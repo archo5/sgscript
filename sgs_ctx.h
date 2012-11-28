@@ -1,0 +1,73 @@
+
+#ifndef SGS_CTX_H_INCLUDED
+#define SGS_CTX_H_INCLUDED
+
+#include "sgs_util.h"
+#include "sgs_proc.h"
+
+/*
+	Context handling
+	- management of build errors, data and compilation
+*/
+
+typedef struct _sgs_BreakInfo sgs_BreakInfo;
+struct _sgs_BreakInfo
+{
+	sgs_BreakInfo* next;
+	uint32_t jdoff;	/* jump data offset */
+	uint16_t numlp; /* which loop */
+	uint8_t iscont; /* is a "continue"? */
+};
+
+typedef
+struct _sgs_FuncCtx
+{
+	int32_t	func;
+	StrBuf	vars;
+	StrBuf	gvars;
+	int32_t	loops;
+	sgs_BreakInfo* binfo;
+}
+sgs_FuncCtx;
+
+/* compilation state */
+/* - user (transfer TODO) */
+#define SGS_STOP_ON_FIRST_ERROR		0x0001
+#define SGS_ADD_DEBUG_INFO			0x0002
+/* - auto */
+#define SGS_HAS_ERRORS				0x00010000
+#define SGS_MUST_STOP				(0x00020000 | SGS_HAS_ERRORS)
+
+
+typedef sgs_Variable* sgs_VarPtr;
+
+struct _sgs_Context
+{
+	/* info output */
+	sgs_PrintFunc	print_fn;	/* printing function */
+	void*		print_ctx;	/* printing context */
+
+	/* compilation */
+	uint32_t	state;
+	sgs_FuncCtx*	fctx; /* ByteCodeGen */
+
+	/* virtual machine */
+	sgs_VarPtr*	stack_base;
+	int			stack_mem;
+	sgs_VarPtr*	stack_off;
+	sgs_VarPtr*	stack_top;
+
+	HashTable	data;
+
+	sgs_VarPtr	vars;
+	int32_t		varcount;
+	uint8_t		redblue;
+	sgs_VarPtr*	gclist;
+	int			gclist_size;
+	sgs_VarPtr	pool;
+	int			poolsize;
+	int			maxpool;
+};
+
+
+#endif /* SGS_CTX_H_INCLUDED */

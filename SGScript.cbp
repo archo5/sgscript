@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="SGScript" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin\SGScriptD" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj\Debug\" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-Wmain" />
+					<Add option="-Wextra" />
+					<Add option="-g" />
+					<Add option="-std=gnu99" />
+					<Add option="-D_DEBUG=1" />
+					<Add option="-D_GLIBCXX_DEBUG=1" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin\SGScript" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj\Release\" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O3" />
+					<Add option="-Wshadow" />
+					<Add option="-Winit-self" />
+					<Add option="-Wredundant-decls" />
+					<Add option="-Wcast-align" />
+					<Add option="-Wmain" />
+					<Add option="-Wextra" />
+					<Add option="-Wall" />
+					<Add option="-g" />
+					<Add option="-std=gnu99" />
+					<Add option="-Wno-unused-function" />
+					<Add option="-DNDEBUG=1" />
+				</Compiler>
+			</Target>
+			<Target title="Release-MSVC">
+				<Option output="bin\SGScript" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj\Release\" />
+				<Option type="1" />
+				<Option compiler="msvc8" />
+				<Compiler>
+					<Add option="/MT" />
+					<Add option="/TP" />
+					<Add option="/arch:SSE" />
+					<Add option="/Gr" />
+					<Add option="/Gm" />
+					<Add option="/fp:precise" />
+					<Add option="/fp:except-" />
+					<Add option="/Gy" />
+					<Add option="/GF" />
+					<Add option="/Ob" />
+					<Add option="/Oy" />
+					<Add option="/Oi" />
+					<Add option="/Ot" />
+					<Add option="/Ox" />
+					<Add option="/W3" />
+					<Add option="/Zi" />
+					<Add option="/DNDEBUG=1" />
+					<Add directory="C:\Program Files\Microsoft Visual Studio 9.0\VC\include" />
+				</Compiler>
+				<Linker>
+					<Add option="/DEBUG" />
+					<Add directory="C:\Program Files\Microsoft Visual Studio 9.0\VC\lib" />
+				</Linker>
+			</Target>
+		</Build>
+		<Unit filename="main.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sgs_bcg.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sgs_bcg.h" />
+		<Unit filename="sgs_cfg.h" />
+		<Unit filename="sgs_ctx.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sgs_ctx.h" />
+		<Unit filename="sgs_fnt.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sgs_fnt.h" />
+		<Unit filename="sgs_proc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sgs_proc.h" />
+		<Unit filename="sgs_std.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sgs_tok.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sgs_tok.h" />
+		<Unit filename="sgs_util.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sgs_util.h" />
+		<Unit filename="sgs_xpc.h" />
+		<Unit filename="sgscript.h" />
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

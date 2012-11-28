@@ -1,0 +1,3 @@
+var a = "random string";
+print( "input string: \"" $ a $ "\"\n" );
+print( "string_cut( a, 3, -4 ): ", string_cut( a, 3, -4 ), "\n" );

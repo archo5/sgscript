@@ -1,0 +1,9 @@
+
+>> Constants
+
+There are no constants in the language apart from the compile-time restriction of writing to a literal.
+
+If they were to be implemented, there were two main directions to take: runtime constness and literal naming. Runtime constness is when something would be marked as constant, making it impossible to change the value of some variable. Since there can be no data attached to variable owners, it is simply impossible to implement. Literal naming could possibly be useful but offers little coding safety benefits and no performance benefits to just using a local variable.
+
+
+>>

@@ -1,0 +1,44 @@
+function iterate( x, y )
+{
+	cr = y - 0.5;
+	ci = x;
+	zi = 0.0;
+	zr = 0.0;
+	i = 0;
+	
+	while( 1 )
+	{
+		i++;
+		temp = zr * zi;
+		zr2 = zr * zr;
+		zi2 = zi * zi;
+		zr = zr2 - zi2 + cr;
+		zi = temp + temp + ci;
+		
+		if( zi2 + zr2 > 16.0 ) return i;
+		if( i > 1000 ) return 0;
+	}
+}
+
+function mandelbrot()
+{
+	tm = ftime();
+	
+	str = "";
+	for( y = -39.0; y < 39.0; ++y )
+	{
+		for( x = -39.0; x < 39.0; ++x )
+		{
+			if( iterate( x / 40.0, y / 40.0 ) == 0 )
+				str $= "*";
+			else
+				str $= " ";
+		}
+		str $= "\n";
+	}
+	print( str );
+	
+	print( "Time elapsed: ", ftime() - tm );
+}
+
+mandelbrot();
