@@ -18,7 +18,7 @@
 const char* outfile = "tests-output.log";
 
 
-double gettime()
+static double gettime()
 {
 	clock_t clk = clock();
 	return (double)( clk ) / (double)( CLOCKS_PER_SEC );
@@ -26,7 +26,7 @@ double gettime()
 
 
 char stdout_buf[ 20 ];
-void setoutput( const char* file )
+static void setoutput( const char* file )
 {
 	if( file )
 	{
@@ -56,7 +56,7 @@ void setoutput( const char* file )
 	}
 }
 
-char* get_file_contents( const char* file )
+static char* get_file_contents( const char* file )
 {
 	int size;
 	char* out = NULL;
@@ -90,7 +90,7 @@ char* get_file_contents( const char* file )
 	return out;
 }
 
-void check_context( sgs_Context* C )
+static void check_context( sgs_Context* C )
 {
 	int all = 1;
 	printf( "state checks:" );
@@ -110,7 +110,7 @@ void check_context( sgs_Context* C )
 int tests_executed = 0;
 int tests_successful = 0;
 
-void count_tests()
+static void count_tests()
 {
 	int testc = 0;
 	DIR* d = opendir( "tests" );
@@ -130,7 +130,7 @@ void count_tests()
 	printf( "\n%8d tests found...\n\n", testc );
 }
 
-void exec_test( const char* fname, const char* nameonly, int disp )
+static void exec_test( const char* fname, const char* nameonly, int disp )
 {
 	int retval;
 	sgs_Context* C;
@@ -168,7 +168,7 @@ void exec_test( const char* fname, const char* nameonly, int disp )
 	free( code );
 }
 
-void exec_tests()
+static void exec_tests()
 {
 	DIR* d = opendir( "tests" );
 	struct dirent* e;

@@ -26,17 +26,24 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
+					<Add option="-march=pentium4" />
+					<Add option="-fexpensive-optimizations" />
 					<Add option="-O3" />
 					<Add option="-Wshadow" />
 					<Add option="-Winit-self" />
 					<Add option="-Wredundant-decls" />
 					<Add option="-Wcast-align" />
+					<Add option="-Winline" />
+					<Add option="-Wunreachable-code" />
+					<Add option="-Wmissing-declarations" />
 					<Add option="-Wmain" />
 					<Add option="-Wextra" />
 					<Add option="-Wall" />
 					<Add option="-g" />
 					<Add option="-std=gnu99" />
 					<Add option="-Wno-unused-function" />
+					<Add option="-fstrict-aliasing" />
+					<Add option="-Wstrict-aliasing=2" />
 					<Add option="-DNDEBUG=1" />
 				</Compiler>
 			</Target>
@@ -48,9 +55,9 @@
 				<Compiler>
 					<Add option="/MT" />
 					<Add option="/TP" />
+					<Add option="/arch:SSE2" />
 					<Add option="/arch:SSE" />
 					<Add option="/Gr" />
-					<Add option="/Gm" />
 					<Add option="/fp:precise" />
 					<Add option="/fp:except-" />
 					<Add option="/Gy" />

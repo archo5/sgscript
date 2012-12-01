@@ -20,10 +20,10 @@ static const char* sgs_VarNames[] =
 	"Object",
 };
 
-
-static sgs_Variable* make_var( SGS_CTX, int type );
-static void destroy_var( SGS_CTX, sgs_Variable* var );
-
+/*
+sgs_Variable* make_var( SGS_CTX, int type );
+void destroy_var( SGS_CTX, sgs_Variable* var );
+*/
 #define VAR_ACQUIRE( pvar ) { if( pvar )(pvar)->refcount++; }
 #define VAR_RELEASE( pvar ) { if( pvar ){ (pvar)->refcount--; sgs_BreakIf( (pvar)->refcount < 0 ); if( (pvar)->refcount == 0 ) destroy_var( C, (pvar) ); } }
 
@@ -115,7 +115,7 @@ static SGS_INLINE void var_free( SGS_CTX, sgs_Variable* var )
 	}
 }
 
-static sgs_Variable* make_var( SGS_CTX, int type )
+sgs_Variable* make_var( SGS_CTX, int type )
 {
 	sgs_Variable* var = var_alloc( C );
 	var->type = type;
@@ -161,7 +161,7 @@ static sgs_Variable* var_create_0str( SGS_CTX, int32_t len )
 	return var;
 }
 
-static sgs_Variable* var_create_str( SGS_CTX, const char* str, int32_t len )
+sgs_Variable* var_create_str( SGS_CTX, const char* str, int32_t len )
 {
 	sgs_Variable* var;
 	sgs_BreakIf( !str );
@@ -174,7 +174,7 @@ static sgs_Variable* var_create_str( SGS_CTX, const char* str, int32_t len )
 	return var;
 }
 
-static void destroy_var( SGS_CTX, sgs_Variable* var )
+void destroy_var( SGS_CTX, sgs_Variable* var )
 {
 	sgs_BreakIf( var->prev != NULL && var->prev == var->next );
 
@@ -258,7 +258,7 @@ static void stk_makespace( SGS_CTX, int num )
 	stkoff = C->stack_off - C->stack_base;
 	stkend = C->stack_top - C->stack_base;
 	DBG_STACK_CHECK
-	nsz = ( stksz + num ) + C->stack_mem * 2; // MAX( stksz + num, C->stack_mem * 2 );
+	nsz = ( stksz + num ) + C->stack_mem * 2; /* MAX( stksz + num, C->stack_mem * 2 ); */
 	nmem = sgs_Alloc_n( sgs_VarPtr, nsz );
 	if( stksz )
 		memcpy( nmem, C->stack_base, stksz * STK_UNITSIZE );
@@ -279,7 +279,7 @@ static void stk_makespace1( SGS_CTX )
 
 		stkoff = C->stack_off - C->stack_base;
 		stkend = C->stack_top - C->stack_base;
-		nsz = ssz1 + C->stack_mem * 2; // MAX( stksz + 1, C->stack_mem * 2 );
+		nsz = ssz1 + C->stack_mem * 2; /* MAX( stksz + 1, C->stack_mem * 2 ); */
 
 		DBG_STACK_CHECK
 
@@ -1215,7 +1215,7 @@ int sgsVM_VarSize( sgs_Variable* var )
 	switch( var->type )
 	{
 	case SVT_FUNC: out += funct_size( &var->data.F ); break;
-	// case SVT_OBJECT: break;
+	/* case SVT_OBJECT: break; */
 	case SVT_STRING: out += var->data.S.size; break;
 	}
 	return out;
@@ -1307,6 +1307,7 @@ sgs_Variable* sgsVM_VarMake_Dict()
 
 /* INTERFACE */
 
+/*
 sgs_Variable* sgsVM_VarCreate( SGS_CTX, int type )
 {
 	return make_var( C, type );
@@ -1319,6 +1320,7 @@ void sgsVM_VarDestroy( SGS_CTX, sgs_Variable* var )
 {
 	destroy_var( C, var );
 }
+*/
 
 int sgs_PushNull( SGS_CTX )
 {

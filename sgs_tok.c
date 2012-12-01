@@ -242,7 +242,7 @@ static void readop( SGS_CTX, MemBuf* out, LineNum line, const char* code, int32_
 
 	memset( opstr, 0, 4 );
 
-	// read in the operator
+	/* read in the operator */
 	while( i < length && isoneof( code[ i ], sgs_opchars ) )
 	{
 		if( opsize < 3 )
@@ -251,7 +251,7 @@ static void readop( SGS_CTX, MemBuf* out, LineNum line, const char* code, int32_
 		i++;
 	}
 
-	// test for various errors
+	/* test for various errors */
 	if( ropsize > 3 ){ *at += ropsize; goto op_read_error; }
 	whichop = op_oneof( opstr, sgs_operators, sgs_opsep, &len );
 	*at += len - 1;
@@ -280,23 +280,23 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length )
 		char fc = code[ i ];
 		int isz = s.size;
 
-		// whitespace
+		/* whitespace */
 		if( detectline( code, i ) )
 			line++;
 		if( isoneof( fc, " \n\r\t" ) )
 			continue;
 
-		// comment
+		/* comment */
 		if( fc == '/' && ( code[ i + 1 ] == '/'
 					|| code[ i + 1 ] == '*' ) )	skipcomment	( C, &s, &line, code, &i, length );
 
-		// special symbol
+		/* special symbol */
 		else if( isoneof( fc, "()[]{},;" ) )	membuf_appchr( &s, fc );
 
-		// identifier
+		/* identifier */
 		else if( fc == '_' || isalpha( fc ) )	readident	( C, &s, code, &i, length );
 
-		// number
+		/* number */
 		else if( isdigit( fc ) )
 		{
 			sgs_Integer vi = 0;
@@ -323,13 +323,13 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length )
 			i--;
 		}
 
-		// string
+		/* string */
 		else if( fc == '\'' || fc == '\"' )		readstring	( C, &s, &line, code, &i, length );
 
-		// operator
+		/* operator */
 		else if( isoneof( fc, sgs_opchars ) )	readop		( C, &s, line, code, &i, length );
 
-		// - unexpected symbol
+		/* - unexpected symbol */
 		else
 		{
 			C->state |= SGS_HAS_ERRORS;

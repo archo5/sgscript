@@ -22,7 +22,7 @@ void sgsFT_Destroy( FTNode* tree )
 }
 
 
-// debugging
+/* debugging */
 
 
 static void dumpnode( FTNode* N )
@@ -82,13 +82,13 @@ void sgsFT_Dump( FTNode* tree )
 }
 
 
-//
+/*
 // C O M P I L E R
-//
+*/
 
 
-// Utilities
-//
+/* Utilities
+*/
 
 #define PTR_MAX ((void*)-1)
 
@@ -115,8 +115,8 @@ static char brace_opposite( char c )
 
 static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end );
 
-// Expression parsing
-//
+/* Expression parsing
+*/
 
 /*
 	FUNC / finds the logical expected end of an expression
@@ -305,11 +305,11 @@ static int part_weight( FTNode* part, int isfcall, int binary )
 			return 11;
 		}
 
-		// unary operators
+		/* unary operators */
 		return 10;
 	}
 
-	// everything else
+	/* everything else */
 	return -1;
 }
 
@@ -333,26 +333,26 @@ static int level_exp( SGS_CTX, FTNode** tree )
 		return 1;
 	}
 
-	// find the most powerful part (mpp)
+	/* find the most powerful part (mpp) */
 	while( node )
 	{
 		count++;
 
-		// only interested in operators and subexpressions
+		/* only interested in operators and subexpressions */
 		if( node->type != SFT_OPER && node->type != SFT_EXPLIST )
 			goto _continue;
 
-		// function tree test
+		/* function tree test */
 		isfcall = node->type == SFT_EXPLIST;
 		if( isfcall )	isfcall = !!prev;
 		if( isfcall )	isfcall = prev->type != SFT_OPER || !ST_OP_BINARY( *prev->token );
 
-		// op tests
+		/* op tests */
 		binary = node->type == SFT_OPER;
 		if( binary )	binary = prev && node->next;
 		if( binary )	binary = prev->type != SFT_OPER || *prev->token == ST_OP_INC || *prev->token == ST_OP_DEC;
 
-		// weighting
+		/* weighting */
 		curwt = part_weight( node, isfcall, binary );
 		if( ( curwt == 40 && curwt > weight ) || ( curwt != 40 && curwt >= weight ) )
 		{
@@ -360,7 +360,7 @@ static int level_exp( SGS_CTX, FTNode** tree )
 			mpp = node;
 		}
 
-		// move to next
+		/* move to next */
 _continue:
 		prev = node;
 		node = node->next;
@@ -368,7 +368,7 @@ _continue:
 
 	if( mpp )
 	{
-		// function call
+		/* function call */
 		if( mpp->type == SFT_EXPLIST )
 		{
 			int ret1, ret2;
@@ -417,7 +417,7 @@ _continue:
 			return 1;
 		}
 
-		// binary ops
+		/* binary ops */
 		if( mpp->type == SFT_OPER )
 		{
 			if( mpp == *tree )
@@ -504,7 +504,7 @@ _continue:
 		return 1;
 	}
 
-	// failed unexpectedly, dump & debug
+	/* failed unexpectedly, dump & debug */
 	sgs_Printf( C, SGS_ERROR, -1, "Failed to level the expression, dumping it:\n" );
 	sgsFT_Dump( *tree );
 	FUNC_END;
@@ -664,8 +664,8 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 }
 
 
-// Statement parsing
-//
+/* Statement parsing
+*/
 
 static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end );
 static FTNode* parse_stmtlist( SGS_CTX, TokenList begin, TokenList end );
@@ -904,7 +904,7 @@ static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
 	sgs_BreakIf( !at );
 	sgs_BreakIf( !*at );
 
-	// IF / ELSE
+	/* IF / ELSE */
 	if( is_keyword( at, "if" ) )
 	{
 		node = parse_if( C, begin, end );
@@ -919,21 +919,21 @@ static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
 		FUNC_END;
 		return NULL;
 	}
-	// WHILE
+	/* WHILE */
 	else if( is_keyword( at, "while" ) )
 	{
 		node = parse_while( C, begin, end );
 		FUNC_END;
 		return node;
 	}
-	// FOR
+	/* FOR */
 	else if( is_keyword( at, "for" ) )
 	{
 		node = parse_for( C, begin, end );
 		FUNC_END;
 		return node;
 	}
-	// BREAK
+	/* BREAK */
 	else if( is_keyword( at, "break" ) )
 	{
 		TokenList expend, orig = at;
@@ -963,7 +963,7 @@ static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
 		FUNC_END;
 		return node;
 	}
-	// CONTINUE
+	/* CONTINUE */
 	else if( is_keyword( at, "continue" ) )
 	{
 		TokenList expend, orig = at;
@@ -993,14 +993,14 @@ static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
 		FUNC_END;
 		return node;
 	}
-	// FUNCTION
+	/* FUNCTION */
 	else if( is_keyword( at, "function" ) )
 	{
 		node = parse_function( C, begin, end );
 		FUNC_END;
 		return node;
 	}
-	// RETURN
+	/* RETURN */
 	else if( is_keyword( at, "return" ) )
 	{
 		TokenList expend;
@@ -1019,7 +1019,7 @@ static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
 		FUNC_END;
 		return node;
 	}
-	// VAR
+	/* VAR */
 	else if( is_keyword( at, "var" ) )
 	{
 		TokenList expend;
@@ -1035,7 +1035,7 @@ static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
 		FUNC_END;
 		return node;
 	}
-	// GLOBAL
+	/* GLOBAL */
 	else if( is_keyword( at, "global" ) )
 	{
 		TokenList expend;
@@ -1051,7 +1051,7 @@ static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
 		FUNC_END;
 		return node;
 	}
-	// BLOCK OF STATEMENTS
+	/* BLOCK OF STATEMENTS */
 	else if( *at == ST_CBRKL )
 	{
 		TokenList expend;
@@ -1066,7 +1066,7 @@ static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
 		FUNC_END;
 		return node;
 	}
-	// SEPARATED STATEMENTS
+	/* SEPARATED STATEMENTS */
 	else
 	{
 		TokenList expend = detect_exp( C, at, end, ";", 0 );
@@ -1119,5 +1119,5 @@ FTNode* sgsFT_Compile( SGS_CTX, TokenList tlist )
 	return parse_stmtlist( C, tlist, (TokenList) PTR_MAX );
 }
 
-// E N D
+/* E N D */
 

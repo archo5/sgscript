@@ -95,10 +95,17 @@ struct _sgs_Variable
 	sgs_Variable *prev, *next;
 };
 
-
+/*
 sgs_Variable* sgsVM_VarCreate( SGS_CTX, int type );
 void sgsVM_VarDestroy( SGS_CTX, sgs_Variable* var );
 sgs_Variable* sgsVM_VarCreateString( SGS_CTX, const char* str, int32_t len );
+*/
+sgs_Variable* make_var( SGS_CTX, int type );
+sgs_Variable* var_create_str( SGS_CTX, const char* str, int32_t len );
+void destroy_var( SGS_CTX, sgs_Variable* var );
+#define sgsVM_VarCreate make_var
+#define sgsVM_VarDestroy destroy_var
+#define sgsVM_VarCreateString var_create_str
 
 
 int sgsVM_VarSize( sgs_Variable* var );
@@ -114,4 +121,4 @@ sgs_Variable* sgsVM_VarMake_Dict();
 int sgsVM_RegStdLibs( SGS_CTX );
 
 
-#endif // SGS_PROC_H_INCLUDED
+#endif /* SGS_PROC_H_INCLUDED */

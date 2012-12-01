@@ -4,6 +4,7 @@
 #include <signal.h>
 #include <ctype.h>
 #include <math.h>
+#include <assert.h>
 
 #include "sgs_util.h"
 
@@ -231,7 +232,7 @@ void sgs_BreakIfFunc( const char* code, const char* file, int line )
 #if defined( _MSC_VER )
 	__asm{ int 3 };
 #elif defined( __GNUC__ )
-	asm( "int $0x3" );
+	raise( SIGBREAK );
 #else
 	assert( 0 );
 #endif
@@ -393,7 +394,7 @@ void membuf_appbuf( MemBuf* mb, const void* buf, int32_t size )
 }
 
 
-Hash hashFunc( char* str, int size )
+static Hash hashFunc( char* str, int size )
 {
 	int i;
 	Hash h = 2166136261u;
@@ -586,7 +587,7 @@ void ht_set( HashTable* T, char* str, int size, void* ptr )
 	}
 }
 
-int ht_trymove( HashTable* T, HTPair* phole, HTPair* P )
+static int ht_trymove( HashTable* T, HTPair* phole, HTPair* P )
 {
 	HTPair* p = T->pairs + ( P->hash % T->size ), *pend = T->pairs + T->size;
 	while( p->str && p != P && p != phole )
@@ -603,7 +604,7 @@ int ht_trymove( HashTable* T, HTPair* phole, HTPair* P )
 	return 1;
 }
 
-void ht_fillhole( HashTable* T, HTPair* P )
+static void ht_fillhole( HashTable* T, HTPair* P )
 {
 	HTPair *pp = P, *phole = P, *pend = T->pairs + T->size;
 

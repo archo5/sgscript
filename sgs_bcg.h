@@ -19,10 +19,10 @@ struct _sgs_IntFunc
 sgs_CompFunc;
 
 
-// - bytecode generator
+/* - bytecode generator */
 sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree );
 void sgsBC_Dump( sgs_CompFunc* func );
 void sgsBC_Free( SGS_CTX, sgs_CompFunc* func );
 
 
-#endif // SGS_UNIT_H_INCLUDED
+#endif /* SGS_UNIT_H_INCLUDED */
