@@ -1,10 +1,9 @@
 
 #include <stdarg.h>
 
-#include "sgs_ctx.h"
+#include "sgs_vmh.h"
 #include "sgs_tok.h"
 #include "sgs_fnt.h"
-#include "sgs_proc.h"
 #include "sgs_bcg.h"
 
 
