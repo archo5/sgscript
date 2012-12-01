@@ -95,11 +95,12 @@ struct _sgs_Variable
 	sgs_Variable *prev, *next;
 };
 
-#define VAR_ACQUIRE( pvar ) { if( pvar )(pvar)->refcount++; }
-#define VAR_RELEASE( pvar ) { if( pvar ){ (pvar)->refcount--; sgs_BreakIf( (pvar)->refcount < 0 ); if( (pvar)->refcount == 0 ) sgsVM_VarDestroy( C, (pvar) ); } }
 
 sgs_Variable* sgsVM_VarCreate( SGS_CTX, int type );
 void sgsVM_VarDestroy( SGS_CTX, sgs_Variable* var );
+sgs_Variable* sgsVM_VarCreateString( SGS_CTX, const char* str, int32_t len );
+
+
 int sgsVM_VarSize( sgs_Variable* var );
 void sgsVM_VarDump( sgs_Variable* var );
 

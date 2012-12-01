@@ -2,6 +2,7 @@
 
 #include "sgs_bcg.h"
 #include "sgs_ctx.h"
+#include "sgs_proc.h"
 
 
 static sgs_CompFunc* make_compfunc()
@@ -315,9 +316,7 @@ static int add_const_s( SGS_CTX, sgs_CompFunc* func, int32_t len, const char* st
 	}
 	UNUSED( C );
 
-	nvar = sgsVM_VarCreate( C, SVT_STRING );
-	nvar->data.S = strbuf_create();
-	strbuf_appbuf( &nvar->data.S, str, len );
+	nvar = sgsVM_VarCreateString( C, str, len );
 	membuf_appbuf( &func->consts, &nvar, sizeof( var ) );
 	return vend - vbeg;
 }
@@ -1118,7 +1117,7 @@ void sgsBC_Free( SGS_CTX, sgs_CompFunc* func )
 	sgs_Variable** var = vbeg;
 	while( var < vend )
 	{
-		VAR_RELEASE( *var );
+		sgs_Release( C, *var );
 		var++;
 	}
 
