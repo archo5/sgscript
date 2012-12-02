@@ -78,6 +78,7 @@ static sgs_FuncCtx* fctx_create()
 	sgs_FuncCtx* fctx = sgs_Alloc( sgs_FuncCtx );
 	fctx->func = TRUE;
 	fctx->regs = 0;
+	fctx->lastreg = -1;
 	fctx->vars = strbuf_create();
 	fctx->gvars = strbuf_create();
 	fctx->loops = 0;
@@ -100,67 +101,97 @@ static void fctx_dump( sgs_FuncCtx* fctx )
 }
 
 
+static void dump_rcpos( char* ptr )
+{
+	int a = AS_INT16( ptr );
+	char rc = a >= 0 ? 'R' : 'C';
+	if( a < 0 ) a = -a-1;
+	printf( "%c%d", rc, a );
+}
+static void dump_opcode_a( const char* name, char* ptr )
+{
+	int a1 = AS_INT16( ptr );
+	printf( "%s R%d <= ", name, a1 );
+	dump_rcpos( ptr + 2 );
+	printf( ", " );
+	dump_rcpos( ptr + 4 );
+}
+static void dump_opcode_b( const char* name, char* ptr )
+{
+	int a1 = AS_INT16( ptr );
+	printf( "%s R%d <= ", name, a1 );
+	dump_rcpos( ptr + 2 );
+}
+static void dump_opcode_c( const char* name, char* ptr )
+{
+	int a1 = AS_INT16( ptr );
+	printf( "%s R%d", name, a1 );
+}
 static void dump_opcode( char* ptr, int32_t size )
 {
 	char* pend = ptr + size;
 	while( ptr < pend )
 	{
+		unsigned char instr = *ptr++;
 		printf( "\t|  " );
-		switch( *ptr++ )
+		switch( instr )
 		{
-#define STOC( wat ) case SI_##wat: printf( #wat "   " ); break
-		STOC( NOP );
+#define DOP_A( wat ) case SI_##wat: dump_opcode_a( #wat, ptr ); ptr += 6; break;
+#define DOP_B( wat ) case SI_##wat: dump_opcode_b( #wat, ptr ); ptr += 4; break;
+#define DOP_C( wat ) case SI_##wat: dump_opcode_c( #wat, ptr ); ptr += 2; break;
+		case SI_NOP: printf( "NOP   " ); break;
 
-		case SI_PUSHC: printf( "PUSH_C %d", (int) AS_UINT16( ptr ) ); ptr += 2; break;
-		case SI_PUSHS: printf( "PUSH_STK %d", (int) AS_INT16( ptr ) ); ptr += 2; break;
-		case SI_PUSHN: printf( "PUSH_NULL" ); break;
-		STOC( DUP );
-
-		STOC( COPY );
-		STOC( POP );
+		case SI_PUSH: printf( "PUSH %s%d", AS_INT16( ptr ) >= 0 ? "R" : "C", (int) AS_INT16( ptr ) ); ptr += 2; break;
+		case SI_PUSHN: printf( "PUSH_NULLS %d", (int) AS_UINT8( ptr++ ) ); break;
 		case SI_POPN: printf( "POP_N %d", (int) AS_UINT8( ptr++ ) ); break;
-		case SI_POPS: printf( "POP_STK %d", (int) AS_INT16( ptr ) ); ptr += 2; break;
+		case SI_POPR: printf( "POP_REG R%d", (int) AS_INT16( ptr ) ); ptr += 2; break;
+
 		case SI_RETN: printf( "RETURN %d", (int) AS_UINT8( ptr++ ) ); break;
 		case SI_JUMP: printf( "JUMP %d", (int) AS_INT16( ptr ) ); ptr += 2; break;
-		case SI_JMPF: printf( "JMP_F %d", (int) AS_INT16( ptr ) ); ptr += 2; break;
-		case SI_CALL: printf( "CALL %d %d", (int) AS_UINT8( ptr ), (int) AS_UINT8( ptr + 1 ) ); ptr += 2; break;
-		case SI_GETVAR: printf( "GET_VAR" ); break;
-		case SI_SETVAR: printf( "SET_VAR" ); break;
-		case SI_GETPROP: printf( "GET_PROP" ); break;
-		case SI_SETPROP: printf( "SET_PROP" ); break;
-		case SI_GETINDEX: printf( "GET_IDX" ); break;
-		case SI_SETINDEX: printf( "SET_IDX" ); break;
+		case SI_JMPF: printf( "JMP_F %d %d", (int) AS_INT16( ptr ), (int) AS_INT16( ptr + 2 ) ); ptr += 4; break;
+		case SI_CALL: printf( "CALL args:%d expect:%d func:", (int) AS_UINT8( ptr ), (int) AS_UINT8( ptr + 1 ) ); dump_rcpos( ptr + 2 ); ptr += 4; break;
 
-		STOC( CONCAT );
-		STOC( BOOL_AND );
-		STOC( BOOL_OR );
-		STOC( NEGATE );
-		STOC( BOOL_INV );
-		STOC( INVERT );
+		DOP_B( GETVAR );
+		DOP_B( SETVAR );
+		DOP_A( GETPROP );
+		DOP_A( SETPROP );
+		DOP_A( GETINDEX );
+		DOP_A( SETINDEX );
 
-		STOC( INC );
-		STOC( DEC );
-		STOC( ADD );
-		STOC( SUB );
-		STOC( MUL );
-		STOC( DIV );
-		STOC( MOD );
+		DOP_B( COPY );
+		DOP_A( CONCAT );
+		DOP_A( BOOL_AND );
+		DOP_A( BOOL_OR );
+		DOP_B( NEGATE );
+		DOP_B( BOOL_INV );
+		DOP_B( INVERT );
 
-		STOC( AND );
-		STOC( OR );
-		STOC( XOR );
-		STOC( LSH );
-		STOC( RSH );
+		DOP_C( INC );
+		DOP_C( DEC );
+		DOP_A( ADD );
+		DOP_A( SUB );
+		DOP_A( MUL );
+		DOP_A( DIV );
+		DOP_A( MOD );
 
-		STOC( SEQ );
-		STOC( SNEQ );
-		STOC( EQ );
-		STOC( NEQ );
-		STOC( LT );
-		STOC( LTE );
-		STOC( GT );
-		STOC( GTE );
-#undef STOC
+		DOP_A( AND );
+		DOP_A( OR );
+		DOP_A( XOR );
+		DOP_A( LSH );
+		DOP_A( RSH );
+
+		DOP_A( SEQ );
+		DOP_A( EQ );
+		DOP_A( LT );
+		DOP_A( LTE );
+
+		DOP_A( SNEQ );
+		DOP_A( NEQ );
+		DOP_A( GT );
+		DOP_A( GTE );
+#undef DOP_A
+#undef DOP_B
+#undef DOP_C
 
 		default: printf( "<error>" ); break;
 		}
@@ -379,6 +410,23 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf )
 
 #define INTERNAL_ERROR( loff ) sgs_printf( C, SGS_ERROR, -1, "INTERNAL ERROR occured in file %s [%d]", __FILE__, __LINE__ - (loff) )
 
+static SGS_INLINE int16_t comp_reg_alloc( SGS_CTX )
+{
+	int out = C->fctx->regs++;
+	if( out > 0x7fff )
+	{
+		C->state |= SGS_HAS_ERRORS;
+		sgs_Printf( C, SGS_ERROR, -1, "Max. register count exceeded" );
+	}
+	return out;
+}
+
+static SGS_INLINE void comp_reg_unwind( SGS_CTX, int32_t pos )
+{
+	C->fctx->lastreg = C->fctx->regs;
+	C->fctx->regs = pos;
+}
+
 static int op_pick_opcode( int oper, int binary )
 {
 	if( !binary )
@@ -422,23 +470,27 @@ static int op_pick_opcode( int oper, int binary )
 
 
 static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node );
-static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node );
-static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node );
-static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int expect, int out );
+static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out );
+static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t src );
+static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out, int expect );
 
 
-static void compile_ident( SGS_CTX, sgs_CompFunc* func, FTNode* node )
+/*
+static void compile_ident( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t dest )
 {
 	int16_t pos = add_const_s( C, func, node->token[ 1 ], (const char*) node->token + 2 );
-	BYTE( SI_PUSHC );
+	BYTE( SI_COPY );
+	DATA( &dest, 2 );
 	DATA( &pos, 2 );
 }
+*/
 
 static int is_keyword( TokenList tok, const char* text )
 {
 	return *tok == ST_KEYWORD && tok[ 1 ] == strlen( text ) && strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
 }
 
+#if 0
 static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 {
 	int16_t pos;
@@ -530,30 +582,27 @@ static int compile_ident_w( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	}
 	return 1;
 }
+#endif
 
-
-static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node )
+static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* opos )
 {
-	int16_t pos;
 	if( *node->token == ST_NUMINT )
 	{
-		pos = add_const_i( C, func, AS_INTEGER( node->token + 1 ) );
+		*opos = -1-add_const_i( C, func, AS_INTEGER( node->token + 1 ) );
 	}
 	else if( *node->token == ST_NUMREAL )
 	{
-		pos = add_const_r( C, func, AS_REAL( node->token + 1 ) );
+		*opos = -1-add_const_r( C, func, AS_REAL( node->token + 1 ) );
 	}
 	else if( *node->token == ST_STRING )
 	{
-		pos = add_const_s( C, func, AS_INT32( node->token + 1 ), (const char*) node->token + 5 );
+		*opos = -1-add_const_s( C, func, AS_INT32( node->token + 1 ), (const char*) node->token + 5 );
 	}
 	else
 	{
 		sgs_Printf( C, SGS_ERROR, -1, "INTERNAL ERROR: constant doesn't have a token of type int/real/string attached" );
 		return 0;
 	}
-	BYTE( SI_PUSHC );
-	DATA( &pos, 2 );
 	return 1;
 }
 
@@ -561,17 +610,21 @@ static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int expect )
 {
 	int i = 0;
+	int16_t funcpos;
 
 	FUNC_ENTER;
-	if( !compile_node_r( C, func, node->child ) ) return 0;
+	if( !compile_node_r( C, func, node->child, &funcpos ) ) return 0;
+	/*
+		object-orientation: TODO
 	if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
 	{
 		FUNC_ENTER;
 		if( !compile_node_r( C, func, node->child->child ) ) return 0;
 		i++;
 	}
+	*/
 	FUNC_ENTER;
-	if( !compile_node_r( C, func, node->child->next ) ) return 0;
+	if( !compile_node_r( C, func, node->child->next, NULL ) ) return 0;
 	{
 		FTNode* n = node->child->next->child;
 		while( n )
@@ -584,20 +637,44 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int expect 
 	BYTE( SI_CALL );
 	BYTE( i );
 	BYTE( expect );
+	DATA( &funcpos, 2 );
 	return 1;
 }
 
-static int compile_index( SGS_CTX, sgs_CompFunc* func, FTNode* node, int out )
+static int compile_index_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
 {
+	int16_t var, name, opos = C->fctx->regs++;
+	int32_t regpos = C->fctx->regs;
 	FUNC_ENTER;
-	if( !compile_node_r( C, func, node->child ) ) return 0;
+	if( !compile_node_r( C, func, node->child, &var ) ) return 0;
 	FUNC_ENTER;
-	if( !compile_node_r( C, func, node->child->next ) ) return 0;
-	BYTE( out ? SI_SETINDEX : SI_GETINDEX );
+	if( !compile_node_r( C, func, node->child->next, &name ) ) return 0;
+	BYTE( SI_GETINDEX );
+	DATA( &opos, 2 );
+	DATA( &var, 2 );
+	DATA( &name, 2 );
+	C->fctx->regs = regpos;
+	*out = opos;
 	return 1;
 }
 
-static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int expect, int out )
+static int compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t src )
+{
+	int16_t var, name;
+	int32_t regpos = C->fctx->regs;
+	FUNC_ENTER;
+	if( !compile_node_r( C, func, node->child, &var ) ) return 0;
+	FUNC_ENTER;
+	if( !compile_node_r( C, func, node->child->next, &name ) ) return 0;
+	BYTE( SI_GETINDEX );
+	DATA( &var, 2 );
+	DATA( &name, 2 );
+	DATA( &src, 2 );
+	C->fctx->regs = regpos;
+	return 1;
+}
+
+static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out, int expect )
 {
 	int i = ST_OP_ASSIGN( *node->token );
 	FUNC_BEGIN;
@@ -731,7 +808,7 @@ static int compile_breaks( SGS_CTX, sgs_CompFunc* func, uint8_t iscont )
 }
 
 
-static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node )
+static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t src )
 {
 	FUNC_BEGIN;
 	switch( node->type )
@@ -739,7 +816,7 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_IDENT:
 	case SFT_KEYWORD:
 		FUNC_HIT( "W_IDENT" );
-		if( !compile_ident_w( C, func, node ) ) goto fail;
+		if( !compile_ident_w( C, func, node, src ) ) goto fail;
 		break;
 
 	case SFT_CONST:
@@ -750,7 +827,7 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_OPER:
 	case SFT_OPER_P:
 		FUNC_HIT( "W_OPER" );
-		if( !compile_oper( C, func, node, 1, 1 ) ) goto fail;
+		if( !compile_oper( C, func, node, NULL, 1 ) ) goto fail;
 		break;
 
 	case SFT_FCALL:
@@ -760,7 +837,7 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 	case SFT_INDEX:
 		FUNC_HIT( "W_INDEX" );
-		if( !compile_index( C, func, node, 1 ) ) goto fail;
+		if( !compile_index_w( C, func, node, src ) ) goto fail;
 		break;
 
 	default:
@@ -774,7 +851,7 @@ fail:
 	FUNC_END;
 	return 0;
 }
-static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node )
+static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
 {
 	FUNC_BEGIN;
 	switch( node->type )
@@ -782,28 +859,28 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_IDENT:
 	case SFT_KEYWORD:
 		FUNC_HIT( "R_IDENT" );
-		if( !compile_ident_r( C, func, node ) ) goto fail;
+		if( !compile_ident_r( C, func, node, out ) ) goto fail;
 		break;
 
 	case SFT_CONST:
 		FUNC_HIT( "R_CONST" );
-		if( !compile_const( C, func, node ) ) goto fail;
+		if( !compile_const( C, func, node, out ) ) goto fail;
 		break;
 
 	case SFT_OPER:
 	case SFT_OPER_P:
 		FUNC_HIT( "R_OPER" );
-		if( !compile_oper( C, func, node, 1, 0 ) ) goto fail;
+		if( !compile_oper( C, func, node, out, 1, 0 ) ) goto fail;
 		break;
 
 	case SFT_FCALL:
 		FUNC_HIT( "R_FCALL" );
-		if( !compile_fcall( C, func, node, 1 ) ) goto fail;
+		if( !compile_fcall( C, func, node, out, 1 ) ) goto fail;
 		break;
 
 	case SFT_INDEX:
 		FUNC_HIT( "R_INDEX" );
-		if( !compile_index( C, func, node, 0 ) ) goto fail;
+		if( !compile_index_r( C, func, node, out ) ) goto fail;
 		break;
 
 	case SFT_EXPLIST:
@@ -813,7 +890,7 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			while( n )
 			{
 				FUNC_ENTER;
-				if( !compile_node_r( C, func, n ) )
+				if( !compile_node_r( C, func, n, out ) )
 					goto fail;
 				n = n->next;
 			}

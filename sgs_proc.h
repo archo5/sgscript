@@ -11,57 +11,62 @@ typedef enum sgs_Instruction_e
 {
 	SI_NOP = 0,
 
-	SI_PUSHC,	/* push a constant */
-	SI_PUSHS,	/* push (duplicate) a stack item */
-	SI_PUSHN,	/* push null */
-	SI_DUP,		/* duplicate top item on stack */
+	SI_PUSH,	/* (i16 src)			push register/constant */
+	SI_PUSHN,	/* (u8 N)				push N nulls */
+	SI_POPN,	/* (u8 N)				pop N items */
+	SI_POPR,	/* (i16 out)			pop item to register */
 
-	SI_COPY,	/* copy data from -2 to -1 */
-	SI_POP,		/* pop one item */
-	SI_POPN,	/* pop N items */
-	SI_POPS,	/* copy item to stack and pop it */
-	SI_RETN,	/* exit current frame of execution, copy N output arguments */
-	SI_JUMP,	/* add to instruction pointer */
-	SI_JMPF,	/* jump (add to instr.ptr.) if false */
-	SI_CALL,	/* call a variable */
+	SI_RETN,	/* (u8 N)				exit current frame of execution, preserve N output arguments */
+	SI_JUMP,	/* (i16 off)			add to instruction pointer */
+	SI_JMPF,	/* (i16 src, off)		jump (add to instr.ptr.) if false */
+	SI_CALL,	/* (u8 args, expect, i16 src)	call a variable */
 
-	SI_GETVAR,	/* <varname> => <value> */
-	SI_SETVAR,	/* <varname> <value> => set <value> to <varname> */
-	SI_GETPROP,	/* <var> <prop> => <var> */
-	SI_SETPROP,	/* <var> <prop> <value> => set a <prop> of <var> to <value> */
-	SI_GETINDEX,
-	SI_SETINDEX,
+	SI_GETVAR,	/* (i16 out, name)		<varname> => <value> */
+	SI_SETVAR,	/* (i16 name, src)		<varname> <value> => set <value> to <varname> */
+	SI_GETPROP,	/* (i16 out, var, name)	<var> <prop> => <var> */
+	SI_SETPROP,	/* (i16 var, name, src)	<var> <prop> <value> => set a <prop> of <var> to <value> */
+	SI_GETINDEX,/* -- || -- */
+	SI_SETINDEX,/* -- || -- */
 
 	/* operators */
-	SI_CONCAT,
-	SI_BOOL_AND,
-	SI_BOOL_OR,
-	SI_NEGATE,
-	SI_BOOL_INV,
-	SI_INVERT,
+	/*
+		A: (i16 out, s1, s2)
+		A1: (xormask, i16 out, s1, s2)
+		B: (i16 out, s1)
+		C: (i16 var)
+	*/
+	SI_COPY,	/* B */
+	SI_CONCAT,	/* A */
+	SI_BOOL_AND,/* A */
+	SI_BOOL_OR,	/* A */
+	SI_NEGATE,	/* B */
+	SI_BOOL_INV,/* B */
+	SI_INVERT,	/* B */
 
-	SI_INC,
-	SI_DEC,
-	SI_ADD,
-	SI_SUB,
-	SI_MUL,
-	SI_DIV,
-	SI_MOD,
+	SI_INC,		/* C */
+	SI_DEC,		/* C */
+	SI_ADD,		/* A */
+	SI_SUB,		/* A */
+	SI_MUL,		/* A */
+	SI_DIV,		/* A */
+	SI_MOD,		/* A */
 
-	SI_AND,
-	SI_OR,
-	SI_XOR,
-	SI_LSH,
-	SI_RSH,
+	SI_AND,		/* A */
+	SI_OR,		/* A */
+	SI_XOR,		/* A */
+	SI_LSH,		/* A */
+	SI_RSH,		/* A */
 
-	SI_SEQ,
-	SI_SNEQ,
-	SI_EQ,
-	SI_NEQ,
-	SI_LT,
-	SI_GT,
-	SI_LTE,
-	SI_GTE,
+	SI_SEQ,		/* A1 */
+	SI_EQ,		/* A1 */
+	SI_LT,		/* A1 */
+	SI_LTE,		/* A1 */
+
+	/* xor masks */
+	SI_SNEQ = SI_SEQ | 0x80,
+	SI_NEQ = SI_EQ | 0x80,
+	SI_GT = SI_LT | 0x80,
+	SI_GTE = SI_LTE | 0x80,
 }
 sgs_Instruction;
 

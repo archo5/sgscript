@@ -23,7 +23,7 @@ typedef
 struct _sgs_FuncCtx
 {
 	int32_t	func;
-	int32_t regs;
+	int32_t regs, lastreg;
 	StrBuf	vars;
 	StrBuf	gvars;
 	int32_t	loops;
