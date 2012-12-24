@@ -682,9 +682,10 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	/* Increment / decrement */
 	if( *node->token == ST_OP_INC || *node->token == ST_OP_DEC )
 	{
+		int16_t ireg, oreg;
 		FUNC_ENTER;
-		if( !compile_node_r( C, func, node->child ) ) goto fail;
-		if( node->type != SFT_OPER_P ) BYTE( *node->token == ST_OP_INC ? SI_INC : SI_DEC );
+		if( !compile_node_r( C, func, node->child, &ireg ) ) goto fail;
+		oreg = expect && node->type == SFT_OPER_P ? C->fctx->regs++ : ireg;
 		if( expect )
 		{
 			if( expect != 1 )
@@ -692,10 +693,13 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Too many expected outputs for operator." );
 				goto fail;
 			}
-			BYTE( SI_DUP );
 		}
-		if( node->type == SFT_OPER_P ) BYTE( *node->token == ST_OP_INC ? SI_INC : SI_DEC );
-		if( !compile_node_w( C, func, node->child ) ) goto fail;
+		BYTE( *node->token == ST_OP_INC ? SI_INC : SI_DEC );
+		DATA( &oreg, 2 );
+		DATA( &ireg, 2 );
+		if( out )
+			*out = ireg;
+		if( !compile_node_w( C, func, node->child, oreg ) ) goto fail;
 	}
 	/* Assignment */
 	else if( i )

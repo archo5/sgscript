@@ -7,7 +7,6 @@
 
 /*
 	Context handling
-	- management of build errors, data and compilation
 */
 
 typedef struct _sgs_BreakInfo sgs_BreakInfo;

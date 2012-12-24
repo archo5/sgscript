@@ -101,6 +101,11 @@ int				sgs_Stat( SGS_CTX, int type );
 
 /* The core interface */
 
+int sgs_SetNull( SGS_CTX, int item );
+int sgs_SetBool( SGS_CTX, int item, int value );
+int sgs_SetInt( SGS_CTX, int item, sgs_Integer value );
+int sgs_SetReal( SGS_CTX, int item, sgs_Real value );
+
 int sgs_PushNull( SGS_CTX );
 int sgs_PushBool( SGS_CTX, int value );
 int sgs_PushInt( SGS_CTX, sgs_Integer value );

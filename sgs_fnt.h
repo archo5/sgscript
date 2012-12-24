@@ -7,7 +7,6 @@
 
 /*
 	Function tree
-	- a data structure that stores all about the logical representation of the parsed code
 */
 
 /* data */
@@ -16,7 +15,7 @@
 #define SFT_CONST	3
 /* expression parts */
 #define SFT_OPER	4
-#define SFT_OPER_P	5
+#define SFT_OPER_P	5 /* post-op (inc/dec) */
 #define SFT_FCALL	6
 #define SFT_INDEX	7
 /* statement data */

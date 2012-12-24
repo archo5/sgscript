@@ -33,7 +33,6 @@ typedef enum sgs_Instruction_e
 		A: (i16 out, s1, s2)
 		A1: (xormask, i16 out, s1, s2)
 		B: (i16 out, s1)
-		C: (i16 var)
 	*/
 	SI_COPY,	/* B */
 	SI_CONCAT,	/* A */
@@ -43,8 +42,8 @@ typedef enum sgs_Instruction_e
 	SI_BOOL_INV,/* B */
 	SI_INVERT,	/* B */
 
-	SI_INC,		/* C */
-	SI_DEC,		/* C */
+	SI_INC,		/* B */
+	SI_DEC,		/* B */
 	SI_ADD,		/* A */
 	SI_SUB,		/* A */
 	SI_MUL,		/* A */
@@ -89,6 +88,7 @@ struct _sgs_Variable
 	uint8_t destroying; /* whether the variable is already in a process of destruction. for container circ. ref. handling. */
 	union _sgs_Variable_data
 	{
+		/* 32/64 bit sizes, size of union isn't guaranteed to be max(all). */
 		int32_t		B;	/* 4 */
 		sgs_Integer	I;	/* 8 */
 		sgs_Real	R;	/* 8 */
