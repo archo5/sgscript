@@ -1378,7 +1378,8 @@ void sgsBC_Free( SGS_CTX, sgs_CompFunc* func )
 	sgs_Variable** var = vbeg;
 	while( var < vend )
 	{
-		sgs_Release( C, *var );
+		if( *var )
+			sgs_Release( C, *var );
 		var++;
 	}
 

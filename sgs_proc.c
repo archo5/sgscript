@@ -1153,7 +1153,6 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 			sgs_BreakIf( ptr + off > pend || ptr + off < (char*)code );
 			if( !var_getbool( C, RESVAR( arg ) ) )
 				ptr += off;
-			stk_pop1( C );
 			break;
 		}
 
