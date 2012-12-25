@@ -185,8 +185,8 @@ static void dump_opcode( char* ptr, int32_t size )
 		DOP_B( BOOL_INV );
 		DOP_B( INVERT );
 
-		DOP_C( INC );
-		DOP_C( DEC );
+		DOP_B( INC );
+		DOP_B( DEC );
 		DOP_A( ADD );
 		DOP_A( SUB );
 		DOP_A( MUL );
@@ -741,6 +741,12 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 		/* output register selection */
 		oreg = expect && node->type == SFT_OPER_P ? comp_reg_alloc( C ) : ireg;
+		if( oreg != ireg )
+		{
+			BYTE( SI_SET );
+			DATA( &oreg, 2 );
+			DATA( &ireg, 2 );
+		}
 
 		/* check for errors if this operator generates output */
 		if( expect )
@@ -754,16 +760,15 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 		/* write bytecode */
 		BYTE( *node->token == ST_OP_INC ? SI_INC : SI_DEC );
-		DATA( &oreg, 2 );
+		DATA( &ireg, 2 );
 		DATA( &ireg, 2 );
 
-		/* ireg is itself modified in pre-ops */
 		if( arg )
-			*arg = ireg;
+			*arg = oreg;
 
 		/* compile writeback */
 		FUNC_ENTER;
-		if( !compile_node_w( C, func, node->child, oreg ) ) goto fail;
+		if( !compile_node_w( C, func, node->child, ireg ) ) goto fail;
 	}
 	/* Assignment */
 	else if( assign )

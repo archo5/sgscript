@@ -233,9 +233,9 @@ static SGS_INLINE sgs_VarPtr stk_getvar( SGS_CTX, int stkid ){ return *stk_getpo
 static SGS_INLINE void stk_setvar( SGS_CTX, int stkid, sgs_VarPtr var )
 {
 	sgs_VarPtr* vpos = stk_getpos( C, stkid );
+	VAR_ACQUIRE( var );
 	VAR_RELEASE( *vpos );
 	*vpos = var;
-	VAR_ACQUIRE( var );
 }
 static SGS_INLINE void stk_setvar_leave( SGS_CTX, int stkid, sgs_VarPtr var )
 {
