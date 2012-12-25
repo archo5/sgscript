@@ -145,11 +145,6 @@ static void dump_opcode_c( const char* name, char* ptr )
 	int a1 = AS_INT16( ptr );
 	printf( "%s R%d", name, a1 );
 }
-static void dump_opcode_c1( const char* name, char* ptr )
-{
-	int a1 = AS_INT16( ptr );
-	printf( "%s %s%d", name, a1 >= 0 ? "R" : "C", a1 >= 0 ? a1 : CONSTDEC( a1 ) );
-}
 static void dump_opcode( char* ptr, int32_t size )
 {
 	char* pend = ptr + size;
@@ -164,7 +159,7 @@ static void dump_opcode( char* ptr, int32_t size )
 #define DOP_C( wat ) case SI_##wat: dump_opcode_c( #wat, ptr ); ptr += 2; break;
 		case SI_NOP: printf( "NOP   " ); break;
 
-		case SI_PUSH: dump_opcode_c1( "PUSH", ptr ); ptr += 2; break;
+		case SI_PUSH: printf( "PUSH " ); dump_rcpos( ptr ); ptr += 2; break;
 		case SI_PUSHN: printf( "PUSH_NULLS %d", (int) AS_UINT8( ptr++ ) ); break;
 		case SI_POPN: printf( "POP_N %d", (int) AS_UINT8( ptr++ ) ); break;
 		case SI_POPR: printf( "POP_REG R%d", (int) AS_INT16( ptr ) ); ptr += 2; break;
@@ -887,7 +882,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			BYTE( op );
 			DATA( &oreg, 2 );
 			DATA( &ireg1, 2 );
-			DATA( &ireg2, 2 );
+			if( node->child->next )
+				DATA( &ireg2, 2 );
 		}
 	}
 

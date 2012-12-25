@@ -818,6 +818,7 @@ static int vm_setvar( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 		VAR_RELEASE( (sgs_Variable*) olddata );
 	}
 	ht_set( &C->data, idx->data.S.ptr, idx->data.S.size, val );
+	VAR_ACQUIRE( val );
 	return SGS_SUCCESS;
 }
 
@@ -1021,17 +1022,17 @@ static int vm_call_do( SGS_CTX, sgs_Variable* func )
 	Call the virtual machine.
 	Args must equal the number of arguments pushed before the function
 */
-static int vm_call( SGS_CTX, int args, int expect )
+static int vm_call( SGS_CTX, int args, int expect, sgs_Variable* fvar )
 {
 	int stkoff = C->stack_off - C->stack_base;
 	int rvc;
 
-	sgs_BreakIf( sgs_StackSize( C ) < args + 1 );
+	sgs_BreakIf( sgs_StackSize( C ) < args );
 	C->stack_off = C->stack_top - args;
 
-	rvc = vm_call_do( C, *( C->stack_off - 1 ) );
+	rvc = vm_call_do( C, fvar );
 
-	stk_clean( C, C->stack_off - 1, C->stack_top - rvc );
+	stk_clean( C, C->stack_off, C->stack_top - rvc );
 	C->stack_off = C->stack_base + stkoff;
 
 	if( rvc > expect )
@@ -1162,7 +1163,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 			uint8_t expect = AS_UINT8( ptr++ );
 			int16_t src = AS_INT16( ptr );
 			ptr += 2;
-			vm_call( C, args, expect );
+			vm_call( C, args, expect, RESVAR( src ) );
 			break;
 		}
 
@@ -1329,8 +1330,8 @@ int sgs_SetBool( SGS_CTX, int item, int value )
 
 int sgs_SetInt( SGS_CTX, int item, sgs_Integer value )
 {
-	sgs_Variable* var = make_var( C, SVT_REAL );
-	var->data.R = value;
+	sgs_Variable* var = make_var( C, SVT_INT );
+	var->data.I = value;
 	stk_setvar_leave( C, item, var );
 	return SGS_SUCCESS;
 }
@@ -1447,7 +1448,7 @@ int sgs_Pop( SGS_CTX, int count )
 
 int sgs_Call( SGS_CTX, int args, int expect )
 {
-	return vm_call( C, args, expect );
+	return vm_call( C, args, expect, stk_getvar( C, -1 - args ) );
 }
 
 int sgs_TypeOf( SGS_CTX )
@@ -1645,32 +1646,36 @@ static int ca_compare( const char* str, const char* end, const char* type )
 	while( str < end )
 	{
 		const char* pend = ca_curend( str, "|," );
-		if( *str == '~' )
+		if( *str != '!' )
 		{
 			/*
 				accept basic promotion:
 				null/bool/int/real -> interchangeable/string
 			*/
-			str++;
 			if( strncmp( "null", str, pend - str ) == 0 ||
 				strncmp( "bool", str, pend - str ) == 0 ||
 				strncmp( "int", str, pend - str ) == 0 ||
 				strncmp( "real", str, pend - str ) == 0 )
 			{
-				const char* ptr = "real|int|bool|null";
+				const char* ptr = "!real|!int|!bool|!null";
 				if( !ca_compare( ptr, ptr + strlen( ptr ), type ) )
 					return 0;
 			}
 			else if( strncmp( "string", str, pend - str ) == 0 )
 			{
-				const char* ptr = "string|real|int|bool|null";
+				const char* ptr = "!string|!real|!int|!bool|!null";
 				if( !ca_compare( ptr, ptr + strlen( ptr ), type ) )
 					return 0;
 			}
 			return 1;
 		}
-		else if( pend - str == len && strncmp( str, type, len ) == 0 )
-			return 1;
+		/* after this point, string assumed to have "!" in front */
+		else
+		{
+			if( pend - str - 1 == len && strncmp( str + 1, type, len ) == 0 )
+				return 1;
+			str++;
+		}
 		str = pend + ( *pend == '|' );
 	}
 
