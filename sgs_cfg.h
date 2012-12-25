@@ -50,6 +50,13 @@
  #define SGS_DEBUG_EXTRA 0
 #endif
 
+
+/* profiling */
+#ifndef SGS_PROFILE_BYTECODE
+ #define SGS_PROFILE_BYTECODE 1
+#endif
+
+
 typedef unsigned short LineNum;
 
 

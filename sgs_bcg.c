@@ -184,7 +184,7 @@ static void dump_opcode( char* ptr, int32_t size )
 
 		case SI_RETN: printf( "RETURN %d", (int) AS_UINT8( ptr++ ) ); break;
 		case SI_JUMP: printf( "JUMP %d", (int) AS_INT16( ptr ) ); ptr += 2; break;
-		case SI_JMPF: printf( "JMP_F %d %d", (int) AS_INT16( ptr ), (int) AS_INT16( ptr + 2 ) ); ptr += 4; break;
+		case SI_JMPF: printf( "JMP_F " ); dump_rcpos( ptr ); printf( ", %d", (int) AS_INT16( ptr + 2 ) ); ptr += 4; break;
 		case SI_CALL: printf( "CALL args:%d expect:%d func:", (int) AS_UINT8( ptr ), (int) AS_UINT8( ptr + 1 ) ); dump_rcpos( ptr + 2 ); ptr += 4; break;
 
 		DOP_B( GETVAR );
@@ -611,9 +611,13 @@ static int compile_ident_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 
 	if( pos >= 0 )
 	{
-		BYTE( SI_SET );
-		DATA( &pos, 2 );
-		DATA( &src, 2 );
+		/* optimization */
+		if( pos != src )
+		{
+			BYTE( SI_SET );
+			DATA( &pos, 2 );
+			DATA( &src, 2 );
+		}
 	}
 	else
 	{
@@ -1289,7 +1293,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				membuf_insbuf( &nf->code, 0, lpn, 2 );
 			}
 
-#if SGS_DEBUG && SGS_DEBUG_DATA
+#if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 			fctx_dump( fctx );
 			sgsBC_Dump( nf );
 #endif
@@ -1356,7 +1360,7 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 	}
 
 	C->fctx = NULL;
-#if SGS_DEBUG && SGS_DEBUG_DATA
+#if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	fctx_dump( fctx );
 #endif
 	fctx_destroy( fctx );

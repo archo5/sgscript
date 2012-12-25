@@ -129,7 +129,7 @@ int sgs_ExecBuffer( SGS_CTX, const char* buf, int32_t size )
 	DBGINFO( "...cleaning up tokens/function tree" );
 	sgsFT_Destroy( ftree ); ftree = NULL;
 	sgsT_Free( tlist ); tlist = NULL;
-#if SGS_DEBUG && SGS_DEBUG_DATA
+#if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	sgsBC_Dump( func );
 #endif
 
