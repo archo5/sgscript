@@ -1057,7 +1057,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 		{
 			int16_t off = AS_INT16( ptr );
 			ptr += 2;
-			sgs_BreakIf( ptr + i > pend || ptr + i < (char*)code );
+			sgs_BreakIf( ptr + off > pend || ptr + off < (char*)code );
 			if( !sgs_GetBool( C, -1 ) )
 				ptr += off;
 			stk_pop1( C );

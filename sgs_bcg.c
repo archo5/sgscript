@@ -37,6 +37,24 @@ static void __ra_free( uint32_t* regs, uint32_t size, int16_t off )
 #define RA_FREE( name, pos ) __ra_free( name, 8, pos )
 
 
+static SGS_INLINE int16_t comp_reg_alloc( SGS_CTX )
+{
+	int out = C->fctx->regs++;
+	if( out > 0x7fff )
+	{
+		C->state |= SGS_HAS_ERRORS;
+		sgs_Printf( C, SGS_ERROR, -1, "Max. register count exceeded" );
+	}
+	return out;
+}
+
+static SGS_INLINE void comp_reg_unwind( SGS_CTX, int32_t pos )
+{
+	C->fctx->lastreg = C->fctx->regs;
+	C->fctx->regs = pos;
+}
+
+
 static sgs_CompFunc* make_compfunc()
 {
 	sgs_CompFunc* func = sgs_Alloc( sgs_CompFunc );
@@ -105,7 +123,7 @@ static void dump_rcpos( char* ptr )
 {
 	int a = AS_INT16( ptr );
 	char rc = a >= 0 ? 'R' : 'C';
-	if( a < 0 ) a = -a-1;
+	if( a < 0 ) a = CONSTDEC( a );
 	printf( "%c%d", rc, a );
 }
 static void dump_opcode_a( const char* name, char* ptr )
@@ -127,6 +145,11 @@ static void dump_opcode_c( const char* name, char* ptr )
 	int a1 = AS_INT16( ptr );
 	printf( "%s R%d", name, a1 );
 }
+static void dump_opcode_c1( const char* name, char* ptr )
+{
+	int a1 = AS_INT16( ptr );
+	printf( "%s %s%d", name, a1 >= 0 ? "R" : "C", a1 >= 0 ? a1 : CONSTDEC( a1 ) );
+}
 static void dump_opcode( char* ptr, int32_t size )
 {
 	char* pend = ptr + size;
@@ -141,7 +164,7 @@ static void dump_opcode( char* ptr, int32_t size )
 #define DOP_C( wat ) case SI_##wat: dump_opcode_c( #wat, ptr ); ptr += 2; break;
 		case SI_NOP: printf( "NOP   " ); break;
 
-		case SI_PUSH: printf( "PUSH %s%d", AS_INT16( ptr ) >= 0 ? "R" : "C", (int) AS_INT16( ptr ) ); ptr += 2; break;
+		case SI_PUSH: dump_opcode_c1( "PUSH", ptr ); ptr += 2; break;
 		case SI_PUSHN: printf( "PUSH_NULLS %d", (int) AS_UINT8( ptr++ ) ); break;
 		case SI_POPN: printf( "POP_N %d", (int) AS_UINT8( ptr++ ) ); break;
 		case SI_POPR: printf( "POP_REG R%d", (int) AS_INT16( ptr ) ); ptr += 2; break;
@@ -158,6 +181,7 @@ static void dump_opcode( char* ptr, int32_t size )
 		DOP_A( GETINDEX );
 		DOP_A( SETINDEX );
 
+		DOP_B( SET );
 		DOP_B( COPY );
 		DOP_A( CONCAT );
 		DOP_A( BOOL_AND );
@@ -252,7 +276,7 @@ static void preparse_varlist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	while( node )
 	{
 		if( add_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) )
-			BYTE( SI_PUSHN );
+			comp_reg_alloc( C );
 		node = node->next;
 	}
 }
@@ -278,7 +302,7 @@ static void preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		if( ST_OP_ASSIGN( *node->token ) && node->child && node->child->type == SFT_IDENT )
 		{
 			if( add_var( &C->fctx->vars, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
-				BYTE( SI_PUSHN );
+				comp_reg_alloc( C );
 		}
 	}
 	else if( node->child && node->type != SFT_FUNC )
@@ -427,23 +451,6 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf )
 
 #define INTERNAL_ERROR( loff ) sgs_printf( C, SGS_ERROR, -1, "INTERNAL ERROR occured in file %s [%d]", __FILE__, __LINE__ - (loff) )
 
-static SGS_INLINE int16_t comp_reg_alloc( SGS_CTX )
-{
-	int out = C->fctx->regs++;
-	if( out > 0x7fff )
-	{
-		C->state |= SGS_HAS_ERRORS;
-		sgs_Printf( C, SGS_ERROR, -1, "Max. register count exceeded" );
-	}
-	return out;
-}
-
-static SGS_INLINE void comp_reg_unwind( SGS_CTX, int32_t pos )
-{
-	C->fctx->lastreg = C->fctx->regs;
-	C->fctx->regs = pos;
-}
-
 static int op_pick_opcode( int oper, int binary )
 {
 	if( !binary )
@@ -496,7 +503,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 static void compile_ident( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
 {
 	int16_t pos = add_const_s( C, func, node->token[ 1 ], (const char*) node->token + 2 );
-	*out = -pos - 1;
+	*out = CONSTENC( pos );
 }
 
 
@@ -511,19 +518,19 @@ static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* 
 	if( is_keyword( node->token, "null" ) )
 	{
 		pos = add_const_null( C, func );
-		*out = -pos-1;
+		*out = CONSTENC( pos );
 		return 1;
 	}
 	if( is_keyword( node->token, "true" ) )
 	{
 		pos = add_const_b( C, func, TRUE );
-		*out = -pos-1;
+		*out = CONSTENC( pos );
 		return 1;
 	}
 	if( is_keyword( node->token, "false" ) )
 	{
 		pos = add_const_b( C, func, FALSE );
-		*out = -pos-1;
+		*out = CONSTENC( pos );
 		return 1;
 	}
 	if( *node->token == ST_KEYWORD )
@@ -609,15 +616,15 @@ static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* op
 {
 	if( *node->token == ST_NUMINT )
 	{
-		*opos = -1-add_const_i( C, func, AS_INTEGER( node->token + 1 ) );
+		*opos = CONSTENC( add_const_i( C, func, AS_INTEGER( node->token + 1 ) ) );
 	}
 	else if( *node->token == ST_NUMREAL )
 	{
-		*opos = -1-add_const_r( C, func, AS_REAL( node->token + 1 ) );
+		*opos = CONSTENC( add_const_r( C, func, AS_REAL( node->token + 1 ) ) );
 	}
 	else if( *node->token == ST_STRING )
 	{
-		*opos = -1-add_const_s( C, func, AS_INT32( node->token + 1 ), (const char*) node->token + 5 );
+		*opos = CONSTENC( add_const_s( C, func, AS_INT32( node->token + 1 ), (const char*) node->token + 5 ) );
 	}
 	else
 	{
@@ -1248,6 +1255,12 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			preparse_varlists( C, nf, node->child->next );
 			FUNC_ENTER;
 			if( !compile_node( C, nf, node->child->next ) ) { fctx_destroy( fctx ); C->fctx = bkfctx; goto fail; }
+
+			{
+				uint8_t lpn[ 2 ] = { SI_PUSHN, C->fctx->lastreg };
+				membuf_insbuf( &nf->code, 0, lpn, 2 );
+			}
+
 #if SGS_DEBUG && SGS_DEBUG_DATA
 			fctx_dump( fctx );
 			sgsBC_Dump( nf );
@@ -1307,6 +1320,12 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 	preparse_varlists( C, func, tree );
 	if( !compile_node( C, func, tree ) )
 		goto fail;
+	comp_reg_unwind( C, 0 );
+
+	{
+		uint8_t lpn[ 2 ] = { SI_PUSHN, C->fctx->lastreg };
+		membuf_insbuf( &func->code, 0, lpn, 2 );
+	}
 
 	C->fctx = NULL;
 #if SGS_DEBUG && SGS_DEBUG_DATA

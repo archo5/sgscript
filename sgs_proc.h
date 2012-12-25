@@ -7,6 +7,9 @@
 #include "sgs_fnt.h"
 
 
+#define CONSTENC( x ) ((x)|0x8000)
+#define CONSTDEC( x ) ((x)&0x7fff)
+
 typedef enum sgs_Instruction_e
 {
 	SI_NOP = 0,
