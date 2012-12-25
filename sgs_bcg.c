@@ -633,21 +633,11 @@ static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* op
 static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out, int expect )
 {
 	int i = 0;
-	int16_t funcpos, argpos, retpos = -1;
+	int16_t funcpos = -1, retpos = -1;
 
 	/* load function */
 	FUNC_ENTER;
 	if( !compile_node_r( C, func, node->child, &funcpos ) ) return 0;
-
-	/*
-		object-orientation: TODO
-	if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
-	{
-		FUNC_ENTER;
-		if( !compile_node_r( C, func, node->child->child ) ) return 0;
-		i++;
-	}
-	*/
 
 	if( expect )
 		retpos = comp_reg_alloc( C );
@@ -657,9 +647,22 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 	/* load arguments */
 	i = 0;
 	{
+		/* passing objects where the call is formed appropriately */
+		/* TODO: implement client side after function expressions */
+		int16_t argpos = -1;
+		if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
+		{
+			FUNC_ENTER;
+			if( !compile_node_r( C, func, node->child->child, &argpos ) ) return 0;
+			BYTE( SI_PUSH );
+			DATA( &argpos, 2 );
+			i++;
+		}
+
 		FTNode* n = node->child->next->child;
 		while( n )
 		{
+			argpos = -1;
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, n, &argpos ) ) return 0;
 			BYTE( SI_PUSH );
@@ -714,7 +717,7 @@ static int compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 	if( !compile_node_r( C, func, node->child, &var ) ) return 0;
 	FUNC_ENTER;
 	if( !compile_node_r( C, func, node->child->next, &name ) ) return 0;
-	BYTE( SI_GETINDEX );
+	BYTE( SI_SETINDEX );
 	DATA( &var, 2 );
 	DATA( &name, 2 );
 	DATA( &src, 2 );
@@ -755,7 +758,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		DATA( &ireg, 2 );
 
 		/* ireg is itself modified in pre-ops */
-		if( out )
+		if( arg )
 			*arg = ireg;
 
 		/* compile writeback */
@@ -765,8 +768,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 	/* Assignment */
 	else if( assign )
 	{
-		/* 2 operands */
-		if( *node->token == ST_OP_SET && *node->token == ST_OP_COPY )
+		/* 1 operand */
+		if( *node->token == ST_OP_SET || *node->token == ST_OP_COPY )
 		{
 			int16_t ireg;
 
@@ -774,7 +777,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child->next, &ireg ) ) goto fail;
 
-			if( out )
+			if( arg )
 				*arg = ireg;
 
 			if( *node->token == ST_OP_SET )
@@ -796,7 +799,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 				DATA( &ireg, 2 );
 			}
 		}
-		/* 3 operands */
+		/* 2 operands */
 		else
 		{
 			uint8_t op;
@@ -814,6 +817,9 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			DATA( &oreg, 2 );
 			DATA( &ireg1, 2 );
 			DATA( &ireg2, 2 );
+
+			if( arg )
+				*arg = oreg;
 
 			/* compile write */
 			FUNC_ENTER;
@@ -835,7 +841,11 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		{
 			/* oreg points to output register if "out", source register otherwise */
 			if( out )
+			{
 				oreg = comp_reg_alloc( C );
+				if( arg )
+					*arg = oreg;
+			}
 			else
 				oreg = *arg;
 
@@ -874,7 +884,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 				if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
 			}
 
-			if( out )
+			if( arg )
 				*arg = oreg;
 
 			/* compile op */
@@ -937,7 +947,7 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t sr
 	case SFT_OPER:
 	case SFT_OPER_P:
 		FUNC_HIT( "W_OPER" );
-		if( !compile_oper( C, func, node, NULL, 0, 1 ) ) goto fail;
+		if( !compile_oper( C, func, node, &src, 0, 1 ) ) goto fail;
 		break;
 
 	case SFT_FCALL:
