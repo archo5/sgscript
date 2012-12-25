@@ -34,6 +34,7 @@ typedef enum sgs_Instruction_e
 		A1: (xormask, i16 out, s1, s2)
 		B: (i16 out, s1)
 	*/
+	SI_SET,		/* B */
 	SI_COPY,	/* B */
 	SI_CONCAT,	/* A */
 	SI_BOOL_AND,/* A */

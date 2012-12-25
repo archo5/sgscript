@@ -304,6 +304,24 @@ static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 }
 
 
+static int add_const_null( SGS_CTX, sgs_CompFunc* func )
+{
+	sgs_Variable** vbeg = (sgs_Variable**) func->consts.ptr;
+	sgs_Variable** vend = (sgs_Variable**) ( func->consts.ptr + func->consts.size );
+	sgs_Variable** var = vbeg;
+	sgs_Variable* nvar = NULL;
+	while( var < vend )
+	{
+		if( !*var )
+			return var - vbeg;
+		var++;
+	}
+	UNUSED( C );
+
+	membuf_appbuf( &func->consts, &nvar, sizeof( var ) );
+	return vend - vbeg;
+}
+
 static int add_const_b( SGS_CTX, sgs_CompFunc* func, int32_t bval )
 {
 	sgs_Variable** vbeg = (sgs_Variable**) func->consts.ptr;
@@ -312,11 +330,10 @@ static int add_const_b( SGS_CTX, sgs_CompFunc* func, int32_t bval )
 	sgs_Variable* nvar;
 	while( var < vend )
 	{
-		if( (*var)->type == SVT_BOOL && (*var)->data.B == bval )
+		if( *var && (*var)->type == SVT_BOOL && (*var)->data.B == bval )
 			return var - vbeg;
 		var++;
 	}
-	UNUSED( C );
 
 	nvar = sgsVM_VarCreate( C, SVT_BOOL );
 	nvar->data.B = bval;
@@ -332,7 +349,7 @@ static int add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Integer ival )
 	sgs_Variable* nvar;
 	while( var < vend )
 	{
-		if( (*var)->type == SVT_INT && (*var)->data.I == ival )
+		if( *var && (*var)->type == SVT_INT && (*var)->data.I == ival )
 			return var - vbeg;
 		var++;
 	}
@@ -352,7 +369,7 @@ static int add_const_r( SGS_CTX, sgs_CompFunc* func, sgs_Real rval )
 	sgs_Variable* nvar;
 	while( var < vend )
 	{
-		if( (*var)->type == SVT_REAL && (*var)->data.R == rval )
+		if( *var && (*var)->type == SVT_REAL && (*var)->data.R == rval )
 			return var - vbeg;
 		var++;
 	}
@@ -372,7 +389,7 @@ static int add_const_s( SGS_CTX, sgs_CompFunc* func, int32_t len, const char* st
 	sgs_Variable* nvar;
 	while( var < vend )
 	{
-		if( (*var)->type == SVT_STRING
+		if( *var && (*var)->type == SVT_STRING
 			&& (*var)->data.S.size == len
 			&& memcmp( (*var)->data.S.ptr, str, len ) == 0 )
 			return var - vbeg;
@@ -472,41 +489,41 @@ static int op_pick_opcode( int oper, int binary )
 static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node );
 static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out );
 static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t src );
-static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out, int expect );
+static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg, int out, int expect );
 
 
-/*
-static void compile_ident( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t dest )
+
+static void compile_ident( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
 {
 	int16_t pos = add_const_s( C, func, node->token[ 1 ], (const char*) node->token + 2 );
-	BYTE( SI_COPY );
-	DATA( &dest, 2 );
-	DATA( &pos, 2 );
+	*out = -pos - 1;
 }
-*/
+
 
 static int is_keyword( TokenList tok, const char* text )
 {
 	return *tok == ST_KEYWORD && tok[ 1 ] == strlen( text ) && strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
 }
 
-#if 0
-static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node )
+static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
 {
 	int16_t pos;
-	if( is_keyword( node->token, "null" ) ) { BYTE( SI_PUSHN ); return 1; }
+	if( is_keyword( node->token, "null" ) )
+	{
+		pos = add_const_null( C, func );
+		*out = -pos-1;
+		return 1;
+	}
 	if( is_keyword( node->token, "true" ) )
 	{
 		pos = add_const_b( C, func, TRUE );
-		BYTE( SI_PUSHC );
-		DATA( &pos, 2 );
+		*out = -pos-1;
 		return 1;
 	}
 	if( is_keyword( node->token, "false" ) )
 	{
 		pos = add_const_b( C, func, FALSE );
-		BYTE( SI_PUSHC );
-		DATA( &pos, 2 );
+		*out = -pos-1;
 		return 1;
 	}
 	if( *node->token == ST_KEYWORD )
@@ -534,18 +551,20 @@ static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 	if( pos >= 0 )
 	{
-		BYTE( SI_PUSHS );
-		DATA( &pos, 2 );
+		*out = pos;
 	}
 	else
 	{
-		compile_ident( C, func, node );
+		*out = comp_reg_alloc( C );
+		compile_ident( C, func, node, &pos );
 		BYTE( SI_GETVAR );
+		DATA( out, 2 );
+		DATA( &pos, 2 );
 	}
 	return 1;
 }
 
-static int compile_ident_w( SGS_CTX, sgs_CompFunc* func, FTNode* node )
+static int compile_ident_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t src )
 {
 	int16_t pos;
 	if( *node->token == ST_KEYWORD )
@@ -572,17 +591,19 @@ static int compile_ident_w( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 	if( pos >= 0 )
 	{
-		BYTE( SI_POPS );
+		BYTE( SI_SET );
 		DATA( &pos, 2 );
+		DATA( &src, 2 );
 	}
 	else
 	{
-		compile_ident( C, func, node );
+		compile_ident( C, func, node, &pos );
 		BYTE( SI_SETVAR );
+		DATA( &pos, 2 );
+		DATA( &src, 2 );
 	}
 	return 1;
 }
-#endif
 
 static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* opos )
 {
@@ -607,13 +628,17 @@ static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* op
 }
 
 
-static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int expect )
+static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out, int expect )
 {
 	int i = 0;
-	int16_t funcpos;
+	int16_t funcpos, argpos, retpos = -1;
 
+	/* load function */
 	FUNC_ENTER;
 	if( !compile_node_r( C, func, node->child, &funcpos ) ) return 0;
+	BYTE( SI_PUSH );
+	DATA( &funcpos, 2 );
+
 	/*
 		object-orientation: TODO
 	if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
@@ -623,27 +648,50 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int expect 
 		i++;
 	}
 	*/
-	FUNC_ENTER;
-	if( !compile_node_r( C, func, node->child->next, NULL ) ) return 0;
+
+	if( expect )
+		retpos = comp_reg_alloc( C );
+	for( i = 1; i < expect; ++i )
+		comp_reg_alloc( C );
+
+	/* load arguments */
+	i = 0;
 	{
 		FTNode* n = node->child->next->child;
 		while( n )
 		{
+			FUNC_ENTER;
+			if( !compile_node_r( C, func, node->child->next, &argpos ) ) return 0;
+			BYTE( SI_PUSH );
+			DATA( &argpos, 2 );
 			i++;
 			n = n->next;
 		}
 	}
 
+	/* compile call */
 	BYTE( SI_CALL );
 	BYTE( i );
 	BYTE( expect );
 	DATA( &funcpos, 2 );
+
+	/* compile writeback */
+	while( expect )
+	{
+		int16_t cra;
+		expect--;
+		cra = retpos + expect;
+		out[ expect ] = cra;
+		BYTE( SI_POPR );
+		DATA( &cra, 2 );
+	}
+
 	return 1;
 }
 
 static int compile_index_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
 {
-	int16_t var, name, opos = C->fctx->regs++;
+	int16_t var, name, opos = comp_reg_alloc( C );
 	int32_t regpos = C->fctx->regs;
 	FUNC_ENTER;
 	if( !compile_node_r( C, func, node->child, &var ) ) return 0;
@@ -674,18 +722,24 @@ static int compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 	return 1;
 }
 
-static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out, int expect )
+static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg, int out, int expect )
 {
-	int i = ST_OP_ASSIGN( *node->token );
+	int assign = ST_OP_ASSIGN( *node->token );
 	FUNC_BEGIN;
 
 	/* Increment / decrement */
 	if( *node->token == ST_OP_INC || *node->token == ST_OP_DEC )
 	{
 		int16_t ireg, oreg;
+
+		/* register with input data */
 		FUNC_ENTER;
 		if( !compile_node_r( C, func, node->child, &ireg ) ) goto fail;
-		oreg = expect && node->type == SFT_OPER_P ? C->fctx->regs++ : ireg;
+
+		/* output register selection */
+		oreg = expect && node->type == SFT_OPER_P ? comp_reg_alloc( C ) : ireg;
+
+		/* check for errors if this operator generates output */
 		if( expect )
 		{
 			if( expect != 1 )
@@ -694,50 +748,84 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 				goto fail;
 			}
 		}
+
+		/* write bytecode */
 		BYTE( *node->token == ST_OP_INC ? SI_INC : SI_DEC );
 		DATA( &oreg, 2 );
 		DATA( &ireg, 2 );
+
+		/* ireg is itself modified in pre-ops */
 		if( out )
-			*out = ireg;
+			*arg = ireg;
+
+		/* compile writeback */
+		FUNC_ENTER;
 		if( !compile_node_w( C, func, node->child, oreg ) ) goto fail;
 	}
 	/* Assignment */
-	else if( i )
+	else if( assign )
 	{
-		char op;
-		if( *node->token != ST_OP_SET && *node->token != ST_OP_COPY )
+		/* 2 operands */
+		if( *node->token == ST_OP_SET && *node->token == ST_OP_COPY )
 		{
-			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child ) ) goto fail;
-		}
-		FUNC_ENTER;
-		if( !compile_node_r( C, func, node->child->next ) ) goto fail;
+			int16_t ireg;
 
-		op = op_pick_opcode( *node->token, 1 );
-		if( op ) BYTE( op );
-
-		if( *node->token != ST_OP_COPY )
-		{
+			/* get source data register */
 			FUNC_ENTER;
-			if( !compile_node_w( C, func, node->child ) ) goto fail;
+			if( !compile_node_r( C, func, node->child->next, &ireg ) ) goto fail;
+
+			if( out )
+				*arg = ireg;
+
+			if( *node->token == ST_OP_SET )
+			{
+				/* just set the contents */
+				FUNC_ENTER;
+				if( !compile_node_w( C, func, node->child, ireg ) ) goto fail;
+			}
+			else
+			{
+				/* load the original variable and copy data to it */
+				int16_t oreg;
+
+				FUNC_ENTER;
+				if( !compile_node_r( C, func, node->child, &oreg ) ) goto fail;
+
+				BYTE( SI_COPY );
+				DATA( &oreg, 2 );
+				DATA( &ireg, 2 );
+			}
 		}
+		/* 3 operands */
 		else
 		{
-			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child ) ) goto fail;
-			BYTE( SI_COPY );
-		}
+			uint8_t op;
+			int16_t ireg1, ireg2, oreg = comp_reg_alloc( C );
 
-		if( expect )
-		{
+			/* get source data registers */
 			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child ) ) goto fail;
+			if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
+			FUNC_ENTER;
+			if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
+
+			/* compile op */
+			op = op_pick_opcode( *node->token, 1 );
+			BYTE( op );
+			DATA( &oreg, 2 );
+			DATA( &ireg1, 2 );
+			DATA( &ireg2, 2 );
+
+			/* compile write */
+			FUNC_ENTER;
+			if( !compile_node_w( C, func, node->child, oreg ) ) goto fail;
 		}
 	}
-	/* Any other, needs expected output */
+	/* Any other, needs expected output to be compiled (optimization) */
 	else if( expect )
 	{
-		if( expect != 1 && expect != 2 )
+		int16_t ireg1, ireg2, oreg;
+
+		if( expect != 1 )
 		{
 			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Too many expected outputs for operator." );
 			goto fail;
@@ -745,39 +833,56 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 
 		if( *node->token == ST_OP_MMBR )
 		{
+			/* oreg points to output register if "out", source register otherwise */
+			if( out )
+				oreg = comp_reg_alloc( C );
+			else
+				oreg = *arg;
+
+			/* get source data registers */
 			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child ) ) goto fail;
-			if( expect == 2 )
-			{
-				BYTE( SI_DUP );
-			}
+			if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
 
 			if( node->child->next->type == SFT_IDENT )
-				compile_ident( C, func, node->child->next );
+				compile_ident( C, func, node->child->next, &ireg2 );
 			else
 			{
 				FUNC_ENTER;
-				if( !compile_node_r( C, func, node->child->next ) ) goto fail;
+				if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
 			}
-			BYTE( out ? SI_SETPROP : SI_GETPROP );
+
+			/* compile op */
+			BYTE( out ? SI_GETPROP : SI_SETPROP );
+			if( out ) DATA( &oreg, 2 );
+			DATA( &ireg1, 2 );
+			DATA( &ireg2, 2 );
+			if( !out ) DATA( &oreg, 2 );
+
 		}
 		else
 		{
-			char op;
+			uint8_t op;
+
+			oreg = comp_reg_alloc( C );
+
+			/* get source data registers */
 			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child ) ) goto fail;
-			if( expect == 2 )
-			{
-				BYTE( SI_DUP );
-			}
+			if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
 			if( node->child->next )
 			{
 				FUNC_ENTER;
-				if( !compile_node_r( C, func, node->child->next ) ) goto fail;
+				if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
 			}
 
+			if( out )
+				*arg = oreg;
+
+			/* compile op */
 			op = op_pick_opcode( *node->token, !!node->child->next );
-			if( op ) BYTE( op );
+			BYTE( op );
+			DATA( &oreg, 2 );
+			DATA( &ireg1, 2 );
+			DATA( &ireg2, 2 );
 		}
 	}
 
@@ -831,12 +936,12 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t sr
 	case SFT_OPER:
 	case SFT_OPER_P:
 		FUNC_HIT( "W_OPER" );
-		if( !compile_oper( C, func, node, NULL, 1 ) ) goto fail;
+		if( !compile_oper( C, func, node, NULL, 0, 1 ) ) goto fail;
 		break;
 
 	case SFT_FCALL:
 		FUNC_HIT( "W_FCALL" );
-		if( !compile_fcall( C, func, node, 1 ) ) goto fail;
+		if( !compile_fcall( C, func, node, NULL, 0 ) ) goto fail;
 		break;
 
 	case SFT_INDEX:
@@ -928,12 +1033,12 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_OPER:
 	case SFT_OPER_P:
 		FUNC_HIT( "OPERATOR" );
-		if( !compile_oper( C, func, node, 0, 0 ) ) goto fail;
+		if( !compile_oper( C, func, node, NULL, 0, 0 ) ) goto fail;
 		break;
 
 	case SFT_FCALL:
 		FUNC_HIT( "FCALL" );
-		if( !compile_fcall( C, func, node, 0 ) ) goto fail;
+		if( !compile_fcall( C, func, node, NULL, 0 ) ) goto fail;
 		break;
 
 	case SFT_EXPLIST:
@@ -957,8 +1062,11 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			FTNode* n = node->child;
 			while( n )
 			{
+				int16_t arg = 0;
 				FUNC_ENTER;
-				if( !compile_node_r( C, func, n ) ) goto fail;
+				if( !compile_node_r( C, func, n, &arg ) ) goto fail;
+				BYTE( SI_PUSH );
+				DATA( &arg, 2 );
 				n = n->next;
 				num++;
 			}
@@ -980,101 +1088,113 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 	case SFT_IFELSE:
 		FUNC_HIT( "IF/ELSE" );
-		FUNC_ENTER;
-		if( !compile_node_r( C, func, node->child ) ) goto fail;
-		BYTE( SI_JMPF );
 		{
-			int32_t jp1, jp2 = 0, jp3 = 0;
-			uint16_t pos = 0;
-			DATA( &pos, 2 );
-			jp1 = func->code.size;
-
+			int16_t arg = 0;
 			FUNC_ENTER;
-			if( !compile_node( C, func, node->child->next ) ) goto fail;
-
-			if( node->child->next->next )
+			if( !compile_node_r( C, func, node->child, &arg ) ) goto fail;
+			BYTE( SI_JMPF );
+			DATA( &arg, 2 );
 			{
-				BYTE( SI_JUMP );
+				int32_t jp1, jp2 = 0, jp3 = 0;
+				uint16_t pos = 0;
 				DATA( &pos, 2 );
-				jp2 = func->code.size;
-				AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
+				jp1 = func->code.size;
 
 				FUNC_ENTER;
-				if( !compile_node( C, func, node->child->next->next ) ) goto fail;
-				jp3 = func->code.size;
-				AS_INT16( func->code.ptr + jp2 - 2 ) = jp3 - jp2;
-			}
-			else
-			{
-				AS_INT16( func->code.ptr + jp1 - 2 ) = func->code.size - jp1;
+				if( !compile_node( C, func, node->child->next ) ) goto fail;
+
+				if( node->child->next->next )
+				{
+					BYTE( SI_JUMP );
+					DATA( &pos, 2 );
+					jp2 = func->code.size;
+					AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
+
+					FUNC_ENTER;
+					if( !compile_node( C, func, node->child->next->next ) ) goto fail;
+					jp3 = func->code.size;
+					AS_INT16( func->code.ptr + jp2 - 2 ) = jp3 - jp2;
+				}
+				else
+				{
+					AS_INT16( func->code.ptr + jp1 - 2 ) = func->code.size - jp1;
+				}
 			}
 		}
 		break;
 
 	case SFT_WHILE:
 		FUNC_HIT( "WHILE" );
-		C->fctx->loops++;
-		i = func->code.size;
-		FUNC_ENTER;
-		if( !compile_node_r( C, func, node->child ) ) goto fail; /* test */
-		BYTE( SI_JMPF );
 		{
-			int16_t off;
-			int32_t jp1, jp2 = 0;
-			uint16_t pos = 0;
-			DATA( &pos, 2 );
-			jp1 = func->code.size;
-
+			int16_t arg = -1;
+			C->fctx->loops++;
+			i = func->code.size;
 			FUNC_ENTER;
-			if( !compile_node( C, func, node->child->next ) ) goto fail; /* while */
+			if( !compile_node_r( C, func, node->child, &arg ) ) goto fail; /* test */
+			BYTE( SI_JMPF );
+			DATA( &arg, 2 );
+			{
+				int16_t off;
+				int32_t jp1, jp2 = 0;
+				uint16_t pos = 0;
+				DATA( &pos, 2 );
+				jp1 = func->code.size;
 
-			if( !compile_breaks( C, func, 1 ) )
+				FUNC_ENTER;
+				if( !compile_node( C, func, node->child->next ) ) goto fail; /* while */
+
+				if( !compile_breaks( C, func, 1 ) )
+					goto fail;
+
+				BYTE( SI_JUMP );
+				jp2 = func->code.size + 2;
+				off = i - jp2;
+				DATA( &off, 2 );
+				AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
+			}
+			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
-
-			BYTE( SI_JUMP );
-			jp2 = func->code.size + 2;
-			off = i - jp2;
-			DATA( &off, 2 );
-			AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
+			C->fctx->loops--;
 		}
-		if( !compile_breaks( C, func, 0 ) )
-			goto fail;
-		C->fctx->loops--;
 		break;
 
 	case SFT_FOR:
 		FUNC_HIT( "FOR" );
-		C->fctx->loops++;
-		FUNC_ENTER;
-		if( !compile_node( C, func, node->child ) ) goto fail; /* init */
-		i = func->code.size;
-		FUNC_ENTER;
-		if( !compile_node_r( C, func, node->child->next ) ) goto fail; /* test */
-		BYTE( SI_JMPF );
 		{
-			int16_t off;
-			int32_t jp1, jp2 = 0;
-			uint16_t pos = 0;
-			DATA( &pos, 2 );
-			jp1 = func->code.size;
-
+			int16_t arg = -1;
+			C->fctx->loops++;
 			FUNC_ENTER;
-			if( !compile_node( C, func, node->child->next->next->next ) ) goto fail; /* block */
+			if( !compile_node( C, func, node->child ) ) goto fail; /* init */
+			i = func->code.size;
+			FUNC_ENTER;
+			if( !compile_node_r( C, func, node->child->next, &arg ) ) goto fail; /* test */
+			BYTE( SI_JMPF );
+			DATA( &arg, 2 );
+			{
+				int16_t off;
+				int32_t jp1, jp2 = 0;
+				uint16_t pos = 0;
+				DATA( &pos, 2 );
+				jp1 = func->code.size;
 
-			if( !compile_breaks( C, func, 1 ) )
+				FUNC_ENTER;
+				if( !compile_node( C, func, node->child->next->next->next ) ) goto fail; /* block */
+
+				if( !compile_breaks( C, func, 1 ) )
+					goto fail;
+				FUNC_ENTER;
+				if( !compile_node( C, func, node->child->next->next ) ) goto fail; /* incr */
+
+				BYTE( SI_JUMP );
+				jp2 = func->code.size + 2;
+				off = i - jp2;
+				DATA( &off, 2 );
+				AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
+			}
+			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
-			FUNC_ENTER;
-			if( !compile_node( C, func, node->child->next->next ) ) goto fail; /* incr */
-
-			BYTE( SI_JUMP );
-			jp2 = func->code.size + 2;
-			off = i - jp2;
-			DATA( &off, 2 );
-			AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
+			C->fctx->loops--;
 		}
-		if( !compile_breaks( C, func, 0 ) )
-			goto fail;
-		C->fctx->loops--;
 		break;
 
 	case SFT_BREAK:
@@ -1136,13 +1256,11 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			C->fctx = bkfctx;
 
 			pos = add_const_f( C, func, nf );
-			BYTE( SI_PUSHC );
-			DATA( &pos, 2 );
 
 			if( node->child->next->next )
 			{
 				FUNC_ENTER;
-				if( !compile_node_w( C, func, node->child->next->next ) ) goto fail;
+				if( !compile_node_w( C, func, node->child->next->next, pos ) ) goto fail;
 			}
 		}
 		break;
@@ -1156,9 +1274,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			{
 				if( pp->child )
 				{
-					if( !compile_node_r( C, func, pp->child ) ) goto fail;
+					int16_t arg = -1;
+					if( !compile_node_r( C, func, pp->child, &arg ) ) goto fail;
 					if( !pp->token || *pp->token != ST_IDENT ) goto fail;
-					compile_ident_w( C, func, pp );
+					compile_ident_w( C, func, pp, arg );
 				}
 				pp = pp->next;
 			}

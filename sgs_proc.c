@@ -1081,7 +1081,8 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 		case SI_GETINDEX: { ARGS_3; vm_getprop( C, a1, a2, a3, TRUE ); break; }
 		case SI_SETINDEX: { ARGS_3; vm_setprop( C, a1, a2, a3, TRUE ); break; }
 
-		case SI_COPY: { ARGS_2; vm_assign( C, a1, a2 ); break; }
+		case SI_SET: { ARGS_2; vm_assign( C, a1, a2 ); break; }
+		case SI_COPY: { ARGS_2; vm_copy( C, a1, a2 ); break; }
 		case SI_CONCAT: { ARGS_3; vm_op_concat( C, a1, a2, a3 ); break; }
 		case SI_BOOL_AND: { ARGS_3; vm_op_booland( C, a1, a2, a3 ); break; }
 		case SI_BOOL_OR: { ARGS_3; vm_op_boolor( C, a1, a2, a3 ); break; }
@@ -1196,52 +1197,6 @@ int sgsVM_ExecFn( SGS_CTX, const void* code, int32_t codesize, const void* data,
 	return ret;
 }
 
-
-
-/* Dictionary */
-/*
-void dict_construct( void** ptr )
-{
-	*ptr = sgs_Alloc( DICT_STRUCT );
-	DICT_CREATE( * (DICT_STRUCT**) ptr );
-}
-
-int dict_destruct( SGS_CTX, void* data )
-{
-	DICT_DESTROY( (DICT_STRUCT*) data );
-	return 1;
-}
-
-int dict_getindex( SGS_CTX, void* data )
-{
-	sgs_Variable* var = DICT_FIND( (DICT_STRUCT*) data, stk_gettop( C )->data.S.ptr );
-	stk_pop2( C );
-	stk_push( C, var );
-	return 1;
-}
-
-int dict_setindex( SGS_CTX, void* data )
-{
-	DICT_SET( (DICT_STRUCT*) data, stk_getvar( C, -2 )->data.S.ptr, stk_getvar( C, -1 ) );
-	stk_pop( C, 3 );
-	return 1;
-}
-
-void* dict_iface[] =
-{
-	SOP_DESTRUCT, dict_destruct,
-	SOP_GETINDEX, dict_getindex,
-	SOP_SETINDEX, dict_setindex,
-	SOP_END,
-};
-
-sgs_Variable* sgsVM_VarMake_Dict()
-{
-	sgs_Variable* var = make_var( SVT_OBJECT );
-	dict_construct( &var->data.O.data );
-	var->data.O.iface = dict_iface;
-}
-*/
 
 /* INTERFACE */
 
