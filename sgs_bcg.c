@@ -134,10 +134,26 @@ static void dump_opcode_a( const char* name, char* ptr )
 	printf( ", " );
 	dump_rcpos( ptr + 4 );
 }
+static void dump_opcode_a1( const char* name, char* ptr )
+{
+	printf( "%s ", name );
+	dump_rcpos( ptr );
+	printf( " <= " );
+	dump_rcpos( ptr + 2 );
+	printf( ", " );
+	dump_rcpos( ptr + 4 );
+}
 static void dump_opcode_b( const char* name, char* ptr )
 {
 	int a1 = AS_INT16( ptr );
 	printf( "%s R%d <= ", name, a1 );
+	dump_rcpos( ptr + 2 );
+}
+static void dump_opcode_b1( const char* name, char* ptr )
+{
+	printf( "%s ", name );
+	dump_rcpos( ptr );
+	printf( " <= " );
 	dump_rcpos( ptr + 2 );
 }
 static void dump_opcode_c( const char* name, char* ptr )
@@ -155,7 +171,9 @@ static void dump_opcode( char* ptr, int32_t size )
 		switch( instr )
 		{
 #define DOP_A( wat ) case SI_##wat: dump_opcode_a( #wat, ptr ); ptr += 6; break;
+#define DOP_A1( wat ) case SI_##wat: dump_opcode_a1( #wat, ptr ); ptr += 6; break;
 #define DOP_B( wat ) case SI_##wat: dump_opcode_b( #wat, ptr ); ptr += 4; break;
+#define DOP_B1( wat ) case SI_##wat: dump_opcode_b1( #wat, ptr ); ptr += 4; break;
 #define DOP_C( wat ) case SI_##wat: dump_opcode_c( #wat, ptr ); ptr += 2; break;
 		case SI_NOP: printf( "NOP   " ); break;
 
@@ -170,11 +188,11 @@ static void dump_opcode( char* ptr, int32_t size )
 		case SI_CALL: printf( "CALL args:%d expect:%d func:", (int) AS_UINT8( ptr ), (int) AS_UINT8( ptr + 1 ) ); dump_rcpos( ptr + 2 ); ptr += 4; break;
 
 		DOP_B( GETVAR );
-		DOP_B( SETVAR );
+		DOP_B1( SETVAR );
 		DOP_A( GETPROP );
-		DOP_A( SETPROP );
+		DOP_A1( SETPROP );
 		DOP_A( GETINDEX );
-		DOP_A( SETINDEX );
+		DOP_A1( SETINDEX );
 
 		DOP_B( SET );
 		DOP_B( COPY );
@@ -265,7 +283,7 @@ static int add_var( StrBuf* S, char* str, int len )
 #define DATA( ptr, sz )	membuf_appbuf( &func->code, (ptr), (sz) )
 
 
-static void preparse_varlist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
+static void preparse_varlist( SGS_CTX, FTNode* node )
 {
 	node = node->child;
 	while( node )
@@ -289,7 +307,7 @@ static void preparse_gvlist( SGS_CTX, FTNode* node )
 static void preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 {
 	if( node->type == SFT_VARLIST )
-		preparse_varlist( C, func, node );
+		preparse_varlist( C, node );
 	else if( node->type == SFT_GVLIST )
 		preparse_gvlist( C, node );
 	else if( node->type == SFT_OPER )
@@ -1264,6 +1282,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			preparse_varlists( C, nf, node->child->next );
 			FUNC_ENTER;
 			if( !compile_node( C, nf, node->child->next ) ) { fctx_destroy( fctx ); C->fctx = bkfctx; goto fail; }
+			comp_reg_unwind( C, 0 );
 
 			{
 				uint8_t lpn[ 2 ] = { SI_PUSHN, C->fctx->lastreg };
@@ -1277,7 +1296,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			fctx_destroy( fctx );
 			C->fctx = bkfctx;
 
-			pos = add_const_f( C, func, nf );
+			pos = CONSTENC( add_const_f( C, func, nf ) );
 
 			if( node->child->next->next )
 			{

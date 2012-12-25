@@ -1047,11 +1047,13 @@ static int vm_call( SGS_CTX, int args, int expect, sgs_Variable* fvar )
 }
 
 
+#if SGS_DEBUG && SGS_DEBUG_VALIDATE
 static SGS_INLINE sgs_VarPtr const_getvar( sgs_VarPtr* consts, uint32_t count, int16_t off )
 {
 	sgs_BreakIf( (int)off >= (int)count );
 	return consts[ off ];
 }
+#endif
 
 /*
 	Main VM execution loop
@@ -1073,9 +1075,10 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 	sgs_Variable** cpend = (sgs_Variable**) ( ((char*)data) + datasize );
 	uint32_t constcount = cpend - cptr;
 	int stkoff = C->stack_top - C->stack_off;
+#  define RESVAR( v ) ( ( (v) & 0x8000 ) ? const_getvar( cptr, constcount, (v) & 0x7fff ) : stk_getlvar( C, (v) ) )
+#else
+#  define RESVAR( v ) ( ( (v) & 0x8000 ) ? cptr[ (v) & 0x7fff ] : stk_getlvar( C, (v) ) )
 #endif
-
-#define RESVAR( v ) ( ( (v) & 0x8000 ) ? const_getvar( cptr, constcount, (v) & 0x7fff ) : stk_getlvar( C, (v) ) )
 
 	/* preallocated helpers */
 	int32_t ret = 0;
@@ -1168,8 +1171,8 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 
 #define ARGPOS_2 int16_t a1, a2; a1 = AS_INT16( ptr ); ptr += 2; a2 = AS_INT16( ptr ); ptr += 2;
 #define ARGPOS_3 int16_t a1, a2, a3; a1 = AS_INT16( ptr ); ptr += 2; a2 = AS_INT16( ptr ); ptr += 2; a3 = AS_INT16( ptr ); ptr += 2;
-#define ARGS_2 sgs_VarPtr p1, p2; ARGPOS_2; p1 = RESVAR( a1 ); p2 = RESVAR( a2 );
-#define ARGS_3 sgs_VarPtr p1, p2, p3; ARGPOS_3; p1 = RESVAR( a1 ); p2 = RESVAR( a2 ); p3 = RESVAR( a3 );
+#define ARGS_2 sgs_VarPtr p1, p2; ARGPOS_2; p1 = RESVAR( a1 ); UNUSED( p1 ); p2 = RESVAR( a2 );
+#define ARGS_3 sgs_VarPtr p1, p2, p3; ARGPOS_3; p1 = RESVAR( a1 ); UNUSED( p1 ); p2 = RESVAR( a2 ); p3 = RESVAR( a3 );
 		case SI_GETVAR: { ARGS_2; vm_getvar( C, a1, p2 ); break; }
 		case SI_SETVAR: { ARGS_2; vm_setvar( C, p1, p2 ); break; }
 		case SI_GETPROP: { ARGS_3; vm_getprop( C, a1, p2, p3, FALSE ); break; }
