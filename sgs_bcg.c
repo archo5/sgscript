@@ -643,8 +643,6 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 	/* load function */
 	FUNC_ENTER;
 	if( !compile_node_r( C, func, node->child, &funcpos ) ) return 0;
-	BYTE( SI_PUSH );
-	DATA( &funcpos, 2 );
 
 	/*
 		object-orientation: TODO
@@ -668,7 +666,7 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 		while( n )
 		{
 			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child->next, &argpos ) ) return 0;
+			if( !compile_node_r( C, func, n, &argpos ) ) return 0;
 			BYTE( SI_PUSH );
 			DATA( &argpos, 2 );
 			i++;
@@ -986,7 +984,7 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 	case SFT_OPER:
 	case SFT_OPER_P:
 		FUNC_HIT( "R_OPER" );
-		if( !compile_oper( C, func, node, out, 1, 0 ) ) goto fail;
+		if( !compile_oper( C, func, node, out, 1, 1 ) ) goto fail;
 		break;
 
 	case SFT_FCALL:

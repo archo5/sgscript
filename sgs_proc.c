@@ -380,111 +380,9 @@ static void stk_pop2( SGS_CTX )
 #endif
 }
 
-/*
-	VM mutation
-*/
-
-static int vm_gettype( SGS_CTX )
-{
-	sgs_Variable* A;
-	if( sgs_StackSize( C ) <= 0 )
-		return 0;
-
-	A = stk_getvar( C, -1 );
-	if( !A )
-	{
-		stk_pop1( C );
-		sgs_PushString( C, "null" );
-		return 1;
-	}
-
-	if( A->type == SVT_OBJECT )
-	{
-		int ret = obj_exec( C, SOP_GETTYPE, &A->data.O );
-		if( ret != SGS_SUCCESS )
-		{
-			char bfr[ 32 ];
-			sprintf( bfr, "0x%p", A->data.O.iface );
-			sgs_PushString( C, bfr );
-		}
-	}
-	else
-	{
-		const char* ty = "ERROR";
-		switch( A->type )
-		{
-		case SVT_BOOL:	ty = "bool"; break;
-		case SVT_INT:	ty = "int"; break;
-		case SVT_REAL:	ty = "real"; break;
-		case SVT_STRING:	ty = "string"; break;
-		case SVT_CFUNC:	ty = "cfunc"; break;
-		case SVT_FUNC:	ty = "func"; break;
-		}
-		sgs_PushString( C, ty );
-	}
-
-	stk_popskip( C, 1, 1 );
-	return 1;
-}
-
-static void vm_assign( SGS_CTX, int16_t to, int16_t from )
-{
-	stk_setvar( C, to, stk_getvar( C, from ) );
-}
-
-static int vm_copy( SGS_CTX, int16_t to, int16_t from )
-{
-	sgs_Variable *A, *B;
-	A = stk_getvar( C, to );
-	B = stk_getvar( C, from );
-	if( !A || !B )
-		return 0;
-	var_destroy( C, B );
-	B->type = A->type;
-	switch( A->type )
-	{
-	case SVT_BOOL: B->data.B = A->data.B; break;
-	case SVT_INT: B->data.I = A->data.I; break;
-	case SVT_REAL: B->data.R = A->data.R; break;
-	case SVT_STRING: B->data.S = strbuf_create(); strbuf_appbuf( &B->data.S, A->data.S.ptr, A->data.S.size ); break;
-	case SVT_CFUNC: B->data.C = A->data.C; break;
-	case SVT_FUNC: funct_copy( C, &B->data.F, &A->data.F ); break;
-	case SVT_OBJECT: return obj_exec( C, SOP_COPY, &A->data.O );
-	}
-	stk_pop2( C );
-	return 1;
-}
-
-static int vm_gcmark( SGS_CTX, sgs_Variable* var )
-{
-	if( var == NULL )
-		return SGS_SUCCESS;
-	if( var->redblue != C->redblue )
-	{
-		var->redblue = C->redblue;
-		if( var->type == SVT_FUNC )
-		{
-			sgs_Variable** vbeg = (sgs_Variable**) var->data.F.bytecode;
-			sgs_Variable** vend = (sgs_Variable**) ( var->data.F.bytecode + var->data.F.instr_off );
-			while( vbeg < vend )
-			{
-				int ret = vm_gcmark( C, *vbeg++ );
-				if( ret != SGS_SUCCESS )
-					return ret;
-			}
-		}
-		else if( var->type == SVT_OBJECT )
-		{
-			int ret = obj_exec( C, SOP_GCMARK, &var->data.O );
-			if( ret != SGS_SUCCESS )
-				return ret;
-		}
-	}
-	return SGS_SUCCESS;
-}
 
 /*
-	CONVERSION
+	Conversions
 */
 
 static int init_var_bool( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
@@ -622,14 +520,205 @@ static int vm_convert( SGS_CTX, int item, int type )
 	return ret;
 }
 
+static int var_getbool( SGS_CTX, sgs_VarPtr var )
+{
+	if( !var )
+		return FALSE;
+	switch( var->type )
+	{
+	case SVT_BOOL: return var->data.B;
+	case SVT_INT: return !!var->data.I;
+	case SVT_REAL: return !!var->data.R;
+	case SVT_STRING: return !!var->data.S.size;
+	case SVT_FUNC: return TRUE;
+	case SVT_CFUNC: return TRUE;
+	case SVT_OBJECT:
+		{
+			int out;
+			stk_push( C, var );
+			if( vm_convert( C, -1, SVT_BOOL ) != SGS_SUCCESS )
+			{
+				stk_pop1( C );
+				return 0;
+			}
+			out = var->data.B;
+			stk_pop1( C );
+			return out;
+		}
+	}
+	return FALSE;
+}
+
+static int var_getint( SGS_CTX, sgs_VarPtr var )
+{
+	if( !var )
+		return 0;
+	switch( var->type )
+	{
+	case SVT_BOOL: return (sgs_Integer) var->data.B;
+	case SVT_INT: return var->data.I;
+	case SVT_REAL: return (sgs_Integer) var->data.R;
+	case SVT_STRING: return util_atoi( var->data.S.ptr, var->data.S.size );
+	case SVT_FUNC: return 0;
+	case SVT_CFUNC: return 0;
+	case SVT_OBJECT:
+		{
+			sgs_Integer out;
+			stk_push( C, var );
+			if( vm_convert( C, -1, SVT_INT ) != SGS_SUCCESS )
+			{
+				stk_pop1( C );
+				return 0;
+			}
+			out = var->data.I;
+			stk_pop1( C );
+			return out;
+		}
+	}
+	return 0;
+}
+
+static sgs_Real var_getreal( SGS_CTX, sgs_Variable* var )
+{
+	if( !var )
+		return 0;
+	switch( var->type )
+	{
+	case SVT_BOOL: return (sgs_Real) var->data.B;
+	case SVT_INT: return (sgs_Real) var->data.I;
+	case SVT_REAL: return var->data.R;
+	case SVT_STRING: return util_atof( var->data.S.ptr, var->data.S.size );
+	case SVT_FUNC: return 0;
+	case SVT_CFUNC: return 0;
+	case SVT_OBJECT:
+		{
+			sgs_Real out;
+			stk_push( C, var );
+			if( vm_convert( C, -1, SVT_REAL ) != SGS_SUCCESS )
+			{
+				stk_pop1( C );
+				return 0;
+			}
+			out = var->data.R;
+			stk_pop1( C );
+			return out;
+		}
+	}
+	return 0;
+}
+
+
+/*
+	VM mutation
+*/
+
+static int vm_gettype( SGS_CTX )
+{
+	sgs_Variable* A;
+	if( sgs_StackSize( C ) <= 0 )
+		return 0;
+
+	A = stk_getvar( C, -1 );
+	if( !A )
+	{
+		stk_pop1( C );
+		sgs_PushString( C, "null" );
+		return 1;
+	}
+
+	if( A->type == SVT_OBJECT )
+	{
+		int ret = obj_exec( C, SOP_GETTYPE, &A->data.O );
+		if( ret != SGS_SUCCESS )
+		{
+			char bfr[ 32 ];
+			sprintf( bfr, "0x%p", A->data.O.iface );
+			sgs_PushString( C, bfr );
+		}
+	}
+	else
+	{
+		const char* ty = "ERROR";
+		switch( A->type )
+		{
+		case SVT_BOOL:	ty = "bool"; break;
+		case SVT_INT:	ty = "int"; break;
+		case SVT_REAL:	ty = "real"; break;
+		case SVT_STRING:	ty = "string"; break;
+		case SVT_CFUNC:	ty = "cfunc"; break;
+		case SVT_FUNC:	ty = "func"; break;
+		}
+		sgs_PushString( C, ty );
+	}
+
+	stk_popskip( C, 1, 1 );
+	return 1;
+}
+
+/* TODO: understand whether this needs extending or dropping */
+static void vm_assign( SGS_CTX, int16_t to, sgs_Variable* from )
+{
+	stk_setvar( C, to, from );
+}
+
+static int vm_copy( SGS_CTX, int16_t to, sgs_Variable* B )
+{
+	sgs_Variable *A;
+	A = stk_getvar( C, to );
+	if( !A || !B )
+		return 0;
+	var_destroy( C, B );
+	B->type = A->type;
+	switch( A->type )
+	{
+	case SVT_BOOL: B->data.B = A->data.B; break;
+	case SVT_INT: B->data.I = A->data.I; break;
+	case SVT_REAL: B->data.R = A->data.R; break;
+	case SVT_STRING: B->data.S = strbuf_create(); strbuf_appbuf( &B->data.S, A->data.S.ptr, A->data.S.size ); break;
+	case SVT_CFUNC: B->data.C = A->data.C; break;
+	case SVT_FUNC: funct_copy( C, &B->data.F, &A->data.F ); break;
+	case SVT_OBJECT: return obj_exec( C, SOP_COPY, &A->data.O );
+	}
+	stk_pop2( C );
+	return 1;
+}
+
+static int vm_gcmark( SGS_CTX, sgs_Variable* var )
+{
+	if( var == NULL )
+		return SGS_SUCCESS;
+	if( var->redblue != C->redblue )
+	{
+		var->redblue = C->redblue;
+		if( var->type == SVT_FUNC )
+		{
+			sgs_Variable** vbeg = (sgs_Variable**) var->data.F.bytecode;
+			sgs_Variable** vend = (sgs_Variable**) ( var->data.F.bytecode + var->data.F.instr_off );
+			while( vbeg < vend )
+			{
+				int ret = vm_gcmark( C, *vbeg++ );
+				if( ret != SGS_SUCCESS )
+					return ret;
+			}
+		}
+		else if( var->type == SVT_OBJECT )
+		{
+			int ret = obj_exec( C, SOP_GCMARK, &var->data.O );
+			if( ret != SGS_SUCCESS )
+				return ret;
+		}
+	}
+	return SGS_SUCCESS;
+}
+
 
 /*
 	Object property / array accessor handling
 */
 
-static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, int16_t name )
+static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 {
-	const char* prop = var_cstr( stk_getvar( C, name ) );
+	const char* prop = var_cstr( idx );
 
 	switch( obj->type )
 	{
@@ -645,28 +734,28 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, int16_t name )
 	return SGS_ENOTFND;
 }
 
-static int vm_getprop( SGS_CTX, int16_t out, int16_t var, int16_t name, int isindex )
+static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* idx, int isindex )
 {
 	int ret;
-	sgs_Variable *obj;
-	vm_convert( C, name, SVT_STRING );
-	obj = stk_getvar( C, var );
+
+	if( idx->type != SVT_STRING )
+		return SGS_ENOTSUP;
 
 	if( obj && obj->type == SVT_OBJECT )
 	{
-		stk_push( C, stk_getvar( C, name ) );
+		stk_push( C, idx );
 		ret = obj_exec( C, isindex ? SOP_GETINDEX : SOP_GETPROP, &obj->data.O );
 		stk_popskip( C, 1, ret == SGS_SUCCESS );
 	}
 	else
-		ret = vm_getprop_builtin( C, obj, name );
+		ret = vm_getprop_builtin( C, obj, idx );
 
 	if( ret != SGS_SUCCESS )
 	{
 		if( ret == SGS_ENOTFND )
 		{
 			const char* err = isindex ? "Cannot index variable" : "Property not found";
-			sgs_Printf( C, SGS_ERROR, -1, "%s: %s", err, stk_getvar( C, name )->data.S.ptr );
+			sgs_Printf( C, SGS_ERROR, -1, "%s: %s", err, var_cstr( idx ) );
 		}
 		stk_setvar( C, out, NULL );
 	}
@@ -678,17 +767,17 @@ static int vm_getprop( SGS_CTX, int16_t out, int16_t var, int16_t name, int isin
 	return ret;
 }
 
-static int vm_setprop( SGS_CTX, int16_t var, int16_t name, int16_t src, int isindex )
+static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* src, int isindex )
 {
 	int ret;
-	sgs_Variable *obj;
-	vm_convert( C, name, SVT_STRING );
-	obj = stk_getvar( C, var );
+
+	if( idx->type != SVT_STRING )
+		return SGS_ENOTSUP;
 
 	if( obj && obj->type == SVT_OBJECT )
 	{
-		stk_push( C, stk_getvar( C, name ) );
-		stk_push( C, stk_getvar( C, src ) );
+		stk_push( C, idx );
+		stk_push( C, src );
 		ret = obj_exec( C, isindex ? SOP_SETINDEX : SOP_SETPROP, &obj->data.O );
 		stk_pop( C, 2 );
 	}
@@ -700,7 +789,7 @@ static int vm_setprop( SGS_CTX, int16_t var, int16_t name, int16_t src, int isin
 		if( ret == SGS_ENOTFND )
 		{
 			const char* err = isindex ? "Cannot index variable" : "Property not found";
-			sgs_Printf( C, SGS_ERROR, -1, "%s: %s", err, stk_getvar( C, name )->data.S.ptr );
+			sgs_Printf( C, SGS_ERROR, -1, "%s: %s", err, var_cstr( idx ) );
 		}
 	}
 	return ret;
@@ -711,21 +800,18 @@ static int vm_setprop( SGS_CTX, int16_t var, int16_t name, int16_t src, int isin
 	Global variable dictionary
 */
 
-static int vm_getvar( SGS_CTX, int16_t out, int16_t name )
+static int vm_getvar( SGS_CTX, int16_t out, sgs_Variable* idx )
 {
-	sgs_Variable *idx;
-	vm_convert( C, name, SVT_STRING );
-	idx = stk_getvar( C, name );
+	if( idx->type != SVT_STRING )
+		return SGS_ENOTSUP;
 	stk_setvar( C, out, (sgs_VarPtr) ht_get( &C->data, idx->data.S.ptr, idx->data.S.size ) );
 	return SGS_SUCCESS;
 }
 
-static int vm_setvar( SGS_CTX, int16_t name, int16_t src )
+static int vm_setvar( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 {
-	sgs_Variable *idx, *val;
-	vm_convert( C, name, SVT_STRING );
-	idx = stk_getvar( C, name );
-	val = stk_getvar( C, src );
+	if( idx->type != SVT_STRING )
+		return SGS_ENOTSUP;
 
 	{
 		void* olddata = ht_get( &C->data, idx->data.S.ptr, idx->data.S.size );
@@ -758,16 +844,19 @@ static int calc_typeid( sgs_Variable* A, sgs_Variable* B )
 #undef _cti_num
 
 
-static void vm_op_concat( SGS_CTX, int16_t out, int16_t a, int16_t b )
+static void vm_op_concat( SGS_CTX, int16_t out, sgs_Variable *A, sgs_Variable *B )
 {
-	sgs_Variable *A, *B, *N;
-	vm_convert( C, a, SVT_STRING );
-	vm_convert( C, b, SVT_STRING );
-	A = stk_getvar( C, a );
-	B = stk_getvar( C, b );
+	sgs_Variable *N;
+	stk_push( C, A );
+	stk_push( C, B );
+	vm_convert( C, -2, SVT_STRING );
+	vm_convert( C, -1, SVT_STRING );
+	A = stk_getvar( C, -2 );
+	B = stk_getvar( C, -1 );
 	N = var_create_0str( C, A->data.S.size + B->data.S.size );
 	memcpy( N->data.S.ptr, A->data.S.ptr, A->data.S.size );
 	memcpy( N->data.S.ptr + A->data.S.size, B->data.S.ptr, B->data.S.size );
+	stk_pop2( C );
 	stk_setvar_leave( C, out, N );
 }
 
@@ -798,28 +887,27 @@ static int vm_op_concat_ex( SGS_CTX, int args )
 	return 1;
 }
 
-static void vm_op_booland( SGS_CTX, int16_t out, int16_t a, int16_t b )
+static void vm_op_booland( SGS_CTX, int16_t out, sgs_Variable *A, sgs_Variable *B )
 {
-	sgs_SetBool( C, out, sgs_GetBool( C, a ) && sgs_GetBool( C, b ) );
+	sgs_SetBool( C, out, var_getbool( C, A ) && var_getbool( C, B ) );
 }
 
-static void vm_op_boolor( SGS_CTX, int16_t out, int16_t a, int16_t b )
+static void vm_op_boolor( SGS_CTX, int16_t out, sgs_Variable *A, sgs_Variable *B )
 {
-	sgs_SetBool( C, out, sgs_GetBool( C, a ) || sgs_GetBool( C, b ) );
+	sgs_SetBool( C, out, var_getbool( C, A ) || var_getbool( C, B ) );
 }
 
-static int vm_op_negate( SGS_CTX, int16_t out, int16_t a )
+static int vm_op_negate( SGS_CTX, int16_t out, sgs_Variable *A )
 {
-	sgs_Variable *A = stk_getvar( C, -1 );
 	int i = A->type;
 
 	if( i == SVT_REAL )
 	{
-		sgs_SetReal( C, out, -sgs_GetReal( C, a ) );
+		sgs_SetReal( C, out, -var_getreal( C, A ) );
 	}
 	else if( i == SVT_INT || i == SVT_BOOL )
 	{
-		sgs_SetInt( C, out, -sgs_GetInt( C, a ) );
+		sgs_SetInt( C, out, -var_getint( C, A ) );
 	}
 	else if( i == SVT_OBJECT )
 	{
@@ -835,21 +923,19 @@ static int vm_op_negate( SGS_CTX, int16_t out, int16_t a )
 	return 1;
 }
 
-static void vm_op_boolinv( SGS_CTX, int16_t out, int16_t a )
+static void vm_op_boolinv( SGS_CTX, int16_t out, sgs_Variable *A )
 {
-	sgs_SetBool( C, out, !sgs_GetBool( C, a ) );
+	sgs_SetBool( C, out, !var_getbool( C, A ) );
 }
 
-static void vm_op_invert( SGS_CTX, int16_t out, int16_t a )
+static void vm_op_invert( SGS_CTX, int16_t out, sgs_Variable *A )
 {
-	sgs_SetInt( C, out, ~sgs_GetInt( C, a ) );
+	sgs_SetInt( C, out, ~var_getint( C, A ) );
 }
 
 
 #define VAR_MOP( pfx, op ) \
-static void vm_op_##pfx( SGS_CTX, int16_t out, int16_t a ) { \
-	sgs_Variable *A; \
-	A = stk_getvar( C, a ); \
+static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable *A ) { \
 	if( !A || ( A->type != SVT_INT && A->type != SVT_REAL ) ) \
 		{ sgs_Printf( C, SGS_ERROR, -1, "Cannot " #pfx "rement null/bool/string/func/cfunc variables!" ); return; } \
 	switch( A->type ){ \
@@ -862,11 +948,11 @@ VAR_MOP( dec, -1 )
 
 
 #define VAR_AOP_BASE( pfx, op, act ) \
-static void vm_op_##pfx( SGS_CTX, int16_t out, int16_t a, int16_t b ) { \
-	int i = calc_typeid( stk_getvar( C, a ), stk_getvar( C, b ) ); \
+static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
+	int i = calc_typeid( a, b ); \
 	switch( i ){ \
-		case SVT_INT: { sgs_Integer A = sgs_GetInt( C, a ), B = sgs_GetInt( C, b ); sgs_SetInt( C, out, A op B ); break; } \
-		case SVT_REAL: { sgs_Real A = sgs_GetReal( C, a ), B = sgs_GetReal( C, b ); sgs_SetReal( C, out, act ); break; } \
+		case SVT_INT: { sgs_Integer A = var_getint( C, a ), B = var_getint( C, b ); sgs_SetInt( C, out, A op B ); break; } \
+		case SVT_REAL: { sgs_Real A = var_getreal( C, a ), B = var_getreal( C, b ); sgs_SetReal( C, out, act ); break; } \
 	}  }
 
 #define VAR_AOP( pfx, op ) VAR_AOP_BASE( pfx, op, A op B )
@@ -879,9 +965,9 @@ VAR_AOP_BASE( mod, %, fmod( A, B ) )
 
 
 #define VAR_IOP( pfx, op ) \
-static void vm_op_##pfx( SGS_CTX, int16_t out, int16_t a, int16_t b ) { \
-	sgs_Integer A = sgs_GetInt( C, a ); \
-	sgs_Integer B = sgs_GetInt( C, b ); \
+static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
+	sgs_Integer A = var_getint( C, a ); \
+	sgs_Integer B = var_getint( C, b ); \
 	sgs_SetInt( C, out, A op B ); \
 	}
 
@@ -893,11 +979,11 @@ VAR_IOP( rsh, >> )
 
 
 #define VAR_LOP( pfx, op ) \
-static void vm_op_##pfx( SGS_CTX, int16_t out, int16_t a, int16_t b ) { \
-	int i = calc_typeid( stk_getvar( C, a ), stk_getvar( C, b ) ); \
+static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
+	int i = calc_typeid( a, b ); \
 	switch( i ){ \
-		case SVT_INT: { sgs_Integer A = sgs_GetInt( C, a ), B = sgs_GetInt( C, b ); sgs_SetBool( C, out, A op B ); break; } \
-		case SVT_REAL: { sgs_Real A = sgs_GetReal( C, a ), B = sgs_GetReal( C, b ); sgs_SetBool( C, out, A op B ); break; } \
+		case SVT_INT: { sgs_Integer A = var_getint( C, a ), B = var_getint( C, b ); sgs_SetBool( C, out, A op B ); break; } \
+		case SVT_REAL: { sgs_Real A = var_getreal( C, a ), B = var_getreal( C, b ); sgs_SetBool( C, out, A op B ); break; } \
 	} }
 
 VAR_LOP( eq, == )
@@ -959,6 +1045,13 @@ static int vm_call( SGS_CTX, int args, int expect )
 	return 1;
 }
 
+
+static SGS_INLINE sgs_VarPtr const_getvar( sgs_VarPtr* consts, uint32_t count, int16_t off )
+{
+	sgs_BreakIf( (int)off >= (int)count );
+	return consts[ off ];
+}
+
 /*
 	Main VM execution loop
 */
@@ -980,6 +1073,8 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 	uint32_t constcount = cpend - cptr;
 	int stkoff = C->stack_top - C->stack_off;
 #endif
+
+#define RESVAR( v ) ( ( (v) & 0x8000 ) ? const_getvar( cptr, constcount, (v) & 0x7fff ) : stk_getlvar( C, (v) ) )
 
 	/* preallocated helpers */
 	int32_t ret = 0;
@@ -1004,13 +1099,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 		{
 			int16_t item = AS_INT16( ptr );
 			ptr += 2;
-			if( item & 0x8000 )
-			{
-				sgs_BreakIf( item & 0x7fff >= constcount );
-				stk_push( C, cptr[ item & 0x7fff ] );
-			}
-			else
-				stk_push( C, stk_getlvar( C, item ) );
+			stk_push( C, RESVAR( item ) );
 			break;
 		}
 		case SI_PUSHN:
@@ -1055,10 +1144,13 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 
 		case SI_JMPF:
 		{
-			int16_t off = AS_INT16( ptr );
+			int16_t arg, off;
+			arg = AS_INT16( ptr );
+			ptr += 2;
+			off = AS_INT16( ptr );
 			ptr += 2;
 			sgs_BreakIf( ptr + off > pend || ptr + off < (char*)code );
-			if( !sgs_GetBool( C, -1 ) )
+			if( !var_getbool( C, RESVAR( arg ) ) )
 				ptr += off;
 			stk_pop1( C );
 			break;
@@ -1068,56 +1160,61 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 		{
 			uint8_t args = AS_UINT8( ptr++ );
 			uint8_t expect = AS_UINT8( ptr++ );
+			int16_t src = AS_INT16( ptr );
+			ptr += 2;
 			vm_call( C, args, expect );
 			break;
 		}
 
-#define ARGS_2 int16_t a1, a2; a1 = AS_INT16( ptr ); ptr += 2; a2 = AS_INT16( ptr ); ptr += 2;
-#define ARGS_3 int16_t a1, a2, a3; a1 = AS_INT16( ptr ); ptr += 2; a2 = AS_INT16( ptr ); ptr += 2; a3 = AS_INT16( ptr ); ptr += 2;
-		case SI_GETVAR: { ARGS_2; vm_getvar( C, a1, a2 ); break; }
-		case SI_SETVAR: { ARGS_2; vm_setvar( C, a1, a2 ); break; }
-		case SI_GETPROP: { ARGS_3; vm_getprop( C, a1, a2, a3, FALSE ); break; }
-		case SI_SETPROP: { ARGS_3; vm_setprop( C, a1, a2, a3, FALSE ); break; }
-		case SI_GETINDEX: { ARGS_3; vm_getprop( C, a1, a2, a3, TRUE ); break; }
-		case SI_SETINDEX: { ARGS_3; vm_setprop( C, a1, a2, a3, TRUE ); break; }
+#define ARGPOS_2 int16_t a1, a2; a1 = AS_INT16( ptr ); ptr += 2; a2 = AS_INT16( ptr ); ptr += 2;
+#define ARGPOS_3 int16_t a1, a2, a3; a1 = AS_INT16( ptr ); ptr += 2; a2 = AS_INT16( ptr ); ptr += 2; a3 = AS_INT16( ptr ); ptr += 2;
+#define ARGS_2 sgs_VarPtr p1, p2; ARGPOS_2; p1 = RESVAR( a1 ); p2 = RESVAR( a2 );
+#define ARGS_3 sgs_VarPtr p1, p2, p3; ARGPOS_3; p1 = RESVAR( a1 ); p2 = RESVAR( a2 ); p3 = RESVAR( a3 );
+		case SI_GETVAR: { ARGS_2; vm_getvar( C, a1, p2 ); break; }
+		case SI_SETVAR: { ARGS_2; vm_setvar( C, p1, p2 ); break; }
+		case SI_GETPROP: { ARGS_3; vm_getprop( C, a1, p2, p3, FALSE ); break; }
+		case SI_SETPROP: { ARGS_3; vm_setprop( C, p1, p2, p3, FALSE ); break; }
+		case SI_GETINDEX: { ARGS_3; vm_getprop( C, a1, p2, p3, TRUE ); break; }
+		case SI_SETINDEX: { ARGS_3; vm_setprop( C, p1, p2, p3, TRUE ); break; }
 
-		case SI_SET: { ARGS_2; vm_assign( C, a1, a2 ); break; }
-		case SI_COPY: { ARGS_2; vm_copy( C, a1, a2 ); break; }
-		case SI_CONCAT: { ARGS_3; vm_op_concat( C, a1, a2, a3 ); break; }
-		case SI_BOOL_AND: { ARGS_3; vm_op_booland( C, a1, a2, a3 ); break; }
-		case SI_BOOL_OR: { ARGS_3; vm_op_boolor( C, a1, a2, a3 ); break; }
-		case SI_NEGATE: { ARGS_2; vm_op_negate( C, a1, a2 ); break; }
-		case SI_BOOL_INV: { ARGS_2; vm_op_boolinv( C, a1, a2 ); break; }
-		case SI_INVERT: { ARGS_2; vm_op_invert( C, a1, a2 ); break; }
+		case SI_SET: { ARGS_2; vm_assign( C, a1, p2 ); break; }
+		case SI_COPY: { ARGS_2; vm_copy( C, a1, p2 ); break; }
+		case SI_CONCAT: { ARGS_3; vm_op_concat( C, a1, p2, p3 ); break; }
+		case SI_BOOL_AND: { ARGS_3; vm_op_booland( C, a1, p2, p3 ); break; }
+		case SI_BOOL_OR: { ARGS_3; vm_op_boolor( C, a1, p2, p3 ); break; }
+		case SI_NEGATE: { ARGS_2; vm_op_negate( C, a1, p2 ); break; }
+		case SI_BOOL_INV: { ARGS_2; vm_op_boolinv( C, a1, p2 ); break; }
+		case SI_INVERT: { ARGS_2; vm_op_invert( C, a1, p2 ); break; }
 
-		case SI_INC: { ARGS_2; vm_op_inc( C, a1, a2 ); break; }
-		case SI_DEC: { ARGS_2; vm_op_dec( C, a1, a2 ); break; }
-		case SI_ADD: { ARGS_3; vm_op_add( C, a1, a2, a3 ); break; }
-		case SI_SUB: { ARGS_3; vm_op_sub( C, a1, a2, a3 ); break; }
-		case SI_MUL: { ARGS_3; vm_op_mul( C, a1, a2, a3 ); break; }
-		case SI_DIV: { ARGS_3; vm_op_div( C, a1, a2, a3 ); break; }
-		case SI_MOD: { ARGS_3; vm_op_mod( C, a1, a2, a3 ); break; }
+		case SI_INC: { ARGS_2; vm_op_inc( C, a1, p2 ); break; }
+		case SI_DEC: { ARGS_2; vm_op_dec( C, a1, p2 ); break; }
+		case SI_ADD: { ARGS_3; vm_op_add( C, a1, p2, p3 ); break; }
+		case SI_SUB: { ARGS_3; vm_op_sub( C, a1, p2, p3 ); break; }
+		case SI_MUL: { ARGS_3; vm_op_mul( C, a1, p2, p3 ); break; }
+		case SI_DIV: { ARGS_3; vm_op_div( C, a1, p2, p3 ); break; }
+		case SI_MOD: { ARGS_3; vm_op_mod( C, a1, p2, p3 ); break; }
 
-		case SI_AND: { ARGS_3; vm_op_and( C, a1, a2, a3 ); break; }
-		case SI_OR: { ARGS_3; vm_op_or( C, a1, a2, a3 ); break; }
-		case SI_XOR: { ARGS_3; vm_op_xor( C, a1, a2, a3 ); break; }
-		case SI_LSH: { ARGS_3; vm_op_lsh( C, a1, a2, a3 ); break; }
-		case SI_RSH: { ARGS_3; vm_op_rsh( C, a1, a2, a3 ); break; }
+		case SI_AND: { ARGS_3; vm_op_and( C, a1, p2, p3 ); break; }
+		case SI_OR: { ARGS_3; vm_op_or( C, a1, p2, p3 ); break; }
+		case SI_XOR: { ARGS_3; vm_op_xor( C, a1, p2, p3 ); break; }
+		case SI_LSH: { ARGS_3; vm_op_lsh( C, a1, p2, p3 ); break; }
+		case SI_RSH: { ARGS_3; vm_op_rsh( C, a1, p2, p3 ); break; }
 
-#define STRICTLY_EQUAL( val ) \
-			if( stk_getvar( C, -2 )->type != stk_getvar( C, -1 )->type ) { \
-				sgs_SetBool( C, a1, val ); break; }
-		case SI_SEQ: { ARGS_3; STRICTLY_EQUAL( FALSE ); vm_op_eq( C, a1, a2, a3 ); break; }
-		case SI_EQ: { ARGS_3; vm_op_eq( C, a1, a2, a3 ); break; }
-		case SI_SNEQ: { ARGS_3; STRICTLY_EQUAL( TRUE ); vm_op_neq( C, a1, a2, a3 ); break; }
-		case SI_NEQ: { ARGS_3; vm_op_neq( C, a1, a2, a3 ); break; }
-		case SI_LT: { ARGS_3; vm_op_lt( C, a1, a2, a3 ); break; }
-		case SI_GT: { ARGS_3; vm_op_gt( C, a1, a2, a3 ); break; }
-		case SI_LTE: { ARGS_3; vm_op_lte( C, a1, a2, a3 ); break; }
-		case SI_GTE: { ARGS_3; vm_op_gte( C, a1, a2, a3 ); break; }
+#define STRICTLY_EQUAL( val ) if( p2->type != p3->type ) { sgs_SetBool( C, a1, val ); break; }
+		case SI_SEQ: { ARGS_3; STRICTLY_EQUAL( FALSE ); vm_op_eq( C, a1, p2, p3 ); break; }
+		case SI_EQ: { ARGS_3; vm_op_eq( C, a1, p2, p3 ); break; }
+		case SI_SNEQ: { ARGS_3; STRICTLY_EQUAL( TRUE ); vm_op_neq( C, a1, p2, p3 ); break; }
+		case SI_NEQ: { ARGS_3; vm_op_neq( C, a1, p2, p3 ); break; }
+		case SI_LT: { ARGS_3; vm_op_lt( C, a1, p2, p3 ); break; }
+		case SI_GT: { ARGS_3; vm_op_gt( C, a1, p2, p3 ); break; }
+		case SI_LTE: { ARGS_3; vm_op_lte( C, a1, p2, p3 ); break; }
+		case SI_GTE: { ARGS_3; vm_op_gte( C, a1, p2, p3 ); break; }
 #undef STRICTLY_EQUAL
 #undef ARGS_2
 #undef ARGS_3
+#undef ARGPOS_2
+#undef ARGPOS_3
+#undef RESVAR
 
 		default:
 			sgs_Printf( C, SGS_ERROR, -1, "Illegal instruction executed: %d", (int) *(ptr - 1) );
@@ -1320,7 +1417,7 @@ int sgs_PushProperty( SGS_CTX, const char* name )
 	int ret = sgs_PushString( C, name );
 	if( ret )
 		return ret;
-	ret = vm_getprop( C, stk_absindex( C, -1 ), -2, -1, FALSE );
+	ret = vm_getprop( C, stk_absindex( C, -1 ), stk_getvar( C, -2 ), stk_getvar( C, -1 ), FALSE );
 	stk_popskip( C, 1, 1 );
 	return ret;
 }
@@ -1329,7 +1426,7 @@ int sgs_StringConcat( SGS_CTX )
 {
 	if( sgs_StackSize( C ) < 2 )
 		return SGS_ESTKUF;
-	vm_op_concat( C, -1, -2, -1 );
+	vm_op_concat( C, -1, stk_getvar( C, -2 ), stk_getvar( C, -1 ) );
 	stk_popskip( C, 1, 1 );
 	return SGS_SUCCESS;
 }
@@ -1362,14 +1459,14 @@ int sgs_TypeOf( SGS_CTX )
 int sgs_GetGlobal( SGS_CTX, const char* name )
 {
 	sgs_PushString( C, name );
-	vm_getvar( C, -1, -1 );
+	vm_getvar( C, -1, stk_getvar( C, -1 ) );
 	return SGS_SUCCESS;
 }
 
 int sgs_SetGlobal( SGS_CTX, const char* name )
 {
 	sgs_PushString( C, name );
-	vm_setvar( C, -1, -2 );
+	vm_setvar( C, stk_getvar( C, -1 ), stk_getvar( C, -2 ) );
 	sgs_Pop( C, 2 );
 	return SGS_SUCCESS;
 }
@@ -1378,91 +1475,19 @@ int sgs_SetGlobal( SGS_CTX, const char* name )
 int sgs_GetBool( SGS_CTX, int item )
 {
 	sgs_Variable* var = stk_getvar( C, item );
-	if( !var )
-		return FALSE;
-	switch( var->type )
-	{
-	case SVT_BOOL: return var->data.B;
-	case SVT_INT: return !!var->data.I;
-	case SVT_REAL: return !!var->data.R;
-	case SVT_STRING: return !!var->data.S.size;
-	case SVT_FUNC: return TRUE;
-	case SVT_CFUNC: return TRUE;
-	case SVT_OBJECT:
-		{
-			int out;
-			stk_push( C, var );
-			if( vm_convert( C, -1, SVT_BOOL ) != SGS_SUCCESS )
-			{
-				stk_pop1( C );
-				return 0;
-			}
-			out = var->data.B;
-			stk_pop1( C );
-			return out;
-		}
-	}
-	return FALSE;
+	return var_getbool( C, var );
 }
 
 sgs_Integer sgs_GetInt( SGS_CTX, int item )
 {
 	sgs_Variable* var = stk_getvar( C, item );
-	if( !var )
-		return 0;
-	switch( var->type )
-	{
-	case SVT_BOOL: return (sgs_Integer) var->data.B;
-	case SVT_INT: return var->data.I;
-	case SVT_REAL: return (sgs_Integer) var->data.R;
-	case SVT_STRING: return util_atoi( var->data.S.ptr, var->data.S.size );
-	case SVT_FUNC: return 0;
-	case SVT_CFUNC: return 0;
-	case SVT_OBJECT:
-		{
-			sgs_Integer out;
-			stk_push( C, var );
-			if( vm_convert( C, -1, SVT_INT ) != SGS_SUCCESS )
-			{
-				stk_pop1( C );
-				return 0;
-			}
-			out = var->data.I;
-			stk_pop1( C );
-			return out;
-		}
-	}
-	return 0;
+	return var_getint( C, var );
 }
 
 sgs_Real sgs_GetReal( SGS_CTX, int item )
 {
 	sgs_Variable* var = stk_getvar( C, item );
-	if( !var )
-		return 0;
-	switch( var->type )
-	{
-	case SVT_BOOL: return (sgs_Real) var->data.B;
-	case SVT_INT: return (sgs_Real) var->data.I;
-	case SVT_REAL: return var->data.R;
-	case SVT_STRING: return util_atof( var->data.S.ptr, var->data.S.size );
-	case SVT_FUNC: return 0;
-	case SVT_CFUNC: return 0;
-	case SVT_OBJECT:
-		{
-			sgs_Real out;
-			stk_push( C, var );
-			if( vm_convert( C, -1, SVT_REAL ) != SGS_SUCCESS )
-			{
-				stk_pop1( C );
-				return 0;
-			}
-			out = var->data.R;
-			stk_pop1( C );
-			return out;
-		}
-	}
-	return 0;
+	return var_getreal( C, var );
 }
 
 
