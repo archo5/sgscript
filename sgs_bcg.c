@@ -232,7 +232,7 @@ static void dump_opcode( char* ptr, int32_t size )
 
 		default: printf( "<error>" ); break;
 		}
-		printf( "\t|\n" );
+		printf( "\n" );
 	}
 }
 
