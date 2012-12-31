@@ -232,7 +232,7 @@ void sgs_BreakIfFunc( const char* code, const char* file, int line )
 #if defined( _MSC_VER )
 	__asm{ int 3 };
 #elif defined( __GNUC__ )
-	raise( SIGBREAK );
+	__asm__( "int $3" );
 #else
 	assert( 0 );
 #endif

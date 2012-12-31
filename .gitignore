@@ -1,10 +1,10 @@
-/SGScript.depend
-/SGScript.layout
+*.depend
+*.layout
 /bin/*
 /obj/*
-/release/*
+/lib/*
 *.idb
 *.pdb
 *.log
-/bench/*lua*
-/bench/init.bat
+*.sdf
+!output.dir
