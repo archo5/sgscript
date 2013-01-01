@@ -108,7 +108,7 @@ static void check_context( sgs_Context* C )
 
 /* test statistics */
 int tests_executed = 0;
-int tests_successful = 0;
+int tests_failed = 0;
 
 static void count_tests()
 {
@@ -156,6 +156,8 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 	{
 		int has_errors = retval == SGS_SUCCESS ? 1 : -1;
 		const char* sucfail = has_errors * disp >= 0 ? "| \tOK" : "| \tFAIL";
+		if( has_errors * disp < 0 )
+			tests_failed++;
 		if( disp == 0 && has_errors > 0 ) sucfail = "";
 		printf( "\t\t\ttime: %f seconds %s\n", tm2 - tm1, sucfail );
 	}
@@ -218,6 +220,9 @@ main( int argc, char** argv )
 	count_tests();
 	printf( "\n/// Executing tests...\n" );
 	exec_tests();
+
+	printf( "\n///\n/// Tests failed:  %d  / %d\n///\n", tests_failed, tests_executed );
+	printf( "..note: some tests may fail in different ways,\nmight want to review the logs..\n\n" );
 /*
 	printf( "\n/// Finished!\nPress 'Enter' to continue..." );
 	getchar();

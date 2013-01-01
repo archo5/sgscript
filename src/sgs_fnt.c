@@ -114,6 +114,9 @@ static char brace_opposite( char c )
 }
 
 static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end );
+static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end );
+static FTNode* parse_stmtlist( SGS_CTX, TokenList begin, TokenList end );
+static FTNode* parse_function( SGS_CTX, TokenList* begin, TokenList end, int inexp );
 
 /* Expression parsing
 */
@@ -566,8 +569,20 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 		}
 		else if( *at == ST_KEYWORD )
 		{
-			cur->next = make_node( SFT_KEYWORD, at, NULL, NULL );
-			cur = cur->next;
+			if( is_keyword( at, "function" ) )
+			{
+				cur->next = parse_function( C, &at, end, 1 );
+				if( !cur->next )
+					break;
+
+				cur = cur->next;
+				continue;
+			}
+			else
+			{
+				cur->next = make_node( SFT_KEYWORD, at, NULL, NULL );
+				cur = cur->next;
+			}
 		}
 		else if( ST_ISOP( *at ) )
 		{
@@ -576,6 +591,7 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 		}
 		else if( ST_ISSPEC( *at ) )
 		{
+			sgsT_DumpList( at, end );
 			if( *at == '(' || *at == '[' )
 			{
 				char cend = *at == '(' ? ')' : ']';
@@ -666,9 +682,6 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 
 /* Statement parsing
 */
-
-static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end );
-static FTNode* parse_stmtlist( SGS_CTX, TokenList begin, TokenList end );
 
 static FTNode* parse_explist( SGS_CTX, TokenList begin, TokenList end, char endtok )
 {
@@ -845,7 +858,7 @@ fail:
 	return NULL;
 }
 
-static FTNode* parse_function( SGS_CTX, TokenList* begin, TokenList end )
+static FTNode* parse_function( SGS_CTX, TokenList* begin, TokenList end, int inexp )
 {
 	FTNode *node, *nname = NULL, *nargs = NULL, *nbody = NULL;
 	TokenList at = *begin;
@@ -854,16 +867,21 @@ static FTNode* parse_function( SGS_CTX, TokenList* begin, TokenList end )
 	FUNC_BEGIN;
 
 	at = sgsT_Next( at );
-	if( *at != ST_IDENT )
+	if( !inexp )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected identifier after 'function'" );
-		goto fail;
+		if( *at != ST_IDENT )
+		{
+			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected identifier after 'function'" );
+			goto fail;
+		}
+		nname = make_node( SFT_IDENT, at, NULL, NULL );
+		at = sgsT_Next( at );
 	}
-	nname = make_node( SFT_IDENT, at, NULL, NULL );
-	at = sgsT_Next( at );
+
 	if( *at != '(' )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected '(' after 'function' and identifier" );
+		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), inexp ? "Expected '(' after 'function'"
+					: "Expected '(' after 'function' and identifier" );
 		goto fail;
 	}
 	at = sgsT_Next( at );
@@ -996,7 +1014,7 @@ static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
 	/* FUNCTION */
 	else if( is_keyword( at, "function" ) )
 	{
-		node = parse_function( C, begin, end );
+		node = parse_function( C, begin, end, 0 );
 		FUNC_END;
 		return node;
 	}

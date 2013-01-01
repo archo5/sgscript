@@ -955,6 +955,39 @@ static int compile_breaks( SGS_CTX, sgs_CompFunc* func, uint8_t iscont )
 }
 
 
+static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
+{
+	sgs_FuncCtx* fctx = fctx_create(), *bkfctx = C->fctx;
+	sgs_CompFunc* nf = make_compfunc();
+
+	C->fctx = fctx;
+	FUNC_ENTER;
+	if( !preparse_arglist( C, nf, node->child ) ) { fctx_destroy( fctx ); C->fctx = bkfctx; goto fail; }
+	preparse_varlists( C, nf, node->child->next );
+	FUNC_ENTER;
+	if( !compile_node( C, nf, node->child->next ) ) { fctx_destroy( fctx ); C->fctx = bkfctx; goto fail; }
+	comp_reg_unwind( C, 0 );
+
+	{
+		uint8_t lpn[ 2 ] = { SI_PUSHN, C->fctx->lastreg };
+		membuf_insbuf( &nf->code, 0, lpn, 2 );
+	}
+
+#if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
+	fctx_dump( fctx );
+	sgsBC_Dump( nf );
+#endif
+	fctx_destroy( fctx );
+	C->fctx = bkfctx;
+
+	*out = CONSTENC( add_const_f( C, func, nf ) );
+	return 1;
+
+fail:
+	return 0;
+}
+
+
 static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t src )
 {
 	FUNC_BEGIN;
@@ -968,6 +1001,10 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t sr
 
 	case SFT_CONST:
 		FUNC_HIT( "W_CONST" );
+		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot write to constants." );
+		goto fail;
+	case SFT_FUNC:
+		FUNC_HIT( "W_FUNC" );
 		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot write to constants." );
 		goto fail;
 
@@ -988,7 +1025,7 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t sr
 		break;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, -1, "Unexpected tree node [uncaught/internal error]." );
+		sgs_Printf( C, SGS_ERROR, -1, "Unexpected tree node [uncaught/internal BcG/w error]." );
 		goto fail;
 	}
 	FUNC_END;
@@ -1012,6 +1049,10 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 	case SFT_CONST:
 		FUNC_HIT( "R_CONST" );
 		if( !compile_const( C, func, node, out ) ) goto fail;
+		break;
+	case SFT_FUNC:
+		FUNC_HIT( "R_FUNC" );
+		if( !compile_func( C, func, node, out ) ) goto fail;
 		break;
 
 	case SFT_OPER:
@@ -1045,7 +1086,7 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 		break;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, -1, "Unexpected tree node [uncaught/internal error]." );
+		sgs_Printf( C, SGS_ERROR, -1, "Unexpected tree node [uncaught/internal BcG/r error]." );
 		goto fail;
 	}
 	FUNC_END;
@@ -1277,30 +1318,8 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		FUNC_HIT( "FUNC" );
 		{
 			uint16_t pos;
-			sgs_FuncCtx* fctx = fctx_create(), *bkfctx = C->fctx;
-			sgs_CompFunc* nf = make_compfunc();
-
-			C->fctx = fctx;
 			FUNC_ENTER;
-			if( !preparse_arglist( C, nf, node->child ) ) { fctx_destroy( fctx ); C->fctx = bkfctx; goto fail; }
-			preparse_varlists( C, nf, node->child->next );
-			FUNC_ENTER;
-			if( !compile_node( C, nf, node->child->next ) ) { fctx_destroy( fctx ); C->fctx = bkfctx; goto fail; }
-			comp_reg_unwind( C, 0 );
-
-			{
-				uint8_t lpn[ 2 ] = { SI_PUSHN, C->fctx->lastreg };
-				membuf_insbuf( &nf->code, 0, lpn, 2 );
-			}
-
-#if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
-			fctx_dump( fctx );
-			sgsBC_Dump( nf );
-#endif
-			fctx_destroy( fctx );
-			C->fctx = bkfctx;
-
-			pos = CONSTENC( add_const_f( C, func, nf ) );
+			if( !compile_func( C, func, node, &pos ) ) goto fail;
 
 			if( node->child->next->next )
 			{
@@ -1330,7 +1349,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		break;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, -1, "Unexpected tree node [uncaught/internal error]." );
+		sgs_Printf( C, SGS_ERROR, -1, "Unexpected tree node [uncaught/internal BcG error]." );
 		goto fail;
 	}
 

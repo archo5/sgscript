@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_workspace_file>
+	<Workspace title="SGScript">
+		<Project filename="SGScript.cbp" />
+		<Project filename="TestTool.cbp" active="1" />
+		<Project filename="VirtualMachine.cbp" />
+	</Workspace>
+</CodeBlocks_workspace_file>
