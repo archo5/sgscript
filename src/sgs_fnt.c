@@ -591,7 +591,6 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 		}
 		else if( ST_ISSPEC( *at ) )
 		{
-			sgsT_DumpList( at, end );
 			if( *at == '(' || *at == '[' )
 			{
 				char cend = *at == '(' ? ')' : ']';

@@ -44,11 +44,13 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)..\..\bin\</OutDir>
     <IntDir>$(SolutionDir)..\..\obj\$(Configuration)\</IntDir>
+    <TargetName>sgstest</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)..\..\bin\</OutDir>
     <IntDir>$(SolutionDir)..\..\obj\$(Configuration)\</IntDir>
+    <TargetName>sgstest</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

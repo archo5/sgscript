@@ -1317,7 +1317,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_FUNC:
 		FUNC_HIT( "FUNC" );
 		{
-			uint16_t pos;
+			int16_t pos;
 			FUNC_ENTER;
 			if( !compile_func( C, func, node, &pos ) ) goto fail;
 

@@ -11,7 +11,7 @@ usage:
 	! project isn't ready to be used as a DLL/SO yet
 	* everything was tested on 32-bit Windows and both 32- and 64-bit Ubuntu
 		* the new register-based VM code isn't tested as thoroughly
-- include sgscript.h in your project
+- include src/sgscript.h in your project
 
 ---
 
@@ -33,8 +33,8 @@ features:
 - 8 data types (with some space for extensions):
 	null, bool, int, real, string, function, C function, object
 - tests & benchmark
-	* testing framework is in main.c;
-	* execute "bin/SGScript[.exe] tests/!!mandelbrot.txt" to run the benchmark
+	* testing framework is in ext/sgstest.c => bin/sgstest
+	* execute "bin/sgsvm bench/bench.sgs" to run the benchmark
 
 development:
 - I work on it when I feel like it
