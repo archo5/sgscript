@@ -192,7 +192,7 @@ static void* dbg_malloc( size_t size )
 {
 	char* ptr;
 	size += _SBSZ * 2 + _SSZ;
-	ptr = malloc( size );
+	ptr = (char*) malloc( size );
 	memcpy( ptr, &size, _SSZ );
 	memset( ptr + _SSZ, GUARDBYTE, _SBSZ );
 	memset( ptr + size - _SBSZ, GUARDBYTE, _SBSZ );

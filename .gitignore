@@ -6,5 +6,9 @@
 *.idb
 *.pdb
 *.log
+*.suo
+*.opensdf
 *.sdf
+ipch
+*.user
 !output.dir
