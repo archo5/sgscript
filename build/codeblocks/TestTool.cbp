@@ -7,37 +7,43 @@
 		<Option compiler="gcc" />
 		<Build>
 			<Target title="Debug">
-				<Option output="..\..\bin\TestTool" prefix_auto="1" extension_auto="1" />
+				<Option output="..\..\bin\sgstest" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="..\..\..\SGScript" />
 				<Option object_output="..\..\obj\" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
-					<Add directory="..\..\src" />
 				</Compiler>
 				<Linker>
 					<Add library="libsgscript.a" />
-					<Add directory="..\..\lib" />
 				</Linker>
 			</Target>
 			<Target title="Release">
-				<Option output="..\..\bin\TestTool" prefix_auto="1" extension_auto="1" />
+				<Option output="..\..\bin\sgstest" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="..\..\..\SGScript" />
 				<Option object_output="..\..\obj\" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-O2" />
+					<Add option="-fomit-frame-pointer" />
+					<Add option="-fexpensive-optimizations" />
+					<Add option="-O3" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
+					<Add library="libsgscript.a" />
 				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
+			<Add directory="..\..\src" />
 		</Compiler>
+		<Linker>
+			<Add library="libsgscript.a" />
+			<Add directory="..\..\lib" />
+		</Linker>
 		<Unit filename="..\..\ext\sgstest.c">
 			<Option compilerVar="CC" />
 		</Unit>

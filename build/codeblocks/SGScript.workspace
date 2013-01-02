@@ -2,7 +2,11 @@
 <CodeBlocks_workspace_file>
 	<Workspace title="SGScript">
 		<Project filename="SGScript.cbp" />
-		<Project filename="TestTool.cbp" active="1" />
-		<Project filename="VirtualMachine.cbp" />
+		<Project filename="TestTool.cbp" active="1">
+			<Depends filename="SGScript.cbp" />
+		</Project>
+		<Project filename="VirtualMachine.cbp">
+			<Depends filename="SGScript.cbp" />
+		</Project>
 	</Workspace>
 </CodeBlocks_workspace_file>
