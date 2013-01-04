@@ -36,7 +36,7 @@ static void setoutput( const char* file )
 			printf( "Could not freopen\n" );
 			exit( 1 );
 		}
-#if SGS_DEBUG
+#if _DEBUG
 		setvbuf( f, NULL, _IONBF, 0 );
 #endif
 	}

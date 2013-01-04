@@ -230,6 +230,8 @@ static void dump_opcode( char* ptr, int32_t size )
 #undef DOP_B
 #undef DOP_C
 
+		case SI_ARRAY: printf( "ARRAY args:%d output:", (int) AS_UINT8( ptr++ ) ); dump_rcpos( ptr ); ptr += 2; break;
+
 		default: printf( "<error>" ); break;
 		}
 		printf( "\n" );
@@ -1054,6 +1056,31 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 		FUNC_HIT( "R_FUNC" );
 		if( !compile_func( C, func, node, out ) ) goto fail;
 		break;
+	case SFT_ARRLIST:
+		FUNC_HIT( "R_ARRLIST" );
+		{
+			int16_t pos = 0, args = 0;
+			FTNode* n = node->child;
+			while( n )
+			{
+				int32_t bkup = C->fctx->regs;
+				pos = 0;
+				FUNC_ENTER;
+				if( !compile_node_r( C, func, n, &pos ) )
+					goto fail;
+				BYTE( SI_PUSH );
+				DATA( &pos, 2 );
+				comp_reg_unwind( C, bkup );
+				args++;
+				n = n->next;
+			}
+			BYTE( SI_ARRAY );
+			BYTE( args );
+			pos = comp_reg_alloc( C );
+			DATA( &pos, 2 );
+			*out = pos;
+		}
+		break;
 
 	case SFT_OPER:
 	case SFT_OPER_P:
@@ -1108,6 +1135,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_IDENT: break;
 	case SFT_KEYWORD: break;
 	case SFT_CONST: break;
+	case SFT_ARRLIST: break;
 
 	case SFT_OPER:
 	case SFT_OPER_P:

@@ -5,6 +5,7 @@
 
 #include "sgscript.h"
 #include "sgs_proc.h"
+#include "sgs_ctx.h"
 
 
 #define CHKARGS( cnt ) \
@@ -292,7 +293,7 @@ void* sgsstd_array_functable[] =
 	SOP_END,
 };
 
-static int sgsstd_array( SGS_CTX )
+int sgsstd_array( SGS_CTX )
 {
 	int i, objcnt = sgs_StackSize( C );
 	void* data = sgs_Malloc( SGSARR_ALLOCSIZE( objcnt ) );
@@ -456,6 +457,8 @@ int sgsVM_RegStdLibs( SGS_CTX )
 		sgs_SetGlobal( C, (const char*) fn[ 0 ] );
 		fn += 2;
 	}
+
+	C->array_func = &sgsstd_array;
 
 	return SGS_SUCCESS;
 }

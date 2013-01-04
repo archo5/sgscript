@@ -36,6 +36,7 @@ static void dumpnode( FTNode* N )
 	case SFT_VARLIST: printf( "VAR_LIST" ); break;
 	case SFT_GVLIST: printf( "GLOBAL_VAR_LIST" ); break;
 	case SFT_EXPLIST: printf( "EXPR_LIST" ); break;
+	case SFT_ARRLIST: printf( "ARRAY_LIST" ); break;
 	case SFT_RETURN: printf( "RETURN" ); break;
 	case SFT_BLOCK: printf( "BLOCK" ); break;
 	case SFT_IFELSE: printf( "IF/ELSE" ); break;
@@ -342,11 +343,11 @@ static int level_exp( SGS_CTX, FTNode** tree )
 		count++;
 
 		/* only interested in operators and subexpressions */
-		if( node->type != SFT_OPER && node->type != SFT_EXPLIST )
+		if( node->type != SFT_OPER && node->type != SFT_EXPLIST && node->type != SFT_ARRLIST )
 			goto _continue;
 
 		/* function tree test */
-		isfcall = node->type == SFT_EXPLIST;
+		isfcall = node->type == SFT_EXPLIST || node->type == SFT_ARRLIST;
 		if( isfcall )	isfcall = !!prev;
 		if( isfcall )	isfcall = prev->type != SFT_OPER || !ST_OP_BINARY( *prev->token );
 
@@ -372,7 +373,7 @@ _continue:
 	if( mpp )
 	{
 		/* function call */
-		if( mpp->type == SFT_EXPLIST )
+		if( mpp->type == SFT_EXPLIST || mpp->type == SFT_ARRLIST )
 		{
 			int ret1, ret2;
 			TokenList mpp_token = mpp->token;
@@ -508,8 +509,10 @@ _continue:
 	}
 
 	/* failed unexpectedly, dump & debug */
-	sgs_Printf( C, SGS_ERROR, -1, "Failed to level the expression, dumping it:\n" );
+	sgs_Printf( C, SGS_ERROR, -1, "Failed to level the expression, missing operators or separators." );
+#if SGS_DEBUG && SGS_DEBUG_DATA
 	sgsFT_Dump( *tree );
+#endif
 	FUNC_END;
 	return 0;
 
@@ -596,7 +599,7 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 				char cend = *at == '(' ? ')' : ']';
 				char endcstr[ 3 ] = { cend, ',', 0 };
 				TokenList pat, expend;
-				FTNode* exprlist = make_node( SFT_EXPLIST, at, NULL, NULL );
+				FTNode* exprlist = make_node( *at == '(' ? SFT_EXPLIST : SFT_ARRLIST, at, NULL, NULL );
 				FTNode* expr, * curexpr = NULL;
 
 				pat = at;

@@ -67,6 +67,9 @@ struct _sgs_Context
 	sgs_VarPtr	pool;
 	int			poolsize;
 	int			maxpool;
+
+	/* special functions */
+	sgs_CFunc	array_func;
 };
 
 
