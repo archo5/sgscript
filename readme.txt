@@ -4,13 +4,13 @@
 .the initial release
 
 usage:
-- grab the source from root directory...
+- grab the source from src/ directory...
 - compile all .c files...
-	* with main.c if you want to launch the test framework
-	* without main.c if you want to build a static library
+	* by using makefiles / build projects or just..
+	..by building them and archiving the generated object files
 	! project isn't ready to be used as a DLL/SO yet
 	* everything was tested on 32-bit Windows and both 32- and 64-bit Ubuntu
-		* the new register-based VM code isn't tested as thoroughly
+		* fresh commits aren't tested as thoroughly
 - include src/sgscript.h in your project
 
 ---
