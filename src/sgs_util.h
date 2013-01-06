@@ -171,6 +171,9 @@ void ht_setpair( HTPair* P, char* str, int size, Hash h, void* ptr );
 void ht_set( HashTable* T, char* str, int size, void* ptr );
 void ht_unset( HashTable* T, char* str, int size );
 
+static SGS_INLINE HashTable* ht_create(){ HashTable* T = sgs_Alloc( HashTable ); ht_init( T, 4 ); return T; }
+static SGS_INLINE void ht_destroy( HashTable* T ){ ht_free( T ); sgs_Free( T ); }
+
 
 double sgs_GetTime();
 

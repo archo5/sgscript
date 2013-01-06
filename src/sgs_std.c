@@ -15,6 +15,10 @@
 
 /* Containers */
 
+/*
+	ARRAY
+*/
+
 typedef struct sgsstd_array_header_s
 {
 	uint32_t size;
@@ -311,6 +315,83 @@ int sgsstd_array( SGS_CTX )
 }
 
 
+/*
+	DICT
+*/
+
+#define HTHDR HashTable* ht = (HashTable*) data->data
+
+static void sgsstd_dict_clearvals( SGS_CTX, sgs_VarObj* data )
+{
+	HTHDR;
+	HTPair* pair = ht->pairs, *pend = ht->pairs + ht->size;
+	while( pair < pend )
+	{
+		if( pair->str )
+			sgs_Release( C, (sgs_Variable*) pair->ptr );
+		pair++;
+	}
+}
+
+static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data )
+{
+	HTHDR;
+	sgsstd_dict_clearvals( C, data );
+	ht_destroy( ht );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_dict_tostring( SGS_CTX, sgs_VarObj* data )
+{
+	HTHDR;
+	StrBuf* sb;
+	HTPair *pair = ht->pairs, *pend = ht->pairs + ht->size;
+	int cnt = 0;
+	sgs_PushString( C, "{" );
+	sb = &sgs_StackItem( C, -1 )->data.S;
+	while( pair < pend )
+	{
+		if( pair->str )
+		{
+			if( cnt )
+				strbuf_appchr( sb, ',' );
+			strbuf_appbuf( sb, pair->str, pair->size );
+			strbuf_appchr( sb, '=' );
+			sgs_PushVariable( C, (sgs_Variable*) pair->ptr );
+			sgs_ToString( C, -1 );
+			strbuf_appbuf( sb, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+			sgs_Pop( C, 1 );
+			cnt++;
+		}
+		pair++;
+	}
+	strbuf_appchr( sb, '}' );
+	return SGS_SUCCESS;
+}
+
+void* sgsstd_dict_functable[] =
+{
+	SOP_DESTRUCT, sgsstd_dict_destruct,
+	SOP_TOSTRING, sgsstd_dict_tostring,
+	SOP_END,
+};
+
+int sgsstd_dict( SGS_CTX )
+{
+	int i, objcnt = sgs_StackSize( C );
+	HashTable* ht = ht_create();
+	for( i = 0; i < objcnt; i += 2 )
+	{
+		sgs_Variable* vkey = sgs_StackItem( C, i );
+		sgs_Variable* var = sgs_StackItem( C, i + 1 );
+		sgs_Acquire( C, var );
+		ht_set( ht, vkey->data.S.ptr, vkey->data.S.size, var );
+	}
+	sgs_PushObject( C, ht, sgsstd_dict_functable );
+	return 1;
+}
+
+
 /* Math */
 
 #define MATHFUNC( name ) \
@@ -459,7 +540,7 @@ int sgsVM_RegStdLibs( SGS_CTX )
 	}
 
 	C->array_func = &sgsstd_array;
-	C->dict_func = &sgsstd_array; /* temporary */
+	C->dict_func = &sgsstd_dict;
 
 	return SGS_SUCCESS;
 }
