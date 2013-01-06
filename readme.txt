@@ -1,7 +1,5 @@
 
---- SGScript v0.4 ---
-
-.the initial release
+--- SGScript v0.5 ---
 
 usage:
 - grab the source from src/ directory...
@@ -12,6 +10,11 @@ usage:
 	* everything was tested on 32-bit Windows and both 32- and 64-bit Ubuntu
 		* fresh commits aren't tested as thoroughly
 - include src/sgscript.h in your project
+
+sample code ... is in the tests/ directory
+	as you'll probably see, it's not that different from many other languages.
+	there'll be no specification until the language survives a few iterations.
+	after that, we'll see if it's necessary.
 
 ---
 
@@ -29,7 +32,7 @@ features:
 - the usual stuff (while/for, expressions, local/global variables etc.)
 - speed! (register-based virtual machine)
 - mixed memory management (ref.count + GC)
-- extensive debugging features
+- extensive native debugging features
 - 8 data types (with some space for extensions):
 	null, bool, int, real, string, function, C function, object
 - tests & benchmark
@@ -43,11 +46,15 @@ development:
 	* don't forget to include a test sample, as small as possible!
 
 future:
-- tail calls, a bit more OOP, containers, optimizations, fully featured API
+- tail calls, a bit more OOP, optimizations, fully featured API
 - got a suggestion? write some sample code (in the form of a test) and send it
 
 credits:
 - this piece of software is created by Arvīds Kokins (snake5)
 	* I can be reached at snake5creator [at] GMail
-- inspired by C, PHP, Lua, Squirrel and AngelScript
+- inspired by C, PHP, Lua, JavaScript, Squirrel and AngelScript
+
+change log:
+0.5 (2013/01/06): cleanup, lambdas, literals, "dict" container
+0.4 (2012/12/26): the initial release
 
