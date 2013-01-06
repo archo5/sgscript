@@ -369,10 +369,75 @@ static int sgsstd_dict_tostring( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
+static int sgsstd_dict_gettype( SGS_CTX, sgs_VarObj* data )
+{
+	sgs_PushString( C, "dict" );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_dict_gcmark( SGS_CTX, sgs_VarObj* data )
+{
+	HTHDR;
+	HTPair* pair = ht->pairs, *pend = ht->pairs + ht->size;
+	while( pair < pend )
+	{
+		if( pair->str )
+		{
+			int ret = sgs_GCMark( C, (sgs_Variable*) pair->ptr );
+			if( ret != SGS_SUCCESS )
+				return ret;
+		}
+		pair++;
+	}
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
+{
+	HTHDR;
+	HTPair* pair;
+	sgs_ToString( C, -1 );
+	if( sgs_StackItem( C, -1 )->type != SVT_STRING )
+		return SGS_EINVAL;
+	pair = ht_find( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+	if( !pair )
+		return SGS_ENOTFND;
+	return sgs_PushVariable( C, (sgs_Variable*) pair->ptr );
+}
+
+static int sgsstd_dict_setindex( SGS_CTX, sgs_VarObj* data )
+{
+	HTHDR;
+	HTPair* pair;
+	sgs_Variable* var, *key;
+	sgs_ToString( C, -2 );
+	key = sgs_StackItem( C, -2 );
+	if( key->type != SVT_STRING )
+		return SGS_EINVAL;
+	pair = ht_find( ht, key->data.S.ptr, key->data.S.size );
+	if( pair )
+	{
+		sgs_Release( C, (sgs_Variable*) pair->ptr );
+	}
+	var = sgs_StackItem( C, -1 );
+	sgs_Acquire( C, var );
+	ht_set( ht, key->data.S.ptr, key->data.S.size, var );
+	return SGS_SUCCESS;
+}
+
+#define sgsstd_dict_getprop sgsstd_dict_getindex
+#define sgsstd_dict_setprop sgsstd_dict_setindex
+
 void* sgsstd_dict_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_dict_destruct,
+	SOP_GETPROP, sgsstd_dict_getprop,
+	SOP_SETPROP, sgsstd_dict_setprop,
+	SOP_GETINDEX, sgsstd_dict_getindex,
+	SOP_SETINDEX, sgsstd_dict_setindex,
 	SOP_TOSTRING, sgsstd_dict_tostring,
+	SOP_GETTYPE, sgsstd_dict_gettype,
+	SOP_GCMARK, sgsstd_dict_gcmark,
 	SOP_END,
 };
 
@@ -389,6 +454,55 @@ int sgsstd_dict( SGS_CTX )
 	}
 	sgs_PushObject( C, ht, sgsstd_dict_functable );
 	return 1;
+}
+
+int sgsstd_isset( SGS_CTX )
+{
+	sgs_Variable* var;
+	HashTable* ht;
+	HTPair* pair;
+	if( sgs_StackSize( C ) != 2 )
+		goto argerr;
+
+	var = sgs_StackItem( C, -2 );
+	if( var->type != SVT_OBJECT || var->data.O.iface != sgsstd_dict_functable )
+		goto argerr;
+
+	sgs_ToString( C, -1 );
+	if( sgs_StackItem( C, -1 )->type != SVT_STRING )
+		goto argerr;
+	ht = (HashTable*) var->data.O.data;
+
+	pair = ht_find( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+	return sgs_PushBool( C, pair != NULL ) == SGS_SUCCESS;
+
+argerr:
+	sgs_Printf( C, SGS_ERROR, -1, "'isset' requires 2 arguments: object (dict), property name (string)" );
+	return 0;
+}
+
+int sgsstd_unset( SGS_CTX )
+{
+	sgs_Variable* var;
+	HashTable* ht;
+	if( sgs_StackSize( C ) != 2 )
+		goto argerr;
+
+	var = sgs_StackItem( C, -2 );
+	if( var->type != SVT_OBJECT || var->data.O.iface != sgsstd_dict_functable )
+		goto argerr;
+
+	sgs_ToString( C, -1 );
+	if( sgs_StackItem( C, -1 )->type != SVT_STRING )
+		goto argerr;
+	ht = (HashTable*) var->data.O.data;
+
+	ht_unset( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+	return 0;
+
+argerr:
+	sgs_Printf( C, SGS_ERROR, -1, "'unset' requires 2 arguments: object (dict), property name (string)" );
+	return 0;
 }
 
 
@@ -511,7 +625,7 @@ static int sgsstd_gc_collect( SGS_CTX )
 void* regfuncs[] =
 {
 	/* containers */
-	FN( array ),
+	FN( array ), FN( isset ), FN( unset ),
 	/* math */
 	FN( abs ), FN( sqrt ), FN( log ), FN( log10 ), FN( exp ), FN( floor ), FN( ceil ),
 	FN( sin ), FN( cos ), FN( tan ), FN( asin ), FN( acos ), FN( atan ),

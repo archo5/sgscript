@@ -394,7 +394,7 @@ void membuf_appbuf( MemBuf* mb, const void* buf, int32_t size )
 }
 
 
-static Hash hashFunc( char* str, int size )
+static Hash hashFunc( const char* str, int size )
 {
 	int i;
 	Hash h = 2166136261u;
@@ -515,7 +515,7 @@ void ht_check( HashTable* T, int inc )
 	}
 }
 
-HTPair* ht_find( HashTable* T, char* str, int size )
+HTPair* ht_find( HashTable* T, const char* str, int size )
 {
 	Hash h = hashFunc( str, size );
 	HTPair* p = T->pairs + ( h % T->size );
@@ -622,7 +622,7 @@ static void ht_fillhole( HashTable* T, HTPair* P )
 	}
 }
 
-void ht_unset( HashTable* T, char* str, int size )
+void ht_unset( HashTable* T, const char* str, int size )
 {
 	HTPair* p = ht_find( T, str, size );
 	if( p )

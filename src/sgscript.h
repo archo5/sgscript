@@ -22,6 +22,7 @@ extern "C" {
 #define SGS_ENOTOBJ	-5	/* argument was not an object */
 #define SGS_ENOTSUP	-6	/* not supported */
 #define SGS_EBOUNDS	-7	/* index out of bounds */
+#define SGS_EINVAL	-8	/* invalid value was passed */
 #define SGS_ENOTIMP	-31	/* - not implemented - */
 
 
