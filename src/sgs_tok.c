@@ -333,7 +333,7 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length )
 		else
 		{
 			C->state |= SGS_HAS_ERRORS;
-			sgs_Printf( C, SGS_ERROR, i, "unexpected symbol: %c", fc );
+			sgs_Printf( C, SGS_ERROR, line, "unexpected symbol: %c", fc );
 		}
 
 		if( s.size != isz ) /* write a line only if successfully wrote something (a token) */

@@ -17,3 +17,4 @@ z[ "foo" ] = "blah"; print( "setindex/getindex test // z['foo']: ", z[ "foo" ], 
 z.prop = x; print( "setprop/getprop test // z.prop: ", z.prop, "\n" );
 print( "nonexistant property/index test: |", z["undef"], "|", z.undef, "|\n" );
 unset( z, "undef" );
+var w = { "spe" = "cial", }; print( w );

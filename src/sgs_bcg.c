@@ -1101,7 +1101,10 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 				pos = 0;
 				if( args % 2 == 0 )
 				{
-					compile_ident( C, func, n, &pos );
+					if( *n->token == ST_STRING )
+						pos = CONSTENC( add_const_s( C, func, AS_INT32( n->token + 1 ), (const char*) n->token + 5 ) );
+					else
+						compile_ident( C, func, n, &pos );
 				}
 				else
 				{

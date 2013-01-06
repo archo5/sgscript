@@ -664,7 +664,7 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 				at = sgsT_Next( at );
 				while( *at != '}' )
 				{
-					if( *at != ST_IDENT )
+					if( *at != ST_IDENT && *at != ST_STRING )
 					{
 						sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected key identifier in dictionary expression" );
 						break;
