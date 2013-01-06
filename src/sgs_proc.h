@@ -66,7 +66,8 @@ typedef enum sgs_Instruction_e
 	SI_LTE,		/* A1 */
 
 	/* specials */
-	SI_ARRAY,
+	SI_ARRAY,	/* (u8 args, i16 out) */
+	SI_DICT,	/* -- || -- */
 
 	/* xor masks */
 	SI_SNEQ = SI_SEQ | 0x80,

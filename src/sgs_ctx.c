@@ -58,6 +58,7 @@ static void ctx_init( SGS_CTX )
 	C->maxpool = 512;
 
 	C->array_func = NULL;
+	C->dict_func = NULL;
 }
 
 sgs_Context* sgs_CreateEngine()

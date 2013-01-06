@@ -1,0 +1,12 @@
+var x = {}; print( x );
+var y = { sth = 'text', cnt = 5 }; print( y );
+var z = 
+{
+	arr = [ 5, 4.0, 3, "2", 1 ],
+	dct = { that = "wow" },
+	raid = 
+	[
+		{ all = "good" }
+	]
+};
+print( z );

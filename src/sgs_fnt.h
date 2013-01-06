@@ -23,9 +23,10 @@
 #define SFT_ARGLIST	11
 #define SFT_VARLIST	12
 #define SFT_GVLIST	13
-#define SFT_EXPLIST	17
-#define SFT_ARRLIST	18
-#define SFT_RETURN	19
+#define SFT_EXPLIST	15
+#define SFT_ARRLIST	16
+#define SFT_MAPLIST	17
+#define SFT_RETURN	18
 /* statement types */
 #define SFT_BLOCK	21
 #define SFT_IFELSE	22

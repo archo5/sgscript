@@ -459,6 +459,7 @@ int sgsVM_RegStdLibs( SGS_CTX )
 	}
 
 	C->array_func = &sgsstd_array;
+	C->dict_func = &sgsstd_array; /* temporary */
 
 	return SGS_SUCCESS;
 }

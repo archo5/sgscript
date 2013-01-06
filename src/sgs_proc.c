@@ -494,8 +494,11 @@ static int vm_convert( SGS_CTX, int item, int type )
 			return SGS_ENOTFND;
 		}
 		ret = obj_exec( C, sop, &var->data.O );
-		stk_setvar( C, item, stk_getvar( C, -1 ) );
+		var = stk_getvar( C, -1 );
+		VAR_ACQUIRE( var );
 		stk_pop1( C );
+		stk_setvar( C, item, var );
+		VAR_RELEASE( var );
 		return ret;
 	}
 
@@ -1019,6 +1022,30 @@ static void vm_make_array( SGS_CTX, int args, int16_t outpos )
 	stk_pop1( C );
 }
 
+static void vm_make_dict( SGS_CTX, int args, int16_t outpos )
+{
+	int expect = 1, rvc, stkoff = C->stack_off - C->stack_base;
+
+	sgs_BreakIf( sgs_StackSize( C ) < args );
+	C->stack_off = C->stack_top - args;
+
+	rvc = (*C->dict_func)( C );
+
+	stk_clean( C, C->stack_off, C->stack_top - rvc );
+	C->stack_off = C->stack_base + stkoff;
+
+	if( rvc > expect )
+		stk_pop( C, rvc - expect );
+	else
+	{
+		while( expect-- > rvc )
+			stk_push( C, NULL );
+	}
+
+	stk_setvar( C, outpos, stk_getvar( C, -1 ) );
+	stk_pop1( C );
+}
+
 
 static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* data, int32_t datasize );
 
@@ -1239,6 +1266,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 		case SI_GTE: { ARGS_3; vm_op_gte( C, a1, p2, p3 ); break; }
 
 		case SI_ARRAY: { uint8_t argc = AS_UINT8( ptr++ ); int16_t a1 = AS_UINT16( ptr ); ptr += 2; vm_make_array( C, argc, a1 ); break; }
+		case SI_DICT: { uint8_t argc = AS_UINT8( ptr++ ); int16_t a1 = AS_UINT16( ptr ); ptr += 2; vm_make_dict( C, argc, a1 ); break; }
 #undef STRICTLY_EQUAL
 #undef ARGS_2
 #undef ARGS_3
@@ -1545,7 +1573,7 @@ sgs_Real sgs_ToReal( SGS_CTX, int item )
 const char* sgs_ToString( SGS_CTX, int item )
 {
 	if( vm_convert( C, item, SVT_STRING ) != SGS_SUCCESS )
-		return "";
+		return "<ERROR>";
 	return stk_getvar( C, item )->data.S.ptr;
 }
 

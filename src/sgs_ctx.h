@@ -70,6 +70,7 @@ struct _sgs_Context
 
 	/* special functions */
 	sgs_CFunc	array_func;
+	sgs_CFunc	dict_func;
 };
 
 

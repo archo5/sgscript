@@ -37,6 +37,7 @@ static void dumpnode( FTNode* N )
 	case SFT_GVLIST: printf( "GLOBAL_VAR_LIST" ); break;
 	case SFT_EXPLIST: printf( "EXPR_LIST" ); break;
 	case SFT_ARRLIST: printf( "ARRAY_LIST" ); break;
+	case SFT_MAPLIST: printf( "MAP_LIST" ); break;
 	case SFT_RETURN: printf( "RETURN" ); break;
 	case SFT_BLOCK: printf( "BLOCK" ); break;
 	case SFT_IFELSE: printf( "IF/ELSE" ); break;
@@ -137,7 +138,16 @@ static TokenList detect_exp( SGS_CTX, TokenList at, TokenList end, const char* e
 
 	sgs_BreakIf( !C );
 	sgs_BreakIf( !at );
-	sgs_BreakIf( !*at );
+
+	if( !*at )
+	{
+		if( !superr )
+		{
+			sgs_Printf( C, SGS_ERROR, -1, "End of expression '%s' not found", ends );
+			C->state |= SGS_HAS_ERRORS;
+		}
+		goto fail2;
+	}
 
 	fline = sgsT_LineNum( at );
 	while( at < end && *at && ( stack.size > 0 || !isoneof( *at, ends ) ) )
@@ -179,6 +189,7 @@ static TokenList detect_exp( SGS_CTX, TokenList at, TokenList end, const char* e
 
 fail:
 	strbuf_destroy( &stack );
+fail2:
 	FUNC_END;
 	return NULL;
 }
@@ -510,6 +521,7 @@ _continue:
 
 	/* failed unexpectedly, dump & debug */
 	sgs_Printf( C, SGS_ERROR, -1, "Failed to level the expression, missing operators or separators." );
+	C->state |= SGS_HAS_ERRORS;
 #if SGS_DEBUG && SGS_DEBUG_DATA
 	sgsFT_Dump( *tree );
 #endif
@@ -643,6 +655,65 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 				cur->next = exprlist;
 				cur = cur->next;
 				continue;
+			}
+			else if( *at == '{' )
+			{
+				TokenList expend;
+				FTNode* expr = NULL, *fexp = NULL;
+				/* dictionary expression */
+				at = sgsT_Next( at );
+				while( *at != '}' )
+				{
+					if( *at != ST_IDENT )
+					{
+						sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected key identifier in dictionary expression" );
+						break;
+					}
+
+					if( !fexp )
+						expr = fexp = make_node( SFT_IDENT, at, NULL, NULL );
+					else
+					{
+						expr->next = make_node( SFT_IDENT, at, NULL, NULL );
+						expr = expr->next;
+					}
+					at = sgsT_Next( at );
+
+					if( *at != ST_OP_SET )
+					{
+						sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected '=' in dictionary expression" );
+						break;
+					}
+					at = sgsT_Next( at );
+
+					expend = detect_exp( C, at, end, ",}", 1 );
+					if( !expend )
+					{
+						sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Could not find end of expression" );
+						break;
+					}
+
+					expr->next = parse_exp( C, at, expend );
+					at = expend;
+					if( !expr->next )
+						break;
+					else
+						expr = expr->next;
+
+					if( *at == ',' )
+						at = sgsT_Next( at );
+				}
+				if( *at != '}' )
+				{
+					if( fexp )
+						sgsFT_Destroy( fexp );
+					C->state |= SGS_HAS_ERRORS;
+				}
+				else
+				{
+					cur->next = make_node( SFT_MAPLIST, NULL, NULL, fexp );
+					cur = cur->next;
+				}
 			}
 			else
 			{

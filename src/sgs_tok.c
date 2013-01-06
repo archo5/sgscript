@@ -375,6 +375,8 @@ TokenList sgsT_Next( TokenList tok )
 
 LineNum sgsT_LineNum( TokenList tok )
 {
+	if( !*tok )
+		return -1;
 	tok = sgsT_Next( tok );
 	return ST_READLN( tok - 2 );
 }
