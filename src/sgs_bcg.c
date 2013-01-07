@@ -819,14 +819,19 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 	if( pos < 0 )
 		goto cannot;
 
-	switch( func->code.ptr[ ibeg ] )
+	switch( (uint8_t) func->code.ptr[ ibeg ] )
 	{
-	case SI_ADD:
-	case SI_SUB:
-	case SI_MUL:
-	case SI_DIV:
-	case SI_MOD:
+	case SI_POPR: case SI_GETVAR: case SI_GETPROP: case SI_GETINDEX:
+	case SI_SET: case SI_CONCAT: case SI_BOOL_AND: case SI_BOOL_OR:
+	case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT: case SI_INC: case SI_DEC:
+	case SI_ADD: case SI_SUB: case SI_MUL: case SI_DIV: case SI_MOD:
+	case SI_AND: case SI_OR: case SI_XOR: case SI_LSH: case SI_RSH:
+	case SI_SEQ: case SI_EQ: case SI_LT: case SI_LTE:
+	case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE:
 		AS_INT16( func->code.ptr + ibeg + 1 ) = pos;
+		break;
+	case SI_ARRAY: case SI_DICT:
+		AS_INT16( func->code.ptr + ibeg + 2 ) = pos;
 		break;
 	default:
 		goto cannot;
