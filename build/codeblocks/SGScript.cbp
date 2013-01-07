@@ -37,7 +37,6 @@
 					<Add option="-Wcast-align" />
 					<Add option="-Winline" />
 					<Add option="-Wunreachable-code" />
-					<Add option="-Wmissing-declarations" />
 					<Add option="-Wmain" />
 					<Add option="-Wextra" />
 					<Add option="-Wall" />

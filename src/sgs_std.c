@@ -371,6 +371,7 @@ static int sgsstd_dict_tostring( SGS_CTX, sgs_VarObj* data )
 
 static int sgsstd_dict_gettype( SGS_CTX, sgs_VarObj* data )
 {
+	UNUSED( data );
 	sgs_PushString( C, "dict" );
 	return SGS_SUCCESS;
 }

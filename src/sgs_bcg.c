@@ -750,6 +750,97 @@ static int compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 	return 1;
 }
 
+
+/*
+	This, all of this, is way more complicated than it has to be.
+	If I'm ever switching to equally sized instructions, this will be one of the reasons.
+*/
+
+static int instr_size( uint8_t pos )
+{
+	switch( pos )
+	{
+	case SI_NOP: return 1;
+	case SI_PUSHN: case SI_POPN: case SI_RETN: return 2;
+	case SI_PUSH: case SI_POPR: case SI_JUMP: return 3;
+	case SI_ARRAY: case SI_DICT: return 4;
+	case SI_JMPF: case SI_CALL: case SI_GETVAR: case SI_SETVAR: case SI_SET:
+	case SI_COPY: case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT: return 5;
+	case SI_GETPROP: case SI_SETPROP: case SI_GETINDEX: case SI_SETINDEX:
+	case SI_CONCAT: case SI_BOOL_AND: case SI_BOOL_OR: case SI_ADD: case SI_SUB:
+	case SI_MUL: case SI_DIV: case SI_MOD: case SI_AND: case SI_OR: case SI_XOR:
+	case SI_LSH: case SI_RSH: case SI_SEQ: case SI_EQ: case SI_LT: case SI_LTE:
+	case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE:
+		return 7;
+	}
+	sgs_BreakIf( "invalid instruction passed to instr_size" );
+	return 0;
+}
+
+static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* node, int32_t ioff )
+{
+	int16_t pos = -1;
+	int32_t ibeg = ioff;
+
+	FUNC_BEGIN;
+	UNUSED( C );
+
+	if( node->type != SFT_IDENT || *node->token != ST_IDENT )
+		goto cannot;
+
+	/* find last instruction */
+	while( ioff < func->code.size )
+	{
+		ibeg = ioff;
+		ioff += instr_size( func->code.ptr[ ioff ] );
+	}
+	if( ibeg == ioff )
+		goto cannot; /* no instructions to process */
+	/* last one's after "ibeg" */
+
+	/* find the variable output register */
+	if( C->fctx->func )
+	{
+		int16_t gpos = find_var( &C->fctx->gvars, (char*) node->token + 2, node->token[ 1 ] );
+		if( gpos >= 0 )
+			pos = -1;
+		else
+		{
+			add_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
+			pos = find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
+		}
+	}
+	else
+	{
+		pos = find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
+	}
+
+	/* global variable */
+	if( pos < 0 )
+		goto cannot;
+
+	switch( func->code.ptr[ ibeg ] )
+	{
+	case SI_ADD:
+	case SI_SUB:
+	case SI_MUL:
+	case SI_DIV:
+	case SI_MOD:
+		AS_INT16( func->code.ptr + ibeg + 1 ) = pos;
+		break;
+	default:
+		goto cannot;
+	}
+
+	FUNC_END;
+	return 1;
+
+cannot:
+	FUNC_END;
+	return 0;
+}
+
+
 static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg, int out, int expect )
 {
 	int assign = ST_OP_ASSIGN( *node->token );
@@ -801,7 +892,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		/* 1 operand */
 		if( *node->token == ST_OP_SET || *node->token == ST_OP_COPY )
 		{
-			int16_t ireg;
+			int16_t ireg, isb = func->code.size;
 
 			/* get source data register */
 			FUNC_ENTER;
@@ -812,9 +903,13 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 			if( *node->token == ST_OP_SET )
 			{
-				/* just set the contents */
 				FUNC_ENTER;
-				if( !compile_node_w( C, func, node->child, ireg ) ) goto fail;
+				if( !try_optimize_last_instr_out( C, func, node->child, isb ) )
+				{
+					/* just set the contents */
+					FUNC_ENTER;
+					if( !compile_node_w( C, func, node->child, ireg ) ) goto fail;
+				}
 			}
 			else
 			{

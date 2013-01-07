@@ -24,19 +24,17 @@ function mandelbrot()
 {
 	tm = ftime();
 	
-	str = "";
 	for( y = -39.0; y < 39.0; ++y )
 	{
 		for( x = -39.0; x < 39.0; ++x )
 		{
 			if( iterate( x / 40.0, y / 40.0 ) == 0 )
-				str $= "*";
+				print( "*" );
 			else
-				str $= " ";
+				print( " " );
 		}
-		str $= "\n";
+		print( "\n" );
 	}
-	print( str );
 	
 	print( "Time elapsed: ", ftime() - tm );
 }
