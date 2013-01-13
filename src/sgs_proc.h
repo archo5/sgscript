@@ -34,46 +34,43 @@ typedef enum sgs_Instruction_e
 	/* operators */
 	/*
 		A: (i16 out, s1, s2)
-		A1: (xormask, i16 out, s1, s2)
 		B: (i16 out, s1)
 	*/
 	SI_SET,		/* B */
-	SI_COPY,	/* B */
+	SI_COPY,
 	SI_CONCAT,	/* A */
-	SI_BOOL_AND,/* A */
-	SI_BOOL_OR,	/* A */
+	SI_BOOL_AND,
+	SI_BOOL_OR,
 	SI_NEGATE,	/* B */
-	SI_BOOL_INV,/* B */
-	SI_INVERT,	/* B */
+	SI_BOOL_INV,
+	SI_INVERT,
 
 	SI_INC,		/* B */
-	SI_DEC,		/* B */
+	SI_DEC,
 	SI_ADD,		/* A */
-	SI_SUB,		/* A */
-	SI_MUL,		/* A */
-	SI_DIV,		/* A */
-	SI_MOD,		/* A */
+	SI_SUB,
+	SI_MUL,
+	SI_DIV,
+	SI_MOD,
 
 	SI_AND,		/* A */
-	SI_OR,		/* A */
-	SI_XOR,		/* A */
-	SI_LSH,		/* A */
-	SI_RSH,		/* A */
+	SI_OR,
+	SI_XOR,
+	SI_LSH,
+	SI_RSH,
 
-	SI_SEQ,		/* A1 */
-	SI_EQ,		/* A1 */
-	SI_LT,		/* A1 */
-	SI_LTE,		/* A1 */
+	SI_SEQ,		/* A */
+	SI_SNEQ,
+	SI_EQ,
+	SI_NEQ,
+	SI_LT,
+	SI_GTE,
+	SI_GT,
+	SI_LTE,
 
 	/* specials */
 	SI_ARRAY,	/* (u8 args, i16 out) */
 	SI_DICT,	/* -- || -- */
-
-	/* xor masks */
-	SI_SNEQ = SI_SEQ | 0x80,
-	SI_NEQ = SI_EQ | 0x80,
-	SI_GT = SI_LT | 0x80,
-	SI_GTE = SI_LTE | 0x80,
 }
 sgs_Instruction;
 

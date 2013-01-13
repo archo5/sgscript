@@ -1112,10 +1112,10 @@ static SGS_INLINE sgs_VarPtr const_getvar( sgs_VarPtr* consts, uint32_t count, i
 */
 const char* opnames[] =
 {
-	"nop", "push", "push_nulls", "pop_n", "pop_reg", "return", "jump", "jump_if_false", "call",
-	"getvar", "setvar", "getprop", "setprop", "getindex", "setindex", "set", "copy",
-	"concat", "bool_and", "bool_or", "negate", "bool_inv", "invert", "inc", "dec", "add", "sub", "mul", "div", "mod",
-	"and", "or", "xor", "lsh", "rsh", "seq", "sneq", "eq", "neq", "lt", "gt", "lte", "gte", "dict", "array"
+	"nop",  "push", "push_nulls", "pop_n", "pop_reg",  "return", "jump", "jump_if_false", "call",
+	"getvar", "setvar", "getprop", "setprop", "getindex", "setindex",  "set", "copy",
+	"concat", "bool_and", "bool_or", "negate", "bool_inv", "invert",  "inc", "dec", "add", "sub", "mul", "div", "mod",
+	"and", "or", "xor", "lsh", "rsh",  "seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte",  "array", "dict"
 };
 static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* data, int32_t datasize )
 {
@@ -1139,7 +1139,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 	{
 		uint8_t instr = *ptr++;
 #if SGS_DEBUG
- #if SGS_DEBUG_FLOW && 0 /* TODO: fix */
+ #if SGS_DEBUG_FLOW
 		printf( "*** [at 0x%04X] %s ***\n", ptr - 1 - (char*)code, opnames[ instr ] );
  #endif
  #if SGS_DEBUG_STATE
@@ -1256,13 +1256,13 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 
 #define STRICTLY_EQUAL( val ) if( p2->type != p3->type ) { sgs_SetBool( C, a1, val ); break; }
 		case SI_SEQ: { ARGS_3; STRICTLY_EQUAL( FALSE ); vm_op_eq( C, a1, p2, p3 ); break; }
-		case SI_EQ: { ARGS_3; vm_op_eq( C, a1, p2, p3 ); break; }
 		case SI_SNEQ: { ARGS_3; STRICTLY_EQUAL( TRUE ); vm_op_neq( C, a1, p2, p3 ); break; }
+		case SI_EQ: { ARGS_3; vm_op_eq( C, a1, p2, p3 ); break; }
 		case SI_NEQ: { ARGS_3; vm_op_neq( C, a1, p2, p3 ); break; }
 		case SI_LT: { ARGS_3; vm_op_lt( C, a1, p2, p3 ); break; }
+		case SI_GTE: { ARGS_3; vm_op_gte( C, a1, p2, p3 ); break; }
 		case SI_GT: { ARGS_3; vm_op_gt( C, a1, p2, p3 ); break; }
 		case SI_LTE: { ARGS_3; vm_op_lte( C, a1, p2, p3 ); break; }
-		case SI_GTE: { ARGS_3; vm_op_gte( C, a1, p2, p3 ); break; }
 
 		case SI_ARRAY: { uint8_t argc = AS_UINT8( ptr++ ); int16_t a1 = AS_UINT16( ptr ); ptr += 2; vm_make_array( C, argc, a1 ); break; }
 		case SI_DICT: { uint8_t argc = AS_UINT8( ptr++ ); int16_t a1 = AS_UINT16( ptr ); ptr += 2; vm_make_dict( C, argc, a1 ); break; }
