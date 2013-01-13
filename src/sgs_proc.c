@@ -1378,7 +1378,14 @@ int sgs_SetNull( SGS_CTX, int item )
 
 int sgs_SetBool( SGS_CTX, int item, int value )
 {
-	sgs_Variable* var = make_var( C, SVT_BOOL );
+	sgs_Variable* var;
+	var = stk_getvar( C, item );
+	if( var && var->type == SVT_BOOL && var->refcount == 1 )
+	{
+		var->data.B = value;
+		return SGS_SUCCESS;
+	}
+	var = make_var( C, SVT_BOOL );
 	var->data.B = value ? 1 : 0;
 	stk_setvar_leave( C, item, var );
 	return SGS_SUCCESS;
@@ -1386,7 +1393,14 @@ int sgs_SetBool( SGS_CTX, int item, int value )
 
 int sgs_SetInt( SGS_CTX, int item, sgs_Integer value )
 {
-	sgs_Variable* var = make_var( C, SVT_INT );
+	sgs_Variable* var;
+	var = stk_getvar( C, item );
+	if( var && var->type == SVT_INT && var->refcount == 1 )
+	{
+		var->data.I = value;
+		return SGS_SUCCESS;
+	}
+	var = make_var( C, SVT_INT );
 	var->data.I = value;
 	stk_setvar_leave( C, item, var );
 	return SGS_SUCCESS;
@@ -1394,7 +1408,14 @@ int sgs_SetInt( SGS_CTX, int item, sgs_Integer value )
 
 int sgs_SetReal( SGS_CTX, int item, sgs_Real value )
 {
-	sgs_Variable* var = make_var( C, SVT_REAL );
+	sgs_Variable* var;
+	var = stk_getvar( C, item );
+	if( var && var->type == SVT_REAL && var->refcount == 1 )
+	{
+		var->data.R = value;
+		return SGS_SUCCESS;
+	}
+	var = make_var( C, SVT_REAL );
 	var->data.R = value;
 	stk_setvar_leave( C, item, var );
 	return SGS_SUCCESS;
