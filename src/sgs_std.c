@@ -114,22 +114,30 @@ static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* data )
 	return 0;
 }
 
+#define SGSARR_IHDR \
+	sgs_VarObj* data; \
+	sgsstd_array_header_t* hdr; \
+	if( !sgs_Method( C ) ){ sgs_Printf( C, SGS_ERROR, -1, "Function isn't called on an array" ); return 0; } \
+	data = sgs_GetObjectData( C, 0 ); \
+	hdr = (sgsstd_array_header_t*) data->data; \
+	UNUSED( hdr );
+
+
 static int sgsstd_arrayI_clear( SGS_CTX )
 {
-	sgsstd_array_clear( C, sgs_GetObjectData( C, 0 ) );
+	SGSARR_IHDR;
+	sgsstd_array_clear( C, data );
 	return 0;
 }
 static int sgsstd_arrayI_push( SGS_CTX )
 {
-	sgs_VarObj* data = sgs_GetObjectData( C, 0 );
-	SGSARR_HDR;
+	SGSARR_IHDR;
 	sgsstd_array_insert( C, data, hdr->size );
 	return 0;
 }
 static int sgsstd_arrayI_pop( SGS_CTX )
 {
-	sgs_VarObj* data = sgs_GetObjectData( C, 0 );
-	SGSARR_HDR;
+	SGSARR_IHDR;
 	sgs_Variable** ptr = SGSARR_PTR( data->data );
 	if( !hdr->size )
 	{
@@ -142,8 +150,7 @@ static int sgsstd_arrayI_pop( SGS_CTX )
 }
 static int sgsstd_arrayI_shift( SGS_CTX )
 {
-	sgs_VarObj* data = sgs_GetObjectData( C, 0 );
-	SGSARR_HDR;
+	SGSARR_IHDR;
 	sgs_Variable** ptr = SGSARR_PTR( data->data );
 	if( !hdr->size )
 	{
@@ -156,7 +163,8 @@ static int sgsstd_arrayI_shift( SGS_CTX )
 }
 static int sgsstd_arrayI_unshift( SGS_CTX )
 {
-	sgsstd_array_insert( C, sgs_GetObjectData( C, 0 ), 0 );
+	SGSARR_IHDR;
+	sgsstd_array_insert( C, data, 0 );
 	return 0;
 }
 static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )

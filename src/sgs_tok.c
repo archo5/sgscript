@@ -143,7 +143,8 @@ static void readident( SGS_CTX, MemBuf* out, const char* code, int32_t* at, int3
 		ident_equal( out->ptr + pos_rev + 2, sz, "continue" ) ||
 		ident_equal( out->ptr + pos_rev + 2, sz, "function" ) ||
 		ident_equal( out->ptr + pos_rev + 2, sz, "return" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "mutate" ) )
+		ident_equal( out->ptr + pos_rev + 2, sz, "mutate" ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, "this" ) )
 	{
 		out->ptr[ pos_rev ] = ST_KEYWORD;
 	}

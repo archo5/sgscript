@@ -204,6 +204,7 @@ static FTNode* parse_arg( SGS_CTX, int argid, TokenList at, TokenList end )
 {
 	FTNode* node = NULL;
 	char toks[ 3 ] = { ',', *end, 0 };
+	int isthis = FALSE;
 
 	FUNC_BEGIN;
 
@@ -213,11 +214,24 @@ static FTNode* parse_arg( SGS_CTX, int argid, TokenList at, TokenList end )
 
 	if( *at == ST_KEYWORD )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Argument name cannot be a reserved keyword" );
-		goto fail;
+		if( is_keyword( at, "this" ) )
+		{
+			if( argid != 1 )
+			{
+				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "'this' must be the first argument" );
+				goto fail;
+			}
+			else
+				isthis = TRUE;
+		}
+		else
+		{
+			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Argument name cannot be a reserved keyword (except 'this')" );
+			goto fail;
+		}
 	}
 
-	if( *at != ST_IDENT )
+	if( *at != ST_IDENT && *at != ST_KEYWORD )
 	{
 		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Unexpected token while parsing argument %d", argid );
 		goto fail;
@@ -228,6 +242,11 @@ static FTNode* parse_arg( SGS_CTX, int argid, TokenList at, TokenList end )
 
 	if( *at == ST_OP_SET )
 	{
+		if( isthis )
+		{
+			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Cannot have default value for a 'this' argument" );
+			goto fail;
+		}
 		TokenList expend;
 		at = sgsT_Next( at );
 		expend = detect_exp( C, at, sgsT_Next( end ), toks, 0 );

@@ -5,6 +5,13 @@
 #include "sgs_proc.h"
 
 
+
+static int is_keyword( TokenList tok, const char* text )
+{
+	return *tok == ST_KEYWORD && tok[ 1 ] == strlen( text ) && strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
+}
+
+
 /* register allocation */
 static int16_t __ra_alloc( const uint32_t* regs, uint32_t size )
 {
@@ -186,7 +193,8 @@ static void dump_opcode( char* ptr, int32_t size )
 		case SI_RETN: printf( "RETURN %d", (int) AS_UINT8( ptr++ ) ); break;
 		case SI_JUMP: printf( "JUMP %d", (int) AS_INT16( ptr ) ); ptr += 2; break;
 		case SI_JMPF: printf( "JMP_F " ); dump_rcpos( ptr ); printf( ", %d", (int) AS_INT16( ptr + 2 ) ); ptr += 4; break;
-		case SI_CALL: printf( "CALL args:%d expect:%d func:", (int) AS_UINT8( ptr ), (int) AS_UINT8( ptr + 1 ) ); dump_rcpos( ptr + 2 ); ptr += 4; break;
+		case SI_CALL: printf( "CALL args:%d%s expect:%d func:", (int) AS_UINT8( ptr ) & 0x7f, AS_UINT8( ptr ) & 0x80 ? ",method" : "",
+							(int) AS_UINT8( ptr + 1 ) ); dump_rcpos( ptr + 2 ); ptr += 4; break;
 
 		DOP_B( GETVAR );
 		DOP_B1( SETVAR );
@@ -330,8 +338,11 @@ static void preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 {
-	UNUSED( func );
 	node = node->child;
+	if( node && is_keyword( node->token, "this" ) )
+	{
+		func->gotthis = TRUE;
+	}
 	while( node )
 	{
 		if( !add_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) )
@@ -339,6 +350,7 @@ static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot redeclare arguments with the same name." );
 			return 0;
 		}
+		comp_reg_alloc( C );
 		node = node->next;
 	}
 	return 1;
@@ -525,11 +537,6 @@ static void compile_ident( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 }
 
 
-static int is_keyword( TokenList tok, const char* text )
-{
-	return *tok == ST_KEYWORD && tok[ 1 ] == strlen( text ) && strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
-}
-
 static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
 {
 	int16_t pos;
@@ -553,6 +560,19 @@ static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* 
 	}
 	if( *node->token == ST_KEYWORD )
 	{
+		if( is_keyword( node->token, "this" ) )
+		{
+			if( func->gotthis )
+			{
+				*out = 0;
+				return 1;
+			}
+			else
+			{
+				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "This function is not a method, cannot use 'this'" );
+				return 0;
+			}
+		}
 		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot read from this keyword" );
 		return 0;
 	}
@@ -660,7 +680,7 @@ static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* op
 static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out, int expect )
 {
 	int i = 0;
-	int16_t funcpos = -1, retpos = -1;
+	int16_t funcpos = -1, retpos = -1, gotthis = FALSE;
 
 	/* load function */
 	FUNC_ENTER;
@@ -683,7 +703,7 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 			if( !compile_node_r( C, func, node->child->child, &argpos ) ) return 0;
 			BYTE( SI_PUSH );
 			DATA( &argpos, 2 );
-			i++;
+			gotthis = TRUE;
 		}
 
 		FTNode* n = node->child->next->child;
@@ -698,6 +718,9 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 			n = n->next;
 		}
 	}
+
+	if( gotthis )
+		i |= 0x80;
 
 	/* compile call */
 	BYTE( SI_CALL );
@@ -1065,17 +1088,19 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 {
 	sgs_FuncCtx* fctx = fctx_create(), *bkfctx = C->fctx;
 	sgs_CompFunc* nf = make_compfunc();
+	int args = 0;
 
 	C->fctx = fctx;
 	FUNC_ENTER;
-	if( !preparse_arglist( C, nf, node->child ) ) { fctx_destroy( fctx ); C->fctx = bkfctx; goto fail; }
+	if( !preparse_arglist( C, nf, node->child ) ) { goto fail; }
+	args = fctx->regs;
 	preparse_varlists( C, nf, node->child->next );
 	FUNC_ENTER;
-	if( !compile_node( C, nf, node->child->next ) ) { fctx_destroy( fctx ); C->fctx = bkfctx; goto fail; }
+	if( !compile_node( C, nf, node->child->next ) ) { goto fail; }
 	comp_reg_unwind( C, 0 );
 
 	{
-		uint8_t lpn[ 2 ] = { SI_PUSHN, C->fctx->lastreg };
+		uint8_t lpn[ 2 ] = { SI_PUSHN, C->fctx->lastreg - args };
 		membuf_insbuf( &nf->code, 0, lpn, 2 );
 	}
 
@@ -1090,6 +1115,10 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	return 1;
 
 fail:
+	sgsBC_Free( C, nf );
+	C->fctx = bkfctx;
+	fctx_destroy( fctx );
+	C->state |= SGS_HAS_ERRORS;
 	return 0;
 }
 
