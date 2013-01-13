@@ -765,7 +765,8 @@ static int instr_size( uint8_t pos )
 	case SI_PUSH: case SI_POPR: case SI_JUMP: return 3;
 	case SI_ARRAY: case SI_DICT: return 4;
 	case SI_JMPF: case SI_CALL: case SI_GETVAR: case SI_SETVAR: case SI_SET:
-	case SI_COPY: case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT: return 5;
+	case SI_COPY: case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT:
+	case SI_INC: case SI_DEC: return 5;
 	case SI_GETPROP: case SI_SETPROP: case SI_GETINDEX: case SI_SETINDEX:
 	case SI_CONCAT: case SI_BOOL_AND: case SI_BOOL_OR: case SI_ADD: case SI_SUB:
 	case SI_MUL: case SI_DIV: case SI_MOD: case SI_AND: case SI_OR: case SI_XOR:

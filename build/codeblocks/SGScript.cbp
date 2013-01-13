@@ -30,6 +30,7 @@
 				<Compiler>
 					<Add option="-fomit-frame-pointer" />
 					<Add option="-fexpensive-optimizations" />
+					<Add option="-Os" />
 					<Add option="-O3" />
 					<Add option="-Wshadow" />
 					<Add option="-Winit-self" />

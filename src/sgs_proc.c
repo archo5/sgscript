@@ -1112,11 +1112,10 @@ static SGS_INLINE sgs_VarPtr const_getvar( sgs_VarPtr* consts, uint32_t count, i
 */
 const char* opnames[] =
 {
-	"nop", "push_const", "push_stack", "push_null", "duplicate",
-	"copy", "pop", "pop_n", "pop_stack", "return", "jump", "jump_if_false", "call",
-	"getvar", "setvar", "getprop", "setprop", "getindex", "setindex",
+	"nop", "push", "push_nulls", "pop_n", "pop_reg", "return", "jump", "jump_if_false", "call",
+	"getvar", "setvar", "getprop", "setprop", "getindex", "setindex", "set", "copy",
 	"concat", "bool_and", "bool_or", "negate", "bool_inv", "invert", "inc", "dec", "add", "sub", "mul", "div", "mod",
-	"and", "or", "xor", "lsh", "rsh", "seq", "sneq", "eq", "neq", "lt", "gt", "lte", "gte",
+	"and", "or", "xor", "lsh", "rsh", "seq", "sneq", "eq", "neq", "lt", "gt", "lte", "gte", "dict", "array"
 };
 static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* data, int32_t datasize )
 {
@@ -1140,7 +1139,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 	{
 		uint8_t instr = *ptr++;
 #if SGS_DEBUG
- #if SGS_DEBUG_FLOW
+ #if SGS_DEBUG_FLOW && 0 /* TODO: fix */
 		printf( "*** [at 0x%04X] %s ***\n", ptr - 1 - (char*)code, opnames[ instr ] );
  #endif
  #if SGS_DEBUG_STATE
