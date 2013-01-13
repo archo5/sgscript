@@ -60,6 +60,7 @@ static sgs_CompFunc* make_compfunc()
 	sgs_CompFunc* func = sgs_Alloc( sgs_CompFunc );
 	func->consts = membuf_create();
 	func->code = membuf_create();
+	func->gotthis = FALSE;
 	return func;
 }
 
@@ -453,8 +454,9 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf )
 	memcpy( fdata + nf->consts.size, nf->code.ptr, nf->code.size );
 
 	var->data.F.bytecode = fdata;
-	var->data.F.instr_off = nf->consts.size;
 	var->data.F.size = nf->consts.size + nf->code.size;
+	var->data.F.instr_off = nf->consts.size;
+	var->data.F.gotthis = nf->gotthis;
 
 	membuf_destroy( &nf->consts );
 	membuf_destroy( &nf->code );

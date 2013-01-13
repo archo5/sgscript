@@ -78,8 +78,9 @@ sgs_Instruction;
 typedef struct funct_s
 {
 	char*	bytecode;
-	int32_t	instr_off;
 	int32_t	size;
+	int16_t	instr_off;
+	int8_t	gotthis;
 }
 funct;
 

@@ -58,8 +58,9 @@ static void funct_copy( SGS_CTX, funct* to, funct* from )
 	}
 
 	to->bytecode = sgs_Alloc_n( char, from->size );
-	to->instr_off = from->instr_off;
 	to->size = from->size;
+	to->instr_off = from->instr_off;
+	to->gotthis = from->gotthis;
 
 	memcpy( to->bytecode, from->bytecode, from->size );
 }
@@ -1049,42 +1050,46 @@ static void vm_make_dict( SGS_CTX, int args, int16_t outpos )
 
 static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* data, int32_t datasize );
 
-/*
-	Tries to execute the given variable as a function
-*/
-static int vm_call_do( SGS_CTX, sgs_Variable* func )
-{
-	if( !func )
-		return 0;
-	else if( func->type == SVT_CFUNC )
-		return (*func->data.C)( C );
-	else if( func->type == SVT_FUNC )
-		return vm_exec( C,
-						((char*)func->data.F.bytecode) + func->data.F.instr_off,
-						func->data.F.size - func->data.F.instr_off,
-						func->data.F.bytecode, func->data.F.instr_off );
-	else
-	{
-		sgs_Printf( C, SGS_ERROR, -1, "Variable of type %s cannot be called", sgs_VarNames[ func->type ] );
-		return 0;
-	}
-}
 
 /*
 	Call the virtual machine.
 	Args must equal the number of arguments pushed before the function
 */
-static int vm_call( SGS_CTX, int args, int expect, sgs_Variable* fvar )
+static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* func )
 {
 	int stkoff = C->stack_off - C->stack_base;
-	int rvc;
+	int rvc = 0;
 
-	sgs_BreakIf( sgs_StackSize( C ) < args );
+	sgs_BreakIf( sgs_StackSize( C ) < args + gotthis );
 	C->stack_off = C->stack_top - args;
 
-	rvc = vm_call_do( C, fvar );
+	if( !func )
+		sgs_Printf( C, SGS_ERROR, -1, "Variable of type 'null' cannot be called" );
+	else if( func->type == SVT_CFUNC )
+	{
+		int stkoff2 = C->stack_off - C->stack_base;
+		int hadthis = C->has_this;
+		C->has_this = gotthis;
+		rvc = (*func->data.C)( C );
+		C->has_this = hadthis;
+		C->stack_off = C->stack_base + stkoff2;
+	}
+	else if( func->type == SVT_FUNC )
+	{
+		funct* F = &func->data.F;
+		/* if <this> was expected but wasn't properly passed, assume that it's already in the argument list */
+		/* if <this> wasn't expected but was passed, just don't use it */
+		if( F->gotthis && gotthis )
+			C->stack_off--;
+		rvc = vm_exec( C, ((char*)F->bytecode) + F->instr_off, F->size - F->instr_off, F->bytecode, F->instr_off );
+		if( F->gotthis && gotthis )
+			C->stack_off++;
+	}
+	else
+		sgs_Printf( C, SGS_ERROR, -1, "Variable of type '%s' cannot be called", sgs_VarNames[ func->type ] );
 
-	stk_clean( C, C->stack_off, C->stack_top - rvc );
+	/* subtract gotthis from offset if pushed extra variable */
+	stk_clean( C, C->stack_off - gotthis, C->stack_top - rvc );
 	C->stack_off = C->stack_base + stkoff;
 
 	if( rvc > expect )
@@ -1215,8 +1220,10 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 			uint8_t args = AS_UINT8( ptr++ );
 			uint8_t expect = AS_UINT8( ptr++ );
 			int16_t src = AS_INT16( ptr );
+			int gotthis = ( args & 0x80 ) != 0;
+			args &= 0x7f;
 			ptr += 2;
-			vm_call( C, args, expect, RESVAR( src ) );
+			vm_call( C, args, gotthis, expect, RESVAR( src ) );
 			break;
 		}
 
@@ -1525,7 +1532,19 @@ int sgs_Pop( SGS_CTX, int count )
 
 int sgs_Call( SGS_CTX, int args, int expect )
 {
-	return vm_call( C, args, expect, stk_getvar( C, -1 - args ) );
+	return vm_call( C, args, FALSE, expect, stk_getvar( C, -1 - args ) );
+}
+
+int sgs_Method( SGS_CTX )
+{
+	if( C->has_this )
+	{
+		C->stack_off--;
+		C->has_this = FALSE;
+		return TRUE;
+	}
+	else
+		return FALSE;
 }
 
 int sgs_TypeOf( SGS_CTX )

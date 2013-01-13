@@ -15,6 +15,7 @@ struct _sgs_IntFunc
 {
 	MemBuf	consts;
 	MemBuf	code;
+	int		gotthis;
 }
 sgs_CompFunc;
 

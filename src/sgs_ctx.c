@@ -45,6 +45,7 @@ static void ctx_init( SGS_CTX )
 	C->stack_base = sgs_Alloc_n( sgs_VarPtr, C->stack_mem );
 	C->stack_off = C->stack_base;
 	C->stack_top = C->stack_base;
+	C->has_this = FALSE;
 
 	ht_init( &C->data, 4 );
 
