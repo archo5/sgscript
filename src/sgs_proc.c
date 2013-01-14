@@ -1077,6 +1077,16 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 	else if( func->type == SVT_FUNC )
 	{
 		funct* F = &func->data.F;
+		int stkargs = args + ( F->gotthis && gotthis );
+		int expargs = F->numargs + F->gotthis;
+		/* fix argument stack */
+		if( stkargs > expargs )
+			stk_pop( C, stkargs - expargs );
+		else while( stkargs < expargs )
+		{
+			stk_push_leave( C, NULL );
+			stkargs++;
+		}
 		/* if <this> was expected but wasn't properly passed, assume that it's already in the argument list */
 		/* if <this> wasn't expected but was passed, just don't use it */
 		if( F->gotthis && gotthis )

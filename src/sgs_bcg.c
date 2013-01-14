@@ -68,6 +68,7 @@ static sgs_CompFunc* make_compfunc()
 	func->consts = membuf_create();
 	func->code = membuf_create();
 	func->gotthis = FALSE;
+	func->numargs = 0;
 	return func;
 }
 
@@ -342,6 +343,7 @@ static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	if( node && is_keyword( node->token, "this" ) )
 	{
 		func->gotthis = TRUE;
+		func->numargs--;
 	}
 	while( node )
 	{
@@ -351,6 +353,7 @@ static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			return 0;
 		}
 		comp_reg_alloc( C );
+		func->numargs++;
 		node = node->next;
 	}
 	return 1;
@@ -469,6 +472,7 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf )
 	var->data.F.size = nf->consts.size + nf->code.size;
 	var->data.F.instr_off = nf->consts.size;
 	var->data.F.gotthis = nf->gotthis;
+	var->data.F.numargs = nf->numargs;
 
 	membuf_destroy( &nf->consts );
 	membuf_destroy( &nf->code );

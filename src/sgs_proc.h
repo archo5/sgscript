@@ -81,6 +81,7 @@ typedef struct funct_s
 	int32_t	size;
 	int16_t	instr_off;
 	int8_t	gotthis;
+	int8_t	numargs;
 }
 funct;
 
