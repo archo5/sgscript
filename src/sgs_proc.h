@@ -21,6 +21,7 @@ typedef enum sgs_Instruction_e
 
 	SI_RETN,	/* (u8 N)				exit current frame of execution, preserve N output arguments */
 	SI_JUMP,	/* (i16 off)			add to instruction pointer */
+	SI_JMPT,	/* (i16 src, off)		jump (add to instr.ptr.) if true */
 	SI_JMPF,	/* (i16 src, off)		jump (add to instr.ptr.) if false */
 	SI_CALL,	/* (u8 args, expect, i16 src)	call a variable */
 

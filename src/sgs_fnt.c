@@ -891,6 +891,53 @@ fail:
 	return NULL;
 }
 
+static FTNode* parse_dowhile( SGS_CTX, TokenList* begin, TokenList end )
+{
+	FTNode *node, *nexp = NULL, *nwhile = NULL;
+	TokenList at = *begin;
+	TokenList expend;
+
+	FUNC_BEGIN;
+
+	at = sgsT_Next( at );
+	nwhile = parse_stmt( C, &at, end );
+	if( !nwhile ) goto fail;
+
+	if( !is_keyword( at, "while" ) )
+	{
+		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected 'while' after statement in do/while" );
+		goto fail;
+	}
+
+	at = sgsT_Next( at );
+	if( *at != '(' )
+	{
+		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected '(' after 'while'" );
+		goto fail;
+	}
+	at = sgsT_Next( at );
+	expend = detect_exp( C, at, end, ")", 0 );
+	if( !expend ) goto fail;
+
+	nexp = parse_exp( C, at, expend );
+	at = sgsT_Next( expend );
+	if( !nexp ) goto fail;
+
+	nexp->next = nwhile;
+	node = make_node( SFT_DOWHILE, *begin, NULL, nexp );
+	*begin = at;
+
+	FUNC_END;
+	return node;
+
+fail:
+	if( nexp ) sgsFT_Destroy( nexp );
+	if( nwhile ) sgsFT_Destroy( nwhile );
+	C->state |= SGS_HAS_ERRORS;
+	FUNC_END;
+	return NULL;
+}
+
 static FTNode* parse_for( SGS_CTX, TokenList* begin, TokenList end )
 {
 	FTNode *node, *ninit = NULL, *nexp = NULL, *nincr = NULL, *nwhile = NULL;
@@ -1033,6 +1080,13 @@ static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
 	else if( is_keyword( at, "while" ) )
 	{
 		node = parse_while( C, begin, end );
+		FUNC_END;
+		return node;
+	}
+	/* DO / WHILE */
+	else if( is_keyword( at, "do" ) )
+	{
+		node = parse_dowhile( C, begin, end );
 		FUNC_END;
 		return node;
 	}

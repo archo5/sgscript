@@ -193,6 +193,7 @@ static void dump_opcode( char* ptr, int32_t size )
 
 		case SI_RETN: printf( "RETURN %d", (int) AS_UINT8( ptr++ ) ); break;
 		case SI_JUMP: printf( "JUMP %d", (int) AS_INT16( ptr ) ); ptr += 2; break;
+		case SI_JMPT: printf( "JMP_T " ); dump_rcpos( ptr ); printf( ", %d", (int) AS_INT16( ptr + 2 ) ); ptr += 4; break;
 		case SI_JMPF: printf( "JMP_F " ); dump_rcpos( ptr ); printf( ", %d", (int) AS_INT16( ptr + 2 ) ); ptr += 4; break;
 		case SI_CALL: printf( "CALL args:%d%s expect:%d func:", (int) AS_UINT8( ptr ) & 0x7f, AS_UINT8( ptr ) & 0x80 ? ",method" : "",
 							(int) AS_UINT8( ptr + 1 ) ); dump_rcpos( ptr + 2 ); ptr += 4; break;
@@ -793,8 +794,8 @@ static int instr_size( uint8_t pos )
 	case SI_PUSHN: case SI_POPN: case SI_RETN: return 2;
 	case SI_PUSH: case SI_POPR: case SI_JUMP: return 3;
 	case SI_ARRAY: case SI_DICT: return 4;
-	case SI_JMPF: case SI_CALL: case SI_GETVAR: case SI_SETVAR: case SI_SET:
-	case SI_COPY: case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT:
+	case SI_JMPT: case SI_JMPF: case SI_CALL: case SI_GETVAR: case SI_SETVAR:
+	case SI_SET: case SI_COPY: case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT:
 	case SI_INC: case SI_DEC: return 5;
 	case SI_GETPROP: case SI_SETPROP: case SI_GETINDEX: case SI_SETINDEX:
 	case SI_CONCAT: case SI_BOOL_AND: case SI_BOOL_OR: case SI_ADD: case SI_SUB:
@@ -1440,6 +1441,31 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				DATA( &off, 2 );
 				AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
 			}
+			if( !compile_breaks( C, func, 0 ) )
+				goto fail;
+			C->fctx->loops--;
+		}
+		break;
+
+	case SFT_DOWHILE:
+		FUNC_HIT( "DO/WHILE" );
+		{
+			int16_t arg = -1, joff;
+			C->fctx->loops++;
+			i = func->code.size;
+			{
+				FUNC_ENTER;
+				if( !compile_node( C, func, node->child->next ) ) goto fail; /* while */
+
+				if( !compile_breaks( C, func, 1 ) )
+					goto fail;
+			}
+			FUNC_ENTER;
+			if( !compile_node_r( C, func, node->child, &arg ) ) goto fail; /* test */
+			BYTE( SI_JMPT );
+			DATA( &arg, 2 );
+			joff = i - func->code.size - 2;
+			DATA( &joff, 2 );
 			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
 			C->fctx->loops--;

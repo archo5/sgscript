@@ -1127,7 +1127,7 @@ static SGS_INLINE sgs_VarPtr const_getvar( sgs_VarPtr* consts, uint32_t count, i
 */
 const char* opnames[] =
 {
-	"nop",  "push", "push_nulls", "pop_n", "pop_reg",  "return", "jump", "jump_if_false", "call",
+	"nop",  "push", "push_nulls", "pop_n", "pop_reg",  "return", "jump", "jump_if_true", "jump_if_false", "call",
 	"getvar", "setvar", "getprop", "setprop", "getindex", "setindex",  "set", "copy",
 	"concat", "bool_and", "bool_or", "negate", "bool_inv", "invert",  "inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",  "seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte",  "array", "dict"
@@ -1212,6 +1212,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 			break;
 		}
 
+		case SI_JMPT:
 		case SI_JMPF:
 		{
 			int16_t arg, off;
@@ -1220,7 +1221,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 			off = AS_INT16( ptr );
 			ptr += 2;
 			sgs_BreakIf( ptr + off > pend || ptr + off < (char*)code );
-			if( !var_getbool( C, RESVAR( arg ) ) )
+			if( var_getbool( C, RESVAR( arg ) ) ^ ( instr == SI_JMPF ) )
 				ptr += off;
 			break;
 		}
