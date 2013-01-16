@@ -42,7 +42,7 @@ static void ctx_init( SGS_CTX )
 	C->state = 0;
 
 	C->stack_mem = 32;
-	C->stack_base = sgs_Alloc_n( sgs_VarPtr, C->stack_mem );
+	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
 	C->stack_off = C->stack_base;
 	C->stack_top = C->stack_base;
 	C->has_this = FALSE;
@@ -126,8 +126,8 @@ int sgs_ExecBuffer( SGS_CTX, const char* buf, int32_t size )
 #endif
 
 	DBGINFO( "...executing the generated function" );
-	C->gclist = (sgs_Variable**) func->consts.ptr;
-	C->gclist_size = func->consts.size / sizeof( sgs_Variable* );
+	C->gclist = (sgs_VarPtr) func->consts.ptr;
+	C->gclist_size = func->consts.size / sizeof( sgs_Variable );
 	sgsVM_ExecFn( C, func->code.ptr, func->code.size, func->consts.ptr, func->consts.size );
 	C->gclist = NULL;
 	C->gclist_size = 0;

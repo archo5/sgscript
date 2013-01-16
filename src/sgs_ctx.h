@@ -52,18 +52,18 @@ struct _sgs_Context
 	sgs_FuncCtx*	fctx; /* ByteCodeGen */
 
 	/* virtual machine */
-	sgs_VarPtr*	stack_base;
+	sgs_VarPtr	stack_base;
 	int			stack_mem;
-	sgs_VarPtr*	stack_off;
-	sgs_VarPtr*	stack_top;
+	sgs_VarPtr	stack_off;
+	sgs_VarPtr	stack_top;
 	int			has_this;
 
 	HashTable	data;
 
-	sgs_VarPtr	vars;
+	object_t*	vars;
 	int32_t		varcount;
 	uint8_t		redblue;
-	sgs_VarPtr*	gclist;
+	sgs_VarPtr	gclist;
 	int			gclist_size;
 
 	/* special functions */

@@ -135,8 +135,8 @@ const char* sgs_ToString( SGS_CTX, int item );
 int sgs_StackSize( SGS_CTX );
 sgs_Variable* sgs_StackItem( SGS_CTX, int item );
 int sgs_ItemType( SGS_CTX, int item );
-int sgs_Acquire( SGS_CTX, sgs_Variable* var );
-int sgs_Release( SGS_CTX, sgs_Variable* var );
+void sgs_Acquire( SGS_CTX, sgs_Variable* var );
+void sgs_Release( SGS_CTX, sgs_Variable* var );
 #ifdef GC
 int sgs_GCExecute( SGS_CTX );
 int sgs_GCMark( SGS_CTX, sgs_Variable* var );
