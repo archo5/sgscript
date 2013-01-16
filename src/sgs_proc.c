@@ -656,22 +656,38 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 
 static int vm_getvar( SGS_CTX, int16_t out, sgs_Variable* idx )
 {
+	sgs_VarPtr data;
 	if( idx->type != SVT_STRING )
 		return SGS_ENOTSUP;
-	stk_setvar( C, out, (sgs_VarPtr) ht_get( &C->data, str_cstr( idx->data.S ), idx->data.S->size ) );
+	data = (sgs_VarPtr) ht_get( &C->data, str_cstr( idx->data.S ), idx->data.S->size );
+	if( !data )
+	{
+		VAR_RELEASE( stk_getpos( C, out ) );
+	}
+	else
+	{
+		stk_setvar( C, out, (sgs_VarPtr) data );
+	}
 	return SGS_SUCCESS;
 }
 
 static int vm_setvar( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 {
+	sgs_VarPtr data;
 	if( idx->type != SVT_STRING )
 		return SGS_ENOTSUP;
 
 	{
 		void* olddata = ht_get( &C->data, str_cstr( idx->data.S ), idx->data.S->size );
-		VAR_RELEASE( (sgs_Variable*) olddata );
+		if( olddata )
+		{
+			VAR_RELEASE( (sgs_Variable*) olddata );
+		}
 	}
-	ht_set( &C->data, str_cstr( idx->data.S ), idx->data.S->size, val );
+	data = sgs_Alloc( sgs_Variable );
+	*data = *val;
+	VAR_ACQUIRE( data );
+	ht_set( &C->data, str_cstr( idx->data.S ), idx->data.S->size, data );
 	VAR_ACQUIRE( val );
 	return SGS_SUCCESS;
 }

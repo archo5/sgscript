@@ -1623,16 +1623,16 @@ fail:
 
 void sgsBC_Dump( sgs_CompFunc* func )
 {
-	sgs_Variable** vbeg = (sgs_Variable**) func->consts.ptr;
-	sgs_Variable** vend = (sgs_Variable**) ( func->consts.ptr + func->consts.size );
-	sgs_Variable** var = vbeg;
+	sgs_Variable* vbeg = (sgs_Variable*) func->consts.ptr;
+	sgs_Variable* vend = (sgs_Variable*) ( func->consts.ptr + func->consts.size );
+	sgs_Variable* var = vbeg;
 
 	printf( "{\n" );
 	printf( "> constants:\n" );
 	while( var < vend )
 	{
 		printf( "%4d = ", (int) ( var - vbeg ) );
-		sgsVM_VarDump( *var );
+		sgsVM_VarDump( var );
 		printf( "\n" );
 		var++;
 	}
