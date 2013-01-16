@@ -69,11 +69,20 @@ sgs_Context* sgs_CreateEngine()
 
 void sgs_DestroyEngine( SGS_CTX )
 {
+	HTPair *p, *pend;
 	C->print_fn = NULL;
 	C->print_ctx = NULL;
 
 	sgs_Free( C->stack_base );
 
+	p = C->data.pairs;
+	pend = C->data.pairs + C->data.size;
+	while( p < pend )
+	{
+		if( p->str && p->ptr )
+			sgs_Free( (sgs_VarPtr) p->ptr );
+		p++;
+	}
 	ht_free( &C->data );
 #ifdef GC
 	while( C->vars )

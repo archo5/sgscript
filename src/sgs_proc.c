@@ -109,10 +109,11 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 static void var_create_0str( SGS_CTX, sgs_VarPtr out, int32_t len )
 {
 	out->type = SVT_STRING;
-	out->data.S = sgs_Alloc_a( string_t, len );
+	out->data.S = sgs_Alloc_a( string_t, len + 1 );
 	out->data.S->refcount = 1;
 	out->data.S->size = len;
 	out->data.S->mem = len;
+	var_cstr( out )[ len ] = 0;
 }
 
 void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len )
@@ -877,7 +878,7 @@ static void vm_make_array( SGS_CTX, int args, int16_t outpos )
 	else
 	{
 		while( expect-- > rvc )
-			stk_push( C, NULL );
+			stk_push_null( C );
 	}
 
 	stk_setvar( C, outpos, stk_getpos( C, -1 ) );
@@ -901,7 +902,7 @@ static void vm_make_dict( SGS_CTX, int args, int16_t outpos )
 	else
 	{
 		while( expect-- > rvc )
-			stk_push( C, NULL );
+			stk_push_null( C );
 	}
 
 	stk_setvar( C, outpos, stk_getpos( C, -1 ) );
@@ -945,7 +946,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 			stk_pop( C, stkargs - expargs );
 		else while( stkargs < expargs )
 		{
-			stk_push_leave( C, NULL );
+			stk_push_null( C );
 			stkargs++;
 		}
 		/* if <this> was expected but wasn't properly passed, assume that it's already in the argument list */
@@ -968,7 +969,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 	else
 	{
 		while( expect-- > rvc )
-			stk_push( C, NULL );
+			stk_push_null( C );
 	}
 
 	return 1;
@@ -1188,7 +1189,7 @@ int sgsVM_VarSize( sgs_Variable* var )
 	{
 	case SVT_FUNC: out += funct_size( var->data.F ); break;
 	/* case SVT_OBJECT: break; */
-	case SVT_STRING: out += var->data.S->mem; break;
+	case SVT_STRING: out += var->data.S->mem + sizeof( string_t ); break;
 	}
 	return out;
 }
@@ -1482,7 +1483,7 @@ const char* sgs_ToString( SGS_CTX, int item )
 
 int sgs_StackSize( SGS_CTX )
 {
-	return ((sgs_Variable**)C->stack_top) - ((sgs_Variable**)C->stack_off);
+	return C->stack_top - C->stack_off;
 }
 
 sgs_Variable* sgs_StackItem( SGS_CTX, int item )
