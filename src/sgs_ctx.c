@@ -54,9 +54,6 @@ static void ctx_init( SGS_CTX )
 	C->redblue = 0;
 	C->gclist = NULL;
 	C->gclist_size = 0;
-	C->pool = NULL;
-	C->poolsize = 0;
-	C->maxpool = 512;
 
 	C->array_func = NULL;
 	C->dict_func = NULL;
@@ -72,25 +69,16 @@ sgs_Context* sgs_CreateEngine()
 
 void sgs_DestroyEngine( SGS_CTX )
 {
-	sgs_Variable* pool;
 	C->print_fn = NULL;
 	C->print_ctx = NULL;
 
 	sgs_Free( C->stack_base );
 
 	ht_free( &C->data );
+#ifdef GC
 	while( C->vars )
 		sgsVM_VarDestroy( C, C->vars );
-
-	pool = C->pool;
-	while( pool )
-	{
-		sgs_Variable* next = pool->next;
-		sgs_Free( pool );
-		pool = next;
-		C->poolsize--;
-	}
-	sgs_BreakIf( C->poolsize );
+#endif
 
 	sgs_Free( C );
 

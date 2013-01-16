@@ -24,13 +24,13 @@ static const char* sgs_VarNames[] =
 sgs_Variable* make_var( SGS_CTX, int type );
 void destroy_var( SGS_CTX, sgs_Variable* var );
 */
-#define VAR_ACQUIRE( pvar ) { if( pvar )(pvar)->refcount++; }
-#define VAR_RELEASE( pvar ) { if( pvar ){ (pvar)->refcount--; sgs_BreakIf( (pvar)->refcount < 0 ); if( (pvar)->refcount == 0 ) destroy_var( C, (pvar) ); } }
+#define VAR_ACQUIRE( pvar ) var_acquire( pvar )
+#define VAR_RELEASE( pvar ) var_release( C, pvar )
 
-#define STK_UNITSIZE sizeof( sgs_VarPtr )
+#define STK_UNITSIZE sizeof( sgs_Variable )
 
 
-static int obj_exec( SGS_CTX, void* sop, sgs_VarObj* data )
+static int obj_exec( SGS_CTX, void* sop, object_t* data )
 {
 	void** func = data->iface;
 	while( *func != SOP_END )
@@ -43,12 +43,13 @@ static int obj_exec( SGS_CTX, void* sop, sgs_VarObj* data )
 	return SGS_ENOTFND;
 }
 
-
-static void funct_copy( SGS_CTX, funct* to, funct* from )
+/*
+static func_t* funct_copy( SGS_CTX, func_t* from )
 {
-	sgs_Variable** vbeg = AS_( from->bytecode, sgs_Variable** );
-	sgs_Variable** vend = AS_( from->bytecode + from->instr_off, sgs_Variable** );
+	sgs_Variable** vbeg = AS_( func_consts( from ), sgs_Variable** );
+	sgs_Variable** vend = AS_( func_bytecode( from ), sgs_Variable** );
 	sgs_Variable** var = vbeg;
+	func_t* out;
 
 	UNUSED( C );
 	while( var < vend )
@@ -57,137 +58,72 @@ static void funct_copy( SGS_CTX, funct* to, funct* from )
 		var++;
 	}
 
-	to->bytecode = sgs_Alloc_n( char, from->size );
-	to->size = from->size;
-	to->instr_off = from->instr_off;
-	to->gotthis = from->gotthis;
+	out = sgs_Alloc_a( func_t, from->size );
+	out->size = from->size;
+	out->instr_off = from->instr_off;
+	out->gotthis = from->gotthis;
+	out->numargs = from->numargs;
 
 	memcpy( to->bytecode, from->bytecode, from->size );
 }
+*/
 
-static void funct_destroy( SGS_CTX, funct* fn )
+
+static void var_acquire( sgs_VarPtr p )
 {
-	sgs_Variable** vbeg = (sgs_Variable**) fn->bytecode;
-	sgs_Variable** vend = (sgs_Variable**) ( fn->bytecode + fn->instr_off );
-	sgs_Variable** var = vbeg;
-
-	while( var < vend )
+	switch( p->type )
 	{
-		VAR_RELEASE( *var );
-		var++;
-	}
-
-	sgs_Free( fn->bytecode );
-}
-
-
-static SGS_INLINE sgs_Variable* var_alloc( SGS_CTX )
-{
-	if( C->poolsize > 0 )
-	{
-		sgs_Variable* vout = C->pool;
-		C->pool = vout->next;
-		C->poolsize--;
-		return vout;
-	}
-	else
-	{
-#if SGS_DEBUG && SGS_DEBUG_PERF
-		printf( "[perf] var alloc\n" );
-#endif
-		return sgs_Alloc( sgs_Variable );
+	case SVT_STRING: p->data.S->refcount++; return;
+	case SVT_FUNC: p->data.F->refcount++; return;
+	case SVT_OBJECT: p->data.O->refcount++; return;
 	}
 }
 
-static SGS_INLINE void var_free( SGS_CTX, sgs_Variable* var )
+static void var_release( SGS_CTX, sgs_VarPtr p )
 {
-	if( C->poolsize < C->maxpool )
-	{
-		var->next = C->pool;
-		C->pool = var;
-		C->poolsize++;
-	}
-	else
-	{
-#if SGS_DEBUG && SGS_DEBUG_PERF
-		printf( "[perf] var free\n" );
-#endif
-		sgs_Free( var );
-	}
-}
-
-sgs_Variable* make_var( SGS_CTX, int type )
-{
-	sgs_Variable* var = var_alloc( C );
-	var->type = type;
-	var->refcount = 1;
-	var->redblue = C->redblue;
-	var->destroying = 0;
-	var->prev = NULL;
-	var->next = C->vars;
-	if( var->next )
-		var->next->prev = var;
-	C->vars = var;
-	C->varcount++;
-	return var;
-}
-
-#define var_cstr( var ) (var)->data.S.ptr
-
-static void var_destroy( SGS_CTX, sgs_Variable* var )
-{
-#if SGS_DEBUG && SGS_DEBUG_STATE
-	sgs_BreakIf( var->type == 0 );
-	var->type = 0;
-#endif
-	switch( var->type )
+	switch( p->type )
 	{
 	case SVT_STRING:
-		strbuf_destroy( &var->data.S );
+		p->data.S->refcount--;
+		if( p->data.S->refcount <= 0 )
+			sgs_Free( p->data.S );
 		break;
 	case SVT_FUNC:
-		funct_destroy( C, &var->data.F );
+		p->data.F->refcount--;
+		if( p->data.F->refcount <= 0 )
+			sgs_Free( p->data.F );
 		break;
 	case SVT_OBJECT:
-		obj_exec( C, SOP_DESTRUCT, &var->data.O );
+		p->data.O->refcount--;
+		if( p->data.O->refcount <= 0 )
+		{
+			obj_exec( C, SOP_DESTRUCT, p->data.O );
+			sgs_Free( p->data.O );
+		}
 		break;
 	}
+	p->type = SVT_NULL;
 }
 
-static sgs_Variable* var_create_0str( SGS_CTX, int32_t len )
+
+static void var_create_0str( SGS_CTX, sgs_VarPtr out, int32_t len )
 {
-	sgs_Variable* var = make_var( C, SVT_STRING );
-	var->data.S = strbuf_create();
-	strbuf_resize( &var->data.S, len );
-	return var;
+	out->type = SVT_STRING;
+	out->data.S = sgs_Alloc_a( string_t, len );
+	out->data.S->refcount = 1;
+	out->data.S->size = len;
+	out->data.S->mem = len;
 }
 
-sgs_Variable* var_create_str( SGS_CTX, const char* str, int32_t len )
+void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len )
 {
-	sgs_Variable* var;
 	sgs_BreakIf( !str );
 
 	if( len < 0 )
 		len = strlen( str );
 
-	var = var_create_0str( C, len );
-	memcpy( var_cstr( var ), str, len );
-	return var;
-}
-
-void destroy_var( SGS_CTX, sgs_Variable* var )
-{
-	sgs_BreakIf( var->prev != NULL && var->prev == var->next );
-
-	var->destroying = 1;
-	var_destroy( C, var );
-
-	if( var->prev ) var->prev->next = var->next;
-	else C->vars = var->next;
-	if( var->next ) var->next->prev = var->prev;
-	C->varcount--;
-
-	var_free( C, var );
+	var_create_0str( C, out, len );
+	memcpy( str_cstr( out->data.S ), str, len );
 }
 
 
@@ -399,7 +335,7 @@ static int init_var_bool( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 	{
 	case SVT_INT: out->data.B = !!var->data.I; break;
 	case SVT_REAL: out->data.B = !!var->data.R; break;
-	case SVT_STRING: out->data.B = !!*var_cstr( var ); break;
+	case SVT_STRING: out->data.B = !!*str_cstr( var->data.S ); break;
 	case SVT_FUNC:
 	case SVT_CFUNC: out->data.B = TRUE; break;
 	}
@@ -419,7 +355,7 @@ static int init_var_int( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 	{
 	case SVT_BOOL: out->data.I = (sgs_Integer) var->data.B; break;
 	case SVT_REAL: out->data.I = (sgs_Integer) var->data.R; break;
-	case SVT_STRING: out->data.I = util_atoi( var->data.S.ptr, var->data.S.size ); break;
+	case SVT_STRING: out->data.I = util_atoi( str_cstr( var->data.S ), var->data.S->size ); break;
 	case SVT_FUNC:
 	case SVT_CFUNC: return SGS_ENOTSUP;
 	}
@@ -439,7 +375,7 @@ static int init_var_real( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 	{
 	case SVT_BOOL: out->data.R = (sgs_Real) var->data.B; break;
 	case SVT_INT: out->data.R = (sgs_Real) var->data.I; break;
-	case SVT_STRING: out->data.R = util_atof( var->data.S.ptr, var->data.S.size ); break;
+	case SVT_STRING: out->data.R = util_atof( str_cstr( var->data.S ), var->data.S->size ); break;
 	case SVT_FUNC:
 	case SVT_CFUNC: return SGS_ENOTSUP;
 	}
@@ -665,6 +601,7 @@ static void vm_assign( SGS_CTX, int16_t to, sgs_Variable* from )
 	stk_setvar( C, to, from );
 }
 
+/*
 static int vm_copy( SGS_CTX, int16_t to, sgs_Variable* B )
 {
 	sgs_Variable *A;
@@ -686,6 +623,7 @@ static int vm_copy( SGS_CTX, int16_t to, sgs_Variable* B )
 	stk_pop2( C );
 	return 1;
 }
+*/
 
 static int vm_gcmark( SGS_CTX, sgs_Variable* var )
 {
@@ -1250,7 +1188,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 		case SI_SETINDEX: { ARGS_3; vm_setprop( C, p1, p2, p3, TRUE ); break; }
 
 		case SI_SET: { ARGS_2; vm_assign( C, a1, p2 ); break; }
-		case SI_COPY: { ARGS_2; vm_copy( C, a1, p2 ); break; }
+	/*	case SI_COPY: { ARGS_2; vm_copy( C, a1, p2 ); break; }	*/
 		case SI_CONCAT: { ARGS_3; vm_op_concat( C, a1, p2, p3 ); break; }
 		case SI_BOOL_AND: { ARGS_3; vm_op_booland( C, a1, p2, p3 ); break; }
 		case SI_BOOL_OR: { ARGS_3; vm_op_boolor( C, a1, p2, p3 ); break; }
@@ -1835,11 +1773,11 @@ int32_t sgs_GetStringSize( SGS_CTX, int item )
 	return var->data.S.size;
 }
 
-sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item )
+void* sgs_GetObjectData( SGS_CTX, int item )
 {
 	sgs_Variable* var = stk_getvar( C, item );
 	sgs_BreakIf( !var || var->type != SVT_OBJECT );
-	return &var->data.O;
+	return var->data.O->data;
 }
 
 

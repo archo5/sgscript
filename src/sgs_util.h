@@ -38,6 +38,7 @@ void sgs_DumpMemoryInfo();
 #endif
 #define sgs_Alloc( what )		(what*) sgs_Malloc( sizeof( what ) )
 #define sgs_Alloc_n( what, n )	(what*) sgs_Malloc( sizeof( what ) * ( n ) )
+#define sgs_Alloc_a( what, n )	(what*) sgs_Malloc( sizeof( what ) + ( n ) )
 
 
 void sgs_BreakIfFunc( const char* code, const char* file, int line );

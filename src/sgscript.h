@@ -52,6 +52,7 @@ typedef void (*sgs_PrintFunc) ( void* /* ctx */, int /* type */, int /* line */,
 
 /* Context internals */
 /* - variable types */
+#define SVT_NULL	0	/* null (/no) data */
 #define SVT_BOOL	1	/* bool(u8) data */
 #define SVT_INT		2	/* i64 data */
 #define SVT_REAL	3	/* f64 data */
@@ -136,13 +137,15 @@ sgs_Variable* sgs_StackItem( SGS_CTX, int item );
 int sgs_ItemType( SGS_CTX, int item );
 int sgs_Acquire( SGS_CTX, sgs_Variable* var );
 int sgs_Release( SGS_CTX, sgs_Variable* var );
+#ifdef GC
 int sgs_GCExecute( SGS_CTX );
 int sgs_GCMark( SGS_CTX, sgs_Variable* var );
+#endif
 int sgs_CheckArgs( SGS_CTX, const char* str );
 
 const char* sgs_GetStringPtr( SGS_CTX, int item );
 int32_t sgs_GetStringSize( SGS_CTX, int item );
-sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item );
+void* sgs_GetObjectData( SGS_CTX, int item );
 
 
 #ifdef __cplusplus

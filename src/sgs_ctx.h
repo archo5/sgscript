@@ -65,9 +65,6 @@ struct _sgs_Context
 	uint8_t		redblue;
 	sgs_VarPtr*	gclist;
 	int			gclist_size;
-	sgs_VarPtr	pool;
-	int			poolsize;
-	int			maxpool;
 
 	/* special functions */
 	sgs_CFunc	array_func;

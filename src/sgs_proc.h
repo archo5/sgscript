@@ -78,6 +78,7 @@ sgs_Instruction;
 
 typedef struct func_s
 {
+	int32_t refcount;
 	int32_t	size;
 	int16_t	instr_off;
 	int8_t	gotthis;
@@ -97,7 +98,7 @@ string_t;
 #define str_cstr( pstr ) (((char*)(pstr))+sizeof(string_t))
 
 typedef struct object_s object_t;
-typedef struct object_s
+struct object_s
 {
 	int32_t refcount;
 	void* data;
@@ -133,11 +134,7 @@ sgs_Variable* sgsVM_VarCreate( SGS_CTX, int type );
 void sgsVM_VarDestroy( SGS_CTX, sgs_Variable* var );
 sgs_Variable* sgsVM_VarCreateString( SGS_CTX, const char* str, int32_t len );
 */
-sgs_Variable* make_var( SGS_CTX, int type );
-sgs_Variable* var_create_str( SGS_CTX, const char* str, int32_t len );
-void destroy_var( SGS_CTX, sgs_Variable* var );
-#define sgsVM_VarCreate make_var
-#define sgsVM_VarDestroy destroy_var
+void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len );
 #define sgsVM_VarCreateString var_create_str
 
 

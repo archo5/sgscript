@@ -15,6 +15,8 @@
 
 /* Containers */
 
+#ifdef GC
+
 /*
 	ARRAY
 */
@@ -514,6 +516,8 @@ argerr:
 	return 0;
 }
 
+#endif
+
 
 /* Math */
 
@@ -617,6 +621,7 @@ static int sgsstd_exec( SGS_CTX )
 	return 0;
 }
 
+#ifdef GC
 static int sgsstd_gc_collect( SGS_CTX )
 {
 	int32_t orvc = sgs_Stat( C, SGS_STAT_VARCOUNT );
@@ -627,14 +632,17 @@ static int sgsstd_gc_collect( SGS_CTX )
 		sgs_PushBool( C, FALSE );
 	return 1;
 }
+#endif
 
 
 /* register all */
 #define FN( name ) #name, sgsstd_##name
 void* regfuncs[] =
 {
+#ifdef GC
 	/* containers */
 	FN( array ), FN( isset ), FN( unset ),
+#endif
 	/* math */
 	FN( abs ), FN( sqrt ), FN( log ), FN( log10 ), FN( exp ), FN( floor ), FN( ceil ),
 	FN( sin ), FN( cos ), FN( tan ), FN( asin ), FN( acos ), FN( atan ),
@@ -648,7 +656,9 @@ void* regfuncs[] =
 	/* utils */
 	FN( typeof ),
 /*	FN( exec ),	*/
+#ifdef GC
 	FN( gc_collect ),
+#endif
 	NULL
 };
 
@@ -661,9 +671,9 @@ int sgsVM_RegStdLibs( SGS_CTX )
 		sgs_SetGlobal( C, (const char*) fn[ 0 ] );
 		fn += 2;
 	}
-
+#ifdef GC
 	C->array_func = &sgsstd_array;
 	C->dict_func = &sgsstd_dict;
-
+#endif
 	return SGS_SUCCESS;
 }
