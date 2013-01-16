@@ -361,126 +361,119 @@ static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 }
 
 
+#define add_const_HDR \
+	sgs_Variable* vbeg = (sgs_Variable*) func->consts.ptr; \
+	sgs_Variable* vend = (sgs_Variable*) ( func->consts.ptr + func->consts.size ); \
+	sgs_Variable* var = vbeg; \
+	sgs_Variable nvar;
+
 static int add_const_null( SGS_CTX, sgs_CompFunc* func )
 {
-	sgs_Variable** vbeg = (sgs_Variable**) func->consts.ptr;
-	sgs_Variable** vend = (sgs_Variable**) ( func->consts.ptr + func->consts.size );
-	sgs_Variable** var = vbeg;
-	sgs_Variable* nvar = NULL;
+	add_const_HDR;
 	while( var < vend )
 	{
-		if( !*var )
+		if( var->type == SVT_NULL )
 			return var - vbeg;
 		var++;
 	}
 	UNUSED( C );
 
-	membuf_appbuf( &func->consts, &nvar, sizeof( var ) );
+	nvar.type = SVT_NULL;
+	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
 }
 
 static int add_const_b( SGS_CTX, sgs_CompFunc* func, int32_t bval )
 {
-	sgs_Variable** vbeg = (sgs_Variable**) func->consts.ptr;
-	sgs_Variable** vend = (sgs_Variable**) ( func->consts.ptr + func->consts.size );
-	sgs_Variable** var = vbeg;
-	sgs_Variable* nvar;
+	add_const_HDR;
 	while( var < vend )
 	{
-		if( *var && (*var)->type == SVT_BOOL && (*var)->data.B == bval )
+		if( var->type == SVT_BOOL && var->data.B == bval )
 			return var - vbeg;
 		var++;
 	}
+	UNUSED( C );
 
-	nvar = sgsVM_VarCreate( C, SVT_BOOL );
-	nvar->data.B = bval;
-	membuf_appbuf( &func->consts, &nvar, sizeof( var ) );
+	nvar.type = SVT_BOOL;
+	nvar.data.B = bval;
+	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
 }
 
 static int add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Integer ival )
 {
-	sgs_Variable** vbeg = (sgs_Variable**) func->consts.ptr;
-	sgs_Variable** vend = (sgs_Variable**) ( func->consts.ptr + func->consts.size );
-	sgs_Variable** var = vbeg;
-	sgs_Variable* nvar;
+	add_const_HDR;
 	while( var < vend )
 	{
-		if( *var && (*var)->type == SVT_INT && (*var)->data.I == ival )
+		if( var->type == SVT_INT && var->data.I == ival )
 			return var - vbeg;
 		var++;
 	}
 	UNUSED( C );
 
-	nvar = sgsVM_VarCreate( C, SVT_INT );
-	nvar->data.I = ival;
-	membuf_appbuf( &func->consts, &nvar, sizeof( var ) );
+	nvar.type = SVT_INT;
+	nvar.data.I = ival;
+	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
 }
 
 static int add_const_r( SGS_CTX, sgs_CompFunc* func, sgs_Real rval )
 {
-	sgs_Variable** vbeg = (sgs_Variable**) func->consts.ptr;
-	sgs_Variable** vend = (sgs_Variable**) ( func->consts.ptr + func->consts.size );
-	sgs_Variable** var = vbeg;
-	sgs_Variable* nvar;
+	add_const_HDR;
 	while( var < vend )
 	{
-		if( *var && (*var)->type == SVT_REAL && (*var)->data.R == rval )
+		if( var->type == SVT_REAL && var->data.R == rval )
 			return var - vbeg;
 		var++;
 	}
 	UNUSED( C );
 
-	nvar = sgsVM_VarCreate( C, SVT_REAL );
-	nvar->data.R = rval;
-	membuf_appbuf( &func->consts, &nvar, sizeof( var ) );
+	nvar.type = SVT_REAL;
+	nvar.data.R = rval;
+	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
 }
 
 static int add_const_s( SGS_CTX, sgs_CompFunc* func, int32_t len, const char* str )
 {
-	sgs_Variable** vbeg = (sgs_Variable**) func->consts.ptr;
-	sgs_Variable** vend = (sgs_Variable**) ( func->consts.ptr + func->consts.size );
-	sgs_Variable** var = vbeg;
-	sgs_Variable* nvar;
+	add_const_HDR;
 	while( var < vend )
 	{
-		if( *var && (*var)->type == SVT_STRING
-			&& (*var)->data.S.size == len
-			&& memcmp( (*var)->data.S.ptr, str, len ) == 0 )
+		if( var->type == SVT_STRING && var->data.S->size == len
+			&& memcmp( var_cstr( var ), str, len ) == 0 )
 			return var - vbeg;
 		var++;
 	}
 	UNUSED( C );
 
-	nvar = sgsVM_VarCreateString( C, str, len );
-	membuf_appbuf( &func->consts, &nvar, sizeof( var ) );
+	sgsVM_VarCreateString( C, &nvar, str, len );
+	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
 }
 
 static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf )
 {
-	sgs_Variable* var = sgsVM_VarCreate( C, SVT_FUNC );
-	char* fdata = sgs_Alloc_n( char, nf->consts.size + nf->code.size );
+	sgs_Variable nvar;
 	int pos;
+	func_t* F = sgs_Alloc_a( func_t, nf->consts.size + nf->code.size );
 	UNUSED( C );
 
-	memcpy( fdata, nf->consts.ptr, nf->consts.size );
-	memcpy( fdata + nf->consts.size, nf->code.ptr, nf->code.size );
+	memcpy( func_consts( F ), nf->consts.ptr, nf->consts.size );
+	memcpy( func_bytecode( F ), nf->code.ptr, nf->code.size );
 
-	var->data.F.bytecode = fdata;
-	var->data.F.size = nf->consts.size + nf->code.size;
-	var->data.F.instr_off = nf->consts.size;
-	var->data.F.gotthis = nf->gotthis;
-	var->data.F.numargs = nf->numargs;
+	F->refcount = 1;
+	F->size = nf->consts.size + nf->code.size;
+	F->instr_off = nf->consts.size;
+	F->gotthis = nf->gotthis;
+	F->numargs = nf->numargs;
 
 	membuf_destroy( &nf->consts );
 	membuf_destroy( &nf->code );
 	sgs_Free( nf );
 
-	pos = func->consts.size / sizeof( var );
-	membuf_appbuf( &func->consts, &var, sizeof( var ) );
+	pos = func->consts.size / sizeof( nvar );
+	nvar.type = SVT_FUNC;
+	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
 	return pos;
 }
 

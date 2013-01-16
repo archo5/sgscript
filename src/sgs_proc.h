@@ -96,6 +96,7 @@ typedef struct string_s
 }
 string_t;
 #define str_cstr( pstr ) (((char*)(pstr))+sizeof(string_t))
+#define var_cstr( var ) str_cstr( (var)->data.S )
 
 typedef struct object_s object_t;
 struct object_s

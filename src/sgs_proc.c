@@ -126,8 +126,6 @@ void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len )
 	memcpy( str_cstr( out->data.S ), str, len );
 }
 
-#define var_cstr( var ) str_cstr( (var)->data.S )
-
 static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface )
 {
 	object_t* obj = sgs_Alloc( object_t );
