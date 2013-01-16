@@ -33,13 +33,6 @@ typedef struct _sgs_Context sgs_Context;
 typedef struct _sgs_Variable sgs_Variable;
 typedef int (*sgs_CFunc) ( sgs_Context* );
 
-typedef struct _sgs_VarObj
-{
-	void* data;
-	void** iface;
-}
-sgs_VarObj;
-
 
 /* Memory management */
 extern void* (*sgs_MemFunc) ( void*, size_t );
@@ -68,7 +61,7 @@ typedef void (*sgs_PrintFunc) ( void* /* ctx */, int /* type */, int /* line */,
 #define SVT_OBJECT	7	/* variable-length binary data */
 
 /* - object interface */
-typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
+typedef int (*sgs_ObjCallback) ( sgs_Context*, void* data );
 
 #define SOP( idx ) ((void*)idx)
 #define SOP_END			SOP( 0 )

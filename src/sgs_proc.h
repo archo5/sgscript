@@ -76,36 +76,56 @@ typedef enum sgs_Instruction_e
 sgs_Instruction;
 
 
-typedef struct funct_s
+typedef struct func_s
 {
-	char*	bytecode;
 	int32_t	size;
 	int16_t	instr_off;
 	int8_t	gotthis;
 	int8_t	numargs;
 }
-funct;
+func_t;
+#define func_consts( pfn ) (((char*)(pfn))+sizeof(func_t))
+#define func_bytecode( pfn )	( func_consts( pfn ) + pfn->instr_off )
 
+typedef struct string_s
+{
+	int32_t refcount;
+	int32_t mem;
+	int32_t size;
+}
+string_t;
+#define str_cstr( pstr ) (((char*)(pstr))+sizeof(string_t))
+
+typedef struct object_s object_t;
+typedef struct object_s
+{
+	int32_t refcount;
+	void* data;
+	void** iface;
+	object_t* prev; /* pointer to previous GC object */
+	object_t* next; /* pointer to next GC object */
+	uint8_t redblue; /* red or blue? mark & sweep */
+	uint8_t destroying; /* whether the variable is already in a process of destruction. for container circ. ref. handling. */
+};
+
+
+typedef union _sgs_VarData
+{
+	int32_t		B;
+	sgs_Integer	I;
+	sgs_Real	R;
+	string_t*	S;
+	func_t*		F;
+	sgs_CFunc	C;
+	object_t*	O;
+}
+sgs_VarData;
 
 
 struct _sgs_Variable
 {
-	int	refcount;
 	uint8_t type;
-	uint8_t redblue; /* red or blue? mark & sweep */
-	uint8_t destroying; /* whether the variable is already in a process of destruction. for container circ. ref. handling. */
-	union _sgs_Variable_data
-	{
-		/* 32/64 bit sizes, size of union isn't guaranteed to be max(all). */
-		int32_t		B;	/* 4 */
-		sgs_Integer	I;	/* 8 */
-		sgs_Real	R;	/* 8 */
-		StrBuf		S;	/* 12/16 */
-		funct		F;	/* 12/16 */
-		sgs_CFunc	C;	/* 4/8 */
-		sgs_VarObj	O;	/* 8/16 */
-	} data;
-	sgs_Variable *prev, *next;
+	sgs_VarData data;
 };
 
 /*
