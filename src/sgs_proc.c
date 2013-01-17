@@ -91,13 +91,23 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 	case SVT_FUNC:
 		p->data.F->refcount--;
 		if( p->data.F->refcount <= 0 )
+		{
+			sgs_VarPtr var = (sgs_VarPtr) func_consts( p->data.F ),
+						vend = (sgs_VarPtr) func_bytecode( p->data.F );
+			while( var < vend )
+			{
+				VAR_RELEASE( var );
+				var++;
+			}
 			sgs_Free( p->data.F );
+		}
 		break;
 	case SVT_OBJECT:
 		p->data.O->refcount--;
 		if( p->data.O->refcount <= 0 )
 		{
 			obj_exec( C, SOP_DESTRUCT, p->data.O );
+			/* TODO: GC linkage */
 			sgs_Free( p->data.O );
 		}
 		break;
@@ -1201,18 +1211,16 @@ int sgsVM_VarSize( sgs_Variable* var )
 
 void sgsVM_VarDump( sgs_VarPtr var )
 {
-	if( !var )
-	{
-		printf( "Null (rc:0)" );
-		return;
-	}
 	printf( "%s (size:%d)", sgs_VarNames[ var->type ], sgsVM_VarSize( var ) );
 	switch( var->type )
 	{
+	case SVT_NULL: printf( "Null" ); break;
 	case SVT_BOOL: printf( " = %s", var->data.B ? "True" : "False" ); break;
 	case SVT_INT: printf( " = %" PRId64, var->data.I ); break;
 	case SVT_REAL: printf( " = %f", var->data.R ); break;
 	case SVT_STRING: printf( " [rc:%d] = \"", var->data.S->refcount ); print_safe( var_cstr( var ), 16 ); printf( var->data.S->size > 16 ? "...\"" : "\"" ); break;
+	case SVT_FUNC: printf( " [rc:%d]", var->data.F->refcount ); break;
+	case SVT_CFUNC: printf( " = %p", var->data.C ); break;
 	case SVT_OBJECT: printf( "TODO [object impl]" ); break;
 	}
 }

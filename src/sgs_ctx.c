@@ -85,6 +85,11 @@ void sgs_DestroyEngine( SGS_CTX )
 	C->print_fn = NULL;
 	C->print_ctx = NULL;
 
+	while( C->stack_base != C->stack_top )
+	{
+		C->stack_top--;
+		sgs_Release( C, C->stack_top );
+	}
 	sgs_Free( C->stack_base );
 
 	p = C->data.pairs;
