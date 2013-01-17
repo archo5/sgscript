@@ -492,6 +492,7 @@ int sgsstd_unset( SGS_CTX )
 {
 	sgs_Variable* var;
 	HashTable* ht;
+	HTPair* val;
 	if( sgs_StackSize( C ) != 2 )
 		goto argerr;
 
@@ -504,7 +505,13 @@ int sgsstd_unset( SGS_CTX )
 		goto argerr;
 	ht = (HashTable*) var->data.O->data;
 
-	ht_unset( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+	val = ht_find( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+	if( val )
+	{
+		sgs_Release( C, (sgs_VarPtr) val->ptr );
+		sgs_Free( val->ptr );
+		ht_unset( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+	}
 	return 0;
 
 argerr:
@@ -662,7 +669,7 @@ int sgsVM_RegStdLibs( SGS_CTX )
 	}
 
 	C->array_func = &sgsstd_array;
-//	C->dict_func = &sgsstd_dict;
+	C->dict_func = &sgsstd_dict;
 
 	return SGS_SUCCESS;
 }
