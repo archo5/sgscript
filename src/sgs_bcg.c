@@ -458,14 +458,14 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf )
 	func_t* F = sgs_Alloc_a( func_t, nf->consts.size + nf->code.size );
 	UNUSED( C );
 
-	memcpy( func_consts( F ), nf->consts.ptr, nf->consts.size );
-	memcpy( func_bytecode( F ), nf->code.ptr, nf->code.size );
-
 	F->refcount = 1;
 	F->size = nf->consts.size + nf->code.size;
 	F->instr_off = nf->consts.size;
 	F->gotthis = nf->gotthis;
 	F->numargs = nf->numargs;
+
+	memcpy( func_consts( F ), nf->consts.ptr, nf->consts.size );
+	memcpy( func_bytecode( F ), nf->code.ptr, nf->code.size );
 
 	membuf_destroy( &nf->consts );
 	membuf_destroy( &nf->code );
@@ -473,6 +473,7 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf )
 
 	pos = func->consts.size / sizeof( nvar );
 	nvar.type = SVT_FUNC;
+	nvar.data.F = F;
 	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
 	return pos;
 }

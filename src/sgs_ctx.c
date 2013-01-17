@@ -34,6 +34,18 @@ static void default_printfn( void* ctx, int type, int line, const char* msg )
 }
 
 
+static int default_array_func( SGS_CTX )
+{
+	sgs_Printf( C, SGS_ERROR, -1, "'array' creating function is undefined" );
+	return 0;
+}
+static int default_dict_func( SGS_CTX )
+{
+	sgs_Printf( C, SGS_ERROR, -1, "'dict' creating function is undefined" );
+	return 0;
+}
+
+
 static void ctx_init( SGS_CTX )
 {
 	C->print_fn = &default_printfn;
@@ -55,8 +67,8 @@ static void ctx_init( SGS_CTX )
 	C->gclist = NULL;
 	C->gclist_size = 0;
 
-	C->array_func = NULL;
-	C->dict_func = NULL;
+	C->array_func = default_array_func;
+	C->dict_func = default_dict_func;
 }
 
 sgs_Context* sgs_CreateEngine()

@@ -174,7 +174,7 @@ static SGS_INLINE sgs_VarPtr stk_getpos( SGS_CTX, int stkid )
 {
 #if SGS_DEBUG_EXTRA
 	DBG_STACK_CHECK
-    if( stkid < 0 ) sgs_BreakIf( -stkid > C->stack_size )
+    if( stkid < 0 ) sgs_BreakIf( -stkid > C->stack_top - C->stack_off )
     else            sgs_BreakIf( stkid >= C->stack_top - C->stack_off )
 #endif
 	if( stkid < 0 )	return C->stack_top + stkid;
@@ -192,7 +192,12 @@ static SGS_INLINE void stk_setvar_leave( SGS_CTX, int stkid, sgs_VarPtr var )
 {
 	sgs_VarPtr vpos = stk_getpos( C, stkid );
 	VAR_RELEASE( vpos );
-	vpos = var;
+	*vpos = *var;
+}
+static SGS_INLINE void stk_setvar_null( SGS_CTX, int stkid )
+{
+	sgs_VarPtr vpos = stk_getpos( C, stkid );
+	VAR_RELEASE( vpos );
 }
 
 static SGS_INLINE sgs_VarPtr stk_getlpos( SGS_CTX, int stkid )
@@ -207,7 +212,7 @@ static SGS_INLINE void stk_setlvar( SGS_CTX, int stkid, sgs_VarPtr var )
 {
 	sgs_VarPtr vpos = stk_getlpos( C, stkid );
 	VAR_RELEASE( vpos );
-	vpos = var;
+	*vpos = *var;
 	VAR_ACQUIRE( var );
 }
 
@@ -612,7 +617,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 			const char* err = isindex ? "Cannot index variable" : "Property not found";
 			sgs_Printf( C, SGS_ERROR, -1, "%s: %s", err, var_cstr( idx ) );
 		}
-		stk_setvar( C, out, NULL );
+		stk_setvar_null( C, out );
 	}
 	else
 	{
