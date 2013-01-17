@@ -61,8 +61,21 @@ typedef void (*sgs_PrintFunc) ( void* /* ctx */, int /* type */, int /* line */,
 #define SVT_CFUNC	6	/* C function */
 #define SVT_OBJECT	7	/* variable-length binary data */
 
+/* - object data */
+typedef struct sgs_ObjData sgs_VarObj;
+struct sgs_ObjData
+{
+	int32_t refcount;
+	void* data;
+	void** iface;
+	sgs_VarObj* prev; /* pointer to previous GC object */
+	sgs_VarObj* next; /* pointer to next GC object */
+	uint8_t redblue; /* red or blue? mark & sweep */
+	uint8_t destroying; /* whether the variable is already in a process of destruction. for container circ. ref. handling. */
+};
+
 /* - object interface */
-typedef int (*sgs_ObjCallback) ( sgs_Context*, void* data );
+typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 
 #define SOP( idx ) ((void*)idx)
 #define SOP_END			SOP( 0 )

@@ -98,18 +98,7 @@ string_t;
 #define str_cstr( pstr ) (((char*)(pstr))+sizeof(string_t))
 #define var_cstr( var ) str_cstr( (var)->data.S )
 
-typedef struct object_s object_t;
-struct object_s
-{
-	int32_t refcount;
-	void* data;
-	void** iface;
-	object_t* prev; /* pointer to previous GC object */
-	object_t* next; /* pointer to next GC object */
-	uint8_t redblue; /* red or blue? mark & sweep */
-	uint8_t destroying; /* whether the variable is already in a process of destruction. for container circ. ref. handling. */
-};
-
+#define object_t sgs_VarObj
 
 typedef union _sgs_VarData
 {

@@ -15,7 +15,6 @@
 
 /* Containers */
 
-#ifdef GC
 
 /*
 	ARRAY
@@ -28,12 +27,13 @@ typedef struct sgsstd_array_header_s
 }
 sgsstd_array_header_t;
 
+#define SGSARR_UNIT sizeof( sgs_Variable )
 #define SGSARR_HDRBASE sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data
 #define SGSARR_HDR sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data->data
 #define SGSARR_HDRUPDATE hdr = (sgsstd_array_header_t*) data->data
 #define SGSARR_HDRSIZE sizeof(sgsstd_array_header_t)
 #define SGSARR_ALLOCSIZE( cnt ) ((cnt)*sizeof(sgs_Variable)+SGSARR_HDRSIZE)
-#define SGSARR_PTR( base ) ((sgs_Variable**)(((char*)base)+SGSARR_HDRSIZE))
+#define SGSARR_PTR( base ) ((sgs_Variable*)(((char*)base)+SGSARR_HDRSIZE))
 
 static void sgsstd_array_reserve( SGS_CTX, sgs_VarObj* data, uint32_t size )
 {
@@ -54,13 +54,13 @@ static void sgsstd_array_reserve( SGS_CTX, sgs_VarObj* data, uint32_t size )
 
 static void sgsstd_array_clear( SGS_CTX, sgs_VarObj* data )
 {
-	sgs_Variable **var, **vend;
+	sgs_Variable *var, *vend;
 	SGSARR_HDR;
 	var = SGSARR_PTR( data->data );
 	vend = var + hdr->size;
 	while( var < vend )
 	{
-		sgs_Release( C, *var );
+		sgs_Release( C, var );
 		var++;
 	}
 	hdr->size = 0;
@@ -72,7 +72,7 @@ static void sgsstd_array_insert( SGS_CTX, sgs_VarObj* data, uint32_t pos )
 	uint32_t cnt = sgs_StackSize( C ) - 1;
 	SGSARR_HDR;
 	uint32_t nsz = hdr->size + cnt;
-	sgs_Variable** ptr = SGSARR_PTR( data->data );
+	sgs_Variable* ptr = SGSARR_PTR( data->data );
 
 	if( !cnt ) return;
 
@@ -83,12 +83,12 @@ static void sgsstd_array_insert( SGS_CTX, sgs_VarObj* data, uint32_t pos )
 		ptr = SGSARR_PTR( data->data );
 	}
 	if( pos < hdr->size )
-		memmove( ptr + pos + cnt, ptr + pos, ( hdr->size - pos ) * sizeof( sgs_Variable* ) );
+		memmove( ptr + pos + cnt, ptr + pos, ( hdr->size - pos ) * SGSARR_UNIT );
 	for( i = 1; i < sgs_StackSize( C ); ++i )
 	{
 		sgs_Variable* var = sgs_StackItem( C, i );
 		sgs_Acquire( C, var );
-		ptr[ pos + i - 1 ] = var;
+		ptr[ pos + i - 1 ] = *var;
 	}
 	hdr->size = nsz;
 }
@@ -98,14 +98,14 @@ static void sgsstd_array_erase( SGS_CTX, sgs_VarObj* data, uint32_t from, uint32
 	uint32_t i;
 	uint32_t cnt = to - from + 1, to1 = to + 1;
 	SGSARR_HDR;
-	sgs_Variable** ptr = SGSARR_PTR( data->data );
+	sgs_Variable* ptr = SGSARR_PTR( data->data );
 
 	sgs_BreakIf( from >= hdr->size || to >= hdr->size || from > to );
 
 	for( i = from; i <= to; ++i )
-		sgs_Release( C, ptr[ i ] );
+		sgs_Release( C, ptr + i );
 	if( to1 < hdr->size )
-		memmove( ptr + from, ptr + to1, ( hdr->size - to1 ) * sizeof( sgs_Variable* ) );
+		memmove( ptr + from, ptr + to1, ( hdr->size - to1 ) * SGSARR_UNIT );
 	hdr->size -= cnt;
 }
 
@@ -140,26 +140,26 @@ static int sgsstd_arrayI_push( SGS_CTX )
 static int sgsstd_arrayI_pop( SGS_CTX )
 {
 	SGSARR_IHDR;
-	sgs_Variable** ptr = SGSARR_PTR( data->data );
+	sgs_Variable* ptr = SGSARR_PTR( data->data );
 	if( !hdr->size )
 	{
 		sgs_Printf( C, SGS_ERROR, -1, "Array is empty, cannot pop." );
 		return 0;
 	}
-	sgs_PushVariable( C, ptr[ hdr->size - 1 ] );
+	sgs_PushVariable( C, ptr + hdr->size - 1 );
 	sgsstd_array_erase( C, data, hdr->size - 1, hdr->size - 1 );
 	return 1;
 }
 static int sgsstd_arrayI_shift( SGS_CTX )
 {
 	SGSARR_IHDR;
-	sgs_Variable** ptr = SGSARR_PTR( data->data );
+	sgs_Variable* ptr = SGSARR_PTR( data->data );
 	if( !hdr->size )
 	{
 		sgs_Printf( C, SGS_ERROR, -1, "Array is empty, cannot shift." );
 		return 0;
 	}
-	sgs_PushVariable( C, ptr[ 0 ] );
+	sgs_PushVariable( C, ptr );
 	sgsstd_array_erase( C, data, 0, 0 );
 	return 1;
 }
@@ -199,32 +199,30 @@ static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 static int sgsstd_array_getindex( SGS_CTX, sgs_VarObj* data )
 {
 	SGSARR_HDR;
-	sgs_Variable** ptr = SGSARR_PTR( data->data );
+	sgs_Variable* ptr = SGSARR_PTR( data->data );
 	sgs_Integer i = sgs_ToInt( C, -1 );
-	sgs_Variable* var;
 	if( i < 0 || i >= hdr->size )
 	{
 		sgs_Printf( C, SGS_ERROR, -1, "Array index out of bounds" );
 		return SGS_EBOUNDS;
 	}
-	var = ptr[ i ];
-	sgs_PushVariable( C, var );
+	sgs_PushVariable( C, ptr + i );
 	return SGS_SUCCESS;
 }
 
 static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* data )
 {
 	SGSARR_HDR;
-	sgs_Variable** ptr = SGSARR_PTR( data->data );
+	sgs_Variable* ptr = SGSARR_PTR( data->data );
 	sgs_Integer i = sgs_ToInt( C, -1 );
 	if( i < 0 || i >= hdr->size )
 	{
 		sgs_Printf( C, SGS_ERROR, -1, "Array index out of bounds" );
 		return SGS_EBOUNDS;
 	}
-	sgs_Release( C, ptr[ i ] );
-	ptr[ i ] = sgs_StackItem( C, -3 );
-	sgs_Acquire( C, ptr[ i ] );
+	sgs_Release( C, ptr + i );
+	ptr[ i ] = *sgs_StackItem( C, -3 );
+	sgs_Acquire( C, ptr + i );
 	return SGS_SUCCESS;
 }
 
@@ -244,25 +242,23 @@ static int sgsstd_array_tobool( SGS_CTX, sgs_VarObj* data )
 
 static int sgsstd_array_tostring( SGS_CTX, sgs_VarObj* data )
 {
+	int cnt;
 	SGSARR_HDR;
-	sgs_Variable** var = SGSARR_PTR( data->data );
-	sgs_Variable** vend = var + hdr->size, *str;
+	sgs_Variable* var = SGSARR_PTR( data->data );
+	sgs_Variable* vend = var + hdr->size, *str;
+	cnt = vend - var;
 
 	sgs_PushString( C, "[" );
 	str = sgs_StackItem( C, -1 );
 	while( var < vend )
 	{
-		sgs_PushVariable( C, *var );
-		sgs_ToString( C, -1 );
-		strbuf_appbuf( &str->data.S, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
-		sgs_Pop( C, 1 );
+		sgs_PushVariable( C, var );
 		var++;
 		if( var < vend )
-			strbuf_appchr( &str->data.S, ',' );
+			sgs_PushString( C, "," );
 	}
-	strbuf_appchr( &str->data.S, ']' );
-
-	return SGS_SUCCESS;
+	sgs_PushString( C, "]" );
+	return sgs_StringMultiConcat( C, cnt * 2 + 1 );
 }
 
 static int sgsstd_array_tostring_UNUSED( SGS_CTX, sgs_VarObj* data )
@@ -283,11 +279,11 @@ static void sgsstd_array_resize( SGS_CTX, sgs_VarObj* data, uint32_t size )
 static int sgsstd_array_gcmark( SGS_CTX, sgs_VarObj* data )
 {
 	SGSARR_HDR;
-	sgs_Variable** var = SGSARR_PTR( data->data );
-	sgs_Variable** vend = var + hdr->size;
+	sgs_Variable* var = SGSARR_PTR( data->data );
+	sgs_Variable* vend = var + hdr->size;
 	while( var < vend )
 	{
-		int ret = sgs_GCMark( C, *var++ );
+		int ret = sgs_GCMark( C, var++ );
 		if( ret != SGS_SUCCESS )
 			return ret;
 	}
@@ -318,7 +314,7 @@ int sgsstd_array( SGS_CTX )
 	{
 		sgs_Variable* var = sgs_StackItem( C, i );
 		sgs_Acquire( C, var );
-		SGSARR_PTR( data )[ i ] = var;
+		SGSARR_PTR( data )[ i ] = *var;
 	}
 	sgs_PushObject( C, data, sgsstd_array_functable );
 	return 1;
@@ -354,29 +350,24 @@ static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data )
 static int sgsstd_dict_tostring( SGS_CTX, sgs_VarObj* data )
 {
 	HTHDR;
-	StrBuf* sb;
 	HTPair *pair = ht->pairs, *pend = ht->pairs + ht->size;
 	int cnt = 0;
 	sgs_PushString( C, "{" );
-	sb = &sgs_StackItem( C, -1 )->data.S;
 	while( pair < pend )
 	{
 		if( pair->str )
 		{
 			if( cnt )
-				strbuf_appchr( sb, ',' );
-			strbuf_appbuf( sb, pair->str, pair->size );
-			strbuf_appchr( sb, '=' );
+				sgs_PushString( C, "," );
+			sgs_PushStringBuf( C, pair->str, pair->size );
+			sgs_PushString( C, "=" );
 			sgs_PushVariable( C, (sgs_Variable*) pair->ptr );
-			sgs_ToString( C, -1 );
-			strbuf_appbuf( sb, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
-			sgs_Pop( C, 1 );
 			cnt++;
 		}
 		pair++;
 	}
-	strbuf_appchr( sb, '}' );
-	return SGS_SUCCESS;
+	sgs_PushString( C, "}" );
+	return sgs_StringMultiConcat( C, cnt * 4 + 1 );
 }
 
 static int sgsstd_dict_gettype( SGS_CTX, sgs_VarObj* data )
@@ -425,14 +416,16 @@ static int sgsstd_dict_setindex( SGS_CTX, sgs_VarObj* data )
 	key = sgs_StackItem( C, -2 );
 	if( key->type != SVT_STRING )
 		return SGS_EINVAL;
-	pair = ht_find( ht, key->data.S.ptr, key->data.S.size );
+	pair = ht_find( ht, var_cstr( key ), key->data.S->size );
 	if( pair )
 	{
 		sgs_Release( C, (sgs_Variable*) pair->ptr );
+		sgs_Free( pair->ptr );
 	}
-	var = sgs_StackItem( C, -1 );
+	var = sgs_Alloc( sgs_Variable );
+	*var = *sgs_StackItem( C, -1 );
 	sgs_Acquire( C, var );
-	ht_set( ht, key->data.S.ptr, key->data.S.size, var );
+	ht_set( ht, var_cstr( key ), key->data.S->size, var );
 	return SGS_SUCCESS;
 }
 
@@ -459,9 +452,10 @@ int sgsstd_dict( SGS_CTX )
 	for( i = 0; i < objcnt; i += 2 )
 	{
 		sgs_Variable* vkey = sgs_StackItem( C, i );
-		sgs_Variable* var = sgs_StackItem( C, i + 1 );
+		sgs_Variable* var = sgs_Alloc( sgs_Variable );
+		*var = *sgs_StackItem( C, i + 1 );
 		sgs_Acquire( C, var );
-		ht_set( ht, vkey->data.S.ptr, vkey->data.S.size, var );
+		ht_set( ht, var_cstr( vkey ), vkey->data.S->size, var );
 	}
 	sgs_PushObject( C, ht, sgsstd_dict_functable );
 	return 1;
@@ -476,13 +470,13 @@ int sgsstd_isset( SGS_CTX )
 		goto argerr;
 
 	var = sgs_StackItem( C, -2 );
-	if( var->type != SVT_OBJECT || var->data.O.iface != sgsstd_dict_functable )
+	if( var->type != SVT_OBJECT || var->data.O->iface != sgsstd_dict_functable )
 		goto argerr;
 
 	sgs_ToString( C, -1 );
 	if( sgs_StackItem( C, -1 )->type != SVT_STRING )
 		goto argerr;
-	ht = (HashTable*) var->data.O.data;
+	ht = (HashTable*) var->data.O->data;
 
 	pair = ht_find( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
 	return sgs_PushBool( C, pair != NULL ) == SGS_SUCCESS;
@@ -500,13 +494,13 @@ int sgsstd_unset( SGS_CTX )
 		goto argerr;
 
 	var = sgs_StackItem( C, -2 );
-	if( var->type != SVT_OBJECT || var->data.O.iface != sgsstd_dict_functable )
+	if( var->type != SVT_OBJECT || var->data.O->iface != sgsstd_dict_functable )
 		goto argerr;
 
 	sgs_ToString( C, -1 );
 	if( sgs_StackItem( C, -1 )->type != SVT_STRING )
 		goto argerr;
-	ht = (HashTable*) var->data.O.data;
+	ht = (HashTable*) var->data.O->data;
 
 	ht_unset( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
 	return 0;
@@ -516,7 +510,6 @@ argerr:
 	return 0;
 }
 
-#endif
 
 
 /* Math */
@@ -621,7 +614,6 @@ static int sgsstd_exec( SGS_CTX )
 	return 0;
 }
 
-#ifdef GC
 static int sgsstd_gc_collect( SGS_CTX )
 {
 	int32_t orvc = sgs_Stat( C, SGS_STAT_VARCOUNT );
@@ -632,17 +624,14 @@ static int sgsstd_gc_collect( SGS_CTX )
 		sgs_PushBool( C, FALSE );
 	return 1;
 }
-#endif
 
 
 /* register all */
 #define FN( name ) #name, sgsstd_##name
 void* regfuncs[] =
 {
-#ifdef GC
 	/* containers */
 	FN( array ), FN( isset ), FN( unset ),
-#endif
 	/* math */
 	FN( abs ), FN( sqrt ), FN( log ), FN( log10 ), FN( exp ), FN( floor ), FN( ceil ),
 	FN( sin ), FN( cos ), FN( tan ), FN( asin ), FN( acos ), FN( atan ),
@@ -656,9 +645,7 @@ void* regfuncs[] =
 	/* utils */
 	FN( typeof ),
 /*	FN( exec ),	*/
-#ifdef GC
 	FN( gc_collect ),
-#endif
 	NULL
 };
 
@@ -671,9 +658,9 @@ int sgsVM_RegStdLibs( SGS_CTX )
 		sgs_SetGlobal( C, (const char*) fn[ 0 ] );
 		fn += 2;
 	}
-#ifdef GC
+
 	C->array_func = &sgsstd_array;
 	C->dict_func = &sgsstd_dict;
-#endif
+
 	return SGS_SUCCESS;
 }
