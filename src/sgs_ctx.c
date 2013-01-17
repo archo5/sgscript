@@ -97,7 +97,10 @@ void sgs_DestroyEngine( SGS_CTX )
 	while( p < pend )
 	{
 		if( p->str && p->ptr )
+		{
+			sgs_Release( C, (sgs_VarPtr) p->ptr );
 			sgs_Free( (sgs_VarPtr) p->ptr );
+		}
 		p++;
 	}
 	ht_free( &C->data );

@@ -698,13 +698,13 @@ static int vm_setvar( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 		if( olddata )
 		{
 			VAR_RELEASE( (sgs_Variable*) olddata );
+			sgs_Free( olddata );
 		}
 	}
 	data = sgs_Alloc( sgs_Variable );
 	*data = *val;
 	VAR_ACQUIRE( data );
 	ht_set( &C->data, str_cstr( idx->data.S ), idx->data.S->size, data );
-	VAR_ACQUIRE( val );
 	return SGS_SUCCESS;
 }
 
