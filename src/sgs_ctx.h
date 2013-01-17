@@ -60,8 +60,8 @@ struct _sgs_Context
 
 	HashTable	data;
 
-	object_t*	vars;
-	int32_t		varcount;
+	object_t*	objs;
+	int32_t		objcount;
 	uint8_t		redblue;
 	sgs_VarPtr	gclist;
 	int			gclist_size;

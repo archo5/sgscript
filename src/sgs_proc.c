@@ -68,6 +68,17 @@ static func_t* funct_copy( SGS_CTX, func_t* from )
 }
 */
 
+void var_destroy_object( SGS_CTX, object_t* O )
+{
+	if( O->prev ) O->prev->next = O->next;
+	if( O->next ) O->next->prev = O->prev;
+	if( C->objs == O )
+		C->objs = O->next;
+	O->destroying = TRUE;
+	obj_exec( C, SOP_DESTRUCT, O );
+	sgs_Free( O );
+	C->objcount--;
+}
 
 static void var_acquire( sgs_VarPtr p )
 {
@@ -106,9 +117,7 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 		p->data.O->refcount--;
 		if( p->data.O->refcount <= 0 )
 		{
-			obj_exec( C, SOP_DESTRUCT, p->data.O );
-			/* TODO: GC linkage */
-			sgs_Free( p->data.O );
+			var_destroy_object( C, p->data.O );
 		}
 		break;
 	}
@@ -143,8 +152,9 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 	obj->data = data;
 	obj->destroying = 0;
 	obj->iface = iface;
-	obj->next = C->vars;
+	obj->next = C->objs;
 	obj->next->prev = obj; /* ! */
+	C->objcount++;
 	obj->prev = NULL;
 	obj->redblue = C->redblue;
 	obj->refcount = 1;
@@ -552,35 +562,13 @@ static int vm_copy( SGS_CTX, int16_t to, sgs_Variable* B )
 }
 */
 
-#ifdef GC
 static int vm_gcmark( SGS_CTX, sgs_Variable* var )
 {
-	if( var == NULL )
+	if( var->type != SVT_OBJECT || var->data.O->destroying || var->data.O->redblue == C->redblue )
 		return SGS_SUCCESS;
-	if( var->redblue != C->redblue )
-	{
-		var->redblue = C->redblue;
-		if( var->type == SVT_FUNC )
-		{
-			sgs_Variable** vbeg = (sgs_Variable**) var->data.F.bytecode;
-			sgs_Variable** vend = (sgs_Variable**) ( var->data.F.bytecode + var->data.F.instr_off );
-			while( vbeg < vend )
-			{
-				int ret = vm_gcmark( C, *vbeg++ );
-				if( ret != SGS_SUCCESS )
-					return ret;
-			}
-		}
-		else if( var->type == SVT_OBJECT )
-		{
-			int ret = obj_exec( C, SOP_GCMARK, &var->data.O );
-			if( ret != SGS_SUCCESS )
-				return ret;
-		}
-	}
-	return SGS_SUCCESS;
+	var->data.O->redblue = C->redblue;
+	return obj_exec( C, SOP_GCMARK, var->data.O );
 }
-#endif
 
 /*
 	Object property / array accessor handling
@@ -1522,7 +1510,6 @@ void sgs_Release( SGS_CTX, sgs_Variable* var )
 	VAR_RELEASE( var );
 }
 
-#ifdef GC
 int sgs_GCExecute( SGS_CTX )
 {
 	C->redblue = !C->redblue;
@@ -1530,13 +1517,14 @@ int sgs_GCExecute( SGS_CTX )
 	/* -- mark -- */
 	/* gclist / currently executed "main" function */
 	{
-		sgs_VarPtr* vbeg = C->gclist;
-		sgs_VarPtr* vend = vbeg + C->gclist_size;
+		sgs_VarPtr vbeg = C->gclist;
+		sgs_VarPtr vend = vbeg + C->gclist_size;
 		while( vbeg < vend )
 		{
-			int ret = vm_gcmark( C, *vbeg++ );
+			int ret = vm_gcmark( C, vbeg );
 			if( ret != SGS_SUCCESS )
 				return ret;
+			vbeg++;
 		}
 	}
 
@@ -1571,7 +1559,7 @@ int sgs_GCExecute( SGS_CTX )
 	/* -- sweep -- */
 	/* mark as being destroyed */
 	{
-		sgs_Variable* p = C->vars;
+		object_t* p = C->objs;
 		while( p )
 		{
 			if( p->redblue != C->redblue )
@@ -1582,12 +1570,12 @@ int sgs_GCExecute( SGS_CTX )
 
 	/* destroy variables */
 	{
-		sgs_Variable* p = C->vars;
+		object_t* p = C->objs;
 		while( p )
 		{
-			sgs_Variable* pn = p->next;
+			object_t* pn = p->next;
 			if( p->redblue != C->redblue )
-				destroy_var( C, p );
+				var_destroy_object( C, p );
 			p = pn;
 		}
 	}
@@ -1599,7 +1587,6 @@ int sgs_GCMark( SGS_CTX, sgs_Variable* var )
 {
 	return vm_gcmark( C, var );
 }
-#endif
 
 static const char* ca_curend( const char* str, const char* endchrs )
 {

@@ -61,8 +61,8 @@ static void ctx_init( SGS_CTX )
 
 	ht_init( &C->data, 4 );
 
-	C->vars = NULL;
-	C->varcount = 0;
+	C->objs = NULL;
+	C->objcount = 0;
 	C->redblue = 0;
 	C->gclist = NULL;
 	C->gclist_size = 0;
@@ -104,10 +104,9 @@ void sgs_DestroyEngine( SGS_CTX )
 		p++;
 	}
 	ht_free( &C->data );
-#ifdef GC
-	while( C->vars )
-		sgsVM_VarDestroy( C, C->vars );
-#endif
+
+	while( C->objs )
+		sgsVM_VarDestroyObject( C, C->objs );
 
 	sgs_Free( C );
 
@@ -179,7 +178,7 @@ int sgs_Stat( SGS_CTX, int type )
 {
 	switch( type )
 	{
-	case SGS_STAT_VARCOUNT: return C->varcount;
+	case SGS_STAT_VARCOUNT: return C->objcount;
 	default:
 		return 0;
 	}
