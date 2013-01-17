@@ -31,6 +31,11 @@
 #  define SGS_DEBUG_FLOW 0
 #endif
 
+/* instruction logging */
+#ifndef SGS_DEBUG_INSTR
+#  define SGS_DEBUG_INSTR 0
+#endif
+
 /* stack dump before execution of each instruction */
 #ifndef SGS_DEBUG_STATE
 #  define SGS_DEBUG_STATE 0

@@ -245,11 +245,10 @@ static int sgsstd_array_tostring( SGS_CTX, sgs_VarObj* data )
 	int cnt;
 	SGSARR_HDR;
 	sgs_Variable* var = SGSARR_PTR( data->data );
-	sgs_Variable* vend = var + hdr->size, *str;
+	sgs_Variable* vend = var + hdr->size;
 	cnt = vend - var;
 
 	sgs_PushString( C, "[" );
-	str = sgs_StackItem( C, -1 );
 	while( var < vend )
 	{
 		sgs_PushVariable( C, var );
@@ -334,7 +333,10 @@ static void sgsstd_dict_clearvals( SGS_CTX, sgs_VarObj* data )
 	while( pair < pend )
 	{
 		if( pair->str )
+		{
 			sgs_Release( C, (sgs_Variable*) pair->ptr );
+			sgs_Free( pair->ptr );
+		}
 		pair++;
 	}
 }
@@ -660,7 +662,7 @@ int sgsVM_RegStdLibs( SGS_CTX )
 	}
 
 	C->array_func = &sgsstd_array;
-	C->dict_func = &sgsstd_dict;
+//	C->dict_func = &sgsstd_dict;
 
 	return SGS_SUCCESS;
 }

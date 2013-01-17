@@ -127,6 +127,7 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 
 static void var_create_0str( SGS_CTX, sgs_VarPtr out, int32_t len )
 {
+	UNUSED( C );
 	out->type = SVT_STRING;
 	out->data.S = sgs_Alloc_a( string_t, len + 1 );
 	out->data.S->refcount = 1;
@@ -152,12 +153,15 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 	obj->data = data;
 	obj->destroying = 0;
 	obj->iface = iface;
-	obj->next = C->objs;
-	obj->next->prev = obj; /* ! */
-	C->objcount++;
-	obj->prev = NULL;
 	obj->redblue = C->redblue;
+	obj->next = C->objs;
+	obj->prev = NULL;
 	obj->refcount = 1;
+	if( obj->next ) /* ! */
+		obj->next->prev = obj;
+	C->objcount++;
+	C->objs = obj;
+
 	out->type = SVT_OBJECT;
 	out->data.O = obj;
 }
@@ -251,6 +255,7 @@ static void stk_makespace( SGS_CTX, int num )
 		memcpy( nmem, C->stack_base, stksz * STK_UNITSIZE );
 	sgs_Free( C->stack_base );
 	C->stack_base = nmem;
+	C->stack_mem = nsz;
 	C->stack_off = C->stack_base + stkoff;
 	C->stack_top = C->stack_base + stkend;
 }
@@ -928,9 +933,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 	sgs_BreakIf( sgs_StackSize( C ) < args + gotthis );
 	C->stack_off = C->stack_top - args;
 
-	if( !func )
-		sgs_Printf( C, SGS_ERROR, -1, "Variable of type 'null' cannot be called" );
-	else if( func->type == SVT_CFUNC )
+	if( func->type == SVT_CFUNC )
 	{
 		int stkoff2 = C->stack_off - C->stack_base;
 		int hadthis = C->has_this;
@@ -1008,7 +1011,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 	int stkoff = C->stack_top - C->stack_off;
 #  define RESVAR( v ) ( ( (v) & 0x8000 ) ? const_getvar( cptr, constcount, (v) & 0x7fff ) : stk_getlpos( C, (v) ) )
 #else
-#  define RESVAR( v ) ( ( (v) & 0x8000 ) ? cptr[ (v) & 0x7fff ] : stk_getlpos( C, (v) ) )
+#  define RESVAR( v ) ( ( (v) & 0x8000 ) ? ( cptr + ( (v) & 0x7fff ) ) : stk_getlpos( C, (v) ) )
 #endif
 
 	/* preallocated helpers */
@@ -1019,12 +1022,12 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 	{
 		uint8_t instr = *ptr++;
 #if SGS_DEBUG
- #if SGS_DEBUG_FLOW
+#  if SGS_DEBUG_INSTR
 		printf( "*** [at 0x%04X] %s ***\n", ptr - 1 - (char*)code, opnames[ instr ] );
- #endif
- #if SGS_DEBUG_STATE
+#  endif
+#  if SGS_DEBUG_STATE
 		sgsVM_StackDump( C );
- #endif
+#  endif
 #endif
 		switch( instr )
 		{
@@ -1163,7 +1166,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 	}
 
 #if SGS_DEBUG && SGS_DEBUG_STATE
-    sgs_MemCheckDbg( C->stack.ptr );
+    sgs_MemCheckDbg( C->stack_base );
 	sgsVM_StackDump( C );
 #endif
 	return ret;
@@ -1202,7 +1205,7 @@ void sgsVM_VarDump( sgs_VarPtr var )
 	printf( "%s (size:%d)", sgs_VarNames[ var->type ], sgsVM_VarSize( var ) );
 	switch( var->type )
 	{
-	case SVT_NULL: printf( "Null" ); break;
+	case SVT_NULL: break;
 	case SVT_BOOL: printf( " = %s", var->data.B ? "True" : "False" ); break;
 	case SVT_INT: printf( " = %" PRId64, var->data.I ); break;
 	case SVT_REAL: printf( " = %f", var->data.R ); break;
@@ -1530,11 +1533,11 @@ int sgs_GCExecute( SGS_CTX )
 
 	/* stack */
 	{
-		sgs_VarPtr* vbeg = (sgs_VarPtr*) C->stack_base;
-		sgs_VarPtr* vend = (sgs_VarPtr*) C->stack_top;
+		sgs_VarPtr vbeg = C->stack_base;
+		sgs_VarPtr vend = C->stack_top;
 		while( vbeg < vend )
 		{
-			int ret = vm_gcmark( C, *vbeg++ );
+			int ret = vm_gcmark( C, vbeg++ );
 			if( ret != SGS_SUCCESS )
 				return ret;
 		}
@@ -1687,11 +1690,11 @@ int32_t sgs_GetStringSize( SGS_CTX, int item )
 	return var->data.S->size;
 }
 
-void* sgs_GetObjectData( SGS_CTX, int item )
+sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item )
 {
 	sgs_Variable* var = stk_getpos( C, item );
 	sgs_BreakIf( var->type != SVT_OBJECT );
-	return var->data.O->data;
+	return var->data.O;
 }
 
 

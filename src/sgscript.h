@@ -156,7 +156,7 @@ int sgs_CheckArgs( SGS_CTX, const char* str );
 
 const char* sgs_GetStringPtr( SGS_CTX, int item );
 int32_t sgs_GetStringSize( SGS_CTX, int item );
-void* sgs_GetObjectData( SGS_CTX, int item );
+sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item );
 
 
 #ifdef __cplusplus
