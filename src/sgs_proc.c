@@ -498,10 +498,10 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type )
 static int vm_convert_stack( SGS_CTX, int item, int type )
 {
 	int ret;
-	sgs_Variable var, *pos = stk_getpos( C, item );
-	var = *pos;
+	sgs_Variable var;
+	var = *stk_getpos( C, item );
 	ret = vm_convert( C, &var, type );
-	*pos = var;
+	*stk_getpos( C, item ) = var;
 	return ret;
 }
 
