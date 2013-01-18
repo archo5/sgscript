@@ -57,7 +57,8 @@ static SGS_INLINE int16_t comp_reg_alloc( SGS_CTX )
 
 static SGS_INLINE void comp_reg_unwind( SGS_CTX, int32_t pos )
 {
-	C->fctx->lastreg = C->fctx->regs;
+	if( C->fctx->regs > C->fctx->lastreg )
+		C->fctx->lastreg = C->fctx->regs;
 	C->fctx->regs = pos;
 }
 
@@ -1341,6 +1342,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_RETURN:
 		FUNC_HIT( "RETURN" );
 		{
+			int regstate = C->fctx->regs;
 			int num = 0;
 			FTNode* n = node->child;
 			while( n )
@@ -1355,6 +1357,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			}
 			BYTE( SI_RETN );
 			BYTE( num );
+			comp_reg_unwind( C, regstate );
 		}
 		break;
 
@@ -1363,9 +1366,11 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		node = node->child;
 		while( node )
 		{
+			int regstate = C->fctx->regs;
 			FUNC_ENTER;
 			if( !compile_node( C, func, node ) ) goto fail;
 			node = node->next;
+			comp_reg_unwind( C, regstate );
 		}
 		break;
 
@@ -1373,8 +1378,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		FUNC_HIT( "IF/ELSE" );
 		{
 			int16_t arg = 0;
+			int regstate = C->fctx->regs;
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child, &arg ) ) goto fail;
+			comp_reg_unwind( C, regstate );
 			BYTE( SI_JMPF );
 			DATA( &arg, 2 );
 			{
@@ -1383,8 +1390,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				DATA( &pos, 2 );
 				jp1 = func->code.size;
 
+				regstate = C->fctx->regs;
 				FUNC_ENTER;
 				if( !compile_node( C, func, node->child->next ) ) goto fail;
+				comp_reg_unwind( C, regstate );
 
 				if( node->child->next->next )
 				{
@@ -1393,10 +1402,12 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 					jp2 = func->code.size;
 					AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
 
+					regstate = C->fctx->regs;
 					FUNC_ENTER;
 					if( !compile_node( C, func, node->child->next->next ) ) goto fail;
 					jp3 = func->code.size;
 					AS_INT16( func->code.ptr + jp2 - 2 ) = jp3 - jp2;
+					comp_reg_unwind( C, regstate );
 				}
 				else
 				{
@@ -1410,10 +1421,12 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		FUNC_HIT( "WHILE" );
 		{
 			int16_t arg = -1;
+			int regstate = C->fctx->regs;
 			C->fctx->loops++;
 			i = func->code.size;
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child, &arg ) ) goto fail; /* test */
+			comp_reg_unwind( C, regstate );
 			BYTE( SI_JMPF );
 			DATA( &arg, 2 );
 			{
@@ -1423,8 +1436,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				DATA( &pos, 2 );
 				jp1 = func->code.size;
 
+				regstate = C->fctx->regs;
 				FUNC_ENTER;
 				if( !compile_node( C, func, node->child->next ) ) goto fail; /* while */
+				comp_reg_unwind( C, regstate );
 
 				if( !compile_breaks( C, func, 1 ) )
 					goto fail;
@@ -1444,18 +1459,21 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_DOWHILE:
 		FUNC_HIT( "DO/WHILE" );
 		{
+			int regstate = C->fctx->regs;
 			int16_t arg = -1, joff;
 			C->fctx->loops++;
 			i = func->code.size;
 			{
 				FUNC_ENTER;
 				if( !compile_node( C, func, node->child->next ) ) goto fail; /* while */
+				comp_reg_unwind( C, regstate );
 
 				if( !compile_breaks( C, func, 1 ) )
 					goto fail;
 			}
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child, &arg ) ) goto fail; /* test */
+			comp_reg_unwind( C, regstate );
 			BYTE( SI_JMPT );
 			DATA( &arg, 2 );
 			joff = i - func->code.size - 2;
@@ -1469,13 +1487,16 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_FOR:
 		FUNC_HIT( "FOR" );
 		{
+			int regstate = C->fctx->regs;
 			int16_t arg = -1;
 			C->fctx->loops++;
 			FUNC_ENTER;
 			if( !compile_node( C, func, node->child ) ) goto fail; /* init */
+			comp_reg_unwind( C, regstate );
 			i = func->code.size;
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child->next, &arg ) ) goto fail; /* test */
+			comp_reg_unwind( C, regstate );
 			BYTE( SI_JMPF );
 			DATA( &arg, 2 );
 			{
@@ -1487,11 +1508,13 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 				FUNC_ENTER;
 				if( !compile_node( C, func, node->child->next->next->next ) ) goto fail; /* block */
+				comp_reg_unwind( C, regstate );
 
 				if( !compile_breaks( C, func, 1 ) )
 					goto fail;
 				FUNC_ENTER;
 				if( !compile_node( C, func, node->child->next->next ) ) goto fail; /* incr */
+				comp_reg_unwind( C, regstate );
 
 				BYTE( SI_JUMP );
 				jp2 = func->code.size + 2;
@@ -1562,6 +1585,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_GVLIST:
 		FUNC_HIT( node->type == SFT_VARLIST ? "VARLIST" : "GLOBALVARLIST" );
 		{
+			int regstate = C->fctx->regs;
 			FTNode* pp = node->child;
 			while( pp )
 			{
@@ -1571,6 +1595,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 					if( !compile_node_r( C, func, pp->child, &arg ) ) goto fail;
 					if( !pp->token || *pp->token != ST_IDENT ) goto fail;
 					compile_ident_w( C, func, pp, arg );
+					comp_reg_unwind( C, regstate );
 				}
 				pp = pp->next;
 			}

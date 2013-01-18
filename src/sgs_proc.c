@@ -68,6 +68,16 @@ static func_t* funct_copy( SGS_CTX, func_t* from )
 }
 */
 
+void var_free_object( SGS_CTX, object_t* O )
+{
+	if( O->prev ) O->prev->next = O->next;
+	if( O->next ) O->next->prev = O->prev;
+	if( C->objs == O )
+		C->objs = O->next;
+	sgs_Free( O );
+	C->objcount--;
+}
+
 void var_destroy_object( SGS_CTX, object_t* O )
 {
 	if( O->prev ) O->prev->next = O->next;
@@ -1581,19 +1591,38 @@ int sgs_GCExecute( SGS_CTX )
 		while( p )
 		{
 			if( p->redblue != C->redblue )
+			{
 				p->destroying = TRUE;
+				p->refcount++;
+			}
 			p = p->next;
 		}
 	}
 
-	/* destroy variables */
+	/* destruct objects */
 	{
 		object_t* p = C->objs;
 		while( p )
 		{
 			object_t* pn = p->next;
 			if( p->redblue != C->redblue )
-				var_destroy_object( C, p );
+			{
+				int ret = obj_exec( C, SOP_DESTRUCT, p );
+				if( ret != SGS_SUCCESS )
+					return ret;
+			}
+			p = pn;
+		}
+	}
+
+	/* free variables */
+	{
+		object_t* p = C->objs;
+		while( p )
+		{
+			object_t* pn = p->next;
+			if( p->redblue != C->redblue )
+				var_free_object( C, p );
 			p = pn;
 		}
 	}

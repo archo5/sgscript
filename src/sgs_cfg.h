@@ -52,7 +52,7 @@
 
 /* extensive buffer overflow tests */
 #ifndef SGS_DEBUG_EXTRA
-#  define SGS_DEBUG_EXTRA 1
+#  define SGS_DEBUG_EXTRA 0
 #endif
 
 
