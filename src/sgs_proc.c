@@ -495,6 +495,16 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type )
 	return ret;
 }
 
+static int vm_convert_stack( SGS_CTX, int item, int type )
+{
+	int ret;
+	sgs_Variable var, *pos = stk_getpos( C, item );
+	var = *pos;
+	ret = vm_convert( C, &var, type );
+	*pos = var;
+	return ret;
+}
+
 
 /*
 	VM mutation
@@ -726,13 +736,19 @@ static int calc_typeid( sgs_Variable* A, sgs_Variable* B )
 
 static void vm_op_concat( SGS_CTX, int16_t out, sgs_Variable *A, sgs_Variable *B )
 {
-	sgs_Variable N;
-	vm_convert( C, A, SVT_STRING );
-	vm_convert( C, B, SVT_STRING );
-	var_create_0str( C, &N, A->data.S->size + B->data.S->size );
-	memcpy( var_cstr( &N ), var_cstr( A ), A->data.S->size );
-	memcpy( var_cstr( &N ) + A->data.S->size, var_cstr( B ), B->data.S->size );
+	sgs_Variable vA, vB, N;
+	vA = *A;
+	vB = *B;
+	VAR_ACQUIRE( &vA );
+	VAR_ACQUIRE( &vB );
+	vm_convert( C, &vA, SVT_STRING );
+	vm_convert( C, &vB, SVT_STRING );
+	var_create_0str( C, &N, vA.data.S->size + vB.data.S->size );
+	memcpy( var_cstr( &N ), var_cstr( &vA ), vA.data.S->size );
+	memcpy( var_cstr( &N ) + vA.data.S->size, var_cstr( &vB ), vB.data.S->size );
 	stk_setvar_leave( C, out, &N );
+	VAR_RELEASE( &vA );
+	VAR_RELEASE( &vB );
 }
 
 static int vm_op_concat_ex( SGS_CTX, int args )
@@ -746,8 +762,9 @@ static int vm_op_concat_ex( SGS_CTX, int args )
 		return 0;
 	for( i = 1; i <= args; ++i )
 	{
+		if( vm_convert_stack( C, -i, SVT_STRING ) != SGS_SUCCESS )
+			return 0;
 		var = stk_getpos( C, -i );
-		vm_convert( C, var, SVT_STRING );
 		totsz += var->data.S->size;
 	}
 	var_create_0str( C, &N, totsz );
@@ -1454,33 +1471,31 @@ sgs_Real sgs_GetReal( SGS_CTX, int item )
 
 int sgs_ToBool( SGS_CTX, int item )
 {
-	sgs_Variable* var = stk_getpos( C, item );
-	if( vm_convert( C, var, SVT_BOOL ) != SGS_SUCCESS )
+	if( vm_convert_stack( C, item, SVT_BOOL ) != SGS_SUCCESS )
 		return 0;
-	return var->data.B;
+	return stk_getpos( C, item )->data.B;
 }
 
 sgs_Integer sgs_ToInt( SGS_CTX, int item )
 {
-	sgs_Variable* var = stk_getpos( C, item );
-	if( vm_convert( C, var, SVT_INT ) != SGS_SUCCESS )
+	if( vm_convert_stack( C, item, SVT_INT ) != SGS_SUCCESS )
 		return 0;
-	return var->data.I;
+	return stk_getpos( C, item )->data.I;
 }
 
 sgs_Real sgs_ToReal( SGS_CTX, int item )
 {
-	sgs_Variable* var = stk_getpos( C, item );
-	if( vm_convert( C, var, SVT_REAL ) != SGS_SUCCESS )
+	if( vm_convert_stack( C, item, SVT_REAL ) != SGS_SUCCESS )
 		return 0;
-	return var->data.R;
+	return stk_getpos( C, item )->data.R;
 }
 
 const char* sgs_ToString( SGS_CTX, int item )
 {
-	sgs_Variable* var = stk_getpos( C, item );
-	if( vm_convert( C, var, SVT_STRING ) != SGS_SUCCESS )
+	sgs_Variable* var;
+	if( vm_convert_stack( C, item, SVT_STRING ) != SGS_SUCCESS )
 		return "<ERROR>";
+	var = stk_getpos( C, item );
 	return var_cstr( var );
 }
 
