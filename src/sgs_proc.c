@@ -846,7 +846,7 @@ static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b 
 	int i; \
 	if( a->type == SVT_INT && b->type == SVT_INT ){ sgs_SetInt( C, out, a->data.I op b->data.I ); return; } \
 	if( a->type == SVT_REAL && b->type == SVT_REAL ){ sgs_Real A = a->data.R, B = b->data.R; sgs_SetReal( C, out, act ); return; } \
-	calc_typeid( a, b ); \
+	i = calc_typeid( a, b ); \
 	switch( i ){ \
 		case SVT_INT: { sgs_Integer A = var_getint( C, a ), B = var_getint( C, b ); sgs_SetInt( C, out, A op B ); break; } \
 		case SVT_REAL: { sgs_Real A = var_getreal( C, a ), B = var_getreal( C, b ); sgs_SetReal( C, out, act ); break; } \
