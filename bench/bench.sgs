@@ -36,7 +36,7 @@ function mandelbrot()
 		print( "\n" );
 	}
 	
-	print( "Time elapsed: ", ftime() - tm );
+	print( "Time elapsed: ", ftime() - tm, "\n" );
 }
 
 mandelbrot();
