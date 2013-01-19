@@ -251,6 +251,17 @@ static SGS_INLINE void stk_setlvar( SGS_CTX, int stkid, sgs_VarPtr var )
 	*vpos = *var;
 	VAR_ACQUIRE( var );
 }
+static SGS_INLINE void stk_setlvar_leave( SGS_CTX, int stkid, sgs_VarPtr var )
+{
+	sgs_VarPtr vpos = stk_getlpos( C, stkid );
+	VAR_RELEASE( vpos );
+	*vpos = *var;
+}
+static SGS_INLINE void stk_setlvar_null( SGS_CTX, int stkid )
+{
+	sgs_VarPtr vpos = stk_getlpos( C, stkid );
+	VAR_RELEASE( vpos );
+}
 
 static void stk_makespace( SGS_CTX, int num )
 {
@@ -552,30 +563,6 @@ static int vm_gettype( SGS_CTX )
 	return 1;
 }
 
-/*
-static int vm_copy( SGS_CTX, int16_t to, sgs_Variable* B )
-{
-	sgs_Variable *A;
-	A = stk_getvar( C, to );
-	if( !A || !B )
-		return 0;
-	var_destroy( C, B );
-	B->type = A->type;
-	switch( A->type )
-	{
-	case SVT_BOOL: B->data.B = A->data.B; break;
-	case SVT_INT: B->data.I = A->data.I; break;
-	case SVT_REAL: B->data.R = A->data.R; break;
-	case SVT_STRING: B->data.S = strbuf_create(); strbuf_appbuf( &B->data.S, A->data.S.ptr, A->data.S.size ); break;
-	case SVT_CFUNC: B->data.C = A->data.C; break;
-	case SVT_FUNC: funct_copy( C, &B->data.F, &A->data.F ); break;
-	case SVT_OBJECT: return obj_exec( C, SOP_COPY, &A->data.O );
-	}
-	stk_pop2( C );
-	return 1;
-}
-*/
-
 static int vm_gcmark( SGS_CTX, sgs_Variable* var )
 {
 	if( var->type != SVT_OBJECT || var->data.O->destroying || var->data.O->redblue == C->redblue )
@@ -735,6 +722,39 @@ static int calc_typeid( sgs_Variable* A, sgs_Variable* B )
 }
 #undef _cti_num
 
+static void vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
+{
+	switch( var->type )
+	{
+	case SVT_STRING:
+		{
+			sgs_Variable ns;
+			var_create_str( C, &ns, var_cstr( var ), var->data.S->size );
+			stk_setlvar_leave( C, out, &ns );
+		}
+		break;
+	case SVT_FUNC:
+		sgs_Printf( C, SGS_INFO, -1, "Functions are strictly immutable and cannot be cloned." );
+		stk_setlvar_null( C, out );
+		break;
+	case SVT_OBJECT:
+		if( obj_exec( C, SOP_CLONE, var->data.O ) != SGS_SUCCESS )
+		{
+			sgs_Printf( C, SGS_ERROR, -1, "This object does not support cloning or failed to do it." );
+			stk_setlvar_null( C, out );
+		}
+		else
+		{
+			sgs_Variable ns = *stk_getpos( C, -1 );
+			stk_setlvar( C, out, &ns );
+			stk_pop1( C );
+		}
+		break;
+	default:
+		stk_setlvar( C, out, var );
+		break;
+	}
+}
 
 static void vm_op_concat( SGS_CTX, int16_t out, sgs_Variable *A, sgs_Variable *B )
 {
@@ -770,7 +790,7 @@ static int vm_op_concat_ex( SGS_CTX, int args )
 		totsz += var->data.S->size;
 	}
 	var_create_0str( C, &N, totsz );
-	for( i = 1; i <= args; ++i )
+	for( i = args; i >= 1; --i )
 	{
 		var = stk_getpos( C, -i );
 		memcpy( var_cstr( &N ) + curoff, var_cstr( var ), var->data.S->size );
@@ -1140,7 +1160,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 		case SI_SETINDEX: { ARGS_3; vm_setprop( C, p1, p2, p3, TRUE ); break; }
 
 		case SI_SET: { ARGS_2; stk_setlvar( C, a1, p2 ); break; }
-	/*	case SI_COPY: { ARGS_2; vm_copy( C, a1, p2 ); break; }	*/
+		case SI_CLONE: { ARGS_2; vm_clone( C, a1, p2 ); break; }
 		case SI_CONCAT: { ARGS_3; vm_op_concat( C, a1, p2, p3 ); break; }
 		case SI_BOOL_AND: { ARGS_3; vm_op_booland( C, a1, p2, p3 ); break; }
 		case SI_BOOL_OR: { ARGS_3; vm_op_boolor( C, a1, p2, p3 ); break; }
@@ -1395,7 +1415,7 @@ int sgs_PushVariable( SGS_CTX, sgs_Variable* var )
 int sgs_PushProperty( SGS_CTX, const char* name )
 {
 	int ret = sgs_PushString( C, name );
-	if( ret )
+	if( ret != SGS_SUCCESS )
 		return ret;
 	ret = vm_getprop( C, stk_absindex( C, -1 ), stk_getpos( C, -2 ), stk_getpos( C, -1 ), FALSE );
 	stk_popskip( C, 1, 1 );
@@ -1461,6 +1481,33 @@ int sgs_SetGlobal( SGS_CTX, const char* name )
 	vm_setvar( C, stk_getpos( C, -1 ), stk_getpos( C, -2 ) );
 	sgs_Pop( C, 2 );
 	return SGS_SUCCESS;
+}
+
+
+int sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx )
+{
+	int ret;
+	sgs_Variable Sobj = *obj, Sidx = *idx;
+	VAR_ACQUIRE( &Sobj );
+	VAR_ACQUIRE( &Sidx );
+
+	stk_push_null( C );
+	ret = vm_getprop( C, stk_absindex( C, -1 ), &Sobj, &Sidx, TRUE );
+	*out = *stk_getpos( C, -1 );
+	if( ret == SGS_SUCCESS )
+	{
+		VAR_ACQUIRE( out );
+	}
+	stk_pop1( C );
+
+	VAR_RELEASE( &Sobj );
+	VAR_RELEASE( &Sidx );
+	return ret;
+}
+
+int sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val )
+{
+	return vm_setprop( C, obj, idx, val, TRUE );
 }
 
 

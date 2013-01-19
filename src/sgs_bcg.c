@@ -207,7 +207,7 @@ static void dump_opcode( char* ptr, int32_t size )
 		DOP_A1( SETINDEX );
 
 		DOP_B( SET );
-		DOP_B( COPY );
+		DOP_B( CLONE );
 		DOP_A( CONCAT );
 		DOP_A( BOOL_AND );
 		DOP_A( BOOL_OR );
@@ -790,7 +790,7 @@ static int instr_size( uint8_t pos )
 	case SI_PUSH: case SI_POPR: case SI_JUMP: return 3;
 	case SI_ARRAY: case SI_DICT: return 4;
 	case SI_JMPT: case SI_JMPF: case SI_CALL: case SI_GETVAR: case SI_SETVAR:
-	case SI_SET: case SI_COPY: case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT:
+	case SI_SET: case SI_CLONE: case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT:
 	case SI_INC: case SI_DEC: return 5;
 	case SI_GETPROP: case SI_SETPROP: case SI_GETINDEX: case SI_SETINDEX:
 	case SI_CONCAT: case SI_BOOL_AND: case SI_BOOL_OR: case SI_ADD: case SI_SUB:
@@ -944,13 +944,14 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			}
 			else
 			{
+				/* TODO: remove, currently emits invalid instruction */
 				/* load the original variable and copy data to it */
 				int16_t oreg;
 
 				FUNC_ENTER;
 				if( !compile_node_r( C, func, node->child, &oreg ) ) goto fail;
 
-				BYTE( SI_COPY );
+				BYTE( 255 );
 				DATA( &oreg, 2 );
 				DATA( &ireg, 2 );
 			}

@@ -80,7 +80,7 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 #define SOP( idx ) ((void*)idx)
 #define SOP_END			SOP( 0 )
 #define SOP_DESTRUCT	SOP( 1 )
-#define SOP_COPY		SOP( 2 )
+#define SOP_CLONE		SOP( 2 )
 #define SOP_GETTYPE		SOP( 3 )
 #define SOP_GETPROP		SOP( 4 )
 #define SOP_SETPROP		SOP( 5 )
@@ -135,6 +135,8 @@ int sgs_TypeOf( SGS_CTX );
 
 int sgs_GetGlobal( SGS_CTX, const char* name );
 int sgs_SetGlobal( SGS_CTX, const char* name );
+int sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx );
+int sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val );
 
 int sgs_GetBool( SGS_CTX, int item );
 sgs_Integer sgs_GetInt( SGS_CTX, int item );

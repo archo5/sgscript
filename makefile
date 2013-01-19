@@ -16,7 +16,7 @@ OUTDIR=bin
 OBJDIR=obj
 
 CC=gcc
-CFLAGS=
+CFLAGS=-O3
 
 _DEPS = sgs_bcg.h sgs_cfg.h sgs_ctx.h sgs_fnt.h sgs_proc.h sgs_tok.h sgs_util.h sgs_xpc.h sgscript.h
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
@@ -36,10 +36,10 @@ test: sgstest
 	$(OUTDIR)/sgstest
 
 $(OUTDIR)/sgstest: $(LIBDIR)/libsgscript.a
-	$(CC) -o $@ $(EXTDIR)/sgstest.c -lsgscript -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+	$(CC) -o $@ $(EXTDIR)/sgstest.c -lsgscript -lm -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 
 $(OUTDIR)/sgsvm: $(LIBDIR)/libsgscript.a
-	$(CC) -o $@ $(EXTDIR)/sgsvm.c -lsgscript -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+	$(CC) -o $@ $(EXTDIR)/sgsvm.c -lsgscript -lm -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 
 .PHONY: tools
 tools: $(OUTDIR)/sgstest $(OUTDIR)/sgsvm

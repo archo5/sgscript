@@ -6,4 +6,52 @@ There are no constants in the language apart from the compile-time restriction o
 If they were to be implemented, there were two main directions to take: runtime constness and literal naming. Runtime constness is when something would be marked as constant, making it impossible to change the value of some variable. Since there can be no data attached to variable owners, it is simply impossible to implement. Literal naming could possibly be useful but offers little coding safety benefits and no performance benefits to just using a local variable.
 
 
->>
+>> Object Interface
+
+general guidelines:
+- caller always cleans the stack
+- property syntax: <obj>.<prop>, "." operator is key
+- index syntax: <obj>[ <prop> ], "[]" operator is key
+- safe type identification can be done by looking at the interface pointer, each object has its own
+- currently arguments are counted backwards from last element, which is -1...
+	...so in a 3 argument callback, argument mapping would be as follows: first -> -3; second -> -2; third -> -1
+	...note that support for normal indexing could be included later (when all locations of object calls can be covered and easily accounted for)
+
+SOP_END:
+	the element used to end a function list
+	never used in object calls
+
+SOP_DESTRUCT:
+	destruction of object before deletion
+	expects: nothing
+
+SOP_CLONE:
+	construction of copy of the object
+	expects: 1 object variable (copy of object) on success, 0 on error
+
+SOP_GETTYPE:
+	retrieval of object type string
+	expects: 1 string variable (type name) on success, 0 on error
+
+SOP_GETPROP:
+SOP_GETINDEX:
+	retrieval of an object property/index
+	gives: 1 variable (property string/index that's not necessarily a string)
+	expects: 1 variable on success, 0 on error
+
+SOP_SETPROP:
+SOP_SETINDEX:
+	saving of an object property/index
+	gives: 2 variables (property string/index that's not necessarily a string ; source variable)
+	expects: nothing
+
+SOP_TOBOOL:
+SOP_TOINT:
+SOP_TOREAL:
+SOP_TOSTRING:
+	conversion to boolean/integer/real/string
+	expects: 1 variable on success (boolean/integer/real/string), 0 on error
+
+SOP_GCMARK:
+	GC callback in which object is expected to call sgs_GCMark() on all variables stored inside it
+	expects: nothing

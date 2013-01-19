@@ -42,7 +42,7 @@ end
 
 local times = 20
 local t = os.time()
-for x = 0, times do
+for x = 0, times-1 do
 	mandelbrot()
 end
 io.write( string.format( "Time Elapsed %f\n", ( os.time() - t ) / times ) )

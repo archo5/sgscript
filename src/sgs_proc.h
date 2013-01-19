@@ -38,7 +38,7 @@ typedef enum sgs_Instruction_e
 		B: (i16 out, s1)
 	*/
 	SI_SET,		/* B */
-	SI_COPY,
+	SI_CLONE,
 	SI_CONCAT,	/* A */
 	SI_BOOL_AND,
 	SI_BOOL_OR,

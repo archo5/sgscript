@@ -463,6 +463,131 @@ int sgsstd_dict( SGS_CTX )
 	return 1;
 }
 
+/* CLASS */
+
+typedef struct sgsstd_class_header_s
+{
+	sgs_Variable data;
+	sgs_Variable inh;
+}
+sgsstd_class_header_t;
+
+
+#define SGSCLASS_HDR sgsstd_class_header_t* hdr = (sgsstd_class_header_t*) data->data;
+
+int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data )
+{
+	SGSCLASS_HDR;
+	sgs_Release( C, &hdr->data );
+	sgs_Release( C, &hdr->inh );
+	sgs_Free( hdr );
+	return SGS_SUCCESS;
+}
+
+int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data )
+{
+	int ret;
+	sgs_Variable var, idx;
+	SGSCLASS_HDR;
+	if( strcmp( sgs_ToString( C, -1 ), "_super" ) == 0 )
+	{
+		sgs_PushVariable( C, &hdr->inh );
+		return SGS_SUCCESS;
+	}
+	idx = *sgs_StackItem( C, -1 );
+	sgs_Acquire( C, &idx );
+
+	if( sgs_GetIndex( C, &var, &hdr->data, &idx ) == SGS_SUCCESS )
+		goto success;
+
+	ret = sgs_GetIndex( C, &var, &hdr->inh, &idx );
+	if( ret == SGS_SUCCESS )
+		goto success;
+
+	sgs_Release( C, &idx );
+	return ret;
+
+success:
+	sgs_PushVariable( C, &var );
+	sgs_Release( C, &var );
+	sgs_Release( C, &idx );
+	return SGS_SUCCESS;
+}
+
+int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data )
+{
+	SGSCLASS_HDR;
+	if( strcmp( sgs_ToString( C, -2 ), "_super" ) == 0 )
+	{
+		sgs_Release( C, &hdr->inh );
+		hdr->inh = *sgs_StackItem( C, -1 );
+		sgs_Acquire( C, &hdr->inh );
+		return SGS_SUCCESS;
+	}
+	return sgs_SetIndex( C, &hdr->data, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ) );
+}
+
+#define sgsstd_class_getprop sgsstd_class_getindex
+#define sgsstd_class_setprop sgsstd_class_setindex
+
+int sgsstd_class_tostring( SGS_CTX, sgs_VarObj* data )
+{
+	/* TODO: special methods */
+	sgs_PushString( C, "class" );
+	return SGS_SUCCESS;
+}
+
+int sgsstd_class_gettype( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( data );
+	sgs_PushString( C, "class" );
+	return SGS_SUCCESS;
+}
+
+int sgsstd_class_gcmark( SGS_CTX, sgs_VarObj* data )
+{
+	SGSCLASS_HDR;
+	int ret = sgs_GCMark( C, &hdr->data );
+	if( ret != SGS_SUCCESS ) return ret;
+	ret = sgs_GCMark( C, &hdr->inh );
+	if( ret != SGS_SUCCESS ) return ret;
+	return SGS_SUCCESS;
+}
+
+void* sgsstd_class_functable[] =
+{
+	SOP_DESTRUCT, sgsstd_class_destruct,
+	SOP_GETPROP, sgsstd_class_getprop,
+	SOP_SETPROP, sgsstd_class_setprop,
+	SOP_GETINDEX, sgsstd_class_getindex,
+	SOP_SETINDEX, sgsstd_class_setindex,
+	SOP_TOSTRING, sgsstd_class_tostring,
+	SOP_GETTYPE, sgsstd_class_gettype,
+	SOP_GCMARK, sgsstd_class_gcmark,
+	SOP_END,
+};
+
+int sgsstd_class( SGS_CTX )
+{
+	sgsstd_class_header_t* hdr;
+	if( sgs_StackSize( C ) != 2 )
+		goto argerr;
+
+	hdr = sgs_Alloc( sgsstd_class_header_t );
+	hdr->data = *sgs_StackItem( C, 0 );
+	hdr->inh = *sgs_StackItem( C, 1 );
+	sgs_Acquire( C, &hdr->data );
+	sgs_Acquire( C, &hdr->inh );
+	return sgs_PushObject( C, hdr, sgsstd_class_functable ) == SGS_SUCCESS;
+
+argerr:
+	sgs_Printf( C, SGS_ERROR, -1, "'class' requires 2 arguments: data, inherited" );
+	return 0;
+}
+
+
+/* UTILITIES */
+
 int sgsstd_isset( SGS_CTX )
 {
 	sgs_Variable* var;
@@ -640,7 +765,8 @@ static int sgsstd_gc_collect( SGS_CTX )
 void* regfuncs[] =
 {
 	/* containers */
-	FN( array ), FN( isset ), FN( unset ),
+	FN( array ), "class", sgsstd_class,
+	FN( isset ), FN( unset ),
 	/* math */
 	FN( abs ), FN( sqrt ), FN( log ), FN( log10 ), FN( exp ), FN( floor ), FN( ceil ),
 	FN( sin ), FN( cos ), FN( tan ), FN( asin ), FN( acos ), FN( atan ),
