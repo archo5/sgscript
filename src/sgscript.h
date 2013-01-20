@@ -103,7 +103,9 @@ sgs_PrintFunc	sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func );
 void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
 
 int				sgs_ExecBuffer( SGS_CTX, const char* buf, int size );
-static SGS_INLINE int	sgs_ExecString( SGS_CTX, const char* str ){ return sgs_ExecBuffer( C, str, strlen( str ) ); }
+static SGS_INLINE int sgs_ExecString( SGS_CTX, const char* str ){ return sgs_ExecBuffer( C, str, strlen( str ) ); }
+int				sgs_EvalBuffer( SGS_CTX, const char* buf, int size, sgs_Variable* out );
+static SGS_INLINE int sgs_EvalString( SGS_CTX, const char* str, sgs_Variable* out ){ return sgs_EvalBuffer( C, str, strlen( str ), out ); }
 int				sgs_Stat( SGS_CTX, int type );
 
 

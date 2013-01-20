@@ -1269,11 +1269,19 @@ void sgsVM_StackDump( SGS_CTX )
 	printf( "--\n" );
 }
 
-int sgsVM_ExecFn( SGS_CTX, const void* code, int32_t codesize, const void* data, int32_t datasize )
+int sgsVM_ExecFn( SGS_CTX, const void* code, int32_t codesize, const void* data, int32_t datasize, int clean )
 {
-	int ret = vm_exec( C, code, codesize, data, datasize );
-	stk_pop( C, C->stack_top - C->stack_base );
-	return ret;
+	int stkoff = C->stack_off - C->stack_base;
+	int rvc = vm_exec( C, code, codesize, data, datasize );
+	C->stack_off = C->stack_base + stkoff;
+	if( clean )
+		stk_pop( C, C->stack_top - C->stack_off );
+	else
+	{
+		/* keep only returned values */
+		stk_clean( C, C->stack_off, C->stack_top - rvc );
+	}
+	return rvc;
 }
 
 
@@ -1789,6 +1797,31 @@ sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item )
 	sgs_Variable* var = stk_getpos( C, item );
 	sgs_BreakIf( var->type != SVT_OBJECT );
 	return var->data.O;
+}
+
+
+int sgs_GetValue( SGS_CTX, const char* str, sgs_Variable* out )
+{
+	int ret = SGS_SUCCESS;
+	uint32_t state = C->state;
+	TokenList tlist = sgsT_Gen( C, str, -1 );
+	if( C->state & SGS_HAS_ERRORS )
+		ret = SGS_EINVAL;
+	else
+	{
+		/* successfully tokenized, parse it */
+		TokenList tok = tlist;
+
+		if( *tok != ST_IDENT )
+		{
+			ret = SGS_EINVAL;
+			goto failed;
+		}
+	}
+failed:
+	sgs_Free( tlist );
+	C->state = state;
+	return ret;
 }
 
 

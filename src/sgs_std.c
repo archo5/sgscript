@@ -742,10 +742,18 @@ static int sgsstd_typeof( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_exec( SGS_CTX )
+static int sgsstd_eval( SGS_CTX )
 {
-	UNUSED( C );
-	return 0;
+	sgs_Variable* var;
+	sgs_Variable out;
+	CHKARGS( 1 );
+	sgs_ToString( C, 0 );
+	var = sgs_StackItem( C, 0 );
+	if( sgs_EvalBuffer( C, var_cstr( var ), var->data.S->size, &out ) != SGS_SUCCESS )
+		out.type = SVT_NULL;
+	sgs_PushVariable( C, &out );
+	sgs_Release( C, &out );
+	return 1;
 }
 
 static int sgsstd_gc_collect( SGS_CTX )
@@ -779,7 +787,7 @@ void* regfuncs[] =
 	FN( ftime ),
 	/* utils */
 	FN( typeof ),
-/*	FN( exec ),	*/
+	FN( eval ),
 	FN( gc_collect ),
 	NULL
 };

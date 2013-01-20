@@ -116,13 +116,12 @@ void sgs_DestroyEngine( SGS_CTX )
 }
 
 
-int sgs_ExecBuffer( SGS_CTX, const char* buf, int32_t size )
+static int ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* rvc )
 {
+	int returned;
 	TokenList tlist = NULL;
 	FTNode* ftree = NULL;
 	sgs_CompFunc* func = NULL;
-
-	DBGINFO( "sgs_ExecBuffer called!" );
 
 	C->state = 0;
 
@@ -156,7 +155,9 @@ int sgs_ExecBuffer( SGS_CTX, const char* buf, int32_t size )
 	DBGINFO( "...executing the generated function" );
 	C->gclist = (sgs_VarPtr) func->consts.ptr;
 	C->gclist_size = func->consts.size / sizeof( sgs_Variable );
-	sgsVM_ExecFn( C, func->code.ptr, func->code.size, func->consts.ptr, func->consts.size );
+	returned = sgsVM_ExecFn( C, func->code.ptr, func->code.size, func->consts.ptr, func->consts.size, clean );
+	if( rvc )
+		*rvc = returned;
 	C->gclist = NULL;
 	C->gclist_size = 0;
 
@@ -173,6 +174,32 @@ error:
 
 	return SGS_ECOMP;
 }
+
+int sgs_ExecBuffer( SGS_CTX, const char* buf, int32_t size )
+{
+	DBGINFO( "sgs_ExecBuffer called!" );
+	return ctx_execute( C, buf, size, TRUE, NULL );
+}
+
+int sgs_EvalBuffer( SGS_CTX, const char* buf, int size, sgs_Variable* out )
+{
+	int rvc, ret;
+	DBGINFO( "sgs_EvalBuffer called!" );
+	ret = ctx_execute( C, buf, size, FALSE, &rvc );
+	if( ret == SGS_SUCCESS && out )
+	{
+		if( rvc )
+		{
+			*out = *sgs_StackItem( C, 0 );
+			sgs_Acquire( C, out );
+			sgs_Pop( C, rvc );
+		}
+		else
+			out->type = SVT_NULL;
+	}
+	return ret;
+}
+
 
 int sgs_Stat( SGS_CTX, int type )
 {
