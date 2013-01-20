@@ -611,11 +611,6 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 
 	if( ret != SGS_SUCCESS )
 	{
-		if( ret == SGS_ENOTFND )
-		{
-			const char* err = isindex ? "Cannot index variable" : "Property not found";
-			sgs_Printf( C, SGS_ERROR, -1, "%s: %s", err, var_cstr( idx ) );
-		}
 		stk_setvar_null( C, out );
 	}
 	else
@@ -643,15 +638,19 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 	else
 		ret = SGS_ENOTFND;
 
-	if( ret != SGS_SUCCESS )
-	{
-		if( ret == SGS_ENOTFND )
-		{
-			const char* err = isindex ? "Cannot index variable" : "Property not found";
-			sgs_Printf( C, SGS_ERROR, -1, "%s: %s", err, var_cstr( idx ) );
-		}
-	}
 	return ret;
+}
+
+static void vm_properr( SGS_CTX, int ret, sgs_Variable* idx, int isindex )
+{
+	if( ret == SGS_ENOTFND )
+	{
+		const char* err = isindex ? "Cannot find value by index" : "Property not found";
+		stk_push( C, idx );
+		sgs_ToString( C, -1 );
+		sgs_Printf( C, SGS_ERROR, -1, "%s: \"%s\"", err, var_cstr( sgs_StackItem( C, -1 ) ) );
+		stk_pop1( C );
+	}
 }
 
 
@@ -1154,10 +1153,10 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 #define ARGS_3 sgs_VarPtr p1, p2, p3; ARGPOS_3; p1 = RESVAR( a1 ); UNUSED( p1 ); p2 = RESVAR( a2 ); p3 = RESVAR( a3 );
 		case SI_GETVAR: { ARGS_2; vm_getvar( C, a1, p2 ); break; }
 		case SI_SETVAR: { ARGS_2; vm_setvar( C, p1, p2 ); break; }
-		case SI_GETPROP: { ARGS_3; vm_getprop( C, a1, p2, p3, FALSE ); break; }
-		case SI_SETPROP: { ARGS_3; vm_setprop( C, p1, p2, p3, FALSE ); break; }
-		case SI_GETINDEX: { ARGS_3; vm_getprop( C, a1, p2, p3, TRUE ); break; }
-		case SI_SETINDEX: { ARGS_3; vm_setprop( C, p1, p2, p3, TRUE ); break; }
+		case SI_GETPROP: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, FALSE ), p3, FALSE ); break; }
+		case SI_SETPROP: { ARGS_3; vm_properr( C, vm_setprop( C, p1, p2, p3, FALSE ), p2, FALSE ); break; }
+		case SI_GETINDEX: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, TRUE ), p3, TRUE ); break; }
+		case SI_SETINDEX: { ARGS_3; vm_properr( C, vm_setprop( C, p1, p2, p3, TRUE ), p2, TRUE ); break; }
 
 		case SI_SET: { ARGS_2; stk_setlvar( C, a1, p2 ); break; }
 		case SI_CLONE: { ARGS_2; vm_clone( C, a1, p2 ); break; }
