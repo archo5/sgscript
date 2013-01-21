@@ -167,9 +167,10 @@ void ht_dump( HashTable* T );
 void ht_rehash( HashTable* T, int size );
 void ht_check( HashTable* T, int inc );
 HTPair* ht_find( HashTable* T, const char* str, int size );
-void* ht_get( HashTable* T, char* str, int size );
-void ht_setpair( HTPair* P, char* str, int size, Hash h, void* ptr );
-void ht_set( HashTable* T, char* str, int size, void* ptr );
+void* ht_get( HashTable* T, const char* str, int size );
+void ht_setpair( HTPair* P, const char* str, int size, Hash h, void* ptr );
+HTPair* ht_set( HashTable* T, const char* str, int size, void* ptr );
+void ht_unset_pair( HashTable* T, HTPair* p );
 void ht_unset( HashTable* T, const char* str, int size );
 
 static SGS_INLINE HashTable* ht_create(){ HashTable* T = sgs_Alloc( HashTable ); ht_init( T, 4 ); return T; }

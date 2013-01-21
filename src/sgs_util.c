@@ -533,13 +533,13 @@ HTPair* ht_find( HashTable* T, const char* str, int size )
 	return NULL;
 }
 
-void* ht_get( HashTable* T, char* str, int size )
+void* ht_get( HashTable* T, const char* str, int size )
 {
 	HTPair* p = ht_find( T, str, size );
 	return p ? p->ptr : NULL;
 }
 
-void ht_setpair( HTPair* P, char* str, int size, Hash h, void* ptr )
+void ht_setpair( HTPair* P, const char* str, int size, Hash h, void* ptr )
 {
 	P->str = size ? sgs_Alloc_n( char, size ) : UNALLOCATED_STRING;
 	if( size ) memcpy( P->str, str, size );
@@ -548,11 +548,14 @@ void ht_setpair( HTPair* P, char* str, int size, Hash h, void* ptr )
 	P->hash = h;
 }
 
-void ht_set( HashTable* T, char* str, int size, void* ptr )
+HTPair* ht_set( HashTable* T, const char* str, int size, void* ptr )
 {
 	HTPair* p = ht_find( T, str, size );
 	if( p )
+	{
 		p->ptr = ptr;
+		return p;
+	}
 	else
 	{
 		Hash h;
@@ -566,7 +569,7 @@ void ht_set( HashTable* T, char* str, int size, void* ptr )
 		if( p->str == NULL )
 		{
 			ht_setpair( p, str, size, h, ptr );
-			return;
+			return p;
 		}
 
 		pp = p++, pend = T->pairs + T->size;
@@ -577,7 +580,7 @@ void ht_set( HashTable* T, char* str, int size, void* ptr )
 			if( p->str == NULL )
 			{
 				ht_setpair( p, str, size, h, ptr );
-				return;
+				return p;
 			}
 			p++;
 			if( p >= pend )
@@ -585,6 +588,7 @@ void ht_set( HashTable* T, char* str, int size, void* ptr )
 		}
 		sgs_BreakIf( "reached end of loop" );
 	}
+	return NULL;
 }
 
 static int ht_trymove( HashTable* T, HTPair* phole, HTPair* P )
@@ -622,19 +626,24 @@ static void ht_fillhole( HashTable* T, HTPair* P )
 	}
 }
 
+void ht_unset_pair( HashTable* T, HTPair* p )
+{
+	int osz = T->size;
+	if( p->str != UNALLOCATED_STRING )
+		sgs_Free( p->str );
+	p->str = NULL;
+	T->load--;
+	ht_check( T, 0 );
+	if( T->size == osz )
+		ht_fillhole( T, p );
+}
+
 void ht_unset( HashTable* T, const char* str, int size )
 {
 	HTPair* p = ht_find( T, str, size );
 	if( p )
 	{
-		int osz = T->size;
-		if( p->str != UNALLOCATED_STRING )
-			sgs_Free( p->str );
-		p->str = NULL;
-		T->load--;
-		ht_check( T, 0 );
-		if( T->size == osz )
-			ht_fillhole( T, p );
+		ht_unset_pair( T, p );
 	}
 }
 

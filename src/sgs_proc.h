@@ -119,11 +119,31 @@ struct _sgs_Variable
 	sgs_VarData data;
 };
 
-/*
-sgs_Variable* sgsVM_VarCreate( SGS_CTX, int type );
-void sgsVM_VarDestroy( SGS_CTX, sgs_Variable* var );
-sgs_Variable* sgsVM_VarCreateString( SGS_CTX, const char* str, int32_t len );
-*/
+
+/* hash table for variables */
+typedef struct _VHTableVar
+{
+	sgs_Variable var;
+	HTPair* me;
+}
+VHTableVar;
+typedef struct _VHTable
+{
+	HashTable ht;
+	VHTableVar* vars;
+	int32_t mem;
+}
+VHTable;
+
+void vht_init( VHTable* vht );
+void vht_free( VHTable* vht, SGS_CTX );
+VHTableVar* vht_get( VHTable* vht, const char* key, int32_t size );
+void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SGS_CTX );
+int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX );
+#define vht_size( T ) ((T)->ht.load)
+
+
+/* VM interface */
 void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len );
 void var_destroy_object( SGS_CTX, object_t* O );
 #define sgsVM_VarCreateString var_create_str

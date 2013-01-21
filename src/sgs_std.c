@@ -324,20 +324,16 @@ int sgsstd_array( SGS_CTX )
 	DICT
 */
 
-#define HTHDR HashTable* ht = (HashTable*) data->data
+#define HTHDR VHTable* ht = (VHTable*) data->data
 
 static void sgsstd_dict_clearvals( SGS_CTX, sgs_VarObj* data )
 {
 	HTHDR;
-	HTPair* pair = ht->pairs, *pend = ht->pairs + ht->size;
-	while( pair < pend )
+	VHTableVar* p = ht->vars, *pend = ht->vars + vht_size( ht );
+	while( p < pend )
 	{
-		if( pair->str )
-		{
-			sgs_Release( C, (sgs_Variable*) pair->ptr );
-			sgs_Free( pair->ptr );
-		}
-		pair++;
+		sgs_Release( C, &p->var );
+		p++;
 	}
 }
 
@@ -345,27 +341,25 @@ static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	HTHDR;
 	sgsstd_dict_clearvals( C, data );
-	ht_destroy( ht );
+	vht_free( ht, C );
+	sgs_Free( ht );
 	return SGS_SUCCESS;
 }
 
 static int sgsstd_dict_tostring( SGS_CTX, sgs_VarObj* data )
 {
 	HTHDR;
-	HTPair *pair = ht->pairs, *pend = ht->pairs + ht->size;
+	VHTableVar *pair = ht->vars, *pend = ht->vars + vht_size( ht );
 	int cnt = 0;
 	sgs_PushString( C, "{" );
 	while( pair < pend )
 	{
-		if( pair->str )
-		{
-			if( cnt )
-				sgs_PushString( C, "," );
-			sgs_PushStringBuf( C, pair->str, pair->size );
-			sgs_PushString( C, "=" );
-			sgs_PushVariable( C, (sgs_Variable*) pair->ptr );
-			cnt++;
-		}
+		if( cnt )
+			sgs_PushString( C, "," );
+		sgs_PushStringBuf( C, pair->me->str, pair->me->size );
+		sgs_PushString( C, "=" );
+		sgs_PushVariable( C, &pair->var );
+		cnt++;
 		pair++;
 	}
 	sgs_PushString( C, "}" );
@@ -382,15 +376,12 @@ static int sgsstd_dict_gettype( SGS_CTX, sgs_VarObj* data )
 static int sgsstd_dict_gcmark( SGS_CTX, sgs_VarObj* data )
 {
 	HTHDR;
-	HTPair* pair = ht->pairs, *pend = ht->pairs + ht->size;
+	VHTableVar *pair = ht->vars, *pend = ht->vars + vht_size( ht );
 	while( pair < pend )
 	{
-		if( pair->str )
-		{
-			int ret = sgs_GCMark( C, (sgs_Variable*) pair->ptr );
-			if( ret != SGS_SUCCESS )
-				return ret;
-		}
+		int ret = sgs_GCMark( C, &pair->var );
+		if( ret != SGS_SUCCESS )
+			return ret;
 		pair++;
 	}
 	return SGS_SUCCESS;
@@ -399,35 +390,25 @@ static int sgsstd_dict_gcmark( SGS_CTX, sgs_VarObj* data )
 static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 {
 	HTHDR;
-	HTPair* pair;
+	VHTableVar* pair;
 	sgs_ToString( C, -1 );
 	if( sgs_StackItem( C, -1 )->type != SVT_STRING )
 		return SGS_EINVAL;
-	pair = ht_find( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+	pair = vht_get( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
 	if( !pair )
 		return SGS_ENOTFND;
-	return sgs_PushVariable( C, (sgs_Variable*) pair->ptr );
+	return sgs_PushVariable( C, &pair->var );
 }
 
 static int sgsstd_dict_setindex( SGS_CTX, sgs_VarObj* data )
 {
 	HTHDR;
-	HTPair* pair;
-	sgs_Variable* var, *key;
+	sgs_Variable* key;
 	sgs_ToString( C, -2 );
 	key = sgs_StackItem( C, -2 );
 	if( key->type != SVT_STRING )
 		return SGS_EINVAL;
-	pair = ht_find( ht, var_cstr( key ), key->data.S->size );
-	if( pair )
-	{
-		sgs_Release( C, (sgs_Variable*) pair->ptr );
-		sgs_Free( pair->ptr );
-	}
-	var = sgs_Alloc( sgs_Variable );
-	*var = *sgs_StackItem( C, -1 );
-	sgs_Acquire( C, var );
-	ht_set( ht, var_cstr( key ), key->data.S->size, var );
+	vht_set( ht, var_cstr( key ), key->data.S->size, sgs_StackItem( C, -1 ), C );
 	return SGS_SUCCESS;
 }
 
@@ -450,14 +431,12 @@ void* sgsstd_dict_functable[] =
 int sgsstd_dict( SGS_CTX )
 {
 	int i, objcnt = sgs_StackSize( C );
-	HashTable* ht = ht_create();
+	VHTable* ht = sgs_Alloc( VHTable );
+	vht_init( ht );
 	for( i = 0; i < objcnt; i += 2 )
 	{
 		sgs_Variable* vkey = sgs_StackItem( C, i );
-		sgs_Variable* var = sgs_Alloc( sgs_Variable );
-		*var = *sgs_StackItem( C, i + 1 );
-		sgs_Acquire( C, var );
-		ht_set( ht, var_cstr( vkey ), vkey->data.S->size, var );
+		vht_set( ht, var_cstr( vkey ), vkey->data.S->size, sgs_StackItem( C, i + 1 ), C );
 	}
 	sgs_PushObject( C, ht, sgsstd_dict_functable );
 	return 1;
@@ -591,8 +570,8 @@ argerr:
 int sgsstd_isset( SGS_CTX )
 {
 	sgs_Variable* var;
-	HashTable* ht;
-	HTPair* pair;
+	VHTable* ht;
+	VHTableVar* pair;
 	if( sgs_StackSize( C ) != 2 )
 		goto argerr;
 
@@ -603,9 +582,9 @@ int sgsstd_isset( SGS_CTX )
 	sgs_ToString( C, -1 );
 	if( sgs_StackItem( C, -1 )->type != SVT_STRING )
 		goto argerr;
-	ht = (HashTable*) var->data.O->data;
+	ht = (VHTable*) var->data.O->data;
 
-	pair = ht_find( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+	pair = vht_get( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
 	return sgs_PushBool( C, pair != NULL ) == SGS_SUCCESS;
 
 argerr:
@@ -616,8 +595,8 @@ argerr:
 int sgsstd_unset( SGS_CTX )
 {
 	sgs_Variable* var;
-	HashTable* ht;
-	HTPair* val;
+	VHTable* ht;
+	VHTableVar* val;
 	if( sgs_StackSize( C ) != 2 )
 		goto argerr;
 
@@ -628,15 +607,10 @@ int sgsstd_unset( SGS_CTX )
 	sgs_ToString( C, -1 );
 	if( sgs_StackItem( C, -1 )->type != SVT_STRING )
 		goto argerr;
-	ht = (HashTable*) var->data.O->data;
 
-	val = ht_find( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
-	if( val )
-	{
-		sgs_Release( C, (sgs_VarPtr) val->ptr );
-		sgs_Free( val->ptr );
-		ht_unset( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
-	}
+	ht = (VHTable*) var->data.O->data;
+	vht_unset( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ), C );
+
 	return 0;
 
 argerr:

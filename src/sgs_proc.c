@@ -179,6 +179,83 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 }
 
 
+/*
+	Variable hash table
+*/
+
+
+void vht_init( VHTable* vht )
+{
+	ht_init( &vht->ht, 4 );
+	vht->vars = NULL;
+	vht->mem = 0;
+}
+
+void vht_free( VHTable* vht, SGS_CTX )
+{
+	int32_t i;
+	for( i = 0; i < vht_size( vht ); ++i )
+	{
+		VAR_RELEASE( &vht->vars[ i ].var );
+	}
+	ht_free( &vht->ht );
+	if( vht->vars )
+		sgs_Free( vht->vars );
+}
+
+VHTableVar* vht_get( VHTable* vht, const char* key, int32_t size )
+{
+	void* idx = ht_get( &vht->ht, key, size );
+	uint32_t ii = (uint32_t) idx;
+	return ii > 0 ? vht->vars + ( ii - 1 ) : NULL;
+}
+
+void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SGS_CTX )
+{
+	VHTableVar* tv = vht_get( vht, key, size );
+	VAR_ACQUIRE( var );
+	if( tv )
+	{
+		VAR_RELEASE( &tv->var );
+		tv->var = *var;
+	}
+	else
+	{
+		if( vht->mem == vht_size( vht ) )
+		{
+			int32_t nmem = vht->mem * 2 + 4;
+			VHTableVar* narr = sgs_Alloc_n( VHTableVar, nmem );
+			memcpy( narr, vht->vars, sizeof( VHTableVar ) * vht_size( vht ) );
+			vht->vars = narr;
+			vht->mem = nmem;
+		}
+
+		{
+			uint32_t ni = vht_size( vht );
+			HTPair* p = ht_set( &vht->ht, key, size, (void*)( ni + 1 ) );
+			VHTableVar htv = { *var, p };
+			vht->vars[ ni ] = htv;
+		}
+	}
+}
+
+int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
+{
+	VHTableVar* tv = vht_get( vht, key, size );
+	if( tv )
+	{
+		VAR_RELEASE( &tv->var );
+		if( tv - vht->vars != vht_size( vht ) )
+		{
+			VHTableVar* lhtv = vht->vars + ( vht_size( vht ) - 1 );
+			tv->var = lhtv->var;
+			tv->me = lhtv->me;
+			lhtv->me->ptr = (void*)( tv - vht->vars + 1 );
+		}
+		ht_unset_pair( &vht->ht, tv->me );
+	}
+}
+
 
 
 /*
