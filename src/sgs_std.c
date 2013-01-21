@@ -363,7 +363,7 @@ static int sgsstd_dict_tostring( SGS_CTX, sgs_VarObj* data )
 		pair++;
 	}
 	sgs_PushString( C, "}" );
-	return sgs_StringMultiConcat( C, cnt * 4 + 1 );
+	return sgs_StringMultiConcat( C, cnt * 4 + 1 + !cnt );
 }
 
 static int sgsstd_dict_gettype( SGS_CTX, sgs_VarObj* data )

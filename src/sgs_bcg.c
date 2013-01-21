@@ -754,7 +754,7 @@ static int compile_index_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* 
 	DATA( &opos, 2 );
 	DATA( &var, 2 );
 	DATA( &name, 2 );
-	C->fctx->regs = regpos;
+	comp_reg_unwind( C, regpos );
 	*out = opos;
 	return 1;
 }
@@ -771,7 +771,7 @@ static int compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 	DATA( &var, 2 );
 	DATA( &name, 2 );
 	DATA( &src, 2 );
-	C->fctx->regs = regpos;
+	comp_reg_unwind( C, regpos );
 	return 1;
 }
 

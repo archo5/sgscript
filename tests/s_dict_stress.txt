@@ -1,5 +1,10 @@
 var obj = {};
-for( var i = 0; i < 100000; ++i )
+print( "filling up...\n" );
+for( var i = 0; i < 5000; ++i )
 	obj[ i ] = ftime();
-for( var i = 0; i < 100000; ++i )
+for( var i = 0; i < 5000; ++i )
+	dummy = obj[ i ];
+print( obj, "\n" );
+for( var i = 0; i < 5000; ++i )
 	unset( obj, i );
+print( obj, " unloaded!\n" );

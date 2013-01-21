@@ -226,6 +226,8 @@ void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SG
 			int32_t nmem = vht->mem * 2 + 4;
 			VHTableVar* narr = sgs_Alloc_n( VHTableVar, nmem );
 			memcpy( narr, vht->vars, sizeof( VHTableVar ) * vht_size( vht ) );
+			if( vht->vars )
+				sgs_Free( vht->vars );
 			vht->vars = narr;
 			vht->mem = nmem;
 		}
@@ -678,10 +680,10 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 {
 	int ret;
 
-	if( idx->type != SVT_STRING )
+	if( !isindex && idx->type != SVT_STRING )
 		return SGS_ENOTSUP;
 
-	if( obj && obj->type == SVT_OBJECT )
+	if( obj->type == SVT_OBJECT )
 	{
 		stk_push( C, idx );
 		ret = obj_exec( C, isindex ? SOP_GETINDEX : SOP_GETPROP, obj->data.O );
@@ -706,10 +708,10 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 {
 	int ret;
 
-	if( idx->type != SVT_STRING )
+	if( !isindex && idx->type != SVT_STRING )
 		return SGS_ENOTSUP;
 
-	if( obj && obj->type == SVT_OBJECT )
+	if( obj->type == SVT_OBJECT )
 	{
 		stk_push( C, idx );
 		stk_push( C, src );
