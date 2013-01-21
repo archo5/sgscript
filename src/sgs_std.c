@@ -356,7 +356,7 @@ static int sgsstd_dict_tostring( SGS_CTX, sgs_VarObj* data )
 	{
 		if( cnt )
 			sgs_PushString( C, "," );
-		sgs_PushStringBuf( C, pair->me->str, pair->me->size );
+		sgs_PushStringBuf( C, pair->str, pair->size );
 		sgs_PushString( C, "=" );
 		sgs_PushVariable( C, &pair->var );
 		cnt++;
@@ -596,7 +596,6 @@ int sgsstd_unset( SGS_CTX )
 {
 	sgs_Variable* var;
 	VHTable* ht;
-	VHTableVar* val;
 	if( sgs_StackSize( C ) != 2 )
 		goto argerr;
 

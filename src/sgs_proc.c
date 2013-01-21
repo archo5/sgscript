@@ -233,7 +233,7 @@ void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SG
 		{
 			uint32_t ni = vht_size( vht );
 			HTPair* p = ht_set( &vht->ht, key, size, (void*)( ni + 1 ) );
-			VHTableVar htv = { *var, p };
+			VHTableVar htv = { *var, p->str, p->size };
 			vht->vars[ ni ] = htv;
 		}
 	}
@@ -241,19 +241,23 @@ void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SG
 
 int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
 {
-	VHTableVar* tv = vht_get( vht, key, size );
-	if( tv )
+	HTPair* tvp = ht_find( &vht->ht, key, size );
+	if( tvp )
 	{
+		VHTableVar* tv = vht->vars + ( ((uint32_t)tvp->ptr) - 1 );
 		VAR_RELEASE( &tv->var );
 		if( tv - vht->vars != vht_size( vht ) )
 		{
 			VHTableVar* lhtv = vht->vars + ( vht_size( vht ) - 1 );
 			tv->var = lhtv->var;
-			tv->me = lhtv->me;
-			lhtv->me->ptr = (void*)( tv - vht->vars + 1 );
+			tv->str = lhtv->str;
+			tv->size = lhtv->size;
+			ht_find( &vht->ht, tv->str, tv->size )->ptr = (void*)( tv - vht->vars + 1 );
 		}
-		ht_unset_pair( &vht->ht, tv->me );
+		ht_unset_pair( &vht->ht, tvp );
+		return 1;
 	}
+	return 0;
 }
 
 
@@ -1874,31 +1878,6 @@ sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item )
 	sgs_Variable* var = stk_getpos( C, item );
 	sgs_BreakIf( var->type != SVT_OBJECT );
 	return var->data.O;
-}
-
-
-int sgs_GetValue( SGS_CTX, const char* str, sgs_Variable* out )
-{
-	int ret = SGS_SUCCESS;
-	uint32_t state = C->state;
-	TokenList tlist = sgsT_Gen( C, str, -1 );
-	if( C->state & SGS_HAS_ERRORS )
-		ret = SGS_EINVAL;
-	else
-	{
-		/* successfully tokenized, parse it */
-		TokenList tok = tlist;
-
-		if( *tok != ST_IDENT )
-		{
-			ret = SGS_EINVAL;
-			goto failed;
-		}
-	}
-failed:
-	sgs_Free( tlist );
-	C->state = state;
-	return ret;
 }
 
 

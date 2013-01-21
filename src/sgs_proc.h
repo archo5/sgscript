@@ -124,7 +124,8 @@ struct _sgs_Variable
 typedef struct _VHTableVar
 {
 	sgs_Variable var;
-	HTPair* me;
+	char* str;
+	int size;
 }
 VHTableVar;
 typedef struct _VHTable
