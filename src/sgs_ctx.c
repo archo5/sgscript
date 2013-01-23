@@ -181,23 +181,10 @@ int sgs_ExecBuffer( SGS_CTX, const char* buf, int32_t size )
 	return ctx_execute( C, buf, size, TRUE, NULL );
 }
 
-int sgs_EvalBuffer( SGS_CTX, const char* buf, int size, sgs_Variable* out )
+int sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc )
 {
-	int rvc, ret;
 	DBGINFO( "sgs_EvalBuffer called!" );
-	ret = ctx_execute( C, buf, size, FALSE, &rvc );
-	if( ret == SGS_SUCCESS && out )
-	{
-		if( rvc )
-		{
-			*out = *sgs_StackItem( C, 0 );
-			sgs_Acquire( C, out );
-			sgs_Pop( C, rvc );
-		}
-		else
-			out->type = SVT_NULL;
-	}
-	return ret;
+	return ctx_execute( C, buf, size, FALSE, rvc );
 }
 
 

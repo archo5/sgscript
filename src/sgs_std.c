@@ -214,14 +214,14 @@ static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* data )
 {
 	SGSARR_HDR;
 	sgs_Variable* ptr = SGSARR_PTR( data->data );
-	sgs_Integer i = sgs_ToInt( C, -1 );
+	sgs_Integer i = sgs_ToInt( C, -2 );
 	if( i < 0 || i >= hdr->size )
 	{
 		sgs_Printf( C, SGS_ERROR, -1, "Array index out of bounds" );
 		return SGS_EBOUNDS;
 	}
 	sgs_Release( C, ptr + i );
-	ptr[ i ] = *sgs_StackItem( C, -3 );
+	ptr[ i ] = *sgs_StackItem( C, -1 );
 	sgs_Acquire( C, ptr + i );
 	return SGS_SUCCESS;
 }
@@ -717,16 +717,13 @@ static int sgsstd_typeof( SGS_CTX )
 
 static int sgsstd_eval( SGS_CTX )
 {
+	int rvc = 0;
 	sgs_Variable* var;
-	sgs_Variable out;
 	CHKARGS( 1 );
 	sgs_ToString( C, 0 );
 	var = sgs_StackItem( C, 0 );
-	if( sgs_EvalBuffer( C, var_cstr( var ), var->data.S->size, &out ) != SGS_SUCCESS )
-		out.type = SVT_NULL;
-	sgs_PushVariable( C, &out );
-	sgs_Release( C, &out );
-	return 1;
+	sgs_EvalBuffer( C, var_cstr( var ), var->data.S->size, &rvc );
+	return rvc;
 }
 
 static int sgsstd_gc_collect( SGS_CTX )
