@@ -335,7 +335,7 @@ static int part_weight( FTNode* part, int isfcall, int binary )
 			if( ST_OP_BINADD( type ) )	return 25;
 			if( ST_OP_BINMUL( type ) )	return 24;
 			if( type == ST_OP_CAT )		return 22;
-			if( type == ST_OP_MMBR )	return 5;
+			if( type == ST_OP_MMBR )	return 7;
 			return 11;
 		}
 
