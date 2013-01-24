@@ -98,7 +98,7 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 
 sgs_Context*	sgs_CreateEngine();
 void			sgs_DestroyEngine( SGS_CTX );
-sgs_PrintFunc	sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func );
+void			sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
 
 void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
 

@@ -199,6 +199,12 @@ int sgs_Stat( SGS_CTX, int type )
 }
 
 
+void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
+{
+	C->print_fn = func;
+	C->print_ctx = ctx;
+}
+
 void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
 {
 	StrBuf info;
