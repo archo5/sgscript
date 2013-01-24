@@ -329,7 +329,8 @@ static void preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	{
 		if( ST_OP_ASSIGN( *node->token ) && node->child && node->child->type == SFT_IDENT )
 		{
-			if( add_var( &C->fctx->vars, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
+			if( find_var( &C->fctx->gvars, (char*) node->child->token + 2, node->child->token[ 1 ] ) == -1 &&
+				add_var( &C->fctx->vars, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
 				comp_reg_alloc( C );
 		}
 	}
