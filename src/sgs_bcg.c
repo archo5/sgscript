@@ -1309,11 +1309,13 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	switch( node->type )
 	{
 	/* ignore these items if they're leading in statements */
-	case SFT_IDENT: break;
-	case SFT_KEYWORD: break;
-	case SFT_CONST: break;
-	case SFT_ARRLIST: break;
-	case SFT_MAPLIST: break;
+	case SFT_IDENT:
+	case SFT_KEYWORD:
+	case SFT_CONST:
+	case SFT_ARRLIST:
+	case SFT_MAPLIST:
+	case SFT_INDEX:
+		break;
 
 	case SFT_OPER:
 	case SFT_OPER_P:
