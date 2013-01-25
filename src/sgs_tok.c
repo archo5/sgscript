@@ -292,7 +292,7 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length )
 					|| code[ i + 1 ] == '*' ) )	skipcomment	( C, &s, &line, code, &i, length );
 
 		/* special symbol */
-		else if( isoneof( fc, "()[]{},;" ) )	membuf_appchr( &s, fc );
+		else if( isoneof( fc, "()[]{},;:" ) )	membuf_appchr( &s, fc );
 
 		/* identifier */
 		else if( fc == '_' || isalpha( fc ) )	readident	( C, &s, code, &i, length );
@@ -415,6 +415,7 @@ void sgsT_DumpToken( TokenList tok )
 	case ST_CBRKR:
 	case ST_ARGSEP:
 	case ST_STSEP:
+	case ST_PICKSEP:
 		printf( "%c", *tok );
 		break;
 	case ST_IDENT:

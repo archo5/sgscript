@@ -20,6 +20,7 @@
 #define ST_CBRKR	'}'
 #define ST_ARGSEP	','
 #define ST_STSEP	';'
+#define ST_PICKSEP	':'
 /* other			id		additional data */
 #define ST_IDENT	'N'	/* 1 byte (string size), N bytes (string), not null-terminated	*/
 #define ST_KEYWORD	'K'	/* same as IDENT */
@@ -79,7 +80,7 @@
 #define ST_OP_COMP( chr )	( (chr) >= 200 && (chr) <= 207 )
 #define ST_OP_BOOL( chr )	( (chr) == ST_OP_BLAEQ || (chr) == ST_OP_BLOEQ || (chr) == ST_OP_BLAND || (chr) == ST_OP_BLOR )
 
-#define ST_ISSPEC( chr )	isoneof( (chr), "()[]{},;" )
+#define ST_ISSPEC( chr )	isoneof( (chr), "()[]{},;:" )
 
 #define ST_READINT( pos )	(*(int32_t*)( pos ))
 #define ST_READLN( pos )	(*(LineNum*)( pos ))

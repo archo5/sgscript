@@ -997,6 +997,63 @@ fail:
 	return NULL;
 }
 
+static FTNode* parse_foreach( SGS_CTX, TokenList* begin, TokenList end )
+{
+	FTNode *node, *nvar = NULL, *nexp = NULL, *nwhile = NULL;
+	TokenList at = *begin;
+	TokenList expend;
+
+	FUNC_BEGIN;
+
+	at = sgsT_Next( at );
+	if( *at != '(' )
+	{
+		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected '(' after 'foreach'" );
+		goto fail;
+	}
+
+	at = sgsT_Next( at );
+	if( *at != ST_IDENT )
+	{
+		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected identifier after '(' in 'foreach'" );
+		goto fail;
+	}
+	nvar = make_node( SFT_IDENT, at, NULL, NULL );
+
+	at = sgsT_Next( at );
+	if( *at != ':' )
+	{
+		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected ':' after identifier in 'foreach'" );
+		goto fail;
+	}
+
+	at = sgsT_Next( at );
+	expend = detect_exp( C, at, end, ")", 0 );
+	if( !expend ) goto fail;
+	expend = sgsT_Next( expend );
+	nexp = parse_explist( C, at, expend, ')' );
+	at = expend;
+	if( !nexp ) goto fail;
+
+	nwhile = parse_stmt( C, &at, end );
+	if( !nwhile ) goto fail;
+
+	nvar->next = nexp;
+	nexp->next = nwhile;
+	node = make_node( SFT_FOREACH, *begin, NULL, nvar );
+	*begin = at;
+
+	FUNC_END;
+	return node;
+
+fail:
+	if( nvar ) sgsFT_Destroy( nvar );
+	if( nexp ) sgsFT_Destroy( nexp );
+	if( nwhile ) sgsFT_Destroy( nwhile );
+	FUNC_END;
+	return NULL;
+}
+
 static FTNode* parse_function( SGS_CTX, TokenList* begin, TokenList end, int inexp )
 {
 	FTNode *node, *nname = NULL, *nargs = NULL, *nbody = NULL;
@@ -1094,6 +1151,13 @@ static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
 	else if( is_keyword( at, "for" ) )
 	{
 		node = parse_for( C, begin, end );
+		FUNC_END;
+		return node;
+	}
+	/* FOREACH */
+	else if( is_keyword( at, "foreach" ) )
+	{
+		node = parse_foreach( C, begin, end );
 		FUNC_END;
 		return node;
 	}

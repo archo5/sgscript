@@ -77,20 +77,22 @@ struct sgs_ObjData
 /* - object interface */
 typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 
-#define SOP( idx ) ((void*)idx)
-#define SOP_END			SOP( 0 )
-#define SOP_DESTRUCT	SOP( 1 )
-#define SOP_CLONE		SOP( 2 )
-#define SOP_GETTYPE		SOP( 3 )
-#define SOP_GETPROP		SOP( 4 )
-#define SOP_SETPROP		SOP( 5 )
-#define SOP_GETINDEX	SOP( 6 )
-#define SOP_SETINDEX	SOP( 7 )
-#define SOP_TOBOOL		SOP( 8 )
-#define SOP_TOINT		SOP( 9 )
-#define SOP_TOREAL		SOP( 10 )
-#define SOP_TOSTRING	SOP( 11 )
-#define SOP_GCMARK		SOP( 12 )
+#define SOP( idx )	((void*)idx)
+#define SOP_END         SOP( 0 )
+#define SOP_DESTRUCT    SOP( 1 )
+#define SOP_CLONE       SOP( 2 )
+#define SOP_GETTYPE     SOP( 3 )
+#define SOP_GETPROP     SOP( 4 )
+#define SOP_SETPROP     SOP( 5 )
+#define SOP_GETINDEX    SOP( 6 )
+#define SOP_SETINDEX    SOP( 7 )
+#define SOP_TOBOOL      SOP( 8 )
+#define SOP_TOINT       SOP( 9 )
+#define SOP_TOREAL      SOP( 10 )
+#define SOP_TOSTRING    SOP( 11 )
+#define SOP_GCMARK      SOP( 12 )
+#define SOP_GETITER     SOP( 13 )
+#define SOP_NEXTKEY     SOP( 14 )
 
 
 /* Engine context */

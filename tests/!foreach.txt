@@ -1,0 +1,3 @@
+arr = [ "one", "two", "three" ];
+foreach( x : arr )
+	print( x, arr[x], "\n" );
