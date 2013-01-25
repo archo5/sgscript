@@ -298,33 +298,46 @@ static int add_var( StrBuf* S, char* str, int len )
 #define DATA( ptr, sz )	membuf_appbuf( &func->code, (ptr), (sz) )
 
 
-static void preparse_varlist( SGS_CTX, FTNode* node )
+static int preparse_varlist( SGS_CTX, FTNode* node )
 {
 	node = node->child;
 	while( node )
 	{
+		if( find_var( &C->fctx->gvars, (char*) node->token + 2, node->token[ 1 ] ) >= 0 )
+		{
+			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined: global -> local" );
+			return FALSE;
+		}
 		if( add_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) )
 			comp_reg_alloc( C );
 		node = node->next;
 	}
+	return TRUE;
 }
 
-static void preparse_gvlist( SGS_CTX, FTNode* node )
+static int preparse_gvlist( SGS_CTX, FTNode* node )
 {
 	node = node->child;
 	while( node )
 	{
+		if( find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) >= 0 )
+		{
+			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined: local -> global" );
+			return FALSE;
+		}
 		add_var( &C->fctx->gvars, (char*) node->token + 2, node->token[ 1 ] );
 		node = node->next;
 	}
+	return TRUE;
 }
 
-static void preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
+static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 {
+	int ret = 1;
 	if( node->type == SFT_VARLIST )
-		preparse_varlist( C, node );
+		ret &= preparse_varlist( C, node );
 	else if( node->type == SFT_GVLIST )
-		preparse_gvlist( C, node );
+		ret &= preparse_gvlist( C, node );
 	else if( node->type == SFT_OPER )
 	{
 		if( ST_OP_ASSIGN( *node->token ) && node->child && node->child->type == SFT_IDENT )
@@ -335,9 +348,10 @@ static void preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		}
 	}
 	else if( node->child && node->type != SFT_FUNC )
-		preparse_varlists( C, func, node->child );
+		ret &= preparse_varlists( C, func, node->child );
 	if( node->next )
-		preparse_varlists( C, func, node->next );
+		ret &= preparse_varlists( C, func, node->next );
+	return ret;
 }
 
 static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
@@ -1096,7 +1110,7 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	FUNC_ENTER;
 	if( !preparse_arglist( C, nf, node->child ) ) { goto fail; }
 	args = fctx->regs;
-	preparse_varlists( C, nf, node->child->next );
+	if( !preparse_varlists( C, nf, node->child->next ) ) { goto fail; }
 	FUNC_ENTER;
 	if( !compile_node( C, nf, node->child->next ) ) { goto fail; }
 	comp_reg_unwind( C, 0 );
@@ -1626,7 +1640,8 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 	sgs_FuncCtx* fctx = fctx_create();
 	fctx->func = FALSE;
 	C->fctx = fctx;
-	preparse_varlists( C, func, tree );
+	if( !preparse_varlists( C, func, tree ) )
+		goto fail;
 	if( !compile_node( C, func, tree ) )
 		goto fail;
 	comp_reg_unwind( C, 0 );
