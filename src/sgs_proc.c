@@ -461,10 +461,11 @@ static int var_getbool( SGS_CTX, sgs_VarPtr var )
 			stk_push( C, var );
 			if( obj_exec( C, SOP_TOBOOL, var->data.O ) != SGS_SUCCESS )
 			{
-				return 0;
+				stk_pop1( C );
+				return FALSE;
 			}
 			out = stk_getpos( C, -1 )->data.B;
-			stk_pop1( C );
+			stk_pop2( C );
 			return out;
 		}
 	}
@@ -485,10 +486,11 @@ static sgs_Integer var_getint( SGS_CTX, sgs_VarPtr var )
 			stk_push( C, var );
 			if( obj_exec( C, SOP_TOINT, var->data.O ) != SGS_SUCCESS )
 			{
-				return 0;
+				stk_pop1( C );
+				return FALSE;
 			}
 			out = stk_getpos( C, -1 )->data.I;
-			stk_pop1( C );
+			stk_pop2( C );
 			return out;
 		}
 	}
@@ -509,10 +511,11 @@ static sgs_Real var_getreal( SGS_CTX, sgs_Variable* var )
 			stk_push( C, var );
 			if( obj_exec( C, SOP_TOREAL, var->data.O ) != SGS_SUCCESS )
 			{
-				return 0;
+				stk_pop1( C );
+				return FALSE;
 			}
 			out = stk_getpos( C, -1 )->data.R;
-			stk_pop1( C );
+			stk_pop2( C );
 			return out;
 		}
 	}
@@ -1019,20 +1022,50 @@ VAR_IOP( lsh, << )
 VAR_IOP( rsh, >> )
 
 
-#define VAR_LOP( pfx, op ) \
-static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
-	int i = calc_typeid( a, b ); \
-	switch( i ){ \
-		case SVT_INT: { sgs_Integer A = var_getint( C, a ), B = var_getint( C, b ); var_setbool( C, out, A op B ); break; } \
-		case SVT_REAL: { sgs_Real A = var_getreal( C, a ), B = var_getreal( C, b ); var_setbool( C, out, A op B ); break; } \
-	} }
-
-VAR_LOP( eq, == )
-VAR_LOP( neq, != )
-VAR_LOP( lt, < )
-VAR_LOP( gt, > )
-VAR_LOP( lte, <= )
-VAR_LOP( gte, >= )
+/* returns 0 if equal, -1 if A is bigger, 1 if B is bigger */
+static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
+{
+	if( a->type == SVT_OBJECT || b->type == SVT_OBJECT )
+	{
+		/* TODO */
+		return -1;
+	}
+	if( a->type == SVT_BOOL || b->type == SVT_BOOL )
+		return var_getbool( C, a ) - var_getbool( C, b );
+	if( a->type == SVT_FUNC || b->type == SVT_FUNC || a->type == SVT_CFUNC || b->type == SVT_CFUNC )
+	{
+		if( a->type != b->type )
+			return a->type - b->type;
+		if( a->type == SVT_FUNC )
+			return a->data.F - b->data.F;
+		else
+			return a->data.C - b->data.C;
+	}
+	if( a->type == SVT_STRING || b->type == SVT_STRING )
+	{
+		int out;
+		stk_push( C, a );
+		stk_push( C, b );
+		if( vm_convert_stack( C, -2, SVT_STRING ) != SGS_SUCCESS ) return 1;
+		if( vm_convert_stack( C, -1, SVT_STRING ) != SGS_SUCCESS ) return -1;
+		a = stk_getpos( C, -2 );
+		b = stk_getpos( C, -1 );
+		out = -strncmp( var_cstr( a ), var_cstr( b ), MIN( a->data.S->size, b->data.S->size ) );
+		if( out == 0 && a->data.S->size != b->data.S->size )
+			out = a->data.S->size - b->data.S->size;
+		else if( out != 0 )
+			out = out > 0 ? 1 : -1;
+		stk_pop2( C );
+		return out;
+	}
+	/* int/real */
+	{
+		sgs_Real diff = var_getreal( C, a ) - var_getreal( C, b );
+		if( diff > 0 ) return -1;
+		else if( diff < 0 ) return 1;
+		else return 0;
+	}
+}
 
 
 static void vm_forprep( SGS_CTX, int outiter, sgs_VarPtr obj )
@@ -1356,18 +1389,21 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 		case SI_LSH: { ARGS_3; vm_op_lsh( C, a1, p2, p3 ); break; }
 		case SI_RSH: { ARGS_3; vm_op_rsh( C, a1, p2, p3 ); break; }
 
-#define STRICTLY_EQUAL( val ) if( p2->type != p3->type ) { var_setbool( C, a1, val ); break; }
-		case SI_SEQ: { ARGS_3; STRICTLY_EQUAL( FALSE ); vm_op_eq( C, a1, p2, p3 ); break; }
-		case SI_SNEQ: { ARGS_3; STRICTLY_EQUAL( TRUE ); vm_op_neq( C, a1, p2, p3 ); break; }
-		case SI_EQ: { ARGS_3; vm_op_eq( C, a1, p2, p3 ); break; }
-		case SI_NEQ: { ARGS_3; vm_op_neq( C, a1, p2, p3 ); break; }
-		case SI_LT: { ARGS_3; vm_op_lt( C, a1, p2, p3 ); break; }
-		case SI_GTE: { ARGS_3; vm_op_gte( C, a1, p2, p3 ); break; }
-		case SI_GT: { ARGS_3; vm_op_gt( C, a1, p2, p3 ); break; }
-		case SI_LTE: { ARGS_3; vm_op_lte( C, a1, p2, p3 ); break; }
+#define STRICTLY_EQUAL( val ) if( p2->type != p3->type || ( p2->type == SVT_OBJECT && \
+								p2->data.O->iface != p3->data.O->iface ) ) { var_setbool( C, a1, val ); break; }
+#define VCOMPARE( op ) var_setbool( C, a1, 0 op vm_compare( C, p2, p3 ) )
+		case SI_SEQ: { ARGS_3; STRICTLY_EQUAL( FALSE ); VCOMPARE( == ); break; }
+		case SI_SNEQ: { ARGS_3; STRICTLY_EQUAL( TRUE ); VCOMPARE( != ); break; }
+		case SI_EQ: { ARGS_3; VCOMPARE( == ); break; }
+		case SI_NEQ: { ARGS_3; VCOMPARE( != ); break; }
+		case SI_LT: { ARGS_3; VCOMPARE( < ); break; }
+		case SI_GTE: { ARGS_3; VCOMPARE( >= ); break; }
+		case SI_GT: { ARGS_3; VCOMPARE( > ); break; }
+		case SI_LTE: { ARGS_3; VCOMPARE( <= ); break; }
 
 		case SI_ARRAY: { uint8_t argc = AS_UINT8( ptr++ ); int16_t a1 = AS_UINT16( ptr ); ptr += 2; vm_make_array( C, argc, a1 ); break; }
 		case SI_DICT: { uint8_t argc = AS_UINT8( ptr++ ); int16_t a1 = AS_UINT16( ptr ); ptr += 2; vm_make_dict( C, argc, a1 ); break; }
+#undef VCOMPARE
 #undef STRICTLY_EQUAL
 #undef ARGS_2
 #undef ARGS_3

@@ -178,7 +178,7 @@ static void dump_opcode( char* ptr, int32_t size )
 	while( ptr < pend )
 	{
 		unsigned char instr = *ptr++;
-		printf( "\t%04d |  ", ptr - pbeg );
+		printf( "\t%04d |  ", ptr - pbeg - 1 );
 		switch( instr )
 		{
 #define DOP_A( wat ) case SI_##wat: dump_opcode_a( #wat, ptr ); ptr += 6; break;
