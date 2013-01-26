@@ -25,6 +25,9 @@ typedef enum sgs_Instruction_e
 	SI_JMPF,	/* (i16 src, off)		jump (add to instr.ptr.) if false */
 	SI_CALL,	/* (u8 args, expect, i16 src)	call a variable */
 
+	SI_FORPREP,	/* (i16 out, src)		retrieves the iterator to work the object */
+	SI_FORNEXT,	/* (i16 oky, ost, iter)	retrieves pending output key/state from iterator */
+
 	SI_GETVAR,	/* (i16 out, name)		<varname> => <value> */
 	SI_SETVAR,	/* (i16 name, src)		<varname> <value> => set <value> to <varname> */
 	SI_GETPROP,	/* (i16 out, var, name)	<var> <prop> => <var> */

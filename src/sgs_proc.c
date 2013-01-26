@@ -317,6 +317,7 @@ static SGS_INLINE void stk_setvar_null( SGS_CTX, int stkid )
 {
 	sgs_VarPtr vpos = stk_getpos( C, stkid );
 	VAR_RELEASE( vpos );
+	vpos->type = SVT_NULL;
 }
 
 static SGS_INLINE sgs_VarPtr stk_getlpos( SGS_CTX, int stkid )
@@ -344,6 +345,7 @@ static SGS_INLINE void stk_setlvar_null( SGS_CTX, int stkid )
 {
 	sgs_VarPtr vpos = stk_getlpos( C, stkid );
 	VAR_RELEASE( vpos );
+	vpos->type = SVT_NULL;
 }
 
 static void stk_makespace( SGS_CTX, int num )
@@ -993,6 +995,44 @@ VAR_LOP( lte, <= )
 VAR_LOP( gte, >= )
 
 
+static void vm_forprep( SGS_CTX, int outiter, sgs_VarPtr obj )
+{
+	int ret;
+	sgs_VarPtr iter;
+
+	if( obj->type != SVT_OBJECT )
+	{
+		sgs_Printf( C, SGS_ERROR, -1, "Variable of type '%s' doesn't have an iterator", sgs_VarNames[ obj->type ] );
+		stk_setvar_null( C, outiter );
+		return;
+	}
+
+	ret = obj_exec( C, SOP_GETITER, obj->data.O );
+	if( ret != SGS_SUCCESS )
+	{
+		sgs_Printf( C, SGS_ERROR, -1, "Object [%p] doesn't have an iterator", obj->data.O );
+		stk_setvar_null( C, outiter );
+		return;
+	}
+	stk_setvar( C, outiter, stk_getpos( C, -1 ) );
+	stk_pop1( C );
+}
+
+static void vm_fornext( SGS_CTX, int outkey, int outstate, sgs_VarPtr iter )
+{
+	if( iter->type != SVT_OBJECT || obj_exec( C, SOP_NEXTKEY, iter->data.O ) != SGS_SUCCESS )
+	{
+		sgs_Printf( C, SGS_ERROR, -1, "Failed to retrieve data from iterator" );
+		stk_setvar_null( C, outstate );
+		return;
+	}
+
+	stk_setvar( C, outkey, stk_getpos( C, -2 ) );
+	stk_setvar( C, outstate, stk_getpos( C, -1 ) );
+	stk_pop2( C );
+}
+
+
 static void vm_make_array( SGS_CTX, int args, int16_t outpos )
 {
 	int expect = 1, rvc, stkoff = C->stack_off - C->stack_base;
@@ -1120,7 +1160,7 @@ static SGS_INLINE sgs_VarPtr const_getvar( sgs_VarPtr consts, uint32_t count, in
 const char* opnames[] =
 {
 	"nop",  "push", "push_nulls", "pop_n", "pop_reg",  "return", "jump", "jump_if_true", "jump_if_false", "call",
-	"getvar", "setvar", "getprop", "setprop", "getindex", "setindex",  "set", "copy",
+	"for_prep", "for_next", "getvar", "setvar", "getprop", "setprop", "getindex", "setindex",  "set", "copy",
 	"concat", "bool_and", "bool_or", "negate", "bool_inv", "invert",  "inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",  "seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte",  "array", "dict"
 };
@@ -1227,6 +1267,19 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 			args &= 0x7f;
 			ptr += 2;
 			vm_call( C, args, gotthis, expect, RESVAR( src ) );
+			break;
+		}
+
+		case SI_FORPREP:
+		{
+			int16_t a1, a2; a1 = AS_INT16( ptr ); a2 = AS_INT16( ptr + 2 ); ptr += 4;
+			vm_forprep( C, a1, RESVAR( a2 ) );
+			break;
+		}
+		case SI_FORNEXT:
+		{
+			int16_t a1, a2, a3; a1 = AS_INT16( ptr ); a2 = AS_INT16( ptr + 2 ); a3 = AS_INT16( ptr + 4 ); ptr += 6;
+			vm_fornext( C, a1, a2, RESVAR( a3 ) );
 			break;
 		}
 

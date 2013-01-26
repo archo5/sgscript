@@ -289,6 +289,54 @@ static int sgsstd_array_gcmark( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
+/* iterator */
+
+typedef struct sgsstd_array_iter_s
+{
+	sgs_Variable ref;
+	uint32_t size;
+	uint32_t off;
+}
+sgsstd_array_iter_t;
+
+static int sgsstd_array_iter_destruct( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( C );
+	sgs_Free( data->data );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_array_iter_nextkey( SGS_CTX, sgs_VarObj* data )
+{
+	sgsstd_array_iter_t* iter = (sgsstd_array_iter_t*) data->data;
+	sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) iter->ref.data.O->data;
+	if( iter->size != hdr->size )
+		return SGS_EINVAL;
+
+	sgs_PushInt( C, iter->off++ );
+	sgs_PushBool( C, iter->off-1 < iter->size );
+}
+
+void* sgsstd_array_iter_functable[] =
+{
+	SOP_DESTRUCT, sgsstd_array_iter_destruct,
+	SOP_NEXTKEY, sgsstd_array_iter_nextkey,
+	SOP_END,
+};
+
+static int sgsstd_array_getiter( SGS_CTX, sgs_VarObj* data )
+{
+	SGSARR_HDR;
+	sgsstd_array_iter_t* iter = sgs_Alloc( sgsstd_array_iter_t );
+
+	iter->ref.type = SVT_OBJECT;
+	iter->ref.data.O = data;
+	iter->size = hdr->size;
+	iter->off = 0;
+
+	return sgs_PushObject( C, iter, sgsstd_array_iter_functable );
+}
+
 void* sgsstd_array_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_array_destruct,
@@ -299,6 +347,7 @@ void* sgsstd_array_functable[] =
 	SOP_TOBOOL, sgsstd_array_tobool,
 	SOP_TOSTRING, sgsstd_array_tostring,
 	SOP_GCMARK, sgsstd_array_gcmark,
+	SOP_GETITER, sgsstd_array_getiter,
 	SOP_END,
 };
 
@@ -412,6 +461,59 @@ static int sgsstd_dict_setindex( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
+/* iterator */
+
+typedef struct sgsstd_dict_iter_s
+{
+	sgs_Variable ref;
+	int32_t size;
+	int32_t off;
+}
+sgsstd_dict_iter_t;
+
+static int sgsstd_dict_iter_destruct( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( C );
+	sgs_Free( data->data );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_dict_iter_nextkey( SGS_CTX, sgs_VarObj* data )
+{
+	sgsstd_dict_iter_t* iter = (sgsstd_dict_iter_t*) data->data;
+	VHTable* ht = (VHTable*) iter->ref.data.O->data;
+	if( iter->size != ht->ht.load )
+		return SGS_EINVAL;
+
+	if( iter->off < iter->size )
+		sgs_PushStringBuf( C, ht->vars[ iter->off ].str, ht->vars[ iter->off ].size );
+	else
+		sgs_PushNull( C );
+	sgs_PushBool( C, iter->off < iter->size );
+	iter->off++;
+	return SGS_SUCCESS;
+}
+
+void* sgsstd_dict_iter_functable[] =
+{
+	SOP_DESTRUCT, sgsstd_dict_iter_destruct,
+	SOP_NEXTKEY, sgsstd_dict_iter_nextkey,
+	SOP_END,
+};
+
+static int sgsstd_dict_getiter( SGS_CTX, sgs_VarObj* data )
+{
+	HTHDR;
+	sgsstd_dict_iter_t* iter = sgs_Alloc( sgsstd_dict_iter_t );
+
+	iter->ref.type = SVT_OBJECT;
+	iter->ref.data.O = data;
+	iter->size = ht->ht.load;
+	iter->off = 0;
+
+	return sgs_PushObject( C, iter, sgsstd_dict_iter_functable );
+}
+
 #define sgsstd_dict_getprop sgsstd_dict_getindex
 #define sgsstd_dict_setprop sgsstd_dict_setindex
 
@@ -425,6 +527,7 @@ void* sgsstd_dict_functable[] =
 	SOP_TOSTRING, sgsstd_dict_tostring,
 	SOP_GETTYPE, sgsstd_dict_gettype,
 	SOP_GCMARK, sgsstd_dict_gcmark,
+	SOP_GETITER, sgsstd_dict_getiter,
 	SOP_END,
 };
 

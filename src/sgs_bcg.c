@@ -174,10 +174,11 @@ static void dump_opcode_c( const char* name, char* ptr )
 static void dump_opcode( char* ptr, int32_t size )
 {
 	char* pend = ptr + size;
+	char* pbeg = ptr;
 	while( ptr < pend )
 	{
 		unsigned char instr = *ptr++;
-		printf( "\t|  " );
+		printf( "\t%04d |  ", ptr - pbeg );
 		switch( instr )
 		{
 #define DOP_A( wat ) case SI_##wat: dump_opcode_a( #wat, ptr ); ptr += 6; break;
@@ -198,6 +199,10 @@ static void dump_opcode( char* ptr, int32_t size )
 		case SI_JMPF: printf( "JMP_F " ); dump_rcpos( ptr ); printf( ", %d", (int) AS_INT16( ptr + 2 ) ); ptr += 4; break;
 		case SI_CALL: printf( "CALL args:%d%s expect:%d func:", (int) AS_UINT8( ptr ) & 0x7f, AS_UINT8( ptr ) & 0x80 ? ",method" : "",
 							(int) AS_UINT8( ptr + 1 ) ); dump_rcpos( ptr + 2 ); ptr += 4; break;
+
+		case SI_FORPREP: printf( "FOR_PREP " ); dump_rcpos( ptr ); printf( " <= " ); dump_rcpos( ptr + 2 ); ptr += 4; break;
+		case SI_FORNEXT: printf( "FOR_NEXT " ); dump_rcpos( ptr ); printf( ", " ); dump_rcpos( ptr + 2 );
+							printf( " <= " ); dump_rcpos( ptr + 4 ); ptr += 6; break;
 
 		DOP_B( GETVAR );
 		DOP_B1( SETVAR );
@@ -346,6 +351,18 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				add_var( &C->fctx->vars, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
 				comp_reg_alloc( C );
 		}
+	}
+	else if( node->type == SFT_FOREACH )
+	{
+		if( find_var( &C->fctx->gvars, (char*) node->token + 2, node->token[ 1 ] ) >= 0 )
+		{
+			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined (foreach key variable cannot be global): global -> local" );
+			ret = FALSE;
+		}
+		else if( add_var( &C->fctx->vars, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
+			comp_reg_alloc( C );
+
+		ret &= preparse_varlists( C, func, node->child->next );
 	}
 	else if( node->child && node->type != SFT_FUNC )
 		ret &= preparse_varlists( C, func, node->child );
@@ -1543,6 +1560,63 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
 			C->fctx->loops--;
+		}
+		break;
+
+	case SFT_FOREACH:
+		FUNC_HIT( "FOREACH" );
+		{
+			int regstate2 = C->fctx->regs;
+			int16_t var = -1;
+			int16_t iter = comp_reg_alloc( C );
+			int16_t key = comp_reg_alloc( C );
+			int16_t state = comp_reg_alloc( C );
+			int regstate = C->fctx->regs;
+			C->fctx->loops++;
+
+			/* init */
+			FUNC_ENTER;
+			if( !compile_node_r( C, func, node->child->next, &var ) ) goto fail; /* get variable */
+
+			BYTE( SI_FORPREP );
+			DATA( &iter, 2 );
+			DATA( &var, 2 );
+			comp_reg_unwind( C, regstate );
+
+			/* iterate */
+			i = func->code.size;
+			BYTE( SI_FORNEXT );
+			DATA( &key, 2 );
+			DATA( &state, 2 );
+			DATA( &iter, 2 );
+
+			BYTE( SI_JMPF );
+			DATA( &state, 2 );
+			{
+				int32_t jp1, jp2 = 0;
+				int16_t off = 0;
+				DATA( &off, 2 );
+				jp1 = func->code.size;
+
+				if( !compile_ident_w( C, func, node->child, key ) ) goto fail;
+
+				FUNC_ENTER;
+				if( !compile_node( C, func, node->child->next->next ) ) goto fail; /* block */
+				comp_reg_unwind( C, regstate );
+
+				if( !compile_breaks( C, func, 1 ) )
+					goto fail;
+
+				BYTE( SI_JUMP );
+				jp2 = func->code.size + 2;
+				off = i - jp2;
+				DATA( &off, 2 );
+				AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
+			}
+
+			if( !compile_breaks( C, func, 0 ) )
+				goto fail;
+			comp_reg_unwind( C, regstate2 );
 		}
 		break;
 

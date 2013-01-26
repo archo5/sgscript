@@ -44,6 +44,7 @@ static void dumpnode( FTNode* N )
 	case SFT_WHILE: printf( "WHILE" ); break;
 	case SFT_DOWHILE: printf( "DO/WHILE" ); break;
 	case SFT_FOR: printf( "FOR" ); break;
+	case SFT_FOREACH: printf( "FOR_EACH" ); break;
 	case SFT_BREAK: printf( "BREAK" ); if( *sgsT_Next( N->token ) == ST_NUMINT ) printf( " %" PRId64, *(sgs_Integer*)( sgsT_Next( N->token ) + 1 ) ); break;
 	case SFT_CONT: printf( "CONTINUE" ); if( *sgsT_Next( N->token ) == ST_NUMINT ) printf( " %" PRId64, *(sgs_Integer*)( sgsT_Next( N->token ) + 1 ) ); break;
 	case SFT_FUNC: printf( "FUNC" ); break;
