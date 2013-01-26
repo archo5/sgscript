@@ -106,9 +106,9 @@ void print_safe( const char* buf, int32_t size );
 typedef
 struct _StrBuf
 {
-	char*	ptr;
-	int32_t	size;
-	int32_t	mem;
+	char*   ptr;
+	int32_t size;
+	int32_t mem;
 }
 StrBuf;
 
@@ -146,8 +146,8 @@ typedef
 struct _HTPair
 {
 	char* str;
-	int size;
-	Hash hash;
+	int   size;
+	Hash  hash;
 	void* ptr;
 }
 HTPair;
@@ -156,8 +156,8 @@ typedef
 struct _HashTable
 {
 	HTPair* pairs;
-	int size;
-	int load;
+	int32_t size;
+	int32_t load;
 }
 HashTable;
 

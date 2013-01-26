@@ -315,6 +315,7 @@ static int sgsstd_array_iter_nextkey( SGS_CTX, sgs_VarObj* data )
 
 	sgs_PushInt( C, iter->off++ );
 	sgs_PushBool( C, iter->off-1 < iter->size );
+	return SGS_SUCCESS;
 }
 
 void* sgsstd_array_iter_functable[] =

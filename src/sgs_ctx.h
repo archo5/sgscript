@@ -13,19 +13,19 @@ typedef struct _sgs_BreakInfo sgs_BreakInfo;
 struct _sgs_BreakInfo
 {
 	sgs_BreakInfo* next;
-	uint32_t jdoff;	/* jump data offset */
-	uint16_t numlp; /* which loop */
-	uint8_t iscont; /* is a "continue"? */
+	uint32_t jdoff;  /* jump data offset */
+	uint16_t numlp;  /* which loop */
+	uint8_t  iscont; /* is a "continue"? */
 };
 
 typedef
 struct _sgs_FuncCtx
 {
-	int32_t	func;
+	int32_t func;
 	int32_t regs, lastreg;
-	StrBuf	vars;
-	StrBuf	gvars;
-	int32_t	loops;
+	StrBuf  vars;
+	StrBuf  gvars;
+	int32_t loops;
 	sgs_BreakInfo* binfo;
 }
 sgs_FuncCtx;
@@ -44,31 +44,31 @@ typedef sgs_Variable* sgs_VarPtr;
 struct _sgs_Context
 {
 	/* info output */
-	sgs_PrintFunc	print_fn;	/* printing function */
-	void*		print_ctx;	/* printing context */
+	sgs_PrintFunc print_fn;  /* printing function */
+	void*         print_ctx; /* printing context */
 
 	/* compilation */
-	uint32_t	state;
-	sgs_FuncCtx*	fctx; /* ByteCodeGen */
+	uint32_t      state;
+	sgs_FuncCtx*  fctx;      /* ByteCodeGen */
 
 	/* virtual machine */
-	sgs_VarPtr	stack_base;
-	int			stack_mem;
-	sgs_VarPtr	stack_off;
-	sgs_VarPtr	stack_top;
-	int			has_this;
+	sgs_VarPtr    stack_base;
+	int           stack_mem;
+	sgs_VarPtr    stack_off;
+	sgs_VarPtr    stack_top;
+	int           has_this;
 
-	HashTable	data;
+	HashTable     data;
 
-	object_t*	objs;
-	int32_t		objcount;
-	uint8_t		redblue;
-	sgs_VarPtr	gclist;
-	int			gclist_size;
+	object_t*     objs;
+	int32_t       objcount;
+	uint8_t       redblue;
+	sgs_VarPtr    gclist;
+	int           gclist_size;
 
 	/* special functions */
-	sgs_CFunc	array_func;
-	sgs_CFunc	dict_func;
+	sgs_CFunc     array_func;
+	sgs_CFunc     dict_func;
 };
 
 

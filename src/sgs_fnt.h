@@ -42,15 +42,15 @@ typedef struct _FTNode FTNode;
 struct _FTNode
 {
 	TokenList token;
-	FTNode* next;
-	FTNode* child;
-	short type;
+	FTNode*   next;
+	FTNode*   child;
+	short     type;
 };
 
-void	sgsFT_Destroy( FTNode* tree );
+void sgsFT_Destroy( FTNode* tree );
 
-FTNode*	sgsFT_Compile( SGS_CTX, TokenList tlist );
-void	sgsFT_Dump( FTNode* tree );
+FTNode* sgsFT_Compile( SGS_CTX, TokenList tlist );
+void sgsFT_Dump( FTNode* tree );
 
 
 #endif /* SGS_FNT_H_INCLUDED */

@@ -13,10 +13,10 @@
 typedef
 struct _sgs_IntFunc
 {
-	MemBuf	consts;
-	MemBuf	code;
-	int		gotthis;
-	int		numargs;
+	MemBuf consts;
+	MemBuf code;
+	int	   gotthis;
+	int	   numargs;
 }
 sgs_CompFunc;
 

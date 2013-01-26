@@ -519,6 +519,46 @@ static sgs_Real var_getreal( SGS_CTX, sgs_Variable* var )
 	return 0;
 }
 
+static void var_setnull( SGS_CTX, int item )
+{
+	sgs_Variable* var = stk_getlpos( C, item );
+	VAR_RELEASE( var );
+	var->type = SVT_NULL;
+}
+
+static void var_setbool( SGS_CTX, int item, int value )
+{
+	sgs_Variable* var = stk_getlpos( C, item );
+	if( var->type != SVT_BOOL )
+	{
+		VAR_RELEASE( var );
+		var->type = SVT_BOOL;
+	}
+	var->data.B = value ? 1 : 0;
+}
+
+static void var_setint( SGS_CTX, int item, sgs_Integer value )
+{
+	sgs_Variable* var = stk_getlpos( C, item );
+	if( var->type != SVT_INT )
+	{
+		VAR_RELEASE( var );
+		var->type = SVT_INT;
+	}
+	var->data.I = value;
+}
+
+static void var_setreal( SGS_CTX, int item, sgs_Real value )
+{
+	sgs_Variable* var = stk_getlpos( C, item );
+	if( var->type != SVT_REAL )
+	{
+		VAR_RELEASE( var );
+		var->type = SVT_REAL;
+	}
+	var->data.R = value;
+}
+
 
 static int init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 {
@@ -887,12 +927,12 @@ static int vm_op_concat_ex( SGS_CTX, int args )
 
 static void vm_op_booland( SGS_CTX, int16_t out, sgs_Variable *A, sgs_Variable *B )
 {
-	sgs_SetBool( C, out, var_getbool( C, A ) && var_getbool( C, B ) );
+	var_setbool( C, out, var_getbool( C, A ) && var_getbool( C, B ) );
 }
 
 static void vm_op_boolor( SGS_CTX, int16_t out, sgs_Variable *A, sgs_Variable *B )
 {
-	sgs_SetBool( C, out, var_getbool( C, A ) || var_getbool( C, B ) );
+	var_setbool( C, out, var_getbool( C, A ) || var_getbool( C, B ) );
 }
 
 static int vm_op_negate( SGS_CTX, int16_t out, sgs_Variable *A )
@@ -901,11 +941,11 @@ static int vm_op_negate( SGS_CTX, int16_t out, sgs_Variable *A )
 
 	if( i == SVT_REAL )
 	{
-		sgs_SetReal( C, out, -var_getreal( C, A ) );
+		var_setreal( C, out, -var_getreal( C, A ) );
 	}
 	else if( i == SVT_INT || i == SVT_BOOL )
 	{
-		sgs_SetInt( C, out, -var_getint( C, A ) );
+		var_setint( C, out, -var_getint( C, A ) );
 	}
 	else if( i == SVT_OBJECT )
 	{
@@ -923,12 +963,12 @@ static int vm_op_negate( SGS_CTX, int16_t out, sgs_Variable *A )
 
 static void vm_op_boolinv( SGS_CTX, int16_t out, sgs_Variable *A )
 {
-	sgs_SetBool( C, out, !var_getbool( C, A ) );
+	var_setbool( C, out, !var_getbool( C, A ) );
 }
 
 static void vm_op_invert( SGS_CTX, int16_t out, sgs_Variable *A )
 {
-	sgs_SetInt( C, out, ~var_getint( C, A ) );
+	var_setint( C, out, ~var_getint( C, A ) );
 }
 
 
@@ -937,8 +977,8 @@ static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable *A ) { \
 	if( A->type != SVT_INT && A->type != SVT_REAL ) \
 		{ sgs_Printf( C, SGS_ERROR, -1, "Cannot " #pfx "rement null/bool/string/func/cfunc variables!" ); return; } \
 	switch( A->type ){ \
-		case SVT_INT: sgs_SetInt( C, out, A->data.I op ); break; \
-		case SVT_REAL: sgs_SetReal( C, out, A->data.R op ); break; \
+		case SVT_INT: var_setint( C, out, A->data.I op ); break; \
+		case SVT_REAL: var_setreal( C, out, A->data.R op ); break; \
 	} }
 
 VAR_MOP( inc, +1 )
@@ -948,12 +988,12 @@ VAR_MOP( dec, -1 )
 #define VAR_AOP_BASE( pfx, op, act ) \
 static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
 	int i; \
-	if( a->type == SVT_REAL && b->type == SVT_REAL ){ sgs_Real A = a->data.R, B = b->data.R; sgs_SetReal( C, out, act ); return; } \
-	if( a->type == SVT_INT && b->type == SVT_INT ){ sgs_SetInt( C, out, a->data.I op b->data.I ); return; } \
+	if( a->type == SVT_REAL && b->type == SVT_REAL ){ sgs_Real A = a->data.R, B = b->data.R; var_setreal( C, out, act ); return; } \
+	if( a->type == SVT_INT && b->type == SVT_INT ){ var_setint( C, out, a->data.I op b->data.I ); return; } \
 	i = calc_typeid( a, b ); \
 	switch( i ){ \
-		case SVT_INT: { sgs_Integer A = var_getint( C, a ), B = var_getint( C, b ); sgs_SetInt( C, out, A op B ); break; } \
-		case SVT_REAL: { sgs_Real A = var_getreal( C, a ), B = var_getreal( C, b ); sgs_SetReal( C, out, act ); break; } \
+		case SVT_INT: { sgs_Integer A = var_getint( C, a ), B = var_getint( C, b ); var_setint( C, out, A op B ); break; } \
+		case SVT_REAL: { sgs_Real A = var_getreal( C, a ), B = var_getreal( C, b ); var_setreal( C, out, act ); break; } \
 	}  }
 
 #define VAR_AOP( pfx, op ) VAR_AOP_BASE( pfx, op, A op B )
@@ -969,7 +1009,7 @@ VAR_AOP_BASE( mod, %, fmod( A, B ) )
 static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
 	sgs_Integer A = var_getint( C, a ); \
 	sgs_Integer B = var_getint( C, b ); \
-	sgs_SetInt( C, out, A op B ); \
+	var_setint( C, out, A op B ); \
 	}
 
 VAR_IOP( and, & )
@@ -983,8 +1023,8 @@ VAR_IOP( rsh, >> )
 static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
 	int i = calc_typeid( a, b ); \
 	switch( i ){ \
-		case SVT_INT: { sgs_Integer A = var_getint( C, a ), B = var_getint( C, b ); sgs_SetBool( C, out, A op B ); break; } \
-		case SVT_REAL: { sgs_Real A = var_getreal( C, a ), B = var_getreal( C, b ); sgs_SetBool( C, out, A op B ); break; } \
+		case SVT_INT: { sgs_Integer A = var_getint( C, a ), B = var_getint( C, b ); var_setbool( C, out, A op B ); break; } \
+		case SVT_REAL: { sgs_Real A = var_getreal( C, a ), B = var_getreal( C, b ); var_setbool( C, out, A op B ); break; } \
 	} }
 
 VAR_LOP( eq, == )
@@ -998,7 +1038,6 @@ VAR_LOP( gte, >= )
 static void vm_forprep( SGS_CTX, int outiter, sgs_VarPtr obj )
 {
 	int ret;
-	sgs_VarPtr iter;
 
 	if( obj->type != SVT_OBJECT )
 	{
@@ -1317,7 +1356,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 		case SI_LSH: { ARGS_3; vm_op_lsh( C, a1, p2, p3 ); break; }
 		case SI_RSH: { ARGS_3; vm_op_rsh( C, a1, p2, p3 ); break; }
 
-#define STRICTLY_EQUAL( val ) if( p2->type != p3->type ) { sgs_SetBool( C, a1, val ); break; }
+#define STRICTLY_EQUAL( val ) if( p2->type != p3->type ) { var_setbool( C, a1, val ); break; }
 		case SI_SEQ: { ARGS_3; STRICTLY_EQUAL( FALSE ); vm_op_eq( C, a1, p2, p3 ); break; }
 		case SI_SNEQ: { ARGS_3; STRICTLY_EQUAL( TRUE ); vm_op_neq( C, a1, p2, p3 ); break; }
 		case SI_EQ: { ARGS_3; vm_op_eq( C, a1, p2, p3 ); break; }
@@ -1437,49 +1476,6 @@ void sgsVM_VarDestroy( SGS_CTX, sgs_Variable* var )
 	destroy_var( C, var );
 }
 */
-
-
-int sgs_SetNull( SGS_CTX, int item )
-{
-	VAR_RELEASE( stk_getpos( C, item ) );
-	return SGS_SUCCESS;
-}
-
-int sgs_SetBool( SGS_CTX, int item, int value )
-{
-	sgs_Variable* var = stk_getpos( C, item );
-	if( var->type != SVT_BOOL )
-	{
-		VAR_RELEASE( var );
-		var->type = SVT_BOOL;
-	}
-	var->data.B = value ? 1 : 0;
-	return SGS_SUCCESS;
-}
-
-int sgs_SetInt( SGS_CTX, int item, sgs_Integer value )
-{
-	sgs_Variable* var = stk_getpos( C, item );
-	if( var->type != SVT_INT )
-	{
-		VAR_RELEASE( var );
-		var->type = SVT_INT;
-	}
-	var->data.I = value;
-	return SGS_SUCCESS;
-}
-
-int sgs_SetReal( SGS_CTX, int item, sgs_Real value )
-{
-	sgs_Variable* var = stk_getpos( C, item );
-	if( var->type != SVT_REAL )
-	{
-		VAR_RELEASE( var );
-		var->type = SVT_REAL;
-	}
-	var->data.R = value;
-	return SGS_SUCCESS;
-}
 
 
 int sgs_PushNull( SGS_CTX )

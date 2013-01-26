@@ -14,21 +14,21 @@ extern "C" {
 
 
 /* Output codes */
-#define SGS_SUCCESS	0	/* success (no errors) */
-#define SGS_ESTKOF	-1	/* stack overflow */
-#define SGS_ESTKUF	-2	/* stack underflow */
-#define SGS_ENOTFND	-3	/* item was not found */
-#define SGS_ECOMP	-4	/* compile error */
-#define SGS_ENOTOBJ	-5	/* argument was not an object */
-#define SGS_ENOTSUP	-6	/* not supported */
-#define SGS_EBOUNDS	-7	/* index out of bounds */
-#define SGS_EINVAL	-8	/* invalid value was passed */
-#define SGS_ENOTIMP	-31	/* - not implemented - */
+#define SGS_SUCCESS  0  /* success (no errors) */
+#define SGS_ESTKOF  -1  /* stack overflow */
+#define SGS_ESTKUF  -2  /* stack underflow */
+#define SGS_ENOTFND -3  /* item was not found */
+#define SGS_ECOMP   -4  /* compile error */
+#define SGS_ENOTOBJ -5  /* argument was not an object */
+#define SGS_ENOTSUP -6  /* not supported */
+#define SGS_EBOUNDS -7  /* index out of bounds */
+#define SGS_EINVAL  -8  /* invalid value was passed */
+#define SGS_ENOTIMP -31 /* - not implemented - */
 
 
 /* Accessible / transferable data */
-typedef int64_t	sgs_Integer;
-typedef double	sgs_Real;
+typedef int64_t sgs_Integer;
+typedef double  sgs_Real;
 typedef struct _sgs_Context sgs_Context;
 typedef struct _sgs_Variable sgs_Variable;
 typedef int (*sgs_CFunc) ( sgs_Context* );
@@ -47,19 +47,19 @@ typedef void (*sgs_PrintFunc) ( void* /* ctx */, int /* type */, int /* line */,
 
 
 /* Statistics */
-#define SGS_STAT_VARCOUNT	1
+#define SGS_STAT_VARCOUNT 1
 
 
 /* Context internals */
 /* - variable types */
-#define SVT_NULL	0	/* null (/no) data */
-#define SVT_BOOL	1	/* bool(u8) data */
-#define SVT_INT		2	/* i64 data */
-#define SVT_REAL	3	/* f64 data */
-#define SVT_STRING	4	/* variable-length string data */
-#define SVT_FUNC	5	/* function data */
-#define SVT_CFUNC	6	/* C function */
-#define SVT_OBJECT	7	/* variable-length binary data */
+#define SVT_NULL    0  /* null (/no) data */
+#define SVT_BOOL    1  /* bool(u8) data */
+#define SVT_INT     2  /* i64 data */
+#define SVT_REAL    3  /* f64 data */
+#define SVT_STRING  4  /* variable-length string data */
+#define SVT_FUNC    5  /* function data */
+#define SVT_CFUNC   6  /* C function */
+#define SVT_OBJECT  7  /* variable-length binary data */
 
 /* - object data */
 typedef struct sgs_ObjData sgs_VarObj;
@@ -77,46 +77,41 @@ struct sgs_ObjData
 /* - object interface */
 typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 
-#define SOP( idx )	((void*)idx)
-#define SOP_END         SOP( 0 )
-#define SOP_DESTRUCT    SOP( 1 )
-#define SOP_CLONE       SOP( 2 )
-#define SOP_GETTYPE     SOP( 3 )
-#define SOP_GETPROP     SOP( 4 )
-#define SOP_SETPROP     SOP( 5 )
-#define SOP_GETINDEX    SOP( 6 )
-#define SOP_SETINDEX    SOP( 7 )
-#define SOP_TOBOOL      SOP( 8 )
-#define SOP_TOINT       SOP( 9 )
-#define SOP_TOREAL      SOP( 10 )
-#define SOP_TOSTRING    SOP( 11 )
-#define SOP_GCMARK      SOP( 12 )
-#define SOP_GETITER     SOP( 13 )
-#define SOP_NEXTKEY     SOP( 14 )
+#define SOP( idx ) ((void*)idx)
+#define SOP_END        SOP( 0 )
+#define SOP_DESTRUCT   SOP( 1 )
+#define SOP_CLONE      SOP( 2 )
+#define SOP_GETTYPE    SOP( 3 )
+#define SOP_GETPROP    SOP( 4 )
+#define SOP_SETPROP    SOP( 5 )
+#define SOP_GETINDEX   SOP( 6 )
+#define SOP_SETINDEX   SOP( 7 )
+#define SOP_TOBOOL     SOP( 8 )
+#define SOP_TOINT      SOP( 9 )
+#define SOP_TOREAL     SOP( 10 )
+#define SOP_TOSTRING   SOP( 11 )
+#define SOP_GCMARK     SOP( 12 )
+#define SOP_GETITER    SOP( 13 )
+#define SOP_NEXTKEY    SOP( 14 )
 
 
 /* Engine context */
 #define SGS_CTX sgs_Context* C
 
-sgs_Context*	sgs_CreateEngine();
-void			sgs_DestroyEngine( SGS_CTX );
-void			sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
+sgs_Context*    sgs_CreateEngine();
+void            sgs_DestroyEngine( SGS_CTX );
+void            sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
 
 void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
 
-int				sgs_ExecBuffer( SGS_CTX, const char* buf, int size );
+int             sgs_ExecBuffer( SGS_CTX, const char* buf, int size );
 static SGS_INLINE int sgs_ExecString( SGS_CTX, const char* str ){ return sgs_ExecBuffer( C, str, strlen( str ) ); }
-int				sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc );
+int             sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc );
 static SGS_INLINE int sgs_EvalString( SGS_CTX, const char* str, int* rvc ){ return sgs_EvalBuffer( C, str, strlen( str ), rvc ); }
-int				sgs_Stat( SGS_CTX, int type );
+int             sgs_Stat( SGS_CTX, int type );
 
 
 /* The core interface */
-
-int sgs_SetNull( SGS_CTX, int item );
-int sgs_SetBool( SGS_CTX, int item, int value );
-int sgs_SetInt( SGS_CTX, int item, sgs_Integer value );
-int sgs_SetReal( SGS_CTX, int item, sgs_Real value );
 
 int sgs_PushNull( SGS_CTX );
 int sgs_PushBool( SGS_CTX, int value );

@@ -55,3 +55,13 @@ SOP_TOSTRING:
 SOP_GCMARK:
 	GC callback in which object is expected to call sgs_GCMark() on all variables stored inside it
 	expects: nothing
+
+SOP_GETITER:
+	function for "foreach" that retrieves the iterator from the expression specified
+	expects: 1 variable on success (iterator object, must have SOP_NEXTKEY defined), 0 on failure
+
+SOP_NEXTKEY:
+	function for "foreach" that returns the next key of the object and the state of the iterator (boolean)
+	first call on a non-zero-sized iterator returns first key and "true" as state
+	last call returns whatever key (for example, "null") and "false" as state
+	expects: 2 variables on success (key variable, state - boolean), 0 on failure
