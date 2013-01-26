@@ -93,6 +93,14 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 #define SOP_GCMARK     SOP( 12 )
 #define SOP_GETITER    SOP( 13 )
 #define SOP_NEXTKEY    SOP( 14 )
+#define SOP_CALL       SOP( 15 )
+#define SOP_COMPARE    SOP( 16 )
+#define SOP_OP_ADD     SOP( 17 )
+#define SOP_OP_SUB     SOP( 18 )
+#define SOP_OP_MUL     SOP( 19 )
+#define SOP_OP_DIV     SOP( 20 )
+#define SOP_OP_MOD     SOP( 21 )
+#define SOP_OP_NEGATE  SOP( 22 )
 
 
 /* Engine context */

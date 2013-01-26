@@ -30,7 +30,7 @@ void destroy_var( SGS_CTX, sgs_Variable* var );
 #define STK_UNITSIZE sizeof( sgs_Variable )
 
 
-static int obj_exec( SGS_CTX, void* sop, object_t* data )
+static int obj_exec( SGS_CTX, const void* sop, object_t* data )
 {
 	void** func = data->iface;
 	while( *func != SOP_END )
@@ -42,31 +42,6 @@ static int obj_exec( SGS_CTX, void* sop, object_t* data )
 
 	return SGS_ENOTFND;
 }
-
-/*
-static func_t* funct_copy( SGS_CTX, func_t* from )
-{
-	sgs_Variable** vbeg = AS_( func_consts( from ), sgs_Variable** );
-	sgs_Variable** vend = AS_( func_bytecode( from ), sgs_Variable** );
-	sgs_Variable** var = vbeg;
-	func_t* out;
-
-	UNUSED( C );
-	while( var < vend )
-	{
-		VAR_ACQUIRE( *var );
-		var++;
-	}
-
-	out = sgs_Alloc_a( func_t, from->size );
-	out->size = from->size;
-	out->instr_off = from->instr_off;
-	out->gotthis = from->gotthis;
-	out->numargs = from->numargs;
-
-	memcpy( to->bytecode, from->bytecode, from->size );
-}
-*/
 
 void var_free_object( SGS_CTX, object_t* O )
 {
@@ -268,6 +243,8 @@ int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
 	Stack management
 */
 
+#define USING_STACK
+
 #if SGS_DEBUG && SGS_DEBUG_EXTRA
  #define DBG_STACK_CHECK sgs_MemCheckDbg( C->stack_base );
 #else
@@ -386,6 +363,14 @@ static void stk_push_null( SGS_CTX )
 	stk_makespace( C, 1 );
 	(C->stack_top++)->type = SVT_NULL;
 }
+static void stk_push_nulls( SGS_CTX, int cnt )
+{
+	sgs_VarPtr tgt;
+	stk_makespace( C, cnt );
+	tgt = C->stack_top + cnt;
+	while( C->stack_top < tgt )
+		(C->stack_top++)->type = SVT_NULL;
+}
 
 static void stk_clean( SGS_CTX, sgs_VarPtr from, sgs_VarPtr to )
 {
@@ -428,6 +413,12 @@ static void stk_pop1( SGS_CTX )
 	C->stack_top--;
 	VAR_RELEASE( C->stack_top );
 }
+static void stk_pop1nr( SGS_CTX )
+{
+	sgs_BreakIf( C->stack_top - C->stack_off < 1 );
+	DBG_STACK_CHECK
+	C->stack_top--;
+}
 
 static void stk_pop2( SGS_CTX )
 {
@@ -456,16 +447,10 @@ static int var_getbool( SGS_CTX, sgs_VarPtr var )
 	case SVT_FUNC: return TRUE;
 	case SVT_CFUNC: return TRUE;
 	case SVT_OBJECT:
+		if( obj_exec( C, SOP_TOBOOL, var->data.O ) == SGS_SUCCESS )
 		{
-			int out;
-			stk_push( C, var );
-			if( obj_exec( C, SOP_TOBOOL, var->data.O ) != SGS_SUCCESS )
-			{
-				stk_pop1( C );
-				return FALSE;
-			}
-			out = stk_getpos( C, -1 )->data.B;
-			stk_pop2( C );
+			int out = stk_getpos( C, -1 )->data.B;
+			stk_pop1( C );
 			return out;
 		}
 	}
@@ -481,16 +466,10 @@ static sgs_Integer var_getint( SGS_CTX, sgs_VarPtr var )
 	case SVT_REAL: return (sgs_Integer) var->data.R;
 	case SVT_STRING: return util_atoi( str_cstr( var->data.S ), var->data.S->size );
 	case SVT_OBJECT:
+		if( obj_exec( C, SOP_TOINT, var->data.O ) == SGS_SUCCESS )
 		{
-			sgs_Integer out;
-			stk_push( C, var );
-			if( obj_exec( C, SOP_TOINT, var->data.O ) != SGS_SUCCESS )
-			{
-				stk_pop1( C );
-				return FALSE;
-			}
-			out = stk_getpos( C, -1 )->data.I;
-			stk_pop2( C );
+			sgs_Integer out = stk_getpos( C, -1 )->data.I;
+			stk_pop1( C );
 			return out;
 		}
 	}
@@ -506,18 +485,36 @@ static sgs_Real var_getreal( SGS_CTX, sgs_Variable* var )
 	case SVT_REAL: return var->data.R;
 	case SVT_STRING: return util_atof( str_cstr( var->data.S ), var->data.S->size );
 	case SVT_OBJECT:
+		if( obj_exec( C, SOP_TOREAL, var->data.O ) == SGS_SUCCESS )
 		{
-			sgs_Real out;
-			stk_push( C, var );
-			if( obj_exec( C, SOP_TOREAL, var->data.O ) != SGS_SUCCESS )
-			{
-				stk_pop1( C );
-				return FALSE;
-			}
-			out = stk_getpos( C, -1 )->data.R;
-			stk_pop2( C );
+			sgs_Real out = stk_getpos( C, -1 )->data.R;
+			stk_pop1( C );
 			return out;
 		}
+	}
+	return 0;
+}
+
+static SGS_INLINE sgs_Integer var_getint_simple( sgs_VarPtr var )
+{
+	switch( var->type )
+	{
+	case SVT_BOOL: return (sgs_Integer) var->data.B;
+	case SVT_INT: return var->data.I;
+	case SVT_REAL: return (sgs_Integer) var->data.R;
+	case SVT_STRING: return util_atoi( str_cstr( var->data.S ), var->data.S->size );
+	}
+	return 0;
+}
+
+static SGS_INLINE sgs_Real var_getreal_simple( sgs_Variable* var )
+{
+	switch( var->type )
+	{
+	case SVT_BOOL: return (sgs_Real) var->data.B;
+	case SVT_INT: return (sgs_Real) var->data.I;
+	case SVT_REAL: return var->data.R;
+	case SVT_STRING: return util_atof( str_cstr( var->data.S ), var->data.S->size );
 	}
 	return 0;
 }
@@ -612,8 +609,7 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type )
 		}
 		ret = obj_exec( C, sop, var->data.O );
 		cvar = *stk_getpos( C, -1 );
-		VAR_ACQUIRE( &cvar );
-		stk_pop1( C );
+		stk_pop1nr( C );
 		VAR_RELEASE( var );
 		*var = cvar;
 		return ret;
@@ -758,10 +754,15 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 
 	if( obj->type == SVT_OBJECT )
 	{
-		stk_push( C, idx );
-		stk_push( C, src );
+		USING_STACK;
+		stk_makespace( C, 2 );
+		C->stack_top[ 0 ] = *idx;
+		C->stack_top[ 1 ] = *src;
+		C->stack_top += 2;
+
 		ret = obj_exec( C, isindex ? SOP_SETINDEX : SOP_SETPROP, obj->data.O );
-		stk_pop( C, 2 );
+
+		C->stack_top -= 2;
 	}
 	else
 		ret = SGS_ENOTFND;
@@ -828,26 +829,6 @@ static int vm_setvar( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 /*
 	OPs
 */
-#define _cti_num( ty ) ( ty == SVT_BOOL || ty == SVT_INT || ty == SVT_REAL )
-static int calc_typeid( sgs_Variable* A, sgs_Variable* B )
-{
-	int ty1, ty2, ii1, ii2;
-	ty1 = A->type;
-	ty2 = B->type;
-	if( ty1 == ty2 )
-		return MAX( ty1, SVT_INT );
-	ii1 = _cti_num( ty1 );
-	ii2 = _cti_num( ty2 );
-	if( ii1 && ii2 )
-		return MAX( MAX( ty1, ty2 ), SVT_INT );
-	else if( ii1 )
-		return ty1;
-	else if( ii2 )
-		return ty2;
-	else
-		return SVT_REAL;
-}
-#undef _cti_num
 
 static void vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
 {
@@ -978,7 +959,7 @@ static void vm_op_invert( SGS_CTX, int16_t out, sgs_Variable *A )
 #define VAR_MOP( pfx, op ) \
 static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable *A ) { \
 	if( A->type != SVT_INT && A->type != SVT_REAL ) \
-		{ sgs_Printf( C, SGS_ERROR, -1, "Cannot " #pfx "rement null/bool/string/func/cfunc variables!" ); return; } \
+		{ sgs_Printf( C, SGS_ERROR, -1, "Cannot " #pfx "rement null/bool/string/func/cfunc/object variables!" ); return; } \
 	switch( A->type ){ \
 		case SVT_INT: var_setint( C, out, A->data.I op ); break; \
 		case SVT_REAL: var_setreal( C, out, A->data.R op ); break; \
@@ -988,6 +969,132 @@ VAR_MOP( inc, +1 )
 VAR_MOP( dec, -1 )
 
 
+#define _cti_num( ty ) ( ty == SVT_BOOL || ty == SVT_INT || ty == SVT_REAL )
+static int calc_typeid( sgs_Variable* A, sgs_Variable* B )
+{
+	int ty1, ty2, ii1, ii2;
+	ty1 = A->type;
+	ty2 = B->type;
+	if( ty1 == ty2 )
+		return MAX( ty1, SVT_INT );
+	ii1 = _cti_num( ty1 );
+	ii2 = _cti_num( ty2 );
+	if( ii1 && ii2 )
+		return MAX( MAX( ty1, ty2 ), SVT_INT );
+	else if( ii1 )
+		return ty1;
+	else if( ii2 )
+		return ty2;
+	else
+		return SVT_REAL;
+}
+#undef _cti_num
+
+
+#define ARITH_OP_ADD	0
+#define ARITH_OP_SUB	1
+#define ARITH_OP_MUL	2
+#define ARITH_OP_DIV	3
+#define ARITH_OP_MOD	4
+static const void* aop_sops[] = { SOP_OP_ADD, SOP_OP_SUB, SOP_OP_MUL, SOP_OP_DIV, SOP_OP_MOD };
+static const uint8_t aop_types[ 35 ] = /* 5x5: NBIRS */
+{
+	SVT_NULL, SVT_INT,  SVT_INT,  SVT_REAL, SVT_REAL,
+	SVT_INT,  SVT_INT,  SVT_INT,  SVT_REAL, SVT_REAL,
+	SVT_INT,  SVT_INT,  SVT_INT,  SVT_REAL, SVT_REAL,
+	SVT_REAL, SVT_REAL, SVT_REAL, SVT_REAL, SVT_REAL,
+	SVT_REAL, SVT_REAL, SVT_REAL, SVT_REAL, SVT_REAL,
+};
+static void vm_arith_op( SGS_CTX, int16_t out, sgs_VarPtr a, sgs_VarPtr b, uint8_t op )
+{
+	if( a->type == SVT_REAL && b->type == SVT_REAL )
+	{
+		sgs_Real A = a->data.R, B = b->data.R, R;
+		switch( op ){
+			case ARITH_OP_ADD: R = A + B; break;
+			case ARITH_OP_SUB: R = A - B; break;
+			case ARITH_OP_MUL: R = A * B; break;
+			case ARITH_OP_DIV: R = A / B; break;
+			case ARITH_OP_MOD: R = fmod( A, B ); break;
+			default: R = 0; break;
+		}
+		var_setreal( C, out, R );
+		return;
+	}
+	if( a->type == SVT_INT && b->type == SVT_INT )
+	{
+		sgs_Integer A = a->data.I, B = b->data.I, R;
+		switch( op ){
+			case ARITH_OP_ADD: R = A + B; break;
+			case ARITH_OP_SUB: R = A - B; break;
+			case ARITH_OP_MUL: R = A * B; break;
+			case ARITH_OP_DIV: R = A / B; break;
+			case ARITH_OP_MOD: R = A % B; break;
+			default: R = 0; break;
+		}
+		var_setint( C, out, R );
+	}
+
+	if( a->type == SVT_OBJECT || b->type == SVT_OBJECT )
+	{
+		const void* sop = aop_sops[ op ];
+
+		USING_STACK
+		stk_makespace( C, 2 );
+		*C->stack_top++ = *a;
+		*C->stack_top++ = *b;
+
+		if( ( a->type == SVT_OBJECT && obj_exec( C, sop, a->data.O ) == SGS_SUCCESS ) ||
+			( b->type == SVT_OBJECT && obj_exec( C, sop, b->data.O ) == SGS_SUCCESS ) )
+		{
+			USING_STACK
+			VAR_RELEASE( C->stack_off + out );
+			C->stack_off[ out ] = *--C->stack_top;
+			C->stack_top -= 2;
+			return;
+		}
+
+		USING_STACK
+		C->stack_top -= 2;
+		goto fail;
+	}
+
+	if( a->type == SVT_FUNC || a->type == SVT_CFUNC ||
+		b->type == SVT_FUNC || b->type == SVT_CFUNC )
+		goto fail;
+
+	if( a->type >= SVT_REAL || b->type >= SVT_REAL )
+	{
+		sgs_Real A = var_getreal_simple( a ), B = var_getreal_simple( b ), R;
+		switch( op ){
+			case ARITH_OP_ADD: R = A + B; break;
+			case ARITH_OP_SUB: R = A - B; break;
+			case ARITH_OP_MUL: R = A * B; break;
+			case ARITH_OP_DIV: R = A / B; break;
+			case ARITH_OP_MOD: R = fmod( A, B ); break;
+			default: R = 0; break;
+		}
+		var_setreal( C, out, R );
+	}
+	else
+	{
+		sgs_Integer A = var_getint_simple( a ), B = var_getint_simple( b ), R;
+		switch( op ){
+			case ARITH_OP_ADD: R = A + B; break;
+			case ARITH_OP_SUB: R = A - B; break;
+			case ARITH_OP_MUL: R = A * B; break;
+			case ARITH_OP_DIV: R = A / B; break;
+			case ARITH_OP_MOD: R = A % B; break;
+			default: R = 0; break;
+		}
+		var_setint( C, out, R );
+	}
+	return;
+
+fail:
+	sgs_Printf( C, SGS_ERROR, -1, "Operation is not supported on the given set of arguments." );
+}
+/*
 #define VAR_AOP_BASE( pfx, op, act ) \
 static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
 	int i; \
@@ -1006,7 +1113,7 @@ VAR_AOP( sub, - )
 VAR_AOP( mul, * )
 VAR_AOP( div, / )
 VAR_AOP_BASE( mod, %, fmod( A, B ) )
-
+*/
 
 #define VAR_IOP( pfx, op ) \
 static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
@@ -1022,9 +1129,12 @@ VAR_IOP( lsh, << )
 VAR_IOP( rsh, >> )
 
 
-/* returns 0 if equal, -1 if A is bigger, 1 if B is bigger */
-static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
+/* returns 0 if equal, >0 if A is bigger, <0 if B is bigger */
+static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 {
+	if( a->type == SVT_INT && b->type == SVT_INT ) return a->data.I - b->data.I;
+	if( a->type == SVT_REAL && b->type == SVT_REAL ) return a->data.R - b->data.R;
+
 	if( a->type == SVT_OBJECT || b->type == SVT_OBJECT )
 	{
 		/* TODO */
@@ -1046,11 +1156,11 @@ static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		int out;
 		stk_push( C, a );
 		stk_push( C, b );
-		if( vm_convert_stack( C, -2, SVT_STRING ) != SGS_SUCCESS ) return 1;
-		if( vm_convert_stack( C, -1, SVT_STRING ) != SGS_SUCCESS ) return -1;
+		if( vm_convert_stack( C, -2, SVT_STRING ) != SGS_SUCCESS ) return -1;
+		if( vm_convert_stack( C, -1, SVT_STRING ) != SGS_SUCCESS ) return 1;
 		a = stk_getpos( C, -2 );
 		b = stk_getpos( C, -1 );
-		out = -strncmp( var_cstr( a ), var_cstr( b ), MIN( a->data.S->size, b->data.S->size ) );
+		out = strncmp( var_cstr( a ), var_cstr( b ), MIN( a->data.S->size, b->data.S->size ) );
 		if( out == 0 && a->data.S->size != b->data.S->size )
 			out = a->data.S->size - b->data.S->size;
 		else if( out != 0 )
@@ -1059,12 +1169,7 @@ static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		return out;
 	}
 	/* int/real */
-	{
-		sgs_Real diff = var_getreal( C, a ) - var_getreal( C, b );
-		if( diff > 0 ) return -1;
-		else if( diff < 0 ) return 1;
-		else return 0;
-	}
+	return var_getreal( C, a ) - var_getreal( C, b );
 }
 
 
@@ -1120,10 +1225,7 @@ static void vm_make_array( SGS_CTX, int args, int16_t outpos )
 	if( rvc > expect )
 		stk_pop( C, rvc - expect );
 	else
-	{
-		while( expect-- > rvc )
-			stk_push_null( C );
-	}
+		stk_push_nulls( C, expect - rvc );
 
 	stk_setvar( C, outpos, stk_getpos( C, -1 ) );
 	stk_pop1( C );
@@ -1144,10 +1246,7 @@ static void vm_make_dict( SGS_CTX, int args, int16_t outpos )
 	if( rvc > expect )
 		stk_pop( C, rvc - expect );
 	else
-	{
-		while( expect-- > rvc )
-			stk_push_null( C );
-	}
+		stk_push_nulls( C, expect - rvc );
 
 	stk_setvar( C, outpos, stk_getpos( C, -1 ) );
 	stk_pop1( C );
@@ -1186,11 +1285,8 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 		/* fix argument stack */
 		if( stkargs > expargs )
 			stk_pop( C, stkargs - expargs );
-		else while( stkargs < expargs )
-		{
-			stk_push_null( C );
-			stkargs++;
-		}
+		else
+			stk_push_nulls( C, expargs - stkargs );
 		/* if <this> was expected but wasn't properly passed, assume that it's already in the argument list */
 		/* if <this> wasn't expected but was passed, just don't use it */
 		if( F->gotthis && gotthis )
@@ -1209,10 +1305,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 	if( rvc > expect )
 		stk_pop( C, rvc - expect );
 	else
-	{
-		while( expect-- > rvc )
-			stk_push_null( C );
-	}
+		stk_push_nulls( C, expect - rvc );
 
 	return 1;
 }
@@ -1377,11 +1470,11 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 
 		case SI_INC: { ARGS_2; vm_op_inc( C, a1, p2 ); break; }
 		case SI_DEC: { ARGS_2; vm_op_dec( C, a1, p2 ); break; }
-		case SI_ADD: { ARGS_3; vm_op_add( C, a1, p2, p3 ); break; }
-		case SI_SUB: { ARGS_3; vm_op_sub( C, a1, p2, p3 ); break; }
-		case SI_MUL: { ARGS_3; vm_op_mul( C, a1, p2, p3 ); break; }
-		case SI_DIV: { ARGS_3; vm_op_div( C, a1, p2, p3 ); break; }
-		case SI_MOD: { ARGS_3; vm_op_mod( C, a1, p2, p3 ); break; }
+		case SI_ADD: { ARGS_3; vm_arith_op( C, a1, p2, p3, ARITH_OP_ADD ); break; }
+		case SI_SUB: { ARGS_3; vm_arith_op( C, a1, p2, p3, ARITH_OP_SUB ); break; }
+		case SI_MUL: { ARGS_3; vm_arith_op( C, a1, p2, p3, ARITH_OP_MUL ); break; }
+		case SI_DIV: { ARGS_3; vm_arith_op( C, a1, p2, p3, ARITH_OP_DIV ); break; }
+		case SI_MOD: { ARGS_3; vm_arith_op( C, a1, p2, p3, ARITH_OP_MOD ); break; }
 
 		case SI_AND: { ARGS_3; vm_op_and( C, a1, p2, p3 ); break; }
 		case SI_OR: { ARGS_3; vm_op_or( C, a1, p2, p3 ); break; }
@@ -1391,7 +1484,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 
 #define STRICTLY_EQUAL( val ) if( p2->type != p3->type || ( p2->type == SVT_OBJECT && \
 								p2->data.O->iface != p3->data.O->iface ) ) { var_setbool( C, a1, val ); break; }
-#define VCOMPARE( op ) var_setbool( C, a1, 0 op vm_compare( C, p2, p3 ) )
+#define VCOMPARE( op ) var_setbool( C, a1, vm_compare( C, p2, p3 ) op 0 )
 		case SI_SEQ: { ARGS_3; STRICTLY_EQUAL( FALSE ); VCOMPARE( == ); break; }
 		case SI_SNEQ: { ARGS_3; STRICTLY_EQUAL( TRUE ); VCOMPARE( != ); break; }
 		case SI_EQ: { ARGS_3; VCOMPARE( == ); break; }

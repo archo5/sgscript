@@ -124,7 +124,9 @@ static void readident( SGS_CTX, MemBuf* out, const char* code, int32_t* at, int3
 		if( sz++ < 255 )
 			membuf_appchr( out, code[ i ] );
 		else
+		{
 			sgs_BreakIf( sz >= 255 );
+		}
 		i++;
 	}
 	out->ptr[ pos_rev + 1 ] = sz;
