@@ -613,9 +613,34 @@ int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data )
 #define sgsstd_class_getprop sgsstd_class_getindex
 #define sgsstd_class_setprop sgsstd_class_setindex
 
+int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
+{
+	int ret;
+	sgs_Variable var, idx;
+	SGSCLASS_HDR;
+	sgs_PushString( C, method );
+	idx = *sgs_StackItem( C, -1 );
+	sgs_Acquire( C, &idx );
+	ret = sgs_GetIndex( C, &var, &hdr->inh, &idx );
+	sgs_Pop( C, 1 );
+	if( ret == SGS_SUCCESS )
+	{
+		sgs_PushVariable( C, &var );
+		sgs_Release( C, &var );
+	}
+	sgs_Release( C, &idx );
+	return ret == SGS_SUCCESS;
+}
+
 int sgsstd_class_tostring( SGS_CTX, sgs_VarObj* data )
 {
-	/* TODO: special methods */
+	if( sgsstd_class_getmethod( C, data, "__tostr" ) )
+	{
+		sgs_PushVariable( C, sgs_StackItem( C, -2 ) );
+		sgs_Call( C, 1, 1 );
+		sgs_PopSkip( C, 1, 1 );
+		return SGS_SUCCESS;
+	}
 	sgs_PushString( C, "class" );
 	return SGS_SUCCESS;
 }
@@ -637,6 +662,19 @@ int sgsstd_class_gcmark( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
+int sgsstd_class_add( SGS_CTX, sgs_VarObj* data )
+{
+	if( sgsstd_class_getmethod( C, data, "__add" ) )
+	{
+		sgs_PushVariable( C, sgs_StackItem( C, -3 ) );
+		sgs_PushVariable( C, sgs_StackItem( C, -3 ) );
+		sgs_Call( C, 2, 1 );
+		sgs_PopSkip( C, 1, 1 );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTFND;
+}
+
 void* sgsstd_class_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_class_destruct,
@@ -647,6 +685,7 @@ void* sgsstd_class_functable[] =
 	SOP_TOSTRING, sgsstd_class_tostring,
 	SOP_GETTYPE, sgsstd_class_gettype,
 	SOP_GCMARK, sgsstd_class_gcmark,
+	SOP_OP_ADD, sgsstd_class_add,
 	SOP_END,
 };
 

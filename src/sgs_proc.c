@@ -607,9 +607,11 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type )
 		default:
 			return SGS_ENOTFND;
 		}
+		stk_push( C, var );
 		ret = obj_exec( C, sop, var->data.O );
 		cvar = *stk_getpos( C, -1 );
 		stk_pop1nr( C );
+		stk_pop1( C );
 		VAR_RELEASE( var );
 		*var = cvar;
 		return ret;
@@ -754,15 +756,18 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 
 	if( obj->type == SVT_OBJECT )
 	{
-		USING_STACK;
 		stk_makespace( C, 2 );
 		C->stack_top[ 0 ] = *idx;
 		C->stack_top[ 1 ] = *src;
 		C->stack_top += 2;
+		VAR_ACQUIRE( idx );
+		VAR_ACQUIRE( src );
 
 		ret = obj_exec( C, isindex ? SOP_SETINDEX : SOP_SETPROP, obj->data.O );
 
 		C->stack_top -= 2;
+		VAR_RELEASE( C->stack_top );
+		VAR_RELEASE( C->stack_top + 1 );
 	}
 	else
 		ret = SGS_ENOTFND;
@@ -1043,6 +1048,8 @@ static void vm_arith_op( SGS_CTX, int16_t out, sgs_VarPtr a, sgs_VarPtr b, uint8
 		stk_makespace( C, 2 );
 		*C->stack_top++ = *a;
 		*C->stack_top++ = *b;
+		VAR_ACQUIRE( a );
+		VAR_ACQUIRE( b );
 
 		if( ( a->type == SVT_OBJECT && obj_exec( C, sop, a->data.O ) == SGS_SUCCESS ) ||
 			( b->type == SVT_OBJECT && obj_exec( C, sop, b->data.O ) == SGS_SUCCESS ) )
@@ -1050,12 +1057,11 @@ static void vm_arith_op( SGS_CTX, int16_t out, sgs_VarPtr a, sgs_VarPtr b, uint8
 			USING_STACK
 			VAR_RELEASE( C->stack_off + out );
 			C->stack_off[ out ] = *--C->stack_top;
-			C->stack_top -= 2;
+			stk_pop2( C );
 			return;
 		}
 
-		USING_STACK
-		C->stack_top -= 2;
+		stk_pop2( C );
 		goto fail;
 	}
 
@@ -1710,6 +1716,13 @@ int sgs_Pop( SGS_CTX, int count )
 	if( C->stack_top - C->stack_base < count )
 		return SGS_ESTKUF;
 	stk_pop( C, count );
+	return SGS_SUCCESS;
+}
+int sgs_PopSkip( SGS_CTX, int count, int skip )
+{
+	if( C->stack_top - C->stack_base < count + skip )
+		return SGS_ESTKUF;
+	stk_popskip( C, count, skip );
 	return SGS_SUCCESS;
 }
 

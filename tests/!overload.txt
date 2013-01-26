@@ -1,0 +1,17 @@
+global vec2_iface = 
+{
+	__add = function( a, b ){ return vec2( a.x + b.x, a.y + b.y ); },
+	__tostr = function( this ){ return "vec2d(" $ this.x $ "," $ this.y $ ")"; }
+};
+function vec2( x, y )
+{
+	global vec2_iface;
+	return class( { x = x, y = y }, vec2_iface );
+}
+
+print( "Vector addition test:\n" );
+A = vec2( 1, 2 );
+print( "A: ", A, "\n" );
+B = vec2( 3, 3 );
+print( "B: ", B, "\n" );
+print( "A + B: ", A + B, "\n" );
