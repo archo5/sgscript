@@ -1,5 +1,5 @@
 
---- SGScript v0.5 ---
+--- SGScript v0.7 ---
 
 usage:
 - grab the source from src/ directory...
@@ -11,7 +11,7 @@ usage:
 		* fresh commits aren't tested as thoroughly
 - include src/sgscript.h in your project
 
-sample code ... is in the tests/ directory
+sample code and documentation ... is in the tests/ directory
 	as you'll probably see, it's not that different from many other languages.
 	there'll be no specification until the language survives a few iterations.
 	after that, we'll see if it's necessary.
@@ -29,15 +29,16 @@ I'm not quite sure what to expect from this project. Worldwide acceptance or..
 
 features:
 - a C-like syntax
-- the usual stuff (while/for, expressions, local/global variables etc.)
+- the usual stuff (while/do-while/for/foreach, expressions, variables etc.)
 - speed! (register-based virtual machine)
-- mixed memory management (ref.count + GC)
+- mixed memory management (ref.counting + GC)
 - extensive native debugging features
 - 8 data types (with some space for extensions):
 	null, bool, int, real, string, function, C function, object
 - tests & benchmark
-	* testing framework is in ext/sgstest.c => bin/sgstest
+	* testing framework is in ext/sgstest.c => bin/sgstest ("make tools")
 	* execute "bin/sgsvm bench/bench.sgs" to run the benchmark
+- object-oriented constructs (dict, class, overloadable operators)
 
 development:
 - I work on it when I feel like it
@@ -46,7 +47,7 @@ development:
 	* don't forget to include a test sample, as small as possible!
 
 future:
-- tail calls, a bit more OOP, optimizations, fully featured API
+- optimizations (the ones based on assumptions), fully featured API
 - got a suggestion? write some sample code (in the form of a test) and send it
 
 credits:
@@ -55,6 +56,9 @@ credits:
 - inspired by C, PHP, Lua, JavaScript, Squirrel and AngelScript
 
 change log:
+0.7 (2013/01/28): object orientation (w/ operator overloading), do-while,
+	optimizations, classes, eval, foreach, fixed comparisons
+0.6 - skipped
 0.5 (2013/01/06): cleanup, lambdas, literals, "dict" container
 0.4 (2012/12/26): the initial release
 
