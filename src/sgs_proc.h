@@ -160,6 +160,7 @@ void sgsVM_VarDump( sgs_Variable* var );
 void sgsVM_StackDump( SGS_CTX );
 
 int sgsVM_ExecFn( SGS_CTX, const void* code, int32_t codesize, const void* data, int32_t datasize, int clean );
+int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int expect, int gotthis );
 
 
 sgs_Variable* sgsVM_VarMake_Dict();

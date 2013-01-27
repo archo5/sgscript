@@ -693,6 +693,15 @@ int sgsstd_class_call( SGS_CTX, sgs_VarObj* data )
 {
 	if( sgsstd_class_getmethod( C, data, "__call" ) )
 	{
+		int ret, i;
+		sgs_Variable var;
+		var.type = SVT_OBJECT;
+		var.data.O = data;
+		sgs_PushVariable( C, &var );
+		for( i = 0; i < C->call_args; ++i )
+			sgs_PushVariable( C, sgs_StackItem( C, i ) );
+		ret = sgsVM_VarCall( C, sgs_StackItem( C, -2 - C->call_args ), C->call_args, C->call_expect, TRUE );
+		return ret;
 	}
 	return SGS_ENOTFND;
 }

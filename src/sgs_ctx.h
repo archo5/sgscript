@@ -56,7 +56,10 @@ struct _sgs_Context
 	int           stack_mem;
 	sgs_VarPtr    stack_off;
 	sgs_VarPtr    stack_top;
-	int           has_this;
+
+	int           call_args;
+	int           call_expect;
+	int           call_this;
 
 	HashTable     data;
 
