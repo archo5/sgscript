@@ -1098,28 +1098,10 @@ static void vm_arith_op( SGS_CTX, int16_t out, sgs_VarPtr a, sgs_VarPtr b, uint8
 	return;
 
 fail:
+	stk_setlvar_null( C, out );
 	sgs_Printf( C, SGS_ERROR, -1, "Operation is not supported on the given set of arguments." );
 }
-/*
-#define VAR_AOP_BASE( pfx, op, act ) \
-static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
-	int i; \
-	if( a->type == SVT_REAL && b->type == SVT_REAL ){ sgs_Real A = a->data.R, B = b->data.R; var_setreal( C, out, act ); return; } \
-	if( a->type == SVT_INT && b->type == SVT_INT ){ var_setint( C, out, a->data.I op b->data.I ); return; } \
-	i = calc_typeid( a, b ); \
-	switch( i ){ \
-		case SVT_INT: { sgs_Integer A = var_getint( C, a ), B = var_getint( C, b ); var_setint( C, out, A op B ); break; } \
-		case SVT_REAL: { sgs_Real A = var_getreal( C, a ), B = var_getreal( C, b ); var_setreal( C, out, act ); break; } \
-	}  }
 
-#define VAR_AOP( pfx, op ) VAR_AOP_BASE( pfx, op, A op B )
-
-VAR_AOP( add, + )
-VAR_AOP( sub, - )
-VAR_AOP( mul, * )
-VAR_AOP( div, / )
-VAR_AOP_BASE( mod, %, fmod( A, B ) )
-*/
 
 #define VAR_IOP( pfx, op ) \
 static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
@@ -1143,8 +1125,29 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 
 	if( a->type == SVT_OBJECT || b->type == SVT_OBJECT )
 	{
-		/* TODO */
-		return -1;
+		USING_STACK
+		stk_makespace( C, 2 );
+		*C->stack_top++ = *a;
+		*C->stack_top++ = *b;
+		VAR_ACQUIRE( a );
+		VAR_ACQUIRE( b );
+
+		if( ( a->type == SVT_OBJECT && obj_exec( C, SOP_COMPARE, a->data.O ) == SGS_SUCCESS ) ||
+			( b->type == SVT_OBJECT && obj_exec( C, SOP_COMPARE, b->data.O ) == SGS_SUCCESS ) )
+		{
+			USING_STACK
+			sgs_Real out = var_getreal( C, --C->stack_top );
+			VAR_RELEASE( C->stack_top );
+			stk_pop2( C );
+			return out;
+		}
+
+		stk_pop2( C );
+		/* fallback: check for equality */
+		if( a->type == b->type )
+			return a->data.O - b->data.O;
+		else
+			return a->type - b->type;
 	}
 	if( a->type == SVT_BOOL || b->type == SVT_BOOL )
 		return var_getbool( C, a ) - var_getbool( C, b );

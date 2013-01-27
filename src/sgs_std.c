@@ -662,18 +662,20 @@ int sgsstd_class_gcmark( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-int sgsstd_class_add( SGS_CTX, sgs_VarObj* data )
-{
-	if( sgsstd_class_getmethod( C, data, "__add" ) )
-	{
-		sgs_PushVariable( C, sgs_StackItem( C, -3 ) );
-		sgs_PushVariable( C, sgs_StackItem( C, -3 ) );
-		sgs_Call( C, 2, 1 );
-		sgs_PopSkip( C, 1, 1 );
-		return SGS_SUCCESS;
-	}
-	return SGS_ENOTFND;
-}
+#define class_op_wrapper( op ) \
+int sgsstd_class_##op ( SGS_CTX, sgs_VarObj* data ){   \
+	if( sgsstd_class_getmethod( C, data, "__" #op ) ){ \
+		sgs_PushVariable( C, sgs_StackItem( C, -3 ) ); \
+		sgs_PushVariable( C, sgs_StackItem( C, -3 ) ); \
+		sgs_Call( C, 2, 1 ); sgs_PopSkip( C, 1, 1 );   \
+		return SGS_SUCCESS; } return SGS_ENOTFND; }
+class_op_wrapper( add )
+class_op_wrapper( sub )
+class_op_wrapper( mul )
+class_op_wrapper( div )
+class_op_wrapper( mod )
+class_op_wrapper( compare )
+#undef class_op_wrapper
 
 void* sgsstd_class_functable[] =
 {
@@ -686,6 +688,11 @@ void* sgsstd_class_functable[] =
 	SOP_GETTYPE, sgsstd_class_gettype,
 	SOP_GCMARK, sgsstd_class_gcmark,
 	SOP_OP_ADD, sgsstd_class_add,
+	SOP_OP_SUB, sgsstd_class_sub,
+	SOP_OP_MUL, sgsstd_class_mul,
+	SOP_OP_DIV, sgsstd_class_div,
+	SOP_OP_MOD, sgsstd_class_mod,
+	SOP_COMPARE, sgsstd_class_compare,
 	SOP_END,
 };
 
