@@ -677,6 +677,26 @@ class_op_wrapper( mod )
 class_op_wrapper( compare )
 #undef class_op_wrapper
 
+int sgsstd_class_negate( SGS_CTX, sgs_VarObj* data )
+{
+	if( sgsstd_class_getmethod( C, data, "__negate" ) )
+	{
+		sgs_PushVariable( C, sgs_StackItem( C, -2 ) );
+		sgs_Call( C, 1, 1 );
+		sgs_PopSkip( C, 1, 1 );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTFND;
+}
+
+int sgsstd_class_call( SGS_CTX, sgs_VarObj* data )
+{
+	if( sgsstd_class_getmethod( C, data, "__call" ) )
+	{
+	}
+	return SGS_ENOTFND;
+}
+
 void* sgsstd_class_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_class_destruct,
@@ -692,7 +712,9 @@ void* sgsstd_class_functable[] =
 	SOP_OP_MUL, sgsstd_class_mul,
 	SOP_OP_DIV, sgsstd_class_div,
 	SOP_OP_MOD, sgsstd_class_mod,
+	SOP_OP_NEGATE, sgsstd_class_negate,
 	SOP_COMPARE, sgsstd_class_compare,
+	SOP_CALL, sgsstd_class_call,
 	SOP_END,
 };
 

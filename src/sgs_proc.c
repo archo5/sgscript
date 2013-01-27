@@ -928,22 +928,28 @@ static int vm_op_negate( SGS_CTX, int16_t out, sgs_Variable *A )
 {
 	int i = A->type;
 
-	if( i == SVT_REAL )
+	switch( i )
 	{
-		var_setreal( C, out, -var_getreal( C, A ) );
-	}
-	else if( i == SVT_INT || i == SVT_BOOL )
-	{
-		var_setint( C, out, -var_getint( C, A ) );
-	}
-	else if( i == SVT_OBJECT )
-	{
-		sgs_Printf( C, SGS_WARNING, -1, "Object negation is NOT IMPLEMENTED" );
+	case SVT_NULL: var_setnull( C, out ); break;
+	case SVT_BOOL: var_setint( C, out, -A->data.B ); break;
+	case SVT_INT: var_setint( C, out, -A->data.I ); break;
+	case SVT_REAL: var_setreal( C, out, -A->data.R ); break;
+	case SVT_OBJECT:
+		stk_push( C, A );
+		if( obj_exec( C, SOP_OP_NEGATE, A->data.O ) == SGS_SUCCESS )
+		{
+			stk_setlvar_leave( C, out, stk_getpos( C, -1 ) );
+			stk_pop1nr( C );
+			stk_pop1( C );
+			break;
+		}
+		stk_pop1( C );
+		sgs_Printf( C, SGS_ERROR, -1, "Given object does not support negation." );
+		var_setnull( C, out );
 		return 0;
-	}
-	else
-	{
-		sgs_Printf( C, SGS_WARNING, -1, "Negating object of type %s is not supported.", sgs_VarNames[ i ] );
+	default:
+		sgs_Printf( C, SGS_ERROR, -1, "Negating variable of type %s is not supported.", sgs_VarNames[ i ] );
+		var_setnull( C, out );
 		return 0;
 	}
 
@@ -972,28 +978,6 @@ static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable *A ) { \
 
 VAR_MOP( inc, +1 )
 VAR_MOP( dec, -1 )
-
-
-#define _cti_num( ty ) ( ty == SVT_BOOL || ty == SVT_INT || ty == SVT_REAL )
-static int calc_typeid( sgs_Variable* A, sgs_Variable* B )
-{
-	int ty1, ty2, ii1, ii2;
-	ty1 = A->type;
-	ty2 = B->type;
-	if( ty1 == ty2 )
-		return MAX( ty1, SVT_INT );
-	ii1 = _cti_num( ty1 );
-	ii2 = _cti_num( ty2 );
-	if( ii1 && ii2 )
-		return MAX( MAX( ty1, ty2 ), SVT_INT );
-	else if( ii1 )
-		return ty1;
-	else if( ii2 )
-		return ty2;
-	else
-		return SVT_REAL;
-}
-#undef _cti_num
 
 
 #define ARITH_OP_ADD	0
@@ -1303,6 +1287,22 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 		rvc = vm_exec( C, func_bytecode( F ), F->size - F->instr_off, func_consts( F ), F->instr_off );
 		if( F->gotthis && gotthis )
 			C->stack_off++;
+	}
+	else if( func->type == SVT_OBJECT )
+	{
+		int stkoff2 = C->stack_off - C->stack_base;
+		int hadthis = C->has_this;
+		C->has_this = TRUE;
+		stk_push( C, func );
+		rvc = obj_exec( C, SOP_CALL, func->data.O );
+		if( rvc < 0 )
+		{
+			sgs_Printf( C, SGS_ERROR, -1, "The object could not be called" );
+			rvc = 0;
+		}
+		stk_pop1( C );
+		C->has_this = hadthis;
+		C->stack_off = C->stack_base + stkoff2;
 	}
 	else
 		sgs_Printf( C, SGS_ERROR, -1, "Variable of type '%s' cannot be called", sgs_VarNames[ func->type ] );

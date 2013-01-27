@@ -95,11 +95,6 @@ void sgsFT_Dump( FTNode* tree )
 
 #define PTR_MAX ((void*)-1)
 
-static int is_ident( TokenList tok, const char* text )
-{
-	return *tok == ST_IDENT && tok[ 1 ] == strlen( text ) && strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
-}
-
 static int is_keyword( TokenList tok, const char* text )
 {
 	return *tok == ST_KEYWORD && tok[ 1 ] == strlen( text ) && strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;

@@ -13,36 +13,6 @@ static int is_keyword( TokenList tok, const char* text )
 
 
 /* register allocation */
-static int16_t __ra_alloc( const uint32_t* regs, uint32_t size )
-{
-	uint32_t i, j;
-	for( i = 0; i < size; ++i )
-	{
-		if( regs[ i ] == 0 )
-			return (int16_t)( i * 32 );
-		else if( regs[ i ] != 0xffffffff )
-		{
-			for( j = 0; j < 32; ++j )
-				if( ( regs[ i ] & ( 1 << j ) ) == 0 )
-					return (int16_t)( i * 32 + j );
-		}
-	}
-	return -1;
-}
-static void __ra_free( uint32_t* regs, uint32_t size, int16_t off )
-{
-	uint32_t i = ((uint32_t)off) / 32;
-	uint32_t j = ((uint32_t)off) % 32;
-	UNUSED( size );
-	sgs_BreakIf( i >= size );
-	regs[ i ] &= ~( 1 << j );
-}
-#define RA_DECL( name ) uint32_t name [ 8 ];
-#define RA_CTOR( name ) { name [0]=0; name [1]=0; name [2]=0; name [3]=0; name [4]=0; name [5]=0; name [6]=0; name[7]=0; }
-#define RA_DTOR( name )
-#define RA_ALLOC( name ) __ra_alloc( name, 8 )
-#define RA_FREE( name, pos ) __ra_free( name, 8, pos )
-
 
 static SGS_INLINE int16_t comp_reg_alloc( SGS_CTX )
 {
@@ -165,11 +135,6 @@ static void dump_opcode_b1( const char* name, char* ptr )
 	dump_rcpos( ptr );
 	printf( " <= " );
 	dump_rcpos( ptr + 2 );
-}
-static void dump_opcode_c( const char* name, char* ptr )
-{
-	int a1 = AS_INT16( ptr );
-	printf( "%s R%d", name, a1 );
 }
 static void dump_opcode( char* ptr, int32_t size )
 {
