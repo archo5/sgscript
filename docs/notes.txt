@@ -13,9 +13,9 @@ general guidelines:
 - property syntax: <obj>.<prop>, "." operator is key
 - index syntax: <obj>[ <prop> ], "[]" operator is key
 - safe type identification can be done by looking at the interface pointer, each object has its own
-- currently arguments are counted backwards from last element, which is -1...
+- currently arguments are counted backwards from last element, which is -1... (!!! SEE sub-item #2)
 	...so in a 3 argument callback, argument mapping would be as follows: first -> -3; second -> -2; third -> -1
-	...note that support for normal indexing could be included later (when all locations of object calls can be covered and easily accounted for)
+	- added support for normal indexing (starting from 0 upwards)
 
 SOP_END:
 	the element used to end a function list
@@ -65,3 +65,27 @@ SOP_NEXTKEY:
 	first call on a non-zero-sized iterator returns first key and "true" as state
 	last call returns whatever key (for example, "null") and "false" as state
 	expects: 2 variables on success (key variable, state - boolean), 0 on failure
+
+SOP_CALL: [overloaded operator]
+	called with variable number of arguments, expected to act like a function call
+	works generally about the same as a function call
+
+SOP_COMPARE: [overloaded operator]
+	returns >0 if A > B, 0 if A = B, <0 if A < B
+	gives: 2 variables of any type, one of them is the object this function is linked to
+	expects: 1 number variable on success
+
+SOP_OP_ADD:
+SOP_OP_SUB:
+SOP_OP_MUL:
+SOP_OP_DIV:
+SOP_OP_MOD: [overloaded operators]
+	returns the value of the operation (+,-,*,/,%)
+	gives: 2 variables of any type, one of them is the object this function is linked to
+	expects: 1 variable of any type on success
+
+SOP_OP_NEGATE: [overloaded operator]
+	returns the negated argument
+	gives: 1 variable of the object type this function is linked to
+	expects: 1 variable of any type on success
+
