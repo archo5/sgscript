@@ -746,6 +746,89 @@ argerr:
 }
 
 
+/* CLOSURE */
+
+typedef struct sgsstd_closure_s
+{
+	sgs_Variable func;
+	sgs_Variable data;
+}
+sgsstd_closure_t;
+
+
+#define SGSCLOSURE_HDR sgsstd_closure_t* hdr = (sgsstd_closure_t*) data->data;
+
+int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data )
+{
+	SGSCLOSURE_HDR;
+	sgs_Release( C, &hdr->func );
+	sgs_Release( C, &hdr->data );
+	sgs_Free( hdr );
+	return SGS_SUCCESS;
+}
+
+int sgsstd_closure_tostring( SGS_CTX, sgs_VarObj* data )
+{
+	sgs_PushString( C, "class" );
+	return SGS_SUCCESS;
+}
+
+int sgsstd_closure_gettype( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( data );
+	sgs_PushString( C, "class" );
+	return SGS_SUCCESS;
+}
+
+int sgsstd_closure_gcmark( SGS_CTX, sgs_VarObj* data )
+{
+	SGSCLOSURE_HDR;
+	int ret = sgs_GCMark( C, &hdr->func );
+	if( ret != SGS_SUCCESS ) return ret;
+	ret = sgs_GCMark( C, &hdr->data );
+	if( ret != SGS_SUCCESS ) return ret;
+	return SGS_SUCCESS;
+}
+
+int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data )
+{
+	int i;
+	SGSCLOSURE_HDR;
+	sgs_PushVariable( C, &hdr->data );
+	for( i = 0; i < C->call_args; ++i )
+		sgs_PushVariable( C, sgs_StackItem( C, i ) );
+	return sgsVM_VarCall( C, &hdr->func, C->call_args, C->call_expect, TRUE );
+}
+
+void* sgsstd_closure_functable[] =
+{
+	SOP_DESTRUCT, sgsstd_closure_destruct,
+	SOP_TOSTRING, sgsstd_closure_tostring,
+	SOP_GETTYPE, sgsstd_closure_gettype,
+	SOP_GCMARK, sgsstd_closure_gcmark,
+	SOP_CALL, sgsstd_closure_call,
+	SOP_END,
+};
+
+int sgsstd_closure( SGS_CTX )
+{
+	sgsstd_closure_t* hdr;
+	if( sgs_StackSize( C ) != 2 )
+		goto argerr;
+
+	hdr = sgs_Alloc( sgsstd_closure_t );
+	hdr->func = *sgs_StackItem( C, 0 );
+	hdr->data = *sgs_StackItem( C, 1 );
+	sgs_Acquire( C, &hdr->func );
+	sgs_Acquire( C, &hdr->data );
+	return sgs_PushObject( C, hdr, sgsstd_closure_functable ) == SGS_SUCCESS;
+
+argerr:
+	sgs_Printf( C, SGS_ERROR, -1, "'closure' requires 2 arguments: function, data" );
+	return 0;
+}
+
+
 /* UTILITIES */
 
 int sgsstd_isset( SGS_CTX )
@@ -924,7 +1007,7 @@ static int sgsstd_gc_collect( SGS_CTX )
 void* regfuncs[] =
 {
 	/* containers */
-	FN( array ), "class", sgsstd_class,
+	FN( array ), "class", sgsstd_class, FN( closure ),
 	FN( isset ), FN( unset ),
 	/* math */
 	FN( abs ), FN( sqrt ), FN( log ), FN( log10 ), FN( exp ), FN( floor ), FN( ceil ),

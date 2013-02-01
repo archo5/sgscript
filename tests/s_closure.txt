@@ -1,0 +1,3 @@
+printme = function( this, pre ){ print( pre, this, "\n" ); };
+dafuq = closure( printme, "banana" );
+dafuq( "this is " );
