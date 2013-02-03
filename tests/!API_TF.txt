@@ -1,0 +1,3 @@
+var a = "random string";
+test( string_cut( a, 3, 5 ) === "dom", "string_cut - basic cutting" );
+test( string_cut( a, -10, -4 ) === "dom str", "string_cut - negative indices" );

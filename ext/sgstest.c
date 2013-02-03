@@ -15,6 +15,7 @@
 #include "sgs_ctx.h"
 
 
+const char* outfile_internal = "tests-output-internal.log";
 const char* outfile = "tests-output.log";
 
 
@@ -106,6 +107,27 @@ static void check_context( sgs_Context* C )
 	}
 }
 
+static void prepengine( sgs_Context* C )
+{
+	int ret;
+	const char* sgs_testapi =
+	"function test( result, name, onfail ){\n"
+	"	if( result ){\n"
+	"		print( \"OK   \\\"\", name, \"\\\"\\n\" );\n"
+	"	}else{\n"
+	"		print( \"FAIL \\\"\", name, \"\\\"\" );\n"
+	"		if( onfail !== null )\n"
+	"			print( \" - \", onfail );\n"
+	"		print( \"\\n\" );\n"
+	"		abort();\n"
+	"	}\n"
+	"}\n"
+	;
+
+	ret = sgs_ExecString( C, sgs_testapi );
+	sgs_BreakIf( ret != SGS_SUCCESS );
+}
+
 /* test statistics */
 int tests_executed = 0;
 int tests_failed = 0;
@@ -142,6 +164,14 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 	C = sgs_CreateEngine();
 
 	printf( "\t> running \"%s\" (%s)...\n", nameonly, disp == 0 ? "..." : ( disp >= 0 ? "+++" : "---" ) );
+
+	if( strstr( nameonly, "TF" ) != NULL )
+	{
+		fclose( fopen( outfile_internal, "w" ) );
+		setoutput( outfile_internal );
+		prepengine( C );
+	}
+
 	setoutput( outfile );
 	printf( "//\n/// O U T P U T  o f  %s\n//\n\n", nameonly );
 
@@ -184,7 +214,7 @@ static void exec_tests()
 		int disp = 0;
 		if( strcmp( e->d_name, "." ) == 0 || strcmp( e->d_name, ".." ) == 0 )
 			continue;
-		if( strncmp( e->d_name, "!!", 2 ) == 0 ) continue;
+		if( strncmp( e->d_name, "!_", 2 ) == 0 ) continue;
 		if( strncmp( e->d_name, "s_", 2 ) == 0 ) disp = 1;
 		if( strncmp( e->d_name, "f_", 2 ) == 0 ) disp = -1;
 

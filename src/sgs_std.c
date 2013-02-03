@@ -769,7 +769,8 @@ int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data )
 
 int sgsstd_closure_tostring( SGS_CTX, sgs_VarObj* data )
 {
-	sgs_PushString( C, "class" );
+	UNUSED( data );
+	sgs_PushString( C, "closure" );
 	return SGS_SUCCESS;
 }
 
@@ -990,6 +991,12 @@ static int sgsstd_eval( SGS_CTX )
 	return rvc;
 }
 
+static int sgsstd_abort( SGS_CTX )
+{
+	C->state |= SGS_MUST_STOP;
+	return 0;
+}
+
 static int sgsstd_gc_collect( SGS_CTX )
 {
 	int32_t orvc = sgs_Stat( C, SGS_STAT_VARCOUNT );
@@ -1022,6 +1029,7 @@ void* regfuncs[] =
 	/* utils */
 	FN( typeof ),
 	FN( eval ),
+	FN( abort ),
 	FN( gc_collect ),
 	NULL
 };

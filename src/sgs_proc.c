@@ -1522,6 +1522,9 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 			sgs_Printf( C, SGS_ERROR, -1, "Illegal instruction executed: %d", (int) *(ptr - 1) );
 			break;
 		}
+
+		if( C->state & SGS_MUST_STOP )
+			break;
 	}
 
 #if SGS_DEBUG && SGS_DEBUG_STATE
