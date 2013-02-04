@@ -162,7 +162,7 @@ void sgs_Acquire( SGS_CTX, sgs_Variable* var );
 void sgs_Release( SGS_CTX, sgs_Variable* var );
 int sgs_GCExecute( SGS_CTX );
 int sgs_GCMark( SGS_CTX, sgs_Variable* var );
-int sgs_CheckArgs( SGS_CTX, const char* str );
+int sgs_CheckArgs( SGS_CTX, const char* name, const char* str );
 
 const char* sgs_GetStringPtr( SGS_CTX, int item );
 int32_t sgs_GetStringSize( SGS_CTX, int item );

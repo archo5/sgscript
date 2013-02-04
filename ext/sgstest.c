@@ -119,8 +119,13 @@ static void prepengine( sgs_Context* C )
 	"		if( onfail !== null )\n"
 	"			print( \" - \", onfail );\n"
 	"		print( \"\\n\" );\n"
-	"		abort();\n"
+	"		sys_errorstate();\n"
 	"	}\n"
+	"}\n"
+	"function testEqual( what, expect, name, onfail ){\n"
+	"	var failmsg = \"expected \\\"\" $ expect $ \"\\\", got \\\"\" $ what $ \"\\\"\";\n"
+	"	if( onfail !== null ) failmsg $= \" (\" $ onfail $ \")\";\n"
+	"	test( what == expect, name, failmsg );\n"
 	"}\n"
 	;
 

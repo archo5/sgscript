@@ -935,6 +935,11 @@ static int sgsstd_print( SGS_CTX )
 	String
 */
 
+#define sgsfNO_REV_INDEX 1
+#define sgsfSTRICT_RANGES 2
+#define sgsfLEFT 1
+#define sgsfRIGHT 2
+
 static SGS_INLINE int32_t idx2off( int32_t size, int32_t i )
 {
 	if( -i > size || i >= size ) return -1;
@@ -946,7 +951,7 @@ static int sgsstd_string_cut( SGS_CTX )
 	int32_t size;
 	const char* str;
 	sgs_Integer i1, i2;
-	if( !sgs_CheckArgs( C, "string,int,int" ) )
+	if( !sgs_CheckArgs( C, "string_cut", "string,int,int" ) )
 		return 0;
 	str = sgs_ToString( C, 0 );
 	size = sgs_GetStringSize( C, 0 );
@@ -991,7 +996,15 @@ static int sgsstd_eval( SGS_CTX )
 	return rvc;
 }
 
-static int sgsstd_abort( SGS_CTX )
+static int sgsstd_sys_errorstate( SGS_CTX )
+{
+	int state = 1;
+	if( sgs_StackSize( C ) )
+		state = sgs_GetBool( C, 0 );
+	C->state = ( C->state & ~SGS_HAS_ERRORS ) | ( SGS_HAS_ERRORS * state );
+	return 0;
+}
+static int sgsstd_sys_abort( SGS_CTX )
 {
 	C->state |= SGS_MUST_STOP;
 	return 0;
@@ -1029,7 +1042,8 @@ void* regfuncs[] =
 	/* utils */
 	FN( typeof ),
 	FN( eval ),
-	FN( abort ),
+	FN( sys_errorstate ),
+	FN( sys_abort ),
 	FN( gc_collect ),
 	NULL
 };
@@ -1043,6 +1057,11 @@ int sgsVM_RegStdLibs( SGS_CTX )
 		sgs_SetGlobal( C, (const char*) fn[ 0 ] );
 		fn += 2;
 	}
+
+	sgs_PushInt( C, sgsfNO_REV_INDEX ); sgs_SetGlobal( C, "fNO_REV_INDEX" );
+	sgs_PushInt( C, sgsfSTRICT_RANGES ); sgs_SetGlobal( C, "fSTRICT_RANGES" );
+	sgs_PushInt( C, sgsfLEFT ); sgs_SetGlobal( C, "fLEFT" );
+	sgs_PushInt( C, sgsfRIGHT ); sgs_SetGlobal( C, "fRIGHT" );
 
 	C->array_func = &sgsstd_array;
 	C->dict_func = &sgsstd_dict;

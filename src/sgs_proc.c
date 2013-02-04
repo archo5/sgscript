@@ -2018,7 +2018,7 @@ static int ca_compare( const char* str, const char* end, const char* type )
 	return 0;
 }
 
-int sgs_CheckArgs( SGS_CTX, const char* str )
+int sgs_CheckArgs( SGS_CTX, const char* name, const char* str )
 {
 	const char* orig = str;
 	int curarg = 0, ret;
@@ -2045,7 +2045,7 @@ int sgs_CheckArgs( SGS_CTX, const char* str )
 	return 1;
 
 fail:
-	sgs_Printf( C, SGS_ERROR, -1, "Invalid arguments passed, expected \"%s\"", orig );
+	sgs_Printf( C, SGS_ERROR, -1, "Invalid arguments passed to %s, expected \"%s\"", name, orig );
 	return 0;
 }
 
