@@ -1830,12 +1830,14 @@ sgs_Real sgs_ToReal( SGS_CTX, int item )
 	return stk_getpos( C, item )->data.R;
 }
 
-const char* sgs_ToString( SGS_CTX, int item )
+char* sgs_ToStringBuf( SGS_CTX, int item, sgs_Integer* outsize )
 {
 	sgs_Variable* var;
 	if( vm_convert_stack( C, item, SVT_STRING ) != SGS_SUCCESS )
-		return "<ERROR>";
+		return NULL;
 	var = stk_getpos( C, item );
+	if( outsize )
+		*outsize = var->data.S->size;
 	return var_cstr( var );
 }
 
@@ -1864,7 +1866,7 @@ void sgs_Acquire( SGS_CTX, sgs_Variable* var )
 void sgs_Release( SGS_CTX, sgs_Variable* var )
 {
 	if( var->type == SVT_OBJECT && var->data.O->destroying )
-		return;// -1;
+		return;
 	VAR_RELEASE( var );
 }
 

@@ -1,8 +1,29 @@
 
+global ERRORS;
+
+//
 print( "\n-- STRINGS --\n" );
+//
 
 var a = "random string";
+
 testEqual( string_cut( a, 3, 5 ), "dom", "string_cut - basic cutting" );
 testEqual( string_cut( a, -10, -4 ), "dom str", "string_cut - negative indices" );
-testEqual( string_cut( a, 0, 20, fSTRICT_RANGES ), null, "string_cut - positive range overflow" );
-testEqual( string_cut( a, -20, -1, fSTRICT_RANGES ), null, "string_cut - negative range overflow" );
+testEqual( string_cut( a, 0, 20 ), a, "string_cut - expected positive range overflow" );
+testEqual( string_cut( a, -20, -1 ), a, "string_cut - expected negative range overflow" );
+ERRORS = "";
+testEqual( string_cut( a, 0, 20, fSTRICT_RANGES ), null, "string_cut - illegal positive range overflow" );
+testEqual( ERRORS, "[W@-1:string_cut() - invalid character range]" );
+ERRORS = "";
+testEqual( string_cut( a, -20, -1, fSTRICT_RANGES ), null, "string_cut - illegal negative range overflow" );
+testEqual( ERRORS, "[W@-1:string_cut() - invalid character range]" );
+ERRORS = "";
+testEqual( string_cut( a, -20, 20, fSTRICT_RANGES ), null, "string_cut - illegal both range overflow" );
+testEqual( ERRORS, "[W@-1:string_cut() - invalid character range]" );
+ERRORS = "";
+testEqual( string_cut( a, 0, 13, fSTRICT_RANGES ), null, "string_cut - illegal subtle range overflow" );
+testEqual( ERRORS, "[W@-1:string_cut() - invalid character range]" );
+
+
+//
+//

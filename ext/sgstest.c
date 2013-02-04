@@ -107,15 +107,33 @@ static void check_context( sgs_Context* C )
 	}
 }
 
+
+static void TF_printfn( void* ctx, int type, int line, const char* message )
+{
+	int ret = 0;
+	const char* pfxs[] = { "[I@", "[W@", "[E@" };
+	sgs_Context* C = (sgs_Context*) ctx;
+	ret |= sgs_GetGlobal( C, "ERRORS" );
+	ret |= sgs_PushString( C, pfxs[ type ] );
+	ret |= sgs_PushInt( C, line );
+	ret |= sgs_PushString( C, ":" );
+	ret |= sgs_PushString( C, message );
+	ret |= sgs_PushString( C, "]" );
+	ret |= sgs_StringMultiConcat( C, 6 );
+	ret |= sgs_SetGlobal( C, "ERRORS" );
+	sgs_BreakIf( ret != 0 );
+}
+
 static void prepengine( sgs_Context* C )
 {
 	int ret;
 	const char* sgs_testapi =
+	"global ERRORS = \"sux\";\n"
 	"function test( result, name, onfail ){\n"
 	"	if( result ){\n"
-	"		print( \"OK   \\\"\", name, \"\\\"\\n\" );\n"
+	"		print( \"OK   `\", name, \"`\\n\" );\n"
 	"	}else{\n"
-	"		print( \"FAIL \\\"\", name, \"\\\"\" );\n"
+	"		print( \"FAIL `\", name, \"`\" );\n"
 	"		if( onfail !== null )\n"
 	"			print( \" - \", onfail );\n"
 	"		print( \"\\n\" );\n"
@@ -125,12 +143,16 @@ static void prepengine( sgs_Context* C )
 	"function testEqual( what, expect, name, onfail ){\n"
 	"	var failmsg = \"expected \\\"\" $ expect $ \"\\\", got \\\"\" $ what $ \"\\\"\";\n"
 	"	if( onfail !== null ) failmsg $= \" (\" $ onfail $ \")\";\n"
+	"	if( name === null ) name = \"...expecting \\\"\" $ expect $ \"\\\"\";\n"
 	"	test( what == expect, name, failmsg );\n"
 	"}\n"
 	;
 
 	ret = sgs_ExecString( C, sgs_testapi );
 	sgs_BreakIf( ret != SGS_SUCCESS );
+
+	C->print_fn = TF_printfn;
+	C->print_ctx = C;
 }
 
 /* test statistics */

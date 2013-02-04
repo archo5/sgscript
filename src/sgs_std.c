@@ -935,6 +935,36 @@ static int sgsstd_print( SGS_CTX )
 	String
 */
 
+#define FLAG( where, which ) (((where)&(which))!=0)
+
+#define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, -1, warn ); return 0; }
+#define STDLIB_ERROR( err ) { sgs_Printf( C, SGS_ERROR, -1, err ); return 0; }
+
+static int stdlib_tostring( SGS_CTX, int arg, char** out, sgs_Integer* size )
+{
+	char* str;
+	sgs_Variable* var = sgs_StackItem( C, arg );
+	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC )
+		return 0;
+	str = sgs_ToStringBuf( C, arg, size );
+	if( out )
+		*out = str;
+	return str != NULL;
+}
+
+static int stdlib_toint( SGS_CTX, int arg, sgs_Integer* out )
+{
+	sgs_Integer i;
+	sgs_Variable* var = sgs_StackItem( C, arg );
+	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC )
+		return 0;
+	i = sgs_ToInt( C, arg );
+	if( out )
+		*out = i;
+	return 1;
+}
+
+
 #define sgsfNO_REV_INDEX 1
 #define sgsfSTRICT_RANGES 2
 #define sgsfLEFT 1
@@ -948,21 +978,34 @@ static SGS_INLINE int32_t idx2off( int32_t size, int32_t i )
 
 static int sgsstd_string_cut( SGS_CTX )
 {
-	int32_t size;
-	const char* str;
-	sgs_Integer i1, i2;
-	if( !sgs_CheckArgs( C, "string_cut", "string,int,int" ) )
-		return 0;
-	str = sgs_ToString( C, 0 );
-	size = sgs_GetStringSize( C, 0 );
-	i1 = idx2off( size, sgs_ToInt( C, 1 ) );
-	i2 = idx2off( size, sgs_ToInt( C, 2 ) );
-	if( i1 < 0 || i2 < 0 || i1 > i2 )
+	int argc;
+	char* str;
+	sgs_Integer size, flags = 0, i1, i2;
+
+	argc = sgs_StackSize( C );
+	if( ( argc != 3 && argc != 4 ) ||
+		!stdlib_tostring( C, 0, &str, &size ) ||
+		!stdlib_toint( C, 1, &i1 ) ||
+		!stdlib_toint( C, 2, &i2 ) ||
+		( argc == 4 && !stdlib_toint( C, 3, &flags ) ) )
+		STDLIB_WARN( "string_cut() - unexpected argument; function expects 3-4 arguments: string, int, int, [int]" );
+
+	if( FLAG( flags, sgsfNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
+		STDLIB_WARN( "string_cut() - detected negative indices" );
+
+	i1 = i1 < 0 ? size + i1 : i1;
+	i2 = i2 < 0 ? size + i2 : i2;
+	if( FLAG( flags, sgsfSTRICT_RANGES ) && ( i1 > i2 || i1 < 0 || i2 < 0 || i1 >= size || i2 >= size ) )
+		STDLIB_WARN( "string_cut() - invalid character range" );
+
+	if( i1 > i2 || i1 >= size || i2 < 0 )
+		sgs_PushStringBuf( C, "", 0 );
+	else
 	{
-		sgs_Printf( C, SGS_ERROR, -1, "string_cut - invalid indices" );
-		return 0;
+		i1 = MAX( 0, MIN( i1, size - 1 ) );
+		i2 = MAX( 0, MIN( i2, size - 1 ) );
+		sgs_PushStringBuf( C, str + i1, i2 - i1 + 1 );
 	}
-	sgs_PushStringBuf( C, str + i1, i2 - i1 + 1 );
 	return 1;
 }
 

@@ -153,7 +153,8 @@ sgs_Real sgs_GetReal( SGS_CTX, int item );
 int sgs_ToBool( SGS_CTX, int item );
 sgs_Integer sgs_ToInt( SGS_CTX, int item );
 sgs_Real sgs_ToReal( SGS_CTX, int item );
-const char* sgs_ToString( SGS_CTX, int item );
+char* sgs_ToStringBuf( SGS_CTX, int item, sgs_Integer* outsize );
+#define sgs_ToString( ctx, item ) sgs_ToStringBuf( ctx, item, NULL )
 
 int sgs_StackSize( SGS_CTX );
 sgs_Variable* sgs_StackItem( SGS_CTX, int item );
