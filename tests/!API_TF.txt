@@ -23,6 +23,10 @@ testEqual( ERRORS, "[W@-1:string_cut() - invalid character range]" );
 ERRORS = "";
 testEqual( string_cut( a, 0, 13, fSTRICT_RANGES ), null, "string_cut - illegal subtle range overflow" );
 testEqual( ERRORS, "[W@-1:string_cut() - invalid character range]" );
+ERRORS = "";
+testEqual( string_cut( a, -5, -3, fNO_REV_INDEX ), null, "string_cut - illegal negative indices" );
+testEqual( ERRORS, "[W@-1:string_cut() - detected negative indices]" );
+testEqual( string_cut( a, 3, 5, fSTRICT_RANGES | fNO_REV_INDEX ), "dom", "string_cut - strict cutting" );
 
 
 //
