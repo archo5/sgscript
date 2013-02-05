@@ -128,7 +128,7 @@ static void prepengine( sgs_Context* C )
 {
 	int ret;
 	const char* sgs_testapi =
-	"global ERRORS = \"sux\";\n"
+	"global ERRORS = \"..uninitialized..\";\n"
 	"function test( result, name, onfail ){\n"
 	"	if( result ){\n"
 	"		print( \"OK   `\", name, \"`\\n\" );\n"

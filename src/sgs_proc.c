@@ -1647,7 +1647,10 @@ int sgs_PushReal( SGS_CTX, sgs_Real value )
 int sgs_PushStringBuf( SGS_CTX, const char* str, int32_t size )
 {
 	sgs_Variable var;
-	var_create_str( C, &var, str, size );
+	if( str )
+		var_create_str( C, &var, str, size );
+	else
+		var_create_0str( C, &var, size );
 	stk_push_leave( C, &var );
 	return SGS_SUCCESS;
 }

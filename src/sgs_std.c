@@ -988,7 +988,7 @@ static int sgsstd_string_cut( SGS_CTX )
 		!stdlib_toint( C, 1, &i1 ) ||
 		!stdlib_toint( C, 2, &i2 ) ||
 		( argc == 4 && !stdlib_toint( C, 3, &flags ) ) )
-		STDLIB_WARN( "string_cut() - unexpected argument; function expects 3-4 arguments: string, int, int, [int]" );
+		STDLIB_WARN( "string_cut() - unexpected arguments; function expects 3-4 arguments: string, int, int, [int]" );
 
 	if( FLAG( flags, sgsfNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
 		STDLIB_WARN( "string_cut() - detected negative indices" );
@@ -1006,6 +1006,25 @@ static int sgsstd_string_cut( SGS_CTX )
 		i2 = MAX( 0, MIN( i2, size - 1 ) );
 		sgs_PushStringBuf( C, str + i1, i2 - i1 + 1 );
 	}
+	return 1;
+}
+
+static int sgsstd_string_reverse( SGS_CTX )
+{
+	int argc;
+	char* str, *sout;
+	sgs_Integer size, i;
+
+	argc = sgs_StackSize( C );
+	if( argc != 1 || !stdlib_tostring( C, 0, &str, &size ) )
+		STDLIB_WARN( "string_reverse() - unexpected arguments; function expects 1 argument: string" );
+
+	sgs_PushStringBuf( C, NULL, size );
+	sout = var_cstr( sgs_StackItem( C, -1 ) );
+
+	for( i = 0; i < size; ++i )
+		sout[ size - i - 1 ] = str[ i ];
+
 	return 1;
 }
 
@@ -1079,7 +1098,7 @@ void* regfuncs[] =
 	/* I/O */
 	FN( print ),
 	/* string */
-	FN( string_cut ),
+	FN( string_cut ), FN( string_reverse ),
 	/* OS */
 	FN( ftime ),
 	/* utils */
