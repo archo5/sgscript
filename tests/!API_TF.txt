@@ -2,15 +2,19 @@
 global ERRORS;
 
 //
+function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
 print( "\n-- STRINGS --\n" );
 //
 
 var a = "random string";
+var b = "WHAT";
 
+	section( "string_cut" );
 testEqual( string_cut( a, 3, 5 ), "dom", "string_cut - basic cutting" );
 testEqual( string_cut( a, -10, -4 ), "dom str", "string_cut - negative indices" );
 testEqual( string_cut( a, 0, 20 ), a, "string_cut - expected positive range overflow" );
 testEqual( string_cut( a, -20, -1 ), a, "string_cut - expected negative range overflow" );
+testEqual( string_cut( a, 3, 5, fSTRICT_RANGES | fNO_REV_INDEX ), "dom", "string_cut - strict cutting" );
 ERRORS = "";
 testEqual( string_cut( a, 0 ), null, "string_cut - bad argument count" );
 testEqual( ERRORS, "[W@-1:string_cut() - unexpected arguments; function expects 3-4 arguments: string, int, int, [int]]" );
@@ -32,8 +36,8 @@ testEqual( ERRORS, "[W@-1:string_cut() - invalid character range]" );
 ERRORS = "";
 testEqual( string_cut( a, -5, -3, fNO_REV_INDEX ), null, "string_cut - illegal negative indices" );
 testEqual( ERRORS, "[W@-1:string_cut() - detected negative indices]" );
-testEqual( string_cut( a, 3, 5, fSTRICT_RANGES | fNO_REV_INDEX ), "dom", "string_cut - strict cutting" );
 
+	section( "string_reverse" );
 testEqual( string_reverse( a ), "gnirts modnar", "string_reverse - output (odd number of chars)" );
 testEqual( string_reverse( "action" ), "noitca", "string_reverse - output (even number of chars)" );
 testEqual( typeof( string_reverse( "" ) ), "string", "string_reverse - empty strings" );
@@ -43,6 +47,27 @@ testEqual( ERRORS, "[W@-1:string_reverse() - unexpected arguments; function expe
 ERRORS = "";
 testEqual( string_reverse( null ), null, "string_reverse - string conversion error" );
 testEqual( ERRORS, "[W@-1:string_reverse() - unexpected arguments; function expects 1 argument: string]" );
+
+	section( "string_pad" );
+testEqual( string_pad( b, 8 ), "  WHAT  ", "string_pad - output (even padding)" );
+testEqual( string_pad( b, 9 ), "   WHAT  ", "string_pad - output (odd padding)" );
+testEqual( string_pad( b, 9, 'pad' ), "padWHATad", "string_pad - custom padding string" );
+testEqual( string_pad( b, 8, 'pad', fLEFT ), "padpWHAT", "string_pad - left padding only" );
+testEqual( string_pad( b, 8, 'pad', fRIGHT ), "WHATadpa", "string_pad - right padding only" );
+testEqual( string_pad( b, 3 ), b, "string_pad - output (no padding)" );
+ERRORS = "";
+testEqual( string_pad( b, 0, a, 0, 0 ), null, "string_pad - too many arguments" );
+testEqual( ERRORS, "[W@-1:string_pad() - unexpected arguments; function expects 2-4 arguments: string, int, [string], [int]]" );
+ERRORS = "";
+testEqual( string_pad( b, 5, 'pad', 4 ), null, "string_pad - no recognizable flags specified" );
+testEqual( ERRORS, "[W@-1:string_pad() - no side flags (fLEFT, fRIGHT) specified]" );
+
+	section( "string_repeat" );
+testEqual( string_repeat( b, 3 ), b$b$b, "string_repeat - positive count" );
+testEqual( string_repeat( b, 0 ), '', "string_repeat - zero count" );
+ERRORS = "";
+testEqual( string_repeat( b, -3 ), null, "string_repeat - negative count" );
+testEqual( ERRORS, "[W@-1:string_repeat() - unexpected arguments; function expects 2 arguments: string, int (>= 0)]" );
 
 
 //

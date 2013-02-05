@@ -1028,6 +1028,77 @@ static int sgsstd_string_reverse( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_string_pad( SGS_CTX )
+{
+	int argc;
+	char* str, *pad = " ", *sout;
+	sgs_Integer size, padsize = 1, tgtsize, flags = sgsfLEFT | sgsfRIGHT, lpad = 0, i;
+
+	argc = sgs_StackSize( C );
+	if( ( argc < 2 || argc > 4 ) ||
+		!stdlib_tostring( C, 0, &str, &size ) ||
+		!stdlib_toint( C, 1, &tgtsize ) ||
+		( argc >= 3 && !stdlib_tostring( C, 2, &pad, &padsize ) ) ||
+		( argc >= 4 && !stdlib_toint( C, 3, &flags ) ) )
+		STDLIB_WARN( "string_pad() - unexpected arguments; function expects 2-4 arguments: string, int, [string], [int]" );
+
+	if( !FLAG( flags, sgsfLEFT | sgsfRIGHT ) )
+		STDLIB_WARN( "string_pad() - no side flags (fLEFT, fRIGHT) specified" );
+
+	if( tgtsize <= size )
+	{
+		sgs_PushVariable( C, sgs_StackItem( C, 0 ) );
+		return 1;
+	}
+
+	sgs_PushStringBuf( C, NULL, tgtsize );
+	sout = var_cstr( sgs_StackItem( C, -1 ) );
+	if( FLAG( flags, sgsfLEFT ) )
+	{
+		if( FLAG( flags, sgsfRIGHT ) )
+		{
+			sgs_Integer pp = tgtsize - size;
+			lpad = pp / 2 + pp % 2;
+		}
+		else
+			lpad = tgtsize - size;
+	}
+
+	memcpy( sout + lpad, str, size );
+	for( i = 0; i < lpad; ++i )
+		sout[ i ] = pad[ i % padsize ];
+	size += lpad;
+	while( size < tgtsize )
+	{
+		sout[ size ] = pad[ size % padsize ];
+		size++;
+	}
+
+	return 1;
+}
+
+static int sgsstd_string_repeat( SGS_CTX )
+{
+	int argc;
+	char* str, *sout;
+	sgs_Integer size, i, count;
+
+	argc = sgs_StackSize( C );
+	if( argc != 2 ||
+		!stdlib_tostring( C, 0, &str, &size ) ||
+		!stdlib_toint( C, 1, &count ) || count < 0 )
+		STDLIB_WARN( "string_repeat() - unexpected arguments; function expects 2 arguments: string, int (>= 0)" );
+
+	sgs_PushStringBuf( C, NULL, count * size );
+	sout = var_cstr( sgs_StackItem( C, -1 ) );
+	while( count-- )
+	{
+		memcpy( sout, str, size );
+		sout += size;
+	}
+	return 1;
+}
+
 
 /* OS */
 
@@ -1098,7 +1169,7 @@ void* regfuncs[] =
 	/* I/O */
 	FN( print ),
 	/* string */
-	FN( string_cut ), FN( string_reverse ),
+	FN( string_cut ), FN( string_reverse ), FN( string_pad ), FN( string_repeat ),
 	/* OS */
 	FN( ftime ),
 	/* utils */

@@ -1523,7 +1523,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 			break;
 		}
 
-		if( C->state & SGS_MUST_STOP )
+		if( ( C->state & SGS_MUST_STOP ) == SGS_MUST_STOP )
 			break;
 	}
 
