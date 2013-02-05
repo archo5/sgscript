@@ -945,7 +945,7 @@ static int stdlib_tostring( SGS_CTX, int arg, char** out, sgs_Integer* size )
 	char* str;
 	sgs_Variable* var = sgs_StackItem( C, arg );
 	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC )
-		return 0;
+		return FALSE;
 	str = sgs_ToStringBuf( C, arg, size );
 	if( out )
 		*out = str;
@@ -957,11 +957,35 @@ static int stdlib_toint( SGS_CTX, int arg, sgs_Integer* out )
 	sgs_Integer i;
 	sgs_Variable* var = sgs_StackItem( C, arg );
 	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC )
-		return 0;
+		return FALSE;
 	i = sgs_ToInt( C, arg );
 	if( out )
 		*out = i;
-	return 1;
+	return TRUE;
+}
+
+static int stdlib_tobool( SGS_CTX, int arg, int* out )
+{
+	int i;
+	sgs_Variable* var = sgs_StackItem( C, arg );
+	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC )
+		return FALSE;
+	i = sgs_ToBool( C, arg );
+	if( out )
+		*out = i;
+	return TRUE;
+}
+
+static SGS_INLINE int stdlib_isoneof( char c, char* from, int fsize )
+{
+	char* fend = from + fsize;
+	while( from < fend )
+	{
+		if( c == *from )
+			return TRUE;
+		from++;
+	}
+	return FALSE;
 }
 
 
@@ -1042,10 +1066,7 @@ static int sgsstd_string_pad( SGS_CTX )
 		( argc >= 4 && !stdlib_toint( C, 3, &flags ) ) )
 		STDLIB_WARN( "string_pad() - unexpected arguments; function expects 2-4 arguments: string, int, [string], [int]" );
 
-	if( !FLAG( flags, sgsfLEFT | sgsfRIGHT ) )
-		STDLIB_WARN( "string_pad() - no side flags (fLEFT, fRIGHT) specified" );
-
-	if( tgtsize <= size )
+	if( tgtsize <= size || !FLAG( flags, sgsfLEFT | sgsfRIGHT ) )
 	{
 		sgs_PushVariable( C, sgs_StackItem( C, 0 ) );
 		return 1;
@@ -1096,6 +1117,70 @@ static int sgsstd_string_repeat( SGS_CTX )
 		memcpy( sout, str, size );
 		sout += size;
 	}
+	return 1;
+}
+
+static int sgsstd_string_count( SGS_CTX )
+{
+	int argc, overlap = FALSE;
+	char* str, *sub, *strend;
+	sgs_Integer size, subsize, ret = 0;
+
+	argc = sgs_StackSize( C );
+	if( argc < 2 || argc > 3 ||
+		!stdlib_tostring( C, 0, &str, &size ) ||
+		!stdlib_tostring( C, 1, &sub, &subsize ) || subsize <= 0 ||
+		( argc == 3 && !stdlib_tobool( C, 2, &overlap ) ) )
+		STDLIB_WARN( "string_count() - unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [bool]" );
+
+	strend = str + size - subsize;
+	while( str <= strend )
+	{
+		if( strncmp( str, sub, subsize ) == 0 )
+		{
+			ret++;
+			str += overlap ? 1 : subsize;
+		}
+		else
+			str++;
+	}
+
+	sgs_PushInt( C, ret );
+	return 1;
+}
+
+static int sgsstd_string_trim( SGS_CTX )
+{
+	int argc;
+	char* str, *strend, *list = " \t\r\n";
+	sgs_Integer size, listsize = 4, flags = sgsfLEFT | sgsfRIGHT;
+
+	argc = sgs_StackSize( C );
+	if( argc < 1 || argc > 3 ||
+		!stdlib_tostring( C, 0, &str, &size ) ||
+		( argc >= 2 && !stdlib_tostring( C, 1, &list, &listsize ) ) ||
+		( argc >= 3 && !stdlib_toint( C, 2, &flags ) ) )
+		STDLIB_WARN( "string_trim() - unexpected arguments; function expects 1-3 arguments: string, [string], [int]" );
+
+	if( !FLAG( flags, sgsfLEFT | sgsfRIGHT ) )
+	{
+		sgs_PushVariable( C, sgs_StackItem( C, 0 ) );
+		return 1;
+	}
+
+	strend = str + size;
+	if( flags & sgsfLEFT )
+	{
+		while( str < strend && stdlib_isoneof( *str, list, listsize ) )
+			str++;
+	}
+	if( flags & sgsfRIGHT )
+	{
+		while( str < strend && stdlib_isoneof( *(strend-1), list, listsize ) )
+			strend--;
+	}
+
+	sgs_PushStringBuf( C, str, strend - str );
 	return 1;
 }
 
@@ -1170,6 +1255,7 @@ void* regfuncs[] =
 	FN( print ),
 	/* string */
 	FN( string_cut ), FN( string_reverse ), FN( string_pad ), FN( string_repeat ),
+	FN( string_count ), FN( string_trim ),
 	/* OS */
 	FN( ftime ),
 	/* utils */

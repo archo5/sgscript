@@ -1,5 +1,6 @@
 
 global ERRORS;
+global tests_failed, tests_ran;
 
 //
 function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
@@ -8,67 +9,76 @@ print( "\n-- STRINGS --\n" );
 
 var a = "random string";
 var b = "WHAT";
+var c = "banana";
+var d = " \t\r\n \t\r\n spacy \t\r\n \t\r\n ";
 
 	section( "string_cut" );
+var string_cut_error_args = "[W:string_cut() - unexpected arguments; function expects 3-4 arguments: string, int, int, [int]]";
+var string_cut_error_range = "[W:string_cut() - invalid character range]";
+var string_cut_error_indices = "[W:string_cut() - detected negative indices]";
 testEqual( string_cut( a, 3, 5 ), "dom", "string_cut - basic cutting" );
 testEqual( string_cut( a, -10, -4 ), "dom str", "string_cut - negative indices" );
 testEqual( string_cut( a, 0, 20 ), a, "string_cut - expected positive range overflow" );
 testEqual( string_cut( a, -20, -1 ), a, "string_cut - expected negative range overflow" );
 testEqual( string_cut( a, 3, 5, fSTRICT_RANGES | fNO_REV_INDEX ), "dom", "string_cut - strict cutting" );
-ERRORS = "";
-testEqual( string_cut( a, 0 ), null, "string_cut - bad argument count" );
-testEqual( ERRORS, "[W@-1:string_cut() - unexpected arguments; function expects 3-4 arguments: string, int, int, [int]]" );
-ERRORS = "";
-testEqual( string_cut( null, 0, 10 ), null, "string_cut - string conversion error" );
-testEqual( ERRORS, "[W@-1:string_cut() - unexpected arguments; function expects 3-4 arguments: string, int, int, [int]]" );
-ERRORS = "";
-testEqual( string_cut( a, 0, 20, fSTRICT_RANGES ), null, "string_cut - illegal positive range overflow" );
-testEqual( ERRORS, "[W@-1:string_cut() - invalid character range]" );
-ERRORS = "";
-testEqual( string_cut( a, -20, -1, fSTRICT_RANGES ), null, "string_cut - illegal negative range overflow" );
-testEqual( ERRORS, "[W@-1:string_cut() - invalid character range]" );
-ERRORS = "";
-testEqual( string_cut( a, -20, 20, fSTRICT_RANGES ), null, "string_cut - illegal both range overflow" );
-testEqual( ERRORS, "[W@-1:string_cut() - invalid character range]" );
-ERRORS = "";
-testEqual( string_cut( a, 0, 13, fSTRICT_RANGES ), null, "string_cut - illegal subtle range overflow" );
-testEqual( ERRORS, "[W@-1:string_cut() - invalid character range]" );
-ERRORS = "";
-testEqual( string_cut( a, -5, -3, fNO_REV_INDEX ), null, "string_cut - illegal negative indices" );
-testEqual( ERRORS, "[W@-1:string_cut() - detected negative indices]" );
+ERRORS = ""; testEqual( string_cut( a, 0 ), null, "string_cut - bad argument count" ); testEqual( ERRORS, string_cut_error_args );
+ERRORS = ""; testEqual( string_cut( null, 0, 10 ), null, "string_cut - string conversion error" ); testEqual( ERRORS, string_cut_error_args );
+ERRORS = ""; testEqual( string_cut( a, 0, 20, fSTRICT_RANGES ), null, "string_cut - illegal positive range overflow" ); testEqual( ERRORS, string_cut_error_range );
+ERRORS = ""; testEqual( string_cut( a, -20, -1, fSTRICT_RANGES ), null, "string_cut - illegal negative range overflow" ); testEqual( ERRORS, string_cut_error_range );
+ERRORS = ""; testEqual( string_cut( a, -20, 20, fSTRICT_RANGES ), null, "string_cut - illegal both range overflow" ); testEqual( ERRORS, string_cut_error_range );
+ERRORS = ""; testEqual( string_cut( a, 0, 13, fSTRICT_RANGES ), null, "string_cut - illegal subtle range overflow" ); testEqual( ERRORS, string_cut_error_range );
+ERRORS = ""; testEqual( string_cut( a, -5, -3, fNO_REV_INDEX ), null, "string_cut - illegal negative indices" ); testEqual( ERRORS, string_cut_error_indices );
 
 	section( "string_reverse" );
+var string_reverse_error_args = "[W:string_reverse() - unexpected arguments; function expects 1 argument: string]";
 testEqual( string_reverse( a ), "gnirts modnar", "string_reverse - output (odd number of chars)" );
 testEqual( string_reverse( "action" ), "noitca", "string_reverse - output (even number of chars)" );
 testEqual( typeof( string_reverse( "" ) ), "string", "string_reverse - empty strings" );
-ERRORS = "";
-testEqual( string_reverse(), null, "string_reverse - bad argument count" );
-testEqual( ERRORS, "[W@-1:string_reverse() - unexpected arguments; function expects 1 argument: string]" );
-ERRORS = "";
-testEqual( string_reverse( null ), null, "string_reverse - string conversion error" );
-testEqual( ERRORS, "[W@-1:string_reverse() - unexpected arguments; function expects 1 argument: string]" );
+ERRORS = ""; testEqual( string_reverse(), null, "string_reverse - bad argument count" ); testEqual( ERRORS, string_reverse_error_args );
+ERRORS = ""; testEqual( string_reverse( null ), null, "string_reverse - string conversion error" ); testEqual( ERRORS, string_reverse_error_args );
 
 	section( "string_pad" );
+var string_pad_error_args = "[W:string_pad() - unexpected arguments; function expects 2-4 arguments: string, int, [string], [int]]";
 testEqual( string_pad( b, 8 ), "  WHAT  ", "string_pad - output (even padding)" );
 testEqual( string_pad( b, 9 ), "   WHAT  ", "string_pad - output (odd padding)" );
 testEqual( string_pad( b, 9, 'pad' ), "padWHATad", "string_pad - custom padding string" );
 testEqual( string_pad( b, 8, 'pad', fLEFT ), "padpWHAT", "string_pad - left padding only" );
 testEqual( string_pad( b, 8, 'pad', fRIGHT ), "WHATadpa", "string_pad - right padding only" );
 testEqual( string_pad( b, 3 ), b, "string_pad - output (no padding)" );
-ERRORS = "";
-testEqual( string_pad( b, 0, a, 0, 0 ), null, "string_pad - too many arguments" );
-testEqual( ERRORS, "[W@-1:string_pad() - unexpected arguments; function expects 2-4 arguments: string, int, [string], [int]]" );
-ERRORS = "";
-testEqual( string_pad( b, 5, 'pad', 4 ), null, "string_pad - no recognizable flags specified" );
-testEqual( ERRORS, "[W@-1:string_pad() - no side flags (fLEFT, fRIGHT) specified]" );
+testEqual( string_pad( b, 100, a, 1<<4 ), b, "string_pad - no (recognized) flags specified" );
+ERRORS = ""; testEqual( string_pad( b, 0, a, 0, 0 ), null, "string_pad - too many arguments" ); testEqual( ERRORS, string_pad_error_args );
 
 	section( "string_repeat" );
+var string_repeat_error_args = "[W:string_repeat() - unexpected arguments; function expects 2 arguments: string, int (>= 0)]";
 testEqual( string_repeat( b, 3 ), b$b$b, "string_repeat - positive count" );
 testEqual( string_repeat( b, 0 ), '', "string_repeat - zero count" );
-ERRORS = "";
-testEqual( string_repeat( b, -3 ), null, "string_repeat - negative count" );
-testEqual( ERRORS, "[W@-1:string_repeat() - unexpected arguments; function expects 2 arguments: string, int (>= 0)]" );
+ERRORS = ""; testEqual( string_repeat( b, -3 ), null, "string_repeat - negative count" ); testEqual( ERRORS, string_repeat_error_args );
+
+	section( "string_count" );
+var string_count_error_args = "[W:string_count() - unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [bool]]";
+testEqual( string_count( a, "ran" ), 1, "string_count - 1 match at beginning" );
+testEqual( string_count( a, "ring" ), 1, "string_count - 1 match at end" );
+testEqual( string_count( a, "box" ), 0, "string_count - 0 matches" );
+testEqual( string_count( c, "a" ), 3, "string_count - multiple matches" );
+testEqual( string_count( c, "an" ), 2, "string_count - multiple following matches" );
+testEqual( string_count( c, "ana" ), 1, "string_count - overlapping matches (disabled)" );
+testEqual( string_count( c, "ana", true ), 2, "string_count - overlapping matches (enabled)" );
+ERRORS = ""; testEqual( string_count( c, "" ), null, "string_count - zero-length substring" ); testEqual( ERRORS, string_count_error_args );
+
+	section( "string_find" );
+	section( "string_replace" );
+	section( "string_tolower" );
+	section( "string_toupper" );
+	section( "string_compare" );
+
+	section( "string_trim" );
+testEqual( string_trim( d ), "spacy", "string_trim - basic space trimming" );
+testEqual( string_trim( d, d ), "", "string_trim - trim everything" );
+testEqual( string_trim( c, "ba", fLEFT ), "nana", "string_trim - trim from left only" );
+testEqual( string_trim( c, "an", fRIGHT ), "b", "string_trim - trim from right only" );
+testEqual( string_trim( c, c, 1<<4 ), c, "string_trim - no (recognized) flags specified" );
 
 
 //
+print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );
 //

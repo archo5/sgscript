@@ -111,15 +111,13 @@ static void check_context( sgs_Context* C )
 static void TF_printfn( void* ctx, int type, int line, const char* message )
 {
 	int ret = 0;
-	const char* pfxs[] = { "[I@", "[W@", "[E@" };
+	const char* pfxs[] = { "[I:", "[W:", "[E:" };
 	sgs_Context* C = (sgs_Context*) ctx;
 	ret |= sgs_GetGlobal( C, "ERRORS" );
 	ret |= sgs_PushString( C, pfxs[ type ] );
-	ret |= sgs_PushInt( C, line );
-	ret |= sgs_PushString( C, ":" );
 	ret |= sgs_PushString( C, message );
 	ret |= sgs_PushString( C, "]" );
-	ret |= sgs_StringMultiConcat( C, 6 );
+	ret |= sgs_StringMultiConcat( C, 4 );
 	ret |= sgs_SetGlobal( C, "ERRORS" );
 	sgs_BreakIf( ret != 0 );
 }
@@ -129,10 +127,14 @@ static void prepengine( sgs_Context* C )
 	int ret;
 	const char* sgs_testapi =
 	"global ERRORS = \"..uninitialized..\";\n"
+	"global tests_failed = 0, tests_ran = 0;\n"
 	"function test( result, name, onfail ){\n"
+	"	global tests_failed, tests_ran;\n"
+	"	tests_ran++;\n"
 	"	if( result ){\n"
 	"		print( \"OK   `\", name, \"`\\n\" );\n"
 	"	}else{\n"
+	"		tests_failed++;\n"
 	"		print( \"FAIL `\", name, \"`\" );\n"
 	"		if( onfail !== null )\n"
 	"			print( \" - \", onfail );\n"
@@ -144,7 +146,7 @@ static void prepengine( sgs_Context* C )
 	"	var failmsg = \"expected \\\"\" $ expect $ \"\\\", got \\\"\" $ what $ \"\\\"\";\n"
 	"	if( onfail !== null ) failmsg $= \" (\" $ onfail $ \")\";\n"
 	"	if( name === null ) name = \"...expecting \\\"\" $ expect $ \"\\\"\";\n"
-	"	test( what == expect, name, failmsg );\n"
+	"	test( what === expect, name, failmsg );\n"
 	"}\n"
 	;
 
