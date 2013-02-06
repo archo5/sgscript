@@ -13,7 +13,7 @@ var c = "banana";
 var d = " \t\r\n \t\r\n spacy \t\r\n \t\r\n ";
 
 	section( "string_cut" );
-var string_cut_error_args = "[W:string_cut() - unexpected arguments; function expects 3-4 arguments: string, int, int, [int]]";
+var string_cut_error_args = "[W:string_cut() - unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]]";
 var string_cut_error_range = "[W:string_cut() - invalid character range]";
 var string_cut_error_indices = "[W:string_cut() - detected negative indices]";
 testEqual( string_cut( a, 3, 5 ), "dom", "string_cut - basic cutting" );
@@ -21,7 +21,8 @@ testEqual( string_cut( a, -10, -4 ), "dom str", "string_cut - negative indices" 
 testEqual( string_cut( a, 0, 20 ), a, "string_cut - expected positive range overflow" );
 testEqual( string_cut( a, -20, -1 ), a, "string_cut - expected negative range overflow" );
 testEqual( string_cut( a, 3, 5, fSTRICT_RANGES | fNO_REV_INDEX ), "dom", "string_cut - strict cutting" );
-ERRORS = ""; testEqual( string_cut( a, 0 ), null, "string_cut - bad argument count" ); testEqual( ERRORS, string_cut_error_args );
+testEqual( string_cut( a, 7 ), 'string', "string_cut - cutting to end" );
+ERRORS = ""; testEqual( string_cut( a ), null, "string_cut - bad argument count" ); testEqual( ERRORS, string_cut_error_args );
 ERRORS = ""; testEqual( string_cut( null, 0, 10 ), null, "string_cut - string conversion error" ); testEqual( ERRORS, string_cut_error_args );
 ERRORS = ""; testEqual( string_cut( a, 0, 20, fSTRICT_RANGES ), null, "string_cut - illegal positive range overflow" ); testEqual( ERRORS, string_cut_error_range );
 ERRORS = ""; testEqual( string_cut( a, -20, -1, fSTRICT_RANGES ), null, "string_cut - illegal negative range overflow" ); testEqual( ERRORS, string_cut_error_range );

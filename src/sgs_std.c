@@ -1007,12 +1007,13 @@ static int sgsstd_string_cut( SGS_CTX )
 	sgs_Integer size, flags = 0, i1, i2;
 
 	argc = sgs_StackSize( C );
-	if( ( argc != 3 && argc != 4 ) ||
+	if( argc < 2 || argc > 4 ||
 		!stdlib_tostring( C, 0, &str, &size ) ||
+		( i2 = size - 1 ) < 0 || /* comparison should always fail */
 		!stdlib_toint( C, 1, &i1 ) ||
-		!stdlib_toint( C, 2, &i2 ) ||
-		( argc == 4 && !stdlib_toint( C, 3, &flags ) ) )
-		STDLIB_WARN( "string_cut() - unexpected arguments; function expects 3-4 arguments: string, int, int, [int]" );
+		( argc >= 3 && !stdlib_toint( C, 2, &i2 ) ) ||
+		( argc >= 4 && !stdlib_toint( C, 3, &flags ) ) )
+		STDLIB_WARN( "string_cut() - unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]" );
 
 	if( FLAG( flags, sgsfNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
 		STDLIB_WARN( "string_cut() - detected negative indices" );
