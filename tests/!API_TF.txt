@@ -4,7 +4,7 @@ global tests_failed, tests_ran;
 
 //
 function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
-print( "\n-- STRINGS --\n" );
+print( "\n\n-- STRINGS --\n" );
 //
 
 var a = "random string";
@@ -78,6 +78,33 @@ testEqual( string_trim( d, d ), "", "string_trim - trim everything" );
 testEqual( string_trim( c, "ba", fLEFT ), "nana", "string_trim - trim from left only" );
 testEqual( string_trim( c, "an", fRIGHT ), "b", "string_trim - trim from right only" );
 testEqual( string_trim( c, c, 1<<4 ), c, "string_trim - no (recognized) flags specified" );
+
+
+//
+print( "\n\n-- TYPES --\n" );
+//
+
+	section( "is_* - strict" );
+var _N = null, _B = true, _I = 1, _R = 1.0, _S = "1", _F = section, _C = print, _O = [];
+testEqual( is_null( _N ) && !is_null( _B ) && !is_null( _I ) && !is_null( _R ) &&
+	!is_null( _S ) && !is_null( _F ) && !is_null( _C ) && !is_null( _O ), true, "is_null - all tests" );
+testEqual( !is_bool( _N ) && is_bool( _B ) && !is_bool( _I ) && !is_bool( _R ) &&
+	!is_bool( _S ) && !is_bool( _F ) && !is_bool( _C ) && !is_bool( _O ), true, "is_bool - all tests" );
+testEqual( !is_int( _N ) && !is_int( _B ) && is_int( _I ) && !is_int( _R ) &&
+	!is_int( _S ) && !is_int( _F ) && !is_int( _C ) && !is_int( _O ), true, "is_int - all tests" );
+testEqual( !is_real( _N ) && !is_real( _B ) && !is_real( _I ) && is_real( _R ) &&
+	!is_real( _S ) && !is_real( _F ) && !is_real( _C ) && !is_real( _O ), true, "is_real - all tests" );
+testEqual( !is_string( _N ) && !is_string( _B ) && !is_string( _I ) && !is_string( _R ) && 
+	is_string( _S ) && !is_string( _F ) && !is_string( _C ) && !is_string( _O ), true, "is_string - all tests" );
+testEqual( !is_func( _N ) && !is_func( _B ) && !is_func( _I ) && !is_func( _R ) &&
+	!is_func( _S ) && is_func( _F ) && !is_func( _C ) && !is_func( _O ), true, "is_func - all tests" );
+testEqual( !is_cfunc( _N ) && !is_cfunc( _B ) && !is_cfunc( _I ) && !is_cfunc( _R ) &&
+	!is_cfunc( _S ) && !is_cfunc( _F ) && is_cfunc( _C ) && !is_cfunc( _O ), true, "is_cfunc - all tests" );
+testEqual( !is_object( _N ) && !is_object( _B ) && !is_object( _I ) && !is_object( _R ) && 
+	!is_object( _S ) && !is_object( _F ) && !is_object( _C ) && is_object( _O ), true, "is_object - all tests" );
+
+	section( "is_* - convertible" );
+	section( "type_*" );
 
 
 //

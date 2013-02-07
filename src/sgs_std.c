@@ -1197,6 +1197,26 @@ static int sgsstd_ftime( SGS_CTX )
 
 /* utils */
 
+#define typechk_func( N, T ) \
+static int sgsstd_##N( SGS_CTX ){ \
+	if( sgs_StackSize( C ) != 1 ){ \
+		sgs_Printf( C, SGS_WARNING, -1, #N ": 1 argument expected" ); \
+		return 0;} \
+	sgs_PushBool( C, sgs_StackItem( C, 0 )->type == T ); \
+	return 1;}
+
+typechk_func( is_null, SVT_NULL )
+typechk_func( is_bool, SVT_BOOL )
+typechk_func( is_int, SVT_INT )
+typechk_func( is_real, SVT_REAL )
+typechk_func( is_string, SVT_STRING )
+typechk_func( is_func, SVT_FUNC )
+typechk_func( is_cfunc, SVT_CFUNC )
+typechk_func( is_object, SVT_OBJECT )
+
+#undef typechk_func
+
+
 static int sgsstd_typeof( SGS_CTX )
 {
 	CHKARGS( 1 );
@@ -1260,6 +1280,8 @@ void* regfuncs[] =
 	/* OS */
 	FN( ftime ),
 	/* utils */
+	FN( is_null ), FN( is_bool ), FN( is_int ), FN( is_real ),
+	FN( is_string ), FN( is_func ), FN( is_cfunc ), FN( is_object ),
 	FN( typeof ),
 	FN( eval ),
 	FN( sys_errorstate ),
