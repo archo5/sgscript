@@ -935,6 +935,21 @@ static int sgsstd_print( SGS_CTX )
 	String
 */
 
+/* move this to other usage spots? */
+typedef union intreal_s
+{
+	sgs_Integer i;
+	sgs_Real r;
+}
+intreal_t;
+
+static SGS_INLINE int stdlib_is_numericstring( const char* str, int32_t size )
+{
+	intreal_t out;
+	const char* ostr = str;
+	return util_strtonum( &str, str + size, &out.i, &out.r ) != 0 && str != ostr;
+}
+
 #define FLAG( where, which ) (((where)&(which))!=0)
 
 #define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, -1, warn ); return 0; }
@@ -958,7 +973,20 @@ static int stdlib_toint( SGS_CTX, int arg, sgs_Integer* out )
 	sgs_Variable* var = sgs_StackItem( C, arg );
 	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC )
 		return FALSE;
-	i = sgs_ToInt( C, arg );
+	if( var->type == SVT_STRING )
+	{
+		intreal_t OIR;
+		const char* ostr = var_cstr( var );
+		const char* str = ostr;
+		int res = util_strtonum( &str, str + var->data.S->size, &OIR.i, &OIR.r );
+
+		if( str == ostr )    return FALSE;
+		if( res == 1 )       i = OIR.i;
+		else if( res == 2 )  i = (sgs_Integer) OIR.r;
+		else                 return FALSE;
+	}
+	else
+		i = sgs_ToInt( C, arg );
 	if( out )
 		*out = i;
 	return TRUE;
@@ -968,7 +996,7 @@ static int stdlib_tobool( SGS_CTX, int arg, int* out )
 {
 	int i;
 	sgs_Variable* var = sgs_StackItem( C, arg );
-	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC )
+	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC ||  var->type == SVT_STRING )
 		return FALSE;
 	i = sgs_ToBool( C, arg );
 	if( out )
@@ -986,21 +1014,6 @@ static SGS_INLINE int stdlib_isoneof( char c, char* from, int fsize )
 		from++;
 	}
 	return FALSE;
-}
-
-/* move this to other usage spots? */
-typedef union intreal_s
-{
-	sgs_Integer i;
-	sgs_Real r;
-}
-intreal_t;
-
-static int stdlib_numericstring( const char* str, int32_t size )
-{
-	intreal_t out;
-	const char* ostr = str;
-	return util_strtonum( &str, str + size, &out.i, &out.r ) != 0 && str != ostr;
 }
 
 
@@ -1247,9 +1260,42 @@ static int sgsstd_is_numeric( SGS_CTX )
 		return 1;
 	}
 
-	res = var->type != SVT_STRING || stdlib_numericstring( var_cstr( var ), var->data.S->size );
+	res = var->type != SVT_STRING || stdlib_is_numericstring( var_cstr( var ), var->data.S->size );
 	sgs_PushBool( C, res );
 
+	return 1;
+}
+
+static int sgsstd_is_callable( SGS_CTX )
+{
+	int res;
+	sgs_Variable* var;
+	EXPECT_ONEARG( is_numeric )
+
+	var = sgs_StackItem( C, 0 );
+	if( var->type != SVT_FUNC && var->type != SVT_CFUNC && var->type != SVT_OBJECT )
+	{
+		res = 0;
+	}
+	else if( var->type == SVT_OBJECT )
+	{
+		void** ptr = var->data.O->iface;
+		res = 0;
+		while( *ptr )
+		{
+			if( *ptr == SOP_CALL )
+			{
+				res = 1;
+				break;
+			}
+			ptr += 2;
+		}
+	}
+	else
+	{
+		res = 1;
+	}
+	sgs_PushBool( C, res );
 	return 1;
 }
 
@@ -1319,7 +1365,7 @@ void* regfuncs[] =
 	/* utils */
 	FN( is_null ), FN( is_bool ), FN( is_int ), FN( is_real ),
 	FN( is_string ), FN( is_func ), FN( is_cfunc ), FN( is_object ),
-	FN( is_numeric ),
+	FN( is_numeric ), FN( is_callable ),
 	FN( typeof ),
 	FN( eval ),
 	FN( sys_errorstate ),
