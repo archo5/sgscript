@@ -1254,17 +1254,21 @@ static int sgsstd_is_numeric( SGS_CTX )
 	EXPECT_ONEARG( is_numeric )
 
 	var = sgs_StackItem( C, 0 );
+
 	if( var->type == SVT_NULL || var->type == SVT_FUNC || var->type == SVT_CFUNC || var->type == SVT_OBJECT )
-	{
-		sgs_PushBool( C, FALSE );
-		return 1;
-	}
+		res = FALSE;
 
-	res = var->type != SVT_STRING || stdlib_is_numericstring( var_cstr( var ), var->data.S->size );
+	else
+		res = var->type != SVT_STRING || stdlib_is_numericstring( var_cstr( var ), var->data.S->size );
+
 	sgs_PushBool( C, res );
-
 	return 1;
 }
+
+#define OBJECT_HAS_IFACE( outVar, objVar, iFace ) \
+	{ void** ptr = objVar->data.O->iface; outVar = 0; \
+	while( *ptr ){ if( *ptr == iFace ){ outVar = 1; \
+		break; } ptr += 2; } }
 
 static int sgsstd_is_callable( SGS_CTX )
 {
@@ -1273,28 +1277,61 @@ static int sgsstd_is_callable( SGS_CTX )
 	EXPECT_ONEARG( is_numeric )
 
 	var = sgs_StackItem( C, 0 );
+
 	if( var->type != SVT_FUNC && var->type != SVT_CFUNC && var->type != SVT_OBJECT )
-	{
-		res = 0;
-	}
+		res = FALSE;
+
 	else if( var->type == SVT_OBJECT )
-	{
-		void** ptr = var->data.O->iface;
-		res = 0;
-		while( *ptr )
-		{
-			if( *ptr == SOP_CALL )
-			{
-				res = 1;
-				break;
-			}
-			ptr += 2;
-		}
-	}
+		OBJECT_HAS_IFACE( res, var, SOP_CALL )
+
 	else
-	{
-		res = 1;
-	}
+		res = TRUE;
+
+	sgs_PushBool( C, res );
+	return 1;
+}
+
+static int sgsstd_is_switch( SGS_CTX )
+{
+	int res;
+	sgs_Variable* var;
+	EXPECT_ONEARG( is_numeric )
+
+	var = sgs_StackItem( C, 0 );
+
+	if( var->type == SVT_FUNC || var->type == SVT_CFUNC )
+		res = FALSE;
+
+	else if( var->type == SVT_STRING )
+		res = stdlib_is_numericstring( var_cstr( var ), var->data.S->size );
+
+	else if( var->type == SVT_OBJECT )
+		OBJECT_HAS_IFACE( res, var, SOP_TOBOOL )
+
+	else
+		res = TRUE;
+
+	sgs_PushBool( C, res );
+	return 1;
+}
+
+static int sgsstd_is_printable( SGS_CTX )
+{
+	int res;
+	sgs_Variable* var;
+	EXPECT_ONEARG( is_numeric )
+
+	var = sgs_StackItem( C, 0 );
+
+	if( var->type == SVT_NULL || var->type == SVT_FUNC || var->type == SVT_CFUNC )
+		res = FALSE;
+
+	else if( var->type == SVT_OBJECT )
+		OBJECT_HAS_IFACE( res, var, SOP_TOSTRING )
+
+	else
+		res = TRUE;
+
 	sgs_PushBool( C, res );
 	return 1;
 }
@@ -1365,7 +1402,7 @@ void* regfuncs[] =
 	/* utils */
 	FN( is_null ), FN( is_bool ), FN( is_int ), FN( is_real ),
 	FN( is_string ), FN( is_func ), FN( is_cfunc ), FN( is_object ),
-	FN( is_numeric ), FN( is_callable ),
+	FN( is_numeric ), FN( is_callable ), FN( is_switch ), FN( is_printable ),
 	FN( typeof ),
 	FN( eval ),
 	FN( sys_errorstate ),

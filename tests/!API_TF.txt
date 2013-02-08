@@ -117,6 +117,12 @@ testEqual( !is_callable( _N ) && !is_callable( _B ) && !is_callable( _I ) && !is
 	!is_callable( _S ) && is_callable( _F ) && is_callable( _C ), true, "is_callable - basic tests" );
 testEqual( is_callable( _O ), false, "is_callable - non-callable object" );
 testEqual( is_callable( closure( print, _O ) ), true, "is_callable - callable object" );
+testEqual( is_switch( _N ) && is_switch( _O ) && !is_switch( closure( print, _O ) ), true, "is_switch - non-numeric type tests" );
+testEqual( is_switch( _B ) == is_numeric( _B ) && is_switch( _I ) == is_numeric( _I ) &&
+	is_switch( _R ) == is_numeric( _R ) && is_switch( _S ) == is_numeric( _S ) &&
+	is_switch( c ) == is_numeric( c ), true, "is_switch - numeric type tests" );
+testEqual( !is_printable( _N ) && is_printable( _B ) && is_printable( _I ) && is_printable( _R ) &&
+	is_printable( _S ) && !is_printable( _F ) && !is_printable( _C ) && is_printable( _O ), true, "is_printable - basic tests" );
 
 	section( "type_*" );
 
