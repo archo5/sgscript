@@ -85,6 +85,7 @@ print( "\n\n-- TYPES --\n" );
 //
 
 	section( "is_* - strict" );
+var is_null_error_args = "[W:is_null: 1 argument expected]";
 var _N = null, _B = true, _I = 1, _R = 1.0, _S = "1", _F = section, _C = print, _O = [];
 testEqual( is_null( _N ) && !is_null( _B ) && !is_null( _I ) && !is_null( _R ) &&
 	!is_null( _S ) && !is_null( _F ) && !is_null( _C ) && !is_null( _O ), true, "is_null - all tests" );
@@ -102,8 +103,17 @@ testEqual( !is_cfunc( _N ) && !is_cfunc( _B ) && !is_cfunc( _I ) && !is_cfunc( _
 	!is_cfunc( _S ) && !is_cfunc( _F ) && is_cfunc( _C ) && !is_cfunc( _O ), true, "is_cfunc - all tests" );
 testEqual( !is_object( _N ) && !is_object( _B ) && !is_object( _I ) && !is_object( _R ) && 
 	!is_object( _S ) && !is_object( _F ) && !is_object( _C ) && is_object( _O ), true, "is_object - all tests" );
+ERRORS = ""; testEqual( is_null(), null, "is_null - no arguments" ); testEqual( ERRORS, is_null_error_args );
+ERRORS = ""; testEqual( is_null( _N, _B ), null, "is_null - too many arguments" ); testEqual( ERRORS, is_null_error_args );
 
 	section( "is_* - convertible" );
+testEqual( !is_numeric( _N ) && is_numeric( _B ) && is_numeric( _I ) && is_numeric( _R ) &&
+	!is_numeric( _F ) && !is_numeric( _C ) && !is_numeric( _O ), true, "is_numeric - basic tests" );
+testEqual( is_numeric( _S ), true, "is_numeric - numeric string" );
+testEqual( is_numeric( c ), false, "is_numeric - non-numeric string" );
+testEqual( is_numeric( "1E+2" ) && is_numeric( "-123.456" ) && is_numeric( "0x7f" ) &&
+	is_numeric( "0b101" ) && is_numeric( "01234" ) && is_numeric( "0o427" ), true, "is_numeric - extra numeric formats" );
+
 	section( "type_*" );
 
 

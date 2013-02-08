@@ -988,6 +988,21 @@ static SGS_INLINE int stdlib_isoneof( char c, char* from, int fsize )
 	return FALSE;
 }
 
+/* move this to other usage spots? */
+typedef union intreal_s
+{
+	sgs_Integer i;
+	sgs_Real r;
+}
+intreal_t;
+
+static int stdlib_numericstring( const char* str, int32_t size )
+{
+	intreal_t out;
+	const char* ostr = str;
+	return util_strtonum( &str, str + size, &out.i, &out.r ) != 0 && str != ostr;
+}
+
 
 #define sgsfNO_REV_INDEX 1
 #define sgsfSTRICT_RANGES 2
@@ -1197,11 +1212,14 @@ static int sgsstd_ftime( SGS_CTX )
 
 /* utils */
 
-#define typechk_func( N, T ) \
-static int sgsstd_##N( SGS_CTX ){ \
+#define EXPECT_ONEARG( N ) \
 	if( sgs_StackSize( C ) != 1 ){ \
 		sgs_Printf( C, SGS_WARNING, -1, #N ": 1 argument expected" ); \
-		return 0;} \
+		return 0;}
+
+#define typechk_func( N, T ) \
+static int sgsstd_##N( SGS_CTX ){ \
+	EXPECT_ONEARG( N ) \
 	sgs_PushBool( C, sgs_StackItem( C, 0 )->type == T ); \
 	return 1;}
 
@@ -1215,6 +1233,25 @@ typechk_func( is_cfunc, SVT_CFUNC )
 typechk_func( is_object, SVT_OBJECT )
 
 #undef typechk_func
+
+static int sgsstd_is_numeric( SGS_CTX )
+{
+	int res;
+	sgs_Variable* var;
+	EXPECT_ONEARG( is_numeric )
+
+	var = sgs_StackItem( C, 0 );
+	if( var->type == SVT_NULL || var->type == SVT_FUNC || var->type == SVT_CFUNC || var->type == SVT_OBJECT )
+	{
+		sgs_PushBool( C, FALSE );
+		return 1;
+	}
+
+	res = var->type != SVT_STRING || stdlib_numericstring( var_cstr( var ), var->data.S->size );
+	sgs_PushBool( C, res );
+
+	return 1;
+}
 
 
 static int sgsstd_typeof( SGS_CTX )
@@ -1282,6 +1319,7 @@ void* regfuncs[] =
 	/* utils */
 	FN( is_null ), FN( is_bool ), FN( is_int ), FN( is_real ),
 	FN( is_string ), FN( is_func ), FN( is_cfunc ), FN( is_object ),
+	FN( is_numeric ),
 	FN( typeof ),
 	FN( eval ),
 	FN( sys_errorstate ),
