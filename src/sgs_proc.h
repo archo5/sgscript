@@ -152,6 +152,7 @@ void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len );
 void var_destroy_object( SGS_CTX, object_t* O );
 #define sgsVM_VarCreateString var_create_str
 #define sgsVM_VarDestroyObject var_destroy_object
+int vm_convert_stack( SGS_CTX, int item, int type );
 
 
 int sgsVM_VarSize( sgs_Variable* var );

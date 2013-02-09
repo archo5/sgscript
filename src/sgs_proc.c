@@ -599,6 +599,7 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type )
 	else if( type == SVT_NULL )
 	{
 		VAR_RELEASE( var );
+		var->type = SVT_NULL;
 		return SGS_SUCCESS;
 	}
 
@@ -612,16 +613,21 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type )
 		case SVT_REAL: sop = SOP_TOREAL; break;
 		case SVT_STRING: sop = SOP_TOSTRING; break;
 		default:
-			return SGS_ENOTFND;
+			ret = SGS_ENOTSUP;
+			goto ending;
 		}
+
 		stk_push( C, var );
 		ret = obj_exec( C, sop, var->data.O, 1 );
-		cvar = *stk_getpos( C, -1 );
-		stk_pop1nr( C );
-		stk_pop1( C );
-		VAR_RELEASE( var );
-		*var = cvar;
-		return ret;
+		if( ret == SGS_SUCCESS )
+		{
+			cvar = *stk_getpos( C, -1 );
+			stk_pop1nr( C );
+			stk_pop1( C );
+		}
+		else
+			stk_pop1( C );
+		goto ending;
 	}
 
 	cvar.type = type;
@@ -632,19 +638,21 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type )
 	case SVT_REAL: cvar.data.R = var_getreal( C, var ); ret = SGS_SUCCESS; break;
 	case SVT_STRING: ret = init_var_string( C, &cvar, var ); break;
 	default:
-		return SGS_ENOTSUP;
+		goto ending;
 	}
 
+ending:
+	VAR_RELEASE( var );
+
 	if( ret == SGS_SUCCESS )
-	{
-		VAR_RELEASE( var );
 		*var = cvar;
-	}
+	else
+		var->type = SVT_NULL;
 
 	return ret;
 }
 
-static int vm_convert_stack( SGS_CTX, int item, int type )
+int vm_convert_stack( SGS_CTX, int item, int type )
 {
 	int ret;
 	sgs_Variable var;

@@ -257,7 +257,7 @@ static int sgsstd_array_tostring( SGS_CTX, sgs_VarObj* data )
 			sgs_PushString( C, "," );
 	}
 	sgs_PushString( C, "]" );
-	return sgs_StringMultiConcat( C, cnt * 2 + 1 );
+	return sgs_StringMultiConcat( C, cnt * 2 + 1 + !cnt );
 }
 
 static int sgsstd_array_tostring_UNUSED( SGS_CTX, sgs_VarObj* data )
@@ -1274,7 +1274,7 @@ static int sgsstd_is_callable( SGS_CTX )
 {
 	int res;
 	sgs_Variable* var;
-	EXPECT_ONEARG( is_numeric )
+	EXPECT_ONEARG( is_callable )
 
 	var = sgs_StackItem( C, 0 );
 
@@ -1295,7 +1295,7 @@ static int sgsstd_is_switch( SGS_CTX )
 {
 	int res;
 	sgs_Variable* var;
-	EXPECT_ONEARG( is_numeric )
+	EXPECT_ONEARG( is_switch )
 
 	var = sgs_StackItem( C, 0 );
 
@@ -1319,7 +1319,7 @@ static int sgsstd_is_printable( SGS_CTX )
 {
 	int res;
 	sgs_Variable* var;
-	EXPECT_ONEARG( is_numeric )
+	EXPECT_ONEARG( is_printable )
 
 	var = sgs_StackItem( C, 0 );
 
@@ -1333,6 +1333,30 @@ static int sgsstd_is_printable( SGS_CTX )
 		res = TRUE;
 
 	sgs_PushBool( C, res );
+	return 1;
+}
+
+
+static int sgsstd_type_get( SGS_CTX )
+{
+	EXPECT_ONEARG( type_get )
+
+	sgs_PushInt( C, sgs_StackItem( C, 0 )->type );
+	return 1;
+}
+
+static int sgsstd_type_cast( SGS_CTX )
+{
+	int argc;
+	sgs_Integer ty;
+
+	argc = sgs_StackSize( C );
+	if( argc < 1 || argc > 2 ||
+		!stdlib_toint( C, 1, &ty ) )
+		STDLIB_WARN( "type_cast() - unexpected arguments; function expects 2 arguments: any, int" );
+
+	vm_convert_stack( C, 0, ty );
+	sgs_Pop( C, 1 );
 	return 1;
 }
 
@@ -1381,6 +1405,13 @@ static int sgsstd_gc_collect( SGS_CTX )
 }
 
 
+typedef struct regiconst_s
+{
+	const char* name;
+	sgs_Integer val;
+}
+regiconst_t;
+
 /* register all */
 #define FN( name ) #name, sgsstd_##name
 void* regfuncs[] =
@@ -1403,28 +1434,52 @@ void* regfuncs[] =
 	FN( is_null ), FN( is_bool ), FN( is_int ), FN( is_real ),
 	FN( is_string ), FN( is_func ), FN( is_cfunc ), FN( is_object ),
 	FN( is_numeric ), FN( is_callable ), FN( is_switch ), FN( is_printable ),
-	FN( typeof ),
-	FN( eval ),
-	FN( sys_errorstate ),
-	FN( sys_abort ),
+	FN( type_get ), FN( type_cast ),
+	FN( typeof ), FN( eval ),
+	FN( sys_errorstate ), FN( sys_abort ),
 	FN( gc_collect ),
 	NULL
 };
 
+regiconst_t regiconsts[] =
+{
+	{ "fNO_REV_INDEX", sgsfNO_REV_INDEX },
+	{ "fSTRICT_RANGES", sgsfSTRICT_RANGES },
+	{ "fLEFT", sgsfLEFT },
+	{ "fRIGHT", sgsfRIGHT },
+
+	{ "tNULL", SVT_NULL },
+	{ "tBOOL", SVT_BOOL },
+	{ "tINT", SVT_INT },
+	{ "tREAL", SVT_REAL },
+	{ "tSTRING", SVT_STRING },
+	{ "tFUNC", SVT_FUNC },
+	{ "tCFUNC", SVT_CFUNC },
+	{ "tOBJECT", SVT_OBJECT },
+	{ "t_COUNT", SVT__COUNT },
+};
+
 int sgsVM_RegStdLibs( SGS_CTX )
 {
-	void** fn = regfuncs;
-	while( *fn )
 	{
-		sgs_PushCFunction( C, (sgs_CFunc) fn[ 1 ] );
-		sgs_SetGlobal( C, (const char*) fn[ 0 ] );
-		fn += 2;
+		void** fn = regfuncs;
+		while( *fn )
+		{
+			sgs_PushCFunction( C, (sgs_CFunc) fn[ 1 ] );
+			sgs_SetGlobal( C, (const char*) fn[ 0 ] );
+			fn += 2;
+		}
 	}
 
-	sgs_PushInt( C, sgsfNO_REV_INDEX ); sgs_SetGlobal( C, "fNO_REV_INDEX" );
-	sgs_PushInt( C, sgsfSTRICT_RANGES ); sgs_SetGlobal( C, "fSTRICT_RANGES" );
-	sgs_PushInt( C, sgsfLEFT ); sgs_SetGlobal( C, "fLEFT" );
-	sgs_PushInt( C, sgsfRIGHT ); sgs_SetGlobal( C, "fRIGHT" );
+	{
+		regiconst_t* cur = regiconsts, *rcend = regiconsts + ( sizeof( regiconsts ) / sizeof( regiconsts[0] ) );
+		while( cur < rcend )
+		{
+			sgs_PushInt( C, cur->val );
+			sgs_SetGlobal( C, cur->name );
+			cur++;
+		}
+	}
 
 	C->array_func = &sgsstd_array;
 	C->dict_func = &sgsstd_dict;

@@ -60,6 +60,7 @@ typedef void (*sgs_PrintFunc) ( void* /* ctx */, int /* type */, int /* line */,
 #define SVT_FUNC    5  /* function data */
 #define SVT_CFUNC   6  /* C function */
 #define SVT_OBJECT  7  /* variable-length binary data */
+#define SVT__COUNT  8  /* number of available types */
 
 /* - object data */
 typedef struct sgs_ObjData sgs_VarObj;
