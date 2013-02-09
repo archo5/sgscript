@@ -558,6 +558,7 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 {
 	FTNode* node, *cur;
 	TokenList at = begin;
+	char prev = 0;
 
 	FUNC_BEGIN;
 
@@ -623,6 +624,7 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 		{
 			if( *at == '(' || *at == '[' )
 			{
+				int isidx = prev == ST_IDENT || prev == ')' || prev == ']';
 				char cend = *at == '(' ? ')' : ']';
 				char endcstr[ 3 ] = { cend, ',', 0 };
 				TokenList pat, expend;
@@ -636,6 +638,11 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 				{
 					do
 					{
+						if( !isidx && *at == cend )
+						{
+							at = sgsT_Next( at );
+							break;
+						}
 						expend = detect_exp( C, at, end, endcstr, 0 );
 						if( !expend )
 						{
@@ -749,6 +756,7 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 			return NULL;
 		}
 
+		prev = *at;
 		at = sgsT_Next( at );
 	}
 
