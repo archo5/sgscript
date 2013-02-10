@@ -30,6 +30,24 @@ ERRORS = ""; testEqual( string_cut( a, -20, 20, fSTRICT_RANGES ), null, "string_
 ERRORS = ""; testEqual( string_cut( a, 0, 13, fSTRICT_RANGES ), null, "string_cut - illegal subtle range overflow" ); testEqual( ERRORS, string_cut_error_range );
 ERRORS = ""; testEqual( string_cut( a, -5, -3, fNO_REV_INDEX ), null, "string_cut - illegal negative indices" ); testEqual( ERRORS, string_cut_error_indices );
 
+	section( "string_part" );
+var string_part_error_args = "[W:string_part() - unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]]";
+var string_part_error_range = "[W:string_part() - invalid character range]";
+var string_part_error_indices = "[W:string_part() - detected negative indices]";
+testEqual( string_part( a, 3, 3 ), "dom", "string_part - basic cutting" );
+testEqual( string_part( a, -10, -6 ), "dom str", "string_part - negative indices" );
+testEqual( string_part( a, 0, 20 ), a, "string_part - expected positive range overflow" );
+testEqual( string_part( a, -20, -1 ), "rando", "string_part - expected negative range overflow" );
+testEqual( string_part( a, 3, 3, fSTRICT_RANGES | fNO_REV_INDEX ), "dom", "string_part - basic cutting" );
+testEqual( string_part( a, 7 ), 'string', "string_part - cutting to end" );
+ERRORS = ""; testEqual( string_part( a ), null, "string_part - bad argument count" ); testEqual( ERRORS, string_part_error_args );
+ERRORS = ""; testEqual( string_part( null, 0, 10 ), null, "string_part - string conversion error" ); testEqual( ERRORS, string_part_error_args );
+ERRORS = ""; testEqual( string_part( a, 0, 20, fSTRICT_RANGES ), null, "string_part - illegal positive range overflow" ); testEqual( ERRORS, string_part_error_range );
+ERRORS = ""; testEqual( string_part( a, -20, -1, fSTRICT_RANGES ), null, "string_part - illegal negative range overflow" ); testEqual( ERRORS, string_part_error_range );
+ERRORS = ""; testEqual( string_part( a, -20, 20, fSTRICT_RANGES ), null, "string_part - illegal both range overflow" ); testEqual( ERRORS, string_part_error_range );
+ERRORS = ""; testEqual( string_part( a, 0, 14, fSTRICT_RANGES ), null, "string_part - illegal subtle range overflow" ); testEqual( ERRORS, string_part_error_range );
+ERRORS = ""; testEqual( string_part( a, -5, -3, fNO_REV_INDEX ), null, "string_part - illegal negative indices" ); testEqual( ERRORS, string_part_error_indices );
+
 	section( "string_reverse" );
 var string_reverse_error_args = "[W:string_reverse() - unexpected arguments; function expects 1 argument: string]";
 testEqual( string_reverse( a ), "gnirts modnar", "string_reverse - output (odd number of chars)" );

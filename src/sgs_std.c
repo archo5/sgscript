@@ -1062,6 +1062,41 @@ static int sgsstd_string_cut( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_string_part( SGS_CTX )
+{
+	int argc;
+	char* str;
+	sgs_Integer size, flags = 0, i1, i2;
+
+	argc = sgs_StackSize( C );
+	if( argc < 2 || argc > 4 ||
+		!stdlib_tostring( C, 0, &str, &size ) ||
+		!stdlib_toint( C, 1, &i1 ) ||
+		( i2 = size - i1 ) < 0 || /* comparison should always fail */
+		( argc >= 3 && !stdlib_toint( C, 2, &i2 ) ) ||
+		( argc >= 4 && !stdlib_toint( C, 3, &flags ) ) )
+		STDLIB_WARN( "string_part() - unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]" );
+
+	if( FLAG( flags, sgsfNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
+		STDLIB_WARN( "string_part() - detected negative indices" );
+
+	i1 = i1 < 0 ? size + i1 : i1;
+	i2 = i2 < 0 ? size + i2 : i2;
+	if( FLAG( flags, sgsfSTRICT_RANGES ) && ( i1 < 0 || i1 + i2 < 0 || i2 < 0 || i1 >= size || i1 + i2 > size ) )
+		STDLIB_WARN( "string_part() - invalid character range" );
+
+	if( i2 <= 0 || i1 >= size || i1 + i2 < 0 )
+		sgs_PushStringBuf( C, "", 0 );
+	else
+	{
+		i2 += i1 - 1;
+		i1 = MAX( 0, MIN( i1, size - 1 ) );
+		i2 = MAX( 0, MIN( i2, size - 1 ) );
+		sgs_PushStringBuf( C, str + i1, i2 - i1 + 1 );
+	}
+	return 1;
+}
+
 static int sgsstd_string_reverse( SGS_CTX )
 {
 	int argc;
@@ -1426,8 +1461,8 @@ void* regfuncs[] =
 	/* I/O */
 	FN( print ),
 	/* string */
-	FN( string_cut ), FN( string_reverse ), FN( string_pad ), FN( string_repeat ),
-	FN( string_count ), FN( string_trim ),
+	FN( string_cut ), FN( string_part ), FN( string_reverse ), FN( string_pad ),
+	FN( string_repeat ), FN( string_count ), FN( string_trim ),
 	/* OS */
 	FN( ftime ),
 	/* utils */
