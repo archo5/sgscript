@@ -3,15 +3,9 @@
 #include <stdio.h>
 #include <math.h>
 
-#include "sgscript.h"
-#include "sgs_proc.h"
+#include "sgs_std.h"
 #include "sgs_ctx.h"
 
-
-#define CHKARGS( cnt ) \
-	if( sgs_StackSize( C ) != cnt ) { \
-		sgs_Printf( C, SGS_ERROR, -1, "Incorrect number of arguments, need " #cnt "." ); \
-		return 0; }
 
 /* Containers */
 
@@ -935,27 +929,7 @@ static int sgsstd_print( SGS_CTX )
 	String
 */
 
-/* move this to other usage spots? */
-typedef union intreal_s
-{
-	sgs_Integer i;
-	sgs_Real r;
-}
-intreal_t;
-
-static SGS_INLINE int stdlib_is_numericstring( const char* str, int32_t size )
-{
-	intreal_t out;
-	const char* ostr = str;
-	return util_strtonum( &str, str + size, &out.i, &out.r ) != 0 && str != ostr;
-}
-
-#define FLAG( where, which ) (((where)&(which))!=0)
-
-#define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, -1, warn ); return 0; }
-#define STDLIB_ERROR( err ) { sgs_Printf( C, SGS_ERROR, -1, err ); return 0; }
-
-static int stdlib_tostring( SGS_CTX, int arg, char** out, sgs_Integer* size )
+int stdlib_tostring( SGS_CTX, int arg, char** out, sgs_Integer* size )
 {
 	char* str;
 	sgs_Variable* var = sgs_StackItem( C, arg );
@@ -967,7 +941,7 @@ static int stdlib_tostring( SGS_CTX, int arg, char** out, sgs_Integer* size )
 	return str != NULL;
 }
 
-static int stdlib_toint( SGS_CTX, int arg, sgs_Integer* out )
+int stdlib_toint( SGS_CTX, int arg, sgs_Integer* out )
 {
 	sgs_Integer i;
 	sgs_Variable* var = sgs_StackItem( C, arg );
@@ -992,7 +966,7 @@ static int stdlib_toint( SGS_CTX, int arg, sgs_Integer* out )
 	return TRUE;
 }
 
-static int stdlib_tobool( SGS_CTX, int arg, int* out )
+int stdlib_tobool( SGS_CTX, int arg, int* out )
 {
 	int i;
 	sgs_Variable* var = sgs_StackItem( C, arg );
@@ -1002,18 +976,6 @@ static int stdlib_tobool( SGS_CTX, int arg, int* out )
 	if( out )
 		*out = i;
 	return TRUE;
-}
-
-static SGS_INLINE int stdlib_isoneof( char c, char* from, int fsize )
-{
-	char* fend = from + fsize;
-	while( from < fend )
-	{
-		if( c == *from )
-			return TRUE;
-		from++;
-	}
-	return FALSE;
 }
 
 
@@ -1277,6 +1239,10 @@ static int sgsstd_string_trim( SGS_CTX )
 	return 1;
 }
 
+void sgs_LoadLib_String( SGS_CTX )
+{
+}
+
 
 /* OS */
 
@@ -1289,149 +1255,6 @@ static int sgsstd_ftime( SGS_CTX )
 
 /* utils */
 
-#define EXPECT_ONEARG( N ) \
-	if( sgs_StackSize( C ) != 1 ){ \
-		sgs_Printf( C, SGS_WARNING, -1, #N ": 1 argument expected" ); \
-		return 0;}
-
-#define typechk_func( N, T ) \
-static int sgsstd_##N( SGS_CTX ){ \
-	EXPECT_ONEARG( N ) \
-	sgs_PushBool( C, sgs_StackItem( C, 0 )->type == T ); \
-	return 1;}
-
-typechk_func( is_null, SVT_NULL )
-typechk_func( is_bool, SVT_BOOL )
-typechk_func( is_int, SVT_INT )
-typechk_func( is_real, SVT_REAL )
-typechk_func( is_string, SVT_STRING )
-typechk_func( is_func, SVT_FUNC )
-typechk_func( is_cfunc, SVT_CFUNC )
-typechk_func( is_object, SVT_OBJECT )
-
-#undef typechk_func
-
-static int sgsstd_is_numeric( SGS_CTX )
-{
-	int res;
-	sgs_Variable* var;
-	EXPECT_ONEARG( is_numeric )
-
-	var = sgs_StackItem( C, 0 );
-
-	if( var->type == SVT_NULL || var->type == SVT_FUNC || var->type == SVT_CFUNC || var->type == SVT_OBJECT )
-		res = FALSE;
-
-	else
-		res = var->type != SVT_STRING || stdlib_is_numericstring( var_cstr( var ), var->data.S->size );
-
-	sgs_PushBool( C, res );
-	return 1;
-}
-
-#define OBJECT_HAS_IFACE( outVar, objVar, iFace ) \
-	{ void** ptr = objVar->data.O->iface; outVar = 0; \
-	while( *ptr ){ if( *ptr == iFace ){ outVar = 1; \
-		break; } ptr += 2; } }
-
-static int sgsstd_is_callable( SGS_CTX )
-{
-	int res;
-	sgs_Variable* var;
-	EXPECT_ONEARG( is_callable )
-
-	var = sgs_StackItem( C, 0 );
-
-	if( var->type != SVT_FUNC && var->type != SVT_CFUNC && var->type != SVT_OBJECT )
-		res = FALSE;
-
-	else if( var->type == SVT_OBJECT )
-		OBJECT_HAS_IFACE( res, var, SOP_CALL )
-
-	else
-		res = TRUE;
-
-	sgs_PushBool( C, res );
-	return 1;
-}
-
-static int sgsstd_is_switch( SGS_CTX )
-{
-	int res;
-	sgs_Variable* var;
-	EXPECT_ONEARG( is_switch )
-
-	var = sgs_StackItem( C, 0 );
-
-	if( var->type == SVT_FUNC || var->type == SVT_CFUNC )
-		res = FALSE;
-
-	else if( var->type == SVT_STRING )
-		res = stdlib_is_numericstring( var_cstr( var ), var->data.S->size );
-
-	else if( var->type == SVT_OBJECT )
-		OBJECT_HAS_IFACE( res, var, SOP_TOBOOL )
-
-	else
-		res = TRUE;
-
-	sgs_PushBool( C, res );
-	return 1;
-}
-
-static int sgsstd_is_printable( SGS_CTX )
-{
-	int res;
-	sgs_Variable* var;
-	EXPECT_ONEARG( is_printable )
-
-	var = sgs_StackItem( C, 0 );
-
-	if( var->type == SVT_NULL || var->type == SVT_FUNC || var->type == SVT_CFUNC )
-		res = FALSE;
-
-	else if( var->type == SVT_OBJECT )
-		OBJECT_HAS_IFACE( res, var, SOP_TOSTRING )
-
-	else
-		res = TRUE;
-
-	sgs_PushBool( C, res );
-	return 1;
-}
-
-
-static int sgsstd_type_get( SGS_CTX )
-{
-	EXPECT_ONEARG( type_get )
-
-	sgs_PushInt( C, sgs_StackItem( C, 0 )->type );
-	return 1;
-}
-
-static int sgsstd_type_cast( SGS_CTX )
-{
-	int argc;
-	sgs_Integer ty;
-
-	argc = sgs_StackSize( C );
-	if( argc < 1 || argc > 2 ||
-		!stdlib_toint( C, 1, &ty ) )
-		STDLIB_WARN( "type_cast() - unexpected arguments; function expects 2 arguments: any, int" );
-
-	vm_convert_stack( C, 0, ty );
-	sgs_Pop( C, 1 );
-	return 1;
-}
-
-
-static int sgsstd_typeof( SGS_CTX )
-{
-	CHKARGS( 1 );
-	sgs_TypeOf( C );
-	return 1;
-}
-
 static int sgsstd_eval( SGS_CTX )
 {
 	int rvc = 0;
@@ -1441,6 +1264,20 @@ static int sgsstd_eval( SGS_CTX )
 	var = sgs_StackItem( C, 0 );
 	sgs_EvalBuffer( C, var_cstr( var ), var->data.S->size, &rvc );
 	return rvc;
+}
+
+static int sgsstd_load_builtin( SGS_CTX )
+{
+	char* str;
+	CHKARGS( 1 );
+	str = sgs_ToString( C, 0 );
+
+	if( strcmp( str, "string" ) == 0 )
+		sgs_LoadLib_String( C );
+	else if( strcmp( str, "type" ) == 0 )
+		sgs_LoadLib_Type( C );
+
+	return 0;
 }
 
 static int sgsstd_sys_errorstate( SGS_CTX )
@@ -1469,19 +1306,12 @@ static int sgsstd_gc_collect( SGS_CTX )
 }
 
 
-typedef struct regiconst_s
-{
-	const char* name;
-	sgs_Integer val;
-}
-regiconst_t;
-
 /* register all */
-#define FN( name ) #name, sgsstd_##name
-void* regfuncs[] =
+#define FN( name ) { #name, sgsstd_##name }
+sgs_RegFuncConst regfuncs[] =
 {
 	/* containers */
-	FN( array ), "class", sgsstd_class, FN( closure ),
+	FN( array ), { "class", sgsstd_class }, FN( closure ),
 	FN( isset ), FN( unset ),
 	/* math */
 	FN( abs ), FN( sqrt ), FN( log ), FN( log10 ), FN( exp ), FN( floor ), FN( ceil ),
@@ -1495,58 +1325,48 @@ void* regfuncs[] =
 	/* OS */
 	FN( ftime ),
 	/* utils */
-	FN( is_null ), FN( is_bool ), FN( is_int ), FN( is_real ),
-	FN( is_string ), FN( is_func ), FN( is_cfunc ), FN( is_object ),
-	FN( is_numeric ), FN( is_callable ), FN( is_switch ), FN( is_printable ),
-	FN( type_get ), FN( type_cast ),
-	FN( typeof ), FN( eval ),
+	FN( eval ), FN( load_builtin ),
 	FN( sys_errorstate ), FN( sys_abort ),
 	FN( gc_collect ),
-	NULL
 };
 
-regiconst_t regiconsts[] =
+sgs_RegIntConst regiconsts[] =
 {
 	{ "fNO_REV_INDEX", sgsfNO_REV_INDEX },
 	{ "fSTRICT_RANGES", sgsfSTRICT_RANGES },
 	{ "fLEFT", sgsfLEFT },
 	{ "fRIGHT", sgsfRIGHT },
-
-	{ "tNULL", SVT_NULL },
-	{ "tBOOL", SVT_BOOL },
-	{ "tINT", SVT_INT },
-	{ "tREAL", SVT_REAL },
-	{ "tSTRING", SVT_STRING },
-	{ "tFUNC", SVT_FUNC },
-	{ "tCFUNC", SVT_CFUNC },
-	{ "tOBJECT", SVT_OBJECT },
-	{ "t_COUNT", SVT__COUNT },
 };
 
 int sgsVM_RegStdLibs( SGS_CTX )
 {
-	{
-		void** fn = regfuncs;
-		while( *fn )
-		{
-			sgs_PushCFunction( C, (sgs_CFunc) fn[ 1 ] );
-			sgs_SetGlobal( C, (const char*) fn[ 0 ] );
-			fn += 2;
-		}
-	}
-
-	{
-		regiconst_t* cur = regiconsts, *rcend = regiconsts + ( sizeof( regiconsts ) / sizeof( regiconsts[0] ) );
-		while( cur < rcend )
-		{
-			sgs_PushInt( C, cur->val );
-			sgs_SetGlobal( C, cur->name );
-			cur++;
-		}
-	}
+	sgs_RegIntConsts( C, regiconsts, ARRAY_SIZE( regiconsts ) );
+	sgs_RegFuncConsts( C, regfuncs, ARRAY_SIZE( regfuncs ) );
 
 	C->array_func = &sgsstd_array;
 	C->dict_func = &sgsstd_dict;
 
 	return SGS_SUCCESS;
+}
+
+void sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size )
+{
+	const sgs_RegFuncConst* last = list + size;
+	while( list < last )
+	{
+		sgs_PushCFunction( C, list->value );
+		sgs_SetGlobal( C, list->name );
+		list++;
+	}
+}
+
+void sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size )
+{
+	const sgs_RegIntConst* last = list + size;
+	while( list < last )
+	{
+		sgs_PushInt( C, list->value );
+		sgs_SetGlobal( C, list->name );
+		list++;
+	}
 }

@@ -120,6 +120,28 @@ static SGS_INLINE int sgs_EvalString( SGS_CTX, const char* str, int* rvc ){ retu
 int             sgs_Stat( SGS_CTX, int type );
 
 
+/* Additional libraries */
+
+void sgs_LoadLib_String( SGS_CTX );
+void sgs_LoadLib_Type( SGS_CTX );
+
+typedef struct _sgs_RegFuncConst
+{
+	char* name;
+	sgs_CFunc value;
+}
+sgs_RegFuncConst;
+void sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size );
+
+typedef struct _sgs_RegIntConst
+{
+	char* name;
+	sgs_Integer value;
+}
+sgs_RegIntConst;
+void sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size );
+
+
 /* The core interface */
 
 int sgs_PushNull( SGS_CTX );

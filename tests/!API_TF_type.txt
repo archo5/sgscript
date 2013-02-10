@@ -1,0 +1,87 @@
+
+global ERRORS;
+global tests_failed, tests_ran;
+
+//
+function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
+
+
+//
+print( "\n\n-- TYPES --\n" );
+load_builtin( "type" );
+//
+
+var a = "random string";
+var b = "WHAT";
+var c = "banana";
+var d = " \t\r\n \t\r\n spacy \t\r\n \t\r\n ";
+
+	section( "is_* - strict" );
+var is_null_error_args = "[W:is_null: 1 argument expected]";
+var _N = null, _B = true, _I = 1, _R = 1.0, _S = "1", _F = section, _C = print, _O = [];
+testEqual( is_null( _N ) && !is_null( _B ) && !is_null( _I ) && !is_null( _R ) &&
+	!is_null( _S ) && !is_null( _F ) && !is_null( _C ) && !is_null( _O ), true, "is_null - all tests" );
+testEqual( !is_bool( _N ) && is_bool( _B ) && !is_bool( _I ) && !is_bool( _R ) &&
+	!is_bool( _S ) && !is_bool( _F ) && !is_bool( _C ) && !is_bool( _O ), true, "is_bool - all tests" );
+testEqual( !is_int( _N ) && !is_int( _B ) && is_int( _I ) && !is_int( _R ) &&
+	!is_int( _S ) && !is_int( _F ) && !is_int( _C ) && !is_int( _O ), true, "is_int - all tests" );
+testEqual( !is_real( _N ) && !is_real( _B ) && !is_real( _I ) && is_real( _R ) &&
+	!is_real( _S ) && !is_real( _F ) && !is_real( _C ) && !is_real( _O ), true, "is_real - all tests" );
+testEqual( !is_string( _N ) && !is_string( _B ) && !is_string( _I ) && !is_string( _R ) && 
+	is_string( _S ) && !is_string( _F ) && !is_string( _C ) && !is_string( _O ), true, "is_string - all tests" );
+testEqual( !is_func( _N ) && !is_func( _B ) && !is_func( _I ) && !is_func( _R ) &&
+	!is_func( _S ) && is_func( _F ) && !is_func( _C ) && !is_func( _O ), true, "is_func - all tests" );
+testEqual( !is_cfunc( _N ) && !is_cfunc( _B ) && !is_cfunc( _I ) && !is_cfunc( _R ) &&
+	!is_cfunc( _S ) && !is_cfunc( _F ) && is_cfunc( _C ) && !is_cfunc( _O ), true, "is_cfunc - all tests" );
+testEqual( !is_object( _N ) && !is_object( _B ) && !is_object( _I ) && !is_object( _R ) && 
+	!is_object( _S ) && !is_object( _F ) && !is_object( _C ) && is_object( _O ), true, "is_object - all tests" );
+ERRORS = ""; testEqual( is_null(), null, "is_null - no arguments" ); testEqual( ERRORS, is_null_error_args );
+ERRORS = ""; testEqual( is_null( _N, _B ), null, "is_null - too many arguments" ); testEqual( ERRORS, is_null_error_args );
+
+	section( "is_* - convertible" );
+testEqual( !is_numeric( _N ) && is_numeric( _B ) && is_numeric( _I ) && is_numeric( _R ) &&
+	!is_numeric( _F ) && !is_numeric( _C ) && !is_numeric( _O ), true, "is_numeric - basic tests" );
+testEqual( is_numeric( _S ), true, "is_numeric - numeric string" );
+testEqual( is_numeric( c ), false, "is_numeric - non-numeric string" );
+testEqual( is_numeric( "1E+2" ) && is_numeric( "-123.456" ) && is_numeric( "0x7f" ) &&
+	is_numeric( "0b101" ) && is_numeric( "01234" ) && is_numeric( "0o427" ), true, "is_numeric - extra numeric formats" );
+testEqual( !is_callable( _N ) && !is_callable( _B ) && !is_callable( _I ) && !is_callable( _R ) &&
+	!is_callable( _S ) && is_callable( _F ) && is_callable( _C ), true, "is_callable - basic tests" );
+testEqual( is_callable( _O ), false, "is_callable - non-callable object" );
+testEqual( is_callable( closure( print, _O ) ), true, "is_callable - callable object" );
+testEqual( is_switch( _N ) && is_switch( _O ) && !is_switch( closure( print, _O ) ), true, "is_switch - non-numeric type tests" );
+testEqual( is_switch( _B ) == is_numeric( _B ) && is_switch( _I ) == is_numeric( _I ) &&
+	is_switch( _R ) == is_numeric( _R ) && is_switch( _S ) == is_numeric( _S ) &&
+	is_switch( c ) == is_numeric( c ), true, "is_switch - numeric type tests" );
+testEqual( !is_printable( _N ) && is_printable( _B ) && is_printable( _I ) && is_printable( _R ) &&
+	is_printable( _S ) && !is_printable( _F ) && !is_printable( _C ) && is_printable( _O ), true, "is_printable - basic tests" );
+
+	section( "type_*" );
+testEqual( type_get( _N ) == tNULL && type_get( _B ) == tBOOL && type_get( _I ) == tINT &&
+	type_get( _R ) == tREAL && type_get( _S ) == tSTRING && type_get( _F ) == tFUNC &&
+	type_get( _C ) == tCFUNC && type_get( _O ) == tOBJECT, true, "type_get - basic tests" );
+var typenames = [ "null", "bool", "int", "real", "string", "func", "cfunc", "object" ];
+var srcvars = [ _N, _B, _I, _R, _S, _F, _C, _O ];
+var expect =
+[
+	tNULL, tNULL, tNULL, tNULL, tNULL, tNULL, tNULL, tNULL,
+	tBOOL, tBOOL, tBOOL, tBOOL, tBOOL, tBOOL, tBOOL, tBOOL,
+	tINT, tINT, tINT, tINT, tINT, tINT, tINT, tNULL,
+	tREAL, tREAL, tREAL, tREAL, tREAL, tREAL, tREAL, tNULL,
+	tSTRING, tSTRING, tSTRING, tSTRING, tSTRING, tSTRING, tSTRING, tSTRING,
+	tNULL, tNULL, tNULL, tNULL, tNULL, tFUNC, tNULL, tNULL,
+	tNULL, tNULL, tNULL, tNULL, tNULL, tNULL, tCFUNC, tNULL,
+	tNULL, tNULL, tNULL, tNULL, tNULL, tNULL, tNULL, tOBJECT,
+];
+for( var i = 0; i < t_COUNT; ++i )
+{
+	for( var j = 0; j < t_COUNT; ++j )
+	{
+		testEqual( type_get( type_cast( srcvars[ j ], i ) ), expect[ i * t_COUNT + j ], "type_cast test - " $ typenames[ j ] $ " -> " $ typenames[ i ] );
+	}
+}
+
+
+//
+print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );
+//
