@@ -85,6 +85,15 @@ testEqual( string_count( c, "ana", true ), 2, "string_count - overlapping matche
 ERRORS = ""; testEqual( string_count( c, "" ), null, "string_count - zero-length substring" ); testEqual( ERRORS, string_count_error_args );
 
 	section( "string_find" );
+var string_find_error_args = "[W:string_find() - unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [int]]";
+testEqual( string_find( a, "ran" ), 0, "string_find - 1 match at beginning" );
+testEqual( string_find( a, "ring" ), 9, "string_find - 1 match at end" );
+testEqual( string_find( a, "box" ), null, "string_find - no matches" );
+testEqual( string_find( c, "a", 2 ), 3, "string_find - matching offset" );
+testEqual( string_find( c, "na", 4 ), 4, "string_find - matching offset right at end" );
+ERRORS = ""; testEqual( string_find( c, "" ), null, "string_find - zero-length substring" ); testEqual( ERRORS, string_find_error_args );
+
+	section( "string_find_rev" );
 	section( "string_replace" );
 	section( "string_tolower" );
 	section( "string_toupper" );

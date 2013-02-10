@@ -1213,6 +1213,35 @@ static int sgsstd_string_count( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_string_find( SGS_CTX )
+{
+	int argc;
+	char* str, *sub, *strend, *ostr;
+	sgs_Integer size, subsize, from = 0;
+
+	argc = sgs_StackSize( C );
+	if( argc < 2 || argc > 3 ||
+		!stdlib_tostring( C, 0, &str, &size ) ||
+		!stdlib_tostring( C, 1, &sub, &subsize ) || subsize <= 0 ||
+		( argc == 3 && !stdlib_toint( C, 2, &from ) ) )
+		STDLIB_WARN( "string_find() - unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [int]" );
+
+	strend = str + size - subsize;
+	ostr = str;
+	str += from;
+	while( str <= strend )
+	{
+		if( strncmp( str, sub, subsize ) == 0 )
+		{
+			sgs_PushInt( C, str - ostr );
+			return 1;
+		}
+		str++;
+	}
+
+	return 0;
+}
+
 static int sgsstd_string_trim( SGS_CTX )
 {
 	int argc;
@@ -1462,7 +1491,7 @@ void* regfuncs[] =
 	FN( print ),
 	/* string */
 	FN( string_cut ), FN( string_part ), FN( string_reverse ), FN( string_pad ),
-	FN( string_repeat ), FN( string_count ), FN( string_trim ),
+	FN( string_repeat ), FN( string_count ), FN( string_find ), FN( string_trim ),
 	/* OS */
 	FN( ftime ),
 	/* utils */
