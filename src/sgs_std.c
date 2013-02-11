@@ -1062,3 +1062,14 @@ void sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size )
 		list++;
 	}
 }
+
+void sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
+{
+	const sgs_RegRealConst* last = list + size;
+	while( list < last )
+	{
+		sgs_PushReal( C, list->value );
+		sgs_SetGlobal( C, list->name );
+		list++;
+	}
+}

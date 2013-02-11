@@ -658,7 +658,8 @@ int vm_convert_stack( SGS_CTX, int item, int type )
 	sgs_Variable var;
 	var = *stk_getpos( C, item );
 	ret = vm_convert( C, &var, type );
-	*stk_getpos( C, item ) = var;
+	if( ret == SGS_SUCCESS )
+		*stk_getpos( C, item ) = var;
 	return ret;
 }
 

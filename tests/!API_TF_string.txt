@@ -96,6 +96,10 @@ testEqual( string_find( c, "na", 4 ), 4, "string_find - matching offset right at
 ERRORS = ""; testEqual( string_find( c, "" ), null, "string_find - zero-length substring" ); testEqual( ERRORS, string_find_error_args );
 
 	section( "string_find_rev" );
+var string_find_rev_error_args = "[W:string_find_rev() - unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [int]]";
+testEqual( string_find_rev( a, "ran" ), 0, "string_find_rev - 1 match at beginning" );
+testEqual( string_find_rev( a, "ring" ), 9, "string_find_rev - 1 match at end" );
+
 	section( "string_replace" );
 	section( "string_tolower" );
 	section( "string_toupper" );

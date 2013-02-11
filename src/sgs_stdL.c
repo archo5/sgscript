@@ -1,5 +1,8 @@
 
 
+/* for the constants... */
+#define _USE_MATH_DEFINES
+#undef __STRICT_ANSI__
 #include <math.h>
 
 #include "sgs_std.h"
@@ -37,6 +40,12 @@ MATHFUNC2( atan2 )
 MATHFUNC2( fmod )
 
 
+static const sgs_RegRealConst m_rconsts[] =
+{
+	{ "vPI", M_PI },
+	{ "vE", M_E },
+};
+
 #define FN( x ) { #x, sgsstd_##x }
 
 static const sgs_RegFuncConst m_fconsts[] =
@@ -48,6 +57,7 @@ static const sgs_RegFuncConst m_fconsts[] =
 
 void sgs_LoadLib_Math( SGS_CTX )
 {
+	sgs_RegRealConsts( C, m_rconsts, ARRAY_SIZE( m_rconsts ) );
 	sgs_RegFuncConsts( C, m_fconsts, ARRAY_SIZE( m_fconsts ) );
 }
 
@@ -264,7 +274,7 @@ static int sgsstd_string_find( SGS_CTX )
 
 	strend = str + size - subsize;
 	ostr = str;
-	str += from;
+	str += from >= 0 ? from : MAX( 0, size - from );
 	while( str <= strend )
 	{
 		if( strncmp( str, sub, subsize ) == 0 )
@@ -273,6 +283,34 @@ static int sgsstd_string_find( SGS_CTX )
 			return 1;
 		}
 		str++;
+	}
+
+	return 0;
+}
+
+static int sgsstd_string_find_rev( SGS_CTX )
+{
+	int argc;
+	char* str, *sub, *strend, *ostr;
+	sgs_Integer size, subsize, from = -1;
+
+	argc = sgs_StackSize( C );
+	if( argc < 2 || argc > 3 ||
+		!stdlib_tostring( C, 0, &str, &size ) ||
+		!stdlib_tostring( C, 1, &sub, &subsize ) || subsize <= 0 ||
+		( argc == 3 && !stdlib_toint( C, 2, &from ) ) )
+		STDLIB_WARN( "string_find_rev() - unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [int]" );
+
+	strend = str + size - subsize;
+	ostr = str;
+	str += from >= 0 ? MIN( from, size - subsize ) : size - subsize - from;
+	while( str >= ostr )
+	{
+		if( strncmp( str, sub, subsize ) == 0 )
+		{
+			sgs_PushInt( C, str - ostr );
+		}
+		str--;
 	}
 
 	return 0;
@@ -328,7 +366,7 @@ static const sgs_RegIntConst s_iconsts[] =
 static const sgs_RegFuncConst s_fconsts[] =
 {
 	FN( string_cut ), FN( string_part ), FN( string_reverse ), FN( string_pad ),
-	FN( string_repeat ), FN( string_count ), FN( string_find ),
+	FN( string_repeat ), FN( string_count ), FN( string_find ), FN( string_find_rev ),
 	FN( string_trim ),
 };
 

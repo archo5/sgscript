@@ -142,6 +142,14 @@ typedef struct _sgs_RegIntConst
 sgs_RegIntConst;
 void sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size );
 
+typedef struct _sgs_RegRealConst
+{
+	char* name;
+	sgs_Real value;
+}
+sgs_RegRealConst;
+void sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size );
+
 
 /* The core interface */
 
