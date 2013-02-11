@@ -21,7 +21,7 @@ CFLAGS=-O3
 _DEPS = sgs_bcg.h sgs_cfg.h sgs_ctx.h sgs_fnt.h sgs_proc.h sgs_std.h sgs_tok.h sgs_util.h sgs_xpc.h sgscript.h
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 
-_OBJ = sgs_bcg.o sgs_ctx.o sgs_fnt.o sgs_proc.o sgs_std.o sgs_stdM.o sgs_stdS.o sgs_stdT.o sgs_tok.o sgs_util.o
+_OBJ = sgs_bcg.o sgs_ctx.o sgs_fnt.o sgs_proc.o sgs_std.o sgs_stdL.o sgs_tok.o sgs_util.o
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 

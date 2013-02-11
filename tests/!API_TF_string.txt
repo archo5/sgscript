@@ -5,6 +5,7 @@ global tests_failed, tests_ran;
 //
 function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
 print( "\n\n-- STRINGS --\n" );
+load_builtin( "string" );
 load_builtin( "type" );
 //
 

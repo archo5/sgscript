@@ -1,3 +1,5 @@
+load_builtin( "math" );
+
 function lookup( dst )
 {
 	if( dst < 1 ) return ".";
