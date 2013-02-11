@@ -112,6 +112,12 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="../../src/sgs_std.h" />
+		<Unit filename="../../src/sgs_stdM.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../../src/sgs_stdS.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="../../src/sgs_stdT.c">
 			<Option compilerVar="CC" />
 		</Unit>

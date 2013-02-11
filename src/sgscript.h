@@ -122,6 +122,7 @@ int             sgs_Stat( SGS_CTX, int type );
 
 /* Additional libraries */
 
+void sgs_LoadLib_Math( SGS_CTX );
 void sgs_LoadLib_String( SGS_CTX );
 void sgs_LoadLib_Type( SGS_CTX );
 

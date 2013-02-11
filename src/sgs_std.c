@@ -1,7 +1,6 @@
 
 
 #include <stdio.h>
-#include <math.h>
 
 #include "sgs_std.h"
 #include "sgs_ctx.h"
@@ -878,39 +877,6 @@ argerr:
 
 
 
-/* Math */
-
-#define MATHFUNC( name ) \
-static int sgsstd_##name( SGS_CTX ) { \
-	CHKARGS( 1 ); \
-	sgs_PushReal( C, name( sgs_ToReal( C, -1 ) ) ); \
-	return 1; }
-
-#define MATHFUNC2( name ) \
-static int sgsstd_##name( SGS_CTX ) { \
-	CHKARGS( 2 ); \
-	sgs_PushReal( C, name( sgs_ToReal( C, -2 ), sgs_ToReal( C, -1 ) ) ); \
-	return 1; }
-
-MATHFUNC( abs )
-MATHFUNC( sqrt )
-MATHFUNC( log )
-MATHFUNC( log10 )
-MATHFUNC( exp )
-MATHFUNC( floor )
-MATHFUNC( ceil )
-MATHFUNC( sin )
-MATHFUNC( cos )
-MATHFUNC( tan )
-MATHFUNC( asin )
-MATHFUNC( acos )
-MATHFUNC( atan )
-
-MATHFUNC2( pow )
-MATHFUNC2( atan2 )
-MATHFUNC2( fmod )
-
-
 /* I/O */
 
 static int sgsstd_print( SGS_CTX )
@@ -1272,7 +1238,9 @@ static int sgsstd_load_builtin( SGS_CTX )
 	CHKARGS( 1 );
 	str = sgs_ToString( C, 0 );
 
-	if( strcmp( str, "string" ) == 0 )
+	if( strcmp( str, "math" ) == 0 )
+		sgs_LoadLib_Math( C );
+	else if( strcmp( str, "string" ) == 0 )
 		sgs_LoadLib_String( C );
 	else if( strcmp( str, "type" ) == 0 )
 		sgs_LoadLib_Type( C );
@@ -1313,10 +1281,6 @@ sgs_RegFuncConst regfuncs[] =
 	/* containers */
 	FN( array ), { "class", sgsstd_class }, FN( closure ),
 	FN( isset ), FN( unset ),
-	/* math */
-	FN( abs ), FN( sqrt ), FN( log ), FN( log10 ), FN( exp ), FN( floor ), FN( ceil ),
-	FN( sin ), FN( cos ), FN( tan ), FN( asin ), FN( acos ), FN( atan ),
-	FN( pow ), FN( atan2 ), FN( fmod ),
 	/* I/O */
 	FN( print ),
 	/* string */
