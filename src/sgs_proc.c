@@ -658,8 +658,7 @@ int vm_convert_stack( SGS_CTX, int item, int type )
 	sgs_Variable var;
 	var = *stk_getpos( C, item );
 	ret = vm_convert( C, &var, type );
-	if( ret == SGS_SUCCESS )
-		*stk_getpos( C, item ) = var;
+	*stk_getpos( C, item ) = var;
 	return ret;
 }
 
@@ -1163,8 +1162,9 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 	if( a->type == SVT_STRING || b->type == SVT_STRING )
 	{
 		int out;
-		stk_push( C, a );
-		stk_push( C, b );
+		sgs_Variable A = *a, B = *b;
+		stk_push( C, &A );
+		stk_push( C, &B );
 		if( vm_convert_stack( C, -2, SVT_STRING ) != SGS_SUCCESS ) return -1;
 		if( vm_convert_stack( C, -1, SVT_STRING ) != SGS_SUCCESS ) return 1;
 		a = stk_getpos( C, -2 );
