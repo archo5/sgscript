@@ -274,7 +274,7 @@ static int sgsstd_string_find( SGS_CTX )
 
 	strend = str + size - subsize;
 	ostr = str;
-	str += from >= 0 ? from : MAX( 0, size - from );
+	str += from >= 0 ? from : MAX( 0, size + from );
 	while( str <= strend )
 	{
 		if( strncmp( str, sub, subsize ) == 0 )
@@ -303,12 +303,13 @@ static int sgsstd_string_find_rev( SGS_CTX )
 
 	strend = str + size - subsize;
 	ostr = str;
-	str += from >= 0 ? MIN( from, size - subsize ) : size - subsize - from;
+	str += from >= 0 ? MIN( from, size - subsize ) : MIN( size - subsize, size + from );
 	while( str >= ostr )
 	{
 		if( strncmp( str, sub, subsize ) == 0 )
 		{
 			sgs_PushInt( C, str - ostr );
+			return 1;
 		}
 		str--;
 	}
