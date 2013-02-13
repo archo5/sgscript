@@ -1,0 +1,5 @@
+
+counter = closure( function( this ){ return this[0]++; }, [1] );
+
+print( "first: ", counter(), "\n" );
+print( "second: ", counter(), "\n" );
