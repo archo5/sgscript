@@ -1,3 +1,7 @@
+// be aware that this example is written to show how closures work
+// and that nothing beats the good old "counter++" in terms of speed
+// don't write code like this unless you absolutely have to,
+// ..for reasons that I cannot even imagine.
 
 counter = closure( function( this ){ return this[0]++; }, [1] );
 
