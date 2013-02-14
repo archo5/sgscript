@@ -449,7 +449,7 @@ static int add_const_s( SGS_CTX, sgs_CompFunc* func, int32_t len, const char* st
 	return vend - vbeg;
 }
 
-static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf )
+static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf, const char* funcname, LineNum lnum )
 {
 	sgs_Variable nvar;
 	int pos;
@@ -461,6 +461,9 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf )
 	F->instr_off = nf->consts.size;
 	F->gotthis = nf->gotthis;
 	F->numargs = nf->numargs;
+	F->funcname = strbuf_create();
+	strbuf_appstr( &F->funcname, funcname );
+	F->linenum = lnum;
 
 	memcpy( func_consts( F ), nf->consts.ptr, nf->consts.size );
 	memcpy( func_bytecode( F ), nf->code.ptr, nf->code.size );
@@ -1109,7 +1112,14 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	fctx_destroy( fctx );
 	C->fctx = bkfctx;
 
-	*out = CONSTENC( add_const_f( C, func, nf ) );
+	{
+		char ffn[ 256 ] = {0};
+		if( node->child->next->next )
+			strncpy( ffn, node->child->next->next->token + 2, node->child->next->next->token[1] );
+		else
+			strcpy( ffn, "<anonymous function>" );
+		*out = CONSTENC( add_const_f( C, func, nf, ffn, sgsT_LineNum( node->token ) ) );
+	}
 	return 1;
 
 fail:

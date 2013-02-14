@@ -103,6 +103,7 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 				VAR_RELEASE( var );
 				var++;
 			}
+			strbuf_destroy( &p->data.F->funcname );
 			sgs_Free( p->data.F );
 		}
 		p->type = SVT_NULL;
@@ -1548,7 +1549,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 
 static int funct_size( func_t* f )
 {
-	int sz = f->size;
+	int sz = f->size + f->funcname.mem;
 	sgs_Variable* beg = (sgs_Variable*) func_consts( f );
 	sgs_Variable* end = (sgs_Variable*) func_bytecode( f );
 	while( beg < end )

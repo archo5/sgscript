@@ -81,6 +81,8 @@ sgs_Instruction;
 
 typedef struct func_s
 {
+	StrBuf funcname;
+	LineNum linenum;
 	int32_t refcount;
 	int32_t size;
 	int16_t instr_off;
