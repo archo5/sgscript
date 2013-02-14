@@ -1,4 +1,4 @@
-load_builtin( "math" );
+include_library( "math" );
 
 function lookup( dst )
 {

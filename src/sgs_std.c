@@ -967,7 +967,7 @@ static int sgsstd_eval( SGS_CTX )
 	return rvc;
 }
 
-static int sgsstd_load_builtin( SGS_CTX )
+static int sgsstd_include_library( SGS_CTX )
 {
 	char* str;
 	CHKARGS( 1 );
@@ -1021,7 +1021,7 @@ sgs_RegFuncConst regfuncs[] =
 	/* OS */
 	FN( ftime ),
 	/* utils */
-	FN( eval ), FN( load_builtin ),
+	FN( eval ), FN( include_library ),
 	FN( sys_errorstate ), FN( sys_abort ),
 	FN( gc_collect ),
 };
