@@ -680,7 +680,7 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 			}
 			else if( *at == '{' )
 			{
-				TokenList expend;
+				TokenList expend, startok = at;
 				FTNode* expr = NULL, *fexp = NULL;
 				/* dictionary expression */
 				at = sgsT_Next( at );
@@ -733,7 +733,7 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 				}
 				else
 				{
-					cur->next = make_node( SFT_MAPLIST, NULL, NULL, fexp );
+					cur->next = make_node( SFT_MAPLIST, startok, NULL, fexp );
 					cur = cur->next;
 				}
 			}

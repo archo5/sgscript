@@ -178,6 +178,22 @@ static SGS_INLINE HashTable* ht_create(){ HashTable* T = sgs_Alloc( HashTable );
 static SGS_INLINE void ht_destroy( HashTable* T ){ ht_free( T ); sgs_Free( T ); }
 
 
+/* hash table for line numbers */
+typedef
+struct _LNTable
+{
+	uint16_t* numbers;
+	int size;
+}
+LNTable;
+
+void lht_init( LNTable* T, int size );
+void lht_init_all( LNTable* T, uint16_t* data, int num );
+void lht_free( LNTable* T );
+void lht_add( LNTable* T, uint16_t from, uint16_t to );
+uint16_t lht_get( LNTable* T, uint16_t from );
+
+
 double sgs_GetTime();
 
 

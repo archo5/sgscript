@@ -81,6 +81,7 @@ sgs_Instruction;
 
 typedef struct func_s
 {
+	LNTable lineinfo;
 	StrBuf funcname;
 	LineNum linenum;
 	int32_t refcount;

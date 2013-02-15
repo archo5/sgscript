@@ -72,6 +72,20 @@ void var_destroy_object( SGS_CTX, object_t* O )
 	C->objcount--;
 }
 
+static void var_release( SGS_CTX, sgs_VarPtr p );
+void var_destroy_func( SGS_CTX, func_t* F )
+{
+	sgs_VarPtr var = (sgs_VarPtr) func_consts( F ), vend = (sgs_VarPtr) func_bytecode( F );
+	while( var < vend )
+	{
+		VAR_RELEASE( var );
+		var++;
+	}
+	lht_free( &F->lineinfo );
+	strbuf_destroy( &F->funcname );
+	sgs_Free( F );
+}
+
 static void var_acquire( sgs_VarPtr p )
 {
 	switch( p->type )
@@ -90,30 +104,21 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 		p->data.S->refcount--;
 		if( p->data.S->refcount <= 0 )
 			sgs_Free( p->data.S );
+
 		p->type = SVT_NULL;
 		break;
 	case SVT_FUNC:
 		p->data.F->refcount--;
 		if( p->data.F->refcount <= 0 )
-		{
-			sgs_VarPtr var = (sgs_VarPtr) func_consts( p->data.F ),
-						vend = (sgs_VarPtr) func_bytecode( p->data.F );
-			while( var < vend )
-			{
-				VAR_RELEASE( var );
-				var++;
-			}
-			strbuf_destroy( &p->data.F->funcname );
-			sgs_Free( p->data.F );
-		}
+			var_destroy_func( C, p->data.F );
+
 		p->type = SVT_NULL;
 		break;
 	case SVT_OBJECT:
 		p->data.O->refcount--;
 		if( p->data.O->refcount <= 0 )
-		{
 			var_destroy_object( C, p->data.O );
-		}
+
 		p->type = SVT_NULL;
 		break;
 	}

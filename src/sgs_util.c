@@ -649,6 +649,80 @@ void ht_unset( HashTable* T, const char* str, int size )
 
 
 
+#define LHT_HASH( off ) (((off)>>3)+(off))
+
+void lht_init( LNTable* T, int size )
+{
+	int i;
+	T->numbers = sgs_Alloc_n( uint16_t, size * 2 );
+	T->size = size;
+	for( i = 0; i < size * 2; i += 2 )
+	{
+		T->numbers[ i ] = 0xffff;
+		T->numbers[ i + 1 ] = 0;
+	}
+}
+
+void lht_init_all( LNTable* T, uint16_t* data, int num )
+{
+	uint16_t* dend = data + num;
+	num /= 2; /* array size to pair count */
+	lht_init( T, num * 4 / 3 ); /* hash tables tend to work poorly over 75% load */
+	while( data < dend )
+	{
+		lht_add( T, data[0], data[1] );
+		data += 2;
+	}
+}
+
+void lht_free( LNTable* T )
+{
+	sgs_Free( T->numbers );
+}
+
+void lht_add( LNTable* T, uint16_t from, uint16_t to )
+{
+	uint16_t* p = T->numbers + ( ( LHT_HASH( from ) % T->size ) * 2 );
+	uint16_t* num = T->numbers, *numend = T->numbers + T->size * 2, *pend = p;
+	do
+	{
+		if( *p == 0xffff )
+		{
+			p[0] = from;
+			p[1] = to;
+			return;
+		}
+		p += 2;
+		if( p == numend )
+			p = num;
+	}
+	while( p != pend );
+	sgs_BreakIf( TRUE );
+	return;
+}
+
+uint16_t lht_get( LNTable* T, uint16_t from )
+{
+	uint16_t* p = T->numbers + ( ( LHT_HASH( from ) % T->size ) * 2 );
+	uint16_t* num = T->numbers, *numend = T->numbers + T->size * 2, *pend = p;
+	if( *p == 0xffff )
+		goto notfound;
+	do
+	{
+		if( *p == from )
+			return p[1];
+		p += 2;
+		if( p == numend )
+			p = num;
+	}
+	while( p != pend && *p != 0xffff );
+notfound:
+	sgs_BreakIf( TRUE );
+	return 0;
+}
+
+
+
 double sgs_GetTime()
 {
 	clock_t clk = clock();
