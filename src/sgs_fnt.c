@@ -247,6 +247,11 @@ static FTNode* parse_arg( SGS_CTX, int argid, TokenList at, TokenList end )
 		at = sgsT_Next( at );
 		expend = detect_exp( C, at, sgsT_Next( end ), toks, 0 );
 		if( !expend ) goto fail;
+		if( at == expend )
+		{
+			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected initializing expression" );
+			goto fail;
+		}
 		node->child = parse_exp( C, at, expend );
 		if( !node->child ) goto fail;
 	}
