@@ -212,7 +212,7 @@ static int sgsstd_string_repeat( SGS_CTX )
 {
 	int argc;
 	char* str, *sout;
-	sgs_Integer size, i, count;
+	sgs_Integer size, count;
 
 	argc = sgs_StackSize( C );
 	if( argc != 2 ||
@@ -291,7 +291,7 @@ static int sgsstd_string_find( SGS_CTX )
 static int sgsstd_string_find_rev( SGS_CTX )
 {
 	int argc;
-	char* str, *sub, *strend, *ostr;
+	char* str, *sub, *ostr;
 	sgs_Integer size, subsize, from = -1;
 
 	argc = sgs_StackSize( C );
@@ -301,7 +301,6 @@ static int sgsstd_string_find_rev( SGS_CTX )
 		( argc == 3 && !stdlib_toint( C, 2, &from ) ) )
 		STDLIB_WARN( "string_find_rev() - unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [int]" );
 
-	strend = str + size - subsize;
 	ostr = str;
 	str += from >= 0 ? MIN( from, size - subsize ) : MIN( size - subsize, size + from );
 	while( str >= ostr )

@@ -171,7 +171,7 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 	Call stack
 */
 
-static void vm_frame_push( SGS_CTX, sgs_StackFrame* localframe, sgs_Variable* func, LNTable* T, uint8_t* code )
+static void vm_frame_push( SGS_CTX, sgs_StackFrame* localframe, sgs_Variable* func, LNTable* T, char* code )
 {
 	localframe->func = func;
 	localframe->code = code;

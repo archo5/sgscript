@@ -27,6 +27,7 @@ static void default_printfn( void* ctx, SGS_CTX, int type, int line, const char*
 {
 	const char* errpfxs[ 3 ] = { "Info", "Warning", "Error" };
 	sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
+	UNUSED( ctx );
 	while( p != NULL )
 	{
 		char* file, *name;
@@ -223,6 +224,7 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, char** name, char** fil
 	int L = 0;
 	char* N = "<non-callable type>", *F = "<buffer>";
 
+	UNUSED( C );
 	if( !frame->func )
 	{
 		N = "<main>";

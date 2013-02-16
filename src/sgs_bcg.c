@@ -1149,7 +1149,7 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	{
 		char ffn[ 256 ] = {0};
 		if( node->child->next->next )
-			strncpy( ffn, node->child->next->next->token + 2, node->child->next->next->token[1] );
+			strncpy( ffn, (const char*) node->child->next->next->token + 2, node->child->next->next->token[1] );
 		*out = CONSTENC( add_const_f( C, func, nf, *ffn ? ffn : NULL, sgsT_LineNum( node->token ) ) );
 	}
 	return 1;
