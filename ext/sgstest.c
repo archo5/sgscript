@@ -108,11 +108,10 @@ static void check_context( sgs_Context* C )
 }
 
 
-static void TF_printfn( void* ctx, int type, int line, const char* message )
+static void TF_printfn( void* ctx, SGS_CTX, int type, int line, const char* message )
 {
 	int ret = 0;
 	const char* pfxs[] = { "[I:", "[W:", "[E:" };
-	sgs_Context* C = (sgs_Context*) ctx;
 	ret |= sgs_GetGlobal( C, "ERRORS" );
 	ret |= sgs_PushString( C, pfxs[ type ] );
 	ret |= sgs_PushString( C, message );
@@ -154,7 +153,6 @@ static void prepengine( sgs_Context* C )
 	sgs_BreakIf( ret != SGS_SUCCESS );
 
 	C->print_fn = TF_printfn;
-	C->print_ctx = C;
 }
 
 /* test statistics */

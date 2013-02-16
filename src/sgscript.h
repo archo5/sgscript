@@ -29,9 +29,22 @@ extern "C" {
 /* Accessible / transferable data */
 typedef int64_t sgs_Integer;
 typedef double  sgs_Real;
+typedef struct _LNTable sgs_LNTable;
 typedef struct _sgs_Context sgs_Context;
 typedef struct _sgs_Variable sgs_Variable;
+typedef struct _sgs_StackFrame sgs_StackFrame;
 typedef int (*sgs_CFunc) ( sgs_Context* );
+
+
+struct _sgs_StackFrame
+{
+	sgs_Variable*   func;
+	sgs_LNTable*    lntable;
+	uint8_t*        code;
+	uint8_t*        iptr;
+	sgs_StackFrame* prev;
+	sgs_StackFrame* next;
+};
 
 
 /* Memory management */
@@ -43,7 +56,7 @@ extern void* (*sgs_MemFunc) ( void*, size_t );
 #define SGS_WARNING	1
 #define SGS_ERROR	2
 
-typedef void (*sgs_PrintFunc) ( void* /* ctx */, int /* type */, int /* line */, const char* /* message */ );
+typedef void (*sgs_PrintFunc) ( void* /* data */, sgs_Context* /* ctx / SGS_CTX */, int /* type */, int /* line */, const char* /* message */ );
 
 
 /* Statistics */
@@ -118,6 +131,8 @@ static SGS_INLINE int sgs_ExecString( SGS_CTX, const char* str ){ return sgs_Exe
 int             sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc );
 static SGS_INLINE int sgs_EvalString( SGS_CTX, const char* str, int* rvc ){ return sgs_EvalBuffer( C, str, strlen( str ), rvc ); }
 int             sgs_Stat( SGS_CTX, int type );
+void            sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, char** name, char** file, int* line );
+sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 
 
 /* Additional libraries */

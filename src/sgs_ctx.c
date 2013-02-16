@@ -23,11 +23,21 @@
 #endif
 
 
-static void default_printfn( void* ctx, int type, int line, const char* msg )
+static void default_printfn( void* ctx, SGS_CTX, int type, int line, const char* msg )
 {
 	const char* errpfxs[ 3 ] = { "Info", "Warning", "Error" };
-	UNUSED( ctx );
-	if( line >= 0 )
+	sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
+	while( p != NULL )
+	{
+		char* file, *name;
+		int ln;
+		if( !p->next )
+			break;
+		sgs_StackFrameInfo( C, p, &name, &file, &ln );
+		fprintf( stderr, "- \"%s\" in %s, line %d\n", name, file, ln );
+		p = p->next;
+	}
+	if( line > 0 )
 		fprintf( stderr, "%s [line %d]: %s\n", errpfxs[ type ], line, msg );
 	else
 		fprintf( stderr, "%s: %s\n", errpfxs[ type ], msg );
@@ -61,6 +71,9 @@ static void ctx_init( SGS_CTX )
 	C->call_args = 0;
 	C->call_expect = 0;
 	C->call_this = FALSE;
+
+	C->sf_first = NULL;
+	C->sf_last = NULL;
 
 	ht_init( &C->data, 4 );
 
@@ -122,6 +135,7 @@ void sgs_DestroyEngine( SGS_CTX )
 static int ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* rvc )
 {
 	int returned;
+	LNTable lnT;
 	TokenList tlist = NULL;
 	FTNode* ftree = NULL;
 	sgs_CompFunc* func = NULL;
@@ -151,6 +165,8 @@ static int ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* 
 	DBGINFO( "...cleaning up tokens/function tree" );
 	sgsFT_Destroy( ftree ); ftree = NULL;
 	sgsT_Free( tlist ); tlist = NULL;
+	DBGINFO( "...generating line number table" );
+	lht_init_all( &lnT, (uint16_t*) func->lnbuf.ptr, func->lnbuf.size / sizeof( uint16_t ) );
 #if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	sgsBC_Dump( func );
 #endif
@@ -158,7 +174,8 @@ static int ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* 
 	DBGINFO( "...executing the generated function" );
 	C->gclist = (sgs_VarPtr) func->consts.ptr;
 	C->gclist_size = func->consts.size / sizeof( sgs_Variable );
-	returned = sgsVM_ExecFn( C, func->code.ptr, func->code.size, func->consts.ptr, func->consts.size, clean );
+	returned = sgsVM_ExecFn( C, func->code.ptr, func->code.size, func->consts.ptr, func->consts.size, clean, &lnT );
+	lht_free( &lnT );
 	if( rvc )
 		*rvc = returned;
 	C->gclist = NULL;
@@ -201,6 +218,41 @@ int sgs_Stat( SGS_CTX, int type )
 	}
 }
 
+void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, char** name, char** file, int* line )
+{
+	int L = 0;
+	char* N = "<non-callable type>", *F = "<buffer>";
+
+	if( !frame->func )
+	{
+		N = "<main>";
+		L = lht_get( frame->lntable, frame->iptr - frame->code );
+	}
+	else if( frame->func->type == SVT_FUNC )
+	{
+		N = "<anonymous function>";
+		if( frame->func->data.F->funcname.size )
+			N = frame->func->data.F->funcname.ptr;
+		L = lht_get( &frame->func->data.F->lineinfo, frame->iptr - frame->code );
+	}
+	else if( frame->func->type == SVT_CFUNC )
+	{
+		N = "<C function>";
+	}
+	else if( frame->func->type == SVT_OBJECT )
+	{
+		N = "<object>";
+	}
+	if( name ) *name = N;
+	if( file ) *file = F;
+	if( line ) *line = L;
+}
+
+sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end )
+{
+	return end ? C->sf_last : C->sf_first;
+}
+
 
 void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
 {
@@ -233,7 +285,12 @@ void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
 	vsprintf( info.ptr, what, args );
 	va_end( args );
 
-	C->print_fn( C->print_ctx, type, line, info.ptr );
+	if( line < 0 && C->sf_last )
+	{
+		sgs_StackFrameInfo( C, C->sf_last, NULL, NULL, &line );
+	}
+
+	C->print_fn( C->print_ctx, C, type, line, info.ptr );
 
 	strbuf_destroy( &info );
 }

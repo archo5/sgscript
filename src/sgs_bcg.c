@@ -474,7 +474,8 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf, const cha
 
 	lht_init_all( &F->lineinfo, (uint16_t*) nf->lnbuf.ptr, nf->lnbuf.size / sizeof( uint16_t ) );
 	F->funcname = strbuf_create();
-	strbuf_appstr( &F->funcname, funcname );
+	if( funcname )
+		strbuf_appstr( &F->funcname, funcname );
 	F->linenum = lnum;
 
 	memcpy( func_consts( F ), nf->consts.ptr, nf->consts.size );
@@ -1130,7 +1131,12 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 
 	{
 		uint8_t lpn[ 2 ] = { SI_PUSHN, C->fctx->lastreg - args };
+		uint16_t* lndata = (uint16_t*) nf->lnbuf.ptr;
+		uint16_t i, lncnt = nf->lnbuf.size / sizeof( uint16_t );
+
 		membuf_insbuf( &nf->code, 0, lpn, 2 );
+		for( i = 0; i < lncnt; i += 2 )
+			lndata[ i ] += 2;
 	}
 
 #if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
@@ -1144,9 +1150,7 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 		char ffn[ 256 ] = {0};
 		if( node->child->next->next )
 			strncpy( ffn, node->child->next->next->token + 2, node->child->next->next->token[1] );
-		else
-			strcpy( ffn, "<anonymous function>" );
-		*out = CONSTENC( add_const_f( C, func, nf, ffn, sgsT_LineNum( node->token ) ) );
+		*out = CONSTENC( add_const_f( C, func, nf, *ffn ? ffn : NULL, sgsT_LineNum( node->token ) ) );
 	}
 	return 1;
 
@@ -1744,7 +1748,12 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 
 	{
 		uint8_t lpn[ 2 ] = { SI_PUSHN, C->fctx->lastreg };
+		uint16_t* lndata = (uint16_t*) func->lnbuf.ptr;
+		uint16_t i, lncnt = func->lnbuf.size / sizeof( uint16_t );
+
 		membuf_insbuf( &func->code, 0, lpn, 2 );
+		for( i = 0; i < lncnt; i += 2 )
+			lndata[ i ] += 2;
 	}
 
 	C->fctx = NULL;

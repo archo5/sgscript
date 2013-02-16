@@ -179,13 +179,12 @@ static SGS_INLINE void ht_destroy( HashTable* T ){ ht_free( T ); sgs_Free( T ); 
 
 
 /* hash table for line numbers */
-typedef
 struct _LNTable
 {
 	uint16_t* numbers;
 	int size;
-}
-LNTable;
+};
+typedef struct _LNTable LNTable;
 
 void lht_init( LNTable* T, int size );
 void lht_init_all( LNTable* T, uint16_t* data, int num );

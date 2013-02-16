@@ -60,6 +60,8 @@ struct _sgs_Context
 	int           call_args;
 	int           call_expect;
 	int           call_this;
+	sgs_StackFrame* sf_first;
+	sgs_StackFrame* sf_last;
 
 	HashTable     data;
 

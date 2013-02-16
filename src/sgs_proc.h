@@ -78,7 +78,6 @@ typedef enum sgs_Instruction_e
 }
 sgs_Instruction;
 
-
 typedef struct func_s
 {
 	LNTable lineinfo;
@@ -114,7 +113,7 @@ typedef union _sgs_VarData
 	string_t*   S;
 	func_t*     F;
 	sgs_CFunc   C;
-	object_t*   O;
+	sgs_VarObj* O;
 }
 sgs_VarData;
 
@@ -163,7 +162,7 @@ void sgsVM_VarDump( sgs_Variable* var );
 
 void sgsVM_StackDump( SGS_CTX );
 
-int sgsVM_ExecFn( SGS_CTX, const void* code, int32_t codesize, const void* data, int32_t datasize, int clean );
+int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize, void* data, int32_t datasize, int clean, LNTable* T );
 int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int expect, int gotthis );
 
 
