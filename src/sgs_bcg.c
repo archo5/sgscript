@@ -900,6 +900,76 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 	int assign = ST_OP_ASSIGN( *node->token );
 	FUNC_BEGIN;
 
+	/* Boolean ops */
+	if( ST_OP_BOOL( *node->token ) )
+	{
+		if( assign || expect )
+		{
+			int16_t ireg1, ireg2, oreg, jmp_off = 0, isb = func->code.size;
+			int32_t csz;
+
+			if( !assign )
+				oreg = comp_reg_alloc( C );
+
+			/* get source data register */
+			FUNC_ENTER;
+			if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
+
+			/* write cond. jump */
+			LINENUM();
+			BYTE( ( *node->token == ST_OP_BLAND || *node->token == ST_OP_BLAEQ ) ? SI_JMPT : SI_JMPF );
+			DATA( &ireg1, 2 );
+			DATA( &jmp_off, 2 );
+			csz = func->code.size;
+
+			/* compile write of value 1 */
+			if( assign )
+			{
+				FUNC_ENTER;
+				if( !compile_node_w( C, func, node->child, ireg1 ) ) goto fail;
+			}
+			else
+			{
+				LINENUM();
+				BYTE( SI_SET );
+				DATA( &oreg, 2 );
+				DATA( &ireg1, 2 );
+			}
+
+			/* fix-up jump */
+			jmp_off = func->code.size - csz;
+			AS_INT16( func->code.ptr + csz - 2 ) = jmp_off;
+
+			/* get source data register 2 */
+			FUNC_ENTER;
+			if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
+
+			/* compile write of value 2 */
+			if( assign )
+			{
+				FUNC_ENTER;
+				if( !compile_node_w( C, func, node->child, ireg2 ) ) goto fail;
+			}
+			else
+			{
+				LINENUM();
+				BYTE( SI_SET );
+				DATA( &oreg, 2 );
+				DATA( &ireg2, 2 );
+			}
+
+			/* re-read from assignments */
+			if( assign && arg )
+			{
+				FUNC_ENTER;
+				if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
+			}
+			else
+			if( arg )
+				*arg = oreg;
+		}
+	}
+	else
 	/* Increment / decrement */
 	if( *node->token == ST_OP_INC || *node->token == ST_OP_DEC )
 	{

@@ -1,0 +1,53 @@
+
+global OPS;
+beet = "boolean execution test: ";
+
+function OP_FALSE()
+{
+	global OPS;
+	OPS $= "F";
+	return false;
+}
+
+function OP_TRUE()
+{
+	global OPS;
+	OPS $= "T";
+	return true;
+}
+
+print( "\n\tboolean tests with 2 operands\n" );
+
+// AND
+OPS = "";
+if( OP_FALSE() && OP_TRUE() ) ;
+testEqual( OPS, "F", beet$ "false && true" );
+
+OPS = "";
+if( OP_FALSE() && OP_FALSE() ) ;
+testEqual( OPS, "F", beet$ "false && false" );
+
+OPS = "";
+if( OP_TRUE() && OP_TRUE() ) ;
+testEqual( OPS, "TT", beet$ "true && true" );
+
+OPS = "";
+if( OP_TRUE() && OP_FALSE() ) ;
+testEqual( OPS, "TF", beet$ "true && false" );
+
+// OR
+OPS = "";
+if( OP_FALSE() || OP_TRUE() ) ;
+testEqual( OPS, "FT", beet$ "false || true" );
+
+OPS = "";
+if( OP_FALSE() || OP_FALSE() ) ;
+testEqual( OPS, "FF", beet$ "false || false" );
+
+OPS = "";
+if( OP_TRUE() || OP_TRUE() ) ;
+testEqual( OPS, "T", beet$ "true || true" );
+
+OPS = "";
+if( OP_TRUE() || OP_FALSE() ) ;
+testEqual( OPS, "T", beet$ "true || false" );
