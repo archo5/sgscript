@@ -7,38 +7,39 @@
 #include "sgs_fnt.h"
 
 
-#define CONSTENC( x ) ((x)|0x8000)
-#define CONSTDEC( x ) ((x)&0x7fff)
+#define CONSTVAR( x ) ((x)&0x100)
+#define CONSTENC( x ) ((x)|0x100)
+#define CONSTDEC( x ) ((x)&0xff)
 
 typedef enum sgs_Instruction_e
 {
 	SI_NOP = 0,
 
-	SI_PUSH,     /* (i16 src)               push register/constant */
-	SI_PUSHN,    /* (u8 N)                  push N nulls */
-	SI_POPN,     /* (u8 N)                  pop N items */
-	SI_POPR,     /* (i16 out)               pop item to register */
+	SI_PUSH,     /* (B:src)                 push register/constant */
+	SI_PUSHN,    /* (A:N)                   push N nulls */
+	SI_POPN,     /* (A:N)                   pop N items */
+	SI_POPR,     /* (A:out)                 pop item to register */
 
-	SI_RETN,     /* (u8 N)                  exit current frame of execution, preserve N output arguments */
-	SI_JUMP,     /* (i16 off)               add to instruction pointer */
-	SI_JMPT,     /* (i16 src, off)          jump (add to instr.ptr.) if true */
-	SI_JMPF,     /* (i16 src, off)          jump (add to instr.ptr.) if false */
-	SI_CALL,     /* (u8 args, exp, i16 src) call a variable */
+	SI_RETN,     /* (A:N)                   exit current frame of execution, preserve N output arguments */
+	SI_JUMP,     /* (E:off)                 add to instruction pointer */
+	SI_JMPT,     /* (C:src, E:off)          jump (add to instr.ptr.) if true */
+	SI_JMPF,     /* (C:src, E:off)          jump (add to instr.ptr.) if false */
+	SI_CALL,     /* (A:exp, B:args, C:src)  call a variable */
 
-	SI_FORPREP,  /* (i16 out, src)          retrieves the iterator to work the object */
-	SI_FORNEXT,  /* (i16 oky, ost, iter)    retrieves pending output key/state from iterator */
+	SI_FORPREP,  /* (A:out, B:src)          retrieves the iterator to work the object */
+	SI_FORNEXT,  /* (A:oky, B:ost, C:iter)  retrieves pending output key/state from iterator */
 
-	SI_GETVAR,   /* (i16 out, name)         <varname> => <value> */
-	SI_SETVAR,   /* (i16 name, src)         <varname> <value> => set <value> to <varname> */
-	SI_GETPROP,  /* (i16 out, var, name)    <var> <prop> => <var> */
-	SI_SETPROP,  /* (i16 var, name, src)    <var> <prop> <value> => set a <prop> of <var> to <value> */
+	SI_GETVAR,   /* (A:out, B:name)         <varname> => <value> */
+	SI_SETVAR,   /* (A:name, B:src)         <varname> <value> => set <value> to <varname> */
+	SI_GETPROP,  /* (A:out, B:var, C:name)  <var> <prop> => <var> */
+	SI_SETPROP,  /* (A:var, B:name, C:src)  <var> <prop> <value> => set a <prop> of <var> to <value> */
 	SI_GETINDEX, /* -- || -- */
 	SI_SETINDEX, /* -- || -- */
 
 	/* operators */
 	/*
-		A: (i16 out, s1, s2)
-		B: (i16 out, s1)
+		A: (A:out, B:s1, C:s2)
+		B: (A:out, B:s1)
 	*/
 	SI_SET,      /* B */
 	SI_CLONE,
@@ -71,7 +72,7 @@ typedef enum sgs_Instruction_e
 	SI_LTE,
 
 	/* specials */
-	SI_ARRAY,    /* (u8 args, i16 out) */
+	SI_ARRAY,    /* (A:out, B:args) */
 	SI_DICT,     /* -- || -- */
 }
 sgs_Instruction;
@@ -79,17 +80,23 @@ sgs_Instruction;
 
 typedef uint32_t instr_t;
 
+/*
+	instruction data: 32 bits
+	OOOOOOAAAAAAAABBBBBBBBBCCCCCCCCC
+	OOOOOOEEEEEEEEEEEEEEEEECCCCCCCCC
+*/
+
 #define INSTR_OFF_OP  26
 #define INSTR_OFF_A   18
 #define INSTR_OFF_B   9
 #define INSTR_OFF_C   0
-#define INSTR_OFF_E   0
+#define INSTR_OFF_E   9
 
-#define INSTR_MASK_OP 0x003f
-#define INSTR_MASK_A  0x00ff
-#define INSTR_MASK_B  0x01ff
-#define INSTR_MASK_C  0x01ff
-#define INSTR_MASK_E  0x0003ffff
+#define INSTR_MASK_OP 0x003f /* OP: 6 bits */
+#define INSTR_MASK_A  0x00ff /* A:  8 bits */
+#define INSTR_MASK_B  0x01ff /* B:  9 bits */
+#define INSTR_MASK_C  0x01ff /* C:  9 bits */
+#define INSTR_MASK_E  0x0001ffff
 
 #define INSTR_GET_OP( x )  ( ( ( x ) >> INSTR_OFF_OP ) & INSTR_MASK_OP )
 #define INSTR_GET_A( x )   ( ( ( x ) >> INSTR_OFF_A  ) & INSTR_MASK_A  )
@@ -105,8 +112,9 @@ typedef uint32_t instr_t;
 
 #define INSTR_MAKE( op, a, b, c ) \
 	( INSTR_MAKE_OP( op ) | INSTR_MAKE_A( a ) | INSTR_MAKE_B( b ) | INSTR_MAKE_C( c ) )
-#define INSTR_MAKE_EX( op, a, ex ) \
-	( INSTR_MAKE_OP( op ) | INSTR_MAKE_A( a ) | INSTR_MAKE_E( ex ) )
+#define INSTR_MAKE_EX( op, ex, c ) \
+	( INSTR_MAKE_OP( op ) | INSTR_MAKE_E( ex ) | INSTR_MAKE_C( c ) )
+#define INSTR_RECOMB_E( a, b ) ( ( ( a ) << INSTR_OFF_B ) | ( b ) )
 
 
 typedef struct func_s

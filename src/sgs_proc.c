@@ -1403,29 +1403,31 @@ const char* opnames[] =
 };
 static int vm_exec( SGS_CTX, const instr_t* code, int32_t instrcnt, sgs_Variable* consts, int32_t constcount )
 {
+	int32_t ret = 0;
 	const instr_t* ptr = code;
 	const instr_t* pend = ptr + instrcnt;
 	sgs_Variable* cptr = consts;
+
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
 	int stkoff = C->stack_top - C->stack_off;
-#  define RESVAR( v ) ( ( (v) & 0x8000 ) ? const_getvar( cptr, constcount, (v) & 0x7fff ) : stk_getlpos( C, (v) ) )
+#  define RESVAR( v ) ( CONSTVAR(v) ? const_getvar( cptr, constcount, CONSTDEC(v) ) : stk_getlpos( C, (v) ) )
 #else
-#  define RESVAR( v ) ( ( (v) & 0x8000 ) ? ( cptr + ( (v) & 0x7fff ) ) : stk_getlpos( C, (v) ) )
+#  define RESVAR( v ) ( CONSTVAR(v) ? ( cptr + CONSTDEC(v) ) : stk_getlpos( C, (v) ) )
 #endif
-
-	/* preallocated helpers */
-	int32_t ret = 0;
 	UNUSED( constcount );
 
 	while( ptr < pend )
 	{
 		instr_t I = *ptr;
 		int instr = INSTR_GET_OP( I );
+		int argA = INSTR_GET_A( I );
+		int argB = INSTR_GET_B( I );
+		int argC = INSTR_GET_C( I );
 
 		if( C->sf_last && C->sf_last->code == code )
 			C->sf_last->iptr = ptr;
-
 		ptr++;
+
 #if SGS_DEBUG
 #  if SGS_DEBUG_INSTR
 		printf( "*** [at 0x%04X] %s ***\n", ptr - 1 - (char*)code, opnames[ instr ] );
@@ -1438,39 +1440,22 @@ static int vm_exec( SGS_CTX, const instr_t* code, int32_t instrcnt, sgs_Variable
 		{
 		case SI_NOP: break;
 
-		case SI_PUSH:
-		{
-			int16_t item = AS_INT16( ptr );
-			ptr += 2;
-			stk_push( C, RESVAR( item ) );
-			break;
-		}
+		case SI_PUSH: stk_push( C, RESVAR( argB ) ); break;
 		case SI_PUSHN:
 		{
-			uint8_t count = AS_UINT8( ptr++ );
+			int count = argA;
 			stk_makespace( C, count );
 			while( count-- )
 				(C->stack_top++)->type = SVT_NULL;
 			break;
 		}
 
-		case SI_POPN:
-		{
-			stk_pop( C, AS_UINT8( ptr++ ) );
-			break;
-		}
-		case SI_POPR:
-		{
-			uint16_t to = AS_UINT16( ptr );
-			ptr += 2;
-			stk_setlvar( C, to, stk_gettop( C ) );
-			stk_pop1( C );
-			break;
-		}
+		case SI_POPN: stk_pop( C, argA ); break;
+		case SI_POPR: stk_setlvar( C, argA, stk_gettop( C ) ); stk_pop1( C ); break;
 
 		case SI_RETN:
 		{
-			ret = AS_UINT8( ptr++ );
+			ret = argA;
 			sgs_BreakIf( ( C->stack_top - C->stack_off ) - stkoff < ret );
 			ptr = pend;
 			break;
@@ -1478,8 +1463,7 @@ static int vm_exec( SGS_CTX, const instr_t* code, int32_t instrcnt, sgs_Variable
 
 		case SI_JUMP:
 		{
-			int16_t off = AS_INT16( ptr );
-			ptr += 2;
+			int16_t off = INSTR_RECOMB_E( argA, argB );
 			ptr += off;
 			sgs_BreakIf( ptr > pend || ptr < code );
 			break;
@@ -1488,52 +1472,35 @@ static int vm_exec( SGS_CTX, const instr_t* code, int32_t instrcnt, sgs_Variable
 		case SI_JMPT:
 		case SI_JMPF:
 		{
-			int16_t arg, off;
-			arg = AS_INT16( ptr );
-			ptr += 2;
-			off = AS_INT16( ptr );
-			ptr += 2;
+			int16_t off = INSTR_RECOMB_E( argA, argB );
 			sgs_BreakIf( ptr + off > pend || ptr + off < code );
-			if( var_getbool( C, RESVAR( arg ) ) ^ ( instr == SI_JMPF ) )
+			if( var_getbool( C, RESVAR( argC ) ) ^ ( instr == SI_JMPF ) )
 				ptr += off;
 			break;
 		}
 
 		case SI_CALL:
 		{
-			uint8_t args = AS_UINT8( ptr++ );
-			uint8_t expect = AS_UINT8( ptr++ );
-			int16_t src = AS_INT16( ptr );
-			int gotthis = ( args & 0x80 ) != 0;
-			args &= 0x7f;
-			ptr += 2;
+			uint8_t expect = argA, args = argB;
+			int16_t src = argC;
+			int gotthis = ( args & 0x100 ) != 0;
+			args &= 0xff;
 			vm_call( C, args, gotthis, expect, RESVAR( src ) );
 			break;
 		}
 
-		case SI_FORPREP:
-		{
-			int16_t a1, a2; a1 = AS_INT16( ptr ); a2 = AS_INT16( ptr + 2 ); ptr += 4;
-			vm_forprep( C, a1, RESVAR( a2 ) );
-			break;
-		}
-		case SI_FORNEXT:
-		{
-			int16_t a1, a2, a3; a1 = AS_INT16( ptr ); a2 = AS_INT16( ptr + 2 ); a3 = AS_INT16( ptr + 4 ); ptr += 6;
-			vm_fornext( C, a1, a2, RESVAR( a3 ) );
-			break;
-		}
+		case SI_FORPREP: vm_forprep( C, argA, RESVAR( argB ) ); break;
+		case SI_FORNEXT: vm_fornext( C, argA, argB, RESVAR( argC ) ); break;
 
-#define ARGPOS_2 int16_t a1, a2; a1 = AS_INT16( ptr ); ptr += 2; a2 = AS_INT16( ptr ); ptr += 2;
-#define ARGPOS_3 int16_t a1, a2, a3; a1 = AS_INT16( ptr ); ptr += 2; a2 = AS_INT16( ptr ); ptr += 2; a3 = AS_INT16( ptr ); ptr += 2;
-#define ARGS_2 sgs_VarPtr p1, p2; ARGPOS_2; p1 = RESVAR( a1 ); UNUSED( p1 ); p2 = RESVAR( a2 );
-#define ARGS_3 sgs_VarPtr p1, p2, p3; ARGPOS_3; p1 = RESVAR( a1 ); UNUSED( p1 ); p2 = RESVAR( a2 ); p3 = RESVAR( a3 );
+#define a1 argA
+#define ARGS_2 sgs_VarPtr p2; p2 = RESVAR( argB );
+#define ARGS_3 sgs_VarPtr p2, p3; p2 = RESVAR( argB ); p3 = RESVAR( argC );
 		case SI_GETVAR: { ARGS_2; vm_getvar( C, a1, p2 ); break; }
-		case SI_SETVAR: { ARGS_2; vm_setvar( C, p1, p2 ); break; }
+		case SI_SETVAR: { ARGS_2; vm_setvar( C, RESVAR( a1 ), p2 ); break; }
 		case SI_GETPROP: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, FALSE ), p3, FALSE ); break; }
-		case SI_SETPROP: { ARGS_3; vm_properr( C, vm_setprop( C, p1, p2, p3, FALSE ), p2, FALSE ); break; }
+		case SI_SETPROP: { ARGS_3; vm_properr( C, vm_setprop( C, RESVAR( a1 ), p2, p3, FALSE ), p2, FALSE ); break; }
 		case SI_GETINDEX: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, TRUE ), p3, TRUE ); break; }
-		case SI_SETINDEX: { ARGS_3; vm_properr( C, vm_setprop( C, p1, p2, p3, TRUE ), p2, TRUE ); break; }
+		case SI_SETINDEX: { ARGS_3; vm_properr( C, vm_setprop( C, RESVAR( a1 ), p2, p3, TRUE ), p2, TRUE ); break; }
 
 		case SI_SET: { ARGS_2; stk_setlvar( C, a1, p2 ); break; }
 		case SI_CLONE: { ARGS_2; vm_clone( C, a1, p2 ); break; }
@@ -1568,14 +1535,13 @@ static int vm_exec( SGS_CTX, const instr_t* code, int32_t instrcnt, sgs_Variable
 		case SI_GT: { ARGS_3; VCOMPARE( > ); break; }
 		case SI_LTE: { ARGS_3; VCOMPARE( <= ); break; }
 
-		case SI_ARRAY: { uint8_t argc = AS_UINT8( ptr++ ); int16_t a1 = AS_UINT16( ptr ); ptr += 2; vm_make_array( C, argc, a1 ); break; }
-		case SI_DICT: { uint8_t argc = AS_UINT8( ptr++ ); int16_t a1 = AS_UINT16( ptr ); ptr += 2; vm_make_dict( C, argc, a1 ); break; }
+		case SI_ARRAY: { vm_make_array( C, argB, argA ); break; }
+		case SI_DICT: { vm_make_dict( C, argB, argA ); break; }
 #undef VCOMPARE
 #undef STRICTLY_EQUAL
 #undef ARGS_2
 #undef ARGS_3
-#undef ARGPOS_2
-#undef ARGPOS_3
+#undef a1
 #undef RESVAR
 
 		default:
@@ -1655,7 +1621,7 @@ int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize, void* data, int32_t dat
 	sgs_StackFrame SF;
 	int stkoff = C->stack_off - C->stack_base, rvc;
 	vm_frame_push( C, &SF, NULL, T, code );
-	rvc = vm_exec( C, code, codesize, data, datasize );
+	rvc = vm_exec( C, code, codesize / sizeof( instr_t ), data, datasize / sizeof( sgs_Variable* ) );
 	C->stack_off = C->stack_base + stkoff;
 	if( clean )
 		stk_pop( C, C->stack_top - C->stack_off );
