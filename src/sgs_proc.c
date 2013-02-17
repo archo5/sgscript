@@ -1054,8 +1054,8 @@ static void vm_arith_op( SGS_CTX, int16_t out, sgs_VarPtr a, sgs_VarPtr b, uint8
 			case ARITH_OP_ADD: R = A + B; break;
 			case ARITH_OP_SUB: R = A - B; break;
 			case ARITH_OP_MUL: R = A * B; break;
-			case ARITH_OP_DIV: R = A / B; break;
-			case ARITH_OP_MOD: R = fmod( A, B ); break;
+			case ARITH_OP_DIV: if( B == 0 ) goto div0err; R = A / B; break;
+			case ARITH_OP_MOD: if( B == 0 ) goto div0err; R = fmod( A, B ); break;
 			default: R = 0; break;
 		}
 		var_setreal( C, out, R );
@@ -1068,8 +1068,8 @@ static void vm_arith_op( SGS_CTX, int16_t out, sgs_VarPtr a, sgs_VarPtr b, uint8
 			case ARITH_OP_ADD: R = A + B; break;
 			case ARITH_OP_SUB: R = A - B; break;
 			case ARITH_OP_MUL: R = A * B; break;
-			case ARITH_OP_DIV: R = A / B; break;
-			case ARITH_OP_MOD: R = A % B; break;
+			case ARITH_OP_DIV: if( B == 0 ) goto div0err; R = A / B; break;
+			case ARITH_OP_MOD: if( B == 0 ) goto div0err; R = A % B; break;
 			default: R = 0; break;
 		}
 		var_setint( C, out, R );
@@ -1111,8 +1111,8 @@ static void vm_arith_op( SGS_CTX, int16_t out, sgs_VarPtr a, sgs_VarPtr b, uint8
 			case ARITH_OP_ADD: R = A + B; break;
 			case ARITH_OP_SUB: R = A - B; break;
 			case ARITH_OP_MUL: R = A * B; break;
-			case ARITH_OP_DIV: R = A / B; break;
-			case ARITH_OP_MOD: R = fmod( A, B ); break;
+			case ARITH_OP_DIV: if( B == 0 ) goto div0err; R = A / B; break;
+			case ARITH_OP_MOD: if( B == 0 ) goto div0err; R = fmod( A, B ); break;
 			default: R = 0; break;
 		}
 		var_setreal( C, out, R );
@@ -1124,17 +1124,21 @@ static void vm_arith_op( SGS_CTX, int16_t out, sgs_VarPtr a, sgs_VarPtr b, uint8
 			case ARITH_OP_ADD: R = A + B; break;
 			case ARITH_OP_SUB: R = A - B; break;
 			case ARITH_OP_MUL: R = A * B; break;
-			case ARITH_OP_DIV: R = A / B; break;
-			case ARITH_OP_MOD: R = A % B; break;
+			case ARITH_OP_DIV: if( B == 0 ) goto div0err; R = A / B; break;
+			case ARITH_OP_MOD: if( B == 0 ) goto div0err; R = A % B; break;
 			default: R = 0; break;
 		}
 		var_setint( C, out, R );
 	}
 	return;
 
+div0err:
+	stk_setlvar_null( C, out );
+	sgs_Printf( C, SGS_ERROR, -1, "Division by 0" );
+	return;
 fail:
 	stk_setlvar_null( C, out );
-	sgs_Printf( C, SGS_ERROR, -1, "Operation is not supported on the given set of arguments." );
+	sgs_Printf( C, SGS_ERROR, -1, "Operation is not supported on the given set of arguments" );
 }
 
 
