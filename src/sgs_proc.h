@@ -86,6 +86,8 @@ typedef uint32_t instr_t;
 	OOOOOOEEEEEEEEEEEEEEEEECCCCCCCCC
 */
 
+#define INSTR_SIZE    32
+
 #define INSTR_OFF_OP  26
 #define INSTR_OFF_A   18
 #define INSTR_OFF_B   9
@@ -119,8 +121,8 @@ typedef uint32_t instr_t;
 
 typedef struct func_s
 {
-	LNTable lineinfo;
-	StrBuf funcname;
+	uint16_t* lineinfo;
+	StrBuf  funcname;
 	LineNum linenum;
 	int32_t refcount;
 	int32_t size;
@@ -201,7 +203,7 @@ void sgsVM_VarDump( sgs_Variable* var );
 
 void sgsVM_StackDump( SGS_CTX );
 
-int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize, void* data, int32_t datasize, int clean, LNTable* T );
+int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize, void* data, int32_t datasize, int clean, uint16_t* T );
 int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int expect, int gotthis );
 
 

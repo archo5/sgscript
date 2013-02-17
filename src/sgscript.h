@@ -39,7 +39,7 @@ typedef int (*sgs_CFunc) ( sgs_Context* );
 struct _sgs_StackFrame
 {
 	sgs_Variable*   func;
-	sgs_LNTable*    lntable;
+	uint16_t*       lntable;
 	const uint32_t* code;
 	const uint32_t* iptr;
 	sgs_StackFrame* prev;

@@ -81,7 +81,7 @@ void var_destroy_func( SGS_CTX, func_t* F )
 		VAR_RELEASE( var );
 		var++;
 	}
-	lht_free( &F->lineinfo );
+	sgs_Free( F->lineinfo );
 	strbuf_destroy( &F->funcname );
 	sgs_Free( F );
 }
@@ -171,7 +171,7 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 	Call stack
 */
 
-static void vm_frame_push( SGS_CTX, sgs_StackFrame* localframe, sgs_Variable* func, LNTable* T, instr_t* code )
+static void vm_frame_push( SGS_CTX, sgs_StackFrame* localframe, sgs_Variable* func, uint16_t* T, instr_t* code )
 {
 	localframe->func = func;
 	localframe->code = code;
@@ -1317,7 +1317,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 	int rvc = 0;
 
 	sgs_BreakIf( sgs_StackSize( C ) < args + gotthis );
-	vm_frame_push( C, &SF, &V, func->type == SVT_FUNC ? &func->data.F->lineinfo : NULL,
+	vm_frame_push( C, &SF, &V, func->type == SVT_FUNC ? func->data.F->lineinfo : NULL,
 					func->type == SVT_FUNC ? func_bytecode( func->data.F ) : NULL );
 	C->stack_off = C->stack_top - args;
 
@@ -1616,7 +1616,7 @@ void sgsVM_StackDump( SGS_CTX )
 	printf( "--\n" );
 }
 
-int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize, void* data, int32_t datasize, int clean, LNTable* T )
+int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize, void* data, int32_t datasize, int clean, uint16_t* T )
 {
 	sgs_StackFrame SF;
 	int stkoff = C->stack_off - C->stack_base, rvc;

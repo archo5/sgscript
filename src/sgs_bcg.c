@@ -17,7 +17,7 @@ static int is_keyword( TokenList tok, const char* text )
 static SGS_INLINE int16_t comp_reg_alloc( SGS_CTX )
 {
 	int out = C->fctx->regs++;
-	if( out > 0x7fff )
+	if( out > 0xff )
 	{
 		C->state |= SGS_HAS_ERRORS;
 		sgs_Printf( C, SGS_ERROR, -1, "Max. register count exceeded" );
@@ -100,82 +100,64 @@ static void fctx_dump( sgs_FuncCtx* fctx )
 }
 
 
-static void dump_rcpos( char* ptr )
+static void dump_rcpos( int arg )
 {
-	int a = AS_INT16( ptr );
-	char rc = a >= 0 ? 'R' : 'C';
-	if( a < 0 ) a = CONSTDEC( a );
-	printf( "%c%d", rc, a );
+	char rc = CONSTVAR( arg ) ? 'C' : 'R';
+	arg = CONSTDEC( arg );
+	printf( "%c%d", rc, arg );
 }
-static void dump_opcode_a( const char* name, char* ptr )
+static void dump_opcode_a( const char* name, instr_t I )
 {
-	int a1 = AS_INT16( ptr );
-	printf( "%s R%d <= ", name, a1 );
-	dump_rcpos( ptr + 2 );
+	printf( "%s R%d <= ", name, INSTR_GET_A( I ) );
+	dump_rcpos( INSTR_GET_B( I ) );
 	printf( ", " );
-	dump_rcpos( ptr + 4 );
+	dump_rcpos( INSTR_GET_C( I ) );
 }
-static void dump_opcode_a1( const char* name, char* ptr )
+static void dump_opcode_b( const char* name, instr_t I )
 {
-	printf( "%s ", name );
-	dump_rcpos( ptr );
-	printf( " <= " );
-	dump_rcpos( ptr + 2 );
-	printf( ", " );
-	dump_rcpos( ptr + 4 );
+	printf( "%s R%d <= ", name, INSTR_GET_A( I ) );
+	dump_rcpos( INSTR_GET_B( I ) );
 }
-static void dump_opcode_b( const char* name, char* ptr )
+static void dump_opcode( instr_t* ptr, int32_t count )
 {
-	int a1 = AS_INT16( ptr );
-	printf( "%s R%d <= ", name, a1 );
-	dump_rcpos( ptr + 2 );
-}
-static void dump_opcode_b1( const char* name, char* ptr )
-{
-	printf( "%s ", name );
-	dump_rcpos( ptr );
-	printf( " <= " );
-	dump_rcpos( ptr + 2 );
-}
-static void dump_opcode( char* ptr, int32_t size )
-{
-	char* pend = ptr + size;
-	char* pbeg = ptr;
+	instr_t* pend = ptr + count;
+	instr_t* pbeg = ptr;
 	while( ptr < pend )
 	{
-		unsigned char instr = *ptr++;
+		instr_t I = *ptr++;
+		int op = INSTR_GET_OP( I ), argA = INSTR_GET_A( I ), argB = INSTR_GET_B( I ),
+			argC = INSTR_GET_C( I ), argE = INSTR_GET_E( I );
+
 		printf( "\t%04d |  ", ptr - pbeg - 1 );
-		switch( instr )
+
+		switch( op )
 		{
-#define DOP_A( wat ) case SI_##wat: dump_opcode_a( #wat, ptr ); ptr += 6; break;
-#define DOP_A1( wat ) case SI_##wat: dump_opcode_a1( #wat, ptr ); ptr += 6; break;
-#define DOP_B( wat ) case SI_##wat: dump_opcode_b( #wat, ptr ); ptr += 4; break;
-#define DOP_B1( wat ) case SI_##wat: dump_opcode_b1( #wat, ptr ); ptr += 4; break;
-#define DOP_C( wat ) case SI_##wat: dump_opcode_c( #wat, ptr ); ptr += 2; break;
+#define DOP_A( wat ) case SI_##wat: dump_opcode_a( #wat, I ); break;
+#define DOP_B( wat ) case SI_##wat: dump_opcode_b( #wat, I ); break;
 		case SI_NOP: printf( "NOP   " ); break;
 
-		case SI_PUSH: printf( "PUSH " ); dump_rcpos( ptr ); ptr += 2; break;
-		case SI_PUSHN: printf( "PUSH_NULLS %d", (int) AS_UINT8( ptr++ ) ); break;
-		case SI_POPN: printf( "POP_N %d", (int) AS_UINT8( ptr++ ) ); break;
-		case SI_POPR: printf( "POP_REG R%d", (int) AS_INT16( ptr ) ); ptr += 2; break;
+		case SI_PUSH: printf( "PUSH " ); dump_rcpos( argB ); break;
+		case SI_PUSHN: printf( "PUSH_NULLS %d", argA ); break;
+		case SI_POPN: printf( "POP_N %d", argA ); break;
+		case SI_POPR: printf( "POP_REG R%d", argA ); break;
 
-		case SI_RETN: printf( "RETURN %d", (int) AS_UINT8( ptr++ ) ); break;
-		case SI_JUMP: printf( "JUMP %d", (int) AS_INT16( ptr ) ); ptr += 2; break;
-		case SI_JMPT: printf( "JMP_T " ); dump_rcpos( ptr ); printf( ", %d", (int) AS_INT16( ptr + 2 ) ); ptr += 4; break;
-		case SI_JMPF: printf( "JMP_F " ); dump_rcpos( ptr ); printf( ", %d", (int) AS_INT16( ptr + 2 ) ); ptr += 4; break;
-		case SI_CALL: printf( "CALL args:%d%s expect:%d func:", (int) AS_UINT8( ptr ) & 0x7f, AS_UINT8( ptr ) & 0x80 ? ",method" : "",
-							(int) AS_UINT8( ptr + 1 ) ); dump_rcpos( ptr + 2 ); ptr += 4; break;
+		case SI_RETN: printf( "RETURN %d", argA ); break;
+		case SI_JUMP: printf( "JUMP %d", argE ); break;
+		case SI_JMPT: printf( "JMP_T " ); dump_rcpos( argC ); printf( ", %d", argE ); break;
+		case SI_JMPF: printf( "JMP_F " ); dump_rcpos( argC ); printf( ", %d", argE ); break;
+		case SI_CALL: printf( "CALL args:%d%s expect:%d func:", argB & 0xff, ( argB & 0x100 ) ? ",method" : "",
+							argA ); dump_rcpos( argC ); break;
 
-		case SI_FORPREP: printf( "FOR_PREP " ); dump_rcpos( ptr ); printf( " <= " ); dump_rcpos( ptr + 2 ); ptr += 4; break;
-		case SI_FORNEXT: printf( "FOR_NEXT " ); dump_rcpos( ptr ); printf( ", " ); dump_rcpos( ptr + 2 );
-							printf( " <= " ); dump_rcpos( ptr + 4 ); ptr += 6; break;
+		case SI_FORPREP: printf( "FOR_PREP " ); dump_rcpos( argA ); printf( " <= " ); dump_rcpos( argB ); break;
+		case SI_FORNEXT: printf( "FOR_NEXT " ); dump_rcpos( argA ); printf( ", " ); dump_rcpos( argB );
+							printf( " <= " ); dump_rcpos( argC ); break;
 
 		DOP_B( GETVAR );
-		DOP_B1( SETVAR );
+		DOP_B( SETVAR );
 		DOP_A( GETPROP );
-		DOP_A1( SETPROP );
+		DOP_A( SETPROP );
 		DOP_A( GETINDEX );
-		DOP_A1( SETINDEX );
+		DOP_A( SETINDEX );
 
 		DOP_B( SET );
 		DOP_B( CLONE );
@@ -209,10 +191,9 @@ static void dump_opcode( char* ptr, int32_t size )
 		DOP_A( GTE );
 #undef DOP_A
 #undef DOP_B
-#undef DOP_C
 
-		case SI_ARRAY: printf( "ARRAY args:%d output:", (int) AS_UINT8( ptr++ ) ); dump_rcpos( ptr ); ptr += 2; break;
-		case SI_DICT: printf( "DICT args:%d output:", (int) AS_UINT8( ptr++ ) ); dump_rcpos( ptr ); ptr += 2; break;
+		case SI_ARRAY: printf( "ARRAY args:%d output:", argB ); dump_rcpos( argA ); break;
+		case SI_DICT: printf( "DICT args:%d output:", argB ); dump_rcpos( argA ); break;
 
 		default: printf( "<error>" ); break;
 		}
@@ -263,17 +244,18 @@ static int add_var( StrBuf* S, char* str, int len )
 }
 
 
-static void add_linenum( sgs_CompFunc* func, FTNode* node )
-{
-	uint16_t ln[ 2 ] = { func->code.size, sgsT_LineNum( node->token ) };
-	membuf_appbuf( &func->lnbuf, ln, sizeof( uint16_t ) * 2 );
-}
-
 /* simplifies writing code */
-#define LINENUM_N( n )  add_linenum( func, n )
-#define LINENUM()       LINENUM_N( node )
-#define BYTE( c )       membuf_appchr( &func->code, (c) )
-#define DATA( ptr, sz ) membuf_appbuf( &func->code, (ptr), (sz) )
+static void add_instr( sgs_CompFunc* func, FTNode* node, instr_t I )
+{
+	uint16_t ln = sgsT_LineNum( node->token );
+	membuf_appbuf( &func->lnbuf, &ln, sizeof( ln ) );
+	membuf_appbuf( &func->code, &I, sizeof( I ) );
+}
+#define INSTR_N( i, n ) add_instr( func, n, i )
+#define INSTR( i )      INSTR_N( i, node )
+#define INSTR_WRITE( op, a, b, c ) INSTR( INSTR_MAKE( op, a, b, c ) )
+#define INSTR_WRITE_EX( op, ex, c ) INSTR( INSTR_MAKE_EX( op, ex, c ) )
+#define INSTR_WRITE_PCH() INSTR_WRITE( SI_NOP, 0, 0, 0 )
 
 
 static int preparse_varlist( SGS_CTX, FTNode* node )
@@ -470,7 +452,11 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf, const cha
 	F->gotthis = nf->gotthis;
 	F->numargs = nf->numargs;
 
-	lht_init_all( &F->lineinfo, (uint16_t*) nf->lnbuf.ptr, nf->lnbuf.size / sizeof( uint16_t ) );
+	{
+		int lnc = nf->lnbuf.size / sizeof( uint16_t );
+		F->lineinfo = sgs_Alloc_n( int16_t, lnc );
+		memcpy( F->lineinfo, nf->lnbuf.ptr, nf->lnbuf.size );
+	}
 	F->funcname = strbuf_create();
 	if( funcname )
 		strbuf_appstr( &F->funcname, funcname );
@@ -612,10 +598,7 @@ static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* 
 	{
 		*out = comp_reg_alloc( C );
 		compile_ident( C, func, node, &pos );
-		LINENUM();
-		BYTE( SI_GETVAR );
-		DATA( out, 2 );
-		DATA( &pos, 2 );
+		INSTR_WRITE( SI_GETVAR, *out, pos, 0 );
 	}
 	return 1;
 }
@@ -650,19 +633,13 @@ static int compile_ident_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 		/* optimization */
 		if( pos != src )
 		{
-			LINENUM();
-			BYTE( SI_SET );
-			DATA( &pos, 2 );
-			DATA( &src, 2 );
+			INSTR_WRITE( SI_SET, pos, src, 0 );
 		}
 	}
 	else
 	{
 		compile_ident( C, func, node, &pos );
-		LINENUM();
-		BYTE( SI_SETVAR );
-		DATA( &pos, 2 );
-		DATA( &src, 2 );
+		INSTR_WRITE( SI_SETVAR, pos, src, 0 );
 	}
 	return 1;
 }
@@ -714,9 +691,7 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 		{
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child->child, &argpos ) ) return 0;
-			LINENUM();
-			BYTE( SI_PUSH );
-			DATA( &argpos, 2 );
+			INSTR_WRITE( SI_PUSH, 0, argpos, 0 );
 			gotthis = TRUE;
 		}
 
@@ -726,9 +701,7 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 			argpos = -1;
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, n, &argpos ) ) return 0;
-			LINENUM();
-			BYTE( SI_PUSH );
-			DATA( &argpos, 2 );
+			INSTR_WRITE( SI_PUSH, 0, argpos, 0 );
 			i++;
 			n = n->next;
 		}
@@ -738,11 +711,7 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 		i |= 0x80;
 
 	/* compile call */
-	LINENUM();
-	BYTE( SI_CALL );
-	BYTE( i );
-	BYTE( expect );
-	DATA( &funcpos, 2 );
+	INSTR_WRITE( SI_CALL, expect, i, funcpos );
 
 	/* compile writeback */
 	while( expect )
@@ -751,9 +720,7 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 		expect--;
 		cra = retpos + expect;
 		out[ expect ] = cra;
-		LINENUM();
-		BYTE( SI_POPR );
-		DATA( &cra, 2 );
+		INSTR_WRITE( SI_POPR, cra, 0, 0 );
 	}
 
 	return 1;
@@ -767,11 +734,7 @@ static int compile_index_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* 
 	if( !compile_node_r( C, func, node->child, &var ) ) return 0;
 	FUNC_ENTER;
 	if( !compile_node_r( C, func, node->child->next, &name ) ) return 0;
-	LINENUM();
-	BYTE( SI_GETINDEX );
-	DATA( &opos, 2 );
-	DATA( &var, 2 );
-	DATA( &name, 2 );
+	INSTR_WRITE( SI_GETINDEX, opos, var, name );
 	comp_reg_unwind( C, regpos );
 	*out = opos;
 	return 1;
@@ -785,42 +748,11 @@ static int compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 	if( !compile_node_r( C, func, node->child, &var ) ) return 0;
 	FUNC_ENTER;
 	if( !compile_node_r( C, func, node->child->next, &name ) ) return 0;
-	LINENUM();
-	BYTE( SI_SETINDEX );
-	DATA( &var, 2 );
-	DATA( &name, 2 );
-	DATA( &src, 2 );
+	INSTR_WRITE( SI_SETINDEX, var, name, src );
 	comp_reg_unwind( C, regpos );
 	return 1;
 }
 
-
-/*
-	This, all of this, is way more complicated than it has to be.
-	If I'm ever switching to equally sized instructions, this will be one of the reasons.
-*/
-
-static int instr_size( uint8_t pos )
-{
-	switch( pos )
-	{
-	case SI_NOP: return 1;
-	case SI_PUSHN: case SI_POPN: case SI_RETN: return 2;
-	case SI_PUSH: case SI_POPR: case SI_JUMP: return 3;
-	case SI_ARRAY: case SI_DICT: return 4;
-	case SI_JMPT: case SI_JMPF: case SI_CALL: case SI_GETVAR: case SI_SETVAR:
-	case SI_SET: case SI_CLONE: case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT:
-	case SI_INC: case SI_DEC: return 5;
-	case SI_GETPROP: case SI_SETPROP: case SI_GETINDEX: case SI_SETINDEX:
-	case SI_CONCAT: case SI_ADD: case SI_SUB:
-	case SI_MUL: case SI_DIV: case SI_MOD: case SI_AND: case SI_OR: case SI_XOR:
-	case SI_LSH: case SI_RSH: case SI_SEQ: case SI_EQ: case SI_LT: case SI_LTE:
-	case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE:
-		return 7;
-	}
-	sgs_BreakIf( "invalid instruction passed to instr_size" );
-	return 0;
-}
 
 static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* node, int32_t ioff )
 {
@@ -830,6 +762,9 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 	FUNC_BEGIN;
 	UNUSED( C );
 
+	/* TODO */
+	goto cannot;
+
 	if( node->type != SFT_IDENT || *node->token != ST_IDENT )
 		goto cannot;
 
@@ -837,7 +772,7 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 	while( ioff < func->code.size )
 	{
 		ibeg = ioff;
-		ioff += instr_size( func->code.ptr[ ioff ] );
+		ioff += 4;
 	}
 	if( ibeg == ioff )
 		goto cannot; /* no instructions to process */
@@ -901,6 +836,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 	{
 		if( assign || expect )
 		{
+			int jin;
 			int16_t ireg1, ireg2, oreg, jmp_off = 0, isb = func->code.size;
 			int32_t csz, csz2;
 
@@ -912,10 +848,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
 
 			/* write cond. jump */
-			LINENUM();
-			BYTE( ( *node->token == ST_OP_BLAND || *node->token == ST_OP_BLAEQ ) ? SI_JMPT : SI_JMPF );
-			DATA( &ireg1, 2 );
-			DATA( &jmp_off, 2 );
+			jin = ( *node->token == ST_OP_BLAND || *node->token == ST_OP_BLAEQ ) ? SI_JMPT : SI_JMPF;
+			INSTR_WRITE_PCH();
 			csz = func->code.size;
 
 			/* compile write of value 1 */
@@ -926,20 +860,15 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			}
 			else
 			{
-				LINENUM();
-				BYTE( SI_SET );
-				DATA( &oreg, 2 );
-				DATA( &ireg1, 2 );
+				INSTR_WRITE( SI_SET, oreg, ireg1, 0 );
 			}
 
-			LINENUM();
-			BYTE( SI_JUMP );
-			DATA( &jmp_off, 2 );
+			INSTR_WRITE_PCH();
 			csz2 = func->code.size;
 
 			/* fix-up jump 1 */
 			jmp_off = func->code.size - csz;
-			AS_INT16( func->code.ptr + csz - 2 ) = jmp_off;
+			AS_UINT32( func->code.ptr + csz - 4 ) = INSTR_MAKE_EX( jin, jmp_off / INSTR_SIZE, ireg1 );
 
 			/* get source data register 2 */
 			FUNC_ENTER;
@@ -953,15 +882,12 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			}
 			else
 			{
-				LINENUM();
-				BYTE( SI_SET );
-				DATA( &oreg, 2 );
-				DATA( &ireg2, 2 );
+				INSTR_WRITE( SI_SET, oreg, ireg2, 0 );
 			}
 
 			/* fix-up jump 2 */
 			jmp_off = func->code.size - csz2;
-			AS_INT16( func->code.ptr + csz2 - 2 ) = jmp_off;
+			AS_UINT32( func->code.ptr + csz - 4 ) = INSTR_MAKE_EX( SI_JUMP, jmp_off / INSTR_SIZE, 0 );
 
 			/* re-read from assignments */
 			if( arg )
@@ -990,10 +916,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		oreg = expect && node->type == SFT_OPER_P ? comp_reg_alloc( C ) : ireg;
 		if( oreg != ireg )
 		{
-			LINENUM();
-			BYTE( SI_SET );
-			DATA( &oreg, 2 );
-			DATA( &ireg, 2 );
+			INSTR_WRITE( SI_SET, oreg, ireg, 0 );
 		}
 
 		/* check for errors if this operator generates output */
@@ -1007,10 +930,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		}
 
 		/* write bytecode */
-		LINENUM();
-		BYTE( *node->token == ST_OP_INC ? SI_INC : SI_DEC );
-		DATA( &ireg, 2 );
-		DATA( &ireg, 2 );
+		INSTR_WRITE( *node->token == ST_OP_INC ? SI_INC : SI_DEC, ireg, ireg, 0 );
 
 		if( arg )
 			*arg = oreg;
@@ -1046,17 +966,14 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			}
 			else
 			{
-				/* TODO: remove, currently emits invalid instruction */
+				/* TODO: remove, currently emits NOP */
 				/* load the original variable and copy data to it */
 				int16_t oreg;
 
 				FUNC_ENTER;
 				if( !compile_node_r( C, func, node->child, &oreg ) ) goto fail;
 
-				LINENUM();
-				BYTE( 255 );
-				DATA( &oreg, 2 );
-				DATA( &ireg, 2 );
+				INSTR_WRITE_PCH();
 			}
 		}
 		/* 2 operands */
@@ -1073,11 +990,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 			/* compile op */
 			op = op_pick_opcode( *node->token, 1 );
-			LINENUM();
-			BYTE( op );
-			DATA( &oreg, 2 );
-			DATA( &ireg1, 2 );
-			DATA( &ireg2, 2 );
+			INSTR_WRITE( op, oreg, ireg1, ireg2 );
 
 			if( arg )
 				*arg = oreg;
@@ -1123,12 +1036,10 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			}
 
 			/* compile op */
-			LINENUM();
-			BYTE( out ? SI_GETPROP : SI_SETPROP );
-			if( out ) DATA( &oreg, 2 );
-			DATA( &ireg1, 2 );
-			DATA( &ireg2, 2 );
-			if( !out ) DATA( &oreg, 2 );
+			if( out )
+				INSTR_WRITE( SI_GETPROP, oreg, ireg1, ireg2 );
+			else
+				INSTR_WRITE( SI_SETPROP, ireg1, ireg2, oreg );
 
 		}
 		else
@@ -1151,12 +1062,10 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 			/* compile op */
 			op = op_pick_opcode( *node->token, !!node->child->next );
-			LINENUM();
-			BYTE( op );
-			DATA( &oreg, 2 );
-			DATA( &ireg1, 2 );
 			if( node->child->next )
-				DATA( &ireg2, 2 );
+				INSTR_WRITE( op, oreg, ireg1, ireg2 );
+			else
+				INSTR_WRITE( op, oreg, ireg1, 0 );
 		}
 	}
 
@@ -1177,7 +1086,8 @@ static int compile_breaks( SGS_CTX, sgs_CompFunc* func, uint8_t iscont )
 	{
 		if( binfo->numlp == C->fctx->loops && binfo->iscont == iscont )
 		{
-			*(int16_t*)( func->code.ptr + binfo->jdoff ) = func->code.size - 2 - binfo->jdoff;
+			int16_t off = ( func->code.size - binfo->jdoff ) / INSTR_SIZE - 1;
+			AS_UINT32( func->code.ptr + binfo->jdoff ) = INSTR_MAKE_EX( SI_JUMP, off, 0 );
 			binfo = binfo->next;
 			fctx_binfo_rem( C->fctx, prev );
 		}
@@ -1326,18 +1236,13 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 				FUNC_ENTER;
 				if( !compile_node_r( C, func, n, &pos ) )
 					goto fail;
-				LINENUM_N( n );
-				BYTE( SI_PUSH );
-				DATA( &pos, 2 );
+				INSTR_WRITE( SI_PUSH, 0, pos, 0 );
 				comp_reg_unwind( C, bkup );
 				args++;
 				n = n->next;
 			}
-			LINENUM();
-			BYTE( SI_ARRAY );
-			BYTE( args );
 			pos = comp_reg_alloc( C );
-			DATA( &pos, 2 );
+			INSTR_WRITE( SI_ARRAY, pos, args, 0 );
 			*out = pos;
 		}
 		break;
@@ -1363,18 +1268,13 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 					if( !compile_node_r( C, func, n, &pos ) )
 						goto fail;
 				}
-				LINENUM_N( n );
-				BYTE( SI_PUSH );
-				DATA( &pos, 2 );
+				INSTR_WRITE( SI_PUSH, 0, pos, 0 );
 				comp_reg_unwind( C, bkup );
 				args++;
 				n = n->next;
 			}
-			LINENUM();
-			BYTE( SI_DICT );
-			BYTE( args );
 			pos = comp_reg_alloc( C );
-			DATA( &pos, 2 );
+			INSTR_WRITE( SI_DICT, pos, args, 0 );
 			*out = pos;
 		}
 		break;
@@ -1473,15 +1373,11 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				int16_t arg = 0;
 				FUNC_ENTER;
 				if( !compile_node_r( C, func, n, &arg ) ) goto fail;
-				LINENUM();
-				BYTE( SI_PUSH );
-				DATA( &arg, 2 );
+				INSTR_WRITE( SI_PUSH, 0, arg, 0 );
 				n = n->next;
 				num++;
 			}
-			LINENUM();
-			BYTE( SI_RETN );
-			BYTE( num );
+			INSTR_WRITE( SI_RETN, num, 0, 0 );
 			comp_reg_unwind( C, regstate );
 		}
 		break;
@@ -1507,13 +1403,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child, &arg ) ) goto fail;
 			comp_reg_unwind( C, regstate );
-			LINENUM();
-			BYTE( SI_JMPF );
-			DATA( &arg, 2 );
+			INSTR_WRITE_PCH();
 			{
 				int32_t jp1, jp2 = 0, jp3 = 0;
 				uint16_t pos = 0;
-				DATA( &pos, 2 );
 				jp1 = func->code.size;
 
 				regstate = C->fctx->regs;
@@ -1523,22 +1416,20 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 				if( node->child->next->next )
 				{
-					LINENUM();
-					BYTE( SI_JUMP );
-					DATA( &pos, 2 );
+					INSTR_WRITE_PCH();
 					jp2 = func->code.size;
-					AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
+					AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE, arg );
 
 					regstate = C->fctx->regs;
 					FUNC_ENTER;
 					if( !compile_node( C, func, node->child->next->next ) ) goto fail;
 					jp3 = func->code.size;
-					AS_INT16( func->code.ptr + jp2 - 2 ) = jp3 - jp2;
+					AS_UINT32( func->code.ptr + jp2 - 4 ) = INSTR_MAKE_EX( SI_JUMP, ( jp3 - jp2 ) / INSTR_SIZE, 0 );
 					comp_reg_unwind( C, regstate );
 				}
 				else
 				{
-					AS_INT16( func->code.ptr + jp1 - 2 ) = func->code.size - jp1;
+					AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( func->code.size - jp1 ) / INSTR_SIZE, arg );
 				}
 			}
 		}
@@ -1554,14 +1445,11 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child, &arg ) ) goto fail; /* test */
 			comp_reg_unwind( C, regstate );
-			LINENUM();
-			BYTE( SI_JMPF );
-			DATA( &arg, 2 );
+			INSTR_WRITE_PCH();
 			{
 				int16_t off;
 				int32_t jp1, jp2 = 0;
 				uint16_t pos = 0;
-				DATA( &pos, 2 );
 				jp1 = func->code.size;
 
 				regstate = C->fctx->regs;
@@ -1572,12 +1460,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				if( !compile_breaks( C, func, 1 ) )
 					goto fail;
 
-				LINENUM();
-				BYTE( SI_JUMP );
-				jp2 = func->code.size + 2;
+				jp2 = func->code.size;
 				off = i - jp2;
-				DATA( &off, 2 );
-				AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
+				INSTR_WRITE_EX( SI_JUMP, off, 0 );
+				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE, arg );
 			}
 			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
@@ -1603,11 +1489,8 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child, &arg ) ) goto fail; /* test */
 			comp_reg_unwind( C, regstate );
-			LINENUM();
-			BYTE( SI_JMPT );
-			DATA( &arg, 2 );
-			joff = i - func->code.size - 2;
-			DATA( &joff, 2 );
+			joff = i - func->code.size;
+			INSTR_WRITE_EX( SI_JMPT, joff, arg );
 			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
 			C->fctx->loops--;
@@ -1627,14 +1510,11 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child->next, &arg ) ) goto fail; /* test */
 			comp_reg_unwind( C, regstate );
-			LINENUM();
-			BYTE( SI_JMPF );
-			DATA( &arg, 2 );
+			INSTR_WRITE_PCH();
 			{
 				int16_t off;
 				int32_t jp1, jp2 = 0;
 				uint16_t pos = 0;
-				DATA( &pos, 2 );
 				jp1 = func->code.size;
 
 				FUNC_ENTER;
@@ -1647,12 +1527,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				if( !compile_node( C, func, node->child->next->next ) ) goto fail; /* incr */
 				comp_reg_unwind( C, regstate );
 
-				LINENUM();
-				BYTE( SI_JUMP );
-				jp2 = func->code.size + 2;
+				jp2 = func->code.size;
 				off = i - jp2;
-				DATA( &off, 2 );
-				AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
+				INSTR_WRITE_EX( SI_JUMP, off, 0 );
+				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE, arg );
 			}
 			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
@@ -1675,27 +1553,17 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child->next, &var ) ) goto fail; /* get variable */
 
-			LINENUM();
-			BYTE( SI_FORPREP );
-			DATA( &iter, 2 );
-			DATA( &var, 2 );
+			INSTR_WRITE( SI_FORPREP, iter, var, 0 );
 			comp_reg_unwind( C, regstate );
 
 			/* iterate */
 			i = func->code.size;
-			LINENUM();
-			BYTE( SI_FORNEXT );
-			DATA( &key, 2 );
-			DATA( &state, 2 );
-			DATA( &iter, 2 );
+			INSTR_WRITE( SI_FORNEXT, key, state, iter );
 
-			LINENUM();
-			BYTE( SI_JMPF );
-			DATA( &state, 2 );
+			INSTR_WRITE_PCH();
 			{
 				int32_t jp1, jp2 = 0;
 				int16_t off = 0;
-				DATA( &off, 2 );
 				jp1 = func->code.size;
 
 				if( !compile_ident_w( C, func, node->child, key ) ) goto fail;
@@ -1707,12 +1575,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				if( !compile_breaks( C, func, 1 ) )
 					goto fail;
 
-				LINENUM();
-				BYTE( SI_JUMP );
-				jp2 = func->code.size + 2;
+				jp2 = func->code.size;
 				off = i - jp2;
-				DATA( &off, 2 );
-				AS_INT16( func->code.ptr + jp1 - 2 ) = jp2 - jp1;
+				INSTR_WRITE_EX( SI_JUMP, off / INSTR_SIZE, 0 );
+				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, off, state );
 			}
 
 			if( !compile_breaks( C, func, 0 ) )
@@ -1734,10 +1600,8 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), C->fctx->loops ? "Break level too high." : "Attempted to break while not in a loop." );
 				goto fail;
 			}
-			LINENUM();
-			BYTE( SI_JUMP );
 			fctx_binfo_add( C->fctx, func->code.size, C->fctx->loops + 1 - blev, FALSE );
-			DATA( &off, 2 );
+			INSTR_WRITE_PCH();
 		}
 		break;
 
@@ -1754,10 +1618,8 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), C->fctx->loops ? "Continue level too high." : "Attempted to continue while not in a loop." );
 				goto fail;
 			}
-			LINENUM();
-			BYTE( SI_JUMP );
 			fctx_binfo_add( C->fctx, func->code.size, C->fctx->loops + 1 - blev, TRUE );
-			DATA( &off, 2 );
+			INSTR_WRITE_PCH();
 		}
 		break;
 
@@ -1864,7 +1726,7 @@ void sgsBC_Dump( sgs_CompFunc* func )
 		var++;
 	}
 	printf( "> code:\n" );
-	dump_opcode( func->code.ptr, func->code.size );
+	dump_opcode( (instr_t*) func->code.ptr, func->code.size / sizeof( instr_t ) );
 	printf( "}\n" );
 }
 

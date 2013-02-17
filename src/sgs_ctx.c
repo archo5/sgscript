@@ -136,7 +136,6 @@ void sgs_DestroyEngine( SGS_CTX )
 static int ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* rvc )
 {
 	int returned;
-	LNTable lnT;
 	TokenList tlist = NULL;
 	FTNode* ftree = NULL;
 	sgs_CompFunc* func = NULL;
@@ -166,8 +165,6 @@ static int ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* 
 	DBGINFO( "...cleaning up tokens/function tree" );
 	sgsFT_Destroy( ftree ); ftree = NULL;
 	sgsT_Free( tlist ); tlist = NULL;
-	DBGINFO( "...generating line number table" );
-	lht_init_all( &lnT, (uint16_t*) func->lnbuf.ptr, func->lnbuf.size / sizeof( uint16_t ) );
 #if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	sgsBC_Dump( func );
 #endif
@@ -175,8 +172,7 @@ static int ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* 
 	DBGINFO( "...executing the generated function" );
 	C->gclist = (sgs_VarPtr) func->consts.ptr;
 	C->gclist_size = func->consts.size / sizeof( sgs_Variable );
-	returned = sgsVM_ExecFn( C, func->code.ptr, func->code.size, func->consts.ptr, func->consts.size, clean, &lnT );
-	lht_free( &lnT );
+	returned = sgsVM_ExecFn( C, func->code.ptr, func->code.size, func->consts.ptr, func->consts.size, clean, (uint16_t*) func->lnbuf.ptr );
 	if( rvc )
 		*rvc = returned;
 	C->gclist = NULL;
@@ -228,14 +224,14 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, char** name, char** fil
 	if( !frame->func )
 	{
 		N = "<main>";
-		L = lht_get( frame->lntable, frame->iptr - frame->code );
+		L = frame->lntable[ frame->iptr - frame->code ];
 	}
 	else if( frame->func->type == SVT_FUNC )
 	{
 		N = "<anonymous function>";
 		if( frame->func->data.F->funcname.size )
 			N = frame->func->data.F->funcname.ptr;
-		L = lht_get( &frame->func->data.F->lineinfo, frame->iptr - frame->code );
+		L = frame->func->data.F->lineinfo[ frame->iptr - frame->code ];
 	}
 	else if( frame->func->type == SVT_CFUNC )
 	{
