@@ -76,6 +76,39 @@ typedef enum sgs_Instruction_e
 }
 sgs_Instruction;
 
+
+typedef uint32_t instr_t;
+
+#define INSTR_OFF_OP  26
+#define INSTR_OFF_A   18
+#define INSTR_OFF_B   9
+#define INSTR_OFF_C   0
+#define INSTR_OFF_E   0
+
+#define INSTR_MASK_OP 0x003f
+#define INSTR_MASK_A  0x00ff
+#define INSTR_MASK_B  0x01ff
+#define INSTR_MASK_C  0x01ff
+#define INSTR_MASK_E  0x0003ffff
+
+#define INSTR_GET_OP( x )  ( ( ( x ) >> INSTR_OFF_OP ) & INSTR_MASK_OP )
+#define INSTR_GET_A( x )   ( ( ( x ) >> INSTR_OFF_A  ) & INSTR_MASK_A  )
+#define INSTR_GET_B( x )   ( ( ( x ) >> INSTR_OFF_B  ) & INSTR_MASK_B  )
+#define INSTR_GET_C( x )   ( ( ( x ) >> INSTR_OFF_C  ) & INSTR_MASK_C  )
+#define INSTR_GET_E( x )   ( ( ( x ) >> INSTR_OFF_E  ) & INSTR_MASK_E  )
+
+#define INSTR_MAKE_OP( x ) ( ( ( x ) & INSTR_MASK_OP ) << INSTR_OFF_OP )
+#define INSTR_MAKE_A( x )  ( ( ( x ) & INSTR_MASK_A  ) << INSTR_OFF_A  )
+#define INSTR_MAKE_B( x )  ( ( ( x ) & INSTR_MASK_B  ) << INSTR_OFF_B  )
+#define INSTR_MAKE_C( x )  ( ( ( x ) & INSTR_MASK_C  ) << INSTR_OFF_C  )
+#define INSTR_MAKE_E( x )  ( ( ( x ) & INSTR_MASK_E  ) << INSTR_OFF_E  )
+
+#define INSTR_MAKE( op, a, b, c ) \
+	( INSTR_MAKE_OP( op ) | INSTR_MAKE_A( a ) | INSTR_MAKE_B( b ) | INSTR_MAKE_C( c ) )
+#define INSTR_MAKE_EX( op, a, ex ) \
+	( INSTR_MAKE_OP( op ) | INSTR_MAKE_A( a ) | INSTR_MAKE_E( ex ) )
+
+
 typedef struct func_s
 {
 	LNTable lineinfo;
@@ -88,8 +121,8 @@ typedef struct func_s
 	int8_t  numargs;
 }
 func_t;
-#define func_consts( pfn ) (((char*)(pfn))+sizeof(func_t))
-#define func_bytecode( pfn )	( func_consts( pfn ) + pfn->instr_off )
+#define func_consts( pfn )   ((sgs_Variable*)(((char*)(pfn))+sizeof(func_t)))
+#define func_bytecode( pfn ) ((instr_t*)(((char*)(pfn))+sizeof(func_t)+pfn->instr_off))
 
 typedef struct string_s
 {

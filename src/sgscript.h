@@ -40,8 +40,8 @@ struct _sgs_StackFrame
 {
 	sgs_Variable*   func;
 	sgs_LNTable*    lntable;
-	char*           code;
-	char*           iptr;
+	const uint32_t* code;
+	const uint32_t* iptr;
 	sgs_StackFrame* prev;
 	sgs_StackFrame* next;
 };

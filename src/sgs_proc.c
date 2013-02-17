@@ -171,7 +171,7 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 	Call stack
 */
 
-static void vm_frame_push( SGS_CTX, sgs_StackFrame* localframe, sgs_Variable* func, LNTable* T, char* code )
+static void vm_frame_push( SGS_CTX, sgs_StackFrame* localframe, sgs_Variable* func, LNTable* T, instr_t* code )
 {
 	localframe->func = func;
 	localframe->code = code;
@@ -1302,7 +1302,7 @@ static void vm_make_dict( SGS_CTX, int args, int16_t outpos )
 }
 
 
-static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* data, int32_t datasize );
+static int vm_exec( SGS_CTX, const instr_t* code, int32_t instrcnt, sgs_Variable* consts, int32_t constcount );
 
 
 /*
@@ -1344,7 +1344,11 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 		/* if <this> wasn't expected but was passed, just don't use it */
 		if( F->gotthis && gotthis )
 			C->stack_off--;
-		rvc = vm_exec( C, func_bytecode( F ), F->size - F->instr_off, func_consts( F ), F->instr_off );
+		{
+			int instrcnt = ( F->size - F->instr_off ) / sizeof( instr_t );
+			int constcnt = F->instr_off / sizeof( sgs_Variable* );
+			rvc = vm_exec( C, func_bytecode( F ), instrcnt, func_consts( F ), constcnt );
+		}
 		if( F->gotthis && gotthis )
 			C->stack_off++;
 	}
@@ -1380,7 +1384,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 
 
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
-static SGS_INLINE sgs_VarPtr const_getvar( sgs_VarPtr consts, uint32_t count, int16_t off )
+static SGS_INLINE sgs_Variable* const_getvar( sgs_Variable* consts, int32_t count, int16_t off )
 {
 	sgs_BreakIf( (int)off >= (int)count );
 	return consts + off;
@@ -1397,14 +1401,12 @@ const char* opnames[] =
 	"concat", "negate", "bool_inv", "invert",  "inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",  "seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte",  "array", "dict"
 };
-static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* data, int32_t datasize )
+static int vm_exec( SGS_CTX, const instr_t* code, int32_t instrcnt, sgs_Variable* consts, int32_t constcount )
 {
-	char* ptr = (char*) code;
-	char* pend = ptr + codesize;
-	sgs_Variable* cptr = (sgs_Variable*) data;
+	const instr_t* ptr = code;
+	const instr_t* pend = ptr + instrcnt;
+	sgs_Variable* cptr = consts;
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
-	sgs_Variable* cpend = (sgs_Variable*) ( ((char*)data) + datasize );
-	uint32_t constcount = cpend - cptr;
 	int stkoff = C->stack_top - C->stack_off;
 #  define RESVAR( v ) ( ( (v) & 0x8000 ) ? const_getvar( cptr, constcount, (v) & 0x7fff ) : stk_getlpos( C, (v) ) )
 #else
@@ -1413,11 +1415,12 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 
 	/* preallocated helpers */
 	int32_t ret = 0;
-	UNUSED( datasize );
+	UNUSED( constcount );
 
 	while( ptr < pend )
 	{
-		uint8_t instr = *ptr;
+		instr_t I = *ptr;
+		int instr = INSTR_GET_OP( I );
 
 		if( C->sf_last && C->sf_last->code == code )
 			C->sf_last->iptr = ptr;
@@ -1478,7 +1481,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 			int16_t off = AS_INT16( ptr );
 			ptr += 2;
 			ptr += off;
-			sgs_BreakIf( ptr > pend || ptr < (char*)code );
+			sgs_BreakIf( ptr > pend || ptr < code );
 			break;
 		}
 
@@ -1490,7 +1493,7 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 			ptr += 2;
 			off = AS_INT16( ptr );
 			ptr += 2;
-			sgs_BreakIf( ptr + off > pend || ptr + off < (char*)code );
+			sgs_BreakIf( ptr + off > pend || ptr + off < code );
 			if( var_getbool( C, RESVAR( arg ) ) ^ ( instr == SI_JMPF ) )
 				ptr += off;
 			break;
