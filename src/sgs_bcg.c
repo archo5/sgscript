@@ -922,6 +922,10 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			DATA( &jmp_off, 2 );
 			csz = func->code.size;
 
+			LINENUM();
+			BYTE( SI_JUMP );
+			DATA( &jmp_off, 2 );
+
 			/* compile write of value 1 */
 			if( assign )
 			{
@@ -936,7 +940,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 				DATA( &ireg1, 2 );
 			}
 
-			/* fix-up jump */
+			/* fix-up jump 1 */
 			jmp_off = func->code.size - csz;
 			AS_INT16( func->code.ptr + csz - 2 ) = jmp_off;
 
@@ -958,15 +962,21 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 				DATA( &ireg2, 2 );
 			}
 
+			/* fix-up jump 2 */
+			jmp_off = func->code.size - csz - 3;
+			AS_INT16( func->code.ptr + csz + 1 ) = jmp_off;
+
 			/* re-read from assignments */
-			if( assign && arg )
-			{
-				FUNC_ENTER;
-				if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
-			}
-			else
 			if( arg )
-				*arg = oreg;
+			{
+				if( assign )
+				{
+					FUNC_ENTER;
+					if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
+				}
+				else
+					*arg = oreg;
+			}
 		}
 	}
 	else
