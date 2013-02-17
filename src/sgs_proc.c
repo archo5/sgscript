@@ -1390,7 +1390,7 @@ const char* opnames[] =
 {
 	"nop",  "push", "push_nulls", "pop_n", "pop_reg",  "return", "jump", "jump_if_true", "jump_if_false", "call",
 	"for_prep", "for_next", "getvar", "setvar", "getprop", "setprop", "getindex", "setindex",  "set", "copy",
-	"concat", "bool_and", "bool_or", "negate", "bool_inv", "invert",  "inc", "dec", "add", "sub", "mul", "div", "mod",
+	"concat", "negate", "bool_inv", "invert",  "inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",  "seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte",  "array", "dict"
 };
 static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* data, int32_t datasize )
@@ -1531,8 +1531,6 @@ static int vm_exec( SGS_CTX, const void* code, int32_t codesize, const void* dat
 		case SI_SET: { ARGS_2; stk_setlvar( C, a1, p2 ); break; }
 		case SI_CLONE: { ARGS_2; vm_clone( C, a1, p2 ); break; }
 		case SI_CONCAT: { ARGS_3; vm_op_concat( C, a1, p2, p3 ); break; }
-		case SI_BOOL_AND: { ARGS_3; vm_op_booland( C, a1, p2, p3 ); break; }
-		case SI_BOOL_OR: { ARGS_3; vm_op_boolor( C, a1, p2, p3 ); break; }
 		case SI_NEGATE: { ARGS_2; vm_op_negate( C, a1, p2 ); break; }
 		case SI_BOOL_INV: { ARGS_2; vm_op_boolinv( C, a1, p2 ); break; }
 		case SI_INVERT: { ARGS_2; vm_op_invert( C, a1, p2 ); break; }

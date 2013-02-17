@@ -43,8 +43,6 @@ typedef enum sgs_Instruction_e
 	SI_SET,      /* B */
 	SI_CLONE,
 	SI_CONCAT,   /* A */
-	SI_BOOL_AND,
-	SI_BOOL_OR,
 	SI_NEGATE,   /* B */
 	SI_BOOL_INV,
 	SI_INVERT,

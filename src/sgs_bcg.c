@@ -180,8 +180,6 @@ static void dump_opcode( char* ptr, int32_t size )
 		DOP_B( SET );
 		DOP_B( CLONE );
 		DOP_A( CONCAT );
-		DOP_A( BOOL_AND );
-		DOP_A( BOOL_OR );
 		DOP_B( NEGATE );
 		DOP_B( BOOL_INV );
 		DOP_B( INVERT );
@@ -520,8 +518,6 @@ static int op_pick_opcode( int oper, int binary )
 	case ST_OP_RSH: case ST_OP_RSHEQ: return SI_RSH;
 
 	case ST_OP_CAT: case ST_OP_CATEQ: return SI_CONCAT;
-	case ST_OP_BLAND: case ST_OP_BLAEQ: return SI_BOOL_AND;
-	case ST_OP_BLOR: case ST_OP_BLOEQ: return SI_BOOL_OR;
 
 	case ST_OP_SEQ: return SI_SEQ;
 	case ST_OP_SNEQ: return SI_SNEQ;
@@ -816,7 +812,7 @@ static int instr_size( uint8_t pos )
 	case SI_SET: case SI_CLONE: case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT:
 	case SI_INC: case SI_DEC: return 5;
 	case SI_GETPROP: case SI_SETPROP: case SI_GETINDEX: case SI_SETINDEX:
-	case SI_CONCAT: case SI_BOOL_AND: case SI_BOOL_OR: case SI_ADD: case SI_SUB:
+	case SI_CONCAT: case SI_ADD: case SI_SUB:
 	case SI_MUL: case SI_DIV: case SI_MOD: case SI_AND: case SI_OR: case SI_XOR:
 	case SI_LSH: case SI_RSH: case SI_SEQ: case SI_EQ: case SI_LT: case SI_LTE:
 	case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE:
@@ -871,7 +867,7 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 	switch( (uint8_t) func->code.ptr[ ibeg ] )
 	{
 	case SI_POPR: case SI_GETVAR: case SI_GETPROP: case SI_GETINDEX:
-	case SI_SET: case SI_CONCAT: case SI_BOOL_AND: case SI_BOOL_OR:
+	case SI_SET: case SI_CONCAT:
 	case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT: case SI_INC: case SI_DEC:
 	case SI_ADD: case SI_SUB: case SI_MUL: case SI_DIV: case SI_MOD:
 	case SI_AND: case SI_OR: case SI_XOR: case SI_LSH: case SI_RSH:
@@ -906,7 +902,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		if( assign || expect )
 		{
 			int16_t ireg1, ireg2, oreg, jmp_off = 0, isb = func->code.size;
-			int32_t csz;
+			int32_t csz, csz2;
 
 			if( !assign )
 				oreg = comp_reg_alloc( C );
@@ -922,10 +918,6 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			DATA( &jmp_off, 2 );
 			csz = func->code.size;
 
-			LINENUM();
-			BYTE( SI_JUMP );
-			DATA( &jmp_off, 2 );
-
 			/* compile write of value 1 */
 			if( assign )
 			{
@@ -939,6 +931,11 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 				DATA( &oreg, 2 );
 				DATA( &ireg1, 2 );
 			}
+
+			LINENUM();
+			BYTE( SI_JUMP );
+			DATA( &jmp_off, 2 );
+			csz2 = func->code.size;
 
 			/* fix-up jump 1 */
 			jmp_off = func->code.size - csz;
@@ -963,8 +960,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			}
 
 			/* fix-up jump 2 */
-			jmp_off = func->code.size - csz - 3;
-			AS_INT16( func->code.ptr + csz + 1 ) = jmp_off;
+			jmp_off = func->code.size - csz2;
+			AS_INT16( func->code.ptr + csz2 - 2 ) = jmp_off;
 
 			/* re-read from assignments */
 			if( arg )
