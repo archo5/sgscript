@@ -1117,13 +1117,10 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	comp_reg_unwind( C, 0 );
 
 	{
-		uint8_t lpn[ 2 ] = { SI_PUSHN, C->fctx->lastreg - args };
-		uint16_t* lndata = (uint16_t*) nf->lnbuf.ptr;
-		uint16_t i, lncnt = nf->lnbuf.size / sizeof( uint16_t );
-
-		membuf_insbuf( &nf->code, 0, lpn, 2 );
-		for( i = 0; i < lncnt; i += 2 )
-			lndata[ i ] += 2;
+		instr_t I = INSTR_MAKE( SI_PUSHN, C->fctx->lastreg - args, 0, 0 );
+		uint16_t ln = 0;
+		membuf_insbuf( &nf->code, 0, &I, sizeof( I ) );
+		membuf_insbuf( &nf->lnbuf, 0, &ln, sizeof( ln ) );
 	}
 
 #if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
@@ -1686,13 +1683,10 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 	comp_reg_unwind( C, 0 );
 
 	{
-		uint8_t lpn[ 2 ] = { SI_PUSHN, C->fctx->lastreg };
-		uint16_t* lndata = (uint16_t*) func->lnbuf.ptr;
-		uint16_t i, lncnt = func->lnbuf.size / sizeof( uint16_t );
-
-		membuf_insbuf( &func->code, 0, lpn, 2 );
-		for( i = 0; i < lncnt; i += 2 )
-			lndata[ i ] += 2;
+		instr_t I = INSTR_MAKE( SI_PUSHN, C->fctx->lastreg, 0, 0 );
+		uint16_t ln = 0;
+		membuf_insbuf( &func->code, 0, &I, sizeof( I ) );
+		membuf_insbuf( &func->lnbuf, 0, &ln, sizeof( ln ) );
 	}
 
 	C->fctx = NULL;
