@@ -86,7 +86,7 @@ typedef uint32_t instr_t;
 	OOOOOOEEEEEEEEEEEEEEEEECCCCCCCCC
 */
 
-#define INSTR_SIZE    32
+#define INSTR_SIZE    4
 
 #define INSTR_OFF_OP  26
 #define INSTR_OFF_A   18

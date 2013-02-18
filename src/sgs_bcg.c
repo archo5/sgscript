@@ -142,9 +142,9 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 		case SI_POPR: printf( "POP_REG R%d", argA ); break;
 
 		case SI_RETN: printf( "RETURN %d", argA ); break;
-		case SI_JUMP: printf( "JUMP %d", argE ); break;
-		case SI_JMPT: printf( "JMP_T " ); dump_rcpos( argC ); printf( ", %d", argE ); break;
-		case SI_JMPF: printf( "JMP_F " ); dump_rcpos( argC ); printf( ", %d", argE ); break;
+		case SI_JUMP: printf( "JUMP %d", (int) (int16_t) argE ); break;
+		case SI_JMPT: printf( "JMP_T " ); dump_rcpos( argC ); printf( ", %d", (int) (int16_t) argE ); break;
+		case SI_JMPF: printf( "JMP_F " ); dump_rcpos( argC ); printf( ", %d", (int) (int16_t) argE ); break;
 		case SI_CALL: printf( "CALL args:%d%s expect:%d func:", argB & 0xff, ( argB & 0x100 ) ? ",method" : "",
 							argA ); dump_rcpos( argC ); break;
 
@@ -255,7 +255,7 @@ static void add_instr( sgs_CompFunc* func, FTNode* node, instr_t I )
 #define INSTR( i )      INSTR_N( i, node )
 #define INSTR_WRITE( op, a, b, c ) INSTR( INSTR_MAKE( op, a, b, c ) )
 #define INSTR_WRITE_EX( op, ex, c ) INSTR( INSTR_MAKE_EX( op, ex, c ) )
-#define INSTR_WRITE_PCH() INSTR_WRITE( SI_NOP, 0, 0, 0 )
+#define INSTR_WRITE_PCH() INSTR_WRITE( 63, 0, 0, 0 )
 
 
 static int preparse_varlist( SGS_CTX, FTNode* node )
@@ -887,7 +887,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 			/* fix-up jump 2 */
 			jmp_off = func->code.size - csz2;
-			AS_UINT32( func->code.ptr + csz - 4 ) = INSTR_MAKE_EX( SI_JUMP, jmp_off / INSTR_SIZE, 0 );
+			AS_UINT32( func->code.ptr + csz2 - 4 ) = INSTR_MAKE_EX( SI_JUMP, jmp_off / INSTR_SIZE, 0 );
 
 			/* re-read from assignments */
 			if( arg )
@@ -1459,8 +1459,8 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 				jp2 = func->code.size;
 				off = i - jp2;
-				INSTR_WRITE_EX( SI_JUMP, off, 0 );
-				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE, arg );
+				INSTR_WRITE_EX( SI_JUMP, off / INSTR_SIZE - 1, 0 );
+				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE + 1, arg );
 			}
 			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
@@ -1487,7 +1487,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			if( !compile_node_r( C, func, node->child, &arg ) ) goto fail; /* test */
 			comp_reg_unwind( C, regstate );
 			joff = i - func->code.size;
-			INSTR_WRITE_EX( SI_JMPT, joff, arg );
+			INSTR_WRITE_EX( SI_JMPT, joff / INSTR_SIZE - 1, arg );
 			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
 			C->fctx->loops--;
@@ -1526,8 +1526,8 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 				jp2 = func->code.size;
 				off = i - jp2;
-				INSTR_WRITE_EX( SI_JUMP, off, 0 );
-				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE, arg );
+				INSTR_WRITE_EX( SI_JUMP, off / INSTR_SIZE - 1, 0 );
+				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE + 1, arg );
 			}
 			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
@@ -1574,8 +1574,8 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 				jp2 = func->code.size;
 				off = i - jp2;
-				INSTR_WRITE_EX( SI_JUMP, off / INSTR_SIZE, 0 );
-				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, off, state );
+				INSTR_WRITE_EX( SI_JUMP, off / INSTR_SIZE - 1, 0 );
+				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, off / INSTR_SIZE - 1, state );
 			}
 
 			if( !compile_breaks( C, func, 0 ) )
