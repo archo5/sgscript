@@ -1481,9 +1481,8 @@ static int vm_exec( SGS_CTX, const instr_t* code, int32_t instrcnt, sgs_Variable
 
 		case SI_CALL:
 		{
-			uint8_t expect = argA, args = argB;
-			int16_t src = argC;
-			int gotthis = ( args & 0x100 ) != 0;
+			int expect = argA, args = argB, src = argC;
+			int gotthis = ( argB & 0x100 ) != 0;
 			args &= 0xff;
 			vm_call( C, args, gotthis, expect, RESVAR( src ) );
 			break;
@@ -1496,7 +1495,7 @@ static int vm_exec( SGS_CTX, const instr_t* code, int32_t instrcnt, sgs_Variable
 #define ARGS_2 sgs_VarPtr p2; p2 = RESVAR( argB );
 #define ARGS_3 sgs_VarPtr p2, p3; p2 = RESVAR( argB ); p3 = RESVAR( argC );
 		case SI_GETVAR: { ARGS_2; vm_getvar( C, a1, p2 ); break; }
-		case SI_SETVAR: { ARGS_2; vm_setvar( C, RESVAR( a1 ), p2 ); break; }
+		case SI_SETVAR: { ARGS_3; vm_setvar( C, p2, p3 ); break; }
 		case SI_GETPROP: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, FALSE ), p3, FALSE ); break; }
 		case SI_SETPROP: { ARGS_3; vm_properr( C, vm_setprop( C, RESVAR( a1 ), p2, p3, FALSE ), p2, FALSE ); break; }
 		case SI_GETINDEX: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, TRUE ), p3, TRUE ); break; }

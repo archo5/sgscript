@@ -30,7 +30,7 @@ typedef enum sgs_Instruction_e
 	SI_FORNEXT,  /* (A:oky, B:ost, C:iter)  retrieves pending output key/state from iterator */
 
 	SI_GETVAR,   /* (A:out, B:name)         <varname> => <value> */
-	SI_SETVAR,   /* (A:name, B:src)         <varname> <value> => set <value> to <varname> */
+	SI_SETVAR,   /* (B:name, C:src)         <varname> <value> => set <value> to <varname> */
 	SI_GETPROP,  /* (A:out, B:var, C:name)  <var> <prop> => <var> */
 	SI_SETPROP,  /* (A:var, B:name, C:src)  <var> <prop> <value> => set a <prop> of <var> to <value> */
 	SI_GETINDEX, /* -- || -- */

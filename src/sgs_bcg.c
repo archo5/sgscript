@@ -118,6 +118,13 @@ static void dump_opcode_b( const char* name, instr_t I )
 	printf( "%s R%d <= ", name, INSTR_GET_A( I ) );
 	dump_rcpos( INSTR_GET_B( I ) );
 }
+static void dump_opcode_b1( const char* name, instr_t I )
+{
+	printf( "%s ", name );
+	dump_rcpos( INSTR_GET_B( I ) );
+	printf( " <= " );
+	dump_rcpos( INSTR_GET_C( I ) );
+}
 static void dump_opcode( instr_t* ptr, int32_t count )
 {
 	instr_t* pend = ptr + count;
@@ -153,7 +160,7 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 							printf( " <= " ); dump_rcpos( argC ); break;
 
 		DOP_B( GETVAR );
-		DOP_B( SETVAR );
+		case SI_SETVAR: dump_opcode_b1( "SETVAR", I ); break;
 		DOP_A( GETPROP );
 		DOP_A( SETPROP );
 		DOP_A( GETINDEX );
@@ -639,7 +646,7 @@ static int compile_ident_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 	else
 	{
 		compile_ident( C, func, node, &pos );
-		INSTR_WRITE( SI_SETVAR, pos, src, 0 );
+		INSTR_WRITE( SI_SETVAR, 0, pos, src );
 	}
 	return 1;
 }
@@ -708,7 +715,7 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 	}
 
 	if( gotthis )
-		i |= 0x80;
+		i |= 0x100;
 
 	/* compile call */
 	INSTR_WRITE( SI_CALL, expect, i, funcpos );
@@ -1575,7 +1582,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				jp2 = func->code.size;
 				off = i - jp2;
 				INSTR_WRITE_EX( SI_JUMP, off / INSTR_SIZE - 1, 0 );
-				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, off / INSTR_SIZE - 1, state );
+				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( func->code.size - jp1 ) / INSTR_SIZE, state );
 			}
 
 			if( !compile_breaks( C, func, 0 ) )
