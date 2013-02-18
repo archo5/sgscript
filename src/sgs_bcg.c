@@ -764,26 +764,17 @@ static int compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* node, int32_t ioff )
 {
 	int16_t pos = -1;
-	int32_t ibeg = ioff;
 
 	FUNC_BEGIN;
 	UNUSED( C );
 
-	/* TODO */
-	goto cannot;
-
 	if( node->type != SFT_IDENT || *node->token != ST_IDENT )
 		goto cannot;
 
-	/* find last instruction */
-	while( ioff < func->code.size )
-	{
-		ibeg = ioff;
-		ioff += 4;
-	}
-	if( ibeg == ioff )
-		goto cannot; /* no instructions to process */
-	/* last one's after "ibeg" */
+	if( ioff >= func->code.size - 4 )
+		goto cannot;
+
+	ioff = func->code.size - 4;
 
 	/* find the variable output register */
 	if( C->fctx->func )
@@ -806,22 +797,25 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 	if( pos < 0 )
 		goto cannot;
 
-	switch( (uint8_t) func->code.ptr[ ibeg ] )
 	{
-	case SI_POPR: case SI_GETVAR: case SI_GETPROP: case SI_GETINDEX:
-	case SI_SET: case SI_CONCAT:
-	case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT: case SI_INC: case SI_DEC:
-	case SI_ADD: case SI_SUB: case SI_MUL: case SI_DIV: case SI_MOD:
-	case SI_AND: case SI_OR: case SI_XOR: case SI_LSH: case SI_RSH:
-	case SI_SEQ: case SI_EQ: case SI_LT: case SI_LTE:
-	case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE:
-		AS_INT16( func->code.ptr + ibeg + 1 ) = pos;
-		break;
-	case SI_ARRAY: case SI_DICT:
-		AS_INT16( func->code.ptr + ibeg + 2 ) = pos;
-		break;
-	default:
-		goto cannot;
+		instr_t I = *(instr_t*)(func->code.ptr + ioff);
+		int op = INSTR_GET_OP( I ), argB = INSTR_GET_B( I ), argC = INSTR_GET_C( I );
+		switch( op )
+		{
+		case SI_POPR: case SI_GETVAR: case SI_GETPROP: case SI_GETINDEX:
+		case SI_SET: case SI_CONCAT:
+		case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT: case SI_INC: case SI_DEC:
+		case SI_ADD: case SI_SUB: case SI_MUL: case SI_DIV: case SI_MOD:
+		case SI_AND: case SI_OR: case SI_XOR: case SI_LSH: case SI_RSH:
+		case SI_SEQ: case SI_EQ: case SI_LT: case SI_LTE:
+		case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE:
+		case SI_ARRAY: case SI_DICT:
+			I = INSTR_MAKE( op, pos, argB, argC );
+			AS_UINT32( func->code.ptr + ioff ) = I;
+			break;
+		default:
+			goto cannot;
+		}
 	}
 
 	FUNC_END;
