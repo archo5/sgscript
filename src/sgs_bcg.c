@@ -461,7 +461,7 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf, const cha
 
 	{
 		int lnc = nf->lnbuf.size / sizeof( uint16_t );
-		F->lineinfo = sgs_Alloc_n( int16_t, lnc );
+		F->lineinfo = sgs_Alloc_n( uint16_t, lnc );
 		memcpy( F->lineinfo, nf->lnbuf.ptr, nf->lnbuf.size );
 	}
 	F->funcname = strbuf_create();
@@ -838,7 +838,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		if( assign || expect )
 		{
 			int jin;
-			int16_t ireg1, ireg2, oreg, jmp_off = 0, isb = func->code.size;
+			int16_t ireg1, ireg2, oreg = 0, jmp_off = 0;
 			int32_t csz, csz2;
 
 			if( !assign )
@@ -1404,7 +1404,6 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			INSTR_WRITE_PCH();
 			{
 				int32_t jp1, jp2 = 0, jp3 = 0;
-				uint16_t pos = 0;
 				jp1 = func->code.size;
 
 				regstate = C->fctx->regs;
@@ -1447,7 +1446,6 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			{
 				int16_t off;
 				int32_t jp1, jp2 = 0;
-				uint16_t pos = 0;
 				jp1 = func->code.size;
 
 				regstate = C->fctx->regs;
@@ -1512,7 +1510,6 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			{
 				int16_t off;
 				int32_t jp1, jp2 = 0;
-				uint16_t pos = 0;
 				jp1 = func->code.size;
 
 				FUNC_ENTER;
@@ -1588,7 +1585,6 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_BREAK:
 		FUNC_HIT( "BREAK" );
 		{
-			int16_t off = 0;
 			TokenList tl = sgsT_Next( node->token );
 			int32_t blev = 1;
 			if( *tl == ST_NUMINT )
@@ -1606,7 +1602,6 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_CONT:
 		FUNC_HIT( "CONTINUE" );
 		{
-			int16_t off = 0;
 			TokenList tl = sgsT_Next( node->token );
 			int32_t blev = 1;
 			if( *tl == ST_NUMINT )
