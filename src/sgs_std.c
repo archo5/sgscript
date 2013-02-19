@@ -993,7 +993,12 @@ static int sgsstd_sys_errorstate( SGS_CTX )
 }
 static int sgsstd_sys_abort( SGS_CTX )
 {
-	C->state |= SGS_MUST_STOP;
+	sgs_StackFrame* sf = C->sf_first;
+	while( sf )
+	{
+		sf->iptr = sf->iend;
+		sf++;
+	}
 	return 0;
 }
 

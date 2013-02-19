@@ -998,12 +998,14 @@ static int vm_op_negate( SGS_CTX, sgs_VarPtr out, sgs_Variable *A )
 
 static void vm_op_boolinv( SGS_CTX, int16_t out, sgs_Variable *A )
 {
-	var_setbool( C, C->stack_off + out, !var_getbool( C, A ) );
+	int val = !var_getbool( C, A );
+	var_setbool( C, C->stack_off + out, val );
 }
 
 static void vm_op_invert( SGS_CTX, int16_t out, sgs_Variable *A )
 {
-	var_setint( C, C->stack_off + out, ~var_getint( C, A ) );
+	sgs_Integer val = ~var_getint( C, A );
+	var_setint( C, C->stack_off + out, val );
 }
 
 
@@ -1488,9 +1490,9 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		case SI_GETVAR: { ARGS_2; vm_getvar( C, p1, p2 ); break; }
 		case SI_SETVAR: { ARGS_3; vm_setvar( C, p2, p3 ); break; }
 		case SI_GETPROP: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, FALSE ), p3, FALSE ); break; }
-		case SI_SETPROP: { ARGS_3; vm_properr( C, vm_setprop( C, RESVAR( a1 ), p2, p3, FALSE ), p2, FALSE ); break; }
+		case SI_SETPROP: { ARGS_3; vm_properr( C, vm_setprop( C, p1, p2, p3, FALSE ), p2, FALSE ); break; }
 		case SI_GETINDEX: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, TRUE ), p3, TRUE ); break; }
-		case SI_SETINDEX: { ARGS_3; vm_properr( C, vm_setprop( C, RESVAR( a1 ), p2, p3, TRUE ), p2, TRUE ); break; }
+		case SI_SETINDEX: { ARGS_3; vm_properr( C, vm_setprop( C, p1, p2, p3, TRUE ), p2, TRUE ); break; }
 
 		case SI_SET: { ARGS_2; stk_setlvar( C, a1, p2 ); break; }
 		case SI_CLONE: { ARGS_2; vm_clone( C, a1, p2 ); break; }
