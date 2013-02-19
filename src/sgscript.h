@@ -42,6 +42,7 @@ struct _sgs_StackFrame
 	uint16_t*       lntable;
 	const uint32_t* code;
 	const uint32_t* iptr;
+	const uint32_t* iend;
 	sgs_StackFrame* prev;
 	sgs_StackFrame* next;
 };
