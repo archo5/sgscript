@@ -340,14 +340,7 @@ static SGS_INLINE void stk_setvar_null( SGS_CTX, int stkid )
 	vpos->type = SVT_NULL;
 }
 
-static SGS_INLINE sgs_VarPtr stk_getlpos( SGS_CTX, int stkid )
-{
-#if SGS_DEBUG_EXTRA
-	DBG_STACK_CHECK
-	sgs_BreakIf( stkid >= C->stack_top - C->stack_off );
-#endif
-	return C->stack_off + stkid;
-}
+#define stk_getlpos( C, stkid ) (C->stack_off + stkid)
 static SGS_INLINE void stk_setlvar( SGS_CTX, int stkid, sgs_VarPtr var )
 {
 	sgs_VarPtr vpos = stk_getlpos( C, stkid );
@@ -1420,12 +1413,11 @@ static int vm_exec( SGS_CTX, const instr_t* code, int32_t instrcnt, sgs_Variable
 	{
 		instr_t I = *ptr;
 		int instr = INSTR_GET_OP( I );
-		int argA = INSTR_GET_A( I );
-		int argB = INSTR_GET_B( I );
-		int argC = INSTR_GET_C( I );
+#define argA INSTR_GET_A(I)
+#define argB INSTR_GET_B(I)
+#define argC INSTR_GET_C(I)
 
-		if( C->sf_last && C->sf_last->code == code )
-			C->sf_last->iptr = ptr;
+		C->sf_last->iptr = ptr;
 		ptr++;
 
 #if SGS_DEBUG
