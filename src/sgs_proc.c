@@ -1185,10 +1185,11 @@ VAR_IOP( rsh, >> )
 /* returns 0 if equal, >0 if A is bigger, <0 if B is bigger */
 static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 {
-	if( a->type == SVT_INT && b->type == SVT_INT ) return a->data.I - b->data.I;
-	if( a->type == SVT_REAL && b->type == SVT_REAL ) return a->data.R - b->data.R;
+	const uint8_t ta = a->type, tb = b->type;
+	if( ta == SVT_INT && tb == SVT_INT ) return a->data.I - b->data.I;
+	if( ta == SVT_REAL && tb == SVT_REAL ) return a->data.R - b->data.R;
 
-	if( a->type == SVT_OBJECT || b->type == SVT_OBJECT )
+	if( ta == SVT_OBJECT || tb == SVT_OBJECT )
 	{
 		USING_STACK
 		stk_makespace( C, 2 );
@@ -1197,8 +1198,8 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		VAR_ACQUIRE( a );
 		VAR_ACQUIRE( b );
 
-		if( ( a->type == SVT_OBJECT && obj_exec( C, SOP_COMPARE, a->data.O, 2 ) == SGS_SUCCESS ) ||
-			( b->type == SVT_OBJECT && obj_exec( C, SOP_COMPARE, b->data.O, 2 ) == SGS_SUCCESS ) )
+		if( ( ta == SVT_OBJECT && obj_exec( C, SOP_COMPARE, a->data.O, 2 ) == SGS_SUCCESS ) ||
+			( tb == SVT_OBJECT && obj_exec( C, SOP_COMPARE, b->data.O, 2 ) == SGS_SUCCESS ) )
 		{
 			USING_STACK
 			sgs_Real out = var_getreal( C, --C->stack_top );
@@ -1209,23 +1210,23 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 
 		stk_pop2( C );
 		/* fallback: check for equality */
-		if( a->type == b->type )
+		if( ta == tb )
 			return a->data.O - b->data.O;
 		else
-			return a->type - b->type;
+			return ta - tb;
 	}
-	if( a->type == SVT_BOOL || b->type == SVT_BOOL )
+	if( ta == SVT_BOOL || tb == SVT_BOOL )
 		return var_getbool( C, a ) - var_getbool( C, b );
-	if( a->type == SVT_FUNC || b->type == SVT_FUNC || a->type == SVT_CFUNC || b->type == SVT_CFUNC )
+	if( ta == SVT_FUNC || tb == SVT_FUNC || ta == SVT_CFUNC || tb == SVT_CFUNC )
 	{
-		if( a->type != b->type )
-			return a->type - b->type;
-		if( a->type == SVT_FUNC )
+		if( ta != tb )
+			return ta - tb;
+		if( ta == SVT_FUNC )
 			return a->data.F - b->data.F;
 		else
 			return a->data.C == b->data.C ? 0 : a->data.C < b->data.C ? -1 : 1;
 	}
-	if( a->type == SVT_STRING || b->type == SVT_STRING )
+	if( ta == SVT_STRING || tb == SVT_STRING )
 	{
 		int out;
 		sgs_Variable A = *a, B = *b;
