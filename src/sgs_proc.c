@@ -607,25 +607,12 @@ static void var_setbool( SGS_CTX, sgs_VarPtr var, int value )
 	var->data.B = value ? 1 : 0;
 }
 
-static void var_setint( SGS_CTX, sgs_VarPtr var, sgs_Integer value )
-{
-	if( var->type != SVT_INT )
-	{
-		VAR_RELEASE( var );
-		var->type = SVT_INT;
-	}
-	var->data.I = value;
-}
-
-static void var_setreal( SGS_CTX, sgs_VarPtr var, sgs_Real value )
-{
-	if( var->type != SVT_REAL )
-	{
-		VAR_RELEASE( var );
-		var->type = SVT_REAL;
-	}
-	var->data.R = value;
-}
+#define var_setint( C, v, value ) \
+{ sgs_VarPtr var = (v); if( var->type == SVT_INT ) var->data.I = value; \
+	else { VAR_RELEASE( var ); var->type = SVT_INT; var->data.I = value; } }
+#define var_setreal( C, v, value ) \
+{ sgs_VarPtr var = (v); if( var->type == SVT_REAL ) var->data.R = value; \
+	else { VAR_RELEASE( var ); var->type = SVT_REAL; var->data.R = value; } }
 
 
 static int init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
