@@ -1033,6 +1033,7 @@ sgs_RegFuncConst regfuncs[] =
 
 sgs_RegIntConst regiconsts[] =
 {
+	{ "__dummy", 0 },
 };
 
 int sgsVM_RegStdLibs( SGS_CTX )

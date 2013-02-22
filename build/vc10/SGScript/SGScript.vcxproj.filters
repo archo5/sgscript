@@ -8,6 +8,7 @@
     <ClCompile Include="..\..\..\src\sgs_std.c" />
     <ClCompile Include="..\..\..\src\sgs_tok.c" />
     <ClCompile Include="..\..\..\src\sgs_util.c" />
+    <ClCompile Include="..\..\..\src\sgs_stdL.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\sgs_bcg.h" />
@@ -19,5 +20,6 @@
     <ClInclude Include="..\..\..\src\sgs_util.h" />
     <ClInclude Include="..\..\..\src\sgs_xpc.h" />
     <ClInclude Include="..\..\..\src\sgscript.h" />
+    <ClInclude Include="..\..\..\src\sgs_std.h" />
   </ItemGroup>
 </Project>

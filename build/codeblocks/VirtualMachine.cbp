@@ -22,14 +22,10 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-fomit-frame-pointer" />
 					<Add option="-O2" />
 					<Add option="-g" />
 					<Add directory="../../src" />
 				</Compiler>
-				<Linker>
-					<Add option="-s" />
-				</Linker>
 			</Target>
 		</Build>
 		<Compiler>

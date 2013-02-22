@@ -88,11 +88,11 @@ typedef uint32_t instr_t;
 
 #define INSTR_SIZE    4
 
-#define INSTR_OFF_OP  26
-#define INSTR_OFF_A   18
-#define INSTR_OFF_B   9
-#define INSTR_OFF_C   0
-#define INSTR_OFF_E   9
+#define INSTR_OFF_OP  0
+#define INSTR_OFF_A   6
+#define INSTR_OFF_B   14
+#define INSTR_OFF_C   23
+#define INSTR_OFF_E   6
 
 #define INSTR_MASK_OP 0x003f /* OP: 6 bits */
 #define INSTR_MASK_A  0x00ff /* A:  8 bits */
@@ -116,19 +116,19 @@ typedef uint32_t instr_t;
 	( INSTR_MAKE_OP( op ) | INSTR_MAKE_A( a ) | INSTR_MAKE_B( b ) | INSTR_MAKE_C( c ) )
 #define INSTR_MAKE_EX( op, ex, c ) \
 	( INSTR_MAKE_OP( op ) | INSTR_MAKE_E( ex ) | INSTR_MAKE_C( c ) )
-#define INSTR_RECOMB_E( a, b ) ( ( ( a ) << INSTR_OFF_B ) | ( b ) )
+#define INSTR_RECOMB_E( a, b ) ( ( ( b ) << 8 ) | ( a ) )
 
 
 typedef struct func_s
 {
-	uint16_t* lineinfo;
-	StrBuf  funcname;
-	LineNum linenum;
 	int32_t refcount;
 	int32_t size;
 	int16_t instr_off;
 	int8_t  gotthis;
 	int8_t  numargs;
+	LineNum linenum;
+	uint16_t* lineinfo;
+	StrBuf  funcname;
 }
 func_t;
 #define func_consts( pfn )   ((sgs_Variable*)(((char*)(pfn))+sizeof(func_t)))
@@ -155,6 +155,7 @@ typedef union _sgs_VarData
 	func_t*     F;
 	sgs_CFunc   C;
 	sgs_VarObj* O;
+	int32_t*    _rc; // reference count for S/F/O
 }
 sgs_VarData;
 
