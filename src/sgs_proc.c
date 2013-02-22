@@ -507,13 +507,14 @@ static void stk_pop2( SGS_CTX )
 */
 
 
-static int var_getbool( SGS_CTX, sgs_VarPtr var )
+static int var_getbool( SGS_CTX, const sgs_VarPtr var )
 {
 	switch( var->type )
 	{
+	case SVT_NULL: return FALSE;
 	case SVT_BOOL: return var->data.B;
-	case SVT_INT: return !!var->data.I;
-	case SVT_REAL: return !!var->data.R;
+	case SVT_INT: return var->data.I != 0;
+	case SVT_REAL: return var->data.R != 0;
 	case SVT_STRING: return !!var->data.S->size;
 	case SVT_FUNC: return TRUE;
 	case SVT_CFUNC: return TRUE;
@@ -524,8 +525,8 @@ static int var_getbool( SGS_CTX, sgs_VarPtr var )
 			stk_pop1( C );
 			return out;
 		}
+	default: return FALSE;
 	}
-	return FALSE;
 }
 
 static sgs_Integer var_getint( SGS_CTX, sgs_VarPtr var )
@@ -1426,9 +1427,9 @@ const char* opnames[] =
 static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 {
 	sgs_StackFrame* SF = C->sf_last;
-	const instr_t* pend = SF->iend, *pp = SF->code;
 	int32_t ret = 0;
 	sgs_Variable* cptr = consts;
+	const instr_t* pend = SF->iend, *pp = SF->code;
 
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
 	int stkoff = C->stack_top - C->stack_off;
