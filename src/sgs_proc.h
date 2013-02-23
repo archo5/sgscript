@@ -155,7 +155,6 @@ typedef union _sgs_VarData
 	func_t*     F;
 	sgs_CFunc   C;
 	sgs_VarObj* O;
-	int32_t*    _rc; // reference count for S/F/O
 }
 sgs_VarData;
 

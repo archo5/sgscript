@@ -755,6 +755,11 @@ static int compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 	if( !compile_node_r( C, func, node->child, &var ) ) return 0;
 	FUNC_ENTER;
 	if( !compile_node_r( C, func, node->child->next, &name ) ) return 0;
+	if( CONSTVAR( var ) )
+	{
+		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot set indexed value of a constant" );
+		return 0;
+	}
 	INSTR_WRITE( SI_SETINDEX, var, name, src );
 	comp_reg_unwind( C, regpos );
 	return 1;
@@ -925,7 +930,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		{
 			if( expect != 1 )
 			{
-				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Too many expected outputs for operator." );
+				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Too many expected outputs for operator" );
 				goto fail;
 			}
 		}
@@ -1008,7 +1013,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 		if( expect != 1 )
 		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Too many expected outputs for operator." );
+			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Too many expected outputs for operator" );
 			goto fail;
 		}
 
@@ -1040,7 +1045,14 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			if( out )
 				INSTR_WRITE( SI_GETPROP, oreg, ireg1, ireg2 );
 			else
+			{
+				if( CONSTVAR( ireg1 ) )
+				{
+					sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot set property of a constant" );
+					goto fail;
+				}
 				INSTR_WRITE( SI_SETPROP, ireg1, ireg2, oreg );
+			}
 
 		}
 		else
