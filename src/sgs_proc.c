@@ -20,16 +20,23 @@ static const char* sgs_VarNames[] =
 	"Object",
 };
 
-/*
-sgs_Variable* make_var( SGS_CTX, int type );
-void destroy_var( SGS_CTX, sgs_Variable* var );
-*/
 
-#define IS_REFTYPE( type ) ((1<<(type))&0xb0)
-#define VAR_ACQUIRE( pvar ) \
-	if( IS_REFTYPE( (pvar)->type ) ) (*(pvar)->data._rc)++;
-#define VAR_RELEASE( pvar ) \
-	if( IS_REFTYPE( (pvar)->type ) && --(*(pvar)->data._rc) <= 0 ) var_destroy_all( C, (pvar) );
+#define RTTMASK( x ) (1<<(x))
+#define REFTYPE_CONSTANT (RTTMASK(SVT_STRING)|RTTMASK(SVT_FUNC)|RTTMASK(SVT_OBJECT))
+#define IS_REFTYPE( type ) ((1<<(type))& REFTYPE_CONSTANT )
+
+
+#if 1
+
+#define VAR_ACQUIRE( pvar ) { if( IS_REFTYPE( (pvar)->type ) ) var_acquire( C, pvar ); }
+#define VAR_RELEASE( pvar ) { if( IS_REFTYPE( (pvar)->type ) ) var_release( C, pvar ); }
+
+#else
+
+#define VAR_ACQUIRE( pvar ) var_acquire( C, pvar )
+#define VAR_RELEASE( pvar ) var_release( C, pvar )
+
+#endif
 
 #define STK_UNITSIZE sizeof( sgs_Variable )
 
@@ -52,37 +59,6 @@ static int obj_exec( SGS_CTX, const void* sop, object_t* data, int args )
 
 	C->stack_off = C->stack_base + stkoff;
 	return ret;
-}
-
-static void var_destroy_all( SGS_CTX, sgs_VarPtr p )
-{
-	switch( p->type )
-	{
-	case SVT_STRING: sgs_Free( p->data.S ); break;
-	case SVT_FUNC: 
-		{
-			func_t* F = p->data.F;
-			sgs_VarPtr var = (sgs_VarPtr) func_consts( F ), vend = (sgs_VarPtr) func_bytecode( F );
-			while( var < vend )
-			{
-				VAR_RELEASE( var );
-				var++;
-			}
-			sgs_Free( F->lineinfo );
-			strbuf_destroy( &F->funcname );
-			sgs_Free( F );
-		} break;
-	case SVT_OBJECT:
-		{
-			object_t* O = p->data.O;
-			if( O->prev ) O->prev->next = O->next;
-			if( O->next ) O->next->prev = O->prev;
-			if( C->objs == O )
-				C->objs = O->next;
-			sgs_Free( O );
-			C->objcount--;
-		} break;
-	}
 }
 
 void var_free_object( SGS_CTX, object_t* O )
@@ -119,6 +95,17 @@ void var_destroy_func( SGS_CTX, func_t* F )
 	sgs_Free( F->lineinfo );
 	strbuf_destroy( &F->funcname );
 	sgs_Free( F );
+}
+
+static void var_acquire( SGS_CTX, sgs_VarPtr p )
+{
+	UNUSED( C );
+	switch( p->type )
+	{
+	case SVT_STRING: p->data.S->refcount++; break;
+	case SVT_FUNC: p->data.F->refcount++; break;
+	case SVT_OBJECT: p->data.O->refcount++; break;
+	}
 }
 
 static void var_release( SGS_CTX, sgs_VarPtr p )
@@ -1465,14 +1452,14 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		{
 			int16_t off = argE;
 			pp += off;
-			sgs_BreakIf( SF->iptr > pend || SF->iptr < code );
+			sgs_BreakIf( pp > pend || pp < SF->code );
 			break;
 		}
 
 		case SI_JMPT:
 		{
 			int16_t off = argE;
-			sgs_BreakIf( SF->iptr + off > pend || SF->iptr + off < code );
+			sgs_BreakIf( pp + off > pend || pp + off < SF->code );
 			if( var_getbool( C, RESVAR( argC ) ) )
 				pp += off;
 			break;
@@ -1480,7 +1467,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		case SI_JMPF:
 		{
 			int16_t off = argE;
-			sgs_BreakIf( SF->iptr + off > pend || SF->iptr + off < code );
+			sgs_BreakIf( pp + off > pend || pp + off < SF->code );
 			if( !var_getbool( C, RESVAR( argC ) ) )
 				pp += off;
 			break;
@@ -1540,7 +1527,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 
 #define STRICTLY_EQUAL( val ) if( p2->type != p3->type || ( p2->type == SVT_OBJECT && \
 								p2->data.O->iface != p3->data.O->iface ) ) { var_setbool( C, p1, val ); break; }
-#define VCOMPARE( op ) var_setbool( C, C->stack_off + a1, vm_compare( C, p2, p3 ) op 0 )
+#define VCOMPARE( op ) int cr = vm_compare( C, p2, p3 ) op 0; var_setbool( C, C->stack_off + a1, cr );
 		case SI_SEQ: { ARGS_3; STRICTLY_EQUAL( FALSE ); VCOMPARE( == ); break; }
 		case SI_SNEQ: { ARGS_3; STRICTLY_EQUAL( TRUE ); VCOMPARE( != ); break; }
 		case SI_EQ: { ARGS_3; VCOMPARE( == ); break; }

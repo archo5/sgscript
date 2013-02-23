@@ -20,7 +20,7 @@ typedef unsigned __int64 uint64_t;
 #  define PRId64 "lld"
 #else
 #  include <inttypes.h>
-#  define SGS_INLINE //inline
+#  define SGS_INLINE inline
 #endif
 
 #define UNUSED( x ) (void)(x)
