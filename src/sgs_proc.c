@@ -591,22 +591,11 @@ static SGS_INLINE sgs_Real var_getreal_simple( sgs_Variable* var )
 	return 0;
 }
 
-static void var_setnull( SGS_CTX, sgs_VarPtr var )
-{
-	VAR_RELEASE( var );
-	var->type = SVT_NULL;
-}
-
-static void var_setbool( SGS_CTX, sgs_VarPtr var, int value )
-{
-	if( var->type != SVT_BOOL )
-	{
-		VAR_RELEASE( var );
-		var->type = SVT_BOOL;
-	}
-	var->data.B = value ? 1 : 0;
-}
-
+#define var_setnull( C, v ) \
+{ sgs_VarPtr var = (v); VAR_RELEASE( var ); var->type = SVT_NULL; }
+#define var_setbool( C, v, value ) \
+{ sgs_VarPtr var = (v); if( var->type == SVT_BOOL ) var->data.B = value; \
+	else { VAR_RELEASE( var ); var->type = SVT_BOOL; var->data.B = value; } }
 #define var_setint( C, v, value ) \
 { sgs_VarPtr var = (v); if( var->type == SVT_INT ) var->data.I = value; \
 	else { VAR_RELEASE( var ); var->type = SVT_INT; var->data.I = value; } }
