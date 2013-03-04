@@ -843,7 +843,7 @@ static int vm_getvar( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 		VAR_ACQUIRE( data );
 		*out = *data;
 	}
-	return SGS_SUCCESS;
+	return data ? SGS_SUCCESS : SGS_ENOTFND;
 }
 
 static int vm_setvar( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
@@ -1787,8 +1787,7 @@ int sgs_GetGlobal( SGS_CTX, const char* name )
 	sgs_VarPtr pos;
 	sgs_PushString( C, name );
 	pos = stk_getpos( C, -1 );
-	vm_getvar( C, pos, pos );
-	return SGS_SUCCESS;
+	return vm_getvar( C, pos, pos );
 }
 
 int sgs_SetGlobal( SGS_CTX, const char* name )
