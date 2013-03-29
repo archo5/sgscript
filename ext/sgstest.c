@@ -19,6 +19,14 @@ const char* outfile_internal = "tests-output-internal.log";
 const char* outfile = "tests-output.log";
 
 
+__declspec(dllexport) int sgscript_main( SGS_CTX )
+{
+	sgs_PushInt( C, 1337 );
+	sgs_SetGlobal( C, "imported_var" );
+	return sgs_PushBool( C, 1 ) == SGS_SUCCESS ? 1 : 0;
+}
+
+
 static double gettime()
 {
 	clock_t clk = clock();

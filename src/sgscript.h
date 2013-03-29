@@ -139,6 +139,7 @@ sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 /* Additional libraries */
 
 void sgs_LoadLib_Math( SGS_CTX );
+void sgs_LoadLib_Native( SGS_CTX );
 void sgs_LoadLib_String( SGS_CTX );
 void sgs_LoadLib_Type( SGS_CTX );
 

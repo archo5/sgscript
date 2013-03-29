@@ -51,6 +51,8 @@ static int stdlib_array_getval( SGS_CTX, sgs_Variable* var, int32_t which, sgs_V
 
 
 
+/* libraries -  M A T H  */
+
 #define MATHFUNC( name ) \
 static int sgsstd_##name( SGS_CTX ) { \
 	CHKARGS( 1 ); \
@@ -104,6 +106,268 @@ void sgs_LoadLib_Math( SGS_CTX )
 }
 
 
+
+/* libraries -  N A T I V E  */
+
+static int sgsstd_pointerI_tobool( SGS_CTX, sgs_VarObj* data )
+{
+	return sgs_PushBool( C, data->data != NULL );
+}
+
+static int sgsstd_pointerI_toint( SGS_CTX, sgs_VarObj* data )
+{
+	return sgs_PushInt( C, (sgs_Integer) (size_t) data->data );
+}
+
+static int sgsstd_pointerI_tostring( SGS_CTX, sgs_VarObj* data )
+{
+	char buf[ 32 ];
+	sprintf( buf, "pointer (%p)", data->data );
+	return sgs_PushString( C, buf );
+}
+
+static int sgsstd_pointerI_gettype( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( data );
+	return sgs_PushString( C, "native_pointer" );
+}
+
+void* sgsstd_pointer_iface[] =
+{
+	SOP_TOBOOL, sgsstd_pointerI_tobool,
+	SOP_TOINT, sgsstd_pointerI_toint,
+	SOP_TOSTRING, sgsstd_pointerI_tostring,
+	SOP_GETTYPE, sgsstd_pointerI_gettype,
+	SOP_END
+};
+
+static int sgsstd_native_pointer( SGS_CTX )
+{
+	void* val = 0;
+
+	if( sgs_StackSize( C ) > 1 )
+		STDLIB_WARN( "native_pointer(): unexpected arguments; function expects 0-1 arguments: [int]" );
+
+	if( sgs_StackSize( C ) == 1 )
+		val = (void*) (size_t) sgs_ToInt( C, 0 );
+
+	return sgs_PushObject( C, val, sgsstd_pointer_iface ) == SGS_SUCCESS ? 1 : 0;
+}
+
+
+#define NTYPE_VOID   0
+#define NTYPE_CHAR   1
+#define NTYPE_UCHAR  2
+#define NTYPE_SHORT  3
+#define NTYPE_USHORT 4
+#define NTYPE_INT    5
+#define NTYPE_UINT   6
+#define NTYPE_LONG   7
+#define NTYPE_ULONG  8
+#define NTYPE_LLONG  9
+#define NTYPE_ULLONG 10
+#define NTYPE_FLOAT  11
+#define NTYPE_DOUBLE 12
+#define NTYPE_LDBL   13
+#define NTYPE_BOOL   14
+#define NTYPE_SIZE_T 15
+#define NTYPE_PTRDIFF_T 16
+#define NTYPE_V8     17
+#define NTYPE_V16    18
+#define NTYPE_V32    19
+#define NTYPE_V64    20
+#define NTYPE_POINTER 21
+
+#define NCALL_CDECL   1
+#define NCALL_STDCALL 2
+
+typedef
+struct sgsstd_nfunc_hdr_s
+{
+	sgs_Variable fname;
+	void* funcptr;
+	int ret;
+	int* args;
+	int argc;
+}
+sgsstd_nfunc_hdr;
+
+#define SGSNFUNC_HDR sgsstd_nfunc_hdr* hdr = (sgsstd_nfunc_hdr*) data->data
+
+static int sgsstd_nfuncI_destruct( SGS_CTX, sgs_VarObj* data )
+{
+	SGSNFUNC_HDR;
+	sgs_Release( C, &hdr->fname );
+	if( hdr->args )
+		sgs_Free( hdr->args );
+	sgs_Free( hdr );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_nfuncI_call( SGS_CTX, sgs_VarObj* data )
+{
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_nfuncI_tostring( SGS_CTX, sgs_VarObj* data )
+{
+	SGSNFUNC_HDR;
+	return
+		sgs_PushString( C, "native function (" ) || 
+		sgs_PushVariable( C, &hdr->fname ) ||
+		sgs_PushString( C, ")" ) ||
+		sgs_StringMultiConcat( C, 3 );
+}
+
+static int sgsstd_nfuncI_gettype( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( data );
+	return sgs_PushString( C, "native_function" );
+}
+
+void* sgsstd_nfunc_iface[] =
+{
+	SOP_DESTRUCT, sgsstd_nfuncI_destruct,
+	SOP_CALL, sgsstd_nfuncI_call,
+	SOP_TOSTRING, sgsstd_nfuncI_tostring,
+	SOP_GETTYPE, sgsstd_nfuncI_gettype,
+	SOP_END
+};
+
+
+static int sgsstd_native_import_symbol( SGS_CTX )
+{
+	int i, argc = sgs_StackSize( C ) - 4;
+	char* fnstr, *pnstr;
+	sgs_Integer fnsize, pnsize, cty = 0, rty = 0;
+	sgsstd_nfunc_hdr proto, *nfunc;
+
+	if( argc < 0 ||
+		!stdlib_tostring( C, 0, &fnstr, &fnsize ) ||
+		!stdlib_tostring( C, 1, &pnstr, &pnsize ) ||
+		!stdlib_toint( C, 2, &cty ) ||
+		!stdlib_toint( C, 3, &rty ) )
+		STDLIB_WARN( "native_import_symbol(): unexpected arguments; function expects 4+ arguments: string, string, int, int, [int]+" )
+
+	if( cty < NCALL_CDECL || cty > NCALL_STDCALL )
+		STDLIB_WARN( "native_import_symbol(): invalid call type" )
+
+	if( rty < NTYPE_VOID || rty > NTYPE_POINTER )
+		STDLIB_WARN( "native_import_symbol(): invalid return type" )
+
+	if( argc )
+		proto.args = sgs_Alloc_n( int, argc );
+	else
+		proto.args = NULL;
+	for( i = 0; i < argc; ++i )
+	{
+		sgs_Integer aty = 0;
+		if( !stdlib_toint( C, i + 4, &aty ) || aty < NTYPE_VOID || aty > NTYPE_POINTER )
+		{
+			char ebuf[ 32 ];
+			sprintf( ebuf, "native_import_symbol(): invalid argument %d type", i + 1 );
+			sgs_Free( proto.args );
+			STDLIB_WARN( ebuf )
+		}
+		proto.args[ i ] = aty;
+	}
+
+	i = sgs_GetProcAddress( fnstr, pnstr, &proto.funcptr );
+	if( i != 0 )
+	{
+		sgs_Free( proto.args );
+
+		if( i == SGS_XPC_NOFILE ) STDLIB_WARN( "native_import_symbol(): file not found" )
+		else if( i == SGS_XPC_NOPROC ) STDLIB_WARN( "native_import_symbol(): procedure not found" )
+		else if( i == SGS_XPC_NOTSUP ) STDLIB_WARN( "native_import_symbol(): feature is not supported on this platform" )
+		else STDLIB_WARN( "native_import_symbol(): unknown error occured" )
+	}
+
+	proto.argc = argc;
+	proto.ret = rty;
+	proto.fname = *sgs_StackItem( C, 1 );
+	sgs_Acquire( C, &proto.fname );
+
+	nfunc = sgs_Alloc( sgsstd_nfunc_hdr );
+	memcpy( nfunc, &proto, sizeof( proto ) );
+	return sgs_PushObject( C, nfunc, sgsstd_nfunc_iface ) == SGS_SUCCESS ? 1 : 0;
+}
+
+static int sgsstd_native_include_shared( SGS_CTX )
+{
+	char* fnstr;
+	sgs_Integer fnsize;
+	int ret, argc = sgs_StackSize( C );
+	sgs_CFunc func;
+
+	if( argc != 1 || !stdlib_tostring( C, 0, &fnstr, &fnsize ) )
+		STDLIB_WARN( "sgsstd_native_include_shared(): unexpected arguments; function expects 1 argument: string" )
+
+	ret = sgs_GetProcAddress( fnstr, "sgscript_main", (void**) &func );
+	if( ret != 0 )
+	{
+		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "native_import_cfunc(): file not found" )
+		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "native_import_cfunc(): procedure not found" )
+		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "native_import_cfunc(): feature is not supported on this platform" )
+		else STDLIB_WARN( "native_import_cfunc(): unknown error occured" )
+	}
+	
+	return func( C );
+}
+
+static int sgsstd_native_import_cfunc( SGS_CTX )
+{
+	char* fnstr, *pnstr;
+	sgs_Integer fnsize, pnsize;
+	int ret, argc = sgs_StackSize( C );
+	sgs_CFunc func;
+
+	if( argc != 2 || !stdlib_tostring( C, 0, &fnstr, &fnsize ) ||
+		!stdlib_tostring( C, 1, &pnstr, &pnsize ) )
+		STDLIB_WARN( "native_import_cfunc(): unexpected arguments; function expects 2 arguments: string, string" )
+
+	ret = sgs_GetProcAddress( fnstr, pnstr, (void**) &func );
+	if( ret != 0 )
+	{
+		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "native_import_cfunc(): file not found" )
+		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "native_import_cfunc(): procedure not found" )
+		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "native_import_cfunc(): feature is not supported on this platform" )
+		else STDLIB_WARN( "native_import_cfunc(): unknown error occured" )
+	}
+	
+	return sgs_PushCFunction( C, func ) == SGS_SUCCESS ? 1 : 0;
+}
+
+static const sgs_RegIntConst n_iconsts[] =
+{
+	/*
+#define DEFTYPE( name ) { "eNTYPE_" #name, NTYPE_##name }
+	DEFTYPE( VOID ), DEFTYPE( CHAR ), DEFTYPE( UCHAR ), DEFTYPE( SHORT ), DEFTYPE( USHORT ),
+	DEFTYPE( INT ), DEFTYPE( UINT ), DEFTYPE( LONG ), DEFTYPE( ULONG ), DEFTYPE( LLONG ),
+	DEFTYPE( ULLONG ), DEFTYPE( FLOAT ), DEFTYPE( DOUBLE ), DEFTYPE( LDBL ), DEFTYPE( BOOL ),
+	DEFTYPE( SIZE_T ), DEFTYPE( PTRDIFF_T ), DEFTYPE( V8 ), DEFTYPE( V16 ), DEFTYPE( V32 ),
+	DEFTYPE( V64 ), DEFTYPE( POINTER ),
+#undef DEFTYPE
+	{ "eNCALL_CDECL", NCALL_CDECL },
+	{ "eNCALL_STDCALL", NCALL_STDCALL },
+	*/
+};
+
+static const sgs_RegFuncConst n_fconsts[] =
+{
+	/* FN( native_pointer ), FN( native_import_symbol ), */
+	FN( native_include_shared ), FN( native_import_cfunc ),
+};
+
+void sgs_LoadLib_Native( SGS_CTX )
+{
+	sgs_RegIntConsts( C, n_iconsts, ARRAY_SIZE( n_iconsts ) );
+	sgs_RegFuncConsts( C, n_fconsts, ARRAY_SIZE( n_fconsts ) );
+}
+
+
+
+/* libraries -  S T R I N G  */
 
 #define sgsfNO_REV_INDEX 1
 #define sgsfSTRICT_RANGES 2

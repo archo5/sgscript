@@ -975,6 +975,8 @@ static int sgsstd_include_library( SGS_CTX )
 
 	if( strcmp( str, "math" ) == 0 )
 		sgs_LoadLib_Math( C );
+	else if( strcmp( str, "native" ) == 0 )
+		sgs_LoadLib_Native( C );
 	else if( strcmp( str, "string" ) == 0 )
 		sgs_LoadLib_String( C );
 	else if( strcmp( str, "type" ) == 0 )
