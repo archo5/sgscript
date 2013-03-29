@@ -8,6 +8,48 @@
 #include "sgs_std.h"
 
 
+/* Utilities - Array access */
+
+static int stdlib_is_array( SGS_CTX, sgs_Variable* var )
+{
+	void** ifp;
+	int a = 0, b = 0, c = 0;
+
+	if( var->type != SVT_OBJECT )
+		return FALSE;
+
+	ifp = var->data.O->iface;
+	while( *ifp )
+	{
+		if( *ifp == SOP_GETPROP ) a = 1;
+		if( *ifp == SOP_GETINDEX ) b = 1;
+		if( *ifp == SOP_GETITER ) c = 1;
+		ifp += 2;
+	}
+	return a && b && c;
+}
+
+static int32_t stdlib_array_size( SGS_CTX, sgs_Variable* var )
+{
+	int ret;
+
+	ret = sgs_PushVariable( C, var );
+	if( ret != SGS_SUCCESS ) return ret;
+
+	ret = sgs_PushProperty( C, "size" );
+	if( ret != SGS_SUCCESS ){ sgs_Pop( C, 1 ); return ret; }
+
+	ret = sgs_ToInt( C, -1 );
+	sgs_Pop( C, 1 );
+	return ret;
+}
+
+static int stdlib_array_getval( SGS_CTX, sgs_Variable* var, int32_t which, sgs_Variable* out )
+{
+	return sgs_GetNumIndex( C, out, var, which ) == SGS_SUCCESS;
+}
+
+
 
 #define MATHFUNC( name ) \
 static int sgsstd_##name( SGS_CTX ) { \
@@ -316,6 +358,198 @@ static int sgsstd_string_find_rev( SGS_CTX )
 	return 0;
 }
 
+static int _stringrep_ss( SGS_CTX, char* str, int32_t size, char* sub, int32_t subsize, char* rep, int32_t repsize )
+{
+	/* the algorithm:
+		- find matches, count them, predict size of output string
+		- readjust matches to fit the process of replacing
+		- rewrite string with replaced matches
+	*/
+#define NUMSM 32 /* statically-stored matches */
+	int32_t sma[ NUMSM ];
+	int32_t* matches = sma;
+	int matchcount = 0, matchcap = NUMSM, curmatch;
+#undef NUMSM
+
+	char* strend = str + size - subsize;
+	char* ptr = str, *i, *o;
+	int32_t outlen;
+	sgs_Variable* out;
+
+	/* subsize = 0 handled by parent */
+
+	while( ptr <= strend )
+	{
+		if( strncmp( ptr, sub, subsize ) == 0 )
+		{
+			if( matchcount == matchcap )
+			{
+				matchcap *= 4;
+				int32_t* nm = sgs_Alloc_n( int32_t, matchcap );
+				memcpy( nm, matches, sizeof( int32_t ) * matchcount );
+				if( matches != sma )
+					sgs_Free( matches );
+				matches = nm;
+			}
+			matches[ matchcount++ ] = ptr - str;
+
+			ptr += subsize;
+		}
+		else
+			ptr++;
+	}
+
+	outlen = size + ( repsize - subsize ) * matchcount;
+	if( sgs_PushStringBuf( C, NULL, outlen ) != SGS_SUCCESS )
+	{
+		if( matches != sma )
+			sgs_Free( matches );
+		return 0;
+	}
+	out = sgs_StackItem( C, -1 );
+
+	i = str;
+	o = var_cstr( out );
+	strend = str + size;
+	curmatch = 0;
+	while( i < strend && curmatch < matchcount )
+	{
+		char* mp = str + matches[ curmatch++ ];
+		int len = mp - i;
+		if( len )
+			memcpy( o, i, len );
+		i += len;
+		o += len;
+
+		memcpy( o, rep, repsize );
+		i += subsize;
+		o += repsize;
+	}
+	if( i < strend )
+	{
+		memcpy( o, i, strend - i );
+	}
+
+	if( matches != sma )
+		sgs_Free( matches );
+
+	return 1;
+}
+static int _stringrep_as( SGS_CTX, char* str, int32_t size, sgs_Variable* subarr, char* rep, int32_t repsize )
+{
+	char* substr;
+	sgs_Integer subsize;
+	sgs_Variable var, *pvar;
+	int32_t i, arrsize = stdlib_array_size( C, subarr );
+	if( arrsize < 0 )
+		goto fail;
+
+	for( i = 0; i < arrsize; ++i )
+	{
+		if( !stdlib_array_getval( C, subarr, i, &var ) )   goto fail;
+		if( sgs_PushVariable( C, &var ) != SGS_SUCCESS )   goto fail;
+		sgs_Release( C, &var );
+		if( !stdlib_tostring( C, -1, &substr, &subsize ) )
+			goto fail;
+
+		if( !_stringrep_ss( C, str, size, substr, subsize, rep, repsize ) )
+			goto fail;
+
+		if( sgs_PopSkip( C, i > 0 ? 2 : 1, 1 ) != SGS_SUCCESS )
+			goto fail;
+		pvar = sgs_StackItem( C, -1 );
+		str = var_cstr( pvar );
+		size = pvar->data.S->size;
+	}
+
+	return 1;
+
+fail:
+	return 0;
+}
+static int _stringrep_aa( SGS_CTX, char* str, int32_t size, sgs_Variable* subarr, sgs_Variable* reparr )
+{
+	char* substr, *repstr;
+	sgs_Integer subsize, repsize;
+	sgs_Variable var, *pvar;
+	int32_t i, arrsize = stdlib_array_size( C, subarr ),
+		reparrsize = stdlib_array_size( C, reparr );
+	if( arrsize < 0 || reparrsize < 0 )
+		goto fail;
+
+	for( i = 0; i < arrsize; ++i )
+	{
+		if( !stdlib_array_getval( C, subarr, i, &var ) )   goto fail;
+		if( sgs_PushVariable( C, &var ) != SGS_SUCCESS )   goto fail;
+		sgs_Release( C, &var );
+		if( !stdlib_tostring( C, -1, &substr, &subsize ) )
+			goto fail;
+
+		if( !stdlib_array_getval( C, reparr, i % reparrsize, &var ) )   goto fail;
+		if( sgs_PushVariable( C, &var ) != SGS_SUCCESS )   goto fail;
+		sgs_Release( C, &var );
+		if( !stdlib_tostring( C, -1, &repstr, &repsize ) )
+			goto fail;
+
+		if( !_stringrep_ss( C, str, size, substr, subsize, repstr, repsize ) )
+			goto fail;
+
+		if( sgs_PopSkip( C, i > 0 ? 3 : 2, 1 ) != SGS_SUCCESS )
+			goto fail;
+		pvar = sgs_StackItem( C, -1 );
+		str = var_cstr( pvar );
+		size = pvar->data.S->size;
+	}
+
+	return 1;
+
+fail:
+	return 0;
+}
+static int sgsstd_string_replace( SGS_CTX )
+{
+	int argc, isarr1, isarr2, ret;
+	char* str, *sub, *rep;
+	sgs_Variable *var1, *var2;
+	sgs_Integer size, subsize, repsize;
+
+	argc = sgs_StackSize( C );
+	if( argc != 3 )
+		goto invargs;
+
+	var1 = sgs_StackItem( C, 1 );
+	var2 = sgs_StackItem( C, 2 );
+	isarr1 = stdlib_is_array( C, var1 );
+	isarr2 = stdlib_is_array( C, var2 );
+
+	if( !stdlib_tostring( C, 0, &str, &size ) )
+		goto invargs;
+
+	if( isarr1 && isarr2 )
+	{
+		return _stringrep_aa( C, str, size, var1, var2 );
+	}
+
+	if( isarr2 )
+		goto invargs;
+
+	ret = stdlib_tostring( C, 2, &rep, &repsize );
+	if( isarr1 && ret )
+	{
+		return _stringrep_as( C, str, size, var1, rep, repsize );
+	}
+
+	if( stdlib_tostring( C, 1, &sub, &subsize ) && ret )
+	{
+		if( subsize == 0 )
+			return sgs_PushVariable( C, var1 ) == SGS_SUCCESS ? 1 : 0;
+		return _stringrep_ss( C, str, size, sub, subsize, rep, repsize );
+	}
+
+invargs:
+	STDLIB_WARN( "string_replace() - unexpected arguments; function expects 3 arguments: string, ((string, string) | (array, string) | (array, array))" );
+}
+
 static int sgsstd_string_trim( SGS_CTX )
 {
 	int argc;
@@ -367,7 +601,7 @@ static const sgs_RegFuncConst s_fconsts[] =
 {
 	FN( string_cut ), FN( string_part ), FN( string_reverse ), FN( string_pad ),
 	FN( string_repeat ), FN( string_count ), FN( string_find ), FN( string_find_rev ),
-	FN( string_trim ),
+	FN( string_replace ), FN( string_trim ),
 };
 
 void sgs_LoadLib_String( SGS_CTX )

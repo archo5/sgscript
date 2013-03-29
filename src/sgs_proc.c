@@ -1825,6 +1825,24 @@ int sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* v
 	return vm_setprop( C, obj, idx, val, TRUE );
 }
 
+int sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Integer idx )
+{
+	sgs_Variable tmp;
+	tmp.type = SVT_INT;
+	tmp.data.I = idx;
+
+	return sgs_GetIndex( C, out, obj, &tmp );
+}
+
+int sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Integer idx, sgs_Variable* val )
+{
+	sgs_Variable tmp;
+	tmp.type = SVT_INT;
+	tmp.data.I = idx;
+
+	return sgs_SetIndex( C, obj, &tmp, val );
+}
+
 
 int sgs_GetBool( SGS_CTX, int item )
 {

@@ -193,6 +193,8 @@ int sgs_GetGlobal( SGS_CTX, const char* name );
 int sgs_SetGlobal( SGS_CTX, const char* name );
 int sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx );
 int sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val );
+int sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Integer idx );
+int sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Integer idx, sgs_Variable* val );
 
 int sgs_GetBool( SGS_CTX, int item );
 sgs_Integer sgs_GetInt( SGS_CTX, int item );
