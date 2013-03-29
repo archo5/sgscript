@@ -1,5 +1,5 @@
 
---- SGScript v0.7 ---
+--- SGScript v0.8 ---
 
 usage:
 - grab the source from src/ directory...
@@ -11,7 +11,7 @@ usage:
 		* fresh commits aren't tested as thoroughly
 - include src/sgscript.h in your project
 
-sample code and documentation ... is in the tests/ directory
+sample code and documentation ... is in tests/ and docs/ directories
 	as you'll probably see, it's not that different from many other languages.
 	there'll be no specification until the language survives a few iterations.
 	after that, we'll see if it's necessary.
@@ -19,12 +19,12 @@ sample code and documentation ... is in the tests/ directory
 ---
 
 intro:
-I'm not quite sure what to expect from this project. Worldwide acceptance or..
-..(more likely) slow death from lack of recognition. Either way, after..
-..putting some effort into it, I've decided to pull it out of shadows. It's..
-..been fun writing this one, a great learning experience. And I've already..
+I'm not quite sure what to expect from this project. Worldwide acceptance or ..
+..(more likely) slow death from lack of recognition. Either way, after       ..
+..putting some effort into it, I've decided to pull it out of shadows. It's  ..
+..been fun writing this one, a great learning experience. And I've already   ..
 ..put it to some use. Not much, so far. It's not quite ready for anything but..
-..the most simple applications. The goal is to make it game-friendly. Let's..
+..the most simple applications. The goal is to make it game-friendly. Let's  ..
 ..see where that goal takes me and the project...
 
 features:
@@ -36,9 +36,9 @@ features:
 - 8 data types (with some space for extensions):
 	null, bool, int, real, string, function, C function, object
 - tests & benchmark
-	* testing framework is in ext/sgstest.c => bin/sgstest ("make tools")
+	* testing framework is in ext/sgstest.c => bin/sgstest ("make test" to run)
 	* execute "bin/sgsvm bench/bench.sgs" to run the benchmark
-- object-oriented constructs (dict, class, overloadable operators)
+- object-oriented constructs (dict, class, closure, overloadable operators)
 
 development:
 - I work on it when I feel like it
@@ -56,6 +56,8 @@ credits:
 - inspired by C, PHP, Lua, JavaScript, Squirrel and AngelScript
 
 change log:
+0.8 (2013/03/29): most of string API, type API, closures, API test framework,
+	improved debugging, fixed: boolean logic, div/0 error and other things
 0.7 (2013/01/28): object orientation (w/ operator overloading), do-while,
 	optimizations, classes, eval, foreach, fixed comparisons
 0.6 - skipped
