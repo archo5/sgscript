@@ -32,7 +32,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 .PHONY: test
-test: sgstest
+test: $(OUTDIR)/sgstest
 	$(OUTDIR)/sgstest
 
 $(OUTDIR)/sgstest: $(LIBDIR)/libsgscript.a
