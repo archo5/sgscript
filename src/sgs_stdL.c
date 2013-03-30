@@ -10,7 +10,7 @@
 
 /* Utilities - Array access */
 
-static int stdlib_is_array( SGS_CTX, sgs_Variable* var )
+int stdlib_is_array( SGS_CTX, sgs_Variable* var )
 {
 	void** ifp;
 	int a = 0, b = 0, c = 0;
@@ -29,7 +29,7 @@ static int stdlib_is_array( SGS_CTX, sgs_Variable* var )
 	return a && b && c;
 }
 
-static int32_t stdlib_array_size( SGS_CTX, sgs_Variable* var )
+int32_t stdlib_array_size( SGS_CTX, sgs_Variable* var )
 {
 	int ret;
 
@@ -44,7 +44,7 @@ static int32_t stdlib_array_size( SGS_CTX, sgs_Variable* var )
 	return ret;
 }
 
-static int stdlib_array_getval( SGS_CTX, sgs_Variable* var, int32_t which, sgs_Variable* out )
+int stdlib_array_getval( SGS_CTX, sgs_Variable* var, int32_t which, sgs_Variable* out )
 {
 	return sgs_GetNumIndex( C, out, var, which ) == SGS_SUCCESS;
 }

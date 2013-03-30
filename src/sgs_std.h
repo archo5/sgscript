@@ -43,3 +43,7 @@ int stdlib_toint( SGS_CTX, int arg, sgs_Integer* out );
 int stdlib_toreal( SGS_CTX, int arg, sgs_Real* out );
 int stdlib_tostring( SGS_CTX, int arg, char** out, sgs_Integer* size );
 
+int stdlib_is_array( SGS_CTX, sgs_Variable* var );
+int32_t stdlib_array_size( SGS_CTX, sgs_Variable* var );
+int stdlib_array_getval( SGS_CTX, sgs_Variable* var, int32_t which, sgs_Variable* out );
+
