@@ -212,7 +212,7 @@ int sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	char* data;
 	DBGINFO( "sgs_EvalFile called!" );
 
-	f = fopen( file, "r" );
+	f = fopen( file, "rb" );
 	if( !f )
 		return SGS_ENOTFND;
 	fseek( f, 0, SEEK_END );
