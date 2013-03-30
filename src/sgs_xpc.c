@@ -28,8 +28,10 @@ int sgs_GetProcAddress( const char* file, const char* proc, void** out )
 		return SGS_XPC_NOPROC;
 
 	return 0;
-#endif
 
+#else
 	return SGS_XPC_NOTSUP;
+	
+#endif
 }
 

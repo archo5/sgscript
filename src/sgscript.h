@@ -138,10 +138,12 @@ sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 
 /* Additional libraries */
 
-void sgs_LoadLib_Math( SGS_CTX );
-void sgs_LoadLib_Native( SGS_CTX );
-void sgs_LoadLib_String( SGS_CTX );
-void sgs_LoadLib_Type( SGS_CTX );
+int sgs_LoadLib_Math( SGS_CTX );
+#if 0
+int sgs_LoadLib_Native( SGS_CTX );
+#endif
+int sgs_LoadLib_String( SGS_CTX );
+int sgs_LoadLib_Type( SGS_CTX );
 
 typedef struct _sgs_RegFuncConst
 {
@@ -149,7 +151,7 @@ typedef struct _sgs_RegFuncConst
 	sgs_CFunc value;
 }
 sgs_RegFuncConst;
-void sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size );
+int sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size );
 
 typedef struct _sgs_RegIntConst
 {
@@ -157,7 +159,7 @@ typedef struct _sgs_RegIntConst
 	sgs_Integer value;
 }
 sgs_RegIntConst;
-void sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size );
+int sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size );
 
 typedef struct _sgs_RegRealConst
 {
@@ -165,7 +167,7 @@ typedef struct _sgs_RegRealConst
 	sgs_Real value;
 }
 sgs_RegRealConst;
-void sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size );
+int sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size );
 
 
 /* The core interface */

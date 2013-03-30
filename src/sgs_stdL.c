@@ -99,14 +99,18 @@ static const sgs_RegFuncConst m_fconsts[] =
 	FN( pow ), FN( atan2 ), FN( fmod ),
 };
 
-void sgs_LoadLib_Math( SGS_CTX )
+int sgs_LoadLib_Math( SGS_CTX )
 {
-	sgs_RegRealConsts( C, m_rconsts, ARRAY_SIZE( m_rconsts ) );
-	sgs_RegFuncConsts( C, m_fconsts, ARRAY_SIZE( m_fconsts ) );
+	int ret;
+	ret = sgs_RegRealConsts( C, m_rconsts, ARRAY_SIZE( m_rconsts ) );
+	if( ret != SGS_SUCCESS ) return ret;
+	ret = sgs_RegFuncConsts( C, m_fconsts, ARRAY_SIZE( m_fconsts ) );
+	return ret;
 }
 
 
 
+#if 0
 /* libraries -  N A T I V E  */
 
 static int sgsstd_pointerI_tobool( SGS_CTX, sgs_VarObj* data )
@@ -293,54 +297,8 @@ static int sgsstd_native_import_symbol( SGS_CTX )
 	return sgs_PushObject( C, nfunc, sgsstd_nfunc_iface ) == SGS_SUCCESS ? 1 : 0;
 }
 
-static int sgsstd_native_include_shared( SGS_CTX )
-{
-	char* fnstr;
-	sgs_Integer fnsize;
-	int ret, argc = sgs_StackSize( C );
-	sgs_CFunc func;
-
-	if( argc != 1 || !stdlib_tostring( C, 0, &fnstr, &fnsize ) )
-		STDLIB_WARN( "sgsstd_native_include_shared(): unexpected arguments; function expects 1 argument: string" )
-
-	ret = sgs_GetProcAddress( fnstr, "sgscript_main", (void**) &func );
-	if( ret != 0 )
-	{
-		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "native_import_cfunc(): file not found" )
-		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "native_import_cfunc(): procedure not found" )
-		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "native_import_cfunc(): feature is not supported on this platform" )
-		else STDLIB_WARN( "native_import_cfunc(): unknown error occured" )
-	}
-	
-	return func( C );
-}
-
-static int sgsstd_native_import_cfunc( SGS_CTX )
-{
-	char* fnstr, *pnstr;
-	sgs_Integer fnsize, pnsize;
-	int ret, argc = sgs_StackSize( C );
-	sgs_CFunc func;
-
-	if( argc != 2 || !stdlib_tostring( C, 0, &fnstr, &fnsize ) ||
-		!stdlib_tostring( C, 1, &pnstr, &pnsize ) )
-		STDLIB_WARN( "native_import_cfunc(): unexpected arguments; function expects 2 arguments: string, string" )
-
-	ret = sgs_GetProcAddress( fnstr, pnstr, (void**) &func );
-	if( ret != 0 )
-	{
-		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "native_import_cfunc(): file not found" )
-		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "native_import_cfunc(): procedure not found" )
-		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "native_import_cfunc(): feature is not supported on this platform" )
-		else STDLIB_WARN( "native_import_cfunc(): unknown error occured" )
-	}
-	
-	return sgs_PushCFunction( C, func ) == SGS_SUCCESS ? 1 : 0;
-}
-
 static const sgs_RegIntConst n_iconsts[] =
 {
-	/*
 #define DEFTYPE( name ) { "eNTYPE_" #name, NTYPE_##name }
 	DEFTYPE( VOID ), DEFTYPE( CHAR ), DEFTYPE( UCHAR ), DEFTYPE( SHORT ), DEFTYPE( USHORT ),
 	DEFTYPE( INT ), DEFTYPE( UINT ), DEFTYPE( LONG ), DEFTYPE( ULONG ), DEFTYPE( LLONG ),
@@ -350,20 +308,22 @@ static const sgs_RegIntConst n_iconsts[] =
 #undef DEFTYPE
 	{ "eNCALL_CDECL", NCALL_CDECL },
 	{ "eNCALL_STDCALL", NCALL_STDCALL },
-	*/
 };
 
 static const sgs_RegFuncConst n_fconsts[] =
 {
-	/* FN( native_pointer ), FN( native_import_symbol ), */
-	FN( native_include_shared ), FN( native_import_cfunc ),
+	FN( native_pointer ), FN( native_import_symbol ),
 };
 
-void sgs_LoadLib_Native( SGS_CTX )
+int sgs_LoadLib_Native( SGS_CTX )
 {
-	sgs_RegIntConsts( C, n_iconsts, ARRAY_SIZE( n_iconsts ) );
+	int ret;
+	ret = sgs_RegIntConsts( C, n_iconsts, ARRAY_SIZE( n_iconsts ) );
+	if( ret != SGS_SUCCESS ) return ret;
 	sgs_RegFuncConsts( C, n_fconsts, ARRAY_SIZE( n_fconsts ) );
+	return ret;
 }
+#endif
 
 
 
@@ -868,10 +828,13 @@ static const sgs_RegFuncConst s_fconsts[] =
 	FN( string_replace ), FN( string_trim ),
 };
 
-void sgs_LoadLib_String( SGS_CTX )
+int sgs_LoadLib_String( SGS_CTX )
 {
-	sgs_RegIntConsts( C, s_iconsts, ARRAY_SIZE( s_iconsts ) );
-	sgs_RegFuncConsts( C, s_fconsts, ARRAY_SIZE( s_fconsts ) );
+	int ret;
+	ret = sgs_RegIntConsts( C, s_iconsts, ARRAY_SIZE( s_iconsts ) );
+	if( ret != SGS_SUCCESS ) return ret;
+	ret = sgs_RegFuncConsts( C, s_fconsts, ARRAY_SIZE( s_fconsts ) );
+	return ret;
 }
 
 
@@ -1042,9 +1005,12 @@ static const sgs_RegIntConst t_iconsts[] =
 };
 
 
-void sgs_LoadLib_Type( SGS_CTX )
+int sgs_LoadLib_Type( SGS_CTX )
 {
-	sgs_RegIntConsts( C, t_iconsts, ARRAY_SIZE( t_iconsts ) );
-	sgs_RegFuncConsts( C, t_fconsts, ARRAY_SIZE( t_fconsts ) );
+	int ret;
+	ret = sgs_RegIntConsts( C, t_iconsts, ARRAY_SIZE( t_iconsts ) );
+	if( ret != SGS_SUCCESS ) return ret;
+	ret = sgs_RegFuncConsts( C, t_fconsts, ARRAY_SIZE( t_fconsts ) );
+	return ret;
 }
 

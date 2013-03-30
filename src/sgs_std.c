@@ -969,20 +969,73 @@ static int sgsstd_eval( SGS_CTX )
 
 static int sgsstd_include_library( SGS_CTX )
 {
+	int ret = SGS_ENOTFND;
 	char* str;
-	CHKARGS( 1 );
-	str = sgs_ToString( C, 0 );
+	sgs_Integer strsize;
+
+	if( sgs_StackSize( C ) != 1 || !stdlib_tostring( C, 0, &str, &strsize ) )
+		STDLIB_WARN( "include_library(): unexpected arguments; function expects 1 argument: string" );
 
 	if( strcmp( str, "math" ) == 0 )
-		sgs_LoadLib_Math( C );
+		ret = sgs_LoadLib_Math( C );
+#if 0
 	else if( strcmp( str, "native" ) == 0 )
-		sgs_LoadLib_Native( C );
+		ret = sgs_LoadLib_Native( C );
+#endif
 	else if( strcmp( str, "string" ) == 0 )
-		sgs_LoadLib_String( C );
+		ret = sgs_LoadLib_String( C );
 	else if( strcmp( str, "type" ) == 0 )
-		sgs_LoadLib_Type( C );
+		ret = sgs_LoadLib_Type( C );
 
-	return 0;
+	if( ret == SGS_ENOTFND )
+		STDLIB_WARN( "include_library(): library not found" );
+	sgs_PushBool( C, ret == SGS_SUCCESS );
+	return 1;
+}
+
+static int sgsstd_include_shared( SGS_CTX )
+{
+	char* fnstr;
+	sgs_Integer fnsize;
+	int ret, argc = sgs_StackSize( C );
+	sgs_CFunc func;
+
+	if( argc != 1 || !stdlib_tostring( C, 0, &fnstr, &fnsize ) )
+		STDLIB_WARN( "include_shared(): unexpected arguments; function expects 1 argument: string" )
+
+	ret = sgs_GetProcAddress( fnstr, "sgscript_main", (void**) &func );
+	if( ret != 0 )
+	{
+		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "include_shared(): file not found" )
+		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "include_shared(): procedure not found" )
+		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "include_shared(): feature is not supported on this platform" )
+		else STDLIB_WARN( "include_shared(): unknown error occured" )
+	}
+	
+	return func( C );
+}
+
+static int sgsstd_import_cfunc( SGS_CTX )
+{
+	char* fnstr, *pnstr;
+	sgs_Integer fnsize, pnsize;
+	int ret, argc = sgs_StackSize( C );
+	sgs_CFunc func;
+
+	if( argc != 2 || !stdlib_tostring( C, 0, &fnstr, &fnsize ) ||
+		!stdlib_tostring( C, 1, &pnstr, &pnsize ) )
+		STDLIB_WARN( "import_cfunc(): unexpected arguments; function expects 2 arguments: string, string" )
+
+	ret = sgs_GetProcAddress( fnstr, pnstr, (void**) &func );
+	if( ret != 0 )
+	{
+		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "import_cfunc(): file not found" )
+		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "import_cfunc(): procedure not found" )
+		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "import_cfunc(): feature is not supported on this platform" )
+		else STDLIB_WARN( "import_cfunc(): unknown error occured" )
+	}
+	
+	return sgs_PushCFunction( C, func ) == SGS_SUCCESS ? 1 : 0;
 }
 
 static int sgsstd_sys_errorstate( SGS_CTX )
@@ -1029,6 +1082,7 @@ sgs_RegFuncConst regfuncs[] =
 	FN( ftime ),
 	/* utils */
 	FN( eval ), FN( include_library ),
+	FN( include_shared ), FN( import_cfunc ),
 	FN( sys_errorstate ), FN( sys_abort ),
 	FN( gc_collect ),
 };
@@ -1040,8 +1094,11 @@ sgs_RegIntConst regiconsts[] =
 
 int sgsVM_RegStdLibs( SGS_CTX )
 {
-	sgs_RegIntConsts( C, regiconsts, ARRAY_SIZE( regiconsts ) );
-	sgs_RegFuncConsts( C, regfuncs, ARRAY_SIZE( regfuncs ) );
+	int ret;
+	ret = sgs_RegIntConsts( C, regiconsts, ARRAY_SIZE( regiconsts ) );
+	if( ret != SGS_SUCCESS ) return ret;
+	ret = sgs_RegFuncConsts( C, regfuncs, ARRAY_SIZE( regfuncs ) );
+	if( ret != SGS_SUCCESS ) return ret;
 
 	C->array_func = &sgsstd_array;
 	C->dict_func = &sgsstd_dict;
@@ -1049,35 +1106,41 @@ int sgsVM_RegStdLibs( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
-void sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size )
+int sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size )
 {
+	int ret;
 	const sgs_RegFuncConst* last = list + size;
 	while( list < last )
 	{
-		sgs_PushCFunction( C, list->value );
-		sgs_SetGlobal( C, list->name );
+		ret = sgs_PushCFunction( C, list->value ); if( ret != SGS_SUCCESS ) return ret;
+		ret = sgs_SetGlobal( C, list->name );      if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
+	return SGS_SUCCESS;
 }
 
-void sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size )
+int sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size )
 {
+	int ret;
 	const sgs_RegIntConst* last = list + size;
 	while( list < last )
 	{
-		sgs_PushInt( C, list->value );
-		sgs_SetGlobal( C, list->name );
+		ret = sgs_PushInt( C, list->value );  if( ret != SGS_SUCCESS ) return ret;
+		ret = sgs_SetGlobal( C, list->name ); if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
+	return SGS_SUCCESS;
 }
 
-void sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
+int sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
 {
+	int ret;
 	const sgs_RegRealConst* last = list + size;
 	while( list < last )
 	{
-		sgs_PushReal( C, list->value );
-		sgs_SetGlobal( C, list->name );
+		ret = sgs_PushReal( C, list->value ); if( ret != SGS_SUCCESS ) return ret;
+		ret = sgs_SetGlobal( C, list->name ); if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
+	return SGS_SUCCESS;
 }
