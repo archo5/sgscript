@@ -369,9 +369,8 @@ int sgsstd_array( SGS_CTX )
 
 #define HTHDR VHTable* ht = (VHTable*) data->data
 
-static void sgsstd_dict_clearvals( SGS_CTX, sgs_VarObj* data )
+static void _dict_clearvals( SGS_CTX, VHTable* ht )
 {
-	HTHDR;
 	VHTableVar* p = ht->vars, *pend = ht->vars + vht_size( ht );
 	while( p < pend )
 	{
@@ -383,7 +382,7 @@ static void sgsstd_dict_clearvals( SGS_CTX, sgs_VarObj* data )
 static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	HTHDR;
-	sgsstd_dict_clearvals( C, data );
+	_dict_clearvals( C, ht );
 	vht_free( ht, C );
 	sgs_Free( ht );
 	return SGS_SUCCESS;
@@ -525,7 +524,7 @@ void* sgsstd_dict_functable[] =
 	SOP_END,
 };
 
-int sgsstd_dict( SGS_CTX )
+int sgsstd_dict_internal( SGS_CTX )
 {
 	int i, objcnt = sgs_StackSize( C );
 	VHTable* ht = sgs_Alloc( VHTable );
@@ -535,6 +534,37 @@ int sgsstd_dict( SGS_CTX )
 		sgs_Variable* vkey = sgs_StackItem( C, i );
 		vht_set( ht, var_cstr( vkey ), vkey->data.S->size, sgs_StackItem( C, i + 1 ), C );
 	}
+	sgs_PushObject( C, ht, sgsstd_dict_functable );
+	return 1;
+}
+
+int sgsstd_dict( SGS_CTX )
+{
+	VHTable* ht;
+	int i, objcnt = sgs_StackSize( C );
+
+	if( objcnt % 2 != 0 )
+		STDLIB_WARN( "make_dict() - unexpected argument count, function expects 0 or an even number of arguments" )
+
+	ht = sgs_Alloc( VHTable );
+	vht_init( ht );
+
+	for( i = 0; i < objcnt; i += 2 )
+	{
+		char* kstr;
+		sgs_Integer ksize;
+		if( !stdlib_tostring( C, i, &kstr, &ksize ) )
+		{
+			_dict_clearvals( C, ht );
+			vht_free( ht, C );
+			sgs_Free( ht );
+			sgs_Printf( C, SGS_WARNING, -1, "make_dict() - key argument %d is not a string", i );
+			return 0;
+		}
+
+		vht_set( ht, kstr, ksize, sgs_StackItem( C, i + 1 ), C );
+	}
+
 	sgs_PushObject( C, ht, sgsstd_dict_functable );
 	return 1;
 }
@@ -1148,7 +1178,7 @@ int sgsVM_RegStdLibs( SGS_CTX )
 	if( ret != SGS_SUCCESS ) return ret;
 
 	C->array_func = &sgsstd_array;
-	C->dict_func = &sgsstd_dict;
+	C->dict_func = &sgsstd_dict_internal;
 
 	return SGS_SUCCESS;
 }

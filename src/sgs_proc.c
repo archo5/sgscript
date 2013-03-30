@@ -1303,7 +1303,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 {
 	sgs_Variable V = *func;
 	int stkoff = C->stack_off - C->stack_base;
-	int rvc = 0;
+	int rvc = 0, ret = 1;
 
 	sgs_BreakIf( sgs_StackSize( C ) < args + gotthis );
 	vm_frame_push( C, &V, NULL, NULL, 0 );
@@ -1349,12 +1349,16 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 		{
 			sgs_Printf( C, SGS_ERROR, -1, "The object could not be called" );
 			rvc = 0;
+			ret = 0;
 		}
 		C->call_args = cargs;
 		C->call_expect = cexp;
 	}
 	else
+	{
 		sgs_Printf( C, SGS_ERROR, -1, "Variable of type '%s' cannot be called", sgs_VarNames[ func->type ] );
+		ret = 0;
+	}
 
 	/* subtract gotthis from offset if pushed extra variable */
 	stk_clean( C, C->stack_off - gotthis, C->stack_top - rvc );
@@ -1366,7 +1370,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 	else
 		stk_push_nulls( C, expect - rvc );
 
-	return 1;
+	return ret;
 }
 
 
