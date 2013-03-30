@@ -766,7 +766,7 @@ static int compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 }
 
 
-static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* node, int32_t ioff )
+static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* node, int32_t ioff, int16_t* out )
 {
 	int16_t pos = -1;
 
@@ -817,6 +817,8 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 		case SI_ARRAY: case SI_DICT:
 			I = INSTR_MAKE( op, pos, argB, argC );
 			AS_UINT32( func->code.ptr + ioff ) = I;
+			if( out )
+				*out = pos;
 			break;
 		default:
 			goto cannot;
@@ -963,7 +965,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			if( *node->token == ST_OP_SET )
 			{
 				FUNC_ENTER;
-				if( !try_optimize_last_instr_out( C, func, node->child, isb ) )
+				if( !try_optimize_last_instr_out( C, func, node->child, isb, arg ) )
 				{
 					/* just set the contents */
 					FUNC_ENTER;
