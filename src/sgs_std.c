@@ -932,6 +932,31 @@ int stdlib_toint( SGS_CTX, int arg, sgs_Integer* out )
 	return TRUE;
 }
 
+int stdlib_toreal( SGS_CTX, int arg, sgs_Real* out )
+{
+	sgs_Real r;
+	sgs_Variable* var = sgs_StackItem( C, arg );
+	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC )
+		return FALSE;
+	if( var->type == SVT_STRING )
+	{
+		intreal_t OIR;
+		const char* ostr = var_cstr( var );
+		const char* str = ostr;
+		int res = util_strtonum( &str, str + var->data.S->size, &OIR.i, &OIR.r );
+
+		if( str == ostr )    return FALSE;
+		if( res == 1 )       r = (sgs_Real) OIR.i;
+		else if( res == 2 )  r = OIR.r;
+		else                 return FALSE;
+	}
+	else
+		r = sgs_ToReal( C, arg );
+	if( out )
+		*out = r;
+	return TRUE;
+}
+
 int stdlib_tobool( SGS_CTX, int arg, int* out )
 {
 	int i;
@@ -958,12 +983,14 @@ static int sgsstd_ftime( SGS_CTX )
 
 static int sgsstd_eval( SGS_CTX )
 {
+	char* str;
+	sgs_Integer size;
 	int rvc = 0;
-	sgs_Variable* var;
-	CHKARGS( 1 );
-	sgs_ToString( C, 0 );
-	var = sgs_StackItem( C, 0 );
-	sgs_EvalBuffer( C, var_cstr( var ), var->data.S->size, &rvc );
+
+	if( sgs_StackSize( C ) != 1 || !stdlib_tostring( C, 0, &str, &size ) )
+		STDLIB_WARN( "eval() - unexpected arguments; function expects 1 argument: string" )
+
+	sgs_EvalBuffer( C, str, size, &rvc );
 	return rvc;
 }
 
@@ -974,7 +1001,7 @@ static int sgsstd_include_library( SGS_CTX )
 	sgs_Integer strsize;
 
 	if( sgs_StackSize( C ) != 1 || !stdlib_tostring( C, 0, &str, &strsize ) )
-		STDLIB_WARN( "include_library(): unexpected arguments; function expects 1 argument: string" );
+		STDLIB_WARN( "include_library() - unexpected arguments; function expects 1 argument: string" )
 
 	if( strcmp( str, "math" ) == 0 )
 		ret = sgs_LoadLib_Math( C );
@@ -988,7 +1015,7 @@ static int sgsstd_include_library( SGS_CTX )
 		ret = sgs_LoadLib_Type( C );
 
 	if( ret == SGS_ENOTFND )
-		STDLIB_WARN( "include_library(): library not found" );
+		STDLIB_WARN( "include_library() - library not found" )
 	sgs_PushBool( C, ret == SGS_SUCCESS );
 	return 1;
 }
@@ -1001,15 +1028,15 @@ static int sgsstd_include_shared( SGS_CTX )
 	sgs_CFunc func;
 
 	if( argc != 1 || !stdlib_tostring( C, 0, &fnstr, &fnsize ) )
-		STDLIB_WARN( "include_shared(): unexpected arguments; function expects 1 argument: string" )
+		STDLIB_WARN( "include_shared() - unexpected arguments; function expects 1 argument: string" )
 
 	ret = sgs_GetProcAddress( fnstr, "sgscript_main", (void**) &func );
 	if( ret != 0 )
 	{
-		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "include_shared(): file not found" )
-		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "include_shared(): procedure not found" )
-		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "include_shared(): feature is not supported on this platform" )
-		else STDLIB_WARN( "include_shared(): unknown error occured" )
+		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "include_shared() - file not found" )
+		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "include_shared() - procedure not found" )
+		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "include_shared() - feature is not supported on this platform" )
+		else STDLIB_WARN( "include_shared() - unknown error occured" )
 	}
 	
 	return func( C );
@@ -1024,15 +1051,15 @@ static int sgsstd_import_cfunc( SGS_CTX )
 
 	if( argc != 2 || !stdlib_tostring( C, 0, &fnstr, &fnsize ) ||
 		!stdlib_tostring( C, 1, &pnstr, &pnsize ) )
-		STDLIB_WARN( "import_cfunc(): unexpected arguments; function expects 2 arguments: string, string" )
+		STDLIB_WARN( "import_cfunc() - unexpected arguments; function expects 2 arguments: string, string" )
 
 	ret = sgs_GetProcAddress( fnstr, pnstr, (void**) &func );
 	if( ret != 0 )
 	{
-		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "import_cfunc(): file not found" )
-		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "import_cfunc(): procedure not found" )
-		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "import_cfunc(): feature is not supported on this platform" )
-		else STDLIB_WARN( "import_cfunc(): unknown error occured" )
+		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "import_cfunc() - file not found" )
+		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "import_cfunc() - procedure not found" )
+		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "import_cfunc() - feature is not supported on this platform" )
+		else STDLIB_WARN( "import_cfunc() - unknown error occured" )
 	}
 	
 	return sgs_PushCFunction( C, func ) == SGS_SUCCESS ? 1 : 0;
@@ -1087,16 +1114,20 @@ sgs_RegFuncConst regfuncs[] =
 	FN( gc_collect ),
 };
 
+#if 0
 sgs_RegIntConst regiconsts[] =
 {
 	{ "__dummy", 0 },
 };
+#endif
 
 int sgsVM_RegStdLibs( SGS_CTX )
 {
 	int ret;
+#if 0
 	ret = sgs_RegIntConsts( C, regiconsts, ARRAY_SIZE( regiconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
+#endif
 	ret = sgs_RegFuncConsts( C, regfuncs, ARRAY_SIZE( regfuncs ) );
 	if( ret != SGS_SUCCESS ) return ret;
 

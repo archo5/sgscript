@@ -55,14 +55,18 @@ static int stdlib_array_getval( SGS_CTX, sgs_Variable* var, int32_t which, sgs_V
 
 #define MATHFUNC( name ) \
 static int sgsstd_##name( SGS_CTX ) { \
-	CHKARGS( 1 ); \
-	sgs_PushReal( C, name( sgs_ToReal( C, -1 ) ) ); \
+	sgs_Real arg0; \
+	if( sgs_StackSize( C ) != 1 || !stdlib_toreal( C, 0, &arg0 ) ) \
+		STDLIB_WARN( #name "() - unexpected arguments; function expects 1 argument: real" ) \
+	sgs_PushReal( C, name( arg0 ) ); \
 	return 1; }
 
 #define MATHFUNC2( name ) \
 static int sgsstd_##name( SGS_CTX ) { \
-	CHKARGS( 2 ); \
-	sgs_PushReal( C, name( sgs_ToReal( C, -2 ), sgs_ToReal( C, -1 ) ) ); \
+	sgs_Real arg0, arg1; \
+	if( sgs_StackSize( C ) != 2 || !stdlib_toreal( C, 0, &arg0 ) || !stdlib_toreal( C, 1, &arg1 ) ) \
+		STDLIB_WARN( #name "() - unexpected arguments; function expects 2 arguments: real, real" ) \
+	sgs_PushReal( C, name( arg0, arg1 ) ); \
 	return 1; }
 
 MATHFUNC( abs )
@@ -150,7 +154,7 @@ static int sgsstd_native_pointer( SGS_CTX )
 	void* val = 0;
 
 	if( sgs_StackSize( C ) > 1 )
-		STDLIB_WARN( "native_pointer(): unexpected arguments; function expects 0-1 arguments: [int]" );
+		STDLIB_WARN( "native_pointer() - unexpected arguments; function expects 0-1 arguments: [int]" )
 
 	if( sgs_StackSize( C ) == 1 )
 		val = (void*) (size_t) sgs_ToInt( C, 0 );
@@ -251,13 +255,13 @@ static int sgsstd_native_import_symbol( SGS_CTX )
 		!stdlib_tostring( C, 1, &pnstr, &pnsize ) ||
 		!stdlib_toint( C, 2, &cty ) ||
 		!stdlib_toint( C, 3, &rty ) )
-		STDLIB_WARN( "native_import_symbol(): unexpected arguments; function expects 4+ arguments: string, string, int, int, [int]+" )
+		STDLIB_WARN( "native_import_symbol() - unexpected arguments; function expects 4+ arguments: string, string, int, int, [int]+" )
 
 	if( cty < NCALL_CDECL || cty > NCALL_STDCALL )
-		STDLIB_WARN( "native_import_symbol(): invalid call type" )
+		STDLIB_WARN( "native_import_symbol() - invalid call type" )
 
 	if( rty < NTYPE_VOID || rty > NTYPE_POINTER )
-		STDLIB_WARN( "native_import_symbol(): invalid return type" )
+		STDLIB_WARN( "native_import_symbol() - invalid return type" )
 
 	if( argc )
 		proto.args = sgs_Alloc_n( int, argc );
@@ -269,7 +273,7 @@ static int sgsstd_native_import_symbol( SGS_CTX )
 		if( !stdlib_toint( C, i + 4, &aty ) || aty < NTYPE_VOID || aty > NTYPE_POINTER )
 		{
 			char ebuf[ 32 ];
-			sprintf( ebuf, "native_import_symbol(): invalid argument %d type", i + 1 );
+			sprintf( ebuf, "native_import_symbol() - invalid argument %d type", i + 1 );
 			sgs_Free( proto.args );
 			STDLIB_WARN( ebuf )
 		}
@@ -281,10 +285,10 @@ static int sgsstd_native_import_symbol( SGS_CTX )
 	{
 		sgs_Free( proto.args );
 
-		if( i == SGS_XPC_NOFILE ) STDLIB_WARN( "native_import_symbol(): file not found" )
-		else if( i == SGS_XPC_NOPROC ) STDLIB_WARN( "native_import_symbol(): procedure not found" )
-		else if( i == SGS_XPC_NOTSUP ) STDLIB_WARN( "native_import_symbol(): feature is not supported on this platform" )
-		else STDLIB_WARN( "native_import_symbol(): unknown error occured" )
+		if( i == SGS_XPC_NOFILE ) STDLIB_WARN( "native_import_symbol() - file not found" )
+		else if( i == SGS_XPC_NOPROC ) STDLIB_WARN( "native_import_symbol() - procedure not found" )
+		else if( i == SGS_XPC_NOTSUP ) STDLIB_WARN( "native_import_symbol() - feature is not supported on this platform" )
+		else STDLIB_WARN( "native_import_symbol() - unknown error occured" )
 	}
 
 	proto.argc = argc;
@@ -966,7 +970,7 @@ static int sgsstd_type_cast( SGS_CTX )
 	argc = sgs_StackSize( C );
 	if( argc < 1 || argc > 2 ||
 		!stdlib_toint( C, 1, &ty ) )
-		STDLIB_WARN( "type_cast() - unexpected arguments; function expects 2 arguments: any, int" );
+		STDLIB_WARN( "type_cast() - unexpected arguments; function expects 2 arguments: any, int" )
 
 	vm_convert_stack( C, 0, ty );
 	sgs_Pop( C, 1 );
@@ -975,7 +979,8 @@ static int sgsstd_type_cast( SGS_CTX )
 
 static int sgsstd_typeof( SGS_CTX )
 {
-	CHKARGS( 1 );
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "typeof() - unexpected arguments; function expects 1 argument: any" )
 	sgs_TypeOf( C );
 	return 1;
 }
