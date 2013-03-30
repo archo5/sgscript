@@ -544,7 +544,7 @@ int sgsstd_dict( SGS_CTX )
 	int i, objcnt = sgs_StackSize( C );
 
 	if( objcnt % 2 != 0 )
-		STDLIB_WARN( "make_dict() - unexpected argument count, function expects 0 or an even number of arguments" )
+		STDLIB_WARN( "dict() - unexpected argument count, function expects 0 or an even number of arguments" )
 
 	ht = sgs_Alloc( VHTable );
 	vht_init( ht );
@@ -558,7 +558,7 @@ int sgsstd_dict( SGS_CTX )
 			_dict_clearvals( C, ht );
 			vht_free( ht, C );
 			sgs_Free( ht );
-			sgs_Printf( C, SGS_WARNING, -1, "make_dict() - key argument %d is not a string", i );
+			sgs_Printf( C, SGS_WARNING, -1, "dict() - key argument %d is not a string", i );
 			return 0;
 		}
 
@@ -641,11 +641,13 @@ int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
 	int ret;
 	sgs_Variable var, idx;
 	SGSCLASS_HDR;
+
 	sgs_PushString( C, method );
 	idx = *sgs_StackItem( C, -1 );
 	sgs_Acquire( C, &idx );
-	ret = sgs_GetIndex( C, &var, &hdr->inh, &idx );
 	sgs_Pop( C, 1 );
+	
+	ret = sgs_GetIndex( C, &var, &hdr->inh, &idx );
 	if( ret == SGS_SUCCESS )
 	{
 		sgs_PushVariable( C, &var );
@@ -658,12 +660,8 @@ int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
 int sgsstd_class_tostring( SGS_CTX, sgs_VarObj* data )
 {
 	if( sgsstd_class_getmethod( C, data, "__tostr" ) )
-	{
-		sgs_PushVariable( C, sgs_StackItem( C, -2 ) );
-		sgs_Call( C, 1, 1 );
-		sgs_PopSkip( C, 1, 1 );
-		return SGS_SUCCESS;
-	}
+		return sgs_Call( C, 1, 1 );
+
 	sgs_PushString( C, "class" );
 	return SGS_SUCCESS;
 }
@@ -688,10 +686,7 @@ int sgsstd_class_gcmark( SGS_CTX, sgs_VarObj* data )
 #define class_op_wrapper( op ) \
 int sgsstd_class_##op ( SGS_CTX, sgs_VarObj* data ){   \
 	if( sgsstd_class_getmethod( C, data, "__" #op ) ){ \
-		sgs_PushVariable( C, sgs_StackItem( C, -3 ) ); \
-		sgs_PushVariable( C, sgs_StackItem( C, -3 ) ); \
-		sgs_Call( C, 2, 1 ); sgs_PopSkip( C, 1, 1 );   \
-		return SGS_SUCCESS; } return SGS_ENOTFND; }
+		return sgs_Call( C, 2, 1 ); } return SGS_ENOTFND; }
 class_op_wrapper( add )
 class_op_wrapper( sub )
 class_op_wrapper( mul )
@@ -703,12 +698,8 @@ class_op_wrapper( compare )
 int sgsstd_class_negate( SGS_CTX, sgs_VarObj* data )
 {
 	if( sgsstd_class_getmethod( C, data, "__negate" ) )
-	{
-		sgs_PushVariable( C, sgs_StackItem( C, -2 ) );
-		sgs_Call( C, 1, 1 );
-		sgs_PopSkip( C, 1, 1 );
-		return SGS_SUCCESS;
-	}
+		return sgs_Call( C, 1, 1 );
+
 	return SGS_ENOTFND;
 }
 

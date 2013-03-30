@@ -506,11 +506,16 @@ static int var_getbool( SGS_CTX, const sgs_VarPtr var )
 	case SVT_FUNC: return TRUE;
 	case SVT_CFUNC: return TRUE;
 	case SVT_OBJECT:
-		if( obj_exec( C, SOP_TOBOOL, var->data.O, 0 ) == SGS_SUCCESS )
 		{
-			int out = stk_getpos( C, -1 )->data.B;
-			stk_pop1( C );
-			return out;
+			int origsize = sgs_StackSize( C );
+			stk_push( C, var );
+			if( obj_exec( C, SOP_TOBOOL, var->data.O, 0 ) == SGS_SUCCESS )
+			{
+				int out = stk_getpos( C, -1 )->data.B;
+				stk_pop( C, sgs_StackSize( C ) - origsize );
+				return out;
+			}
+			stk_pop( C, sgs_StackSize( C ) - origsize );
 		}
 	default: return FALSE;
 	}
@@ -525,11 +530,15 @@ static sgs_Integer var_getint( SGS_CTX, sgs_VarPtr var )
 	case SVT_REAL: return (sgs_Integer) var->data.R;
 	case SVT_STRING: return util_atoi( str_cstr( var->data.S ), var->data.S->size );
 	case SVT_OBJECT:
-		if( obj_exec( C, SOP_TOINT, var->data.O, 0 ) == SGS_SUCCESS )
 		{
-			sgs_Integer out = stk_getpos( C, -1 )->data.I;
-			stk_pop1( C );
-			return out;
+			int origsize = sgs_StackSize( C );
+			if( obj_exec( C, SOP_TOINT, var->data.O, 0 ) == SGS_SUCCESS )
+			{
+				sgs_Integer out = stk_getpos( C, -1 )->data.I;
+				stk_pop( C, sgs_StackSize( C ) - origsize );
+				return out;
+			}
+			stk_pop( C, sgs_StackSize( C ) - origsize );
 		}
 	}
 	return 0;
@@ -544,11 +553,15 @@ static sgs_Real var_getreal( SGS_CTX, sgs_Variable* var )
 	case SVT_REAL: return var->data.R;
 	case SVT_STRING: return util_atof( str_cstr( var->data.S ), var->data.S->size );
 	case SVT_OBJECT:
-		if( obj_exec( C, SOP_TOREAL, var->data.O, 0 ) == SGS_SUCCESS )
 		{
-			sgs_Real out = stk_getpos( C, -1 )->data.R;
-			stk_pop1( C );
-			return out;
+			int origsize = sgs_StackSize( C );
+			if( obj_exec( C, SOP_TOREAL, var->data.O, 0 ) == SGS_SUCCESS )
+			{
+				sgs_Real out = stk_getpos( C, -1 )->data.R;
+				stk_pop( C, sgs_StackSize( C ) - origsize );
+				return out;
+			}
+			stk_pop( C, sgs_StackSize( C ) - origsize );
 		}
 	}
 	return 0;
@@ -629,6 +642,7 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type )
 
 	if( var->type == SVT_OBJECT )
 	{
+		int origsize = sgs_StackSize( C );
 		void* sop = NULL;
 		switch( type )
 		{
@@ -647,10 +661,8 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type )
 		{
 			cvar = *stk_getpos( C, -1 );
 			stk_pop1nr( C );
-			stk_pop1( C );
 		}
-		else
-			stk_pop1( C );
+		stk_pop( C, sgs_StackSize( C ) - origsize );
 		goto ending;
 	}
 
@@ -767,9 +779,11 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 
 	if( obj->type == SVT_OBJECT )
 	{
+		sgs_VarObj* o = obj->data.O;
+		int origsize = sgs_StackSize( C );
 		stk_push( C, idx );
-		ret = obj_exec( C, isindex ? SOP_GETINDEX : SOP_GETPROP, obj->data.O, 1 );
-		stk_popskip( C, 1, ret == SGS_SUCCESS );
+		ret = obj_exec( C, isindex ? SOP_GETINDEX : SOP_GETPROP, o, 1 );
+		stk_popskip( C, sgs_StackSize( C ) - origsize - (ret == SGS_SUCCESS), ret == SGS_SUCCESS );
 	}
 	else
 		ret = vm_getprop_builtin( C, obj, idx );
@@ -795,6 +809,8 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 
 	if( obj->type == SVT_OBJECT )
 	{
+		sgs_VarObj* o = obj->data.O;
+		int origsize = sgs_StackSize( C );
 		stk_makespace( C, 2 );
 		C->stack_top[ 0 ] = *idx;
 		C->stack_top[ 1 ] = *src;
@@ -802,11 +818,9 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 		VAR_ACQUIRE( idx );
 		VAR_ACQUIRE( src );
 
-		ret = obj_exec( C, isindex ? SOP_SETINDEX : SOP_SETPROP, obj->data.O, 2 );
+		ret = obj_exec( C, isindex ? SOP_SETINDEX : SOP_SETPROP, o, 2 );
 
-		C->stack_top -= 2;
-		VAR_RELEASE( C->stack_top );
-		VAR_RELEASE( C->stack_top + 1 );
+		stk_pop( C, sgs_StackSize( C ) - origsize );
 	}
 	else
 		ret = SGS_ENOTFND;
@@ -1063,6 +1077,7 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 
 	if( a->type == SVT_OBJECT || b->type == SVT_OBJECT )
 	{
+		int origsize = sgs_StackSize( C );
 		const void* sop = aop_sops[ op ];
 		int ofs = out - C->stack_off;
 
@@ -1079,11 +1094,11 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 			USING_STACK
 			VAR_RELEASE( C->stack_off + ofs );
 			C->stack_off[ ofs ] = *--C->stack_top;
-			stk_pop2( C );
+			stk_pop( C, sgs_StackSize( C ) - origsize );
 			return;
 		}
 
-		stk_pop2( C );
+		stk_pop( C, sgs_StackSize( C ) - origsize );
 		goto fail;
 	}
 
@@ -1154,6 +1169,7 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 
 	if( ta == SVT_OBJECT || tb == SVT_OBJECT )
 	{
+		int origsize = sgs_StackSize( C );
 		USING_STACK
 		stk_makespace( C, 2 );
 		*C->stack_top++ = *a;
@@ -1167,11 +1183,11 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 			USING_STACK
 			sgs_Real out = var_getreal( C, --C->stack_top );
 			VAR_RELEASE( C->stack_top );
-			stk_pop2( C );
+			stk_pop( C, sgs_StackSize( C ) - origsize );
 			return out;
 		}
 
-		stk_pop2( C );
+		stk_pop( C, sgs_StackSize( C ) - origsize );
 		/* fallback: check for equality */
 		if( ta == tb )
 			return a->data.O - b->data.O;
@@ -1765,7 +1781,29 @@ int sgs_PopSkip( SGS_CTX, int count, int skip )
 
 int sgs_Call( SGS_CTX, int args, int expect )
 {
-	return vm_call( C, args, FALSE, expect, stk_getpos( C, -1 - args ) ) ? SGS_SUCCESS : SGS_EINPROC;
+	int ret;
+	sgs_Variable func;
+	int stksize = sgs_StackSize( C );
+	if( stksize < args + 1 )
+		return SGS_ESTKUF;
+
+	func = *stk_getpos( C, -1 );
+	VAR_ACQUIRE( &func );
+	sgs_Pop( C, 1 );
+	ret = vm_call( C, args, FALSE, expect, &func ) ? SGS_SUCCESS : SGS_EINPROC;
+	VAR_RELEASE( &func );
+	return ret;
+}
+
+int sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect )
+{
+	int ret;
+	ret = sgs_GetGlobal( C, name );
+	if( ret != SGS_SUCCESS ) return ret;
+	ret = sgs_Call( C, args, expect );
+	if( ret != SGS_SUCCESS )
+		sgs_Pop( C, 1 );
+	return ret;
 }
 
 int sgs_Method( SGS_CTX )

@@ -192,6 +192,7 @@ int sgs_StringMultiConcat( SGS_CTX, int args );
 int sgs_Pop( SGS_CTX, int count );
 int sgs_PopSkip( SGS_CTX, int count, int skip );
 int sgs_Call( SGS_CTX, int args, int expect );
+int sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );
 int sgs_Method( SGS_CTX );
 int sgs_TypeOf( SGS_CTX );
 
