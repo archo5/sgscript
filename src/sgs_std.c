@@ -1020,6 +1020,22 @@ static int sgsstd_include_library( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_include_file( SGS_CTX )
+{
+	int ret;
+	char* str;
+	sgs_Integer strsize;
+
+	if( sgs_StackSize( C ) != 1 || !stdlib_tostring( C, 0, &str, &strsize ) )
+		STDLIB_WARN( "include_file() - unexpected arguments; function expects 1 argument: string" )
+
+	ret = sgs_ExecFile( C, str );
+	if( ret == SGS_ENOTFND )
+		STDLIB_WARN( "include_file() - file not found" )
+	sgs_PushBool( C, ret == SGS_SUCCESS );
+	return 1;
+}
+
 static int sgsstd_include_shared( SGS_CTX )
 {
 	char* fnstr;
@@ -1108,7 +1124,7 @@ sgs_RegFuncConst regfuncs[] =
 	/* OS */
 	FN( ftime ),
 	/* utils */
-	FN( eval ), FN( include_library ),
+	FN( eval ), FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( import_cfunc ),
 	FN( sys_errorstate ), FN( sys_abort ),
 	FN( gc_collect ),

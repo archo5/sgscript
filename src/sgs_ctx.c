@@ -204,6 +204,36 @@ int sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc )
 	return ctx_execute( C, buf, size, FALSE, rvc );
 }
 
+int sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
+{
+	int ret;
+	long len;
+	FILE* f;
+	char* data;
+	DBGINFO( "sgs_EvalFile called!" );
+
+	f = fopen( file, "r" );
+	if( !f )
+		return SGS_ENOTFND;
+	fseek( f, 0, SEEK_END );
+	len = ftell( f );
+	fseek( f, 0, SEEK_SET );
+
+	data = sgs_Alloc_n( char, len );
+	if( fread( data, 1, len, f ) != len )
+	{
+		fclose( f );
+		sgs_Free( data );
+		return SGS_EINPROC;
+	}
+	fclose( f );
+
+	ret = ctx_execute( C, data, len, rvc ? FALSE : TRUE, rvc );
+
+	sgs_Free( data );
+	return ret;
+}
+
 
 int sgs_Stat( SGS_CTX, int type )
 {

@@ -8,6 +8,9 @@ print( "\n\n-- CORE FUNCTIONS --\n" );
 include_library( "type" );
 //
 
+	section( "include_file" );
+testEqual( include_file( "tests/s_fnexp.txt" ), true, "include_file - basic inclusion" );
+
 	section( "include_shared" );
 testEqual( include_shared( "bin/sgstest.exe" ), true, "include_shared - sgscript_main call [1]" );
 testEqual( imported_var, 1337, "include_shared - sgscript_main call [2]" );

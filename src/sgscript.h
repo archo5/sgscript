@@ -23,6 +23,7 @@ extern "C" {
 #define SGS_ENOTSUP -6  /* not supported */
 #define SGS_EBOUNDS -7  /* index out of bounds */
 #define SGS_EINVAL  -8  /* invalid value was passed */
+#define SGS_EINPROC -9  /* process was interrupted */
 #define SGS_ENOTIMP -31 /* - not implemented - */
 
 
@@ -131,6 +132,8 @@ int             sgs_ExecBuffer( SGS_CTX, const char* buf, int size );
 static SGS_INLINE int sgs_ExecString( SGS_CTX, const char* str ){ return sgs_ExecBuffer( C, str, strlen( str ) ); }
 int             sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc );
 static SGS_INLINE int sgs_EvalString( SGS_CTX, const char* str, int* rvc ){ return sgs_EvalBuffer( C, str, strlen( str ), rvc ); }
+int             sgs_EvalFile( SGS_CTX, const char* file, int* rvc );
+static SGS_INLINE int sgs_ExecFile( SGS_CTX, const char* file ){ return sgs_EvalFile( C, file, NULL ); }
 int             sgs_Stat( SGS_CTX, int type );
 void            sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, char** name, char** file, int* line );
 sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
