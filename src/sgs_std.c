@@ -1117,7 +1117,7 @@ static int sgsstd_gc_collect( SGS_CTX )
 sgs_RegFuncConst regfuncs[] =
 {
 	/* containers */
-	FN( array ), { "class", sgsstd_class }, FN( closure ),
+	FN( array ), FN( dict ), { "class", sgsstd_class }, FN( closure ),
 	FN( isset ), FN( unset ),
 	/* I/O */
 	FN( print ),

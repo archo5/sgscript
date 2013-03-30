@@ -1761,7 +1761,7 @@ int sgs_PopSkip( SGS_CTX, int count, int skip )
 
 int sgs_Call( SGS_CTX, int args, int expect )
 {
-	return vm_call( C, args, FALSE, expect, stk_getpos( C, -1 - args ) );
+	return vm_call( C, args, FALSE, expect, stk_getpos( C, -1 - args ) ) ? SGS_SUCCESS : SGS_EINPROC;
 }
 
 int sgs_Method( SGS_CTX )
