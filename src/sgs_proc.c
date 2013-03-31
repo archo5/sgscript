@@ -858,6 +858,11 @@ static int vm_getvar( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 		VAR_ACQUIRE( data );
 		*out = *data;
 	}
+	else
+	{
+		VAR_RELEASE( out );
+		out->type = SVT_NULL;
+	}
 	return data ? SGS_SUCCESS : SGS_ENOTFND;
 }
 
