@@ -129,6 +129,7 @@ typedef struct func_s
 	LineNum linenum;
 	uint16_t* lineinfo;
 	StrBuf  funcname;
+	StrBuf  filename;
 }
 func_t;
 #define func_consts( pfn )   ((sgs_Variable*)(((char*)(pfn))+sizeof(func_t)))

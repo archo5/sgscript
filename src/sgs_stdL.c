@@ -675,7 +675,7 @@ static int _stringrep_as( SGS_CTX, char* str, int32_t size, sgs_Variable* subarr
 	for( i = 0; i < arrsize; ++i )
 	{
 		if( !stdlib_array_getval( C, subarr, i, &var ) )   goto fail;
-		if( sgs_PushVariable( C, &var ) != SGS_SUCCESS )   goto fail;
+		sgs_PushVariable( C, &var );
 		sgs_Release( C, &var );
 		if( !stdlib_tostring( C, -1, &substr, &subsize ) )
 			goto fail;
@@ -708,13 +708,13 @@ static int _stringrep_aa( SGS_CTX, char* str, int32_t size, sgs_Variable* subarr
 	for( i = 0; i < arrsize; ++i )
 	{
 		if( !stdlib_array_getval( C, subarr, i, &var ) )   goto fail;
-		if( sgs_PushVariable( C, &var ) != SGS_SUCCESS )   goto fail;
+		sgs_PushVariable( C, &var );
 		sgs_Release( C, &var );
 		if( !stdlib_tostring( C, -1, &substr, &subsize ) )
 			goto fail;
 
 		if( !stdlib_array_getval( C, reparr, i % reparrsize, &var ) )   goto fail;
-		if( sgs_PushVariable( C, &var ) != SGS_SUCCESS )   goto fail;
+		sgs_PushVariable( C, &var );
 		sgs_Release( C, &var );
 		if( !stdlib_tostring( C, -1, &repstr, &repsize ) )
 			goto fail;

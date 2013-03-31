@@ -63,6 +63,8 @@ static void ctx_init( SGS_CTX )
 	C->print_ctx = NULL;
 
 	C->state = 0;
+	C->fctx = NULL;
+	C->filename = NULL;
 
 	C->stack_mem = 32;
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
@@ -209,7 +211,7 @@ int sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	int ret;
 	long len;
 	FILE* f;
-	char* data;
+	char* data, *ofn;
 	DBGINFO( "sgs_EvalFile called!" );
 
 	f = fopen( file, "rb" );
@@ -228,7 +230,10 @@ int sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	}
 	fclose( f );
 
+	ofn = C->filename;
+	C->filename = (char*) file;
 	ret = ctx_execute( C, data, len, rvc ? FALSE : TRUE, rvc );
+	C->filename = ofn;
 
 	sgs_Free( data );
 	return ret;
@@ -255,6 +260,7 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, char** name, char** fil
 	{
 		N = "<main>";
 		L = frame->lntable[ frame->iptr - frame->code ];
+		F = C->filename;
 	}
 	else if( frame->func->type == SVT_FUNC )
 	{
@@ -262,10 +268,13 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, char** name, char** fil
 		if( frame->func->data.F->funcname.size )
 			N = frame->func->data.F->funcname.ptr;
 		L = frame->func->data.F->lineinfo[ frame->iptr - frame->code ];
+		if( frame->func->data.F->filename.size )
+			F = frame->func->data.F->filename.ptr;
 	}
 	else if( frame->func->type == SVT_CFUNC )
 	{
 		N = "<C function>";
+		F = "<C code>";
 	}
 	else if( frame->func->type == SVT_OBJECT )
 	{

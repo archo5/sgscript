@@ -94,6 +94,7 @@ void var_destroy_func( SGS_CTX, func_t* F )
 	}
 	sgs_Free( F->lineinfo );
 	strbuf_destroy( &F->funcname );
+	strbuf_destroy( &F->filename );
 	sgs_Free( F );
 }
 
@@ -1589,7 +1590,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 
 static int funct_size( func_t* f )
 {
-	int sz = f->size + f->funcname.mem;
+	int sz = f->size + f->funcname.mem + f->filename.mem;
 	sgs_Variable* beg = (sgs_Variable*) func_consts( f );
 	sgs_Variable* end = (sgs_Variable*) func_bytecode( f );
 	while( beg < end )

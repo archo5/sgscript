@@ -451,7 +451,6 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf, const cha
 	sgs_Variable nvar;
 	int pos;
 	func_t* F = sgs_Alloc_a( func_t, nf->consts.size + nf->code.size );
-	UNUSED( C );
 
 	F->refcount = 1;
 	F->size = nf->consts.size + nf->code.size;
@@ -468,7 +467,11 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf, const cha
 	if( funcname )
 		strbuf_appstr( &F->funcname, funcname );
 	F->linenum = lnum;
-
+	
+	F->filename = strbuf_create();
+	if( C->filename )
+		strbuf_appstr( &F->filename, C->filename );
+	
 	memcpy( func_consts( F ), nf->consts.ptr, nf->consts.size );
 	memcpy( func_bytecode( F ), nf->code.ptr, nf->code.size );
 
