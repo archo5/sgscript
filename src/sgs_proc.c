@@ -693,6 +693,9 @@ int vm_convert_stack( SGS_CTX, int item, int type )
 {
 	int ret;
 	sgs_Variable var;
+	item = stk_absindex( C, item );
+	if( item < 0 || item >= C->stack_top - C->stack_off )
+		return SGS_EINVAL;
 	var = *stk_getpos( C, item );
 	ret = vm_convert( C, &var, type );
 	*stk_getpos( C, item ) = var;

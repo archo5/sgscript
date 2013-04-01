@@ -263,7 +263,7 @@ static void dumpobj( FILE* fp, sgs_VarObj* p )
 	buf[0] = 0;
 	while( *ci )
 	{
-		if( !*buf )
+		if( *buf )
 			strcat( buf, "," );
 		strcat( buf, g_ifitems[ (int) *ci ] );
 		ci += 2;
@@ -284,7 +284,7 @@ static void dumpvar( FILE* fp, sgs_Variable* var )
 	case SVT_STRING: fprintf( fp, " [rc:%d] = \"", var->data.S->refcount ); print_safe( fp, var_cstr( var ), 16 ); fprintf( fp, var->data.S->size > 16 ? "...\"" : "\"" ); break;
 	case SVT_FUNC: fprintf( fp, " [rc:%d]", var->data.F->refcount ); break;
 	case SVT_CFUNC: fprintf( fp, " = %p", var->data.C ); break;
-	case SVT_OBJECT: dumpobj( fp, var->data.O ); break;
+	case SVT_OBJECT: fprintf( fp, " = " ); dumpobj( fp, var->data.O ); break;
 	}
 }
 
@@ -296,6 +296,7 @@ int sgs_Stat( SGS_CTX, int type )
 	case SGS_STAT_DUMP_STACK:
 		{
 			sgs_Variable* p = C->stack_base;
+			fprintf( stderr, "VARIABLE ---- STACK ---- BASE ----\n" );
 			while( p < C->stack_top )
 			{
 				if( p == C->stack_off )
@@ -307,12 +308,14 @@ int sgs_Stat( SGS_CTX, int type )
 				fprintf( stderr, "\n" );
 				p++;
 			}
+			fprintf( stderr, "VARIABLE ---- STACK ---- TOP ----\n" );
 		}
 		return 0;
 	case SGS_STAT_DUMP_GLOBALS:
 		{
 			HTPair* p = C->data.pairs;
 			HTPair* pend = C->data.pairs + C->data.size;
+			fprintf( stderr, "GLOBAL ---- LIST ---- START ----\n" );
 			while( p < pend )
 			{
 				if( p->str )
@@ -325,31 +328,36 @@ int sgs_Stat( SGS_CTX, int type )
 				}
 				p++;
 			}
+			fprintf( stderr, "GLOBAL ---- LIST ---- END ----\n" );
 		}
 		return 0;
 	case SGS_STAT_DUMP_OBJECTS:
 		{
 			char buf[ 256 ];
 			object_t* p = C->objs;
+			fprintf( stderr, "OBJECT ---- LIST ---- START ----\n" );
 			while( p )
 			{
 				dumpobj( stderr, p );
 				fprintf( stderr, "\n" );
 				p = p->next;
 			}
+			fprintf( stderr, "OBJECT ---- LIST ---- END ----\n" );
 		}
 		return 0;
 	case SGS_STAT_DUMP_FRAMES:
 		{
 			sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
+			fprintf( stderr, "FRAME ---- LIST ---- START ----\n" );
 			while( p != NULL )
 			{
 				char* file, *name;
 				int ln;
 				sgs_StackFrameInfo( C, p, &name, &file, &ln );
-				fprintf( stderr, "- \"%s\" in %s, line %d\n", name, file, ln );
+				fprintf( stderr, "FRAME \"%s\" in %s, line %d\n", name, file, ln );
 				p = p->next;
 			}
+			fprintf( stderr, "FRAME ---- LIST ---- END ----\n" );
 		}
 		return 0;
 	default:
