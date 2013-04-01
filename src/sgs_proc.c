@@ -1627,7 +1627,7 @@ void sgsVM_VarDump( sgs_VarPtr var )
 	case SVT_BOOL: printf( " = %s", var->data.B ? "True" : "False" ); break;
 	case SVT_INT: printf( " = %" PRId64, var->data.I ); break;
 	case SVT_REAL: printf( " = %f", var->data.R ); break;
-	case SVT_STRING: printf( " [rc:%d] = \"", var->data.S->refcount ); print_safe( var_cstr( var ), 16 ); printf( var->data.S->size > 16 ? "...\"" : "\"" ); break;
+	case SVT_STRING: printf( " [rc:%d] = \"", var->data.S->refcount ); print_safe( stdout, var_cstr( var ), 16 ); printf( var->data.S->size > 16 ? "...\"" : "\"" ); break;
 	case SVT_FUNC: printf( " [rc:%d]", var->data.F->refcount ); break;
 	case SVT_CFUNC: printf( " = %p", var->data.C ); break;
 	case SVT_OBJECT: printf( "TODO [object impl]" ); break;
@@ -1669,40 +1669,36 @@ int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int expect, int gotthis
 }
 
 
-int sgs_PushNull( SGS_CTX )
+void sgs_PushNull( SGS_CTX )
 {
 	stk_push_null( C );
-	return SGS_SUCCESS;
 }
 
-int sgs_PushBool( SGS_CTX, int value )
+void sgs_PushBool( SGS_CTX, int value )
 {
 	sgs_Variable var;
 	var.type = SVT_BOOL;
 	var.data.B = value ? 1 : 0;
 	stk_push_leave( C, &var );
-	return SGS_SUCCESS;
 }
 
-int sgs_PushInt( SGS_CTX, sgs_Integer value )
+void sgs_PushInt( SGS_CTX, sgs_Integer value )
 {
 	sgs_Variable var;
 	var.type = SVT_INT;
 	var.data.I = value;
 	stk_push_leave( C, &var );
-	return SGS_SUCCESS;
 }
 
-int sgs_PushReal( SGS_CTX, sgs_Real value )
+void sgs_PushReal( SGS_CTX, sgs_Real value )
 {
 	sgs_Variable var;
 	var.type = SVT_REAL;
 	var.data.R = value;
 	stk_push_leave( C, &var );
-	return SGS_SUCCESS;
 }
 
-int sgs_PushStringBuf( SGS_CTX, const char* str, int32_t size )
+void sgs_PushStringBuf( SGS_CTX, const char* str, int32_t size )
 {
 	sgs_Variable var;
 	if( str )
@@ -1710,46 +1706,54 @@ int sgs_PushStringBuf( SGS_CTX, const char* str, int32_t size )
 	else
 		var_create_0str( C, &var, size );
 	stk_push_leave( C, &var );
-	return SGS_SUCCESS;
 }
 
-int sgs_PushString( SGS_CTX, const char* str )
+void sgs_PushString( SGS_CTX, const char* str )
 {
 	sgs_Variable var;
 	var_create_str( C, &var, str, -1 );
 	stk_push_leave( C, &var );
-	return SGS_SUCCESS;
 }
 
-int sgs_PushCFunction( SGS_CTX, sgs_CFunc func )
+void sgs_PushCFunction( SGS_CTX, sgs_CFunc func )
 {
 	sgs_Variable var;
 	var.type = SVT_CFUNC;
 	var.data.C = func;
 	stk_push_leave( C, &var );
-	return SGS_SUCCESS;
 }
 
-int sgs_PushObject( SGS_CTX, void* data, void** iface )
+void sgs_PushObject( SGS_CTX, void* data, void** iface )
 {
 	sgs_Variable var;
 	var_create_obj( C, &var, data, iface );
 	stk_push_leave( C, &var );
-	return SGS_SUCCESS;
 }
 
-int sgs_PushVariable( SGS_CTX, sgs_Variable* var )
+void sgs_PushVariable( SGS_CTX, sgs_Variable* var )
 {
 	stk_push( C, var );
-	return SGS_SUCCESS;
 }
 
+
+int sgs_PushItem( SGS_CTX, int pos )
+{
+	pos = stk_absindex( C, pos );
+	if( pos < 0 )
+		return SGS_EINVAL;
+	if( pos >= C->stack_top - C->stack_off )
+		return SGS_EINVAL;
+	{
+		sgs_Variable copy = *stk_getpos( C, pos );
+		stk_push( C, &copy );
+		return SGS_SUCCESS;
+	}
+}
 
 int sgs_PushProperty( SGS_CTX, const char* name )
 {
-	int ret = sgs_PushString( C, name );
-	if( ret != SGS_SUCCESS )
-		return ret;
+	int ret;
+	sgs_PushString( C, name );
 	ret = vm_getprop( C, stk_absindex( C, -1 ), stk_getpos( C, -2 ), stk_getpos( C, -1 ), FALSE );
 	stk_popskip( C, 1, 1 );
 	return ret;
@@ -2067,90 +2071,6 @@ int sgs_GCExecute( SGS_CTX )
 int sgs_GCMark( SGS_CTX, sgs_Variable* var )
 {
 	return vm_gcmark( C, var );
-}
-
-static const char* ca_curend( const char* str, const char* endchrs )
-{
-	while( *str && !isoneof( *str, endchrs ) )
-		str++;
-	return str;
-}
-
-static int ca_compare( const char* str, const char* end, const char* type )
-{
-	int len;
-	if( end - str == 1 && *str == '*' )
-		return 1;
-
-	len = strlen( type );
-	while( str < end )
-	{
-		const char* pend = ca_curend( str, "|," );
-		if( *str != '!' )
-		{
-			/*
-				accept basic promotion:
-				null/bool/int/real -> interchangeable/string
-			*/
-			if( strncmp( "null", str, pend - str ) == 0 ||
-				strncmp( "bool", str, pend - str ) == 0 ||
-				strncmp( "int", str, pend - str ) == 0 ||
-				strncmp( "real", str, pend - str ) == 0 )
-			{
-				const char* ptr = "!real|!int|!bool|!null";
-				if( !ca_compare( ptr, ptr + strlen( ptr ), type ) )
-					return 0;
-			}
-			else if( strncmp( "string", str, pend - str ) == 0 )
-			{
-				const char* ptr = "!string|!real|!int|!bool|!null";
-				if( !ca_compare( ptr, ptr + strlen( ptr ), type ) )
-					return 0;
-			}
-			return 1;
-		}
-		/* after this point, string assumed to have "!" in front */
-		else
-		{
-			if( pend - str - 1 == len && strncmp( str + 1, type, len ) == 0 )
-				return 1;
-			str++;
-		}
-		str = pend + ( *pend == '|' );
-	}
-
-	return 0;
-}
-
-int sgs_CheckArgs( SGS_CTX, const char* name, const char* str )
-{
-	const char* orig = str;
-	int curarg = 0, ret;
-	const char* end = ca_curend( str, "," );
-	while( *str )
-	{
-		if( curarg >= sgs_StackSize( C ) )
-			goto fail;
-
-		sgs_PushVariable( C, stk_getpos( C, curarg ) );
-		if( !vm_gettype( C ) )
-			goto fail;
-
-		ret = ca_compare( str, end, var_cstr( stk_getpos( C, -1 ) ) );
-		stk_pop1( C );
-		if( !ret ) goto fail;
-
-		str = end + !!*end;
-		end = ca_curend( str, "," );
-		curarg++;
-	}
-	if( curarg < sgs_StackSize( C ) )
-		goto fail;
-	return 1;
-
-fail:
-	sgs_Printf( C, SGS_ERROR, -1, "Invalid arguments passed to %s, expected \"%s\"", name, orig );
-	return 0;
 }
 
 

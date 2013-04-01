@@ -61,8 +61,12 @@ extern void* (*sgs_MemFunc) ( void*, size_t );
 typedef void (*sgs_PrintFunc) ( void* /* data */, sgs_Context* /* ctx / SGS_CTX */, int /* type */, int /* line */, const char* /* message */ );
 
 
-/* Statistics */
-#define SGS_STAT_VARCOUNT 1
+/* Statistics / debugging */
+#define SGS_STAT_VARCOUNT     1
+#define SGS_STAT_DUMP_STACK   10
+#define SGS_STAT_DUMP_GLOBALS 11
+#define SGS_STAT_DUMP_OBJECTS 12
+#define SGS_STAT_DUMP_FRAMES  13
 
 
 /* Context internals */
@@ -175,16 +179,17 @@ int sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size );
 
 /* The core interface */
 
-int sgs_PushNull( SGS_CTX );
-int sgs_PushBool( SGS_CTX, int value );
-int sgs_PushInt( SGS_CTX, sgs_Integer value );
-int sgs_PushReal( SGS_CTX, sgs_Real value );
-int sgs_PushStringBuf( SGS_CTX, const char* str, int32_t size );
-int sgs_PushString( SGS_CTX, const char* str );
-int sgs_PushCFunction( SGS_CTX, sgs_CFunc func );
-int sgs_PushObject( SGS_CTX, void* data, void** iface );
-int sgs_PushVariable( SGS_CTX, sgs_Variable* var );
+void sgs_PushNull( SGS_CTX );
+void sgs_PushBool( SGS_CTX, int value );
+void sgs_PushInt( SGS_CTX, sgs_Integer value );
+void sgs_PushReal( SGS_CTX, sgs_Real value );
+void sgs_PushStringBuf( SGS_CTX, const char* str, int32_t size );
+void sgs_PushString( SGS_CTX, const char* str );
+void sgs_PushCFunction( SGS_CTX, sgs_CFunc func );
+void sgs_PushObject( SGS_CTX, void* data, void** iface );
+void sgs_PushVariable( SGS_CTX, sgs_Variable* var );
 
+int sgs_PushItem( SGS_CTX, int pos );
 int sgs_PushProperty( SGS_CTX, const char* name );
 int sgs_StringConcat( SGS_CTX );
 int sgs_StringMultiConcat( SGS_CTX, int args );
@@ -198,9 +203,9 @@ int sgs_TypeOf( SGS_CTX );
 
 int sgs_GetGlobal( SGS_CTX, const char* name );
 int sgs_SetGlobal( SGS_CTX, const char* name );
-int sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx );
+int sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx ); /* must release "out" */
 int sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val );
-int sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Integer idx );
+int sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Integer idx ); /* must release "out" */
 int sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Integer idx, sgs_Variable* val );
 
 int sgs_GetBool( SGS_CTX, int item );
@@ -220,7 +225,6 @@ void sgs_Acquire( SGS_CTX, sgs_Variable* var );
 void sgs_Release( SGS_CTX, sgs_Variable* var );
 int sgs_GCExecute( SGS_CTX );
 int sgs_GCMark( SGS_CTX, sgs_Variable* var );
-int sgs_CheckArgs( SGS_CTX, const char* name, const char* str );
 
 const char* sgs_GetStringPtr( SGS_CTX, int item );
 int32_t sgs_GetStringSize( SGS_CTX, int item );

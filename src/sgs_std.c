@@ -328,7 +328,8 @@ static int sgsstd_array_getiter( SGS_CTX, sgs_VarObj* data )
 	iter->size = hdr->size;
 	iter->off = 0;
 
-	return sgs_PushObject( C, iter, sgsstd_array_iter_functable );
+	sgs_PushObject( C, iter, sgsstd_array_iter_functable );
+	return SGS_SUCCESS;
 }
 
 void* sgsstd_array_functable[] =
@@ -439,7 +440,8 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 	pair = vht_get( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
 	if( !pair )
 		return SGS_ENOTFND;
-	return sgs_PushVariable( C, &pair->var );
+	sgs_PushVariable( C, &pair->var );
+	return SGS_SUCCESS;
 }
 
 static int sgsstd_dict_setindex( SGS_CTX, sgs_VarObj* data )
@@ -504,7 +506,8 @@ static int sgsstd_dict_getiter( SGS_CTX, sgs_VarObj* data )
 	iter->size = ht->ht.load;
 	iter->off = 0;
 
-	return sgs_PushObject( C, iter, sgsstd_dict_iter_functable );
+	sgs_PushObject( C, iter, sgsstd_dict_iter_functable );
+	return SGS_SUCCESS;
 }
 
 #define sgsstd_dict_getprop sgsstd_dict_getindex
@@ -752,7 +755,8 @@ int sgsstd_class( SGS_CTX )
 	hdr->inh = *sgs_StackItem( C, 1 );
 	sgs_Acquire( C, &hdr->data );
 	sgs_Acquire( C, &hdr->inh );
-	return sgs_PushObject( C, hdr, sgsstd_class_functable ) == SGS_SUCCESS;
+	sgs_PushObject( C, hdr, sgsstd_class_functable );
+	return 1;
 
 argerr:
 	sgs_Printf( C, SGS_ERROR, -1, "'class' requires 2 arguments: data, inherited" );
@@ -836,7 +840,8 @@ int sgsstd_closure( SGS_CTX )
 	hdr->data = *sgs_StackItem( C, 1 );
 	sgs_Acquire( C, &hdr->func );
 	sgs_Acquire( C, &hdr->data );
-	return sgs_PushObject( C, hdr, sgsstd_closure_functable ) == SGS_SUCCESS;
+	sgs_PushObject( C, hdr, sgsstd_closure_functable );
+	return 1;
 
 argerr:
 	sgs_Printf( C, SGS_ERROR, -1, "'closure' requires 2 arguments: function, data" );
@@ -864,7 +869,8 @@ int sgsstd_isset( SGS_CTX )
 	ht = (VHTable*) var->data.O->data;
 
 	pair = vht_get( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
-	return sgs_PushBool( C, pair != NULL ) == SGS_SUCCESS;
+	sgs_PushBool( C, pair != NULL );
+	return 1;
 
 argerr:
 	sgs_Printf( C, SGS_ERROR, -1, "'isset' requires 2 arguments: object (dict), property name (string)" );
@@ -1099,7 +1105,8 @@ static int sgsstd_import_cfunc( SGS_CTX )
 		else STDLIB_WARN( "import_cfunc() - unknown error occured" )
 	}
 	
-	return sgs_PushCFunction( C, func ) == SGS_SUCCESS ? 1 : 0;
+	sgs_PushCFunction( C, func );
+	return 1;
 }
 
 static int sgsstd_sys_errorstate( SGS_CTX )
@@ -1180,8 +1187,9 @@ int sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size )
 	const sgs_RegFuncConst* last = list + size;
 	while( list < last )
 	{
-		ret = sgs_PushCFunction( C, list->value ); if( ret != SGS_SUCCESS ) return ret;
-		ret = sgs_SetGlobal( C, list->name );      if( ret != SGS_SUCCESS ) return ret;
+		sgs_PushCFunction( C, list->value );
+		ret = sgs_SetGlobal( C, list->name );
+		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
 	return SGS_SUCCESS;
@@ -1193,8 +1201,9 @@ int sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size )
 	const sgs_RegIntConst* last = list + size;
 	while( list < last )
 	{
-		ret = sgs_PushInt( C, list->value );  if( ret != SGS_SUCCESS ) return ret;
-		ret = sgs_SetGlobal( C, list->name ); if( ret != SGS_SUCCESS ) return ret;
+		sgs_PushInt( C, list->value );
+		ret = sgs_SetGlobal( C, list->name );
+		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
 	return SGS_SUCCESS;
@@ -1206,8 +1215,9 @@ int sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
 	const sgs_RegRealConst* last = list + size;
 	while( list < last )
 	{
-		ret = sgs_PushReal( C, list->value ); if( ret != SGS_SUCCESS ) return ret;
-		ret = sgs_SetGlobal( C, list->name ); if( ret != SGS_SUCCESS ) return ret;
+		sgs_PushReal( C, list->value );
+		ret = sgs_SetGlobal( C, list->name );
+		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
 	return SGS_SUCCESS;

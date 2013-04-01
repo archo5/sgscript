@@ -100,7 +100,7 @@ static SGS_INLINE int getbin( char c ){ return c - '0'; }
 #  define FUNC_END
 #endif
 
-void print_safe( const char* buf, int32_t size );
+void print_safe( FILE* fp, const char* buf, int32_t size );
 
 
 /* string buffer */

@@ -23,7 +23,8 @@ __declspec(dllexport) int sgscript_main( SGS_CTX )
 {
 	sgs_PushInt( C, 1337 );
 	sgs_SetGlobal( C, "imported_var" );
-	return sgs_PushBool( C, 1 ) == SGS_SUCCESS ? 1 : 0;
+	sgs_PushBool( C, 1 );
+	return 1;
 }
 
 
@@ -121,9 +122,9 @@ static void TF_printfn( void* ctx, SGS_CTX, int type, int line, const char* mess
 	int ret = 0;
 	const char* pfxs[] = { "[I:", "[W:", "[E:" };
 	ret |= sgs_GetGlobal( C, "ERRORS" );
-	ret |= sgs_PushString( C, pfxs[ type ] );
-	ret |= sgs_PushString( C, message );
-	ret |= sgs_PushString( C, "]" );
+	sgs_PushString( C, pfxs[ type ] );
+	sgs_PushString( C, message );
+	sgs_PushString( C, "]" );
 	ret |= sgs_StringMultiConcat( C, 4 );
 	ret |= sgs_SetGlobal( C, "ERRORS" );
 	sgs_BreakIf( ret != 0 );

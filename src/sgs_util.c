@@ -239,17 +239,17 @@ void sgs_BreakIfFunc( const char* code, const char* file, int line )
 }
 
 
-void print_safe( const char* buf, int32_t size )
+void print_safe( FILE* fp, const char* buf, int32_t size )
 {
 	int32_t i;
 	for( i = 0; i < size; ++i )
 	{
 		if( !buf[ i ] )
 			break;
-		if( isgraph( buf[ i ] ) )
-			putchar( buf[ i ] );
+		if( isgraph( buf[ i ] ) || buf[ i ] == ' ' )
+			fputc( buf[ i ], fp );
 		else
-			printf( "\\x%02X", (int) buf[ i ] );
+			fprintf( fp, "\\x%02X", (int) buf[ i ] );
 	}
 }
 

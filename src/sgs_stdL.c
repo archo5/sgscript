@@ -33,8 +33,7 @@ int32_t stdlib_array_size( SGS_CTX, sgs_Variable* var )
 {
 	int ret;
 
-	ret = sgs_PushVariable( C, var );
-	if( ret != SGS_SUCCESS ) return ret;
+	sgs_PushVariable( C, var );
 
 	ret = sgs_PushProperty( C, "size" );
 	if( ret != SGS_SUCCESS ){ sgs_Pop( C, 1 ); return ret; }
@@ -448,7 +447,7 @@ static int sgsstd_string_pad( SGS_CTX )
 
 	if( tgtsize <= size || !FLAG( flags, sgsfLEFT | sgsfRIGHT ) )
 	{
-		sgs_PushVariable( C, sgs_StackItem( C, 0 ) );
+		sgs_PushItem( C, 0 );
 		return 1;
 	}
 
@@ -628,12 +627,7 @@ static int _stringrep_ss( SGS_CTX, char* str, int32_t size, char* sub, int32_t s
 	}
 
 	outlen = size + ( repsize - subsize ) * matchcount;
-	if( sgs_PushStringBuf( C, NULL, outlen ) != SGS_SUCCESS )
-	{
-		if( matches != sma )
-			sgs_Free( matches );
-		return 0;
-	}
+	sgs_PushStringBuf( C, NULL, outlen );
 	out = sgs_StackItem( C, -1 );
 
 	i = str;
@@ -770,7 +764,10 @@ static int sgsstd_string_replace( SGS_CTX )
 	if( stdlib_tostring( C, 1, &sub, &subsize ) && ret )
 	{
 		if( subsize == 0 )
-			return sgs_PushVariable( C, var1 ) == SGS_SUCCESS ? 1 : 0;
+		{
+			sgs_PushVariable( C, var1 );
+			return 1;
+		}
 		return _stringrep_ss( C, str, size, sub, subsize, rep, repsize );
 	}
 
@@ -793,7 +790,7 @@ static int sgsstd_string_trim( SGS_CTX )
 
 	if( !FLAG( flags, sgsfLEFT | sgsfRIGHT ) )
 	{
-		sgs_PushVariable( C, sgs_StackItem( C, 0 ) );
+		sgs_PushItem( C, 0 );
 		return 1;
 	}
 

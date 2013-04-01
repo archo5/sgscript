@@ -438,7 +438,7 @@ void sgsT_DumpToken( TokenList tok )
 		break;
 	case ST_STRING:
 		fwrite( "str(", 1, 4, stdout );
-		print_safe( (const char*) tok + 5, ST_READINT( tok + 1 ) );
+		print_safe( stdout, (const char*) tok + 5, ST_READINT( tok + 1 ) );
 		fwrite( ")", 1, 1, stdout );
 		break;
 #define OPR( op ) printf( "%s", op );
