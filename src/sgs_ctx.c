@@ -104,13 +104,14 @@ void sgs_DestroyEngine( SGS_CTX )
 	C->print_fn = NULL;
 	C->print_ctx = NULL;
 
+	/* clear the stack */
 	while( C->stack_base != C->stack_top )
 	{
 		C->stack_top--;
 		sgs_Release( C, C->stack_top );
 	}
-	sgs_Free( C->stack_base );
 
+	/* clear the globals' table */
 	p = C->data.pairs;
 	pend = C->data.pairs + C->data.size;
 	while( p < pend )
@@ -118,14 +119,19 @@ void sgs_DestroyEngine( SGS_CTX )
 		if( p->str && p->ptr )
 		{
 			sgs_Release( C, (sgs_VarPtr) p->ptr );
-			sgs_Free( (sgs_VarPtr) p->ptr );
+			sgs_Free( p->ptr );
 		}
 		p++;
 	}
-	ht_free( &C->data );
 
-	while( C->objs )
-		sgsVM_VarDestroyObject( C, C->objs );
+	/* unsetting keys one by one might reallocate the table more often than it's necessary */
+	ht_free( &C->data );
+	ht_init( &C->data, 4 );
+
+	sgs_GCExecute( C );
+
+	sgs_Free( C->stack_base );
+	ht_free( &C->data );
 
 	sgs_Free( C );
 
