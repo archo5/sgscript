@@ -253,20 +253,14 @@ static int sgsstd_array_tostring( SGS_CTX, sgs_VarObj* data )
 	return sgs_StringMultiConcat( C, cnt * 2 + 1 + !cnt );
 }
 
-static int sgsstd_array_tostring_UNUSED( SGS_CTX, sgs_VarObj* data )
-{
-	char buf[ 32 ];
-	sprintf( buf, "Array(0x%8p)", data );
-	sgs_PushString( C, buf );
-	return SGS_SUCCESS;
-}
-
+#if 0
 static void sgsstd_array_resize( SGS_CTX, sgs_VarObj* data, uint32_t size )
 {
 	SGSARR_HDR;
 	if( size > hdr->mem )
 		sgsstd_array_reserve( C, data, ( size < hdr->mem * 2 ) ? hdr->mem * 2 : size );
 }
+#endif
 
 static int sgsstd_array_gcmark( SGS_CTX, sgs_VarObj* data )
 {
@@ -565,7 +559,7 @@ int sgsstd_dict( SGS_CTX )
 			return 0;
 		}
 
-		vht_set( ht, kstr, ksize, sgs_StackItem( C, i + 1 ), C );
+		vht_set( ht, kstr, (int32_t) ksize, sgs_StackItem( C, i + 1 ), C );
 	}
 
 	sgs_PushObject( C, ht, sgsstd_dict_functable );
@@ -1017,7 +1011,7 @@ static int sgsstd_eval( SGS_CTX )
 	if( sgs_StackSize( C ) != 1 || !stdlib_tostring( C, 0, &str, &size ) )
 		STDLIB_WARN( "eval() - unexpected arguments; function expects 1 argument: string" )
 
-	sgs_EvalBuffer( C, str, size, &rvc );
+	sgs_EvalBuffer( C, str, (int) size, &rvc );
 	return rvc;
 }
 

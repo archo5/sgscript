@@ -26,10 +26,18 @@ typedef unsigned __int64 uint64_t;
 #define UNUSED( x ) (void)(x)
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SGS_XPC_NOFILE -1
 #define SGS_XPC_NOPROC -2
 #define SGS_XPC_NOTSUP -3
 int sgs_GetProcAddress( const char* file, const char* proc, void** out );
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* SGS_XPC_H_INCLUDED */

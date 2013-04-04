@@ -94,10 +94,12 @@ static void fctx_destroy( sgs_FuncCtx* fctx )
 	sgs_Free( fctx );
 }
 
+#if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 static void fctx_dump( sgs_FuncCtx* fctx )
 {
 	printf( "Type: %s\nGlobals: %s\nVariables: %s\n", fctx->func ? "Function" : "Main code", fctx->gvars.ptr, fctx->vars.ptr );
 }
+#endif
 
 
 static void dump_rcpos( int arg )

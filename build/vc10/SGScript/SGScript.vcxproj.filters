@@ -9,6 +9,7 @@
     <ClCompile Include="..\..\..\src\sgs_tok.c" />
     <ClCompile Include="..\..\..\src\sgs_util.c" />
     <ClCompile Include="..\..\..\src\sgs_stdL.c" />
+    <ClCompile Include="..\..\..\src\sgs_xpc.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\sgs_bcg.h" />

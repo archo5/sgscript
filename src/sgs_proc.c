@@ -1173,7 +1173,7 @@ VAR_IOP( rsh, >> )
 static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 {
 	const uint8_t ta = a->type, tb = b->type;
-	if( ta == SVT_INT && tb == SVT_INT ) return a->data.I - b->data.I;
+	if( ta == SVT_INT && tb == SVT_INT ) return (sgs_Real)( a->data.I - b->data.I );
 	if( ta == SVT_REAL && tb == SVT_REAL ) return a->data.R - b->data.R;
 
 	if( ta == SVT_OBJECT || tb == SVT_OBJECT )

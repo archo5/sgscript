@@ -31,14 +31,14 @@ int stdlib_is_array( SGS_CTX, sgs_Variable* var )
 
 int32_t stdlib_array_size( SGS_CTX, sgs_Variable* var )
 {
-	int ret;
+	int32_t ret;
 
 	sgs_PushVariable( C, var );
 
 	ret = sgs_PushProperty( C, "size" );
 	if( ret != SGS_SUCCESS ){ sgs_Pop( C, 1 ); return ret; }
 
-	ret = sgs_ToInt( C, -1 );
+	ret = (int32_t) sgs_ToInt( C, -1 );
 	sgs_Pop( C, 1 );
 	return ret;
 }

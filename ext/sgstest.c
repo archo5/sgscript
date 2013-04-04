@@ -159,6 +159,7 @@ static void prepengine( sgs_Context* C )
 	;
 
 	ret = sgs_ExecString( C, sgs_testapi );
+	UNUSED( ret );
 	sgs_BreakIf( ret != SGS_SUCCESS );
 
 	C->print_fn = TF_printfn;

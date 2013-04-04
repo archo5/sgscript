@@ -1,15 +1,15 @@
 
---- SGScript v0.8 ---
+--- SGScript v0.8.1 ---
 
 usage:
-- grab the source from src/ directory...
-- compile all .c files...
-	* by using makefiles / build projects or just..
-	..by building them and archiving the generated object files
-	! project isn't ready to be used as a DLL/SO yet
-	* everything was tested on 32-bit Windows and both 32- and 64-bit Ubuntu
-		* fresh commits aren't tested as thoroughly
-- include src/sgscript.h in your project
+- MinGW users:
+	* compile the makefile (add mode=release to get the release build)
+	* link against libsgscript.a from the lib/ directory (-lsgscript)
+- VC10/11 users:
+	* project file is in build/vc10/SGScript
+- Code::Blocks users:
+	* project file is in build/codeblocks
+- include src/sgscript.h in your project and link with libsgscript.a
 
 sample code and documentation ... is in tests/ and docs/ directories
 	as you'll probably see, it's not that different from many other languages.
@@ -47,7 +47,7 @@ development:
 	* don't forget to include a test sample, as small as possible!
 
 future:
-- optimizations (the ones based on assumptions), fully featured API
+- optimizations, fully featured API
 - got a suggestion? write some sample code (in the form of a test) and send it
 
 credits:
@@ -56,6 +56,8 @@ credits:
 - inspired by C, PHP, Lua, JavaScript, Squirrel and AngelScript
 
 change log:
+0.8.1 (2013/04/04): important stability and main API improvements
+	the engine is finally tested to be production-code-ready
 0.8 (2013/03/29): most of string API, type API, closures, API test framework,
 	improved debugging, fixed: boolean logic, div/0 error and other things
 0.7 (2013/01/28): object orientation (w/ operator overloading), do-while,

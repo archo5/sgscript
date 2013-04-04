@@ -19,6 +19,7 @@
     <ClCompile Include="..\..\..\src\sgs_stdL.c" />
     <ClCompile Include="..\..\..\src\sgs_tok.c" />
     <ClCompile Include="..\..\..\src\sgs_util.c" />
+    <ClCompile Include="..\..\..\src\sgs_xpc.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\sgscript.h" />
@@ -99,7 +100,6 @@
       <StringPooling>true</StringPooling>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <Optimization>MaxSpeed</Optimization>
-      <AssemblerOutput>All</AssemblerOutput>
       <InlineFunctionExpansion>Default</InlineFunctionExpansion>
       <OmitFramePointers>true</OmitFramePointers>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>

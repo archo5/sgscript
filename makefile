@@ -9,14 +9,19 @@ else
 	PLATFLAGS = 
 endif
 
+CC=gcc
+ifeq ($(mode),release)
+   CFLAGS = -O3 -Wall
+else
+   mode = debug
+   CFLAGS = -D_DEBUG -g -Wall
+endif
+
 SRCDIR=src
 LIBDIR=lib
 EXTDIR=ext
 OUTDIR=bin
 OBJDIR=obj
-
-CC=gcc
-CFLAGS=-D_DEBUG -g
 
 _DEPS = sgs_bcg.h sgs_cfg.h sgs_ctx.h sgs_fnt.h sgs_proc.h sgs_std.h sgs_tok.h sgs_util.h sgs_xpc.h sgscript.h
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))

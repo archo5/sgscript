@@ -252,8 +252,8 @@ static const char* g_ifitems[] =
 {
 	"end", "destruct", "clone", "gettype", "getprop", "setprop",
 	"getindex", "setindex", "tobool", "toint", "toreal", "tostring",
-	"gcmark", "getiter", "nextkey", "call", "compare", "add",
-	"sub", "mul", "div", "mod", "negate"
+	"dump", "gcmark", "getiter", "nextkey", "call", "compare",
+	"add", "sub", "mul", "div", "mod", "negate"
 };
 
 static void dumpobj( FILE* fp, sgs_VarObj* p )
@@ -333,7 +333,6 @@ int sgs_Stat( SGS_CTX, int type )
 		return 0;
 	case SGS_STAT_DUMP_OBJECTS:
 		{
-			char buf[ 256 ];
 			object_t* p = C->objs;
 			fprintf( stderr, "OBJECT ---- LIST ---- START ----\n" );
 			while( p )
