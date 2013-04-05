@@ -253,6 +253,33 @@ static int sgsstd_array_tostring( SGS_CTX, sgs_VarObj* data )
 	return sgs_StringMultiConcat( C, cnt * 2 + 1 + !cnt );
 }
 
+int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data )
+{
+	int i, depth = (int) sgs_ToInt( C, 0 );
+	SGSARR_HDR;
+	sgs_PushString( C, "array\n[" );
+	if( depth )
+	{
+		for( i = 0; i < hdr->size; ++i )
+		{
+			sgs_PushString( C, "\n" );
+			sgs_PushVariable( C, SGSARR_PTR( data->data ) + i );
+			if( sgs_DumpVar( C, depth ) )
+				return SGS_EINPROC;
+		}
+		if( sgs_StringMultiConcat( C, hdr->size * 2 ) || sgs_PadString( C ) )
+			return SGS_EINPROC;
+	}
+	else
+	{
+		sgs_PushString( C, "\n..." );
+		if( sgs_PadString( C ) )
+			return SGS_EINPROC;
+	}
+	sgs_PushString( C, "\n]" );
+	return sgs_StringMultiConcat( C, 3 );
+}
+
 #if 0
 static void sgsstd_array_resize( SGS_CTX, sgs_VarObj* data, uint32_t size )
 {
@@ -335,6 +362,7 @@ void* sgsstd_array_functable[] =
 	SOP_GETTYPE, sgsstd_array_gettype,
 	SOP_TOBOOL, sgsstd_array_tobool,
 	SOP_TOSTRING, sgsstd_array_tostring,
+	SOP_DUMP, sgsstd_array_dump,
 	SOP_GCMARK, sgsstd_array_gcmark,
 	SOP_GETITER, sgsstd_array_getiter,
 	SOP_END,
@@ -401,6 +429,37 @@ static int sgsstd_dict_tostring( SGS_CTX, sgs_VarObj* data )
 	}
 	sgs_PushString( C, "}" );
 	return sgs_StringMultiConcat( C, cnt * 4 + 1 + !cnt );
+}
+
+int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data )
+{
+	int depth = (int) sgs_ToInt( C, 0 );
+	HTHDR;
+	VHTableVar *pair = ht->vars, *pend = ht->vars + vht_size( ht );
+	sgs_PushString( C, "dict\n{" );
+	if( depth )
+	{
+		while( pair < pend )
+		{
+			sgs_PushString( C, "\n" );
+			sgs_PushStringBuf( C, pair->str, pair->size );
+			sgs_PushString( C, " = " );
+			sgs_PushVariable( C, &pair->var );
+			if( sgs_DumpVar( C, depth ) )
+				return SGS_EINPROC;
+			pair++;
+		}
+		if( sgs_StringMultiConcat( C, ( pend - ht->vars ) * 4 ) || sgs_PadString( C ) )
+			return SGS_EINPROC;
+	}
+	else
+	{
+		sgs_PushString( C, "\n..." );
+		if( sgs_PadString( C ) )
+			return SGS_EINPROC;
+	}
+	sgs_PushString( C, "\n}" );
+	return sgs_StringMultiConcat( C, 3 );
 }
 
 static int sgsstd_dict_gettype( SGS_CTX, sgs_VarObj* data )
@@ -515,6 +574,7 @@ void* sgsstd_dict_functable[] =
 	SOP_GETINDEX, sgsstd_dict_getindex,
 	SOP_SETINDEX, sgsstd_dict_setindex,
 	SOP_TOSTRING, sgsstd_dict_tostring,
+	SOP_DUMP, sgsstd_dict_dump,
 	SOP_GETTYPE, sgsstd_dict_gettype,
 	SOP_GCMARK, sgsstd_dict_gcmark,
 	SOP_GETITER, sgsstd_dict_getiter,
@@ -663,6 +723,31 @@ int sgsstd_class_tostring( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
+int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data )
+{
+	int depth = (int) sgs_ToInt( C, 0 );
+	SGSCLASS_HDR;
+	sgs_PushString( C, "class\n{" );
+	sgs_PushString( C, "\ndata: " );
+	sgs_PushVariable( C, &hdr->data );
+	if( sgs_DumpVar( C, depth ) )
+	{
+		sgs_Pop( C, 1 );
+		sgs_PushString( C, "<error>" );
+	}
+	sgs_PushString( C, "\nsuper: " );
+	sgs_PushVariable( C, &hdr->inh );
+	if( sgs_DumpVar( C, depth ) )
+	{
+		sgs_Pop( C, 1 );
+		sgs_PushString( C, "<error>" );
+	}
+	if( sgs_StringMultiConcat( C, 4 ) || sgs_PadString( C ) )
+		return SGS_EINPROC;
+	sgs_PushString( C, "\n}" );
+	return sgs_StringMultiConcat( C, 3 );
+}
+
 int sgsstd_class_gettype( SGS_CTX, sgs_VarObj* data )
 {
 	UNUSED( data );
@@ -725,6 +810,7 @@ void* sgsstd_class_functable[] =
 	SOP_GETINDEX, sgsstd_class_getindex,
 	SOP_SETINDEX, sgsstd_class_setindex,
 	SOP_TOSTRING, sgsstd_class_tostring,
+	SOP_DUMP, sgsstd_class_dump,
 	SOP_GETTYPE, sgsstd_class_gettype,
 	SOP_GCMARK, sgsstd_class_gcmark,
 	SOP_OP_ADD, sgsstd_class_add,
@@ -907,6 +993,50 @@ static int sgsstd_print( SGS_CTX )
 	for( i = 0; i < ssz; ++i )
 	{
 		printf( "%s", sgs_ToString( C, i ) );
+	}
+	return 0;
+}
+
+static int sgsstd_printvar( SGS_CTX )
+{
+	sgs_Integer depth = 5;
+	int ssz = sgs_StackSize( C );
+
+	if( ssz < 1 || ssz > 2 ||
+		( ssz == 2 && !stdlib_toint( C, 1, &depth ) ) )
+		STDLIB_WARN( "printvar(): unexpected arguments; function expects <any>[, int]" );
+
+	if( ssz == 2 )
+		sgs_Pop( C, 1 );
+	if( sgs_DumpVar( C, depth ) == SGS_SUCCESS )
+	{
+		fputs( sgs_ToString( C, -1 ), stdout );
+		fputs( "\n", stdout );
+	}
+	else
+		STDLIB_WARN( "printvar(): unknown error while dumping variable" );
+	return 0;
+}
+static int sgsstd_printvars( SGS_CTX )
+{
+	int i, ssz;
+	ssz = sgs_StackSize( C );
+	for( i = 0; i < ssz; ++i )
+	{
+		sgs_PushItem( C, i );
+		int res = sgs_DumpVar( C, 5 );
+		if( res == SGS_SUCCESS )
+		{
+			fputs( sgs_ToString( C, -1 ), stdout );
+			fputs( "\n", stdout );
+		}
+		else
+		{
+			char ebuf[ 64 ];
+			sprintf( ebuf, "printvars(): unknown error while dumping variable #%d", i + 1 );
+			STDLIB_WARN( ebuf );
+		}
+		sgs_Pop( C, 1 );
 	}
 	return 0;
 }
@@ -1122,6 +1252,53 @@ static int sgsstd_sys_abort( SGS_CTX )
 	return 0;
 }
 
+static int sgsstd_dumpvar( SGS_CTX )
+{
+	sgs_Integer depth = 5;
+	int ssz = sgs_StackSize( C );
+
+	if( ssz < 1 || ssz > 2 ||
+		( ssz == 2 && !stdlib_toint( C, 1, &depth ) ) )
+		STDLIB_WARN( "dumpvar(): unexpected arguments; function expects <any>[, int]" );
+
+	if( ssz == 2 )
+		sgs_Pop( C, 1 );
+	if( sgs_DumpVar( C, depth ) == SGS_SUCCESS )
+		return 1;
+	else
+		STDLIB_WARN( "dumpvar(): unknown error while dumping variable" );
+	return 0;
+}
+static int sgsstd_dumpvars( SGS_CTX )
+{
+	int i, ssz, rc = 0;
+	ssz = sgs_StackSize( C );
+	for( i = 0; i < ssz; ++i )
+	{
+		sgs_PushItem( C, i );
+		int res = sgs_DumpVar( C, 5 );
+		if( res == SGS_SUCCESS )
+		{
+			sgs_PushString( C, "\n" );
+			rc++;
+		}
+		else
+		{
+			char ebuf[ 64 ];
+			sprintf( ebuf, "dumpvars(): unknown error while dumping variable #%d", i + 1 );
+			STDLIB_WARN( ebuf );
+			sgs_Pop( C, 1 );
+		}
+	}
+	if( rc )
+	{
+		if( sgs_StringMultiConcat( C, rc * 2 ) == SGS_SUCCESS )
+			STDLIB_WARN( "dumpvars(): failed to concatenate the output" );
+		return 1;
+	}
+	return 0;
+}
+
 static int sgsstd_gc_collect( SGS_CTX )
 {
 	int32_t orvc = sgs_Stat( C, SGS_STAT_VARCOUNT );
@@ -1142,13 +1319,14 @@ sgs_RegFuncConst regfuncs[] =
 	FN( array ), FN( dict ), { "class", sgsstd_class }, FN( closure ),
 	FN( isset ), FN( unset ),
 	/* I/O */
-	FN( print ),
+	FN( print ), FN( printvar ), FN( printvars ),
 	/* OS */
 	FN( ftime ),
 	/* utils */
 	FN( eval ), FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( import_cfunc ),
 	FN( sys_errorstate ), FN( sys_abort ),
+	FN( dumpvar ), FN( dumpvars ),
 	FN( gc_collect ),
 };
 

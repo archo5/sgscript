@@ -209,6 +209,7 @@ int sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );
 int sgs_Method( SGS_CTX );
 int sgs_TypeOf( SGS_CTX );
 int sgs_DumpVar( SGS_CTX, int maxdepth );
+int sgs_PadString( SGS_CTX );
 int sgs_StringConcat( SGS_CTX );
 int sgs_StringMultiConcat( SGS_CTX, int args );
 

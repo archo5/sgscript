@@ -1899,6 +1899,7 @@ int sgs_DumpVar( SGS_CTX, int maxdepth )
 
 	if( maxdepth <= 0 )
 	{
+		sgs_Pop( C, 1 );
 		sgs_PushString( C, "..." );
 		return SGS_SUCCESS;
 	}
@@ -1917,8 +1918,8 @@ int sgs_DumpVar( SGS_CTX, int maxdepth )
 			sprintf( buf, "real (%g)", var->data.R );
 			sgs_PushString( C, buf ); } break;
 		case SVT_STRING: { char buf[ 48 ]; const char* ddd = "";
-			int32_t len = var->data.S.size; if( len > 32 ){ len = 32; ddd = "..."; }
-			sprintf( "string (%.*s%s)", len, var_cstr( var ), ddd );
+			int32_t len = var->data.S->size; if( len > 32 ){ len = 32; ddd = "..."; }
+			sprintf( buf, "string (%.*s%s)", len, var_cstr( var ), ddd );
 			sgs_PushString( C, buf ); } break;
 		case SVT_FUNC: sgs_PushString( C, "SGS function" ); break;
 		case SVT_CFUNC: sgs_PushString( C, "C function" ); break;
@@ -1927,23 +1928,32 @@ int sgs_DumpVar( SGS_CTX, int maxdepth )
 				int q, stksz = C->stack_top - C->stack_off;
 				object_t* obj = var->data.O;
 				sgs_PushInt( C, maxdepth - 1 );
-				ret = obj_exec( SOP_DUMP, obj, 1 );
+				ret = obj_exec( C, SOP_DUMP, obj, 1 );
 				q = ret == SGS_SUCCESS ? 1 : 0;
 				sgs_PopSkip( C, C->stack_top - C->stack_off - stksz - q, q );
+				if( !q )
+				{
+					char buf[ 32 ];
+					sprintf( buf, "object (%p) [%d]", obj->iface, obj->refcount - 1 );
+					sgs_PushString( C, buf );
+					ret = SGS_SUCCESS;
+				}
 			}
 			break;
 		default:
 			ret = SGS_EINVAL;
 			break;
 		}
+		if( ret == SGS_SUCCESS )
+			sgs_PopSkip( C, 1, 1 );
 		return ret;
 	}
 }
 
 int sgs_PadString( SGS_CTX )
 {
-	const char* padding = "    ";
-	const int padsize = 4;
+	const char* padding = "  ";
+	const int padsize = 2;
 
 	if( sgs_StackSize( C ) < 1 )
 		return SGS_ESTKUF;
@@ -1955,14 +1965,24 @@ int sgs_PadString( SGS_CTX )
 		if( var->type != SVT_STRING )
 			return SGS_EINVAL;
 		cstr = var_cstr( var );
-		for( i = 0; cstr[ i ]; cstr[ i ] == '\n' ? i++ : cstr++ );
-		sgs_PushStringBuf( C, NULL, var->data.S.size + ( i + 1 ) * padsize );
-		str = var_cstr( stk_getpos( C, -2 ) );
+		for( i = 0; cstr[ i ]; )
+			if( cstr[ i ] == '\n' ) i++; else cstr++;
+		sgs_PushStringBuf( C, NULL, var->data.S->size + i * padsize );
+		cstr = var_cstr( stk_getpos( C, -2 ) );
 		ostr = var_cstr( stk_getpos( C, -1 ) );
-		/*
-			TODO
-		*/
+		while( *cstr )
+		{
+			*ostr++ = *cstr;
+			if( *cstr == '\n' )
+			{
+				const char* ppd = padding;
+				while( *ppd )
+					*ostr++ = *ppd++;
+			}
+			cstr++;
+		}
 	}
+	sgs_PopSkip( C, 1, 1 );
 	return SGS_SUCCESS;
 }
 
