@@ -349,6 +349,39 @@ static int part_weight( FTNode* part, int isfcall, int binary )
 }
 
 
+
+static LineNum findlinenum( FTNode* node ) /* local, next, child */
+{
+	LineNum ln = -1;
+
+	if( node->token )
+		return sgsT_LineNum( node->token );
+
+	ln = findlinenum( node->next );
+	if( ln != -1 ) return ln;
+
+	ln = findlinenum( node->child );
+	if( ln != -1 ) return ln;
+
+	return -1;
+}
+
+static LineNum predictlinenum( FTNode* node ) /* next, child, local */
+{
+	LineNum ln = -1;
+
+	ln = findlinenum( node->next );
+	if( ln != -1 ) return ln;
+
+	ln = predictlinenum( node->child );
+	if( ln != -1 ) return ln;
+
+	if( node->token )
+		return sgsT_LineNum( node->token );
+
+	return -1;
+}
+
 /*
 	FUNC / adds depth to the tree
 	ARGS / context, function tree, operational region
@@ -539,8 +572,8 @@ _continue:
 		return 1;
 	}
 
-	/* failed unexpectedly, dump & debug */
-	sgs_Printf( C, SGS_ERROR, -1, "Failed to level the expression, missing operators or separators." );
+	/* in case we failed unexpectedly, dump & debug */
+	sgs_Printf( C, SGS_ERROR, predictlinenum( *tree ), "Missing operators or separators." );
 	C->state |= SGS_HAS_ERRORS;
 #if SGS_DEBUG && SGS_DEBUG_DATA
 	sgsFT_Dump( *tree );

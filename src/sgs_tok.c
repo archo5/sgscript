@@ -162,7 +162,7 @@ static void readstring( SGS_CTX, MemBuf* out, LineNum* line, const char* code, i
 	while( i < length )
 	{
 		char c = code[ i ];
-		if( detectline( code, *at ) )
+		if( detectline( code, i ) )
 			(*line)++;
 		if( c == '\\' )
 			escaped = !escaped;

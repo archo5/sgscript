@@ -192,22 +192,25 @@ void sgs_PushVariable( SGS_CTX, sgs_Variable* var );
 
 int sgs_PushItem( SGS_CTX, int pos );
 int sgs_PushProperty( SGS_CTX, const char* name );
-int sgs_StringConcat( SGS_CTX );
-int sgs_StringMultiConcat( SGS_CTX, int args );
+int sgs_PushIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx );
+int sgs_PushGlobal( SGS_CTX, const char* name );
+int sgs_StoreGlobal( SGS_CTX, const char* name );
 
-int sgs_Pop( SGS_CTX, int count );
-int sgs_PopSkip( SGS_CTX, int count, int skip );
-int sgs_Call( SGS_CTX, int args, int expect );
-int sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );
-int sgs_Method( SGS_CTX );
-int sgs_TypeOf( SGS_CTX );
-
-int sgs_GetGlobal( SGS_CTX, const char* name );
-int sgs_SetGlobal( SGS_CTX, const char* name );
 int sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx ); /* must release "out" */
 int sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val );
 int sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Integer idx ); /* must release "out" */
 int sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Integer idx, sgs_Variable* val );
+
+int sgs_Pop( SGS_CTX, int count );
+int sgs_PopSkip( SGS_CTX, int count, int skip );
+
+int sgs_Call( SGS_CTX, int args, int expect );
+int sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );
+int sgs_Method( SGS_CTX );
+int sgs_TypeOf( SGS_CTX );
+int sgs_DumpVar( SGS_CTX, int maxdepth );
+int sgs_StringConcat( SGS_CTX );
+int sgs_StringMultiConcat( SGS_CTX, int args );
 
 int sgs_GetBool( SGS_CTX, int item );
 sgs_Integer sgs_GetInt( SGS_CTX, int item );

@@ -1182,7 +1182,7 @@ int sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size )
 	while( list < last )
 	{
 		sgs_PushCFunction( C, list->value );
-		ret = sgs_SetGlobal( C, list->name );
+		ret = sgs_StoreGlobal( C, list->name );
 		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
@@ -1196,7 +1196,7 @@ int sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size )
 	while( list < last )
 	{
 		sgs_PushInt( C, list->value );
-		ret = sgs_SetGlobal( C, list->name );
+		ret = sgs_StoreGlobal( C, list->name );
 		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
@@ -1210,7 +1210,7 @@ int sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
 	while( list < last )
 	{
 		sgs_PushReal( C, list->value );
-		ret = sgs_SetGlobal( C, list->name );
+		ret = sgs_StoreGlobal( C, list->name );
 		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
