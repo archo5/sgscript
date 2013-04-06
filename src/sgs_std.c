@@ -1178,6 +1178,18 @@ static int sgsstd_sys_abort( SGS_CTX )
 	return 0;
 }
 
+static int sgsstd_sys_stat( SGS_CTX )
+{
+	sgs_Integer type;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseInt( C, 0, &type ) )
+		STDLIB_WARN( "sys_stat(): unexpected arguments; function expects int" );
+
+	sgs_Stat( C, type );
+	return 0;
+}
+
 static int sgsstd_dumpvar( SGS_CTX )
 {
 	sgs_Integer depth = 5;
@@ -1251,7 +1263,7 @@ sgs_RegFuncConst regfuncs[] =
 	/* utils */
 	FN( eval ), FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( import_cfunc ),
-	FN( sys_errorstate ), FN( sys_abort ),
+	FN( sys_errorstate ), FN( sys_abort ), FN( sys_stat ),
 	FN( dumpvar ), FN( dumpvars ),
 	FN( gc_collect ),
 };

@@ -52,6 +52,10 @@ SOP_TOSTRING:
 	conversion to boolean/integer/real/string
 	expects: 1 variable on success (boolean/integer/real/string), 0 on error
 
+SOP_DUMP:
+	conversion to string containing extended info
+	expects: 1 string on success, 0 on error
+
 SOP_GCMARK:
 	GC callback in which object is expected to call sgs_GCMark() on all variables stored inside it
 	expects: nothing
