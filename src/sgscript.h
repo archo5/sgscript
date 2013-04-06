@@ -13,23 +13,29 @@ extern "C" {
 #include "sgs_xpc.h"
 
 
+/* API self-doc helpers */
+#define SGSRESULT int     /* output code */
+#define SGSBOOL   int     /* true (1) / false (0) */
+#define SGSMIXED  int32_t /* usable (x >= 0) value on success, error code (x < 0) on failure */
+
+
 /* Output codes */
 #define SGS_SUCCESS  0  /* success (no errors) */
-#define SGS_ESTKOF  -1  /* stack overflow */
-#define SGS_ESTKUF  -2  /* stack underflow */
-#define SGS_ENOTFND -3  /* item was not found */
-#define SGS_ECOMP   -4  /* compile error */
-#define SGS_ENOTOBJ -5  /* argument was not an object */
-#define SGS_ENOTSUP -6  /* not supported */
-#define SGS_EBOUNDS -7  /* index out of bounds */
-#define SGS_EINVAL  -8  /* invalid value was passed */
-#define SGS_EINPROC -9  /* process was interrupted */
+#define SGS_ENOTFND -1  /* item was not found */
+#define SGS_ECOMP   -2  /* compile error */
+#define SGS_ENOTOBJ -3  /* argument was not an object */
+#define SGS_ENOTSUP -4  /* not supported */
+#define SGS_EBOUNDS -5  /* index out of bounds */
+#define SGS_EINVAL  -6  /* invalid value was passed */
+#define SGS_EINPROC -7  /* process was interrupted */
 #define SGS_ENOTIMP -31 /* - not implemented - */
 
 
 /* Accessible / transferable data */
+typedef int32_t sgs_Bool;
 typedef int64_t sgs_Integer;
 typedef double  sgs_Real;
+typedef int32_t sgs_SizeVal;
 typedef struct _LNTable sgs_LNTable;
 typedef struct _sgs_Context sgs_Context;
 typedef struct _sgs_Variable sgs_Variable;
@@ -85,13 +91,14 @@ typedef void (*sgs_PrintFunc) ( void* /* data */, sgs_Context* /* ctx / SGS_CTX 
 typedef struct sgs_ObjData sgs_VarObj;
 struct sgs_ObjData
 {
-	int32_t refcount;
+	sgs_SizeVal refcount;
 	void* data;
 	void** iface;
-	sgs_VarObj* prev; /* pointer to previous GC object */
-	sgs_VarObj* next; /* pointer to next GC object */
-	uint8_t redblue; /* red or blue? mark & sweep */
-	uint8_t destroying; /* whether the variable is already in a process of destruction. for container circ. ref. handling. */
+	sgs_VarObj* prev;   /* pointer to previous GC object */
+	sgs_VarObj* next;   /* pointer to next GC object */
+	uint8_t redblue;    /* red or blue? mark & sweep */
+	uint8_t destroying; /* whether the variable is already in a process of destruction.
+	                       for container circ. ref. handling. */
 };
 
 /* - object interface */
@@ -133,25 +140,25 @@ void            sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
 
 void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
 
-int             sgs_ExecBuffer( SGS_CTX, const char* buf, int size );
-static SGS_INLINE int sgs_ExecString( SGS_CTX, const char* str ){ return sgs_ExecBuffer( C, str, strlen( str ) ); }
-int             sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc );
-static SGS_INLINE int sgs_EvalString( SGS_CTX, const char* str, int* rvc ){ return sgs_EvalBuffer( C, str, strlen( str ), rvc ); }
-int             sgs_EvalFile( SGS_CTX, const char* file, int* rvc );
-static SGS_INLINE int sgs_ExecFile( SGS_CTX, const char* file ){ return sgs_EvalFile( C, file, NULL ); }
-int             sgs_Stat( SGS_CTX, int type );
+SGSRESULT       sgs_ExecBuffer( SGS_CTX, const char* buf, int size );
+static SGS_INLINE SGSRESULT sgs_ExecString( SGS_CTX, const char* str ){ return sgs_ExecBuffer( C, str, strlen( str ) ); }
+SGSRESULT       sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc );
+static SGS_INLINE SGSRESULT sgs_EvalString( SGS_CTX, const char* str, int* rvc ){ return sgs_EvalBuffer( C, str, strlen( str ), rvc ); }
+SGSRESULT       sgs_EvalFile( SGS_CTX, const char* file, int* rvc );
+static SGS_INLINE SGSRESULT sgs_ExecFile( SGS_CTX, const char* file ){ return sgs_EvalFile( C, file, NULL ); }
+SGSRESULT       sgs_Stat( SGS_CTX, int type );
 void            sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, char** name, char** file, int* line );
 sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 
 
 /* Additional libraries */
 
-int sgs_LoadLib_Math( SGS_CTX );
+SGSRESULT sgs_LoadLib_Math( SGS_CTX );
 #if 0
-int sgs_LoadLib_Native( SGS_CTX );
+SGSRESULT sgs_LoadLib_Native( SGS_CTX );
 #endif
-int sgs_LoadLib_String( SGS_CTX );
-int sgs_LoadLib_Type( SGS_CTX );
+SGSRESULT sgs_LoadLib_String( SGS_CTX );
+SGSRESULT sgs_LoadLib_Type( SGS_CTX );
 
 typedef struct _sgs_RegFuncConst
 {
@@ -159,7 +166,7 @@ typedef struct _sgs_RegFuncConst
 	sgs_CFunc value;
 }
 sgs_RegFuncConst;
-int sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size );
+SGSRESULT sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size );
 
 typedef struct _sgs_RegIntConst
 {
@@ -167,7 +174,7 @@ typedef struct _sgs_RegIntConst
 	sgs_Integer value;
 }
 sgs_RegIntConst;
-int sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size );
+SGSRESULT sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size );
 
 typedef struct _sgs_RegRealConst
 {
@@ -175,64 +182,94 @@ typedef struct _sgs_RegRealConst
 	sgs_Real value;
 }
 sgs_RegRealConst;
-int sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size );
+SGSRESULT sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size );
 
 
 /* The core interface */
 
+/*
+	STACK & SUB-ITEMS
+*/
 void sgs_PushNull( SGS_CTX );
-void sgs_PushBool( SGS_CTX, int value );
+void sgs_PushBool( SGS_CTX, sgs_Bool value );
 void sgs_PushInt( SGS_CTX, sgs_Integer value );
 void sgs_PushReal( SGS_CTX, sgs_Real value );
-void sgs_PushStringBuf( SGS_CTX, const char* str, int32_t size );
+void sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size );
 void sgs_PushString( SGS_CTX, const char* str );
 void sgs_PushCFunction( SGS_CTX, sgs_CFunc func );
 void sgs_PushObject( SGS_CTX, void* data, void** iface );
 void sgs_PushVariable( SGS_CTX, sgs_Variable* var );
 
-int sgs_PushItem( SGS_CTX, int pos );
-int sgs_PushProperty( SGS_CTX, const char* name );
-int sgs_PushIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx );
-int sgs_PushGlobal( SGS_CTX, const char* name );
-int sgs_StoreGlobal( SGS_CTX, const char* name );
+SGSRESULT sgs_PushItem( SGS_CTX, int item );
+SGSRESULT sgs_StoreItem( SGS_CTX, int item );
+SGSRESULT sgs_PushProperty( SGS_CTX, const char* name );
+SGSRESULT sgs_PushIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx );
+SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name );
+SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name );
 
-int sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx ); /* must release "out" */
-int sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val );
-int sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Integer idx ); /* must release "out" */
-int sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Integer idx, sgs_Variable* val );
+SGSRESULT sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx ); /* must release "out" */
+SGSRESULT sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val );
+SGSRESULT sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Integer idx ); /* must release "out" */
+SGSRESULT sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Integer idx, sgs_Variable* val );
 
-int sgs_Pop( SGS_CTX, int count );
-int sgs_PopSkip( SGS_CTX, int count, int skip );
+SGSRESULT sgs_Pop( SGS_CTX, int count );
+SGSRESULT sgs_PopSkip( SGS_CTX, int count, int skip );
 
-int sgs_Call( SGS_CTX, int args, int expect );
-int sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );
-int sgs_Method( SGS_CTX );
-int sgs_TypeOf( SGS_CTX );
-int sgs_DumpVar( SGS_CTX, int maxdepth );
-int sgs_PadString( SGS_CTX );
-int sgs_StringConcat( SGS_CTX );
-int sgs_StringMultiConcat( SGS_CTX, int args );
+/*
+	OPERATIONS
+*/
+SGSRESULT sgs_Call( SGS_CTX, int args, int expect );
+SGSRESULT sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );
+SGSRESULT sgs_TypeOf( SGS_CTX );
+SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth );
+SGSRESULT sgs_GCExecute( SGS_CTX );
 
-int sgs_GetBool( SGS_CTX, int item );
+SGSRESULT sgs_PadString( SGS_CTX );
+SGSRESULT sgs_StringConcat( SGS_CTX );
+SGSRESULT sgs_StringMultiConcat( SGS_CTX, int args );
+
+/*
+	CONVERSION / RETRIEVAL
+*/
+sgs_Bool sgs_GetBool( SGS_CTX, int item );
 sgs_Integer sgs_GetInt( SGS_CTX, int item );
 sgs_Real sgs_GetReal( SGS_CTX, int item );
 
-int sgs_ToBool( SGS_CTX, int item );
+sgs_Bool sgs_ToBool( SGS_CTX, int item );
 sgs_Integer sgs_ToInt( SGS_CTX, int item );
 sgs_Real sgs_ToReal( SGS_CTX, int item );
-char* sgs_ToStringBuf( SGS_CTX, int item, sgs_Integer* outsize );
+char* sgs_ToStringBuf( SGS_CTX, int item, sgs_SizeVal* outsize );
 #define sgs_ToString( ctx, item ) sgs_ToStringBuf( ctx, item, NULL )
+char* sgs_ToStringBufFast( SGS_CTX, int item, sgs_SizeVal* outsize );
+#define sgs_ToStringFast( ctx, item ) sgs_ToStringBufFast( ctx, item, NULL )
 
+/*
+	ARGUMENT HANDLING
+*/
+SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size );
+SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out );
+SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Integer* out );
+SGSBOOL sgs_ParseReal( SGS_CTX, int item, sgs_Real* out );
+SGSBOOL sgs_ParseString( SGS_CTX, int item, char** out, sgs_SizeVal* size );
+
+SGSBOOL sgs_IsArray( SGS_CTX, sgs_Variable* var );
+SGSMIXED sgs_ArraySize( SGS_CTX, sgs_Variable* var );
+SGSBOOL sgs_ArrayGet( SGS_CTX, sgs_Variable* var, sgs_SizeVal which, sgs_Variable* out );
+
+/*
+	EXTENSION UTILITIES
+*/
 int sgs_StackSize( SGS_CTX );
+SGSBOOL sgs_IsValidIndex( SGS_CTX, int item );
 sgs_Variable* sgs_StackItem( SGS_CTX, int item );
 int sgs_ItemType( SGS_CTX, int item );
+SGSBOOL sgs_Method( SGS_CTX );
 void sgs_Acquire( SGS_CTX, sgs_Variable* var );
 void sgs_Release( SGS_CTX, sgs_Variable* var );
-int sgs_GCExecute( SGS_CTX );
-int sgs_GCMark( SGS_CTX, sgs_Variable* var );
+SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var );
 
 const char* sgs_GetStringPtr( SGS_CTX, int item );
-int32_t sgs_GetStringSize( SGS_CTX, int item );
+sgs_SizeVal sgs_GetStringSize( SGS_CTX, int item );
 sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item );
 
 

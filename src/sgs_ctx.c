@@ -141,7 +141,7 @@ void sgs_DestroyEngine( SGS_CTX )
 }
 
 
-static int ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* rvc )
+static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* rvc )
 {
 	int returned;
 	TokenList tlist = NULL;
@@ -200,19 +200,19 @@ error:
 	return SGS_ECOMP;
 }
 
-int sgs_ExecBuffer( SGS_CTX, const char* buf, int32_t size )
+SGSRESULT sgs_ExecBuffer( SGS_CTX, const char* buf, int32_t size )
 {
 	DBGINFO( "sgs_ExecBuffer called!" );
 	return ctx_execute( C, buf, size, TRUE, NULL );
 }
 
-int sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc )
+SGSRESULT sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc )
 {
 	DBGINFO( "sgs_EvalBuffer called!" );
 	return ctx_execute( C, buf, size, FALSE, rvc );
 }
 
-int sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
+SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 {
 	int ret;
 	long len;
@@ -288,7 +288,7 @@ static void dumpvar( FILE* fp, sgs_Variable* var )
 	}
 }
 
-int sgs_Stat( SGS_CTX, int type )
+SGSRESULT sgs_Stat( SGS_CTX, int type )
 {
 	switch( type )
 	{
@@ -310,7 +310,7 @@ int sgs_Stat( SGS_CTX, int type )
 			}
 			fprintf( stderr, "VARIABLE ---- STACK ---- TOP ----\n" );
 		}
-		return 0;
+		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_GLOBALS:
 		{
 			HTPair* p = C->data.pairs;
@@ -330,7 +330,7 @@ int sgs_Stat( SGS_CTX, int type )
 			}
 			fprintf( stderr, "GLOBAL ---- LIST ---- END ----\n" );
 		}
-		return 0;
+		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_OBJECTS:
 		{
 			object_t* p = C->objs;
@@ -343,7 +343,7 @@ int sgs_Stat( SGS_CTX, int type )
 			}
 			fprintf( stderr, "OBJECT ---- LIST ---- END ----\n" );
 		}
-		return 0;
+		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_FRAMES:
 		{
 			sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
@@ -358,9 +358,9 @@ int sgs_Stat( SGS_CTX, int type )
 			}
 			fprintf( stderr, "FRAME ---- LIST ---- END ----\n" );
 		}
-		return 0;
+		return SGS_SUCCESS;
 	default:
-		return 0;
+		return SGS_SUCCESS;
 	}
 }
 

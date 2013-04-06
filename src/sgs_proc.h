@@ -149,7 +149,7 @@ string_t;
 
 typedef union _sgs_VarData
 {
-	int32_t     B;
+	sgs_Bool    B;
 	sgs_Integer I;
 	sgs_Real    R;
 	string_t*   S;

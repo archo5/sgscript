@@ -77,5 +77,7 @@ struct _sgs_Context
 	sgs_CFunc     dict_func;
 };
 
+#define STACKFRAMESIZE  (C->stack_top - C->stack_off)
+
 
 #endif /* SGS_CTX_H_INCLUDED */
