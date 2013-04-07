@@ -23,7 +23,7 @@
 
 /* stage output dumps */
 #ifndef SGS_DEBUG_DATA
-#  define SGS_DEBUG_DATA 0
+#  define SGS_DEBUG_DATA 1
 #endif
 
 /* function entry/exit tagging */

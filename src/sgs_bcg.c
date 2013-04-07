@@ -307,6 +307,13 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		ret &= preparse_varlist( C, node );
 	else if( node->type == SFT_GVLIST )
 		ret &= preparse_gvlist( C, node );
+	else if( node->token && is_keyword( node->token, "this" ) )
+	{
+		func->gotthis = TRUE;
+		if( find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) == -1 &&
+			add_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) )
+			comp_reg_alloc( C );
+	}
 	else if( node->type == SFT_OPER )
 	{
 		if( ST_OP_ASSIGN( *node->token ) && node->child && node->child->type == SFT_IDENT )
@@ -315,6 +322,7 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				add_var( &C->fctx->vars, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
 				comp_reg_alloc( C );
 		}
+		ret &= preparse_varlists( C, func, node->child );
 	}
 	else if( node->type == SFT_FOREACH )
 	{
@@ -338,11 +346,6 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 {
 	node = node->child;
-	if( node && is_keyword( node->token, "this" ) )
-	{
-		func->gotthis = TRUE;
-		func->numargs--;
-	}
 	while( node )
 	{
 		if( !add_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) )
@@ -697,7 +700,6 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 	i = 0;
 	{
 		/* passing objects where the call is formed appropriately */
-		/* TODO: implement client side after function expressions */
 		int16_t argpos = -1;
 		if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
 		{
@@ -1130,8 +1132,8 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	C->fctx = fctx;
 	FUNC_ENTER;
 	if( !preparse_arglist( C, nf, node->child ) ) { goto fail; }
-	args = fctx->regs;
 	if( !preparse_varlists( C, nf, node->child->next ) ) { goto fail; }
+	args = fctx->regs;
 	FUNC_ENTER;
 	if( !compile_node( C, nf, node->child->next ) ) { goto fail; }
 	comp_reg_unwind( C, 0 );

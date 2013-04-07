@@ -431,6 +431,20 @@ static void stk_push_nulls( SGS_CTX, int cnt )
 		(C->stack_top++)->type = SVT_NULL;
 }
 
+static void stk_insert_null( SGS_CTX, int off )
+{
+	sgs_Variable *op, *p;
+	stk_makespace( C, 1 );
+	op = C->stack_off + off, p = C->stack_top;
+	while( p != op )
+	{
+		*p = *(p-1);
+		p--;
+	}
+	C->stack_top++;
+	op->type = SVT_NULL;
+}
+
 static void stk_clean( SGS_CTX, sgs_VarPtr from, sgs_VarPtr to )
 {
 	int len = to - from;
@@ -759,6 +773,32 @@ static int vm_gcmark( SGS_CTX, sgs_Variable* var )
 	Object property / array accessor handling
 */
 
+int _thiscall_method( SGS_CTX )
+{
+	int ret;
+	if( !sgs_Method( C ) ||
+		!( sgs_ItemType( C, 0 ) == SVT_FUNC || sgs_ItemType( C, 0 ) == SVT_CFUNC ) )
+	{
+		sgs_Printf( C, SGS_WARNING, -1, "thiscall() was not called on a function type" );
+		return 0;
+	}
+	if( sgs_StackSize( C ) < 2 )
+	{
+		sgs_Printf( C, SGS_WARNING, -1, "thiscall() expects at least one argument (this)" );
+		return 0;
+	}
+
+	sgs_PushVariable( C, sgs_StackItem( C, 0 ) );
+	ret = sgs_ThisCall( C, sgs_StackSize( C ) - 3, 1 );
+	if( ret != SGS_SUCCESS )
+	{
+		sgs_Printf( C, SGS_WARNING, -1, "thiscall() failed with error %d", ret );
+		return 0;
+	}
+	return 1;
+}
+
+
 static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 {
 	const char* prop = var_cstr( idx );
@@ -769,6 +809,14 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 		if( 0 == strcmp( prop, "length" ) )
 		{
 			sgs_PushInt( C, obj->data.S->size );
+			return SGS_SUCCESS;
+		}
+		break;
+	case SVT_FUNC:
+	case SVT_CFUNC:
+		if( 0 == strcmp( prop, "thiscall" ) )
+		{
+			sgs_PushCFunction( C, _thiscall_method );
 			return SGS_SUCCESS;
 		}
 		break;
@@ -1356,16 +1404,21 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 			stk_pop( C, stkargs - expargs );
 		else
 			stk_push_nulls( C, expargs - stkargs );
-		/* if <this> was expected but wasn't properly passed, assume that it's already in the argument list */
-		/* if <this> wasn't expected but was passed, just don't use it */
-		if( F->gotthis && gotthis )
-			C->stack_off--;
+		/* if <this> was expected but wasn't properly passed, insert a NULL in its place */
+		/* if <this> wasn't expected but was passed, ignore it */
+		if( F->gotthis && !gotthis )
+		{
+			stk_insert_null( C, 0 );
+			C->stack_off++;
+			gotthis = TRUE;
+		}
+
+		if( F->gotthis && gotthis ) C->stack_off--;
 		{
 			int constcnt = F->instr_off / sizeof( sgs_Variable* );
 			rvc = vm_exec( C, func_consts( F ), constcnt );
 		}
-		if( F->gotthis && gotthis )
-			C->stack_off++;
+		if( F->gotthis && gotthis ) C->stack_off++;
 	}
 	else if( func->type == SVT_OBJECT )
 	{
@@ -1876,7 +1929,7 @@ SGSRESULT sgs_PopSkip( SGS_CTX, int count, int skip )
 
 */
 
-SGSRESULT sgs_Call( SGS_CTX, int args, int expect )
+SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
 {
 	int ret;
 	sgs_Variable func;
@@ -1887,7 +1940,7 @@ SGSRESULT sgs_Call( SGS_CTX, int args, int expect )
 	func = *stk_getpos( C, -1 );
 	VAR_ACQUIRE( &func );
 	sgs_Pop( C, 1 );
-	ret = vm_call( C, args, FALSE, expect, &func ) ? SGS_SUCCESS : SGS_EINPROC;
+	ret = vm_call( C, args, gotthis, expect, &func ) ? SGS_SUCCESS : SGS_EINPROC;
 	VAR_RELEASE( &func );
 	return ret;
 }
