@@ -877,10 +877,35 @@ int sgsstd_closure_tostring( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
+int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* data )
+{
+	int depth = (int) sgs_ToInt( C, 0 );
+	SGSCLOSURE_HDR;
+	sgs_PushString( C, "closure\n{" );
+	sgs_PushString( C, "\nfunc: " );
+	sgs_PushVariable( C, &hdr->func );
+	if( sgs_DumpVar( C, depth ) )
+	{
+		sgs_Pop( C, 1 );
+		sgs_PushString( C, "<error>" );
+	}
+	sgs_PushString( C, "\ndata: " );
+	sgs_PushVariable( C, &hdr->data );
+	if( sgs_DumpVar( C, depth ) )
+	{
+		sgs_Pop( C, 1 );
+		sgs_PushString( C, "<error>" );
+	}
+	if( sgs_StringMultiConcat( C, 4 ) || sgs_PadString( C ) )
+		return SGS_EINPROC;
+	sgs_PushString( C, "\n}" );
+	return sgs_StringMultiConcat( C, 3 );
+}
+
 int sgsstd_closure_gettype( SGS_CTX, sgs_VarObj* data )
 {
 	UNUSED( data );
-	sgs_PushString( C, "class" );
+	sgs_PushString( C, "closure" );
 	return SGS_SUCCESS;
 }
 
@@ -908,6 +933,7 @@ void* sgsstd_closure_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_closure_destruct,
 	SOP_TOSTRING, sgsstd_closure_tostring,
+	SOP_DUMP, sgsstd_closure_dump,
 	SOP_GETTYPE, sgsstd_closure_gettype,
 	SOP_GCMARK, sgsstd_closure_gcmark,
 	SOP_CALL, sgsstd_closure_call,

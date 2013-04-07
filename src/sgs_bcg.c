@@ -252,6 +252,17 @@ static int add_var( StrBuf* S, char* str, int len )
 	return FALSE;
 }
 
+static int preadd_thisvar( StrBuf* S )
+{
+	int pos = find_var( S, "this", 4 );
+	if( pos < 0 )
+	{
+		strbuf_insbuf( S, 0, "this=", 5 );
+		return TRUE;
+	}
+	return FALSE;
+}
+
 
 /* simplifies writing code */
 static void add_instr( sgs_CompFunc* func, FTNode* node, instr_t I )
@@ -310,14 +321,14 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	else if( node->token && is_keyword( node->token, "this" ) )
 	{
 		func->gotthis = TRUE;
-		if( find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) == -1 &&
-			add_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) )
+		if( preadd_thisvar( &C->fctx->vars ) )
 			comp_reg_alloc( C );
 	}
 	else if( node->type == SFT_OPER )
 	{
 		if( ST_OP_ASSIGN( *node->token ) && node->child && node->child->type == SFT_IDENT )
 		{
+			/* add_var calls find_var internally but - GVARS vs VARS - note the difference */
 			if( find_var( &C->fctx->gvars, (char*) node->child->token + 2, node->child->token[ 1 ] ) == -1 &&
 				add_var( &C->fctx->vars, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
 				comp_reg_alloc( C );
