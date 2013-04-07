@@ -23,16 +23,60 @@ table { box-shadow: 1px 1px 5px rgba( 0, 0, 0, 0.2 ); }
 th, td { padding: 2px 5px; }
 th { background: #FFF; }
 pre,
-code { background: #E5E5E5; display: inline-block; padding: 2px 4px; border-radius: 2px; line-height: 120%; border: 1px solid #F7F7F7; white-space: nowrap; position: relative; }
+code { background: #E5E5E5; display: inline-block; padding: 2px 4px; border-radius: 2px; line-height: 120%; border: 1px solid #F7F7F7; position: relative; }
+code { white-space: nowrap; }
+pre { tab-size: 4; }
 body pre { display: block; }
 code i { display: none; padding: 4px 8px; left: 120%; top: 50%; border: 1px solid #A00; background: #C21; color: #EEE; }
 code:hover i { display: inline-block; position: absolute; z-index: 2; border-radius: 5px; box-shadow: 2px 2px 5px rgba(0,0,0,0.5); }
+.notice-bgr { background: #DEF; padding: 8px; margin: 8px; }
 .notice { background: #79C; color: #FFF; font-weight: bold; padding: 4px; margin: 4px; display: inline-block; font-size: 16px; border: 1px solid #68B;
 	width: 20px; height: 20px; text-align: center; text-shadow: 0px 0px 5px #FFF, 0px 0px 9px #FFF, 0px 0px 13px #FFF; font-family: monospace; border-radius: 1px; }
+i.note { color: #AAA; font-size: 13px; }
+
+.sgsCOM, pre > .sgsCOM *, code > .sgsCOM * { color: #5A3; }
+.sgsSTR, pre > .sgsSTR *, code > .sgsSTR * { color: #C21; }
+.sgsKEY { color: #13C; }
+.sgsSPC { color: #341; font-weight: bold; }
+.sgsNUM { color: #481; }
 		</style>
+		<script type="text/javascript">
+
+function sgsCC( el )
+{
+	var code = el.innerHTML;
+	
+	code = code.replace( /("(?:[^"\\]|\\.)*")/g, '<span class="sgsSTR">$1</span>' );
+	code = code.replace( /('(?:[^"\\]|\\.)*')/g, '<span class="sgsSTR">$1</span>' );
+	code = code.replace( /(^|[^0-9a-zA-Z])(0b[0-1]+)/g, '$1<span class="sgsNUM">$2</span>' );
+	code = code.replace( /(^|[^0-9a-zA-Z])(0o[0-8]+)/g, '$1<span class="sgsNUM">$2</span>' );
+	code = code.replace( /(^|[^0-9a-zA-Z])(0x[0-9a-fA-F]+)/g, '$1<span class="sgsNUM">$2</span>' );
+	code = code.replace( /(^|[^0-9a-zA-Z])(-?[0-9]+(\.[0-9]+)?([eE][-+][0-9]+)?)/g, '$1<span class="sgsNUM">$2</span>' );
+	code = code.replace( /(^|[^0-9a-zA-Z])(if|else|do|while|for|foreach|break|continue|var|global|function|return|null|true|false)(\s|\b)/g, '$1<span class="sgsKEY">$2</span>$3' );
+	code = code.replace( /(\(|\)|\[|\]|\{|\})/g, '<span class="sgsSPC">$1</span>' );
+	code = code.replace( /(\/\/[^\n\r]*)([\r\n])/g, '<span class="sgsCOM">$1</span>$2' );
+	
+	el.innerHTML = code;
+}
+
+function sgsCCify( tag )
+{
+	var codes = document.getElementsByTagName( tag );
+	for( var i = 0; i < codes.length; ++i )
+	{
+		sgsCC( codes[ i ] );
+	}
+}
+
+window.onload = function()
+{
+	sgsCCify( 'CODE' );
+	sgsCCify( 'PRE' );
+}
+		</script>
 	</head>
 	<body>
-		<noscript>Notice: to generate extended links for simplified traversal, enable JavaScript for this page</noscript>
+		<noscript><span class="notice">i</span> Notice: to generate properly formatted code and extended links for simplified traversal, enable JavaScript for this page</noscript>
 		<h1>SGScript documentation - v0.8.2</h1>
 		
 		<div class="cont">
@@ -44,8 +88,10 @@ code:hover i { display: inline-block; position: absolute; z-index: 2; border-rad
 					<div class="l2"><a href="#intro-why">1.1. Why SGScript?</a></div>
 					<div class="l2"><a href="#intro-features">1.2. Feature list</a></div>
 				<div class="l1"><a href="#sgscript">2. SGScript</a></div>
-					<div class="l2"><a href="#sgscript-basics">2.1. The basics</a></div>
-				<div class="l1"><a href="#usage">3. Library API</a></div>
+					<div class="l2"><a href="#sgscript-language">2.1. The language</a></div>
+					<div class="l2"><a href="#sgscript-stdlib">2.2. The Standard Library</a></div>
+					<div class="l2"><a href="#sgscript-code">2.2. The code</a></div>
+				<div class="l1"><a href="#vmapi">3. Native library (VM) API</a></div>
 			</div>
 			
 			<a name="intro"></a>
@@ -92,11 +138,11 @@ code:hover i { display: inline-block; position: absolute; z-index: 2; border-rad
 			<a name="sgscript"></a>
 			<h2><a href="#sgscript">SGScript</a></h2>
 			
-			<a name="sgscript-basics"></a>
-			<h3><a href="#sgscript-basics">Basics</a></h3>
+			<a name="sgscript-language"></a>
+			<h3><a href="#sgscript-language">The language</a></h3>
 			<div class="cont txt">
-<p>
-	<span class="notice">i</span> If you consider yourself familiar with languages like JavaScript, PHP or C, you may want to skip this section.
+<p class="notice-bgr">
+	<span class="notice">i</span> Even though the language is very similar to many others, it is advised to read this section to learn more about the differences. While there will be at most few differences in small scripts, bigger software will require getting used to having some concepts handled completely differently.
 </p>
 <p>
 	There are 8 <b>data types</b> in SGScript: <code>null</code>, <code>bool</code>, <code>int</code>, <code>real</code>, <code>string</code>, <code>function</code>, <code>C function</code> and <code>object</code>. Each of them offers a different set of features and possible values. The values may sometimes overlap, so the language offers automatic conversion between types where and to what extent it is possible.
@@ -212,24 +258,66 @@ code:hover i { display: inline-block; position: absolute; z-index: 2; border-rad
 		</ul>
 	</td><td>
 		<ul>
-			<li>The declaration of variable cannot change inside a scope (one scope is inside a function, another is outside all functions - more on that later). The variable may be redefined, though:<pre>var a; var a; // OK<br/>var b; global b; // ERROR<br/>global c; var c; // ERROR</pre></li>
+			<li>The declaration of variable cannot change inside a scope (one scope is inside a function, another is outside all functions - more on that later). The variable may be redefined, though:<pre>
+var a; var a; // OK
+var b; global b; // ERROR
+global c; var c; // ERROR
+</pre></li>
 		</ul>
 	</td></tr>
 	
 	<tr><td>Special</td><td>
 		<ul>
-			<li>Operators: <code>=<i>assign</i></code>, <code>$<i>string-concatenate</i></code>, <code>$=<i>string-concatenate-assign</i></code>, <code>.<i>property</i></code>
+			<li>Operators: <code>=<i>assign</i></code>, <code>$<i>string-concatenate</i></code>, <code>$=<i>string-concatenate-assign</i></code>, <code>.<i>property access</i></code>, <code>[]<i>index access</i></code></li>
+			<li>Function call: <code>&lt;function&gt;( [&lt;argument&gt;[, &lt;argument&gt;] ...] )</code></li>
 		</ul>
 	</td><td>
 		<ul>
-			<li><code>a $= "have " $ arr.size $ " items";</code></li>
+			<li><code>x.prop = 5</code>, <code>arr[5] = "sixth"</code>, <code>a $= "have " $ arr.size $ " items";</code></li>
+			<li><code>print( "x = ", 5 )</code>, <code>magic()</code></li>
 		</ul>
 	</td><td>
 		<ul>
+			<li>String concatenation operators are created to avoid context-specific behavior in the <code>+</code> operator, which is used to concatenate strings in other languages like JavaScript and C++.</li>
 		</ul>
 	</td></tr>
 	
 </tbody></table>
+			</div>
+			
+			<a name="sgscript-stdlib"></a>
+			<h3><a href="#sgscript-stdlib">The Standard Library</a></h3>
+			<div class="cont txt">
+			</div>
+			
+			<a name="sgscript-code"></a>
+			<h3><a href="#sgscript-code">The code</a></h3>
+			<div class="cont txt">
+<p>
+	Example #1: printing a 15x15 ASCII circle gradient. <i class="note">...it was either this or factorials and I don't give a damn about factorials.</i>
+</p>
+<pre>
+include_library( "math" ); // import the math functions from the standard library
+
+gradient = [ ".", "o", "O", "#", "O", "o", "." ]; // define the array of characters
+
+for( y = -7; y &lt;= 7; ++y ) // loop while advancing "y" from -7 to 7 by 1
+{
+	for( x = -7; x &lt;= 7; ++x ) // loop while advancing "x" from -7 to 7 by 1
+	{
+		dst = sqrt( x * x + y * y ) * 0.9; // calculate the index
+		if( dst &gt; 6 ) // if index is greater than 6, clamp it
+			dst = 6;
+		chr = gradient[ dst ]; // read character from gradient
+		print( chr $ ' ' ); // print it together with an aligning character
+	}
+	print( "\n" );
+}
+</pre>
+<p>
+	As you probably noticed from the comments, there's very little language-specific stuff and most things are oriented towards the actual logic of the code.
+	This is mostly because the code is simple. Let's look at a more object-oriented example.
+</p>
 			</div>
 		
 		</div>
