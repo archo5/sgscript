@@ -722,7 +722,7 @@ int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
 int sgsstd_class_tostring( SGS_CTX, sgs_VarObj* data )
 {
 	if( sgsstd_class_getmethod( C, data, "__tostr" ) )
-		return sgs_Call( C, 1, 1 );
+		return sgs_ThisCall( C, 0, 1 );
 
 	sgs_PushString( C, "class" );
 	return SGS_SUCCESS;
@@ -785,7 +785,7 @@ class_op_wrapper( compare )
 int sgsstd_class_negate( SGS_CTX, sgs_VarObj* data )
 {
 	if( sgsstd_class_getmethod( C, data, "__negate" ) )
-		return sgs_Call( C, 1, 1 );
+		return sgs_ThisCall( C, 0, 1 );
 
 	return SGS_ENOTFND;
 }

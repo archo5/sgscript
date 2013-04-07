@@ -210,21 +210,8 @@ static FTNode* parse_arg( SGS_CTX, int argid, TokenList at, TokenList end )
 
 	if( *at == ST_KEYWORD )
 	{
-		if( is_keyword( at, "this" ) )
-		{
-			if( argid != 1 )
-			{
-				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "'this' must be the first argument" );
-				goto fail;
-			}
-			else
-				isthis = TRUE;
-		}
-		else
-		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Argument name cannot be a reserved keyword (except 'this')" );
-			goto fail;
-		}
+		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Argument name cannot be a reserved keyword" );
+		goto fail;
 	}
 
 	if( *at != ST_IDENT && *at != ST_KEYWORD )

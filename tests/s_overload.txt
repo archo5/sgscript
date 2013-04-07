@@ -5,14 +5,13 @@ global vec2_iface =
 	__mul = function( a, b ){ return vec2( a.x * b.x, a.y * b.y ); },
 	__div = function( a, b ){ return vec2( a.x / b.x, a.y / b.y ); },
 	__mod = function( a, b ){ return vec2( a.x % b.x, a.y % b.y ); },
-	__negate = function( a ){ return vec2( -a.x, -a.y ); },
+	__negate = function(){ return vec2( -this.x, -this.y ); },
 	__compare = function( a, b ){ var out = a.x - b.x; if( out ) return a.y - b.y; else return out; },
-	__call = function( this, something ){ print( "THIS IS VEC2[", this.x, ",", this.y, "]... in other news: ", something, "!\n" ); }, 
-	__tostr = function( this ){ return "vec2(" $ this.x $ "," $ this.y $ ")"; }
+	__call = function( something ){ print( "THIS IS VEC2[", this.x, ",", this.y, "]... in other news: ", something, "!\n" ); }, 
+	__tostr = function(){ return "vec2(" $ this.x $ "," $ this.y $ ")"; }
 };
 function vec2( x, y )
 {
-	global vec2_iface;
 	return class( { x = x, y = y }, vec2_iface );
 }
 
@@ -27,7 +26,7 @@ print( "A - B: ", A - B, "\n" );
 print( "A * B: ", A * B, "\n" );
 print( "A / B: ", A / B, "\n" );
 print( "B % A: ", B % A, "\n" );
-print( "-A: ", -A, "\n" );
+printvars( "-A: ", -A, "\n" );
 print( "A == B: ", A == B, "\n" );
 print( "A < B: ", A < B, "\n" );
 print( "A == A: ", A == A, "\n" );

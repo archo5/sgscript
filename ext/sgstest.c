@@ -19,7 +19,10 @@ const char* outfile_internal = "tests-output-internal.log";
 const char* outfile = "tests-output.log";
 
 
-__declspec(dllexport) int sgscript_main( SGS_CTX )
+#ifdef WIN32
+__declspec(dllexport)
+#endif
+int sgscript_main( SGS_CTX )
 {
 	sgs_PushInt( C, 1337 );
 	sgs_StoreGlobal( C, "imported_var" );

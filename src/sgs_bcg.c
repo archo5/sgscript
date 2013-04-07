@@ -1132,8 +1132,9 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	C->fctx = fctx;
 	FUNC_ENTER;
 	if( !preparse_arglist( C, nf, node->child ) ) { goto fail; }
-	if( !preparse_varlists( C, nf, node->child->next ) ) { goto fail; }
 	args = fctx->regs;
+	if( !preparse_varlists( C, nf, node->child->next ) ) { goto fail; }
+	args += func->gotthis;
 	FUNC_ENTER;
 	if( !compile_node( C, nf, node->child->next ) ) { goto fail; }
 	comp_reg_unwind( C, 0 );

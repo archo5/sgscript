@@ -1,6 +1,6 @@
 obj = 
 {
-	method = function( this, what ){ print( "'obj.method' says: ", this, what, "\n" ); },
+	method = function( what ){ print( "'obj.method' says: ", this, what, "\n" ); },
 	usual = function( what ){ print( "'obj.usual' says: ", what, "\n" ); },
 };
 obj.method( " <= method output" );

@@ -4,7 +4,7 @@ var printerIface =
 };
 var postfixPrinterIface = 
 {
-	print = function( this, text ){ this.print_stdout( text $ this.postfix ); },
+	print = function( text ){ this.print_stdout( text $ this.postfix ); },
 	postfix = '[postfix]',
 };
 var questionPrinter = class( { postfix = '?' }, class( postfixPrinterIface, printerIface ) );

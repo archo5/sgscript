@@ -1,7 +1,7 @@
 var myInfoIface = 
 {
-	greetMe = function( this ){ print( "Hello, " $ this._name $ "!\n" ); },
-	setMyName = function( this, name ){ this._name = name; },
+	greetMe = function(){ print( "Hello, " $ this._name $ "!\n" ); },
+	setMyName = function( name ){ this._name = name; },
 };
 myInfo = class( {}, myInfoIface );
 print( "Created a ", myInfo, " object with this interface: ", myInfo._super, "\n" );
