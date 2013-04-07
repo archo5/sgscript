@@ -33,6 +33,7 @@ code:hover i { display: inline-block; position: absolute; z-index: 2; border-rad
 .notice { background: #79C; color: #FFF; font-weight: bold; padding: 4px; margin: 4px; display: inline-block; font-size: 16px; border: 1px solid #68B;
 	width: 20px; height: 20px; text-align: center; text-shadow: 0px 0px 5px #FFF, 0px 0px 9px #FFF, 0px 0px 13px #FFF; font-family: monospace; border-radius: 1px; }
 i.note { color: #AAA; font-size: 13px; }
+dt { font-weight: bold; }
 
 .sgsCOM, pre > .sgsCOM *, code > .sgsCOM * { color: #5A3; }
 .sgsSTR, pre > .sgsSTR *, code > .sgsSTR * { color: #C21; }
@@ -89,8 +90,9 @@ window.onload = function()
 					<div class="l2"><a href="#intro-features">1.2. Feature list</a></div>
 				<div class="l1"><a href="#sgscript">2. SGScript</a></div>
 					<div class="l2"><a href="#sgscript-language">2.1. The language</a></div>
-					<div class="l2"><a href="#sgscript-stdlib">2.2. The Standard Library</a></div>
-					<div class="l2"><a href="#sgscript-code">2.2. The code</a></div>
+					<div class="l2"><a href="#sgscript-faq">2.2. Frequently asked questions</a></div>
+					<div class="l2"><a href="#sgscript-stdlib">2.3. The Standard Library</a></div>
+					<div class="l2"><a href="#sgscript-code">2.4. The code</a></div>
 				<div class="l1"><a href="#vmapi">3. Native library (VM) API</a></div>
 			</div>
 			
@@ -283,6 +285,17 @@ global c; var c; // ERROR
 	</td></tr>
 	
 </tbody></table>
+			</div>
+			
+			<a name="sgscript-faq"></a>
+			<h3><a href="#sgscript-faq">Frequently asked questions</a></h3>
+			<div class="cont txt">
+<dl>
+	<dt>What is the variable scope?</dt>
+	<dd>There are three kinds of scopes: base scope (outside any function), function scope and global scope. Unless the variable is explicitly declared to be global or defined as a function in the base scope, it is assumed to be local.</dd>
+	<dt>How are function declarations assigned to variables?</dt>
+	<dd>Anonymous functions can be assigned just like any other constant. Named functions are assigned to global variables with the same name if outside any functions or to local variables if the definition is inside a function.</dd>
+</dl>
 			</div>
 			
 			<a name="sgscript-stdlib"></a>

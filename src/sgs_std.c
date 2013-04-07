@@ -1028,6 +1028,13 @@ static int sgsstd_print( SGS_CTX )
 	return 0;
 }
 
+static int sgsstd_println( SGS_CTX )
+{
+	sgsstd_print( C );
+	printf( "\n" );
+	return 0;
+}
+
 static int sgsstd_printvar( SGS_CTX )
 {
 	sgs_Integer depth = 5;
@@ -1283,7 +1290,7 @@ sgs_RegFuncConst regfuncs[] =
 	FN( array ), FN( dict ), { "class", sgsstd_class }, FN( closure ),
 	FN( isset ), FN( unset ),
 	/* I/O */
-	FN( print ), FN( printvar ), FN( printvars ),
+	FN( print ), FN( println ), FN( printvar ), FN( printvars ),
 	/* OS */
 	FN( ftime ),
 	/* utils */
