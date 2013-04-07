@@ -1037,7 +1037,7 @@ static int vm_op_negate( SGS_CTX, sgs_VarPtr out, sgs_Variable *A )
 	case SVT_REAL: var_setreal( C, out, -A->data.R ); break;
 	case SVT_OBJECT:
 		{
-			int ofs = out - C->stack_off;
+			int ofs = out - C->stack_off, ssz = STACKFRAMESIZE;
 			stk_push( C, A );
 			if( obj_exec( C, SOP_OP_NEGATE, A->data.O, 1 ) == SGS_SUCCESS )
 			{
@@ -1045,10 +1045,10 @@ static int vm_op_negate( SGS_CTX, sgs_VarPtr out, sgs_Variable *A )
 				VAR_RELEASE( out );
 				*out = *stk_getpos( C, -1 );
 				stk_pop1nr( C );
-				stk_pop1( C );
+				stk_pop( C, STACKFRAMESIZE - ssz );
 				break;
 			}
-			stk_pop1( C );
+			stk_pop( C, STACKFRAMESIZE - ssz );
 			sgs_Printf( C, SGS_ERROR, -1, "Given object does not support negation." );
 			var_setnull( C, C->stack_off + ofs );
 		}

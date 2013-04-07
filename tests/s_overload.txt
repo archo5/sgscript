@@ -26,7 +26,7 @@ print( "A - B: ", A - B, "\n" );
 print( "A * B: ", A * B, "\n" );
 print( "A / B: ", A / B, "\n" );
 print( "B % A: ", B % A, "\n" );
-printvars( "-A: ", -A, "\n" );
+print( "-A: ", -A, "\n" );
 print( "A == B: ", A == B, "\n" );
 print( "A < B: ", A < B, "\n" );
 print( "A == A: ", A == A, "\n" );
