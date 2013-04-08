@@ -1771,3 +1771,129 @@ void sgsBC_Free( SGS_CTX, sgs_CompFunc* func )
 }
 
 
+
+/* bytecode serialization */
+
+#define esi32( x ) (\
+	((x&0xff)<<24) | ((x&0xff00)<<8) |
+	((x>>8)&0xff00) | ((x>>24)&0xff) )
+
+typedef struct decoder_s
+{
+	SGS_CTX;
+	char* buf;
+	char convend;
+}
+decoder_t;
+
+static void bc_read_sgsstring( decoder_t* D, sgs_Variable* var )
+{
+	char* buf = D->buf;
+	int32_t len = AS_INT32( buf );
+	if( D->convend )
+		len = esi32( len );
+	buf += 4;
+	sgsVM_VarCreateString( var, buf, len );
+	D->buf = buf + len;;
+}
+
+#define PP_bc_read_sgsint( buf, dest ) \
+	dest = AS_INTEGER( buf ) ); buf += sizeof( sgs_Integer );
+#define PP_bc_read_sgsreal( buf, dest ) \
+	dest = AS_REAL( buf ); buf += sizeof( sgs_Real );
+
+static int bc_read_var( decoder_t* D, sgs_Variable* var )
+{
+	var->type = *D->buf++;
+	switch( var->type )
+	{
+	case SVT_NULL: break;
+	case SVT_BOOL: var->data.B = *buf++; break;
+	case SVT_INT: PP_bc_read_sgsint( D->buf, var->data.I ); break;
+	case SVT_REAL: PP_bc_read_sgsreal( D->buf, var->data.R ); break;
+	case SVT_STRING: bc_read_sgsstring( D, var ); break;
+	case SVT_FUNC: bc_read_sgsfunc( D, &var->data.F ); break;
+	default:
+		return 0;
+	}
+	return 1;
+}
+
+static int bc_read_varlist( decoder_t* D, sgs_Variable* vlist, int cnt )
+{
+	int i;
+	for( i = 0; i < cnt; ++i )
+	{
+		if( !bc_read_var( D, vlist + i ) )
+		{
+			cnt = i;
+			for( i = 0; i < cnt; ++i )
+				sgs_Release( C, vlist + i );
+			return 0;
+		}
+	}
+	return 1;
+}
+
+
+int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
+{
+}
+
+int sgsBC_Buf2Func( SGS_CTX, char* buf, int32_t size, sgs_CompFunc** outfunc )
+{
+	char flags = buf[ 9 ];
+	decoder_t D = { C, NULL, ( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) !=
+		( ( flags & SGSBC_FLAG_LITTLE_ENDIAN ) != 0 ) };
+	int32_t sz = AS_INT32( buf + 10 );
+	if( sz != size )
+		return 0;
+	{
+		int16_t cc, ic;
+		char gt, na;
+		sgs_CompFunc* func = make_compfunc();
+		cc = AS_INT16( buf + 14 );
+		ic = AS_INT16( buf + 16 );
+		gt = AS_UINT8( buf + 18 );
+		na = AS_UINT8( buf + 19 );
+		D->buf = buf;
+
+		func->gotthis = gt;
+		func->numargs = na;
+		membuf_resize( &func->consts, sizeof( sgs_Variable ) * cc );
+		membuf_resize( &func->code, sizeof( instr_t ) * ic );
+		membuf_resize( &func->lnbuf, sizeof( LineNum ) * ic );
+
+		if( !bc_read_varlist( D, (sgs_Variable*) func->consts.ptr, cc ) )
+			return 0;
+		memcpy( func->code.ptr, D->buf, sizeof( instr_t ) * ic );
+		D->buf += sizeof( instr_t ) * ic;
+		memcpy( func->lnbuf.ptr, D->buf, sizeof( LineNum ) * ic );
+		return 1;
+	}
+}
+
+int sgsBC_ValidateHeader( char* buf, int32_t size )
+{
+	int i;
+	char validate_bytes[ 9 ] =
+	{
+		'S', 'G', 'S', '\n',
+		SGS_VERSION_MAJOR,
+		SGS_VERSION_MINOR,
+		SGS_VERSION_INCR,
+		sizeof( sgs_Integer ),
+		sizeof( sgs_Real )
+	};
+
+	if( size < SGS_MIN_BC_SIZE )
+		return -1;
+	for( i = 0; i < 9; ++i )
+	{
+		if( buf[ i ] != validate_bytes[ i ] )
+			return i;
+	}
+	return SGS_HEADER_SIZE;
+}
+
+

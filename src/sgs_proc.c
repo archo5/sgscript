@@ -138,9 +138,8 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 }
 
 
-static void var_create_0str( SGS_CTX, sgs_VarPtr out, int32_t len )
+static void var_create_0str( sgs_VarPtr out, int32_t len )
 {
-	UNUSED( C );
 	out->type = SVT_STRING;
 	out->data.S = sgs_Alloc_a( string_t, len + 1 );
 	out->data.S->refcount = 1;
@@ -149,14 +148,14 @@ static void var_create_0str( SGS_CTX, sgs_VarPtr out, int32_t len )
 	var_cstr( out )[ len ] = 0;
 }
 
-void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len )
+void var_create_str( sgs_Variable* out, const char* str, int32_t len )
 {
 	sgs_BreakIf( !str );
 
 	if( len < 0 )
 		len = strlen( str );
 
-	var_create_0str( C, out, len );
+	var_create_0str( out, len );
 	memcpy( str_cstr( out->data.S ), str, len );
 }
 

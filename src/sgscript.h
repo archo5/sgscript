@@ -2,6 +2,13 @@
 #ifndef SGSCRIPT_H_INCLUDED
 #define SGSCRIPT_H_INCLUDED
 
+
+#define SGS_VERSION_MAJOR 0
+#define SGS_VERSION_MINOR 8
+#define SGS_VERSION_INCR  2
+#define SGS_VERSION "0.8.2"
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
