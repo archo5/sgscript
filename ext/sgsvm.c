@@ -19,7 +19,8 @@ int main( int argc, char** argv )
 		return 1;
 	}
 
-	setvbuf( stdout, NULL, _IOLBF, 128 );
+	setvbuf( stdout, NULL, _IOLBF, 32 );
+	setvbuf( stderr, NULL, _IOLBF, 32 );
 
 	for( i = 1; i < argc; ++i )
 	{

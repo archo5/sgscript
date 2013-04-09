@@ -147,12 +147,15 @@ void            sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
 
 void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
 
-SGSRESULT       sgs_ExecBuffer( SGS_CTX, const char* buf, int size );
+SGSRESULT       sgs_ExecBuffer( SGS_CTX, const char* buf, sgs_SizeVal size );
 static SGS_INLINE SGSRESULT sgs_ExecString( SGS_CTX, const char* str ){ return sgs_ExecBuffer( C, str, strlen( str ) ); }
-SGSRESULT       sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc );
+SGSRESULT       sgs_EvalBuffer( SGS_CTX, const char* buf, sgs_SizeVal size, int* rvc );
 static SGS_INLINE SGSRESULT sgs_EvalString( SGS_CTX, const char* str, int* rvc ){ return sgs_EvalBuffer( C, str, strlen( str ), rvc ); }
 SGSRESULT       sgs_EvalFile( SGS_CTX, const char* file, int* rvc );
 static SGS_INLINE SGSRESULT sgs_ExecFile( SGS_CTX, const char* file ){ return sgs_EvalFile( C, file, NULL ); }
+SGSRESULT       sgs_Compile( SGS_CTX, const char* buf, sgs_SizeVal size, char** outbuf, sgs_SizeVal* outsize );
+void            sgs_FreeCompileBuffer( char* buf );
+
 SGSRESULT       sgs_Stat( SGS_CTX, int type );
 void            sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, char** name, char** file, int* line );
 sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );

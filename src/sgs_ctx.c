@@ -141,12 +141,11 @@ void sgs_DestroyEngine( SGS_CTX )
 }
 
 
-static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* rvc )
+static int ctx_compile( SGS_CTX, const char* buf, int32_t size, sgs_CompFunc** out )
 {
-	int returned;
+	sgs_CompFunc* func = NULL;
 	TokenList tlist = NULL;
 	FTNode* ftree = NULL;
-	sgs_CompFunc* func = NULL;
 
 	C->state = 0;
 
@@ -177,6 +176,25 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean,
 	sgsBC_Dump( func );
 #endif
 
+	*out = func;
+	return 1;
+
+error:
+	if( func )	sgsBC_Free( C, func );
+	if( ftree ) sgsFT_Destroy( ftree );
+	if( tlist ) sgsT_Free( tlist );
+
+	return 0;
+}
+
+static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* rvc )
+{
+	int returned;
+	sgs_CompFunc* func;
+
+	if( !ctx_compile( C, buf, size, &func ) )
+		return SGS_ECOMP;
+
 	DBGINFO( "...executing the generated function" );
 	C->gclist = (sgs_VarPtr) func->consts.ptr;
 	C->gclist_size = func->consts.size / sizeof( sgs_Variable );
@@ -187,17 +205,10 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean,
 	C->gclist_size = 0;
 
 	DBGINFO( "...cleaning up bytecode/constants" );
-	sgsBC_Free( C, func ); func = NULL;
+	sgsBC_Free( C, func );
 
 	DBGINFO( "...finished!" );
 	return SGS_SUCCESS;
-
-error:
-	if( func )	sgsBC_Free( C, func );
-	if( ftree ) sgsFT_Destroy( ftree );
-	if( tlist ) sgsT_Free( tlist );
-
-	return SGS_ECOMP;
 }
 
 SGSRESULT sgs_ExecBuffer( SGS_CTX, const char* buf, int32_t size )
@@ -243,6 +254,32 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 
 	sgs_Free( data );
 	return ret;
+}
+
+SGSRESULT sgs_Compile( SGS_CTX, const char* buf, sgs_SizeVal size, char** outbuf, sgs_SizeVal* outsize )
+{
+	MemBuf mb;
+	sgs_CompFunc* func;
+
+	if( !ctx_compile( C, buf, size, &func ) )
+		return SGS_ECOMP;
+
+	mb = membuf_create();
+	if( !sgsBC_Func2Buf( C, func, &mb ) )
+	{
+		membuf_destroy( &mb );
+		return SGS_EINPROC;
+	}
+
+	*outbuf = mb.ptr;
+	*outsize = mb.size;
+
+	return SGS_SUCCESS;
+}
+
+void sgs_FreeCompileBuffer( char* buf )
+{
+	sgs_Free( buf );
 }
 
 

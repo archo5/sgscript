@@ -1785,26 +1785,31 @@ typedef struct decoder_s
 	SGS_CTX;
 	char* buf;
 	char convend;
-	char* filename;
+	const char* filename;
 	int32_t filename_len;
 }
 decoder_t;
 
-static void bc_read_strbuf( decoder_t* D, StrBuf* out )
+static void esi32_array( int32_t* data, int cnt )
 {
-	char* buf = D->buf;
-	int32_t len = AS_INT32( buf );
-	if( D->convend )
-		len = esi32( len );
-	buf += 4;
-	strbuf_appbuf( out, buf, len );
-	D->buf = buf + len;
+	int i;
+	for( i = 0; i < cnt; ++i )
+	{
+		data[ i ] = esi32( data[ i ] );
+	}
 }
 
-#define PP_bc_read_sgsint( buf, dest ) \
-	dest = AS_INTEGER( buf ); buf += sizeof( sgs_Integer );
-#define PP_bc_read_sgsreal( buf, dest ) \
-	dest = AS_REAL( buf ); buf += sizeof( sgs_Real );
+
+/*
+	i32 size
+	byte[size] data
+*/
+static void bc_write_sgsstring( string_t* S, MemBuf* outbuf )
+{
+	membuf_appbuf( outbuf, &S->size, sizeof( int32_t ) );
+	membuf_appbuf( outbuf, str_cstr( S ), S->size );
+}
+
 static void bc_read_sgsstring( decoder_t* D, sgs_Variable* var )
 {
 	char* buf = D->buf;
@@ -1815,8 +1820,41 @@ static void bc_read_sgsstring( decoder_t* D, sgs_Variable* var )
 	sgsVM_VarCreateString( var, buf, len );
 	D->buf = buf + len;
 }
-static int bc_read_sgsfunc( decoder_t* D, sgs_Variable* var );
 
+
+/*
+	byte type
+	--if type = NULL:
+	--if type = BOOL:
+	byte value
+	--if type = INT:
+	integer value
+	--if type = REAL:
+	real value
+	--if type = STRING:
+	stringdata data
+	--if type = FUNC:
+	funcdata data
+*/
+static int bc_write_sgsfunc( func_t* F, MemBuf* outbuf );
+static int bc_write_var( sgs_Variable* var, MemBuf* outbuf )
+{
+	membuf_appchr( outbuf, var->type );
+	switch( var->type )
+	{
+	case SVT_NULL: break;
+	case SVT_BOOL: membuf_appchr( outbuf, var->data.B ); break;
+	case SVT_INT: membuf_appbuf( outbuf, &var->data.I, sizeof( sgs_Integer ) ); break;
+	case SVT_REAL: membuf_appbuf( outbuf, &var->data.R, sizeof( sgs_Real ) ); break;
+	case SVT_STRING: bc_write_sgsstring( var->data.S, outbuf ); break;
+	case SVT_FUNC: if( !bc_write_sgsfunc( var->data.F, outbuf ) ) return 0; break;
+	default:
+		return 0;
+	}
+	return 1;
+}
+
+static int bc_read_sgsfunc( decoder_t* D, sgs_Variable* var );
 static int bc_read_var( decoder_t* D, sgs_Variable* var )
 {
 	var->type = *D->buf++;
@@ -1824,12 +1862,27 @@ static int bc_read_var( decoder_t* D, sgs_Variable* var )
 	{
 	case SVT_NULL: break;
 	case SVT_BOOL: var->data.B = *D->buf++; break;
-	case SVT_INT: PP_bc_read_sgsint( D->buf, var->data.I ); break;
-	case SVT_REAL: PP_bc_read_sgsreal( D->buf, var->data.R ); break;
+	case SVT_INT: var->data.I = AS_INTEGER( D->buf ); D->buf += sizeof( sgs_Integer ); break;
+	case SVT_REAL: var->data.R = AS_REAL( D->buf ); D->buf += sizeof( sgs_Real ); break;
 	case SVT_STRING: bc_read_sgsstring( D, var ); break;
-	case SVT_FUNC: bc_read_sgsfunc( D, var ); break;
+	case SVT_FUNC: if( !bc_read_sgsfunc( D, var ) ) return 0; break;
 	default:
 		return 0;
+	}
+	return 1;
+}
+
+
+/*
+	var[cnt] varlist
+*/
+static int bc_write_varlist( sgs_Variable* vlist, int cnt, MemBuf* outbuf )
+{
+	int i;
+	for( i = 0; i < cnt; ++i )
+	{
+		if( !bc_write_var( vlist + i, outbuf ) )
+			return 0;
 	}
 	return 1;
 }
@@ -1850,6 +1903,50 @@ static int bc_read_varlist( decoder_t* D, sgs_Variable* vlist, int cnt )
 	return 1;
 }
 
+
+/*
+	i16 constcount
+	i16 instrcount
+	byte gotthis
+	byte numargs
+	i16 linenum
+	i16[instrcount] lineinfo
+	i32 funcname_size
+	byte[funcname_size] funcname
+	varlist consts
+	instr[instrcount] instrs
+*/
+static int bc_write_sgsfunc( func_t* F, MemBuf* outbuf )
+{
+	int16_t cc = F->instr_off / sizeof( sgs_Variable ),
+	        ic = ( F->size - F->instr_off ) / sizeof( instr_t );
+	char gt = F->gotthis, na = F->numargs;
+
+	membuf_appbuf( outbuf, &cc, sizeof( int16_t ) );
+	membuf_appbuf( outbuf, &ic, sizeof( int16_t ) );
+	membuf_appchr( outbuf, gt );
+	membuf_appchr( outbuf, na );
+	membuf_appbuf( outbuf, &F->linenum, sizeof( LineNum ) );
+	membuf_appbuf( outbuf, F->lineinfo, sizeof( uint16_t ) * ic );
+	membuf_appbuf( outbuf, &F->funcname.size, sizeof( int32_t ) );
+
+	if( !bc_write_varlist( func_consts( F ), cc, outbuf ) )
+		return 0;
+
+	membuf_appbuf( outbuf, func_bytecode( F ), sizeof( instr_t ) * ic );
+	return 1;
+}
+
+static void bc_read_strbuf( decoder_t* D, StrBuf* out )
+{
+	char* buf = D->buf;
+	int32_t len = AS_INT32( buf );
+	if( D->convend )
+		len = esi32( len );
+	buf += 4;
+	strbuf_appbuf( out, buf, len );
+	D->buf = buf + len;
+}
 static int bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 {
 	func_t* F;
@@ -1889,6 +1986,8 @@ static int bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 		goto fail;
 
 	memcpy( func_bytecode( F ), D->buf, size - ioff );
+	if( D->convend )
+		esi32_array( (int32_t*) func_bytecode( F ), ( size - ioff ) / sizeof( instr_t ) );
 	D->buf += size - ioff;
 
 	var->data.F = F;
@@ -1903,16 +2002,66 @@ fail:
 }
 
 
+/*
+	seq "SGS\0"
+	byte version_major
+	byte version_minor
+	byte integer_size
+	byte real_size
+	byte flags
+	i16 constcount
+	i16 instrcount
+	byte gotthis
+	byte numargs
+	varlist consts
+	i32[instrcount] instrs
+	linenum[instrcount] lines
+*/
 int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 {
-	return 0;
+	char header_bytes[ 14 ] =
+	{
+		'S', 'G', 'S', 0,
+		SGS_VERSION_MAJOR,
+		SGS_VERSION_MINOR,
+		SGS_VERSION_INCR,
+		sizeof( sgs_Integer ),
+		sizeof( sgs_Real ),
+		( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) ? SGSBC_FLAG_LITTLE_ENDIAN : 0,
+		0, 0, 0, 0
+	};
+	membuf_resize( outbuf, 0 );
+	membuf_reserve( outbuf, 1000 );
+	membuf_appbuf( outbuf, header_bytes, 14 );
+
+	{
+		int16_t cc = func->consts.size / sizeof( sgs_Variable ),
+		        ic = func->code.size / sizeof( instr_t );
+		char gt = func->gotthis, na = func->numargs;
+
+		membuf_appbuf( outbuf, &cc, sizeof( int16_t ) );
+		membuf_appbuf( outbuf, &ic, sizeof( int16_t ) );
+		membuf_appchr( outbuf, gt );
+		membuf_appchr( outbuf, na );
+
+		if( !bc_write_varlist( (sgs_Variable*) func->consts.ptr,
+			func->consts.size / sizeof( sgs_Variable ), outbuf ) )
+			return 0;
+
+		membuf_appbuf( outbuf, func->code.ptr, sizeof( instr_t ) * ic );
+		membuf_appbuf( outbuf, func->lnbuf.ptr, sizeof( LineNum ) * ic );
+
+		AS_UINT32( outbuf->ptr + 10 ) = outbuf->size;
+
+		return 1;
+	}
 }
 
-int sgsBC_Buf2Func( SGS_CTX, char* buf, int32_t size, sgs_CompFunc** outfunc )
+int sgsBC_Buf2Func( SGS_CTX, const char* fn, char* buf, int32_t size, sgs_CompFunc** outfunc )
 {
 	char flags = buf[ 9 ];
 	decoder_t D = { C, NULL, ( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) !=
-		( ( flags & SGSBC_FLAG_LITTLE_ENDIAN ) != 0 ), C->filename, strlen( C->filename ) };
+		( ( flags & SGSBC_FLAG_LITTLE_ENDIAN ) != 0 ), fn, strlen( fn ) };
 	int32_t sz = AS_INT32( buf + 10 );
 	if( D.convend )
 		sz = esi32( sz );
@@ -1943,6 +2092,8 @@ int sgsBC_Buf2Func( SGS_CTX, char* buf, int32_t size, sgs_CompFunc** outfunc )
 		if( !bc_read_varlist( &D, (sgs_Variable*) func->consts.ptr, cc ) )
 			return 0;
 		memcpy( func->code.ptr, D.buf, sizeof( instr_t ) * ic );
+		if( D.convend )
+			esi32_array( (int32_t*) func->code.ptr, ic );
 		D.buf += sizeof( instr_t ) * ic;
 		memcpy( func->lnbuf.ptr, D.buf, sizeof( LineNum ) * ic );
 		return 1;
@@ -1954,7 +2105,7 @@ int sgsBC_ValidateHeader( char* buf, int32_t size )
 	int i;
 	char validate_bytes[ 9 ] =
 	{
-		'S', 'G', 'S', '\n',
+		'S', 'G', 'S', 0,
 		SGS_VERSION_MAJOR,
 		SGS_VERSION_MINOR,
 		SGS_VERSION_INCR,
