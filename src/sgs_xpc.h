@@ -27,9 +27,6 @@ typedef unsigned __int64 uint64_t;
 
 
 /* http://stackoverflow.com/a/2103095/1648140 */
-#if CHAR_BIT != 8
-#error "unsupported char size"
-#endif
 
 enum
 {

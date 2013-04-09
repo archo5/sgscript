@@ -626,12 +626,12 @@ static int init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 
 	switch( var->type )
 	{
-	case SVT_NULL: var_create_str( C, out, "null", 4 ); break;
-	case SVT_BOOL: if( var->data.B ) var_create_str( C, out, "true", 4 ); else var_create_str( C, out, "false", 5 ); break;
-	case SVT_INT: sprintf( buf, "%" PRId64, var->data.I ); var_create_str( C, out, buf, -1 ); break;
-	case SVT_REAL: sprintf( buf, "%g", var->data.R ); var_create_str( C, out, buf, -1 ); break;
-	case SVT_FUNC: var_create_str( C, out, "Function", -1 ); break;
-	case SVT_CFUNC: var_create_str( C, out, "C Function", -1 ); break;
+	case SVT_NULL: var_create_str( out, "null", 4 ); break;
+	case SVT_BOOL: if( var->data.B ) var_create_str( out, "true", 4 ); else var_create_str( out, "false", 5 ); break;
+	case SVT_INT: sprintf( buf, "%" PRId64, var->data.I ); var_create_str( out, buf, -1 ); break;
+	case SVT_REAL: sprintf( buf, "%g", var->data.R ); var_create_str( out, buf, -1 ); break;
+	case SVT_FUNC: var_create_str( out, "Function", -1 ); break;
+	case SVT_CFUNC: var_create_str( out, "C Function", -1 ); break;
 	}
 	return SGS_SUCCESS;
 }
@@ -952,7 +952,7 @@ static void vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
 	case SVT_STRING:
 		{
 			sgs_Variable ns;
-			var_create_str( C, &ns, var_cstr( var ), var->data.S->size );
+			var_create_str( &ns, var_cstr( var ), var->data.S->size );
 			stk_setlvar_leave( C, out, &ns );
 		}
 		break;
@@ -988,7 +988,7 @@ static void vm_op_concat( SGS_CTX, int16_t out, sgs_Variable *A, sgs_Variable *B
 	VAR_ACQUIRE( &vB );
 	vm_convert( C, &vA, SVT_STRING );
 	vm_convert( C, &vB, SVT_STRING );
-	var_create_0str( C, &N, vA.data.S->size + vB.data.S->size );
+	var_create_0str( &N, vA.data.S->size + vB.data.S->size );
 	memcpy( var_cstr( &N ), var_cstr( &vA ), vA.data.S->size );
 	memcpy( var_cstr( &N ) + vA.data.S->size, var_cstr( &vB ), vB.data.S->size );
 	stk_setvar_leave( C, out, &N );
@@ -1012,7 +1012,7 @@ static int vm_op_concat_ex( SGS_CTX, int args )
 		var = stk_getpos( C, -i );
 		totsz += var->data.S->size;
 	}
-	var_create_0str( C, &N, totsz );
+	var_create_0str( &N, totsz );
 	for( i = args; i >= 1; --i )
 	{
 		var = stk_getpos( C, -i );
@@ -1769,16 +1769,16 @@ void sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size )
 {
 	sgs_Variable var;
 	if( str )
-		var_create_str( C, &var, str, size );
+		var_create_str( &var, str, size );
 	else
-		var_create_0str( C, &var, size );
+		var_create_0str( &var, size );
 	stk_push_leave( C, &var );
 }
 
 void sgs_PushString( SGS_CTX, const char* str )
 {
 	sgs_Variable var;
-	var_create_str( C, &var, str, -1 );
+	var_create_str( &var, str, -1 );
 	stk_push_leave( C, &var );
 }
 
