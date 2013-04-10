@@ -143,6 +143,8 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 
 sgs_Context*    sgs_CreateEngine();
 void            sgs_DestroyEngine( SGS_CTX );
+
+#define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
 void            sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
 
 void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
@@ -157,7 +159,7 @@ SGSRESULT       sgs_Compile( SGS_CTX, const char* buf, sgs_SizeVal size, char** 
 void            sgs_FreeCompileBuffer( char* buf );
 
 SGSRESULT       sgs_Stat( SGS_CTX, int type );
-void            sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, char** name, char** file, int* line );
+void            sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, const char** file, int* line );
 sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 
 

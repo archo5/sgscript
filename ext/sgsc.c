@@ -146,12 +146,14 @@ int main( int argc, char** argv )
 			if( !f )
 			{
 				sgs_FreeCompileBuffer( data2 );
-				printf( EPFX "failed to open output file for writing" );
+				printf( EPFX "failed to open output file for writing\n" );
 				return errno;
 			}
 			fwrite( data2, 1, size2, f ); /* TODO handle partial writes */
 			sgs_FreeCompileBuffer( data2 );
 			fclose( f );
+
+			printf( "successfully wrote bytecode to '%s'\n", of );
 		}
 
 		sgs_DestroyEngine( C );

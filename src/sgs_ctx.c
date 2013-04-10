@@ -30,18 +30,18 @@ static void default_printfn( void* ctx, SGS_CTX, int type, int line, const char*
 	UNUSED( ctx );
 	while( p != NULL )
 	{
-		char* file, *name;
+		const char* file, *name;
 		int ln;
 		if( !p->next )
 			break;
 		sgs_StackFrameInfo( C, p, &name, &file, &ln );
-		fprintf( stderr, "- \"%s\" in %s, line %d\n", name, file, ln );
+		fprintf( ctx, "- \"%s\" in %s, line %d\n", name, file, ln );
 		p = p->next;
 	}
 	if( line > 0 )
-		fprintf( stderr, "%s [line %d]: %s\n", errpfxs[ type ], line, msg );
+		fprintf( ctx, "%s [line %d]: %s\n", errpfxs[ type ], line, msg );
 	else
-		fprintf( stderr, "%s: %s\n", errpfxs[ type ], msg );
+		fprintf( ctx, "%s: %s\n", errpfxs[ type ], msg );
 }
 
 
@@ -60,7 +60,7 @@ static int default_dict_func( SGS_CTX )
 static void ctx_init( SGS_CTX )
 {
 	C->print_fn = &default_printfn;
-	C->print_ctx = NULL;
+	C->print_ctx = stderr;
 
 	C->state = 0;
 	C->fctx = NULL;
@@ -141,6 +141,31 @@ void sgs_DestroyEngine( SGS_CTX )
 }
 
 
+static int ctx_decode( SGS_CTX, const char* buf, int32_t size, sgs_CompFunc** out )
+{
+	sgs_CompFunc* func = NULL;
+
+	if( sgsBC_ValidateHeader( buf, size ) < SGS_HEADER_SIZE )
+	{
+		/* invalid / unsupported / unrecognized file */
+		return 0;
+	}
+
+	{
+		const char* ret;
+		ret = sgsBC_Buf2Func( C, C->filename ? C->filename : "", buf, size, &func );
+		if( ret )
+		{
+			/* just invalid, error! */
+			sgs_Printf( C, SGS_ERROR, -1, "Failed to read bytecode file (%s)", ret );
+			return -1;
+		}
+	}
+
+	*out = func;
+	return 1;
+}
+
 static int ctx_compile( SGS_CTX, const char* buf, int32_t size, sgs_CompFunc** out )
 {
 	sgs_CompFunc* func = NULL;
@@ -189,11 +214,15 @@ error:
 
 static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* rvc )
 {
-	int returned;
+	int returned, rr;
 	sgs_CompFunc* func;
 
-	if( !ctx_compile( C, buf, size, &func ) )
+	if( !( rr = ctx_decode( C, buf, size, &func ) ) &&
+		!ctx_compile( C, buf, size, &func ) )
 		return SGS_ECOMP;
+
+	if( rr < 0 )
+		return SGS_EINVAL;
 
 	DBGINFO( "...executing the generated function" );
 	C->gclist = (sgs_VarPtr) func->consts.ptr;
@@ -228,7 +257,8 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	int ret;
 	long len;
 	FILE* f;
-	char* data, *ofn;
+	char* data;
+	const char* ofn;
 	DBGINFO( "sgs_EvalFile called!" );
 
 	f = fopen( file, "rb" );
@@ -248,7 +278,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	fclose( f );
 
 	ofn = C->filename;
-	C->filename = (char*) file;
+	C->filename = file;
 	ret = ctx_execute( C, data, len, rvc ? FALSE : TRUE, rvc );
 	C->filename = ofn;
 
@@ -389,7 +419,7 @@ SGSRESULT sgs_Stat( SGS_CTX, int type )
 			fprintf( stderr, "FRAME ---- LIST ---- START ----\n" );
 			while( p != NULL )
 			{
-				char* file, *name;
+				const char* file, *name;
 				int ln;
 				sgs_StackFrameInfo( C, p, &name, &file, &ln );
 				fprintf( stderr, "FRAME \"%s\" in %s, line %d\n", name, file, ln );
@@ -403,10 +433,11 @@ SGSRESULT sgs_Stat( SGS_CTX, int type )
 	}
 }
 
-void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, char** name, char** file, int* line )
+void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, const char** file, int* line )
 {
 	int L = 0;
-	char* N = "<non-callable type>", *F = "<buffer>";
+	const char* N = "<non-callable type>";
+	const char* F = "<buffer>";
 
 	UNUSED( C );
 	if( !frame->func )
@@ -446,6 +477,8 @@ sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end )
 
 void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
 {
+	if( func == SGSPRINTFN_DEFAULT )
+		func = default_printfn;
 	C->print_fn = func;
 	C->print_ctx = ctx;
 }

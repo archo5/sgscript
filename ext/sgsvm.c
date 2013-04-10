@@ -20,7 +20,6 @@ int main( int argc, char** argv )
 	}
 
 	setvbuf( stdout, NULL, _IOLBF, 32 );
-	setvbuf( stderr, NULL, _IOLBF, 32 );
 
 	for( i = 1; i < argc; ++i )
 	{
@@ -29,6 +28,7 @@ int main( int argc, char** argv )
 	}
 
 	C = sgs_CreateEngine();
+	sgs_SetPrintFunc( C, SGSPRINTFN_DEFAULT, stdout );
 
 	for( i = 1; i < argc; ++i )
 	{

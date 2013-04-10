@@ -50,7 +50,7 @@ struct _sgs_Context
 	/* compilation */
 	uint32_t      state;
 	sgs_FuncCtx*  fctx;      /* ByteCodeGen */
-	char*         filename;  /* filename of currently compiled code */
+	const char*   filename;  /* filename of currently compiled code */
 
 	/* virtual machine */
 	sgs_VarPtr    stack_base;
