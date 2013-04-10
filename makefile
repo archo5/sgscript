@@ -46,8 +46,11 @@ $(OUTDIR)/sgstest: $(LIBDIR)/libsgscript.a
 $(OUTDIR)/sgsvm: $(LIBDIR)/libsgscript.a
 	$(CC) -o $@ $(EXTDIR)/sgsvm.c -lsgscript -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 
+$(OUTDIR)/sgsc: $(LIBDIR)/libsgscript.a
+	$(CC) -o $@ $(EXTDIR)/sgsc.c -lsgscript -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+
 .PHONY: tools
-tools: $(OUTDIR)/sgstest $(OUTDIR)/sgsvm
+tools: $(OUTDIR)/sgstest $(OUTDIR)/sgsvm $(OUTDIR)/sgsc
 
 .PHONY: clean
 clean:

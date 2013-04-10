@@ -11,17 +11,47 @@
 int action = 0;
 const char* infile = NULL;
 const char* outfile = NULL;
-const char* outext = NULL;
+const char* outext = ".sgc";
 
 void print_help()
 {
 	printf( "Available options:\n"
-	        "-h\t- print help info\n"
-	        "-c\t- compile a file\n"
-	        "-d\t- dump bytecode\n"
-	        "-o\t- set output file (optional)\n"
+	        "  -h\t- print help info\n"
+	        "  -c\t- compile a file\n"
+	        "  -d\t- dump bytecode to STDOUT\n"
+	        "  -o\t- set compiled output file name (optional)\n"
 	        "note: either -c or -d must be specified\n"
+	        "example usage:\n"
+	        "> sgsc -c script.sgs -o compiled.sgc\n"
+	        "> sgsc -d compiled.sgc\n"
 	        "\n" );
+}
+
+int loadfile( const char* file, char** out, sgs_SizeVal* outsize )
+{
+	char* data;
+	sgs_SizeVal len;
+	FILE* f;
+
+	f = fopen( file, "rb" );
+	if( !f )
+		return SGS_ENOTFND;
+	fseek( f, 0, SEEK_END );
+	len = ftell( f );
+	fseek( f, 0, SEEK_SET );
+
+	data = malloc( len );
+	if( fread( data, 1, len, f ) != len )
+	{
+		fclose( f );
+		free( data );
+		return SGS_EINPROC;
+	}
+	fclose( f );
+
+	*out = data;
+	*outsize = len;
+	return SGS_SUCCESS;
 }
 
 int main( int argc, char** argv )
@@ -68,16 +98,63 @@ int main( int argc, char** argv )
 	}
 
 	/* validate */
+	if( !action )
+	{
+		EPRINT( "action (-c or -d) not specified" );
+		print_help();
+		return 1;
+	}
+	else if( !infile )
+	{
+		EPRINT( "no input file" );
+		print_help();
+		return 1;
+	}
 
 	/* do */
 	{
-		sgs_Context* C = sgs_CreateContext();
+		sgs_Context* C = sgs_CreateEngine();
 
 		if( action == 1 )
 		{
+			int ret;
+			FILE* f;
+			char of[ 260 ];
+			char* data = NULL, *data2 = NULL;
+			sgs_SizeVal size, size2;
+			ret = loadfile( infile, &data, &size );
+			if( ret != SGS_SUCCESS )
+			{
+				printf( EPFX "failed to read the file, error %d\n", ret );
+				return ret;
+			}
+			ret = sgs_Compile( C, data, size, &data2, &size2 );
+			free( data );
+			if( ret != SGS_SUCCESS )
+			{
+				printf( EPFX "failed to compile, error %d\n", ret );
+				return ret;
+			}
+			if( outfile )
+				strncpy( of, outfile, 260 );
+			else
+			{
+				strncpy( of, infile, 260 );
+				strcat( of, ".sgc" ); /* TODO fix potential buffer overflow */
+			}
+			f = fopen( of, "wb" );
+			if( !f )
+			{
+				sgs_FreeCompileBuffer( data2 );
+				printf( EPFX "failed to open output file for writing" );
+				return errno;
+			}
+			fwrite( data2, 1, size2, f ); /* TODO handle partial writes */
+			sgs_FreeCompileBuffer( data2 );
+			fclose( f );
 		}
 
-		sgs_DestroyContext( C );
+		sgs_DestroyEngine( C );
 	}
 
 	return 0;

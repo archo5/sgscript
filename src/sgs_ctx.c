@@ -274,6 +274,8 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, sgs_SizeVal size, char** outbuf
 	*outbuf = mb.ptr;
 	*outsize = mb.size;
 
+	sgsBC_Free( C, func );
+
 	return SGS_SUCCESS;
 }
 
