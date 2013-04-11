@@ -23,6 +23,9 @@
 #endif
 
 
+static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "func", "cfunc", "obj" };
+
+
 static void default_printfn( void* ctx, SGS_CTX, int type, int line, const char* msg )
 {
 	const char* errpfxs[ 3 ] = { "Info", "Warning", "Error" };
@@ -315,8 +318,26 @@ void sgs_FreeCompileBuffer( char* buf )
 }
 
 
+SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size )
+{
+	int rr;
+	sgs_CompFunc* func;
 
-static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "func", "cfunc", "obj" };
+	if( !( rr = ctx_decode( C, buf, size, &func ) ) &&
+		!ctx_compile( C, buf, size, &func ) )
+		return SGS_ECOMP;
+
+	if( rr < 0 )
+		return SGS_EINVAL;
+
+	sgsBC_Dump( func );
+	sgsBC_Free( C, func );
+	return SGS_SUCCESS;
+}
+
+
+
+/* g_varnames ^^ */
 static const char* g_ifitems[] =
 {
 	"end", "destruct", "clone", "gettype", "getprop", "setprop",

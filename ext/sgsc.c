@@ -113,47 +113,91 @@ int main( int argc, char** argv )
 
 	/* do */
 	{
-		sgs_Context* C = sgs_CreateEngine();
+		int ret;
+		FILE* f;
+		char of[ 270 ];
+		sgs_SizeVal size;
+		char* data = NULL;
+		sgs_Context* C = sgs_CreateEngine(); /* RSRC: sgs_CreateEngine -> C */
+
+		ret = loadfile( infile, &data, &size );
+		if( ret != SGS_SUCCESS )
+		{
+			printf( EPFX "failed to read the file, error %d\n", ret );
+			sgs_DestroyEngine( C );
+			return ret;
+		}
+		/* RSRC: loadfile -> data */
 
 		if( action == 1 )
 		{
-			int ret;
-			FILE* f;
-			char of[ 260 ];
-			char* data = NULL, *data2 = NULL;
-			sgs_SizeVal size, size2;
-			ret = loadfile( infile, &data, &size );
-			if( ret != SGS_SUCCESS )
-			{
-				printf( EPFX "failed to read the file, error %d\n", ret );
-				return ret;
-			}
+			char* data2 = NULL;
+			sgs_SizeVal size2;
 			ret = sgs_Compile( C, data, size, &data2, &size2 );
 			free( data );
+			/* FREE: loadfile */
 			if( ret != SGS_SUCCESS )
 			{
 				printf( EPFX "failed to compile, error %d\n", ret );
+				sgs_DestroyEngine( C );
 				return ret;
 			}
+			/* RSRC: sgs_Compile -> data2 */
 			if( outfile )
 				strncpy( of, outfile, 260 );
 			else
 			{
+				char* sp, *pp = NULL;
 				strncpy( of, infile, 260 );
-				strcat( of, ".sgc" ); /* TODO fix potential buffer overflow */
+				sp = strstr( of, ".sgs" );
+				while( sp )
+				{
+					pp = sp;
+					sp = strstr( sp + 1, ".sgs" );
+				}
+				if( pp - of + 4 == strlen( of ) )
+					memcpy( pp, ".sgc", 4 );
+				else
+					strcat( of, ".sgc" );
 			}
 			f = fopen( of, "wb" );
 			if( !f )
 			{
 				sgs_FreeCompileBuffer( data2 );
+				sgs_DestroyEngine( C );
 				printf( EPFX "failed to open output file for writing\n" );
 				return errno;
 			}
-			fwrite( data2, 1, size2, f ); /* TODO handle partial writes */
-			sgs_FreeCompileBuffer( data2 );
-			fclose( f );
+			/* RSRC: fopen -> f */
+			if( fwrite( data2, 1, size2, f ) < size2 )
+			{
+				fclose( f );
+				sgs_FreeCompileBuffer( data2 );
+				sgs_DestroyEngine( C );
+				printf( EPFX "failed to write to '%s'\n", of );
+				return errno;
+			}
+			sgs_FreeCompileBuffer( data2 ); /* FREE: sgs_Compile */
+			fclose( f ); /* FREE: fopen */
 
 			printf( "successfully wrote bytecode to '%s'\n", of );
+		}
+		else if( action == 2 )
+		{
+			/* MAINTAIN
+				- RSRC: loadfile -> data
+				- RSRC: sgs_CreateEngine -> C
+			*/
+			ret = sgs_DumpCompiled( C, data, size );
+			free( data );
+			/* FREE: loadfile */
+
+			if( ret != SGS_SUCCESS )
+			{
+				printf( EPFX "failed to dump input file, error %d\n", ret );
+				sgs_DestroyEngine( C );
+				return ret;
+			}
 		}
 
 		sgs_DestroyEngine( C );

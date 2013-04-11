@@ -13,6 +13,8 @@ int main( int argc, char** argv )
 	int i, sep = 0;
 	sgs_Context* C;
 
+	printf( "SGSVM [SGScript v%s]\n", SGS_VERSION );
+
 	if( argc < 2 )
 	{
 		EPRINT( "need to specify at least one file" );

@@ -35,7 +35,6 @@ extern "C" {
 #define SGS_EBOUNDS -5  /* index out of bounds */
 #define SGS_EINVAL  -6  /* invalid value was passed */
 #define SGS_EINPROC -7  /* process was interrupted */
-#define SGS_ENOTIMP -31 /* - not implemented - */
 
 
 /* Accessible / transferable data */
@@ -146,8 +145,7 @@ void            sgs_DestroyEngine( SGS_CTX );
 
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
 void            sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
-
-void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
+void            sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
 
 SGSRESULT       sgs_ExecBuffer( SGS_CTX, const char* buf, sgs_SizeVal size );
 static SGS_INLINE SGSRESULT sgs_ExecString( SGS_CTX, const char* str ){ return sgs_ExecBuffer( C, str, strlen( str ) ); }
@@ -157,6 +155,7 @@ SGSRESULT       sgs_EvalFile( SGS_CTX, const char* file, int* rvc );
 static SGS_INLINE SGSRESULT sgs_ExecFile( SGS_CTX, const char* file ){ return sgs_EvalFile( C, file, NULL ); }
 SGSRESULT       sgs_Compile( SGS_CTX, const char* buf, sgs_SizeVal size, char** outbuf, sgs_SizeVal* outsize );
 void            sgs_FreeCompileBuffer( char* buf );
+SGSRESULT       sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size );
 
 SGSRESULT       sgs_Stat( SGS_CTX, int type );
 void            sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, const char** file, int* line );
