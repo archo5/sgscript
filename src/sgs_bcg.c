@@ -1134,6 +1134,29 @@ static int compile_breaks( SGS_CTX, sgs_CompFunc* func, uint8_t iscont )
 }
 
 
+
+
+static void rpts( StrBuf* out, FTNode* root )
+{
+	switch( root->type )
+	{
+	case SFT_IDENT:
+		strbuf_appbuf( out, root->token + 2, root->token[1] );
+		break;
+	case SFT_OPER:
+		switch( *root->token )
+		{
+		case ST_OP_MMBR:
+			rpts( out, root->child );
+			strbuf_appchr( out, '.' );
+			rpts( out, root->child->next );
+			break;
+		}
+		break;
+	}
+}
+
+
 static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
 {
 	sgs_FuncCtx* fctx = fctx_create(), *bkfctx = C->fctx;
@@ -1165,10 +1188,11 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	C->fctx = bkfctx;
 
 	{
-		char ffn[ 256 ] = {0};
+		StrBuf ffn = strbuf_create();
 		if( node->child->next->next )
-			strncpy( ffn, (const char*) node->child->next->next->token + 2, node->child->next->next->token[1] );
-		*out = CONSTENC( add_const_f( C, func, nf, *ffn ? ffn : NULL, sgsT_LineNum( node->token ) ) );
+			rpts( &ffn, node->child->next->next );
+		*out = CONSTENC( add_const_f( C, func, nf, ffn.ptr, sgsT_LineNum( node->token ) ) );
+		strbuf_destroy( &ffn );
 	}
 	return 1;
 

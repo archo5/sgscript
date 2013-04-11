@@ -1101,12 +1101,28 @@ static FTNode* parse_function( SGS_CTX, TokenList* begin, TokenList end, int ine
 		}
 		nname = make_node( SFT_IDENT, at, NULL, NULL );
 		at = sgsT_Next( at );
+		if( *at == ST_OP_MMBR )
+		{
+			nname = make_node( SFT_OPER, at, NULL, nname );
+			at = sgsT_Next( at );
+			if( *at != ST_IDENT )
+			{
+				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ),
+					"Expected identifier after 'function', identifier and '.'" );
+				goto fail;
+			}
+			else
+			{
+				nname->child->next = make_node( SFT_IDENT, at, NULL, NULL );
+				at = sgsT_Next( at );
+			}
+		}
 	}
 
 	if( *at != '(' )
 	{
 		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), inexp ? "Expected '(' after 'function'"
-					: "Expected '(' after 'function' and identifier" );
+					: "Expected '(' after 'function' and its name" );
 		goto fail;
 	}
 	at = sgsT_Next( at );

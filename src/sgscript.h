@@ -67,9 +67,9 @@ extern void* (*sgs_MemFunc) ( void*, size_t );
 
 
 /* Debug output */
-#define SGS_INFO	0
-#define SGS_WARNING	1
-#define SGS_ERROR	2
+#define SGS_INFO    0  /* information about potential issues and state of the system */
+#define SGS_WARNING 1  /* non-fatal problems */
+#define SGS_ERROR   2  /* fatal problems */
 
 typedef void (*sgs_PrintFunc) ( void* /* data */, sgs_Context* /* ctx / SGS_CTX */, int /* type */, int /* line */, const char* /* message */ );
 

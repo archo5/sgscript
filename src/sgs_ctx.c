@@ -350,8 +350,16 @@ static void dumpvar( FILE* fp, sgs_Variable* var )
 	case SVT_BOOL: fprintf( fp, " = %s", var->data.B ? "true" : "false" ); break;
 	case SVT_INT: fprintf( fp, " = %" PRId64, var->data.I ); break;
 	case SVT_REAL: fprintf( fp, " = %f", var->data.R ); break;
-	case SVT_STRING: fprintf( fp, " [rc:%d] = \"", var->data.S->refcount ); print_safe( fp, var_cstr( var ), 16 ); fprintf( fp, var->data.S->size > 16 ? "...\"" : "\"" ); break;
-	case SVT_FUNC: fprintf( fp, " [rc:%d]", var->data.F->refcount ); break;
+	case SVT_STRING:
+		fprintf( fp, " [rc:%d] = \"", var->data.S->refcount );
+		print_safe( fp, var_cstr( var ), 16 );
+		fprintf( fp, var->data.S->size > 16 ? "...\"" : "\"" );
+		break;
+	case SVT_FUNC:
+		fprintf( fp, " [rc:%d] '%s'[%d]%s", var->data.F->refcount,
+			var->data.F->funcname.ptr ? var->data.F->funcname.ptr : "<anonymous>",
+			(int) var->data.F->numargs, var->data.F->gotthis ? " (method)" : "" );
+		break;
 	case SVT_CFUNC: fprintf( fp, " = %p", var->data.C ); break;
 	case SVT_OBJECT: fprintf( fp, " = " ); dumpobj( fp, var->data.O ); break;
 	}
@@ -359,73 +367,74 @@ static void dumpvar( FILE* fp, sgs_Variable* var )
 
 SGSRESULT sgs_Stat( SGS_CTX, int type )
 {
+	FILE* fh = stdout;
 	switch( type )
 	{
 	case SGS_STAT_VARCOUNT: return C->objcount;
 	case SGS_STAT_DUMP_STACK:
 		{
 			sgs_Variable* p = C->stack_base;
-			fprintf( stderr, "VARIABLE ---- STACK ---- BASE ----\n" );
+			fprintf( fh, "VARIABLE ---- STACK ---- BASE ----\n" );
 			while( p < C->stack_top )
 			{
 				if( p == C->stack_off )
 				{
-					fprintf( stderr, "VARIABLE ---- STACK ---- OFFSET ----\n" );
+					fprintf( fh, "VARIABLE ---- STACK ---- OFFSET ----\n" );
 				}
-				fprintf( stderr, "VARIABLE " );
-				dumpvar( stderr, (sgs_Variable*) p );
-				fprintf( stderr, "\n" );
+				fprintf( fh, "VARIABLE " );
+				dumpvar( fh, (sgs_Variable*) p );
+				fprintf( fh, "\n" );
 				p++;
 			}
-			fprintf( stderr, "VARIABLE ---- STACK ---- TOP ----\n" );
+			fprintf( fh, "VARIABLE ---- STACK ---- TOP ----\n" );
 		}
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_GLOBALS:
 		{
 			HTPair* p = C->data.pairs;
 			HTPair* pend = C->data.pairs + C->data.size;
-			fprintf( stderr, "GLOBAL ---- LIST ---- START ----\n" );
+			fprintf( fh, "GLOBAL ---- LIST ---- START ----\n" );
 			while( p < pend )
 			{
 				if( p->str )
 				{
-					fprintf( stderr, "GLOBAL '" );
-					print_safe( stderr, p->str, p->size );
-					fprintf( stderr, "' = " );
-					dumpvar( stderr, (sgs_Variable*) p->ptr );
-					fprintf( stderr, "\n" );
+					fprintf( fh, "GLOBAL '" );
+					print_safe( fh, p->str, p->size );
+					fprintf( fh, "' = " );
+					dumpvar( fh, (sgs_Variable*) p->ptr );
+					fprintf( fh, "\n" );
 				}
 				p++;
 			}
-			fprintf( stderr, "GLOBAL ---- LIST ---- END ----\n" );
+			fprintf( fh, "GLOBAL ---- LIST ---- END ----\n" );
 		}
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_OBJECTS:
 		{
 			object_t* p = C->objs;
-			fprintf( stderr, "OBJECT ---- LIST ---- START ----\n" );
+			fprintf( fh, "OBJECT ---- LIST ---- START ----\n" );
 			while( p )
 			{
-				dumpobj( stderr, p );
-				fprintf( stderr, "\n" );
+				dumpobj( fh, p );
+				fprintf( fh, "\n" );
 				p = p->next;
 			}
-			fprintf( stderr, "OBJECT ---- LIST ---- END ----\n" );
+			fprintf( fh, "OBJECT ---- LIST ---- END ----\n" );
 		}
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_FRAMES:
 		{
 			sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
-			fprintf( stderr, "FRAME ---- LIST ---- START ----\n" );
+			fprintf( fh, "FRAME ---- LIST ---- START ----\n" );
 			while( p != NULL )
 			{
 				const char* file, *name;
 				int ln;
 				sgs_StackFrameInfo( C, p, &name, &file, &ln );
-				fprintf( stderr, "FRAME \"%s\" in %s, line %d\n", name, file, ln );
+				fprintf( fh, "FRAME \"%s\" in %s, line %d\n", name, file, ln );
 				p = p->next;
 			}
-			fprintf( stderr, "FRAME ---- LIST ---- END ----\n" );
+			fprintf( fh, "FRAME ---- LIST ---- END ----\n" );
 		}
 		return SGS_SUCCESS;
 	default:
