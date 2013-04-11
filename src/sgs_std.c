@@ -1113,7 +1113,9 @@ static int sgsstd_include_library( SGS_CTX )
 	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, &str, &strsize ) )
 		STDLIB_WARN( "include_library() - unexpected arguments; function expects 1 argument: string" )
 
-	if( strcmp( str, "math" ) == 0 )
+	if( strcmp( str, "io" ) == 0 )
+		ret = sgs_LoadLib_IO( C );
+	else if( strcmp( str, "math" ) == 0 )
 		ret = sgs_LoadLib_Math( C );
 #if 0
 	else if( strcmp( str, "native" ) == 0 )

@@ -164,6 +164,7 @@ sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 
 /* Additional libraries */
 
+SGSRESULT sgs_LoadLib_IO( SGS_CTX );
 SGSRESULT sgs_LoadLib_Math( SGS_CTX );
 #if 0
 SGSRESULT sgs_LoadLib_Native( SGS_CTX );

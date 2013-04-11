@@ -1,0 +1,20 @@
+
+global ERRORS;
+global tests_failed, tests_ran;
+
+//
+function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
+print( "\n\n-- CORE FUNCTIONS --\n" );
+include_library( "string" );
+include_library( "io" );
+//
+
+	section( "io_setcwd/io_getcwd" );
+testEqual( io_setcwd('tests'), true, "io_setcwd - basic directory change" );
+testEqual( string_cut( io_getcwd(), -5, -1 ), 'tests', "io_getcwd - validation of prev. change" );
+testEqual( io_setcwd('..'), true, "io_setcwd - reverting change" );
+
+
+//
+print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );
+//

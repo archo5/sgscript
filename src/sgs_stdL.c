@@ -5,11 +5,78 @@
 #undef __STRICT_ANSI__
 #include <math.h>
 
+#ifdef _WIN32
+#  include <direct.h>
+#  define getcwd _getcwd
+#else
+#  include <unistd.h>
+#endif
+
 #include "sgscript.h"
 #include "sgs_proc.h"
 
 #define FLAG( a, b ) (((a)&(b))!=0)
 #define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, -1, warn ); return 0; }
+
+
+
+/* libraries - I / O */
+
+#define FILE_READ 1
+#define FILE_WRITE 2
+
+static int sgsstd_io_setcwd( SGS_CTX )
+{
+	int ret;
+	char* str;
+	sgs_SizeVal size;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "io_setcwd() - unexpected arguments; function expects 1 argument: string" )
+
+	ret = chdir( str );
+	sgs_PushBool( C, ret == 0 );
+	return 1;
+}
+
+static int sgsstd_io_getcwd( SGS_CTX )
+{
+	/* XPC WARNING: getcwd( NULL, 0 ) relies on undefined behavior */
+	char* cwd = getcwd( NULL, 0 );
+	if( cwd )
+	{
+		sgs_PushString( C, cwd );
+		free( cwd );
+		return 1;
+	}
+	else
+		return 0;
+}
+
+
+static const sgs_RegRealConst i_rconsts[] =
+{
+	{ "fFILE_READ", FILE_READ },
+	{ "fFILE_WRITE", FILE_WRITE },
+};
+
+#define FN( x ) { #x, sgsstd_##x }
+
+static const sgs_RegFuncConst i_fconsts[] =
+{
+	FN( io_getcwd ), FN( io_setcwd ),
+};
+
+SGSRESULT sgs_LoadLib_IO( SGS_CTX )
+{
+	int ret;
+	ret = sgs_RegRealConsts( C, i_rconsts, ARRAY_SIZE( i_rconsts ) );
+	if( ret != SGS_SUCCESS ) return ret;
+	ret = sgs_RegFuncConsts( C, i_fconsts, ARRAY_SIZE( i_fconsts ) );
+	return ret;
+}
+
 
 
 /* libraries -  M A T H  */
