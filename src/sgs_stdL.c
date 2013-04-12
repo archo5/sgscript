@@ -5,13 +5,23 @@
 #undef __STRICT_ANSI__
 #include <math.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #ifdef _WIN32
 #  include <direct.h>
 #  define getcwd _getcwd
 #  define mkdir _mkdir
 #  define rmdir _rmdir
+#  define stat _stat
 #else
 #  include <unistd.h>
+#endif
+
+#ifdef _MSC_VER
+#  include "msvc/dirent.c"
+#else
+#  include <dirent.h>
 #endif
 
 #include "sgscript.h"
@@ -22,10 +32,46 @@
 
 
 
+/* path helper functions */
+
+int32_t findlastof( const char* str, int32_t len, const char* of )
+{
+	const char* ptr = str + len;
+	while( ptr-- > str )
+	{
+		const char* pof = of;
+		while( *pof )
+		{
+			if( *pof == *ptr )
+				return ptr - str;
+			pof++;
+		}
+	}
+	return -1;
+}
+
+int path_replast( SGS_CTX, int from, int with )
+{
+	sgs_SizeVal size, pos;
+	char* buf = sgs_ToStringBuf( C, from, &size );
+	if( !buf || ( pos = findlastof( buf, size, "/\\" ) ) < 0 )
+	{
+		return !sgs_PushItem( C, with );
+	}
+	sgs_PushStringBuf( C, buf, pos + 1 );
+	return !( sgs_PushItem( C, with ) || sgs_StringConcat( C ) );
+}
+
+
+
 /* libraries - I / O */
 
 #define FILE_READ 1
 #define FILE_WRITE 2
+
+#define FST_UNKNOWN 0
+#define FST_FILE 1
+#define FST_DIR 2
 
 static int sgsstd_io_setcwd( SGS_CTX )
 {
@@ -58,6 +104,97 @@ static int sgsstd_io_getcwd( SGS_CTX )
 		}
 		else
 			return 0;
+	}
+}
+
+static int sgsstd_io_rename( SGS_CTX )
+{
+	int ret;
+	char* path, *nnm;
+	sgs_SizeVal psz, nnmsz;
+
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseString( C, 0, &path, &psz ) ||
+		!sgs_ParseString( C, 1, &nnm, &nnmsz ) )
+		STDLIB_WARN( "io_rename() - unexpected arguments; function expects 2 arguments: string, string" )
+
+	if( !path_replast( C, 0, 1 ) ||
+		!sgs_ParseString( C, -1, &nnm, &nnmsz ) )
+	{
+		sgs_PushBool( C, FALSE );
+		return 1;
+	}
+
+	ret = rename( path, nnm );
+	sgs_PushBool( C, ret == 0 );
+	return 1;
+}
+
+static int sgsstd_io_file_exists( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "io_file_exists() - unexpected arguments; function expects 1 argument: string" )
+
+	{
+		FILE* fp = fopen( str, "rb" );
+		sgs_PushBool( C, !!fp );
+		if( fp ) fclose( fp );
+		return 1;
+	}
+}
+
+static int sgsstd_io_dir_exists( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "io_dir_exists() - unexpected arguments; function expects 1 argument: string" )
+
+	{
+		DIR* dp = opendir( str );
+		sgs_PushBool( C, !!dp );
+		if( dp ) closedir( dp );
+		return 1;
+	}
+}
+
+static int sgsstd_io_stat( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "io_stat() - unexpected arguments; function expects 1 argument: string" )
+
+	{
+		struct stat data;
+		if( stat( str, &data ) != 0 )
+			return 0;
+
+		/* --- */
+		sgs_PushString( C, "atime" );
+		sgs_PushInt( C, data.st_atime );
+		sgs_PushString( C, "ctime" );
+		sgs_PushInt( C, data.st_ctime );
+		sgs_PushString( C, "mtime" );
+		sgs_PushInt( C, data.st_mtime );
+		sgs_PushString( C, "type" );
+		if( data.st_mode & _S_IFDIR )
+			sgs_PushInt( C, FST_DIR );
+		else if( data.st_mode * _S_IFREG )
+			sgs_PushInt( C, FST_FILE );
+		else
+			sgs_PushInt( C, FST_UNKNOWN );
+		sgs_PushString( C, "size" );
+		sgs_PushInt( C, data.st_size );
+		return !sgs_GlobalCall( C, "dict", 10, 1 );
 	}
 }
 
@@ -164,6 +301,10 @@ static const sgs_RegRealConst i_rconsts[] =
 {
 	{ "fFILE_READ", FILE_READ },
 	{ "fFILE_WRITE", FILE_WRITE },
+
+	{ "eFST_UNKNOWN", FST_UNKNOWN },
+	{ "eFST_FILE", FST_FILE },
+	{ "eFST_DIR", FST_DIR },
 };
 
 #define FN( x ) { #x, sgsstd_##x }
@@ -171,6 +312,8 @@ static const sgs_RegRealConst i_rconsts[] =
 static const sgs_RegFuncConst i_fconsts[] =
 {
 	FN( io_getcwd ), FN( io_setcwd ),
+	FN( io_rename ),
+	FN( io_file_exists ), FN( io_dir_exists ), FN( io_stat ),
 	FN( io_dir_create ), FN( io_dir_delete ),
 	FN( io_file_delete ),
 	FN( io_file_write ), FN( io_file_read ),
