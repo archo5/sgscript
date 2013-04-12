@@ -54,6 +54,59 @@ static int sgsstd_io_getcwd( SGS_CTX )
 		return 0;
 }
 
+static int sgsstd_io_file_write( SGS_CTX )
+{
+	char* path, *data;
+	sgs_SizeVal psz, dsz;
+
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseString( C, 0, &path, &psz ) ||
+		!sgs_ParseString( C, 1, &data, &dsz ) )
+		STDLIB_WARN( "io_file_write() - unexpected arguments; function expects 2 arguments: string, string" )
+
+	{
+		sgs_SizeVal wsz;
+		FILE* fp = fopen( path, "wb" );
+		if( !fp )
+			STDLIB_WARN( "io_file_write() - failed to create file" )
+		wsz = fwrite( data, 1, dsz, fp );
+		fclose( fp );
+		if( wsz < dsz )
+			STDLIB_WARN( "io_file_write() - failed to write to file" )
+	}
+
+	sgs_PushBool( C, TRUE );
+	return 1;
+}
+
+static int sgsstd_io_file_read( SGS_CTX )
+{
+	char* path;
+	sgs_SizeVal psz;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &path, &psz ) )
+		STDLIB_WARN( "io_file_read() - unexpected arguments; function expects 1 argument: string" )
+
+	{
+		sgs_SizeVal len, rd;
+		FILE* fp = fopen( path, "rb" );
+		if( !fp )
+			STDLIB_WARN( "io_file_read() - failed to open file" )
+		fseek( fp, 0, SEEK_END );
+		len = ftell( fp );
+		fseek( fp, 0, SEEK_SET );
+
+		sgs_PushStringBuf( C, NULL, len );
+		rd = fread( var_cstr( sgs_StackItem( C, -1 ) ), 1, len, fp );
+		fclose( fp );
+		if( rd < len )
+			STDLIB_WARN( "io_file_read() - failed to read file" )
+
+		return 1;
+	}
+}
+
 
 static const sgs_RegRealConst i_rconsts[] =
 {
@@ -66,6 +119,7 @@ static const sgs_RegRealConst i_rconsts[] =
 static const sgs_RegFuncConst i_fconsts[] =
 {
 	FN( io_getcwd ), FN( io_setcwd ),
+	FN( io_file_write ), FN( io_file_read ),
 };
 
 SGSRESULT sgs_LoadLib_IO( SGS_CTX )

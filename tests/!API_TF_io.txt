@@ -13,6 +13,12 @@ include_library( "io" );
 testEqual( io_setcwd('tests'), true, "io_setcwd - basic directory change" );
 testEqual( string_cut( io_getcwd(), -5, -1 ), 'tests', "io_getcwd - validation of prev. change" );
 testEqual( io_setcwd('..'), true, "io_setcwd - reverting change" );
+testEqual( io_setcwd('doesnotexist'), false, "io_setcwd - invalid directory change" );
+
+	section( "io_file_write/io_file_read" );
+testEqual( io_file_read('tests/data/1.txt'), 'one two three', "io_file_read - basic read" );
+testEqual( io_file_write('tests/data/t.txt', 'four five six'), true, "io_file_write - basic write" );
+testEqual( io_file_read('tests/data/t.txt'), 'four five six', "io_file_read - re-read of io_write output" );
 
 
 //
