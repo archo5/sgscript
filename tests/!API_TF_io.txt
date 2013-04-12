@@ -4,7 +4,7 @@ global tests_failed, tests_ran;
 
 //
 function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
-print( "\n\n-- CORE FUNCTIONS --\n" );
+print( "\n\n-- I/O FUNCTIONS --\n" );
 include_library( "string" );
 include_library( "io" );
 include_library( "type" );
