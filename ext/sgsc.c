@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "sgscript.h"
 

@@ -8,6 +8,8 @@
 #ifdef _WIN32
 #  include <direct.h>
 #  define getcwd _getcwd
+#  define mkdir _mkdir
+#  define rmdir _rmdir
 #else
 #  include <unistd.h>
 #endif
@@ -42,16 +44,66 @@ static int sgsstd_io_setcwd( SGS_CTX )
 
 static int sgsstd_io_getcwd( SGS_CTX )
 {
-	/* XPC WARNING: getcwd( NULL, 0 ) relies on undefined behavior */
-	char* cwd = getcwd( NULL, 0 );
-	if( cwd )
+	if( sgs_StackSize( C ) != 0 )
+		STDLIB_WARN( "io_getcwd() - unexpected arguments; function expects 0 arguments" )
+
 	{
-		sgs_PushString( C, cwd );
-		free( cwd );
-		return 1;
+		/* XPC WARNING: getcwd( NULL, 0 ) relies on undefined behavior */
+		char* cwd = getcwd( NULL, 0 );
+		if( cwd )
+		{
+			sgs_PushString( C, cwd );
+			free( cwd );
+			return 1;
+		}
+		else
+			return 0;
 	}
-	else
-		return 0;
+}
+
+static int sgsstd_io_dir_create( SGS_CTX )
+{
+	int ret;
+	char* str;
+	sgs_SizeVal size;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "io_dir_create() - unexpected arguments; function expects 1 argument: string" )
+
+	ret = mkdir( str );
+	sgs_PushBool( C, ret == 0 );
+	return 1;
+}
+
+static int sgsstd_io_dir_delete( SGS_CTX )
+{
+	int ret;
+	char* str;
+	sgs_SizeVal size;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "io_dir_delete() - unexpected arguments; function expects 1 argument: string" )
+
+	ret = rmdir( str );
+	sgs_PushBool( C, ret == 0 );
+	return 1;
+}
+
+static int sgsstd_io_file_delete( SGS_CTX )
+{
+	int ret;
+	char* str;
+	sgs_SizeVal size;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "io_delete() - unexpected arguments; function expects 1 argument: string" )
+
+	ret = remove( str );
+	sgs_PushBool( C, ret == 0 );
+	return 1;
 }
 
 static int sgsstd_io_file_write( SGS_CTX )
@@ -119,6 +171,8 @@ static const sgs_RegRealConst i_rconsts[] =
 static const sgs_RegFuncConst i_fconsts[] =
 {
 	FN( io_getcwd ), FN( io_setcwd ),
+	FN( io_dir_create ), FN( io_dir_delete ),
+	FN( io_file_delete ),
 	FN( io_file_write ), FN( io_file_read ),
 };
 

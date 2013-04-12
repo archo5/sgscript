@@ -3,6 +3,7 @@
 /bin/*
 /obj/*
 /lib/*
+/tests/data/*
 *.idb
 *.pdb
 *.log
