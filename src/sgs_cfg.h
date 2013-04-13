@@ -62,9 +62,6 @@
 #endif
 
 
-typedef unsigned short LineNum;
-
-
 /*	Tokenizer settings	*/
 #ifndef SGS_TOKENLIST_PREALLOC
 #  define SGS_TOKENLIST_PREALLOC	1024

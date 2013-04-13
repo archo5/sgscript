@@ -20,6 +20,9 @@
 #define isoneof( chr, str ) (!!strchr( str, chr ))
 
 
+typedef int16_t LineNum;
+
+
 /* memory handling */
 #if SGS_DEBUG && SGS_DEBUG_MEMORY && SGS_DEBUG_EXTRA
 void sgs_MemCheckDbg( void* ptr );

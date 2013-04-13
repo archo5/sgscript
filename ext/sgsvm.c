@@ -21,7 +21,7 @@ int main( int argc, char** argv )
 		return 1;
 	}
 
-	setvbuf( stdout, NULL, _IOLBF, 32 );
+	setvbuf( stdout, NULL, _IOLBF, 4 );
 
 	for( i = 1; i < argc; ++i )
 	{

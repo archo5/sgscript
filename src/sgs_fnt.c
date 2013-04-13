@@ -230,6 +230,11 @@ SFTRET parse_arglist( SFTC, char end )
 
 			id++;
 		}
+		else
+		{
+			sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, "Expected ',' or '%c'", end );
+			goto fail;
+		}
 	}
 
 	FUNC_END;
@@ -596,6 +601,7 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 				{
 					for(;;)
 					{
+						/* if not index, extra ',' is allowed */
 						if( !isidx && SFTC_IS( cend ) )
 						{
 							SFTC_NEXT;
@@ -605,7 +611,10 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 						FUNC_ENTER;
 						expr = parse_exp( F, endcstr, 2 );
 						if( !expr )
-							break;
+						{
+							sgsFT_Destroy( exprlist );
+							goto fail;
+						}
 
 						if( curexpr )
 							curexpr->next = expr;
@@ -654,7 +663,8 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 
 					if( !SFTC_IS( ST_OP_SET ) )
 					{
-						SFTC_PRINTERR( "Expected '=' in dictionary expression" );
+						SFTC_PRINTERR( "Expected '=' in dictionary expression "
+							"/ missing closing bracket before '{'" );
 						break;
 					}
 					SFTC_NEXT;
@@ -682,8 +692,7 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 			}
 			else
 			{
-				sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM,
-					"Unexpected token '%c' found! (prev=%c)", *SFTC_AT, prev );
+				sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, "Unexpected token '%c' found!", *SFTC_AT );
 				F->C->state |= SGS_MUST_STOP;
 			}
 		}
@@ -707,6 +716,12 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 	cur = node->next;
 	sgs_Free( node );
 	node = cur;
+	if( !node )
+	{
+		SFTC_PRINTERR( "Empty expression found" );
+		goto fail;
+	}
+
 	if( !level_exp( F->C, &node ) )
 		goto fail;
 
@@ -745,6 +760,8 @@ SFTRET parse_explist( SFTC, char endtok )
 		}
 		else if( SFTC_IS( ',' ) || SFTC_AT == explist->token )
 		{
+			if( SFTC_AT != explist->token )
+				SFTC_NEXT;
 			node = parse_exp( F, endtoklist, 2 );
 			if( !node )
 				goto fail;
@@ -882,6 +899,7 @@ SFTRET parse_dowhile( SFTC )
 
 	nexp = parse_exp( F, ")", 1 );
 	if( !nexp ) goto fail;
+	SFTC_NEXT;
 
 	nexp->next = nwhile;
 	node = make_node( SFT_DOWHILE, begin, NULL, nexp );
