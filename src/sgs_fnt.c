@@ -4,6 +4,34 @@
 #include "sgs_ctx.h"
 
 
+static int isoneofN( char ch, const char* what, int size )
+{
+	const char* end = what + size;
+	while( what < end )
+	{
+		if( ch == *what++ )
+			return TRUE;
+	}
+	return FALSE;
+}
+
+static int is_keyword( TokenList tok, const char* text )
+{
+	return *tok == ST_KEYWORD && tok[ 1 ] == strlen( text ) && strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
+}
+/*
+static char brace_opposite( char c )
+{
+	switch( c )
+	{
+	case '(':	return ')';
+	case '[':	return ']';
+	case '{':	return '}';
+	default:	return 0;
+	}
+}
+*/
+
 static FTNode* make_node( int type, TokenList token, FTNode* next, FTNode* child )
 {
 	FTNode* node = sgs_Alloc( FTNode );
@@ -90,40 +118,46 @@ void sgsFT_Dump( FTNode* tree )
 */
 
 
-/* Utilities
-*/
-
-#define PTR_MAX ((void*)-1)
-
-static int is_keyword( TokenList tok, const char* text )
+typedef struct _ftcomp
 {
-	return *tok == ST_KEYWORD && tok[ 1 ] == strlen( text ) && strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
+	SGS_CTX;
+	TokenList at;
 }
+FTComp;
 
-static char brace_opposite( char c )
-{
-	switch( c )
-	{
-	case '(':	return ')';
-	case '[':	return ']';
-	case '{':	return '}';
-	default:	return 0;
-	}
-}
+#define SFTC FTComp* F
+#define SFTRET static FTNode*
+#define SFTC_VALIDATE sgs_BreakIf( !*F->at )
+#define SFTC_AT F->at
+#define SFTC_NEXT F->at = sgsT_Next( F->at )
+#define SFTC_IS( type ) (*F->at == (type))
+#define SFTC_IN( buf, sz ) isoneofN( *F->at, buf, sz )
+#define SFTC_HASERR ( F->C->state & SGS_HAS_ERRORS )
+#define SFTC_SETERR F->C->state |= SGS_HAS_ERRORS
+#define SFTC_ISKEY( name ) is_keyword( F->at, name )
+#define SFTC_LINENUM sgsT_LineNum( F->at )
+#define SFTC_PRINTERR( what ) sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, what )
+#define SFTC_UNEXP SFTC_PRINTERR( "Unexpected end of code" )
 
-static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end );
-static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end );
-static FTNode* parse_stmtlist( SGS_CTX, TokenList begin, TokenList end );
-static FTNode* parse_function( SGS_CTX, TokenList* begin, TokenList end, int inexp );
 
-/* Expression parsing
-*/
+
+
+
+SFTRET parse_exp( SFTC, char* endtoklist, int etlsize );
+SFTRET parse_stmt( SFTC );
+SFTRET parse_stmtlist( SFTC, char end );
+SFTRET parse_function( SFTC, int inexp );
+
+
+
+
 
 /*
 	FUNC / finds the logical expected end of an expression
 	ARGS / context, token stream, list of ending characters
 	ERRS / brace mismatch, end of expression
 */
+/*
 static TokenList detect_exp( SGS_CTX, TokenList at, TokenList end, const char* ends, int superr )
 {
 	StrBuf stack = strbuf_create();
@@ -189,58 +223,44 @@ fail2:
 	FUNC_END;
 	return NULL;
 }
-
-/*
-	FUNC / parses an argument
-	ARGS / context, function tree, argument id, token stream
-	ERRS / unexpected token, @parse_exp
-	TODO: default values
 */
-static FTNode* parse_arg( SGS_CTX, int argid, TokenList at, TokenList end )
+
+
+SFTRET parse_arg( SFTC, int argid, char end )
 {
 	FTNode* node = NULL;
-	char toks[ 3 ] = { ',', *end, 0 };
-	int isthis = FALSE;
+	char toks[ 3 ] = { ',', end, 0 };
 
 	FUNC_BEGIN;
 
-	sgs_BreakIf( !C );
-	sgs_BreakIf( !at );
-	sgs_BreakIf( !*at );
+	SFTC_VALIDATE;
 
-	if( *at == ST_KEYWORD )
+	if( SFTC_IS( ST_KEYWORD ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Argument name cannot be a reserved keyword" );
+		SFTC_PRINTERR( "Argument name cannot be a reserved keyword" );
 		goto fail;
 	}
 
-	if( *at != ST_IDENT && *at != ST_KEYWORD )
+	if( !SFTC_IS( ST_IDENT ) && !SFTC_IS( ST_KEYWORD ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Unexpected token while parsing argument %d", argid );
+		sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, "Unexpected token while parsing argument %d", argid );
 		goto fail;
 	}
 
-	node = make_node( SFT_ARGMT, at, NULL, NULL );
-	at = sgsT_Next( at );
+	node = make_node( SFT_ARGMT, SFTC_AT, NULL, NULL );
+	SFTC_NEXT;
 
-	if( *at == ST_OP_SET )
+	if( SFTC_IS( ST_OP_SET ) )
 	{
-		if( isthis )
+		SFTC_NEXT;
+		if( SFTC_IS( end ) || SFTC_IS( ',' ) )
 		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Cannot have default value for a 'this' argument" );
+			SFTC_PRINTERR( "Expected initializing expression" );
 			goto fail;
 		}
-		TokenList expend;
-		at = sgsT_Next( at );
-		expend = detect_exp( C, at, sgsT_Next( end ), toks, 0 );
-		if( !expend ) goto fail;
-		if( at == expend )
-		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected initializing expression" );
+		node->child = parse_exp( F, toks, 2 );
+		if( !node->child )
 			goto fail;
-		}
-		node->child = parse_exp( C, at, expend );
-		if( !node->child ) goto fail;
 	}
 
 	FUNC_END;
@@ -248,7 +268,7 @@ static FTNode* parse_arg( SGS_CTX, int argid, TokenList at, TokenList end )
 
 fail:
 	if( node ) sgsFT_Destroy( node );
-	C->state |= SGS_HAS_ERRORS;
+	SFTC_SETERR;
 	FUNC_END;
 	return 0;
 }
@@ -258,7 +278,7 @@ fail:
 	ARGS / context, function tree, token stream
 	ERRS / unexpected token, @parse_arg
 */
-static FTNode* parse_arglist( SGS_CTX, TokenList at, TokenList end )
+SFTRET parse_arglist( SFTC, char end )
 {
 	FTNode* arglist = make_node( SFT_ARGLIST, NULL, NULL, NULL );
 	FTNode* curnode = NULL;
@@ -267,34 +287,43 @@ static FTNode* parse_arglist( SGS_CTX, TokenList at, TokenList end )
 
 	FUNC_BEGIN;
 
-	sgs_BreakIf( !C );
-	sgs_BreakIf( !at );
-	sgs_BreakIf( !*at );
+	SFTC_VALIDATE;
 
-	while( at < end )
+	for(;;)
 	{
-		TokenList cend = detect_exp( C, at, end, ",", 1 );
-		if( !cend ) cend = end;
-
-		argnode = parse_arg( C, id, at, end );
-		if( !argnode && C->state & SGS_MUST_STOP )
+		if( SFTC_IS( end ) )
 		{
-			sgsFT_Destroy( arglist );
-			arglist = NULL;
 			break;
 		}
-		if( curnode ) curnode->next = argnode;
-		else arglist->child = argnode;
-		curnode = argnode;
+		else if( SFTC_IS( 0 ) )
+		{
+			SFTC_UNEXP;
+			goto fail;
+		}
+		else if( id == 1 || SFTC_IS( ',' ) )
+		{
+			if( id != 1 )
+				SFTC_NEXT;
+			argnode = parse_arg( F, id, end );
+			if( !argnode && F->C->state & SGS_MUST_STOP )
+			{
+				goto fail;
+			}
+			if( curnode ) curnode->next = argnode;
+			else arglist->child = argnode;
+			curnode = argnode;
 
-		id++;
-		at = cend;
-		if( at < end )
-			at = sgsT_Next( at );
+			id++;
+		}
 	}
 
 	FUNC_END;
 	return arglist;
+
+fail:
+	SFTC_SETERR;
+	sgsFT_Destroy( arglist );
+	return NULL;
 }
 
 /*
@@ -369,11 +398,7 @@ static LineNum predictlinenum( FTNode* node ) /* next, child, local */
 	return -1;
 }
 
-/*
-	FUNC / adds depth to the tree
-	ARGS / context, function tree, operational region
-	ERRS / many
-*/
+
 static int level_exp( SGS_CTX, FTNode** tree )
 {
 	FTNode* node = *tree, *prev = NULL, *mpp = NULL;
@@ -574,35 +599,30 @@ fail:
 	return 0;
 }
 
-/*
-	FUNC / parses an expression
-	ARGS / context, function tree, token stream
-	ERRS / internal, @level_exp
-*/
-static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
+
+SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 {
 	FTNode* node, *cur;
-	TokenList at = begin;
 	char prev = 0;
 
 	FUNC_BEGIN;
 
-	sgs_BreakIf( !C );
-	sgs_BreakIf( !at );
-	sgs_BreakIf( !*at );
+	SFTC_VALIDATE;
 
 	/* special cases */
-	if( is_keyword( begin, "var" ) )
+	if( SFTC_ISKEY( "var" ) )
 	{
-		node = parse_arglist( C, sgsT_Next( begin ), end );
+		SFTC_NEXT;
+		node = parse_arglist( F, endtoklist[ endtoklist[0] == ',' ] );
 		if( node )
 			node->type = SFT_VARLIST;
 		FUNC_END;
 		return node;
 	}
-	if( is_keyword( begin, "global" ) )
+	if( SFTC_ISKEY( "global" ) )
 	{
-		node = parse_arglist( C, sgsT_Next( begin ), end );
+		SFTC_NEXT;
+		node = parse_arglist( F, endtoklist[ endtoklist[0] == ',' ] );
 		if( node )
 			node->type = SFT_GVLIST;
 		FUNC_END;
@@ -611,150 +631,130 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 
 	cur = node = make_node( 0, NULL, NULL, NULL );
 
-	while( at < end )
+	for(;;)
 	{
-		if( *at == ST_STRING || *at == ST_NUMINT || *at == ST_NUMREAL )
+		if( SFTC_IN( endtoklist, etlsize ) )
 		{
-			cur->next = make_node( SFT_CONST, at, NULL, NULL );
-			cur = cur->next;
+			break;
 		}
-		else if( *at == ST_IDENT )
+		else if( SFTC_IS( 0 ) )
 		{
-			cur->next = make_node( SFT_IDENT, at, NULL, NULL );
-			cur = cur->next;
+			SFTC_UNEXP;
+			goto fail;
 		}
-		else if( *at == ST_KEYWORD )
+		else if( SFTC_IS( ST_STRING )
+			  || SFTC_IS( ST_NUMINT )
+			  || SFTC_IS( ST_NUMREAL ) )
+			cur = cur->next = make_node( SFT_CONST, SFTC_AT, NULL, NULL );
+		else if( SFTC_IS( ST_IDENT ) )
+			cur = cur->next = make_node( SFT_IDENT, SFTC_AT, NULL, NULL );
+		else if( SFTC_IS( ST_KEYWORD ) )
 		{
-			if( is_keyword( at, "function" ) )
+			if( SFTC_ISKEY( "function" ) )
 			{
-				cur->next = parse_function( C, &at, end, 1 );
+				cur->next = parse_function( F, 1 );
 				if( !cur->next )
-					break;
+					goto fail;
 
 				cur = cur->next;
 				continue;
 			}
 			else
-			{
-				cur->next = make_node( SFT_KEYWORD, at, NULL, NULL );
-				cur = cur->next;
-			}
+				cur = cur->next = make_node( SFT_KEYWORD, SFTC_AT, NULL, NULL );
 		}
-		else if( ST_ISOP( *at ) )
+		else if( ST_ISOP( *SFTC_AT ) )
+			cur = cur->next = make_node( SFT_OPER, SFTC_AT, NULL, NULL );
+		else if( ST_ISSPEC( *SFTC_AT ) )
 		{
-			cur->next = make_node( SFT_OPER, at, NULL, NULL );
-			cur = cur->next;
-		}
-		else if( ST_ISSPEC( *at ) )
-		{
-			if( *at == '(' || *at == '[' )
+			/* array accesor / argument list / subexpression */
+			if( SFTC_IS( '(' ) || SFTC_IS( '[' ) )
 			{
 				int isidx = prev == ST_IDENT || prev == ')' || prev == ']';
-				char cend = *at == '(' ? ')' : ']';
-				char endcstr[ 3 ] = { cend, ',', 0 };
-				TokenList pat, expend;
-				FTNode* exprlist = make_node( *at == '(' ? SFT_EXPLIST : SFT_ARRLIST, at, NULL, NULL );
+				char cend = SFTC_IS( '(' ) ? ')' : ']';
+				char endcstr[ 3 ] = { ',', cend, 0 };
+				FTNode* exprlist = make_node( SFTC_IS( '(' ) ? SFT_EXPLIST : SFT_ARRLIST, SFTC_AT, NULL, NULL );
 				FTNode* expr, * curexpr = NULL;
 
-				pat = at;
-				at = sgsT_Next( at );
+				SFTC_NEXT;
 				/* if this is an empty expression (for a function call), do not process it further */
-				if( *at != cend )
+				if( !SFTC_IS( cend ) )
 				{
-					do
+					for(;;)
 					{
-						if( !isidx && *at == cend )
+						if( !isidx && SFTC_IS( cend ) )
 						{
-							at = sgsT_Next( at );
-							break;
-						}
-						expend = detect_exp( C, at, end, endcstr, 0 );
-						if( !expend )
-						{
-						/*	sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "End of expression not found" );	*/
-							C->state |= SGS_HAS_ERRORS;
-							break;
-						}
-						if( expend == at )
-						{
-							sgs_Printf( C, SGS_ERROR, sgsT_LineNum( pat ), "Empty expression found" );
-							C->state |= SGS_HAS_ERRORS;
+							SFTC_NEXT;
 							break;
 						}
 
 						FUNC_ENTER;
-						expr = parse_exp( C, at, expend );
+						expr = parse_exp( F, endcstr, 2 );
 						if( !expr )
 							break;
 
-						if( curexpr ) curexpr->next = expr;
-						else exprlist->child = expr;
+						if( curexpr )
+							curexpr->next = expr;
+						else
+							exprlist->child = expr;
 						curexpr = expr;
 
-						pat = expend;
-						at = sgsT_Next( expend );
+						if( SFTC_IS( cend ) )
+							break;
+
+						SFTC_NEXT;
 					}
-					while( *expend == ',' );
 				}
 				else
-					at = sgsT_Next( at );
+					SFTC_NEXT;
 
-				cur->next = exprlist;
-				cur = cur->next;
+				cur = cur->next = exprlist;
 				continue;
 			}
-			else if( *at == '{' )
+			/* dictionary */
+			else if( SFTC_IS( '{' ) )
 			{
-				TokenList expend, startok = at;
+				TokenList startok = SFTC_AT;
 				FTNode* expr = NULL, *fexp = NULL;
 				/* dictionary expression */
-				at = sgsT_Next( at );
-				while( *at != '}' )
+				SFTC_NEXT;
+				while( !SFTC_IS( '}' ) )
 				{
-					if( *at != ST_IDENT && *at != ST_STRING )
+					if( !SFTC_IS( ST_IDENT ) && !SFTC_IS( ST_STRING ) )
 					{
-						sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected key identifier in dictionary expression" );
+						SFTC_PRINTERR( "Expected key identifier in dictionary expression" );
 						break;
 					}
 
 					if( !fexp )
-						expr = fexp = make_node( SFT_IDENT, at, NULL, NULL );
+						expr = fexp = make_node( SFT_IDENT, SFTC_AT, NULL, NULL );
 					else
 					{
-						expr->next = make_node( SFT_IDENT, at, NULL, NULL );
+						expr->next = make_node( SFT_IDENT, SFTC_AT, NULL, NULL );
 						expr = expr->next;
 					}
-					at = sgsT_Next( at );
+					SFTC_NEXT;
 
-					if( *at != ST_OP_SET )
+					if( !SFTC_IS( ST_OP_SET ) )
 					{
-						sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected '=' in dictionary expression" );
+						SFTC_PRINTERR( "Expected '=' in dictionary expression" );
 						break;
 					}
-					at = sgsT_Next( at );
+					SFTC_NEXT;
 
-					expend = detect_exp( C, at, end, ",}", 1 );
-					if( !expend )
-					{
-						sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Could not find end of expression" );
-						break;
-					}
-
-					expr->next = parse_exp( C, at, expend );
-					at = expend;
+					expr->next = parse_exp( F, ",}", 2 );
 					if( !expr->next )
 						break;
 					else
 						expr = expr->next;
 
-					if( *at == ',' )
-						at = sgsT_Next( at );
+					if( SFTC_IS( ',' ) )
+						SFTC_NEXT;
 				}
-				if( *at != '}' )
+				if( !SFTC_IS( '}' ) )
 				{
 					if( fexp )
 						sgsFT_Destroy( fexp );
-					C->state |= SGS_HAS_ERRORS;
+					SFTC_SETERR;
 				}
 				else
 				{
@@ -764,109 +764,121 @@ static FTNode* parse_exp( SGS_CTX, TokenList begin, TokenList end )
 			}
 			else
 			{
-				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Unexpected token '%c' found!", *at );
-				C->state |= SGS_MUST_STOP;
+				sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, "Unexpected token '%c' found!", *SFTC_AT );
+				F->C->state |= SGS_MUST_STOP;
 			}
 		}
 		else
 		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "INTERNAL ERROR in parse_exp: unknown token found!" );
-			C->state |= SGS_MUST_STOP;
+			SFTC_PRINTERR( "INTERNAL ERROR in parse_exp: unknown token found!" );
+			F->C->state |= SGS_MUST_STOP;
 		}
 
-		if( C->state & SGS_MUST_STOP )
+		if( F->C->state & SGS_MUST_STOP )
 		{
 			sgsFT_Destroy( node );
 			FUNC_END;
 			return NULL;
 		}
 
-		prev = *at;
-		at = sgsT_Next( at );
+		prev = *SFTC_AT;
+		SFTC_NEXT;
 	}
 
 	cur = node->next;
 	sgs_Free( node );
 	node = cur;
-	if( !level_exp( C, &node ) )
-	{
-		C->state |= SGS_HAS_ERRORS;
-		if( node ) sgsFT_Destroy( node );
-		FUNC_END;
-		return NULL;
-	}
+	if( !level_exp( F->C, &node ) )
+		goto fail;
 
 	FUNC_END;
 	return node;
+
+fail:
+	SFTC_SETERR;
+	if( node ) sgsFT_Destroy( node );
+	FUNC_END;
+	return NULL;
 }
 
 
-/* Statement parsing
-*/
 
-static FTNode* parse_explist( SGS_CTX, TokenList begin, TokenList end, char endtok )
+
+
+SFTRET parse_explist( SFTC, char endtok )
 {
-	TokenList at = begin;
-	FTNode* explist = make_node( SFT_EXPLIST, at, NULL, NULL );
+	FTNode* explist = make_node( SFT_EXPLIST, SFTC_AT, NULL, NULL );
 	FTNode* curexp = NULL, *node;
 	char endtoklist[] = { ',', endtok, 0 };
 
-	while( at < end )
+	for(;;)
 	{
-		TokenList epe = detect_exp( C, at, end, endtoklist, 0 );
-		if( !epe )
+		if( SFTC_IS( endtok ) )
 		{
+			break;
+		}
+		else if( SFTC_IS( 0 ) )
+		{
+			SFTC_UNEXP;
+			SFTC_SETERR;
 			sgsFT_Destroy( explist );
-			C->state |= SGS_HAS_ERRORS;
 			return NULL;
 		}
-		node = parse_exp( C, at, epe );
-		if( curexp ) curexp->next = node;
-		else explist->child = node;
-		curexp = node;
-		at = sgsT_Next( epe );
+		else if( SFTC_IS( ',' ) )
+		{
+			node = parse_exp( F, endtoklist, 2 );
+			if( curexp )
+				curexp->next = node;
+			else
+				explist->child = node;
+			curexp = node;
+			SFTC_NEXT;
+		}
+		else
+		{
+			sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, "Expected ',' or '%c'", endtok );
+			SFTC_SETERR;
+			sgsFT_Destroy( explist );
+			return NULL;
+		}
 	}
 
 	return explist;
 }
 
-static FTNode* parse_if( SGS_CTX, TokenList* begin, TokenList end )
+SFTRET parse_if( SFTC )
 {
 	FTNode *node = NULL, *nexp = NULL, *nif = NULL, *nelse = NULL;
-	TokenList at = *begin;
-	TokenList expend;
+	TokenList begin = SFTC_AT;
 
 	FUNC_BEGIN;
 
-	at = sgsT_Next( at );
-	if( *at != '(' )
+	SFTC_NEXT;
+	if( !SFTC_IS( '(' ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected '(' after 'if'" );
+		SFTC_PRINTERR( "Expected '(' after 'if'" );
 		goto fail;
 	}
 
-	at = sgsT_Next( at );
-	expend = detect_exp( C, at, end, ")", 0 );
-	if( !expend ) goto fail;
+	SFTC_NEXT;
 
-	nexp = parse_exp( C, at, expend );
-	at = sgsT_Next( expend );
-	if( !nexp || ( C->state & SGS_HAS_ERRORS ) ) goto fail;
+	nexp = parse_exp( F, ")", 1 );
+	if( !nexp ) goto fail;
+	SFTC_NEXT;
 
-	nif = parse_stmt( C, &at, end );
-	if( !nif || ( C->state & SGS_HAS_ERRORS ) ) goto fail;
+	nif = parse_stmt( F );
+	if( !nif ) goto fail;
 
-	if( is_keyword( at, "else" ) )
+	if( SFTC_ISKEY( "else" ) )
 	{
-		at = sgsT_Next( at );
-		nelse = parse_stmt( C, &at, end );
-		if( !nelse || ( C->state & SGS_HAS_ERRORS ) ) goto fail;
+		SFTC_NEXT;
+		nelse = parse_stmt( F );
+		if( !nelse ) goto fail;
 	}
 
 	nexp->next = nif;
 	nif->next = nelse;
-	node = make_node( SFT_IFELSE, *begin, NULL, nexp );
-	*begin = at;
+	node = make_node( SFT_IFELSE, begin, NULL, nexp );
 
 	FUNC_END;
 	return node;
@@ -875,39 +887,36 @@ fail:
 	if( nexp ) sgsFT_Destroy( nexp );
 	if( nif ) sgsFT_Destroy( nif );
 	if( nelse ) sgsFT_Destroy( nelse );
-	C->state |= SGS_HAS_ERRORS;
+	SFTC_SETERR;
 	FUNC_END;
 	return NULL;
 }
 
-static FTNode* parse_while( SGS_CTX, TokenList* begin, TokenList end )
+SFTRET parse_while( SFTC )
 {
 	FTNode *node, *nexp = NULL, *nwhile = NULL;
-	TokenList at = *begin;
-	TokenList expend;
+	TokenList begin = SFTC_AT;
 
 	FUNC_BEGIN;
 
-	at = sgsT_Next( at );
-	if( *at != '(' )
+	SFTC_NEXT;
+	if( !SFTC_IS( '(' ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected '(' after 'while'" );
+		SFTC_PRINTERR( "Expected '(' after 'while'" );
 		goto fail;
 	}
-	at = sgsT_Next( at );
-	expend = detect_exp( C, at, end, ")", 0 );
-	if( !expend ) goto fail;
 
-	nexp = parse_exp( C, at, expend );
-	at = sgsT_Next( expend );
+	SFTC_NEXT;
+
+	nexp = parse_exp( F, ")", 1 );
 	if( !nexp ) goto fail;
+	SFTC_NEXT;
 
-	nwhile = parse_stmt( C, &at, end );
+	nwhile = parse_stmt( F );
 	if( !nwhile ) goto fail;
 
 	nexp->next = nwhile;
-	node = make_node( SFT_WHILE, *begin, NULL, nexp );
-	*begin = at;
+	node = make_node( SFT_WHILE, begin, NULL, nexp );
 
 	FUNC_END;
 	return node;
@@ -915,46 +924,42 @@ static FTNode* parse_while( SGS_CTX, TokenList* begin, TokenList end )
 fail:
 	if( nexp ) sgsFT_Destroy( nexp );
 	if( nwhile ) sgsFT_Destroy( nwhile );
-	C->state |= SGS_HAS_ERRORS;
+	SFTC_SETERR;
 	FUNC_END;
 	return NULL;
 }
 
-static FTNode* parse_dowhile( SGS_CTX, TokenList* begin, TokenList end )
+SFTRET parse_dowhile( SFTC )
 {
 	FTNode *node, *nexp = NULL, *nwhile = NULL;
-	TokenList at = *begin;
-	TokenList expend;
+	TokenList begin = SFTC_AT;
 
 	FUNC_BEGIN;
 
-	at = sgsT_Next( at );
-	nwhile = parse_stmt( C, &at, end );
+	SFTC_NEXT;
+	nwhile = parse_stmt( F );
 	if( !nwhile ) goto fail;
 
-	if( !is_keyword( at, "while" ) )
+	if( !SFTC_ISKEY( "while" ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected 'while' after statement in do/while" );
+		SFTC_PRINTERR( "Expected 'while' after statement in do/while" );
 		goto fail;
 	}
 
-	at = sgsT_Next( at );
-	if( *at != '(' )
+	SFTC_NEXT;
+	if( !SFTC_IS( '(' ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected '(' after 'while'" );
+		SFTC_PRINTERR( "Expected '(' after 'while'" );
 		goto fail;
 	}
-	at = sgsT_Next( at );
-	expend = detect_exp( C, at, end, ")", 0 );
-	if( !expend ) goto fail;
 
-	nexp = parse_exp( C, at, expend );
-	at = sgsT_Next( expend );
+	SFTC_NEXT;
+
+	nexp = parse_exp( F, ")", 1 );
 	if( !nexp ) goto fail;
 
 	nexp->next = nwhile;
-	node = make_node( SFT_DOWHILE, *begin, NULL, nexp );
-	*begin = at;
+	node = make_node( SFT_DOWHILE, begin, NULL, nexp );
 
 	FUNC_END;
 	return node;
@@ -962,56 +967,46 @@ static FTNode* parse_dowhile( SGS_CTX, TokenList* begin, TokenList end )
 fail:
 	if( nexp ) sgsFT_Destroy( nexp );
 	if( nwhile ) sgsFT_Destroy( nwhile );
-	C->state |= SGS_HAS_ERRORS;
+	SFTC_SETERR;
 	FUNC_END;
 	return NULL;
 }
 
-static FTNode* parse_for( SGS_CTX, TokenList* begin, TokenList end )
+SFTRET parse_for( SFTC )
 {
 	FTNode *node, *ninit = NULL, *nexp = NULL, *nincr = NULL, *nwhile = NULL;
-	TokenList at = *begin;
-	TokenList expend;
+	TokenList begin = SFTC_AT;
 
 	FUNC_BEGIN;
 
-	at = sgsT_Next( at );
-	if( *at != '(' )
+	SFTC_NEXT;
+	if( !SFTC_IS( '(' ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected '(' after 'for'" );
+		SFTC_PRINTERR( "Expected '(' after 'for'" );
 		goto fail;
 	}
-	at = sgsT_Next( at );
 
-	expend = detect_exp( C, at, end, ";", 0 );
-	if( !expend ) goto fail;
-	expend = sgsT_Next( expend );
-	ninit = parse_explist( C, at, expend, ';' );
-	at = expend;
+	SFTC_NEXT;
+
+	ninit = parse_explist( F, ';' );
 	if( !ninit ) goto fail;
+	SFTC_NEXT;
 
-	expend = detect_exp( C, at, end, ";", 0 );
-	if( !expend ) goto fail;
-	expend = sgsT_Next( expend );
-	nexp = parse_explist( C, at, expend, ';' );
-	at = expend;
+	nexp = parse_explist( F, ';' );
 	if( !nexp ) goto fail;
+	SFTC_NEXT;
 
-	expend = detect_exp( C, at, end, ")", 0 );
-	if( !expend ) goto fail;
-	expend = sgsT_Next( expend );
-	nincr = parse_explist( C, at, expend, ')' );
-	at = expend;
+	nincr = parse_explist( F, ')' );
 	if( !nincr ) goto fail;
+	SFTC_NEXT;
 
-	nwhile = parse_stmt( C, &at, end );
+	nwhile = parse_stmt( F );
 	if( !nwhile ) goto fail;
 
 	ninit->next = nexp;
 	nexp->next = nincr;
 	nincr->next = nwhile;
-	node = make_node( SFT_FOR, *begin, NULL, ninit );
-	*begin = at;
+	node = make_node( SFT_FOR, begin, NULL, ninit );
 
 	FUNC_END;
 	return node;
@@ -1021,56 +1016,52 @@ fail:
 	if( nexp ) sgsFT_Destroy( nexp );
 	if( nincr ) sgsFT_Destroy( nincr );
 	if( nwhile ) sgsFT_Destroy( nwhile );
-	C->state |= SGS_HAS_ERRORS;
+	SFTC_SETERR;
 	FUNC_END;
 	return NULL;
 }
 
-static FTNode* parse_foreach( SGS_CTX, TokenList* begin, TokenList end )
+SFTRET parse_foreach( SFTC )
 {
 	FTNode *node, *nvar = NULL, *nexp = NULL, *nwhile = NULL;
-	TokenList at = *begin;
-	TokenList expend;
+	TokenList begin = SFTC_AT;
 
 	FUNC_BEGIN;
 
-	at = sgsT_Next( at );
-	if( *at != '(' )
+	SFTC_NEXT;
+	if( !SFTC_IS( '(' ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected '(' after 'foreach'" );
+		SFTC_PRINTERR( "Expected '(' after 'foreach'" );
 		goto fail;
 	}
 
-	at = sgsT_Next( at );
-	if( *at != ST_IDENT )
+	SFTC_NEXT;
+	if( !SFTC_IS( ST_IDENT ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected identifier after '(' in 'foreach'" );
+		SFTC_PRINTERR( "Expected identifier after '(' in 'foreach'" );
 		goto fail;
 	}
-	nvar = make_node( SFT_IDENT, at, NULL, NULL );
+	nvar = make_node( SFT_IDENT, SFTC_AT, NULL, NULL );
 
-	at = sgsT_Next( at );
-	if( *at != ':' )
+	SFTC_NEXT;
+	if( !SFTC_IS( ':' ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected ':' after identifier in 'foreach'" );
+		SFTC_PRINTERR( "Expected ':' after identifier in 'foreach'" );
 		goto fail;
 	}
 
-	at = sgsT_Next( at );
-	expend = detect_exp( C, at, end, ")", 0 );
-	if( !expend ) goto fail;
-	expend = sgsT_Next( expend );
-	nexp = parse_explist( C, at, expend, ')' );
-	at = expend;
+	SFTC_NEXT;
+
+	nexp = parse_explist( F, ')' );
 	if( !nexp ) goto fail;
 
-	nwhile = parse_stmt( C, &at, end );
+	SFTC_NEXT;
+	nwhile = parse_stmt( F );
 	if( !nwhile ) goto fail;
 
 	nvar->next = nexp;
 	nexp->next = nwhile;
-	node = make_node( SFT_FOREACH, *begin, NULL, nvar );
-	*begin = at;
+	node = make_node( SFT_FOREACH, begin, NULL, nvar );
 
 	FUNC_END;
 	return node;
@@ -1083,62 +1074,59 @@ fail:
 	return NULL;
 }
 
-static FTNode* parse_function( SGS_CTX, TokenList* begin, TokenList end, int inexp )
+SFTRET parse_function( SFTC, int inexp )
 {
 	FTNode *node, *nname = NULL, *nargs = NULL, *nbody = NULL;
-	TokenList at = *begin;
-	TokenList expend;
+	TokenList begin = SFTC_AT;
 
 	FUNC_BEGIN;
 
-	at = sgsT_Next( at );
+	SFTC_NEXT;
 	if( !inexp )
 	{
-		if( *at != ST_IDENT )
+		if( !SFTC_IS( ST_IDENT ) )
 		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Expected identifier after 'function'" );
+			SFTC_PRINTERR( "Expected identifier after 'function'" );
 			goto fail;
 		}
-		nname = make_node( SFT_IDENT, at, NULL, NULL );
-		at = sgsT_Next( at );
-		if( *at == ST_OP_MMBR )
+		nname = make_node( SFT_IDENT, SFTC_AT, NULL, NULL );
+		SFTC_NEXT;
+		if( SFTC_IS( ST_OP_MMBR ) )
 		{
-			nname = make_node( SFT_OPER, at, NULL, nname );
-			at = sgsT_Next( at );
-			if( *at != ST_IDENT )
+			nname = make_node( SFT_OPER, SFTC_AT, NULL, nname );
+			SFTC_NEXT;
+			if( !SFTC_IS( ST_IDENT ) )
 			{
-				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ),
-					"Expected identifier after 'function', identifier and '.'" );
+				SFTC_PRINTERR( "Expected identifier after 'function', identifier and '.'" );
 				goto fail;
 			}
 			else
 			{
-				nname->child->next = make_node( SFT_IDENT, at, NULL, NULL );
-				at = sgsT_Next( at );
+				nname->child->next = make_node( SFT_IDENT, SFTC_AT, NULL, NULL );
+				SFTC_NEXT;
 			}
 		}
 	}
 
-	if( *at != '(' )
+	if( !SFTC_IS( '(' ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), inexp ? "Expected '(' after 'function'"
-					: "Expected '(' after 'function' and its name" );
+		SFTC_PRINTERR( inexp ? "Expected '(' after 'function'"
+			: "Expected '(' after 'function' and its name" );
 		goto fail;
 	}
-	at = sgsT_Next( at );
-	expend = detect_exp( C, at, end, ")", 0 );
-	if( !expend ) goto fail;
-	nargs = parse_arglist( C, at, expend );
-	at = sgsT_Next( expend );
-	if( !nargs ) goto fail;
 
-	nbody = parse_stmt( C, &at, end );
+	SFTC_NEXT;
+
+	nargs = parse_arglist( F, ')' );
+	if( !nargs ) goto fail;
+	SFTC_NEXT;
+
+	nbody = parse_stmt( F );
 	if( !nbody ) goto fail;
 
 	nargs->next = nbody;
 	nbody->next = nname;
-	node = make_node( SFT_FUNC, *begin, NULL, nargs );
-	*begin = at;
+	node = make_node( SFT_FUNC, begin, NULL, nargs );
 
 	FUNC_END;
 	return node;
@@ -1147,239 +1135,169 @@ fail:
 	if( nname ) sgsFT_Destroy( nname );
 	if( nargs ) sgsFT_Destroy( nargs );
 	if( nbody ) sgsFT_Destroy( nbody );
-	C->state |= SGS_HAS_ERRORS;
+	SFTC_SETERR;
 	FUNC_END;
 	return NULL;
 }
 
-static FTNode* parse_stmt( SGS_CTX, TokenList* begin, TokenList end )
+SFTRET parse_stmt( SFTC )
 {
 	FTNode* node;
-	TokenList at = *begin;
 
 	FUNC_BEGIN;
 
-	sgs_BreakIf( !C );
-	sgs_BreakIf( !at );
-	sgs_BreakIf( !*at );
+	SFTC_VALIDATE;
 
 	/* IF / ELSE */
-	if( is_keyword( at, "if" ) )
+	if( SFTC_ISKEY( "if" ) ) { node = parse_if( F ); FUNC_END; return node; }
+	else if( SFTC_ISKEY( "else" ) )
 	{
-		node = parse_if( C, begin, end );
-		FUNC_END;
-		return node;
-	}
-	else if( is_keyword( at, "else" ) )
-	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Found 'else' without matching 'if'." );
-		C->state |= SGS_HAS_ERRORS;
-		*begin = sgsT_Next( at );
-		FUNC_END;
-		return NULL;
+		SFTC_PRINTERR( "Found 'else' without matching 'if'." );
+		goto fail;
 	}
 	/* WHILE */
-	else if( is_keyword( at, "while" ) )
-	{
-		node = parse_while( C, begin, end );
-		FUNC_END;
-		return node;
-	}
+	else if( SFTC_ISKEY( "while" ) ) { node = parse_while( F ); FUNC_END; return node; }
 	/* DO / WHILE */
-	else if( is_keyword( at, "do" ) )
-	{
-		node = parse_dowhile( C, begin, end );
-		FUNC_END;
-		return node;
-	}
+	else if( SFTC_ISKEY( "do" ) ) { node = parse_dowhile( F ); FUNC_END; return node; }
 	/* FOR */
-	else if( is_keyword( at, "for" ) )
-	{
-		node = parse_for( C, begin, end );
-		FUNC_END;
-		return node;
-	}
+	else if( SFTC_ISKEY( "for" ) ) { node = parse_for( F ); FUNC_END; return node; }
 	/* FOREACH */
-	else if( is_keyword( at, "foreach" ) )
-	{
-		node = parse_foreach( C, begin, end );
-		FUNC_END;
-		return node;
-	}
+	else if( SFTC_ISKEY( "foreach" ) ) { node = parse_foreach( F ); FUNC_END; return node; }
 	/* BREAK */
-	else if( is_keyword( at, "break" ) )
+	else if( SFTC_ISKEY( "break" ) )
 	{
-		TokenList expend, orig = at;
-		at = sgsT_Next( at );
-		expend = detect_exp( C, at, end, ";", 0 );
-		if( expend && ( ( expend == at ) || ( expend == sgsT_Next( at ) && *at == ST_NUMINT ) ) )
+		TokenList orig = SFTC_AT;
+		SFTC_NEXT;
+
+		if( SFTC_IS( ST_NUMINT ) )
 		{
-			if( *at == ST_NUMINT )
+			sgs_Integer blev = *(sgs_Integer*)( SFTC_AT + 1 );
+			if( blev < 1 || blev > 255 )
 			{
-				sgs_Integer blev = *(sgs_Integer*)( at + 1 );
-				if( blev < 1 || blev > 255 )
-				{
-					sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Invalid break level (can be between 1 and 255)" );
-					goto fail;
-				}
+				SFTC_PRINTERR( "Invalid break level (can be between 1 and 255)" );
+				goto fail;
 			}
-			expend = sgsT_Next( expend );
-			node = make_node( SFT_BREAK, orig, NULL, NULL );
-		}
-		else
-		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Invalid 'break' syntax, needs 'break;' or 'break <int>;'." );
-			goto fail;
+			SFTC_NEXT;
 		}
 
-		*begin = expend;
+		node = make_node( SFT_BREAK, orig, NULL, NULL );
+
 		FUNC_END;
 		return node;
 	}
 	/* CONTINUE */
-	else if( is_keyword( at, "continue" ) )
+	else if( SFTC_ISKEY( "continue" ) )
 	{
-		TokenList expend, orig = at;
-		at = sgsT_Next( at );
-		expend = detect_exp( C, at, end, ";", 0 );
-		if( expend && ( ( expend == at ) || ( expend == sgsT_Next( at ) && *at == ST_NUMINT ) ) )
+		TokenList orig = SFTC_AT;
+		SFTC_NEXT;
+
+		if( SFTC_IS( ST_NUMINT ) )
 		{
-			if( *at == ST_NUMINT )
+			sgs_Integer blev = *(sgs_Integer*)( SFTC_AT + 1 );
+			if( blev < 1 || blev > 255 )
 			{
-				sgs_Integer blev = *(sgs_Integer*)( at + 1 );
-				if( blev < 1 || blev > 255 )
-				{
-					sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Invalid continue level (can be between 1 and 255)" );
-					goto fail;
-				}
+				SFTC_PRINTERR( "Invalid continue level (can be between 1 and 255)" );
+				goto fail;
 			}
-			expend = sgsT_Next( expend );
-			node = make_node( SFT_CONT, orig, NULL, NULL );
-		}
-		else
-		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( at ), "Invalid 'continue' syntax, needs 'continue;' or 'continue <int>;'." );
-			goto fail;
+			SFTC_NEXT;
 		}
 
-		*begin = expend;
+		node = make_node( SFT_CONT, orig, NULL, NULL );
+
 		FUNC_END;
 		return node;
 	}
 	/* FUNCTION */
-	else if( is_keyword( at, "function" ) )
-	{
-		node = parse_function( C, begin, end, 0 );
-		FUNC_END;
-		return node;
-	}
+	else if( SFTC_ISKEY( "function" ) ) { node = parse_function( F, 0 ); FUNC_END; return node; }
 	/* RETURN */
-	else if( is_keyword( at, "return" ) )
+	else if( SFTC_ISKEY( "return" ) )
 	{
-		TokenList expend;
-		at = sgsT_Next( at );
-		expend = detect_exp( C, at, end, ";", 0 );
-		if( expend )
-		{
-			expend = sgsT_Next( expend );
-			node = parse_explist( C, at, expend, ';' );
-		}
-		else goto fail;
+		SFTC_NEXT;
+		node = parse_explist( F, ';' );
 
 		if( node )
 			node->type = SFT_RETURN;
-		*begin = expend;
+
+		SFTC_NEXT;
 		FUNC_END;
 		return node;
 	}
-	/* VAR */
-	else if( is_keyword( at, "var" ) )
+	/* VAR / GLOBAL - reuse code in parse_exp */
+	else if( SFTC_ISKEY( "var" ) || SFTC_ISKEY( "global" ) )
 	{
-		TokenList expend;
-		at = sgsT_Next( at );
-		expend = detect_exp( C, at, end, ";", 0 );
-		if( !expend ) goto fail;
+		node = parse_exp( F, ";", 1 );
+		if( !node )
+			goto fail;
+		if( !SFTC_IS( ';' ) )
+		{
+			SFTC_UNEXP;
+			sgsFT_Destroy( node );
+			goto fail;
+		}
 
-		node = parse_arglist( C, at, expend );
-		if( !node ) goto fail;
-
-		node->type = SFT_VARLIST;
-		*begin = sgsT_Next( expend );
-		FUNC_END;
-		return node;
-	}
-	/* GLOBAL */
-	else if( is_keyword( at, "global" ) )
-	{
-		TokenList expend;
-		at = sgsT_Next( at );
-		expend = detect_exp( C, at, end, ";", 0 );
-		if( !expend ) goto fail;
-
-		node = parse_arglist( C, at, expend );
-		if( !node ) goto fail;
-
-		node->type = SFT_GVLIST;
-		*begin = sgsT_Next( expend );
+		SFTC_NEXT;
 		FUNC_END;
 		return node;
 	}
 	/* BLOCK OF STATEMENTS */
-	else if( *at == ST_CBRKL )
+	else if( SFTC_IS( ST_CBRKL ) )
 	{
-		TokenList expend;
-		at = sgsT_Next( at );
-		expend = detect_exp( C, at, end, "}", 0 );
-		if( !expend ) goto fail;
-
-		node = parse_stmtlist( C, at, expend );
+		node = parse_stmtlist( F, '}' );
 		if( !node ) goto fail;
 
-		*begin = sgsT_Next( expend );
+		SFTC_NEXT;
 		FUNC_END;
 		return node;
 	}
 	/* SEPARATED STATEMENTS */
 	else
 	{
-		TokenList expend = detect_exp( C, at, end, ";", 0 );
-		if( expend )
+		node = parse_explist( F, ';' );
+		if( node )
 		{
-			expend = sgsT_Next( expend );
-			node = parse_explist( C, at, expend, ';' );
-			*begin = expend;
+			SFTC_NEXT;
 			FUNC_END;
 			return node;
 		}
 		else
-		{
-			C->state |= SGS_HAS_ERRORS;
-			FUNC_END;
-			return NULL;
-		}
+			goto fail;
 	}
 
 fail:
-	C->state |= SGS_HAS_ERRORS;
+	SFTC_SETERR;
 	FUNC_END;
 	return NULL;
 }
 
-static FTNode* parse_stmtlist( SGS_CTX, TokenList begin, TokenList end )
+SFTRET parse_stmtlist( SFTC, char end )
 {
 	FTNode* stmtlist = make_node( SFT_BLOCK, NULL, NULL, NULL );
 	FTNode* curstmt = NULL;
 
 	FUNC_BEGIN;
 
-	while( begin < end && *begin != ST_NULL )
+	for(;;)
 	{
-		FTNode* stmt = parse_stmt( C, &begin, end );
-		if( curstmt ) curstmt->next = stmt;
-		else stmtlist->child = stmt;
-		curstmt = stmt;
+		if( SFTC_IS( end ) )
+		{
+			break;
+		}
+		else if( SFTC_IS( 0 ) )
+		{
+			SFTC_UNEXP;
+			SFTC_SETERR;
+		}
+		else
+		{
+			FTNode* stmt = parse_stmt( F );
+			if( curstmt )
+				curstmt->next = stmt;
+			else
+				stmtlist->child = stmt;
+			curstmt = stmt;
+		}
 
-		if( C->state & SGS_MUST_STOP )
+		if( F->C->state & SGS_MUST_STOP )
 			break;
 	}
 
@@ -1389,8 +1307,10 @@ static FTNode* parse_stmtlist( SGS_CTX, TokenList begin, TokenList end )
 
 FTNode* sgsFT_Compile( SGS_CTX, TokenList tlist )
 {
-	return parse_stmtlist( C, tlist, (TokenList) PTR_MAX );
+	FTNode* ret;
+	FTComp F = { C, tlist };
+	ret = parse_stmtlist( &F, 0 );
+	return ret;
 }
 
-/* E N D */
 
