@@ -19,18 +19,7 @@ static int is_keyword( TokenList tok, const char* text )
 {
 	return *tok == ST_KEYWORD && tok[ 1 ] == strlen( text ) && strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
 }
-/*
-static char brace_opposite( char c )
-{
-	switch( c )
-	{
-	case '(':	return ')';
-	case '[':	return ']';
-	case '{':	return '}';
-	default:	return 0;
-	}
-}
-*/
+
 
 static FTNode* make_node( int type, TokenList token, FTNode* next, FTNode* child )
 {
@@ -150,80 +139,6 @@ SFTRET parse_function( SFTC, int inexp );
 
 
 
-
-
-/*
-	FUNC / finds the logical expected end of an expression
-	ARGS / context, token stream, list of ending characters
-	ERRS / brace mismatch, end of expression
-*/
-/*
-static TokenList detect_exp( SGS_CTX, TokenList at, TokenList end, const char* ends, int superr )
-{
-	StrBuf stack = strbuf_create();
-	LineNum line = -1, fline;
-
-	FUNC_BEGIN;
-	FUNC_INFO( "Looking for %s\n", ends );
-
-	sgs_BreakIf( !C );
-	sgs_BreakIf( !at );
-
-	if( !*at )
-	{
-		if( !superr )
-		{
-			sgs_Printf( C, SGS_ERROR, -1, "End of expression '%s' not found", ends );
-			C->state |= SGS_HAS_ERRORS;
-		}
-		goto fail2;
-	}
-
-	fline = sgsT_LineNum( at );
-	while( at < end && *at && ( stack.size > 0 || !isoneof( *at, ends ) ) )
-	{
-		line = sgsT_LineNum( at );
-		if( isoneof( *at, "([{" ) )
-		{
-			strbuf_appbuf( &stack, &line, sizeof( LineNum ) );
-			strbuf_appchr( &stack, brace_opposite( *at ) );
-		}
-		if( isoneof( *at, ")]}" ) )
-		{
-			if( stack.size == 0 || *at != stack.ptr[ stack.size - 1 ] )
-			{
-				sgs_Printf( C, SGS_ERROR, stack.size > 0 ? ST_READLN( stack.ptr + stack.size - 1 - sizeof( LineNum ) ) : -1,
-							"Brace mismatch detected at line %d!", line );
-				C->state |= SGS_HAS_ERRORS;
-				goto fail;
-			}
-			else
-				strbuf_resize( &stack, stack.size - 1 - sizeof( LineNum ) );
-		}
-		at = sgsT_Next( at );
-	}
-
-	if( !*at || at >= end )
-	{
-		if( !superr )
-		{
-			sgs_Printf( C, SGS_ERROR, fline, "End of expression '%s' not found", ends );
-			C->state |= SGS_HAS_ERRORS;
-		}
-		goto fail;
-	}
-
-	strbuf_destroy( &stack );
-	FUNC_END;
-	return at;
-
-fail:
-	strbuf_destroy( &stack );
-fail2:
-	FUNC_END;
-	return NULL;
-}
-*/
 
 
 SFTRET parse_arg( SFTC, int argid, char end )
@@ -699,7 +614,10 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 						curexpr = expr;
 
 						if( SFTC_IS( cend ) )
+						{
+							SFTC_NEXT;
 							break;
+						}
 
 						SFTC_NEXT;
 					}
@@ -764,7 +682,8 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 			}
 			else
 			{
-				sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, "Unexpected token '%c' found!", *SFTC_AT );
+				sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM,
+					"Unexpected token '%c' found! (prev=%c)", *SFTC_AT, prev );
 				F->C->state |= SGS_MUST_STOP;
 			}
 		}
@@ -811,6 +730,8 @@ SFTRET parse_explist( SFTC, char endtok )
 	FTNode* curexp = NULL, *node;
 	char endtoklist[] = { ',', endtok, 0 };
 
+	FUNC_BEGIN;
+
 	for(;;)
 	{
 		if( SFTC_IS( endtok ) )
@@ -820,30 +741,34 @@ SFTRET parse_explist( SFTC, char endtok )
 		else if( SFTC_IS( 0 ) )
 		{
 			SFTC_UNEXP;
-			SFTC_SETERR;
-			sgsFT_Destroy( explist );
-			return NULL;
+			goto fail;
 		}
-		else if( SFTC_IS( ',' ) )
+		else if( SFTC_IS( ',' ) || SFTC_AT == explist->token )
 		{
 			node = parse_exp( F, endtoklist, 2 );
+			if( !node )
+				goto fail;
 			if( curexp )
 				curexp->next = node;
 			else
 				explist->child = node;
 			curexp = node;
-			SFTC_NEXT;
 		}
 		else
 		{
 			sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, "Expected ',' or '%c'", endtok );
-			SFTC_SETERR;
-			sgsFT_Destroy( explist );
-			return NULL;
+			goto fail;
 		}
 	}
 
+	FUNC_END;
 	return explist;
+
+fail:
+	SFTC_SETERR;
+	sgsFT_Destroy( explist );
+	FUNC_END;
+	return NULL;
 }
 
 SFTRET parse_if( SFTC )
@@ -1242,6 +1167,7 @@ SFTRET parse_stmt( SFTC )
 	/* BLOCK OF STATEMENTS */
 	else if( SFTC_IS( ST_CBRKL ) )
 	{
+		SFTC_NEXT;
 		node = parse_stmtlist( F, '}' );
 		if( !node ) goto fail;
 
