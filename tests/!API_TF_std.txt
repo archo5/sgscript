@@ -8,6 +8,13 @@ print( "\n\n-- CORE FUNCTIONS --\n" );
 include_library( "type" );
 //
 
+	section( "array sizing" );
+var asz = [ 10, "huh", {}, 0.25, "end!" ];
+testEqual( clone(asz).resize(2)$'', '[10,huh]', "resize - 5 to 2" );
+testEqual( clone(asz).resize(2).resize(5)$'', '[10,huh,null,null,null]', "resize - 5 to 2 to 5" );
+testEqual( clone(asz).reserve(16).capacity, 16, "reserve - capacity check" );
+testEqual( clone(asz).reserve(1).capacity, 5, "reserve - less than current" );
+
 	section( "array.sort" );
 var arr = [ 9, 3, 6, 2, 8 ];
 testEqual( clone(arr).sort()$'', '[2,3,6,8,9]', "sort - basic integer sorting" );
@@ -20,6 +27,12 @@ testEqual( clone(arr).sort_custom( customSort, true )$'', '[9,3,8,6,2]', "sort_c
 var mapping = [ 1, 3, 2, 5, 4 ];
 testEqual( clone(arr).sort_mapped( mapping )$'', '[9,6,3,8,2]', "sort_mapped" );
 testEqual( clone(arr).sort_mapped( mapping, true )$'', '[2,8,3,6,9]', "sort_mapped (reversed)" );
+
+	section( "array utils" );
+var arr = [ 1, 5, 7, 3, 9 ];
+testEqual( clone(arr).reverse()$'', '[9,3,7,5,1]', "reverse - odd" );
+testEqual( clone(arr).resize(4).reverse()$'', '[3,7,5,1]', "reverse - even" );
+testEqual( [].reverse()$'', '[]', "reverse - none" );
 
 	section( "include_file" );
 testEqual( include_file( "tests/s_fnexp.txt" ), true, "include_file - basic inclusion" );

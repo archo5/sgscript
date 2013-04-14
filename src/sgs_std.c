@@ -155,7 +155,7 @@ static int sgsstd_arrayI_pop( SGS_CTX )
 	ptr = SGSARR_PTR( data->data );
 	if( !hdr->size )
 		STDLIB_WARN( "array.pop(): array is empty, cannot pop" );
-	
+
 	sgs_PushVariable( C, ptr + hdr->size - 1 );
 	sgsstd_array_erase( C, data, hdr->size - 1, hdr->size - 1 );
 	return 1;
@@ -167,7 +167,7 @@ static int sgsstd_arrayI_shift( SGS_CTX )
 	ptr = SGSARR_PTR( data->data );
 	if( !hdr->size )
 		STDLIB_WARN( "array.shift(): array is empty, cannot shift" );
-	
+
 	sgs_PushVariable( C, ptr );
 	sgsstd_array_erase( C, data, 0, 0 );
 	return 1;
@@ -183,6 +183,69 @@ static int sgsstd_arrayI_clear( SGS_CTX )
 {
 	SGSARR_IHDR( clear );
 	sgsstd_array_clear( C, data );
+	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	return 1;
+}
+static int sgsstd_arrayI_reverse( SGS_CTX )
+{
+	SGSARR_IHDR( reverse );
+
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "array.reverse(): unexpected arguments; function expects 0 arguments" )
+	
+	{
+		sgs_Variable tmp;
+		sgs_Variable* P = SGSARR_PTR( hdr );
+		sgs_SizeVal i, j, hsz = hdr->size / 2;
+		for( i = 0, j = hdr->size - 1; i < hsz; ++i, --j )
+		{
+			tmp = P[ i ];
+			P[ i ] = P[ j ];
+			P[ j ] = tmp;
+		}
+	}
+	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	return 1;
+}
+
+static void sgsstd_array_adjust( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal cnt )
+{
+	while( hdr->size > cnt )
+	{
+		sgs_Release( C, SGSARR_PTR( hdr ) + hdr->size - 1 );
+		hdr->size--;
+	}
+	while( hdr->size < cnt )
+	{
+		( SGSARR_PTR( hdr ) + (hdr->size++) )->type = SVT_NULL;
+	}
+}
+static int sgsstd_arrayI_resize( SGS_CTX )
+{
+	sgs_Integer sz;
+	int cnt = sgs_StackSize( C );
+	SGSARR_IHDR( resize );
+
+	if( cnt != 1 || !sgs_ParseInt( C, 1, &sz ) || sz < 0 )
+		STDLIB_WARN( "array.resize(): unexpected arguments;"
+			" function expects 1 argument: int (>= 0)" );
+
+	sgsstd_array_reserve( C, data, sz );
+	sgsstd_array_adjust( C, hdr, sz );
+	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	return 1;
+}
+static int sgsstd_arrayI_reserve( SGS_CTX )
+{
+	sgs_Integer sz;
+	int cnt = sgs_StackSize( C );
+	SGSARR_IHDR( reserve );
+
+	if( cnt != 1 || !sgs_ParseInt( C, 1, &sz ) || sz < 0 )
+		STDLIB_WARN( "array.reserve(): unexpected arguments;"
+			" function expects 1 argument: int (>= 0)" );
+
+	sgsstd_array_reserve( C, data, sz );
 	sgs_Pop( C, sgs_StackSize( C ) - 1 );
 	return 1;
 }
@@ -351,6 +414,9 @@ static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 	else if( 0 == strcmp( name, "shift" ) )     func = sgsstd_arrayI_shift;
 	else if( 0 == strcmp( name, "unshift" ) )   func = sgsstd_arrayI_unshift;
 	else if( 0 == strcmp( name, "clear" ) )     func = sgsstd_arrayI_clear;
+	else if( 0 == strcmp( name, "reverse" ) )   func = sgsstd_arrayI_reverse;
+	else if( 0 == strcmp( name, "resize" ) )    func = sgsstd_arrayI_resize;
+	else if( 0 == strcmp( name, "reserve" ) )   func = sgsstd_arrayI_reserve;
 	else if( 0 == strcmp( name, "sort" ) )      func = sgsstd_arrayI_sort;
 	else if( 0 == strcmp( name, "sort_custom" ) ) func = sgsstd_arrayI_sort_custom;
 	else if( 0 == strcmp( name, "sort_mapped" ) ) func = sgsstd_arrayI_sort_mapped;
