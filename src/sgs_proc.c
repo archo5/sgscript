@@ -1125,18 +1125,18 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 	}
 	if( a->type == SVT_INT && b->type == SVT_INT )
 	{
-		sgs_Integer A = a->data.I, B = b->data.I, R;
+		sgs_Integer A = a->data.I, B = b->data.I;
 		switch( op ){
 			/*
 			case ARITH_OP_ADD: R = A + B; break;
 			case ARITH_OP_SUB: R = A - B; break;
 			case ARITH_OP_MUL: R = A * B; break;
 			*/
-			case ARITH_OP_DIV: if( B == 0 ) goto div0err; R = A / B; break;
-			case ARITH_OP_MOD: if( B == 0 ) goto div0err; R = A % B; break;
-			default: R = 0; break;
+			case ARITH_OP_DIV: if( B == 0 ) goto div0err;
+				var_setreal( C, out, ((sgs_Real) A) / ((sgs_Real) B) ); break;
+			case ARITH_OP_MOD: if( B == 0 ) goto div0err; var_setint( C, out, A % B ); break;
+			default: var_setint( C, out, 0 ); break;
 		}
-		var_setint( C, out, R );
 	}
 
 	if( a->type == SVT_OBJECT || b->type == SVT_OBJECT )
@@ -1190,7 +1190,8 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 			case ARITH_OP_ADD: R = A + B; break;
 			case ARITH_OP_SUB: R = A - B; break;
 			case ARITH_OP_MUL: R = A * B; break;
-			case ARITH_OP_DIV: if( B == 0 ) goto div0err; R = A / B; break;
+			case ARITH_OP_DIV: if( B == 0 ) goto div0err;
+				var_setreal( C, out, ((sgs_Real) A) / ((sgs_Real) B) ); return;
 			case ARITH_OP_MOD: if( B == 0 ) goto div0err; R = A % B; break;
 			default: R = 0; break;
 		}
@@ -2164,6 +2165,12 @@ SGSRESULT sgs_CloneItem( SGS_CTX, int item )
 sgs_Real sgs_CompareF( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
 {
 	return vm_compare( C, v1, v2 );
+}
+
+SGSBOOL sgs_EqualTypes( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
+{
+	return v1->type == v2->type && ( v1->type != SVT_OBJECT
+		|| v1->data.O->iface == v2->data.O->iface );
 }
 
 

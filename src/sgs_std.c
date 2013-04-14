@@ -447,6 +447,41 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 	}
 }
 
+static int sgsstd_arrayI_find( SGS_CTX )
+{
+	int strict = FALSE;
+	int cnt = sgs_StackSize( C );
+	sgs_Integer from = 0;
+	SGSARR_IHDR( find );
+	if( cnt < 1 || cnt > 3 ||
+		( cnt >= 2 && !sgs_ParseBool( C, 2, &strict ) ) ||
+		( cnt >= 3 && !sgs_ParseInt( C, 3, &from ) ) )
+		STDLIB_WARN( "array.find(): unexpected arguments;"
+			" function expects 1-3 arguments: any[, bool[, int]]" )
+
+	{
+		sgs_Variable* comp = sgs_StackItem( C, 1 );
+		sgs_SizeVal off = from;
+		while( off < hdr->size )
+		{
+			sgs_Variable* p = SGSARR_PTR( hdr ) + off;
+			if( ( !strict || sgs_EqualTypes( C, p, comp ) )
+				&& sgs_CompareF( C, p, comp ) == 0 )
+			{
+				sgs_PushInt( C, off );
+				return 1;
+			}
+			off++;
+		}
+		return 0;
+	}
+}
+
+static int sgsstd_arrayI_remove( SGS_CTX )
+{
+	return 0;
+}
+
 static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 {
 	const char* name = sgs_ToString( C, -1 );
@@ -476,6 +511,8 @@ static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 	else if( 0 == strcmp( name, "sort" ) )      func = sgsstd_arrayI_sort;
 	else if( 0 == strcmp( name, "sort_custom" ) ) func = sgsstd_arrayI_sort_custom;
 	else if( 0 == strcmp( name, "sort_mapped" ) ) func = sgsstd_arrayI_sort_mapped;
+	else if( 0 == strcmp( name, "find" ) )      func = sgsstd_arrayI_find;
+	else if( 0 == strcmp( name, "remove" ) )    func = sgsstd_arrayI_remove;
 	else return SGS_ENOTFND;
 
 	sgs_PushCFunction( C, func );

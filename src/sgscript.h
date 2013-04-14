@@ -300,6 +300,7 @@ SGSRESULT sgs_CloneItem( SGS_CTX, int item );
 sgs_Real sgs_CompareF( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 );
 static SGS_INLINE int sgs_Compare( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
 { sgs_Real v = sgs_CompareF( C, v1, v2 ); if( v < 0 ) return -1; return v > 0 ? 1 : 0; }
+SGSBOOL sgs_EqualTypes( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 );
 
 /*
 	CONVERSION / RETRIEVAL
