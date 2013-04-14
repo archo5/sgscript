@@ -64,10 +64,11 @@ static void sgsstd_array_clear( SGS_CTX, sgs_VarObj* data )
 	hdr->size = 0;
 }
 
-static void sgsstd_array_insert( SGS_CTX, sgs_VarObj* data, uint32_t pos )
+/* off = offset in stack to start inserting from (1 = the first argument in methods) */
+static void sgsstd_array_insert( SGS_CTX, sgs_VarObj* data, uint32_t pos, int off )
 {
 	int i;
-	uint32_t cnt = sgs_StackSize( C ) - 1;
+	uint32_t cnt = sgs_StackSize( C ) - off;
 	SGSARR_HDR;
 	uint32_t nsz = hdr->size + cnt;
 	sgs_Variable* ptr = SGSARR_PTR( data->data );
@@ -82,11 +83,11 @@ static void sgsstd_array_insert( SGS_CTX, sgs_VarObj* data, uint32_t pos )
 	}
 	if( pos < hdr->size )
 		memmove( ptr + pos + cnt, ptr + pos, ( hdr->size - pos ) * SGSARR_UNIT );
-	for( i = 1; i < sgs_StackSize( C ); ++i )
+	for( i = off; i < sgs_StackSize( C ); ++i )
 	{
 		sgs_Variable* var = sgs_StackItem( C, i );
 		sgs_Acquire( C, var );
-		ptr[ pos + i - 1 ] = *var;
+		ptr[ pos + i - off ] = *var;
 	}
 	hdr->size = nsz;
 }
@@ -144,7 +145,7 @@ static int sgsstd_array_clone( SGS_CTX, sgs_VarObj* data )
 static int sgsstd_arrayI_push( SGS_CTX )
 {
 	SGSARR_IHDR( push );
-	sgsstd_array_insert( C, data, hdr->size );
+	sgsstd_array_insert( C, data, hdr->size, 1 );
 	sgs_Pop( C, sgs_StackSize( C ) - 1 );
 	return 1;
 }
@@ -175,10 +176,62 @@ static int sgsstd_arrayI_shift( SGS_CTX )
 static int sgsstd_arrayI_unshift( SGS_CTX )
 {
 	SGSARR_IHDR( unshift );
-	sgsstd_array_insert( C, data, 0 );
+	sgsstd_array_insert( C, data, 0, 1 );
 	sgs_Pop( C, sgs_StackSize( C ) - 1 );
 	return 1;
 }
+
+static int sgsstd_arrayI_insert( SGS_CTX )
+{
+	sgs_Integer at;
+	SGSARR_IHDR( insert );
+	if( sgs_StackSize( C ) < 3 || !sgs_ParseInt( C, 1, &at ) )
+		STDLIB_WARN( "array.insert(): unexpected arguments;"
+			" function expects 2+ arguments: int, any+" )
+
+	if( at < 0 )
+		at += hdr->size + 1;
+	if( at < 0 || at > hdr->size )
+		STDLIB_WARN( "array.insert(): index out of bounds" )
+
+	sgsstd_array_insert( C, data, at, 2 );
+	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	return 1;
+}
+static int sgsstd_arrayI_erase( SGS_CTX )
+{
+	int cnt = sgs_StackSize( C );
+	sgs_Integer at, at2;
+	SGSARR_IHDR( erase );
+	if( cnt < 1 || cnt > 2 || !sgs_ParseInt( C, 1, &at ) ||
+		( cnt == 2 && !sgs_ParseInt( C, 2, &at2 ) ) )
+		STDLIB_WARN( "array.erase(): unexpected arguments;"
+			" function expects 1-2 arguments: int[, int]" )
+
+	if( at < 0 )
+		at += hdr->size;
+	if( at < 0 || at >= hdr->size )
+		STDLIB_WARN( "array.erase(): index out of bounds" )
+
+	if( cnt == 1 )
+		at2 = at;
+	else
+	{
+		if( at2 < 0 )
+			at2 += hdr->size;
+		if( at2 < 0 || at2 >= hdr->size )
+			STDLIB_WARN( "array.erase(): index out of bounds" )
+
+		if( at2 < at )
+			STDLIB_WARN( "array.erase(): after resolving,"
+				" index #1 must be smaller or equal than index #2" )
+	}
+
+	sgsstd_array_erase( C, data, at, at2 );
+	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	return 1;
+}
+
 static int sgsstd_arrayI_clear( SGS_CTX )
 {
 	SGSARR_IHDR( clear );
@@ -186,6 +239,7 @@ static int sgsstd_arrayI_clear( SGS_CTX )
 	sgs_Pop( C, sgs_StackSize( C ) - 1 );
 	return 1;
 }
+
 static int sgsstd_arrayI_reverse( SGS_CTX )
 {
 	SGSARR_IHDR( reverse );
@@ -413,6 +467,8 @@ static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 	else if( 0 == strcmp( name, "pop" ) )       func = sgsstd_arrayI_pop;
 	else if( 0 == strcmp( name, "shift" ) )     func = sgsstd_arrayI_shift;
 	else if( 0 == strcmp( name, "unshift" ) )   func = sgsstd_arrayI_unshift;
+	else if( 0 == strcmp( name, "insert" ) )    func = sgsstd_arrayI_insert;
+	else if( 0 == strcmp( name, "erase" ) )     func = sgsstd_arrayI_erase;
 	else if( 0 == strcmp( name, "clear" ) )     func = sgsstd_arrayI_clear;
 	else if( 0 == strcmp( name, "reverse" ) )   func = sgsstd_arrayI_reverse;
 	else if( 0 == strcmp( name, "resize" ) )    func = sgsstd_arrayI_resize;

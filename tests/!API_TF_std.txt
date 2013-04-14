@@ -8,15 +8,33 @@ print( "\n\n-- CORE FUNCTIONS --\n" );
 include_library( "type" );
 //
 
-	section( "array sizing" );
 var asz = [ 10, "huh", {}, 0.25, "end!" ];
+var arr = [ 9, 3, 6, 2, 8 ];
+
+	section( "array basic ops" );
+testEqual( clone(arr).insert(0,1,4)$'', '[1,4,9,3,6,2,8]', "insert at beginning" );
+testEqual( clone(arr).insert(-1,1,4)$'', '[9,3,6,2,8,1,4]', "insert at end" );
+testEqual( clone(arr).insert(3,1,4)$'', '[9,3,6,1,4,2,8]', "insert at middle" );
+ERRORS = ""; testEqual( clone(arr).insert(6,5), null, "insert - out of bounds" );
+testEqual( ERRORS, "[W:array.insert(): index out of bounds]" );
+testEqual( clone(arr).erase(0)$'', '[3,6,2,8]', "erase one at beginning" );
+testEqual( clone(arr).erase(2)$'', '[9,3,2,8]', "erase one at middle" );
+testEqual( clone(arr).erase(-1)$'', '[9,3,6,2]', "erase one at end" );
+testEqual( clone(arr).erase(0,2)$'', '[2,8]', "erase many at beginning" );
+testEqual( clone(arr).erase(1,3)$'', '[9,8]', "erase many at middle" );
+testEqual( clone(arr).erase(-3,-1)$'', '[9,3]', "erase many at end" );
+ERRORS = ""; testEqual( clone(arr).erase(4,7), null, "erase - out of bounds" );
+testEqual( ERRORS, "[W:array.erase(): index out of bounds]" );
+ERRORS = ""; testEqual( clone(arr).erase(4,-2), null, "erase - invalid range" );
+testEqual( ERRORS, "[W:array.erase(): after resolving, index #1 must be smaller or equal than index #2]" );
+
+	section( "array sizing" );
 testEqual( clone(asz).resize(2)$'', '[10,huh]', "resize - 5 to 2" );
 testEqual( clone(asz).resize(2).resize(5)$'', '[10,huh,null,null,null]', "resize - 5 to 2 to 5" );
 testEqual( clone(asz).reserve(16).capacity, 16, "reserve - capacity check" );
 testEqual( clone(asz).reserve(1).capacity, 5, "reserve - less than current" );
 
 	section( "array.sort" );
-var arr = [ 9, 3, 6, 2, 8 ];
 testEqual( clone(arr).sort()$'', '[2,3,6,8,9]', "sort - basic integer sorting" );
 testEqual( clone(arr).sort(true)$'', '[9,8,6,3,2]', "sort - reversed integer sorting" );
 
