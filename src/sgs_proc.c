@@ -945,7 +945,7 @@ static int vm_setvar( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 	OPs
 */
 
-static void vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
+static int vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
 {
 	switch( var->type )
 	{
@@ -956,27 +956,32 @@ static void vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
 			stk_setlvar_leave( C, out, &ns );
 		}
 		break;
-	case SVT_FUNC:
-		sgs_Printf( C, SGS_INFO, -1, "Functions are strictly immutable and cannot be cloned." );
-		stk_setlvar_null( C, out );
-		break;
 	case SVT_OBJECT:
-		if( obj_exec( C, SOP_CLONE, var->data.O, 0 ) != SGS_SUCCESS )
 		{
-			sgs_Printf( C, SGS_ERROR, -1, "This object does not support cloning or failed to do it." );
-			stk_setlvar_null( C, out );
-		}
-		else
-		{
-			sgs_Variable ns = *stk_getpos( C, -1 );
-			stk_setlvar( C, out, &ns );
-			stk_pop1( C );
+			int sz = STACKFRAMESIZE;
+			int ret = obj_exec( C, SOP_CLONE, var->data.O, 0 );
+			if( ret != SGS_SUCCESS )
+			{
+				stk_setlvar_null( C, out );
+				stk_pop( C, STACKFRAMESIZE - sz );
+				return ret;
+			}
+			else
+			{
+				sgs_Variable ns = *stk_getpos( C, -1 );
+				stk_setlvar( C, out, &ns );
+				stk_pop( C, STACKFRAMESIZE - sz );
+			}
 		}
 		break;
 	default:
+		/* even though functions are immutable, they're also impossible to modify,
+			thus there is little need for showing an error when trying to convert one,
+			especially if it's a part of some object to be cloned */
 		stk_setlvar( C, out, var );
 		break;
 	}
+	return SGS_SUCCESS;
 }
 
 static void vm_op_concat( SGS_CTX, int16_t out, sgs_Variable *A, sgs_Variable *B )
@@ -2140,6 +2145,25 @@ SGSRESULT sgs_StringConcat( SGS_CTX )
 SGSRESULT sgs_StringMultiConcat( SGS_CTX, int args )
 {
 	return vm_op_concat_ex( C, args ) ? SGS_SUCCESS : SGS_EINVAL;
+}
+
+SGSRESULT sgs_CloneItem( SGS_CTX, int item )
+{
+	int ret;
+	if( !sgs_IsValidIndex( C, item ) )
+		return SGS_EBOUNDS;
+	item = stk_absindex( C, item );
+	sgs_PushNull( C );
+	ret = vm_clone( C, stk_absindex( C, -1 ), sgs_StackItem( C, item ) );
+	if( ret != SGS_SUCCESS )
+		sgs_Pop( C, 1 );
+	return ret;
+}
+
+
+sgs_Real sgs_CompareF( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
+{
+	return vm_compare( C, v1, v2 );
 }
 
 

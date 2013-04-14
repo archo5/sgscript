@@ -8,6 +8,19 @@ print( "\n\n-- CORE FUNCTIONS --\n" );
 include_library( "type" );
 //
 
+	section( "array.sort" );
+var arr = [ 9, 3, 6, 2, 8 ];
+testEqual( clone(arr).sort()$'', '[2,3,6,8,9]', "sort - basic integer sorting" );
+testEqual( clone(arr).sort(true)$'', '[9,8,6,3,2]', "sort - reversed integer sorting" );
+
+function customSort( a, b ){ return a - b + ( a % 2 - b % 2 ) * 5000; } // even before odd
+testEqual( clone(arr).sort_custom( customSort )$'', '[2,6,8,3,9]', "sort_custom" );
+testEqual( clone(arr).sort_custom( customSort, true )$'', '[9,3,8,6,2]', "sort_custom (reversed)" );
+
+var mapping = [ 1, 3, 2, 5, 4 ];
+testEqual( clone(arr).sort_mapped( mapping )$'', '[9,6,3,8,2]', "sort_mapped" );
+testEqual( clone(arr).sort_mapped( mapping, true )$'', '[2,8,3,6,9]', "sort_mapped (reversed)" );
+
 	section( "include_file" );
 testEqual( include_file( "tests/s_fnexp.txt" ), true, "include_file - basic inclusion" );
 

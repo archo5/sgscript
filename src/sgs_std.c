@@ -23,6 +23,8 @@ typedef struct sgsstd_array_header_s
 }
 sgsstd_array_header_t;
 
+void* sgsstd_array_functable[];
+
 #define SGSARR_UNIT sizeof( sgs_Variable )
 #define SGSARR_HDRBASE sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data
 #define SGSARR_HDR sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data->data
@@ -112,59 +114,222 @@ static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* data )
 	return 0;
 }
 
-#define SGSARR_IHDR \
+static int sgsstd_array_clone( SGS_CTX, sgs_VarObj* data )
+{
+	void* nd;
+	SGSARR_HDR;
+	nd = sgs_Malloc( SGSARR_ALLOCSIZE( hdr->mem ) );
+	memcpy( nd, hdr, SGSARR_ALLOCSIZE( hdr->mem ) );
+	{
+		sgs_Variable* ptr = SGSARR_PTR( hdr );
+		sgs_Variable* pend = ptr + hdr->size;
+		while( ptr < pend )
+			sgs_Acquire( C, ptr++ );
+	}
+	sgs_PushObject( C, nd, sgsstd_array_functable );
+	return 0;
+}
+
+#define SGSARR_IHDR( name ) \
 	sgs_VarObj* data; \
 	sgsstd_array_header_t* hdr; \
-	if( !sgs_Method( C ) ){ sgs_Printf( C, SGS_ERROR, -1, "Function isn't called on an array" ); return 0; } \
+	if( !sgs_Method( C ) || sgs_GetObjectData( C, 0 )->iface != sgsstd_array_functable ) \
+		{ sgs_Printf( C, SGS_ERROR, -1, "array." #name "() isn't called on an array" ); return 0; } \
 	data = sgs_GetObjectData( C, 0 ); \
 	hdr = (sgsstd_array_header_t*) data->data; \
 	UNUSED( hdr );
+/* after this, the counting starts from 1 because of sgs_Method */
 
 
-static int sgsstd_arrayI_clear( SGS_CTX )
-{
-	SGSARR_IHDR;
-	sgsstd_array_clear( C, data );
-	return 0;
-}
 static int sgsstd_arrayI_push( SGS_CTX )
 {
-	SGSARR_IHDR;
+	SGSARR_IHDR( push );
 	sgsstd_array_insert( C, data, hdr->size );
-	return 0;
+	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	return 1;
 }
 static int sgsstd_arrayI_pop( SGS_CTX )
 {
-	SGSARR_IHDR;
-	sgs_Variable* ptr = SGSARR_PTR( data->data );
+	sgs_Variable* ptr;
+	SGSARR_IHDR( pop );
+	ptr = SGSARR_PTR( data->data );
 	if( !hdr->size )
-	{
-		sgs_Printf( C, SGS_ERROR, -1, "Array is empty, cannot pop." );
-		return 0;
-	}
+		STDLIB_WARN( "array.pop(): array is empty, cannot pop" );
+	
 	sgs_PushVariable( C, ptr + hdr->size - 1 );
 	sgsstd_array_erase( C, data, hdr->size - 1, hdr->size - 1 );
 	return 1;
 }
 static int sgsstd_arrayI_shift( SGS_CTX )
 {
-	SGSARR_IHDR;
-	sgs_Variable* ptr = SGSARR_PTR( data->data );
+	sgs_Variable* ptr;
+	SGSARR_IHDR( shift );
+	ptr = SGSARR_PTR( data->data );
 	if( !hdr->size )
-	{
-		sgs_Printf( C, SGS_ERROR, -1, "Array is empty, cannot shift." );
-		return 0;
-	}
+		STDLIB_WARN( "array.shift(): array is empty, cannot shift" );
+	
 	sgs_PushVariable( C, ptr );
 	sgsstd_array_erase( C, data, 0, 0 );
 	return 1;
 }
 static int sgsstd_arrayI_unshift( SGS_CTX )
 {
-	SGSARR_IHDR;
+	SGSARR_IHDR( unshift );
 	sgsstd_array_insert( C, data, 0 );
-	return 0;
+	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	return 1;
 }
+static int sgsstd_arrayI_clear( SGS_CTX )
+{
+	SGSARR_IHDR( clear );
+	sgsstd_array_clear( C, data );
+	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	return 1;
+}
+
+static SGS_INLINE int sgsarrcomp_basic( const void* p1, const void* p2, void* userdata )
+{
+	SGS_CTX = (sgs_Context*) userdata;
+	sgs_Variable *v1 = (sgs_Variable*) p1;
+	sgs_Variable *v2 = (sgs_Variable*) p2;
+	return sgs_Compare( C, v1, v2 );
+}
+static SGS_INLINE int sgsarrcomp_basic_rev( const void* p1, const void* p2, void* userdata )
+{ return sgsarrcomp_basic( p2, p1, userdata ); }
+static int sgsstd_arrayI_sort( SGS_CTX )
+{
+	int rev = 0, cnt = sgs_StackSize( C );
+	SGSARR_IHDR( sort );
+
+	if( cnt > 1 ||
+		( cnt == 1 && !sgs_ParseBool( C, 1, &rev ) ) )
+		STDLIB_WARN( "array.sort(): unexpected arguments; function expects 0-1 arguments: [bool]" )
+
+	{
+		quicksort( SGSARR_PTR( data->data ), hdr->size, sizeof( sgs_Variable ),
+			rev ? sgsarrcomp_basic_rev : sgsarrcomp_basic, C );
+		if( cnt )
+			sgs_Pop( C, 1 );
+		return 1;
+	}
+}
+
+typedef struct sgsarrcomp_cl2_s
+{
+	SGS_CTX;
+	sgs_Variable sortfunc;
+}
+sgsarrcomp_cl2;
+static SGS_INLINE int sgsarrcomp_custom( const void* p1, const void* p2, void* userdata )
+{
+	sgsarrcomp_cl2* u = (sgsarrcomp_cl2*) userdata;
+	sgs_Variable *v1 = (sgs_Variable*) p1;
+	sgs_Variable *v2 = (sgs_Variable*) p2;
+	SGS_CTX = u->C;
+	sgs_PushVariable( C, v1 );
+	sgs_PushVariable( C, v2 );
+	sgs_PushVariable( C, &u->sortfunc );
+	if( sgs_Call( C, 2, 1 ) != SGS_SUCCESS )
+		return 0;
+	else
+	{
+		int ret = sgs_GetInt( C, -1 );
+		sgs_Pop( C, 1 );
+		return ret;
+	}
+}
+static SGS_INLINE int sgsarrcomp_custom_rev( const void* p1, const void* p2, void* userdata )
+{ return sgsarrcomp_custom( p2, p1, userdata ); }
+static int sgsstd_arrayI_sort_custom( SGS_CTX )
+{
+	int rev = 0, cnt = sgs_StackSize( C );
+	SGSARR_IHDR( sort_custom );
+
+	if( cnt < 1 || cnt > 2 ||
+		( cnt == 2 && !sgs_ParseBool( C, 2, &rev ) ) )
+		STDLIB_WARN( "array.sort_custom(): unexpected arguments;"
+			" function expects 1-2 arguments: func[, bool]" )
+
+	{
+		sgsarrcomp_cl2 u = { C, *sgs_StackItem( C, 1 ) };
+		quicksort( SGSARR_PTR( data->data ), hdr->size,
+			sizeof( sgs_Variable ), rev ? sgsarrcomp_custom_rev : sgsarrcomp_custom, &u );
+		sgs_Pop( C, cnt );
+		return 1;
+	}
+}
+
+typedef struct sgsarr_smi_s
+{
+	sgs_Real value;
+	sgs_SizeVal pos;
+}
+sgsarr_smi;
+static SGS_INLINE int sgsarrcomp_smi( const void* p1, const void* p2, void* userdata )
+{
+	sgsarr_smi *v1 = (sgsarr_smi*) p1;
+	sgsarr_smi *v2 = (sgsarr_smi*) p2;
+	if( v1->value < v2->value )
+		return -1;
+	return v1->value > v2->value ? 1 : 0;
+}
+static SGS_INLINE int sgsarrcomp_smi_rev( const void* p1, const void* p2, void* userdata )
+{ return sgsarrcomp_smi( p2, p1, userdata ); }
+static int sgsstd_arrayI_sort_mapped( SGS_CTX )
+{
+	sgs_SizeVal i, asize = 0;
+	sgs_Variable* a2 = NULL;
+	int rev = 0, cnt = sgs_StackSize( C );
+	SGSARR_IHDR( sort_mapped );
+
+	if( cnt < 1 || cnt > 2 ||
+		!( a2 = sgs_StackItem( C, 1 ) ) ||
+		!sgs_IsArray( C, a2 ) ||
+		( asize = sgs_ArraySize( C, a2 ) ) < 0 ||
+		( cnt == 2 && !sgs_ParseBool( C, 2, &rev ) ) )
+		STDLIB_WARN( "array.sort_mapped(): unexpected arguments;"
+			" function expects 1-2 arguments: array[, bool]" )
+
+	if( asize != hdr->size )
+		STDLIB_WARN( "array.sort_mapped(): array sizes must match" )
+
+	{
+		sgsarr_smi* smis = sgs_Alloc_n( sgsarr_smi, asize );
+		for( i = 0; i < asize; ++i )
+		{
+			sgs_Variable var;
+			if( !sgs_ArrayGet( C, a2, i, &var ) )
+			{
+				sgs_Free( smis );
+				STDLIB_WARN( "array.sort_mapped(): error in mapping array" )
+			}
+			sgs_PushVariable( C, &var );
+			smis[ i ].value = sgs_GetReal( C, -1 );
+			smis[ i ].pos = i;
+			sgs_Pop( C, 1 );
+		}
+		quicksort( smis, asize, sizeof( sgsarr_smi ),
+			rev ? sgsarrcomp_smi_rev : sgsarrcomp_smi, NULL );
+
+		{
+			sgs_Variable *p1, *p2;
+			sgsstd_array_header_t* nd = (sgsstd_array_header_t*)
+				sgs_Malloc( SGSARR_ALLOCSIZE( hdr->mem ) );
+			memcpy( nd, hdr, SGSARR_ALLOCSIZE( hdr->mem ) );
+			p1 = SGSARR_PTR( hdr );
+			p2 = SGSARR_PTR( nd );
+			for( i = 0; i < asize; ++i )
+				p1[ i ] = p2[ smis[ i ].pos ];
+			sgs_Free( nd );
+		}
+
+		sgs_Free( smis );
+
+		sgs_Pop( C, cnt );
+		return 1;
+	}
+}
+
 static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 {
 	const char* name = sgs_ToString( C, -1 );
@@ -181,11 +346,14 @@ static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 		sgs_PushInt( C, hdr->mem );
 		return SGS_SUCCESS;
 	}
-	else if( 0 == strcmp( name, "push" ) )		func = sgsstd_arrayI_push;
-	else if( 0 == strcmp( name, "pop" ) )		func = sgsstd_arrayI_pop;
-	else if( 0 == strcmp( name, "shift" ) )		func = sgsstd_arrayI_shift;
-	else if( 0 == strcmp( name, "unshift" ) )	func = sgsstd_arrayI_unshift;
-	else if( 0 == strcmp( name, "clear" ) )		func = sgsstd_arrayI_clear;
+	else if( 0 == strcmp( name, "push" ) )      func = sgsstd_arrayI_push;
+	else if( 0 == strcmp( name, "pop" ) )       func = sgsstd_arrayI_pop;
+	else if( 0 == strcmp( name, "shift" ) )     func = sgsstd_arrayI_shift;
+	else if( 0 == strcmp( name, "unshift" ) )   func = sgsstd_arrayI_unshift;
+	else if( 0 == strcmp( name, "clear" ) )     func = sgsstd_arrayI_clear;
+	else if( 0 == strcmp( name, "sort" ) )      func = sgsstd_arrayI_sort;
+	else if( 0 == strcmp( name, "sort_custom" ) ) func = sgsstd_arrayI_sort_custom;
+	else if( 0 == strcmp( name, "sort_mapped" ) ) func = sgsstd_arrayI_sort_mapped;
 	else return SGS_ENOTFND;
 
 	sgs_PushCFunction( C, func );
@@ -360,6 +528,7 @@ static int sgsstd_array_getiter( SGS_CTX, sgs_VarObj* data )
 void* sgsstd_array_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_array_destruct,
+	SOP_CLONE, sgsstd_array_clone,
 	SOP_GETPROP, sgsstd_array_getprop,
 	SOP_GETINDEX, sgsstd_array_getindex,
 	SOP_SETINDEX, sgsstd_array_setindex,
@@ -395,6 +564,7 @@ int sgsstd_array( SGS_CTX )
 */
 
 #define HTHDR VHTable* ht = (VHTable*) data->data
+void* sgsstd_dict_functable[];
 
 static void _dict_clearvals( SGS_CTX, VHTable* ht )
 {
@@ -412,6 +582,20 @@ static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data )
 	_dict_clearvals( C, ht );
 	vht_free( ht, C );
 	sgs_Free( ht );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_dict_clone( SGS_CTX, sgs_VarObj* data )
+{
+	HTHDR;
+	int i, htsize = vht_size( ht );
+	VHTable* nht = sgs_Alloc( VHTable );
+	vht_init( nht );
+	for( i = 0; i < htsize; ++i )
+	{
+		vht_set( nht, ht->vars[ i ].str, ht->vars[ i ].size, &ht->vars[ i ].var, C );
+	}
+	sgs_PushObject( C, nht, sgsstd_dict_functable );
 	return SGS_SUCCESS;
 }
 
@@ -574,6 +758,7 @@ static int sgsstd_dict_getiter( SGS_CTX, sgs_VarObj* data )
 void* sgsstd_dict_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_dict_destruct,
+	SOP_CLONE, sgsstd_dict_clone,
 	SOP_GETPROP, sgsstd_dict_getprop,
 	SOP_SETPROP, sgsstd_dict_setprop,
 	SOP_GETINDEX, sgsstd_dict_getindex,
@@ -606,7 +791,8 @@ int sgsstd_dict( SGS_CTX )
 	int i, objcnt = sgs_StackSize( C );
 
 	if( objcnt % 2 != 0 )
-		STDLIB_WARN( "dict() - unexpected argument count, function expects 0 or an even number of arguments" )
+		STDLIB_WARN( "dict() - unexpected argument count,"
+			" function expects 0 or an even number of arguments" )
 
 	ht = sgs_Alloc( VHTable );
 	vht_init( ht );
@@ -801,7 +987,8 @@ int sgsstd_class_call( SGS_CTX, sgs_VarObj* data )
 		sgs_PushVariable( C, &var );
 		for( i = 0; i < C->call_args; ++i )
 			sgs_PushVariable( C, sgs_StackItem( C, i ) );
-		ret = sgsVM_VarCall( C, sgs_StackItem( C, -2 - C->call_args ), C->call_args, C->call_expect, TRUE );
+		ret = sgsVM_VarCall( C, sgs_StackItem( C, -2 - C->call_args ),
+			C->call_args, C->call_expect, TRUE );
 		return ret;
 	}
 	return SGS_ENOTFND;
@@ -984,7 +1171,8 @@ int sgsstd_isset( SGS_CTX )
 	return 1;
 
 argerr:
-	sgs_Printf( C, SGS_ERROR, -1, "'isset' requires 2 arguments: object (dict), property name (string)" );
+	sgs_Printf( C, SGS_ERROR, -1, "'isset' requires 2 arguments:"
+		" object (dict), property name (string)" );
 	return 0;
 }
 
@@ -1009,8 +1197,21 @@ int sgsstd_unset( SGS_CTX )
 	return 0;
 
 argerr:
-	sgs_Printf( C, SGS_ERROR, -1, "'unset' requires 2 arguments: object (dict), property name (string)" );
+	sgs_Printf( C, SGS_ERROR, -1, "'unset' requires 2 arguments:"
+		" object (dict), property name (string)" );
 	return 0;
+}
+
+int sgsstd_clone( SGS_CTX )
+{
+	int ret;
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "clone() requires 1 argument" )
+
+	ret = sgs_CloneItem( C, 0 );
+	if( ret != SGS_SUCCESS )
+		STDLIB_WARN( "clone() failed to clone object" )
+	return 1;
 }
 
 
@@ -1104,27 +1305,36 @@ static int sgsstd_eval( SGS_CTX )
 	return rvc;
 }
 
-static int sgsstd_include_library( SGS_CTX )
+
+static int sgsstd__inclib( SGS_CTX, const char* name )
 {
 	int ret = SGS_ENOTFND;
-	char* str;
-	sgs_SizeVal strsize;
 
-	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, &str, &strsize ) )
-		STDLIB_WARN( "include_library() - unexpected arguments; function expects 1 argument: string" )
-
-	if( strcmp( str, "io" ) == 0 )
+	if( strcmp( name, "io" ) == 0 )
 		ret = sgs_LoadLib_IO( C );
-	else if( strcmp( str, "math" ) == 0 )
+	else if( strcmp( name, "math" ) == 0 )
 		ret = sgs_LoadLib_Math( C );
 #if 0
-	else if( strcmp( str, "native" ) == 0 )
+	else if( strcmp( name, "native" ) == 0 )
 		ret = sgs_LoadLib_Native( C );
 #endif
-	else if( strcmp( str, "string" ) == 0 )
+	else if( strcmp( name, "string" ) == 0 )
 		ret = sgs_LoadLib_String( C );
-	else if( strcmp( str, "type" ) == 0 )
+	else if( strcmp( name, "type" ) == 0 )
 		ret = sgs_LoadLib_Type( C );
+
+	return ret;
+}
+
+static int sgsstd_include_library( SGS_CTX )
+{
+	int ret;
+	char* str;
+
+	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, &str, NULL ) )
+		STDLIB_WARN( "include_library() - unexpected arguments; function expects 1 argument: string" )
+
+	ret = sgsstd__inclib( C, str );
 
 	if( ret == SGS_ENOTFND )
 		STDLIB_WARN( "include_library() - library not found" )
@@ -1134,16 +1344,19 @@ static int sgsstd_include_library( SGS_CTX )
 
 static int sgsstd_include_file( SGS_CTX )
 {
-	int ret;
+	int ret, ev = 0, retcnt = 0;
 	char* str;
-	sgs_SizeVal strsize;
+	int cnt = sgs_StackSize( C );
 
-	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, &str, &strsize ) )
-		STDLIB_WARN( "include_file() - unexpected arguments; function expects 1 argument: string" )
+	if( cnt < 1 || cnt > 2 || !sgs_ParseString( C, 0, &str, NULL )
+		|| ( cnt == 2 && !sgs_ParseBool( C, 1, &ev ) ) )
+		STDLIB_WARN( "include_file() - unexpected arguments; function expects 1-2 argument: string[, bool]" )
 
-	ret = sgs_ExecFile( C, str );
+	ret = sgs_EvalFile( C, str, ev ? &retcnt : NULL );
 	if( ret == SGS_ENOTFND )
 		STDLIB_WARN( "include_file() - file not found" )
+	if( ev )
+		return retcnt;
 	sgs_PushBool( C, ret == SGS_SUCCESS );
 	return 1;
 }
@@ -1151,19 +1364,20 @@ static int sgsstd_include_file( SGS_CTX )
 static int sgsstd_include_shared( SGS_CTX )
 {
 	char* fnstr;
-	sgs_SizeVal fnsize;
 	int ret, argc = sgs_StackSize( C );
 	sgs_CFunc func;
 
-	if( argc != 1 || !sgs_ParseString( C, 0, &fnstr, &fnsize ) )
+	if( argc != 1 || !sgs_ParseString( C, 0, &fnstr, NULL ) )
 		STDLIB_WARN( "include_shared() - unexpected arguments; function expects 1 argument: string" )
 
 	ret = sgs_GetProcAddress( fnstr, "sgscript_main", (void**) &func );
 	if( ret != 0 )
 	{
 		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "include_shared() - file not found" )
-		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "include_shared() - procedure not found" )
-		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "include_shared() - feature is not supported on this platform" )
+		else if( ret == SGS_XPC_NOPROC )
+			STDLIB_WARN( "include_shared() - procedure not found" )
+		else if( ret == SGS_XPC_NOTSUP )
+			STDLIB_WARN( "include_shared() - feature is not supported on this platform" )
 		else STDLIB_WARN( "include_shared() - unknown error occured" )
 	}
 	
@@ -1173,20 +1387,21 @@ static int sgsstd_include_shared( SGS_CTX )
 static int sgsstd_import_cfunc( SGS_CTX )
 {
 	char* fnstr, *pnstr;
-	sgs_SizeVal fnsize, pnsize;
 	int ret, argc = sgs_StackSize( C );
 	sgs_CFunc func;
 
-	if( argc != 2 || !sgs_ParseString( C, 0, &fnstr, &fnsize ) ||
-		!sgs_ParseString( C, 1, &pnstr, &pnsize ) )
+	if( argc != 2 || !sgs_ParseString( C, 0, &fnstr, NULL ) ||
+		!sgs_ParseString( C, 1, &pnstr, NULL ) )
 		STDLIB_WARN( "import_cfunc() - unexpected arguments; function expects 2 arguments: string, string" )
 
 	ret = sgs_GetProcAddress( fnstr, pnstr, (void**) &func );
 	if( ret != 0 )
 	{
 		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "import_cfunc() - file not found" )
-		else if( ret == SGS_XPC_NOPROC ) STDLIB_WARN( "import_cfunc() - procedure not found" )
-		else if( ret == SGS_XPC_NOTSUP ) STDLIB_WARN( "import_cfunc() - feature is not supported on this platform" )
+		else if( ret == SGS_XPC_NOPROC )
+			STDLIB_WARN( "import_cfunc() - procedure not found" )
+		else if( ret == SGS_XPC_NOTSUP )
+			STDLIB_WARN( "import_cfunc() - feature is not supported on this platform" )
 		else STDLIB_WARN( "import_cfunc() - unknown error occured" )
 	}
 	
@@ -1290,7 +1505,7 @@ sgs_RegFuncConst regfuncs[] =
 {
 	/* containers */
 	FN( array ), FN( dict ), { "class", sgsstd_class }, FN( closure ),
-	FN( isset ), FN( unset ),
+	FN( isset ), FN( unset ), FN( clone ),
 	/* I/O */
 	FN( print ), FN( println ), FN( printvar ), FN( printvars ),
 	/* OS */

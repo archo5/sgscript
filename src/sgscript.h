@@ -70,7 +70,13 @@ extern void* (*sgs_MemFunc) ( void*, size_t );
 #define SGS_WARNING 1  /* non-fatal problems */
 #define SGS_ERROR   2  /* fatal problems */
 
-typedef void (*sgs_PrintFunc) ( void* /* data */, sgs_Context* /* ctx / SGS_CTX */, int /* type */, int /* line */, const char* /* message */ );
+typedef void (*sgs_PrintFunc) (
+	void* /* data */,
+	sgs_Context* /* ctx / SGS_CTX */,
+	int /* type */,
+	int /* line */,
+	const char* /* message */
+);
 
 
 /* Statistics / debugging */
@@ -140,26 +146,73 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 /* Engine context */
 #define SGS_CTX sgs_Context* C
 
-sgs_Context*    sgs_CreateEngine();
-void            sgs_DestroyEngine( SGS_CTX );
+sgs_Context* sgs_CreateEngine();
+
+void sgs_DestroyEngine( SGS_CTX );
 
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
-void            sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
-void            sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
+void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
+void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
 
-SGSRESULT       sgs_ExecBuffer( SGS_CTX, const char* buf, sgs_SizeVal size );
-static SGS_INLINE SGSRESULT sgs_ExecString( SGS_CTX, const char* str ){ return sgs_ExecBuffer( C, str, strlen( str ) ); }
-SGSRESULT       sgs_EvalBuffer( SGS_CTX, const char* buf, sgs_SizeVal size, int* rvc );
-static SGS_INLINE SGSRESULT sgs_EvalString( SGS_CTX, const char* str, int* rvc ){ return sgs_EvalBuffer( C, str, strlen( str ), rvc ); }
-SGSRESULT       sgs_EvalFile( SGS_CTX, const char* file, int* rvc );
-static SGS_INLINE SGSRESULT sgs_ExecFile( SGS_CTX, const char* file ){ return sgs_EvalFile( C, file, NULL ); }
-SGSRESULT       sgs_Compile( SGS_CTX, const char* buf, sgs_SizeVal size, char** outbuf, sgs_SizeVal* outsize );
-void            sgs_FreeCompileBuffer( char* buf );
-SGSRESULT       sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size );
+SGSRESULT
+sgs_ExecBuffer
+(
+	SGS_CTX,
+	const char* buf,
+	sgs_SizeVal size
+);
 
-SGSRESULT       sgs_Stat( SGS_CTX, int type );
-void            sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, const char** file, int* line );
+SGSRESULT
+sgs_EvalBuffer
+(
+	SGS_CTX,
+	const char* buf,
+	sgs_SizeVal size,
+	int* rvc
+);
+
+SGSRESULT
+sgs_EvalFile
+(
+	SGS_CTX,
+	const char* file,
+	int* rvc
+);
+
+SGSRESULT
+sgs_Compile
+(
+	SGS_CTX,
+	const char* buf,
+	sgs_SizeVal size,
+	char** outbuf,
+	sgs_SizeVal* outsize
+);
+
+void sgs_FreeCompileBuffer( char* buf );
+SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size );
+
+SGSRESULT sgs_Stat( SGS_CTX, int type );
+
+void
+sgs_StackFrameInfo
+(
+	SGS_CTX,
+	sgs_StackFrame* frame,
+	const char** name,
+	const char** file,
+	int* line
+);
+
 sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
+
+
+static SGS_INLINE SGSRESULT sgs_ExecString( SGS_CTX, const char* str )
+	{ return sgs_ExecBuffer( C, str, strlen( str ) ); }
+static SGS_INLINE SGSRESULT sgs_EvalString( SGS_CTX, const char* str, int* rvc )
+	{ return sgs_EvalBuffer( C, str, strlen( str ), rvc ); }
+static SGS_INLINE SGSRESULT sgs_ExecFile( SGS_CTX, const char* file )
+	{ return sgs_EvalFile( C, file, NULL ); }
 
 
 /* Additional libraries */
@@ -219,9 +272,10 @@ SGSRESULT sgs_PushIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx );
 SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name );
 SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name );
 
-SGSRESULT sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx ); /* must release "out" */
+/* sgs_Get(Num)Index: must release "out" */
+SGSRESULT sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx );
 SGSRESULT sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val );
-SGSRESULT sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Integer idx ); /* must release "out" */
+SGSRESULT sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Integer idx );
 SGSRESULT sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Integer idx, sgs_Variable* val );
 
 SGSRESULT sgs_Pop( SGS_CTX, int count );
@@ -241,6 +295,11 @@ SGSRESULT sgs_GCExecute( SGS_CTX );
 SGSRESULT sgs_PadString( SGS_CTX );
 SGSRESULT sgs_StringConcat( SGS_CTX );
 SGSRESULT sgs_StringMultiConcat( SGS_CTX, int args );
+SGSRESULT sgs_CloneItem( SGS_CTX, int item );
+
+sgs_Real sgs_CompareF( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 );
+static SGS_INLINE int sgs_Compare( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
+{ sgs_Real v = sgs_CompareF( C, v1, v2 ); if( v < 0 ) return -1; return v > 0 ? 1 : 0; }
 
 /*
 	CONVERSION / RETRIEVAL

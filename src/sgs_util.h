@@ -205,4 +205,9 @@ sgs_Integer util_atoi( const char* str, int len );
 sgs_Real util_atof( const char* str, int len );
 
 
+
+void quicksort( void *array, size_t length, size_t size,
+	int(*compare)(const void *, const void *, void*), void* userdata);
+
+
 #endif /* SGS_UTIL_H_INCLUDED */
