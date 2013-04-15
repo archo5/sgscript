@@ -14,6 +14,8 @@
 #  define mkdir _mkdir
 #  define rmdir _rmdir
 #  define stat _stat
+#  define S_IFDIR _S_IFDIR
+#  define S_IFREG _S_IFREG
 #else
 #  include <unistd.h>
 #endif
@@ -186,9 +188,9 @@ static int sgsstd_io_stat( SGS_CTX )
 		sgs_PushString( C, "mtime" );
 		sgs_PushInt( C, data.st_mtime );
 		sgs_PushString( C, "type" );
-		if( data.st_mode & _S_IFDIR )
+		if( data.st_mode & S_IFDIR )
 			sgs_PushInt( C, FST_DIR );
-		else if( data.st_mode * _S_IFREG )
+		else if( data.st_mode * S_IFREG )
 			sgs_PushInt( C, FST_FILE );
 		else
 			sgs_PushInt( C, FST_UNKNOWN );
@@ -208,7 +210,11 @@ static int sgsstd_io_dir_create( SGS_CTX )
 		!sgs_ParseString( C, 0, &str, &size ) )
 		STDLIB_WARN( "io_dir_create() - unexpected arguments; function expects 1 argument: string" )
 
-	ret = mkdir( str );
+	ret = mkdir( str
+#ifndef WIN32
+		,0777
+#endif
+	);
 	sgs_PushBool( C, ret == 0 );
 	return 1;
 }
@@ -902,7 +908,7 @@ static int _stringrep_ss( SGS_CTX, char* str, int32_t size, char* sub, int32_t s
 				int32_t* nm = sgs_Alloc_n( int32_t, matchcap );
 				memcpy( nm, matches, sizeof( int32_t ) * matchcount );
 				if( matches != sma )
-					sgs_Free( matches );
+					sgs_Dealloc( matches );
 				matches = nm;
 			}
 			matches[ matchcount++ ] = ptr - str;
@@ -940,7 +946,7 @@ static int _stringrep_ss( SGS_CTX, char* str, int32_t size, char* sub, int32_t s
 	}
 
 	if( matches != sma )
-		sgs_Free( matches );
+		sgs_Dealloc( matches );
 
 	return 1;
 }

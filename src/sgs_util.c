@@ -12,6 +12,8 @@
 
 
 
+#if 0
+
 #if SGS_DEBUG && SGS_DEBUG_MEMORY
  #if SGS_DEBUG_CHECK_LEAKS
 #if SGS_DEBUG && SGS_DEBUG_EXTRA
@@ -226,6 +228,7 @@ static void* sgs_DefaultMemFunc( void* ptr, size_t size )
 
 void* (*sgs_MemFunc) ( void*, size_t ) = sgs_DefaultMemFunc;
 
+#endif
 
 
 void sgs_BreakIfFunc( const char* code, const char* file, int line )
@@ -262,10 +265,10 @@ StrBuf strbuf_create( void )
 	return sb;
 }
 
-void strbuf_destroy( StrBuf* sb )
+void strbuf_destroy( StrBuf* sb, SGS_CTX )
 {
 	if( sb->ptr )
-		sgs_Free( sb->ptr );
+		sgs_Dealloc( sb->ptr );
 	sb->ptr = NULL;
 }
 
@@ -275,105 +278,91 @@ StrBuf strbuf_partial( char* ch, int32_t size )
 	return sb;
 }
 
-void strbuf_reserve( StrBuf* sb, int32_t size )
+void strbuf_reserve( StrBuf* sb, SGS_CTX, int32_t size )
 {
-	char* str;
 	if( size < sb->mem )
 		return;
 
 	sb->mem = size;
-	str = sgs_Alloc_n( char, size + 1 );
-	if( sb->ptr )
-	{
-		memcpy( str, sb->ptr, sb->size + 1 );
-		sgs_Free( sb->ptr );
-	}
-	sb->ptr = str;
+	sb->ptr = sgs_Realloc( C, sb->ptr, size + 1 );
 }
 
-void strbuf_resize( StrBuf* sb, int32_t size )
+void strbuf_resize( StrBuf* sb, SGS_CTX, int32_t size )
 {
-	strbuf_reserve( sb, size );
+	strbuf_reserve( sb, C, size );
 	sb->size = size;
 	sb->ptr[ size ] = 0;
 }
 
-void strbuf_inschr( StrBuf* sb, int32_t pos, char ch )
+void strbuf_inschr( StrBuf* sb, SGS_CTX, int32_t pos, char ch )
 {
-	strbuf_reserve( sb, sb->mem < sb->size + 1 ? MAX( sb->mem * 2, sb->size + 1 ) : 0 );
+	strbuf_reserve( sb, C, sb->mem < sb->size + 1 ? MAX( sb->mem * 2, sb->size + 1 ) : 0 );
 	memcpy( sb->ptr + pos + 1, sb->ptr + pos, sb->size - pos );
 	sb->ptr[ pos ] = ch;
 	sb->ptr[ ++sb->size ] = 0;
 }
 
-void strbuf_insbuf( StrBuf* sb, int32_t pos, const void* buf, int32_t size )
+void strbuf_insbuf( StrBuf* sb, SGS_CTX, int32_t pos, const void* buf, int32_t size )
 {
-	strbuf_reserve( sb, sb->mem < sb->size + size ? MAX( sb->mem * 2, sb->size + size ) : 0 );
+	strbuf_reserve( sb, C, sb->mem < sb->size + size ? MAX( sb->mem * 2, sb->size + size ) : 0 );
 	memcpy( sb->ptr + pos + size, sb->ptr + pos, sb->size - pos );
 	memcpy( sb->ptr + pos, buf, size );
 	sb->size += size;
 	sb->ptr[ sb->size ] = 0;
 }
 
-void strbuf_insstr( StrBuf* sb, int32_t pos, const char* str )
+void strbuf_insstr( StrBuf* sb, SGS_CTX, int32_t pos, const char* str )
 {
-	strbuf_insbuf( sb, pos, str, strlen( str ) );
+	strbuf_insbuf( sb, C, pos, str, strlen( str ) );
 }
 
-void strbuf_appchr( StrBuf* sb, char ch )
+void strbuf_appchr( StrBuf* sb, SGS_CTX, char ch )
 {
-	strbuf_reserve( sb, sb->mem < sb->size + 1 ? MAX( sb->mem * 2, sb->size + 1 ) : 0 );
+	strbuf_reserve( sb, C, sb->mem < sb->size + 1 ? MAX( sb->mem * 2, sb->size + 1 ) : 0 );
 	sb->ptr[ sb->size++ ] = ch;
 	sb->ptr[ sb->size ] = 0;
 }
 
-void strbuf_appbuf( StrBuf* sb, const void* buf, int32_t size )
+void strbuf_appbuf( StrBuf* sb, SGS_CTX, const void* buf, int32_t size )
 {
-	strbuf_reserve( sb, sb->mem < sb->size + size ? MAX( sb->mem * 2, sb->size + size ) : 0 );
+	strbuf_reserve( sb, C, sb->mem < sb->size + size ? MAX( sb->mem * 2, sb->size + size ) : 0 );
 	memcpy( sb->ptr + sb->size, buf, size );
 	sb->size += size;
 	sb->ptr[ sb->size ] = 0;
 }
 
-void strbuf_appstr( StrBuf* sb, const char* str )
+void strbuf_appstr( StrBuf* sb, SGS_CTX, const char* str )
 {
-	strbuf_appbuf( sb, str, strlen( str ) );
+	strbuf_appbuf( sb, C, str, strlen( str ) );
 }
 
 
-void membuf_reserve( MemBuf* mb, int32_t size )
+void membuf_reserve( MemBuf* mb, SGS_CTX, int32_t size )
 {
-	char* str;
 	if( size < mb->mem )
 		return;
 
 	mb->mem = size;
-	str = sgs_Alloc_n( char, size );
-	if( mb->ptr )
-	{
-		memcpy( str, mb->ptr, mb->size );
-		sgs_Free( mb->ptr );
-	}
-	mb->ptr = str;
+	mb->ptr = sgs_Realloc( C, mb->ptr, size );
 }
 
-void membuf_resize( MemBuf* mb, int32_t size )
+void membuf_resize( MemBuf* mb, SGS_CTX, int32_t size )
 {
-	membuf_reserve( mb, size );
+	membuf_reserve( mb, C, size );
 	mb->size = size;
 }
 
-void membuf_resize_opt( MemBuf* mb, int32_t size )
+void membuf_resize_opt( MemBuf* mb, SGS_CTX, int32_t size )
 {
 	if( size > mb->mem )
-		membuf_reserve( mb, mb->mem * 2 < size ? size : mb->mem * 2 );
+		membuf_reserve( mb, C, mb->mem * 2 < size ? size : mb->mem * 2 );
 	if( size > mb->size )
 		mb->size = size;
 }
 
-void membuf_insbuf( MemBuf* mb, int32_t pos, const void* buf, int32_t size )
+void membuf_insbuf( MemBuf* mb, SGS_CTX, int32_t pos, const void* buf, int32_t size )
 {
-	membuf_reserve( mb, mb->mem < mb->size + size ? MAX( mb->mem * 2, mb->size + size ) : 0 );
+	membuf_reserve( mb, C, mb->mem < mb->size + size ? MAX( mb->mem * 2, mb->size + size ) : 0 );
 	memmove( mb->ptr + pos + size, mb->ptr + pos, mb->size - pos );
 	memcpy( mb->ptr + pos, buf, size );
 	mb->size += size;
@@ -388,9 +377,9 @@ void membuf_erase( MemBuf* mb, int32_t from, int32_t to )
 	mb->size -= to - from + 1;
 }
 
-void membuf_appbuf( MemBuf* mb, const void* buf, int32_t size )
+void membuf_appbuf( MemBuf* mb, SGS_CTX, const void* buf, int32_t size )
 {
-	membuf_reserve( mb, mb->mem < mb->size + size ? MAX( mb->mem * 2, mb->size + size ) : 0 );
+	membuf_reserve( mb, C, mb->mem < mb->size + size ? MAX( mb->mem * 2, mb->size + size ) : 0 );
 	memcpy( mb->ptr + mb->size, buf, size );
 	mb->size += size;
 }
@@ -408,9 +397,9 @@ static Hash hashFunc( const char* str, int size )
 	return h;
 }
 
-char* UNALLOCATED_STRING = "";
+static char* UNALLOCATED_STRING = "";
 
-void ht_init( HashTable* T, int size )
+void ht_init( HashTable* T, SGS_CTX, int size )
 {
 	HTPair *p, *pend;
 
@@ -427,15 +416,15 @@ void ht_init( HashTable* T, int size )
 	}
 }
 
-void ht_free( HashTable* T )
+void ht_free( HashTable* T, SGS_CTX )
 {
 	HTPair* p = T->pairs, *pend = T->pairs + T->size;
 	while( p < pend )
 	{
-		if( p->str ) sgs_Free( p->str );
+		if( p->str ) sgs_Dealloc( p->str );
 		p++;
 	}
-	sgs_Free( T->pairs );
+	sgs_Dealloc( T->pairs );
 	T->pairs = NULL;
 	T->size = 0;
 	T->load = 0;
@@ -462,7 +451,7 @@ void ht_dump( HashTable* T )
 	}
 }
 
-void ht_rehash( HashTable* T, int size )
+void ht_rehash( HashTable* T, SGS_CTX, int size )
 {
 	HTPair *np, *p, *pend;
 
@@ -498,22 +487,22 @@ void ht_rehash( HashTable* T, int size )
 		p++;
 	}
 
-	sgs_Free( T->pairs );
+	sgs_Dealloc( T->pairs );
 	T->pairs = np;
 	T->size = size;
 }
 
-void ht_check( HashTable* T, int inc )
+void ht_check( HashTable* T, SGS_CTX, int inc )
 {
 	if( T->load + inc > T->size * 0.75 )
 	{
 		int newsize = (int)( T->size * 0.6 + ( T->load + inc ) * 0.6 );
-		ht_rehash( T, newsize );
+		ht_rehash( T, C, newsize );
 	}
 	else if( T->load + inc < T->size * 0.25 )
 	{
 		int newsize = (int)( T->size * 0.5 + ( T->load + inc ) * 0.5 );
-		ht_rehash( T, newsize );
+		ht_rehash( T, C, newsize );
 	}
 }
 
@@ -541,7 +530,7 @@ void* ht_get( HashTable* T, const char* str, int size )
 	return p ? p->ptr : NULL;
 }
 
-void ht_setpair( HTPair* P, const char* str, int size, Hash h, void* ptr )
+void ht_setpair( HTPair* P, SGS_CTX, const char* str, int size, Hash h, void* ptr )
 {
 	P->str = size ? sgs_Alloc_n( char, size ) : UNALLOCATED_STRING;
 	if( size ) memcpy( P->str, str, size );
@@ -550,7 +539,7 @@ void ht_setpair( HTPair* P, const char* str, int size, Hash h, void* ptr )
 	P->hash = h;
 }
 
-HTPair* ht_set( HashTable* T, const char* str, int size, void* ptr )
+HTPair* ht_set( HashTable* T, SGS_CTX, const char* str, int size, void* ptr )
 {
 	HTPair* p = ht_find( T, str, size );
 	if( p )
@@ -563,14 +552,14 @@ HTPair* ht_set( HashTable* T, const char* str, int size, void* ptr )
 		Hash h;
 		HTPair *pp, *pend;
 
-		ht_check( T, 1 );
+		ht_check( T, C, 1 );
 		h = hashFunc( str, size );
 		T->load++;
 
 		p = T->pairs + ( h % T->size );
 		if( p->str == NULL )
 		{
-			ht_setpair( p, str, size, h, ptr );
+			ht_setpair( p, C, str, size, h, ptr );
 			return p;
 		}
 
@@ -581,7 +570,7 @@ HTPair* ht_set( HashTable* T, const char* str, int size, void* ptr )
 		{
 			if( p->str == NULL )
 			{
-				ht_setpair( p, str, size, h, ptr );
+				ht_setpair( p, C, str, size, h, ptr );
 				return p;
 			}
 			p++;
@@ -628,99 +617,25 @@ static void ht_fillhole( HashTable* T, HTPair* P )
 	}
 }
 
-void ht_unset_pair( HashTable* T, HTPair* p )
+void ht_unset_pair( HashTable* T, SGS_CTX, HTPair* p )
 {
 	int osz = T->size;
 	if( p->str != UNALLOCATED_STRING )
-		sgs_Free( p->str );
+		sgs_Dealloc( p->str );
 	p->str = NULL;
 	T->load--;
-	ht_check( T, 0 );
+	ht_check( T, C, 0 );
 	if( T->size == osz )
 		ht_fillhole( T, p );
 }
 
-void ht_unset( HashTable* T, const char* str, int size )
+void ht_unset( HashTable* T, SGS_CTX, const char* str, int size )
 {
 	HTPair* p = ht_find( T, str, size );
 	if( p )
 	{
-		ht_unset_pair( T, p );
+		ht_unset_pair( T, C, p );
 	}
-}
-
-
-
-#define LHT_HASH( off ) (((off)>>3)+(off))
-
-void lht_init( LNTable* T, int size )
-{
-	int i;
-	T->numbers = sgs_Alloc_n( uint16_t, size * 2 );
-	T->size = size;
-	for( i = 0; i < size * 2; i += 2 )
-	{
-		T->numbers[ i ] = 0xffff;
-		T->numbers[ i + 1 ] = 0;
-	}
-}
-
-void lht_init_all( LNTable* T, uint16_t* data, int num )
-{
-	uint16_t* dend = data + num;
-	num /= 2; /* array size to pair count */
-	lht_init( T, num * 4 / 3 ); /* hash tables tend to work poorly over 75% load */
-	while( data < dend )
-	{
-		lht_add( T, data[0], data[1] );
-		data += 2;
-	}
-}
-
-void lht_free( LNTable* T )
-{
-	sgs_Free( T->numbers );
-}
-
-void lht_add( LNTable* T, uint16_t from, uint16_t to )
-{
-	uint16_t* p = T->numbers + ( ( LHT_HASH( from ) % T->size ) * 2 );
-	uint16_t* num = T->numbers, *numend = T->numbers + T->size * 2, *pend = p;
-	do
-	{
-		if( *p == 0xffff )
-		{
-			p[0] = from;
-			p[1] = to;
-			return;
-		}
-		p += 2;
-		if( p == numend )
-			p = num;
-	}
-	while( p != pend );
-	sgs_BreakIf( TRUE );
-	return;
-}
-
-uint16_t lht_get( LNTable* T, uint16_t from )
-{
-	uint16_t* p = T->numbers + ( ( LHT_HASH( from ) % T->size ) * 2 );
-	uint16_t* num = T->numbers, *numend = T->numbers + T->size * 2, *pend = p;
-	if( *p == 0xffff )
-		goto notfound;
-	do
-	{
-		if( *p == from )
-			return p[1];
-		p += 2;
-		if( p == numend )
-			p = num;
-	}
-	while( p != pend && *p != 0xffff );
-notfound:
-	sgs_BreakIf( TRUE );
-	return 0;
 }
 
 

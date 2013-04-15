@@ -183,7 +183,7 @@ typedef struct _VHTable
 }
 VHTable;
 
-void vht_init( VHTable* vht );
+void vht_init( VHTable* vht, SGS_CTX );
 void vht_free( VHTable* vht, SGS_CTX );
 VHTableVar* vht_get( VHTable* vht, const char* key, int32_t size );
 void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SGS_CTX );
@@ -192,7 +192,7 @@ int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX );
 
 
 /* VM interface */
-void var_create_str( sgs_Variable* out, const char* str, int32_t len );
+void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len );
 void var_destroy_object( SGS_CTX, object_t* O );
 #define sgsVM_VarCreateString var_create_str
 #define sgsVM_VarDestroyObject var_destroy_object

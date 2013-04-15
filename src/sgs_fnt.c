@@ -21,24 +21,6 @@ static int is_keyword( TokenList tok, const char* text )
 }
 
 
-static FTNode* make_node( int type, TokenList token, FTNode* next, FTNode* child )
-{
-	FTNode* node = sgs_Alloc( FTNode );
-	node->type = type;
-	node->token = token;
-	node->next = next;
-	node->child = child;
-	return node;
-}
-
-void sgsFT_Destroy( FTNode* tree )
-{
-	if( tree->next ) sgsFT_Destroy( tree->next );
-	if( tree->child ) sgsFT_Destroy( tree->child );
-	sgs_Free( tree );
-}
-
-
 /* debugging */
 
 
@@ -129,6 +111,26 @@ FTComp;
 #define SFTC_UNEXP SFTC_PRINTERR( "Unexpected end of code" )
 
 
+static FTNode* _make_node( SGS_CTX, int type, TokenList token, FTNode* next, FTNode* child )
+{
+	FTNode* node = sgs_Alloc( FTNode );
+	node->type = type;
+	node->token = token;
+	node->next = next;
+	node->child = child;
+	return node;
+}
+#define make_node( ty, tok, next, ch ) _make_node( F->C, ty, tok, next, ch )
+
+void sgsFT_Destroy( SGS_CTX, FTNode* tree )
+{
+	if( tree->next ) sgsFT_Destroy( C, tree->next );
+	if( tree->child ) sgsFT_Destroy( C, tree->child );
+	sgs_Dealloc( tree );
+}
+#define SFTC_DESTROY( node ) sgsFT_Destroy( F->C, node )
+
+
 
 
 
@@ -182,7 +184,7 @@ SFTRET parse_arg( SFTC, int argid, char end )
 	return node;
 
 fail:
-	if( node ) sgsFT_Destroy( node );
+	if( node ) SFTC_DESTROY( node );
 	SFTC_SETERR;
 	FUNC_END;
 	return 0;
@@ -242,7 +244,7 @@ SFTRET parse_arglist( SFTC, char end )
 
 fail:
 	SFTC_SETERR;
-	sgsFT_Destroy( arglist );
+	SFTC_DESTROY( arglist );
 	return NULL;
 }
 
@@ -389,8 +391,8 @@ _continue:
 			if( !ret1 || !ret2 )
 			{
 				*tree = NULL;
-				if( se1 ) sgsFT_Destroy( se1 );
-				if( se2 ) sgsFT_Destroy( se2 );
+				if( se1 ) sgsFT_Destroy( C, se1 );
+				if( se2 ) sgsFT_Destroy( C, se2 );
 				FUNC_END;
 				return 0;
 			}
@@ -401,19 +403,19 @@ _continue:
 				{
 					sgs_Printf( C, SGS_ERROR, sgsT_LineNum( mpp_token ), "Invalid number of arguments in an array accessor" );
 					*tree = NULL;
-					if( se1 ) sgsFT_Destroy( se1 );
-					if( se2 ) sgsFT_Destroy( se2 );
+					if( se1 ) sgsFT_Destroy( C, se1 );
+					if( se2 ) sgsFT_Destroy( C, se2 );
 					FUNC_END;
 					return 0;
 				}
 				se1->next = se2->child;
 				se2->child = NULL;
-				sgsFT_Destroy( se2 );
-				*tree = make_node( SFT_INDEX, mpp_token, NULL, se1 );
+				sgsFT_Destroy( C, se2 );
+				*tree = _make_node( C, SFT_INDEX, mpp_token, NULL, se1 );
 				return 1;
 			}
 			se1->next = se2;
-			*tree = make_node( SFT_FCALL, mpp_token, NULL, se1 );
+			*tree = _make_node( C, SFT_FCALL, mpp_token, NULL, se1 );
 			return 1;
 		}
 
@@ -442,7 +444,7 @@ _continue:
 					se1i = se1i->next;
 				}
 				mpp->next = NULL;
-				sgsFT_Destroy( mpp );
+				sgsFT_Destroy( C, mpp );
 
 				FUNC_ENTER;
 				ret1 = level_exp( C, &se1 );
@@ -451,13 +453,13 @@ _continue:
 				if( !ret1 || !ret2 )
 				{
 					*tree = NULL;
-					if( se1 ) sgsFT_Destroy( se1 );
-					if( se2 ) sgsFT_Destroy( se2 );
+					if( se1 ) sgsFT_Destroy( C, se1 );
+					if( se2 ) sgsFT_Destroy( C, se2 );
 					FUNC_END;
 					return 0;
 				}
 				se1->next = se2;
-				*tree = make_node( SFT_OPER, mpptoken, NULL, se1 );
+				*tree = _make_node( C, SFT_OPER, mpptoken, NULL, se1 );
 				FUNC_END;
 				return 1;
 			}
@@ -612,7 +614,7 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 						expr = parse_exp( F, endcstr, 2 );
 						if( !expr )
 						{
-							sgsFT_Destroy( exprlist );
+							SFTC_DESTROY( exprlist );
 							goto fail;
 						}
 
@@ -681,7 +683,7 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 				if( !SFTC_IS( '}' ) )
 				{
 					if( fexp )
-						sgsFT_Destroy( fexp );
+						SFTC_DESTROY( fexp );
 					SFTC_SETERR;
 				}
 				else
@@ -704,7 +706,7 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 
 		if( F->C->state & SGS_MUST_STOP )
 		{
-			sgsFT_Destroy( node );
+			SFTC_DESTROY( node );
 			FUNC_END;
 			return NULL;
 		}
@@ -714,7 +716,7 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 	}
 
 	cur = node->next;
-	sgs_Free( node );
+	sgs_Free( F->C, node );
 	node = cur;
 	if( !node )
 	{
@@ -730,7 +732,7 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 
 fail:
 	SFTC_SETERR;
-	if( node ) sgsFT_Destroy( node );
+	if( node ) SFTC_DESTROY( node );
 	FUNC_END;
 	return NULL;
 }
@@ -783,7 +785,7 @@ SFTRET parse_explist( SFTC, char endtok )
 
 fail:
 	SFTC_SETERR;
-	sgsFT_Destroy( explist );
+	SFTC_DESTROY( explist );
 	FUNC_END;
 	return NULL;
 }
@@ -826,9 +828,9 @@ SFTRET parse_if( SFTC )
 	return node;
 
 fail:
-	if( nexp ) sgsFT_Destroy( nexp );
-	if( nif ) sgsFT_Destroy( nif );
-	if( nelse ) sgsFT_Destroy( nelse );
+	if( nexp ) SFTC_DESTROY( nexp );
+	if( nif ) SFTC_DESTROY( nif );
+	if( nelse ) SFTC_DESTROY( nelse );
 	SFTC_SETERR;
 	FUNC_END;
 	return NULL;
@@ -864,8 +866,8 @@ SFTRET parse_while( SFTC )
 	return node;
 
 fail:
-	if( nexp ) sgsFT_Destroy( nexp );
-	if( nwhile ) sgsFT_Destroy( nwhile );
+	if( nexp ) SFTC_DESTROY( nexp );
+	if( nwhile ) SFTC_DESTROY( nwhile );
 	SFTC_SETERR;
 	FUNC_END;
 	return NULL;
@@ -908,8 +910,8 @@ SFTRET parse_dowhile( SFTC )
 	return node;
 
 fail:
-	if( nexp ) sgsFT_Destroy( nexp );
-	if( nwhile ) sgsFT_Destroy( nwhile );
+	if( nexp ) SFTC_DESTROY( nexp );
+	if( nwhile ) SFTC_DESTROY( nwhile );
 	SFTC_SETERR;
 	FUNC_END;
 	return NULL;
@@ -955,10 +957,10 @@ SFTRET parse_for( SFTC )
 	return node;
 
 fail:
-	if( ninit ) sgsFT_Destroy( ninit );
-	if( nexp ) sgsFT_Destroy( nexp );
-	if( nincr ) sgsFT_Destroy( nincr );
-	if( nwhile ) sgsFT_Destroy( nwhile );
+	if( ninit ) SFTC_DESTROY( ninit );
+	if( nexp ) SFTC_DESTROY( nexp );
+	if( nincr ) SFTC_DESTROY( nincr );
+	if( nwhile ) SFTC_DESTROY( nwhile );
 	SFTC_SETERR;
 	FUNC_END;
 	return NULL;
@@ -1010,9 +1012,9 @@ SFTRET parse_foreach( SFTC )
 	return node;
 
 fail:
-	if( nvar ) sgsFT_Destroy( nvar );
-	if( nexp ) sgsFT_Destroy( nexp );
-	if( nwhile ) sgsFT_Destroy( nwhile );
+	if( nvar ) SFTC_DESTROY( nvar );
+	if( nexp ) SFTC_DESTROY( nexp );
+	if( nwhile ) SFTC_DESTROY( nwhile );
 	FUNC_END;
 	return NULL;
 }
@@ -1075,9 +1077,9 @@ SFTRET parse_function( SFTC, int inexp )
 	return node;
 
 fail:
-	if( nname ) sgsFT_Destroy( nname );
-	if( nargs ) sgsFT_Destroy( nargs );
-	if( nbody ) sgsFT_Destroy( nbody );
+	if( nname ) SFTC_DESTROY( nname );
+	if( nargs ) SFTC_DESTROY( nargs );
+	if( nbody ) SFTC_DESTROY( nbody );
 	SFTC_SETERR;
 	FUNC_END;
 	return NULL;
@@ -1174,7 +1176,7 @@ SFTRET parse_stmt( SFTC )
 		if( !SFTC_IS( ';' ) )
 		{
 			SFTC_UNEXP;
-			sgsFT_Destroy( node );
+			SFTC_DESTROY( node );
 			goto fail;
 		}
 

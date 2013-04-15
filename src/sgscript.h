@@ -62,7 +62,18 @@ struct _sgs_StackFrame
 
 
 /* Memory management */
-extern void* (*sgs_MemFunc) ( void*, size_t );
+typedef void* (*sgs_MemFunc)
+(
+	void* /* userdata */,
+	void* /* curmem */,
+	size_t /* numbytes */
+);
+
+static void* sgs_DefaultMemFunc( void* ud, void* ptr, size_t size )
+{
+	UNUSED( ud );
+	return realloc( ptr, size );
+}
 
 
 /* Debug output */
@@ -146,13 +157,33 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 /* Engine context */
 #define SGS_CTX sgs_Context* C
 
-sgs_Context* sgs_CreateEngine();
+
+sgs_Context*
+sgs_CreateEngineExt
+(
+	sgs_MemFunc memfunc,
+	void* mfuserdata
+);
+static SGS_INLINE sgs_Context* sgs_CreateEngine()
+	{ return sgs_CreateEngineExt( sgs_DefaultMemFunc, NULL ); }
 
 void sgs_DestroyEngine( SGS_CTX );
 
+
+/* Core systems */
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
 void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
 void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
+void* sgs_Memory( SGS_CTX, void* ptr, size_t size );
+#define sgs_Malloc( C, size ) sgs_Memory( C, NULL, size )
+#define sgs_Free( C, ptr ) sgs_Memory( C, ptr, 0 )
+#define sgs_Realloc sgs_Memory
+/* assumes SGS_CTX: */
+#define sgs_Alloc( what ) (what*) sgs_Malloc( C, sizeof(what) )
+#define sgs_Alloc_n( what, cnt ) (what*) sgs_Malloc( C, sizeof(what) * cnt )
+#define sgs_Alloc_a( what, app ) (what*) sgs_Malloc( C, sizeof(what) + app )
+#define sgs_Dealloc( ptr ) sgs_Free( C, ptr )
+
 
 SGSRESULT
 sgs_ExecBuffer
@@ -189,7 +220,6 @@ sgs_Compile
 	sgs_SizeVal* outsize
 );
 
-void sgs_FreeCompileBuffer( char* buf );
 SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size );
 
 SGSRESULT sgs_Stat( SGS_CTX, int type );

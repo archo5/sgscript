@@ -29,29 +29,34 @@ DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 _OBJ = sgs_bcg.o sgs_ctx.o sgs_fnt.o sgs_proc.o sgs_std.o sgs_stdL.o sgs_tok.o sgs_util.o sgs_xpc.o
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
-
+# the library (default target)
 $(LIBDIR)/libsgscript.a: $(OBJ)
 	ar rcs $@ $(OBJ)
-
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
+# the tools
+$(OUTDIR)/sgstest: $(LIBDIR)/libsgscript.a
+	$(CC) -o $@ $(EXTDIR)/sgstest.c -lsgscript -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+$(OUTDIR)/sgsvm: $(LIBDIR)/libsgscript.a
+	$(CC) -o $@ $(EXTDIR)/sgsvm.c -lsgscript -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+$(OUTDIR)/sgsc: $(LIBDIR)/libsgscript.a
+	$(CC) -o $@ $(EXTDIR)/sgsc.c -lsgscript -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+.PHONY: tools
+tools: $(OUTDIR)/sgstest $(OUTDIR)/sgsvm $(OUTDIR)/sgsc
 .PHONY: test
 test: $(OUTDIR)/sgstest
 	$(OUTDIR)/sgstest
 
-$(OUTDIR)/sgstest: $(LIBDIR)/libsgscript.a
-	$(CC) -o $@ $(EXTDIR)/sgstest.c -lsgscript -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+# other stuff
+# - multithreaded testing
+.PHONY: test_mt
+test_mt: $(OUTDIR)/sgstest_mt
+	$(OUTDIR)/sgstest_mt
+$(OUTDIR)/sgstest_mt: $(LIBDIR)/libsgscript.a
+	$(CC) -o $@ examples/sgstest_mt.c -lsgscript -lm -lpthread $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 
-$(OUTDIR)/sgsvm: $(LIBDIR)/libsgscript.a
-	$(CC) -o $@ $(EXTDIR)/sgsvm.c -lsgscript -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
-
-$(OUTDIR)/sgsc: $(LIBDIR)/libsgscript.a
-	$(CC) -o $@ $(EXTDIR)/sgsc.c -lsgscript -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
-
-.PHONY: tools
-tools: $(OUTDIR)/sgstest $(OUTDIR)/sgsvm $(OUTDIR)/sgsc
-
+# clean everything
 .PHONY: clean
 clean:
 	$(RM) $(call FixPath,$(OBJDIR)/*.o $(LIBDIR)/*.a $(LIBDIR)/*.lib $(OUTDIR)/sgs*)

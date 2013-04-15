@@ -47,6 +47,10 @@ struct _sgs_Context
 	sgs_PrintFunc print_fn;  /* printing function */
 	void*         print_ctx; /* printing context */
 
+	/* memory */
+	sgs_MemFunc   memfunc;
+	void*         mfuserdata;
+
 	/* compilation */
 	uint32_t      state;
 	sgs_FuncCtx*  fctx;      /* ByteCodeGen */

@@ -33,7 +33,7 @@ static SGS_INLINE void comp_reg_unwind( SGS_CTX, int32_t pos )
 }
 
 
-static sgs_CompFunc* make_compfunc()
+static sgs_CompFunc* make_compfunc( SGS_CTX )
 {
 	sgs_CompFunc* func = sgs_Alloc( sgs_CompFunc );
 	func->consts = membuf_create();
@@ -45,7 +45,7 @@ static sgs_CompFunc* make_compfunc()
 }
 
 
-static void fctx_binfo_add( sgs_FuncCtx* fctx, uint32_t ioff, uint16_t loop, uint8_t iscont )
+static void fctx_binfo_add( SGS_CTX, sgs_FuncCtx* fctx, uint32_t ioff, uint16_t loop, uint8_t iscont )
 {
 	sgs_BreakInfo* binfo = sgs_Alloc( sgs_BreakInfo );
 	binfo->jdoff = ioff;
@@ -55,24 +55,24 @@ static void fctx_binfo_add( sgs_FuncCtx* fctx, uint32_t ioff, uint16_t loop, uin
 	fctx->binfo = binfo;
 }
 
-static void fctx_binfo_rem( sgs_FuncCtx* fctx, sgs_BreakInfo* prev )
+static void fctx_binfo_rem( SGS_CTX, sgs_FuncCtx* fctx, sgs_BreakInfo* prev )
 {
 	sgs_BreakInfo* pn;
 	if( prev )
 	{
 		pn = prev->next;
 		prev->next = prev->next->next;
-		sgs_Free( pn );
+		sgs_Dealloc( pn );
 	}
 	else
 	{
 		pn = fctx->binfo;
 		fctx->binfo = fctx->binfo->next;
-		sgs_Free( pn );
+		sgs_Dealloc( pn );
 	}
 }
 
-static sgs_FuncCtx* fctx_create()
+static sgs_FuncCtx* fctx_create( SGS_CTX )
 {
 	sgs_FuncCtx* fctx = sgs_Alloc( sgs_FuncCtx );
 	fctx->func = TRUE;
@@ -85,13 +85,13 @@ static sgs_FuncCtx* fctx_create()
 	return fctx;
 }
 
-static void fctx_destroy( sgs_FuncCtx* fctx )
+static void fctx_destroy( SGS_CTX, sgs_FuncCtx* fctx )
 {
 	while( fctx->binfo )
-		fctx_binfo_rem( fctx, NULL );
-	strbuf_destroy( &fctx->vars );
-	strbuf_destroy( &fctx->gvars );
-	sgs_Free( fctx );
+		fctx_binfo_rem( C, fctx, NULL );
+	strbuf_destroy( &fctx->vars, C );
+	strbuf_destroy( &fctx->gvars, C );
+	sgs_Dealloc( fctx );
 }
 
 #if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
@@ -240,24 +240,24 @@ static int find_var( StrBuf* S, char* str, int len )
 	return -1;
 }
 
-static int add_var( StrBuf* S, char* str, int len )
+static int add_var( StrBuf* S, SGS_CTX, char* str, int len )
 {
 	int pos = find_var( S, str, len );
 	if( pos < 0 )
 	{
-		strbuf_appbuf( S, str, len );
-		strbuf_appchr( S, '=' );
+		strbuf_appbuf( S, C, str, len );
+		strbuf_appchr( S, C, '=' );
 		return TRUE;
 	}
 	return FALSE;
 }
 
-static int preadd_thisvar( StrBuf* S )
+static int preadd_thisvar( StrBuf* S, SGS_CTX )
 {
 	int pos = find_var( S, "this", 4 );
 	if( pos < 0 )
 	{
-		strbuf_insbuf( S, 0, "this=", 5 );
+		strbuf_insbuf( S, C, 0, "this=", 5 );
 		return TRUE;
 	}
 	return FALSE;
@@ -265,13 +265,13 @@ static int preadd_thisvar( StrBuf* S )
 
 
 /* simplifies writing code */
-static void add_instr( sgs_CompFunc* func, FTNode* node, instr_t I )
+static void add_instr( sgs_CompFunc* func, SGS_CTX, FTNode* node, instr_t I )
 {
 	uint16_t ln = sgsT_LineNum( node->token );
-	membuf_appbuf( &func->lnbuf, &ln, sizeof( ln ) );
-	membuf_appbuf( &func->code, &I, sizeof( I ) );
+	membuf_appbuf( &func->lnbuf, C, &ln, sizeof( ln ) );
+	membuf_appbuf( &func->code, C, &I, sizeof( I ) );
 }
-#define INSTR_N( i, n ) add_instr( func, n, i )
+#define INSTR_N( i, n ) add_instr( func, C, n, i )
 #define INSTR( i )      INSTR_N( i, node )
 #define INSTR_WRITE( op, a, b, c ) INSTR( INSTR_MAKE( op, a, b, c ) )
 #define INSTR_WRITE_EX( op, ex, c ) INSTR( INSTR_MAKE_EX( op, ex, c ) )
@@ -288,7 +288,7 @@ static int preparse_varlist( SGS_CTX, FTNode* node )
 			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined: global -> local" );
 			return FALSE;
 		}
-		if( add_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) )
+		if( add_var( &C->fctx->vars, C, (char*) node->token + 2, node->token[ 1 ] ) )
 			comp_reg_alloc( C );
 		node = node->next;
 	}
@@ -305,7 +305,7 @@ static int preparse_gvlist( SGS_CTX, FTNode* node )
 			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined: local -> global" );
 			return FALSE;
 		}
-		add_var( &C->fctx->gvars, (char*) node->token + 2, node->token[ 1 ] );
+		add_var( &C->fctx->gvars, C, (char*) node->token + 2, node->token[ 1 ] );
 		node = node->next;
 	}
 	return TRUE;
@@ -321,7 +321,7 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	else if( node->token && is_keyword( node->token, "this" ) )
 	{
 		func->gotthis = TRUE;
-		if( preadd_thisvar( &C->fctx->vars ) )
+		if( preadd_thisvar( &C->fctx->vars, C ) )
 			comp_reg_alloc( C );
 	}
 	else if( node->type == SFT_OPER )
@@ -330,7 +330,7 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		{
 			/* add_var calls find_var internally but - GVARS vs VARS - note the difference */
 			if( find_var( &C->fctx->gvars, (char*) node->child->token + 2, node->child->token[ 1 ] ) == -1 &&
-				add_var( &C->fctx->vars, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
+				add_var( &C->fctx->vars, C, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
 				comp_reg_alloc( C );
 		}
 		ret &= preparse_varlists( C, func, node->child );
@@ -342,7 +342,7 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined (foreach key variable cannot be global): global -> local" );
 			ret = FALSE;
 		}
-		else if( add_var( &C->fctx->vars, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
+		else if( add_var( &C->fctx->vars, C, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
 			comp_reg_alloc( C );
 
 		ret &= preparse_varlists( C, func, node->child->next );
@@ -359,7 +359,7 @@ static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	node = node->child;
 	while( node )
 	{
-		if( !add_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) )
+		if( !add_var( &C->fctx->vars, C, (char*) node->token + 2, node->token[ 1 ] ) )
 		{
 			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot redeclare arguments with the same name." );
 			return 0;
@@ -387,10 +387,9 @@ static int add_const_null( SGS_CTX, sgs_CompFunc* func )
 			return var - vbeg;
 		var++;
 	}
-	UNUSED( C );
 
 	nvar.type = SVT_NULL;
-	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
+	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
 }
 
@@ -403,11 +402,10 @@ static int add_const_b( SGS_CTX, sgs_CompFunc* func, int32_t bval )
 			return var - vbeg;
 		var++;
 	}
-	UNUSED( C );
 
 	nvar.type = SVT_BOOL;
 	nvar.data.B = bval;
-	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
+	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
 }
 
@@ -420,11 +418,10 @@ static int add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Integer ival )
 			return var - vbeg;
 		var++;
 	}
-	UNUSED( C );
 
 	nvar.type = SVT_INT;
 	nvar.data.I = ival;
-	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
+	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
 }
 
@@ -437,11 +434,10 @@ static int add_const_r( SGS_CTX, sgs_CompFunc* func, sgs_Real rval )
 			return var - vbeg;
 		var++;
 	}
-	UNUSED( C );
 
 	nvar.type = SVT_REAL;
 	nvar.data.R = rval;
-	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
+	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
 }
 
@@ -455,10 +451,9 @@ static int add_const_s( SGS_CTX, sgs_CompFunc* func, int32_t len, const char* st
 			return var - vbeg;
 		var++;
 	}
-	UNUSED( C );
 
-	sgsVM_VarCreateString( &nvar, str, len );
-	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
+	sgsVM_VarCreateString( C, &nvar, str, len );
+	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
 }
 
@@ -481,25 +476,25 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf, const cha
 	}
 	F->funcname = strbuf_create();
 	if( funcname )
-		strbuf_appstr( &F->funcname, funcname );
+		strbuf_appstr( &F->funcname, C, funcname );
 	F->linenum = lnum;
 	
 	F->filename = strbuf_create();
 	if( C->filename )
-		strbuf_appstr( &F->filename, C->filename );
+		strbuf_appstr( &F->filename, C, C->filename );
 	
 	memcpy( func_consts( F ), nf->consts.ptr, nf->consts.size );
 	memcpy( func_bytecode( F ), nf->code.ptr, nf->code.size );
 
-	membuf_destroy( &nf->consts );
-	membuf_destroy( &nf->code );
-	membuf_destroy( &nf->lnbuf );
-	sgs_Free( nf );
+	membuf_destroy( &nf->consts, C );
+	membuf_destroy( &nf->code, C );
+	membuf_destroy( &nf->lnbuf, C );
+	sgs_Dealloc( nf );
 
 	pos = func->consts.size / sizeof( nvar );
 	nvar.type = SVT_FUNC;
 	nvar.data.F = F;
-	membuf_appbuf( &func->consts, &nvar, sizeof( nvar ) );
+	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return pos;
 }
 
@@ -645,7 +640,7 @@ static int compile_ident_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 			pos = -1;
 		else
 		{
-			add_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
+			add_var( &C->fctx->vars, C, (char*) node->token + 2, node->token[ 1 ] );
 			pos = find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
 		}
 	}
@@ -807,7 +802,7 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 			pos = -1;
 		else
 		{
-			add_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
+			add_var( &C->fctx->vars, C, (char*) node->token + 2, node->token[ 1 ] );
 			pos = find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
 		}
 	}
@@ -1122,7 +1117,7 @@ static int compile_breaks( SGS_CTX, sgs_CompFunc* func, uint8_t iscont )
 			int16_t off = ( func->code.size - binfo->jdoff ) / INSTR_SIZE - 1;
 			AS_UINT32( func->code.ptr + binfo->jdoff ) = INSTR_MAKE_EX( SI_JUMP, off, 0 );
 			binfo = binfo->next;
-			fctx_binfo_rem( C->fctx, prev );
+			fctx_binfo_rem( C, C->fctx, prev );
 		}
 		else
 		{
@@ -1136,20 +1131,20 @@ static int compile_breaks( SGS_CTX, sgs_CompFunc* func, uint8_t iscont )
 
 
 
-static void rpts( StrBuf* out, FTNode* root )
+static void rpts( StrBuf* out, SGS_CTX, FTNode* root )
 {
 	switch( root->type )
 	{
 	case SFT_IDENT:
-		strbuf_appbuf( out, root->token + 2, root->token[1] );
+		strbuf_appbuf( out, C, root->token + 2, root->token[1] );
 		break;
 	case SFT_OPER:
 		switch( *root->token )
 		{
 		case ST_OP_MMBR:
-			rpts( out, root->child );
-			strbuf_appchr( out, '.' );
-			rpts( out, root->child->next );
+			rpts( out, C, root->child );
+			strbuf_appchr( out, C, '.' );
+			rpts( out, C, root->child->next );
 			break;
 		}
 		break;
@@ -1159,8 +1154,8 @@ static void rpts( StrBuf* out, FTNode* root )
 
 static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
 {
-	sgs_FuncCtx* fctx = fctx_create(), *bkfctx = C->fctx;
-	sgs_CompFunc* nf = make_compfunc();
+	sgs_FuncCtx* fctx = fctx_create( C ), *bkfctx = C->fctx;
+	sgs_CompFunc* nf = make_compfunc( C );
 	int args = 0;
 
 	C->fctx = fctx;
@@ -1176,30 +1171,30 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	{
 		instr_t I = INSTR_MAKE( SI_PUSHN, C->fctx->lastreg - args, 0, 0 );
 		uint16_t ln = 0;
-		membuf_insbuf( &nf->code, 0, &I, sizeof( I ) );
-		membuf_insbuf( &nf->lnbuf, 0, &ln, sizeof( ln ) );
+		membuf_insbuf( &nf->code, C, 0, &I, sizeof( I ) );
+		membuf_insbuf( &nf->lnbuf, C, 0, &ln, sizeof( ln ) );
 	}
 
 #if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	fctx_dump( fctx );
 	sgsBC_Dump( nf );
 #endif
-	fctx_destroy( fctx );
+	fctx_destroy( C, fctx );
 	C->fctx = bkfctx;
 
 	{
 		StrBuf ffn = strbuf_create();
 		if( node->child->next->next )
-			rpts( &ffn, node->child->next->next );
+			rpts( &ffn, C, node->child->next->next );
 		*out = CONSTENC( add_const_f( C, func, nf, ffn.ptr, sgsT_LineNum( node->token ) ) );
-		strbuf_destroy( &ffn );
+		strbuf_destroy( &ffn, C );
 	}
 	return 1;
 
 fail:
 	sgsBC_Free( C, nf );
 	C->fctx = bkfctx;
-	fctx_destroy( fctx );
+	fctx_destroy( C, fctx );
 	C->state |= SGS_HAS_ERRORS;
 	return 0;
 }
@@ -1651,7 +1646,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), C->fctx->loops ? "Break level too high." : "Attempted to break while not in a loop." );
 				goto fail;
 			}
-			fctx_binfo_add( C->fctx, func->code.size, C->fctx->loops + 1 - blev, FALSE );
+			fctx_binfo_add( C, C->fctx, func->code.size, C->fctx->loops + 1 - blev, FALSE );
 			INSTR_WRITE_PCH();
 		}
 		break;
@@ -1668,7 +1663,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), C->fctx->loops ? "Continue level too high." : "Attempted to continue while not in a loop." );
 				goto fail;
 			}
-			fctx_binfo_add( C->fctx, func->code.size, C->fctx->loops + 1 - blev, TRUE );
+			fctx_binfo_add( C, C->fctx, func->code.size, C->fctx->loops + 1 - blev, TRUE );
 			INSTR_WRITE_PCH();
 		}
 		break;
@@ -1725,8 +1720,8 @@ fail:
 
 sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 {
-	sgs_CompFunc* func = make_compfunc();
-	sgs_FuncCtx* fctx = fctx_create();
+	sgs_CompFunc* func = make_compfunc( C );
+	sgs_FuncCtx* fctx = fctx_create( C );
 	fctx->func = FALSE;
 	C->fctx = fctx;
 	if( !preparse_varlists( C, func, tree ) )
@@ -1738,21 +1733,21 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 	{
 		instr_t I = INSTR_MAKE( SI_PUSHN, C->fctx->lastreg, 0, 0 );
 		uint16_t ln = 0;
-		membuf_insbuf( &func->code, 0, &I, sizeof( I ) );
-		membuf_insbuf( &func->lnbuf, 0, &ln, sizeof( ln ) );
+		membuf_insbuf( &func->code, C, 0, &I, sizeof( I ) );
+		membuf_insbuf( &func->lnbuf, C, 0, &ln, sizeof( ln ) );
 	}
 
 	C->fctx = NULL;
 #if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	fctx_dump( fctx );
 #endif
-	fctx_destroy( fctx );
+	fctx_destroy( C, fctx );
 	return func;
 
 fail:
 	sgsBC_Free( C, func );
 	C->fctx = NULL;
-	fctx_destroy( fctx );
+	fctx_destroy( C, fctx );
 	C->state |= SGS_HAS_ERRORS;
 	return NULL;
 }
@@ -1788,10 +1783,10 @@ void sgsBC_Free( SGS_CTX, sgs_CompFunc* func )
 		var++;
 	}
 
-	membuf_destroy( &func->code );
-	membuf_destroy( &func->consts );
-	membuf_destroy( &func->lnbuf );
-	sgs_Free( func );
+	membuf_destroy( &func->code, C );
+	membuf_destroy( &func->consts, C );
+	membuf_destroy( &func->lnbuf, C );
+	sgs_Dealloc( func );
 }
 
 
@@ -1828,10 +1823,10 @@ static void esi32_array( int32_t* data, int cnt )
 	i32 size
 	byte[size] data
 */
-static void bc_write_sgsstring( string_t* S, MemBuf* outbuf )
+static void bc_write_sgsstring( string_t* S, SGS_CTX, MemBuf* outbuf )
 {
-	membuf_appbuf( outbuf, &S->size, sizeof( int32_t ) );
-	membuf_appbuf( outbuf, str_cstr( S ), S->size );
+	membuf_appbuf( outbuf, C, &S->size, sizeof( int32_t ) );
+	membuf_appbuf( outbuf, C, str_cstr( S ), S->size );
 }
 
 static void bc_read_sgsstring( decoder_t* D, sgs_Variable* var )
@@ -1841,7 +1836,7 @@ static void bc_read_sgsstring( decoder_t* D, sgs_Variable* var )
 	if( D->convend )
 		len = esi32( len );
 	buf += 4;
-	sgsVM_VarCreateString( var, buf, len );
+	sgsVM_VarCreateString( D->C, var, buf, len );
 	D->buf = buf + len;
 }
 
@@ -1860,18 +1855,18 @@ static void bc_read_sgsstring( decoder_t* D, sgs_Variable* var )
 	--if type = FUNC:
 	funcdata data
 */
-static int bc_write_sgsfunc( func_t* F, MemBuf* outbuf );
-static int bc_write_var( sgs_Variable* var, MemBuf* outbuf )
+static int bc_write_sgsfunc( func_t* F, SGS_CTX, MemBuf* outbuf );
+static int bc_write_var( sgs_Variable* var, SGS_CTX, MemBuf* outbuf )
 {
-	membuf_appchr( outbuf, var->type );
+	membuf_appchr( outbuf, C, var->type );
 	switch( var->type )
 	{
 	case SVT_NULL: break;
-	case SVT_BOOL: membuf_appchr( outbuf, var->data.B ); break;
-	case SVT_INT: membuf_appbuf( outbuf, &var->data.I, sizeof( sgs_Integer ) ); break;
-	case SVT_REAL: membuf_appbuf( outbuf, &var->data.R, sizeof( sgs_Real ) ); break;
-	case SVT_STRING: bc_write_sgsstring( var->data.S, outbuf ); break;
-	case SVT_FUNC: if( !bc_write_sgsfunc( var->data.F, outbuf ) ) return 0; break;
+	case SVT_BOOL: membuf_appchr( outbuf, C, var->data.B ); break;
+	case SVT_INT: membuf_appbuf( outbuf, C, &var->data.I, sizeof( sgs_Integer ) ); break;
+	case SVT_REAL: membuf_appbuf( outbuf, C, &var->data.R, sizeof( sgs_Real ) ); break;
+	case SVT_STRING: bc_write_sgsstring( var->data.S, C, outbuf ); break;
+	case SVT_FUNC: if( !bc_write_sgsfunc( var->data.F, C, outbuf ) ) return 0; break;
 	default:
 		return 0;
 	}
@@ -1900,12 +1895,12 @@ static const char* bc_read_var( decoder_t* D, sgs_Variable* var )
 /*
 	var[cnt] varlist
 */
-static int bc_write_varlist( sgs_Variable* vlist, int cnt, MemBuf* outbuf )
+static int bc_write_varlist( sgs_Variable* vlist, SGS_CTX, int cnt, MemBuf* outbuf )
 {
 	int i;
 	for( i = 0; i < cnt; ++i )
 	{
-		if( !bc_write_var( vlist + i, outbuf ) )
+		if( !bc_write_var( vlist + i, C, outbuf ) )
 			return 0;
 	}
 	return 1;
@@ -1941,25 +1936,25 @@ static const char* bc_read_varlist( decoder_t* D, sgs_Variable* vlist, int cnt )
 	varlist consts
 	instr[instrcount] instrs
 */
-static int bc_write_sgsfunc( func_t* F, MemBuf* outbuf )
+static int bc_write_sgsfunc( func_t* F, SGS_CTX, MemBuf* outbuf )
 {
 	int16_t cc = F->instr_off / sizeof( sgs_Variable ),
 	        ic = ( F->size - F->instr_off ) / sizeof( instr_t );
 	char gt = F->gotthis, na = F->numargs;
 
-	membuf_appbuf( outbuf, &cc, sizeof( int16_t ) );
-	membuf_appbuf( outbuf, &ic, sizeof( int16_t ) );
-	membuf_appchr( outbuf, gt );
-	membuf_appchr( outbuf, na );
-	membuf_appbuf( outbuf, &F->linenum, sizeof( LineNum ) );
-	membuf_appbuf( outbuf, F->lineinfo, sizeof( uint16_t ) * ic );
-	membuf_appbuf( outbuf, &F->funcname.size, sizeof( int32_t ) );
-	membuf_appbuf( outbuf, F->funcname.ptr, F->funcname.size );
+	membuf_appbuf( outbuf, C, &cc, sizeof( int16_t ) );
+	membuf_appbuf( outbuf, C, &ic, sizeof( int16_t ) );
+	membuf_appchr( outbuf, C, gt );
+	membuf_appchr( outbuf, C, na );
+	membuf_appbuf( outbuf, C, &F->linenum, sizeof( LineNum ) );
+	membuf_appbuf( outbuf, C, F->lineinfo, sizeof( uint16_t ) * ic );
+	membuf_appbuf( outbuf, C, &F->funcname.size, sizeof( int32_t ) );
+	membuf_appbuf( outbuf, C, F->funcname.ptr, F->funcname.size );
 
-	if( !bc_write_varlist( func_consts( F ), cc, outbuf ) )
+	if( !bc_write_varlist( func_consts( F ), C, cc, outbuf ) )
 		return 0;
 
-	membuf_appbuf( outbuf, func_bytecode( F ), sizeof( instr_t ) * ic );
+	membuf_appbuf( outbuf, C, func_bytecode( F ), sizeof( instr_t ) * ic );
 	return 1;
 }
 
@@ -1970,7 +1965,7 @@ static void bc_read_strbuf( decoder_t* D, StrBuf* out )
 	if( D->convend )
 		len = esi32( len );
 	buf += 4;
-	strbuf_appbuf( out, buf, len );
+	strbuf_appbuf( out, D->C, buf, len );
 	D->buf = buf + len;
 }
 static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
@@ -1979,6 +1974,7 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	int32_t ioff, size;
 	int16_t cc, ic;
 	const char* ret;
+	SGS_CTX = D->C;
 
 	cc = AS_INT16( D->buf );
 	ic = AS_INT16( D->buf + 2 );
@@ -2007,7 +2003,7 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	F->funcname = strbuf_create();
 	bc_read_strbuf( D, &F->funcname );
 	F->filename = strbuf_create();
-	strbuf_appbuf( &F->filename, D->filename, D->filename_len );
+	strbuf_appbuf( &F->filename, C, D->filename, D->filename_len );
 
 	/* the main data */
 	ret = bc_read_varlist( D, func_consts( F ), cc );
@@ -2023,10 +2019,10 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	return NULL;
 
 fail:
-	sgs_Free( F->lineinfo );
-	strbuf_destroy( &F->funcname );
-	strbuf_destroy( &F->filename );
-	sgs_Free( F );
+	sgs_Dealloc( F->lineinfo );
+	strbuf_destroy( &F->funcname, C );
+	strbuf_destroy( &F->filename, C );
+	sgs_Dealloc( F );
 	return ret;
 }
 
@@ -2063,28 +2059,28 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 		( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) ? SGSBC_FLAG_LITTLE_ENDIAN : 0,
 		0, 0, 0, 0
 	};
-	membuf_resize( outbuf, 0 );
-	membuf_reserve( outbuf, 1000 );
-	membuf_appbuf( outbuf, header_bytes, 14 );
+	membuf_resize( outbuf, C, 0 );
+	membuf_reserve( outbuf, C, 1000 );
+	membuf_appbuf( outbuf, C, header_bytes, 14 );
 
 	{
 		int16_t cc = func->consts.size / sizeof( sgs_Variable ),
 		        ic = func->code.size / sizeof( instr_t );
 		char gt = func->gotthis, na = func->numargs;
 
-		membuf_appbuf( outbuf, &cc, sizeof( int16_t ) );
-		membuf_appbuf( outbuf, &ic, sizeof( int16_t ) );
-		membuf_appchr( outbuf, gt );
-		membuf_appchr( outbuf, na );
+		membuf_appbuf( outbuf, C, &cc, sizeof( int16_t ) );
+		membuf_appbuf( outbuf, C, &ic, sizeof( int16_t ) );
+		membuf_appchr( outbuf, C, gt );
+		membuf_appchr( outbuf, C, na );
 
 		sgs_BreakIf( outbuf->size != 20 );
 
-		if( !bc_write_varlist( (sgs_Variable*) func->consts.ptr,
+		if( !bc_write_varlist( (sgs_Variable*) func->consts.ptr, C,
 			func->consts.size / sizeof( sgs_Variable ), outbuf ) )
 			return 0;
 
-		membuf_appbuf( outbuf, func->code.ptr, sizeof( instr_t ) * ic );
-		membuf_appbuf( outbuf, func->lnbuf.ptr, sizeof( LineNum ) * ic );
+		membuf_appbuf( outbuf, C, func->code.ptr, sizeof( instr_t ) * ic );
+		membuf_appbuf( outbuf, C, func->lnbuf.ptr, sizeof( LineNum ) * ic );
 
 		AS_UINT32( outbuf->ptr + 10 ) = outbuf->size;
 
@@ -2106,7 +2102,7 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t si
 		const char* ret;
 		int16_t cc, ic;
 		char gt, na;
-		sgs_CompFunc* func = make_compfunc();
+		sgs_CompFunc* func = make_compfunc( C );
 		cc = AS_INT16( buf + 14 );
 		ic = AS_INT16( buf + 16 );
 		gt = AS_UINT8( buf + 18 );
@@ -2121,9 +2117,9 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t si
 
 		func->gotthis = gt;
 		func->numargs = na;
-		membuf_resize( &func->consts, sizeof( sgs_Variable ) * cc );
-		membuf_resize( &func->code, sizeof( instr_t ) * ic );
-		membuf_resize( &func->lnbuf, sizeof( LineNum ) * ic );
+		membuf_resize( &func->consts, C, sizeof( sgs_Variable ) * cc );
+		membuf_resize( &func->code, C, sizeof( instr_t ) * ic );
+		membuf_resize( &func->lnbuf, C, sizeof( LineNum ) * ic );
 
 		ret = bc_read_varlist( &D, (sgs_Variable*) func->consts.ptr, cc );
 		if( ret )

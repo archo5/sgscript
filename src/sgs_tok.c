@@ -116,13 +116,12 @@ static void readident( SGS_CTX, MemBuf* out, const char* code, int32_t* at, int3
 	int32_t sz = 0;
 	int32_t i = *at;
 	int32_t pos_rev = out->size;
-	UNUSED( C );
-	membuf_appchr( out, ST_IDENT );
-	membuf_appchr( out, 0 );
+	membuf_appchr( out, C, ST_IDENT );
+	membuf_appchr( out, C, 0 );
 	while( i < length && ( isalnum( code[ i ] ) || code[ i ] == '_' ) )
 	{
 		if( sz++ < 255 )
-			membuf_appchr( out, code[ i ] );
+			membuf_appchr( out, C, code[ i ] );
 		else
 		{
 			sgs_BreakIf( sz >= 255 );
@@ -170,9 +169,9 @@ static void readstring( SGS_CTX, MemBuf* out, LineNum* line, const char* code, i
 		{
 			int32_t size = i - *at - 1, newsize;
 			int32_t numpos = out->size + 1;
-			membuf_appchr( out, ST_STRING );
-			membuf_appbuf( out, (char*) &size, 4 );
-			membuf_appbuf( out, code + *at + 1, size );
+			membuf_appchr( out, C, ST_STRING );
+			membuf_appbuf( out, C, (char*) &size, 4 );
+			membuf_appbuf( out, C, code + *at + 1, size );
 			*at += size + 1;
 			newsize = string_inplace_fix( out->ptr + numpos + 4, size );
 			*((int32_t*)( out->ptr + numpos )) = newsize;
@@ -260,7 +259,7 @@ static void readop( SGS_CTX, MemBuf* out, LineNum line, const char* code, int32_
 	*at += len - 1;
 	if( whichop < 0 ) goto op_read_error;
 
-	membuf_appchr( out, sgs_optable[ whichop ] );
+	membuf_appchr( out, C, sgs_optable[ whichop ] );
 	return;
 
 op_read_error:
@@ -273,7 +272,7 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length )
 	int32_t i;
 	LineNum line = 1;
 	MemBuf s = membuf_create();
-	membuf_reserve( &s, SGS_TOKENLIST_PREALLOC );
+	membuf_reserve( &s, C, SGS_TOKENLIST_PREALLOC );
 	if( length < 0 )
 		length = strlen( code );
 
@@ -294,7 +293,7 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length )
 					|| code[ i + 1 ] == '*' ) )	skipcomment	( C, &s, &line, code, &i, length );
 
 		/* special symbol */
-		else if( isoneof( fc, "()[]{},;:" ) )	membuf_appchr( &s, fc );
+		else if( isoneof( fc, "()[]{},;:" ) )	membuf_appchr( &s, C, fc );
 
 		/* identifier */
 		else if( fc == '_' || isalpha( fc ) )	readident	( C, &s, code, &i, length );
@@ -313,13 +312,13 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length )
 			}
 			else if( res == 1 )
 			{
-				membuf_appchr( &s, ST_NUMINT );
-				membuf_appbuf( &s, &vi, sizeof( vi ) );
+				membuf_appchr( &s, C, ST_NUMINT );
+				membuf_appbuf( &s, C, &vi, sizeof( vi ) );
 			}
 			else if( res == 2 )
 			{
-				membuf_appchr( &s, ST_NUMREAL );
-				membuf_appbuf( &s, &vr, sizeof( vr ) );
+				membuf_appchr( &s, C, ST_NUMREAL );
+				membuf_appbuf( &s, C, &vr, sizeof( vr ) );
 			}
 			else{ sgs_BreakIf( "Invalid return value from util_strtonum." ); }
 			i = pos - code;
@@ -340,20 +339,20 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length )
 		}
 
 		if( s.size != isz ) /* write a line only if successfully wrote something (a token) */
-			membuf_appbuf( &s, &tokline, sizeof( tokline ) );
+			membuf_appbuf( &s, C, &tokline, sizeof( tokline ) );
 
 		if( C->state & SGS_MUST_STOP )
 			break;
 	}
 
-	membuf_appchr( &s, ST_NULL );
+	membuf_appchr( &s, C, ST_NULL );
 	return (TokenList) s.ptr;
 }
 
-void sgsT_Free( TokenList tlist )
+void sgsT_Free( SGS_CTX, TokenList tlist )
 {
 	StrBuf s = strbuf_partial( (char*) tlist, 0 );
-	strbuf_destroy( &s );
+	strbuf_destroy( &s, C );
 }
 
 TokenList sgsT_Next( TokenList tok )

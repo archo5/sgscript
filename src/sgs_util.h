@@ -22,7 +22,7 @@
 
 typedef int16_t LineNum;
 
-
+#if 0
 /* memory handling */
 #if SGS_DEBUG && SGS_DEBUG_MEMORY && SGS_DEBUG_EXTRA
 void sgs_MemCheckDbg( void* ptr );
@@ -43,7 +43,7 @@ void sgs_DumpMemoryInfo();
 #define sgs_Alloc( what )		(what*) sgs_Malloc( sizeof( what ) )
 #define sgs_Alloc_n( what, n )	(what*) sgs_Malloc( sizeof( what ) * ( n ) )
 #define sgs_Alloc_a( what, n )	(what*) sgs_Malloc( sizeof( what ) + ( n ) )
-
+#endif
 
 void sgs_BreakIfFunc( const char* code, const char* file, int line );
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
@@ -117,16 +117,16 @@ struct _StrBuf
 StrBuf;
 
 StrBuf strbuf_create( void );
-void strbuf_destroy( StrBuf* sb );
+void strbuf_destroy( StrBuf* sb, SGS_CTX );
 StrBuf strbuf_partial( char* ch, int32_t size );
-void strbuf_reserve( StrBuf* sb, int32_t size );
-void strbuf_resize( StrBuf* sb, int32_t size );
-void strbuf_inschr( StrBuf* sb, int32_t pos, char ch );
-void strbuf_insbuf( StrBuf* sb, int32_t pos, const void* buf, int32_t size );
-void strbuf_insstr( StrBuf* sb, int32_t pos, const char* str );
-void strbuf_appchr( StrBuf* sb, char ch );
-void strbuf_appbuf( StrBuf* sb, const void* buf, int32_t size );
-void strbuf_appstr( StrBuf* sb, const char* str );
+void strbuf_reserve( StrBuf* sb, SGS_CTX, int32_t size );
+void strbuf_resize( StrBuf* sb, SGS_CTX, int32_t size );
+void strbuf_inschr( StrBuf* sb, SGS_CTX, int32_t pos, char ch );
+void strbuf_insbuf( StrBuf* sb, SGS_CTX, int32_t pos, const void* buf, int32_t size );
+void strbuf_insstr( StrBuf* sb, SGS_CTX, int32_t pos, const char* str );
+void strbuf_appchr( StrBuf* sb, SGS_CTX, char ch );
+void strbuf_appbuf( StrBuf* sb, SGS_CTX, const void* buf, int32_t size );
+void strbuf_appstr( StrBuf* sb, SGS_CTX, const char* str );
 
 
 /* data buffer */
@@ -134,13 +134,13 @@ void strbuf_appstr( StrBuf* sb, const char* str );
 #define membuf_create strbuf_create
 #define membuf_destroy strbuf_destroy
 #define membuf_partial strbuf_partial
-void membuf_reserve( MemBuf* mb, int32_t size );
-void membuf_resize( MemBuf* mb, int32_t size );
-void membuf_resize_opt( MemBuf* mb, int32_t size );
-void membuf_insbuf( MemBuf* mb, int32_t pos, const void* buf, int32_t size );
+void membuf_reserve( MemBuf* mb, SGS_CTX, int32_t size );
+void membuf_resize( MemBuf* mb, SGS_CTX, int32_t size );
+void membuf_resize_opt( MemBuf* mb, SGS_CTX, int32_t size );
+void membuf_insbuf( MemBuf* mb, SGS_CTX, int32_t pos, const void* buf, int32_t size );
 void membuf_erase( MemBuf* mb, int32_t from, int32_t to );
-void membuf_appbuf( MemBuf* mb, const void* buf, int32_t size );
-static SGS_INLINE void membuf_appchr( MemBuf* mb, char chr ){ membuf_appbuf( mb, &chr, 1 ); }
+void membuf_appbuf( MemBuf* mb, SGS_CTX, const void* buf, int32_t size );
+static SGS_INLINE void membuf_appchr( MemBuf* mb, SGS_CTX, char chr ){ membuf_appbuf( mb, C, &chr, 1 ); }
 
 
 /* hash table */
@@ -165,35 +165,17 @@ struct _HashTable
 }
 HashTable;
 
-void ht_init( HashTable* T, int size );
-void ht_free( HashTable* T );
+void ht_init( HashTable* T, SGS_CTX, int size );
+void ht_free( HashTable* T, SGS_CTX );
 void ht_dump( HashTable* T );
-void ht_rehash( HashTable* T, int size );
-void ht_check( HashTable* T, int inc );
+void ht_rehash( HashTable* T, SGS_CTX, int size );
+void ht_check( HashTable* T, SGS_CTX, int inc );
 HTPair* ht_find( HashTable* T, const char* str, int size );
 void* ht_get( HashTable* T, const char* str, int size );
-void ht_setpair( HTPair* P, const char* str, int size, Hash h, void* ptr );
-HTPair* ht_set( HashTable* T, const char* str, int size, void* ptr );
-void ht_unset_pair( HashTable* T, HTPair* p );
-void ht_unset( HashTable* T, const char* str, int size );
-
-static SGS_INLINE HashTable* ht_create(){ HashTable* T = sgs_Alloc( HashTable ); ht_init( T, 4 ); return T; }
-static SGS_INLINE void ht_destroy( HashTable* T ){ ht_free( T ); sgs_Free( T ); }
-
-
-/* hash table for line numbers */
-struct _LNTable
-{
-	uint16_t* numbers;
-	int size;
-};
-typedef struct _LNTable LNTable;
-
-void lht_init( LNTable* T, int size );
-void lht_init_all( LNTable* T, uint16_t* data, int num );
-void lht_free( LNTable* T );
-void lht_add( LNTable* T, uint16_t from, uint16_t to );
-uint16_t lht_get( LNTable* T, uint16_t from );
+void ht_setpair( HTPair* P, SGS_CTX, const char* str, int size, Hash h, void* ptr );
+HTPair* ht_set( HashTable* T, SGS_CTX, const char* str, int size, void* ptr );
+void ht_unset_pair( HashTable* T, SGS_CTX, HTPair* p );
+void ht_unset( HashTable* T, SGS_CTX, const char* str, int size );
 
 
 double sgs_GetTime();

@@ -67,7 +67,7 @@ void var_free_object( SGS_CTX, object_t* O )
 	if( O->next ) O->next->prev = O->prev;
 	if( C->objs == O )
 		C->objs = O->next;
-	sgs_Free( O );
+	sgs_Dealloc( O );
 	C->objcount--;
 }
 
@@ -79,7 +79,7 @@ void var_destroy_object( SGS_CTX, object_t* O )
 		C->objs = O->next;
 	O->destroying = TRUE;
 	obj_exec( C, SOP_DESTRUCT, O, 0 );
-	sgs_Free( O );
+	sgs_Dealloc( O );
 	C->objcount--;
 }
 
@@ -92,10 +92,10 @@ void var_destroy_func( SGS_CTX, func_t* F )
 		VAR_RELEASE( var );
 		var++;
 	}
-	sgs_Free( F->lineinfo );
-	strbuf_destroy( &F->funcname );
-	strbuf_destroy( &F->filename );
-	sgs_Free( F );
+	sgs_Dealloc( F->lineinfo );
+	strbuf_destroy( &F->funcname, C );
+	strbuf_destroy( &F->filename, C );
+	sgs_Dealloc( F );
 }
 
 static void var_acquire( SGS_CTX, sgs_VarPtr p )
@@ -116,7 +116,7 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 	case SVT_STRING:
 		p->data.S->refcount--;
 		if( p->data.S->refcount <= 0 )
-			sgs_Free( p->data.S );
+			sgs_Dealloc( p->data.S );
 
 		p->type = SVT_NULL;
 		break;
@@ -138,7 +138,7 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 }
 
 
-static void var_create_0str( sgs_VarPtr out, int32_t len )
+static void var_create_0str( SGS_CTX, sgs_VarPtr out, int32_t len )
 {
 	out->type = SVT_STRING;
 	out->data.S = sgs_Alloc_a( string_t, len + 1 );
@@ -148,14 +148,14 @@ static void var_create_0str( sgs_VarPtr out, int32_t len )
 	var_cstr( out )[ len ] = 0;
 }
 
-void var_create_str( sgs_Variable* out, const char* str, int32_t len )
+void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len )
 {
 	sgs_BreakIf( !str );
 
 	if( len < 0 )
 		len = strlen( str );
 
-	var_create_0str( out, len );
+	var_create_0str( C, out, len );
 	memcpy( str_cstr( out->data.S ), str, len );
 }
 
@@ -214,7 +214,7 @@ static void vm_frame_pop( SGS_CTX )
 	C->sf_last = F->prev;
 	if( C->sf_first == F )
 		C->sf_first = NULL;
-	sgs_Free( F );
+	sgs_Dealloc( F );
 }
 
 
@@ -223,9 +223,9 @@ static void vm_frame_pop( SGS_CTX )
 */
 
 
-void vht_init( VHTable* vht )
+void vht_init( VHTable* vht, SGS_CTX )
 {
-	ht_init( &vht->ht, 4 );
+	ht_init( &vht->ht, C, 4 );
 	vht->vars = NULL;
 	vht->mem = 0;
 }
@@ -238,9 +238,9 @@ void vht_free( VHTable* vht, SGS_CTX )
 		sgs_VarPtr p = &vht->vars[ i ].var;
 		VAR_RELEASE( p );
 	}
-	ht_free( &vht->ht );
+	ht_free( &vht->ht, C );
 	if( vht->vars )
-		sgs_Free( vht->vars );
+		sgs_Dealloc( vht->vars );
 }
 
 VHTableVar* vht_get( VHTable* vht, const char* key, int32_t size )
@@ -267,14 +267,14 @@ void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SG
 			VHTableVar* narr = sgs_Alloc_n( VHTableVar, nmem );
 			memcpy( narr, vht->vars, sizeof( VHTableVar ) * vht_size( vht ) );
 			if( vht->vars )
-				sgs_Free( vht->vars );
+				sgs_Dealloc( vht->vars );
 			vht->vars = narr;
 			vht->mem = nmem;
 		}
 
 		{
 			uint32_t ni = vht_size( vht );
-			HTPair* p = ht_set( &vht->ht, key, size, (void*)( ni + 1 ) );
+			HTPair* p = ht_set( &vht->ht, C, key, size, (void*)( ni + 1 ) );
 			VHTableVar htv = { *var, p->str, p->size };
 			vht->vars[ ni ] = htv;
 		}
@@ -296,7 +296,7 @@ int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
 			tv->size = lhtv->size;
 			ht_find( &vht->ht, tv->str, tv->size )->ptr = (void*)( tv - vht->vars + 1 );
 		}
-		ht_unset_pair( &vht->ht, tvp );
+		ht_unset_pair( &vht->ht, C, tvp );
 		return 1;
 	}
 	return 0;
@@ -386,18 +386,13 @@ static SGS_INLINE void stk_setlvar_null( SGS_CTX, int stkid )
 static void stk_makespace( SGS_CTX, int num )
 {
 	int stkoff, stkend, nsz, stksz = C->stack_top - C->stack_base;
-	sgs_VarPtr nmem;
 	if( stksz + num <= C->stack_mem )
 		return;
 	stkoff = C->stack_off - C->stack_base;
 	stkend = C->stack_top - C->stack_base;
 	DBG_STACK_CHECK
 	nsz = ( stksz + num ) + C->stack_mem * 2; /* MAX( stksz + num, C->stack_mem * 2 ); */
-	nmem = sgs_Alloc_n( sgs_Variable, nsz );
-	if( stksz )
-		memcpy( nmem, C->stack_base, stksz * STK_UNITSIZE );
-	sgs_Free( C->stack_base );
-	C->stack_base = nmem;
+	C->stack_base = sgs_Realloc( C, C->stack_base, sizeof( sgs_Variable ) * nsz );
 	C->stack_mem = nsz;
 	C->stack_off = C->stack_base + stkoff;
 	C->stack_top = C->stack_base + stkend;
@@ -626,12 +621,12 @@ static int init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 
 	switch( var->type )
 	{
-	case SVT_NULL: var_create_str( out, "null", 4 ); break;
-	case SVT_BOOL: if( var->data.B ) var_create_str( out, "true", 4 ); else var_create_str( out, "false", 5 ); break;
-	case SVT_INT: sprintf( buf, "%" PRId64, var->data.I ); var_create_str( out, buf, -1 ); break;
-	case SVT_REAL: sprintf( buf, "%g", var->data.R ); var_create_str( out, buf, -1 ); break;
-	case SVT_FUNC: var_create_str( out, "Function", -1 ); break;
-	case SVT_CFUNC: var_create_str( out, "C Function", -1 ); break;
+	case SVT_NULL: var_create_str( C, out, "null", 4 ); break;
+	case SVT_BOOL: if( var->data.B ) var_create_str( C, out, "true", 4 ); else var_create_str( C, out, "false", 5 ); break;
+	case SVT_INT: sprintf( buf, "%" PRId64, var->data.I ); var_create_str( C, out, buf, -1 ); break;
+	case SVT_REAL: sprintf( buf, "%g", var->data.R ); var_create_str( C, out, buf, -1 ); break;
+	case SVT_FUNC: var_create_str( C, out, "Function", -1 ); break;
+	case SVT_CFUNC: var_create_str( C, out, "C Function", -1 ); break;
 	}
 	return SGS_SUCCESS;
 }
@@ -930,13 +925,13 @@ static int vm_setvar( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 		if( olddata )
 		{
 			VAR_RELEASE( (sgs_Variable*) olddata );
-			sgs_Free( olddata );
+			sgs_Dealloc( olddata );
 		}
 	}
 	data = sgs_Alloc( sgs_Variable );
 	*data = *val;
 	VAR_ACQUIRE( data );
-	ht_set( &C->data, str_cstr( idx->data.S ), idx->data.S->size, data );
+	ht_set( &C->data, C, str_cstr( idx->data.S ), idx->data.S->size, data );
 	return SGS_SUCCESS;
 }
 
@@ -952,7 +947,7 @@ static int vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
 	case SVT_STRING:
 		{
 			sgs_Variable ns;
-			var_create_str( &ns, var_cstr( var ), var->data.S->size );
+			var_create_str( C, &ns, var_cstr( var ), var->data.S->size );
 			stk_setlvar_leave( C, out, &ns );
 		}
 		break;
@@ -993,7 +988,7 @@ static void vm_op_concat( SGS_CTX, int16_t out, sgs_Variable *A, sgs_Variable *B
 	VAR_ACQUIRE( &vB );
 	vm_convert( C, &vA, SVT_STRING );
 	vm_convert( C, &vB, SVT_STRING );
-	var_create_0str( &N, vA.data.S->size + vB.data.S->size );
+	var_create_0str( C, &N, vA.data.S->size + vB.data.S->size );
 	memcpy( var_cstr( &N ), var_cstr( &vA ), vA.data.S->size );
 	memcpy( var_cstr( &N ) + vA.data.S->size, var_cstr( &vB ), vB.data.S->size );
 	stk_setvar_leave( C, out, &N );
@@ -1017,7 +1012,7 @@ static int vm_op_concat_ex( SGS_CTX, int args )
 		var = stk_getpos( C, -i );
 		totsz += var->data.S->size;
 	}
-	var_create_0str( &N, totsz );
+	var_create_0str( C, &N, totsz );
 	for( i = args; i >= 1; --i )
 	{
 		var = stk_getpos( C, -i );
@@ -1775,16 +1770,16 @@ void sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size )
 {
 	sgs_Variable var;
 	if( str )
-		var_create_str( &var, str, size );
+		var_create_str( C, &var, str, size );
 	else
-		var_create_0str( &var, size );
+		var_create_0str( C, &var, size );
 	stk_push_leave( C, &var );
 }
 
 void sgs_PushString( SGS_CTX, const char* str )
 {
 	sgs_Variable var;
-	var_create_str( &var, str, -1 );
+	var_create_str( C, &var, str, -1 );
 	stk_push_leave( C, &var );
 }
 

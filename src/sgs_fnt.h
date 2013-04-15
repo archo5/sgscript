@@ -47,7 +47,7 @@ struct _FTNode
 	short     type;
 };
 
-void sgsFT_Destroy( FTNode* tree );
+void sgsFT_Destroy( SGS_CTX, FTNode* tree );
 
 FTNode* sgsFT_Compile( SGS_CTX, TokenList tlist );
 void sgsFT_Dump( FTNode* tree );

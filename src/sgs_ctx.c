@@ -81,7 +81,7 @@ static void ctx_init( SGS_CTX )
 	C->sf_first = NULL;
 	C->sf_last = NULL;
 
-	ht_init( &C->data, 4 );
+	ht_init( &C->data, C, 4 );
 
 	C->objs = NULL;
 	C->objcount = 0;
@@ -93,9 +93,11 @@ static void ctx_init( SGS_CTX )
 	C->dict_func = default_dict_func;
 }
 
-sgs_Context* sgs_CreateEngine()
+sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 {
-	SGS_CTX = sgs_Alloc( sgs_Context );
+	SGS_CTX = memfunc( mfuserdata, NULL, sizeof( sgs_Context ) );
+	C->memfunc = memfunc;
+	C->mfuserdata = mfuserdata;
 	ctx_init( C );
 	sgsVM_RegStdLibs( C );
 	return C;
@@ -122,25 +124,70 @@ void sgs_DestroyEngine( SGS_CTX )
 		if( p->str && p->ptr )
 		{
 			sgs_Release( C, (sgs_VarPtr) p->ptr );
-			sgs_Free( p->ptr );
+			sgs_Dealloc( p->ptr );
 		}
 		p++;
 	}
 
 	/* unsetting keys one by one might reallocate the table more often than it's necessary */
-	ht_free( &C->data );
-	ht_init( &C->data, 4 );
+	ht_free( &C->data, C );
+	ht_init( &C->data, C, 4 );
 
 	sgs_GCExecute( C );
 
-	sgs_Free( C->stack_base );
-	ht_free( &C->data );
+	sgs_Dealloc( C->stack_base );
+	ht_free( &C->data, C );
 
-	sgs_Free( C );
+	sgs_Free( C, C );
+}
 
-#if SGS_DEBUG && SGS_DEBUG_MEMORY && SGS_DEBUG_CHECK_LEAKS
-	sgs_DumpMemoryInfo();
+
+void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
+{
+	if( func == SGSPRINTFN_DEFAULT )
+		func = default_printfn;
+	C->print_fn = func;
+	C->print_ctx = ctx;
+}
+
+void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
+{
+	StrBuf info;
+	int cnt;
+	va_list args;
+
+	if( !C->print_fn )
+		return;
+
+	info = strbuf_create();
+
+	va_start( args, what );
+#ifdef _MSC_VER
+	cnt = _vscprintf( what, args );
+#else
+	cnt = vsnprintf( NULL, 0, what, args );
 #endif
+	va_end( args );
+
+	strbuf_resize( &info, C, cnt );
+
+	va_start( args, what );
+	vsprintf( info.ptr, what, args );
+	va_end( args );
+
+	if( line < 0 && C->sf_last )
+	{
+		sgs_StackFrameInfo( C, C->sf_last, NULL, NULL, &line );
+	}
+
+	C->print_fn( C->print_ctx, C, type, line, info.ptr );
+
+	strbuf_destroy( &info, C );
+}
+
+void* sgs_Memory( SGS_CTX, void* ptr, size_t size )
+{
+	return C->memfunc( C->mfuserdata, ptr, size );
 }
 
 
@@ -198,8 +245,8 @@ static int ctx_compile( SGS_CTX, const char* buf, int32_t size, sgs_CompFunc** o
 	if( !func || C->state & SGS_HAS_ERRORS )
 		goto error;
 	DBGINFO( "...cleaning up tokens/function tree" );
-	sgsFT_Destroy( ftree ); ftree = NULL;
-	sgsT_Free( tlist ); tlist = NULL;
+	sgsFT_Destroy( C, ftree ); ftree = NULL;
+	sgsT_Free( C, tlist ); tlist = NULL;
 #if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	sgsBC_Dump( func );
 #endif
@@ -209,8 +256,8 @@ static int ctx_compile( SGS_CTX, const char* buf, int32_t size, sgs_CompFunc** o
 
 error:
 	if( func )	sgsBC_Free( C, func );
-	if( ftree ) sgsFT_Destroy( ftree );
-	if( tlist ) sgsT_Free( tlist );
+	if( ftree ) sgsFT_Destroy( C, ftree );
+	if( tlist ) sgsT_Free( C, tlist );
 
 	return 0;
 }
@@ -275,7 +322,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	if( fread( data, 1, len, f ) != len )
 	{
 		fclose( f );
-		sgs_Free( data );
+		sgs_Dealloc( data );
 		return SGS_EINPROC;
 	}
 	fclose( f );
@@ -285,7 +332,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	ret = ctx_execute( C, data, len, rvc ? FALSE : TRUE, rvc );
 	C->filename = ofn;
 
-	sgs_Free( data );
+	sgs_Dealloc( data );
 	return ret;
 }
 
@@ -300,7 +347,7 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, sgs_SizeVal size, char** outbuf
 	mb = membuf_create();
 	if( !sgsBC_Func2Buf( C, func, &mb ) )
 	{
-		membuf_destroy( &mb );
+		membuf_destroy( &mb, C );
 		return SGS_EINPROC;
 	}
 
@@ -310,11 +357,6 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, sgs_SizeVal size, char** outbuf
 	sgsBC_Free( C, func );
 
 	return SGS_SUCCESS;
-}
-
-void sgs_FreeCompileBuffer( char* buf )
-{
-	sgs_Free( buf );
 }
 
 
@@ -502,49 +544,5 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end )
 {
 	return end ? C->sf_last : C->sf_first;
-}
-
-
-void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
-{
-	if( func == SGSPRINTFN_DEFAULT )
-		func = default_printfn;
-	C->print_fn = func;
-	C->print_ctx = ctx;
-}
-
-void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
-{
-	StrBuf info;
-	int cnt;
-	va_list args;
-
-	if( !C->print_fn )
-		return;
-
-	info = strbuf_create();
-
-	va_start( args, what );
-#ifdef _MSC_VER
-	cnt = _vscprintf( what, args );
-#else
-	cnt = vsnprintf( NULL, 0, what, args );
-#endif
-	va_end( args );
-
-	strbuf_resize( &info, cnt );
-
-	va_start( args, what );
-	vsprintf( info.ptr, what, args );
-	va_end( args );
-
-	if( line < 0 && C->sf_last )
-	{
-		sgs_StackFrameInfo( C, C->sf_last, NULL, NULL, &line );
-	}
-
-	C->print_fn( C->print_ctx, C, type, line, info.ptr );
-
-	strbuf_destroy( &info );
 }
 

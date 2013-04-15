@@ -35,17 +35,11 @@ void* sgsstd_array_functable[];
 
 static void sgsstd_array_reserve( SGS_CTX, sgs_VarObj* data, uint32_t size )
 {
-	void* nd;
 	SGSARR_HDR;
 	if( size <= hdr->mem )
 		return;
 
-	UNUSED( C );
-
-	nd = sgs_Malloc( SGSARR_ALLOCSIZE( size ) );
-	memcpy( nd, data->data, SGSARR_ALLOCSIZE( hdr->mem ) );
-	sgs_Free( data->data );
-	data->data = nd;
+	data->data = sgs_Realloc( C, data->data, SGSARR_ALLOCSIZE( size ) );
 	SGSARR_HDRUPDATE;
 	hdr->mem = size;
 }
@@ -111,7 +105,7 @@ static void sgsstd_array_erase( SGS_CTX, sgs_VarObj* data, uint32_t from, uint32
 static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	sgsstd_array_clear( C, data );
-	sgs_Free( data->data );
+	sgs_Dealloc( data->data );
 	return 0;
 }
 
@@ -119,7 +113,7 @@ static int sgsstd_array_clone( SGS_CTX, sgs_VarObj* data )
 {
 	void* nd;
 	SGSARR_HDR;
-	nd = sgs_Malloc( SGSARR_ALLOCSIZE( hdr->mem ) );
+	nd = sgs_Malloc( C, SGSARR_ALLOCSIZE( hdr->mem ) );
 	memcpy( nd, hdr, SGSARR_ALLOCSIZE( hdr->mem ) );
 	{
 		sgs_Variable* ptr = SGSARR_PTR( hdr );
@@ -417,7 +411,7 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 			sgs_Variable var;
 			if( !sgs_ArrayGet( C, a2, i, &var ) )
 			{
-				sgs_Free( smis );
+				sgs_Dealloc( smis );
 				STDLIB_WARN( "array.sort_mapped(): error in mapping array" )
 			}
 			sgs_PushVariable( C, &var );
@@ -431,16 +425,16 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 		{
 			sgs_Variable *p1, *p2;
 			sgsstd_array_header_t* nd = (sgsstd_array_header_t*)
-				sgs_Malloc( SGSARR_ALLOCSIZE( hdr->mem ) );
+				sgs_Malloc( C, SGSARR_ALLOCSIZE( hdr->mem ) );
 			memcpy( nd, hdr, SGSARR_ALLOCSIZE( hdr->mem ) );
 			p1 = SGSARR_PTR( hdr );
 			p2 = SGSARR_PTR( nd );
 			for( i = 0; i < asize; ++i )
 				p1[ i ] = p2[ smis[ i ].pos ];
-			sgs_Free( nd );
+			sgs_Dealloc( nd );
 		}
 
-		sgs_Free( smis );
+		sgs_Dealloc( smis );
 
 		sgs_Pop( C, cnt );
 		return 1;
@@ -646,8 +640,7 @@ sgsstd_array_iter_t;
 
 static int sgsstd_array_iter_destruct( SGS_CTX, sgs_VarObj* data )
 {
-	UNUSED( C );
-	sgs_Free( data->data );
+	sgs_Dealloc( data->data );
 	return SGS_SUCCESS;
 }
 
@@ -703,7 +696,7 @@ void* sgsstd_array_functable[] =
 int sgsstd_array( SGS_CTX )
 {
 	int i, objcnt = sgs_StackSize( C );
-	void* data = sgs_Malloc( SGSARR_ALLOCSIZE( objcnt ) );
+	void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( objcnt ) );
 	SGSARR_HDRBASE;
 	hdr->size = objcnt;
 	hdr->mem = objcnt;
@@ -740,7 +733,7 @@ static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data )
 	HTHDR;
 	_dict_clearvals( C, ht );
 	vht_free( ht, C );
-	sgs_Free( ht );
+	sgs_Dealloc( ht );
 	return SGS_SUCCESS;
 }
 
@@ -749,7 +742,7 @@ static int sgsstd_dict_clone( SGS_CTX, sgs_VarObj* data )
 	HTHDR;
 	int i, htsize = vht_size( ht );
 	VHTable* nht = sgs_Alloc( VHTable );
-	vht_init( nht );
+	vht_init( nht, C );
 	for( i = 0; i < htsize; ++i )
 	{
 		vht_set( nht, ht->vars[ i ].str, ht->vars[ i ].size, &ht->vars[ i ].var, C );
@@ -870,7 +863,7 @@ sgsstd_dict_iter_t;
 static int sgsstd_dict_iter_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	UNUSED( C );
-	sgs_Free( data->data );
+	sgs_Dealloc( data->data );
 	return SGS_SUCCESS;
 }
 
@@ -934,7 +927,7 @@ int sgsstd_dict_internal( SGS_CTX )
 {
 	int i, objcnt = sgs_StackSize( C );
 	VHTable* ht = sgs_Alloc( VHTable );
-	vht_init( ht );
+	vht_init( ht, C );
 	for( i = 0; i < objcnt; i += 2 )
 	{
 		sgs_Variable* vkey = sgs_StackItem( C, i );
@@ -954,7 +947,7 @@ int sgsstd_dict( SGS_CTX )
 			" function expects 0 or an even number of arguments" )
 
 	ht = sgs_Alloc( VHTable );
-	vht_init( ht );
+	vht_init( ht, C );
 
 	for( i = 0; i < objcnt; i += 2 )
 	{
@@ -964,7 +957,7 @@ int sgsstd_dict( SGS_CTX )
 		{
 			_dict_clearvals( C, ht );
 			vht_free( ht, C );
-			sgs_Free( ht );
+			sgs_Dealloc( ht );
 			sgs_Printf( C, SGS_WARNING, -1, "dict() - key argument %d is not a string", i );
 			return 0;
 		}
@@ -993,7 +986,7 @@ int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data )
 	SGSCLASS_HDR;
 	sgs_Release( C, &hdr->data );
 	sgs_Release( C, &hdr->inh );
-	sgs_Free( hdr );
+	sgs_Dealloc( hdr );
 	return SGS_SUCCESS;
 }
 
@@ -1212,7 +1205,7 @@ int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data )
 	SGSCLOSURE_HDR;
 	sgs_Release( C, &hdr->func );
 	sgs_Release( C, &hdr->data );
-	sgs_Free( hdr );
+	sgs_Dealloc( hdr );
 	return SGS_SUCCESS;
 }
 

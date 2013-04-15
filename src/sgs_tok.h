@@ -90,7 +90,7 @@ typedef unsigned char TokenType;
 typedef unsigned char* TokenList;
 
 TokenList   sgsT_Gen( SGS_CTX, const char* code, int32_t length );
-void        sgsT_Free( TokenList tlist );
+void        sgsT_Free( SGS_CTX, TokenList tlist );
 TokenList   sgsT_Next( TokenList tok );
 LineNum     sgsT_LineNum( TokenList tok );
 
