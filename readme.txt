@@ -1,5 +1,5 @@
 
---- SGScript v0.8.1 ---
+--- SGScript v0.8.2 ---
 
 usage:
 - MinGW users:
@@ -56,6 +56,9 @@ credits:
 - inspired by C, PHP, Lua, JavaScript, Squirrel and AngelScript
 
 change log:
+0.8.2 (2013/04/15): implicit "this", bytecode serialization, upgraded AST code,
+	DLL loading system (Windows-only ATM), core I/O API, variable cloning,
+	extended array API that is made to be sequencing-friendly, int/int=>real
 0.8.1 (2013/04/04): important stability and main API improvements
 	the engine is finally tested to be production-code-ready
 0.8 (2013/03/29): most of string API, type API, closures, API test framework,
