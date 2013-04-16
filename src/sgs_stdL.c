@@ -589,7 +589,7 @@ static int sgsstd_native_import_symbol( SGS_CTX )
 
 static const sgs_RegIntConst n_iconsts[] =
 {
-#define DEFTYPE( name ) { "eNTYPE_" #name, NTYPE_##name }
+#define DEFTYPE( name ) { "NTYPE_" #name, NTYPE_##name }
 	DEFTYPE( VOID ), DEFTYPE( CHAR ), DEFTYPE( UCHAR ), DEFTYPE( SHORT ), DEFTYPE( USHORT ),
 	DEFTYPE( INT ), DEFTYPE( UINT ), DEFTYPE( LONG ), DEFTYPE( ULONG ), DEFTYPE( LLONG ),
 	DEFTYPE( ULLONG ), DEFTYPE( FLOAT ), DEFTYPE( DOUBLE ), DEFTYPE( LDBL ), DEFTYPE( BOOL ),
@@ -619,10 +619,10 @@ SGSRESULT sgs_LoadLib_Native( SGS_CTX )
 
 /* libraries -  S T R I N G  */
 
-#define sgsfNO_REV_INDEX 1
-#define sgsfSTRICT_RANGES 2
-#define sgsfLEFT 1
-#define sgsfRIGHT 2
+#define sgsNO_REV_INDEX 1
+#define sgsSTRICT_RANGES 2
+#define sgsLEFT 1
+#define sgsRIGHT 2
 
 static SGS_INLINE int32_t idx2off( int32_t size, int32_t i )
 {
@@ -646,12 +646,12 @@ static int sgsstd_string_cut( SGS_CTX )
 		( argc >= 4 && !sgs_ParseInt( C, 3, &flags ) ) )
 		STDLIB_WARN( "string_cut() - unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]" );
 
-	if( FLAG( flags, sgsfNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
+	if( FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
 		STDLIB_WARN( "string_cut() - detected negative indices" );
 
 	i1 = i1 < 0 ? size + i1 : i1;
 	i2 = i2 < 0 ? size + i2 : i2;
-	if( FLAG( flags, sgsfSTRICT_RANGES ) && ( i1 > i2 || i1 < 0 || i2 < 0 || i1 >= size || i2 >= size ) )
+	if( FLAG( flags, sgsSTRICT_RANGES ) && ( i1 > i2 || i1 < 0 || i2 < 0 || i1 >= size || i2 >= size ) )
 		STDLIB_WARN( "string_cut() - invalid character range" );
 
 	if( i1 > i2 || i1 >= size || i2 < 0 )
@@ -681,12 +681,12 @@ static int sgsstd_string_part( SGS_CTX )
 		( argc >= 4 && !sgs_ParseInt( C, 3, &flags ) ) )
 		STDLIB_WARN( "string_part() - unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]" );
 
-	if( FLAG( flags, sgsfNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
+	if( FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
 		STDLIB_WARN( "string_part() - detected negative indices" );
 
 	i1 = i1 < 0 ? size + i1 : i1;
 	i2 = i2 < 0 ? size + i2 : i2;
-	if( FLAG( flags, sgsfSTRICT_RANGES ) && ( i1 < 0 || i1 + i2 < 0 || i2 < 0 || i1 >= size || i1 + i2 > size ) )
+	if( FLAG( flags, sgsSTRICT_RANGES ) && ( i1 < 0 || i1 + i2 < 0 || i2 < 0 || i1 >= size || i1 + i2 > size ) )
 		STDLIB_WARN( "string_part() - invalid character range" );
 
 	if( i2 <= 0 || i1 >= size || i1 + i2 < 0 )
@@ -725,7 +725,7 @@ static int sgsstd_string_pad( SGS_CTX )
 	int argc;
 	char* str, *pad = " ", *sout;
 	sgs_SizeVal size, padsize = 1;
-	sgs_Integer tgtsize, flags = sgsfLEFT | sgsfRIGHT, lpad = 0, i;
+	sgs_Integer tgtsize, flags = sgsLEFT | sgsRIGHT, lpad = 0, i;
 
 	argc = sgs_StackSize( C );
 	if( ( argc < 2 || argc > 4 ) ||
@@ -735,7 +735,7 @@ static int sgsstd_string_pad( SGS_CTX )
 		( argc >= 4 && !sgs_ParseInt( C, 3, &flags ) ) )
 		STDLIB_WARN( "string_pad() - unexpected arguments; function expects 2-4 arguments: string, int, [string], [int]" );
 
-	if( tgtsize <= size || !FLAG( flags, sgsfLEFT | sgsfRIGHT ) )
+	if( tgtsize <= size || !FLAG( flags, sgsLEFT | sgsRIGHT ) )
 	{
 		sgs_PushItem( C, 0 );
 		return 1;
@@ -743,9 +743,9 @@ static int sgsstd_string_pad( SGS_CTX )
 
 	sgs_PushStringBuf( C, NULL, tgtsize );
 	sout = var_cstr( sgs_StackItem( C, -1 ) );
-	if( FLAG( flags, sgsfLEFT ) )
+	if( FLAG( flags, sgsLEFT ) )
 	{
-		if( FLAG( flags, sgsfRIGHT ) )
+		if( FLAG( flags, sgsRIGHT ) )
 		{
 			sgs_Integer pp = tgtsize - size;
 			lpad = pp / 2 + pp % 2;
@@ -1086,7 +1086,7 @@ static int sgsstd_string_trim( SGS_CTX )
 	int argc;
 	char* str, *strend, *list = " \t\r\n";
 	sgs_SizeVal size, listsize = 4;
-	sgs_Integer flags = sgsfLEFT | sgsfRIGHT;
+	sgs_Integer flags = sgsLEFT | sgsRIGHT;
 
 	argc = sgs_StackSize( C );
 	if( argc < 1 || argc > 3 ||
@@ -1095,19 +1095,19 @@ static int sgsstd_string_trim( SGS_CTX )
 		( argc >= 3 && !sgs_ParseInt( C, 2, &flags ) ) )
 		STDLIB_WARN( "string_trim() - unexpected arguments; function expects 1-3 arguments: string, [string], [int]" );
 
-	if( !FLAG( flags, sgsfLEFT | sgsfRIGHT ) )
+	if( !FLAG( flags, sgsLEFT | sgsRIGHT ) )
 	{
 		sgs_PushItem( C, 0 );
 		return 1;
 	}
 
 	strend = str + size;
-	if( flags & sgsfLEFT )
+	if( flags & sgsLEFT )
 	{
 		while( str < strend && stdlib_isoneof( *str, list, listsize ) )
 			str++;
 	}
-	if( flags & sgsfRIGHT )
+	if( flags & sgsRIGHT )
 	{
 		while( str < strend && stdlib_isoneof( *(strend-1), list, listsize ) )
 			strend--;
@@ -1123,10 +1123,10 @@ static int sgsstd_string_trim( SGS_CTX )
 
 static const sgs_RegIntConst s_iconsts[] =
 {
-	{ "fNO_REV_INDEX", sgsfNO_REV_INDEX },
-	{ "fSTRICT_RANGES", sgsfSTRICT_RANGES },
-	{ "fLEFT", sgsfLEFT },
-	{ "fRIGHT", sgsfRIGHT },
+	{ "NO_REV_INDEX", sgsNO_REV_INDEX },
+	{ "STRICT_RANGES", sgsSTRICT_RANGES },
+	{ "LEFT", sgsLEFT },
+	{ "RIGHT", sgsRIGHT },
 };
 
 static const sgs_RegFuncConst s_fconsts[] =
@@ -1302,15 +1302,15 @@ static const sgs_RegFuncConst t_fconsts[] =
 
 static const sgs_RegIntConst t_iconsts[] =
 {
-	{ "tNULL", SVT_NULL },
-	{ "tBOOL", SVT_BOOL },
-	{ "tINT", SVT_INT },
-	{ "tREAL", SVT_REAL },
-	{ "tSTRING", SVT_STRING },
-	{ "tFUNC", SVT_FUNC },
-	{ "tCFUNC", SVT_CFUNC },
-	{ "tOBJECT", SVT_OBJECT },
-	{ "t_COUNT", SVT__COUNT },
+	{ "TYPE_NULL", SVT_NULL },
+	{ "TYPE_BOOL", SVT_BOOL },
+	{ "TYPE_INT", SVT_INT },
+	{ "TYPE_REAL", SVT_REAL },
+	{ "TYPE_STRING", SVT_STRING },
+	{ "TYPE_FUNC", SVT_FUNC },
+	{ "TYPE_CFUNC", SVT_CFUNC },
+	{ "TYPE_OBJECT", SVT_OBJECT },
+	{ "TYPE_COUNT", SVT__COUNT },
 };
 
 

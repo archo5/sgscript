@@ -22,15 +22,15 @@ testEqual( string_cut( a, 3, 5 ), "dom", "string_cut - basic cutting" );
 testEqual( string_cut( a, -10, -4 ), "dom str", "string_cut - negative indices" );
 testEqual( string_cut( a, 0, 20 ), a, "string_cut - expected positive range overflow" );
 testEqual( string_cut( a, -20, -1 ), a, "string_cut - expected negative range overflow" );
-testEqual( string_cut( a, 3, 5, fSTRICT_RANGES | fNO_REV_INDEX ), "dom", "string_cut - strict cutting" );
+testEqual( string_cut( a, 3, 5, STRICT_RANGES | NO_REV_INDEX ), "dom", "string_cut - strict cutting" );
 testEqual( string_cut( a, 7 ), 'string', "string_cut - cutting to end" );
 ERRORS = ""; testEqual( string_cut( a ), null, "string_cut - bad argument count" ); testEqual( ERRORS, string_cut_error_args );
 ERRORS = ""; testEqual( string_cut( null, 0, 10 ), null, "string_cut - string conversion error" ); testEqual( ERRORS, string_cut_error_args );
-ERRORS = ""; testEqual( string_cut( a, 0, 20, fSTRICT_RANGES ), null, "string_cut - illegal positive range overflow" ); testEqual( ERRORS, string_cut_error_range );
-ERRORS = ""; testEqual( string_cut( a, -20, -1, fSTRICT_RANGES ), null, "string_cut - illegal negative range overflow" ); testEqual( ERRORS, string_cut_error_range );
-ERRORS = ""; testEqual( string_cut( a, -20, 20, fSTRICT_RANGES ), null, "string_cut - illegal both range overflow" ); testEqual( ERRORS, string_cut_error_range );
-ERRORS = ""; testEqual( string_cut( a, 0, 13, fSTRICT_RANGES ), null, "string_cut - illegal subtle range overflow" ); testEqual( ERRORS, string_cut_error_range );
-ERRORS = ""; testEqual( string_cut( a, -5, -3, fNO_REV_INDEX ), null, "string_cut - illegal negative indices" ); testEqual( ERRORS, string_cut_error_indices );
+ERRORS = ""; testEqual( string_cut( a, 0, 20, STRICT_RANGES ), null, "string_cut - illegal positive range overflow" ); testEqual( ERRORS, string_cut_error_range );
+ERRORS = ""; testEqual( string_cut( a, -20, -1, STRICT_RANGES ), null, "string_cut - illegal negative range overflow" ); testEqual( ERRORS, string_cut_error_range );
+ERRORS = ""; testEqual( string_cut( a, -20, 20, STRICT_RANGES ), null, "string_cut - illegal both range overflow" ); testEqual( ERRORS, string_cut_error_range );
+ERRORS = ""; testEqual( string_cut( a, 0, 13, STRICT_RANGES ), null, "string_cut - illegal subtle range overflow" ); testEqual( ERRORS, string_cut_error_range );
+ERRORS = ""; testEqual( string_cut( a, -5, -3, NO_REV_INDEX ), null, "string_cut - illegal negative indices" ); testEqual( ERRORS, string_cut_error_indices );
 
 	section( "string_part" );
 var string_part_error_args = "[W:string_part() - unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]]";
@@ -40,15 +40,15 @@ testEqual( string_part( a, 3, 3 ), "dom", "string_part - basic cutting" );
 testEqual( string_part( a, -10, -6 ), "dom str", "string_part - negative indices" );
 testEqual( string_part( a, 0, 20 ), a, "string_part - expected positive range overflow" );
 testEqual( string_part( a, -20, -1 ), "rando", "string_part - expected negative range overflow" );
-testEqual( string_part( a, 3, 3, fSTRICT_RANGES | fNO_REV_INDEX ), "dom", "string_part - basic cutting" );
+testEqual( string_part( a, 3, 3, STRICT_RANGES | NO_REV_INDEX ), "dom", "string_part - basic cutting" );
 testEqual( string_part( a, 7 ), 'string', "string_part - cutting to end" );
 ERRORS = ""; testEqual( string_part( a ), null, "string_part - bad argument count" ); testEqual( ERRORS, string_part_error_args );
 ERRORS = ""; testEqual( string_part( null, 0, 10 ), null, "string_part - string conversion error" ); testEqual( ERRORS, string_part_error_args );
-ERRORS = ""; testEqual( string_part( a, 0, 20, fSTRICT_RANGES ), null, "string_part - illegal positive range overflow" ); testEqual( ERRORS, string_part_error_range );
-ERRORS = ""; testEqual( string_part( a, -20, -1, fSTRICT_RANGES ), null, "string_part - illegal negative range overflow" ); testEqual( ERRORS, string_part_error_range );
-ERRORS = ""; testEqual( string_part( a, -20, 20, fSTRICT_RANGES ), null, "string_part - illegal both range overflow" ); testEqual( ERRORS, string_part_error_range );
-ERRORS = ""; testEqual( string_part( a, 0, 14, fSTRICT_RANGES ), null, "string_part - illegal subtle range overflow" ); testEqual( ERRORS, string_part_error_range );
-ERRORS = ""; testEqual( string_part( a, -5, -3, fNO_REV_INDEX ), null, "string_part - illegal negative indices" ); testEqual( ERRORS, string_part_error_indices );
+ERRORS = ""; testEqual( string_part( a, 0, 20, STRICT_RANGES ), null, "string_part - illegal positive range overflow" ); testEqual( ERRORS, string_part_error_range );
+ERRORS = ""; testEqual( string_part( a, -20, -1, STRICT_RANGES ), null, "string_part - illegal negative range overflow" ); testEqual( ERRORS, string_part_error_range );
+ERRORS = ""; testEqual( string_part( a, -20, 20, STRICT_RANGES ), null, "string_part - illegal both range overflow" ); testEqual( ERRORS, string_part_error_range );
+ERRORS = ""; testEqual( string_part( a, 0, 14, STRICT_RANGES ), null, "string_part - illegal subtle range overflow" ); testEqual( ERRORS, string_part_error_range );
+ERRORS = ""; testEqual( string_part( a, -5, -3, NO_REV_INDEX ), null, "string_part - illegal negative indices" ); testEqual( ERRORS, string_part_error_indices );
 
 	section( "string_reverse" );
 var string_reverse_error_args = "[W:string_reverse() - unexpected arguments; function expects 1 argument: string]";
@@ -63,8 +63,8 @@ var string_pad_error_args = "[W:string_pad() - unexpected arguments; function ex
 testEqual( string_pad( b, 8 ), "  WHAT  ", "string_pad - output (even padding)" );
 testEqual( string_pad( b, 9 ), "   WHAT  ", "string_pad - output (odd padding)" );
 testEqual( string_pad( b, 9, 'pad' ), "padWHATad", "string_pad - custom padding string" );
-testEqual( string_pad( b, 8, 'pad', fLEFT ), "padpWHAT", "string_pad - left padding only" );
-testEqual( string_pad( b, 8, 'pad', fRIGHT ), "WHATadpa", "string_pad - right padding only" );
+testEqual( string_pad( b, 8, 'pad', LEFT ), "padpWHAT", "string_pad - left padding only" );
+testEqual( string_pad( b, 8, 'pad', RIGHT ), "WHATadpa", "string_pad - right padding only" );
 testEqual( string_pad( b, 3 ), b, "string_pad - output (no padding)" );
 testEqual( string_pad( b, 100, a, 1<<4 ), b, "string_pad - no (recognized) flags specified" );
 ERRORS = ""; testEqual( string_pad( b, 0, a, 0, 0 ), null, "string_pad - too many arguments" ); testEqual( ERRORS, string_pad_error_args );
@@ -125,8 +125,8 @@ ERRORS = ""; testEqual( string_replace( a, "wat", ["1","2"] ), null, "string_rep
 	section( "string_trim" );
 testEqual( string_trim( d ), "spacy", "string_trim - basic space trimming" );
 testEqual( string_trim( d, d ), "", "string_trim - trim everything" );
-testEqual( string_trim( c, "ba", fLEFT ), "nana", "string_trim - trim from left only" );
-testEqual( string_trim( c, "an", fRIGHT ), "b", "string_trim - trim from right only" );
+testEqual( string_trim( c, "ba", LEFT ), "nana", "string_trim - trim from left only" );
+testEqual( string_trim( c, "an", RIGHT ), "b", "string_trim - trim from right only" );
 testEqual( string_trim( c, c, 1<<4 ), c, "string_trim - no (recognized) flags specified" );
 
 

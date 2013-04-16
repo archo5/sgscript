@@ -57,27 +57,27 @@ testEqual( !is_printable( _N ) && is_printable( _B ) && is_printable( _I ) && is
 	is_printable( _S ) && !is_printable( _F ) && !is_printable( _C ) && is_printable( _O ), true, "is_printable - basic tests" );
 
 	section( "type_*" );
-testEqual( type_get( _N ) == tNULL && type_get( _B ) == tBOOL && type_get( _I ) == tINT &&
-	type_get( _R ) == tREAL && type_get( _S ) == tSTRING && type_get( _F ) == tFUNC &&
-	type_get( _C ) == tCFUNC && type_get( _O ) == tOBJECT, true, "type_get - basic tests" );
+testEqual( type_get( _N ) == TYPE_NULL && type_get( _B ) == TYPE_BOOL && type_get( _I ) == TYPE_INT &&
+	type_get( _R ) == TYPE_REAL && type_get( _S ) == TYPE_STRING && type_get( _F ) == TYPE_FUNC &&
+	type_get( _C ) == TYPE_CFUNC && type_get( _O ) == TYPE_OBJECT, true, "type_get - basic tests" );
 var typenames = [ "null", "bool", "int", "real", "string", "func", "cfunc", "object" ];
 var srcvars = [ _N, _B, _I, _R, _S, _F, _C, _O ];
 var expect =
 [
-	tNULL, tNULL, tNULL, tNULL, tNULL, tNULL, tNULL, tNULL,
-	tBOOL, tBOOL, tBOOL, tBOOL, tBOOL, tBOOL, tBOOL, tBOOL,
-	tINT, tINT, tINT, tINT, tINT, tINT, tINT, tNULL,
-	tREAL, tREAL, tREAL, tREAL, tREAL, tREAL, tREAL, tNULL,
-	tSTRING, tSTRING, tSTRING, tSTRING, tSTRING, tSTRING, tSTRING, tSTRING,
-	tNULL, tNULL, tNULL, tNULL, tNULL, tFUNC, tNULL, tNULL,
-	tNULL, tNULL, tNULL, tNULL, tNULL, tNULL, tCFUNC, tNULL,
-	tNULL, tNULL, tNULL, tNULL, tNULL, tNULL, tNULL, tOBJECT,
+	TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL,
+	TYPE_BOOL, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL,
+	TYPE_INT, TYPE_INT, TYPE_INT, TYPE_INT, TYPE_INT, TYPE_INT, TYPE_INT, TYPE_NULL,
+	TYPE_REAL, TYPE_REAL, TYPE_REAL, TYPE_REAL, TYPE_REAL, TYPE_REAL, TYPE_REAL, TYPE_NULL,
+	TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_STRING,
+	TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_FUNC, TYPE_NULL, TYPE_NULL,
+	TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_CFUNC, TYPE_NULL,
+	TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_OBJECT,
 ];
-for( var i = 0; i < t_COUNT; ++i )
+for( var i = 0; i < TYPE_COUNT; ++i )
 {
-	for( var j = 0; j < t_COUNT; ++j )
+	for( var j = 0; j < TYPE_COUNT; ++j )
 	{
-		testEqual( type_get( type_cast( srcvars[ j ], i ) ), expect[ i * t_COUNT + j ], "type_cast test - " $ typenames[ j ] $ " -> " $ typenames[ i ] );
+		testEqual( type_get( type_cast( srcvars[ j ], i ) ), expect[ i * TYPE_COUNT + j ], "type_cast test - " $ typenames[ j ] $ " -> " $ typenames[ i ] );
 	}
 }
 

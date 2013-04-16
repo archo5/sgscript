@@ -96,6 +96,7 @@ static void ctx_init( SGS_CTX )
 sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 {
 	SGS_CTX = memfunc( mfuserdata, NULL, sizeof( sgs_Context ) );
+	C->memsize = sizeof( sgs_Context );
 	C->memfunc = memfunc;
 	C->mfuserdata = mfuserdata;
 	ctx_init( C );
