@@ -2,7 +2,6 @@
 #ifndef SGS_UNIT_H_INCLUDED
 #define SGS_UNIT_H_INCLUDED
 
-#include "sgscript.h"
 #include "sgs_proc.h"
 
 /*

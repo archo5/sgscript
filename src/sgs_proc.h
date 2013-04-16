@@ -3,8 +3,14 @@
 #define SGS_PROC_H_INCLUDED
 
 
+#ifndef _sgs_iStr
+#  define _sgs_iStr string_s
+#  define _sgs_iFunc func_s
+#endif
+
 #include "sgs_util.h"
 #include "sgs_fnt.h"
+#include "sgscript.h"
 
 
 #define CONSTVAR( x ) ((x)&0x100)
@@ -146,25 +152,6 @@ string_t;
 #define var_cstr( var ) str_cstr( (var)->data.S )
 
 #define object_t sgs_VarObj
-
-typedef union _sgs_VarData
-{
-	sgs_Bool    B;
-	sgs_Integer I;
-	sgs_Real    R;
-	string_t*   S;
-	func_t*     F;
-	sgs_CFunc   C;
-	sgs_VarObj* O;
-}
-sgs_VarData;
-
-
-struct _sgs_Variable
-{
-	uint8_t     type;
-	sgs_VarData data;
-};
 
 
 /* hash table for variables */

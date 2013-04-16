@@ -26,7 +26,6 @@
 #  include <dirent.h>
 #endif
 
-#include "sgscript.h"
 #include "sgs_proc.h"
 
 #define FLAG( a, b ) (((a)&(b))!=0)

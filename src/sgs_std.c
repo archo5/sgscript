@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 
-#include "sgscript.h"
 #include "sgs_proc.h"
 #include "sgs_ctx.h"
 

@@ -125,6 +125,26 @@ struct sgs_ObjData
 	                       for container circ. ref. handling. */
 };
 
+typedef struct _sgs_iStr sgs_iStr;
+typedef struct _sgs_iFunc sgs_iFunc;
+typedef union _sgs_VarData
+{
+	sgs_Bool    B;
+	sgs_Integer I;
+	sgs_Real    R;
+	sgs_iStr*   S;
+	sgs_iFunc*  F;
+	sgs_CFunc   C;
+	sgs_VarObj* O;
+}
+sgs_VarData;
+
+struct _sgs_Variable
+{
+	uint8_t     type;
+	sgs_VarData data;
+};
+
 /* - object interface */
 typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 
