@@ -11,16 +11,6 @@
 #  endif
 #endif
 
-/* buffer overflow/underflow tests (doesn't work with a custom allocation function!) */
-#ifndef SGS_DEBUG_MEMORY
-#  define SGS_DEBUG_MEMORY 1
-#endif
-
-/* leak dump after destructions (works properly with one context only!) */
-#ifndef SGS_DEBUG_CHECK_LEAKS
-#  define SGS_DEBUG_CHECK_LEAKS 1
-#endif
-
 /* stage output dumps */
 #ifndef SGS_DEBUG_DATA
 #  define SGS_DEBUG_DATA 0

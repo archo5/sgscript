@@ -1588,8 +1588,8 @@ static int sgsstd_sys_stat( SGS_CTX )
 		!sgs_ParseInt( C, 0, &type ) )
 		STDLIB_WARN( "sys_stat(): unexpected arguments; function expects int" );
 
-	sgs_Stat( C, type );
-	return 0;
+	sgs_PushInt( C, sgs_Stat( C, type ) );
+	return 1;
 }
 
 static int sgsstd_dumpvar( SGS_CTX )

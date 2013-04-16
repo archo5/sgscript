@@ -164,7 +164,7 @@ int main( int argc, char** argv )
 			f = fopen( of, "wb" );
 			if( !f )
 			{
-				sgs_FreeCompileBuffer( data2 );
+				sgs_Free( C, data2 );
 				sgs_DestroyEngine( C );
 				printf( EPFX "failed to open output file for writing\n" );
 				return errno;
@@ -173,12 +173,12 @@ int main( int argc, char** argv )
 			if( fwrite( data2, 1, size2, f ) < size2 )
 			{
 				fclose( f );
-				sgs_FreeCompileBuffer( data2 );
+				sgs_Free( C, data2 );
 				sgs_DestroyEngine( C );
 				printf( EPFX "failed to write to '%s'\n", of );
 				return errno;
 			}
-			sgs_FreeCompileBuffer( data2 ); /* FREE: sgs_Compile */
+			sgs_Free( C, data2 ); /* FREE: sgs_Compile */
 			fclose( f ); /* FREE: fopen */
 
 			printf( "successfully wrote bytecode to '%s'\n", of );

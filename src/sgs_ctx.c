@@ -138,7 +138,7 @@ void sgs_DestroyEngine( SGS_CTX )
 	sgs_Dealloc( C->stack_base );
 	ht_free( &C->data, C );
 
-	sgs_Free( C, C );
+	C->memfunc( C->mfuserdata, C, 0 );
 }
 
 
@@ -187,7 +187,24 @@ void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
 
 void* sgs_Memory( SGS_CTX, void* ptr, size_t size )
 {
-	return C->memfunc( C->mfuserdata, ptr, size );
+	void* p;
+	if( size )
+	{
+		size += 16;
+		C->memsize += size;
+	}
+	if( ptr )
+	{
+		ptr = ((char*)ptr) - 16;
+		C->memsize -= AS_UINT32( ptr );
+	}
+	p = C->memfunc( C->mfuserdata, ptr, size );
+	if( p )
+	{
+		AS_UINT32( p ) = size;
+		p = ((char*)p) + 16;
+	}
+	return p;
 }
 
 
@@ -434,6 +451,7 @@ SGSRESULT sgs_Stat( SGS_CTX, int type )
 	switch( type )
 	{
 	case SGS_STAT_VARCOUNT: return C->objcount;
+	case SGS_STAT_MEMSIZE: return C->memsize;
 	case SGS_STAT_DUMP_STACK:
 		{
 			sgs_Variable* p = C->stack_base;

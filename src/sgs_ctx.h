@@ -50,6 +50,7 @@ struct _sgs_Context
 	/* memory */
 	sgs_MemFunc   memfunc;
 	void*         mfuserdata;
+	uint32_t      memsize;
 
 	/* compilation */
 	uint32_t      state;

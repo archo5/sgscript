@@ -310,11 +310,7 @@ int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
 
 #define USING_STACK
 
-#if SGS_DEBUG && SGS_DEBUG_EXTRA
- #define DBG_STACK_CHECK sgs_MemCheckDbg( C->stack_base );
-#else
- #define DBG_STACK_CHECK
-#endif
+#define DBG_STACK_CHECK /* TODO fix */
 
 static SGS_INLINE sgs_VarPtr stk_gettop( SGS_CTX )
 {
@@ -1501,7 +1497,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 
 #if SGS_DEBUG
 #  if SGS_DEBUG_INSTR
-		printf( "*** [at 0x%04X] %s ***\n", ptr - 1 - (char*)code, opnames[ instr ] );
+		printf( "*** [at 0x%04X] %s ***\n", pp - SF->code, opnames[ instr ] );
 #  endif
 #  if SGS_DEBUG_STATE
 		sgsVM_StackDump( C );
@@ -1643,7 +1639,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 	}
 
 #if SGS_DEBUG && SGS_DEBUG_STATE
-    sgs_MemCheckDbg( C->stack_base );
+	/* TODO restore memcheck */
 	sgsVM_StackDump( C );
 #endif
 	return ret;

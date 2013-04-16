@@ -22,29 +22,6 @@
 
 typedef int16_t LineNum;
 
-#if 0
-/* memory handling */
-#if SGS_DEBUG && SGS_DEBUG_MEMORY && SGS_DEBUG_EXTRA
-void sgs_MemCheckDbg( void* ptr );
-#else
-#  define sgs_MemCheckDbg( ptr )
-#endif
-#if SGS_DEBUG && SGS_DEBUG_MEMORY && SGS_DEBUG_CHECK_LEAKS
-int _memdbghash( const char* str );
-void* sgs_MemFuncDbg( void* ptr, size_t size, const char* file, int line, int bucket );
-void sgs_DumpMemoryInfo();
-#  define sgs_Malloc( sz )		sgs_MemFuncDbg( NULL, sz, __FILE__, __LINE__, _memdbghash( __FILE__ ) + __LINE__ )
-#  define sgs_Free( what )		sgs_MemFuncDbg( what, 0, NULL, 0, -1 )
-#else
-#  define sgs_Malloc( sz )		sgs_MemFunc( NULL, sz )
-#  define sgs_Free( what )		sgs_MemFunc( what, 0 )
-#  define sgs_DumpMemoryInfo()
-#endif
-#define sgs_Alloc( what )		(what*) sgs_Malloc( sizeof( what ) )
-#define sgs_Alloc_n( what, n )	(what*) sgs_Malloc( sizeof( what ) * ( n ) )
-#define sgs_Alloc_a( what, n )	(what*) sgs_Malloc( sizeof( what ) + ( n ) )
-#endif
-
 void sgs_BreakIfFunc( const char* code, const char* file, int line );
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
 #  define sgs_BreakIf( expr ) { if( expr ){ sgs_BreakIfFunc( #expr, __FILE__, __LINE__ ); } }
