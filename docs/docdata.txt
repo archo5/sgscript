@@ -1,0 +1,13 @@
+<##### intro Intro #####>
+
+<##### intro.why Why SGScript? #####>
+
+It's good
+
+...
+
+<##### intro.features Feature list #####>
+
+Something
+
+

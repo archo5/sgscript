@@ -1,0 +1,73 @@
+
+include_library( "string" );
+include_library( "io" );
+
+raw = io_file_read( "docs/docdata.txt" );
+BSEP = "<#####";
+ESEP = "#####>";
+parts = [];
+
+function string_explode( sep, str )
+{
+	out = [];
+	pp = 0;
+	p = string_find( str, sep );
+	while( p !== null )
+	{
+		out.push( string_part( str, pp, p - pp ) );
+		
+		pp = p + sep.length;
+		p = string_find( str, sep, p + sep.length );
+	}
+	out.push( string_part( str, pp ) );
+	return out;
+}
+
+// split into parts
+pp = string_find( raw, BSEP );
+while(true)
+{
+	if( pp == raw.length )
+		break;
+	p = string_find( raw, BSEP, pp + BSEP.length );
+	if( p === null )
+		p = raw.length;
+	
+	// parse data between pp and p
+	hdrend = string_find( raw, ESEP, pp );
+	hdr = string_cut( raw, pp + BSEP.length, hdrend - 1 );
+	body = string_cut( raw, hdrend + ESEP.length, p - 1 );
+	hdr = string_trim( hdr );
+	body = string_trim( body );
+	
+	// first part of hdr is path, everything else is title
+	hdrfpe = string_find( hdr, " " );
+	path = string_cut( hdr, 0, hdrfpe - 1 );
+	title = string_trim( string_part( hdr, hdrfpe ) );
+	
+	pstr = path;
+	path = string_explode( ".", path );
+	
+	parts.push({ path = path, path_str = pstr, title = title, body = body });
+	
+	pp = p;
+}
+printvar( parts );
+
+
+data = "<div>";
+foreach( i : parts )
+{
+	P = parts[ i ];
+	h = "h" $ ( P.path.size + 1 );
+	
+	data $= "<div class='item'>";
+	data $= "<" $ h $ ">";
+	data $= P.title;
+	data $= " (" $ P.path_str $ ")";
+	data $= "</" $ h $ ">";
+	data $= P.body;
+	data $= "</div>";
+}
+data $= "</div>";
+io_file_write( "docs/test.htm", data );
