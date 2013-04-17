@@ -1558,7 +1558,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child->next, &arg ) ) goto fail; /* test */
 			comp_reg_unwind( C, regstate );
-			INSTR_WRITE_PCH();
+			if( arg != -1 )
+			{
+				INSTR_WRITE_PCH();
+			}
 			{
 				int16_t off;
 				int32_t jp1, jp2 = 0;
@@ -1577,7 +1580,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				jp2 = func->code.size;
 				off = i - jp2;
 				INSTR_WRITE_EX( SI_JUMP, off / INSTR_SIZE - 1, 0 );
-				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE + 1, arg );
+				if( arg != -1 )
+				{
+					AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE + 1, arg );
+				}
 			}
 			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
