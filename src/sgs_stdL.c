@@ -27,6 +27,7 @@
 #endif
 
 #include "sgs_proc.h"
+#include "sgs_ctx.h"
 
 #define FLAG( a, b ) (((a)&(b))!=0)
 #define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, -1, warn ); return 0; }
@@ -1116,6 +1117,79 @@ static int sgsstd_string_trim( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_string_implode( SGS_CTX )
+{
+	sgs_Variable arr;
+	sgs_SizeVal i, asize;
+
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_IsArray( C, sgs_StackItem( C, 0 ) ) ||
+		!sgs_ParseString( C, 1, NULL, NULL ) )
+		STDLIB_WARN( "string_implode() - unexpected arguments; function expects 2 arguments: array, string" )
+
+	arr = *sgs_StackItem( C, 0 );
+	asize = sgs_ArraySize( C, &arr );
+	if( !asize )
+	{
+		sgs_PushString( C, "" );
+		return 1;
+	}
+	for( i = 0; i < asize; ++i )
+	{
+		sgs_Variable var;
+		if( i )
+			sgs_PushItem( C, 1 );
+		if( !sgs_ArrayGet( C, &arr, i, &var ) )
+			STDLIB_WARN( "string_implode() - failed to read from array" )
+		sgs_PushVariable( C, &var );
+		sgs_Release( C, &var );
+	}
+	sgs_StringMultiConcat( C, i * 2 - 1 );
+	return 1;
+}
+
+static char* _findpos( char* a, sgs_SizeVal asize, char* b, sgs_SizeVal bsize )
+{
+	char* aend = a + asize - bsize;
+	char* pend = b + bsize;
+	while( a <= aend )
+	{
+		char* x = a, *p = b;
+		while( p < pend )
+			if( *x++ != *p++ )
+				goto notthis;
+		return a;
+notthis:
+		a++;
+	}
+	return NULL;
+}
+
+static int sgsstd_string_explode( SGS_CTX )
+{
+	char* a, *b, *p, *pp;
+	sgs_SizeVal asize, bsize;
+
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseString( C, 0, &a, &asize ) ||
+		!sgs_ParseString( C, 1, &b, &bsize ) )
+		STDLIB_WARN( "string_explode() - unexpected arguments; function expects 2 arguments: string, string" )
+
+	pp = a;
+	p = _findpos( a, asize, b, bsize );
+
+	while( p )
+	{
+		sgs_PushStringBuf( C, pp, p - pp );
+		pp = p + bsize;
+		p = _findpos( pp, asize - ( pp - a ), b, bsize );
+	}
+
+	sgs_PushStringBuf( C, pp, a + asize - pp );
+	sgs_PushCFunction( C, C->array_func );
+	return sgs_Call( C, sgs_StackSize( C ) - 3, 1 ) == SGS_SUCCESS;
+}
+
 
 
 #define FN( x ) { #x, sgsstd_##x }
@@ -1133,6 +1207,7 @@ static const sgs_RegFuncConst s_fconsts[] =
 	FN( string_cut ), FN( string_part ), FN( string_reverse ), FN( string_pad ),
 	FN( string_repeat ), FN( string_count ), FN( string_find ), FN( string_find_rev ),
 	FN( string_replace ), FN( string_trim ),
+	FN( string_implode ), FN( string_explode ),
 };
 
 SGSRESULT sgs_LoadLib_String( SGS_CTX )

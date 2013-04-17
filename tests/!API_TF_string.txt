@@ -129,6 +129,25 @@ testEqual( string_trim( c, "ba", LEFT ), "nana", "string_trim - trim from left o
 testEqual( string_trim( c, "an", RIGHT ), "b", "string_trim - trim from right only" );
 testEqual( string_trim( c, c, 1<<4 ), c, "string_trim - no (recognized) flags specified" );
 
+	section( "string_implode" );
+testEqual( string_implode( ["a","b",5], "." ), "a.b.5", "string_implode - basic concatenation" );
+testEqual( string_implode( ["",3,""], "-" ), "-3-", "string_implode - empty strings" );
+
+	section( "string_explode" );
+testEqual( string_explode( "a.b.5", "." )$'', "[a,b,5]", "string_explode - basic split" );
+testEqual( string_explode( ".b.5", "." )$'', "[,b,5]", "string_explode - empty left side" );
+testEqual( string_explode( "a.b.", "." )$'', "[a,b,]", "string_explode - empty right side" );
+testEqual( string_explode( "a..5", "." )$'', "[a,,5]", "string_explode - empty middle" );
+testEqual( string_explode( "a<>b<>5", "<>" )$'', "[a,b,5]", "string_explode - multi-char split" );
+testEqual( string_explode( "<>b<>5", "<>" )$'', "[,b,5]", "string_explode - MC empty left side" );
+testEqual( string_explode( "a<>b<>", "<>" )$'', "[a,b,]", "string_explode - MC empty right side" );
+testEqual( string_explode( "a<><>5", "<>" )$'', "[a,,5]", "string_explode - MC empty middle" );
+testEqual( string_explode( "a..b..5", ".." )$'', "[a,b,5]", "string_explode - same-multi-char split" );
+testEqual( string_explode( "..b..5", ".." )$'', "[,b,5]", "string_explode - SMC empty left side" );
+testEqual( string_explode( "a..b..", ".." )$'', "[a,b,]", "string_explode - SMC empty right side" );
+testEqual( string_explode( "a....5", ".." )$'', "[a,,5]", "string_explode - SMC empty middle" );
+testEqual( string_explode( "a...5", ".." )$'', "[a,.5]", "string_explode - SMC tricky middle" );
+
 
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );

@@ -1984,7 +1984,7 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 			sgs_PushString( C, buf ); } break;
 		case SVT_STRING: { char buf[ 48 ]; const char* ddd = "";
 			int32_t len = var->data.S->size; if( len > 32 ){ len = 32; ddd = "..."; }
-			sprintf( buf, "string \"%.*s%s\"", len, var_cstr( var ), ddd );
+			sprintf( buf, "string [%d] \"%.*s%s\"", len, len, var_cstr( var ), ddd );
 			sgs_PushString( C, buf ); } break;
 		case SVT_FUNC: sgs_PushString( C, "SGS function" ); break;
 		case SVT_CFUNC: sgs_PushString( C, "C function" ); break;
