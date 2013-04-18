@@ -1,3 +1,4 @@
+global sqr;
 sqr = function( x )
 {
 	return x*x;

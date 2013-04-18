@@ -282,8 +282,10 @@ error:
 
 static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean, int* rvc )
 {
-	int returned, rr;
+	int returned, rr, oo;
 	sgs_CompFunc* func;
+
+	oo = C->stack_off - C->stack_base;
 
 	if( !( rr = ctx_decode( C, buf, size, &func ) ) &&
 		!ctx_compile( C, buf, size, &func ) )
@@ -293,6 +295,7 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean,
 		return SGS_EINVAL;
 
 	DBGINFO( "...executing the generated function" );
+	C->stack_off = C->stack_top;
 	C->gclist = (sgs_VarPtr) func->consts.ptr;
 	C->gclist_size = func->consts.size / sizeof( sgs_Variable );
 	returned = sgsVM_ExecFn( C, func->code.ptr, func->code.size, func->consts.ptr, func->consts.size, clean, (uint16_t*) func->lnbuf.ptr );
@@ -300,6 +303,7 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean,
 		*rvc = returned;
 	C->gclist = NULL;
 	C->gclist_size = 0;
+	C->stack_off = C->stack_base + oo;
 
 	DBGINFO( "...cleaning up bytecode/constants" );
 	sgsBC_Free( C, func );

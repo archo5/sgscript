@@ -60,6 +60,14 @@ testEqual( arr.find( 3, true, 2 ), null, "find - strict, offset, empty" );
 
 	section( "include_file" );
 testEqual( include_file( "tests/s_fnexp.txt" ), true, "include_file - basic inclusion" );
+global sqr;
+testEqual( typeof( sqr ), "func", "include_file - received the variable?" );
+sqr = null;
+include_file( "tests/s_fnexp.txt" );
+testEqual( typeof( sqr ), "null", "include_file - didn't rewrite the variable?" );
+include_file( "tests/s_fnexp.txt", true );
+testEqual( typeof( sqr ), "func", "include_file - did force-rewrite the variable?" );
+
 
 	section( "include_shared" );
 testEqual( include_shared( "bin/sgstest.exe" ), true, "include_shared - sgscript_main call [1]" );

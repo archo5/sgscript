@@ -1456,10 +1456,33 @@ static int sgsstd_eval( SGS_CTX )
 	return rvc;
 }
 
-
-static int sgsstd__inclib( SGS_CTX, const char* name )
+static int sgsstd_eval_file( SGS_CTX )
 {
+	int ret, retcnt = 0;
+	char* str;
+	int cnt = sgs_StackSize( C );
+
+	if( cnt != 1 || !sgs_ParseString( C, 0, &str, NULL ) )
+		STDLIB_WARN( "eval_file() - unexpected arguments; function expects 1 argument: string" )
+
+	ret = sgs_EvalFile( C, str, &retcnt );
+	if( ret == SGS_ENOTFND )
+		STDLIB_WARN( "eval_file() - file not found" )
+	return retcnt;
+}
+
+
+static int sgsstd__inclib( SGS_CTX, const char* name, int override )
+{
+	char buf[ 16 ];
 	int ret = SGS_ENOTFND;
+
+	sprintf( buf, "-%.14s", name );
+	if( !override && sgs_PushGlobal( C, buf ) == SGS_SUCCESS )
+	{
+		sgs_Pop( C, 1 );
+		return SGS_SUCCESS;
+	}
 
 	if( strcmp( name, "io" ) == 0 )
 		ret = sgs_LoadLib_IO( C );
@@ -1474,18 +1497,46 @@ static int sgsstd__inclib( SGS_CTX, const char* name )
 	else if( strcmp( name, "type" ) == 0 )
 		ret = sgs_LoadLib_Type( C );
 
+	if( ret == SGS_SUCCESS )
+	{
+		sgs_PushBool( C, TRUE );
+		sgs_StoreGlobal( C, buf );
+	}
+
 	return ret;
+}
+
+static int sgsstd__chkinc( SGS_CTX, int argid )
+{
+	sgs_PushString( C, "+" );
+	sgs_PushItem( C, argid );
+	sgs_StringConcat( C );
+	if( sgs_PushGlobal( C, sgs_ToString( C, -1 ) ) != SGS_SUCCESS )
+		return FALSE;
+	/* sgs_Pop( C, 2 ); [.., string, bool] - will return last */
+	return TRUE;
+}
+
+static void sgsstd__setinc( SGS_CTX, int argid )
+{
+	sgs_PushString( C, "+" );
+	sgs_PushItem( C, argid );
+	sgs_StringConcat( C );
+	sgs_PushBool( C, TRUE );
+	sgs_StoreGlobal( C, sgs_ToString( C, -2 ) );
+	sgs_Pop( C, 1 );
 }
 
 static int sgsstd_include_library( SGS_CTX )
 {
-	int ret;
+	int ret, sz = sgs_StackSize( C ), over = FALSE;
 	char* str;
 
-	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, &str, NULL ) )
-		STDLIB_WARN( "include_library() - unexpected arguments; function expects 1 argument: string" )
+	if( sz < 1 || sz > 2 || !sgs_ParseString( C, 0, &str, NULL ) ||
+		( sz == 2 && !sgs_ParseBool( C, 1, &over ) ) )
+		STDLIB_WARN( "include_library() - unexpected arguments; function expects 1-2 arguments: string[, bool]" )
 
-	ret = sgsstd__inclib( C, str );
+	ret = sgsstd__inclib( C, str, over );
 
 	if( ret == SGS_ENOTFND )
 		STDLIB_WARN( "include_library() - library not found" )
@@ -1495,19 +1546,22 @@ static int sgsstd_include_library( SGS_CTX )
 
 static int sgsstd_include_file( SGS_CTX )
 {
-	int ret, ev = 0, retcnt = 0;
+	int ret, over = FALSE;
 	char* str;
 	int cnt = sgs_StackSize( C );
 
 	if( cnt < 1 || cnt > 2 || !sgs_ParseString( C, 0, &str, NULL )
-		|| ( cnt == 2 && !sgs_ParseBool( C, 1, &ev ) ) )
-		STDLIB_WARN( "include_file() - unexpected arguments; function expects 1-2 argument: string[, bool]" )
+		|| ( cnt == 2 && !sgs_ParseBool( C, 1, &over ) ) )
+		STDLIB_WARN( "include_file() - unexpected arguments; function expects 1-2 arguments: string[, bool]" )
 
-	ret = sgs_EvalFile( C, str, ev ? &retcnt : NULL );
+	if( !over && sgsstd__chkinc( C, 0 ) )
+		return 1;
+
+	ret = sgs_ExecFile( C, str );
 	if( ret == SGS_ENOTFND )
 		STDLIB_WARN( "include_file() - file not found" )
-	if( ev )
-		return retcnt;
+	if( ret == SGS_SUCCESS )
+		sgsstd__setinc( C, 0 );
 	sgs_PushBool( C, ret == SGS_SUCCESS );
 	return 1;
 }
@@ -1515,11 +1569,15 @@ static int sgsstd_include_file( SGS_CTX )
 static int sgsstd_include_shared( SGS_CTX )
 {
 	char* fnstr;
-	int ret, argc = sgs_StackSize( C );
+	int ret, cnt = sgs_StackSize( C ), over = FALSE;
 	sgs_CFunc func;
 
-	if( argc != 1 || !sgs_ParseString( C, 0, &fnstr, NULL ) )
-		STDLIB_WARN( "include_shared() - unexpected arguments; function expects 1 argument: string" )
+	if( cnt < 1 || cnt > 2 || !sgs_ParseString( C, 0, &fnstr, NULL )
+		|| ( cnt == 2 && !sgs_ParseBool( C, 1, &over ) ) )
+		STDLIB_WARN( "include_shared() - unexpected arguments; function expects 1-2 arguments: string[, bool]" )
+
+	if( !over && sgsstd__chkinc( C, 0 ) )
+		return 1;
 
 	ret = sgs_GetProcAddress( fnstr, "sgscript_main", (void**) &func );
 	if( ret != 0 )
@@ -1531,6 +1589,8 @@ static int sgsstd_include_shared( SGS_CTX )
 			STDLIB_WARN( "include_shared() - feature is not supported on this platform" )
 		else STDLIB_WARN( "include_shared() - unknown error occured" )
 	}
+	else
+		sgsstd__setinc( C, 0 );
 	
 	return func( C );
 }
@@ -1662,7 +1722,8 @@ sgs_RegFuncConst regfuncs[] =
 	/* OS */
 	FN( ftime ),
 	/* utils */
-	FN( eval ), FN( include_library ), FN( include_file ),
+	FN( eval ), FN( eval_file ),
+	FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( import_cfunc ),
 	FN( sys_errorstate ), FN( sys_abort ), FN( sys_stat ),
 	FN( dumpvar ), FN( dumpvars ),
