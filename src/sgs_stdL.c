@@ -305,12 +305,12 @@ static int sgsstd_io_file_read( SGS_CTX )
 
 static const sgs_RegRealConst i_rconsts[] =
 {
-	{ "fFILE_READ", FILE_READ },
-	{ "fFILE_WRITE", FILE_WRITE },
+	{ "FILE_READ", FILE_READ },
+	{ "FILE_WRITE", FILE_WRITE },
 
-	{ "eFST_UNKNOWN", FST_UNKNOWN },
-	{ "eFST_FILE", FST_FILE },
-	{ "eFST_DIR", FST_DIR },
+	{ "FST_UNKNOWN", FST_UNKNOWN },
+	{ "FST_FILE", FST_FILE },
+	{ "FST_DIR", FST_DIR },
 };
 
 #define FN( x ) { #x, sgsstd_##x }
@@ -1173,17 +1173,27 @@ static int sgsstd_string_explode( SGS_CTX )
 		!sgs_ParseString( C, 1, &b, &bsize ) )
 		STDLIB_WARN( "string_explode() - unexpected arguments; function expects 2 arguments: string, string" )
 
-	pp = a;
-	p = _findpos( a, asize, b, bsize );
-
-	while( p )
+	if( !bsize )
 	{
-		sgs_PushStringBuf( C, pp, p - pp );
-		pp = p + bsize;
-		p = _findpos( pp, asize - ( pp - a ), b, bsize );
+		p = a + asize;
+		while( a < p )
+			sgs_PushStringBuf( C, a++, 1 );
+	}
+	else
+	{
+		pp = a;
+		p = _findpos( a, asize, b, bsize );
+
+		while( p )
+		{
+			sgs_PushStringBuf( C, pp, p - pp );
+			pp = p + bsize;
+			p = _findpos( pp, asize - ( pp - a ), b, bsize );
+		}
+
+		sgs_PushStringBuf( C, pp, a + asize - pp );
 	}
 
-	sgs_PushStringBuf( C, pp, a + asize - pp );
 	sgs_PushCFunction( C, C->array_func );
 	return sgs_Call( C, sgs_StackSize( C ) - 3, 1 ) == SGS_SUCCESS;
 }

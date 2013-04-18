@@ -147,6 +147,7 @@ testEqual( string_explode( "..b..5", ".." )$'', "[,b,5]", "string_explode - SMC 
 testEqual( string_explode( "a..b..", ".." )$'', "[a,b,]", "string_explode - SMC empty right side" );
 testEqual( string_explode( "a....5", ".." )$'', "[a,,5]", "string_explode - SMC empty middle" );
 testEqual( string_explode( "a...5", ".." )$'', "[a,.5]", "string_explode - SMC tricky middle" );
+testEqual( string_explode( "abc5", "" )$'', "[a,b,c,5]", "string_explode - empty separator string" );
 
 
 //

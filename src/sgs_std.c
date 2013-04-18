@@ -1339,11 +1339,11 @@ int sgsstd_unset( SGS_CTX )
 	sgs_Variable var;
 	VHTable* ht;
 	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseString( C, 0, &str, &size ) ||
-		!sgs_GetStackItem( C, 1, &var ) ||
+		!sgs_GetStackItem( C, 0, &var ) ||
 		var.type != SVT_OBJECT ||
 		var.data.O->iface != sgsstd_dict_functable ||
-		!( ht = (VHTable*) sgs_GetObjectData( C, 0 ) ) )
+		!( ht = (VHTable*) sgs_GetObjectData( C, 0 )->data ) ||
+		!sgs_ParseString( C, 1, &str, &size ) )
 		STDLIB_WARN( "unset(): unexpected arguments; function expects 2 arguments: dict, string" )
 
 	vht_unset( ht, str, size, C );
