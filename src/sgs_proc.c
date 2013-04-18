@@ -1509,7 +1509,12 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		{
 		case SI_NOP: break;
 
-		case SI_PUSH: stk_push( C, RESVAR( argB ) ); break;
+		case SI_PUSH:
+		{
+			sgs_Variable var = *RESVAR( argB );
+			stk_push( C, &var );
+			break;
+		}
 		case SI_PUSHN:
 		{
 			int count = argA;
