@@ -31,7 +31,7 @@ while(true)
 	title = string_trim( string_part( hdr, hdrfpe ) );
 	
 	pstr = path;
-	path = string_explode( ".", path );
+	path = string_explode( path, "." );
 	
 	parts.push({ path = path, path_str = pstr, title = title, body = body });
 	
@@ -56,7 +56,3 @@ foreach( i : parts )
 }
 data $= "</div>";
 io_file_write( "docs/test.htm", data );
-
-sys_stat( 11 );
-sys_stat( 12 );
-sys_stat( 13 );

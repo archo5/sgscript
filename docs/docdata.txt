@@ -5,6 +5,11 @@
 It's good
 
 ...
+---
+that shoulda been HR
+..newlines don't matter much
+
+==== now for some hilite action.. ====
 
 <##### intro.features Feature list #####>
 

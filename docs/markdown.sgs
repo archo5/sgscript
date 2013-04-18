@@ -2,12 +2,43 @@
 include_library( "string" );
 
 
+function htmlencode( text )
+{
+	text = string_replace( text, "&", "&amp;" );
+	text = string_replace( text, "<", "&lt;" );
+	text = string_replace( text, ">", "&gt;" );
+	text = string_replace( text, "'", "&#39;" );
+	text = string_replace( text, "\"", "&quot;" );
+	return text;
+}
+
+
 function markdown2html( text )
 {
 	text = string_replace( text, ['\r\n','\r'], '\n' );
 	
-	lines = string_explode( "\n", text );
-	printvar( lines );
+	lines = string_explode( text, "\n" );
+	for( i = 0; i < lines.size; ++i )
+	{
+		L = lines[ i ];
+		
+		if( string_part( L, 0, 3 ) == "---" )
+		{
+			lines[ i ] = "</p><hr /><p>";
+		}
+		else if( string_part( L, 0, 2 ) == "==" )
+		{
+			cnt = L.length - string_trim( L, "=", LEFT ).length;
+			L = string_trim( L, "= \t\v\r\n" );
+			lines[ i ] = "</p><h"$cnt$">" $ htmlencode( L ) $ "</h"$cnt$"><p>";
+		}
+		else if( string_trim( L ) == "" )
+		{
+			lines[ i ] = "</p><p>";
+		}
+		else
+			lines[ i ] = htmlencode( L );
+	}
 	
-	return text;
+	return "<p>" $ string_implode( lines, "\n" ) $ "</p>";
 }
