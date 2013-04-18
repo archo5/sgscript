@@ -778,7 +778,7 @@ int _thiscall_method( SGS_CTX )
 		return 0;
 	}
 
-	sgs_PushVariable( C, sgs_StackItem( C, 0 ) );
+	sgs_PushItem( C, 0 );
 	ret = sgs_ThisCall( C, sgs_StackSize( C ) - 3, 1 );
 	if( ret != SGS_SUCCESS )
 	{
@@ -877,10 +877,11 @@ static void vm_properr( SGS_CTX, int ret, sgs_Variable* idx, int isindex )
 {
 	if( ret == SGS_ENOTFND )
 	{
+		char* p;
 		const char* err = isindex ? "Cannot find value by index" : "Property not found";
 		stk_push( C, idx );
-		sgs_ToString( C, -1 );
-		sgs_Printf( C, SGS_ERROR, -1, "%s: \"%s\"", err, var_cstr( sgs_StackItem( C, -1 ) ) );
+		p = sgs_ToString( C, -1 );
+		sgs_Printf( C, SGS_ERROR, -1, "%s: \"%s\"", err, p );
 		stk_pop1( C );
 	}
 }
@@ -2007,6 +2008,7 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 			}
 			break;
 		default:
+			sgs_BreakIf( "Invalid variable type in sgs_DumpVar!" );
 			ret = SGS_EINVAL;
 			break;
 		}
@@ -2142,11 +2144,13 @@ SGSRESULT sgs_StringMultiConcat( SGS_CTX, int args )
 SGSRESULT sgs_CloneItem( SGS_CTX, int item )
 {
 	int ret;
+	sgs_Variable copy;
 	if( !sgs_IsValidIndex( C, item ) )
 		return SGS_EBOUNDS;
 	item = stk_absindex( C, item );
 	sgs_PushNull( C );
-	ret = vm_clone( C, stk_absindex( C, -1 ), sgs_StackItem( C, item ) );
+	sgs_GetStackItem( C, item, &copy );
+	ret = vm_clone( C, stk_absindex( C, -1 ), &copy );
 	if( ret != SGS_SUCCESS )
 		sgs_Pop( C, 1 );
 	return ret;
@@ -2258,9 +2262,8 @@ SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )
 
 SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out )
 {
-	int i;
-	sgs_Variable* var = sgs_StackItem( C, item );
-	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC ||  var->type == SVT_STRING )
+	int i, ty = sgs_ItemType( C, item );
+	if( ty == SVT_NULL || ty == SVT_CFUNC || ty == SVT_FUNC || ty == SVT_STRING )
 		return FALSE;
 	i = sgs_GetBool( C, item );
 	if( out )
@@ -2271,7 +2274,7 @@ SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out )
 SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Integer* out )
 {
 	sgs_Integer i;
-	sgs_Variable* var = sgs_StackItem( C, item );
+	sgs_Variable* var = stk_getpos( C, item );
 	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC )
 		return FALSE;
 	if( var->type == SVT_STRING )
@@ -2296,7 +2299,7 @@ SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Integer* out )
 SGSBOOL sgs_ParseReal( SGS_CTX, int item, sgs_Real* out )
 {
 	sgs_Real r;
-	sgs_Variable* var = sgs_StackItem( C, item );
+	sgs_Variable* var = stk_getpos( C, item );
 	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC )
 		return FALSE;
 	if( var->type == SVT_STRING )
@@ -2321,8 +2324,8 @@ SGSBOOL sgs_ParseReal( SGS_CTX, int item, sgs_Real* out )
 SGSBOOL sgs_ParseString( SGS_CTX, int item, char** out, sgs_SizeVal* size )
 {
 	char* str;
-	sgs_Variable* var = sgs_StackItem( C, item );
-	if( var->type == SVT_NULL || var->type == SVT_CFUNC || var->type == SVT_FUNC )
+	int ty = sgs_ItemType( C, item );
+	if( ty == SVT_NULL || ty == SVT_CFUNC || ty == SVT_FUNC )
 		return FALSE;
 	str = sgs_ToStringBuf( C, item, size );
 	if( out )
@@ -2387,9 +2390,12 @@ SGSBOOL sgs_IsValidIndex( SGS_CTX, int item )
 	return ( item >= 0 && item < STACKFRAMESIZE );
 }
 
-sgs_Variable* sgs_StackItem( SGS_CTX, int item )
+SGSBOOL sgs_GetStackItem( SGS_CTX, int item, sgs_Variable* out )
 {
-	return stk_getpos( C, item );
+	if( !sgs_IsValidIndex( C, item ) )
+		return FALSE;
+	*out = *stk_getpos( C, item );
+	return TRUE;
 }
 
 int sgs_ItemType( SGS_CTX, int item )
@@ -2428,25 +2434,36 @@ SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var )
 }
 
 
-const char* sgs_GetStringPtr( SGS_CTX, int item )
+#define DBLCHK( what, fval )\
+	sgs_BreakIf( what );\
+	if( what ) return fval;
+
+char* sgs_GetStringPtr( SGS_CTX, int item )
 {
-	sgs_Variable* var = stk_getpos( C, item );
-	sgs_BreakIf( var->type != SVT_STRING );
+	sgs_Variable* var;
+	DBLCHK( !sgs_IsValidIndex( C, item ), NULL )
+	var = stk_getpos( C, item );
+	DBLCHK( var->type != SVT_STRING, NULL )
 	return var_cstr( var );
 }
 
 sgs_SizeVal sgs_GetStringSize( SGS_CTX, int item )
 {
-	sgs_Variable* var = stk_getpos( C, item );
-	sgs_BreakIf( var->type != SVT_STRING );
+	sgs_Variable* var;
+	DBLCHK( !sgs_IsValidIndex( C, item ), 0 )
+	var = stk_getpos( C, item );
+	DBLCHK( var->type != SVT_STRING, 0 )
 	return var->data.S->size;
 }
 
 sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item )
 {
-	sgs_Variable* var = stk_getpos( C, item );
-	sgs_BreakIf( var->type != SVT_OBJECT );
+	sgs_Variable* var;
+	DBLCHK( !sgs_IsValidIndex( C, item ), NULL )
+	var = stk_getpos( C, item );
+	DBLCHK( var->type != SVT_OBJECT, 0 )
 	return var->data.O;
 }
 
+#undef DBLCHK
 

@@ -1,27 +1,12 @@
 
 include_library( "string" );
 include_library( "io" );
+include_file( "docs/markdown.sgs" );
 
 raw = io_file_read( "docs/docdata.txt" );
 BSEP = "<#####";
 ESEP = "#####>";
 parts = [];
-
-function string_explode( sep, str )
-{
-	out = [];
-	pp = 0;
-	p = string_find( str, sep );
-	while( p !== null )
-	{
-		out.push( string_part( str, pp, p - pp ) );
-		
-		pp = p + sep.length;
-		p = string_find( str, sep, p + sep.length );
-	}
-	out.push( string_part( str, pp ) );
-	return out;
-}
 
 // split into parts
 pp = string_find( raw, BSEP );
@@ -66,8 +51,12 @@ foreach( i : parts )
 	data $= P.title;
 	data $= " (" $ P.path_str $ ")";
 	data $= "</" $ h $ ">";
-	data $= P.body;
+	data $= markdown2html( P.body );
 	data $= "</div>";
 }
 data $= "</div>";
 io_file_write( "docs/test.htm", data );
+
+sys_stat( 11 );
+sys_stat( 12 );
+sys_stat( 13 );

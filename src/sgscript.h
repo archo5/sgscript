@@ -386,14 +386,14 @@ SGSBOOL sgs_ArrayGet( SGS_CTX, sgs_Variable* var, sgs_SizeVal which, sgs_Variabl
 */
 int sgs_StackSize( SGS_CTX );
 SGSBOOL sgs_IsValidIndex( SGS_CTX, int item );
-sgs_Variable* sgs_StackItem( SGS_CTX, int item );
+SGSBOOL sgs_GetStackItem( SGS_CTX, int item, sgs_Variable* out );
 int sgs_ItemType( SGS_CTX, int item );
 SGSBOOL sgs_Method( SGS_CTX );
 void sgs_Acquire( SGS_CTX, sgs_Variable* var );
 void sgs_Release( SGS_CTX, sgs_Variable* var );
 SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var );
 
-const char* sgs_GetStringPtr( SGS_CTX, int item );
+char* sgs_GetStringPtr( SGS_CTX, int item );
 sgs_SizeVal sgs_GetStringSize( SGS_CTX, int item );
 sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item );
 

@@ -78,9 +78,9 @@ static void sgsstd_array_insert( SGS_CTX, sgs_VarObj* data, uint32_t pos, int of
 		memmove( ptr + pos + cnt, ptr + pos, ( hdr->size - pos ) * SGSARR_UNIT );
 	for( i = off; i < sgs_StackSize( C ); ++i )
 	{
-		sgs_Variable* var = sgs_StackItem( C, i );
+		sgs_Variable* var = ptr + pos + i - off;
+		sgs_GetStackItem( C, i, var );
 		sgs_Acquire( C, var );
-		ptr[ pos + i - off ] = *var;
 	}
 	hdr->size = nsz;
 }
@@ -361,7 +361,8 @@ static int sgsstd_arrayI_sort_custom( SGS_CTX )
 			" function expects 1-2 arguments: func[, bool]" )
 
 	{
-		sgsarrcomp_cl2 u = { C, *sgs_StackItem( C, 1 ) };
+		sgsarrcomp_cl2 u = { C };
+		sgs_GetStackItem( C, 1, &u.sortfunc );
 		quicksort( SGSARR_PTR( data->data ), hdr->size,
 			sizeof( sgs_Variable ), rev ? sgsarrcomp_custom_rev : sgsarrcomp_custom, &u );
 		sgs_Pop( C, cnt );
@@ -388,14 +389,14 @@ static SGS_INLINE int sgsarrcomp_smi_rev( const void* p1, const void* p2, void* 
 static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 {
 	sgs_SizeVal i, asize = 0;
-	sgs_Variable* a2 = NULL;
+	sgs_Variable a2;
 	int rev = 0, cnt = sgs_StackSize( C );
 	SGSARR_IHDR( sort_mapped );
 
 	if( cnt < 1 || cnt > 2 ||
-		!( a2 = sgs_StackItem( C, 1 ) ) ||
-		!sgs_IsArray( C, a2 ) ||
-		( asize = sgs_ArraySize( C, a2 ) ) < 0 ||
+		!sgs_GetStackItem( C, 1, &a2 ) ||
+		!sgs_IsArray( C, &a2 ) ||
+		( asize = sgs_ArraySize( C, &a2 ) ) < 0 ||
 		( cnt == 2 && !sgs_ParseBool( C, 2, &rev ) ) )
 		STDLIB_WARN( "array.sort_mapped(): unexpected arguments;"
 			" function expects 1-2 arguments: array[, bool]" )
@@ -408,7 +409,7 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 		for( i = 0; i < asize; ++i )
 		{
 			sgs_Variable var;
-			if( !sgs_ArrayGet( C, a2, i, &var ) )
+			if( !sgs_ArrayGet( C, &a2, i, &var ) )
 			{
 				sgs_Dealloc( smis );
 				STDLIB_WARN( "array.sort_mapped(): error in mapping array" )
@@ -453,13 +454,14 @@ static int sgsstd_arrayI_find( SGS_CTX )
 			" function expects 1-3 arguments: any[, bool[, int]]" )
 
 	{
-		sgs_Variable* comp = sgs_StackItem( C, 1 );
+		sgs_Variable comp;
+		sgs_GetStackItem( C, 1, &comp );
 		sgs_SizeVal off = from;
 		while( off < hdr->size )
 		{
 			sgs_Variable* p = SGSARR_PTR( hdr ) + off;
-			if( ( !strict || sgs_EqualTypes( C, p, comp ) )
-				&& sgs_CompareF( C, p, comp ) == 0 )
+			if( ( !strict || sgs_EqualTypes( C, p, &comp ) )
+				&& sgs_CompareF( C, p, &comp ) == 0 )
 			{
 				sgs_PushInt( C, off );
 				return 1;
@@ -537,7 +539,7 @@ static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* data )
 		return SGS_EBOUNDS;
 	}
 	sgs_Release( C, ptr + i );
-	ptr[ i ] = *sgs_StackItem( C, -1 );
+	sgs_GetStackItem( C, -1, ptr + i );
 	sgs_Acquire( C, ptr + i );
 	return SGS_SUCCESS;
 }
@@ -694,16 +696,18 @@ void* sgsstd_array_functable[] =
 
 int sgsstd_array( SGS_CTX )
 {
-	int i, objcnt = sgs_StackSize( C );
+	int i = 0, objcnt = sgs_StackSize( C );
 	void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( objcnt ) );
+	sgs_Variable *p, *pend;
 	SGSARR_HDRBASE;
 	hdr->size = objcnt;
 	hdr->mem = objcnt;
-	for( i = 0; i < objcnt; ++i )
+	p = SGSARR_PTR( data );
+	pend = p + objcnt;
+	while( p < pend )
 	{
-		sgs_Variable* var = sgs_StackItem( C, i );
-		sgs_Acquire( C, var );
-		SGSARR_PTR( data )[ i ] = *var;
+		sgs_GetStackItem( C, i++, p );
+		sgs_Acquire( C, p++ );
 	}
 	sgs_PushObject( C, data, sgsstd_array_functable );
 	return 1;
@@ -828,7 +832,7 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 	HTHDR;
 	VHTableVar* pair;
 	sgs_ToString( C, -1 );
-	if( sgs_StackItem( C, -1 )->type != SVT_STRING )
+	if( sgs_ItemType( C, -1 ) != SVT_STRING )
 		return SGS_EINVAL;
 	pair = vht_get( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
 	if( !pair )
@@ -840,12 +844,13 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 static int sgsstd_dict_setindex( SGS_CTX, sgs_VarObj* data )
 {
 	HTHDR;
-	sgs_Variable* key;
+	sgs_Variable key, val;
 	sgs_ToString( C, -2 );
-	key = sgs_StackItem( C, -2 );
-	if( key->type != SVT_STRING )
+	sgs_GetStackItem( C, -2, &key );
+	sgs_GetStackItem( C, -1, &val );
+	if( key.type != SVT_STRING )
 		return SGS_EINVAL;
-	vht_set( ht, var_cstr( key ), key->data.S->size, sgs_StackItem( C, -1 ), C );
+	vht_set( ht, var_cstr( &key ), key.data.S->size, &val, C );
 	return SGS_SUCCESS;
 }
 
@@ -929,8 +934,10 @@ int sgsstd_dict_internal( SGS_CTX )
 	vht_init( ht, C );
 	for( i = 0; i < objcnt; i += 2 )
 	{
-		sgs_Variable* vkey = sgs_StackItem( C, i );
-		vht_set( ht, var_cstr( vkey ), vkey->data.S->size, sgs_StackItem( C, i + 1 ), C );
+		sgs_Variable vkey, val;
+		sgs_GetStackItem( C, i, &vkey );
+		sgs_GetStackItem( C, i + 1, &val );
+		vht_set( ht, var_cstr( &vkey ), vkey.data.S->size, &val, C );
 	}
 	sgs_PushObject( C, ht, sgsstd_dict_functable );
 	return 1;
@@ -952,6 +959,7 @@ int sgsstd_dict( SGS_CTX )
 	{
 		char* kstr;
 		sgs_SizeVal ksize;
+		sgs_Variable val;
 		if( !sgs_ParseString( C, i, &kstr, &ksize ) )
 		{
 			_dict_clearvals( C, ht );
@@ -961,7 +969,8 @@ int sgsstd_dict( SGS_CTX )
 			return 0;
 		}
 
-		vht_set( ht, kstr, (int32_t) ksize, sgs_StackItem( C, i + 1 ), C );
+		sgs_GetStackItem( C, i + 1, &val );
+		vht_set( ht, kstr, (int32_t) ksize, &val, C );
 	}
 
 	sgs_PushObject( C, ht, sgsstd_dict_functable );
@@ -999,7 +1008,7 @@ int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data )
 		sgs_PushVariable( C, &hdr->inh );
 		return SGS_SUCCESS;
 	}
-	idx = *sgs_StackItem( C, -1 );
+	sgs_GetStackItem( C, -1, &idx );
 	sgs_Acquire( C, &idx );
 
 	if( sgs_GetIndex( C, &var, &hdr->data, &idx ) == SGS_SUCCESS )
@@ -1021,15 +1030,18 @@ success:
 
 int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data )
 {
+	sgs_Variable k, v;
 	SGSCLASS_HDR;
 	if( strcmp( sgs_ToString( C, -2 ), "_super" ) == 0 )
 	{
 		sgs_Release( C, &hdr->inh );
-		hdr->inh = *sgs_StackItem( C, -1 );
+		sgs_GetStackItem( C, -1, &hdr->inh );
 		sgs_Acquire( C, &hdr->inh );
 		return SGS_SUCCESS;
 	}
-	return sgs_SetIndex( C, &hdr->data, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ) );
+	sgs_GetStackItem( C, -2, &k );
+	sgs_GetStackItem( C, -1, &v );
+	return sgs_SetIndex( C, &hdr->data, &k, &v );
 }
 
 #define sgsstd_class_getprop sgsstd_class_getindex
@@ -1042,7 +1054,7 @@ int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
 	SGSCLASS_HDR;
 
 	sgs_PushString( C, method );
-	idx = *sgs_StackItem( C, -1 );
+	sgs_GetStackItem( C, -1, &idx );
 	sgs_Acquire( C, &idx );
 	sgs_Pop( C, 1 );
 	
@@ -1132,14 +1144,14 @@ int sgsstd_class_call( SGS_CTX, sgs_VarObj* data )
 	if( sgsstd_class_getmethod( C, data, "__call" ) )
 	{
 		int ret, i;
-		sgs_Variable var;
+		sgs_Variable var, fn;
 		var.type = SVT_OBJECT;
 		var.data.O = data;
 		sgs_PushVariable( C, &var );
 		for( i = 0; i < C->call_args; ++i )
-			sgs_PushVariable( C, sgs_StackItem( C, i ) );
-		ret = sgsVM_VarCall( C, sgs_StackItem( C, -2 - C->call_args ),
-			C->call_args, C->call_expect, TRUE );
+			sgs_PushItem( C, i );
+		sgs_GetStackItem( C, -2 - C->call_args, &fn );
+		ret = sgsVM_VarCall( C, &fn, C->call_args, C->call_expect, TRUE );
 		return ret;
 	}
 	return SGS_ENOTFND;
@@ -1174,8 +1186,8 @@ int sgsstd_class( SGS_CTX )
 		goto argerr;
 
 	hdr = sgs_Alloc( sgsstd_class_header_t );
-	hdr->data = *sgs_StackItem( C, 0 );
-	hdr->inh = *sgs_StackItem( C, 1 );
+	sgs_GetStackItem( C, 0, &hdr->data );
+	sgs_GetStackItem( C, 1, &hdr->inh );
 	sgs_Acquire( C, &hdr->data );
 	sgs_Acquire( C, &hdr->inh );
 	sgs_PushObject( C, hdr, sgsstd_class_functable );
@@ -1263,7 +1275,7 @@ int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data )
 	SGSCLOSURE_HDR;
 	sgs_PushVariable( C, &hdr->data );
 	for( i = 0; i < C->call_args; ++i )
-		sgs_PushVariable( C, sgs_StackItem( C, i ) );
+		sgs_PushItem( C, i );
 	return sgsVM_VarCall( C, &hdr->func, C->call_args, C->call_expect, TRUE );
 }
 
@@ -1285,8 +1297,8 @@ int sgsstd_closure( SGS_CTX )
 		goto argerr;
 
 	hdr = sgs_Alloc( sgsstd_closure_t );
-	hdr->func = *sgs_StackItem( C, 0 );
-	hdr->data = *sgs_StackItem( C, 1 );
+	sgs_GetStackItem( C, 0, &hdr->func );
+	sgs_GetStackItem( C, 1, &hdr->data );
 	sgs_Acquire( C, &hdr->func );
 	sgs_Acquire( C, &hdr->data );
 	sgs_PushObject( C, hdr, sgsstd_closure_functable );
@@ -1302,54 +1314,40 @@ argerr:
 
 int sgsstd_isset( SGS_CTX )
 {
-	sgs_Variable* var;
+	char* str;
+	sgs_SizeVal size;
+	sgs_Variable var;
 	VHTable* ht;
 	VHTableVar* pair;
-	if( sgs_StackSize( C ) != 2 )
-		goto argerr;
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseString( C, 0, &str, &size ) ||
+		!sgs_GetStackItem( C, 1, &var ) ||
+		var.type != SVT_OBJECT ||
+		var.data.O->iface != sgsstd_dict_functable ||
+		!( ht = (VHTable*) sgs_GetObjectData( C, 0 ) ) )
+		STDLIB_WARN( "isset(): unexpected arguments; function expects 2 arguments: dict, string" )
 
-	var = sgs_StackItem( C, -2 );
-	if( var->type != SVT_OBJECT || var->data.O->iface != sgsstd_dict_functable )
-		goto argerr;
-
-	sgs_ToString( C, -1 );
-	if( sgs_StackItem( C, -1 )->type != SVT_STRING )
-		goto argerr;
-	ht = (VHTable*) var->data.O->data;
-
-	pair = vht_get( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+	pair = vht_get( ht, str, size );
 	sgs_PushBool( C, pair != NULL );
 	return 1;
-
-argerr:
-	sgs_Printf( C, SGS_ERROR, -1, "'isset' requires 2 arguments:"
-		" object (dict), property name (string)" );
-	return 0;
 }
 
 int sgsstd_unset( SGS_CTX )
 {
-	sgs_Variable* var;
+	char* str;
+	sgs_SizeVal size;
+	sgs_Variable var;
 	VHTable* ht;
-	if( sgs_StackSize( C ) != 2 )
-		goto argerr;
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseString( C, 0, &str, &size ) ||
+		!sgs_GetStackItem( C, 1, &var ) ||
+		var.type != SVT_OBJECT ||
+		var.data.O->iface != sgsstd_dict_functable ||
+		!( ht = (VHTable*) sgs_GetObjectData( C, 0 ) ) )
+		STDLIB_WARN( "unset(): unexpected arguments; function expects 2 arguments: dict, string" )
 
-	var = sgs_StackItem( C, -2 );
-	if( var->type != SVT_OBJECT || var->data.O->iface != sgsstd_dict_functable )
-		goto argerr;
+	vht_unset( ht, str, size, C );
 
-	sgs_ToString( C, -1 );
-	if( sgs_StackItem( C, -1 )->type != SVT_STRING )
-		goto argerr;
-
-	ht = (VHTable*) var->data.O->data;
-	vht_unset( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ), C );
-
-	return 0;
-
-argerr:
-	sgs_Printf( C, SGS_ERROR, -1, "'unset' requires 2 arguments:"
-		" object (dict), property name (string)" );
 	return 0;
 }
 

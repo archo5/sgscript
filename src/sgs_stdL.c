@@ -293,7 +293,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 		fseek( fp, 0, SEEK_SET );
 
 		sgs_PushStringBuf( C, NULL, len );
-		rd = fread( var_cstr( sgs_StackItem( C, -1 ) ), 1, len, fp );
+		rd = fread( sgs_GetStringPtr( C, -1 ), 1, len, fp );
 		fclose( fp );
 		if( rd < len )
 			STDLIB_WARN( "io_file_read() - failed to read file" )
@@ -712,7 +712,7 @@ static int sgsstd_string_reverse( SGS_CTX )
 		STDLIB_WARN( "string_reverse() - unexpected arguments; function expects 1 argument: string" );
 
 	sgs_PushStringBuf( C, NULL, size );
-	sout = var_cstr( sgs_StackItem( C, -1 ) );
+	sout = sgs_GetStringPtr( C, -1 );
 
 	for( i = 0; i < size; ++i )
 		sout[ size - i - 1 ] = str[ i ];
@@ -742,7 +742,7 @@ static int sgsstd_string_pad( SGS_CTX )
 	}
 
 	sgs_PushStringBuf( C, NULL, tgtsize );
-	sout = var_cstr( sgs_StackItem( C, -1 ) );
+	sout = sgs_GetStringPtr( C, -1 );
 	if( FLAG( flags, sgsLEFT ) )
 	{
 		if( FLAG( flags, sgsRIGHT ) )
@@ -781,7 +781,7 @@ static int sgsstd_string_repeat( SGS_CTX )
 		STDLIB_WARN( "string_repeat() - unexpected arguments; function expects 2 arguments: string, int (>= 0)" );
 
 	sgs_PushStringBuf( C, NULL, count * size );
-	sout = var_cstr( sgs_StackItem( C, -1 ) );
+	sout = sgs_GetStringPtr( C, -1 );
 	while( count-- )
 	{
 		memcpy( sout, str, size );
@@ -894,7 +894,6 @@ static int _stringrep_ss( SGS_CTX, char* str, int32_t size, char* sub, int32_t s
 	char* strend = str + size - subsize;
 	char* ptr = str, *i, *o;
 	int32_t outlen;
-	sgs_Variable* out;
 
 	/* subsize = 0 handled by parent */
 
@@ -921,10 +920,9 @@ static int _stringrep_ss( SGS_CTX, char* str, int32_t size, char* sub, int32_t s
 
 	outlen = size + ( repsize - subsize ) * matchcount;
 	sgs_PushStringBuf( C, NULL, outlen );
-	out = sgs_StackItem( C, -1 );
 
 	i = str;
-	o = var_cstr( out );
+	o = sgs_GetStringPtr( C, -1 );
 	strend = str + size;
 	curmatch = 0;
 	while( i < strend && curmatch < matchcount )
@@ -954,7 +952,7 @@ static int _stringrep_as( SGS_CTX, char* str, int32_t size, sgs_Variable* subarr
 {
 	char* substr;
 	sgs_SizeVal subsize;
-	sgs_Variable var, *pvar;
+	sgs_Variable var;
 	int32_t i, arrsize = sgs_ArraySize( C, subarr );
 	if( arrsize < 0 )
 		goto fail;
@@ -972,9 +970,9 @@ static int _stringrep_as( SGS_CTX, char* str, int32_t size, sgs_Variable* subarr
 
 		if( sgs_PopSkip( C, i > 0 ? 2 : 1, 1 ) != SGS_SUCCESS )
 			goto fail;
-		pvar = sgs_StackItem( C, -1 );
-		str = var_cstr( pvar );
-		size = pvar->data.S->size;
+
+		str = sgs_GetStringPtr( C, -1 );
+		size = sgs_GetStringSize( C, -1 );
 	}
 
 	return 1;
@@ -986,7 +984,7 @@ static int _stringrep_aa( SGS_CTX, char* str, int32_t size, sgs_Variable* subarr
 {
 	char* substr, *repstr;
 	sgs_SizeVal subsize, repsize;
-	sgs_Variable var, *pvar;
+	sgs_Variable var;
 	int32_t i, arrsize = sgs_ArraySize( C, subarr ),
 		reparrsize = sgs_ArraySize( C, reparr );
 	if( arrsize < 0 || reparrsize < 0 )
@@ -1011,9 +1009,9 @@ static int _stringrep_aa( SGS_CTX, char* str, int32_t size, sgs_Variable* subarr
 
 		if( sgs_PopSkip( C, i > 0 ? 3 : 2, 1 ) != SGS_SUCCESS )
 			goto fail;
-		pvar = sgs_StackItem( C, -1 );
-		str = var_cstr( pvar );
-		size = pvar->data.S->size;
+
+		str = sgs_GetStringPtr( C, -1 );
+		size = sgs_GetStringSize( C, -1 );
 	}
 
 	return 1;
@@ -1025,24 +1023,24 @@ static int sgsstd_string_replace( SGS_CTX )
 {
 	int argc, isarr1, isarr2, ret;
 	char* str, *sub, *rep;
-	sgs_Variable *var1, *var2;
+	sgs_Variable var1, var2;
 	sgs_SizeVal size, subsize, repsize;
 
 	argc = sgs_StackSize( C );
 	if( argc != 3 )
 		goto invargs;
 
-	var1 = sgs_StackItem( C, 1 );
-	var2 = sgs_StackItem( C, 2 );
-	isarr1 = sgs_IsArray( C, var1 );
-	isarr2 = sgs_IsArray( C, var2 );
+	sgs_GetStackItem( C, 1, &var1 );
+	sgs_GetStackItem( C, 2, &var2 );
+	isarr1 = sgs_IsArray( C, &var1 );
+	isarr2 = sgs_IsArray( C, &var2 );
 
 	if( !sgs_ParseString( C, 0, &str, &size ) )
 		goto invargs;
 
 	if( isarr1 && isarr2 )
 	{
-		return _stringrep_aa( C, str, size, var1, var2 );
+		return _stringrep_aa( C, str, size, &var1, &var2 );
 	}
 
 	if( isarr2 )
@@ -1051,14 +1049,14 @@ static int sgsstd_string_replace( SGS_CTX )
 	ret = sgs_ParseString( C, 2, &rep, &repsize );
 	if( isarr1 && ret )
 	{
-		return _stringrep_as( C, str, size, var1, rep, repsize );
+		return _stringrep_as( C, str, size, &var1, rep, repsize );
 	}
 
 	if( sgs_ParseString( C, 1, &sub, &subsize ) && ret )
 	{
 		if( subsize == 0 )
 		{
-			sgs_PushVariable( C, var1 );
+			sgs_PushVariable( C, &var1 );
 			return 1;
 		}
 		return _stringrep_ss( C, str, size, sub, subsize, rep, repsize );
@@ -1123,11 +1121,11 @@ static int sgsstd_string_implode( SGS_CTX )
 	sgs_SizeVal i, asize;
 
 	if( sgs_StackSize( C ) != 2 ||
-		!sgs_IsArray( C, sgs_StackItem( C, 0 ) ) ||
+		!sgs_GetStackItem( C, 0, &arr ) ||
+		!sgs_IsArray( C, &arr ) ||
 		!sgs_ParseString( C, 1, NULL, NULL ) )
 		STDLIB_WARN( "string_implode() - unexpected arguments; function expects 2 arguments: array, string" )
 
-	arr = *sgs_StackItem( C, 0 );
 	asize = sgs_ArraySize( C, &arr );
 	if( !asize )
 	{
@@ -1244,41 +1242,38 @@ typechk_func( is_object, SVT_OBJECT )
 
 static int sgsstd_is_numeric( SGS_CTX )
 {
-	int res;
-	sgs_Variable* var;
+	int res, ty = sgs_ItemType( C, 0 );
 	EXPECT_ONEARG( is_numeric )
 
-	var = sgs_StackItem( C, 0 );
-
-	if( var->type == SVT_NULL || var->type == SVT_FUNC || var->type == SVT_CFUNC || var->type == SVT_OBJECT )
+	if( ty == SVT_NULL || ty == SVT_FUNC || ty == SVT_CFUNC || ty == SVT_OBJECT )
 		res = FALSE;
 
 	else
-		res = var->type != SVT_STRING || sgs_IsNumericString( var_cstr( var ), var->data.S->size );
+		res = ty != SVT_STRING || sgs_IsNumericString(
+			sgs_GetStringPtr( C, 0 ), sgs_GetStringSize( C, 0 ) );
 
 	sgs_PushBool( C, res );
 	return 1;
 }
 
-#define OBJECT_HAS_IFACE( outVar, objVar, iFace ) \
-	{ void** ptr = objVar->data.O->iface; outVar = 0; \
+#define OBJECT_HAS_IFACE( outVar, O, iFace ) \
+	{ void** ptr = O->iface; outVar = 0; \
 	while( *ptr ){ if( *ptr == iFace ){ outVar = 1; \
 		break; } ptr += 2; } }
 
 static int sgsstd_is_callable( SGS_CTX )
 {
-	int res;
-	sgs_Variable* var;
+	int res, ty = sgs_ItemType( C, 0 );
 	EXPECT_ONEARG( is_callable )
 
-	var = sgs_StackItem( C, 0 );
-
-	if( var->type != SVT_FUNC && var->type != SVT_CFUNC && var->type != SVT_OBJECT )
+	if( ty != SVT_FUNC && ty != SVT_CFUNC && ty != SVT_OBJECT )
 		res = FALSE;
 
-	else if( var->type == SVT_OBJECT )
-		OBJECT_HAS_IFACE( res, var, SOP_CALL )
-
+	else if( ty == SVT_OBJECT )
+	{
+		sgs_VarObj* O = sgs_GetObjectData( C, 0 );
+		OBJECT_HAS_IFACE( res, O, SOP_CALL )
+	}
 	else
 		res = TRUE;
 
@@ -1288,21 +1283,21 @@ static int sgsstd_is_callable( SGS_CTX )
 
 static int sgsstd_is_switch( SGS_CTX )
 {
-	int res;
-	sgs_Variable* var;
+	int res, ty = sgs_ItemType( C, 0 );
 	EXPECT_ONEARG( is_switch )
 
-	var = sgs_StackItem( C, 0 );
-
-	if( var->type == SVT_FUNC || var->type == SVT_CFUNC )
+	if( ty == SVT_FUNC || ty == SVT_CFUNC )
 		res = FALSE;
 
-	else if( var->type == SVT_STRING )
-		res = sgs_IsNumericString( var_cstr( var ), var->data.S->size );
+	else if( ty == SVT_STRING )
+		res = sgs_IsNumericString(
+			sgs_GetStringPtr( C, 0 ), sgs_GetStringSize( C, 0 ) );
 
-	else if( var->type == SVT_OBJECT )
-		OBJECT_HAS_IFACE( res, var, SOP_TOBOOL )
-
+	else if( ty == SVT_OBJECT )
+	{
+		sgs_VarObj* O = sgs_GetObjectData( C, 0 );
+		OBJECT_HAS_IFACE( res, O, SOP_TOBOOL )
+	}
 	else
 		res = TRUE;
 
@@ -1312,18 +1307,17 @@ static int sgsstd_is_switch( SGS_CTX )
 
 static int sgsstd_is_printable( SGS_CTX )
 {
-	int res;
-	sgs_Variable* var;
+	int res, ty = sgs_ItemType( C, 0 );
 	EXPECT_ONEARG( is_printable )
 
-	var = sgs_StackItem( C, 0 );
-
-	if( var->type == SVT_NULL || var->type == SVT_FUNC || var->type == SVT_CFUNC )
+	if( ty == SVT_NULL || ty == SVT_FUNC || ty == SVT_CFUNC )
 		res = FALSE;
 
-	else if( var->type == SVT_OBJECT )
-		OBJECT_HAS_IFACE( res, var, SOP_TOSTRING )
-
+	else if( ty == SVT_OBJECT )
+	{
+		sgs_VarObj* O = sgs_GetObjectData( C, 0 );
+		OBJECT_HAS_IFACE( res, O, SOP_TOSTRING )
+	}
 	else
 		res = TRUE;
 
@@ -1336,7 +1330,7 @@ static int sgsstd_type_get( SGS_CTX )
 {
 	EXPECT_ONEARG( type_get )
 
-	sgs_PushInt( C, sgs_StackItem( C, 0 )->type );
+	sgs_PushInt( C, sgs_ItemType( C, 0 ) );
 	return 1;
 }
 

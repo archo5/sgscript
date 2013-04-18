@@ -1,0 +1,13 @@
+
+include_library( "string" );
+
+
+function markdown2html( text )
+{
+	text = string_replace( text, ['\r\n','\r'], '\n' );
+	
+	lines = string_explode( "\n", text );
+	printvar( lines );
+	
+	return text;
+}
