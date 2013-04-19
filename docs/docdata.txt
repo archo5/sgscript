@@ -2,17 +2,39 @@
 
 <##### intro.why Why SGScript? #####>
 
-It's good
+SGScript is a scripting language that is made to be used in all kinds of environments.
+Where other languages / virtual machines may have requirements beyond your control, this one is light on memory usage and requires a level of explicitness that matches the weight of a feature.
+Very few things are hidden from the user, making it simple to detect performance and memory problems, if they occur.
 
-...
----
-that shoulda been HR
-..newlines don't matter much
-
-==== now for some hilite action.. ====
+Most design decisions in the language are oriented towards control so you might find yourself out of luck a few times while trying to find a high-level feature to do the job for you.
+For example, *there is no such thing as "exceptions" in the language*. This is to avoid ambiguity in error handling, as well as the performance hit that occurs when all registered handlers are checked for each minor issue that occurs in simple use of the language.
 
 <##### intro.features Feature list #####>
 
-Something
+The language supports:
 
+- `if/else`, `while`, `for`, `do/while`, `foreach`
+- 8 variable types: null, bool, int, real, string, function, C function, object
+- Multi-level break/continue
+- First-class functions
+
+The virtual machine supports:
+
+- Operator overloading
+- On-demand garbage collection
+- Full introspection of machine state
+
+The standard library includes:
+
+- array, dict, class, closure
+- math, string and type functions
+- eval, file import, DLL import
+
+<##### sgscript SGScript #####>
+
+<##### sgscript.lang The Language #####>
+
+! Even though the language is very similar to many others, it is advised to read this section to learn more about the differences. While there will be at most few differences in small scripts, bigger software will require getting used to having some concepts handled completely differently.
+
+There are 8 **data types** in SGScript: **null**, **bool**, **int**, **real**, **string**, **function**, **C function** and **object**. Each of them offers a different set of features and possible values. The values may sometimes overlap, so the language offers automatic conversion between types where and to what extent it is possible.
 
