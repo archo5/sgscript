@@ -1312,7 +1312,7 @@ argerr:
 
 /* UTILITIES */
 
-int sgsstd_isset( SGS_CTX )
+static int sgsstd_isset( SGS_CTX )
 {
 	char* str;
 	sgs_SizeVal size;
@@ -1332,7 +1332,7 @@ int sgsstd_isset( SGS_CTX )
 	return 1;
 }
 
-int sgsstd_unset( SGS_CTX )
+static int sgsstd_unset( SGS_CTX )
 {
 	char* str;
 	sgs_SizeVal size;
@@ -1351,7 +1351,7 @@ int sgsstd_unset( SGS_CTX )
 	return 0;
 }
 
-int sgsstd_clone( SGS_CTX )
+static int sgsstd_clone( SGS_CTX )
 {
 	int ret;
 	if( sgs_StackSize( C ) != 1 )
@@ -1618,6 +1618,26 @@ static int sgsstd_import_cfunc( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_sys_curfile( SGS_CTX )
+{
+	const char* file;
+	sgs_StackFrame* sf;
+	if( sgs_StackSize( C ) )
+		STDLIB_WARN( "sys_curfile(): unexpected arguments; function expects none" )
+
+	sf = sgs_GetFramePtr( C, 1 )->prev;
+	if( !sf )
+		return 0;
+
+	sgs_StackFrameInfo( C, sf, NULL, &file, NULL );
+	if( file )
+	{
+		sgs_PushString( C, file );
+		return 1;
+	}
+	return 0;
+}
+
 static int sgsstd_sys_errorstate( SGS_CTX )
 {
 	int state = 1;
@@ -1723,6 +1743,7 @@ sgs_RegFuncConst regfuncs[] =
 	FN( eval ), FN( eval_file ),
 	FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( import_cfunc ),
+	FN( sys_curfile ),
 	FN( sys_errorstate ), FN( sys_abort ), FN( sys_stat ),
 	FN( dumpvar ), FN( dumpvars ),
 	FN( gc_collect ),

@@ -1,9 +1,10 @@
 
 include_library( "string" );
 include_library( "io" );
-include_file( "docs/markdown.sgs" );
 
-raw = io_file_read( "docs/docdata.txt" );
+include_file( "markdown.sgs" );
+
+raw = io_file_read( "docdata.txt" );
 BSEP = "<#####";
 ESEP = "#####>";
 parts = [];

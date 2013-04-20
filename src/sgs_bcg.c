@@ -19,7 +19,7 @@ static SGS_INLINE int16_t comp_reg_alloc( SGS_CTX )
 	int out = C->fctx->regs++;
 	if( out > 0xff )
 	{
-		C->state |= SGS_HAS_ERRORS;
+		C->state |= SGS_HAS_ERRORS | SGS_MUST_STOP;
 		sgs_Printf( C, SGS_ERROR, -1, "Max. register count exceeded" );
 	}
 	return out;
@@ -863,6 +863,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 			if( !assign )
 				oreg = comp_reg_alloc( C );
+			if( C->state & SGS_MUST_STOP )
+				goto fail;
 
 			/* get source data register */
 			FUNC_ENTER;
@@ -935,6 +937,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 		/* output register selection */
 		oreg = expect && node->type == SFT_OPER_P ? comp_reg_alloc( C ) : ireg;
+		if( C->state & SGS_MUST_STOP )
+			goto fail;
 		if( oreg != ireg )
 		{
 			INSTR_WRITE( SI_SET, oreg, ireg, 0 );
@@ -1002,6 +1006,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		{
 			uint8_t op;
 			int16_t ireg1, ireg2, oreg = comp_reg_alloc( C );
+			if( C->state & SGS_MUST_STOP )
+				goto fail;
 
 			/* get source data registers */
 			FUNC_ENTER;
@@ -1026,7 +1032,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 	{
 		int16_t ireg1, ireg2, oreg;
 
-		if( expect != 1 )
+		if( expect > 1 )
 		{
 			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Too many expected outputs for operator" );
 			goto fail;
@@ -1038,6 +1044,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			if( out )
 			{
 				oreg = comp_reg_alloc( C );
+				if( C->state & SGS_MUST_STOP )
+					goto fail;
 				if( arg )
 					*arg = oreg;
 			}
@@ -1075,6 +1083,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			uint8_t op;
 
 			oreg = comp_reg_alloc( C );
+			if( C->state & SGS_MUST_STOP )
+				goto fail;
 
 			/* get source data registers */
 			FUNC_ENTER;
@@ -1167,6 +1177,12 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	FUNC_ENTER;
 	if( !compile_node( C, nf, node->child->next ) ) { goto fail; }
 	comp_reg_unwind( C, 0 );
+
+	if( C->fctx->lastreg > 0xff )
+	{
+		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Max. register count exceeded" );
+		goto fail;
+	}
 
 	{
 		instr_t I = INSTR_MAKE( SI_PUSHN, C->fctx->lastreg - args, 0, 0 );
@@ -1735,6 +1751,12 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 	if( !compile_node( C, func, tree ) )
 		goto fail;
 	comp_reg_unwind( C, 0 );
+
+	if( C->fctx->lastreg > 0xff )
+	{
+		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( tree->token ), "Max. register count exceeded" );
+		goto fail;
+	}
 
 	{
 		instr_t I = INSTR_MAKE( SI_PUSHN, C->fctx->lastreg, 0, 0 );
