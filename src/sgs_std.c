@@ -1276,7 +1276,8 @@ int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data )
 	sgs_PushVariable( C, &hdr->data );
 	for( i = 0; i < C->call_args; ++i )
 		sgs_PushItem( C, i );
-	return sgsVM_VarCall( C, &hdr->func, C->call_args, C->call_expect, TRUE );
+	return sgsVM_VarCall( C, &hdr->func, C->call_args, C->call_expect, TRUE )
+		* C->call_expect;
 }
 
 void* sgsstd_closure_functable[] =

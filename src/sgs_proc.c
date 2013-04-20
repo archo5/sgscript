@@ -1485,6 +1485,14 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 #endif
 	UNUSED( constcount );
 
+#if SGS_DEBUG && SGS_DEBUG_INSTR
+	{
+		const char *name, *file;
+		sgs_StackFrameInfo( C, SF, &name, &file, NULL );
+		printf( ">>>\n\t'%s' in %s\n>>>\n", name, file );
+	}
+#endif
+
 	while( pp < pend )
 	{
 		const instr_t I = *pp;
@@ -1702,6 +1710,8 @@ void sgsVM_StackDump( SGS_CTX )
 	for( i = 0; i < stksz; ++i )
 	{
 		sgs_VarPtr var = C->stack_base + i;
+		if( var == C->stack_off )
+			printf( "-- offset --\n" );
 		printf( "  " ); sgsVM_VarDump( var ); printf( "\n" );
 	}
 	printf( "--\n" );

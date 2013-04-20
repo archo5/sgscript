@@ -298,7 +298,8 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean,
 	C->stack_off = C->stack_top;
 	C->gclist = (sgs_VarPtr) func->consts.ptr;
 	C->gclist_size = func->consts.size / sizeof( sgs_Variable );
-	returned = sgsVM_ExecFn( C, func->code.ptr, func->code.size, func->consts.ptr, func->consts.size, clean, (uint16_t*) func->lnbuf.ptr );
+	returned = sgsVM_ExecFn( C, func->code.ptr, func->code.size,
+		func->consts.ptr, func->consts.size, clean, (uint16_t*) func->lnbuf.ptr );
 	if( rvc )
 		*rvc = returned;
 	C->gclist = NULL;
@@ -382,6 +383,23 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, sgs_SizeVal size, char** outbuf
 }
 
 
+static void _recfndump( const char* constptr, sgs_SizeVal constsize,
+	const char* codeptr, sgs_SizeVal codesize )
+{
+	sgs_Variable* var = (sgs_Variable*) constptr;
+	sgs_Variable* vend = (sgs_Variable*) ( constptr + constsize );
+	while( var < vend )
+	{
+		if( var->type == SVT_FUNC )
+		{
+			_recfndump( (const char*) func_consts( var->data.F ), var->data.F->instr_off,
+				(const char*) func_bytecode( var->data.F ), var->data.F->size - var->data.F->instr_off );
+		}
+		var++;
+	}
+	sgsBC_DumpEx( constptr, constsize, codeptr, codesize );
+}
+
 SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size )
 {
 	int rr;
@@ -394,7 +412,8 @@ SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size )
 	if( rr < 0 )
 		return SGS_EINVAL;
 
-	sgsBC_Dump( func );
+	_recfndump( func->consts.ptr, func->consts.size, func->code.ptr, func->code.size );
+
 	sgsBC_Free( C, func );
 	return SGS_SUCCESS;
 }

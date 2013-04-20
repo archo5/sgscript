@@ -24,6 +24,8 @@ sgs_CompFunc;
 /* - bytecode generator */
 sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree );
 void sgsBC_Dump( sgs_CompFunc* func );
+void sgsBC_DumpEx( const char* constptr, sgs_SizeVal constsize,
+	const char* codeptr, sgs_SizeVal codesize );
 void sgsBC_Free( SGS_CTX, sgs_CompFunc* func );
 
 

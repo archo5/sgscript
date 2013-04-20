@@ -1,0 +1,4 @@
+// will trigger break-if on failure
+function test(){ println( "whoa" ); }
+x = closure( test, 0 );
+x();

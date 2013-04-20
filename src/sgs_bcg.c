@@ -1782,8 +1782,14 @@ fail:
 
 void sgsBC_Dump( sgs_CompFunc* func )
 {
-	sgs_Variable* vbeg = (sgs_Variable*) func->consts.ptr;
-	sgs_Variable* vend = (sgs_Variable*) ( func->consts.ptr + func->consts.size );
+	sgsBC_DumpEx( func->consts.ptr, func->consts.size, func->code.ptr, func->code.size );
+}
+
+void sgsBC_DumpEx( const char* constptr, sgs_SizeVal constsize,
+	const char* codeptr, sgs_SizeVal codesize )
+{
+	sgs_Variable* vbeg = (sgs_Variable*) constptr;
+	sgs_Variable* vend = (sgs_Variable*) ( constptr + constsize );
 	sgs_Variable* var = vbeg;
 
 	printf( "{\n" );
@@ -1796,7 +1802,7 @@ void sgsBC_Dump( sgs_CompFunc* func )
 		var++;
 	}
 	printf( "> code:\n" );
-	dump_opcode( (instr_t*) func->code.ptr, func->code.size / sizeof( instr_t ) );
+	dump_opcode( (instr_t*) codeptr, codesize / sizeof( instr_t ) );
 	printf( "}\n" );
 }
 
