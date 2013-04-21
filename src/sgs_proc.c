@@ -10,14 +10,14 @@
 
 static const char* sgs_VarNames[] =
 {
-	"Null",
-	"Bool",
-	"Int",
-	"Real",
-	"String",
-	"Function",
+	"null",
+	"bool",
+	"int",
+	"real",
+	"string",
+	"function",
 	"C function",
-	"Object",
+	"object",
 };
 
 
@@ -789,6 +789,36 @@ int _thiscall_method( SGS_CTX )
 }
 
 
+static int vm_getidx_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
+{
+	int res;
+	sgs_Integer pos, size;
+	if( obj->type == SVT_STRING )
+	{
+		size = obj->data.S->size;
+		sgs_PushVariable( C, idx );
+		res = sgs_ParseInt( C, -1, &pos );
+		sgs_Pop( C, 1 );
+		if( !res )
+		{
+			sgs_Printf( C, SGS_WARNING, -1, "Expected integer as string index" );
+			return SGS_EINVAL;
+		}
+		if( pos >= size || pos < -size )
+		{
+			sgs_Printf( C, SGS_WARNING, -1, "String index out of bounds" );
+			return SGS_EBOUNDS;
+		}
+		pos = ( pos + size ) % size;
+		sgs_PushStringBuf( C, var_cstr( obj ) + pos, 1 );
+		return SGS_SUCCESS;
+	}
+
+	sgs_Printf( C, SGS_WARNING, -1, "Cannot index variable of type '%s'",
+		sgs_VarNames[ obj->type ] );
+	return SGS_ENOTFND;
+}
+
 static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 {
 	const char* prop = var_cstr( idx );
@@ -812,6 +842,8 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 		break;
 	}
 
+	sgs_Printf( C, SGS_WARNING, -1, "Property '%s' not found on "
+		"object of type '%s'", prop, sgs_VarNames[ obj->type ] );
 	return SGS_ENOTFND;
 }
 
@@ -831,7 +863,9 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 		stk_popskip( C, sgs_StackSize( C ) - origsize - (ret == SGS_SUCCESS), ret == SGS_SUCCESS );
 	}
 	else
-		ret = vm_getprop_builtin( C, obj, idx );
+	{
+		ret = isindex ? vm_getidx_builtin( C, obj, idx ) : vm_getprop_builtin( C, obj, idx );
+	}
 
 	if( ret != SGS_SUCCESS )
 	{
