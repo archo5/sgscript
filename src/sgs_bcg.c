@@ -347,7 +347,17 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 		ret &= preparse_varlists( C, func, node->child->next );
 	}
-	else if( node->child && node->type != SFT_FUNC )
+	else if( node->type == SFT_FUNC )
+	{
+		FTNode* N = node->child->next->next;
+		if( N && N->type == SFT_IDENT )
+		{
+			if( find_var( &C->fctx->gvars, (char*) N->token + 2, N->token[ 1 ] ) == -1 &&
+				add_var( C->fctx->func ? &C->fctx->vars : &C->fctx->gvars, C, (char*) N->token + 2, N->token[ 1 ] ) )
+				comp_reg_alloc( C );
+		}
+	}
+	else if( node->child )
 		ret &= preparse_varlists( C, func, node->child );
 	if( node->next )
 		ret &= preparse_varlists( C, func, node->next );
