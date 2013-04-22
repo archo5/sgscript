@@ -98,7 +98,6 @@ FTComp;
 
 #define SFTC FTComp* F
 #define SFTRET static FTNode*
-#define SFTC_VALIDATE sgs_BreakIf( !*F->at )
 #define SFTC_AT F->at
 #define SFTC_NEXT F->at = sgsT_Next( F->at )
 #define SFTC_IS( type ) (*F->at == (type))
@@ -150,7 +149,11 @@ SFTRET parse_arg( SFTC, int argid, char end )
 
 	FUNC_BEGIN;
 
-	SFTC_VALIDATE;
+	if( SFTC_IS(0) )
+	{
+		SFTC_UNEXP;
+		goto fail;
+	}
 
 	if( SFTC_IS( ST_KEYWORD ) )
 	{
@@ -203,8 +206,6 @@ SFTRET parse_arglist( SFTC, char end )
 	int id = 1;
 
 	FUNC_BEGIN;
-
-	SFTC_VALIDATE;
 
 	for(;;)
 	{
@@ -332,7 +333,7 @@ static int level_exp( SGS_CTX, FTNode** tree )
 	if( !*tree )
 	{
 		FUNC_END;
-		return 1;
+		return 0;
 	}
 
 	/* find the most powerful part (mpp) */
@@ -464,7 +465,8 @@ _continue:
 				return 1;
 			}
 			/* unary operators */
-			else if( ST_OP_UNARY( *mpp->token ) )
+			else if( ST_OP_UNARY( *mpp->token ) && ( *mpp->token == ST_OP_INC
+				|| *mpp->token == ST_OP_DEC || mpp == *tree ) )
 			{
 				int ret1;
 				if( !mpp->next )
@@ -536,7 +538,6 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 		FUNC_END;
 		return NULL;
 	}
-	SFTC_VALIDATE;
 
 	/* special cases */
 	if( SFTC_ISKEY( "var" ) )
@@ -1209,9 +1210,10 @@ SFTRET parse_stmt( SFTC )
 	{
 		SFTC_NEXT;
 		node = parse_explist( F, ';' );
+		if( !node )
+			goto fail;
 
-		if( node )
-			node->type = SFT_RETURN;
+		node->type = SFT_RETURN;
 
 		SFTC_NEXT;
 		FUNC_END;

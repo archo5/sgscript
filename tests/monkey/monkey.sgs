@@ -24,21 +24,33 @@ function advance( cur )
 		cur.push( 0 );
 }
 
-function produce( cur )
+function produce( cur, sep )
 {
 	out = [];
 	foreach( n : cur )
 		out.push( tokens[ n ] );
-	return string_implode( out, " " );
+	return string_implode( out, sep );
 }
 
 cur = [];
+if( io_file_exists( "monkey_state.txt" ) )
+{
+	str = string_trim( io_file_read( "monkey_state.txt" ) );
+	cur = string_explode( str, ',' );
+	foreach( k,v : cur )
+		cur[k] = 0+v;
+}
 
+ctr = 0;
 while( true )
 {
+	if( ctr++ % 10 == 0 )
+		io_file_write( "monkey_state.txt", string_implode(cur,",")$"\n" );
 	advance( cur );
-	str = produce( cur );
-	io_file_write( "monkey_state.txt", string_implode(cur,",")$"\n"$str$"\n" );
+	str = produce( cur, " " );
+	println( "||| " $ str $ " |||" );
+	eval( str, true );
+	str = produce( cur, "" );
 	println( "||| " $ str $ " |||" );
 	eval( str, true );
 }
