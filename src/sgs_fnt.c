@@ -1137,7 +1137,11 @@ SFTRET parse_stmt( SFTC )
 
 	FUNC_BEGIN;
 
-	SFTC_VALIDATE;
+	if( SFTC_IS(0) )
+	{
+		SFTC_UNEXP;
+		goto fail;
+	}
 
 	/* IF / ELSE */
 	if( SFTC_ISKEY( "if" ) ) { node = parse_if( F ); FUNC_END; return node; }
