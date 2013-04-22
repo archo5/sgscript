@@ -1624,13 +1624,16 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			int16_t var = -1;
 			int16_t iter = comp_reg_alloc( C );
 			int16_t key = comp_reg_alloc( C );
+			int16_t val = -1;
+			if( node->child->next->type != SFT_NULL )
+				val = comp_reg_alloc( C );
 			int16_t state = comp_reg_alloc( C );
 			int regstate = C->fctx->regs;
 			C->fctx->loops++;
 
 			/* init */
 			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child->next, &var ) ) goto fail; /* get variable */
+			if( !compile_node_r( C, func, node->child->next->next, &var ) ) goto fail; /* get variable */
 
 			INSTR_WRITE( SI_FORPREP, iter, var, 0 );
 			comp_reg_unwind( C, regstate );
@@ -1645,10 +1648,18 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				int16_t off = 0;
 				jp1 = func->code.size;
 
-				if( !compile_ident_w( C, func, node->child, key ) ) goto fail;
+				/* write to key variable */
+				if( node->child->type != SFT_NULL && !compile_ident_w( C, func, node->child, key ) ) goto fail;
+
+				/* write to value variable */
+				if( node->child->next->type != SFT_NULL )
+				{
+					INSTR_WRITE( SI_GETINDEX, val, var, key );
+					if( !compile_ident_w( C, func, node->child->next, val ) ) goto fail;
+				}
 
 				FUNC_ENTER;
-				if( !compile_node( C, func, node->child->next->next ) ) goto fail; /* block */
+				if( !compile_node( C, func, node->child->next->next->next ) ) goto fail; /* block */
 				comp_reg_unwind( C, regstate );
 
 				if( !compile_breaks( C, func, 1 ) )

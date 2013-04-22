@@ -45,9 +45,8 @@ data = "<h1>SGScript documentation - v0.8.2</h1>";
 
 data $= "<div><h2>Table of Contents</h2>";
 ulevel = 0;
-foreach( i : parts )
+foreach( P : parts )
 {
-	P = parts[ i ];
 	newulev = P.path.size;
 	data $= uladjust( ulevel, newulev );
 	data $= "<a href='#" $ P.path_str $ "'>" $ htmlencode( P.title ) $ "</a>";
@@ -57,9 +56,8 @@ uladjust( ulevel, 0 );
 data $= "</div>";
 
 data $= "<div>";
-foreach( i : parts )
+foreach( P : parts )
 {
-	P = parts[ i ];
 	h = "h" $ ( P.path.size + 1 );
 	
 	data $= "<div class='item'>";

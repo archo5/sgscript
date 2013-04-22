@@ -968,7 +968,12 @@ fail:
 
 SFTRET parse_foreach( SFTC )
 {
-	FTNode *node, *nvar = NULL, *nexp = NULL, *nwhile = NULL;
+	/*
+		(x: => null=>ident
+		(x,x: => ident=>ident
+		(x,: => ident=>null
+	*/
+	FTNode *node, *nvar = NULL, *nkey = NULL, *nexp = NULL, *nwhile = NULL;
 	TokenList begin = SFTC_AT;
 
 	FUNC_BEGIN;
@@ -986,13 +991,45 @@ SFTRET parse_foreach( SFTC )
 		SFTC_PRINTERR( "Expected identifier after '(' in 'foreach'" );
 		goto fail;
 	}
+	/* (x:e) */
+	nkey = make_node( SFT_NULL, SFTC_AT, NULL, NULL );
 	nvar = make_node( SFT_IDENT, SFTC_AT, NULL, NULL );
-
 	SFTC_NEXT;
-	if( !SFTC_IS( ':' ) )
+
+	if( !SFTC_IS( ':' ) && !SFTC_IS( ',' ) )
 	{
-		SFTC_PRINTERR( "Expected ':' after identifier in 'foreach'" );
+		SFTC_PRINTERR( "Expected ':' or ',' after identifier in 'foreach'" );
 		goto fail;
+	}
+
+	if( SFTC_IS( ',' ) )
+	{
+		SFTC_NEXT;
+		if( !SFTC_IS( ST_IDENT ) && !SFTC_IS( ':' ) )
+		{
+			SFTC_PRINTERR( "Expected identifier or ':' after ',' in 'foreach'" );
+			goto fail;
+		}
+
+		if( SFTC_IS( ST_IDENT ) )
+		{
+			/* (x,x:e) */
+			nkey->type = SFT_IDENT;
+			nvar->token = SFTC_AT;
+			SFTC_NEXT;
+		}
+		else
+		{
+			/* (x,:e) */
+			nkey->type = SFT_IDENT;
+			nvar->type = SFT_NULL;
+		}
+
+		if( !SFTC_IS( ':' ) )
+		{
+			SFTC_PRINTERR( "Expected ':' after identifier #2 or ',' in 'foreach'" );
+			goto fail;
+		}
 	}
 
 	SFTC_NEXT;
@@ -1004,15 +1041,17 @@ SFTRET parse_foreach( SFTC )
 	nwhile = parse_stmt( F );
 	if( !nwhile ) goto fail;
 
+	nkey->next = nvar;
 	nvar->next = nexp;
 	nexp->next = nwhile;
-	node = make_node( SFT_FOREACH, begin, NULL, nvar );
+	node = make_node( SFT_FOREACH, begin, NULL, nkey );
 
 	FUNC_END;
 	return node;
 
 fail:
 	if( nvar ) SFTC_DESTROY( nvar );
+	if( nkey ) SFTC_DESTROY( nkey );
 	if( nexp ) SFTC_DESTROY( nexp );
 	if( nwhile ) SFTC_DESTROY( nwhile );
 	FUNC_END;

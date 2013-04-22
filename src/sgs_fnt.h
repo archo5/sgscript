@@ -9,6 +9,7 @@
 	Function tree
 */
 
+#define SFT_NULL    0
 /* data */
 #define SFT_IDENT   1
 #define SFT_KEYWORD 2
