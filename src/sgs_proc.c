@@ -314,7 +314,7 @@ int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
 
 static SGS_INLINE sgs_VarPtr stk_gettop( SGS_CTX )
 {
-#if SGS_DEBUG_EXTRA
+#if SGS_DEBUG && SGS_DEBUG_VALIDATE && SGS_DEBUG_EXTRA
     sgs_BreakIf( C->stack_top == C->stack_base );
     DBG_STACK_CHECK
 #endif
@@ -329,7 +329,7 @@ static SGS_INLINE int stk_absindex( SGS_CTX, int stkid )
 
 static SGS_INLINE sgs_VarPtr stk_getpos( SGS_CTX, int stkid )
 {
-#if SGS_DEBUG_EXTRA
+#if SGS_DEBUG && SGS_DEBUG_VALIDATE && SGS_DEBUG_EXTRA
 	DBG_STACK_CHECK
     if( stkid < 0 ) sgs_BreakIf( -stkid > C->stack_top - C->stack_off )
     else            sgs_BreakIf( stkid >= C->stack_top - C->stack_off )

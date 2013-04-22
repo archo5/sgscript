@@ -464,9 +464,15 @@ _continue:
 				FUNC_END;
 				return 1;
 			}
-			/* unary operators */
-			else if( ST_OP_UNARY( *mpp->token ) && ( *mpp->token == ST_OP_INC
-				|| *mpp->token == ST_OP_DEC || mpp == *tree ) )
+			/* unary operators
+				must be one of these cases:
+				- no tokens before operator
+				- is inc|dec and there are tokens either before or after the operator
+					- can't have both, can't have neither
+			*/
+			else if( ST_OP_UNARY( *mpp->token ) && ( mpp == *tree || 
+				( ( *mpp->token == ST_OP_INC || *mpp->token == ST_OP_DEC ) &&
+				( mpp != *tree ) != ( !!mpp->next ) ) ) )
 			{
 				int ret1;
 				if( !mpp->next )
