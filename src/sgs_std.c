@@ -783,18 +783,21 @@ int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data )
 	sgs_PushString( C, "dict\n{" );
 	if( depth )
 	{
-		while( pair < pend )
+		if( vht_size( ht ) )
 		{
-			sgs_PushString( C, "\n" );
-			sgs_PushStringBuf( C, pair->str, pair->size );
-			sgs_PushString( C, " = " );
-			sgs_PushVariable( C, &pair->var );
-			if( sgs_DumpVar( C, depth ) )
+			while( pair < pend )
+			{
+				sgs_PushString( C, "\n" );
+				sgs_PushStringBuf( C, pair->str, pair->size );
+				sgs_PushString( C, " = " );
+				sgs_PushVariable( C, &pair->var );
+				if( sgs_DumpVar( C, depth ) )
+					return SGS_EINPROC;
+				pair++;
+			}
+			if( sgs_StringMultiConcat( C, ( pend - ht->vars ) * 4 ) || sgs_PadString( C ) )
 				return SGS_EINPROC;
-			pair++;
 		}
-		if( sgs_StringMultiConcat( C, ( pend - ht->vars ) * 4 ) || sgs_PadString( C ) )
-			return SGS_EINPROC;
 	}
 	else
 	{
@@ -803,7 +806,7 @@ int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data )
 			return SGS_EINPROC;
 	}
 	sgs_PushString( C, "\n}" );
-	return sgs_StringMultiConcat( C, 3 );
+	return sgs_StringMultiConcat( C, 2 + !!vht_size( ht ) );
 }
 
 static int sgsstd_dict_gettype( SGS_CTX, sgs_VarObj* data )

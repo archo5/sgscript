@@ -4,12 +4,15 @@ include_library( "io" );
 
 include_file( "markdown.sgs" );
 
+
 raw = io_file_read( "docdata.txt" );
 BSEP = "<#####";
 ESEP = "#####>";
 parts = [];
 
-// split into parts
+/*
+	PARSE DOCUMENTATION
+*/
 pp = string_find( raw, BSEP );
 while(true)
 {
@@ -38,7 +41,44 @@ while(true)
 	
 	pp = p;
 }
-printvar( parts );
+parts.unshift({ path = [], path_str = "", title = "SGScript documentation", body = "" });
+
+/*
+	PARSE WEB TREE
+*/
+tree = eval_file( "doctree.txt" );
+function part_from_pathstr( parts, pstr )
+{
+	foreach( part : parts )
+	{
+		if( part.path_str == pstr )
+			return part;
+	}
+	return {title = "<error>"};
+}
+function gen_toc( name, tree, parts, bc )
+{
+	out = {};
+	ch = [];
+	printvar(tree);
+	foreach( n, v : tree )
+	{
+		ch.push( n );
+		if( v !== null )
+		{
+			st = gen_toc( n, v, parts, clone(bc).push(n) );
+			foreach( stn, sti : st )
+				out[ stn ] = sti;
+		}
+	}
+	var rbc = clone(bc);
+	rbc.pop();
+	out[ name ] = { name = part_from_pathstr( parts, name ).title, bc = rbc, ch = ch };
+	return out;
+}
+toc = gen_toc( "", tree, parts, [] );
+//printvar(toc);
+//io_file_write( 'toc.json', json_encode( toc ) );
 
 
 data = "<h1>SGScript documentation - v0.8.2</h1>";
