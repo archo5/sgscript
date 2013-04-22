@@ -529,6 +529,13 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 
 	FUNC_BEGIN;
 
+	if( SFTC_IS( 0 ) )
+	{
+		SFTC_UNEXP;
+		SFTC_SETERR;
+		FUNC_END;
+		return NULL;
+	}
 	SFTC_VALIDATE;
 
 	/* special cases */
@@ -1271,6 +1278,7 @@ SFTRET parse_stmtlist( SFTC, char end )
 		{
 			SFTC_UNEXP;
 			SFTC_SETERR;
+			goto fail;
 		}
 		else
 		{
@@ -1283,11 +1291,17 @@ SFTRET parse_stmtlist( SFTC, char end )
 		}
 
 		if( F->C->state & SGS_MUST_STOP )
-			break;
+			goto fail;
 	}
 
 	FUNC_END;
 	return stmtlist;
+
+fail:
+	SFTC_DESTROY( stmtlist );
+	SFTC_SETERR;
+	FUNC_END;
+	return NULL;
 }
 
 FTNode* sgsFT_Compile( SGS_CTX, TokenList tlist )

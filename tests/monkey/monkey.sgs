@@ -1,0 +1,44 @@
+
+include_library( "string" );
+include_library( "io" );
+
+global tokens = io_file_read( "monkey_dict.txt" );
+tokens = string_trim( string_replace( tokens, ["\n","  ","  ","  "," "], " " ) );
+tokens = string_explode( tokens, " " );
+
+function advance( cur )
+{
+	i = cur.size - 1;
+	while( i >= 0 )
+	{
+		cur[ i ]++;
+		if( cur[ i ] >= tokens.size )
+		{
+			cur[ i ] = 0;
+			i--;
+		}
+		else
+			break;
+	}
+	if( i == -1 )
+		cur.push( 0 );
+}
+
+function produce( cur )
+{
+	out = [];
+	foreach( n : cur )
+		out.push( tokens[ n ] );
+	return string_implode( out, " " );
+}
+
+cur = [];
+
+while( true )
+{
+	advance( cur );
+	str = produce( cur );
+	io_file_write( "monkey_state.txt", string_implode(cur,",")$"\n"$str$"\n" );
+	println( "||| " $ str $ " |||" );
+	eval( str, true );
+}

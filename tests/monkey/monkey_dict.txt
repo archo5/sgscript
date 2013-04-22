@@ -1,0 +1,7 @@
+{ } ( ) [ ] ; . " '
++ - * / % & | ^ && || $
++= -= *= /= %= &= |= ^= &&= ||= $=
+< > <= >= == != === !==
+a b c aa bb cc
+if else do while for foreach
+return function break continue
