@@ -400,7 +400,7 @@ _continue:
 			if( *mpp_token == ST_SBRKL )
 			{
 				/* array */
-				if( se2->child->next )
+				if( !se2->child || se2->child->next )
 				{
 					sgs_Printf( C, SGS_ERROR, sgsT_LineNum( mpp_token ), "Invalid number of arguments in an array accessor" );
 					*tree = NULL;
