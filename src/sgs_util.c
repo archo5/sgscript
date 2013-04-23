@@ -177,7 +177,6 @@ static Hash hashFunc( const char* str, int size )
 	return h;
 }
 
-static char* UNALLOCATED_STRING = "";
 
 void ht_init( HashTable* T, SGS_CTX, int size )
 {
@@ -312,7 +311,7 @@ void* ht_get( HashTable* T, const char* str, int size )
 
 void ht_setpair( HTPair* P, SGS_CTX, const char* str, int size, Hash h, void* ptr )
 {
-	P->str = size ? sgs_Alloc_n( char, size ) : UNALLOCATED_STRING;
+	P->str = sgs_Alloc_n( char, size ? size : 1 );
 	if( size ) memcpy( P->str, str, size );
 	P->size = size;
 	P->ptr = ptr;
@@ -400,8 +399,7 @@ static void ht_fillhole( HashTable* T, HTPair* P )
 void ht_unset_pair( HashTable* T, SGS_CTX, HTPair* p )
 {
 	int osz = T->size;
-	if( p->str != UNALLOCATED_STRING )
-		sgs_Dealloc( p->str );
+	sgs_Dealloc( p->str );
 	p->str = NULL;
 	T->load--;
 	ht_check( T, C, 0 );

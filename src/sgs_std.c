@@ -846,14 +846,15 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 
 static int sgsstd_dict_setindex( SGS_CTX, sgs_VarObj* data )
 {
+	char* str;
+	sgs_SizeVal size;
+	sgs_Variable val;
 	HTHDR;
-	sgs_Variable key, val;
-	sgs_ToString( C, -2 );
-	sgs_GetStackItem( C, -2, &key );
+	str = sgs_ToStringBuf( C, -2, &size );
 	sgs_GetStackItem( C, -1, &val );
-	if( key.type != SVT_STRING )
+	if( !str )
 		return SGS_EINVAL;
-	vht_set( ht, var_cstr( &key ), key.data.S->size, &val, C );
+	vht_set( ht, str, size, &val, C );
 	return SGS_SUCCESS;
 }
 

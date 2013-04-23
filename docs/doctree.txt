@@ -1,0 +1,12 @@
+return
+{
+	"intro" =
+	{
+		"intro.why" = {},
+		"intro.features" = {}
+	},
+	"sgscript" =
+	{
+		"sgscript.lang" = {}
+	}
+};
