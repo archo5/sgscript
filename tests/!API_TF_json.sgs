@@ -63,6 +63,12 @@ tests =
 	'{\n\t"a": true\n}' = "{a=true}",
 	'[true][false]' = "null",
 	"{true:false}" = "null",
+	"5" = "5",
+	"45" = "45",
+	"12.345" = "12.345",
+	"0.234" = "0.234",
+	"00" = "null",
+	"01.23" = "null",
 };
 
 foreach( test, expect : tests )

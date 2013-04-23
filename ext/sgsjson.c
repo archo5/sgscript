@@ -1,11 +1,13 @@
 
 
+#include <math.h>
+
 #include <sgscript.h>
 #include <sgs_util.h>
 #include <sgs_ctx.h>
 
 
-/* disables trailing commas */
+/* disables trailing commas and other possibly useful things */
 #define STRICT_JSON
 
 
@@ -41,10 +43,11 @@ const char* json_parse( SGS_CTX, MemBuf* stack, const char* str, sgs_SizeVal siz
 		if( STK_TOP == '{' && *pos != '"' && *pos != '}' )
 			return pos;
 
+		if( STK_TOP == 0 && sgs_StackSize( C ) > stk )
+			return pos;
+
 		if( *pos == '{' )
 		{
-			if( STK_TOP == 0 && sgs_StackSize( C ) > stk )
-				return pos;
 			STK_PUSH( '{' );
 			if( proto )
 			{
@@ -66,8 +69,6 @@ const char* json_parse( SGS_CTX, MemBuf* stack, const char* str, sgs_SizeVal siz
 		}
 		else if( *pos == '[' )
 		{
-			if( STK_TOP == 0 && sgs_StackSize( C ) > stk )
-				return pos;
 			STK_PUSH( '[' );
 			sgs_PushCFunction( C, C->array_func );
 			sgs_Call( C, 0, 1 );
@@ -152,6 +153,70 @@ const char* json_parse( SGS_CTX, MemBuf* stack, const char* str, sgs_SizeVal siz
 			{
 				push = 1;
 			}
+		}
+		else if( decchar( *pos ) || *pos == '-' )
+		{
+			sgs_Real val = 0;
+			int neg = *pos == '-', num;
+			if( neg )
+			{
+				pos++;
+				if( pos >= end ) goto endnumparse;
+				if( !decchar( *pos ) )
+					return pos;
+			}
+			num = getdec( *pos++ );
+			val = num;
+			if( pos >= end ) goto endnumparse;
+			if( num )
+			{
+				while( pos < end && decchar( *pos ) )
+				{
+					val *= 10;
+					val += getdec( *pos++ );
+				}
+			}
+			if( *pos == '.' )
+			{
+				sgs_Real dp = 1;
+				pos++;
+				while( pos < end && decchar( *pos ) )
+				{
+					dp /= 10;
+					val += dp * getdec( *pos++ );
+				}
+			}
+			if( *pos == 'E' || *pos == 'e' )
+			{
+				sgs_Real expnt = 0, sign = 1;
+				pos++;
+				if( pos >= end ) goto endnumparse;
+				if( *pos == '-' )
+				{
+					sign = -1;
+					pos++;
+				}
+				else if( *pos == '+' )
+					pos++;
+				else if( !decchar( *pos ) )
+					return pos;
+				if( pos >= end ) goto endnumparse;
+				while( pos < end && decchar( *pos ) )
+				{
+					expnt *= 10;
+					expnt += getdec( *pos++ );
+				}
+				val *= powf( 10, expnt * sign );
+			}
+endnumparse:
+			if( neg )
+				val = -val;
+			if( val == (sgs_Integer) val )
+				sgs_PushInt( C, (sgs_Integer) val );
+			else
+				sgs_PushReal( C, val );
+			push = 1;
+			pos--;
 		}
 		/* special constants */
 		else if( *pos == 'n' )
