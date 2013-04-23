@@ -252,6 +252,11 @@ static int add_var( StrBuf* S, SGS_CTX, char* str, int len )
 	return FALSE;
 }
 
+#define find_varT( S, tok ) \
+	find_var( S, (char*) (tok) + 2, tok[1] )
+#define add_varT( S, C, tok ) \
+	add_var( S, C, (char*) (tok) + 2, tok[1] )
+
 static int preadd_thisvar( StrBuf* S, SGS_CTX )
 {
 	int pos = find_var( S, "this", 4 );
@@ -283,12 +288,12 @@ static int preparse_varlist( SGS_CTX, FTNode* node )
 	node = node->child;
 	while( node )
 	{
-		if( find_var( &C->fctx->gvars, (char*) node->token + 2, node->token[ 1 ] ) >= 0 )
+		if( find_varT( &C->fctx->gvars, node->token ) >= 0 )
 		{
 			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined: global -> local" );
 			return FALSE;
 		}
-		if( add_var( &C->fctx->vars, C, (char*) node->token + 2, node->token[ 1 ] ) )
+		if( add_varT( &C->fctx->vars, C, node->token ) )
 			comp_reg_alloc( C );
 		node = node->next;
 	}
@@ -300,12 +305,12 @@ static int preparse_gvlist( SGS_CTX, FTNode* node )
 	node = node->child;
 	while( node )
 	{
-		if( find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] ) >= 0 )
+		if( find_varT( &C->fctx->vars, node->token ) >= 0 )
 		{
 			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined: local -> global" );
 			return FALSE;
 		}
-		add_var( &C->fctx->gvars, C, (char*) node->token + 2, node->token[ 1 ] );
+		add_varT( &C->fctx->gvars, C, node->token );
 		node = node->next;
 	}
 	return TRUE;
@@ -329,21 +334,28 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		if( ST_OP_ASSIGN( *node->token ) && node->child && node->child->type == SFT_IDENT )
 		{
 			/* add_var calls find_var internally but - GVARS vs VARS - note the difference */
-			if( find_var( &C->fctx->gvars, (char*) node->child->token + 2, node->child->token[ 1 ] ) == -1 &&
-				add_var( &C->fctx->vars, C, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
+			if( find_varT( &C->fctx->gvars, node->child->token ) == -1 &&
+				add_varT( &C->fctx->vars, C, node->child->token ) )
 				comp_reg_alloc( C );
 		}
 		ret &= preparse_varlists( C, func, node->child );
 	}
 	else if( node->type == SFT_FOREACH )
 	{
-		if( find_var( &C->fctx->gvars, (char*) node->token + 2, node->token[ 1 ] ) >= 0 )
+		if( find_varT( &C->fctx->gvars, node->token ) >= 0 )
 		{
 			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined (foreach key variable cannot be global): global -> local" );
 			ret = FALSE;
 		}
-		else if( add_var( &C->fctx->vars, C, (char*) node->child->token + 2, node->child->token[ 1 ] ) )
-			comp_reg_alloc( C );
+		else
+		{
+			if( node->child->type != SFT_NULL && 
+				add_varT( &C->fctx->vars, C, node->child->token ) )
+				comp_reg_alloc( C );
+			if( node->child->next->type != SFT_NULL && 
+				add_varT( &C->fctx->vars, C, node->child->next->token ) )
+				comp_reg_alloc( C );
+		}
 
 		ret &= preparse_varlists( C, func, node->child->next );
 	}
@@ -352,8 +364,8 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		FTNode* N = node->child->next->next;
 		if( N && N->type == SFT_IDENT )
 		{
-			if( find_var( &C->fctx->gvars, (char*) N->token + 2, N->token[ 1 ] ) == -1 &&
-				add_var( C->fctx->func ? &C->fctx->vars : &C->fctx->gvars, C, (char*) N->token + 2, N->token[ 1 ] ) )
+			if( find_varT( &C->fctx->gvars, N->token ) == -1 &&
+				add_varT( C->fctx->func ? &C->fctx->vars : &C->fctx->gvars, C, N->token ) )
 				comp_reg_alloc( C );
 		}
 	}
@@ -799,7 +811,7 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 	if( node->type != SFT_IDENT || *node->token != ST_IDENT )
 		goto cannot;
 
-	if( ioff >= func->code.size - 4 )
+	if( ioff > func->code.size - 4 )
 		goto cannot;
 
 	ioff = func->code.size - 4;
