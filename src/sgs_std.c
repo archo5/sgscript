@@ -586,15 +586,18 @@ int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data )
 	sgs_PushString( C, "array\n[" );
 	if( depth )
 	{
-		for( i = 0; i < hdr->size; ++i )
+		if( hdr->size )
 		{
-			sgs_PushString( C, "\n" );
-			sgs_PushVariable( C, SGSARR_PTR( data->data ) + i );
-			if( sgs_DumpVar( C, depth ) )
+			for( i = 0; i < hdr->size; ++i )
+			{
+				sgs_PushString( C, "\n" );
+				sgs_PushVariable( C, SGSARR_PTR( data->data ) + i );
+				if( sgs_DumpVar( C, depth ) )
+					return SGS_EINPROC;
+			}
+			if( sgs_StringMultiConcat( C, hdr->size * 2 ) || sgs_PadString( C ) )
 				return SGS_EINPROC;
 		}
-		if( sgs_StringMultiConcat( C, hdr->size * 2 ) || sgs_PadString( C ) )
-			return SGS_EINPROC;
 	}
 	else
 	{
@@ -603,7 +606,7 @@ int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data )
 			return SGS_EINPROC;
 	}
 	sgs_PushString( C, "\n]" );
-	return sgs_StringMultiConcat( C, 3 );
+	return sgs_StringMultiConcat( C, 2 + !!hdr->size );
 }
 
 #if 0

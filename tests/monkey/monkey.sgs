@@ -44,7 +44,7 @@ if( io_file_exists( "monkey_state.txt" ) )
 ctr = 0;
 while( true )
 {
-	if( ctr++ % 10 == 0 )
+	if( ctr++ % 100 == 0 )
 		io_file_write( "monkey_state.txt", string_implode(cur,",")$"\n" );
 	advance( cur );
 	str = produce( cur, " " );

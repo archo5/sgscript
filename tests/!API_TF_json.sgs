@@ -1,0 +1,73 @@
+
+include_library( "type" );
+include_shared( "sgsjson.dll" );
+
+function tostr( x )
+{
+	if( typeof( x ) == "array" )
+	{
+		out = "";
+		foreach( v : x )
+		{
+			if( out != "" ) out $= ",";
+			out $= tostr( v );
+		}
+		return "[" $ out $ "]";
+	}
+	else if( typeof( x ) == "dict" )
+	{
+		out = "";
+		foreach( k, v : x )
+		{
+			if( out != "" ) out $= ",";
+			out $= k $ "=" $ tostr( v );
+		}
+		return "{" $ out $ "}";
+	}
+	else
+		return ""$x;
+}
+
+tests =
+{
+	"" = "null",
+	"[" = "null",
+	"][" = "null",
+	"[]" = "[]",
+	"null" = "null",
+	"[null]" = "[null]",
+	"[[null]" = "null",
+	"[[null]]" = "[[null]]",
+	"[null null]" = "null",
+	"[null,null]" = "[null,null]",
+	"[null,null,]" = "null",
+	"[null,,null]" = "null",
+	"[,null,null]" = "null",
+	"[[],[]]" = "[[],[]]",
+	'"wat"' = "wat",
+	'["huh","wat"]' = "[huh,wat]",
+	"{}" = "{}",
+	'{"key"}' = "null",
+	'{"key":true}' = "{key=true}",
+	'{"a":false,"b":true}' = "{a=false,b=true}",
+	'{"a":false,"b":true,}' = "null",
+	'{"a":false,,"b":true}' = "null",
+	'{,"a":false,"b":true}' = "null",
+	'["a"}' = "null",
+	'{"a"]' = "null",
+	'{"a":["b"]}' = "{a=[b]}",
+	'[{"a":"b"}]' = "[{a=b}]",
+	'"\\n\\t\\r\\f\\uFFFF"' = "\n\t\r\f\xFFFF",
+	'"\\x"' = "null",
+	'"\\u123"' = "null",
+	'{\n\t"a": true\n}' = "{a=true}",
+	'[true][false]' = "null",
+	"{true:false}" = "null",
+};
+
+foreach( test, expect : tests )
+{
+	out = json_decode( test );
+	str = tostr( out );
+	testEqual( str, expect );
+}
