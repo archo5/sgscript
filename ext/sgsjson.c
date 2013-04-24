@@ -110,16 +110,50 @@ const char* json_parse( SGS_CTX, MemBuf* stack, const char* str, sgs_SizeVal siz
 					case 't': strbuf_appchr( &str, C, '\t' ); break;
 					case 'u':
 						{
-							char buf[ 2 ];
+							char hex[ 4 ];
+							uint8_t buf[ 2 ];
+							uint16_t uchar;
 							pos++;
 							if( hexchar( *pos ) ) pos++; else return pos;
 							if( hexchar( *pos ) ) pos++; else return pos;
 							if( hexchar( *pos ) ) pos++; else return pos;
 							if( hexchar( *pos ) ) pos++; else return pos;
 							pos--;
-							buf[ 0 ] = ( gethex( *(pos-3) ) << 4 ) | gethex( *(pos-2) );
-							buf[ 1 ] = ( gethex( *(pos-1) ) << 4 ) | gethex( *pos );
-							strbuf_appbuf( &str, C, buf, 2 );
+							hex[ 0 ] = gethex( *(pos-3) );
+							hex[ 1 ] = gethex( *(pos-2) );
+							hex[ 2 ] = gethex( *(pos-1) );
+							hex[ 3 ] = gethex( *pos );
+							if( hex[0] == 0xff || hex[1] == 0xff ||
+								hex[2] == 0xff || hex[3] == 0xff )
+								return pos;
+							buf[ 0 ] = ( hex[0] << 4 ) | hex[1];
+							buf[ 1 ] = ( hex[2] << 4 ) | hex[3];
+							uchar = ( buf[0]<<8 ) | buf[1];
+							if( uchar <= 0x7f )
+							{
+								strbuf_appchr( &str, C, buf[1] );
+								break;
+							}
+							if( uchar <= 0x7ff )
+							{
+								char obuf[ 2 ] =
+								{
+									0xC0 | ((buf[1] & 0xC0) >> 6) | ((buf[0] & 0x7) << 2),
+									0x80 | (buf[1] & 0x3F)
+								};
+								strbuf_appbuf( &str, C, obuf, 2 );
+								break;
+							}
+
+							{
+								char obuf[ 3 ] =
+								{
+									0xE0 | ((buf[0] & 0xF0) >> 4),
+									0x80 | ((buf[0] & 0xF) << 2) | ((buf[1] & 0xC0) >> 6),
+									0x80 | (buf[1] & 0x3F)
+								};
+								strbuf_appbuf( &str, C, obuf, 3 );
+							}
 						}
 						break;
 					default:
