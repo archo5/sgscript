@@ -93,8 +93,8 @@ void var_destroy_func( SGS_CTX, func_t* F )
 		var++;
 	}
 	sgs_Dealloc( F->lineinfo );
-	strbuf_destroy( &F->funcname, C );
-	strbuf_destroy( &F->filename, C );
+	membuf_destroy( &F->funcname, C );
+	membuf_destroy( &F->filename, C );
 	sgs_Dealloc( F );
 }
 

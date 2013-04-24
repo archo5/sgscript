@@ -153,14 +153,14 @@ void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
 
 void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
 {
-	StrBuf info;
+	MemBuf info;
 	int cnt;
 	va_list args;
 
 	if( !C->print_fn )
 		return;
 
-	info = strbuf_create();
+	info = membuf_create();
 
 	va_start( args, what );
 #ifdef _MSC_VER
@@ -170,11 +170,12 @@ void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
 #endif
 	va_end( args );
 
-	strbuf_resize( &info, C, cnt );
+	membuf_resize( &info, C, cnt + 1 );
 
 	va_start( args, what );
 	vsprintf( info.ptr, what, args );
 	va_end( args );
+	info.ptr[ cnt ] = 0;
 
 	if( line < 0 && C->sf_last )
 	{
@@ -183,12 +184,13 @@ void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
 
 	C->print_fn( C->print_ctx, C, type, line, info.ptr );
 
-	strbuf_destroy( &info, C );
+	membuf_destroy( &info, C );
 }
 
 void* sgs_Memory( SGS_CTX, void* ptr, size_t size )
 {
 	void* p;
+	sgs_BreakIf( size < 0 );
 	if( size )
 	{
 		size += 16;

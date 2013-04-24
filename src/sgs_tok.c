@@ -350,8 +350,8 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length )
 
 void sgsT_Free( SGS_CTX, TokenList tlist )
 {
-	StrBuf s = strbuf_partial( (char*) tlist, 0 );
-	strbuf_destroy( &s, C );
+	MemBuf s = membuf_partial( (char*) tlist, 0 );
+	membuf_destroy( &s, C );
 }
 
 TokenList sgsT_Next( TokenList tok )

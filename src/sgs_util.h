@@ -90,51 +90,44 @@ void print_safe( FILE* fp, const char* buf, int32_t size );
 
 /* string buffer */
 typedef
-struct _StrBuf
+struct _MemBuf
 {
 	char*   ptr;
 	int32_t size;
 	int32_t mem;
 }
-StrBuf;
-
-StrBuf strbuf_create( void );
-void strbuf_destroy( StrBuf* sb, SGS_CTX );
-StrBuf strbuf_partial( char* ch, int32_t size );
-void strbuf_reserve( StrBuf* sb, SGS_CTX, int32_t size );
-void strbuf_resize( StrBuf* sb, SGS_CTX, int32_t size );
-void strbuf_inschr( StrBuf* sb, SGS_CTX, int32_t pos, char ch );
-void strbuf_insbuf( StrBuf* sb, SGS_CTX, int32_t pos, const void* buf, int32_t size );
-void strbuf_insstr( StrBuf* sb, SGS_CTX, int32_t pos, const char* str );
-void strbuf_appchr( StrBuf* sb, SGS_CTX, char ch );
-void strbuf_appbuf( StrBuf* sb, SGS_CTX, const void* buf, int32_t size );
-void strbuf_appstr( StrBuf* sb, SGS_CTX, const char* str );
+MemBuf;
 
 
 /* data buffer */
-#define MemBuf StrBuf
-#define membuf_create strbuf_create
-#define membuf_destroy strbuf_destroy
-#define membuf_partial strbuf_partial
+MemBuf membuf_create( void );
+void membuf_destroy( MemBuf* sb, SGS_CTX );
+MemBuf membuf_partial( char* ch, int32_t size );
 void membuf_reserve( MemBuf* mb, SGS_CTX, int32_t size );
 void membuf_resize( MemBuf* mb, SGS_CTX, int32_t size );
 void membuf_resize_opt( MemBuf* mb, SGS_CTX, int32_t size );
 void membuf_insbuf( MemBuf* mb, SGS_CTX, int32_t pos, const void* buf, int32_t size );
 void membuf_erase( MemBuf* mb, int32_t from, int32_t to );
 void membuf_appbuf( MemBuf* mb, SGS_CTX, const void* buf, int32_t size );
-static SGS_INLINE void membuf_appchr( MemBuf* mb, SGS_CTX, char chr ){ membuf_appbuf( mb, C, &chr, 1 ); }
+static SGS_INLINE void membuf_setstr( MemBuf* mb, SGS_CTX, const char* str )
+	{ mb->size = 0; membuf_appbuf( mb, C, str, strlen( str ) + 1 ); mb->size--; }
+static SGS_INLINE void membuf_setstrbuf( MemBuf* mb, SGS_CTX, const char* str, int32_t size )
+	{ membuf_reserve( mb, C, size + 1 ); mb->size = 0;
+		membuf_appbuf( mb, C, str, size ); mb->ptr[ mb->size ] = 0; }
+static SGS_INLINE void membuf_appchr( MemBuf* mb, SGS_CTX, char chr )
+	{ membuf_appbuf( mb, C, &chr, 1 ); }
 
 
 /* hash table */
-typedef uint32_t Hash;
+typedef uint32_t sgs_Hash;
 
 typedef
 struct _HTPair
 {
-	char* str;
-	int   size;
-	Hash  hash;
-	void* ptr;
+	char*    str;
+	int      size;
+	sgs_Hash hash;
+	void*    ptr;
 }
 HTPair;
 
@@ -154,7 +147,7 @@ void ht_rehash( HashTable* T, SGS_CTX, int size );
 void ht_check( HashTable* T, SGS_CTX, int inc );
 HTPair* ht_find( HashTable* T, const char* str, int size );
 void* ht_get( HashTable* T, const char* str, int size );
-void ht_setpair( HTPair* P, SGS_CTX, const char* str, int size, Hash h, void* ptr );
+void ht_setpair( HTPair* P, SGS_CTX, const char* str, int size, sgs_Hash h, void* ptr );
 HTPair* ht_set( HashTable* T, SGS_CTX, const char* str, int size, void* ptr );
 void ht_unset_pair( HashTable* T, SGS_CTX, HTPair* p );
 void ht_unset( HashTable* T, SGS_CTX, const char* str, int size );

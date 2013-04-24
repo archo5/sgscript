@@ -23,8 +23,8 @@ struct _sgs_FuncCtx
 {
 	int32_t func;
 	int32_t regs, lastreg;
-	StrBuf  vars;
-	StrBuf  gvars;
+	MemBuf  vars;
+	MemBuf  gvars;
 	int32_t loops;
 	sgs_BreakInfo* binfo;
 }

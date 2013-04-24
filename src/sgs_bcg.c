@@ -78,8 +78,8 @@ static sgs_FuncCtx* fctx_create( SGS_CTX )
 	fctx->func = TRUE;
 	fctx->regs = 0;
 	fctx->lastreg = -1;
-	fctx->vars = strbuf_create();
-	fctx->gvars = strbuf_create();
+	fctx->vars = membuf_create();
+	fctx->gvars = membuf_create();
 	fctx->loops = 0;
 	fctx->binfo = NULL;
 	return fctx;
@@ -89,8 +89,8 @@ static void fctx_destroy( SGS_CTX, sgs_FuncCtx* fctx )
 {
 	while( fctx->binfo )
 		fctx_binfo_rem( C, fctx, NULL );
-	strbuf_destroy( &fctx->vars, C );
-	strbuf_destroy( &fctx->gvars, C );
+	membuf_destroy( &fctx->vars, C );
+	membuf_destroy( &fctx->gvars, C );
 	sgs_Dealloc( fctx );
 }
 
@@ -211,7 +211,7 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 }
 
 
-static int find_var( StrBuf* S, char* str, int len )
+static int find_var( MemBuf* S, char* str, int len )
 {
 	char* ptr = S->ptr;
 	char* pend = ptr + S->size;
@@ -240,13 +240,13 @@ static int find_var( StrBuf* S, char* str, int len )
 	return -1;
 }
 
-static int add_var( StrBuf* S, SGS_CTX, char* str, int len )
+static int add_var( MemBuf* S, SGS_CTX, char* str, int len )
 {
 	int pos = find_var( S, str, len );
 	if( pos < 0 )
 	{
-		strbuf_appbuf( S, C, str, len );
-		strbuf_appchr( S, C, '=' );
+		membuf_appbuf( S, C, str, len );
+		membuf_appchr( S, C, '=' );
 		return TRUE;
 	}
 	return FALSE;
@@ -257,12 +257,12 @@ static int add_var( StrBuf* S, SGS_CTX, char* str, int len )
 #define add_varT( S, C, tok ) \
 	add_var( S, C, (char*) (tok) + 2, tok[1] )
 
-static int preadd_thisvar( StrBuf* S, SGS_CTX )
+static int preadd_thisvar( MemBuf* S, SGS_CTX )
 {
 	int pos = find_var( S, "this", 4 );
 	if( pos < 0 )
 	{
-		strbuf_insbuf( S, C, 0, "this=", 5 );
+		membuf_insbuf( S, C, 0, "this=", 5 );
 		return TRUE;
 	}
 	return FALSE;
@@ -479,7 +479,8 @@ static int add_const_s( SGS_CTX, sgs_CompFunc* func, int32_t len, const char* st
 	return vend - vbeg;
 }
 
-static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf, const char* funcname, LineNum lnum )
+static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
+	const char* funcname, sgs_SizeVal fnsize, LineNum lnum )
 {
 	sgs_Variable nvar;
 	int pos;
@@ -496,14 +497,14 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf, const cha
 		F->lineinfo = sgs_Alloc_n( uint16_t, lnc );
 		memcpy( F->lineinfo, nf->lnbuf.ptr, nf->lnbuf.size );
 	}
-	F->funcname = strbuf_create();
+	F->funcname = membuf_create();
 	if( funcname )
-		strbuf_appstr( &F->funcname, C, funcname );
+		membuf_setstrbuf( &F->funcname, C, funcname, fnsize );
 	F->linenum = lnum;
 	
-	F->filename = strbuf_create();
+	F->filename = membuf_create();
 	if( C->filename )
-		strbuf_appstr( &F->filename, C, C->filename );
+		membuf_setstr( &F->filename, C, C->filename );
 	
 	memcpy( func_consts( F ), nf->consts.ptr, nf->consts.size );
 	memcpy( func_bytecode( F ), nf->code.ptr, nf->code.size );
@@ -1163,19 +1164,19 @@ static int compile_breaks( SGS_CTX, sgs_CompFunc* func, uint8_t iscont )
 
 
 
-static void rpts( StrBuf* out, SGS_CTX, FTNode* root )
+static void rpts( MemBuf* out, SGS_CTX, FTNode* root )
 {
 	switch( root->type )
 	{
 	case SFT_IDENT:
-		strbuf_appbuf( out, C, root->token + 2, root->token[1] );
+		membuf_appbuf( out, C, root->token + 2, root->token[1] );
 		break;
 	case SFT_OPER:
 		switch( *root->token )
 		{
 		case ST_OP_MMBR:
 			rpts( out, C, root->child );
-			strbuf_appchr( out, C, '.' );
+			membuf_appchr( out, C, '.' );
 			rpts( out, C, root->child->next );
 			break;
 		}
@@ -1221,11 +1222,11 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	C->fctx = bkfctx;
 
 	{
-		StrBuf ffn = strbuf_create();
+		MemBuf ffn = membuf_create();
 		if( node->child->next->next )
 			rpts( &ffn, C, node->child->next->next );
-		*out = CONSTENC( add_const_f( C, func, nf, ffn.ptr, sgsT_LineNum( node->token ) ) );
-		strbuf_destroy( &ffn, C );
+		*out = CONSTENC( add_const_f( C, func, nf, ffn.ptr, ffn.size, sgsT_LineNum( node->token ) ) );
+		membuf_destroy( &ffn, C );
 	}
 	return 1;
 
@@ -2025,14 +2026,14 @@ static int bc_write_sgsfunc( func_t* F, SGS_CTX, MemBuf* outbuf )
 	return 1;
 }
 
-static void bc_read_strbuf( decoder_t* D, StrBuf* out )
+static void bc_read_membuf( decoder_t* D, MemBuf* out )
 {
 	const char* buf = D->buf;
 	int32_t len = AS_INT32( buf );
 	if( D->convend )
 		len = esi32( len );
 	buf += 4;
-	strbuf_appbuf( out, D->C, buf, len );
+	membuf_setstrbuf( out, D->C, buf, len );
 	D->buf = buf + len;
 }
 static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
@@ -2067,10 +2068,10 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	D->buf += 8;
 	memcpy( F->lineinfo, D->buf, sizeof( uint16_t ) * (int32_t) ic );
 	D->buf += sizeof( uint16_t ) * (int32_t) ic;
-	F->funcname = strbuf_create();
-	bc_read_strbuf( D, &F->funcname );
-	F->filename = strbuf_create();
-	strbuf_appbuf( &F->filename, C, D->filename, D->filename_len );
+	F->funcname = membuf_create();
+	bc_read_membuf( D, &F->funcname );
+	F->filename = membuf_create();
+	membuf_setstrbuf( &F->filename, C, D->filename, D->filename_len );
 
 	/* the main data */
 	ret = bc_read_varlist( D, func_consts( F ), cc );
@@ -2087,8 +2088,8 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 
 fail:
 	sgs_Dealloc( F->lineinfo );
-	strbuf_destroy( &F->funcname, C );
-	strbuf_destroy( &F->filename, C );
+	membuf_destroy( &F->funcname, C );
+	membuf_destroy( &F->filename, C );
 	sgs_Dealloc( F );
 	return ret;
 }
