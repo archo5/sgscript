@@ -12,7 +12,7 @@
 #endif
 
 #include "sgscript.h"
-#include "sgs_ctx.h"
+#include "sgs_int.h"
 
 
 const char* outfile_internal = "tests-output-internal.log";

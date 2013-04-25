@@ -8,6 +8,8 @@
 #include <limits.h>
 #include <stddef.h>
 
+#define SGS_INTERNAL
+
 #include "sgs_util.h"
 
 

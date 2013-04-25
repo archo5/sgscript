@@ -1,7 +1,8 @@
 
 
-#include "sgs_fnt.h"
-#include "sgs_ctx.h"
+#define SGS_INTERNAL
+
+#include "sgs_int.h"
 
 
 static int isoneofN( char ch, const char* what, int size )

@@ -26,8 +26,9 @@
 #  include <dirent.h>
 #endif
 
-#include "sgs_proc.h"
-#include "sgs_ctx.h"
+#define SGS_INTERNAL
+
+#include "sgs_int.h"
 
 #define FLAG( a, b ) (((a)&(b))!=0)
 #define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, -1, warn ); return 0; }
@@ -36,7 +37,7 @@
 
 /* path helper functions */
 
-int32_t findlastof( const char* str, int32_t len, const char* of )
+static int32_t findlastof( const char* str, int32_t len, const char* of )
 {
 	const char* ptr = str + len;
 	while( ptr-- > str )
@@ -52,7 +53,7 @@ int32_t findlastof( const char* str, int32_t len, const char* of )
 	return -1;
 }
 
-int path_replast( SGS_CTX, int from, int with )
+static int path_replast( SGS_CTX, int from, int with )
 {
 	sgs_SizeVal size, pos;
 	char* buf = sgs_ToStringBuf( C, from, &size );

@@ -2,8 +2,9 @@
 
 #include <stdio.h>
 
-#include "sgs_proc.h"
-#include "sgs_ctx.h"
+#define SGS_INTERNAL
+
+#include "sgs_int.h"
 
 #define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, -1, warn ); return 0; }
 

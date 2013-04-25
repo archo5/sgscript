@@ -3,9 +3,10 @@
 #include <math.h>
 #include <stdarg.h>
 
+#define SGS_INTERNAL
+
 #include "sgs_xpc.h"
-#include "sgs_ctx.h"
-#include "sgs_proc.h"
+#include "sgs_int.h"
 
 
 static const char* sgs_VarNames[] =
@@ -763,7 +764,7 @@ static int vm_gcmark( SGS_CTX, sgs_Variable* var )
 	Object property / array accessor handling
 */
 
-int _thiscall_method( SGS_CTX )
+static int _thiscall_method( SGS_CTX )
 {
 	int ret;
 	if( !sgs_Method( C ) ||

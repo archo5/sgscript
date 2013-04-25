@@ -3,9 +3,10 @@
 #include <stdarg.h>
 #include <math.h>
 
+#define SGS_INTERNAL
+
 #include "sgs_cfg.h"
-#include "sgs_tok.h"
-#include "sgs_ctx.h"
+#include "sgs_int.h"
 
 
 static SGS_INLINE int detectline( const char* code, int32_t at )

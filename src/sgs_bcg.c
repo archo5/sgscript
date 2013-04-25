@@ -1,8 +1,8 @@
 
 
-#include "sgs_bcg.h"
-#include "sgs_ctx.h"
-#include "sgs_proc.h"
+#define SGS_INTERNAL
+
+#include "sgs_int.h"
 
 
 

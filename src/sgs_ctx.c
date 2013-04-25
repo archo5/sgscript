@@ -1,11 +1,9 @@
 
 #include <stdarg.h>
 
-#include "sgs_ctx.h"
-#include "sgs_tok.h"
-#include "sgs_fnt.h"
-#include "sgs_bcg.h"
-#include "sgs_proc.h"
+#define SGS_INTERNAL
+
+#include "sgs_int.h"
 
 
 #if SGS_DEBUG && SGS_DEBUG_FLOW

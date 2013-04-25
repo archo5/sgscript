@@ -1,10 +1,11 @@
 
 
+#define SGS_INTERNAL
+
 #include <math.h>
 
 #include <sgscript.h>
-#include <sgs_util.h>
-#include <sgs_ctx.h>
+#include <sgs_int.h>
 
 
 /* disables trailing commas and other possibly useful things */

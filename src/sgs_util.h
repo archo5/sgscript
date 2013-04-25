@@ -12,20 +12,29 @@
 #  define _sgs_iFunc func_s
 #endif
 
+#ifdef SGS_INTERNAL
+#  define TRUE sgs_TRUE
+#  define FALSE sgs_FALSE
+#  define MIN sgs_MIN
+#  define MAX sgs_MAX
+#  define ARRAY_SIZE sgs_ARRAY_SIZE
+#  define sgs_LineNum LineNum
+#endif
+
 #include "sgscript.h"
 
 
 /* useful shortcut definitions */
-#define TRUE 1
-#define FALSE 0
-#define MAX( a, b ) ((a)>(b)?(a):(b))
-#define MIN( a, b ) ((a)<(b)?(a):(b))
-#define ARRAY_SIZE( a ) (sizeof(a)/sizeof(a[0]))
+#define sgs_TRUE 1
+#define sgs_FALSE 0
+#define sgs_MAX( a, b ) ((a)>(b)?(a):(b))
+#define sgs_MIN( a, b ) ((a)<(b)?(a):(b))
+#define sgs_ARRAY_SIZE( a ) (sizeof(a)/sizeof(a[0]))
 
 #define isoneof( chr, str ) (!!strchr( str, chr ))
 
 
-typedef int16_t LineNum;
+typedef int16_t sgs_LineNum;
 
 void sgs_BreakIfFunc( const char* code, const char* file, int line );
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
