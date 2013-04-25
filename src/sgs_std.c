@@ -23,7 +23,7 @@ typedef struct sgsstd_array_header_s
 }
 sgsstd_array_header_t;
 
-void* sgsstd_array_functable[];
+static void* sgsstd_array_functable[];
 
 #define SGSARR_UNIT sizeof( sgs_Variable )
 #define SGSARR_HDRBASE sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data
@@ -580,7 +580,7 @@ static int sgsstd_array_tostring( SGS_CTX, sgs_VarObj* data )
 	return sgs_StringMultiConcat( C, cnt * 2 + 1 + !cnt );
 }
 
-int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data )
 {
 	int i, depth = (int) sgs_ToInt( C, 0 );
 	SGSARR_HDR;
@@ -661,7 +661,7 @@ static int sgsstd_array_iter_nextkey( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-void* sgsstd_array_iter_functable[] =
+static void* sgsstd_array_iter_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_array_iter_destruct,
 	SOP_NEXTKEY, sgsstd_array_iter_nextkey,
@@ -682,7 +682,7 @@ static int sgsstd_array_getiter( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-void* sgsstd_array_functable[] =
+static void* sgsstd_array_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_array_destruct,
 	SOP_CLONE, sgsstd_array_clone,
@@ -698,7 +698,7 @@ void* sgsstd_array_functable[] =
 	SOP_END,
 };
 
-int sgsstd_array( SGS_CTX )
+static int sgsstd_array( SGS_CTX )
 {
 	int i = 0, objcnt = sgs_StackSize( C );
 	void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( objcnt ) );
@@ -723,7 +723,7 @@ int sgsstd_array( SGS_CTX )
 */
 
 #define HTHDR VHTable* ht = (VHTable*) data->data
-void* sgsstd_dict_functable[];
+static void* sgsstd_dict_functable[];
 
 static void _dict_clearvals( SGS_CTX, VHTable* ht )
 {
@@ -779,7 +779,7 @@ static int sgsstd_dict_tostring( SGS_CTX, sgs_VarObj* data )
 	return sgs_StringMultiConcat( C, cnt * 4 + 1 + !cnt );
 }
 
-int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data )
 {
 	int depth = (int) sgs_ToInt( C, 0 );
 	HTHDR;
@@ -895,7 +895,7 @@ static int sgsstd_dict_iter_nextkey( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-void* sgsstd_dict_iter_functable[] =
+static void* sgsstd_dict_iter_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_dict_iter_destruct,
 	SOP_NEXTKEY, sgsstd_dict_iter_nextkey,
@@ -919,7 +919,7 @@ static int sgsstd_dict_getiter( SGS_CTX, sgs_VarObj* data )
 #define sgsstd_dict_getprop sgsstd_dict_getindex
 #define sgsstd_dict_setprop sgsstd_dict_setindex
 
-void* sgsstd_dict_functable[] =
+static void* sgsstd_dict_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_dict_destruct,
 	SOP_CLONE, sgsstd_dict_clone,
@@ -935,7 +935,7 @@ void* sgsstd_dict_functable[] =
 	SOP_END,
 };
 
-int sgsstd_dict_internal( SGS_CTX )
+static int sgsstd_dict_internal( SGS_CTX )
 {
 	int i, objcnt = sgs_StackSize( C );
 	VHTable* ht = sgs_Alloc( VHTable );
@@ -951,7 +951,7 @@ int sgsstd_dict_internal( SGS_CTX )
 	return 1;
 }
 
-int sgsstd_dict( SGS_CTX )
+static int sgsstd_dict( SGS_CTX )
 {
 	VHTable* ht;
 	int i, objcnt = sgs_StackSize( C );
@@ -997,7 +997,7 @@ sgsstd_class_header_t;
 
 #define SGSCLASS_HDR sgsstd_class_header_t* hdr = (sgsstd_class_header_t*) data->data;
 
-int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	SGSCLASS_HDR;
 	sgs_Release( C, &hdr->data );
@@ -1006,7 +1006,7 @@ int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data )
 {
 	int ret;
 	sgs_Variable var, idx;
@@ -1036,7 +1036,7 @@ success:
 	return SGS_SUCCESS;
 }
 
-int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data )
 {
 	sgs_Variable k, v;
 	SGSCLASS_HDR;
@@ -1055,7 +1055,7 @@ int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data )
 #define sgsstd_class_getprop sgsstd_class_getindex
 #define sgsstd_class_setprop sgsstd_class_setindex
 
-int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
+static int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
 {
 	int ret;
 	sgs_Variable var, idx;
@@ -1076,7 +1076,7 @@ int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
 	return ret == SGS_SUCCESS;
 }
 
-int sgsstd_class_tostring( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_tostring( SGS_CTX, sgs_VarObj* data )
 {
 	if( sgsstd_class_getmethod( C, data, "__tostr" ) )
 		return sgs_ThisCall( C, 0, 1 );
@@ -1085,7 +1085,7 @@ int sgsstd_class_tostring( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data )
 {
 	int depth = (int) sgs_ToInt( C, 0 );
 	SGSCLASS_HDR;
@@ -1110,14 +1110,14 @@ int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data )
 	return sgs_StringMultiConcat( C, 3 );
 }
 
-int sgsstd_class_gettype( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_gettype( SGS_CTX, sgs_VarObj* data )
 {
 	UNUSED( data );
 	sgs_PushString( C, "class" );
 	return SGS_SUCCESS;
 }
 
-int sgsstd_class_gcmark( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_gcmark( SGS_CTX, sgs_VarObj* data )
 {
 	SGSCLASS_HDR;
 	int ret = sgs_GCMark( C, &hdr->data );
@@ -1128,7 +1128,7 @@ int sgsstd_class_gcmark( SGS_CTX, sgs_VarObj* data )
 }
 
 #define class_op_wrapper( op ) \
-int sgsstd_class_##op ( SGS_CTX, sgs_VarObj* data ){   \
+static int sgsstd_class_##op ( SGS_CTX, sgs_VarObj* data ){   \
 	if( sgsstd_class_getmethod( C, data, "__" #op ) ){ \
 		return sgs_Call( C, 2, 1 ); } return SGS_ENOTFND; }
 class_op_wrapper( add )
@@ -1139,7 +1139,7 @@ class_op_wrapper( mod )
 class_op_wrapper( compare )
 #undef class_op_wrapper
 
-int sgsstd_class_negate( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_negate( SGS_CTX, sgs_VarObj* data )
 {
 	if( sgsstd_class_getmethod( C, data, "__negate" ) )
 		return sgs_ThisCall( C, 0, 1 );
@@ -1147,7 +1147,7 @@ int sgsstd_class_negate( SGS_CTX, sgs_VarObj* data )
 	return SGS_ENOTFND;
 }
 
-int sgsstd_class_call( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_call( SGS_CTX, sgs_VarObj* data )
 {
 	if( sgsstd_class_getmethod( C, data, "__call" ) )
 	{
@@ -1165,7 +1165,7 @@ int sgsstd_class_call( SGS_CTX, sgs_VarObj* data )
 	return SGS_ENOTFND;
 }
 
-void* sgsstd_class_functable[] =
+static void* sgsstd_class_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_class_destruct,
 	SOP_GETPROP, sgsstd_class_getprop,
@@ -1187,7 +1187,7 @@ void* sgsstd_class_functable[] =
 	SOP_END,
 };
 
-int sgsstd_class( SGS_CTX )
+static int sgsstd_class( SGS_CTX )
 {
 	sgsstd_class_header_t* hdr;
 	if( sgs_StackSize( C ) != 2 )
@@ -1219,7 +1219,7 @@ sgsstd_closure_t;
 
 #define SGSCLOSURE_HDR sgsstd_closure_t* hdr = (sgsstd_closure_t*) data->data;
 
-int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	SGSCLOSURE_HDR;
 	sgs_Release( C, &hdr->func );
@@ -1228,14 +1228,14 @@ int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-int sgsstd_closure_tostring( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_closure_tostring( SGS_CTX, sgs_VarObj* data )
 {
 	UNUSED( data );
 	sgs_PushString( C, "closure" );
 	return SGS_SUCCESS;
 }
 
-int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* data )
 {
 	int depth = (int) sgs_ToInt( C, 0 );
 	SGSCLOSURE_HDR;
@@ -1260,14 +1260,14 @@ int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* data )
 	return sgs_StringMultiConcat( C, 3 );
 }
 
-int sgsstd_closure_gettype( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_closure_gettype( SGS_CTX, sgs_VarObj* data )
 {
 	UNUSED( data );
 	sgs_PushString( C, "closure" );
 	return SGS_SUCCESS;
 }
 
-int sgsstd_closure_gcmark( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_closure_gcmark( SGS_CTX, sgs_VarObj* data )
 {
 	SGSCLOSURE_HDR;
 	int ret = sgs_GCMark( C, &hdr->func );
@@ -1277,7 +1277,7 @@ int sgsstd_closure_gcmark( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data )
 {
 	int i;
 	SGSCLOSURE_HDR;
@@ -1288,7 +1288,7 @@ int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data )
 		* C->call_expect;
 }
 
-void* sgsstd_closure_functable[] =
+static void* sgsstd_closure_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_closure_destruct,
 	SOP_TOSTRING, sgsstd_closure_tostring,
@@ -1299,7 +1299,7 @@ void* sgsstd_closure_functable[] =
 	SOP_END,
 };
 
-int sgsstd_closure( SGS_CTX )
+static int sgsstd_closure( SGS_CTX )
 {
 	sgsstd_closure_t* hdr;
 	if( sgs_StackSize( C ) != 2 )
@@ -1742,7 +1742,7 @@ static int sgsstd_gc_collect( SGS_CTX )
 
 /* register all */
 #define FN( name ) { #name, sgsstd_##name }
-sgs_RegFuncConst regfuncs[] =
+static sgs_RegFuncConst regfuncs[] =
 {
 	/* containers */
 	FN( array ), FN( dict ), { "class", sgsstd_class }, FN( closure ),

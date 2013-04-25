@@ -367,6 +367,7 @@ char* sgs_ToStringBuf( SGS_CTX, int item, sgs_SizeVal* outsize );
 #define sgs_ToString( ctx, item ) sgs_ToStringBuf( ctx, item, NULL )
 char* sgs_ToStringBufFast( SGS_CTX, int item, sgs_SizeVal* outsize );
 #define sgs_ToStringFast( ctx, item ) sgs_ToStringBufFast( ctx, item, NULL )
+SGSRESULT sgs_Convert( SGS_CTX, int item, int type );
 
 /*
 	ARGUMENT HANDLING

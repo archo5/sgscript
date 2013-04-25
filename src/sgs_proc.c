@@ -62,7 +62,7 @@ static int obj_exec( SGS_CTX, const void* sop, object_t* data, int args )
 	return ret;
 }
 
-void var_free_object( SGS_CTX, object_t* O )
+static void var_free_object( SGS_CTX, object_t* O )
 {
 	if( O->prev ) O->prev->next = O->next;
 	if( O->next ) O->next->prev = O->prev;
@@ -72,7 +72,7 @@ void var_free_object( SGS_CTX, object_t* O )
 	C->objcount--;
 }
 
-void var_destroy_object( SGS_CTX, object_t* O )
+void sgsVM_VarDestroyObject( SGS_CTX, object_t* O )
 {
 	if( O->prev ) O->prev->next = O->next;
 	if( O->next ) O->next->prev = O->prev;
@@ -85,7 +85,7 @@ void var_destroy_object( SGS_CTX, object_t* O )
 }
 
 static void var_release( SGS_CTX, sgs_VarPtr p );
-void var_destroy_func( SGS_CTX, func_t* F )
+static void var_destroy_func( SGS_CTX, func_t* F )
 {
 	sgs_VarPtr var = (sgs_VarPtr) func_consts( F ), vend = (sgs_VarPtr) func_bytecode( F );
 	while( var < vend )
@@ -149,7 +149,7 @@ static void var_create_0str( SGS_CTX, sgs_VarPtr out, int32_t len )
 	var_cstr( out )[ len ] = 0;
 }
 
-void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len )
+void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t len )
 {
 	sgs_BreakIf( !str );
 
@@ -694,7 +694,7 @@ ending:
 	return ret;
 }
 
-int vm_convert_stack( SGS_CTX, int item, int type )
+static int vm_convert_stack( SGS_CTX, int item, int type )
 {
 	int ret;
 	sgs_Variable var;
@@ -1498,7 +1498,7 @@ static SGS_INLINE sgs_Variable* const_getvar( sgs_Variable* consts, int32_t coun
 /*
 	Main VM execution loop
 */
-const char* opnames[] =
+static const char* opnames[] =
 {
 	"nop",  "push", "push_nulls", "pop_n", "pop_reg",  "return", "jump", "jump_if_true", "jump_if_false", "call",
 	"for_prep", "for_next", "getvar", "setvar", "getprop", "setprop", "getindex", "setindex",  "set", "copy",
@@ -1547,6 +1547,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		sgsVM_StackDump( C );
 #  endif
 #endif
+		UNUSED( opnames );
 
 		switch( instr )
 		{
@@ -2286,6 +2287,13 @@ char* sgs_ToStringBufFast( SGS_CTX, int item, sgs_SizeVal* outsize )
 		sgs_StoreItem( C, g );
 	}
 	return sgs_ToStringBuf( C, item, outsize );
+}
+
+SGSRESULT sgs_Convert( SGS_CTX, int item, int type )
+{
+	if( !sgs_IsValidIndex( C, item ) )
+		return SGS_EBOUNDS;
+	return vm_convert_stack( C, item, type );
 }
 
 

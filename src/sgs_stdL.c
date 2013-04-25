@@ -1355,7 +1355,7 @@ static int sgsstd_type_cast( SGS_CTX )
 		!sgs_ParseInt( C, 1, &ty ) )
 		STDLIB_WARN( "type_cast() - unexpected arguments; function expects 2 arguments: any, int" )
 
-	vm_convert_stack( C, 0, ty );
+	sgs_Convert( C, 0, ty );
 	sgs_Pop( C, 1 );
 	return 1;
 }

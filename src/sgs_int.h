@@ -202,6 +202,14 @@
 #  define object_t sgs_object_t
 #  define VHTable sgs_VHTable
 #  define VHTableVar sgs_VHTableVar
+#  define vht_init sgs_vht_init
+#  define vht_free sgs_vht_free
+#  define vht_get sgs_vht_get
+#  define vht_set sgs_vht_set
+#  define vht_unset sgs_vht_unset
+#  define vht_size sgs_vht_size
+#  define var_create_str sgsVM_VarCreateString
+#  define var_destroy_object sgsVM_VarDestroyObject
 
 #  define STACKFRAMESIZE SGS_STACKFRAMESIZE
 #endif
@@ -362,9 +370,9 @@ void sgsFT_Dump( sgs_FTNode* tree );
 typedef
 struct _sgs_CompFunc
 {
-	MemBuf consts;
-	MemBuf code;
-	MemBuf lnbuf;
+	sgs_MemBuf consts;
+	sgs_MemBuf code;
+	sgs_MemBuf lnbuf;
 	int	   gotthis;
 	int	   numargs;
 }
@@ -382,7 +390,7 @@ void sgsBC_Free( SGS_CTX, sgs_CompFunc* func );
 /*
 	Serialized bytecode
 */
-int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf );
+int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf );
 
 /* assumes headers have already been validated (except size) but are still in the buffer */
 const char* sgsBC_Buf2Func( SGS_CTX, const char* fn,
@@ -406,67 +414,67 @@ int sgsBC_ValidateHeader( const char* buf, sgs_SizeVal size );
 
 typedef enum sgs_Instruction_e
 {
-	SI_NOP = 0,
+	SGS_SI_NOP = 0,
 
-	SI_PUSH,     /* (B:src)                 push register/constant */
-	SI_PUSHN,    /* (A:N)                   push N nulls */
-	SI_POPN,     /* (A:N)                   pop N items */
-	SI_POPR,     /* (A:out)                 pop item to register */
+	SGS_SI_PUSH,     /* (B:src)                 push register/constant */
+	SGS_SI_PUSHN,    /* (A:N)                   push N nulls */
+	SGS_SI_POPN,     /* (A:N)                   pop N items */
+	SGS_SI_POPR,     /* (A:out)                 pop item to register */
 
-	SI_RETN,     /* (A:N)                   exit current frame of execution, preserve N output arguments */
-	SI_JUMP,     /* (E:off)                 add to instruction pointer */
-	SI_JMPT,     /* (C:src, E:off)          jump (add to instr.ptr.) if true */
-	SI_JMPF,     /* (C:src, E:off)          jump (add to instr.ptr.) if false */
-	SI_CALL,     /* (A:exp, B:args, C:src)  call a variable */
+	SGS_SI_RETN,     /* (A:N)                   exit current frame of execution, preserve N output arguments */
+	SGS_SI_JUMP,     /* (E:off)                 add to instruction pointer */
+	SGS_SI_JMPT,     /* (C:src, E:off)          jump (add to instr.ptr.) if true */
+	SGS_SI_JMPF,     /* (C:src, E:off)          jump (add to instr.ptr.) if false */
+	SGS_SI_CALL,     /* (A:exp, B:args, C:src)  call a variable */
 
-	SI_FORPREP,  /* (A:out, B:src)          retrieves the iterator to work the object */
-	SI_FORNEXT,  /* (A:oky, B:ost, C:iter)  retrieves pending output key/state from iterator */
+	SGS_SI_FORPREP,  /* (A:out, B:src)          retrieves the iterator to work the object */
+	SGS_SI_FORNEXT,  /* (A:oky, B:ost, C:iter)  retrieves pending output key/state from iterator */
 
-	SI_GETVAR,   /* (A:out, B:name)         <varname> => <value> */
-	SI_SETVAR,   /* (B:name, C:src)         <varname> <value> => set <value> to <varname> */
-	SI_GETPROP,  /* (A:out, B:var, C:name)  <var> <prop> => <var> */
-	SI_SETPROP,  /* (A:var, B:name, C:src)  <var> <prop> <value> => set a <prop> of <var> to <value> */
-	SI_GETINDEX, /* -- || -- */
-	SI_SETINDEX, /* -- || -- */
+	SGS_SI_GETVAR,   /* (A:out, B:name)         <varname> => <value> */
+	SGS_SI_SETVAR,   /* (B:name, C:src)         <varname> <value> => set <value> to <varname> */
+	SGS_SI_GETPROP,  /* (A:out, B:var, C:name)  <var> <prop> => <var> */
+	SGS_SI_SETPROP,  /* (A:var, B:name, C:src)  <var> <prop> <value> => set a <prop> of <var> to <value> */
+	SGS_SI_GETINDEX, /* -- || -- */
+	SGS_SI_SETINDEX, /* -- || -- */
 
 	/* operators */
 	/*
 		A: (A:out, B:s1, C:s2)
 		B: (A:out, B:s1)
 	*/
-	SI_SET,      /* B */
-	SI_CLONE,
-	SI_CONCAT,   /* A */
-	SI_NEGATE,   /* B */
-	SI_BOOL_INV,
-	SI_INVERT,
+	SGS_SI_SET,      /* B */
+	SGS_SI_CLONE,
+	SGS_SI_CONCAT,   /* A */
+	SGS_SI_NEGATE,   /* B */
+	SGS_SI_BOOL_INV,
+	SGS_SI_INVERT,
 
-	SI_INC,      /* B */
-	SI_DEC,
-	SI_ADD,      /* A */
-	SI_SUB,
-	SI_MUL,
-	SI_DIV,
-	SI_MOD,
+	SGS_SI_INC,      /* B */
+	SGS_SI_DEC,
+	SGS_SI_ADD,      /* A */
+	SGS_SI_SUB,
+	SGS_SI_MUL,
+	SGS_SI_DIV,
+	SGS_SI_MOD,
 
-	SI_AND,      /* A */
-	SI_OR,
-	SI_XOR,
-	SI_LSH,
-	SI_RSH,
+	SGS_SI_AND,      /* A */
+	SGS_SI_OR,
+	SGS_SI_XOR,
+	SGS_SI_LSH,
+	SGS_SI_RSH,
 
-	SI_SEQ,      /* A */
-	SI_SNEQ,
-	SI_EQ,
-	SI_NEQ,
-	SI_LT,
-	SI_GTE,
-	SI_GT,
-	SI_LTE,
+	SGS_SI_SEQ,      /* A */
+	SGS_SI_SNEQ,
+	SGS_SI_EQ,
+	SGS_SI_NEQ,
+	SGS_SI_LT,
+	SGS_SI_GTE,
+	SGS_SI_GT,
+	SGS_SI_LTE,
 
 	/* specials */
-	SI_ARRAY,    /* (A:out, B:args) */
-	SI_DICT,     /* -- || -- */
+	SGS_SI_ARRAY,    /* (A:out, B:args) */
+	SGS_SI_DICT,     /* -- || -- */
 }
 sgs_Instruction;
 
@@ -521,8 +529,8 @@ typedef struct _sgs_func_t
 	int8_t  numargs;
 	sgs_LineNum linenum;
 	uint16_t* lineinfo;
-	MemBuf  funcname;
-	MemBuf  filename;
+	sgs_MemBuf funcname;
+	sgs_MemBuf filename;
 }
 sgs_func_t;
 #define sgs_func_consts( pfn )   ((sgs_Variable*)(((char*)(pfn))+sizeof(sgs_func_t)))
@@ -551,27 +559,23 @@ typedef struct _sgs_VHTableVar
 sgs_VHTableVar;
 typedef struct _sgs_VHTable
 {
-	HashTable   ht;
+	sgs_HashTable   ht;
 	sgs_VHTableVar* vars;
 	int32_t     mem;
 }
 sgs_VHTable;
 
-void vht_init( sgs_VHTable* vht, SGS_CTX );
-void vht_free( sgs_VHTable* vht, SGS_CTX );
-sgs_VHTableVar* vht_get( sgs_VHTable* vht, const char* key, int32_t size );
-void vht_set( sgs_VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SGS_CTX );
-int vht_unset( sgs_VHTable* vht, const char* key, int32_t size, SGS_CTX );
-#define vht_size( T ) ((T)->ht.load)
+void sgs_vht_init( sgs_VHTable* vht, SGS_CTX );
+void sgs_vht_free( sgs_VHTable* vht, SGS_CTX );
+sgs_VHTableVar* sgs_vht_get( sgs_VHTable* vht, const char* key, int32_t size );
+void sgs_vht_set( sgs_VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SGS_CTX );
+int sgs_vht_unset( sgs_VHTable* vht, const char* key, int32_t size, SGS_CTX );
+#define sgs_vht_size( T ) ((T)->ht.load)
 
 
 /* VM interface */
-void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len );
-void var_destroy_object( SGS_CTX, sgs_object_t* O );
-#define sgsVM_VarCreateString var_create_str
-#define sgsVM_VarDestroyObject var_destroy_object
-int vm_convert_stack( SGS_CTX, int item, int type );
-
+void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t len );
+void sgsVM_VarDestroyObject( SGS_CTX, sgs_object_t* O );
 
 int sgsVM_VarSize( sgs_Variable* var );
 void sgsVM_VarDump( sgs_Variable* var );
@@ -606,8 +610,8 @@ struct _sgs_FuncCtx
 {
 	int32_t func;
 	int32_t regs, lastreg;
-	MemBuf  vars;
-	MemBuf  gvars;
+	sgs_MemBuf vars;
+	sgs_MemBuf gvars;
 	int32_t loops;
 	sgs_BreakInfo* binfo;
 }
@@ -652,7 +656,7 @@ struct _sgs_Context
 	sgs_StackFrame* sf_first;
 	sgs_StackFrame* sf_last;
 
-	HashTable     data;
+	sgs_HashTable data;
 
 	sgs_object_t* objs;
 	int32_t       objcount;
