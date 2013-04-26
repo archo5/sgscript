@@ -79,16 +79,16 @@ SOP_COMPARE: [overloaded operator]
 	gives: 2 variables of any type, one of them is the object this function is linked to
 	expects: 1 number variable on success
 
-SOP_OP_ADD:
-SOP_OP_SUB:
-SOP_OP_MUL:
-SOP_OP_DIV:
-SOP_OP_MOD: [overloaded operators]
+SOP_ADD:
+SOP_SUB:
+SOP_MUL:
+SOP_DIV:
+SOP_MOD: [overloaded operators]
 	returns the value of the operation (+,-,*,/,%)
 	gives: 2 variables of any type, one of them is the object this function is linked to
 	expects: 1 variable of any type on success
 
-SOP_OP_NEGATE: [overloaded operator]
+SOP_NEGATE: [overloaded operator]
 	returns the negated argument
 	gives: 1 variable of the object type this function is linked to
 	expects: 1 variable of any type on success

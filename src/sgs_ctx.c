@@ -27,6 +27,9 @@ static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "fu
 static void default_printfn( void* ctx, SGS_CTX, int type, int line, const char* msg )
 {
 	const char* errpfxs[ 3 ] = { "Info", "Warning", "Error" };
+	type = type / 100 - 1;
+	if( type < 0 ) type = 0;
+	if( type > 2 ) type = 2;
 	sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
 	UNUSED( ctx );
 	while( p != NULL )
@@ -60,8 +63,11 @@ static int default_dict_func( SGS_CTX )
 
 static void ctx_init( SGS_CTX )
 {
+	C->version = ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) |
+		SGS_VERSION_MINOR ) << SGS_VERSION_OFFSET | SGS_VERSION_INCR );
 	C->print_fn = &default_printfn;
 	C->print_ctx = stderr;
+	C->minlev = SGS_INFO;
 
 	C->state = 0;
 	C->fctx = NULL;
@@ -155,7 +161,7 @@ void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
 	int cnt;
 	va_list args;
 
-	if( !C->print_fn )
+	if( !C->print_fn || type < C->minlev )
 		return;
 
 	info = membuf_create();
@@ -469,11 +475,12 @@ static void dumpvar( FILE* fp, sgs_Variable* var )
 	}
 }
 
-SGSRESULT sgs_Stat( SGS_CTX, int type )
+SGSMIXED sgs_Stat( SGS_CTX, int type )
 {
 	FILE* fh = stdout;
 	switch( type )
 	{
+	case SGS_STAT_VERSION: return C->version;
 	case SGS_STAT_VARCOUNT: return C->objcount;
 	case SGS_STAT_MEMSIZE: return C->memsize;
 	case SGS_STAT_DUMP_STACK:
@@ -543,8 +550,21 @@ SGSRESULT sgs_Stat( SGS_CTX, int type )
 		}
 		return SGS_SUCCESS;
 	default:
-		return SGS_SUCCESS;
+		return SGS_EINVAL;
 	}
+}
+
+int32_t sgs_Cntl( SGS_CTX, int what, int32_t val )
+{
+	int32_t x;
+	switch( what )
+	{
+	case SGS_CNTL_STATE: x = C->state; C->state = val; return x;
+	case SGS_CNTL_GET_STATE: return C->state;
+	case SGS_CNTL_MINLEV: x = C->minlev; C->minlev = val; return x;
+	case SGS_CNTL_GET_MINLEV: return C->minlev;
+	}
+	return 0;
 }
 
 void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, const char** file, int* line )

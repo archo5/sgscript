@@ -124,6 +124,9 @@ static void TF_printfn( void* ctx, SGS_CTX, int type, int line, const char* mess
 {
 	int ret = 0;
 	const char* pfxs[] = { "[I:", "[W:", "[E:" };
+	type = type / 100 - 1;
+	if( type < 0 ) type = 0;
+	if( type > 2 ) type = 2;
 	ret |= sgs_PushGlobal( C, "ERRORS" );
 	sgs_PushString( C, pfxs[ type ] );
 	sgs_PushString( C, message );

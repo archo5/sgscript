@@ -8,6 +8,8 @@
 #define SGS_VERSION_INCR  2
 #define SGS_VERSION "0.8.2"
 
+#define SGS_VERSION_OFFSET 8
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -18,6 +20,45 @@ extern "C" {
 
 #include "sgs_cfg.h"
 #include "sgs_xpc.h"
+
+
+
+#ifdef SGS_INTERNAL
+#  define SVT_NULL SGS_VT_NULL
+#  define SVT_BOOL SGS_VT_BOOL
+#  define SVT_INT SGS_VT_INT
+#  define SVT_REAL SGS_VT_REAL
+#  define SVT_STRING SGS_VT_STRING
+#  define SVT_FUNC SGS_VT_FUNC
+#  define SVT_CFUNC SGS_VT_CFUNC
+#  define SVT_OBJECT SGS_VT_OBJECT
+#  define SVT__COUNT SGS_VT__COUNT
+
+#  define SOP_END SGS_OP_END
+#  define SOP_DESTRUCT SGS_OP_DESTRUCT
+#  define SOP_CLONE SGS_OP_CLONE
+#  define SOP_GETTYPE SGS_OP_GETTYPE
+#  define SOP_GETPROP SGS_OP_GETPROP
+#  define SOP_SETPROP SGS_OP_SETPROP
+#  define SOP_GETINDEX SGS_OP_GETINDEX
+#  define SOP_SETINDEX SGS_OP_SETINDEX
+#  define SOP_TOBOOL SGS_OP_TOBOOL
+#  define SOP_TOINT SGS_OP_TOINT
+#  define SOP_TOREAL SGS_OP_TOREAL
+#  define SOP_TOSTRING SGS_OP_TOSTRING
+#  define SOP_DUMP SGS_OP_DUMP
+#  define SOP_GCMARK SGS_OP_GCMARK
+#  define SOP_GETITER SGS_OP_GETITER
+#  define SOP_NEXTKEY SGS_OP_NEXTKEY
+#  define SOP_CALL SGS_OP_CALL
+#  define SOP_COMPARE SGS_OP_COMPARE
+#  define SOP_ADD SGS_OP_ADD
+#  define SOP_SUB SGS_OP_SUB
+#  define SOP_MUL SGS_OP_MUL
+#  define SOP_DIV SGS_OP_DIV
+#  define SOP_MOD SGS_OP_MOD
+#  define SOP_NEGATE SGS_OP_NEGATE
+#endif
 
 
 /* API self-doc helpers */
@@ -77,9 +118,9 @@ static void* sgs_DefaultMemFunc( void* ud, void* ptr, size_t size )
 
 
 /* Debug output */
-#define SGS_INFO    0  /* information about potential issues and state of the system */
-#define SGS_WARNING 1  /* non-fatal problems */
-#define SGS_ERROR   2  /* fatal problems */
+#define SGS_INFO    100  /* information about potential issues and state of the system */
+#define SGS_WARNING 200  /* non-fatal problems */
+#define SGS_ERROR   300  /* fatal problems */
 
 typedef void (*sgs_PrintFunc) (
 	void* /* data */,
@@ -90,7 +131,14 @@ typedef void (*sgs_PrintFunc) (
 );
 
 
+/* Virtual machine state */
+#define SGS_STOP_ON_FIRST_ERROR		0x0001
+#define SGS_HAS_ERRORS				0x00010000
+#define SGS_MUST_STOP				(0x00020000 | SGS_HAS_ERRORS)
+
+
 /* Statistics / debugging */
+#define SGS_STAT_VERSION      0
 #define SGS_STAT_VARCOUNT     1
 #define SGS_STAT_MEMSIZE      2
 #define SGS_STAT_DUMP_STACK   10
@@ -99,17 +147,24 @@ typedef void (*sgs_PrintFunc) (
 #define SGS_STAT_DUMP_FRAMES  13
 
 
+/* Virtual machine control */
+#define SGS_CNTL_STATE      1
+#define SGS_CNTL_GET_STATE  2
+#define SGS_CNTL_MINLEV     3
+#define SGS_CNTL_GET_MINLEV 4
+
+
 /* Context internals */
 /* - variable types */
-#define SVT_NULL    0  /* null (/no) data */
-#define SVT_BOOL    1  /* bool(u8) data */
-#define SVT_INT     2  /* i64 data */
-#define SVT_REAL    3  /* f64 data */
-#define SVT_STRING  4  /* variable-length string data */
-#define SVT_FUNC    5  /* function data */
-#define SVT_CFUNC   6  /* C function */
-#define SVT_OBJECT  7  /* variable-length binary data */
-#define SVT__COUNT  8  /* number of available types */
+#define SGS_VT_NULL    0  /* null (/no) data */
+#define SGS_VT_BOOL    1  /* bool(u8) data */
+#define SGS_VT_INT     2  /* i64 data */
+#define SGS_VT_REAL    3  /* f64 data */
+#define SGS_VT_STRING  4  /* variable-length string data */
+#define SGS_VT_FUNC    5  /* function data */
+#define SGS_VT_CFUNC   6  /* C function */
+#define SGS_VT_OBJECT  7  /* variable-length binary data */
+#define SGS_VT__COUNT  8  /* number of available types */
 
 /* - object data */
 typedef struct sgs_ObjData sgs_VarObj;
@@ -148,31 +203,31 @@ struct _sgs_Variable
 /* - object interface */
 typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 
-#define SOP( idx ) ((void*)idx)
-#define SOP_END        SOP( 0 )
-#define SOP_DESTRUCT   SOP( 1 )
-#define SOP_CLONE      SOP( 2 )
-#define SOP_GETTYPE    SOP( 3 )
-#define SOP_GETPROP    SOP( 4 )
-#define SOP_SETPROP    SOP( 5 )
-#define SOP_GETINDEX   SOP( 6 )
-#define SOP_SETINDEX   SOP( 7 )
-#define SOP_TOBOOL     SOP( 8 )
-#define SOP_TOINT      SOP( 9 )
-#define SOP_TOREAL     SOP( 10 )
-#define SOP_TOSTRING   SOP( 11 )
-#define SOP_DUMP       SOP( 12 )
-#define SOP_GCMARK     SOP( 13 )
-#define SOP_GETITER    SOP( 14 )
-#define SOP_NEXTKEY    SOP( 15 )
-#define SOP_CALL       SOP( 16 )
-#define SOP_COMPARE    SOP( 17 )
-#define SOP_OP_ADD     SOP( 18 )
-#define SOP_OP_SUB     SOP( 19 )
-#define SOP_OP_MUL     SOP( 20 )
-#define SOP_OP_DIV     SOP( 21 )
-#define SOP_OP_MOD     SOP( 22 )
-#define SOP_OP_NEGATE  SOP( 23 )
+#define SGS_OP( idx ) ((void*)idx)
+#define SGS_OP_END        SGS_OP( 0 )
+#define SGS_OP_DESTRUCT   SGS_OP( 1 )
+#define SGS_OP_CLONE      SGS_OP( 2 )
+#define SGS_OP_GETTYPE    SGS_OP( 3 )
+#define SGS_OP_GETPROP    SGS_OP( 4 )
+#define SGS_OP_SETPROP    SGS_OP( 5 )
+#define SGS_OP_GETINDEX   SGS_OP( 6 )
+#define SGS_OP_SETINDEX   SGS_OP( 7 )
+#define SGS_OP_TOBOOL     SGS_OP( 8 )
+#define SGS_OP_TOINT      SGS_OP( 9 )
+#define SGS_OP_TOREAL     SGS_OP( 10 )
+#define SGS_OP_TOSTRING   SGS_OP( 11 )
+#define SGS_OP_DUMP       SGS_OP( 12 )
+#define SGS_OP_GCMARK     SGS_OP( 13 )
+#define SGS_OP_GETITER    SGS_OP( 14 )
+#define SGS_OP_NEXTKEY    SGS_OP( 15 )
+#define SGS_OP_CALL       SGS_OP( 16 )
+#define SGS_OP_COMPARE    SGS_OP( 17 )
+#define SGS_OP_ADD        SGS_OP( 18 )
+#define SGS_OP_SUB        SGS_OP( 19 )
+#define SGS_OP_MUL        SGS_OP( 20 )
+#define SGS_OP_DIV        SGS_OP( 21 )
+#define SGS_OP_MOD        SGS_OP( 22 )
+#define SGS_OP_NEGATE     SGS_OP( 23 )
 
 
 /* Engine context */
@@ -243,7 +298,8 @@ sgs_Compile
 
 SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size );
 
-SGSRESULT sgs_Stat( SGS_CTX, int type );
+SGSMIXED sgs_Stat( SGS_CTX, int type );
+int32_t sgs_Cntl( SGS_CTX, int what, int32_t val );
 
 void
 sgs_StackFrameInfo

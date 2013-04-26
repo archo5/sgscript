@@ -1070,7 +1070,7 @@ static int vm_op_negate( SGS_CTX, sgs_VarPtr out, sgs_Variable *A )
 		{
 			int ofs = out - C->stack_off, ssz = STACKFRAMESIZE;
 			stk_push( C, A );
-			if( obj_exec( C, SOP_OP_NEGATE, A->data.O, 1 ) == SGS_SUCCESS )
+			if( obj_exec( C, SOP_NEGATE, A->data.O, 1 ) == SGS_SUCCESS )
 			{
 				out = C->stack_off + ofs;
 				VAR_RELEASE( out );
@@ -1123,7 +1123,7 @@ VAR_MOP( dec, -1 )
 #define ARITH_OP_MUL	2
 #define ARITH_OP_DIV	3
 #define ARITH_OP_MOD	4
-static const void* aop_sops[] = { SOP_OP_ADD, SOP_OP_SUB, SOP_OP_MUL, SOP_OP_DIV, SOP_OP_MOD };
+static const void* aop_sops[] = { SOP_ADD, SOP_SUB, SOP_MUL, SOP_DIV, SOP_MOD };
 static const uint8_t aop_types[ 35 ] = /* 5x5: NBIRS */
 {
 	SVT_NULL, SVT_INT,  SVT_INT,  SVT_REAL, SVT_REAL,
