@@ -7,22 +7,39 @@
 
 
 #if SGS_DEBUG && SGS_DEBUG_FLOW
- #ifdef _MSC_VER
-  #define DBGINFO( ... ) sgs_Printf( C, SGS_INFO, -1, __VA_ARGS__ )
- #else
-  #define DBGINFO( wat... ) sgs_Printf( C, SGS_INFO, -1, wat )
- #endif
+#  ifdef _MSC_VER
+#    define DBGINFO( ... ) sgs_Printf( C, SGS_INFO, -1, __VA_ARGS__ )
+#  else
+#    define DBGINFO( wat... ) sgs_Printf( C, SGS_INFO, -1, wat )
+#  endif
 #else
- #ifdef _MSC_VER
-  #define DBGINFO( ... )
- #else
-  #define DBGINFO( wat... )
- #endif
+#  ifdef _MSC_VER
+#    define DBGINFO( ... )
+#  else
+#    define DBGINFO( wat... )
+#  endif
 #endif
 
 
 static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "func", "cfunc", "obj" };
 
+
+static int default_array_func( SGS_CTX )
+{
+	sgs_Printf( C, SGS_ERROR, -1, "'array' creating function is undefined" );
+	return 0;
+}
+static int default_dict_func( SGS_CTX )
+{
+	sgs_Printf( C, SGS_ERROR, -1, "'dict' creating function is undefined" );
+	return 0;
+}
+
+
+static void default_outputfn( void* userdata, SGS_CTX, void* ptr, sgs_SizeVal size )
+{
+	fwrite( ptr, 1, size, (FILE*) userdata );
+}
 
 static void default_printfn( void* ctx, SGS_CTX, int type, int line, const char* msg )
 {
@@ -49,23 +66,13 @@ static void default_printfn( void* ctx, SGS_CTX, int type, int line, const char*
 }
 
 
-static int default_array_func( SGS_CTX )
-{
-	sgs_Printf( C, SGS_ERROR, -1, "'array' creating function is undefined" );
-	return 0;
-}
-static int default_dict_func( SGS_CTX )
-{
-	sgs_Printf( C, SGS_ERROR, -1, "'dict' creating function is undefined" );
-	return 0;
-}
-
-
 static void ctx_init( SGS_CTX )
 {
 	C->version = ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) |
 		SGS_VERSION_MINOR ) << SGS_VERSION_OFFSET | SGS_VERSION_INCR );
-	C->print_fn = &default_printfn;
+	C->output_fn = default_outputfn;
+	C->output_ctx = stdout;
+	C->print_fn = default_printfn;
 	C->print_ctx = stderr;
 	C->minlev = SGS_INFO;
 
@@ -144,6 +151,20 @@ void sgs_DestroyEngine( SGS_CTX )
 	ht_free( &C->data, C );
 
 	C->memfunc( C->mfuserdata, C, 0 );
+}
+
+
+void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx )
+{
+	if( func == SGSOUTPUTFN_DEFAULT )
+		func = default_outputfn;
+	C->output_fn = func;
+	C->output_ctx = ctx;
+}
+
+void sgs_Write( SGS_CTX, void* ptr, sgs_SizeVal size )
+{
+	C->output_fn( C->output_ctx, C, ptr, size );
 }
 
 

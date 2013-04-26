@@ -117,6 +117,15 @@ static void* sgs_DefaultMemFunc( void* ud, void* ptr, size_t size )
 }
 
 
+/* Main output */
+typedef void (*sgs_OutputFunc) (
+	void* /* userdata */,
+	sgs_Context* /* ctx / SGS_CTX */,
+	void* /* ptr */,
+	sgs_SizeVal /* size */
+);
+
+
 /* Debug output */
 #define SGS_INFO    100  /* information about potential issues and state of the system */
 #define SGS_WARNING 200  /* non-fatal problems */
@@ -247,9 +256,14 @@ void sgs_DestroyEngine( SGS_CTX );
 
 
 /* Core systems */
+#define SGSOUTPUTFN_DEFAULT ((sgs_OutputFunc)-1)
+void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx );
+void sgs_Write( SGS_CTX, void* ptr, sgs_SizeVal size );
+
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
 void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
 void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
+
 void* sgs_Memory( SGS_CTX, void* ptr, size_t size );
 #define sgs_Malloc( C, size ) sgs_Memory( C, NULL, size )
 #define sgs_Free( C, ptr ) sgs_Memory( C, ptr, 0 )

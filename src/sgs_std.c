@@ -1382,7 +1382,9 @@ static int sgsstd_print( SGS_CTX )
 	ssz = sgs_StackSize( C );
 	for( i = 0; i < ssz; ++i )
 	{
-		printf( "%s", sgs_ToString( C, i ) );
+		sgs_SizeVal size;
+		char* buf = sgs_ToStringBuf( C, i, &size );
+		sgs_Write( C, buf, size );
 	}
 	return 0;
 }
@@ -1390,7 +1392,7 @@ static int sgsstd_print( SGS_CTX )
 static int sgsstd_println( SGS_CTX )
 {
 	sgsstd_print( C );
-	printf( "\n" );
+	sgs_Write( C, "\n", 1 );
 	return 0;
 }
 

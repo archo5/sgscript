@@ -17,6 +17,7 @@
 
 const char* outfile_internal = "tests-output-internal.log";
 const char* outfile = "tests-output.log";
+const char* outfile_errors = "tests-errors.log";
 
 
 #ifdef WIN32
@@ -28,95 +29,6 @@ int sgscript_main( SGS_CTX )
 	sgs_StoreGlobal( C, "imported_var" );
 	sgs_PushBool( C, 1 );
 	return 1;
-}
-
-
-static double gettime()
-{
-	clock_t clk = clock();
-	return (double)( clk ) / (double)( CLOCKS_PER_SEC );
-}
-
-
-char stdout_buf[ 20 ];
-static void setoutput( const char* file )
-{
-	if( file )
-	{
-		FILE* f = freopen( file, "a", stdout );
-		if( !f )
-		{
-			printf( "Could not freopen\n" );
-			exit( 1 );
-		}
-#if _DEBUG
-		setvbuf( f, NULL, _IONBF, 0 );
-#endif
-	}
-	else
-	{
-		FILE* f =
-#if __linux__
-			freopen( stdout_buf, "w", stdout );
-#else
-			freopen( "CON", "w", stdout );
-#endif
-		if( !f )
-		{
-			printf( "Could not freopen\n" );
-			exit( 1 );
-		}
-	}
-}
-
-static char* get_file_contents( const char* file )
-{
-	int size;
-	char* out = NULL;
-	FILE* f = fopen( file, "rb" );
-	if( !f ) return NULL;
-
-	fseek( f, 0, SEEK_END );
-	size = ftell( f );
-	fseek( f, 0, SEEK_SET );
-
-	out = (char*) malloc( size + 1 );
-
-	{
-		int rdb;
-		rdb = fread( out, 1, size, f );
-		if( size != rdb )
-		{
-			if( ferror( f ) )
-			{
-				fclose( f );
-				free( out );
-				return NULL;
-			}
-			assert( size == rdb );
-		}
-	}
-
-	out[ size ] = 0;
-	fclose( f );
-
-	return out;
-}
-
-static void check_context( sgs_Context* C )
-{
-	int all = 1;
-	printf( "state checks:" );
-
-	printf( " stack %s", C->stack_top != C->stack_base ? "ERROR" : "OK" );
-	all &= C->stack_top == C->stack_base;
-
-	printf( " => %s", all ? "OK" : "ERROR" );
-	if( !all )
-	{
-		printf( "\n\n critical error in tests - aborting now\n\n" );
-		exit( 1 );
-	}
 }
 
 
@@ -170,79 +82,93 @@ static void prepengine( sgs_Context* C )
 	UNUSED( ret );
 	sgs_BreakIf( ret != SGS_SUCCESS );
 
-	C->print_fn = TF_printfn;
+	sgs_SetPrintFunc( C, TF_printfn, NULL );
 }
 
 /* test statistics */
 int tests_executed = 0;
 int tests_failed = 0;
 
-static void count_tests()
+int numallocs = 0;
+static void* ext_memfunc( void* ud, void* ptr, size_t size )
 {
-	int testc = 0;
-	DIR* d = opendir( "tests" );
-	struct dirent* e;
-	printf( "\n" );
-	while( ( e = readdir( d ) ) != NULL )
+	if( ptr ) numallocs--;
+	if( size ) numallocs++;
+	UNUSED( ud );
+	return realloc( ptr, size );
+}
+
+
+#define ATTMKR "\n\n#### "
+static void checkdestroy_context( sgs_Context* C )
+{
+	int all = 1;
+
+	/* pre-destroy */
+	all &= C->stack_top == C->stack_base;
+	if( C->stack_top != C->stack_base ) printf( ATTMKR "stack left in bad state\n" );
+
+	/* DESTROY */
+	sgs_DestroyEngine( C );
+
+	/* post-destroy */
+	all &= numallocs == 0;
+	if( numallocs ) printf( ATTMKR "memory leaks detected (%d)\n", numallocs );
+
+	if( !all )
 	{
-		const char* disp = "...";
-		if( strcmp( e->d_name, "." ) == 0 || strcmp( e->d_name, ".." ) == 0 )
-			continue;
-		if( strncmp( e->d_name, "s_", 2 ) == 0 ) disp = "+++";
-		if( strncmp( e->d_name, "f_", 2 ) == 0 ) disp = "---";
-		printf( "%s\t%s\n", disp, e->d_name );
-		testc++;
+		printf( "\n\n\tcritical error in tests - aborting now\n\n" );
+		exit( 1 );
 	}
-	closedir( d );
-	printf( "\n%8d tests found...\n\n", testc );
 }
 
 static void exec_test( const char* fname, const char* nameonly, int disp )
 {
+	FILE* fp, *fpe;
 	int retval;
 	sgs_Context* C;
 	double tm1, tm2;
 
-	char* code = get_file_contents( fname );
-	if( !code )
-		return;
-	C = sgs_CreateEngine();
+	fpe = fopen( outfile_errors, "a" );
+	numallocs = 0;
+	C = sgs_CreateEngineExt( ext_memfunc, NULL );
+	sgs_SetPrintFunc( C, SGSPRINTFN_DEFAULT, fpe );
 
-	printf( "\t> running \"%s\" (%s)...\n", nameonly, disp == 0 ? "..." : ( disp >= 0 ? "+++" : "---" ) );
+	fprintf( fpe, ">>> test: %s\n", nameonly );
+	printf( "> running %20s (%s)...\t", nameonly, disp == 0 ? "..." : ( disp >= 0 ? "+++" : "---" ) );
 
 	if( strstr( nameonly, "TF" ) != NULL )
 	{
-		fclose( fopen( outfile_internal, "w" ) );
-		setoutput( outfile_internal );
+		fp = fopen( outfile_internal, "w" );
+		sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, fp );
 		prepengine( C );
+		fclose( fp );
 	}
 
-	setoutput( outfile );
-	printf( "//\n/// O U T P U T  o f  %s\n//\n\n", nameonly );
+	fp = fopen( outfile, "a" );
+	sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, fp );
+	fprintf( fp, "//\n/// O U T P U T  o f  %s\n//\n\n", nameonly );
 
-	tm1 = gettime();
-	retval = sgs_ExecString( C, code );
-	tm2 = gettime();
+	tm1 = sgs_GetTime();
+	retval = sgs_ExecFile( C, fname );
+	tm2 = sgs_GetTime();
 
-	printf( "\n\n" );
-	setoutput( NULL );
+	fprintf( fp, "\n\n" );
+	fclose( fp );
+	sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, stdout );
 
 /*	if( disp )	*/
 	{
 		int has_errors = retval == SGS_SUCCESS ? 1 : -1;
-		const char* sucfail = has_errors * disp >= 0 ? "| \tOK" : "| \tFAIL";
+		const char* sucfail = has_errors * disp >= 0 ? "| OK" : "| FAIL";
 		if( has_errors * disp < 0 )
 			tests_failed++;
 		if( disp == 0 && has_errors > 0 ) sucfail = "";
-		printf( "\t\t\ttime: %f seconds %s\n", tm2 - tm1, sucfail );
+		printf( "time: %f seconds %s", tm2 - tm1, sucfail );
 	}
-
-	printf( "\t\t\t    -\t" );
-	check_context( C );
+	checkdestroy_context( C );
+	fclose( fpe );
 	printf( "\n" );
-	sgs_DestroyEngine( C );
-	printf( "\n\n" );
-	free( code );
 }
 
 static void exec_tests()
@@ -252,6 +178,7 @@ static void exec_tests()
 	char namebuf[ 260 ];
 
 	fclose( fopen( outfile, "w" ) );
+	fclose( fopen( outfile_errors, "w" ) );
 	printf( "\n" );
 
 	while( ( e = readdir( d ) ) != NULL )
@@ -278,22 +205,17 @@ __cdecl
 #endif
 main( int argc, char** argv )
 {
-#if __linux__
-	int saved_stdout = dup( 1 );
-	sprintf( stdout_buf, "/dev/fd/%d", saved_stdout );
-#endif
-	printf( "//\n/// SGScript test framework\n//\n" );
+	printf( "\n//\n/// SGScript test framework\n//\n" );
 
 	if( argc > 1 )
 	{
 		printf( "\n/// Executing test %s...\n", argv[ 1 ] );
 		fclose( fopen( outfile, "w" ) );
+		fclose( fopen( outfile_errors, "w" ) );
 		exec_test( argv[ 1 ], argv[ 1 ], 0 );
 		return 0;
 	}
 
-	count_tests();
-	printf( "\n/// Executing tests...\n" );
 	exec_tests();
 
 	printf( "\n///\n/// Tests failed:  %d  / %d\n///\n", tests_failed, tests_executed );

@@ -623,6 +623,11 @@ typedef sgs_Variable* sgs_VarPtr;
 struct _sgs_Context
 {
 	uint32_t      version;
+
+	/* output */
+	sgs_OutputFunc output_fn; /* output function */
+	void*         output_ctx; /* output context */
+
 	/* info output */
 	int           minlev;
 	sgs_PrintFunc print_fn;  /* printing function */
