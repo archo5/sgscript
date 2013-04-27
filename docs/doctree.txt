@@ -3,10 +3,40 @@ return
 	"intro" =
 	{
 		"intro.why" = {},
-		"intro.features" = {}
+		"intro.features" = {},
 	},
 	"sgscript" =
 	{
-		"sgscript.lang" = {}
-	}
+		"sgscript.lang" = {},
+	},
+	"api" =
+	{
+	},
+	"stdlib" =
+	{
+		"stdlib.io" =
+		{
+		},
+		"stdlib.math" =
+		{
+			"stdlib.math.abs" = {},
+			"stdlib.math.floor" = {},
+			"stdlib.math.ceil" = {},
+			"stdlib.math.round" = {},
+			
+			"stdlib.math.pow" = {},
+			"stdlib.math.sqrt" = {},
+			"stdlib.math.log" = {},
+			
+			"stdlib.math.pi" = {},
+			"stdlib.math.e" = {},
+		},
+		"stdlib.string" =
+		{
+			"stdlib.string_cut" = {},
+		},
+		"stdlib.type" =
+		{
+		},
+	},
 };

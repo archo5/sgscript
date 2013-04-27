@@ -1,3 +1,5 @@
+
+
 <##### intro Intro #####>
 
 <##### intro.why Why SGScript? #####>
@@ -30,6 +32,10 @@ The standard library includes:
 - math, string and type functions
 - eval, file import, DLL import
 
+
+
+
+
 <##### sgscript SGScript #####>
 
 <##### sgscript.lang The Language #####>
@@ -38,3 +44,139 @@ The standard library includes:
 
 There are 8 **data types** in SGScript: **null**, **bool**, **int**, **real**, **string**, **function**, **C function** and **object**. Each of them offers a different set of features and possible values. The values may sometimes overlap, so the language offers automatic conversion between types where and to what extent it is possible.
 
+
+
+
+
+<##### api The API #####>
+
+
+
+
+
+<##### stdlib The Standard Libraries #####>
+
+
+
+<##### stdlib.io I/O library #####>
+
+
+
+<##### stdlib.math Math library #####>
+
+The mathematical functions are pretty much a direct implementation from those of the C runtime library. The functions and constants are loaded by using the include_library function:
+
+    include_library( "math" );
+
+
+<##### stdlib.math.abs abs() [function] #####>
+
+== abs( x )
+=== returns the absolute value of `x`, as `real`
+
+    printvar( abs( 2.2 ) ); // real (2.2)
+    printvar( abs( -3.1 ) ); // real (3.1)
+
+
+<##### stdlib.math.floor floor() [function] #####>
+
+== floor( x )
+=== returns the largest integer that is not bigger than `x`, as `real`
+
+    printvar( floor( 3.4 ) ); // real (3)
+    printvar( floor( 3.8 ) ); // real (3)
+    printvar( floor( 4.2 ) ); // real (4)
+    printvar( floor( -3.1 ) ); // real (-4)
+
+
+<##### stdlib.math.ceil ceil() [function] #####>
+
+== ceil( x )
+=== returns the smallest integer that is not smaller than `x`, as `real`
+
+    printvar( ceil( 3.4 ) ); // real (4)
+    printvar( ceil( 3.8 ) ); // real (4)
+    printvar( ceil( 4.2 ) ); // real (5)
+    printvar( ceil( -3.1 ) ); // real (-3)
+
+
+<##### stdlib.math.round round() [function] #####>
+
+== round( x )
+=== returns the closest integer to `x`, as `real`
+
+    printvar( round( 3.4 ) ); // real (3)
+    printvar( round( 3.8 ) ); // real (4)
+    printvar( round( 4.2 ) ); // real (4)
+    printvar( round( -3.1 ) ); // real (-3)
+
+
+<##### stdlib.math.pow pow() [function] #####>
+
+== pow( x, y )
+=== returns `x` raised to the power `y`, as `real`
+
+- If base (`x`) is negative and exponent (`y`) is not an integral value, or if base is zero and exponent is negative, function returns `null` and emits a warning message.
+
+    printvar( pow( 2, 5 ) ); // real (32)
+    printvar( pow( 9, 0.5 ) ); // real (3)
+    printvar( pow( -1, 0.5 ) ); // null; Warning: pow() - mathematical error
+
+
+<##### stdlib.math.sqrt sqrt() [function] #####>
+
+== sqrt( x )
+=== returns the square root of `x`, as `real`
+
+- If `x` is negative, function returns `null` and emits a warning message
+
+    printvar( sqrt( 16 ) ); // real (4)
+    printvar( sqrt( -1 ) ); // null; Warning: sqrt() - mathematical error
+
+
+<##### stdlib.math.log log() [function] #####>
+
+== log( x, y )
+=== returns the base-`y` logarithm of `x`, as `real`
+
+    printvar( log( 9, 3 ) ); // real (2)
+
+
+<##### stdlib.math.pi M_PI [constant] #####>
+
+== M_PI
+=== the ratio of circumference of a circle to its diameter (pi)
+
+- the value of this constant is `3.14159265358979323846`
+
+
+<##### stdlib.math.e M_E [constant] #####>
+
+== M_E
+=== the natural logarithmic base (e)
+
+- the value of this constant is `2.7182818284590452354`
+
+
+
+<##### stdlib.string String library #####>
+
+String manipulation functions. The functions and constants are loaded by using the include_library function:
+
+    include_library( "string" );
+
+
+<##### stdlib.string_cut string_cut() [function] #####>
+
+== string_cut( string str, int from[, int to[, int flags]] )
+=== returns a part of string `str`, `from` and `to` being positions of the first and last character returned, respectively
+
+- if `to` is not specified, `to` is assumed to be the position of the last character in string `str`
+- if `from` or `to` are negative, they point to characters before the end of string (-1 being the last one)
+- available values for `flags`:
+-- `NO_REV_INDEX` - emit warnings on negative indices, instead of handling them
+-- `STRICT_RANGES` - emit warnings on out of bounds `from`/`to` values instead of silently ignoring the outside characters
+
+
+
+<##### stdlib.type Type library #####>

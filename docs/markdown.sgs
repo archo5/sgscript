@@ -67,7 +67,7 @@ function markdown2html( text )
 		hstack = [];
 		for( i = 0; i < text.length; ++i )
 		{
-			chr = string_cut( text, i, i );
+			chr = text[ i ];
 			if( chr == "*" )
 			{
 				if( i + 1 < text.length && string_cut( text, i+1, i+1 ) == "*" ) // bold
@@ -127,6 +127,28 @@ function markdown2html( text )
 			}
 			if( i >= lines.size ) i--;
 			lines[ i ] $= uladjust( ulevel, 0 ) $ "<p>";
+		}
+		else if( string_part( L, 0, 2 ) == "! " )
+		{
+			lines[ i ] = "<em>" $ mdinline( string_trim( L, "! ", LEFT ) ) $ "</em>";
+		}
+		else if( string_part( L, 0, 4 ) == "    " )
+		{
+			lines[ i ] = "</p><pre>" $ string_part( L, 4 );
+			i++;
+			while( i < lines.size )
+			{
+				L = lines[ i ];
+				if( string_part( L, 0, 4 ) != "    " )
+				{
+					i--;
+					break;
+				}
+				lines[ i ] = string_part( L, 4 );
+				i++;
+			}
+			if( i >= lines.size ) i--;
+			lines[ i ] $= "</pre><p>";
 		}
 		else if( string_part( L, 0, 2 ) == "==" )
 		{

@@ -319,54 +319,94 @@ SGSRESULT sgs_LoadLib_IO( SGS_CTX )
 
 /* libraries -  M A T H  */
 
-#define MATHFUNC( name ) \
+#define SGS_PI 3.14159265358979323846
+#define SGS_E 2.7182818284590452354
+
+static sgs_Real myround( sgs_Real x )
+{
+	return floor( x + 0.5 ) - 0.5;
+}
+
+static int sgsstd_pow( SGS_CTX )
+{
+	sgs_Real b, e;
+	if( sgs_StackSize( C ) != 2 || !sgs_ParseReal( C, 0, &b ) || !sgs_ParseReal( C, 1, &e ) )
+		STDLIB_WARN( "pow() - unexpected arguments; function expects 2 arguments: real, real" )
+	if( ( b < 0 && e != (sgs_Real) (sgs_Integer) e )
+		|| ( b == 0 && e < 0 ) )
+		STDLIB_WARN( "pow() - mathematical error" )
+	sgs_PushReal( C, pow( b, e ) );
+	return 1;
+}
+
+static int sgsstd_sqrt( SGS_CTX )
+{
+	sgs_Real arg0;
+	if( sgs_StackSize( C ) != 1 || !sgs_ParseReal( C, 0, &arg0 ) )
+		STDLIB_WARN( "sqrt() - unexpected arguments; function expects 1 argument: real" )
+	if( arg0 < 0 )
+		STDLIB_WARN( "sqrt() - mathematical error" )
+	sgs_PushReal( C, sqrtf( arg0 ) );
+	return 1;
+}
+
+static int sgsstd_log( SGS_CTX )
+{
+	sgs_Real x, b;
+	if( sgs_StackSize( C ) != 2 || !sgs_ParseReal( C, 0, &x ) || !sgs_ParseReal( C, 1, &b ) )
+		STDLIB_WARN( "log() - unexpected arguments; function expects 2 arguments: real, real" )
+	if( x < 0 )
+		STDLIB_WARN( "log() - mathematical error" )
+	sgs_PushReal( C, log( x ) / log( b ) );
+	return 1;
+}
+
+#define MATHFUNC_CN( name, orig ) \
 static int sgsstd_##name( SGS_CTX ) { \
 	sgs_Real arg0; \
 	if( sgs_StackSize( C ) != 1 || !sgs_ParseReal( C, 0, &arg0 ) ) \
 		STDLIB_WARN( #name "() - unexpected arguments; function expects 1 argument: real" ) \
-	sgs_PushReal( C, name( arg0 ) ); \
+	sgs_PushReal( C, orig( arg0 ) ); \
 	return 1; }
+#define MATHFUNC( name ) MATHFUNC_CN( name, name )
 
-#define MATHFUNC2( name ) \
+#define MATHFUNC2_CN( name, orig ) \
 static int sgsstd_##name( SGS_CTX ) { \
 	sgs_Real arg0, arg1; \
 	if( sgs_StackSize( C ) != 2 || !sgs_ParseReal( C, 0, &arg0 ) || !sgs_ParseReal( C, 1, &arg1 ) ) \
 		STDLIB_WARN( #name "() - unexpected arguments; function expects 2 arguments: real, real" ) \
-	sgs_PushReal( C, name( arg0, arg1 ) ); \
+	sgs_PushReal( C, orig( arg0, arg1 ) ); \
 	return 1; }
+#define MATHFUNC2( name ) MATHFUNC2_CN( name, name )
 
-MATHFUNC( abs )
-MATHFUNC( sqrt )
-MATHFUNC( log )
-MATHFUNC( log10 )
-MATHFUNC( exp )
+MATHFUNC_CN( abs, fabs )
 MATHFUNC( floor )
 MATHFUNC( ceil )
+MATHFUNC_CN( round, myround )
+
 MATHFUNC( sin )
 MATHFUNC( cos )
 MATHFUNC( tan )
 MATHFUNC( asin )
 MATHFUNC( acos )
 MATHFUNC( atan )
-
-MATHFUNC2( pow )
 MATHFUNC2( atan2 )
-MATHFUNC2( fmod )
 
 
 static const sgs_RegRealConst m_rconsts[] =
 {
-	{ "vPI", M_PI },
-	{ "vE", M_E },
+	{ "M_PI", SGS_PI },
+	{ "M_E", SGS_E },
 };
 
 #define FN( x ) { #x, sgsstd_##x }
 
 static const sgs_RegFuncConst m_fconsts[] =
 {
-	FN( abs ), FN( sqrt ), FN( log ), FN( log10 ), FN( exp ), FN( floor ), FN( ceil ),
-	FN( sin ), FN( cos ), FN( tan ), FN( asin ), FN( acos ), FN( atan ),
-	FN( pow ), FN( atan2 ), FN( fmod ),
+	FN( abs ), FN( floor ), FN( ceil ), FN( round ),
+	FN( pow ), FN( sqrt ), FN( log ),
+	FN( sin ), FN( cos ), FN( tan ),
+	FN( asin ), FN( acos ), FN( atan ), FN( atan2 ),
 };
 
 SGSRESULT sgs_LoadLib_Math( SGS_CTX )
