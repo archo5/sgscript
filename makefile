@@ -31,6 +31,8 @@ else
 	OUTFILE = $(OUTDIR)/sgscript$(LIBEXT)
 endif
 
+LFLAGS += -ldl
+
 SRCDIR=src
 LIBDIR=lib
 EXTDIR=ext
