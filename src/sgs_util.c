@@ -645,7 +645,8 @@ void quicksort( void *array, size_t length, size_t size,
 		--recursion;
 
 	    /* Determine a pivot (in the middle) and move it to the end */
-		SWAP(left + (((right - left) >> 1) & (~(size - 1))),right,size)
+	    /* @modification@ changed the left address to something that works */
+		SWAP(left + (((right - left) >> 1) / size * size),right,size)
 
 	    /* From left to right */
 		while (index < right)
@@ -733,19 +734,19 @@ void quicksort( void *array, size_t length, size_t size,
 	}
 #endif
 
-	/* Recurse into the smaller partition first */
-	if (store - left < right - store)
-	{
-	/* Left side is smaller */
-		SORT_RIGHT
+		/* Recurse into the smaller partition first */
+		if (store - left < right - store)
+		{
+		/* Left side is smaller */
+			SORT_RIGHT
+			SORT_LEFT
+
+			continue;
+		}
+
+		/* Right side is smaller */
 		SORT_LEFT
-
-		continue;
-	}
-
-	/* Right side is smaller */
-	SORT_LEFT
-	SORT_RIGHT
+		SORT_RIGHT
 
 #undef RECURSE_LEFT
 #undef RECURSE_RIGHT
