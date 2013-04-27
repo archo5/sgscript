@@ -8,7 +8,7 @@ ifdef SystemRoot
 else
 	RM = rm -f
 	FixPath = $1
-	PLATFLAGS = 
+	PLATFLAGS = -ldl
 	BINEXT=
 	LIBEXT=.so
 endif
@@ -30,8 +30,6 @@ else
 	OUTLIB = sgscript$(LIBEXT)
 	OUTFILE = $(OUTDIR)/sgscript$(LIBEXT)
 endif
-
-LFLAGS += -ldl
 
 SRCDIR=src
 LIBDIR=lib
