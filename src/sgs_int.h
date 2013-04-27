@@ -539,7 +539,6 @@ sgs_func_t;
 typedef struct _sgs_string_t
 {
 	int32_t refcount;
-	int32_t mem;
 	int32_t size;
 }
 sgs_string_t;

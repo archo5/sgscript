@@ -47,6 +47,12 @@ typedef unsigned __int64 uint64_t;
 #  endif
 #endif
 
+#ifdef _WIN32
+#  define SGS_MODULE_EXT ".dll"
+#else
+#  define SGS_MODULE_EXT ".so"
+#endif
+
 
 /* http://stackoverflow.com/a/2103095/1648140 */
 

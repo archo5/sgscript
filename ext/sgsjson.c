@@ -428,8 +428,52 @@ int encode_var( SGS_CTX, MemBuf* buf )
 		sgs_Printf( C, SGS_WARNING, -1, "json_encode: cannot encode functions" );
 		return 0;
 	case SVT_OBJECT:
-		sgs_Printf( C, SGS_WARNING, -1, "TODO" );
-		return 0;
+		{
+			/* stack: Obj */
+			sgs_Variable idx;
+			int isarr = sgs_IsArray( C, &var ), first = 1;
+			membuf_appchr( buf, C, isarr ? '[' : '{' );
+			if( sgs_PushIterator( C, -1 ) != SGS_SUCCESS )
+				return 0;
+			/* stack: Obj, Iter */
+			while( sgs_PushNextKey( C, -1 ) > 0 )
+			{
+				/* stack: Obj, Iter, Key */
+				if( first ) first = 0;
+				else membuf_appchr( buf, C, ',' );
+
+				if( !isarr )
+				{
+					int nsk = sgs_ItemType( C, -1 ) != SVT_STRING;
+					if( nsk )
+					{
+						sgs_PushItem( C, -1 );
+						sgs_ToString( C, -1 );
+					}
+					if( !encode_var( C, buf ) )
+						return 0;
+					if( nsk )
+						sgs_Pop( C, 1 );
+					membuf_appchr( buf, C, ':' );
+				}
+
+				if( !sgs_GetStackItem( C, -1, &idx )
+					|| sgs_PushIndex( C, &var, &idx ) != SGS_SUCCESS )
+					return 0;
+				/* stack: Obj, Iter, Key, Value */
+				sgs_PopSkip( C, 1, 1 );
+				/* stack: Obj, Iter, Value */
+				if( !encode_var( C, buf ) )
+					return 0;
+				/* stack: -- (?) */
+				sgs_Pop( C, 1 );
+				/* stack: Obj, Iter */
+			}
+			sgs_Pop( C, 1 );
+			/* stack: Obj */
+			membuf_appchr( buf, C, isarr ? ']' : '}' );
+			return 1;
+		}
 	}
 	return 0;
 }

@@ -479,7 +479,7 @@ static const char* g_ifitems[] =
 	"end", "destruct", "clone", "gettype", "getprop", "setprop",
 	"getindex", "setindex", "tobool", "toint", "toreal", "tostring",
 	"dump", "gcmark", "getiter", "nextkey", "call", "compare",
-	"add", "sub", "mul", "div", "mod", "negate"
+	"add", "sub", "mul", "div", "mod", "negate", "flags"
 };
 
 static void ctx_print_safe( SGS_CTX, const char* str, sgs_SizeVal size )
@@ -491,7 +491,8 @@ static void ctx_print_safe( SGS_CTX, const char* str, sgs_SizeVal size )
 			sgs_Write( C, str, 1 );
 		else
 		{
-			char buf[ 4 ] = { '\\', 'x', (*str & 0xf0) >> 4, *str & 0xf };
+			static const char* hexdigs = "0123456789ABCDEF";
+			char buf[ 4 ] = { '\\', 'x', hexdigs[ (*str & 0xf0) >> 4 ], hexdigs[ *str & 0xf ] };
 			sgs_Write( C, buf, 4 );
 		}
 		str++;
@@ -500,14 +501,15 @@ static void ctx_print_safe( SGS_CTX, const char* str, sgs_SizeVal size )
 
 static void dumpobj( SGS_CTX, sgs_VarObj* p )
 {
-	char buf[ 256 ];
+	char buf[ 320 ];
 	void** ci = p->iface;
 	buf[0] = 0;
 	while( *ci )
 	{
+		int osi = ((int)*ci) == SOP_FLAGS ? ARRAY_SIZE( g_ifitems ) - 1 : ((int)*ci);
 		if( *buf )
 			strcat( buf, "," );
-		strcat( buf, g_ifitems[ (int) *ci ] );
+		strcat( buf, g_ifitems[ osi ] );
 		ci += 2;
 	}
 	sgs_Writef( C, "OBJECT %p refcount=%d data=%p iface=%p (%s) prev=%p next=%p redblue=%s destroying=%s",
@@ -525,7 +527,7 @@ static void dumpvar( SGS_CTX, sgs_Variable* var )
 	case SVT_REAL: sgs_Writef( C, " = %f", var->data.R ); break;
 	case SVT_STRING:
 		sgs_Writef( C, " [rc:%d] = \"", var->data.S->refcount );
-		ctx_print_safe( C, var_cstr( var ), 16 );
+		ctx_print_safe( C, var_cstr( var ), MIN( var->data.S->size, 16 ) );
 		sgs_Writef( C, var->data.S->size > 16 ? "...\"" : "\"" );
 		break;
 	case SVT_FUNC:

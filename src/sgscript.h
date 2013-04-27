@@ -58,6 +58,7 @@ extern "C" {
 #  define SOP_DIV SGS_OP_DIV
 #  define SOP_MOD SGS_OP_MOD
 #  define SOP_NEGATE SGS_OP_NEGATE
+#  define SOP_FLAGS SGS_OP_FLAGS
 #endif
 
 
@@ -184,6 +185,7 @@ struct sgs_ObjData
 	void** iface;
 	sgs_VarObj* prev;   /* pointer to previous GC object */
 	sgs_VarObj* next;   /* pointer to next GC object */
+	uint16_t flags;     /* features of the object */
 	uint8_t redblue;    /* red or blue? mark & sweep */
 	uint8_t destroying; /* whether the variable is already in a process of destruction.
 	                       for container circ. ref. handling. */
@@ -237,6 +239,9 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
 #define SGS_OP_DIV        SGS_OP( 21 )
 #define SGS_OP_MOD        SGS_OP( 22 )
 #define SGS_OP_NEGATE     SGS_OP( 23 )
+
+#define SGS_OP_FLAGS      SGS_OP(100)
+#define SGS_OBJ_ARRAY     0x01
 
 
 /* Engine context */
@@ -450,6 +455,9 @@ SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out );
 SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Integer* out );
 SGSBOOL sgs_ParseReal( SGS_CTX, int item, sgs_Real* out );
 SGSBOOL sgs_ParseString( SGS_CTX, int item, char** out, sgs_SizeVal* size );
+
+SGSRESULT sgs_PushIterator( SGS_CTX, int item );
+SGSMIXED sgs_PushNextKey( SGS_CTX, int item );
 
 SGSBOOL sgs_IsArray( SGS_CTX, sgs_Variable* var );
 SGSMIXED sgs_ArraySize( SGS_CTX, sgs_Variable* var );

@@ -695,6 +695,7 @@ static void* sgsstd_array_functable[] =
 	SOP_DUMP, sgsstd_array_dump,
 	SOP_GCMARK, sgsstd_array_gcmark,
 	SOP_GETITER, sgsstd_array_getiter,
+	SOP_FLAGS, SGS_OP( SGS_OBJ_ARRAY ),
 	SOP_END,
 };
 

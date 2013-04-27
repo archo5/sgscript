@@ -146,7 +146,6 @@ static void var_create_0str( SGS_CTX, sgs_VarPtr out, int32_t len )
 	out->data.S = sgs_Alloc_a( string_t, len + 1 );
 	out->data.S->refcount = 1;
 	out->data.S->size = len;
-	out->data.S->mem = len;
 	var_cstr( out )[ len ] = 0;
 }
 
@@ -167,6 +166,7 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 	obj->data = data;
 	obj->destroying = 0;
 	obj->iface = iface;
+	obj->flags = 0;
 	obj->redblue = C->redblue;
 	obj->next = C->objs;
 	obj->prev = NULL;
@@ -175,6 +175,19 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 		obj->next->prev = obj;
 	C->objcount++;
 	C->objs = obj;
+
+	{
+		void** i = iface;
+		while( *i )
+		{
+			if( i[0] == SOP_FLAGS )
+			{
+				obj->flags = (uint16_t) (size_t) i[1];
+				break;
+			}
+			i += 2;
+		}
+	}
 
 	out->type = SVT_OBJECT;
 	out->data.O = obj;
@@ -1321,40 +1334,47 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 }
 
 
-static void vm_forprep( SGS_CTX, int outiter, sgs_VarPtr obj )
+static int vm_forprep( SGS_CTX, int outiter, sgs_VarPtr obj )
 {
-	int ret;
+	int ret, ssz = STACKFRAMESIZE;
 
 	if( obj->type != SVT_OBJECT )
 	{
 		sgs_Printf( C, SGS_ERROR, -1, "Variable of type '%s' doesn't have an iterator", sgs_VarNames[ obj->type ] );
 		stk_setvar_null( C, outiter );
-		return;
+		return SGS_ENOTSUP;
 	}
 
 	ret = obj_exec( C, SOP_GETITER, obj->data.O, 0 );
 	if( ret != SGS_SUCCESS )
 	{
+		sgs_Pop( C, STACKFRAMESIZE - ssz );
 		sgs_Printf( C, SGS_ERROR, -1, "Object [%p] doesn't have an iterator", obj->data.O );
 		stk_setvar_null( C, outiter );
-		return;
+		return SGS_ENOTFND;
 	}
+	sgs_PopSkip( C, STACKFRAMESIZE - ssz - 1, 1 );
 	stk_setvar( C, outiter, stk_getpos( C, -1 ) );
 	stk_pop1( C );
+	return SGS_SUCCESS;
 }
 
-static void vm_fornext( SGS_CTX, int outkey, int outstate, sgs_VarPtr iter )
+static int vm_fornext( SGS_CTX, int outkey, int outstate, sgs_VarPtr iter )
 {
+	int ssz = STACKFRAMESIZE;
 	if( iter->type != SVT_OBJECT || obj_exec( C, SOP_NEXTKEY, iter->data.O, 0 ) != SGS_SUCCESS )
 	{
+		sgs_Pop( C, STACKFRAMESIZE - ssz );
 		sgs_Printf( C, SGS_ERROR, -1, "Failed to retrieve data from iterator" );
 		stk_setvar_null( C, outstate );
-		return;
+		return SGS_EINPROC;
 	}
 
+	sgs_PopSkip( C, STACKFRAMESIZE - ssz - 2, 2 );
 	stk_setvar( C, outkey, stk_getpos( C, -2 ) );
 	stk_setvar( C, outstate, stk_getpos( C, -1 ) );
 	stk_pop2( C );
+	return SGS_SUCCESS;
 }
 
 
@@ -1719,7 +1739,7 @@ int sgsVM_VarSize( sgs_Variable* var )
 	{
 	case SVT_FUNC: out += funct_size( var->data.F ); break;
 	/* case SVT_OBJECT: break; */
-	case SVT_STRING: out += var->data.S->mem + sizeof( string_t ); break;
+	case SVT_STRING: out += var->data.S->size + sizeof( string_t ); break;
 	}
 	return out;
 }
@@ -2051,10 +2071,11 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 						*bptr++ = *source++;
 					else
 					{
+						static const char* hexdigs = "0123456789ABCDEF";
 						bptr[ 0 ] = '\\';
 						bptr[ 1 ] = 'x';
-						bptr[ 2 ] = (*source & 0xf0) >> 4;
-						bptr[ 3 ] = *source & 0xf;
+						bptr[ 2 ] = hexdigs[ (*source & 0xf0) >> 4 ];
+						bptr[ 3 ] = hexdigs[ *source & 0xf ];
 						bptr += 4;
 						source++;
 					}
@@ -2066,7 +2087,7 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 					*bptr++ = '.';
 				}
 				*bptr++ = '"';
-				sgs_PushString( C, buf );
+				sgs_PushStringBuf( C, buf, bptr - buf );
 			}
 			break;
 		case SVT_FUNC: sgs_PushString( C, "SGS function" ); break;
@@ -2423,23 +2444,42 @@ SGSBOOL sgs_ParseString( SGS_CTX, int item, char** out, sgs_SizeVal* size )
 }
 
 
+SGSRESULT sgs_PushIterator( SGS_CTX, int item )
+{
+	int ret;
+	sgs_Variable var;
+	if( !sgs_GetStackItem( C, item, &var ) )
+		return SGS_EBOUNDS;
+	sgs_PushNull( C );
+	ret = vm_forprep( C, stk_absindex( C, -1 ), &var );
+	if( ret != SGS_SUCCESS )
+		sgs_Pop( C, 1 );
+	return ret;
+}
+
+SGSMIXED sgs_PushNextKey( SGS_CTX, int item )
+{
+	int ret;
+	sgs_Variable var;
+	if( !sgs_GetStackItem( C, item, &var ) )
+		return SGS_EBOUNDS;
+	sgs_PushNull( C );
+	sgs_PushNull( C );
+	ret = vm_fornext( C, stk_absindex( C, -2 ), stk_absindex( C, -1 ), &var );
+	if( ret == SGS_SUCCESS )
+	{
+		ret = sgs_GetBool( C, -1 );
+		sgs_Pop( C, 2 - !!ret );
+	}
+	else
+		sgs_Pop( C, 2 );
+	return ret;
+}
+
+
 SGSBOOL sgs_IsArray( SGS_CTX, sgs_Variable* var )
 {
-	void** ifp;
-	int a = 0, b = 0, c = 0;
-
-	if( var->type != SVT_OBJECT )
-		return FALSE;
-
-	ifp = var->data.O->iface;
-	while( *ifp )
-	{
-		if( *ifp == SOP_GETPROP ) a = 1;
-		if( *ifp == SOP_GETINDEX ) b = 1;
-		if( *ifp == SOP_GETITER ) c = 1;
-		ifp += 2;
-	}
-	return a && b && c;
+	return var->type == SVT_OBJECT && ( var->data.O->flags & SGS_OBJ_ARRAY ) == SGS_OBJ_ARRAY;
 }
 
 SGSMIXED sgs_ArraySize( SGS_CTX, sgs_Variable* var )
