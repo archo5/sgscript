@@ -1,5 +1,6 @@
 
 #include <stdarg.h>
+#include <ctype.h>
 
 #define SGS_INTERNAL
 
@@ -36,7 +37,7 @@ static int default_dict_func( SGS_CTX )
 }
 
 
-static void default_outputfn( void* userdata, SGS_CTX, void* ptr, sgs_SizeVal size )
+static void default_outputfn( void* userdata, SGS_CTX, const void* ptr, sgs_SizeVal size )
 {
 	fwrite( ptr, 1, size, (FILE*) userdata );
 }
@@ -162,9 +163,37 @@ void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx )
 	C->output_ctx = ctx;
 }
 
-void sgs_Write( SGS_CTX, void* ptr, sgs_SizeVal size )
+void sgs_Write( SGS_CTX, const void* ptr, sgs_SizeVal size )
 {
 	C->output_fn( C->output_ctx, C, ptr, size );
+}
+
+void sgs_Writef( SGS_CTX, const char* what, ... )
+{
+	char buf[ SGS_OUTPUT_STACKBUF_SIZE ];
+	MemBuf info = membuf_create();
+	int cnt;
+	va_list args;
+	char* ptr = buf;
+
+	va_start( args, what );
+	cnt = SGS_VSPRINTF_LEN( what, args );
+	va_end( args );
+
+	if( cnt >= SGS_OUTPUT_STACKBUF_SIZE )
+	{
+		membuf_resize( &info, C, cnt + 1 );
+		ptr = info.ptr;
+	}
+
+	va_start( args, what );
+	vsprintf( ptr, what, args );
+	va_end( args );
+	ptr[ cnt ] = 0;
+
+	sgs_WriteStr( C, ptr );
+
+	membuf_destroy( &info, C );
 }
 
 
@@ -178,36 +207,33 @@ void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
 
 void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
 {
-	MemBuf info;
+	char buf[ SGS_OUTPUT_STACKBUF_SIZE ];
+	MemBuf info = membuf_create();
 	int cnt;
 	va_list args;
-
-	if( !C->print_fn || type < C->minlev )
-		return;
-
-	info = membuf_create();
+	char* ptr = buf;
 
 	va_start( args, what );
-#ifdef _MSC_VER
-	cnt = _vscprintf( what, args );
-#else
-	cnt = vsnprintf( NULL, 0, what, args );
-#endif
+	cnt = SGS_VSPRINTF_LEN( what, args );
 	va_end( args );
 
-	membuf_resize( &info, C, cnt + 1 );
+	if( cnt >= SGS_OUTPUT_STACKBUF_SIZE )
+	{
+		membuf_resize( &info, C, cnt + 1 );
+		ptr = info.ptr;
+	}
 
 	va_start( args, what );
-	vsprintf( info.ptr, what, args );
+	vsprintf( ptr, what, args );
 	va_end( args );
-	info.ptr[ cnt ] = 0;
+	ptr[ cnt ] = 0;
 
 	if( line < 0 && C->sf_last )
 	{
 		sgs_StackFrameInfo( C, C->sf_last, NULL, NULL, &line );
 	}
 
-	C->print_fn( C->print_ctx, C, type, line, info.ptr );
+	C->print_fn( C->print_ctx, C, type, line, ptr );
 
 	membuf_destroy( &info, C );
 }
@@ -456,7 +482,23 @@ static const char* g_ifitems[] =
 	"add", "sub", "mul", "div", "mod", "negate"
 };
 
-static void dumpobj( FILE* fp, sgs_VarObj* p )
+static void ctx_print_safe( SGS_CTX, const char* str, sgs_SizeVal size )
+{
+	const char* strend = str + size;
+	while( str < strend )
+	{
+		if( *str == ' ' || isgraph( *str ) )
+			sgs_Write( C, str, 1 );
+		else
+		{
+			char buf[ 4 ] = { '\\', 'x', (*str & 0xf0) >> 4, *str & 0xf };
+			sgs_Write( C, buf, 4 );
+		}
+		str++;
+	}
+}
+
+static void dumpobj( SGS_CTX, sgs_VarObj* p )
 {
 	char buf[ 256 ];
 	void** ci = p->iface;
@@ -468,37 +510,36 @@ static void dumpobj( FILE* fp, sgs_VarObj* p )
 		strcat( buf, g_ifitems[ (int) *ci ] );
 		ci += 2;
 	}
-	fprintf( fp, "OBJECT %p refcount=%d data=%p iface=%p (%s) prev=%p next=%p redblue=%s destroying=%s",
+	sgs_Writef( C, "OBJECT %p refcount=%d data=%p iface=%p (%s) prev=%p next=%p redblue=%s destroying=%s",
 		p, p->refcount, p->data, p->iface, buf, p->prev, p->next, p->redblue ? "R" : "B", p->destroying ? "T" : "F" );
 }
 
-static void dumpvar( FILE* fp, sgs_Variable* var )
+static void dumpvar( SGS_CTX, sgs_Variable* var )
 {
-	fprintf( fp, "%s (size:%d)", g_varnames[ var->type ], sgsVM_VarSize( var ) );
+	sgs_Writef( C, "%s (size:%d)", g_varnames[ var->type ], sgsVM_VarSize( var ) );
 	switch( var->type )
 	{
 	case SVT_NULL: break;
-	case SVT_BOOL: fprintf( fp, " = %s", var->data.B ? "true" : "false" ); break;
-	case SVT_INT: fprintf( fp, " = %" PRId64, var->data.I ); break;
-	case SVT_REAL: fprintf( fp, " = %f", var->data.R ); break;
+	case SVT_BOOL: sgs_Writef( C, " = %s", var->data.B ? "true" : "false" ); break;
+	case SVT_INT: sgs_Writef( C, " = %" PRId64, var->data.I ); break;
+	case SVT_REAL: sgs_Writef( C, " = %f", var->data.R ); break;
 	case SVT_STRING:
-		fprintf( fp, " [rc:%d] = \"", var->data.S->refcount );
-		print_safe( fp, var_cstr( var ), 16 );
-		fprintf( fp, var->data.S->size > 16 ? "...\"" : "\"" );
+		sgs_Writef( C, " [rc:%d] = \"", var->data.S->refcount );
+		ctx_print_safe( C, var_cstr( var ), 16 );
+		sgs_Writef( C, var->data.S->size > 16 ? "...\"" : "\"" );
 		break;
 	case SVT_FUNC:
-		fprintf( fp, " [rc:%d] '%s'[%d]%s", var->data.F->refcount,
+		sgs_Writef( C, " [rc:%d] '%s'[%d]%s", var->data.F->refcount,
 			var->data.F->funcname.ptr ? var->data.F->funcname.ptr : "<anonymous>",
 			(int) var->data.F->numargs, var->data.F->gotthis ? " (method)" : "" );
 		break;
-	case SVT_CFUNC: fprintf( fp, " = %p", var->data.C ); break;
-	case SVT_OBJECT: fprintf( fp, " = " ); dumpobj( fp, var->data.O ); break;
+	case SVT_CFUNC: sgs_Writef( C, " = %p", var->data.C ); break;
+	case SVT_OBJECT: sgs_Writef( C, " = " ); dumpobj( C, var->data.O ); break;
 	}
 }
 
 SGSMIXED sgs_Stat( SGS_CTX, int type )
 {
-	FILE* fh = stdout;
 	switch( type )
 	{
 	case SGS_STAT_VERSION: return C->version;
@@ -507,67 +548,67 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 	case SGS_STAT_DUMP_STACK:
 		{
 			sgs_Variable* p = C->stack_base;
-			fprintf( fh, "VARIABLE ---- STACK ---- BASE ----\n" );
+			sgs_WriteStr( C, "VARIABLE ---- STACK ---- BASE ----\n" );
 			while( p < C->stack_top )
 			{
 				if( p == C->stack_off )
 				{
-					fprintf( fh, "VARIABLE ---- STACK ---- OFFSET ----\n" );
+					sgs_WriteStr( C, "VARIABLE ---- STACK ---- OFFSET ----\n" );
 				}
-				fprintf( fh, "VARIABLE " );
-				dumpvar( fh, (sgs_Variable*) p );
-				fprintf( fh, "\n" );
+				sgs_WriteStr( C, "VARIABLE " );
+				dumpvar( C, (sgs_Variable*) p );
+				sgs_WriteStr( C, "\n" );
 				p++;
 			}
-			fprintf( fh, "VARIABLE ---- STACK ---- TOP ----\n" );
+			sgs_WriteStr( C, "VARIABLE ---- STACK ---- TOP ----\n" );
 		}
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_GLOBALS:
 		{
 			HTPair* p = C->data.pairs;
 			HTPair* pend = C->data.pairs + C->data.size;
-			fprintf( fh, "GLOBAL ---- LIST ---- START ----\n" );
+			sgs_WriteStr( C, "GLOBAL ---- LIST ---- START ----\n" );
 			while( p < pend )
 			{
 				if( p->str )
 				{
-					fprintf( fh, "GLOBAL '" );
-					print_safe( fh, p->str, p->size );
-					fprintf( fh, "' = " );
-					dumpvar( fh, (sgs_Variable*) p->ptr );
-					fprintf( fh, "\n" );
+					sgs_WriteStr( C, "GLOBAL '" );
+					ctx_print_safe( C, p->str, p->size );
+					sgs_WriteStr( C, "' = " );
+					dumpvar( C, (sgs_Variable*) p->ptr );
+					sgs_WriteStr( C, "\n" );
 				}
 				p++;
 			}
-			fprintf( fh, "GLOBAL ---- LIST ---- END ----\n" );
+			sgs_WriteStr( C, "GLOBAL ---- LIST ---- END ----\n" );
 		}
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_OBJECTS:
 		{
 			object_t* p = C->objs;
-			fprintf( fh, "OBJECT ---- LIST ---- START ----\n" );
+			sgs_WriteStr( C, "OBJECT ---- LIST ---- START ----\n" );
 			while( p )
 			{
-				dumpobj( fh, p );
-				fprintf( fh, "\n" );
+				dumpobj( C, p );
+				sgs_WriteStr( C, "\n" );
 				p = p->next;
 			}
-			fprintf( fh, "OBJECT ---- LIST ---- END ----\n" );
+			sgs_WriteStr( C, "OBJECT ---- LIST ---- END ----\n" );
 		}
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_FRAMES:
 		{
 			sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
-			fprintf( fh, "FRAME ---- LIST ---- START ----\n" );
+			sgs_WriteStr( C, "FRAME ---- LIST ---- START ----\n" );
 			while( p != NULL )
 			{
 				const char* file, *name;
 				int ln;
 				sgs_StackFrameInfo( C, p, &name, &file, &ln );
-				fprintf( fh, "FRAME \"%s\" in %s, line %d\n", name, file, ln );
+				sgs_Writef( C, "FRAME \"%s\" in %s, line %d\n", name, file, ln );
 				p = p->next;
 			}
-			fprintf( fh, "FRAME ---- LIST ---- END ----\n" );
+			sgs_WriteStr( C, "FRAME ---- LIST ---- END ----\n" );
 		}
 		return SGS_SUCCESS;
 	default:

@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdarg.h>
+#include <ctype.h>
 
 #define SGS_INTERNAL
 
@@ -2034,10 +2035,40 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 		case SVT_REAL: { char buf[ 32 ];
 			sprintf( buf, "real (%g)", var->data.R );
 			sgs_PushString( C, buf ); } break;
-		case SVT_STRING: { char buf[ 48 ]; const char* ddd = "";
-			int32_t len = var->data.S->size; if( len > 32 ){ len = 32; ddd = "..."; }
-			sprintf( buf, "string [%d] \"%.*s%s\"", len, len, var_cstr( var ), ddd );
-			sgs_PushString( C, buf ); } break;
+		case SVT_STRING:
+			{
+				char buf[ 532 ];
+				char* bptr = buf;
+				char* bend = buf + 512;
+				char* source = var_cstr( var );
+				sgs_SizeVal len = var->data.S->size;
+				char* srcend = source + len;
+				sprintf( buf, "string [%d] \"", len );
+				bptr += strlen( buf );
+				while( source < srcend && bptr < bend )
+				{
+					if( *source == ' ' || isgraph( *source ) )
+						*bptr++ = *source++;
+					else
+					{
+						bptr[ 0 ] = '\\';
+						bptr[ 1 ] = 'x';
+						bptr[ 2 ] = (*source & 0xf0) >> 4;
+						bptr[ 3 ] = *source & 0xf;
+						bptr += 4;
+						source++;
+					}
+				}
+				if( source != srcend )
+				{
+					*bptr++ = '.';
+					*bptr++ = '.';
+					*bptr++ = '.';
+				}
+				*bptr++ = '"';
+				sgs_PushString( C, buf );
+			}
+			break;
 		case SVT_FUNC: sgs_PushString( C, "SGS function" ); break;
 		case SVT_CFUNC: sgs_PushString( C, "C function" ); break;
 		case SVT_OBJECT:

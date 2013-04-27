@@ -1,15 +1,9 @@
 
 #include <stdio.h>
 #include <time.h>
-#ifdef _MSC_VER
-#  include "msvc/dirent.c"
-#else
-#  include <dirent.h>
-#endif
-#include <assert.h>
-#if __linux__
-#  include <unistd.h>
-#endif
+
+#define SGS_INTERNAL
+#define SGS_USE_FILESYSTEM
 
 #include "sgscript.h"
 #include "sgs_int.h"
@@ -20,16 +14,90 @@ const char* outfile = "tests-output.log";
 const char* outfile_errors = "tests-errors.log";
 
 
-#ifdef WIN32
-__declspec(dllexport)
-#endif
-int sgscript_main( SGS_CTX )
+
+typedef struct testfile_
 {
-	sgs_PushInt( C, 1337 );
-	sgs_StoreGlobal( C, "imported_var" );
-	sgs_PushBool( C, 1 );
+	char* nameonly;
+	char* fullname;
+	int sucfail;
+	int loadtf;
+	int sortkey;
+}
+testfile;
+
+
+int tf_compare( const void* p1, const void* p2 )
+{
+	testfile* f1 = (testfile*) p1;
+	testfile* f2 = (testfile*) p2;
+	if( f1->sortkey != f2->sortkey )
+		return f1->sortkey - f2->sortkey;
+	return strcmp( f1->nameonly, f2->nameonly );
+}
+
+int load_testfiles( const char* dir, testfile** files, int* count )
+{
+	DIR* d = opendir( dir );
+	struct dirent* e;
+	struct stat sdata;
+	char namebuf[ 260 ];
+
+	int TFM = 32, TFC = 0;
+	testfile* TF = (testfile*) malloc( sizeof( testfile ) * TFM );
+
+	while( ( e = readdir( d ) ) != NULL )
+	{
+		int disp = 0;
+		if( strcmp( e->d_name, "." ) == 0 || strcmp( e->d_name, ".." ) == 0 )
+			continue;
+		if( strncmp( e->d_name, "!_", 2 ) == 0 ) continue;
+		if( strncmp( e->d_name, "s_", 2 ) == 0 ) disp = 1;
+		if( strncmp( e->d_name, "f_", 2 ) == 0 ) disp = -1;
+
+		strcpy( namebuf, dir );
+		strcat( namebuf, "/" );
+		strcat( namebuf, e->d_name );
+		stat( namebuf, &sdata );
+		if( !( sdata.st_mode & S_IFREG ) )
+			continue;
+		
+		if( TFC == TFM )
+		{
+			TFM *= 2;
+			TF = (testfile*) realloc( TF, sizeof( testfile ) * TFM );
+		}
+
+		TF[ TFC ].nameonly = (char*) malloc( strlen( e->d_name ) + 1 );
+		strcpy( TF[ TFC ].nameonly, e->d_name );
+		TF[ TFC ].fullname = (char*) malloc( strlen( namebuf ) + 1 );
+		strcpy( TF[ TFC ].fullname, namebuf );
+		TF[ TFC ].sucfail = disp;
+		TF[ TFC ].loadtf = strstr( e->d_name, "TF" ) != NULL;
+		TF[ TFC ].sortkey = ( disp != 1 ) * 2 + ( disp != -1 ) * 1 + TF[ TFC ].loadtf * 4;
+		TFC++;
+	}
+	closedir( d );
+
+	qsort( TF, TFC, sizeof( testfile ), tf_compare );
+
+	*files = TF;
+	*count = TFC;
 	return 1;
 }
+
+void free_testfiles( testfile* files, int count )
+{
+	testfile* f = files, *fend = files + count;
+	while( f < fend )
+	{
+		free( f->nameonly );
+		free( f->fullname );
+		f++;
+	}
+	free( files );
+}
+
+
 
 
 static void TF_printfn( void* ctx, SGS_CTX, int type, int line, const char* message )
@@ -134,8 +202,8 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 	C = sgs_CreateEngineExt( ext_memfunc, NULL );
 	sgs_SetPrintFunc( C, SGSPRINTFN_DEFAULT, fpe );
 
-	fprintf( fpe, ">>> test: %s\n", nameonly );
-	printf( "> running %20s (%s)...\t", nameonly, disp == 0 ? "..." : ( disp >= 0 ? "+++" : "---" ) );
+	fprintf( fpe, "\n>>> test: %s\n", nameonly );
+	printf( "> running %20s [%s]\t", nameonly, disp == 0 ? " " : ( disp >= 0 ? "+" : "-" ) );
 
 	if( strstr( nameonly, "TF" ) != NULL )
 	{
@@ -157,14 +225,15 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 	fclose( fp );
 	sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, stdout );
 
+	tests_executed++;
 /*	if( disp )	*/
 	{
 		int has_errors = retval == SGS_SUCCESS ? 1 : -1;
-		const char* sucfail = has_errors * disp >= 0 ? "| OK" : "| FAIL";
+		const char* sucfail = has_errors * disp >= 0 ? " OK" : " FAIL";
 		if( has_errors * disp < 0 )
 			tests_failed++;
-		if( disp == 0 && has_errors > 0 ) sucfail = "";
-		printf( "time: %f seconds %s", tm2 - tm1, sucfail );
+		if( disp == 0 && has_errors < 0 ) sucfail = " ~~";
+		printf( "time: %f seconds |%s", tm2 - tm1, sucfail );
 	}
 	checkdestroy_context( C );
 	fclose( fpe );
@@ -173,30 +242,28 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 
 static void exec_tests()
 {
-	DIR* d = opendir( "tests" );
-	struct dirent* e;
-	char namebuf[ 260 ];
-
+	int ret, count;
+	testfile* files, *f, *fend;
 	fclose( fopen( outfile, "w" ) );
 	fclose( fopen( outfile_errors, "w" ) );
 	printf( "\n" );
 
-	while( ( e = readdir( d ) ) != NULL )
+	ret = load_testfiles( "tests", &files, &count );
+	if( !ret )
 	{
-		int disp = 0;
-		if( strcmp( e->d_name, "." ) == 0 || strcmp( e->d_name, ".." ) == 0 )
-			continue;
-		if( strncmp( e->d_name, "!_", 2 ) == 0 ) continue;
-		if( strncmp( e->d_name, "s_", 2 ) == 0 ) disp = 1;
-		if( strncmp( e->d_name, "f_", 2 ) == 0 ) disp = -1;
-
-		tests_executed++;
-		strcpy( namebuf, "tests/" );
-		strcat( namebuf, e->d_name );
-
-		exec_test( namebuf, e->d_name, disp );
+		printf( "\n\nfailed to load tests! aborting...\n\n" );
+		exit( 1 );
 	}
-	closedir( d );
+
+	f = files;
+	fend = files + count;
+	while( f < fend )
+	{
+		exec_test( f->fullname, f->nameonly, f->sucfail );
+		f++;
+	}
+
+	free_testfiles( files, count );
 }
 
 int
@@ -220,9 +287,6 @@ main( int argc, char** argv )
 
 	printf( "\n///\n/// Tests failed:  %d  / %d\n///\n", tests_failed, tests_executed );
 	printf( "..note: some tests may fail in different ways,\nmight want to review the logs..\n\n" );
-/*
-	printf( "\n/// Finished!\nPress 'Enter' to continue..." );
-	getchar();
-*/
+
 	return 0;
 }

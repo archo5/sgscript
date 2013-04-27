@@ -1409,8 +1409,10 @@ static int sgsstd_printvar( SGS_CTX )
 		sgs_Pop( C, 1 );
 	if( sgs_DumpVar( C, depth ) == SGS_SUCCESS )
 	{
-		fputs( sgs_ToString( C, -1 ), stdout );
-		fputs( "\n", stdout );
+		sgs_SizeVal bsz;
+		char* buf = sgs_ToStringBuf( C, -1, &bsz );
+		sgs_Write( C, buf, bsz );
+		sgs_Write( C, "\n", 1 );
 	}
 	else
 		STDLIB_WARN( "printvar(): unknown error while dumping variable" );
@@ -1426,8 +1428,10 @@ static int sgsstd_printvars( SGS_CTX )
 		int res = sgs_DumpVar( C, 5 );
 		if( res == SGS_SUCCESS )
 		{
-			fputs( sgs_ToString( C, -1 ), stdout );
-			fputs( "\n", stdout );
+			sgs_SizeVal bsz;
+			char* buf = sgs_ToStringBuf( C, -1, &bsz );
+			sgs_Write( C, buf, bsz );
+			sgs_Write( C, "\n", 1 );
 		}
 		else
 		{

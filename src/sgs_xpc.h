@@ -18,12 +18,34 @@ typedef unsigned __int64 uint64_t;
 #  endif
 #  define SGS_INLINE
 #  define PRId64 "lld"
+#  define SGS_VSPRINTF_LEN( str, args ) _vscprintf( str, args )
 #else
 #  include <inttypes.h>
 #  define SGS_INLINE inline
+#  define SGS_VSPRINTF_LEN( str, args ) vsnprintf( NULL, 0, str, args )
 #endif
 
 #define UNUSED( x ) (void)(x)
+
+
+#ifdef SGS_USE_FILESYSTEM
+#  include <sys/types.h>
+#  include <sys/stat.h>
+
+#  ifdef _MSC_VER
+#    include <direct.h>
+#    define getcwd _getcwd
+#    define mkdir _mkdir
+#    define rmdir _rmdir
+#    define stat _stat
+#    define S_IFDIR _S_IFDIR
+#    define S_IFREG _S_IFREG
+#    include "msvc/dirent.c"
+#  else
+#    include <unistd.h>
+#    include <dirent.h>
+#  endif
+#endif
 
 
 /* http://stackoverflow.com/a/2103095/1648140 */

@@ -5,28 +5,8 @@
 #undef __STRICT_ANSI__
 #include <math.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-
-#ifdef _WIN32
-#  include <direct.h>
-#  define getcwd _getcwd
-#  define mkdir _mkdir
-#  define rmdir _rmdir
-#  define stat _stat
-#  define S_IFDIR _S_IFDIR
-#  define S_IFREG _S_IFREG
-#else
-#  include <unistd.h>
-#endif
-
-#ifdef _MSC_VER
-#  include "msvc/dirent.c"
-#else
-#  include <dirent.h>
-#endif
-
 #define SGS_INTERNAL
+#define SGS_USE_FILESYSTEM
 
 #include "sgs_int.h"
 
@@ -191,7 +171,7 @@ static int sgsstd_io_stat( SGS_CTX )
 		sgs_PushString( C, "type" );
 		if( data.st_mode & S_IFDIR )
 			sgs_PushInt( C, FST_DIR );
-		else if( data.st_mode * S_IFREG )
+		else if( data.st_mode & S_IFREG )
 			sgs_PushInt( C, FST_FILE );
 		else
 			sgs_PushInt( C, FST_UNKNOWN );

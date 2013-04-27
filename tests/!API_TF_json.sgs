@@ -1,6 +1,6 @@
 
 include_library( "type" );
-include_shared( "sgsjson.dll" );
+include_shared( "sgsjson" );
 
 function tostr( x )
 {

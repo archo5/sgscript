@@ -69,14 +69,15 @@ include_file( "tests/s_fnexp.txt", true );
 testEqual( typeof( sqr ), "func", "include_file - did force-rewrite the variable?" );
 
 
+var libfile = "bin/sgsjson";
 	section( "include_shared" );
-testEqual( include_shared( "bin/sgstest.exe" ), true, "include_shared - sgscript_main call [1]" );
-testEqual( imported_var, 1337, "include_shared - sgscript_main call [2]" );
+testEqual( include_shared( libfile ), true, "include_shared - sgscript_main call [1]" );
+testEqual( json_decode$'', 'C Function', "include_shared - sgscript_main call [2]" );
 
 	section( "import_cfunc" );
-testEqual( typeof( import_cfunc( "bin/sgstest.exe", "sgscript_main" ) ), "cfunc", "import_cfunc - retrieval of entry point" );
+testEqual( typeof( import_cfunc( libfile, "sgscript_main" ) ), "cfunc", "import_cfunc - retrieval of entry point" );
 ERRORS = ""; testEqual( import_cfunc( "bin/nosuchfile", "sgscript_main" ), null, "import_cfunc - invalid file name" ); testEqual( ERRORS, "[W:import_cfunc() - file not found]" );
-ERRORS = ""; testEqual( import_cfunc( "bin/sgstest.exe", "nosuchfunc" ), null, "import_cfunc - invalid function name" ); testEqual( ERRORS, "[W:import_cfunc() - procedure not found]" );
+ERRORS = ""; testEqual( import_cfunc( libfile, "nosuchfunc" ), null, "import_cfunc - invalid function name" ); testEqual( ERRORS, "[W:import_cfunc() - procedure not found]" );
 
 
 //

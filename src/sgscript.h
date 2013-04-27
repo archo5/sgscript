@@ -121,7 +121,7 @@ static void* sgs_DefaultMemFunc( void* ud, void* ptr, size_t size )
 typedef void (*sgs_OutputFunc) (
 	void* /* userdata */,
 	sgs_Context* /* ctx / SGS_CTX */,
-	void* /* ptr */,
+	const void* /* ptr */,
 	sgs_SizeVal /* size */
 );
 
@@ -258,7 +258,10 @@ void sgs_DestroyEngine( SGS_CTX );
 /* Core systems */
 #define SGSOUTPUTFN_DEFAULT ((sgs_OutputFunc)-1)
 void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx );
-void sgs_Write( SGS_CTX, void* ptr, sgs_SizeVal size );
+void sgs_Write( SGS_CTX, const void* ptr, sgs_SizeVal size );
+static SGS_INLINE void sgs_WriteStr( SGS_CTX, const char* str )
+	{ sgs_Write( C, str, strlen( str ) ); }
+void sgs_Writef( SGS_CTX, const char* what, ... );
 
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
 void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
