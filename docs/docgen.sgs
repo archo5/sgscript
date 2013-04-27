@@ -1,9 +1,17 @@
 
+println( "--- SGScript documentation generator ---" );
+
 include_library( "string" );
 include_library( "io" );
+include_shared( "sgsjson" );
 
 include_file( "markdown.sgs" );
 
+
+io_dir_create( "out" );
+
+
+println( "parsing documentation file..." );
 
 raw = io_file_read( "docdata.txt" );
 BSEP = "<#####";
@@ -43,6 +51,8 @@ while(true)
 }
 parts.unshift({ path = [], path_str = "", title = "SGScript documentation", body = "" });
 
+println( "parsing web tree..." );
+
 /*
 	PARSE WEB TREE
 */
@@ -60,26 +70,33 @@ function gen_toc( name, tree, parts, bc )
 {
 	out = {};
 	ch = [];
-	printvar(tree);
 	foreach( n, v : tree )
 	{
-		ch.push( n );
+		pn = string_replace( n, ".", "/" );
+		ch.push( pn );
 		if( v !== null )
 		{
-			st = gen_toc( n, v, parts, clone(bc).push(n) );
+			st = gen_toc( n, v, parts, clone(bc).push(pn) );
 			foreach( stn, sti : st )
 				out[ stn ] = sti;
 		}
 	}
 	var rbc = clone(bc);
-	rbc.pop();
-	out[ name ] = { name = part_from_pathstr( parts, name ).title, bc = rbc, ch = ch };
+	if( rbc.size )
+		rbc.pop();
+	out[ string_replace( name, ".", "/" ) ] =
+		{ name = part_from_pathstr( parts, name ).title, bc = rbc, ch = ch };
 	return out;
 }
 toc = gen_toc( "", tree, parts, [] );
-//printvar(toc);
-//io_file_write( 'toc.json', json_encode( toc ) );
 
+println( "writing web tree to out/toc.json..." );
+
+// printvar( toc );
+io_file_write( "out/toc.json", json_encode( toc ) );
+
+
+println( "generating and writing html pages..." );
 
 data = "<h1>SGScript documentation - v0.8.2</h1>";
 
@@ -99,6 +116,9 @@ data $= "<div>";
 foreach( P : parts )
 {
 	h = "h" $ ( P.path.size + 1 );
+
+	content = markdown2html( P.body );
+	io_file_write( "out/" $ string_replace( P.path_str, ".", "-" ) $ ".htm", content );
 	
 	data $= "<div class='item'>";
 	data $= "<a name='" $ P.path_str $ "'></a>";
@@ -106,8 +126,11 @@ foreach( P : parts )
 	data $= P.title;
 	data $= " (" $ P.path_str $ ")";
 	data $= "</" $ h $ ">";
-	data $= markdown2html( P.body );
+	data $= content;
 	data $= "</div>";
 }
 data $= "</div>";
-io_file_write( "docs/test.htm", data );
+io_file_write( "out/test.htm", data );
+
+
+println( "done!" );
