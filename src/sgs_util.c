@@ -475,7 +475,7 @@ static int strtonum_dec( CCH** at, CCH* end, sgs_Integer* outi, sgs_Real* outf )
 	if( *str == '+' || *str == '-' ) str++;
 	while( str < end && decchar( *str ) )
 		str++;
-	if( *str == '.' || *str == 'E' || *str == 'e' )
+	if( str < end && ( *str == '.' || *str == 'E' || *str == 'e' ) )
 		return strtonum_real( at, end, outf );
 	else
 	{
@@ -486,7 +486,7 @@ static int strtonum_dec( CCH** at, CCH* end, sgs_Integer* outi, sgs_Real* outf )
 		if( *str == '+' ) str++;
 		else if( *str == '-' ){ invsign = 1; str++; }
 
-		while( decchar( *str ) )
+		while( str < end && decchar( *str ) )
 		{
 			val *= 10;
 			val += getdec( *str );
@@ -502,7 +502,7 @@ static int strtonum_dec( CCH** at, CCH* end, sgs_Integer* outi, sgs_Real* outf )
 int util_strtonum( CCH** at, CCH* end, sgs_Integer* outi, sgs_Real* outf )
 {
 	CCH* str = *at;
-	if( str == end )
+	if( str >= end )
 		return 0;
 	if( end - str >= 3 && *str == '0' )
 	{

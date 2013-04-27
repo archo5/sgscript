@@ -59,6 +59,7 @@ static int32_t string_inplace_fix( char* str, int32_t len )
 		if( *ipos == '\\' )
 		{
 			ipos++;
+			/* assumption that there's always a character after '\' */
 			if( *ipos >= '0' && *ipos <= '7' )
 			{
 				int oct = *ipos++ - '0';
@@ -81,11 +82,11 @@ static int32_t string_inplace_fix( char* str, int32_t len )
 				case 't': *opos = '\t'; break;
 				case 'v': *opos = '\v'; break;
 				case 'x':
-					if( hexchar( ipos[1] ) && hexchar( ipos[2] ) )
+					if( ipos + 3 < iend && hexchar( ipos[1] ) && hexchar( ipos[2] ) )
 					{
 						*opos = ( gethex( ipos[1] ) << 4 ) | gethex( ipos[2] );
 						ipos += 2;
-						if( hexchar( ipos[1] ) && hexchar( ipos[2] ) )
+						if( ipos + 3 < iend && hexchar( ipos[1] ) && hexchar( ipos[2] ) )
 						{
 							opos++;
 							*opos = ( gethex( ipos[1] ) << 4 ) | gethex( ipos[2] );
