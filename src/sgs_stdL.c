@@ -1294,6 +1294,76 @@ fail:
 	STDLIB_WARN( "string_frombytes() - failed to read the array" )
 }
 
+static int sgsstd_string_utf8_decode( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size, cc = 0;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "string_utf8_decode() - unexpected arguments; function expects 1 argument: string" )
+
+	while( size > 0 )
+	{
+		uint32_t outchar = SGS_UNICODE_INVCHAR;
+		int ret = sgs_utf8_decode( str, size, &outchar );
+		ret = abs( ret );
+		str += ret;
+		size -= ret;
+		sgs_PushInt( C, outchar );
+		cc++;
+	}
+	sgs_PushCFunction( C, C->array_func );
+	sgs_Call( C, cc, 1 );
+	return 1;
+}
+
+static int sgsstd_string_utf8_encode( SGS_CTX )
+{
+	MemBuf buf = membuf_create();
+	sgs_SizeVal size;
+	sgs_Variable arr;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_GetStackItem( C, 0, &arr ) ||
+		!sgs_IsArray( C, &arr ) )
+		STDLIB_WARN( "string_utf8_encode() - unexpected arguments; function expects 1 argument: array" )
+
+	size = sgs_ArraySize( C, &arr );
+	if( size < 0 )
+		goto fail;
+
+	if( sgs_PushIterator( C, 0 ) < 0 )
+		goto fail;
+
+	while( sgs_PushNextKey( C, -1 ) > 0 )
+	{
+		int cnt;
+		char tmp[ 4 ];
+		sgs_Integer cp;
+		sgs_Variable idx;
+		sgs_GetStackItem( C, -1, &idx );
+		if( sgs_PushIndex( C, &arr, &idx ) < 0 )
+			goto fail;
+		cp = sgs_GetInt( C, -1 );
+		cnt = sgs_utf8_encode( cp, tmp );
+		if( !cnt )
+		{
+			strcpy( tmp, SGS_UNICODE_INVCHAR_STR );
+			cnt = SGS_UNICODE_INVCHAR_LEN;
+		}
+		membuf_appbuf( &buf, C, tmp, cnt );
+		sgs_Pop( C, 2 );
+	}
+	sgs_PushStringBuf( C, buf.ptr, buf.size );
+	membuf_destroy( &buf, C );
+	return 1;
+
+fail:
+	membuf_destroy( &buf, C );
+	STDLIB_WARN( "string_utf8_encode() - failed to read the array" )
+}
+
 
 
 #define FN( x ) { #x, sgsstd_##x }
@@ -1313,6 +1383,7 @@ static const sgs_RegFuncConst s_fconsts[] =
 	FN( string_replace ), FN( string_trim ),
 	FN( string_implode ), FN( string_explode ),
 	FN( string_charcode ), FN( string_frombytes ),
+	FN( string_utf8_decode ), FN( string_utf8_encode ),
 };
 
 SGSRESULT sgs_LoadLib_String( SGS_CTX )

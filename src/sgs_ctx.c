@@ -506,7 +506,7 @@ static void dumpobj( SGS_CTX, sgs_VarObj* p )
 	buf[0] = 0;
 	while( *ci )
 	{
-		int osi = ((int)*ci) == SOP_FLAGS ? ARRAY_SIZE( g_ifitems ) - 1 : ((int)*ci);
+		int osi = ((int)*ci) == (int)SOP_FLAGS ? ARRAY_SIZE( g_ifitems ) - 1 : ((int)*ci);
 		if( *buf )
 			strcat( buf, "," );
 		strcat( buf, g_ifitems[ osi ] );

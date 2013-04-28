@@ -161,6 +161,8 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 		case SI_FORNEXT: printf( "FOR_NEXT " ); dump_rcpos( argA ); printf( ", " ); dump_rcpos( argB );
 							printf( " <= " ); dump_rcpos( argC ); break;
 
+		case SI_LOADCONST: printf( "LOADCONST " ); dump_rcpos( argC ); printf( " <= C%d", argE ); break;
+
 		DOP_B( GETVAR );
 		case SI_SETVAR: dump_opcode_b1( "SETVAR", I ); break;
 		DOP_A( GETPROP );
@@ -570,10 +572,32 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 
 
+
+int const_maybeload( SGS_CTX, sgs_CompFunc* func, FTNode* node, int cid )
+{
+	if( cid > 65535 )
+	{
+		sgs_Printf( C, SGS_WARNING, sgsT_LineNum( node->token ), "Maximum number of constants exceeded" );
+		C->state |= SGS_MUST_STOP;
+		return 0;
+	}
+	if( cid < 256 )
+		return CONSTENC( cid );
+	else
+	{
+		int out = comp_reg_alloc( C );
+		INSTR_WRITE_EX( SI_LOADCONST, cid, out );
+		return out;
+	}
+}
+
+#define BC_CONSTENC( cid ) const_maybeload( C, func, node, cid )
+
+
 static void compile_ident( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
 {
 	int16_t pos = add_const_s( C, func, node->token[ 1 ], (const char*) node->token + 2 );
-	*out = CONSTENC( pos );
+	*out = BC_CONSTENC( pos );
 }
 
 
@@ -583,19 +607,19 @@ static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* 
 	if( is_keyword( node->token, "null" ) )
 	{
 		pos = add_const_null( C, func );
-		*out = CONSTENC( pos );
+		*out = BC_CONSTENC( pos );
 		return 1;
 	}
 	if( is_keyword( node->token, "true" ) )
 	{
 		pos = add_const_b( C, func, TRUE );
-		*out = CONSTENC( pos );
+		*out = BC_CONSTENC( pos );
 		return 1;
 	}
 	if( is_keyword( node->token, "false" ) )
 	{
 		pos = add_const_b( C, func, FALSE );
-		*out = CONSTENC( pos );
+		*out = BC_CONSTENC( pos );
 		return 1;
 	}
 	if( *node->token == ST_KEYWORD )
@@ -692,15 +716,15 @@ static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* op
 {
 	if( *node->token == ST_NUMINT )
 	{
-		*opos = CONSTENC( add_const_i( C, func, AS_INTEGER( node->token + 1 ) ) );
+		*opos = BC_CONSTENC( add_const_i( C, func, AS_INTEGER( node->token + 1 ) ) );
 	}
 	else if( *node->token == ST_NUMREAL )
 	{
-		*opos = CONSTENC( add_const_r( C, func, AS_REAL( node->token + 1 ) ) );
+		*opos = BC_CONSTENC( add_const_r( C, func, AS_REAL( node->token + 1 ) ) );
 	}
 	else if( *node->token == ST_STRING )
 	{
-		*opos = CONSTENC( add_const_s( C, func, AS_INT32( node->token + 1 ), (const char*) node->token + 5 ) );
+		*opos = BC_CONSTENC( add_const_s( C, func, AS_INT32( node->token + 1 ), (const char*) node->token + 5 ) );
 	}
 	else
 	{
@@ -1225,7 +1249,7 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 		MemBuf ffn = membuf_create();
 		if( node->child->next->next )
 			rpts( &ffn, C, node->child->next->next );
-		*out = CONSTENC( add_const_f( C, func, nf, ffn.ptr, ffn.size, sgsT_LineNum( node->token ) ) );
+		*out = BC_CONSTENC( add_const_f( C, func, nf, ffn.ptr, ffn.size, sgsT_LineNum( node->token ) ) );
 		membuf_destroy( &ffn, C );
 	}
 	return 1;
@@ -1347,7 +1371,7 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 				if( args % 2 == 0 )
 				{
 					if( *n->token == ST_STRING )
-						pos = CONSTENC( add_const_s( C, func, AS_INT32( n->token + 1 ), (const char*) n->token + 5 ) );
+						pos = BC_CONSTENC( add_const_s( C, func, AS_INT32( n->token + 1 ), (const char*) n->token + 5 ) );
 					else
 						compile_ident( C, func, n, &pos );
 				}

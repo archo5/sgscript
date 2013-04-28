@@ -82,11 +82,11 @@ static int32_t string_inplace_fix( char* str, int32_t len )
 				case 't': *opos = '\t'; break;
 				case 'v': *opos = '\v'; break;
 				case 'x':
-					if( ipos + 3 < iend && hexchar( ipos[1] ) && hexchar( ipos[2] ) )
+					if( ipos + 2 < iend && hexchar( ipos[1] ) && hexchar( ipos[2] ) )
 					{
 						*opos = ( gethex( ipos[1] ) << 4 ) | gethex( ipos[2] );
 						ipos += 2;
-						if( ipos + 3 < iend && hexchar( ipos[1] ) && hexchar( ipos[2] ) )
+						if( ipos + 2 < iend && hexchar( ipos[1] ) && hexchar( ipos[2] ) )
 						{
 							opos++;
 							*opos = ( gethex( ipos[1] ) << 4 ) | gethex( ipos[2] );

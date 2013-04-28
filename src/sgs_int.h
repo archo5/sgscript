@@ -131,6 +131,7 @@
 #  define SI_CALL SGS_SI_CALL
 #  define SI_FORPREP SGS_SI_FORPREP
 #  define SI_FORNEXT SGS_SI_FORNEXT
+#  define SI_LOADCONST SGS_SI_LOADCONST
 #  define SI_GETVAR SGS_SI_GETVAR
 #  define SI_SETVAR SGS_SI_SETVAR
 #  define SI_GETPROP SGS_SI_GETPROP
@@ -430,6 +431,7 @@ typedef enum sgs_Instruction_e
 	SGS_SI_FORPREP,  /* (A:out, B:src)          retrieves the iterator to work the object */
 	SGS_SI_FORNEXT,  /* (A:oky, B:ost, C:iter)  retrieves pending output key/state from iterator */
 
+	SGS_SI_LOADCONST,/* (C:out, E:off)          load a constant to a register */
 	SGS_SI_GETVAR,   /* (A:out, B:name)         <varname> => <value> */
 	SGS_SI_SETVAR,   /* (B:name, C:src)         <varname> <value> => set <value> to <varname> */
 	SGS_SI_GETPROP,  /* (A:out, B:var, C:name)  <var> <prop> => <var> */

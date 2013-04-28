@@ -1522,8 +1522,8 @@ static SGS_INLINE sgs_Variable* const_getvar( sgs_Variable* consts, int32_t coun
 static const char* opnames[] =
 {
 	"nop",  "push", "push_nulls", "pop_n", "pop_reg",  "return", "jump", "jump_if_true", "jump_if_false", "call",
-	"for_prep", "for_next", "getvar", "setvar", "getprop", "setprop", "getindex", "setindex",  "set", "copy",
-	"concat", "negate", "bool_inv", "invert",  "inc", "dec", "add", "sub", "mul", "div", "mod",
+	"for_prep", "for_next", "loadconst", "getvar", "setvar", "getprop", "setprop", "getindex", "setindex", "set",
+	"clone", "concat", "negate", "bool_inv", "invert",  "inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",  "seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte",  "array", "dict"
 };
 static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
@@ -1640,6 +1640,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 #define a1 argA
 #define ARGS_2 const sgs_VarPtr p2 = RESVAR( argB );
 #define ARGS_3 const sgs_VarPtr p2 = RESVAR( argB ), p3 = RESVAR( argC );
+		case SI_LOADCONST: { stk_setlvar( C, argC, cptr + argE ); break; }
 		case SI_GETVAR: { ARGS_2; vm_getvar( C, p1, p2 ); break; }
 		case SI_SETVAR: { ARGS_3; vm_setvar( C, p2, p3 ); break; }
 		case SI_GETPROP: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, FALSE ), p3, FALSE ); break; }

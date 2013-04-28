@@ -163,6 +163,22 @@ testEqual( string_frombytes( 256 ), null, "string_frombytes - invalid integer" )
 testEqual( string_frombytes([ 32, -1, 256 ]), null, "string_frombytes - invalid array" );
 var e_sfbibv = "[W:string_frombytes() - invalid byte value]"; testEqual( ERRORS, e_sfbibv $ e_sfbibv );
 
+	section( "string_utf8_decode" );
+testEqual( string_utf8_decode( "pie" )$"", "[112,105,101]", "string_utf8_decode - ASCII code points" );
+testEqual( string_utf8_decode( "āži" )$"", "[257,382,105]", "string_utf8_decode - baltic code points" );
+testEqual( string_utf8_decode( "код" )$"", "[1082,1086,1076]", "string_utf8_decode - russian code points" );
+testEqual( string_utf8_decode( "標準" )$"", "[27161,28310]", "string_utf8_decode - chinese (?) code points" );
+testEqual( string_utf8_decode( "起頭" )$"", "[36215,38957]", "string_utf8_decode - big code points" );
+testEqual( string_utf8_decode( "\xF0\xAE\xD0\xBD" )$"", "[65533]", "string_utf8_decode - invalid #1" );
+testEqual( string_utf8_decode( "\xD0\xAE\xD0\xBD\xD0" )$"", "[1070,1085,65533]", "string_utf8_decode - invalid #2" );
+
+	section( "string_utf8_encode" );
+testEqual( string_utf8_encode( [112,105,101] ), "pie", "string_utf8_encode - ASCII code points" );
+testEqual( string_utf8_encode( [257,382,105] ), "āži", "string_utf8_encode - baltic code points" );
+testEqual( string_utf8_encode( [1082,1086,1076] ), "код", "string_utf8_encode - russian code points" );
+testEqual( string_utf8_encode( [27161,28310] ), "標準", "string_utf8_encode - chinese (?) code points" );
+testEqual( string_utf8_encode( [36215,38957] ), "起頭", "string_utf8_encode - big code points" );
+
 
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );

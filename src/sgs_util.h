@@ -246,5 +246,16 @@ sgs_Real sgs_util_atof( const char* str, int len );
 void sgs_quicksort( void *array, size_t length, size_t size,
 	int(*compare)(const void *, const void *, void*), void* userdata);
 
+/*
+	UNICODE helper functions
+	- utf8_decode: returns number of bytes parsed (negated if input was invalid)
+	- utf8_encode: returns number of bytes written (up to 4, make sure there's space)
+*/
+#define SGS_UNICODE_INVCHAR 0xfffd
+#define SGS_UNICODE_INVCHAR_STR "\xff\xfd"
+#define SGS_UNICODE_INVCHAR_LEN 2
+int sgs_utf8_decode( char* buf, size_t size, uint32_t* outchar );
+int sgs_utf8_encode( uint32_t ch, char* out );
+
 
 #endif /* SGS_UTIL_H_INCLUDED */
