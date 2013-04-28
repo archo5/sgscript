@@ -746,7 +746,7 @@ static int sgsstd_string_pad( SGS_CTX )
 	int argc;
 	char* str, *pad = " ", *sout;
 	sgs_SizeVal size, padsize = 1;
-	sgs_Integer tgtsize, flags = sgsLEFT | sgsRIGHT, lpad = 0, i;
+	sgs_Integer tgtsize, flags = sgsRIGHT, lpad = 0, i;
 
 	argc = sgs_StackSize( C );
 	if( ( argc < 2 || argc > 4 ) ||
@@ -1219,6 +1219,81 @@ static int sgsstd_string_explode( SGS_CTX )
 	return sgs_Call( C, sgs_StackSize( C ) - 3, 1 ) == SGS_SUCCESS;
 }
 
+static int sgsstd_string_charcode( SGS_CTX )
+{
+	char* a;
+	sgs_SizeVal asize, argc = sgs_StackSize( C );
+	sgs_Integer off = 0;
+
+	if( argc < 1 || argc > 2 ||
+		!sgs_ParseString( C, 0, &a, &asize ) ||
+		( argc == 2 && !sgs_ParseInt( C, 1, &off ) ) )
+		STDLIB_WARN( "string_charcode() - unexpected arguments; function expects 1-2 arguments: string[, int]" )
+
+	if( off < 0 )
+		off += asize;
+
+	if( off < 0 || off >= (sgs_Integer) asize )
+		STDLIB_WARN( "string_charcode() - index out of bounds" )
+
+	sgs_PushInt( C, a[ off ] );
+	return 1;
+}
+
+static int sgsstd_string_frombytes( SGS_CTX )
+{
+	char* buf;
+	int hasone = 0;
+	sgs_SizeVal size, i = 0;
+	sgs_Variable arr;
+	sgs_Integer onecode;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_GetStackItem( C, 0, &arr ) ||
+		( !sgs_IsArray( C, &arr ) && !( hasone = sgs_ParseInt( C, 0, &onecode ) ) ) )
+		STDLIB_WARN( "string_frombytes() - unexpected arguments; function expects 1 argument: array|int" )
+
+	if( hasone )
+	{
+		if( onecode < 0 || onecode > 255 )
+			STDLIB_WARN( "string_frombytes() - invalid byte value" )
+		else
+		{
+			char c = (char) onecode;
+			sgs_PushStringBuf( C, &c, 1 );
+			return 1;
+		}
+	}
+
+	size = sgs_ArraySize( C, &arr );
+	if( size < 0 )
+		goto fail;
+
+	sgs_PushStringBuf( C, NULL, size );
+	buf = sgs_ToString( C, -1 );
+	if( sgs_PushIterator( C, 0 ) < 0 )
+		goto fail;
+
+	while( sgs_PushNextKey( C, -1 ) > 0 )
+	{
+		sgs_Integer b;
+		sgs_Variable idx;
+		sgs_GetStackItem( C, -1, &idx );
+		if( sgs_PushIndex( C, &arr, &idx ) < 0 )
+			goto fail;
+		b = sgs_GetInt( C, -1 );
+		if( b < 0 || b > 255 )
+			STDLIB_WARN( "string_frombytes() - invalid byte value" )
+		buf[ i++ ] = b;
+		sgs_Pop( C, 2 );
+	}
+	sgs_Pop( C, 1 );
+	return 1;
+
+fail:
+	STDLIB_WARN( "string_frombytes() - failed to read the array" )
+}
+
 
 
 #define FN( x ) { #x, sgsstd_##x }
@@ -1237,6 +1312,7 @@ static const sgs_RegFuncConst s_fconsts[] =
 	FN( string_repeat ), FN( string_count ), FN( string_find ), FN( string_find_rev ),
 	FN( string_replace ), FN( string_trim ),
 	FN( string_implode ), FN( string_explode ),
+	FN( string_charcode ), FN( string_frombytes ),
 };
 
 SGSRESULT sgs_LoadLib_String( SGS_CTX )

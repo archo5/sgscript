@@ -255,7 +255,7 @@ The return value is equal to one of the type ID constants.
 == typeof( any var )
 === returns the type name of variable `var`, as `string`
 
-- If `var` is an object and if the object interface function SGS_OP_GETTYPE exists, this function calls it. For more information, see sgs_Typeof@api/typeof
+- If `var` is an object and if the object interface function SGS_OP_GETTYPE exists, this function calls it. For more information, see @__DOCS__/api/typeof<sgs_Typeof>
 
     printvar( typeof( null ) ); // string [4] "null"
     printvar( typeof( true ) ); // string [4] "bool"

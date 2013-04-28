@@ -59,13 +59,14 @@ testEqual( arr.find( 3, true, 2 ), null, "find - strict, offset, empty" );
 
 
 	section( "include_file" );
-testEqual( include_file( "tests/s_fnexp.txt" ), true, "include_file - basic inclusion" );
+f2inc = "tests/s_fnexp.sgs";
+testEqual( include_file( f2inc ), true, "include_file - basic inclusion" );
 global sqr;
 testEqual( typeof( sqr ), "func", "include_file - received the variable?" );
 sqr = null;
-include_file( "tests/s_fnexp.txt" );
+include_file( f2inc );
 testEqual( typeof( sqr ), "null", "include_file - didn't rewrite the variable?" );
-include_file( "tests/s_fnexp.txt", true );
+include_file( f2inc, true );
 testEqual( typeof( sqr ), "func", "include_file - did force-rewrite the variable?" );
 
 

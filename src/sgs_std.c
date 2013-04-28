@@ -759,6 +759,13 @@ static int sgsstd_dict_clone( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
+static int sgsstd_dict_tobool( SGS_CTX, sgs_VarObj* data )
+{
+	HTHDR;
+	sgs_PushBool( C, vht_size( ht ) != 0 );
+	return SGS_SUCCESS;
+}
+
 static int sgsstd_dict_tostring( SGS_CTX, sgs_VarObj* data )
 {
 	HTHDR;
@@ -928,6 +935,7 @@ static void* sgsstd_dict_functable[] =
 	SOP_SETPROP, sgsstd_dict_setprop,
 	SOP_GETINDEX, sgsstd_dict_getindex,
 	SOP_SETINDEX, sgsstd_dict_setindex,
+	SOP_TOBOOL, sgsstd_dict_tobool,
 	SOP_TOSTRING, sgsstd_dict_tostring,
 	SOP_DUMP, sgsstd_dict_dump,
 	SOP_GETTYPE, sgsstd_dict_gettype,

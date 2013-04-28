@@ -36,8 +36,9 @@ function markdown2html( text )
 {
 	function mdinline( text )
 	{
-		function apply_tag( hstack, tag )
+		function apply_tag( hstack, tag, attribs )
 		{
+			attribs = attribs || {};
 			out = "";
 			if( array_find( hstack, tag ) !== null )
 			{
@@ -58,7 +59,16 @@ function markdown2html( text )
 			else
 			{
 				hstack.push( tag );
-				out $= "<"$tag$">";
+				out $= "<"$tag;
+				foreach( k, v : attribs )
+				{
+					out $= " ";
+					out $= k;
+					out $= "=\"";
+					out $= v;
+					out $= "\"";
+				}
+				out $= ">";
 			}
 			return out;
 		}
@@ -68,10 +78,23 @@ function markdown2html( text )
 		for( i = 0; i < text.length; ++i )
 		{
 			chr = text[ i ];
-			if( chr == "@" && i > 0 )
+			if( chr == "@" )
 			{
-				// TODO character code loading and character classification
-				out $= chr;
+				b = ++i;
+				while( i < text.length && text[i] != "<" )
+					i++;
+				if( text[i] != "<" )
+				{
+					out $= text[ b - 1 ];
+					i = b - 1;
+					continue;
+				}
+				href = string_cut( text, b, i - 1 );
+				out $= apply_tag( hstack, "a", {href=href} );
+			}
+			else if( chr == ">" )
+			{
+				out $= apply_tag( hstack, "a" );
 			}
 			else if( chr == "*" )
 			{

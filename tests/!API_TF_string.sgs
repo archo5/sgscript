@@ -60,9 +60,9 @@ ERRORS = ""; testEqual( string_reverse( null ), null, "string_reverse - string c
 
 	section( "string_pad" );
 var string_pad_error_args = "[W:string_pad() - unexpected arguments; function expects 2-4 arguments: string, int, [string], [int]]";
-testEqual( string_pad( b, 8 ), "  WHAT  ", "string_pad - output (even padding)" );
-testEqual( string_pad( b, 9 ), "   WHAT  ", "string_pad - output (odd padding)" );
-testEqual( string_pad( b, 9, 'pad' ), "padWHATad", "string_pad - custom padding string" );
+testEqual( string_pad( b, 8, " ", LEFT|RIGHT ), "  WHAT  ", "string_pad - output (even padding)" );
+testEqual( string_pad( b, 9, " ", LEFT|RIGHT ), "   WHAT  ", "string_pad - output (odd padding)" );
+testEqual( string_pad( b, 9, 'pad', LEFT|RIGHT ), "padWHATad", "string_pad - custom padding string" );
 testEqual( string_pad( b, 8, 'pad', LEFT ), "padpWHAT", "string_pad - left padding only" );
 testEqual( string_pad( b, 8, 'pad', RIGHT ), "WHATadpa", "string_pad - right padding only" );
 testEqual( string_pad( b, 3 ), b, "string_pad - output (no padding)" );
@@ -148,6 +148,20 @@ testEqual( string_explode( "a..b..", ".." )$'', "[a,b,]", "string_explode - SMC 
 testEqual( string_explode( "a....5", ".." )$'', "[a,,5]", "string_explode - SMC empty middle" );
 testEqual( string_explode( "a...5", ".." )$'', "[a,.5]", "string_explode - SMC tricky middle" );
 testEqual( string_explode( "abc5", "" )$'', "[a,b,c,5]", "string_explode - empty separator string" );
+
+	section( "string_charcode" );
+testEqual( string_charcode( "%?" ), 37, "string_charcode - default behavior" );
+testEqual( string_charcode( "%?", -1 ), 63, "string_charcode - reverse indexing" );
+ERRORS = ""; testEqual( string_charcode( "%?", -3 ), null, "string_charcode - invalid reverse index" );
+	testEqual( ERRORS, "[W:string_charcode() - index out of bounds]" );
+
+	section( "string_frombytes" );
+testEqual( string_frombytes( 33 ), "!", "string_frombytes - integer" );
+testEqual( string_frombytes([72,101,108,108,111]), "Hello", "string_frombytes - array" );
+ERRORS = "";
+testEqual( string_frombytes( 256 ), null, "string_frombytes - invalid integer" );
+testEqual( string_frombytes([ 32, -1, 256 ]), null, "string_frombytes - invalid array" );
+var e_sfbibv = "[W:string_frombytes() - invalid byte value]"; testEqual( ERRORS, e_sfbibv $ e_sfbibv );
 
 
 //
