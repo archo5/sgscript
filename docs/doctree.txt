@@ -14,6 +14,21 @@ return
 	},
 	"stdlib" =
 	{
+		"stdlib.primary" =
+		{
+		},
+		"stdlib.array" =
+		{
+		},
+		"stdlib.class" =
+		{
+		},
+		"stdlib.closure" =
+		{
+		},
+		"stdlib.dict" =
+		{
+		},
 		"stdlib.io" =
 		{
 		},
@@ -34,9 +49,14 @@ return
 		"stdlib.string" =
 		{
 			"stdlib.string_cut" = {},
+			"stdlib.string_part" = {},
+			"stdlib.string_reverse" = {},
 		},
 		"stdlib.type" =
 		{
+			"stdlib.type_get" = {},
+			"stdlib.typeof" = {},
+			"stdlib.type.consts" = {},
 		},
 	},
 };

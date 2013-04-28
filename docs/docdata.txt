@@ -16,7 +16,7 @@ For example, *there is no such thing as "exceptions" in the language*. This is t
 The language supports:
 
 - `if/else`, `while`, `for`, `do/while`, `foreach`
-- 8 variable types: null, bool, int, real, string, function, C function, object
+- User-defined data types
 - Multi-level break/continue
 - First-class functions
 
@@ -40,15 +40,13 @@ The standard library includes:
 
 <##### sgscript.lang The Language #####>
 
-! Even though the language is very similar to many others, it is advised to read this section to learn more about the differences. While there will be at most few differences in small scripts, bigger software will require getting used to having some concepts handled completely differently.
-
 There are 8 **data types** in SGScript: **null**, **bool**, **int**, **real**, **string**, **function**, **C function** and **object**. Each of them offers a different set of features and possible values. The values may sometimes overlap, so the language offers automatic conversion between types where and to what extent it is possible.
 
 
 
 
 
-<##### api The API #####>
+<##### api API Reference #####>
 
 
 
@@ -58,13 +56,33 @@ There are 8 **data types** in SGScript: **null**, **bool**, **int**, **real**, *
 
 
 
+<##### stdlib.primary Primary (startup) interface #####>
+
+
+
+<##### stdlib.array Array interface #####>
+
+
+
+<##### stdlib.class Class interface #####>
+
+
+
+<##### stdlib.closure Closure interface #####>
+
+
+
+<##### stdlib.dict Dictionary (`dict`) interface #####>
+
+
+
 <##### stdlib.io I/O library #####>
 
 
 
 <##### stdlib.math Math library #####>
 
-The mathematical functions are pretty much a direct implementation from those of the C runtime library. The functions and constants are loaded by using the include_library function:
+Mathematical functions and constants. The functions and constants are loaded by using the include_library function:
 
     include_library( "math" );
 
@@ -165,6 +183,8 @@ String manipulation functions. The functions and constants are loaded by using t
 
     include_library( "string" );
 
+! These functions operate at the byte level. Most cannot be safely used on strings with multibyte encoding, some cannot provide useful output from such strings at all.
+
 
 <##### stdlib.string_cut string_cut() [function] #####>
 
@@ -177,6 +197,88 @@ String manipulation functions. The functions and constants are loaded by using t
 -- `NO_REV_INDEX` - emit warnings on negative indices, instead of handling them
 -- `STRICT_RANGES` - emit warnings on out of bounds `from`/`to` values instead of silently ignoring the outside characters
 
+    printvar( string_cut( "01234567", 3, 5 ) ); // string [3] "345"
+
+
+<##### stdlib.string_part string_part() [function] #####>
+
+== string_part( string str, int from[, int len[, int flags]] )
+=== returns a part of string `str`, starting at `from`, at most `len` characters
+
+- if `len` is not specified, `len` is assumed to be the number of characters between `from` and the end of string `str`
+- if `from` is negative, it points to characters before the end of string (-1 being the last one)
+- if `len` is negative, the maximum length of returned string is the sum of `len` and string `str` length
+- available values for `flags`:
+-- `NO_REV_INDEX` - emit warnings on negative indices, instead of handling them
+-- `STRICT_RANGES` - emit warnings on out of bounds `from`/`len` values instead of silently ignoring the outside characters
+
+    printvar( string_part( "01234567", 3, 3 ) ); // string [3] "345"
+
+
+<##### stdlib.string_reverse string_reverse() [function] #####>
+
+== string_reverse( string str )
+=== returns `str` with all the bytes in reversed order
+
+! This function will not work correctly with multibyte-encoded strings.
+
+    printvar( string_reverse( "noitca" ) ); // string [6] "action"
+
 
 
 <##### stdlib.type Type library #####>
+
+Type detection and conversion functions. The functions and constants are loaded by using the include_library function:
+
+    include_library( "type" );
+
+
+<##### stdlib.type_get type_get() [function] #####>
+
+== type_get( any var )
+=== returns the type ID of variable `var`, as `int`
+
+The return value is equal to one of the type ID constants.
+
+    printvar( type_get( null ) ); // int (0)
+    printvar( type_get( true ) ); // int (1)
+    printvar( type_get( 5 ) ); // int (2)
+    printvar( type_get( 5.1 ) ); // int (3)
+    printvar( type_get( "5.1" ) ); // int (4)
+    printvar( type_get( function(){} ) ); // int (5)
+    printvar( type_get( printvar ) ); // int (6)
+    printvar( type_get( [] ) ); // int (7)
+
+
+<##### stdlib.typeof typeof() [function] #####>
+
+== typeof( any var )
+=== returns the type name of variable `var`, as `string`
+
+- If `var` is an object and if the object interface function SGS_OP_GETTYPE exists, this function calls it. For more information, see sgs_Typeof@api/typeof
+
+    printvar( typeof( null ) ); // string [4] "null"
+    printvar( typeof( true ) ); // string [4] "bool"
+    printvar( typeof( 5 ) ); // string [3] "int"
+    printvar( typeof( 5.1 ) ); // string [4] "real"
+    printvar( typeof( "5.1" ) ); // string [6] "string"
+    printvar( typeof( function(){} ) ); // string [4] "func"
+    printvar( typeof( printvar ) ); // string [5] "cfunc"
+    printvar( typeof( [] ) ); // string [5] "array"
+    printvar( typeof( {} ) ); // string [4] "dict"
+    printvar( typeof( class({},{}) ) ); // string [5] "class"
+    printvar( typeof( closure( typeof, [0] ) ) ); // string [7] "closure"
+
+
+<##### stdlib.type.consts TYPE_* [constants] #####>
+
+== TYPE_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]
+=== type identifier constants
+
+== TYPE_COUNT
+=== number of types in the virtual machine
+
+It is currently guaranteed that all TYPE_ constants are an enumeration from 0 to 8 (`TYPE_NULL` being 0 and `TYPE_COUNT` being 8), thus allowing to iterate the available types with a simple loop:
+
+    for( i = 0; i < TYPE_COUNT; ++i ) ...
+

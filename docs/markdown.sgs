@@ -34,9 +34,9 @@ function array_find( a, what )
 
 function markdown2html( text )
 {
-	mdinline = function( text )
+	function mdinline( text )
 	{
-		apply_tag = function( hstack, tag )
+		function apply_tag( hstack, tag )
 		{
 			out = "";
 			if( array_find( hstack, tag ) !== null )
@@ -61,14 +61,19 @@ function markdown2html( text )
 				out $= "<"$tag$">";
 			}
 			return out;
-		};
+		}
 		
 		out = "";
 		hstack = [];
 		for( i = 0; i < text.length; ++i )
 		{
 			chr = text[ i ];
-			if( chr == "*" )
+			if( chr == "@" && i > 0 )
+			{
+				// TODO character code loading and character classification
+				out $= chr;
+			}
+			else if( chr == "*" )
 			{
 				if( i + 1 < text.length && string_cut( text, i+1, i+1 ) == "*" ) // bold
 				{
@@ -91,7 +96,7 @@ function markdown2html( text )
 			out $= "</" $ x $ ">";
 		}
 		return out;
-	};
+	}
 	
 	text = string_replace( text, ['\r\n','\r'], '\n' );
 	

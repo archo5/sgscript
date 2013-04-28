@@ -1251,27 +1251,40 @@ SGSRESULT sgs_LoadLib_String( SGS_CTX )
 
 #define EXPECT_ONEARG( N ) \
 	if( sgs_StackSize( C ) != 1 ){ \
-		sgs_Printf( C, SGS_WARNING, -1, #N ": 1 argument expected" ); \
+		sgs_Printf( C, SGS_WARNING, -1, "type_" #N ": expected 1 argument" ); \
 		return 0;}
 
-#define typechk_func( N, T ) \
-static int sgsstd_##N( SGS_CTX ){ \
-	EXPECT_ONEARG( N ) \
-	sgs_PushBool( C, sgs_ItemType( C, 0 ) == T ); \
-	return 1;}
+static int sgsstd_type_get( SGS_CTX )
+{
+	EXPECT_ONEARG( type_get )
+	sgs_PushInt( C, sgs_ItemType( C, 0 ) );
+	return 1;
+}
 
-typechk_func( is_null, SVT_NULL )
-typechk_func( is_bool, SVT_BOOL )
-typechk_func( is_int, SVT_INT )
-typechk_func( is_real, SVT_REAL )
-typechk_func( is_string, SVT_STRING )
-typechk_func( is_func, SVT_FUNC )
-typechk_func( is_cfunc, SVT_CFUNC )
-typechk_func( is_object, SVT_OBJECT )
+static int sgsstd_typeof( SGS_CTX )
+{
+	EXPECT_ONEARG( typeof )
+	sgs_TypeOf( C );
+	return 1;
+}
 
-#undef typechk_func
+static int sgsstd_type_cast( SGS_CTX )
+{
+	int argc;
+	sgs_Integer ty;
 
-static int sgsstd_is_numeric( SGS_CTX )
+	argc = sgs_StackSize( C );
+	if( argc < 1 || argc > 2 ||
+		!sgs_ParseInt( C, 1, &ty ) )
+		STDLIB_WARN( "type_cast() - unexpected arguments; function expects 2 arguments: any, int" )
+
+	sgs_Convert( C, 0, ty );
+	sgs_Pop( C, 1 );
+	return 1;
+}
+
+
+static int sgsstd_type_is_numeric( SGS_CTX )
 {
 	int res, ty = sgs_ItemType( C, 0 );
 	EXPECT_ONEARG( is_numeric )
@@ -1292,7 +1305,7 @@ static int sgsstd_is_numeric( SGS_CTX )
 	while( *ptr ){ if( *ptr == iFace ){ outVar = 1; \
 		break; } ptr += 2; } }
 
-static int sgsstd_is_callable( SGS_CTX )
+static int sgsstd_type_is_callable( SGS_CTX )
 {
 	int res, ty = sgs_ItemType( C, 0 );
 	EXPECT_ONEARG( is_callable )
@@ -1312,7 +1325,7 @@ static int sgsstd_is_callable( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_is_switch( SGS_CTX )
+static int sgsstd_type_is_switch( SGS_CTX )
 {
 	int res, ty = sgs_ItemType( C, 0 );
 	EXPECT_ONEARG( is_switch )
@@ -1336,7 +1349,7 @@ static int sgsstd_is_switch( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_is_printable( SGS_CTX )
+static int sgsstd_type_is_printable( SGS_CTX )
 {
 	int res, ty = sgs_ItemType( C, 0 );
 	EXPECT_ONEARG( is_printable )
@@ -1357,46 +1370,13 @@ static int sgsstd_is_printable( SGS_CTX )
 }
 
 
-static int sgsstd_type_get( SGS_CTX )
-{
-	EXPECT_ONEARG( type_get )
-
-	sgs_PushInt( C, sgs_ItemType( C, 0 ) );
-	return 1;
-}
-
-static int sgsstd_type_cast( SGS_CTX )
-{
-	int argc;
-	sgs_Integer ty;
-
-	argc = sgs_StackSize( C );
-	if( argc < 1 || argc > 2 ||
-		!sgs_ParseInt( C, 1, &ty ) )
-		STDLIB_WARN( "type_cast() - unexpected arguments; function expects 2 arguments: any, int" )
-
-	sgs_Convert( C, 0, ty );
-	sgs_Pop( C, 1 );
-	return 1;
-}
-
-static int sgsstd_typeof( SGS_CTX )
-{
-	if( sgs_StackSize( C ) != 1 )
-		STDLIB_WARN( "typeof() - unexpected arguments; function expects 1 argument: any" )
-	sgs_TypeOf( C );
-	return 1;
-}
-
-
 #define FN( x ) { #x, sgsstd_##x }
 
 static const sgs_RegFuncConst t_fconsts[] =
 {
-	FN( is_null ), FN( is_bool ), FN( is_int ), FN( is_real ),
-	FN( is_string ), FN( is_func ), FN( is_cfunc ), FN( is_object ),
-	FN( is_numeric ), FN( is_callable ), FN( is_switch ), FN( is_printable ),
-	FN( type_get ), FN( type_cast ), FN( typeof ),
+	FN( type_get ), FN( typeof ), FN( type_cast ),
+	FN( type_is_numeric ), FN( type_is_callable ),
+	FN( type_is_switch ), FN( type_is_printable ),
 };
 
 static const sgs_RegIntConst t_iconsts[] =
