@@ -872,7 +872,7 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 		{
 		case SI_POPR: case SI_GETVAR: case SI_GETPROP: case SI_GETINDEX:
 		case SI_SET: case SI_CONCAT:
-		case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT: case SI_INC: case SI_DEC:
+		case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT:
 		case SI_ADD: case SI_SUB: case SI_MUL: case SI_DIV: case SI_MOD:
 		case SI_AND: case SI_OR: case SI_XOR: case SI_LSH: case SI_RSH:
 		case SI_SEQ: case SI_EQ: case SI_LT: case SI_LTE:
