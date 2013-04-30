@@ -16,6 +16,8 @@ struct _sgs_IDbg
 	int inside;
 	int stkoff;
 	int stksize;
+
+	int minlev;
 }
 sgs_IDbg;
 

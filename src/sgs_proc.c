@@ -785,12 +785,12 @@ static int _thiscall_method( SGS_CTX )
 	if( !sgs_Method( C ) ||
 		!( sgs_ItemType( C, 0 ) == SVT_FUNC || sgs_ItemType( C, 0 ) == SVT_CFUNC ) )
 	{
-		sgs_Printf( C, SGS_WARNING, -1, "thiscall() was not called on a function type" );
+		sgs_Printf( C, SGS_WARNING, "thiscall() was not called on a function type" );
 		return 0;
 	}
 	if( sgs_StackSize( C ) < 2 )
 	{
-		sgs_Printf( C, SGS_WARNING, -1, "thiscall() expects at least one argument (this)" );
+		sgs_Printf( C, SGS_WARNING, "thiscall() expects at least one argument (this)" );
 		return 0;
 	}
 
@@ -798,7 +798,7 @@ static int _thiscall_method( SGS_CTX )
 	ret = sgs_ThisCall( C, sgs_StackSize( C ) - 3, 1 );
 	if( ret != SGS_SUCCESS )
 	{
-		sgs_Printf( C, SGS_WARNING, -1, "thiscall() failed with error %d", ret );
+		sgs_Printf( C, SGS_WARNING, "thiscall() failed with error %d", ret );
 		return 0;
 	}
 	return 1;
@@ -817,12 +817,12 @@ static int vm_getidx_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 		sgs_Pop( C, 1 );
 		if( !res )
 		{
-			sgs_Printf( C, SGS_WARNING, -1, "Expected integer as string index" );
+			sgs_Printf( C, SGS_WARNING, "Expected integer as string index" );
 			return SGS_EINVAL;
 		}
 		if( pos >= size || pos < -size )
 		{
-			sgs_Printf( C, SGS_WARNING, -1, "String index out of bounds" );
+			sgs_Printf( C, SGS_WARNING, "String index out of bounds" );
 			return SGS_EBOUNDS;
 		}
 		pos = ( pos + size ) % size;
@@ -830,7 +830,7 @@ static int vm_getidx_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 		return SGS_SUCCESS;
 	}
 
-	sgs_Printf( C, SGS_WARNING, -1, "Cannot index variable of type '%s'",
+	sgs_Printf( C, SGS_WARNING, "Cannot index variable of type '%s'",
 		sgs_VarNames[ obj->type ] );
 	return SGS_ENOTFND;
 }
@@ -858,7 +858,7 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 		break;
 	}
 
-	sgs_Printf( C, SGS_WARNING, -1, "Property '%s' not found on "
+	sgs_Printf( C, SGS_WARNING, "Property '%s' not found on "
 		"object of type '%s'", prop, sgs_VarNames[ obj->type ] );
 	return SGS_ENOTFND;
 }
@@ -931,7 +931,7 @@ static void vm_properr( SGS_CTX, int ret, sgs_Variable* idx, int isindex )
 		const char* err = isindex ? "Cannot find value by index" : "Property not found";
 		stk_push( C, idx );
 		p = sgs_ToString( C, -1 );
-		sgs_Printf( C, SGS_ERROR, -1, "%s: \"%s\"", err, p );
+		sgs_Printf( C, SGS_ERROR, "%s: \"%s\"", err, p );
 		stk_pop1( C );
 	}
 }
@@ -1095,12 +1095,12 @@ static int vm_op_negate( SGS_CTX, sgs_VarPtr out, sgs_Variable *A )
 				break;
 			}
 			stk_pop( C, STACKFRAMESIZE - ssz );
-			sgs_Printf( C, SGS_ERROR, -1, "Given object does not support negation." );
+			sgs_Printf( C, SGS_ERROR, "Given object does not support negation." );
 			var_setnull( C, C->stack_off + ofs );
 		}
 		return 0;
 	default:
-		sgs_Printf( C, SGS_ERROR, -1, "Negating variable of type %s is not supported.", sgs_VarNames[ i ] );
+		sgs_Printf( C, SGS_ERROR, "Negating variable of type %s is not supported.", sgs_VarNames[ i ] );
 		var_setnull( C, out );
 		return 0;
 	}
@@ -1126,7 +1126,7 @@ static void vm_op_##pfx( SGS_CTX, sgs_VarPtr out, sgs_Variable *A ) { \
 	switch( A->type ){ \
 		case SVT_INT: var_setint( C, out, A->data.I op ); break; \
 		case SVT_REAL: var_setreal( C, out, A->data.R op ); break; \
-		default: sgs_Printf( C, SGS_ERROR, -1, "Cannot " #pfx "rement null/bool/string/func/cfunc/object variables!" ); return; \
+		default: sgs_Printf( C, SGS_ERROR, "Cannot " #pfx "rement null/bool/string/func/cfunc/object variables!" ); return; \
 	} }
 
 VAR_MOP( inc, +1 )
@@ -1244,12 +1244,12 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 div0err:
 	VAR_RELEASE( out );
 	out->type = SVT_NULL;
-	sgs_Printf( C, SGS_ERROR, -1, "Division by 0" );
+	sgs_Printf( C, SGS_ERROR, "Division by 0" );
 	return;
 fail:
 	VAR_RELEASE( out );
 	out->type = SVT_NULL;
-	sgs_Printf( C, SGS_ERROR, -1, "Operation is not supported on the given set of arguments" );
+	sgs_Printf( C, SGS_ERROR, "Operation is not supported on the given set of arguments" );
 }
 
 
@@ -1341,7 +1341,7 @@ static int vm_forprep( SGS_CTX, int outiter, sgs_VarPtr obj )
 
 	if( obj->type != SVT_OBJECT )
 	{
-		sgs_Printf( C, SGS_ERROR, -1, "Variable of type '%s' doesn't have an iterator", sgs_VarNames[ obj->type ] );
+		sgs_Printf( C, SGS_ERROR, "Variable of type '%s' doesn't have an iterator", sgs_VarNames[ obj->type ] );
 		stk_setvar_null( C, outiter );
 		return SGS_ENOTSUP;
 	}
@@ -1350,7 +1350,7 @@ static int vm_forprep( SGS_CTX, int outiter, sgs_VarPtr obj )
 	if( ret != SGS_SUCCESS )
 	{
 		sgs_Pop( C, STACKFRAMESIZE - ssz );
-		sgs_Printf( C, SGS_ERROR, -1, "Object [%p] doesn't have an iterator", obj->data.O );
+		sgs_Printf( C, SGS_ERROR, "Object [%p] doesn't have an iterator", obj->data.O );
 		stk_setvar_null( C, outiter );
 		return SGS_ENOTFND;
 	}
@@ -1366,7 +1366,7 @@ static int vm_fornext( SGS_CTX, int outkey, int outstate, sgs_VarPtr iter )
 	if( iter->type != SVT_OBJECT || obj_exec( C, SOP_NEXTKEY, iter->data.O, 0 ) != SGS_SUCCESS )
 	{
 		sgs_Pop( C, STACKFRAMESIZE - ssz );
-		sgs_Printf( C, SGS_ERROR, -1, "Failed to retrieve data from iterator" );
+		sgs_Printf( C, SGS_ERROR, "Failed to retrieve data from iterator" );
 		stk_setvar_null( C, outstate );
 		return SGS_EINPROC;
 	}
@@ -1482,7 +1482,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 		rvc = obj_exec( C, SOP_CALL, func->data.O, args );
 		if( rvc < 0 )
 		{
-			sgs_Printf( C, SGS_ERROR, -1, "The object could not be called" );
+			sgs_Printf( C, SGS_ERROR, "The object could not be called" );
 			rvc = 0;
 			ret = 0;
 		}
@@ -1491,7 +1491,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 	}
 	else
 	{
-		sgs_Printf( C, SGS_ERROR, -1, "Variable of type '%s' cannot be called", sgs_VarNames[ func->type ] );
+		sgs_Printf( C, SGS_ERROR, "Variable of type '%s' cannot be called", sgs_VarNames[ func->type ] );
 		ret = 0;
 	}
 
@@ -1701,7 +1701,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 #undef RESVAR
 
 		default:
-			sgs_Printf( C, SGS_ERROR, -1, "Illegal instruction executed: 0x%08X", I );
+			sgs_Printf( C, SGS_ERROR, "Illegal instruction executed: 0x%08X", I );
 			break;
 		}
 
@@ -2110,6 +2110,8 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 				sgs_PopSkip( C, C->stack_top - C->stack_off - stksz - q, q );
 				if( q )
 					sgs_StringConcat( C );
+				if( ret == SGS_ENOTFND ) /* object most probably doesn't support the dumping interface */
+					ret = SGS_SUCCESS;
 			}
 			break;
 		default:

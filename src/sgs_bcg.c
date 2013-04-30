@@ -21,7 +21,7 @@ static SGS_INLINE int16_t comp_reg_alloc( SGS_CTX )
 	if( out > 0xff )
 	{
 		C->state |= SGS_HAS_ERRORS | SGS_MUST_STOP;
-		sgs_Printf( C, SGS_ERROR, -1, "Max. register count exceeded" );
+		sgs_Printf( C, SGS_ERROR, "Max. register count exceeded" );
 	}
 	return out;
 }
@@ -285,6 +285,8 @@ static void add_instr( sgs_CompFunc* func, SGS_CTX, FTNode* node, instr_t I )
 #define INSTR_WRITE_EX( op, ex, c ) INSTR( INSTR_MAKE_EX( op, ex, c ) )
 #define INSTR_WRITE_PCH() INSTR_WRITE( 63, 0, 0, 0 )
 
+#define QPRINT( str ) sgs_Printf( C, SGS_ERROR, "[line %d] " str, sgsT_LineNum( node->token ) )
+
 
 static int preparse_varlist( SGS_CTX, FTNode* node )
 {
@@ -293,7 +295,7 @@ static int preparse_varlist( SGS_CTX, FTNode* node )
 	{
 		if( find_varT( &C->fctx->gvars, node->token ) >= 0 )
 		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined: global -> local" );
+			QPRINT( "Variable storage redefined: global -> local" );
 			return FALSE;
 		}
 		if( add_varT( &C->fctx->vars, C, node->token ) )
@@ -310,7 +312,7 @@ static int preparse_gvlist( SGS_CTX, FTNode* node )
 	{
 		if( find_varT( &C->fctx->vars, node->token ) >= 0 )
 		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined: local -> global" );
+			QPRINT( "Variable storage redefined: local -> global" );
 			return FALSE;
 		}
 		add_varT( &C->fctx->gvars, C, node->token );
@@ -347,7 +349,7 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	{
 		if( find_varT( &C->fctx->gvars, node->token ) >= 0 )
 		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Variable storage redefined (foreach key variable cannot be global): global -> local" );
+			QPRINT( "Variable storage redefined (foreach key variable cannot be global): global -> local" );
 			ret = FALSE;
 		}
 		else
@@ -386,7 +388,7 @@ static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	{
 		if( !add_var( &C->fctx->vars, C, (char*) node->token + 2, node->token[ 1 ] ) )
 		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot redeclare arguments with the same name." );
+			QPRINT( "Cannot redeclare arguments with the same name." );
 			return 0;
 		}
 		comp_reg_alloc( C );
@@ -524,7 +526,7 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
 	return pos;
 }
 
-#define INTERNAL_ERROR( loff ) sgs_printf( C, SGS_ERROR, -1, "INTERNAL ERROR occured in file %s [%d]", __FILE__, __LINE__ - (loff) )
+#define INTERNAL_ERROR( loff ) sgs_printf( C, SGS_ERROR, "INTERNAL ERROR occured in file %s [%d]", __FILE__, __LINE__ - (loff) )
 
 static int op_pick_opcode( int oper, int binary )
 {
@@ -578,7 +580,7 @@ int const_maybeload( SGS_CTX, sgs_CompFunc* func, FTNode* node, int cid )
 {
 	if( cid > 65535 )
 	{
-		sgs_Printf( C, SGS_WARNING, sgsT_LineNum( node->token ), "Maximum number of constants exceeded" );
+		QPRINT( "Maximum number of constants exceeded" );
 		C->state |= SGS_MUST_STOP;
 		return 0;
 	}
@@ -634,11 +636,11 @@ static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* 
 			}
 			else
 			{
-				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "This function is not a method, cannot use 'this'" );
+				QPRINT( "This function is not a method, cannot use 'this'" );
 				return 0;
 			}
 		}
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot read from this keyword" );
+		QPRINT( "Cannot read from this keyword" );
 		return 0;
 	}
 
@@ -677,7 +679,7 @@ static int compile_ident_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 	int16_t pos;
 	if( *node->token == ST_KEYWORD )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot write to reserved keywords" );
+		QPRINT( "Cannot write to reserved keywords" );
 		return 0;
 	}
 
@@ -729,7 +731,7 @@ static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* op
 	}
 	else
 	{
-		sgs_Printf( C, SGS_ERROR, -1, "INTERNAL ERROR: constant doesn't have a token of type int/real/string attached" );
+		QPRINT( "INTERNAL ERROR: constant doesn't have a token of type int/real/string attached" );
 		return 0;
 	}
 	return 1;
@@ -818,7 +820,7 @@ static int compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 	if( !compile_node_r( C, func, node->child->next, &name ) ) return 0;
 	if( CONSTVAR( var ) )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot set indexed value of a constant" );
+		QPRINT( "Cannot set indexed value of a constant" );
 		return 0;
 	}
 	INSTR_WRITE( SI_SETINDEX, var, name, src );
@@ -997,7 +999,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		{
 			if( expect != 1 )
 			{
-				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Too many expected outputs for operator" );
+				QPRINT( "Too many expected outputs for operator" );
 				goto fail;
 			}
 		}
@@ -1082,7 +1084,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 		if( expect > 1 )
 		{
-			sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Too many expected outputs for operator" );
+			QPRINT( "Too many expected outputs for operator" );
 			goto fail;
 		}
 
@@ -1119,7 +1121,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			{
 				if( CONSTVAR( ireg1 ) )
 				{
-					sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot set property of a constant" );
+					QPRINT( "Cannot set property of a constant" );
 					goto fail;
 				}
 				INSTR_WRITE( SI_SETPROP, ireg1, ireg2, oreg );
@@ -1228,7 +1230,7 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 
 	if( C->fctx->lastreg > 0xff )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Max. register count exceeded" );
+		QPRINT( "Max. register count exceeded" );
 		goto fail;
 	}
 
@@ -1277,19 +1279,19 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t sr
 
 	case SFT_CONST:
 		FUNC_HIT( "W_CONST" );
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot write to constants." );
+		QPRINT( "Cannot write to constants." );
 		goto fail;
 	case SFT_FUNC:
 		FUNC_HIT( "W_FUNC" );
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot write to constants." );
+		QPRINT( "Cannot write to constants." );
 		goto fail;
 	case SFT_ARRLIST:
 		FUNC_HIT( "W_ARRLIST" );
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot write to constants." );
+		QPRINT( "Cannot write to constants." );
 		goto fail;
 	case SFT_MAPLIST:
 		FUNC_HIT( "W_MAPLIST" );
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), "Cannot write to constants." );
+		QPRINT( "Cannot write to constants." );
 		goto fail;
 
 	case SFT_OPER:
@@ -1309,7 +1311,7 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t sr
 		break;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, -1, "Unexpected tree node [uncaught/internal BcG/w error]." );
+		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/w error]." );
 		goto fail;
 	}
 	FUNC_END;
@@ -1424,7 +1426,7 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 		break;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, -1, "Unexpected tree node [uncaught/internal BcG/r error]." );
+		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r error]." );
 		goto fail;
 	}
 	FUNC_END;
@@ -1724,7 +1726,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				blev = (uint32_t)*(sgs_Integer*)( tl + 1 );
 			if( blev > C->fctx->loops )
 			{
-				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), C->fctx->loops ? "Break level too high." : "Attempted to break while not in a loop." );
+				if( C->fctx->loops )
+					QPRINT( "Break level too high." );
+				else
+					QPRINT( "Attempted to break while not in a loop." );
 				goto fail;
 			}
 			fctx_binfo_add( C, C->fctx, func->code.size, C->fctx->loops + 1 - blev, FALSE );
@@ -1741,7 +1746,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				blev = (uint32_t)*(sgs_Integer*)( tl + 1 );
 			if( blev > C->fctx->loops )
 			{
-				sgs_Printf( C, SGS_ERROR, sgsT_LineNum( node->token ), C->fctx->loops ? "Continue level too high." : "Attempted to continue while not in a loop." );
+				if( C->fctx->loops )
+					QPRINT( "Continue level too high." );
+				else
+					QPRINT( "Attempted to continue while not in a loop." );
 				goto fail;
 			}
 			fctx_binfo_add( C, C->fctx, func->code.size, C->fctx->loops + 1 - blev, TRUE );
@@ -1786,7 +1794,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		break;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, -1, "Unexpected tree node [uncaught/internal BcG error]." );
+		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG error]." );
 		goto fail;
 	}
 
@@ -1813,7 +1821,8 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 
 	if( C->fctx->lastreg > 0xff )
 	{
-		sgs_Printf( C, SGS_ERROR, sgsT_LineNum( tree->token ), "Max. register count exceeded" );
+		sgs_Printf( C, SGS_ERROR, "[line %d] Max. register count exceeded",
+			sgsT_LineNum( tree->token ) );
 		goto fail;
 	}
 

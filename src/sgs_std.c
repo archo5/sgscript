@@ -7,7 +7,7 @@
 
 #include "sgs_int.h"
 
-#define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, -1, warn ); return 0; }
+#define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, warn ); return 0; }
 
 
 /* Containers */
@@ -130,7 +130,7 @@ static int sgsstd_array_clone( SGS_CTX, sgs_VarObj* data )
 	sgs_VarObj* data; \
 	sgsstd_array_header_t* hdr; \
 	if( !sgs_Method( C ) || sgs_GetObjectData( C, 0 )->iface != sgsstd_array_functable ) \
-		{ sgs_Printf( C, SGS_ERROR, -1, "array." #name "() isn't called on an array" ); return 0; } \
+		{ sgs_Printf( C, SGS_ERROR, "array." #name "() isn't called on an array" ); return 0; } \
 	data = sgs_GetObjectData( C, 0 ); \
 	hdr = (sgsstd_array_header_t*) data->data; \
 	UNUSED( hdr );
@@ -523,7 +523,7 @@ static int sgsstd_array_getindex( SGS_CTX, sgs_VarObj* data )
 	sgs_Integer i = sgs_ToInt( C, -1 );
 	if( i < 0 || i >= hdr->size )
 	{
-		sgs_Printf( C, SGS_ERROR, -1, "Array index out of bounds" );
+		sgs_Printf( C, SGS_ERROR, "Array index out of bounds" );
 		return SGS_EBOUNDS;
 	}
 	sgs_PushVariable( C, ptr + i );
@@ -537,7 +537,7 @@ static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* data )
 	sgs_Integer i = sgs_ToInt( C, -2 );
 	if( i < 0 || i >= hdr->size )
 	{
-		sgs_Printf( C, SGS_ERROR, -1, "Array index out of bounds" );
+		sgs_Printf( C, SGS_ERROR, "Array index out of bounds" );
 		return SGS_EBOUNDS;
 	}
 	sgs_Release( C, ptr + i );
@@ -983,7 +983,7 @@ static int sgsstd_dict( SGS_CTX )
 			_dict_clearvals( C, ht );
 			vht_free( ht, C );
 			sgs_Dealloc( ht );
-			sgs_Printf( C, SGS_WARNING, -1, "dict() - key argument %d is not a string", i );
+			sgs_Printf( C, SGS_WARNING, "dict() - key argument %d is not a string", i );
 			return 0;
 		}
 
@@ -1212,7 +1212,7 @@ static int sgsstd_class( SGS_CTX )
 	return 1;
 
 argerr:
-	sgs_Printf( C, SGS_ERROR, -1, "'class' requires 2 arguments: data, inherited" );
+	sgs_Printf( C, SGS_ERROR, "'class' requires 2 arguments: data, inherited" );
 	return 0;
 }
 
@@ -1324,7 +1324,7 @@ static int sgsstd_closure( SGS_CTX )
 	return 1;
 
 argerr:
-	sgs_Printf( C, SGS_ERROR, -1, "'closure' requires 2 arguments: function, data" );
+	sgs_Printf( C, SGS_ERROR, "'closure' requires 2 arguments: function, data" );
 	return 0;
 }
 

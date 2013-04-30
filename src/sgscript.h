@@ -136,7 +136,6 @@ typedef void (*sgs_PrintFunc) (
 	void* /* data */,
 	sgs_Context* /* ctx / SGS_CTX */,
 	int /* type */,
-	int /* line */,
 	const char* /* message */
 );
 
@@ -270,7 +269,7 @@ void sgs_Writef( SGS_CTX, const char* what, ... );
 
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
 void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
-void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... );
+void sgs_Printf( SGS_CTX, int type, const char* what, ... );
 
 void* sgs_Memory( SGS_CTX, void* ptr, size_t size );
 #define sgs_Malloc( C, size ) sgs_Memory( C, NULL, size )

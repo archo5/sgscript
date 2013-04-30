@@ -12,7 +12,7 @@
 #include "sgs_int.h"
 
 #define FLAG( a, b ) (((a)&(b))!=0)
-#define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, -1, warn ); return 0; }
+#define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, warn ); return 0; }
 
 
 
@@ -1399,7 +1399,7 @@ SGSRESULT sgs_LoadLib_String( SGS_CTX )
 
 #define EXPECT_ONEARG( N ) \
 	if( sgs_StackSize( C ) != 1 ){ \
-		sgs_Printf( C, SGS_WARNING, -1, "type_" #N ": expected 1 argument" ); \
+		sgs_Printf( C, SGS_WARNING, "type_" #N ": expected 1 argument" ); \
 		return 0;}
 
 static int sgsstd_type_get( SGS_CTX )

@@ -100,7 +100,7 @@ void free_testfiles( testfile* files, int count )
 
 
 
-static void TF_printfn( void* ctx, SGS_CTX, int type, int line, const char* message )
+static void TF_printfn( void* ctx, SGS_CTX, int type, const char* message )
 {
 	int ret = 0;
 	const char* pfxs[] = { "[I:", "[W:", "[E:" };
@@ -113,8 +113,6 @@ static void TF_printfn( void* ctx, SGS_CTX, int type, int line, const char* mess
 	sgs_PushString( C, "]" );
 	ret |= sgs_StringMultiConcat( C, 4 );
 	ret |= sgs_StoreGlobal( C, "ERRORS" );
-	sgs_PushInt( C, line );
-	ret |= sgs_StoreGlobal( C, "ERRLINE" );
 	sgs_BreakIf( ret != 0 );
 }
 

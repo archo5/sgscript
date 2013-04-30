@@ -10,9 +10,9 @@
 
 #if SGS_DEBUG && SGS_DEBUG_FLOW
 #  ifdef _MSC_VER
-#    define DBGINFO( ... ) sgs_Printf( C, SGS_INFO, -1, __VA_ARGS__ )
+#    define DBGINFO( ... ) sgs_Printf( C, SGS_INFO, __VA_ARGS__ )
 #  else
-#    define DBGINFO( wat... ) sgs_Printf( C, SGS_INFO, -1, wat )
+#    define DBGINFO( wat... ) sgs_Printf( C, SGS_INFO, wat )
 #  endif
 #else
 #  ifdef _MSC_VER
@@ -28,12 +28,12 @@ static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "fu
 
 static int default_array_func( SGS_CTX )
 {
-	sgs_Printf( C, SGS_ERROR, -1, "'array' creating function is undefined" );
+	sgs_Printf( C, SGS_ERROR, "'array' creating function is undefined" );
 	return 0;
 }
 static int default_dict_func( SGS_CTX )
 {
-	sgs_Printf( C, SGS_ERROR, -1, "'dict' creating function is undefined" );
+	sgs_Printf( C, SGS_ERROR, "'dict' creating function is undefined" );
 	return 0;
 }
 
@@ -43,7 +43,7 @@ static void default_outputfn( void* userdata, SGS_CTX, const void* ptr, sgs_Size
 	fwrite( ptr, 1, size, (FILE*) userdata );
 }
 
-static void default_printfn( void* ctx, SGS_CTX, int type, int line, const char* msg )
+static void default_printfn( void* ctx, SGS_CTX, int type, const char* msg )
 {
 	const char* errpfxs[ 3 ] = { "Info", "Warning", "Error" };
 	type = type / 100 - 1;
@@ -55,16 +55,13 @@ static void default_printfn( void* ctx, SGS_CTX, int type, int line, const char*
 	{
 		const char* file, *name;
 		int ln;
-		if( !p->next )
+		if( !p->next && !p->code )
 			break;
 		sgs_StackFrameInfo( C, p, &name, &file, &ln );
 		fprintf( ctx, "- \"%s\" in %s, line %d\n", name, file, ln );
 		p = p->next;
 	}
-	if( line > 0 )
-		fprintf( ctx, "%s [line %d]: %s\n", errpfxs[ type ], line, msg );
-	else
-		fprintf( ctx, "%s: %s\n", errpfxs[ type ], msg );
+	fprintf( ctx, "%s: %s\n", errpfxs[ type ], msg );
 }
 
 
@@ -206,7 +203,7 @@ void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
 	C->print_ctx = ctx;
 }
 
-void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
+void sgs_Printf( SGS_CTX, int type, const char* what, ... )
 {
 	char buf[ SGS_OUTPUT_STACKBUF_SIZE ];
 	MemBuf info = membuf_create();
@@ -229,12 +226,7 @@ void sgs_Printf( SGS_CTX, int type, int line, const char* what, ... )
 	va_end( args );
 	ptr[ cnt ] = 0;
 
-	if( line < 0 && C->sf_last )
-	{
-		sgs_StackFrameInfo( C, C->sf_last, NULL, NULL, &line );
-	}
-
-	C->print_fn( C->print_ctx, C, type, line, ptr );
+	C->print_fn( C->print_ctx, C, type, ptr );
 
 	membuf_destroy( &info, C );
 }
@@ -279,7 +271,7 @@ static int ctx_decode( SGS_CTX, const char* buf, int32_t size, sgs_CompFunc** ou
 		if( ret )
 		{
 			/* just invalid, error! */
-			sgs_Printf( C, SGS_ERROR, -1, "Failed to read bytecode file (%s)", ret );
+			sgs_Printf( C, SGS_ERROR, "Failed to read bytecode file (%s)", ret );
 			return -1;
 		}
 	}

@@ -353,7 +353,7 @@ int json_decode( SGS_CTX )
 		!sgs_ParseString( C, 0, &str, &size ) ||
 		( argc == 2 && sgs_ItemType( C, 1 ) != SVT_OBJECT ) )
 	{
-		sgs_Printf( C, SGS_WARNING, -1, "json_decode: unexpected arguments; "
+		sgs_Printf( C, SGS_WARNING, "json_decode: unexpected arguments; "
 			"function expects 1-2 arguments: string[, object]" );
 		return 0;
 	}
@@ -425,7 +425,7 @@ int encode_var( SGS_CTX, MemBuf* buf )
 		}
 	case SVT_FUNC:
 	case SVT_CFUNC:
-		sgs_Printf( C, SGS_WARNING, -1, "json_encode: cannot encode functions" );
+		sgs_Printf( C, SGS_WARNING, "json_encode: cannot encode functions" );
 		return 0;
 	case SVT_OBJECT:
 		{
@@ -485,7 +485,7 @@ int json_encode( SGS_CTX )
 
 	if( argc != 1 )
 	{
-		sgs_Printf( C, SGS_WARNING, -1, "json_encode: function expects 1 argument" );
+		sgs_Printf( C, SGS_WARNING, "json_encode: function expects 1 argument" );
 		return 0;
 	}
 

@@ -38,13 +38,13 @@ static void idbg_readStdin( SGS_IDBG )
 }
 
 
-static void idbgPrintFunc( void* data, SGS_CTX, int type, int line, const char* message )
+static void idbgPrintFunc( void* data, SGS_CTX, int type, const char* message )
 {
 	SGS_IDBG = (sgs_IDbg*) data;
 
 	D->stkoff = C->stack_off - C->stack_base;
 	D->stksize = C->stack_top - C->stack_base;
-	D->pfn( D->pctx, C, type, line, message );
+	D->pfn( D->pctx, C, type, message );
 	if( D->inside )
 		return;
 	D->inside = 1;
@@ -59,7 +59,7 @@ static void idbgPrintFunc( void* data, SGS_CTX, int type, int line, const char* 
 
 		if( STREQ( D->iword, "continue" ) || STREQ( D->iword, "cont" ) ) break;
 		if( STREQ( D->iword, "quit" ) ) exit( 0 );
-		if( STREQ( D->iword, "reprint" ) ) D->pfn( D->pctx, C, type, line, message );
+		if( STREQ( D->iword, "reprint" ) ) D->pfn( D->pctx, C, type, message );
 		if( STREQ( D->iword, "stack" ) ) sgs_Stat( C, SGS_STAT_DUMP_STACK );
 		if( STREQ( D->iword, "globals" ) ) sgs_Stat( C, SGS_STAT_DUMP_GLOBALS );
 		if( STREQ( D->iword, "objects" ) ) sgs_Stat( C, SGS_STAT_DUMP_OBJECTS );
@@ -103,7 +103,7 @@ static int idbg_stackitem( SGS_CTX )
 		!sgs_ParseInt( C, 0, &off ) ||
 		( argc >= 2 && !sgs_ParseBool( C, 1, &full ) ) )
 	{
-		sgs_Printf( C, SGS_WARNING, -1, "dbg_stackitem(): "
+		sgs_Printf( C, SGS_WARNING, "dbg_stackitem(): "
 			"unexpected arguments; function expects int[, bool]" );
 		return 0;
 	}
@@ -113,7 +113,7 @@ static int idbg_stackitem( SGS_CTX )
 	cnt = b - a;
 	if( off >= cnt || -off > cnt )
 	{
-		sgs_Printf( C, SGS_WARNING, -1, "dbg_stackitem(): "
+		sgs_Printf( C, SGS_WARNING, "dbg_stackitem(): "
 			"index %d out of bounds, count = %d\n", (int) off, (int) cnt );
 		return 0;
 	}
@@ -133,7 +133,7 @@ static int idbg_setstackitem( SGS_CTX )
 		!sgs_ParseInt( C, 0, &off ) ||
 		( argc >= 3 && !sgs_ParseBool( C, 2, &full ) ) )
 	{
-		sgs_Printf( C, SGS_WARNING, -1, "dbg_setstackitem(): "
+		sgs_Printf( C, SGS_WARNING, "dbg_setstackitem(): "
 			"unexpected arguments; function expects int, any[, bool]" );
 		return 0;
 	}
@@ -143,7 +143,7 @@ static int idbg_setstackitem( SGS_CTX )
 	cnt = b - a;
 	if( off >= cnt || -off > cnt )
 	{
-		sgs_Printf( C, SGS_WARNING, -1, "dbg_setstackitem(): "
+		sgs_Printf( C, SGS_WARNING, "dbg_setstackitem(): "
 			"index %d out of bounds, count = %d\n", (int) off, (int) cnt );
 		return 0;
 	}
@@ -167,10 +167,13 @@ int sgs_InitIDbg( SGS_CTX, SGS_IDBG )
 	D->input = membuf_create();
 	D->iword[0] = 0;
 	D->inside = 0;
+	D->minlev = SGS_WARNING;
+
 	sgs_PushCFunction( C, idbg_stackitem );
 	sgs_StoreGlobal( C, "dbg_stackitem" );
 	sgs_PushCFunction( C, idbg_setstackitem );
 	sgs_StoreGlobal( C, "dbg_setstackitem" );
+
 	return SGS_SUCCESS;
 }
 

@@ -108,7 +108,7 @@ FTComp;
 #define SFTC_SETERR F->C->state |= SGS_HAS_ERRORS
 #define SFTC_ISKEY( name ) is_keyword( F->at, name )
 #define SFTC_LINENUM sgsT_LineNum( F->at )
-#define SFTC_PRINTERR( what ) sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, what )
+#define SFTC_PRINTERR( what ) sgs_Printf( F->C, SGS_ERROR, "[line %d] " what, SFTC_LINENUM )
 #define SFTC_UNEXP SFTC_PRINTERR( "Unexpected end of code" )
 
 
@@ -165,7 +165,7 @@ SFTRET parse_arg( SFTC, int argid, char end )
 
 	if( !SFTC_IS( ST_IDENT ) && !SFTC_IS( ST_KEYWORD ) )
 	{
-		sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, "Unexpected token while parsing argument %d", argid );
+		sgs_Printf( F->C, SGS_ERROR, "[line %d] Unexpected token while parsing argument %d", SFTC_LINENUM, argid );
 		goto fail;
 	}
 
@@ -237,7 +237,7 @@ SFTRET parse_arglist( SFTC, char end )
 		}
 		else
 		{
-			sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, "Expected ',' or '%c'", end );
+			sgs_Printf( F->C, SGS_ERROR, "[line %d] Expected ',' or '%c'", SFTC_LINENUM, end );
 			goto fail;
 		}
 	}
@@ -404,7 +404,8 @@ _continue:
 				/* array */
 				if( !se2->child || se2->child->next )
 				{
-					sgs_Printf( C, SGS_ERROR, sgsT_LineNum( mpp_token ), "Invalid number of arguments in an array accessor" );
+					sgs_Printf( C, SGS_ERROR, "[line %d] Invalid number of arguments "
+						"in an array accessor", sgsT_LineNum( mpp_token ) );
 					*tree = NULL;
 					if( se1 ) sgsFT_Destroy( C, se1 );
 					if( se2 ) sgsFT_Destroy( C, se2 );
@@ -517,7 +518,7 @@ _continue:
 	}
 
 	/* in case we failed unexpectedly, dump & debug */
-	sgs_Printf( C, SGS_ERROR, predictlinenum( *tree ), "Missing operators or separators." );
+	sgs_Printf( C, SGS_ERROR, "[line %d] Missing operators or separators.", predictlinenum( *tree ) );
 	C->state |= SGS_HAS_ERRORS;
 #if SGS_DEBUG && SGS_DEBUG_DATA
 	sgsFT_Dump( *tree );
@@ -526,7 +527,7 @@ _continue:
 	return 0;
 
 fail:
-	sgs_Printf( C, SGS_ERROR, sgsT_LineNum( mpp->token ), "Invalid expression" );
+	sgs_Printf( C, SGS_ERROR, "[line %d] Invalid expression", sgsT_LineNum( mpp->token ) );
 	FUNC_END;
 	return 0;
 }
@@ -710,7 +711,7 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 			}
 			else
 			{
-				sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, "Unexpected token '%c' found!", *SFTC_AT );
+				sgs_Printf( F->C, SGS_ERROR, "[line %d] Unexpected token '%c' found!", SFTC_LINENUM, *SFTC_AT );
 				F->C->state |= SGS_MUST_STOP;
 			}
 		}
@@ -791,7 +792,7 @@ SFTRET parse_explist( SFTC, char endtok )
 		}
 		else
 		{
-			sgs_Printf( F->C, SGS_ERROR, SFTC_LINENUM, "Expected ',' or '%c'", endtok );
+			sgs_Printf( F->C, SGS_ERROR, "[line %d] Expected ',' or '%c'", SFTC_LINENUM, endtok );
 			goto fail;
 		}
 	}
@@ -1110,8 +1111,10 @@ SFTRET parse_function( SFTC, int inexp )
 
 	if( !SFTC_IS( '(' ) )
 	{
-		SFTC_PRINTERR( inexp ? "Expected '(' after 'function'"
-			: "Expected '(' after 'function' and its name" );
+		if( inexp )
+			SFTC_PRINTERR( "Expected '(' after 'function'" );
+		else
+			SFTC_PRINTERR( "Expected '(' after 'function' and its name" );
 		goto fail;
 	}
 
