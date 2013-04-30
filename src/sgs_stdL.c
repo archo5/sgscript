@@ -6,6 +6,7 @@
 #include <math.h>
 
 #define SGS_INTERNAL
+#define SGS_REALLY_INTERNAL
 #define SGS_USE_FILESYSTEM
 
 #include "sgs_int.h"

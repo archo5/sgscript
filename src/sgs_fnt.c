@@ -1,6 +1,7 @@
 
 
 #define SGS_INTERNAL
+#define SGS_REALLY_INTERNAL
 
 #include "sgs_int.h"
 
@@ -267,7 +268,7 @@ static int part_weight( FTNode* part, int isfcall, int binary )
 
 	if( part->type == SFT_OPER )
 	{
-		TokenType type = *part->token;
+		sgs_TokenType type = *part->token;
 		if( binary )
 		{
 			if( ST_OP_BOOL( type ) )	return 30;

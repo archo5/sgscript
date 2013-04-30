@@ -13,11 +13,13 @@
 #endif
 
 #ifdef SGS_INTERNAL
-#  define TRUE sgs_TRUE
-#  define FALSE sgs_FALSE
-#  define MIN sgs_MIN
-#  define MAX sgs_MAX
-#  define ARRAY_SIZE sgs_ARRAY_SIZE
+#  ifdef SGS_REALLY_INTERNAL
+#    define TRUE sgs_TRUE
+#    define FALSE sgs_FALSE
+#    define MIN sgs_MIN
+#    define MAX sgs_MAX
+#    define ARRAY_SIZE sgs_ARRAY_SIZE
+#  endif
 #  define LineNum sgs_LineNum
 #  define isoneof sgs_isoneof
 #  define hexchar sgs_hexchar

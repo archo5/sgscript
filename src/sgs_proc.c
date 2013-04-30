@@ -5,6 +5,7 @@
 #include <ctype.h>
 
 #define SGS_INTERNAL
+#define SGS_REALLY_INTERNAL
 
 #include "sgs_xpc.h"
 #include "sgs_int.h"

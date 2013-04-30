@@ -414,8 +414,8 @@ SGSRESULT sgs_PopSkip( SGS_CTX, int count, int skip );
 	OPERATIONS
 */
 SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis );
-#define sgs_Call( C, args, expect ) sgs_FCall( C, args, expect, FALSE )
-#define sgs_ThisCall( C, args, expect ) sgs_FCall( C, args, expect, TRUE )
+#define sgs_Call( C, args, expect ) sgs_FCall( C, args, expect, 0 )
+#define sgs_ThisCall( C, args, expect ) sgs_FCall( C, args, expect, 1 )
 SGSRESULT sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );
 SGSRESULT sgs_TypeOf( SGS_CTX );
 SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth );

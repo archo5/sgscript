@@ -1,6 +1,7 @@
 
 
 #define SGS_INTERNAL
+#define SGS_REALLY_INTERNAL
 
 #include "sgs_int.h"
 

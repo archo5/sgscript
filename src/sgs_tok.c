@@ -4,6 +4,7 @@
 #include <math.h>
 
 #define SGS_INTERNAL
+#define SGS_REALLY_INTERNAL
 
 #include "sgs_cfg.h"
 #include "sgs_int.h"
@@ -190,7 +191,7 @@ static void readstring( SGS_CTX, MemBuf* out, LineNum* line, const char* code, i
 
 static const char* sgs_opchars = "=<>+-*/%!~&|^.$";
 static const char* sgs_operators = "===;!==;==;!=;<=;>=;+=;-=;*=;/=;%=;&=;|=;^=;<<=;>>=;$=;<<;>>;&&=;||=;&&;||;<;>;=&;=;++;--;+;-;*;/;%;&;|;^;.;$;!;~";
-static const TokenType sgs_optable[] =
+static const sgs_TokenType sgs_optable[] =
 {
 	ST_OP_SEQ, ST_OP_SNEQ, ST_OP_EQ, ST_OP_NEQ, ST_OP_LEQ, ST_OP_GEQ,
 	ST_OP_ADDEQ, ST_OP_SUBEQ, ST_OP_MULEQ, ST_OP_DIVEQ, ST_OP_MODEQ,

@@ -271,7 +271,7 @@ endnumparse:
 			if( *pos == 'r' ) pos++; else return pos;
 			if( *pos == 'u' ) pos++; else return pos;
 			if( *pos == 'e' ) pos++; else return pos;
-			sgs_PushBool( C, TRUE );
+			sgs_PushBool( C, sgs_TRUE );
 			pos--;
 			push = 1;
 		}
@@ -282,7 +282,7 @@ endnumparse:
 			if( *pos == 'l' ) pos++; else return pos;
 			if( *pos == 's' ) pos++; else return pos;
 			if( *pos == 'e' ) pos++; else return pos;
-			sgs_PushBool( C, FALSE );
+			sgs_PushBool( C, sgs_FALSE );
 			pos--;
 			push = 1;
 		}

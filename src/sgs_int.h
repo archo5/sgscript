@@ -82,7 +82,7 @@
 #  define ST_READINT SGS_ST_READINT
 #  define ST_READLN SGS_ST_READLN
 
-#  define TokenType sgs_TokenType
+/* #  define TokenType sgs_TokenType */
 #  define TokenList sgs_TokenList
 
 #  define SFT_NULL SGS_SFT_NULL
