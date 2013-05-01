@@ -45,7 +45,7 @@ static void idbgPrintFunc( void* data, SGS_CTX, int type, const char* message )
 	D->stkoff = C->stack_off - C->stack_base;
 	D->stksize = C->stack_top - C->stack_base;
 	D->pfn( D->pctx, C, type, message );
-	if( D->inside )
+	if( D->inside || type < D->minlev )
 		return;
 	D->inside = 1;
 	printf( "----- Interactive SGScript Debug Inspector -----" );

@@ -1666,6 +1666,20 @@ static int sgsstd_sys_curfile( SGS_CTX )
 	return 0;
 }
 
+static int sgsstd_sys_print( SGS_CTX )
+{
+	char* errmsg;
+	sgs_Integer errcode;
+
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseInt( C, 0, &errcode ) ||
+		!sgs_ParseString( C, 1, &errmsg, NULL ) )
+		STDLIB_WARN( "sys_print(): unexpected arguments; function expects 2 arguments: int, string" )
+
+	sgs_Printf( C, errcode, errmsg );
+	return 0;
+}
+
 static int sgsstd_sys_errorstate( SGS_CTX )
 {
 	int state = 1;
@@ -1772,25 +1786,23 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( import_cfunc ),
 	FN( sys_curfile ),
-	FN( sys_errorstate ), FN( sys_abort ), FN( sys_stat ),
+	FN( sys_print ), FN( sys_errorstate ), FN( sys_abort ), FN( sys_stat ),
 	FN( dumpvar ), FN( dumpvars ),
 	FN( gc_collect ),
 };
 
-#if 0
 sgs_RegIntConst regiconsts[] =
 {
-	{ "__dummy", 0 },
+	{ "SGS_INFO", SGS_INFO },
+	{ "SGS_WARNING", SGS_WARNING },
+	{ "SGS_ERROR", SGS_ERROR },
 };
-#endif
 
 int sgsVM_RegStdLibs( SGS_CTX )
 {
 	int ret;
-#if 0
 	ret = sgs_RegIntConsts( C, regiconsts, ARRAY_SIZE( regiconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
-#endif
 	ret = sgs_RegFuncConsts( C, regfuncs, ARRAY_SIZE( regfuncs ) );
 	if( ret != SGS_SUCCESS ) return ret;
 
