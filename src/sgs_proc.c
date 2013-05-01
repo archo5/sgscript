@@ -955,6 +955,7 @@ static int vm_getvar( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 	}
 	else
 	{
+		sgs_Printf( C, SGS_ERROR, "Variable '%s' was not found", str_cstr( idx->data.S ) );
 		VAR_RELEASE( out );
 		out->type = SVT_NULL;
 	}

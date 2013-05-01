@@ -357,6 +357,10 @@ static int level_exp( SGS_CTX, FTNode** tree )
 		if( binary )	binary = prev && node->next;
 		if( binary )	binary = prev->type != SFT_OPER || *prev->token == ST_OP_INC || *prev->token == ST_OP_DEC;
 
+		/* HACK: discard unary operators following unary operators */
+		if( !binary && !isfcall && mpp && mpp->next == node && ST_OP_UNARY( *mpp->token ) )
+			goto _continue;
+
 		/* weighting */
 		curwt = part_weight( node, isfcall, binary );
 		if( ( curwt == 40 && curwt > weight ) || ( curwt != 40 && curwt >= weight ) )
@@ -528,6 +532,9 @@ _continue:
 
 fail:
 	sgs_Printf( C, SGS_ERROR, "[line %d] Invalid expression", sgsT_LineNum( mpp->token ) );
+#if SGS_DEBUG && SGS_DEBUG_DATA
+	sgsFT_Dump( *tree );
+#endif
 	FUNC_END;
 	return 0;
 }
