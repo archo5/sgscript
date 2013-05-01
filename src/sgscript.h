@@ -111,10 +111,16 @@ typedef void* (*sgs_MemFunc)
 	size_t /* numbytes */
 );
 
+/*
+	unlike realloc, if size = 0, this function MUST return NULL
+*/
 static void* sgs_DefaultMemFunc( void* ud, void* ptr, size_t size )
 {
 	UNUSED( ud );
-	return realloc( ptr, size );
+	if( ptr && size ) return realloc( ptr, size );
+	else if( size )   return malloc( size );
+	if( ptr )         free( ptr );
+	return NULL;
 }
 
 
