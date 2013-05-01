@@ -211,6 +211,9 @@ void sgs_Printf( SGS_CTX, int type, const char* what, ... )
 	va_list args;
 	char* ptr = buf;
 
+	if( type < C->minlev )
+		return;
+
 	va_start( args, what );
 	cnt = SGS_VSPRINTF_LEN( what, args );
 	va_end( args );

@@ -1928,10 +1928,14 @@ SGSRESULT sgs_PushIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 
 SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name )
 {
+	int oelev = C->minlev, ret;
 	sgs_VarPtr pos;
 	sgs_PushString( C, name );
 	pos = stk_getpos( C, -1 );
-	return vm_getvar( C, pos, pos );
+	C->minlev = SGS_ERROR + 1;
+	ret = vm_getvar( C, pos, pos );
+	C->minlev = oelev;
+	return ret;
 }
 
 SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
