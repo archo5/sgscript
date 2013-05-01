@@ -632,10 +632,54 @@ SGSRESULT sgs_LoadLib_Native( SGS_CTX )
 	int ret;
 	ret = sgs_RegIntConsts( C, n_iconsts, ARRAY_SIZE( n_iconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
-	sgs_RegFuncConsts( C, n_fconsts, ARRAY_SIZE( n_fconsts ) );
+	ret = sgs_RegFuncConsts( C, n_fconsts, ARRAY_SIZE( n_fconsts ) );
 	return ret;
 }
 #endif
+
+
+
+/* libraries -  O S  */
+
+
+
+int sgsstd_os_getenv( SGS_CTX )
+{
+	char* str;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, NULL ) )
+		STDLIB_WARN( "os_getenv(): unexpected arguments; function expects 1 argument: string" )
+
+	str = getenv( str );
+	if( str )
+		sgs_PushString( C, str );
+	return !!str;
+}
+
+int sgsstd_os_putenv( SGS_CTX )
+{
+	char* str;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, NULL ) )
+		STDLIB_WARN( "os_putenv(): unexpected arguments; function expects 1 argument: string" )
+
+	sgs_PushBool( C, putenv( str ) == 0 );
+	return 1;
+}
+
+static const sgs_RegFuncConst o_fconsts[] =
+{
+	FN( os_getenv ), FN( os_putenv ),
+};
+
+SGSRESULT sgs_LoadLib_OS( SGS_CTX )
+{
+	int ret;
+	ret = sgs_RegFuncConsts( C, o_fconsts, ARRAY_SIZE( o_fconsts ) );
+	return ret;
+}
 
 
 

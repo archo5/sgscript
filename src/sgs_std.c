@@ -1510,18 +1510,14 @@ static int sgsstd__inclib( SGS_CTX, const char* name, int override )
 		return SGS_SUCCESS;
 	}
 
-	if( strcmp( name, "io" ) == 0 )
-		ret = sgs_LoadLib_IO( C );
-	else if( strcmp( name, "math" ) == 0 )
-		ret = sgs_LoadLib_Math( C );
+	if( strcmp( name, "io" ) == 0 ) ret = sgs_LoadLib_IO( C );
+	else if( strcmp( name, "math" ) == 0 ) ret = sgs_LoadLib_Math( C );
 #if 0
-	else if( strcmp( name, "native" ) == 0 )
-		ret = sgs_LoadLib_Native( C );
+	else if( strcmp( name, "native" ) == 0 ) ret = sgs_LoadLib_Native( C );
 #endif
-	else if( strcmp( name, "string" ) == 0 )
-		ret = sgs_LoadLib_String( C );
-	else if( strcmp( name, "type" ) == 0 )
-		ret = sgs_LoadLib_Type( C );
+	else if( strcmp( name, "os" ) == 0 ) ret = sgs_LoadLib_OS( C );
+	else if( strcmp( name, "string" ) == 0 ) ret = sgs_LoadLib_String( C );
+	else if( strcmp( name, "type" ) == 0 ) ret = sgs_LoadLib_Type( C );
 
 	if( ret == SGS_SUCCESS )
 	{
@@ -1699,6 +1695,23 @@ static int sgsstd_sys_abort( SGS_CTX )
 	return 0;
 }
 
+static int sgsstd_sys_replevel( SGS_CTX )
+{
+	int lev = C->minlev;
+	if( sgs_StackSize( C ) )
+	{
+		sgs_Integer i;
+		if( sgs_StackSize( C ) != 1 ||
+			!sgs_ParseInt( C, 0, &i ) )
+			STDLIB_WARN( "sys_replevel(): unexpected arguments; "
+				"function expects 0-1 arguments - [int]" )
+		C->minlev = (int) i;
+		return 0;
+	}
+	sgs_PushInt( C, lev );
+	return 1;
+}
+
 static int sgsstd_sys_stat( SGS_CTX )
 {
 	sgs_Integer type;
@@ -1786,7 +1799,8 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( import_cfunc ),
 	FN( sys_curfile ),
-	FN( sys_print ), FN( sys_errorstate ), FN( sys_abort ), FN( sys_stat ),
+	FN( sys_print ), FN( sys_errorstate ), FN( sys_abort ),
+	FN( sys_replevel ), FN( sys_stat ),
 	FN( dumpvar ), FN( dumpvars ),
 	FN( gc_collect ),
 };

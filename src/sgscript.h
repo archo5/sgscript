@@ -350,6 +350,7 @@ SGSRESULT sgs_LoadLib_Math( SGS_CTX );
 #if 0
 SGSRESULT sgs_LoadLib_Native( SGS_CTX );
 #endif
+SGSRESULT sgs_LoadLib_OS( SGS_CTX );
 SGSRESULT sgs_LoadLib_String( SGS_CTX );
 SGSRESULT sgs_LoadLib_Type( SGS_CTX );
 
