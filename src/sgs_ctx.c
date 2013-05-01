@@ -546,19 +546,19 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 	case SGS_STAT_DUMP_STACK:
 		{
 			sgs_Variable* p = C->stack_base;
-			sgs_WriteStr( C, "VARIABLE ---- STACK ---- BASE ----\n" );
+			sgs_WriteStr( C, "VARIABLE -- ---- STACK ---- BASE ----\n" );
 			while( p < C->stack_top )
 			{
 				if( p == C->stack_off )
 				{
-					sgs_WriteStr( C, "VARIABLE ---- STACK ---- OFFSET ----\n" );
+					sgs_WriteStr( C, "VARIABLE -- ---- STACK ---- OFFSET ----\n" );
 				}
-				sgs_WriteStr( C, "VARIABLE " );
+				sgs_Writef( C, "VARIABLE %02d ", p - C->stack_base );
 				dumpvar( C, (sgs_Variable*) p );
 				sgs_WriteStr( C, "\n" );
 				p++;
 			}
-			sgs_WriteStr( C, "VARIABLE ---- STACK ---- TOP ----\n" );
+			sgs_WriteStr( C, "VARIABLE -- ---- STACK ---- TOP ----\n" );
 		}
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_GLOBALS:

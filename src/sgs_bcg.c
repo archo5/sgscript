@@ -1660,20 +1660,23 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_FOREACH:
 		FUNC_HIT( "FOREACH" );
 		{
-			int regstate2 = C->fctx->regs;
-			int16_t var = -1;
-			int16_t iter = comp_reg_alloc( C );
-			int16_t key = comp_reg_alloc( C );
-			int16_t val = -1;
-			if( node->child->next->type != SFT_NULL )
-				val = comp_reg_alloc( C );
-			int16_t state = comp_reg_alloc( C );
-			int regstate = C->fctx->regs;
-			C->fctx->loops++;
+			int16_t var, iter, key, val, state;
+			int regstate, regstate2;
+			regstate2 = C->fctx->regs;
 
 			/* init */
+			var = -1;
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child->next->next, &var ) ) goto fail; /* get variable */
+			
+			iter = comp_reg_alloc( C );
+			key = comp_reg_alloc( C );
+			val = -1;
+			if( node->child->next->type != SFT_NULL )
+				val = comp_reg_alloc( C );
+			state = comp_reg_alloc( C );
+			regstate = C->fctx->regs;
+			C->fctx->loops++;
 
 			INSTR_WRITE( SI_FORPREP, iter, var, 0 );
 			comp_reg_unwind( C, regstate );
