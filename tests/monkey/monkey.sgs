@@ -41,6 +41,8 @@ if( io_file_exists( "monkey_state.txt" ) )
 		cur[k] = 0+v;
 }
 
+sys_replevel( SGS_ERROR + 1 );
+
 ctr = 0;
 while( true )
 {

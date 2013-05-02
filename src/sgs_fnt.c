@@ -109,7 +109,7 @@ FTComp;
 #define SFTC_ISKEY( name ) is_keyword( F->at, name )
 #define SFTC_LINENUM sgsT_LineNum( F->at )
 #define SFTC_PRINTERR( what ) sgs_Printf( F->C, SGS_ERROR, "[line %d] " what, SFTC_LINENUM )
-#define SFTC_UNEXP SFTC_PRINTERR( "Unexpected end of code" )
+#define SFTC_UNEXP sgs_Printf( F->C, SGS_ERROR, "Unexpected end of code", SFTC_LINENUM )
 
 
 static FTNode* _make_node( SGS_CTX, int type, TokenList token, FTNode* next, FTNode* child )
