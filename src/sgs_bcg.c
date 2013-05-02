@@ -1415,6 +1415,11 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 		FUNC_HIT( "R_EXPLIST" );
 		{
 			FTNode* n = node->child;
+			if( !n )
+			{
+				QPRINT( "Empty expression found" );
+				goto fail;
+			}
 			while( n )
 			{
 				FUNC_ENTER;
