@@ -1442,6 +1442,37 @@ fail:
 	return 0;
 }
 
+static int compile_for_explist( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
+{
+	FTNode* n;
+
+	FUNC_BEGIN;
+
+	if( node->type != SFT_EXPLIST )
+	{
+		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r[fe] error]." );
+		goto fail;
+	}
+
+	FUNC_HIT( "Rs_EXPLIST" );
+
+	n = node->child;
+	while( n )
+	{
+		FUNC_ENTER;
+		if( !compile_node_r( C, func, n, out ) )
+			goto fail;
+		n = n->next;
+	}
+
+	FUNC_END;
+	return 1;
+
+fail:
+	FUNC_END;
+	return 0;
+}
+
 static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 {
 	int32_t i = 0;
@@ -1627,7 +1658,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			comp_reg_unwind( C, regstate );
 			i = func->code.size;
 			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child->next, &arg ) ) goto fail; /* test */
+			if( !compile_for_explist( C, func, node->child->next, &arg ) ) goto fail; /* test */
 			comp_reg_unwind( C, regstate );
 			if( arg != -1 )
 			{

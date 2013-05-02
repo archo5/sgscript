@@ -497,10 +497,15 @@ int json_encode( SGS_CTX )
 }
 
 
+#ifdef SGS_COMPILE_MODULE
+#  define json_module_entry_point sgscript_main
+#endif
+
+
 #ifdef WIN32
 __declspec(dllexport)
 #endif
-int sgscript_main( SGS_CTX )
+int json_module_entry_point( SGS_CTX )
 {
 	sgs_PushCFunction( C, json_decode );
 	sgs_StoreGlobal( C, "json_decode" );

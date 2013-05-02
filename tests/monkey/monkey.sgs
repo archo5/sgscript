@@ -44,13 +44,13 @@ if( io_file_exists( "monkey_state.txt" ) )
 ctr = 0;
 while( true )
 {
-	if( ctr++ % 100 == 0 )
+	if( ctr++ % 1000 == 0 )
 		io_file_write( "monkey_state.txt", string_implode(cur,",")$"\n" );
 	advance( cur );
 	str = produce( cur, " " );
-	println( "||| " $ str $ " |||" );
+//	println( "||| " $ str $ " |||" );
 	eval( str, true );
 	str = produce( cur, "" );
-	println( "||| " $ str $ " |||" );
+//	println( "||| " $ str $ " |||" );
 	eval( str, true );
 }
