@@ -199,9 +199,19 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 	Call stack
 */
 
-static void vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, instr_t* code, int icnt )
+static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, instr_t* code, int icnt )
 {
-	sgs_StackFrame* F = sgs_Alloc( sgs_StackFrame );
+	sgs_StackFrame* F;
+
+	if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
+	{
+		sgs_Printf( C, SGS_ERROR, "Max. call stack size reached" );
+		C->state |= SGS_MUST_STOP;
+		return 0;
+	}
+
+	C->sf_count++;
+	F = sgs_Alloc( sgs_StackFrame );
 	F->func = func;
 	F->code = code;
 	F->iptr = code;
@@ -220,11 +230,13 @@ static void vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, instr_t* co
 	else
 		C->sf_first = F;
 	C->sf_last = F;
+	return 1;
 }
 
 static void vm_frame_pop( SGS_CTX )
 {
 	sgs_StackFrame* F = C->sf_last;
+	C->sf_count--;
 	if( F->prev )
 		F->prev->next = NULL;
 	C->sf_last = F->prev;
@@ -1434,72 +1446,77 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 {
 	sgs_Variable V = *func;
 	int stkoff = C->stack_off - C->stack_base;
-	int rvc = 0, ret = 1;
+	int rvc = 0, ret = 1, allowed;
 
 	sgs_BreakIf( sgs_StackSize( C ) < args + gotthis );
-	vm_frame_push( C, &V, NULL, NULL, 0 );
+	allowed = vm_frame_push( C, &V, NULL, NULL, 0 );
 	C->stack_off = C->stack_top - args;
 
-	if( func->type == SVT_CFUNC )
+	if( allowed )
 	{
-		int stkoff2 = C->stack_off - C->stack_base;
-		int hadthis = C->call_this;
-		C->call_this = gotthis;
-		rvc = (*func->data.C)( C );
-		C->call_this = hadthis;
-		C->stack_off = C->stack_base + stkoff2;
-	}
-	else if( func->type == SVT_FUNC )
-	{
-		func_t* F = func->data.F;
-		int stkargs = args + ( F->gotthis && gotthis );
-		int expargs = F->numargs + F->gotthis;
-		/* fix argument stack */
-		if( stkargs > expargs )
-			stk_pop( C, stkargs - expargs );
-		else
-			stk_push_nulls( C, expargs - stkargs );
-		/* if <this> was expected but wasn't properly passed, insert a NULL in its place */
-		/* if <this> wasn't expected but was passed, ignore it */
-		if( F->gotthis && !gotthis )
+		if( func->type == SVT_CFUNC )
 		{
-			stk_insert_null( C, 0 );
-			C->stack_off++;
-			gotthis = TRUE;
+			int stkoff2 = C->stack_off - C->stack_base;
+			int hadthis = C->call_this;
+			C->call_this = gotthis;
+			rvc = (*func->data.C)( C );
+			C->call_this = hadthis;
+			C->stack_off = C->stack_base + stkoff2;
 		}
+		else if( func->type == SVT_FUNC )
+		{
+			func_t* F = func->data.F;
+			int stkargs = args + ( F->gotthis && gotthis );
+			int expargs = F->numargs + F->gotthis;
+			/* fix argument stack */
+			if( stkargs > expargs )
+				stk_pop( C, stkargs - expargs );
+			else
+				stk_push_nulls( C, expargs - stkargs );
+			/* if <this> was expected but wasn't properly passed, insert a NULL in its place */
+			/* if <this> wasn't expected but was passed, ignore it */
+			if( F->gotthis && !gotthis )
+			{
+				stk_insert_null( C, 0 );
+				C->stack_off++;
+				gotthis = TRUE;
+			}
 
-		if( F->gotthis && gotthis ) C->stack_off--;
-		{
-			int constcnt = F->instr_off / sizeof( sgs_Variable* );
-			rvc = vm_exec( C, func_consts( F ), constcnt );
+			if( F->gotthis && gotthis ) C->stack_off--;
+			{
+				int constcnt = F->instr_off / sizeof( sgs_Variable* );
+				rvc = vm_exec( C, func_consts( F ), constcnt );
+			}
+			if( F->gotthis && gotthis ) C->stack_off++;
 		}
-		if( F->gotthis && gotthis ) C->stack_off++;
-	}
-	else if( func->type == SVT_OBJECT )
-	{
-		int cargs = C->call_args, cexp = C->call_expect;
-		C->call_args = args;
-		C->call_expect = expect;
-		rvc = obj_exec( C, SOP_CALL, func->data.O, args );
-		if( rvc < 0 )
+		else if( func->type == SVT_OBJECT )
 		{
-			sgs_Printf( C, SGS_ERROR, "The object could not be called" );
-			rvc = 0;
+			int cargs = C->call_args, cexp = C->call_expect;
+			C->call_args = args;
+			C->call_expect = expect;
+			rvc = obj_exec( C, SOP_CALL, func->data.O, args );
+			if( rvc < 0 )
+			{
+				sgs_Printf( C, SGS_ERROR, "The object could not be called" );
+				rvc = 0;
+				ret = 0;
+			}
+			C->call_args = cargs;
+			C->call_expect = cexp;
+		}
+		else
+		{
+			sgs_Printf( C, SGS_ERROR, "Variable of type '%s' cannot be called", sgs_VarNames[ func->type ] );
 			ret = 0;
 		}
-		C->call_args = cargs;
-		C->call_expect = cexp;
-	}
-	else
-	{
-		sgs_Printf( C, SGS_ERROR, "Variable of type '%s' cannot be called", sgs_VarNames[ func->type ] );
-		ret = 0;
 	}
 
 	/* subtract gotthis from offset if pushed extra variable */
 	stk_clean( C, C->stack_off - gotthis, C->stack_top - rvc );
 	C->stack_off = C->stack_base + stkoff;
-	vm_frame_pop( C );
+
+	if( allowed )
+		vm_frame_pop( C );
 
 	if( rvc > expect )
 		stk_pop( C, rvc - expect );
@@ -1779,9 +1796,10 @@ void sgsVM_StackDump( SGS_CTX )
 
 int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize, void* data, int32_t datasize, int clean, uint16_t* T )
 {
-	int stkoff = C->stack_off - C->stack_base, rvc;
-	vm_frame_push( C, NULL, T, (instr_t*) code, codesize / sizeof( instr_t ) );
-	rvc = vm_exec( C, (sgs_Variable*) data, datasize / sizeof( sgs_Variable* ) );
+	int stkoff = C->stack_off - C->stack_base, rvc = 0, allowed;
+	allowed = vm_frame_push( C, NULL, T, (instr_t*) code, codesize / sizeof( instr_t ) );
+	if( allowed )
+		rvc = vm_exec( C, (sgs_Variable*) data, datasize / sizeof( sgs_Variable* ) );
 	C->stack_off = C->stack_base + stkoff;
 	if( clean )
 		stk_pop( C, C->stack_top - C->stack_off );
@@ -1790,7 +1808,8 @@ int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize, void* data, int32_t dat
 		/* keep only returned values */
 		stk_clean( C, C->stack_off, C->stack_top - rvc );
 	}
-	vm_frame_pop( C );
+	if( allowed )
+		vm_frame_pop( C );
 	return rvc;
 }
 

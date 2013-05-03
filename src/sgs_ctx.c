@@ -90,6 +90,7 @@ static void ctx_init( SGS_CTX )
 
 	C->sf_first = NULL;
 	C->sf_last = NULL;
+	C->sf_count = 0;
 
 	ht_init( &C->data, C, 4 );
 

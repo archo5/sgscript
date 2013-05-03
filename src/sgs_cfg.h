@@ -53,17 +53,17 @@
 
 
 /*	Tokenizer settings	*/
-#ifndef SGS_TOKENLIST_PREALLOC
-#  define SGS_TOKENLIST_PREALLOC	1024
-#endif
+#define SGS_TOKENLIST_PREALLOC 1024
 
 /*	Function tree settings	*/
 
 /*	Interpreter settings	*/
 
+#define SGS_MAX_CALL_STACK_SIZE 1024
+
 /*	Context settings		*/
 
-#define SGS_OUTPUT_STACKBUF_SIZE	128
+#define SGS_OUTPUT_STACKBUF_SIZE 128
 
 
 #endif /* SGS_CFG_H_INCLUDED */
