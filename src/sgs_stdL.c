@@ -325,7 +325,7 @@ SGSRESULT sgs_LoadLib_IO( SGS_CTX )
 
 static sgs_Real myround( sgs_Real x )
 {
-	return floor( x + 0.5 ) - 0.5;
+	return floor( x + 0.5 );
 }
 
 static int sgsstd_pow( SGS_CTX )
