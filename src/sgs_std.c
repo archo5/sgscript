@@ -1333,21 +1333,21 @@ argerr:
 
 static int sgsstd_isset( SGS_CTX )
 {
+	int oml, ret;
 	char* str;
 	sgs_SizeVal size;
 	sgs_Variable var;
-	VHTable* ht;
-	VHTableVar* pair;
 	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseString( C, 0, &str, &size ) ||
-		!sgs_GetStackItem( C, 1, &var ) ||
-		var.type != SVT_OBJECT ||
-		var.data.O->iface != sgsstd_dict_functable ||
-		!( ht = (VHTable*) sgs_GetObjectData( C, 0 ) ) )
-		STDLIB_WARN( "isset(): unexpected arguments; function expects 2 arguments: dict, string" )
+		!sgs_GetStackItem( C, 0, &var ) ||
+		!sgs_ParseString( C, 1, &str, &size ) )
+		STDLIB_WARN( "isset(): unexpected arguments; function expects 2 arguments: any, string" )
 
-	pair = vht_get( ht, str, size );
-	sgs_PushBool( C, pair != NULL );
+	oml = C->minlev;
+	C->minlev = INT32_MAX;
+	sgs_Pop( C, 1 );
+	ret = sgs_PushProperty( C, str );
+	C->minlev = oml;
+	sgs_PushBool( C, ret == SGS_SUCCESS );
 	return 1;
 }
 
