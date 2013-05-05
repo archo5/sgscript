@@ -65,5 +65,9 @@
 
 #define SGS_OUTPUT_STACKBUF_SIZE 128
 
+/*	StdLib settings			*/
+
+#define SGS_DICT_CACHE_SIZE 8
+
 
 #endif /* SGS_CFG_H_INCLUDED */

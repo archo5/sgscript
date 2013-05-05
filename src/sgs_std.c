@@ -724,7 +724,40 @@ static int sgsstd_array( SGS_CTX )
 	DICT
 */
 
-#define HTHDR VHTable* ht = (VHTable*) data->data
+#ifdef SGS_DICT_CACHE_SIZE
+#define DICT_CACHE_SIZE SGS_DICT_CACHE_SIZE
+#endif
+
+typedef
+struct _DictHdr
+{
+	VHTable ht;
+#ifdef DICT_CACHE_SIZE
+	void* cachekeys[ DICT_CACHE_SIZE ];
+	int32_t cachevars[ DICT_CACHE_SIZE ];
+#endif
+}
+DictHdr;
+
+static DictHdr* mkdict( SGS_CTX )
+{
+#ifdef DICT_CACHE_SIZE
+	int i;
+#endif
+	DictHdr* dh = sgs_Alloc( DictHdr );
+	vht_init( &dh->ht, C );
+#ifdef DICT_CACHE_SIZE
+	for( i = 0; i < DICT_CACHE_SIZE; ++i )
+	{
+		dh->cachekeys[ i ] = NULL;
+		dh->cachevars[ i ] = 0;
+	}
+#endif
+	return dh;
+}
+
+
+#define HTHDR DictHdr* dh = (DictHdr*) data->data; VHTable* ht = &dh->ht;
 static void* sgsstd_dict_functable[];
 
 static void _dict_clearvals( SGS_CTX, VHTable* ht )
@@ -742,7 +775,7 @@ static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data )
 	HTHDR;
 	_dict_clearvals( C, ht );
 	vht_free( ht, C );
-	sgs_Dealloc( ht );
+	sgs_Dealloc( dh );
 	return SGS_SUCCESS;
 }
 
@@ -750,13 +783,12 @@ static int sgsstd_dict_clone( SGS_CTX, sgs_VarObj* data )
 {
 	HTHDR;
 	int i, htsize = vht_size( ht );
-	VHTable* nht = sgs_Alloc( VHTable );
-	vht_init( nht, C );
+	DictHdr* ndh = mkdict( C );
 	for( i = 0; i < htsize; ++i )
 	{
-		vht_set( nht, ht->vars[ i ].str, ht->vars[ i ].size, &ht->vars[ i ].var, C );
+		vht_set( &ndh->ht, ht->vars[ i ].str, ht->vars[ i ].size, &ht->vars[ i ].var, C );
 	}
-	sgs_PushObject( C, nht, sgsstd_dict_functable );
+	sgs_PushObject( C, ndh, sgsstd_dict_functable );
 	return SGS_SUCCESS;
 }
 
@@ -845,14 +877,51 @@ static int sgsstd_dict_gcmark( SGS_CTX, sgs_VarObj* data )
 
 static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 {
+	char* ptr;
+	VHTableVar* pair = NULL;
 	HTHDR;
-	VHTableVar* pair;
-	sgs_ToString( C, -1 );
+#ifdef DICT_CACHE_SIZE
+	int i, cacheable = sgs_ItemType( C, -1 ) == SVT_STRING;
+	void* key = (C->stack_top-1)->data.S;
+#endif
+
+	ptr = sgs_ToString( C, -1 );
 	if( sgs_ItemType( C, -1 ) != SVT_STRING )
 		return SGS_EINVAL;
-	pair = vht_get( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+
+#ifdef DICT_CACHE_SIZE
+	for( i = 0; i < DICT_CACHE_SIZE; ++i )
+	{
+		if( dh->cachekeys[ i ] == key )
+		{
+			pair = ht->vars + dh->cachevars[ i ];
+			cacheable = 0;
+			break;
+		}
+	}
+
+	if( !pair ){
+#endif
+
+	pair = vht_get( ht, ptr, sgs_GetStringSize( C, -1 ) );
 	if( !pair )
 		return SGS_ENOTFND;
+
+#ifdef DICT_CACHE_SIZE
+	}/* !pair */
+
+	if( cacheable )
+	{
+		for( i = 1; i < DICT_CACHE_SIZE; ++i )
+		{
+			dh->cachekeys[ i ] = dh->cachekeys[ i - 1 ];
+			dh->cachevars[ i ] = dh->cachevars[ i - 1 ];
+		}
+		dh->cachekeys[ 0 ] = key;
+		dh->cachevars[ 0 ] = pair - ht->vars;
+	}
+#endif
+
 	sgs_PushVariable( C, &pair->var );
 	return SGS_SUCCESS;
 }
@@ -948,8 +1017,8 @@ static void* sgsstd_dict_functable[] =
 static int sgsstd_dict_internal( SGS_CTX )
 {
 	int i, objcnt = sgs_StackSize( C );
-	VHTable* ht = sgs_Alloc( VHTable );
-	vht_init( ht, C );
+	DictHdr* dh = mkdict( C );
+	VHTable* ht = &dh->ht;
 	for( i = 0; i < objcnt; i += 2 )
 	{
 		sgs_Variable vkey, val;
@@ -963,6 +1032,7 @@ static int sgsstd_dict_internal( SGS_CTX )
 
 static int sgsstd_dict( SGS_CTX )
 {
+	DictHdr* dh;
 	VHTable* ht;
 	int i, objcnt = sgs_StackSize( C );
 
@@ -970,8 +1040,8 @@ static int sgsstd_dict( SGS_CTX )
 		STDLIB_WARN( "dict() - unexpected argument count,"
 			" function expects 0 or an even number of arguments" )
 
-	ht = sgs_Alloc( VHTable );
-	vht_init( ht, C );
+	dh = mkdict( C );
+	ht = &dh->ht;
 
 	for( i = 0; i < objcnt; i += 2 )
 	{
@@ -1356,16 +1426,31 @@ static int sgsstd_unset( SGS_CTX )
 	char* str;
 	sgs_SizeVal size;
 	sgs_Variable var;
-	VHTable* ht;
+	DictHdr* dh;
 	if( sgs_StackSize( C ) != 2 ||
 		!sgs_GetStackItem( C, 0, &var ) ||
 		var.type != SVT_OBJECT ||
 		var.data.O->iface != sgsstd_dict_functable ||
-		!( ht = (VHTable*) sgs_GetObjectData( C, 0 )->data ) ||
+		!( dh = (DictHdr*) sgs_GetObjectData( C, 0 )->data ) ||
 		!sgs_ParseString( C, 1, &str, &size ) )
 		STDLIB_WARN( "unset(): unexpected arguments; function expects 2 arguments: dict, string" )
 
-	vht_unset( ht, str, size, C );
+#ifdef DICT_CACHE_SIZE
+	{
+		VHTableVar* tv = vht_get( &dh->ht, str, size );
+		if( tv )
+		{
+			int i;
+			int32_t idx = tv - dh->ht.vars;
+			for( i = 0; i < DICT_CACHE_SIZE; ++i )
+			{
+				if( dh->cachevars[ i ] == idx )
+					dh->cachekeys[ i ] = NULL;
+			}
+		}
+	}
+#endif
+	vht_unset( &dh->ht, str, size, C );
 
 	return 0;
 }
