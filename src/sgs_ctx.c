@@ -4,6 +4,7 @@
 
 #define SGS_INTERNAL
 #define SGS_REALLY_INTERNAL
+#define SGS_INTERNAL_STRINGTABLES
 
 #include "sgs_int.h"
 
@@ -71,9 +72,11 @@ static void ctx_init( SGS_CTX )
 		SGS_VERSION_MINOR ) << SGS_VERSION_OFFSET | SGS_VERSION_INCR );
 	C->output_fn = default_outputfn;
 	C->output_ctx = stdout;
+	C->minlev = SGS_INFO;
 	C->print_fn = default_printfn;
 	C->print_ctx = stderr;
-	C->minlev = SGS_INFO;
+	C->hook_fn = NULL;
+	C->hook_ctx = NULL;
 
 	C->state = 0;
 	C->fctx = NULL;
@@ -154,6 +157,31 @@ void sgs_DestroyEngine( SGS_CTX )
 }
 
 
+const char* sgs_CodeString( int type, int val )
+{
+	if( type == SGS_CODE_VT )
+	{
+		if( val < 0 || val >= SGS_VT__COUNT )
+			return NULL;
+		return sgs_VarNames[ val ];
+	}
+	else if( type == SGS_CODE_OP )
+	{
+		if( val < 0 || val >= SGS_SI_COUNT )
+			return NULL;
+		return sgs_OpNames[ val ];
+	}
+	else if( type == SGS_CODE_OI )
+	{
+		if( val < 0 || val >= ARRAY_SIZE( sgs_IfaceNames ) )
+			return NULL;
+		return sgs_IfaceNames[ val ];
+	}
+	else
+		return NULL;
+}
+
+
 void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx )
 {
 	if( func == SGSOUTPUTFN_DEFAULT )
@@ -202,6 +230,23 @@ void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
 		func = default_printfn;
 	C->print_fn = func;
 	C->print_ctx = ctx;
+}
+
+SGSBOOL sgs_GetHookFunc( SGS_CTX, sgs_HookFunc* outf, void** outc )
+{
+	if( C->hook_fn )
+	{
+		*outf = C->hook_fn;
+		*outc = C->hook_ctx;
+		return 1;
+	}
+	return 0;
+}
+
+void sgs_SetHookFunc( SGS_CTX, sgs_HookFunc func, void* ctx )
+{
+	C->hook_fn = func;
+	C->hook_ctx = ctx;
 }
 
 void sgs_Printf( SGS_CTX, int type, const char* what, ... )
@@ -471,13 +516,6 @@ SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size )
 
 
 /* g_varnames ^^ */
-static const char* g_ifitems[] =
-{
-	"end", "destruct", "clone", "gettype", "getprop", "setprop",
-	"getindex", "setindex", "tobool", "toint", "toreal", "tostring",
-	"dump", "gcmark", "getiter", "nextkey", "call", "compare",
-	"add", "sub", "mul", "div", "mod", "negate", "flags"
-};
 
 static void ctx_print_safe( SGS_CTX, const char* str, sgs_SizeVal size )
 {
@@ -503,10 +541,10 @@ static void dumpobj( SGS_CTX, sgs_VarObj* p )
 	buf[0] = 0;
 	while( *ci )
 	{
-		int osi = ((int)*ci) == (int)SOP_FLAGS ? ARRAY_SIZE( g_ifitems ) - 1 : ((int)*ci);
+		int osi = ((int)*ci) == (int)SOP_FLAGS ? ARRAY_SIZE( sgs_IfaceNames ) - 1 : ((int)*ci);
 		if( *buf )
 			strcat( buf, "," );
-		strcat( buf, g_ifitems[ osi ] );
+		strcat( buf, sgs_IfaceNames[ osi ] );
 		ci += 2;
 	}
 	sgs_Writef( C, "OBJECT %p refcount=%d data=%p iface=%p (%s) prev=%p next=%p redblue=%s destroying=%s",

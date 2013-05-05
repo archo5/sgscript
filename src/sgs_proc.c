@@ -6,22 +6,10 @@
 
 #define SGS_INTERNAL
 #define SGS_REALLY_INTERNAL
+#define SGS_INTERNAL_STRINGTABLES
 
 #include "sgs_xpc.h"
 #include "sgs_int.h"
-
-
-static const char* sgs_VarNames[] =
-{
-	"null",
-	"bool",
-	"int",
-	"real",
-	"string",
-	"function",
-	"C function",
-	"object",
-};
 
 
 #define RTTMASK( x ) (1<<(x))
@@ -230,12 +218,20 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, instr_t* cod
 	else
 		C->sf_first = F;
 	C->sf_last = F;
+
+	if( C->hook_fn )
+		C->hook_fn( C->hook_ctx, C, SGS_HOOK_ENTER );
+
 	return 1;
 }
 
 static void vm_frame_pop( SGS_CTX )
 {
 	sgs_StackFrame* F = C->sf_last;
+
+	if( C->hook_fn )
+		C->hook_fn( C->hook_ctx, C, SGS_HOOK_EXIT );
+
 	C->sf_count--;
 	if( F->prev )
 		F->prev->next = NULL;
@@ -1538,13 +1534,6 @@ static SGS_INLINE sgs_Variable* const_getvar( sgs_Variable* consts, int32_t coun
 /*
 	Main VM execution loop
 */
-static const char* opnames[] =
-{
-	"nop",  "push", "push_nulls", "pop_n", "pop_reg",  "return", "jump", "jump_if_true", "jump_if_false", "call",
-	"for_prep", "for_next", "loadconst", "getvar", "setvar", "getprop", "setprop", "getindex", "setindex", "set",
-	"clone", "concat", "negate", "bool_inv", "invert",  "inc", "dec", "add", "sub", "mul", "div", "mod",
-	"and", "or", "xor", "lsh", "rsh",  "seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte",  "array", "dict"
-};
 static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 {
 	sgs_StackFrame* SF = C->sf_last;
@@ -1581,13 +1570,17 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 
 #if SGS_DEBUG
 #  if SGS_DEBUG_INSTR
-		printf( "*** [at 0x%04X] %s ***\n", pp - SF->code, opnames[ instr ] );
+		printf( "*** [at 0x%04X] %s ***\n", pp - SF->code, sgs_OpNames[ instr ] );
 #  endif
 #  if SGS_DEBUG_STATE
 		sgsVM_StackDump( C );
 #  endif
 #endif
-		UNUSED( opnames );
+		UNUSED( sgs_OpNames );
+		UNUSED( sgs_IfaceNames );
+
+		if( C->hook_fn )
+			C->hook_fn( C->hook_ctx, C, SGS_HOOK_STEP );
 
 		switch( instr )
 		{

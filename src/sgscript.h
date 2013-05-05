@@ -146,6 +146,18 @@ typedef void (*sgs_PrintFunc) (
 );
 
 
+/* Event Hook */
+/* additional info can be found in the last stack frame */
+#define SGS_HOOK_ENTER 1 /* entered a function */
+#define SGS_HOOK_EXIT  2 /* exited a function */
+#define SGS_HOOK_STEP  3 /* about to execute an instruction */
+typedef void (*sgs_HookFunc) (
+	void* /* userdata */,
+	sgs_Context* /* ctx / SGS_CTX */,
+	int /* event_id */
+);
+
+
 /* Virtual machine state */
 #define SGS_STOP_ON_FIRST_ERROR		0x0001
 #define SGS_HAS_ERRORS				0x00010000
@@ -265,6 +277,12 @@ static SGS_INLINE sgs_Context* sgs_CreateEngine()
 void sgs_DestroyEngine( SGS_CTX );
 
 
+#define SGS_CODE_VT 1 /* variable type */
+#define SGS_CODE_OP 2 /* VM instruction */
+#define SGS_CODE_OI 3 /* object interface */
+const char* sgs_CodeString( int type, int val );
+
+
 /* Core systems */
 #define SGSOUTPUTFN_DEFAULT ((sgs_OutputFunc)-1)
 void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx );
@@ -276,6 +294,9 @@ void sgs_Writef( SGS_CTX, const char* what, ... );
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
 void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
 void sgs_Printf( SGS_CTX, int type, const char* what, ... );
+
+SGSBOOL sgs_GetHookFunc( SGS_CTX, sgs_HookFunc* outf, void** outc );
+void sgs_SetHookFunc( SGS_CTX, sgs_HookFunc func, void* ctx );
 
 void* sgs_Memory( SGS_CTX, void* ptr, size_t size );
 #define sgs_Malloc( C, size ) sgs_Memory( C, NULL, size )

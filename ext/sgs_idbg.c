@@ -8,6 +8,16 @@
 #include "sgs_idbg.h"
 
 
+/*
+	To successfully debug recursion issues,
+	call stack limit must be slightly raised
+	to allow execution of debug code.
+*/
+#ifndef SGS_IDBG_STACK_EXTENSION
+#define SGS_IDBG_STACK_EXTENSION 128
+#endif
+
+
 #define STREQ( a, b ) ( strcmp( a, b ) == 0 )
 
 
@@ -48,6 +58,7 @@ static void idbgPrintFunc( void* data, SGS_CTX, int type, const char* message )
 	if( D->inside || type < D->minlev )
 		return;
 	D->inside = 1;
+	C->sf_count -= SGS_IDBG_STACK_EXTENSION;
 	printf( "----- Interactive SGScript Debug Inspector -----" );
 
 	for(;;)
@@ -88,6 +99,7 @@ static void idbgPrintFunc( void* data, SGS_CTX, int type, const char* message )
 		}
 	}
 
+	C->sf_count += SGS_IDBG_STACK_EXTENSION;
 	D->inside = 0;
 }
 

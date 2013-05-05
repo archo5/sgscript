@@ -477,6 +477,8 @@ typedef enum sgs_Instruction_e
 	/* specials */
 	SGS_SI_ARRAY,    /* (A:out, B:args) */
 	SGS_SI_DICT,     /* -- || -- */
+
+	SGS_SI_COUNT,
 }
 sgs_Instruction;
 
@@ -634,6 +636,10 @@ struct _sgs_Context
 	sgs_PrintFunc print_fn;  /* printing function */
 	void*         print_ctx; /* printing context */
 
+	/* hook */
+	sgs_HookFunc  hook_fn;
+	void*         hook_ctx;
+
 	/* memory */
 	sgs_MemFunc   memfunc;
 	void*         mfuserdata;
@@ -671,6 +677,44 @@ struct _sgs_Context
 };
 
 #define SGS_STACKFRAMESIZE  (C->stack_top - C->stack_off)
+
+
+#ifdef SGS_INTERNAL_STRINGTABLES
+
+static const char* sgs_VarNames[] =
+{
+	"null",
+	"bool",
+	"int",
+	"real",
+	"string",
+	"function",
+	"C function",
+	"object",
+};
+
+static const char* sgs_OpNames[] =
+{
+	"nop",  "push", "push_nulls", "pop_n", "pop_reg",
+	"return", "jump", "jump_if_true", "jump_if_false", "call",
+	"for_prep", "for_next", "loadconst", "getvar", "setvar",
+	"getprop", "setprop", "getindex", "setindex", "set",
+	"clone", "concat", "negate", "bool_inv", "invert",
+	"inc", "dec", "add", "sub", "mul", "div", "mod",
+	"and", "or", "xor", "lsh", "rsh",
+	"seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte",
+	"array", "dict"
+};
+
+static const char* sgs_IfaceNames[] =
+{
+	"end", "destruct", "clone", "gettype", "getprop", "setprop",
+	"getindex", "setindex", "tobool", "toint", "toreal", "tostring",
+	"dump", "gcmark", "getiter", "nextkey", "call", "compare",
+	"add", "sub", "mul", "div", "mod", "negate", "flags"
+};
+
+#endif
 
 
 #endif /* SGS_INT_H_INCLUDED */

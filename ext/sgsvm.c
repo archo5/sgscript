@@ -4,6 +4,7 @@
 
 #include "sgscript.h"
 #include "sgs_idbg.h"
+#include "sgs_prof.h"
 
 
 #define EPFX "SGSVM Error: "
@@ -19,9 +20,10 @@ void readme()
 
 int main( int argc, char** argv )
 {
-	int i, sep = 0, idbg = 0;
+	int i, sep = 0, idbg = 0, prof = 0;
 	sgs_Context* C;
 	sgs_IDbg D;
+	sgs_Prof P;
 
 	printf( "SGSVM [SGScript v%s]\n", SGS_VERSION );
 
@@ -38,12 +40,15 @@ int main( int argc, char** argv )
 			strcmp( argv[ i ], "-s" ) == 0 ){ sep = 1; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--debug" ) == 0 ||
 			strcmp( argv[ i ], "-d" ) == 0 ){ idbg = 1; argv[ i ] = 0; }
+		else if( strcmp( argv[ i ], "--profile-ops" ) == 0 )
+			{ prof = 2; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--help" ) == 0 ||
 			strcmp( argv[ i ], "-h" ) == 0 ){ readme(); return 0; }
 	}
 
 	C = sgs_CreateEngine();
 	if( idbg ) sgs_InitIDbg( C, &D );
+	if( prof ) sgs_ProfInit( C, &P, prof );
 
 	for( i = 1; i < argc; ++i )
 	{
@@ -72,6 +77,11 @@ int main( int argc, char** argv )
 	}
 
 	if( idbg ) sgs_CloseIDbg( C, &D );
+	if( prof )
+	{
+		sgs_ProfDump( &P );
+		sgs_ProfClose( &P );
+	}
 	sgs_DestroyEngine( C );
 	return 0;
 }
