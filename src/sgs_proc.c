@@ -147,6 +147,18 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t
 
 	var_create_0str( C, out, len );
 	memcpy( str_cstr( out->data.S ), str, len );
+	out->data.S->hash = sgs_HashFunc( str, len );
+}
+
+static void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len )
+{
+	sgs_BreakIf( !str );
+
+	if( len < 0 )
+		len = strlen( str );
+
+	var_create_0str( C, out, len );
+	memcpy( str_cstr( out->data.S ), str, len );
 }
 
 static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface )

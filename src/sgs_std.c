@@ -882,7 +882,9 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 	HTHDR;
 #ifdef DICT_CACHE_SIZE
 	int i, cacheable = sgs_ItemType( C, -1 ) == SVT_STRING;
-	void* key = (C->stack_top-1)->data.S;
+	string_t* key = (C->stack_top-1)->data.S;
+	if( cacheable )
+		cacheable = key->hash != 0;
 #endif
 
 	ptr = sgs_ToString( C, -1 );
@@ -912,7 +914,7 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 
 	if( cacheable )
 	{
-		for( i = 1; i < DICT_CACHE_SIZE; ++i )
+		for( i = DICT_CACHE_SIZE - 1; i > 0; --i )
 		{
 			dh->cachekeys[ i ] = dh->cachekeys[ i - 1 ];
 			dh->cachevars[ i ] = dh->cachevars[ i - 1 ];

@@ -209,7 +209,6 @@
 #  define vht_set sgs_vht_set
 #  define vht_unset sgs_vht_unset
 #  define vht_size sgs_vht_size
-#  define var_create_str sgsVM_VarCreateString
 #  define var_destroy_object sgsVM_VarDestroyObject
 
 #  define STACKFRAMESIZE SGS_STACKFRAMESIZE
@@ -544,6 +543,7 @@ typedef struct _sgs_string_t
 {
 	int32_t refcount;
 	int32_t size;
+	sgs_Hash hash;
 }
 sgs_string_t;
 #define sgs_str_cstr( pstr ) (((char*)(pstr))+sizeof(sgs_string_t))

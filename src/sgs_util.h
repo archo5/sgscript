@@ -202,6 +202,7 @@ static SGS_INLINE void sgs_membuf_appchr( sgs_MemBuf* mb, SGS_CTX, char chr )
 
 /* hash table */
 typedef uint32_t sgs_Hash;
+sgs_Hash sgs_HashFunc( const char* str, int size );
 
 typedef
 struct _sgs_HTPair
