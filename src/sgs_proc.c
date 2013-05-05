@@ -135,6 +135,7 @@ static void var_create_0str( SGS_CTX, sgs_VarPtr out, int32_t len )
 	out->data.S = sgs_Alloc_a( string_t, len + 1 );
 	out->data.S->refcount = 1;
 	out->data.S->size = len;
+	out->data.S->hash = 0;
 	var_cstr( out )[ len ] = 0;
 }
 
