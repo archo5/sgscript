@@ -889,6 +889,7 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 	sgs_ToString( C, -1 );
 	if( sgs_ItemType( C, -1 ) != SVT_STRING )
 		return SGS_EINVAL;
+	key = (C->stack_top-1)->data.S;
 
 #ifdef DICT_CACHE_SIZE
 	for( i = 0; i < DICT_CACHE_SIZE; ++i )
