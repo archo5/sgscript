@@ -136,6 +136,7 @@ static void var_create_0str( SGS_CTX, sgs_VarPtr out, int32_t len )
 	out->data.S->refcount = 1;
 	out->data.S->size = len;
 	out->data.S->hash = 0;
+	out->data.S->isconst = 0;
 	var_cstr( out )[ len ] = 0;
 }
 
@@ -149,6 +150,7 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t
 	var_create_0str( C, out, len );
 	memcpy( str_cstr( out->data.S ), str, len );
 	out->data.S->hash = sgs_HashFunc( str, len );
+	out->data.S->isconst = 1;
 }
 
 static void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len )
@@ -287,9 +289,12 @@ VHTableVar* vht_get( VHTable* vht, const char* key, int32_t size )
 	return ii > 0 ? vht->vars + ( ii - 1 ) : NULL;
 }
 
-sgs_VHTableVar* sgs_vht_getph( sgs_VHTable* vht, const char* key, int32_t size, sgs_Hash hash )
+sgs_VHTableVar* vht_getS( sgs_VHTable* vht, string_t* S )
 {
-	HTPair* pair = ht_find( &vht->ht, key, size, hash );
+	const char* key = str_cstr( S );
+	if( !S->hash )
+		S->hash = sgs_HashFunc( key, S->size );
+	HTPair* pair = ht_find( &vht->ht, key, S->size, S->hash );
 	if( !pair )
 		return NULL;
 	void* idx = pair->ptr;
@@ -330,7 +335,7 @@ void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SG
 
 int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
 {
-	HTPair* tvp = ht_find( &vht->ht, key, size, 0 );
+	HTPair* tvp = ht_find( &vht->ht, key, size, sgs_HashFunc( key, size ) );
 	if( tvp )
 	{
 		VHTableVar* tv = vht->vars + ( ((uint32_t)tvp->ptr) - 1 );
@@ -341,7 +346,7 @@ int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
 			tv->var = lhtv->var;
 			tv->str = lhtv->str;
 			tv->size = lhtv->size;
-			ht_find( &vht->ht, tv->str, tv->size, 0 )->ptr = (void*)( tv - vht->vars + 1 );
+			ht_find( &vht->ht, tv->str, tv->size, sgs_HashFunc( tv->str, tv->size ) )->ptr = (void*)( tv - vht->vars + 1 );
 		}
 		ht_unset_pair( &vht->ht, C, tvp );
 		return 1;

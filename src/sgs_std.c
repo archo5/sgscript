@@ -877,17 +877,16 @@ static int sgsstd_dict_gcmark( SGS_CTX, sgs_VarObj* data )
 
 static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 {
-	char* ptr;
 	VHTableVar* pair = NULL;
 	HTHDR;
 #ifdef DICT_CACHE_SIZE
 	int i, cacheable = sgs_ItemType( C, -1 ) == SVT_STRING;
 	string_t* key = (C->stack_top-1)->data.S;
 	if( cacheable )
-		cacheable = key->hash != 0;
+		cacheable = key->isconst;
 #endif
 
-	ptr = sgs_ToString( C, -1 );
+	sgs_ToString( C, -1 );
 	if( sgs_ItemType( C, -1 ) != SVT_STRING )
 		return SGS_EINVAL;
 
@@ -911,7 +910,7 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 
 	if( !pair )
 	{
-		pair = vht_getph( ht, ptr, key->size, key->hash );
+		pair = vht_getS( ht, key );
 		if( !pair )
 			return SGS_ENOTFND;
 	}
@@ -930,7 +929,7 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 	/*
 		the old method
 	*/
-	pair = vht_get( ht, ptr, sgs_GetStringSize( C, -1 ) );
+	pair = vht_get( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
 	if( !pair )
 		return SGS_ENOTFND;
 #endif

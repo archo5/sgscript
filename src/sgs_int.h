@@ -206,7 +206,7 @@
 #  define vht_init sgs_vht_init
 #  define vht_free sgs_vht_free
 #  define vht_get sgs_vht_get
-#  define vht_getph sgs_vht_getph
+#  define vht_getS sgs_vht_getS
 #  define vht_set sgs_vht_set
 #  define vht_unset sgs_vht_unset
 #  define vht_size sgs_vht_size
@@ -545,6 +545,7 @@ typedef struct _sgs_string_t
 	int32_t refcount;
 	int32_t size;
 	sgs_Hash hash;
+	int isconst;
 }
 sgs_string_t;
 #define sgs_str_cstr( pstr ) (((char*)(pstr))+sizeof(sgs_string_t))
@@ -572,7 +573,7 @@ sgs_VHTable;
 void sgs_vht_init( sgs_VHTable* vht, SGS_CTX );
 void sgs_vht_free( sgs_VHTable* vht, SGS_CTX );
 sgs_VHTableVar* sgs_vht_get( sgs_VHTable* vht, const char* key, int32_t size );
-sgs_VHTableVar* sgs_vht_getph( sgs_VHTable* vht, const char* key, int32_t size, sgs_Hash hash );
+sgs_VHTableVar* sgs_vht_getS( sgs_VHTable* vht, sgs_string_t* S );
 void sgs_vht_set( sgs_VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SGS_CTX );
 int sgs_vht_unset( sgs_VHTable* vht, const char* key, int32_t size, SGS_CTX );
 #define sgs_vht_size( T ) ((T)->ht.load)
