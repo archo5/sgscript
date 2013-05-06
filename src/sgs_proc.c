@@ -142,15 +142,36 @@ static void var_create_0str( SGS_CTX, sgs_VarPtr out, int32_t len )
 
 void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t len )
 {
+	sgs_Hash hash;
 	sgs_BreakIf( !str );
 
 	if( len < 0 )
 		len = strlen( str );
 
+	hash = sgs_HashFunc( str, len );
+	if( len <= SGS_STRINGTABLE_MAXLEN )
+	{
+		HTPair* pair = ht_find( &C->stringtable, str, len, hash );
+		if( pair )
+		{
+			string_t* S = (string_t*) pair->ptr;
+			S->refcount++;
+			out->data.S = S;
+			out->type = SVT_STRING;
+			return;
+		}
+	}
+
 	var_create_0str( C, out, len );
 	memcpy( str_cstr( out->data.S ), str, len );
-	out->data.S->hash = sgs_HashFunc( str, len );
+	out->data.S->hash = hash;
 	out->data.S->isconst = 1;
+
+	if( len <= SGS_STRINGTABLE_MAXLEN )
+	{
+		out->data.S->refcount++;
+		ht_set( &C->stringtable, C, str, len, out->data.S );
+	}
 }
 
 static void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t len )

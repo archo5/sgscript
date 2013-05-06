@@ -31,6 +31,7 @@
 #  define SGS_DEBUG_STATE 0
 #endif
 
+/* debugging of performance issues (currently logs vm_convert only) */
 #ifndef SGS_DEBUG_PERF
 #  define SGS_DEBUG_PERF 0
 #endif
@@ -45,28 +46,38 @@
 #  define SGS_DEBUG_EXTRA 0
 #endif
 
-
-/* profiling */
-#ifndef SGS_PROFILE_BYTECODE
-#  define SGS_PROFILE_BYTECODE 0
+/* checks for having more memory allocated with..
+	..the context memory functions than freed
+	very fast, runs only in sgs_DestroyEngine */
+#ifndef SGS_DEBUG_LEAKS
+#  define SGS_DEBUG_LEAKS 1
 #endif
 
 
-/*	Tokenizer settings	*/
+/* profiling */
+#ifndef SGS_DUMP_BYTECODE
+#  define SGS_DUMP_BYTECODE 0
+#endif
+
+
+/* bytes reserved initially for token storage
+	used to prevent multiple reallocations in the beginning */
 #define SGS_TOKENLIST_PREALLOC 1024
 
-/*	Function tree settings	*/
+/* maximum length for a string to be included in the string table */
+#define SGS_STRINGTABLE_MAXLEN 16
 
-/*	Interpreter settings	*/
-
+/* max. length of the call stack */
 #define SGS_MAX_CALL_STACK_SIZE 1024
 
-/*	Context settings		*/
-
+/* the size of the stack buffer for temporary vsprintf'ed text
+	if predicted text length is longer than that, the memory
+	is allocated using the context allocator */
 #define SGS_OUTPUT_STACKBUF_SIZE 128
 
-/*	StdLib settings			*/
-
+/* size of the last property access cache for dict
+	bigger numbers increase average access time
+	smaller numbers decrease cache hit rate */
 #define SGS_DICT_CACHE_SIZE 8
 
 

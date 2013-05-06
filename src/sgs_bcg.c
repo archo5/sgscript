@@ -95,7 +95,7 @@ static void fctx_destroy( SGS_CTX, sgs_FuncCtx* fctx )
 	sgs_Dealloc( fctx );
 }
 
-#if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
+#if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 static void fctx_dump( sgs_FuncCtx* fctx )
 {
 	printf( "Type: %s\nGlobals: %s\nVariables: %s\n", fctx->func ? "Function" : "Main code", fctx->gvars.ptr, fctx->vars.ptr );
@@ -1242,7 +1242,7 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 		membuf_insbuf( &nf->lnbuf, C, 0, &ln, sizeof( ln ) );
 	}
 
-#if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
+#if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	fctx_dump( fctx );
 	sgsBC_Dump( nf );
 #endif
@@ -1874,7 +1874,7 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 	}
 
 	C->fctx = NULL;
-#if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
+#if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	fctx_dump( fctx );
 #endif
 	fctx_destroy( C, fctx );

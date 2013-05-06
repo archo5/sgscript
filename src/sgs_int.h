@@ -652,6 +652,7 @@ struct _sgs_Context
 	uint32_t      state;
 	sgs_FuncCtx*  fctx;      /* ByteCodeGen */
 	const char*   filename;  /* filename of currently compiled code */
+	sgs_HashTable stringtable; /* string constant caching hash table */
 
 	/* virtual machine */
 	sgs_VarPtr    stack_base;

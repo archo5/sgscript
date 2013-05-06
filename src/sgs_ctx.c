@@ -81,6 +81,7 @@ static void ctx_init( SGS_CTX )
 	C->state = 0;
 	C->fctx = NULL;
 	C->filename = NULL;
+	ht_init( &C->stringtable, C, 4 );
 
 	C->stack_mem = 32;
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
@@ -152,6 +153,25 @@ void sgs_DestroyEngine( SGS_CTX )
 
 	sgs_Dealloc( C->stack_base );
 	ht_free( &C->data, C );
+
+	p = C->stringtable.pairs;
+	pend = C->stringtable.pairs + C->stringtable.size;
+	while( p < pend )
+	{
+		if( p->str && p->ptr )
+		{
+			string_t* st = (string_t*) p->ptr;
+			st->refcount--;
+			sgs_BreakIf( st->refcount != 0 );
+			sgs_Dealloc( st );
+		}
+		p++;
+	}
+	ht_free( &C->stringtable, C );
+
+#ifdef SGS_DEBUG_LEAKS
+	sgs_BreakIf( C->memsize != sizeof( sgs_Context ) );
+#endif
 
 	C->memfunc( C->mfuserdata, C, 0 );
 }
@@ -360,7 +380,7 @@ static int ctx_compile( SGS_CTX, const char* buf, int32_t size, sgs_CompFunc** o
 	DBGINFO( "...cleaning up tokens/function tree" );
 	sgsFT_Destroy( C, ftree ); ftree = NULL;
 	sgsT_Free( C, tlist ); tlist = NULL;
-#if SGS_PROFILE_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
+#if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	sgsBC_Dump( func );
 #endif
 
