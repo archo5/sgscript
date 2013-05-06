@@ -228,7 +228,7 @@ void sgs_ht_free( sgs_HashTable* T, SGS_CTX );
 void sgs_ht_dump( sgs_HashTable* T );
 void sgs_ht_rehash( sgs_HashTable* T, SGS_CTX, int size );
 void sgs_ht_check( sgs_HashTable* T, SGS_CTX, int inc );
-sgs_HTPair* sgs_ht_find( sgs_HashTable* T, const char* str, int size );
+sgs_HTPair* sgs_ht_find( sgs_HashTable* T, const char* str, int size, sgs_Hash h );
 void* sgs_ht_get( sgs_HashTable* T, const char* str, int size );
 void sgs_ht_setpair( sgs_HTPair* P, SGS_CTX, const char* str, int size, sgs_Hash h, void* ptr );
 sgs_HTPair* sgs_ht_set( sgs_HashTable* T, SGS_CTX, const char* str, int size, void* ptr );

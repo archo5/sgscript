@@ -897,20 +897,24 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 		if( dh->cachekeys[ i ] == key )
 		{
 			pair = ht->vars + dh->cachevars[ i ];
-			cacheable = 0;
+			/* for the extremely rare case when some constant is reallocated
+			in the space of a previous one and the dict has it cached,
+			we have to validate all hits */
+			if( pair->size != key->size ||
+				0 != strncmp( pair->str, str_cstr( key ), key->size ) )
+				pair = NULL;
+			else
+				cacheable = 0;
 			break;
 		}
 	}
 
-	if( !pair ){
-#endif
-
-	pair = vht_get( ht, ptr, sgs_GetStringSize( C, -1 ) );
 	if( !pair )
-		return SGS_ENOTFND;
-
-#ifdef DICT_CACHE_SIZE
-	}/* !pair */
+	{
+		pair = vht_getph( ht, ptr, key->size, key->hash );
+		if( !pair )
+			return SGS_ENOTFND;
+	}
 
 	if( cacheable )
 	{
@@ -922,6 +926,13 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 		dh->cachekeys[ 0 ] = key;
 		dh->cachevars[ 0 ] = pair - ht->vars;
 	}
+#else
+	/*
+		the old method
+	*/
+	pair = vht_get( ht, ptr, sgs_GetStringSize( C, -1 ) );
+	if( !pair )
+		return SGS_ENOTFND;
 #endif
 
 	sgs_PushVariable( C, &pair->var );

@@ -206,6 +206,7 @@
 #  define vht_init sgs_vht_init
 #  define vht_free sgs_vht_free
 #  define vht_get sgs_vht_get
+#  define vht_getph sgs_vht_getph
 #  define vht_set sgs_vht_set
 #  define vht_unset sgs_vht_unset
 #  define vht_size sgs_vht_size
@@ -571,6 +572,7 @@ sgs_VHTable;
 void sgs_vht_init( sgs_VHTable* vht, SGS_CTX );
 void sgs_vht_free( sgs_VHTable* vht, SGS_CTX );
 sgs_VHTableVar* sgs_vht_get( sgs_VHTable* vht, const char* key, int32_t size );
+sgs_VHTableVar* sgs_vht_getph( sgs_VHTable* vht, const char* key, int32_t size, sgs_Hash hash );
 void sgs_vht_set( sgs_VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SGS_CTX );
 int sgs_vht_unset( sgs_VHTable* vht, const char* key, int32_t size, SGS_CTX );
 #define sgs_vht_size( T ) ((T)->ht.load)

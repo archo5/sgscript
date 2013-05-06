@@ -230,9 +230,10 @@ void ht_check( HashTable* T, SGS_CTX, int inc )
 	}
 }
 
-HTPair* ht_find( HashTable* T, const char* str, int size )
+HTPair* ht_find( HashTable* T, const char* str, int size, sgs_Hash h )
 {
-	sgs_Hash h = hashFunc( str, size );
+	if( !h )
+		h = hashFunc( str, size );
 	HTPair* p = T->pairs + ( h % T->size );
 	HTPair* pp = p, *pend = T->pairs + T->size;
 	if( p->str == NULL )
@@ -250,7 +251,7 @@ HTPair* ht_find( HashTable* T, const char* str, int size )
 
 void* ht_get( HashTable* T, const char* str, int size )
 {
-	HTPair* p = ht_find( T, str, size );
+	HTPair* p = ht_find( T, str, size, 0 );
 	return p ? p->ptr : NULL;
 }
 
@@ -265,7 +266,7 @@ void ht_setpair( HTPair* P, SGS_CTX, const char* str, int size, sgs_Hash h, void
 
 HTPair* ht_set( HashTable* T, SGS_CTX, const char* str, int size, void* ptr )
 {
-	HTPair* p = ht_find( T, str, size );
+	HTPair* p = ht_find( T, str, size, 0 );
 	if( p )
 	{
 		p->ptr = ptr;
@@ -354,7 +355,7 @@ void ht_unset_pair( HashTable* T, SGS_CTX, HTPair* p )
 
 void ht_unset( HashTable* T, SGS_CTX, const char* str, int size )
 {
-	HTPair* p = ht_find( T, str, size );
+	HTPair* p = ht_find( T, str, size, 0 );
 	if( p )
 	{
 		ht_unset_pair( T, C, p );
