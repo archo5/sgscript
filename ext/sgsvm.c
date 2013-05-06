@@ -16,6 +16,8 @@ void readme()
 	puts( "\t-h, --help: print this text" );
 	puts( "\t-s, --separate: restart the engine between scripts" );
 	puts( "\t-d, --debug: enable interactive debugging on errors" );
+	puts( "\t--profile: enable profiling by collecting call stack timings" );
+	puts( "\t--profile-ops: enable low-level VM instruction profiling" );
 }
 
 int main( int argc, char** argv )
@@ -40,6 +42,8 @@ int main( int argc, char** argv )
 			strcmp( argv[ i ], "-s" ) == 0 ){ sep = 1; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--debug" ) == 0 ||
 			strcmp( argv[ i ], "-d" ) == 0 ){ idbg = 1; argv[ i ] = 0; }
+		else if( strcmp( argv[ i ], "--profile" ) == 0 )
+			{ prof = 1; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--profile-ops" ) == 0 )
 			{ prof = 2; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--help" ) == 0 ||

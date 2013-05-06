@@ -13,6 +13,10 @@ struct _sgs_Prof
 	void* hctx;
 
 	int mode;
+	/* mode 1 */
+	sgs_MemBuf keytmp;
+	sgs_MemBuf timetmp;
+	sgs_HashTable timings;
 	/* mode 2 */
 	int prev;
 	double* ictrs;

@@ -6,14 +6,102 @@
 #include "sgs_prof.h"
 
 
+
+static void mode1hook( void* userdata, SGS_CTX, int evid )
+{
+	SGS_PROF = (sgs_Prof*) userdata;
+	double TM = sgs_GetTime();
+	if( P->hfn )
+		P->hfn( P->hctx, C, evid );
+
+	if( evid == SGS_HOOK_ENTER )
+	{
+		const char* fname = "<error>";
+		sgs_StackFrame* sf = sgs_GetFramePtr( C, 1 );
+		sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
+		membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
+		membuf_appchr( &P->keytmp, C, 0 );
+		membuf_appbuf( &P->timetmp, C, &TM, sizeof(TM) );
+	}
+	else if( evid == SGS_HOOK_EXIT && P->keytmp.size )
+	{
+		double prevTM;
+		HTPair* pair;
+		int prevzeroat = P->keytmp.size - 1;
+		while( prevzeroat --> 0 )
+			if( P->keytmp.ptr[ prevzeroat ] == 0 )
+				break;
+
+		prevTM = AS_DOUBLE( P->timetmp.ptr + P->timetmp.size - sizeof(double) );
+		pair = ht_find( &P->timings, P->keytmp.ptr, P->keytmp.size,
+			sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
+		if( pair )
+		{
+			AS_DOUBLE( pair->ptr ) += TM - prevTM;
+		}
+		else
+		{
+			double* val = sgs_Alloc( double );
+			*val = TM - prevTM;
+			ht_set( &P->timings, C, P->keytmp.ptr, P->keytmp.size, val );
+		}
+
+
+		membuf_resize( &P->keytmp, C, prevzeroat ? prevzeroat + 1 : 0 );
+		membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(TM) );
+	}
+}
+
 static int initProfMode1( SGS_PROF )
 {
-	return 0;
+	P->keytmp = membuf_create();
+	P->timetmp = membuf_create();
+	ht_init( &P->timings, P->C, 4 );
+	sgs_SetHookFunc( P->C, mode1hook, P );
+	return 1;
+}
+
+static void freeProfMode1( SGS_PROF )
+{
+	HTPair* p, *pend;
+	membuf_destroy( &P->keytmp, P->C );
+	membuf_destroy( &P->timetmp, P->C );
+	p = P->timings.pairs;
+	pend = p + P->timings.size;
+	while( p < pend )
+	{
+		if( p->str )
+			sgs_Free( P->C, p->ptr );
+		p++;
+	}
+	ht_free( &P->timings, P->C );
 }
 
 static int dumpProfMode1( SGS_PROF )
 {
-	return 0;
+	HTPair* p, *pend;
+	sgs_Writef( P->C, "--- Time by call stack frame ---\n" );
+	p = P->timings.pairs;
+	pend = p + P->timings.size;
+	while( p < pend )
+	{
+		if( p->str )
+		{
+			const char* s = p->str;
+			const char* send = s + p->size;
+			while( s < send )
+			{
+				if( s != p->str )
+					sgs_Writef( P->C, "::" );
+				sgs_Writef( P->C, "%s", s );
+				s += strlen( s ) + 1;
+			}
+			sgs_Writef( P->C, " - %f\n", AS_DOUBLE( p->ptr ) );
+		}
+		p++;
+	}
+	sgs_Writef( P->C, "---\n" );
+	return 1;
 }
 
 
@@ -24,6 +112,9 @@ static void mode2hook( void* userdata, SGS_CTX, int evid )
 {
 	SGS_PROF = (sgs_Prof*) userdata;
 	double TM = sgs_GetTime();
+	if( P->hfn )
+		P->hfn( P->hctx, C, evid );
+
 	if( P->instr >= 0 )
 	{
 		double dif = TM - P->starttime;
@@ -62,6 +153,12 @@ static int initProfMode2( SGS_PROF )
 	}
 	sgs_SetHookFunc( P->C, mode2hook, P );
 	return 1;
+}
+
+static void freeProfMode2( SGS_PROF )
+{
+	sgs_Free( P->C, P->ictrs );
+	sgs_Free( P->C, P->iexcs );
 }
 
 typedef struct { int i; uint32_t c; double t; } icts;
@@ -111,6 +208,8 @@ static int dumpProfMode2( SGS_PROF )
 
 SGSBOOL sgs_ProfInit( SGS_CTX, SGS_PROF, int mode )
 {
+	P->hfn = NULL;
+	P->hctx = NULL;
 	sgs_GetHookFunc( C, &P->hfn, &P->hctx );
 	P->C = C;
 	P->mode = mode;
@@ -127,10 +226,10 @@ SGSBOOL sgs_ProfInit( SGS_CTX, SGS_PROF, int mode )
 
 SGSBOOL sgs_ProfClose( SGS_PROF )
 {
-	if( P->ictrs )
-		sgs_Free( P->C, P->ictrs );
-	if( P->iexcs )
-		sgs_Free( P->C, P->iexcs );
+	if( P->mode == SGS_PROF_FUNCTIME )
+		freeProfMode1( P );
+	else if( P->mode == SGS_PROF_OPTIME )
+		freeProfMode2( P );
 	sgs_SetHookFunc( P->C, P->hfn, P->hctx );
 	return 1;
 }
