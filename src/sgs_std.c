@@ -875,10 +875,20 @@ static int sgsstd_dict_gcmark( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_dict_getprop( SGS_CTX, sgs_VarObj* data )
 {
 	VHTableVar* pair = NULL;
 	HTHDR;
+
+	if( sgs_ItemType( C, -1 ) == SVT_INT )
+	{
+		int32_t off = (int32_t) (C->stack_top-1)->data.I;
+		if( off < 0 || off > vht_size( ht ) )
+			return SGS_EBOUNDS;
+		sgs_PushVariable( C, &ht->vars[ off ].var );
+		return SGS_SUCCESS;
+	}
+
 #ifdef DICT_CACHE_SIZE
 	int i, cacheable = sgs_ItemType( C, -1 ) == SVT_STRING;
 	string_t* key = (C->stack_top-1)->data.S;
@@ -934,6 +944,23 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
 	if( !pair )
 		return SGS_ENOTFND;
 #endif
+
+	sgs_PushVariable( C, &pair->var );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data )
+{
+	VHTableVar* pair = NULL;
+	HTHDR;
+
+	sgs_ToString( C, -1 );
+	if( sgs_ItemType( C, -1 ) != SVT_STRING )
+		return SGS_EINVAL;
+
+	pair = vht_get( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+	if( !pair )
+		return SGS_ENOTFND;
 
 	sgs_PushVariable( C, &pair->var );
 	return SGS_SUCCESS;
@@ -1007,7 +1034,6 @@ static int sgsstd_dict_getiter( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-#define sgsstd_dict_getprop sgsstd_dict_getindex
 #define sgsstd_dict_setprop sgsstd_dict_setindex
 
 static void* sgsstd_dict_functable[] =

@@ -924,7 +924,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 {
 	int ret;
 
-	if( !isindex && idx->type != SVT_STRING )
+	if( !isindex && idx->type != SVT_STRING && idx->type != SVT_INT )
 		return SGS_ENOTSUP;
 
 	if( obj->type == SVT_OBJECT )
