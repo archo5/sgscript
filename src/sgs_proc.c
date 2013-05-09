@@ -740,6 +740,11 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type )
 			cvar = *stk_getpos( C, -1 );
 			stk_pop1nr( C );
 		}
+		else
+		{
+			var_create_str( C, &cvar, "object", 6 );
+			ret = SGS_SUCCESS;
+		}
 		stk_pop( C, sgs_StackSize( C ) - origsize );
 		goto ending;
 	}
@@ -1086,16 +1091,18 @@ static int vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
 
 static void vm_op_concat( SGS_CTX, int16_t out, sgs_Variable *A, sgs_Variable *B )
 {
+	sgs_SizeVal sA = 0, sB = 0;
+	const char *pA = NULL, *pB = NULL;
 	sgs_Variable vA, vB, N;
 	vA = *A;
 	vB = *B;
 	VAR_ACQUIRE( &vA );
 	VAR_ACQUIRE( &vB );
-	vm_convert( C, &vA, SVT_STRING );
-	vm_convert( C, &vB, SVT_STRING );
-	var_create_0str( C, &N, vA.data.S->size + vB.data.S->size );
-	memcpy( var_cstr( &N ), var_cstr( &vA ), vA.data.S->size );
-	memcpy( var_cstr( &N ) + vA.data.S->size, var_cstr( &vB ), vB.data.S->size );
+	if( vm_convert( C, &vA, SVT_STRING ) == SGS_SUCCESS ){ sA = vA.data.S->size; pA = var_cstr( &vA ); }
+	if( vm_convert( C, &vB, SVT_STRING ) == SGS_SUCCESS ){ sB = vB.data.S->size; pB = var_cstr( &vB ); }
+	var_create_0str( C, &N, sA + sB );
+	if( pA ) memcpy( var_cstr( &N ), pA, sA );
+	if( pB ) memcpy( var_cstr( &N ) + sA, pB, sB );
 	stk_setvar_leave( C, out, &N );
 	VAR_RELEASE( &vA );
 	VAR_RELEASE( &vB );
