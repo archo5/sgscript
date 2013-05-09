@@ -285,6 +285,170 @@ static int sgsstd_io_file_read( SGS_CTX )
 }
 
 
+#define FVAR (*(FILE**)&data->data)
+
+static void* sgsstd_file_functable[];
+
+static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( C );
+	if( FVAR )
+		fclose( FVAR );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_file_gettype( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( data );
+	sgs_PushString( C, "file" );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_fileI_open( SGS_CTX )
+{
+	int ff;
+	char* path;
+	sgs_Integer flags;
+	const char* fstrs[] = { NULL, "r", "w", "w+" };
+	sgs_VarObj* data;
+
+	if( !sgs_Method( C ) ||
+		sgs_ItemType( C, 0 ) != SVT_OBJECT ||
+		( data = sgs_GetObjectData( C, 0 ) )->iface != sgsstd_file_functable )
+		STDLIB_WARN( "file::open() - expected file as 'this'" )
+
+	if( sgs_StackSize( C ) != 3 ||
+		!sgs_ParseString( C, 1, &path, NULL ) ||
+		!sgs_ParseInt( C, 2, &flags ) ||
+		!( ff = flags & ( FILE_READ | FILE_WRITE ) ) )
+		STDLIB_WARN( "file::open() - unexpected arguments; function expects 2 arguments: string, int (!= 0)" )
+
+	if( FVAR )
+		fclose( FVAR );
+
+	FVAR = fopen( path, fstrs[ ff ] );
+
+	sgs_PushBool( C, !!FVAR );
+	return 1;
+}
+
+static int sgsstd_fileI_close( SGS_CTX )
+{
+	int res = 0;
+	sgs_VarObj* data;
+
+	if( !sgs_Method( C ) ||
+		sgs_ItemType( C, 0 ) != SVT_OBJECT ||
+		( data = sgs_GetObjectData( C, 0 ) )->iface != sgsstd_file_functable )
+		STDLIB_WARN( "file::close() - expected file as 'this'" )
+
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "file::close() - unexpected arguments; function expects 0 arguments" )
+
+	if( FVAR )
+	{
+		res = 1;
+		fclose( FVAR );
+		FVAR = NULL;
+	}
+
+	sgs_PushBool( C, res );
+	return 1;
+}
+
+static int sgsstd_fileI_write( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal strsize;
+	sgs_VarObj* data;
+
+	if( !sgs_Method( C ) ||
+		sgs_ItemType( C, 0 ) != SVT_OBJECT ||
+		( data = sgs_GetObjectData( C, 0 ) )->iface != sgsstd_file_functable )
+		STDLIB_WARN( "file::write() - expected file as 'this'" )
+
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseString( C, 1, &str, &strsize ) )
+		STDLIB_WARN( "file::write() - unexpected arguments; function expects 1 argument: string" )
+
+	if( FVAR )
+	{
+		sgs_PushBool( C, fwrite( str, strsize, 1, FVAR ) );
+		return 1;
+	}
+	else
+		STDLIB_WARN( "file::write() - file is not opened" );
+}
+
+static int sgsstd_fileI_size( SGS_CTX )
+{
+	sgs_VarObj* data;
+
+	if( !sgs_Method( C ) ||
+		sgs_ItemType( C, 0 ) != SVT_OBJECT ||
+		( data = sgs_GetObjectData( C, 0 ) )->iface != sgsstd_file_functable )
+		STDLIB_WARN( "file::size() - expected file as 'this'" )
+
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "file::size() - unexpected arguments; function expects 0 arguments" )
+
+	if( FVAR )
+	{
+		long pos = ftell( FVAR );
+		fseek( FVAR, 0, SEEK_END );
+		sgs_PushInt( C, ftell( FVAR ) );
+		fseek( FVAR, pos, SEEK_SET );
+	}
+	else
+		sgs_PushBool( C, 0 );
+
+	return 1;
+}
+
+static int sgsstd_file_getprop( SGS_CTX, sgs_VarObj* data )
+{
+	char* str;
+	sgs_SizeVal len;
+	if( !sgs_ParseString( C, 0, &str, &len ) )
+		return SGS_EINVAL;
+
+	if( 0 == strcmp( str, "open" ) ){ sgs_PushCFunction( C, sgsstd_fileI_open ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "close" ) ){ sgs_PushCFunction( C, sgsstd_fileI_close ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "write" ) ){ sgs_PushCFunction( C, sgsstd_fileI_write ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "size" ) ){ sgs_PushCFunction( C, sgsstd_fileI_size ); return SGS_SUCCESS; }
+
+	return SGS_ENOTFND;
+}
+
+static void* sgsstd_file_functable[] =
+{
+	SOP_DESTRUCT, sgsstd_file_destruct,
+	SOP_GETTYPE, sgsstd_file_gettype,
+	SOP_GETPROP, sgsstd_file_getprop,
+	SOP_END,
+};
+
+static int sgsstd_io_file( SGS_CTX )
+{
+	int ff;
+	char* path;
+	sgs_Integer flags;
+	FILE* fp;
+	const char* fstrs[] = { NULL, "r", "w", "w+" };
+
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseString( C, 0, &path, NULL ) ||
+		!sgs_ParseInt( C, 1, &flags ) ||
+		!( ff = flags & ( FILE_READ | FILE_WRITE ) ) )
+		STDLIB_WARN( "io_file() - unexpected arguments; function expects 2 arguments: string, int (!= 0)" )
+
+	fp = fopen( path, fstrs[ ff ] );
+
+	sgs_PushObject( C, fp, sgsstd_file_functable );
+	return 1;
+}
+
+
 static const sgs_RegRealConst i_rconsts[] =
 {
 	{ "FILE_READ", FILE_READ },
@@ -305,6 +469,7 @@ static const sgs_RegFuncConst i_fconsts[] =
 	FN( io_dir_create ), FN( io_dir_delete ),
 	FN( io_file_delete ),
 	FN( io_file_write ), FN( io_file_read ),
+	FN( io_file ),
 };
 
 SGSRESULT sgs_LoadLib_IO( SGS_CTX )
