@@ -448,14 +448,15 @@ static int sgsstd_fileI_write( SGS_CTX )
 #define SGS_SEEK_END 2
 static int sgsstd_fileI_seek( SGS_CTX )
 {
-	sgs_Integer off, mode;
+	sgs_Integer off, mode = SEEK_SET;
 	FIF_INIT( eof )
+	int ssz = sgs_StackSize( C );
 	int seekmodes[ 3 ] = { SEEK_SET, SEEK_CUR, SEEK_END };
 
-	if( sgs_StackSize( C ) != 3 ||
+	if( ssz < 2 || ssz > 3 ||
 		!sgs_ParseInt( C, 1, &off ) ||
-		!sgs_ParseInt( C, 2, &mode ) )
-		STDLIB_WARN( "file::seek() - unexpected arguments; function expects 2 arguments: int, int" )
+		( ssz >= 3 && !sgs_ParseInt( C, 2, &mode ) ) )
+		STDLIB_WARN( "file::seek() - unexpected arguments; function expects 1-2 arguments: int[, int]" )
 
 	if( mode < 0 || mode > 2 )
 		STDLIB_WARN( "file::seek() - 'mode' not one of SEEK_(SET|CUR|END)" )
