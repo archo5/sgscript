@@ -466,6 +466,35 @@ static int sgsstd_fileI_seek( SGS_CTX )
 	FVNO_END( eof )
 }
 
+static int sgsstd_fileI_flush( SGS_CTX )
+{
+	FIF_INIT( close )
+
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "file::close() - unexpected arguments; function expects 0 arguments" )
+
+	FVNO_BEGIN
+		sgs_PushBool( C, !fflush( FVAR ) );
+		return 1;
+	FVNO_END( flush )
+}
+
+static int sgsstd_fileI_setbuf( SGS_CTX )
+{
+	sgs_Integer size;
+	FIF_INIT( eof )
+
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseInt( C, 1, &size ) )
+		STDLIB_WARN( "file::setbuf() - unexpected arguments; function expects 1 argument: int" )
+
+	FVNO_BEGIN
+		sgs_PushBool( C, !setvbuf( FVAR, NULL, size ? _IOFBF : _IONBF, size ) );
+		return 1;
+	FVNO_END( setbuf )
+}
+
+
 static int sgsstd_file_getprop( SGS_CTX, sgs_VarObj* data )
 {
 	char* str;
@@ -483,6 +512,9 @@ static int sgsstd_file_getprop( SGS_CTX, sgs_VarObj* data )
 	if( 0 == strcmp( str, "read" ) ){ sgs_PushCFunction( C, sgsstd_fileI_read ); return SGS_SUCCESS; }
 	if( 0 == strcmp( str, "write" ) ){ sgs_PushCFunction( C, sgsstd_fileI_write ); return SGS_SUCCESS; }
 	if( 0 == strcmp( str, "seek" ) ){ sgs_PushCFunction( C, sgsstd_fileI_seek ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "flush" ) ){ sgs_PushCFunction( C, sgsstd_fileI_flush ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "setbuf" ) ){ sgs_PushCFunction( C, sgsstd_fileI_setbuf ); return SGS_SUCCESS; }
+
 
 	return SGS_ENOTFND;
 }
