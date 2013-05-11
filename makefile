@@ -75,6 +75,13 @@ test_mt: $(OUTDIR)/sgstest_mt$(BINEXT)
 	$(OUTDIR)/sgstest_mt
 $(OUTDIR)/sgstest_mt$(BINEXT): $(LIBDIR)/libsgscript.a
 	$(CC) -o $@ examples/sgstest_mt.c $(LFLAGS) -lm -lpthread $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+# - sgs2exe tool
+.PHONY: sgsexe
+sgsexe: $(LIBDIR)/libsgscript.a $(EXTDIR)/sgsexe.c
+	$(CC) -o $(OUTDIR)/sgsexe$(BINEXT) $(EXTDIR)/sgsexe.c $(LIBDIR)/libsgscript.a -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+	objcopy --only-keep-debug "$(OUTDIR)/sgsexe$(BINEXT)" "$(OUTDIR)/sgsexe$(BINEXT).dbg"
+	strip -s "$(OUTDIR)/sgsexe$(BINEXT)"
+	objcopy --add-gnu-debuglink="$(OUTDIR)/sgsexe$(BINEXT).dbg" "$(OUTDIR)/sgsexe$(BINEXT)"
 
 # clean everything
 .PHONY: clean

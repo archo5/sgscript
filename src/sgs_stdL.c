@@ -1570,7 +1570,7 @@ static int sgsstd_string_charcode( SGS_CTX )
 	if( off < 0 || off >= (sgs_Integer) asize )
 		STDLIB_WARN( "string_charcode() - index out of bounds" )
 
-	sgs_PushInt( C, a[ off ] );
+	sgs_PushInt( C, (unsigned char) a[ off ] );
 	return 1;
 }
 
