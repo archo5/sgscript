@@ -50,7 +50,6 @@
 #  define ST_OP_BLOEQ SGS_ST_OP_BLOEQ
 #  define ST_OP_CATEQ SGS_ST_OP_CATEQ
 #  define ST_OP_SET SGS_ST_OP_SET
-#  define ST_OP_COPY SGS_ST_OP_COPY
 #  define ST_OP_BLAND SGS_ST_OP_BLAND
 #  define ST_OP_BLOR SGS_ST_OP_BLOR
 #  define ST_OP_ADD SGS_ST_OP_ADD
@@ -130,7 +129,8 @@
 #  define SI_JMPF SGS_SI_JMPF
 #  define SI_CALL SGS_SI_CALL
 #  define SI_FORPREP SGS_SI_FORPREP
-#  define SI_FORNEXT SGS_SI_FORNEXT
+#  define SI_FORLOAD SGS_SI_FORLOAD
+#  define SI_FORJUMP SGS_SI_FORJUMP
 #  define SI_LOADCONST SGS_SI_LOADCONST
 #  define SI_GETVAR SGS_SI_GETVAR
 #  define SI_SETVAR SGS_SI_SETVAR
@@ -260,7 +260,6 @@
 #define SGS_ST_OP_BLOEQ 219	/* ||=  */
 #define SGS_ST_OP_CATEQ 220	/* $=   */
 #define SGS_ST_OP_SET   221	/* =    */
-#define SGS_ST_OP_COPY  222	/* =&   */
 #define SGS_ST_OP_BLAND 223	/* &&   */
 #define SGS_ST_OP_BLOR  224	/* ||   */
 #define SGS_ST_OP_ADD   225	/* +    */
@@ -429,7 +428,8 @@ typedef enum sgs_Instruction_e
 	SGS_SI_CALL,     /* (A:exp, B:args, C:src)  call a variable */
 
 	SGS_SI_FORPREP,  /* (A:out, B:src)          retrieves the iterator to work the object */
-	SGS_SI_FORNEXT,  /* (A:oky, B:ost, C:iter)  retrieves pending output key/state from iterator */
+	SGS_SI_FORLOAD,  /* (A:iter, B:oky, C:ovl)  retrieves current key & value from iterator */
+	SGS_SI_FORJUMP,  /* (C:iter, E:off)         advances and jumps if next key exists */
 
 	SGS_SI_LOADCONST,/* (C:out, E:off)          load a constant to a register */
 	SGS_SI_GETVAR,   /* (A:out, B:name)         <varname> => <value> */
@@ -701,7 +701,7 @@ static const char* sgs_OpNames[] =
 {
 	"nop",  "push", "push_nulls", "pop_n", "pop_reg",
 	"return", "jump", "jump_if_true", "jump_if_false", "call",
-	"for_prep", "for_next", "loadconst", "getvar", "setvar",
+	"for_prep", "for_load", "for_jump", "loadconst", "getvar", "setvar",
 	"getprop", "setprop", "getindex", "setindex", "set",
 	"clone", "concat", "negate", "bool_inv", "invert",
 	"inc", "dec", "add", "sub", "mul", "div", "mod",

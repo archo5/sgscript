@@ -1420,13 +1420,13 @@ static int vm_forprep( SGS_CTX, int outiter, sgs_VarPtr obj )
 	return SGS_SUCCESS;
 }
 
-static int vm_fornext( SGS_CTX, int outkey, int outval, int outstate, sgs_VarPtr iter )
+static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 {
 	int ssz = STACKFRAMESIZE;
-	int flags = 0, expargs = 0;
+	int flags = 0, expargs = 0, out;
 	if( outkey >= 0 ){ flags |= SGS_GETNEXT_KEY; expargs++; }
 	if( outval >= 0 ){ flags |= SGS_GETNEXT_VALUE; expargs++; }
-	if( iter->type != SVT_OBJECT || obj_exec( C, SOP_GETNEXT, iter->data.O, flags, 0 ) != SGS_SUCCESS )
+	if( iter->type != SVT_OBJECT || ( out = obj_exec( C, SOP_GETNEXT, iter->data.O, flags, 0 ) ) < 0 )
 	{
 		sgs_Pop( C, STACKFRAMESIZE - ssz );
 		sgs_Printf( C, SGS_ERROR, "Failed to retrieve data from iterator" );
@@ -1434,12 +1434,16 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, int outstate, sgs_VarPtr
 		return SGS_EINPROC;
 	}
 
-	sgs_PopSkip( C, STACKFRAMESIZE - ssz - expargs, expargs );
-	stk_setvar( C, outkey, stk_getpos( C, -3 + (outval<0) ) );
-	stk_setvar( C, outval, stk_getpos( C, -2 ) );
-	stk_setvar( C, outstate, stk_getpos( C, -1 ) );
-	stk_pop2( C );
-	return SGS_SUCCESS;
+	if( flags )
+	{
+		sgs_PopSkip( C, STACKFRAMESIZE - ssz - expargs, expargs );
+		stk_setvar( C, outkey, stk_getpos( C, -2 + (outval<0) ) );
+		stk_setvar( C, outval, stk_getpos( C, -1 ) );
+		stk_pop2( C );
+	}
+	else
+		sgs_Pop( C, STACKFRAMESIZE - ssz );
+	return out;
 }
 
 
@@ -2175,7 +2179,7 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 				sprintf( buf, "object (%p) [%d] ", obj, obj->refcount - 1 );
 				sgs_PushString( C, buf );
 				stksz = C->stack_top - C->stack_off;
-				
+
 				ret = obj_exec( C, SOP_DUMP, obj, maxdepth - 1, 1 );
 				q = ret == SGS_SUCCESS ? 1 : 0;
 				sgs_PopSkip( C, C->stack_top - C->stack_off - stksz - q, q );

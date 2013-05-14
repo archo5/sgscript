@@ -1019,7 +1019,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 	else if( assign )
 	{
 		/* 1 operand */
-		if( *node->token == ST_OP_SET || *node->token == ST_OP_COPY )
+		if( *node->token == ST_OP_SET )
 		{
 			int16_t ireg, isb = func->code.size;
 
@@ -1030,26 +1030,12 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			if( arg )
 				*arg = ireg;
 
-			if( *node->token == ST_OP_SET )
+			FUNC_ENTER;
+			if( !try_optimize_last_instr_out( C, func, node->child, isb, arg ) )
 			{
+				/* just set the contents */
 				FUNC_ENTER;
-				if( !try_optimize_last_instr_out( C, func, node->child, isb, arg ) )
-				{
-					/* just set the contents */
-					FUNC_ENTER;
-					if( !compile_node_w( C, func, node->child, ireg ) ) goto fail;
-				}
-			}
-			else
-			{
-				/* TODO: remove, currently emits NOP */
-				/* load the original variable and copy data to it */
-				int16_t oreg;
-
-				FUNC_ENTER;
-				if( !compile_node_r( C, func, node->child, &oreg ) ) goto fail;
-
-				INSTR_WRITE_PCH();
+				if( !compile_node_w( C, func, node->child, ireg ) ) goto fail;
 			}
 		}
 		/* 2 operands */

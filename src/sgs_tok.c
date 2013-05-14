@@ -190,14 +190,14 @@ static void readstring( SGS_CTX, MemBuf* out, LineNum* line, const char* code, i
 }
 
 static const char* sgs_opchars = "=<>+-*/%!~&|^.$";
-static const char* sgs_operators = "===;!==;==;!=;<=;>=;+=;-=;*=;/=;%=;&=;|=;^=;<<=;>>=;$=;<<;>>;&&=;||=;&&;||;<;>;=&;=;++;--;+;-;*;/;%;&;|;^;.;$;!;~";
+static const char* sgs_operators = "===;!==;==;!=;<=;>=;+=;-=;*=;/=;%=;&=;|=;^=;<<=;>>=;$=;<<;>>;&&=;||=;&&;||;<;>;=;++;--;+;-;*;/;%;&;|;^;.;$;!;~";
 static const sgs_TokenType sgs_optable[] =
 {
 	ST_OP_SEQ, ST_OP_SNEQ, ST_OP_EQ, ST_OP_NEQ, ST_OP_LEQ, ST_OP_GEQ,
 	ST_OP_ADDEQ, ST_OP_SUBEQ, ST_OP_MULEQ, ST_OP_DIVEQ, ST_OP_MODEQ,
 	ST_OP_ANDEQ, ST_OP_OREQ, ST_OP_XOREQ, ST_OP_LSHEQ, ST_OP_RSHEQ, ST_OP_CATEQ,
 	ST_OP_LSH, ST_OP_RSH, ST_OP_BLAEQ, ST_OP_BLOEQ, ST_OP_BLAND, ST_OP_BLOR,
-	ST_OP_LESS, ST_OP_GRTR, ST_OP_COPY, ST_OP_SET, ST_OP_INC, ST_OP_DEC,
+	ST_OP_LESS, ST_OP_GRTR, ST_OP_SET, ST_OP_INC, ST_OP_DEC,
 	ST_OP_ADD, ST_OP_SUB, ST_OP_MUL, ST_OP_DIV, ST_OP_MOD, ST_OP_AND,
 	ST_OP_OR, ST_OP_XOR, ST_OP_MMBR, ST_OP_CAT, ST_OP_NOT, ST_OP_INV
 };

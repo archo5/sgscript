@@ -234,13 +234,13 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj*, int /* arg */ );
 #define SGS_GETNEXT_KEY   0x01
 #define SGS_GETNEXT_VALUE 0x02
 
-#define SGS_EOP_ADD       1
-#define SGS_EOP_SUB       2
-#define SGS_EOP_MUL       3
-#define SGS_EOP_DIV       4
-#define SGS_EOP_MOD       5
-#define SGS_EOP_COMPARE   6
-#define SGS_EOP_NEGATE    7
+#define SGS_EOP_ADD       0
+#define SGS_EOP_SUB       1
+#define SGS_EOP_MUL       2
+#define SGS_EOP_DIV       3
+#define SGS_EOP_MOD       4
+#define SGS_EOP_COMPARE   5
+#define SGS_EOP_NEGATE    6
 
 #define SGS_CONVOP_CLONE  11
 #define SGS_CONVOP_TOTYPE 12
