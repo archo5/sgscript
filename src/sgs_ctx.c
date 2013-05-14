@@ -567,8 +567,8 @@ static void dumpobj( SGS_CTX, sgs_VarObj* p )
 		strcat( buf, sgs_IfaceNames[ osi ] );
 		ci += 2;
 	}
-	sgs_Writef( C, "OBJECT %p refcount=%d data=%p iface=%p (%s) prev=%p next=%p redblue=%s destroying=%s",
-		p, p->refcount, p->data, p->iface, buf, p->prev, p->next, p->redblue ? "R" : "B", p->destroying ? "T" : "F" );
+	sgs_Writef( C, "OBJECT %p refcount=%d data=%p iface=%p (%s) prev=%p next=%p redblue=%s",
+		p, p->refcount, p->data, p->iface, buf, p->prev, p->next, p->redblue ? "R" : "B" );
 }
 
 static void dumpvar( SGS_CTX, sgs_Variable* var )

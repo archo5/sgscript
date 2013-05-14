@@ -36,28 +36,14 @@ extern "C" {
 
 #  define SOP_END SGS_OP_END
 #  define SOP_DESTRUCT SGS_OP_DESTRUCT
-#  define SOP_CLONE SGS_OP_CLONE
-#  define SOP_GETTYPE SGS_OP_GETTYPE
-#  define SOP_GETPROP SGS_OP_GETPROP
-#  define SOP_SETPROP SGS_OP_SETPROP
 #  define SOP_GETINDEX SGS_OP_GETINDEX
 #  define SOP_SETINDEX SGS_OP_SETINDEX
-#  define SOP_TOBOOL SGS_OP_TOBOOL
-#  define SOP_TOINT SGS_OP_TOINT
-#  define SOP_TOREAL SGS_OP_TOREAL
-#  define SOP_TOSTRING SGS_OP_TOSTRING
+#  define SOP_CONVERT SGS_OP_CONVERT
 #  define SOP_DUMP SGS_OP_DUMP
 #  define SOP_GCMARK SGS_OP_GCMARK
-#  define SOP_GETITER SGS_OP_GETITER
-#  define SOP_NEXTKEY SGS_OP_NEXTKEY
+#  define SOP_GETNEXT SGS_OP_GETNEXT
 #  define SOP_CALL SGS_OP_CALL
-#  define SOP_COMPARE SGS_OP_COMPARE
-#  define SOP_ADD SGS_OP_ADD
-#  define SOP_SUB SGS_OP_SUB
-#  define SOP_MUL SGS_OP_MUL
-#  define SOP_DIV SGS_OP_DIV
-#  define SOP_MOD SGS_OP_MOD
-#  define SOP_NEGATE SGS_OP_NEGATE
+#  define SOP_EXPR SGS_OP_EXPR
 #  define SOP_FLAGS SGS_OP_FLAGS
 #endif
 
@@ -198,14 +184,12 @@ typedef struct sgs_ObjData sgs_VarObj;
 struct sgs_ObjData
 {
 	sgs_SizeVal refcount;
-	void* data;
+	uint16_t flags;     /* features of the object */
+	uint8_t redblue;    /* red or blue? mark & sweep */
+	void* data;         /* should have offset=8 with packing alignment>=8 */
 	void** iface;
 	sgs_VarObj* prev;   /* pointer to previous GC object */
 	sgs_VarObj* next;   /* pointer to next GC object */
-	uint16_t flags;     /* features of the object */
-	uint8_t redblue;    /* red or blue? mark & sweep */
-	uint8_t destroying; /* whether the variable is already in a process of destruction.
-	                       for container circ. ref. handling. */
 };
 
 typedef struct _sgs_iStr sgs_iStr;
@@ -229,36 +213,38 @@ struct _sgs_Variable
 };
 
 /* - object interface */
-typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* data );
+typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj*, int /* arg */ );
 
 #define SGS_OP( idx ) ((void*)idx)
 #define SGS_OP_END        SGS_OP( 0 )
-#define SGS_OP_DESTRUCT   SGS_OP( 1 )
-#define SGS_OP_CLONE      SGS_OP( 2 )
-#define SGS_OP_GETTYPE    SGS_OP( 3 )
-#define SGS_OP_GETPROP    SGS_OP( 4 )
-#define SGS_OP_SETPROP    SGS_OP( 5 )
-#define SGS_OP_GETINDEX   SGS_OP( 6 )
-#define SGS_OP_SETINDEX   SGS_OP( 7 )
-#define SGS_OP_TOBOOL     SGS_OP( 8 )
-#define SGS_OP_TOINT      SGS_OP( 9 )
-#define SGS_OP_TOREAL     SGS_OP( 10 )
-#define SGS_OP_TOSTRING   SGS_OP( 11 )
-#define SGS_OP_DUMP       SGS_OP( 12 )
-#define SGS_OP_GCMARK     SGS_OP( 13 )
-#define SGS_OP_GETITER    SGS_OP( 14 )
-#define SGS_OP_NEXTKEY    SGS_OP( 15 )
-#define SGS_OP_CALL       SGS_OP( 16 )
-#define SGS_OP_COMPARE    SGS_OP( 17 )
-#define SGS_OP_ADD        SGS_OP( 18 )
-#define SGS_OP_SUB        SGS_OP( 19 )
-#define SGS_OP_MUL        SGS_OP( 20 )
-#define SGS_OP_DIV        SGS_OP( 21 )
-#define SGS_OP_MOD        SGS_OP( 22 )
-#define SGS_OP_NEGATE     SGS_OP( 23 )
+#define SGS_OP_DESTRUCT   SGS_OP( 1 )  /* arg = should free child vars? */
+#define SGS_OP_GETINDEX   SGS_OP( 2 )  /* arg = prop? */
+#define SGS_OP_SETINDEX   SGS_OP( 3 )  /* arg = prop? */
+#define SGS_OP_CONVERT    SGS_OP( 4 )  /* arg = type(B|I|R|S)/spec. */
+#define SGS_OP_DUMP       SGS_OP( 5 )
+#define SGS_OP_GCMARK     SGS_OP( 6 )
+#define SGS_OP_GETNEXT    SGS_OP( 7 )
+#define SGS_OP_CALL       SGS_OP( 8 )
+#define SGS_OP_EXPR       SGS_OP( 9 )
 
 #define SGS_OP_FLAGS      SGS_OP(100)
 #define SGS_OBJ_ARRAY     0x01
+
+/* parameter flags / special values */
+#define SGS_GETNEXT_KEY   0x01
+#define SGS_GETNEXT_VALUE 0x02
+
+#define SGS_EOP_ADD       1
+#define SGS_EOP_SUB       2
+#define SGS_EOP_MUL       3
+#define SGS_EOP_DIV       4
+#define SGS_EOP_MOD       5
+#define SGS_EOP_COMPARE   6
+#define SGS_EOP_NEGATE    7
+
+#define SGS_CONVOP_CLONE  11
+#define SGS_CONVOP_TOTYPE 12
+#define SGS_CONVOP_TOITER 13
 
 
 /* Engine context */

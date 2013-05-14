@@ -516,7 +516,6 @@ static int sgsstd_file_getprop( SGS_CTX, sgs_VarObj* data )
 	if( 0 == strcmp( str, "flush" ) ){ sgs_PushCFunction( C, sgsstd_fileI_flush ); return SGS_SUCCESS; }
 	if( 0 == strcmp( str, "setbuf" ) ){ sgs_PushCFunction( C, sgsstd_fileI_setbuf ); return SGS_SUCCESS; }
 
-
 	return SGS_ENOTFND;
 }
 
@@ -565,6 +564,88 @@ static int sgsstd_io_file( SGS_CTX )
 
 pushobj:
 	sgs_PushObject( C, fp, sgsstd_file_functable );
+	return 1;
+}
+
+#undef FVAR
+
+
+#define DVAR (*(DIR**)&data->data)
+#define DVNO_BEGIN if( DVAR ) {
+#define DVNO_END( name ) } else STDLIB_WARN( "dir::" #name "() - directory is not opened" )
+
+static void* sgsstd_dir_functable[];
+
+static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( C );
+	if( DVAR )
+		closedir( DVAR );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_dir_gettype( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( data );
+	sgs_PushString( C, "dir" );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_dir_getprop( SGS_CTX, sgs_VarObj* data )
+{
+	char* str;
+	sgs_SizeVal len;
+	if( !sgs_ParseString( C, 0, &str, &len ) )
+		return SGS_EINVAL;
+
+	if( 0 == strcmp( str, "iterator" ) ){ return sgsstd_dirP_iterator( C, DVAR ); }
+
+	if( 0 == strcmp( str, "open" ) ){ sgs_PushCFunction( C, sgsstd_dirI_open ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "close" ) ){ sgs_PushCFunction( C, sgsstd_dirI_close ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "read" ) ){ sgs_PushCFunction( C, sgsstd_fileI_read ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "write" ) ){ sgs_PushCFunction( C, sgsstd_fileI_write ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "seek" ) ){ sgs_PushCFunction( C, sgsstd_fileI_seek ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "flush" ) ){ sgs_PushCFunction( C, sgsstd_fileI_flush ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "setbuf" ) ){ sgs_PushCFunction( C, sgsstd_fileI_setbuf ); return SGS_SUCCESS; }
+
+	return SGS_ENOTFND;
+}
+
+int sgsstd_dir_tostring( SGS_CTX, sgs_VarObj* data )
+{
+	UNUSED( data );
+	sgs_PushString( C, "dir" );
+	return SGS_SUCCESS;
+}
+
+int sgsstd_dir_tobool( SGS_CTX, sgs_VarObj* data )
+{
+	sgs_PushBool( C, !!DVAR );
+	return SGS_SUCCESS;
+}
+
+static void* sgsstd_dir_functable[] =
+{
+	SOP_DESTRUCT, sgsstd_dir_destruct,
+	SOP_GETTYPE, sgsstd_dir_gettype,
+	SOP_GETPROP, sgsstd_dir_getprop,
+	SOP_TOSTRING, sgsstd_dir_tostring,
+	SOP_TOBOOL, sgsstd_dir_tobool,
+	SOP_END,
+};
+
+static int sgsstd_io_dir( SGS_CTX )
+{
+	char* path;
+	DIR* dp = NULL;
+
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &path, NULL ) )
+		STDLIB_WARN( "io_dir() - unexpected arguments; function expects 1 argument: string" )
+
+	dp = opendir( path );
+
+	sgs_PushObject( C, dp, sgsstd_dir_functable );
 	return 1;
 }
 
