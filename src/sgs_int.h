@@ -505,17 +505,17 @@ typedef uint32_t sgs_instr_t;
 #define SGS_INSTR_MASK_C  0x01ff /* C:  9 bits */
 #define SGS_INSTR_MASK_E  0x0001ffff
 
-#define SGS_INSTR_GET_OP( x )  ( ( ( x ) >> SGS_INSTR_OFF_OP ) & SGS_INSTR_MASK_OP )
-#define SGS_INSTR_GET_A( x )   ( ( ( x ) >> SGS_INSTR_OFF_A  ) & SGS_INSTR_MASK_A  )
-#define SGS_INSTR_GET_B( x )   ( ( ( x ) >> SGS_INSTR_OFF_B  ) & SGS_INSTR_MASK_B  )
-#define SGS_INSTR_GET_C( x )   ( ( ( x ) >> SGS_INSTR_OFF_C  ) & SGS_INSTR_MASK_C  )
-#define SGS_INSTR_GET_E( x )   ( ( ( x ) >> SGS_INSTR_OFF_E  ) & SGS_INSTR_MASK_E  )
+#define SGS_INSTR_GET_OP( x )  (((x) >> SGS_INSTR_OFF_OP) & SGS_INSTR_MASK_OP)
+#define SGS_INSTR_GET_A( x )   (((x) >> SGS_INSTR_OFF_A ) & SGS_INSTR_MASK_A )
+#define SGS_INSTR_GET_B( x )   (((x) >> SGS_INSTR_OFF_B ) & SGS_INSTR_MASK_B )
+#define SGS_INSTR_GET_C( x )   (((x) >> SGS_INSTR_OFF_C ) & SGS_INSTR_MASK_C )
+#define SGS_INSTR_GET_E( x )   (((x) >> SGS_INSTR_OFF_E ) & SGS_INSTR_MASK_E )
 
-#define SGS_INSTR_MAKE_OP( x ) ( ( ( x ) & SGS_INSTR_MASK_OP ) << SGS_INSTR_OFF_OP )
-#define SGS_INSTR_MAKE_A( x )  ( ( ( x ) & SGS_INSTR_MASK_A  ) << SGS_INSTR_OFF_A  )
-#define SGS_INSTR_MAKE_B( x )  ( ( ( x ) & SGS_INSTR_MASK_B  ) << SGS_INSTR_OFF_B  )
-#define SGS_INSTR_MAKE_C( x )  ( ( ( x ) & SGS_INSTR_MASK_C  ) << SGS_INSTR_OFF_C  )
-#define SGS_INSTR_MAKE_E( x )  ( ( ( x ) & SGS_INSTR_MASK_E  ) << SGS_INSTR_OFF_E  )
+#define SGS_INSTR_MAKE_OP( x ) (((x) & SGS_INSTR_MASK_OP) << SGS_INSTR_OFF_OP)
+#define SGS_INSTR_MAKE_A( x )  (((x) & SGS_INSTR_MASK_A ) << SGS_INSTR_OFF_A )
+#define SGS_INSTR_MAKE_B( x )  (((x) & SGS_INSTR_MASK_B ) << SGS_INSTR_OFF_B )
+#define SGS_INSTR_MAKE_C( x )  (((x) & SGS_INSTR_MASK_C ) << SGS_INSTR_OFF_C )
+#define SGS_INSTR_MAKE_E( x )  (((x) & SGS_INSTR_MASK_E ) << SGS_INSTR_OFF_E )
 
 #define SGS_INSTR_MAKE( op, a, b, c ) \
 	( SGS_INSTR_MAKE_OP( op ) | SGS_INSTR_MAKE_A( a ) | SGS_INSTR_MAKE_B( b ) | SGS_INSTR_MAKE_C( c ) )

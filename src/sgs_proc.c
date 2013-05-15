@@ -1424,13 +1424,12 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 {
 	int ssz = STACKFRAMESIZE;
 	int flags = 0, expargs = 0, out;
-	if( outkey >= 0 ){ flags |= SGS_GETNEXT_KEY; expargs++; }
-	if( outval >= 0 ){ flags |= SGS_GETNEXT_VALUE; expargs++; }
+	if( outkey < 256 ){ flags |= SGS_GETNEXT_KEY; expargs++; }
+	if( outval < 256 ){ flags |= SGS_GETNEXT_VALUE; expargs++; }
 	if( iter->type != SVT_OBJECT || ( out = obj_exec( C, SOP_GETNEXT, iter->data.O, flags, 0 ) ) < 0 )
 	{
 		sgs_Pop( C, STACKFRAMESIZE - ssz );
 		sgs_Printf( C, SGS_ERROR, "Failed to retrieve data from iterator" );
-		stk_setvar_null( C, outstate );
 		return SGS_EINPROC;
 	}
 
@@ -1706,7 +1705,15 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		}
 
 		case SI_FORPREP: vm_forprep( C, argA, RESVAR( argB ) ); break;
-		case SI_FORNEXT: vm_fornext( C, argA, argB, RESVAR( argC ) ); break;
+		case SI_FORLOAD: vm_fornext( C, argB, argC, RESVAR( argA ) ); break;
+		case SI_FORJUMP:
+		{
+			int16_t off = argE;
+			sgs_BreakIf( pp > pend || pp < SF->code );
+			if( !vm_fornext( C, 0x100, 0x100, RESVAR( argC ) ) )
+				pp += off;
+			break;
+		}
 
 #define a1 argA
 #define ARGS_2 const sgs_VarPtr p2 = RESVAR( argB );

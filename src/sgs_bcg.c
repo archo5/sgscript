@@ -159,8 +159,9 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 							argA ); dump_rcpos( argC ); break;
 
 		case SI_FORPREP: printf( "FOR_PREP " ); dump_rcpos( argA ); printf( " <= " ); dump_rcpos( argB ); break;
-		case SI_FORNEXT: printf( "FOR_NEXT " ); dump_rcpos( argA ); printf( ", " ); dump_rcpos( argB );
+		case SI_FORLOAD: printf( "FOR_LOAD " ); dump_rcpos( argA ); printf( ", " ); dump_rcpos( argB );
 							printf( " <= " ); dump_rcpos( argC ); break;
+		case SI_FORJUMP: printf( "FOR_JUMP " ); dump_rcpos( argC ); printf( ", %d", (int) (int16_t) argE ); break;
 
 		case SI_LOADCONST: printf( "LOADCONST " ); dump_rcpos( argC ); printf( " <= C%d", argE ); break;
 
@@ -1683,7 +1684,8 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_FOREACH:
 		FUNC_HIT( "FOREACH" );
 		{
-			int16_t var, iter, key, val, state;
+			int32_t jp1;
+			int16_t var, iter, key = -1, val = -1;
 			int regstate, regstate2;
 			regstate2 = C->fctx->regs;
 
@@ -1693,11 +1695,8 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			if( !compile_node_r( C, func, node->child->next->next, &var ) ) goto fail; /* get variable */
 			
 			iter = comp_reg_alloc( C );
-			key = comp_reg_alloc( C );
-			val = -1;
-			if( node->child->next->type != SFT_NULL )
-				val = comp_reg_alloc( C );
-			state = comp_reg_alloc( C );
+			if( node->child->type != SFT_NULL ) key = comp_reg_alloc( C );
+			if( node->child->next->type != SFT_NULL ) val = comp_reg_alloc( C );
 			regstate = C->fctx->regs;
 			C->fctx->loops++;
 
@@ -1706,23 +1705,19 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 			/* iterate */
 			i = func->code.size;
-			INSTR_WRITE( SI_FORNEXT, key, state, iter );
-
 			INSTR_WRITE_PCH();
+			jp1 = func->code.size;
+			INSTR_WRITE( SI_FORLOAD, iter, key, val );
+
 			{
-				int32_t jp1, jp2 = 0;
+				int32_t jp2 = 0;
 				int16_t off = 0;
-				jp1 = func->code.size;
 
 				/* write to key variable */
 				if( node->child->type != SFT_NULL && !compile_ident_w( C, func, node->child, key ) ) goto fail;
 
 				/* write to value variable */
-				if( node->child->next->type != SFT_NULL )
-				{
-					INSTR_WRITE( SI_GETINDEX, val, var, key );
-					if( !compile_ident_w( C, func, node->child->next, val ) ) goto fail;
-				}
+				if( node->child->next->type != SFT_NULL && !compile_ident_w( C, func, node->child->next, val ) ) goto fail;
 
 				FUNC_ENTER;
 				if( !compile_node( C, func, node->child->next->next->next ) ) goto fail; /* block */
@@ -1734,7 +1729,11 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				jp2 = func->code.size;
 				off = i - jp2;
 				INSTR_WRITE_EX( SI_JUMP, off / INSTR_SIZE - 1, 0 );
-				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( func->code.size - jp1 ) / INSTR_SIZE, state );
+				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX(
+					SI_FORJUMP,
+					( func->code.size - jp1 ) / INSTR_SIZE,
+					iter
+				);
 			}
 
 			if( !compile_breaks( C, func, 0 ) )
