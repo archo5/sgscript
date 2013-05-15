@@ -221,11 +221,11 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj*, int /* arg */ );
 #define SGS_OP_GETINDEX   SGS_OP( 2 )  /* arg = prop? */
 #define SGS_OP_SETINDEX   SGS_OP( 3 )  /* arg = prop? */
 #define SGS_OP_CONVERT    SGS_OP( 4 )  /* arg = type(B|I|R|S)/spec. */
-#define SGS_OP_DUMP       SGS_OP( 5 )
+#define SGS_OP_DUMP       SGS_OP( 5 )  /* arg = depth */
 #define SGS_OP_GCMARK     SGS_OP( 6 )
-#define SGS_OP_GETNEXT    SGS_OP( 7 )
+#define SGS_OP_GETNEXT    SGS_OP( 7 )  /* arg = flags */
 #define SGS_OP_CALL       SGS_OP( 8 )
-#define SGS_OP_EXPR       SGS_OP( 9 )
+#define SGS_OP_EXPR       SGS_OP( 9 )  /* arg = op */
 
 #define SGS_OP_FLAGS      SGS_OP(100)
 #define SGS_OBJ_ARRAY     0x01

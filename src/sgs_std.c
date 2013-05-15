@@ -103,29 +103,6 @@ static void sgsstd_array_erase( SGS_CTX, sgs_VarObj* data, uint32_t from, uint32
 	hdr->size -= cnt;
 }
 
-static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* data )
-{
-	sgsstd_array_clear( C, data );
-	sgs_Dealloc( data->data );
-	return 0;
-}
-
-static int sgsstd_array_clone( SGS_CTX, sgs_VarObj* data )
-{
-	void* nd;
-	SGSARR_HDR;
-	nd = sgs_Malloc( C, SGSARR_ALLOCSIZE( hdr->mem ) );
-	memcpy( nd, hdr, SGSARR_ALLOCSIZE( hdr->mem ) );
-	{
-		sgs_Variable* ptr = SGSARR_PTR( hdr );
-		sgs_Variable* pend = ptr + hdr->size;
-		while( ptr < pend )
-			sgs_Acquire( C, ptr++ );
-	}
-	sgs_PushObject( C, nd, sgsstd_array_functable );
-	return 0;
-}
-
 #define SGSARR_IHDR( name ) \
 	sgs_VarObj* data; \
 	sgsstd_array_header_t* hdr; \
@@ -516,74 +493,49 @@ static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_array_getindex( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_array_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
-	SGSARR_HDR;
-	sgs_Variable* ptr = SGSARR_PTR( data->data );
-	sgs_Integer i = sgs_ToInt( C, -1 );
-	if( i < 0 || i >= hdr->size )
+	if( prop )
+		return sgsstd_array_getprop( C, data );
+	else
 	{
-		sgs_Printf( C, SGS_ERROR, "Array index out of bounds" );
-		return SGS_EBOUNDS;
+		SGSARR_HDR;
+		sgs_Variable* ptr = SGSARR_PTR( data->data );
+		sgs_Integer i = sgs_ToInt( C, -1 );
+		if( i < 0 || i >= hdr->size )
+		{
+			sgs_Printf( C, SGS_ERROR, "Array index out of bounds" );
+			return SGS_EBOUNDS;
+		}
+		sgs_PushVariable( C, ptr + i );
+		return SGS_SUCCESS;
 	}
-	sgs_PushVariable( C, ptr + i );
-	return SGS_SUCCESS;
 }
 
-static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
-	SGSARR_HDR;
-	sgs_Variable* ptr = SGSARR_PTR( data->data );
-	sgs_Integer i = sgs_ToInt( C, -2 );
-	if( i < 0 || i >= hdr->size )
+	if( prop )
+		return SGS_ENOTSUP;
+	else
 	{
-		sgs_Printf( C, SGS_ERROR, "Array index out of bounds" );
-		return SGS_EBOUNDS;
+		SGSARR_HDR;
+		sgs_Variable* ptr = SGSARR_PTR( data->data );
+		sgs_Integer i = sgs_ToInt( C, -2 );
+		if( i < 0 || i >= hdr->size )
+		{
+			sgs_Printf( C, SGS_ERROR, "Array index out of bounds" );
+			return SGS_EBOUNDS;
+		}
+		sgs_Release( C, ptr + i );
+		sgs_GetStackItem( C, -1, ptr + i );
+		sgs_Acquire( C, ptr + i );
+		return SGS_SUCCESS;
 	}
-	sgs_Release( C, ptr + i );
-	sgs_GetStackItem( C, -1, ptr + i );
-	sgs_Acquire( C, ptr + i );
-	return SGS_SUCCESS;
 }
 
-static int sgsstd_array_gettype( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data, int depth )
 {
-	UNUSED( data );
-	sgs_PushString( C, "array" );
-	return SGS_SUCCESS;
-}
-
-static int sgsstd_array_tobool( SGS_CTX, sgs_VarObj* data )
-{
-	SGSARR_HDR;
-	sgs_PushBool( C, !!hdr->size );
-	return SGS_SUCCESS;
-}
-
-static int sgsstd_array_tostring( SGS_CTX, sgs_VarObj* data )
-{
-	int cnt;
-	SGSARR_HDR;
-	sgs_Variable* var = SGSARR_PTR( data->data );
-	sgs_Variable* vend = var + hdr->size;
-	cnt = vend - var;
-
-	sgs_PushString( C, "[" );
-	while( var < vend )
-	{
-		sgs_PushVariable( C, var );
-		sgs_ToStringFast( C, -1 );
-		var++;
-		if( var < vend )
-			sgs_PushString( C, "," );
-	}
-	sgs_PushString( C, "]" );
-	return sgs_StringMultiConcat( C, cnt * 2 + 1 + !cnt );
-}
-
-static int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data )
-{
-	int i, depth = (int) sgs_ToInt( C, 0 );
+	int i;
 	SGSARR_HDR;
 	sgs_PushString( C, "array\n[" );
 	if( depth )
@@ -611,16 +563,7 @@ static int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data )
 	return sgs_StringMultiConcat( C, 2 + !!hdr->size );
 }
 
-#if 0
-static void sgsstd_array_resize( SGS_CTX, sgs_VarObj* data, uint32_t size )
-{
-	SGSARR_HDR;
-	if( size > hdr->mem )
-		sgsstd_array_reserve( C, data, ( size < hdr->mem * 2 ) ? hdr->mem * 2 : size );
-}
-#endif
-
-static int sgsstd_array_gcmark( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_array_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	SGSARR_HDR;
 	sgs_Variable* var = SGSARR_PTR( data->data );
@@ -644,58 +587,115 @@ typedef struct sgsstd_array_iter_s
 }
 sgsstd_array_iter_t;
 
-static int sgsstd_array_iter_destruct( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_array_iter_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
 	sgs_Dealloc( data->data );
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_array_iter_nextkey( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_array_iter_getnext( SGS_CTX, sgs_VarObj* data, int mask )
 {
 	sgsstd_array_iter_t* iter = (sgsstd_array_iter_t*) data->data;
 	sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) iter->ref.data.O->data;
 	if( iter->size != hdr->size )
 		return SGS_EINVAL;
 
-	sgs_PushInt( C, iter->off++ );
-	sgs_PushBool( C, iter->off-1 < iter->size );
-	return SGS_SUCCESS;
+	if( !mask )
+	{
+		iter->off++;
+		return iter->off < iter->size;
+	}
+	else
+	{
+		if( mask & SGS_GETNEXT_KEY )
+			sgs_PushInt( C, iter->off );
+		if( mask & SGS_GETNEXT_VALUE )
+			sgs_PushVariable( C, SGSARR_PTR( hdr ) + iter->off );
+		return SGS_SUCCESS;
+	}
 }
 
 static void* sgsstd_array_iter_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_array_iter_destruct,
-	SOP_NEXTKEY, sgsstd_array_iter_nextkey,
+	SOP_GETNEXT, sgsstd_array_iter_getnext,
 	SOP_END,
 };
 
-static int sgsstd_array_getiter( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
 	SGSARR_HDR;
-	sgsstd_array_iter_t* iter = sgs_Alloc( sgsstd_array_iter_t );
+	if( type == SGS_CONVOP_TOITER )
+	{
+		sgsstd_array_iter_t* iter = sgs_Alloc( sgsstd_array_iter_t );
 
-	iter->ref.type = SVT_OBJECT;
-	iter->ref.data.O = data;
-	iter->size = hdr->size;
-	iter->off = 0;
+		iter->ref.type = SVT_OBJECT;
+		iter->ref.data.O = data;
+		iter->size = hdr->size;
+		iter->off = -1;
 
-	sgs_PushObject( C, iter, sgsstd_array_iter_functable );
-	return SGS_SUCCESS;
+		sgs_PushObject( C, iter, sgsstd_array_iter_functable );
+		return SGS_SUCCESS;
+	}
+	else if( type == SVT_BOOL )
+	{
+		sgs_PushBool( C, !!hdr->size );
+		return SGS_SUCCESS;
+	}
+	else if( type == SVT_STRING )
+	{
+		sgs_Variable* var = SGSARR_PTR( data->data );
+		sgs_Variable* vend = var + hdr->size;
+
+		sgs_PushString( C, "[" );
+		while( var < vend )
+		{
+			sgs_PushVariable( C, var );
+			sgs_ToStringFast( C, -1 );
+			var++;
+			if( var < vend )
+				sgs_PushString( C, "," );
+		}
+		sgs_PushString( C, "]" );
+		return sgs_StringMultiConcat( C, hdr->size * 2 + 1 + !hdr->size );
+	}
+	else if( type == SGS_CONVOP_CLONE )
+	{
+		void* nd = sgs_Malloc( C, SGSARR_ALLOCSIZE( hdr->mem ) );
+		memcpy( nd, hdr, SGSARR_ALLOCSIZE( hdr->mem ) );
+		{
+			sgs_Variable* ptr = SGSARR_PTR( hdr );
+			sgs_Variable* pend = ptr + hdr->size;
+			while( ptr < pend )
+				sgs_Acquire( C, ptr++ );
+		}
+		sgs_PushObject( C, nd, sgsstd_array_functable );
+		return SGS_SUCCESS;
+	}
+	else if( type == SGS_CONVOP_TOTYPE )
+	{
+		sgs_PushString( C, "array" );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* data, int dch )
+{
+	if( dch )
+		sgsstd_array_clear( C, data );
+	sgs_Dealloc( data->data );
+	return 0;
 }
 
 static void* sgsstd_array_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_array_destruct,
-	SOP_CLONE, sgsstd_array_clone,
-	SOP_GETPROP, sgsstd_array_getprop,
 	SOP_GETINDEX, sgsstd_array_getindex,
 	SOP_SETINDEX, sgsstd_array_setindex,
-	SOP_GETTYPE, sgsstd_array_gettype,
-	SOP_TOBOOL, sgsstd_array_tobool,
-	SOP_TOSTRING, sgsstd_array_tostring,
 	SOP_DUMP, sgsstd_array_dump,
 	SOP_GCMARK, sgsstd_array_gcmark,
-	SOP_GETITER, sgsstd_array_getiter,
+	SOP_CONVERT, sgsstd_array_convert,
 	SOP_FLAGS, SGS_OP( SGS_OBJ_ARRAY ),
 	SOP_END,
 };
