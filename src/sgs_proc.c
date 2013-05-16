@@ -1438,7 +1438,7 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 		sgs_PopSkip( C, STACKFRAMESIZE - ssz - expargs, expargs );
 		stk_setvar( C, outkey, stk_getpos( C, -2 + (outval<0) ) );
 		stk_setvar( C, outval, stk_getpos( C, -1 ) );
-		stk_pop2( C );
+		sgs_Pop( C, STACKFRAMESIZE - ssz );
 	}
 	else
 		sgs_Pop( C, STACKFRAMESIZE - ssz );

@@ -15,5 +15,6 @@ print( "\n" );
 print( "--== DICT ==--\n" );
 map = { "1" = "one", "2" = "two", "3" = "three" };
 map[ "1.5" ] = "one and a half";
+unset( map, "3" );
 foreach( k, x : map )
 	println( k, " = ", x );

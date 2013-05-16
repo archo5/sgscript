@@ -159,8 +159,8 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 							argA ); dump_rcpos( argC ); break;
 
 		case SI_FORPREP: printf( "FOR_PREP " ); dump_rcpos( argA ); printf( " <= " ); dump_rcpos( argB ); break;
-		case SI_FORLOAD: printf( "FOR_LOAD " ); dump_rcpos( argA ); printf( ", " ); dump_rcpos( argB );
-							printf( " <= " ); dump_rcpos( argC ); break;
+		case SI_FORLOAD: printf( "FOR_LOAD " ); dump_rcpos( argA ); printf( " => " ); dump_rcpos( argB );
+							printf( ", " ); dump_rcpos( argC ); break;
 		case SI_FORJUMP: printf( "FOR_JUMP " ); dump_rcpos( argC ); printf( ", %d", (int) (int16_t) argE ); break;
 
 		case SI_LOADCONST: printf( "LOADCONST " ); dump_rcpos( argC ); printf( " <= C%d", argE ); break;

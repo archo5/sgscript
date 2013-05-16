@@ -712,10 +712,8 @@ static const char* sgs_OpNames[] =
 
 static const char* sgs_IfaceNames[] =
 {
-	"end", "destruct", "clone", "gettype", "getprop", "setprop",
-	"getindex", "setindex", "tobool", "toint", "toreal", "tostring",
-	"dump", "gcmark", "getiter", "nextkey", "call", "compare",
-	"add", "sub", "mul", "div", "mod", "negate", "flags"
+	"end", "destruct", "getindex", "setindex", "convert",
+	"dump", "gcmark", "getnext", "call", "expr", "flags"
 };
 
 #endif
