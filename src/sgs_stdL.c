@@ -1690,18 +1690,16 @@ static int sgsstd_string_frombytes( SGS_CTX )
 	if( sgs_PushIterator( C, 0 ) < 0 )
 		goto fail;
 
-	while( sgs_PushNextKey( C, -1 ) > 0 )
+	while( sgs_IterAdvance( C, -1 ) > 0 )
 	{
 		sgs_Integer b;
-		sgs_Variable idx;
-		sgs_GetStackItem( C, -1, &idx );
-		if( sgs_PushIndex( C, &arr, &idx ) < 0 )
+		if( sgs_IterPushData( C, -1, FALSE, TRUE ) < 0 )
 			goto fail;
 		b = sgs_GetInt( C, -1 );
 		if( b < 0 || b > 255 )
 			STDLIB_WARN( "string_frombytes() - invalid byte value" )
 		buf[ i++ ] = b;
-		sgs_Pop( C, 2 );
+		sgs_Pop( C, 1 );
 	}
 	sgs_Pop( C, 1 );
 	return 1;
@@ -1752,14 +1750,12 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 	if( sgs_PushIterator( C, 0 ) < 0 )
 		goto fail;
 
-	while( sgs_PushNextKey( C, -1 ) > 0 )
+	while( sgs_IterAdvance( C, -1 ) > 0 )
 	{
 		int cnt;
 		char tmp[ 4 ];
 		sgs_Integer cp;
-		sgs_Variable idx;
-		sgs_GetStackItem( C, -1, &idx );
-		if( sgs_PushIndex( C, &arr, &idx ) < 0 )
+		if( sgs_IterPushData( C, -1, FALSE, TRUE ) < 0 )
 			goto fail;
 		cp = sgs_GetInt( C, -1 );
 		cnt = sgs_utf8_encode( cp, tmp );
@@ -1769,7 +1765,7 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 			cnt = SGS_UNICODE_INVCHAR_LEN;
 		}
 		membuf_appbuf( &buf, C, tmp, cnt );
-		sgs_Pop( C, 2 );
+		sgs_Pop( C, 1 );
 	}
 	sgs_PushStringBuf( C, buf.ptr, buf.size );
 	membuf_destroy( &buf, C );

@@ -1424,8 +1424,8 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 {
 	int ssz = STACKFRAMESIZE;
 	int flags = 0, expargs = 0, out;
-	if( outkey < 256 ){ flags |= SGS_GETNEXT_KEY; expargs++; }
-	if( outval < 256 ){ flags |= SGS_GETNEXT_VALUE; expargs++; }
+	if( outkey >= 0 ){ flags |= SGS_GETNEXT_KEY; expargs++; }
+	if( outval >= 0 ){ flags |= SGS_GETNEXT_VALUE; expargs++; }
 	if( iter->type != SVT_OBJECT || ( out = obj_exec( C, SOP_GETNEXT, iter->data.O, flags, 0 ) ) < 0 )
 	{
 		sgs_Pop( C, STACKFRAMESIZE - ssz );
@@ -1436,8 +1436,8 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 	if( flags )
 	{
 		sgs_PopSkip( C, STACKFRAMESIZE - ssz - expargs, expargs );
-		stk_setvar( C, outkey, stk_getpos( C, -2 + (outval<0) ) );
-		stk_setvar( C, outval, stk_getpos( C, -1 ) );
+		if( outkey >= 0 ) stk_setvar( C, outkey, stk_getpos( C, -2 + (outval<0) ) );
+		if( outval >= 0 ) stk_setvar( C, outval, stk_getpos( C, -1 ) );
 		sgs_Pop( C, STACKFRAMESIZE - ssz );
 	}
 	else
@@ -1705,12 +1705,12 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		}
 
 		case SI_FORPREP: vm_forprep( C, argA, RESVAR( argB ) ); break;
-		case SI_FORLOAD: vm_fornext( C, argB, argC, RESVAR( argA ) ); break;
+		case SI_FORLOAD: vm_fornext( C, argB < 0x100 ? argB : -1, argC < 0x100 ? argC : -1, RESVAR( argA ) ); break;
 		case SI_FORJUMP:
 		{
 			int16_t off = argE;
 			sgs_BreakIf( pp > pend || pp < SF->code );
-			if( !vm_fornext( C, 0x100, 0x100, RESVAR( argC ) ) )
+			if( !vm_fornext( C, -1, -1, RESVAR( argC ) ) )
 				pp += off;
 			break;
 		}
@@ -2533,23 +2533,32 @@ SGSRESULT sgs_PushIterator( SGS_CTX, int item )
 	return ret;
 }
 
-SGSMIXED sgs_PushNextKey( SGS_CTX, int item )
+SGSMIXED sgs_IterAdvance( SGS_CTX, int item )
 {
-	int ret;
 	sgs_Variable var;
 	if( !sgs_GetStackItem( C, item, &var ) )
 		return SGS_EBOUNDS;
-	sgs_PushNull( C );
-	sgs_PushNull( C );
-	ret = vm_fornext( C, stk_absindex( C, -2 ), stk_absindex( C, -1 ), &var );
-	if( ret == SGS_SUCCESS )
+	return vm_fornext( C, -1, -1, &var );
+}
+
+SGSMIXED sgs_IterPushData( SGS_CTX, int item, int key, int value )
+{
+	sgs_Variable var;
+	if( !sgs_GetStackItem( C, item, &var ) )
+		return SGS_EBOUNDS;
+	if( key )
 	{
-		ret = sgs_GetBool( C, -1 );
-		sgs_Pop( C, 2 - !!ret );
+		sgs_PushNull( C );
+		key = stk_absindex( C, -1 );
 	}
-	else
-		sgs_Pop( C, 2 );
-	return ret;
+	else key = -1;
+	if( value )
+	{
+		sgs_PushNull( C );
+		value = stk_absindex( C, -1 );
+	}
+	else value = -1;
+	return vm_fornext( C, key, value, &var );
 }
 
 

@@ -430,38 +430,35 @@ int encode_var( SGS_CTX, MemBuf* buf )
 	case SVT_OBJECT:
 		{
 			/* stack: Obj */
-			sgs_Variable idx;
 			int isarr = sgs_IsArray( C, &var ), first = 1;
 			membuf_appchr( buf, C, isarr ? '[' : '{' );
 			if( sgs_PushIterator( C, -1 ) != SGS_SUCCESS )
 				return 0;
 			/* stack: Obj, Iter */
-			while( sgs_PushNextKey( C, -1 ) > 0 )
+			while( sgs_IterAdvance( C, -1 ) > 0 )
 			{
-				/* stack: Obj, Iter, Key */
+				/* stack: Obj, Iter */
+				if( sgs_IterPushData( C, -1, !isarr, 1 ) != SGS_SUCCESS )
+					return 0;
+				/* stack: Obj, Iter[, Key], Value */
+
 				if( first ) first = 0;
 				else membuf_appchr( buf, C, ',' );
 
 				if( !isarr )
 				{
-					int nsk = sgs_ItemType( C, -1 ) != SVT_STRING;
-					if( nsk )
-					{
-						sgs_PushItem( C, -1 );
-						sgs_ToString( C, -1 );
-					}
+					/* stack: Obj, Iter, Key, Value */
+					sgs_ToString( C, -2 );
 					if( !encode_var( C, buf ) )
 						return 0;
-					if( nsk )
-						sgs_Pop( C, 1 );
 					membuf_appchr( buf, C, ':' );
 				}
 
-				if( !sgs_GetStackItem( C, -1, &idx )
-					|| sgs_PushIndex( C, &var, &idx ) != SGS_SUCCESS )
-					return 0;
-				/* stack: Obj, Iter, Key, Value */
-				sgs_PopSkip( C, 1, 1 );
+				if( !isarr )
+				{
+					/* stack: Obj, Iter, Key, Value */
+					sgs_PopSkip( C, 1, 1 );
+				}
 				/* stack: Obj, Iter, Value */
 				if( !encode_var( C, buf ) )
 					return 0;

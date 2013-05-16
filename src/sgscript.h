@@ -470,7 +470,8 @@ SGSBOOL sgs_ParseReal( SGS_CTX, int item, sgs_Real* out );
 SGSBOOL sgs_ParseString( SGS_CTX, int item, char** out, sgs_SizeVal* size );
 
 SGSRESULT sgs_PushIterator( SGS_CTX, int item );
-SGSMIXED sgs_PushNextKey( SGS_CTX, int item );
+SGSMIXED sgs_IterAdvance( SGS_CTX, int item );
+SGSRESULT sgs_IterPushData( SGS_CTX, int item, int key, int value );
 
 SGSBOOL sgs_IsArray( SGS_CTX, sgs_Variable* var );
 SGSMIXED sgs_ArraySize( SGS_CTX, sgs_Variable* var );
