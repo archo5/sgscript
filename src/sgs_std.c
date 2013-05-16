@@ -589,6 +589,11 @@ sgsstd_array_iter_t;
 
 static int sgsstd_array_iter_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
+	if( dch )
+	{
+		sgsstd_array_iter_t* iter = (sgsstd_array_iter_t*) data->data;
+		sgs_Release( C, &iter->ref );
+	}
 	sgs_Dealloc( data->data );
 	return SGS_SUCCESS;
 }
@@ -634,6 +639,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 		iter->size = hdr->size;
 		iter->off = -1;
 
+		sgs_Acquire( C, &iter->ref );
 		sgs_PushObject( C, iter, sgsstd_array_iter_functable );
 		return SGS_SUCCESS;
 	}
@@ -947,7 +953,6 @@ sgsstd_dict_iter_t;
 
 static int sgsstd_dict_iter_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
-	UNUSED( C );
 	if( dch )
 		sgs_Release( C, &((sgsstd_dict_iter_t*) data->data)->ref );
 	sgs_Dealloc( data->data );
