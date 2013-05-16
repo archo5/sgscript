@@ -1125,21 +1125,24 @@ sgsstd_class_header_t;
 
 #define SGSCLASS_HDR sgsstd_class_header_t* hdr = (sgsstd_class_header_t*) data->data;
 
-static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
 	SGSCLASS_HDR;
-	sgs_Release( C, &hdr->data );
-	sgs_Release( C, &hdr->inh );
+	if( dch )
+	{
+		sgs_Release( C, &hdr->data );
+		sgs_Release( C, &hdr->inh );
+	}
 	sgs_Dealloc( hdr );
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	int ret;
 	sgs_Variable var, idx;
 	SGSCLASS_HDR;
-	if( strcmp( sgs_ToString( C, -1 ), "_super" ) == 0 )
+	if( prop && strcmp( sgs_ToString( C, -1 ), "_super" ) == 0 )
 	{
 		sgs_PushVariable( C, &hdr->inh );
 		return SGS_SUCCESS;
@@ -1164,7 +1167,7 @@ success:
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	sgs_Variable k, v;
 	SGSCLASS_HDR;
@@ -1179,9 +1182,6 @@ static int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data )
 	sgs_GetStackItem( C, -1, &v );
 	return sgs_SetIndex( C, &hdr->data, &k, &v );
 }
-
-#define sgsstd_class_getprop sgsstd_class_getindex
-#define sgsstd_class_setprop sgsstd_class_setindex
 
 static int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
 {
@@ -1204,18 +1204,8 @@ static int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method
 	return ret == SGS_SUCCESS;
 }
 
-static int sgsstd_class_tostring( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data, int depth )
 {
-	if( sgsstd_class_getmethod( C, data, "__tostr" ) )
-		return sgs_ThisCall( C, 0, 1 );
-
-	sgs_PushString( C, "class" );
-	return SGS_SUCCESS;
-}
-
-static int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data )
-{
-	int depth = (int) sgs_ToInt( C, 0 );
 	SGSCLASS_HDR;
 	sgs_PushString( C, "class\n{" );
 	sgs_PushString( C, "\ndata: " );
@@ -1238,14 +1228,50 @@ static int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data )
 	return sgs_StringMultiConcat( C, 3 );
 }
 
-static int sgsstd_class_gettype( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class( SGS_CTX );
+static void* sgsstd_class_functable[];
+
+static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	UNUSED( data );
-	sgs_PushString( C, "class" );
-	return SGS_SUCCESS;
+	int otype = type;
+	static const char* ops[] = { "__tobool", "__toint", "__toreal", "__tostr", "__clone", "__typeof" };
+
+	if( type < 1 || ( type > 4 && type < SGS_CONVOP_CLONE ) || type > SGS_CONVOP_TOTYPE )
+		return SGS_ENOTFND;
+	if( type < SGS_CONVOP_CLONE )
+		type -= 1;
+	else
+		type += 4 - SGS_CONVOP_CLONE;
+
+	if( sgsstd_class_getmethod( C, data, ops[ type ] ) )
+		return sgs_ThisCall( C, 0, 1 );
+
+	if( otype == SVT_STRING || otype == SGS_CONVOP_TOTYPE )
+	{
+		sgs_PushString( C, "class" );
+		return SGS_SUCCESS;
+	}
+
+	if( otype == SGS_CONVOP_CLONE )
+	{
+		SGSCLASS_HDR;
+		sgsstd_class_header_t* hdr2;
+		sgs_PushVariable( C, &hdr->data );
+		sgs_CloneItem( C, -1 );
+
+		hdr2 = sgs_Alloc( sgsstd_class_header_t );
+		sgs_GetStackItem( C, -1, &hdr2->data );
+		hdr2->inh = hdr->inh;
+		sgs_Acquire( C, &hdr2->data );
+		sgs_Acquire( C, &hdr2->inh );
+		sgs_PushObject( C, hdr2, sgsstd_class_functable );
+		return SGS_SUCCESS;
+	}
+
+	return SGS_ENOTSUP;
 }
 
-static int sgsstd_class_gcmark( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_gcmark( SGS_CTX, sgs_VarObj* data, int type )
 {
 	SGSCLASS_HDR;
 	int ret = sgs_GCMark( C, &hdr->data );
@@ -1255,27 +1281,16 @@ static int sgsstd_class_gcmark( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-#define class_op_wrapper( op ) \
-static int sgsstd_class_##op ( SGS_CTX, sgs_VarObj* data ){   \
-	if( sgsstd_class_getmethod( C, data, "__" #op ) ){ \
-		return sgs_Call( C, 2, 1 ); } return SGS_ENOTFND; }
-class_op_wrapper( add )
-class_op_wrapper( sub )
-class_op_wrapper( mul )
-class_op_wrapper( div )
-class_op_wrapper( mod )
-class_op_wrapper( compare )
-#undef class_op_wrapper
-
-static int sgsstd_class_negate( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_expr( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( sgsstd_class_getmethod( C, data, "__negate" ) )
-		return sgs_ThisCall( C, 0, 1 );
+	static const char* ops[] = { "__add", "__sub", "__mul", "__div", "__mod", "__compare", "__negate" };
+	if( sgsstd_class_getmethod( C, data, ops[type] ) )
+		return sgs_FCall( C, type == SGS_EOP_NEGATE ? 0 : 2, 1, type == SGS_EOP_NEGATE ? 1 : 0 );
 
 	return SGS_ENOTFND;
 }
 
-static int sgsstd_class_call( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_class_call( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	if( sgsstd_class_getmethod( C, data, "__call" ) )
 	{
@@ -1296,21 +1311,12 @@ static int sgsstd_class_call( SGS_CTX, sgs_VarObj* data )
 static void* sgsstd_class_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_class_destruct,
-	SOP_GETPROP, sgsstd_class_getprop,
-	SOP_SETPROP, sgsstd_class_setprop,
 	SOP_GETINDEX, sgsstd_class_getindex,
 	SOP_SETINDEX, sgsstd_class_setindex,
-	SOP_TOSTRING, sgsstd_class_tostring,
+	SOP_CONVERT, sgsstd_class_convert,
 	SOP_DUMP, sgsstd_class_dump,
-	SOP_GETTYPE, sgsstd_class_gettype,
 	SOP_GCMARK, sgsstd_class_gcmark,
-	SOP_ADD, sgsstd_class_add,
-	SOP_SUB, sgsstd_class_sub,
-	SOP_MUL, sgsstd_class_mul,
-	SOP_DIV, sgsstd_class_div,
-	SOP_MOD, sgsstd_class_mod,
-	SOP_NEGATE, sgsstd_class_negate,
-	SOP_COMPARE, sgsstd_class_compare,
+	SOP_EXPR, sgsstd_class_expr,
 	SOP_CALL, sgsstd_class_call,
 	SOP_END,
 };
