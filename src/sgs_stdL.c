@@ -291,21 +291,6 @@ static int sgsstd_io_file_read( SGS_CTX )
 
 static void* sgsstd_file_functable[];
 
-static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* data )
-{
-	UNUSED( C );
-	if( FVAR )
-		fclose( FVAR );
-	return SGS_SUCCESS;
-}
-
-static int sgsstd_file_gettype( SGS_CTX, sgs_VarObj* data )
-{
-	UNUSED( data );
-	sgs_PushString( C, "file" );
-	return SGS_SUCCESS;
-}
-
 #define FIF_INIT( fname ) \
 	sgs_VarObj* data; \
 	if( !sgs_Method( C ) || \
@@ -496,10 +481,12 @@ static int sgsstd_fileI_setbuf( SGS_CTX )
 }
 
 
-static int sgsstd_file_getprop( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_file_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	char* str;
 	sgs_SizeVal len;
+	if( !prop )
+		return SGS_ENOTSUP;
 	if( !sgs_ParseString( C, 0, &str, &len ) )
 		return SGS_EINVAL;
 
@@ -519,27 +506,37 @@ static int sgsstd_file_getprop( SGS_CTX, sgs_VarObj* data )
 	return SGS_ENOTFND;
 }
 
-int sgsstd_file_tostring( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
-	UNUSED( data );
-	sgs_PushString( C, "file" );
+	UNUSED( C );
+	UNUSED( dch );
+	if( FVAR )
+		fclose( FVAR );
 	return SGS_SUCCESS;
 }
 
-int sgsstd_file_tobool( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	sgs_PushBool( C, !!FVAR );
-	return SGS_SUCCESS;
+	UNUSED( data );
+	if( type == SVT_BOOL )
+	{
+		sgs_PushBool( C, !!FVAR );
+		return SGS_SUCCESS;
+	}
+	if( type == SVT_STRING || type == SGS_CONVOP_TOTYPE )
+	{
+		sgs_PushString( C, "file" );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
 }
 
 
 static void* sgsstd_file_functable[] =
 {
+	SOP_GETINDEX, sgsstd_file_getindex,
+	SOP_CONVERT, sgsstd_file_convert,
 	SOP_DESTRUCT, sgsstd_file_destruct,
-	SOP_GETTYPE, sgsstd_file_gettype,
-	SOP_GETPROP, sgsstd_file_getprop,
-	SOP_TOSTRING, sgsstd_file_tostring,
-	SOP_TOBOOL, sgsstd_file_tobool,
 	SOP_END,
 };
 
@@ -569,6 +566,8 @@ pushobj:
 
 #undef FVAR
 
+
+#if 0
 
 #define DVAR (*(DIR**)&data->data)
 #define DVNO_BEGIN if( DVAR ) {
@@ -648,6 +647,8 @@ static int sgsstd_io_dir( SGS_CTX )
 	sgs_PushObject( C, dp, sgsstd_dir_functable );
 	return 1;
 }
+
+#endif
 
 
 static const sgs_RegRealConst i_rconsts[] =
@@ -1887,50 +1888,6 @@ static int sgsstd_type_is_callable( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_type_is_switch( SGS_CTX )
-{
-	int res, ty = sgs_ItemType( C, 0 );
-	EXPECT_ONEARG( is_switch )
-
-	if( ty == SVT_FUNC || ty == SVT_CFUNC )
-		res = FALSE;
-
-	else if( ty == SVT_STRING )
-		res = sgs_IsNumericString(
-			sgs_GetStringPtr( C, 0 ), sgs_GetStringSize( C, 0 ) );
-
-	else if( ty == SVT_OBJECT )
-	{
-		sgs_VarObj* O = sgs_GetObjectData( C, 0 );
-		OBJECT_HAS_IFACE( res, O, SOP_TOBOOL )
-	}
-	else
-		res = TRUE;
-
-	sgs_PushBool( C, res );
-	return 1;
-}
-
-static int sgsstd_type_is_printable( SGS_CTX )
-{
-	int res, ty = sgs_ItemType( C, 0 );
-	EXPECT_ONEARG( is_printable )
-
-	if( ty == SVT_NULL || ty == SVT_FUNC || ty == SVT_CFUNC )
-		res = FALSE;
-
-	else if( ty == SVT_OBJECT )
-	{
-		sgs_VarObj* O = sgs_GetObjectData( C, 0 );
-		OBJECT_HAS_IFACE( res, O, SOP_TOSTRING )
-	}
-	else
-		res = TRUE;
-
-	sgs_PushBool( C, res );
-	return 1;
-}
-
 
 #define FN( x ) { #x, sgsstd_##x }
 
@@ -1938,7 +1895,6 @@ static const sgs_RegFuncConst t_fconsts[] =
 {
 	FN( type_get ), FN( typeof ), FN( type_cast ),
 	FN( type_is_numeric ), FN( type_is_callable ),
-	FN( type_is_switch ), FN( type_is_printable ),
 };
 
 static const sgs_RegIntConst t_iconsts[] =

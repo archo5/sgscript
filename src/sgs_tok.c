@@ -467,7 +467,6 @@ void sgsT_DumpToken( TokenList tok )
 	case ST_OP_LESS: OPR( "<" ); break;
 	case ST_OP_GRTR: OPR( ">" ); break;
 	case ST_OP_SET: OPR( "=" ); break;
-	case ST_OP_COPY: OPR( "=&" ); break;
 	case ST_OP_ADD: OPR( "+" ); break;
 	case ST_OP_SUB: OPR( "-" ); break;
 	case ST_OP_MUL: OPR( "*" ); break;
