@@ -589,11 +589,7 @@ sgsstd_array_iter_t;
 
 static int sgsstd_array_iter_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
-	if( dch )
-	{
-		sgsstd_array_iter_t* iter = (sgsstd_array_iter_t*) data->data;
-		sgs_Release( C, &iter->ref );
-	}
+	sgs_ReleaseOwned( C, &((sgsstd_array_iter_t*) data->data)->ref, dch );
 	sgs_Dealloc( data->data );
 	return SGS_SUCCESS;
 }
@@ -953,8 +949,7 @@ sgsstd_dict_iter_t;
 
 static int sgsstd_dict_iter_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
-	if( dch )
-		sgs_Release( C, &((sgsstd_dict_iter_t*) data->data)->ref );
+	sgs_ReleaseOwned( C, &((sgsstd_dict_iter_t*) data->data)->ref, dch );
 	sgs_Dealloc( data->data );
 	return SGS_SUCCESS;
 }
@@ -1133,11 +1128,8 @@ sgsstd_class_header_t;
 static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
 	SGSCLASS_HDR;
-	if( dch )
-	{
-		sgs_Release( C, &hdr->data );
-		sgs_Release( C, &hdr->inh );
-	}
+	sgs_ReleaseOwned( C, &hdr->data, dch );
+	sgs_ReleaseOwned( C, &hdr->inh, dch );
 	sgs_Dealloc( hdr );
 	return SGS_SUCCESS;
 }
@@ -1361,11 +1353,8 @@ sgsstd_closure_t;
 static int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
 	SGSCLOSURE_HDR;
-	if( dch )
-	{
-		sgs_Release( C, &hdr->func );
-		sgs_Release( C, &hdr->data );
-	}
+	sgs_ReleaseOwned( C, &hdr->func, dch );
+	sgs_ReleaseOwned( C, &hdr->data, dch );
 	sgs_Dealloc( hdr );
 	return SGS_SUCCESS;
 }

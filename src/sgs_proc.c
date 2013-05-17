@@ -2637,7 +2637,12 @@ void sgs_Acquire( SGS_CTX, sgs_Variable* var )
 
 void sgs_Release( SGS_CTX, sgs_Variable* var )
 {
-	if( var->type == SVT_OBJECT )
+	VAR_RELEASE( var );
+}
+
+void sgs_ReleaseOwned( SGS_CTX, sgs_Variable* var, int dco )
+{
+	if( var->type == SVT_OBJECT && !dco )
 		return;
 	VAR_RELEASE( var );
 }

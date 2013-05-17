@@ -487,6 +487,7 @@ int sgs_ItemType( SGS_CTX, int item );
 SGSBOOL sgs_Method( SGS_CTX );
 void sgs_Acquire( SGS_CTX, sgs_Variable* var );
 void sgs_Release( SGS_CTX, sgs_Variable* var );
+void sgs_ReleaseOwned( SGS_CTX, sgs_Variable* var, int dco );
 SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var );
 
 char* sgs_GetStringPtr( SGS_CTX, int item );
