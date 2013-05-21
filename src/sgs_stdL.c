@@ -567,69 +567,74 @@ pushobj:
 #undef FVAR
 
 
-#if 0
+typedef struct _sgsstd_dir_t
+{
+	DIR* dir;
+	char* name;
+}
+sgsstd_dir_t;
 
-#define DVAR (*(DIR**)&data->data)
-#define DVNO_BEGIN if( DVAR ) {
-#define DVNO_END( name ) } else STDLIB_WARN( "dir::" #name "() - directory is not opened" )
+
+#define DIR_HDR sgsstd_dir_t* hdr = (sgsstd_dir_t*) data->data
 
 static void* sgsstd_dir_functable[];
 
-static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
+	DIR_HDR;
 	UNUSED( C );
-	if( DVAR )
-		closedir( DVAR );
+	if( hdr->dir ) closedir( hdr->dir );
+	sgs_Dealloc( hdr );
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_dir_gettype( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_dir_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	UNUSED( data );
-	sgs_PushString( C, "dir" );
-	return SGS_SUCCESS;
+	if( type == SVT_STRING || type == SGS_CONVOP_TOTYPE )
+	{
+		sgs_PushString( C, "directory_iterator" );
+		return SGS_SUCCESS;
+	}
+	else if( type == SGS_CONVOP_TOITER )
+	{
+		sgs_Variable v;
+		v.type = SVT_OBJECT;
+		v.data.O = data;
+		sgs_PushVariable( C, &v );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
 }
 
-static int sgsstd_dir_getprop( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_dir_getnext( SGS_CTX, sgs_VarObj* data, int what )
 {
-	char* str;
-	sgs_SizeVal len;
-	if( !sgs_ParseString( C, 0, &str, &len ) )
-		return SGS_EINVAL;
+	DIR_HDR;
+	if( !what )
+	{
+		struct dirent* de = readdir( hdr->dir );
+		hdr->name = de ? de->d_name : NULL;
+		return hdr->name ? 1 : 0;
+	}
+	else
+	{
+		if( !hdr->name )
+			return SGS_EINVAL;
 
-	if( 0 == strcmp( str, "iterator" ) ){ return sgsstd_dirP_iterator( C, DVAR ); }
-
-	if( 0 == strcmp( str, "open" ) ){ sgs_PushCFunction( C, sgsstd_dirI_open ); return SGS_SUCCESS; }
-	if( 0 == strcmp( str, "close" ) ){ sgs_PushCFunction( C, sgsstd_dirI_close ); return SGS_SUCCESS; }
-	if( 0 == strcmp( str, "read" ) ){ sgs_PushCFunction( C, sgsstd_fileI_read ); return SGS_SUCCESS; }
-	if( 0 == strcmp( str, "write" ) ){ sgs_PushCFunction( C, sgsstd_fileI_write ); return SGS_SUCCESS; }
-	if( 0 == strcmp( str, "seek" ) ){ sgs_PushCFunction( C, sgsstd_fileI_seek ); return SGS_SUCCESS; }
-	if( 0 == strcmp( str, "flush" ) ){ sgs_PushCFunction( C, sgsstd_fileI_flush ); return SGS_SUCCESS; }
-	if( 0 == strcmp( str, "setbuf" ) ){ sgs_PushCFunction( C, sgsstd_fileI_setbuf ); return SGS_SUCCESS; }
-
-	return SGS_ENOTFND;
-}
-
-int sgsstd_dir_tostring( SGS_CTX, sgs_VarObj* data )
-{
-	UNUSED( data );
-	sgs_PushString( C, "dir" );
-	return SGS_SUCCESS;
-}
-
-int sgsstd_dir_tobool( SGS_CTX, sgs_VarObj* data )
-{
-	sgs_PushBool( C, !!DVAR );
+		if( what & SGS_GETNEXT_KEY )
+			sgs_PushBool( C,
+				!( hdr->name[0] == '.' && ( hdr->name[1] == '\0' ||
+				( hdr->name[1] == '.' && hdr->name[2] == '\0' ) ) ) );
+		if( what & SGS_GETNEXT_VALUE )
+			sgs_PushString( C, hdr->name );
+	}
 	return SGS_SUCCESS;
 }
 
 static void* sgsstd_dir_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_dir_destruct,
-	SOP_GETTYPE, sgsstd_dir_gettype,
-	SOP_GETPROP, sgsstd_dir_getprop,
-	SOP_TOSTRING, sgsstd_dir_tostring,
-	SOP_TOBOOL, sgsstd_dir_tobool,
+	SOP_CONVERT, sgsstd_dir_convert,
+	SOP_GETNEXT, sgsstd_dir_getnext,
 	SOP_END,
 };
 
@@ -637,18 +642,23 @@ static int sgsstd_io_dir( SGS_CTX )
 {
 	char* path;
 	DIR* dp = NULL;
+	sgsstd_dir_t* hdr;
 
 	if( sgs_StackSize( C ) != 1 ||
 		!sgs_ParseString( C, 0, &path, NULL ) )
 		STDLIB_WARN( "io_dir() - unexpected arguments; function expects 1 argument: string" )
 
 	dp = opendir( path );
+	if( !dp )
+		STDLIB_WARN( "io_dir() - failed to open directory" )
 
-	sgs_PushObject( C, dp, sgsstd_dir_functable );
+	hdr = sgs_Alloc( sgsstd_dir_t );
+	hdr->dir = dp;
+	hdr->name = NULL;
+
+	sgs_PushObject( C, hdr, sgsstd_dir_functable );
 	return 1;
 }
-
-#endif
 
 
 static const sgs_RegRealConst i_rconsts[] =
@@ -675,7 +685,7 @@ static const sgs_RegFuncConst i_fconsts[] =
 	FN( io_dir_create ), FN( io_dir_delete ),
 	FN( io_file_delete ),
 	FN( io_file_write ), FN( io_file_read ),
-	FN( io_file ),
+	FN( io_file ), FN( io_dir ),
 };
 
 SGSRESULT sgs_LoadLib_IO( SGS_CTX )
