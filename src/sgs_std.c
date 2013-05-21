@@ -45,7 +45,7 @@ static void sgsstd_array_reserve( SGS_CTX, sgs_VarObj* data, uint32_t size )
 	hdr->mem = size;
 }
 
-static void sgsstd_array_clear( SGS_CTX, sgs_VarObj* data )
+static void sgsstd_array_clear( SGS_CTX, sgs_VarObj* data, int dch )
 {
 	sgs_Variable *var, *vend;
 	SGSARR_HDR;
@@ -53,7 +53,7 @@ static void sgsstd_array_clear( SGS_CTX, sgs_VarObj* data )
 	vend = var + hdr->size;
 	while( var < vend )
 	{
-		sgs_Release( C, var );
+		sgs_ReleaseOwned( C, var, dch );
 		var++;
 	}
 	hdr->size = 0;
@@ -207,7 +207,7 @@ static int sgsstd_arrayI_erase( SGS_CTX )
 static int sgsstd_arrayI_clear( SGS_CTX )
 {
 	SGSARR_IHDR( clear );
-	sgsstd_array_clear( C, data );
+	sgsstd_array_clear( C, data, 1 );
 	sgs_Pop( C, sgs_StackSize( C ) - 1 );
 	return 1;
 }
@@ -684,8 +684,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 
 static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
-	if( dch )
-		sgsstd_array_clear( C, data );
+	sgsstd_array_clear( C, data, dch );
 	sgs_Dealloc( data->data );
 	return 0;
 }
@@ -762,12 +761,12 @@ static DictHdr* mkdict( SGS_CTX )
 #define HTHDR DictHdr* dh = (DictHdr*) data->data; VHTable* ht = &dh->ht;
 static void* sgsstd_dict_functable[];
 
-static void _dict_clearvals( SGS_CTX, VHTable* ht )
+static void _dict_clearvals( SGS_CTX, VHTable* ht, int dch )
 {
 	VHTableVar* p = ht->vars, *pend = ht->vars + vht_size( ht );
 	while( p < pend )
 	{
-		sgs_Release( C, &p->var );
+		sgs_ReleaseOwned( C, &p->var, dch );
 		p++;
 	}
 }
@@ -775,8 +774,7 @@ static void _dict_clearvals( SGS_CTX, VHTable* ht )
 static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
 	HTHDR;
-	if( dch )
-		_dict_clearvals( C, ht );
+	_dict_clearvals( C, ht, dch );
 	vht_free( ht, C );
 	sgs_Dealloc( dh );
 	return SGS_SUCCESS;
@@ -1098,7 +1096,7 @@ static int sgsstd_dict( SGS_CTX )
 		sgs_Variable val;
 		if( !sgs_ParseString( C, i, &kstr, &ksize ) )
 		{
-			_dict_clearvals( C, ht );
+			_dict_clearvals( C, ht, 1 );
 			vht_free( ht, C );
 			sgs_Dealloc( ht );
 			sgs_Printf( C, SGS_WARNING, "dict() - key argument %d is not a string", i );
