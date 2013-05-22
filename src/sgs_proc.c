@@ -1710,7 +1710,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		{
 			int16_t off = argE;
 			sgs_BreakIf( pp > pend || pp < SF->code );
-			if( !vm_fornext( C, -1, -1, RESVAR( argC ) ) )
+			if( vm_fornext( C, -1, -1, RESVAR( argC ) ) < 1 )
 				pp += off;
 			break;
 		}
