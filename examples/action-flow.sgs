@@ -27,12 +27,25 @@ function Action.create( init )
 
 function Action.createTimed( init )
 {
+	function my_ontick( data )
+	{
+		this.time -= DT; 
+		if( this.time <= 0 )
+			this.end();
+		else if( data )
+			data.thiscall( this );
+	}
+
 	if( !isset( init, "time" ) )
 		init.time = 1.0;
-	if( isset( init, "ontick" ) )
-		init.ontick = closure( function( data ){ this.time -= DT; data.thiscall( this ); }, init.ontick );
 	if( !isset( init, "type" ) )
 		init.type = "Timed";
+
+	if( isset( init, "ontick" ) )
+		init.ontick = closure( my_ontick, init.ontick );
+	else
+		init.ontick = my_ontick;
+
 	return Action.create( init );
 }
 
@@ -56,7 +69,8 @@ function ActionFlow.tick()
 			action.ontick();
 		if( action.ended )
 		{
-			action.onend();
+			if( action.onend )
+				action.onend();
 			AA.erase( i-- );
 		}
 	}
@@ -80,16 +94,14 @@ function ActionFlow.hasActions()
 function intro_fade()
 {
 	println( "time: ", this.time );
-	this.time -= DT;
-	if( this.time <= 0 )
-		this.end();
 }
 function intro_end()
 {
-	println( "End!" );
+	ActionFlow.addAction( Action.createTimed({ named = "Stopping...", time = 1.0 }) );
+	println( "Stopping in 1 sec!" );
 }
 
-ActionFlow.addAction( Action.createTimed({ name = "Intro", time = 3.0, ontick = intro_fade, onend = intro_end }) );
+ActionFlow.addAction( Action.createTimed({ name = "Intro", time = 2.0, ontick = intro_fade, onend = intro_end }) );
 
 
 // Test action

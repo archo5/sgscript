@@ -1654,7 +1654,8 @@ static int sgsstd__inclib( SGS_CTX, const char* name, int override )
 		return SGS_SUCCESS;
 	}
 
-	if( strcmp( name, "io" ) == 0 ) ret = sgs_LoadLib_IO( C );
+	if( strcmp( name, "fmt" ) == 0 ) ret = sgs_LoadLib_Fmt( C );
+	else if( strcmp( name, "io" ) == 0 ) ret = sgs_LoadLib_IO( C );
 	else if( strcmp( name, "math" ) == 0 ) ret = sgs_LoadLib_Math( C );
 #if 0
 	else if( strcmp( name, "native" ) == 0 ) ret = sgs_LoadLib_Native( C );

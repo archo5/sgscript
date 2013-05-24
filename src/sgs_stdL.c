@@ -48,6 +48,469 @@ static int path_replast( SGS_CTX, int from, int with )
 
 
 
+/* libraries - formatting */
+
+static sgs_SizeVal fmt_pack_numitems(
+	SGS_CTX, const char* str, sgs_SizeVal size )
+{
+	sgs_SizeVal cnt = 0, first = 1, mult = 0;
+	const char* sb = str, *strend = str + size;
+	while( str < strend )
+	{
+		char c = *str++;
+		switch( c )
+		{
+		/* multipliers */
+		case '0': case '1': case '2': case '3':
+		case '4': case '5': case '6': case '7':
+		case '8': case '9':
+			mult *= 10;
+			mult += c - '0';
+			break;
+		/* endianness */
+		case '=': case '<': case '>': case '@':
+		/* sign */
+		case '+': case '-':
+			mult = 0;
+			break;
+		/* types */
+		case 'c': case 'w': case 'l': case 'q':
+		case 'f': case 'd': case 'p':
+			cnt += mult ? mult : 1;
+			mult = 0;
+			break;
+		case 's':
+			cnt++;
+			mult = 0;
+			break;
+		/* misc. */
+		case 'x':
+			mult = 0;
+			break;
+		default:
+			if( first )
+			{
+				first = 0;
+				sgs_Printf( C, SGS_WARNING, "fmt_pack() - invalid character"
+				" at position %d (there might be more)", ( str - sb + 1 ) );
+			}
+			mult = 0;
+			break;
+		}
+	}
+	return cnt;
+}
+
+static sgs_SizeVal fmt_pack_numbytes(
+	SGS_CTX, const char* str, sgs_SizeVal size )
+{
+	sgs_SizeVal cnt = 0, first = 1, mult = 0;
+	const char* sb = str, *strend = str + size;
+	while( str < strend )
+	{
+		char c = *str++;
+		switch( c )
+		{
+		/* multipliers */
+		case '0': case '1': case '2': case '3':
+		case '4': case '5': case '6': case '7':
+		case '8': case '9':
+			mult *= 10;
+			mult += c - '0';
+			break;
+		/* endianness */
+		case '=': case '<': case '>': case '@':
+		/* sign */
+		case '+': case '-':
+			mult = 0;
+			break;
+		/* types */
+		case 'c': cnt += mult ? mult : 1; mult = 0; break;
+		case 'w': cnt += ( mult ? mult : 1 ) * 2; mult = 0; break;
+		case 'l': case 'f': cnt += ( mult ? mult : 1 ) * 4; mult = 0; break;
+		case 'q': case 'd': cnt += ( mult ? mult : 1 ) * 8; mult = 0; break;
+		case 'p': cnt += ( mult ? mult : 1 ) * sizeof( size_t ); mult = 0; break;
+		case 's':
+			cnt += mult;
+			mult = 0;
+			break;
+		/* misc. */
+		case 'x':
+			mult = 0;
+			break;
+		default:
+			if( first )
+			{
+				first = 0;
+				sgs_Printf( C, SGS_WARNING, "fmt_pack() - invalid character"
+				" at position %d (there might be more)", ( str - sb + 1 ) );
+			}
+			mult = 0;
+			break;
+		}
+	}
+	return cnt;
+}
+
+static sgs_SizeVal fmt_pack( SGS_CTX,
+	const char* str, sgs_SizeVal size, MemBuf* bfr )
+{
+	int invert = 0;
+	sgs_SizeVal si = 1, mult = 0;
+	const char* strend = str + size;
+	while( str < strend )
+	{
+		char c = *str++;
+		switch( c )
+		{
+		/* multipliers */
+		case '0': case '1': case '2': case '3':
+		case '4': case '5': case '6': case '7':
+		case '8': case '9':
+			mult *= 10;
+			mult += c - '0';
+			break;
+		/* modifiers */
+		case '=': invert = 0; mult = 0; break;
+		case '<': invert = O32_HOST_ORDER != O32_LITTLE_ENDIAN; mult = 0; break;
+		case '>': invert = O32_HOST_ORDER != O32_BIG_ENDIAN; mult = 0; break;
+		case '@': invert = 1; mult = 0; break;
+		case '+': case '-': mult = 0; break;
+		/* data */
+		case 'c': case 'w': case 'l': case 'q':
+		case 'p':
+			if( !mult )
+				mult = 1;
+			while( mult-- > 0 )
+			{
+				int size = 1, off = 0;
+				char bb[ 8 ];
+				sgs_Integer i;
+				if( !sgs_ParseInt( C, si, &i ) )
+					return si;
+				si++;
+				if( c == 'w' ) size = 2;
+				else if( c == 'l' ) size = 4;
+				else if( c == 'q' ) size = 8;
+				else if( c == 'p' ) size = sizeof( size_t );
+				if( O32_HOST_ORDER == O32_BIG_ENDIAN )
+					off = 7 - size;
+				memcpy( bb, ((char*)&i) + off, size );
+				if( invert )
+				{
+					int a, b;
+					for( a = 0, b = size - 1; a < b; a++, b-- )
+					{
+						char bbt = bb[ a ];
+						bb[ a ] = bb[ b ];
+						bb[ b ] = bbt;
+					}
+				}
+				membuf_appbuf( bfr, C, bb, size );
+			}
+			mult = 0;
+			break;
+		case 'f': case 'd':
+			if( !mult )
+				mult = 1;
+			while( mult-- > 0 )
+			{
+				sgs_Real f;
+				if( !sgs_ParseReal( C, si, &f ) )
+					return si;
+				si++;
+				if( c == 'f' )
+				{
+					char bb[ 4 ];
+					float f32 = (float) f;
+					memcpy( bb, &f32, 4 );
+					if( invert )
+					{
+						char bbt;
+						bbt = bb[ 0 ]; bb[ 0 ] = bb[ 3 ]; bb[ 3 ] = bbt;
+						bbt = bb[ 1 ]; bb[ 1 ] = bb[ 2 ]; bb[ 2 ] = bbt;
+					}
+					membuf_appbuf( bfr, C, bb, 4 );
+				}
+				else
+				{
+					char bb[ 8 ];
+					memcpy( bb, &f, 8 );
+					if( invert )
+					{
+						char bbt;
+						bbt = bb[ 0 ]; bb[ 0 ] = bb[ 7 ]; bb[ 7 ] = bbt;
+						bbt = bb[ 1 ]; bb[ 1 ] = bb[ 6 ]; bb[ 6 ] = bbt;
+						bbt = bb[ 2 ]; bb[ 2 ] = bb[ 5 ]; bb[ 5 ] = bbt;
+						bbt = bb[ 3 ]; bb[ 3 ] = bb[ 4 ]; bb[ 4 ] = bbt;
+					}
+					membuf_appbuf( bfr, C, bb, 8 );
+				}
+			}
+			mult = 0;
+			break;
+		case 's':
+			{
+				char* astr;
+				sgs_SizeVal asize;
+				if( !sgs_ParseString( C, si, &astr, &asize ) )
+					return si;
+				si++;
+				if( mult < 1 )
+					mult = 1;
+				if( asize > mult )
+					asize = mult;
+				membuf_appbuf( bfr, C, astr, asize );
+				while( asize < mult )
+				{
+					membuf_appchr( bfr, C, '\0' );
+					asize++;
+				}
+			}
+			mult = 0;
+			break;
+		case 'x':
+			membuf_appchr( bfr, C, '\0' );
+			mult = 0;
+			break;
+		default:
+			mult = 0;
+			break;
+		}
+	}
+	return si;
+}
+
+static int fmt_unpack( SGS_CTX, const char* str,
+	sgs_SizeVal size, const char* data, sgs_SizeVal datasize )
+{
+	int invert = 0, sign = 0;
+	sgs_SizeVal si = 0, mult = 0;
+	const char* strend = str + size, *dataend = data + datasize;
+	while( str < strend )
+	{
+		char c = *str++;
+		switch( c )
+		{
+		/* multipliers */
+		case '0': case '1': case '2': case '3':
+		case '4': case '5': case '6': case '7':
+		case '8': case '9':
+			mult *= 10;
+			mult += c - '0';
+			break;
+		/* modifiers */
+		case '=': invert = 0; mult = 0; break;
+		case '<': invert = O32_HOST_ORDER != O32_LITTLE_ENDIAN; mult = 0; break;
+		case '>': invert = O32_HOST_ORDER != O32_BIG_ENDIAN; mult = 0; break;
+		case '@': invert = 1; mult = 0; break;
+		case '+': sign = 0; mult = 0; break;
+		case '-': sign = 1; mult = 0; break;
+		/* data */
+		case 'c': case 'w': case 'l': case 'q':
+		case 'p':
+			if( !mult )
+				mult = 1;
+			while( mult-- > 0 )
+			{
+				int size = 1, off = 0;
+				sgs_Integer i = 0;
+				char bb[ 8 ];
+
+				if( c == 'w' ) size = 2;
+				else if( c == 'l' ) size = 4;
+				else if( c == 'q' ) size = 8;
+				else if( c == 'p' ) size = sizeof( size_t );
+				if( O32_HOST_ORDER == O32_BIG_ENDIAN )
+					off = 7 - size;
+
+				memcpy( bb, data, size );
+				data += size;
+
+				if( invert )
+				{
+					int a, b;
+					for( a = 0, b = size - 1; a < b; a++, b-- )
+					{
+						char bbt = bb[ a ];
+						bb[ a ] = bb[ b ];
+						bb[ b ] = bbt;
+					}
+				}
+
+				memcpy( ((char*)&i) + off, bb, size );
+				if( sign )
+				{
+					const sgs_Integer SIGN = -1;
+#define ESB( i, mask ) { if( i > mask ) i = ( i & mask ) | ( SIGN & ~mask ); }
+					if( c == 'c' )      ESB( i, 0x7f )
+					else if( c == 'w' ) ESB( i, 0x7fff )
+					else if( c == 'l' ) ESB( i, 0x7fffffff )
+#undef ESB
+				}
+				sgs_PushInt( C, i );
+				si++;
+			}
+			mult = 0;
+			break;
+		case 'f': case 'd':
+			if( !mult )
+				mult = 1;
+			while( mult-- > 0 )
+			{
+				char bb[ 8 ];
+				if( c == 'f' )
+				{
+					float f32;
+					memcpy( bb, data, 4 );
+					data += 4;
+					if( invert )
+					{
+						char bbt;
+						bbt = bb[ 0 ]; bb[ 0 ] = bb[ 3 ]; bb[ 3 ] = bbt;
+						bbt = bb[ 1 ]; bb[ 1 ] = bb[ 2 ]; bb[ 2 ] = bbt;
+					}
+					memcpy( &f32, bb, 4 );
+					sgs_PushReal( C, f32 );
+				}
+				else
+				{
+					double f64;
+					memcpy( bb, data, 8 );
+					data += 8;
+					if( invert )
+					{
+						char bbt;
+						bbt = bb[ 0 ]; bb[ 0 ] = bb[ 7 ]; bb[ 7 ] = bbt;
+						bbt = bb[ 1 ]; bb[ 1 ] = bb[ 6 ]; bb[ 6 ] = bbt;
+						bbt = bb[ 2 ]; bb[ 2 ] = bb[ 5 ]; bb[ 5 ] = bbt;
+						bbt = bb[ 3 ]; bb[ 3 ] = bb[ 4 ]; bb[ 4 ] = bbt;
+					}
+					memcpy( &f64, bb, 8 );
+					sgs_PushReal( C, f64 );
+				}
+				si++;
+			}
+			mult = 0;
+			break;
+		case 's':
+			{
+				if( mult < 1 )
+					mult = 1;
+				sgs_PushStringBuf( C, data, mult );
+				data += mult;
+				si++;
+			}
+			mult = 0;
+			break;
+		case 'x':
+			data++;
+			mult = 0;
+			break;
+		default:
+			mult = 0;
+			break;
+		}
+	}
+	sgs_BreakIf( data > dataend );
+	return si;
+}
+
+static int sgsstd_fmt_pack( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size, numitems, ret;
+	if( sgs_StackSize( C ) < 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "fmt_pack() - unexpected arguments; "
+			"function expects 1+ arguments: string, ..." )
+
+	numitems = fmt_pack_numitems( C, str, size );
+	if( sgs_StackSize( C ) < numitems + 1 )
+	{
+		sgs_Printf( C, SGS_WARNING, "fmt_pack() - "
+			"expected at least %d arguments, got %d\n",
+			numitems + 1, sgs_StackSize( C ) );
+		return 0;
+	}
+
+	{
+		MemBuf bfr = membuf_create();
+		ret = fmt_pack( C, str, size, &bfr ) - 1;
+		if( ret == numitems )
+			sgs_PushStringBuf( C, bfr.ptr, bfr.size );
+		else
+			sgs_Printf( C, SGS_WARNING, "fmt_pack() - "
+				"error in arguments, could not read all" );
+		membuf_destroy( &bfr, C );
+		return ret == numitems;
+	}
+}
+
+static int sgsstd_fmt_pack_count( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size;
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "fmt_pack_count() - unexpected arguments; "
+			"function expects 1 argument: string" )
+
+	sgs_PushInt( C, fmt_pack_numitems( C, str, size ) );
+	return 1;
+}
+
+static int sgsstd_fmt_unpack( SGS_CTX )
+{
+	sgs_SizeVal bytes, ret;
+	char* str, *data;
+	sgs_SizeVal size, datasize;
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseString( C, 0, &str, &size ) ||
+		!sgs_ParseString( C, 1, &data, &datasize ) )
+		STDLIB_WARN( "fmt_unpack() - unexpected arguments; "
+			"function expects 1 argument: string" )
+
+	bytes = fmt_pack_numbytes( C, str, size );
+	if( bytes > datasize )
+		STDLIB_WARN( "fmt_unpack() - not enough data to successfully unpack" )
+	ret = fmt_unpack( C, str, size, data, datasize );
+	if( ret < 0 || sgs_PushArray( C, ret ) != SGS_SUCCESS )
+		return 0;
+	return 1;
+}
+
+static int sgsstd_fmt_pack_size( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size;
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "fmt_pack_size() - unexpected arguments; "
+			"function expects 1 argument: string" )
+
+	sgs_PushInt( C, fmt_pack_numbytes( C, str, size ) );
+	return 1;
+}
+
+
+#define FN( x ) { #x, sgsstd_##x }
+
+static const sgs_RegFuncConst f_fconsts[] =
+{
+	FN( fmt_pack ), FN( fmt_pack_count ),
+	FN( fmt_unpack ), FN( fmt_pack_size ),
+};
+
+SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
+{
+	int ret;
+	ret = sgs_RegFuncConsts( C, f_fconsts, ARRAY_SIZE( f_fconsts ) );
+	return ret;
+}
+
+
+
 /* libraries - I / O */
 
 #define FILE_READ 1

@@ -1975,6 +1975,23 @@ SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var )
 	return SGS_SUCCESS;
 }
 
+SGSRESULT sgs_PushArray( SGS_CTX, sgs_SizeVal numitems )
+{
+	if( numitems > sgs_StackSize( C ) )
+		return SGS_EINVAL;
+	sgs_PushCFunction( C, C->array_func );
+	return sgs_Call( C, numitems, 1 );
+}
+
+SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems )
+{
+	if( numitems % 2 != 0 || numitems > sgs_StackSize( C ) )
+		return SGS_EINVAL;
+	sgs_PushCFunction( C, C->dict_func );
+	return sgs_Call( C, numitems, 1 );
+}
+
+
 SGSRESULT sgs_PushItem( SGS_CTX, int item )
 {
 	if( !sgs_IsValidIndex( C, item ) )
