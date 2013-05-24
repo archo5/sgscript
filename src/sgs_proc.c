@@ -492,7 +492,7 @@ static void stk_push_nulls( SGS_CTX, int cnt )
 		(C->stack_top++)->type = SVT_NULL;
 }
 
-static void stk_insert_null( SGS_CTX, int off )
+static sgs_Variable* stk_insert_pos( SGS_CTX, int off )
 {
 	sgs_Variable *op, *p;
 	stk_makespace( C, 1 );
@@ -503,7 +503,12 @@ static void stk_insert_null( SGS_CTX, int off )
 		p--;
 	}
 	C->stack_top++;
-	op->type = SVT_NULL;
+	return op;
+}
+
+static void stk_insert_null( SGS_CTX, int off )
+{
+	stk_insert_pos( C, off )->type = SVT_NULL;
 }
 
 static void stk_clean( SGS_CTX, sgs_VarPtr from, sgs_VarPtr to )
@@ -1546,8 +1551,10 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 		else if( func->type == SVT_OBJECT )
 		{
 			int cargs = C->call_args, cexp = C->call_expect;
+			int hadthis = C->call_this;
 			C->call_args = args;
 			C->call_expect = expect;
+			C->call_this = gotthis;
 			rvc = obj_exec( C, SOP_CALL, func->data.O, 0, args );
 			if( rvc < 0 )
 			{
@@ -1557,6 +1564,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 			}
 			C->call_args = cargs;
 			C->call_expect = cexp;
+			C->call_this = hadthis;
 		}
 		else
 		{
@@ -1953,6 +1961,19 @@ void sgs_PushVariable( SGS_CTX, sgs_Variable* var )
 	stk_push( C, var );
 }
 
+
+SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var )
+{
+	sgs_Variable* vp;
+	if( pos > sgs_StackSize( C ) || pos < -sgs_StackSize( C ) - 1 )
+		return SGS_EBOUNDS;
+	if( pos < 0 )
+		pos = sgs_StackSize( C ) + pos + 1;
+	vp = stk_insert_pos( C, pos );
+	VAR_ACQUIRE( var );
+	*vp = *var;
+	return SGS_SUCCESS;
+}
 
 SGSRESULT sgs_PushItem( SGS_CTX, int item )
 {

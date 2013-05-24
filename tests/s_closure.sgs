@@ -1,3 +1,8 @@
-printme = function( pre ){ print( pre, this, "\n" ); };
+printme = function( what, pre ){ print( pre, what, "\n" ); };
 dafuq = closure( printme, "banana" );
 dafuq( "this is " );
+
+printmethod = function( x ){ println( this.text, x ); };
+dafuq2 = closure( printmethod, "apple" );
+obj = { text = "that is ", func = dafuq2 };
+obj.func();

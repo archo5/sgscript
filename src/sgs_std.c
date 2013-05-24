@@ -1383,6 +1383,11 @@ static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* data, int depth )
 
 static int sgsstd_closure_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
+	if( type == SVT_BOOL )
+	{
+		sgs_PushBool( C, 1 );
+		return SGS_SUCCESS;
+	}
 	if( type != SVT_STRING && type != SGS_CONVOP_TOTYPE )
 		return SGS_ENOTSUP;
 	UNUSED( data );
@@ -1402,13 +1407,11 @@ static int sgsstd_closure_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 
 static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data, int unused )
 {
-	int i;
+	int ismethod = sgs_Method( C );
 	SGSCLOSURE_HDR;
-	sgs_PushVariable( C, &hdr->data );
-	for( i = 0; i < C->call_args; ++i )
-		sgs_PushItem( C, i );
-	return sgsVM_VarCall( C, &hdr->func, C->call_args, C->call_expect, TRUE )
-		* C->call_expect;
+	sgs_BreakIf( sgs_InsertVariable( C, -C->call_args - 1, &hdr->data ) );
+	return sgsVM_VarCall( C, &hdr->func, C->call_args + 1,
+		C->call_expect, ismethod ) * C->call_expect;
 }
 
 static void* sgsstd_closure_functable[] =

@@ -289,8 +289,12 @@ static void add_instr( sgs_CompFunc* func, SGS_CTX, FTNode* node, instr_t I )
 #define QPRINT( str ) sgs_Printf( C, SGS_ERROR, "[line %d] " str, sgsT_LineNum( node->token ) )
 
 
-static int preparse_varlist( SGS_CTX, FTNode* node )
+
+static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node );
+
+static int preparse_varlist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 {
+	int ret = TRUE;
 	node = node->child;
 	while( node )
 	{
@@ -301,13 +305,16 @@ static int preparse_varlist( SGS_CTX, FTNode* node )
 		}
 		if( add_varT( &C->fctx->vars, C, node->token ) )
 			comp_reg_alloc( C );
+		if( node->child )
+			ret &= preparse_varlists( C, func, node );
 		node = node->next;
 	}
-	return TRUE;
+	return ret;
 }
 
-static int preparse_gvlist( SGS_CTX, FTNode* node )
+static int preparse_gvlist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 {
+	int ret = TRUE;
 	node = node->child;
 	while( node )
 	{
@@ -317,18 +324,20 @@ static int preparse_gvlist( SGS_CTX, FTNode* node )
 			return FALSE;
 		}
 		add_varT( &C->fctx->gvars, C, node->token );
+		if( node->child )
+			ret &= preparse_varlists( C, func, node );
 		node = node->next;
 	}
-	return TRUE;
+	return ret;
 }
 
 static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 {
 	int ret = 1;
 	if( node->type == SFT_VARLIST )
-		ret &= preparse_varlist( C, node );
+		ret &= preparse_varlist( C, func, node );
 	else if( node->type == SFT_GVLIST )
-		ret &= preparse_gvlist( C, node );
+		ret &= preparse_gvlist( C, func, node );
 	else if( node->token && is_keyword( node->token, "this" ) )
 	{
 		func->gotthis = TRUE;

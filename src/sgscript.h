@@ -407,6 +407,7 @@ void sgs_PushCFunction( SGS_CTX, sgs_CFunc func );
 void sgs_PushObject( SGS_CTX, void* data, void** iface );
 void sgs_PushVariable( SGS_CTX, sgs_Variable* var );
 
+SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var );
 SGSRESULT sgs_PushItem( SGS_CTX, int item );
 SGSRESULT sgs_StoreItem( SGS_CTX, int item );
 SGSRESULT sgs_PushProperty( SGS_CTX, const char* name );
