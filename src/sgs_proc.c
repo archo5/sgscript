@@ -2425,6 +2425,7 @@ static void serialize_output_func( void* ud,
 
 SGSRESULT sgs_Serialize( SGS_CTX )
 {
+	int ret = SGS_SUCCESS;
 	sgs_Variable V;
 	MemBuf B = membuf_create();
 	sgs_OutputFunc dofn;
@@ -2444,21 +2445,16 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 	if( V.type == SVT_OBJECT )
 	{
 		int ssz = sgs_StackSize( C );
-		int ret = obj_exec( C, SOP_SERIALIZE, V.data.O, 0, 0 );
+		ret = obj_exec( C, SOP_SERIALIZE, V.data.O, 0, 0 );
 		sgs_Pop( C, sgs_StackSize( C ) - ssz );
 		if( ret != SGS_SUCCESS )
-		{
-			if( ep )
-				membuf_destroy( &B, C );
-			return ret;
-		}
+			goto fail;
 	}
 	else if( V.type == SVT_FUNC || V.type == SVT_CFUNC )
 	{
 		sgs_Printf( C, SGS_WARNING, "Cannot serialize functions" );
-		if( ep )
-			membuf_destroy( &B, C );
-		return SGS_EINVAL;
+		ret = SGS_EINVAL;
+		goto fail;
 	}
 	else
 	{
@@ -2476,35 +2472,36 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 			break;
 		default:
 			sgs_Printf( C, SGS_ERROR, "sgs_Serialize: Unknown memory error" );
-			if( ep )
-				membuf_destroy( &B, C );
-			return SGS_EINPROC;
+			ret = SGS_EINPROC;
+			goto fail;
 		}
 	}
-	
+
 	sgs_Pop( C, 1 );
+fail:
 	if( ep )
 	{
 		sgs_SetOutputFunc( C, dofn, doud );
-		sgs_PushStringBuf( C, B.ptr, B.size );
+		if( ret == SGS_SUCCESS )
+			sgs_PushStringBuf( C, B.ptr, B.size );
 		membuf_destroy( &B, C );
 	}
-	return SGS_SUCCESS;
+	return ret;
 }
 
 SGSRESULT sgs_SerializeObject( SGS_CTX, int args, const char* func )
 {
 	int len = strlen( func );
-	char pb[4] = { 'C', args, 0, 0 };
-	if( len >= 255 ||args > 255 )
+	char pb[7] = { 'C', args, args>>8, args>>16, args>>24, 0, 0 };
+	if( len >= 255 )
 		return SGS_EINVAL;
 	if( C->output_fn != serialize_output_func )
 		return SGS_EINPROC;
 
-	pb[ 2 ] = strlen( func );
-	sgs_Write( C, pb, 3 );
+	pb[ 5 ] = strlen( func );
+	sgs_Write( C, pb, 6 );
 	sgs_Write( C, func, len );
-	sgs_Write( C, pb + 3, 1 );
+	sgs_Write( C, pb + 6, 1 );
 	return SGS_SUCCESS;
 }
 
@@ -2564,9 +2561,10 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 		else if( c == 'C' )
 		{
 			int argc, fnsz, ret;
-			if( str >= strend-1 )
+			if( str >= strend-4 )
 				return SGS_EINPROC;
-			argc = *str++;
+			argc = AS_INT32( str );
+			str += 4;
 			fnsz = *str++ + 1;
 			if( str > strend - fnsz )
 				return SGS_EINPROC;
