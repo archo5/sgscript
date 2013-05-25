@@ -39,6 +39,7 @@ extern "C" {
 #  define SOP_GETINDEX SGS_OP_GETINDEX
 #  define SOP_SETINDEX SGS_OP_SETINDEX
 #  define SOP_CONVERT SGS_OP_CONVERT
+#  define SOP_SERIALIZE SGS_OP_SERIALIZE
 #  define SOP_DUMP SGS_OP_DUMP
 #  define SOP_GCMARK SGS_OP_GCMARK
 #  define SOP_GETNEXT SGS_OP_GETNEXT
@@ -221,11 +222,12 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj*, int /* arg */ );
 #define SGS_OP_GETINDEX   SGS_OP( 2 )  /* arg = prop? */
 #define SGS_OP_SETINDEX   SGS_OP( 3 )  /* arg = prop? */
 #define SGS_OP_CONVERT    SGS_OP( 4 )  /* arg = type(B|I|R|S)/spec. */
-#define SGS_OP_DUMP       SGS_OP( 5 )  /* arg = depth */
-#define SGS_OP_GCMARK     SGS_OP( 6 )
-#define SGS_OP_GETNEXT    SGS_OP( 7 )  /* arg = flags */
-#define SGS_OP_CALL       SGS_OP( 8 )
-#define SGS_OP_EXPR       SGS_OP( 9 )  /* arg = op */
+#define SGS_OP_SERIALIZE  SGS_OP( 5 )
+#define SGS_OP_DUMP       SGS_OP( 6 )  /* arg = depth */
+#define SGS_OP_GCMARK     SGS_OP( 7 )
+#define SGS_OP_GETNEXT    SGS_OP( 8 )  /* arg = flags */
+#define SGS_OP_CALL       SGS_OP( 9 )
+#define SGS_OP_EXPR       SGS_OP(10 )  /* arg = op */
 
 #define SGS_OP_FLAGS      SGS_OP(100)
 #define SGS_OBJ_ARRAY     0x01
@@ -446,6 +448,10 @@ SGSRESULT sgs_PadString( SGS_CTX );
 SGSRESULT sgs_StringConcat( SGS_CTX );
 SGSRESULT sgs_StringMultiConcat( SGS_CTX, int args );
 SGSRESULT sgs_CloneItem( SGS_CTX, int item );
+
+SGSRESULT sgs_Serialize( SGS_CTX );
+SGSRESULT sgs_SerializeObject( SGS_CTX, int args, const char* func );
+SGSRESULT sgs_Unserialize( SGS_CTX );
 
 sgs_Real sgs_CompareF( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 );
 static SGS_INLINE int sgs_Compare( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )

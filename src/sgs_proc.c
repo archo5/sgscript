@@ -2416,6 +2416,174 @@ SGSRESULT sgs_CloneItem( SGS_CTX, int item )
 }
 
 
+static void serialize_output_func( void* ud,
+	SGS_CTX, const void* ptr, sgs_SizeVal datasize )
+{
+	MemBuf* B = (MemBuf*) ud;
+	membuf_appbuf( B, C, ptr, datasize );
+}
+
+SGSRESULT sgs_Serialize( SGS_CTX )
+{
+	sgs_Variable V;
+	MemBuf B = membuf_create();
+	sgs_OutputFunc dofn;
+	void* doud;
+	int ep = C->output_fn != serialize_output_func;
+
+	if( !sgs_GetStackItem( C, -1, &V ) )
+		return SGS_EBOUNDS;
+
+	if( ep )
+	{
+		dofn = C->output_fn;
+		doud = C->output_ctx;
+		sgs_SetOutputFunc( C, serialize_output_func, &B );
+	}
+
+	if( V.type == SVT_OBJECT )
+	{
+		int ssz = sgs_StackSize( C );
+		int ret = obj_exec( C, SOP_SERIALIZE, V.data.O, 0, 0 );
+		sgs_Pop( C, sgs_StackSize( C ) - ssz );
+		if( ret != SGS_SUCCESS )
+		{
+			if( ep )
+				membuf_destroy( &B, C );
+			return ret;
+		}
+	}
+	else if( V.type == SVT_FUNC || V.type == SVT_CFUNC )
+	{
+		sgs_Printf( C, SGS_WARNING, "Cannot serialize functions" );
+		if( ep )
+			membuf_destroy( &B, C );
+		return SGS_EINVAL;
+	}
+	else
+	{
+		char pb[2] = { 'P', V.type };
+		sgs_Write( C, pb, 2 );
+		switch( V.type )
+		{
+		case SVT_NULL: break;
+		case SVT_BOOL: { uint8_t b = V.data.B; sgs_Write( C, &b, 1 ); } break;
+		case SVT_INT: sgs_Write( C, &V.data.I, sizeof( sgs_Integer ) ); break;
+		case SVT_REAL: sgs_Write( C, &V.data.R, sizeof( sgs_Real ) ); break;
+		case SVT_STRING:
+			sgs_Write( C, &V.data.S->size, 4 );
+			sgs_Write( C, var_cstr( &V ), V.data.S->size );
+			break;
+		default:
+			sgs_Printf( C, SGS_ERROR, "sgs_Serialize: Unknown memory error" );
+			if( ep )
+				membuf_destroy( &B, C );
+			return SGS_EINPROC;
+		}
+	}
+	
+	sgs_Pop( C, 1 );
+	if( ep )
+	{
+		sgs_SetOutputFunc( C, dofn, doud );
+		sgs_PushStringBuf( C, B.ptr, B.size );
+		membuf_destroy( &B, C );
+	}
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_SerializeObject( SGS_CTX, int args, const char* func )
+{
+	int len = strlen( func );
+	char pb[4] = { 'C', args, 0, 0 };
+	if( len >= 255 ||args > 255 )
+		return SGS_EINVAL;
+	if( C->output_fn != serialize_output_func )
+		return SGS_EINPROC;
+
+	pb[ 2 ] = strlen( func );
+	sgs_Write( C, pb, 3 );
+	sgs_Write( C, func, len );
+	sgs_Write( C, pb + 3, 1 );
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_Unserialize( SGS_CTX )
+{
+	char* str, *strend;
+	sgs_SizeVal size;
+	if( !sgs_ParseString( C, 0, &str, &size ) )
+		return SGS_EINVAL;
+
+	strend = str + size;
+	while( str < strend )
+	{
+		char c = *str++;
+		if( c == 'P' )
+		{
+			if( str >= strend )
+				return SGS_EINPROC;
+			c = *str++;
+			switch( c )
+			{
+			case SVT_NULL: sgs_PushNull( C ); break;
+			case SVT_BOOL:
+				if( str >= strend )
+					return SGS_EINPROC;
+				sgs_PushBool( C, *str++ );
+				break;
+			case SVT_INT:
+				if( str >= strend-7 )
+					return SGS_EINPROC;
+				sgs_PushInt( C, AS_INTEGER( str ) );
+				str += 8;
+				break;
+			case SVT_REAL:
+				if( str >= strend-7 )
+					return SGS_EINPROC;
+				sgs_PushReal( C, AS_REAL( str ) );
+				str += 8;
+				break;
+			case SVT_STRING:
+				{
+					sgs_SizeVal strsz;
+					if( str >= strend-3 )
+						return SGS_EINPROC;
+					strsz = AS_INT32( str );
+					str += 4;
+					if( str > strend - strsz )
+						return SGS_EINPROC;
+					sgs_PushStringBuf( C, str, strsz );
+					str += strsz;
+				}
+				break;
+			default:
+				return SGS_EINPROC;
+			}
+		}
+		else if( c == 'C' )
+		{
+			int argc, fnsz, ret;
+			if( str >= strend-1 )
+				return SGS_EINPROC;
+			argc = *str++;
+			fnsz = *str++ + 1;
+			if( str > strend - fnsz )
+				return SGS_EINPROC;
+			ret = sgs_GlobalCall( C, str, argc, 1 );
+			if( ret != SGS_SUCCESS )
+				return ret;
+			str += fnsz;
+		}
+		else
+		{
+			return SGS_EINPROC;
+		}
+	}
+	return SGS_SUCCESS;
+}
+
+
 sgs_Real sgs_CompareF( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
 {
 	return vm_compare( C, v1, v2 );

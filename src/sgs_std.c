@@ -714,6 +714,24 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
+static int sgsstd_array_serialize( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	int ret;
+	sgs_Variable* pos, *posend;
+	SGSARR_HDR;
+	UNUSED( unused );
+	pos = SGSARR_PTR( hdr );
+	posend = pos + hdr->size;
+	while( pos < posend )
+	{
+		sgs_PushVariable( C, pos++ );
+		ret = sgs_Serialize( C );
+		if( ret != SGS_SUCCESS )
+			return ret;
+	}
+	return sgs_SerializeObject( C, hdr->size, "array" );
+}
+
 static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
 	sgsstd_array_clear( C, data, dch );
@@ -729,6 +747,7 @@ static void* sgsstd_array_functable[] =
 	SOP_DUMP, sgsstd_array_dump,
 	SOP_GCMARK, sgsstd_array_gcmark,
 	SOP_CONVERT, sgsstd_array_convert,
+	SOP_SERIALIZE, sgsstd_array_serialize,
 	SOP_FLAGS, SGS_OP( SGS_OBJ_ARRAY ),
 	SOP_END,
 };
@@ -1081,6 +1100,27 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
+static int sgsstd_dict_serialize( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	int ret;
+	HTHDR;
+	VHTableVar *pair = ht->vars, *pend = ht->vars + vht_size( ht );
+	UNUSED( unused );
+	while( pair < pend )
+	{
+		sgs_PushStringBuf( C, pair->str, pair->size );
+		ret = sgs_Serialize( C );
+		if( ret != SGS_SUCCESS )
+			return ret;
+		sgs_PushVariable( C, &pair->var );
+		ret = sgs_Serialize( C );
+		if( ret != SGS_SUCCESS )
+			return ret;
+		pair++;
+	}
+	return sgs_SerializeObject( C, vht_size( ht ) * 2, "dict" );
+}
+
 static void* sgsstd_dict_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_dict_destruct,
@@ -1088,6 +1128,7 @@ static void* sgsstd_dict_functable[] =
 	SOP_GETINDEX, sgsstd_dict_getindex,
 	SOP_SETINDEX, sgsstd_dict_setindex,
 	SOP_DUMP, sgsstd_dict_dump,
+	SOP_SERIALIZE, sgsstd_dict_serialize,
 	SOP_GCMARK, sgsstd_dict_gcmark,
 	SOP_END,
 };
@@ -1298,6 +1339,25 @@ static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
+static int sgsstd_class_serialize( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	int ret;
+	SGSCLASS_HDR;
+	UNUSED( unused );
+
+	sgs_PushVariable( C, &hdr->data );
+	ret = sgs_Serialize( C );
+	if( ret != SGS_SUCCESS )
+		return ret;
+
+	sgs_PushVariable( C, &hdr->inh );
+	ret = sgs_Serialize( C );
+	if( ret != SGS_SUCCESS )
+		return ret;
+
+	return sgs_SerializeObject( C, 2, "class" );
+}
+
 static int sgsstd_class_gcmark( SGS_CTX, sgs_VarObj* data, int type )
 {
 	SGSCLASS_HDR;
@@ -1341,6 +1401,7 @@ static void* sgsstd_class_functable[] =
 	SOP_GETINDEX, sgsstd_class_getindex,
 	SOP_SETINDEX, sgsstd_class_setindex,
 	SOP_CONVERT, sgsstd_class_convert,
+	SOP_SERIALIZE, sgsstd_class_serialize,
 	SOP_DUMP, sgsstd_class_dump,
 	SOP_GCMARK, sgsstd_class_gcmark,
 	SOP_EXPR, sgsstd_class_expr,
@@ -2067,6 +2128,39 @@ static int sgsstd_gc_collect( SGS_CTX )
 }
 
 
+static int sgsstd_serialize( SGS_CTX )
+{
+	int ret;
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "serialize(): unexpected arguments; "
+			"function expects 1 argument" )
+
+	ret = sgs_Serialize( C );
+	if( ret == SGS_SUCCESS )
+		return 1;
+	else
+		STDLIB_WARN( "serialize(): failed to serialize" )
+}
+
+static int sgsstd_unserialize( SGS_CTX )
+{
+	int ret;
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "unserialize(): unexpected arguments; "
+			"function expects 1 argument: string" )
+
+	ret = sgs_Unserialize( C );
+	if( ret == SGS_SUCCESS )
+		return 1;
+	else if( ret == SGS_EINPROC )
+		STDLIB_WARN( "unserialize(): error in data" )
+	else if( ret == SGS_ENOTFND )
+		STDLIB_WARN( "unserialize(): could not find something" )
+	else
+		STDLIB_WARN( "unserialize(): unknown error" )
+}
+
+
 /* register all */
 #define FN( name ) { #name, sgsstd_##name }
 static sgs_RegFuncConst regfuncs[] =
@@ -2090,6 +2184,7 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( sys_replevel ), FN( sys_stat ),
 	FN( dumpvar ), FN( dumpvars ),
 	FN( gc_collect ),
+	FN( serialize ), FN( unserialize ),
 };
 
 static const sgs_RegIntConst regiconsts[] =

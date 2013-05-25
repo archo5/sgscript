@@ -1610,6 +1610,18 @@ static int sgsstd_os_gettype( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_os_command( SGS_CTX )
+{
+	char* str;
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, NULL ) )
+		STDLIB_WARN( "os_command() - unexpected arguments; "
+			"function expects 1 argument: string" )
+
+	sgs_PushInt( C, system( str ) );
+	return 1;
+}
+
 static int sgsstd_os_getenv( SGS_CTX )
 {
 	char* str;
@@ -1888,7 +1900,7 @@ static int sgsstd_os_make_time( SGS_CTX )
 
 static const sgs_RegFuncConst o_fconsts[] =
 {
-	FN( os_gettype ),
+	FN( os_gettype ), FN( os_command ),
 	FN( os_getenv ), FN( os_putenv ),
 	FN( os_time ), FN( os_get_timezone ), FN( os_date_string ),
 	FN( os_parse_time ), FN( os_make_time ),
