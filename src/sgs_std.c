@@ -453,7 +453,39 @@ static int sgsstd_arrayI_find( SGS_CTX )
 
 static int sgsstd_arrayI_remove( SGS_CTX )
 {
-	return 0;
+	int strict = FALSE, all = FALSE;
+	int cnt = sgs_StackSize( C );
+	sgs_Integer from = 0;
+	SGSARR_IHDR( remove );
+	if( cnt < 1 || cnt > 4 ||
+		( cnt >= 2 && !sgs_ParseBool( C, 2, &strict ) ) ||
+		( cnt >= 3 && !sgs_ParseBool( C, 3, &all ) ) ||
+		( cnt >= 4 && !sgs_ParseInt( C, 4, &from ) ) )
+		STDLIB_WARN( "array.find(): unexpected arguments;"
+			" function expects 1-4 arguments: any[, bool[, bool[, int]]]" )
+
+	{
+		int rmvd = 0;
+		sgs_Variable comp;
+		sgs_GetStackItem( C, 1, &comp );
+		sgs_SizeVal off = from;
+		while( off < hdr->size )
+		{
+			sgs_Variable* p = SGSARR_PTR( hdr ) + off;
+			if( ( !strict || sgs_EqualTypes( C, p, &comp ) )
+				&& sgs_CompareF( C, p, &comp ) == 0 )
+			{
+				sgsstd_array_erase( C, data, off, off );
+				rmvd++;
+				if( !all )
+					break;
+			}
+			else
+				off++;
+		}
+		sgs_PushInt( C, rmvd );
+		return 1;
+	}
 }
 
 static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
@@ -1513,6 +1545,90 @@ static int sgsstd_clone( SGS_CTX )
 }
 
 
+static int _foreach_lister( SGS_CTX, int vnk, const char* mename )
+{
+	if( sgs_StackSize( C ) != 1 ||
+		sgs_PushIterator( C, 0 ) != SGS_SUCCESS )
+		sgs_Printf( C, SGS_WARNING, "%s() unexpected arguments; "
+			" function expects 1 argument of iterable type", mename );
+
+	sgs_PushArray( C, 0 );
+	/* arg1, arg1 iter, output */
+	while( sgs_IterAdvance( C, 1 ) > 0 )
+	{
+		sgs_PushItem( C, 2 );
+		sgs_IterPushData( C, 1, !vnk, vnk );
+		sgs_PushCFunction( C, sgsstd_arrayI_push );
+		sgs_ThisCall( C, 1, 0 );
+	}
+	return 1;
+}
+static int sgsstd_get_keys( SGS_CTX )
+{
+	return _foreach_lister( C, 0, "get_keys" );
+}
+static int sgsstd_get_values( SGS_CTX )
+{
+	return _foreach_lister( C, 1, "get_values" );
+}
+
+static int sgsstd_get_concat( SGS_CTX )
+{
+	const char* E = "get_concat() - unexpected arguments; "
+			"function expects 2+ arguments: iterable, iterable, ...";
+	int i, ssz = sgs_StackSize( C );
+	if( ssz < 2 )
+		STDLIB_WARN( E );
+
+	sgs_PushArray( C, 0 );
+	for( i = 0; i < ssz; ++i )
+	{
+		if( sgs_PushIterator( C, i ) != SGS_SUCCESS )
+			STDLIB_WARN( E );
+		while( sgs_IterAdvance( C, -1 ) > 0 )
+		{
+			/* ..., output, arg2 iter */
+			sgs_PushItem( C, -2 );
+			sgs_IterPushData( C, -2, FALSE, TRUE );
+			sgs_PushCFunction( C, sgsstd_arrayI_push );
+			sgs_ThisCall( C, 1, 0 );
+		}
+		sgs_Pop( C, 1 );
+	}
+	return 1;
+}
+
+static int sgsstd_get_merged( SGS_CTX )
+{
+	const char* E = "get_merged() - unexpected arguments; "
+			"function expects 2+ arguments: iterable, iterable, ...";
+	int i, ssz = sgs_StackSize( C );
+	if( ssz < 2 )
+		STDLIB_WARN( E );
+
+	sgs_PushDict( C, 0 );
+	for( i = 0; i < ssz; ++i )
+	{
+		if( sgs_PushIterator( C, i ) != SGS_SUCCESS )
+			STDLIB_WARN( E );
+		while( sgs_IterAdvance( C, -1 ) > 0 )
+		{
+			int ret;
+			/* ..., output, arg2 iter */
+			ret = sgs_IterPushData( C, -1, TRUE, TRUE );
+			if( ret != SGS_SUCCESS ) STDLIB_WARN( "get_merged() - "
+				"failed to retrieve data from iterator" )
+			ret = sgs_StoreIndex( C, -4, -2 );
+			if( ret != SGS_SUCCESS ) STDLIB_WARN( "get_merged() - "
+				"failed to store data" )
+			sgs_Pop( C, 1 );
+		}
+		sgs_Pop( C, 1 );
+	}
+	return 1;
+}
+
+
 
 /* I/O */
 
@@ -1935,6 +2051,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* containers */
 	FN( array ), FN( dict ), { "class", sgsstd_class }, FN( closure ),
 	FN( isset ), FN( unset ), FN( clone ),
+	FN( get_keys ), FN( get_values ), FN( get_concat ), FN( get_merged ),
 	/* I/O */
 	FN( print ), FN( println ), FN( printlns ),
 	FN( printvar ), FN( printvars ),

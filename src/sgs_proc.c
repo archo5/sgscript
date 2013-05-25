@@ -2029,7 +2029,23 @@ SGSRESULT sgs_PushProperty( SGS_CTX, const char* name )
 	return ret;
 }
 
-SGSRESULT sgs_PushIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
+SGSRESULT sgs_PushIndex( SGS_CTX, int obj, int idx )
+{
+	int ret;
+	sgs_Variable vo, vi;
+	if( !sgs_GetStackItem( C, obj, &vo ) ||
+		!sgs_GetStackItem( C, idx, &vi ) )
+		return SGS_EBOUNDS;
+
+	stk_push_null( C );
+	ret = vm_getprop( C, stk_absindex( C, -1 ), &vo, &vi, TRUE );
+	if( ret != SGS_SUCCESS )
+		stk_pop1( C );
+
+	return ret;
+}
+
+SGSRESULT sgs_PushIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 {
 	int ret;
 	sgs_Variable Sobj = *obj, Sidx = *idx;
@@ -2039,6 +2055,32 @@ SGSRESULT sgs_PushIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 	if( ret != SGS_SUCCESS )
 		stk_pop1( C );
 
+	return ret;
+}
+
+SGSRESULT sgs_StoreIndex( SGS_CTX, int obj, int idx )
+{
+	int ret;
+	sgs_Variable vo, vi, val;
+	if( !sgs_GetStackItem( C, obj, &vo ) ||
+		!sgs_GetStackItem( C, idx, &vi ) ||
+		!sgs_GetStackItem( C, -1, &val ) )
+		return SGS_EBOUNDS;
+	ret = vm_setprop( C, &vo, &vi, &val, TRUE );
+	if( ret == SGS_SUCCESS )
+		sgs_Pop( C, 1 );
+	return ret;
+}
+
+SGSRESULT sgs_StoreIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
+{
+	int ret;
+	sgs_Variable val;
+	if( !sgs_GetStackItem( C, -1, &val ) )
+		return SGS_EBOUNDS;
+	ret = vm_setprop( C, obj, idx, &val, TRUE );
+	if( ret == SGS_SUCCESS )
+		sgs_Pop( C, 1 );
 	return ret;
 }
 
@@ -2065,7 +2107,7 @@ SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
 
 SGSRESULT sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx )
 {
-	int ret = sgs_PushIndex( C, obj, idx );
+	int ret = sgs_PushIndexP( C, obj, idx );
 	if( ret == SGS_SUCCESS )
 	{
 		*out = *stk_getpos( C, -1 );
@@ -2469,6 +2511,15 @@ SGSRESULT sgs_Convert( SGS_CTX, int item, int type )
 
 */
 
+
+SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface )
+{
+	sgs_Variable* var;
+	if( !sgs_IsValidIndex( C, item ) )
+		return FALSE;
+	var = stk_getpos( C, item );
+	return var->type == SVT_OBJECT && var->data.O->iface == iface;
+}
 
 typedef union intreal_s
 {

@@ -415,7 +415,10 @@ SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems );
 SGSRESULT sgs_PushItem( SGS_CTX, int item );
 SGSRESULT sgs_StoreItem( SGS_CTX, int item );
 SGSRESULT sgs_PushProperty( SGS_CTX, const char* name );
-SGSRESULT sgs_PushIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx );
+SGSRESULT sgs_PushIndex( SGS_CTX, int obj, int idx );
+SGSRESULT sgs_PushIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx );
+SGSRESULT sgs_StoreIndex( SGS_CTX, int obj, int idx );
+SGSRESULT sgs_StoreIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx );
 SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name );
 SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name );
 
@@ -468,6 +471,7 @@ SGSRESULT sgs_Convert( SGS_CTX, int item, int type );
 /*
 	ARGUMENT HANDLING
 */
+SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface );
 SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size );
 SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out );
 SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Integer* out );
