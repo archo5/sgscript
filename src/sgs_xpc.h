@@ -53,6 +53,19 @@ typedef unsigned __int64 uint64_t;
 #  define SGS_MODULE_EXT ".so"
 #endif
 
+/* basic platform info */
+#ifdef _WIN32
+#  define SGS_OS_TYPE "Windows"
+#elif __linux
+#  define SGS_OS_TYPE "Linux"
+#elif __unix
+#  define SGS_OS_TYPE "Unix"
+#elif __posix
+#  define SGS_OS_TYPE "POSIX"
+#else
+#  define SGS_OS_TYPE "Unknown"
+#endif
+
 
 /* http://stackoverflow.com/a/2103095/1648140 */
 

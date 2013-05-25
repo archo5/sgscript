@@ -4,6 +4,7 @@
 #define _USE_MATH_DEFINES
 #undef __STRICT_ANSI__
 #include <math.h>
+#include <time.h>
 
 #define SGS_INTERNAL
 #define SGS_REALLY_INTERNAL
@@ -1603,7 +1604,11 @@ SGSRESULT sgs_LoadLib_Native( SGS_CTX )
 
 /* libraries -  O S  */
 
-
+static int sgsstd_os_gettype( SGS_CTX )
+{
+	sgs_PushString( C, SGS_OS_TYPE );
+	return 1;
+}
 
 static int sgsstd_os_getenv( SGS_CTX )
 {
@@ -1611,7 +1616,8 @@ static int sgsstd_os_getenv( SGS_CTX )
 
 	if( sgs_StackSize( C ) != 1 ||
 		!sgs_ParseString( C, 0, &str, NULL ) )
-		STDLIB_WARN( "os_getenv(): unexpected arguments; function expects 1 argument: string" )
+		STDLIB_WARN( "os_getenv(): unexpected arguments; "
+			"function expects 1 argument: string" )
 
 	str = getenv( str );
 	if( str )
@@ -1625,15 +1631,267 @@ static int sgsstd_os_putenv( SGS_CTX )
 
 	if( sgs_StackSize( C ) != 1 ||
 		!sgs_ParseString( C, 0, &str, NULL ) )
-		STDLIB_WARN( "os_putenv(): unexpected arguments; function expects 1 argument: string" )
+		STDLIB_WARN( "os_putenv(): unexpected arguments; "
+			"function expects 1 argument: string" )
 
 	sgs_PushBool( C, putenv( str ) == 0 );
 	return 1;
 }
 
+
+static int sgsstd_os_time( SGS_CTX )
+{
+	time_t ttv;
+	sgs_Real tz = 0;
+	sgs_Integer outsecs = 0;
+	int ssz = sgs_StackSize( C );
+	if( ssz < 0 || ssz > 1 ||
+		( ssz >= 1 && !sgs_ParseReal( C, 0, &tz ) ) )
+		STDLIB_WARN( "os_time(): unexpected arguments; "
+			"function expects 1 optional argument - int" )
+	
+	time( &ttv );
+	if( ssz )
+	{
+		outsecs = mktime( gmtime( &ttv ) );
+		outsecs += ((int)(tz * 2)) * 1800;
+	}
+	else
+		outsecs = ttv;
+	sgs_PushInt( C, outsecs );
+	return 1;
+}
+
+static int sgsstd_os_get_timezone( SGS_CTX )
+{
+	int asstr = 0, ssz = sgs_StackSize( C );
+	if( ssz < 0 || ssz > 1 ||
+		( ssz >= 1 && !sgs_ParseBool( C, 0, &asstr ) ) )
+		STDLIB_WARN( "os_get_timezone(): unexpected arguments; "
+			"function expects 1 optional argument - bool" )
+
+	{
+		double diff;
+		time_t ttv, t1, t2;
+		/* magic */
+		time( &ttv );
+		t1 = mktime( gmtime( &ttv ) );
+		t2 = mktime( localtime( &ttv ) );
+		diff = difftime( t2, t1 ) / 3600;
+		if( !asstr )
+			sgs_PushReal( C, diff );
+		else
+		{
+			char bfr[ 32 ];
+			sprintf( bfr, "%c%02d:%02d", diff >= 0 ? '+' : '-',
+				(int) diff, ((int) diff * 60 ) % 60 );
+			sgs_PushString( C, bfr );
+		}
+		return 1;
+	}
+}
+
+
+static void put2digs( char* at, int what )
+{
+	at[0] = '0' + ( ( what / 10 ) % 10 );
+	at[1] = '0' + ( what % 10 );
+}
+
+static void put4digs( char* at, int what )
+{
+	at[0] = '0' + ( ( what / 1000 ) % 10 );
+	at[1] = '0' + ( ( what / 100 ) % 10 );
+	at[2] = '0' + ( ( what / 10 ) % 10 );
+	at[3] = '0' + ( what % 10 );
+}
+
+static int sgsstd_os_date_string( SGS_CTX )
+{
+	time_t ttv;
+	char* fmt, *fmtend;
+	sgs_SizeVal fmtsize;
+	sgs_Integer uts;
+	struct tm T;
+	MemBuf B = membuf_create();
+	int ssz = sgs_StackSize( C );
+	if( ssz < 1 || ssz > 2 ||
+		!sgs_ParseString( C, 0, &fmt, &fmtsize ) ||
+		( ssz >= 2 && !sgs_ParseInt( C, 1, &uts ) ) )
+		STDLIB_WARN( "os_date_string(): unexpected arguments; "
+			"function expects 1-2 arguments: string[, int]" )
+
+	{
+		int Y, M, D, H, m, s;
+		if( ssz < 2 )
+			time( &ttv );
+		else
+			ttv = uts;
+		T = *localtime( &ttv );
+
+		Y = T.tm_year + 1900;
+		M = T.tm_mon + 1;
+		D = T.tm_mday;
+		H = T.tm_hour;
+		m = T.tm_min;
+		s = T.tm_sec;
+
+		fmtend = fmt + fmtsize;
+		while( fmt < fmtend )
+		{
+			char c = *fmt++;
+			if( c == '%' && fmt < fmtend )
+			{
+				int sz = 0;
+				char swp[ 32 ];
+				c = *fmt++;
+				switch( c )
+				{
+				/* handle locale-specific/complex cases with strftime */
+				case 'a': case 'A': case 'b': case 'B':
+				case 'c': case 'x': case 'X': case 'Z':
+				case 'U': case 'W':
+					{
+						char pbuf[ 256 ];
+						char fmt[3] = { '%', c, 0 };
+						strftime( pbuf, 256, fmt, &T );
+						membuf_appbuf( &B, C, pbuf, strlen( pbuf ) );
+					}
+					break;
+				case 'C': put2digs( swp, Y / 100 ); sz = 2; break;
+				case 'd': put2digs( swp, D ); sz = 2; break;
+				case 'e':
+					if( D > 9 )
+						swp[0] = '0' + ( ( D / 10 ) % 10 );
+					else swp[0] = ' ';
+					swp[1] = '0' + ( D % 10 );
+					sz = 2; break;
+				case 'F':
+					put4digs( swp, Y ); swp[4] = '-';
+					put2digs( swp + 5, M ); swp[7] = '-';
+					put2digs( swp + 8, D ); sz = 10;
+					break;
+				case 'H': put2digs( swp, H ); sz = 2; break;
+				case 'I': put2digs( swp, H%12 ? H%12 : 12 ); sz = 2; break;
+				case 'j':
+					put2digs( swp, ( T.tm_yday + 1 ) / 10 );
+					swp[2] = '0' + ( T.tm_yday + 1 ) % 10;
+					sz = 3; break;
+				case 'm': put2digs( swp, M ); sz = 2; break;
+				case 'M': put2digs( swp, m ); sz = 2; break;
+				case 'p': membuf_appbuf( &B, C, "AMPM" + H/12*2, 2 ); break;
+				case 'R':
+					put2digs( swp, H ); swp[2] = ':';
+					put2digs( swp + 3, m ); sz = 5;
+					break;
+				case 'S': put2digs( swp, s ); sz = 2; break;
+				case 'T':
+					put2digs( swp, H ); swp[2] = ':';
+					put2digs( swp + 3, m ); swp[5] = ':';
+					put2digs( swp + 6, s ); sz = 8;
+					break;
+				case 'u': swp[0] = '0' + T.tm_wday; sz = 1; break;
+				case 'w': swp[0] = '0'+(T.tm_wday?T.tm_wday:7); sz = 1; break;
+				case 'y': put2digs( swp, Y ); sz = 2; break;
+				case 'Y': put4digs( swp, Y ); sz = 4; break;
+				/* special additions */
+				case 'f': /* the file-safe format: %Y-%m-%d_%H-%M-%S" */
+					put4digs( swp, Y ); swp[4] = '-';
+					put2digs( swp + 5, M ); swp[7] = '-';
+					put2digs( swp + 8, D ); swp[10] = '_';
+					put2digs( swp + 11, H ); swp[13] = '-';
+					put2digs( swp + 14, m ); swp[16] = '-';
+					put2digs( swp + 17, s ); sz = 19;
+					break;
+				case 't': /* the UNIX timestamp */
+					sprintf( swp, "%" PRId64, (sgs_Integer) ttv );
+					sz = strlen( swp ); break;
+				/* leftovers */
+				case '%': membuf_appchr( &B, C, '%' ); break;
+				default: membuf_appbuf( &B, C, fmt - 2, 2 ); break;
+				}
+				if( sz )
+					membuf_appbuf( &B, C, swp, sz );
+			}
+			else
+				membuf_appchr( &B, C, c );
+		}
+
+		sgs_PushStringBuf( C, B.ptr, B.size );
+		membuf_destroy( &B, C );
+		return 1;
+	}
+}
+
+static int sgsstd_os_parse_time( SGS_CTX )
+{
+	time_t ttv;
+	sgs_Integer uts;
+	struct tm T;
+	int ssz = sgs_StackSize( C );
+	if( ssz < 0 || ssz > 1 ||
+		( ssz >= 1 && !sgs_ParseInt( C, 1, &uts ) ) )
+		STDLIB_WARN( "os_date_string(): unexpected arguments; "
+			"function expects 1-2 arguments: string[, int]" )
+
+	if( ssz >= 1 )
+		ttv = uts;
+	else
+		time( &ttv );
+	T = *localtime( &ttv );
+
+	sgs_PushString( C, "year" );
+	sgs_PushInt( C, T.tm_year + 1900 );
+	sgs_PushString( C, "month" );
+	sgs_PushInt( C, T.tm_mon + 1 );
+	sgs_PushString( C, "day" );
+	sgs_PushInt( C, T.tm_mday );
+	sgs_PushString( C, "weekday" );
+	sgs_PushInt( C, T.tm_wday ? T.tm_wday : 7 );
+	sgs_PushString( C, "yearday" );
+	sgs_PushInt( C, T.tm_yday + 1 );
+	sgs_PushString( C, "hours" );
+	sgs_PushInt( C, T.tm_hour );
+	sgs_PushString( C, "minutes" );
+	sgs_PushInt( C, T.tm_min );
+	sgs_PushString( C, "seconds" );
+	sgs_PushInt( C, T.tm_sec );
+	sgs_PushDict( C, sgs_StackSize( C ) - ssz );
+	return 1;
+}
+
+static int sgsstd_os_make_time( SGS_CTX )
+{
+	sgs_Integer p[6];
+	struct tm T = {0};
+	int ssz = sgs_StackSize( C );
+	if( ssz < 1 || ssz > 6 ||
+		( ssz >= 1 && !sgs_ParseInt( C, 0, p+0 ) ) ||
+		( ssz >= 2 && !sgs_ParseInt( C, 1, p+1 ) ) ||
+		( ssz >= 3 && !sgs_ParseInt( C, 2, p+2 ) ) ||
+		( ssz >= 4 && !sgs_ParseInt( C, 3, p+3 ) ) ||
+		( ssz >= 5 && !sgs_ParseInt( C, 4, p+4 ) ) ||
+		( ssz >= 6 && !sgs_ParseInt( C, 5, p+5 ) ) )
+		STDLIB_WARN( "os_make_time(): unexpected arguments; "
+			"function expects 1-6 arguments of type 'int'" )
+
+	if( ssz >= 1 ) T.tm_sec = p[0];
+	if( ssz >= 2 ) T.tm_min = p[1];
+	if( ssz >= 3 ) T.tm_hour = p[2];
+	if( ssz >= 4 ) T.tm_mday = p[3];
+	if( ssz >= 5 ) T.tm_mon = p[4] - 1;
+	if( ssz >= 6 ) T.tm_year = p[5] - 1900;
+	sgs_PushInt( C, mktime( &T ) );
+	return 1;
+}
+
+
 static const sgs_RegFuncConst o_fconsts[] =
 {
+	FN( os_gettype ),
 	FN( os_getenv ), FN( os_putenv ),
+	FN( os_time ), FN( os_get_timezone ), FN( os_date_string ),
+	FN( os_parse_time ), FN( os_make_time ),
 };
 
 SGSRESULT sgs_LoadLib_OS( SGS_CTX )
