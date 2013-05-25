@@ -494,12 +494,129 @@ static int sgsstd_fmt_pack_size( SGS_CTX )
 }
 
 
+static const char* b64_table =
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdef"
+	"ghijklmnopqrstuvwxyz0123456789+/";
+
+static int sgsstd_fmt_base64_encode( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size;
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "fmt_base64_encode() - unexpected arguments; "
+			"function expects 1 argument: string" )
+
+	{
+		MemBuf B = membuf_create();
+		char* strend = str + size;
+		while( str < strend - 2 )
+		{
+			uint32_t merged = str[0] | (str[1]<<8) | (str[2]<<16);
+			char bb[ 4 ] =
+			{
+				b64_table[ (merged) & 0x3f ],
+				b64_table[ (merged>>6) & 0x3f ],
+				b64_table[ (merged>>12) & 0x3f ],
+				b64_table[ (merged>>18) & 0x3f ]
+			};
+			membuf_appbuf( &B, C, bb, 4 );
+			str += 3;
+		}
+		/* last bytes */
+		if( str < strend )
+		{
+			char bb[ 4 ];
+			uint32_t merged = str[0];
+			if( str < strend - 1 )
+				merged |= str[1]<<8;
+
+			bb[ 0 ] = b64_table[ (merged) & 0x3f ];
+			bb[ 1 ] = b64_table[ (merged>>6) & 0x3f ];
+			bb[ 2 ] = str < strend-1 ? b64_table[ (merged>>12) & 0x3f ] : '=';
+			bb[ 3 ] = '=';
+			membuf_appbuf( &B, C, bb, 4 );
+		}
+		sgs_PushStringBuf( C, B.ptr, B.size );
+		membuf_destroy( &B, C );
+		return 1;
+	}
+}
+
+static SGS_INLINE int findintable( const char* ct, char c )
+{
+	int p = 0;
+	while( *ct )
+	{
+		if( *ct == c )
+			return p;
+		ct++;
+		p++;
+	}
+	return -1;
+}
+
+static int sgsstd_fmt_base64_decode( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size;
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "fmt_base64_decode() - unexpected arguments; "
+			"function expects 1 argument: string" )
+
+	{
+		MemBuf B = membuf_create();
+		char* beg = str;
+		char* strend = str + size;
+		while( str < strend - 3 )
+		{
+			char bb[ 3 ];
+			int e = 0, i1, i2, i3 = 0, i4 = 0, no = 0;
+			if( str[3] == '=' ){ no = 1; }
+			if( no && str[2] == '=' ){ no = 2; }
+			i1 = findintable( b64_table, str[0] );
+			i2 = findintable( b64_table, str[1] );
+			if( no>=1 ) i3 = findintable( b64_table, str[2] );
+			if( no>=2 ) i4 = findintable( b64_table, str[3] );
+#define warnbyte( pos ) sgs_Printf( C, SGS_WARNING, \
+	"fmt_base64_decode() - wrong byte value at position %d", pos );
+			if( i1 < 0 ){ warnbyte( str-beg+1 ); e = 1; }
+			else if( i2 < 0 ){ warnbyte( str-beg+2 ); e = 1; }
+			else if( i3 < 0 ){ warnbyte( str-beg+3 ); e = 1; }
+			else if( i4 < 0 ){ warnbyte( str-beg+4 ); e = 1; }
+#undef warnbyte
+			if( e )
+			{
+				membuf_destroy( &B, C );
+				return 0;
+			}
+			uint32_t merged = i1 | (i2<<6) | (i3<<12) | (i4<<18);
+			bb[ 0 ] = merged & 0xff;
+			bb[ 1 ] = (merged>>8) & 0xff;
+			bb[ 2 ] = (merged>>16) & 0xff;
+			membuf_appbuf( &B, C, bb, 3 - no );
+			str += 4;
+			if( no )
+				break;
+		}
+		if( str < strend )
+			sgs_Printf( C, SGS_WARNING, "fmt_base64_decode()"
+				" - extra bytes detected and ignored" );
+		sgs_PushStringBuf( C, B.ptr, B.size );
+		membuf_destroy( &B, C );
+		return 1;
+	}
+}
+
+
 #define FN( x ) { #x, sgsstd_##x }
 
 static const sgs_RegFuncConst f_fconsts[] =
 {
 	FN( fmt_pack ), FN( fmt_pack_count ),
 	FN( fmt_unpack ), FN( fmt_pack_size ),
+	FN( fmt_base64_encode ), FN( fmt_base64_decode ),
 };
 
 SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
@@ -1487,7 +1604,7 @@ SGSRESULT sgs_LoadLib_Native( SGS_CTX )
 
 
 
-int sgsstd_os_getenv( SGS_CTX )
+static int sgsstd_os_getenv( SGS_CTX )
 {
 	char* str;
 
@@ -1501,7 +1618,7 @@ int sgsstd_os_getenv( SGS_CTX )
 	return !!str;
 }
 
-int sgsstd_os_putenv( SGS_CTX )
+static int sgsstd_os_putenv( SGS_CTX )
 {
 	char* str;
 

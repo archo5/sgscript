@@ -2068,7 +2068,7 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( gc_collect ),
 };
 
-sgs_RegIntConst regiconsts[] =
+static const sgs_RegIntConst regiconsts[] =
 {
 	{ "SGS_INFO", SGS_INFO },
 	{ "SGS_WARNING", SGS_WARNING },

@@ -586,7 +586,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 
 
-int const_maybeload( SGS_CTX, sgs_CompFunc* func, FTNode* node, int cid )
+static int const_maybeload( SGS_CTX, sgs_CompFunc* func, FTNode* node, int cid )
 {
 	if( cid > 65535 )
 	{
