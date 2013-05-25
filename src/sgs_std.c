@@ -1714,6 +1714,29 @@ static int sgsstd_printvars( SGS_CTX )
 	return 0;
 }
 
+static int sgsstd_read_stdin( SGS_CTX )
+{
+	MemBuf B;
+	char bfr[ 1024 ];
+	int all = 0, ssz = sgs_StackSize( C );
+	if( ssz < 0 || ssz > 1 ||
+		( ssz >= 1 && !sgs_ParseBool( C, 0, &all ) ) )
+		STDLIB_WARN( "read_stdin(): unexpected arguments; "
+			"function expects 1 optional argument: bool" )
+
+	B = membuf_create();
+	while( fgets( bfr, 1024, stdin ) )
+	{
+		int len = strlen( bfr );
+		membuf_appbuf( &B, C, bfr, len );
+		if( len && !all && bfr[ len - 1 ] == '\n' )
+			break;
+	}
+	sgs_PushStringBuf( C, B.ptr, B.size );
+	membuf_destroy( &B, C );
+	return 1;
+}
+
 
 /* OS */
 
@@ -2055,6 +2078,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* I/O */
 	FN( print ), FN( println ), FN( printlns ),
 	FN( printvar ), FN( printvars ),
+	FN( read_stdin ),
 	/* OS */
 	FN( ftime ),
 	/* utils */
