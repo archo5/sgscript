@@ -612,6 +612,345 @@ static int sgsstd_fmt_base64_decode( SGS_CTX )
 }
 
 
+struct fmtspec
+{
+	char* end;
+	sgs_SizeVal padcnt;
+	sgs_SizeVal prec;
+	int padrgt;
+	char padchr;
+	char type;
+};
+
+int parse_fmtspec( struct fmtspec* out, char* fmt, char* fmtend )
+{
+	if( fmt >= fmtend ) return 0;
+
+	out->padcnt = 0;
+	out->prec = -1;
+	out->padrgt = 0;
+	out->padchr = ' ';
+	out->type = *fmt++;
+
+	if( out->type == '{' )
+	{
+		out->end = fmt;
+		return 1;
+	}
+
+	if( fmt >= fmtend ) return 0;
+
+	while( fmt < fmtend && *fmt >= '0' && *fmt <= '9' )
+	{
+		out->padcnt *= 10;
+		out->padcnt += *fmt++ - '0';
+	}
+
+	if( *fmt == '.' )
+	{
+		out->prec = 0;
+		fmt++;
+		while( fmt < fmtend && *fmt >= '0' && *fmt <= '9' )
+		{
+			out->prec *= 10;
+			out->prec += *fmt++ - '0';
+		}
+	}
+
+	if( *fmt == 'r' )
+	{
+		fmt++;
+		out->padrgt = 1;
+	}
+
+	if( fmt < fmtend-1 && *fmt == 'p' )
+	{
+		fmt++;
+		out->padchr = *fmt++;
+	}
+
+	if( fmt >= fmtend || *fmt != '}' ) return 0;
+	out->end = ++fmt;
+	return 1;
+}
+
+static void _padbuf( MemBuf* B, SGS_CTX, char pc, int cnt )
+{
+	while( cnt --> 0 )
+		membuf_appchr( B, C, pc );
+}
+
+static int _flt_write_rep( char* out, sgs_Real R, int sci, struct fmtspec* F )
+{
+	/*
+		sci = 1  =>  scientific mode, F->prec digits after point
+		sci = 0  =>  readability mode, F->prec digits of precision
+		sci = -1 =>  decimal mode, F->prec digits after point
+	*/
+#define DBL_MDST 0.000000000000000001
+
+	int mandigs, minprec = 0, maxprec = 999, exp10 = 0;
+
+	char* obeg = out;
+	uint64_t data = AS_UINT64( &R );
+	int sgn = ( data >> 63 ) & 1;
+	int xpn = ( data >> 52 ) & 0x7ff;
+	uint64_t mnt = data & 0xfffffffffffffULL;
+
+	if( R < 0 ) R = -R;
+
+	if( xpn == 0 && mnt == 0 )
+	{
+		out[0] = '0';
+		return 1;
+	}
+	if( xpn == 0x7ff )
+	{
+		out[0] = "+-"[ sgn ];
+		out[1] = '#';
+		if( mnt == 0 ){ out[2] = 'I'; out[3] = 'N'; out[4] = 'F'; }
+		else { out[2] = 'N'; out[3] = 'a'; out[4] = 'N'; }
+		return 5;
+	}
+
+	mandigs = 17;
+	if( sci == 0 )
+	{
+/*		int prev = 9;
+		double qf = pow( 10, floor( log10( R ) ) );
+		mandigs = 0;
+		while( qf > DBL_MDST )
+		{
+			int nv = (int) floor( fmodf( R / qf, 10.0 ) );
+			if( nv == 0 && prev == 0 )
+				break;
+			prev = nv;
+			qf /= 10.0;
+			mandigs++;
+		}
+		if( qf > DBL_MDST )
+			mandigs--;
+		if( mandigs > F->prec )*/
+			mandigs = F->prec;
+	}
+	else
+	{
+		minprec = maxprec = F->prec;
+	}
+
+	if( sci == 0 )
+	{
+		double xpmov = log10( pow( 2, abs( xpn - 1023 ) ) ) + 1;
+		int xpdigs = floor( xpmov ) + 1;
+		int scisc = mandigs + log10( xpmov + 1 ) + 1 + 3;
+		int decsc = mandigs + 1 +
+			( xpn > 1024 ?
+				MAX( xpdigs - mandigs + 2, 0 ) :
+				xpdigs - 2
+			);
+		sci = scisc < decsc ? 1 : -1;
+		/*
+		printf( "scisc = %d, decsc = %d, mandigs = %d, xpdigs = %d, xpd = %d\n"
+			, scisc, decsc, mandigs, xpdigs, xpn ); */
+
+		/* recombine to remove significand digits */
+	}
+
+	if( sgn )
+		*out++ = '-';
+	if( sci > 0 )
+	{
+		/* pull out exponent */
+		exp10 = (int) floor( log10( R ) );
+		R /= pow( 10, exp10 );
+	}
+
+	/* render the double */
+	{
+		int mdc = 0, pdc = 0, hasdot = 0;
+		double qf = pow( 10, floor( log10( R ) ) );
+		if( qf >= 1 )
+		{
+			while( qf >= 1 )
+			{
+				*out++ = '0' + (int) floor( fmodf( R / qf, 10.0 ) );
+				qf /= 10.0;
+				mdc++;
+			}
+		}
+		else
+			*out++ = '0';
+		if( mdc < mandigs && pdc < maxprec && qf > DBL_MDST )
+		{
+			double qfb = 0.1;
+			*out++ = '.';
+			hasdot = 1;
+			while( qfb > qf )
+			{
+				*out++ = '0';
+				qfb /= 10.0;
+			}
+		}
+		while( mdc < mandigs && pdc < maxprec && qf > DBL_MDST )
+		{
+			*out++ = '0' + (int) floor( fmodf( R / qf, 10.0 ) );
+			qf /= 10.0;
+			mdc++; pdc++;
+		}
+		while( pdc < minprec )
+		{
+			*out++ = '0';
+			pdc++;
+		}
+
+		if( ( F->type == 'g' || F->type == 'G' ) && hasdot )
+		{
+			out--;
+			while( *out == '0' )
+				out--;
+			if( *out == '.' )
+				out--;
+			out++;
+		}
+	}
+
+	/* write the exponent part */
+	if( sci > 0 )
+	{
+		int qf;
+		*out++ = F->type == 'G' || F->type == 'E' ? 'E' : 'e';
+		*out++ = exp10 >= 0 ? '+' : '-';
+		if( exp10 < 0 ) exp10 = -exp10;
+		qf = (int) pow( 10, floor( log10( exp10 ) ) );
+		if( !qf )
+			*out++ = '0';
+		while( qf )
+		{
+			*out++ = '0' + ( exp10 / qf ) % 10;
+			qf /= 10;
+		}
+	}
+	return out - obeg;
+}
+
+static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
+{
+	switch( F->type )
+	{
+	case 'b': case 'o': case 'd': case 'x': case 'X':
+		{
+			static const char* hextbl = "0123456789abcdef0123456789ABCDEF";
+			const char* tbl = hextbl;
+			int radix, size, i;
+			sgs_Integer I;
+			if( !sgs_ParseInt( C, (*psi)++, &I ) )
+				return 0;
+
+			if( F->type == 'b' ) radix = 2;
+			else if( F->type == 'o' ) radix = 8;
+			else if( F->type == 'd' ) radix = 10;
+			else radix = 16;
+
+			if( F->type == 'X' )
+				tbl += 16;
+
+			size = 1 + (int) floor( log( I ) / log( radix ) );
+
+			if( size < F->padcnt && !F->padrgt )
+				_padbuf( B, C, F->padchr, F->padcnt - size );
+			for( i = size - 1; i >= 0; --i )
+			{
+				int cv = ( I / (sgs_Integer) pow( radix, i ) ) % radix;
+				membuf_appchr( B, C, tbl[ cv ] );
+			}
+			if( size < F->padcnt && F->padrgt )
+				_padbuf( B, C, F->padchr, F->padcnt - size );
+		}
+		break;
+	case 'f': case 'g': case 'G': case 'e': case 'E':
+		{
+			char data[ 350 ];
+			int size, sci = 0;
+			sgs_Real R;
+			if( !sgs_ParseReal( C, (*psi)++, &R ) )
+				return 0;
+			if( F->prec < 0 )
+				F->prec = 6;
+
+			if( F->type == 'f' ) sci = -1;
+			else if( F->type == 'e' || F->type == 'E' ) sci = 1;
+
+			size = _flt_write_rep( data, R, sci, F );
+
+			if( size < F->padcnt && !F->padrgt )
+				_padbuf( B, C, F->padchr, F->padcnt - size );
+			membuf_appbuf( B, C, data, size );
+			if( size < F->padcnt && F->padrgt )
+				_padbuf( B, C, F->padchr, F->padcnt - size );
+		}
+		break;
+	case 's':
+		{
+			char* str;
+			sgs_SizeVal size;
+			if( !sgs_ParseString( C, (*psi)++, &str, &size ) )
+				return 0;
+			if( size > F->prec && F->prec >= 0 )
+				size = F->prec;
+			if( size < F->padcnt && !F->padrgt )
+				_padbuf( B, C, F->padchr, F->padcnt - size );
+			membuf_appbuf( B, C, str, size );
+			if( size < F->padcnt && F->padrgt )
+				_padbuf( B, C, F->padchr, F->padcnt - size );
+		}
+		break;
+	case '{':
+		membuf_appchr( B, C, '{' );
+		break;
+	default:
+		return 0;
+	}
+	return 1;
+}
+
+static int sgsstd_fmt_text( SGS_CTX )
+{
+	char* fmt, *fmtend;
+	sgs_SizeVal fmtsize;
+	MemBuf B = membuf_create();
+	int ssz = sgs_StackSize( C ), numitem = 0, si = 1;
+	if( ssz < 1 || !sgs_ParseString( C, 0, &fmt, &fmtsize ) )
+		STDLIB_WARN( "fmt_text(): unexpected arguments; "
+			"function expects 1+ arguments: string, ..." )
+
+	fmtend = fmt + fmtsize;
+	while( fmt < fmtend )
+	{
+		struct fmtspec F;
+		char c = *fmt++;
+		if( c == '{' )
+		{
+			int ret = parse_fmtspec( &F, fmt, fmtend );
+			numitem++;
+			fmt = F.end;
+			if( !ret || !commit_fmtspec( C, &B, &F, &si ) )
+			{
+				membuf_destroy( &B, C );
+				sgs_Printf( C, SGS_WARNING, "fmt_text(): "
+					"error in item %d", numitem );
+				return 0;
+			}
+		}
+		else
+			membuf_appchr( &B, C, c );
+	}
+
+	sgs_PushStringBuf( C, B.ptr, B.size );
+	membuf_destroy( &B, C );
+	return 1;
+}
+
+
 #define FN( x ) { #x, sgsstd_##x }
 
 static const sgs_RegFuncConst f_fconsts[] =
@@ -619,6 +958,7 @@ static const sgs_RegFuncConst f_fconsts[] =
 	FN( fmt_pack ), FN( fmt_pack_count ),
 	FN( fmt_unpack ), FN( fmt_pack_size ),
 	FN( fmt_base64_encode ), FN( fmt_base64_decode ),
+	FN( fmt_text ),
 };
 
 SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
