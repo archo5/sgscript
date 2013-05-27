@@ -638,6 +638,9 @@ int parse_fmtspec( struct fmtspec* out, char* fmt, char* fmtend )
 		return 1;
 	}
 
+	if( !isoneof( out->type, "bodxXfgGeEsc{" ) )
+		return 0;
+
 	if( fmt >= fmtend ) return 0;
 
 	while( fmt < fmtend && *fmt >= '0' && *fmt <= '9' )
@@ -827,7 +830,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			int radix, size, i;
 			sgs_Integer I;
 			if( !sgs_ParseInt( C, (*psi)++, &I ) )
-				return 0;
+				goto error;
 
 			if( F->type == 'b' ) radix = 2;
 			else if( F->type == 'o' ) radix = 8;
@@ -856,7 +859,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			int size, sci = 0;
 			sgs_Real R;
 			if( !sgs_ParseReal( C, (*psi)++, &R ) )
-				return 0;
+				goto error;
 			if( F->prec < 0 )
 				F->prec = 6;
 
@@ -872,12 +875,15 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
 		}
 		break;
-	case 's':
+	case 's': case 'c':
 		{
 			char* str;
 			sgs_SizeVal size;
+			if( F->type == 'c' &&
+				sgs_Convert( C, (*psi), SVT_STRING ) != SGS_SUCCESS )
+				goto error;
 			if( !sgs_ParseString( C, (*psi)++, &str, &size ) )
-				return 0;
+				goto error;
 			if( size > F->prec && F->prec >= 0 )
 				size = F->prec;
 			if( size < F->padcnt && !F->padrgt )
@@ -891,9 +897,13 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 		membuf_appchr( B, C, '{' );
 		break;
 	default:
-		return 0;
+		goto error;
 	}
 	return 1;
+
+error:
+	membuf_appbuf( B, C, "#error#", 7 );
+	return 0;
 }
 
 static int sgsstd_fmt_text( SGS_CTX )
@@ -913,15 +923,20 @@ static int sgsstd_fmt_text( SGS_CTX )
 		char c = *fmt++;
 		if( c == '{' )
 		{
-			int ret = parse_fmtspec( &F, fmt, fmtend );
+			int sio = si, ret = parse_fmtspec( &F, fmt, fmtend );
 			numitem++;
 			fmt = F.end;
-			if( !ret || !commit_fmtspec( C, &B, &F, &si ) )
+			if( !ret )
 			{
 				membuf_destroy( &B, C );
 				sgs_Printf( C, SGS_WARNING, "fmt_text(): "
-					"error in item %d", numitem );
+					"parsing error in item %d", numitem );
 				return 0;
+			}
+			if( !commit_fmtspec( C, &B, &F, &si ) )
+			{
+				sgs_Printf( C, SGS_WARNING, "fmt_text(): "
+					"could not read item %d (arg. %d)", numitem, sio );
 			}
 		}
 		else
@@ -2979,6 +2994,77 @@ fail:
 }
 
 
+static int sgsstd_string_format( SGS_CTX )
+{
+	char* fmt, *fmtend;
+	sgs_SizeVal fmtsize;
+	MemBuf B = membuf_create();
+	int ssz = sgs_StackSize( C ), numitem = 0;
+	if( ssz < 1 || !sgs_ParseString( C, 0, &fmt, &fmtsize ) )
+		STDLIB_WARN( "string_format(): unexpected arguments; "
+			"function expects 1+ arguments: string, ..." )
+
+	fmtend = fmt + fmtsize;
+	while( fmt < fmtend )
+	{
+		struct fmtspec F;
+		char c = *fmt++;
+		if( c == '{' )
+		{
+			int stkid = 0, sio, ret;
+			numitem++;
+			while( fmt < fmtend && *fmt >= '0' && *fmt <= '9' )
+			{
+				stkid *= 10;
+				stkid += *fmt++ - '0';
+			}
+
+			if( *fmt == ':' )
+			{
+				fmt++;
+				ret = parse_fmtspec( &F, fmt, fmtend );
+				fmt = F.end;
+				if( !ret )
+				{
+					membuf_destroy( &B, C );
+					sgs_Printf( C, SGS_WARNING, "string_format(): "
+						"parsing error in item %d", numitem );
+					return 0;
+				}
+			}
+			else if( *fmt != '}' )
+			{
+				membuf_destroy( &B, C );
+				sgs_Printf( C, SGS_WARNING, "string_format(): "
+					"parsing error in item %d", numitem );
+				return 0;
+			}
+			else
+			{
+				fmt++;
+				F.type = 'c';
+				F.padcnt = 0;
+				F.padchr = ' ';
+				F.prec = -1;
+			}
+
+			sio = stkid;
+			if( !commit_fmtspec( C, &B, &F, &stkid ) )
+			{
+				sgs_Printf( C, SGS_WARNING, "string_format(): "
+					"could not read item %d (arg. %d)", numitem, sio );
+			}
+		}
+		else
+			membuf_appchr( &B, C, c );
+	}
+
+	sgs_PushStringBuf( C, B.ptr, B.size );
+	membuf_destroy( &B, C );
+	return 1;
+}
+
+
 
 #define FN( x ) { #x, sgsstd_##x }
 
@@ -2998,6 +3084,7 @@ static const sgs_RegFuncConst s_fconsts[] =
 	FN( string_implode ), FN( string_explode ),
 	FN( string_charcode ), FN( string_frombytes ),
 	FN( string_utf8_decode ), FN( string_utf8_encode ),
+	FN( string_format ),
 };
 
 SGSRESULT sgs_LoadLib_String( SGS_CTX )
