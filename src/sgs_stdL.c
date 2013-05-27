@@ -716,22 +716,7 @@ static int _flt_write_rep( char* out, sgs_Real R, int sci, struct fmtspec* F )
 	mandigs = 17;
 	if( sci == 0 )
 	{
-/*		int prev = 9;
-		double qf = pow( 10, floor( log10( R ) ) );
-		mandigs = 0;
-		while( qf > DBL_MDST )
-		{
-			int nv = (int) floor( fmodf( R / qf, 10.0 ) );
-			if( nv == 0 && prev == 0 )
-				break;
-			prev = nv;
-			qf /= 10.0;
-			mandigs++;
-		}
-		if( qf > DBL_MDST )
-			mandigs--;
-		if( mandigs > F->prec )*/
-			mandigs = F->prec;
+		mandigs = F->prec;
 	}
 	else
 	{
@@ -740,8 +725,8 @@ static int _flt_write_rep( char* out, sgs_Real R, int sci, struct fmtspec* F )
 
 	if( sci == 0 )
 	{
-		double xpmov = log10( pow( 2, abs( xpn - 1023 ) ) ) + 1;
-		int xpdigs = floor( xpmov ) + 1;
+		double xpmov = floor( fabs( log10( R ) ) ) + 1;
+		int xpdigs = xpmov + 1;
 		int scisc = mandigs + log10( xpmov + 1 ) + 1 + 3;
 		int decsc = mandigs + 1 +
 			( xpn > 1024 ?
@@ -751,9 +736,7 @@ static int _flt_write_rep( char* out, sgs_Real R, int sci, struct fmtspec* F )
 		sci = scisc < decsc ? 1 : -1;
 		/*
 		printf( "scisc = %d, decsc = %d, mandigs = %d, xpdigs = %d, xpd = %d\n"
-			, scisc, decsc, mandigs, xpdigs, xpn ); */
-
-		/* recombine to remove significand digits */
+			, scisc, decsc, mandigs, xpdigs, xpn );*/
 	}
 
 	if( sgn )
@@ -1653,13 +1636,33 @@ static int sgsstd_sqrt( SGS_CTX )
 	sgs_PushReal( C, sqrtf( arg0 ) );
 	return 1;
 }
+static int sgsstd_asin( SGS_CTX )
+{
+	sgs_Real arg0;
+	if( sgs_StackSize( C ) != 1 || !sgs_ParseReal( C, 0, &arg0 ) )
+		STDLIB_WARN( "asin() - unexpected arguments; function expects 1 argument: real" )
+	if( arg0 < -1 || arg0 > 1 )
+		STDLIB_WARN( "asin() - mathematical error" )
+	sgs_PushReal( C, asin( arg0 ) );
+	return 1;
+}
+static int sgsstd_acos( SGS_CTX )
+{
+	sgs_Real arg0;
+	if( sgs_StackSize( C ) != 1 || !sgs_ParseReal( C, 0, &arg0 ) )
+		STDLIB_WARN( "acos() - unexpected arguments; function expects 1 argument: real" )
+	if( arg0 < -1 || arg0 > 1 )
+		STDLIB_WARN( "acos() - mathematical error" )
+	sgs_PushReal( C, acos( arg0 ) );
+	return 1;
+}
 
 static int sgsstd_log( SGS_CTX )
 {
 	sgs_Real x, b;
 	if( sgs_StackSize( C ) != 2 || !sgs_ParseReal( C, 0, &x ) || !sgs_ParseReal( C, 1, &b ) )
 		STDLIB_WARN( "log() - unexpected arguments; function expects 2 arguments: real, real" )
-	if( x < 0 )
+	if( x <= 0 || b <= 0 || b == 1 )
 		STDLIB_WARN( "log() - mathematical error" )
 	sgs_PushReal( C, log( x ) / log( b ) );
 	return 1;
@@ -1691,8 +1694,6 @@ MATHFUNC_CN( round, myround )
 MATHFUNC( sin )
 MATHFUNC( cos )
 MATHFUNC( tan )
-MATHFUNC( asin )
-MATHFUNC( acos )
 MATHFUNC( atan )
 MATHFUNC2( atan2 )
 
