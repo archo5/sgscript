@@ -949,6 +949,61 @@ static int sgsstd_fmt_text( SGS_CTX )
 }
 
 
+typedef struct sgsstd_fmtstream_s
+{
+	sgs_Variable source;
+	char* buffer;
+	int bufsize;
+}
+sgsstd_fmtstream_t;
+
+#define SGSFS_HDR sgsstd_fmtstream_t* hdr = (sgsstd_fmtstream_t*) data->data
+
+
+static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data, int dco )
+{
+	SGSFS_HDR;
+	sgs_ReleaseOwned( C, &hdr->source, dco );
+	sgs_Dealloc( hdr->buffer );
+	sgs_Dealloc( hdr );
+	return SGS_SUCCESS;
+}
+
+void* sgsstd_fmtstream_functable[] =
+{
+	SOP_DESTRUCT, sgsstd_fmtstream_destroy,
+};
+
+static int sgsstd_fmt_parser( SGS_CTX )
+{
+	sgs_Integer bufsize = 1024;
+	int ssz = sgs_StackSize( C );
+	if( ssz < 1 || ssz > 2 ||
+		( ssz >= 2 && !sgs_ParseInt( C, 1, &bufsize ) ) ||
+		bufsize <= 0 )
+		STDLIB_WARN( "fmt_parser(): unexpected arguments; "
+			"function expects 1-2 arguments: <source>[, int(>0)]" )
+
+	/* test call: reading 0 bytes should return an empty string */
+	sgs_PushInt( C, 0 );
+	sgs_PushItem( C, 0 );
+	if( sgs_Call( C, 1, 1 ) != SGS_SUCCESS )
+		STDLIB_WARN( "fmt_parser(): test call did not succeed; "
+			"is the source function correctly specified?" )
+	sgs_Pop( C, 1 );
+
+	{
+		sgsstd_fmtstream_t* hdr = sgs_Alloc( sgsstd_fmtstream_t );
+		sgs_GetStackItem( C, 0, &hdr->source );
+		sgs_Acquire( C, &hdr->source );
+		hdr->bufsize = (int) bufsize;
+		hdr->buffer = sgs_Alloc_n( char, hdr->bufsize );
+		sgs_PushObject( C, hdr, sgsstd_fmtstream_functable );
+		return 1;
+	}
+}
+
+
 #define FN( x ) { #x, sgsstd_##x }
 
 static const sgs_RegFuncConst f_fconsts[] =
@@ -956,7 +1011,7 @@ static const sgs_RegFuncConst f_fconsts[] =
 	FN( fmt_pack ), FN( fmt_pack_count ),
 	FN( fmt_unpack ), FN( fmt_pack_size ),
 	FN( fmt_base64_encode ), FN( fmt_base64_decode ),
-	FN( fmt_text ),
+	FN( fmt_text ), FN( fmt_parser ),
 };
 
 SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
