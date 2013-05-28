@@ -58,15 +58,20 @@ $(OUTDIR)/sgsjson$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsjson.c
 # the tools
 $(OUTDIR)/sgstest$(BINEXT): $(OUTFILE) $(EXTDIR)/sgstest.c $(OUTDIR)/sgsjson$(LIBEXT)
 	$(CC) -o $@ $(EXTDIR)/sgstest.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+$(OUTDIR)/sgsapitest$(BINEXT): $(OUTFILE) $(EXTDIR)/sgsapitest.c $(OUTDIR)/sgsjson$(LIBEXT)
+	$(CC) -o $@ $(EXTDIR)/sgsapitest.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgsvm$(BINEXT): $(OUTFILE) $(EXTDIR)/sgsvm.c $(EXTDIR)/sgs_idbg.c $(EXTDIR)/sgs_prof.c
 	$(CC) -o $@ $(EXTDIR)/sgsvm.c $(EXTDIR)/sgs_idbg.c $(EXTDIR)/sgs_prof.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgsc$(BINEXT): $(OUTFILE) $(EXTDIR)/sgsc.c
 	$(CC) -o $@ $(EXTDIR)/sgsc.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 .PHONY: tools
-tools: $(OUTDIR)/sgsjson$(LIBEXT) $(OUTDIR)/sgstest$(BINEXT) $(OUTDIR)/sgsvm$(BINEXT) $(OUTDIR)/sgsc$(BINEXT)
+tools: $(OUTDIR)/sgsjson$(LIBEXT) $(OUTDIR)/sgstest$(BINEXT) $(OUTDIR)/sgsapitest$(BINEXT) $(OUTDIR)/sgsvm$(BINEXT) $(OUTDIR)/sgsc$(BINEXT)
 .PHONY: test
 test: $(OUTDIR)/sgstest$(BINEXT)
 	$(OUTDIR)/sgstest
+.PHONY: apitest
+apitest: $(OUTDIR)/sgsapitest$(BINEXT)
+	$(OUTDIR)/sgsapitest
 
 # other stuff
 # - multithreaded testing
