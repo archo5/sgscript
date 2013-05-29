@@ -27,18 +27,6 @@
 static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "func", "cfunc", "obj" };
 
 
-static int default_array_func( SGS_CTX )
-{
-	sgs_Printf( C, SGS_ERROR, "'array' creating function is undefined" );
-	return 0;
-}
-static int default_dict_func( SGS_CTX )
-{
-	sgs_Printf( C, SGS_ERROR, "'dict' creating function is undefined" );
-	return 0;
-}
-
-
 static void default_outputfn( void* userdata, SGS_CTX, const void* ptr, sgs_SizeVal size )
 {
 	fwrite( ptr, 1, size, (FILE*) userdata );
@@ -96,17 +84,11 @@ static void ctx_init( SGS_CTX )
 	C->sf_last = NULL;
 	C->sf_count = 0;
 
-	ht_init( &C->data, C, 4 );
-
 	C->objs = NULL;
 	C->objcount = 0;
 	C->redblue = 0;
 	C->gclist = NULL;
 	C->gclist_size = 0;
-
-	C->array_func = default_array_func;
-	C->dict_func = default_dict_func;
-	C->dict_api_func = default_dict_func;
 }
 
 sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
@@ -116,7 +98,8 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	C->memfunc = memfunc;
 	C->mfuserdata = mfuserdata;
 	ctx_init( C );
-	sgsVM_RegStdLibs( C );
+	sgsSTD_GlobalInit( C );
+	sgsSTD_PostInit( C );
 	return C;
 }
 
@@ -133,27 +116,11 @@ void sgs_DestroyEngine( SGS_CTX )
 		sgs_Release( C, C->stack_top );
 	}
 
-	/* clear the globals' table */
-	p = C->data.pairs;
-	pend = C->data.pairs + C->data.size;
-	while( p < pend )
-	{
-		if( p->str && p->ptr )
-		{
-			sgs_Release( C, (sgs_VarPtr) p->ptr );
-			sgs_Dealloc( p->ptr );
-		}
-		p++;
-	}
-
-	/* unsetting keys one by one might reallocate the table more often than it's necessary */
-	ht_free( &C->data, C );
-	ht_init( &C->data, C, 4 );
+	sgsSTD_GlobalFree( C );
 
 	sgs_GCExecute( C );
 
 	sgs_Dealloc( C->stack_base );
-	ht_free( &C->data, C );
 
 	p = C->stringtable.pairs;
 	pend = C->stringtable.pairs + C->stringtable.size;
@@ -623,19 +590,16 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_GLOBALS:
 		{
-			HTPair* p = C->data.pairs;
-			HTPair* pend = C->data.pairs + C->data.size;
+			VHTableVar *p, *pend;
+			sgsSTD_GlobalIter( C, &p, &pend );
 			sgs_WriteStr( C, "GLOBAL ---- LIST ---- START ----\n" );
 			while( p < pend )
 			{
-				if( p->str )
-				{
-					sgs_WriteStr( C, "GLOBAL '" );
-					ctx_print_safe( C, p->str, p->size );
-					sgs_WriteStr( C, "' = " );
-					dumpvar( C, (sgs_Variable*) p->ptr );
-					sgs_WriteStr( C, "\n" );
-				}
+				sgs_WriteStr( C, "GLOBAL '" );
+				ctx_print_safe( C, p->str, p->size );
+				sgs_WriteStr( C, "' = " );
+				dumpvar( C, &p->var );
+				sgs_WriteStr( C, "\n" );
 				p++;
 			}
 			sgs_WriteStr( C, "GLOBAL ---- LIST ---- END ----\n" );

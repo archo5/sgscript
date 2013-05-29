@@ -622,7 +622,7 @@ struct fmtspec
 	char type;
 };
 
-int parse_fmtspec( struct fmtspec* out, char* fmt, char* fmtend )
+static int parse_fmtspec( struct fmtspec* out, char* fmt, char* fmtend )
 {
 	if( fmt >= fmtend ) return 0;
 
@@ -969,7 +969,7 @@ static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data, int dco )
 	return SGS_SUCCESS;
 }
 
-void* sgsstd_fmtstream_functable[] =
+static void* sgsstd_fmtstream_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_fmtstream_destroy,
 };
@@ -2903,8 +2903,7 @@ static int sgsstd_string_explode( SGS_CTX )
 		sgs_PushStringBuf( C, pp, a + asize - pp );
 	}
 
-	sgs_PushCFunction( C, C->array_func );
-	return sgs_Call( C, sgs_StackSize( C ) - 3, 1 ) == SGS_SUCCESS;
+	return sgs_PushArray( C, sgs_StackSize( C ) - 3 ) == SGS_SUCCESS;
 }
 
 static int sgsstd_string_charcode( SGS_CTX )
@@ -2999,9 +2998,7 @@ static int sgsstd_string_utf8_decode( SGS_CTX )
 		sgs_PushInt( C, outchar );
 		cc++;
 	}
-	sgs_PushCFunction( C, C->array_func );
-	sgs_Call( C, cc, 1 );
-	return 1;
+	return sgs_PushArray( C, cc ) == SGS_SUCCESS;
 }
 
 static int sgsstd_string_utf8_encode( SGS_CTX )

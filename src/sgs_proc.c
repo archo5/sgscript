@@ -1002,53 +1002,6 @@ static void vm_properr( SGS_CTX, int ret, sgs_Variable* idx, int isindex )
 
 
 /*
-	Global variable dictionary
-*/
-
-static int vm_getvar( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
-{
-	sgs_VarPtr data;
-	if( idx->type != SVT_STRING )
-		return SGS_ENOTSUP;
-	data = (sgs_VarPtr) ht_get( &C->data, str_cstr( idx->data.S ), idx->data.S->size );
-	VAR_RELEASE( out );
-	if( data )
-	{
-		VAR_ACQUIRE( data );
-		*out = *data;
-	}
-	else
-	{
-		sgs_Printf( C, SGS_ERROR, "Variable '%s' was not found", str_cstr( idx->data.S ) );
-		VAR_RELEASE( out );
-		out->type = SVT_NULL;
-	}
-	return data ? SGS_SUCCESS : SGS_ENOTFND;
-}
-
-static int vm_setvar( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
-{
-	sgs_VarPtr data;
-	if( idx->type != SVT_STRING )
-		return SGS_ENOTSUP;
-
-	{
-		void* olddata = ht_get( &C->data, str_cstr( idx->data.S ), idx->data.S->size );
-		if( olddata )
-		{
-			VAR_RELEASE( (sgs_Variable*) olddata );
-			sgs_Dealloc( olddata );
-		}
-	}
-	data = sgs_Alloc( sgs_Variable );
-	*data = *val;
-	VAR_ACQUIRE( data );
-	ht_set( &C->data, C, str_cstr( idx->data.S ), idx->data.S->size, data );
-	return SGS_SUCCESS;
-}
-
-
-/*
 	OPs
 */
 
@@ -1453,20 +1406,10 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 
 static void vm_make_array( SGS_CTX, int args, int16_t outpos )
 {
-	int expect = 1, rvc, stkoff = C->stack_off - C->stack_base;
-
+	int ret;
 	sgs_BreakIf( sgs_StackSize( C ) < args );
-	C->stack_off = C->stack_top - args;
-
-	rvc = (*C->array_func)( C );
-
-	stk_clean( C, C->stack_off, C->stack_top - rvc );
-	C->stack_off = C->stack_base + stkoff;
-
-	if( rvc > expect )
-		stk_pop( C, rvc - expect );
-	else
-		stk_push_nulls( C, expect - rvc );
+	ret = sgsSTD_MakeArray( C, args );
+	sgs_BreakIf( ret != SGS_SUCCESS );
 
 	stk_setvar( C, outpos, stk_getpos( C, -1 ) );
 	stk_pop1( C );
@@ -1474,20 +1417,10 @@ static void vm_make_array( SGS_CTX, int args, int16_t outpos )
 
 static void vm_make_dict( SGS_CTX, int args, int16_t outpos )
 {
-	int expect = 1, rvc, stkoff = C->stack_off - C->stack_base;
-
+	int ret;
 	sgs_BreakIf( sgs_StackSize( C ) < args );
-	C->stack_off = C->stack_top - args;
-
-	rvc = (*C->dict_func)( C );
-
-	stk_clean( C, C->stack_off, C->stack_top - rvc );
-	C->stack_off = C->stack_base + stkoff;
-
-	if( rvc > expect )
-		stk_pop( C, rvc - expect );
-	else
-		stk_push_nulls( C, expect - rvc );
+	ret = sgsSTD_MakeDict( C, args );
+	sgs_BreakIf( ret != SGS_SUCCESS );
 
 	stk_setvar( C, outpos, stk_getpos( C, -1 ) );
 	stk_pop1( C );
@@ -1727,8 +1660,8 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 #define ARGS_2 const sgs_VarPtr p2 = RESVAR( argB );
 #define ARGS_3 const sgs_VarPtr p2 = RESVAR( argB ), p3 = RESVAR( argC );
 		case SI_LOADCONST: { stk_setlvar( C, argC, cptr + argE ); break; }
-		case SI_GETVAR: { ARGS_2; vm_getvar( C, p1, p2 ); break; }
-		case SI_SETVAR: { ARGS_3; vm_setvar( C, p2, p3 ); break; }
+		case SI_GETVAR: { ARGS_2; sgsSTD_GlobalGet( C, p1, p2, FALSE ); break; }
+		case SI_SETVAR: { ARGS_3; sgsSTD_GlobalSet( C, p2, p3, FALSE ); break; }
 		case SI_GETPROP: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, FALSE ), p3, FALSE ); break; }
 		case SI_SETPROP: { ARGS_3; vm_properr( C, vm_setprop( C, p1, p2, p3, FALSE ), p2, FALSE ); break; }
 		case SI_GETINDEX: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, TRUE ), p3, TRUE ); break; }
@@ -1977,18 +1910,12 @@ SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var )
 
 SGSRESULT sgs_PushArray( SGS_CTX, sgs_SizeVal numitems )
 {
-	if( numitems > sgs_StackSize( C ) )
-		return SGS_EINVAL;
-	sgs_PushCFunction( C, C->array_func );
-	return sgs_Call( C, numitems, 1 );
+	return sgsSTD_MakeArray( C, numitems );
 }
 
 SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems )
 {
-	if( numitems % 2 != 0 || numitems > sgs_StackSize( C ) )
-		return SGS_EINVAL;
-	sgs_PushCFunction( C, C->dict_api_func );
-	return sgs_Call( C, numitems, 1 );
+	return sgsSTD_MakeDict( C, numitems );
 }
 
 
@@ -2092,7 +2019,7 @@ SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name )
 	sgs_PushString( C, name );
 	pos = stk_getpos( C, -1 );
 	C->minlev = SGS_ERROR + 1;
-	ret = vm_getvar( C, pos, pos );
+	ret = sgsSTD_GlobalGet( C, pos, pos, 1 );
 	C->minlev = oelev;
 	return ret;
 }
@@ -2100,7 +2027,7 @@ SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name )
 SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
 {
 	sgs_PushString( C, name );
-	vm_setvar( C, stk_getpos( C, -1 ), stk_getpos( C, -2 ) );
+	sgsSTD_GlobalSet( C, stk_getpos( C, -1 ), stk_getpos( C, -2 ), 1 );
 	sgs_Pop( C, 2 );
 	return SGS_SUCCESS;
 }
@@ -2291,7 +2218,6 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 SGSRESULT sgs_GCExecute( SGS_CTX )
 {
 	sgs_VarPtr vbeg, vend;
-	HTPair *pbeg, *pend;
 	object_t* p;
 
 	C->redblue = !C->redblue;
@@ -2315,15 +2241,7 @@ SGSRESULT sgs_GCExecute( SGS_CTX )
 	}
 
 	/* GLOBALS */
-	pbeg = C->data.pairs; pend = pbeg + C->data.size;
-	while( pbeg < pend ){
-		if( pbeg->str ){
-			int ret = vm_gcmark( C, (sgs_Variable*) pbeg->ptr );
-			if( ret != SGS_SUCCESS )
-				return ret;
-		}
-		pbeg++;
-	}
+	sgsSTD_GlobalGC( C );
 
 	/* -- SWEEP -- */
 	/* destruct objects */

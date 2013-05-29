@@ -963,7 +963,7 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	/*
 		the old method
 	*/
-	pair = vht_get( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
+	pair = vht_getS( ht, (C->stack_top-1)->data.S );
 	if( !pair )
 		return SGS_ENOTFND;
 #endif
@@ -1132,22 +1132,6 @@ static void* sgsstd_dict_functable[] =
 	SOP_GCMARK, sgsstd_dict_gcmark,
 	SOP_END,
 };
-
-static int sgsstd_dict_internal( SGS_CTX )
-{
-	int i, objcnt = sgs_StackSize( C );
-	DictHdr* dh = mkdict( C );
-	VHTable* ht = &dh->ht;
-	for( i = 0; i < objcnt; i += 2 )
-	{
-		sgs_Variable vkey, val;
-		sgs_GetStackItem( C, i, &vkey );
-		sgs_GetStackItem( C, i + 1, &val );
-		vht_set( ht, var_cstr( &vkey ), vkey.data.S->size, &val, C );
-	}
-	sgs_PushObject( C, ht, sgsstd_dict_functable );
-	return 1;
-}
 
 static int sgsstd_dict( SGS_CTX )
 {
@@ -2194,20 +2178,218 @@ static const sgs_RegIntConst regiconsts[] =
 	{ "SGS_ERROR", SGS_ERROR },
 };
 
-int sgsVM_RegStdLibs( SGS_CTX )
+
+int sgsSTD_PostInit( SGS_CTX )
 {
 	int ret;
 	ret = sgs_RegIntConsts( C, regiconsts, ARRAY_SIZE( regiconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
 	ret = sgs_RegFuncConsts( C, regfuncs, ARRAY_SIZE( regfuncs ) );
 	if( ret != SGS_SUCCESS ) return ret;
+	return SGS_SUCCESS;
+}
 
-	C->array_func = &sgsstd_array;
-	C->dict_func = &sgsstd_dict_internal;
-	C->dict_api_func = &sgsstd_dict;
+int sgsSTD_MakeArray( SGS_CTX, int cnt )
+{
+	int i = 0, ssz = sgs_StackSize( C );
+
+	if( ssz < cnt )
+		return SGS_EINVAL;
+	else
+	{
+		sgs_Variable *p, *pend;
+		void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( cnt ) );
+		SGSARR_HDRBASE;
+
+		hdr->size = cnt;
+		hdr->mem = cnt;
+		p = SGSARR_PTR( data );
+		pend = p + cnt;
+		while( p < pend )
+		{
+			sgs_GetStackItem( C, i++ - cnt, p );
+			sgs_Acquire( C, p++ );
+		}
+
+		sgs_Pop( C, cnt );
+		sgs_PushObject( C, data, sgsstd_array_functable );
+		return SGS_SUCCESS;
+	}
+}
+
+int sgsSTD_MakeDict( SGS_CTX, int cnt )
+{
+	DictHdr* dh;
+	VHTable* ht;
+	int i, ssz = sgs_StackSize( C );
+
+	if( cnt > ssz || cnt % 2 != 0 )
+		return SGS_EINVAL;
+
+	dh = mkdict( C );
+	ht = &dh->ht;
+
+	for( i = 0; i < cnt; i += 2 )
+	{
+		char* kstr;
+		sgs_SizeVal ksize;
+		sgs_Variable val;
+		if( !sgs_ParseString( C, i - cnt, &kstr, &ksize ) )
+		{
+			_dict_clearvals( C, ht, 1 );
+			vht_free( ht, C );
+			sgs_Dealloc( ht );
+			sgs_Pop( C, sgs_StackSize( C ) - ssz );
+			return SGS_EINVAL;
+		}
+
+		sgs_GetStackItem( C, i + 1 - cnt, &val );
+		vht_set( ht, kstr, (int32_t) ksize, &val, C );
+	}
+
+	sgs_Pop( C, cnt );
+	sgs_PushObject( C, ht, sgsstd_dict_functable );
+	return SGS_SUCCESS;
+}
+
+
+#define GLBP (*(sgs_VarObj**)&C->data)
+
+int sgsSTD_GlobalInit( SGS_CTX )
+{
+	sgs_Variable var;
+	if( sgsSTD_MakeDict( C, 0 ) < 0 ||
+		sgs_GetStackItem( C, -1, &var ) < 0 )
+		return SGS_EINPROC;
+	sgs_Acquire( C, &var );
+	if( sgs_Pop( C, 1 ) < 0 )
+		return SGS_EINPROC;
+	GLBP = var.data.O;
+	return SGS_SUCCESS;
+}
+
+int sgsSTD_GlobalFree( SGS_CTX )
+{
+	sgs_Variable var;
+	VHTableVar *p, *pend;
+	sgs_VarObj* data = GLBP;
+	HTHDR;
+
+	p = ht->vars;
+	pend = p + vht_size( ht );
+	while( p < pend )
+	{
+		sgs_Release( C, &p->var );
+		p++;
+	}
+
+	var.type = SVT_OBJECT;
+	var.data.O = GLBP;
+	sgs_Release( C, &var );
+
+	C->data = NULL;
 
 	return SGS_SUCCESS;
 }
+
+int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall )
+{
+	VHTableVar* pair;
+	sgs_VarObj* data = GLBP;
+	HTHDR;
+
+	if( idx->type != SVT_STRING )
+		return SGS_ENOTSUP;
+
+	sgs_Release( C, out );
+	pair = vht_getS( ht, idx->data.S );
+
+	if( pair )
+	{
+		*out = pair->var;
+		sgs_Acquire( C, out );
+		return SGS_SUCCESS;
+	}
+	else if( strcmp( str_cstr( idx->data.S ), "_G" ) == 0 )
+	{
+		out->type = SVT_OBJECT;
+		out->data.O = GLBP;
+		sgs_Acquire( C, out );
+		return SGS_SUCCESS;
+	}
+	else
+	{
+		if( !apicall )
+			sgs_Printf( C, SGS_WARNING, "Variable '%s' was not found", str_cstr( idx->data.S ) );
+		out->type = SVT_NULL;
+		return SGS_ENOTFND;
+	}
+}
+
+int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall )
+{
+	sgs_VarObj* data = GLBP;
+	HTHDR;
+
+	if( idx->type != SVT_STRING )
+		return SGS_ENOTSUP;
+
+	if( strcmp( var_cstr( idx ), "_G" ) == 0 )
+	{
+		if( !apicall )
+			sgs_Printf( C, SGS_WARNING, "Cannot change the value "
+				"of a hardcoded constant (%s)", var_cstr( idx ) );
+		return SGS_EINPROC;
+	}
+
+	vht_set( ht, var_cstr( idx ), idx->data.S->size, val, C );
+	return SGS_SUCCESS;
+}
+
+int sgsSTD_GlobalGC( SGS_CTX )
+{
+	sgs_VarObj* data = GLBP;
+
+	if( data )
+	{
+		sgs_Variable tmp;
+		VHTableVar *pair, *pend;
+		HTHDR;
+
+		tmp.type = SVT_OBJECT;
+		tmp.data.O = data;
+		if( sgs_GCMark( C, &tmp ) < 0 )
+			return SGS_EINPROC;
+
+		pair = ht->vars;
+		pend = pair + vht_size( ht );
+		while( pair < pend )
+		{
+			if( sgs_GCMark( C, &pair->var ) < 0 )
+				return SGS_EINPROC;
+			pair++;
+		}
+	}
+	return SGS_SUCCESS;
+}
+
+int sgsSTD_GlobalIter( SGS_CTX, sgs_VHTableVar** outp, sgs_VHTableVar** outpend )
+{
+	sgs_VarObj* data = GLBP;
+
+	if( data )
+	{
+		HTHDR;
+		*outp = ht->vars;
+		*outpend = ht->vars + vht_size( ht );
+		return SGS_SUCCESS;
+	}
+	else
+		return SGS_EINPROC;
+}
+
+
+
 
 SGSRESULT sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size )
 {

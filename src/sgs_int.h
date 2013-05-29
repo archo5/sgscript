@@ -667,18 +667,13 @@ struct _sgs_Context
 	sgs_StackFrame* sf_last;
 	int           sf_count;
 
-	sgs_HashTable data;
+	void*         data;
 
 	sgs_object_t* objs;
 	int32_t       objcount;
 	uint8_t       redblue;
 	sgs_VarPtr    gclist;
 	int           gclist_size;
-
-	/* special functions */
-	sgs_CFunc     array_func;
-	sgs_CFunc     dict_func;
-	sgs_CFunc     dict_api_func;
 };
 
 #define SGS_STACKFRAMESIZE  (C->stack_top - C->stack_off)
@@ -718,6 +713,18 @@ static const char* sgs_IfaceNames[] =
 };
 
 #endif
+
+
+/* apicall = error codes only; printfs otherwise (VM call) */
+int sgsSTD_PostInit( SGS_CTX );
+int sgsSTD_MakeArray( SGS_CTX, int cnt );
+int sgsSTD_MakeDict( SGS_CTX, int cnt );
+int sgsSTD_GlobalInit( SGS_CTX );
+int sgsSTD_GlobalFree( SGS_CTX );
+int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall );
+int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall );
+int sgsSTD_GlobalGC( SGS_CTX );
+int sgsSTD_GlobalIter( SGS_CTX, sgs_VHTableVar** outp, sgs_VHTableVar** outpend );
 
 
 #endif /* SGS_INT_H_INCLUDED */
