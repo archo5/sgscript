@@ -1987,7 +1987,7 @@ SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems )
 {
 	if( numitems % 2 != 0 || numitems > sgs_StackSize( C ) )
 		return SGS_EINVAL;
-	sgs_PushCFunction( C, C->dict_func );
+	sgs_PushCFunction( C, C->dict_api_func );
 	return sgs_Call( C, numitems, 1 );
 }
 
@@ -2006,13 +2006,14 @@ SGSRESULT sgs_PushItem( SGS_CTX, int item )
 
 SGSRESULT sgs_StoreItem( SGS_CTX, int item )
 {
-	int g;
+	int g, ret;
 	C->stack_top--;
-	if( !sgs_IsValidIndex( C, item ) )
-		return SGS_EBOUNDS;
-
+	ret = sgs_IsValidIndex( C, item );
 	g = stk_absindex( C, item );
 	C->stack_top++;
+	if( !ret )
+		return SGS_EBOUNDS;
+
 	stk_setlvar( C, g, stk_getpos( C, -1 ) );
 	stk_pop1( C );
 	return SGS_SUCCESS;

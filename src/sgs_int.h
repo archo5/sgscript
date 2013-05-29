@@ -678,6 +678,7 @@ struct _sgs_Context
 	/* special functions */
 	sgs_CFunc     array_func;
 	sgs_CFunc     dict_func;
+	sgs_CFunc     dict_api_func;
 };
 
 #define SGS_STACKFRAMESIZE  (C->stack_top - C->stack_off)

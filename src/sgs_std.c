@@ -2204,6 +2204,7 @@ int sgsVM_RegStdLibs( SGS_CTX )
 
 	C->array_func = &sgsstd_array;
 	C->dict_func = &sgsstd_dict_internal;
+	C->dict_api_func = &sgsstd_dict;
 
 	return SGS_SUCCESS;
 }

@@ -106,6 +106,7 @@ static void ctx_init( SGS_CTX )
 
 	C->array_func = default_array_func;
 	C->dict_func = default_dict_func;
+	C->dict_api_func = default_dict_func;
 }
 
 sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )

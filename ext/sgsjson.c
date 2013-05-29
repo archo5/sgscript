@@ -57,8 +57,7 @@ const char* json_parse( SGS_CTX, MemBuf* stack, const char* str, sgs_SizeVal siz
 			}
 			else
 			{
-				sgs_PushCFunction( C, C->dict_func );
-				sgs_Call( C, 0, 1 );
+				sgs_PushDict( C, 0 );
 			}
 		}
 		else if( *pos == '}' )
@@ -71,8 +70,7 @@ const char* json_parse( SGS_CTX, MemBuf* stack, const char* str, sgs_SizeVal siz
 		else if( *pos == '[' )
 		{
 			STK_PUSH( '[' );
-			sgs_PushCFunction( C, C->array_func );
-			sgs_Call( C, 0, 1 );
+			sgs_PushArray( C, 0 );
 		}
 		else if( *pos == ']' )
 		{
