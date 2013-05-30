@@ -324,6 +324,23 @@ DEFINE_TEST( stack_propindex )
 	destroy_context( C );
 }
 
+DEFINE_TEST( globals_101 )
+{
+	SGS_CTX = get_context();
+
+	atf_assert( sgs_PushGlobal( C, "array" ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 1 );
+	atf_assert( sgs_PushGlobal( C, "donut_remover" ) == SGS_ENOTFND );
+	atf_assert_( sgs_StackSize( C ) == 1, "wrong stack size after failed PushGlobal" );
+
+	atf_assert( sgs_PushArray( C, 1 ) == SGS_SUCCESS );
+	atf_assert_( sgs_StackSize( C ) == 1, "wrong stack size after PushArray" );
+	atf_assert( sgs_StoreGlobal( C, "yarra" ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 0 );
+
+	destroy_context( C );
+}
+
 
 test_t all_tests[] =
 {
@@ -333,6 +350,7 @@ test_t all_tests[] =
 	TST( stack_arraydict ),
 	TST( stack_pushstore ),
 	TST( stack_propindex ),
+	TST( globals_101 ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }
 

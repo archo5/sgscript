@@ -2014,13 +2014,13 @@ SGSRESULT sgs_StoreIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 
 SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name )
 {
-	int oelev = C->minlev, ret;
+	int ret;
 	sgs_VarPtr pos;
 	sgs_PushString( C, name );
 	pos = stk_getpos( C, -1 );
-	C->minlev = SGS_ERROR + 1;
 	ret = sgsSTD_GlobalGet( C, pos, pos, 1 );
-	C->minlev = oelev;
+	if( ret != SGS_SUCCESS )
+		sgs_Pop( C, 1 );
 	return ret;
 }
 
