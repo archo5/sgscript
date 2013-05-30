@@ -816,7 +816,8 @@ static int compile_index_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* 
 	if( !compile_node_r( C, func, node->child->next, &name ) ) return 0;
 	INSTR_WRITE( SI_GETINDEX, opos, var, name );
 	comp_reg_unwind( C, regpos );
-	*out = opos;
+	if( out )
+		*out = opos;
 	return 1;
 }
 
@@ -916,74 +917,71 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 	/* Boolean ops */
 	if( ST_OP_BOOL( *node->token ) )
 	{
-		if( assign || expect )
+		int jin;
+		int16_t ireg1, ireg2, oreg = 0, jmp_off = 0;
+		int32_t csz, csz2;
+
+		if( !assign )
+			oreg = comp_reg_alloc( C );
+		if( C->state & SGS_MUST_STOP )
+			goto fail;
+
+		/* get source data register */
+		FUNC_ENTER;
+		if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
+
+		/* write cond. jump */
+		jin = ( *node->token == ST_OP_BLAND || *node->token == ST_OP_BLAEQ ) ? SI_JMPT : SI_JMPF;
+		INSTR_WRITE_PCH();
+		csz = func->code.size;
+
+		/* compile write of value 1 */
+		if( assign )
 		{
-			int jin;
-			int16_t ireg1, ireg2, oreg = 0, jmp_off = 0;
-			int32_t csz, csz2;
-
-			if( !assign )
-				oreg = comp_reg_alloc( C );
-			if( C->state & SGS_MUST_STOP )
-				goto fail;
-
-			/* get source data register */
 			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
+			if( !compile_node_w( C, func, node->child, ireg1 ) ) goto fail;
+		}
+		else
+		{
+			INSTR_WRITE( SI_SET, oreg, ireg1, 0 );
+		}
 
-			/* write cond. jump */
-			jin = ( *node->token == ST_OP_BLAND || *node->token == ST_OP_BLAEQ ) ? SI_JMPT : SI_JMPF;
-			INSTR_WRITE_PCH();
-			csz = func->code.size;
+		INSTR_WRITE_PCH();
+		csz2 = func->code.size;
 
-			/* compile write of value 1 */
+		/* fix-up jump 1 */
+		jmp_off = func->code.size - csz;
+		AS_UINT32( func->code.ptr + csz - 4 ) = INSTR_MAKE_EX( jin, jmp_off / INSTR_SIZE, ireg1 );
+
+		/* get source data register 2 */
+		FUNC_ENTER;
+		if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
+
+		/* compile write of value 2 */
+		if( assign )
+		{
+			FUNC_ENTER;
+			if( !compile_node_w( C, func, node->child, ireg2 ) ) goto fail;
+		}
+		else
+		{
+			INSTR_WRITE( SI_SET, oreg, ireg2, 0 );
+		}
+
+		/* fix-up jump 2 */
+		jmp_off = func->code.size - csz2;
+		AS_UINT32( func->code.ptr + csz2 - 4 ) = INSTR_MAKE_EX( SI_JUMP, jmp_off / INSTR_SIZE, 0 );
+
+		/* re-read from assignments */
+		if( arg )
+		{
 			if( assign )
 			{
 				FUNC_ENTER;
-				if( !compile_node_w( C, func, node->child, ireg1 ) ) goto fail;
+				if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
 			}
 			else
-			{
-				INSTR_WRITE( SI_SET, oreg, ireg1, 0 );
-			}
-
-			INSTR_WRITE_PCH();
-			csz2 = func->code.size;
-
-			/* fix-up jump 1 */
-			jmp_off = func->code.size - csz;
-			AS_UINT32( func->code.ptr + csz - 4 ) = INSTR_MAKE_EX( jin, jmp_off / INSTR_SIZE, ireg1 );
-
-			/* get source data register 2 */
-			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
-
-			/* compile write of value 2 */
-			if( assign )
-			{
-				FUNC_ENTER;
-				if( !compile_node_w( C, func, node->child, ireg2 ) ) goto fail;
-			}
-			else
-			{
-				INSTR_WRITE( SI_SET, oreg, ireg2, 0 );
-			}
-
-			/* fix-up jump 2 */
-			jmp_off = func->code.size - csz2;
-			AS_UINT32( func->code.ptr + csz2 - 4 ) = INSTR_MAKE_EX( SI_JUMP, jmp_off / INSTR_SIZE, 0 );
-
-			/* re-read from assignments */
-			if( arg )
-			{
-				if( assign )
-				{
-					FUNC_ENTER;
-					if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
-				}
-				else
-					*arg = oreg;
-			}
+				*arg = oreg;
 		}
 	}
 	else
@@ -1074,8 +1072,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			if( !compile_node_w( C, func, node->child, oreg ) ) goto fail;
 		}
 	}
-	/* Any other, needs expected output to be compiled (optimization) */
-	else if( expect )
+	/* Any other */
+	else
 	{
 		int16_t ireg1, ireg2, oreg;
 
@@ -1483,13 +1481,17 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	case SFT_CONST:
 	case SFT_ARRLIST:
 	case SFT_MAPLIST:
-	case SFT_INDEX:
 		break;
 
 	case SFT_OPER:
 	case SFT_OPER_P:
 		FUNC_HIT( "OPERATOR" );
-		if( !compile_oper( C, func, node, NULL, 0, 0 ) ) goto fail;
+		if( !compile_oper( C, func, node, NULL, 1, 0 ) ) goto fail;
+		break;
+
+	case SFT_INDEX:
+		FUNC_HIT( "INDEX" );
+		if( !compile_index_r( C, func, node, NULL ) ) goto fail;
 		break;
 
 	case SFT_FCALL:

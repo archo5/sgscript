@@ -995,7 +995,7 @@ static void vm_properr( SGS_CTX, int ret, sgs_Variable* idx, int isindex )
 		const char* err = isindex ? "Cannot find value by index" : "Property not found";
 		stk_push( C, idx );
 		p = sgs_ToString( C, -1 );
-		sgs_Printf( C, SGS_ERROR, "%s: \"%s\"", err, p );
+		sgs_Printf( C, SGS_WARNING, "%s: \"%s\"", err, p );
 		stk_pop1( C );
 	}
 }
