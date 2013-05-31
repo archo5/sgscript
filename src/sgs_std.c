@@ -106,7 +106,7 @@ static void sgsstd_array_erase( SGS_CTX, sgs_VarObj* data, uint32_t from, uint32
 #define SGSARR_IHDR( name ) \
 	sgs_VarObj* data; \
 	sgsstd_array_header_t* hdr; \
-	if( !sgs_Method( C ) || sgs_GetObjectData( C, 0 )->iface != sgsstd_array_functable ) \
+	if( !sgs_Method( C ) || !sgs_IsObject( C, 0, sgsstd_array_functable ) ) \
 		{ sgs_Printf( C, SGS_ERROR, "array." #name "() isn't called on an array" ); return 0; } \
 	data = sgs_GetObjectData( C, 0 ); \
 	hdr = (sgsstd_array_header_t*) data->data; \

@@ -949,15 +949,59 @@ static int sgsstd_fmt_text( SGS_CTX )
 }
 
 
+#define FMTSTREAM_STATE_INIT 0
+#define FMTSTREAM_STATE_READ 1
+#define FMTSTREAM_STATE_END  2
+
 typedef struct sgsstd_fmtstream_s
 {
 	sgs_Variable source;
 	char* buffer;
-	int bufsize;
+	sgs_SizeVal bufsize;
+	sgs_SizeVal buffill;
+	sgs_SizeVal bufpos;
+	int state;
 }
 sgsstd_fmtstream_t;
 
+static void* sgsstd_fmtstream_functable[];
 #define SGSFS_HDR sgsstd_fmtstream_t* hdr = (sgsstd_fmtstream_t*) data->data
+
+#define fs_getreadsize( hdr, lim ) MIN( hdr->buffill - hdr->bufpos, lim )
+
+static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
+{
+	int ret;
+	char* str;
+	sgs_SizeVal size;
+	if( fs->buffill > fs->bufpos )
+	{
+		memmove( fs->buffer,
+			fs->buffer + fs->bufpos,
+			fs->buffill - fs->bufpos );
+		fs->buffill -= fs->bufpos;
+	}
+	fs->bufpos = 0;
+	
+	sgs_PushInt( C, fs->bufsize - fs->buffill );
+	sgs_PushVariable( C, &fs->source );
+	ret = sgs_Call( C, 1, 1 );
+	if( ret != SGS_SUCCESS )
+		return FALSE;
+	if( sgs_ItemType( C, -1 ) == SVT_NULL )
+	{
+		fs->state = FMTSTREAM_STATE_END;
+		return -1;
+	}
+	if( !sgs_ParseString( C, -1, &str, &size ) ||
+		size > fs->bufsize - fs->buffill )
+		return FALSE;
+	if( size )
+		memcpy( fs->buffer + fs->bufpos, str, size );
+	fs->buffill += size;
+	fs->state = FMTSTREAM_STATE_READ;
+	return 1;
+}
 
 
 static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data, int dco )
@@ -969,9 +1013,72 @@ static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data, int dco )
 	return SGS_SUCCESS;
 }
 
+#define SGSFS_IHDR( name ) \
+	sgs_VarObj* data; \
+	sgsstd_fmtstream_t* hdr; \
+	if( !sgs_Method( C ) || \
+		!sgs_IsObject( C, 0, sgsstd_fmtstream_functable ) )\
+		{ sgs_Printf( C, SGS_ERROR, "fmtstream." #name \
+			"() wasn't called on a fmtstream" ); return 0; } \
+	data = sgs_GetObjectData( C, 0 ); \
+	hdr = (sgsstd_fmtstream_t*) data->data; \
+	UNUSED( hdr );
+/* after this, the counting starts from 1 because of sgs_Method */
+
+static int sgsstd_fmtstreamI_read( SGS_CTX )
+{
+	sgs_SizeVal numbytes;
+	MemBuf B = membuf_create();
+	sgs_Integer numbi;
+	int ssz = sgs_StackSize( C );
+	
+	SGSFS_IHDR( read )
+	
+	if( ssz != 1 || !sgs_ParseInt( C, 1, &numbi ) ||
+		numbi < 0 || numbi >= 1<<31 )
+		STDLIB_WARN( "fmtstream.read(): unexpected arguments; "
+			"function expects 1 argument: int (0-2^31)" )
+	
+	numbytes = numbi;
+	if( numbytes )
+	{
+		while( hdr->state != FMTSTREAM_STATE_END )
+		{
+			sgs_SizeVal readamt = fs_getreadsize( hdr, numbytes );
+			if( readamt )
+				membuf_appbuf( &B, C, hdr->buffer + hdr->bufpos, readamt );
+			numbytes -= readamt;
+			if( numbytes <= 0 )
+				break;
+			if( !fs_refill( C, hdr ) )
+			{
+				membuf_destroy( &B, C );
+				STDLIB_WARN( "fmtstream.read(): unexpected read error" )
+			}
+		}
+	}
+	sgs_PushStringBuf( C, B.ptr, B.size );
+	membuf_destroy( &B, C );
+	return 1;
+}
+
+static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+{
+	char* str;
+	sgs_SizeVal size;
+	if( !sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "fmt_parser: could not read property string" )
+	
+#define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
+	if( 0 == strcmp( str, "read" ) ) IFN( sgsstd_fmtstreamI_read )
+	
+	return SGS_ENOTFND;
+}
+
 static void* sgsstd_fmtstream_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_fmtstream_destroy,
+	SOP_GETINDEX, sgsstd_fmtstream_getindex,
 };
 
 static int sgsstd_fmt_parser( SGS_CTX )
@@ -998,6 +1105,9 @@ static int sgsstd_fmt_parser( SGS_CTX )
 		sgs_Acquire( C, &hdr->source );
 		hdr->bufsize = (int) bufsize;
 		hdr->buffer = sgs_Alloc_n( char, hdr->bufsize );
+		hdr->buffill = 0;
+		hdr->bufpos = 0;
+		hdr->state = FMTSTREAM_STATE_INIT;
 		sgs_PushObject( C, hdr, sgsstd_fmtstream_functable );
 		return 1;
 	}
