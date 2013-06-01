@@ -49,7 +49,11 @@ static int path_replast( SGS_CTX, int from, int with )
 
 
 
-/* libraries - formatting */
+/*  - - - - - - - - - -
+	
+	F O R M A T T I N G
+
+*/
 
 static sgs_SizeVal fmt_pack_numitems(
 	SGS_CTX, const char* str, sgs_SizeVal size )
@@ -979,27 +983,32 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 		memmove( fs->buffer,
 			fs->buffer + fs->bufpos,
 			fs->buffill - fs->bufpos );
-		fs->buffill -= fs->bufpos;
 	}
+	fs->buffill -= fs->bufpos;
 	fs->bufpos = 0;
 	
-	sgs_PushInt( C, fs->bufsize - fs->buffill );
-	sgs_PushVariable( C, &fs->source );
-	ret = sgs_Call( C, 1, 1 );
-	if( ret != SGS_SUCCESS )
-		return FALSE;
-	if( sgs_ItemType( C, -1 ) == SVT_NULL )
+	if( fs->bufsize > fs->buffill )
 	{
-		fs->state = FMTSTREAM_STATE_END;
-		return -1;
+		sgs_PushInt( C, fs->bufsize - fs->buffill );
+		sgs_PushVariable( C, &fs->source );
+		ret = sgs_Call( C, 1, 1 );
+		if( ret != SGS_SUCCESS )
+			return FALSE;
+		if( sgs_ItemType( C, -1 ) == SVT_NULL )
+		{
+			sgs_Pop( C, 1 );
+			fs->state = FMTSTREAM_STATE_END;
+			return -1;
+		}
+		if( !sgs_ParseString( C, -1, &str, &size ) ||
+			size > fs->bufsize - fs->buffill )
+			return FALSE;
+		if( size )
+			memcpy( fs->buffer + fs->bufpos, str, size );
+		fs->buffill += size;
+		fs->state = FMTSTREAM_STATE_READ;
+		sgs_Pop( C, 1 );
 	}
-	if( !sgs_ParseString( C, -1, &str, &size ) ||
-		size > fs->bufsize - fs->buffill )
-		return FALSE;
-	if( size )
-		memcpy( fs->buffer + fs->bufpos, str, size );
-	fs->buffill += size;
-	fs->state = FMTSTREAM_STATE_READ;
 	return 1;
 }
 
@@ -1030,14 +1039,14 @@ static int sgsstd_fmtstreamI_read( SGS_CTX )
 	sgs_SizeVal numbytes;
 	MemBuf B = membuf_create();
 	sgs_Integer numbi;
-	int ssz = sgs_StackSize( C );
 	
 	SGSFS_IHDR( read )
 	
-	if( ssz != 1 || !sgs_ParseInt( C, 1, &numbi ) ||
-		numbi < 0 || numbi >= 1<<31 )
+	if( sgs_StackSize( C ) != 2 ||
+		!sgs_ParseInt( C, 1, &numbi ) ||
+		numbi < 0 || numbi >= (1LL<<31) )
 		STDLIB_WARN( "fmtstream.read(): unexpected arguments; "
-			"function expects 1 argument: int (0-2^31)" )
+			"function expects 1 argument: int [0-2^31)" )
 	
 	numbytes = numbi;
 	if( numbytes )
@@ -1048,6 +1057,7 @@ static int sgsstd_fmtstreamI_read( SGS_CTX )
 			if( readamt )
 				membuf_appbuf( &B, C, hdr->buffer + hdr->bufpos, readamt );
 			numbytes -= readamt;
+			hdr->bufpos += readamt;
 			if( numbytes <= 0 )
 				break;
 			if( !fs_refill( C, hdr ) )
@@ -1062,6 +1072,103 @@ static int sgsstd_fmtstreamI_read( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_fmtstreamI_getchar( SGS_CTX )
+{
+	int chr = -1, ssz, asint = 0;
+	SGSFS_IHDR( getchar )
+	ssz = sgs_StackSize( C );
+	
+	if( ssz < 1 || ssz > 2 ||
+		( ssz == 2 && !sgs_ParseBool( C, 1, &asint ) ) )
+		STDLIB_WARN( "fmtstream.getchar(): unexpected arguments; "
+			"function expects 0-1 arguments: [bool]" )
+	
+	while( hdr->state != FMTSTREAM_STATE_END )
+	{
+		sgs_SizeVal readamt = fs_getreadsize( hdr, 1 );
+		if( !readamt )
+		{
+			if( !fs_refill( C, hdr ) )
+			{
+				STDLIB_WARN( "fmtstream.getchar(): unexpected read error" )
+			}
+			continue;
+		}
+		chr = hdr->buffer[ hdr->bufpos++ ];
+		break;
+	}
+	if( asint )
+		sgs_PushInt( C, chr );
+	else
+	{
+		char cc = (uint8_t) chr;
+		sgs_PushStringBuf( C, &cc, 1 );
+	}
+	return 1;
+}
+
+
+static int fs_validate_cc( SGS_CTX, const char* str, sgs_SizeVal size )
+{
+	return 1;
+}
+
+static int fs_check_cc( const char* str, sgs_SizeVal size, char c )
+{
+	return 1;
+}
+
+static int sgsstd_fmtstreamI_readcc( SGS_CTX )
+{
+	char* ccstr;
+	sgs_SizeVal numbytes, ccsize;
+	MemBuf B = membuf_create();
+	sgs_Integer numbi = 0x7fffffff;
+	int ssz = sgs_StackSize( C );
+	
+	SGSFS_IHDR( readcc )
+	
+	if( ssz < 1 || ssz > 2 ||
+		!sgs_ParseString( C, 1, &ccstr, &ccsize ) ||
+		( ssz >= 2 && ( !sgs_ParseInt( C, 2, &numbi ) ||
+		numbi < 0 || numbi >= (1LL<<31) ) ) )
+		STDLIB_WARN( "fmtstream.readcc(): unexpected arguments; "
+			"function expects 1-2 arguments: string[, int [0-2^31)]" )
+
+	if( !fs_validate_cc( C, ccstr, ccsize ) )
+		STDLIB_WARN( "fmtstream.readcc(): invalid character class" )
+	
+	numbytes = numbi;
+	if( numbytes )
+	{
+		while( hdr->state != FMTSTREAM_STATE_END )
+		{
+			sgs_SizeVal readamt = fs_getreadsize( hdr, 1 );
+			if( readamt )
+			{
+				char c = hdr->buffer[ hdr->bufpos ];
+				if( !fs_check_cc( ccstr, ccsize, c ) )
+					break;
+				membuf_appchr( &B, C, c );
+			}
+			numbytes -= readamt;
+			hdr->bufpos += readamt;
+			if( numbytes <= 0 )
+				break;
+			if( !fs_refill( C, hdr ) )
+			{
+				membuf_destroy( &B, C );
+				STDLIB_WARN( "fmtstream.readcc(): unexpected read error" )
+			}
+		}
+	}
+	sgs_PushStringBuf( C, B.ptr, B.size );
+	membuf_destroy( &B, C );
+	return 1;
+}
+
+
+
 static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	char* str;
@@ -1071,6 +1178,7 @@ static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	
 #define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
 	if( 0 == strcmp( str, "read" ) ) IFN( sgsstd_fmtstreamI_read )
+	else if( 0 == strcmp( str, "getchar" ) ) IFN( sgsstd_fmtstreamI_getchar )
 	
 	return SGS_ENOTFND;
 }
@@ -1133,7 +1241,11 @@ SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
 
 
 
-/* libraries - I / O */
+/*  - - - - -       - - - - - -
+	
+	I N P U T   /   O U T P U T
+	
+*/
 
 #define FILE_READ 1
 #define FILE_WRITE 2
@@ -1807,7 +1919,11 @@ SGSRESULT sgs_LoadLib_IO( SGS_CTX )
 
 
 
-/* libraries -  M A T H  */
+/*  - - - -
+	
+	M A T H
+	
+*/
 
 #define SGS_PI 3.14159265358979323846
 #define SGS_E 2.7182818284590452354
@@ -2175,7 +2291,11 @@ SGSRESULT sgs_LoadLib_Native( SGS_CTX )
 
 
 
-/* libraries -  O S  */
+/*  - - - - - - - - -   - - - - - -
+	
+	O P E R A T I N G   S Y S T E M
+	
+*/
 
 static int sgsstd_os_gettype( SGS_CTX )
 {
@@ -2488,7 +2608,11 @@ SGSRESULT sgs_LoadLib_OS( SGS_CTX )
 
 
 
-/* libraries -  S T R I N G  */
+/*  - - - - - -
+	
+	S T R I N G
+	
+*/
 
 #define sgsNO_REV_INDEX 1
 #define sgsSTRICT_RANGES 2
@@ -3350,6 +3474,13 @@ SGSRESULT sgs_LoadLib_String( SGS_CTX )
 	return ret;
 }
 
+
+
+/*  - - - -
+	
+	T Y P E
+	
+*/
 
 #define EXPECT_ONEARG( N ) \
 	if( sgs_StackSize( C ) != 1 ){ \
