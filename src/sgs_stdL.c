@@ -3293,13 +3293,14 @@ notthis:
 static int sgsstd_string_explode( SGS_CTX )
 {
 	char* a, *b, *p, *pp;
-	sgs_SizeVal asize, bsize;
+	sgs_SizeVal asize, bsize, ssz;
 
 	if( sgs_StackSize( C ) != 2 ||
 		!sgs_ParseString( C, 0, &a, &asize ) ||
 		!sgs_ParseString( C, 1, &b, &bsize ) )
 		STDLIB_WARN( "string_explode() - unexpected arguments; "
 			"function expects 2 arguments: string, string" )
+	ssz = sgs_StackSize( C );
 
 	if( !bsize )
 	{
@@ -3322,7 +3323,7 @@ static int sgsstd_string_explode( SGS_CTX )
 		sgs_PushStringBuf( C, pp, a + asize - pp );
 	}
 
-	return sgs_PushArray( C, sgs_StackSize( C ) - 3 ) == SGS_SUCCESS;
+	return sgs_PushArray( C, sgs_StackSize( C ) - ssz ) == SGS_SUCCESS;
 }
 
 static int sgsstd_string_charcode( SGS_CTX )
