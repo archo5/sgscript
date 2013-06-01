@@ -475,7 +475,7 @@ static int sgsstd_fmt_unpack( SGS_CTX )
 		!sgs_ParseString( C, 0, &str, &size ) ||
 		!sgs_ParseString( C, 1, &data, &datasize ) )
 		STDLIB_WARN( "fmt_unpack() - unexpected arguments; "
-			"function expects 1 argument: string" )
+			"function expects 2 arguments: string, string" )
 
 	bytes = fmt_pack_numbytes( C, str, size );
 	if( bytes > datasize )
@@ -962,6 +962,7 @@ typedef struct sgsstd_fmtstream_s
 {
 	sgs_Variable source;
 	char* buffer;
+	sgs_SizeVal streamoff;
 	sgs_SizeVal bufsize;
 	sgs_SizeVal buffill;
 	sgs_SizeVal bufpos;
@@ -986,6 +987,7 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 			fs->buffill - fs->bufpos );
 	}
 	fs->buffill -= fs->bufpos;
+	fs->streamoff += fs->bufpos;
 	fs->bufpos = 0;
 	
 	if( fs->bufsize > fs->buffill && needs )
@@ -1273,6 +1275,9 @@ static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	else if( 0 == strcmp( str, "at_end" ) ){
 		sgs_PushBool( C, hdr->state == FMTSTREAM_STATE_END );
 		return SGS_SUCCESS; }
+	else if( 0 == strcmp( str, "stream_offset" ) ){
+		sgs_PushInt( C, hdr->streamoff + hdr->bufpos );
+		return SGS_SUCCESS; }
 	
 	return SGS_ENOTFND;
 }
@@ -1305,6 +1310,7 @@ static int sgsstd_fmt_parser( SGS_CTX )
 		sgsstd_fmtstream_t* hdr = sgs_Alloc( sgsstd_fmtstream_t );
 		sgs_GetStackItem( C, 0, &hdr->source );
 		sgs_Acquire( C, &hdr->source );
+		hdr->streamoff = 0;
 		hdr->bufsize = (int) bufsize;
 		hdr->buffer = sgs_Alloc_n( char, hdr->bufsize );
 		hdr->buffill = 0;
@@ -1590,7 +1596,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 #define FVAR (*(FILE**)&data->data)
 #define FVNO_BEGIN if( FVAR ) {
 #define FVNO_END( name ) } else \
-	STDLIB_WARN( "file::" #name "() - file is not opened" )
+	STDLIB_WARN( "file." #name "() - file is not opened" )
 
 static void* sgsstd_file_functable[];
 
@@ -1599,7 +1605,7 @@ static void* sgsstd_file_functable[];
 	if( !sgs_Method( C ) || \
 		sgs_ItemType( C, 0 ) != SVT_OBJECT || \
 		( data = sgs_GetObjectData( C, 0 ) )->iface != sgsstd_file_functable ) \
-		STDLIB_WARN( "file::" #fname "() - expected file as 'this'" )
+		STDLIB_WARN( "file." #fname "() - expected file as 'this'" )
 
 
 static int sgsstd_fileP_offset( SGS_CTX, FILE* fp )
@@ -1657,7 +1663,7 @@ static int sgsstd_fileI_open( SGS_CTX )
 		!sgs_ParseString( C, 1, &path, NULL ) ||
 		!sgs_ParseInt( C, 2, &flags ) ||
 		!( ff = flags & ( FILE_READ | FILE_WRITE ) ) )
-		STDLIB_WARN( "file::open() - unexpected arguments; "
+		STDLIB_WARN( "file.open() - unexpected arguments; "
 			"function expects 2 arguments: string, int (!= 0)" )
 
 	if( FVAR )
@@ -1676,7 +1682,7 @@ static int sgsstd_fileI_close( SGS_CTX )
 	FIF_INIT( close )
 
 	if( sgs_StackSize( C ) != 1 )
-		STDLIB_WARN( "file::close() - unexpected arguments; "
+		STDLIB_WARN( "file.close() - unexpected arguments; "
 			"function expects 0 arguments" )
 
 	if( FVAR )
@@ -1699,7 +1705,7 @@ static int sgsstd_fileI_read( SGS_CTX )
 
 	if( sgs_StackSize( C ) != 2 ||
 		!sgs_ParseInt( C, 1, &size ) )
-		STDLIB_WARN( "file::read() - unexpected arguments; "
+		STDLIB_WARN( "file.read() - unexpected arguments; "
 			"function expects 1 argument: int" )
 
 	FVNO_BEGIN
@@ -1726,7 +1732,7 @@ static int sgsstd_fileI_write( SGS_CTX )
 
 	if( sgs_StackSize( C ) != 2 ||
 		!sgs_ParseString( C, 1, &str, &strsize ) )
-		STDLIB_WARN( "file::write() - unexpected arguments; "
+		STDLIB_WARN( "file.write() - unexpected arguments; "
 			"function expects 1 argument: string" )
 
 	FVNO_BEGIN
@@ -1748,11 +1754,11 @@ static int sgsstd_fileI_seek( SGS_CTX )
 	if( ssz < 2 || ssz > 3 ||
 		!sgs_ParseInt( C, 1, &off ) ||
 		( ssz >= 3 && !sgs_ParseInt( C, 2, &mode ) ) )
-		STDLIB_WARN( "file::seek() - unexpected arguments; "
+		STDLIB_WARN( "file.seek() - unexpected arguments; "
 			"function expects 1-2 arguments: int[, int]" )
 
 	if( mode < 0 || mode > 2 )
-		STDLIB_WARN( "file::seek() - 'mode' not one of SEEK_(SET|CUR|END)" )
+		STDLIB_WARN( "file.seek() - 'mode' not one of SEEK_(SET|CUR|END)" )
 
 	FVNO_BEGIN
 		sgs_PushBool( C, !fseek( FVAR, off, seekmodes[ mode ] ) );
@@ -1765,7 +1771,7 @@ static int sgsstd_fileI_flush( SGS_CTX )
 	FIF_INIT( close )
 
 	if( sgs_StackSize( C ) != 1 )
-		STDLIB_WARN( "file::close() - unexpected arguments; "
+		STDLIB_WARN( "file.close() - unexpected arguments; "
 			"function expects 0 arguments" )
 
 	FVNO_BEGIN
@@ -1781,7 +1787,7 @@ static int sgsstd_fileI_setbuf( SGS_CTX )
 
 	if( sgs_StackSize( C ) != 2 ||
 		!sgs_ParseInt( C, 1, &size ) )
-		STDLIB_WARN( "file::setbuf() - unexpected arguments; "
+		STDLIB_WARN( "file.setbuf() - unexpected arguments; "
 			"function expects 1 argument: int" )
 
 	FVNO_BEGIN
@@ -1858,7 +1864,7 @@ static int sgsstd_io_file( SGS_CTX )
 	char* path;
 	sgs_Integer flags;
 	FILE* fp = NULL;
-	const char* fstrs[] = { NULL, "r", "w", "w+" };
+	const char* fstrs[] = { NULL, "rb", "wb", "wb+" };
 
 	if( sgs_StackSize( C ) == 0 )
 		goto pushobj;

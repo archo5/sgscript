@@ -9,7 +9,9 @@
 
 static int is_keyword( TokenList tok, const char* text )
 {
-	return *tok == ST_KEYWORD && tok[ 1 ] == strlen( text ) && strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
+	return *tok == ST_KEYWORD &&
+		tok[ 1 ] == strlen( text ) &&
+		strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
 }
 
 
@@ -46,7 +48,8 @@ static sgs_CompFunc* make_compfunc( SGS_CTX )
 }
 
 
-static void fctx_binfo_add( SGS_CTX, sgs_FuncCtx* fctx, uint32_t ioff, uint16_t loop, uint8_t iscont )
+static void fctx_binfo_add( SGS_CTX, sgs_FuncCtx* fctx,
+	uint32_t ioff, uint16_t loop, uint8_t iscont )
 {
 	sgs_BreakInfo* binfo = sgs_Alloc( sgs_BreakInfo );
 	binfo->jdoff = ioff;
@@ -98,7 +101,8 @@ static void fctx_destroy( SGS_CTX, sgs_FuncCtx* fctx )
 #if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 static void fctx_dump( sgs_FuncCtx* fctx )
 {
-	printf( "Type: %s\nGlobals: %s\nVariables: %s\n", fctx->func ? "Function" : "Main code", fctx->gvars.ptr, fctx->vars.ptr );
+	printf( "Type: %s\nGlobals: %s\nVariables: %s\n", fctx->func ?
+		"Function" : "Main code", fctx->gvars.ptr, fctx->vars.ptr );
 }
 #endif
 
@@ -135,8 +139,9 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 	while( ptr < pend )
 	{
 		instr_t I = *ptr++;
-		int op = INSTR_GET_OP( I ), argA = INSTR_GET_A( I ), argB = INSTR_GET_B( I ),
-			argC = INSTR_GET_C( I ), argE = INSTR_GET_E( I );
+		int op = INSTR_GET_OP( I ), argA = INSTR_GET_A( I ),
+			argB = INSTR_GET_B( I ), argC = INSTR_GET_C( I ),
+			argE = INSTR_GET_E( I );
 
 		printf( "\t%04d |  ", ptr - pbeg - 1 );
 
@@ -153,17 +158,24 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 
 		case SI_RETN: printf( "RETURN %d", argA ); break;
 		case SI_JUMP: printf( "JUMP %d", (int) (int16_t) argE ); break;
-		case SI_JMPT: printf( "JMP_T " ); dump_rcpos( argC ); printf( ", %d", (int) (int16_t) argE ); break;
-		case SI_JMPF: printf( "JMP_F " ); dump_rcpos( argC ); printf( ", %d", (int) (int16_t) argE ); break;
-		case SI_CALL: printf( "CALL args:%d%s expect:%d func:", argB & 0xff, ( argB & 0x100 ) ? ",method" : "",
-							argA ); dump_rcpos( argC ); break;
+		case SI_JMPT: printf( "JMP_T " ); dump_rcpos( argC );
+			printf( ", %d", (int) (int16_t) argE ); break;
+		case SI_JMPF: printf( "JMP_F " ); dump_rcpos( argC );
+			printf( ", %d", (int) (int16_t) argE ); break;
+		case SI_CALL: printf( "CALL args:%d%s expect:%d func:",
+			argB & 0xff, ( argB & 0x100 ) ? ",method" : "", argA );
+			dump_rcpos( argC ); break;
 
-		case SI_FORPREP: printf( "FOR_PREP " ); dump_rcpos( argA ); printf( " <= " ); dump_rcpos( argB ); break;
-		case SI_FORLOAD: printf( "FOR_LOAD " ); dump_rcpos( argA ); printf( " => " ); dump_rcpos( argB );
-							printf( ", " ); dump_rcpos( argC ); break;
-		case SI_FORJUMP: printf( "FOR_JUMP " ); dump_rcpos( argC ); printf( ", %d", (int) (int16_t) argE ); break;
+		case SI_FORPREP: printf( "FOR_PREP " ); dump_rcpos( argA );
+			printf( " <= " ); dump_rcpos( argB ); break;
+		case SI_FORLOAD: printf( "FOR_LOAD " ); dump_rcpos( argA );
+			printf( " => " ); dump_rcpos( argB );
+			printf( ", " ); dump_rcpos( argC ); break;
+		case SI_FORJUMP: printf( "FOR_JUMP " ); dump_rcpos( argC );
+			printf( ", %d", (int) (int16_t) argE ); break;
 
-		case SI_LOADCONST: printf( "LOADCONST " ); dump_rcpos( argC ); printf( " <= C%d", argE ); break;
+		case SI_LOADCONST: printf( "LOADCONST " ); dump_rcpos( argC );
+			printf( " <= C%d", argE ); break;
 
 		DOP_B( GETVAR );
 		case SI_SETVAR: dump_opcode_b1( "SETVAR", I ); break;
@@ -205,10 +217,16 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 #undef DOP_A
 #undef DOP_B
 
-		case SI_ARRAY: printf( "ARRAY args:%d output:", argB ); dump_rcpos( argA ); break;
-		case SI_DICT: printf( "DICT args:%d output:", argB ); dump_rcpos( argA ); break;
+		case SI_ARRAY:
+			printf( "ARRAY args:%d output:", argB );
+			dump_rcpos( argA ); break;
+		case SI_DICT:
+			printf( "DICT args:%d output:", argB );
+			dump_rcpos( argA ); break;
 
-		default: printf( "<error>" ); break;
+		default:
+			printf( "<error> \t\t(op=%d A=%d B=%d C=%d E=%d)",
+				op, argA, argB, argC, argE ); break;
 		}
 		printf( "\n" );
 	}
@@ -1749,6 +1767,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
+			C->fctx->loops--;
 			comp_reg_unwind( C, regstate2 );
 		}
 		break;
