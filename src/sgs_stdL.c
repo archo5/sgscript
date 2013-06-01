@@ -13,6 +13,7 @@
 #include "sgs_int.h"
 
 #define FLAG( a, b ) (((a)&(b))!=0)
+#define STDLIB_INFO( info ) { sgs_Printf( C, SGS_INFO, info ); return 0; }
 #define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, warn ); return 0; }
 
 
@@ -975,7 +976,7 @@ static void* sgsstd_fmtstream_functable[];
 
 static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 {
-	int ret;
+	int ret, needs = fs->buffill == fs->bufsize || fs->buffill == 0;
 	char* str;
 	sgs_SizeVal size;
 	if( fs->buffill > fs->bufpos )
@@ -987,7 +988,7 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 	fs->buffill -= fs->bufpos;
 	fs->bufpos = 0;
 	
-	if( fs->bufsize > fs->buffill )
+	if( fs->bufsize > fs->buffill && needs )
 	{
 		sgs_PushInt( C, fs->bufsize - fs->buffill );
 		sgs_PushVariable( C, &fs->source );
@@ -1107,15 +1108,55 @@ static int sgsstd_fmtstreamI_getchar( SGS_CTX )
 	return 1;
 }
 
+/*
+	Character class format
+	cclass: ["^"] crlist
+	crlist: critem [crlist]
+	critem: <any> | <any> "-" <any> | "--"
+*/
 
 static int fs_validate_cc( SGS_CTX, const char* str, sgs_SizeVal size )
 {
-	return 1;
+	if( size && *str == '^' )
+		size--;
+	return !!size;
 }
 
-static int fs_check_cc( const char* str, sgs_SizeVal size, char c )
+static int fs_check_cc( const char* str, sgs_SizeVal size, uint8_t c )
 {
-	return 1;
+	int match = 0, invert = 0;
+	const char *strend = str + size;
+	if( !size )
+		return 1;
+	if( *str == '^' )
+	{
+		invert = 1;
+		str++;
+	}
+	while( str < strend )
+	{
+		if( str + 1 < strend && *(str+1) == '-' )
+		{
+			if( *str == '-' )
+			{
+				match |= *str == c;
+				str += 1;
+			}
+			else if( str + 2 < strend )
+			{
+				match |= c >= *str && c <= *(str+2);
+				str += 2;
+			}
+		}
+		else
+		{
+			match |= *str == c;
+		}
+		str++;
+		if( match )
+			break;
+	}
+	return match ^ invert;
 }
 
 static int sgsstd_fmtstreamI_readcc( SGS_CTX )
@@ -1136,7 +1177,7 @@ static int sgsstd_fmtstreamI_readcc( SGS_CTX )
 			"function expects 1-2 arguments: string[, int [0-2^31)]" )
 
 	if( !fs_validate_cc( C, ccstr, ccsize ) )
-		STDLIB_WARN( "fmtstream.readcc(): invalid character class" )
+		STDLIB_WARN( "fmtstream.readcc(): error in character class" )
 	
 	numbytes = numbi;
 	if( numbytes )
@@ -1167,18 +1208,71 @@ static int sgsstd_fmtstreamI_readcc( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_fmtstreamI_skipcc( SGS_CTX )
+{
+	char* ccstr;
+	sgs_SizeVal numbytes, ccsize, numsc = 0;
+	sgs_Integer numbi = 0x7fffffff;
+	int ssz = sgs_StackSize( C );
+	
+	SGSFS_IHDR( skipcc )
+	
+	if( ssz < 1 || ssz > 2 ||
+		!sgs_ParseString( C, 1, &ccstr, &ccsize ) ||
+		( ssz >= 2 && ( !sgs_ParseInt( C, 2, &numbi ) ||
+		numbi < 0 || numbi >= (1LL<<31) ) ) )
+		STDLIB_WARN( "fmtstream.skipcc(): unexpected arguments; "
+			"function expects 1-2 arguments: string[, int [0-2^31)]" )
+
+	if( !fs_validate_cc( C, ccstr, ccsize ) )
+		STDLIB_WARN( "fmtstream.skipcc(): error in character class" )
+	
+	numbytes = numbi;
+	if( numbytes )
+	{
+		while( hdr->state != FMTSTREAM_STATE_END )
+		{
+			sgs_SizeVal readamt = fs_getreadsize( hdr, 1 );
+			if( readamt )
+			{
+				char c = hdr->buffer[ hdr->bufpos ];
+				if( !fs_check_cc( ccstr, ccsize, c ) )
+					break;
+				numsc++;
+			}
+			numbytes -= readamt;
+			hdr->bufpos += readamt;
+			if( numbytes <= 0 )
+				break;
+			if( !fs_refill( C, hdr ) )
+			{
+				STDLIB_WARN( "fmtstream.skipcc(): unexpected read error" )
+			}
+		}
+	}
+	sgs_PushInt( C, numsc );
+	return 1;
+}
+
 
 
 static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	char* str;
 	sgs_SizeVal size;
+	SGSFS_HDR;
 	if( !sgs_ParseString( C, 0, &str, &size ) )
 		STDLIB_WARN( "fmt_parser: could not read property string" )
 	
 #define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
 	if( 0 == strcmp( str, "read" ) ) IFN( sgsstd_fmtstreamI_read )
 	else if( 0 == strcmp( str, "getchar" ) ) IFN( sgsstd_fmtstreamI_getchar )
+	else if( 0 == strcmp( str, "readcc" ) ) IFN( sgsstd_fmtstreamI_readcc )
+	else if( 0 == strcmp( str, "skipcc" ) ) IFN( sgsstd_fmtstreamI_skipcc )
+	
+	else if( 0 == strcmp( str, "at_end" ) ){
+		sgs_PushBool( C, hdr->state == FMTSTREAM_STATE_END );
+		return SGS_SUCCESS; }
 	
 	return SGS_ENOTFND;
 }
