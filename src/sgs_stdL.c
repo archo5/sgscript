@@ -832,7 +832,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 		{
 			static const char* hextbl = "0123456789abcdef0123456789ABCDEF";
 			const char* tbl = hextbl;
-			int radix, size, i;
+			int radix, size, i, sign = 0;
 			sgs_Integer I;
 			if( !sgs_ParseInt( C, (*psi)++, &I ) )
 				goto error;
@@ -844,14 +844,21 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 
 			if( F->type == 'X' )
 				tbl += 16;
-
-			size = 1 + (int) floor( log( I ) / log( radix ) );
+			
+			if( I < 0 )
+			{
+				sign = 1;
+				I = -I;
+			}
+			size = 1 + (int) floor( log( MAX(1,I) ) / log( radix ) ) + sign;
 
 			if( size < F->padcnt && !F->padrgt )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
 			for( i = size - 1; i >= 0; --i )
 			{
 				int cv = ( I / (sgs_Integer) pow( radix, i ) ) % radix;
+				if( sign )
+					membuf_appchr( B, C, '-' );
 				membuf_appchr( B, C, tbl[ cv ] );
 			}
 			if( size < F->padcnt && F->padrgt )

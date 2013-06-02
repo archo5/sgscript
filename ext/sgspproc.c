@@ -112,7 +112,7 @@ static ppmapitem_t* ppjob_map_find(
 	ppmapitem_t* item = job->data;
 	while( item )
 	{
-		if( item->keysize == keysize && !strncmp( item->data, key, keysize ) )
+		if( item->keysize == keysize && !memcmp( item->data, key, keysize ) )
 			return item;
 		item = item->next;
 	}
@@ -295,6 +295,29 @@ static int ppjobI_wait( SGS_CTX )
 	return 1;
 }
 
+static int ppjobI_has( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size;
+	int ssz = sgs_StackSize( C );
+	PPJOB_IHDR( has );
+	
+	if( ssz != 1 ||
+		!sgs_ParseString( C, 1, &str, &size ) ||
+		size == 0 )
+		STDLIB_WARN( "ppjob.has(): unexpected arguments; "
+			"function expects 1 argument: string (size > 0)" )
+	
+	sgsmutex_lock( job->mutex );
+	{
+		ppmapitem_t* item = ppjob_map_find( job, str, size );
+		sgs_PushBool( C, !!item );
+	}
+	sgsmutex_unlock( job->mutex );
+	
+	return 1;
+}
+
 static int ppjobI_get( SGS_CTX )
 {
 	int ret;
@@ -304,7 +327,7 @@ static int ppjobI_get( SGS_CTX )
 	PPJOB_IHDR( get );
 	
 	if( ssz != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) ||
+		!sgs_ParseString( C, 1, &str, &size ) ||
 		size == 0 )
 		STDLIB_WARN( "ppjob.get(): unexpected arguments; "
 			"function expects 1 argument: string (size > 0)" )
@@ -346,7 +369,7 @@ static int ppjobI_set( SGS_CTX )
 	PPJOB_IHDR( set );
 	
 	if( ssz != 2 ||
-		!sgs_ParseString( C, 0, &str, &size ) ||
+		!sgs_ParseString( C, 1, &str, &size ) ||
 		size == 0 ||
 		sgs_Serialize( C ) != SGS_SUCCESS ||
 		!sgs_ParseString( C, -1, &var, &varsize ) )
@@ -358,6 +381,55 @@ static int ppjobI_set( SGS_CTX )
 	sgsmutex_unlock( job->mutex );
 	
 	sgs_PushBool( C, 1 );
+	return 1;
+}
+
+static int ppjobI_set_if( SGS_CTX )
+{
+	char* str, *var, *var2;
+	sgs_SizeVal size, varsize, var2size;
+	int ssz = sgs_StackSize( C );
+	PPJOB_IHDR( set_if );
+	
+#define PPJOBI_SET_IF_MSG "ppjob.set_if(): unexpected arguments; " \
+			"function expects 3 arguments: string (size > 0), " \
+			"serializable, serializable"
+	
+	if( ssz != 3 ||
+		!sgs_ParseString( C, 1, &str, &size ) ||
+		size == 0 )
+		STDLIB_WARN( PPJOBI_SET_IF_MSG )
+	
+	sgs_PushItem( C, 2 );
+	if( sgs_Serialize( C ) != SGS_SUCCESS ||
+		!sgs_ParseString( C, -1, &var, &varsize ) )
+		STDLIB_WARN( PPJOBI_SET_IF_MSG )
+	
+	sgs_PushItem( C, 3 );
+	if( sgs_Serialize( C ) != SGS_SUCCESS ||
+		!sgs_ParseString( C, -1, &var2, &var2size ) )
+		STDLIB_WARN( PPJOBI_SET_IF_MSG )
+	
+	sgsmutex_lock( job->mutex );
+	{
+		ppmapitem_t* item = ppjob_map_find( job, str, size );
+		if( !item )
+		{
+			sgs_Printf( C, SGS_WARNING, "ppjob.set_if(): "
+				"could not find item \"%.*s\"", size, str );
+			return 0;
+		}
+		else if( item->datasize == var2size && 
+			memcmp( item->data + item->keysize, var2, var2size ) == 0 )
+		{
+			ppjob_map_set( job, str, size, var, varsize );
+			sgs_PushBool( C, 1 );
+		}
+		else
+			sgs_PushBool( C, 0 );
+	}
+	sgsmutex_unlock( job->mutex );
+	
 	return 1;
 }
 
@@ -382,8 +454,10 @@ static int ppjob_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( 0 == strcmp( str, "start" ) ) IFN( ppjobI_start )
 	else if( 0 == strcmp( str, "wait" ) ) IFN( ppjobI_wait )
 	
+	else if( 0 == strcmp( str, "has" ) ) IFN( ppjobI_has )
 	else if( 0 == strcmp( str, "get" ) ) IFN( ppjobI_get )
 	else if( 0 == strcmp( str, "set" ) ) IFN( ppjobI_set )
+	else if( 0 == strcmp( str, "set_if" ) ) IFN( ppjobI_set_if )
 	
 	else if( 0 == strcmp( str, "state" ) ) return ppjobP_state( C, data );
 	
