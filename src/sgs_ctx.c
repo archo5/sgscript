@@ -147,7 +147,13 @@ void sgs_DestroyEngine( SGS_CTX )
 
 const char* sgs_CodeString( int type, int val )
 {
-	if( type == SGS_CODE_VT )
+	if( type == SGS_CODE_ER )
+	{
+		if( val < SGS_EINPROC || val > SGS_SUCCESS )
+			return NULL;
+		return sgs_ErrNames[  -  val ];
+	}
+	else if( type == SGS_CODE_VT )
 	{
 		if( val < 0 || val >= SGS_VT__COUNT )
 			return NULL;

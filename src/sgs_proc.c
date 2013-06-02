@@ -1575,6 +1575,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		sgsVM_StackDump( C );
 #  endif
 #endif
+		UNUSED( sgs_ErrNames );
 		UNUSED( sgs_OpNames );
 		UNUSED( sgs_IfaceNames );
 
@@ -2428,7 +2429,7 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 {
 	char* str, *strend;
 	sgs_SizeVal size;
-	if( !sgs_ParseString( C, 0, &str, &size ) )
+	if( !sgs_ParseString( C, -1, &str, &size ) )
 		return SGS_EINVAL;
 
 	strend = str + size;

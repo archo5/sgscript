@@ -265,6 +265,7 @@ static SGS_INLINE sgs_Context* sgs_CreateEngine()
 void sgs_DestroyEngine( SGS_CTX );
 
 
+#define SGS_CODE_ER 0 /* error codes */
 #define SGS_CODE_VT 1 /* variable type */
 #define SGS_CODE_OP 2 /* VM instruction */
 #define SGS_CODE_OI 3 /* object interface */

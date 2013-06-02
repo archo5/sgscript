@@ -681,6 +681,12 @@ struct _sgs_Context
 
 #ifdef SGS_INTERNAL_STRINGTABLES
 
+static const char* sgs_ErrNames[] =
+{
+	"SUCCESS", "ENOTFND", "ECOMP", "ENOTOBJ",
+	"ENOTSUP", "EBOUNDS", "EINVAL", "EINPROC"
+};
+
 static const char* sgs_VarNames[] =
 {
 	"null",
