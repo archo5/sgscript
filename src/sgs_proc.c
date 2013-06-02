@@ -2016,10 +2016,14 @@ SGSRESULT sgs_StoreIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name )
 {
 	int ret;
+	sgs_Variable str;
 	sgs_VarPtr pos;
 	sgs_PushString( C, name );
 	pos = stk_getpos( C, -1 );
+	str = *pos;
+	sgs_Acquire( C, &str );
 	ret = sgsSTD_GlobalGet( C, pos, pos, 1 );
+	sgs_Release( C, &str );
 	if( ret != SGS_SUCCESS )
 		sgs_Pop( C, 1 );
 	return ret;
