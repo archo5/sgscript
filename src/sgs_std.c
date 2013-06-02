@@ -812,21 +812,10 @@ static DictHdr* mkdict( SGS_CTX )
 #define HTHDR DictHdr* dh = (DictHdr*) data->data; VHTable* ht = &dh->ht;
 static void* sgsstd_dict_functable[];
 
-static void _dict_clearvals( SGS_CTX, VHTable* ht, int dch )
-{
-	VHTableVar* p = ht->vars, *pend = ht->vars + vht_size( ht );
-	while( p < pend )
-	{
-		sgs_ReleaseOwned( C, &p->var, dch );
-		p++;
-	}
-}
-
-static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data, int dch )
+static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
 	HTHDR;
-	_dict_clearvals( C, ht, dch );
-	vht_free( ht, C );
+	vht_free( ht, C, dco );
 	sgs_Dealloc( dh );
 	return SGS_SUCCESS;
 }
@@ -1153,8 +1142,7 @@ static int sgsstd_dict( SGS_CTX )
 		sgs_Variable val;
 		if( !sgs_ParseString( C, i, &kstr, &ksize ) )
 		{
-			_dict_clearvals( C, ht, 1 );
-			vht_free( ht, C );
+			vht_free( ht, C, 1 );
 			sgs_Dealloc( ht );
 			sgs_Printf( C, SGS_WARNING, "dict() - key argument %d is not a string", i );
 			return 0;
@@ -2236,8 +2224,7 @@ int sgsSTD_MakeDict( SGS_CTX, int cnt )
 		sgs_Variable val;
 		if( !sgs_ParseString( C, i - cnt, &kstr, &ksize ) )
 		{
-			_dict_clearvals( C, ht, 1 );
-			vht_free( ht, C );
+			vht_free( ht, C, 1 );
 			sgs_Dealloc( ht );
 			sgs_Pop( C, sgs_StackSize( C ) - ssz );
 			return SGS_EINVAL;

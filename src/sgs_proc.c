@@ -288,13 +288,13 @@ void vht_init( VHTable* vht, SGS_CTX )
 	vht->mem = 0;
 }
 
-void vht_free( VHTable* vht, SGS_CTX )
+void vht_free( VHTable* vht, SGS_CTX, int dco )
 {
 	int32_t i;
 	for( i = 0; i < vht_size( vht ); ++i )
 	{
 		sgs_VarPtr p = &vht->vars[ i ].var;
-		VAR_RELEASE( p );
+		sgs_ReleaseOwned( C, p, dco );
 	}
 	ht_free( &vht->ht, C );
 	if( vht->vars )

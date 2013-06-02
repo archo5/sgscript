@@ -571,7 +571,7 @@ typedef struct _sgs_VHTable
 sgs_VHTable;
 
 void sgs_vht_init( sgs_VHTable* vht, SGS_CTX );
-void sgs_vht_free( sgs_VHTable* vht, SGS_CTX );
+void sgs_vht_free( sgs_VHTable* vht, SGS_CTX, int dco );
 sgs_VHTableVar* sgs_vht_get( sgs_VHTable* vht, const char* key, int32_t size );
 sgs_VHTableVar* sgs_vht_getS( sgs_VHTable* vht, sgs_string_t* S );
 void sgs_vht_set( sgs_VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SGS_CTX );
