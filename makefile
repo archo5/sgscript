@@ -55,6 +55,8 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
 # the libraries
 $(OUTDIR)/sgsjson$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsjson.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgsjson.c -shared $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+$(OUTDIR)/sgspproc$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgspproc.c
+	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgspproc.c -shared $(LFLAGS) -lpthread -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 # the tools
 $(OUTDIR)/sgstest$(BINEXT): $(OUTFILE) $(EXTDIR)/sgstest.c $(OUTDIR)/sgsjson$(LIBEXT)
 	$(CC) -o $@ $(EXTDIR)/sgstest.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
@@ -64,11 +66,19 @@ $(OUTDIR)/sgsvm$(BINEXT): $(OUTFILE) $(EXTDIR)/sgsvm.c $(EXTDIR)/sgs_idbg.c $(EX
 	$(CC) -o $@ $(EXTDIR)/sgsvm.c $(EXTDIR)/sgs_idbg.c $(EXTDIR)/sgs_prof.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgsc$(BINEXT): $(OUTFILE) $(EXTDIR)/sgsc.c
 	$(CC) -o $@ $(EXTDIR)/sgsc.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+
 .PHONY: tools
-tools: $(OUTDIR)/sgsjson$(LIBEXT) $(OUTDIR)/sgstest$(BINEXT) $(OUTDIR)/sgsapitest$(BINEXT) $(OUTDIR)/sgsvm$(BINEXT) $(OUTDIR)/sgsc$(BINEXT)
+tools: $(OUTDIR)/sgsjson$(LIBEXT) \
+		$(OUTDIR)/sgspproc$(LIBEXT) \
+		$(OUTDIR)/sgstest$(BINEXT) \
+		$(OUTDIR)/sgsapitest$(BINEXT) \
+		$(OUTDIR)/sgsvm$(BINEXT) \
+		$(OUTDIR)/sgsc$(BINEXT)
+
 .PHONY: test
 test: $(OUTDIR)/sgstest$(BINEXT)
 	$(OUTDIR)/sgstest
+
 .PHONY: apitest
 apitest: $(OUTDIR)/sgsapitest$(BINEXT)
 	$(OUTDIR)/sgsapitest
