@@ -567,9 +567,11 @@ static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 
 static int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data, int depth )
 {
+	char bfr[ 32 ];
 	int i;
 	SGSARR_HDR;
-	sgs_PushString( C, "array\n[" );
+	sprintf( bfr, "array (%d)\n[", hdr->size );
+	sgs_PushString( C, bfr );
 	if( depth )
 	{
 		if( hdr->size )
@@ -822,9 +824,11 @@ static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 
 static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data, int depth )
 {
+	char bfr[ 32 ];
 	HTHDR;
 	VHTableVar *pair = ht->vars, *pend = ht->vars + vht_size( ht );
-	sgs_PushString( C, "dict\n{" );
+	sprintf( bfr, "dict (%d)\n{", vht_size( ht ) );
+	sgs_PushString( C, bfr );
 	if( depth )
 	{
 		if( vht_size( ht ) )
