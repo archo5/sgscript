@@ -506,7 +506,6 @@ int json_module_entry_point( SGS_CTX )
 	sgs_StoreGlobal( C, "json_decode" );
 	sgs_PushCFunction( C, json_encode );
 	sgs_StoreGlobal( C, "json_encode" );
-	sgs_PushBool( C, 1 );
-	return 1;
+	return SGS_SUCCESS;
 }
 

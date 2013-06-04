@@ -130,7 +130,8 @@ void sgs_DestroyEngine( SGS_CTX )
 		{
 			string_t* st = (string_t*) p->ptr;
 			st->refcount--;
-			sgs_BreakIf( st->refcount != 0 );
+			sgs_BreakIf( st->refcount > 0 );
+			sgs_BreakIf( st->refcount < 0 );
 			sgs_Dealloc( st );
 		}
 		p++;

@@ -19,7 +19,14 @@ static int isoneofN( char ch, const char* what, int size )
 
 static int is_keyword( TokenList tok, const char* text )
 {
-	return *tok == ST_KEYWORD && tok[ 1 ] == strlen( text ) && strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
+	return *tok == ST_KEYWORD && tok[ 1 ] == strlen( text ) &&
+		strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
+}
+
+static int is_ident( TokenList tok, const char* text )
+{
+	return *tok == ST_IDENT && tok[ 1 ] == strlen( text ) &&
+		strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
 }
 
 
@@ -107,6 +114,7 @@ FTComp;
 #define SFTC_HASERR ( F->C->state & SGS_HAS_ERRORS )
 #define SFTC_SETERR F->C->state |= SGS_HAS_ERRORS
 #define SFTC_ISKEY( name ) is_keyword( F->at, name )
+#define SFTC_IS_ID( name ) is_ident( F->at, name )
 #define SFTC_LINENUM sgsT_LineNum( F->at )
 #define SFTC_PRINTERR( what ) sgs_Printf( F->C, SGS_ERROR, "[line %d] " what, SFTC_LINENUM )
 #define SFTC_UNEXP sgs_Printf( F->C, SGS_ERROR, "Unexpected end of code", SFTC_LINENUM )
@@ -1150,6 +1158,65 @@ fail:
 	return NULL;
 }
 
+SFTRET parse_command( SFTC, int multi )
+{
+	FTNode *nargs = NULL;
+	TokenList begin = SFTC_AT;
+
+	FUNC_BEGIN;
+	SFTC_NEXT;
+	
+	nargs = parse_explist( F, ';' );
+	if( !nargs ) goto fail;
+	SFTC_NEXT;
+	
+	if( multi )
+	{
+		/* one argument to one function call */
+		FTNode *r = NULL, *n = NULL, *p = nargs->child;
+		
+		if( !p )
+		{
+			if( nargs ) SFTC_DESTROY( nargs );
+			FUNC_END;
+			return make_node( SFT_BLOCK, begin, NULL, NULL );
+		}
+		
+		nargs->child = NULL;
+		SFTC_DESTROY( nargs );
+		
+		while( p )
+		{
+			FTNode* nn = make_node( SFT_FCALL, begin, NULL,
+				make_node( SFT_IDENT, begin, 
+					make_node( SFT_EXPLIST, p->token, NULL, p ),
+						NULL ) );
+			FTNode* pp = p;
+			p = p->next;
+			pp->next = NULL;
+			if( !r )
+				r = n = nn;
+			else
+				n = n->next = nn;
+		}
+		
+		return make_node( SFT_BLOCK, begin, NULL, r );
+	}
+	else
+	{
+		/* one function call */
+		FTNode* nname = make_node( SFT_IDENT, begin, nargs, NULL );
+		FUNC_END;
+		return make_node( SFT_FCALL, begin, NULL, nname );
+	}
+	
+fail:
+	if( nargs ) SFTC_DESTROY( nargs );
+	SFTC_SETERR;
+	FUNC_END;
+	return NULL;
+}
+
 SFTRET parse_stmt( SFTC )
 {
 	FTNode* node;
@@ -1251,6 +1318,20 @@ SFTRET parse_stmt( SFTC )
 		}
 
 		SFTC_NEXT;
+		FUNC_END;
+		return node;
+	}
+	/* SIMPLE COMMANDS */
+	else if( SFTC_IS_ID( "print" ) )
+	{
+		node = parse_command( F, 0 );
+		FUNC_END;
+		return node;
+	}
+	/* MULTIPLIED COMMANDS */
+	else if( SFTC_IS_ID( "include" ) )
+	{
+		node = parse_command( F, 1 );
 		FUNC_END;
 		return node;
 	}

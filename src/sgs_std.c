@@ -1973,24 +1973,42 @@ static int sgsstd_include_shared( SGS_CTX )
 			STDLIB_WARN( "feature is not supported on this platform" )
 		else STDLIB_WARN( "unknown error occured" )
 	}
-	else
-		sgsstd__setinc( C, 0 );
 	
-	return func( C );
+	ret = func( C );
+	if( ret != SGS_SUCCESS )
+		STDLIB_WARN( "module failed to initialize" )
+	
+	sgsstd__setinc( C, 0 );
+	sgs_PushBool( C, TRUE );
+	return 1;
 }
 
 static int sgsstd_include_module( SGS_CTX )
 {
+	int ret;
+	sgs_Variable backup;
 	SGSBASEFN( "include_module" );
 	if( sgs_StackSize( C ) < 1 || !sgs_ParseString( C, 0, NULL, NULL ) )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1-2 arguments: string[, bool]" )
+	
+	sgs_GetStackItem( C, 0, &backup );
+	sgs_Acquire( C, &backup );
+	
 	sgs_PushString( C, "sgs" );
 	sgs_PushItem( C, 0 );
 	sgs_PushString( C, SGS_MODULE_EXT );
 	sgs_StringMultiConcat( C, 3 );
 	sgs_StoreItem( C, 0 );
-	return sgsstd_include_shared( C );
+	
+	ret = sgsstd_include_shared( C );
+	if( !ret )
+	{
+		sgs_PushVariable( C, &backup );
+		sgs_StoreItem( C, 0 );
+	}
+	sgs_Release( C, &backup );
+	return ret;
 }
 
 static int sgsstd_include( SGS_CTX )
@@ -2009,13 +2027,20 @@ static int sgsstd_include( SGS_CTX )
 	
 	oml = C->minlev;
 	C->minlev = INT32_MAX;
-	if( sgsstd_include_library( C ) ) goto success;
-	if( sgsstd_include_file( C ) ) goto success;
-	if( sgsstd_include_module( C ) ) goto success;
-	if( sgsstd_include_shared( C ) ) goto success;
+	
+	if( sgsstd_include_library( C ) && sgs_ToBool( C, -1 ) ) goto success;
+	sgs_Pop( C, sgs_StackSize( C ) - ssz );
+	
+	if( sgsstd_include_file( C ) && sgs_ToBool( C, -1 ) ) goto success;
+	sgs_Pop( C, sgs_StackSize( C ) - ssz );
+	
+	if( sgsstd_include_module( C ) && sgs_ToBool( C, -1 ) ) goto success;
+	sgs_Pop( C, sgs_StackSize( C ) - ssz );
+	
+	if( sgsstd_include_shared( C ) && sgs_ToBool( C, -1 ) ) goto success;
 	
 	C->minlev = oml;
-	return sgs_Printf( C, SGS_WARNING, "could not find '%.*s'", fnsize, fnstr );
+	return sgs_Printf( C, SGS_WARNING, "could not load '%.*s'", fnsize, fnstr );
 	
 success:
 	C->minlev = oml;
