@@ -85,6 +85,7 @@ struct _sgs_StackFrame
 	const uint32_t* code;
 	const uint32_t* iptr;
 	const uint32_t* iend;
+	const char*     nfname;
 	sgs_StackFrame* prev;
 	sgs_StackFrame* next;
 };
@@ -282,7 +283,11 @@ void sgs_Writef( SGS_CTX, const char* what, ... );
 
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
 void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
-void sgs_Printf( SGS_CTX, int type, const char* what, ... );
+int sgs_Printf( SGS_CTX, int type, const char* what, ... );
+int sgs_HasFuncName( SGS_CTX );
+void sgs_FuncName( SGS_CTX, const char* fnliteral );
+#define SGSFN( x ) sgs_FuncName( C, x )
+#define SGSBASEFN( x ) if( !sgs_HasFuncName( C ) ) sgs_FuncName( C, x )
 
 SGSBOOL sgs_GetHookFunc( SGS_CTX, sgs_HookFunc* outf, void** outc );
 void sgs_SetHookFunc( SGS_CTX, sgs_HookFunc func, void* ctx );

@@ -73,6 +73,8 @@ int load_testfiles( const char* dir, testfile** files, int* count )
 		strcpy( TF[ TFC ].fullname, namebuf );
 		TF[ TFC ].sucfail = disp;
 		TF[ TFC ].loadtf = strstr( e->d_name, "TF" ) != NULL;
+		if( TF[ TFC ].loadtf )
+			TF[ TFC ].sucfail = 1;
 		TF[ TFC ].sortkey = ( disp != 1 ) * 2 + ( disp != -1 ) * 1 + TF[ TFC ].loadtf * 4;
 		TFC++;
 	}
@@ -218,6 +220,14 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 	tm1 = sgs_GetTime();
 	retval = sgs_ExecFile( C, fname );
 	tm2 = sgs_GetTime();
+	
+	if( strstr( nameonly, "TF" ) != NULL &&
+		sgs_PushGlobal( C, "tests_failed" ) == SGS_SUCCESS )
+	{
+		if( sgs_GetInt( C, -1 ) )
+			retval = SGS_EINPROC;
+		sgs_Pop( C, 1 );
+	}
 
 	fprintf( fp, "\n\n" );
 	fclose( fp );

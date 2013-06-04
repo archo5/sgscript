@@ -243,19 +243,26 @@ void sgs_SetHookFunc( SGS_CTX, sgs_HookFunc func, void* ctx )
 	C->hook_ctx = ctx;
 }
 
-void sgs_Printf( SGS_CTX, int type, const char* what, ... )
+
+int sgs_Printf( SGS_CTX, int type, const char* what, ... )
 {
 	char buf[ SGS_OUTPUT_STACKBUF_SIZE ];
 	MemBuf info = membuf_create();
-	int cnt;
+	int off = 0, cnt = 0, slen = 0;
 	va_list args;
 	char* ptr = buf;
 
 	if( type < C->minlev )
-		return;
+		return 0;
+	
+	if( C->sf_last && C->sf_last->nfname )
+	{
+		slen = strlen( C->sf_last->nfname );
+		cnt = off += slen + SGS_PRINTF_EXTRABYTES;
+	}
 
 	va_start( args, what );
-	cnt = SGS_VSPRINTF_LEN( what, args );
+	cnt += SGS_VSPRINTF_LEN( what, args );
 	va_end( args );
 
 	if( cnt >= SGS_OUTPUT_STACKBUF_SIZE )
@@ -263,16 +270,36 @@ void sgs_Printf( SGS_CTX, int type, const char* what, ... )
 		membuf_resize( &info, C, cnt + 1 );
 		ptr = info.ptr;
 	}
+	
+	if( C->sf_last && C->sf_last->nfname )
+	{
+		memcpy( ptr, C->sf_last->nfname, slen );
+		memcpy( ptr + slen, SGS_PRINTF_EXTRASTRING, SGS_PRINTF_EXTRABYTES );
+	}
 
 	va_start( args, what );
-	vsprintf( ptr, what, args );
+	vsprintf( ptr + off, what, args );
 	va_end( args );
 	ptr[ cnt ] = 0;
 
 	C->print_fn( C->print_ctx, C, type, ptr );
 
 	membuf_destroy( &info, C );
+	
+	return 0;
 }
+
+void sgs_FuncName( SGS_CTX, const char* fnliteral )
+{
+	if( C->sf_last )
+		C->sf_last->nfname = fnliteral;
+}
+
+int sgs_HasFuncName( SGS_CTX )
+{
+	return !!C->sf_last && !!C->sf_last->nfname;
+}
+
 
 void* sgs_Memory( SGS_CTX, void* ptr, size_t size )
 {

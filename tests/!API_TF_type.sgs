@@ -30,12 +30,6 @@ testEqual( !type_is_callable( _N ) && !type_is_callable( _B ) && !type_is_callab
 	!type_is_callable( _S ) && type_is_callable( _F ) && type_is_callable( _C ), true, "type_is_callable - basic tests" );
 testEqual( type_is_callable( _O ), false, "type_is_callable - non-callable object" );
 testEqual( type_is_callable( closure( print, _O ) ), true, "type_is_callable - callable object" );
-testEqual( type_is_switch( _N ) && type_is_switch( _O ) && !type_is_switch( closure( print, _O ) ), true, "type_is_switch - non-numeric type tests" );
-testEqual( type_is_switch( _B ) == type_is_numeric( _B ) && type_is_switch( _I ) == type_is_numeric( _I ) &&
-	type_is_switch( _R ) == type_is_numeric( _R ) && type_is_switch( _S ) == type_is_numeric( _S ) &&
-	type_is_switch( c ) == type_is_numeric( c ), true, "type_is_switch - numeric type tests" );
-testEqual( !type_is_printable( _N ) && type_is_printable( _B ) && type_is_printable( _I ) && type_is_printable( _R ) &&
-	type_is_printable( _S ) && !type_is_printable( _F ) && !type_is_printable( _C ) && type_is_printable( _O ), true, "type_is_printable - basic tests" );
 
 	section( "type_*" );
 testEqual( type_get( _N ) == TYPE_NULL && type_get( _B ) == TYPE_BOOL && type_get( _I ) == TYPE_INT &&

@@ -15,9 +15,9 @@ var c = "banana";
 var d = " \t\r\n \t\r\n spacy \t\r\n \t\r\n ";
 
 	section( "string_cut" );
-var string_cut_error_args = "[W:string_cut() - unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]]";
-var string_cut_error_range = "[W:string_cut() - invalid character range]";
-var string_cut_error_indices = "[W:string_cut() - detected negative indices]";
+var string_cut_error_args = "[W:string_cut(): unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]]";
+var string_cut_error_range = "[W:string_cut(): invalid character range]";
+var string_cut_error_indices = "[W:string_cut(): detected negative indices]";
 testEqual( string_cut( a, 3, 5 ), "dom", "string_cut - basic cutting" );
 testEqual( string_cut( a, -10, -4 ), "dom str", "string_cut - negative indices" );
 testEqual( string_cut( a, 0, 20 ), a, "string_cut - expected positive range overflow" );
@@ -33,9 +33,9 @@ ERRORS = ""; testEqual( string_cut( a, 0, 13, STRICT_RANGES ), null, "string_cut
 ERRORS = ""; testEqual( string_cut( a, -5, -3, NO_REV_INDEX ), null, "string_cut - illegal negative indices" ); testEqual( ERRORS, string_cut_error_indices );
 
 	section( "string_part" );
-var string_part_error_args = "[W:string_part() - unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]]";
-var string_part_error_range = "[W:string_part() - invalid character range]";
-var string_part_error_indices = "[W:string_part() - detected negative indices]";
+var string_part_error_args = "[W:string_part(): unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]]";
+var string_part_error_range = "[W:string_part(): invalid character range]";
+var string_part_error_indices = "[W:string_part(): detected negative indices]";
 testEqual( string_part( a, 3, 3 ), "dom", "string_part - basic cutting" );
 testEqual( string_part( a, -10, -6 ), "dom str", "string_part - negative indices" );
 testEqual( string_part( a, 0, 20 ), a, "string_part - expected positive range overflow" );
@@ -51,7 +51,7 @@ ERRORS = ""; testEqual( string_part( a, 0, 14, STRICT_RANGES ), null, "string_pa
 ERRORS = ""; testEqual( string_part( a, -5, -3, NO_REV_INDEX ), null, "string_part - illegal negative indices" ); testEqual( ERRORS, string_part_error_indices );
 
 	section( "string_reverse" );
-var string_reverse_error_args = "[W:string_reverse() - unexpected arguments; function expects 1 argument: string]";
+var string_reverse_error_args = "[W:string_reverse(): unexpected arguments; function expects 1 argument: string]";
 testEqual( string_reverse( a ), "gnirts modnar", "string_reverse - output (odd number of chars)" );
 testEqual( string_reverse( "action" ), "noitca", "string_reverse - output (even number of chars)" );
 testEqual( typeof( string_reverse( "" ) ), "string", "string_reverse - empty strings" );
@@ -59,7 +59,7 @@ ERRORS = ""; testEqual( string_reverse(), null, "string_reverse - bad argument c
 ERRORS = ""; testEqual( string_reverse( null ), null, "string_reverse - string conversion error" ); testEqual( ERRORS, string_reverse_error_args );
 
 	section( "string_pad" );
-var string_pad_error_args = "[W:string_pad() - unexpected arguments; function expects 2-4 arguments: string, int, [string], [int]]";
+var string_pad_error_args = "[W:string_pad(): unexpected arguments; function expects 2-4 arguments: string, int, [string], [int]]";
 testEqual( string_pad( b, 8, " ", LEFT|RIGHT ), "  WHAT  ", "string_pad - output (even padding)" );
 testEqual( string_pad( b, 9, " ", LEFT|RIGHT ), "   WHAT  ", "string_pad - output (odd padding)" );
 testEqual( string_pad( b, 9, 'pad', LEFT|RIGHT ), "padWHATad", "string_pad - custom padding string" );
@@ -70,13 +70,13 @@ testEqual( string_pad( b, 100, a, 1<<4 ), b, "string_pad - no (recognized) flags
 ERRORS = ""; testEqual( string_pad( b, 0, a, 0, 0 ), null, "string_pad - too many arguments" ); testEqual( ERRORS, string_pad_error_args );
 
 	section( "string_repeat" );
-var string_repeat_error_args = "[W:string_repeat() - unexpected arguments; function expects 2 arguments: string, int (>= 0)]";
+var string_repeat_error_args = "[W:string_repeat(): unexpected arguments; function expects 2 arguments: string, int (>= 0)]";
 testEqual( string_repeat( b, 3 ), b$b$b, "string_repeat - positive count" );
 testEqual( string_repeat( b, 0 ), '', "string_repeat - zero count" );
 ERRORS = ""; testEqual( string_repeat( b, -3 ), null, "string_repeat - negative count" ); testEqual( ERRORS, string_repeat_error_args );
 
 	section( "string_count" );
-var string_count_error_args = "[W:string_count() - unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [bool]]";
+var string_count_error_args = "[W:string_count(): unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [bool]]";
 testEqual( string_count( a, "ran" ), 1, "string_count - 1 match at beginning" );
 testEqual( string_count( a, "ring" ), 1, "string_count - 1 match at end" );
 testEqual( string_count( a, "box" ), 0, "string_count - 0 matches" );
@@ -87,7 +87,7 @@ testEqual( string_count( c, "ana", true ), 2, "string_count - overlapping matche
 ERRORS = ""; testEqual( string_count( c, "" ), null, "string_count - zero-length substring" ); testEqual( ERRORS, string_count_error_args );
 
 	section( "string_find" );
-var string_find_error_args = "[W:string_find() - unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [int]]";
+var string_find_error_args = "[W:string_find(): unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [int]]";
 testEqual( string_find( a, "ran" ), 0, "string_find - 1 match at beginning" );
 testEqual( string_find( a, "ring" ), 9, "string_find - 1 match at end" );
 testEqual( string_find( a, "box" ), null, "string_find - no matches" );
@@ -97,7 +97,7 @@ testEqual( string_find( c, "na", 4 ), 4, "string_find - matching offset right at
 ERRORS = ""; testEqual( string_find( c, "" ), null, "string_find - zero-length substring" ); testEqual( ERRORS, string_find_error_args );
 
 	section( "string_find_rev" );
-var string_find_rev_error_args = "[W:string_find_rev() - unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [int]]";
+var string_find_rev_error_args = "[W:string_find_rev(): unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [int]]";
 testEqual( string_find_rev( a, "ran" ), 0, "string_find_rev - 1 match at beginning" );
 testEqual( string_find_rev( a, "ring" ), 9, "string_find_rev - 1 match at end" );
 testEqual( string_find_rev( a, "box" ), null, "string_find_rev - no matches" );
@@ -107,7 +107,7 @@ testEqual( string_find_rev( c, "ba", 0 ), 0, "string_find_rev - matching offset 
 ERRORS = ""; testEqual( string_find_rev( c, "" ), null, "string_find_rev - zero-length substring" ); testEqual( ERRORS, string_find_rev_error_args );
 
 	section( "string_replace" );
-var string_replace_error_args = "[W:string_replace() - unexpected arguments; function expects 3 arguments: string, ((string, string) | (array, string) | (array, array))]";
+var string_replace_error_args = "[W:string_replace(): unexpected arguments; function expects 3 arguments: string, ((string|array), string) | (string, string)]";
 testEqual( string_replace( a, "random", "exact" ), "exact string", "string_replace - 1 match at beginning" );
 testEqual( string_replace( a, "string", "cat" ), "random cat", "string_replace - 1 match at end" );
 testEqual( string_replace( a, "box", "wat" ), "random string", "string_replace - no matches" );
@@ -153,7 +153,7 @@ testEqual( string_explode( "abc5", "" )$'', "[a,b,c,5]", "string_explode - empty
 testEqual( string_charcode( "%?" ), 37, "string_charcode - default behavior" );
 testEqual( string_charcode( "%?", -1 ), 63, "string_charcode - reverse indexing" );
 ERRORS = ""; testEqual( string_charcode( "%?", -3 ), null, "string_charcode - invalid reverse index" );
-	testEqual( ERRORS, "[W:string_charcode() - index out of bounds]" );
+	testEqual( ERRORS, "[W:string_charcode(): index out of bounds]" );
 
 	section( "string_frombytes" );
 testEqual( string_frombytes( 33 ), "!", "string_frombytes - integer" );
@@ -161,7 +161,7 @@ testEqual( string_frombytes([72,101,108,108,111]), "Hello", "string_frombytes - 
 ERRORS = "";
 testEqual( string_frombytes( 256 ), null, "string_frombytes - invalid integer" );
 testEqual( string_frombytes([ 32, -1, 256 ]), null, "string_frombytes - invalid array" );
-var e_sfbibv = "[W:string_frombytes() - invalid byte value]"; testEqual( ERRORS, e_sfbibv $ e_sfbibv );
+var e_sfbibv = "[W:string_frombytes(): invalid byte value]"; testEqual( ERRORS, e_sfbibv $ e_sfbibv );
 
 	section( "string_utf8_decode" );
 testEqual( string_utf8_decode( "pie" )$"", "[112,105,101]", "string_utf8_decode - ASCII code points" );

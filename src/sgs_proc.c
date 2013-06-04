@@ -245,6 +245,7 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, instr_t* cod
 		F->iend = F->iptr + ( ( fn->size - fn->instr_off ) / sizeof( instr_t ) );
 	}
 	F->lntable = T;
+	F->nfname = NULL;
 	F->next = NULL;
 	F->prev = C->sf_last;
 	if( C->sf_last )
@@ -742,7 +743,7 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type )
 			cvar = *stk_getpos( C, -1 );
 			stk_pop1nr( C );
 		}
-		else
+		else if( type == SVT_STRING )
 		{
 			var_create_str( C, &cvar, "object", 6 );
 			ret = SGS_SUCCESS;

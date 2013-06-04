@@ -80,5 +80,10 @@
 	smaller numbers decrease cache hit rate */
 #define SGS_DICT_CACHE_SIZE 8
 
+/* postfix for function names in C functions
+	EXTRABYTES should be set to the length of EXTRASTRING */
+#define SGS_PRINTF_EXTRASTRING "(): "
+#define SGS_PRINTF_EXTRABYTES 4
+
 
 #endif /* SGS_CFG_H_INCLUDED */
