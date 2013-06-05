@@ -1961,29 +1961,39 @@ SGSRESULT sgs_PushProperty( SGS_CTX, const char* name )
 
 SGSRESULT sgs_PushIndex( SGS_CTX, int obj, int idx )
 {
+	int32_t oel = C->minlev;
 	int ret;
 	sgs_Variable vo, vi;
 	if( !sgs_GetStackItem( C, obj, &vo ) ||
 		!sgs_GetStackItem( C, idx, &vi ) )
 		return SGS_EBOUNDS;
+	
+	C->minlev = INT32_MAX;
 
 	stk_push_null( C );
 	ret = vm_getprop( C, stk_absindex( C, -1 ), &vo, &vi, TRUE );
 	if( ret != SGS_SUCCESS )
 		stk_pop1( C );
+	
+	C->minlev = oel;
 
 	return ret;
 }
 
 SGSRESULT sgs_PushIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 {
+	int32_t oel = C->minlev;
 	int ret;
 	sgs_Variable Sobj = *obj, Sidx = *idx;
+	
+	C->minlev = INT32_MAX;
 
 	stk_push_null( C );
 	ret = vm_getprop( C, stk_absindex( C, -1 ), &Sobj, &Sidx, TRUE );
 	if( ret != SGS_SUCCESS )
 		stk_pop1( C );
+	
+	C->minlev = oel;
 
 	return ret;
 }
@@ -2102,7 +2112,8 @@ SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
 	int ret;
 	sgs_Variable func;
 	int stksize = sgs_StackSize( C );
-	if( stksize < args + 1 )
+	gotthis = !!gotthis;
+	if( stksize < args + gotthis + 1 )
 		return SGS_EINVAL;
 
 	func = *stk_getpos( C, -1 );

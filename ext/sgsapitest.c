@@ -341,6 +341,64 @@ DEFINE_TEST( globals_101 )
 	destroy_context( C );
 }
 
+DEFINE_TEST( libraries )
+{
+	SGS_CTX = get_context();
+	
+	atf_assert( sgs_LoadLib_Fmt( C ) == SGS_SUCCESS );
+	atf_assert( sgs_LoadLib_IO( C ) == SGS_SUCCESS );
+	atf_assert( sgs_LoadLib_Math( C ) == SGS_SUCCESS );
+	atf_assert( sgs_LoadLib_OS( C ) == SGS_SUCCESS );
+	atf_assert( sgs_LoadLib_String( C ) == SGS_SUCCESS );
+	atf_assert( sgs_LoadLib_Type( C ) == SGS_SUCCESS );
+	
+	atf_assert( sgs_PushGlobal( C, "fmt_text" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobal( C, "io_file" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobal( C, "pow" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobal( C, "os_date_string" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobal( C, "string_replace" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobal( C, "type_cast" ) == SGS_SUCCESS );
+
+	destroy_context( C );
+}
+
+DEFINE_TEST( function_calls )
+{
+	SGS_CTX = get_context();
+	
+	atf_assert( sgs_PushGlobal( C, "array" ) == SGS_SUCCESS );
+	atf_assert( sgs_Call( C, 5, 1 ) == SGS_EINVAL );
+	atf_assert( sgs_Call( C, 1, 0 ) == SGS_EINVAL );
+	atf_assert( sgs_Call( C, 0, 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobal( C, "array" ) == SGS_SUCCESS );
+	atf_assert( sgs_Call( C, 0, 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 1 );
+	atf_assert( sgs_ItemType( C, -1 ) == SVT_OBJECT );
+	
+	atf_assert( sgs_PushGlobal( C, "array" ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 2 );
+	atf_assert( sgs_ThisCall( C, 1, 0 ) == SGS_EINVAL );
+	atf_assert( sgs_ThisCall( C, 0, 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 0 );
+
+	destroy_context( C );
+}
+
+DEFINE_TEST( complex_gc )
+{
+	SGS_CTX = get_context();
+	
+	const char* str =
+	"o = { a = [ { b = {}, c = 5 }, { d = { e = {} }, f = [] } ], g = [] };"
+	"o.a[0].parent = o; o.a[1].d.parent = o; o.a[1].d.e.parent = o.a[1].d;"
+	"o.a[1].f.push(o); o.g.push( o.a[1].f ); o.a.push( o.a );";
+	
+	atf_assert( sgs_ExecString( C, str ) == SGS_SUCCESS );
+	atf_assert( sgs_GCExecute( C ) == SGS_SUCCESS );
+
+	destroy_context( C );
+}
+
 
 test_t all_tests[] =
 {
@@ -351,6 +409,9 @@ test_t all_tests[] =
 	TST( stack_pushstore ),
 	TST( stack_propindex ),
 	TST( globals_101 ),
+	TST( libraries ),
+	TST( function_calls ),
+	TST( complex_gc ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }
 
