@@ -258,6 +258,7 @@ static int sgsstd_arrayI_resize( SGS_CTX )
 			" function expects 1 argument: int (>= 0)" )
 
 	sgsstd_array_reserve( C, data, sz );
+	SGSARR_HDRUPDATE;
 	sgsstd_array_adjust( C, hdr, sz );
 	sgs_Pop( C, sgs_StackSize( C ) - 1 );
 	return 1;
