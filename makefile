@@ -3,6 +3,7 @@ ifdef SystemRoot
 	RM = del /Q
 	FixPath = $(subst /,\,$1)
 	PLATFLAGS = -lkernel32
+	SOCKLIBS = -lws2_32
 	BINEXT=.exe
 	LIBEXT=.dll
 else
@@ -57,6 +58,8 @@ $(OUTDIR)/sgsjson$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsjson.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgsjson.c -shared $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgspproc$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgspproc.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgspproc.c -shared $(LFLAGS) -lpthread -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+$(OUTDIR)/sgssockets$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgssockets.c
+	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgssockets.c -shared $(LFLAGS) $(SOCKLIBS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 # the tools
 $(OUTDIR)/sgstest$(BINEXT): $(OUTFILE) $(EXTDIR)/sgstest.c $(OUTDIR)/sgsjson$(LIBEXT)
 	$(CC) -o $@ $(EXTDIR)/sgstest.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
@@ -70,6 +73,7 @@ $(OUTDIR)/sgsc$(BINEXT): $(OUTFILE) $(EXTDIR)/sgsc.c
 .PHONY: tools
 tools: $(OUTDIR)/sgsjson$(LIBEXT) \
 		$(OUTDIR)/sgspproc$(LIBEXT) \
+		$(OUTDIR)/sgssockets$(LIBEXT) \
 		$(OUTDIR)/sgstest$(BINEXT) \
 		$(OUTDIR)/sgsapitest$(BINEXT) \
 		$(OUTDIR)/sgsvm$(BINEXT) \

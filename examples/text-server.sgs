@@ -1,0 +1,17 @@
+
+include "sockets";
+
+S = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP );
+
+if( !S.bind_port( 80 ) || !S.listen( 10 ) )
+	sys_error( SGS_ERROR, "Failed to configure socket (occupied port 80)?" );
+
+for(;;)
+{
+	C = S.accept();
+	println( "Request! Let's send something..." );
+	C.send( "This is a test." );
+	C.shutdown( SHUT_WR );
+	C.close();
+	C = null;
+}
