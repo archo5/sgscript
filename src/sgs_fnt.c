@@ -1321,15 +1321,17 @@ SFTRET parse_stmt( SFTC )
 		FUNC_END;
 		return node;
 	}
+	/* COMMAND HELPERS */
+#define NOT_FCALL ( !sgsT_Next( F->at ) || *sgsT_Next( F->at ) != '(' )
 	/* SIMPLE COMMANDS */
-	else if( SFTC_IS_ID( "print" ) )
+	else if( SFTC_IS_ID( "print" ) && NOT_FCALL )
 	{
 		node = parse_command( F, 0 );
 		FUNC_END;
 		return node;
 	}
 	/* MULTIPLIED COMMANDS */
-	else if( SFTC_IS_ID( "include" ) )
+	else if( SFTC_IS_ID( "include" ) && NOT_FCALL )
 	{
 		node = parse_command( F, 1 );
 		FUNC_END;

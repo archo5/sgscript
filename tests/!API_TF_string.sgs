@@ -39,6 +39,7 @@ var string_part_error_indices = "[W:string_part(): detected negative indices]";
 testEqual( string_part( a, 3, 3 ), "dom", "string_part - basic cutting" );
 testEqual( string_part( a, -10, -6 ), "dom str", "string_part - negative indices" );
 testEqual( string_part( a, 0, 20 ), a, "string_part - expected positive range overflow" );
+testEqual( string_part( a, 20, 20 ), "", "string_part - expected positive range overflow" );
 testEqual( string_part( a, -20, -1 ), "rando", "string_part - expected negative range overflow" );
 testEqual( string_part( a, 3, 3, STRICT_RANGES | NO_REV_INDEX ), "dom", "string_part - basic cutting" );
 testEqual( string_part( a, 7 ), 'string', "string_part - cutting to end" );

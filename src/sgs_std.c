@@ -1688,7 +1688,7 @@ static int sgsstd_get_merged( SGS_CTX )
 static int sgsstd_print( SGS_CTX )
 {
 	int i, ssz;
-	SGSBASEFN( "println" );
+	SGSBASEFN( "print" );
 	ssz = sgs_StackSize( C );
 	for( i = 0; i < ssz; ++i )
 	{

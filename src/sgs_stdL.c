@@ -429,6 +429,7 @@ static int fmt_unpack( SGS_CTX, const char* str,
 		}
 	}
 	sgs_BreakIf( data > dataend );
+	UNUSED( dataend );
 	return si;
 }
 
@@ -727,7 +728,8 @@ static int _flt_write_rep( char* out, sgs_Real R, int sci, struct fmtspec* F )
 	int mandigs, minprec = 0, maxprec = 999, exp10 = 0;
 
 	char* obeg = out;
-	uint64_t data = AS_UINT64( &R );
+	uint64_t data;
+	memcpy( &data, &R, sizeof( R ) );
 	int sgn = ( data >> 63 ) & 1;
 	int xpn = ( data >> 52 ) & 0x7ff;
 	uint64_t mnt = data & 0xfffffffffffffULL;
@@ -2883,7 +2885,7 @@ static int sgsstd_string_part( SGS_CTX )
 	if( argc < 2 || argc > 4 ||
 		!sgs_ParseString( C, 0, &str, &size ) ||
 		!sgs_ParseInt( C, 1, &i1 ) ||
-		( i2 = size - i1 ) < 0 || /* comparison should always fail */
+		( i2 = size - i1 ) &0 || /* test should always fail */
 		( argc >= 3 && !sgs_ParseInt( C, 2, &i2 ) ) ||
 		( argc >= 4 && !sgs_ParseInt( C, 3, &flags ) ) )
 		STDLIB_WARN( "unexpected arguments; "

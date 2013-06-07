@@ -1411,6 +1411,7 @@ static void vm_make_array( SGS_CTX, int args, int16_t outpos )
 	sgs_BreakIf( sgs_StackSize( C ) < args );
 	ret = sgsSTD_MakeArray( C, args );
 	sgs_BreakIf( ret != SGS_SUCCESS );
+	UNUSED( ret );
 
 	stk_setvar( C, outpos, stk_getpos( C, -1 ) );
 	stk_pop1( C );
@@ -1422,6 +1423,7 @@ static void vm_make_dict( SGS_CTX, int args, int16_t outpos )
 	sgs_BreakIf( sgs_StackSize( C ) < args );
 	ret = sgsSTD_MakeDict( C, args );
 	sgs_BreakIf( ret != SGS_SUCCESS );
+	UNUSED( ret );
 
 	stk_setvar( C, outpos, stk_getpos( C, -1 ) );
 	stk_pop1( C );
