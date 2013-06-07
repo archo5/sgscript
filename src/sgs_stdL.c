@@ -93,6 +93,7 @@ static sgs_SizeVal fmt_pack_numitems(
 		case 'x':
 			mult = 0;
 			break;
+		case ' ': case '\t': case '\n': case '\r': break;
 		default:
 			if( first )
 			{
@@ -142,8 +143,10 @@ static sgs_SizeVal fmt_pack_numbytes(
 			break;
 		/* misc. */
 		case 'x':
+			cnt += mult;
 			mult = 0;
 			break;
+		case ' ': case '\t': case '\n': case '\r': break;
 		default:
 			if( first )
 			{
@@ -276,9 +279,13 @@ static sgs_SizeVal fmt_pack( SGS_CTX,
 			mult = 0;
 			break;
 		case 'x':
-			membuf_appchr( bfr, C, '\0' );
+			if( !mult )
+				mult = 1;
+			while( mult-- > 0 )
+				membuf_appchr( bfr, C, '\0' );
 			mult = 0;
 			break;
+		case ' ': case '\t': case '\n': case '\r': break;
 		default:
 			mult = 0;
 			break;
@@ -410,9 +417,12 @@ static int fmt_unpack( SGS_CTX, const char* str,
 			mult = 0;
 			break;
 		case 'x':
-			data++;
+			if( !mult )
+				mult = 1;
+			data += mult;
 			mult = 0;
 			break;
+		case ' ': case '\t': case '\n': case '\r': break;
 		default:
 			mult = 0;
 			break;
