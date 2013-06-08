@@ -6,7 +6,8 @@
 #define SGS_VERSION_MAJOR 0
 #define SGS_VERSION_MINOR 8
 #define SGS_VERSION_INCR  2
-#define SGS_VERSION "0.8.2"
+#define SGS_VERSION "0.9.0"
+#define SGS_API_VERSION 1
 
 #define SGS_VERSION_OFFSET 8
 
@@ -284,10 +285,6 @@ void sgs_Writef( SGS_CTX, const char* what, ... );
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
 void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
 int sgs_Printf( SGS_CTX, int type, const char* what, ... );
-int sgs_HasFuncName( SGS_CTX );
-void sgs_FuncName( SGS_CTX, const char* fnliteral );
-#define SGSFN( x ) sgs_FuncName( C, x )
-#define SGSBASEFN( x ) if( !sgs_HasFuncName( C ) ) sgs_FuncName( C, x )
 
 SGSBOOL sgs_GetHookFunc( SGS_CTX, sgs_HookFunc* outf, void** outc );
 void sgs_SetHookFunc( SGS_CTX, sgs_HookFunc func, void* ctx );
@@ -514,6 +511,16 @@ SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var );
 char* sgs_GetStringPtr( SGS_CTX, int item );
 sgs_SizeVal sgs_GetStringSize( SGS_CTX, int item );
 sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item );
+
+int sgs_HasFuncName( SGS_CTX );
+void sgs_FuncName( SGS_CTX, const char* fnliteral );
+int sgs_Errno( SGS_CTX, int clear );
+int sgs_GetLastErrno( SGS_CTX );
+
+#define SGSFN( x ) sgs_FuncName( C, x )
+#define SGSBASEFN( x ) if( !sgs_HasFuncName( C ) ) sgs_FuncName( C, x )
+#define SGSCERR sgs_Errno( C, 0 )
+#define SGSCLEARERR sgs_Errno( C, 1 )
 
 
 #ifdef __cplusplus

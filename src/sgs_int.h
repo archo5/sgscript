@@ -220,7 +220,7 @@
 	Token stream
 	<1 byte: type> <additional data> <2 bytes: line number>
 */
-/* special          id */
+/*     special          id */
 #define SGS_ST_NULL	    '\0'
 #define SGS_ST_RBRKL    '('
 #define SGS_ST_RBRKR    ')'
@@ -231,13 +231,13 @@
 #define SGS_ST_ARGSEP   ','
 #define SGS_ST_STSEP    ';'
 #define SGS_ST_PICKSEP  ':'
-/* other            id    additional data */
+/*     other            id    additional data */
 #define SGS_ST_IDENT    'N'	/* 1 byte (string size), N bytes (string), not null-terminated */
 #define SGS_ST_KEYWORD  'K'	/* same as IDENT */
 #define SGS_ST_NUMREAL  'R'	/* 8 bytes (double) */
 #define SGS_ST_NUMINT   'I'	/* 8 bytes (int64) */
 #define SGS_ST_STRING   'S'	/* 4 bytes (string size), N bytes (string), not null-terminated */
-/* operators        id    type  */
+/*     operators        id    type  */
 #define SGS_ST_OP_SEQ   200	/* ===  */
 #define SGS_ST_OP_SNEQ  201	/* !==  */
 #define SGS_ST_OP_EQ    202	/* ==   */
@@ -638,6 +638,7 @@ struct _sgs_Context
 	int           minlev;
 	sgs_PrintFunc print_fn;  /* printing function */
 	void*         print_ctx; /* printing context */
+	int           last_errno;
 
 	/* hook */
 	sgs_HookFunc  hook_fn;

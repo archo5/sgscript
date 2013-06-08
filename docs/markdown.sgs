@@ -162,7 +162,7 @@ function markdown2html( text )
 		}
 		else if( string_part( L, 0, 4 ) == "    " )
 		{
-			lines[ i ] = "</p><pre>" $ string_part( L, 4 );
+			lines[ i ] = "</p><pre>" $ htmlencode( string_part( L, 4 ) );
 			i++;
 			while( i < lines.size )
 			{
@@ -172,7 +172,7 @@ function markdown2html( text )
 					i--;
 					break;
 				}
-				lines[ i ] = string_part( L, 4 );
+				lines[ i ] = htmlencode( string_part( L, 4 ) );
 				i++;
 			}
 			if( i >= lines.size ) i--;

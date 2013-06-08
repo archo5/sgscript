@@ -1,6 +1,37 @@
 
 
+#ifdef WIN32
+#  include <winsock2.h>
+#  include <ws2tcpip.h>
+#  define EADDRINUSE WSAEADDRINUSE
+#  define EADDRNOTAVAIL WSAEADDRNOTAVAIL
+#  define EAFNOSUPPORT WSAEAFNOSUPPORT
+#  define EALREADY WSAEALREADY
+#  define ECONNABORTED WSAECONNABORTED
+#  define ECONNREFUSED WSAECONNREFUSED
+#  define ECONNRESET WSAECONNRESET
+#  define EDESTADDRREQ WSAEDESTADDRREQ
+#  define EHOSTUNREACH WSAEHOSTUNREACH
+#  define EINPROGRESS WSAEINPROGRESS
+#  define EISCONN WSAEISCONN
+#  define ELOOP WSAELOOP
+#  define EMSGSIZE WSAEMSGSIZE
+#  define ENETDOWN WSAENETDOWN
+#  define ENETRESET WSAENETRESET
+#  define ENETUNREACH WSAENETUNREACH
+#  define ENOBUFS WSAENOBUFS
+#  define ENOPROTOOPT WSAENOPROTOOPT
+#  define ENOTCONN WSAENOTCONN
+#  define ENOTSOCK WSAENOTSOCK
+#  define EOPNOTSUPP WSAEOPNOTSUPP
+#  define EPROTONOSUPPORT WSAEPROTONOSUPPORT
+#  define EPROTOTYPE WSAEPROTOTYPE
+#  define ETIMEDOUT WSAETIMEDOUT
+#  define EWOULDBLOCK WSAEWOULDBLOCK
+#endif
+
 #include <stdio.h>
+#include <errno.h>
 
 #define SGS_INTERNAL
 #define SGS_REALLY_INTERNAL
@@ -2153,6 +2184,103 @@ static int sgsstd_sys_replevel( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_errno( SGS_CTX )
+{
+	int retstr = 0;
+	
+	SGSFN( "errno" );
+	
+	if( sgs_StackSize( C ) )
+	{
+		if( sgs_StackSize( C ) != 1 ||
+			!sgs_ParseBool( C, 0, &retstr ) )
+			STDLIB_WARN( "unexpected arguments; "
+				"function expects 0-1 arguments - [bool]" )
+	}
+	
+	if( retstr )
+		sgs_PushString( C, strerror( C->last_errno ) );
+	else
+		sgs_PushInt( C, C->last_errno );
+	
+	return 1;
+}
+
+static int sgsstd_errno_string( SGS_CTX )
+{
+	sgs_Integer e;
+	
+	SGSFN( "errno_string" );
+	
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseInt( C, 0, &e ) )
+		STDLIB_WARN( "unexpected arguments; function expects 1 argument: int" )
+	
+	sgs_PushString( C, strerror( C->last_errno ) );
+	
+	return 1;
+}
+
+
+#define AE( x ) #x, (const char*) x
+static const char* errno_key_table[] =
+{
+	AE( E2BIG ), AE( EACCES ), AE( EADDRINUSE ), AE( EADDRNOTAVAIL ),
+	AE( EAFNOSUPPORT ), AE( EAGAIN ), AE( EALREADY ), AE( EBADF ),
+	AE( EBUSY ), AE( ECHILD ),
+	AE( ECONNABORTED ), AE( ECONNREFUSED ), AE( ECONNRESET ), AE( EDEADLK ),
+	AE( EDESTADDRREQ ), AE( EDOM ), AE( EEXIST ), AE( EFAULT ), AE( EFBIG ),
+	AE( EHOSTUNREACH ), AE( EILSEQ ), AE( EINPROGRESS ),
+	AE( EINTR ), AE( EINVAL ), AE( EIO ), AE( EISCONN ), AE( EISDIR ),
+	AE( ELOOP ), AE( EMFILE ), AE( EMLINK ), AE( EMSGSIZE ), AE( ENAMETOOLONG ),
+	AE( ENETDOWN ), AE( ENETRESET ), AE( ENETUNREACH ), AE( ENFILE ),
+	AE( ENOBUFS ), AE( ENODEV ), AE( ENOENT ), AE( ENOEXEC ),
+	AE( ENOLCK ), AE( ENOMEM ), AE( ENOPROTOOPT ),
+	AE( ENOSPC ), AE( ENOSYS ), AE( ENOTCONN ),
+	AE( ENOTDIR ), AE( ENOTEMPTY ), AE( ENOTSOCK ),
+	AE( ENOTTY ), AE( ENXIO ), AE( EOPNOTSUPP ),
+	AE( EPERM ), AE( EPIPE ),
+	AE( EPROTONOSUPPORT ), AE( EPROTOTYPE ), AE( ERANGE ), AE( EROFS ),
+	AE( ESPIPE ), AE( ESRCH ), AE( ETIMEDOUT ),
+	AE( EWOULDBLOCK ), AE( EXDEV ),
+
+#ifndef WIN32
+	AE( EBADMSG ), AE( ECANCELED ), AE( EIDRM ), AE( ENODATA ), AE( ENOLINK ),
+	AE( ENOMSG ), AE( ENOSR ), AE( ENOSTR ), AE( ENOTRECOVERABLE ),
+	AE( ENOTSUP ), AE( EOTHER ), AE( EOVERFLOW ), AE( EOWNERDEAD ),
+	AE( EPROTO ), AE( ETIME ), AE( ETXTBSY ),
+#endif
+	
+	NULL,
+};
+#undef AE
+
+static int sgsstd_errno_value( SGS_CTX )
+{
+	const char** ekt = errno_key_table;
+	char* str;
+	
+	SGSFN( "errno_value" );
+	
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, NULL ) )
+		STDLIB_WARN( "unexpected arguments; "
+			"function expects 1 argument: string" )
+	
+	while( *ekt )
+	{
+		if( strcmp( *ekt, str ) == 0 )
+		{
+			sgs_PushInt( C, (int) ekt[1] );
+			return 1;
+		}
+		ekt += 2;
+	}
+	
+	sgs_Printf( C, SGS_ERROR, "this errno value is unsupported" );
+	return 0;
+}
+
 static int sgsstd_sys_stat( SGS_CTX )
 {
 	sgs_Integer type;
@@ -2297,6 +2425,7 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( sys_curfile ),
 	FN( sys_print ), FN( sys_errorstate ), FN( sys_abort ),
 	FN( sys_replevel ), FN( sys_stat ),
+	FN( errno ), FN( errno_string ), FN( errno_value ),
 	FN( dumpvar ), FN( dumpvars ),
 	FN( gc_collect ),
 	FN( serialize ), FN( unserialize ),

@@ -63,6 +63,7 @@ static void ctx_init( SGS_CTX )
 	C->minlev = SGS_INFO;
 	C->print_fn = default_printfn;
 	C->print_ctx = stderr;
+	C->last_errno = 0;
 	C->hook_fn = NULL;
 	C->hook_ctx = NULL;
 
@@ -290,17 +291,6 @@ int sgs_Printf( SGS_CTX, int type, const char* what, ... )
 	return 0;
 }
 
-void sgs_FuncName( SGS_CTX, const char* fnliteral )
-{
-	if( C->sf_last )
-		C->sf_last->nfname = fnliteral;
-}
-
-int sgs_HasFuncName( SGS_CTX )
-{
-	return !!C->sf_last && !!C->sf_last->nfname;
-}
-
 
 void* sgs_Memory( SGS_CTX, void* ptr, size_t size )
 {
@@ -453,7 +443,10 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 
 	f = fopen( file, "rb" );
 	if( !f )
+	{
+		SGSCERR;
 		return SGS_ENOTFND;
+	}
 	fseek( f, 0, SEEK_END );
 	len = ftell( f );
 	fseek( f, 0, SEEK_SET );
@@ -461,6 +454,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	data = sgs_Alloc_n( char, len );
 	if( fread( data, 1, len, f ) != len )
 	{
+		SGSCERR;
 		fclose( f );
 		sgs_Dealloc( data );
 		return SGS_EINPROC;
@@ -724,5 +718,31 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end )
 {
 	return end ? C->sf_last : C->sf_first;
+}
+
+
+void sgs_FuncName( SGS_CTX, const char* fnliteral )
+{
+	if( C->sf_last )
+		C->sf_last->nfname = fnliteral;
+}
+
+int sgs_HasFuncName( SGS_CTX )
+{
+	return !!C->sf_last && !!C->sf_last->nfname;
+}
+
+int sgs_Errno( SGS_CTX, int clear )
+{
+	if( clear )
+		C->last_errno = 0;
+	else
+		C->last_errno = errno;
+	return clear;
+}
+
+int sgs_GetLastErrno( SGS_CTX )
+{
+	return C->last_errno;
 }
 

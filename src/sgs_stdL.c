@@ -5,6 +5,7 @@
 #undef __STRICT_ANSI__
 #include <math.h>
 #include <time.h>
+#include <errno.h>
 
 #define SGS_INTERNAL
 #define SGS_REALLY_INTERNAL
@@ -1389,6 +1390,8 @@ SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
 	
 */
 
+#define CRET( suc ) sgs_PushBool( C, sgs_Errno( C, suc ) ); return 1;
+
 #define FILE_READ 1
 #define FILE_WRITE 2
 
@@ -1398,7 +1401,6 @@ SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
 
 static int sgsstd_io_setcwd( SGS_CTX )
 {
-	int ret;
 	char* str;
 	sgs_SizeVal size;
 	
@@ -1408,10 +1410,8 @@ static int sgsstd_io_setcwd( SGS_CTX )
 		!sgs_ParseString( C, 0, &str, &size ) )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1 argument: string" )
-
-	ret = chdir( str );
-	sgs_PushBool( C, ret == 0 );
-	return 1;
+	
+	CRET( chdir( str ) == 0 );
 }
 
 static int sgsstd_io_getcwd( SGS_CTX )
@@ -1438,7 +1438,6 @@ static int sgsstd_io_getcwd( SGS_CTX )
 
 static int sgsstd_io_rename( SGS_CTX )
 {
-	int ret;
 	char* path, *nnm;
 	sgs_SizeVal psz, nnmsz;
 	
@@ -1456,10 +1455,8 @@ static int sgsstd_io_rename( SGS_CTX )
 		sgs_PushBool( C, FALSE );
 		return 1;
 	}
-
-	ret = rename( path, nnm );
-	sgs_PushBool( C, ret == 0 );
-	return 1;
+	
+	CRET( rename( path, nnm ) == 0 );
 }
 
 static int sgsstd_io_file_exists( SGS_CTX )
@@ -1516,7 +1513,7 @@ static int sgsstd_io_stat( SGS_CTX )
 
 	{
 		struct stat data;
-		if( stat( str, &data ) != 0 )
+		if( !sgs_Errno( C, stat( str, &data ) == 0 ) )
 			return 0;
 
 		/* --- */
@@ -1557,13 +1554,11 @@ static int sgsstd_io_dir_create( SGS_CTX )
 		,0777
 #endif
 	);
-	sgs_PushBool( C, ret == 0 );
-	return 1;
+	CRET( ret == 0 );
 }
 
 static int sgsstd_io_dir_delete( SGS_CTX )
 {
-	int ret;
 	char* str;
 	sgs_SizeVal size;
 	
@@ -1573,15 +1568,12 @@ static int sgsstd_io_dir_delete( SGS_CTX )
 		!sgs_ParseString( C, 0, &str, &size ) )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1 argument: string" )
-
-	ret = rmdir( str );
-	sgs_PushBool( C, ret == 0 );
-	return 1;
+	
+	CRET( rmdir( str ) == 0 );
 }
 
 static int sgsstd_io_file_delete( SGS_CTX )
 {
-	int ret;
 	char* str;
 	sgs_SizeVal size;
 	
@@ -1591,10 +1583,8 @@ static int sgsstd_io_file_delete( SGS_CTX )
 		!sgs_ParseString( C, 0, &str, &size ) )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1 argument: string" )
-
-	ret = remove( str );
-	sgs_PushBool( C, ret == 0 );
-	return 1;
+	
+	CRET( remove( str ) == 0 );
 }
 
 static int sgsstd_io_file_write( SGS_CTX )
@@ -1614,13 +1604,20 @@ static int sgsstd_io_file_write( SGS_CTX )
 		sgs_SizeVal wsz;
 		FILE* fp = fopen( path, "wb" );
 		if( !fp )
+		{
+			SGSCERR;
 			STDLIB_WARN( "failed to create file" )
+		}
+		errno = 0;
 		wsz = fwrite( data, 1, dsz, fp );
+		if( wsz < dsz )
+			SGSCERR;
 		fclose( fp );
 		if( wsz < dsz )
 			STDLIB_WARN( "failed to write to file" )
 	}
-
+	
+	SGSCLEARERR;
 	sgs_PushBool( C, TRUE );
 	return 1;
 }
@@ -1641,13 +1638,19 @@ static int sgsstd_io_file_read( SGS_CTX )
 		sgs_SizeVal len, rd;
 		FILE* fp = fopen( path, "rb" );
 		if( !fp )
+		{
+			SGSCERR;
 			STDLIB_WARN( "failed to open file" )
+		}
 		fseek( fp, 0, SEEK_END );
 		len = ftell( fp );
 		fseek( fp, 0, SEEK_SET );
 
 		sgs_PushStringBuf( C, NULL, len );
+		errno = 0;
 		rd = fread( sgs_GetStringPtr( C, -1 ), 1, len, fp );
+		if( rd < len )
+			SGSCERR;
 		fclose( fp );
 		if( rd < len )
 			STDLIB_WARN( "failed to read file" )
@@ -1675,10 +1678,13 @@ static void* sgsstd_file_functable[];
 
 static int sgsstd_fileP_offset( SGS_CTX, FILE* fp )
 {
+	long pos;
 	if( !fp )
 		STDLIB_WARN( "file.offset - file is not opened" )
 	
-	sgs_PushInt( C, ftell( fp ) );
+	pos = ftell( fp );
+	sgs_Errno( C, pos >= 0 );
+	sgs_PushInt( C, pos );
 	return SGS_SUCCESS;
 }
 
@@ -1688,10 +1694,22 @@ static int sgsstd_fileP_size( SGS_CTX, FILE* fp )
 		STDLIB_WARN( "file.size - file is not opened" )
 
 	{
-		long pos = ftell( fp );
+		long size;
+		fpos_t pos;
+		if( fgetpos( fp, &pos ) < 0 )
+		{
+			SGSCERR;
+			return SGS_EINPROC;
+		}
 		fseek( fp, 0, SEEK_END );
-		sgs_PushInt( C, ftell( fp ) );
+		if( ( size = ftell( fp ) ) < 0 )
+		{
+			SGSCERR;
+			return SGS_EINPROC;
+		}
+		sgs_PushInt( C, size );
 		fseek( fp, pos, SEEK_SET );
+		SGSCLEARERR;
 		return SGS_SUCCESS;
 	}
 }
@@ -1736,9 +1754,8 @@ static int sgsstd_fileI_open( SGS_CTX )
 		fclose( FVAR );
 
 	FVAR = fopen( path, g_io_fileflagmodes[ ff ] );
-
-	sgs_PushBool( C, !!FVAR );
-	return 1;
+	
+	CRET( !!FVAR );
 }
 
 static int sgsstd_fileI_close( SGS_CTX )
@@ -1778,6 +1795,8 @@ static int sgsstd_fileI_read( SGS_CTX )
 		while( size > 0 )
 		{
 			int read = fread( bfr, 1, MIN( size, 1024 ), FVAR );
+			if( read < 0 )
+				SGSCERR;
 			if( read <= 0 )
 				break;
 			membuf_appbuf( &mb, C, bfr, read );
@@ -1785,6 +1804,7 @@ static int sgsstd_fileI_read( SGS_CTX )
 		}
 		sgs_PushStringBuf( C, mb.ptr, mb.size );
 		membuf_destroy( &mb, C );
+		SGSCLEARERR;
 		return 1;
 	FVNO_END( write )
 }
@@ -1944,6 +1964,7 @@ static int sgsstd_io_file( SGS_CTX )
 			"function expects 0 or 2 arguments: string, int (!= 0)" )
 
 	fp = fopen( path, g_io_fileflagmodes[ ff ] );
+	sgs_Errno( C, !!fp );
 
 pushobj:
 	sgs_PushObject( C, fp, sgsstd_file_functable );
@@ -2038,6 +2059,7 @@ static int sgsstd_io_dir( SGS_CTX )
 			"function expects 1 argument: string" )
 
 	dp = opendir( path );
+	sgs_Errno( C, !!dp );
 	if( !dp )
 		STDLIB_WARN( "failed to open directory" )
 

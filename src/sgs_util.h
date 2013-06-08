@@ -14,8 +14,12 @@
 
 #ifdef SGS_INTERNAL
 #  ifdef SGS_REALLY_INTERNAL
-#    define TRUE sgs_TRUE
-#    define FALSE sgs_FALSE
+#    ifndef TRUE
+#      define TRUE sgs_TRUE
+#    endif
+#    ifndef FALSE
+#      define FALSE sgs_FALSE
+#    endif
 #    define MIN sgs_MIN
 #    define MAX sgs_MAX
 #    define ARRAY_SIZE sgs_ARRAY_SIZE
