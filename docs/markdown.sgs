@@ -180,7 +180,8 @@ function markdown2html( text )
 		}
 		else if( string_part( L, 0, 2 ) == "==" )
 		{
-			cnt = L.length - string_trim( L, "=", LEFT ).length;
+			cnt = L.length - string_trim( L, "=", LEFT ).length + 1;
+			if( cnt > 6 ) cnt = 6;
 			L = string_trim( L, "= \t\v\r\n" );
 			lines[ i ] = "</p><h"$cnt$">" $ mdinline( L ) $ "</h"$cnt$"><p>";
 		}

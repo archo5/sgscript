@@ -76,6 +76,10 @@ There are 8 **data types** in SGScript: **null**, **bool**, **int**, **real**, *
 
 
 
+<##### stdlib.fmt Data formatting library #####>
+
+
+
 <##### stdlib.io I/O library #####>
 
 
@@ -85,6 +89,8 @@ There are 8 **data types** in SGScript: **null**, **bool**, **int**, **real**, *
 Mathematical functions and constants. The functions and constants are loaded by using the include_library function:
 
     include_library( "math" );
+    // .. or ..
+    include "math";
 
 
 <##### stdlib.math.abs abs() [function] #####>
@@ -92,8 +98,8 @@ Mathematical functions and constants. The functions and constants are loaded by 
 == abs( x )
 === returns the absolute value of `x`, as `real`
 
-    printvar( abs( 2.2 ) ); // real (2.2)
-    printvar( abs( -3.1 ) ); // real (3.1)
+    abs( 2.2 ); // real (2.2)
+    abs( -3.1 ); // real (3.1)
 
 
 <##### stdlib.math.floor floor() [function] #####>
@@ -101,10 +107,10 @@ Mathematical functions and constants. The functions and constants are loaded by 
 == floor( x )
 === returns the largest integer that is not bigger than `x`, as `real`
 
-    printvar( floor( 3.4 ) ); // real (3)
-    printvar( floor( 3.8 ) ); // real (3)
-    printvar( floor( 4.2 ) ); // real (4)
-    printvar( floor( -3.1 ) ); // real (-4)
+    floor( 3.4 ); // real (3)
+    floor( 3.8 ); // real (3)
+    floor( 4.2 ); // real (4)
+    floor( -3.1 ); // real (-4)
 
 
 <##### stdlib.math.ceil ceil() [function] #####>
@@ -112,10 +118,10 @@ Mathematical functions and constants. The functions and constants are loaded by 
 == ceil( x )
 === returns the smallest integer that is not smaller than `x`, as `real`
 
-    printvar( ceil( 3.4 ) ); // real (4)
-    printvar( ceil( 3.8 ) ); // real (4)
-    printvar( ceil( 4.2 ) ); // real (5)
-    printvar( ceil( -3.1 ) ); // real (-3)
+    ceil( 3.4 ); // real (4)
+    ceil( 3.8 ); // real (4)
+    ceil( 4.2 ); // real (5)
+    ceil( -3.1 ); // real (-3)
 
 
 <##### stdlib.math.round round() [function] #####>
@@ -123,10 +129,10 @@ Mathematical functions and constants. The functions and constants are loaded by 
 == round( x )
 === returns the closest integer to `x`, as `real`
 
-    printvar( round( 3.4 ) ); // real (3)
-    printvar( round( 3.8 ) ); // real (4)
-    printvar( round( 4.2 ) ); // real (4)
-    printvar( round( -3.1 ) ); // real (-3)
+    round( 3.4 ); // real (3)
+    round( 3.8 ); // real (4)
+    round( 4.2 ); // real (4)
+    round( -3.1 ); // real (-3)
 
 
 <##### stdlib.math.pow pow() [function] #####>
@@ -136,9 +142,9 @@ Mathematical functions and constants. The functions and constants are loaded by 
 
 - If base (`x`) is negative and exponent (`y`) is not an integral value, or if base is zero and exponent is negative, function returns `null` and emits a warning message.
 
-    printvar( pow( 2, 5 ) ); // real (32)
-    printvar( pow( 9, 0.5 ) ); // real (3)
-    printvar( pow( -1, 0.5 ) ); // null; Warning: pow() - mathematical error
+    pow( 2, 5 ); // real (32)
+    pow( 9, 0.5 ); // real (3)
+    pow( -1, 0.5 ); // null; Warning: pow(): mathematical error
 
 
 <##### stdlib.math.sqrt sqrt() [function] #####>
@@ -146,10 +152,10 @@ Mathematical functions and constants. The functions and constants are loaded by 
 == sqrt( x )
 === returns the square root of `x`, as `real`
 
-- If `x` is negative, function returns `null` and emits a warning message
+- If `x` is negative, function returns `null` and emits a warning message.
 
-    printvar( sqrt( 16 ) ); // real (4)
-    printvar( sqrt( -1 ) ); // null; Warning: sqrt() - mathematical error
+    sqrt( 16 ); // real (4)
+    sqrt( -1 ); // null; Warning: sqrt(): mathematical error
 
 
 <##### stdlib.math.log log() [function] #####>
@@ -157,23 +163,126 @@ Mathematical functions and constants. The functions and constants are loaded by 
 == log( x, y )
 === returns the base-`y` logarithm of `x`, as `real`
 
-    printvar( log( 9, 3 ) ); // real (2)
+- If `x <= 0`  or  `b <= 0`  or  `b = 1`, function returns `null` and emits a warning message.
+
+    log( 9, 3 ); // real (2)
+    log( -1, 3 ); // .. or ..
+    log( 3, 0 ); // .. or ..
+    log( 3, 1 ); // null; Warning: log(): mathematical error
 
 
-<##### stdlib.math.pi M_PI [constant] #####>
+<##### stdlib.math.sin sin() [function] #####>
+
+== sin( x )
+=== returns the sine of angle `x` in radians, as `real`
+
+    sin( 0 ); // real (0)
+    sin( M_PI / 2 ); // real (1)
+    sin( M_PI / 4 ); // real (0.707107)
+
+
+<##### stdlib.math.cos cos() [function] #####>
+
+== cos( x )
+=== returns the cosine of angle `x` in radians, as `real`
+
+    sin( 0 ); // real (1)
+    sin( M_PI ); // real (-1)
+    sin( M_PI / 4 ); // real (0.707107)
+
+
+<##### stdlib.math.tan tan() [function] #####>
+
+== tan( x )
+=== returns the tangent of angle `x` in radians, as `real`
+
+    tan( 0 ); // real (0)
+    tan( 1 ); // real (1.55741)
+    tan( M_PI / 4 ); // real (1)
+
+
+<##### stdlib.math.asin asin() [function] #####>
+
+== asin( x )
+=== returns the arcsine of `x` (angle in radians), as `real`
+
+- If `x` is outside the [-1,1] range, function returns `null` and emits a warning message
+
+    asin( -1 ); // real (-1.5708)
+    asin( 0 ); // real (0)
+    asin( 2 ); // null; Warning: asin(): mathematical error
+
+
+<##### stdlib.math.acos acos() [function] #####>
+
+== acos( x )
+=== returns the arccosine of `x` (angle in radians), as `real`
+
+- If `x` is outside the [-1,1] range, function returns `null` and emits a warning message
+
+    acos( -1 ); // real (3.14159)
+    acos( 0 ); // real (1.5708)
+    acos( 2 ); // null; Warning: acos(): mathematical error
+
+
+<##### stdlib.math.atan atan() [function] #####>
+
+== atan( x )
+=== returns the arctangent of `x` (angle in radians), as `real`
+
+    atan( 0 ); // real (0)
+    atan( 1 ); // real (0.785398)
+    atan( 9999999 ); // real (1.5708)
+
+
+<##### stdlib.math.atan2 atan2() [function] #####>
+
+== atan2( y, x )
+=== returns the extended arctangent of y/x (angle in radians), as `real`
+
+- Signs of `x` and `y` are used to determine the quadrant, thus `y` is expected to be the sine of the angle to be returned (the `y` coordinate of a point) and `x` - the cosine (the `x` coordinate).
+
+! Due to the common requirement to use this function to determine the angle between two somewhat random points (usually from a simulation), it will not emit a warning when both arguments are 0 - it will return 0 instead.
+
+    atan2( 0, 1 ); // real (0)
+    atan2( 1, 0 ); // real (1.5708)
+    atan2( -1, -1 ); // real (-2.35619)
+    atan2( 0, 0 ); // real (0)
+
+
+<##### stdlib.math.deg2rad deg2rad() [function] #####>
+
+== deg2rad( x )
+=== returns angle, converted from degrees to radians, as `real`
+
+    deg2rad( 0 ); // real (0)
+    deg2rad( 180 ); // real (3.14159)
+    deg2rad( -90 ); // real (-1.5708)
+
+
+<##### stdlib.math.rad2deg rad2deg() [function] #####>
+
+== rad2deg( x )
+=== returns angle, converted from radians to degrees, as `real`
+
+    rad2deg( 0 ); // real (0)
+    rad2deg( M_PI ); // real (180)
+    rad2deg( -M_PI / 2 ); // real (-90)
+
+
+<##### stdlib.math.constants M_* (pi, e) [constants] #####>
 
 == M_PI
 === the ratio of circumference of a circle to its diameter (pi)
-
 - the value of this constant is `3.14159265358979323846`
-
-
-<##### stdlib.math.e M_E [constant] #####>
 
 == M_E
 === the natural logarithmic base (e)
-
 - the value of this constant is `2.7182818284590452354`
+
+
+
+<##### stdlib.os Operating system library #####>
 
 
 
@@ -182,11 +291,13 @@ Mathematical functions and constants. The functions and constants are loaded by 
 String manipulation functions. The functions and constants are loaded by using the include_library function:
 
     include_library( "string" );
+    // .. or ..
+    include "string";
 
 ! These functions operate at the byte level. Most cannot be safely used on strings with multibyte encoding, some cannot provide useful output from such strings at all.
 
 
-<##### stdlib.string_cut string_cut() [function] #####>
+<##### stdlib.string.string_cut string_cut() [function] #####>
 
 == string_cut( string str, int from[, int to[, int flags]] )
 === returns a part of string `str`, `from` and `to` being positions of the first and last character returned, respectively
@@ -197,10 +308,10 @@ String manipulation functions. The functions and constants are loaded by using t
 -- `NO_REV_INDEX` - emit warnings on negative indices, instead of handling them
 -- `STRICT_RANGES` - emit warnings on out of bounds `from`/`to` values instead of silently ignoring the outside characters
 
-    printvar( string_cut( "01234567", 3, 5 ) ); // string [3] "345"
+    string_cut( "01234567", 3, 5 ); // string [3] "345"
 
 
-<##### stdlib.string_part string_part() [function] #####>
+<##### stdlib.string.string_part string_part() [function] #####>
 
 == string_part( string str, int from[, int len[, int flags]] )
 === returns a part of string `str`, starting at `from`, at most `len` characters
@@ -212,17 +323,17 @@ String manipulation functions. The functions and constants are loaded by using t
 -- `NO_REV_INDEX` - emit warnings on negative indices, instead of handling them
 -- `STRICT_RANGES` - emit warnings on out of bounds `from`/`len` values instead of silently ignoring the outside characters
 
-    printvar( string_part( "01234567", 3, 3 ) ); // string [3] "345"
+    string_part( "01234567", 3, 3 ); // string [3] "345"
 
 
-<##### stdlib.string_reverse string_reverse() [function] #####>
+<##### stdlib.string.string_reverse string_reverse() [function] #####>
 
 == string_reverse( string str )
 === returns `str` with all the bytes in reversed order
 
 ! This function will not work correctly with multibyte-encoded strings.
 
-    printvar( string_reverse( "noitca" ) ); // string [6] "action"
+    string_reverse( "noitca" ); // string [6] "action"
 
 
 
@@ -231,43 +342,45 @@ String manipulation functions. The functions and constants are loaded by using t
 Type detection and conversion functions. The functions and constants are loaded by using the include_library function:
 
     include_library( "type" );
+    // .. or ..
+    include "type";
 
 
-<##### stdlib.type_get type_get() [function] #####>
+<##### stdlib.type.type_get type_get() [function] #####>
 
 == type_get( any var )
 === returns the type ID of variable `var`, as `int`
 
 The return value is equal to one of the type ID constants.
 
-    printvar( type_get( null ) ); // int (0)
-    printvar( type_get( true ) ); // int (1)
-    printvar( type_get( 5 ) ); // int (2)
-    printvar( type_get( 5.1 ) ); // int (3)
-    printvar( type_get( "5.1" ) ); // int (4)
-    printvar( type_get( function(){} ) ); // int (5)
-    printvar( type_get( printvar ) ); // int (6)
-    printvar( type_get( [] ) ); // int (7)
+    type_get( null ); // int (0)
+    type_get( true ); // int (1)
+    type_get( 5 ); // int (2)
+    type_get( 5.1 ); // int (3)
+    type_get( "5.1" ); // int (4)
+    type_get( function(){} ); // int (5)
+    type_get( printvar ); // int (6)
+    type_get( [] ); // int (7)
 
 
-<##### stdlib.typeof typeof() [function] #####>
+<##### stdlib.type.typeof typeof() [function] #####>
 
 == typeof( any var )
 === returns the type name of variable `var`, as `string`
 
 - If `var` is an object and if the object interface function SGS_OP_GETTYPE exists, this function calls it. For more information, see @__DOCS__/api/typeof<sgs_Typeof>
 
-    printvar( typeof( null ) ); // string [4] "null"
-    printvar( typeof( true ) ); // string [4] "bool"
-    printvar( typeof( 5 ) ); // string [3] "int"
-    printvar( typeof( 5.1 ) ); // string [4] "real"
-    printvar( typeof( "5.1" ) ); // string [6] "string"
-    printvar( typeof( function(){} ) ); // string [4] "func"
-    printvar( typeof( printvar ) ); // string [5] "cfunc"
-    printvar( typeof( [] ) ); // string [5] "array"
-    printvar( typeof( {} ) ); // string [4] "dict"
-    printvar( typeof( class({},{}) ) ); // string [5] "class"
-    printvar( typeof( closure( typeof, [0] ) ) ); // string [7] "closure"
+    typeof( null ); // string [4] "null"
+    typeof( true ); // string [4] "bool"
+    typeof( 5 ); // string [3] "int"
+    typeof( 5.1 ); // string [4] "real"
+    typeof( "5.1" ); // string [6] "string"
+    typeof( function(){} ); // string [4] "func"
+    typeof( printvar ); // string [5] "cfunc"
+    typeof( [] ); // string [5] "array"
+    typeof( {} ); // string [4] "dict"
+    typeof( class({},{}) ); // string [5] "class"
+    typeof( closure( typeof, [0] ) ); // string [7] "closure"
 
 
 <##### stdlib.type.consts TYPE_* [constants] #####>

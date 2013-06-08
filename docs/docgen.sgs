@@ -1,11 +1,8 @@
 
 println( "--- SGScript documentation generator ---" );
 
-include_library( "string" );
-include_library( "io" );
-include_shared( "sgsjson" );
-
-include_file( "markdown.sgs" );
+include "string", "io", "json";
+include "markdown.sgs";
 
 
 io_dir_create( "out" );
@@ -98,7 +95,7 @@ io_file_write( "out/toc.json", json_encode( toc ) );
 
 println( "generating and writing html pages..." );
 
-data = "<h1>SGScript documentation - v0.8.2</h1>";
+data = "<h1>SGScript documentation - v0.8.5</h1>";
 
 data $= "<div><h2>Table of Contents</h2>";
 ulevel = 0;
@@ -122,10 +119,11 @@ foreach( P : parts )
 	
 	data $= "<div class='item'>";
 	data $= "<a name='" $ P.path_str $ "'></a>";
-	data $= "<" $ h $ ">";
+	data $= "<hr /><h2>";
 	data $= P.title;
-	data $= " (" $ P.path_str $ ")";
-	data $= "</" $ h $ ">";
+	if( P.path_str )
+		data $= " <small>(" $ P.path_str $ ")</small>";
+	data $= "</h2>";
 	data $= content;
 	data $= "</div>";
 }

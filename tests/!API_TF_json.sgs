@@ -1,6 +1,5 @@
 
-include_library( "type" );
-include_shared( "sgsjson" );
+include "type", "json";
 
 function tostr( x )
 {
@@ -79,4 +78,22 @@ foreach( test, expect : tests )
 	out = json_decode( test );
 	str = tostr( out );
 	testEqual( str, expect );
+}
+
+
+println( "--- encoding ---" );
+
+enctests =
+{
+	"null" = null,
+	"[]" = [],
+	"{}" = {},
+	'{"a":"b"}' = { a = "b" },
+	'{"a":[]}' = { a = [] },
+};
+
+foreach( expect, test : enctests )
+{
+	out = json_encode( test );
+	testEqual( out, expect );
 }

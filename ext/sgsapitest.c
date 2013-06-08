@@ -399,6 +399,39 @@ DEFINE_TEST( complex_gc )
 	destroy_context( C );
 }
 
+void output_strcat( void* ud, SGS_CTX, const void* ptr, sgs_SizeVal size )
+{
+	char* dst = (char*) ud;
+	const char* src = (const char*) ptr;
+	
+	if( strlen( dst ) + size + 1 > 64 )
+	{
+		printf( "size: %d, whole string: %s%s\n", size, dst, src );
+		fflush( stdout );
+	}
+	atf_assert( strlen( dst ) + size + 1 <= 64 );
+	
+	strcat( dst, src );
+}
+DEFINE_TEST( commands )
+{
+	char pbuf[ 64 ] = {0};
+	
+	SGS_CTX = get_context();
+	
+	const char* str =
+	"print('1');print('2','3');print();"
+	"print '4'; print '5', '6'; print;";
+	
+	sgs_SetOutputFunc( C, output_strcat, pbuf );
+	atf_assert( sgs_ExecString( C, str ) == SGS_SUCCESS );
+	sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, outfp );
+	
+	atf_assert_string( pbuf, "123456" );
+
+	destroy_context( C );
+}
+
 
 test_t all_tests[] =
 {
@@ -412,6 +445,7 @@ test_t all_tests[] =
 	TST( libraries ),
 	TST( function_calls ),
 	TST( complex_gc ),
+	TST( commands ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }
 

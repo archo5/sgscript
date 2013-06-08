@@ -1322,7 +1322,7 @@ SFTRET parse_stmt( SFTC )
 		return node;
 	}
 	/* COMMAND HELPERS */
-#define NOT_FCALL ( !sgsT_Next( F->at ) || *sgsT_Next( F->at ) != '(' )
+#define NOT_FCALL ( !sgsT_Next( F->at ) || '(' != *sgsT_Next( F->at ) )
 	/* SIMPLE COMMANDS */
 	else if( SFTC_IS_ID( "print" ) && NOT_FCALL )
 	{

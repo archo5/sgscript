@@ -12,7 +12,7 @@
 #define STRICT_JSON
 
 
-void skipws( const char** p, const char* end )
+static void skipws( const char** p, const char* end )
 {
 	const char* pos = *p;
 	while( pos < end )
@@ -30,7 +30,7 @@ void skipws( const char** p, const char* end )
 #define STK_POP membuf_resize( stack, C, stack->size - 1 )
 #define STK_PUSH( what ) membuf_appchr( stack, C, what )
 
-const char* json_parse( SGS_CTX, MemBuf* stack, const char* str, sgs_SizeVal size, int proto )
+static const char* json_parse( SGS_CTX, MemBuf* stack, const char* str, sgs_SizeVal size, int proto )
 {
 	int stk = sgs_StackSize( C );
 	const char* pos = str, *end = str + size;
@@ -341,7 +341,7 @@ endnumparse:
 	return sgs_StackSize( C ) > stk && stack->size == 1 ? NULL : str;
 }
 
-int json_decode( SGS_CTX )
+static int json_decode( SGS_CTX )
 {
 	char* str;
 	sgs_SizeVal size;
@@ -371,7 +371,7 @@ int json_decode( SGS_CTX )
 }
 
 
-int encode_var( SGS_CTX, MemBuf* buf )
+static int encode_var( SGS_CTX, MemBuf* buf )
 {
 	sgs_Variable var;
 	sgs_GetStackItem( C, -1, &var );
@@ -436,7 +436,7 @@ int encode_var( SGS_CTX, MemBuf* buf )
 			while( sgs_IterAdvance( C, -1 ) > 0 )
 			{
 				/* stack: Obj, Iter */
-				if( sgs_IterPushData( C, -1, !isarr, 1 ) != SGS_SUCCESS )
+				if( sgs_IterPushData( C, -1, 0, 1 ) != SGS_SUCCESS )
 					return 0;
 				/* stack: Obj, Iter[, Key], Value */
 
@@ -445,17 +445,15 @@ int encode_var( SGS_CTX, MemBuf* buf )
 
 				if( !isarr )
 				{
-					/* stack: Obj, Iter, Key, Value */
-					sgs_ToString( C, -2 );
+					if( sgs_IterPushData( C, -2, 1, 0 ) != SGS_SUCCESS )
+						return 0;
+					/* stack: Obj, Iter, Value, Key */
+					sgs_ToString( C, -1 );
 					if( !encode_var( C, buf ) )
 						return 0;
 					membuf_appchr( buf, C, ':' );
-				}
-
-				if( !isarr )
-				{
-					/* stack: Obj, Iter, Key, Value */
-					sgs_PopSkip( C, 1, 1 );
+					
+					sgs_Pop( C, 1 );
 				}
 				/* stack: Obj, Iter, Value */
 				if( !encode_var( C, buf ) )
@@ -473,7 +471,7 @@ int encode_var( SGS_CTX, MemBuf* buf )
 	return 0;
 }
 
-int json_encode( SGS_CTX )
+static int json_encode( SGS_CTX )
 {
 	MemBuf buf = membuf_create();
 	int argc = sgs_StackSize( C ), ret;

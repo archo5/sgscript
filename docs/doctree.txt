@@ -29,6 +29,9 @@ return
 		"stdlib.dict" =
 		{
 		},
+		"stdlib.fmt" =
+		{
+		},
 		"stdlib.io" =
 		{
 		},
@@ -43,19 +46,32 @@ return
 			"stdlib.math.sqrt" = {},
 			"stdlib.math.log" = {},
 			
-			"stdlib.math.pi" = {},
-			"stdlib.math.e" = {},
+			"stdlib.math.sin" = {},
+			"stdlib.math.cos" = {},
+			"stdlib.math.tan" = {},
+			"stdlib.math.asin" = {},
+			"stdlib.math.acos" = {},
+			"stdlib.math.atan" = {},
+			"stdlib.math.atan2" = {},
+			
+			"stdlib.math.deg2rad" = {},
+			"stdlib.math.rad2deg" = {},
+			
+			"stdlib.math.constants" = {},
+		},
+		"stdlib.os" =
+		{
 		},
 		"stdlib.string" =
 		{
-			"stdlib.string_cut" = {},
-			"stdlib.string_part" = {},
-			"stdlib.string_reverse" = {},
+			"stdlib.string.string_cut" = {},
+			"stdlib.string.string_part" = {},
+			"stdlib.string.string_reverse" = {},
 		},
 		"stdlib.type" =
 		{
-			"stdlib.type_get" = {},
-			"stdlib.typeof" = {},
+			"stdlib.type.type_get" = {},
+			"stdlib.type.typeof" = {},
 			"stdlib.type.consts" = {},
 		},
 	},
