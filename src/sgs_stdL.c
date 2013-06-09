@@ -764,8 +764,8 @@ static int _flt_write_rep( char* out, sgs_Real R, int sci, struct fmtspec* F )
 	if( sci == 0 )
 	{
 		double xpmov = floor( fabs( log10( R ) ) ) + 1;
-		int xpdigs = xpmov + 1;
-		int scisc = mandigs + log10( xpmov + 1 ) + 1 + 3;
+		int xpdigs = 1 + (int) xpmov;
+		int scisc = mandigs + (int) log10( xpmov + 1.0 ) + 1 + 3;
 		int decsc = mandigs + 1 +
 			( xpn > 1024 ?
 				MAX( xpdigs - mandigs + 2, 0 ) :
@@ -783,7 +783,7 @@ static int _flt_write_rep( char* out, sgs_Real R, int sci, struct fmtspec* F )
 	{
 		/* pull out exponent */
 		exp10 = (int) floor( log10( R ) );
-		R /= pow( 10, exp10 );
+		R /= pow( 10.0, exp10 );
 	}
 
 	/* render the double */
@@ -794,7 +794,7 @@ static int _flt_write_rep( char* out, sgs_Real R, int sci, struct fmtspec* F )
 		{
 			while( qf >= 1 )
 			{
-				*out++ = '0' + (int) floor( fmodf( R / qf, 10.0 ) );
+				*out++ = '0' + (int) floor( fmod( R / qf, 10.0 ) );
 				qf /= 10.0;
 				mdc++;
 			}
@@ -814,7 +814,7 @@ static int _flt_write_rep( char* out, sgs_Real R, int sci, struct fmtspec* F )
 		}
 		while( mdc < mandigs && pdc < maxprec && qf > DBL_MDST )
 		{
-			*out++ = '0' + (int) floor( fmodf( R / qf, 10.0 ) );
+			*out++ = '0' + (int) floor( fmod( R / qf, 10.0 ) );
 			qf /= 10.0;
 			mdc++; pdc++;
 		}
@@ -842,7 +842,7 @@ static int _flt_write_rep( char* out, sgs_Real R, int sci, struct fmtspec* F )
 		*out++ = F->type == 'G' || F->type == 'E' ? 'E' : 'e';
 		*out++ = exp10 >= 0 ? '+' : '-';
 		if( exp10 < 0 ) exp10 = -exp10;
-		qf = (int) pow( 10, floor( log10( exp10 ) ) );
+		qf = (int) pow( 10, floor( log10( (double) exp10 ) ) );
 		if( !qf )
 			*out++ = '0';
 		while( qf )
@@ -880,13 +880,13 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 				sign = 1;
 				I = -I;
 			}
-			size = 1 + (int) floor( log( MAX(1,I) ) / log( radix ) ) + sign;
+			size = 1 + (int) floor( log( (double) MAX(1,I) ) / log( (double) radix ) ) + sign;
 
 			if( size < F->padcnt && !F->padrgt )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
 			for( i = size - 1; i >= 0; --i )
 			{
-				int cv = ( I / (sgs_Integer) pow( radix, i ) ) % radix;
+				int cv = ( I / (sgs_Integer) pow( (double) radix, i ) ) % radix;
 				if( sign )
 					membuf_appchr( B, C, '-' );
 				membuf_appchr( B, C, tbl[ cv ] );
@@ -1010,7 +1010,7 @@ typedef struct sgsstd_fmtstream_s
 }
 sgsstd_fmtstream_t;
 
-static void* sgsstd_fmtstream_functable[];
+SGS_DECLARE void* sgsstd_fmtstream_functable[];
 #define SGSFS_HDR sgsstd_fmtstream_t* hdr = (sgsstd_fmtstream_t*) data->data
 
 #define fs_getreadsize( hdr, lim ) MIN( hdr->buffill - hdr->bufpos, lim )
@@ -1091,7 +1091,7 @@ static int sgsstd_fmtstreamI_read( SGS_CTX )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1 argument: int [0-2^31)" )
 	
-	numbytes = numbi;
+	numbytes = (sgs_SizeVal) numbi;
 	if( numbytes )
 	{
 		while( hdr->state != FMTSTREAM_STATE_END )
@@ -1221,7 +1221,7 @@ static int sgsstd_fmtstreamI_readcc( SGS_CTX )
 	if( !fs_validate_cc( C, ccstr, ccsize ) )
 		STDLIB_WARN( "error in character class" )
 	
-	numbytes = numbi;
+	numbytes = (sgs_SizeVal) numbi;
 	if( numbytes )
 	{
 		while( hdr->state != FMTSTREAM_STATE_END )
@@ -1269,7 +1269,7 @@ static int sgsstd_fmtstreamI_skipcc( SGS_CTX )
 	if( !fs_validate_cc( C, ccstr, ccsize ) )
 		STDLIB_WARN( "error in character class" )
 	
-	numbytes = numbi;
+	numbytes = (sgs_SizeVal) numbi;
 	if( numbytes )
 	{
 		while( hdr->state != FMTSTREAM_STATE_END )
@@ -1665,7 +1665,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 #define FVNO_END( name ) } else \
 	STDLIB_WARN( "file." #name "() - file is not opened" )
 
-static void* sgsstd_file_functable[];
+SGS_DECLARE void* sgsstd_file_functable[];
 
 #define FIF_INIT( fname ) \
 	sgs_VarObj* data; \
@@ -1708,7 +1708,7 @@ static int sgsstd_fileP_size( SGS_CTX, FILE* fp )
 			return SGS_EINPROC;
 		}
 		sgs_PushInt( C, size );
-		fseek( fp, pos, SEEK_SET );
+		fsetpos( fp, &pos );
 		SGSCLEARERR;
 		return SGS_SUCCESS;
 	}
@@ -1794,7 +1794,7 @@ static int sgsstd_fileI_read( SGS_CTX )
 	FVNO_BEGIN
 		while( size > 0 )
 		{
-			int read = fread( bfr, 1, MIN( size, 1024 ), FVAR );
+			int read = fread( bfr, 1, (size_t) MIN( size, 1024 ), FVAR );
 			if( read < 0 )
 				SGSCERR;
 			if( read <= 0 )
@@ -1877,7 +1877,7 @@ static int sgsstd_fileI_setbuf( SGS_CTX )
 			"function expects 1 argument: int" )
 
 	FVNO_BEGIN
-		sgs_PushBool( C, !setvbuf( FVAR, NULL, size ? _IOFBF : _IONBF, size ) );
+		sgs_PushBool( C, !setvbuf( FVAR, NULL, size ? _IOFBF : _IONBF, (size_t) size ) );
 		return 1;
 	FVNO_END( setbuf )
 }
@@ -1984,7 +1984,7 @@ sgsstd_dir_t;
 
 #define DIR_HDR sgsstd_dir_t* hdr = (sgsstd_dir_t*) data->data
 
-static void* sgsstd_dir_functable[];
+SGS_DECLARE void* sgsstd_dir_functable[];
 
 static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
@@ -2156,7 +2156,7 @@ static int sgsstd_sqrt( SGS_CTX )
 			"function expects 1 argument: real" )
 	if( arg0 < 0 )
 		STDLIB_WARN( "mathematical error" )
-	sgs_PushReal( C, sqrtf( arg0 ) );
+	sgs_PushReal( C, sqrt( arg0 ) );
 	return 1;
 }
 static int sgsstd_asin( SGS_CTX )
@@ -2583,12 +2583,12 @@ static int sgsstd_os_make_time( SGS_CTX )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1-6 arguments of type 'int'" )
 
-	if( ssz >= 1 ) T.tm_sec = p[0];
-	if( ssz >= 2 ) T.tm_min = p[1];
-	if( ssz >= 3 ) T.tm_hour = p[2];
-	if( ssz >= 4 ) T.tm_mday = p[3];
-	if( ssz >= 5 ) T.tm_mon = p[4] - 1;
-	if( ssz >= 6 ) T.tm_year = p[5] - 1900;
+	if( ssz >= 1 ) T.tm_sec = (int) p[0];
+	if( ssz >= 2 ) T.tm_min = (int) p[1];
+	if( ssz >= 3 ) T.tm_hour = (int) p[2];
+	if( ssz >= 4 ) T.tm_mday = (int) p[3];
+	if( ssz >= 5 ) T.tm_mon = (int) p[4] - 1;
+	if( ssz >= 6 ) T.tm_year = (int) p[5] - 1900;
 	sgs_PushInt( C, mktime( &T ) );
 	return 1;
 }
@@ -2662,7 +2662,7 @@ static int sgsstd_string_cut( SGS_CTX )
 	{
 		i1 = MAX( 0, MIN( i1, size - 1 ) );
 		i2 = MAX( 0, MIN( i2, size - 1 ) );
-		sgs_PushStringBuf( C, str + i1, i2 - i1 + 1 );
+		sgs_PushStringBuf( C, str + i1, (sgs_SizeVal) i2 - (sgs_SizeVal) i1 + 1 );
 	}
 	return 1;
 }
@@ -2702,7 +2702,7 @@ static int sgsstd_string_part( SGS_CTX )
 		i2 += i1 - 1;
 		i1 = MAX( 0, MIN( i1, size - 1 ) );
 		i2 = MAX( 0, MIN( i2, size - 1 ) );
-		sgs_PushStringBuf( C, str + i1, i2 - i1 + 1 );
+		sgs_PushStringBuf( C, str + i1, (sgs_SizeVal) i2 - (sgs_SizeVal) i1 + 1 );
 	}
 	return 1;
 }
@@ -2753,7 +2753,7 @@ static int sgsstd_string_pad( SGS_CTX )
 		return 1;
 	}
 
-	sgs_PushStringBuf( C, NULL, tgtsize );
+	sgs_PushStringBuf( C, NULL, (sgs_SizeVal) tgtsize );
 	sout = sgs_GetStringPtr( C, -1 );
 	if( FLAG( flags, sgsLEFT ) )
 	{
@@ -2769,7 +2769,7 @@ static int sgsstd_string_pad( SGS_CTX )
 	memcpy( sout + lpad, str, size );
 	for( i = 0; i < lpad; ++i )
 		sout[ i ] = pad[ i % padsize ];
-	size += lpad;
+	size += (sgs_SizeVal) lpad;
 	while( size < tgtsize )
 	{
 		sout[ size ] = pad[ size % padsize ];
@@ -2795,7 +2795,7 @@ static int sgsstd_string_repeat( SGS_CTX )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 2 arguments: string, int (>= 0)" );
 
-	sgs_PushStringBuf( C, NULL, count * size );
+	sgs_PushStringBuf( C, NULL, (sgs_SizeVal) count * size );
 	sout = sgs_GetStringPtr( C, -1 );
 	while( count-- )
 	{
@@ -3323,7 +3323,7 @@ static int sgsstd_string_frombytes( SGS_CTX )
 		b = sgs_GetInt( C, -1 );
 		if( b < 0 || b > 255 )
 			STDLIB_WARN( "invalid byte value" )
-		buf[ i++ ] = b;
+		buf[ i++ ] = (char) b;
 		sgs_Pop( C, 1 );
 	}
 	sgs_Pop( C, 1 );
@@ -3387,7 +3387,7 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 		if( sgs_IterPushData( C, -1, FALSE, TRUE ) < 0 )
 			goto fail;
 		cp = sgs_GetInt( C, -1 );
-		cnt = sgs_utf8_encode( cp, tmp );
+		cnt = sgs_utf8_encode( (uint32_t) cp, tmp );
 		if( !cnt )
 		{
 			strcpy( tmp, SGS_UNICODE_INVCHAR_STR );
@@ -3553,7 +3553,7 @@ static int sgsstd_type_cast( SGS_CTX )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 2 arguments: any, int" )
 
-	sgs_Convert( C, 0, ty );
+	sgs_Convert( C, 0, (int) ty );
 	sgs_Pop( C, 1 );
 	return 1;
 }

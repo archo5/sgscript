@@ -27,6 +27,12 @@ typedef unsigned __int64 uint64_t;
 
 #define UNUSED( x ) (void)(x)
 
+#ifdef __cplusplus
+#define SGS_DECLARE extern
+#else
+#define SGS_DECLARE static
+#endif
+
 
 #ifdef SGS_USE_FILESYSTEM
 #  include <sys/types.h>
@@ -40,7 +46,7 @@ typedef unsigned __int64 uint64_t;
 #    define stat _stat
 #    define S_IFDIR _S_IFDIR
 #    define S_IFREG _S_IFREG
-#    include "msvc/dirent.c"
+#    include "../ext/msvc/dirent.h"
 #  else
 #    include <unistd.h>
 #    include <dirent.h>

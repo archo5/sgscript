@@ -460,7 +460,7 @@ static void stk_makespace( SGS_CTX, int num )
 	stkend = C->stack_top - C->stack_base;
 	DBG_STACK_CHECK
 	nsz = ( stksz + num ) + C->stack_mem * 2; /* MAX( stksz + num, C->stack_mem * 2 ); */
-	C->stack_base = sgs_Realloc( C, C->stack_base, sizeof( sgs_Variable ) * nsz );
+	C->stack_base = (sgs_VarPtr) sgs_Realloc( C, C->stack_base, sizeof( sgs_Variable ) * nsz );
 	C->stack_mem = nsz;
 	C->stack_off = C->stack_base + stkoff;
 	C->stack_top = C->stack_base + stkend;

@@ -144,8 +144,8 @@ static int initProfMode2( SGS_PROF )
 {
 	int i;
 	P->instr = -1;
-	P->ictrs = sgs_Malloc( P->C, sizeof( double ) * TOPCNT );
-	P->iexcs = sgs_Malloc( P->C, sizeof( uint32_t ) * TOPCNT );
+	P->ictrs = (double*) sgs_Malloc( P->C, sizeof( double ) * TOPCNT );
+	P->iexcs = (int32_t*) sgs_Malloc( P->C, sizeof( int32_t ) * TOPCNT );
 	for( i = 0; i < TOPCNT; ++i )
 	{
 		P->ictrs[ i ] = 0;

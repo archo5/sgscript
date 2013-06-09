@@ -68,7 +68,7 @@
 #define SGS_STRINGTABLE_MAXLEN 16
 
 /* max. length of the call stack */
-#define SGS_MAX_CALL_STACK_SIZE 1024
+#define SGS_MAX_CALL_STACK_SIZE 256
 
 /* the size of the stack buffer for temporary vsprintf'ed text
 	if predicted text length is longer than that, the memory

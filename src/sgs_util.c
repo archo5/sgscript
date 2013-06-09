@@ -67,7 +67,7 @@ void membuf_reserve( MemBuf* mb, SGS_CTX, int32_t size )
 		return;
 
 	mb->mem = size;
-	mb->ptr = sgs_Realloc( C, mb->ptr, size );
+	mb->ptr = (char*) sgs_Realloc( C, mb->ptr, size );
 }
 
 void membuf_resize( MemBuf* mb, SGS_CTX, int32_t size )
@@ -635,8 +635,8 @@ void quicksort( void *array, size_t length, size_t size,
 	do
 	{
 	    /* Partition the array */
-		register char *index = recursion->left;
-		register char *right = recursion->right;
+		register char *index = (char*) recursion->left;
+		register char *right = (char*) recursion->right;
 		char          *left  = index;
 
 	    /* Assigning store to the left */
@@ -785,7 +785,7 @@ int sgs_utf8_decode( char* buf, size_t size, uint32_t* outchar )
 	if( ( c & 0xE0 ) == 0xC0 )
 	{
 		if( size < 2 || U8NFL( buf[1] ) )
-			return -MIN(size,2);
+			return - (int) MIN(size,2);
 		*outchar = ( ( ((int)(buf[0]&0x1f)) << 6 ) | ((int)(buf[1]&0x3f)) );
 		return 2;
 	}
@@ -793,7 +793,7 @@ int sgs_utf8_decode( char* buf, size_t size, uint32_t* outchar )
 	if( ( c & 0xF0 ) == 0xE0 )
 	{
 		if( size < 3 || U8NFL( buf[1] ) || U8NFL( buf[2] ) )
-			return -MIN(size,3);
+			return - (int) MIN(size,3);
 		*outchar = ( ( ((int)(buf[0]&0x0f)) << 12 ) | ( ((int)(buf[1]&0x3f)) << 6 )
 			| ((int)(buf[2]&0x3f)) );
 		return 3;
@@ -802,7 +802,7 @@ int sgs_utf8_decode( char* buf, size_t size, uint32_t* outchar )
 	if( ( c & 0xF8 ) == 0xF0 )
 	{
 		if( size < 4 || U8NFL( buf[1] ) || U8NFL( buf[2] ) || U8NFL( buf[3] ) )
-			return -MIN(size,4);
+			return - (int) MIN(size,4);
 		*outchar = ( ( ((int)(buf[0]&0x07)) << 18 ) | ( ((int)(buf[1]&0x3f)) << 12 )
 				| ( ((int)(buf[2]&0x3f)) << 6 ) | ((int)(buf[3]&0x3f)) );
 		return 4;

@@ -10,17 +10,14 @@
     <ClCompile Include="..\..\..\src\sgs_util.c" />
     <ClCompile Include="..\..\..\src\sgs_stdL.c" />
     <ClCompile Include="..\..\..\src\sgs_xpc.c" />
+    <ClCompile Include="..\..\..\ext\msvc\dirent.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\src\sgs_bcg.h" />
     <ClInclude Include="..\..\..\src\sgs_cfg.h" />
-    <ClInclude Include="..\..\..\src\sgs_ctx.h" />
-    <ClInclude Include="..\..\..\src\sgs_fnt.h" />
     <ClInclude Include="..\..\..\src\sgs_proc.h" />
-    <ClInclude Include="..\..\..\src\sgs_tok.h" />
     <ClInclude Include="..\..\..\src\sgs_util.h" />
     <ClInclude Include="..\..\..\src\sgs_xpc.h" />
     <ClInclude Include="..\..\..\src\sgscript.h" />
-    <ClInclude Include="..\..\..\src\sgs_std.h" />
+    <ClInclude Include="..\..\..\src\sgs_int.h" />
   </ItemGroup>
 </Project>

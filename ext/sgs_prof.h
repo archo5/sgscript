@@ -20,8 +20,8 @@ struct _sgs_Prof
 	/* mode 2 */
 	int prev;
 	double* ictrs;
-	uint32_t* iexcs;
-	uint32_t instr;
+	int32_t* iexcs;
+	int32_t instr;
 	double starttime;
 }
 sgs_Prof;

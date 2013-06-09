@@ -1,6 +1,9 @@
 
 
-#ifdef WIN32
+#include <stdio.h>
+#include <errno.h>
+
+#if defined(WIN32) && !defined(_MSC_VER)
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
 #  define EADDRINUSE WSAEADDRINUSE
@@ -30,9 +33,6 @@
 #  define EWOULDBLOCK WSAEWOULDBLOCK
 #endif
 
-#include <stdio.h>
-#include <errno.h>
-
 #define SGS_INTERNAL
 #define SGS_REALLY_INTERNAL
 
@@ -50,12 +50,12 @@
 
 typedef struct sgsstd_array_header_s
 {
-	uint32_t size;
-	uint32_t mem;
+	sgs_SizeVal size;
+	sgs_SizeVal mem;
 }
 sgsstd_array_header_t;
 
-static void* sgsstd_array_functable[];
+SGS_DECLARE void* sgsstd_array_functable[];
 
 #define SGSARR_UNIT sizeof( sgs_Variable )
 #define SGSARR_HDRBASE sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data
@@ -65,7 +65,7 @@ static void* sgsstd_array_functable[];
 #define SGSARR_ALLOCSIZE( cnt ) ((cnt)*sizeof(sgs_Variable)+SGSARR_HDRSIZE)
 #define SGSARR_PTR( base ) ((sgs_Variable*)(((char*)base)+SGSARR_HDRSIZE))
 
-static void sgsstd_array_reserve( SGS_CTX, sgs_VarObj* data, uint32_t size )
+static void sgsstd_array_reserve( SGS_CTX, sgs_VarObj* data, sgs_SizeVal size )
 {
 	SGSARR_HDR;
 	if( size <= hdr->mem )
@@ -91,12 +91,12 @@ static void sgsstd_array_clear( SGS_CTX, sgs_VarObj* data, int dch )
 }
 
 /* off = offset in stack to start inserting from (1 = the first argument in methods) */
-static void sgsstd_array_insert( SGS_CTX, sgs_VarObj* data, uint32_t pos, int off )
+static void sgsstd_array_insert( SGS_CTX, sgs_VarObj* data, sgs_SizeVal pos, int off )
 {
 	int i;
-	uint32_t cnt = sgs_StackSize( C ) - off;
+	sgs_SizeVal cnt = sgs_StackSize( C ) - off;
 	SGSARR_HDR;
-	uint32_t nsz = hdr->size + cnt;
+	sgs_SizeVal nsz = hdr->size + cnt;
 	sgs_Variable* ptr = SGSARR_PTR( data->data );
 
 	if( !cnt ) return;
@@ -118,14 +118,14 @@ static void sgsstd_array_insert( SGS_CTX, sgs_VarObj* data, uint32_t pos, int of
 	hdr->size = nsz;
 }
 
-static void sgsstd_array_erase( SGS_CTX, sgs_VarObj* data, uint32_t from, uint32_t to )
+static void sgsstd_array_erase( SGS_CTX, sgs_VarObj* data, sgs_SizeVal from, sgs_SizeVal to )
 {
-	uint32_t i;
-	uint32_t cnt = to - from + 1, to1 = to + 1;
+	sgs_SizeVal i;
+	sgs_SizeVal cnt = to - from + 1, to1 = to + 1;
 	SGSARR_HDR;
 	sgs_Variable* ptr = SGSARR_PTR( data->data );
 
-	sgs_BreakIf( from >= hdr->size || to >= hdr->size || from > to );
+	sgs_BreakIf( from < 0 || from >= hdr->size || to < 0 || to >= hdr->size || from > to );
 
 	for( i = from; i <= to; ++i )
 		sgs_Release( C, ptr + i );
@@ -198,7 +198,7 @@ static int sgsstd_arrayI_insert( SGS_CTX )
 	if( at < 0 || at > hdr->size )
 		STDLIB_WARN( "index out of bounds" )
 
-	sgsstd_array_insert( C, data, at, 2 );
+	sgsstd_array_insert( C, data, (sgs_SizeVal) at, 2 );
 	sgs_Pop( C, sgs_StackSize( C ) - 1 );
 	return 1;
 }
@@ -231,7 +231,7 @@ static int sgsstd_arrayI_erase( SGS_CTX )
 				" index #1 must be smaller or equal than index #2" )
 	}
 
-	sgsstd_array_erase( C, data, at, at2 );
+	sgsstd_array_erase( C, data, (sgs_SizeVal) at, (sgs_SizeVal) at2 );
 	sgs_Pop( C, sgs_StackSize( C ) - 1 );
 	return 1;
 }
@@ -288,9 +288,9 @@ static int sgsstd_arrayI_resize( SGS_CTX )
 		STDLIB_WARN( "unexpected arguments;"
 			" function expects 1 argument: int (>= 0)" )
 
-	sgsstd_array_reserve( C, data, sz );
+	sgsstd_array_reserve( C, data, (sgs_SizeVal) sz );
 	SGSARR_HDRUPDATE;
-	sgsstd_array_adjust( C, hdr, sz );
+	sgsstd_array_adjust( C, hdr, (sgs_SizeVal) sz );
 	sgs_Pop( C, sgs_StackSize( C ) - 1 );
 	return 1;
 }
@@ -304,7 +304,7 @@ static int sgsstd_arrayI_reserve( SGS_CTX )
 		STDLIB_WARN( "unexpected arguments;"
 			" function expects 1 argument: int (>= 0)" )
 
-	sgsstd_array_reserve( C, data, sz );
+	sgsstd_array_reserve( C, data, (sgs_SizeVal) sz );
 	sgs_Pop( C, sgs_StackSize( C ) - 1 );
 	return 1;
 }
@@ -355,7 +355,7 @@ static SGS_INLINE int sgsarrcomp_custom( const void* p1, const void* p2, void* u
 		return 0;
 	else
 	{
-		int ret = sgs_GetInt( C, -1 );
+		int ret = (int) sgs_GetInt( C, -1 );
 		sgs_Pop( C, 1 );
 		return ret;
 	}
@@ -468,7 +468,7 @@ static int sgsstd_arrayI_find( SGS_CTX )
 	{
 		sgs_Variable comp;
 		sgs_GetStackItem( C, 1, &comp );
-		sgs_SizeVal off = from;
+		sgs_SizeVal off = (sgs_SizeVal) from;
 		while( off < hdr->size )
 		{
 			sgs_Variable* p = SGSARR_PTR( hdr ) + off;
@@ -501,7 +501,7 @@ static int sgsstd_arrayI_remove( SGS_CTX )
 		int rmvd = 0;
 		sgs_Variable comp;
 		sgs_GetStackItem( C, 1, &comp );
-		sgs_SizeVal off = from;
+		sgs_SizeVal off = (sgs_SizeVal) from;
 		while( off < hdr->size )
 		{
 			sgs_Variable* p = SGSARR_PTR( hdr ) + off;
@@ -649,8 +649,8 @@ static int sgsstd_array_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 typedef struct sgsstd_array_iter_s
 {
 	sgs_Variable ref;
-	uint32_t size;
-	uint32_t off;
+	sgs_SizeVal size;
+	sgs_SizeVal off;
 }
 sgsstd_array_iter_t;
 
@@ -845,7 +845,13 @@ static DictHdr* mkdict( SGS_CTX )
 
 
 #define HTHDR DictHdr* dh = (DictHdr*) data->data; VHTable* ht = &dh->ht;
-static void* sgsstd_dict_functable[];
+
+#ifdef __cplusplus
+extern
+#else
+static
+#endif
+void* sgsstd_dict_functable[];
 
 static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
@@ -1308,7 +1314,8 @@ static int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data, int depth )
 }
 
 static int sgsstd_class( SGS_CTX );
-static void* sgsstd_class_functable[];
+
+SGS_DECLARE void* sgsstd_class_functable[];
 
 static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
@@ -1768,7 +1775,7 @@ static int sgsstd_printvar( SGS_CTX )
 
 	if( ssz == 2 )
 		sgs_Pop( C, 1 );
-	if( sgs_DumpVar( C, depth ) == SGS_SUCCESS )
+	if( sgs_DumpVar( C, (int) depth ) == SGS_SUCCESS )
 	{
 		sgs_SizeVal bsz;
 		char* buf = sgs_ToStringBuf( C, -1, &bsz );
@@ -2141,7 +2148,7 @@ static int sgsstd_sys_print( SGS_CTX )
 		!sgs_ParseString( C, 1, &errmsg, NULL ) )
 		STDLIB_WARN( "unexpected arguments; function expects 2 arguments: int, string" )
 
-	sgs_Printf( C, errcode, errmsg );
+	sgs_Printf( C, (int) errcode, errmsg );
 	return 0;
 }
 
@@ -2291,7 +2298,7 @@ static int sgsstd_sys_stat( SGS_CTX )
 		!sgs_ParseInt( C, 0, &type ) )
 		STDLIB_WARN( "unexpected arguments; function expects int" );
 
-	sgs_PushInt( C, sgs_Stat( C, type ) );
+	sgs_PushInt( C, sgs_Stat( C, (int) type ) );
 	return 1;
 }
 
@@ -2308,7 +2315,7 @@ static int sgsstd_dumpvar( SGS_CTX )
 
 	if( ssz == 2 )
 		sgs_Pop( C, 1 );
-	if( sgs_DumpVar( C, depth ) == SGS_SUCCESS )
+	if( sgs_DumpVar( C, (int) depth ) == SGS_SUCCESS )
 		return 1;
 	else
 		STDLIB_WARN( "unknown error while dumping variable" );

@@ -47,10 +47,10 @@ static void default_printfn( void* ctx, SGS_CTX, int type, const char* msg )
 		if( !p->next && !p->code )
 			break;
 		sgs_StackFrameInfo( C, p, &name, &file, &ln );
-		fprintf( ctx, "- \"%s\" in %s, line %d\n", name, file, ln );
+		fprintf( (FILE*) ctx, "- \"%s\" in %s, line %d\n", name, file, ln );
 		p = p->next;
 	}
-	fprintf( ctx, "%s: %s\n", errpfxs[ type ], msg );
+	fprintf( (FILE*) ctx, "%s: %s\n", errpfxs[ type ], msg );
 }
 
 
@@ -94,7 +94,7 @@ static void ctx_init( SGS_CTX )
 
 sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 {
-	SGS_CTX = memfunc( mfuserdata, NULL, sizeof( sgs_Context ) );
+	SGS_CTX = (sgs_Context*) memfunc( mfuserdata, NULL, sizeof( sgs_Context ) );
 	C->memsize = sizeof( sgs_Context );
 	C->memfunc = memfunc;
 	C->mfuserdata = mfuserdata;

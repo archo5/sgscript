@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\ext\msvc\dirent.c" />
     <ClCompile Include="..\..\..\src\sgs_bcg.c" />
     <ClCompile Include="..\..\..\src\sgs_ctx.c" />
     <ClCompile Include="..\..\..\src\sgs_fnt.c" />
@@ -23,13 +24,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\sgscript.h" />
-    <ClInclude Include="..\..\..\src\sgs_bcg.h" />
     <ClInclude Include="..\..\..\src\sgs_cfg.h" />
-    <ClInclude Include="..\..\..\src\sgs_ctx.h" />
-    <ClInclude Include="..\..\..\src\sgs_fnt.h" />
+    <ClInclude Include="..\..\..\src\sgs_int.h" />
     <ClInclude Include="..\..\..\src\sgs_proc.h" />
-    <ClInclude Include="..\..\..\src\sgs_std.h" />
-    <ClInclude Include="..\..\..\src\sgs_tok.h" />
     <ClInclude Include="..\..\..\src\sgs_util.h" />
     <ClInclude Include="..\..\..\src\sgs_xpc.h" />
   </ItemGroup>
