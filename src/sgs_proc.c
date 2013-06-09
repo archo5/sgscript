@@ -1387,20 +1387,17 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 	if( outval >= 0 ){ flags |= SGS_GETNEXT_VALUE; expargs++; }
 	if( iter->type != SVT_OBJECT || ( out = obj_exec( C, SOP_GETNEXT, iter->data.O, flags, 0 ) ) < 0 )
 	{
-		sgs_Pop( C, STACKFRAMESIZE - ssz );
 		sgs_Printf( C, SGS_ERROR, "Failed to retrieve data from iterator" );
-		return SGS_EINPROC;
-	}
-
-	if( flags )
-	{
-		sgs_PopSkip( C, STACKFRAMESIZE - ssz - expargs, expargs );
-		if( outkey >= 0 ) stk_setvar( C, outkey, stk_getpos( C, -2 + (outval<0) ) );
-		if( outval >= 0 ) stk_setvar( C, outval, stk_getpos( C, -1 ) );
-		sgs_Pop( C, STACKFRAMESIZE - ssz );
+		out = SGS_EINPROC;
 	}
 	else
-		sgs_Pop( C, STACKFRAMESIZE - ssz );
+	if( flags )
+	{
+		if( outkey >= 0 ) stk_setvar( C, outkey, stk_getpos( C, -2 + (outval<0) ) );
+		if( outval >= 0 ) stk_setvar( C, outval, stk_getpos( C, -1 ) );
+	}
+
+	sgs_Pop( C, STACKFRAMESIZE - ssz );
 	return out;
 }
 
