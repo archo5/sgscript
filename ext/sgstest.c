@@ -110,10 +110,12 @@ static void TF_printfn( void* ctx, SGS_CTX, int type, const char* message )
 	if( type < 0 ) type = 0;
 	if( type > 2 ) type = 2;
 	ret |= sgs_PushGlobal( C, "ERRORS" );
+	sgs_BreakIf( ret != 0 );
 	sgs_PushString( C, pfxs[ type ] );
 	sgs_PushString( C, message );
 	sgs_PushString( C, "]" );
 	ret |= sgs_StringMultiConcat( C, 4 );
+	sgs_BreakIf( ret != 0 );
 	ret |= sgs_StoreGlobal( C, "ERRORS" );
 	sgs_BreakIf( ret != 0 );
 }

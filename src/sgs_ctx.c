@@ -114,6 +114,7 @@ void sgs_DestroyEngine( SGS_CTX )
 	while( C->stack_base != C->stack_top )
 	{
 		C->stack_top--;
+		sgs_Acquire( C, C->stack_top );
 		sgs_Release( C, C->stack_top );
 	}
 

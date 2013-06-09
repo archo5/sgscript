@@ -2557,6 +2557,7 @@ int sgsSTD_GlobalFree( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
+extern void sgsVM_ReleaseStack( SGS_CTX, sgs_Variable* var );
 int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall )
 {
 	VHTableVar* pair;
@@ -2564,26 +2565,29 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 	HTHDR;
 
 	if( idx->type != SVT_STRING )
+	{
+		sgsVM_ReleaseStack( C, out );
 		return SGS_ENOTSUP;
-
-	sgs_Release( C, out );
+	}
+	
 	pair = vht_getS( ht, idx->data.S );
 
 	if( pair )
 	{
+		sgsVM_ReleaseStack( C, out );
 		*out = pair->var;
-		sgs_Acquire( C, out );
 		return SGS_SUCCESS;
 	}
 	else if( strcmp( str_cstr( idx->data.S ), "_G" ) == 0 )
 	{
+		sgsVM_ReleaseStack( C, out );
 		out->type = SVT_OBJECT;
 		out->data.O = GLBP;
-		sgs_Acquire( C, out );
 		return SGS_SUCCESS;
 	}
 	else
 	{
+		sgsVM_ReleaseStack( C, out );
 		if( !apicall )
 			sgs_Printf( C, SGS_WARNING, "variable '%s' was not found",
 				str_cstr( idx->data.S ) );
