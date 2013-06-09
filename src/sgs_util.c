@@ -238,7 +238,7 @@ HTPair* ht_find( HashTable* T, const char* str, int size, sgs_Hash h )
 		return NULL;
 	do
 	{
-		if( h == p->hash && size == p->size && strncmp( str, p->str, size ) == 0 )
+		if( h == p->hash && size == p->size && memcmp( str, p->str, size ) == 0 )
 			return p;
 		p++;
 		if( p >= pend ) p = T->pairs;

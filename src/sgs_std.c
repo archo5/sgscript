@@ -935,7 +935,7 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( !prop )
 		return sgsstd_dict_getindex_exact( C, data );
 
-	if( sgs_ItemType( C, -1 ) == SVT_INT )
+	if( (C->stack_top-1)->type == SVT_INT )
 	{
 		int32_t off = (int32_t) (C->stack_top-1)->data.I;
 		if( off < 0 || off > vht_size( ht ) )
@@ -951,8 +951,7 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		cacheable = key->isconst;
 #endif
 
-	sgs_ToString( C, -1 );
-	if( sgs_ItemType( C, -1 ) != SVT_STRING )
+	if( !sgs_ToString( C, -1 ) )
 		return SGS_EINVAL;
 
 #ifdef DICT_CACHE_SIZE

@@ -935,13 +935,12 @@ static void vm_properr( SGS_CTX, sgs_Variable* idx, int isindex )
 	stk_push( C, idx );
 	p = sgs_ToString( C, -1 );
 	sgs_Printf( C, SGS_WARNING, "%s: \"%s\"", err, p );
-	stk_pop1( C );
 }
 #define VM_PROP_NOT_FOUND_ERROR vm_properr( C, idx, isindex );
 
 static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* idx, int isindex )
 {
-	int ret;
+	int ret, origsize = STACKFRAMESIZE;
 
 	if( idx->type != SVT_STRING && idx->type != SVT_INT )
 	{
@@ -950,10 +949,8 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 	else if( obj->type == SVT_OBJECT )
 	{
 		sgs_VarObj* o = obj->data.O;
-		int origsize = sgs_StackSize( C );
 		stk_push( C, idx );
 		ret = obj_exec( C, SOP_GETINDEX, o, !isindex, 1 );
-		stk_popskip( C, sgs_StackSize( C ) - origsize - (ret == SGS_SUCCESS), ret == SGS_SUCCESS );
 	}
 	else
 	{
@@ -969,14 +966,14 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 	else
 	{
 		stk_setvar( C, out, stk_getpos( C, -1 ) );
-		stk_pop( C, 1 );
 	}
+	stk_pop( C, STACKFRAMESIZE - origsize );
 	return ret;
 }
 
 static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* src, int isindex )
 {
-	int ret;
+	int ret, origsize = STACKFRAMESIZE;
 
 	if( idx->type != SVT_INT && idx->type != SVT_STRING )
 	{
@@ -985,7 +982,6 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 	else if( obj->type == SVT_OBJECT )
 	{
 		sgs_VarObj* o = obj->data.O;
-		int origsize = sgs_StackSize( C );
 		stk_makespace( C, 2 );
 		C->stack_top[ 0 ] = *idx;
 		C->stack_top[ 1 ] = *src;
@@ -994,15 +990,14 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 		VAR_ACQUIRE( src );
 
 		ret = obj_exec( C, SOP_SETINDEX, o, !isindex, 2 );
-
-		stk_pop( C, sgs_StackSize( C ) - origsize );
 	}
 	else
 		ret = SGS_ENOTFND;
 	
 	if( ret == SGS_ENOTFND )
 		VM_PROP_NOT_FOUND_ERROR
-
+	
+	stk_pop( C, STACKFRAMESIZE - origsize );
 	return ret;
 }
 
@@ -2580,7 +2575,8 @@ sgs_Real sgs_ToReal( SGS_CTX, int item )
 char* sgs_ToStringBuf( SGS_CTX, int item, sgs_SizeVal* outsize )
 {
 	sgs_Variable* var;
-	if( vm_convert_stack( C, item, SVT_STRING ) != SGS_SUCCESS )
+	if( sgs_ItemType( C, item ) != SVT_STRING &&
+		vm_convert_stack( C, item, SVT_STRING ) != SGS_SUCCESS )
 		return NULL;
 	var = stk_getpos( C, item );
 	if( outsize )
