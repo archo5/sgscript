@@ -78,7 +78,7 @@
 /* size of the last property access cache for dict
 	bigger numbers increase average access time
 	smaller numbers decrease cache hit rate */
-#define SGS_DICT_CACHE_SIZE 8
+//#define SGS_DICT_CACHE_SIZE 8
 
 /* postfix for function names in C functions
 	EXTRABYTES should be set to the length of EXTRASTRING */

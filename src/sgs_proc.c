@@ -928,14 +928,26 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 	return SGS_ENOTFND;
 }
 
+static void vm_properr( SGS_CTX, sgs_Variable* idx, int isindex )
+{
+	char* p;
+	const char* err = isindex ? "Cannot find value by index" : "Property not found";
+	stk_push( C, idx );
+	p = sgs_ToString( C, -1 );
+	sgs_Printf( C, SGS_WARNING, "%s: \"%s\"", err, p );
+	stk_pop1( C );
+}
+#define VM_PROP_NOT_FOUND_ERROR vm_properr( C, idx, isindex );
+
 static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* idx, int isindex )
 {
 	int ret;
 
-	if( !isindex && idx->type != SVT_STRING && idx->type != SVT_INT )
-		return SGS_ENOTSUP;
-
-	if( obj->type == SVT_OBJECT )
+	if( idx->type != SVT_STRING && idx->type != SVT_INT )
+	{
+		ret = SGS_ENOTSUP;
+	}
+	else if( obj->type == SVT_OBJECT )
 	{
 		sgs_VarObj* o = obj->data.O;
 		int origsize = sgs_StackSize( C );
@@ -951,6 +963,8 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 	if( ret != SGS_SUCCESS )
 	{
 		stk_setvar_null( C, out );
+		if( ret == SGS_ENOTFND )
+			VM_PROP_NOT_FOUND_ERROR
 	}
 	else
 	{
@@ -964,10 +978,11 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 {
 	int ret;
 
-	if( !isindex && idx->type != SVT_STRING )
-		return SGS_ENOTSUP;
-
-	if( obj->type == SVT_OBJECT )
+	if( idx->type != SVT_INT && idx->type != SVT_STRING )
+	{
+		ret = SGS_ENOTSUP;
+	}
+	else if( obj->type == SVT_OBJECT )
 	{
 		sgs_VarObj* o = obj->data.O;
 		int origsize = sgs_StackSize( C );
@@ -984,21 +999,11 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 	}
 	else
 		ret = SGS_ENOTFND;
+	
+	if( ret == SGS_ENOTFND )
+		VM_PROP_NOT_FOUND_ERROR
 
 	return ret;
-}
-
-static void vm_properr( SGS_CTX, int ret, sgs_Variable* idx, int isindex )
-{
-	if( ret == SGS_ENOTFND )
-	{
-		char* p;
-		const char* err = isindex ? "Cannot find value by index" : "Property not found";
-		stk_push( C, idx );
-		p = sgs_ToString( C, -1 );
-		sgs_Printf( C, SGS_WARNING, "%s: \"%s\"", err, p );
-		stk_pop1( C );
-	}
 }
 
 
@@ -1666,10 +1671,10 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		case SI_LOADCONST: { stk_setlvar( C, argC, cptr + argE ); break; }
 		case SI_GETVAR: { ARGS_2; sgsSTD_GlobalGet( C, p1, p2, FALSE ); break; }
 		case SI_SETVAR: { ARGS_3; sgsSTD_GlobalSet( C, p2, p3, FALSE ); break; }
-		case SI_GETPROP: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, FALSE ), p3, FALSE ); break; }
-		case SI_SETPROP: { ARGS_3; vm_properr( C, vm_setprop( C, p1, p2, p3, FALSE ), p2, FALSE ); break; }
-		case SI_GETINDEX: { ARGS_3; vm_properr( C, vm_getprop( C, a1, p2, p3, TRUE ), p3, TRUE ); break; }
-		case SI_SETINDEX: { ARGS_3; vm_properr( C, vm_setprop( C, p1, p2, p3, TRUE ), p2, TRUE ); break; }
+		case SI_GETPROP: { ARGS_3; vm_getprop( C, a1, p2, p3, FALSE ); break; }
+		case SI_SETPROP: { ARGS_3; vm_setprop( C, p1, p2, p3, FALSE ); break; }
+		case SI_GETINDEX: { ARGS_3; vm_getprop( C, a1, p2, p3, TRUE ); break; }
+		case SI_SETINDEX: { ARGS_3; vm_setprop( C, p1, p2, p3, TRUE ); break; }
 
 		case SI_SET: { ARGS_2; VAR_ACQUIRE( p2 ); VAR_RELEASE( p1 ); *p1 = *p2; break; }
 		case SI_CLONE: { ARGS_2; vm_clone( C, a1, p2 ); break; }
