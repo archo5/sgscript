@@ -23,10 +23,12 @@ else
 endif
 
 ifneq ($(static),)
+	PREFLAGS = -DBUILDING_SGS=1
 	LFLAGS = -lsgscript
 	OUTLIB = libsgscript.a
 	OUTFILE = $(LIBDIR)/libsgscript.a
 else
+	PREFLAGS = -DBUILDING_SGS=1 -DSGS_DLL=1
 	LFLAGS = $(OUTDIR)/sgscript$(LIBEXT)
 	OUTLIB = sgscript$(LIBEXT)
 	OUTFILE = $(OUTDIR)/sgscript$(LIBEXT)
@@ -46,12 +48,15 @@ _OBJ = sgs_bcg.o sgs_ctx.o sgs_fnt.o sgs_proc.o sgs_std.o sgs_stdL.o sgs_tok.o s
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 # the library (default target)
+.PHONY: make
+make: $(OUTFILE)
+
 $(LIBDIR)/libsgscript.a: $(OBJ)
 	ar rcs $@ $(OBJ)
 $(OUTDIR)/sgscript$(LIBEXT): $(OBJ)
-	gcc -o $@ -shared $(OBJ) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+	$(CC) $(PREFLAGS) -o $@ -shared $(OBJ) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) $(PREFLAGS) -c -o $@ $< $(CFLAGS)
 
 # the libraries
 $(OUTDIR)/sgsjson$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsjson.c

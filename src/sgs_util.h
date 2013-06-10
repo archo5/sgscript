@@ -105,7 +105,7 @@
 
 typedef int16_t sgs_LineNum;
 
-void sgs_BreakIfFunc( const char* code, const char* file, int line );
+SGS_APIFUNC void sgs_BreakIfFunc( const char* code, const char* file, int line );
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
 #  define sgs_BreakIf( expr ) { if( expr ){ sgs_BreakIfFunc( #expr, __FILE__, __LINE__ ); } }
 #else
@@ -171,7 +171,7 @@ static SGS_INLINE int sgs_getbin( char c ){ return c - '0'; }
 #  define SGS_FUNC_END
 #endif
 
-void sgs_print_safe( FILE* fp, const char* buf, int32_t size );
+SGS_APIFUNC void sgs_print_safe( FILE* fp, const char* buf, int32_t size );
 
 
 /* string buffer */
@@ -186,15 +186,15 @@ sgs_MemBuf;
 
 
 /* data buffer */
-sgs_MemBuf sgs_membuf_create( void );
-void sgs_membuf_destroy( sgs_MemBuf* sb, SGS_CTX );
-sgs_MemBuf sgs_membuf_partial( char* ch, int32_t size );
-void sgs_membuf_reserve( sgs_MemBuf* mb, SGS_CTX, int32_t size );
-void sgs_membuf_resize( sgs_MemBuf* mb, SGS_CTX, int32_t size );
-void sgs_membuf_resize_opt( sgs_MemBuf* mb, SGS_CTX, int32_t size );
-void sgs_membuf_insbuf( sgs_MemBuf* mb, SGS_CTX, int32_t pos, const void* buf, int32_t size );
-void sgs_membuf_erase( sgs_MemBuf* mb, int32_t from, int32_t to );
-void sgs_membuf_appbuf( sgs_MemBuf* mb, SGS_CTX, const void* buf, int32_t size );
+SGS_APIFUNC sgs_MemBuf sgs_membuf_create( void );
+SGS_APIFUNC void sgs_membuf_destroy( sgs_MemBuf* sb, SGS_CTX );
+SGS_APIFUNC sgs_MemBuf sgs_membuf_partial( char* ch, int32_t size );
+SGS_APIFUNC void sgs_membuf_reserve( sgs_MemBuf* mb, SGS_CTX, int32_t size );
+SGS_APIFUNC void sgs_membuf_resize( sgs_MemBuf* mb, SGS_CTX, int32_t size );
+SGS_APIFUNC void sgs_membuf_resize_opt( sgs_MemBuf* mb, SGS_CTX, int32_t size );
+SGS_APIFUNC void sgs_membuf_insbuf( sgs_MemBuf* mb, SGS_CTX, int32_t pos, const void* buf, int32_t size );
+SGS_APIFUNC void sgs_membuf_erase( sgs_MemBuf* mb, int32_t from, int32_t to );
+SGS_APIFUNC void sgs_membuf_appbuf( sgs_MemBuf* mb, SGS_CTX, const void* buf, int32_t size );
 static SGS_INLINE void sgs_membuf_setstr( sgs_MemBuf* mb, SGS_CTX, const char* str )
 	{ mb->size = 0; sgs_membuf_appbuf( mb, C, str, strlen( str ) + 1 ); mb->size--; }
 static SGS_INLINE void sgs_membuf_setstrbuf( sgs_MemBuf* mb, SGS_CTX, const char* str, int32_t size )
@@ -206,7 +206,7 @@ static SGS_INLINE void sgs_membuf_appchr( sgs_MemBuf* mb, SGS_CTX, char chr )
 
 /* hash table */
 typedef uint32_t sgs_Hash;
-sgs_Hash sgs_HashFunc( const char* str, int size );
+SGS_APIFUNC sgs_Hash sgs_HashFunc( const char* str, int size );
 
 typedef
 struct _sgs_HTPair
@@ -227,30 +227,30 @@ struct _sgs_HashTable
 }
 sgs_HashTable;
 
-void sgs_ht_init( sgs_HashTable* T, SGS_CTX, int size );
-void sgs_ht_free( sgs_HashTable* T, SGS_CTX );
-void sgs_ht_dump( sgs_HashTable* T );
-void sgs_ht_rehash( sgs_HashTable* T, SGS_CTX, int size );
-void sgs_ht_check( sgs_HashTable* T, SGS_CTX, int inc );
-sgs_HTPair* sgs_ht_find( sgs_HashTable* T, const char* str, int size, sgs_Hash h );
-void* sgs_ht_get( sgs_HashTable* T, const char* str, int size );
-void sgs_ht_setpair( sgs_HTPair* P, SGS_CTX, const char* str, int size, sgs_Hash h, void* ptr );
-sgs_HTPair* sgs_ht_set( sgs_HashTable* T, SGS_CTX, const char* str, int size, void* ptr );
-void sgs_ht_unset_pair( sgs_HashTable* T, SGS_CTX, sgs_HTPair* p );
-void sgs_ht_unset( sgs_HashTable* T, SGS_CTX, const char* str, int size );
+SGS_APIFUNC void sgs_ht_init( sgs_HashTable* T, SGS_CTX, int size );
+SGS_APIFUNC void sgs_ht_free( sgs_HashTable* T, SGS_CTX );
+SGS_APIFUNC void sgs_ht_dump( sgs_HashTable* T );
+SGS_APIFUNC void sgs_ht_rehash( sgs_HashTable* T, SGS_CTX, int size );
+SGS_APIFUNC void sgs_ht_check( sgs_HashTable* T, SGS_CTX, int inc );
+SGS_APIFUNC sgs_HTPair* sgs_ht_find( sgs_HashTable* T, const char* str, int size, sgs_Hash h );
+SGS_APIFUNC void* sgs_ht_get( sgs_HashTable* T, const char* str, int size );
+SGS_APIFUNC void sgs_ht_setpair( sgs_HTPair* P, SGS_CTX, const char* str, int size, sgs_Hash h, void* ptr );
+SGS_APIFUNC sgs_HTPair* sgs_ht_set( sgs_HashTable* T, SGS_CTX, const char* str, int size, void* ptr );
+SGS_APIFUNC void sgs_ht_unset_pair( sgs_HashTable* T, SGS_CTX, sgs_HTPair* p );
+SGS_APIFUNC void sgs_ht_unset( sgs_HashTable* T, SGS_CTX, const char* str, int size );
 
 
-double sgs_GetTime();
+SGS_APIFUNC double sgs_GetTime();
 
 
 /* returns 0 on failure, 1/2 on integer/real */
-int sgs_util_strtonum( const char** at, const char* end, sgs_Integer* outi, sgs_Real* outf );
-sgs_Integer sgs_util_atoi( const char* str, int len );
-sgs_Real sgs_util_atof( const char* str, int len );
+SGS_APIFUNC int sgs_util_strtonum( const char** at, const char* end, sgs_Integer* outi, sgs_Real* outf );
+SGS_APIFUNC sgs_Integer sgs_util_atoi( const char* str, int len );
+SGS_APIFUNC sgs_Real sgs_util_atof( const char* str, int len );
 
 
 
-void sgs_quicksort( void *array, size_t length, size_t size,
+SGS_APIFUNC void sgs_quicksort( void *array, size_t length, size_t size,
 	int(*compare)(const void *, const void *, void*), void* userdata);
 
 /*
@@ -261,8 +261,8 @@ void sgs_quicksort( void *array, size_t length, size_t size,
 #define SGS_UNICODE_INVCHAR 0xfffd
 #define SGS_UNICODE_INVCHAR_STR "\xff\xfd"
 #define SGS_UNICODE_INVCHAR_LEN 2
-int sgs_utf8_decode( char* buf, size_t size, uint32_t* outchar );
-int sgs_utf8_encode( uint32_t ch, char* out );
+SGS_APIFUNC int sgs_utf8_decode( char* buf, size_t size, uint32_t* outchar );
+SGS_APIFUNC int sgs_utf8_encode( uint32_t ch, char* out );
 
 
 #endif /* SGS_UTIL_H_INCLUDED */

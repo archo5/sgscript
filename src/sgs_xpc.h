@@ -34,6 +34,17 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 
+#if SGS_DLL
+#  if BUILDING_SGS
+#    define SGS_APIFUNC __declspec(dllexport)
+#  else
+#    define SGS_APIFUNC __declspec(dllimport)
+#  endif
+#else
+#  define SGS_APIFUNC
+#endif
+
+
 #ifdef SGS_USE_FILESYSTEM
 #  include <sys/types.h>
 #  include <sys/stat.h>

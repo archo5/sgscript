@@ -12,9 +12,9 @@
 #include "sgs_int.h"
 
 
-#define RTTMASK( x ) (1<<(x))
-#define REFTYPE_CONSTANT (RTTMASK(SVT_STRING)|RTTMASK(SVT_FUNC)|RTTMASK(SVT_OBJECT))
-#define IS_REFTYPE( type ) ((1<<(type))& REFTYPE_CONSTANT )
+#define TYPENAME( type ) sgs_VarNames[ type & 0xf ]
+
+#define IS_REFTYPE( type ) ( type & SGS_VTF_REF )
 
 
 #if 1
@@ -935,7 +935,7 @@ static int vm_getidx_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 	}
 
 	sgs_Printf( C, SGS_WARNING, "Cannot index variable of type '%s'",
-		sgs_VarNames[ obj->type ] );
+		TYPENAME( obj->type ) );
 	return SGS_ENOTFND;
 }
 
@@ -963,7 +963,7 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 	}
 
 	sgs_Printf( C, SGS_WARNING, "Property '%s' not found on "
-		"object of type '%s'", prop, sgs_VarNames[ obj->type ] );
+		"object of type '%s'", prop, TYPENAME( obj->type ) );
 	return SGS_ENOTFND;
 }
 
@@ -1149,7 +1149,7 @@ static int vm_op_negate( SGS_CTX, sgs_VarPtr out, sgs_Variable *A )
 		}
 		return 0;
 	default:
-		sgs_Printf( C, SGS_ERROR, "Negating variable of type %s is not supported.", sgs_VarNames[ i ] );
+		sgs_Printf( C, SGS_ERROR, "Negating variable of type %s is not supported.", TYPENAME( i ) );
 		var_setnull( C, out );
 		return 0;
 	}
@@ -1187,17 +1187,9 @@ VAR_MOP( dec, -1 )
 #define ARITH_OP_MUL	SGS_EOP_MUL
 #define ARITH_OP_DIV	SGS_EOP_DIV
 #define ARITH_OP_MOD	SGS_EOP_MOD
-static const uint8_t aop_types[ 35 ] = /* 5x5: NBIRS */
-{
-	SVT_NULL, SVT_INT,  SVT_INT,  SVT_REAL, SVT_REAL,
-	SVT_INT,  SVT_INT,  SVT_INT,  SVT_REAL, SVT_REAL,
-	SVT_INT,  SVT_INT,  SVT_INT,  SVT_REAL, SVT_REAL,
-	SVT_REAL, SVT_REAL, SVT_REAL, SVT_REAL, SVT_REAL,
-	SVT_REAL, SVT_REAL, SVT_REAL, SVT_REAL, SVT_REAL,
-};
 static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, uint8_t op )
 {
-	if( a->type == SVT_REAL && b->type == SVT_REAL )
+	if( ( a->type | b->type ) == SVT_REAL )
 	{
 		sgs_Real A = a->data.R, B = b->data.R, R;
 		switch( op ){
@@ -1213,7 +1205,7 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 		var_setreal( C, out, R );
 		return;
 	}
-	if( a->type == SVT_INT && b->type == SVT_INT )
+	if( ( a->type | b->type ) == SVT_INT )
 	{
 		sgs_Integer A = a->data.I, B = b->data.I;
 		switch( op ){
@@ -1229,7 +1221,7 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 		}
 	}
 
-	if( a->type == SVT_OBJECT || b->type == SVT_OBJECT )
+	if( ( a->type | b->type ) == SVT_OBJECT )
 	{
 		int origsize = sgs_StackSize( C );
 		int ofs = out - C->stack_off;
@@ -1253,11 +1245,10 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 		goto fail;
 	}
 
-	if( a->type == SVT_FUNC || a->type == SVT_CFUNC ||
-		b->type == SVT_FUNC || b->type == SVT_CFUNC )
+	if( (a->type | b->type) & SGS_VTF_CALL )
 		goto fail;
 
-	if( a->type >= SVT_REAL || b->type >= SVT_REAL )
+	if( (a->type | b->type) & (SGS_VTF_REAL | SGS_VTF_STRING) )
 	{
 		sgs_Real A = var_getreal_simple( a ), B = var_getreal_simple( b ), R;
 		switch( op ){
@@ -1384,7 +1375,8 @@ static int vm_forprep( SGS_CTX, int outiter, sgs_VarPtr obj )
 
 	if( obj->type != SVT_OBJECT )
 	{
-		sgs_Printf( C, SGS_ERROR, "Variable of type '%s' doesn't have an iterator", sgs_VarNames[ obj->type ] );
+		sgs_Printf( C, SGS_ERROR, "Variable of type '%s' "
+			"doesn't have an iterator", TYPENAME( obj->type ) );
 		stk_setvar_null( C, outiter );
 		return SGS_ENOTSUP;
 	}
@@ -1525,7 +1517,8 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 		}
 		else
 		{
-			sgs_Printf( C, SGS_ERROR, "Variable of type '%s' cannot be called", sgs_VarNames[ func->type ] );
+			sgs_Printf( C, SGS_ERROR, "Variable of type '%s' "
+				"cannot be called", TYPENAME( func->type ) );
 			ret = 0;
 		}
 	}
@@ -1791,7 +1784,7 @@ int sgsVM_VarSize( sgs_Variable* var )
 
 void sgsVM_VarDump( sgs_VarPtr var )
 {
-	printf( "%s (size:%d)", sgs_VarNames[ var->type ], sgsVM_VarSize( var ) );
+	printf( "%s (size:%d)", TYPENAME( var->type ), sgsVM_VarSize( var ) );
 	switch( var->type )
 	{
 	case SVT_NULL: break;
@@ -2481,25 +2474,25 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 			c = *str++;
 			switch( c )
 			{
-			case SVT_NULL: sgs_PushNull( C ); break;
-			case SVT_BOOL:
+			case SGS_VTF_NULL: sgs_PushNull( C ); break;
+			case SGS_VTF_BOOL:
 				if( str >= strend )
 					return SGS_EINPROC;
 				sgs_PushBool( C, *str++ );
 				break;
-			case SVT_INT:
+			case SGS_VTF_INT:
 				if( str >= strend-7 )
 					return SGS_EINPROC;
 				sgs_PushInt( C, AS_INTEGER( str ) );
 				str += 8;
 				break;
-			case SVT_REAL:
+			case SGS_VTF_REAL:
 				if( str >= strend-7 )
 					return SGS_EINPROC;
 				sgs_PushReal( C, AS_REAL( str ) );
 				str += 8;
 				break;
-			case SVT_STRING:
+			case SGS_VTF_STRING:
 				{
 					sgs_SizeVal strsz;
 					if( str >= strend-3 )

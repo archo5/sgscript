@@ -390,10 +390,10 @@ void sgsBC_Free( SGS_CTX, sgs_CompFunc* func );
 /*
 	Serialized bytecode
 */
-int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf );
+SGS_APIFUNC int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf );
 
 /* assumes headers have already been validated (except size) but are still in the buffer */
-const char* sgsBC_Buf2Func( SGS_CTX, const char* fn,
+SGS_APIFUNC const char* sgsBC_Buf2Func( SGS_CTX, const char* fn,
 	const char* buf, sgs_SizeVal size, sgs_CompFunc** outfunc );
 
 /* validates header size and bytes one by one (except last flag byte)
