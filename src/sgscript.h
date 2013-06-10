@@ -184,6 +184,7 @@ typedef void (*sgs_HookFunc) (
 
 /* - object data */
 typedef struct sgs_ObjData sgs_VarObj;
+typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj*, int /* arg */ );
 struct sgs_ObjData
 {
 	sgs_SizeVal refcount;
@@ -193,6 +194,9 @@ struct sgs_ObjData
 	void** iface;
 	sgs_VarObj* prev;   /* pointer to previous GC object */
 	sgs_VarObj* next;   /* pointer to next GC object */
+	/* cache */
+	sgs_ObjCallback getindex;
+	sgs_ObjCallback getnext;
 };
 
 typedef struct _sgs_iStr sgs_iStr;
@@ -216,8 +220,6 @@ struct _sgs_Variable
 };
 
 /* - object interface */
-typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj*, int /* arg */ );
-
 #define SGS_OP( idx ) ((void*)idx)
 #define SGS_OP_END        SGS_OP( 0 )
 #define SGS_OP_DESTRUCT   SGS_OP( 1 )  /* arg = should free child vars? */

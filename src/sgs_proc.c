@@ -36,21 +36,36 @@
 static int obj_exec( SGS_CTX, const void* sop, object_t* data, int arg, int args )
 {
 	void** func = data->iface;
-	int ret = SGS_ENOTFND, stkoff = C->stack_off - C->stack_base;
-	C->stack_off = C->stack_top - args;
-
+	int ret = SGS_ENOTFND, stkoff;
+	
 	while( *func != SOP_END )
 	{
 		if( *func == sop )
 		{
+			stkoff = C->stack_off - C->stack_base;
+			C->stack_off = C->stack_top - args;
 			ret = ( (sgs_ObjCallback) func[ 1 ] )( C, data, arg );
+			C->stack_off = C->stack_base + stkoff;
 			break;
 		}
 		func += 2;
 	}
-
-	C->stack_off = C->stack_base + stkoff;
+	
 	return ret;
+}
+
+static int obj_exec_specific( SGS_CTX, sgs_ObjCallback fn, object_t* data, int arg, int args )
+{
+	if( !fn )
+		return SGS_ENOTFND;
+	else
+	{
+		int ret, stkoff = C->stack_off - C->stack_base;
+		C->stack_off = C->stack_top - args;
+		ret = fn( C, data, arg );
+		C->stack_off = C->stack_base + stkoff;
+		return ret;
+	}
 }
 
 static void var_free_object( SGS_CTX, object_t* O )
@@ -223,7 +238,9 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 		obj->next->prev = obj;
 	C->objcount++;
 	C->objs = obj;
-
+	
+	obj->getindex = NULL;
+	obj->getnext = NULL;
 	{
 		void** i = iface;
 		while( *i )
@@ -233,6 +250,10 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 				obj->flags = (uint16_t) (size_t) i[1];
 				break;
 			}
+			else if( i[0] == SOP_GETINDEX )
+				obj->getindex = (sgs_ObjCallback) i[1];
+			else if( i[0] == SOP_GETNEXT )
+				obj->getnext = (sgs_ObjCallback) i[1];
 			i += 2;
 		}
 	}
@@ -968,7 +989,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 	{
 		sgs_VarObj* o = obj->data.O;
 		stk_push( C, idx );
-		ret = obj_exec( C, SOP_GETINDEX, o, !isindex, 1 );
+		ret = obj_exec_specific( C, o->getindex, o, !isindex, 1 );
 	}
 	else
 	{
@@ -1387,7 +1408,8 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 	int flags = 0, expargs = 0, out;
 	if( outkey >= 0 ){ flags |= SGS_GETNEXT_KEY; expargs++; }
 	if( outval >= 0 ){ flags |= SGS_GETNEXT_VALUE; expargs++; }
-	if( iter->type != SVT_OBJECT || ( out = obj_exec( C, SOP_GETNEXT, iter->data.O, flags, 0 ) ) < 0 )
+	if( iter->type != SVT_OBJECT ||
+		( out = obj_exec_specific( C, iter->data.O->getnext, iter->data.O, flags, 0 ) ) < 0 )
 	{
 		sgs_Printf( C, SGS_ERROR, "Failed to retrieve data from iterator" );
 		out = SGS_EINPROC;
