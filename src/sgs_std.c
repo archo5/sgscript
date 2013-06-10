@@ -558,7 +558,7 @@ static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_array_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+int sgsstd_array_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	if( prop )
 		return sgsstd_array_getprop( C, data );
@@ -697,7 +697,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
 		sgsstd_array_iter_t* iter = sgs_Alloc( sgsstd_array_iter_t );
 
-		iter->ref.type = SVT_OBJECT;
+		iter->ref.type = SGS_VT_ARRAY;
 		iter->ref.data.O = data;
 		iter->size = hdr->size;
 		iter->off = -1;
@@ -739,6 +739,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 				sgs_Acquire( C, ptr++ );
 		}
 		sgs_PushObject( C, nd, sgsstd_array_functable );
+		(C->stack_top-1)->type |= SGS_VTF_ARRAY;
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_CONVOP_TOTYPE )
@@ -803,6 +804,7 @@ static int sgsstd_array( SGS_CTX )
 		sgs_Acquire( C, p++ );
 	}
 	sgs_PushObject( C, data, sgsstd_array_functable );
+	(C->stack_top-1)->type |= SGS_VTF_ARRAY;
 	return 1;
 }
 
@@ -927,7 +929,7 @@ static int sgsstd_dict_getindex_exact( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	VHTableVar* pair = NULL;
 	HTHDR;
@@ -1079,7 +1081,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
 		sgsstd_dict_iter_t* iter = sgs_Alloc( sgsstd_dict_iter_t );
 
-		iter->ref.type = SVT_OBJECT;
+		iter->ref.type = SGS_VT_DICT;
 		iter->ref.data.O = data;
 		iter->size = ht->ht.load;
 		iter->off = -1;
@@ -1121,6 +1123,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 			vht_set( &ndh->ht, ht->vars[ i ].str, ht->vars[ i ].size, &ht->vars[ i ].var, C );
 		}
 		sgs_PushObject( C, ndh, sgsstd_dict_functable );
+		(C->stack_top-1)->type |= SGS_VTF_DICT;
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_CONVOP_TOTYPE )
@@ -1197,6 +1200,7 @@ static int sgsstd_dict( SGS_CTX )
 	}
 
 	sgs_PushObject( C, ht, sgsstd_dict_functable );
+	(C->stack_top-1)->type |= SGS_VTF_DICT;
 	return 1;
 }
 
@@ -1590,8 +1594,7 @@ static int sgsstd_unset( SGS_CTX )
 	
 	if( sgs_StackSize( C ) != 2 ||
 		!sgs_GetStackItem( C, 0, &var ) ||
-		var.type != SVT_OBJECT ||
-		var.data.O->iface != sgsstd_dict_functable ||
+		!sgs_IsObject( C, 0, sgsstd_dict_functable ) ||
 		!( dh = (DictHdr*) sgs_GetObjectData( C, 0 )->data ) ||
 		!sgs_ParseString( C, 1, &str, &size ) )
 		STDLIB_WARN( "unexpected arguments; function expects 2 arguments: dict, string" )

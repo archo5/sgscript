@@ -31,11 +31,6 @@
 #  define SGS_DEBUG_STATE 0
 #endif
 
-/* debugging of performance issues (currently logs vm_convert only) */
-#ifndef SGS_DEBUG_PERF
-#  define SGS_DEBUG_PERF 0
-#endif
-
 /* break-if */
 #ifndef SGS_DEBUG_VALIDATE
 #  define SGS_DEBUG_VALIDATE 1

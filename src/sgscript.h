@@ -174,13 +174,13 @@ typedef void (*sgs_HookFunc) (
 /* - variable type flags */
 #define SGS_VTF_NULL   0
 
-#define SGS_VTF_BOOL   1
-#define SGS_VTF_INT    2
-#define SGS_VTF_REAL   3
-#define SGS_VTF_STRING 4
-#define SGS_VTF_FUNC   5
-#define SGS_VTF_CFUNC  6
-#define SGS_VTF_OBJECT 7
+#define SGS_VTF_BOOL   0x01
+#define SGS_VTF_INT    0x02
+#define SGS_VTF_REAL   0x04
+#define SGS_VTF_STRING 0x08
+#define SGS_VTF_FUNC   0x10
+#define SGS_VTF_CFUNC  0x20
+#define SGS_VTF_OBJECT 0x40
 
 #define SGS_VTF_NUM    0x0100
 #define SGS_VTF_CALL   0x0200
@@ -223,6 +223,7 @@ typedef struct _sgs_iStr sgs_iStr;
 typedef struct _sgs_iFunc sgs_iFunc;
 typedef union _sgs_VarData
 {
+	sgs_SizeVal* pRC;
 	sgs_Bool    B;
 	sgs_Integer I;
 	sgs_Real    R;
@@ -268,9 +269,9 @@ struct _sgs_Variable
 #define SGS_EOP_COMPARE   5
 #define SGS_EOP_NEGATE    6
 
-#define SGS_CONVOP_CLONE  11
-#define SGS_CONVOP_TOTYPE 12
-#define SGS_CONVOP_TOITER 13
+#define SGS_CONVOP_CLONE  0x10000
+#define SGS_CONVOP_TOTYPE 0x20000
+#define SGS_CONVOP_TOITER 0x30000
 
 
 /* Engine context */
