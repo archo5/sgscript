@@ -176,7 +176,7 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 
 static int socket_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( type == SGS_CONVOP_TOTYPE || type == SVT_STRING )
+	if( type == SGS_CONVOP_TOTYPE || type == VT_STRING )
 	{
 		sgs_PushString( C, "socket" );
 		return SGS_SUCCESS;

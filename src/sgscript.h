@@ -25,15 +25,31 @@ extern "C" {
 
 
 #ifdef SGS_INTERNAL
-#  define SVT_NULL SGS_VT_NULL
-#  define SVT_BOOL SGS_VT_BOOL
-#  define SVT_INT SGS_VT_INT
-#  define SVT_REAL SGS_VT_REAL
-#  define SVT_STRING SGS_VT_STRING
-#  define SVT_FUNC SGS_VT_FUNC
-#  define SVT_CFUNC SGS_VT_CFUNC
-#  define SVT_OBJECT SGS_VT_OBJECT
-#  define SVT__COUNT SGS_VT__COUNT
+#  define VT_NULL SGS_VT_NULL
+#  define VT_BOOL SGS_VT_BOOL
+#  define VT_INT SGS_VT_INT
+#  define VT_REAL SGS_VT_REAL
+#  define VT_STRING SGS_VT_STRING
+#  define VT_FUNC SGS_VT_FUNC
+#  define VT_CFUNC SGS_VT_CFUNC
+#  define VT_OBJECT SGS_VT_OBJECT
+#  define VTYPE_MASK SGS_VTYPE_MASK
+#  define BASETYPE SGS_BASETYPE
+#  define VTF_NUM SGS_VTF_NUM
+#  define VTF_CALL SGS_VTF_CALL
+#  define VTF_REF SGS_VTF_REF
+#  define VTF_ARRAY SGS_VTF_ARRAY
+#  define VTF_DICT SGS_VTF_DICT
+#  define VTC_NULL SGS_VTC_NULL
+#  define VTC_BOOL SGS_VTC_BOOL
+#  define VTC_INT SGS_VTC_INT
+#  define VTC_REAL SGS_VTC_REAL
+#  define VTC_STRING SGS_VTC_STRING
+#  define VTC_FUNC SGS_VTC_FUNC
+#  define VTC_CFUNC SGS_VTC_CFUNC
+#  define VTC_OBJECT SGS_VTC_OBJECT
+#  define VTC_ARRAY SGS_VTC_ARRAY
+#  define VTC_DICT SGS_VTC_DICT
 
 #  define SOP_END SGS_OP_END
 #  define SOP_DESTRUCT SGS_OP_DESTRUCT
@@ -171,16 +187,18 @@ typedef void (*sgs_HookFunc) (
 
 
 /* Context internals */
-/* - variable type flags */
-#define SGS_VTF_NULL   0
+/* - variable type flags, primary and extended */
+#define SGS_VT_NULL   0
+#define SGS_VT_BOOL   0x01
+#define SGS_VT_INT    0x02
+#define SGS_VT_REAL   0x04
+#define SGS_VT_STRING 0x08
+#define SGS_VT_FUNC   0x10
+#define SGS_VT_CFUNC  0x20
+#define SGS_VT_OBJECT 0x40
 
-#define SGS_VTF_BOOL   0x01
-#define SGS_VTF_INT    0x02
-#define SGS_VTF_REAL   0x04
-#define SGS_VTF_STRING 0x08
-#define SGS_VTF_FUNC   0x10
-#define SGS_VTF_CFUNC  0x20
-#define SGS_VTF_OBJECT 0x40
+#define SGS_VTYPE_MASK 0xff
+#define SGS_BASETYPE( x ) ( x & SGS_VTYPE_MASK )
 
 #define SGS_VTF_NUM    0x0100
 #define SGS_VTF_CALL   0x0200
@@ -188,19 +206,17 @@ typedef void (*sgs_HookFunc) (
 #define SGS_VTF_ARRAY  0x1000
 #define SGS_VTF_DICT   0x2000
 
-/* - variable types */
-#define SGS_VT_NULL    (SGS_VTF_NULL)
-#define SGS_VT_BOOL    (SGS_VTF_BOOL)
-#define SGS_VT_INT     (SGS_VTF_INT | SGS_VTF_NUM)
-#define SGS_VT_REAL    (SGS_VTF_REAL | SGS_VTF_NUM)
-#define SGS_VT_STRING  (SGS_VTF_STRING | SGS_VTF_REF)
-#define SGS_VT_FUNC    (SGS_VTF_FUNC | SGS_VTF_CALL | SGS_VTF_REF)
-#define SGS_VT_CFUNC   (SGS_VTF_CFUNC | SGS_VTF_CALL)
-#define SGS_VT_OBJECT  (SGS_VTF_OBJECT | SGS_VTF_REF)
-#define SGS_VT_ARRAY   (SGS_VT_OBJECT | SGS_VTF_ARRAY)
-#define SGS_VT_DICT    (SGS_VT_OBJECT | SGS_VTF_DICT)
-
-#define SGS_VT__COUNT  8
+/* - complete variable types */
+#define SGS_VTC_NULL    (SGS_VT_NULL)
+#define SGS_VTC_BOOL    (SGS_VT_BOOL)
+#define SGS_VTC_INT     (SGS_VT_INT | SGS_VTF_NUM)
+#define SGS_VTC_REAL    (SGS_VT_REAL | SGS_VTF_NUM)
+#define SGS_VTC_STRING  (SGS_VT_STRING | SGS_VTF_REF)
+#define SGS_VTC_FUNC    (SGS_VT_FUNC | SGS_VTF_CALL | SGS_VTF_REF)
+#define SGS_VTC_CFUNC   (SGS_VT_CFUNC | SGS_VTF_CALL)
+#define SGS_VTC_OBJECT  (SGS_VT_OBJECT | SGS_VTF_REF)
+#define SGS_VTC_ARRAY   (SGS_VTC_OBJECT | SGS_VTF_ARRAY)
+#define SGS_VTC_DICT    (SGS_VTC_OBJECT | SGS_VTF_DICT)
 
 /* - object data */
 typedef struct sgs_ObjData sgs_VarObj;
@@ -528,6 +544,7 @@ SGS_APIFUNC int sgs_StackSize( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_IsValidIndex( SGS_CTX, int item );
 SGS_APIFUNC SGSBOOL sgs_GetStackItem( SGS_CTX, int item, sgs_Variable* out );
 SGS_APIFUNC int sgs_ItemType( SGS_CTX, int item );
+SGS_APIFUNC int sgs_ItemTypeExt( SGS_CTX, int item );
 SGS_APIFUNC SGSBOOL sgs_Method( SGS_CTX );
 SGS_APIFUNC void sgs_Acquire( SGS_CTX, sgs_Variable* var );
 SGS_APIFUNC void sgs_Release( SGS_CTX, sgs_Variable* var );

@@ -275,7 +275,7 @@ static void sgsstd_array_adjust( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVa
 	}
 	while( hdr->size < cnt )
 	{
-		( SGSARR_PTR( hdr ) + (hdr->size++) )->type = SVT_NULL;
+		( SGSARR_PTR( hdr ) + (hdr->size++) )->type = VTC_NULL;
 	}
 }
 static int sgsstd_arrayI_resize( SGS_CTX )
@@ -697,7 +697,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
 		sgsstd_array_iter_t* iter = sgs_Alloc( sgsstd_array_iter_t );
 
-		iter->ref.type = SGS_VT_ARRAY;
+		iter->ref.type = VTC_ARRAY;
 		iter->ref.data.O = data;
 		iter->size = hdr->size;
 		iter->off = -1;
@@ -706,12 +706,12 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgs_PushObject( C, iter, sgsstd_array_iter_functable );
 		return SGS_SUCCESS;
 	}
-	else if( type == SVT_BOOL )
+	else if( type == VT_BOOL )
 	{
 		sgs_PushBool( C, !!hdr->size );
 		return SGS_SUCCESS;
 	}
-	else if( type == SVT_STRING )
+	else if( type == VT_STRING )
 	{
 		sgs_Variable* var = SGSARR_PTR( data->data );
 		sgs_Variable* vend = var + hdr->size;
@@ -739,7 +739,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 				sgs_Acquire( C, ptr++ );
 		}
 		sgs_PushObject( C, nd, sgsstd_array_functable );
-		(C->stack_top-1)->type |= SGS_VTF_ARRAY;
+		(C->stack_top-1)->type = VTC_ARRAY;
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_CONVOP_TOTYPE )
@@ -804,7 +804,7 @@ static int sgsstd_array( SGS_CTX )
 		sgs_Acquire( C, p++ );
 	}
 	sgs_PushObject( C, data, sgsstd_array_functable );
-	(C->stack_top-1)->type |= SGS_VTF_ARRAY;
+	(C->stack_top-1)->type = VTC_ARRAY;
 	return 1;
 }
 
@@ -918,7 +918,7 @@ static int sgsstd_dict_getindex_exact( SGS_CTX, sgs_VarObj* data )
 	HTHDR;
 
 	sgs_ToString( C, -1 );
-	if( sgs_ItemType( C, -1 ) != SVT_STRING )
+	if( sgs_ItemType( C, -1 ) != VT_STRING )
 		return SGS_EINVAL;
 
 	pair = vht_get( ht, sgs_GetStringPtr( C, -1 ), sgs_GetStringSize( C, -1 ) );
@@ -937,7 +937,7 @@ int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( !prop )
 		return sgsstd_dict_getindex_exact( C, data );
 
-	if( (C->stack_top-1)->type == SVT_INT )
+	if( (C->stack_top-1)->type == VTC_INT )
 	{
 		int32_t off = (int32_t) (C->stack_top-1)->data.I;
 		if( off < 0 || off > vht_size( ht ) )
@@ -947,7 +947,7 @@ int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	}
 
 #ifdef DICT_CACHE_SIZE
-	int i, cacheable = sgs_ItemType( C, -1 ) == SVT_STRING;
+	int i, cacheable = sgs_ItemType( C, -1 ) == VT_STRING;
 	string_t* key = (C->stack_top-1)->data.S;
 	if( cacheable )
 		cacheable = key->isconst;
@@ -1081,7 +1081,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
 		sgsstd_dict_iter_t* iter = sgs_Alloc( sgsstd_dict_iter_t );
 
-		iter->ref.type = SGS_VT_DICT;
+		iter->ref.type = VTC_DICT;
 		iter->ref.data.O = data;
 		iter->size = ht->ht.load;
 		iter->off = -1;
@@ -1090,12 +1090,12 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgs_PushObject( C, iter, sgsstd_dict_iter_functable );
 		return SGS_SUCCESS;
 	}
-	else if( type == SVT_BOOL )
+	else if( type == VT_BOOL )
 	{
 		sgs_PushBool( C, vht_size( ht ) != 0 );
 		return SGS_SUCCESS;
 	}
-	else if( type == SVT_STRING )
+	else if( type == VT_STRING )
 	{
 		VHTableVar *pair = ht->vars, *pend = ht->vars + vht_size( ht );
 		int cnt = 0;
@@ -1123,7 +1123,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 			vht_set( &ndh->ht, ht->vars[ i ].str, ht->vars[ i ].size, &ht->vars[ i ].var, C );
 		}
 		sgs_PushObject( C, ndh, sgsstd_dict_functable );
-		(C->stack_top-1)->type |= SGS_VTF_DICT;
+		(C->stack_top-1)->type = VTC_DICT;
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_CONVOP_TOTYPE )
@@ -1200,7 +1200,7 @@ static int sgsstd_dict( SGS_CTX )
 	}
 
 	sgs_PushObject( C, ht, sgsstd_dict_functable );
-	(C->stack_top-1)->type |= SGS_VTF_DICT;
+	(C->stack_top-1)->type = VTC_DICT;
 	return 1;
 }
 
@@ -1335,7 +1335,7 @@ static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 	if( sgsstd_class_getmethod( C, data, ops[ type ] ) )
 		return sgs_ThisCall( C, 0, 1 );
 
-	if( otype == SVT_STRING || otype == SGS_CONVOP_TOTYPE )
+	if( otype == VT_STRING || otype == SGS_CONVOP_TOTYPE )
 	{
 		sgs_PushString( C, "class" );
 		return SGS_SUCCESS;
@@ -1404,7 +1404,7 @@ static int sgsstd_class_call( SGS_CTX, sgs_VarObj* data, int unused )
 	{
 		int ret, i;
 		sgs_Variable var, fn;
-		var.type = SVT_OBJECT;
+		var.type = VTC_OBJECT;
 		var.data.O = data;
 		sgs_PushVariable( C, &var );
 		for( i = 0; i < C->call_args; ++i )
@@ -1497,12 +1497,12 @@ static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* data, int depth )
 
 static int sgsstd_closure_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( type == SVT_BOOL )
+	if( type == VT_BOOL )
 	{
 		sgs_PushBool( C, 1 );
 		return SGS_SUCCESS;
 	}
-	if( type != SVT_STRING && type != SGS_CONVOP_TOTYPE )
+	if( type != VT_STRING && type != SGS_CONVOP_TOTYPE )
 		return SGS_ENOTSUP;
 	UNUSED( data );
 	sgs_PushString( C, "closure" );
@@ -2551,7 +2551,7 @@ int sgsSTD_GlobalFree( SGS_CTX )
 		p++;
 	}
 
-	var.type = SVT_OBJECT;
+	var.type = VTC_DICT;
 	var.data.O = GLBP;
 	sgs_Release( C, &var );
 
@@ -2567,7 +2567,7 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 	sgs_VarObj* data = GLBP;
 	HTHDR;
 
-	if( idx->type != SVT_STRING )
+	if( idx->type != VTC_STRING )
 	{
 		sgsVM_ReleaseStack( C, out );
 		return SGS_ENOTSUP;
@@ -2584,7 +2584,7 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 	else if( strcmp( str_cstr( idx->data.S ), "_G" ) == 0 )
 	{
 		sgsVM_ReleaseStack( C, out );
-		out->type = SVT_OBJECT;
+		out->type = VTC_DICT;
 		out->data.O = GLBP;
 		return SGS_SUCCESS;
 	}
@@ -2594,7 +2594,7 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 		if( !apicall )
 			sgs_Printf( C, SGS_WARNING, "variable '%s' was not found",
 				str_cstr( idx->data.S ) );
-		out->type = SVT_NULL;
+		out->type = VTC_NULL;
 		return SGS_ENOTFND;
 	}
 }
@@ -2604,7 +2604,7 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 	sgs_VarObj* data = GLBP;
 	HTHDR;
 
-	if( idx->type != SVT_STRING )
+	if( idx->type != VTC_STRING )
 		return SGS_ENOTSUP;
 
 	if( strcmp( var_cstr( idx ), "_G" ) == 0 )
@@ -2629,7 +2629,7 @@ int sgsSTD_GlobalGC( SGS_CTX )
 		VHTableVar *pair, *pend;
 		HTHDR;
 
-		tmp.type = SVT_OBJECT;
+		tmp.type = VTC_DICT;
 		tmp.data.O = data;
 		if( sgs_GCMark( C, &tmp ) < 0 )
 			return SGS_EINPROC;

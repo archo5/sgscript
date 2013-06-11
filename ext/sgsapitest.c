@@ -156,7 +156,7 @@ DEFINE_TEST( stack_101 )
 	sgs_Variable sgs_dummy_var;
 	SGS_CTX = get_context();
 
-	sgs_dummy_var.type = SVT_NULL;
+	sgs_dummy_var.type = VTC_NULL;
 
 	atf_assert( C->stack_base == C->stack_off );
 	atf_assert( C->stack_top == C->stack_off );
@@ -175,15 +175,15 @@ DEFINE_TEST( stack_101 )
 	atf_assert( sgs_StackSize( C ) == 9 );
 	atf_assert( C->stack_top == C->stack_off + 9 );
 
-	atf_assert( C->stack_off[0].type == SVT_NULL );
-	atf_assert( C->stack_off[1].type == SVT_BOOL );
-	atf_assert( C->stack_off[2].type == SVT_INT );
-	atf_assert( C->stack_off[3].type == SVT_REAL );
-	atf_assert( C->stack_off[4].type == SVT_STRING );
-	atf_assert( C->stack_off[5].type == SVT_STRING );
-	atf_assert( C->stack_off[6].type == SVT_CFUNC );
-	atf_assert( C->stack_off[7].type == SVT_OBJECT );
-	atf_assert( C->stack_off[8].type == SVT_NULL );
+	atf_assert( C->stack_off[0].type == VTC_NULL );
+	atf_assert( C->stack_off[1].type == VTC_BOOL );
+	atf_assert( C->stack_off[2].type == VTC_INT );
+	atf_assert( C->stack_off[3].type == VTC_REAL );
+	atf_assert( C->stack_off[4].type == VTC_STRING );
+	atf_assert( C->stack_off[5].type == VTC_STRING );
+	atf_assert( C->stack_off[6].type == VTC_CFUNC );
+	atf_assert( C->stack_off[7].type == VTC_OBJECT );
+	atf_assert( C->stack_off[8].type == VTC_NULL );
 
 	atf_assert( C->stack_off[1].data.B == 1 );
 	atf_assert( C->stack_off[2].data.I == 1337 );
@@ -213,7 +213,7 @@ DEFINE_TEST( stack_insert )
 	sgs_Variable sgs_dummy_var;
 	SGS_CTX = get_context();
 
-	sgs_dummy_var.type = SVT_NULL;
+	sgs_dummy_var.type = VTC_NULL;
 
 	sgs_PushInt( C, 1 );
 	sgs_PushInt( C, 2 );
@@ -226,11 +226,11 @@ DEFINE_TEST( stack_insert )
 	atf_assert( sgs_InsertVariable( C, 2, &sgs_dummy_var ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 5 );
 
-	atf_assert( C->stack_off[0].type == SVT_NULL );
-	atf_assert( C->stack_off[1].type == SVT_INT );
-	atf_assert( C->stack_off[2].type == SVT_NULL );
-	atf_assert( C->stack_off[3].type == SVT_INT );
-	atf_assert( C->stack_off[4].type == SVT_NULL );
+	atf_assert( C->stack_off[0].type == VTC_NULL );
+	atf_assert( C->stack_off[1].type == VTC_INT );
+	atf_assert( C->stack_off[2].type == VTC_NULL );
+	atf_assert( C->stack_off[3].type == VTC_INT );
+	atf_assert( C->stack_off[4].type == VTC_NULL );
 
 	atf_assert( sgs_Pop( C, 5 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 0 );
@@ -291,7 +291,7 @@ DEFINE_TEST( stack_pushstore )
 	atf_assert( sgs_StoreItem( C, -3 ) == SGS_SUCCESS );
 	atf_assert( sgs_StoreItem( C, 0 ) == SGS_SUCCESS );
 
-	atf_assert( C->stack_off[1].type == SVT_INT );
+	atf_assert( C->stack_off[1].type == VTC_INT );
 	atf_assert( C->stack_off[1].data.I == 5 );
 	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 0 );
@@ -373,7 +373,7 @@ DEFINE_TEST( function_calls )
 	atf_assert( sgs_PushGlobal( C, "array" ) == SGS_SUCCESS );
 	atf_assert( sgs_Call( C, 0, 1 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 1 );
-	atf_assert( sgs_ItemType( C, -1 ) == SVT_OBJECT );
+	atf_assert( sgs_ItemType( C, -1 ) == VT_OBJECT );
 	
 	atf_assert( sgs_PushGlobal( C, "array" ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 2 );

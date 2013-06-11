@@ -48,7 +48,7 @@ var expect =
 	TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_CFUNC, TYPE_NULL,
 	TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_OBJECT,
 ];
-for( var i = 0; i < TYPE_COUNT; ++i )
+for( var i = 0; i < 5; ++i )
 {
 	for( var j = 0; j < TYPE_COUNT; ++j )
 	{

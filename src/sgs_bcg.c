@@ -438,12 +438,12 @@ static int add_const_null( SGS_CTX, sgs_CompFunc* func )
 	add_const_HDR;
 	while( var < vend )
 	{
-		if( var->type == SVT_NULL )
+		if( var->type == SGS_VTC_NULL )
 			return var - vbeg;
 		var++;
 	}
 
-	nvar.type = SVT_NULL;
+	nvar.type = SGS_VTC_NULL;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
 }
@@ -453,12 +453,12 @@ static int add_const_b( SGS_CTX, sgs_CompFunc* func, int32_t bval )
 	add_const_HDR;
 	while( var < vend )
 	{
-		if( var->type == SVT_BOOL && var->data.B == bval )
+		if( var->type == SGS_VTC_BOOL && var->data.B == bval )
 			return var - vbeg;
 		var++;
 	}
 
-	nvar.type = SVT_BOOL;
+	nvar.type = SGS_VTC_BOOL;
 	nvar.data.B = bval;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
@@ -469,12 +469,12 @@ static int add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Integer ival )
 	add_const_HDR;
 	while( var < vend )
 	{
-		if( var->type == SVT_INT && var->data.I == ival )
+		if( var->type == SGS_VTC_INT && var->data.I == ival )
 			return var - vbeg;
 		var++;
 	}
 
-	nvar.type = SVT_INT;
+	nvar.type = SGS_VTC_INT;
 	nvar.data.I = ival;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
@@ -485,12 +485,12 @@ static int add_const_r( SGS_CTX, sgs_CompFunc* func, sgs_Real rval )
 	add_const_HDR;
 	while( var < vend )
 	{
-		if( var->type == SVT_REAL && var->data.R == rval )
+		if( var->type == SGS_VTC_REAL && var->data.R == rval )
 			return var - vbeg;
 		var++;
 	}
 
-	nvar.type = SVT_REAL;
+	nvar.type = SGS_VTC_REAL;
 	nvar.data.R = rval;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return vend - vbeg;
@@ -501,7 +501,7 @@ static int add_const_s( SGS_CTX, sgs_CompFunc* func, int32_t len, const char* st
 	add_const_HDR;
 	while( var < vend )
 	{
-		if( var->type == SVT_STRING && var->data.S->size == len
+		if( var->type == SGS_VTC_STRING && var->data.S->size == len
 			&& memcmp( var_cstr( var ), str, len ) == 0 )
 			return var - vbeg;
 		var++;
@@ -548,7 +548,7 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
 	sgs_Dealloc( nf );
 
 	pos = func->consts.size / sizeof( nvar );
-	nvar.type = SVT_FUNC;
+	nvar.type = SGS_VTC_FUNC;
 	nvar.data.F = F;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return pos;
@@ -2018,12 +2018,12 @@ static int bc_write_var( sgs_Variable* var, SGS_CTX, MemBuf* outbuf )
 	membuf_appchr( outbuf, C, var->type );
 	switch( var->type )
 	{
-	case SVT_NULL: break;
-	case SVT_BOOL: membuf_appchr( outbuf, C, var->data.B ); break;
-	case SVT_INT: membuf_appbuf( outbuf, C, &var->data.I, sizeof( sgs_Integer ) ); break;
-	case SVT_REAL: membuf_appbuf( outbuf, C, &var->data.R, sizeof( sgs_Real ) ); break;
-	case SVT_STRING: bc_write_sgsstring( var->data.S, C, outbuf ); break;
-	case SVT_FUNC: if( !bc_write_sgsfunc( var->data.F, C, outbuf ) ) return 0; break;
+	case SGS_VTC_NULL: break;
+	case SGS_VTC_BOOL: membuf_appchr( outbuf, C, var->data.B ); break;
+	case SGS_VTC_INT: membuf_appbuf( outbuf, C, &var->data.I, sizeof( sgs_Integer ) ); break;
+	case SGS_VTC_REAL: membuf_appbuf( outbuf, C, &var->data.R, sizeof( sgs_Real ) ); break;
+	case SGS_VTC_STRING: bc_write_sgsstring( var->data.S, C, outbuf ); break;
+	case SGS_VTC_FUNC: if( !bc_write_sgsfunc( var->data.F, C, outbuf ) ) return 0; break;
 	default:
 		return 0;
 	}
@@ -2036,12 +2036,12 @@ static const char* bc_read_var( decoder_t* D, sgs_Variable* var )
 	var->type = *D->buf++;
 	switch( var->type )
 	{
-	case SVT_NULL: break;
-	case SVT_BOOL: var->data.B = *D->buf++; break;
-	case SVT_INT: var->data.I = AS_INTEGER( D->buf ); D->buf += sizeof( sgs_Integer ); break;
-	case SVT_REAL: var->data.R = AS_REAL( D->buf ); D->buf += sizeof( sgs_Real ); break;
-	case SVT_STRING: bc_read_sgsstring( D, var ); break;
-	case SVT_FUNC: return bc_read_sgsfunc( D, var );
+	case SGS_VTC_NULL: break;
+	case SGS_VTC_BOOL: var->data.B = *D->buf++; break;
+	case SGS_VTC_INT: var->data.I = AS_INTEGER( D->buf ); D->buf += sizeof( sgs_Integer ); break;
+	case SGS_VTC_REAL: var->data.R = AS_REAL( D->buf ); D->buf += sizeof( sgs_Real ); break;
+	case SGS_VTC_STRING: bc_read_sgsstring( D, var ); break;
+	case SGS_VTC_FUNC: return bc_read_sgsfunc( D, var );
 	default:
 		return "invalid variable type found";
 	}

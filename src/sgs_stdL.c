@@ -922,7 +922,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			char* str;
 			sgs_SizeVal size;
 			if( F->type == 'c' &&
-				sgs_Convert( C, (*psi), SVT_STRING ) != SGS_SUCCESS )
+				sgs_Convert( C, (*psi), VTC_STRING ) != SGS_SUCCESS )
 				goto error;
 			if( !sgs_ParseString( C, (*psi)++, &str, &size ) )
 				goto error;
@@ -1037,7 +1037,7 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 		ret = sgs_Call( C, 1, 1 );
 		if( ret != SGS_SUCCESS )
 			return FALSE;
-		if( sgs_ItemType( C, -1 ) == SVT_NULL )
+		if( sgs_ItemType( C, -1 ) == VT_NULL )
 		{
 			sgs_Pop( C, 1 );
 			fs->state = FMTSTREAM_STATE_END;
@@ -1671,7 +1671,7 @@ SGS_DECLARE void* sgsstd_file_functable[];
 	sgs_VarObj* data; \
 	SGSFN( "file." #fname ); \
 	if( !sgs_Method( C ) || \
-		sgs_ItemType( C, 0 ) != SVT_OBJECT || \
+		sgs_ItemType( C, 0 ) != VT_OBJECT || \
 		( data = sgs_GetObjectData( C, 0 ) )->iface != sgsstd_file_functable ) \
 		STDLIB_WARN( "expected file as 'this'" )
 
@@ -1922,12 +1922,12 @@ static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
 	UNUSED( data );
-	if( type == SVT_BOOL )
+	if( type == VT_BOOL )
 	{
 		sgs_PushBool( C, !!FVAR );
 		return SGS_SUCCESS;
 	}
-	if( type == SVT_STRING || type == SGS_CONVOP_TOTYPE )
+	if( type == VT_STRING || type == SGS_CONVOP_TOTYPE )
 	{
 		sgs_PushString( C, "file" );
 		return SGS_SUCCESS;
@@ -1997,7 +1997,7 @@ static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 
 static int sgsstd_dir_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( type == SVT_STRING || type == SGS_CONVOP_TOTYPE )
+	if( type == VT_STRING || type == SGS_CONVOP_TOTYPE )
 	{
 		sgs_PushString( C, "directory_iterator" );
 		return SGS_SUCCESS;
@@ -2005,7 +2005,7 @@ static int sgsstd_dir_convert( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_CONVOP_TOITER )
 	{
 		sgs_Variable v;
-		v.type = SVT_OBJECT;
+		v.type = VTC_OBJECT;
 		v.data.O = data;
 		sgs_PushVariable( C, &v );
 		return SGS_SUCCESS;
@@ -3551,7 +3551,7 @@ static int sgsstd_typeof( SGS_CTX )
 static int sgsstd_type_cast( SGS_CTX )
 {
 	static const int fulltypename[] = {
-		SVT_NULL, SVT_BOOL, SVT_INT, SVT_REAL, SVT_STRING };
+		VTC_NULL, VTC_BOOL, VTC_INT, VTC_REAL, VTC_STRING };
 	
 	int argc;
 	sgs_Integer ty;
@@ -3572,15 +3572,15 @@ static int sgsstd_type_cast( SGS_CTX )
 
 static int sgsstd_type_is_numeric( SGS_CTX )
 {
-	int res, ty = sgs_ItemType( C, 0 );
+	int res, ty = sgs_ItemTypeExt( C, 0 );
 	
 	SGSFN( "type_is_numeric" );
 	EXPECT_ONEARG()
 
-	if( ty == SVT_NULL || ( ty & (SGS_VTF_CALL|SGS_VTF_OBJECT) ) )
+	if( ty == VTC_NULL || ( ty & (VTF_CALL|VT_OBJECT) ) )
 		res = FALSE;
 	else
-		res = ty != SVT_STRING || sgs_IsNumericString(
+		res = ty != VTC_STRING || sgs_IsNumericString(
 			sgs_GetStringPtr( C, 0 ), sgs_GetStringSize( C, 0 ) );
 
 	sgs_PushBool( C, res );
@@ -3594,14 +3594,14 @@ static int sgsstd_type_is_numeric( SGS_CTX )
 
 static int sgsstd_type_is_callable( SGS_CTX )
 {
-	int res, ty = sgs_ItemType( C, 0 );
+	int res, ty = sgs_ItemTypeExt( C, 0 );
 	
 	SGSFN( "type_is_callable" );
 	EXPECT_ONEARG()
 
-	if( ty & SGS_VTF_CALL )
+	if( ty & VTF_CALL )
 		res = TRUE;
-	else if( ty & SGS_VTF_OBJECT )
+	else if( ty & VT_OBJECT )
 	{
 		sgs_VarObj* O = sgs_GetObjectData( C, 0 );
 		OBJECT_HAS_IFACE( res, O, SOP_CALL )

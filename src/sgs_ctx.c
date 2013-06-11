@@ -9,6 +9,16 @@
 #include "sgs_int.h"
 
 
+
+static int fastlog2( int x )
+{
+	int targetlevel = 0;
+	while( x >>= 1 )
+		++targetlevel;
+	return targetlevel;
+}
+
+
 #if SGS_DEBUG && SGS_DEBUG_FLOW
 #  ifdef _MSC_VER
 #    define DBGINFO( ... ) sgs_Printf( C, SGS_INFO, __VA_ARGS__ )
@@ -158,7 +168,8 @@ const char* sgs_CodeString( int type, int val )
 	}
 	else if( type == SGS_CODE_VT )
 	{
-		if( val < 0 || val >= SGS_VT__COUNT )
+		val = fastlog2( type & 0xff << 1 );
+		if( val < 0 || val >= 8 )
 			return NULL;
 		return sgs_VarNames[ val ];
 	}
@@ -502,7 +513,7 @@ static void _recfndump( const char* constptr, sgs_SizeVal constsize,
 	sgs_Variable* vend = (sgs_Variable*) ( constptr + constsize );
 	while( var < vend )
 	{
-		if( var->type == SVT_FUNC )
+		if( var->type == SGS_VTC_FUNC )
 		{
 			_recfndump( (const char*) func_consts( var->data.F ), var->data.F->instr_off,
 				(const char*) func_bytecode( var->data.F ), var->data.F->size - var->data.F->instr_off );
@@ -571,24 +582,24 @@ static void dumpobj( SGS_CTX, sgs_VarObj* p )
 static void dumpvar( SGS_CTX, sgs_Variable* var )
 {
 	sgs_Writef( C, "%s (size:%d)", g_varnames[ var->type ], sgsVM_VarSize( var ) );
-	switch( var->type )
+	switch( var->type & SGS_VTYPE_MASK )
 	{
-	case SVT_NULL: break;
-	case SVT_BOOL: sgs_Writef( C, " = %s", var->data.B ? "true" : "false" ); break;
-	case SVT_INT: sgs_Writef( C, " = %" PRId64, var->data.I ); break;
-	case SVT_REAL: sgs_Writef( C, " = %f", var->data.R ); break;
-	case SVT_STRING:
+	case SGS_VT_NULL: break;
+	case SGS_VT_BOOL: sgs_Writef( C, " = %s", var->data.B ? "true" : "false" ); break;
+	case SGS_VT_INT: sgs_Writef( C, " = %" PRId64, var->data.I ); break;
+	case SGS_VT_REAL: sgs_Writef( C, " = %f", var->data.R ); break;
+	case SGS_VT_STRING:
 		sgs_Writef( C, " [rc:%d] = \"", var->data.S->refcount );
 		ctx_print_safe( C, var_cstr( var ), MIN( var->data.S->size, 16 ) );
 		sgs_Writef( C, var->data.S->size > 16 ? "...\"" : "\"" );
 		break;
-	case SVT_FUNC:
+	case SGS_VT_FUNC:
 		sgs_Writef( C, " [rc:%d] '%s'[%d]%s", var->data.F->refcount,
 			var->data.F->funcname.ptr ? var->data.F->funcname.ptr : "<anonymous>",
 			(int) var->data.F->numargs, var->data.F->gotthis ? " (method)" : "" );
 		break;
-	case SVT_CFUNC: sgs_Writef( C, " = %p", var->data.C ); break;
-	case SVT_OBJECT: sgs_Writef( C, " = " ); dumpobj( C, var->data.O ); break;
+	case SGS_VT_CFUNC: sgs_Writef( C, " = %p", var->data.C ); break;
+	case SGS_VT_OBJECT: sgs_Writef( C, " = " ); dumpobj( C, var->data.O ); break;
 	}
 }
 
@@ -693,7 +704,7 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 		L = frame->lntable[ frame->iptr - frame->code ];
 		F = C->filename;
 	}
-	else if( frame->func->type == SVT_FUNC )
+	else if( SGS_BASETYPE( frame->func->type ) == SGS_VT_FUNC )
 	{
 		N = "<anonymous function>";
 		if( frame->func->data.F->funcname.size )
@@ -702,12 +713,12 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 		if( frame->func->data.F->filename.size )
 			F = frame->func->data.F->filename.ptr;
 	}
-	else if( frame->func->type == SVT_CFUNC )
+	else if( SGS_BASETYPE( frame->func->type ) == SGS_VT_CFUNC )
 	{
 		N = "<C function>";
 		F = "<C code>";
 	}
-	else if( frame->func->type == SVT_OBJECT )
+	else if( SGS_BASETYPE( frame->func->type ) == SGS_VT_OBJECT )
 	{
 		N = "<object>";
 	}
