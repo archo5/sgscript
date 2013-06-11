@@ -349,7 +349,7 @@ static int json_decode( SGS_CTX )
 
 	if( argc < 1 || argc > 2 ||
 		!sgs_ParseString( C, 0, &str, &size ) ||
-		( argc == 2 && sgs_ItemType( C, 1 ) != SVT_OBJECT ) )
+		( argc == 2 && !( sgs_ItemType( C, 1 ) & SGS_VTF_OBJECT ) ) )
 	{
 		sgs_Printf( C, SGS_WARNING, "json_decode: unexpected arguments; "
 			"function expects 1-2 arguments: string[, object]" );
@@ -375,29 +375,29 @@ static int encode_var( SGS_CTX, MemBuf* buf )
 {
 	sgs_Variable var;
 	sgs_GetStackItem( C, -1, &var );
-	switch( var.type )
+	switch( var.type & 0xff )
 	{
-	case SVT_NULL:
+	case SGS_VTF_NULL:
 		membuf_appbuf( buf, C, "null", 4 );
 		return 1;
-	case SVT_BOOL:
+	case SGS_VTF_BOOL:
 		membuf_appbuf( buf, C, var.data.B ? "true" : "false", 5 - !!var.data.B );
 		return 1;
-	case SVT_INT:
+	case SGS_VTF_INT:
 		{
 			char tmp[ 64 ];
 			sprintf( tmp, "%" PRId64, var.data.I );
 			membuf_appbuf( buf, C, tmp, strlen( tmp ) );
 			return 1;
 		}
-	case SVT_REAL:
+	case SGS_VTF_REAL:
 		{
 			char tmp[ 64 ];
 			sprintf( tmp, "%g", var.data.R );
 			membuf_appbuf( buf, C, tmp, strlen( tmp ) );
 			return 1;
 		}
-	case SVT_STRING:
+	case SGS_VTF_STRING:
 		{
 			membuf_appchr( buf, C, '"' );
 			{
@@ -421,11 +421,11 @@ static int encode_var( SGS_CTX, MemBuf* buf )
 			membuf_appchr( buf, C, '"' );
 			return 1;
 		}
-	case SVT_FUNC:
-	case SVT_CFUNC:
+	case SGS_VTF_FUNC:
+	case SGS_VTF_CFUNC:
 		sgs_Printf( C, SGS_WARNING, "json_encode: cannot encode functions" );
 		return 0;
-	case SVT_OBJECT:
+	case SGS_VTF_OBJECT:
 		{
 			/* stack: Obj */
 			int isarr = sgs_IsArray( C, &var ), first = 1;

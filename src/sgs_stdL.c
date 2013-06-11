@@ -3524,11 +3524,19 @@ SGSRESULT sgs_LoadLib_String( SGS_CTX )
 #define EXPECT_ONEARG() \
 	if( sgs_StackSize( C ) != 1 ) STDLIB_WARN( "expected 1 argument" )
 
+static int fastlog2( int x )
+{
+	int targetlevel = 0;
+	while( x >>= 1 )
+		++targetlevel;
+	return targetlevel;
+}
+
 static int sgsstd_type_get( SGS_CTX )
 {
 	SGSFN( "type_get" );
 	EXPECT_ONEARG()
-	sgs_PushInt( C, sgs_ItemType( C, 0 ) );
+	sgs_PushInt( C, fastlog2( ( sgs_ItemType( C, 0 ) & 0xff ) << 1 ) );
 	return 1;
 }
 
@@ -3542,6 +3550,9 @@ static int sgsstd_typeof( SGS_CTX )
 
 static int sgsstd_type_cast( SGS_CTX )
 {
+	static const int fulltypename[] = {
+		SVT_NULL, SVT_BOOL, SVT_INT, SVT_REAL, SVT_STRING };
+	
 	int argc;
 	sgs_Integer ty;
 	
@@ -3549,11 +3560,11 @@ static int sgsstd_type_cast( SGS_CTX )
 
 	argc = sgs_StackSize( C );
 	if( argc < 1 || argc > 2 ||
-		!sgs_ParseInt( C, 1, &ty ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 2 arguments: any, int" )
+		!sgs_ParseInt( C, 1, &ty ) || ty < 0 || ty > 4 )
+		STDLIB_WARN( "unexpected arguments; function expects 2 arguments: "
+			"any, int (null/bool/int/real/string)" )
 
-	sgs_Convert( C, 0, (int) ty );
+	sgs_Convert( C, 0, fulltypename[ ty ] );
 	sgs_Pop( C, 1 );
 	return 1;
 }
@@ -3566,10 +3577,8 @@ static int sgsstd_type_is_numeric( SGS_CTX )
 	SGSFN( "type_is_numeric" );
 	EXPECT_ONEARG()
 
-	if( ty == SVT_NULL || ty == SVT_FUNC ||
-		ty == SVT_CFUNC || ty == SVT_OBJECT )
+	if( ty == SVT_NULL || ( ty & (SGS_VTF_CALL|SGS_VTF_OBJECT) ) )
 		res = FALSE;
-
 	else
 		res = ty != SVT_STRING || sgs_IsNumericString(
 			sgs_GetStringPtr( C, 0 ), sgs_GetStringSize( C, 0 ) );
@@ -3590,16 +3599,15 @@ static int sgsstd_type_is_callable( SGS_CTX )
 	SGSFN( "type_is_callable" );
 	EXPECT_ONEARG()
 
-	if( ty != SVT_FUNC && ty != SVT_CFUNC && ty != SVT_OBJECT )
-		res = FALSE;
-
-	else if( ty == SVT_OBJECT )
+	if( ty & SGS_VTF_CALL )
+		res = TRUE;
+	else if( ty & SGS_VTF_OBJECT )
 	{
 		sgs_VarObj* O = sgs_GetObjectData( C, 0 );
 		OBJECT_HAS_IFACE( res, O, SOP_CALL )
 	}
 	else
-		res = TRUE;
+		res = FALSE;
 
 	sgs_PushBool( C, res );
 	return 1;
@@ -3616,15 +3624,15 @@ static const sgs_RegFuncConst t_fconsts[] =
 
 static const sgs_RegIntConst t_iconsts[] =
 {
-	{ "TYPE_NULL", SVT_NULL },
-	{ "TYPE_BOOL", SVT_BOOL },
-	{ "TYPE_INT", SVT_INT },
-	{ "TYPE_REAL", SVT_REAL },
-	{ "TYPE_STRING", SVT_STRING },
-	{ "TYPE_FUNC", SVT_FUNC },
-	{ "TYPE_CFUNC", SVT_CFUNC },
-	{ "TYPE_OBJECT", SVT_OBJECT },
-	{ "TYPE_COUNT", SVT__COUNT },
+	{ "TYPE_NULL", 0 },
+	{ "TYPE_BOOL", 1 },
+	{ "TYPE_INT", 2 },
+	{ "TYPE_REAL", 3 },
+	{ "TYPE_STRING", 4 },
+	{ "TYPE_FUNC", 5 },
+	{ "TYPE_CFUNC", 6 },
+	{ "TYPE_OBJECT", 7 },
+	{ "TYPE_COUNT", 8 },
 };
 
 
