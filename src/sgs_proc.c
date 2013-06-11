@@ -1441,6 +1441,27 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 	int flags = 0, expargs = 0, out;
 	if( outkey >= 0 ){ flags |= SGS_GETNEXT_KEY; expargs++; }
 	if( outval >= 0 ){ flags |= SGS_GETNEXT_VALUE; expargs++; }
+	
+	if( iter->type == SGS_VTC_ARRAY_ITER )
+	{
+		sgsstd_array_iter_t* it = (sgsstd_array_iter_t*) iter->data.O->data;
+		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) it->ref.data.O->data;
+		if( it->size != hdr->size )
+			return SGS_EINVAL;
+		else if( !flags )
+		{
+			it->off++;
+			return it->off < it->size;
+		}
+		else
+		{
+			if( outkey >= 0 )
+				var_setint( C, stk_getlpos( C, outkey ), it->off );
+			if( outval >= 0 )
+				stk_setlvar( C, outval, (sgs_Variable*)( hdr + 1 ) + it->off );
+			return SGS_SUCCESS;
+		}
+	}
 	if( !( iter->type & VT_OBJECT ) ||
 		( out = obj_exec_specific( C, iter->data.O->getnext, iter->data.O, flags, 0 ) ) < 0 )
 	{

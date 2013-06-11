@@ -204,7 +204,8 @@ typedef void (*sgs_HookFunc) (
 #define SGS_VTF_CALL   0x0200
 #define SGS_VTF_REF    0x0400
 #define SGS_VTF_ARRAY  0x1000
-#define SGS_VTF_DICT   0x2000
+#define SGS_VTF_ARRAY_ITER 0x2000
+#define SGS_VTF_DICT   0x4000
 
 /* - complete variable types */
 #define SGS_VTC_NULL    (SGS_VT_NULL)
@@ -216,6 +217,7 @@ typedef void (*sgs_HookFunc) (
 #define SGS_VTC_CFUNC   (SGS_VT_CFUNC | SGS_VTF_CALL)
 #define SGS_VTC_OBJECT  (SGS_VT_OBJECT | SGS_VTF_REF)
 #define SGS_VTC_ARRAY   (SGS_VTC_OBJECT | SGS_VTF_ARRAY)
+#define SGS_VTC_ARRAY_ITER (SGS_VTC_OBJECT | SGS_VTF_ARRAY_ITER)
 #define SGS_VTC_DICT    (SGS_VTC_OBJECT | SGS_VTF_DICT)
 
 /* - object data */

@@ -735,4 +735,24 @@ int sgsSTD_GlobalGC( SGS_CTX );
 int sgsSTD_GlobalIter( SGS_CTX, sgs_VHTableVar** outp, sgs_VHTableVar** outpend );
 
 
+
+/* STRUCTS */
+
+typedef struct sgsstd_array_header_s
+{
+	sgs_SizeVal size;
+	sgs_SizeVal mem;
+}
+sgsstd_array_header_t;
+
+typedef struct sgsstd_array_iter_s
+{
+	sgs_Variable ref;
+	sgs_SizeVal size;
+	sgs_SizeVal off;
+}
+sgsstd_array_iter_t;
+
+
+
 #endif /* SGS_INT_H_INCLUDED */

@@ -48,13 +48,6 @@
 	ARRAY
 */
 
-typedef struct sgsstd_array_header_s
-{
-	sgs_SizeVal size;
-	sgs_SizeVal mem;
-}
-sgsstd_array_header_t;
-
 SGS_DECLARE void* sgsstd_array_functable[];
 
 #define SGSARR_UNIT sizeof( sgs_Variable )
@@ -646,14 +639,6 @@ static int sgsstd_array_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 
 /* iterator */
 
-typedef struct sgsstd_array_iter_s
-{
-	sgs_Variable ref;
-	sgs_SizeVal size;
-	sgs_SizeVal off;
-}
-sgsstd_array_iter_t;
-
 static int sgsstd_array_iter_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
 	sgs_ReleaseOwned( C, &((sgsstd_array_iter_t*) data->data)->ref, dch );
@@ -704,6 +689,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 
 		sgs_Acquire( C, &iter->ref );
 		sgs_PushObject( C, iter, sgsstd_array_iter_functable );
+		(C->stack_top-1)->type = SGS_VTC_ARRAY_ITER;
 		return SGS_SUCCESS;
 	}
 	else if( type == VT_BOOL )
