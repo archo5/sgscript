@@ -581,7 +581,7 @@ static void dumpobj( SGS_CTX, sgs_VarObj* p )
 
 static void dumpvar( SGS_CTX, sgs_Variable* var )
 {
-	sgs_Writef( C, "%s (size:%d)", g_varnames[ var->type ], sgsVM_VarSize( var ) );
+	sgs_Writef( C, "%s (size:%d)", g_varnames[ fastlog2( var->type & 0xff << 1 ) ], sgsVM_VarSize( var ) );
 	switch( var->type & SGS_VTYPE_MASK )
 	{
 	case SGS_VT_NULL: break;
