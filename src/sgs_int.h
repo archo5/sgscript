@@ -630,6 +630,7 @@ typedef sgs_Variable* sgs_VarPtr;
 struct _sgs_Context
 {
 	uint32_t      version;
+	uint32_t      apiversion;
 
 	/* output */
 	sgs_OutputFunc output_fn; /* output function */

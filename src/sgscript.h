@@ -171,8 +171,9 @@ typedef void (*sgs_HookFunc) (
 
 /* Statistics / debugging */
 #define SGS_STAT_VERSION      0
-#define SGS_STAT_VARCOUNT     1
-#define SGS_STAT_MEMSIZE      2
+#define SGS_STAT_APIVERSION   1
+#define SGS_STAT_VARCOUNT     2
+#define SGS_STAT_MEMSIZE      3
 #define SGS_STAT_DUMP_STACK   10
 #define SGS_STAT_DUMP_GLOBALS 11
 #define SGS_STAT_DUMP_OBJECTS 12

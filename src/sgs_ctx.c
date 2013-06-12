@@ -68,6 +68,7 @@ static void ctx_init( SGS_CTX )
 {
 	C->version = ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) |
 		SGS_VERSION_MINOR ) << SGS_VERSION_OFFSET | SGS_VERSION_INCR );
+	C->apiversion = SGS_API_VERSION;
 	C->output_fn = default_outputfn;
 	C->output_ctx = stdout;
 	C->minlev = SGS_INFO;
@@ -581,7 +582,7 @@ static void dumpobj( SGS_CTX, sgs_VarObj* p )
 
 static void dumpvar( SGS_CTX, sgs_Variable* var )
 {
-	sgs_Writef( C, "%s (size:%d)", g_varnames[ fastlog2( var->type & 0xff << 1 ) ], sgsVM_VarSize( var ) );
+	sgs_Writef( C, "%s (size:%d)", g_varnames[ fastlog2( BASETYPE( var->type ) << 1 ) ], sgsVM_VarSize( var ) );
 	switch( BASETYPE( var->type ) )
 	{
 	case VT_NULL: break;
@@ -608,6 +609,7 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 	switch( type )
 	{
 	case SGS_STAT_VERSION: return C->version;
+	case SGS_STAT_APIVERSION: return C->apiversion;
 	case SGS_STAT_VARCOUNT: return C->objcount;
 	case SGS_STAT_MEMSIZE: return C->memsize;
 	case SGS_STAT_DUMP_STACK:

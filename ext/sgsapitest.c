@@ -432,6 +432,31 @@ DEFINE_TEST( commands )
 	destroy_context( C );
 }
 
+DEFINE_TEST( debugging )
+{
+	int rvc;
+	SGS_CTX = get_context();
+	
+	sgs_PushNull( C );
+	sgs_PushBool( C, 1 );
+	sgs_PushInt( C, 1337 );
+	sgs_PushReal( C, 3.14 );
+	sgs_PushString( C, "wat" );
+	sgs_EvalString( C, "return function(){};", &rvc );
+	sgs_PushGlobal( C, "print" );
+	sgs_PushArray( C, 0 );
+	sgs_PushDict( C, 0 );
+	
+	atf_assert( sgs_StackSize( C ) == 9 );
+	atf_assert( sgs_StackSize( C ) == 9 );
+	sgs_Stat( C, SGS_STAT_DUMP_STACK );
+	sgs_Stat( C, SGS_STAT_DUMP_GLOBALS );
+	sgs_Stat( C, SGS_STAT_DUMP_OBJECTS );
+	sgs_Stat( C, SGS_STAT_DUMP_FRAMES );
+
+	destroy_context( C );
+}
+
 
 test_t all_tests[] =
 {
@@ -446,6 +471,7 @@ test_t all_tests[] =
 	TST( function_calls ),
 	TST( complex_gc ),
 	TST( commands ),
+	TST( debugging ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }
 

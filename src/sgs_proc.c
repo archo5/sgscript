@@ -1035,7 +1035,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 	else if( obj->type == VTC_DICT )
 	{
 		VHTable* ht = (VHTable*) obj->data.O->data;
-		if( idx->type == VTC_INT )
+		if( idx->type == VTC_INT && !isindex )
 		{
 			int32_t off = (int32_t) idx->data.I;
 			if( off < 0 || off >= vht_size( ht ) )
@@ -2357,7 +2357,7 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 				int q, stksz;
 				object_t* obj = var->data.O;
 
-				sprintf( buf, "object (%p) [%d] ", obj, obj->refcount - 1 );
+				sprintf( buf, "object (%p) [%d] ", obj, obj->refcount );
 				sgs_PushString( C, buf );
 				stksz = C->stack_top - C->stack_off;
 
