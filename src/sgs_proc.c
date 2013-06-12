@@ -958,23 +958,79 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 extern int sgsstd_array_getindex( SGS_CTX, sgs_VarObj* data, int prop );
 extern int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop );
 
-static void vm_properr( SGS_CTX, sgs_Variable* idx, int isindex )
+
+
+static int vm_runerr_getprop( SGS_CTX, int type, int origsize, int16_t out, sgs_Variable* idx, int isindex )
 {
-	char* p;
-	const char* err = isindex ? "Cannot find value by index" : "Property not found";
-	stk_push( C, idx );
-	p = sgs_ToString( C, -1 );
-	sgs_Printf( C, SGS_WARNING, "%s: \"%s\"", err, p );
+	stk_setvar_null( C, out );
+	
+	if( type == SGS_ENOTFND )
+	{
+		char* p;
+		const char* err = isindex ? "Cannot find value by index" : "Property not found";
+		stk_push( C, idx );
+		p = sgs_ToString( C, -1 );
+		sgs_Printf( C, SGS_WARNING, "%s: \"%s\"", err, p );
+	}
+	else if( type == SGS_EBOUNDS )
+	{
+		sgs_Printf( C, SGS_WARNING, "Index out of bounds" );
+	}
+	else if( type == SGS_EINVAL )
+	{
+		sgs_Printf( C, SGS_WARNING, "Invalid value type used for %s",
+			isindex ? "index read" : "property read" );
+	}
+	else
+	{
+		sgs_Printf( C, SGS_WARNING, "Unknown error on %s",
+			isindex ? "index read" : "property read" );
+	}
+	
+	stk_pop( C, STACKFRAMESIZE - origsize );
+	return type;
 }
-#define VM_PROP_NOT_FOUND_ERROR vm_properr( C, idx, isindex );
+#define VM_GETPROP_ERR( type ) vm_runerr_getprop( C, type, origsize, out, idx, isindex )
+
+static int vm_runerr_setprop( SGS_CTX, int type, int origsize, sgs_Variable* idx, int isindex )
+{
+	if( type == SGS_ENOTFND )
+	{
+		char* p;
+		const char* err = isindex ? "Cannot find value by index" : "Property not found";
+		stk_push( C, idx );
+		p = sgs_ToString( C, -1 );
+		sgs_Printf( C, SGS_WARNING, "%s: \"%s\"", err, p );
+	}
+	else if( type == SGS_EBOUNDS )
+	{
+		sgs_Printf( C, SGS_WARNING, "Index out of bounds" );
+	}
+	else if( type == SGS_EINVAL )
+	{
+		sgs_Printf( C, SGS_WARNING, "Invalid value type used for %s",
+			isindex ? "index write" : "property write" );
+	}
+	else
+	{
+		sgs_Printf( C, SGS_WARNING, "Unknown error on %s",
+			isindex ? "index write" : "property write" );
+	}
+	
+	stk_pop( C, STACKFRAMESIZE - origsize );
+	return type;
+}
+#define VM_SETPROP_ERR( type ) vm_runerr_setprop( C, type, origsize, idx, isindex )
+
+
 
 static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* idx, int isindex )
 {
 	int ret, origsize = STACKFRAMESIZE;
 
-	if( idx->type != VTC_STRING && idx->type != VTC_INT )
+	if( !isindex && idx->type != VTC_STRING && idx->type != VTC_INT )
 	{
-		ret = SGS_ENOTSUP;
+		return VM_GETPROP_ERR( SGS_EINVAL );
 	}
 	else if( obj->type == VTC_DICT )
 	{
@@ -983,7 +1039,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 		{
 			int32_t off = (int32_t) idx->data.I;
 			if( off < 0 || off >= vht_size( ht ) )
-				return SGS_EBOUNDS;
+				return VM_GETPROP_ERR( SGS_EBOUNDS );
 			else
 			{
 				stk_setlvar( C, out, &ht->vars[ off ].var );
@@ -994,7 +1050,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 		{
 			VHTableVar* var = vht_getS( ht, idx->data.S );
 			if( !var )
-				return SGS_ENOTFND;
+				return VM_GETPROP_ERR( SGS_ENOTFND );
 			else
 			{
 				stk_setlvar( C, out, &var->var );
@@ -1005,16 +1061,17 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 		{
 			stk_push( C, idx );
 			if( !sgs_ToString( C, -1 ) )
-				ret = SGS_EINVAL;
+				return VM_GETPROP_ERR( SGS_EINVAL );
 			else
 			{
 				VHTableVar* var = vht_getS( ht, stk_getpos( C, -1 )->data.S );
 				if( !var )
-					ret = SGS_ENOTFND;
+					return VM_GETPROP_ERR( SGS_ENOTFND );
 				else
 				{
-					stk_push( C, &var->var );
-					ret = SGS_SUCCESS;
+					stk_setlvar( C, out, &var->var );
+					stk_pop1( C );
+					return SGS_SUCCESS;
 				}
 			}
 		}
@@ -1033,13 +1090,18 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 	else
 	{
 		ret = isindex ? vm_getidx_builtin( C, obj, idx ) : vm_getprop_builtin( C, obj, idx );
+		if( ret != SGS_SUCCESS )
+		{
+			/* lots of custom errors printed */
+			stk_setlvar_null( C, out );
+			stk_pop( C, STACKFRAMESIZE - origsize );
+			return ret;
+		}
 	}
 
 	if( ret != SGS_SUCCESS )
 	{
-		stk_setvar_null( C, out );
-		if( ret == SGS_ENOTFND )
-			VM_PROP_NOT_FOUND_ERROR
+		return VM_GETPROP_ERR( ret );
 	}
 	else
 	{
@@ -1053,9 +1115,9 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 {
 	int ret, origsize = STACKFRAMESIZE;
 
-	if( idx->type != VTC_INT && idx->type != VTC_STRING )
+	if( !isindex && idx->type != VTC_INT && idx->type != VTC_STRING )
 	{
-		ret = SGS_ENOTSUP;
+		ret = SGS_EINVAL;
 	}
 	else if( obj->type & VT_OBJECT )
 	{
@@ -1070,8 +1132,8 @@ static int vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variab
 	else
 		ret = SGS_ENOTFND;
 	
-	if( ret == SGS_ENOTFND )
-		VM_PROP_NOT_FOUND_ERROR
+	if( ret != SGS_SUCCESS )
+		return VM_SETPROP_ERR( ret );
 	
 	stk_pop( C, STACKFRAMESIZE - origsize );
 	return ret;
