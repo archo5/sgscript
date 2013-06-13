@@ -1,4 +1,11 @@
 
+CC=gcc
+SRCDIR=src
+LIBDIR=lib
+EXTDIR=ext
+OUTDIR=bin
+OBJDIR=obj
+
 ifdef SystemRoot
 	RM = del /Q
 	FixPath = $(subst /,\,$1)
@@ -6,20 +13,23 @@ ifdef SystemRoot
 	SOCKLIBS = -lws2_32
 	BINEXT=.exe
 	LIBEXT=.dll
+	LIBPFX=
+	LDPREP=
 else
 	RM = rm -f
 	FixPath = $1
 	PLATFLAGS = -ldl
 	BINEXT=
 	LIBEXT=.so
+	LIBPFX=lib
+	LDPREP=LD_LIBRARY_PATH=./bin
 endif
 
-CC=gcc
 ifeq ($(mode),release)
-	CFLAGS = -O3 -Wall
+	CFLAGS = -O3 -Wall -fPIC
 else
 	mode = debug
-	CFLAGS = -D_DEBUG -g -Wall
+	CFLAGS = -D_DEBUG -g -Wall -fPIC
 endif
 
 ifneq ($(static),)
@@ -29,16 +39,10 @@ ifneq ($(static),)
 	OUTFILE = $(LIBDIR)/libsgscript.a
 else
 	PREFLAGS = -DBUILDING_SGS=1 -DSGS_DLL=1
-	LFLAGS = $(OUTDIR)/sgscript$(LIBEXT)
-	OUTLIB = sgscript$(LIBEXT)
-	OUTFILE = $(OUTDIR)/sgscript$(LIBEXT)
+	LFLAGS = -Lbin -lsgscript
+	OUTLIB = $(LIBPFX)sgscript$(LIBEXT)
+	OUTFILE = $(OUTDIR)/$(LIBPFX)sgscript$(LIBEXT)
 endif
-
-SRCDIR=src
-LIBDIR=lib
-EXTDIR=ext
-OUTDIR=bin
-OBJDIR=obj
 
 
 _DEPS = sgs_cfg.h sgs_int.h sgs_util.h sgs_xpc.h sgscript.h
@@ -53,7 +57,7 @@ make: $(OUTFILE)
 
 $(LIBDIR)/libsgscript.a: $(OBJ)
 	ar rcs $@ $(OBJ)
-$(OUTDIR)/sgscript$(LIBEXT): $(OBJ)
+$(OUTDIR)/$(LIBPFX)sgscript$(LIBEXT): $(OBJ)
 	$(CC) $(PREFLAGS) -o $@ -shared $(OBJ) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
 	$(CC) $(PREFLAGS) -c -o $@ $< $(CFLAGS)
@@ -84,19 +88,20 @@ tools: $(OUTDIR)/sgsjson$(LIBEXT) \
 		$(OUTDIR)/sgsvm$(BINEXT) \
 		$(OUTDIR)/sgsc$(BINEXT)
 
+
 .PHONY: test
 test: $(OUTDIR)/sgstest$(BINEXT)
-	$(OUTDIR)/sgstest
+	$(LDPREP) $(OUTDIR)/sgstest
 
 .PHONY: apitest
 apitest: $(OUTDIR)/sgsapitest$(BINEXT)
-	$(OUTDIR)/sgsapitest
+	$(LDPREP) $(OUTDIR)/sgsapitest
 
 # other stuff
 # - multithreaded testing
 .PHONY: test_mt
 test_mt: $(OUTDIR)/sgstest_mt$(BINEXT)
-	$(OUTDIR)/sgstest_mt
+	$(LDPREP) $(OUTDIR)/sgstest_mt
 $(OUTDIR)/sgstest_mt$(BINEXT): $(LIBDIR)/libsgscript.a
 	$(CC) -o $@ examples/sgstest_mt.c $(LFLAGS) -lm -lpthread $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 # - sgs2exe tool
@@ -110,4 +115,4 @@ sgsexe: $(LIBDIR)/libsgscript.a $(EXTDIR)/sgsexe.c
 # clean everything
 .PHONY: clean
 clean:
-	$(RM) $(call FixPath,$(OBJDIR)/*.o $(LIBDIR)/*.a $(LIBDIR)/*.lib $(OUTDIR)/sgs*)
+	$(RM) $(call FixPath,$(OBJDIR)/*.o $(LIBDIR)/*.a $(LIBDIR)/*.lib $(OUTDIR)/sgs* $(OUTDIR)/libsgs*)

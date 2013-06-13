@@ -89,10 +89,10 @@ void atf_assert_string_( const char* str1, const char* str2, const char* msg )
 		if( *s1 != *s2 )
 		{
 			const char* spaces = "           ";
-			printf( "\nERROR\n%s (mismatch at pos. %d)\n", msg, s1-str1+1 );
+			printf( "\nERROR\n%s (mismatch at pos. %d)\n", msg, (int)(size_t)( s1-str1+1 ) );
 			printf( "...%-20s...\n", s1 - 10 > str1 ? s1 : str1 );
 			printf( "...%-20s...\n", s2 - 10 > str2 ? s2 : str2 );
-			printf( "   %.*s^\n", s1 - str1 > 10 ? 10 : s1 - str1, spaces );
+			printf( "   %.*s^\n", (int)(size_t)( s1 - str1 > 10 ? 10 : s1 - str1 ), spaces );
 			atf_abort();
 		}
 		s1++;

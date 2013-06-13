@@ -2242,7 +2242,7 @@ static const char* errno_key_table[] =
 #ifndef WIN32
 	AE( EBADMSG ), AE( ECANCELED ), AE( EIDRM ), AE( ENODATA ), AE( ENOLINK ),
 	AE( ENOMSG ), AE( ENOSR ), AE( ENOSTR ), AE( ENOTRECOVERABLE ),
-	AE( ENOTSUP ), AE( EOTHER ), AE( EOVERFLOW ), AE( EOWNERDEAD ),
+	AE( ENOTSUP ), AE( EOVERFLOW ), AE( EOWNERDEAD ),
 	AE( EPROTO ), AE( ETIME ), AE( ETXTBSY ),
 #endif
 	
@@ -2266,7 +2266,7 @@ static int sgsstd_errno_value( SGS_CTX )
 	{
 		if( strcmp( *ekt, str ) == 0 )
 		{
-			sgs_PushInt( C, (int) ekt[1] );
+			sgs_PushInt( C, (int) (size_t) ekt[1] );
 			return 1;
 		}
 		ekt += 2;

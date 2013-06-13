@@ -143,7 +143,7 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 			argB = INSTR_GET_B( I ), argC = INSTR_GET_C( I ),
 			argE = INSTR_GET_E( I );
 
-		printf( "\t%04d |  ", ptr - pbeg - 1 );
+		printf( "\t%04d |  ", (int)( ptr - pbeg - 1 ) );
 
 		switch( op )
 		{

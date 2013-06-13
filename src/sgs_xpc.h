@@ -34,7 +34,7 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 
-#if SGS_DLL
+#if SGS_DLL && !defined( __GNUC__ )
 #  if BUILDING_SGS
 #    define SGS_APIFUNC __declspec(dllexport)
 #  else

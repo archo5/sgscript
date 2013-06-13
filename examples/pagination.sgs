@@ -41,7 +41,7 @@ foreach( p : pages )
 	padchr = ' ';
 	if( p == curpage )
 		padchr = '-';
-	out $= string_pad( p, 3, padchr ) $ '|';
+	out $= string_pad( p, 3, padchr, LEFT|RIGHT ) $ '|';
 }
 side = string_repeat( '-', out.length );
 

@@ -341,7 +341,7 @@ void vht_free( VHTable* vht, SGS_CTX, int dco )
 VHTableVar* vht_get( VHTable* vht, const char* key, int32_t size )
 {
 	void* idx = ht_get( &vht->ht, key, size );
-	uint32_t ii = (uint32_t) idx;
+	uint32_t ii = (uint32_t) (size_t) idx;
 	return ii > 0 ? vht->vars + ( ii - 1 ) : NULL;
 }
 
@@ -354,7 +354,7 @@ sgs_VHTableVar* vht_getS( sgs_VHTable* vht, string_t* S )
 	if( !pair )
 		return NULL;
 	void* idx = pair->ptr;
-	uint32_t ii = (uint32_t) idx;
+	uint32_t ii = (uint32_t) (size_t) idx;
 	return vht->vars + ( ii - 1 );
 }
 
@@ -382,7 +382,7 @@ void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SG
 
 		{
 			uint32_t ni = vht_size( vht );
-			HTPair* p = ht_set( &vht->ht, C, key, size, (void*)( ni + 1 ) );
+			HTPair* p = ht_set( &vht->ht, C, key, size, (void*)( (size_t) ni + 1 ) );
 			VHTableVar htv = { *var, p->str, p->size };
 			vht->vars[ ni ] = htv;
 		}
@@ -394,7 +394,7 @@ int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
 	HTPair* tvp = ht_find( &vht->ht, key, size, sgs_HashFunc( key, size ) );
 	if( tvp )
 	{
-		VHTableVar* tv = vht->vars + ( ((uint32_t)tvp->ptr) - 1 );
+		VHTableVar* tv = vht->vars + ( ((uint32_t)(size_t) tvp->ptr) - 1 );
 		VAR_RELEASE( &tv->var );
 		if( tv - vht->vars != vht_size( vht ) )
 		{
