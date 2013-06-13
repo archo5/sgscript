@@ -1,5 +1,6 @@
 
 CC=gcc
+COMMONFLAGS=-Wall
 SRCDIR=src
 LIBDIR=lib
 EXTDIR=ext
@@ -9,6 +10,7 @@ OBJDIR=obj
 ifdef SystemRoot
 	RM = del /Q
 	FixPath = $(subst /,\,$1)
+	CPLATFLAGS =
 	PLATFLAGS = -lkernel32
 	SOCKLIBS = -lws2_32
 	BINEXT=.exe
@@ -18,6 +20,7 @@ ifdef SystemRoot
 else
 	RM = rm -f
 	FixPath = $1
+	CPLATFLAGS = -fPIC
 	PLATFLAGS = -ldl
 	BINEXT=
 	LIBEXT=.so
@@ -26,10 +29,10 @@ else
 endif
 
 ifeq ($(mode),release)
-	CFLAGS = -O3 -Wall -fPIC
+	CFLAGS = -O3 $(COMMONFLAGS) $(CPLATFLAGS)
 else
 	mode = debug
-	CFLAGS = -D_DEBUG -g -Wall -fPIC
+	CFLAGS = -D_DEBUG -g $(COMMONFLAGS) $(CPLATFLAGS)
 endif
 
 ifneq ($(static),)

@@ -5,7 +5,7 @@ global tests_failed, tests_ran;
 //
 function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
 print( "\n\n-- CORE FUNCTIONS --\n" );
-include "type", "io";
+include "type", "os";
 //
 
 var asz = [ 10, "huh", {}, 0.25, "end!" ];
@@ -75,7 +75,7 @@ if( os_gettype() == "Windows" )
 	libfile $= ".dll";
 else
 	libfile $= ".so";
-	section( "include_shared" );
+	section( "include_shared ("$libfile$", OS="$os_gettype()$")" );
 testEqual( include_shared( libfile ), true, "include_shared - sgscript_main call [1]" );
 testEqual( json_decode$'', 'C Function', "include_shared - sgscript_main call [2]" );
 
