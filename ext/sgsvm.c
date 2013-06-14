@@ -22,20 +22,18 @@ void readme()
 
 int main( int argc, char** argv )
 {
-	int i, sep = 0, idbg = 0, prof = 0;
+	int i, sep = 0, idbg = 0, prof = 0, v = 0;
 	sgs_Context* C;
 	sgs_IDbg D;
 	sgs_Prof P;
-
-	printf( "SGSVM [SGScript v%s]\n", SGS_VERSION );
-
+	
 	if( argc < 2 )
 	{
 		EPRINT( "need to specify at least one file" );
 		readme();
 		return 1;
 	}
-
+	
 	for( i = 1; i < argc; ++i )
 	{
 		if( strcmp( argv[ i ], "--separate" ) == 0 ||
@@ -48,12 +46,17 @@ int main( int argc, char** argv )
 			{ prof = 2; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--help" ) == 0 ||
 			strcmp( argv[ i ], "-h" ) == 0 ){ readme(); return 0; }
+		else if( strcmp( argv[ i ], "--version" ) == 0 ||
+			strcmp( argv[ i ], "-v" ) == 0 ){ v = 1; argv[ i ] = 0; }
 	}
-
+	
+	if( v )
+		printf( "SGSVM [SGScript v%s]\n", SGS_VERSION );
+	
 	C = sgs_CreateEngine();
 	if( idbg ) sgs_InitIDbg( C, &D );
 	if( prof ) sgs_ProfInit( C, &P, prof );
-
+	
 	for( i = 1; i < argc; ++i )
 	{
 		if( argv[ i ] )

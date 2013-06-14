@@ -125,7 +125,6 @@ int socket_error( SGS_CTX )
 			MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),
 			buf, 1024, NULL
 		);
-		printf( "getlasterror(): %d\n", (int) GetLastError() );
 		if( !numwr )
 			STDLIB_WARN( "failed to retrieve error message" )
 		sgs_PushStringBuf( C, buf, numwr );

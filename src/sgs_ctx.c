@@ -43,7 +43,7 @@ static void default_outputfn( void* userdata, SGS_CTX, const void* ptr, sgs_Size
 	fwrite( ptr, 1, size, (FILE*) userdata );
 }
 
-static void default_printfn( void* ctx, SGS_CTX, int type, const char* msg )
+static void default_printfn_noabort( void* ctx, SGS_CTX, int type, const char* msg )
 {
 	const char* errpfxs[ 3 ] = { "Info", "Warning", "Error" };
 	type = type / 100 - 1;
@@ -62,6 +62,13 @@ static void default_printfn( void* ctx, SGS_CTX, int type, const char* msg )
 		p = p->next;
 	}
 	fprintf( (FILE*) ctx, "%s: %s\n", errpfxs[ type ], msg );
+}
+
+static void default_printfn( void* ctx, SGS_CTX, int type, const char* msg )
+{
+	default_printfn_noabort( ctx, C, type, msg );
+	if( type >= SGS_ERROR )
+		abort();
 }
 
 
@@ -238,6 +245,8 @@ void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
 {
 	if( func == SGSPRINTFN_DEFAULT )
 		func = default_printfn;
+	else if( func == SGSPRINTFN_DEFAULT_NOABORT )
+		func = default_printfn_noabort;
 	C->print_fn = func;
 	C->print_ctx = ctx;
 }
@@ -718,8 +727,8 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 	}
 	else if( SGS_BASETYPE( frame->func->type ) == SGS_VT_CFUNC )
 	{
-		N = "<C function>";
-		F = "<C code>";
+		N = "[C function]";
+		F = "[C code]";
 	}
 	else if( SGS_BASETYPE( frame->func->type ) == SGS_VT_OBJECT )
 	{

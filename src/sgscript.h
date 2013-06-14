@@ -328,6 +328,7 @@ static SGS_INLINE void sgs_WriteStr( SGS_CTX, const char* str )
 SGS_APIFUNC void sgs_Writef( SGS_CTX, const char* what, ... );
 
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
+#define SGSPRINTFN_DEFAULT_NOABORT ((sgs_PrintFunc)-2)
 SGS_APIFUNC void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
 SGS_APIFUNC int sgs_Printf( SGS_CTX, int type, const char* what, ... );
 

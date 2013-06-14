@@ -1,7 +1,7 @@
 
 function memusage()
 {
-	println( "Memory usage: ", sys_stat( 2 ) / 1024, " kB" );
+	println( "Memory usage: ", sys_stat( 3 ) / 1024, " kB" );
 }
 
 numobjs = 16384;

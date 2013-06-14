@@ -77,30 +77,52 @@ static void freeProfMode1( SGS_PROF )
 	ht_free( &P->timings, P->C );
 }
 
+static int dpm1sf( const void* p1, const void* p2 )
+{
+	const HTPair* v1 = *(const HTPair**) p1;
+	const HTPair* v2 = *(const HTPair**) p2;
+	int cmpsz = v1->size < v2->size ? v1->size : v2->size;
+	int ret = memcmp( v1->str, v2->str, cmpsz );
+	if( !ret )
+		ret = v1->size - v2->size;
+	return ret;
+}
+
 static int dumpProfMode1( SGS_PROF )
 {
-	HTPair* p, *pend;
-	sgs_Writef( P->C, "--- Time by call stack frame ---\n" );
+	int i, off = 0;
+	HTPair* p, *pend, **pbuf = (HTPair**)
+		sgs_Malloc( P->C, sizeof(HTPair*) * P->timings.load );
+	
 	p = P->timings.pairs;
 	pend = p + P->timings.size;
 	while( p < pend )
 	{
 		if( p->str )
-		{
-			const char* s = p->str;
-			const char* send = s + p->size;
-			while( s < send )
-			{
-				if( s != p->str )
-					sgs_Writef( P->C, "::" );
-				sgs_Writef( P->C, "%s", s );
-				s += strlen( s ) + 1;
-			}
-			sgs_Writef( P->C, " - %f\n", AS_DOUBLE( p->ptr ) );
-		}
+			pbuf[ off++ ] = p;
 		p++;
 	}
+	qsort( pbuf, off, sizeof( HTPair* ), dpm1sf );
+	
+	sgs_Writef( P->C, "--- Time by call stack frame ---\n" );
+	for( i = 0; i < off; ++i )
+	{
+		const char *s, *send;
+		p = pbuf[ i ];
+		s = p->str;
+		send = s + p->size;
+		while( s < send )
+		{
+			if( s != p->str )
+				sgs_Writef( P->C, "::" );
+			sgs_Writef( P->C, "%s", s );
+			s += strlen( s ) + 1;
+		}
+		sgs_Writef( P->C, " - %f\n", AS_DOUBLE( p->ptr ) );
+	}
 	sgs_Writef( P->C, "---\n" );
+	sgs_Free( P->C, pbuf );
+	
 	return 1;
 }
 
