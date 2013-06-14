@@ -8,8 +8,9 @@ function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
 
 //
 print( "\n\n-- TYPES --\n" );
-include_library( "type" );
 //
+
+loadtypeflags();
 
 var a = "random string";
 var b = "WHAT";
@@ -19,42 +20,22 @@ var d = " \t\r\n \t\r\n spacy \t\r\n \t\r\n ";
 
 var _N = null, _B = true, _I = 1, _R = 1.0, _S = "1", _F = section, _C = print, _O = [];
 
-	section( "type_is_* - convertible" );
-testEqual( !type_is_numeric( _N ) && type_is_numeric( _B ) && type_is_numeric( _I ) && type_is_numeric( _R ) &&
-	!type_is_numeric( _F ) && !type_is_numeric( _C ) && !type_is_numeric( _O ), true, "type_is_numeric - basic tests" );
-testEqual( type_is_numeric( _S ), true, "type_is_numeric - numeric string" );
-testEqual( type_is_numeric( c ), false, "type_is_numeric - non-numeric string" );
-testEqual( type_is_numeric( "1E+2" ) && type_is_numeric( "-123.456" ) && type_is_numeric( "0x7f" ) &&
-	type_is_numeric( "0b101" ) && type_is_numeric( "01234" ) && type_is_numeric( "0o427" ), true, "type_is_numeric - extra numeric formats" );
-testEqual( !type_is_callable( _N ) && !type_is_callable( _B ) && !type_is_callable( _I ) && !type_is_callable( _R ) &&
-	!type_is_callable( _S ) && type_is_callable( _F ) && type_is_callable( _C ), true, "type_is_callable - basic tests" );
-testEqual( type_is_callable( _O ), false, "type_is_callable - non-callable object" );
-testEqual( type_is_callable( closure( print, _O ) ), true, "type_is_callable - callable object" );
+	section( "is_* - convertible" );
+testEqual( !is_numeric( _N ) && is_numeric( _B ) && is_numeric( _I ) && is_numeric( _R ) &&
+	!is_numeric( _F ) && !is_numeric( _C ) && !is_numeric( _O ), true, "is_numeric - basic tests" );
+testEqual( is_numeric( _S ), true, "is_numeric - numeric string" );
+testEqual( is_numeric( c ), false, "is_numeric - non-numeric string" );
+testEqual( is_numeric( "1E+2" ) && is_numeric( "-123.456" ) && is_numeric( "0x7f" ) &&
+	is_numeric( "0b101" ) && is_numeric( "01234" ) && is_numeric( "0o427" ), true, "is_numeric - extra numeric formats" );
+testEqual( !is_callable( _N ) && !is_callable( _B ) && !is_callable( _I ) && !is_callable( _R ) &&
+	!is_callable( _S ) && is_callable( _F ) && is_callable( _C ), true, "is_callable - basic tests" );
+testEqual( is_callable( _O ), false, "is_callable - non-callable object" );
+testEqual( is_callable( closure( print, _O ) ), true, "is_callable - callable object" );
 
 	section( "type_*" );
-testEqual( type_get( _N ) == TYPE_NULL && type_get( _B ) == TYPE_BOOL && type_get( _I ) == TYPE_INT &&
-	type_get( _R ) == TYPE_REAL && type_get( _S ) == TYPE_STRING && type_get( _F ) == TYPE_FUNC &&
-	type_get( _C ) == TYPE_CFUNC && type_get( _O ) == TYPE_OBJECT, true, "type_get - basic tests" );
-var typenames = [ "null", "bool", "int", "real", "string", "func", "cfunc", "object" ];
-var srcvars = [ _N, _B, _I, _R, _S, _F, _C, _O ];
-var expect =
-[
-	TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL,
-	TYPE_BOOL, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL, TYPE_BOOL,
-	TYPE_INT, TYPE_INT, TYPE_INT, TYPE_INT, TYPE_INT, TYPE_INT, TYPE_INT, TYPE_NULL,
-	TYPE_REAL, TYPE_REAL, TYPE_REAL, TYPE_REAL, TYPE_REAL, TYPE_REAL, TYPE_REAL, TYPE_NULL,
-	TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_STRING,
-	TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_FUNC, TYPE_NULL, TYPE_NULL,
-	TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_CFUNC, TYPE_NULL,
-	TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_NULL, TYPE_OBJECT,
-];
-for( var i = 0; i < 5; ++i )
-{
-	for( var j = 0; j < TYPE_COUNT; ++j )
-	{
-		testEqual( type_get( type_cast( srcvars[ j ], i ) ), expect[ i * TYPE_COUNT + j ], "type_cast test - " $ typenames[ j ] $ " -> " $ typenames[ i ] );
-	}
-}
+testEqual( typeid( _N ) == VT_NULL && typeid( _B ) == VT_BOOL && typeid( _I ) == VT_INT &&
+	typeid( _R ) == VT_REAL && typeid( _S ) == VT_STRING && typeid( _F ) == VT_FUNC &&
+	typeid( _C ) == VT_CFUNC && typeid( _O ) == VT_OBJECT, true, "typeid - basic tests" );
 
 
 //

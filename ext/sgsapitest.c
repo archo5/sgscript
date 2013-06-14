@@ -350,14 +350,12 @@ DEFINE_TEST( libraries )
 	atf_assert( sgs_LoadLib_Math( C ) == SGS_SUCCESS );
 	atf_assert( sgs_LoadLib_OS( C ) == SGS_SUCCESS );
 	atf_assert( sgs_LoadLib_String( C ) == SGS_SUCCESS );
-	atf_assert( sgs_LoadLib_Type( C ) == SGS_SUCCESS );
 	
 	atf_assert( sgs_PushGlobal( C, "fmt_text" ) == SGS_SUCCESS );
 	atf_assert( sgs_PushGlobal( C, "io_file" ) == SGS_SUCCESS );
 	atf_assert( sgs_PushGlobal( C, "pow" ) == SGS_SUCCESS );
 	atf_assert( sgs_PushGlobal( C, "os_date_string" ) == SGS_SUCCESS );
 	atf_assert( sgs_PushGlobal( C, "string_replace" ) == SGS_SUCCESS );
-	atf_assert( sgs_PushGlobal( C, "type_cast" ) == SGS_SUCCESS );
 
 	destroy_context( C );
 }

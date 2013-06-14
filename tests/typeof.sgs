@@ -1,5 +1,3 @@
-include_library( "type" );
-
 print( typeof( true ), "\n" );
 print( typeof( 1337 ), "\n" );
 print( typeof( 3.14 ), "\n" );

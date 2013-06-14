@@ -39,6 +39,7 @@ extern "C" {
 #  define VTF_CALL SGS_VTF_CALL
 #  define VTF_REF SGS_VTF_REF
 #  define VTF_ARRAY SGS_VTF_ARRAY
+#  define VTF_ARRAY_ITER SGS_VTF_ARRAY_ITER
 #  define VTF_DICT SGS_VTF_DICT
 #  define VTC_NULL SGS_VTC_NULL
 #  define VTC_BOOL SGS_VTC_BOOL
@@ -49,6 +50,7 @@ extern "C" {
 #  define VTC_CFUNC SGS_VTC_CFUNC
 #  define VTC_OBJECT SGS_VTC_OBJECT
 #  define VTC_ARRAY SGS_VTC_ARRAY
+#  define VTC_ARRAY_ITER SGS_VTC_ARRAY_ITER
 #  define VTC_DICT SGS_VTC_DICT
 
 #  define SOP_END SGS_OP_END
@@ -416,7 +418,6 @@ SGS_APIFUNC SGSRESULT sgs_LoadLib_IO( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_LoadLib_Math( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_LoadLib_OS( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_LoadLib_String( SGS_CTX );
-SGS_APIFUNC SGSRESULT sgs_LoadLib_Type( SGS_CTX );
 
 typedef struct _sgs_RegFuncConst
 {

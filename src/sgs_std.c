@@ -1708,6 +1708,161 @@ static int sgsstd_get_merged( SGS_CTX )
 }
 
 
+static int sgsstd_tobool( SGS_CTX )
+{
+	SGSFN( "tobool" );
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "unexpected arguments; function expects 1 argument" )
+	sgs_PushBool( C, sgs_GetBool( C, 0 ) );
+	return 1;
+}
+
+static int sgsstd_toint( SGS_CTX )
+{
+	SGSFN( "toint" );
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "unexpected arguments; function expects 1 argument" )
+	sgs_PushInt( C, sgs_GetInt( C, 0 ) );
+	return 1;
+}
+
+static int sgsstd_toreal( SGS_CTX )
+{
+	SGSFN( "toreal" );
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "unexpected arguments; function expects 1 argument" )
+	sgs_PushReal( C, sgs_GetReal( C, 0 ) );
+	return 1;
+}
+
+static int sgsstd_tostring( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal sz;
+	SGSFN( "tostring" );
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "unexpected arguments; function expects 1 argument" )
+	str = sgs_ToStringBuf( C, 0, &sz );
+	if( str )
+		sgs_PushStringBuf( C, str, sz );
+	else
+		sgs_PushStringBuf( C, "", 0 );
+	return 1;
+}
+
+static int sgsstd_typeof( SGS_CTX )
+{
+	SGSFN( "typeof" );
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "unexpected arguments; function expects 1 argument" )
+	sgs_TypeOf( C );
+	return 1;
+}
+
+static int sgsstd_typeid( SGS_CTX )
+{
+	SGSFN( "typeid" );
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "unexpected arguments; function expects 1 argument" )
+	sgs_PushInt( C, sgs_ItemType( C, 0 ) );
+	return 1;
+}
+
+static int sgsstd_typeflags( SGS_CTX )
+{
+	SGSFN( "typeflags" );
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "unexpected arguments; function expects 1 argument" )
+	sgs_PushInt( C, sgs_ItemTypeExt( C, 0 ) );
+	return 1;
+}
+
+static int sgsstd_is_numeric( SGS_CTX )
+{
+	int res, ty = sgs_ItemTypeExt( C, 0 );
+	
+	SGSFN( "is_numeric" );
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "unexpected arguments; function expects 1 argument" )
+
+	if( ty == VTC_NULL || ( ty & (VTF_CALL|VT_OBJECT) ) )
+		res = FALSE;
+	else
+		res = ty != VTC_STRING || sgs_IsNumericString(
+			sgs_GetStringPtr( C, 0 ), sgs_GetStringSize( C, 0 ) );
+
+	sgs_PushBool( C, res );
+	return 1;
+}
+
+#define OBJECT_HAS_IFACE( outVar, O, iFace ) \
+	{ void** ptr = O->iface; outVar = 0; \
+	while( *ptr ){ if( *ptr == iFace ){ outVar = 1; \
+		break; } ptr += 2; } }
+
+static int sgsstd_is_callable( SGS_CTX )
+{
+	int res, ty = sgs_ItemTypeExt( C, 0 );
+	
+	SGSFN( "is_callable" );
+	if( sgs_StackSize( C ) != 1 )
+		STDLIB_WARN( "unexpected arguments; function expects 1 argument" )
+
+	if( ty & VTF_CALL )
+		res = TRUE;
+	else if( ty & VT_OBJECT )
+	{
+		sgs_VarObj* O = sgs_GetObjectData( C, 0 );
+		OBJECT_HAS_IFACE( res, O, SOP_CALL )
+	}
+	else
+		res = FALSE;
+
+	sgs_PushBool( C, res );
+	return 1;
+}
+
+static int sgsstd_loadtypeflags( SGS_CTX )
+{
+	static const sgs_RegIntConst tycs[] =
+	{
+		{ "VT_NULL", VT_NULL },
+		{ "VT_BOOL", VT_BOOL },
+		{ "VT_INT", VT_INT },
+		{ "VT_REAL", VT_REAL },
+		{ "VT_STRING", VT_STRING },
+		{ "VT_FUNC", VT_FUNC },
+		{ "VT_CFUNC", VT_CFUNC },
+		{ "VT_OBJECT", VT_OBJECT },
+		
+		{ "VTF_NUM", VTF_NUM },
+		{ "VTF_CALL", VTF_CALL },
+		{ "VTF_REF", VTF_REF },
+		{ "VTF_ARRAY", VTF_ARRAY },
+		{ "VTF_ARRAY_ITER", VTF_ARRAY_ITER },
+		{ "VTF_DICT", VTF_DICT },
+		
+		{ "VTC_NULL", VTC_NULL },
+		{ "VTC_BOOL", VTC_BOOL },
+		{ "VTC_INT", VTC_INT },
+		{ "VTC_REAL", VTC_REAL },
+		{ "VTC_STRING", VTC_STRING },
+		{ "VTC_FUNC", VTC_FUNC },
+		{ "VTC_CFUNC", VTC_CFUNC },
+		{ "VTC_OBJECT", VTC_OBJECT },
+		{ "VTC_ARRAY", VTC_ARRAY },
+		{ "VTC_ARRAY_ITER", VTC_ARRAY_ITER },
+		{ "VTC_DICT", VTC_DICT },
+	};
+	
+	SGSFN( "loadtypeflags" );
+	if( sgs_StackSize( C ) )
+		STDLIB_WARN( "unexpected arguments" );
+	
+	sgs_RegIntConsts( C, tycs, sizeof(tycs)/sizeof(tycs[0]) );
+	return 0;
+}
+
 
 /* I/O */
 
@@ -1892,12 +2047,8 @@ static int sgsstd__inclib( SGS_CTX, const char* name, int override )
 	if( strcmp( name, "fmt" ) == 0 ) ret = sgs_LoadLib_Fmt( C );
 	else if( strcmp( name, "io" ) == 0 ) ret = sgs_LoadLib_IO( C );
 	else if( strcmp( name, "math" ) == 0 ) ret = sgs_LoadLib_Math( C );
-#if 0
-	else if( strcmp( name, "native" ) == 0 ) ret = sgs_LoadLib_Native( C );
-#endif
 	else if( strcmp( name, "os" ) == 0 ) ret = sgs_LoadLib_OS( C );
 	else if( strcmp( name, "string" ) == 0 ) ret = sgs_LoadLib_String( C );
-	else if( strcmp( name, "type" ) == 0 ) ret = sgs_LoadLib_Type( C );
 
 	if( ret == SGS_SUCCESS )
 	{
@@ -2406,6 +2557,10 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( array ), FN( dict ), { "class", sgsstd_class }, FN( closure ),
 	FN( isset ), FN( unset ), FN( clone ),
 	FN( get_keys ), FN( get_values ), FN( get_concat ), FN( get_merged ),
+	/* types */
+	FN( tobool ), FN( toint ), FN( toreal ), FN( tostring ), FN( typeof ),
+	FN( typeid ), FN( typeflags ), FN( is_numeric ), FN( is_callable ),
+	FN( loadtypeflags ),
 	/* I/O */
 	FN( print ), FN( println ), FN( printlns ),
 	FN( printvar ), FN( printvars ),
