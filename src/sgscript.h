@@ -562,6 +562,7 @@ SGS_APIFUNC sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item );
 SGS_APIFUNC int sgs_HasFuncName( SGS_CTX );
 SGS_APIFUNC void sgs_FuncName( SGS_CTX, const char* fnliteral );
 SGS_APIFUNC int sgs_Errno( SGS_CTX, int clear );
+SGS_APIFUNC int sgs_SetErrno( SGS_CTX, int err );
 SGS_APIFUNC int sgs_GetLastErrno( SGS_CTX );
 
 #define SGSFN( x ) sgs_FuncName( C, x )

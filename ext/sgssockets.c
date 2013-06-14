@@ -1,8 +1,52 @@
 
 
+#include <errno.h>
 #ifdef _WIN32
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
+#  ifndef _MSC_VER
+#    define EADDRINUSE      100
+#    define EADDRNOTAVAIL   101
+#    define EAFNOSUPPORT    102
+#    define EALREADY        103
+#    define EBADMSG         104
+#    define ECANCELED       105
+#    define ECONNABORTED    106
+#    define ECONNREFUSED    107
+#    define ECONNRESET      108
+#    define EDESTADDRREQ    109
+#    define EHOSTUNREACH    110
+#    define EIDRM           111
+#    define EINPROGRESS     112
+#    define EISCONN         113
+#    define ELOOP           114
+#    define EMSGSIZE        115
+#    define ENETDOWN        116
+#    define ENETRESET       117
+#    define ENETUNREACH     118
+#    define ENOBUFS         119
+#    define ENODATA         120
+#    define ENOLINK         121
+#    define ENOMSG          122
+#    define ENOPROTOOPT     123
+#    define ENOSR           124
+#    define ENOSTR          125
+#    define ENOTCONN        126
+#    define ENOTRECOVERABLE 127
+#    define ENOTSOCK        128
+#    define ENOTSUP         129
+#    define EOPNOTSUPP      130
+#    define EOTHER          131
+#    define EOVERFLOW       132
+#    define EOWNERDEAD      133
+#    define EPROTO          134
+#    define EPROTONOSUPPORT 135
+#    define EPROTOTYPE      136
+#    define ETIME           137
+#    define ETIMEDOUT       138
+#    define ETXTBSY         139
+#    define EWOULDBLOCK     140
+#  endif
 #else
 #  include <unistd.h>
 #  include <sys/socket.h>
@@ -38,6 +82,64 @@
 #define STDLIB_WARN( warn ) return sgs_Printf( C, SGS_WARNING, warn );
 
 
+#ifdef _WIN32
+#  define sockerror WSAGetLastError()
+#else
+#  define sockerror errno
+#endif
+
+
+#define SCKERRVN "__socket_error"
+
+int sockassert( SGS_CTX, int test )
+{
+	int err = test ? 0 : sockerror;
+	sgs_PushInt( C, err );
+	sgs_StoreGlobal( C, SCKERRVN );
+	return test;
+}
+
+int socket_error( SGS_CTX )
+{
+	int astext = 0, e = 0, ssz = sgs_StackSize( C );
+	SGSFN( "socket_error" );
+	if( ssz < 0 || ssz > 1 ||
+		( ssz >= 1 && !sgs_ParseBool( C, 0, &astext ) ) )
+		STDLIB_WARN( "unexpected arguments; "
+			"function expects 0-1 arguments: [bool]" )
+	
+	if( sgs_PushGlobal( C, SCKERRVN ) == SGS_SUCCESS )
+		e = (int) sgs_GetInt( C, -1 );
+	else if( !astext )
+		sgs_PushInt( C, 0 );
+	
+	if( !astext )
+		return 1;
+	
+#ifdef _WIN32
+	{
+		char buf[ 1024 ];
+		int numwr = FormatMessageA
+		(
+			FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, e,
+			MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),
+			buf, 1024, NULL
+		);
+		printf( "getlasterror(): %d\n", (int) GetLastError() );
+		if( !numwr )
+			STDLIB_WARN( "failed to retrieve error message" )
+		sgs_PushStringBuf( C, buf, numwr );
+	}
+#else
+	sgs_PushString( C, strerror( e ) );
+#endif
+	return 1;
+}
+
+#define SOCKERR sockassert( C, 1 )
+#define SOCKCLEARERR sockassert( C, 0 )
+
+
 static void* socket_iface[];
 #define SOCK_IHDR( name ) \
 	sgs_VarObj* data; \
@@ -66,7 +168,7 @@ static int socketI_bind_port( SGS_CTX )
 	sa.sin_addr.s_addr = htonl( INADDR_ANY );
 	ret = bind( GET_SCK, (struct sockaddr*) &sa, sizeof(sa) );
 	
-	sgs_PushBool( C, sgs_Errno( C, ret == 0 ) );
+	sgs_PushBool( C, sockassert( C, ret == 0 ) );
 	return 1;
 }
 
@@ -81,7 +183,7 @@ static int socketI_listen( SGS_CTX )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1 argument: int" )
 	
-	sgs_PushBool( C, sgs_Errno( C, listen( GET_SCK, (int) queuesize ) == 0 ) );
+	sgs_PushBool( C, sockassert( C, listen( GET_SCK, (int) queuesize ) == 0 ) );
 	return 1;
 }
 
@@ -107,10 +209,10 @@ static int socketI_accept( SGS_CTX )
 		S = accept( GET_SCK, NULL, NULL );
 		if( S == -1 )
 		{
-			SGSCERR;
+			SOCKERR;
 			STDLIB_WARN( "failed to accept connection" )
 		}
-		SGSCLEARERR;
+		SOCKCLEARERR;
 		sgs_PushObject( C, (void*) (size_t) S, socket_iface );
 		return 1;
 	}
@@ -137,7 +239,7 @@ static int socketI_send( SGS_CTX )
 			"function expects 1-2 arguments: string[, int]" )
 	
 	ret = send( GET_SCK, str, size, (int) flags );
-	sgs_Errno( C, ret >= 0 );
+	sockassert( C, ret >= 0 );
 	if( ret < 0 )
 		sgs_PushBool( C, 0 );
 	else
@@ -156,7 +258,7 @@ static int socketI_shutdown( SGS_CTX )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1 argument: int" )
 	
-	sgs_PushBool( C, sgs_Errno( C, shutdown( GET_SCK, (int) flags ) == 0 ) );
+	sgs_PushBool( C, sockassert( C, shutdown( GET_SCK, (int) flags ) == 0 ) );
 	return 1;
 }
 
@@ -238,10 +340,10 @@ static int sgs_socket( SGS_CTX )
 	S = socket( domain, type, protocol );
 	if( S < 0 )
 	{
-		SGSCERR;
+		SOCKERR;
 		STDLIB_WARN( "failed to create socket" )
 	}
-	SGSCLEARERR;
+	SOCKCLEARERR;
 	
 	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
 	return 1;
@@ -251,6 +353,7 @@ static int sgs_socket( SGS_CTX )
 static sgs_RegFuncConst f_sock[] =
 {
 	{ "socket", sgs_socket },
+	{ "socket_error", socket_error },
 };
 
 static sgs_RegIntConst i_sock[] =
@@ -283,6 +386,9 @@ int sockets_module_entry_point( SGS_CTX )
 	WSADATA wsadata;
 #endif
 	
+	sgs_PushInt( C, 0 );
+	sgs_StoreGlobal( C, SCKERRVN );
+	
 	ret = sgs_RegFuncConsts( C, f_sock, sizeof(f_sock) / sizeof(f_sock[0]) );
 	if( ret != SGS_SUCCESS ) return ret;
 	
@@ -290,7 +396,7 @@ int sockets_module_entry_point( SGS_CTX )
 	if( ret != SGS_SUCCESS ) return ret;
 	
 #ifdef _WIN32
-	ret = WSAStartup( 0x0202, &wsadata );
+	ret = WSAStartup( MAKEWORD( 2, 0 ), &wsadata );
 	if( ret != 0 )
 		return SGS_EINPROC;
 #endif

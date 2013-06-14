@@ -1,7 +1,7 @@
 
-include "sockets";
+include "sockets", "string";
 
-function ee(){ return "(errno: " $ errno(true) $ ")"; }
+function ee(){ return "(error: " $ string_trim( socket_error(true) ) $ ")"; }
 
 S = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP );
 if( !S )
@@ -14,7 +14,7 @@ for(;;)
 {
 	C = S.accept();
 	println( "Request! Let's send something..." );
-	C.send( "This is a test." );
+	C.send( "This is a test.\r\n" );
 	C.shutdown( SHUT_WR );
 	C.close();
 	C = null;

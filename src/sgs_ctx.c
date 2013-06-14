@@ -756,6 +756,11 @@ int sgs_Errno( SGS_CTX, int clear )
 	return clear;
 }
 
+int sgs_SetErrno( SGS_CTX, int err )
+{
+	return C->last_errno = err;
+}
+
 int sgs_GetLastErrno( SGS_CTX )
 {
 	return C->last_errno;
