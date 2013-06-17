@@ -1333,7 +1333,7 @@ static int sgsstd_fmt_parser( SGS_CTX )
 	sgs_Integer bufsize = 1024;
 	int ssz = sgs_StackSize( C );
 	
-	SGSFN( "fmt_parser" );
+	SGSBASEFN( "fmt_parser" );
 	
 	if( ssz < 1 || ssz > 2 ||
 		( ssz >= 2 && !sgs_ParseInt( C, 1, &bufsize ) ) ||
@@ -1365,6 +1365,69 @@ static int sgsstd_fmt_parser( SGS_CTX )
 }
 
 
+typedef struct _stringread_t
+{
+	sgs_Variable S;
+	sgs_SizeVal off;
+}
+stringread_t;
+
+
+static int srt_call( SGS_CTX, sgs_VarObj* data, int smth )
+{
+	sgs_Integer amt;
+	stringread_t* srt = (stringread_t*) data->data;
+	if( !sgs_ParseInt( C, 0, &amt ) || amt > 0x7fffffff )
+		return SGS_EINVAL;
+	if( srt->off >= srt->S.data.S->size )
+		return 0;
+	else
+	{
+		sgs_SizeVal rn = MIN( srt->S.data.S->size - srt->off, amt );
+		printf( "read %d\n", rn );
+		sgs_PushStringBuf( C, str_cstr( srt->S.data.S ) + srt->off, rn );
+		srt->off += rn;
+		return 1;
+	}
+}
+
+static int srt_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+{
+	stringread_t* srt = (stringread_t*) data->data;
+	sgs_ReleaseOwned( C, &srt->S, dco );
+	sgs_Dealloc( data->data );
+	return SGS_SUCCESS;
+}
+
+static void* srt_iface[] =
+{
+	SOP_CALL, srt_call,
+	SOP_DESTRUCT, srt_destruct,
+	SOP_END
+};
+
+static int sgsstd_fmt_string_parser( SGS_CTX )
+{
+	stringread_t* srt;
+	int ssz = sgs_StackSize( C );
+	SGSBASEFN( "fmt_string_parser" );
+	
+	if( ssz < 1 || ssz > 2 ||
+		!sgs_ParseString( C, 0, NULL, NULL ) )
+		STDLIB_WARN( "unexpected arguments; "
+			"function expects 1-2 arguments: string[, int(>0)]" )
+	
+	srt = sgs_Alloc( stringread_t );
+	sgs_GetStackItem( C, 0, &srt->S );
+	sgs_BreakIf( srt->S.type != VTC_STRING );
+	sgs_Acquire( C, &srt->S );
+	srt->off = 0;
+	sgs_PushObject( C, srt, srt_iface );
+	sgs_StoreItem( C, 0 );
+	return sgsstd_fmt_parser( C );
+}
+
+
 #define FN( x ) { #x, sgsstd_##x }
 
 static const sgs_RegFuncConst f_fconsts[] =
@@ -1372,7 +1435,7 @@ static const sgs_RegFuncConst f_fconsts[] =
 	FN( fmt_pack ), FN( fmt_pack_count ),
 	FN( fmt_unpack ), FN( fmt_pack_size ),
 	FN( fmt_base64_encode ), FN( fmt_base64_decode ),
-	FN( fmt_text ), FN( fmt_parser ),
+	FN( fmt_text ), FN( fmt_parser ), FN( fmt_string_parser ),
 };
 
 SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
