@@ -2269,14 +2269,26 @@ static int sgsstd_sys_errorstate( SGS_CTX )
 	C->state = ( C->state & ~SGS_HAS_ERRORS ) | ( SGS_HAS_ERRORS * state );
 	return 0;
 }
-static int sgsstd_sys_abort( SGS_CTX )
+static int sgsstd_sys_fallthru( SGS_CTX )
 {
 	sgs_StackFrame* sf = C->sf_first;
 	while( sf )
 	{
 		sf->iptr = sf->iend;
-		sf++;
+		sf = sf->next;
 	}
+	return 0;
+}
+static int sgsstd_sys_abort( SGS_CTX ){ abort(); }
+static int sgsstd_sys_exit( SGS_CTX )
+{
+	sgs_Integer ret = 0;
+	int ssz = sgs_StackSize( C );
+	if( ssz < 0 || ssz > 1 ||
+		( ssz >= 1 && !sgs_ParseInt( C, 0, &ret ) ) )
+		STDLIB_WARN( "unexpected arguments; "
+			"function expects 0-1 arguments: [int]" )
+	exit( (int) ret );
 	return 0;
 }
 
@@ -2526,7 +2538,8 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( include_shared ), FN( include_module ), FN( import_cfunc ),
 	FN( include ),
 	FN( sys_curfile ),
-	FN( sys_print ), FN( sys_errorstate ), FN( sys_abort ),
+	FN( sys_print ), FN( sys_errorstate ),
+	FN( sys_fallthru ), FN( sys_abort ), FN( sys_exit ),
 	FN( sys_replevel ), FN( sys_stat ),
 	FN( errno ), FN( errno_string ), FN( errno_value ),
 	FN( dumpvar ), FN( dumpvars ),
