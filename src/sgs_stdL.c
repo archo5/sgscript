@@ -1387,7 +1387,6 @@ static int srt_call( SGS_CTX, sgs_VarObj* data, int smth )
 	else
 	{
 		sgs_SizeVal rn = MIN( srt->S.data.S->size - srt->off, amt );
-		printf( "read %d\n", rn );
 		sgs_PushStringBuf( C, str_cstr( srt->S.data.S ) + srt->off, rn );
 		srt->off += rn;
 		return 1;
