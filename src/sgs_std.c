@@ -564,7 +564,7 @@ static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 static int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data, int depth )
 {
 	char bfr[ 32 ];
-	int i;
+	int i, ssz = sgs_StackSize( C );
 	SGSARR_HDR;
 	sprintf( bfr, "array (%d)\n[", hdr->size );
 	sgs_PushString( C, bfr );
@@ -590,7 +590,7 @@ static int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data, int depth )
 			return SGS_EINPROC;
 	}
 	sgs_PushString( C, "\n]" );
-	return sgs_StringMultiConcat( C, 2 + !!hdr->size );
+	return sgs_StringMultiConcat( C, sgs_StackSize( C ) - ssz );
 }
 
 static int sgsstd_array_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
@@ -824,6 +824,7 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data, int depth )
 	char bfr[ 32 ];
 	HTHDR;
 	VHTableVar *pair = ht->vars, *pend = ht->vars + vht_size( ht );
+	int ssz = sgs_StackSize( C );
 	sprintf( bfr, "dict (%d)\n{", vht_size( ht ) );
 	sgs_PushString( C, bfr );
 	if( depth )
@@ -851,7 +852,7 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data, int depth )
 			return SGS_EINPROC;
 	}
 	sgs_PushString( C, "\n}" );
-	return sgs_StringMultiConcat( C, 2 + !!vht_size( ht ) );
+	return sgs_StringMultiConcat( C, sgs_StackSize( C ) - ssz );
 }
 
 static int sgsstd_dict_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
