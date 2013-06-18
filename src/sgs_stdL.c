@@ -1117,14 +1117,15 @@ static int sgsstd_fmtstreamI_read( SGS_CTX )
 
 static int sgsstd_fmtstreamI_getchar( SGS_CTX )
 {
-	int chr = -1, ssz, asint = 0;
+	int chr = -1, ssz, asint = 0, peek = 0;
 	SGSFS_IHDR( getchar )
 	ssz = sgs_StackSize( C );
 	
-	if( ssz < 1 || ssz > 2 ||
-		( ssz == 2 && !sgs_ParseBool( C, 1, &asint ) ) )
+	if( ssz < 1 || ssz > 3 ||
+		( ssz >= 2 && !sgs_ParseBool( C, 1, &peek ) ) ||
+		( ssz >= 3 && !sgs_ParseBool( C, 2, &asint ) ) )
 		STDLIB_WARN( "unexpected arguments; "
-			"function expects 0-1 arguments: [bool]" )
+			"function expects 0-2 arguments: [bool[, bool]]" )
 	
 	while( hdr->state != FMTSTREAM_STATE_END )
 	{
@@ -1137,7 +1138,9 @@ static int sgsstd_fmtstreamI_getchar( SGS_CTX )
 			}
 			continue;
 		}
-		chr = hdr->buffer[ hdr->bufpos++ ];
+		chr = hdr->buffer[ hdr->bufpos ];
+		if( !peek )
+			hdr->bufpos++;
 		break;
 	}
 	if( asint )
@@ -1428,6 +1431,24 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 }
 
 
+static int sgsstd_fmt_charcc( SGS_CTX )
+{
+	char* chs, *ccs;
+	sgs_SizeVal chsz, ccsz;
+	int ssz = sgs_StackSize( C );
+	SGSFN( "fmt_charcc" );
+	
+	if( ssz != 2 ||
+		!sgs_ParseString( C, 0, &chs, &chsz ) || !chsz ||
+		!sgs_ParseString( C, 1, &ccs, &ccsz ) )
+		STDLIB_WARN( "unexpected arguments; "
+			"function expects 2 arguments: string, string" )
+	
+	sgs_PushBool( C, fs_check_cc( ccs, ccsz, *chs ) );
+	return 1;
+}
+
+
 #define FN( x ) { #x, sgsstd_##x }
 
 static const sgs_RegFuncConst f_fconsts[] =
@@ -1436,6 +1457,7 @@ static const sgs_RegFuncConst f_fconsts[] =
 	FN( fmt_unpack ), FN( fmt_pack_size ),
 	FN( fmt_base64_encode ), FN( fmt_base64_decode ),
 	FN( fmt_text ), FN( fmt_parser ), FN( fmt_string_parser ),
+	FN( fmt_charcc ),
 };
 
 SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
