@@ -1103,7 +1103,7 @@ static int sgsstd_fmtstreamI_read( SGS_CTX )
 			hdr->bufpos += readamt;
 			if( numbytes <= 0 )
 				break;
-			if( !fs_refill( C, hdr ) )
+			if( !readamt && !fs_refill( C, hdr ) )
 			{
 				membuf_destroy( &B, C );
 				STDLIB_WARN( "unexpected read error" )
@@ -1241,7 +1241,7 @@ static int sgsstd_fmtstreamI_readcc( SGS_CTX )
 			hdr->bufpos += readamt;
 			if( numbytes <= 0 )
 				break;
-			if( !fs_refill( C, hdr ) )
+			if( !readamt && !fs_refill( C, hdr ) )
 			{
 				membuf_destroy( &B, C );
 				STDLIB_WARN( "unexpected read error" )
@@ -1289,7 +1289,7 @@ static int sgsstd_fmtstreamI_skipcc( SGS_CTX )
 			hdr->bufpos += readamt;
 			if( numbytes <= 0 )
 				break;
-			if( !fs_refill( C, hdr ) )
+			if( !readamt && !fs_refill( C, hdr ) )
 			{
 				STDLIB_WARN( "fmtstream.skipcc(): unexpected read error" )
 			}
