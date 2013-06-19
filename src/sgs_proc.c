@@ -1459,7 +1459,7 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		if( vm_convert_stack( C, -1, VTC_STRING ) != SGS_SUCCESS ) return 1;
 		a = stk_getpos( C, -2 );
 		b = stk_getpos( C, -1 );
-		out = strncmp( var_cstr( a ), var_cstr( b ), MIN( a->data.S->size, b->data.S->size ) );
+		out = memcmp( var_cstr( a ), var_cstr( b ), MIN( a->data.S->size, b->data.S->size ) );
 		if( out == 0 && a->data.S->size != b->data.S->size )
 			out = a->data.S->size - b->data.S->size;
 		else if( out != 0 )
