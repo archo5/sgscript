@@ -455,6 +455,44 @@ DEFINE_TEST( debugging )
 	destroy_context( C );
 }
 
+DEFINE_TEST( varpaths )
+{
+	SGS_CTX = get_context();
+	
+	const char* str =
+	"global o = { a = [ { b = {}, c = 5 }, { d = { e = {} }, f = [] } ], g = [] };"
+	"o.a[0].parent = o; o.a[1].d.parent = o; o.a[1].d.e.parent = o.a[1].d;"
+	"o.a[1].f.push(o); o.g.push( o.a[1].f ); o.a.push( o.a );";
+	
+	atf_assert( sgs_ExecString( C, str ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobal( C, "o" ) == SGS_SUCCESS );
+	
+	/* basic property retrieval */
+	atf_assert( sgs_PushPath( C, -1, "p", "g" ) == SGS_SUCCESS );
+	atf_assert( sgs_ItemType( C, -1 ) == VT_OBJECT );
+	atf_assert( sgs_ItemTypeExt( C, -1 ) == VTC_ARRAY );
+	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 1 );
+	
+	/* properties and indices */
+	atf_assert( sgs_PushPath( C, -1, "piso", "a", 1, 1, "d", 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_ItemType( C, -1 ) == VT_OBJECT );
+	atf_assert( sgs_ItemTypeExt( C, -1 ) == VTC_DICT );
+	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 1 );
+	
+	/* storing data */
+	sgs_PushInt( C, 42 );
+	atf_assert( sgs_StorePath( C, -2, "pippp", "a", 1, "d", "e", "test" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushPath( C, -1, "pippp", "a", 1, "d", "e", "test" ) == SGS_SUCCESS );
+	atf_assert( sgs_ItemType( C, -1 ) == VT_INT );
+	atf_assert( (C->stack_top-1)->data.I == 42 );
+	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 1 );
+
+	destroy_context( C );
+}
+
 
 test_t all_tests[] =
 {
@@ -470,6 +508,7 @@ test_t all_tests[] =
 	TST( complex_gc ),
 	TST( commands ),
 	TST( debugging ),
+	TST( varpaths ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }
 

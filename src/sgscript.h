@@ -467,12 +467,17 @@ SGS_APIFUNC SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems );
 SGS_APIFUNC SGSRESULT sgs_PushItem( SGS_CTX, int item );
 SGS_APIFUNC SGSRESULT sgs_StoreItem( SGS_CTX, int item );
 SGS_APIFUNC SGSRESULT sgs_PushProperty( SGS_CTX, const char* name );
-SGS_APIFUNC SGSRESULT sgs_PushIndex( SGS_CTX, int obj, int idx );
+SGS_APIFUNC SGSRESULT sgs_PushIndexExt( SGS_CTX, int obj, int idx, int prop );
+#define sgs_PushIndex( C, obj, idx ) sgs_PushIndexExt( C, obj, idx, 0 )
 SGS_APIFUNC SGSRESULT sgs_PushIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx );
-SGS_APIFUNC SGSRESULT sgs_StoreIndex( SGS_CTX, int obj, int idx );
+SGS_APIFUNC SGSRESULT sgs_StoreIndexExt( SGS_CTX, int obj, int idx, int prop );
+#define sgs_StoreIndex( C, obj, idx ) sgs_StoreIndexExt( C, obj, idx, 0 )
 SGS_APIFUNC SGSRESULT sgs_StoreIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx );
 SGS_APIFUNC SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name );
 SGS_APIFUNC SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name );
+
+SGS_APIFUNC SGSRESULT sgs_PushPath( SGS_CTX, int item, const char* path, ... );
+SGS_APIFUNC SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... );
 
 /* sgs_Get(Num)Index: must release "out" */
 SGS_APIFUNC SGSRESULT sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx );

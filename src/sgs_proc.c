@@ -2108,7 +2108,7 @@ SGSRESULT sgs_PushProperty( SGS_CTX, const char* name )
 	return ret;
 }
 
-SGSRESULT sgs_PushIndex( SGS_CTX, int obj, int idx )
+SGSRESULT sgs_PushIndexExt( SGS_CTX, int obj, int idx, int prop )
 {
 	int32_t oel = C->minlev;
 	int ret;
@@ -2120,7 +2120,7 @@ SGSRESULT sgs_PushIndex( SGS_CTX, int obj, int idx )
 	C->minlev = INT32_MAX;
 
 	stk_push_null( C );
-	ret = vm_getprop( C, stk_absindex( C, -1 ), &vo, &vi, TRUE );
+	ret = vm_getprop( C, stk_absindex( C, -1 ), &vo, &vi, !prop );
 	if( ret != SGS_SUCCESS )
 		stk_pop1( C );
 	
@@ -2147,7 +2147,7 @@ SGSRESULT sgs_PushIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 	return ret;
 }
 
-SGSRESULT sgs_StoreIndex( SGS_CTX, int obj, int idx )
+SGSRESULT sgs_StoreIndexExt( SGS_CTX, int obj, int idx, int prop )
 {
 	int ret;
 	sgs_Variable vo, vi, val;
@@ -2155,7 +2155,7 @@ SGSRESULT sgs_StoreIndex( SGS_CTX, int obj, int idx )
 		!sgs_GetStackItem( C, idx, &vi ) ||
 		!sgs_GetStackItem( C, -1, &val ) )
 		return SGS_EBOUNDS;
-	ret = vm_setprop( C, &vo, &vi, &val, TRUE );
+	ret = vm_setprop( C, &vo, &vi, &val, !prop );
 	if( ret == SGS_SUCCESS )
 		sgs_Pop( C, 1 );
 	return ret;
@@ -2195,6 +2195,133 @@ SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
 	sgsSTD_GlobalSet( C, stk_getpos( C, -1 ), stk_getpos( C, -2 ), 1 );
 	sgs_Pop( C, 2 );
 	return SGS_SUCCESS;
+}
+
+
+/*
+	o = offset (isprop=true) (sizeval)
+	p = property (isprop=true) (null-terminated string)
+	s = super-secret property (isprop=true) (sizeval, buffer)
+	i = index (isprop=false) (sizeval)
+	k = key (isprop=false) (null-terminated string)
+	n = null-including key (isprop=false) (sizeval, buffer)
+*/
+
+static SGSRESULT sgs_PushPathBuf( SGS_CTX, int item, const char* path, int plen, va_list* pargs )
+{
+	va_list args = *pargs;
+	int ret = sgs_PushItem( C, item ), i = 0;
+	if( ret != SGS_SUCCESS )
+		return ret;
+	while( path[i] && ( plen < 0 || i < plen ) )
+	{
+		sgs_SizeVal S = -1;
+		char* P = NULL;
+		int prop = -1;
+		char a = path[ i++ ];
+		ret = SGS_EINVAL;
+		if( a == 'o' ){ prop = 1; S = va_arg( args, sgs_SizeVal ); }
+		else if( a == 'p' ){ prop = 1; P = va_arg( args, char* );
+			if( !P ) return SGS_EINVAL; }
+		else if( a == 's' ){ prop = 1; S = va_arg( args, sgs_SizeVal );
+			P = va_arg( args, char* ); if( !P ) return SGS_EINVAL; }
+		else if( a == 'i' ){ prop = 0; S = va_arg( args, sgs_SizeVal ); }
+		else if( a == 'k' ){ prop = 0; P = va_arg( args, char* );
+			if( !P ) return SGS_EINVAL; }
+		else if( a == 'n' ){ prop = 0; S = va_arg( args, sgs_SizeVal );
+			P = va_arg( args, char* ); if( !P ) return SGS_EINVAL; }
+		else
+			return SGS_EINVAL;
+		
+		if( P )
+		{
+			if( S >= 0 )
+				sgs_PushStringBuf( C, P, S );
+			else
+				sgs_PushString( C, P );
+		}
+		else if( S >= 0 )
+			sgs_PushInt( C, S );
+		else
+			return SGS_EINPROC;
+		
+		ret = sgs_PushIndexExt( C, -2, -1, prop );
+		if( ret != SGS_SUCCESS )
+			return ret;
+	}
+	*pargs = args;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_PushPath( SGS_CTX, int item, const char* path, ... )
+{
+	int ret, ssz = sgs_StackSize( C );
+	va_list args;
+	va_start( args, path );
+	item = stk_absindex( C, item );
+	ret = sgs_PushPathBuf( C, item, path, -1, &args );
+	if( ret == SGS_SUCCESS )
+		sgs_PopSkip( C, sgs_StackSize( C ) - ssz - 1, 1 );
+	else
+		sgs_Pop( C, sgs_StackSize( C ) - ssz );
+	va_end( args );
+	return ret;
+}
+
+SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... )
+{
+	int ret, len = strlen( path ), val, ssz = sgs_StackSize( C );
+	va_list args;
+	if( !*path )
+		return sgs_StoreItem( C, item );
+	va_start( args, path );
+	item = stk_absindex( C, item );
+	val = stk_absindex( C, -1 );
+	ret = sgs_PushPathBuf( C, item, path, len - 1, &args );
+	va_end( args );
+	if( ret == SGS_SUCCESS )
+	{
+		sgs_SizeVal S = -1;
+		char* P = NULL;
+		int prop = -1;
+		char a = path[ len - 1 ];
+		ret = SGS_EINVAL;
+		if( a == 'o' ){ prop = 1; S = va_arg( args, sgs_SizeVal ); }
+		else if( a == 'p' ){ prop = 1; P = va_arg( args, char* );
+			if( !P ) goto fail; }
+		else if( a == 's' ){ prop = 1; S = va_arg( args, sgs_SizeVal );
+			P = va_arg( args, char* ); if( !P ) goto fail; }
+		else if( a == 'i' ){ prop = 0; S = va_arg( args, sgs_SizeVal ); }
+		else if( a == 'k' ){ prop = 0; P = va_arg( args, char* );
+			if( !P ) goto fail; }
+		else if( a == 'n' ){ prop = 0; S = va_arg( args, sgs_SizeVal );
+			P = va_arg( args, char* ); if( !P ) goto fail; }
+		else
+			goto fail;
+		ret = SGS_SUCCESS;
+		
+		if( P )
+		{
+			if( S >= 0 )
+				sgs_PushStringBuf( C, P, S );
+			else
+				sgs_PushString( C, P );
+		}
+		else if( S >= 0 )
+			sgs_PushInt( C, S );
+		else
+		{
+			ret = SGS_EINPROC;
+			goto fail;
+		}
+		
+		sgs_PushItem( C, val );
+		ret = sgs_StoreIndexExt( C, -3, -2, prop );
+		ssz--;
+	}
+fail:
+	sgs_Pop( C, sgs_StackSize( C ) - ssz );
+	return ret;
 }
 
 
