@@ -3003,14 +3003,21 @@ SGSRESULT sgs_PushIterator( SGS_CTX, int item )
 
 SGSMIXED sgs_IterAdvance( SGS_CTX, int item )
 {
+	int32_t oml = C->minlev;
+	sgs_SizeVal ret;
 	sgs_Variable var;
 	if( !sgs_GetStackItem( C, item, &var ) )
 		return SGS_EBOUNDS;
-	return vm_fornext( C, -1, -1, &var );
+	C->minlev = INT32_MAX;
+	ret = vm_fornext( C, -1, -1, &var );
+	C->minlev = oml;
+	return ret;
 }
 
 SGSMIXED sgs_IterPushData( SGS_CTX, int item, int key, int value )
 {
+	int32_t oml = C->minlev;
+	sgs_SizeVal ret;
 	sgs_Variable var;
 	if( !sgs_GetStackItem( C, item, &var ) )
 		return SGS_EBOUNDS;
@@ -3026,7 +3033,10 @@ SGSMIXED sgs_IterPushData( SGS_CTX, int item, int key, int value )
 		value = stk_absindex( C, -1 );
 	}
 	else value = -1;
-	return vm_fornext( C, key, value, &var );
+	C->minlev = INT32_MAX;
+	ret = vm_fornext( C, key, value, &var );
+	C->minlev = oml;
+	return ret;
 }
 
 
