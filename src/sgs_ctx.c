@@ -124,7 +124,7 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 }
 
 
-void stringfreefunc( HTPair* p, void* userdata )
+static void stringfreefunc( HTPair* p, void* userdata )
 {
 	SGS_CTX = (sgs_Context*) userdata;
 	string_t* st = (string_t*) p->ptr;
