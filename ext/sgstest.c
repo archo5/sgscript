@@ -164,6 +164,8 @@ static void* ext_memfunc( void* ud, void* ptr, size_t size )
 {
 	if( ptr ) numallocs--;
 	if( size ) numallocs++;
+	else if( !ptr )
+		return NULL;
 	UNUSED( ud );
 	return realloc( ptr, size );
 }
@@ -183,7 +185,8 @@ static void checkdestroy_context( sgs_Context* C )
 
 	/* post-destroy */
 	all &= numallocs == 0;
-	if( numallocs ) printf( ATTMKR "memory leaks detected (%d)\n", numallocs );
+	if( numallocs > 0 ) printf( ATTMKR "memory leaks detected (numallocs = %d)\n", numallocs );
+	if( numallocs < 0 ) printf( ATTMKR "repeated frees detected (numallocs = %d)\n", numallocs );
 
 	if( !all )
 	{

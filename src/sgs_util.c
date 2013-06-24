@@ -123,6 +123,8 @@ sgs_Hash sgs_HashFunc( const char* str, int size )
 }
 
 
+#if 0
+
 void ht_init( HashTable* T, SGS_CTX, int size )
 {
 	HTPair *p, *pend;
@@ -359,6 +361,177 @@ void ht_unset( HashTable* T, SGS_CTX, const char* str, int size )
 		ht_unset_pair( T, C, p );
 	}
 }
+
+#else
+
+static void htp_remove( HTPair** p, SGS_CTX )
+{
+	HTPair* pn = (*p)->next;
+	sgs_Dealloc( (*p)->str );
+	sgs_Dealloc( *p );
+	*p = pn;
+}
+
+void ht_init( HashTable* T, SGS_CTX, int size )
+{
+	T->pairs = sgs_Alloc_n( HTPair*, size );
+	T->size = size;
+	T->load = 0;
+	memset( T->pairs, 0, sizeof( HTPair* ) * size );
+}
+
+void ht_clear( sgs_HashTable* T, SGS_CTX )
+{
+	HTPair** p = T->pairs, **pend = T->pairs + T->size;
+	while( p < pend )
+	{
+		while( *p )
+			htp_remove( p, C );
+		p++;
+	}
+	T->load = 0;
+}
+
+void ht_free( HashTable* T, SGS_CTX )
+{
+	ht_clear( T, C );
+	sgs_Dealloc( T->pairs );
+	T->pairs = NULL;
+	T->size = 0;
+}
+
+void ht_rehash( HashTable* T, SGS_CTX, int size )
+{
+	HTPair** np, **p = T->pairs, **pend = T->pairs + T->size;
+	
+	if( size < 1 )
+		size = 1;
+	
+	sgs_BreakIf( size < T->load );
+	np = sgs_Alloc_n( HTPair*, size );
+	memset( np, 0, sizeof( HTPair* ) * size );
+	
+	while( p < pend )
+	{
+		HTPair* pc = *p;
+		while( pc )
+		{
+			HTPair* pn = pc->next;
+			int hm = pc->hash % size;
+			pc->next = np[ hm ];
+			np[ hm ] = pc;
+			pc = pn;
+		}
+		p++;
+	}
+	
+	sgs_Dealloc( T->pairs );
+	T->pairs = np;
+	T->size = size;
+}
+
+void ht_check( HashTable* T, SGS_CTX, int inc )
+{
+	if( T->load + inc > T->size * 0.75 )
+	{
+		int newsize = (int)( T->size * 0.6 + ( T->load + inc ) * 0.6 );
+		ht_rehash( T, C, newsize );
+	}
+	else if( T->load + inc < T->size * 0.25 )
+	{
+		int newsize = (int)( T->size * 0.5 + ( T->load + inc ) * 0.5 );
+		ht_rehash( T, C, newsize );
+	}
+}
+
+HTPair* ht_find( HashTable* T, const char* str, int size, sgs_Hash h )
+{
+	HTPair* p = T->pairs[ ( h % T->size ) ];
+	while( p )
+	{
+		if( p->size == size && !memcmp( str, p->str, size ) )
+			return p;
+		p = p->next;
+	}
+	return NULL;
+}
+
+HTPair* ht_set( HashTable* T, SGS_CTX, const char* str, int size, void* ptr )
+{
+	sgs_Hash h = hashFunc( str, size );
+	HTPair* p = ht_find( T, str, size, h );
+	if( p )
+		p->ptr = ptr;
+	else
+	{
+		HTPair* np = sgs_Alloc( HTPair );
+		
+		ht_check( T, C, 1 );
+		
+		np->str = sgs_Alloc_n( char, size );
+		np->ptr = ptr;
+		memcpy( np->str, str, size );
+		np->size = size;
+		np->hash = h;
+		
+		np->next = T->pairs[ h % T->size ];
+		T->pairs[ h % T->size ] = np;
+		T->load++;
+		p = np;
+	}
+	return p;
+}
+
+void ht_unset( sgs_HashTable* T, SGS_CTX, const char* str, int size )
+{
+	sgs_Hash h = hashFunc( str, size );
+	HTPair** p = T->pairs + ( h % T->size );
+	while( *p )
+	{
+		if( (*p)->size == size && !memcmp( str, (*p)->str, size ) )
+		{
+			htp_remove( p, C );
+			T->load--;
+			ht_check( T, C, -1 );
+			return;
+		}
+		p = &(*p)->next;
+	}
+}
+
+void ht_unset_pair( sgs_HashTable* T, SGS_CTX, sgs_HTPair* pair )
+{
+	sgs_Hash h = pair->hash;
+	HTPair** p = T->pairs + ( h % T->size );
+	while( *p )
+	{
+		if( *p == pair )
+		{
+			htp_remove( p, C );
+			T->load--;
+			ht_check( T, C, -1 );
+			return;
+		}
+		p = &(*p)->next;
+	}
+}
+
+void ht_iterate( sgs_HashTable* T, sgs_HTIterFunc func, void* userdata )
+{
+	HTPair** p = T->pairs, **pend = T->pairs + T->size;
+	while( p < pend )
+	{
+		HTPair* sp = *p;
+		while( sp )
+		{
+			func( sp, userdata );
+			sp = sp->next;
+		}
+		p++;
+	}
+}
+
+#endif
 
 
 

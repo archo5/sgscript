@@ -123,9 +123,19 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	return C;
 }
 
+
+void stringfreefunc( HTPair* p, void* userdata )
+{
+	SGS_CTX = (sgs_Context*) userdata;
+	string_t* st = (string_t*) p->ptr;
+	st->refcount--;
+	sgs_BreakIf( st->refcount > 0 );
+	sgs_BreakIf( st->refcount < 0 );
+	sgs_Dealloc( st );
+}
+
 void sgs_DestroyEngine( SGS_CTX )
 {
-	HTPair *p, *pend;
 	C->print_fn = NULL;
 	C->print_ctx = NULL;
 
@@ -142,21 +152,8 @@ void sgs_DestroyEngine( SGS_CTX )
 	sgs_GCExecute( C );
 
 	sgs_Dealloc( C->stack_base );
-
-	p = C->stringtable.pairs;
-	pend = C->stringtable.pairs + C->stringtable.size;
-	while( p < pend )
-	{
-		if( p->str && p->ptr )
-		{
-			string_t* st = (string_t*) p->ptr;
-			st->refcount--;
-			sgs_BreakIf( st->refcount > 0 );
-			sgs_BreakIf( st->refcount < 0 );
-			sgs_Dealloc( st );
-		}
-		p++;
-	}
+	
+	ht_iterate( &C->stringtable, stringfreefunc, C );
 	ht_free( &C->stringtable, C );
 
 #ifdef SGS_DEBUG_LEAKS

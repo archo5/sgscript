@@ -81,6 +81,7 @@
 #  define ht_set sgs_ht_set
 #  define ht_unset_pair sgs_ht_unset_pair
 #  define ht_unset sgs_ht_unset
+#  define ht_iterate sgs_ht_iterate
 
 
 #  define print_safe sgs_print_safe
@@ -208,36 +209,37 @@ static SGS_INLINE void sgs_membuf_appchr( sgs_MemBuf* mb, SGS_CTX, char chr )
 typedef uint32_t sgs_Hash;
 SGS_APIFUNC sgs_Hash sgs_HashFunc( const char* str, int size );
 
-typedef
+typedef struct _sgs_HTPair sgs_HTPair;
 struct _sgs_HTPair
 {
+	sgs_HTPair* next;
+	void*    ptr;
 	char*    str;
 	int      size;
 	sgs_Hash hash;
-	void*    ptr;
-}
-sgs_HTPair;
+};
 
 typedef
 struct _sgs_HashTable
 {
-	sgs_HTPair* pairs;
+	sgs_HTPair** pairs;
 	int32_t size;
 	int32_t load;
 }
 sgs_HashTable;
 
+typedef void (*sgs_HTIterFunc) ( sgs_HTPair*, void* );
+
 SGS_APIFUNC void sgs_ht_init( sgs_HashTable* T, SGS_CTX, int size );
+SGS_APIFUNC void sgs_ht_clear( sgs_HashTable* T, SGS_CTX );
 SGS_APIFUNC void sgs_ht_free( sgs_HashTable* T, SGS_CTX );
-SGS_APIFUNC void sgs_ht_dump( sgs_HashTable* T );
 SGS_APIFUNC void sgs_ht_rehash( sgs_HashTable* T, SGS_CTX, int size );
 SGS_APIFUNC void sgs_ht_check( sgs_HashTable* T, SGS_CTX, int inc );
 SGS_APIFUNC sgs_HTPair* sgs_ht_find( sgs_HashTable* T, const char* str, int size, sgs_Hash h );
-SGS_APIFUNC void* sgs_ht_get( sgs_HashTable* T, const char* str, int size );
-SGS_APIFUNC void sgs_ht_setpair( sgs_HTPair* P, SGS_CTX, const char* str, int size, sgs_Hash h, void* ptr );
 SGS_APIFUNC sgs_HTPair* sgs_ht_set( sgs_HashTable* T, SGS_CTX, const char* str, int size, void* ptr );
-SGS_APIFUNC void sgs_ht_unset_pair( sgs_HashTable* T, SGS_CTX, sgs_HTPair* p );
 SGS_APIFUNC void sgs_ht_unset( sgs_HashTable* T, SGS_CTX, const char* str, int size );
+SGS_APIFUNC void sgs_ht_unset_pair( sgs_HashTable* T, SGS_CTX, sgs_HTPair* pair );
+SGS_APIFUNC void sgs_ht_iterate( sgs_HashTable* T, sgs_HTIterFunc func, void* userdata );
 
 
 SGS_APIFUNC double sgs_GetTime();

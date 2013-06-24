@@ -340,9 +340,11 @@ void vht_free( VHTable* vht, SGS_CTX, int dco )
 
 VHTableVar* vht_get( VHTable* vht, const char* key, int32_t size )
 {
-	void* idx = ht_get( &vht->ht, key, size );
-	uint32_t ii = (uint32_t) (size_t) idx;
-	return ii > 0 ? vht->vars + ( ii - 1 ) : NULL;
+	HTPair* p = ht_find( &vht->ht, key, size, sgs_HashFunc( key, size ) );
+	if( p )
+		return vht->vars + (size_t) p->ptr;
+	else
+		return NULL;
 }
 
 sgs_VHTableVar* vht_getS( sgs_VHTable* vht, string_t* S )
@@ -351,11 +353,10 @@ sgs_VHTableVar* vht_getS( sgs_VHTable* vht, string_t* S )
 	if( !S->hash )
 		S->hash = sgs_HashFunc( key, S->size );
 	HTPair* pair = ht_find( &vht->ht, key, S->size, S->hash );
-	if( !pair )
+	if( pair )
+		return vht->vars + (size_t) pair->ptr;
+	else
 		return NULL;
-	void* idx = pair->ptr;
-	uint32_t ii = (uint32_t) (size_t) idx;
-	return vht->vars + ( ii - 1 );
 }
 
 void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SGS_CTX )
@@ -382,7 +383,7 @@ void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SG
 
 		{
 			uint32_t ni = vht_size( vht );
-			HTPair* p = ht_set( &vht->ht, C, key, size, (void*)( (size_t) ni + 1 ) );
+			HTPair* p = ht_set( &vht->ht, C, key, size, (void*)( (size_t) ni ) );
 			VHTableVar htv = { *var, p->str, p->size };
 			vht->vars[ ni ] = htv;
 		}
@@ -394,7 +395,7 @@ int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
 	HTPair* tvp = ht_find( &vht->ht, key, size, sgs_HashFunc( key, size ) );
 	if( tvp )
 	{
-		VHTableVar* tv = vht->vars + ( ((uint32_t)(size_t) tvp->ptr) - 1 );
+		VHTableVar* tv = vht->vars + ( ((uint32_t)(size_t) tvp->ptr) );
 		VAR_RELEASE( &tv->var );
 		if( tv - vht->vars != vht_size( vht ) )
 		{
@@ -402,7 +403,7 @@ int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
 			tv->var = lhtv->var;
 			tv->str = lhtv->str;
 			tv->size = lhtv->size;
-			ht_find( &vht->ht, tv->str, tv->size, sgs_HashFunc( tv->str, tv->size ) )->ptr = (void*)( tv - vht->vars + 1 );
+			ht_find( &vht->ht, tv->str, tv->size, sgs_HashFunc( tv->str, tv->size ) )->ptr = (void*)( tv - vht->vars );
 		}
 		ht_unset_pair( &vht->ht, C, tvp );
 		return 1;
