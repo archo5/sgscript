@@ -71,16 +71,14 @@
 #  define HTPair sgs_HTPair
 #  define HashTable sgs_HashTable
 #  define ht_init sgs_ht_init
+#  define ht_clear sgs_ht_clear
 #  define ht_free sgs_ht_free
-#  define ht_dump sgs_ht_dump
 #  define ht_rehash sgs_ht_rehash
 #  define ht_check sgs_ht_check
 #  define ht_find sgs_ht_find
-#  define ht_get sgs_ht_get
-#  define ht_setpair sgs_ht_setpair
 #  define ht_set sgs_ht_set
-#  define ht_unset_pair sgs_ht_unset_pair
 #  define ht_unset sgs_ht_unset
+#  define ht_unset_pair sgs_ht_unset_pair
 #  define ht_iterate sgs_ht_iterate
 
 
