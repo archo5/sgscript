@@ -2220,7 +2220,7 @@ static SGSRESULT sgs_PushPathBuf( SGS_CTX, int item, const char* path, int plen,
 		char* P = NULL;
 		int prop = -1;
 		char a = path[ i++ ];
-		ret = SGS_EINVAL;
+		
 		if( a == 'o' ){ prop = 1; S = va_arg( args, sgs_SizeVal ); }
 		else if( a == 'p' ){ prop = 1; P = va_arg( args, char* );
 			if( !P ) return SGS_EINVAL; }
@@ -2299,7 +2299,6 @@ SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... )
 			P = va_arg( args, char* ); if( !P ) goto fail; }
 		else
 			goto fail;
-		ret = SGS_SUCCESS;
 		
 		if( P )
 		{
