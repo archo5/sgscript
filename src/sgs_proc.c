@@ -2210,7 +2210,7 @@ SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
 
 static SGSRESULT sgs_PushPathBuf( SGS_CTX, int item, const char* path, int plen, va_list* pargs )
 {
-	va_list args = *pargs;
+#define args *pargs
 	int ret = sgs_PushItem( C, item ), i = 0;
 	if( ret != SGS_SUCCESS )
 		return ret;
@@ -2250,7 +2250,7 @@ static SGSRESULT sgs_PushPathBuf( SGS_CTX, int item, const char* path, int plen,
 		if( ret != SGS_SUCCESS )
 			return ret;
 	}
-	*pargs = args;
+#undef args
 	return SGS_SUCCESS;
 }
 
