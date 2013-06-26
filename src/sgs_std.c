@@ -1948,7 +1948,10 @@ static int sgsstd_read_stdin( SGS_CTX )
 		int len = strlen( bfr );
 		membuf_appbuf( &B, C, bfr, len );
 		if( len && !all && bfr[ len - 1 ] == '\n' )
+		{
+			B.size--;
 			break;
+		}
 	}
 	sgs_PushStringBuf( C, B.ptr, B.size );
 	membuf_destroy( &B, C );

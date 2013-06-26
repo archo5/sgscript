@@ -6,6 +6,7 @@
 #include <math.h>
 #include <time.h>
 #include <errno.h>
+#include <ctype.h>
 
 #define SGS_INTERNAL
 #define SGS_REALLY_INTERNAL
@@ -3248,6 +3249,52 @@ static int sgsstd_string_trim( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_string_toupper( SGS_CTX )
+{
+	char* str, *strend;
+	sgs_SizeVal size;
+	
+	SGSFN( "string_toupper" );
+	
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "unexpected arguments; "
+			"function expects 1 argument: string" )
+	
+	sgs_PushStringBuf( C, str, size );
+	str = sgs_GetStringPtr( C, -1 );
+	strend = str + size;
+	while( str < strend )
+	{
+		*str = toupper( *str );
+		str++;
+	}
+	return 1;
+}
+
+static int sgsstd_string_tolower( SGS_CTX )
+{
+	char* str, *strend;
+	sgs_SizeVal size;
+	
+	SGSFN( "string_tolower" );
+	
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "unexpected arguments; "
+			"function expects 1 argument: string" )
+	
+	sgs_PushStringBuf( C, str, size );
+	str = sgs_GetStringPtr( C, -1 );
+	strend = str + size;
+	while( str < strend )
+	{
+		*str = tolower( *str );
+		str++;
+	}
+	return 1;
+}
+
 static int sgsstd_string_implode( SGS_CTX )
 {
 	sgs_Variable arr;
@@ -3582,6 +3629,7 @@ static const sgs_RegFuncConst s_fconsts[] =
 	FN( string_repeat ), FN( string_count ),
 	FN( string_find ), FN( string_find_rev ),
 	FN( string_replace ), FN( string_trim ),
+	FN( string_toupper ), FN( string_tolower ),
 	FN( string_implode ), FN( string_explode ),
 	FN( string_charcode ), FN( string_frombytes ),
 	FN( string_utf8_decode ), FN( string_utf8_encode ),
