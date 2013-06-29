@@ -1325,11 +1325,11 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 		}
 	}
 
-	if( ( a->type | b->type ) == VTC_OBJECT )
+	if( ( a->type | b->type ) & VTC_OBJECT )
 	{
 		int origsize = sgs_StackSize( C );
 		int ofs = out - C->stack_off;
-
+		
 		USING_STACK
 		stk_makespace( C, 2 );
 		*C->stack_top++ = *a;
