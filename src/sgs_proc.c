@@ -27,18 +27,10 @@ static int fastlog2( int x )
 #define IS_REFTYPE( type ) ( type & VTF_REF )
 
 
-#if 1
-
 #define VAR_ACQUIRE( pvar ) { if( IS_REFTYPE( (pvar)->type ) ) var_acquire( C, pvar ); }
 #define VAR_RELEASE( pvar ) { if( IS_REFTYPE( (pvar)->type ) ) var_release( C, pvar, 1 ); }
 #define STKVAR_RELEASE( pvar ) { if( IS_REFTYPE( (pvar)->type ) ) var_release( C, pvar, 0 ); }
 
-#else
-
-#define VAR_ACQUIRE( pvar ) var_acquire( C, pvar )
-#define VAR_RELEASE( pvar ) var_release( C, pvar )
-
-#endif
 
 #define STK_UNITSIZE sizeof( sgs_Variable )
 
@@ -617,15 +609,13 @@ static int var_getbool( SGS_CTX, const sgs_VarPtr var )
 	case VT_CFUNC: return TRUE;
 	case VT_OBJECT:
 		{
+			int out = 1;
 			int origsize = sgs_StackSize( C );
 			stk_push( C, var );
 			if( obj_exec( C, SOP_CONVERT, var->data.O, VT_BOOL, 0 ) == SGS_SUCCESS )
-			{
-				int out = stk_getpos( C, -1 )->data.B;
-				stk_pop( C, sgs_StackSize( C ) - origsize );
-				return out;
-			}
+				out = stk_getpos( C, -1 )->data.B;
 			stk_pop( C, sgs_StackSize( C ) - origsize );
+			return out;
 		}
 	default: return FALSE;
 	}
@@ -774,6 +764,11 @@ static int vm_convert( SGS_CTX, sgs_VarPtr var, int type, int stack )
 		{
 			var_create_str( C, &cvar, "object", 6 );
 			ret = SGS_SUCCESS;
+		}
+		else if( type == VTC_BOOL )
+		{
+			cvar.type = VTC_BOOL;
+			cvar.data.B = 1;
 		}
 		stk_pop( C, sgs_StackSize( C ) - origsize );
 		goto ending;
