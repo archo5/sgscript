@@ -859,6 +859,8 @@ static int vm_gcmark( SGS_CTX, sgs_Variable* var )
 		return SGS_SUCCESS;
 	var->data.O->redblue = C->redblue;
 	ret = obj_exec( C, SOP_GCMARK, var->data.O, 0, 0 );
+	if( ret == SGS_ENOTFND )
+		ret = SGS_SUCCESS; /* assume no owned objects */
 	stk_pop( C, STACKFRAMESIZE - ssz );
 	return ret;
 }

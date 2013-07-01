@@ -2737,22 +2737,11 @@ int sgsSTD_GlobalGC( SGS_CTX )
 	if( data )
 	{
 		sgs_Variable tmp;
-		VHTableVar *pair, *pend;
-		HTHDR;
 
 		tmp.type = VTC_DICT;
 		tmp.data.O = data;
 		if( sgs_GCMark( C, &tmp ) < 0 )
 			return SGS_EINPROC;
-
-		pair = ht->vars;
-		pend = pair + vht_size( ht );
-		while( pair < pend )
-		{
-			if( sgs_GCMark( C, &pair->var ) < 0 )
-				return SGS_EINPROC;
-			pair++;
-		}
 	}
 	return SGS_SUCCESS;
 }

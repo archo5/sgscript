@@ -150,6 +150,7 @@ void sgs_DestroyEngine( SGS_CTX )
 	sgsSTD_GlobalFree( C );
 
 	sgs_GCExecute( C );
+	sgs_BreakIf( C->objs || C->objcount );
 
 	sgs_Dealloc( C->stack_base );
 	
