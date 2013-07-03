@@ -7,6 +7,7 @@
 #include <time.h>
 #include <errno.h>
 #include <ctype.h>
+#include <float.h>
 
 #define SGS_INTERNAL
 #define SGS_REALLY_INTERNAL
@@ -718,143 +719,6 @@ static void _padbuf( MemBuf* B, SGS_CTX, char pc, int cnt )
 		membuf_appchr( B, C, pc );
 }
 
-static int _flt_write_rep( char* out, sgs_Real R, int sci, struct fmtspec* F )
-{
-	/*
-		sci = 1  =>  scientific mode, F->prec digits after point
-		sci = 0  =>  readability mode, F->prec digits of precision
-		sci = -1 =>  decimal mode, F->prec digits after point
-	*/
-#define DBL_MDST 0.000000000000000001
-
-	int mandigs, minprec = 0, maxprec = 999, exp10 = 0;
-
-	char* obeg = out;
-	uint64_t data;
-	memcpy( &data, &R, sizeof( R ) );
-	int sgn = ( data >> 63 ) & 1;
-	int xpn = ( data >> 52 ) & 0x7ff;
-	uint64_t mnt = data & 0xfffffffffffffULL;
-
-	if( R < 0 ) R = -R;
-
-	if( xpn == 0 && mnt == 0 )
-	{
-		out[0] = '0';
-		return 1;
-	}
-	if( xpn == 0x7ff )
-	{
-		out[0] = "+-"[ sgn ];
-		out[1] = '#';
-		if( mnt == 0 ){ out[2] = 'I'; out[3] = 'N'; out[4] = 'F'; }
-		else { out[2] = 'N'; out[3] = 'a'; out[4] = 'N'; }
-		return 5;
-	}
-
-	mandigs = 17;
-	if( sci == 0 )
-	{
-		mandigs = F->prec;
-	}
-	else
-	{
-		minprec = maxprec = F->prec;
-	}
-
-	if( sci == 0 )
-	{
-		double xpmov = floor( fabs( log10( R ) ) ) + 1;
-		int xpdigs = 1 + (int) xpmov;
-		int scisc = mandigs + (int) log10( xpmov + 1.0 ) + 1 + 3;
-		int decsc = mandigs + 1 +
-			( xpn > 1024 ?
-				MAX( xpdigs - mandigs + 2, 0 ) :
-				xpdigs - 2
-			);
-		sci = scisc < decsc ? 1 : -1;
-		/*
-		printf( "scisc = %d, decsc = %d, mandigs = %d, xpdigs = %d, xpd = %d\n"
-			, scisc, decsc, mandigs, xpdigs, xpn );*/
-	}
-
-	if( sgn )
-		*out++ = '-';
-	if( sci > 0 )
-	{
-		/* pull out exponent */
-		exp10 = (int) floor( log10( R ) );
-		R /= pow( 10.0, exp10 );
-	}
-
-	/* render the double */
-	{
-		int mdc = 0, pdc = 0, hasdot = 0;
-		double qf = pow( 10, floor( log10( R ) ) );
-		if( qf >= 1 )
-		{
-			while( qf >= 1 )
-			{
-				*out++ = '0' + (int) floor( fmod( R / qf, 10.0 ) );
-				qf /= 10.0;
-				mdc++;
-			}
-		}
-		else
-			*out++ = '0';
-		if( mdc < mandigs && pdc < maxprec && qf > DBL_MDST )
-		{
-			double qfb = 0.1;
-			*out++ = '.';
-			hasdot = 1;
-			while( qfb > qf )
-			{
-				*out++ = '0';
-				qfb /= 10.0;
-			}
-		}
-		while( mdc < mandigs && pdc < maxprec && qf > DBL_MDST )
-		{
-			*out++ = '0' + (int) floor( fmod( R / qf, 10.0 ) );
-			qf /= 10.0;
-			mdc++; pdc++;
-		}
-		while( pdc < minprec )
-		{
-			*out++ = '0';
-			pdc++;
-		}
-
-		if( ( F->type == 'g' || F->type == 'G' ) && hasdot )
-		{
-			out--;
-			while( *out == '0' )
-				out--;
-			if( *out == '.' )
-				out--;
-			out++;
-		}
-	}
-
-	/* write the exponent part */
-	if( sci > 0 )
-	{
-		int qf;
-		*out++ = F->type == 'G' || F->type == 'E' ? 'E' : 'e';
-		*out++ = exp10 >= 0 ? '+' : '-';
-		if( exp10 < 0 ) exp10 = -exp10;
-		qf = (int) pow( 10, floor( log10( (double) exp10 ) ) );
-		if( !qf )
-			*out++ = '0';
-		while( qf )
-		{
-			*out++ = '0' + ( exp10 / qf ) % 10;
-			qf /= 10;
-		}
-	}
-	return out - obeg;
-}
-
 static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 {
 	switch( F->type )
@@ -898,18 +762,20 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 		break;
 	case 'f': case 'g': case 'G': case 'e': case 'E':
 		{
-			char data[ 350 ];
-			int size, sci = 0;
+			const int MAXSIZE = 3 + DBL_MANT_DIG - DBL_MIN_EXP;
+			char data[ MAXSIZE + 1 ];
+			int size;
 			sgs_Real R;
 			if( !sgs_ParseReal( C, (*psi)++, &R ) )
 				goto error;
 			if( F->prec < 0 )
 				F->prec = 6;
-
-			if( F->type == 'f' ) sci = -1;
-			else if( F->type == 'e' || F->type == 'E' ) sci = 1;
-
-			size = _flt_write_rep( data, R, sci, F );
+			
+			char tmpl[ 32 ];
+			sprintf( tmpl, "%%.%d%c", F->prec, F->type );
+			snprintf( data, MAXSIZE, tmpl, R );
+			data[ MAXSIZE ] = 0;
+			size = strlen( data );
 
 			if( size < F->padcnt && !F->padrgt )
 				_padbuf( B, C, F->padchr, F->padcnt - size );

@@ -4,8 +4,8 @@
 
 
 #define SGS_VERSION_MAJOR 0
-#define SGS_VERSION_MINOR 8
-#define SGS_VERSION_INCR  2
+#define SGS_VERSION_MINOR 9
+#define SGS_VERSION_INCR  0
 #define SGS_VERSION "0.9.0"
 #define SGS_API_VERSION 1
 
@@ -386,7 +386,7 @@ sgs_Compile
 );
 
 SGS_APIFUNC SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size );
-
+SGS_APIFUNC SGSRESULT sgs_Abort( SGS_CTX );
 SGS_APIFUNC SGSMIXED sgs_Stat( SGS_CTX, int type );
 SGS_APIFUNC int32_t sgs_Cntl( SGS_CTX, int what, int32_t val );
 

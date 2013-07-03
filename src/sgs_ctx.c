@@ -68,7 +68,7 @@ static void default_printfn( void* ctx, SGS_CTX, int type, const char* msg )
 {
 	default_printfn_noabort( ctx, C, type, msg );
 	if( type >= SGS_ERROR )
-		abort();
+		sgs_Abort( C );
 }
 
 
@@ -547,6 +547,20 @@ SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size )
 	_recfndump( func->consts.ptr, func->consts.size, func->code.ptr, func->code.size );
 
 	sgsBC_Free( C, func );
+	return SGS_SUCCESS;
+}
+
+
+SGSRESULT sgs_Abort( SGS_CTX )
+{
+	sgs_StackFrame* sf = C->sf_last;
+	if( !sf || !sf->iptr )
+		return SGS_ENOTFND;
+	while( sf && sf->iptr )
+	{
+		sf->iptr = sf->iend;
+		sf = sf->prev;
+	}
 	return SGS_SUCCESS;
 }
 

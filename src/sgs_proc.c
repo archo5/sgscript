@@ -1679,7 +1679,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 	sgs_StackFrame* SF = C->sf_last;
 	int32_t ret = 0;
 	sgs_Variable* cptr = consts;
-	const instr_t* pend = SF->iend, *pp = SF->code;
+	const instr_t* pend = SF->iend;
 
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
 	int stkoff = C->stack_top - C->stack_off;
@@ -1697,10 +1697,10 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 	}
 #endif
 
-	while( pp < pend )
+	while( SF->iptr < pend )
 	{
-		const instr_t I = *pp;
-		SF->iptr = pp;
+		const instr_t I = *SF->iptr++;
+#define pp SF->iptr
 #define instr INSTR_GET_OP(I)
 #define argA INSTR_GET_A(I)
 #define argB INSTR_GET_B(I)
@@ -1859,16 +1859,12 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 #undef ARGS_3
 #undef a1
 #undef RESVAR
+#undef pp
 
 		default:
 			sgs_Printf( C, SGS_ERROR, "Illegal instruction executed: 0x%08X", I );
 			break;
 		}
-
-		if( ( C->state & SGS_MUST_STOP ) == SGS_MUST_STOP )
-			break;
-
-		pp++;
 	}
 
 #if SGS_DEBUG && SGS_DEBUG_STATE
