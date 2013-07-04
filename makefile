@@ -111,9 +111,9 @@ $(OUTDIR)/sgstest_mt$(BINEXT): $(LIBDIR)/libsgscript.a
 .PHONY: sgsexe
 sgsexe: $(LIBDIR)/libsgscript.a $(EXTDIR)/sgsexe.c
 	$(CC) -o $(OUTDIR)/sgsexe$(BINEXT) $(EXTDIR)/sgsexe.c $(LIBDIR)/libsgscript.a -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
-	objcopy --only-keep-debug "$(OUTDIR)/sgsexe$(BINEXT)" "$(OUTDIR)/sgsexe$(BINEXT).dbg"
-	strip -s "$(OUTDIR)/sgsexe$(BINEXT)"
-	objcopy --add-gnu-debuglink="$(OUTDIR)/sgsexe$(BINEXT).dbg" "$(OUTDIR)/sgsexe$(BINEXT)"
+	copy /B $(OUTDIR)\sgsexe$(BINEXT) + $(EXTDIR)\stubapp.bin $(OUTDIR)\sgsexe.tmp
+	del /Q $(OUTDIR)\sgsexe$(BINEXT)
+	cmd /c move /Y $(OUTDIR)\sgsexe.tmp $(OUTDIR)\sgsexe$(BINEXT)
 
 # clean everything
 .PHONY: clean

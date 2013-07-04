@@ -30,7 +30,7 @@ int main( int argc, char* argv[] )
 {
 	int i;
 	BYTE buf[ 4096 ], *path, *data;
-	DWORD read, written, filesize;
+	DWORD read, written, scriptsize = 0;
 	HANDLE fh;
 
 	path = buf;
@@ -47,31 +47,11 @@ int main( int argc, char* argv[] )
 		free( path );
 	if( fh == INVALID_HANDLE_VALUE )
 		return E_FAIL;
-	ReadFile( fh, buf, sizeof( buf ), &read, NULL );
-	IMAGE_DOS_HEADER* dosheader = (IMAGE_DOS_HEADER*) buf;
-
-	/* locate PE header */
-	IMAGE_NT_HEADERS32* header = (IMAGE_NT_HEADERS32*)( buf + dosheader->e_lfanew );
-	if( dosheader->e_magic != IMAGE_DOS_SIGNATURE || header->Signature != IMAGE_NT_SIGNATURE )
-	{
-		CloseHandle( fh );
-		return E_UNEXPECTED;
-	}
-
-	/* locate end of last section */
-	IMAGE_SECTION_HEADER* sectiontable = (IMAGE_SECTION_HEADER*)( (BYTE*) header + sizeof( IMAGE_NT_HEADERS32 ) );
-	DWORD exesize = 0;
-	for( i = 0; i < header->FileHeader.NumberOfSections; i++ )
-	{
-		DWORD nesize = sectiontable->PointerToRawData + sectiontable->SizeOfRawData;
-		if( exesize < nesize )
-			exesize = nesize;
-		sectiontable++;
-	}
+	SetFilePointer( fh, -4, NULL, FILE_END );
+	ReadFile( fh, &scriptsize, sizeof( scriptsize ), &read, NULL );
 
 	/* read the following data */
-	filesize = GetFileSize( fh, NULL );
-	if( filesize <= exesize )
+	if( scriptsize == 0 )
 	{
 		if( argc == 3 )
 		{
@@ -95,6 +75,8 @@ int main( int argc, char* argv[] )
 				WriteFile( hout, buf, read, &written, NULL );
 			while( ReadFile( hsgs, buf, sizeof( buf ), &read, NULL ) && read )
 				WriteFile( hout, buf, read, &written, NULL );
+			scriptsize = GetFileSize( hsgs, NULL );
+			WriteFile( hout, &scriptsize, 4, &written, NULL );
 			CloseHandle( fh );
 			CloseHandle( hsgs );
 			CloseHandle( hout );
@@ -112,9 +94,9 @@ int main( int argc, char* argv[] )
 		}
 	}
 
-	data = malloc( filesize - exesize );
-	SetFilePointer( fh, exesize, NULL, FILE_BEGIN );
-	ReadFile( fh, data, filesize - exesize, &read, NULL );
+	data = malloc( scriptsize );
+	SetFilePointer( fh, -4-scriptsize, NULL, FILE_END );
+	ReadFile( fh, data, scriptsize, &read, NULL );
 	CloseHandle( fh );
 	
 	{
@@ -123,12 +105,13 @@ int main( int argc, char* argv[] )
 		for( i = 0; i < argc; ++i )
 			sgs_PushString( C, argv[ i ] );
 
-		sgs_PushGlobal( C, "array" );
-		sgs_Call( C, argc, 1 );
-		
+		sgs_PushArray( C, argc );
 		sgs_StoreGlobal( C, "argv" );
 
-		sgs_ExecBuffer( C, (char*) data, filesize - exesize );
+		sgs_PushInt( C, argc );
+		sgs_StoreGlobal( C, "argc" );
+
+		sgs_ExecBuffer( C, (char*) data, scriptsize );
 
 		sgs_DestroyEngine( C );
 	}
