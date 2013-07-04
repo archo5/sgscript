@@ -554,6 +554,8 @@ SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size )
 SGSRESULT sgs_Abort( SGS_CTX )
 {
 	sgs_StackFrame* sf = C->sf_last;
+	if( sf && !sf->iptr )
+		sf = sf->prev; /* should be able to use this inside a C function */
 	if( !sf || !sf->iptr )
 		return SGS_ENOTFND;
 	while( sf && sf->iptr )

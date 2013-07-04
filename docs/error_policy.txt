@@ -1,0 +1,51 @@
+
+CONTEXT
+E Failed to read bytecode file
+
+TOKENIZER
+E End of string not found
+E Invalid operator found
+E Failed to parse numeric constant
+E Unexpected symbol
+E Comment has no end
+
+FUNCTION TREE GENERATOR
+E Everything
+
+BYTECODE GENERATOR
+E Everything
+
+VIRTUAL MACHINE
+E Max call stack size reached
+E Object does not support negation
+E Negating variable of type .. isn't supported
+E Cannot (in|de)crement non-numeric variables
+E Division by 0
+E Specified arithmetic operation is not supported on the given set of arguments
+E Variable of type .. doesn't have an iterator
+E Object .. doesn't have an iterator
+E Failed to retrieve data from iterator
+E Object could not be called
+E Variable of type .. cannot be called
+E Illegal instruction executed
+E Unknown memory error // (usually means that a wrong type ID is found)
+W Thiscall was not called on a function type
+W Thiscall expects at least one argument
+W Thiscall failed with error ..
+W Expected integer as string index
+W String index out of bounds
+W Cannot index variable of type ..
+W Property .. not found on object of type ..
+W Cannot find value by index / Property not found
+W Index out of bounds
+W Invalid value used for (index|property) (read|write)
+W Unknown error on (index|property) (read|write)
+W Cannot serialize functions
+W Variable .. was not found
+
+STANDARD LIBRARY
+E This errno value is unsupported
+W Most issues with arguments / state
+W Array index out of bounds
+W Cannot change the value of a hardcoded constant
+

@@ -1276,7 +1276,7 @@ static void vm_op_##pfx( SGS_CTX, sgs_VarPtr out, sgs_Variable *A ) { \
 	switch( A->type ){ \
 		case VTC_INT: var_setint( C, out, A->data.I op ); break; \
 		case VTC_REAL: var_setreal( C, out, A->data.R op ); break; \
-		default: sgs_Printf( C, SGS_ERROR, "Cannot " #pfx "rement null/bool/string/func/cfunc/object variables!" ); return; \
+		default: sgs_Printf( C, SGS_ERROR, "Cannot " #pfx "rement non-numeric variables!" ); return; \
 	} }
 
 VAR_MOP( inc, +1 )
@@ -1386,7 +1386,7 @@ div0err:
 fail:
 	STKVAR_RELEASE( out );
 	out->type = VTC_NULL;
-	sgs_Printf( C, SGS_ERROR, "Operation is not supported on the given set of arguments" );
+	sgs_Printf( C, SGS_ERROR, "Specified arithmetic operation is not supported on the given set of arguments" );
 }
 
 

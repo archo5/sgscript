@@ -2275,13 +2275,7 @@ static int sgsstd_sys_errorstate( SGS_CTX )
 }
 static int sgsstd_sys_fallthru( SGS_CTX )
 {
-	sgs_StackFrame* sf = C->sf_last;
-	if( sf ) sf = sf->prev;
-	while( sf && sf->iptr )
-	{
-		sf->iptr = sf->iend;
-		sf = sf->prev;
-	}
+	sgs_Abort( C );
 	return 0;
 }
 static int sgsstd_sys_abort( SGS_CTX ){ abort(); }

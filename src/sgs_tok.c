@@ -44,7 +44,7 @@ static void skipcomment( SGS_CTX, MemBuf* out, LineNum* line, const char* code, 
 		}
 		if( i == length )
 		{
-			sgs_Printf( C, SGS_WARNING, "[line %d] Comment has no end", init );
+			sgs_Printf( C, SGS_ERROR, "[line %d] Comment has no end", init );
 			*at = i - 1;
 		}
 		else
