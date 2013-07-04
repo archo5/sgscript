@@ -123,15 +123,18 @@ static void readident( SGS_CTX, MemBuf* out, const char* code, int32_t* at, int3
 	membuf_appchr( out, C, 0 );
 	while( i < length && ( isalnum( code[ i ] ) || code[ i ] == '_' ) )
 	{
-		if( sz++ < 255 )
+		sz++;
+		if( sz < 256 )
 			membuf_appchr( out, C, code[ i ] );
-		else
+		else if( sz == 256 )
 		{
-			sgs_BreakIf( sz >= 255 );
+			C->state |= SGS_HAS_ERRORS;
+			sgs_Printf( C, SGS_ERROR, "[line %d] identifier too long", *at );
 		}
 		i++;
 	}
-	out->ptr[ pos_rev + 1 ] = sz;
+	if( sz >= 255 ) sz = 255;
+	out->ptr[ pos_rev + 1 ] = (char) sz;
 	if( ident_equal( out->ptr + pos_rev + 2, sz, "var" ) ||
 		ident_equal( out->ptr + pos_rev + 2, sz, "global" ) ||
 		ident_equal( out->ptr + pos_rev + 2, sz, "null" ) ||

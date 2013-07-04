@@ -1699,7 +1699,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 
 	while( SF->iptr < pend )
 	{
-		const instr_t I = *SF->iptr++;
+		const instr_t I = *SF->iptr;
 #define pp SF->iptr
 #define instr INSTR_GET_OP(I)
 #define argA INSTR_GET_A(I)
@@ -1722,6 +1722,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 
 		if( C->hook_fn )
 			C->hook_fn( C->hook_ctx, C, SGS_HOOK_STEP );
+		pp++;
 
 		switch( instr )
 		{

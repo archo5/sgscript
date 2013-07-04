@@ -14,18 +14,56 @@ void readme()
 {
 	puts( "syntax: sgsvm [files|options]" );
 	puts( "\t-h, --help: print this text" );
+	puts( "\t-v, --version: print version info" );
 	puts( "\t-s, --separate: restart the engine between scripts" );
 	puts( "\t-d, --debug: enable interactive debugging on errors" );
 	puts( "\t--profile: enable profiling by collecting call stack timings" );
 	puts( "\t--profile-ops: enable low-level VM instruction profiling" );
 }
 
+int sep = 0, v = 0;
+sgs_Context* C;
+sgs_IDbg D;
+sgs_Prof P;
+int idbg = 0;
+int prof = 0;
+
+void sgs_init()
+{
+	C = sgs_CreateEngine();
+	if( idbg ) sgs_InitIDbg( C, &D );
+	if( prof ) sgs_ProfInit( C, &P, prof );
+}
+void sgs_close()
+{
+	if( idbg ) sgs_CloseIDbg( C, &D );
+	if( prof )
+	{
+		sgs_ProfDump( &P );
+		sgs_ProfClose( &P );
+	}
+	sgs_DestroyEngine( C );
+}
+void sgs_dofile( const char* name )
+{
+	int rv = sgs_ExecFile( C, name );
+
+	if( rv != SGS_SUCCESS )
+	{
+		if( rv == SGS_ENOTFND ) printf( EPFX "file was not found: %s\n", name );
+		else if( rv == SGS_EINPROC ) printf( EPFX "failed to load file: %s\n", name );
+		else printf( EPFX "failed to run file: %s\n", name );
+	}
+}
+void sgs_printversion()
+{
+	if( v )
+		printf( "SGSVM [SGScript v%s]\n", SGS_VERSION );
+}
+
 int main( int argc, char** argv )
 {
-	int i, sep = 0, idbg = 0, prof = 0, v = 0;
-	sgs_Context* C;
-	sgs_IDbg D;
-	sgs_Prof P;
+	int i, j;
 	
 	if( argc < 2 )
 	{
@@ -48,47 +86,50 @@ int main( int argc, char** argv )
 			strcmp( argv[ i ], "-h" ) == 0 ){ readme(); return 0; }
 		else if( strcmp( argv[ i ], "--version" ) == 0 ||
 			strcmp( argv[ i ], "-v" ) == 0 ){ v = 1; argv[ i ] = 0; }
+		else if( strcmp( argv[ i ], "--program" ) == 0 ||
+			strcmp( argv[ i ], "-p" ) == 0 )
+		{
+			i++;
+			if( i == argc )
+			{
+				EPRINT( "file name expected" );
+				return 1;
+			}
+			
+			sgs_printversion();
+			sgs_init();
+			
+			for( j = i + 1; j < argc; ++j )
+				sgs_PushString( C, argv[ j ] );
+			sgs_PushArray( C, argc - i - 1 );
+			sgs_StoreGlobal( C, "argv" );
+			
+			sgs_PushInt( C, argc - i - 1 );
+			sgs_StoreGlobal( C, "argc" );
+			
+			sgs_dofile( argv[ i ] );
+			sgs_close();
+			return 0;
+		}
 	}
 	
-	if( v )
-		printf( "SGSVM [SGScript v%s]\n", SGS_VERSION );
+	sgs_printversion();
 	
-	C = sgs_CreateEngine();
-	if( idbg ) sgs_InitIDbg( C, &D );
-	if( prof ) sgs_ProfInit( C, &P, prof );
-	
+	sgs_init();
 	for( i = 1; i < argc; ++i )
 	{
 		if( argv[ i ] )
 		{
-			int rv;
-
-			rv = sgs_ExecFile( C, argv[ i ] );
-
-			if( rv != SGS_SUCCESS )
-			{
-				if( rv == SGS_ENOTFND ) printf( EPFX "file was not found: %s\n", argv[ i ] );
-				else if( rv == SGS_EINPROC ) printf( EPFX "failed to load file: %s\n", argv[ i ] );
-				else printf( EPFX "failed to run file: %s\n", argv[ i ] );
-				continue;
-			}
+			sgs_dofile( argv[ i ] );
 
 			if( sep )
 			{
-				if( idbg ) sgs_CloseIDbg( C, &D );
-				sgs_DestroyEngine( C );
-				C = sgs_CreateEngine();
-				if( idbg ) sgs_InitIDbg( C, &D );
+				sgs_close();
+				sgs_init();
 			}
 		}
 	}
-
-	if( idbg ) sgs_CloseIDbg( C, &D );
-	if( prof )
-	{
-		sgs_ProfDump( &P );
-		sgs_ProfClose( &P );
-	}
-	sgs_DestroyEngine( C );
+	
+	sgs_close();
 	return 0;
 }
