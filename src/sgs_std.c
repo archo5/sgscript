@@ -9,6 +9,7 @@
 #include "sgs_int.h"
 
 #define STDLIB_WARN( warn ) return sgs_Printf( C, SGS_WARNING, warn );
+#define STDLIB_ERR( err ) return sgs_Printf( C, SGS_ERROR, err );
 
 
 /* Containers */
@@ -1897,7 +1898,7 @@ static int sgsstd_printvar( SGS_CTX )
 		sgs_Write( C, "\n", 1 );
 	}
 	else
-		STDLIB_WARN( "unknown error while dumping variable" );
+		STDLIB_ERR( "unknown error while dumping variable" );
 	return 0;
 }
 static int sgsstd_printvars( SGS_CTX )
@@ -1922,7 +1923,7 @@ static int sgsstd_printvars( SGS_CTX )
 		{
 			char ebuf[ 64 ];
 			sprintf( ebuf, "unknown error while dumping variable #%d", i + 1 );
-			STDLIB_WARN( ebuf );
+			STDLIB_ERR( ebuf );
 		}
 		sgs_Pop( C, 1 );
 	}
@@ -2421,7 +2422,7 @@ static int sgsstd_dumpvar( SGS_CTX )
 	if( sgs_DumpVar( C, (int) depth ) == SGS_SUCCESS )
 		return 1;
 	else
-		STDLIB_WARN( "unknown error while dumping variable" );
+		STDLIB_ERR( "unknown error while dumping variable" );
 	return 0;
 }
 static int sgsstd_dumpvars( SGS_CTX )
@@ -2444,14 +2445,14 @@ static int sgsstd_dumpvars( SGS_CTX )
 		{
 			char ebuf[ 64 ];
 			sprintf( ebuf, "unknown error while dumping variable #%d", i + 1 );
-			STDLIB_WARN( ebuf );
+			STDLIB_ERR( ebuf );
 			sgs_Pop( C, 1 );
 		}
 	}
 	if( rc )
 	{
 		if( sgs_StringMultiConcat( C, rc * 2 ) == SGS_SUCCESS )
-			STDLIB_WARN( "failed to concatenate the output" )
+			STDLIB_ERR( "failed to concatenate the output" )
 		return 1;
 	}
 	return 0;
@@ -2488,7 +2489,7 @@ static int sgsstd_serialize( SGS_CTX )
 	if( ret == SGS_SUCCESS )
 		return 1;
 	else
-		STDLIB_WARN( "failed to serialize" )
+		STDLIB_ERR( "failed to serialize" )
 }
 
 static int sgsstd_unserialize( SGS_CTX )
@@ -2505,11 +2506,11 @@ static int sgsstd_unserialize( SGS_CTX )
 	if( ret == SGS_SUCCESS )
 		return 1;
 	else if( ret == SGS_EINPROC )
-		STDLIB_WARN( "error in data" )
+		STDLIB_ERR( "error in data" )
 	else if( ret == SGS_ENOTFND )
-		STDLIB_WARN( "could not find something" )
+		STDLIB_ERR( "could not find something" )
 	else
-		STDLIB_WARN( "unknown error" )
+		STDLIB_ERR( "unknown error" )
 }
 
 
@@ -2716,7 +2717,7 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 	if( strcmp( var_cstr( idx ), "_G" ) == 0 )
 	{
 		if( !apicall )
-			sgs_Printf( C, SGS_WARNING, "cannot change the value "
+			sgs_Printf( C, SGS_ERROR, "cannot change the value "
 				"of a hardcoded constant (%s)", var_cstr( idx ) );
 		return SGS_EINPROC;
 	}

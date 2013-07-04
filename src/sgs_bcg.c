@@ -416,7 +416,7 @@ static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	{
 		if( !add_var( &C->fctx->vars, C, (char*) node->token + 2, node->token[ 1 ] ) )
 		{
-			QPRINT( "Cannot redeclare arguments with the same name." );
+			QPRINT( "Cannot redeclare arguments with the same name" );
 			return 0;
 		}
 		comp_reg_alloc( C );
@@ -668,7 +668,7 @@ static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* 
 				return 0;
 			}
 		}
-		QPRINT( "Cannot read from this keyword" );
+		QPRINT( "Cannot read from specified keyword" );
 		return 0;
 	}
 
@@ -1243,7 +1243,7 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 
 	if( C->fctx->lastreg > 0xff )
 	{
-		QPRINT( "Max. register count exceeded" );
+		QPRINT( "Maximum register count exceeded" );
 		goto fail;
 	}
 
@@ -1292,19 +1292,19 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t sr
 
 	case SFT_CONST:
 		FUNC_HIT( "W_CONST" );
-		QPRINT( "Cannot write to constants." );
+		QPRINT( "Cannot write to constants" );
 		goto fail;
 	case SFT_FUNC:
 		FUNC_HIT( "W_FUNC" );
-		QPRINT( "Cannot write to constants." );
+		QPRINT( "Cannot write to constants" );
 		goto fail;
 	case SFT_ARRLIST:
 		FUNC_HIT( "W_ARRLIST" );
-		QPRINT( "Cannot write to constants." );
+		QPRINT( "Cannot write to constants" );
 		goto fail;
 	case SFT_MAPLIST:
 		FUNC_HIT( "W_MAPLIST" );
-		QPRINT( "Cannot write to constants." );
+		QPRINT( "Cannot write to constants" );
 		goto fail;
 
 	case SFT_OPER:
@@ -1324,7 +1324,7 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t sr
 		break;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/w error]." );
+		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/w error]" );
 		goto fail;
 	}
 	FUNC_END;
@@ -1444,7 +1444,7 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 		break;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r error]." );
+		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r error]" );
 		goto fail;
 	}
 	FUNC_END;
@@ -1463,7 +1463,7 @@ static int compile_for_explist( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16
 
 	if( node->type != SFT_EXPLIST )
 	{
-		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r[fe] error]." );
+		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r[fe] error]" );
 		goto fail;
 	}
 
@@ -1782,9 +1782,9 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			if( blev > C->fctx->loops )
 			{
 				if( C->fctx->loops )
-					QPRINT( "Break level too high." );
+					QPRINT( "Break level too high" );
 				else
-					QPRINT( "Attempted to break while not in a loop." );
+					QPRINT( "Attempted to break while not in a loop" );
 				goto fail;
 			}
 			fctx_binfo_add( C, C->fctx, func->code.size, C->fctx->loops + 1 - blev, FALSE );
@@ -1802,9 +1802,9 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			if( blev > C->fctx->loops )
 			{
 				if( C->fctx->loops )
-					QPRINT( "Continue level too high." );
+					QPRINT( "Continue level too high" );
 				else
-					QPRINT( "Attempted to continue while not in a loop." );
+					QPRINT( "Attempted to continue while not in a loop" );
 				goto fail;
 			}
 			fctx_binfo_add( C, C->fctx, func->code.size, C->fctx->loops + 1 - blev, TRUE );
@@ -1849,7 +1849,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		break;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG error]." );
+		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG error]" );
 		goto fail;
 	}
 
@@ -1876,7 +1876,7 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 
 	if( C->fctx->lastreg > 0xff )
 	{
-		sgs_Printf( C, SGS_ERROR, "[line %d] Max. register count exceeded",
+		sgs_Printf( C, SGS_ERROR, "[line %d] Maximum register count exceeded",
 			sgsT_LineNum( tree->token ) );
 		goto fail;
 	}

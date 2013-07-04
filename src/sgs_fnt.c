@@ -530,7 +530,7 @@ _continue:
 	}
 
 	/* in case we failed unexpectedly, dump & debug */
-	sgs_Printf( C, SGS_ERROR, "[line %d] Missing operators or separators.", predictlinenum( *tree ) );
+	sgs_Printf( C, SGS_ERROR, "[line %d] Missing operators or separators", predictlinenum( *tree ) );
 	C->state |= SGS_HAS_ERRORS;
 #if SGS_DEBUG && SGS_DEBUG_DATA
 	sgsFT_Dump( *tree );
@@ -1233,7 +1233,7 @@ SFTRET parse_stmt( SFTC )
 	if( SFTC_ISKEY( "if" ) ) { node = parse_if( F ); FUNC_END; return node; }
 	else if( SFTC_ISKEY( "else" ) )
 	{
-		SFTC_PRINTERR( "Found 'else' without matching 'if'." );
+		SFTC_PRINTERR( "Found 'else' without matching 'if'" );
 		goto fail;
 	}
 	/* WHILE */
