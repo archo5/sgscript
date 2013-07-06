@@ -1722,7 +1722,6 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 
 		if( C->hook_fn )
 			C->hook_fn( C->hook_ctx, C, SGS_HOOK_STEP );
-		pp++;
 
 		switch( instr )
 		{
@@ -1866,6 +1865,8 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 			sgs_Printf( C, SGS_ERROR, "Illegal instruction executed: 0x%08X", I );
 			break;
 		}
+		
+		SF->iptr++;
 	}
 
 #if SGS_DEBUG && SGS_DEBUG_STATE
