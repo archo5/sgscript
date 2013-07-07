@@ -1798,15 +1798,6 @@ static int sgsstd_loadtypeflags( SGS_CTX )
 {
 	static const sgs_RegIntConst tycs[] =
 	{
-		{ "VT_NULL", VT_NULL },
-		{ "VT_BOOL", VT_BOOL },
-		{ "VT_INT", VT_INT },
-		{ "VT_REAL", VT_REAL },
-		{ "VT_STRING", VT_STRING },
-		{ "VT_FUNC", VT_FUNC },
-		{ "VT_CFUNC", VT_CFUNC },
-		{ "VT_OBJECT", VT_OBJECT },
-		
 		{ "VTF_NUM", VTF_NUM },
 		{ "VTF_CALL", VTF_CALL },
 		{ "VTF_REF", VTF_REF },
@@ -2552,6 +2543,15 @@ static const sgs_RegIntConst regiconsts[] =
 	{ "SGS_INFO", SGS_INFO },
 	{ "SGS_WARNING", SGS_WARNING },
 	{ "SGS_ERROR", SGS_ERROR },
+	
+	{ "VT_NULL", VT_NULL },
+	{ "VT_BOOL", VT_BOOL },
+	{ "VT_INT", VT_INT },
+	{ "VT_REAL", VT_REAL },
+	{ "VT_STRING", VT_STRING },
+	{ "VT_FUNC", VT_FUNC },
+	{ "VT_CFUNC", VT_CFUNC },
+	{ "VT_OBJECT", VT_OBJECT },
 };
 
 

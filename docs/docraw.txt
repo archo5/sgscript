@@ -1,0 +1,309 @@
+
+array() [function]
+
+== array( ... )
+=== returns an array, containing the arguments
+
+- similar to the array literal, though somewhat limited
+
+    array( "5", 6, 7.0 ) // same as ["5",6,7.0]
+
+
+dict() [function]
+
+== dict( [key, value, ...] )
+=== returns a 'dict' (dictionary/hash table) object, containing the even arguments mapped to respective previous arguments
+
+- if no arguments are passed, an empty dictionary is returned
+- if an even number of arguments is passed, function returns null and emits a warning
+- all even arguments must be strings or convertible to strings
+
+    dict( "name", "John", "phone", 1234567890 ); // same as { name = "John", phone = 1234567890 }
+
+
+class() [function]
+
+== class( first, second )
+=== returns a class object with `first` set as the primary data source and `second` set as the secondary/backup data source
+
+- both arguments accept all kinds of variables but it's generally preferred to use only dicts / special objects
+- refer to @CLASSES for more information on how class objects work and how to use them
+
+    someCommonInterface = { printdata = function(){ print( this.data ); } };
+    c = class( { data = "5" }, someCommonInterface );
+    c.data = "6";
+    c.printdata(); // prints 6
+
+
+closure() [function]
+
+== closure( callable, data )
+=== returns a closure object with `callable` set as the callable variable and `data` set as the first argument for the closure call
+
+- second argument accepts all kinds of variables, first requires a variable that can be called (SGScript function / C function / object with OP_CALL interface function defined)
+- refer to @CLOSURES for more information on how closure objects work and how to use them
+
+    counter = closure( function( data ){ return data[0]++; }, [0] );
+    print( counter() ); print( counter() ); // prints "01"
+
+
+isset() [function]
+
+== isset( var, string key )
+=== returns whether a property named `key` is accessible (exists) in variable `var`
+
+    x = { a = 5 };
+    isset( x, "a" ); // returns 'true'
+    isset( x, "b" ); // returns 'false'
+    isset( print, "thiscall" ); // returns 'true' -- works with built-in special properties too
+
+
+unset() [function]
+
+== unset( dict var, string key )
+=== removes an entry named `key` from the dictionary `var`
+
+
+clone() [function]
+
+== clone( var )
+=== creates a one-reference copy of the variable `var` or returns null and emits a warning on failure
+
+- variables that are passed by value (null, bool, int, real, cfunc) or functions are returned as-is, since for value types all copies are same and functions are immutable -- TODO: what about strings? they're currently cloned
+
+    x = { a = 5 };
+    y = clone( x );
+    z = x;
+    x.a = 6;
+    print( y.a ); // prints "5"
+    print( z.a ); // prints "6"
+
+
+get_keys() [function]
+
+== get_keys( iterable var )
+=== returns an array of keys found in the iterable object `var` or returns null and emits a warning on failure
+
+- `var` must be an iterable object (has interface OP_CONVERT defined and successfully handles a CONVOP_TOITER request) - such objects are `array`, `dict` and `io_dir`
+
+    get_keys( [5,7,0] ); // returns [0,1,2]
+    get_keys( {b=5,a=2} ); // returns ["b","a"]
+
+
+get_values() [function]
+
+== get_values( iterable var )
+=== returns an array of values found in the iterable object `var` or returns null and emits a warning on failure
+
+- `var` must be an iterable object (has interface OP_CONVERT defined and successfully handles a CONVOP_TOITER request) - such objects are `array`, `dict` and `io_dir`
+
+    get_values( [5,7,0] ); // returns [5,7,0]
+    get_values( {b=5,a=2} ); // returns [5,2]
+
+
+get_concat() [function]
+
+== get_concat( iterable var, iterable var1, ... )
+=== returns an array of values found in all iterable objects passed to the function or returns null and emits a warning on failure
+
+    get_concat( [1,2], {a="5",b=8} ); // returns [1,2,"5",8]
+
+
+get_merged() [function]
+
+== get_merged( iterable var, iterable var1, ... )
+=== returns a dict of all key-value pairs found in all iterable objects passed to the function or returns null and emits a warning on failure
+
+    get_merged( [1,2], [3], {a="4"} ); // return {0=3,1=2,a="4"}
+
+
+tobool() [function]
+
+== tobool( var )
+=== returns a boolean, generated from variable `var` using the @conversion rules
+
+- this function is equivalent to @sgs_GetBool / @sgs_ToBool in the C API
+
+    tobool( 5 ); // returns 'true'
+    tobool( "" ); // returns 'false'
+
+
+toint() [function]
+
+== toint( var )
+=== returns an integer, generated from variable `var` using the @conversion rules
+
+- this function is equivalent to @sgs_GetInt / @sgs_ToInt in the C API
+
+    toint( 5.4 ); // returns 5
+    toint( "0xff" ); // returns 255
+
+
+toreal() [function]
+
+== toreal( var )
+=== returns a real value, generated from variable `var` using the @conversion rules
+
+- this function is equivalent to @sgs_GetReal / @sgs_ToReal in the C API
+
+    toreal( 5 ); // returns 5.0
+    toreal( "3e+2" ); // returns 3.0 -- exponential string values don't work (TODO: why)
+    toreal( "0xff" ); // returns 255.0
+
+
+tostring() [function]
+
+== tostring( var )
+=== returns a string value, generated from variable `var` using the @conversion rules
+
+- this function is equivalent to @sgs_ToString in the C API
+
+    tostring( 5 ); // returns "5"
+    tostring( { "a" = "b" } ); // returns "{a=b}"
+
+
+typeof() [function]
+
+== typeof( var )
+=== returns the type name of variable `var`, as string
+
+- this function is equivalent to @sgs_Typeof in the C API
+
+    typeof( 5 ); // returns "real"
+    typeof( [] ); // returns "array"
+
+
+typeid() [function]
+
+== typeid( var )
+=== returns the first 4 bits of the variable `var` type flags, as `int`
+
+- returns one of the values mapped to VT_NULL/VT_BOOL/VT_INT/VT_REAL/VT_STRING/VT_FUNC/VT_CFUNC/VT_OBJECT
+- this function is equivalent to @sgs_ItemType in the C API
+
+    typeid( 5 ) == VT_REAL; // returns 'true'
+    typeid( [] ); // returns 0x80 / VT_OBJECT
+
+
+typeflags() [function]
+
+== typeflags( var )
+=== returns the type flags of the variable `var`, as `int`
+
+- returns a bitfield, consisting of many different VT_* and VTF_* value combos, matching one of VTC_* values
+- this function is equivalent to @sgs_ItemTypeExt in the C API
+
+    typeflags( 5 ) == VTC_REAL; // returns 'true'
+    typeid( [] ) & VT_OBJECT != 0; // returns 'true'
+    typeid( "" ) & VTF_NUMERIC != 0; // returns 'false'
+
+
+is_numeric() [function]
+
+== is_numeric( var )
+=== returns whether the variable `var` is numeric - one of bool/int/real or a numeric string
+
+- all types that can always be converted to numbers are considered numeric, with two exceptions:
+-- convertible objects are not numeric since validation requires an interface call and unnecessary interface calls cannot be made
+-- null value is considered to be the lack of a better value, thus it cannot be considered valid, even though it always maps implicitly to the integer 0
+
+    is_numeric( 12.124 ); // returns true
+    is_numeric( "what" ); // returns false
+
+
+is_callable() [function]
+
+== is_callable( var )
+=== returns whether the variable `var` is callable - a function (func/cfunc) or an object with OP_CALL defined
+
+    is_callable( print ); // returns 'true'
+    is_callable( closure( print, 5 ) ); // returns 'true'
+    is_callable( 5 ); // returns 'false'
+
+
+loadtypeflags() [function]
+
+== loadtypeflags()
+=== sets the globals beginning with VTF_ and VTC_
+
+- since these features are expected to be rarely used, they're set to be loaded on-demand, not on startup
+
+    isset( _G, "VTF_NUM" ); // returns 'false'
+    loadtypeflags();
+    isset( _G, "VTF_NUM" ); // returns 'true'
+
+
+print(), println(), printlns() [functions]
+
+== print( ... ), println( ... ), printlns( ... ),
+=== passes all arguments, converted to strings, to the @output callback
+- print passes arguments without modifications
+- println passes a newline character after all variables
+- printlns passes a newline character after each variable
+
+    print( 5, "x" ); // prints "5x"
+    println( 5, "x" ); // prints "5x\n"
+    printlns( 5, "x" ); // prints "5\nx\n"
+
+
+printvar() [function]
+
+== printvar( var, int maxdepth = 5 )
+=== passes a dump of the variable (informative string version) to the @output callback, allowing to optionally specify the maximum depth of the dump (how deep it is allowed to look for sub-variables)
+
+    printvar( 5 ); // prints "real (5)"
+    printvar( "wat" ); // prints "string [3] "wat""
+    printvar( [{a=[{}]}], 2 ); /* prints:
+    object (003C5F90) [0] array (1)
+    [
+      object (003C60A8) [1] dict (1)
+      {
+        ...
+      }
+    ]
+    */
+
+
+printvars() [function]
+
+== printvars( var, ... )
+=== same as a list of printvar(var); calls for each argument
+
+- refer to @printvar() for more info
+
+
+read_stdin() [function]
+
+== read_stdin( bool all = false )
+=== reads from the standard input
+
+- if `all` is set to 'true', all standard input is read up to EOF (useful for piped input)
+- if `all` is set to 'false' or not set at all, input is read up to (and excluding) the next newline character
+
+    print "Name: "; name = read_stdin(); // waits for user input
+    process( read_stdin(true) ); // loads all piped input
+
+
+ftime() [function]
+
+== ftime()
+=== returns a value that is increased by a total of 1 each second (time), as real
+
+- guaranteed to offer sub-second precision unless stated otherwise for any specific platform
+- currently the precision is one millisecond
+
+    start = ftime();
+    do_something_big();
+    println( "That took " $ ftime() - start $ " seconds." );
+
+
+eval() [function]
+
+== eval( string code ) TODO: bool restore - do we need it??
+=== returns the result of evaluating the passed `code` string as SGScript code
+
+
+
+
+
+
