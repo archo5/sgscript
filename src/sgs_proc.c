@@ -256,7 +256,6 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, instr_t* cod
 	if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
 	{
 		sgs_Printf( C, SGS_ERROR, "Max. call stack size reached" );
-		C->state |= SGS_MUST_STOP;
 		return 0;
 	}
 

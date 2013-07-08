@@ -2254,21 +2254,13 @@ static int sgsstd_sys_print( SGS_CTX )
 	return 0;
 }
 
-static int sgsstd_sys_errorstate( SGS_CTX )
-{
-	int state = 1;
-	if( sgs_StackSize( C ) )
-		state = sgs_GetBool( C, 0 );
-	C->state = ( C->state & ~SGS_HAS_ERRORS ) | ( SGS_HAS_ERRORS * state );
-	return 0;
-}
-static int sgsstd_sys_fallthru( SGS_CTX )
+static int sgsstd_sys_abort( SGS_CTX )
 {
 	sgs_Abort( C );
 	return 0;
 }
-static int sgsstd_sys_abort( SGS_CTX ){ abort(); }
-static int sgsstd_sys_exit( SGS_CTX )
+static int sgsstd_app_abort( SGS_CTX ){ abort(); }
+static int sgsstd_app_exit( SGS_CTX )
 {
 	sgs_Integer ret = 0;
 	int ssz = sgs_StackSize( C );
@@ -2297,6 +2289,20 @@ static int sgsstd_sys_replevel( SGS_CTX )
 		return 0;
 	}
 	sgs_PushInt( C, lev );
+	return 1;
+}
+
+static int sgsstd_sys_stat( SGS_CTX )
+{
+	sgs_Integer type;
+	
+	SGSFN( "sys_stat" );
+	
+	if( sgs_StackSize( C ) != 1 ||
+		!sgs_ParseInt( C, 0, &type ) )
+		STDLIB_WARN( "unexpected arguments; function expects int" );
+
+	sgs_PushInt( C, sgs_Stat( C, (int) type ) );
 	return 1;
 }
 
@@ -2332,7 +2338,7 @@ static int sgsstd_errno_string( SGS_CTX )
 		!sgs_ParseInt( C, 0, &e ) )
 		STDLIB_WARN( "unexpected arguments; function expects 1 argument: int" )
 	
-	sgs_PushString( C, strerror( C->last_errno ) );
+	sgs_PushString( C, strerror( e ) );
 	
 	return 1;
 }
@@ -2378,20 +2384,6 @@ static int sgsstd_errno_value( SGS_CTX )
 	
 	sgs_Printf( C, SGS_ERROR, "this errno value is unsupported" );
 	return 0;
-}
-
-static int sgsstd_sys_stat( SGS_CTX )
-{
-	sgs_Integer type;
-	
-	SGSFN( "sys_stat" );
-	
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseInt( C, 0, &type ) )
-		STDLIB_WARN( "unexpected arguments; function expects int" );
-
-	sgs_PushInt( C, sgs_Stat( C, (int) type ) );
-	return 1;
 }
 
 static int sgsstd_dumpvar( SGS_CTX )
@@ -2526,8 +2518,8 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( include_shared ), FN( include_module ), FN( import_cfunc ),
 	FN( include ),
 	FN( sys_curfile ),
-	FN( sys_print ), FN( sys_errorstate ),
-	FN( sys_fallthru ), FN( sys_abort ), FN( sys_exit ),
+	FN( sys_print ), FN( sys_abort ),
+	FN( app_abort ), FN( app_exit ),
 	FN( sys_replevel ), FN( sys_stat ),
 	FN( errno ), FN( errno_string ), FN( errno_value ),
 	FN( dumpvar ), FN( dumpvars ),

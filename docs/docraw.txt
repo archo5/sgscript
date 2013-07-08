@@ -338,7 +338,7 @@ include_file() [function]
 
 - `file` must be available in one of the include paths (TODO: we don't have 'em yet)
 - if `override` is specified, file will be reloaded even if it was already loaded before
-- this function is eqivalent to @sgs_ExecFile in the C API
+- this function is equivalent to @sgs_ExecFile in the C API
 
     include_file( "something.sgs" ); // loads something
     include_file( "something.sgs" ); // does not load it again
@@ -390,6 +390,171 @@ import_cfunc() [function]
     import_cfunc( "mydll.dll", "someSGScriptFunc" )();
 
 
+sys_curfile() [function]
+
+== sys_curfile()
+=== returns the path of the file (as passed on load) that contains the currently executed code or `null` if the file cannot be determined (eval, C functions)
+
+    // a.sgs
+    print( sys_curfile() ); // prints "a.sgs"
+    // b.sgs
+    include "a.sgs";
+
+
+sys_print() [function]
+
+== sys_print( int code, string message )
+=== passes a message to the internal messaging system (one that's commonly used to report errors and warnings)
+
+! Different codes can be handled differently by the system. By default, SGS_ERROR code will stop execution and return to C code as soon as possible.
+
+- `code` is the code to use to pass the message (ex. SGS_INFO, SGS_WARNING, SGS_ERROR)
+
+
+sys_abort() [function]
+
+== sys_abort()
+=== stops execution and returns to C code as soon as possible
+
+- this function is equivalent to @sgs_Abort in the C API
+
+    sys_abort();
+    print( 5 ); // this line is not reached
+
+
+app_abort() [function]
+
+== app_abort()
+=== calls the abort() function of the C standard library (crashes the application)
+
+
+app_exit() [function]
+
+== app_exit( code = 0 )
+=== calls the exit() function of the C standard library (exits the application)
+
+
+sys_replevel() [function]
+
+== sys_replevel([ level ])
+=== returns the current reported error level and optionally sets a new one
+
+! The effects of this function are not reverted automatically at any moment (unless implemented manually with hooks).
+
+    old_level = sys_replevel( SGS_ERROR ); // report only errors or worse
+    magic = calculate_magic(); // any warnings are never processed at this point
+    sys_replevel( old_level ); // restore the old reported level
+
+
+sys_stat() [function]
+
+== sys_stat( code )
+=== prints info about virtual machine state, everything is implementation-defined
+
+- accepted codes are the same as for @sgs_Stat, which this function is equivalent to
+
+    sys_stat( 11 ); // dumps all globals
+
+
+errno() [function]
+
+== errno( as_string = false )
+=== returns the last relevant error number for the C standard library, as an integer or a string if `as_string` is set
+
+- last relevant error number is defined by @sgs_Errno/@sgs_SetErrno C API functions
+
+    data = io_file_read( "doesnotexist" ); // file that does not exist
+    print errno(); // prints 2
+    print errno(true); // prints "No such file or directory" on Windows
+
+
+errno_string() [function]
+
+== errno_string( int code )
+=== returns the error string for the given code
+
+- errno_string(errno()) is equivalent to errno(true)
+
+    print errno_string(2); // prints "No such file or directory" on Windows
+
+
+errno_value() [function]
+
+== errno_value( string key )
+=== returns the number for the error key (for "ENOENT" it would return 2)
+
+- this function might be a bit slow considering that it currently does not use any extended lookup systems, such as hash tables
+
+    data = io_file_read( "doesnotexist" );
+    if( errno() == error_string("ENOENT") )
+        println( "file does not exist" );
+
+
+dumpvar() [function]
+
+== dumpvar( var, int depth = 5 )
+=== similar to @printvar() but returns the dump instead of printing it
+
+- this function is equivalent to @sgs_DumpVar in the C API
+
+    sys_error( SGS_INFO, "Extended variable info:\n" $ dumpvar(data) );
+
+
+dumpvars() [function]
+
+== dumpvars( ... )
+=== similar to @printvars() but returns the dumps, concatenated, instead of printing them
+
+
+gc_collect() [function]
+
+== gc_collect()
+=== runs the garbage collector on the virtual machine, waiting until it has finished
+
+    a = [];
+    a.push(a); // creates a circular dependency
+    a = null; // a is not actually freed
+    gc_collect(); // a is freed now
+
+
+serialize() [function]
+
+== serialize( var )
+=== converts the variable to a byte buffer (string), containing the serialized data that can be recreated with @unserialize() or returns null and emits a warning on failure
+
+- functions and objects without OP_SERIALIZE implemented cannot be serialized (TODO: add the serialization of SGS functions, it's already implemented in pproc)
+
+    data = serialize({ name = "A", info = "B" });
+    print data; // prints random-ish garbage
+    print unserialize(data); // prints {name=A,info=B}
+
+
+unserialize() [function]
+
+== unserialize( string data )
+=== recreates a variable from the buffer with serialized data or returns null and emits a warning on failure
+
+- this function will internally call global object creation functions specified in the data, so they must be defined and the state could change in the process
+- for more info on serialization in SGScript, refer to @Serialization (TODO: what could this possibly lead to?)
+
+    @serialize example
+
+
+SGS_[INFO|WARNING|ERROR] [constants]
+
+== SGS_INFO, SGS_WARNING, SGS_ERROR are defined to the values of the C macros, respectively 100, 200 and 300
+
+
+VT_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT] [constants]
+
+= these constants are defined to the values of the C macros and can be compared with the values returned in @typeid() or @typeflags()
+
+
+_G [superglobal]
+
+== A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals.
+
+    _G["$diff"] = 5; // no way to access this via usual globals
 
 
 
