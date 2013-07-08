@@ -299,8 +299,95 @@ ftime() [function]
 
 eval() [function]
 
-== eval( string code ) TODO: bool restore - do we need it??
+== eval( string code )
 === returns the result of evaluating the passed `code` string as SGScript code
+
+- this function is equivalent to @sgs_EvalBuffer/@sgs_EvalString in the C API
+
+    eval("print 5;"); // prints 5
+
+
+eval_file() [function]
+
+== eval_file( string filename )
+=== returns the result of evaluating the file pointed to by `filename` as SGScript code
+
+- this function is equivalent to @sgs_EvalFile in the C API
+
+    eval_file("myfile.sgs"); // ???
+
+
+include_library() [function]
+
+== include_library( string lib[, bool override ] )
+=== loads the global variables of the specific library `lib` in the state, returns success, as `bool`, emits a warning on failure
+
+- lib must be one of 'fmt', 'io', 'math', 'os', 'string'
+- if `override` is specified, library will be reloaded even if it was already loaded before
+- this function is equivalent to the sgs_LoadLib_* functions in the C API
+
+    printvar( sin ); // warning, null
+    include_library( "math" );
+    printvar( sin ); // C function
+
+
+include_file() [function]
+
+== include_file( string file[, bool override ] )
+=== executes the file pointed to by `file`, returns success, as `bool`, emits a warning on failure
+
+- `file` must be available in one of the include paths (TODO: we don't have 'em yet)
+- if `override` is specified, file will be reloaded even if it was already loaded before
+- this function is eqivalent to @sgs_ExecFile in the C API
+
+    include_file( "something.sgs" ); // loads something
+    include_file( "something.sgs" ); // does not load it again
+    include_file( "something.sgs", true ); // loads it again
+
+
+include_shared() [function]
+
+== include_shared( string file[, bool override ] )
+=== runs the shared library pointed to by `file`, returns success, as `bool`, emits a warning on failure
+
+- `file` must be available according to the platform-specific rules of dynamic libraries (shared objects)
+- the library must contain a 'sgscript_main' function that will be called on initialization
+- if `override` is specified, file will be reloaded even if it was already loaded before
+
+    include_shared( "sgsjson.dll" ); // load the JSON library DLL on Windows
+
+
+include_module() [function]
+
+== include_module( string file[, bool override ] )
+=== runs the shared library pointed to by `file`, first applying file name transformation rules, returns success, as `bool`, emits a warning on failure
+
+- `file` must be available according to the platform-specific rules of dynamic libraries (shared objects)
+- the library must contain a 'sgscript_main' function that will be called on initialization
+- if `override` is specified, file will be reloaded even if it was already loaded before
+- the transformation rules are as follows: 1) append '.' and the lowercase platform-specific extension of shared libraries (ex. 'dll', 'so'); 2) prepend 'sgs' to file name (TODO: do we really need it? it doesn't work like that now)
+
+    include_module( "json" ); // load the JSON library anywhere
+
+
+include() [function]
+
+== include( string file[, bool override ] )
+=== the umbrella function for @include_library, @include_file, @include_module and @include_shared, attempts to call all of them in the specified order, stops on success or hard failure after any function
+
+- this function is also available as a replicating statement 'include' (ex. 'include "fmt", "io";' works the same way as include("fmt"); include("io");)
+
+
+import_cfunc() [function]
+
+== import_cfunc( string file, string funcname )
+=== retrieves the `funcname` function of the shared library `file`, returns success, as `bool`, emits a warning on failure
+
+! Do not call 'sgscript_main' using this function! That function has different return value semantics so at best, something will work, a warning could be emitted and the worst case is that something will crash.
+
+- `file` must be available according to the platform-specific rules of dynamic libraries (shared objects)
+
+    import_cfunc( "mydll.dll", "someSGScriptFunc" )();
 
 
 

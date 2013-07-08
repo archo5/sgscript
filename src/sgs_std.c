@@ -1966,17 +1966,14 @@ static int sgsstd_eval( SGS_CTX )
 {
 	char* str;
 	sgs_SizeVal size;
-	int rvc = 0, restore = 0, state = C->state;
+	int rvc = 0;
 	
 	SGSFN( "eval" );
 
-	if( sgs_StackSize( C ) < 1 || sgs_StackSize( C ) > 2 || !sgs_ParseString( C, 0, &str, &size ) ||
-		( sgs_StackSize( C ) == 2 && !sgs_ParseBool( C, 1, &restore ) ) )
-		STDLIB_WARN( "unexpected arguments; function expects 1-2 arguments: string[, bool]" )
+	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, &str, &size ) )
+		STDLIB_WARN( "unexpected arguments; function expects 1 argument: string" )
 
 	sgs_EvalBuffer( C, str, (int) size, &rvc );
-	if( restore )
-		C->state = state;
 	return rvc;
 }
 
