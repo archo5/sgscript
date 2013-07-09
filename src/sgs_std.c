@@ -1455,11 +1455,6 @@ static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* data, int depth )
 
 static int sgsstd_closure_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( type == VT_BOOL )
-	{
-		sgs_PushBool( C, 1 );
-		return SGS_SUCCESS;
-	}
 	if( type != VT_STRING && type != SGS_CONVOP_TOTYPE )
 		return SGS_ENOTSUP;
 	UNUSED( data );

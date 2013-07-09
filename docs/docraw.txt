@@ -1,4 +1,8 @@
 
+=
+== STDLIB/CORE-FUNCTIONS
+=
+
 array() [function]
 
 == array( ... )
@@ -555,6 +559,270 @@ _G [superglobal]
 == A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals.
 
     _G["$diff"] = 5; // no way to access this via usual globals
+
+
+=
+== STDLIB/CORE-OBJECTS
+=
+
+
+/////////////////////////////
+>>> array
+
+* read-only properties
+ - [int] size
+ - [int] capacity
+ - [cfunc] push
+ - [cfunc] pop
+ - [cfunc] shift
+ - [cfunc] unshift
+ - [cfunc] insert
+ - [cfunc] erase
+ - [cfunc] clear
+ - [cfunc] reverse
+ - [cfunc] resize
+ - [cfunc] reserve
+ - [cfunc] sort
+ - [cfunc] sort_custom
+ - [cfunc] sort_mapped
+ - [cfunc] find
+ - [cfunc] remove
+* other features:
+ - read/write integer index
+ - full content dump
+ - tostring = quick content dump
+ - tobool = size != 0
+ - iterator
+ - cloning
+ - serialization
+ - GC-safe
+ - type identification (returns the string "array")
+
+
+array.push [method]
+
+== array.push( ... )
+=== appends the variables passed to the end of array in the same order, returns the array for chaining
+
+    a = [ 5 ];
+    a.push( 6, 7 ).push( 8 ); // a = [5,6,7,8]
+
+
+array.pop [method]
+
+== array.pop()
+=== removes one item from the end of array or emits a warning if there are no items in the array, returns the removed item
+
+    a = [ 5 ];
+    a.pop(); // array is empty now
+    a.pop(); // warning: "array is empty, cannot pop"
+
+
+array.shift [method]
+
+== array.shift()
+=== removes one item from the beginning of array or emits a warning if there are no items in the array, returns the removed item
+
+    a = [ 5, 6 ];
+    a.shift(); // a = [6], returned 5
+
+
+array.unshift [method]
+
+== array.unshift( ... )
+=== prepends the variables passed to the beginning of array in the same order, returns the array for chaining
+
+    a = [ 5 ];
+    a.unshift( 6, 7 ); // a = [6,7,5] now
+
+
+array.insert [method]
+
+== array.insert( int pos, ... )
+=== inserts the variables passed (all arguments after first) to the position specified in the array or emits a warning on failure (index out of bounds), returns the array for chaining
+
+- `pos` accepts both positive and negative values, the meaning is "which value to insert before"
+-- negative values are converted to positive ones by adding (<size> + 1) to them
+-- beginning of array can be inserted to using position 0 or (- <size> - 1)
+-- end of array can be inserted to using position <size> or -1
+
+    a = [ 5, 7 ];
+    a.insert( 1, 6 ); // inserts 6 at position 1 (before item with index 1)
+    a.insert( -1, 8 ); // appends to the end of array, a = [5,6,7,8] now
+
+
+array.erase [method]
+
+== array.erase( int[, int] )
+=== erases item or a range of items from the array, depending on the arguments passed or emits a warning on failure, returns the array for chaining
+
+- both arguments have same index processing rules as @array.insert(), but with one difference - if both arguments are passed, after resolving (converting negative indices to positive ones, if there are any), first must be smaller than second
+
+    a = [ 5, 6, 7, 8 ];
+    a.erase( 1, 2 ); // erases all items between position 1 and 2, including; gives a = [5,8]
+    a.erase( 0 ); // a = [8]
+
+
+array.clear [method]
+
+== array.clear()
+=== erases all items from the array, returns the array for chaining
+
+    a = [ 1, "asd", 8 ];
+    a.clear(); // a = []
+
+
+array.reverse [method]
+
+== array.reverse()
+=== reverses the order of items in the original array, returns the original array for chaining
+
+    a = [ 1, 2, 3 ];
+    b = a;
+    a.reverse(); // a = [3,2,1]
+    print( b ); // prints [3,2,1]
+
+
+array.resize [method]
+
+== array.resize( int size )
+=== changes the size of the array, returns the array for chaining
+
+- `size` must be larger than or equal to 0
+- if previous size was less than passed to the method, null variables are appended
+- if previous size was more than passed to the method, items are popped from the end of the array
+- if size was not changed, nothing else will change
+
+    a = [ 5, 6, 7 ];
+    a.resize( 5 ); // a = [5,6,7,null,null]
+    a.resize( 2 ); // a = [5,6]
+
+
+array.reserve [method]
+
+== array.reserve( int capacity )
+=== reserves the space for the requested number of elements in the array, returns the array for chaining
+
+- `capacity` must be larger than or equal to 0
+- if previous capacity was less than passed to the method, capacity will be increased to the requested amount
+- if previous capacity was more than or equal to what was passed to the method, nothing will change
+
+    a = [ 5, 6, 7 ];
+    a.capacity( 1 ); // nothing happens
+    a.capacity( 5 ); // a.capacity = 5 and two variable additions can now happen without reallocations
+
+
+array.sort [method]
+
+== array.sort([ bool reverse ])
+=== sorts the array using the @sgs_Compare C API function for comparisons, returns the array for chaining
+
+- if `reverse` is true, array is sorted in the reverse order
+
+    a = [ 6, 8, 7, 5 ];
+    a.sort(); // a = [5,6,7,8]
+
+
+array.sort_custom [method]
+
+== array.sort_custom( callable[, bool reverse ] )
+=== sorts the array using the callable for comparisons, returns the array for chaining
+
+! This function is considerably slower than @array.sort or @array.sort_mapped so prefer those if performance matters.
+
+- callable must return an integer, specifying the relative order of the two passed arguments: less than 0 if first variable should be placed before second, greater than 0 if first variable should be placed after second, or 0 if it doesn't matter (TODO: unsafe with big integers/FP return values! something must be done)
+- if `reverse` is true, array is sorted in the reverse order
+
+    a = [ 6, 8, 7, 5 ];
+    // this code will sort numbers into odd/even ones and in ascending order
+    a.sort_custom( function(a,b){return a-b+(b%2-a%2)*1000; } ); // a = [5,7,6,8]
+
+
+array.sort_mapped [method]
+
+== array.sort_mapped( array map[, bool reverse ] );
+=== sorts the array by sorting the passed array and applying the index map to the first one, returns the array for chaining
+
+- both arrays must have the same size, otherwise a warning is emitted
+- all variables in the mapping array are interpreted as 'real' values
+- if `reverse` is true, array is sorted in the reverse order
+
+    a = [ 5, 6, 7, 8 ];
+    b = [ 3, 1, 4, 2 ];
+    a.sort_mapped( b ); // a = [6,8,5,7]
+
+
+array.find [method]
+
+== array.find( var item[, bool strict[, int from ]] )
+=== attempts to find `item` in array, starting from 0 or the index passed with `from`, if it exists, using basic or strict equality comparisons (depending on `strict`), returning the index or 'null' if item was not found
+
+- if strict comparisons are enabled, variable types are also checked for equality
+
+    a = [ 5, 6, 7, 8 ];
+    a.find( "7" ); // returns 2
+    a.find( "7", true ); // returns null
+
+
+array.remove [method]
+
+== array.remove( var item[, bool strict[, bool all[, int from ]]] )
+=== attepts to find and remove first or all `item` variables in array (depending on `all`), according to the rules specified in @array.find(), returning the number of removed items
+
+    a = [ 5, 2, 6, 7, 8, 2 ];
+    a.remove( "7" ); // returns 1; a = [5,2,6,8,2]
+    a.remove( "6", true ); // returns 0; a remains unchanged
+    a.remove( 2, false, true ); // returns 2; a = [5,6,8]
+
+
+
+/////////////////////////////
+>>> dict
+
+* features:
+ - read/write string index
+ - read/write string properties and integer index-via-property
+ - full content dump
+ - tostring = quick content dump
+ - tobool = size != 0
+ - iterator
+ - cloning
+ - serialization
+ - GC-safe
+ - type identification (returns the string "dict")
+
+
+
+/////////////////////////////
+>>> class
+
+* read/write properties
+ - [var] _super
+* other features
+ - read/write pass-through index
+ - read/write pass-through properties (except string "_super")
+ - full content dump
+ - tobool = ENOTSUP, overridable via "__tobool"
+ - toint = ENOTSUP, overridable via "__toint"
+ - toreal = ENOTSUP, overridable via "__toreal"
+ - tostring = "class", overridable via "__tostring"
+ - cloning, overridable via "__clone"
+ - type identification (returns the string "class", overridable via "__typeof")
+ - overridable arithmetic/comparison operations
+ - overridable object call
+ - serialization
+ - GC-safe
+
+
+
+/////////////////////////////
+>>> closure
+* features
+ - full content dump
+ - tostring = "closure"
+ - type identification (returns the string "closure")
+ - object call to callable, using the attached first argument
+ - GC-safe
 
 
 
