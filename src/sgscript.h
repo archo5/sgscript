@@ -458,6 +458,7 @@ SGS_APIFUNC void sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size )
 SGS_APIFUNC void sgs_PushString( SGS_CTX, const char* str );
 SGS_APIFUNC void sgs_PushCFunction( SGS_CTX, sgs_CFunc func );
 SGS_APIFUNC void sgs_PushObject( SGS_CTX, void* data, void** iface );
+SGS_APIFUNC void* sgs_PushObjectIPA( SGS_CTX, int added, void** iface );
 SGS_APIFUNC void sgs_PushVariable( SGS_CTX, sgs_Variable* var );
 
 SGS_APIFUNC SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var );

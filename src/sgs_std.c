@@ -24,10 +24,9 @@ SGS_DECLARE void* sgsstd_array_functable[];
 #define SGSARR_UNIT sizeof( sgs_Variable )
 #define SGSARR_HDRBASE sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data
 #define SGSARR_HDR sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data->data
-#define SGSARR_HDRUPDATE hdr = (sgsstd_array_header_t*) data->data
 #define SGSARR_HDRSIZE sizeof(sgsstd_array_header_t)
-#define SGSARR_ALLOCSIZE( cnt ) ((cnt)*sizeof(sgs_Variable)+SGSARR_HDRSIZE)
-#define SGSARR_PTR( base ) ((sgs_Variable*)(((char*)base)+SGSARR_HDRSIZE))
+#define SGSARR_ALLOCSIZE( cnt ) ((cnt)*SGSARR_UNIT)
+#define SGSARR_PTR( base ) (((sgsstd_array_header_t*)base)->data)
 
 static void sgsstd_array_reserve( SGS_CTX, sgs_VarObj* data, sgs_SizeVal size )
 {
@@ -35,8 +34,7 @@ static void sgsstd_array_reserve( SGS_CTX, sgs_VarObj* data, sgs_SizeVal size )
 	if( size <= hdr->mem )
 		return;
 
-	data->data = sgs_Realloc( C, data->data, SGSARR_ALLOCSIZE( size ) );
-	SGSARR_HDRUPDATE;
+	hdr->data = sgs_Realloc( C, hdr->data, SGSARR_ALLOCSIZE( size ) );
 	hdr->mem = size;
 }
 
@@ -68,7 +66,6 @@ static void sgsstd_array_insert( SGS_CTX, sgs_VarObj* data, sgs_SizeVal pos, int
 	if( nsz > hdr->mem )
 	{
 		sgsstd_array_reserve( C, data, MAX( nsz, hdr->mem * 2 ) );
-		SGSARR_HDRUPDATE;
 		ptr = SGSARR_PTR( data->data );
 	}
 	if( pos < hdr->size )
@@ -253,7 +250,6 @@ static int sgsstd_arrayI_resize( SGS_CTX )
 			" function expects 1 argument: int (>= 0)" )
 
 	sgsstd_array_reserve( C, data, (sgs_SizeVal) sz );
-	SGSARR_HDRUPDATE;
 	sgsstd_array_adjust( C, hdr, (sgs_SizeVal) sz );
 	sgs_Pop( C, sgs_StackSize( C ) - 1 );
 	return 1;
@@ -400,14 +396,12 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 
 		{
 			sgs_Variable *p1, *p2;
-			sgsstd_array_header_t* nd = (sgsstd_array_header_t*)
-				sgs_Malloc( C, SGSARR_ALLOCSIZE( hdr->mem ) );
-			memcpy( nd, hdr, SGSARR_ALLOCSIZE( hdr->mem ) );
 			p1 = SGSARR_PTR( hdr );
-			p2 = SGSARR_PTR( nd );
+			p2 = sgs_Alloc_n( sgs_Variable, hdr->mem );
+			memcpy( p2, p1, SGSARR_ALLOCSIZE( hdr->mem ) );
 			for( i = 0; i < asize; ++i )
 				p1[ i ] = p2[ smis[ i ].pos ];
-			sgs_Dealloc( nd );
+			sgs_Dealloc( p2 );
 		}
 
 		sgs_Dealloc( smis );
@@ -687,15 +681,17 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 	}
 	else if( type == SGS_CONVOP_CLONE )
 	{
-		void* nd = sgs_Malloc( C, SGSARR_ALLOCSIZE( hdr->mem ) );
-		memcpy( nd, hdr, SGSARR_ALLOCSIZE( hdr->mem ) );
+		sgsstd_array_header_t* hdr2 = (sgsstd_array_header_t*)
+			sgs_PushObjectIPA( C, sizeof( sgsstd_array_header_t ), sgsstd_array_functable );
+		memcpy( hdr2, hdr, sizeof( sgsstd_array_header_t ) );
+		hdr2->data = sgs_Alloc_n( sgs_Variable, hdr->mem );
+		memcpy( hdr2->data, hdr->data, SGSARR_ALLOCSIZE( hdr->mem ) );
 		{
 			sgs_Variable* ptr = SGSARR_PTR( hdr );
 			sgs_Variable* pend = ptr + hdr->size;
 			while( ptr < pend )
 				sgs_Acquire( C, ptr++ );
 		}
-		sgs_PushObject( C, nd, sgsstd_array_functable );
 		(C->stack_top-1)->type = VTC_ARRAY;
 		return SGS_SUCCESS;
 	}
@@ -727,8 +723,9 @@ static int sgsstd_array_serialize( SGS_CTX, sgs_VarObj* data, int unused )
 
 static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
+	SGSARR_HDR;
 	sgsstd_array_clear( C, data, dch );
-	sgs_Dealloc( data->data );
+	sgs_Dealloc( hdr->data );
 	return 0;
 }
 
@@ -750,17 +747,17 @@ static int sgsstd_array( SGS_CTX )
 	int i = 0, objcnt = sgs_StackSize( C );
 	void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( objcnt ) );
 	sgs_Variable *p, *pend;
-	SGSARR_HDRBASE;
+	sgsstd_array_header_t* hdr = (sgsstd_array_header_t*)
+		sgs_PushObjectIPA( C, sizeof( sgsstd_array_header_t ), sgsstd_array_functable );
 	hdr->size = objcnt;
 	hdr->mem = objcnt;
-	p = SGSARR_PTR( data );
+	p = hdr->data = (sgs_Variable*) data;
 	pend = p + objcnt;
 	while( p < pend )
 	{
 		sgs_GetStackItem( C, i++, p );
 		sgs_Acquire( C, p++ );
 	}
-	sgs_PushObject( C, data, sgsstd_array_functable );
 	(C->stack_top-1)->type = VTC_ARRAY;
 	return 1;
 }
@@ -773,6 +770,13 @@ static int sgsstd_array( SGS_CTX )
 #ifdef SGS_DICT_CACHE_SIZE
 #define DICT_CACHE_SIZE SGS_DICT_CACHE_SIZE
 #endif
+
+#ifdef __cplusplus
+extern
+#else
+static
+#endif
+void* sgsstd_dict_functable[];
 
 typedef
 struct _DictHdr
@@ -790,7 +794,7 @@ static DictHdr* mkdict( SGS_CTX )
 #ifdef DICT_CACHE_SIZE
 	int i;
 #endif
-	DictHdr* dh = sgs_Alloc( DictHdr );
+	DictHdr* dh = (DictHdr*) sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_dict_functable );
 	vht_init( &dh->ht, C );
 #ifdef DICT_CACHE_SIZE
 	for( i = 0; i < DICT_CACHE_SIZE; ++i )
@@ -805,18 +809,10 @@ static DictHdr* mkdict( SGS_CTX )
 
 #define HTHDR DictHdr* dh = (DictHdr*) data->data; VHTable* ht = &dh->ht;
 
-#ifdef __cplusplus
-extern
-#else
-static
-#endif
-void* sgsstd_dict_functable[];
-
 static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
 	HTHDR;
 	vht_free( ht, C, dco );
-	sgs_Dealloc( dh );
 	return SGS_SUCCESS;
 }
 
@@ -1080,7 +1076,6 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 		{
 			vht_set( &ndh->ht, ht->vars[ i ].str, ht->vars[ i ].size, &ht->vars[ i ].var, C );
 		}
-		sgs_PushObject( C, ndh, sgsstd_dict_functable );
 		(C->stack_top-1)->type = VTC_DICT;
 		return SGS_SUCCESS;
 	}
@@ -1147,8 +1142,6 @@ static int sgsstd_dict( SGS_CTX )
 		sgs_Variable val;
 		if( !sgs_ParseString( C, i, &kstr, &ksize ) )
 		{
-			vht_free( ht, C, 1 );
-			sgs_Dealloc( ht );
 			return sgs_Printf( C, SGS_WARNING, 
 				"key argument %d is not a string", i );
 		}
@@ -1157,7 +1150,6 @@ static int sgsstd_dict( SGS_CTX )
 		vht_set( ht, kstr, (int32_t) ksize, &val, C );
 	}
 
-	sgs_PushObject( C, ht, sgsstd_dict_functable );
 	(C->stack_top-1)->type = VTC_DICT;
 	return 1;
 }
@@ -1179,7 +1171,6 @@ static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 	SGSCLASS_HDR;
 	sgs_ReleaseOwned( C, &hdr->data, dch );
 	sgs_ReleaseOwned( C, &hdr->inh, dch );
-	sgs_Dealloc( hdr );
 	return SGS_SUCCESS;
 }
 
@@ -1306,12 +1297,12 @@ static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgs_PushVariable( C, &hdr->data );
 		sgs_CloneItem( C, -1 );
 
-		hdr2 = sgs_Alloc( sgsstd_class_header_t );
+		hdr2 = (sgsstd_class_header_t*) sgs_PushObjectIPA( C,
+			sizeof( sgsstd_class_header_t ), sgsstd_class_functable );
 		sgs_GetStackItem( C, -1, &hdr2->data );
 		hdr2->inh = hdr->inh;
 		sgs_Acquire( C, &hdr2->data );
 		sgs_Acquire( C, &hdr2->inh );
-		sgs_PushObject( C, hdr2, sgsstd_class_functable );
 		return SGS_SUCCESS;
 	}
 
@@ -1398,12 +1389,12 @@ static int sgsstd_class( SGS_CTX )
 		STDLIB_WARN( "unexpected arguments; "
 			"function requires 2 arguments: any (data), any (inherited data)" )
 
-	hdr = sgs_Alloc( sgsstd_class_header_t );
+	hdr = (sgsstd_class_header_t*) sgs_PushObjectIPA( C,
+		sizeof( sgsstd_class_header_t ), sgsstd_class_functable );
 	sgs_GetStackItem( C, 0, &hdr->data );
 	sgs_GetStackItem( C, 1, &hdr->inh );
 	sgs_Acquire( C, &hdr->data );
 	sgs_Acquire( C, &hdr->inh );
-	sgs_PushObject( C, hdr, sgsstd_class_functable );
 	return 1;
 }
 
@@ -1425,7 +1416,6 @@ static int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 	SGSCLOSURE_HDR;
 	sgs_ReleaseOwned( C, &hdr->func, dch );
 	sgs_ReleaseOwned( C, &hdr->data, dch );
-	sgs_Dealloc( hdr );
 	return SGS_SUCCESS;
 }
 
@@ -1501,12 +1491,12 @@ static int sgsstd_closure( SGS_CTX )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 2 arguments: callable, any" )
 
-	hdr = sgs_Alloc( sgsstd_closure_t );
+	hdr = (sgsstd_closure_t*) sgs_PushObjectIPA( C,
+		sizeof( sgsstd_closure_t ), sgsstd_closure_functable );
 	sgs_GetStackItem( C, 0, &hdr->func );
 	sgs_GetStackItem( C, 1, &hdr->data );
 	sgs_Acquire( C, &hdr->func );
 	sgs_Acquire( C, &hdr->data );
-	sgs_PushObject( C, hdr, sgsstd_closure_functable );
 	return 1;
 }
 
@@ -2559,20 +2549,20 @@ int sgsSTD_MakeArray( SGS_CTX, int cnt )
 	{
 		sgs_Variable *p, *pend;
 		void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( cnt ) );
-		SGSARR_HDRBASE;
+		sgsstd_array_header_t* hdr = sgs_PushObjectIPA( C,
+			sizeof( sgsstd_array_header_t ), sgsstd_array_functable );
 
 		hdr->size = cnt;
 		hdr->mem = cnt;
-		p = SGSARR_PTR( data );
+		p = hdr->data = (sgs_Variable*) data;
 		pend = p + cnt;
 		while( p < pend )
 		{
-			sgs_GetStackItem( C, i++ - cnt, p );
+			sgs_GetStackItem( C, i++ - cnt - 1, p );
 			sgs_Acquire( C, p++ );
 		}
 
-		sgs_Pop( C, cnt );
-		sgs_PushObject( C, data, sgsstd_array_functable );
+		sgs_PopSkip( C, cnt, 1 );
 		return SGS_SUCCESS;
 	}
 }
@@ -2594,20 +2584,17 @@ int sgsSTD_MakeDict( SGS_CTX, int cnt )
 		char* kstr;
 		sgs_SizeVal ksize;
 		sgs_Variable val;
-		if( !sgs_ParseString( C, i - cnt, &kstr, &ksize ) )
+		if( !sgs_ParseString( C, i - cnt - 1, &kstr, &ksize ) )
 		{
-			vht_free( ht, C, 1 );
-			sgs_Dealloc( ht );
 			sgs_Pop( C, sgs_StackSize( C ) - ssz );
 			return SGS_EINVAL;
 		}
 
-		sgs_GetStackItem( C, i + 1 - cnt, &val );
+		sgs_GetStackItem( C, i - cnt, &val );
 		vht_set( ht, kstr, (int32_t) ksize, &val, C );
 	}
 
-	sgs_Pop( C, cnt );
-	sgs_PushObject( C, ht, sgsstd_dict_functable );
+	sgs_PopSkip( C, cnt, 1 );
 	return SGS_SUCCESS;
 }
 

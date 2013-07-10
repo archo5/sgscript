@@ -743,6 +743,7 @@ typedef struct sgsstd_array_header_s
 {
 	sgs_SizeVal size;
 	sgs_SizeVal mem;
+	sgs_Variable* data;
 }
 sgsstd_array_header_t;
 

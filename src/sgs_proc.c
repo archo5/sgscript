@@ -206,10 +206,12 @@ static void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t
 	memcpy( str_cstr( out->data.S ), str, len );
 }
 
-static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface )
+static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface, int xbytes )
 {
-	object_t* obj = sgs_Alloc( object_t );
+	object_t* obj = sgs_Alloc_a( object_t, xbytes );
 	obj->data = data;
+	if( xbytes )
+		obj->data = ((char*)obj) + sizeof( object_t );
 	obj->iface = iface;
 	obj->flags = 0;
 	obj->redblue = C->redblue;
@@ -1517,7 +1519,7 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 			if( outkey >= 0 )
 				var_setint( C, stk_getlpos( C, outkey ), it->off );
 			if( outval >= 0 )
-				stk_setlvar( C, outval, (sgs_Variable*)( hdr + 1 ) + it->off );
+				stk_setlvar( C, outval, hdr->data + it->off );
 			return SGS_SUCCESS;
 		}
 	}
@@ -2026,8 +2028,16 @@ void sgs_PushCFunction( SGS_CTX, sgs_CFunc func )
 void sgs_PushObject( SGS_CTX, void* data, void** iface )
 {
 	sgs_Variable var;
-	var_create_obj( C, &var, data, iface );
+	var_create_obj( C, &var, data, iface, 0 );
 	stk_push_leave( C, &var );
+}
+
+void* sgs_PushObjectIPA( SGS_CTX, int added, void** iface )
+{
+	sgs_Variable var;
+	var_create_obj( C, &var, NULL, iface, added );
+	stk_push_leave( C, &var );
+	return var.data.O->data;
 }
 
 void sgs_PushVariable( SGS_CTX, sgs_Variable* var )
