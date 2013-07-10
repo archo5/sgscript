@@ -1279,10 +1279,12 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 {
 	stringread_t* srt;
 	int ssz = sgs_StackSize( C );
+	sgs_Integer off = 0;
 	SGSBASEFN( "fmt_string_parser" );
 	
 	if( ssz < 1 || ssz > 2 ||
-		!sgs_ParseString( C, 0, NULL, NULL ) )
+		!sgs_ParseString( C, 0, NULL, NULL ) ||
+		( ssz >= 2 && !sgs_ParseInt( C, 1, &off ) ) )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1-2 arguments: string[, int(>0)]" )
 	
@@ -1290,7 +1292,7 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 	sgs_GetStackItem( C, 0, &srt->S );
 	sgs_BreakIf( srt->S.type != VTC_STRING );
 	sgs_Acquire( C, &srt->S );
-	srt->off = 0;
+	srt->off = off;
 	sgs_PushObject( C, srt, srt_iface );
 	sgs_StoreItem( C, 0 );
 	return sgsstd_fmt_parser( C );

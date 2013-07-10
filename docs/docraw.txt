@@ -825,5 +825,39 @@ array.remove [method]
  - GC-safe
 
 
+=
+== STDLIB/FMT
+=
+
+
+fmt_pack [function]
+fmt_pack_count [function]
+fmt_unpack [function]
+fmt_pack_size [function]
+fmt_base64_encode [function]
+fmt_base64_decode [function]
+fmt_text [function]
+fmt_parser [function]
+
+
+fmt_string_parser [function]
+
+== fmt_string_parser( string, offset = 0 )
+=== creates a @fmt_parser object, connected to a string reader, initialized to the given offset
+
+    p = fmt_string_parser( "this is a test" );
+    p.readcc( "a-z" ); // returns "this"
+
+
+fmt_charcc [function]
+
+== fmt_charcc( string char, string class )
+=== checks if the first character of string `char` is included in the character class `class`
+
+- character class is a regex-like list of specific symbols and ranges (its low and high symbols separated by "-"), optionally prepended by "^" that inverts the scope of the class
+
+    fmt_charcc( ".", "a-zA-Z0-9" ); // returns false
+    fmt_charcc( "x", "a-zA-Z0-9" ); // returns true
+
 
 
