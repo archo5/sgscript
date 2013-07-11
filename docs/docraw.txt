@@ -836,8 +836,36 @@ fmt_unpack [function]
 fmt_pack_size [function]
 fmt_base64_encode [function]
 fmt_base64_decode [function]
+
 fmt_text [function]
+
+== fmt_text( string text, ... )
+=== parses all format specifiers in `text` and returns the result
+
+- the general format of a format specifier is as follows: {fmt[size][.prec][r][p<char>]}
+-- fmt: one-character output type (b-binary, o-octal, d-decimal, x/X-hexadecimal, f-floating-point, g/G-compact floating-point, e/E-scientific floating-point, s-valid string, c-always converted to string)
+-- size: minimum number of characters to print
+-- prec: precision of floating-point variables, string length limit
+-- r: add "r" to right-pad (left-justify)
+-- p<char>: add "p" and any character to set that character as the padding character (default: space/0x20)
+- if anything unexpected happens, this function will emit a warning and put "#error#" in the place of a format specifier
+
+    print fmt_text( "{d} -> {x}", 1337, 1337 ); // prints "1337 -> 539"
+    print fmt_text( "null: {d}, {s}, {c}", null, null, null ); // prints "null: #error#, #error#, null" and emits two warnings for item 1 and item 2
+    print fmt_text( "pi: {f10.10r} {g10r} {E10r}", M_PI, M_PI, M_PI ); // "pi: 3.1415926536 3.14159    3.141593E+000"
+    TODO: more useful examples!
+
+
 fmt_parser [function]
+
+== fmt_parser( callable[, buffersize ] )
+=== creates a @fmt_parser object, connected to the callable
+
+- the callable is a function that returns at most the number of bytes requested from the stream
+-- if previous request reached end, subsequent requests must return 'null'
+
+    f = io_file( "test.txt", FILE_READ ); // TODO: this is too complex for basic features, add fmt_file_parser
+    p = fmt_parser( closure( function(file,num){ if( file.eof() ) return null; return file.read( num ); }, f ) );
 
 
 fmt_string_parser [function]
