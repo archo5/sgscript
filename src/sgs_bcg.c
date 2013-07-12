@@ -864,7 +864,6 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 
 	FUNC_BEGIN;
 	UNUSED( C );
-	goto cannot;
 
 	if( node->type != SFT_IDENT || *node->token != ST_IDENT )
 		goto cannot;
