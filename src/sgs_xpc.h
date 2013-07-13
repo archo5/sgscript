@@ -18,6 +18,7 @@ typedef unsigned __int64 uint64_t;
 #  endif
 #  define SGS_INLINE
 #  define PRId64 "lld"
+#  define snprintf _snprintf
 #  define SGS_VSPRINTF_LEN( str, args ) _vscprintf( str, args )
 #else
 #  include <inttypes.h>

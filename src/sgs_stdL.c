@@ -1253,7 +1253,7 @@ static int srt_call( SGS_CTX, sgs_VarObj* data, int smth )
 		return 0;
 	else
 	{
-		sgs_SizeVal rn = MIN( srt->S.data.S->size - srt->off, amt );
+		sgs_SizeVal rn = MIN( srt->S.data.S->size - srt->off, (sgs_SizeVal) amt );
 		sgs_PushStringBuf( C, str_cstr( srt->S.data.S ) + srt->off, rn );
 		srt->off += rn;
 		return 1;
@@ -1292,7 +1292,7 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 	sgs_GetStackItem( C, 0, &srt->S );
 	sgs_BreakIf( srt->S.type != VTC_STRING );
 	sgs_Acquire( C, &srt->S );
-	srt->off = off;
+	srt->off = (sgs_SizeVal) off;
 	sgs_PushObject( C, srt, srt_iface );
 	sgs_StoreItem( C, 0 );
 	return sgsstd_fmt_parser( C );
@@ -1485,7 +1485,7 @@ static int sgsstd_io_stat( SGS_CTX )
 			sgs_PushInt( C, FST_UNKNOWN );
 		sgs_PushString( C, "size" );
 		sgs_PushInt( C, data.st_size );
-		return !sgs_GlobalCall( C, "dict", 10, 1 );
+		return sgs_PushDict( C, 10 );
 	}
 }
 
@@ -1493,18 +1493,20 @@ static int sgsstd_io_dir_create( SGS_CTX )
 {
 	int ret;
 	char* str;
-	sgs_SizeVal size;
+	sgs_SizeVal size, ssz = sgs_StackSize( C );
+	sgs_Integer mode = 0777;
 	
 	SGSFN( "io_dir_create" );
 
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
+	if( ssz < 1 || ssz > 2 ||
+		!sgs_ParseString( C, 0, &str, &size ) ||
+		( ssz >= 2 && !sgs_ParseInt( C, 1, &mode ) ) )
 		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+			"function expects 1-2 arguments: string[, int]" )
 
 	ret = mkdir( str
-#ifndef WIN32
-		,0777
+#ifndef _WIN32
+		,mode
 #endif
 	);
 	CRET( ret == 0 );
@@ -1530,7 +1532,7 @@ static int sgsstd_io_file_delete( SGS_CTX )
 	char* str;
 	sgs_SizeVal size;
 	
-	SGSFN( "io_delete" );
+	SGSFN( "io_file_delete" );
 
 	if( sgs_StackSize( C ) != 1 ||
 		!sgs_ParseString( C, 0, &str, &size ) )
@@ -1800,7 +1802,7 @@ static int sgsstd_fileI_seek( SGS_CTX )
 		STDLIB_WARN( "'mode' not one of SEEK_(SET|CUR|END)" )
 
 	FVNO_BEGIN
-		sgs_PushBool( C, !fseek( FVAR, off, seekmodes[ mode ] ) );
+		sgs_PushBool( C, !fseek( FVAR, (sgs_SizeVal) off, seekmodes[ mode ] ) );
 		return 1;
 	FVNO_END( eof )
 }
@@ -2329,7 +2331,7 @@ static int sgsstd_os_get_timezone( SGS_CTX )
 		time( &ttv );
 		t1 = mktime( gmtime( &ttv ) );
 		t2 = mktime( localtime( &ttv ) );
-		diff = difftime( t2, t1 ) / 3600;
+		diff = (double) ( difftime( t2, t1 ) / 1800 ) / 2.0;
 		if( !asstr )
 			sgs_PushReal( C, diff );
 		else
@@ -2490,7 +2492,7 @@ static int sgsstd_os_parse_time( SGS_CTX )
 	if( ssz < 0 || ssz > 1 ||
 		( ssz >= 1 && !sgs_ParseInt( C, 1, &uts ) ) )
 		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-2 arguments: string[, int]" )
+			"function expects 0-1 arguments: [int]" )
 
 	if( ssz >= 1 )
 		ttv = uts;

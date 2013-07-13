@@ -561,42 +561,36 @@ _G [superglobal]
     _G["$diff"] = 5; // no way to access this via usual globals
 
 
-=
-== STDLIB/CORE-OBJECTS
-=
+array [object]
 
-
-/////////////////////////////
->>> array
-
-* read-only properties
- - [int] size
- - [int] capacity
- - [cfunc] push
- - [cfunc] pop
- - [cfunc] shift
- - [cfunc] unshift
- - [cfunc] insert
- - [cfunc] erase
- - [cfunc] clear
- - [cfunc] reverse
- - [cfunc] resize
- - [cfunc] reserve
- - [cfunc] sort
- - [cfunc] sort_custom
- - [cfunc] sort_mapped
- - [cfunc] find
- - [cfunc] remove
-* other features:
- - read/write integer index
- - full content dump
- - tostring = quick content dump
- - tobool = size != 0
- - iterator
- - cloning
- - serialization
- - GC-safe
- - type identification (returns the string "array")
+- read-only properties
+-- [int] size
+-- [int] capacity
+-- [cfunc] push
+-- [cfunc] pop
+-- [cfunc] shift
+-- [cfunc] unshift
+-- [cfunc] insert
+-- [cfunc] erase
+-- [cfunc] clear
+-- [cfunc] reverse
+-- [cfunc] resize
+-- [cfunc] reserve
+-- [cfunc] sort
+-- [cfunc] sort_custom
+-- [cfunc] sort_mapped
+-- [cfunc] find
+-- [cfunc] remove
+- other features:
+-- read/write integer index
+-- full content dump
+-- tostring = quick content dump
+-- tobool = size != 0
+-- iterator
+-- cloning
+-- serialization
+-- GC-safe
+-- type identification (returns the string "array")
 
 
 array.push [method]
@@ -775,54 +769,49 @@ array.remove [method]
     a.remove( 2, false, true ); // returns 2; a = [5,6,8]
 
 
+dict [object]
 
-/////////////////////////////
->>> dict
-
-* features:
- - read/write string index
- - read/write string properties and integer index-via-property
- - full content dump
- - tostring = quick content dump
- - tobool = size != 0
- - iterator
- - cloning
- - serialization
- - GC-safe
- - type identification (returns the string "dict")
+- features:
+-- read/write string index
+-- read/write string properties and integer index-via-property
+-- full content dump
+-- tostring = quick content dump
+-- tobool = size != 0
+-- iterator
+-- cloning
+-- serialization
+-- GC-safe
+-- type identification (returns the string "dict")
 
 
+class [object]
 
-/////////////////////////////
->>> class
-
-* read/write properties
- - [var] _super
-* other features
- - read/write pass-through index
- - read/write pass-through properties (except string "_super")
- - full content dump
- - tobool = ENOTSUP, overridable via "__tobool"
- - toint = ENOTSUP, overridable via "__toint"
- - toreal = ENOTSUP, overridable via "__toreal"
- - tostring = "class", overridable via "__tostring"
- - cloning, overridable via "__clone"
- - type identification (returns the string "class", overridable via "__typeof")
- - overridable arithmetic/comparison operations
- - overridable object call
- - serialization
- - GC-safe
+- read/write properties
+-- [var] _super
+- other features
+-- read/write pass-through index
+-- read/write pass-through properties (except string "_super")
+-- full content dump
+-- tobool = ENOTSUP, overridable via "__tobool"
+-- toint = ENOTSUP, overridable via "__toint"
+-- toreal = ENOTSUP, overridable via "__toreal"
+-- tostring = "class", overridable via "__tostring"
+-- cloning, overridable via "__clone"
+-- type identification (returns the string "class", overridable via "__typeof")
+-- overridable arithmetic/comparison operations
+-- overridable object call
+-- serialization
+-- GC-safe
 
 
+closure [object]
 
-/////////////////////////////
->>> closure
-* features
- - full content dump
- - tostring = "closure"
- - type identification (returns the string "closure")
- - object call to callable, using the attached first argument
- - GC-safe
+- features
+-- full content dump
+-- tostring = "closure"
+-- type identification (returns the string "closure")
+-- object call to callable, using the attached first argument
+-- GC-safe
 
 
 =
@@ -935,7 +924,7 @@ fmt_parser [function]
 
 fmt_string_parser [function]
 
-== fmt_string_parser( string, offset = 0 )
+== fmt_string_parser( string, offset = 0 ) TODO: what about buffer size?
 === creates a @fmt_parser object, connected to a string reader, initialized to the given offset
 
     p = fmt_string_parser( "this is a test" );
@@ -951,6 +940,644 @@ fmt_charcc [function]
 
     fmt_charcc( ".", "a-zA-Z0-9" ); // returns false
     fmt_charcc( "x", "a-zA-Z0-9" ); // returns true
+
+
+fmt_parser [object]
+
+* read-only properties
+ - [bool] at_end
+ - [bool] stream_offset
+ - [cfunc] read
+ - [cfunc] getchar
+ - [cfunc] readcc
+ - [cfunc] skipcc
+* other features:
+ - GC-safe
+(TODO: do we need a more feature-complete object?)
+
+
+fmt_parser.read [method]
+
+== fmt_parser.read( int num )
+=== reads at most `num` bytes from stream and returns them as string
+
+- if 0 bytes are returned, it's quite safe to assume that the function has reached the end of file but check the at_end property to be sure
+- may return null and emit a warning on unexpected read errors
+
+    stream = fmt_string_parser( "action" );
+    stream.read( 5 ); // returns "actio"
+
+
+fmt_parser.getchar [method]
+
+== fmt_parser.getchar( bool peek = false, bool as_int = false )
+=== returns a character from stream
+
+- if `peek` is true, stream is not advanced (next read operation will also work on the same character)
+- if `as_int` is true, character is returned as integer (as one-character string otherwise)
+- may return null and emit a warning on unexpected read errors
+
+    stream = fmt_string_parser( "action" );
+    stream.read( true ); // returns "a"
+    stream.read( true, true ); // returns 97
+    stream.read(); // returns "a"
+    stream.read(); // returns "c"
+
+
+fmt_parser.readcc [method]
+
+== fmt_parser.readcc( string class, int num = 2^31-1 (0x7fffffff) )
+=== reads and returns at most `num` bytes that match the character class `class`
+
+- returns null and emits a warning if the class is empty/only contains the inversion symbol "^" (TODO: is this necessary?)
+- may return null and emit a warning on unexpected read errors
+
+    stream = fmt_string_parser( "what is this" );
+    stream.readcc( "a-z" ); // returns "what"
+    stream.readcc( "^a-z" ); // returns " "
+
+
+fmt_parser.skipcc [method]
+
+== fmt_parser.skipcc( string class, int num = 2^31-1 (0x7fffffff) )
+=== skips at most `num` bytes that match the character class `class` and returns the number of bytes skipped
+
+- returns null and emits a warning if the class is empty/only contains the inversion symbol "^" (TODO: is this necessary?)
+- may return null and emit a warning on unexpected read errors
+
+    stream = fmt_string_parser( "what is this" );
+    stream.skipcc( "a-z" ); // returns 4
+    stream.skipcc( "^a-z" ); // returns 1
+
+
+=
+== STDLIB/IO
+=
+
+
+io_setcwd [function]
+
+== io_setcwd( string cwd )
+=== sets the current working directory, returns bool/sets errno
+
+- wraps the C library function chdir
+
+
+io_getcwd [function]
+
+== io_getcwd()
+=== returns the current working directory or null, if for some reason an error occured (TODO: getcwd(NULL,0) is UB, how wide is support for expected behavior?)
+
+- wraps the C library function getcwd/_getcwd
+
+
+io_rename [function]
+
+== io_rename( string path, string newname )
+=== attempts to rename the file, returns bool/sets errno
+
+- wraps the C library function rename, with one important difference - moving the file is not allowed, regardless of platform support (TODO: is the restriction safe and necessary?)
+
+
+io_file_exists [function]
+
+== io_file_exists( string file )
+=== checks if file exists and is accessible by the process at the moment, returns true on success, false otherwise
+
+- uses the C library functions fopen/fclose
+
+
+io_dir_exists [function]
+
+== io_dir_exists( string dir )
+=== checks if directory exists and is accessible by the process at the moment, returns true on success, false otherwise
+
+- uses the C library functions opendir,closedir where supported, _findfirst,_findclose otherwise (Windows/MSVC)
+
+
+io_stat [function]
+
+== io_stat( string fsitem )
+=== returns info about the file system item `fsitem`, as dict
+
+- the returned object contains the following properties:
+-- atime: last access time
+-- ctime: creation time
+-- mtime: last modification time
+-- type: enum (one of FST_DIR/FST_FILE/FST_UNKNOWN) TODO: do we need more?
+-- size: size of item
+- uses the C library function stat/_stat
+
+
+io_dir_create [function]
+
+== io_dir_create( string path, int mode = 0o777 )
+=== attempts to create a directory at the specified path, with the specified access mode `mode`, returns bool/sets errno
+
+- `mode` is ignored on Windows
+- uses the C library function mkdir/_mkdir
+
+
+io_dir_delete [function]
+
+== io_dir_delete( string path )
+=== attempts to delete a directory at the specified path, returns bool/sets errno
+
+- uses the C library function rmdir/_rmdir
+
+
+io_file_delete [function]
+
+== io_file_delete( string path )
+=== attempts to delete a file at the specified path, returns bool/sets errno
+
+- uses the C library function remove
+
+
+io_file_write [function]
+
+== io_file_write( string path, string data )
+=== writes the byte buffer `data` to the file pointed to by `path`, returns bool/sets errno
+
+
+io_file_read [function]
+
+== io_file_read( string path )
+=== reads the byte buffer from file at `path`, returns buffer as string or null/sets errno
+
+
+io_file [object]
+
+- read-only properties
+-- [int] offset
+-- [int] size
+-- [bool] error
+-- [bool] eof
+-- [cfunc] open
+-- [cfunc] close
+-- [cfunc] read
+-- [cfunc] write
+-- [cfunc] seek
+-- [cfunc] flush
+-- [cfunc] setbuf
+- other features:
+-- tostring = "file"
+-- tobool = returns whether file is open or not
+-- GC-safe
+-- type identification (returns the string "file")
+
+
+io_file.open [method]
+
+== io_file.open( string name, int mode )
+=== closes the previously open file if any, opens the file `name` for operation mode `mode`, returns bool/sets errno
+
+- `mode` must be one of FILE_READ, FILE_WRITE or FILE_READ|FILE_WRITE
+- file is always opened in binary mode
+
+    f = io_file();
+    f.open( "file" ); // returns true or false, sets errno accordingly
+
+
+io_file.close [method]
+
+== io_file.close()
+=== closes the previously open file, if any, returns whether the file was open or not
+
+    f = io_file( "file.txt" );
+    f.close(); // returns true if the file existed
+    f.close(); // returns false
+
+
+io_file.read [method]
+
+== io_file.read( int num )
+=== reads and returns at most `num` bytes from file, sets errno
+
+
+io_file.write [method]
+
+== io_file.write( string data )
+=== writes the byte buffer `data` to the file, sets errno
+
+
+io_file.seek [method]
+
+== io_file.seek( int off, int mode )
+=== sets the offset in file, returns bool/sets errno
+
+- `mode` must be one of SEEK_SET (sets as-is), SEEK_CUR (sets relative to current), SEEK_END (sets relative to end)
+
+
+io_file.flush [method]
+
+== io_file.flush()
+=== flushes a buffered file, returns bool
+
+
+io_file.setbuf [method]
+
+== io_file.setbuf( int size )
+=== sets the size of file buffer (0 to disable buffering), returns bool
+
+- buffering allows to avoid committing each write immediately to disk, resulting in a performance gain, however it may introduce issues if application is expected to fail at any moment, resulting in some data not being written in such cases
+
+
+io_file [function]
+
+== io_file([ string name, int mode ])
+=== creates and returns a file, optionally allowing to open it on creation
+
+- see @io_file.open() for more info on opening the file
+
+
+io_dir (directory_iterator) [object]
+
+- features:
+-- tostring = "directory_iterator"
+-- iterator interface (key = whether real item, value = item name)
+--- real items are all except "." and ".."
+-- returns self as iterator
+-- GC-safe
+-- type identification (returns the string "directory_iterator")
+
+
+io_dir [function]
+
+== io_dir( string dir )
+=== creates a directory iterator for the directory `dir`, sets errno, returns null and emits a warning on failure
+
+
+FILE_[READ|WRITE] [constants]
+
+== mode constants for @io_file.open() / @io_file()
+
+
+SEEK_[SET|CUR|END] [constants]
+
+== mode constants for @io_file.seek()
+
+
+FST_[UNKNOWN|FILE|DIR] [constants]
+
+== file system item type constants for @io_stat()
+
+
+=
+== STDLIB/MATH
+=
+
+
+abs() [function]
+
+== abs( x )
+=== returns the absolute value of `x`, as `real`
+
+    abs( 2.2 ); // real (2.2)
+    abs( -3.1 ); // real (3.1)
+
+
+floor() [function]
+
+== floor( x )
+=== returns the largest integer that is not bigger than `x`, as `real`
+
+    floor( 3.4 ); // real (3)
+    floor( 3.8 ); // real (3)
+    floor( 4.2 ); // real (4)
+    floor( -3.1 ); // real (-4)
+
+
+ceil() [function]
+
+== ceil( x )
+=== returns the smallest integer that is not smaller than `x`, as `real`
+
+    ceil( 3.4 ); // real (4)
+    ceil( 3.8 ); // real (4)
+    ceil( 4.2 ); // real (5)
+    ceil( -3.1 ); // real (-3)
+
+
+round() [function]
+
+== round( x )
+=== returns the closest integer to `x`, as `real`
+
+    round( 3.4 ); // real (3)
+    round( 3.8 ); // real (4)
+    round( 4.2 ); // real (4)
+    round( -3.1 ); // real (-3)
+
+
+pow() [function]
+
+== pow( x, y )
+=== returns `x` raised to the power `y`, as `real`
+
+- If base (`x`) is negative and exponent (`y`) is not an integral value, or if base is zero and exponent is negative, function returns `null` and emits a warning message.
+
+    pow( 2, 5 ); // real (32)
+    pow( 9, 0.5 ); // real (3)
+    pow( -1, 0.5 ); // null; Warning: pow(): mathematical error
+
+
+sqrt() [function]
+
+== sqrt( x )
+=== returns the square root of `x`, as `real`
+
+- If `x` is negative, function returns `null` and emits a warning message.
+
+    sqrt( 16 ); // real (4)
+    sqrt( -1 ); // null; Warning: sqrt(): mathematical error
+
+
+log() [function]
+
+== log( x, y )
+=== returns the base-`y` logarithm of `x`, as `real`
+
+- If `x <= 0`  or  `b <= 0`  or  `b = 1`, function returns `null` and emits a warning message.
+
+    log( 9, 3 ); // real (2)
+    log( -1, 3 ); // .. or ..
+    log( 3, 0 ); // .. or ..
+    log( 3, 1 ); // null; Warning: log(): mathematical error
+
+
+sin() [function]
+
+== sin( x )
+=== returns the sine of angle `x` in radians, as `real`
+
+    sin( 0 ); // real (0)
+    sin( M_PI / 2 ); // real (1)
+    sin( M_PI / 4 ); // real (0.707107)
+
+
+cos() [function]
+
+== cos( x )
+=== returns the cosine of angle `x` in radians, as `real`
+
+    sin( 0 ); // real (1)
+    sin( M_PI ); // real (-1)
+    sin( M_PI / 4 ); // real (0.707107)
+
+
+tan() [function]
+
+== tan( x )
+=== returns the tangent of angle `x` in radians, as `real`
+
+    tan( 0 ); // real (0)
+    tan( 1 ); // real (1.55741)
+    tan( M_PI / 4 ); // real (1)
+
+
+asin() [function]
+
+== asin( x )
+=== returns the arcsine of `x` (angle in radians), as `real`
+
+- If `x` is outside the [-1,1] range, function returns `null` and emits a warning message
+
+    asin( -1 ); // real (-1.5708)
+    asin( 0 ); // real (0)
+    asin( 2 ); // null; Warning: asin(): mathematical error
+
+
+acos() [function]
+
+== acos( x )
+=== returns the arccosine of `x` (angle in radians), as `real`
+
+- If `x` is outside the [-1,1] range, function returns `null` and emits a warning message
+
+    acos( -1 ); // real (3.14159)
+    acos( 0 ); // real (1.5708)
+    acos( 2 ); // null; Warning: acos(): mathematical error
+
+
+atan() [function]
+
+== atan( x )
+=== returns the arctangent of `x` (angle in radians), as `real`
+
+    atan( 0 ); // real (0)
+    atan( 1 ); // real (0.785398)
+    atan( 9999999 ); // real (1.5708)
+
+
+atan2() [function]
+
+== atan2( y, x )
+=== returns the extended arctangent of y/x (angle in radians), as `real`
+
+- Signs of `x` and `y` are used to determine the quadrant, thus `y` is expected to be the sine of the angle to be returned (the `y` coordinate of a point) and `x` - the cosine (the `x` coordinate).
+
+! Due to the common requirement to use this function to determine the angle between two somewhat random points (usually from a simulation), it will not emit a warning when both arguments are 0 - it will return 0 instead.
+
+    atan2( 0, 1 ); // real (0)
+    atan2( 1, 0 ); // real (1.5708)
+    atan2( -1, -1 ); // real (-2.35619)
+    atan2( 0, 0 ); // real (0)
+
+
+deg2rad() [function]
+
+== deg2rad( x )
+=== returns angle, converted from degrees to radians, as `real`
+
+    deg2rad( 0 ); // real (0)
+    deg2rad( 180 ); // real (3.14159)
+    deg2rad( -90 ); // real (-1.5708)
+
+
+rad2deg() [function]
+
+== rad2deg( x )
+=== returns angle, converted from radians to degrees, as `real`
+
+    rad2deg( 0 ); // real (0)
+    rad2deg( M_PI ); // real (180)
+    rad2deg( -M_PI / 2 ); // real (-90)
+
+
+M_[PI|E] [constants]
+
+== M_PI
+=== the ratio of circumference of a circle to its diameter (pi)
+- the value of this constant is `3.14159265358979323846`
+
+== M_E
+=== the natural logarithmic base (e)
+- the value of this constant is `2.7182818284590452354`
+
+
+=
+== STDLIB/OS
+=
+
+
+os_gettype [function]
+
+== os_gettype()
+=== returns the name of the closest known match for the operating system type, defined at library compile time
+
+- the function can detect and return the following OSes at the moment (with the preprocessor define in braces):
+-- "Windows" (_WIN32)
+-- "Linux" (__linux)
+-- "Unix" (__unix)
+-- "POSIX" (__posix)
+-- "Unknown" (..any other)
+
+
+os_command [function]
+
+== os_command( string cmd )
+=== passes a command to the OS command processor, returns the integer return value
+
+! this function can be extremely unsafe in multithreaded/incontrollable environments due to the completely undefined outcome of the call
+
+- uses the C library function 'system'
+
+
+os_getenv [function]
+
+== os_getenv( string var )
+=== returns the value for the environment variable `var` or null, if there is no such value
+
+
+os_putenv [function]
+
+== os_putenv( string cmd )
+=== sets the value for the environment variable specified in command `cmd`, returns success as bool
+
+- `cmd` has the format "<name>=<value>"
+
+
+os_time [function]
+
+== os_time( real tz = <local> )
+=== returns the time in seconds, as integer, optionally from a different timezone `tz`
+
+
+os_get_timezone [function]
+
+== os_get_timezone( bool as_string = false )
+=== returns the timezone set in the operating system, optionally as string in the format "(+/-)HH:MM"
+
+
+os_date_string [function]
+
+== os_date_string( string fmt, int time = os_time() )
+=== returns the date/time string in the format `fmt`, optionally for a different time `time`
+
+- the following item specifiers are supported (*-local-specific): (TODO: what about setting the locale?)
+-- %a: abbreviated weekday name *
+-- %A: full weekday name *
+-- %b: abbreviated month name *
+-- %B: full month name *
+-- %c: full date/time *
+-- %x: full date *
+-- %X: full time *
+-- %Z: timezone name/abbreviation (could be an empty string) *
+-- %U: week number with first Sunday as the first day of week one *
+-- %W: week number with first Monday as the first day of week one *
+-- %C: year/100, as integer
+-- %d: zero-padded day of the month (01-31)
+-- %e: space-padded day of the month ( 1-31)
+-- %F: date, shortcut of "%Y-%m-%d"
+-- %H: hour in 24h format (00-23)
+-- %I: hour in 12h format (01-12)
+-- %j: day of the year (001-366)
+-- %m: month number (01-12)
+-- %M: minute (00-59)
+-- %p: AM or PM
+-- %R: hour/minute time, shortcut to %H:%M
+-- %s: second (00-61)
+-- %T: time, shortcut to %H:%M:%S
+-- %u: weekday with Sunday as 0
+-- %w: weekday with Monday as 1
+-- %y: 2-digit year (00-99)
+-- %Y: year
+-- %f: file-safe full time, shortcut to %Y-%m-%d_%H-%M-%S
+-- %t: the UNIX timestamp
+-- %%: prints "%"
+-- %<any other>: prints both characters
+
+
+os_parse_time [function]
+
+== os_parse_time( int time = os_time() )
+=== returns `time` split into parts, as dict
+
+- the returned dict contains the following properties (all are integers):
+-- year (1900-????)
+-- month (1-12)
+-- day (1-31)
+-- weekday (1-7)
+-- yearday (1-366)
+-- hours (0-23)
+-- minutes (0-59)
+-- seconds (0-61)
+
+
+os_make_time [function]
+
+== os_make_time( int sec, int min = 0, int hour = 0, int mday = 0, int mon = 0, int year = 0 )
+=== returns time as UNIX timestamp, generated from the arguments, using them as hints (under-/overflows may have some unexpected behavior)
+
+
+=
+== STDLIB/STRING
+=
+
+
+string_cut() [function]
+
+== string_cut( string str, int from[, int to[, int flags]] )
+=== returns a part of string `str`, `from` and `to` being positions of the first and last character returned, respectively
+
+- if `to` is not specified, `to` is assumed to be the position of the last character in string `str`
+- if `from` or `to` are negative, they point to characters before the end of string (-1 being the last one)
+- available values for `flags`:
+-- `NO_REV_INDEX` - emit warnings on negative indices, instead of handling them
+-- `STRICT_RANGES` - emit warnings on out of bounds `from`/`to` values instead of silently ignoring the outside characters
+
+    string_cut( "01234567", 3, 5 ); // string [3] "345"
+
+
+string_part() [function]
+
+== string_part( string str, int from[, int len[, int flags]] )
+=== returns a part of string `str`, starting at `from`, at most `len` characters
+
+- if `len` is not specified, `len` is assumed to be the number of characters between `from` and the end of string `str`
+- if `from` is negative, it points to characters before the end of string (-1 being the last one)
+- if `len` is negative, the maximum length of returned string is the sum of `len` and string `str` length
+- available values for `flags`:
+-- `NO_REV_INDEX` - emit warnings on negative indices, instead of handling them
+-- `STRICT_RANGES` - emit warnings on out of bounds `from`/`len` values instead of silently ignoring the outside characters
+
+    string_part( "01234567", 3, 3 ); // string [3] "345"
+
+
+string_reverse() [function]
+
+== string_reverse( string str )
+=== returns `str` with all the bytes in reversed order
+
+! This function will not work correctly with multibyte-encoded strings.
+
+    string_reverse( "noitca" ); // string [6] "action"
+
+
+
+
+
 
 
 

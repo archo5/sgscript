@@ -34,7 +34,7 @@ static void sgsstd_array_reserve( SGS_CTX, sgs_VarObj* data, sgs_SizeVal size )
 	if( size <= hdr->mem )
 		return;
 
-	hdr->data = sgs_Realloc( C, hdr->data, SGSARR_ALLOCSIZE( size ) );
+	hdr->data = (sgs_Variable*) sgs_Realloc( C, hdr->data, SGSARR_ALLOCSIZE( size ) );
 	hdr->mem = size;
 }
 
@@ -2244,7 +2244,7 @@ static int sgsstd_sys_abort( SGS_CTX )
 	sgs_Abort( C );
 	return 0;
 }
-static int sgsstd_app_abort( SGS_CTX ){ abort(); }
+static int sgsstd_app_abort( SGS_CTX ){ abort(); return 0; }
 static int sgsstd_app_exit( SGS_CTX )
 {
 	sgs_Integer ret = 0;
@@ -2323,7 +2323,7 @@ static int sgsstd_errno_string( SGS_CTX )
 		!sgs_ParseInt( C, 0, &e ) )
 		STDLIB_WARN( "unexpected arguments; function expects 1 argument: int" )
 	
-	sgs_PushString( C, strerror( e ) );
+	sgs_PushString( C, strerror( (int) e ) );
 	
 	return 1;
 }
@@ -2549,7 +2549,7 @@ int sgsSTD_MakeArray( SGS_CTX, int cnt )
 	{
 		sgs_Variable *p, *pend;
 		void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( cnt ) );
-		sgsstd_array_header_t* hdr = sgs_PushObjectIPA( C,
+		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_PushObjectIPA( C,
 			sizeof( sgsstd_array_header_t ), sgsstd_array_functable );
 
 		hdr->size = cnt;
