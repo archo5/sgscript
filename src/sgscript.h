@@ -348,15 +348,6 @@ SGS_APIFUNC void* sgs_Memory( SGS_CTX, void* ptr, size_t size );
 
 SGS_APIFUNC
 SGSRESULT
-sgs_ExecBuffer
-(
-	SGS_CTX,
-	const char* buf,
-	sgs_SizeVal size
-);
-
-SGS_APIFUNC
-SGSRESULT
 sgs_EvalBuffer
 (
 	SGS_CTX,
@@ -404,12 +395,14 @@ sgs_StackFrameInfo
 SGS_APIFUNC sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 
 
-static SGS_INLINE SGSRESULT sgs_ExecString( SGS_CTX, const char* str )
-	{ return sgs_ExecBuffer( C, str, strlen( str ) ); }
-static SGS_INLINE SGSRESULT sgs_EvalString( SGS_CTX, const char* str, int* rvc )
-	{ return sgs_EvalBuffer( C, str, strlen( str ), rvc ); }
-static SGS_INLINE SGSRESULT sgs_ExecFile( SGS_CTX, const char* file )
-	{ return sgs_EvalFile( C, file, NULL ); }
+#ifndef SGS_STRINGLENGTHFUNC
+#define SGS_STRINGLENGTHFUNC strlen
+#endif
+
+#define sgs_ExecBuffer( C, buf, sz ) sgs_EvalBuffer( C, buf, sz, NULL )
+#define sgs_ExecString( C, str ) sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )
+#define sgs_EvalString( C, str, rvc ) sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ), rvc )
+#define sgs_ExecFile( C, str ) sgs_EvalFile( C, str, NULL )
 
 
 /* Additional libraries */

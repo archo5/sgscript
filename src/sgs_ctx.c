@@ -441,16 +441,10 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean,
 	return SGS_SUCCESS;
 }
 
-SGSRESULT sgs_ExecBuffer( SGS_CTX, const char* buf, int32_t size )
-{
-	DBGINFO( "sgs_ExecBuffer called!" );
-	return ctx_execute( C, buf, size, TRUE, NULL );
-}
-
-SGSRESULT sgs_EvalBuffer( SGS_CTX, const char* buf, int size, int* rvc )
+SGSRESULT sgs_EvalBuffer( SGS_CTX, const char* buf, sgs_SizeVal size, int* rvc )
 {
 	DBGINFO( "sgs_EvalBuffer called!" );
-	return ctx_execute( C, buf, size, FALSE, rvc );
+	return ctx_execute( C, buf, size, !rvc, rvc );
 }
 
 SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )

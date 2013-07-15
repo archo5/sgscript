@@ -1,7 +1,94 @@
 
+======================
+== S G S c r i p t = =
+======================
+
 =
-== STDLIB/CORE-FUNCTIONS
+== API/BASIC
 =
+
+
+sgs_CreateEngine [function alias]
+
+== sgs_Context* sgs_CreateEngine()
+=== returns a new scripting engine context
+
+- alias to `sgs_CreateEngineExt( sgs_DefaultMemFunc, NULL )`
+
+
+sgs_CreateEngineExt [function]
+
+== sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
+=== returns a new scripting engine context, attached to the specified allocator
+
+
+sgs_DestroyEngine [function]
+
+== sgs_DestroyEngine( sgs_Context* C )
+=== destroys the passed context and frees all memory associated to it
+
+
+sgs_ExecString [function alias]
+
+== SGSRESULT sgs_ExecString( sgs_Context* C, const char* str )
+=== compiles and executes a string of text
+
+- leaves the stack the same as it was before the call
+- alias to `sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )`
+- theoretically bytecode is supported but it will most probably be trimmed by the string length function, unless a different string termination mark is used, and a different string length function to detect it is set
+- return values:
+-- SGS_SUCCESS: operation was successful
+-- SGS_ECOMP: compiler error
+-- SGS_EINVAL: passed data was not recognized
+
+
+sgs_ExecBuffer [function alias]
+
+== SGSRESULT sgs_ExecBuffer( sgs_Context* C, const char* buf, sgs_SizeVal size )
+=== compiles and executes a buffer of text or bytecode
+
+- leaves the stack the same as it was before the call
+- alias to `sgs_EvalBuffer( C, buf, size, NULL )`
+
+
+sgs_EvalString [function alias]
+
+== SGSRESULT sgs_EvalString( sgs_Context* C, const char* str, int* rvc )
+=== compiles and executes a string of text, optionally leaving the return values on stack and returning the number of values via `rvc`
+
+- if `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call
+- alias to sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ), rvc )
+
+
+sgs_EvalBuffer [function]
+
+== SGSRESULT sgs_EvalBuffer( sgs_Context* C, const char* buf, sgs_SizeVal size, int* rvc )
+=== compiles and executes a buffer of text or bytecode, optionally leaving the return values on stack and returning the number of values via `rvc`
+
+- if `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call
+
+
+sgs_ExecFile [function alias]
+
+== SGSRESULT sgs_ExecFile( sgs_Context* C, const char* filename )
+=== compiles and executes a file containing script text or bytecode
+
+- leaves the stack the same as it was before the call
+- alias to `sgs_EvalFile( C, filename, NULL )`
+
+
+sgs_EvalFile [function]
+
+== SGSRESULT sgs_ExecFile( sgs_Context* C, const char* filename, int* rvc )
+=== compiles and executes a file containing script text or bytecode, optionally leaving the return values on stack and returning the number of values via `rvc`
+
+- if `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call
+
+
+=
+== STDLIB/CORE
+=
+
 
 array() [function]
 
