@@ -36,10 +36,11 @@ sgs_ExecString [function alias]
 - leaves the stack the same as it was before the call
 - alias to `sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )`
 - theoretically bytecode is supported but it will most probably be trimmed by the string length function, unless a different string termination mark is used, and a different string length function to detect it is set
-- return values:
--- SGS_SUCCESS: operation was successful
--- SGS_ECOMP: compiler error
--- SGS_EINVAL: passed data was not recognized
+
+=== return values
+- SGS_SUCCESS: operation was successful
+- SGS_ECOMP: compiler error
+- SGS_EINVAL: passed data was not recognized
 
 
 sgs_ExecBuffer [function alias]
@@ -50,6 +51,11 @@ sgs_ExecBuffer [function alias]
 - leaves the stack the same as it was before the call
 - alias to `sgs_EvalBuffer( C, buf, size, NULL )`
 
+=== return values
+- SGS_SUCCESS: operation was successful
+- SGS_ECOMP: compiler error
+- SGS_EINVAL: passed data was not recognized
+
 
 sgs_EvalString [function alias]
 
@@ -59,6 +65,11 @@ sgs_EvalString [function alias]
 - if `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call
 - alias to sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ), rvc )
 
+=== return values
+- SGS_SUCCESS: operation was successful
+- SGS_ECOMP: compiler error
+- SGS_EINVAL: passed data was not recognized
+
 
 sgs_EvalBuffer [function]
 
@@ -66,6 +77,11 @@ sgs_EvalBuffer [function]
 === compiles and executes a buffer of text or bytecode, optionally leaving the return values on stack and returning the number of values via `rvc`
 
 - if `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call
+
+=== return values
+- SGS_SUCCESS: operation was successful
+- SGS_ECOMP: compiler error
+- SGS_EINVAL: passed data was not recognized
 
 
 sgs_ExecFile [function alias]
@@ -76,6 +92,11 @@ sgs_ExecFile [function alias]
 - leaves the stack the same as it was before the call
 - alias to `sgs_EvalFile( C, filename, NULL )`
 
+=== return values
+- SGS_SUCCESS: operation was successful
+- SGS_ECOMP: compiler error
+- SGS_EINVAL: passed data was not recognized
+
 
 sgs_EvalFile [function]
 
@@ -83,6 +104,52 @@ sgs_EvalFile [function]
 === compiles and executes a file containing script text or bytecode, optionally leaving the return values on stack and returning the number of values via `rvc`
 
 - if `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call
+
+=== return values
+- SGS_SUCCESS: operation was successful
+- SGS_ECOMP: compiler error
+- SGS_EINVAL: passed data was not recognized
+
+
+sgs_LoadLib_[Fmt|IO|Math|OS|String] [functions]
+
+== SGSRESULT sgs_LoadLib_Fmt( sgs_Context* C )
+== SGSRESULT sgs_LoadLib_IO( sgs_Context* C )
+== SGSRESULT sgs_LoadLib_Math( sgs_Context* C )
+== SGSRESULT sgs_LoadLib_OS( sgs_Context* C )
+== SGSRESULT sgs_LoadLib_String( sgs_Context* C )
+=== loads the library into the specified context
+
+- it is generally unnecessary to check for these error codes
+
+=== return values
+- SGS_SUCCESS: operation was successful
+- SGS_E****: first error encountered (operation stopped somewhere in the middle)
+
+
+sgs_Reg[Func|Int|Real]Const [struct]
+
+== sgs_RegFuncConst { char* name; sgs_CFunc value; }
+== sgs_RegIntConst { char* name; sgs_Integer value; }
+== sgs_RegRealConst { char* name; sgs_Real value; }
+=== a pair of null-terminated string and a scripting engine value type
+
+
+sgs_Reg[Func|Int|Real]Consts [function]
+
+== SGSRESULT sgs_RegFuncConsts( sgs_Context* C, const sgs_RegFuncConst* list, int size )
+== SGSRESULT sgs_RegIntConsts( sgs_Context* C, const sgs_RegIntConst* list, int size )
+== SGSRESULT sgs_RegRealConsts( sgs_Context* C, const sgs_RegRealConst* list, int size )
+=== loads the specified list of constants in the context
+
+- the end of list can be specified in two ways
+-- set the size to `sizeof(list)/sizeof(list[0])`
+-- set the size to -1 and end the list with `SGS_RC_END()`
+-- using both at the same time should be reserved to special cases only
+
+=== return values
+- SGS_SUCCESS: operation was successful
+- SGS_E****: first error encountered (operation stopped somewhere in the middle)
 
 
 =

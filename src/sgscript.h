@@ -413,6 +413,8 @@ SGS_APIFUNC SGSRESULT sgs_LoadLib_Math( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_LoadLib_OS( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_LoadLib_String( SGS_CTX );
 
+#define SGS_RC_END() { NULL, NULL }
+
 typedef struct _sgs_RegFuncConst
 {
 	char* name;

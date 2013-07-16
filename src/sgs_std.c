@@ -2734,9 +2734,10 @@ int sgsSTD_GlobalIter( SGS_CTX, sgs_VHTableVar** outp, sgs_VHTableVar** outpend 
 SGSRESULT sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size )
 {
 	int ret;
-	const sgs_RegFuncConst* last = list + size;
-	while( list < last )
+	while( size-- )
 	{
+		if( !list->name )
+			break;
 		sgs_PushCFunction( C, list->value );
 		ret = sgs_StoreGlobal( C, list->name );
 		if( ret != SGS_SUCCESS ) return ret;
@@ -2748,9 +2749,10 @@ SGSRESULT sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size )
 SGSRESULT sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size )
 {
 	int ret;
-	const sgs_RegIntConst* last = list + size;
-	while( list < last )
+	while( size-- )
 	{
+		if( !list->name )
+			break;
 		sgs_PushInt( C, list->value );
 		ret = sgs_StoreGlobal( C, list->name );
 		if( ret != SGS_SUCCESS ) return ret;
@@ -2762,9 +2764,10 @@ SGSRESULT sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size )
 SGSRESULT sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
 {
 	int ret;
-	const sgs_RegRealConst* last = list + size;
-	while( list < last )
+	while( size-- )
 	{
+		if( !list->name )
+			break;
 		sgs_PushReal( C, list->value );
 		ret = sgs_StoreGlobal( C, list->name );
 		if( ret != SGS_SUCCESS ) return ret;
