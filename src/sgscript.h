@@ -87,7 +87,7 @@ extern "C" {
 
 /* Accessible / transferable data */
 typedef int32_t sgs_Bool;
-typedef int64_t sgs_Integer;
+typedef int64_t sgs_Int;
 typedef double  sgs_Real;
 typedef int32_t sgs_SizeVal;
 typedef struct _LNTable sgs_LNTable;
@@ -95,6 +95,9 @@ typedef struct _sgs_Context sgs_Context;
 typedef struct _sgs_Variable sgs_Variable;
 typedef struct _sgs_StackFrame sgs_StackFrame;
 typedef int (*sgs_CFunc) ( sgs_Context* );
+
+#define sgs_Integer sgs_Int
+#define sgs_Float sgs_Real
 
 
 struct _sgs_StackFrame
@@ -246,7 +249,7 @@ typedef union _sgs_VarData
 {
 	sgs_SizeVal* pRC;
 	sgs_Bool    B;
-	sgs_Integer I;
+	sgs_Int I;
 	sgs_Real    R;
 	sgs_iStr*   S;
 	sgs_iFunc*  F;
@@ -426,7 +429,7 @@ SGS_APIFUNC SGSRESULT sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, 
 typedef struct _sgs_RegIntConst
 {
 	char* name;
-	sgs_Integer value;
+	sgs_Int value;
 }
 sgs_RegIntConst;
 SGS_APIFUNC SGSRESULT sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size );
@@ -447,13 +450,13 @@ SGS_APIFUNC SGSRESULT sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, 
 */
 SGS_APIFUNC void sgs_PushNull( SGS_CTX );
 SGS_APIFUNC void sgs_PushBool( SGS_CTX, sgs_Bool value );
-SGS_APIFUNC void sgs_PushInt( SGS_CTX, sgs_Integer value );
+SGS_APIFUNC void sgs_PushInt( SGS_CTX, sgs_Int value );
 SGS_APIFUNC void sgs_PushReal( SGS_CTX, sgs_Real value );
 SGS_APIFUNC void sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size );
 SGS_APIFUNC void sgs_PushString( SGS_CTX, const char* str );
 SGS_APIFUNC void sgs_PushCFunction( SGS_CTX, sgs_CFunc func );
 SGS_APIFUNC void sgs_PushObject( SGS_CTX, void* data, void** iface );
-SGS_APIFUNC void* sgs_PushObjectIPA( SGS_CTX, int added, void** iface );
+SGS_APIFUNC void* sgs_PushObjectIPA( SGS_CTX, sgs_SizeVal added, void** iface );
 SGS_APIFUNC void sgs_PushVariable( SGS_CTX, sgs_Variable* var );
 
 SGS_APIFUNC SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var );
@@ -478,8 +481,8 @@ SGS_APIFUNC SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... );
 /* sgs_Get(Num)Index: must release "out" */
 SGS_APIFUNC SGSRESULT sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx );
 SGS_APIFUNC SGSRESULT sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val );
-SGS_APIFUNC SGSRESULT sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Integer idx );
-SGS_APIFUNC SGSRESULT sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Integer idx, sgs_Variable* val );
+SGS_APIFUNC SGSRESULT sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Int idx );
+SGS_APIFUNC SGSRESULT sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Int idx, sgs_Variable* val );
 
 SGS_APIFUNC SGSRESULT sgs_Pop( SGS_CTX, int count );
 SGS_APIFUNC SGSRESULT sgs_PopSkip( SGS_CTX, int count, int skip );
@@ -513,11 +516,11 @@ SGS_APIFUNC SGSBOOL sgs_EqualTypes( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 
 	CONVERSION / RETRIEVAL
 */
 SGS_APIFUNC sgs_Bool sgs_GetBool( SGS_CTX, int item );
-SGS_APIFUNC sgs_Integer sgs_GetInt( SGS_CTX, int item );
+SGS_APIFUNC sgs_Int sgs_GetInt( SGS_CTX, int item );
 SGS_APIFUNC sgs_Real sgs_GetReal( SGS_CTX, int item );
 
 SGS_APIFUNC sgs_Bool sgs_ToBool( SGS_CTX, int item );
-SGS_APIFUNC sgs_Integer sgs_ToInt( SGS_CTX, int item );
+SGS_APIFUNC sgs_Int sgs_ToInt( SGS_CTX, int item );
 SGS_APIFUNC sgs_Real sgs_ToReal( SGS_CTX, int item );
 SGS_APIFUNC char* sgs_ToStringBuf( SGS_CTX, int item, sgs_SizeVal* outsize );
 #define sgs_ToString( ctx, item ) sgs_ToStringBuf( ctx, item, NULL )
@@ -531,7 +534,7 @@ SGS_APIFUNC SGSRESULT sgs_Convert( SGS_CTX, int item, int type );
 SGS_APIFUNC SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface );
 SGS_APIFUNC SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size );
 SGS_APIFUNC SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out );
-SGS_APIFUNC SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Integer* out );
+SGS_APIFUNC SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Int* out );
 SGS_APIFUNC SGSBOOL sgs_ParseReal( SGS_CTX, int item, sgs_Real* out );
 SGS_APIFUNC SGSBOOL sgs_ParseString( SGS_CTX, int item, char** out, sgs_SizeVal* size );
 

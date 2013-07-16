@@ -197,7 +197,7 @@ static sgs_SizeVal fmt_pack( SGS_CTX,
 			{
 				int size = 1, off = 0;
 				char bb[ 8 ];
-				sgs_Integer i;
+				sgs_Int i;
 				if( !sgs_ParseInt( C, si, &i ) )
 					return si;
 				si++;
@@ -330,7 +330,7 @@ static int fmt_unpack( SGS_CTX, const char* str,
 			while( mult-- > 0 )
 			{
 				int size = 1, off = 0;
-				sgs_Integer i = 0;
+				sgs_Int i = 0;
 				char bb[ 8 ];
 
 				if( c == 'w' ) size = 2;
@@ -357,7 +357,7 @@ static int fmt_unpack( SGS_CTX, const char* str,
 				memcpy( ((char*)&i) + off, bb, size );
 				if( sign )
 				{
-					const sgs_Integer SIGN = -1;
+					const sgs_Int SIGN = -1;
 #define ESB( i, mask ) { if( i > mask ) i = ( i & mask ) | ( SIGN & ~mask ); }
 					if( c == 'c' )      ESB( i, 0x7f )
 					else if( c == 'w' ) ESB( i, 0x7fff )
@@ -728,7 +728,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			static const char* hextbl = "0123456789abcdef0123456789ABCDEF";
 			const char* tbl = hextbl;
 			int radix, size, i, sign = 0;
-			sgs_Integer I;
+			sgs_Int I;
 			if( !sgs_ParseInt( C, (*psi)++, &I ) )
 				goto error;
 
@@ -751,7 +751,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
 			for( i = size - 1; i >= 0; --i )
 			{
-				int cv = ( I / (sgs_Integer) pow( (double) radix, i ) ) % radix;
+				int cv = ( I / (sgs_Int) pow( (double) radix, i ) ) % radix;
 				if( sign )
 					membuf_appchr( B, C, '-' );
 				membuf_appchr( B, C, tbl[ cv ] );
@@ -948,7 +948,7 @@ static int sgsstd_fmtstreamI_read( SGS_CTX )
 {
 	sgs_SizeVal numbytes;
 	MemBuf B = membuf_create();
-	sgs_Integer numbi;
+	sgs_Int numbi;
 	
 	SGSFS_IHDR( read )
 	
@@ -1076,7 +1076,7 @@ static int sgsstd_fmtstreamI_readcc( SGS_CTX )
 	char* ccstr;
 	sgs_SizeVal numbytes, ccsize;
 	MemBuf B = membuf_create();
-	sgs_Integer numbi = 0x7fffffff;
+	sgs_Int numbi = 0x7fffffff;
 	int ssz = sgs_StackSize( C );
 	
 	SGSFS_IHDR( readcc )
@@ -1124,7 +1124,7 @@ static int sgsstd_fmtstreamI_skipcc( SGS_CTX )
 {
 	char* ccstr;
 	sgs_SizeVal numbytes, ccsize, numsc = 0;
-	sgs_Integer numbi = 0x7fffffff;
+	sgs_Int numbi = 0x7fffffff;
 	int ssz = sgs_StackSize( C );
 	
 	SGSFS_IHDR( skipcc )
@@ -1200,7 +1200,7 @@ static void* sgsstd_fmtstream_functable[] =
 
 static int sgsstd_fmt_parser( SGS_CTX )
 {
-	sgs_Integer bufsize = 1024;
+	sgs_Int bufsize = 1024;
 	int ssz = sgs_StackSize( C );
 	
 	SGSBASEFN( "fmt_parser" );
@@ -1245,7 +1245,7 @@ stringread_t;
 
 static int srt_call( SGS_CTX, sgs_VarObj* data, int smth )
 {
-	sgs_Integer amt;
+	sgs_Int amt;
 	stringread_t* srt = (stringread_t*) data->data;
 	if( !sgs_ParseInt( C, 0, &amt ) || amt > 0x7fffffff )
 		return SGS_EINVAL;
@@ -1279,7 +1279,7 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 {
 	stringread_t* srt;
 	int ssz = sgs_StackSize( C );
-	sgs_Integer off = 0;
+	sgs_Int off = 0;
 	SGSBASEFN( "fmt_string_parser" );
 	
 	if( ssz < 1 || ssz > 2 ||
@@ -1494,7 +1494,7 @@ static int sgsstd_io_dir_create( SGS_CTX )
 	int ret;
 	char* str;
 	sgs_SizeVal size, ssz = sgs_StackSize( C );
-	sgs_Integer mode = 0777;
+	sgs_Int mode = 0777;
 	
 	SGSFN( "io_dir_create" );
 
@@ -1694,7 +1694,7 @@ static int sgsstd_fileI_open( SGS_CTX )
 {
 	int ff;
 	char* path;
-	sgs_Integer flags;
+	sgs_Int flags;
 
 	FIF_INIT( open )
 
@@ -1738,7 +1738,7 @@ static int sgsstd_fileI_read( SGS_CTX )
 {
 	MemBuf mb = membuf_create();
 	char bfr[ 1024 ];
-	sgs_Integer size;
+	sgs_Int size;
 	FIF_INIT( read )
 
 	if( sgs_StackSize( C ) != 2 ||
@@ -1787,7 +1787,7 @@ static int sgsstd_fileI_write( SGS_CTX )
 #define SGS_SEEK_END 2
 static int sgsstd_fileI_seek( SGS_CTX )
 {
-	sgs_Integer off, mode = SEEK_SET;
+	sgs_Int off, mode = SEEK_SET;
 	FIF_INIT( seek )
 	int ssz = sgs_StackSize( C );
 	int seekmodes[ 3 ] = { SEEK_SET, SEEK_CUR, SEEK_END };
@@ -1823,7 +1823,7 @@ static int sgsstd_fileI_flush( SGS_CTX )
 
 static int sgsstd_fileI_setbuf( SGS_CTX )
 {
-	sgs_Integer size;
+	sgs_Int size;
 	FIF_INIT( setbuf )
 
 	if( sgs_StackSize( C ) != 2 ||
@@ -1903,7 +1903,7 @@ static int sgsstd_io_file( SGS_CTX )
 {
 	int ff;
 	char* path;
-	sgs_Integer flags;
+	sgs_Int flags;
 	FILE* fp = NULL;
 	
 	SGSFN( "io_file" );
@@ -2093,7 +2093,7 @@ static int sgsstd_pow( SGS_CTX )
 		!sgs_ParseReal( C, 1, &e ) )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 2 arguments: real, real" )
-	if( ( b < 0 && e != (sgs_Real) (sgs_Integer) e )
+	if( ( b < 0 && e != (sgs_Real) (sgs_Int) e )
 		|| ( b == 0 && e < 0 ) )
 		STDLIB_WARN( "mathematical error" )
 	sgs_PushReal( C, pow( b, e ) );
@@ -2291,7 +2291,7 @@ static int sgsstd_os_time( SGS_CTX )
 {
 	time_t ttv;
 	sgs_Real tz = 0;
-	sgs_Integer outsecs = 0;
+	sgs_Int outsecs = 0;
 	int ssz = sgs_StackSize( C );
 	
 	SGSFN( "os_time" );
@@ -2365,7 +2365,7 @@ static int sgsstd_os_date_string( SGS_CTX )
 	time_t ttv;
 	char* fmt, *fmtend;
 	sgs_SizeVal fmtsize;
-	sgs_Integer uts;
+	sgs_Int uts;
 	struct tm T;
 	MemBuf B = membuf_create();
 	int ssz = sgs_StackSize( C );
@@ -2461,7 +2461,7 @@ static int sgsstd_os_date_string( SGS_CTX )
 					put2digs( swp + 17, s ); sz = 19;
 					break;
 				case 't': /* the UNIX timestamp */
-					sprintf( swp, "%" PRId64, (sgs_Integer) ttv );
+					sprintf( swp, "%" PRId64, (sgs_Int) ttv );
 					sz = strlen( swp ); break;
 				/* leftovers */
 				case '%': membuf_appchr( &B, C, '%' ); break;
@@ -2483,7 +2483,7 @@ static int sgsstd_os_date_string( SGS_CTX )
 static int sgsstd_os_parse_time( SGS_CTX )
 {
 	time_t ttv;
-	sgs_Integer uts;
+	sgs_Int uts;
 	struct tm T;
 	int ssz = sgs_StackSize( C );
 	
@@ -2522,7 +2522,7 @@ static int sgsstd_os_parse_time( SGS_CTX )
 
 static int sgsstd_os_make_time( SGS_CTX )
 {
-	sgs_Integer p[6];
+	sgs_Int p[6];
 	struct tm T = {0};
 	int ssz = sgs_StackSize( C );
 	
@@ -2588,7 +2588,7 @@ static int sgsstd_string_cut( SGS_CTX )
 	int argc;
 	char* str;
 	sgs_SizeVal size;
-	sgs_Integer flags = 0, i1, i2;
+	sgs_Int flags = 0, i1, i2;
 	
 	SGSFN( "string_cut" );
 
@@ -2627,7 +2627,7 @@ static int sgsstd_string_part( SGS_CTX )
 	int argc;
 	char* str;
 	sgs_SizeVal size;
-	sgs_Integer flags = 0, i1, i2;
+	sgs_Int flags = 0, i1, i2;
 	
 	SGSFN( "string_part" );
 
@@ -2689,7 +2689,7 @@ static int sgsstd_string_pad( SGS_CTX )
 	int argc;
 	char* str, *pad = " ", *sout;
 	sgs_SizeVal size, padsize = 1;
-	sgs_Integer tgtsize, flags = sgsRIGHT, lpad = 0, i;
+	sgs_Int tgtsize, flags = sgsRIGHT, lpad = 0, i;
 	
 	SGSFN( "string_pad" );
 
@@ -2714,7 +2714,7 @@ static int sgsstd_string_pad( SGS_CTX )
 	{
 		if( FLAG( flags, sgsRIGHT ) )
 		{
-			sgs_Integer pp = tgtsize - size;
+			sgs_Int pp = tgtsize - size;
 			lpad = pp / 2 + pp % 2;
 		}
 		else
@@ -2739,7 +2739,7 @@ static int sgsstd_string_repeat( SGS_CTX )
 	int argc;
 	char* str, *sout;
 	sgs_SizeVal size;
-	sgs_Integer count;
+	sgs_Int count;
 	
 	SGSFN( "string_repeat" );
 
@@ -2797,7 +2797,7 @@ static int sgsstd_string_find( SGS_CTX )
 	int argc;
 	char* str, *sub, *strend, *ostr;
 	sgs_SizeVal size, subsize; 
-	sgs_Integer from = 0;
+	sgs_Int from = 0;
 	
 	SGSFN( "string_find" );
 
@@ -2830,7 +2830,7 @@ static int sgsstd_string_find_rev( SGS_CTX )
 	int argc;
 	char* str, *sub, *ostr;
 	sgs_SizeVal size, subsize;
-	sgs_Integer from = -1;
+	sgs_Int from = -1;
 	
 	SGSFN( "string_find_rev" );
 
@@ -3085,7 +3085,7 @@ static int sgsstd_string_trim( SGS_CTX )
 	int argc;
 	char* str, *strend, *list = " \t\r\n";
 	sgs_SizeVal size, listsize = 4;
-	sgs_Integer flags = sgsLEFT | sgsRIGHT;
+	sgs_Int flags = sgsLEFT | sgsRIGHT;
 	
 	SGSFN( "string_trim" );
 
@@ -3258,7 +3258,7 @@ static int sgsstd_string_charcode( SGS_CTX )
 {
 	char* a;
 	sgs_SizeVal asize, argc = sgs_StackSize( C );
-	sgs_Integer off = 0;
+	sgs_Int off = 0;
 	
 	SGSFN( "string_charcode" );
 
@@ -3271,7 +3271,7 @@ static int sgsstd_string_charcode( SGS_CTX )
 	if( off < 0 )
 		off += asize;
 
-	if( off < 0 || off >= (sgs_Integer) asize )
+	if( off < 0 || off >= (sgs_Int) asize )
 		STDLIB_WARN( "index out of bounds" )
 
 	sgs_PushInt( C, (unsigned char) a[ off ] );
@@ -3284,7 +3284,7 @@ static int sgsstd_string_frombytes( SGS_CTX )
 	int hasone = 0;
 	sgs_SizeVal size, i = 0;
 	sgs_Variable arr;
-	sgs_Integer onecode;
+	sgs_Int onecode;
 	
 	SGSFN( "string_frombytes" );
 
@@ -3318,7 +3318,7 @@ static int sgsstd_string_frombytes( SGS_CTX )
 
 	while( sgs_IterAdvance( C, -1 ) > 0 )
 	{
-		sgs_Integer b;
+		sgs_Int b;
 		if( sgs_IterPushData( C, -1, FALSE, TRUE ) < 0 )
 			goto fail;
 		b = sgs_GetInt( C, -1 );
@@ -3384,7 +3384,7 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 	{
 		int cnt;
 		char tmp[ 4 ];
-		sgs_Integer cp;
+		sgs_Int cp;
 		if( sgs_IterPushData( C, -1, FALSE, TRUE ) < 0 )
 			goto fail;
 		cp = sgs_GetInt( C, -1 );

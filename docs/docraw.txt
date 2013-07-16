@@ -3,6 +3,98 @@
 == S G S c r i p t = =
 ======================
 
+
+=
+== API/INFO
+=
+
+
+Main types [info]
+
+== Main data types
+
+Return types:
+- SGSRESULT [int]: output code (success = 0, failure: < 0 )
+- SGSBOOL [int]: simplified output code (success = 1, failure = 0)
+- SGSMIXED [int32_t] output code / value (success + value: >= 0, failure: < 0)
+
+Virtual machine / language types:
+- sgs_Bool [int32_t]: boolean value
+- sgs_Int [int64_t]: integer
+- sgs_Real [double]: real (floating point) value
+- sgs_SizeVal [int32_t]: size type
+- sgs_CFunc [int ( sgs_Context* )]: C function type
+- sgs_ObjCallback [int ( sgs_Context*, sgs_VarObj*, int )]: object interface function
+- sgs_Variable [struct]: the combined variable type
+
+System types:
+- sgs_Context [struct]: the virtual machine
+- sgs_StackFrame [struct]: the function call info object
+
+Interface types:
+- sgs_MemFunc [void* ( void*, void*, size_t )]: memory interface function
+- sgs_OutputFunc [void ( void*, sgs_Context*, const void*, sgs_SizeVal )]: output function
+- sgs_PrintFunc [void ( void*, sgs_Context*, int, const char* )]: error printing function
+- sgs_HookFunc [void ( void*, sgs_Context*, int )]: debug hook function
+
+
+Error codes [info]
+
+== Error codes
+
+These are the default meanings for error codes that are honored throughout the API.
+
+- SGS_SUCCESS: operation was successful
+- SGS_ENOTFND: item was not found
+- SGS_ECOMP: compile error
+- SGS_ENOTOBJ: argument was not an object
+- SGS_ENOTSUP: operation is not supported
+- SGS_EINVAL: invalid value was passed
+- SGS_EINPROC: process was interrupted
+
+
+Variable type flags [info]
+
+== Variable type flags
+
+- SGS_VT_NULL: (primary null flag, actually - lack of a primary flag)
+- SGS_VT_[BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]: primary flags
+- SGS_VTF_NUM: numeric type flag
+- SGS_VTF_CALL: always-callable type flag
+- SGS_VTF_REF: reference-counted type flag
+- SGS_VTF_ARRAY: array type flag
+- SGS_VTF_ARRAY_ITER: array iterator type flag
+- SGS_VTF_DICT: dict type flag
+- SGS_VTC_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]: complete variable flags
+- SGS_VTC_[ARRAY|ARRAY_ITER|DICT]: complete specialized variable flags
+
+
+Object operation types [info]
+
+== Object operation types
+
+- SGS_OP_END: <end of list> marker op
+- SGS_OP_DESTRUCT: object destruction op (argument: whether should free child variables - 1/0)
+- SGS_OP_GETINDEX: object index/property retrieval (argument: whether is a property)
+- SGS_OP_SETINDEX: object index/property store (argument: whether is a property)
+- SGS_OP_CONVERT: object conversion (argument: subtype)
+-- subtype = SGS_VT_[BOOL|INT|REAL|STRING]: convert to boolean/integer/real/string
+-- subtype = SGS_CONVOP_CLONE: create a clone of the object
+-- subtype = SGS_CONVOP_TOTYPE: return the type name as string
+-- subtype = SGS_TOITER: return a new iterator object for the current one
+- SGS_OP_SERIALIZE: generate serialized code
+- SGS_OP_DUMP: print anything informational about the variable
+- SGS_OP_GCMARK: mark the object as reachable by the GC
+- SGS_OP_GETNEXT: [for iterators] return the data / advance to next item
+-- subtype = SGS_GETNEXT_[KEY|VALUE]: return the key/value from the iterator
+-- subtype = 0: advance to next item
+- SGS_OP_CALL: call the object
+- SGS_OP_EXPR: perform an expression between this and another object
+-- subtype = SGS_EOP_[ADD|SUB|MUL|DIV|MOD]: return A [+|-|*|/|%] B
+-- subtype = SGS_EOP_COMPARE: if A < B, return -1; if A > B, return 1; otherwise return 0;
+-- subtype = SGS_EOP_NEGATE: return the current value, negated
+
+
 =
 == API/BASIC
 =
@@ -37,8 +129,7 @@ sgs_ExecString [function alias]
 - alias to `sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )`
 - theoretically bytecode is supported but it will most probably be trimmed by the string length function, unless a different string termination mark is used, and a different string length function to detect it is set
 
-=== return values
-- SGS_SUCCESS: operation was successful
+=== error codes
 - SGS_ECOMP: compiler error
 - SGS_EINVAL: passed data was not recognized
 
@@ -51,8 +142,7 @@ sgs_ExecBuffer [function alias]
 - leaves the stack the same as it was before the call
 - alias to `sgs_EvalBuffer( C, buf, size, NULL )`
 
-=== return values
-- SGS_SUCCESS: operation was successful
+=== error codes
 - SGS_ECOMP: compiler error
 - SGS_EINVAL: passed data was not recognized
 
@@ -65,8 +155,7 @@ sgs_EvalString [function alias]
 - if `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call
 - alias to sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ), rvc )
 
-=== return values
-- SGS_SUCCESS: operation was successful
+=== error codes
 - SGS_ECOMP: compiler error
 - SGS_EINVAL: passed data was not recognized
 
@@ -78,8 +167,7 @@ sgs_EvalBuffer [function]
 
 - if `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call
 
-=== return values
-- SGS_SUCCESS: operation was successful
+=== error codes
 - SGS_ECOMP: compiler error
 - SGS_EINVAL: passed data was not recognized
 
@@ -92,8 +180,7 @@ sgs_ExecFile [function alias]
 - leaves the stack the same as it was before the call
 - alias to `sgs_EvalFile( C, filename, NULL )`
 
-=== return values
-- SGS_SUCCESS: operation was successful
+=== error codes
 - SGS_ECOMP: compiler error
 - SGS_EINVAL: passed data was not recognized
 
@@ -105,8 +192,7 @@ sgs_EvalFile [function]
 
 - if `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call
 
-=== return values
-- SGS_SUCCESS: operation was successful
+=== error codes
 - SGS_ECOMP: compiler error
 - SGS_EINVAL: passed data was not recognized
 
@@ -122,15 +208,14 @@ sgs_LoadLib_[Fmt|IO|Math|OS|String] [functions]
 
 - it is generally unnecessary to check for these error codes
 
-=== return values
-- SGS_SUCCESS: operation was successful
+=== error codes
 - SGS_E****: first error encountered (operation stopped somewhere in the middle)
 
 
 sgs_Reg[Func|Int|Real]Const [struct]
 
 == sgs_RegFuncConst { char* name; sgs_CFunc value; }
-== sgs_RegIntConst { char* name; sgs_Integer value; }
+== sgs_RegIntConst { char* name; sgs_Int value; }
 == sgs_RegRealConst { char* name; sgs_Real value; }
 === a pair of null-terminated string and a scripting engine value type
 
@@ -147,9 +232,98 @@ sgs_Reg[Func|Int|Real]Consts [function]
 -- set the size to -1 and end the list with `SGS_RC_END()`
 -- using both at the same time should be reserved to special cases only
 
-=== return values
-- SGS_SUCCESS: operation was successful
+=== error codes
 - SGS_E****: first error encountered (operation stopped somewhere in the middle)
+
+
+=
+== API/DATA
+=
+
+
+sgs_Push[Null|Bool|Int|Real|StringBuf|String|CFunction|Object|ObjectIPA|Variable] [functions]
+
+== void sgs_PushNull( sgs_Context* C )
+== void sgs_PushBool( sgs_Context* C, sgs_Bool value )
+== void sgs_PushInt( sgs_Context* C, sgs_Int value )
+== void sgs_PushReal( sgs_Context* C, sgs_Real value )
+== void sgs_PushStringBuf( sgs_Context* C, const char* str, sgs_SizeVal size )
+== void sgs_PushString( sgs_Context* C, const char* str )
+== void sgs_PushCFunction( sgs_Context* C, sgs_CFunc func )
+== void sgs_PushObject( sgs_Context* C, void* data, void** iface )
+== void* sgs_PushObjectIPA( sgs_Context* C, sgs_SizeVal added, void** iface )
+== void sgs_PushVariable( sgs_Context* C, sgs_Variable* var )
+=== pushes the data on the stack, as a new entry, appended to the end
+
+- sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
+- sgs_PushStringBuf( C, NULL, size ) would allocate an uninitialized buffer
+-- it is accessible immediately by @sgs_GetString[Ptr|Size]( C, -1 )
+- sgs_PushObjectIPA stands for "push object, allocate memory in-place"
+-- it means that the `added` memory space will be appended to the end of object allocation
+-- this allows to allocate all object data for most objects with just one allocation, instead of two
+-- the allocated memory will be returned and also available via sgs_GetObjectData( C, -1 )->data
+- sgs_PushVariable will increment the reference count of strings, SGS functions and objects
+- these functions do not throw an error when the stack is full since there is no way to handle that
+
+
+sgs_InsertVariable [function]
+
+== SGSRESULT sgs_InsertVariable( sgs_Context* C, int pos, sgs_Variable* var )
+=== inserts a variable `var` at a given index `pos` of the current stack frame, increasing its reference count
+
+=== error codes
+- SGS_EBOUNDS: index out of bounds
+
+
+sgs_PushArray [function]
+
+== SGSRESULT sgs_PushArray( sgs_Context* C, sgs_SizeVal numitems )
+=== creates an array from `numitems` last items on the stack, pops those items and pushes the array
+
+=== error codes
+- SGS_EINVAL: more items are selected than exist in the current stack frame
+
+
+sgs_PushDict [function]
+
+== SGSRESULT sgs_PushDict( sgs_Context* C, sgs_SizeVal numitems )
+=== creates a dict from `numitems` last items on the stack, pops those items and pushes the dict
+
+- `numitems` can be even or 0, since all odd arguments are keys and all even arguments are values
+
+=== error codes
+- SGS_EINVAL: more items are selected than exist in the current stack frame or `numitems` wasn't even or 0
+
+
+sgs_PushItem [function]
+
+== SGSRESULT sgs_PushItem( sgs_Context* C, int item )
+=== copy an item from the current stack frame and append it to the end of the stack
+
+=== error codes
+- SGS_EBOUNDS: index out of bounds
+
+
+sgs_StoreItem [function]
+
+== SGSRESULT sgs_StoreItem( sgs_Context* C, int item )
+=== copy last item in current stack frame to index `item` and pop it
+
+- `item` refers to a position after the pop operation, therefore -1 means one element before the last etc.
+
+=== error codes
+- SGS_EBOUNDS: index out of bounds
+
+
+sgs_PushProperty [function]
+
+== SGSRESULT sgs_PushProperty( sgs_Context* C, const char* name )
+=== load and push the property of the topmost item in the current stack frame
+
+=== error codes
+- SGS_EINPROC: current stack frame is empty
+- SGS_ENOTFND: property was not found
+- other codes may appear if returned by custom objects
 
 
 =

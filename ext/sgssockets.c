@@ -151,7 +151,7 @@ static void* socket_iface[];
 
 static int socketI_bind_port( SGS_CTX )
 {
-	sgs_Integer port;
+	sgs_Int port;
 	struct sockaddr_in sa;
 	int ret = 0, ssz = sgs_StackSize( C );
 	
@@ -173,7 +173,7 @@ static int socketI_bind_port( SGS_CTX )
 
 static int socketI_listen( SGS_CTX )
 {
-	sgs_Integer queuesize;
+	sgs_Int queuesize;
 	int ssz = sgs_StackSize( C );
 	
 	SOCK_IHDR( listen );
@@ -226,7 +226,7 @@ static int socketI_send( SGS_CTX )
 {
 	char* str;
 	sgs_SizeVal size;
-	sgs_Integer flags = 0;
+	sgs_Int flags = 0;
 	int ret, ssz = sgs_StackSize( C );
 	
 	SOCK_IHDR( send );
@@ -248,7 +248,7 @@ static int socketI_send( SGS_CTX )
 
 static int socketI_shutdown( SGS_CTX )
 {
-	sgs_Integer flags;
+	sgs_Int flags;
 	int ssz = sgs_StackSize( C );
 	
 	SOCK_IHDR( shutdown );
@@ -325,7 +325,7 @@ static void* socket_iface[] =
 static int sgs_socket( SGS_CTX )
 {
 	int S;
-	sgs_Integer domain, type, protocol;
+	sgs_Int domain, type, protocol;
 	
 	SGSFN( "socket" );
 	

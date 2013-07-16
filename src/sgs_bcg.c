@@ -464,7 +464,7 @@ static int add_const_b( SGS_CTX, sgs_CompFunc* func, int32_t bval )
 	return vend - vbeg;
 }
 
-static int add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Integer ival )
+static int add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Int ival )
 {
 	add_const_HDR;
 	while( var < vend )
@@ -1777,7 +1777,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			TokenList tl = sgsT_Next( node->token );
 			int32_t blev = 1;
 			if( *tl == ST_NUMINT )
-				blev = (uint32_t)*(sgs_Integer*)( tl + 1 );
+				blev = (uint32_t)*(sgs_Int*)( tl + 1 );
 			if( blev > C->fctx->loops )
 			{
 				if( C->fctx->loops )
@@ -1797,7 +1797,7 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			TokenList tl = sgsT_Next( node->token );
 			int32_t blev = 1;
 			if( *tl == ST_NUMINT )
-				blev = (uint32_t)*(sgs_Integer*)( tl + 1 );
+				blev = (uint32_t)*(sgs_Int*)( tl + 1 );
 			if( blev > C->fctx->loops )
 			{
 				if( C->fctx->loops )
@@ -2020,7 +2020,7 @@ static int bc_write_var( sgs_Variable* var, SGS_CTX, MemBuf* outbuf )
 	{
 	case VT_NULL: break;
 	case VT_BOOL: membuf_appchr( outbuf, C, var->data.B ); break;
-	case VT_INT: membuf_appbuf( outbuf, C, &var->data.I, sizeof( sgs_Integer ) ); break;
+	case VT_INT: membuf_appbuf( outbuf, C, &var->data.I, sizeof( sgs_Int ) ); break;
 	case VT_REAL: membuf_appbuf( outbuf, C, &var->data.R, sizeof( sgs_Real ) ); break;
 	case VT_STRING: bc_write_sgsstring( var->data.S, C, outbuf ); break;
 	case VT_FUNC: if( !bc_write_sgsfunc( var->data.F, C, outbuf ) ) return 0; break;
@@ -2038,7 +2038,7 @@ static const char* bc_read_var( decoder_t* D, sgs_Variable* var )
 	{
 	case VT_NULL: var->type = VTC_NULL; break;
 	case VT_BOOL: var->type = VTC_BOOL; var->data.B = *D->buf++; break;
-	case VT_INT: var->type = VTC_INT; var->data.I = AS_INTEGER( D->buf ); D->buf += sizeof( sgs_Integer ); break;
+	case VT_INT: var->type = VTC_INT; var->data.I = AS_INTEGER( D->buf ); D->buf += sizeof( sgs_Int ); break;
 	case VT_REAL: var->type = VTC_REAL; var->data.R = AS_REAL( D->buf ); D->buf += sizeof( sgs_Real ); break;
 	case VT_STRING: var->type = VTC_STRING; bc_read_sgsstring( D, var ); break;
 	case VT_FUNC: var->type = VTC_FUNC; return bc_read_sgsfunc( D, var );
@@ -2211,7 +2211,7 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 		SGS_VERSION_MAJOR,
 		SGS_VERSION_MINOR,
 		SGS_VERSION_INCR,
-		sizeof( sgs_Integer ),
+		sizeof( sgs_Int ),
 		sizeof( sgs_Real ),
 		( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) ? SGSBC_FLAG_LITTLE_ENDIAN : 0,
 		0, 0, 0, 0
@@ -2304,7 +2304,7 @@ int sgsBC_ValidateHeader( const char* buf, int32_t size )
 		SGS_VERSION_MAJOR,
 		SGS_VERSION_MINOR,
 		SGS_VERSION_INCR,
-		sizeof( sgs_Integer ),
+		sizeof( sgs_Int ),
 		sizeof( sgs_Real )
 	};
 

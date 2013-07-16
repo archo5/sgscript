@@ -148,7 +148,7 @@ static int sgsstd_arrayI_unshift( SGS_CTX )
 
 static int sgsstd_arrayI_insert( SGS_CTX )
 {
-	sgs_Integer at;
+	sgs_Int at;
 	SGSARR_IHDR( insert );
 	if( sgs_StackSize( C ) < 3 || !sgs_ParseInt( C, 1, &at ) )
 		STDLIB_WARN( "unexpected arguments;"
@@ -166,7 +166,7 @@ static int sgsstd_arrayI_insert( SGS_CTX )
 static int sgsstd_arrayI_erase( SGS_CTX )
 {
 	int cnt = sgs_StackSize( C );
-	sgs_Integer at, at2;
+	sgs_Int at, at2;
 	SGSARR_IHDR( erase );
 	if( cnt < 1 || cnt > 2 || !sgs_ParseInt( C, 1, &at ) ||
 		( cnt == 2 && !sgs_ParseInt( C, 2, &at2 ) ) )
@@ -241,7 +241,7 @@ static void sgsstd_array_adjust( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVa
 }
 static int sgsstd_arrayI_resize( SGS_CTX )
 {
-	sgs_Integer sz;
+	sgs_Int sz;
 	int cnt = sgs_StackSize( C );
 	SGSARR_IHDR( resize );
 
@@ -256,7 +256,7 @@ static int sgsstd_arrayI_resize( SGS_CTX )
 }
 static int sgsstd_arrayI_reserve( SGS_CTX )
 {
-	sgs_Integer sz;
+	sgs_Int sz;
 	int cnt = sgs_StackSize( C );
 	SGSARR_IHDR( reserve );
 
@@ -415,7 +415,7 @@ static int sgsstd_arrayI_find( SGS_CTX )
 {
 	int strict = FALSE;
 	int cnt = sgs_StackSize( C );
-	sgs_Integer from = 0;
+	sgs_Int from = 0;
 	SGSARR_IHDR( find );
 	if( cnt < 1 || cnt > 3 ||
 		( cnt >= 2 && !sgs_ParseBool( C, 2, &strict ) ) ||
@@ -446,7 +446,7 @@ static int sgsstd_arrayI_remove( SGS_CTX )
 {
 	int strict = FALSE, all = FALSE;
 	int cnt = sgs_StackSize( C );
-	sgs_Integer from = 0;
+	sgs_Int from = 0;
 	SGSARR_IHDR( remove );
 	if( cnt < 1 || cnt > 4 ||
 		( cnt >= 2 && !sgs_ParseBool( C, 2, &strict ) ) ||
@@ -524,7 +524,7 @@ int sgsstd_array_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	{
 		SGSARR_HDR;
 		sgs_Variable* ptr = SGSARR_PTR( data->data );
-		sgs_Integer i = sgs_ToInt( C, -1 );
+		sgs_Int i = sgs_ToInt( C, -1 );
 		if( i < 0 || i >= hdr->size )
 		{
 			sgs_Printf( C, SGS_WARNING, "array index out of bounds" );
@@ -543,7 +543,7 @@ static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 	{
 		SGSARR_HDR;
 		sgs_Variable* ptr = SGSARR_PTR( data->data );
-		sgs_Integer i = sgs_ToInt( C, -2 );
+		sgs_Int i = sgs_ToInt( C, -2 );
 		if( i < 0 || i >= hdr->size )
 		{
 			sgs_Printf( C, SGS_WARNING, "array index out of bounds" );
@@ -1855,7 +1855,7 @@ static int sgsstd_printlns( SGS_CTX )
 
 static int sgsstd_printvar( SGS_CTX )
 {
-	sgs_Integer depth = 5;
+	sgs_Int depth = 5;
 	int ssz = sgs_StackSize( C );
 	
 	SGSFN( "printvar" );
@@ -2226,7 +2226,7 @@ static int sgsstd_sys_curfile( SGS_CTX )
 static int sgsstd_sys_print( SGS_CTX )
 {
 	char* errmsg;
-	sgs_Integer errcode;
+	sgs_Int errcode;
 	
 	SGSFN( "sys_print" );
 
@@ -2247,7 +2247,7 @@ static int sgsstd_sys_abort( SGS_CTX )
 static int sgsstd_app_abort( SGS_CTX ){ abort(); return 0; }
 static int sgsstd_app_exit( SGS_CTX )
 {
-	sgs_Integer ret = 0;
+	sgs_Int ret = 0;
 	int ssz = sgs_StackSize( C );
 	if( ssz < 0 || ssz > 1 ||
 		( ssz >= 1 && !sgs_ParseInt( C, 0, &ret ) ) )
@@ -2265,7 +2265,7 @@ static int sgsstd_sys_replevel( SGS_CTX )
 	
 	if( sgs_StackSize( C ) )
 	{
-		sgs_Integer i;
+		sgs_Int i;
 		if( sgs_StackSize( C ) != 1 ||
 			!sgs_ParseInt( C, 0, &i ) )
 			STDLIB_WARN( "unexpected arguments; "
@@ -2279,7 +2279,7 @@ static int sgsstd_sys_replevel( SGS_CTX )
 
 static int sgsstd_sys_stat( SGS_CTX )
 {
-	sgs_Integer type;
+	sgs_Int type;
 	
 	SGSFN( "sys_stat" );
 	
@@ -2315,7 +2315,7 @@ static int sgsstd_errno( SGS_CTX )
 
 static int sgsstd_errno_string( SGS_CTX )
 {
-	sgs_Integer e;
+	sgs_Int e;
 	
 	SGSFN( "errno_string" );
 	
@@ -2373,7 +2373,7 @@ static int sgsstd_errno_value( SGS_CTX )
 
 static int sgsstd_dumpvar( SGS_CTX )
 {
-	sgs_Integer depth = 5;
+	sgs_Int depth = 5;
 	int ssz = sgs_StackSize( C );
 	
 	SGSFN( "dumpvar" );

@@ -306,7 +306,7 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length )
 		/* number */
 		else if( isdigit( fc ) )
 		{
-			sgs_Integer vi = 0;
+			sgs_Int vi = 0;
 			sgs_Real vr = 0;
 			const char* pos = code + i;
 			int res = util_strtonum( &pos, code + length, &vi, &vr );

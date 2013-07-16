@@ -139,7 +139,7 @@ static SGS_INLINE int sgs_getbin( char c ){ return c - '0'; }
 #define SGS_AS_FLOAT( ptr ) SGS_AS_( ptr, float )
 #define SGS_AS_DOUBLE( ptr ) SGS_AS_( ptr, double )
 
-#define SGS_AS_INTEGER( ptr ) SGS_AS_( ptr, sgs_Integer )
+#define SGS_AS_INTEGER( ptr ) SGS_AS_( ptr, sgs_Int )
 #define SGS_AS_REAL( ptr ) SGS_AS_( ptr, sgs_Real )
 
 
@@ -244,8 +244,8 @@ SGS_APIFUNC double sgs_GetTime();
 
 
 /* returns 0 on failure, 1/2 on integer/real */
-SGS_APIFUNC int sgs_util_strtonum( const char** at, const char* end, sgs_Integer* outi, sgs_Real* outf );
-SGS_APIFUNC sgs_Integer sgs_util_atoi( const char* str, int len );
+SGS_APIFUNC int sgs_util_strtonum( const char** at, const char* end, sgs_Int* outi, sgs_Real* outf );
+SGS_APIFUNC sgs_Int sgs_util_atoi( const char* str, int len );
 SGS_APIFUNC sgs_Real sgs_util_atof( const char* str, int len );
 
 

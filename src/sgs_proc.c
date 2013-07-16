@@ -622,20 +622,20 @@ static int var_getbool( SGS_CTX, const sgs_VarPtr var )
 	}
 }
 
-static sgs_Integer var_getint( SGS_CTX, sgs_VarPtr var )
+static sgs_Int var_getint( SGS_CTX, sgs_VarPtr var )
 {
 	switch( BASETYPE( var->type ) )
 	{
-	case VT_BOOL: return (sgs_Integer) var->data.B;
+	case VT_BOOL: return (sgs_Int) var->data.B;
 	case VT_INT: return var->data.I;
-	case VT_REAL: return (sgs_Integer) var->data.R;
+	case VT_REAL: return (sgs_Int) var->data.R;
 	case VT_STRING: return util_atoi( str_cstr( var->data.S ), var->data.S->size );
 	case VT_OBJECT:
 		{
 			int origsize = sgs_StackSize( C );
 			if( obj_exec( C, SOP_CONVERT, var->data.O, VT_INT, 0 ) == SGS_SUCCESS )
 			{
-				sgs_Integer out = stk_getpos( C, -1 )->data.I;
+				sgs_Int out = stk_getpos( C, -1 )->data.I;
 				stk_pop( C, sgs_StackSize( C ) - origsize );
 				return out;
 			}
@@ -668,13 +668,13 @@ static sgs_Real var_getreal( SGS_CTX, sgs_Variable* var )
 	return 0;
 }
 
-static SGS_INLINE sgs_Integer var_getint_simple( sgs_VarPtr var )
+static SGS_INLINE sgs_Int var_getint_simple( sgs_VarPtr var )
 {
 	switch( var->type )
 	{
-	case VTC_BOOL: return (sgs_Integer) var->data.B;
+	case VTC_BOOL: return (sgs_Int) var->data.B;
 	case VTC_INT: return var->data.I;
-	case VTC_REAL: return (sgs_Integer) var->data.R;
+	case VTC_REAL: return (sgs_Int) var->data.R;
 	case VTC_STRING: return util_atoi( str_cstr( var->data.S ), var->data.S->size );
 	}
 	return 0;
@@ -898,7 +898,7 @@ static int _thiscall_method( SGS_CTX )
 static int vm_getidx_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 {
 	int res;
-	sgs_Integer pos, size;
+	sgs_Int pos, size;
 	if( obj->type == VTC_STRING )
 	{
 		size = obj->data.S->size;
@@ -1267,7 +1267,7 @@ static void vm_op_boolinv( SGS_CTX, int16_t out, sgs_Variable *A )
 
 static void vm_op_invert( SGS_CTX, int16_t out, sgs_Variable *A )
 {
-	sgs_Integer val = ~var_getint( C, A );
+	sgs_Int val = ~var_getint( C, A );
 	var_setint( C, C->stack_off + out, val );
 }
 
@@ -1309,7 +1309,7 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 	}
 	if( ( a->type | b->type ) == VTC_INT )
 	{
-		sgs_Integer A = a->data.I, B = b->data.I;
+		sgs_Int A = a->data.I, B = b->data.I;
 		switch( op ){
 			/*
 			case ARITH_OP_ADD: R = A + B; break;
@@ -1365,7 +1365,7 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 	}
 	else
 	{
-		sgs_Integer A = var_getint_simple( a ), B = var_getint_simple( b ), R;
+		sgs_Int A = var_getint_simple( a ), B = var_getint_simple( b ), R;
 		switch( op ){
 			case ARITH_OP_ADD: R = A + B; break;
 			case ARITH_OP_SUB: R = A - B; break;
@@ -1393,8 +1393,8 @@ fail:
 
 #define VAR_IOP( pfx, op ) \
 static void vm_op_##pfx( SGS_CTX, int16_t out, sgs_Variable* a, sgs_Variable* b ) { \
-	sgs_Integer A = var_getint( C, a ); \
-	sgs_Integer B = var_getint( C, b ); \
+	sgs_Int A = var_getint( C, a ); \
+	sgs_Int B = var_getint( C, b ); \
 	var_setint( C, C->stack_off + out, A op B ); \
 	}
 
@@ -1984,7 +1984,7 @@ void sgs_PushBool( SGS_CTX, sgs_Bool value )
 	stk_push_leave( C, &var );
 }
 
-void sgs_PushInt( SGS_CTX, sgs_Integer value )
+void sgs_PushInt( SGS_CTX, sgs_Int value )
 {
 	sgs_Variable var;
 	var.type = VTC_INT;
@@ -2032,7 +2032,7 @@ void sgs_PushObject( SGS_CTX, void* data, void** iface )
 	stk_push_leave( C, &var );
 }
 
-void* sgs_PushObjectIPA( SGS_CTX, int added, void** iface )
+void* sgs_PushObjectIPA( SGS_CTX, sgs_SizeVal added, void** iface )
 {
 	sgs_Variable var;
 	var_create_obj( C, &var, NULL, iface, added );
@@ -2346,7 +2346,7 @@ SGSRESULT sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Varia
 	return vm_setprop( C, obj, idx, val, TRUE );
 }
 
-SGSRESULT sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Integer idx )
+SGSRESULT sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Int idx )
 {
 	sgs_Variable tmp;
 	tmp.type = VTC_INT;
@@ -2355,7 +2355,7 @@ SGSRESULT sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_In
 	return sgs_GetIndex( C, out, obj, &tmp );
 }
 
-SGSRESULT sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Integer idx, sgs_Variable* val )
+SGSRESULT sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Int idx, sgs_Variable* val )
 {
 	sgs_Variable tmp;
 	tmp.type = VTC_INT;
@@ -2680,7 +2680,7 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 		{
 		case VTC_NULL: break;
 		case VTC_BOOL: { uint8_t b = V.data.B; sgs_Write( C, &b, 1 ); } break;
-		case VTC_INT: sgs_Write( C, &V.data.I, sizeof( sgs_Integer ) ); break;
+		case VTC_INT: sgs_Write( C, &V.data.I, sizeof( sgs_Int ) ); break;
 		case VTC_REAL: sgs_Write( C, &V.data.R, sizeof( sgs_Real ) ); break;
 		case VTC_STRING:
 			sgs_Write( C, &V.data.S->size, 4 );
@@ -2816,7 +2816,7 @@ sgs_Bool sgs_GetBool( SGS_CTX, int item )
 	return var_getbool( C, var );
 }
 
-sgs_Integer sgs_GetInt( SGS_CTX, int item )
+sgs_Int sgs_GetInt( SGS_CTX, int item )
 {
 	sgs_Variable* var = stk_getpos( C, item );
 	return var_getint( C, var );
@@ -2836,7 +2836,7 @@ sgs_Bool sgs_ToBool( SGS_CTX, int item )
 	return stk_getpos( C, item )->data.B;
 }
 
-sgs_Integer sgs_ToInt( SGS_CTX, int item )
+sgs_Int sgs_ToInt( SGS_CTX, int item )
 {
 	if( vm_convert_stack( C, item, VTC_INT ) != SGS_SUCCESS )
 		return 0;
@@ -2906,7 +2906,7 @@ SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface )
 
 typedef union intreal_s
 {
-	sgs_Integer i;
+	sgs_Int i;
 	sgs_Real r;
 }
 intreal_t;
@@ -2929,9 +2929,9 @@ SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out )
 	return TRUE;
 }
 
-SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Integer* out )
+SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Int* out )
 {
-	sgs_Integer i;
+	sgs_Int i;
 	sgs_Variable* var = stk_getpos( C, item );
 	if( var->type == VTC_NULL || (var->type & VTF_CALL) )
 		return FALSE;
@@ -2944,7 +2944,7 @@ SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Integer* out )
 
 		if( str == ostr )    return FALSE;
 		if( res == 1 )       i = OIR.i;
-		else if( res == 2 )  i = (sgs_Integer) OIR.r;
+		else if( res == 2 )  i = (sgs_Int) OIR.r;
 		else                 return FALSE;
 	}
 	else

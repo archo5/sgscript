@@ -107,7 +107,7 @@ static void idbgPrintFunc( void* data, SGS_CTX, int type, const char* message )
 static int idbg_stackitem( SGS_CTX )
 {
 	int full = 0, argc = sgs_StackSize( C );
-	sgs_Integer off, cnt;
+	sgs_Int off, cnt;
 	sgs_Variable* a, *b;
 	SGS_IDBG = (sgs_IDbg*) C->print_ctx;
 
@@ -137,7 +137,7 @@ static int idbg_stackitem( SGS_CTX )
 static int idbg_setstackitem( SGS_CTX )
 {
 	int full = 0, argc = sgs_StackSize( C );
-	sgs_Integer off, cnt;
+	sgs_Int off, cnt;
 	sgs_Variable* a, *b, *x;
 	SGS_IDBG = (sgs_IDbg*) C->print_ctx;
 

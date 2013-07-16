@@ -304,9 +304,9 @@ double sgs_GetTime()
 
 typedef const char CCH;
 
-static int strtonum_hex( CCH** at, CCH* end, sgs_Integer* outi )
+static int strtonum_hex( CCH** at, CCH* end, sgs_Int* outi )
 {
-	sgs_Integer val = 0;
+	sgs_Int val = 0;
 	CCH* str = *at + 2;
 	while( str < end && hexchar( *str ) )
 	{
@@ -319,9 +319,9 @@ static int strtonum_hex( CCH** at, CCH* end, sgs_Integer* outi )
 	return 1;
 }
 
-static int strtonum_oct( CCH** at, CCH* end, sgs_Integer* outi )
+static int strtonum_oct( CCH** at, CCH* end, sgs_Int* outi )
 {
-	sgs_Integer val = 0;
+	sgs_Int val = 0;
 	CCH* str = *at + 2;
 	while( str < end && octchar( *str ) )
 	{
@@ -334,9 +334,9 @@ static int strtonum_oct( CCH** at, CCH* end, sgs_Integer* outi )
 	return 1;
 }
 
-static int strtonum_bin( CCH** at, CCH* end, sgs_Integer* outi )
+static int strtonum_bin( CCH** at, CCH* end, sgs_Int* outi )
 {
-	sgs_Integer val = 0;
+	sgs_Int val = 0;
 	CCH* str = *at + 2;
 	while( str < end && binchar( *str ) )
 	{
@@ -401,7 +401,7 @@ done:
 	return 2;
 }
 
-static int strtonum_dec( CCH** at, CCH* end, sgs_Integer* outi, sgs_Real* outf )
+static int strtonum_dec( CCH** at, CCH* end, sgs_Int* outi, sgs_Real* outf )
 {
 	CCH* str = *at;
 	if( *str == '+' || *str == '-' ) str++;
@@ -411,7 +411,7 @@ static int strtonum_dec( CCH** at, CCH* end, sgs_Integer* outi, sgs_Real* outf )
 		return strtonum_real( at, end, outf );
 	else
 	{
-		sgs_Integer val = 0;
+		sgs_Int val = 0;
 		int invsign = 0;
 
 		str = *at;
@@ -431,7 +431,7 @@ static int strtonum_dec( CCH** at, CCH* end, sgs_Integer* outi, sgs_Real* outf )
 	}
 }
 
-int util_strtonum( CCH** at, CCH* end, sgs_Integer* outi, sgs_Real* outf )
+int util_strtonum( CCH** at, CCH* end, sgs_Int* outi, sgs_Real* outf )
 {
 	CCH* str = *at;
 	if( str >= end )
@@ -446,19 +446,19 @@ int util_strtonum( CCH** at, CCH* end, sgs_Integer* outi, sgs_Real* outf )
 }
 
 
-sgs_Integer util_atoi( const char* str, int len )
+sgs_Int util_atoi( const char* str, int len )
 {
-	sgs_Integer vi;
+	sgs_Int vi;
 	sgs_Real vr;
 	int ret = util_strtonum( &str, str + len, &vi, &vr );
 	if( ret == 1 ) return vi;
-	else if( ret == 2 ) return (sgs_Integer) vr;
+	else if( ret == 2 ) return (sgs_Int) vr;
 	else return 0;
 }
 
 sgs_Real util_atof( const char* str, int len )
 {
-	sgs_Integer vi;
+	sgs_Int vi;
 	sgs_Real vr;
 	int ret = util_strtonum( &str, str + len, &vi, &vr );
 	if( ret == 1 ) return (sgs_Real) vi;

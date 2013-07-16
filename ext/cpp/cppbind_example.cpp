@@ -26,7 +26,7 @@ public:
 	int Add( SGS_CTX )
 	{
 		int orig = coins;
-		sgs_Integer I;
+		sgs_Int I;
 		if( sgs_StackSize( C ) != 2 ||
 			!sgs_ParseInt( C, 1, &I ) )
 			return sgs_Printf( C, SGS_WARNING, "unexpected arguments" );

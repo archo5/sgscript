@@ -598,7 +598,7 @@ static int pproc_create( SGS_CTX )
 
 static int pproc_sleep( SGS_CTX )
 {
-	sgs_Integer ms;
+	sgs_Int ms;
 	if( sgs_StackSize( C ) != 1 ||
 		!sgs_ParseInt( C, 0, &ms ) )
 		STDLIB_WARN( "sleep(): unexpected arguments; "

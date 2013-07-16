@@ -245,8 +245,8 @@ static const char* json_parse( SGS_CTX, MemBuf* stack, const char* str, sgs_Size
 endnumparse:
 			if( neg )
 				val = -val;
-			if( val == (sgs_Integer) val )
-				sgs_PushInt( C, (sgs_Integer) val );
+			if( val == (sgs_Int) val )
+				sgs_PushInt( C, (sgs_Int) val );
 			else
 				sgs_PushReal( C, val );
 			push = 1;
