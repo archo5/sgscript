@@ -249,7 +249,7 @@ typedef union _sgs_VarData
 {
 	sgs_SizeVal* pRC;
 	sgs_Bool    B;
-	sgs_Int I;
+	sgs_Int     I;
 	sgs_Real    R;
 	sgs_iStr*   S;
 	sgs_iFunc*  F;
