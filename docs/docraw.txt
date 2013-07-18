@@ -57,6 +57,7 @@ These are the default meanings for error codes that are honored throughout the A
 -- SGS_INFO: information about potential issues and state of the system
 -- SGS_WARNING: non-fatal issues
 -- SGS_ERROR: fatal issues
+-- any other integer may be defined and returned by other interfaces
 
 
 Variable type flags [info]
@@ -115,6 +116,7 @@ Interaction with the native environment [info]
 - sgs_MemFunc (re)allocates and frees memory
 - unlike realloc, if size = 0, this function must return NULL
 - sgs_DefaultMemFunc is the sample implementation
+- the expected behavior is same as for @sgs_Memory()
 
 
 =
@@ -360,20 +362,112 @@ sgs_SetOutputFunc [function]
 
 - default implementation copies data to FILE* stream, specified in userdata, it can be found in sgs_ctx.c
 
+
 sgs_Write [function]
-sgs_WriteStr [function]
+
+== void sgs_Write( sgs_Context* C, const void* ptr, sgs_SizeVal size )
+=== passes the specified data to the output function
+
+- the default output function prints the data to the specified FILE* stream (stdout by default)
+
+
+sgs_WriteStr [function alias]
+
+== void sgs_Write( sgs_Context* C, const char* str )
+=== passes the specified string to the output function
+
+- alias to `sgs_Write( C, str, SGS_STRINGLENGTHFUNC( str ) )`
+
+
 sgs_Writef [function]
+
+== void sgs_Writef( sgs_Context* C, const char* what, ... )
+=== passes the arguments through a vsprintf-like function to expand the data and passes it to the specified output function
+
+- printf rules apply here
+
+
 sgs_SetPrintFunc [function]
 
-== void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* userdata )
+== void sgs_SetPrintFunc( sgs_Context* C, sgs_PrintFunc func, void* userdata )
 === sets the function that handles and prints the error that has occured, while still being physically in that context
 
+- both subtypes of the default printing function can be set by passing these flags for `func` and a FILE* pointer for `userdata`:
+-- 'SGSPRINTFN_DEFAULT' - default behavior (write stack frame, write error, abort on SGS_ERROR)
+-- 'SGSPRINTFN_DEFAULT_NOABORT' - default behavior without the abort-on-errors feature
 - default implementation writes error and stack trace to FILE* stream, specified in userdata, it can be found in sgs_ctx.c
 
+
 sgs_Printf [function]
-sgs_GetHookFunc [function]
+
+== int sgs_Printf( sgs_Context* C, int type, const char* what, ... )
+=== prepares and prints the error specified
+
+- `type` is the output code (SGS_WARNING, SGS_ERROR etc.)
+- `what` is the error text
+-- additional function name prefix can be specified with @sgs_FuncName or the SGSFN/SGSBASEFN macros
+- `what`, the function name prefix (if set) and the variable arguments are passed to a vsprintf-like function so printf syntax rules apply
+- function always returns 0 to be compatible with most error handling cases in C functions: "return sgs_Printf( ... );"
+
+
+sgs_HasFuncName [function]
+
+== int sgs_HasFuncName( sgs_Context* C )
+=== checks if the currently executed function (last stack frame) has a name literal set
+
+
+sgs_FuncName [function]
+
+== void sgs_FuncName( sgs_Context* C, const char* fnliteral )
+=== sets the function name string for the currently executed function (last stack frame)
+
+- the argument is expected to stay alive for the duration of the function call
+-- this makes string literals safe for the call, everything else should be avoided
+
+
+SGSFN [function alias]
+
+== void SGSFN( const char* fnliteral )
+=== sets the function name string, more info at @sgs_FuncName
+
+- alias for `sgs_FuncName( <implicit> C, fnliteral )`
+
+
+SGSBASEFN [function alias]
+
+== void SGSBASEFN( const char* fnliteral )
+=== sets the function name string if it hasn't already been set for the function
+
+- alias for `if( !sgs_HasFuncName( <implicit> C ) ) sgs_FuncName( <implicit> C, x )`
+
+
 sgs_SetHookFunc [function]
+
+== void sgs_SetHookFunc( sgs_Context* C, sgs_HookFunc func, void* ctx )
+=== sets the hook function and user data pointer
+
+- hook function is called on function entry, exit and instruction change events
+- setting a new hook function disables the one that was set before (if any)
+
+
+sgs_GetHookFunc [function]
+
+== SGSBOOL sgs_GetHookFunc( sgs_Context* C, sgs_HookFunc* outfunc, void** outctx )
+=== writes the hook function and user data pointer that was set (if any), returns whether anything was written
+
+
 sgs_Memory [function]
+
+== void sgs_Memory( sgs_Context* C, void* ptr, size_t size )
+=== allocates and frees memory, as specified in arguments
+
+- there are four possible cases that are handled by the function:
+-- `ptr` != NULL, `size` != 0: `ptr` is reallocated with new size, keeping as much data as possible, new block of memory is returned
+-- `ptr` != NULL, `size` == 0: `ptr` is freed, NULL is returned
+-- `ptr` == NULL, `size` != 0: a new block of memory is allocated and returned
+-- `ptr` == NULL, `size` == 0: nothing is done, NULL is returned
+
+
 memory allocation macros [macros]
 
 == Memory allocation macros
@@ -388,6 +482,23 @@ memory allocation macros [macros]
 -- `sgs_Alloc_a( what, app )`: allocates enough memory to fit the specified type `what` and `app` more bytes
 -- `sgs_Dealloc( ptr )`: frees the memory
 - all of these functions, including sgs_Memory, work on the same heap, thus they are interchangeable
+
+
+=
+== API/INFO-CTRL
+=
+
+
+sgs_CodeString [function]
+sgs_Abort [function]
+sgs_Stat [function]
+sgs_Cntl [function]
+sgs_GetFramePtr [function]
+sgs_Errno [function]
+sgs_SetErrno [function]
+sgs_GetLastErrno [function]
+SGSCERR [function alias]
+SGSCLEARERR [function alias]
 
 
 =

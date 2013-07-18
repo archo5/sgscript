@@ -326,8 +326,6 @@ SGS_APIFUNC const char* sgs_CodeString( int type, int val );
 #define SGSOUTPUTFN_DEFAULT ((sgs_OutputFunc)-1)
 SGS_APIFUNC void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx );
 SGS_APIFUNC void sgs_Write( SGS_CTX, const void* ptr, sgs_SizeVal size );
-static SGS_INLINE void sgs_WriteStr( SGS_CTX, const char* str )
-	{ sgs_Write( C, str, strlen( str ) ); }
 SGS_APIFUNC void sgs_Writef( SGS_CTX, const char* what, ... );
 
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
@@ -406,6 +404,7 @@ SGS_APIFUNC sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 #define sgs_ExecString( C, str ) sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )
 #define sgs_EvalString( C, str, rvc ) sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ), rvc )
 #define sgs_ExecFile( C, str ) sgs_EvalFile( C, str, NULL )
+#define sgs_WriteStr( C, str ) sgs_Write( C, str, SGS_STRINGLENGTHFUNC( str ) )
 
 
 /* Additional libraries */
