@@ -2920,9 +2920,10 @@ SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )
 
 SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out )
 {
-	int i, ty = sgs_ItemType( C, item );
+	int i, ty;
 	if( !sgs_IsValidIndex( C, item ) )
 		return FALSE;
+	ty = sgs_ItemType( C, item );
 	if( ty == VTC_NULL || ty == VTC_CFUNC || ty == VTC_FUNC || ty == VTC_STRING )
 		return FALSE;
 	i = sgs_GetBool( C, item );
@@ -3107,11 +3108,15 @@ SGSBOOL sgs_GetStackItem( SGS_CTX, int item, sgs_Variable* out )
 
 int sgs_ItemType( SGS_CTX, int item )
 {
+	if( !sgs_IsValidIndex( C, item ) )
+		return 0;
 	return BASETYPE( stk_getpos( C, item )->type );
 }
 
 int sgs_ItemTypeExt( SGS_CTX, int item )
 {
+	if( !sgs_IsValidIndex( C, item ) )
+		return 0;
 	return stk_getpos( C, item )->type;
 }
 
@@ -3178,7 +3183,7 @@ sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item )
 	sgs_Variable* var;
 	DBLCHK( !sgs_IsValidIndex( C, item ), NULL )
 	var = stk_getpos( C, item );
-	DBLCHK( !( var->type & VT_OBJECT ), 0 )
+	DBLCHK( !( var->type & VT_OBJECT ), NULL )
 	return var->data.O;
 }
 
