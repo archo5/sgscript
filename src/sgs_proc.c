@@ -2921,6 +2921,8 @@ SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )
 SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out )
 {
 	int i, ty = sgs_ItemType( C, item );
+	if( !sgs_IsValidIndex( C, item ) )
+		return FALSE;
 	if( ty == VTC_NULL || ty == VTC_CFUNC || ty == VTC_FUNC || ty == VTC_STRING )
 		return FALSE;
 	i = sgs_GetBool( C, item );
@@ -2932,7 +2934,10 @@ SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out )
 SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Int* out )
 {
 	sgs_Int i;
-	sgs_Variable* var = stk_getpos( C, item );
+	sgs_Variable* var;
+	if( !sgs_IsValidIndex( C, item ) )
+		return FALSE;
+	var = stk_getpos( C, item );
 	if( var->type == VTC_NULL || (var->type & VTF_CALL) )
 		return FALSE;
 	if( var->type == VTC_STRING )
@@ -2957,7 +2962,10 @@ SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Int* out )
 SGSBOOL sgs_ParseReal( SGS_CTX, int item, sgs_Real* out )
 {
 	sgs_Real r;
-	sgs_Variable* var = stk_getpos( C, item );
+	sgs_Variable* var;
+	if( !sgs_IsValidIndex( C, item ) )
+		return FALSE;
+	var = stk_getpos( C, item );
 	if( var->type == VTC_NULL || (var->type & VTF_CALL) )
 		return FALSE;
 	if( var->type == VTC_STRING )
@@ -2982,7 +2990,10 @@ SGSBOOL sgs_ParseReal( SGS_CTX, int item, sgs_Real* out )
 SGSBOOL sgs_ParseString( SGS_CTX, int item, char** out, sgs_SizeVal* size )
 {
 	char* str;
-	int ty = sgs_ItemTypeExt( C, item );
+	int ty;
+	if( !sgs_IsValidIndex( C, item ) )
+		return FALSE;
+	ty = sgs_ItemTypeExt( C, item );
 	if( ty == VTC_NULL || (ty & VTF_CALL) )
 		return FALSE;
 	str = sgs_ToStringBuf( C, item, size );
