@@ -1260,6 +1260,13 @@ SFTRET parse_stmt( SFTC )
 			}
 			SFTC_NEXT;
 		}
+		
+		if( !SFTC_IS( ';' ) )
+		{
+			SFTC_UNEXP;
+			goto fail;
+		}
+		SFTC_NEXT;
 
 		node = make_node( SFT_BREAK, orig, NULL, NULL );
 
@@ -1282,6 +1289,13 @@ SFTRET parse_stmt( SFTC )
 			}
 			SFTC_NEXT;
 		}
+		
+		if( !SFTC_IS( ';' ) )
+		{
+			SFTC_UNEXP;
+			goto fail;
+		}
+		SFTC_NEXT;
 
 		node = make_node( SFT_CONT, orig, NULL, NULL );
 
