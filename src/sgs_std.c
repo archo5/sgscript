@@ -1947,6 +1947,89 @@ static int sgsstd_ftime( SGS_CTX )
 
 /* utils */
 
+static int idxiscallable( SGS_CTX, int idx )
+{
+	int ite = sgs_ItemTypeExt( C, idx );
+	if( ite & VTF_CALL )
+		return 1;
+	if( ite & VT_OBJECT )
+	{
+		int outvar = 0;
+		sgs_VarObj* O = sgs_GetObjectData( C, idx );
+		OBJECT_HAS_IFACE( outvar, O, SOP_CALL );
+		return outvar;
+	}
+	return 0;
+}
+
+struct pcall_printinfo
+{
+	sgs_PrintFunc pfn;
+	void* pctx;
+	sgs_Variable handler;
+	int depth;
+};
+
+static void sgsstd_pcall_print( void* data, SGS_CTX, int type, const char* message )
+{
+	int ret = 0;
+	struct pcall_printinfo* P = (struct pcall_printinfo*) data;
+	P->depth++;
+	
+	if( P->depth > 1 )
+		ret = type; /* don't handle errors thrown inside handlers */
+	else if( P->handler.type != VTC_NULL )
+	{
+		sgs_PushInt( C, type );
+		sgs_PushString( C, message );
+		sgs_PushVariable( C, &P->handler );
+		if( sgs_Call( C, 2, 1 ) )
+		{
+			P->pfn( P->pctx, C, SGS_ERROR, "Error detected while attempting to call error handler" );
+		}
+		else
+		{
+			ret = sgs_GetInt( C, -1 );
+			sgs_Pop( C, 1 );
+		}
+	}
+	
+	if( ret > 0 )
+		P->pfn( P->pctx, C, ret, message );
+	
+	P->depth--;
+}
+
+static int sgsstd_pcall( SGS_CTX )
+{
+	struct pcall_printinfo P;
+	int ssz = sgs_StackSize( C );
+	
+	SGSFN( "pcall" );
+	
+	if( ssz < 1 || ssz > 2 || !idxiscallable( C, 0 )
+		|| ( ssz >= 2 && !idxiscallable( C, 1 ) ) )
+		STDLIB_WARN( "unexpected arguments; function expects 1-2 callable arguments" )
+	
+	P.pfn = C->print_fn;
+	P.pctx = C->print_ctx;
+	P.handler.type = VTC_NULL;
+	P.depth = 0;
+	if( ssz >= 2 )
+		sgs_GetStackItem( C, 1, &P.handler );
+	
+	C->print_fn = sgsstd_pcall_print;
+	C->print_ctx = &P;
+	
+	sgs_PushItem( C, 0 );
+	sgs_Call( C, 0, 0 );
+	
+	C->print_fn = P.pfn;
+	C->print_ctx = P.pctx;
+	
+	return 0;
+}
+
 static int sgsstd_eval( SGS_CTX )
 {
 	char* str;
@@ -2234,6 +2317,8 @@ static int sgsstd_sys_print( SGS_CTX )
 		!sgs_ParseInt( C, 0, &errcode ) ||
 		!sgs_ParseString( C, 1, &errmsg, NULL ) )
 		STDLIB_WARN( "unexpected arguments; function expects 2 arguments: int, string" )
+	
+	SGSFN( NULL );
 
 	sgs_Printf( C, (int) errcode, errmsg );
 	return 0;
@@ -2498,6 +2583,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* OS */
 	FN( ftime ),
 	/* utils */
+	FN( pcall ),
 	FN( eval ), FN( eval_file ),
 	FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( include_module ), FN( import_cfunc ),
