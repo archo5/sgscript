@@ -1560,19 +1560,19 @@ static int sgsstd_io_file_write( SGS_CTX )
 		FILE* fp = fopen( path, "wb" );
 		if( !fp )
 		{
-			SGSCERR;
+			sgs_Errno( C, 0 );
 			STDLIB_WARN( "failed to create file" )
 		}
 		errno = 0;
 		wsz = fwrite( data, 1, dsz, fp );
 		if( wsz < dsz )
-			SGSCERR;
+			sgs_Errno( C, 0 );
 		fclose( fp );
 		if( wsz < dsz )
 			STDLIB_WARN( "failed to write to file" )
 	}
 	
-	SGSCLEARERR;
+	sgs_Errno( C, 1 );
 	sgs_PushBool( C, TRUE );
 	return 1;
 }
@@ -1594,7 +1594,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 		FILE* fp = fopen( path, "rb" );
 		if( !fp )
 		{
-			SGSCERR;
+			sgs_Errno( C, 0 );
 			STDLIB_WARN( "failed to open file" )
 		}
 		fseek( fp, 0, SEEK_END );
@@ -1605,7 +1605,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 		errno = 0;
 		rd = fread( sgs_GetStringPtr( C, -1 ), 1, len, fp );
 		if( rd < len )
-			SGSCERR;
+			sgs_Errno( C, 0 );
 		fclose( fp );
 		if( rd < len )
 			STDLIB_WARN( "failed to read file" )
@@ -1653,18 +1653,18 @@ static int sgsstd_fileP_size( SGS_CTX, FILE* fp )
 		fpos_t pos;
 		if( fgetpos( fp, &pos ) < 0 )
 		{
-			SGSCERR;
+			sgs_Errno( C, 0 );
 			return SGS_EINPROC;
 		}
 		fseek( fp, 0, SEEK_END );
 		if( ( size = ftell( fp ) ) < 0 )
 		{
-			SGSCERR;
+			sgs_Errno( C, 0 );
 			return SGS_EINPROC;
 		}
 		sgs_PushInt( C, size );
 		fsetpos( fp, &pos );
-		SGSCLEARERR;
+		sgs_Errno( C, 1 );
 		return SGS_SUCCESS;
 	}
 }
@@ -1751,7 +1751,7 @@ static int sgsstd_fileI_read( SGS_CTX )
 		{
 			int read = fread( bfr, 1, (size_t) MIN( size, 1024 ), FVAR );
 			if( read < 0 )
-				SGSCERR;
+				sgs_Errno( C, 0 );
 			if( read <= 0 )
 				break;
 			membuf_appbuf( &mb, C, bfr, read );
@@ -1759,7 +1759,7 @@ static int sgsstd_fileI_read( SGS_CTX )
 		}
 		sgs_PushStringBuf( C, mb.ptr, mb.size );
 		membuf_destroy( &mb, C );
-		SGSCLEARERR;
+		sgs_Errno( C, 1 );
 		return 1;
 	FVNO_END( write )
 }

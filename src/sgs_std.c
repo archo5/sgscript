@@ -2511,14 +2511,14 @@ static int sgsstd_dumpvars( SGS_CTX )
 static int sgsstd_gc_collect( SGS_CTX )
 {
 	int ret;
-	int32_t orvc = sgs_Stat( C, SGS_STAT_VARCOUNT );
+	int32_t orvc = sgs_Stat( C, SGS_STAT_OBJCOUNT );
 	
 	SGSFN( "gc_collect" );
 	
 	ret = sgs_GCExecute( C );
 	
 	if( ret == SGS_SUCCESS )
-		sgs_PushInt( C, orvc - sgs_Stat( C, SGS_STAT_VARCOUNT ) );
+		sgs_PushInt( C, orvc - sgs_Stat( C, SGS_STAT_OBJCOUNT ) );
 	else
 		sgs_PushBool( C, FALSE );
 	return 1;

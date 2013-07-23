@@ -74,8 +74,7 @@ static void default_printfn( void* ctx, SGS_CTX, int type, const char* msg )
 
 static void ctx_init( SGS_CTX )
 {
-	C->version = ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) |
-		SGS_VERSION_MINOR ) << SGS_VERSION_OFFSET | SGS_VERSION_INCR );
+	C->version = SGS_VERSION_INT;
 	C->apiversion = SGS_API_VERSION;
 	C->output_fn = default_outputfn;
 	C->output_ctx = stdout;
@@ -459,7 +458,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	f = fopen( file, "rb" );
 	if( !f )
 	{
-		SGSCERR;
+		sgs_Errno( C, 0 );
 		return SGS_ENOTFND;
 	}
 	fseek( f, 0, SEEK_END );
@@ -469,7 +468,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	data = sgs_Alloc_n( char, len );
 	if( fread( data, 1, len, f ) != len )
 	{
-		SGSCERR;
+		sgs_Errno( C, 0 );
 		fclose( f );
 		sgs_Dealloc( data );
 		return SGS_EINPROC;
@@ -628,7 +627,7 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 	{
 	case SGS_STAT_VERSION: return C->version;
 	case SGS_STAT_APIVERSION: return C->apiversion;
-	case SGS_STAT_VARCOUNT: return C->objcount;
+	case SGS_STAT_OBJCOUNT: return C->objcount;
 	case SGS_STAT_MEMSIZE: return C->memsize;
 	case SGS_STAT_DUMP_STACK:
 		{
@@ -707,6 +706,9 @@ int32_t sgs_Cntl( SGS_CTX, int what, int32_t val )
 	case SGS_CNTL_GET_STATE: return C->state;
 	case SGS_CNTL_MINLEV: x = C->minlev; C->minlev = val; return x;
 	case SGS_CNTL_GET_MINLEV: return C->minlev;
+	case SGS_CNTL_ERRNO: x = C->last_errno; C->last_errno = val ? 0 : errno; return x;
+	case SGS_CNTL_SET_ERRNO: x = C->last_errno; C->last_errno = val; return x;
+	case SGS_CNTL_GET_ERRNO: return C->last_errno;
 	}
 	return 0;
 }
@@ -762,24 +764,5 @@ void sgs_FuncName( SGS_CTX, const char* fnliteral )
 int sgs_HasFuncName( SGS_CTX )
 {
 	return !!C->sf_last && !!C->sf_last->nfname;
-}
-
-int sgs_Errno( SGS_CTX, int clear )
-{
-	if( clear )
-		C->last_errno = 0;
-	else
-		C->last_errno = errno;
-	return clear;
-}
-
-int sgs_SetErrno( SGS_CTX, int err )
-{
-	return C->last_errno = err;
-}
-
-int sgs_GetLastErrno( SGS_CTX )
-{
-	return C->last_errno;
 }
 

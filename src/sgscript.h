@@ -10,6 +10,8 @@
 #define SGS_API_VERSION 1
 
 #define SGS_VERSION_OFFSET 8
+#define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
+		SGS_VERSION_MINOR ) << SGS_VERSION_OFFSET ) | SGS_VERSION_INCR )
 
 
 #ifdef __cplusplus
@@ -177,7 +179,7 @@ typedef void (*sgs_HookFunc) (
 /* Statistics / debugging */
 #define SGS_STAT_VERSION      0
 #define SGS_STAT_APIVERSION   1
-#define SGS_STAT_VARCOUNT     2
+#define SGS_STAT_OBJCOUNT     2
 #define SGS_STAT_MEMSIZE      3
 #define SGS_STAT_DUMP_STACK   10
 #define SGS_STAT_DUMP_GLOBALS 11
@@ -190,6 +192,9 @@ typedef void (*sgs_HookFunc) (
 #define SGS_CNTL_GET_STATE  2
 #define SGS_CNTL_MINLEV     3
 #define SGS_CNTL_GET_MINLEV 4
+#define SGS_CNTL_ERRNO      5
+#define SGS_CNTL_SET_ERRNO  6
+#define SGS_CNTL_GET_ERRNO  7
 
 
 /* Context internals */
@@ -565,14 +570,17 @@ SGS_APIFUNC sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item );
 
 SGS_APIFUNC int sgs_HasFuncName( SGS_CTX );
 SGS_APIFUNC void sgs_FuncName( SGS_CTX, const char* fnliteral );
-SGS_APIFUNC int sgs_Errno( SGS_CTX, int clear );
-SGS_APIFUNC int sgs_SetErrno( SGS_CTX, int err );
-SGS_APIFUNC int sgs_GetLastErrno( SGS_CTX );
 
 #define SGSFN( x ) sgs_FuncName( C, x )
 #define SGSBASEFN( x ) if( !sgs_HasFuncName( C ) ) sgs_FuncName( C, x )
-#define SGSCERR sgs_Errno( C, 0 )
-#define SGSCLEARERR sgs_Errno( C, 1 )
+
+static SGS_INLINE int sgs_Errno( SGS_CTX, int clear )
+{
+	sgs_Cntl( C, SGS_CNTL_ERRNO, clear );
+	return clear;
+}
+#define sgs_SetErrno( C, err ) sgs_Cntl( C, SGS_CNTL_SET_ERRNO, err )
+#define sgs_GetLastErrno( C ) sgs_Cntl( C, SGS_CNTL_GET_ERRNO, 0 )
 
 
 #ifdef __cplusplus

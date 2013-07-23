@@ -490,15 +490,94 @@ memory allocation macros [macros]
 
 
 sgs_CodeString [function]
+
+== const char* sgs_CodeString( int type, int val )
+=== returns a string for the enumeration `type` value `val`
+
+- there are 4 enumerations to have value names returned for:
+-- SGS_CODE_ER: error codes (SGS_ERROR, SGS_WARNING, ...)
+-- SGS_CODE_VT: variable types (SGS_VT_BOOL, SGS_VT_FUNC, ...)
+-- SGS_CODE_OP: VM instructions (SGS_SI_PUSH, SGS_SI_FORPREP, ... [internal])
+-- SGS_CODE_OI: object interface function types (SGS_OP_GETINDEX, SGS_OP_GCMARK, ...)
+
+
 sgs_Abort [function]
+
+== SGSRESULT sgs_Abort( sgs_Context* C )
+=== stops execution of current SGS functions up to the last C function in the stack, excluding the current
+
+=== error codes
+- SGS_ENOTFND: last or next to last function in the stack was not a SGS function
+
+
 sgs_Stat [function]
+
+== SGSMIXED sgs_Stat( sgs_Context* C, int type )
+=== returns or prints information about state of SGScript VM
+
+- the following `type` values are supported:
+-- SGS_STAT_VERSION: returns the version number of the VM
+-- SGS_STAT_APIVERSION: returns the API version numver of the VM
+-- SGS_STAT_OBJCOUNT: returns the number of objects created in the VM
+-- SGS_STAT_MEMSIZE: returns the number of bytes allocated through this SGScript context
+-- SGS_STAT_DUMP_STACK: prints all of the variables in the stack
+-- SGS_STAT_DUMP_GLOBALS: prints all variables in the global dictionary
+-- SGS_STAT_DUMP_OBJECTS: prints all objects in the context
+-- SGS_STAT_DUMP_FRAMES: prints all functions in the call stack
+
+- tips:
+-- compare return value of SGS_STAT_VERSION against SGS_VERSION_INT if the code is version-sensitive
+-- compare return value of SGS_STATE_APIVERSION against SGS_API_VERSION if dynamic loading is used and multiple versions should be supported
+
+
 sgs_Cntl [function]
+
+== int32_t sgs_Cntl( sgs_Context* C, int what, int32_t val )
+=== modifies the state of the VM or returns info about it
+
+- the following `what` values are supported:
+-- SGS_CNTL_STATE: sets the new compilation state from `val`, returns the previous value
+-- SGS_CNTL_GET_STATE: returns the currently set compilation state
+-- SGS_CNTL_MINLEV: sets the new minimum error level from `val`, returns the previous value
+-- SGS_CNTL_GET_MINLEV: returns the currently set minimum error level
+-- SGS_CNTL_ERRNO: if `val` is true, sets internal errno to 0, otherwise - to `errno`, returns the previous value
+-- SGS_CNTL_SET_ERRNO: sets internal errno to `val`, returns the previous value
+-- SGS_CNTL_GET_ERRNO: returns the currently set internal errno
+- everything else does nothing and returns 0
+
+
 sgs_GetFramePtr [function]
-sgs_Errno [function]
-sgs_SetErrno [function]
-sgs_GetLastErrno [function]
-SGSCERR [function alias]
-SGSCLEARERR [function alias]
+
+== sgs_StackFrame* sgs_GetFramePtr( sgs_Context* C, int end )
+=== returns a call stack frame pointer
+
+- if `end` is not 0, pointer to topmost frame is returned, otherwise a pointer to first frame is returned
+
+
+sgs_Errno [function alias]
+
+== int sgs_Errno( sgs_Context* C, int clear )
+=== copies errno to internal errno value if `clear` is not 0, otherwise internal errno value is set to 0
+
+- used with a boolean expression to set errno if the expression returned false, like this:
+-- `sgs_Errno( C, rename( a, b ) == 0 )`
+- alias to `sgs_Cntl( C, SGS_CNTL_ERRNO, clear )`
+
+
+sgs_SetErrno [function alias]
+
+== int sgs_SetErrno( sgs_Context* C, int err )
+=== sets a specific value `err` to the internal errno variable
+
+- alias to `sgs_Cntl( C, SGS_CNTL_SET_ERRNO, err )`
+
+
+sgs_GetLastErrno [function alias]
+
+== int sgs_GetLastErrno( sgs_Context* C )
+=== returns the currently set internal errno variable
+
+- alias to `sgs_Cntl( C, SGS_CNTL_GET_ERRNO, 0 )`
 
 
 =
