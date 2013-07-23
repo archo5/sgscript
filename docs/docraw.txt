@@ -804,6 +804,35 @@ ftime() [function]
     println( "That took " $ ftime() - start $ " seconds." );
 
 
+pcall() [function]
+
+== pcall( callable func[, callable errh ])
+=== calls the callable `func`, hiding internal errors from the caller or optionally passing them to callable `errh`
+
+- `errh` error handler is called with two arguments - `int error_type, string message` - and expected to return 0-1 arguments ([int])
+- error handler must return 0/null/nothing if the error has been successfully processed or the new error type otherwise
+-- errors thrown inside the handler will not be caught so any error can be transformed to any other
+-- an empty function behaves the same way as `pcall` without function
+
+    include "string";
+    
+    function handler( type, msg )
+    {
+        if( string_find( msg, "not found" ) !== null )
+            sys_print( type, "nooooooooooo" );
+    }
+    
+    function handler2( type, msg )
+    {
+        if( string_find( msg, "not found" ) !== null )
+            return SGS_ERROR;
+    }
+    
+    pcall(function(){ print x; }); // nothing
+    pcall(function(){ print x; }, handler ); // renamed warning
+    pcall(function(){ print x; }, handler2 ); // changed type to error
+
+
 eval() [function]
 
 == eval( string code )
