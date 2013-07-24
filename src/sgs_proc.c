@@ -2367,14 +2367,14 @@ SGSRESULT sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Int idx, sgs_Variable
 
 SGSRESULT sgs_Pop( SGS_CTX, int count )
 {
-	if( STACKFRAMESIZE < count )
+	if( STACKFRAMESIZE < count || count < 0 )
 		return SGS_EINVAL;
 	stk_pop( C, count );
 	return SGS_SUCCESS;
 }
 SGSRESULT sgs_PopSkip( SGS_CTX, int count, int skip )
 {
-	if( STACKFRAMESIZE < count + skip )
+	if( STACKFRAMESIZE < count + skip || count < 0 || skip < 0 )
 		return SGS_EINVAL;
 	stk_popskip( C, count, skip );
 	return SGS_SUCCESS;

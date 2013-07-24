@@ -290,6 +290,24 @@ sgs_Push[Null|Bool|Int|Real|StringBuf|String|CFunction|Object|ObjectIPA|Variable
 - these functions do not throw an error when the stack is full since there is no way to handle that
 
 
+sgs_Pop [function]
+
+== SGSRESULT sgs_Pop( sgs_Context* C, int count )
+=== pops `count` variables off the current frame of the stack
+
+=== error codes
+- SGS_EINVAL: `count` was bigger than the number of items in the current stack frame or `count` is less than 0
+
+
+sgs_PopSkip [function]
+
+== SGSRESULT sgs_PopSkip( sgs_Context* C, int count, int skip )
+=== pops `count` variables off the current frame of the stack, skipping the last `skip` elements
+
+=== error codes
+- SGS_EINVAL: `count+skip` was bigger than the number of items in the current stack frame or `count` is less than 0 or `skip` is less than 0
+
+
 sgs_InsertVariable [function]
 
 == SGSRESULT sgs_InsertVariable( sgs_Context* C, int pos, sgs_Variable* var )
@@ -348,6 +366,22 @@ sgs_PushProperty [function]
 - SGS_EINPROC: current stack frame is empty
 - SGS_ENOTFND: property was not found
 - other codes may appear if returned by custom objects
+
+
+sgs_PushIndexExt [function]
+sgs_PushIndex [function alias]
+sgs_PushIndexP [function]
+sgs_StoreIndexExt [function]
+sgs_StoreIndex [function alias]
+sgs_StoreIndexP [function]
+sgs_PushGlobal [function]
+sgs_StoreGlobal [function]
+sgs_PushPath [function]
+sgs_StorePath [function]
+sgs_GetIndex [function]
+sgs_SetIndex [function]
+sgs_GetNumIndex [function]
+sgs_SetNumIndex [function]
 
 
 =
@@ -554,14 +588,13 @@ sgs_GetFramePtr [function]
 - if `end` is not 0, pointer to topmost frame is returned, otherwise a pointer to first frame is returned
 
 
-sgs_Errno [function alias]
+sgs_Errno [function (inline)]
 
 == int sgs_Errno( sgs_Context* C, int clear )
-=== copies errno to internal errno value if `clear` is not 0, otherwise internal errno value is set to 0
+=== copies errno to internal errno value if `clear` is not 0, otherwise internal errno value is set to 0, returns `clear`
 
-- used with a boolean expression to set errno if the expression returned false, like this:
--- `sgs_Errno( C, rename( a, b ) == 0 )`
-- alias to `sgs_Cntl( C, SGS_CNTL_ERRNO, clear )`
+- used with a boolean expression and chaining to set errno if the expression returned false, like this:
+-- `sgs_PushBool( C, sgs_Errno( C, rename( a, b ) == 0 ) )`
 
 
 sgs_SetErrno [function alias]
