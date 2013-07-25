@@ -470,6 +470,9 @@ SGS_APIFUNC SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems );
 SGS_APIFUNC SGSRESULT sgs_PushItem( SGS_CTX, int item );
 SGS_APIFUNC SGSRESULT sgs_StoreItem( SGS_CTX, int item );
 SGS_APIFUNC SGSRESULT sgs_PushProperty( SGS_CTX, const char* name );
+SGS_APIFUNC SGSRESULT sgs_StoreProperty( SGS_CTX, int obj, const char* name );
+SGS_APIFUNC SGSRESULT sgs_PushNumIndex( SGS_CTX, int obj, sgs_Int idx );
+SGS_APIFUNC SGSRESULT sgs_StoreNumIndex( SGS_CTX, int obj, sgs_Int idx );
 SGS_APIFUNC SGSRESULT sgs_PushIndexExt( SGS_CTX, int obj, int idx, int prop );
 #define sgs_PushIndex( C, obj, idx ) sgs_PushIndexExt( C, obj, idx, 0 )
 SGS_APIFUNC SGSRESULT sgs_PushIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx );
@@ -481,12 +484,6 @@ SGS_APIFUNC SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name );
 
 SGS_APIFUNC SGSRESULT sgs_PushPath( SGS_CTX, int item, const char* path, ... );
 SGS_APIFUNC SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... );
-
-/* sgs_Get(Num)Index: must release "out" */
-SGS_APIFUNC SGSRESULT sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx );
-SGS_APIFUNC SGSRESULT sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val );
-SGS_APIFUNC SGSRESULT sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Int idx );
-SGS_APIFUNC SGSRESULT sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Int idx, sgs_Variable* val );
 
 SGS_APIFUNC SGSRESULT sgs_Pop( SGS_CTX, int count );
 SGS_APIFUNC SGSRESULT sgs_PopSkip( SGS_CTX, int count, int skip );
@@ -546,9 +543,7 @@ SGS_APIFUNC SGSRESULT sgs_PushIterator( SGS_CTX, int item );
 SGS_APIFUNC SGSMIXED sgs_IterAdvance( SGS_CTX, int item );
 SGS_APIFUNC SGSRESULT sgs_IterPushData( SGS_CTX, int item, int key, int value );
 
-SGS_APIFUNC SGSBOOL sgs_IsArray( SGS_CTX, sgs_Variable* var );
-SGS_APIFUNC SGSMIXED sgs_ArraySize( SGS_CTX, sgs_Variable* var );
-SGS_APIFUNC SGSBOOL sgs_ArrayGet( SGS_CTX, sgs_Variable* var, sgs_SizeVal which, sgs_Variable* out );
+SGS_APIFUNC SGSMIXED sgs_ArraySize( SGS_CTX, int item );
 
 /*
 	EXTENSION UTILITIES

@@ -2939,22 +2939,18 @@ static int _stringrep_as
 (
 	SGS_CTX,
 	char* str, int32_t size,
-	sgs_Variable* subarr,
 	char* rep, int32_t repsize
 )
 {
 	char* substr;
 	sgs_SizeVal subsize;
-	sgs_Variable var;
-	int32_t i, arrsize = sgs_ArraySize( C, subarr );
+	int32_t i, arrsize = sgs_ArraySize( C, 1 );
 	if( arrsize < 0 )
 		goto fail;
 
 	for( i = 0; i < arrsize; ++i )
 	{
-		if( !sgs_ArrayGet( C, subarr, i, &var ) )   goto fail;
-		sgs_PushVariable( C, &var );
-		sgs_Release( C, &var );
+		if( sgs_PushNumIndex( C, 1, i ) )   goto fail;
 		if( !sgs_ParseString( C, -1, &substr, &subsize ) )
 			goto fail;
 
@@ -2973,32 +2969,22 @@ static int _stringrep_as
 fail:
 	return 0;
 }
-static int _stringrep_aa
-(
-	SGS_CTX, char* str, int32_t size,
-	sgs_Variable* subarr,
-	sgs_Variable* reparr
-)
+static int _stringrep_aa( SGS_CTX, char* str, int32_t size )
 {
 	char* substr, *repstr;
 	sgs_SizeVal subsize, repsize;
-	sgs_Variable var;
-	int32_t i, arrsize = sgs_ArraySize( C, subarr ),
-		reparrsize = sgs_ArraySize( C, reparr );
+	int32_t i, arrsize = sgs_ArraySize( C, 1 ),
+		reparrsize = sgs_ArraySize( C, 2 );
 	if( arrsize < 0 || reparrsize < 0 )
 		goto fail;
 
 	for( i = 0; i < arrsize; ++i )
 	{
-		if( !sgs_ArrayGet( C, subarr, i, &var ) )   goto fail;
-		sgs_PushVariable( C, &var );
-		sgs_Release( C, &var );
+		if( sgs_PushNumIndex( C, 1, i ) )   goto fail;
 		if( !sgs_ParseString( C, -1, &substr, &subsize ) )
 			goto fail;
 
-		if( !sgs_ArrayGet( C, reparr, i % reparrsize, &var ) )   goto fail;
-		sgs_PushVariable( C, &var );
-		sgs_Release( C, &var );
+		if( sgs_PushNumIndex( C, 2, i % reparrsize ) )   goto fail;
 		if( !sgs_ParseString( C, -1, &repstr, &repsize ) )
 			goto fail;
 
@@ -3021,7 +3007,6 @@ static int sgsstd_string_replace( SGS_CTX )
 {
 	int argc, isarr1, isarr2, ret;
 	char* str, *sub, *rep;
-	sgs_Variable var1, var2;
 	sgs_SizeVal size, subsize, repsize;
 	
 	SGSFN( "string_replace" );
@@ -3030,17 +3015,15 @@ static int sgsstd_string_replace( SGS_CTX )
 	if( argc != 3 )
 		goto invargs;
 
-	sgs_GetStackItem( C, 1, &var1 );
-	sgs_GetStackItem( C, 2, &var2 );
-	isarr1 = sgs_IsArray( C, &var1 );
-	isarr2 = sgs_IsArray( C, &var2 );
+	isarr1 = sgs_ItemTypeExt( C, 1 ) == VTC_ARRAY;
+	isarr2 = sgs_ItemTypeExt( C, 2 ) == VTC_ARRAY;
 
 	if( !sgs_ParseString( C, 0, &str, &size ) )
 		goto invargs;
 
 	if( isarr1 && isarr2 )
 	{
-		return _stringrep_aa( C, str, size, &var1, &var2 );
+		return _stringrep_aa( C, str, size );
 	}
 
 	if( isarr2 )
@@ -3049,14 +3032,14 @@ static int sgsstd_string_replace( SGS_CTX )
 	ret = sgs_ParseString( C, 2, &rep, &repsize );
 	if( isarr1 && ret )
 	{
-		return _stringrep_as( C, str, size, &var1, rep, repsize );
+		return _stringrep_as( C, str, size, rep, repsize );
 	}
 
 	if( sgs_ParseString( C, 1, &sub, &subsize ) && ret )
 	{
 		if( subsize == 0 )
 		{
-			sgs_PushVariable( C, &var1 );
+			sgs_PushItem( C, 1 );
 			return 1;
 		}
 		return _stringrep_ss( C, str, size, sub, subsize, rep, repsize );
@@ -3167,19 +3150,16 @@ static int sgsstd_string_tolower( SGS_CTX )
 
 static int sgsstd_string_implode( SGS_CTX )
 {
-	sgs_Variable arr;
 	sgs_SizeVal i, asize;
 	
 	SGSFN( "string_implode" );
 
 	if( sgs_StackSize( C ) != 2 ||
-		!sgs_GetStackItem( C, 0, &arr ) ||
-		!sgs_IsArray( C, &arr ) ||
+		( asize = sgs_ArraySize( C, 0 ) ) < 0 ||
 		!sgs_ParseString( C, 1, NULL, NULL ) )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 2 arguments: array, string" )
 
-	asize = sgs_ArraySize( C, &arr );
 	if( !asize )
 	{
 		sgs_PushString( C, "" );
@@ -3187,13 +3167,10 @@ static int sgsstd_string_implode( SGS_CTX )
 	}
 	for( i = 0; i < asize; ++i )
 	{
-		sgs_Variable var;
 		if( i )
 			sgs_PushItem( C, 1 );
-		if( !sgs_ArrayGet( C, &arr, i, &var ) )
+		if( sgs_PushNumIndex( C, 0, i ) )
 			STDLIB_WARN( "failed to read from array" )
-		sgs_PushVariable( C, &var );
-		sgs_Release( C, &var );
 	}
 	sgs_StringMultiConcat( C, i * 2 - 1 );
 	return 1;
@@ -3283,14 +3260,12 @@ static int sgsstd_string_frombytes( SGS_CTX )
 	char* buf;
 	int hasone = 0;
 	sgs_SizeVal size, i = 0;
-	sgs_Variable arr;
 	sgs_Int onecode;
 	
 	SGSFN( "string_frombytes" );
 
 	if( sgs_StackSize( C ) != 1 ||
-		!sgs_GetStackItem( C, 0, &arr ) ||
-		( !sgs_IsArray( C, &arr ) &&
+		( ( size = sgs_ArraySize( C, 0 ) ) < 0 &&
 			!( hasone = sgs_ParseInt( C, 0, &onecode ) ) ) )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1 argument: array|int" )
@@ -3306,10 +3281,6 @@ static int sgsstd_string_frombytes( SGS_CTX )
 			return 1;
 		}
 	}
-
-	size = sgs_ArraySize( C, &arr );
-	if( size < 0 )
-		goto fail;
 
 	sgs_PushStringBuf( C, NULL, size );
 	buf = sgs_ToString( C, -1 );
@@ -3363,19 +3334,13 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 {
 	MemBuf buf = membuf_create();
 	sgs_SizeVal size;
-	sgs_Variable arr;
 	
 	SGSFN( "string_utf8_encode" );
 
 	if( sgs_StackSize( C ) != 1 ||
-		!sgs_GetStackItem( C, 0, &arr ) ||
-		!sgs_IsArray( C, &arr ) )
+		( size = sgs_ArraySize( C, 0 ) ) < 0 )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1 argument: array" )
-
-	size = sgs_ArraySize( C, &arr );
-	if( size < 0 )
-		goto fail;
 
 	if( sgs_PushIterator( C, 0 ) < 0 )
 		goto fail;

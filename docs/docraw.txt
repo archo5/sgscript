@@ -368,20 +368,177 @@ sgs_PushProperty [function]
 - other codes may appear if returned by custom objects
 
 
+sgs_StoreProperty [function]
+
+== SGSRESULT sgs_StoreProperty( sgs_Context* C, int obj, const char* name )
+=== copy and pop the topmost item of the current stack frame to the property `name` of variable `obj`
+
+=== error codes
+- SGS_EBOUNDS: `obj` was not pointing inside the current stack frame
+- SGS_ENOTFND: property was not found
+- other codes may appear if returned by custom objects
+
+
+sgs_PushNumIndex [function]
+
+== SGSRESULT sgs_PushNumIndex( sgs_Context* C, int obj, sgs_Int idx )
+=== load and push the integer index `idx` of the variable `obj`
+
+=== error codes:
+- SGS_EBOUNDS: `obj` was not pointing inside the current stack frame / array index out of bounds
+- SGS_ENOTFND: index was not found
+- other codes may appear if returned by custom objects
+
+
+sgs_StoreNumIndex [function]
+
+== SGSRESULT sgs_StoreNumIndex( sgs_Context* C, int obj, sgs_Int idx )
+=== copy and pop the topmost item of the current stack to the integer index `idx` of variable `obj`
+
+=== error codes
+- SGS_EBOUNDS: `obj` was not pointing inside the current stack frame / array index out of bounds
+- SGS_ENOTFND: index was not found
+- other codes may appear if returned by custom objects
+
+
 sgs_PushIndexExt [function]
+
+== SGSRESULT sgs_PushIndexExt( sgs_Context* C, int obj, int idx, int prop )
+=== load and push the indexed item/property (if `prop` is nonzero) `idx` of the item `obj` in the current stack frame
+
+=== error codes
+- SGS_EBOUNDS: `obj` or `idx` were not pointing inside the current stack frame / array index out of bounds
+- SGS_ENOTFND: property/index was not found
+- SGS_EINVAL: index is not of string or integer type
+- other codes may appear if returned by custom objects
+
+
 sgs_PushIndex [function alias]
+
+== SGSRESULT sgs_PushIndex( sgs_Context* C, int obj, int idx )
+=== load and push the indexed item `idx` of the item `obj` in the current stack frame
+
+- alias of `sgs_PushIndexExt( C, obj, idx, 0 )`
+
+=== error codes
+- SGS_EBOUNDS: `obj` or `idx` were not pointing inside the current stack frame / array index out of bounds
+- SGS_ENOTFND: index was not found
+- SGS_EINVAL: index is not of string or integer type
+- other codes may appear if returned by custom objects
+
+
 sgs_PushIndexP [function]
+
+== SGSRESULT sgs_PushIndexP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx )
+=== load and push the indexed item `idx` of the item `obj`
+
+=== error codes
+- SGS_EBOUNDS: array index out of bounds
+- SGS_ENOTFND: index was not found
+- SGS_EINVAL: index is not of string or integer type
+- other codes may appear if returned by custom objects
+
+
 sgs_StoreIndexExt [function]
+
+== SGSRESULT sgs_StoreIndexExt( sgs_Context* C, int obj, int idx, int prop )
+=== copy and pop the topmost stack item to the indexed item/property (if `prop` is nonzero) `idx` of the item `obj` in the current stack frame
+
+=== error codes
+- SGS_EBOUNDS: `obj` or `idx` were not pointing inside the current stack frame / array index out of bounds
+- SGS_ENOTFND: property/index was not found
+- SGS_EINVAL: index is not of string or integer type
+- other codes may appear if returned by custom objects
+
+
 sgs_StoreIndex [function alias]
+
+== SGSRESULT sgs_StoreIndex( sgs_Context* C, int obj, int idx )
+=== copy and pop the topmost stack item to the indexed item `idx` of the item `obj` in the current stack frame
+
+=== error codes
+- SGS_EBOUNDS: `obj` or `idx` were not pointing inside the current stack frame / array index out of bounds
+- SGS_ENOTFND: index was not found
+- SGS_EINVAL: index is not of string or integer type
+- other codes may appear if returned by custom objects
+
+
 sgs_StoreIndexP [function]
+
+== SGSRESULT sgs_StoreIndexP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx )
+=== copy and pop the topmost stack item to the indexed item `idx` of the item `obj`
+
+=== error codes
+- SGS_EBOUNDS: array index out of bounds
+- SGS_EINPROC: current stack frame is empty
+- SGS_ENOTFND: index was not found
+- SGS_EINVAL: index is not of string or integer type
+- other codes may appear if returned by custom objects
+
+
 sgs_PushGlobal [function]
+
+== SGSRESULT sgs_PushGlobal( sgs_Context* C, const char* name )
+=== push the global variable `name` on the stack
+
+=== error codes
+- SGS_ENOTFND: variable was not found
+
+
 sgs_StoreGlobal [function]
+
+== SGSRESULT sgs_StoreGlobal( sgs_Context* C, const char* name )
+=== copy and pop the topmost stack item to the global variable `name`
+
+=== error codes
+- SGS_EINPROC: attempted to set a hardcoded constant (`_G`) / current stack frame was empty
+
+
 sgs_PushPath [function]
+
+== sgs_PushPath( sgs_Context* C, int item, const char* path, ... )
+=== push the variable specified by starting point `item` and traversal path `path`
+
+! The safety of this function is similar to that of the printf family of functions. Be explicit in what types you pass to the variable argument list to avoid errors.
+
+- the syntax of `path`:
+-- a list of letters, specifying a sub-variable to request (o,p,s,i,k,n)
+
+==== table of accepted letters
+---------------------------------------------------------------------------------------
+! letter ! property? ! variable arguments ! virtual machine access mode / description !
+|    o   |    yes    |  SizeVal           |   integer property                        |
+|    p   |    yes    |  C string          |   string property                         |
+|    s   |    yes    |  SizeVal, buffer   |   special string property                 |
+|    i   |    no     |  SizeVal           |   integer index                           |
+|    k   |    no     |  C string          |   string index                            |
+|    n   |    no     |  SizeVal, buffer   |   special string index                    |
+---------------------------------------------------------------------------------------
+- legend:
+-- SizeVal: sgs_SizeVal / int32_t
+-- C string: null-terminated char* string
+-- buffer: char* byte array, size is specified in the previous argument
+-- property?: if yes, property access is used (object.property), otherwise index access is used (object[index])
+
+=== error codes
+- SGS_EINVAL: invalid symbol found in path / corresponding variable arguments had an invalid value
+- other errors, as returned by @sgs_PushIndexExt()
+
+
 sgs_StorePath [function]
-sgs_GetIndex [function]
-sgs_SetIndex [function]
-sgs_GetNumIndex [function]
-sgs_SetNumIndex [function]
+
+== sgs_StorePath( sgs_Context* C, int item, const char* path, ... )
+=== copy and pop the topmost item on stack to variable specified by starting point `item` and traversal path `path`
+
+! The safety of this function is similar to that of the printf family of functions. Be explicit in what types you pass to the variable argument list to avoid errors.
+
+- the syntax of `path` is the same as with @sgs_PushPath()
+- the last item on the path (or in the case of an empty path, the starting point) is accessed with a store operation, the rest - with a push operation
+
+=== error codes
+- SGS_EINVAL: invalid symbol found in path / corresponding variable arguments had an invalid value
+- SGS_EINPROC: current stack frame is empty
+- other errors, as returned by @sgs_PushIndexExt() or @sgs_StoreIndexExt()
 
 
 =

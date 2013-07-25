@@ -361,14 +361,11 @@ static SGS_INLINE int sgsarrcomp_smi_rev( const void* p1, const void* p2, void* 
 static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 {
 	sgs_SizeVal i, asize = 0;
-	sgs_Variable a2;
 	int rev = 0, cnt = sgs_StackSize( C );
 	SGSARR_IHDR( sort_mapped );
 
 	if( cnt < 1 || cnt > 2 ||
-		!sgs_GetStackItem( C, 1, &a2 ) ||
-		!sgs_IsArray( C, &a2 ) ||
-		( asize = sgs_ArraySize( C, &a2 ) ) < 0 ||
+		( asize = sgs_ArraySize( C, 1 ) ) < 0 ||
 		( cnt == 2 && !sgs_ParseBool( C, 2, &rev ) ) )
 		STDLIB_WARN( "unexpected arguments;"
 			" function expects 1-2 arguments: array[, bool]" )
@@ -380,13 +377,11 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 		sgsarr_smi* smis = sgs_Alloc_n( sgsarr_smi, asize );
 		for( i = 0; i < asize; ++i )
 		{
-			sgs_Variable var;
-			if( !sgs_ArrayGet( C, &a2, i, &var ) )
+			if( sgs_PushNumIndex( C, 1, i ) )
 			{
 				sgs_Dealloc( smis );
 				STDLIB_WARN( "error in mapping array" )
 			}
-			sgs_PushVariable( C, &var );
 			smis[ i ].value = sgs_GetReal( C, -1 );
 			smis[ i ].pos = i;
 			sgs_Pop( C, 1 );
@@ -1177,7 +1172,7 @@ static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 static int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
 	int ret;
-	sgs_Variable var, idx;
+	sgs_Variable idx;
 	SGSCLASS_HDR;
 	if( prop && strcmp( sgs_ToString( C, -1 ), "_super" ) == 0 )
 	{
@@ -1185,28 +1180,23 @@ static int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		return SGS_SUCCESS;
 	}
 	sgs_GetStackItem( C, -1, &idx );
-	sgs_Acquire( C, &idx );
 
-	if( sgs_GetIndex( C, &var, &hdr->data, &idx ) == SGS_SUCCESS )
+	if( sgs_PushIndexP( C, &hdr->data, &idx ) == SGS_SUCCESS )
 		goto success;
 
-	ret = sgs_GetIndex( C, &var, &hdr->inh, &idx );
+	ret = sgs_PushIndexP( C, &hdr->inh, &idx );
 	if( ret == SGS_SUCCESS )
 		goto success;
 
-	sgs_Release( C, &idx );
 	return ret;
 
 success:
-	sgs_PushVariable( C, &var );
-	sgs_Release( C, &var );
-	sgs_Release( C, &idx );
 	return SGS_SUCCESS;
 }
 
 static int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
-	sgs_Variable k, v;
+	sgs_Variable k;
 	SGSCLASS_HDR;
 	if( strcmp( sgs_ToString( C, -2 ), "_super" ) == 0 )
 	{
@@ -1216,28 +1206,20 @@ static int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 		return SGS_SUCCESS;
 	}
 	sgs_GetStackItem( C, -2, &k );
-	sgs_GetStackItem( C, -1, &v );
-	return sgs_SetIndex( C, &hdr->data, &k, &v );
+	return sgs_StoreIndexP( C, &hdr->data, &k );
 }
 
 static int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
 {
 	int ret;
-	sgs_Variable var, idx;
+	sgs_Variable idx;
 	SGSCLASS_HDR;
 
 	sgs_PushString( C, method );
 	sgs_GetStackItem( C, -1, &idx );
-	sgs_Acquire( C, &idx );
-	sgs_Pop( C, 1 );
 	
-	ret = sgs_GetIndex( C, &var, &hdr->inh, &idx );
-	if( ret == SGS_SUCCESS )
-	{
-		sgs_PushVariable( C, &var );
-		sgs_Release( C, &var );
-	}
-	sgs_Release( C, &idx );
+	ret = sgs_PushIndexP( C, &hdr->inh, &idx );
+	sgs_PopSkip( C, 1, ret == SGS_SUCCESS ? 1 : 0 );
 	return ret == SGS_SUCCESS;
 }
 

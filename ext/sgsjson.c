@@ -326,12 +326,8 @@ endnumparse:
 			}
 			if( STK_TOP == ':' )
 			{
-				sgs_Variable obj, idx, val;
-				sgs_GetStackItem( C, -3, &obj );
-				sgs_GetStackItem( C, -2, &idx );
-				sgs_GetStackItem( C, -1, &val );
-				sgs_SetIndex( C, &obj, &idx, &val );
-				sgs_Pop( C, 2 );
+				sgs_StoreIndex( C, -3, -2 );
+				sgs_Pop( C, 1 );
 				STK_TOP = '{';
 			}
 		}
@@ -428,7 +424,7 @@ static int encode_var( SGS_CTX, MemBuf* buf )
 	case VT_OBJECT:
 		{
 			/* stack: Obj */
-			int isarr = sgs_IsArray( C, &var ), first = 1;
+			int isarr = var.type == SGS_VTC_ARRAY, first = 1;
 			membuf_appchr( buf, C, isarr ? '[' : '{' );
 			if( sgs_PushIterator( C, -1 ) != SGS_SUCCESS )
 				return 0;

@@ -2113,6 +2113,38 @@ SGSRESULT sgs_PushProperty( SGS_CTX, const char* name )
 	return ret;
 }
 
+SGSRESULT sgs_StoreProperty( SGS_CTX, int obj, const char* name )
+{
+	int ret;
+	if( !sgs_IsValidIndex( C, obj ) )
+		return SGS_EBOUNDS;
+	obj = stk_absindex( C, obj );
+	sgs_PushString( C, name );
+	ret = vm_setprop( C, stk_getpos( C, obj ), stk_getpos( C, -1 ), stk_getpos( C, -2 ), FALSE );
+	sgs_Pop( C, ret == SGS_SUCCESS ? 2 : 1 );
+	return ret;
+}
+
+SGS_APIFUNC SGSRESULT sgs_PushNumIndex( SGS_CTX, int obj, sgs_Int idx )
+{
+	sgs_Variable var, ivar;
+	ivar.type = VTC_INT;
+	ivar.data.I = idx;
+	if( !sgs_GetStackItem( C, obj, &var ) )
+		return SGS_EBOUNDS;
+	return sgs_PushIndexP( C, &var, &ivar );
+}
+
+SGS_APIFUNC SGSRESULT sgs_StoreNumIndex( SGS_CTX, int obj, sgs_Int idx )
+{
+	sgs_Variable var, ivar;
+	ivar.type = VTC_INT;
+	ivar.data.I = idx;
+	if( !sgs_GetStackItem( C, obj, &var ) )
+		return SGS_EBOUNDS;
+	return sgs_StoreIndexP( C, &var, &ivar );
+}
+
 SGSRESULT sgs_PushIndexExt( SGS_CTX, int obj, int idx, int prop )
 {
 	int32_t oel = C->minlev;
@@ -2171,7 +2203,7 @@ SGSRESULT sgs_StoreIndexP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 	int ret;
 	sgs_Variable val;
 	if( !sgs_GetStackItem( C, -1, &val ) )
-		return SGS_EBOUNDS;
+		return SGS_EINPROC;
 	ret = vm_setprop( C, obj, idx, &val, TRUE );
 	if( ret == SGS_SUCCESS )
 		sgs_Pop( C, 1 );
@@ -2196,6 +2228,8 @@ SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name )
 
 SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
 {
+	if( sgs_StackSize( C ) < 1 )
+		return SGS_EINPROC;
 	sgs_PushString( C, name );
 	sgsSTD_GlobalSet( C, stk_getpos( C, -1 ), stk_getpos( C, -2 ), 1 );
 	sgs_Pop( C, 2 );
@@ -2277,6 +2311,8 @@ SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... )
 {
 	int ret, len = strlen( path ), val, ssz = sgs_StackSize( C );
 	va_list args;
+	if( ssz < 1 )
+		return SGS_EINPROC;
 	if( !*path )
 		return sgs_StoreItem( C, item );
 	va_start( args, path );
@@ -2326,42 +2362,6 @@ SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... )
 fail:
 	sgs_Pop( C, sgs_StackSize( C ) - ssz );
 	return ret;
-}
-
-
-SGSRESULT sgs_GetIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Variable* idx )
-{
-	int ret = sgs_PushIndexP( C, obj, idx );
-	if( ret == SGS_SUCCESS )
-	{
-		*out = *stk_getpos( C, -1 );
-		VAR_ACQUIRE( out );
-		stk_pop1( C );
-	}
-	return ret;
-}
-
-SGSRESULT sgs_SetIndex( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val )
-{
-	return vm_setprop( C, obj, idx, val, TRUE );
-}
-
-SGSRESULT sgs_GetNumIndex( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_Int idx )
-{
-	sgs_Variable tmp;
-	tmp.type = VTC_INT;
-	tmp.data.I = idx;
-
-	return sgs_GetIndex( C, out, obj, &tmp );
-}
-
-SGSRESULT sgs_SetNumIndex( SGS_CTX, sgs_Variable* obj, sgs_Int idx, sgs_Variable* val )
-{
-	sgs_Variable tmp;
-	tmp.type = VTC_INT;
-	tmp.data.I = idx;
-
-	return sgs_SetIndex( C, obj, &tmp, val );
 }
 
 
@@ -3055,29 +3055,11 @@ SGSMIXED sgs_IterPushData( SGS_CTX, int item, int key, int value )
 	return ret;
 }
 
-
-SGSBOOL sgs_IsArray( SGS_CTX, sgs_Variable* var )
+SGSMIXED sgs_ArraySize( SGS_CTX, int item )
 {
-	return var->type == VTC_ARRAY;
-}
-
-SGSMIXED sgs_ArraySize( SGS_CTX, sgs_Variable* var )
-{
-	int32_t ret;
-
-	sgs_PushVariable( C, var );
-
-	ret = sgs_PushProperty( C, "size" );
-	if( ret != SGS_SUCCESS ){ sgs_Pop( C, 1 ); return ret; }
-
-	ret = (int32_t) sgs_ToInt( C, -1 );
-	sgs_Pop( C, 1 );
-	return ret;
-}
-
-SGSBOOL sgs_ArrayGet( SGS_CTX, sgs_Variable* var, sgs_SizeVal which, sgs_Variable* out )
-{
-	return sgs_GetNumIndex( C, out, var, which ) == SGS_SUCCESS;
+	if( sgs_ItemTypeExt( C, item ) != VTC_ARRAY )
+		return SGS_EINVAL;
+	return ((sgsstd_array_header_t*)sgs_GetObjectData( C, item )->data)->size;
 }
 
 
