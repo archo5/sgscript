@@ -529,9 +529,6 @@ SGS_APIFUNC char* sgs_ToStringBufFast( SGS_CTX, int item, sgs_SizeVal* outsize )
 #define sgs_ToStringFast( ctx, item ) sgs_ToStringBufFast( ctx, item, NULL )
 SGS_APIFUNC SGSRESULT sgs_Convert( SGS_CTX, int item, int type );
 
-/*
-	ARGUMENT HANDLING
-*/
 SGS_APIFUNC SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface );
 SGS_APIFUNC SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size );
 SGS_APIFUNC SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out );

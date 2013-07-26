@@ -542,6 +542,78 @@ sgs_StorePath [function]
 
 
 =
+== API/OPERATIONS
+=
+
+
+sgs_FCall [function]
+sgs_Call [function alias]
+sgs_ThisCall [function alias]
+sgs_GlobalCall [function]
+sgs_TypeOf [function]
+sgs_DumpVar [function]
+sgs_GCExecute [function]
+sgs_PadString [function]
+sgs_StringConcat [function]
+sgs_StringMultiConcat [function]
+sgs_CloneItem [function]
+sgs_Serialize [function]
+sgs_SerializeObject [function]
+sgs_Unserialize [function]
+sgs_CompareF [function]
+sgs_Compare [function alias]
+sgs_EqualTypes [function]
+
+
+=
+== API/CONVRET
+=
+
+
+sgs_GetBool [function]
+sgs_GetInt [function]
+sgs_GetReal [function]
+sgs_ToBool [function]
+sgs_ToInt [function]
+sgs_ToReal [function]
+sgs_ToStringBuf [function]
+sgs_ToString [function alias]
+sgs_ToStringBufFast [function]
+sgs_ToStringFast [function alias]
+sgs_Convert [function]
+sgs_IsObject [function]
+sgs_IsNumericString [function]
+sgs_ParseBool [function]
+sgs_ParseInt [function]
+sgs_ParseReal [function]
+sgs_ParseString [function]
+sgs_PushIterator [function]
+sgs_IterAdvance [function]
+sgs_IterPushData [function]
+sgs_ArraySize [function]
+
+
+=
+== API/EXT
+=
+
+
+sgs_StackSize [function]
+sgs_IsValidIndex [function]
+sgs_GetStackItem [function]
+sgs_ItemType [function]
+sgs_ItemTypeExt [function]
+sgs_Method [function]
+sgs_Acquire [function]
+sgs_Release [function]
+sgs_ReleaseOwned [function]
+sgs_GCMark [function]
+sgs_GetStringPtr [function]
+sgs_GetStringSize [function]
+sgs_GetObjectData [function]
+
+
+=
 == API/ENV
 =
 
