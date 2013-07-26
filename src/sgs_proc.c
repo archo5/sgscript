@@ -820,7 +820,7 @@ static int vm_gettype( SGS_CTX )
 {
 	sgs_Variable* A;
 	if( sgs_StackSize( C ) <= 0 )
-		return SGS_ENOTFND;
+		return SGS_EINPROC;
 
 	A = stk_getpos( C, -1 );
 	if( A->type & VT_OBJECT )
@@ -1147,6 +1147,7 @@ static int vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
 {
 	switch( var->type )
 	{
+	/*
 	case VTC_STRING:
 		{
 			sgs_Variable ns;
@@ -1154,6 +1155,7 @@ static int vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
 			stk_setlvar_leave( C, out, &ns );
 		}
 		break;
+	*/
 	case VTC_OBJECT:
 	case VTC_ARRAY:
 	case VTC_DICT:
@@ -2423,7 +2425,7 @@ SGSRESULT sgs_TypeOf( SGS_CTX )
 SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 {
 	if( sgs_StackSize( C ) < 1 )
-		return SGS_ENOTFND;
+		return SGS_EINPROC;
 
 	if( maxdepth <= 0 )
 	{
@@ -2547,7 +2549,7 @@ SGSRESULT sgs_GCExecute( SGS_CTX )
 		object_t* pn = p->next;
 		if( p->redblue != C->redblue ){
 			int ret = obj_exec( C, SOP_DESTRUCT, p, FALSE, 0 );
-			if( ret != SGS_SUCCESS )
+			if( ret != SGS_SUCCESS && ret != SGS_ENOTFND )
 				return ret;
 		}
 		p = pn;
@@ -2572,7 +2574,7 @@ SGSRESULT sgs_PadString( SGS_CTX )
 	const int padsize = 2;
 
 	if( sgs_StackSize( C ) < 1 )
-		return SGS_ENOTFND;
+		return SGS_EINPROC;
 	{
 		int i;
 		char* ostr;
@@ -2605,7 +2607,7 @@ SGSRESULT sgs_PadString( SGS_CTX )
 SGSRESULT sgs_StringConcat( SGS_CTX )
 {
 	if( sgs_StackSize( C ) < 2 )
-		return SGS_ENOTFND;
+		return SGS_EINPROC;
 	vm_op_concat( C, stk_absindex( C, -1 ), stk_getpos( C, -2 ), stk_getpos( C, -1 ) );
 	stk_popskip( C, 1, 1 );
 	return SGS_SUCCESS;

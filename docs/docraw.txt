@@ -547,26 +547,190 @@ sgs_StorePath [function]
 
 
 sgs_FCall [function]
+
+== SGSRESULT sgs_FCall( sgs_Context* C, int args, int expect, int gotthis )
+=== call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack
+
+- `args`: the primary variables to be passed to the function, in the same order they are in the stack
+- `expect`: the number of variables to be left after a successful call
+- `gotthis`: whether the function is a method and an additional argument needs to be passed as the 'this' value before others
+
+After a successful call, all arguments and the function will be popped off the stack and the expected number of variables will appear in their place. If the underlying callable does not return enough arguments, 'null' variables will be pushed instead. If the number of returned values is bigger than expected, only the first expected return values will stay on the stack.
+
+- expected stack structure:
+-- (if gotthis != 0) [this]
+-- [argument] x `args`
+-- [callable]
+
+- a callable is one of the following:
+-- SGS function
+-- C function
+-- object with SGS_OP_CALL interface function defined
+
+! Stack is returned to the expected state only if the return value is equal to SGS_SUCCESS or SGS_EINPROC. Otherwise, it's left exactly as it was before the call.
+
+=== error codes
+- SGS_EINPROC: topmost item on stack was not callable
+- SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + 1`)
+
+
 sgs_Call [function alias]
 sgs_ThisCall [function alias]
+
+== SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )
+== SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )
+=== call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack
+
+- aliases to @sgs_FCall(), for the first `gotthis = 0`, for the second `gotthis = 1`.
+
+
 sgs_GlobalCall [function]
+
+== SGSRESULT sgs_GlobalCall( sgs_Context* C, const char* name, int args, int expect )
+=== call the global variable `name` as a function
+
+- combination of @sgs_PushGlobal() and @sgs_Call()
+
+
 sgs_TypeOf [function]
+
+== SGSRESULT sgs_TypeOf( sgs_Context* C )
+=== return the type name string of topmost variable in current stack frame
+
+- if the object does not support the specific part of the conversion interface function, a string of format "object (%p)" is returned to ensure expected type name comparison capabilities
+
+=== error codes
+- SGS_EINPROC: current stack frame was empty
+
+
 sgs_DumpVar [function]
+
+== SGSRESULT sgs_DumpVar( sgs_Context* C, int maxdepth )
+=== convert the topmost variable of current stack frame to a highly informative string that should display the contents of the variable, up to `maxdepth` depth
+
+- if object does not have the SGS_OP_DUMP interface function implemented, only its pointer in memory and reference count are displayed
+
+=== error codes
+- SGS_EINPROC: current stack frame was empty
+- SGS_EINVAL: invalid base variable type found in variable (not really expected to happen unless custom variable creation is done)
+
+
 sgs_GCExecute [function]
+
+== SGSRESULT sgs_GCExecute( sgs_Context* C )
+=== call the garbage collector on the VM
+
+- this procedure may take some time if the object graph is big
+- during the procedure, the SGS_OP_GCMARK interface functions of objects are invoked for the objects visible from entry points (like stack and global table)
+- aborting of the procedure (via error codes) would lead the system into an unrecoverable state (TODO: is that really necessary?)
+
+=== error codes
+- any code can be returned by SGS_OP_GCMARK and SGS_OP_DESTRUCT functions, doing so would abort the process if the code is not either SGS_SUCCESS or SGS_ENOTFND
+
+
 sgs_PadString [function]
+
+== SGSRESULT sgs_PadString( sgs_Context* C )
+=== append two spaces after every newline in the topmost variable of current stack frame
+
+=== error codes
+- SGS_EINPROC: current stack frame is empty
+- SGS_EINVAL: topmost variable is not a string
+
+
 sgs_StringConcat [function]
+
+== SGSRESULT sgs_StringConcat( sgs_Context* C )
+=== concatenate the two topmost string variables in the current stack frame
+
+=== error codes
+- SGS_EINPROC: not enough variables were found in the current stack frame
+
+
 sgs_StringMultiConcat [function]
+
+== SGSRESULT sgs_StringMultiConcat( sgs_Context* C, int args )
+=== concatenate the `args` number of topmost string variables in the current stack frame
+
+=== error codes
+- SGS_EINVAL: not enough (less than `args`) variables were found in the current stack frame
+
+
 sgs_CloneItem [function]
+
+== SGSRESULT sgs_CloneItem( sgs_Context* C, int item )
+=== push a copy of the specified stack item
+
+! Even though operations with functions and strings succeed, functions and strings are not actually cloned since they are immutable.
+
+=== error codes
+- SGS_EBOUNDS: stack item index was out of bounds
+- SGS_ENOTFND: the object does not support cloning
+
+
 sgs_Serialize [function]
+
+== SGSRESULT sgs_Serialize( sgs_Context* C )
+=== serialize the topmost variable of the current stack frame (convert to a binary recreation instruction stream)
+
+- the following variable types can be serialized:
+-- null, bool, int, real, string (TODO: why not SGS functions? it's possible)
+-- objects with the SGS_OP_SERIALIZE interface function defined
+
+- serialized data has the following format:
+-- a list of 'P' or 'C' commands
+-- 'P' (push) command: byte - variable type; variable data
+--- variable data: nothing for null, byte for bool, int64 for int, double for real, int32 + char[] for string
+-- 'C' (call) command: int32 - number of arguments; byte - function name size; char[] - function name
+
+=== error codes
+- SGS_EBOUNDS: current stack frame was empty
+- SGS_EINVAL: an unserializable topmost variable was found (function)
+- SGS_EINPROC: unknown memory error
+
+
 sgs_SerializeObject [function]
+
+== SGSRESULT sgs_SerializeObject( sgs_Context* C, int args, const char* func )
+=== write the serialized code for an object's unserializing function
+
+=== error codes
+- SGS_EINVAL: function name was too long (255 characters or more)
+- SGS_EINPROC: function was used outside serialization interface function
+
+
 sgs_Unserialize [function]
+
+== SGSRESULT sgs_Unserialize( sgs_Context* C )
+=== unserialize the topmost string variable of the current stack frame (run the binary recreation instruction stream)
+
+! Be mindful of the data sources you use - calls to any global function can be placed in the instruction stream. (TODO: need the ability to change global variable lists completely)
+
+
 sgs_CompareF [function]
+
+== sgs_Real sgs_CompareF( sgs_Context* C, sgs_Variable* v1, sgs_Variable* v2 )
+=== return the difference between variables, as `real`
+
+
 sgs_Compare [function alias]
+
+== int sgs_Compare( sgs_Context* C, sgs_Variable* v1, sgs_Variable* v2 )
+=== return the difference between variables, as int -1/0/1
+
+- alias to @sgs_CompareF() + conversion (if result < 0, return -1; if result > 0, return 1; otherwise return 0)
+
+
 sgs_EqualTypes [function]
+
+== SGSBOOL sgs_EqualTypes( sgs_Context* C, sgs_Variable* v1, sgs_Variable* v2 )
+=== return if types of both variables are exactly equal
+
+- both type variables and interface pointers (only if both variables are objects) are checked for equality
 
 
 =
-== API/CONVRET
+== API/CONV-RET
 =
 
 
