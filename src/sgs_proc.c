@@ -2230,12 +2230,13 @@ SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name )
 
 SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
 {
+	int ret;
 	if( sgs_StackSize( C ) < 1 )
 		return SGS_EINPROC;
 	sgs_PushString( C, name );
-	sgsSTD_GlobalSet( C, stk_getpos( C, -1 ), stk_getpos( C, -2 ), 1 );
-	sgs_Pop( C, 2 );
-	return SGS_SUCCESS;
+	ret = sgsSTD_GlobalSet( C, stk_getpos( C, -1 ), stk_getpos( C, -2 ), 1 );
+	sgs_Pop( C, ret == SGS_SUCCESS ? 2 : 1 );
+	return ret;
 }
 
 

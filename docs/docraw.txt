@@ -490,8 +490,11 @@ sgs_StoreGlobal [function]
 == SGSRESULT sgs_StoreGlobal( sgs_Context* C, const char* name )
 === copy and pop the topmost stack item to the global variable `name`
 
+- _G is the superglobal, the environment table (list of global variable names and values)
+
 === error codes
-- SGS_EINPROC: attempted to set a hardcoded constant (`_G`) / current stack frame was empty
+- SGS_EINPROC: current stack frame was empty
+- SGS_ENOTSUP: _G only accepts dict values
 
 
 sgs_PushPath [function]

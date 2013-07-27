@@ -2755,10 +2755,22 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 
 	if( strcmp( var_cstr( idx ), "_G" ) == 0 )
 	{
-		if( !apicall )
-			sgs_Printf( C, SGS_ERROR, "cannot change the value "
-				"of a hardcoded constant (%s)", var_cstr( idx ) );
-		return SGS_EINPROC;
+		sgs_Variable tmp;
+		
+		if( val->type != VTC_DICT )
+		{
+			if( !apicall )
+				sgs_Printf( C, SGS_WARNING, "_G only accepts 'dict' values" );
+			return SGS_ENOTSUP;
+		}
+		
+		sgs_Acquire( C, val );
+		GLBP = val->data.O;
+		
+		tmp.type = VTC_DICT;
+		tmp.data.O = data;
+		sgs_Release( C, &tmp );
+		return SGS_SUCCESS;
 	}
 
 	vht_set( ht, var_cstr( idx ), idx->data.S->size, val, C );
