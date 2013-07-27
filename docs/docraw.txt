@@ -574,8 +574,7 @@ After a successful call, all arguments and the function will be popped off the s
 - SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + 1`)
 
 
-sgs_Call [function alias]
-sgs_ThisCall [function alias]
+sgs_[Call|ThisCall] [function aliases]
 
 == SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )
 == SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )
@@ -734,27 +733,142 @@ sgs_EqualTypes [function]
 =
 
 
-sgs_GetBool [function]
-sgs_GetInt [function]
-sgs_GetReal [function]
-sgs_ToBool [function]
-sgs_ToInt [function]
-sgs_ToReal [function]
-sgs_ToStringBuf [function]
-sgs_ToString [function alias]
-sgs_ToStringBufFast [function]
-sgs_ToStringFast [function alias]
+sgs_[GetBool|GetInt|GetReal] [functions]
+
+== sgs_Bool sgs_GetBool( sgs_Context* C, int item )
+== sgs_Int sgs_GetInt( sgs_Context* C, int item )
+== sgs_Real sgs_GetReal( sgs_Context* C, int item )
+=== return an item from the current stack frame, converted to the specified type
+
+- if `item` is out of bounds, 0 is returned
+
+
+sgs_[ToBool|ToInt|ToReal] [functions]
+
+== sgs_Bool sgs_ToBool( sgs_Context* C, int item )
+== sgs_Int sgs_ToInt( sgs_Context* C, int item )
+== sgs_Real sgs_ToReal( sgs_Context* C, int item )
+=== return an item from the current stack frame, converted in-place to the specified type
+
+- in-place conversion means that if the function succeeds, the item in the stack might have a different type, most likely the requested type
+
+
+sgs_[ToStringBuf|ToStringBufFast] [functions]
+
+== char* sgs_ToStringBuf( sgs_Context* C, int item, sgs_SizeVal* outsize )
+== char* sgs_ToStringBufFast( sgs_Context* C, int item, sgs_SizeVal* outsize )
+=== return an item from the current stack frame, converted in-place to string
+
+- if `item` is out of bounds or conversion fails, NULL is returned
+- the 'fast' version uses type name conversion on object, instead of string conversion - this is to avoid recursion while generating a short description about object contents
+- length of string is returned to the value that `outsize` points to
+
+
+sgs_[ToString|ToStringFast] [function aliases]
+
+== char* sgs_ToString( sgs_Context* C, int item )
+== char* sgs_ToStringFast( sgs_Context* C, int item )
+=== return an item from the current stack frame, converted in-place to string
+
+- aliases of @sgs_ToStringBuf() and @sgs_ToStringBufFast() with the third argument set to NULL
+
+
 sgs_Convert [function]
+
+== SGSRESULT sgs_Convert( sgs_Context* C, int item, int type )
+=== convert an item from the current stack frame to the specified base type
+
+- `type` expects one of the SGS_VT_* constants
+
+=== error codes
+- SGS_EBOUNDS: index out of bounds
+- SGS_ENOTSUP: object does not support the specific conversion
+- SGS_ENOTFND: object does not support conversions
+
+
 sgs_IsObject [function]
+
+== SGSBOOL sgs_IsObject( sgs_Context* C, int item, void** iface )
+=== returns whether the specified stack item `item` is an object with the interface pointer `iface`
+
+- if `item` is out of bounds or not an object or doesn't have the specified interface, 0 is returned
+
+
 sgs_IsNumericString [function]
-sgs_ParseBool [function]
-sgs_ParseInt [function]
-sgs_ParseReal [function]
-sgs_ParseString [function]
+
+== SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )
+=== checks if the string is convertible to an integer/real
+
+- TODO: link to parsing rules
+
+
+sgs_[ParseBool|ParseInt|ParseReal|ParseString] [functions]
+
+== SGSBOOL sgs_ParseBool( sgs_Context* C, int item, sgs_Bool* out )
+== SGSBOOL sgs_ParseInt( sgs_Context* C, int item, sgs_Int* out )
+== SGSBOOL sgs_ParseReal( sgs_Context* C, int item, sgs_Real* out )
+== SGSBOOL sgs_ParseString( sgs_Context* C, int item, char** out, sgs_SizeVal* size )
+=== attempts to parse the specified item of the current stack frame, returning whether parsing was successful
+
+- the parsing rules:
+-- if `item` is out of bounds, fail
+-- if item has the type `null`, `func` or `cfunc`, fail
+-- if item is of `string` type and `bool` is requested, fail
+-- if item is of `string` type and `int`/`real` is requested, try to convert
+-- if item is of `object` type, success of conversion depends on implementation of the object interface and the rules of sgs_GetBool/sgs_GetInt/sgs_GetReal/sgs_ToStringBuf
+-- everything else succeeds
+
+
 sgs_PushIterator [function]
+
+== SGSRESULT sgs_PushIterator( sgs_Context* C, int item )
+=== create an iterator from the specified item of the current stack frame
+
+- iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value
+- iterator starts at the pre-first position, so nothing can be read before the initial state
+
+=== error codes
+- SGS_EBOUNDS: index out of bounds
+- SGS_ENOTSUP: variable type does not support iterators (only objects support them)
+- SGS_ENOTFND: object type does not support iterators (iterator conversion request failed)
+- any other code can be returned by the object
+
+
 sgs_IterAdvance [function]
+
+== SGSMIXED sgs_IterAdvance( sgs_Context* C, int item )
+=== advance the iterator to the next position, returning if the current position is still in range or an error code on failure
+
+- this is the way it's expected to be usually called: `while( sgs_IterAdvance( C, item ) > 0 ){ ... sgs_IterPushData ... }`
+
+=== error codes
+- SGS_EBOUNDS: index out of bounds
+- SGS_EINVAL: iterated object changed in a way that iterator does not support (currently a size equality test) (TODO: what about any other structural changes? can we have a revision number?)
+- SGS_EINPROC: internal failure in the object interface
+
+
 sgs_IterPushData [function]
+
+== SGSRESULT sgs_IterPushData( sgs_Context* C, int item, int key, int value )
+=== load and push the data associated with the current position
+
+- `key` and `value` are booleans that specify if the respective value should be returned
+- first the key is pushed, then the value
+- if neither `key` nor `value` are expected, the call succeeds and doesn't push anything
+
+=== error codes
+- SGS_EBOUNDS: index out of bounds
+- SGS_EINVAL: iterated object changed in a way that iterator does not support
+- SGS_EINPROC: internal failure in the object interface
+
+
 sgs_ArraySize [function]
+
+== SGSMIXED sgs_ArraySize( sgs_Context* C, int item )
+=== check if the specified stack item is an array and return its size or error code on failure
+
+=== error codes
+- SGS_EINVAL: index out of bounds / variable was not an array
 
 
 =

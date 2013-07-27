@@ -2814,19 +2814,28 @@ SGSBOOL sgs_EqualTypes( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
 
 sgs_Bool sgs_GetBool( SGS_CTX, int item )
 {
-	sgs_Variable* var = stk_getpos( C, item );
+	sgs_Variable* var;
+	if( !sgs_IsValidIndex( C, item ) )
+		return 0;
+	var = stk_getpos( C, item );
 	return var_getbool( C, var );
 }
 
 sgs_Int sgs_GetInt( SGS_CTX, int item )
 {
-	sgs_Variable* var = stk_getpos( C, item );
+	sgs_Variable* var;
+	if( !sgs_IsValidIndex( C, item ) )
+		return 0;
+	var = stk_getpos( C, item );
 	return var_getint( C, var );
 }
 
 sgs_Real sgs_GetReal( SGS_CTX, int item )
 {
-	sgs_Variable* var = stk_getpos( C, item );
+	sgs_Variable* var;
+	if( !sgs_IsValidIndex( C, item ) )
+		return 0;
+	var = stk_getpos( C, item );
 	return var_getreal( C, var );
 }
 
@@ -3039,6 +3048,8 @@ SGSMIXED sgs_IterPushData( SGS_CTX, int item, int key, int value )
 	sgs_Variable var;
 	if( !sgs_GetStackItem( C, item, &var ) )
 		return SGS_EBOUNDS;
+	if( !key && !value )
+		return SGS_SUCCESS;
 	if( key )
 	{
 		sgs_PushNull( C );
