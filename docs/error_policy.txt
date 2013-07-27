@@ -57,6 +57,9 @@ E Break level too high
 E Attempted to break while not in a loop
 E Continue level too high
 E Attempted to continue while not in a loop
+E Expression writes only allowed with function call reads
+E 'if' pseudo-function cannot be used as input for expression writes
+E 'if' pseudo-function requires exactly 3 arguments
 E INTERNAL ERROR: constant doesn't have a token of type int/real/string attached
 E Unexpected tree node [uncaught/internal (BcG/w|BcG/r|BcG/r[fe]|BcG) error]
 

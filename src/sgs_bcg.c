@@ -316,6 +316,8 @@ static int preparse_varlist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	node = node->child;
 	while( node )
 	{
+		if( node->type != SFT_IDENT && node->type != SFT_KEYWORD && node->type != SFT_ARGMT )
+			goto cont; /* compatibility with explists */
 		if( find_varT( &C->fctx->gvars, node->token ) >= 0 )
 		{
 			QPRINT( "Variable storage redefined: global -> local" );
@@ -325,6 +327,7 @@ static int preparse_varlist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			comp_reg_alloc( C );
 		if( node->child )
 			ret &= preparse_varlists( C, func, node );
+cont:
 		node = node->next;
 	}
 	return ret;
@@ -364,12 +367,17 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	}
 	else if( node->type == SFT_OPER )
 	{
-		if( ST_OP_ASSIGN( *node->token ) && node->child && node->child->type == SFT_IDENT )
+		if( ST_OP_ASSIGN( *node->token ) && node->child )
 		{
-			/* add_var calls find_var internally but - GVARS vs VARS - note the difference */
-			if( find_varT( &C->fctx->gvars, node->child->token ) == -1 &&
-				add_varT( &C->fctx->vars, C, node->child->token ) )
-				comp_reg_alloc( C );
+			if( node->child->type == SFT_IDENT )
+			{
+				/* add_var calls find_var internally but - GVARS vs VARS - note the difference */
+				if( find_varT( &C->fctx->gvars, node->child->token ) == -1 &&
+					add_varT( &C->fctx->vars, C, node->child->token ) )
+					comp_reg_alloc( C );
+			}
+			if( node->child->type == SFT_EXPLIST )
+				ret &= preparse_varlist( C, func, node->child );
 		}
 		ret &= preparse_varlists( C, func, node->child );
 	}
@@ -783,6 +791,11 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 		FTNode* n = node->child->next->child;
 		int argc = 0, csz1, csz2, csz3;
 		int16_t exprpos = -1, srcpos = -1;
+		if( !out )
+		{
+			QPRINT( "'if' pseudo-function cannot be used as input for expression writes" );
+			return 0;
+		}
 		while( n )
 		{
 			argc++;
@@ -819,8 +832,7 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 		AS_UINT32( func->code.ptr + csz1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( csz2 - csz1 ) / INSTR_SIZE, exprpos );
 		AS_UINT32( func->code.ptr + csz2 - 4 ) = INSTR_MAKE_EX( SI_JUMP, ( csz3 - csz2 ) / INSTR_SIZE, 0 );
 		
-		if( out )
-			*out = retpos;
+		*out = retpos;
 		return 1;
 	}
 
@@ -828,10 +840,13 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 	FUNC_ENTER;
 	if( !compile_node_r( C, func, node->child, &funcpos ) ) return 0;
 
-	if( expect )
-		retpos = comp_reg_alloc( C );
-	for( i = 1; i < expect; ++i )
-		comp_reg_alloc( C );
+	if( out )
+	{
+		if( expect )
+			retpos = comp_reg_alloc( C );
+		for( i = 1; i < expect; ++i )
+			comp_reg_alloc( C );
+	}
 
 	/* load arguments */
 	i = 0;
@@ -865,13 +880,16 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 	INSTR_WRITE( SI_CALL, expect, i, funcpos );
 
 	/* compile writeback */
-	while( expect )
+	if( out )
 	{
-		int16_t cra;
-		expect--;
-		cra = retpos + expect;
-		out[ expect ] = cra;
-		INSTR_WRITE( SI_POPR, cra, 0, 0 );
+		while( expect )
+		{
+			int16_t cra;
+			expect--;
+			cra = retpos + expect;
+			out[ expect ] = cra;
+			INSTR_WRITE( SI_POPR, cra, 0, 0 );
+		}
 	}
 
 	return 1;
@@ -1100,20 +1118,71 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		if( *node->token == ST_OP_SET )
 		{
 			int16_t ireg, isb = func->code.size;
-
-			/* get source data register */
-			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child->next, &ireg ) ) goto fail;
-
-			if( arg )
-				*arg = ireg;
-
-			FUNC_ENTER;
-			if( !try_optimize_last_instr_out( C, func, node->child, isb, arg ) )
+			
+			if( node->child->type == SFT_EXPLIST )
 			{
-				/* just set the contents */
+				int32_t bkup;
+				if( node->child->next->type != SFT_FCALL )
+				{
+					QPRINT( "Expression writes only allowed with function call reads" );
+					goto fail;
+				}
+				
+				/* multiwrite */
+				int xpct = 0;
+				FTNode* n = node->child->child;
+				while( n )
+				{
+					xpct++;
+					n = n->next;
+				}
+				
+				if( !compile_fcall( C, func, node->child->next, NULL, xpct ) ) goto fail;
+				
+				bkup = C->fctx->regs;
+				while( xpct-- )
+				{
+					int i;
+					ireg = comp_reg_alloc( C );
+					if( C->state & SGS_MUST_STOP )
+						goto fail;
+					
+					isb = func->code.size;
+					INSTR_WRITE( SI_POPR, ireg, 0, 0 );
+					if( arg )
+						*arg = ireg;
+					
+					n = node->child->child;
+					for( i = 0; i < xpct; ++i )
+						n = n->next;
+					
+					FUNC_ENTER;
+					if( !try_optimize_last_instr_out( C, func, n, isb, arg ) )
+					{
+						/* just set the contents */
+						FUNC_ENTER;
+						if( !compile_node_w( C, func, n, ireg ) ) goto fail;
+					}
+					
+					comp_reg_unwind( C, bkup );
+				}
+			}
+			else
+			{
+				/* get source data register */
 				FUNC_ENTER;
-				if( !compile_node_w( C, func, node->child, ireg ) ) goto fail;
+				if( !compile_node_r( C, func, node->child->next, &ireg ) ) goto fail;
+
+				if( arg )
+					*arg = ireg;
+
+				FUNC_ENTER;
+				if( !try_optimize_last_instr_out( C, func, node->child, isb, arg ) )
+				{
+					/* just set the contents */
+					FUNC_ENTER;
+					if( !compile_node_w( C, func, node->child, ireg ) ) goto fail;
+				}
 			}
 		}
 		/* 2 operands */
@@ -1374,6 +1443,11 @@ static int compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t sr
 		FUNC_HIT( "W_INDEX" );
 		if( !compile_index_w( C, func, node, src ) ) goto fail;
 		break;
+	
+	case SFT_EXPLIST:
+		FUNC_HIT( "W_EXPLIST" );
+		QPRINT( "Expression writes only allowed with function call reads" );
+		goto fail;
 
 	default:
 		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/w error]" );

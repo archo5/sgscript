@@ -262,7 +262,7 @@
 #define SGS_ST_OP_BLOEQ 219 /* ||=  */
 #define SGS_ST_OP_CATEQ 220 /* $=   */
 #define SGS_ST_OP_SET   221 /* =    */
-#define SGS_ST_OP_MSET  222 /* :=   */
+/* ------- RESERVED --- 222 ------- */
 #define SGS_ST_OP_BLAND 223 /* &&   */
 #define SGS_ST_OP_BLOR  224 /* ||   */
 #define SGS_ST_OP_ADD   225 /* +    */
