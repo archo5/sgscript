@@ -50,6 +50,7 @@
 #  define ST_OP_BLOEQ SGS_ST_OP_BLOEQ
 #  define ST_OP_CATEQ SGS_ST_OP_CATEQ
 #  define ST_OP_SET SGS_ST_OP_SET
+#  define ST_OP_MSET SGS_ST_OP_MSET
 #  define ST_OP_BLAND SGS_ST_OP_BLAND
 #  define ST_OP_BLOR SGS_ST_OP_BLOR
 #  define ST_OP_ADD SGS_ST_OP_ADD
@@ -233,52 +234,53 @@
 #define SGS_ST_STSEP    ';'
 #define SGS_ST_PICKSEP  ':'
 /*     other            id    additional data */
-#define SGS_ST_IDENT    'N'	/* 1 byte (string size), N bytes (string), not null-terminated */
-#define SGS_ST_KEYWORD  'K'	/* same as IDENT */
-#define SGS_ST_NUMREAL  'R'	/* 8 bytes (double) */
-#define SGS_ST_NUMINT   'I'	/* 8 bytes (int64) */
-#define SGS_ST_STRING   'S'	/* 4 bytes (string size), N bytes (string), not null-terminated */
+#define SGS_ST_IDENT    'N' /* 1 byte (string size), N bytes (string), not null-terminated */
+#define SGS_ST_KEYWORD  'K' /* same as IDENT */
+#define SGS_ST_NUMREAL  'R' /* 8 bytes (double) */
+#define SGS_ST_NUMINT   'I' /* 8 bytes (int64) */
+#define SGS_ST_STRING   'S' /* 4 bytes (string size), N bytes (string), not null-terminated */
 /*     operators        id    type  */
-#define SGS_ST_OP_SEQ   200	/* ===  */
-#define SGS_ST_OP_SNEQ  201	/* !==  */
-#define SGS_ST_OP_EQ    202	/* ==   */
-#define SGS_ST_OP_NEQ   203	/* !=   */
-#define SGS_ST_OP_LEQ   204	/* <=   */
-#define SGS_ST_OP_GEQ   205	/* >=   */
-#define SGS_ST_OP_LESS  206	/* <    */
-#define SGS_ST_OP_GRTR  207	/* >    */
-#define SGS_ST_OP_ADDEQ 208	/* +=   */
-#define SGS_ST_OP_SUBEQ 209	/* -=   */
-#define SGS_ST_OP_MULEQ 210	/* *=   */
-#define SGS_ST_OP_DIVEQ 211	/* /=   */
-#define SGS_ST_OP_MODEQ 212	/* %=   */
-#define SGS_ST_OP_ANDEQ 213	/* &=   */
-#define SGS_ST_OP_OREQ  214	/* |=   */
-#define SGS_ST_OP_XOREQ 215	/* ^=   */
-#define SGS_ST_OP_LSHEQ 216	/* <<=  */
-#define SGS_ST_OP_RSHEQ 217	/* >>=  */
+#define SGS_ST_OP_SEQ   200 /* ===  */
+#define SGS_ST_OP_SNEQ  201 /* !==  */
+#define SGS_ST_OP_EQ    202 /* ==   */
+#define SGS_ST_OP_NEQ   203 /* !=   */
+#define SGS_ST_OP_LEQ   204 /* <=   */
+#define SGS_ST_OP_GEQ   205 /* >=   */
+#define SGS_ST_OP_LESS  206 /* <    */
+#define SGS_ST_OP_GRTR  207 /* >    */
+#define SGS_ST_OP_ADDEQ 208 /* +=   */
+#define SGS_ST_OP_SUBEQ 209 /* -=   */
+#define SGS_ST_OP_MULEQ 210 /* *=   */
+#define SGS_ST_OP_DIVEQ 211 /* /=   */
+#define SGS_ST_OP_MODEQ 212 /* %=   */
+#define SGS_ST_OP_ANDEQ 213 /* &=   */
+#define SGS_ST_OP_OREQ  214 /* |=   */
+#define SGS_ST_OP_XOREQ 215 /* ^=   */
+#define SGS_ST_OP_LSHEQ 216 /* <<=  */
+#define SGS_ST_OP_RSHEQ 217 /* >>=  */
 #define SGS_ST_OP_BLAEQ 218 /* &&=  */
-#define SGS_ST_OP_BLOEQ 219	/* ||=  */
-#define SGS_ST_OP_CATEQ 220	/* $=   */
-#define SGS_ST_OP_SET   221	/* =    */
-#define SGS_ST_OP_BLAND 223	/* &&   */
-#define SGS_ST_OP_BLOR  224	/* ||   */
-#define SGS_ST_OP_ADD   225	/* +    */
-#define SGS_ST_OP_SUB   226	/* -    */
-#define SGS_ST_OP_MUL   227	/* *    */
-#define SGS_ST_OP_DIV   228	/* /    */
-#define SGS_ST_OP_MOD   229	/* %    */
-#define SGS_ST_OP_AND   230	/* &    */
-#define SGS_ST_OP_OR    231	/* |    */
-#define SGS_ST_OP_XOR   232	/* ^    */
+#define SGS_ST_OP_BLOEQ 219 /* ||=  */
+#define SGS_ST_OP_CATEQ 220 /* $=   */
+#define SGS_ST_OP_SET   221 /* =    */
+#define SGS_ST_OP_MSET  222 /* :=   */
+#define SGS_ST_OP_BLAND 223 /* &&   */
+#define SGS_ST_OP_BLOR  224 /* ||   */
+#define SGS_ST_OP_ADD   225 /* +    */
+#define SGS_ST_OP_SUB   226 /* -    */
+#define SGS_ST_OP_MUL   227 /* *    */
+#define SGS_ST_OP_DIV   228 /* /    */
+#define SGS_ST_OP_MOD   229 /* %    */
+#define SGS_ST_OP_AND   230 /* &    */
+#define SGS_ST_OP_OR    231 /* |    */
+#define SGS_ST_OP_XOR   232 /* ^    */
 #define SGS_ST_OP_LSH   233 /* <<   */
-#define SGS_ST_OP_RSH   234	/* >>   */
-#define SGS_ST_OP_MMBR  235	/* .    */
-#define SGS_ST_OP_CAT   236	/* $    */
-#define SGS_ST_OP_NOT   237	/* !    */
-#define SGS_ST_OP_INV   238	/* ~    */
-#define SGS_ST_OP_INC   239	/* ++   */
-#define SGS_ST_OP_DEC   240	/* --   */
+#define SGS_ST_OP_RSH   234 /* >>   */
+#define SGS_ST_OP_MMBR  235 /* .    */
+#define SGS_ST_OP_CAT   236 /* $    */
+#define SGS_ST_OP_NOT   237 /* !    */
+#define SGS_ST_OP_INV   238 /* ~    */
+#define SGS_ST_OP_INC   239 /* ++   */
+#define SGS_ST_OP_DEC   240 /* --   */
 
 #define SGS_ST_ISOP( chr )      ( (chr) >= 200 && (chr) <= 240 )
 #define SGS_ST_OP_UNARY( chr )  ( (chr) == SGS_ST_OP_ADD || (chr) == SGS_ST_OP_SUB || ( (chr) >= SGS_ST_OP_NOT && (chr) <= SGS_ST_OP_DEC ) )

@@ -766,10 +766,63 @@ static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* op
 }
 
 
+static int compile_regcopy( SGS_CTX, sgs_CompFunc* func, FTNode* node, int from, int16_t srcpos, int16_t dstpos )
+{
+	INSTR_WRITE( SI_SET, dstpos, srcpos, 0 );
+	return 1;
+}
+
 static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out, int expect )
 {
 	int i = 0;
 	int16_t funcpos = -1, retpos = -1, gotthis = FALSE;
+	
+	/* IF (ternary-like) */
+	if( is_keyword( node->child->token, "if" ) )
+	{
+		FTNode* n = node->child->next->child;
+		int argc = 0, csz1, csz2, csz3;
+		int16_t exprpos = -1, srcpos = -1;
+		while( n )
+		{
+			argc++;
+			n = n->next;
+		}
+		if( argc != 3 )
+		{
+			QPRINT( "'if' pseudo-function requires exactly 3 arguments" );
+			return 0;
+		}
+		
+		if( expect )
+			retpos = comp_reg_alloc( C );
+		
+		n = node->child->next->child;
+		FUNC_ENTER;
+		if( !compile_node_r( C, func, n, &exprpos ) || exprpos < 0 ) return 0;
+		
+		n = n->next;
+		INSTR_WRITE_PCH();
+		csz1 = func->code.size;
+		if( !compile_node_r( C, func, n, &srcpos ) ||
+			!compile_regcopy( C, func, n, csz1, srcpos, retpos ) ) return 0;
+		
+		n = n->next;
+		INSTR_WRITE_PCH();
+		csz2 = func->code.size;
+		if( !compile_node_r( C, func, n, &srcpos ) ||
+			!compile_regcopy( C, func, n, csz2, srcpos, retpos ) ) return 0;
+		
+		csz3 = func->code.size;
+		
+		INSTR_WRITE_EX( SI_NOP, 0, 0 ); /* harmful optimization prevention hack */
+		AS_UINT32( func->code.ptr + csz1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( csz2 - csz1 ) / INSTR_SIZE, exprpos );
+		AS_UINT32( func->code.ptr + csz2 - 4 ) = INSTR_MAKE_EX( SI_JUMP, ( csz3 - csz2 ) / INSTR_SIZE, 0 );
+		
+		if( out )
+			*out = retpos;
+		return 1;
+	}
 
 	/* load function */
 	FUNC_ENTER;
