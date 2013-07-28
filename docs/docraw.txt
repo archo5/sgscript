@@ -490,7 +490,7 @@ sgs_StoreGlobal [function]
 == SGSRESULT sgs_StoreGlobal( sgs_Context* C, const char* name )
 === copy and pop the topmost stack item to the global variable `name`
 
-- _G is the superglobal, the environment table (list of global variable names and values)
+- _G is the environment table (a superglobal, list of global variable names and values)
 
 === error codes
 - SGS_EINPROC: current stack frame was empty
@@ -676,7 +676,7 @@ sgs_Serialize [function]
 === serialize the topmost variable of the current stack frame (convert to a binary recreation instruction stream)
 
 - the following variable types can be serialized:
--- null, bool, int, real, string (TODO: why not SGS functions? it's possible)
+-- null, bool, int, real, string, func (SGS function)
 -- objects with the SGS_OP_SERIALIZE interface function defined
 
 - serialized data has the following format:
@@ -1064,10 +1064,14 @@ sgs_Stat [function]
 -- SGS_STAT_APIVERSION: returns the API version numver of the VM
 -- SGS_STAT_OBJCOUNT: returns the number of objects created in the VM
 -- SGS_STAT_MEMSIZE: returns the number of bytes allocated through this SGScript context
+-- SGS_STAT_NUMALLOCS: returns the number of memory allocations (incremented on each alloc/realloc)
+-- SGS_STAT_NUMFREES: returns the number of memory frees (incremented on each free/realloc)
+-- SGS_STAT_NUMBLOCKS: number of memory blocks currently allocated (incremented on alloc, decremented on free)
 -- SGS_STAT_DUMP_STACK: prints all of the variables in the stack
 -- SGS_STAT_DUMP_GLOBALS: prints all variables in the global dictionary
 -- SGS_STAT_DUMP_OBJECTS: prints all objects in the context
 -- SGS_STAT_DUMP_FRAMES: prints all functions in the call stack
+-- SGS_STAT_DUMP_STATS: dump some info about memory and objects
 
 - tips:
 -- compare return value of SGS_STAT_VERSION against SGS_VERSION_INT if the code is version-sensitive
@@ -1680,7 +1684,7 @@ serialize() [function]
 == serialize( var )
 === converts the variable to a byte buffer (string), containing the serialized data that can be recreated with @unserialize() or returns null and emits a warning on failure
 
-- functions and objects without OP_SERIALIZE implemented cannot be serialized (TODO: add the serialization of SGS functions, it's already implemented in pproc)
+- C functions and objects without OP_SERIALIZE implemented cannot be serialized
 
     data = serialize({ name = "A", info = "B" });
     print data; // prints random-ish garbage

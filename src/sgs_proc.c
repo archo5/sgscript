@@ -2635,6 +2635,69 @@ SGSRESULT sgs_CloneItem( SGS_CTX, int item )
 }
 
 
+static int _serialize_function( SGS_CTX, sgs_iFunc* func, MemBuf* out )
+{
+	sgs_CompFunc F =
+	{
+		membuf_create(),
+		membuf_create(),
+		membuf_create(),
+		func->gotthis,
+		func->numargs,
+	};
+	
+	F.consts.ptr = ((char*)(func+1));
+	F.consts.size = F.consts.mem = func->instr_off;
+	
+	F.code.ptr = ((char*)(func+1)) + func->instr_off;
+	F.code.size = F.code.mem = func->size - func->instr_off;
+	
+	F.lnbuf.ptr = (char*) func->lineinfo;
+	F.lnbuf.size = ( func->size - func->instr_off ) / 2;
+	
+	return sgsBC_Func2Buf( C, &F, out );
+}
+
+static int _unserialize_function( SGS_CTX, const char* buf, sgs_SizeVal sz, sgs_iFunc** outfn )
+{
+	func_t* F;
+	sgs_CompFunc* nf = NULL;
+	if( sgsBC_ValidateHeader( buf, sz ) < SGS_HEADER_SIZE )
+		return 0;
+	if( sgsBC_Buf2Func( C, "<anonymous>", buf, sz, &nf ) )
+		return 0;
+	
+	F = sgs_Alloc_a( func_t, nf->consts.size + nf->code.size );
+
+	F->refcount = 0;
+	F->size = nf->consts.size + nf->code.size;
+	F->instr_off = nf->consts.size;
+	F->gotthis = nf->gotthis;
+	F->numargs = nf->numargs;
+
+	{
+		int lnc = nf->lnbuf.size / sizeof( uint16_t );
+		F->lineinfo = sgs_Alloc_n( uint16_t, lnc );
+		memcpy( F->lineinfo, nf->lnbuf.ptr, nf->lnbuf.size );
+	}
+	F->funcname = membuf_create();
+	F->linenum = 0;
+	F->filename = membuf_create();
+	/* set from current if possible? */
+	
+	memcpy( func_consts( F ), nf->consts.ptr, nf->consts.size );
+	memcpy( func_bytecode( F ), nf->code.ptr, nf->code.size );
+
+	membuf_destroy( &nf->consts, C );
+	membuf_destroy( &nf->code, C );
+	membuf_destroy( &nf->lnbuf, C );
+	sgs_Dealloc( nf );
+	
+	*outfn = F;
+	
+	return 1;
+}
+
 static void serialize_output_func( void* ud,
 	SGS_CTX, const void* ptr, sgs_SizeVal datasize )
 {
@@ -2669,9 +2732,9 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 		if( ret != SGS_SUCCESS )
 			goto fail;
 	}
-	else if( V.type == VTC_FUNC || V.type == VTC_CFUNC )
+	else if( V.type == VTC_CFUNC )
 	{
-		sgs_Printf( C, SGS_WARNING, "Cannot serialize functions" );
+		sgs_Printf( C, SGS_WARNING, "Cannot serialize C functions" );
 		ret = SGS_EINVAL;
 		goto fail;
 	}
@@ -2688,6 +2751,23 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 		case VTC_STRING:
 			sgs_Write( C, &V.data.S->size, 4 );
 			sgs_Write( C, var_cstr( &V ), V.data.S->size );
+			break;
+		case VTC_FUNC:
+			{
+				MemBuf B = membuf_create();
+				ret = _serialize_function( C, V.data.F, &B );
+				if( ret != 0 )
+				{
+					sgs_Write( C, &B.size, 4 );
+					sgs_Write( C, B.ptr, B.size );
+					ret = SGS_SUCCESS;
+				}
+				else
+					ret = SGS_EINPROC;
+				membuf_destroy( &B, C );
+				if( ret != SGS_SUCCESS )
+					goto fail;
+			}
 			break;
 		default:
 			sgs_Printf( C, SGS_ERROR, "sgs_Serialize: Unknown memory error" );
@@ -2771,6 +2851,25 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 						return SGS_EINPROC;
 					sgs_PushStringBuf( C, str, strsz );
 					str += strsz;
+				}
+				break;
+			case VT_FUNC:
+				{
+					sgs_Variable tmp;
+					sgs_SizeVal bcsz;
+					sgs_iFunc* fn;
+					if( str >= strend-3 )
+						return SGS_EINPROC;
+					bcsz = AS_INT32( str );
+					str += 4;
+					if( str > strend - bcsz )
+						return SGS_EINPROC;
+					if( !_unserialize_function( C, str, bcsz, &fn ) )
+						return SGS_EINPROC;
+					tmp.type = VTC_FUNC;
+					tmp.data.F = fn;
+					sgs_PushVariable( C, &tmp );
+					str += bcsz;
 				}
 				break;
 			default:

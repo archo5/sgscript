@@ -320,11 +320,15 @@ void* sgs_Memory( SGS_CTX, void* ptr, size_t size )
 	{
 		size += 16;
 		C->memsize += size;
+		C->numallocs++;
+		C->numblocks++;
 	}
 	if( ptr )
 	{
 		ptr = ((char*)ptr) - 16;
 		C->memsize -= AS_UINT32( ptr );
+		C->numfrees++;
+		C->numblocks--;
 	}
 	p = C->memfunc( C->mfuserdata, ptr, size );
 	if( p )
@@ -629,10 +633,13 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 	case SGS_STAT_APIVERSION: return C->apiversion;
 	case SGS_STAT_OBJCOUNT: return C->objcount;
 	case SGS_STAT_MEMSIZE: return C->memsize;
+	case SGS_STAT_NUMALLOCS: return C->numallocs;
+	case SGS_STAT_NUMFREES: return C->numfrees;
+	case SGS_STAT_NUMBLOCKS: return C->numblocks;
 	case SGS_STAT_DUMP_STACK:
 		{
 			sgs_Variable* p = C->stack_base;
-			sgs_WriteStr( C, "VARIABLE -- ---- STACK ---- BASE ----\n" );
+			sgs_WriteStr( C, "\nVARIABLE -- ---- STACK ---- BASE ----\n" );
 			while( p < C->stack_top )
 			{
 				if( p == C->stack_off )
@@ -651,7 +658,7 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 		{
 			VHTableVar *p, *pend;
 			sgsSTD_GlobalIter( C, &p, &pend );
-			sgs_WriteStr( C, "GLOBAL ---- LIST ---- START ----\n" );
+			sgs_WriteStr( C, "\nGLOBAL ---- LIST ---- START ----\n" );
 			while( p < pend )
 			{
 				sgs_WriteStr( C, "GLOBAL '" );
@@ -667,7 +674,7 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 	case SGS_STAT_DUMP_OBJECTS:
 		{
 			object_t* p = C->objs;
-			sgs_WriteStr( C, "OBJECT ---- LIST ---- START ----\n" );
+			sgs_WriteStr( C, "\nOBJECT ---- LIST ---- START ----\n" );
 			while( p )
 			{
 				dumpobj( C, p );
@@ -680,7 +687,7 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 	case SGS_STAT_DUMP_FRAMES:
 		{
 			sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
-			sgs_WriteStr( C, "FRAME ---- LIST ---- START ----\n" );
+			sgs_WriteStr( C, "\nFRAME ---- LIST ---- START ----\n" );
 			while( p != NULL )
 			{
 				const char* file, *name;
@@ -690,6 +697,18 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 				p = p->next;
 			}
 			sgs_WriteStr( C, "FRAME ---- LIST ---- END ----\n" );
+		}
+		return SGS_SUCCESS;
+	case SGS_STAT_DUMP_STATS:
+		{
+			sgs_WriteStr( C, "\nSTATS ---- ---- ----\n" );
+			sgs_Writef( C, "# allocs: %d\n", C->numallocs );
+			sgs_Writef( C, "# frees: %d\n", C->numfrees );
+			sgs_Writef( C, "# mem blocks: %d\n", C->numblocks );
+			sgs_Writef( C, "# mem bytes: %d\n", C->memsize );
+			sgs_Writef( C, "# objects: %d\n", C->objcount );
+			sgs_Writef( C, "GC state: %s\n", C->redblue ? "red" : "blue" );
+			sgs_WriteStr( C, "---- ---- ---- -----\n" );
 		}
 		return SGS_SUCCESS;
 	default:

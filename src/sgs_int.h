@@ -652,6 +652,9 @@ struct _sgs_Context
 	sgs_MemFunc   memfunc;
 	void*         mfuserdata;
 	uint32_t      memsize;
+	uint32_t      numallocs;
+	uint32_t      numfrees;
+	uint32_t      numblocks;
 
 	/* compilation */
 	uint32_t      state;

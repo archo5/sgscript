@@ -2530,7 +2530,7 @@ static int sgsstd_unserialize( SGS_CTX )
 	
 	SGSFN( "unserialize" );
 	
-	if( sgs_StackSize( C ) != 1 )
+	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, NULL, NULL ) )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1 argument: string" )
 
@@ -2540,7 +2540,7 @@ static int sgsstd_unserialize( SGS_CTX )
 	else if( ret == SGS_EINPROC )
 		STDLIB_ERR( "error in data" )
 	else if( ret == SGS_ENOTFND )
-		STDLIB_ERR( "could not find something" )
+		STDLIB_ERR( "could not find something (like recreation function)" )
 	else
 		STDLIB_ERR( "unknown error" )
 }

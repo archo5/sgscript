@@ -181,10 +181,14 @@ typedef void (*sgs_HookFunc) (
 #define SGS_STAT_APIVERSION   1
 #define SGS_STAT_OBJCOUNT     2
 #define SGS_STAT_MEMSIZE      3
+#define SGS_STAT_NUMALLOCS    4
+#define SGS_STAT_NUMFREES     5
+#define SGS_STAT_NUMBLOCKS    6
 #define SGS_STAT_DUMP_STACK   10
 #define SGS_STAT_DUMP_GLOBALS 11
 #define SGS_STAT_DUMP_OBJECTS 12
 #define SGS_STAT_DUMP_FRAMES  13
+#define SGS_STAT_DUMP_STATS   14
 
 
 /* Virtual machine control */

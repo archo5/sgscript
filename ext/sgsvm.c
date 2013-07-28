@@ -27,6 +27,7 @@ sgs_IDbg D;
 sgs_Prof P;
 int idbg = 0;
 int prof = 0;
+int stats = 0;
 
 void sgs_init()
 {
@@ -42,6 +43,8 @@ void sgs_close()
 		sgs_ProfDump( &P );
 		sgs_ProfClose( &P );
 	}
+	if( stats )
+		sgs_Stat( C, SGS_STAT_DUMP_STATS );
 	sgs_DestroyEngine( C );
 }
 void sgs_dofile( const char* name )
@@ -86,6 +89,7 @@ int main( int argc, char** argv )
 			strcmp( argv[ i ], "-h" ) == 0 ){ readme(); return 0; }
 		else if( strcmp( argv[ i ], "--version" ) == 0 ||
 			strcmp( argv[ i ], "-v" ) == 0 ){ v = 1; argv[ i ] = 0; }
+		else if( strcmp( argv[ i ], "--stats" ) == 0 ){ stats = 1; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--program" ) == 0 ||
 			strcmp( argv[ i ], "-p" ) == 0 )
 		{
