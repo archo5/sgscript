@@ -409,6 +409,152 @@ int32_t sgsT_ListMemSize( TokenList tlist )
 }
 
 
+static void tp_token( SGS_CTX, MemBuf* out, TokenList t )
+{
+	switch( *t )
+	{
+	case ST_RBRKL:
+	case ST_RBRKR:
+	case ST_SBRKL:
+	case ST_SBRKR:
+	case ST_CBRKL:
+	case ST_CBRKR:
+	case ST_ARGSEP:
+	case ST_STSEP:
+	case ST_PICKSEP:
+		membuf_appchr( out, C, *t );
+		break;
+	case ST_IDENT:
+	case ST_KEYWORD:
+		membuf_appbuf( out, C, t + 2, t[1] );
+		break;
+	case ST_NUMREAL:
+		{
+			char tmp[ 1024 ];
+			sprintf( tmp, "%g", *((sgs_Real*)(t+1)) );
+			membuf_appbuf( out, C, tmp, strlen( tmp ) );
+		}
+		break;
+	case ST_NUMINT:
+		{
+			char tmp[ 24 ];
+			sprintf( tmp, "%" PRId64, *((sgs_Int*)t+1) );
+			membuf_appbuf( out, C, tmp, strlen( tmp ) );
+		}
+		break;
+	case ST_STRING:
+		{
+			int32_t i, size = ST_READINT( t + 1 );
+			TokenList buf = t + 5;
+			for( i = 0; i < size; ++i )
+			{
+				if( isgraph( buf[ i ] ) || buf[ i ] == ' ' )
+					membuf_appchr( out, C, buf[ i ] );
+				else
+				{
+					static const char* hexdigs = "0123456789ABCDEF";
+					char tmp[ 4 ] = { '\\', 'x', hexdigs[ (buf[i] & 0xf0) >> 4 ], hexdigs[ buf[i] & 0xf ] };
+					membuf_appbuf( out, C, tmp, 4 );
+				}
+			}
+		}
+		break;
+#define OPR( op ) membuf_appbuf( out, C, op, strlen(op) )
+	case ST_OP_SEQ: OPR( "===" ); break;
+	case ST_OP_SNEQ: OPR( "!==" ); break;
+	case ST_OP_EQ: OPR( "==" ); break;
+	case ST_OP_NEQ: OPR( "!=" ); break;
+	case ST_OP_LEQ: OPR( "<=" ); break;
+	case ST_OP_GEQ: OPR( ">=" ); break;
+	case ST_OP_ADDEQ: OPR( "+=" ); break;
+	case ST_OP_SUBEQ: OPR( "-=" ); break;
+	case ST_OP_MULEQ: OPR( "*=" ); break;
+	case ST_OP_DIVEQ: OPR( "/=" ); break;
+	case ST_OP_MODEQ: OPR( "%=" ); break;
+	case ST_OP_ANDEQ: OPR( "&=" ); break;
+	case ST_OP_OREQ: OPR( "|=" ); break;
+	case ST_OP_XOREQ: OPR( "^=" ); break;
+	case ST_OP_LSHEQ: OPR( "<<=" ); break;
+	case ST_OP_RSHEQ: OPR( ">>=" ); break;
+	case ST_OP_BLAEQ: OPR( "&&=" ); break;
+	case ST_OP_BLOEQ: OPR( "||=" ); break;
+	case ST_OP_CATEQ: OPR( "$=" ); break;
+	case ST_OP_BLAND: OPR( "&&" ); break;
+	case ST_OP_BLOR: OPR( "||" ); break;
+	case ST_OP_LESS: OPR( "<" ); break;
+	case ST_OP_GRTR: OPR( ">" ); break;
+	case ST_OP_SET: OPR( "=" ); break;
+	case ST_OP_ADD: OPR( "+" ); break;
+	case ST_OP_SUB: OPR( "-" ); break;
+	case ST_OP_MUL: OPR( "*" ); break;
+	case ST_OP_DIV: OPR( "/" ); break;
+	case ST_OP_MOD: OPR( "%" ); break;
+	case ST_OP_AND: OPR( "&" ); break;
+	case ST_OP_OR: OPR( "|" ); break;
+	case ST_OP_XOR: OPR( "^" ); break;
+	case ST_OP_LSH: OPR( "<<" ); break;
+	case ST_OP_RSH: OPR( ">>" ); break;
+	case ST_OP_MMBR: OPR( "." ); break;
+	case ST_OP_CAT: OPR( "$" ); break;
+	case ST_OP_NOT: OPR( "!" ); break;
+	case ST_OP_INV: OPR( "~" ); break;
+	case ST_OP_INC: OPR( "++" ); break;
+	case ST_OP_DEC: OPR( "--" ); break;
+#undef OPR
+	default:
+		membuf_appbuf( out, C, "<error>", 7 );
+		break;
+	}
+}
+
+static int tp_tt2i( sgs_TokenType t )
+{
+	/* 0 ident | 1 const | 2 punct | 3 op */
+	if( ST_ISOP( t ) ) return 3;
+	if( t == ST_IDENT || t == ST_KEYWORD ) return 0;
+	if( t == ST_NUMREAL || t == ST_NUMINT || t == ST_STRING ) return 1;
+	return 2;
+}
+
+/*
+	kerning table:
+	  I C P O
+	I 1 1 0 +
+	C 1 1 0 +
+	P 0 0 0 +
+	O + + + 1
+*/
+static void tp_kerning( SGS_CTX, MemBuf* out, TokenList t1, TokenList t2, int xs )
+{
+	static const int32_t mask = 0x8033;
+	static const int32_t maskg = 0xf8bb;
+	int32_t m;
+	int ty1, ty2;
+	
+	if( !t1 || !t2 )
+		return;
+	
+	m = xs ? maskg : mask;
+	ty1 = tp_tt2i( *t1 );
+	ty2 = tp_tt2i( *t2 );
+	
+	if( m & (1 << (ty1 + ty2 * 4)) )
+		membuf_appchr( out, C, ' ' );
+}
+
+void sgsT_TokenString( SGS_CTX, MemBuf* out, TokenList tlist, TokenList tend, int xs )
+{
+	while( tlist < tend && *tlist )
+	{
+		TokenList t = tlist;
+		tlist = sgsT_Next( t );
+		
+		tp_token( C, out, t );
+		tp_kerning( C, out, t, tlist == tend ? NULL : tlist, xs );
+	}
+}
+
+
 void sgsT_DumpToken( TokenList tok )
 {
 	switch( *tok )

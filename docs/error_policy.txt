@@ -95,7 +95,7 @@ STANDARD LIBRARY
 W ~ Most issues with arguments / state - if not specified otherwise, warning is used
 E This errno value is unsupported
 W Array index out of bounds
-W _G only accepts 'dict' values
+E _G only accepts 'dict' values
 E unknown error while dumping variable
 E failed to concatenate the output
 E failed to serialize

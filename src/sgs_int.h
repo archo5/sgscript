@@ -308,10 +308,10 @@ sgs_LineNum   sgsT_LineNum( sgs_TokenList tok );
 int32_t       sgsT_ListSize( sgs_TokenList tlist );
 int32_t       sgsT_ListMemSize( sgs_TokenList tlist );
 
-#ifdef SGS_DEBUG
+void          sgsT_TokenString( SGS_CTX, sgs_MemBuf* out, sgs_TokenList tlist, sgs_TokenList tend, int xs );
+
 void          sgsT_DumpToken( sgs_TokenList tok );
 void          sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend );
-#endif
 
 
 /*

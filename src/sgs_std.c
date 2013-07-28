@@ -2019,6 +2019,25 @@ static int sgsstd_pcall( SGS_CTX )
 	return 0;
 }
 
+static int sgsstd_assert( SGS_CTX )
+{
+	char* str = NULL;
+	int ssz = sgs_StackSize( C );
+	
+	SGSFN( "assert" );
+	
+	if( ssz < 1 || ssz > 2 ||
+		( ssz >= 2 && !sgs_ParseString( C, 1, &str, NULL ) ) )
+		STDLIB_ERR( "unexpected arguments; "
+			"function expects 2 arguments: any, string" )
+	
+	SGSFN( NULL );
+	if( !sgs_GetBool( C, 0 ) )
+		sgs_Printf( C, SGS_ERROR, !str ? "assertion failed" :
+			"assertion failed: %s", str );
+	return 0;
+}
+
 static int sgsstd_eval( SGS_CTX )
 {
 	char* str;
@@ -2572,7 +2591,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* OS */
 	FN( ftime ),
 	/* utils */
-	FN( pcall ),
+	FN( pcall ), FN( assert ),
 	FN( eval ), FN( eval_file ),
 	FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( include_module ), FN( import_cfunc ),
@@ -2765,7 +2784,7 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 		if( val->type != VTC_DICT )
 		{
 			if( !apicall )
-				sgs_Printf( C, SGS_WARNING, "_G only accepts 'dict' values" );
+				sgs_Printf( C, SGS_ERROR, "_G only accepts 'dict' values" );
 			return SGS_ENOTSUP;
 		}
 		
