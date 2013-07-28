@@ -114,6 +114,9 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 {
 	SGS_CTX = (sgs_Context*) memfunc( mfuserdata, NULL, sizeof( sgs_Context ) );
 	C->memsize = sizeof( sgs_Context );
+	C->numallocs = 1;
+	C->numblocks = 1;
+	C->numfrees = 0;
 	C->memfunc = memfunc;
 	C->mfuserdata = mfuserdata;
 	ctx_init( C );

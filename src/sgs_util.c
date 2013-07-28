@@ -192,6 +192,7 @@ void ht_rehash( HashTable* T, SGS_CTX, int size )
 
 void ht_check( HashTable* T, SGS_CTX, int inc )
 {
+#if 0
 	if( T->load + inc > T->size * 0.75 )
 	{
 		int newsize = (int)( T->size * 0.6 + ( T->load + inc ) * 0.6 );
@@ -202,6 +203,15 @@ void ht_check( HashTable* T, SGS_CTX, int inc )
 		int newsize = (int)( T->size * 0.5 + ( T->load + inc ) * 0.5 );
 		ht_rehash( T, C, newsize );
 	}
+#else
+	if( T->load + inc > T->size * 0.75 )
+	{
+		int newsize = (int)( T->size * 0.75 + ( T->load + inc ) * 0.75 );
+		if( newsize < T->load * 2 )
+			newsize = T->load * 2;
+		ht_rehash( T, C, newsize );
+	}
+#endif
 }
 
 HTPair* ht_find( HashTable* T, const char* str, int size, sgs_Hash h )
