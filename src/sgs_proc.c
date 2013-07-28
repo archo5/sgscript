@@ -91,6 +91,16 @@ void sgsVM_VarDestroyObject( SGS_CTX, object_t* O )
 	C->objcount--;
 }
 
+static void var_destroy_string( SGS_CTX, string_t* S )
+{
+	/*
+	HTPair* p = ht_findS( &C->stringtable, S );
+	if( p )
+		ht_unset_pair( &C->stringtable, C, p );
+	else*/
+		sgs_Dealloc( S );
+}
+
 static void var_release( SGS_CTX, sgs_VarPtr p, int notonstack );
 static void var_destroy_func( SGS_CTX, func_t* F )
 {
@@ -128,6 +138,7 @@ static int is_on_stack( SGS_CTX, sgs_VarPtr p, uint32_t type )
 static void var_release( SGS_CTX, sgs_VarPtr p, int notonstack )
 {
 	uint32_t type = p->type;
+/*	int isstring = type == VTC_STRING ? 1 : 0; */
 	(*p->data.pRC) -= notonstack;
 	p->type = VTC_NULL;
 	
@@ -135,7 +146,7 @@ static void var_release( SGS_CTX, sgs_VarPtr p, int notonstack )
 	{
 		switch( BASETYPE( type ) )
 		{
-		case VT_STRING: sgs_Dealloc( p->data.S ); break;
+		case VT_STRING: var_destroy_string( C, p->data.S ); break;
 		case VT_FUNC: var_destroy_func( C, p->data.F ); break;
 		case VT_OBJECT: var_destroy_object( C, p->data.O ); break;
 		}
@@ -191,7 +202,7 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t
 	if( len <= SGS_STRINGTABLE_MAXLEN )
 	{
 		out->data.S->refcount++;
-		ht_set( &C->stringtable, C, str, len, out->data.S );
+		ht_setS( &C->stringtable, C, out->data.S, out->data.S );
 	}
 }
 
@@ -331,30 +342,18 @@ void vht_free( VHTable* vht, SGS_CTX, int dco )
 		sgs_Dealloc( vht->vars );
 }
 
-VHTableVar* vht_get( VHTable* vht, const char* key, int32_t size )
-{
-	HTPair* p = ht_find( &vht->ht, key, size, sgs_HashFunc( key, size ) );
-	if( p )
-		return vht->vars + (size_t) p->ptr;
-	else
-		return NULL;
-}
-
 sgs_VHTableVar* vht_getS( sgs_VHTable* vht, string_t* S )
 {
-	const char* key = str_cstr( S );
-	if( !S->hash )
-		S->hash = sgs_HashFunc( key, S->size );
-	HTPair* pair = ht_find( &vht->ht, key, S->size, S->hash );
+	HTPair* pair = ht_findS( &vht->ht, S );
 	if( pair )
 		return vht->vars + (size_t) pair->ptr;
 	else
 		return NULL;
 }
 
-void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SGS_CTX )
+void vht_setS( VHTable* vht, string_t* S, sgs_Variable* var, SGS_CTX )
 {
-	VHTableVar* tv = vht_get( vht, key, size );
+	VHTableVar* tv = vht_getS( vht, S );
 	VAR_ACQUIRE( var );
 	if( tv )
 	{
@@ -374,18 +373,19 @@ void vht_set( VHTable* vht, const char* key, int32_t size, sgs_Variable* var, SG
 			vht->mem = nmem;
 		}
 
+		/* no 'else', just an extra scope */
 		{
 			uint32_t ni = vht_size( vht );
-			HTPair* p = ht_set( &vht->ht, C, key, size, (void*)( (size_t) ni ) );
-			VHTableVar htv = { *var, p->str, p->size };
+			HTPair* p = ht_setS( &vht->ht, C, S, (void*)( (size_t) ni ) );
+			VHTableVar htv = { *var, p->str };
 			vht->vars[ ni ] = htv;
 		}
 	}
 }
 
-int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
+int vht_unsetS( VHTable* vht, string_t* S, SGS_CTX )
 {
-	HTPair* tvp = ht_find( &vht->ht, key, size, sgs_HashFunc( key, size ) );
+	HTPair* tvp = ht_findS( &vht->ht, S );
 	if( tvp )
 	{
 		VHTableVar* tv = vht->vars + ( ((uint32_t)(size_t) tvp->ptr) );
@@ -395,8 +395,7 @@ int vht_unset( VHTable* vht, const char* key, int32_t size, SGS_CTX )
 			VHTableVar* lhtv = vht->vars + ( vht_size( vht ) - 1 );
 			tv->var = lhtv->var;
 			tv->str = lhtv->str;
-			tv->size = lhtv->size;
-			ht_find( &vht->ht, tv->str, tv->size, sgs_HashFunc( tv->str, tv->size ) )->ptr = (void*)( tv - vht->vars );
+			ht_findS( &vht->ht, tv->str )->ptr = (void*)( tv - vht->vars );
 		}
 		ht_unset_pair( &vht->ht, C, tvp );
 		return 1;

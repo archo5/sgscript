@@ -11,7 +11,7 @@
 #define SGS_INTERNAL
 #define SGS_REALLY_INTERNAL
 
-#include "sgs_util.h"
+#include "sgs_int.h"
 
 
 void sgs_BreakIfFunc( const char* code, const char* file, int line )
@@ -119,17 +119,21 @@ sgs_Hash sgs_HashFunc( const char* str, int size )
 		h ^= str[ i ];
 		h *= 16777619u;
 	}
-	return h;
+	return h | 0x80000000;
 }
 
 
 
 static void htp_remove( HTPair** p, SGS_CTX )
 {
+	sgs_Variable tmp;
 	HTPair* pn = (*p)->next;
-	sgs_Dealloc( (*p)->str );
-	sgs_Dealloc( *p );
+	HTPair* cur = *p;
 	*p = pn;
+	tmp.type = VTC_STRING;
+	tmp.data.S = cur->str;
+	sgs_Release( C, &tmp );
+	sgs_Dealloc( cur );
 }
 
 void ht_init( HashTable* T, SGS_CTX, int size )
@@ -177,7 +181,7 @@ void ht_rehash( HashTable* T, SGS_CTX, int size )
 		while( pc )
 		{
 			HTPair* pn = pc->next;
-			int hm = pc->hash % size;
+			int hm = pc->str->hash % size;
 			pc->next = np[ hm ];
 			np[ hm ] = pc;
 			pc = pn;
@@ -219,7 +223,24 @@ HTPair* ht_find( HashTable* T, const char* str, int size, sgs_Hash h )
 	HTPair* p = T->pairs[ ( h % T->size ) ];
 	while( p )
 	{
-		if( p->size == size && !memcmp( str, p->str, size ) )
+		if( p->str->size == size && !memcmp( str, str_cstr( p->str ), size ) )
+			return p;
+		p = p->next;
+	}
+	return NULL;
+}
+
+HTPair* ht_findS( HashTable* T, string_t* S )
+{
+	HTPair* p;
+	if( !HASH_COMPUTED( S->hash ) )
+		S->hash = hashFunc( str_cstr( S ), S->size );
+	p = T->pairs[ ( S->hash % T->size ) ];
+	while( p )
+	{
+		if( S == p->str )
+			return p;
+		if( p->str->size == S->size && !memcmp( str_cstr( S ), str_cstr( p->str ), S->size ) )
 			return p;
 		p = p->next;
 	}
@@ -234,18 +255,41 @@ HTPair* ht_set( HashTable* T, SGS_CTX, const char* str, int size, void* ptr )
 		p->ptr = ptr;
 	else
 	{
+		sgs_Variable tmp;
 		HTPair* np = sgs_Alloc( HTPair );
 		
 		ht_check( T, C, 1 );
 		
-		np->str = sgs_Alloc_n( char, size );
+		sgsVM_VarCreateString( C, &tmp, str, size );
+		np->str = tmp.data.S;
 		np->ptr = ptr;
-		memcpy( np->str, str, size );
-		np->size = size;
-		np->hash = h;
+		h = np->str->hash;
 		
 		np->next = T->pairs[ h % T->size ];
 		T->pairs[ h % T->size ] = np;
+		T->load++;
+		p = np;
+	}
+	return p;
+}
+
+HTPair* ht_setS( HashTable* T, SGS_CTX, string_t* S, void* ptr )
+{
+	HTPair* p = ht_findS( T, S );
+	if( p )
+		p->ptr = ptr;
+	else
+	{
+		HTPair* np = sgs_Alloc( HTPair );
+		
+		ht_check( T, C, 1 );
+		
+		S->refcount++;
+		np->str = S;
+		np->ptr = ptr;
+		
+		np->next = T->pairs[ S->hash % T->size ];
+		T->pairs[ S->hash % T->size ] = np;
 		T->load++;
 		p = np;
 	}
@@ -258,7 +302,7 @@ void ht_unset( sgs_HashTable* T, SGS_CTX, const char* str, int size )
 	HTPair** p = T->pairs + ( h % T->size );
 	while( *p )
 	{
-		if( (*p)->size == size && !memcmp( str, (*p)->str, size ) )
+		if( (*p)->str->size == size && !memcmp( str, str_cstr( (*p)->str ), size ) )
 		{
 			htp_remove( p, C );
 			T->load--;
@@ -271,7 +315,7 @@ void ht_unset( sgs_HashTable* T, SGS_CTX, const char* str, int size )
 
 void ht_unset_pair( sgs_HashTable* T, SGS_CTX, sgs_HTPair* pair )
 {
-	sgs_Hash h = pair->hash;
+	sgs_Hash h = pair->str->hash;
 	HTPair** p = T->pairs + ( h % T->size );
 	while( *p )
 	{

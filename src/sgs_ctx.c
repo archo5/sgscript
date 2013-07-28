@@ -665,7 +665,7 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 			while( p < pend )
 			{
 				sgs_WriteStr( C, "GLOBAL '" );
-				ctx_print_safe( C, p->str, p->size );
+				ctx_print_safe( C, str_cstr( p->str ), p->str->size );
 				sgs_WriteStr( C, "' = " );
 				dumpvar( C, &p->var );
 				sgs_WriteStr( C, "\n" );

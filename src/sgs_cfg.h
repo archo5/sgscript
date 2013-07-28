@@ -60,7 +60,7 @@
 #define SGS_TOKENLIST_PREALLOC 1024
 
 /* maximum length for a string to be included in the string table */
-#define SGS_STRINGTABLE_MAXLEN 16
+#define SGS_STRINGTABLE_MAXLEN -1
 
 /* max. length of the call stack */
 #define SGS_MAX_CALL_STACK_SIZE 256
@@ -73,7 +73,7 @@
 /* size of the last property access cache for dict
 	bigger numbers increase average access time
 	smaller numbers decrease cache hit rate */
-//#define SGS_DICT_CACHE_SIZE 8
+/* #define SGS_DICT_CACHE_SIZE 8 */
 
 /* postfix for function names in C functions
 	EXTRABYTES should be set to the length of EXTRASTRING */
