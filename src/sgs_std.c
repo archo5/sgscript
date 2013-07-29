@@ -2200,67 +2200,101 @@ static int sgsstd_include_shared( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_include_module( SGS_CTX )
+static int _find_includable_file( SGS_CTX, MemBuf* tmp, char* ps,
+	sgs_SizeVal pssize, char* fn, sgs_SizeVal fnsize )
 {
-	int ret;
-	sgs_Variable backup;
-	SGSBASEFN( "include_module" );
-	if( sgs_StackSize( C ) < 1 || !sgs_ParseString( C, 0, NULL, NULL ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-2 arguments: string[, bool]" )
-	
-	sgs_GetStackItem( C, 0, &backup );
-	sgs_Acquire( C, &backup );
-	
-	sgs_PushString( C, "sgs" );
-	sgs_PushItem( C, 0 );
-	sgs_PushString( C, SGS_MODULE_EXT );
-	sgs_StringMultiConcat( C, 3 );
-	sgs_StoreItem( C, 0 );
-	
-	ret = sgsstd_include_shared( C );
-	if( !ret )
+	char* pse = ps + pssize;
+	char* psc = ps;
+	while( ps <= pse )
 	{
-		sgs_PushVariable( C, &backup );
-		sgs_StoreItem( C, 0 );
+		if( ps == pse || *ps == ';' )
+		{
+			FILE* f;
+			membuf_resize( tmp, C, 0 );
+			while( psc < ps )
+			{
+				if( *psc == '?' )
+					membuf_appbuf( tmp, C, fn, fnsize );
+				else
+					membuf_appchr( tmp, C, *psc );
+				psc++;
+			}
+			if( ( f = fopen( tmp->ptr, "rb" ) ) != NULL )
+			{
+				fclose( f );
+				return 1;
+			}
+			psc++;
+		}
+		ps++;
 	}
-	sgs_Release( C, &backup );
-	return ret;
+	return 0;
 }
 
 static int sgsstd_include( SGS_CTX )
 {
-	int32_t oml;
 	char* fnstr;
 	sgs_SizeVal fnsize;
-	int ssz = sgs_StackSize( C );
+	int ssz = sgs_StackSize( C ), over = 0, ret;
 	
 	SGSFN( "include" );
 	
 	if( ssz < 1 || ssz > 2 || !sgs_ParseString( C, 0, &fnstr, &fnsize )
-		|| ( ssz >= 2 && !sgs_ParseBool( C, 1, NULL ) ) )
+		|| ( ssz >= 2 && !sgs_ParseBool( C, 1, &over ) ) )
 		STDLIB_WARN( "unexpected arguments; "
 			"function expects 1-2 arguments: string[, bool]" )
 	
-	oml = C->minlev;
-	C->minlev = INT32_MAX;
+	if( !over && sgsstd__chkinc( C, 0 ) )
+		goto success;
 	
-	if( sgsstd_include_library( C ) && sgs_ToBool( C, -1 ) ) goto success;
-	sgs_Pop( C, sgs_StackSize( C ) - ssz );
+	ret = sgsstd__inclib( C, fnstr, over );
+	if( ret == SGS_SUCCESS )
+		goto success;
+	else
+	{
+		char* ps;
+		sgs_SizeVal pssize;
+		sgs_CFunc func;
+		MemBuf mb = membuf_create();
+		
+		ret = sgs_PushGlobal( C, "sys_include_path" );
+		if( ret != SGS_SUCCESS )
+			STDLIB_WARN( "sys_include_path was not found" )
+		ps = sgs_ToStringBuf( C, -1, &pssize );
+		if( !ps )
+			STDLIB_WARN( "sys_include_path could not be recognized" )
+		
+		ret = _find_includable_file( C, &mb, ps, pssize, fnstr, fnsize );
+		if( ret == 0 )
+		{
+			membuf_destroy( &mb, C );
+			sgs_Printf( C, SGS_WARNING, "could not find '%.*s' "
+				"with include path '%.*s'", fnsize, fnstr, pssize, ps );
+		}
+		
+		ret = sgs_GetProcAddress( fnstr, "sgscript_main", (void**) &func );
+		if( ret == SGS_SUCCESS )
+		{
+			ret = func( C );
+			if( ret == SGS_SUCCESS )
+			{
+				membuf_destroy( &mb, C );
+				goto success;
+			}
+		}
+		
+		ret = sgs_ExecFile( C, mb.ptr );
+		membuf_destroy( &mb, C );
+		if( ret == SGS_SUCCESS )
+			goto success;
+	}
 	
-	if( sgsstd_include_file( C ) && sgs_ToBool( C, -1 ) ) goto success;
-	sgs_Pop( C, sgs_StackSize( C ) - ssz );
-	
-	if( sgsstd_include_module( C ) && sgs_ToBool( C, -1 ) ) goto success;
-	sgs_Pop( C, sgs_StackSize( C ) - ssz );
-	
-	if( sgsstd_include_shared( C ) && sgs_ToBool( C, -1 ) ) goto success;
-	
-	C->minlev = oml;
-	return sgs_Printf( C, SGS_WARNING, "could not load '%.*s'", fnsize, fnstr );
+	sgs_Printf( C, SGS_WARNING, "could not load '%.*s'", fnsize, fnstr );
+	sgs_PushBool( C, 0 );
+	return 1;
 	
 success:
-	C->minlev = oml;
+	sgs_PushBool( C, 1 );
 	return 1;
 }
 
@@ -2594,7 +2628,7 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( pcall ), FN( assert ),
 	FN( eval ), FN( eval_file ),
 	FN( include_library ), FN( include_file ),
-	FN( include_shared ), FN( include_module ), FN( import_cfunc ),
+	FN( include_shared ), FN( import_cfunc ),
 	FN( include ),
 	FN( sys_curfile ),
 	FN( sys_print ), FN( sys_abort ),
@@ -2629,6 +2663,9 @@ int sgsSTD_PostInit( SGS_CTX )
 	ret = sgs_RegIntConsts( C, regiconsts, ARRAY_SIZE( regiconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
 	ret = sgs_RegFuncConsts( C, regfuncs, ARRAY_SIZE( regfuncs ) );
+	if( ret != SGS_SUCCESS ) return ret;
+	sgs_PushString( C, "?;?." SGS_MODULE_EXT ";?.sgc;?.sgs" );
+	ret = sgs_StoreGlobal( C, "sys_include_path" );
 	if( ret != SGS_SUCCESS ) return ret;
 	return SGS_SUCCESS;
 }

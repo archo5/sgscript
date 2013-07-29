@@ -20,8 +20,11 @@ int sgs_GetProcAddress( const char* file, const char* proc, void** out )
 {
 #ifdef WIN32
 	HMODULE mod;
+	UINT pe;
 
+	pe = SetErrorMode( SEM_FAILCRITICALERRORS );
 	mod = LoadLibraryA( file );
+	SetErrorMode( pe );
 	if( !mod )
 		return SGS_XPC_NOFILE;
 
