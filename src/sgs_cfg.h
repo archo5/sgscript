@@ -81,4 +81,7 @@
 #define SGS_PRINTF_EXTRABYTES 4
 
 
+#define SGS_INCLUDE_PATH "?;?." SGS_MODULE_EXT ";?.sgc;?.sgs"
+
+
 #endif /* SGS_CFG_H_INCLUDED */

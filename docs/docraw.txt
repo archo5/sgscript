@@ -880,18 +880,105 @@ sgs_ArraySize [function]
 
 
 sgs_StackSize [function]
+
+== int sgs_StackSize( sgs_Context* C )
+=== return the size of the current stack frame
+
+
 sgs_IsValidIndex [function]
+
+== SGSBOOL sgs_IsValidIndex( sgs_Context* C, int item )
+=== return whether the specified stack index points to an item in the current stack frame
+
+- both positive (first = 0) and negative (last = -1) indices are supported
+
+
 sgs_GetStackItem [function]
+
+== SGSBOOL sgs_GetStackItem( sgs_Context* C, int item, sgs_Variable* out )
+=== write the data of the specified stack variable if the index is valid
+
+- function returns whether the stack index was valid
+
+
 sgs_ItemType [function]
+
+== int sgs_ItemType( sgs_Context* C, int item )
+=== return the base type (first 8 bits, mask 0xff) of the specified stack item
+
+- return value will be equal to one of the SGS_VT_* macro
+- if index is invalid, return value will be 0
+
+
 sgs_ItemTypeExt [function]
+
+== int sgs_ItemTypeExt( sgs_Context* C, int item )
+=== return the full type of the specified stack item
+
+- return value expected to be equal to one of the SGS_VTC_* macro
+- if index is invalid, return value will be 0
+
+
 sgs_Method [function]
+
+== SGSBOOL sgs_Method( sgs_Context* C )
+=== unlock the 'this' variable, return if the function was called as a method (and thus variable was unlocked)
+
+- method calls look like this: "object.method(...)"
+
+
 sgs_Acquire [function]
+
+== void sgs_Acquire( sgs_Context* C, sgs_Variable* var )
+=== increment the reference count of the variable (if it counts references)
+
+
 sgs_Release [function]
+
+== void sgs_Release( sgs_Context* C, sgs_Variable* var )
+=== decrement and possibly deallocate the reference count of the variable (if it counts references)
+
+
 sgs_ReleaseOwned [function]
+
+== void sgs_ReleaseOwned( sgs_Context* C, sgs_Variable* var, int dco )
+=== decrement and possibly deallocate the reference count of the variable (if it counts references), depending on `dco`
+
+- `dco` stands for "destroy child objects", which essentially means that if it's zero and the variable is an object, it prevents the object from being destroyed
+- expected to be called in destructors of objects may that contain reference-counted variables, using the parameter passed in the callback
+- the child objects need to be preserved in exactly once case: the garbage collector destruction phase - when all objects are scheduled for deletion, it is important to avoid destroying them twice
+
+
 sgs_GCMark [function]
+
+== SGSRESULT sgs_GCMark( sgs_Context* C, sgs_Variable* var )
+=== mark the specified variable as reachable for the garbage collector
+
+- to be called in the SGS_OP_GCMARK object callback
+
+
 sgs_GetStringPtr [function]
+
+== char* sgs_GetStringPtr( sgs_Context* C, int item )
+=== return the string data pointer of the specified stack item, using BreakIf to validate the call
+
+- if item is out of bounds or not a string, one of the BreakIf macros will go off and stop the action
+
+
 sgs_GetStringSize [function]
+
+== sgs_SizeVal sgs_GetStringSize( sgs_Context* C, int item )
+=== return the string size of the specified stack item, using BreakIf to validate the call
+
+- if item is out of bounds or not a string, one of the BreakIf macros will go off and stop the action
+
+
 sgs_GetObjectData [function]
+
+== sgs_VarObj* sgs_GetObjectData( sgs_Context* C, int item )
+=== return the object data pointer of the specified stack item, using BreakIf to validate the call
+
+- if item is out of bounds or not an object, one of the BreakIf macros will go off and stop the action
 
 
 =
@@ -1519,24 +1606,16 @@ include_shared() [function]
     include_shared( "sgsjson.dll" ); // load the JSON library DLL on Windows
 
 
-include_module() [function]
-
-== include_module( string file[, bool override ] )
-=== runs the shared library pointed to by `file`, first applying file name transformation rules, returns success, as `bool`, emits a warning on failure
-
-- `file` must be available according to the platform-specific rules of dynamic libraries (shared objects)
-- the library must contain a 'sgscript_main' function that will be called on initialization
-- if `override` is specified, file will be reloaded even if it was already loaded before
-- the transformation rules are as follows: 1) append '.' and the lowercase platform-specific extension of shared libraries (ex. 'dll', 'so'); 2) prepend 'sgs' to file name (TODO: do we really need it? it doesn't work like that now)
-
-    include_module( "json" ); // load the JSON library anywhere
-
-
 include() [function]
 
 == include( string file[, bool override ] )
-=== the umbrella function for @include_library, @include_file, @include_module and @include_shared, attempts to call all of them in the specified order, stops on success or hard failure after any function
+=== tries to load a library or a file according to the include path
 
+- the order of actions:
+-- first, a library load is attempted
+-- on failure, a file is looked for by every entry of the sys_include_path variable (? - the file replacement symbol, ; - separator)
+-- if file is not found, everything stops
+-- if file is found, first - a library load is attempted, on failure - bytecode & source code loading
 - this function is also available as a replicating statement 'include' (ex. 'include "fmt", "io";' works the same way as include("fmt"); include("io");)
 
 

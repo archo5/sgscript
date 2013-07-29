@@ -2257,12 +2257,13 @@ static int sgsstd_include( SGS_CTX )
 		sgs_CFunc func;
 		MemBuf mb = membuf_create();
 		
-		ret = sgs_PushGlobal( C, "sys_include_path" );
-		if( ret != SGS_SUCCESS )
-			STDLIB_WARN( "sys_include_path was not found" )
-		ps = sgs_ToStringBuf( C, -1, &pssize );
-		if( !ps )
-			STDLIB_WARN( "sys_include_path could not be recognized" )
+		ret = sgs_PushGlobal( C, "SGS_PATH" );
+		if( ret != SGS_SUCCESS ||
+			( ps = sgs_ToStringBuf( C, -1, &pssize ) ) != NULL )
+		{
+			ps = SGS_INCLUDE_PATH;
+			pssize = strlen( ps );
+		}
 		
 		ret = _find_includable_file( C, &mb, ps, pssize, fnstr, fnsize );
 		if( ret == 0 )
@@ -2294,6 +2295,7 @@ static int sgsstd_include( SGS_CTX )
 	return 1;
 	
 success:
+	sgsstd__setinc( C, 0 );
 	sgs_PushBool( C, 1 );
 	return 1;
 }
@@ -2664,8 +2666,8 @@ int sgsSTD_PostInit( SGS_CTX )
 	if( ret != SGS_SUCCESS ) return ret;
 	ret = sgs_RegFuncConsts( C, regfuncs, ARRAY_SIZE( regfuncs ) );
 	if( ret != SGS_SUCCESS ) return ret;
-	sgs_PushString( C, "?;?." SGS_MODULE_EXT ";?.sgc;?.sgs" );
-	ret = sgs_StoreGlobal( C, "sys_include_path" );
+	sgs_PushString( C, SGS_INCLUDE_PATH );
+	ret = sgs_StoreGlobal( C, "SGS_PATH" );
 	if( ret != SGS_SUCCESS ) return ret;
 	return SGS_SUCCESS;
 }
