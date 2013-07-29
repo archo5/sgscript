@@ -93,12 +93,15 @@ void sgsVM_VarDestroyObject( SGS_CTX, object_t* O )
 
 static void var_destroy_string( SGS_CTX, string_t* S )
 {
-	/*
-	HTPair* p = ht_findS( &C->stringtable, S );
-	if( p )
+#if SGS_STRINGTABLE_MAXLEN >= 0
+	HTPair* p = S->size <= SGS_STRINGTABLE_MAXLEN ? ht_findS( &C->stringtable, S ) : NULL;
+	if( p && p->str == S )
+	{
+		S->refcount = 2; /* the 'less code' way to avoid double free */
 		ht_unset_pair( &C->stringtable, C, p );
-	else*/
-		sgs_Dealloc( S );
+	}
+#endif
+	sgs_Dealloc( S );
 }
 
 static void var_release( SGS_CTX, sgs_VarPtr p, int notonstack );
@@ -138,7 +141,6 @@ static int is_on_stack( SGS_CTX, sgs_VarPtr p, uint32_t type )
 static void var_release( SGS_CTX, sgs_VarPtr p, int notonstack )
 {
 	uint32_t type = p->type;
-/*	int isstring = type == VTC_STRING ? 1 : 0; */
 	(*p->data.pRC) -= notonstack;
 	p->type = VTC_NULL;
 	
@@ -195,14 +197,14 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t
 
 	var_create_0str( C, out, len );
 	memcpy( str_cstr( out->data.S ), str, len );
-	out->data.S->refcount++;
+	out->data.S->refcount = 1;
 	out->data.S->hash = hash;
 	out->data.S->isconst = 1;
 
 	if( len <= SGS_STRINGTABLE_MAXLEN )
 	{
-		out->data.S->refcount++;
 		ht_setS( &C->stringtable, C, out->data.S, out->data.S );
+		out->data.S->refcount--;
 	}
 }
 
@@ -2321,7 +2323,6 @@ SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... )
 	item = stk_absindex( C, item );
 	val = stk_absindex( C, -1 );
 	ret = sgs_PushPathBuf( C, item, path, len - 1, &args );
-	va_end( args );
 	if( ret == SGS_SUCCESS )
 	{
 		sgs_SizeVal S = -1;
@@ -2362,6 +2363,7 @@ SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... )
 		ssz--;
 	}
 fail:
+	va_end( args );
 	sgs_Pop( C, sgs_StackSize( C ) - ssz );
 	return ret;
 }

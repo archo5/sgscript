@@ -60,7 +60,7 @@
 #define SGS_TOKENLIST_PREALLOC 1024
 
 /* maximum length for a string to be included in the string table */
-#define SGS_STRINGTABLE_MAXLEN -1
+#define SGS_STRINGTABLE_MAXLEN 16
 
 /* max. length of the call stack */
 #define SGS_MAX_CALL_STACK_SIZE 256

@@ -160,7 +160,8 @@ void sgs_DestroyEngine( SGS_CTX )
 	ht_free( &C->stringtable, C );
 
 #ifdef SGS_DEBUG_LEAKS
-	sgs_BreakIf( C->memsize != sizeof( sgs_Context ) );
+	sgs_BreakIf( C->memsize > sizeof( sgs_Context ) );
+	sgs_BreakIf( C->memsize < sizeof( sgs_Context ) );
 #endif
 
 	C->memfunc( C->mfuserdata, C, 0 );
