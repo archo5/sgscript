@@ -2588,15 +2588,58 @@ static int sgsstd_serialize( SGS_CTX )
 
 static int sgsstd_unserialize( SGS_CTX )
 {
-	int ret;
+	int ret, ssz = sgs_StackSize( C ), dictpos;
 	
 	SGSFN( "unserialize" );
 	
-	if( sgs_StackSize( C ) != 1 || !sgs_ParseString( C, 0, NULL, NULL ) )
+	if( ssz < 1 || ssz > 2 || !sgs_ParseString( C, 0, NULL, NULL ) ||
+		( ssz >= 2 && sgs_ItemTypeExt( C, 1 ) != VTC_ARRAY && sgs_ItemTypeExt( C, 1 ) != VTC_DICT ) )
 		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+			"function expects 1-2 arguments: string, array|dict" )
+	
+	if( ssz >= 2 )
+	{
+		if( sgs_ItemTypeExt( C, 1 ) == VTC_ARRAY )
+		{
+			dictpos = sgs_StackSize( C );
+			sgs_PushDict( C, 0 );
+			sgs_PushIterator( C, 1 );
+			while( sgs_IterAdvance( C, -1 ) > 0 )
+			{
+				if( !sgs_IterPushData( C, -1, 0, 1 ) )
+				{
+					char* nm = NULL;
+					if( ( nm = sgs_ToString( C, -1 ) ) != NULL )
+					{
+						if( sgs_PushGlobal( C, nm ) )
+							sgs_PushNull( C );
+						sgs_StoreProperty( C, 2, nm );
+					}
+					sgs_Pop( C, 1 );
+				}
+			}
+			sgs_Pop( C, 1 );
+		}
+		else
+			dictpos = 1;
+		
+		if( sgs_PushGlobal( C, "_G" ) )
+			STDLIB_ERR( "failed to retrieve the environment data" )
+		
+		if( sgs_PushItem( C, dictpos ) || sgs_StoreGlobal( C, "_G" ) )
+			STDLIB_ERR( "failed to change the environment" )
+		
+		sgs_PushItem( C, 0 );
+	}
 
 	ret = sgs_Unserialize( C );
+	
+	if( ssz >= 2 )
+	{
+		if( sgs_PushItem( C, dictpos + 1 ) || sgs_StoreGlobal( C, "_G" ) )
+			STDLIB_ERR( "failed to restore the environment" )
+	}
+	
 	if( ret == SGS_SUCCESS )
 		return 1;
 	else if( ret == SGS_EINPROC )
@@ -2781,20 +2824,18 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 		sgsVM_ReleaseStack( C, out );
 		return SGS_ENOTSUP;
 	}
-	
-	pair = vht_getS( ht, idx->data.S );
 
-	if( pair )
-	{
-		sgsVM_ReleaseStack( C, out );
-		*out = pair->var;
-		return SGS_SUCCESS;
-	}
-	else if( strcmp( str_cstr( idx->data.S ), "_G" ) == 0 )
+	if( strcmp( str_cstr( idx->data.S ), "_G" ) == 0 )
 	{
 		sgsVM_ReleaseStack( C, out );
 		out->type = VTC_DICT;
 		out->data.O = GLBP;
+		return SGS_SUCCESS;
+	}
+	else if( ( pair = vht_getS( ht, idx->data.S ) ) != NULL )
+	{
+		sgsVM_ReleaseStack( C, out );
+		*out = pair->var;
 		return SGS_SUCCESS;
 	}
 	else
