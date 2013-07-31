@@ -2368,6 +2368,29 @@ fail:
 	return ret;
 }
 
+/*
+	argument unpacking:
+	c,w,l,q,i - integers (int8,int16,int32,int64 x2)
+	f,d,r - floats (reals) (float32,float64 x2)
+	s,m - strings (string,string+size)
+	b - boolean
+	n - null (not sure why but I had a free letter here)
+	f - function (callable, actually)
+	a,t,o - objects (array,dict,specific iface)
+	x - custom check/return function
+	? - check only, no writeback
+	! - strict check (no conversions)
+	-,+ - signed/unsigned (changes checked ranges and return value signs)
+	| - optional arguments follow
+*/
+
+SGSRESULT sgs_LoadArgs( SGS_CTX, const char* cmd, ... )
+{
+	/*
+	TODO
+	*/
+}
+
 
 SGSRESULT sgs_Pop( SGS_CTX, int count )
 {
