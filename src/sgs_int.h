@@ -3,11 +3,6 @@
 #define SGS_INT_H_INCLUDED
 
 
-#ifndef _sgs_iStr
-#  define _sgs_iStr _sgs_string_t
-#  define _sgs_iFunc _sgs_func_t
-#endif
-
 #include "sgscript.h"
 #include "sgs_util.h"
 
@@ -195,10 +190,10 @@
 #  define INSTR_MAKE_EX SGS_INSTR_MAKE_EX
 #  define INSTR_RECOMB_E SGS_INSTR_RECOMB_E
 
-#  define func_t sgs_func_t
+#  define func_t sgs_iFunc
 #  define func_consts sgs_func_consts
 #  define func_bytecode sgs_func_bytecode
-#  define string_t sgs_string_t
+#  define string_t sgs_iStr
 #  define str_cstr sgs_str_cstr
 #  define var_cstr sgs_var_cstr
 #  define object_t sgs_object_t
@@ -526,7 +521,7 @@ typedef uint32_t sgs_instr_t;
 #define SGS_INSTR_RECOMB_E( a, b ) ( ( ( b ) << 8 ) | ( a ) )
 
 
-typedef struct _sgs_func_t
+struct _sgs_iFunc
 {
 	int32_t refcount;
 	int32_t size;
@@ -537,20 +532,18 @@ typedef struct _sgs_func_t
 	uint16_t* lineinfo;
 	sgs_MemBuf funcname;
 	sgs_MemBuf filename;
-}
-sgs_func_t;
-#define sgs_func_consts( pfn )   ((sgs_Variable*)(((char*)(pfn))+sizeof(sgs_func_t)))
-#define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(((char*)(pfn))+sizeof(sgs_func_t)+pfn->instr_off))
+};
+#define sgs_func_consts( pfn )   ((sgs_Variable*)(((char*)(pfn))+sizeof(sgs_iFunc)))
+#define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(((char*)(pfn))+sizeof(sgs_iFunc)+pfn->instr_off))
 
-typedef struct _sgs_string_t
+struct _sgs_iStr
 {
 	int32_t refcount;
 	int32_t size;
 	sgs_Hash hash;
 	int isconst;
-}
-sgs_string_t;
-#define sgs_str_cstr( pstr ) (((char*)(pstr))+sizeof(sgs_string_t))
+};
+#define sgs_str_cstr( pstr ) (((char*)(pstr))+sizeof(sgs_iStr))
 #define sgs_var_cstr( var ) sgs_str_cstr( (var)->data.S )
 
 #define sgs_object_t sgs_VarObj
@@ -560,7 +553,7 @@ sgs_string_t;
 typedef struct _sgs_VHTableVar
 {
 	sgs_Variable var;
-	string_t*    str;
+	sgs_iStr* str;
 }
 sgs_VHTableVar;
 typedef struct _sgs_VHTable
@@ -573,9 +566,9 @@ sgs_VHTable;
 
 void sgs_vht_init( sgs_VHTable* vht, SGS_CTX );
 void sgs_vht_free( sgs_VHTable* vht, SGS_CTX, int dco );
-sgs_VHTableVar* sgs_vht_getS( sgs_VHTable* vht, sgs_string_t* S );
-void sgs_vht_setS( sgs_VHTable* vht, sgs_string_t* S, sgs_Variable* var, SGS_CTX );
-int sgs_vht_unsetS( sgs_VHTable* vht, sgs_string_t* S, SGS_CTX );
+sgs_VHTableVar* sgs_vht_getS( sgs_VHTable* vht, sgs_iStr* S );
+void sgs_vht_setS( sgs_VHTable* vht, sgs_iStr* S, sgs_Variable* var, SGS_CTX );
+int sgs_vht_unsetS( sgs_VHTable* vht, sgs_iStr* S, SGS_CTX );
 #define sgs_vht_size( T ) ((T)->ht.load)
 
 

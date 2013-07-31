@@ -186,14 +186,45 @@ static int socketI_listen( SGS_CTX )
 	return 1;
 }
 
+static void push_sockaddr( SGS_CTX, struct sockaddr* sa, int size )
+{
+	int ssz = sgs_StackSize( C );
+	sgs_PushString( C, "family" );
+	sgs_PushInt( C, sa->sa_family );
+	if( sa->sa_family == AF_INET )
+	{
+		char addr[ 24 ];
+		struct sockaddr_in* sai = (struct sockaddr_in*) sa;
+		sgs_PushString( C, "port" );
+		sgs_PushInt( C, ntohs( sai->sin_port ) );
+		sgs_PushString( C, "addr" );
+		sgs_PushInt( C, sai->sin_addr.S_un.S_un_b.s_b1 );
+		sgs_PushInt( C, sai->sin_addr.S_un.S_un_b.s_b2 );
+		sgs_PushInt( C, sai->sin_addr.S_un.S_un_b.s_b3 );
+		sgs_PushInt( C, sai->sin_addr.S_un.S_un_b.s_b4 );
+		sgs_PushArray( C, 4 );
+		sgs_PushString( C, "addri" );
+		sgs_PushInt( C, sai->sin_addr.S_un.S_addr );
+		sgs_PushString( C, "addrs" );
+#ifdef _WIN32
+		{
+			DWORD ioasz = 24;
+			WSAAddressToString( sa, size, NULL, addr, &ioasz );
+			*strstr( addr, ":" ) = 0;
+		}
+#else
+		inet_ntop( AF_INET, &sai->sin_addr, addr, 24 );
+#endif
+		sgs_PushString( C, addr );
+	}
+	else if( sa->sa_family == AF_INET6 )
+	{
+	}
+	sgs_PushDict( C, sgs_StackSize( C ) - ssz );
+}
+
 static int socketI_accept( SGS_CTX )
 {
-	struct sockaddr sa;
-#ifdef _WIN32
-	int sa_size;
-#else
-	unsigned int sa_size;
-#endif
 	int S, more = 0, ssz = sgs_StackSize( C );
 	
 	SOCK_IHDR( accept );
@@ -217,8 +248,23 @@ static int socketI_accept( SGS_CTX )
 	}
 	else
 	{
-		STDLIB_WARN( "TODO" )
+		struct sockaddr sa;
+#ifdef _WIN32
+		int sa_size;
+#else
+		unsigned int sa_size;
+#endif
 		S = accept( GET_SCK, &sa, &sa_size );
+		if( S == -1 )
+		{
+			SOCKERR;
+			STDLIB_WARN( "failed to accept connection" )
+		}
+		SOCKCLEARERR;
+		sgs_PushObject( C, (void*) (size_t) S, socket_iface );
+		push_sockaddr( C, &sa, sa_size );
+		sgs_PushArray( C, 2 );
+		return 1;
 	}
 }
 
@@ -243,6 +289,29 @@ static int socketI_send( SGS_CTX )
 		sgs_PushBool( C, 0 );
 	else
 		sgs_PushInt( C, ret );
+	return 1;
+}
+
+static int socketI_recv( SGS_CTX )
+{
+	sgs_Int size, flags = 0;
+	int ret, ssz = sgs_StackSize( C );
+
+	SOCK_IHDR( recv );
+
+	if( ssz < 1 || ssz > 2 ||
+		!sgs_ParseInt( C, 1, &size ) ||
+		( ssz >= 2 && !sgs_ParseInt( C, 2, &flags ) ) )
+		STDLIB_WARN( "unexpected arguments; "
+			"function expects 1-2 arguments: int[, int]" )
+
+	sgs_PushStringBuf( C, NULL, size );
+	ret = recv( GET_SCK, sgs_GetStringPtr( C, -1 ), size, flags );
+	sockassert( C, ret );
+	if( ret <= 0 )
+		sgs_PushInt( C, ret );
+	else
+		(C->stack_top-1)->data.S->size = ret;
 	return 1;
 }
 
@@ -285,6 +354,7 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( STREQ( name, "listen" ) ) IFN( socketI_listen )
 	if( STREQ( name, "accept" ) ) IFN( socketI_accept )
 	if( STREQ( name, "send" ) ) IFN( socketI_send )
+	if( STREQ( name, "recv" ) ) IFN( socketI_recv )
 	if( STREQ( name, "shutdown" ) ) IFN( socketI_shutdown )
 	if( STREQ( name, "close" ) ) IFN( socketI_close )
 	
@@ -293,12 +363,12 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 
 static int socket_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( type == SGS_CONVOP_TOTYPE || type == VT_STRING )
+	if( type == SGS_CONVOP_TOTYPE || type == SVT_STRING )
 	{
 		sgs_PushString( C, "socket" );
 		return SGS_SUCCESS;
 	}
-	else if( type == VT_BOOL )
+	else if( type == SVT_BOOL )
 	{
 		sgs_PushBool( C, GET_SCK != -1 );
 		return SGS_SUCCESS;

@@ -7,11 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifndef _sgs_iStr
-#  define _sgs_iStr string_s
-#  define _sgs_iFunc func_s
-#endif
-
 #ifdef SGS_INTERNAL
 #  ifdef SGS_REALLY_INTERNAL
 #    ifndef TRUE

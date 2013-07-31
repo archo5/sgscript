@@ -27,14 +27,14 @@ extern "C" {
 
 
 #ifdef SGS_INTERNAL
-#  define VT_NULL SGS_VT_NULL
-#  define VT_BOOL SGS_VT_BOOL
-#  define VT_INT SGS_VT_INT
-#  define VT_REAL SGS_VT_REAL
-#  define VT_STRING SGS_VT_STRING
-#  define VT_FUNC SGS_VT_FUNC
-#  define VT_CFUNC SGS_VT_CFUNC
-#  define VT_OBJECT SGS_VT_OBJECT
+#  define SVT_NULL SGS_VT_NULL
+#  define SVT_BOOL SGS_VT_BOOL
+#  define SVT_INT SGS_VT_INT
+#  define SVT_REAL SGS_VT_REAL
+#  define SVT_STRING SGS_VT_STRING
+#  define SVT_FUNC SGS_VT_FUNC
+#  define SVT_CFUNC SGS_VT_CFUNC
+#  define SVT_OBJECT SGS_VT_OBJECT
 #  define VTYPE_MASK SGS_VTYPE_MASK
 #  define BASETYPE SGS_BASETYPE
 #  define VTF_NUM SGS_VTF_NUM

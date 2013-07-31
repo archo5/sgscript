@@ -610,22 +610,22 @@ static void dumpvar( SGS_CTX, sgs_Variable* var )
 	sgs_Writef( C, "%s (size:%d)", g_varnames[ fastlog2( BASETYPE( var->type ) << 1 ) ], sgsVM_VarSize( var ) );
 	switch( BASETYPE( var->type ) )
 	{
-	case VT_NULL: break;
-	case VT_BOOL: sgs_Writef( C, " = %s", var->data.B ? "true" : "false" ); break;
-	case VT_INT: sgs_Writef( C, " = %" PRId64, var->data.I ); break;
-	case VT_REAL: sgs_Writef( C, " = %f", var->data.R ); break;
-	case VT_STRING:
+	case SVT_NULL: break;
+	case SVT_BOOL: sgs_Writef( C, " = %s", var->data.B ? "true" : "false" ); break;
+	case SVT_INT: sgs_Writef( C, " = %" PRId64, var->data.I ); break;
+	case SVT_REAL: sgs_Writef( C, " = %f", var->data.R ); break;
+	case SVT_STRING:
 		sgs_Writef( C, " [rc:%d] = \"", var->data.S->refcount );
 		ctx_print_safe( C, var_cstr( var ), MIN( var->data.S->size, 16 ) );
 		sgs_Writef( C, var->data.S->size > 16 ? "...\"" : "\"" );
 		break;
-	case VT_FUNC:
+	case SVT_FUNC:
 		sgs_Writef( C, " [rc:%d] '%s'[%d]%s", var->data.F->refcount,
 			var->data.F->funcname.ptr ? var->data.F->funcname.ptr : "<anonymous>",
 			(int) var->data.F->numargs, var->data.F->gotthis ? " (method)" : "" );
 		break;
-	case VT_CFUNC: sgs_Writef( C, " = %p", var->data.C ); break;
-	case VT_OBJECT: sgs_Writef( C, " = " ); dumpobj( C, var->data.O ); break;
+	case SVT_CFUNC: sgs_Writef( C, " = %p", var->data.C ); break;
+	case SVT_OBJECT: sgs_Writef( C, " = " ); dumpobj( C, var->data.O ); break;
 	}
 }
 

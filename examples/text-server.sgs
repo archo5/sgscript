@@ -12,8 +12,28 @@ if( !S.bind_port( 8080 ) || !S.listen( 10 ) )
 
 for(;;)
 {
-	C = S.accept();
-	println( "Request! Let's send something..." );
+	info = S.accept( true );
+	C = info[0];
+	printvar( info[1] );
+
+	println( "Request!" );
+
+	/*
+		Need more API for this to work.
+		
+	rcvd = "";
+	while( string_part( rcvd, -4 ) != "\r\n\r\n" )
+	{
+		more = C.recv( 1024 );
+		if( more === -1 )
+			break;
+		else
+			rcvd $= more;
+	}
+	println( rcvd );
+	*/
+
+	println( "Let's send something..." );
 	C.send( "This is a test.\r\n" );
 	C.shutdown( SHUT_WR );
 	C.close();

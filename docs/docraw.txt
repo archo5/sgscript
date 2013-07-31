@@ -1788,7 +1788,7 @@ SGS_[INFO|WARNING|ERROR] [constants]
 
 VT_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT] [constants]
 
-= these constants are defined to the values of the C macros and can be compared with the values returned in @typeid() or @typeflags()
+= these constants are defined to the values of the C macros (with the prefix "SVT_" in C) and can be compared with the values returned in @typeid() or @typeflags()
 
 
 _G [superglobal]

@@ -537,12 +537,12 @@ static int pprocI_add_job( SGS_CTX )
 	int ssz = sgs_StackSize( C ), type;
 	
 	if( ssz != 1 || !( type = sgs_ItemType( C, 0 ) ) ||
-		( type != VT_FUNC && type != VT_STRING ) ||
-		( type == VT_STRING && !sgs_ParseString( C, 0, &str, &size ) ) )
+		( type != SVT_FUNC && type != SVT_STRING ) ||
+		( type == SVT_STRING && !sgs_ParseString( C, 0, &str, &size ) ) )
 		STDLIB_WARN( "pproc.add_job(): unexpected arguments; "
 			"function expects 1 argument: string|function" )
 	
-	if( type == VT_FUNC )
+	if( type == SVT_FUNC )
 	{
 		sgs_Variable var;
 		if( !sgs_GetStackItem( C, 0, &var ) ||

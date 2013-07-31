@@ -904,7 +904,7 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 		ret = sgs_Call( C, 1, 1 );
 		if( ret != SGS_SUCCESS )
 			return FALSE;
-		if( sgs_ItemType( C, -1 ) == VT_NULL )
+		if( sgs_ItemType( C, -1 ) == SVT_NULL )
 		{
 			sgs_Pop( C, 1 );
 			fs->state = FMTSTREAM_STATE_END;
@@ -1626,7 +1626,7 @@ SGS_DECLARE void* sgsstd_file_functable[];
 	sgs_VarObj* data; \
 	SGSFN( "file." #fname ); \
 	if( !sgs_Method( C ) || \
-		sgs_ItemType( C, 0 ) != VT_OBJECT || \
+		sgs_ItemType( C, 0 ) != SVT_OBJECT || \
 		( data = sgs_GetObjectData( C, 0 ) )->iface != sgsstd_file_functable ) \
 		STDLIB_WARN( "expected file as 'this'" )
 
@@ -1877,12 +1877,12 @@ static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
 	UNUSED( data );
-	if( type == VT_BOOL )
+	if( type == SVT_BOOL )
 	{
 		sgs_PushBool( C, !!FVAR );
 		return SGS_SUCCESS;
 	}
-	if( type == VT_STRING || type == SGS_CONVOP_TOTYPE )
+	if( type == SVT_STRING || type == SGS_CONVOP_TOTYPE )
 	{
 		sgs_PushString( C, "file" );
 		return SGS_SUCCESS;
@@ -1952,7 +1952,7 @@ static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 
 static int sgsstd_dir_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( type == VT_STRING || type == SGS_CONVOP_TOTYPE )
+	if( type == SVT_STRING || type == SGS_CONVOP_TOTYPE )
 	{
 		sgs_PushString( C, "directory_iterator" );
 		return SGS_SUCCESS;

@@ -2145,12 +2145,12 @@ static int bc_write_var( sgs_Variable* var, SGS_CTX, MemBuf* outbuf )
 	membuf_appchr( outbuf, C, vt );
 	switch( vt )
 	{
-	case VT_NULL: break;
-	case VT_BOOL: membuf_appchr( outbuf, C, var->data.B ); break;
-	case VT_INT: membuf_appbuf( outbuf, C, &var->data.I, sizeof( sgs_Int ) ); break;
-	case VT_REAL: membuf_appbuf( outbuf, C, &var->data.R, sizeof( sgs_Real ) ); break;
-	case VT_STRING: bc_write_sgsstring( var->data.S, C, outbuf ); break;
-	case VT_FUNC: if( !bc_write_sgsfunc( var->data.F, C, outbuf ) ) return 0; break;
+	case SVT_NULL: break;
+	case SVT_BOOL: membuf_appchr( outbuf, C, var->data.B ); break;
+	case SVT_INT: membuf_appbuf( outbuf, C, &var->data.I, sizeof( sgs_Int ) ); break;
+	case SVT_REAL: membuf_appbuf( outbuf, C, &var->data.R, sizeof( sgs_Real ) ); break;
+	case SVT_STRING: bc_write_sgsstring( var->data.S, C, outbuf ); break;
+	case SVT_FUNC: if( !bc_write_sgsfunc( var->data.F, C, outbuf ) ) return 0; break;
 	default:
 		return 0;
 	}
@@ -2163,12 +2163,12 @@ static const char* bc_read_var( decoder_t* D, sgs_Variable* var )
 	int vt = *D->buf++;
 	switch( vt )
 	{
-	case VT_NULL: var->type = VTC_NULL; break;
-	case VT_BOOL: var->type = VTC_BOOL; var->data.B = *D->buf++; break;
-	case VT_INT: var->type = VTC_INT; var->data.I = AS_INTEGER( D->buf ); D->buf += sizeof( sgs_Int ); break;
-	case VT_REAL: var->type = VTC_REAL; var->data.R = AS_REAL( D->buf ); D->buf += sizeof( sgs_Real ); break;
-	case VT_STRING: var->type = VTC_STRING; bc_read_sgsstring( D, var ); break;
-	case VT_FUNC: var->type = VTC_FUNC; return bc_read_sgsfunc( D, var );
+	case SVT_NULL: var->type = VTC_NULL; break;
+	case SVT_BOOL: var->type = VTC_BOOL; var->data.B = *D->buf++; break;
+	case SVT_INT: var->type = VTC_INT; var->data.I = AS_INTEGER( D->buf ); D->buf += sizeof( sgs_Int ); break;
+	case SVT_REAL: var->type = VTC_REAL; var->data.R = AS_REAL( D->buf ); D->buf += sizeof( sgs_Real ); break;
+	case SVT_STRING: var->type = VTC_STRING; bc_read_sgsstring( D, var ); break;
+	case SVT_FUNC: var->type = VTC_FUNC; return bc_read_sgsfunc( D, var );
 	default:
 		return "invalid variable type found";
 	}
