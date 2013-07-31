@@ -1741,30 +1741,13 @@ static int sgsstd_is_numeric( SGS_CTX )
 	return 1;
 }
 
-#define OBJECT_HAS_IFACE( outVar, O, iFace ) \
-	{ void** ptr = O->iface; outVar = 0; \
-	while( *ptr ){ if( *ptr == iFace ){ outVar = 1; \
-		break; } ptr += 2; } }
-
 static int sgsstd_is_callable( SGS_CTX )
 {
-	int res, ty = sgs_ItemTypeExt( C, 0 );
-	
 	SGSFN( "is_callable" );
 	if( sgs_StackSize( C ) != 1 )
 		STDLIB_WARN( "unexpected arguments; function expects 1 argument" )
-
-	if( ty & VTF_CALL )
-		res = TRUE;
-	else if( ty & SVT_OBJECT )
-	{
-		sgs_VarObj* O = sgs_GetObjectData( C, 0 );
-		OBJECT_HAS_IFACE( res, O, SOP_CALL )
-	}
-	else
-		res = FALSE;
-
-	sgs_PushBool( C, res );
+	
+	sgs_PushBool( C, sgs_IsCallable( C, -1 ) );
 	return 1;
 }
 
@@ -1936,21 +1919,6 @@ static int sgsstd_ftime( SGS_CTX )
 
 /* utils */
 
-static int idxiscallable( SGS_CTX, int idx )
-{
-	int ite = sgs_ItemTypeExt( C, idx );
-	if( ite & VTF_CALL )
-		return 1;
-	if( ite & SVT_OBJECT )
-	{
-		int outvar = 0;
-		sgs_VarObj* O = sgs_GetObjectData( C, idx );
-		OBJECT_HAS_IFACE( outvar, O, SOP_CALL );
-		return outvar;
-	}
-	return 0;
-}
-
 struct pcall_printinfo
 {
 	sgs_PrintFunc pfn;
@@ -1996,8 +1964,8 @@ static int sgsstd_pcall( SGS_CTX )
 	
 	SGSFN( "pcall" );
 	
-	if( ssz < 1 || ssz > 2 || !idxiscallable( C, 0 )
-		|| ( ssz >= 2 && !idxiscallable( C, 1 ) ) )
+	if( ssz < 1 || ssz > 2 || !sgs_IsCallable( C, 0 )
+		|| ( ssz >= 2 && !sgs_IsCallable( C, 1 ) ) )
 		STDLIB_WARN( "unexpected arguments; function expects 1-2 callable arguments" )
 	
 	P.pfn = C->print_fn;

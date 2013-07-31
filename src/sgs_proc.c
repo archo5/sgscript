@@ -2370,25 +2370,248 @@ fail:
 
 /*
 	argument unpacking:
+	n - null (not sure why but I had a free letter here)
+	b - boolean
 	c,w,l,q,i - integers (int8,int16,int32,int64 x2)
 	f,d,r - floats (reals) (float32,float64 x2)
 	s,m - strings (string,string+size)
-	b - boolean
-	n - null (not sure why but I had a free letter here)
-	f - function (callable, actually)
+	p - function (callable, actually; p stands for "procedure";
+		returns a SGSBOOL always, useful only for optional arguments)
 	a,t,o - objects (array,dict,specific iface)
 	x - custom check/return function
 	? - check only, no writeback
 	! - strict check (no conversions)
 	-,+ - signed/unsigned (changes checked ranges and return value signs)
 	| - optional arguments follow
+	# - check ranges
+	^ - clamp ranges
+	~ - ignore ranges
 */
 
-SGSRESULT sgs_LoadArgs( SGS_CTX, const char* cmd, ... )
+static void argerrx( SGS_CTX, int argid, const char* expect, const char* expfx )
 {
-	/*
-	TODO
-	*/
+	sgs_Printf( C, SGS_WARNING, "argument %d - expected %s%s, got %s",
+		argid, expfx, expect, sgs_CodeString( SGS_CODE_VT, sgs_ItemType( C, argid ) ) );
+}
+
+static void argerr( SGS_CTX, int argid, int expect, int strict )
+{
+	argerrx( C, argid, sgs_CodeString( SGS_CODE_VT, expect ), strict ? "strict " : "" );
+}
+
+SGSRESULT sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
+{
+	int opt = 0;
+	int strict = 0;
+	int range = 0; /* <0: clamp, >0: check */
+	int isig = 0;
+	int nowrite = 0;
+	va_list args;
+	va_start( args, cmd );
+	while( *cmd )
+	{
+		switch( *cmd )
+		{
+		case '|': opt = 1; break;
+		case '#': range = 1; break;
+		case '^': range = -1; break;
+		case '~': range = 0; break;
+		case '-': isig = 1; break;
+		case '+': isig = 0; break;
+		case '!': strict = 1; break;
+		case '?': nowrite = 1; break;
+		
+		case 'n':
+			{
+				if( sgs_ItemType( C, from ) != SVT_NULL )
+				{
+					argerr( C, from, SVT_NULL, 0 );
+					va_end( args );
+					return opt;
+				}
+			}
+			strict = 0; nowrite = 0; from++; break;
+		
+		case 'b':
+			{
+				SGSBOOL b;
+				
+				if( !sgs_ParseBool( C, from, &b ) ||
+					( strict && sgs_ItemType( C, from ) != SVT_BOOL ) )
+				{
+					argerr( C, from, SVT_BOOL, strict );
+					va_end( args );
+					return opt;
+				}
+				
+				if( !nowrite )
+				{
+					*va_arg( args, SGSBOOL* ) = b;
+				}
+			}
+			strict = 0; nowrite = 0; from++; break;
+		
+		case 'c': case 'w': case 'l': case 'q': case 'i':
+			{
+				sgs_Int i, imin = INT64_MIN, imax = INT64_MAX;
+				
+				if( range )
+				{
+					if( *cmd == 'c' && isig ){ imin = INT8_MIN; imax = INT8_MAX; }
+					else if( *cmd == 'c' && !isig ){ imin = 0; imax = UINT8_MAX; }
+					else if( *cmd == 'w' && isig ){ imin = INT16_MIN; imax = INT16_MAX; }
+					else if( *cmd == 'w' && !isig ){ imin = 0; imax = UINT16_MAX; }
+					else if( *cmd == 'l' && isig ){ imin = INT32_MIN; imax = INT32_MAX; }
+					else if( *cmd == 'l' && !isig ){ imin = 0; imax = UINT32_MAX; }
+				}
+				
+				if( !sgs_ParseInt( C, from, &i ) ||
+					( strict && sgs_ItemType( C, from ) != SVT_INT ) )
+				{
+					argerr( C, from, SVT_INT, strict );
+					va_end( args );
+					return opt;
+				}
+				
+				if( range > 0 && ( i < imin || i > imax ) )
+				{
+					sgs_Printf( C, SGS_WARNING, "integer argument %d (%" PRId64 ") out of range [%"
+						PRId64 ",%" PRId64 "]", from, i, imin, imax );
+					va_end( args );
+					return opt;
+				}
+				else if( range < 0 )
+				{
+					if( i < imin ) i = imin;
+					else if( i > imax ) i = imax;
+				}
+				
+				if( !nowrite )
+				{
+					switch( *cmd )
+					{
+					case 'c': *va_arg( args, uint8_t* ) = (uint8_t) i; break;
+					case 'w': *va_arg( args, uint16_t* ) = (uint16_t) i; break;
+					case 'l': *va_arg( args, uint32_t* ) = (uint32_t) i; break;
+					case 'q': *va_arg( args, uint64_t* ) = (uint64_t) i; break;
+					case 'i': *va_arg( args, sgs_Int* ) = i; break;
+					}
+				}
+			}
+			strict = 0; nowrite = 0; from++; break;
+			
+		case 'f': case 'd': case 'r':
+			{
+				sgs_Real r;
+				
+				if( !sgs_ParseReal( C, from, &r ) ||
+					( strict && sgs_ItemType( C, from ) != SVT_REAL ) )
+				{
+					argerr( C, from, SVT_REAL, strict );
+					va_end( args );
+					return opt;
+				}
+				
+				if( !nowrite )
+				{
+					switch( *cmd )
+					{
+					case 'f': *va_arg( args, float* ) = (float) r; break;
+					case 'd': *va_arg( args, double* ) = r; break;
+					case 'r': *va_arg( args, sgs_Real* ) = r; break;
+					}
+				}
+			}
+			strict = 0; nowrite = 0; from++; break;
+			
+		case 's': case 'm':
+			{
+				char* str;
+				sgs_SizeVal sz;
+				
+				if( ( strict && sgs_ItemType( C, from ) != SVT_STRING ) ||
+					!sgs_ParseString( C, from, &str, &sz ) )
+				{
+					argerr( C, from, SVT_STRING, strict );
+					va_end( args );
+					return opt;
+				}
+				
+				if( !nowrite )
+				{
+					*va_arg( args, char** ) = str;
+					if( *cmd == 'm' )
+						*va_arg( args, sgs_SizeVal* ) = sz;
+				}
+			}
+			strict = 0; nowrite = 0; from++; break;
+		
+		case 'p':
+			{
+				if( !sgs_IsCallable( C, from ) )
+				{
+					argerrx( C, from, "callable", "" );
+					va_end( args );
+					return opt;
+				}
+				
+				if( !nowrite )
+				{
+					*va_arg( args, SGSBOOL* ) = 1;
+				}
+			}
+			strict = 0; nowrite = 0; from++; break;
+			
+		case 'a': case 't': case 'o':
+			{
+				int fcf = VTC_OBJECT;
+				void** ifc = NULL;
+				const char* ostr = "custom object";
+				
+				if( *cmd == 'a' ){ fcf = VTC_ARRAY; ostr = "array"; }
+				if( *cmd == 't' ){ fcf = VTC_DICT; ostr = "dict"; }
+				if( *cmd == 'o' ) ifc = va_arg( args, void** );
+				
+				if( ( sgs_ItemTypeExt( C, from ) & fcf ) != fcf ||
+					( ifc != NULL && !sgs_IsObject( C, from, ifc ) ) )
+				{
+					argerrx( C, from, ostr, "" );
+					va_end( args );
+					return opt;
+				}
+				
+				if( !nowrite )
+				{
+					*va_arg( args, sgs_VarObj** ) = sgs_GetObjectData( C, from );
+				}
+			}
+			strict = 0; nowrite = 0; from++; break;
+			
+		case 'x':
+			{
+				sgs_ArgCheckFunc acf = va_arg( args, sgs_ArgCheckFunc );
+				int flags = 0;
+				
+				if( strict )     flags |= SGS_LOADARG_STRICT;
+				if( nowrite )    flags |= SGS_LOADARG_NOWRITE;
+				if( opt )        flags |= SGS_LOADARG_OPTIONAL;
+				if( isig )       flags |= SGS_LOADARG_INTSIGN;
+				if( range > 0 )  flags |= SGS_LOADARG_INTRANGE;
+				if( range < 0 )  flags |= SGS_LOADARG_INTCLAMP;
+				
+				if( !acf( C, from, args, flags ) )
+				{
+					va_end( args );
+					return opt;
+				}
+			}
+			strict = 0; nowrite = 0; from++; break;
+			
+		}
+		cmd++;
+	}
+	va_end( args );
+	return 1;
 }
 
 
@@ -3038,6 +3261,28 @@ SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface )
 	var = stk_getpos( C, item );
 	return ( var->type & SVT_OBJECT ) && var->data.O->iface == iface;
 }
+
+
+SGSBOOL sgs_IsCallable( SGS_CTX, int item )
+{
+	int ty = sgs_ItemTypeExt( C, 0 );
+
+	if( ty & VTF_CALL )
+		return 1;
+	if( ty & SVT_OBJECT )
+	{
+		sgs_VarObj* O = sgs_GetObjectData( C, 0 );
+		void** ptr = O->iface;
+		while( *ptr )
+		{
+			if( *ptr == SOP_CALL )
+				return 1;
+			ptr += 2;
+		}
+	}
+	return 0;
+}
+
 
 typedef union intreal_s
 {

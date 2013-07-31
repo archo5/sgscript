@@ -20,6 +20,7 @@ extern "C" {
 
 #include <string.h>
 #include <malloc.h>
+#include <stdarg.h>
 
 #include "sgs_cfg.h"
 #include "sgs_xpc.h"
@@ -489,6 +490,17 @@ SGS_APIFUNC SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name );
 SGS_APIFUNC SGSRESULT sgs_PushPath( SGS_CTX, int item, const char* path, ... );
 SGS_APIFUNC SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... );
 
+typedef int (*sgs_ArgCheckFunc) ( sgs_Context*, int, va_list, int );
+#define SGS_LOADARG_STRICT 0x01
+#define SGS_LOADARG_NOWRITE 0x02
+#define SGS_LOADARG_OPTIONAL 0x04
+#define SGS_LOADARG_INTSIGN 0x08
+#define SGS_LOADARG_INTRANGE 0x10
+#define SGS_LOADARG_INTCLAMP 0x20
+
+SGSRESULT sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... );
+#define sgs_LoadArgs( C, cmd, ... ) sgs_LoadArgsExt( C, 0, cmd, ##__VA_ARGS__ )
+
 SGS_APIFUNC SGSRESULT sgs_Pop( SGS_CTX, int count );
 SGS_APIFUNC SGSRESULT sgs_PopSkip( SGS_CTX, int count, int skip );
 
@@ -534,6 +546,7 @@ SGS_APIFUNC char* sgs_ToStringBufFast( SGS_CTX, int item, sgs_SizeVal* outsize )
 SGS_APIFUNC SGSRESULT sgs_Convert( SGS_CTX, int item, int type );
 
 SGS_APIFUNC SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface );
+SGS_APIFUNC SGSBOOL sgs_IsCallable( SGS_CTX, int item );
 SGS_APIFUNC SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size );
 SGS_APIFUNC SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out );
 SGS_APIFUNC SGSBOOL sgs_ParseInt( SGS_CTX, int item, sgs_Int* out );
