@@ -544,6 +544,24 @@ sgs_StorePath [function]
 - other errors, as returned by @sgs_PushIndexExt() or @sgs_StoreIndexExt()
 
 
+sgs_ArgErrorExt [function]
+
+== int sgs_ArgErrorExt( SGS_CTX, int argid, const char* expect, const char* expfx )
+=== prints the argument type mismatch error
+
+- always returns 0 so it can be used to return and print an error in the same statement
+- used in @sgs_LoadArgsExt for most errors
+
+
+sgs_ArgError [function alias]
+
+== int sgs_ArgError( sgs_Context* C, int argid, int expect, int is_strict )
+=== prints the argument type mismatch error
+
+- always returns 0 so it can be used to return and print an error in the same statement
+- alias to `sgs_ArgErrorExt( C, argid, sgs_CodeString( SGS_CODE_VT, expect ), strict ? "strict " : "" )`
+
+
 sgs_LoadArgsExt [function]
 
 == SGSMIXED sgs_LoadArgsExt( sgs_Context* C, int from, const char* cmd, ... )
@@ -554,6 +572,8 @@ sgs_LoadArgsExt [function]
 - function returns whether all required arguments have been parsed successfully
 -- thus, if function returns < 1, state of outputs is somewhat unknown unless filled with defaults
 -- it is guaranteed that all arguments will be parsed from first (specified) forward, not in any other way
+
+! unlike sgs_LoadArgs, it returns `SGSMIXED` and must be checked differently
 
 ==== control commands
 - `?` -- only check, do not write the result and do not require a pointer to write the data to
@@ -589,11 +609,13 @@ sgs_LoadArgsExt [function]
 
 sgs_LoadArgs [function alias]
 
-== SGSMIXED sgs_LoadArgs( sgs_Context* C, const char* cmd, ... )
+== SGSBOOL sgs_LoadArgs( sgs_Context* C, const char* cmd, ... )
 === parse the stack items and retrieve their data according to `cmd`, starting from item 0
 
+! unlike sgs_LoadArgsExt, it returns `bool` - whether all required arguments have been successfully parsed
+
 - for more info on syntax and usage, refer to @sgs_LoadArgsExt
-- alias to `sgs_LoadArgsExt( C, 0, cmd, ... )`
+- alias to `sgs_LoadArgsExt( C, 0, cmd, ... )>0`
 
 
 =

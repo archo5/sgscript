@@ -490,6 +490,10 @@ SGS_APIFUNC SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name );
 SGS_APIFUNC SGSRESULT sgs_PushPath( SGS_CTX, int item, const char* path, ... );
 SGS_APIFUNC SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... );
 
+SGS_APIFUNC int sgs_ArgErrorExt( SGS_CTX, int argid, const char* expect, const char* expfx );
+#define sgs_ArgError( C, argid, expect, strict ) \
+	sgs_ArgErrorExt( C, argid, sgs_CodeString( SGS_CODE_VT, expect ), strict ? "strict " : "" )
+
 typedef int (*sgs_ArgCheckFunc) ( sgs_Context*, int, va_list, int );
 #define SGS_LOADARG_STRICT 0x01
 #define SGS_LOADARG_NOWRITE 0x02
@@ -499,7 +503,7 @@ typedef int (*sgs_ArgCheckFunc) ( sgs_Context*, int, va_list, int );
 #define SGS_LOADARG_INTCLAMP 0x20
 
 SGS_APIFUNC SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... );
-#define sgs_LoadArgs( C, cmd, ... ) sgs_LoadArgsExt( C, 0, cmd, ##__VA_ARGS__ )
+#define sgs_LoadArgs( C, cmd, ... ) (sgs_LoadArgsExt( C, 0, cmd, ##__VA_ARGS__ )>0)
 
 SGS_APIFUNC SGSRESULT sgs_Pop( SGS_CTX, int count );
 SGS_APIFUNC SGSRESULT sgs_PopSkip( SGS_CTX, int count, int skip );

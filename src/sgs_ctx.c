@@ -178,7 +178,7 @@ const char* sgs_CodeString( int type, int val )
 	}
 	else if( type == SGS_CODE_VT )
 	{
-		val = fastlog2( type & 0xff << 1 );
+		val = fastlog2( ( val & 0xff ) << 1 );
 		if( val < 0 || val >= 8 )
 			return NULL;
 		return sgs_VarNames[ val ];

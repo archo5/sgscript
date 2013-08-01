@@ -15,7 +15,6 @@ var c = "banana";
 var d = " \t\r\n \t\r\n spacy \t\r\n \t\r\n ";
 
 	section( "string_cut" );
-var string_cut_error_args = "[W:string_cut(): unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]]";
 var string_cut_error_range = "[W:string_cut(): invalid character range]";
 var string_cut_error_indices = "[W:string_cut(): detected negative indices]";
 testEqual( string_cut( a, 3, 5 ), "dom", "string_cut - basic cutting" );
@@ -24,8 +23,8 @@ testEqual( string_cut( a, 0, 20 ), a, "string_cut - expected positive range over
 testEqual( string_cut( a, -20, -1 ), a, "string_cut - expected negative range overflow" );
 testEqual( string_cut( a, 3, 5, STRICT_RANGES | NO_REV_INDEX ), "dom", "string_cut - strict cutting" );
 testEqual( string_cut( a, 7 ), 'string', "string_cut - cutting to end" );
-ERRORS = ""; testEqual( string_cut( a ), null, "string_cut - bad argument count" ); testEqual( ERRORS, string_cut_error_args );
-ERRORS = ""; testEqual( string_cut( null, 0, 10 ), null, "string_cut - string conversion error" ); testEqual( ERRORS, string_cut_error_args );
+ERRORS = ""; testEqual( string_cut( a ), null, "string_cut - bad argument count" );
+ERRORS = ""; testEqual( string_cut( null, 0, 10 ), null, "string_cut - string conversion error" );
 ERRORS = ""; testEqual( string_cut( a, 0, 20, STRICT_RANGES ), null, "string_cut - illegal positive range overflow" ); testEqual( ERRORS, string_cut_error_range );
 ERRORS = ""; testEqual( string_cut( a, -20, -1, STRICT_RANGES ), null, "string_cut - illegal negative range overflow" ); testEqual( ERRORS, string_cut_error_range );
 ERRORS = ""; testEqual( string_cut( a, -20, 20, STRICT_RANGES ), null, "string_cut - illegal both range overflow" ); testEqual( ERRORS, string_cut_error_range );
@@ -33,7 +32,6 @@ ERRORS = ""; testEqual( string_cut( a, 0, 13, STRICT_RANGES ), null, "string_cut
 ERRORS = ""; testEqual( string_cut( a, -5, -3, NO_REV_INDEX ), null, "string_cut - illegal negative indices" ); testEqual( ERRORS, string_cut_error_indices );
 
 	section( "string_part" );
-var string_part_error_args = "[W:string_part(): unexpected arguments; function expects 2-4 arguments: string, int, [int], [int]]";
 var string_part_error_range = "[W:string_part(): invalid character range]";
 var string_part_error_indices = "[W:string_part(): detected negative indices]";
 testEqual( string_part( a, 3, 3 ), "dom", "string_part - basic cutting" );
@@ -43,8 +41,8 @@ testEqual( string_part( a, 20, 20 ), "", "string_part - expected positive range 
 testEqual( string_part( a, -20, -1 ), "rando", "string_part - expected negative range overflow" );
 testEqual( string_part( a, 3, 3, STRICT_RANGES | NO_REV_INDEX ), "dom", "string_part - basic cutting" );
 testEqual( string_part( a, 7 ), 'string', "string_part - cutting to end" );
-ERRORS = ""; testEqual( string_part( a ), null, "string_part - bad argument count" ); testEqual( ERRORS, string_part_error_args );
-ERRORS = ""; testEqual( string_part( null, 0, 10 ), null, "string_part - string conversion error" ); testEqual( ERRORS, string_part_error_args );
+ERRORS = ""; testEqual( string_part( a ), null, "string_part - bad argument count" );
+ERRORS = ""; testEqual( string_part( null, 0, 10 ), null, "string_part - string conversion error" );
 ERRORS = ""; testEqual( string_part( a, 0, 20, STRICT_RANGES ), null, "string_part - illegal positive range overflow" ); testEqual( ERRORS, string_part_error_range );
 ERRORS = ""; testEqual( string_part( a, -20, -1, STRICT_RANGES ), null, "string_part - illegal negative range overflow" ); testEqual( ERRORS, string_part_error_range );
 ERRORS = ""; testEqual( string_part( a, -20, 20, STRICT_RANGES ), null, "string_part - illegal both range overflow" ); testEqual( ERRORS, string_part_error_range );
@@ -52,15 +50,13 @@ ERRORS = ""; testEqual( string_part( a, 0, 14, STRICT_RANGES ), null, "string_pa
 ERRORS = ""; testEqual( string_part( a, -5, -3, NO_REV_INDEX ), null, "string_part - illegal negative indices" ); testEqual( ERRORS, string_part_error_indices );
 
 	section( "string_reverse" );
-var string_reverse_error_args = "[W:string_reverse(): unexpected arguments; function expects 1 argument: string]";
 testEqual( string_reverse( a ), "gnirts modnar", "string_reverse - output (odd number of chars)" );
 testEqual( string_reverse( "action" ), "noitca", "string_reverse - output (even number of chars)" );
 testEqual( typeof( string_reverse( "" ) ), "string", "string_reverse - empty strings" );
-ERRORS = ""; testEqual( string_reverse(), null, "string_reverse - bad argument count" ); testEqual( ERRORS, string_reverse_error_args );
-ERRORS = ""; testEqual( string_reverse( null ), null, "string_reverse - string conversion error" ); testEqual( ERRORS, string_reverse_error_args );
+ERRORS = ""; testEqual( string_reverse(), null, "string_reverse - bad argument count" );
+ERRORS = ""; testEqual( string_reverse( null ), null, "string_reverse - string conversion error" );
 
 	section( "string_pad" );
-var string_pad_error_args = "[W:string_pad(): unexpected arguments; function expects 2-4 arguments: string, int, [string], [int]]";
 testEqual( string_pad( b, 8, " ", LEFT|RIGHT ), "  WHAT  ", "string_pad - output (even padding)" );
 testEqual( string_pad( b, 9, " ", LEFT|RIGHT ), "   WHAT  ", "string_pad - output (odd padding)" );
 testEqual( string_pad( b, 9, 'pad', LEFT|RIGHT ), "padWHATad", "string_pad - custom padding string" );
@@ -68,16 +64,13 @@ testEqual( string_pad( b, 8, 'pad', LEFT ), "padpWHAT", "string_pad - left paddi
 testEqual( string_pad( b, 8, 'pad', RIGHT ), "WHATadpa", "string_pad - right padding only" );
 testEqual( string_pad( b, 3 ), b, "string_pad - output (no padding)" );
 testEqual( string_pad( b, 100, a, 1<<4 ), b, "string_pad - no (recognized) flags specified" );
-ERRORS = ""; testEqual( string_pad( b, 0, a, 0, 0 ), null, "string_pad - too many arguments" ); testEqual( ERRORS, string_pad_error_args );
 
 	section( "string_repeat" );
-var string_repeat_error_args = "[W:string_repeat(): unexpected arguments; function expects 2 arguments: string, int (>= 0)]";
 testEqual( string_repeat( b, 3 ), b$b$b, "string_repeat - positive count" );
 testEqual( string_repeat( b, 0 ), '', "string_repeat - zero count" );
-ERRORS = ""; testEqual( string_repeat( b, -3 ), null, "string_repeat - negative count" ); testEqual( ERRORS, string_repeat_error_args );
+ERRORS = ""; testEqual( string_repeat( b, -3 ), null, "string_repeat - negative count" );
 
 	section( "string_count" );
-var string_count_error_args = "[W:string_count(): unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [bool]]";
 testEqual( string_count( a, "ran" ), 1, "string_count - 1 match at beginning" );
 testEqual( string_count( a, "ring" ), 1, "string_count - 1 match at end" );
 testEqual( string_count( a, "box" ), 0, "string_count - 0 matches" );
@@ -85,30 +78,27 @@ testEqual( string_count( c, "a" ), 3, "string_count - multiple matches" );
 testEqual( string_count( c, "an" ), 2, "string_count - multiple following matches" );
 testEqual( string_count( c, "ana" ), 1, "string_count - overlapping matches (disabled)" );
 testEqual( string_count( c, "ana", true ), 2, "string_count - overlapping matches (enabled)" );
-ERRORS = ""; testEqual( string_count( c, "" ), null, "string_count - zero-length substring" ); testEqual( ERRORS, string_count_error_args );
+ERRORS = ""; testEqual( string_count( c, "" ), null, "string_count - zero-length substring" );
 
 	section( "string_find" );
-var string_find_error_args = "[W:string_find(): unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [int]]";
 testEqual( string_find( a, "ran" ), 0, "string_find - 1 match at beginning" );
 testEqual( string_find( a, "ring" ), 9, "string_find - 1 match at end" );
 testEqual( string_find( a, "box" ), null, "string_find - no matches" );
 testEqual( string_find( c, "a", 2 ), 3, "string_find - matching offset" );
 testEqual( string_find( c, "a", -4 ), 3, "string_find - negative matching offset" );
 testEqual( string_find( c, "na", 4 ), 4, "string_find - matching offset right at end" );
-ERRORS = ""; testEqual( string_find( c, "" ), null, "string_find - zero-length substring" ); testEqual( ERRORS, string_find_error_args );
+ERRORS = ""; testEqual( string_find( c, "" ), null, "string_find - zero-length substring" );
 
 	section( "string_find_rev" );
-var string_find_rev_error_args = "[W:string_find_rev(): unexpected arguments; function expects 2-3 arguments: string, string (length > 0), [int]]";
 testEqual( string_find_rev( a, "ran" ), 0, "string_find_rev - 1 match at beginning" );
 testEqual( string_find_rev( a, "ring" ), 9, "string_find_rev - 1 match at end" );
 testEqual( string_find_rev( a, "box" ), null, "string_find_rev - no matches" );
 testEqual( string_find_rev( c, "a", 2 ), 1, "string_find_rev - matching offset" );
 testEqual( string_find_rev( c, "a", -4 ), 1, "string_find_rev - negative matching offset" );
 testEqual( string_find_rev( c, "ba", 0 ), 0, "string_find_rev - matching offset right at start" );
-ERRORS = ""; testEqual( string_find_rev( c, "" ), null, "string_find_rev - zero-length substring" ); testEqual( ERRORS, string_find_rev_error_args );
+ERRORS = ""; testEqual( string_find_rev( c, "" ), null, "string_find_rev - zero-length substring" );
 
 	section( "string_replace" );
-var string_replace_error_args = "[W:string_replace(): unexpected arguments; function expects 3 arguments: string, ((string|array), string) | (string, string)]";
 testEqual( string_replace( a, "random", "exact" ), "exact string", "string_replace - 1 match at beginning" );
 testEqual( string_replace( a, "string", "cat" ), "random cat", "string_replace - 1 match at end" );
 testEqual( string_replace( a, "box", "wat" ), "random string", "string_replace - no matches" );
@@ -117,7 +107,7 @@ testEqual( string_replace( string_repeat( "x", 1020 ), "x", "y" ), string_repeat
 testEqual( string_replace( a, ["random","string"], "blah" ), "blah blah", "string_replace - array/string" );
 testEqual( string_replace( c, ["b","na"], ["batm","nana"] ), "batmanananana", "string_replace - array/array" );
 testEqual( string_replace( "a b c d e", ["a","b","c","d","e"], ["1","2"] ), "1 2 1 2 1", "string_replace - array/array modulo test" );
-ERRORS = ""; testEqual( string_replace( a, "wat", ["1","2"] ), null, "string_replace - string/array" ); testEqual( ERRORS, string_replace_error_args );
+ERRORS = ""; testEqual( string_replace( a, "wat", ["1","2"] ), null, "string_replace - string/array" );
 
 	section( "string_tolower" );
 	section( "string_toupper" );

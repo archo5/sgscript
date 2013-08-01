@@ -2388,16 +2388,16 @@ fail:
 	~ - ignore ranges
 */
 
-static void argerrx( SGS_CTX, int argid, const char* expect, const char* expfx )
+int sgs_ArgErrorExt( SGS_CTX, int argid, const char* expect, const char* expfx )
 {
-	sgs_Printf( C, SGS_WARNING, "argument %d - expected %s%s, got %s",
-		argid, expfx, expect, sgs_CodeString( SGS_CODE_VT, sgs_ItemType( C, argid ) ) );
+	const char* got = sgs_StackSize( C ) <= argid ? "nothing" : 
+		sgs_CodeString( SGS_CODE_VT, sgs_ItemType( C, argid ) );
+	return sgs_Printf( C, SGS_WARNING, "argument %d - expected %s%s, got %s",
+		argid + 1, expfx, expect, got );
 }
 
-static void argerr( SGS_CTX, int argid, int expect, int strict )
-{
-	argerrx( C, argid, sgs_CodeString( SGS_CODE_VT, expect ), strict ? "strict " : "" );
-}
+#define argerrx sgs_ArgErrorExt
+#define argerr sgs_ArgError
 
 SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 {
@@ -2627,6 +2627,8 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 			return SGS_EINVAL;
 			
 		}
+		if( opt && from >= sgs_StackSize( C ) )
+			break;
 		cmd++;
 	}
 	va_end( args );
