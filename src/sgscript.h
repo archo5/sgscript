@@ -498,7 +498,7 @@ typedef int (*sgs_ArgCheckFunc) ( sgs_Context*, int, va_list, int );
 #define SGS_LOADARG_INTRANGE 0x10
 #define SGS_LOADARG_INTCLAMP 0x20
 
-SGSRESULT sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... );
+SGS_APIFUNC SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... );
 #define sgs_LoadArgs( C, cmd, ... ) sgs_LoadArgsExt( C, 0, cmd, ##__VA_ARGS__ )
 
 SGS_APIFUNC SGSRESULT sgs_Pop( SGS_CTX, int count );

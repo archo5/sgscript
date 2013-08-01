@@ -544,6 +544,58 @@ sgs_StorePath [function]
 - other errors, as returned by @sgs_PushIndexExt() or @sgs_StoreIndexExt()
 
 
+sgs_LoadArgsExt [function]
+
+== SGSMIXED sgs_LoadArgsExt( sgs_Context* C, int from, const char* cmd, ... )
+=== parse the stack items and retrieve their data according to `cmd`, starting from item `from`
+
+- `cmd` is a string consisting of one-character commands
+- the commands are grouped into two kinds: control commands and parsing commands
+- function returns whether all required arguments have been parsed successfully
+-- thus, if function returns < 1, state of outputs is somewhat unknown unless filled with defaults
+-- it is guaranteed that all arguments will be parsed from first (specified) forward, not in any other way
+
+==== control commands
+- `?` -- only check, do not write the result and do not require a pointer to write the data to
+- `!` -- enable strict parsing for the next item (requires exactly the type specified
+- `-`,`+` -- enable (-) or disable (+) treating integers as signed (default = true)
+- `|` -- mark the point where required arguments end and optional arguments begin
+- `#` -- do range checking on integer arguments (min/max of the required types)
+- `^` -- clamp the argument to the range of the required type
+- `~` -- ignore ranges and chop out-of-range integers (default)
+
+==== parsing commands
+- `n` -- check for `null` (returns SGSBOOL = 1, always strict)
+- `b` -- check for `bool` (returns SGSBOOL)
+- `c` -- check for `int` (returns int8_t or uint8_t, depending on sign settings, may check ranges)
+- `w` -- check for `int` (returns int16_t or uint16_t, depending on sign settings, may check ranges)
+- `l` -- check for `int` (returns int32_t or uint32_t, depending on sign settings, may check ranges)
+- `q` -- check for `int` (returns int64_t or uint64_t, depending on sign settings, may check ranges)
+- `i` -- check for `int` (returns sgs_Int, may check ranges)
+- `f` -- check for `real` (returns float)
+- `d` -- check for `real` (returns double)
+- `r` -- check for `real` (returns sgs_Real)
+- `s` -- check for `string` (returns char*)
+- `m` -- check for `string` (returns char* string and sgs_SizeVal size)
+- `p` -- check for `func/cfunc/object with SGS_OP_CALL` (callables) (returns SGSBOOL = 1)
+- `a` -- check for `array` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
+- `t` -- check for `dict` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
+- `o` -- check for `object` (requires void** interface, returns sgs_VarObj* data)
+- `x` -- call a custom checking function (requires sgs_ArgCheckFunc, everything else depends on function)
+
+=== error codes
+- SGS_EINVAL: error in `cmd` (wrong character)
+
+
+sgs_LoadArgs [function alias]
+
+== SGSMIXED sgs_LoadArgs( sgs_Context* C, const char* cmd, ... )
+=== parse the stack items and retrieve their data according to `cmd`, starting from item 0
+
+- for more info on syntax and usage, refer to @sgs_LoadArgsExt
+- alias to `sgs_LoadArgsExt( C, 0, cmd, ... )`
+
+
 =
 == API/OPERATIONS
 =
@@ -795,6 +847,15 @@ sgs_IsObject [function]
 === returns whether the specified stack item `item` is an object with the interface pointer `iface`
 
 - if `item` is out of bounds or not an object or doesn't have the specified interface, 0 is returned
+
+
+sgs_IsCallable [function]
+
+== SGSBOOL sgs_IsCallable( sgs_Context* C, int item )
+=== returns whether the specified stack item `item` is callable
+
+- callable variables are either SGS functions or C functions or objects with the SGS_OP_CALL interface implemented
+- if `item` is out of bounds, 0 is returned
 
 
 sgs_IsNumericString [function]
@@ -1435,6 +1496,8 @@ is_callable() [function]
 
 == is_callable( var )
 === returns whether the variable `var` is callable - a function (func/cfunc) or an object with OP_CALL defined
+
+- this function is equivalent to @sgs_IsCallable in the C API
 
     is_callable( print ); // returns 'true'
     is_callable( closure( print, 5 ) ); // returns 'true'

@@ -2399,12 +2399,12 @@ static void argerr( SGS_CTX, int argid, int expect, int strict )
 	argerrx( C, argid, sgs_CodeString( SGS_CODE_VT, expect ), strict ? "strict " : "" );
 }
 
-SGSRESULT sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
+SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 {
 	int opt = 0;
 	int strict = 0;
 	int range = 0; /* <0: clamp, >0: check */
-	int isig = 0;
+	int isig = 1;
 	int nowrite = 0;
 	va_list args;
 	va_start( args, cmd );
@@ -2428,6 +2428,11 @@ SGSRESULT sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 					argerr( C, from, SVT_NULL, 0 );
 					va_end( args );
 					return opt;
+				}
+				
+				if( !nowrite )
+				{
+					*va_arg( args, SGSBOOL* ) = 1;
 				}
 			}
 			strict = 0; nowrite = 0; from++; break;
@@ -2582,7 +2587,15 @@ SGSRESULT sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				
 				if( !nowrite )
 				{
-					*va_arg( args, sgs_VarObj** ) = sgs_GetObjectData( C, from );
+					sgs_VarObj* O = sgs_GetObjectData( C, from );
+					switch( *cmd )
+					{
+					case 'a': *va_arg( args, sgs_SizeVal* ) = 
+						((sgsstd_array_header_t*) O->data)->size; break;
+					case 't': *va_arg( args, sgs_SizeVal* ) =
+						vht_size( ((VHTable*) O->data) ); break;
+					case 'o': *va_arg( args, sgs_VarObj** ) = O; break;
+					}
 				}
 			}
 			strict = 0; nowrite = 0; from++; break;
@@ -2606,6 +2619,12 @@ SGSRESULT sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				}
 			}
 			strict = 0; nowrite = 0; from++; break;
+			
+		case ' ': case '\t': case '\n': case '\r':
+			break;
+			
+		default:
+			return SGS_EINVAL;
 			
 		}
 		cmd++;
