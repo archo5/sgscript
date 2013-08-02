@@ -546,20 +546,28 @@ sgs_StorePath [function]
 
 sgs_ArgErrorExt [function]
 
-== int sgs_ArgErrorExt( SGS_CTX, int argid, const char* expect, const char* expfx )
+== int sgs_ArgErrorExt( SGS_CTX, int argid, int method, const char* expect, const char* expfx )
 === prints the argument type mismatch error
 
 - always returns 0 so it can be used to return and print an error in the same statement
-- used in @sgs_LoadArgsExt for most errors
 
 
-sgs_ArgError [function alias]
+sgs_ArgError [function]
 
 == int sgs_ArgError( sgs_Context* C, int argid, int expect, int is_strict )
 === prints the argument type mismatch error
 
 - always returns 0 so it can be used to return and print an error in the same statement
-- alias to `sgs_ArgErrorExt( C, argid, sgs_CodeString( SGS_CODE_VT, expect ), strict ? "strict " : "" )`
+
+
+sgs_[FuncArgError|MethodArgError] [function aliases]
+
+== int sgs_FuncArgError( sgs_Context* C, int argid, int expect, int is_strict )
+== int sgs_MethodArgError( sgs_Context* C, int argid, int expect, int is_strict )
+=== prints the argument type mismatch error
+
+- always returns 0 so it can be used to return and print an error in the same statement
+- alias to `sgs_ArgError( C, argid, Func/Method => 0/1, expect, is_strict )`
 
 
 sgs_LoadArgsExt [function]
@@ -583,6 +591,9 @@ sgs_LoadArgsExt [function]
 - `#` -- do range checking on integer arguments (min/max of the required types)
 - `^` -- clamp the argument to the range of the required type
 - `~` -- ignore ranges and chop out-of-range integers (default)
+- `<` -- move argument pointer 1 item back (cannot move it before 0)
+- `>` -- move argument pointer 1 item forward
+- `@` -- specify that this is a method (argument 0 = 'this'; shifts argument indices on error printing by -1)
 
 ==== parsing commands
 - `n` -- check for `null` (returns SGSBOOL = 1, always strict)
@@ -604,7 +615,7 @@ sgs_LoadArgsExt [function]
 - `x` -- call a custom checking function (requires sgs_ArgCheckFunc, everything else depends on function)
 
 === error codes
-- SGS_EINVAL: error in `cmd` (wrong character)
+- SGS_EINVAL: error in `cmd` (wrong character/argument pointer moved before 0)
 
 
 sgs_LoadArgs [function alias]

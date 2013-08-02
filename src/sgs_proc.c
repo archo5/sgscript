@@ -2386,18 +2386,30 @@ fail:
 	# - check ranges
 	^ - clamp ranges
 	~ - ignore ranges
+	< - move argument pointer 1 item back
+	> - move argument pointer 1 item forward
+	@ - treat as method (1st arg = this, argnum -= 1)
 */
 
-int sgs_ArgErrorExt( SGS_CTX, int argid, const char* expect, const char* expfx )
+int sgs_ArgErrorExt( SGS_CTX, int argid, int gotthis, const char* expect, const char* expfx )
 {
 	const char* got = sgs_StackSize( C ) <= argid ? "nothing" : 
 		sgs_CodeString( SGS_CODE_VT, sgs_ItemType( C, argid ) );
-	return sgs_Printf( C, SGS_WARNING, "argument %d - expected %s%s, got %s",
-		argid + 1, expfx, expect, got );
+	if( argid == 0 && gotthis )
+		return sgs_Printf( C, SGS_WARNING, "'this' - expected %s%s, got %s", expfx, expect, got );
+	else
+		return sgs_Printf( C, SGS_WARNING, "argument %d - expected %s%s, got %s",
+			argid + !gotthis, expfx, expect, got );
 }
 
-#define argerrx sgs_ArgErrorExt
+int sgs_ArgError( SGS_CTX, int argid, int gotthis, int expect, int is_strict )
+{
+	return sgs_ArgErrorExt( C, argid, gotthis,
+		sgs_CodeString( SGS_CODE_VT, expect ), is_strict ? "strict " : "" );
+}
+
 #define argerr sgs_ArgError
+#define argerrx sgs_ArgErrorExt
 
 SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 {
@@ -2406,6 +2418,7 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 	int range = 0; /* <0: clamp, >0: check */
 	int isig = 1;
 	int nowrite = 0;
+	int method = 0;
 	va_list args;
 	va_start( args, cmd );
 	while( *cmd )
@@ -2420,12 +2433,21 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 		case '+': isig = 0; break;
 		case '!': strict = 1; break;
 		case '?': nowrite = 1; break;
+		case '<': from--;
+			if( from < 0 )
+			{
+				sgs_Printf( C, SGS_WARNING, "cannot move argument pointer before 0" );
+				return SGS_EINVAL;
+			}
+			break;
+		case '>': from++; break;
+		case '@': method = 1; break;
 		
 		case 'n':
 			{
 				if( sgs_ItemType( C, from ) != SVT_NULL )
 				{
-					argerr( C, from, SVT_NULL, 0 );
+					argerr( C, from, method, SVT_NULL, 0 );
 					va_end( args );
 					return opt;
 				}
@@ -2444,7 +2466,7 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				if( !sgs_ParseBool( C, from, &b ) ||
 					( strict && sgs_ItemType( C, from ) != SVT_BOOL ) )
 				{
-					argerr( C, from, SVT_BOOL, strict );
+					argerr( C, from, method, SVT_BOOL, strict );
 					va_end( args );
 					return opt;
 				}
@@ -2473,7 +2495,7 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				if( !sgs_ParseInt( C, from, &i ) ||
 					( strict && sgs_ItemType( C, from ) != SVT_INT ) )
 				{
-					argerr( C, from, SVT_INT, strict );
+					argerr( C, from, method, SVT_INT, strict );
 					va_end( args );
 					return opt;
 				}
@@ -2512,7 +2534,7 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				if( !sgs_ParseReal( C, from, &r ) ||
 					( strict && sgs_ItemType( C, from ) != SVT_REAL ) )
 				{
-					argerr( C, from, SVT_REAL, strict );
+					argerr( C, from, method, SVT_REAL, strict );
 					va_end( args );
 					return opt;
 				}
@@ -2537,7 +2559,7 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				if( ( strict && sgs_ItemType( C, from ) != SVT_STRING ) ||
 					!sgs_ParseString( C, from, &str, &sz ) )
 				{
-					argerr( C, from, SVT_STRING, strict );
+					argerr( C, from, method, SVT_STRING, strict );
 					va_end( args );
 					return opt;
 				}
@@ -2555,7 +2577,7 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 			{
 				if( !sgs_IsCallable( C, from ) )
 				{
-					argerrx( C, from, "callable", "" );
+					argerrx( C, from, method, "callable", "" );
 					va_end( args );
 					return opt;
 				}
@@ -2580,7 +2602,7 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				if( ( sgs_ItemTypeExt( C, from ) & fcf ) != fcf ||
 					( ifc != NULL && !sgs_IsObject( C, from, ifc ) ) )
 				{
-					argerrx( C, from, ostr, "" );
+					argerrx( C, from, method, ostr, "" );
 					va_end( args );
 					return opt;
 				}

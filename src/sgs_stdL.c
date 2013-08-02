@@ -442,11 +442,9 @@ static int sgsstd_fmt_pack( SGS_CTX )
 	sgs_SizeVal size, numitems, ret;
 	
 	SGSFN( "fmt_pack" );
-	
-	if( sgs_StackSize( C ) < 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1+ arguments: string, ..." )
+
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 
 	numitems = fmt_pack_numitems( C, str, size );
 	if( sgs_StackSize( C ) < numitems + 1 )
@@ -476,11 +474,9 @@ static int sgsstd_fmt_pack_count( SGS_CTX )
 	sgs_SizeVal size;
 	
 	SGSFN( "fmt_pack_count" );
-	
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 
 	sgs_PushInt( C, fmt_pack_numitems( C, str, size ) );
 	return 1;
@@ -493,12 +489,9 @@ static int sgsstd_fmt_unpack( SGS_CTX )
 	sgs_SizeVal size, datasize;
 	
 	SGSFN( "fmt_unpack" );
-	
-	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseString( C, 0, &str, &size ) ||
-		!sgs_ParseString( C, 1, &data, &datasize ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 2 arguments: string, string" )
+
+	if( !sgs_LoadArgs( C, "mm", &str, &size, &data, &datasize ) )
+		return 0;
 
 	bytes = fmt_pack_numbytes( C, str, size );
 	if( bytes > datasize )
@@ -515,11 +508,9 @@ static int sgsstd_fmt_pack_size( SGS_CTX )
 	sgs_SizeVal size;
 	
 	SGSFN( "fmt_pack_size" );
-	
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 
 	sgs_PushInt( C, fmt_pack_numbytes( C, str, size ) );
 	return 1;
@@ -536,11 +527,9 @@ static int sgsstd_fmt_base64_encode( SGS_CTX )
 	sgs_SizeVal size;
 	
 	SGSFN( "fmt_base64_encode" );
-	
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 
 	{
 		MemBuf B = membuf_create();
@@ -597,11 +586,9 @@ static int sgsstd_fmt_base64_decode( SGS_CTX )
 	sgs_SizeVal size;
 	
 	SGSFN( "fmt_base64_decode" );
-	
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 
 	{
 		MemBuf B = membuf_create();
@@ -820,13 +807,12 @@ static int sgsstd_fmt_text( SGS_CTX )
 	char* fmt, *fmtend;
 	sgs_SizeVal fmtsize;
 	MemBuf B = membuf_create();
-	int ssz = sgs_StackSize( C ), numitem = 0, si = 1;
+	int numitem = 0, si = 1;
 	
 	SGSFN( "fmt_text" );
-	
-	if( ssz < 1 || !sgs_ParseString( C, 0, &fmt, &fmtsize ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1+ arguments: string, ..." )
+
+	if( !sgs_LoadArgs( C, "m", &fmt, &fmtsize ) )
+		return 0;
 
 	fmtend = fmt + fmtsize;
 	while( fmt < fmtend )
@@ -948,17 +934,12 @@ static int sgsstd_fmtstreamI_read( SGS_CTX )
 {
 	sgs_SizeVal numbytes;
 	MemBuf B = membuf_create();
-	sgs_Int numbi;
 	
 	SGSFS_IHDR( read )
+
+	if( !sgs_LoadArgs( C, "@>l", &numbytes ) )
+		return 0;
 	
-	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseInt( C, 1, &numbi ) ||
-		numbi < 0 || numbi >= (1LL<<31) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: int [0-2^31)" )
-	
-	numbytes = (sgs_SizeVal) numbi;
 	if( numbytes )
 	{
 		while( hdr->state != FMTSTREAM_STATE_END )
@@ -984,15 +965,11 @@ static int sgsstd_fmtstreamI_read( SGS_CTX )
 
 static int sgsstd_fmtstreamI_getchar( SGS_CTX )
 {
-	int chr = -1, ssz, asint = 0, peek = 0;
+	int chr = -1, asint = 0, peek = 0;
 	SGSFS_IHDR( getchar )
-	ssz = sgs_StackSize( C );
-	
-	if( ssz < 1 || ssz > 3 ||
-		( ssz >= 2 && !sgs_ParseBool( C, 1, &peek ) ) ||
-		( ssz >= 3 && !sgs_ParseBool( C, 2, &asint ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 0-2 arguments: [bool[, bool]]" )
+
+	if( !sgs_LoadArgs( C, "@>|bb", &peek, &asint ) )
+		return 0;
 	
 	while( hdr->state != FMTSTREAM_STATE_END )
 	{
@@ -1074,25 +1051,18 @@ static int fs_check_cc( const char* str, sgs_SizeVal size, uint8_t c )
 static int sgsstd_fmtstreamI_readcc( SGS_CTX )
 {
 	char* ccstr;
-	sgs_SizeVal numbytes, ccsize;
+	sgs_SizeVal numbytes = 0x7fffffff, ccsize;
 	MemBuf B = membuf_create();
-	sgs_Int numbi = 0x7fffffff;
-	int ssz = sgs_StackSize( C );
 	
 	SGSFS_IHDR( readcc )
-	
-	if( ssz < 1 || ssz > 2 ||
-		!sgs_ParseString( C, 1, &ccstr, &ccsize ) ||
-		( ssz >= 2 && ( !sgs_ParseInt( C, 2, &numbi ) ||
-		numbi < 0 || numbi >= (1LL<<31) ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-2 arguments: string[, int [0-2^31)]" )
+
+	if( !sgs_LoadArgs( C, "@>m|l", &ccstr, &ccsize, &numbytes ) )
+		return 0;
 
 	if( !fs_validate_cc( C, ccstr, ccsize ) )
 		STDLIB_WARN( "error in character class" )
 	
-	numbytes = (sgs_SizeVal) numbi;
-	if( numbytes )
+	if( numbytes > 0 )
 	{
 		while( hdr->state != FMTSTREAM_STATE_END )
 		{
@@ -1123,23 +1093,16 @@ static int sgsstd_fmtstreamI_readcc( SGS_CTX )
 static int sgsstd_fmtstreamI_skipcc( SGS_CTX )
 {
 	char* ccstr;
-	sgs_SizeVal numbytes, ccsize, numsc = 0;
-	sgs_Int numbi = 0x7fffffff;
-	int ssz = sgs_StackSize( C );
+	sgs_SizeVal numbytes = 0x7fffffff, ccsize, numsc = 0;
 	
 	SGSFS_IHDR( skipcc )
-	
-	if( ssz < 1 || ssz > 2 ||
-		!sgs_ParseString( C, 1, &ccstr, &ccsize ) ||
-		( ssz >= 2 && ( !sgs_ParseInt( C, 2, &numbi ) ||
-		numbi < 0 || numbi >= (1LL<<31) ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-2 arguments: string[, int [0-2^31)]" )
+
+	if( !sgs_LoadArgs( C, "@>m|l", &ccstr, &ccsize, &numbytes ) )
+		return 0;
 
 	if( !fs_validate_cc( C, ccstr, ccsize ) )
 		STDLIB_WARN( "error in character class" )
 	
-	numbytes = (sgs_SizeVal) numbi;
 	if( numbytes )
 	{
 		while( hdr->state != FMTSTREAM_STATE_END )
@@ -1201,15 +1164,11 @@ static void* sgsstd_fmtstream_functable[] =
 static int sgsstd_fmt_parser( SGS_CTX )
 {
 	sgs_Int bufsize = 1024;
-	int ssz = sgs_StackSize( C );
 	
 	SGSBASEFN( "fmt_parser" );
-	
-	if( ssz < 1 || ssz > 2 ||
-		( ssz >= 2 && !sgs_ParseInt( C, 1, &bufsize ) ) ||
-		bufsize <= 0 )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-2 arguments: <source>[, int(>0)]" )
+
+	if( !sgs_LoadArgs( C, "?p|i", &bufsize ) )
+		return 0;
 
 	/* test call: reading 0 bytes should return an empty string */
 	sgs_PushInt( C, 0 );
@@ -1278,15 +1237,11 @@ static void* srt_iface[] =
 static int sgsstd_fmt_string_parser( SGS_CTX )
 {
 	stringread_t* srt;
-	int ssz = sgs_StackSize( C );
 	sgs_Int off = 0;
 	SGSBASEFN( "fmt_string_parser" );
-	
-	if( ssz < 1 || ssz > 2 ||
-		!sgs_ParseString( C, 0, NULL, NULL ) ||
-		( ssz >= 2 && !sgs_ParseInt( C, 1, &off ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-2 arguments: string[, int(>0)]" )
+
+	if( !sgs_LoadArgs( C, "?m|i", &off ) )
+		return 0;
 	
 	srt = sgs_Alloc( stringread_t );
 	sgs_GetStackItem( C, 0, &srt->S );
@@ -1303,14 +1258,13 @@ static int sgsstd_fmt_charcc( SGS_CTX )
 {
 	char* chs, *ccs;
 	sgs_SizeVal chsz, ccsz;
-	int ssz = sgs_StackSize( C );
 	SGSFN( "fmt_charcc" );
-	
-	if( ssz != 2 ||
-		!sgs_ParseString( C, 0, &chs, &chsz ) || !chsz ||
-		!sgs_ParseString( C, 1, &ccs, &ccsz ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 2 arguments: string, string" )
+
+	if( !sgs_LoadArgs( C, "mm", &chs, &chsz, &ccs, &ccsz ) )
+		return 0;
+
+	if( chsz < 1 )
+		STDLIB_WARN( "argument 1 (string) needs at least one character" )
 	
 	sgs_PushBool( C, fs_check_cc( ccs, ccsz, *chs ) );
 	return 1;
@@ -1359,10 +1313,8 @@ static int sgsstd_io_setcwd( SGS_CTX )
 	
 	SGSFN( "io_setcwd" );
 
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 	
 	CRET( chdir( str ) == 0 );
 }
@@ -1372,8 +1324,7 @@ static int sgsstd_io_getcwd( SGS_CTX )
 	SGSFN( "io_getcwd" );
 	
 	if( sgs_StackSize( C ) != 0 )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 0 arguments" )
+		STDLIB_WARN( "function expects 0 arguments" )
 
 	{
 		/* XPC WARNING: getcwd( NULL, 0 ) relies on undefined behavior */
@@ -1396,11 +1347,8 @@ static int sgsstd_io_rename( SGS_CTX )
 	
 	SGSFN( "io_rename" );
 
-	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseString( C, 0, &path, &psz ) ||
-		!sgs_ParseString( C, 1, &nnm, &nnmsz ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 2 arguments: string, string" )
+	if( !sgs_LoadArgs( C, "mm", &path, &psz, &nnm, &nnmsz ) )
+		return 0;
 
 	if( !path_replast( C, 0, 1 ) ||
 		!sgs_ParseString( C, -1, &nnm, &nnmsz ) )
@@ -1419,10 +1367,8 @@ static int sgsstd_io_file_exists( SGS_CTX )
 	
 	SGSFN( "io_file_exists" );
 
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 
 	{
 		FILE* fp = fopen( str, "rb" );
@@ -1439,10 +1385,8 @@ static int sgsstd_io_dir_exists( SGS_CTX )
 	
 	SGSFN( "io_dir_exists" );
 
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 
 	{
 		DIR* dp = opendir( str );
@@ -1459,10 +1403,8 @@ static int sgsstd_io_stat( SGS_CTX )
 	
 	SGSFN( "io_stat" );
 
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 
 	{
 		struct stat data;
@@ -1493,16 +1435,13 @@ static int sgsstd_io_dir_create( SGS_CTX )
 {
 	int ret;
 	char* str;
-	sgs_SizeVal size, ssz = sgs_StackSize( C );
+	sgs_SizeVal size;
 	sgs_Int mode = 0777;
 	
 	SGSFN( "io_dir_create" );
 
-	if( ssz < 1 || ssz > 2 ||
-		!sgs_ParseString( C, 0, &str, &size ) ||
-		( ssz >= 2 && !sgs_ParseInt( C, 1, &mode ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-2 arguments: string[, int]" )
+	if( !sgs_LoadArgs( C, "m|i", &str, &size, &mode ) )
+		return 0;
 
 	ret = mkdir( str
 #ifndef _WIN32
@@ -1519,10 +1458,8 @@ static int sgsstd_io_dir_delete( SGS_CTX )
 	
 	SGSFN( "io_dir_delete" );
 
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 	
 	CRET( rmdir( str ) == 0 );
 }
@@ -1534,10 +1471,8 @@ static int sgsstd_io_file_delete( SGS_CTX )
 	
 	SGSFN( "io_file_delete" );
 
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 	
 	CRET( remove( str ) == 0 );
 }
@@ -1549,11 +1484,8 @@ static int sgsstd_io_file_write( SGS_CTX )
 	
 	SGSFN( "io_file_write" );
 
-	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseString( C, 0, &path, &psz ) ||
-		!sgs_ParseString( C, 1, &data, &dsz ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 2 arguments: string, string" )
+	if( !sgs_LoadArgs( C, "mm", &path, &psz, &data, &dsz ) )
+		return 0;
 
 	{
 		sgs_SizeVal wsz;
@@ -1584,10 +1516,8 @@ static int sgsstd_io_file_read( SGS_CTX )
 	
 	SGSFN( "io_file_read" );
 
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &path, &psz ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	if( !sgs_LoadArgs( C, "m", &path, &psz ) )
+		return 0;
 
 	{
 		sgs_SizeVal len, rd;
@@ -1626,9 +1556,9 @@ SGS_DECLARE void* sgsstd_file_functable[];
 	sgs_VarObj* data; \
 	SGSFN( "file." #fname ); \
 	if( !sgs_Method( C ) || \
-		sgs_ItemType( C, 0 ) != SVT_OBJECT || \
-		( data = sgs_GetObjectData( C, 0 ) )->iface != sgsstd_file_functable ) \
-		STDLIB_WARN( "expected file as 'this'" )
+		!sgs_IsObject( C, 0, sgsstd_file_functable ) ) \
+		STDLIB_WARN( "expected file as 'this'" ) \
+	data = sgs_GetObjectData( C, 0 );
 
 
 static int sgsstd_fileP_offset( SGS_CTX, FILE* fp )
@@ -1697,13 +1627,12 @@ static int sgsstd_fileI_open( SGS_CTX )
 	sgs_Int flags;
 
 	FIF_INIT( open )
-
-	if( sgs_StackSize( C ) != 3 ||
-		!sgs_ParseString( C, 1, &path, NULL ) ||
-		!sgs_ParseInt( C, 2, &flags ) ||
-		!( ff = flags & ( FILE_READ | FILE_WRITE ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 2 arguments: string, int (!= 0)" )
+	
+	if( !sgs_LoadArgs( C, "@>si", &path, &flags ) )
+		return 0;
+	
+	if( !( ff = flags & ( FILE_READ | FILE_WRITE ) ) )
+		STDLIB_WARN( "argument 2 (flags) must be either FILE_READ or FILE_WRITE or both" )
 
 	if( FVAR )
 		fclose( FVAR );
@@ -1720,8 +1649,7 @@ static int sgsstd_fileI_close( SGS_CTX )
 	FIF_INIT( close )
 
 	if( sgs_StackSize( C ) != 1 )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 0 arguments" )
+		STDLIB_WARN( "function expects 0 arguments" )
 
 	if( FVAR )
 	{
@@ -1740,11 +1668,9 @@ static int sgsstd_fileI_read( SGS_CTX )
 	char bfr[ 1024 ];
 	sgs_Int size;
 	FIF_INIT( read )
-
-	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseInt( C, 1, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: int" )
+	
+	if( !sgs_LoadArgs( C, "@>i", &size ) )
+		return 0;
 
 	FVNO_BEGIN
 		while( size > 0 )
@@ -1770,11 +1696,9 @@ static int sgsstd_fileI_write( SGS_CTX )
 	sgs_SizeVal strsize;
 
 	FIF_INIT( write )
-
-	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseString( C, 1, &str, &strsize ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	
+	if( !sgs_LoadArgs( C, "@>m", &str, &strsize ) )
+		return 0;
 
 	FVNO_BEGIN
 		sgs_PushBool( C, fwrite( str, strsize, 1, FVAR ) );
@@ -1789,14 +1713,10 @@ static int sgsstd_fileI_seek( SGS_CTX )
 {
 	sgs_Int off, mode = SEEK_SET;
 	FIF_INIT( seek )
-	int ssz = sgs_StackSize( C );
 	int seekmodes[ 3 ] = { SEEK_SET, SEEK_CUR, SEEK_END };
-
-	if( ssz < 2 || ssz > 3 ||
-		!sgs_ParseInt( C, 1, &off ) ||
-		( ssz >= 3 && !sgs_ParseInt( C, 2, &mode ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-2 arguments: int[, int]" )
+	
+	if( !sgs_LoadArgs( C, "@>ii", &off, &mode ) )
+		return 0;
 
 	if( mode < 0 || mode > 2 )
 		STDLIB_WARN( "'mode' not one of SEEK_(SET|CUR|END)" )
@@ -1812,8 +1732,7 @@ static int sgsstd_fileI_flush( SGS_CTX )
 	FIF_INIT( close )
 
 	if( sgs_StackSize( C ) != 1 )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 0 arguments" )
+		STDLIB_WARN( "function expects 0 arguments" )
 
 	FVNO_BEGIN
 		sgs_PushBool( C, !fflush( FVAR ) );
@@ -1825,11 +1744,9 @@ static int sgsstd_fileI_setbuf( SGS_CTX )
 {
 	sgs_Int size;
 	FIF_INIT( setbuf )
-
-	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseInt( C, 1, &size ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: int" )
+	
+	if( !sgs_LoadArgs( C, "@>i", &size ) )
+		return 0;
 
 	FVNO_BEGIN
 		sgs_PushBool( C, !setvbuf( FVAR, NULL, size ? _IOFBF : _IONBF, (size_t) size ) );
@@ -1910,13 +1827,12 @@ static int sgsstd_io_file( SGS_CTX )
 
 	if( sgs_StackSize( C ) == 0 )
 		goto pushobj;
-
-	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseString( C, 0, &path, NULL ) ||
-		!sgs_ParseInt( C, 1, &flags ) ||
-		!( ff = flags & ( FILE_READ | FILE_WRITE ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 0 or 2 arguments: string, int (!= 0)" )
+	
+	if( !sgs_LoadArgs( C, "si", &path, &flags ) )
+		return 0;
+	
+	if( !( ff = flags & ( FILE_READ | FILE_WRITE ) ) )
+		STDLIB_WARN( "argument 2 (flags) must be either FILE_READ or FILE_WRITE or both" )
 
 	fp = fopen( path, g_io_fileflagmodes[ ff ] );
 	sgs_Errno( C, !!fp );
@@ -2007,11 +1923,9 @@ static int sgsstd_io_dir( SGS_CTX )
 	sgsstd_dir_t* hdr;
 	
 	SGSFN( "io_dir" );
-
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &path, NULL ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	
+	if( !sgs_LoadArgs( C, "s", &path ) )
+		return 0;
 
 	dp = opendir( path );
 	sgs_Errno( C, !!dp );
@@ -2088,11 +2002,9 @@ static int sgsstd_pow( SGS_CTX )
 	
 	SGSFN( "pow" );
 	
-	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseReal( C, 0, &b ) ||
-		!sgs_ParseReal( C, 1, &e ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 2 arguments: real, real" )
+	if( !sgs_LoadArgs( C, "rr", &b, &e ) )
+		return 0;
+	
 	if( ( b < 0 && e != (sgs_Real) (sgs_Int) e )
 		|| ( b == 0 && e < 0 ) )
 		STDLIB_WARN( "mathematical error" )
@@ -2106,9 +2018,9 @@ static int sgsstd_sqrt( SGS_CTX )
 	
 	SGSFN( "sqrt" );
 	
-	if( sgs_StackSize( C ) != 1 || !sgs_ParseReal( C, 0, &arg0 ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: real" )
+	if( !sgs_LoadArgs( C, "r", &arg0 ) )
+		return 0;
+	
 	if( arg0 < 0 )
 		STDLIB_WARN( "mathematical error" )
 	sgs_PushReal( C, sqrt( arg0 ) );
@@ -2120,9 +2032,9 @@ static int sgsstd_asin( SGS_CTX )
 	
 	SGSFN( "asin" );
 	
-	if( sgs_StackSize( C ) != 1 || !sgs_ParseReal( C, 0, &arg0 ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: real" )
+	if( !sgs_LoadArgs( C, "r", &arg0 ) )
+		return 0;
+	
 	if( arg0 < -1 || arg0 > 1 )
 		STDLIB_WARN( "mathematical error" )
 	sgs_PushReal( C, asin( arg0 ) );
@@ -2134,9 +2046,9 @@ static int sgsstd_acos( SGS_CTX )
 	
 	SGSFN( "acos" );
 	
-	if( sgs_StackSize( C ) != 1 || !sgs_ParseReal( C, 0, &arg0 ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: real" )
+	if( !sgs_LoadArgs( C, "r", &arg0 ) )
+		return 0;
+	
 	if( arg0 < -1 || arg0 > 1 )
 		STDLIB_WARN( "mathematical error" )
 	sgs_PushReal( C, acos( arg0 ) );
@@ -2149,11 +2061,9 @@ static int sgsstd_log( SGS_CTX )
 	
 	SGSFN( "log" );
 	
-	if( sgs_StackSize( C ) != 2 ||
-		!sgs_ParseReal( C, 0, &x ) ||
-		!sgs_ParseReal( C, 1, &b ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 2 arguments: real, real" )
+	if( !sgs_LoadArgs( C, "rr", &x, &b ) )
+		return 0;
+	
 	if( x <= 0 || b <= 0 || b == 1 )
 		STDLIB_WARN( "mathematical error" )
 	sgs_PushReal( C, log( x ) / log( b ) );
@@ -2164,10 +2074,8 @@ static int sgsstd_log( SGS_CTX )
 static int sgsstd_##name( SGS_CTX ) { \
 	sgs_Real arg0; \
 	SGSFN( #name ); \
-	if( sgs_StackSize( C ) != 1 || \
-		!sgs_ParseReal( C, 0, &arg0 ) ) \
-		STDLIB_WARN( "unexpected arguments; " \
-			"function expects 1 argument: real" ) \
+	if( !sgs_LoadArgs( C, "r", &arg0 ) ) \
+		return 0; \
 	sgs_PushReal( C, orig( arg0 ) ); \
 	return 1; }
 #define MATHFUNC( name ) MATHFUNC_CN( name, name )
@@ -2176,11 +2084,8 @@ static int sgsstd_##name( SGS_CTX ) { \
 static int sgsstd_##name( SGS_CTX ) { \
 	sgs_Real arg0, arg1; \
 	SGSFN( #name ); \
-	if( sgs_StackSize( C ) != 2 || \
-		!sgs_ParseReal( C, 0, &arg0 ) || \
-		!sgs_ParseReal( C, 1, &arg1 ) ) \
-		STDLIB_WARN( "unexpected arguments; " \
-			"function expects 2 arguments: real, real" ) \
+	if( !sgs_LoadArgs( C, "rr", &arg0, &arg1 ) ) \
+		return 0; \
 	sgs_PushReal( C, orig( arg0, arg1 ) ); \
 	return 1; }
 #define MATHFUNC2( name ) MATHFUNC2_CN( name, name )
@@ -2245,10 +2150,8 @@ static int sgsstd_os_command( SGS_CTX )
 	
 	SGSFN( "os_command" );
 	
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, NULL ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	if( !sgs_LoadArgs( C, "s", &str ) )
+		return 0;
 
 	sgs_PushInt( C, system( str ) );
 	return 1;
@@ -2259,11 +2162,9 @@ static int sgsstd_os_getenv( SGS_CTX )
 	char* str;
 	
 	SGSFN( "os_getenv" );
-
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, NULL ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	
+	if( !sgs_LoadArgs( C, "s", &str ) )
+		return 0;
 
 	str = getenv( str );
 	if( str )
@@ -2276,11 +2177,9 @@ static int sgsstd_os_putenv( SGS_CTX )
 	char* str;
 	
 	SGSFN( "os_putenv" );
-
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, NULL ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: string" )
+	
+	if( !sgs_LoadArgs( C, "s", &str ) )
+		return 0;
 
 	sgs_PushBool( C, putenv( str ) == 0 );
 	return 1;
@@ -2296,10 +2195,8 @@ static int sgsstd_os_time( SGS_CTX )
 	
 	SGSFN( "os_time" );
 	
-	if( ssz < 0 || ssz > 1 ||
-		( ssz >= 1 && !sgs_ParseReal( C, 0, &tz ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 optional argument - int" )
+	if( !sgs_LoadArgs( C, "|r", &tz ) )
+		return 0;
 	
 	time( &ttv );
 	if( ssz )
@@ -2315,14 +2212,12 @@ static int sgsstd_os_time( SGS_CTX )
 
 static int sgsstd_os_get_timezone( SGS_CTX )
 {
-	int asstr = 0, ssz = sgs_StackSize( C );
+	int asstr = 0;
 	
 	SGSFN( "os_get_timezone" );
 	
-	if( ssz < 0 || ssz > 1 ||
-		( ssz >= 1 && !sgs_ParseBool( C, 0, &asstr ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 optional argument - bool" )
+	if( !sgs_LoadArgs( C, "|b", &asstr ) )
+		return 0;
 
 	{
 		double diff;
@@ -2372,11 +2267,8 @@ static int sgsstd_os_date_string( SGS_CTX )
 	
 	SGSFN( "os_date_string" );
 	
-	if( ssz < 1 || ssz > 2 ||
-		!sgs_ParseString( C, 0, &fmt, &fmtsize ) ||
-		( ssz >= 2 && !sgs_ParseInt( C, 1, &uts ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-2 arguments: string[, int]" )
+	if( !sgs_LoadArgs( C, "m|i", &fmt, &fmtsize, &uts ) )
+		return 0;
 
 	{
 		int Y, M, D, H, m, s;
@@ -2489,10 +2381,8 @@ static int sgsstd_os_parse_time( SGS_CTX )
 	
 	SGSFN( "os_parse_time" );
 	
-	if( ssz < 0 || ssz > 1 ||
-		( ssz >= 1 && !sgs_ParseInt( C, 1, &uts ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 0-1 arguments: [int]" )
+	if( !sgs_LoadArgs( C, "|i", &uts ) )
+		return 0;
 
 	if( ssz >= 1 )
 		ttv = uts;
@@ -2528,15 +2418,8 @@ static int sgsstd_os_make_time( SGS_CTX )
 	
 	SGSFN( "os_make_time" );
 	
-	if( ssz < 1 || ssz > 6 ||
-		( ssz >= 1 && !sgs_ParseInt( C, 0, p+0 ) ) ||
-		( ssz >= 2 && !sgs_ParseInt( C, 1, p+1 ) ) ||
-		( ssz >= 3 && !sgs_ParseInt( C, 2, p+2 ) ) ||
-		( ssz >= 4 && !sgs_ParseInt( C, 3, p+3 ) ) ||
-		( ssz >= 5 && !sgs_ParseInt( C, 4, p+4 ) ) ||
-		( ssz >= 6 && !sgs_ParseInt( C, 5, p+5 ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-6 arguments of type 'int'" )
+	if( !sgs_LoadArgs( C, "i|iiiii", p, p+1, p+2, p+3, p+4, p+5 ) )
+		return 0;
 
 	if( ssz >= 1 ) T.tm_sec = (int) p[0];
 	if( ssz >= 2 ) T.tm_min = (int) p[1];
@@ -2986,7 +2869,7 @@ static int sgsstd_string_replace( SGS_CTX )
 	isarr2 = sgs_ItemTypeExt( C, 2 ) == VTC_ARRAY;
 
 	if( !sgs_ParseString( C, 0, &str, &size ) )
-		return sgs_ArgError( C, 0, SVT_STRING, 0 );
+		return sgs_FuncArgError( C, 0, SVT_STRING, 0 );
 
 	if( isarr1 && isarr2 )
 	{
@@ -2994,7 +2877,7 @@ static int sgsstd_string_replace( SGS_CTX )
 	}
 
 	if( isarr2 )
-		return sgs_ArgError( C, 2, SVT_STRING, 0 );
+		return sgs_FuncArgError( C, 2, SVT_STRING, 0 );
 
 	ret = sgs_ParseString( C, 2, &rep, &repsize );
 	if( isarr1 && ret )
@@ -3013,16 +2896,16 @@ static int sgsstd_string_replace( SGS_CTX )
 	}
 	
 	if( sgs_ItemType( C, 1 ) != SVT_STRING && !isarr1 )
-		return sgs_ArgErrorExt( C, 1, "array or string", "" );
+		return sgs_ArgErrorExt( C, 1, 0, "array or string", "" );
 	if( isarr1 )
 	{
 		if( sgs_ItemType( C, 2 ) != SVT_STRING && !isarr2 )
-			return sgs_ArgErrorExt( C, 2, "array or string", "" );
+			return sgs_ArgErrorExt( C, 2, 0, "array or string", "" );
 	}
 	else
 	{
 		if( sgs_ItemType( C, 2 ) != SVT_STRING )
-			return sgs_ArgErrorExt( C, 2, "string", "" );
+			return sgs_ArgErrorExt( C, 2, 0, "string", "" );
 	}
 	STDLIB_WARN( "unhandled argument error" )
 }
@@ -3226,7 +3109,7 @@ static int sgsstd_string_frombytes( SGS_CTX )
 	if( sgs_StackSize( C ) != 1 ||
 		( ( size = sgs_ArraySize( C, 0 ) ) < 0 &&
 			!( hasone = sgs_ParseInt( C, 0, &onecode ) ) ) )
-		return sgs_ArgErrorExt( C, 0, "array or int", "" );
+		return sgs_ArgErrorExt( C, 0, 0, "array or int", "" );
 
 	if( hasone )
 	{

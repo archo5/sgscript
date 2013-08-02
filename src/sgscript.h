@@ -490,9 +490,11 @@ SGS_APIFUNC SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name );
 SGS_APIFUNC SGSRESULT sgs_PushPath( SGS_CTX, int item, const char* path, ... );
 SGS_APIFUNC SGSRESULT sgs_StorePath( SGS_CTX, int item, const char* path, ... );
 
-SGS_APIFUNC int sgs_ArgErrorExt( SGS_CTX, int argid, const char* expect, const char* expfx );
-#define sgs_ArgError( C, argid, expect, strict ) \
-	sgs_ArgErrorExt( C, argid, sgs_CodeString( SGS_CODE_VT, expect ), strict ? "strict " : "" )
+SGS_APIFUNC int sgs_ArgErrorExt( SGS_CTX, int argid, int gotthis, const char* expect, const char* expfx );
+SGS_APIFUNC int sgs_ArgError( SGS_CTX, int argid, int gotthis, int expect, int is_strict );
+
+#define sgs_FuncArgError( C, argid, expect, strict ) sgs_ArgError( C, argid, 0, expect, strict )
+#define sgs_MethodArgError( C, argid, expect, strict ) sgs_ArgError( C, argid, 1, expect, strict )
 
 typedef int (*sgs_ArgCheckFunc) ( sgs_Context*, int, va_list, int );
 #define SGS_LOADARG_STRICT 0x01
