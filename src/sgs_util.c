@@ -610,6 +610,9 @@ void quicksort( void *array, size_t length, size_t size,
 	/* Insertion sort threshold */
 	const int threshold = size << INSERTION_SORT_THRESHOLD_SHIFT;
 #endif
+	
+	if( length <= 1 )
+		return;
 
 	/* Assign the first recursion level of the sorting */
 	recursion->left = array;

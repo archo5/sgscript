@@ -2378,6 +2378,7 @@ fail:
 	p - function (callable, actually; p stands for "procedure";
 		returns a SGSBOOL always, useful only for optional arguments)
 	a,t,o - objects (array,dict,specific iface)
+	v - any variable (returns sgs_Variable, checks if valid index or non-null if strict)
 	x - custom check/return function
 	? - check only, no writeback
 	! - strict check (no conversions)
@@ -2389,6 +2390,7 @@ fail:
 	< - move argument pointer 1 item back
 	> - move argument pointer 1 item forward
 	@ - treat as method (1st arg = this, argnum -= 1)
+	. - check if there are no more arguments
 */
 
 int sgs_ArgErrorExt( SGS_CTX, int argid, int gotthis, const char* expect, const char* expfx )
@@ -2442,6 +2444,15 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 			break;
 		case '>': from++; break;
 		case '@': method = 1; break;
+		case '.':
+			if( from < sgs_StackSize( C ) )
+			{
+				sgs_Printf( C, SGS_WARNING, "function expects exactly %d arguments, %d given",
+					from - method, sgs_StackSize( C ) - method );
+				va_end( args );
+				return 0;
+			}
+			break;
 		
 		case 'n':
 			{
@@ -2622,6 +2633,24 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 			}
 			strict = 0; nowrite = 0; from++; break;
 			
+		case 'v':
+			{
+				if( from >= sgs_StackSize( C ) ||
+					( strict && sgs_ItemType( C, from ) == SVT_NULL ) )
+				{
+					argerrx( C, from, method, strict ? "non-null" : "any", "" );
+					va_end( args );
+					return opt;
+				}
+				
+				if( !nowrite )
+				{
+					int owr = sgs_GetStackItem( C, from, va_arg( args, sgs_Variable* ) );
+					sgs_BreakIf( !owr );
+				}
+			}
+			strict = 0; nowrite = 0; from++; break;
+			
 		case 'x':
 			{
 				sgs_ArgCheckFunc acf = va_arg( args, sgs_ArgCheckFunc );
@@ -2670,6 +2699,19 @@ SGSRESULT sgs_PopSkip( SGS_CTX, int count, int skip )
 	if( STACKFRAMESIZE < count + skip || count < 0 || skip < 0 )
 		return SGS_EINVAL;
 	stk_popskip( C, count, skip );
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_SetStackSize( SGS_CTX, int size )
+{
+	int diff;
+	if( size < 0 )
+		return SGS_EINVAL;
+	diff = STACKFRAMESIZE - size;
+	if( diff > 0 )
+		stk_pop( C, diff );
+	else
+		stk_push_nulls( C, -diff );
 	return SGS_SUCCESS;
 }
 
@@ -3308,13 +3350,13 @@ SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface )
 
 SGSBOOL sgs_IsCallable( SGS_CTX, int item )
 {
-	int ty = sgs_ItemTypeExt( C, 0 );
+	int ty = sgs_ItemTypeExt( C, item );
 
 	if( ty & VTF_CALL )
 		return 1;
 	if( ty & SVT_OBJECT )
 	{
-		sgs_VarObj* O = sgs_GetObjectData( C, 0 );
+		sgs_VarObj* O = sgs_GetObjectData( C, item );
 		void** ptr = O->iface;
 		while( *ptr )
 		{

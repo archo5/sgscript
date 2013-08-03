@@ -496,7 +496,13 @@ SGS_APIFUNC int sgs_ArgError( SGS_CTX, int argid, int gotthis, int expect, int i
 #define sgs_FuncArgError( C, argid, expect, strict ) sgs_ArgError( C, argid, 0, expect, strict )
 #define sgs_MethodArgError( C, argid, expect, strict ) sgs_ArgError( C, argid, 1, expect, strict )
 
-typedef int (*sgs_ArgCheckFunc) ( sgs_Context*, int, va_list, int );
+typedef int (*sgs_ArgCheckFunc)
+(
+	sgs_Context* /* ctx / SGS_CTX */,
+	int /* argid */,
+	va_list /* args */,
+	int /* flags */
+);
 #define SGS_LOADARG_STRICT 0x01
 #define SGS_LOADARG_NOWRITE 0x02
 #define SGS_LOADARG_OPTIONAL 0x04
@@ -509,6 +515,8 @@ SGS_APIFUNC SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... );
 
 SGS_APIFUNC SGSRESULT sgs_Pop( SGS_CTX, int count );
 SGS_APIFUNC SGSRESULT sgs_PopSkip( SGS_CTX, int count, int skip );
+
+SGS_APIFUNC SGSRESULT sgs_SetStackSize( SGS_CTX, int size );
 
 /*
 	OPERATIONS

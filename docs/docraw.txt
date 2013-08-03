@@ -575,13 +575,14 @@ sgs_LoadArgsExt [function]
 == SGSMIXED sgs_LoadArgsExt( sgs_Context* C, int from, const char* cmd, ... )
 === parse the stack items and retrieve their data according to `cmd`, starting from item `from`
 
+- for anything function requires, pass the value; for anything it returns - the pointer to the value
 - `cmd` is a string consisting of one-character commands
 - the commands are grouped into two kinds: control commands and parsing commands
 - function returns whether all required arguments have been parsed successfully
 -- thus, if function returns < 1, state of outputs is somewhat unknown unless filled with defaults
 -- it is guaranteed that all arguments will be parsed from first (specified) forward, not in any other way
 
-! unlike sgs_LoadArgs, it returns `SGSMIXED` and must be checked differently
+! unlike sgs_LoadArgs, it returns `SGSMIXED` and must be checked differently ("ret.val. > 0", if same output needed)
 
 ==== control commands
 - `?` -- only check, do not write the result and do not require a pointer to write the data to
@@ -594,6 +595,7 @@ sgs_LoadArgsExt [function]
 - `<` -- move argument pointer 1 item back (cannot move it before 0)
 - `>` -- move argument pointer 1 item forward
 - `@` -- specify that this is a method (argument 0 = 'this'; shifts argument indices on error printing by -1)
+- `.` -- specify the end of argument list (how many arguments are expected)
 
 ==== parsing commands
 - `n` -- check for `null` (returns SGSBOOL = 1, always strict)
@@ -612,6 +614,7 @@ sgs_LoadArgsExt [function]
 - `a` -- check for `array` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `t` -- check for `dict` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `o` -- check for `object` (requires void** interface, returns sgs_VarObj* data)
+- `v` -- check for any (non-null if strict, returns sgs_Variable data)
 - `x` -- call a custom checking function (requires sgs_ArgCheckFunc, everything else depends on function)
 
 === error codes
@@ -1847,6 +1850,8 @@ gc_collect() [function]
 
 == gc_collect()
 === runs the garbage collector on the virtual machine, waiting until it has finished
+
+- returns the reduction in objects or false on failure
 
     a = [];
     a.push(a); // creates a circular dependency
