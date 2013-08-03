@@ -2980,15 +2980,34 @@ string_replace [function]
 == string_replace( string str, string from, string to )
 == string_replace( string str, array from, string to )
 == string_replace( string str, array from, array to )
-=== replaces portions of string `str`, specified in `from`, to the respective values passed in `to`
+=== replaces parts of string `str`, specified in `from`, to the respective values passed in `to`
 
 - the respective replacement is picked by taking the substring index and performing modulo operation with the number of replacement strings
+
+    string_replace( "loaded %num files", "%num", 5 ); // string [14] "loaded 5 files"
+    string_replace( "abcd", ["a","b","c","d"], [1,2,3,4] ); // string [4] "1234"
+    string_replace( "1234", ["1","2","3","4"], ["x","y"] ); // string [4] "xyxy"
+
+
+string_translate [function]
+
+== string_translate( string str, iterable repmap )
+=== replaces parts of string `str`, specified in the keys of `repmap`, to the matching values of the same iterable
+
+    string_translate( "found %a files and %b folders", {"%a" = 5, "%b" = 17} ); // string [28] "found 5 files and 17 folders"
 
 
 string_trim [function]
 
 == string_trim( string str, string chars = " \t\r\n", int flags = STRING_TRIM_LEFT | STRING_TRIM_RIGHT )
 === removes the specified characters from the specified sides of the string
+
+- available values for `flags`:
+-- `STRING_TRIM_LEFT` - trim the string from the left side
+-- `STRING_TRIM_RIGHT` - trim the string from the right side
+
+    string_trim( "  space  " ); // string [5] "space"
+    string_trim( "..something!..", ".!", STRING_TRIM_RIGHT ); // string [11] "..something"
 
 
 string_toupper [function]
@@ -3012,17 +3031,27 @@ string_compare [function]
 == string_compare( string str1, string str2, int max = 0, int from = 0 )
 === compares the two strings or the specified portions of them
 
+    string_compare( "what", "whaT" ); // int 1
+    string_compare( "what", "whaT", 3 ); // int 0
+    string_compare( "file.txt", ".txt", 0, -4 ); // int 0
+
 
 string_implode [function]
 
 == string_implode( array items, string sep )
 === concatenates the string representations of array `items` values, putting a string `sep` between each two
 
+    string_implode( ["one","two","three"], ", " ); // string [15] "one, two, three"
+
 
 string_explode [function]
 
 == string_explode( string str, string sep )
 === splits the string `str` into an array of substrings, separated by string `sep`
+
+    string_explode( "www.example.com", "." ); // ["www","example","com"]
+    string_explode( "x", "-" ); // ["x"]
+    string_explode( "/some//data", "/" ); // ["","some","","data"]
 
 
 string_charcode [function]
@@ -3074,5 +3103,12 @@ string_utf8_encode [function]
 
 string_format [function]
 
+== string_format( string text, ... )
+=== parses all format specifiers in `text` and returns the result
+
+- the format specifier has the form {<id>:<specifier>} where "id" is the argument index to use and specifier is a @fmt_text specifier
+- argument indices to be used in specifiers start from 1
+
+    print string_format( "{1:d} -> {1:x}", 1337 ); // prints "1337 -> 539"
 
 

@@ -2910,6 +2910,33 @@ static int sgsstd_string_replace( SGS_CTX )
 	STDLIB_WARN( "unhandled argument error" )
 }
 
+static int sgsstd_string_translate( SGS_CTX )
+{
+	SGSFN( "string_translate" );
+	
+	if( !sgs_LoadArgs( C, "?m" ) )
+		return 0;
+	if( sgs_PushIterator( C, 1 ) )
+		return sgs_ArgErrorExt( C, 1, 0, "iterable", "" );
+	
+	while( sgs_IterAdvance( C, -1 ) > 0 )
+	{
+		char *str, *substr, *repstr;
+		sgs_SizeVal size, subsize, repsize;
+		if( sgs_IterPushData( C, -1, 1, 1 ) ||
+			!sgs_ParseString( C, 0, &str, &size ) ||
+			!sgs_ParseString( C, -2, &substr, &subsize ) ||
+			!sgs_ParseString( C, -1, &repstr, &repsize ) )
+			STDLIB_WARN( "failed to read data" )
+		_stringrep_ss( C, str, size, substr, subsize, repstr, repsize );
+		sgs_StoreItem( C, 0 );
+		sgs_Pop( C, 2 );
+	}
+	
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
 
 static SGS_INLINE int stdlib_isoneof( char c, char* from, int fsize )
 {
@@ -3362,7 +3389,8 @@ static const sgs_RegFuncConst s_fconsts[] =
 	FN( string_reverse ), FN( string_pad ),
 	FN( string_repeat ), FN( string_count ),
 	FN( string_find ), FN( string_find_rev ),
-	FN( string_replace ), FN( string_trim ),
+	FN( string_replace ), FN( string_translate ),
+	FN( string_trim ),
 	FN( string_toupper ), FN( string_tolower ),
 	FN( string_compare ),
 	FN( string_implode ), FN( string_explode ),
