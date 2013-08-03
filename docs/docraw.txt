@@ -2874,7 +2874,7 @@ os_make_time [function]
 =
 
 
-string_cut() [function]
+string_cut [function]
 
 == string_cut( string str, int from[, int to[, int flags]] )
 === returns a part of string `str`, `from` and `to` being positions of the first and last character returned, respectively
@@ -2882,13 +2882,13 @@ string_cut() [function]
 - if `to` is not specified, `to` is assumed to be the position of the last character in string `str`
 - if `from` or `to` are negative, they point to characters before the end of string (-1 being the last one)
 - available values for `flags`:
--- `NO_REV_INDEX` - emit warnings on negative indices, instead of handling them
--- `STRICT_RANGES` - emit warnings on out of bounds `from`/`to` values instead of silently ignoring the outside characters
+-- `STRING_NO_REV_INDEX` - emit warnings on negative indices, instead of handling them
+-- `STRING_STRICT_RANGES` - emit warnings on out of bounds `from`/`to` values instead of silently ignoring the outside characters
 
     string_cut( "01234567", 3, 5 ); // string [3] "345"
 
 
-string_part() [function]
+string_part [function]
 
 == string_part( string str, int from[, int len[, int flags]] )
 === returns a part of string `str`, starting at `from`, at most `len` characters
@@ -2897,13 +2897,13 @@ string_part() [function]
 - if `from` is negative, it points to characters before the end of string (-1 being the last one)
 - if `len` is negative, the maximum length of returned string is the sum of `len` and string `str` length
 - available values for `flags`:
--- `NO_REV_INDEX` - emit warnings on negative indices, instead of handling them
--- `STRICT_RANGES` - emit warnings on out of bounds `from`/`len` values instead of silently ignoring the outside characters
+-- `STRING_NO_REV_INDEX` - emit warnings on negative indices, instead of handling them
+-- `STRING_STRICT_RANGES` - emit warnings on out of bounds `from`/`len` values instead of silently ignoring the outside characters
 
     string_part( "01234567", 3, 3 ); // string [3] "345"
 
 
-string_reverse() [function]
+string_reverse [function]
 
 == string_reverse( string str )
 === returns `str` with all the bytes in reversed order
@@ -2913,9 +2913,166 @@ string_reverse() [function]
     string_reverse( "noitca" ); // string [6] "action"
 
 
+string_pad [function]
+
+== string_pad( string str, int tgtsize, string padstr = " ", int flags = STRING_PAD_RIGHT )
+=== return the string `str`, padded from template `padstr` up to the size `tgtsize` according to `flags`
+
+- if `str` is longer than `tgtsize`, it is returned without changes
+- available values for `flags`:
+-- `STRING_PAD_LEFT` - pad the string at the left side
+-- `STRING_PAD_RIGHT` - pad the string at the right side
+-- if both flags are OR'ed together, the string `str` is centered
+-- at least one of the flags must be specified if the argument is passed for the function to work
+
+    string_pad( "padded", 10 ); // string [10] "padded    "
+    string_pad( "center", 10, "_", STRING_PAD_LEFT | STRING_PAD_RIGHT ); // string [10] "__center__"
 
 
+string_repeat [function]
 
+== string_repeat( string str, int count )
+=== return the string `str`, appended to itself `count`-1 times or an empty string if `count` is equal to 0
+
+- `count` must be greater than or equal to 0
+
+    string_repeat( "na", 6 ); // string [12] "nananananana"
+    string_repeat( "none", 0 ); // string [0] ""
+
+
+string_count [function]
+
+== string_count( string str, string substr, bool overlap = false )
+=== returns the number of substrings `substr` found in string `str`
+
+- if `overlap` is true, function does not skip substrings when they are found
+
+    string_count( "abababa", "aba" ); // int 2
+    string_count( "abababa", "aba", true ); // int 3
+
+
+string_find [function]
+
+== string_find( string str, string substr, int offset = 0 )
+=== returns the position of first found substring `substr` in string `str`, starting at `offset`
+
+- if `substr` was not found, 'null' is returned
+- if `offset` is less than 0, it specifies offset from the end
+
+    string_find( "what hat", "hat" ); // int 1
+    string_find( "what", "hat", 2 ); // null
+
+
+string_find_rev [function]
+
+== string_find_rev( string str, string substr, int offset = 0 )
+=== returns the position of last found substring `substr` in string `str`, starting at `offset`
+
+- if `substr` was not found, 'null' is returned
+- if `offset` is less than 0, it specifies offset from the end
+
+    string_find_rev( "what hat", "hat" ); // int 5
+    string_find_rev( "what", "hat", 2 ); // int 1
+
+
+string_replace [function]
+
+== string_replace( string str, string from, string to )
+== string_replace( string str, array from, string to )
+== string_replace( string str, array from, array to )
+=== replaces portions of string `str`, specified in `from`, to the respective values passed in `to`
+
+- the respective replacement is picked by taking the substring index and performing modulo operation with the number of replacement strings
+
+
+string_trim [function]
+
+== string_trim( string str, string chars = " \t\r\n", int flags = STRING_TRIM_LEFT | STRING_TRIM_RIGHT )
+=== removes the specified characters from the specified sides of the string
+
+
+string_toupper [function]
+
+== string_toupper( string str )
+=== converts all ASCII lowercase letter characters of the string to uppercase
+
+    string_toupper( "Test" ); // string [4] "TEST"
+
+
+string_tolower [function]
+
+== string_tolower( string str )
+=== converts all ASCII uppercase letter characters of the string to lowercase
+
+    string_toupper( "Test" ); // string [4] "test"
+
+
+string_compare [function]
+
+== string_compare( string str1, string str2, int max = 0, int from = 0 )
+=== compares the two strings or the specified portions of them
+
+
+string_implode [function]
+
+== string_implode( array items, string sep )
+=== concatenates the string representations of array `items` values, putting a string `sep` between each two
+
+
+string_explode [function]
+
+== string_explode( string str, string sep )
+=== splits the string `str` into an array of substrings, separated by string `sep`
+
+
+string_charcode [function]
+
+== string_charcode( string str, int offset = 0 )
+=== returns the byte value / ASCII character code of the specified byte in the string
+
+    string_charcode( "Test" ); // int 84
+    string_charcode( "Test", 3 ); // int 116
+
+
+string_frombytes [function]
+
+== string_frombytes( int byteval )
+== string_frombytes( array bytes )
+=== returns a string, created from either one byte value (overload #1) or an array of byte values (overload #2)
+
+- byte values must be in the range [0-255]
+
+    string_frombytes( 53 ); // string [1] "5"
+    string_frombytes([ 84, 101, 115, 116 ]); // string [4] "Test"
+
+
+string_utf8_decode [function]
+
+== string_utf8_decode( string ustr )
+=== returns an array of Unicode code points, decoded from the UTF-8 string `ustr`
+
+- invalid byte sequences will add 0xFFFD to the array
+
+    string_utf8_decode( "pie" ); // [112,105,101]
+    string_utf8_decode( "код" ); // [1082,1086,1076]
+    string_utf8_decode( "標準" ); // [27161,28310]
+
+
+string_utf8_encode [function]
+
+== string_utf8_encode( array cplist )
+=== returns a UTF-8 string, composed from the Unicode code point list `cplist`
+
+! Without proper terminal software UTF-8 strings will not be displayed correctly (as is the case on Windows).
+
+- invalid code points will add "\xEF\xBF\xBD" (0xFFFD code point as UTF-8) to the string
+
+    string_utf8_encode( [112,105,101] ); // string [3] "pie"
+    string_utf8_decode( [1082,1086,1076] ); // string [6] "код"
+    string_utf8_decode( [27161,28310] ); // string [6] "標準"
+
+
+string_format [function]
 
 
 

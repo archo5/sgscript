@@ -259,8 +259,8 @@ SGS_APIFUNC void sgs_quicksort( void *array, size_t length, size_t size,
 	- utf8_encode: returns number of bytes written (up to 4, make sure there's space)
 */
 #define SGS_UNICODE_INVCHAR 0xfffd
-#define SGS_UNICODE_INVCHAR_STR "\xff\xfd"
-#define SGS_UNICODE_INVCHAR_LEN 2
+#define SGS_UNICODE_INVCHAR_STR "\xef\xbf\xbd"
+#define SGS_UNICODE_INVCHAR_LEN 3
 SGS_APIFUNC int sgs_utf8_decode( char* buf, size_t size, uint32_t* outchar );
 SGS_APIFUNC int sgs_utf8_encode( uint32_t ch, char* out );
 

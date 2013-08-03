@@ -2998,6 +2998,67 @@ static int sgsstd_string_tolower( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_string_compare( SGS_CTX )
+{
+	int ret = 0;
+	char *str1, *str2;
+	sgs_SizeVal str1size, str2size;
+	sgs_SizeVal from = 0, max = 0;
+	
+	SGSFN( "string_compare" );
+	
+	if( !sgs_LoadArgs( C, "mm|ll", &str1, &str1size, &str2, &str2size, &max, &from ) )
+		return 0;
+	
+	if( from == 0 )
+	{
+		if( max > 0 )
+		{
+			str1size = MIN( str1size, max );
+			str2size = MIN( str2size, max );
+		}
+		ret = memcmp( str1, str2, MIN( str1size, str2size ) );
+		if( !ret )
+		{
+			if( str1size < str2size ) ret = -1;
+			else if( str1size > str2size ) ret = 1;
+		}
+	}
+	else
+	{
+		sgs_SizeVal i1, i2, from1, from2, to1, to2;
+		from1 = from < 0 ? str1size + from : from;
+		from2 = from < 0 ? str2size + from : from;
+		to1 = max > 0 ? from1 + max : str1size;
+		to2 = max > 0 ? from2 + max : str2size;
+		i1 = from1;
+		i2 = from2;
+		for(;;)
+		{
+			int b1 = i1 < 0 ? 0 : ( i1 >= str1size ? 0 : str1[ i1 ] );
+			int b2 = i2 < 0 ? 0 : ( i2 >= str2size ? 0 : str2[ i2 ] );
+			if( b1 < b2 )
+				ret = -1;
+			if( b1 > b2 )
+				ret = 1;
+			i1++;
+			i2++;
+			if( ret || i1 >= to1 || i2 >= to2 )
+				break;
+		}
+		if( !ret )
+		{
+			sgs_SizeVal sz1 = to1 - from1, sz2 = to2 - from2;
+			if( sz1 < sz2 )
+				ret = -1;
+			else if( sz1 > sz2 )
+				ret = 1;
+		}
+	}
+	sgs_PushInt( C, ret );
+	return 1;
+}
+
 static int sgsstd_string_implode( SGS_CTX )
 {
 	sgs_SizeVal i, asize;
@@ -3287,10 +3348,12 @@ static int sgsstd_string_format( SGS_CTX )
 
 static const sgs_RegIntConst s_iconsts[] =
 {
-	{ "NO_REV_INDEX", sgsNO_REV_INDEX },
-	{ "STRICT_RANGES", sgsSTRICT_RANGES },
-	{ "LEFT", sgsLEFT },
-	{ "RIGHT", sgsRIGHT },
+	{ "STRING_NO_REV_INDEX", sgsNO_REV_INDEX },
+	{ "STRING_STRICT_RANGES", sgsSTRICT_RANGES },
+	{ "STRING_PAD_LEFT", sgsLEFT },
+	{ "STRING_PAD_RIGHT", sgsRIGHT },
+	{ "STRING_TRIM_LEFT", sgsLEFT },
+	{ "STRING_TRIM_RIGHT", sgsRIGHT },
 };
 
 static const sgs_RegFuncConst s_fconsts[] =
@@ -3301,6 +3364,7 @@ static const sgs_RegFuncConst s_fconsts[] =
 	FN( string_find ), FN( string_find_rev ),
 	FN( string_replace ), FN( string_trim ),
 	FN( string_toupper ), FN( string_tolower ),
+	FN( string_compare ),
 	FN( string_implode ), FN( string_explode ),
 	FN( string_charcode ), FN( string_frombytes ),
 	FN( string_utf8_decode ), FN( string_utf8_encode ),
