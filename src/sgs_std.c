@@ -2077,7 +2077,7 @@ static int sgsstd_include_file( SGS_CTX )
 
 	ret = sgs_ExecFile( C, str );
 	if( ret == SGS_ENOTFND )
-		STDLIB_WARN( "file not found" )
+		return sgs_Printf( C, SGS_WARNING, "file '%s' was not found", str );
 	if( ret == SGS_SUCCESS )
 		sgsstd__setinc( C, 0 );
 	sgs_PushBool( C, ret == SGS_SUCCESS );
@@ -2098,12 +2098,13 @@ static int sgsstd_include_shared( SGS_CTX )
 	if( !over && sgsstd__chkinc( C, 0 ) )
 		return 1;
 
-	ret = sgs_GetProcAddress( fnstr, "sgscript_main", (void**) &func );
+	ret = sgs_GetProcAddress( fnstr, SGS_LIB_ENTRY_POINT, (void**) &func );
 	if( ret != 0 )
 	{
-		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "file not found" )
+		if( ret == SGS_XPC_NOFILE )
+			return sgs_Printf( C, SGS_WARNING, "file '%s' was not found", fnstr );
 		else if( ret == SGS_XPC_NOPROC )
-			STDLIB_WARN( "procedure not found" )
+			return sgs_Printf( C, SGS_WARNING, "procedure '" SGS_LIB_ENTRY_POINT "' was not found" );
 		else if( ret == SGS_XPC_NOTSUP )
 			STDLIB_WARN( "feature is not supported on this platform" )
 		else STDLIB_WARN( "unknown error occured" )
@@ -2137,6 +2138,7 @@ static int _find_includable_file( SGS_CTX, MemBuf* tmp, char* ps,
 					membuf_appchr( tmp, C, *psc );
 				psc++;
 			}
+			membuf_appchr( tmp, C, 0 );
 			if( ( f = fopen( tmp->ptr, "rb" ) ) != NULL )
 			{
 				fclose( f );
@@ -2189,7 +2191,7 @@ static int sgsstd_include( SGS_CTX )
 				"with include path '%.*s'", fnsize, fnstr, pssize, ps );
 		}
 		
-		ret = sgs_GetProcAddress( fnstr, "sgscript_main", (void**) &func );
+		ret = sgs_GetProcAddress( fnstr, SGS_LIB_ENTRY_POINT, (void**) &func );
 		if( ret == SGS_SUCCESS )
 		{
 			ret = func( C );
@@ -2230,9 +2232,10 @@ static int sgsstd_import_cfunc( SGS_CTX )
 	ret = sgs_GetProcAddress( fnstr, pnstr, (void**) &func );
 	if( ret != 0 )
 	{
-		if( ret == SGS_XPC_NOFILE ) STDLIB_WARN( "file not found" )
+		if( ret == SGS_XPC_NOFILE )
+			return sgs_Printf( C, SGS_WARNING, "file '%s' was not found", fnstr );
 		else if( ret == SGS_XPC_NOPROC )
-			STDLIB_WARN( "procedure not found" )
+			return sgs_Printf( C, SGS_WARNING, "procedure '%s' was not found", pnstr );
 		else if( ret == SGS_XPC_NOTSUP )
 			STDLIB_WARN( "feature is not supported on this platform" )
 		else STDLIB_WARN( "unknown error occured" )
