@@ -3331,11 +3331,39 @@ SGSRESULT sgs_Convert( SGS_CTX, int item, int type )
 }
 
 
-/*
 
-	ARGUMENT HANDLING
+SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, void** iface )
+{
+	int len;
+	HTPair* p;
+	if( !iface )
+		return SGS_EINVAL;
+	len = strlen( name );
+	p = ht_find( &C->typetable, name, len, sgs_HashFunc( name, len ) );
+	if( p )
+		return SGS_EINPROC;
+	ht_set( &C->typetable, C, name, len, (void*) iface );
+	return SGS_SUCCESS;
+}
 
-*/
+SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )
+{
+	int len = strlen( name );
+	HTPair* p = ht_find( &C->typetable, name, len, sgs_HashFunc( name, len ) );
+	if( !p )
+		return SGS_ENOTFND;
+	ht_unset_pair( &C->typetable, C, p );
+	return SGS_SUCCESS;
+}
+
+void** sgs_FindType( SGS_CTX, const char* name )
+{
+	int len = strlen( name );
+	HTPair* p = ht_find( &C->typetable, name, len, sgs_HashFunc( name, len ) );
+	if( p )
+		return (void**) p->ptr;
+	return NULL;
+}
 
 
 SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface )

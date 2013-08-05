@@ -1055,6 +1055,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		{
 			INSTR_WRITE( SI_SET, oreg, ireg2, 0 );
 		}
+		
+		INSTR_WRITE( SI_NOP, 0, 0, 0 );
 
 		/* fix-up jump 2 */
 		jmp_off = func->code.size - csz2;

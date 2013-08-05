@@ -666,6 +666,7 @@ struct _sgs_Context
 	int           sf_count;
 
 	void*         data;
+	sgs_HashTable typetable;
 
 	sgs_object_t* objs;
 	int32_t       objcount;

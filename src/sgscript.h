@@ -559,7 +559,12 @@ SGS_APIFUNC char* sgs_ToStringBufFast( SGS_CTX, int item, sgs_SizeVal* outsize )
 #define sgs_ToStringFast( ctx, item ) sgs_ToStringBufFast( ctx, item, NULL )
 SGS_APIFUNC SGSRESULT sgs_Convert( SGS_CTX, int item, int type );
 
+SGS_APIFUNC SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, void** iface );
+SGS_APIFUNC SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name );
+SGS_APIFUNC void** sgs_FindType( SGS_CTX, const char* name );
+
 SGS_APIFUNC SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface );
+#define sgs_IsType( C, item, name ) sgs_IsObject( C, item, sgs_FindType( C, name ) )
 SGS_APIFUNC SGSBOOL sgs_IsCallable( SGS_CTX, int item );
 SGS_APIFUNC SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size );
 SGS_APIFUNC SGSBOOL sgs_ParseBool( SGS_CTX, int item, sgs_Bool* out );

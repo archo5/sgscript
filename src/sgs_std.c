@@ -1881,6 +1881,31 @@ static int sgsstd_ftime( SGS_CTX )
 
 /* utils */
 
+static int sgsstd_rand( SGS_CTX )
+{
+	sgs_PushInt( C, rand() );
+	return 1;
+}
+
+static int sgsstd_randf( SGS_CTX )
+{
+	sgs_PushReal( C, (double) rand() / (double) RAND_MAX );
+	return 1;
+}
+
+static int sgsstd_srand( SGS_CTX )
+{
+	sgs_Int s;
+	SGSFN( "srand" );
+	if( !sgs_LoadArgs( C, "i", &s ) )
+		return 0;
+	srand( s );
+	return 0;
+}
+
+
+/* internal utils */
+
 struct pcall_printinfo
 {
 	sgs_PrintFunc pfn;
@@ -2577,6 +2602,8 @@ static sgs_RegFuncConst regfuncs[] =
 	/* OS */
 	FN( ftime ),
 	/* utils */
+	FN( rand ), FN( randf ), FN( srand ),
+	/* internal utils */
 	FN( pcall ), FN( assert ),
 	FN( eval ), FN( eval_file ),
 	FN( include_library ), FN( include_file ),
@@ -2606,6 +2633,8 @@ static const sgs_RegIntConst regiconsts[] =
 	{ "VT_FUNC", SVT_FUNC },
 	{ "VT_CFUNC", SVT_CFUNC },
 	{ "VT_OBJECT", SVT_OBJECT },
+	
+	{ "RAND_MAX", RAND_MAX },
 };
 
 
@@ -2616,9 +2645,29 @@ int sgsSTD_PostInit( SGS_CTX )
 	if( ret != SGS_SUCCESS ) return ret;
 	ret = sgs_RegFuncConsts( C, regfuncs, ARRAY_SIZE( regfuncs ) );
 	if( ret != SGS_SUCCESS ) return ret;
+	
 	sgs_PushString( C, SGS_INCLUDE_PATH );
 	ret = sgs_StoreGlobal( C, "SGS_PATH" );
 	if( ret != SGS_SUCCESS ) return ret;
+	
+	ret = sgs_RegisterType( C, "array", sgsstd_array_functable );
+	if( ret != SGS_SUCCESS ) return ret;
+	
+	ret = sgs_RegisterType( C, "array_iterator", sgsstd_array_iter_functable );
+	if( ret != SGS_SUCCESS ) return ret;
+	
+	ret = sgs_RegisterType( C, "dict", sgsstd_dict_functable );
+	if( ret != SGS_SUCCESS ) return ret;
+	
+	ret = sgs_RegisterType( C, "dict_iterator", sgsstd_dict_iter_functable );
+	if( ret != SGS_SUCCESS ) return ret;
+	
+	ret = sgs_RegisterType( C, "class", sgsstd_class_functable );
+	if( ret != SGS_SUCCESS ) return ret;
+	
+	ret = sgs_RegisterType( C, "closure", sgsstd_closure_functable );
+	if( ret != SGS_SUCCESS ) return ret;
+	
 	return SGS_SUCCESS;
 }
 

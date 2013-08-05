@@ -88,7 +88,7 @@ static void ctx_init( SGS_CTX )
 	C->state = 0;
 	C->fctx = NULL;
 	C->filename = NULL;
-	ht_init( &C->stringtable, C, 4 );
+	ht_init( &C->stringtable, C, 256 );
 
 	C->stack_mem = 32;
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
@@ -102,6 +102,8 @@ static void ctx_init( SGS_CTX )
 	C->sf_first = NULL;
 	C->sf_last = NULL;
 	C->sf_count = 0;
+	
+	ht_init( &C->typetable, C, 32 );
 
 	C->objs = NULL;
 	C->objcount = 0;
@@ -155,6 +157,8 @@ void sgs_DestroyEngine( SGS_CTX )
 	sgs_BreakIf( C->objs || C->objcount );
 
 	sgs_Dealloc( C->stack_base );
+	
+	ht_free( &C->typetable, C );
 	
 	ht_iterate( &C->stringtable, stringfreefunc, C );
 	ht_free( &C->stringtable, C );

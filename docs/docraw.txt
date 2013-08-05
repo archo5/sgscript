@@ -877,12 +877,45 @@ sgs_Convert [function]
 - SGS_ENOTFND: object does not support conversions
 
 
+sgs_RegisterType [function]
+
+== SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, void** iface )
+=== register a type interface by mapping it to a name
+
+=== error codes
+- SGS_EINVAL: iface was NULL
+- SGS_EINPROC: the name is already used
+
+
+sgs_UnregisterType [function]
+
+== SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )
+=== unregister a type interface by its name
+
+=== error codes
+- SGS_ENOTFND: the specified type name was not mapped to any interface
+
+
+sgs_FindType [function]
+
+== void** sgs_FindType( SGS_CTX, const char* name )
+=== finds the type interface that is mapped to the specified name or returns NULL if that type name cannot be found
+
+
 sgs_IsObject [function]
 
 == SGSBOOL sgs_IsObject( sgs_Context* C, int item, void** iface )
 === returns whether the specified stack item `item` is an object with the interface pointer `iface`
 
 - if `item` is out of bounds or not an object or doesn't have the specified interface, 0 is returned
+
+
+sgs_IsType [function alias]
+
+== SGSBOOL sgs_IsType( sgs_Context* C, int item, const char* type )
+=== returns whether the specified stack item `item` is an object of the specified type
+
+- alias of `sgs_IsObject( C, item, sgs_FindType( C, type ) )`
 
 
 sgs_IsCallable [function]
@@ -1316,7 +1349,7 @@ sgs_GetLastErrno [function alias]
 =
 
 
-array() [function]
+array [function]
 
 == array( ... )
 === returns an array, containing the arguments
@@ -1326,7 +1359,7 @@ array() [function]
     array( "5", 6, 7.0 ) // same as ["5",6,7.0]
 
 
-dict() [function]
+dict [function]
 
 == dict( [key, value, ...] )
 === returns a 'dict' (dictionary/hash table) object, containing the even arguments mapped to respective previous arguments
@@ -1338,7 +1371,7 @@ dict() [function]
     dict( "name", "John", "phone", 1234567890 ); // same as { name = "John", phone = 1234567890 }
 
 
-class() [function]
+class [function]
 
 == class( first, second )
 === returns a class object with `first` set as the primary data source and `second` set as the secondary/backup data source
@@ -1352,7 +1385,7 @@ class() [function]
     c.printdata(); // prints 6
 
 
-closure() [function]
+closure [function]
 
 == closure( callable, data )
 === returns a closure object with `callable` set as the callable variable and `data` set as the first argument for the closure call
@@ -1364,7 +1397,7 @@ closure() [function]
     print( counter() ); print( counter() ); // prints "01"
 
 
-isset() [function]
+isset [function]
 
 == isset( var, string key )
 === returns whether a property named `key` is accessible (exists) in variable `var`
@@ -1375,13 +1408,13 @@ isset() [function]
     isset( print, "thiscall" ); // returns 'true' -- works with built-in special properties too
 
 
-unset() [function]
+unset [function]
 
 == unset( dict var, string key )
 === removes an entry named `key` from the dictionary `var`
 
 
-clone() [function]
+clone [function]
 
 == clone( var )
 === creates a one-reference copy of the variable `var` or returns null and emits a warning on failure
@@ -1396,7 +1429,7 @@ clone() [function]
     print( z.a ); // prints "6"
 
 
-get_keys() [function]
+get_keys [function]
 
 == get_keys( iterable var )
 === returns an array of keys found in the iterable object `var` or returns null and emits a warning on failure
@@ -1407,7 +1440,7 @@ get_keys() [function]
     get_keys( {b=5,a=2} ); // returns ["b","a"]
 
 
-get_values() [function]
+get_values [function]
 
 == get_values( iterable var )
 === returns an array of values found in the iterable object `var` or returns null and emits a warning on failure
@@ -1418,7 +1451,7 @@ get_values() [function]
     get_values( {b=5,a=2} ); // returns [5,2]
 
 
-get_concat() [function]
+get_concat [function]
 
 == get_concat( iterable var, iterable var1, ... )
 === returns an array of values found in all iterable objects passed to the function or returns null and emits a warning on failure
@@ -1426,7 +1459,7 @@ get_concat() [function]
     get_concat( [1,2], {a="5",b=8} ); // returns [1,2,"5",8]
 
 
-get_merged() [function]
+get_merged [function]
 
 == get_merged( iterable var, iterable var1, ... )
 === returns a dict of all key-value pairs found in all iterable objects passed to the function or returns null and emits a warning on failure
@@ -1434,7 +1467,7 @@ get_merged() [function]
     get_merged( [1,2], [3], {a="4"} ); // return {0=3,1=2,a="4"}
 
 
-tobool() [function]
+tobool [function]
 
 == tobool( var )
 === returns a boolean, generated from variable `var` using the @conversion rules
@@ -1445,7 +1478,7 @@ tobool() [function]
     tobool( "" ); // returns 'false'
 
 
-toint() [function]
+toint [function]
 
 == toint( var )
 === returns an integer, generated from variable `var` using the @conversion rules
@@ -1456,7 +1489,7 @@ toint() [function]
     toint( "0xff" ); // returns 255
 
 
-toreal() [function]
+toreal [function]
 
 == toreal( var )
 === returns a real value, generated from variable `var` using the @conversion rules
@@ -1468,7 +1501,7 @@ toreal() [function]
     toreal( "0xff" ); // returns 255.0
 
 
-tostring() [function]
+tostring [function]
 
 == tostring( var )
 === returns a string value, generated from variable `var` using the @conversion rules
@@ -1479,7 +1512,7 @@ tostring() [function]
     tostring( { "a" = "b" } ); // returns "{a=b}"
 
 
-typeof() [function]
+typeof [function]
 
 == typeof( var )
 === returns the type name of variable `var`, as string
@@ -1490,7 +1523,7 @@ typeof() [function]
     typeof( [] ); // returns "array"
 
 
-typeid() [function]
+typeid [function]
 
 == typeid( var )
 === returns the first 4 bits of the variable `var` type flags, as `int`
@@ -1502,7 +1535,7 @@ typeid() [function]
     typeid( [] ); // returns 0x80 / VT_OBJECT
 
 
-typeflags() [function]
+typeflags [function]
 
 == typeflags( var )
 === returns the type flags of the variable `var`, as `int`
@@ -1515,7 +1548,7 @@ typeflags() [function]
     typeid( "" ) & VTF_NUMERIC != 0; // returns 'false'
 
 
-is_numeric() [function]
+is_numeric [function]
 
 == is_numeric( var )
 === returns whether the variable `var` is numeric - one of bool/int/real or a numeric string
@@ -1528,7 +1561,7 @@ is_numeric() [function]
     is_numeric( "what" ); // returns false
 
 
-is_callable() [function]
+is_callable [function]
 
 == is_callable( var )
 === returns whether the variable `var` is callable - a function (func/cfunc) or an object with OP_CALL defined
@@ -1540,7 +1573,7 @@ is_callable() [function]
     is_callable( 5 ); // returns 'false'
 
 
-loadtypeflags() [function]
+loadtypeflags [function]
 
 == loadtypeflags()
 === sets the globals beginning with VTF_ and VTC_
@@ -1552,7 +1585,7 @@ loadtypeflags() [function]
     isset( _G, "VTF_NUM" ); // returns 'true'
 
 
-print(), println(), printlns() [functions]
+print, println, printlns [functions]
 
 == print( ... ), println( ... ), printlns( ... ),
 === passes all arguments, converted to strings, to the @output callback
@@ -1565,7 +1598,7 @@ print(), println(), printlns() [functions]
     printlns( 5, "x" ); // prints "5\nx\n"
 
 
-printvar() [function]
+printvar_ext [function]
 
 == printvar( var, int maxdepth = 5 )
 === passes a dump of the variable (informative string version) to the @output callback, allowing to optionally specify the maximum depth of the dump (how deep it is allowed to look for sub-variables)
@@ -1583,15 +1616,15 @@ printvar() [function]
     */
 
 
-printvars() [function]
+printvar [function]
 
 == printvars( var, ... )
 === same as a list of printvar(var); calls for each argument
 
-- refer to @printvar() for more info
+- refer to @printvar_ext() for more info
 
 
-read_stdin() [function]
+read_stdin [function]
 
 == read_stdin( bool all = false )
 === reads from the standard input
@@ -1603,20 +1636,40 @@ read_stdin() [function]
     process( read_stdin(true) ); // loads all piped input
 
 
-ftime() [function]
+ftime [function]
 
 == ftime()
 === returns a value that is increased by a total of 1 each second (time), as real
 
 - guaranteed to offer sub-second precision unless stated otherwise for any specific platform
-- currently the precision is one millisecond
 
     start = ftime();
     do_something_big();
     println( "That took " $ ftime() - start $ " seconds." );
 
 
-pcall() [function]
+rand [function]
+
+== rand()
+=== returns a random 'int' value in the range [0;RAND_MAX) - from 0, inclusive, to RAND_MAX, exclusive
+
+
+randf [function]
+
+== randf()
+=== returns a random 'real' value in the range [0;1) - from 0, inclusive, to 1, exclusive
+
+
+srand [function]
+
+== srand( int seed )
+=== specify a different seed value for the built-in pseudo-random number generator
+
+    srand( 5 ); // restart the generator with the value specified
+    srand( ftime() ); // restart the generator depending on the second the code was executed
+
+
+pcall [function]
 
 == pcall( callable func[, callable errh ])
 === calls the callable `func`, hiding internal errors from the caller or optionally passing them to callable `errh`
@@ -1645,7 +1698,7 @@ pcall() [function]
     pcall(function(){ print x; }, handler2 ); // changed type to error
 
 
-eval() [function]
+eval [function]
 
 == eval( string code )
 === returns the result of evaluating the passed `code` string as SGScript code
@@ -1655,7 +1708,7 @@ eval() [function]
     eval("print 5;"); // prints 5
 
 
-eval_file() [function]
+eval_file [function]
 
 == eval_file( string filename )
 === returns the result of evaluating the file pointed to by `filename` as SGScript code
@@ -1665,7 +1718,7 @@ eval_file() [function]
     eval_file("myfile.sgs"); // ???
 
 
-include_library() [function]
+include_library [function]
 
 == include_library( string lib[, bool override ] )
 === loads the global variables of the specific library `lib` in the state, returns success, as `bool`, emits a warning on failure
@@ -1679,7 +1732,7 @@ include_library() [function]
     printvar( sin ); // C function
 
 
-include_file() [function]
+include_file [function]
 
 == include_file( string file[, bool override ] )
 === executes the file pointed to by `file`, returns success, as `bool`, emits a warning on failure
@@ -1693,7 +1746,7 @@ include_file() [function]
     include_file( "something.sgs", true ); // loads it again
 
 
-include_shared() [function]
+include_shared [function]
 
 == include_shared( string file[, bool override ] )
 === runs the shared library pointed to by `file`, returns success, as `bool`, emits a warning on failure
@@ -1705,7 +1758,7 @@ include_shared() [function]
     include_shared( "sgsjson.dll" ); // load the JSON library DLL on Windows
 
 
-include() [function]
+include [function]
 
 == include( string file[, bool override ] )
 === tries to load a library or a file according to the include path
@@ -1718,7 +1771,7 @@ include() [function]
 - this function is also available as a replicating statement 'include' (ex. 'include "fmt", "io";' works the same way as include("fmt"); include("io");)
 
 
-import_cfunc() [function]
+import_cfunc [function]
 
 == import_cfunc( string file, string funcname )
 === retrieves the `funcname` function of the shared library `file`, returns success, as `bool`, emits a warning on failure
@@ -1730,7 +1783,7 @@ import_cfunc() [function]
     import_cfunc( "mydll.dll", "someSGScriptFunc" )();
 
 
-sys_curfile() [function]
+sys_curfile [function]
 
 == sys_curfile()
 === returns the path of the file (as passed on load) that contains the currently executed code or `null` if the file cannot be determined (eval, C functions)
@@ -1741,7 +1794,7 @@ sys_curfile() [function]
     include "a.sgs";
 
 
-sys_print() [function]
+sys_print [function]
 
 == sys_print( int code, string message )
 === passes a message to the internal messaging system (one that's commonly used to report errors and warnings)
@@ -1751,7 +1804,7 @@ sys_print() [function]
 - `code` is the code to use to pass the message (ex. SGS_INFO, SGS_WARNING, SGS_ERROR)
 
 
-sys_abort() [function]
+sys_abort [function]
 
 == sys_abort()
 === stops execution and returns to C code as soon as possible
@@ -1762,19 +1815,19 @@ sys_abort() [function]
     print( 5 ); // this line is not reached
 
 
-app_abort() [function]
+app_abort [function]
 
 == app_abort()
 === calls the abort() function of the C standard library (crashes the application)
 
 
-app_exit() [function]
+app_exit [function]
 
 == app_exit( code = 0 )
 === calls the exit() function of the C standard library (exits the application)
 
 
-sys_replevel() [function]
+sys_replevel [function]
 
 == sys_replevel([ level ])
 === returns the current reported error level and optionally sets a new one
@@ -1786,7 +1839,7 @@ sys_replevel() [function]
     sys_replevel( old_level ); // restore the old reported level
 
 
-sys_stat() [function]
+sys_stat [function]
 
 == sys_stat( code )
 === prints info about virtual machine state, everything is implementation-defined
@@ -1796,7 +1849,7 @@ sys_stat() [function]
     sys_stat( 11 ); // dumps all globals
 
 
-errno() [function]
+errno [function]
 
 == errno( as_string = false )
 === returns the last relevant error number for the C standard library, as an integer or a string if `as_string` is set
@@ -1808,7 +1861,7 @@ errno() [function]
     print errno(true); // prints "No such file or directory" on Windows
 
 
-errno_string() [function]
+errno_string [function]
 
 == errno_string( int code )
 === returns the error string for the given code
@@ -1818,7 +1871,7 @@ errno_string() [function]
     print errno_string(2); // prints "No such file or directory" on Windows
 
 
-errno_value() [function]
+errno_value [function]
 
 == errno_value( string key )
 === returns the number for the error key (for "ENOENT" it would return 2)
@@ -1830,23 +1883,23 @@ errno_value() [function]
         println( "file does not exist" );
 
 
-dumpvar() [function]
+dumpvar_ext [function]
 
 == dumpvar( var, int depth = 5 )
-=== similar to @printvar() but returns the dump instead of printing it
+=== similar to @printvar_ext() but returns the dump instead of printing it
 
 - this function is equivalent to @sgs_DumpVar in the C API
 
     sys_error( SGS_INFO, "Extended variable info:\n" $ dumpvar(data) );
 
 
-dumpvars() [function]
+dumpvar [function]
 
 == dumpvars( ... )
-=== similar to @printvars() but returns the dumps, concatenated, instead of printing them
+=== similar to @printvar() but returns the dumps, concatenated, instead of printing them
 
 
-gc_collect() [function]
+gc_collect [function]
 
 == gc_collect()
 === runs the garbage collector on the virtual machine, waiting until it has finished
@@ -1859,7 +1912,7 @@ gc_collect() [function]
     gc_collect(); // a is freed now
 
 
-serialize() [function]
+serialize [function]
 
 == serialize( var )
 === converts the variable to a byte buffer (string), containing the serialized data that can be recreated with @unserialize() or returns null and emits a warning on failure
@@ -1871,7 +1924,7 @@ serialize() [function]
     print unserialize(data); // prints {name=A,info=B}
 
 
-unserialize() [function]
+unserialize [function]
 
 == unserialize( string data )
 === recreates a variable from the buffer with serialized data or returns null and emits a warning on failure
@@ -2566,7 +2619,7 @@ FST_[UNKNOWN|FILE|DIR] [constants]
 =
 
 
-abs() [function]
+abs [function]
 
 == abs( x )
 === returns the absolute value of `x`, as `real`
@@ -2575,7 +2628,7 @@ abs() [function]
     abs( -3.1 ); // real (3.1)
 
 
-floor() [function]
+floor [function]
 
 == floor( x )
 === returns the largest integer that is not bigger than `x`, as `real`
@@ -2586,7 +2639,7 @@ floor() [function]
     floor( -3.1 ); // real (-4)
 
 
-ceil() [function]
+ceil [function]
 
 == ceil( x )
 === returns the smallest integer that is not smaller than `x`, as `real`
@@ -2597,7 +2650,7 @@ ceil() [function]
     ceil( -3.1 ); // real (-3)
 
 
-round() [function]
+round [function]
 
 == round( x )
 === returns the closest integer to `x`, as `real`
@@ -2608,7 +2661,7 @@ round() [function]
     round( -3.1 ); // real (-3)
 
 
-pow() [function]
+pow [function]
 
 == pow( x, y )
 === returns `x` raised to the power `y`, as `real`
@@ -2620,7 +2673,7 @@ pow() [function]
     pow( -1, 0.5 ); // null; Warning: pow(): mathematical error
 
 
-sqrt() [function]
+sqrt [function]
 
 == sqrt( x )
 === returns the square root of `x`, as `real`
@@ -2631,7 +2684,7 @@ sqrt() [function]
     sqrt( -1 ); // null; Warning: sqrt(): mathematical error
 
 
-log() [function]
+log [function]
 
 == log( x, y )
 === returns the base-`y` logarithm of `x`, as `real`
@@ -2644,7 +2697,7 @@ log() [function]
     log( 3, 1 ); // null; Warning: log(): mathematical error
 
 
-sin() [function]
+sin [function]
 
 == sin( x )
 === returns the sine of angle `x` in radians, as `real`
@@ -2654,7 +2707,7 @@ sin() [function]
     sin( M_PI / 4 ); // real (0.707107)
 
 
-cos() [function]
+cos [function]
 
 == cos( x )
 === returns the cosine of angle `x` in radians, as `real`
@@ -2664,7 +2717,7 @@ cos() [function]
     sin( M_PI / 4 ); // real (0.707107)
 
 
-tan() [function]
+tan [function]
 
 == tan( x )
 === returns the tangent of angle `x` in radians, as `real`
@@ -2674,7 +2727,7 @@ tan() [function]
     tan( M_PI / 4 ); // real (1)
 
 
-asin() [function]
+asin [function]
 
 == asin( x )
 === returns the arcsine of `x` (angle in radians), as `real`
@@ -2686,7 +2739,7 @@ asin() [function]
     asin( 2 ); // null; Warning: asin(): mathematical error
 
 
-acos() [function]
+acos [function]
 
 == acos( x )
 === returns the arccosine of `x` (angle in radians), as `real`
@@ -2698,7 +2751,7 @@ acos() [function]
     acos( 2 ); // null; Warning: acos(): mathematical error
 
 
-atan() [function]
+atan [function]
 
 == atan( x )
 === returns the arctangent of `x` (angle in radians), as `real`
@@ -2708,7 +2761,7 @@ atan() [function]
     atan( 9999999 ); // real (1.5708)
 
 
-atan2() [function]
+atan2 [function]
 
 == atan2( y, x )
 === returns the extended arctangent of y/x (angle in radians), as `real`
@@ -2723,7 +2776,7 @@ atan2() [function]
     atan2( 0, 0 ); // real (0)
 
 
-deg2rad() [function]
+deg2rad [function]
 
 == deg2rad( x )
 === returns angle, converted from degrees to radians, as `real`
@@ -2733,7 +2786,7 @@ deg2rad() [function]
     deg2rad( -90 ); // real (-1.5708)
 
 
-rad2deg() [function]
+rad2deg [function]
 
 == rad2deg( x )
 === returns angle, converted from radians to degrees, as `real`
