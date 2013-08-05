@@ -921,10 +921,10 @@ static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data, int dco )
 #define SGSFS_IHDR( name ) \
 	sgs_VarObj* data; \
 	sgsstd_fmtstream_t* hdr; \
+	int method_call = sgs_Method( C ); \
 	SGSFN( "fmtstream." #name ); \
-	if( !sgs_Method( C ) || \
-		!sgs_IsObject( C, 0, sgsstd_fmtstream_functable ) )\
-		STDLIB_WARN( "not called on a fmtstream" ) \
+	if( !sgs_IsObject( C, 0, sgsstd_fmtstream_functable ) )\
+		return sgs_ArgErrorExt( C, 0, method_call, "fmtstream", "" ); \
 	data = sgs_GetObjectData( C, 0 ); \
 	hdr = (sgsstd_fmtstream_t*) data->data; \
 	UNUSED( hdr );
@@ -1554,10 +1554,10 @@ SGS_DECLARE void* sgsstd_file_functable[];
 
 #define FIF_INIT( fname ) \
 	sgs_VarObj* data; \
+	int method_call = sgs_Method( C ); \
 	SGSFN( "file." #fname ); \
-	if( !sgs_Method( C ) || \
-		!sgs_IsObject( C, 0, sgsstd_file_functable ) ) \
-		STDLIB_WARN( "expected file as 'this'" ) \
+	if( !sgs_IsObject( C, 0, sgsstd_file_functable ) ) \
+		return sgs_ArgErrorExt( C, 0, method_call, "file", "" ); \
 	data = sgs_GetObjectData( C, 0 );
 
 

@@ -110,7 +110,9 @@ struct _sgs_StackFrame
 	const uint32_t* code;
 	const uint32_t* iptr;
 	const uint32_t* iend;
+	const uint32_t* lptr;
 	const char*     nfname;
+	const char*     filename;
 	sgs_StackFrame* prev;
 	sgs_StackFrame* next;
 };

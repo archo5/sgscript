@@ -98,9 +98,10 @@ static void sgsstd_array_erase( SGS_CTX, sgs_VarObj* data, sgs_SizeVal from, sgs
 #define SGSARR_IHDR( name ) \
 	sgs_VarObj* data; \
 	sgsstd_array_header_t* hdr; \
+	int method_call = sgs_Method( C ); \
 	SGSFN( "array." #name ); \
-	if( !sgs_Method( C ) || !sgs_IsObject( C, 0, sgsstd_array_functable ) ) \
-		STDLIB_WARN( "not called on an array" ) \
+	if( !sgs_IsObject( C, 0, sgsstd_array_functable ) ) \
+		return sgs_ArgErrorExt( C, 0, method_call, "array", "" ); \
 	data = sgs_GetObjectData( C, 0 ); \
 	hdr = (sgsstd_array_header_t*) data->data; \
 	UNUSED( hdr );
@@ -2144,42 +2145,105 @@ static int sgsstd_include_shared( SGS_CTX )
 	return 1;
 }
 
-static int _find_includable_file( SGS_CTX, MemBuf* tmp, char* ps,
-	sgs_SizeVal pssize, char* fn, sgs_SizeVal fnsize )
+static int _push_curdir( SGS_CTX )
 {
-	char* pse = ps + pssize;
-	char* psc = ps;
-	while( ps <= pse )
+	const char* file, *fend;
+	sgs_StackFrame* sf;
+
+	sf = sgs_GetFramePtr( C, 1 )->prev;
+	if( !sf )
+		return 0;
+
+	sgs_StackFrameInfo( C, sf, NULL, &file, NULL );
+	if( file )
 	{
-		if( ps == pse || *ps == ';' )
+		fend = file + strlen( file );
+		while( fend > file && *fend != '/' && *fend != '\\' )
+			fend--;
+		if( fend == file )
 		{
-			FILE* f;
-			membuf_resize( tmp, C, 0 );
-			while( psc < ps )
+#ifdef _WIN32
+			sgs_PushString( C, "." );
+#else
+			if( *file == '/' )
+				sgs_PushString( C, "" );
+			else
+				sgs_PushString( C, "." );
+#endif
+		}
+		else
+			sgs_PushStringBuf( C, file, fend - file );
+		return 1;
+	}
+	
+	return 0;
+}
+
+static int _find_includable_file( SGS_CTX, MemBuf* tmp, char* ps,
+	sgs_SizeVal pssize, char* fn, sgs_SizeVal fnsize, char* dn, sgs_SizeVal dnsize )
+{
+	if( ( fnsize > 1 && *fn == '.' ) ||
+#ifdef _WIN32
+		( fnsize > 2 && fn[1] == ':' ) )
+#else
+		( fnsize > 1 && *fn == '/' ) )
+#endif
+	{
+		FILE* f;
+		membuf_setstrbuf( tmp, C, fn, fnsize );
+		if( ( f = fopen( tmp->ptr, "rb" ) ) != NULL )
+		{
+			fclose( f );
+			return 1;
+		}
+	}
+	else
+	{
+		char* pse = ps + pssize;
+		char* psc = ps;
+		while( ps <= pse )
+		{
+			if( ps == pse || *ps == ';' )
 			{
-				if( *psc == '?' )
-					membuf_appbuf( tmp, C, fn, fnsize );
-				else
-					membuf_appchr( tmp, C, *psc );
+				FILE* f;
+				membuf_resize( tmp, C, 0 );
+				while( psc < ps )
+				{
+					if( *psc == '?' )
+						membuf_appbuf( tmp, C, fn, fnsize );
+					else if( *psc == '|' )
+					{
+						if( dn )
+							membuf_appbuf( tmp, C, dn, dnsize );
+						else
+						{
+							psc = ps;
+							goto notthispath;
+						}
+					}
+					else
+						membuf_appchr( tmp, C, *psc );
+					psc++;
+				}
+				membuf_appchr( tmp, C, 0 );
+				if( ( f = fopen( tmp->ptr, "rb" ) ) != NULL )
+				{
+					fclose( f );
+					return 1;
+				}
+notthispath:
 				psc++;
 			}
-			membuf_appchr( tmp, C, 0 );
-			if( ( f = fopen( tmp->ptr, "rb" ) ) != NULL )
-			{
-				fclose( f );
-				return 1;
-			}
-			psc++;
+			ps++;
 		}
-		ps++;
 	}
 	return 0;
 }
 
 static int sgsstd_include( SGS_CTX )
 {
-	char* fnstr;
-	sgs_SizeVal fnsize;
+	char* fnstr, *dnstr = NULL;
+	sgs_SizeVal fnsize, dnsize = 0;
 	int over = 0, ret;
 	
 	SGSFN( "include" );
@@ -2208,15 +2272,20 @@ static int sgsstd_include( SGS_CTX )
 			pssize = strlen( ps );
 		}
 		
-		ret = _find_includable_file( C, &mb, ps, pssize, fnstr, fnsize );
-		if( ret == 0 )
+		if( _push_curdir( C ) )
+		{
+			dnstr = sgs_GetStringPtr( C, -1 );
+			dnsize = sgs_GetStringSize( C, -1 );
+		}
+		ret = _find_includable_file( C, &mb, ps, pssize, fnstr, fnsize, dnstr, dnsize );
+		if( ret == 0 || mb.size == 0 )
 		{
 			membuf_destroy( &mb, C );
-			sgs_Printf( C, SGS_WARNING, "could not find '%.*s' "
+			return sgs_Printf( C, SGS_WARNING, "could not find '%.*s' "
 				"with include path '%.*s'", fnsize, fnstr, pssize, ps );
 		}
 		
-		ret = sgs_GetProcAddress( fnstr, SGS_LIB_ENTRY_POINT, (void**) &func );
+		ret = sgs_GetProcAddress( mb.ptr, SGS_LIB_ENTRY_POINT, (void**) &func );
 		if( ret == SGS_SUCCESS )
 		{
 			ret = func( C );
@@ -2227,7 +2296,12 @@ static int sgsstd_include( SGS_CTX )
 			}
 		}
 		
+		sgs_PushString( C, mb.ptr );
+		sgs_PushString( C, " - include" );
+		sgs_StringMultiConcat( C, 2 );
+		SGSFN( sgs_GetStringPtr( C, -1 ) );
 		ret = sgs_ExecFile( C, mb.ptr );
+		SGSFN( "include" );
 		membuf_destroy( &mb, C );
 		if( ret == SGS_SUCCESS )
 			goto success;

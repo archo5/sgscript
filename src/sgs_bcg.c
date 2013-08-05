@@ -86,6 +86,7 @@ static sgs_FuncCtx* fctx_create( SGS_CTX )
 	fctx->gvars = membuf_create();
 	fctx->loops = 0;
 	fctx->binfo = NULL;
+	membuf_appbuf( &fctx->gvars, C, "_G=", 3 );
 	return fctx;
 }
 

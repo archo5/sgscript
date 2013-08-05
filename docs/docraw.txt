@@ -5,6 +5,59 @@
 
 
 =
+== MAIN/INFO
+=
+
+
+SGScript - description [info]
+
+This is a programming language that is made to be fast, accessible and simple. It is similar to many but the exact combination makes it unique in comparison to others. Thus, it might be best to describe it in comparison to others, especially the ones that heavily influenced the development of SGScript.
+
+--------------------------------------------------------------------------------------
+!  language  !            what it DOESN'T have in comparison to SGScript             !
+|     C      |  dynamic typing, built-in serialization                               |
+|    Lua     |  built-in serialization, C-like syntax, proper indexing, arrays, ...  |
+|    PHP     |  consistency, lightweight design                                      |
+| JavaScript |  environmental awareness, determinism, built-in serialization, ...    |
+|   Python   |  C-like syntax, lightweight design                                    |
+--------------------------------------------------------------------------------------
+
+With this in mind, technologies get upgraded occasionally, thus be sure to take this comparison with a grain of salt and recheck it and perhaps even report the factual errors along with the version number that marked the introduction of changes.
+
+However, SGScript has all of the things mentioned, and some more, possibly making it one of the most balanced languages ever created.
+
+
+SGScript Virtual Machine [info]
+
+...or the interface that it defines, is one of the driving forces of SGScript. It is heavily influenced by Lua, while also adding some features of PHP (Zend Engine) and Python.
+
+The overview: register-based, single-stack, highly customizable / extensible bytecode interpreter.
+
+The most important difference is in error handling and triggers: errors detected in C can easily be non-fatal. Just like with PHP, minor errors are emitted as warnings that also propagate invalid (null) values throughout the system to effectively disable the subsequent calls and notify whoever is interested of the exact trail of failures. Furthermore, this behavior can be modified by using protected calls (pcall function) in SGScript and custom error printing callbacks in C.
+
+
+Commonly required advanced tasks [info]
+
+=== Method handling
+
+- version 1: plain method handling:
+
+    SGSFN( "<object>.<method>" );
+    if( !sgs_Method( C ) || !sgs_IsObject( C, 0, Object_interface_pointer ) )
+        return sgs_ArgErrorExt( C, 0, 1, "<object>", "" );
+    ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 )->data;
+
+
+- version 2: Method + function handling (function that can be called as a method too)
+
+    int method_call = sgs_Method( C );
+    SGSFN( method_call ? "<object>.<method>" : "<object_function>" );
+    if( !sgs_IsObject( C, 0, Object_interface_pointer ) )
+        return sgs_ArgErrorExt( C, 0, method_call, "<object>", "" );
+    ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 )->data;
+
+
+=
 == API/INFO
 =
 

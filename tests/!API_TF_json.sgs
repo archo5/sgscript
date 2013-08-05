@@ -1,5 +1,5 @@
 
-include "type", "sgsjson";
+include "bin/sgsjson";
 
 function tostr( x )
 {
@@ -24,7 +24,7 @@ function tostr( x )
 		return "{" $ out $ "}";
 	}
 	else
-		return ""$x;
+		return tostring(x);
 }
 
 tests =

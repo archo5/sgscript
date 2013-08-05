@@ -279,15 +279,17 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, instr_t* cod
 	F->func = func;
 	F->code = code;
 	F->iptr = code;
+	F->lptr = code;
 	F->iend = code + icnt;
 	if( func && func->type == VTC_FUNC )
 	{
 		func_t* fn = func->data.F;
-		F->iptr = F->code = func_bytecode( fn );
+		F->lptr = F->iptr = F->code = func_bytecode( fn );
 		F->iend = F->iptr + ( ( fn->size - fn->instr_off ) / sizeof( instr_t ) );
 	}
 	F->lntable = T;
 	F->nfname = NULL;
+	F->filename = C->filename;
 	F->next = NULL;
 	F->prev = C->sf_last;
 	if( C->sf_last )
@@ -1870,7 +1872,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 			break;
 		}
 		
-		SF->iptr++;
+		SF->lptr = ++SF->iptr;
 	}
 
 #if SGS_DEBUG && SGS_DEBUG_STATE
@@ -2016,6 +2018,8 @@ void sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size )
 void sgs_PushString( SGS_CTX, const char* str )
 {
 	sgs_Variable var;
+	if( !str )
+		sgs_BreakIf( "sgs_PushString: str = NULL" );
 	var_create_str( C, &var, str, -1 );
 	stk_push_leave( C, &var );
 }

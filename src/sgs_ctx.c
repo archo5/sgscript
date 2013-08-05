@@ -58,7 +58,10 @@ static void default_printfn_noabort( void* ctx, SGS_CTX, int type, const char* m
 		if( !p->next && !p->code )
 			break;
 		sgs_StackFrameInfo( C, p, &name, &file, &ln );
-		fprintf( (FILE*) ctx, "- \"%s\" in %s, line %d\n", name, file, ln );
+		if( ln )
+			fprintf( (FILE*) ctx, "- \"%s\" in %s, line %d\n", name, file, ln );
+		else
+			fprintf( (FILE*) ctx, "- \"%s\" in %s\n", name, file );
 		p = p->next;
 	}
 	fprintf( (FILE*) ctx, "%s: %s\n", errpfxs[ type ], msg );
@@ -750,26 +753,30 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 	if( !frame->func )
 	{
 		N = "<main>";
-		L = frame->lntable[ frame->iptr - frame->code ];
-		F = C->filename;
+		L = frame->lntable[ frame->lptr - frame->code ];
+		if( frame->filename )
+			F = frame->filename;
 	}
 	else if( SGS_BASETYPE( frame->func->type ) == SGS_VT_FUNC )
 	{
 		N = "<anonymous function>";
 		if( frame->func->data.F->funcname.size )
 			N = frame->func->data.F->funcname.ptr;
-		L = frame->func->data.F->lineinfo[ frame->iptr - frame->code ];
+		L = frame->func->data.F->lineinfo[ frame->lptr - frame->code ];
 		if( frame->func->data.F->filename.size )
 			F = frame->func->data.F->filename.ptr;
+		else if( frame->filename )
+			F = frame->filename;
 	}
 	else if( SGS_BASETYPE( frame->func->type ) == SGS_VT_CFUNC )
 	{
-		N = "[C function]";
+		N = frame->nfname ? frame->nfname : "[C function]";
 		F = "[C code]";
 	}
 	else if( SGS_BASETYPE( frame->func->type ) == SGS_VT_OBJECT )
 	{
 		N = "<object>";
+		F = "[C code]";
 	}
 	if( name ) *name = N;
 	if( file ) *file = F;
