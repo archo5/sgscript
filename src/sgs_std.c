@@ -464,6 +464,30 @@ static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 		sgs_PushInt( C, hdr->mem );
 		return SGS_SUCCESS;
 	}
+	else if( 0 == strcmp( name, "first" ) )
+	{
+		SGSARR_HDR;
+		if( hdr->size )
+			sgs_PushVariable( C, SGSARR_PTR( hdr ) );
+		else
+		{
+			sgs_PushNull( C );
+			sgs_Printf( C, SGS_WARNING, "array is empty, cannot get first item" );
+		}
+		return SGS_SUCCESS;
+	}
+	else if( 0 == strcmp( name, "last" ) )
+	{
+		SGSARR_HDR;
+		if( hdr->size )
+			sgs_PushVariable( C, SGSARR_PTR( hdr ) + hdr->size - 1 );
+		else
+		{
+			sgs_PushNull( C );
+			sgs_Printf( C, SGS_WARNING, "array is empty, cannot get last item" );
+		}
+		return SGS_SUCCESS;
+	}
 	else if( 0 == strcmp( name, "push" ) )      func = sgsstd_arrayI_push;
 	else if( 0 == strcmp( name, "pop" ) )       func = sgsstd_arrayI_pop;
 	else if( 0 == strcmp( name, "shift" ) )     func = sgsstd_arrayI_shift;
@@ -2182,7 +2206,7 @@ static int _push_curdir( SGS_CTX )
 static int _find_includable_file( SGS_CTX, MemBuf* tmp, char* ps,
 	sgs_SizeVal pssize, char* fn, sgs_SizeVal fnsize, char* dn, sgs_SizeVal dnsize )
 {
-	if( ( fnsize > 1 && *fn == '.' ) ||
+	if( ( fnsize > 2 && *fn == '.' && ( fn[1] == '/' || fn[1] == '\\' ) ) ||
 #ifdef _WIN32
 		( fnsize > 2 && fn[1] == ':' ) )
 #else
