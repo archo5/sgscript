@@ -1920,7 +1920,7 @@ void sgsVM_VarDump( sgs_VarPtr var )
 	case SVT_INT: printf( " = %" PRId64, var->data.I ); break;
 	case SVT_REAL: printf( " = %f", var->data.R ); break;
 	case SVT_STRING: printf( " [rc:%d] = \"", var->data.S->refcount );
-		print_safe( stdout, var_cstr( var ), 16 );
+		print_safe( stdout, var_cstr( var ), MIN( var->data.S->size, 16 ) );
 		printf( var->data.S->size > 16 ? "...\"" : "\"" ); break;
 	case SVT_FUNC: printf( " [rc:%d]", var->data.F->refcount ); break;
 	case SVT_CFUNC: printf( " = %p", var->data.C ); break;
@@ -2650,6 +2650,7 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				if( !nowrite )
 				{
 					int owr = sgs_GetStackItem( C, from, va_arg( args, sgs_Variable* ) );
+					UNUSED( owr );
 					sgs_BreakIf( !owr );
 				}
 			}
