@@ -23,6 +23,7 @@
 
 /* path helper functions */
 
+#if 0
 static int32_t findlastof( const char* str, int32_t len, const char* of )
 {
 	const char* ptr = str + len;
@@ -50,7 +51,7 @@ static int path_replast( SGS_CTX, int from, int with )
 	sgs_PushStringBuf( C, buf, pos + 1 );
 	return !( sgs_PushItem( C, with ) || sgs_StringConcat( C ) );
 }
-
+#endif
 
 
 /*  - - - - - - - - - -
@@ -1237,10 +1238,10 @@ static void* srt_iface[] =
 static int sgsstd_fmt_string_parser( SGS_CTX )
 {
 	stringread_t* srt;
-	sgs_Int off = 0;
-	SGSBASEFN( "fmt_string_parser" );
+	sgs_Int off = 0, bufsize = 1024;
+	SGSFN( "fmt_string_parser" );
 
-	if( !sgs_LoadArgs( C, "?m|i", &off ) )
+	if( !sgs_LoadArgs( C, "?m|ii", &off, &bufsize ) )
 		return 0;
 	
 	srt = sgs_Alloc( stringread_t );
@@ -1250,6 +1251,8 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 	srt->off = (sgs_SizeVal) off;
 	sgs_PushObject( C, srt, srt_iface );
 	sgs_StoreItem( C, 0 );
+	sgs_SetStackSize( C, 1 );
+	sgs_PushInt( C, bufsize );
 	return sgsstd_fmt_parser( C );
 }
 
@@ -1349,13 +1352,6 @@ static int sgsstd_io_rename( SGS_CTX )
 
 	if( !sgs_LoadArgs( C, "mm", &path, &psz, &nnm, &nnmsz ) )
 		return 0;
-
-	if( !path_replast( C, 0, 1 ) ||
-		!sgs_ParseString( C, -1, &nnm, &nnmsz ) )
-	{
-		sgs_PushBool( C, FALSE );
-		return 1;
-	}
 	
 	CRET( rename( path, nnm ) == 0 );
 }

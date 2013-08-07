@@ -78,6 +78,71 @@ The virtual machine supports:
     ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 )->data;
 
 
+# Serialization in SGScript [info]
+
+In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the "serialize" function and deserialization is done with "unserialize". The C API has similar functions: sgs_Serialize/sgs_SerializeObject and sgs_Unserialize, respectively.
+
+=== The format
+
+- a list of operations
+- each operation consists of a 'type' byte and additional data
+-- a "push" operation has the byte 'P', the data consists of the type to push (a byte consisting of one base flag from SGS_VT_*) and the binary data of the type
+-- a "call" operation has the byte 'C', the data consists of the number of arguments (4 bytes), function name length (1 byte) and the null-terminated function name itself (<length>+1 bytes)
+
+=== Serialization
+
+- "serialize" is called
+- "sgs_Serialize" is called internally
+- type of variable is determined and the data is written
+-- C functions cannot be serialized (obviously) and whenever encountered, will abort the action
+-- objects will have SGS_OP_SERIALIZE operation called
+--- if operation is not defined, everything will stop
+--- if object is an array, all variables in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to 'array'
+--- if object is a 'dict', all keys and values in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to 'dict'
+
+=== Deserialization
+
+- "unserialize" is called
+-- the global environment could be changed
+- "sgs_Unserialize" is called internally
+- "push" and "call" operations are executed, thus regenerating the data
+
+=== Possible gotchas
+
+- sgs_Serialize overrides the output function so any output done via "print" or "sgs_Write*" functions during serialization will corrupt the stream
+- if environment overrides are used on deserialization, remember to add "array" and "dict" to the list if you use them, they are not added automatically
+- serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items
+
+
+# Numeric string parsing rules [info]
+
+">>>" means "until any other symbol has been found" (the text is too dense for exact repetition)
+
+The string is not a number if no numeric characters (0-9) could be parsed. (for example, "+" isn't a number but "0x" is)
+
+- if string begins with 0b and has at least 3 characters, try to read a binary integer
+-- >>>, 0 or 1 adds the specified bit to the integer
+- if string begins with 0o and has at least 3 characters, try to read an octal integer
+-- >>>, characters 0-7 add the specified 3 bits to the integer
+- if string begins with 0x and has at least 3 characters, try to read a hexadecimal integer
+-- >>>, characters 0-9, a-f and A-F add the specified 4 bits to the integer
+- otherwise, try to read a decimal number
+-- do a test to see if the number is not an integer
+--- skip the sign character (+ or -)
+--- skip the 0-9 characters
+--- if e, E or . is found, try to read a real value
+---- read the sign character (+ or -)
+---- >>>, characters 0-9 add the specified decimal number to the whole part
+---- if the dot character (.) is found, read the fractional part
+----- >>>, characters 0-9 add the specified decimal number to the fractional part
+---- if at least 3 more characters can be found and the first is "e" or "E", read the exponent part
+----- read the sign character (+ or -)
+----- >>>, characters 0-9 add the specified decimal number to the exponent part
+--- otherwise, try to read the integer
+---- read the sign character (+ or -)
+---- >>>, characters 0-9 add the specified decimal number to the integer
+
+
 #
 ## API/INFO
 #
@@ -858,7 +923,7 @@ After a successful call, all arguments and the function will be popped off the s
 == SGSRESULT sgs_Unserialize( sgs_Context* C )
 === unserialize the topmost string variable of the current stack frame (run the binary recreation instruction stream)
 
-! Be mindful of the data sources you use - calls to any global function can be placed in the instruction stream. (TODO: need the ability to change global variable lists completely)
+! Be mindful of the data sources you use - calls to any global function can be placed in the instruction stream.
 
 
 # sgs_CompareF [function]
@@ -996,7 +1061,7 @@ After a successful call, all arguments and the function will be popped off the s
 == SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )
 === checks if the string is convertible to an integer/real
 
-- TODO: link to parsing rules
+- more info at @<Numeric string parsing rules>
 
 
 # sgs_[ParseBool|ParseInt|ParseReal|ParseString] [functions]
@@ -1483,7 +1548,7 @@ sgs_Errno [function (inline)]
 == clone( var )
 === creates a one-reference copy of the variable `var` or returns null and emits a warning on failure
 
-- variables that are passed by value (null, bool, int, real, cfunc) or functions are returned as-is, since for value types all copies are same and functions are immutable -- TODO: what about strings? they're currently cloned
+- variables that are passed by value (null, bool, int, real, cfunc) or strings/functions are returned as-is, since for value types all copies are same and strings/functions are immutable
 
     x = { a = 5 };
     y = clone( x );
@@ -1561,7 +1626,7 @@ sgs_Errno [function (inline)]
 - this function is equivalent to @sgs_GetReal / @sgs_ToReal in the C API
 
     toreal( 5 ); // returns 5.0
-    toreal( "3e+2" ); // returns 3.0 -- exponential string values don't work (TODO: why)
+    toreal( "3e+2" ); // returns 300.0
     toreal( "0xff" ); // returns 255.0
 
 
@@ -1809,7 +1874,7 @@ sgs_Errno [function (inline)]
 == include_file( string file[, bool override ] )
 === executes the file pointed to by `file`, returns success, as `bool`, emits a warning on failure
 
-- `file` must be available in one of the include paths (TODO: we don't have 'em yet)
+- this function does NOT check include paths (SGS_PATH)
 - if `override` is specified, file will be reloaded even if it was already loaded before
 - this function is equivalent to @sgs_ExecFile in the C API
 
@@ -2044,9 +2109,11 @@ sgs_Errno [function (inline)]
 === recreates a variable from the buffer with serialized data or returns null and emits a warning on failure
 
 - this function will internally call global object creation functions specified in the data, so they must be defined and the state could change in the process
-- for more info on serialization in SGScript, refer to @Serialization (TODO: what could this possibly lead to?)
+- for more info on serialization in SGScript, refer to @<Serialization in SGScript>
 
-    @serialize example
+    data = serialize({ name = "A", info = "B" });
+    print data; // prints random-ish garbage
+    print unserialize(data); // prints {name=A,info=B}
 
 
 # SGS_[INFO|WARNING|ERROR] [constants]
@@ -2232,7 +2299,7 @@ sgs_Errno [function (inline)]
 
 ! This function is considerably slower than @array.sort or @array.sort_mapped so prefer those if performance matters.
 
-- callable must return an integer, specifying the relative order of the two passed arguments: less than 0 if first variable should be placed before second, greater than 0 if first variable should be placed after second, or 0 if it doesn't matter (TODO: unsafe with big integers/FP return values! something must be done)
+- callable must return a number, specifying the relative order of the two passed arguments: less than 0 if first variable should be placed before second, greater than 0 if first variable should be placed after second, or 0 if it doesn't matter
 - if `reverse` is true, array is sorted in the reverse order
 
     a = [ 6, 8, 7, 5 ];
@@ -2415,7 +2482,6 @@ sgs_Errno [function (inline)]
     print fmt_text( "{d} -> {x}", 1337, 1337 ); // prints "1337 -> 539"
     print fmt_text( "null: {d}, {s}, {c}", null, null, null ); // prints "null: #error#, #error#, null" and emits two warnings for item 1 and item 2
     print fmt_text( "pi: {f10.10r} {g10r} {E10r}", M_PI, M_PI, M_PI ); // "pi: 3.1415926536 3.14159    3.141593E+000"
-    TODO: more useful examples!
 
 
 # fmt_parser [function]
@@ -2432,8 +2498,8 @@ sgs_Errno [function (inline)]
 
 # fmt_string_parser [function]
 
-== fmt_string_parser( string, offset = 0 ) TODO: what about buffer size?
-=== creates a @fmt_parser object, connected to a string reader, initialized to the given offset
+== fmt_string_parser( string, offset = 0[, buffersize ] )
+=== creates a @fmt_parser object, connected to a string reader object, initialized to the given offset and buffer size
 
     p = fmt_string_parser( "this is a test" );
     p.readcc( "a-z" ); // returns "this"
@@ -2497,7 +2563,7 @@ sgs_Errno [function (inline)]
 == fmt_parser.readcc( string class, int num = 2^31-1 (0x7fffffff) )
 === reads and returns at most `num` bytes that match the character class `class`
 
-- returns null and emits a warning if the class is empty/only contains the inversion symbol "^" (TODO: is this necessary?)
+- returns null and emits a warning if the class is empty/only contains the inversion symbol "^"
 - may return null and emit a warning on unexpected read errors
 
     stream = fmt_string_parser( "what is this" );
@@ -2510,7 +2576,7 @@ sgs_Errno [function (inline)]
 == fmt_parser.skipcc( string class, int num = 2^31-1 (0x7fffffff) )
 === skips at most `num` bytes that match the character class `class` and returns the number of bytes skipped
 
-- returns null and emits a warning if the class is empty/only contains the inversion symbol "^" (TODO: is this necessary?)
+- returns null and emits a warning if the class is empty/only contains the inversion symbol "^"
 - may return null and emit a warning on unexpected read errors
 
     stream = fmt_string_parser( "what is this" );
@@ -2534,17 +2600,18 @@ sgs_Errno [function (inline)]
 # io_getcwd [function]
 
 == io_getcwd()
-=== returns the current working directory or null, if for some reason an error occured (TODO: getcwd(NULL,0) is UB, how wide is support for expected behavior?)
+=== returns the current working directory or null, if for some reason an error occured
 
 - wraps the C library function getcwd/_getcwd
 
 
 # io_rename [function]
 
-== io_rename( string path, string newname )
+== io_rename( string path, string newpath )
 === attempts to rename the file, returns bool/sets errno
 
-- wraps the C library function rename, with one important difference - moving the file is not allowed, regardless of platform support (TODO: is the restriction safe and necessary?)
+- wraps the C library function rename
+- to avoid moving the file/directory, make sure both paths are of the same origin
 
 
 # io_file_exists [function]
@@ -2572,7 +2639,7 @@ sgs_Errno [function (inline)]
 -- atime: last access time
 -- ctime: creation time
 -- mtime: last modification time
--- type: enum (one of FST_DIR/FST_FILE/FST_UNKNOWN) TODO: do we need more?
+-- type: enum (one of FST_DIR/FST_FILE/FST_UNKNOWN)
 -- size: size of item
 - uses the C library function stat/_stat
 

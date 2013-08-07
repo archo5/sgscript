@@ -1159,13 +1159,9 @@ static int vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
 	switch( var->type )
 	{
 	/*
-	case VTC_STRING:
-		{
-			sgs_Variable ns;
-			var_create_str( C, &ns, var_cstr( var ), var->data.S->size );
-			stk_setlvar_leave( C, out, &ns );
-		}
-		break;
+		strings are supposed to be immutable
+		(even though C functions can accidentally
+		or otherwise modify them with relative ease)
 	*/
 	case VTC_OBJECT:
 	case VTC_ARRAY:

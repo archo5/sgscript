@@ -313,9 +313,9 @@ static SGS_INLINE int sgsarrcomp_custom( const void* p1, const void* p2, void* u
 		return 0;
 	else
 	{
-		int ret = (int) sgs_GetInt( C, -1 );
+		sgs_Real r = sgs_GetReal( C, -1 );
 		sgs_Pop( C, 1 );
-		return ret;
+		return r == 0 ? 0 : ( r < 0 ? -1 : 1 );
 	}
 }
 static SGS_INLINE int sgsarrcomp_custom_rev( const void* p1, const void* p2, void* userdata )
