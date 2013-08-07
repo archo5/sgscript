@@ -104,6 +104,7 @@ static void ctx_init( SGS_CTX )
 
 	C->sf_first = NULL;
 	C->sf_last = NULL;
+	C->sf_cached = NULL;
 	C->sf_count = 0;
 	
 	ht_init( &C->typetable, C, 32 );
@@ -143,6 +144,8 @@ static void stringfreefunc( HTPair* p, void* userdata )
 
 void sgs_DestroyEngine( SGS_CTX )
 {
+	sgs_StackFrame* sf = C->sf_cached, *sfn;
+	
 	C->print_fn = NULL;
 	C->print_ctx = NULL;
 
@@ -165,6 +168,15 @@ void sgs_DestroyEngine( SGS_CTX )
 	
 	ht_iterate( &C->stringtable, stringfreefunc, C );
 	ht_free( &C->stringtable, C );
+	
+	/* free the call stack */
+	while( sf )
+	{
+		sfn = sf->cached;
+		sgs_Dealloc( sf );
+		sf = sfn;
+	}
+	C->sf_cached = NULL;
 
 #ifdef SGS_DEBUG_LEAKS
 	sgs_BreakIf( C->memsize > sizeof( sgs_Context ) );

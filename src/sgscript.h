@@ -115,6 +115,7 @@ struct _sgs_StackFrame
 	const char*     filename;
 	sgs_StackFrame* prev;
 	sgs_StackFrame* next;
+	sgs_StackFrame* cached;
 };
 
 

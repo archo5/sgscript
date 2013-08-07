@@ -1920,9 +1920,9 @@ static int sgsstd_randf( SGS_CTX )
 
 static int sgsstd_srand( SGS_CTX )
 {
-	sgs_Int s;
+	uint32_t s;
 	SGSFN( "srand" );
-	if( !sgs_LoadArgs( C, "i", &s ) )
+	if( !sgs_LoadArgs( C, "+l", &s ) )
 		return 0;
 	srand( s );
 	return 0;
@@ -1958,7 +1958,7 @@ static void sgsstd_pcall_print( void* data, SGS_CTX, int type, const char* messa
 		}
 		else
 		{
-			ret = sgs_GetInt( C, -1 );
+			ret = (int) sgs_GetInt( C, -1 );
 			sgs_Pop( C, 1 );
 		}
 	}
