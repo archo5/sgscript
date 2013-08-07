@@ -2391,6 +2391,16 @@ static int sgsstd_sys_curfile( SGS_CTX )
 	return 0;
 }
 
+static int sgsstd_sys_curfiledir( SGS_CTX )
+{
+	SGSFN( "sys_curfiledir" );
+	
+	if( sgs_StackSize( C ) )
+		STDLIB_WARN( "function expects 0 arguments" )
+	
+	return _push_curdir( C );
+}
+
 static int sgsstd_sys_print( SGS_CTX )
 {
 	char* errmsg;
@@ -2406,6 +2416,22 @@ static int sgsstd_sys_print( SGS_CTX )
 	sgs_Printf( C, (int) errcode, errmsg );
 	return 0;
 }
+
+static int sgsstd__printwrapper( SGS_CTX, const char* fn, int code )
+{
+	char* msg;
+	SGSFN( fn );
+	if( sgs_LoadArgs( C, "s", &msg ) )
+	{
+		SGSFN( NULL );
+		sgs_Printf( C, code, msg );
+	}
+	return 0;
+}
+
+static int sgsstd_INFO( SGS_CTX ){ return sgsstd__printwrapper( C, "INFO", SGS_INFO ); }
+static int sgsstd_WARNING( SGS_CTX ){ return sgsstd__printwrapper( C, "WARNING", SGS_WARNING ); }
+static int sgsstd_ERROR( SGS_CTX ){ return sgsstd__printwrapper( C, "ERROR", SGS_ERROR ); }
 
 static int sgsstd_sys_abort( SGS_CTX )
 {
@@ -2707,9 +2733,9 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( import_cfunc ),
 	FN( include ),
-	FN( sys_curfile ),
-	FN( sys_print ), FN( sys_abort ),
-	FN( app_abort ), FN( app_exit ),
+	FN( sys_curfile ), FN( sys_curfiledir ),
+	FN( sys_print ), FN( INFO ), FN( WARNING ), FN( ERROR ),
+	FN( sys_abort ), FN( app_abort ), FN( app_exit ),
 	FN( sys_replevel ), FN( sys_stat ),
 	FN( errno ), FN( errno_string ), FN( errno_value ),
 	FN( dumpvar ), FN( dumpvar_ext ),

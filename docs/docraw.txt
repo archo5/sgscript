@@ -1762,6 +1762,14 @@ sgs_Errno [function (inline)]
     pcall(function(){ print x; }, handler2 ); // changed type to error
 
 
+# assert [function]
+
+== assert( var condition[, string message] )
+=== if condition evaluates to 'false', emits an error "assertion failed" or if message is defined, "assertion failed: <message>"
+
+    assert( text, "text was not defined" );
+
+
 # eval [function]
 
 == eval( string code )
@@ -1829,7 +1837,7 @@ sgs_Errno [function (inline)]
 
 - the order of actions:
 -- first, a library load is attempted
--- on failure, a file is looked for by every entry of the sys_include_path variable (? - the file replacement symbol, ; - separator)
+-- on failure, a file is looked for by every entry of the sys_include_path variable (? - the file replacement symbol, | - file directory replacement symbol, ; - separator)
 -- if file is not found, everything stops
 -- if file is found, first - a library load is attempted, on failure - bytecode & source code loading
 - this function is also available as a replicating statement 'include' (ex. 'include "fmt", "io";' works the same way as include("fmt"); include("io");)
@@ -1858,6 +1866,19 @@ sgs_Errno [function (inline)]
     include "a.sgs";
 
 
+# sys_curfiledir [function]
+
+== sys_curfiledir()
+=== returns the directory path of the file (as passed on load) that contains the currently executed code or `null` if the file cannot be determined (eval, C functions)
+
+    // ext/a.sgs
+    print( sys_curfiledir() ); // prints "ext"
+    // a.sgs
+    print( sys_curfiledir() ); // prints "."
+    // b.sgs
+    include "ext/a.sgs", "a.sgs";
+
+
 # sys_print [function]
 
 == sys_print( int code, string message )
@@ -1866,6 +1887,35 @@ sgs_Errno [function (inline)]
 ! Different codes can be handled differently by the system. By default, SGS_ERROR code will stop execution and return to C code as soon as possible.
 
 - `code` is the code to use to pass the message (ex. SGS_INFO, SGS_WARNING, SGS_ERROR)
+
+
+# INFO [function]
+
+== INFO( string message )
+=== passes a message to the internal messaging system
+
+- the name of this function is written in all caps to avoid shadowing by a common variable name
+- works exactly like `sys_print( SGS_INFO, message )`
+
+
+# WARNING [function]
+
+== WARNING( string message )
+=== passes a message to the internal messaging system
+
+- the name of this function is written in all caps for consistency with the other two
+- works exactly like `sys_print( SGS_INFO, message )`
+
+
+# ERROR [function]
+
+== ERROR( string message )
+=== passes a message to the internal messaging system
+
+! By default, SGS_ERROR code (the one this function uses internally) will stop execution and return to C code as soon as possible.
+
+- the name of this function is written in all caps to avoid shadowing by a common variable name
+- works exactly like `sys_print( SGS_INFO, message )`
 
 
 # sys_abort [function]

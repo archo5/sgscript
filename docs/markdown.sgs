@@ -130,7 +130,39 @@ function markdown2html( text )
 		
 		if( string_part( L, 0, 3 ) == "---" )
 		{
-			lines[ i ] = "</p><hr /><p>";
+			if( i + 1 < lines.size &&
+				( string_part( lines[ i + 1 ], 0, 2 ) == "| " ||
+				string_part( lines[ i + 1 ], 0, 2 ) == "! " ) )
+			{
+				lines[ i ] = "<table>";
+				i++;
+				while( string_part( lines[ i ], 0, 3 ) != "---" )
+				{
+					L = lines[ i ];
+					lout = "";
+					
+					tag = "td";
+					spl = string_explode( L, "|" );
+					if( spl.size == 1 )
+					{
+						spl = string_explode( L, "!" );
+						tag = "th";
+					}
+					foreach( s : spl )
+					{
+						s = string_trim( s );
+						if( !s.length )
+							continue;
+						lout $= string_format( "<{1}>{2}</{1}>", tag, mdinline( s ) );
+					}
+					lines[ i ] = "<tr>" $ lout $ "</tr>";
+					
+					i++;
+				}
+				lines[ i ] = "</table>";
+			}
+			else
+				lines[ i ] = "</p><hr /><p>";
 		}
 		else if( string_part( L, 0, 2 ) == "- " )
 		{
