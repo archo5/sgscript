@@ -89,6 +89,10 @@
 #endif
 
 
+/*
+	Socket error handling
+*/
+
 #define SCKERRVN "__socket_error"
 
 int sockassert( SGS_CTX, int test )
@@ -101,12 +105,10 @@ int sockassert( SGS_CTX, int test )
 
 int socket_error( SGS_CTX )
 {
-	int astext = 0, e = 0, ssz = sgs_StackSize( C );
+	int astext = 0, e = 0;
 	SGSFN( "socket_error" );
-	if( ssz < 0 || ssz > 1 ||
-		( ssz >= 1 && !sgs_ParseBool( C, 0, &astext ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 0-1 arguments: [bool]" )
+	if( !sgs_LoadArgs( C, "|b", &astext ) )
+		return 0;
 	
 	if( sgs_PushGlobal( C, SCKERRVN ) == SGS_SUCCESS )
 		e = (int) sgs_GetInt( C, -1 );
@@ -139,27 +141,309 @@ int socket_error( SGS_CTX )
 #define SOCKCLEARERR sockassert( C, 0 )
 
 
+/*
+	Socket address object
+*/
+
+static void* sockaddr_iface[];
+#define SOCKADDR_IHDR( name ) \
+	sgs_VarObj* data; \
+	int method_call = sgs_Method( C ); \
+	SGSFN( "socket_address." #name ); \
+	if( !sgs_IsObject( C, 0, sockaddr_iface ) ) \
+		return sgs_ArgErrorExt( C, 0, method_call, "socket_address", "" ); \
+	data = sgs_GetObjectData( C, 0 );
+
+#define GET_SAF ((struct sockaddr_storage*)data->data)->ss_family
+#define GET_SAI ((struct sockaddr_in*)data->data)
+#define GET_SAI6 ((struct sockaddr_in6*)data->data)
+
+static int sockaddr_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+{
+	char* name;
+	if( !sgs_ParseString( C, 0, &name, NULL ) )
+		return SGS_ENOTSUP;
+	
+	if( STREQ( name, "family" ) ){ sgs_PushInt( C, GET_SAF ); return SGS_SUCCESS; }
+	if( STREQ( name, "port" ) )
+	{
+		if( GET_SAF == AF_INET ){ sgs_PushInt( C, ntohs( GET_SAI->sin_port ) ); }
+		else if( GET_SAF == AF_INET6 ){ sgs_PushInt( C, ntohs( GET_SAI6->sin6_port ) ); }
+		else { sgs_PushNull( C ); sgs_Printf( C, SGS_WARNING, "port supported only for AF_INET[6]" ); }
+		return SGS_SUCCESS;
+	}
+	if( STREQ( name, "addr_u32" ) )
+	{
+		if( GET_SAF == AF_INET ){ sgs_PushInt( C, ntohl( GET_SAI->sin_addr.s_addr ) ); }
+		else { sgs_PushNull( C ); sgs_Printf( C, SGS_WARNING, "addr_u32 supported only for AF_INET" ); }
+		return SGS_SUCCESS;
+	}
+	if( STREQ( name, "addr_buf" ) )
+	{
+		if( GET_SAF == AF_INET ){ sgs_PushStringBuf( C, (char*) &GET_SAI->sin_addr.s_addr, 4 ); }
+		else if( GET_SAF == AF_INET6 ){ sgs_PushStringBuf( C, (char*) &GET_SAI6->sin6_addr.s6_addr, 16 ); }
+		else { sgs_PushNull( C ); sgs_Printf( C, SGS_WARNING, "addr_buf supported only for AF_INET[6]" ); }
+		return SGS_SUCCESS;
+	}
+	if( STREQ( name, "addr_bytes" ) )
+	{
+		char* buf = NULL;
+		int i, sz = 0;
+		if( GET_SAF == AF_INET )
+		{
+			buf = (char*) &GET_SAI->sin_addr.s_addr;
+			sz = 4;
+		}
+		else if( GET_SAF == AF_INET6 )
+		{
+			buf = (char*) &GET_SAI6->sin6_addr.s6_addr;
+			sz = 16;
+		}
+		if( buf )
+		{
+			for( i = 0; i < sz; ++i )
+				sgs_PushInt( C, buf[ i ] );
+			sgs_PushArray( C, sz );
+		}
+		else { sgs_PushNull( C ); sgs_Printf( C, SGS_WARNING, "addr_bytes supported only for AF_INET[6]" ); }
+		return SGS_SUCCESS;
+	}
+	if( STREQ( name, "addr_string" ) )
+	{
+		char addr[ 64 ] = {0};
+#ifdef _WIN32
+		DWORD ioasz = 64;
+		WSAAddressToString( data->data, sizeof(struct sockaddr_storage), NULL, addr, &ioasz );
+		*strrchr( addr, ':' ) = 0;
+#else
+		if( GET_SAF == AF_INET )
+			inet_ntop( GET_SAF, &GET_SAI->sin_addr, addr, 64 );
+		else if( GET_SAF == AF_INET6 )
+			inet_ntop( GET_SAF, &GET_SAI6->sin6_addr, addr, 64 );
+#endif
+		addr[ 64-1 ] = 0;
+		if( *addr )
+			sgs_PushString( C, addr );
+		else
+			sgs_PushString( C, "-" );
+		return SGS_SUCCESS;
+	}
+	if( STREQ( name, "full_addr_string" ) )
+	{
+		char addr[ 64 ] = {0};
+#ifdef _WIN32
+		DWORD ioasz = 64;
+		WSAAddressToString( data->data, sizeof(struct sockaddr_storage), NULL, addr, &ioasz );
+#else
+		if( GET_SAF == AF_INET || GET_SAF == AF_INET6 )
+		{
+			char pb[ 8 ];
+			inet_ntop( GET_SAF, GET_SAF == AF_INET ? &GET_SAI->sin_addr : &GET_SAI6->sin6_addr, addr, 64 );
+			sprintf( pb, ":%hu", GET_SAF == AF_INET ? &GET_SAI->sin_port : &GET_SAI6->sin6_port );
+			strcat( addr, pb );
+		}
+#endif
+		addr[ 64-1 ] = 0;
+		if( *addr )
+			sgs_PushString( C, addr );
+		else
+			sgs_PushString( C, "-" );
+		return SGS_SUCCESS;
+	}
+	
+	return SGS_ENOTFND;
+}
+
+static int sockaddr_setindex( SGS_CTX, sgs_VarObj* data, int prop )
+{
+	char* name;
+	if( !sgs_ParseString( C, 0, &name, NULL ) )
+		return SGS_ENOTSUP;
+	
+	if( STREQ( name, "port" ) )
+	{
+		sgs_Int port;
+		if( !sgs_ParseInt( C, -1, &port ) )
+			return SGS_EINVAL;
+		if( GET_SAF == AF_INET ) GET_SAI->sin_port = htons( port );
+		else if( GET_SAF == AF_INET6 ) GET_SAI6->sin6_port = htons( port );
+		return SGS_SUCCESS;
+	}
+	
+	return SGS_ENOTFND;
+}
+
+static int sockaddr_convert( SGS_CTX, sgs_VarObj* data, int type )
+{
+	if( type == SGS_CONVOP_TOTYPE )
+	{
+		sgs_PushString( C, "socket_address" );
+		return SGS_SUCCESS;
+	}
+	else if( type == SVT_STRING )
+	{
+		sgs_PushProperty( C, "full_addr_string" );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int sockaddr_dump( SGS_CTX, sgs_VarObj* data, int depth )
+{
+	char buf[ 32 ];
+	sgs_Variable var;
+	sprintf( buf, "socket_address [family=%hu] ", GET_SAF );
+	var.type = VTC_OBJECT;
+	var.data.O = data;
+	sgs_PushString( C, buf );
+	sgs_PushVariable( C, &var );
+	sgs_StringConcat( C );
+	return SGS_SUCCESS;
+}
+
+static void* sockaddr_iface[] =
+{
+	SOP_GETINDEX, sockaddr_getindex,
+	SOP_SETINDEX, sockaddr_setindex,
+	SOP_CONVERT, sockaddr_convert,
+	SOP_DUMP, sockaddr_dump,
+	SOP_END,
+};
+
+static void push_sockaddr( SGS_CTX, struct sockaddr_storage* sa, int size )
+{
+	void* ss = sgs_PushObjectIPA( C, sizeof( struct sockaddr_storage ), sockaddr_iface );
+	memset( ss, 0, sizeof(ss) );
+	memcpy( ss, sa, size );
+}
+
+
+static int sgs_socket_address( SGS_CTX )
+{
+	struct sockaddr_storage ss;
+	char* buf;
+	sgs_SizeVal bufsize;
+	sgs_Int af;
+	uint16_t port = 0;
+	
+	SGSFN( "socket_address" );
+	if( !sgs_LoadArgs( C, "im|+w", &af, &buf, &bufsize, &port ) )
+		return 0;
+	
+	if( af != AF_INET && af != AF_INET6 )
+		STDLIB_WARN( "argument 1 (address family)"
+			" must be either AF_INET or AF_INET6" )
+	
+	ss.ss_family = (int16_t) af;
+	port = htons( port );
+	{
+#ifdef _WIN32
+		INT len = sizeof( ss );
+		int res = sockassert( C, WSAStringToAddressA( buf, (int16_t) af,
+			NULL, (struct sockaddr*) &ss, &len ) == 0 );
+#else
+		int res = sockassert( C, inet_pton( (int16_t) af, buf, &ss ) == 1 );
+#endif
+		if( !res )
+			STDLIB_WARN( "failed to generate address from string" )
+	}
+	
+	if( af == AF_INET )
+	{
+		struct sockaddr_in* sai = (struct sockaddr_in*) &ss;
+		sai->sin_port = port;
+	}
+	else /* AF_INET6 */
+	{
+		struct sockaddr_in6* sai = (struct sockaddr_in6*) &ss;
+		sai->sin6_port = port;
+	}
+	
+	push_sockaddr( C, &ss, sizeof(ss) );
+	return 1;
+}
+
+static int sgs_socket_address_frombytes( SGS_CTX )
+{
+	struct sockaddr_storage ss = {0};
+	char* buf;
+	sgs_SizeVal bufsize;
+	sgs_Int af;
+	uint16_t port = 0;
+	
+	SGSFN( "socket_address_frombytes" );
+	if( !sgs_LoadArgs( C, "im|+w", &af, &buf, &bufsize, &port ) )
+		return 0;
+	
+	if( af != AF_INET && af != AF_INET6 )
+		STDLIB_WARN( "argument 1 (address family)"
+			" must be either AF_INET or AF_INET6" )
+	
+	ss.ss_family = (int16_t) af;
+	port = htons( port );
+	if( af == AF_INET )
+	{
+		struct sockaddr_in* sai = (struct sockaddr_in*) &ss;
+		if( bufsize != 4 )
+			STDLIB_WARN( "argument 2 (buffer)"
+				" must be 4 bytes long for an AF_INET address" )
+		sai->sin_port = port;
+		memcpy( &sai->sin_addr.s_addr, buf, 4 );
+	}
+	else /* AF_INET6 */
+	{
+		struct sockaddr_in6* sai = (struct sockaddr_in6*) &ss;
+		if( bufsize != 16 )
+			STDLIB_WARN( "argument 2 (buffer)"
+				" must be 16 bytes long for an AF_INET address" )
+		sai->sin6_port = port;
+		memcpy( sai->sin6_addr.s6_addr, buf, 16 );
+	}
+	
+	push_sockaddr( C, &ss, sizeof(ss) );
+	return 1;
+}
+
+
+static int sgs_socket_gethostname( SGS_CTX )
+{
+	char buf[ 256 ];
+	SGSFN( "socket_gethostname" );
+	if( !sgs_LoadArgs( C, "." ) )
+		return 0;
+	if( !sockassert( C, gethostname( buf, 256 ) == 0 ) )
+		STDLIB_WARN( "failed to get host name" )
+	buf[ 256-1 ] = 0;
+	sgs_PushString( C, buf );
+	return 1;
+}
+
+
+/*
+	Socket object
+*/
+
 static void* socket_iface[];
 #define SOCK_IHDR( name ) \
 	sgs_VarObj* data; \
+	int method_call = sgs_Method( C ); \
 	SGSFN( "socket." #name ); \
-	if( !sgs_Method( C ) || !sgs_IsObject( C, 0, socket_iface ) ) \
-		STDLIB_WARN( "not called on a socket" ) \
+	if( !sgs_IsObject( C, 0, socket_iface ) ) \
+		return sgs_ArgErrorExt( C, 0, method_call, "socket", "" ); \
 	data = sgs_GetObjectData( C, 0 );
 
 #define GET_SCK ((int)(size_t)data->data)
 
-static int socketI_bind_port( SGS_CTX )
+static int socketI_bind( SGS_CTX )
 {
 	sgs_Int port;
 	struct sockaddr_in sa;
-	int ret = 0, ssz = sgs_StackSize( C );
+	int ret = 0;
 	
-	SOCK_IHDR( bind_port );
+	SOCK_IHDR( bind );
 	
-	if( ssz != 1 || !sgs_ParseInt( C, 1, &port ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: int" )
+	if( !sgs_LoadArgs( C, "@>i", &port ) )
+		return 0;
 	
 	memset( &sa, 0, sizeof(sa) );
 	sa.sin_family = AF_INET;
@@ -174,65 +458,24 @@ static int socketI_bind_port( SGS_CTX )
 static int socketI_listen( SGS_CTX )
 {
 	sgs_Int queuesize;
-	int ssz = sgs_StackSize( C );
 	
 	SOCK_IHDR( listen );
 	
-	if( ssz != 1 || !sgs_ParseInt( C, 1, &queuesize ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: int" )
+	if( !sgs_LoadArgs( C, "@>i", &queuesize ) )
+		return 0;
 	
 	sgs_PushBool( C, sockassert( C, listen( GET_SCK, (int) queuesize ) == 0 ) );
 	return 1;
 }
 
-static void push_sockaddr( SGS_CTX, struct sockaddr* sa, int size )
-{
-	int ssz = sgs_StackSize( C );
-	sgs_PushString( C, "family" );
-	sgs_PushInt( C, sa->sa_family );
-	if( sa->sa_family == AF_INET )
-	{
-		char addr[ 24 ];
-		struct sockaddr_in* sai = (struct sockaddr_in*) sa;
-		sgs_PushString( C, "port" );
-		sgs_PushInt( C, ntohs( sai->sin_port ) );
-		sgs_PushString( C, "addr" );
-		sgs_PushInt( C, sai->sin_addr.S_un.S_un_b.s_b1 );
-		sgs_PushInt( C, sai->sin_addr.S_un.S_un_b.s_b2 );
-		sgs_PushInt( C, sai->sin_addr.S_un.S_un_b.s_b3 );
-		sgs_PushInt( C, sai->sin_addr.S_un.S_un_b.s_b4 );
-		sgs_PushArray( C, 4 );
-		sgs_PushString( C, "addri" );
-		sgs_PushInt( C, sai->sin_addr.S_un.S_addr );
-		sgs_PushString( C, "addrs" );
-#ifdef _WIN32
-		{
-			DWORD ioasz = 24;
-			WSAAddressToString( sa, size, NULL, addr, &ioasz );
-			*strstr( addr, ":" ) = 0;
-		}
-#else
-		inet_ntop( AF_INET, &sai->sin_addr, addr, 24 );
-#endif
-		sgs_PushString( C, addr );
-	}
-	else if( sa->sa_family == AF_INET6 )
-	{
-	}
-	sgs_PushDict( C, sgs_StackSize( C ) - ssz );
-}
-
 static int socketI_accept( SGS_CTX )
 {
-	int S, more = 0, ssz = sgs_StackSize( C );
+	int S, more = 0;
 	
 	SOCK_IHDR( accept );
 	
-	if( ssz < 0 || ssz > 1 ||
-		( ssz >= 1 && !sgs_ParseBool( C, 1, &more ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 0-1 arguments: [bool]" )
+	if( !sgs_LoadArgs( C, "@>|b", &more ) )
+		return 0;
 	
 	if( !more )
 	{
@@ -248,13 +491,13 @@ static int socketI_accept( SGS_CTX )
 	}
 	else
 	{
-		struct sockaddr sa;
+		struct sockaddr_storage sa;
 #ifdef _WIN32
 		int sa_size;
 #else
 		unsigned int sa_size;
 #endif
-		S = accept( GET_SCK, &sa, &sa_size );
+		S = accept( GET_SCK, (struct sockaddr*) &sa, &sa_size );
 		if( S == -1 )
 		{
 			SOCKERR;
@@ -263,8 +506,7 @@ static int socketI_accept( SGS_CTX )
 		SOCKCLEARERR;
 		sgs_PushObject( C, (void*) (size_t) S, socket_iface );
 		push_sockaddr( C, &sa, sa_size );
-		sgs_PushArray( C, 2 );
-		return 1;
+		return 2;
 	}
 }
 
@@ -273,15 +515,12 @@ static int socketI_send( SGS_CTX )
 	char* str;
 	sgs_SizeVal size;
 	sgs_Int flags = 0;
-	int ret, ssz = sgs_StackSize( C );
+	int ret;
 	
 	SOCK_IHDR( send );
 	
-	if( ssz < 1 || ssz > 2 ||
-		!sgs_ParseString( C, 1, &str, &size ) ||
-		( ssz >= 2 && !sgs_ParseInt( C, 2, &flags ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-2 arguments: string[, int]" )
+	if( !sgs_LoadArgs( C, "@>m|i", &str, &size, &flags ) )
+		return 0;
 	
 	ret = send( GET_SCK, str, size, (int) flags );
 	sockassert( C, ret >= 0 );
@@ -295,15 +534,12 @@ static int socketI_send( SGS_CTX )
 static int socketI_recv( SGS_CTX )
 {
 	sgs_Int size, flags = 0;
-	int ret, ssz = sgs_StackSize( C );
+	int ret;
 
 	SOCK_IHDR( recv );
-
-	if( ssz < 1 || ssz > 2 ||
-		!sgs_ParseInt( C, 1, &size ) ||
-		( ssz >= 2 && !sgs_ParseInt( C, 2, &flags ) ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1-2 arguments: int[, int]" )
+	
+	if( !sgs_LoadArgs( C, "@>i|i", &size, &flags ) )
+		return 0;
 
 	sgs_PushStringBuf( C, NULL, size );
 	ret = recv( GET_SCK, sgs_GetStringPtr( C, -1 ), size, flags );
@@ -318,13 +554,11 @@ static int socketI_recv( SGS_CTX )
 static int socketI_shutdown( SGS_CTX )
 {
 	sgs_Int flags;
-	int ssz = sgs_StackSize( C );
 	
 	SOCK_IHDR( shutdown );
 	
-	if( ssz != 1 || !sgs_ParseInt( C, 1, &flags ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 1 argument: int" )
+	if( !sgs_LoadArgs( C, "@>i", &flags ) )
+		return 0;
 	
 	sgs_PushBool( C, sockassert( C, shutdown( GET_SCK, (int) flags ) == 0 ) );
 	return 1;
@@ -332,16 +566,38 @@ static int socketI_shutdown( SGS_CTX )
 
 static int socketI_close( SGS_CTX )
 {
-	int ssz = sgs_StackSize( C );
-	
 	SOCK_IHDR( close );
 	
-	if( ssz != 0 )
-		STDLIB_WARN( "unexpected arguments" )
+	if( !sgs_LoadArgs( C, "@>." ) )
+		return 0;
 	
 	sgs_PushBool( C, GET_SCK != -1 && closesocket( GET_SCK ) == 0 );
 	data->data = (void*) -1;
 	return 1;
+}
+
+static int socketI_getpeername( SGS_CTX )
+{
+	struct sockaddr_storage sa;
+#ifdef _WIN32
+	int sa_size;
+#else
+	unsigned int sa_size;
+#endif
+	SOCK_IHDR( getpeername );
+	
+	if( !sgs_LoadArgs( C, "@>." ) )
+		return 0;
+	
+	if( getpeername( GET_SCK, (struct sockaddr*) &sa, &sa_size ) != -1 )
+	{
+		SOCKCLEARERR;
+		push_sockaddr( C, &sa, sa_size );
+		return 1;
+	}
+	
+	SOCKERR;
+	STDLIB_WARN( "failed to get peer name" )
 }
 
 static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
@@ -350,13 +606,14 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( !sgs_ParseString( C, 0, &name, NULL ) )
 		return SGS_ENOTSUP;
 	
-	if( STREQ( name, "bind_port" ) ) IFN( socketI_bind_port )
+	if( STREQ( name, "bind" ) ) IFN( socketI_bind )
 	if( STREQ( name, "listen" ) ) IFN( socketI_listen )
 	if( STREQ( name, "accept" ) ) IFN( socketI_accept )
 	if( STREQ( name, "send" ) ) IFN( socketI_send )
 	if( STREQ( name, "recv" ) ) IFN( socketI_recv )
 	if( STREQ( name, "shutdown" ) ) IFN( socketI_shutdown )
 	if( STREQ( name, "close" ) ) IFN( socketI_close )
+	if( STREQ( name, "getpeername" ) ) IFN( socketI_getpeername )
 	
 	return SGS_ENOTFND;
 }
@@ -399,12 +656,8 @@ static int sgs_socket( SGS_CTX )
 	
 	SGSFN( "socket" );
 	
-	if( sgs_StackSize( C ) != 3 ||
-		!sgs_ParseInt( C, 0, &domain ) ||
-		!sgs_ParseInt( C, 1, &type ) ||
-		!sgs_ParseInt( C, 2, &protocol ) )
-		STDLIB_WARN( "unexpected arguments; "
-			"function expects 3 arguments: int, int, int" )
+	if( !sgs_LoadArgs( C, "iii", &domain, &type, &protocol ) )
+		return 0;
 	
 	S = socket( domain, type, protocol );
 	if( S < 0 )
@@ -421,6 +674,9 @@ static int sgs_socket( SGS_CTX )
 
 static sgs_RegFuncConst f_sock[] =
 {
+	{ "socket_address", sgs_socket_address },
+	{ "socket_address_frombytes", sgs_socket_address_frombytes },
+	{ "socket_gethostname", sgs_socket_gethostname },
 	{ "socket", sgs_socket },
 	{ "socket_error", socket_error },
 };

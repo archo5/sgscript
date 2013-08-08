@@ -82,6 +82,8 @@ The virtual machine supports:
 
 In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the "serialize" function and deserialization is done with "unserialize". The C API has similar functions: sgs_Serialize/sgs_SerializeObject and sgs_Unserialize, respectively.
 
+! check the "Possible gotchas" part of this page if it is intended to trust the end user with access to serialized data
+
 === The format
 
 - a list of operations
@@ -106,9 +108,12 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 -- the global environment could be changed
 - "sgs_Unserialize" is called internally
 - "push" and "call" operations are executed, thus regenerating the data
+-- "push" operation pushes a variable on the stack
+-- "call" operation calls the specified function
 
 === Possible gotchas
 
+- unserialization is not by default safe in the sense that any function can be executed with a carefully crafted byte buffer; this can be prevented by specifying the second parameter to the "unserialize" function. the behavior can be reproduced with the C API but it will take a bit more effort or calling the "unserialize" function from it
 - sgs_Serialize overrides the output function so any output done via "print" or "sgs_Write*" functions during serialization will corrupt the stream
 - if environment overrides are used on deserialization, remember to add "array" and "dict" to the list if you use them, they are not added automatically
 - serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items
@@ -1729,12 +1734,12 @@ sgs_Errno [function (inline)]
 
 # printvar_ext [function]
 
-== printvar( var, int maxdepth = 5 )
+== printvar_ext( var, int maxdepth = 5 )
 === passes a dump of the variable (informative string version) to the @output callback, allowing to optionally specify the maximum depth of the dump (how deep it is allowed to look for sub-variables)
 
-    printvar( 5 ); // prints "real (5)"
-    printvar( "wat" ); // prints "string [3] "wat""
-    printvar( [{a=[{}]}], 2 ); /* prints:
+    printvar_ext( 5 ); // prints "real (5)"
+    printvar_ext( "wat" ); // prints "string [3] "wat""
+    printvar_ext( [{a=[{}]}], 2 ); /* prints:
     object (003C5F90) [0] array (1)
     [
       object (003C60A8) [1] dict (1)
@@ -1747,7 +1752,7 @@ sgs_Errno [function (inline)]
 
 # printvar [function]
 
-== printvars( var, ... )
+== printvar( var, ... )
 === same as a list of printvar(var); calls for each argument
 
 - refer to @printvar_ext() for more info
@@ -2064,7 +2069,7 @@ sgs_Errno [function (inline)]
 
 # dumpvar_ext [function]
 
-== dumpvar( var, int depth = 5 )
+== dumpvar_ext( var, int depth = 5 )
 === similar to @printvar_ext() but returns the dump instead of printing it
 
 - this function is equivalent to @sgs_DumpVar in the C API
@@ -2074,7 +2079,7 @@ sgs_Errno [function (inline)]
 
 # dumpvar [function]
 
-== dumpvars( ... )
+== dumpvar( ... )
 === similar to @printvar() but returns the dumps, concatenated, instead of printing them
 
 
