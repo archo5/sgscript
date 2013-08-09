@@ -151,7 +151,7 @@ static int socket_geterrnobyname( SGS_CTX )
 		ekt += 2;
 	}
 	
-	sgs_Printf( C, SGS_ERROR, "this socket errno value is unsupported" );
+	sgs_Printf( C, SGS_ERROR, "this socket errno value is unsupported on this platform" );
 	return 0;
 }
 
@@ -949,6 +949,7 @@ static sgs_RegIntConst i_sock[] =
 {
 	DF( PF_INET ), DF( PF_INET6 ), DF( PF_UNIX ), DF( PF_IPX ),
 	DF( AF_INET ), DF( AF_INET6 ), DF( AF_UNIX ), DF( AF_IPX ),
+	DF( AF_UNSPEC ), DF( AI_PASSIVE ),
 	DF( SOCK_STREAM ), DF( SOCK_DGRAM ), DF( SOCK_SEQPACKET ), DF( SOCK_RAW ),
 	DF( IPPROTO_TCP ), DF( IPPROTO_UDP ),
 	

@@ -1,0 +1,122 @@
+SGS Sockets library
+
+
+#
+## MAIN/INFO
+#
+
+
+# SGS Sockets - description [info]
+
+The main focus of support in this library was to support Internet sockets in a cross-platform way. Every other possible use of sockets currently is not supported.
+
+The library is compiled to a 'sgssockets' shared library so it can be included this way (assuming that, on Linux and similar systems, LD_LIBRARY_PATH is set correctly):
+
+    include "sgssockets";
+
+
+#
+## NATIVE/API
+#
+
+
+# socket [type]
+
+== socket
+=== a socket object contains the socket identifier directly in the data pointer
+
+- extraction of the identifier can be done this way: `((int)(size_t)data->data)`
+- the identifier may be -1 if the socket is closed
+
+
+# socket_address [type]
+
+== socket_address
+=== a socket address object contains the address of any type (family), data pointer points to a sockaddr_storage struct
+
+- extraction can be done by casting the pointer to one of the sockaddr types (_in, _in6, _storage and others), depending on the value of the address family member (all structs are supposed to have it at the same place)
+
+
+#
+## SGS/API
+#
+
+
+# socket_error [function]
+
+== socket_error( bool as_text = false )
+=== returns the last error received from working with the sockets, possibly as text
+
+
+# socket_geterrnobyname [function]
+
+== socket_geterrnobyname( string name )
+=== returns a socket error code as integer by its name (for example, "EWOULDBLOCK")
+
+- error codes can differ between platforms so it is expected to retrieve the required ones from the function for comparisons
+
+
+# socket_address [object]
+
+- read-only properties
+-- family - the address family (AF_* constants) of this address, may be other than AF_INET or AF_INET6 but for those, feature set is severely limited
+- read-write properties
+-- port - (AF_INET/AF_INET6 only)
+-- addr_u32 - (AF_INET only) the address as an integer between 0 and 2^32-1
+-- addr_buf - (AF_INET/AF_INET6 only) the address as a buffer of bytes of 'string' type
+-- addr_bytes - (AF_INET/AF_INET6 only) the address as an array of byte integers
+-- addr_string - (AF_INET/AF_INET6 only) the address string without the port
+-- full_addr_string - (AF_INET/AF_INET6 only) the address string with the port
+- other features:
+-- tostring = <obj>.full_addr_string
+-- GC-safe
+-- limited content dump (full only for AF_INET/AF_INET6 addresses, for any other only `family` is dumped)
+-- type identification (returns the string "socket_address")
+
+
+# socket_address [function]
+# socket_address_frombytes [function]
+# socket_gethostname [function]
+# socket [object]
+
+- read-only properties
+-- [int] error - the last error code specifically for the socket
+-- [cfunc] bind
+-- [cfunc] listen
+-- [cfunc] accept
+-- [cfunc] connect
+-- [cfunc] send
+-- [cfunc] sendto
+-- [cfunc] recv
+-- [cfunc] recvfrom
+-- [cfunc] shutdown
+-- [cfunc] close
+-- [cfunc] getpeername
+- write-only properties
+-- [bool] blocking - whether the socket is blocking
+- read/write properties
+-- [bool] broadcast - whether the socket has broadcasting capabilities (applies to UDP sockets only)
+-- [bool] reuse_addr - whether to reuse addresses (ports) when binding the socket
+- other features:
+-- tostring = "socket"
+-- tobool = whether the socket is valid (not closed yet)
+-- GC-safe
+-- type identification (returns the string "socket")
+
+
+# socket.bind [method]
+# socket.listen [method]
+# socket.accept [method]
+# socket.connect [method]
+# socket.send [method]
+# socket.sendto [method]
+# socket.recv [method]
+# socket.recvfrom [method]
+# socket.shutdown [method]
+# socket.close [method]
+# socket.getpeername [method]
+
+
+# socket [function]
+# socket_select [function]
+

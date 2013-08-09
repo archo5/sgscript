@@ -31,6 +31,7 @@ function generate_docdata( name )
 		EXTRACT TAGS
 	*/
 	lines = string_explode( string_replace( raw, ["\r\n","\r"], "\n" ), "\n" );
+	doc_title = lines.shift();
 	tags = [];
 	foreach( id, line : lines )
 	{
@@ -89,7 +90,7 @@ function generate_docdata( name )
 
 	println( "generating and writing html pages..." );
 
-	title = "SGScript documentation - v0.9.0";
+	title = doc_title;
 	data = "<h1>"$title$"</h1>";
 
 	data $= "<div><h2>Table of Contents</h2>";
