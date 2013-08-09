@@ -3058,8 +3058,8 @@ static int sgsstd_string_compare( SGS_CTX )
 		i2 = from2;
 		for(;;)
 		{
-			int b1 = i1 < 0 ? 0 : ( i1 >= str1size ? 0 : str1[ i1 ] );
-			int b2 = i2 < 0 ? 0 : ( i2 >= str2size ? 0 : str2[ i2 ] );
+			int b1 = i1 < 0 ? -1 : ( i1 >= str1size ? -1 : str1[ i1 ] );
+			int b2 = i2 < 0 ? -1 : ( i2 >= str2size ? -1 : str2[ i2 ] );
 			if( b1 < b2 )
 				ret = -1;
 			if( b1 > b2 )

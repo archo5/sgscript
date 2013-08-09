@@ -8,53 +8,6 @@ include "markdown.sgs";
 io_dir_create( "out" );
 
 
-println( "parsing documentation file..." );
-
-raw = io_file_read( "docraw.txt" );
-
-/*
-	EXTRACT TAGS
-*/
-lines = string_explode( string_replace( raw, ["\r\n","\r"], "\n" ), "\n" );
-tags = [];
-foreach( id, line : lines )
-{
-	if( line.length < 1 || line[0] != "#" )
-	{
-		if( tags.size && isset( tags.last, "lines" ) )
-			tags.last.lines.push( line );
-		
-		continue;
-	}
-	
-	if( string_find( line, ">>>" ) !== null )
-	{
-		alias = string_trim( string_cut( line, 2, string_find( line, ">>>" ) - 1 ) );
-		tags.push({ id = id, type = ">", alias = alias });
-	}
-	else if( string_find( line, "<<<" ) !== null )
-	{
-		tags.push({ id = id, type = "<" });
-	}
-	else
-	{
-		pos2 = string_find_rev( line, "]" );
-		if( pos2 !== null )
-		{
-			pos1 = string_find_rev( line, "[" );
-			if( pos1 !== null && pos1 < pos2 )
-			{
-				page_name = string_trim( string_cut( line, 2, pos1 - 1 ) );
-				page_type = string_trim( string_part( line, pos1 + 1, pos2 - pos1 - 1 ) );
-				tags.push({ id = id, type = "+", pagename = page_name, pagetype = page_type, lines = [] });
-			}
-		}
-	}
-}
-
-/*
-	GENERATE PAGES
-*/
 function generate_alias( name )
 {
 	name = string_replace( name, [" "], "-" );
@@ -68,125 +21,140 @@ function full_alias( name, type )
 	return generate_alias( name $ " " $ type );
 }
 
-parts = [];
-foreach( tag : tags )
+function generate_docdata( name )
 {
-	if( tag.type == "+" )
-	{
-		alias = full_alias( tag.pagename, tag.pagetype );
-		path = [ alias ];
-		path_str = string_implode( path, '/' );
-		title = tag.pagename $ " [" $ tag.pagetype $ "]";
-		body = string_implode( tag.lines, "\n" );
-		parts.push({ path = path, path_str = path_str, title = title, body = body });
-	}
-}
-parts.unshift({ path = [], path_str = "", title = "SGScript documentation", body = "" });
+	println( "parsing documentation file '" $ name $ "'..." );
 
+	raw = io_file_read( name $ ".txt" );
 
-if(0){
-println( "parsing web tree..." );
-
-/*
-	PARSE WEB TREE
-*/
-tree = eval_file( "doctree.txt" );
-function part_from_pathstr( parts, pstr )
-{
-	foreach( part : parts )
+	/*
+		EXTRACT TAGS
+	*/
+	lines = string_explode( string_replace( raw, ["\r\n","\r"], "\n" ), "\n" );
+	tags = [];
+	foreach( id, line : lines )
 	{
-		if( part.path_str == pstr )
-			return part;
-	}
-	return {title = "<error>"};
-}
-function gen_toc( name, tree, parts, bc )
-{
-	out = {};
-	ch = [];
-	foreach( n, v : tree )
-	{
-		pn = string_replace( n, ".", "/" );
-		ch.push( pn );
-		if( v !== null )
+		if( line.length < 1 || line[0] != "#" )
 		{
-			st = gen_toc( n, v, parts, clone(bc).push(pn) );
-			foreach( stn, sti : st )
-				out[ stn ] = sti;
+			if( tags.size && isset( tags.last, "lines" ) )
+				tags.last.lines.push( line );
+			
+			continue;
+		}
+		
+		if( string_find( line, ">>>" ) !== null )
+		{
+			alias = string_trim( string_cut( line, 2, string_find( line, ">>>" ) - 1 ) );
+			tags.push({ id = id, type = ">", alias = alias });
+		}
+		else if( string_find( line, "<<<" ) !== null )
+		{
+			tags.push({ id = id, type = "<" });
+		}
+		else
+		{
+			pos2 = string_find_rev( line, "]" );
+			if( pos2 !== null )
+			{
+				pos1 = string_find_rev( line, "[" );
+				if( pos1 !== null && pos1 < pos2 )
+				{
+					page_name = string_trim( string_cut( line, 2, pos1 - 1 ) );
+					page_type = string_trim( string_part( line, pos1 + 1, pos2 - pos1 - 1 ) );
+					tags.push({ id = id, type = "+", pagename = page_name, pagetype = page_type, lines = [] });
+				}
+			}
 		}
 	}
-	var rbc = clone(bc);
-	if( rbc.size )
-		rbc.pop();
-	out[ string_replace( name, ".", "/" ) ] =
-		{ name = part_from_pathstr( parts, name ).title, bc = rbc, ch = ch };
-	return out;
-}
-toc = gen_toc( "", tree, parts, [] );
 
-println( "writing web tree to out/toc.json..." );
+	/*
+		GENERATE PAGES
+	*/
 
-// printvar( toc );
-io_file_write( "out/toc.json", json_encode( toc ) );
-}
+	parts = [];
+	foreach( tag : tags )
+	{
+		if( tag.type == "+" )
+		{
+			alias = full_alias( tag.pagename, tag.pagetype );
+			path = [ alias ];
+			path_str = string_implode( path, '/' );
+			title = tag.pagename $ " [" $ tag.pagetype $ "]";
+			body = string_implode( tag.lines, "\n" );
+			parts.push({ path = path, path_str = path_str, title = title, body = body });
+		}
+	}
+	parts.unshift({ path = [], path_str = "", title = "SGScript documentation", body = "" });
 
 
-println( "generating and writing html pages..." );
+	println( "generating and writing html pages..." );
 
-title = "SGScript documentation - v0.9.0";
-data = "<h1>"$title$"</h1>";
+	title = "SGScript documentation - v0.9.0";
+	data = "<h1>"$title$"</h1>";
 
-data $= "<div><h2>Table of Contents</h2>";
-ulevel = 0;
-foreach( P : parts )
-{
-	if( !P.path_str )
-		continue;
-	newulev = P.path.size;
-	data $= uladjust( ulevel, newulev );
-	data $= "<a href='#" $ P.path_str $ "'>" $ htmlencode( P.title ) $ "</a>";
-	ulevel = newulev;
-}
-data $= uladjust( ulevel, 0 );
-data $= "</div>";
-
-data $= "<div>";
-foreach( P : parts )
-{
-	if( !P.path_str )
-		continue;
-	
-	h = "h" $ ( P.path.size + 1 );
-
-	content = markdown2html( P.body );
-//	io_file_write( "out/" $ string_replace( P.path_str, ".", "-" ) $ ".htm", content );
-	
-	data $= "<div class='item'>";
-	data $= "<a name='" $ P.path_str $ "'></a>";
-	data $= "<hr><h2>";
-	data $= P.title;
-//	if( P.path_str )
-//		data $= " <small>(" $ P.path_str $ ")</small>";
-	data $= "</h2>";
-	data $= content;
+	data $= "<div><h2>Table of Contents</h2>";
+	ulevel = 0;
+	foreach( P : parts )
+	{
+		if( !P.path_str )
+			continue;
+		newulev = P.path.size;
+		data $= uladjust( ulevel, newulev );
+		data $= "<a href='#" $ P.path_str $ "'>" $ htmlencode( P.title ) $ "</a>";
+		ulevel = newulev;
+	}
+	data $= uladjust( ulevel, 0 );
 	data $= "</div>";
+
+	data $= "<div>";
+	foreach( P : parts )
+	{
+		if( !P.path_str )
+			continue;
+		
+		h = "h" $ ( P.path.size + 1 );
+
+		content = markdown2html( P.body );
+	//	io_file_write( "out/" $ string_replace( P.path_str, ".", "-" ) $ ".htm", content );
+		
+		data $= "<div class='item'>";
+		data $= "<a name='" $ P.path_str $ "'></a>";
+		data $= "<hr><h2>";
+		data $= P.title;
+	//	if( P.path_str )
+	//		data $= " <small>(" $ P.path_str $ ")</small>";
+		data $= "</h2>";
+		data $= content;
+		data $= "</div>";
+	}
+	data $= "</div>";
+
+	data = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" '$
+		'"http://www.w3.org/TR/html4/loose.dtd">
+	<html><head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>'$title$"</title>
+		<link rel='stylesheet' type='text/css' href='docs.css'>
+		<script type='text/javascript' src='docs.js'></script>
+	</head><body>
+	"$data$"
+	</body></html>
+	";
+
+
+	io_file_write( name $ ".htm", data );
 }
-data $= "</div>";
-
-data = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" '$
-	'"http://www.w3.org/TR/html4/loose.dtd">
-<html><head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<title>'$title$"</title>
-	<link rel='stylesheet' type='text/css' href='sgscript-docs.css'>
-	<script type='text/javascript' src='sgscript-docs.js'></script>
-</head><body>
-"$data$"
-</body></html>
-";
 
 
-io_file_write( "sgscript-docs.htm", data );
-
+foreach( real, filename : io_dir( "." ) )
+{
+	if( !real ) continue;
+	if( string_compare( filename, ".docs.txt", 0, -9 ) != 0 )
+		continue;
+	fn = string_explode( filename, "." );
+	fn.pop();
+	fn = string_implode( fn, "." );
+	generate_docdata( fn );
+}
 
 println( "done!" );

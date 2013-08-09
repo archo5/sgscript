@@ -103,12 +103,12 @@ int main( int argc, char** argv )
 			sgs_printversion();
 			sgs_init();
 			
-			for( j = i + 1; j < argc; ++j )
+			for( j = i; j < argc; ++j )
 				sgs_PushString( C, argv[ j ] );
-			sgs_PushArray( C, argc - i - 1 );
+			sgs_PushArray( C, argc - i );
 			sgs_StoreGlobal( C, "argv" );
 			
-			sgs_PushInt( C, argc - i - 1 );
+			sgs_PushInt( C, argc - i );
 			sgs_StoreGlobal( C, "argc" );
 			
 			sgs_dofile( argv[ i ] );

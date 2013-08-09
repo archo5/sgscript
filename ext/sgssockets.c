@@ -5,49 +5,6 @@
 #ifdef _WIN32
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
-#  ifndef _MSC_VER
-#    define EADDRINUSE      100
-#    define EADDRNOTAVAIL   101
-#    define EAFNOSUPPORT    102
-#    define EALREADY        103
-#    define EBADMSG         104
-#    define ECANCELED       105
-#    define ECONNABORTED    106
-#    define ECONNREFUSED    107
-#    define ECONNRESET      108
-#    define EDESTADDRREQ    109
-#    define EHOSTUNREACH    110
-#    define EIDRM           111
-#    define EINPROGRESS     112
-#    define EISCONN         113
-#    define ELOOP           114
-#    define EMSGSIZE        115
-#    define ENETDOWN        116
-#    define ENETRESET       117
-#    define ENETUNREACH     118
-#    define ENOBUFS         119
-#    define ENODATA         120
-#    define ENOLINK         121
-#    define ENOMSG          122
-#    define ENOPROTOOPT     123
-#    define ENOSR           124
-#    define ENOSTR          125
-#    define ENOTCONN        126
-#    define ENOTRECOVERABLE 127
-#    define ENOTSOCK        128
-#    define ENOTSUP         129
-#    define EOPNOTSUPP      130
-#    define EOTHER          131
-#    define EOVERFLOW       132
-#    define EOWNERDEAD      133
-#    define EPROTO          134
-#    define EPROTONOSUPPORT 135
-#    define EPROTOTYPE      136
-#    define ETIME           137
-#    define ETIMEDOUT       138
-#    define ETXTBSY         139
-#    define EWOULDBLOCK     140
-#  endif
 #else
 #  include <unistd.h>
 #  include <sys/socket.h>
@@ -101,7 +58,7 @@
 
 #define SCKERRVN "__socket_error"
 
-int sockassert( SGS_CTX, int test )
+static int sockassert( SGS_CTX, int test )
 {
 	int err = test ? 0 : sgs_sockerror;
 	sgs_PushInt( C, err );
@@ -109,7 +66,7 @@ int sockassert( SGS_CTX, int test )
 	return test;
 }
 
-int socket_error( SGS_CTX )
+static int socket_error( SGS_CTX )
 {
 	int astext = 0, e = 0;
 	SGSFN( "socket_error" );
@@ -145,6 +102,58 @@ int socket_error( SGS_CTX )
 
 #define SOCKERR sockassert( C, 1 )
 #define SOCKCLEARERR sockassert( C, 0 )
+
+
+#ifdef _WIN32
+#  define AE( x ) #x, (const char*) WSA##x
+#else
+#  define AE( x ) #x, (const char*) x
+#endif
+static const char* socket_errno_key_table[] =
+{
+#ifndef _WIN32
+	AE( EBADMSG ), AE( ECANCELED ), AE( EIDRM ), AE( ENODATA ),
+	AE( ENOLINK ), AE( ENOMSG ), AE( ENOSR ), AE( ENOSTR ),
+	AE( ENOTRECOVERABLE ), AE( ENOTSUP ), AE( EOTHER ), AE( EOVERFLOW ),
+	AE( EOWNERDEAD ), AE( EPROTO ), AE( ETIME ), AE( ETXTBSY ),
+#endif
+	
+	AE( EADDRINUSE ), AE( EADDRNOTAVAIL ), AE( EAFNOSUPPORT ),
+	AE( EALREADY ), AE( ECONNABORTED ), AE( ECONNREFUSED ),
+	AE( ECONNRESET ), AE( EDESTADDRREQ ), AE( EHOSTUNREACH ),
+	AE( EINPROGRESS ), AE( EISCONN ), AE( ELOOP ), AE( EMSGSIZE ),
+	AE( ENETDOWN ), AE( ENETRESET ), AE( ENETUNREACH ), AE( ENOBUFS ),
+	AE( ENOPROTOOPT ), AE( ENOTCONN ), AE( ENOTSOCK ),
+	AE( EOPNOTSUPP ), AE( EPROTONOSUPPORT ), AE( EPROTOTYPE ),
+	AE( ETIMEDOUT ), AE( EWOULDBLOCK ),
+	
+	NULL,
+};
+#undef AE
+
+static int socket_geterrnobyname( SGS_CTX )
+{
+	const char** ekt = socket_errno_key_table;
+	char* str;
+	
+	SGSFN( "socket_geterrnobyname" );
+	
+	if( !sgs_LoadArgs( C, "s", &str ) )
+		return 0;
+	
+	while( *ekt )
+	{
+		if( strcmp( *ekt, str ) == 0 )
+		{
+			sgs_PushInt( C, (int) (size_t) ekt[1] );
+			return 1;
+		}
+		ekt += 2;
+	}
+	
+	sgs_Printf( C, SGS_ERROR, "this socket errno value is unsupported" );
+	return 0;
+}
 
 
 /*
@@ -568,8 +577,8 @@ static int socketI_recv( SGS_CTX )
 	sgs_PushStringBuf( C, NULL, size );
 	ret = recv( GET_SCK, sgs_GetStringPtr( C, -1 ), size, flags );
 	sockassert( C, ret );
-	if( ret < 0 )
-		sgs_PushBool( C, 0 );
+	if( ret <= 0 )
+		sgs_PushBool( C, ret == 0 );
 	else
 	{
 		(C->stack_top-1)->data.S->size = ret;
@@ -675,7 +684,7 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	
 	if( STREQ( name, "broadcast" ) )
 	{
-		int bv, bvl;
+		int bv, bvl = sizeof(int);
 		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_BROADCAST, (char*) &bv, &bvl ) != -1 ) )
 		{
 			sgs_Printf( C, SGS_WARNING, "failed to retrieve the 'broadcast' property of a socket" );
@@ -687,10 +696,22 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	}
 	if( STREQ( name, "reuse_addr" ) )
 	{
-		int bv, bvl;
+		int bv, bvl = sizeof(int);
 		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_REUSEADDR, (char*) &bv, &bvl ) != -1 ) )
 		{
 			sgs_Printf( C, SGS_WARNING, "failed to retrieve the 'reuse_addr' property of a socket" );
+			sgs_PushNull( C );
+		}
+		else
+			sgs_PushBool( C, bv );
+		return SGS_SUCCESS;
+	}
+	if( STREQ( name, "error" ) )
+	{
+		int bv, bvl = sizeof(int);
+		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_ERROR, (char*) &bv, &bvl ) != -1 ) )
+		{
+			sgs_Printf( C, SGS_WARNING, "failed to retrieve the 'error' property of a socket" );
 			sgs_PushNull( C );
 		}
 		else
@@ -862,14 +883,16 @@ static int sgs_socket_select( SGS_CTX )
 	ret = select( maxsock + 1, &setR, &setW, &setE, sgs_StackSize( C ) >= 4 ? &tv : NULL );
 	sockassert( C, ret != -1 );
 	
+	sgs_PushString( C, "erase" );
 	for( i = 0; i < szR; ++i )
 	{
 		sgs_PushNumIndex( C, 0, i );
 		data = sgs_GetObjectData( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setR ) )
 		{
-			sgs_PushProperty( C, "erase" );
+			sgs_PushItem( C, 0 );
 			sgs_PushInt( C, i );
+			sgs_PushIndexExt( C, -2, -4, 1 );
 			sgs_ThisCall( C, 1, 0 );
 			i--; szR--;
 		}
@@ -882,8 +905,9 @@ static int sgs_socket_select( SGS_CTX )
 		data = sgs_GetObjectData( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setW ) )
 		{
-			sgs_PushProperty( C, "erase" );
+			sgs_PushItem( C, 1 );
 			sgs_PushInt( C, i );
+			sgs_PushIndexExt( C, -2, -4, 1 );
 			sgs_ThisCall( C, 1, 0 );
 			i--; szW--;
 		}
@@ -896,8 +920,9 @@ static int sgs_socket_select( SGS_CTX )
 		data = sgs_GetObjectData( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setE ) )
 		{
-			sgs_PushProperty( C, "erase" );
+			sgs_PushItem( C, 2 );
 			sgs_PushInt( C, i );
+			sgs_PushIndexExt( C, -2, -4, 1 );
 			sgs_ThisCall( C, 1, 0 );
 			i--; szE--;
 		}
@@ -912,6 +937,7 @@ static int sgs_socket_select( SGS_CTX )
 static sgs_RegFuncConst f_sock[] =
 {
 	{ "socket_error", socket_error },
+	{ "socket_geterrnobyname", socket_geterrnobyname },
 	{ "socket_address", sgs_socket_address },
 	{ "socket_address_frombytes", sgs_socket_address_frombytes },
 	{ "socket_gethostname", sgs_socket_gethostname },
