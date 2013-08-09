@@ -1,6 +1,7 @@
 
 
 #include <errno.h>
+#include <math.h>
 #ifdef _WIN32
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
@@ -52,6 +53,7 @@
 #  include <sys/socket.h>
 #  include <netinet/in.h>
 #  define closesocket close
+#  define ioctlsocket ioctl
 #endif
 
 
@@ -83,9 +85,13 @@
 
 
 #ifdef _WIN32
-#  define sockerror WSAGetLastError()
+#  define sgs_sockerror WSAGetLastError()
+#  define SOCKADDR_SIZE int
+#  define IOCTL_VALUE u_long
 #else
-#  define sockerror errno
+#  define sgs_sockerror errno
+#  define SOCKADDR_SIZE unsigned int
+#  define IOCTL_VALUE int
 #endif
 
 
@@ -97,7 +103,7 @@
 
 int sockassert( SGS_CTX, int test )
 {
-	int err = test ? 0 : sockerror;
+	int err = test ? 0 : sgs_sockerror;
 	sgs_PushInt( C, err );
 	sgs_StoreGlobal( C, SCKERRVN );
 	return test;
@@ -470,44 +476,39 @@ static int socketI_listen( SGS_CTX )
 
 static int socketI_accept( SGS_CTX )
 {
-	int S, more = 0;
+	int S;
+	struct sockaddr_storage sa = {0};
+	SOCKADDR_SIZE sa_size = sizeof( sa );
 	
 	SOCK_IHDR( accept );
 	
-	if( !sgs_LoadArgs( C, "@>|b", &more ) )
+	if( !sgs_LoadArgs( C, "@>." ) )
 		return 0;
 	
-	if( !more )
+	S = accept( GET_SCK, (struct sockaddr*) &sa, &sa_size );
+	if( S == -1 )
 	{
-		S = accept( GET_SCK, NULL, NULL );
-		if( S == -1 )
-		{
-			SOCKERR;
-			STDLIB_WARN( "failed to accept connection" )
-		}
-		SOCKCLEARERR;
-		sgs_PushObject( C, (void*) (size_t) S, socket_iface );
-		return 1;
+		SOCKERR;
+		STDLIB_WARN( "failed to accept connection" )
 	}
-	else
-	{
-		struct sockaddr_storage sa;
-#ifdef _WIN32
-		int sa_size;
-#else
-		unsigned int sa_size;
-#endif
-		S = accept( GET_SCK, (struct sockaddr*) &sa, &sa_size );
-		if( S == -1 )
-		{
-			SOCKERR;
-			STDLIB_WARN( "failed to accept connection" )
-		}
-		SOCKCLEARERR;
-		sgs_PushObject( C, (void*) (size_t) S, socket_iface );
-		push_sockaddr( C, &sa, sa_size );
-		return 2;
-	}
+	SOCKCLEARERR;
+	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
+	push_sockaddr( C, &sa, sa_size );
+	return 2;
+}
+
+static int socketI_connect( SGS_CTX )
+{
+	sgs_VarObj* odt;
+	
+	SOCK_IHDR( connect );
+	
+	if( !sgs_LoadArgs( C, "@>o", sockaddr_iface, &odt ) )
+		return 0;
+	
+	sgs_PushBool( C, sockassert( C, connect( GET_SCK,
+		(struct sockaddr*) odt->data, sizeof(struct sockaddr_storage) ) != -1 ) );
+	return 1;
 }
 
 static int socketI_send( SGS_CTX )
@@ -531,6 +532,29 @@ static int socketI_send( SGS_CTX )
 	return 1;
 }
 
+static int socketI_sendto( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size;
+	sgs_Int flags = 0;
+	int ret;
+	sgs_VarObj* odt;
+	
+	SOCK_IHDR( sendto );
+	
+	if( !sgs_LoadArgs( C, "@>mo|i", &str, &size, sockaddr_iface, &odt, &flags ) )
+		return 0;
+	
+	ret = sendto( GET_SCK, str, size, (int) flags,
+		(struct sockaddr*) odt->data, sizeof(struct sockaddr_storage) );
+	sockassert( C, ret >= 0 );
+	if( ret < 0 )
+		sgs_PushBool( C, 0 );
+	else
+		sgs_PushInt( C, ret );
+	return 1;
+}
+
 static int socketI_recv( SGS_CTX )
 {
 	sgs_Int size, flags = 0;
@@ -544,11 +568,45 @@ static int socketI_recv( SGS_CTX )
 	sgs_PushStringBuf( C, NULL, size );
 	ret = recv( GET_SCK, sgs_GetStringPtr( C, -1 ), size, flags );
 	sockassert( C, ret );
-	if( ret <= 0 )
-		sgs_PushInt( C, ret );
+	if( ret < 0 )
+		sgs_PushBool( C, 0 );
 	else
+	{
 		(C->stack_top-1)->data.S->size = ret;
+		sgs_GetStringPtr( C, -1 )[ ret ] = 0;
+	}
 	return 1;
+}
+
+static int socketI_recvfrom( SGS_CTX )
+{
+	struct sockaddr_storage sa = {0};
+	SOCKADDR_SIZE sa_size = sizeof( sa );
+	
+	sgs_Int size, flags = 0;
+	int ret;
+
+	SOCK_IHDR( recvfrom );
+	
+	if( !sgs_LoadArgs( C, "@>i|i", &size, &flags ) )
+		return 0;
+
+	sgs_PushStringBuf( C, NULL, size );
+	ret = recvfrom( GET_SCK, sgs_GetStringPtr( C, -1 ), size, flags,
+		(struct sockaddr*) &sa, &sa_size );
+	sockassert( C, ret );
+	if( ret < 0 )
+	{
+		sgs_PushBool( C, 0 );
+		return 1;
+	}
+	else
+	{
+		(C->stack_top-1)->data.S->size = ret;
+		sgs_GetStringPtr( C, -1 )[ ret ] = 0;
+		push_sockaddr( C, &sa, sa_size );
+		return 2;
+	}
 }
 
 static int socketI_shutdown( SGS_CTX )
@@ -578,12 +636,9 @@ static int socketI_close( SGS_CTX )
 
 static int socketI_getpeername( SGS_CTX )
 {
-	struct sockaddr_storage sa;
-#ifdef _WIN32
-	int sa_size;
-#else
-	unsigned int sa_size;
-#endif
+	struct sockaddr_storage sa = {0};
+	SOCKADDR_SIZE sa_size = sizeof( sa );
+	
 	SOCK_IHDR( getpeername );
 	
 	if( !sgs_LoadArgs( C, "@>." ) )
@@ -609,11 +664,78 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( STREQ( name, "bind" ) ) IFN( socketI_bind )
 	if( STREQ( name, "listen" ) ) IFN( socketI_listen )
 	if( STREQ( name, "accept" ) ) IFN( socketI_accept )
+	if( STREQ( name, "connect" ) ) IFN( socketI_connect )
 	if( STREQ( name, "send" ) ) IFN( socketI_send )
+	if( STREQ( name, "sendto" ) ) IFN( socketI_sendto )
 	if( STREQ( name, "recv" ) ) IFN( socketI_recv )
+	if( STREQ( name, "recvfrom" ) ) IFN( socketI_recvfrom )
 	if( STREQ( name, "shutdown" ) ) IFN( socketI_shutdown )
 	if( STREQ( name, "close" ) ) IFN( socketI_close )
 	if( STREQ( name, "getpeername" ) ) IFN( socketI_getpeername )
+	
+	if( STREQ( name, "broadcast" ) )
+	{
+		int bv, bvl;
+		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_BROADCAST, (char*) &bv, &bvl ) != -1 ) )
+		{
+			sgs_Printf( C, SGS_WARNING, "failed to retrieve the 'broadcast' property of a socket" );
+			sgs_PushNull( C );
+		}
+		else
+			sgs_PushBool( C, bv );
+		return SGS_SUCCESS;
+	}
+	if( STREQ( name, "reuse_addr" ) )
+	{
+		int bv, bvl;
+		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_REUSEADDR, (char*) &bv, &bvl ) != -1 ) )
+		{
+			sgs_Printf( C, SGS_WARNING, "failed to retrieve the 'reuse_addr' property of a socket" );
+			sgs_PushNull( C );
+		}
+		else
+			sgs_PushBool( C, bv );
+		return SGS_SUCCESS;
+	}
+	
+	return SGS_ENOTFND;
+}
+
+static int socket_setindex( SGS_CTX, sgs_VarObj* data, int prop )
+{
+	char* name;
+	if( !sgs_ParseString( C, 0, &name, NULL ) )
+		return SGS_ENOTSUP;
+	
+	if( STREQ( name, "blocking" ) )
+	{
+		int bv;
+		IOCTL_VALUE inbv;
+		if( !sgs_ParseBool( C, -1, &bv ) )
+			return SGS_EINVAL;
+		inbv = !bv;
+		if( !sockassert( C, ioctlsocket( GET_SCK, FIONBIO, &inbv ) != -1 ) )
+			sgs_Printf( C, SGS_WARNING, "failed to set the 'blocking' property of a socket" );
+		return SGS_SUCCESS;
+	}
+	if( STREQ( name, "broadcast" ) )
+	{
+		int bv;
+		if( !sgs_ParseBool( C, -1, &bv ) )
+			return SGS_EINVAL;
+		if( !sockassert( C, setsockopt( GET_SCK, SOL_SOCKET, SO_BROADCAST, (char*) &bv, sizeof(bv) ) != -1 ) )
+			sgs_Printf( C, SGS_WARNING, "failed to set the 'broadcast' property of a socket" );
+		return SGS_SUCCESS;
+	}
+	if( STREQ( name, "reuse_addr" ) )
+	{
+		int bv;
+		if( !sgs_ParseBool( C, -1, &bv ) )
+			return SGS_EINVAL;
+		if( !sockassert( C, setsockopt( GET_SCK, SOL_SOCKET, SO_REUSEADDR, (char*) &bv, sizeof(bv) ) != -1 ) )
+			sgs_Printf( C, SGS_WARNING, "failed to set the 'reuse_addr' property of a socket" );
+		return SGS_SUCCESS;
+	}
 	
 	return SGS_ENOTFND;
 }
@@ -644,6 +766,7 @@ static int socket_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 static void* socket_iface[] =
 {
 	SOP_GETINDEX, socket_getindex,
+	SOP_SETINDEX, socket_setindex,
 	SOP_CONVERT, socket_convert,
 	SOP_DESTRUCT, socket_destruct,
 	SOP_END,
@@ -671,20 +794,135 @@ static int sgs_socket( SGS_CTX )
 	return 1;
 }
 
+static int sgs_socket_select( SGS_CTX )
+{
+	struct timeval tv;
+	sgs_Real timeout = 0;
+	sgs_SizeVal szR, szW, szE, i;
+	fd_set setR, setW, setE;
+	sgs_VarObj* data;
+	int maxsock = 0, ret;
+	
+	SGSFN( "socket_select" );
+	
+	if( !sgs_LoadArgs( C, "aaa|r", &szR, &szW, &szE, &timeout ) )
+		return 0;
+	
+	if( timeout < 0 )
+		STDLIB_WARN( "argument 4 (timeout) cannot be negative" )
+	
+	FD_ZERO( &setR );
+	FD_ZERO( &setW );
+	FD_ZERO( &setE );
+	
+	for( i = 0; i < szR; ++i )
+	{
+		sgs_PushNumIndex( C, 0, i );
+		if( !sgs_IsObject( C, -1, socket_iface ) )
+			return sgs_Printf( C, SGS_WARNING, "item #%d of 'read' array is not a socket", i + 1 );
+		data = sgs_GetObjectData( C, -1 );
+		if( GET_SCK == -1 )
+			return sgs_Printf( C, SGS_WARNING, "item #%d of 'read' array is not an open socket", i + 1 );
+		FD_SET( GET_SCK, &setR );
+		if( GET_SCK > maxsock )
+			maxsock = GET_SCK;
+		sgs_Pop( C, 1 );
+	}
+	
+	for( i = 0; i < szW; ++i )
+	{
+		sgs_PushNumIndex( C, 1, i );
+		if( !sgs_IsObject( C, -1, socket_iface ) )
+			return sgs_Printf( C, SGS_WARNING, "item #%d of 'write' array is not a socket", i + 1 );
+		data = sgs_GetObjectData( C, -1 );
+		if( GET_SCK == -1 )
+			return sgs_Printf( C, SGS_WARNING, "item #%d of 'write' array is not an open socket", i + 1 );
+		FD_SET( GET_SCK, &setW );
+		if( GET_SCK > maxsock )
+			maxsock = GET_SCK;
+		sgs_Pop( C, 1 );
+	}
+	
+	for( i = 0; i < szE; ++i )
+	{
+		sgs_PushNumIndex( C, 2, i );
+		if( !sgs_IsObject( C, -1, socket_iface ) )
+			return sgs_Printf( C, SGS_WARNING, "item #%d of 'error' array is not a socket", i + 1 );
+		data = sgs_GetObjectData( C, -1 );
+		if( GET_SCK == -1 )
+			return sgs_Printf( C, SGS_WARNING, "item #%d of 'error' array is not an open socket", i + 1 );
+		FD_SET( GET_SCK, &setE );
+		if( GET_SCK > maxsock )
+			maxsock = GET_SCK;
+		sgs_Pop( C, 1 );
+	}
+	
+	tv.tv_sec = floor( timeout );
+	tv.tv_usec = ( timeout - (sgs_Real) tv.tv_sec ) * 1000000;
+	ret = select( maxsock + 1, &setR, &setW, &setE, sgs_StackSize( C ) >= 4 ? &tv : NULL );
+	sockassert( C, ret != -1 );
+	
+	for( i = 0; i < szR; ++i )
+	{
+		sgs_PushNumIndex( C, 0, i );
+		data = sgs_GetObjectData( C, -1 );
+		if( !FD_ISSET( GET_SCK, &setR ) )
+		{
+			sgs_PushProperty( C, "erase" );
+			sgs_PushInt( C, i );
+			sgs_ThisCall( C, 1, 0 );
+			i--; szR--;
+		}
+		sgs_Pop( C, 1 );
+	}
+	
+	for( i = 0; i < szW; ++i )
+	{
+		sgs_PushNumIndex( C, 1, i );
+		data = sgs_GetObjectData( C, -1 );
+		if( !FD_ISSET( GET_SCK, &setW ) )
+		{
+			sgs_PushProperty( C, "erase" );
+			sgs_PushInt( C, i );
+			sgs_ThisCall( C, 1, 0 );
+			i--; szW--;
+		}
+		sgs_Pop( C, 1 );
+	}
+	
+	for( i = 0; i < szE; ++i )
+	{
+		sgs_PushNumIndex( C, 2, i );
+		data = sgs_GetObjectData( C, -1 );
+		if( !FD_ISSET( GET_SCK, &setE ) )
+		{
+			sgs_PushProperty( C, "erase" );
+			sgs_PushInt( C, i );
+			sgs_ThisCall( C, 1, 0 );
+			i--; szE--;
+		}
+		sgs_Pop( C, 1 );
+	}
+	
+	sgs_PushInt( C, ret );
+	return 1;
+}
+
 
 static sgs_RegFuncConst f_sock[] =
 {
+	{ "socket_error", socket_error },
 	{ "socket_address", sgs_socket_address },
 	{ "socket_address_frombytes", sgs_socket_address_frombytes },
 	{ "socket_gethostname", sgs_socket_gethostname },
 	{ "socket", sgs_socket },
-	{ "socket_error", socket_error },
+	{ "socket_select", sgs_socket_select },
 };
 
 static sgs_RegIntConst i_sock[] =
 {
-	DF( PF_INET ),
-	DF( AF_INET ), DF( AF_INET6 ), DF( AF_UNIX ),
+	DF( PF_INET ), DF( PF_INET6 ), DF( PF_UNIX ), DF( PF_IPX ),
+	DF( AF_INET ), DF( AF_INET6 ), DF( AF_UNIX ), DF( AF_IPX ),
 	DF( SOCK_STREAM ), DF( SOCK_DGRAM ), DF( SOCK_SEQPACKET ), DF( SOCK_RAW ),
 	DF( IPPROTO_TCP ), DF( IPPROTO_UDP ),
 	
@@ -701,7 +939,7 @@ static sgs_RegIntConst i_sock[] =
 #endif
 
 
-#ifdef WIN32
+#ifdef _WIN32
 __declspec(dllexport)
 #endif
 int sockets_module_entry_point( SGS_CTX )
@@ -713,6 +951,9 @@ int sockets_module_entry_point( SGS_CTX )
 	
 	sgs_PushInt( C, 0 );
 	sgs_StoreGlobal( C, SCKERRVN );
+	
+	sgs_RegisterType( C, "socket", socket_iface );
+	sgs_RegisterType( C, "socket_address", sockaddr_iface );
 	
 	ret = sgs_RegFuncConsts( C, f_sock, sizeof(f_sock) / sizeof(f_sock[0]) );
 	if( ret != SGS_SUCCESS ) return ret;
@@ -728,3 +969,18 @@ int sockets_module_entry_point( SGS_CTX )
 	
 	return SGS_SUCCESS;
 }
+
+/*
+	in case someone wants to compile it like a header file...
+*/
+#undef GET_SCK
+#undef GET_SAF
+#undef GET_SAI
+#undef GET_SAI6
+#undef DF
+#undef STREQ
+#undef IFN
+#undef STDLIB_WARN
+#undef SOCKADDR_SIZE
+#undef SCKERRVN
+
