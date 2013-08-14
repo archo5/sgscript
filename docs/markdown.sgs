@@ -2,14 +2,18 @@
 include "string";
 
 
+global htmlencode_repmap =
+{
+	"&" = "&amp;",
+	"<" = "&lt;",
+	">" = "&gt;",
+	"'" = "&#39;",
+	"\"" = "&quot;"
+};
 function htmlencode( text )
 {
-	text = string_replace( text, "&", "&amp;" );
-	text = string_replace( text, "<", "&lt;" );
-	text = string_replace( text, ">", "&gt;" );
-	text = string_replace( text, "'", "&#39;" );
-	text = string_replace( text, "\"", "&quot;" );
-	return text;
+	global htmlencode_repmap;
+	return string_translate( text, htmlencode_repmap );
 }
 
 function uladjust( prev, cur )
@@ -22,103 +26,23 @@ function uladjust( prev, cur )
 		return string_repeat( "</li></ul>", prev - cur ) $ ["","<li>"][ cur > 0 ];
 }
 
-function array_find( a, what )
-{
-	for( i = 0; i < a.size; ++i )
-	{
-		if( a[ i ] == what )
-			return i;
-	}
-	return null;
-}
-
 function markdown2html( text )
 {
 	function mdinline( text )
 	{
-		function apply_tag( hstack, tag, attribs )
-		{
-			attribs = attribs || {};
-			out = "";
-			if( array_find( hstack, tag ) !== null )
-			{
-				tmp = [];
-				while( ( x = hstack.pop() ) != tag )
-				{
-					out $= "</"$x$">";
-					tmp.push( x );
-				}
-				out $= "</"$tag$">";
-				while( tmp.size )
-				{
-					x = tmp.pop();
-					out $= "<"$x$">";
-					hstack.push( x );
-				}
-			}
-			else
-			{
-				hstack.push( tag );
-				out $= "<"$tag;
-				foreach( k, v : attribs )
-				{
-					out $= " ";
-					out $= k;
-					out $= "=\"";
-					out $= v;
-					out $= "\"";
-				}
-				out $= ">";
-			}
-			return out;
-		}
-		
-		out = "";
-		hstack = [];
-		for( i = 0; i < text.length; ++i )
-		{
-			chr = text[ i ];
-			if( chr == "@" )
-			{
-				b = ++i;
-				while( i < text.length && text[i] != "<" )
-					i++;
-				if( i >= text.length || text[i] != "<" )
-				{
-					out $= text[ b - 1 ];
-					i = b - 1;
-					continue;
-				}
-				href = string_part( text, b, i - b );
-				out $= apply_tag( hstack, "a", {href=href} );
-			}
-			else if( chr == ">" && hstack.size && hstack.last == "a" )
-			{
-				out $= apply_tag( hstack, "a" );
-			}
-			else if( chr == "*" && i > 1 && text[i-1] == "*" && text[i-2] == "*" )
-			{
-				if( i + 1 < text.length && string_cut( text, i+1, i+1 ) == "*" ) // bold
-				{
-					out $= apply_tag( hstack, "b" );
-					i++;
-				}
-				else
-				{
-					out $= apply_tag( hstack, "i" );
-				}
-			}
-			else if( chr == "`" )
-				out $= apply_tag( hstack, "code" );
-			else
-				out $= htmlencode( chr );
-		}
-		while( hstack.size )
-		{
-			x = hstack.pop();
-			out $= "</" $ x $ ">";
-		}
-		return out;
+		text = htmlencode( text );
+		bdcc = "(^|[ \n\r\t,.])";
+		edcc = "($|[ \n\r\t,.])";
+		text = string_regex_replace( text,
+			"#"$bdcc$"\\*\\*([^*]+)\\*\\*"$edcc$"#",
+			"$1<b>$2</b>$3" );
+		text = string_regex_replace( text,
+			"#"$bdcc$"\\*([^*]+)\\*"$edcc$"#",
+			"$1<i>$2</i>$3" );
+		text = string_regex_replace( text,
+			"#"$bdcc$"`([^`]+)`"$edcc$"#",
+			"$1<code>$2</code>$3" );
+		return text;
 	}
 	
 	text = string_replace( text, ['\r\n','\r'], '\n' );
@@ -128,11 +52,11 @@ function markdown2html( text )
 	{
 		L = lines[ i ];
 		
-		if( string_part( L, 0, 3 ) == "---" )
+		if( !string_compare( L, "---", 3 ) )
 		{
 			if( i + 1 < lines.size &&
-				( string_part( lines[ i + 1 ], 0, 2 ) == "| " ||
-				string_part( lines[ i + 1 ], 0, 2 ) == "! " ) )
+				( !string_compare( lines[ i + 1 ], "| ", 2 ) ||
+				!string_compare( lines[ i + 1 ], "! ", 2 ) ) )
 			{
 				lines[ i ] = "<table>";
 				i++;
@@ -164,7 +88,7 @@ function markdown2html( text )
 			else
 				lines[ i ] = "</p><hr /><p>";
 		}
-		else if( string_part( L, 0, 2 ) == "- " )
+		else if( !string_compare( L, "- ", 2 ) )
 		{
 			lines[ i ] = "</p><ul><li>" $ mdinline( string_trim( L, "- ", STRING_TRIM_LEFT ) );
 			i++;
@@ -188,18 +112,18 @@ function markdown2html( text )
 			if( i >= lines.size ) i--;
 			lines[ i ] $= uladjust( ulevel, 0 ) $ "<p>";
 		}
-		else if( string_part( L, 0, 2 ) == "! " )
+		else if( !string_compare( L, "! ", 2 ) )
 		{
 			lines[ i ] = "<em class='notice-bgr'>" $ mdinline( string_trim( L, "! ", STRING_TRIM_LEFT ) ) $ "</em>";
 		}
-		else if( string_part( L, 0, 4 ) == "    " )
+		else if( !string_compare( L, "    ", 4 ) )
 		{
 			lines[ i ] = "</p><pre>" $ htmlencode( string_part( L, 4 ) );
 			i++;
 			while( i < lines.size )
 			{
 				L = lines[ i ];
-				if( string_part( L, 0, 4 ) != "    " )
+				if( string_compare( L, "    ", 4 ) )
 				{
 					i--;
 					break;
@@ -210,7 +134,7 @@ function markdown2html( text )
 			if( i >= lines.size ) i--;
 			lines[ i ] $= "</pre><p>";
 		}
-		else if( string_part( L, 0, 2 ) == "==" )
+		else if( !string_compare( L, "==", 2 ) )
 		{
 			cnt = L.length - string_trim( L, "=", STRING_TRIM_LEFT ).length + 1;
 			if( cnt > 6 ) cnt = 6;

@@ -48,10 +48,10 @@ else
 endif
 
 
-_DEPS = sgs_cfg.h sgs_int.h sgs_util.h sgs_xpc.h sgscript.h
+_DEPS = sgs_cfg.h sgs_int.h sgs_util.h sgs_xpc.h sgscript.h sgs_regex.h
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 
-_OBJ = sgs_bcg.o sgs_ctx.o sgs_fnt.o sgs_proc.o sgs_std.o sgs_stdL.o sgs_tok.o sgs_util.o sgs_xpc.o
+_OBJ = sgs_bcg.o sgs_ctx.o sgs_fnt.o sgs_proc.o sgs_std.o sgs_stdL.o sgs_tok.o sgs_util.o sgs_xpc.o sgs_regex.o
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 # the library (default target)

@@ -318,7 +318,7 @@ These are the default meanings for error codes that are honored throughout the A
 </p><ul><li>it is generally unnecessary to check for these error codes</li></ul><p>
 </p><p>
 </p><h4>error codes</h4><p>
-</p><ul><li>SGS_E**<b>: first error encountered (operation stopped somewhere in the middle)</b></li></ul><p>
+</p><ul><li>SGS_E****: first error encountered (operation stopped somewhere in the middle)</li></ul><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='sgs_Reg[Func|Int|Real]Const-struct'></a><hr><h2>sgs_Reg[Func|Int|Real]Const [struct]</h2><p></p><p>
 </p><h3>sgs_RegFuncConst { char* name; sgs_CFunc value; }</h3><p>
@@ -338,7 +338,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li>using both at the same time should be reserved to special cases only</li></ul></li></ul><p>
 </p><p>
 </p><h4>error codes</h4><p>
-</p><ul><li>SGS_E**<b>: first error encountered (operation stopped somewhere in the middle)</b></li></ul><p>
+</p><ul><li>SGS_E****: first error encountered (operation stopped somewhere in the middle)</li></ul><p>
 </p><p>
 </p><p>
 </p><p>
@@ -540,7 +540,7 @@ These are the default meanings for error codes that are honored throughout the A
 </p><p>
 <em class='notice-bgr'>The safety of this function is similar to that of the printf family of functions. Be explicit in what types you pass to the variable argument list to avoid errors.</em>
 </p><p>
-</p><ul><li>the syntax of <code>path</code>:
+</p><ul><li>the syntax of `path`:
 <ul><li>a list of letters, specifying a sub-variable to request (o,p,s,i,k,n)</li></ul></li></ul><p>
 </p><p>
 </p><h5>table of accepted letters</h5><p>
@@ -661,9 +661,9 @@ These are the default meanings for error codes that are honored throughout the A
 </p><h3>SGSRESULT sgs_FCall( sgs_Context* C, int args, int expect, int gotthis )</h3><p>
 </p><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><p>
 </p><p>
-</p><ul><li><code>args</code>: the primary variables to be passed to the function, in the same order they are in the stack
-</li><li><code>expect</code>: the number of variables to be left after a successful call
-</li><li><code>gotthis</code>: whether the function is a method and an additional argument needs to be passed as the &#39;this&#39; value before others</li></ul><p>
+</p><ul><li>`args`: the primary variables to be passed to the function, in the same order they are in the stack
+</li><li>`expect`: the number of variables to be left after a successful call
+</li><li>`gotthis`: whether the function is a method and an additional argument needs to be passed as the &#39;this&#39; value before others</li></ul><p>
 </p><p>
 After a successful call, all arguments and the function will be popped off the stack and the expected number of variables will appear in their place. If the underlying callable does not return enough arguments, &#39;null&#39; variables will be pushed instead. If the number of returned values is bigger than expected, only the first expected return values will stay on the stack.
 </p><p>
@@ -681,7 +681,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><p>
 </p><h4>error codes</h4><p>
 </p><ul><li>SGS_EINPROC: topmost item on stack was not callable
-</li><li>SGS_EINVAL: not enough values in current stack frame (must have at least <code>args + (gotthis?1:0) + 1</code>)</li></ul><p>
+</li><li>SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + 1`)</li></ul><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='sgs_[Call|ThisCall]-function-aliases'></a><hr><h2>sgs_[Call|ThisCall] [function aliases]</h2><p></p><p>
 </p><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><p>
@@ -746,7 +746,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><h4>concatenate the <code>args</code> number of topmost string variables in the current stack frame</h4><p>
 </p><p>
 </p><h4>error codes</h4><p>
-</p><ul><li>SGS_EINVAL: not enough (less than <code>args</code>) variables were found in the current stack frame</li></ul><p>
+</p><ul><li>SGS_EINVAL: not enough (less than `args`) variables were found in the current stack frame</li></ul><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='sgs_CloneItem-function'></a><hr><h2>sgs_CloneItem [function]</h2><p></p><p>
 </p><h3>SGSRESULT sgs_CloneItem( sgs_Context* C, int item )</h3><p>
@@ -799,7 +799,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><h3>int sgs_Compare( sgs_Context* C, sgs_Variable* v1, sgs_Variable* v2 )</h3><p>
 </p><h4>return the difference between variables, as int -1/0/1</h4><p>
 </p><p>
-</p><ul><li>alias to <a href="sgs_CompareF() + conversion (if result "> 0, return -1; if result </a> 0, return 1; otherwise return 0)</li></ul><p>
+</p><ul><li>alias to @sgs_CompareF() + conversion (if result &lt; 0, return -1; if result &gt; 0, return 1; otherwise return 0)</li></ul><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='sgs_EqualTypes-function'></a><hr><h2>sgs_EqualTypes [function]</h2><p></p><p>
 </p><h3>SGSBOOL sgs_EqualTypes( sgs_Context* C, sgs_Variable* v1, sgs_Variable* v2 )</h3><p>
@@ -894,7 +894,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><h3>SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )</h3><p>
 </p><h4>checks if the string is convertible to an integer/real</h4><p>
 </p><p>
-</p><ul><li>more info at <a href="">Numeric string parsing rules</a></li></ul><p>
+</p><ul><li>more info at @&lt;Numeric string parsing rules&gt;</li></ul><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='sgs_[ParseBool|ParseInt|ParseReal|ParseString]-functions'></a><hr><h2>sgs_[ParseBool|ParseInt|ParseReal|ParseString] [functions]</h2><p></p><p>
 </p><h3>SGSBOOL sgs_ParseBool( sgs_Context* C, int item, sgs_Bool* out )</h3><p>
@@ -907,7 +907,7 @@ After a successful call, all arguments and the function will be popped off the s
 <ul><li>if <code>item</code> is out of bounds, fail
 </li><li>if item has the type <code>null</code>, <code>func</code> or <code>cfunc</code>, fail
 </li><li>if item is of <code>string</code> type and <code>bool</code> is requested, fail
-</li><li>if item is of <code>string</code> type and <code>int</code>/<code>real</code> is requested, try to convert
+</li><li>if item is of <code>string</code> type and `int`/`real` is requested, try to convert
 </li><li>if item is of <code>object</code> type, success of conversion depends on implementation of the object interface and the rules of sgs_GetBool/sgs_GetInt/sgs_GetReal/sgs_ToStringBuf
 </li><li>everything else succeeds</li></ul></li></ul><p>
 </p><p>
@@ -1063,7 +1063,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><h3>void sgs_SetPrintFunc( sgs_Context* C, sgs_PrintFunc func, void* userdata )</h3><p>
 </p><h4>sets the function that handles and prints the error that has occured, while still being physically in that context</h4><p>
 </p><p>
-</p><ul><li>both subtypes of the default printing function can be set by passing these flags for <code>func</code> and a FILE* pointer for <code>userdata</code>:
+</p><ul><li>both subtypes of the default printing function can be set by passing these flags for <code>func</code> and a FILE* pointer for `userdata`:
 <ul><li>&#39;SGSPRINTFN_DEFAULT&#39; - default behavior (write stack frame, write error, abort on SGS_ERROR)
 </li><li>&#39;SGSPRINTFN_DEFAULT_NOABORT&#39; - default behavior without the abort-on-errors feature
 </li></ul><li>default implementation writes error and stack trace to FILE* stream, specified in userdata, it can be found in sgs_ctx.c</li></ul><p>
@@ -1126,14 +1126,14 @@ After a successful call, all arguments and the function will be popped off the s
 </p><h3>Memory allocation macros</h3><p>
 </p><h4>these macros allow slightly simplified handling of memory</h4><p>
 </p><p>
-</p><ul><li><code>sgs_Malloc( C, size )</code>: allocates the memory (alias to <code>sgs_Memory( C, NULL, size )</code>)
-</li><li><code>sgs_Free( C, ptr )</code>: frees the memory (alias to <code>sgs_Memory( C, ptr, 0 )</code>)
+</p><ul><li>`sgs_Malloc( C, size )`: allocates the memory (alias to `sgs_Memory( C, NULL, size )`)
+</li><li>`sgs_Free( C, ptr )`: frees the memory (alias to `sgs_Memory( C, ptr, 0 )`)
 </li><li>sgs_Realloc: alias to sgs_Memory
 </li><li>the following macros expect that the variable sgs_Context* C is in the scope
-<ul><li><code>sgs_Alloc( what )</code>: allocates enough memory to fit the specified type <code>what</code>
-</li><li><code>sgs_Alloc_n( what, n )</code>: allocates enough memory to fit <code>n</code> instances of the specified type <code>what</code>
-</li><li><code>sgs_Alloc_a( what, app )</code>: allocates enough memory to fit the specified type <code>what</code> and <code>app</code> more bytes
-</li><li><code>sgs_Dealloc( ptr )</code>: frees the memory
+<ul><li>`sgs_Alloc( what )`: allocates enough memory to fit the specified type <code>what</code>
+</li><li>`sgs_Alloc_n( what, n )`: allocates enough memory to fit <code>n</code> instances of the specified type <code>what</code>
+</li><li>`sgs_Alloc_a( what, app )`: allocates enough memory to fit the specified type <code>what</code> and <code>app</code> more bytes
+</li><li>`sgs_Dealloc( ptr )`: frees the memory
 </li></ul><li>all of these functions, including sgs_Memory, work on the same heap, thus they are interchangeable</li></ul><p>
 </p><p>
 </p><p>
@@ -1738,7 +1738,7 @@ print unserialize(data); // prints {name=A,info=B}</pre><p>
 </p><h4>recreates a variable from the buffer with serialized data or returns null and emits a warning on failure</h4><p>
 </p><p>
 </p><ul><li>this function will internally call global object creation functions specified in the data, so they must be defined and the state could change in the process
-</li><li>for more info on serialization in SGScript, refer to <a href="">Serialization in SGScript</a></li></ul><p>
+</li><li>for more info on serialization in SGScript, refer to @&lt;Serialization in SGScript&gt;</li></ul><p>
 </p><p>
 </p><pre>data = serialize({ name = &quot;A&quot;, info = &quot;B&quot; });
 print data; // prints random-ish garbage
@@ -1917,7 +1917,7 @@ a.sort_mapped( b ); // a = [6,8,5,7]</pre><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='array.find-method'></a><hr><h2>array.find [method]</h2><p></p><p>
 </p><h3>array.find( var item[, bool strict[, int from ]] )</h3><p>
-</p><h4>attempts to find <code>item</code> in array, starting from 0 or the index passed with <code>from</code>, if it exists, using basic or strict equality comparisons (depending on <code>strict</code>), returning the index or &#39;null&#39; if item was not found</h4><p>
+</p><h4>attempts to find <code>item</code> in array, starting from 0 or the index passed with <code>from</code>, if it exists, using basic or strict equality comparisons (depending on `strict`), returning the index or &#39;null&#39; if item was not found</h4><p>
 </p><p>
 </p><ul><li>if strict comparisons are enabled, variable types are also checked for equality</li></ul><p>
 </p><p>
@@ -1927,7 +1927,7 @@ a.find( &quot;7&quot;, true ); // returns null</pre><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='array.remove-method'></a><hr><h2>array.remove [method]</h2><p></p><p>
 </p><h3>array.remove( var item[, bool strict[, bool all[, int from ]]] )</h3><p>
-</p><h4>attepts to find and remove first or all <code>item</code> variables in array (depending on <code>all</code>), according to the rules specified in @array.find(), returning the number of removed items</h4><p>
+</p><h4>attepts to find and remove first or all <code>item</code> variables in array (depending on `all`), according to the rules specified in @array.find(), returning the number of removed items</h4><p>
 </p><p>
 </p><pre>a = [ 5, 2, 6, 7, 8, 2 ];
 a.remove( &quot;7&quot; ); // returns 1; a = [5,2,6,8,2]
@@ -1981,7 +1981,7 @@ a.remove( 2, false, true ); // returns 2; a = [5,6,8]</pre><p>
 </p><p>
 </p><ul><li>the format: character command list
 <ul><li>0-9: add a digit to multiplier
-</li><li>=/&lt;/&gt;/<a href=": "=" sets host byte order, "">&quot; - little endian byte order, &quot;</a>&quot; - big endian, &quot;@&quot; - inverted
+</li><li>=/&lt;/&gt;/@: &quot;=&quot; sets host byte order, &quot;&lt;&quot; - little endian byte order, &quot;&gt;&quot; - big endian, &quot;@&quot; - inverted
 </li><li>+/-: &quot;+&quot; - unsigned integers, &quot;-&quot; - signed integers
 </li><li>c/w/l/q/p: integers (c - char, 1 byte, w - word, 2 bytes, l - long, 4 bytes, q - quad-word, 8 bytes, p - pointer/size, platform-specific size of 4/8 bytes, usually)
 </li><li>f/d: floating-point numbers: &quot;f&quot; - single precision, &quot;d&quot; - double precision
@@ -2336,7 +2336,7 @@ round( -3.1 ); // real (-3)</pre><p>
 </p><h3>pow( x, y )</h3><p>
 </p><h4>returns <code>x</code> raised to the power <code>y</code>, as <code>real</code></h4><p>
 </p><p>
-</p><ul><li>If base (<code>x</code>) is negative and exponent (<code>y</code>) is not an integral value, or if base is zero and exponent is negative, function returns <code>null</code> and emits a warning message.</li></ul><p>
+</p><ul><li>If base (`x`) is negative and exponent (`y`) is not an integral value, or if base is zero and exponent is negative, function returns <code>null</code> and emits a warning message.</li></ul><p>
 </p><p>
 </p><pre>pow( 2, 5 ); // real (32)
 pow( 9, 0.5 ); // real (3)
@@ -2353,7 +2353,7 @@ sqrt( -1 ); // null; Warning: sqrt(): mathematical error</pre><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='log-function'></a><hr><h2>log [function]</h2><p></p><p>
 </p><h3>log( x, y )</h3><p>
-</p><h4>returns the base-<code>y</code> logarithm of <code>x</code>, as <code>real</code></h4><p>
+</p><h4>returns the base-`y` logarithm of <code>x</code>, as <code>real</code></h4><p>
 </p><p>
 </p><ul><li>If <code>x &lt;= 0</code>  or  <code>b &lt;= 0</code>  or  <code>b = 1</code>, function returns <code>null</code> and emits a warning message.</li></ul><p>
 </p><p>
@@ -2554,9 +2554,9 @@ rad2deg( -M_PI / 2 ); // real (-90)</pre><p>
 </p><p>
 </p><ul><li>if <code>to</code> is not specified, <code>to</code> is assumed to be the position of the last character in string <code>str</code>
 </li><li>if <code>from</code> or <code>to</code> are negative, they point to characters before the end of string (-1 being the last one)
-</li><li>available values for <code>flags</code>:
+</li><li>available values for `flags`:
 <ul><li><code>STRING_NO_REV_INDEX</code> - emit warnings on negative indices, instead of handling them
-</li><li><code>STRING_STRICT_RANGES</code> - emit warnings on out of bounds <code>from</code>/<code>to</code> values instead of silently ignoring the outside characters</li></ul></li></ul><p>
+</li><li><code>STRING_STRICT_RANGES</code> - emit warnings on out of bounds `from`/`to` values instead of silently ignoring the outside characters</li></ul></li></ul><p>
 </p><p>
 </p><pre>string_cut( &quot;01234567&quot;, 3, 5 ); // string [3] &quot;345&quot;</pre><p>
 </p><p>
@@ -2567,9 +2567,9 @@ rad2deg( -M_PI / 2 ); // real (-90)</pre><p>
 </p><ul><li>if <code>len</code> is not specified, <code>len</code> is assumed to be the number of characters between <code>from</code> and the end of string <code>str</code>
 </li><li>if <code>from</code> is negative, it points to characters before the end of string (-1 being the last one)
 </li><li>if <code>len</code> is negative, the maximum length of returned string is the sum of <code>len</code> and string <code>str</code> length
-</li><li>available values for <code>flags</code>:
+</li><li>available values for `flags`:
 <ul><li><code>STRING_NO_REV_INDEX</code> - emit warnings on negative indices, instead of handling them
-</li><li><code>STRING_STRICT_RANGES</code> - emit warnings on out of bounds <code>from</code>/<code>len</code> values instead of silently ignoring the outside characters</li></ul></li></ul><p>
+</li><li><code>STRING_STRICT_RANGES</code> - emit warnings on out of bounds `from`/`len` values instead of silently ignoring the outside characters</li></ul></li></ul><p>
 </p><p>
 </p><pre>string_part( &quot;01234567&quot;, 3, 3 ); // string [3] &quot;345&quot;</pre><p>
 </p><p>
@@ -2586,7 +2586,7 @@ rad2deg( -M_PI / 2 ); // real (-90)</pre><p>
 </p><h4>return the string <code>str</code>, padded from template <code>padstr</code> up to the size <code>tgtsize</code> according to <code>flags</code></h4><p>
 </p><p>
 </p><ul><li>if <code>str</code> is longer than <code>tgtsize</code>, it is returned without changes
-</li><li>available values for <code>flags</code>:
+</li><li>available values for `flags`:
 <ul><li><code>STRING_PAD_LEFT</code> - pad the string at the left side
 </li><li><code>STRING_PAD_RIGHT</code> - pad the string at the right side
 </li><li>if both flags are OR&#39;ed together, the string <code>str</code> is centered
@@ -2597,7 +2597,7 @@ string_pad( &quot;center&quot;, 10, &quot;_&quot;, STRING_PAD_LEFT | STRING_PAD_
 </p><p>
 </p><p></p></div><div class='item'><a name='string_repeat-function'></a><hr><h2>string_repeat [function]</h2><p></p><p>
 </p><h3>string_repeat( string str, int count )</h3><p>
-</p><h4>return the string <code>str</code>, appended to itself <code>count</code>-1 times or an empty string if <code>count</code> is equal to 0</h4><p>
+</p><h4>return the string <code>str</code>, appended to itself `count`-1 times or an empty string if <code>count</code> is equal to 0</h4><p>
 </p><p>
 </p><ul><li><code>count</code> must be greater than or equal to 0</li></ul><p>
 </p><p>
@@ -2655,7 +2655,7 @@ string_replace( &quot;1234&quot;, [&quot;1&quot;,&quot;2&quot;,&quot;3&quot;,&qu
 </p><h3>string_trim( string str, string chars = &quot; \t\r\n&quot;, int flags = STRING_TRIM_LEFT | STRING_TRIM_RIGHT )</h3><p>
 </p><h4>removes the specified characters from the specified sides of the string</h4><p>
 </p><p>
-</p><ul><li>available values for <code>flags</code>:
+</p><ul><li>available values for `flags`:
 <ul><li><code>STRING_TRIM_LEFT</code> - trim the string from the left side
 </li><li><code>STRING_TRIM_RIGHT</code> - trim the string from the right side</li></ul></li></ul><p>
 </p><p>
