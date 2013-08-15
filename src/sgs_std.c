@@ -196,6 +196,38 @@ static int sgsstd_arrayI_erase( SGS_CTX )
 	sgs_SetStackSize( C, 1 );
 	return 1;
 }
+static int sgsstd_arrayI_part( SGS_CTX )
+{
+	sgs_SizeVal from, max = 0x7fffffff, to, i;
+	SGSARR_IHDR( part );
+	
+	if( !sgs_LoadArgs( C, "@>l|l", &from, &max ) )
+		return 0;
+	
+	if( max < 0 )
+		STDLIB_WARN( "argument 2 (count) cannot be negative" )
+	
+	if( from < 0 )
+		from += hdr->size;
+	to = from + max;
+	if( to < from )
+		to = hdr->size;
+	
+	sgs_PushArray( C, 0 );
+	if( from < hdr->size && 0 < to )
+	{
+		from = MAX( from, 0 );
+		to = MIN( to, hdr->size );
+		
+		for( i = from; i < to; ++i )
+		{
+			sgs_PushVariable( C, SGSARR_PTR( hdr ) + i );
+			sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
+		}
+	}
+	
+	return 1;
+}
 
 static int sgsstd_arrayI_clear( SGS_CTX )
 {
@@ -603,6 +635,7 @@ static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 	else if( 0 == strcmp( name, "unshift" ) )   func = sgsstd_arrayI_unshift;
 	else if( 0 == strcmp( name, "insert" ) )    func = sgsstd_arrayI_insert;
 	else if( 0 == strcmp( name, "erase" ) )     func = sgsstd_arrayI_erase;
+	else if( 0 == strcmp( name, "part" ) )      func = sgsstd_arrayI_part;
 	else if( 0 == strcmp( name, "clear" ) )     func = sgsstd_arrayI_clear;
 	else if( 0 == strcmp( name, "reverse" ) )   func = sgsstd_arrayI_reverse;
 	else if( 0 == strcmp( name, "resize" ) )    func = sgsstd_arrayI_resize;
@@ -3293,7 +3326,10 @@ SGSRESULT sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 		if( i < 0 || arg > j || arg < 0 )
 			return SGS_EINVAL;
 		if( arg )
+		{
 			sgsstd_array_insert( C, sgs_GetObjectData( C, item ), i, j - arg );
+			sgs_Pop( C, arg );
+		}
 		return SGS_SUCCESS;
 		
 	case SGS_ACT_ARRAY_POP:

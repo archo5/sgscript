@@ -2297,6 +2297,20 @@ sgs_Errno [function (inline)]
     a.erase( 0 ); // a = [8]
 
 
+# array.part [method]
+
+== array.part( int from[, int max ] )
+=== returns a new array starting from index `from`, with the max. size `max`
+
+- if `from` is negative, it is subtracted from the end of array
+- `max` cannot be negative, everything else is allowed
+
+    a = [ 5, 6, 7, 8 ];
+    a.part( 1, 2 ); // returns [6,7]
+    a.part( -5, 2 ); // returns [5]
+    a.part( 3 ); // returns [8]
+
+
 # array.clear [method]
 
 == array.clear()
