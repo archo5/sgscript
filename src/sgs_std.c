@@ -112,7 +112,7 @@ static int sgsstd_arrayI_push( SGS_CTX )
 {
 	SGSARR_IHDR( push );
 	sgsstd_array_insert( C, data, hdr->size, 1 );
-	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	sgs_SetStackSize( C, 1 );
 	return 1;
 }
 static int sgsstd_arrayI_pop( SGS_CTX )
@@ -143,7 +143,7 @@ static int sgsstd_arrayI_unshift( SGS_CTX )
 {
 	SGSARR_IHDR( unshift );
 	sgsstd_array_insert( C, data, 0, 1 );
-	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	sgs_SetStackSize( C, 1 );
 	return 1;
 }
 
@@ -161,7 +161,7 @@ static int sgsstd_arrayI_insert( SGS_CTX )
 		STDLIB_WARN( "index out of bounds" )
 
 	sgsstd_array_insert( C, data, (sgs_SizeVal) at, 2 );
-	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	sgs_SetStackSize( C, 1 );
 	return 1;
 }
 static int sgsstd_arrayI_erase( SGS_CTX )
@@ -193,7 +193,7 @@ static int sgsstd_arrayI_erase( SGS_CTX )
 	}
 
 	sgsstd_array_erase( C, data, (sgs_SizeVal) at, (sgs_SizeVal) at2 );
-	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	sgs_SetStackSize( C, 1 );
 	return 1;
 }
 
@@ -223,7 +223,8 @@ static int sgsstd_arrayI_reverse( SGS_CTX )
 			P[ j ] = tmp;
 		}
 	}
-	sgs_Pop( C, sgs_StackSize( C ) - 1 );
+	
+	sgs_SetStackSize( C, 1 );
 	return 1;
 }
 
@@ -448,6 +449,114 @@ static int sgsstd_arrayI_remove( SGS_CTX )
 	return 1;
 }
 
+static int _in_array( SGS_CTX, sgs_VarObj* data, int strconv )
+{
+	int found = 0;
+	sgs_SizeVal off = 0;
+	SGSARR_HDR;
+	
+	while( off < hdr->size )
+	{
+		sgs_PushVariable( C, SGSARR_PTR( hdr ) + off );
+		if( strconv )
+		{
+			sgs_PushItem( C, -2 );
+			sgs_ToString( C, -2 );
+			sgs_ToString( C, -1 );
+		}
+		
+		/* the comparison */
+		{
+			sgs_Variable A, B;
+			sgs_GetStackItem( C, -2, &A );
+			sgs_GetStackItem( C, -1, &B );
+			found = sgs_EqualTypes( C, &A, &B )
+				&& sgs_CompareF( C, &A, &B ) == 0;
+		}
+		
+		sgs_Pop( C, strconv ? 2 : 1 );
+		if( found )
+			break;
+		off++;
+	}
+	return found;
+}
+
+static int sgsstd_arrayI_unique( SGS_CTX )
+{
+	int strconv = FALSE;
+	sgs_SizeVal off = 0, asz = 0;
+	sgs_VarObj* nadata;
+	
+	SGSARR_IHDR( unique );
+	if( !sgs_LoadArgs( C, "@>|b", &strconv ) )
+		return 0;
+	
+	sgs_SetStackSize( C, 1 );
+	sgs_PushArray( C, 0 );
+	nadata = sgs_GetObjectData( C, -1 );
+	while( off < hdr->size )
+	{
+		sgs_PushVariable( C, SGSARR_PTR( hdr ) + off );
+		if( !_in_array( C, nadata, strconv ) )
+		{
+			sgsstd_array_insert( C, nadata, asz, 2 );
+			asz++;
+		}
+		sgs_Pop( C, 1 );
+		off++;
+	}
+	
+	return 1;
+}
+
+static int sgsstd_arrayI_random( SGS_CTX )
+{
+	sgs_Int num;
+	sgs_SizeVal asz = 0;
+	sgs_VarObj* nadata;
+	
+	SGSARR_IHDR( random );
+	if( !sgs_LoadArgs( C, "@>i", &num ) )
+		return 0;
+	
+	if( num < 0 )
+		STDLIB_WARN( "argument 1 (count) cannot be negative" )
+	
+	sgs_SetStackSize( C, 1 );
+	sgs_PushArray( C, 0 );
+	nadata = sgs_GetObjectData( C, -1 );
+	while( num-- )
+	{
+		sgs_PushVariable( C, SGSARR_PTR( hdr ) + ( rand() % hdr->size ) );
+		sgsstd_array_insert( C, nadata, asz, 2 );
+		asz++;
+		sgs_Pop( C, 1 );
+	}
+	
+	return 1;
+}
+
+static int sgsstd_arrayI_shuffle( SGS_CTX )
+{
+	sgs_Variable tmp;
+	sgs_SizeVal i, j;
+	
+	SGSARR_IHDR( shuffle );
+	if( !sgs_LoadArgs( C, "@>." ) )
+		return 0;
+	
+	for( i = hdr->size - 1; i >= 1; i-- )
+	{
+		j = rand() % ( i + 1 );
+		tmp = SGSARR_PTR( hdr )[ i ];
+		SGSARR_PTR( hdr )[ i ] = SGSARR_PTR( hdr )[ j ];
+		SGSARR_PTR( hdr )[ j ] = tmp;
+	}
+	
+	return 1;
+}
+
 static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 {
 	const char* name = sgs_ToString( C, -1 );
@@ -503,6 +612,9 @@ static int sgsstd_array_getprop( SGS_CTX, sgs_VarObj* data )
 	else if( 0 == strcmp( name, "sort_mapped" ) ) func = sgsstd_arrayI_sort_mapped;
 	else if( 0 == strcmp( name, "find" ) )      func = sgsstd_arrayI_find;
 	else if( 0 == strcmp( name, "remove" ) )    func = sgsstd_arrayI_remove;
+	else if( 0 == strcmp( name, "unique" ) )    func = sgsstd_arrayI_unique;
+	else if( 0 == strcmp( name, "random" ) )    func = sgsstd_arrayI_random;
+	else if( 0 == strcmp( name, "shuffle" ) )   func = sgsstd_arrayI_shuffle;
 	else return SGS_ENOTFND;
 
 	sgs_PushCFunction( C, func );
@@ -2567,7 +2679,7 @@ static int sgsstd_dumpvar( SGS_CTX )
 		if( res == SGS_SUCCESS )
 		{
 			sgs_PushString( C, "\n" );
-			rc++;
+			rc += 2;
 		}
 		else
 		{
@@ -2579,7 +2691,7 @@ static int sgsstd_dumpvar( SGS_CTX )
 	}
 	if( rc )
 	{
-		if( sgs_StringMultiConcat( C, rc * 2 ) == SGS_SUCCESS )
+		if( sgs_StringMultiConcat( C, rc ) != SGS_SUCCESS )
 			STDLIB_ERR( "failed to concatenate the output" )
 		return 1;
 	}
