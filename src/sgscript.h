@@ -205,6 +205,12 @@ typedef void (*sgs_HookFunc) (
 #define SGS_CNTL_GET_ERRNO  7
 
 
+/* Object actions */
+#define SGS_ACT_ARRAY_PUSH   1
+#define SGS_ACT_ARRAY_POP    2
+#define SGS_ACT_ARRAY_POPRET 3
+
+
 /* Context internals */
 /* - variable type flags, primary and extended */
 #define SGS_VT_NULL   0
@@ -537,6 +543,7 @@ SGS_APIFUNC SGSRESULT sgs_PadString( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_StringConcat( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_StringMultiConcat( SGS_CTX, int args );
 SGS_APIFUNC SGSRESULT sgs_CloneItem( SGS_CTX, int item );
+SGS_APIFUNC SGSRESULT sgs_ObjectAction( SGS_CTX, int item, int act, int arg );
 
 SGS_APIFUNC SGSRESULT sgs_Serialize( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_SerializeObject( SGS_CTX, int args, const char* func );

@@ -3280,3 +3280,39 @@ SGSRESULT sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
 	}
 	return SGS_SUCCESS;
 }
+
+
+SGSRESULT sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
+{
+	int i, j;
+	switch( act )
+	{
+	case SGS_ACT_ARRAY_PUSH:
+		i = sgs_ArraySize( C, item );
+		j = sgs_StackSize( C );
+		if( i < 0 || arg > j || arg < 0 )
+			return SGS_EINVAL;
+		if( arg )
+			sgsstd_array_insert( C, sgs_GetObjectData( C, item ), i, j - arg );
+		return SGS_SUCCESS;
+		
+	case SGS_ACT_ARRAY_POP:
+	case SGS_ACT_ARRAY_POPRET:
+		i = sgs_ArraySize( C, item );
+		if( i < 0 || arg > i || arg < 0 )
+			return SGS_EINVAL;
+		if( arg )
+		{
+			if( act == SGS_ACT_ARRAY_POPRET )
+			{
+				for( j = i - arg; j < i; ++j )
+					sgs_PushNumIndex( C, item, j );
+			}
+			sgsstd_array_erase( C, sgs_GetObjectData( C, item ), i - arg, i - 1 );
+		}
+		return SGS_SUCCESS;
+		
+	}
+	return SGS_ENOTFND;
+}
+

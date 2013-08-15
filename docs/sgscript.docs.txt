@@ -843,7 +843,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 - this procedure may take some time if the object graph is big
 - during the procedure, the SGS_OP_GCMARK interface functions of objects are invoked for the objects visible from entry points (like stack and global table)
-- aborting of the procedure (via error codes) would lead the system into an unrecoverable state (TODO: is that really necessary?)
+- aborting the procedure via error codes could lead the system into an unrecoverable state
 
 === error codes
 - any code can be returned by SGS_OP_GCMARK and SGS_OP_DESTRUCT functions, doing so would abort the process if the code is not either SGS_SUCCESS or SGS_ENOTFND
@@ -887,6 +887,30 @@ After a successful call, all arguments and the function will be popped off the s
 === error codes
 - SGS_EBOUNDS: stack item index was out of bounds
 - SGS_ENOTFND: the object does not support cloning
+
+
+# sgs_ObjectAction [function]
+
+== SGSRESULT sgs_ObjectAction( sgs_Context* C, int item, int action, int arg )
+=== execute an action on the specified stack item
+
+=== actions
+- SGS_ACT_ARRAY_PUSH
+-- append the last `arg` items on stack to the array
+-- error codes
+--- SGS_EINVAL: `item` was not an array, `arg` was negative or bigger than stack frame
+- SGS_ACT_ARRAY_POP
+-- remove the last `arg` items from the end of the array
+-- error codes
+--- SGS_EINVAL: `item` was not an array, `arg` was negative or bigger than size of array
+- SGS_ACT_ARRAY_POPRET
+-- remove the last `arg` items from the end of the array and return them in the order they were stored (last items on array are last on stack)
+-- error codes
+--- SGS_EINVAL: `item` was not an array, `arg` was negative or bigger than size of array
+
+=== error codes
+- SGS_E****: action-specific
+- SGS_ENOTFND: action was not found
 
 
 # sgs_Serialize [function]
@@ -1107,7 +1131,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 === error codes
 - SGS_EBOUNDS: index out of bounds
-- SGS_EINVAL: iterated object changed in a way that iterator does not support (currently a size equality test) (TODO: what about any other structural changes? can we have a revision number?)
+- SGS_EINVAL: iterated object changed in a way that iterator does not support (currently a size equality test)
 - SGS_EINPROC: internal failure in the object interface
 
 
@@ -1526,6 +1550,42 @@ sgs_Errno [function (inline)]
 
     counter = closure( function( data ){ return data[0]++; }, [0] );
     print( counter() ); print( counter() ); // prints "01"
+
+
+# array_filter [function]
+
+== array_filter( array[, callable] )
+=== return an array with the items that convert to boolean 'true', optionally preprocessed by a callable
+
+- two arguments are passed to the callable: value, index
+
+    array_filter([ 0, 1, 2, 3 ]); // returns [1,2,3]
+
+
+# array_process [function]
+
+== array_process( array, callable )
+=== return an array with the items passed through a callable
+
+- two arguments are passed to the callable: value, index
+
+
+# dict_filter [function]
+
+== dict_filter( dict[, callable] )
+=== return a dict with the items that convert to boolean 'true', optionally preprocessed by a callable
+
+- two arguments are passed to the callable: value, key
+
+    dict_filter({ a = 0, b = 1 }); // returns {b=1}
+
+
+# dict_process [function]
+
+== dict_process( dict, callable )
+=== return a dict with the items passed through a callable
+
+- two arguments are passed to the callable: value, key
 
 
 # isset [function]
@@ -2142,7 +2202,7 @@ sgs_Errno [function (inline)]
 -- [int] size
 -- [int] capacity
 -- [var] first (valid if array is not empty, otherwise a warning is thrown and 'null' is returned)
--- [var] last (same as 'first')
+-- [var] last (similar to 'first')
 -- [cfunc] push
 -- [cfunc] pop
 -- [cfunc] shift
@@ -2158,6 +2218,9 @@ sgs_Errno [function (inline)]
 -- [cfunc] sort_mapped
 -- [cfunc] find
 -- [cfunc] remove
+-- [cfunc] unique
+-- [cfunc] random
+-- [cfunc] shuffle
 - other features:
 -- read/write integer index
 -- full content dump
@@ -2346,6 +2409,33 @@ sgs_Errno [function (inline)]
     a.remove( 2, false, true ); // returns 2; a = [5,6,8]
 
 
+# array.unique [method]
+
+== array.unique( bool strconv = false )
+=== returns an array without duplicates, where a duplicate is a strictly equal variable or a string conversion match
+
+- if `strconv` is true, items are converted to strings before comparison
+
+    a = [ 5, 3, 2, 3, 2, "3" ];
+    a.unique(); // returns [5,3,2,"3"]
+    a.unique( true ); // returns [5,3,2]
+
+
+# array.random [method]
+
+== array.random( int num )
+=== return `num` randomly chosen items from the array
+
+- to retrieve a part of the array in random order without duplicates, @array.shuffle can be used
+- items after RAND_MAX will currently not be returned
+
+
+# array.shuffle [method]
+
+== array.shuffle()
+=== change the order of items in the array
+
+
 # dict [object]
 
 - features:
@@ -2494,7 +2584,8 @@ sgs_Errno [function (inline)]
 - the callable is a function that returns at most the number of bytes requested from the stream
 -- if previous request reached end, subsequent requests must return 'null'
 
-    f = io_file( "test.txt", FILE_READ ); // TODO: this is too complex for basic features, add fmt_file_parser
+    f = io_file( "test.txt", FILE_READ );
+    // usually it is easier to use @fmt_file_parser instead of the next line of code
     p = fmt_parser( closure( function(file,num){ if( file.eof() ) return null; return file.read( num ); }, f ) );
 
 
@@ -2505,6 +2596,15 @@ sgs_Errno [function (inline)]
 
     p = fmt_string_parser( "this is a test" );
     p.readcc( "a-z" ); // returns "this"
+
+
+# fmt_file_parser [function]
+
+== fmt_file_parser( file[, buffersize ] )
+=== creates a @fmt_parser object, connected to a file reader object, initialized to the given buffer size
+
+    p = fmt_file_parser( io_file( "something.txt", FILE_READ ) );
+    p.readcc( "a-z" ); // returns something
 
 
 # fmt_charcc [function]
@@ -2527,9 +2627,15 @@ sgs_Errno [function (inline)]
  - [cfunc] getchar
  - [cfunc] readcc
  - [cfunc] skipcc
+ - [cfunc] read_real
+ - [cfunc] read_int
+ - [cfunc] read_binary_int
+ - [cfunc] read_octal_int
+ - [cfunc] read_decimal_int
+ - [cfunc] read_hex_int
+ - [cfunc] check
 * other features:
  - GC-safe
-(TODO: do we need a more feature-complete object?)
 
 
 # fmt_parser.read [method]
@@ -2584,6 +2690,51 @@ sgs_Errno [function (inline)]
     stream = fmt_string_parser( "what is this" );
     stream.skipcc( "a-z" ); // returns 4
     stream.skipcc( "^a-z" ); // returns 1
+
+
+# fmt_parser.read_real [method]
+
+== fmt_parser.read_real( bool as_real = true )
+=== returns characters read with the character class "-+0-9.eE", optionally returned as a real value
+
+
+# fmt_parser.read_int [method]
+
+== fmt_parser.read_int( bool as_int = true )
+=== returns characters read with the character class "-+0-9A-Fa-fxob", optionally returned as an int value
+
+
+# fmt_parser.read_binary_int [method]
+
+== fmt_parser.read_binary_int( bool as_int = true )
+=== returns characters read with the character class "0-1", optionally returned as an int value
+
+
+# fmt_parser.read_octal_int [method]
+
+== fmt_parser.read_octal_int( bool as_int = true )
+=== returns characters read with the character class "0-7", optionally returned as an int value
+
+
+# fmt_parser.read_decimal_int [method]
+
+== fmt_parser.read_decimal_int( bool as_int = true )
+=== returns characters read with the character class "-+0-9", optionally returned as an int value
+
+
+# fmt_parser.read_hex_int [method]
+
+== fmt_parser.read_hex_int( bool as_int = true )
+=== returns characters read with the character class "0-9a-fA-F", optionally returned as an int value
+
+
+# fmt_parser.check [method]
+
+== fmt_parser.check( string str, bool ci = false, bool partial = false )
+=== returns whether the specified string was found at the current position
+
+- `ci` makes matching case-insensitive
+- if `partial` is true, function returns the number of characters successfully matched instead of whether everything has been matched
 
 
 #
@@ -3052,7 +3203,7 @@ sgs_Errno [function (inline)]
 == os_date_string( string fmt, int time = os_time() )
 === returns the date/time string in the format `fmt`, optionally for a different time `time`
 
-- the following item specifiers are supported (*-local-specific): (TODO: what about setting the locale?)
+- the following item specifiers are supported (*-local-specific):
 -- %a: abbreviated weekday name *
 -- %A: full weekday name *
 -- %b: abbreviated month name *
@@ -3106,6 +3257,93 @@ sgs_Errno [function (inline)]
 
 == os_make_time( int sec, int min = 0, int hour = 0, int mday = 0, int mon = 0, int year = 0 )
 === returns time as UNIX timestamp, generated from the arguments, using them as hints (under-/overflows may have some unexpected behavior)
+
+
+# os_get_locale [function]
+
+== os_get_locale( int which )
+=== returns the currently set locale for the specified category
+
+- `which` must be one of the LC_ constants
+- the returned string is platform-specific
+- wraps the C library function setlocale
+
+
+# os_set_locale [function]
+
+== os_set_locale( int which, string locale )
+=== sets the locale for the specified category, returning whether the call was successful
+
+- `which` must be one of the LC_ constants
+- the available locale strings are platform-specific
+- wraps the C library function setlocale
+
+
+# os_get_locale_format [function]
+
+== os_get_locale_format()
+=== retrieve the formatting info of the currently set locale as a dict
+
+- wraps the C library function localeconv
+- the returned data is identical to pre-C99 format of struct lconv
+
+
+# os_locale_strcmp [function]
+
+== os_locale_strcmp( string a, string b )
+=== compare two strings using locale to return correct sign for inequalities (good for language-correct sorting)
+
+- expected encoding depends on the platform and the locale that is currently set
+- wraps the C library function strcoll
+
+
+# LC_[ALL|COLLATE|MONETARY|NUMERIC|TIME] [constants]
+
+These constants specify the categories for which locale can be changed.
+
+- LC_ALL affects every locale-related function
+- LC_COLLATE: os_locale_strcmp
+- LC_MONETARY: os_get_locale_format
+- LC_NUMERIC: os_get_locale_format
+- LC_TIME: os_date_string
+
+
+#
+## STDLIB/RE
+#
+
+
+# re_match [function]
+
+== re_match( string str, string pattern, int flags = 0, int offset = 0 )
+=== check for matches in string `str` for `pattern`, returning whether a match was found or details of the first match, as specified in `flags`
+
+- `offset` specifies the character to start matching from, negative offset is subtracted from the end
+- `flags` expect RE_RETURN_CAPTURED, RE_RETURN_OFFSETS or RE_RETURN_BOTH, which is a combination of the previous two
+-- if `flags` is one of the special values, function returns an array of captured ranges
+--- each entry is either a string (on RE_RETURN_CAPTURED) or an array of beginning and end offsets (at positions 0 and 1, respectively, on RE_RETURN_OFFSETS) or an array of a string and the beginning and end offsets (on RE_RETURN_BOTH)
+- the first character in the pattern specifies a delimiter that separates the pattern from modifiers
+-- example pattern strings: "/^[a-z]+/mi", "#[a-z0-9_]+.*?#s"
+- more info about the supported features and modifiers at https://github.com/snake5/sgregex
+
+
+# re_match_all [function]
+
+== re_match_all( string str, string pattern, int flags = 0, int offset = 0 )
+=== check for matches in string `str` for `pattern`, returning the number of matches or details of all matches, as specified in `flags`
+
+- similar to @re_match, only difference is in the return value:
+-- if `flags` is one of the special values, function returns an array of matches where each match is an array of captured ranges
+--- each entry is same as in @re_match
+
+
+# re_replace [function]
+
+== re_replace( string str, string pattern, string replacement )
+=== find and replace all occurrences of `pattern` in string `str` with the `replacement` string
+
+- replacement string can contain backreferences in the forms "$[0-9]" or "\[0-9]" (in a string constant, a double backslash is required due to rules in SGScript)
+-- there can be up to 10 backreferences, 0-9, 0 being the whole match
 
 
 #
