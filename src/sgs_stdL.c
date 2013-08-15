@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include <float.h>
+#include <locale.h>
 
 #define SGS_INTERNAL
 #define SGS_REALLY_INTERNAL
@@ -2529,18 +2530,101 @@ static int sgsstd_os_make_time( SGS_CTX )
 }
 
 
+static int sgsstd_os_get_locale( SGS_CTX )
+{
+	sgs_Int which;
+	
+	SGSFN( "os_get_locale" );
+	if( !sgs_LoadArgs( C, "i", &which ) )
+		return 0;
+	
+	sgs_PushString( C, setlocale( (int) which, NULL ) );
+	return 1;
+}
+
+static int sgsstd_os_set_locale( SGS_CTX )
+{
+	char* nlstr;
+	sgs_Int which;
+	
+	SGSFN( "os_set_locale" );
+	if( !sgs_LoadArgs( C, "is", &which, &nlstr ) )
+		return 0;
+	
+	sgs_PushBool( C, !!setlocale( (int) which, nlstr ) );
+	return 1;
+}
+
+static int sgsstd_os_get_locale_format( SGS_CTX )
+{
+	struct lconv* lc = localeconv();
+	
+	sgs_SetStackSize( C, 0 );
+	
+#define PLK( name ) sgs_PushString( C, #name );
+#define PLS( name ) PLK( name ); sgs_PushString( C, lc->name );
+#define PLI( name ) PLK( name ); sgs_PushInt( C, lc->name );
+	PLS( decimal_point );
+	PLS( thousands_sep );
+	PLS( grouping );
+	PLS( int_curr_symbol );
+	PLS( currency_symbol );
+	PLS( mon_decimal_point );
+	PLS( mon_thousands_sep );
+	PLS( mon_grouping );
+	PLS( positive_sign );
+	PLS( negative_sign );
+	PLI( frac_digits );
+	PLI( p_cs_precedes );
+	PLI( n_cs_precedes );
+	PLI( p_sep_by_space );
+	PLI( n_sep_by_space );
+	PLI( p_sign_posn );
+	PLI( n_sign_posn );
+	PLI( int_frac_digits );
+	
+	sgs_PushDict( C, sgs_StackSize( C ) );
+	return 1;
+}
+
+static int sgsstd_os_locale_strcmp( SGS_CTX )
+{
+	char *a, *b;
+	
+	SGSFN( "os_locale_strcmp" );
+	if( !sgs_LoadArgs( C, "ss", &a, &b ) )
+		return 0;
+	
+	sgs_PushInt( C, strcoll( a, b ) );
+	return 1;
+}
+
+
+static const sgs_RegIntConst o_iconsts[] =
+{
+	{ "LC_ALL", LC_ALL },
+	{ "LC_COLLATE", LC_COLLATE },
+	{ "LC_MONETARY", LC_MONETARY },
+	{ "LC_NUMERIC", LC_NUMERIC },
+	{ "LC_TIME", LC_TIME },
+};
+
 static const sgs_RegFuncConst o_fconsts[] =
 {
 	FN( os_gettype ), FN( os_command ),
 	FN( os_getenv ), FN( os_putenv ),
 	FN( os_time ), FN( os_get_timezone ), FN( os_date_string ),
 	FN( os_parse_time ), FN( os_make_time ),
+	FN( os_get_locale ), FN( os_set_locale ),
+	FN( os_get_locale_format ), FN( os_locale_strcmp ),
 };
 
 SGSRESULT sgs_LoadLib_OS( SGS_CTX )
 {
 	int ret;
 	ret = sgs_RegFuncConsts( C, o_fconsts, ARRAY_SIZE( o_fconsts ) );
+	if( ret != SGS_SUCCESS ) return ret;
+	ret = sgs_RegIntConsts( C, o_iconsts, ARRAY_SIZE( o_iconsts ) );
 	return ret;
 }
 
