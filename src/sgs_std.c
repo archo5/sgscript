@@ -1596,6 +1596,140 @@ static int sgsstd_closure( SGS_CTX )
 
 /* UTILITIES */
 
+static int sgsstd_array_filter( SGS_CTX )
+{
+	SGSBOOL cset = 0, use;
+	sgs_SizeVal asz, off = 0, nasz = 0;
+	sgs_VarObj *data, *nadata;
+	
+	SGSFN( "array_filter" );
+	if( !sgs_LoadArgs( C, "a|p", &asz, &cset ) )
+		return 0;
+	
+	sgs_PushArray( C, 0 );
+	data = sgs_GetObjectData( C, 0 );
+	nadata = sgs_GetObjectData( C, -1 );
+	
+	{
+		SGSARR_HDR;
+		
+		while( off < asz )
+		{
+			sgs_PushVariable( C, SGSARR_PTR( hdr ) + off );
+			if( cset )
+			{
+				sgs_PushInt( C, off );
+				sgs_PushItem( C, 1 );
+				if( sgs_Call( C, 2, 1 ) )
+					STDLIB_WARN( "failed to call the filter function" )
+			}
+			use = sgs_GetBool( C, -1 );
+			sgs_Pop( C, 1 );
+			sgs_PushVariable( C, SGSARR_PTR( hdr ) + off );
+			if( use )
+			{
+				sgsstd_array_insert( C, nadata, nasz, sgs_StackSize( C ) - 1 );
+				nasz++;
+			}
+			sgs_Pop( C, 1 );
+			
+			off++;
+		}
+	}
+	
+	return 1;
+}
+
+static int sgsstd_array_process( SGS_CTX )
+{
+	sgs_SizeVal asz, off = 0;
+	sgs_VarObj *data;
+	
+	SGSFN( "array_process" );
+	if( !sgs_LoadArgs( C, "a?p", &asz ) )
+		return 0;
+	
+	data = sgs_GetObjectData( C, 0 );
+	{
+		SGSARR_HDR;
+		
+		while( off < asz )
+		{
+			sgs_PushVariable( C, SGSARR_PTR( hdr ) + off );
+			sgs_PushInt( C, off );
+			sgs_PushItem( C, 1 );
+			if( sgs_Call( C, 2, 1 ) )
+				STDLIB_WARN( "failed to call the processing function" )
+			sgs_StoreNumIndex( C, 0, off );
+			off++;
+		}
+	}
+	
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
+static int sgsstd_dict_filter( SGS_CTX )
+{
+	SGSBOOL cset = 0, use;
+	
+	SGSFN( "dict_filter" );
+	if( !sgs_LoadArgs( C, "?t|p", &cset ) )
+		return 0;
+	
+	sgs_PushDict( C, 0 );
+	sgs_PushIterator( C, 0 );
+	while( sgs_IterAdvance( C, -1 ) > 0 )
+	{
+		if( sgs_IterPushData( C, -1, 1, 1 ) )
+			STDLIB_WARN( "failed to read iterator (was dict changed in callback?)" )
+		if( cset )
+		{
+			sgs_PushItem( C, -1 );
+			sgs_PushItem( C, -3 );
+			sgs_PushItem( C, 1 );
+			if( sgs_Call( C, 2, 1 ) )
+				STDLIB_WARN( "failed to call the filter function" )
+		}
+		use = sgs_GetBool( C, -1 );
+		if( cset )
+			sgs_Pop( C, 1 );
+		if( use )
+		{
+			/* src-dict, ... dest-dict, iterator, key, value */
+			sgs_StoreIndex( C, -4, -2 );
+		}
+		sgs_Pop( C, use ? 1 : 2 );
+	}
+	sgs_Pop( C, 1 );
+	return 1;
+}
+
+static int sgsstd_dict_process( SGS_CTX )
+{
+	SGSFN( "dict_process" );
+	if( !sgs_LoadArgs( C, "?t?p" ) )
+		return 0;
+	
+	sgs_PushIterator( C, 0 );
+	while( sgs_IterAdvance( C, -1 ) > 0 )
+	{
+		if( sgs_IterPushData( C, -1, 1, 1 ) )
+			STDLIB_WARN( "failed to read iterator (was dict changed in callback?)" )
+		sgs_PushItem( C, -2 );
+		sgs_PushItem( C, 1 );
+		if( sgs_Call( C, 2, 1 ) )
+			STDLIB_WARN( "failed to call the processing function" )
+		/* src-dict, callable, ... iterator, key, proc.val. */
+		sgs_StoreIndex( C, 0, -2 );
+		sgs_Pop( C, 1 );
+	}
+	
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
+
 static int sgsstd_isset( SGS_CTX )
 {
 	int oml, ret;
@@ -1761,8 +1895,6 @@ static int sgsstd_get_merged( SGS_CTX )
 static int sgsstd_tobool( SGS_CTX )
 {
 	SGSFN( "tobool" );
-	if( !sgs_LoadArgs( C, ">." ) )
-		return 0;
 	sgs_PushBool( C, sgs_GetBool( C, 0 ) );
 	return 1;
 }
@@ -1770,8 +1902,6 @@ static int sgsstd_tobool( SGS_CTX )
 static int sgsstd_toint( SGS_CTX )
 {
 	SGSFN( "toint" );
-	if( !sgs_LoadArgs( C, ">." ) )
-		return 0;
 	sgs_PushInt( C, sgs_GetInt( C, 0 ) );
 	return 1;
 }
@@ -1779,8 +1909,6 @@ static int sgsstd_toint( SGS_CTX )
 static int sgsstd_toreal( SGS_CTX )
 {
 	SGSFN( "toreal" );
-	if( !sgs_LoadArgs( C, ">." ) )
-		return 0;
 	sgs_PushReal( C, sgs_GetReal( C, 0 ) );
 	return 1;
 }
@@ -1790,8 +1918,6 @@ static int sgsstd_tostring( SGS_CTX )
 	char* str;
 	sgs_SizeVal sz;
 	SGSFN( "tostring" );
-	if( !sgs_LoadArgs( C, ">." ) )
-		return 0;
 	str = sgs_ToStringBuf( C, 0, &sz );
 	if( str )
 		sgs_PushStringBuf( C, str, sz );
@@ -2825,6 +2951,8 @@ static sgs_RegFuncConst regfuncs[] =
 {
 	/* containers */
 	FN( array ), FN( dict ), { "class", sgsstd_class }, FN( closure ),
+	FN( array_filter ), FN( array_process ),
+	FN( dict_filter ), FN( dict_process ),
 	FN( isset ), FN( unset ), FN( clone ),
 	FN( get_keys ), FN( get_values ), FN( get_concat ), FN( get_merged ),
 	/* types */
