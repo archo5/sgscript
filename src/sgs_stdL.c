@@ -18,9 +18,12 @@
 
 #define FN( x ) { #x, sgsstd_##x }
 #define FLAG( a, b ) (((a)&(b))!=0)
+#define STREQ( a, b ) (0==strcmp(a,b))
 #define STDLIB_INFO( info ) return sgs_Printf( C, SGS_INFO, info );
 #define STDLIB_WARN( warn ) return sgs_Printf( C, SGS_WARNING, warn );
 
+
+SGS_DECLARE void* sgsstd_file_functable[];
 
 
 /* path helper functions */
@@ -1132,6 +1135,48 @@ static int sgsstd_fmtstreamI_skipcc( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_fmtstreamI_check( SGS_CTX )
+{
+	char* chkstr, chr;
+	sgs_SizeVal chksize, numchk = 0;
+	SGSBOOL partial = FALSE;
+	
+	SGSFS_IHDR( skipcc )
+	if( !sgs_LoadArgs( C, "@>m|b", &chkstr, &chksize, &partial ) )
+		return 0;
+	
+	while( numchk < chksize )
+	{
+		while( hdr->state != FMTSTREAM_STATE_END )
+		{
+			sgs_SizeVal readamt = fs_getreadsize( hdr, 1 );
+			if( !readamt )
+			{
+				if( !fs_refill( C, hdr ) )
+				{
+					STDLIB_WARN( "unexpected read error" )
+				}
+				continue;
+			}
+			chr = hdr->buffer[ hdr->bufpos ];
+			break;
+		}
+		if( chr == chkstr[ numchk ] )
+		{
+			hdr->bufpos++;
+			numchk++;
+		}
+		else
+			break;
+	}
+	
+	if( partial )
+		sgs_PushInt( C, numchk );
+	else
+		sgs_PushBool( C, numchk == chksize );
+	return 1;
+}
+
 
 
 static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
@@ -1143,10 +1188,11 @@ static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		STDLIB_WARN( "fmt_parser: could not read property string" )
 	
 #define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
-	if( 0 == strcmp( str, "read" ) ) IFN( sgsstd_fmtstreamI_read )
-	else if( 0 == strcmp( str, "getchar" ) ) IFN( sgsstd_fmtstreamI_getchar )
-	else if( 0 == strcmp( str, "readcc" ) ) IFN( sgsstd_fmtstreamI_readcc )
-	else if( 0 == strcmp( str, "skipcc" ) ) IFN( sgsstd_fmtstreamI_skipcc )
+	if STREQ( str, "read" ) IFN( sgsstd_fmtstreamI_read )
+	else if STREQ( str, "getchar" ) IFN( sgsstd_fmtstreamI_getchar )
+	else if STREQ( str, "readcc" ) IFN( sgsstd_fmtstreamI_readcc )
+	else if STREQ( str, "skipcc" ) IFN( sgsstd_fmtstreamI_skipcc )
+	else if STREQ( str, "check" ) IFN( sgsstd_fmtstreamI_check )
 	
 	else if( 0 == strcmp( str, "at_end" ) ){
 		sgs_PushBool( C, hdr->state == FMTSTREAM_STATE_END );
@@ -1226,7 +1272,6 @@ static int srt_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
 	stringread_t* srt = (stringread_t*) data->data;
 	sgs_ReleaseOwned( C, &srt->S, dco );
-	sgs_Dealloc( data->data );
 	return SGS_SUCCESS;
 }
 
@@ -1241,17 +1286,76 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 {
 	stringread_t* srt;
 	sgs_Int off = 0, bufsize = 1024;
+	
 	SGSFN( "fmt_string_parser" );
-
 	if( !sgs_LoadArgs( C, "?m|ii", &off, &bufsize ) )
 		return 0;
 	
-	srt = sgs_Alloc( stringread_t );
+	srt = (stringread_t*) sgs_PushObjectIPA( C, sizeof(stringread_t), srt_iface );
 	sgs_GetStackItem( C, 0, &srt->S );
 	sgs_BreakIf( srt->S.type != VTC_STRING );
 	sgs_Acquire( C, &srt->S );
 	srt->off = (sgs_SizeVal) off;
-	sgs_PushObject( C, srt, srt_iface );
+	sgs_StoreItem( C, 0 );
+	sgs_SetStackSize( C, 1 );
+	sgs_PushInt( C, bufsize );
+	return sgsstd_fmt_parser( C );
+}
+
+
+typedef struct _fileread_t
+{
+	sgs_Variable F;
+}
+fileread_t;
+
+
+static int frt_call( SGS_CTX, sgs_VarObj* data, int smth )
+{
+	sgs_Int amt;
+	FILE* fp;
+	fileread_t* frt = (fileread_t*) data->data;
+	if( !sgs_ParseInt( C, 0, &amt ) || amt > 0x7fffffff )
+		return SGS_EINVAL;
+	fp = (FILE*) frt->F.data.O->data;
+	if( !fp || feof( fp ) )
+		return 0;
+	sgs_PushVariable( C, &frt->F );
+	sgs_PushInt( C, amt );
+	sgs_PushItem( C, -2 );
+	sgs_PushProperty( C, "read" );
+	if( sgs_ThisCall( C, 1, 1 ) )
+		return SGS_EINPROC;
+	return 1;
+}
+
+static int frt_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+{
+	fileread_t* frt = (fileread_t*) data->data;
+	sgs_ReleaseOwned( C, &frt->F, dco );
+	return SGS_SUCCESS;
+}
+
+static void* frt_iface[] =
+{
+	SOP_CALL, frt_call,
+	SOP_DESTRUCT, frt_destruct,
+	SOP_END
+};
+
+static int sgsstd_fmt_file_parser( SGS_CTX )
+{
+	fileread_t* frt;
+	sgs_Int bufsize = 1024;
+	
+	SGSFN( "fmt_file_parser" );
+	if( !sgs_LoadArgs( C, "?o|i", sgsstd_file_functable, &bufsize ) )
+		return 0;
+	
+	frt = (fileread_t*) sgs_PushObjectIPA( C, sizeof(fileread_t), frt_iface );
+	sgs_GetStackItem( C, 0, &frt->F );
+	sgs_BreakIf( frt->F.type != VTC_OBJECT );
+	sgs_Acquire( C, &frt->F );
 	sgs_StoreItem( C, 0 );
 	sgs_SetStackSize( C, 1 );
 	sgs_PushInt( C, bufsize );
@@ -1281,7 +1385,8 @@ static const sgs_RegFuncConst f_fconsts[] =
 	FN( fmt_pack ), FN( fmt_pack_count ),
 	FN( fmt_unpack ), FN( fmt_pack_size ),
 	FN( fmt_base64_encode ), FN( fmt_base64_decode ),
-	FN( fmt_text ), FN( fmt_parser ), FN( fmt_string_parser ),
+	FN( fmt_text ), FN( fmt_parser ),
+	FN( fmt_string_parser ), FN( fmt_file_parser ),
 	FN( fmt_charcc ),
 };
 
@@ -1546,7 +1651,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 #define FVNO_END( name ) } else \
 	STDLIB_WARN( "file." #name "() - file is not opened" )
 
-SGS_DECLARE void* sgsstd_file_functable[];
+/* sgsstd_file_functable declaration is at the top */
 
 #define FIF_INIT( fname ) \
 	sgs_VarObj* data; \
