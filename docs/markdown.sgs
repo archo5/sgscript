@@ -1,5 +1,5 @@
 
-include "string";
+include "string", "re";
 
 
 global htmlencode_repmap =
@@ -33,13 +33,13 @@ function markdown2html( text )
 		text = htmlencode( text );
 		bdcc = "(^|[ \n\r\t,.])";
 		edcc = "($|[ \n\r\t,.])";
-		text = string_regex_replace( text,
+		text = re_replace( text,
 			"#"$bdcc$"\\*\\*([^*]+)\\*\\*"$edcc$"#",
 			"$1<b>$2</b>$3" );
-		text = string_regex_replace( text,
+		text = re_replace( text,
 			"#"$bdcc$"\\*([^*]+)\\*"$edcc$"#",
 			"$1<i>$2</i>$3" );
-		text = string_regex_replace( text,
+		text = re_replace( text,
 			"#"$bdcc$"`([^`]+)`"$edcc$"#",
 			"$1<code>$2</code>$3" );
 		return text;

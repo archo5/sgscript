@@ -16,6 +16,7 @@
 #include "sgs_int.h"
 #include "sgs_regex.h"
 
+#define FN( x ) { #x, sgsstd_##x }
 #define FLAG( a, b ) (((a)&(b))!=0)
 #define STDLIB_INFO( info ) return sgs_Printf( C, SGS_INFO, info );
 #define STDLIB_WARN( warn ) return sgs_Printf( C, SGS_WARNING, warn );
@@ -1275,8 +1276,6 @@ static int sgsstd_fmt_charcc( SGS_CTX )
 }
 
 
-#define FN( x ) { #x, sgsstd_##x }
-
 static const sgs_RegFuncConst f_fconsts[] =
 {
 	FN( fmt_pack ), FN( fmt_pack_count ),
@@ -1952,8 +1951,6 @@ static const sgs_RegRealConst i_rconsts[] =
 	{ "FST_DIR", FST_DIR },
 };
 
-#define FN( x ) { #x, sgsstd_##x }
-
 static const sgs_RegFuncConst i_fconsts[] =
 {
 	FN( io_getcwd ), FN( io_setcwd ),
@@ -2106,8 +2103,6 @@ static const sgs_RegRealConst m_rconsts[] =
 	{ "M_PI", SGS_PI },
 	{ "M_E", SGS_E },
 };
-
-#define FN( x ) { #x, sgsstd_##x }
 
 static const sgs_RegFuncConst m_fconsts[] =
 {
@@ -2441,6 +2436,197 @@ SGSRESULT sgs_LoadLib_OS( SGS_CTX )
 {
 	int ret;
 	ret = sgs_RegFuncConsts( C, o_fconsts, ARRAY_SIZE( o_fconsts ) );
+	return ret;
+}
+
+
+
+/*  - - - - - - -   - - - - - - - - - - -
+	
+	R E G U L A R   E X P R E S S I O N S
+	
+*/
+
+#define REGEX_RETURN_CAPTURED 1
+#define REGEX_RETURN_OFFSETS 2
+#define REGEX_RETURN_BOTH (REGEX_RETURN_CAPTURED|REGEX_RETURN_OFFSETS)
+
+static int _regex_init( SGS_CTX, srx_Context** pR, char* ptrn )
+{
+	srx_Context* R;
+	int errnpos[2] = {0,0};
+	char conchar, *delpos;
+	
+	if( !*ptrn )
+		STDLIB_WARN( "argument 2 (pattern) is empty" )
+	conchar = *ptrn;
+	delpos = strchr( ptrn + 1, conchar );
+	if( !delpos )
+		STDLIB_WARN( "unmatched pattern/modifier separator defined at character 0" )
+	
+	*delpos = 0; /* slightly evil */
+	R = srx_CreateExt( ptrn + 1, delpos + 1, errnpos, C->memfunc, C->mfuserdata );
+	*delpos = conchar;
+	if( !R )
+	{
+		const char* errstr = "unknown error";
+		switch( errnpos[0] )
+		{
+		case RXEINMOD: errstr = "invalid modifier"; break;
+		case RXEPART : errstr = "partial (sub-)expression"; break;
+		case RXEUNEXP: errstr = "unexpected character"; break;
+		case RXERANGE: errstr = "invalid range (min > max)"; break;
+		case RXELIMIT: errstr = "too many digits"; break;
+		case RXEEMPTY: errstr = "expression is effectively empty"; break;
+		case RXENOREF: errstr = "the specified backreference cannot be used here"; break;
+		}
+		return sgs_Printf( C, SGS_WARNING, "failed to parse the pattern"
+			" - %s at character %d", errstr, errnpos[1] );
+	}
+	*pR = R;
+	
+	return 1;
+}
+
+static int _regex_match( SGS_CTX, srx_Context* R, char* str, sgs_SizeVal off, sgs_Int flags )
+{
+	int ret = srx_Match( R, str, off );
+	if( ret )
+	{
+		if( flags & REGEX_RETURN_BOTH )
+		{
+			int i, numcaps = srx_GetCaptureCount( R );
+			for( i = 0; i < numcaps; ++i )
+			{
+				const char *cf, *ct;
+				if( srx_GetCapturedPtrs( R, i, &cf, &ct ) )
+				{
+					if( flags & REGEX_RETURN_CAPTURED )
+						sgs_PushStringBuf( C, cf, ct - cf );
+					if( flags & REGEX_RETURN_OFFSETS )
+					{
+						sgs_PushInt( C, cf - str );
+						sgs_PushInt( C, ct - str );
+					}
+					if( ( flags & REGEX_RETURN_BOTH ) > 1 )
+						sgs_PushArray( C, flags & REGEX_RETURN_BOTH );
+				}
+				else
+					sgs_PushNull( C );
+			}
+			sgs_PushArray( C, numcaps );
+			return -1;
+		}
+	}
+	return ret;
+}
+
+static int sgsstd_re_match( SGS_CTX )
+{
+	char *str, *ptrn;
+	int ret;
+	sgs_SizeVal strsize, off = 0;
+	sgs_Int flags = 0;
+	srx_Context* R;
+	
+	SGSFN( "re_match" );
+	
+	if( !sgs_LoadArgs( C, "ms|il", &str, &strsize, &ptrn, &flags, &off ) )
+		return 0;
+	
+	if( off < 0 ) off += strsize;
+	if( off < 0 || off > strsize )
+		STDLIB_WARN( "argument 5 (offset) out of bounds" )
+	
+	if( !_regex_init( C, &R, ptrn ) )
+		return 0;
+	
+	ret = _regex_match( C, R, str, off, flags );
+	if( ret >= 0 )
+		sgs_PushBool( C, ret );
+	
+	srx_Destroy( R );
+	return 1;
+}
+
+static int sgsstd_re_match_all( SGS_CTX )
+{
+	char *str, *ptrn;
+	int ret, cnt = 0, noff;
+	sgs_SizeVal strsize, off = 0;
+	sgs_Int flags = 0;
+	srx_Context* R;
+	
+	SGSFN( "re_match_all" );
+	
+	if( !sgs_LoadArgs( C, "ms|il", &str, &strsize, &ptrn, &flags, &off ) )
+		return 0;
+	
+	if( off < 0 ) off += strsize;
+	if( off < 0 || off > strsize )
+		STDLIB_WARN( "argument 5 (offset) out of bounds" )
+	
+	if( !_regex_init( C, &R, ptrn ) )
+		return 0;
+	
+	while( ( ret = _regex_match( C, R, str, off, flags ) ) != 0 )
+	{
+		srx_GetCaptured( R, 0, NULL, &noff );
+		if( off != noff )
+			off = noff;
+		else
+			off++;
+		cnt++;
+	}
+	if( flags & REGEX_RETURN_BOTH )
+		sgs_PushArray( C, cnt );
+	else
+		sgs_PushInt( C, cnt );
+	
+	srx_Destroy( R );
+	return 1;
+}
+
+static int sgsstd_re_replace( SGS_CTX )
+{
+	char *str, *ptrn, *rep, *ret;
+	srx_Context* R;
+	
+	SGSFN( "re_replace" );
+	
+	if( !sgs_LoadArgs( C, "sss", &str, &ptrn, &rep ) )
+		return 0;
+	
+	if( !_regex_init( C, &R, ptrn ) )
+		return 0;
+	
+	ret = srx_Replace( R, str, rep );
+	sgs_PushString( C, ret );
+	srx_FreeReplaced( R, ret );
+	
+	return 1;
+}
+
+
+static const sgs_RegIntConst r_iconsts[] =
+{
+	{ "RE_RETURN_CAPTURED", REGEX_RETURN_CAPTURED },
+	{ "RE_RETURN_OFFSETS", REGEX_RETURN_OFFSETS },
+	{ "RE_RETURN_BOTH", REGEX_RETURN_BOTH },
+};
+
+static const sgs_RegFuncConst r_fconsts[] =
+{
+	FN( re_match ), FN( re_match_all ),
+	FN( re_replace ),
+};
+
+SGSRESULT sgs_LoadLib_RE( SGS_CTX )
+{
+	int ret;
+	ret = sgs_RegIntConsts( C, r_iconsts, ARRAY_SIZE( r_iconsts ) );
+	if( ret != SGS_SUCCESS ) return ret;
+	ret = sgs_RegFuncConsts( C, r_fconsts, ARRAY_SIZE( r_fconsts ) );
 	return ret;
 }
 
@@ -3367,170 +3553,6 @@ static int sgsstd_string_format( SGS_CTX )
 }
 
 
-#define REGEX_RETURN_CAPTURED 1
-#define REGEX_RETURN_OFFSETS 2
-#define REGEX_RETURN_BOTH (REGEX_RETURN_CAPTURED|REGEX_RETURN_OFFSETS)
-
-static int _regex_init( SGS_CTX, srx_Context** pR, char* ptrn )
-{
-	srx_Context* R;
-	int errnpos[2] = {0,0};
-	char conchar, *delpos;
-	
-	if( !*ptrn )
-		STDLIB_WARN( "argument 2 (pattern) is empty" )
-	conchar = *ptrn;
-	delpos = strchr( ptrn + 1, conchar );
-	if( !delpos )
-		STDLIB_WARN( "unmatched pattern/modifier separator defined at character 0" )
-	
-	*delpos = 0; /* slightly evil */
-	R = srx_CreateExt( ptrn + 1, delpos + 1, errnpos, C->memfunc, C->mfuserdata );
-	*delpos = conchar;
-	if( !R )
-	{
-		const char* errstr = "unknown error";
-		switch( errnpos[0] )
-		{
-		case RXEINMOD: errstr = "invalid modifier"; break;
-		case RXEPART : errstr = "partial (sub-)expression"; break;
-		case RXEUNEXP: errstr = "unexpected character"; break;
-		case RXERANGE: errstr = "invalid range (min > max)"; break;
-		case RXELIMIT: errstr = "too many digits"; break;
-		case RXEEMPTY: errstr = "expression is effectively empty"; break;
-		case RXENOREF: errstr = "the specified backreference cannot be used here"; break;
-		}
-		return sgs_Printf( C, SGS_WARNING, "failed to parse the pattern"
-			" - %s at character %d", errstr, errnpos[1] );
-	}
-	*pR = R;
-	
-	return 1;
-}
-
-static int _regex_match( SGS_CTX, srx_Context* R, char* str, sgs_SizeVal off, sgs_Int flags )
-{
-	int ret = srx_Match( R, str, off );
-	if( ret )
-	{
-		if( flags & REGEX_RETURN_BOTH )
-		{
-			int i, numcaps = srx_GetCaptureCount( R );
-			for( i = 0; i < numcaps; ++i )
-			{
-				const char *cf, *ct;
-				if( srx_GetCapturedPtrs( R, i, &cf, &ct ) )
-				{
-					if( flags & REGEX_RETURN_CAPTURED )
-						sgs_PushStringBuf( C, cf, ct - cf );
-					if( flags & REGEX_RETURN_OFFSETS )
-					{
-						sgs_PushInt( C, cf - str );
-						sgs_PushInt( C, ct - str );
-					}
-					if( ( flags & REGEX_RETURN_BOTH ) > 1 )
-						sgs_PushArray( C, flags & REGEX_RETURN_BOTH );
-				}
-				else
-					sgs_PushNull( C );
-			}
-			sgs_PushArray( C, numcaps );
-			return -1;
-		}
-	}
-	return ret;
-}
-
-static int sgsstd_string_regex_match( SGS_CTX )
-{
-	char *str, *ptrn;
-	int ret;
-	sgs_SizeVal strsize, off = 0;
-	sgs_Int flags = 0;
-	srx_Context* R;
-	
-	SGSFN( "string_regex_match" );
-	
-	if( !sgs_LoadArgs( C, "ms|il", &str, &strsize, &ptrn, &flags, &off ) )
-		return 0;
-	
-	if( off < 0 ) off += strsize;
-	if( off < 0 || off > strsize )
-		STDLIB_WARN( "argument 5 (offset) out of bounds" )
-	
-	if( !_regex_init( C, &R, ptrn ) )
-		return 0;
-	
-	ret = _regex_match( C, R, str, off, flags );
-	if( ret >= 0 )
-		sgs_PushBool( C, ret );
-	
-	srx_Destroy( R );
-	return 1;
-}
-
-static int sgsstd_string_regex_match_all( SGS_CTX )
-{
-	char *str, *ptrn;
-	int ret, cnt = 0, noff;
-	sgs_SizeVal strsize, off = 0;
-	sgs_Int flags = 0;
-	srx_Context* R;
-	
-	SGSFN( "string_regex_match_all" );
-	
-	if( !sgs_LoadArgs( C, "ms|il", &str, &strsize, &ptrn, &flags, &off ) )
-		return 0;
-	
-	if( off < 0 ) off += strsize;
-	if( off < 0 || off > strsize )
-		STDLIB_WARN( "argument 5 (offset) out of bounds" )
-	
-	if( !_regex_init( C, &R, ptrn ) )
-		return 0;
-	
-	while( ( ret = _regex_match( C, R, str, off, flags ) ) != 0 )
-	{
-		srx_GetCaptured( R, 0, NULL, &noff );
-		if( off != noff )
-			off = noff;
-		else
-			off++;
-		cnt++;
-	}
-	if( flags & REGEX_RETURN_BOTH )
-		sgs_PushArray( C, cnt );
-	else
-		sgs_PushInt( C, cnt );
-	
-	srx_Destroy( R );
-	return 1;
-}
-
-static int sgsstd_string_regex_replace( SGS_CTX )
-{
-	char *str, *ptrn, *rep, *ret;
-	srx_Context* R;
-	
-	SGSFN( "string_regex_replace" );
-	
-	if( !sgs_LoadArgs( C, "sss", &str, &ptrn, &rep ) )
-		return 0;
-	
-	if( !_regex_init( C, &R, ptrn ) )
-		return 0;
-	
-	ret = srx_Replace( R, str, rep );
-	sgs_PushString( C, ret );
-	srx_FreeReplaced( R, ret );
-	
-	return 1;
-}
-
-
-
-#define FN( x ) { #x, sgsstd_##x }
-
 static const sgs_RegIntConst s_iconsts[] =
 {
 	{ "STRING_NO_REV_INDEX", sgsNO_REV_INDEX },
@@ -3539,9 +3561,6 @@ static const sgs_RegIntConst s_iconsts[] =
 	{ "STRING_PAD_RIGHT", sgsRIGHT },
 	{ "STRING_TRIM_LEFT", sgsLEFT },
 	{ "STRING_TRIM_RIGHT", sgsRIGHT },
-	{ "STRING_REGEX_RETURN_CAPTURED", REGEX_RETURN_CAPTURED },
-	{ "STRING_REGEX_RETURN_OFFSETS", REGEX_RETURN_OFFSETS },
-	{ "STRING_REGEX_RETURN_BOTH", REGEX_RETURN_BOTH },
 };
 
 static const sgs_RegFuncConst s_fconsts[] =
@@ -3558,8 +3577,6 @@ static const sgs_RegFuncConst s_fconsts[] =
 	FN( string_charcode ), FN( string_frombytes ),
 	FN( string_utf8_decode ), FN( string_utf8_encode ),
 	FN( string_format ),
-	FN( string_regex_match ), FN( string_regex_match_all ),
-	FN( string_regex_replace ),
 };
 
 SGSRESULT sgs_LoadLib_String( SGS_CTX )

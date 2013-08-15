@@ -2300,6 +2300,7 @@ static int sgsstd__inclib( SGS_CTX, const char* name, int override )
 	else if( strcmp( name, "io" ) == 0 ) ret = sgs_LoadLib_IO( C );
 	else if( strcmp( name, "math" ) == 0 ) ret = sgs_LoadLib_Math( C );
 	else if( strcmp( name, "os" ) == 0 ) ret = sgs_LoadLib_OS( C );
+	else if( strcmp( name, "re" ) == 0 ) ret = sgs_LoadLib_RE( C );
 	else if( strcmp( name, "string" ) == 0 ) ret = sgs_LoadLib_String( C );
 
 	if( ret == SGS_SUCCESS )
