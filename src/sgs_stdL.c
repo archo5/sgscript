@@ -1055,8 +1055,38 @@ static int fs_check_cc( const char* str, sgs_SizeVal size, uint8_t c )
 	return match ^ invert;
 }
 
+static int _stream_readcc( SGS_CTX, sgsstd_fmtstream_t* hdr,
+	MemBuf* B, sgs_SizeVal numbytes, char* ccstr, sgs_SizeVal ccsize )
+{
+	if( numbytes > 0 )
+	{
+		while( hdr->state != FMTSTREAM_STATE_END )
+		{
+			sgs_SizeVal readamt = fs_getreadsize( hdr, 1 );
+			if( readamt )
+			{
+				char c = hdr->buffer[ hdr->bufpos ];
+				if( !fs_check_cc( ccstr, ccsize, c ) )
+					break;
+				membuf_appchr( B, C, c );
+			}
+			numbytes -= readamt;
+			hdr->bufpos += readamt;
+			if( numbytes <= 0 )
+				break;
+			if( !readamt && !fs_refill( C, hdr ) )
+			{
+				STDLIB_WARN( "unexpected read error" )
+			}
+		}
+	}
+	
+	return 1;
+}
+
 static int sgsstd_fmtstreamI_readcc( SGS_CTX )
 {
+	int ret;
 	char* ccstr;
 	sgs_SizeVal numbytes = 0x7fffffff, ccsize;
 	MemBuf B = membuf_create();
@@ -1069,32 +1099,11 @@ static int sgsstd_fmtstreamI_readcc( SGS_CTX )
 	if( !fs_validate_cc( C, ccstr, ccsize ) )
 		STDLIB_WARN( "error in character class" )
 	
-	if( numbytes > 0 )
-	{
-		while( hdr->state != FMTSTREAM_STATE_END )
-		{
-			sgs_SizeVal readamt = fs_getreadsize( hdr, 1 );
-			if( readamt )
-			{
-				char c = hdr->buffer[ hdr->bufpos ];
-				if( !fs_check_cc( ccstr, ccsize, c ) )
-					break;
-				membuf_appchr( &B, C, c );
-			}
-			numbytes -= readamt;
-			hdr->bufpos += readamt;
-			if( numbytes <= 0 )
-				break;
-			if( !readamt && !fs_refill( C, hdr ) )
-			{
-				membuf_destroy( &B, C );
-				STDLIB_WARN( "unexpected read error" )
-			}
-		}
-	}
-	sgs_PushStringBuf( C, B.ptr, B.size );
+	ret = _stream_readcc( C, hdr, &B, numbytes, ccstr, ccsize );
+	if( ret )
+		sgs_PushStringBuf( C, B.ptr, B.size );
 	membuf_destroy( &B, C );
-	return 1;
+	return ret;
 }
 
 static int sgsstd_fmtstreamI_skipcc( SGS_CTX )
@@ -1136,14 +1145,149 @@ static int sgsstd_fmtstreamI_skipcc( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_fmtstreamI_read_real( SGS_CTX )
+{
+	SGSBOOL ret, conv = TRUE;
+	sgs_SizeVal numbytes = 128;
+	MemBuf B = membuf_create();
+	
+	SGSFS_IHDR( read_real )
+	if( !sgs_LoadArgs( C, "@>|bl", &conv, &numbytes ) )
+		return 0;
+	
+	ret = _stream_readcc( C, hdr, &B, numbytes, "-+0-9.eE", 8 );
+	if( ret )
+	{
+		if( conv )
+			sgs_PushReal( C, util_atof( B.ptr, B.size ) );
+		else
+			sgs_PushStringBuf( C, B.ptr, B.size );
+	}
+	membuf_destroy( &B, C );
+	return ret;
+}
+
+static int sgsstd_fmtstreamI_read_int( SGS_CTX )
+{
+	SGSBOOL ret, conv = TRUE;
+	sgs_SizeVal numbytes = 128;
+	MemBuf B = membuf_create();
+	
+	SGSFS_IHDR( read_int )
+	if( !sgs_LoadArgs( C, "@>|bl", &conv, &numbytes ) )
+		return 0;
+	
+	ret = _stream_readcc( C, hdr, &B, numbytes, "-+0-9A-Fa-fxob", 14 );
+	if( ret )
+	{
+		if( conv )
+			sgs_PushInt( C, util_atoi( B.ptr, B.size ) );
+		else
+			sgs_PushStringBuf( C, B.ptr, B.size );
+	}
+	membuf_destroy( &B, C );
+	return ret;
+}
+
+static int sgsstd_fmtstreamI_read_binary_int( SGS_CTX )
+{
+	SGSBOOL ret, conv = TRUE;
+	sgs_SizeVal numbytes = 128;
+	MemBuf B = membuf_create();
+	membuf_appbuf( &B, C, "0b", 2 );
+	
+	SGSFS_IHDR( read_binary_int )
+	if( !sgs_LoadArgs( C, "@>|bl", &conv, &numbytes ) )
+		return 0;
+	
+	ret = _stream_readcc( C, hdr, &B, numbytes, "0-1", 3 );
+	if( ret )
+	{
+		if( conv )
+			sgs_PushInt( C, util_atoi( B.ptr, B.size ) );
+		else
+			sgs_PushStringBuf( C, B.ptr, B.size );
+	}
+	membuf_destroy( &B, C );
+	return ret;
+}
+
+static int sgsstd_fmtstreamI_read_octal_int( SGS_CTX )
+{
+	SGSBOOL ret, conv = TRUE;
+	sgs_SizeVal numbytes = 128;
+	MemBuf B = membuf_create();
+	membuf_appbuf( &B, C, "0o", 2 );
+	
+	SGSFS_IHDR( read_octal_int )
+	if( !sgs_LoadArgs( C, "@>|bl", &conv, &numbytes ) )
+		return 0;
+	
+	ret = _stream_readcc( C, hdr, &B, numbytes, "0-7", 3 );
+	if( ret )
+	{
+		if( conv )
+			sgs_PushInt( C, util_atoi( B.ptr, B.size ) );
+		else
+			sgs_PushStringBuf( C, B.ptr, B.size );
+	}
+	membuf_destroy( &B, C );
+	return ret;
+}
+
+static int sgsstd_fmtstreamI_read_decimal_int( SGS_CTX )
+{
+	SGSBOOL ret, conv = TRUE;
+	sgs_SizeVal numbytes = 128;
+	MemBuf B = membuf_create();
+	
+	SGSFS_IHDR( read_decimal_int )
+	if( !sgs_LoadArgs( C, "@>|bl", &conv, &numbytes ) )
+		return 0;
+	
+	ret = _stream_readcc( C, hdr, &B, numbytes, "-+0-9", 5 );
+	if( ret )
+	{
+		if( conv )
+			sgs_PushInt( C, util_atoi( B.ptr, B.size ) );
+		else
+			sgs_PushStringBuf( C, B.ptr, B.size );
+	}
+	membuf_destroy( &B, C );
+	return ret;
+}
+
+static int sgsstd_fmtstreamI_read_hex_int( SGS_CTX )
+{
+	SGSBOOL ret, conv = TRUE;
+	sgs_SizeVal numbytes = 128;
+	MemBuf B = membuf_create();
+	membuf_appbuf( &B, C, "0x", 2 );
+	
+	SGSFS_IHDR( read_hex_int )
+	if( !sgs_LoadArgs( C, "@>|bl", &conv, &numbytes ) )
+		return 0;
+	
+	ret = _stream_readcc( C, hdr, &B, numbytes, "0-9a-fA-F", 9 );
+	if( ret )
+	{
+		if( conv )
+			sgs_PushInt( C, util_atoi( B.ptr, B.size ) );
+		else
+			sgs_PushStringBuf( C, B.ptr, B.size );
+	}
+	membuf_destroy( &B, C );
+	return ret;
+}
+
 static int sgsstd_fmtstreamI_check( SGS_CTX )
 {
-	char* chkstr, chr;
+	char* chkstr, chr, chr2;
 	sgs_SizeVal chksize, numchk = 0;
-	SGSBOOL partial = FALSE;
+	SGSBOOL partial = FALSE, ci = FALSE;
 	
 	SGSFS_IHDR( skipcc )
-	if( !sgs_LoadArgs( C, "@>m|b", &chkstr, &chksize, &partial ) )
+	if( !sgs_LoadArgs( C, "@>m|bb", &chkstr, &chksize, &ci, &partial ) )
 		return 0;
 	
 	while( numchk < chksize )
@@ -1162,7 +1306,8 @@ static int sgsstd_fmtstreamI_check( SGS_CTX )
 			chr = hdr->buffer[ hdr->bufpos ];
 			break;
 		}
-		if( chr == chkstr[ numchk ] )
+		chr2 = chkstr[ numchk ];
+		if( chr == chr2 || ( ci && tolower( chr ) == tolower( chr2 ) ) )
 		{
 			hdr->bufpos++;
 			numchk++;
@@ -1193,6 +1338,12 @@ static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	else if STREQ( str, "getchar" ) IFN( sgsstd_fmtstreamI_getchar )
 	else if STREQ( str, "readcc" ) IFN( sgsstd_fmtstreamI_readcc )
 	else if STREQ( str, "skipcc" ) IFN( sgsstd_fmtstreamI_skipcc )
+	else if STREQ( str, "read_real" ) IFN( sgsstd_fmtstreamI_read_real )
+	else if STREQ( str, "read_int" ) IFN( sgsstd_fmtstreamI_read_int )
+	else if STREQ( str, "read_binary_int" ) IFN( sgsstd_fmtstreamI_read_binary_int )
+	else if STREQ( str, "read_octal_int" ) IFN( sgsstd_fmtstreamI_read_octal_int )
+	else if STREQ( str, "read_decimal_int" ) IFN( sgsstd_fmtstreamI_read_decimal_int )
+	else if STREQ( str, "read_hex_int" ) IFN( sgsstd_fmtstreamI_read_hex_int )
 	else if STREQ( str, "check" ) IFN( sgsstd_fmtstreamI_check )
 	
 	else if( 0 == strcmp( str, "at_end" ) ){

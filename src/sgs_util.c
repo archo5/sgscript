@@ -508,7 +508,9 @@ sgs_Int util_atoi( const char* str, int len )
 {
 	sgs_Int vi;
 	sgs_Real vr;
-	int ret = util_strtonum( &str, str + len, &vi, &vr );
+	const char* p = str;
+	int ret = util_strtonum( &p, str + len, &vi, &vr );
+	if( p == str ) return 0;
 	if( ret == 1 ) return vi;
 	else if( ret == 2 ) return (sgs_Int) vr;
 	else return 0;
@@ -518,7 +520,9 @@ sgs_Real util_atof( const char* str, int len )
 {
 	sgs_Int vi;
 	sgs_Real vr;
-	int ret = util_strtonum( &str, str + len, &vi, &vr );
+	const char* p = str;
+	int ret = util_strtonum( &p, str + len, &vi, &vr );
+	if( p == str ) return 0;
 	if( ret == 1 ) return (sgs_Real) vi;
 	else if( ret == 2 ) return vr;
 	else return 0;
