@@ -16,16 +16,14 @@ ifdef SystemRoot
 	BINEXT=.exe
 	LIBEXT=.dll
 	LIBPFX=
-	LDPREP=
 else
 	RM = rm -f
 	FixPath = $1
 	CPLATFLAGS = -fPIC
-	PLATFLAGS = -ldl
+	PLATFLAGS = -ldl -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
 	BINEXT=
 	LIBEXT=.so
 	LIBPFX=lib
-	LDPREP=LD_LIBRARY_PATH=./bin
 endif
 
 ifeq ($(mode),release)
@@ -94,17 +92,17 @@ tools: $(OUTDIR)/sgsjson$(LIBEXT) \
 
 .PHONY: test
 test: $(OUTDIR)/sgstest$(BINEXT)
-	$(LDPREP) $(OUTDIR)/sgstest
+	$(OUTDIR)/sgstest
 
 .PHONY: apitest
 apitest: $(OUTDIR)/sgsapitest$(BINEXT)
-	$(LDPREP) $(OUTDIR)/sgsapitest
+	$(OUTDIR)/sgsapitest
 
 # other stuff
 # - multithreaded testing
 .PHONY: test_mt
 test_mt: $(OUTDIR)/sgstest_mt$(BINEXT)
-	$(LDPREP) $(OUTDIR)/sgstest_mt
+	$(OUTDIR)/sgstest_mt
 $(OUTDIR)/sgstest_mt$(BINEXT): $(LIBDIR)/libsgscript.a
 	$(CC) -o $@ examples/sgstest_mt.c $(LFLAGS) -lm -lpthread $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 # - sgs2exe tool
