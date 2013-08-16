@@ -30,7 +30,7 @@
 	sgs_VarObj* data; SGSFN( #funcname ); obj* item; \
 	if( !sgs_Method( C ) || !sgs_IsObject( C, 0, SGS_IFN(obj) ) ) \
 		return sgs_Printf( C, SGS_WARNING, "method not called on " #obj );\
-	data = sgs_GetObjectData( C, 0 ); item = (obj*) data->data;
+	data = sgs_GetObjectStruct( C, 0 ); item = (obj*) data->data;
 #define SGS_METHOD_WRAPPER_O( obj, funcname ) \
 	int SGS_METHODNAME(obj,funcname)(SGS_CTX){SGS_IFNHDR(obj,funcname) \
 	return item->funcname(C);}

@@ -2628,7 +2628,7 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				
 				if( !nowrite )
 				{
-					sgs_VarObj* O = sgs_GetObjectData( C, from );
+					sgs_VarObj* O = sgs_GetObjectStruct( C, from );
 					switch( *cmd )
 					{
 					case 'a': *va_arg( args, sgs_SizeVal* ) = 
@@ -3393,8 +3393,7 @@ SGSBOOL sgs_IsCallable( SGS_CTX, int item )
 		return 1;
 	if( ty & SVT_OBJECT )
 	{
-		sgs_VarObj* O = sgs_GetObjectData( C, item );
-		void** ptr = O->iface;
+		void** ptr = sgs_GetObjectIface( C, item );
 		while( *ptr )
 		{
 			if( *ptr == SOP_CALL )
@@ -3563,7 +3562,7 @@ SGSMIXED sgs_ArraySize( SGS_CTX, int item )
 {
 	if( sgs_ItemTypeExt( C, item ) != VTC_ARRAY )
 		return SGS_EINVAL;
-	return ((sgsstd_array_header_t*)sgs_GetObjectData( C, item )->data)->size;
+	return ((sgsstd_array_header_t*)sgs_GetObjectData( C, item ))->size;
 }
 
 
@@ -3664,13 +3663,42 @@ sgs_SizeVal sgs_GetStringSize( SGS_CTX, int item )
 	return var->data.S->size;
 }
 
-sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item )
+#define _OBJPREP( ret ) \
+	sgs_Variable* var; \
+	DBLCHK( !sgs_IsValidIndex( C, item ), ret ) \
+	var = stk_getpos( C, item ); \
+	DBLCHK( !( var->type & SVT_OBJECT ), ret )
+
+sgs_VarObj* sgs_GetObjectStruct( SGS_CTX, int item )
 {
-	sgs_Variable* var;
-	DBLCHK( !sgs_IsValidIndex( C, item ), NULL )
-	var = stk_getpos( C, item );
-	DBLCHK( !( var->type & SVT_OBJECT ), NULL )
+	_OBJPREP( NULL );
 	return var->data.O;
+}
+
+void* sgs_GetObjectData( SGS_CTX, int item )
+{
+	_OBJPREP( NULL );
+	return var->data.O->data;
+}
+
+void** sgs_GetObjectIface( SGS_CTX, int item )
+{
+	_OBJPREP( NULL );
+	return var->data.O->iface;
+}
+
+int sgs_SetObjectData( SGS_CTX, int item, void* data )
+{
+	_OBJPREP( 0 );
+	var->data.O->data = data;
+	return 1;
+}
+
+int sgs_SetObjectIface( SGS_CTX, int item, void** iface )
+{
+	_OBJPREP( 0 );
+	var->data.O->iface = iface;
+	return 1;
 }
 
 #undef DBLCHK

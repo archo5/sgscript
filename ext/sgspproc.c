@@ -165,15 +165,13 @@ static void ppjob_map_free( ppjob_t* job )
 
 static void* ppjob_iface[];
 #define PPJOB_IHDR( name ) \
-	sgs_VarObj* data; \
 	ppjob_t* job; \
 	if( !sgs_Method( C ) \
 		|| !( sgs_IsObject( C, 0, ppjob_iface ) \
 		|| sgs_IsObject( C, 0, ppjob_iface_job ) ) \
 		){ sgs_Printf( C, SGS_ERROR, "ppjob." #name \
 			"() isn't called on a ppjob" ); return 0; } \
-	data = sgs_GetObjectData( C, 0 ); \
-	job = (ppjob_t*) data->data; \
+	job = (ppjob_t*) sgs_GetObjectData( C, 0 ); \
 	UNUSED( job );
 
 

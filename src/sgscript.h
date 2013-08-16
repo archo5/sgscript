@@ -7,7 +7,7 @@
 #define SGS_VERSION_MINOR 9
 #define SGS_VERSION_INCR  0
 #define SGS_VERSION "0.9.0"
-#define SGS_API_VERSION 1
+#define SGS_API_VERSION 2
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
@@ -605,7 +605,11 @@ SGS_APIFUNC SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var );
 
 SGS_APIFUNC char* sgs_GetStringPtr( SGS_CTX, int item );
 SGS_APIFUNC sgs_SizeVal sgs_GetStringSize( SGS_CTX, int item );
-SGS_APIFUNC sgs_VarObj* sgs_GetObjectData( SGS_CTX, int item );
+SGS_APIFUNC sgs_VarObj* sgs_GetObjectStruct( SGS_CTX, int item );
+SGS_APIFUNC void* sgs_GetObjectData( SGS_CTX, int item );
+SGS_APIFUNC void** sgs_GetObjectIface( SGS_CTX, int item );
+SGS_APIFUNC int sgs_SetObjectData( SGS_CTX, int item, void* data );
+SGS_APIFUNC int sgs_SetObjectIface( SGS_CTX, int item, void** iface );
 
 SGS_APIFUNC int sgs_HasFuncName( SGS_CTX );
 SGS_APIFUNC void sgs_FuncName( SGS_CTX, const char* fnliteral );

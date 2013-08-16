@@ -63,7 +63,7 @@ The virtual machine supports:
     SGSFN( "<object>.<method>" );
     if( !sgs_Method( C ) || !sgs_IsObject( C, 0, Object_interface_pointer ) )
         return sgs_ArgErrorExt( C, 0, 1, "<object>", "" );
-    ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 )->data;
+    ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
 
 
 - version 2: Method + function handling (function that can be called as a method too)
@@ -72,7 +72,7 @@ The virtual machine supports:
     SGSFN( method_call ? "<object>.<method>" : "<object_function>" );
     if( !sgs_IsObject( C, 0, Object_interface_pointer ) )
         return sgs_ArgErrorExt( C, 0, method_call, "<object>", "" );
-    ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 )->data;
+    ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
 
 
 # Serialization in SGScript [info]
@@ -416,7 +416,7 @@ These are the default meanings for error codes that are honored throughout the A
 - sgs_PushObjectIPA stands for "push object, allocate memory in-place"
 -- it means that the `added` memory space will be appended to the end of object allocation
 -- this allows to allocate all object data for most objects with just one allocation, instead of two
--- the allocated memory will be returned and also available via sgs_GetObjectData( C, -1 )->data
+-- the allocated memory will be returned and also available via sgs_GetObjectData( C, -1 )
 - sgs_PushVariable will increment the reference count of strings, SGS functions and objects
 - these functions do not throw an error when the stack is full since there is no way to handle that
 
@@ -1245,25 +1245,64 @@ After a successful call, all arguments and the function will be popped off the s
 # sgs_GetStringPtr [function]
 
 == char* sgs_GetStringPtr( sgs_Context* C, int item )
-=== return the string data pointer of the specified stack item, using BreakIf to validate the call
+=== return the string data pointer of the specified stack item
 
-- if item is out of bounds or not a string, one of the BreakIf macros will go off and stop the action
+- if item is out of bounds or not a string, NULL will be returned and ...
+-- in a debug build, one of the BreakIf macros will go off and stop the action
 
 
 # sgs_GetStringSize [function]
 
 == sgs_SizeVal sgs_GetStringSize( sgs_Context* C, int item )
-=== return the string size of the specified stack item, using BreakIf to validate the call
+=== return the string size of the specified stack item
 
-- if item is out of bounds or not a string, one of the BreakIf macros will go off and stop the action
+- if item is out of bounds or not a string, 0 will be returned and ...
+-- in a debug build, one of the BreakIf macros will go off and stop the action
+
+
+# sgs_GetObjectStruct [function]
+
+== sgs_VarObj* sgs_GetObjectStruct( sgs_Context* C, int item )
+=== return the object's internal data pointer of the specified stack item
+
+- if item is out of bounds or not an object, NULL will be returned and ...
+-- in a debug build, one of the BreakIf macros will go off and stop the action
 
 
 # sgs_GetObjectData [function]
 
-== sgs_VarObj* sgs_GetObjectData( sgs_Context* C, int item )
-=== return the object data pointer of the specified stack item, using BreakIf to validate the call
+== void* sgs_GetObjectData( sgs_Context* C, int item )
+=== return the object data pointer of the specified stack item
 
-- if item is out of bounds or not an object, one of the BreakIf macros will go off and stop the action
+- if item is out of bounds or not an object, NULL will be returned and ...
+-- in a debug build, one of the BreakIf macros will go off and stop the action
+
+
+# sgs_GetObjectIface [function]
+
+== void** sgs_GetObjectIface( sgs_Context* C, int item )
+=== return the object interface pointer of the specified stack item
+
+- if item is out of bounds or not an object, NULL will be returned and ...
+-- in a debug build, one of the BreakIf macros will go off and stop the action
+
+
+# sgs_SetObjectData [function]
+
+== int sgs_SetObjectData( sgs_Context* C, int item, void* data )
+=== set the object data pointer of the specified stack item
+
+- if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
+-- in a debug build, one of the BreakIf macros will go off and stop the action
+
+
+# sgs_SetObjectIface [function]
+
+== int sgs_SetObjectIface( sgs_Context* C, int item, void* iface )
+=== set the object interface pointer of the specified stack item
+
+- if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
+-- in a debug build, one of the BreakIf macros will go off and stop the action
 
 
 #

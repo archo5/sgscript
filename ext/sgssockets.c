@@ -160,15 +160,6 @@ static int socket_geterrnobyname( SGS_CTX )
 	Socket address object
 */
 
-static void* sockaddr_iface[];
-#define SOCKADDR_IHDR( name ) \
-	sgs_VarObj* data; \
-	int method_call = sgs_Method( C ); \
-	SGSFN( "socket_address." #name ); \
-	if( !sgs_IsObject( C, 0, sockaddr_iface ) ) \
-		return sgs_ArgErrorExt( C, 0, method_call, "socket_address", "" ); \
-	data = sgs_GetObjectData( C, 0 );
-
 #define GET_SAF ((struct sockaddr_storage*)data->data)->ss_family
 #define GET_SAI ((struct sockaddr_in*)data->data)
 #define GET_SAI6 ((struct sockaddr_in6*)data->data)
@@ -445,7 +436,7 @@ static void* socket_iface[];
 	SGSFN( "socket." #name ); \
 	if( !sgs_IsObject( C, 0, socket_iface ) ) \
 		return sgs_ArgErrorExt( C, 0, method_call, "socket", "" ); \
-	data = sgs_GetObjectData( C, 0 );
+	data = sgs_GetObjectStruct( C, 0 );
 
 #define GET_SCK ((int)(size_t)data->data)
 
@@ -841,7 +832,7 @@ static int sgs_socket_select( SGS_CTX )
 		sgs_PushNumIndex( C, 0, i );
 		if( !sgs_IsObject( C, -1, socket_iface ) )
 			return sgs_Printf( C, SGS_WARNING, "item #%d of 'read' array is not a socket", i + 1 );
-		data = sgs_GetObjectData( C, -1 );
+		data = sgs_GetObjectStruct( C, -1 );
 		if( GET_SCK == -1 )
 			return sgs_Printf( C, SGS_WARNING, "item #%d of 'read' array is not an open socket", i + 1 );
 		FD_SET( GET_SCK, &setR );
@@ -855,7 +846,7 @@ static int sgs_socket_select( SGS_CTX )
 		sgs_PushNumIndex( C, 1, i );
 		if( !sgs_IsObject( C, -1, socket_iface ) )
 			return sgs_Printf( C, SGS_WARNING, "item #%d of 'write' array is not a socket", i + 1 );
-		data = sgs_GetObjectData( C, -1 );
+		data = sgs_GetObjectStruct( C, -1 );
 		if( GET_SCK == -1 )
 			return sgs_Printf( C, SGS_WARNING, "item #%d of 'write' array is not an open socket", i + 1 );
 		FD_SET( GET_SCK, &setW );
@@ -869,7 +860,7 @@ static int sgs_socket_select( SGS_CTX )
 		sgs_PushNumIndex( C, 2, i );
 		if( !sgs_IsObject( C, -1, socket_iface ) )
 			return sgs_Printf( C, SGS_WARNING, "item #%d of 'error' array is not a socket", i + 1 );
-		data = sgs_GetObjectData( C, -1 );
+		data = sgs_GetObjectStruct( C, -1 );
 		if( GET_SCK == -1 )
 			return sgs_Printf( C, SGS_WARNING, "item #%d of 'error' array is not an open socket", i + 1 );
 		FD_SET( GET_SCK, &setE );
@@ -887,7 +878,7 @@ static int sgs_socket_select( SGS_CTX )
 	for( i = 0; i < szR; ++i )
 	{
 		sgs_PushNumIndex( C, 0, i );
-		data = sgs_GetObjectData( C, -1 );
+		data = sgs_GetObjectStruct( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setR ) )
 		{
 			sgs_PushItem( C, 0 );
@@ -902,7 +893,7 @@ static int sgs_socket_select( SGS_CTX )
 	for( i = 0; i < szW; ++i )
 	{
 		sgs_PushNumIndex( C, 1, i );
-		data = sgs_GetObjectData( C, -1 );
+		data = sgs_GetObjectStruct( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setW ) )
 		{
 			sgs_PushItem( C, 1 );
@@ -917,7 +908,7 @@ static int sgs_socket_select( SGS_CTX )
 	for( i = 0; i < szE; ++i )
 	{
 		sgs_PushNumIndex( C, 2, i );
-		data = sgs_GetObjectData( C, -1 );
+		data = sgs_GetObjectStruct( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setE ) )
 		{
 			sgs_PushItem( C, 2 );

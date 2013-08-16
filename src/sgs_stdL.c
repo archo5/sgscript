@@ -926,14 +926,12 @@ static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data, int dco )
 }
 
 #define SGSFS_IHDR( name ) \
-	sgs_VarObj* data; \
 	sgsstd_fmtstream_t* hdr; \
 	int method_call = sgs_Method( C ); \
 	SGSFN( "fmtstream." #name ); \
 	if( !sgs_IsObject( C, 0, sgsstd_fmtstream_functable ) )\
 		return sgs_ArgErrorExt( C, 0, method_call, "fmtstream", "" ); \
-	data = sgs_GetObjectData( C, 0 ); \
-	hdr = (sgsstd_fmtstream_t*) data->data; \
+	hdr = (sgsstd_fmtstream_t*) sgs_GetObjectData( C, 0 ); \
 	UNUSED( hdr );
 /* after this, the counting starts from 1 because of sgs_Method */
 
@@ -1798,7 +1796,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 }
 
 
-#define FVAR (*(FILE**)&data->data)
+#define FVAR ((FILE*)data)
 #define FVNO_BEGIN if( FVAR ) {
 #define FVNO_END( name ) } else \
 	STDLIB_WARN( "file." #name "() - file is not opened" )
@@ -1806,7 +1804,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 /* sgsstd_file_functable declaration is at the top */
 
 #define FIF_INIT( fname ) \
-	sgs_VarObj* data; \
+	void* data; \
 	int method_call = sgs_Method( C ); \
 	SGSFN( "file." #fname ); \
 	if( !sgs_IsObject( C, 0, sgsstd_file_functable ) ) \
@@ -1890,7 +1888,7 @@ static int sgsstd_fileI_open( SGS_CTX )
 	if( FVAR )
 		fclose( FVAR );
 
-	FVAR = fopen( path, g_io_fileflagmodes[ ff ] );
+	sgs_SetObjectData( C, 0, fopen( path, g_io_fileflagmodes[ ff ] ) );
 	
 	CRET( !!FVAR );
 }
@@ -1908,7 +1906,7 @@ static int sgsstd_fileI_close( SGS_CTX )
 	{
 		res = 1;
 		fclose( FVAR );
-		FVAR = NULL;
+		sgs_SetObjectData( C, 0, NULL );
 	}
 
 	sgs_PushBool( C, res );
