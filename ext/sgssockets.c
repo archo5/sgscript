@@ -7,8 +7,11 @@
 #  include <ws2tcpip.h>
 #else
 #  include <unistd.h>
+#  include <sys/ioctl.h>
 #  include <sys/socket.h>
 #  include <netinet/in.h>
+#  include <arpa/inet.h>
+#  include <netdb.h>
 #  define closesocket close
 #  define ioctlsocket ioctl
 #endif
@@ -45,10 +48,12 @@
 #  define sgs_sockerror WSAGetLastError()
 #  define SOCKADDR_SIZE int
 #  define IOCTL_VALUE u_long
+#  define GSO_ARG5TYPE int
 #else
 #  define sgs_sockerror errno
 #  define SOCKADDR_SIZE unsigned int
 #  define IOCTL_VALUE int
+#  define GSO_ARG5TYPE unsigned int
 #endif
 
 
@@ -114,7 +119,7 @@ static const char* socket_errno_key_table[] =
 #ifndef _WIN32
 	AE( EBADMSG ), AE( ECANCELED ), AE( EIDRM ), AE( ENODATA ),
 	AE( ENOLINK ), AE( ENOMSG ), AE( ENOSR ), AE( ENOSTR ),
-	AE( ENOTRECOVERABLE ), AE( ENOTSUP ), AE( EOTHER ), AE( EOVERFLOW ),
+	AE( ENOTRECOVERABLE ), AE( ENOTSUP ), AE( EOVERFLOW ),
 	AE( EOWNERDEAD ), AE( EPROTO ), AE( ETIME ), AE( ETXTBSY ),
 #endif
 	
@@ -244,8 +249,10 @@ static int sockaddr_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		if( GET_SAF == AF_INET || GET_SAF == AF_INET6 )
 		{
 			char pb[ 8 ];
-			inet_ntop( GET_SAF, GET_SAF == AF_INET ? &GET_SAI->sin_addr : &GET_SAI6->sin6_addr, addr, 64 );
-			sprintf( pb, ":%hu", GET_SAF == AF_INET ? &GET_SAI->sin_port : &GET_SAI6->sin6_port );
+			inet_ntop( GET_SAF, GET_SAF == AF_INET ?
+				(void*) &GET_SAI->sin_addr :
+				(void*) &GET_SAI6->sin6_addr, addr, 64 );
+			sprintf( pb, ":%hu", (int) GET_SAF == AF_INET ? GET_SAI->sin_port : GET_SAI6->sin6_port );
 			strcat( addr, pb );
 		}
 #endif
@@ -675,7 +682,8 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	
 	if( STREQ( name, "broadcast" ) )
 	{
-		int bv, bvl = sizeof(int);
+		int bv;
+		GSO_ARG5TYPE bvl = sizeof(int);
 		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_BROADCAST, (char*) &bv, &bvl ) != -1 ) )
 		{
 			sgs_Printf( C, SGS_WARNING, "failed to retrieve the 'broadcast' property of a socket" );
@@ -687,7 +695,8 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	}
 	if( STREQ( name, "reuse_addr" ) )
 	{
-		int bv, bvl = sizeof(int);
+		int bv;
+		GSO_ARG5TYPE bvl = sizeof(int);
 		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_REUSEADDR, (char*) &bv, &bvl ) != -1 ) )
 		{
 			sgs_Printf( C, SGS_WARNING, "failed to retrieve the 'reuse_addr' property of a socket" );
@@ -699,7 +708,8 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	}
 	if( STREQ( name, "error" ) )
 	{
-		int bv, bvl = sizeof(int);
+		int bv;
+		GSO_ARG5TYPE bvl = sizeof(int);
 		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_ERROR, (char*) &bv, &bvl ) != -1 ) )
 		{
 			sgs_Printf( C, SGS_WARNING, "failed to retrieve the 'error' property of a socket" );

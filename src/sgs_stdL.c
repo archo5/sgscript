@@ -3571,6 +3571,10 @@ static int sgsstd_string_compare( SGS_CTX )
 			if( str1size < str2size ) ret = -1;
 			else if( str1size > str2size ) ret = 1;
 		}
+		else if( ret > 0 )
+			ret = 1;
+		else
+			ret = -1;
 	}
 	else
 	{
