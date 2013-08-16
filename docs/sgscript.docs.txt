@@ -1,9 +1,11 @@
 SGScript documentation - v0.9.0
 
 
-#
-## MAIN/INFO
-#
+# Main info [info]
+
+In this part of the documentation, universally useful information can be found about various aspects of both the language and the C API.
+
+# >>>
 
 
 # SGScript - description [info]
@@ -60,7 +62,7 @@ The virtual machine supports:
 
 - version 1: plain method handling:
 
-    SGSFN( "<object>.<method>" );
+    sgs_FuncName( C, "<object>.<method>" );
     if( !sgs_Method( C ) || !sgs_IsObject( C, 0, Object_interface_pointer ) )
         return sgs_ArgErrorExt( C, 0, 1, "<object>", "" );
     ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
@@ -69,7 +71,7 @@ The virtual machine supports:
 - version 2: Method + function handling (function that can be called as a method too)
 
     int method_call = sgs_Method( C );
-    SGSFN( method_call ? "<object>.<method>" : "<object_function>" );
+    sgs_FuncName( C, method_call ? "<object>.<method>" : "<object_function>" );
     if( !sgs_IsObject( C, 0, Object_interface_pointer ) )
         return sgs_ArgErrorExt( C, 0, method_call, "<object>", "" );
     ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
@@ -145,9 +147,14 @@ The string is not a number if no numeric characters (0-9) could be parsed. (for 
 ---- >>>, characters 0-9 add the specified decimal number to the integer
 
 
-#
-## API/INFO
-#
+# <<<
+
+
+# API info [info]
+
+This part of the documentation describes the various types and definitions used in the C API.
+
+# >>>
 
 
 # Main types [info]
@@ -250,9 +257,15 @@ These are the default meanings for error codes that are honored throughout the A
 - the expected behavior is same as for @sgs_Memory()
 
 
-#
-## API/BASIC
-#
+# <<<
+
+
+# C API reference [info]
+# >>>
+
+
+# Primary interface [info]
+# >>>
 
 
 # sgs_CreateEngine [function alias]
@@ -391,9 +404,11 @@ These are the default meanings for error codes that are honored throughout the A
 - SGS_E****: first error encountered (operation stopped somewhere in the middle)
 
 
-#
-## API/DATA
-#
+# <<<
+
+
+# Data interface [info]
+# >>>
 
 
 # sgs_Push[Null|Bool|Int|Real|StringBuf|String|CFunction|Object|ObjectIPA|Variable] [functions]
@@ -763,9 +778,11 @@ These are the default meanings for error codes that are honored throughout the A
 - alias to `sgs_LoadArgsExt( C, 0, cmd, ... )>0`
 
 
-#
-## API/OPERATIONS
-#
+# <<<
+
+
+# Operations [info]
+# >>>
 
 
 # sgs_FCall [function]
@@ -974,9 +991,11 @@ After a successful call, all arguments and the function will be popped off the s
 - both type variables and interface pointers (only if both variables are objects) are checked for equality
 
 
-#
-## API/CONV-RET
-#
+# <<<
+
+
+# Conversion interface [info]
+# >>>
 
 
 # sgs_[GetBool|GetInt|GetReal] [functions]
@@ -1159,9 +1178,11 @@ After a successful call, all arguments and the function will be popped off the s
 - SGS_EINVAL: index out of bounds / variable was not an array
 
 
-#
-## API/EXT
-#
+# <<<
+
+
+# Extension interface [info]
+# >>>
 
 
 # sgs_StackSize [function]
@@ -1305,9 +1326,11 @@ After a successful call, all arguments and the function will be popped off the s
 -- in a debug build, one of the BreakIf macros will go off and stop the action
 
 
-#
-## API/ENV
-#
+# <<<
+
+
+# Environment control interface [info]
+# >>>
 
 
 # sgs_SetOutputFunc [function]
@@ -1439,9 +1462,11 @@ After a successful call, all arguments and the function will be popped off the s
 - all of these functions, including sgs_Memory, work on the same heap, thus they are interchangeable
 
 
-#
-## API/INFO-CTRL
-#
+# <<<
+
+
+# Information retrieval/control interface [info]
+# >>>
 
 
 # sgs_CodeString [function]
@@ -1538,9 +1563,31 @@ sgs_Errno [function (inline)]
 - alias to `sgs_Cntl( C, SGS_CNTL_GET_ERRNO, 0 )`
 
 
-#
-## STDLIB/CORE
-#
+# <<<
+
+
+# <<<
+
+
+# Standard library reference [info]
+# >>>
+
+
+# Core library [info]
+
+This library is loaded on initialization and contains the functions and constants necessary to do primary actions:
+
+- execution of additional scripts
+- creating and using array, class, dict, closure
+- converting between variables
+- serialization / deserialization
+- operation control
+- error handling and throwing
+- global environment modification
+- standard input / output
+- data debugging
+
+# >>>
 
 
 # array [function]
@@ -2534,9 +2581,18 @@ sgs_Errno [function (inline)]
 -- GC-safe
 
 
-#
-## STDLIB/FMT
-#
+# <<<
+
+
+# Formatting library ("fmt") [info]
+
+This library includes functions and objects for parsing binary and text buffers.
+
+- binary format -- fmt_pack, fmt_unpack, fmt_pack_count, fmt_pack_size
+- base64 format -- fmt_base64_encode, fmt_base64_decode
+- text format -- fmt_parser, fmt_text, fmt_charcc
+
+# >>>
 
 
 # fmt_pack [function]
@@ -2790,9 +2846,14 @@ sgs_Errno [function (inline)]
 - if `partial` is true, function returns the number of characters successfully matched instead of whether everything has been matched
 
 
-#
-## STDLIB/IO
-#
+# <<<
+
+
+# I/O library ("io") [info]
+
+This library contains the functions necessary to work with the file system (files and directories).
+
+# >>>
 
 
 # io_setcwd [function]
@@ -3004,9 +3065,14 @@ sgs_Errno [function (inline)]
 == file system item type constants for @io_stat()
 
 
-#
-## STDLIB/MATH
-#
+# <<<
+
+
+# Math library ("math") [info]
+
+This library contains the basic math functions for processing real values.
+
+# >>>
 
 
 # abs [function]
@@ -3197,9 +3263,18 @@ sgs_Errno [function (inline)]
 - the value of this constant is `2.7182818284590452354`
 
 
-#
-## STDLIB/OS
-#
+# <<<
+
+
+# OS library ("os") [info]
+
+# This function deals with data that can be retrieved from the operating system. This includes the following data sources:
+
+- environment variables
+- time and date
+- locale / regional settings
+
+# >>>
 
 
 # os_gettype [function]
@@ -3361,9 +3436,14 @@ These constants specify the categories for which locale can be changed.
 - LC_TIME: os_date_string
 
 
-#
-## STDLIB/RE
-#
+# <<<
+
+
+# Regular expression library ("re") [info]
+
+This library includes regular expression match & replace functions.
+
+# >>>
 
 
 # re_match [function]
@@ -3399,9 +3479,14 @@ These constants specify the categories for which locale can be changed.
 -- there can be up to 10 backreferences, 0-9, 0 being the whole match
 
 
-#
-## STDLIB/STRING
-#
+# <<<
+
+
+# String library ("string") [info]
+
+This library contains the string handling functions. In all functions, except the utf-8 ones, it is assumed that strings are byte buffers where each byte is one character. If correct indices are applied, many of them will work with multibyte strings.
+
+# >>>
 
 
 # string_cut [function]
@@ -3640,5 +3725,11 @@ These constants specify the categories for which locale can be changed.
 - argument indices to be used in specifiers start from 1
 
     print string_format( "{1:d} -> {1:x}", 1337 ); // prints "1337 -> 539"
+
+
+# <<<
+
+
+# <<<
 
 

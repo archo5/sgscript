@@ -14,3 +14,4 @@ ipch
 *.user
 !output.dir
 /docs/out/*
+/docs/*.toc

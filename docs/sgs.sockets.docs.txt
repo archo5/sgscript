@@ -1,9 +1,8 @@
 SGS Sockets library
 
 
-#
-## MAIN/INFO
-#
+# Main info [info]
+# >>>
 
 
 # SGS Sockets - description [info]
@@ -15,9 +14,11 @@ The library is compiled to a 'sgssockets' shared library so it can be included t
     include "sgssockets";
 
 
-#
-## NATIVE/API
-#
+# <<<
+
+
+# C API [info]
+# >>>
 
 
 # socket [type]
@@ -37,9 +38,11 @@ The library is compiled to a 'sgssockets' shared library so it can be included t
 - extraction can be done by casting the pointer to one of the sockaddr types (_in, _in6, _storage and others), depending on the value of the address family member (all structs are supposed to have it at the same place)
 
 
-#
-## SGS/API
-#
+# <<<
+
+
+# SGScript API [info]
+# >>>
 
 
 # socket_error [function]
@@ -119,4 +122,7 @@ The library is compiled to a 'sgssockets' shared library so it can be included t
 
 # socket [function]
 # socket_select [function]
+
+
+# <<<
 

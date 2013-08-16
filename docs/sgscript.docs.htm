@@ -5,7 +5,9 @@
 		<link rel='stylesheet' type='text/css' href='docs.css'>
 		<script type='text/javascript' src='docs.js'></script>
 	</head><body>
-	<h1>SGScript documentation - v0.9.0</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGScript---description-info'>SGScript - description [info]</a></li><li><a href='#SGScript-Virtual-Machine-info'>SGScript Virtual Machine [info]</a></li><li><a href='#Commonly-required-advanced-tasks-info'>Commonly required advanced tasks [info]</a></li><li><a href='#Serialization-in-SGScript-info'>Serialization in SGScript [info]</a></li><li><a href='#Numeric-string-parsing-rules-info'>Numeric string parsing rules [info]</a></li><li><a href='#Main-types-info'>Main types [info]</a></li><li><a href='#Error-codes-info'>Error codes [info]</a></li><li><a href='#Variable-type-flags-info'>Variable type flags [info]</a></li><li><a href='#Object-operation-types-info'>Object operation types [info]</a></li><li><a href='#Interaction-with-the-native-environment-info'>Interaction with the native environment [info]</a></li><li><a href='#sgs_CreateEngine-function-alias'>sgs_CreateEngine [function alias]</a></li><li><a href='#sgs_CreateEngineExt-function'>sgs_CreateEngineExt [function]</a></li><li><a href='#sgs_DestroyEngine-function'>sgs_DestroyEngine [function]</a></li><li><a href='#sgs_ExecString-function-alias'>sgs_ExecString [function alias]</a></li><li><a href='#sgs_ExecBuffer-function-alias'>sgs_ExecBuffer [function alias]</a></li><li><a href='#sgs_EvalString-function-alias'>sgs_EvalString [function alias]</a></li><li><a href='#sgs_EvalBuffer-function'>sgs_EvalBuffer [function]</a></li><li><a href='#sgs_ExecFile-function-alias'>sgs_ExecFile [function alias]</a></li><li><a href='#sgs_EvalFile-function'>sgs_EvalFile [function]</a></li><li><a href='#sgs_LoadLib_[Fmt|IO|Math|OS|String]-functions'>sgs_LoadLib_[Fmt|IO|Math|OS|String] [functions]</a></li><li><a href='#sgs_Reg[Func|Int|Real]Const-struct'>sgs_Reg[Func|Int|Real]Const [struct]</a></li><li><a href='#sgs_Reg[Func|Int|Real]Consts-function'>sgs_Reg[Func|Int|Real]Consts [function]</a></li><li><a href='#sgs_Push[Null|Bool|Int|Real|StringBuf|String|CFunction|Object|ObjectIPA|Variable]-functions'>sgs_Push[Null|Bool|Int|Real|StringBuf|String|CFunction|Object|ObjectIPA|Variable] [functions]</a></li><li><a href='#sgs_Pop-function'>sgs_Pop [function]</a></li><li><a href='#sgs_PopSkip-function'>sgs_PopSkip [function]</a></li><li><a href='#sgs_InsertVariable-function'>sgs_InsertVariable [function]</a></li><li><a href='#sgs_PushArray-function'>sgs_PushArray [function]</a></li><li><a href='#sgs_PushDict-function'>sgs_PushDict [function]</a></li><li><a href='#sgs_PushItem-function'>sgs_PushItem [function]</a></li><li><a href='#sgs_StoreItem-function'>sgs_StoreItem [function]</a></li><li><a href='#sgs_PushProperty-function'>sgs_PushProperty [function]</a></li><li><a href='#sgs_StoreProperty-function'>sgs_StoreProperty [function]</a></li><li><a href='#sgs_PushNumIndex-function'>sgs_PushNumIndex [function]</a></li><li><a href='#sgs_StoreNumIndex-function'>sgs_StoreNumIndex [function]</a></li><li><a href='#sgs_PushIndexExt-function'>sgs_PushIndexExt [function]</a></li><li><a href='#sgs_PushIndex-function-alias'>sgs_PushIndex [function alias]</a></li><li><a href='#sgs_PushIndexP-function'>sgs_PushIndexP [function]</a></li><li><a href='#sgs_StoreIndexExt-function'>sgs_StoreIndexExt [function]</a></li><li><a href='#sgs_StoreIndex-function-alias'>sgs_StoreIndex [function alias]</a></li><li><a href='#sgs_StoreIndexP-function'>sgs_StoreIndexP [function]</a></li><li><a href='#sgs_PushGlobal-function'>sgs_PushGlobal [function]</a></li><li><a href='#sgs_StoreGlobal-function'>sgs_StoreGlobal [function]</a></li><li><a href='#sgs_PushPath-function'>sgs_PushPath [function]</a></li><li><a href='#sgs_StorePath-function'>sgs_StorePath [function]</a></li><li><a href='#sgs_ArgErrorExt-function'>sgs_ArgErrorExt [function]</a></li><li><a href='#sgs_ArgError-function'>sgs_ArgError [function]</a></li><li><a href='#sgs_[FuncArgError|MethodArgError]-function-aliases'>sgs_[FuncArgError|MethodArgError] [function aliases]</a></li><li><a href='#sgs_LoadArgsExt-function'>sgs_LoadArgsExt [function]</a></li><li><a href='#sgs_LoadArgs-function-alias'>sgs_LoadArgs [function alias]</a></li><li><a href='#sgs_FCall-function'>sgs_FCall [function]</a></li><li><a href='#sgs_[Call|ThisCall]-function-aliases'>sgs_[Call|ThisCall] [function aliases]</a></li><li><a href='#sgs_GlobalCall-function'>sgs_GlobalCall [function]</a></li><li><a href='#sgs_TypeOf-function'>sgs_TypeOf [function]</a></li><li><a href='#sgs_DumpVar-function'>sgs_DumpVar [function]</a></li><li><a href='#sgs_GCExecute-function'>sgs_GCExecute [function]</a></li><li><a href='#sgs_PadString-function'>sgs_PadString [function]</a></li><li><a href='#sgs_StringConcat-function'>sgs_StringConcat [function]</a></li><li><a href='#sgs_StringMultiConcat-function'>sgs_StringMultiConcat [function]</a></li><li><a href='#sgs_CloneItem-function'>sgs_CloneItem [function]</a></li><li><a href='#sgs_Serialize-function'>sgs_Serialize [function]</a></li><li><a href='#sgs_SerializeObject-function'>sgs_SerializeObject [function]</a></li><li><a href='#sgs_Unserialize-function'>sgs_Unserialize [function]</a></li><li><a href='#sgs_CompareF-function'>sgs_CompareF [function]</a></li><li><a href='#sgs_Compare-function-alias'>sgs_Compare [function alias]</a></li><li><a href='#sgs_EqualTypes-function'>sgs_EqualTypes [function]</a></li><li><a href='#sgs_[GetBool|GetInt|GetReal]-functions'>sgs_[GetBool|GetInt|GetReal] [functions]</a></li><li><a href='#sgs_[ToBool|ToInt|ToReal]-functions'>sgs_[ToBool|ToInt|ToReal] [functions]</a></li><li><a href='#sgs_[ToStringBuf|ToStringBufFast]-functions'>sgs_[ToStringBuf|ToStringBufFast] [functions]</a></li><li><a href='#sgs_[ToString|ToStringFast]-function-aliases'>sgs_[ToString|ToStringFast] [function aliases]</a></li><li><a href='#sgs_Convert-function'>sgs_Convert [function]</a></li><li><a href='#sgs_RegisterType-function'>sgs_RegisterType [function]</a></li><li><a href='#sgs_UnregisterType-function'>sgs_UnregisterType [function]</a></li><li><a href='#sgs_FindType-function'>sgs_FindType [function]</a></li><li><a href='#sgs_IsObject-function'>sgs_IsObject [function]</a></li><li><a href='#sgs_IsType-function-alias'>sgs_IsType [function alias]</a></li><li><a href='#sgs_IsCallable-function'>sgs_IsCallable [function]</a></li><li><a href='#sgs_IsNumericString-function'>sgs_IsNumericString [function]</a></li><li><a href='#sgs_[ParseBool|ParseInt|ParseReal|ParseString]-functions'>sgs_[ParseBool|ParseInt|ParseReal|ParseString] [functions]</a></li><li><a href='#sgs_PushIterator-function'>sgs_PushIterator [function]</a></li><li><a href='#sgs_IterAdvance-function'>sgs_IterAdvance [function]</a></li><li><a href='#sgs_IterPushData-function'>sgs_IterPushData [function]</a></li><li><a href='#sgs_ArraySize-function'>sgs_ArraySize [function]</a></li><li><a href='#sgs_StackSize-function'>sgs_StackSize [function]</a></li><li><a href='#sgs_IsValidIndex-function'>sgs_IsValidIndex [function]</a></li><li><a href='#sgs_GetStackItem-function'>sgs_GetStackItem [function]</a></li><li><a href='#sgs_ItemType-function'>sgs_ItemType [function]</a></li><li><a href='#sgs_ItemTypeExt-function'>sgs_ItemTypeExt [function]</a></li><li><a href='#sgs_Method-function'>sgs_Method [function]</a></li><li><a href='#sgs_Acquire-function'>sgs_Acquire [function]</a></li><li><a href='#sgs_Release-function'>sgs_Release [function]</a></li><li><a href='#sgs_ReleaseOwned-function'>sgs_ReleaseOwned [function]</a></li><li><a href='#sgs_GCMark-function'>sgs_GCMark [function]</a></li><li><a href='#sgs_GetStringPtr-function'>sgs_GetStringPtr [function]</a></li><li><a href='#sgs_GetStringSize-function'>sgs_GetStringSize [function]</a></li><li><a href='#sgs_GetObjectData-function'>sgs_GetObjectData [function]</a></li><li><a href='#sgs_SetOutputFunc-function'>sgs_SetOutputFunc [function]</a></li><li><a href='#sgs_Write-function'>sgs_Write [function]</a></li><li><a href='#sgs_WriteStr-function-alias'>sgs_WriteStr [function alias]</a></li><li><a href='#sgs_Writef-function'>sgs_Writef [function]</a></li><li><a href='#sgs_SetPrintFunc-function'>sgs_SetPrintFunc [function]</a></li><li><a href='#sgs_Printf-function'>sgs_Printf [function]</a></li><li><a href='#sgs_HasFuncName-function'>sgs_HasFuncName [function]</a></li><li><a href='#sgs_FuncName-function'>sgs_FuncName [function]</a></li><li><a href='#SGSFN-function-alias'>SGSFN [function alias]</a></li><li><a href='#SGSBASEFN-function-alias'>SGSBASEFN [function alias]</a></li><li><a href='#sgs_SetHookFunc-function'>sgs_SetHookFunc [function]</a></li><li><a href='#sgs_GetHookFunc-function'>sgs_GetHookFunc [function]</a></li><li><a href='#sgs_Memory-function'>sgs_Memory [function]</a></li><li><a href='#memory-allocation-macros-macros'>memory allocation macros [macros]</a></li><li><a href='#sgs_CodeString-function'>sgs_CodeString [function]</a></li><li><a href='#sgs_Abort-function'>sgs_Abort [function]</a></li><li><a href='#sgs_Stat-function'>sgs_Stat [function]</a></li><li><a href='#sgs_Cntl-function'>sgs_Cntl [function]</a></li><li><a href='#sgs_GetFramePtr-function'>sgs_GetFramePtr [function]</a></li><li><a href='#sgs_SetErrno-function-alias'>sgs_SetErrno [function alias]</a></li><li><a href='#sgs_GetLastErrno-function-alias'>sgs_GetLastErrno [function alias]</a></li><li><a href='#array-function'>array [function]</a></li><li><a href='#dict-function'>dict [function]</a></li><li><a href='#class-function'>class [function]</a></li><li><a href='#closure-function'>closure [function]</a></li><li><a href='#isset-function'>isset [function]</a></li><li><a href='#unset-function'>unset [function]</a></li><li><a href='#clone-function'>clone [function]</a></li><li><a href='#get_keys-function'>get_keys [function]</a></li><li><a href='#get_values-function'>get_values [function]</a></li><li><a href='#get_concat-function'>get_concat [function]</a></li><li><a href='#get_merged-function'>get_merged [function]</a></li><li><a href='#tobool-function'>tobool [function]</a></li><li><a href='#toint-function'>toint [function]</a></li><li><a href='#toreal-function'>toreal [function]</a></li><li><a href='#tostring-function'>tostring [function]</a></li><li><a href='#typeof-function'>typeof [function]</a></li><li><a href='#typeid-function'>typeid [function]</a></li><li><a href='#typeflags-function'>typeflags [function]</a></li><li><a href='#is_numeric-function'>is_numeric [function]</a></li><li><a href='#is_callable-function'>is_callable [function]</a></li><li><a href='#loadtypeflags-function'>loadtypeflags [function]</a></li><li><a href='#print,-println,-printlns-functions'>print, println, printlns [functions]</a></li><li><a href='#printvar_ext-function'>printvar_ext [function]</a></li><li><a href='#printvar-function'>printvar [function]</a></li><li><a href='#read_stdin-function'>read_stdin [function]</a></li><li><a href='#ftime-function'>ftime [function]</a></li><li><a href='#rand-function'>rand [function]</a></li><li><a href='#randf-function'>randf [function]</a></li><li><a href='#srand-function'>srand [function]</a></li><li><a href='#pcall-function'>pcall [function]</a></li><li><a href='#assert-function'>assert [function]</a></li><li><a href='#eval-function'>eval [function]</a></li><li><a href='#eval_file-function'>eval_file [function]</a></li><li><a href='#include_library-function'>include_library [function]</a></li><li><a href='#include_file-function'>include_file [function]</a></li><li><a href='#include_shared-function'>include_shared [function]</a></li><li><a href='#include-function'>include [function]</a></li><li><a href='#import_cfunc-function'>import_cfunc [function]</a></li><li><a href='#sys_curfile-function'>sys_curfile [function]</a></li><li><a href='#sys_curfiledir-function'>sys_curfiledir [function]</a></li><li><a href='#sys_print-function'>sys_print [function]</a></li><li><a href='#INFO-function'>INFO [function]</a></li><li><a href='#WARNING-function'>WARNING [function]</a></li><li><a href='#ERROR-function'>ERROR [function]</a></li><li><a href='#sys_abort-function'>sys_abort [function]</a></li><li><a href='#app_abort-function'>app_abort [function]</a></li><li><a href='#app_exit-function'>app_exit [function]</a></li><li><a href='#sys_replevel-function'>sys_replevel [function]</a></li><li><a href='#sys_stat-function'>sys_stat [function]</a></li><li><a href='#errno-function'>errno [function]</a></li><li><a href='#errno_string-function'>errno_string [function]</a></li><li><a href='#errno_value-function'>errno_value [function]</a></li><li><a href='#dumpvar_ext-function'>dumpvar_ext [function]</a></li><li><a href='#dumpvar-function'>dumpvar [function]</a></li><li><a href='#gc_collect-function'>gc_collect [function]</a></li><li><a href='#serialize-function'>serialize [function]</a></li><li><a href='#unserialize-function'>unserialize [function]</a></li><li><a href='#SGS_[INFO|WARNING|ERROR]-constants'>SGS_[INFO|WARNING|ERROR] [constants]</a></li><li><a href='#VT_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]-constants'>VT_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT] [constants]</a></li><li><a href='#_G-superglobal'>_G [superglobal]</a></li><li><a href='#array-object'>array [object]</a></li><li><a href='#array.push-method'>array.push [method]</a></li><li><a href='#array.pop-method'>array.pop [method]</a></li><li><a href='#array.shift-method'>array.shift [method]</a></li><li><a href='#array.unshift-method'>array.unshift [method]</a></li><li><a href='#array.insert-method'>array.insert [method]</a></li><li><a href='#array.erase-method'>array.erase [method]</a></li><li><a href='#array.clear-method'>array.clear [method]</a></li><li><a href='#array.reverse-method'>array.reverse [method]</a></li><li><a href='#array.resize-method'>array.resize [method]</a></li><li><a href='#array.reserve-method'>array.reserve [method]</a></li><li><a href='#array.sort-method'>array.sort [method]</a></li><li><a href='#array.sort_custom-method'>array.sort_custom [method]</a></li><li><a href='#array.sort_mapped-method'>array.sort_mapped [method]</a></li><li><a href='#array.find-method'>array.find [method]</a></li><li><a href='#array.remove-method'>array.remove [method]</a></li><li><a href='#dict-object'>dict [object]</a></li><li><a href='#class-object'>class [object]</a></li><li><a href='#closure-object'>closure [object]</a></li><li><a href='#fmt_pack-function'>fmt_pack [function]</a></li><li><a href='#fmt_unpack-function'>fmt_unpack [function]</a></li><li><a href='#fmt_pack_count-function'>fmt_pack_count [function]</a></li><li><a href='#fmt_pack_size-function'>fmt_pack_size [function]</a></li><li><a href='#fmt_base64_encode-function'>fmt_base64_encode [function]</a></li><li><a href='#fmt_base64_decode-function'>fmt_base64_decode [function]</a></li><li><a href='#fmt_text-function'>fmt_text [function]</a></li><li><a href='#fmt_parser-function'>fmt_parser [function]</a></li><li><a href='#fmt_string_parser-function'>fmt_string_parser [function]</a></li><li><a href='#fmt_charcc-function'>fmt_charcc [function]</a></li><li><a href='#fmt_parser-object'>fmt_parser [object]</a></li><li><a href='#fmt_parser.read-method'>fmt_parser.read [method]</a></li><li><a href='#fmt_parser.getchar-method'>fmt_parser.getchar [method]</a></li><li><a href='#fmt_parser.readcc-method'>fmt_parser.readcc [method]</a></li><li><a href='#fmt_parser.skipcc-method'>fmt_parser.skipcc [method]</a></li><li><a href='#io_setcwd-function'>io_setcwd [function]</a></li><li><a href='#io_getcwd-function'>io_getcwd [function]</a></li><li><a href='#io_rename-function'>io_rename [function]</a></li><li><a href='#io_file_exists-function'>io_file_exists [function]</a></li><li><a href='#io_dir_exists-function'>io_dir_exists [function]</a></li><li><a href='#io_stat-function'>io_stat [function]</a></li><li><a href='#io_dir_create-function'>io_dir_create [function]</a></li><li><a href='#io_dir_delete-function'>io_dir_delete [function]</a></li><li><a href='#io_file_delete-function'>io_file_delete [function]</a></li><li><a href='#io_file_write-function'>io_file_write [function]</a></li><li><a href='#io_file_read-function'>io_file_read [function]</a></li><li><a href='#io_file-object'>io_file [object]</a></li><li><a href='#io_file.open-method'>io_file.open [method]</a></li><li><a href='#io_file.close-method'>io_file.close [method]</a></li><li><a href='#io_file.read-method'>io_file.read [method]</a></li><li><a href='#io_file.write-method'>io_file.write [method]</a></li><li><a href='#io_file.seek-method'>io_file.seek [method]</a></li><li><a href='#io_file.flush-method'>io_file.flush [method]</a></li><li><a href='#io_file.setbuf-method'>io_file.setbuf [method]</a></li><li><a href='#io_file-function'>io_file [function]</a></li><li><a href='#io_dir-(directory_iterator)-object'>io_dir (directory_iterator) [object]</a></li><li><a href='#io_dir-function'>io_dir [function]</a></li><li><a href='#FILE_[READ|WRITE]-constants'>FILE_[READ|WRITE] [constants]</a></li><li><a href='#SEEK_[SET|CUR|END]-constants'>SEEK_[SET|CUR|END] [constants]</a></li><li><a href='#FST_[UNKNOWN|FILE|DIR]-constants'>FST_[UNKNOWN|FILE|DIR] [constants]</a></li><li><a href='#abs-function'>abs [function]</a></li><li><a href='#floor-function'>floor [function]</a></li><li><a href='#ceil-function'>ceil [function]</a></li><li><a href='#round-function'>round [function]</a></li><li><a href='#pow-function'>pow [function]</a></li><li><a href='#sqrt-function'>sqrt [function]</a></li><li><a href='#log-function'>log [function]</a></li><li><a href='#sin-function'>sin [function]</a></li><li><a href='#cos-function'>cos [function]</a></li><li><a href='#tan-function'>tan [function]</a></li><li><a href='#asin-function'>asin [function]</a></li><li><a href='#acos-function'>acos [function]</a></li><li><a href='#atan-function'>atan [function]</a></li><li><a href='#atan2-function'>atan2 [function]</a></li><li><a href='#deg2rad-function'>deg2rad [function]</a></li><li><a href='#rad2deg-function'>rad2deg [function]</a></li><li><a href='#M_[PI|E]-constants'>M_[PI|E] [constants]</a></li><li><a href='#os_gettype-function'>os_gettype [function]</a></li><li><a href='#os_command-function'>os_command [function]</a></li><li><a href='#os_getenv-function'>os_getenv [function]</a></li><li><a href='#os_putenv-function'>os_putenv [function]</a></li><li><a href='#os_time-function'>os_time [function]</a></li><li><a href='#os_get_timezone-function'>os_get_timezone [function]</a></li><li><a href='#os_date_string-function'>os_date_string [function]</a></li><li><a href='#os_parse_time-function'>os_parse_time [function]</a></li><li><a href='#os_make_time-function'>os_make_time [function]</a></li><li><a href='#string_cut-function'>string_cut [function]</a></li><li><a href='#string_part-function'>string_part [function]</a></li><li><a href='#string_reverse-function'>string_reverse [function]</a></li><li><a href='#string_pad-function'>string_pad [function]</a></li><li><a href='#string_repeat-function'>string_repeat [function]</a></li><li><a href='#string_count-function'>string_count [function]</a></li><li><a href='#string_find-function'>string_find [function]</a></li><li><a href='#string_find_rev-function'>string_find_rev [function]</a></li><li><a href='#string_replace-function'>string_replace [function]</a></li><li><a href='#string_translate-function'>string_translate [function]</a></li><li><a href='#string_trim-function'>string_trim [function]</a></li><li><a href='#string_toupper-function'>string_toupper [function]</a></li><li><a href='#string_tolower-function'>string_tolower [function]</a></li><li><a href='#string_compare-function'>string_compare [function]</a></li><li><a href='#string_implode-function'>string_implode [function]</a></li><li><a href='#string_explode-function'>string_explode [function]</a></li><li><a href='#string_charcode-function'>string_charcode [function]</a></li><li><a href='#string_frombytes-function'>string_frombytes [function]</a></li><li><a href='#string_utf8_decode-function'>string_utf8_decode [function]</a></li><li><a href='#string_utf8_encode-function'>string_utf8_encode [function]</a></li><li><a href='#string_format-function'>string_format [function]</a></li></ul></div><div><div class='item'><a name='SGScript---description-info'></a><hr><h2>SGScript - description [info]</h2><p></p><p>
+	<h1>SGScript documentation - v0.9.0</h1><div><h2>Table of Contents</h2><ul><li><a href='#Main-info'>Main info</a><ul><li><a href='#SGScript-description'>SGScript - description</a></li><li><a href='#SGScript-Virtual-Machine'>SGScript Virtual Machine</a></li><li><a href='#Commonly-required-advanced-tasks'>Commonly required advanced tasks</a></li><li><a href='#Serialization-in-SGScript'>Serialization in SGScript</a></li><li><a href='#Numeric-string-parsing-rules'>Numeric string parsing rules</a></li></ul><li><a href='#API-info'>API info</a><ul><li><a href='#Main-types'>Main types</a></li><li><a href='#Error-codes'>Error codes</a></li><li><a href='#Variable-type-flags'>Variable type flags</a></li><li><a href='#Object-operation-types'>Object operation types</a></li><li><a href='#Interaction-with-the-native-environment'>Interaction with the native environment</a></li></ul><li><a href='#C-API-reference'>C API reference</a><ul><li><a href='#Primary-interface'>Primary interface</a><ul><li><a href='#sgs_CreateEngine-function-alias'>sgs_CreateEngine [function alias]</a></li><li><a href='#sgs_CreateEngineExt-function'>sgs_CreateEngineExt [function]</a></li><li><a href='#sgs_DestroyEngine-function'>sgs_DestroyEngine [function]</a></li><li><a href='#sgs_ExecString-function-alias'>sgs_ExecString [function alias]</a></li><li><a href='#sgs_ExecBuffer-function-alias'>sgs_ExecBuffer [function alias]</a></li><li><a href='#sgs_EvalString-function-alias'>sgs_EvalString [function alias]</a></li><li><a href='#sgs_EvalBuffer-function'>sgs_EvalBuffer [function]</a></li><li><a href='#sgs_ExecFile-function-alias'>sgs_ExecFile [function alias]</a></li><li><a href='#sgs_EvalFile-function'>sgs_EvalFile [function]</a></li><li><a href='#sgs_LoadLib_-Fmt-IO-Math-OS-String-functions'>sgs_LoadLib_[Fmt|IO|Math|OS|String] [functions]</a></li><li><a href='#sgs_Reg-Func-Int-Real-Const-struct'>sgs_Reg[Func|Int|Real]Const [struct]</a></li><li><a href='#sgs_Reg-Func-Int-Real-Consts-function'>sgs_Reg[Func|Int|Real]Consts [function]</a></li></ul><li><a href='#Data-interface'>Data interface</a><ul><li><a href='#sgs_Push-Null-Bool-Int-Real-StringBuf-String-CFunction-Object-ObjectIPA-Variable-functions'>sgs_Push[Null|Bool|Int|Real|StringBuf|String|CFunction|Object|ObjectIPA|Variable] [functions]</a></li><li><a href='#sgs_Pop-function'>sgs_Pop [function]</a></li><li><a href='#sgs_PopSkip-function'>sgs_PopSkip [function]</a></li><li><a href='#sgs_InsertVariable-function'>sgs_InsertVariable [function]</a></li><li><a href='#sgs_PushArray-function'>sgs_PushArray [function]</a></li><li><a href='#sgs_PushDict-function'>sgs_PushDict [function]</a></li><li><a href='#sgs_PushItem-function'>sgs_PushItem [function]</a></li><li><a href='#sgs_StoreItem-function'>sgs_StoreItem [function]</a></li><li><a href='#sgs_PushProperty-function'>sgs_PushProperty [function]</a></li><li><a href='#sgs_StoreProperty-function'>sgs_StoreProperty [function]</a></li><li><a href='#sgs_PushNumIndex-function'>sgs_PushNumIndex [function]</a></li><li><a href='#sgs_StoreNumIndex-function'>sgs_StoreNumIndex [function]</a></li><li><a href='#sgs_PushIndexExt-function'>sgs_PushIndexExt [function]</a></li><li><a href='#sgs_PushIndex-function-alias'>sgs_PushIndex [function alias]</a></li><li><a href='#sgs_PushIndexP-function'>sgs_PushIndexP [function]</a></li><li><a href='#sgs_StoreIndexExt-function'>sgs_StoreIndexExt [function]</a></li><li><a href='#sgs_StoreIndex-function-alias'>sgs_StoreIndex [function alias]</a></li><li><a href='#sgs_StoreIndexP-function'>sgs_StoreIndexP [function]</a></li><li><a href='#sgs_PushGlobal-function'>sgs_PushGlobal [function]</a></li><li><a href='#sgs_StoreGlobal-function'>sgs_StoreGlobal [function]</a></li><li><a href='#sgs_PushPath-function'>sgs_PushPath [function]</a></li><li><a href='#sgs_StorePath-function'>sgs_StorePath [function]</a></li><li><a href='#sgs_ArgErrorExt-function'>sgs_ArgErrorExt [function]</a></li><li><a href='#sgs_ArgError-function'>sgs_ArgError [function]</a></li><li><a href='#sgs_-FuncArgError-MethodArgError-function-aliases'>sgs_[FuncArgError|MethodArgError] [function aliases]</a></li><li><a href='#sgs_LoadArgsExt-function'>sgs_LoadArgsExt [function]</a></li><li><a href='#sgs_LoadArgs-function-alias'>sgs_LoadArgs [function alias]</a></li></ul><li><a href='#Operations'>Operations</a><ul><li><a href='#sgs_FCall-function'>sgs_FCall [function]</a></li><li><a href='#sgs_-Call-ThisCall-function-aliases'>sgs_[Call|ThisCall] [function aliases]</a></li><li><a href='#sgs_GlobalCall-function'>sgs_GlobalCall [function]</a></li><li><a href='#sgs_TypeOf-function'>sgs_TypeOf [function]</a></li><li><a href='#sgs_DumpVar-function'>sgs_DumpVar [function]</a></li><li><a href='#sgs_GCExecute-function'>sgs_GCExecute [function]</a></li><li><a href='#sgs_PadString-function'>sgs_PadString [function]</a></li><li><a href='#sgs_StringConcat-function'>sgs_StringConcat [function]</a></li><li><a href='#sgs_StringMultiConcat-function'>sgs_StringMultiConcat [function]</a></li><li><a href='#sgs_CloneItem-function'>sgs_CloneItem [function]</a></li><li><a href='#sgs_ObjectAction-function'>sgs_ObjectAction [function]</a></li><li><a href='#sgs_Serialize-function'>sgs_Serialize [function]</a></li><li><a href='#sgs_SerializeObject-function'>sgs_SerializeObject [function]</a></li><li><a href='#sgs_Unserialize-function'>sgs_Unserialize [function]</a></li><li><a href='#sgs_CompareF-function'>sgs_CompareF [function]</a></li><li><a href='#sgs_Compare-function-alias'>sgs_Compare [function alias]</a></li><li><a href='#sgs_EqualTypes-function'>sgs_EqualTypes [function]</a></li></ul><li><a href='#Conversion-interface'>Conversion interface</a><ul><li><a href='#sgs_-GetBool-GetInt-GetReal-functions'>sgs_[GetBool|GetInt|GetReal] [functions]</a></li><li><a href='#sgs_-ToBool-ToInt-ToReal-functions'>sgs_[ToBool|ToInt|ToReal] [functions]</a></li><li><a href='#sgs_-ToStringBuf-ToStringBufFast-functions'>sgs_[ToStringBuf|ToStringBufFast] [functions]</a></li><li><a href='#sgs_-ToString-ToStringFast-function-aliases'>sgs_[ToString|ToStringFast] [function aliases]</a></li><li><a href='#sgs_Convert-function'>sgs_Convert [function]</a></li><li><a href='#sgs_RegisterType-function'>sgs_RegisterType [function]</a></li><li><a href='#sgs_UnregisterType-function'>sgs_UnregisterType [function]</a></li><li><a href='#sgs_FindType-function'>sgs_FindType [function]</a></li><li><a href='#sgs_IsObject-function'>sgs_IsObject [function]</a></li><li><a href='#sgs_IsType-function-alias'>sgs_IsType [function alias]</a></li><li><a href='#sgs_IsCallable-function'>sgs_IsCallable [function]</a></li><li><a href='#sgs_IsNumericString-function'>sgs_IsNumericString [function]</a></li><li><a href='#sgs_-ParseBool-ParseInt-ParseReal-ParseString-functions'>sgs_[ParseBool|ParseInt|ParseReal|ParseString] [functions]</a></li><li><a href='#sgs_PushIterator-function'>sgs_PushIterator [function]</a></li><li><a href='#sgs_IterAdvance-function'>sgs_IterAdvance [function]</a></li><li><a href='#sgs_IterPushData-function'>sgs_IterPushData [function]</a></li><li><a href='#sgs_ArraySize-function'>sgs_ArraySize [function]</a></li></ul><li><a href='#Extension-interface'>Extension interface</a><ul><li><a href='#sgs_StackSize-function'>sgs_StackSize [function]</a></li><li><a href='#sgs_IsValidIndex-function'>sgs_IsValidIndex [function]</a></li><li><a href='#sgs_GetStackItem-function'>sgs_GetStackItem [function]</a></li><li><a href='#sgs_ItemType-function'>sgs_ItemType [function]</a></li><li><a href='#sgs_ItemTypeExt-function'>sgs_ItemTypeExt [function]</a></li><li><a href='#sgs_Method-function'>sgs_Method [function]</a></li><li><a href='#sgs_Acquire-function'>sgs_Acquire [function]</a></li><li><a href='#sgs_Release-function'>sgs_Release [function]</a></li><li><a href='#sgs_ReleaseOwned-function'>sgs_ReleaseOwned [function]</a></li><li><a href='#sgs_GCMark-function'>sgs_GCMark [function]</a></li><li><a href='#sgs_GetStringPtr-function'>sgs_GetStringPtr [function]</a></li><li><a href='#sgs_GetStringSize-function'>sgs_GetStringSize [function]</a></li><li><a href='#sgs_GetObjectStruct-function'>sgs_GetObjectStruct [function]</a></li><li><a href='#sgs_GetObjectData-function'>sgs_GetObjectData [function]</a></li><li><a href='#sgs_GetObjectIface-function'>sgs_GetObjectIface [function]</a></li><li><a href='#sgs_SetObjectData-function'>sgs_SetObjectData [function]</a></li><li><a href='#sgs_SetObjectIface-function'>sgs_SetObjectIface [function]</a></li></ul><li><a href='#Environment-control-interface'>Environment control interface</a><ul><li><a href='#sgs_SetOutputFunc-function'>sgs_SetOutputFunc [function]</a></li><li><a href='#sgs_Write-function'>sgs_Write [function]</a></li><li><a href='#sgs_WriteStr-function-alias'>sgs_WriteStr [function alias]</a></li><li><a href='#sgs_Writef-function'>sgs_Writef [function]</a></li><li><a href='#sgs_SetPrintFunc-function'>sgs_SetPrintFunc [function]</a></li><li><a href='#sgs_Printf-function'>sgs_Printf [function]</a></li><li><a href='#sgs_HasFuncName-function'>sgs_HasFuncName [function]</a></li><li><a href='#sgs_FuncName-function'>sgs_FuncName [function]</a></li><li><a href='#SGSFN-function-alias'>SGSFN [function alias]</a></li><li><a href='#SGSBASEFN-function-alias'>SGSBASEFN [function alias]</a></li><li><a href='#sgs_SetHookFunc-function'>sgs_SetHookFunc [function]</a></li><li><a href='#sgs_GetHookFunc-function'>sgs_GetHookFunc [function]</a></li><li><a href='#sgs_Memory-function'>sgs_Memory [function]</a></li><li><a href='#memory-allocation-macros-macros'>memory allocation macros [macros]</a></li></ul><li><a href='#Information-retrieval-control-interface'>Information retrieval/control interface</a><ul><li><a href='#sgs_CodeString-function'>sgs_CodeString [function]</a></li><li><a href='#sgs_Abort-function'>sgs_Abort [function]</a></li><li><a href='#sgs_Stat-function'>sgs_Stat [function]</a></li><li><a href='#sgs_Cntl-function'>sgs_Cntl [function]</a></li><li><a href='#sgs_GetFramePtr-function'>sgs_GetFramePtr [function]</a></li><li><a href='#sgs_SetErrno-function-alias'>sgs_SetErrno [function alias]</a></li><li><a href='#sgs_GetLastErrno-function-alias'>sgs_GetLastErrno [function alias]</a></li></ul></li></ul><li><a href='#Standard-library-reference'>Standard library reference</a><ul><li><a href='#Core-library'>Core library</a><ul><li><a href='#array-function'>array [function]</a></li><li><a href='#dict-function'>dict [function]</a></li><li><a href='#class-function'>class [function]</a></li><li><a href='#closure-function'>closure [function]</a></li><li><a href='#array_filter-function'>array_filter [function]</a></li><li><a href='#array_process-function'>array_process [function]</a></li><li><a href='#dict_filter-function'>dict_filter [function]</a></li><li><a href='#dict_process-function'>dict_process [function]</a></li><li><a href='#isset-function'>isset [function]</a></li><li><a href='#unset-function'>unset [function]</a></li><li><a href='#clone-function'>clone [function]</a></li><li><a href='#get_keys-function'>get_keys [function]</a></li><li><a href='#get_values-function'>get_values [function]</a></li><li><a href='#get_concat-function'>get_concat [function]</a></li><li><a href='#get_merged-function'>get_merged [function]</a></li><li><a href='#tobool-function'>tobool [function]</a></li><li><a href='#toint-function'>toint [function]</a></li><li><a href='#toreal-function'>toreal [function]</a></li><li><a href='#tostring-function'>tostring [function]</a></li><li><a href='#typeof-function'>typeof [function]</a></li><li><a href='#typeid-function'>typeid [function]</a></li><li><a href='#typeflags-function'>typeflags [function]</a></li><li><a href='#is_numeric-function'>is_numeric [function]</a></li><li><a href='#is_callable-function'>is_callable [function]</a></li><li><a href='#loadtypeflags-function'>loadtypeflags [function]</a></li><li><a href='#print-println-printlns-functions'>print, println, printlns [functions]</a></li><li><a href='#printvar_ext-function'>printvar_ext [function]</a></li><li><a href='#printvar-function'>printvar [function]</a></li><li><a href='#read_stdin-function'>read_stdin [function]</a></li><li><a href='#ftime-function'>ftime [function]</a></li><li><a href='#rand-function'>rand [function]</a></li><li><a href='#randf-function'>randf [function]</a></li><li><a href='#srand-function'>srand [function]</a></li><li><a href='#pcall-function'>pcall [function]</a></li><li><a href='#assert-function'>assert [function]</a></li><li><a href='#eval-function'>eval [function]</a></li><li><a href='#eval_file-function'>eval_file [function]</a></li><li><a href='#include_library-function'>include_library [function]</a></li><li><a href='#include_file-function'>include_file [function]</a></li><li><a href='#include_shared-function'>include_shared [function]</a></li><li><a href='#include-function'>include [function]</a></li><li><a href='#import_cfunc-function'>import_cfunc [function]</a></li><li><a href='#sys_curfile-function'>sys_curfile [function]</a></li><li><a href='#sys_curfiledir-function'>sys_curfiledir [function]</a></li><li><a href='#sys_print-function'>sys_print [function]</a></li><li><a href='#INFO-function'>INFO [function]</a></li><li><a href='#WARNING-function'>WARNING [function]</a></li><li><a href='#ERROR-function'>ERROR [function]</a></li><li><a href='#sys_abort-function'>sys_abort [function]</a></li><li><a href='#app_abort-function'>app_abort [function]</a></li><li><a href='#app_exit-function'>app_exit [function]</a></li><li><a href='#sys_replevel-function'>sys_replevel [function]</a></li><li><a href='#sys_stat-function'>sys_stat [function]</a></li><li><a href='#errno-function'>errno [function]</a></li><li><a href='#errno_string-function'>errno_string [function]</a></li><li><a href='#errno_value-function'>errno_value [function]</a></li><li><a href='#dumpvar_ext-function'>dumpvar_ext [function]</a></li><li><a href='#dumpvar-function'>dumpvar [function]</a></li><li><a href='#gc_collect-function'>gc_collect [function]</a></li><li><a href='#serialize-function'>serialize [function]</a></li><li><a href='#unserialize-function'>unserialize [function]</a></li><li><a href='#SGS_-INFO-WARNING-ERROR-constants'>SGS_[INFO|WARNING|ERROR] [constants]</a></li><li><a href='#VT_-NULL-BOOL-INT-REAL-STRING-FUNC-CFUNC-OBJECT-constants'>VT_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT] [constants]</a></li><li><a href='#_G-superglobal'>_G [superglobal]</a></li><li><a href='#array-object'>array [object]</a></li><li><a href='#array-push-method'>array.push [method]</a></li><li><a href='#array-pop-method'>array.pop [method]</a></li><li><a href='#array-shift-method'>array.shift [method]</a></li><li><a href='#array-unshift-method'>array.unshift [method]</a></li><li><a href='#array-insert-method'>array.insert [method]</a></li><li><a href='#array-erase-method'>array.erase [method]</a></li><li><a href='#array-part-method'>array.part [method]</a></li><li><a href='#array-clear-method'>array.clear [method]</a></li><li><a href='#array-reverse-method'>array.reverse [method]</a></li><li><a href='#array-resize-method'>array.resize [method]</a></li><li><a href='#array-reserve-method'>array.reserve [method]</a></li><li><a href='#array-sort-method'>array.sort [method]</a></li><li><a href='#array-sort_custom-method'>array.sort_custom [method]</a></li><li><a href='#array-sort_mapped-method'>array.sort_mapped [method]</a></li><li><a href='#array-find-method'>array.find [method]</a></li><li><a href='#array-remove-method'>array.remove [method]</a></li><li><a href='#array-unique-method'>array.unique [method]</a></li><li><a href='#array-random-method'>array.random [method]</a></li><li><a href='#array-shuffle-method'>array.shuffle [method]</a></li><li><a href='#dict-object'>dict [object]</a></li><li><a href='#class-object'>class [object]</a></li><li><a href='#closure-object'>closure [object]</a></li></ul><li><a href='#Formatting-library-fmt'>Formatting library (&quot;fmt&quot;)</a><ul><li><a href='#fmt_pack-function'>fmt_pack [function]</a></li><li><a href='#fmt_unpack-function'>fmt_unpack [function]</a></li><li><a href='#fmt_pack_count-function'>fmt_pack_count [function]</a></li><li><a href='#fmt_pack_size-function'>fmt_pack_size [function]</a></li><li><a href='#fmt_base64_encode-function'>fmt_base64_encode [function]</a></li><li><a href='#fmt_base64_decode-function'>fmt_base64_decode [function]</a></li><li><a href='#fmt_text-function'>fmt_text [function]</a></li><li><a href='#fmt_parser-function'>fmt_parser [function]</a></li><li><a href='#fmt_string_parser-function'>fmt_string_parser [function]</a></li><li><a href='#fmt_file_parser-function'>fmt_file_parser [function]</a></li><li><a href='#fmt_charcc-function'>fmt_charcc [function]</a></li><li><a href='#fmt_parser-object'>fmt_parser [object]</a></li><li><a href='#fmt_parser-read-method'>fmt_parser.read [method]</a></li><li><a href='#fmt_parser-getchar-method'>fmt_parser.getchar [method]</a></li><li><a href='#fmt_parser-readcc-method'>fmt_parser.readcc [method]</a></li><li><a href='#fmt_parser-skipcc-method'>fmt_parser.skipcc [method]</a></li><li><a href='#fmt_parser-read_real-method'>fmt_parser.read_real [method]</a></li><li><a href='#fmt_parser-read_int-method'>fmt_parser.read_int [method]</a></li><li><a href='#fmt_parser-read_binary_int-method'>fmt_parser.read_binary_int [method]</a></li><li><a href='#fmt_parser-read_octal_int-method'>fmt_parser.read_octal_int [method]</a></li><li><a href='#fmt_parser-read_decimal_int-method'>fmt_parser.read_decimal_int [method]</a></li><li><a href='#fmt_parser-read_hex_int-method'>fmt_parser.read_hex_int [method]</a></li><li><a href='#fmt_parser-check-method'>fmt_parser.check [method]</a></li></ul><li><a href='#I-O-library-io'>I/O library (&quot;io&quot;)</a><ul><li><a href='#io_setcwd-function'>io_setcwd [function]</a></li><li><a href='#io_getcwd-function'>io_getcwd [function]</a></li><li><a href='#io_rename-function'>io_rename [function]</a></li><li><a href='#io_file_exists-function'>io_file_exists [function]</a></li><li><a href='#io_dir_exists-function'>io_dir_exists [function]</a></li><li><a href='#io_stat-function'>io_stat [function]</a></li><li><a href='#io_dir_create-function'>io_dir_create [function]</a></li><li><a href='#io_dir_delete-function'>io_dir_delete [function]</a></li><li><a href='#io_file_delete-function'>io_file_delete [function]</a></li><li><a href='#io_file_write-function'>io_file_write [function]</a></li><li><a href='#io_file_read-function'>io_file_read [function]</a></li><li><a href='#io_file-object'>io_file [object]</a></li><li><a href='#io_file-open-method'>io_file.open [method]</a></li><li><a href='#io_file-close-method'>io_file.close [method]</a></li><li><a href='#io_file-read-method'>io_file.read [method]</a></li><li><a href='#io_file-write-method'>io_file.write [method]</a></li><li><a href='#io_file-seek-method'>io_file.seek [method]</a></li><li><a href='#io_file-flush-method'>io_file.flush [method]</a></li><li><a href='#io_file-setbuf-method'>io_file.setbuf [method]</a></li><li><a href='#io_file-function'>io_file [function]</a></li><li><a href='#io_dir-directory_iterator-object'>io_dir (directory_iterator) [object]</a></li><li><a href='#io_dir-function'>io_dir [function]</a></li><li><a href='#FILE_-READ-WRITE-constants'>FILE_[READ|WRITE] [constants]</a></li><li><a href='#SEEK_-SET-CUR-END-constants'>SEEK_[SET|CUR|END] [constants]</a></li><li><a href='#FST_-UNKNOWN-FILE-DIR-constants'>FST_[UNKNOWN|FILE|DIR] [constants]</a></li></ul><li><a href='#Math-library-math'>Math library (&quot;math&quot;)</a><ul><li><a href='#abs-function'>abs [function]</a></li><li><a href='#floor-function'>floor [function]</a></li><li><a href='#ceil-function'>ceil [function]</a></li><li><a href='#round-function'>round [function]</a></li><li><a href='#pow-function'>pow [function]</a></li><li><a href='#sqrt-function'>sqrt [function]</a></li><li><a href='#log-function'>log [function]</a></li><li><a href='#sin-function'>sin [function]</a></li><li><a href='#cos-function'>cos [function]</a></li><li><a href='#tan-function'>tan [function]</a></li><li><a href='#asin-function'>asin [function]</a></li><li><a href='#acos-function'>acos [function]</a></li><li><a href='#atan-function'>atan [function]</a></li><li><a href='#atan2-function'>atan2 [function]</a></li><li><a href='#deg2rad-function'>deg2rad [function]</a></li><li><a href='#rad2deg-function'>rad2deg [function]</a></li><li><a href='#M_-PI-E-constants'>M_[PI|E] [constants]</a></li></ul><li><a href='#OS-library-os'>OS library (&quot;os&quot;)</a><ul><li><a href='#os_gettype-function'>os_gettype [function]</a></li><li><a href='#os_command-function'>os_command [function]</a></li><li><a href='#os_getenv-function'>os_getenv [function]</a></li><li><a href='#os_putenv-function'>os_putenv [function]</a></li><li><a href='#os_time-function'>os_time [function]</a></li><li><a href='#os_get_timezone-function'>os_get_timezone [function]</a></li><li><a href='#os_date_string-function'>os_date_string [function]</a></li><li><a href='#os_parse_time-function'>os_parse_time [function]</a></li><li><a href='#os_make_time-function'>os_make_time [function]</a></li><li><a href='#os_get_locale-function'>os_get_locale [function]</a></li><li><a href='#os_set_locale-function'>os_set_locale [function]</a></li><li><a href='#os_get_locale_format-function'>os_get_locale_format [function]</a></li><li><a href='#os_locale_strcmp-function'>os_locale_strcmp [function]</a></li><li><a href='#LC_-ALL-COLLATE-MONETARY-NUMERIC-TIME-constants'>LC_[ALL|COLLATE|MONETARY|NUMERIC|TIME] [constants]</a></li></ul><li><a href='#Regular-expression-library-re'>Regular expression library (&quot;re&quot;)</a><ul><li><a href='#re_match-function'>re_match [function]</a></li><li><a href='#re_match_all-function'>re_match_all [function]</a></li><li><a href='#re_replace-function'>re_replace [function]</a></li></ul><li><a href='#String-library-string'>String library (&quot;string&quot;)</a><ul><li><a href='#string_cut-function'>string_cut [function]</a></li><li><a href='#string_part-function'>string_part [function]</a></li><li><a href='#string_reverse-function'>string_reverse [function]</a></li><li><a href='#string_pad-function'>string_pad [function]</a></li><li><a href='#string_repeat-function'>string_repeat [function]</a></li><li><a href='#string_count-function'>string_count [function]</a></li><li><a href='#string_find-function'>string_find [function]</a></li><li><a href='#string_find_rev-function'>string_find_rev [function]</a></li><li><a href='#string_replace-function'>string_replace [function]</a></li><li><a href='#string_translate-function'>string_translate [function]</a></li><li><a href='#string_trim-function'>string_trim [function]</a></li><li><a href='#string_toupper-function'>string_toupper [function]</a></li><li><a href='#string_tolower-function'>string_tolower [function]</a></li><li><a href='#string_compare-function'>string_compare [function]</a></li><li><a href='#string_implode-function'>string_implode [function]</a></li><li><a href='#string_explode-function'>string_explode [function]</a></li><li><a href='#string_charcode-function'>string_charcode [function]</a></li><li><a href='#string_frombytes-function'>string_frombytes [function]</a></li><li><a href='#string_utf8_decode-function'>string_utf8_decode [function]</a></li><li><a href='#string_utf8_encode-function'>string_utf8_encode [function]</a></li><li><a href='#string_format-function'>string_format [function]</a></li></ul></li></ul></li></ul></div><div><div class='item'><a name='Main-info'></a><hr><h2>Main info</h2><p></p><p>
+In this part of the documentation, universally useful information can be found about various aspects of both the language and the C API.
+</p><p></p></div><div class='item'><a name='SGScript-description'></a><hr><h2>SGScript - description</h2><p></p><p>
 This is a programming language that is made to be fast, accessible and simple. It is similar to many but the exact combination makes it unique in comparison to others. Thus, it might be best to describe it in comparison to others, especially the ones that heavily influenced the development of SGScript.
 </p><p>
 <table>
@@ -35,7 +37,7 @@ The standard library includes:
 </li><li>math, string, I/O, O/S and formatting functions
 </li><li><code>eval</code>, file import, DLL import</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='SGScript-Virtual-Machine-info'></a><hr><h2>SGScript Virtual Machine [info]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='SGScript-Virtual-Machine'></a><hr><h2>SGScript Virtual Machine</h2><p></p><p>
 ...or the interface that it defines, is one of the driving forces of SGScript. It is heavily influenced by Lua, while also adding some features of PHP (Zend Engine) and Python.
 </p><p>
 The overview: register-based, single-stack, highly customizable / extensible bytecode interpreter.
@@ -49,26 +51,26 @@ The virtual machine supports:
 </li><li>Full introspection of machine state
 </li><li>Type registration for simplified cross-library data reuse</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='Commonly-required-advanced-tasks-info'></a><hr><h2>Commonly required advanced tasks [info]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Commonly-required-advanced-tasks'></a><hr><h2>Commonly required advanced tasks</h2><p></p><p>
 </p><h4>Method handling</h4><p>
 </p><p>
 </p><ul><li>version 1: plain method handling:</li></ul><p>
 </p><p>
-</p><pre>SGSFN( &quot;&lt;object&gt;.&lt;method&gt;&quot; );
+</p><pre>sgs_FuncName( C, &quot;&lt;object&gt;.&lt;method&gt;&quot; );
 if( !sgs_Method( C ) || !sgs_IsObject( C, 0, Object_interface_pointer ) )
     return sgs_ArgErrorExt( C, 0, 1, &quot;&lt;object&gt;&quot;, &quot;&quot; );
-ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 )-&gt;data;</pre><p>
+ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );</pre><p>
 </p><p>
 </p><p>
 </p><ul><li>version 2: Method + function handling (function that can be called as a method too)</li></ul><p>
 </p><p>
 </p><pre>int method_call = sgs_Method( C );
-SGSFN( method_call ? &quot;&lt;object&gt;.&lt;method&gt;&quot; : &quot;&lt;object_function&gt;&quot; );
+sgs_FuncName( C, method_call ? &quot;&lt;object&gt;.&lt;method&gt;&quot; : &quot;&lt;object_function&gt;&quot; );
 if( !sgs_IsObject( C, 0, Object_interface_pointer ) )
     return sgs_ArgErrorExt( C, 0, method_call, &quot;&lt;object&gt;&quot;, &quot;&quot; );
-ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 )-&gt;data;</pre><p>
+ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='Serialization-in-SGScript-info'></a><hr><h2>Serialization in SGScript [info]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Serialization-in-SGScript'></a><hr><h2>Serialization in SGScript</h2><p></p><p>
 In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the &quot;serialize&quot; function and deserialization is done with &quot;unserialize&quot;. The C API has similar functions: sgs_Serialize/sgs_SerializeObject and sgs_Unserialize, respectively.
 </p><p>
 <em class='notice-bgr'>check the &quot;Possible gotchas&quot; part of this page if it is intended to trust the end user with access to serialized data</em>
@@ -107,7 +109,7 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 </li><li>if environment overrides are used on deserialization, remember to add &quot;array&quot; and &quot;dict&quot; to the list if you use them, they are not added automatically
 </li><li>serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='Numeric-string-parsing-rules-info'></a><hr><h2>Numeric string parsing rules [info]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Numeric-string-parsing-rules'></a><hr><h2>Numeric string parsing rules</h2><p></p><p>
 &quot;&gt;&gt;&gt;&quot; means &quot;until any other symbol has been found&quot; (the text is too dense for exact repetition)
 </p><p>
 The string is not a number if no numeric characters (0-9) could be parsed. (for example, &quot;+&quot; isn&#39;t a number but &quot;0x&quot; is)
@@ -134,9 +136,9 @@ The string is not a number if no numeric characters (0-9) could be parsed. (for 
 <ul><li>read the sign character (+ or -)
 </li><li>&gt;&gt;&gt;, characters 0-9 add the specified decimal number to the integer</li></ul></li></ul></li></ul></li></ul><p>
 </p><p>
-</p><p>
-</p><p>
-</p><p></p></div><div class='item'><a name='Main-types-info'></a><hr><h2>Main types [info]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='API-info'></a><hr><h2>API info</h2><p></p><p>
+This part of the documentation describes the various types and definitions used in the C API.
+</p><p></p></div><div class='item'><a name='Main-types'></a><hr><h2>Main types</h2><p></p><p>
 Return types:
 </p><ul><li>SGSRESULT [int]: output code (success = 0, failure: &lt; 0 )
 </li><li>SGSBOOL [int]: simplified output code (success = 1, failure = 0)
@@ -161,7 +163,7 @@ Interface types:
 </li><li>sgs_PrintFunc [void ( void* userdata, sgs_Context* C, int code, const char* text )]: error printing function
 </li><li>sgs_HookFunc [void ( void*, sgs_Context*, int )]: debug hook function</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='Error-codes-info'></a><hr><h2>Error codes [info]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Error-codes'></a><hr><h2>Error codes</h2><p></p><p>
 These are the default meanings for error codes that are honored throughout the API.
 </p><p>
 </p><ul><li>Generated by the C API
@@ -179,7 +181,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li>SGS_ERROR: fatal issues
 </li><li>any other integer may be defined and returned by other interfaces</li></ul></li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='Variable-type-flags-info'></a><hr><h2>Variable type flags [info]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Variable-type-flags'></a><hr><h2>Variable type flags</h2><p></p><p>
 </p><ul><li>primary flags
 <ul><li>SGS_VT_NULL: (primary null flag, actually - lack of a primary flag)
 </li><li>SGS_VT_[BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]: primary flags</li></ul></li></ul><p>
@@ -196,7 +198,7 @@ These are the default meanings for error codes that are honored throughout the A
 <ul><li>SGS_VTC_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]: complete variable flags
 </li><li>SGS_VTC_[ARRAY|ARRAY_ITER|DICT]: complete specialized variable flags</li></ul></li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='Object-operation-types-info'></a><hr><h2>Object operation types [info]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Object-operation-types'></a><hr><h2>Object operation types</h2><p></p><p>
 </p><ul><li>SGS_OP_END: &lt;end of list&gt; marker op
 </li><li>SGS_OP_DESTRUCT: object destruction op (argument: whether should free child variables - 1/0)
 </li><li>SGS_OP_GETINDEX: object index/property retrieval (argument: whether is a property)
@@ -218,7 +220,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li>subtype = SGS_EOP_COMPARE: if A &lt; B, return -1; if A &gt; B, return 1; otherwise return 0;
 </li><li>subtype = SGS_EOP_NEGATE: return the current value, negated</li></ul></li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='Interaction-with-the-native-environment-info'></a><hr><h2>Interaction with the native environment [info]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Interaction-with-the-native-environment'></a><hr><h2>Interaction with the native environment</h2><p></p><p>
 </p><h4>Memory allocation</h4><p>
 </p><ul><li>sgs_MemFunc must be specified in creation of the scripting engine context
 </li><li>sgs_MemFunc (re)allocates and frees memory
@@ -226,9 +228,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li>sgs_DefaultMemFunc is the sample implementation
 </li><li>the expected behavior is same as for @sgs_Memory()</li></ul><p>
 </p><p>
-</p><p>
-</p><p>
-</p><p></p></div><div class='item'><a name='sgs_CreateEngine-function-alias'></a><hr><h2>sgs_CreateEngine [function alias]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='C-API-reference'></a><hr><h2>C API reference</h2><p></p><p></p></div><div class='item'><a name='Primary-interface'></a><hr><h2>Primary interface</h2><p></p><p></p></div><div class='item'><a name='sgs_CreateEngine-function-alias'></a><hr><h2>sgs_CreateEngine [function alias]</h2><p></p><p>
 </p><h3>sgs_Context* sgs_CreateEngine()</h3><p>
 </p><h4>returns a new scripting engine context</h4><p>
 </p><p>
@@ -307,7 +307,7 @@ These are the default meanings for error codes that are honored throughout the A
 </p><ul><li>SGS_ECOMP: compiler error
 </li><li>SGS_EINVAL: passed data was not recognized</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='sgs_LoadLib_[Fmt|IO|Math|OS|String]-functions'></a><hr><h2>sgs_LoadLib_[Fmt|IO|Math|OS|String] [functions]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='sgs_LoadLib_-Fmt-IO-Math-OS-String-functions'></a><hr><h2>sgs_LoadLib_[Fmt|IO|Math|OS|String] [functions]</h2><p></p><p>
 </p><h3>SGSRESULT sgs_LoadLib_Fmt( sgs_Context* C )</h3><p>
 </p><h3>SGSRESULT sgs_LoadLib_IO( sgs_Context* C )</h3><p>
 </p><h3>SGSRESULT sgs_LoadLib_Math( sgs_Context* C )</h3><p>
@@ -320,13 +320,13 @@ These are the default meanings for error codes that are honored throughout the A
 </p><h4>error codes</h4><p>
 </p><ul><li>SGS_E****: first error encountered (operation stopped somewhere in the middle)</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='sgs_Reg[Func|Int|Real]Const-struct'></a><hr><h2>sgs_Reg[Func|Int|Real]Const [struct]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='sgs_Reg-Func-Int-Real-Const-struct'></a><hr><h2>sgs_Reg[Func|Int|Real]Const [struct]</h2><p></p><p>
 </p><h3>sgs_RegFuncConst { char* name; sgs_CFunc value; }</h3><p>
 </p><h3>sgs_RegIntConst { char* name; sgs_Int value; }</h3><p>
 </p><h3>sgs_RegRealConst { char* name; sgs_Real value; }</h3><p>
 </p><h4>a pair of null-terminated string and a scripting engine value type</h4><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='sgs_Reg[Func|Int|Real]Consts-function'></a><hr><h2>sgs_Reg[Func|Int|Real]Consts [function]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='sgs_Reg-Func-Int-Real-Consts-function'></a><hr><h2>sgs_Reg[Func|Int|Real]Consts [function]</h2><p></p><p>
 </p><h3>SGSRESULT sgs_RegFuncConsts( sgs_Context* C, const sgs_RegFuncConst* list, int size )</h3><p>
 </p><h3>SGSRESULT sgs_RegIntConsts( sgs_Context* C, const sgs_RegIntConst* list, int size )</h3><p>
 </p><h3>SGSRESULT sgs_RegRealConsts( sgs_Context* C, const sgs_RegRealConst* list, int size )</h3><p>
@@ -340,9 +340,7 @@ These are the default meanings for error codes that are honored throughout the A
 </p><h4>error codes</h4><p>
 </p><ul><li>SGS_E****: first error encountered (operation stopped somewhere in the middle)</li></ul><p>
 </p><p>
-</p><p>
-</p><p>
-</p><p></p></div><div class='item'><a name='sgs_Push[Null|Bool|Int|Real|StringBuf|String|CFunction|Object|ObjectIPA|Variable]-functions'></a><hr><h2>sgs_Push[Null|Bool|Int|Real|StringBuf|String|CFunction|Object|ObjectIPA|Variable] [functions]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Data-interface'></a><hr><h2>Data interface</h2><p></p><p></p></div><div class='item'><a name='sgs_Push-Null-Bool-Int-Real-StringBuf-String-CFunction-Object-ObjectIPA-Variable-functions'></a><hr><h2>sgs_Push[Null|Bool|Int|Real|StringBuf|String|CFunction|Object|ObjectIPA|Variable] [functions]</h2><p></p><p>
 </p><h3>void sgs_PushNull( sgs_Context* C )</h3><p>
 </p><h3>void sgs_PushBool( sgs_Context* C, sgs_Bool value )</h3><p>
 </p><h3>void sgs_PushInt( sgs_Context* C, sgs_Int value )</h3><p>
@@ -361,7 +359,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li></ul><li>sgs_PushObjectIPA stands for &quot;push object, allocate memory in-place&quot;
 <ul><li>it means that the <code>added</code> memory space will be appended to the end of object allocation
 </li><li>this allows to allocate all object data for most objects with just one allocation, instead of two
-</li><li>the allocated memory will be returned and also available via sgs_GetObjectData( C, -1 )-&gt;data
+</li><li>the allocated memory will be returned and also available via sgs_GetObjectData( C, -1 )
 </li></ul><li>sgs_PushVariable will increment the reference count of strings, SGS functions and objects
 </li><li>these functions do not throw an error when the stack is full since there is no way to handle that</li></ul><p>
 </p><p>
@@ -589,7 +587,7 @@ These are the default meanings for error codes that are honored throughout the A
 </p><p>
 </p><ul><li>always returns 0 so it can be used to return and print an error in the same statement</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='sgs_[FuncArgError|MethodArgError]-function-aliases'></a><hr><h2>sgs_[FuncArgError|MethodArgError] [function aliases]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='sgs_-FuncArgError-MethodArgError-function-aliases'></a><hr><h2>sgs_[FuncArgError|MethodArgError] [function aliases]</h2><p></p><p>
 </p><h3>int sgs_FuncArgError( sgs_Context* C, int argid, int expect, int is_strict )</h3><p>
 </p><h3>int sgs_MethodArgError( sgs_Context* C, int argid, int expect, int is_strict )</h3><p>
 </p><h4>prints the argument type mismatch error</h4><p>
@@ -655,9 +653,7 @@ These are the default meanings for error codes that are honored throughout the A
 </p><ul><li>for more info on syntax and usage, refer to @sgs_LoadArgsExt
 </li><li>alias to <code>sgs_LoadArgsExt( C, 0, cmd, ... )&gt;0</code></li></ul><p>
 </p><p>
-</p><p>
-</p><p>
-</p><p></p></div><div class='item'><a name='sgs_FCall-function'></a><hr><h2>sgs_FCall [function]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Operations'></a><hr><h2>Operations</h2><p></p><p></p></div><div class='item'><a name='sgs_FCall-function'></a><hr><h2>sgs_FCall [function]</h2><p></p><p>
 </p><h3>SGSRESULT sgs_FCall( sgs_Context* C, int args, int expect, int gotthis )</h3><p>
 </p><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><p>
 </p><p>
@@ -683,7 +679,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><ul><li>SGS_EINPROC: topmost item on stack was not callable
 </li><li>SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + 1`)</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='sgs_[Call|ThisCall]-function-aliases'></a><hr><h2>sgs_[Call|ThisCall] [function aliases]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='sgs_-Call-ThisCall-function-aliases'></a><hr><h2>sgs_[Call|ThisCall] [function aliases]</h2><p></p><p>
 </p><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><p>
 </p><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )</h3><p>
 </p><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><p>
@@ -721,7 +717,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><p>
 </p><ul><li>this procedure may take some time if the object graph is big
 </li><li>during the procedure, the SGS_OP_GCMARK interface functions of objects are invoked for the objects visible from entry points (like stack and global table)
-</li><li>aborting of the procedure (via error codes) would lead the system into an unrecoverable state (TODO: is that really necessary?)</li></ul><p>
+</li><li>aborting the procedure via error codes could lead the system into an unrecoverable state</li></ul><p>
 </p><p>
 </p><h4>error codes</h4><p>
 </p><ul><li>any code can be returned by SGS_OP_GCMARK and SGS_OP_DESTRUCT functions, doing so would abort the process if the code is not either SGS_SUCCESS or SGS_ENOTFND</li></ul><p>
@@ -757,6 +753,28 @@ After a successful call, all arguments and the function will be popped off the s
 </p><h4>error codes</h4><p>
 </p><ul><li>SGS_EBOUNDS: stack item index was out of bounds
 </li><li>SGS_ENOTFND: the object does not support cloning</li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='sgs_ObjectAction-function'></a><hr><h2>sgs_ObjectAction [function]</h2><p></p><p>
+</p><h3>SGSRESULT sgs_ObjectAction( sgs_Context* C, int item, int action, int arg )</h3><p>
+</p><h4>execute an action on the specified stack item</h4><p>
+</p><p>
+</p><h4>actions</h4><p>
+</p><ul><li>SGS_ACT_ARRAY_PUSH
+<ul><li>append the last <code>arg</code> items on stack to the array
+</li><li>error codes
+<ul><li>SGS_EINVAL: <code>item</code> was not an array, <code>arg</code> was negative or bigger than stack frame
+</li></ul></li></ul><li>SGS_ACT_ARRAY_POP
+<ul><li>remove the last <code>arg</code> items from the end of the array
+</li><li>error codes
+<ul><li>SGS_EINVAL: <code>item</code> was not an array, <code>arg</code> was negative or bigger than size of array
+</li></ul></li></ul><li>SGS_ACT_ARRAY_POPRET
+<ul><li>remove the last <code>arg</code> items from the end of the array and return them in the order they were stored (last items on array are last on stack)
+</li><li>error codes
+<ul><li>SGS_EINVAL: <code>item</code> was not an array, <code>arg</code> was negative or bigger than size of array</li></ul></li></ul></li></ul><p>
+</p><p>
+</p><h4>error codes</h4><p>
+</p><ul><li>SGS_E****: action-specific
+</li><li>SGS_ENOTFND: action was not found</li></ul><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='sgs_Serialize-function'></a><hr><h2>sgs_Serialize [function]</h2><p></p><p>
 </p><h3>SGSRESULT sgs_Serialize( sgs_Context* C )</h3><p>
@@ -807,9 +825,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><p>
 </p><ul><li>both type variables and interface pointers (only if both variables are objects) are checked for equality</li></ul><p>
 </p><p>
-</p><p>
-</p><p>
-</p><p></p></div><div class='item'><a name='sgs_[GetBool|GetInt|GetReal]-functions'></a><hr><h2>sgs_[GetBool|GetInt|GetReal] [functions]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Conversion-interface'></a><hr><h2>Conversion interface</h2><p></p><p></p></div><div class='item'><a name='sgs_-GetBool-GetInt-GetReal-functions'></a><hr><h2>sgs_[GetBool|GetInt|GetReal] [functions]</h2><p></p><p>
 </p><h3>sgs_Bool sgs_GetBool( sgs_Context* C, int item )</h3><p>
 </p><h3>sgs_Int sgs_GetInt( sgs_Context* C, int item )</h3><p>
 </p><h3>sgs_Real sgs_GetReal( sgs_Context* C, int item )</h3><p>
@@ -817,7 +833,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><p>
 </p><ul><li>if <code>item</code> is out of bounds, 0 is returned</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='sgs_[ToBool|ToInt|ToReal]-functions'></a><hr><h2>sgs_[ToBool|ToInt|ToReal] [functions]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='sgs_-ToBool-ToInt-ToReal-functions'></a><hr><h2>sgs_[ToBool|ToInt|ToReal] [functions]</h2><p></p><p>
 </p><h3>sgs_Bool sgs_ToBool( sgs_Context* C, int item )</h3><p>
 </p><h3>sgs_Int sgs_ToInt( sgs_Context* C, int item )</h3><p>
 </p><h3>sgs_Real sgs_ToReal( sgs_Context* C, int item )</h3><p>
@@ -825,7 +841,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><p>
 </p><ul><li>in-place conversion means that if the function succeeds, the item in the stack might have a different type, most likely the requested type</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='sgs_[ToStringBuf|ToStringBufFast]-functions'></a><hr><h2>sgs_[ToStringBuf|ToStringBufFast] [functions]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='sgs_-ToStringBuf-ToStringBufFast-functions'></a><hr><h2>sgs_[ToStringBuf|ToStringBufFast] [functions]</h2><p></p><p>
 </p><h3>char* sgs_ToStringBuf( sgs_Context* C, int item, sgs_SizeVal* outsize )</h3><p>
 </p><h3>char* sgs_ToStringBufFast( sgs_Context* C, int item, sgs_SizeVal* outsize )</h3><p>
 </p><h4>return an item from the current stack frame, converted in-place to string</h4><p>
@@ -834,7 +850,7 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>the &#39;fast&#39; version uses type name conversion on object, instead of string conversion - this is to avoid recursion while generating a short description about object contents
 </li><li>length of string is returned to the value that <code>outsize</code> points to</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='sgs_[ToString|ToStringFast]-function-aliases'></a><hr><h2>sgs_[ToString|ToStringFast] [function aliases]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='sgs_-ToString-ToStringFast-function-aliases'></a><hr><h2>sgs_[ToString|ToStringFast] [function aliases]</h2><p></p><p>
 </p><h3>char* sgs_ToString( sgs_Context* C, int item )</h3><p>
 </p><h3>char* sgs_ToStringFast( sgs_Context* C, int item )</h3><p>
 </p><h4>return an item from the current stack frame, converted in-place to string</h4><p>
@@ -896,7 +912,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><p>
 </p><ul><li>more info at @&lt;Numeric string parsing rules&gt;</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='sgs_[ParseBool|ParseInt|ParseReal|ParseString]-functions'></a><hr><h2>sgs_[ParseBool|ParseInt|ParseReal|ParseString] [functions]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='sgs_-ParseBool-ParseInt-ParseReal-ParseString-functions'></a><hr><h2>sgs_[ParseBool|ParseInt|ParseReal|ParseString] [functions]</h2><p></p><p>
 </p><h3>SGSBOOL sgs_ParseBool( sgs_Context* C, int item, sgs_Bool* out )</h3><p>
 </p><h3>SGSBOOL sgs_ParseInt( sgs_Context* C, int item, sgs_Int* out )</h3><p>
 </p><h3>SGSBOOL sgs_ParseReal( sgs_Context* C, int item, sgs_Real* out )</h3><p>
@@ -932,7 +948,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><p>
 </p><h4>error codes</h4><p>
 </p><ul><li>SGS_EBOUNDS: index out of bounds
-</li><li>SGS_EINVAL: iterated object changed in a way that iterator does not support (currently a size equality test) (TODO: what about any other structural changes? can we have a revision number?)
+</li><li>SGS_EINVAL: iterated object changed in a way that iterator does not support (currently a size equality test)
 </li><li>SGS_EINPROC: internal failure in the object interface</li></ul><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='sgs_IterPushData-function'></a><hr><h2>sgs_IterPushData [function]</h2><p></p><p>
@@ -955,9 +971,7 @@ After a successful call, all arguments and the function will be popped off the s
 </p><h4>error codes</h4><p>
 </p><ul><li>SGS_EINVAL: index out of bounds / variable was not an array</li></ul><p>
 </p><p>
-</p><p>
-</p><p>
-</p><p></p></div><div class='item'><a name='sgs_StackSize-function'></a><hr><h2>sgs_StackSize [function]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Extension-interface'></a><hr><h2>Extension interface</h2><p></p><p></p></div><div class='item'><a name='sgs_StackSize-function'></a><hr><h2>sgs_StackSize [function]</h2><p></p><p>
 </p><h3>int sgs_StackSize( sgs_Context* C )</h3><p>
 </p><h4>return the size of the current stack frame</h4><p>
 </p><p>
@@ -1017,25 +1031,54 @@ After a successful call, all arguments and the function will be popped off the s
 </p><p>
 </p><p></p></div><div class='item'><a name='sgs_GetStringPtr-function'></a><hr><h2>sgs_GetStringPtr [function]</h2><p></p><p>
 </p><h3>char* sgs_GetStringPtr( sgs_Context* C, int item )</h3><p>
-</p><h4>return the string data pointer of the specified stack item, using BreakIf to validate the call</h4><p>
+</p><h4>return the string data pointer of the specified stack item</h4><p>
 </p><p>
-</p><ul><li>if item is out of bounds or not a string, one of the BreakIf macros will go off and stop the action</li></ul><p>
+</p><ul><li>if item is out of bounds or not a string, NULL will be returned and ...
+<ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='sgs_GetStringSize-function'></a><hr><h2>sgs_GetStringSize [function]</h2><p></p><p>
 </p><h3>sgs_SizeVal sgs_GetStringSize( sgs_Context* C, int item )</h3><p>
-</p><h4>return the string size of the specified stack item, using BreakIf to validate the call</h4><p>
+</p><h4>return the string size of the specified stack item</h4><p>
 </p><p>
-</p><ul><li>if item is out of bounds or not a string, one of the BreakIf macros will go off and stop the action</li></ul><p>
+</p><ul><li>if item is out of bounds or not a string, 0 will be returned and ...
+<ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='sgs_GetObjectStruct-function'></a><hr><h2>sgs_GetObjectStruct [function]</h2><p></p><p>
+</p><h3>sgs_VarObj* sgs_GetObjectStruct( sgs_Context* C, int item )</h3><p>
+</p><h4>return the object&#39;s internal data pointer of the specified stack item</h4><p>
+</p><p>
+</p><ul><li>if item is out of bounds or not an object, NULL will be returned and ...
+<ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='sgs_GetObjectData-function'></a><hr><h2>sgs_GetObjectData [function]</h2><p></p><p>
-</p><h3>sgs_VarObj* sgs_GetObjectData( sgs_Context* C, int item )</h3><p>
-</p><h4>return the object data pointer of the specified stack item, using BreakIf to validate the call</h4><p>
+</p><h3>void* sgs_GetObjectData( sgs_Context* C, int item )</h3><p>
+</p><h4>return the object data pointer of the specified stack item</h4><p>
 </p><p>
-</p><ul><li>if item is out of bounds or not an object, one of the BreakIf macros will go off and stop the action</li></ul><p>
+</p><ul><li>if item is out of bounds or not an object, NULL will be returned and ...
+<ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul><p>
 </p><p>
+</p><p></p></div><div class='item'><a name='sgs_GetObjectIface-function'></a><hr><h2>sgs_GetObjectIface [function]</h2><p></p><p>
+</p><h3>void** sgs_GetObjectIface( sgs_Context* C, int item )</h3><p>
+</p><h4>return the object interface pointer of the specified stack item</h4><p>
 </p><p>
+</p><ul><li>if item is out of bounds or not an object, NULL will be returned and ...
+<ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='sgs_SetOutputFunc-function'></a><hr><h2>sgs_SetOutputFunc [function]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='sgs_SetObjectData-function'></a><hr><h2>sgs_SetObjectData [function]</h2><p></p><p>
+</p><h3>int sgs_SetObjectData( sgs_Context* C, int item, void* data )</h3><p>
+</p><h4>set the object data pointer of the specified stack item</h4><p>
+</p><p>
+</p><ul><li>if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
+<ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='sgs_SetObjectIface-function'></a><hr><h2>sgs_SetObjectIface [function]</h2><p></p><p>
+</p><h3>int sgs_SetObjectIface( sgs_Context* C, int item, void* iface )</h3><p>
+</p><h4>set the object interface pointer of the specified stack item</h4><p>
+</p><p>
+</p><ul><li>if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
+<ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='Environment-control-interface'></a><hr><h2>Environment control interface</h2><p></p><p></p></div><div class='item'><a name='sgs_SetOutputFunc-function'></a><hr><h2>sgs_SetOutputFunc [function]</h2><p></p><p>
 </p><h3>void sgs_SetOutputFunc( sgs_Context* C, sgs_OutputFunc func, void* userdata )</h3><p>
 </p><h4>sets the function used in &#39;print&#39; function</h4><p>
 </p><p>
@@ -1136,9 +1179,7 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>`sgs_Dealloc( ptr )`: frees the memory
 </li></ul><li>all of these functions, including sgs_Memory, work on the same heap, thus they are interchangeable</li></ul><p>
 </p><p>
-</p><p>
-</p><p>
-</p><p></p></div><div class='item'><a name='sgs_CodeString-function'></a><hr><h2>sgs_CodeString [function]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='Information-retrieval-control-interface'></a><hr><h2>Information retrieval/control interface</h2><p></p><p></p></div><div class='item'><a name='sgs_CodeString-function'></a><hr><h2>sgs_CodeString [function]</h2><p></p><p>
 </p><h3>const char* sgs_CodeString( int type, int val )</h3><p>
 </p><h4>returns a string for the enumeration <code>type</code> value <code>val</code></h4><p>
 </p><p>
@@ -1218,8 +1259,18 @@ sgs_Errno [function (inline)]
 </p><p>
 </p><ul><li>alias to <code>sgs_Cntl( C, SGS_CNTL_GET_ERRNO, 0 )</code></li></ul><p>
 </p><p>
+</p><p></p></div><div class='item'><a name='Standard-library-reference'></a><hr><h2>Standard library reference</h2><p></p><p></p></div><div class='item'><a name='Core-library'></a><hr><h2>Core library</h2><p></p><p>
+This library is loaded on initialization and contains the functions and constants necessary to do primary actions:
 </p><p>
-</p><p>
+</p><ul><li>execution of additional scripts
+</li><li>creating and using array, class, dict, closure
+</li><li>converting between variables
+</li><li>serialization / deserialization
+</li><li>operation control
+</li><li>error handling and throwing
+</li><li>global environment modification
+</li><li>standard input / output
+</li><li>data debugging</li></ul><p>
 </p><p></p></div><div class='item'><a name='array-function'></a><hr><h2>array [function]</h2><p></p><p>
 </p><h3>array( ... )</h3><p>
 </p><h4>returns an array, containing the arguments</h4><p>
@@ -1259,6 +1310,34 @@ c.printdata(); // prints 6</pre><p>
 </p><p>
 </p><pre>counter = closure( function( data ){ return data[0]++; }, [0] );
 print( counter() ); print( counter() ); // prints &quot;01&quot;</pre><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='array_filter-function'></a><hr><h2>array_filter [function]</h2><p></p><p>
+</p><h3>array_filter( array[, callable] )</h3><p>
+</p><h4>return an array with the items that convert to boolean &#39;true&#39;, optionally preprocessed by a callable</h4><p>
+</p><p>
+</p><ul><li>two arguments are passed to the callable: value, index</li></ul><p>
+</p><p>
+</p><pre>array_filter([ 0, 1, 2, 3 ]); // returns [1,2,3]</pre><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='array_process-function'></a><hr><h2>array_process [function]</h2><p></p><p>
+</p><h3>array_process( array, callable )</h3><p>
+</p><h4>return an array with the items passed through a callable</h4><p>
+</p><p>
+</p><ul><li>two arguments are passed to the callable: value, index</li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='dict_filter-function'></a><hr><h2>dict_filter [function]</h2><p></p><p>
+</p><h3>dict_filter( dict[, callable] )</h3><p>
+</p><h4>return a dict with the items that convert to boolean &#39;true&#39;, optionally preprocessed by a callable</h4><p>
+</p><p>
+</p><ul><li>two arguments are passed to the callable: value, key</li></ul><p>
+</p><p>
+</p><pre>dict_filter({ a = 0, b = 1 }); // returns {b=1}</pre><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='dict_process-function'></a><hr><h2>dict_process [function]</h2><p></p><p>
+</p><h3>dict_process( dict, callable )</h3><p>
+</p><h4>return a dict with the items passed through a callable</h4><p>
+</p><p>
+</p><ul><li>two arguments are passed to the callable: value, key</li></ul><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='isset-function'></a><hr><h2>isset [function]</h2><p></p><p>
 </p><h3>isset( var, string key )</h3><p>
@@ -1414,7 +1493,7 @@ is_callable( 5 ); // returns &#39;false&#39;</pre><p>
 loadtypeflags();
 isset( _G, &quot;VTF_NUM&quot; ); // returns &#39;true&#39;</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='print,-println,-printlns-functions'></a><hr><h2>print, println, printlns [functions]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='print-println-printlns-functions'></a><hr><h2>print, println, printlns [functions]</h2><p></p><p>
 </p><h3>print( ... ), println( ... ), printlns( ... ),</h3><p>
 </p><h4>passes all arguments, converted to strings, to the @output callback</h4><p>
 </p><ul><li>print passes arguments without modifications
@@ -1744,10 +1823,10 @@ print unserialize(data); // prints {name=A,info=B}</pre><p>
 print data; // prints random-ish garbage
 print unserialize(data); // prints {name=A,info=B}</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='SGS_[INFO|WARNING|ERROR]-constants'></a><hr><h2>SGS_[INFO|WARNING|ERROR] [constants]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='SGS_-INFO-WARNING-ERROR-constants'></a><hr><h2>SGS_[INFO|WARNING|ERROR] [constants]</h2><p></p><p>
 </p><h3>SGS_INFO, SGS_WARNING, SGS_ERROR are defined to the values of the C macros, respectively 100, 200 and 300</h3><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='VT_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]-constants'></a><hr><h2>VT_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT] [constants]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='VT_-NULL-BOOL-INT-REAL-STRING-FUNC-CFUNC-OBJECT-constants'></a><hr><h2>VT_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT] [constants]</h2><p></p><p>
 </p><h3>these constants are defined to the values of the C macros (with the prefix &quot;SVT_&quot; in C) and can be compared with the values returned in @typeid() or @typeflags()</h3><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='_G-superglobal'></a><hr><h2>_G [superglobal]</h2><p></p><p>
@@ -1761,7 +1840,7 @@ _G = {}; // global value dictionary is changed, previous functions are lost unle
 <ul><li>[int] size
 </li><li>[int] capacity
 </li><li>[var] first (valid if array is not empty, otherwise a warning is thrown and &#39;null&#39; is returned)
-</li><li>[var] last (same as &#39;first&#39;)
+</li><li>[var] last (similar to &#39;first&#39;)
 </li><li>[cfunc] push
 </li><li>[cfunc] pop
 </li><li>[cfunc] shift
@@ -1777,6 +1856,9 @@ _G = {}; // global value dictionary is changed, previous functions are lost unle
 </li><li>[cfunc] sort_mapped
 </li><li>[cfunc] find
 </li><li>[cfunc] remove
+</li><li>[cfunc] unique
+</li><li>[cfunc] random
+</li><li>[cfunc] shuffle
 </li></ul><li>other features:
 <ul><li>read/write integer index
 </li><li>full content dump
@@ -1788,14 +1870,14 @@ _G = {}; // global value dictionary is changed, previous functions are lost unle
 </li><li>GC-safe
 </li><li>type identification (returns the string &quot;array&quot;)</li></ul></li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.push-method'></a><hr><h2>array.push [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-push-method'></a><hr><h2>array.push [method]</h2><p></p><p>
 </p><h3>array.push( ... )</h3><p>
 </p><h4>appends the variables passed to the end of array in the same order, returns the array for chaining</h4><p>
 </p><p>
 </p><pre>a = [ 5 ];
 a.push( 6, 7 ).push( 8 ); // a = [5,6,7,8]</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.pop-method'></a><hr><h2>array.pop [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-pop-method'></a><hr><h2>array.pop [method]</h2><p></p><p>
 </p><h3>array.pop()</h3><p>
 </p><h4>removes one item from the end of array or emits a warning if there are no items in the array, returns the removed item</h4><p>
 </p><p>
@@ -1803,21 +1885,21 @@ a.push( 6, 7 ).push( 8 ); // a = [5,6,7,8]</pre><p>
 a.pop(); // array is empty now
 a.pop(); // warning: &quot;array is empty, cannot pop&quot;</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.shift-method'></a><hr><h2>array.shift [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-shift-method'></a><hr><h2>array.shift [method]</h2><p></p><p>
 </p><h3>array.shift()</h3><p>
 </p><h4>removes one item from the beginning of array or emits a warning if there are no items in the array, returns the removed item</h4><p>
 </p><p>
 </p><pre>a = [ 5, 6 ];
 a.shift(); // a = [6], returned 5</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.unshift-method'></a><hr><h2>array.unshift [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-unshift-method'></a><hr><h2>array.unshift [method]</h2><p></p><p>
 </p><h3>array.unshift( ... )</h3><p>
 </p><h4>prepends the variables passed to the beginning of array in the same order, returns the array for chaining</h4><p>
 </p><p>
 </p><pre>a = [ 5 ];
 a.unshift( 6, 7 ); // a = [6,7,5] now</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.insert-method'></a><hr><h2>array.insert [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-insert-method'></a><hr><h2>array.insert [method]</h2><p></p><p>
 </p><h3>array.insert( int pos, ... )</h3><p>
 </p><h4>inserts the variables passed (all arguments after first) to the position specified in the array or emits a warning on failure (index out of bounds), returns the array for chaining</h4><p>
 </p><p>
@@ -1830,7 +1912,7 @@ a.unshift( 6, 7 ); // a = [6,7,5] now</pre><p>
 a.insert( 1, 6 ); // inserts 6 at position 1 (before item with index 1)
 a.insert( -1, 8 ); // appends to the end of array, a = [5,6,7,8] now</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.erase-method'></a><hr><h2>array.erase [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-erase-method'></a><hr><h2>array.erase [method]</h2><p></p><p>
 </p><h3>array.erase( int[, int] )</h3><p>
 </p><h4>erases item or a range of items from the array, depending on the arguments passed or emits a warning on failure, returns the array for chaining</h4><p>
 </p><p>
@@ -1840,14 +1922,26 @@ a.insert( -1, 8 ); // appends to the end of array, a = [5,6,7,8] now</pre><p>
 a.erase( 1, 2 ); // erases all items between position 1 and 2, including; gives a = [5,8]
 a.erase( 0 ); // a = [8]</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.clear-method'></a><hr><h2>array.clear [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-part-method'></a><hr><h2>array.part [method]</h2><p></p><p>
+</p><h3>array.part( int from[, int max ] )</h3><p>
+</p><h4>returns a new array starting from index <code>from</code>, with the max. size <code>max</code></h4><p>
+</p><p>
+</p><ul><li>if <code>from</code> is negative, it is subtracted from the end of array
+</li><li><code>max</code> cannot be negative, everything else is allowed</li></ul><p>
+</p><p>
+</p><pre>a = [ 5, 6, 7, 8 ];
+a.part( 1, 2 ); // returns [6,7]
+a.part( -5, 2 ); // returns [5]
+a.part( 3 ); // returns [8]</pre><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='array-clear-method'></a><hr><h2>array.clear [method]</h2><p></p><p>
 </p><h3>array.clear()</h3><p>
 </p><h4>erases all items from the array, returns the array for chaining</h4><p>
 </p><p>
 </p><pre>a = [ 1, &quot;asd&quot;, 8 ];
 a.clear(); // a = []</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.reverse-method'></a><hr><h2>array.reverse [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-reverse-method'></a><hr><h2>array.reverse [method]</h2><p></p><p>
 </p><h3>array.reverse()</h3><p>
 </p><h4>reverses the order of items in the original array, returns the original array for chaining</h4><p>
 </p><p>
@@ -1856,7 +1950,7 @@ b = a;
 a.reverse(); // a = [3,2,1]
 print( b ); // prints [3,2,1]</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.resize-method'></a><hr><h2>array.resize [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-resize-method'></a><hr><h2>array.resize [method]</h2><p></p><p>
 </p><h3>array.resize( int size )</h3><p>
 </p><h4>changes the size of the array, returns the array for chaining</h4><p>
 </p><p>
@@ -1869,7 +1963,7 @@ print( b ); // prints [3,2,1]</pre><p>
 a.resize( 5 ); // a = [5,6,7,null,null]
 a.resize( 2 ); // a = [5,6]</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.reserve-method'></a><hr><h2>array.reserve [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-reserve-method'></a><hr><h2>array.reserve [method]</h2><p></p><p>
 </p><h3>array.reserve( int capacity )</h3><p>
 </p><h4>reserves the space for the requested number of elements in the array, returns the array for chaining</h4><p>
 </p><p>
@@ -1881,7 +1975,7 @@ a.resize( 2 ); // a = [5,6]</pre><p>
 a.capacity( 1 ); // nothing happens
 a.capacity( 5 ); // a.capacity = 5 and two variable additions can now happen without reallocations</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.sort-method'></a><hr><h2>array.sort [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-sort-method'></a><hr><h2>array.sort [method]</h2><p></p><p>
 </p><h3>array.sort([ bool reverse ])</h3><p>
 </p><h4>sorts the array using the @sgs_Compare C API function for comparisons, returns the array for chaining</h4><p>
 </p><p>
@@ -1890,7 +1984,7 @@ a.capacity( 5 ); // a.capacity = 5 and two variable additions can now happen wit
 </p><pre>a = [ 6, 8, 7, 5 ];
 a.sort(); // a = [5,6,7,8]</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.sort_custom-method'></a><hr><h2>array.sort_custom [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-sort_custom-method'></a><hr><h2>array.sort_custom [method]</h2><p></p><p>
 </p><h3>array.sort_custom( callable[, bool reverse ] )</h3><p>
 </p><h4>sorts the array using the callable for comparisons, returns the array for chaining</h4><p>
 </p><p>
@@ -1903,7 +1997,7 @@ a.sort(); // a = [5,6,7,8]</pre><p>
 // this code will sort numbers into odd/even ones and in ascending order
 a.sort_custom( function(a,b){return a-b+(b%2-a%2)*1000; } ); // a = [5,7,6,8]</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.sort_mapped-method'></a><hr><h2>array.sort_mapped [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-sort_mapped-method'></a><hr><h2>array.sort_mapped [method]</h2><p></p><p>
 </p><h3>array.sort_mapped( array map[, bool reverse ] );</h3><p>
 </p><h4>sorts the array by sorting the passed array and applying the index map to the first one, returns the array for chaining</h4><p>
 </p><p>
@@ -1915,7 +2009,7 @@ a.sort_custom( function(a,b){return a-b+(b%2-a%2)*1000; } ); // a = [5,7,6,8]</p
 b = [ 3, 1, 4, 2 ];
 a.sort_mapped( b ); // a = [6,8,5,7]</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.find-method'></a><hr><h2>array.find [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-find-method'></a><hr><h2>array.find [method]</h2><p></p><p>
 </p><h3>array.find( var item[, bool strict[, int from ]] )</h3><p>
 </p><h4>attempts to find <code>item</code> in array, starting from 0 or the index passed with <code>from</code>, if it exists, using basic or strict equality comparisons (depending on `strict`), returning the index or &#39;null&#39; if item was not found</h4><p>
 </p><p>
@@ -1925,7 +2019,7 @@ a.sort_mapped( b ); // a = [6,8,5,7]</pre><p>
 a.find( &quot;7&quot; ); // returns 2
 a.find( &quot;7&quot;, true ); // returns null</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='array.remove-method'></a><hr><h2>array.remove [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='array-remove-method'></a><hr><h2>array.remove [method]</h2><p></p><p>
 </p><h3>array.remove( var item[, bool strict[, bool all[, int from ]]] )</h3><p>
 </p><h4>attepts to find and remove first or all <code>item</code> variables in array (depending on `all`), according to the rules specified in @array.find(), returning the number of removed items</h4><p>
 </p><p>
@@ -1933,6 +2027,27 @@ a.find( &quot;7&quot;, true ); // returns null</pre><p>
 a.remove( &quot;7&quot; ); // returns 1; a = [5,2,6,8,2]
 a.remove( &quot;6&quot;, true ); // returns 0; a remains unchanged
 a.remove( 2, false, true ); // returns 2; a = [5,6,8]</pre><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='array-unique-method'></a><hr><h2>array.unique [method]</h2><p></p><p>
+</p><h3>array.unique( bool strconv = false )</h3><p>
+</p><h4>returns an array without duplicates, where a duplicate is a strictly equal variable or a string conversion match</h4><p>
+</p><p>
+</p><ul><li>if <code>strconv</code> is true, items are converted to strings before comparison</li></ul><p>
+</p><p>
+</p><pre>a = [ 5, 3, 2, 3, 2, &quot;3&quot; ];
+a.unique(); // returns [5,3,2,&quot;3&quot;]
+a.unique( true ); // returns [5,3,2]</pre><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='array-random-method'></a><hr><h2>array.random [method]</h2><p></p><p>
+</p><h3>array.random( int num )</h3><p>
+</p><h4>return <code>num</code> randomly chosen items from the array</h4><p>
+</p><p>
+</p><ul><li>to retrieve a part of the array in random order without duplicates, @array.shuffle can be used
+</li><li>items after RAND_MAX will currently not be returned</li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='array-shuffle-method'></a><hr><h2>array.shuffle [method]</h2><p></p><p>
+</p><h3>array.shuffle()</h3><p>
+</p><h4>change the order of items in the array</h4><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='dict-object'></a><hr><h2>dict [object]</h2><p></p><p>
 </p><ul><li>features:
@@ -1973,8 +2088,12 @@ a.remove( 2, false, true ); // returns 2; a = [5,6,8]</pre><p>
 </li><li>object call to callable, using the attached first argument
 </li><li>GC-safe</li></ul></li></ul><p>
 </p><p>
+</p><p></p></div><div class='item'><a name='Formatting-library-fmt'></a><hr><h2>Formatting library ("fmt")</h2><p></p><p>
+This library includes functions and objects for parsing binary and text buffers.
 </p><p>
-</p><p>
+</p><ul><li>binary format -- fmt_pack, fmt_unpack, fmt_pack_count, fmt_pack_size
+</li><li>base64 format -- fmt_base64_encode, fmt_base64_decode
+</li><li>text format -- fmt_parser, fmt_text, fmt_charcc</li></ul><p>
 </p><p></p></div><div class='item'><a name='fmt_pack-function'></a><hr><h2>fmt_pack [function]</h2><p></p><p>
 </p><h3>fmt_pack( string fmt, ... )</h3><p>
 </p><h4>packs the given arguments using the format <code>fmt</code> and returns the byte buffer or returns null and emits a warning on failure</h4><p>
@@ -2058,7 +2177,8 @@ print fmt_text( &quot;pi: {f10.10r} {g10r} {E10r}&quot;, M_PI, M_PI, M_PI ); // 
 </p><ul><li>the callable is a function that returns at most the number of bytes requested from the stream
 <ul><li>if previous request reached end, subsequent requests must return &#39;null&#39;</li></ul></li></ul><p>
 </p><p>
-</p><pre>f = io_file( &quot;test.txt&quot;, FILE_READ ); // TODO: this is too complex for basic features, add fmt_file_parser
+</p><pre>f = io_file( &quot;test.txt&quot;, FILE_READ );
+// usually it is easier to use @fmt_file_parser instead of the next line of code
 p = fmt_parser( closure( function(file,num){ if( file.eof() ) return null; return file.read( num ); }, f ) );</pre><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='fmt_string_parser-function'></a><hr><h2>fmt_string_parser [function]</h2><p></p><p>
@@ -2067,6 +2187,13 @@ p = fmt_parser( closure( function(file,num){ if( file.eof() ) return null; retur
 </p><p>
 </p><pre>p = fmt_string_parser( &quot;this is a test&quot; );
 p.readcc( &quot;a-z&quot; ); // returns &quot;this&quot;</pre><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='fmt_file_parser-function'></a><hr><h2>fmt_file_parser [function]</h2><p></p><p>
+</p><h3>fmt_file_parser( file[, buffersize ] )</h3><p>
+</p><h4>creates a @fmt_parser object, connected to a file reader object, initialized to the given buffer size</h4><p>
+</p><p>
+</p><pre>p = fmt_file_parser( io_file( &quot;something.txt&quot;, FILE_READ ) );
+p.readcc( &quot;a-z&quot; ); // returns something</pre><p>
 </p><p>
 </p><p></p></div><div class='item'><a name='fmt_charcc-function'></a><hr><h2>fmt_charcc [function]</h2><p></p><p>
 </p><h3>fmt_charcc( string char, string class )</h3><p>
@@ -2085,11 +2212,17 @@ fmt_charcc( &quot;x&quot;, &quot;a-zA-Z0-9&quot; ); // returns true</pre><p>
  - [cfunc] getchar
  - [cfunc] readcc
  - [cfunc] skipcc
+ - [cfunc] read_real
+ - [cfunc] read_int
+ - [cfunc] read_binary_int
+ - [cfunc] read_octal_int
+ - [cfunc] read_decimal_int
+ - [cfunc] read_hex_int
+ - [cfunc] check
 * other features:
  - GC-safe
-(TODO: do we need a more feature-complete object?)
 </p><p>
-</p><p></p></div><div class='item'><a name='fmt_parser.read-method'></a><hr><h2>fmt_parser.read [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='fmt_parser-read-method'></a><hr><h2>fmt_parser.read [method]</h2><p></p><p>
 </p><h3>fmt_parser.read( int num )</h3><p>
 </p><h4>reads at most <code>num</code> bytes from stream and returns them as string</h4><p>
 </p><p>
@@ -2099,7 +2232,7 @@ fmt_charcc( &quot;x&quot;, &quot;a-zA-Z0-9&quot; ); // returns true</pre><p>
 </p><pre>stream = fmt_string_parser( &quot;action&quot; );
 stream.read( 5 ); // returns &quot;actio&quot;</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='fmt_parser.getchar-method'></a><hr><h2>fmt_parser.getchar [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='fmt_parser-getchar-method'></a><hr><h2>fmt_parser.getchar [method]</h2><p></p><p>
 </p><h3>fmt_parser.getchar( bool peek = false, bool as_int = false )</h3><p>
 </p><h4>returns a character from stream</h4><p>
 </p><p>
@@ -2113,7 +2246,7 @@ stream.read( true, true ); // returns 97
 stream.read(); // returns &quot;a&quot;
 stream.read(); // returns &quot;c&quot;</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='fmt_parser.readcc-method'></a><hr><h2>fmt_parser.readcc [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='fmt_parser-readcc-method'></a><hr><h2>fmt_parser.readcc [method]</h2><p></p><p>
 </p><h3>fmt_parser.readcc( string class, int num = 2^31-1 (0x7fffffff) )</h3><p>
 </p><h4>reads and returns at most <code>num</code> bytes that match the character class <code>class</code></h4><p>
 </p><p>
@@ -2124,7 +2257,7 @@ stream.read(); // returns &quot;c&quot;</pre><p>
 stream.readcc( &quot;a-z&quot; ); // returns &quot;what&quot;
 stream.readcc( &quot;^a-z&quot; ); // returns &quot; &quot;</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='fmt_parser.skipcc-method'></a><hr><h2>fmt_parser.skipcc [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='fmt_parser-skipcc-method'></a><hr><h2>fmt_parser.skipcc [method]</h2><p></p><p>
 </p><h3>fmt_parser.skipcc( string class, int num = 2^31-1 (0x7fffffff) )</h3><p>
 </p><h4>skips at most <code>num</code> bytes that match the character class <code>class</code> and returns the number of bytes skipped</h4><p>
 </p><p>
@@ -2135,8 +2268,39 @@ stream.readcc( &quot;^a-z&quot; ); // returns &quot; &quot;</pre><p>
 stream.skipcc( &quot;a-z&quot; ); // returns 4
 stream.skipcc( &quot;^a-z&quot; ); // returns 1</pre><p>
 </p><p>
+</p><p></p></div><div class='item'><a name='fmt_parser-read_real-method'></a><hr><h2>fmt_parser.read_real [method]</h2><p></p><p>
+</p><h3>fmt_parser.read_real( bool as_real = true )</h3><p>
+</p><h4>returns characters read with the character class &quot;-+0-9.eE&quot;, optionally returned as a real value</h4><p>
 </p><p>
+</p><p></p></div><div class='item'><a name='fmt_parser-read_int-method'></a><hr><h2>fmt_parser.read_int [method]</h2><p></p><p>
+</p><h3>fmt_parser.read_int( bool as_int = true )</h3><p>
+</p><h4>returns characters read with the character class &quot;-+0-9A-Fa-fxob&quot;, optionally returned as an int value</h4><p>
 </p><p>
+</p><p></p></div><div class='item'><a name='fmt_parser-read_binary_int-method'></a><hr><h2>fmt_parser.read_binary_int [method]</h2><p></p><p>
+</p><h3>fmt_parser.read_binary_int( bool as_int = true )</h3><p>
+</p><h4>returns characters read with the character class &quot;0-1&quot;, optionally returned as an int value</h4><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='fmt_parser-read_octal_int-method'></a><hr><h2>fmt_parser.read_octal_int [method]</h2><p></p><p>
+</p><h3>fmt_parser.read_octal_int( bool as_int = true )</h3><p>
+</p><h4>returns characters read with the character class &quot;0-7&quot;, optionally returned as an int value</h4><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='fmt_parser-read_decimal_int-method'></a><hr><h2>fmt_parser.read_decimal_int [method]</h2><p></p><p>
+</p><h3>fmt_parser.read_decimal_int( bool as_int = true )</h3><p>
+</p><h4>returns characters read with the character class &quot;-+0-9&quot;, optionally returned as an int value</h4><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='fmt_parser-read_hex_int-method'></a><hr><h2>fmt_parser.read_hex_int [method]</h2><p></p><p>
+</p><h3>fmt_parser.read_hex_int( bool as_int = true )</h3><p>
+</p><h4>returns characters read with the character class &quot;0-9a-fA-F&quot;, optionally returned as an int value</h4><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='fmt_parser-check-method'></a><hr><h2>fmt_parser.check [method]</h2><p></p><p>
+</p><h3>fmt_parser.check( string str, bool ci = false, bool partial = false )</h3><p>
+</p><h4>returns whether the specified string was found at the current position</h4><p>
+</p><p>
+</p><ul><li><code>ci</code> makes matching case-insensitive
+</li><li>if <code>partial</code> is true, function returns the number of characters successfully matched instead of whether everything has been matched</li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='I-O-library-io'></a><hr><h2>I/O library ("io")</h2><p></p><p>
+This library contains the functions necessary to work with the file system (files and directories).
 </p><p></p></div><div class='item'><a name='io_setcwd-function'></a><hr><h2>io_setcwd [function]</h2><p></p><p>
 </p><h3>io_setcwd( string cwd )</h3><p>
 </p><h4>sets the current working directory, returns bool/sets errno</h4><p>
@@ -2226,7 +2390,7 @@ stream.skipcc( &quot;^a-z&quot; ); // returns 1</pre><p>
 </li><li>GC-safe
 </li><li>type identification (returns the string &quot;file&quot;)</li></ul></li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='io_file.open-method'></a><hr><h2>io_file.open [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='io_file-open-method'></a><hr><h2>io_file.open [method]</h2><p></p><p>
 </p><h3>io_file.open( string name, int mode )</h3><p>
 </p><h4>closes the previously open file if any, opens the file <code>name</code> for operation mode <code>mode</code>, returns bool/sets errno</h4><p>
 </p><p>
@@ -2236,7 +2400,7 @@ stream.skipcc( &quot;^a-z&quot; ); // returns 1</pre><p>
 </p><pre>f = io_file();
 f.open( &quot;file&quot; ); // returns true or false, sets errno accordingly</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='io_file.close-method'></a><hr><h2>io_file.close [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='io_file-close-method'></a><hr><h2>io_file.close [method]</h2><p></p><p>
 </p><h3>io_file.close()</h3><p>
 </p><h4>closes the previously open file, if any, returns whether the file was open or not</h4><p>
 </p><p>
@@ -2244,25 +2408,25 @@ f.open( &quot;file&quot; ); // returns true or false, sets errno accordingly</pr
 f.close(); // returns true if the file existed
 f.close(); // returns false</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='io_file.read-method'></a><hr><h2>io_file.read [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='io_file-read-method'></a><hr><h2>io_file.read [method]</h2><p></p><p>
 </p><h3>io_file.read( int num )</h3><p>
 </p><h4>reads and returns at most <code>num</code> bytes from file, sets errno</h4><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='io_file.write-method'></a><hr><h2>io_file.write [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='io_file-write-method'></a><hr><h2>io_file.write [method]</h2><p></p><p>
 </p><h3>io_file.write( string data )</h3><p>
 </p><h4>writes the byte buffer <code>data</code> to the file, sets errno</h4><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='io_file.seek-method'></a><hr><h2>io_file.seek [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='io_file-seek-method'></a><hr><h2>io_file.seek [method]</h2><p></p><p>
 </p><h3>io_file.seek( int off, int mode )</h3><p>
 </p><h4>sets the offset in file, returns bool/sets errno</h4><p>
 </p><p>
 </p><ul><li><code>mode</code> must be one of SEEK_SET (sets as-is), SEEK_CUR (sets relative to current), SEEK_END (sets relative to end)</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='io_file.flush-method'></a><hr><h2>io_file.flush [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='io_file-flush-method'></a><hr><h2>io_file.flush [method]</h2><p></p><p>
 </p><h3>io_file.flush()</h3><p>
 </p><h4>flushes a buffered file, returns bool</h4><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='io_file.setbuf-method'></a><hr><h2>io_file.setbuf [method]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='io_file-setbuf-method'></a><hr><h2>io_file.setbuf [method]</h2><p></p><p>
 </p><h3>io_file.setbuf( int size )</h3><p>
 </p><h4>sets the size of file buffer (0 to disable buffering), returns bool</h4><p>
 </p><p>
@@ -2274,7 +2438,7 @@ f.close(); // returns false</pre><p>
 </p><p>
 </p><ul><li>see @io_file.open() for more info on opening the file</li></ul><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='io_dir-(directory_iterator)-object'></a><hr><h2>io_dir (directory_iterator) [object]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='io_dir-directory_iterator-object'></a><hr><h2>io_dir (directory_iterator) [object]</h2><p></p><p>
 </p><ul><li>features:
 <ul><li>tostring = &quot;directory_iterator&quot;
 </li><li>iterator interface (key = whether real item, value = item name)
@@ -2287,17 +2451,17 @@ f.close(); // returns false</pre><p>
 </p><h3>io_dir( string dir )</h3><p>
 </p><h4>creates a directory iterator for the directory <code>dir</code>, sets errno, returns null and emits a warning on failure</h4><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='FILE_[READ|WRITE]-constants'></a><hr><h2>FILE_[READ|WRITE] [constants]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='FILE_-READ-WRITE-constants'></a><hr><h2>FILE_[READ|WRITE] [constants]</h2><p></p><p>
 </p><h3>mode constants for @io_file.open() / @io_file()</h3><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='SEEK_[SET|CUR|END]-constants'></a><hr><h2>SEEK_[SET|CUR|END] [constants]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='SEEK_-SET-CUR-END-constants'></a><hr><h2>SEEK_[SET|CUR|END] [constants]</h2><p></p><p>
 </p><h3>mode constants for @io_file.seek()</h3><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='FST_[UNKNOWN|FILE|DIR]-constants'></a><hr><h2>FST_[UNKNOWN|FILE|DIR] [constants]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='FST_-UNKNOWN-FILE-DIR-constants'></a><hr><h2>FST_[UNKNOWN|FILE|DIR] [constants]</h2><p></p><p>
 </p><h3>file system item type constants for @io_stat()</h3><p>
 </p><p>
-</p><p>
-</p><p>
+</p><p></p></div><div class='item'><a name='Math-library-math'></a><hr><h2>Math library ("math")</h2><p></p><p>
+This library contains the basic math functions for processing real values.
 </p><p></p></div><div class='item'><a name='abs-function'></a><hr><h2>abs [function]</h2><p></p><p>
 </p><h3>abs( x )</h3><p>
 </p><h4>returns the absolute value of <code>x</code>, as <code>real</code></h4><p>
@@ -2443,7 +2607,7 @@ deg2rad( -90 ); // real (-1.5708)</pre><p>
 rad2deg( M_PI ); // real (180)
 rad2deg( -M_PI / 2 ); // real (-90)</pre><p>
 </p><p>
-</p><p></p></div><div class='item'><a name='M_[PI|E]-constants'></a><hr><h2>M_[PI|E] [constants]</h2><p></p><p>
+</p><p></p></div><div class='item'><a name='M_-PI-E-constants'></a><hr><h2>M_[PI|E] [constants]</h2><p></p><p>
 </p><h3>M_PI</h3><p>
 </p><h4>the ratio of circumference of a circle to its diameter (pi)</h4><p>
 </p><ul><li>the value of this constant is <code>3.14159265358979323846</code></li></ul><p>
@@ -2452,8 +2616,11 @@ rad2deg( -M_PI / 2 ); // real (-90)</pre><p>
 </p><h4>the natural logarithmic base (e)</h4><p>
 </p><ul><li>the value of this constant is <code>2.7182818284590452354</code></li></ul><p>
 </p><p>
+</p><p></p></div><div class='item'><a name='OS-library-os'></a><hr><h2>OS library ("os")</h2><p></p><p>
 </p><p>
-</p><p>
+</p><ul><li>environment variables
+</li><li>time and date
+</li><li>locale / regional settings</li></ul><p>
 </p><p></p></div><div class='item'><a name='os_gettype-function'></a><hr><h2>os_gettype [function]</h2><p></p><p>
 </p><h3>os_gettype()</h3><p>
 </p><h4>returns the name of the closest known match for the operating system type, defined at library compile time</h4><p>
@@ -2495,7 +2662,7 @@ rad2deg( -M_PI / 2 ); // real (-90)</pre><p>
 </p><h3>os_date_string( string fmt, int time = os_time() )</h3><p>
 </p><h4>returns the date/time string in the format <code>fmt</code>, optionally for a different time <code>time</code></h4><p>
 </p><p>
-</p><ul><li>the following item specifiers are supported (*-local-specific): (TODO: what about setting the locale?)
+</p><ul><li>the following item specifiers are supported (*-local-specific):
 <ul><li>%a: abbreviated weekday name *
 </li><li>%A: full weekday name *
 </li><li>%b: abbreviated month name *
@@ -2546,8 +2713,76 @@ rad2deg( -M_PI / 2 ); // real (-90)</pre><p>
 </p><h3>os_make_time( int sec, int min = 0, int hour = 0, int mday = 0, int mon = 0, int year = 0 )</h3><p>
 </p><h4>returns time as UNIX timestamp, generated from the arguments, using them as hints (under-/overflows may have some unexpected behavior)</h4><p>
 </p><p>
+</p><p></p></div><div class='item'><a name='os_get_locale-function'></a><hr><h2>os_get_locale [function]</h2><p></p><p>
+</p><h3>os_get_locale( int which )</h3><p>
+</p><h4>returns the currently set locale for the specified category</h4><p>
 </p><p>
+</p><ul><li><code>which</code> must be one of the LC_ constants
+</li><li>the returned string is platform-specific
+</li><li>wraps the C library function setlocale</li></ul><p>
 </p><p>
+</p><p></p></div><div class='item'><a name='os_set_locale-function'></a><hr><h2>os_set_locale [function]</h2><p></p><p>
+</p><h3>os_set_locale( int which, string locale )</h3><p>
+</p><h4>sets the locale for the specified category, returning whether the call was successful</h4><p>
+</p><p>
+</p><ul><li><code>which</code> must be one of the LC_ constants
+</li><li>the available locale strings are platform-specific
+</li><li>wraps the C library function setlocale</li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='os_get_locale_format-function'></a><hr><h2>os_get_locale_format [function]</h2><p></p><p>
+</p><h3>os_get_locale_format()</h3><p>
+</p><h4>retrieve the formatting info of the currently set locale as a dict</h4><p>
+</p><p>
+</p><ul><li>wraps the C library function localeconv
+</li><li>the returned data is identical to pre-C99 format of struct lconv</li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='os_locale_strcmp-function'></a><hr><h2>os_locale_strcmp [function]</h2><p></p><p>
+</p><h3>os_locale_strcmp( string a, string b )</h3><p>
+</p><h4>compare two strings using locale to return correct sign for inequalities (good for language-correct sorting)</h4><p>
+</p><p>
+</p><ul><li>expected encoding depends on the platform and the locale that is currently set
+</li><li>wraps the C library function strcoll</li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='LC_-ALL-COLLATE-MONETARY-NUMERIC-TIME-constants'></a><hr><h2>LC_[ALL|COLLATE|MONETARY|NUMERIC|TIME] [constants]</h2><p></p><p>
+These constants specify the categories for which locale can be changed.
+</p><p>
+</p><ul><li>LC_ALL affects every locale-related function
+</li><li>LC_COLLATE: os_locale_strcmp
+</li><li>LC_MONETARY: os_get_locale_format
+</li><li>LC_NUMERIC: os_get_locale_format
+</li><li>LC_TIME: os_date_string</li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='Regular-expression-library-re'></a><hr><h2>Regular expression library ("re")</h2><p></p><p>
+This library includes regular expression match &amp; replace functions.
+</p><p></p></div><div class='item'><a name='re_match-function'></a><hr><h2>re_match [function]</h2><p></p><p>
+</p><h3>re_match( string str, string pattern, int flags = 0, int offset = 0 )</h3><p>
+</p><h4>check for matches in string <code>str</code> for <code>pattern</code>, returning whether a match was found or details of the first match, as specified in <code>flags</code></h4><p>
+</p><p>
+</p><ul><li><code>offset</code> specifies the character to start matching from, negative offset is subtracted from the end
+</li><li><code>flags</code> expect RE_RETURN_CAPTURED, RE_RETURN_OFFSETS or RE_RETURN_BOTH, which is a combination of the previous two
+<ul><li>if <code>flags</code> is one of the special values, function returns an array of captured ranges
+<ul><li>each entry is either a string (on RE_RETURN_CAPTURED) or an array of beginning and end offsets (at positions 0 and 1, respectively, on RE_RETURN_OFFSETS) or an array of a string and the beginning and end offsets (on RE_RETURN_BOTH)
+</li></ul></li></ul><li>the first character in the pattern specifies a delimiter that separates the pattern from modifiers
+<ul><li>example pattern strings: &quot;/^[a-z]+/mi&quot;, &quot;#[a-z0-9_]+.*?#s&quot;
+</li></ul><li>more info about the supported features and modifiers at https://github.com/snake5/sgregex</li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='re_match_all-function'></a><hr><h2>re_match_all [function]</h2><p></p><p>
+</p><h3>re_match_all( string str, string pattern, int flags = 0, int offset = 0 )</h3><p>
+</p><h4>check for matches in string <code>str</code> for <code>pattern</code>, returning the number of matches or details of all matches, as specified in <code>flags</code></h4><p>
+</p><p>
+</p><ul><li>similar to @re_match, only difference is in the return value:
+<ul><li>if <code>flags</code> is one of the special values, function returns an array of matches where each match is an array of captured ranges
+<ul><li>each entry is same as in @re_match</li></ul></li></ul></li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='re_replace-function'></a><hr><h2>re_replace [function]</h2><p></p><p>
+</p><h3>re_replace( string str, string pattern, string replacement )</h3><p>
+</p><h4>find and replace all occurrences of <code>pattern</code> in string <code>str</code> with the <code>replacement</code> string</h4><p>
+</p><p>
+</p><ul><li>replacement string can contain backreferences in the forms &quot;$[0-9]&quot; or &quot;\[0-9]&quot; (in a string constant, a double backslash is required due to rules in SGScript)
+<ul><li>there can be up to 10 backreferences, 0-9, 0 being the whole match</li></ul></li></ul><p>
+</p><p>
+</p><p></p></div><div class='item'><a name='String-library-string'></a><hr><h2>String library ("string")</h2><p></p><p>
+This library contains the string handling functions. In all functions, except the utf-8 ones, it is assumed that strings are byte buffers where each byte is one character. If correct indices are applied, many of them will work with multibyte strings.
 </p><p></p></div><div class='item'><a name='string_cut-function'></a><hr><h2>string_cut [function]</h2><p></p><p>
 </p><h3>string_cut( string str, int from[, int to[, int flags]] )</h3><p>
 </p><h4>returns a part of string <code>str</code>, <code>from</code> and <code>to</code> being positions of the first and last character returned, respectively</h4><p>
@@ -2743,7 +2978,6 @@ string_utf8_decode( [27161,28310] ); // string [6] &quot;標準&quot;</pre><p>
 </li><li>argument indices to be used in specifiers start from 1</li></ul><p>
 </p><p>
 </p><pre>print string_format( &quot;{1:d} -&gt; {1:x}&quot;, 1337 ); // prints &quot;1337 -&gt; 539&quot;</pre><p>
-</p><p>
 </p><p>
 </p><p></p></div></div>
 	</body></html>

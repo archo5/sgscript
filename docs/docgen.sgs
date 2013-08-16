@@ -1,7 +1,7 @@
 
 println( "--- SGScript documentation generator ---" );
 
-include "string", "fmt", "io", "../bin/sgsjson";
+include "string", "fmt", "io", "re", "../bin/sgsjson";
 include "markdown.sgs";
 
 
@@ -10,7 +10,7 @@ io_dir_create( "out" );
 
 function generate_alias( name )
 {
-	name = string_replace( name, [" "], "-" );
+	name = re_replace( name, "#[^a-zA-Z0-9_]+#", "-" );
 	name = string_trim( name, "-" );
 //	name = string_tolower( name );
 	return name;
@@ -18,7 +18,9 @@ function generate_alias( name )
 
 function full_alias( name, type )
 {
-	return generate_alias( name $ " " $ type );
+	if( type != "info" )
+		name $= " " $ type;
+	return generate_alias( name );
 }
 
 function generate_docdata( name )
@@ -72,17 +74,31 @@ function generate_docdata( name )
 		GENERATE PAGES
 	*/
 
+	pgstack = [];
+	lastpage = null;
 	parts = [];
+	toclist = [];
 	foreach( tag : tags )
 	{
 		if( tag.type == "+" )
 		{
 			alias = full_alias( tag.pagename, tag.pagetype );
-			path = [ alias ];
-			path_str = string_implode( path, '/' );
-			title = tag.pagename $ " [" $ tag.pagetype $ "]";
+			path = clone( pgstack ).push( alias );
+			path_str = alias; // string_implode( path, '/' );
+			title = tag.pagename;
+			if( tag.pagetype != "info" )
+				title $= " [" $ tag.pagetype $ "]";
+			lastpage = alias;
 			body = string_implode( tag.lines, "\n" );
 			parts.push({ path = path, path_str = path_str, title = title, body = body });
+		}
+		else if( tag.type == ">" )
+		{
+			pgstack.push( lastpage );
+		}
+		else if( tag.type == "<" )
+		{
+			pgstack.pop();
 		}
 	}
 	parts.unshift({ path = [], path_str = "", title = "SGScript documentation", body = "" });
@@ -125,12 +141,18 @@ function generate_docdata( name )
 	//	if( P.path_str )
 	//		data $= " <small>(" $ P.path_str $ ")</small>";
 		data $= "</h2>";
+		
+		tocitem_from = data.length;
 		data $= content;
+		tocitem_to = data.length;
+		
 		data $= "</div>";
+		
+		toclist.push([ tocitem_from, tocitem_to, string_implode( P.path, "/" ), P.title ]);
 	}
 	data $= "</div>";
 
-	data = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" '$
+	fullfile = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" '$
 		'"http://www.w3.org/TR/html4/loose.dtd">
 	<html><head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
@@ -138,12 +160,25 @@ function generate_docdata( name )
 		<link rel='stylesheet' type='text/css' href='docs.css'>
 		<script type='text/javascript' src='docs.js'></script>
 	</head><body>
-	"$data$"
+	";
+	
+	foreach( tocitem : toclist )
+	{
+		tocitem[ 0 ] += fullfile.length;
+		tocitem[ 1 ] += fullfile.length;
+	}
+	
+	fullfile $= data $ "
 	</body></html>
 	";
-
-
-	io_file_write( name $ ".htm", data );
+	
+	io_file_write( name $ ".htm", fullfile );
+	
+	io_file_write( name $ ".toc", json_encode( toclist ) );
+	/*
+	array_process( toclist, function(x){ return string_implode( x, " " ); } );
+	io_file_write( name $ ".toc", string_implode( toclist, "\n" ) );
+	*/
 }
 
 
