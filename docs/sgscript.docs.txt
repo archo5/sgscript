@@ -260,6 +260,160 @@ These are the default meanings for error codes that are honored throughout the A
 # <<<
 
 
+# Language reference [info]
+# >>>
+
+
+# Variable types [info]
+
+SGScript has 8 primary variable types:
+
+- `null`: the 'lack of a better value' type
+- `bool`: boolean, true/false
+- `int`: signed integer
+- `real`: floating point number
+- `string`: byte buffer
+- `(SGS) function`: function that was defined in and compiled from SGScript code
+- `C function`: function defined in C code
+- `object`: the extension type and container for complex built-in types
+
+Extended variable types (built on `object`):
+
+- `array`: a dynamically allocated variable array
+- `dict`: a map/table structure where variables are mapped to string keys
+- `class`: object that uses two other objects to build its interface
+- `closure`: a callable object consisting of another callable and one variable
+
+
+# Code structure [info]
+
+
+Code can contain constants, expressions and statements. Statements can include expressions, expressions can include constants.
+
+
+# >>>
+
+
+# Constants [info]
+
+
+# Expressions [info]
+
+Expressions can be categorized in many different ways: type of action, appearance, whether it also assigns the value somewhere or if its purpose has a special meaning.
+
+There are 5 types of action for expressions in SGScript: arithmetic, binary, boolean, comparison, declarative and special.
+
+--------------------------------------------------------------------------------------
+!    expression       !   appearance   ! type of action ! assign ! # ops !
+|  add                | `  A  +  B    `|   arithmetic   |  no    |   2   |
+|  subtract           | `  A  -  B    `|   arithmetic   |  no    |   2   |
+|  multiply           | `  A  *  B    `|   arithmetic   |  no    |   2   |
+|  divide             | `  A  /  B    `|   arithmetic   |  no    |   2   |
+|  modulo             | `  A  %  B    `|   arithmetic   |  no    |   2   |
+|  increment          | `    A++      `|   arithmetic   |  yes   |   1   |
+|  decrement          | `    A--      `|   arithmetic   |  yes   |   1   |
+|  add-assign         | `  A  +  B    `|   arithmetic   |  yes   |   2   |
+|  subtract-assign    | `  A  -  B    `|   arithmetic   |  yes   |   2   |
+|  multiply-assign    | `  A  *  B    `|   arithmetic   |  yes   |   2   |
+|  divide-assign      | `  A  /  B    `|   arithmetic   |  yes   |   2   |
+|  modulo-assign      | `  A  %  B    `|   arithmetic   |  yes   |   2   |
+|  binary-AND         | `  A  &  B    `|     binary     |  no    |   2   |
+|  binary-OR          | `  A  |  B    `|     binary     |  no    |   2   |
+|  binary-XOR         | `  A  ^  B    `|     binary     |  no    |   2   |
+|  left shift         | `  A  <<  B   `|     binary     |  no    |   2   |
+|  right shift        | `  A  >>  B   `|     binary     |  no    |   2   |
+|  binary-AND-assign  | `  A  &=  B   `|     binary     |  yes   |   2   |
+|  binary-OR-assign   | `  A  |=  B   `|     binary     |  yes   |   2   |
+|  binary-XOR-assign  | `  A  ^=  B   `|     binary     |  yes   |   2   |
+|  left shift-assign  | `  A  <<=  B  `|     binary     |  yes   |   2   |
+|  right shift-assign | `  A  >>=  B  `|     binary     |  yes   |   2   |
+|  binary-invert      | `    ~A       `|     binary     |  no    |   1   |
+|  boolean-AND        | `  A  &&  B   `|     boolean    |  no    |   2   |
+|  boolean-OR         | `  A  ||  B   `|     boolean    |  no    |   2   |
+|  boolean-AND-assign | `  A  &&=  B  `|     boolean    |  yes   |   2   |
+|  boolean-OR-assign  | `  A  ||=  B  `|     boolean    |  yes   |   2   |
+|  boolean-invert     | `    !A       `|     boolean    |  no    |   1   |
+--------------------------------------------------------------------------------------
+
+
+# Statements [info]
+
+There are X statement types in SGScript:
+
+=== Container statements
+
+There are two types of container statements: expression statements and block statements.
+
+- Expression statements contain zero or more expressions, separated by commas (",") and ending with semicolons (";").
+- Block statements contain zero or more statements.
+
+Format:
+
+- expression statement: `<expression>[, <expression>[, <expression> ...]] ;`
+- block statement: `{ [<statement>[, <statement>...]] }`
+
+Examples:
+
+    a = 5;
+    a = 1, b = 2;
+
+=== Flow control statements
+
+These statements decide which code gets executed when. They include loops (while, for, foreach, do/while), the if/else construct, break/continue/return.
+
+Formats:
+
+- if/else: `if( <expression> ) <statement> [ else <statement> ]`
+- while: `while( <expression> ) <statement>`
+- for: `for( <expression-list>; <expression-list>; <expression-list> ) <statement>`
+- foreach: `foreach( [<identifier>,][<identifier>] : <expression> ) <statement>`
+- do/while: `do <statement> while( <expression> )`
+- break: `break <N>;`
+- continue: `continue <N>;`
+- return: `return <expression-list>;`
+
+Examples:
+
+    if( a )
+    {
+        print( "a is true" );
+    }
+    else
+        print( "a is not true" );
+    
+    while( b > 0 ) b--;
+
+=== Declaration statements
+
+Statements that begin with "var", "global" or "function" declare and set variables.
+
+Examples:
+
+    var x = 5, y = 6, z;
+    global World = null;
+    function fn(){ INFO( "'fn' was called" ); }
+
+=== Function statements
+
+These statements are converted directly to function calls. Currently, 'include' and 'print' functions are available as statements.
+
+Formats:
+
+- include: `include [<file1>[, <file2>...]];` - for each entry, a function call is generated
+- print: `print [<string>[, <string>...]];` - one function call is generated for all items
+
+Examples:
+
+    include "io", "string";
+    print "Count: ", count;
+
+
+# <<<
+
+
+# <<<
+
+
 # C API reference [info]
 # >>>
 
