@@ -145,9 +145,6 @@ static void stringfreefunc( HTPair* p, void* userdata )
 void sgs_DestroyEngine( SGS_CTX )
 {
 	sgs_StackFrame* sf = C->sf_cached, *sfn;
-	
-	C->print_fn = NULL;
-	C->print_ctx = NULL;
 
 	/* clear the stack */
 	while( C->stack_base != C->stack_top )
@@ -184,6 +181,9 @@ void sgs_DestroyEngine( SGS_CTX )
 #endif
 
 	C->memfunc( C->mfuserdata, C, 0 );
+	
+	C->print_fn = NULL;
+	C->print_ctx = NULL;
 }
 
 

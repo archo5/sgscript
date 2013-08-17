@@ -1301,9 +1301,37 @@ sgsstd_class_header_t;
 
 #define SGSCLASS_HDR sgsstd_class_header_t* hdr = (sgsstd_class_header_t*) data->data;
 
+static int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
+{
+	int ret;
+	sgs_Variable idx;
+	SGSCLASS_HDR;
+
+	sgs_PushString( C, method );
+	sgs_GetStackItem( C, -1, &idx );
+	
+	ret = sgs_PushIndexP( C, &hdr->inh, &idx );
+	sgs_PopSkip( C, 1, ret == SGS_SUCCESS ? 1 : 0 );
+	return ret == SGS_SUCCESS;
+}
+
 static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
 	SGSCLASS_HDR;
+	if( sgsstd_class_getmethod( C, data, "__destruct" ) )
+	{
+		sgs_Variable tmp;
+		tmp.type = VTC_OBJECT;
+		tmp.data.O = data;
+		data->refcount++;
+		sgs_PushVariable( C, &tmp );
+		sgs_PushItem( C, -2 );
+		if( sgs_ThisCall( C, 0, 0 ) )
+			sgs_Pop( C, 3 );
+		else
+			sgs_Pop( C, 1 );
+		data->refcount--;
+	}
 	sgs_ReleaseOwned( C, &hdr->data, dch );
 	sgs_ReleaseOwned( C, &hdr->inh, dch );
 	return SGS_SUCCESS;
@@ -1347,20 +1375,6 @@ static int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 	}
 	sgs_GetStackItem( C, -2, &k );
 	return sgs_StoreIndexP( C, &hdr->data, &k );
-}
-
-static int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
-{
-	int ret;
-	sgs_Variable idx;
-	SGSCLASS_HDR;
-
-	sgs_PushString( C, method );
-	sgs_GetStackItem( C, -1, &idx );
-	
-	ret = sgs_PushIndexP( C, &hdr->inh, &idx );
-	sgs_PopSkip( C, 1, ret == SGS_SUCCESS ? 1 : 0 );
-	return ret == SGS_SUCCESS;
 }
 
 static int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data, int depth )

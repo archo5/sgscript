@@ -82,13 +82,8 @@ static void var_free_object( SGS_CTX, object_t* O )
 
 void sgsVM_VarDestroyObject( SGS_CTX, object_t* O )
 {
-	if( O->prev ) O->prev->next = O->next;
-	if( O->next ) O->next->prev = O->prev;
-	if( C->objs == O )
-		C->objs = O->next;
 	obj_exec( C, SOP_DESTRUCT, O, TRUE, 0 );
-	sgs_Dealloc( O );
-	C->objcount--;
+	var_free_object( C, O );
 }
 
 static void var_destroy_string( SGS_CTX, string_t* S )

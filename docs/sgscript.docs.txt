@@ -485,6 +485,132 @@ Examples:
 # <<<
 
 
+# Common constructs in SGScript [info]
+
+This section shows some ways of implementing various often-used constructs in SGScript. Some of them (specifically the constructs coming from compiled languages) do not map directly to any set of native features and are considered solutions of lower quality.
+
+# >>>
+
+
+# Basic classes [info]
+
+    global SampleClass = {}; // create a placeholder type dictionary
+    
+    function SampleClass.SampleMethod( a, b ) // this is the name that will show up in debug output
+    {
+        return a + b + this.c; // usage of "this" turns the function into a method
+    }
+    
+    function SampleClass.SampleFunction( a, b )
+    {
+        return a + b;
+    }
+    
+    // Function will show up as "<anonymous>" in debug output, so avoid this kind of function declaration if possible
+    SampleClass.SampleAnonymous = function( a, b )
+    {
+        return a + b + this.c;
+    }; // <-- the semicolon is required for this notation
+    
+    // Giving functions a specific name:
+    function MyCustomFunction( a, b )
+    {
+        return a + b + this.c; // note that it is still possible to use "this"
+    }
+    SampleClass.Sample = MyCustomFunction;
+    
+    SampleClass.StaticVariable = 5;
+    
+    // class instantiation without custom data
+    myclass = class( {}, SampleClass );
+    
+    // class instantiation with custom data
+    CustomData = { c = 5, d = 6 };
+    mydataclass = class( CustomData, SampleClass );
+    
+    // static construction function
+    function SampleClass.Create( x )
+    {
+        data = { c = x };
+        return class( data, SampleClass );
+    }
+    
+    // make class interface into a construction function
+    function SampleClass.__call( x )
+    {
+        return SampleClass.Create( x );
+    }
+    SampleClass = class( null, SampleClass );
+    // Be aware that this method involves some runtime overhead.
+    // Prefer simply giving the construction function (or the interface variable) a different name:
+    function createSampleClass( x )
+    {
+        data = { c = x };
+        return class( data, SampleClass );
+    }
+    
+    // destructor
+    function SampleClass.__destruct()
+    {
+        this.c = null;
+    }
+    
+    // many more special methods are available for 'class' objects
+
+
+# Inheritance [info]
+
+    // class A - base class
+    global A = {};
+    function A.func()
+    {
+        println( "base" );
+    }
+    function A.create()
+    {
+        return class( {}, A );
+    }
+    
+    // class B - inherits from A
+    global B = {};
+    function B.func()
+    {
+        // needless to say, this is not the preferred way to do software design in SGScript
+    	this._super._super.func.thiscall( this );
+        println( "override" );
+    }
+    A.func_A = A.func; // make a duplicate entry that will not be overridden
+    // it is usually preferred to make the duplicates near the original entries where they're expected to be overridden
+    function B.func()
+    {
+        B.func_A(); // call that entry instead of the original, obstructed entry 
+        println( "override" );
+    }
+    function B.create()
+    {
+        return class( {}, class( B, A ) );
+    }
+
+
+# Game entities [info]
+
+With game entities and objects of similar structure (just about any object) it is easier to simply define it as a key-value data map, without any classes, inheritance or anything of that kind. The nature of a dynamically typed scripting engine implies that almost everything is checked at runtime, making emulation of compiled language constructs pointless.
+
+    entity =
+    {
+        x = 10,
+        y = 20,
+    };
+    
+    function entity.tick( dt )
+    {
+        this.x += dt;
+    }
+
+
+# <<<
+
+
 # <<<
 
 
