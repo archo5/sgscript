@@ -287,8 +287,7 @@ Extended variable types (built on `object`):
 
 # Code structure [info]
 
-
-Code can contain constants, expressions and statements. Statements can include expressions, expressions can include constants.
+Code can contain constants, identifiers, expressions and statements. Statements usually include expressions but expressions can also include statements, specifically - function expressions.
 
 
 # >>>
@@ -296,49 +295,124 @@ Code can contain constants, expressions and statements. Statements can include e
 
 # Constants [info]
 
+Available constant formats:
+
+--------------------------------------------------
+!     type     !   subtype    !     examples     !
+|  null        |      -       |      null        |
+|  bool        |      -       |    true, false   |
+|  int         |   decimal    |  1413, -583, 0   |
+|  int         |    binary    |   0b0101, 0b11   |
+|  int         |    octal     | 0o644, 0o1, 0o77 |
+|  int         |  hexadecimal |   0x1f, 0xCA5    |
+|  real        |    basic     |   0.14, -25.48   |
+|  real        |  scientific  |  1.5e-5, 1e+10   |
+|  string      |      -       |  "text", '1\n2'  |
+--------------------------------------------------
+
+
+# Identifiers [info]
+
+Identifiers can contain letters (a-z, A-Z), numbers (0-9) or underscores ("_") but they cannot begin with a number.
+
+Special keywords and hardcoded constants:
+
+------------------------------------------------------------------------------------
+!    name    !              type                !              usage               !
+|  this      |  special identifier, read-only   |  method context retrieval        |
+|  _G        |  special identifier, read/write  |  global environment access       |
+|  null      |             constant             |  constant                        |
+|  true      |             constant             |  constant                        |
+|  false     |             constant             |  constant                        |
+|  var       |       restricted keyword         |  variable declaration            |
+|  global    |       restricted keyword         |  variable declaration            |
+|  if        |       restricted keyword         |  "if" statement                  |
+|  else      |       restricted keyword         |  "if/else" statement             |
+|  do        |       restricted keyword         |  "do/while" statement            |
+|  while     |       restricted keyword         |  "while", "do/while" statements  |
+|  for       |       restricted keyword         |  "for" statement                 |
+|  foreach   |       restricted keyword         |  "foreach" statement             |
+|  break     |       restricted keyword         |  "break" statement               |
+|  continue  |       restricted keyword         |  "continue" statement            |
+|  function  |       restricted keyword         |  function definition             |
+|  return    |       restricted keyword         |  "return" statement              |
+------------------------------------------------------------------------------------
+
 
 # Expressions [info]
 
 Expressions can be categorized in many different ways: type of action, appearance, whether it also assigns the value somewhere or if its purpose has a special meaning.
 
-There are 5 types of action for expressions in SGScript: arithmetic, binary, boolean, comparison, declarative and special.
+There are 5 types of action for expressions in SGScript: arithmetic, binary, boolean, comparison and special.
 
---------------------------------------------------------------------------------------
-!    expression       !   appearance   ! type of action ! assign ! # ops !
-|  add                | `  A  +  B    `|   arithmetic   |  no    |   2   |
-|  subtract           | `  A  -  B    `|   arithmetic   |  no    |   2   |
-|  multiply           | `  A  *  B    `|   arithmetic   |  no    |   2   |
-|  divide             | `  A  /  B    `|   arithmetic   |  no    |   2   |
-|  modulo             | `  A  %  B    `|   arithmetic   |  no    |   2   |
-|  increment          | `    A++      `|   arithmetic   |  yes   |   1   |
-|  decrement          | `    A--      `|   arithmetic   |  yes   |   1   |
-|  add-assign         | `  A  +  B    `|   arithmetic   |  yes   |   2   |
-|  subtract-assign    | `  A  -  B    `|   arithmetic   |  yes   |   2   |
-|  multiply-assign    | `  A  *  B    `|   arithmetic   |  yes   |   2   |
-|  divide-assign      | `  A  /  B    `|   arithmetic   |  yes   |   2   |
-|  modulo-assign      | `  A  %  B    `|   arithmetic   |  yes   |   2   |
-|  binary-AND         | `  A  &  B    `|     binary     |  no    |   2   |
-|  binary-OR          | `  A  |  B    `|     binary     |  no    |   2   |
-|  binary-XOR         | `  A  ^  B    `|     binary     |  no    |   2   |
-|  left shift         | `  A  <<  B   `|     binary     |  no    |   2   |
-|  right shift        | `  A  >>  B   `|     binary     |  no    |   2   |
-|  binary-AND-assign  | `  A  &=  B   `|     binary     |  yes   |   2   |
-|  binary-OR-assign   | `  A  |=  B   `|     binary     |  yes   |   2   |
-|  binary-XOR-assign  | `  A  ^=  B   `|     binary     |  yes   |   2   |
-|  left shift-assign  | `  A  <<=  B  `|     binary     |  yes   |   2   |
-|  right shift-assign | `  A  >>=  B  `|     binary     |  yes   |   2   |
-|  binary-invert      | `    ~A       `|     binary     |  no    |   1   |
-|  boolean-AND        | `  A  &&  B   `|     boolean    |  no    |   2   |
-|  boolean-OR         | `  A  ||  B   `|     boolean    |  no    |   2   |
-|  boolean-AND-assign | `  A  &&=  B  `|     boolean    |  yes   |   2   |
-|  boolean-OR-assign  | `  A  ||=  B  `|     boolean    |  yes   |   2   |
-|  boolean-invert     | `    !A       `|     boolean    |  no    |   1   |
---------------------------------------------------------------------------------------
+------------------------------------------------------------------------------
+!     expression          !   appearance   ! type of action ! assign ! # in. !
+|  add                    |`   A  +  B    `|   arithmetic   |  no    |   2   |
+|  subtract               |`   A  -  B    `|   arithmetic   |  no    |   2   |
+|  multiply               |`   A  *  B    `|   arithmetic   |  no    |   2   |
+|  divide                 |`   A  /  B    `|   arithmetic   |  no    |   2   |
+|  modulo                 |`   A  %  B    `|   arithmetic   |  no    |   2   |
+|  pre-increment          |`     ++ A     `|   arithmetic   |  self  |   1   |
+|  pre-decrement          |`     -- A     `|   arithmetic   |  self  |   1   |
+|  post-increment         |`     A ++     `|   arithmetic   |  self  |   1   |
+|  post-decrement         |`     A --     `|   arithmetic   |  self  |   1   |
+|  add-assign             |`   A  +=  B   `|   arithmetic   |  yes   |   2   |
+|  subtract-assign        |`   A  -=  B   `|   arithmetic   |  yes   |   2   |
+|  multiply-assign        |`   A  *=  B   `|   arithmetic   |  yes   |   2   |
+|  divide-assign          |`   A  /=  B   `|   arithmetic   |  yes   |   2   |
+|  modulo-assign          |`   A  %=  B   `|   arithmetic   |  yes   |   2   |
+|  binary AND             |`   A  &  B    `|     binary     |  no    |   2   |
+|  binary OR              |`   A  |  B    `|     binary     |  no    |   2   |
+|  binary XOR             |`   A  ^  B    `|     binary     |  no    |   2   |
+|  left shift             |`   A  <<  B   `|     binary     |  no    |   2   |
+|  right shift            |`   A  >>  B   `|     binary     |  no    |   2   |
+|  binary AND-assign      |`   A  &=  B   `|     binary     |  yes   |   2   |
+|  binary OR-assign       |`   A  |=  B   `|     binary     |  yes   |   2   |
+|  binary XOR-assign      |`   A  ^=  B   `|     binary     |  yes   |   2   |
+|  left shift-assign      |`   A  <<=  B  `|     binary     |  yes   |   2   |
+|  right shift-assign     |`   A  >>=  B  `|     binary     |  yes   |   2   |
+|  binary invert          |`     ~ A      `|     binary     |  no    |   1   |
+|  boolean AND            |`   A  &&  B   `|     boolean    |  no    |   2   |
+|  boolean OR             |`   A  ||  B   `|     boolean    |  no    |   2   |
+|  boolean AND-assign     |`   A  &&=  B  `|     boolean    |  yes   |   2   |
+|  boolean OR-assign      |`   A  ||=  B  `|     boolean    |  yes   |   2   |
+|  boolean invert         |`     ! A      `|     boolean    |  no    |   1   |
+|  less than              |`   A  <  B    `|   comparison   |  no    |   2   |
+|  less than or equal     |`   A  <=  B   `|   comparison   |  no    |   2   |
+|  greater than           |`   A  >  B    `|   comparison   |  no    |   2   |
+|  greater than or equal  |`   A  >=  B   `|   comparison   |  no    |   2   |
+|  equal                  |`   A  ==  B   `|   comparison   |  no    |   2   |
+|  not equal              |`   A  !=  B   `|   comparison   |  no    |   2   |
+|  strict equality        |`   A  ===  B  `|   comparison   |  no    |   2   |
+|  strict inequality      |`   A  !==  B  `|   comparison   |  no    |   2   |
+|  declare-local          |`   var A      `|    special     | maybe  |  any  |
+|  declare-global         |`   global A   `|    special     | maybe  |  any  |
+|  array literal          |` [ A, B, .. ] `|    special     |  no    |  any  |
+|  dict. literal          |` {A=1,B=2,..} `|    special     |  no    |  any  |
+|  assign                 |`   A  =  B    `|    special     |  yes   |   1   |
+|  concatenate            |`   A  $  B    `|    special     |  no    |   2   |
+|  concatenate-assign     |`   A  $=  B   `|    special     |  yes   |   2   |
+|  property               |`   A  .  B    `|    special     | maybe  |   2   |
+|  index                  |`   A [ B ]    `|    special     | maybe  |   2   |
+|  function call          |`  A ([B,..])  `|    special     |  no    | <=256 |
+|  function definition    |` function A.. `|    special     | maybe  |   0   |
+|  subexpression          |` ( A[, ..] )  `|    special     | maybe  |  any  |
+------------------------------------------------------------------------------
+
+Some notes on the special cases:
+
+- [increment,decrement] pre-increment and pre-decrement operators return the modified value, post- operators - the original one
+- [equality] strict (in)equality operators are the same as their non-strict counterparts with one difference: they do type checking, for example `5 == 5.0` would return 'true' and `5 === 5.0` would return 'false'
+- [declare] declarations only actually set the data if they include the assignment expression, otherwise only the type is internally noted for other references
+- [declare] variables can be redeclared as long as they maintain their access level
+- [property,index] whether property or index expressions set data depends if they're on the receiving (left) end of an assignment expression
+- [subexpression] subexpressions can set data if they are set up like this: <subexpression> = <function-call> - this is the way to read more than one return value from a function
+- [boolean] all boolean operators except 'boolean invert' (which returns bool) set/return one of the two operands passed
 
 
 # Statements [info]
 
-There are X statement types in SGScript:
+There are 4 statement types in SGScript:
 
 === Container statements
 
@@ -393,7 +467,7 @@ Examples:
     global World = null;
     function fn(){ INFO( "'fn' was called" ); }
 
-=== Function statements
+=== Function call statements
 
 These statements are converted directly to function calls. Currently, 'include' and 'print' functions are available as statements.
 

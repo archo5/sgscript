@@ -65,6 +65,9 @@ function markdown2html( text )
 					L = lines[ i ];
 					lout = "";
 					
+					while( ( nL = re_replace( L, "#(`.*)\\|(.*`)#", "$1-~OR~-$2" ) ) != L )
+						L = nL;
+					
 					tag = "td";
 					spl = string_explode( L, "|" );
 					if( spl.size == 1 )
@@ -77,6 +80,7 @@ function markdown2html( text )
 						s = string_trim( s );
 						if( !s.length )
 							continue;
+						s = string_replace( s, "-~OR~-", "|" );
 						lout $= string_format( "<{1}>{2}</{1}>", tag, mdinline( s ) );
 					}
 					lines[ i ] = "<tr>" $ lout $ "</tr>";

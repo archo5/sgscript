@@ -210,19 +210,35 @@ static int regex_match_many( match_ctx* ctx )
 		{
 			if( !*item->matchend && item->type != RIT_SPCEND && item->type != RIT_EITHER && item->type != RIT_SUBEXP )
 			{
-				RXLOGINFO( printf( "stopped while matching, %d between %d and %d?\n", i, item->min, item->max ) );
 				item->counter = item->flags & RIF_LAZY ? item->max : i;
+				RXLOGINFO( printf( "stopped while matching, counter = %d, %d between %d and %d?\n", item->counter, i, item->min, item->max ) );
 				return i >= item->min && i <= item->max;
 			}
 			if( !regex_match_once( ctx ) )
 			{
-				RXLOGINFO( printf( "did not match\n" ) );
 				item->counter = item->flags & RIF_LAZY ? item->max : i;
+				RXLOGINFO( printf( "did not match, counter reset to %d\n", item->counter ) );
 				return i >= item->min && i <= item->max;
 			}
 			RXLOGINFO( else printf( "matched\n" ) );
 		}
 		return 1;
+	}
+}
+
+static void regex_full_reset( regex_item* p );
+static void regex_reset_one( regex_item* p )
+{
+	if( p->ch ) regex_full_reset( p->ch );
+	if( p->ch2 ) regex_full_reset( p->ch2 );
+	p->counter = p->flags & RIF_LAZY ? p->min : p->max;
+}
+static void regex_full_reset( regex_item* p )
+{
+	while( p )
+	{
+		regex_reset_one( p );
+		p = p->next;
 	}
 }
 
@@ -249,6 +265,8 @@ static int regex_subexp_backtrack( regex_item* item )
 			if( p->counter >= p->min )
 				break;
 		}
+		RXLOGINFO( printf( "subexp backtrack - reset current, move back\n" ) );
+		regex_reset_one( p );
 		p = p->prev;
 		chgh = 1;
 	}
@@ -263,8 +281,6 @@ static int regex_test( const RX_Char* str, match_ctx* ctx, int subexp )
 {
 	regex_item* p = ctx->item;
 	p->matchbeg = str;
-	if( !subexp )
-		p->counter = p->flags & RIF_LAZY ? p->min : p->max;
 	
 	for(;;)
 	{
@@ -279,16 +295,6 @@ static int regex_test( const RX_Char* str, match_ctx* ctx, int subexp )
 				return 1;
 			RXLOGINFO( printf( "moving on to type %d action\n", p->type ) );
 			p->matchbeg = p->prev->matchend;
-			p->counter = p->flags & RIF_LAZY ? p->min : p->max;
-			if( p->type == RIT_SUBEXP )
-			{
-				regex_item* c = p->ch;
-				while( c )
-				{
-					c->counter = c->flags & RIF_LAZY ? c->min : c->max;
-					c = c->type == RIT_SUBEXP ? c->ch : NULL;
-				}
-			}
 		}
 		else
 		{
@@ -309,7 +315,8 @@ static int regex_test( const RX_Char* str, match_ctx* ctx, int subexp )
 					if( p->counter >= p->min )
 						break;
 				}
-				RXLOGINFO( printf( "backtrack\n" ) );
+				RXLOGINFO( printf( "backtrack, reset current\n" ) );
+				regex_reset_one( p );
 				p = p->prev;
 				chgh = 1;
 			}
@@ -322,16 +329,8 @@ static int regex_test( const RX_Char* str, match_ctx* ctx, int subexp )
 static int regex_test_start( const RX_Char* str, match_ctx* ctx )
 {
 	regex_item* p = ctx->item;
-	p->counter = p->flags & RIF_LAZY ? p->min : p->max;
-	if( p->type == RIT_SUBEXP )
-	{
-		regex_item* c = p->ch;
-		while( c )
-		{
-			c->counter = c->flags & RIF_LAZY ? c->min : c->max;
-			c = c->type == RIT_SUBEXP ? c->ch : NULL;
-		}
-	}
+	RXLOGINFO( printf( "test start - counter reset\n" ) );
+	regex_reset_one( p );
 	return regex_test( str, ctx, 0 );
 }
 
