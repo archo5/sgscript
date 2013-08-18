@@ -1,13 +1,6 @@
 SGScript documentation - v0.9.0
 
 
-# Main info [info]
-
-In this part of the documentation, universally useful information can be found about various aspects of both the language and the C API.
-
-# >>>
-
-
 # SGScript - description [info]
 
 This is a programming language that is made to be fast, accessible and simple. It is similar to many but the exact combination makes it unique in comparison to others. Thus, it might be best to describe it in comparison to others, especially the ones that heavily influenced the development of SGScript.
@@ -38,43 +31,6 @@ The standard library includes:
 - array, dict, class, closure
 - math, string, I/O, O/S and formatting functions
 - `eval`, file import, DLL import
-
-
-# SGScript Virtual Machine [info]
-
-...or the interface that it defines, is one of the driving forces of SGScript. It is heavily influenced by Lua, while also adding some features of PHP (Zend Engine) and Python.
-
-The overview: register-based, single-stack, highly customizable / extensible bytecode interpreter.
-
-The most important difference is in error handling and triggers: errors detected in C can easily be non-fatal. Just like with PHP, minor errors are emitted as warnings that also propagate invalid (null) values throughout the system to effectively disable the subsequent calls and notify whoever is interested of the exact trail of failures. Furthermore, this behavior can be modified by using protected calls (pcall function) in SGScript and custom error printing callbacks in C.
-
-The virtual machine supports:
-
-- Operator overloading
-- On-demand garbage collection
-- Full introspection of machine state
-- Type registration for simplified cross-library data reuse
-
-
-# Commonly required advanced tasks [info]
-
-=== Method handling
-
-- version 1: plain method handling:
-
-    sgs_FuncName( C, "<object>.<method>" );
-    if( !sgs_Method( C ) || !sgs_IsObject( C, 0, Object_interface_pointer ) )
-        return sgs_ArgErrorExt( C, 0, 1, "<object>", "" );
-    ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
-
-
-- version 2: Method + function handling (function that can be called as a method too)
-
-    int method_call = sgs_Method( C );
-    sgs_FuncName( C, method_call ? "<object>.<method>" : "<object_function>" );
-    if( !sgs_IsObject( C, 0, Object_interface_pointer ) )
-        return sgs_ArgErrorExt( C, 0, method_call, "<object>", "" );
-    ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
 
 
 # Serialization in SGScript [info]
@@ -116,148 +72,6 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 - sgs_Serialize overrides the output function so any output done via "print" or "sgs_Write*" functions during serialization will corrupt the stream
 - if environment overrides are used on deserialization, remember to add "array" and "dict" to the list if you use them, they are not added automatically
 - serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items
-
-
-# Numeric string parsing rules [info]
-
-">>>" means "until any other symbol has been found" (the text is too dense for exact repetition)
-
-The string is not a number if no numeric characters (0-9) could be parsed. (for example, "+" isn't a number but "0x" is)
-
-- if string begins with 0b and has at least 3 characters, try to read a binary integer
--- >>>, 0 or 1 adds the specified bit to the integer
-- if string begins with 0o and has at least 3 characters, try to read an octal integer
--- >>>, characters 0-7 add the specified 3 bits to the integer
-- if string begins with 0x and has at least 3 characters, try to read a hexadecimal integer
--- >>>, characters 0-9, a-f and A-F add the specified 4 bits to the integer
-- otherwise, try to read a decimal number
--- do a test to see if the number is not an integer
---- skip the sign character (+ or -)
---- skip the 0-9 characters
---- if e, E or . is found, try to read a real value
----- read the sign character (+ or -)
----- >>>, characters 0-9 add the specified decimal number to the whole part
----- if the dot character (.) is found, read the fractional part
------ >>>, characters 0-9 add the specified decimal number to the fractional part
----- if at least 3 more characters can be found and the first is "e" or "E", read the exponent part
------ read the sign character (+ or -)
------ >>>, characters 0-9 add the specified decimal number to the exponent part
---- otherwise, try to read the integer
----- read the sign character (+ or -)
----- >>>, characters 0-9 add the specified decimal number to the integer
-
-
-# <<<
-
-
-# API info [info]
-
-This part of the documentation describes the various types and definitions used in the C API.
-
-# >>>
-
-
-# Main types [info]
-
-Return types:
-- SGSRESULT [int]: output code (success = 0, failure: < 0 )
-- SGSBOOL [int]: simplified output code (success = 1, failure = 0)
-- SGSMIXED [int32_t] output code / value (success + value: >= 0, failure: < 0)
-
-Virtual machine / language types:
-- sgs_Bool [int32_t]: boolean value
-- sgs_Int [int64_t]: integer
-- sgs_Real [double]: real (floating point) value
-- sgs_SizeVal [int32_t]: size type
-- sgs_CFunc [int ( sgs_Context* )]: C function type
-- sgs_ObjCallback [int ( sgs_Context*, sgs_VarObj*, int )]: object interface function
-- sgs_Variable [struct]: the combined variable type
-
-System types:
-- sgs_Context [struct]: the virtual machine
-- sgs_StackFrame [struct]: the function call info object
-
-Interface types:
-- sgs_MemFunc [void* ( void* userdata, void* ptr, size_t size )]: memory interface function
-- sgs_OutputFunc [void ( void* userdata, sgs_Context* C, const void* buf, sgs_SizeVal size )]: output function
-- sgs_PrintFunc [void ( void* userdata, sgs_Context* C, int code, const char* text )]: error printing function
-- sgs_HookFunc [void ( void*, sgs_Context*, int )]: debug hook function
-
-
-# Error codes [info]
-
-These are the default meanings for error codes that are honored throughout the API.
-
-- Generated by the C API
--- SGS_SUCCESS: operation was successful
--- SGS_ENOTFND: item was not found
--- SGS_ECOMP: compile error
--- SGS_ENOTOBJ: argument was not an object
--- SGS_ENOTSUP: operation is not supported
--- SGS_EINVAL: invalid value was passed
--- SGS_EINPROC: process was interrupted
-
-- Generated by SGScript VM
--- SGS_INFO: information about potential issues and state of the system
--- SGS_WARNING: non-fatal issues
--- SGS_ERROR: fatal issues
--- any other integer may be defined and returned by other interfaces
-
-
-# Variable type flags [info]
-
-- primary flags
--- SGS_VT_NULL: (primary null flag, actually - lack of a primary flag)
--- SGS_VT_[BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]: primary flags
-
-- property flags
--- SGS_VTF_NUM: numeric type flag
--- SGS_VTF_CALL: always-callable type flag
--- SGS_VTF_REF: reference-counted type flag
--- SGS_VTF_ARRAY: array type flag
--- SGS_VTF_ARRAY_ITER: array iterator type flag
--- SGS_VTF_DICT: dict type flag
-
-- complete flag combos
--- SGS_VTC_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]: complete variable flags
--- SGS_VTC_[ARRAY|ARRAY_ITER|DICT]: complete specialized variable flags
-
-
-# Object operation types [info]
-
-- SGS_OP_END: <end of list> marker op
-- SGS_OP_DESTRUCT: object destruction op (argument: whether should free child variables - 1/0)
-- SGS_OP_GETINDEX: object index/property retrieval (argument: whether is a property)
-- SGS_OP_SETINDEX: object index/property store (argument: whether is a property)
-- SGS_OP_CONVERT: object conversion (argument: subtype)
--- subtype = SGS_VT_[BOOL|INT|REAL|STRING]: convert to boolean/integer/real/string
--- subtype = SGS_CONVOP_CLONE: create a clone of the object
--- subtype = SGS_CONVOP_TOTYPE: return the type name as string
--- subtype = SGS_TOITER: return a new iterator object for the current one
-- SGS_OP_SERIALIZE: generate serialized code
-- SGS_OP_DUMP: print anything informational about the variable
-- SGS_OP_GCMARK: mark the object as reachable by the GC
-- SGS_OP_GETNEXT: [for iterators] return the data / advance to next item
--- subtype = SGS_GETNEXT_[KEY|VALUE]: return the key/value from the iterator
--- subtype = 0: advance to next item
-- SGS_OP_CALL: call the object
-- SGS_OP_EXPR: perform an expression between this and another object
--- subtype = SGS_EOP_[ADD|SUB|MUL|DIV|MOD]: return A [+|-|*|/|%] B
--- subtype = SGS_EOP_COMPARE: if A < B, return -1; if A > B, return 1; otherwise return 0;
--- subtype = SGS_EOP_NEGATE: return the current value, negated
-
-
-# Interaction with the native environment [info]
-
-=== Memory allocation
-- sgs_MemFunc must be specified in creation of the scripting engine context
-- sgs_MemFunc (re)allocates and frees memory
-- unlike realloc, if size = 0, this function must return NULL
-- sgs_DefaultMemFunc is the sample implementation
-- the expected behavior is same as for @sgs_Memory()
-
-
-# <<<
 
 
 # Language reference [info]
@@ -326,6 +140,7 @@ Special keywords and hardcoded constants:
 |  false     |             constant             |  constant                        |
 |  var       |       restricted keyword         |  variable declaration            |
 |  global    |       restricted keyword         |  variable declaration            |
+|  function  |       restricted keyword         |  function definition             |
 |  if        |       restricted keyword         |  "if" statement                  |
 |  else      |       restricted keyword         |  "if/else" statement             |
 |  do        |       restricted keyword         |  "do/while" statement            |
@@ -334,7 +149,6 @@ Special keywords and hardcoded constants:
 |  foreach   |       restricted keyword         |  "foreach" statement             |
 |  break     |       restricted keyword         |  "break" statement               |
 |  continue  |       restricted keyword         |  "continue" statement            |
-|  function  |       restricted keyword         |  function definition             |
 |  return    |       restricted keyword         |  "return" statement              |
 ------------------------------------------------------------------------------------
 
@@ -611,11 +425,153 @@ With game entities and objects of similar structure (just about any object) it i
 # <<<
 
 
+# Numeric string parsing rules [info]
+
+">>>" means "until any other symbol has been found" (the text is too dense for exact repetition)
+
+The string is not a number if no numeric characters (0-9) could be parsed. (for example, "+" isn't a number but "0x" is)
+
+- if string begins with 0b and has at least 3 characters, try to read a binary integer
+-- >>>, 0 or 1 adds the specified bit to the integer
+- if string begins with 0o and has at least 3 characters, try to read an octal integer
+-- >>>, characters 0-7 add the specified 3 bits to the integer
+- if string begins with 0x and has at least 3 characters, try to read a hexadecimal integer
+-- >>>, characters 0-9, a-f and A-F add the specified 4 bits to the integer
+- otherwise, try to read a decimal number
+-- do a test to see if the number is not an integer
+--- skip the sign character (+ or -)
+--- skip the 0-9 characters
+--- if e, E or . is found, try to read a real value
+---- read the sign character (+ or -)
+---- >>>, characters 0-9 add the specified decimal number to the whole part
+---- if the dot character (.) is found, read the fractional part
+----- >>>, characters 0-9 add the specified decimal number to the fractional part
+---- if at least 3 more characters can be found and the first is "e" or "E", read the exponent part
+----- read the sign character (+ or -)
+----- >>>, characters 0-9 add the specified decimal number to the exponent part
+--- otherwise, try to read the integer
+---- read the sign character (+ or -)
+---- >>>, characters 0-9 add the specified decimal number to the integer
+
+
 # <<<
 
 
 # C API reference [info]
+
+The interface that it defines is one of the driving forces of SGScript. It is heavily influenced by Lua, while also adding some features of PHP (Zend Engine) and Python.
+
+The most important difference is in error handling and triggers: errors detected in C can easily be non-fatal. Just like with PHP, minor errors are emitted as warnings that also propagate invalid (null) values throughout the system to effectively disable the subsequent calls and notify whoever is interested of the exact trail of errors. Furthermore, this behavior can be modified by using protected calls (pcall function) in SGScript and custom error printing callbacks in C.
+
+The virtual machine supports:
+
+- Operator overloading
+- On-demand garbage collection
+- Full introspection of machine state
+- Type registration for simplified cross-library data reuse
+
+
 # >>>
+
+
+# Constants and types [info]
+
+This part of the documentation describes the various types and definitions used in the C API.
+
+# >>>
+
+
+# Main types [info]
+
+Return types:
+- SGSRESULT [int]: output code (success = 0, failure: < 0 )
+- SGSBOOL [int]: simplified output code (success = 1, failure = 0)
+- SGSMIXED [int32_t] output code / value (success + value: >= 0, failure: < 0)
+
+Virtual machine / language types:
+- sgs_Bool [int32_t]: boolean value
+- sgs_Int [int64_t]: integer
+- sgs_Real [double]: real (floating point) value
+- sgs_SizeVal [int32_t]: size type
+- sgs_CFunc [int ( sgs_Context* )]: C function type
+- sgs_ObjCallback [int ( sgs_Context*, sgs_VarObj*, int )]: object interface function
+- sgs_Variable [struct]: the combined variable type
+
+System types:
+- sgs_Context [struct]: the virtual machine
+- sgs_StackFrame [struct]: the function call info object
+
+Interface types:
+- sgs_MemFunc [void* ( void* userdata, void* ptr, size_t size )]: memory interface function
+- sgs_OutputFunc [void ( void* userdata, sgs_Context* C, const void* buf, sgs_SizeVal size )]: output function
+- sgs_PrintFunc [void ( void* userdata, sgs_Context* C, int code, const char* text )]: error printing function
+- sgs_HookFunc [void ( void*, sgs_Context*, int )]: debug hook function
+
+
+# Error codes [info]
+
+These are the default meanings for error codes that are honored throughout the API.
+
+- Generated by the C API
+-- SGS_SUCCESS: operation was successful
+-- SGS_ENOTFND: item was not found
+-- SGS_ECOMP: compile error
+-- SGS_ENOTOBJ: argument was not an object
+-- SGS_ENOTSUP: operation is not supported
+-- SGS_EINVAL: invalid value was passed
+-- SGS_EINPROC: process was interrupted
+
+- Generated by SGScript VM
+-- SGS_INFO: information about potential issues and state of the system
+-- SGS_WARNING: non-fatal issues
+-- SGS_ERROR: fatal issues
+-- any other integer may be defined and returned by other interfaces
+
+
+# Variable type flags [info]
+
+- primary flags
+-- SGS_VT_NULL: (primary null flag, actually - lack of a primary flag)
+-- SGS_VT_[BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]: primary flags
+
+- property flags
+-- SGS_VTF_NUM: numeric type flag
+-- SGS_VTF_CALL: always-callable type flag
+-- SGS_VTF_REF: reference-counted type flag
+-- SGS_VTF_ARRAY: array type flag
+-- SGS_VTF_ARRAY_ITER: array iterator type flag
+-- SGS_VTF_DICT: dict type flag
+
+- complete flag combos
+-- SGS_VTC_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]: complete variable flags
+-- SGS_VTC_[ARRAY|ARRAY_ITER|DICT]: complete specialized variable flags
+
+
+# Object operation types [info]
+
+- SGS_OP_END: <end of list> marker op
+- SGS_OP_DESTRUCT: object destruction op (argument: whether should free child variables - 1/0)
+- SGS_OP_GETINDEX: object index/property retrieval (argument: whether is a property)
+- SGS_OP_SETINDEX: object index/property store (argument: whether is a property)
+- SGS_OP_CONVERT: object conversion (argument: subtype)
+-- subtype = SGS_VT_[BOOL|INT|REAL|STRING]: convert to boolean/integer/real/string
+-- subtype = SGS_CONVOP_CLONE: create a clone of the object
+-- subtype = SGS_CONVOP_TOTYPE: return the type name as string
+-- subtype = SGS_TOITER: return a new iterator object for the current one
+- SGS_OP_SERIALIZE: generate serialized code
+- SGS_OP_DUMP: print anything informational about the variable
+- SGS_OP_GCMARK: mark the object as reachable by the GC
+- SGS_OP_GETNEXT: [for iterators] return the data / advance to next item
+-- subtype = SGS_GETNEXT_[KEY|VALUE]: return the key/value from the iterator
+-- subtype = 0: advance to next item
+- SGS_OP_CALL: call the object
+- SGS_OP_EXPR: perform an expression between this and another object
+-- subtype = SGS_EOP_[ADD|SUB|MUL|DIV|MOD]: return A [+|-|*|/|%] B
+-- subtype = SGS_EOP_COMPARE: if A < B, return -1; if A > B, return 1; otherwise return 0;
+-- subtype = SGS_EOP_NEGATE: return the current value, negated
+
+
+# <<<
 
 
 # Primary interface [info]
@@ -719,12 +675,13 @@ With game entities and objects of similar structure (just about any object) it i
 - SGS_EINVAL: passed data was not recognized
 
 
-# sgs_LoadLib_[Fmt|IO|Math|OS|String] [functions]
+# sgs_LoadLib_*** [functions]
 
 == SGSRESULT sgs_LoadLib_Fmt( sgs_Context* C )
 == SGSRESULT sgs_LoadLib_IO( sgs_Context* C )
 == SGSRESULT sgs_LoadLib_Math( sgs_Context* C )
 == SGSRESULT sgs_LoadLib_OS( sgs_Context* C )
+== SGSRESULT sgs_LoadLib_RE( sgs_Context* C )
 == SGSRESULT sgs_LoadLib_String( sgs_Context* C )
 === loads the library into the specified context
 
@@ -734,7 +691,7 @@ With game entities and objects of similar structure (just about any object) it i
 - SGS_E****: first error encountered (operation stopped somewhere in the middle)
 
 
-# sgs_Reg[Func|Int|Real]Const [struct]
+# sgs_Reg***Const [struct]
 
 == sgs_RegFuncConst { char* name; sgs_CFunc value; }
 == sgs_RegIntConst { char* name; sgs_Int value; }
@@ -742,7 +699,7 @@ With game entities and objects of similar structure (just about any object) it i
 === a pair of null-terminated string and a scripting engine value type
 
 
-# sgs_Reg[Func|Int|Real]Consts [function]
+# sgs_Reg***Consts [function]
 
 == SGSRESULT sgs_RegFuncConsts( sgs_Context* C, const sgs_RegFuncConst* list, int size )
 == SGSRESULT sgs_RegIntConsts( sgs_Context* C, const sgs_RegIntConst* list, int size )
@@ -765,7 +722,7 @@ With game entities and objects of similar structure (just about any object) it i
 # >>>
 
 
-# sgs_Push[Null|Bool|Int|Real|StringBuf|String|CFunction|Object|ObjectIPA|Variable] [functions]
+# sgs_Push*** [functions]
 
 == void sgs_PushNull( sgs_Context* C )
 == void sgs_PushBool( sgs_Context* C, sgs_Bool value )
@@ -1060,7 +1017,7 @@ With game entities and objects of similar structure (just about any object) it i
 - always returns 0 so it can be used to return and print an error in the same statement
 
 
-# sgs_[FuncArgError|MethodArgError] [function aliases]
+# sgs_***ArgError [function aliases]
 
 == int sgs_FuncArgError( sgs_Context* C, int argid, int expect, int is_strict )
 == int sgs_MethodArgError( sgs_Context* C, int argid, int expect, int is_strict )
@@ -1167,7 +1124,7 @@ After a successful call, all arguments and the function will be popped off the s
 - SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + 1`)
 
 
-# sgs_[Call|ThisCall] [function aliases]
+# sgs_(This)Call [function aliases]
 
 == SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )
 == SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )
@@ -1352,7 +1309,7 @@ After a successful call, all arguments and the function will be popped off the s
 # >>>
 
 
-# sgs_[GetBool|GetInt|GetReal] [functions]
+# sgs_Get*** [functions]
 
 == sgs_Bool sgs_GetBool( sgs_Context* C, int item )
 == sgs_Int sgs_GetInt( sgs_Context* C, int item )
@@ -1362,7 +1319,7 @@ After a successful call, all arguments and the function will be popped off the s
 - if `item` is out of bounds, 0 is returned
 
 
-# sgs_[ToBool|ToInt|ToReal] [functions]
+# sgs_To*** [functions]
 
 == sgs_Bool sgs_ToBool( sgs_Context* C, int item )
 == sgs_Int sgs_ToInt( sgs_Context* C, int item )
@@ -1372,7 +1329,7 @@ After a successful call, all arguments and the function will be popped off the s
 - in-place conversion means that if the function succeeds, the item in the stack might have a different type, most likely the requested type
 
 
-# sgs_[ToStringBuf|ToStringBufFast] [functions]
+# sgs_ToStringBuf(Fast) [functions]
 
 == char* sgs_ToStringBuf( sgs_Context* C, int item, sgs_SizeVal* outsize )
 == char* sgs_ToStringBufFast( sgs_Context* C, int item, sgs_SizeVal* outsize )
@@ -1383,7 +1340,7 @@ After a successful call, all arguments and the function will be popped off the s
 - length of string is returned to the value that `outsize` points to
 
 
-# sgs_[ToString|ToStringFast] [function aliases]
+# sgs_ToString(Fast) [function aliases]
 
 == char* sgs_ToString( sgs_Context* C, int item )
 == char* sgs_ToStringFast( sgs_Context* C, int item )
@@ -1463,7 +1420,7 @@ After a successful call, all arguments and the function will be popped off the s
 - more info at @<Numeric string parsing rules>
 
 
-# sgs_[ParseBool|ParseInt|ParseReal|ParseString] [functions]
+# sgs_Parse*** [functions]
 
 == SGSBOOL sgs_ParseBool( sgs_Context* C, int item, sgs_Bool* out )
 == SGSBOOL sgs_ParseInt( sgs_Context* C, int item, sgs_Int* out )
@@ -1918,6 +1875,132 @@ sgs_Errno [function (inline)]
 
 
 # <<<
+
+
+# Interface implementation [info]
+# >>>
+
+
+# Functions [info]
+
+A C function has the type `int CFunc( sgs_Context* )`. It receives the context that called it and must return the number of return values pushed on stack.
+
+=== Conventions
+
+There are no forced courses of action beyond this point. However, to simplify development, some conventions were established and are used throughout the standard library and are suggested to follow.
+
+==== General structure
+- the usage of SGS_CTX in argument list is suggested to enable the use of certain macros that assume the availability of `sgs_Context* C`
+- there are no restrictions on function names, however it helps to mark the scripting engine functions with a common prefix and if they wrap a native function, including the name of the wrapped function is suggested
+
+==== Argument loading
+- prefer using sgs_LoadArgs, followed by sgs_LoadArgsExt, followed by the sgs_Parse***/sgs_Is***/sgs_ItemType(Ext)/... functions together with ArgError function family for error handling
+
+==== Error handling
+- it is preferred to do most of it at the beginning, before custom allocations (VM stack doesn't count here), where it is possible to just `return sgs_Printf( C, SGS_WARNING, "Error message" )`
+- SGS_WARNING is for non-fatal errors, SGS_ERROR is for errors that make it impossible to continue (severe, undoubted logical errors fall into this category)
+- on error, functions should return nothing or null
+
+A typical function
+
+    int sgsfunc_sample( SGS_CTX )
+    {
+        sgs_Int num;
+        char* str;
+        char* buf;
+        sgs_SizeVal bufsize;
+        
+        if( !sgs_LoadArgs( C, "ism", &num, &str, &buf, &bufsize ) )
+            return 0;
+        
+        if( bufsize == 0 )
+            return sgs_Printf( C, SGS_WARNING, "buffer cannot be empty" );
+        // sgs_Printf always returns 0
+        
+        // .. do something with the passed arguments ..
+        
+        // anything can be returned ..
+        // .. but in this case, we want to say ..
+        // .. that the action was successful
+        sgs_PushBool( C, 1 );
+        return 1;
+    }
+
+
+# Object interface [info]
+
+Every interface function has the type `int ObjCallback ( sgs_Context* C, sgs_VarObj* data, int arg )`. Not every of them has to be implemented (none of them are required) but for all non-pointer objects it helps to have at least one of them.
+
+Even if pointer objects don't require interface functions, it is suggested all objects of same type still have their own interface pointer for the type for identification.
+
+=== SOP_DESTRUCT
+
+Destruction callback, called before the object is about to be destroyed. Argument = 0/1, whether to destroy child objects.
+
+Argument specifies whether object is destroyed via GC (if argument == 0) and cannot allow the destruction of other objects to happen at the moment.
+
+To ensure safe destruction of owned variables, call sgs_ReleaseOwned and pass the argument.
+
+
+# Interaction with the environment [info]
+
+Most operations are directed towards the scripting engine, that is - environment makes a function call and scripting engine handles it. For everything else, there are callbacks.
+
+=== Memory allocation
+- sgs_MemFunc must be specified in creation of the scripting engine context
+- sgs_MemFunc (re)allocates and frees memory
+- unlike realloc, if size = 0, this function must return NULL
+- sgs_DefaultMemFunc is the sample implementation
+- the expected behavior is same as for @sgs_Memory()
+
+=== Output
+- sgs_PrintFunc and sgs_OutputFunc are responsible for piping the outputs to their destinations
+- they can be set at any moment after the creation of the scripting engine context
+- sgs_PrintFunc takes the following arguments:
+-- void* data - the user data pointer
+-- sgs_Context* C - the scripting engine context
+-- int type - the debug type (SGS_INFO, SGS_WARNING etc.)
+-- const char* message - the debug message
+- sgs_OutputFunc takes the following arguments:
+-- void* data - the user data pointer
+-- sgs_Context* C - the scripting engine context
+-- const void* ptr - the data to write
+-- sgs_SizeVal size - the size of data to write
+
+=== Execution notifications
+- sgs_HookFunc must be set to retrieve events of that kind
+- it can be set at any moment after the creation of the scripting engine context
+- sgs_HookFunc takes the following arguments:
+-- void* data - the user data pointer
+-- sgs_Context* C - the scripting engine context
+-- int event - the event that occured, can be one of these values:
+--- SGS_HOOK_ENTER - function was entered
+--- SGS_HOOK_EXIT - function was exited
+--- SGS_HOOK_STEP - instruction is about to be executed
+
+
+# <<<
+
+
+# Commonly required advanced tasks [info]
+
+=== Method handling
+
+- version 1: plain method handling:
+
+    sgs_FuncName( C, "<object>.<method>" );
+    if( !sgs_Method( C ) || !sgs_IsObject( C, 0, Object_interface_pointer ) )
+        return sgs_ArgErrorExt( C, 0, 1, "<object>", "" );
+    ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
+
+
+- version 2: Method + function handling (function that can be called as a method too)
+
+    int method_call = sgs_Method( C );
+    sgs_FuncName( C, method_call ? "<object>.<method>" : "<object_function>" );
+    if( !sgs_IsObject( C, 0, Object_interface_pointer ) )
+        return sgs_ArgErrorExt( C, 0, method_call, "<object>", "" );
+    ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
 
 
 # <<<
@@ -2618,14 +2701,16 @@ This library is loaded on initialization and contains the functions and constant
     print unserialize(data); // prints {name=A,info=B}
 
 
-# SGS_[INFO|WARNING|ERROR] [constants]
+# SGS_*** [constants]
 
-== SGS_INFO, SGS_WARNING, SGS_ERROR are defined to the values of the C macros, respectively 100, 200 and 300
+== SGS_INFO, SGS_WARNING, SGS_ERROR
+=== defined to the values of the C macros, respectively 100, 200 and 300
 
 
-# VT_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT] [constants]
+# VT_*** [constants]
 
-== these constants are defined to the values of the C macros (with the prefix "SVT_" in C) and can be compared with the values returned in @typeid() or @typeflags()
+== VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT
+=== these constants are defined to the values of the C macros (with the prefix "SVT_" in C) and can be compared with the values returned in @typeid() or @typeflags()
 
 
 # _G [superglobal]
@@ -3404,19 +3489,22 @@ This library contains the functions necessary to work with the file system (file
 === creates a directory iterator for the directory `dir`, sets errno, returns null and emits a warning on failure
 
 
-# FILE_[READ|WRITE] [constants]
+# FILE_*** [constants]
 
-== mode constants for @io_file.open() / @io_file()
-
-
-# SEEK_[SET|CUR|END] [constants]
-
-== mode constants for @io_file.seek()
+== FILE_READ, FILE_WRITE
+=== mode constants for @io_file.open() / @io_file()
 
 
-# FST_[UNKNOWN|FILE|DIR] [constants]
+# SEEK_*** [constants]
 
-== file system item type constants for @io_stat()
+== SEEK_SET, SEEK_CUR, SEEK_END
+=== mode constants for @io_file.seek()
+
+
+# FST_*** [constants]
+
+== FST_UNKNOWN, FST_FILE, FST_DIR
+=== file system item type constants for @io_stat()
 
 
 # <<<
@@ -3606,7 +3694,7 @@ This library contains the basic math functions for processing real values.
     rad2deg( -M_PI / 2 ); // real (-90)
 
 
-# M_[PI|E] [constants]
+# M_*** [constants]
 
 == M_PI
 === the ratio of circumference of a circle to its diameter (pi)
@@ -3779,7 +3867,7 @@ This library contains the basic math functions for processing real values.
 - wraps the C library function strcoll
 
 
-# LC_[ALL|COLLATE|MONETARY|NUMERIC|TIME] [constants]
+# LC_*** [constants]
 
 These constants specify the categories for which locale can be changed.
 

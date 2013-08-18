@@ -153,5 +153,7 @@ function markdown2html( text )
 			lines[ i ] = mdinline( L );
 	}
 	
-	return "<p>" $ string_implode( lines, "\n" ) $ "</p>";
+	out = "<p>" $ string_implode( lines, "\n" ) $ "</p>";
+	out = re_replace( out, "#<([a-zA-Z]+)>[ \n\r\t]*</\\1>#", "" );
+	return out;
 }
