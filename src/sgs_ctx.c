@@ -614,7 +614,7 @@ static void dumpobj( SGS_CTX, sgs_VarObj* p )
 	buf[0] = 0;
 	while( *ci )
 	{
-		int osi = ((int)(size_t)*ci) == (int)(size_t)SOP_FLAGS ? ARRAY_SIZE( sgs_IfaceNames ) - 1 : ((int)(size_t)*ci);
+		int osi = ((int)(size_t)*ci);
 		if( *buf )
 			strcat( buf, "," );
 		strcat( buf, sgs_IfaceNames[ osi ] );

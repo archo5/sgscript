@@ -251,7 +251,6 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj*, int /* arg */ );
 struct sgs_ObjData
 {
 	sgs_SizeVal refcount;
-	uint16_t flags;     /* features of the object */
 	uint8_t redblue;    /* red or blue? mark & sweep */
 	void* data;         /* should have offset=8 with packing alignment>=8 */
 	void** iface;
@@ -296,9 +295,6 @@ struct _sgs_Variable
 #define SGS_OP_GETNEXT    SGS_OP( 8 )  /* arg = flags */
 #define SGS_OP_CALL       SGS_OP( 9 )
 #define SGS_OP_EXPR       SGS_OP(10 )  /* arg = op */
-
-#define SGS_OP_FLAGS      SGS_OP(100)
-#define SGS_OBJ_ARRAY     0x01
 
 /* parameter flags / special values */
 #define SGS_GETNEXT_KEY   0x01

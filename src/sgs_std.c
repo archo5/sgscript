@@ -870,7 +870,6 @@ static void* sgsstd_array_functable[] =
 	SOP_GCMARK, sgsstd_array_gcmark,
 	SOP_CONVERT, sgsstd_array_convert,
 	SOP_SERIALIZE, sgsstd_array_serialize,
-	SOP_FLAGS, SGS_OP( SGS_OBJ_ARRAY ),
 	SOP_END,
 };
 

@@ -221,7 +221,6 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 	if( xbytes )
 		obj->data = ((char*)obj) + sizeof( object_t );
 	obj->iface = iface;
-	obj->flags = 0;
 	obj->redblue = C->redblue;
 	obj->next = C->objs;
 	obj->prev = NULL;
@@ -237,12 +236,7 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 		void** i = iface;
 		while( *i )
 		{
-			if( i[0] == SOP_FLAGS )
-			{
-				obj->flags = (uint16_t) (size_t) i[1];
-				break;
-			}
-			else if( i[0] == SOP_GETINDEX )
+			if( i[0] == SOP_GETINDEX )
 				obj->getindex = (sgs_ObjCallback) i[1];
 			else if( i[0] == SOP_GETNEXT )
 				obj->getnext = (sgs_ObjCallback) i[1];

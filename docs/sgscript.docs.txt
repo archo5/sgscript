@@ -33,47 +33,6 @@ The standard library includes:
 - `eval`, file import, DLL import
 
 
-# Serialization in SGScript [info]
-
-In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the "serialize" function and deserialization is done with "unserialize". The C API has similar functions: sgs_Serialize/sgs_SerializeObject and sgs_Unserialize, respectively.
-
-! check the "Possible gotchas" part of this page if it is intended to trust the end user with access to serialized data
-
-=== The format
-
-- a list of operations
-- each operation consists of a 'type' byte and additional data
--- a "push" operation has the byte 'P', the data consists of the type to push (a byte consisting of one base flag from SGS_VT_*) and the binary data of the type
--- a "call" operation has the byte 'C', the data consists of the number of arguments (4 bytes), function name length (1 byte) and the null-terminated function name itself (<length>+1 bytes)
-
-=== Serialization
-
-- "serialize" is called
-- "sgs_Serialize" is called internally
-- type of variable is determined and the data is written
--- C functions cannot be serialized (obviously) and whenever encountered, will abort the action
--- objects will have SGS_OP_SERIALIZE operation called
---- if operation is not defined, everything will stop
---- if object is an array, all variables in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to 'array'
---- if object is a 'dict', all keys and values in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to 'dict'
-
-=== Deserialization
-
-- "unserialize" is called
--- the global environment could be changed
-- "sgs_Unserialize" is called internally
-- "push" and "call" operations are executed, thus regenerating the data
--- "push" operation pushes a variable on the stack
--- "call" operation calls the specified function
-
-=== Possible gotchas
-
-- unserialization is not by default safe in the sense that any function can be executed with a carefully crafted byte buffer; this can be prevented by specifying the second parameter to the "unserialize" function. the behavior can be reproduced with the C API but it will take a bit more effort or calling the "unserialize" function from it
-- sgs_Serialize overrides the output function so any output done via "print" or "sgs_Write*" functions during serialization will corrupt the stream
-- if environment overrides are used on deserialization, remember to add "array" and "dict" to the list if you use them, they are not added automatically
-- serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items
-
-
 # Language reference [info]
 # >>>
 
@@ -210,18 +169,20 @@ There are 5 types of action for expressions in SGScript: arithmetic, binary, boo
 |  index                  |`   A [ B ]    `|    special     | maybe  |   2   |
 |  function call          |`  A ([B,..])  `|    special     |  no    | <=256 |
 |  function definition    |` function A.. `|    special     | maybe  |   0   |
+|  inline if              |`  if(A,B,C)   `|    special     |  no    |  3(2) |
 |  subexpression          |` ( A[, ..] )  `|    special     | maybe  |  any  |
 ------------------------------------------------------------------------------
 
 Some notes on the special cases:
 
 - [increment,decrement] pre-increment and pre-decrement operators return the modified value, post- operators - the original one
+- [boolean] all boolean operators except 'boolean invert' (which returns bool) set/return one of the two operands passed
 - [equality] strict (in)equality operators are the same as their non-strict counterparts with one difference: they do type checking, for example `5 == 5.0` would return 'true' and `5 === 5.0` would return 'false'
 - [declare] declarations only actually set the data if they include the assignment expression, otherwise only the type is internally noted for other references
 - [declare] variables can be redeclared as long as they maintain their access level
 - [property,index] whether property or index expressions set data depends if they're on the receiving (left) end of an assignment expression
+- [inline if] 3 inputs are required, 2 are actually used (as if `if(A){return B;}else{return C;}` was used)
 - [subexpression] subexpressions can set data if they are set up like this: <subexpression> = <function-call> - this is the way to read more than one return value from a function
-- [boolean] all boolean operators except 'boolean invert' (which returns bool) set/return one of the two operands passed
 
 
 # Statements [info]
@@ -1933,13 +1894,113 @@ Every interface function has the type `int ObjCallback ( sgs_Context* C, sgs_Var
 
 Even if pointer objects don't require interface functions, it is suggested all objects of same type still have their own interface pointer for the type for identification.
 
-=== SOP_DESTRUCT
+Interface is an array of void* that contains a list of pairs, where in each the first value is a SGS_OP_*** constant and the second is an object interface function, and one SGS_OP_END value at the end. This is how interfaces are usually defined in code:
 
-Destruction callback, called before the object is about to be destroyed. Argument = 0/1, whether to destroy child objects.
+    void* object_interface[] =
+    {
+        SGS_OP_DESTRUCT, object_destruct,
+        SGS_OP_GETINDEX, object_getindex,
+        SGS_OP_END
+    };
 
-Argument specifies whether object is destroyed via GC (if argument == 0) and cannot allow the destruction of other objects to happen at the moment.
+=== SGS_OP_DESTRUCT - destruction callback
+
+**Called** before the object is about to be destroyed. Argument = 0/1, whether to destroy child objects.
+
+**Argument** specifies whether object is destroyed via GC (if argument == 0) and cannot allow the destruction of other objects to happen at the moment.
+
+**Stack frame** contains no additional data.
 
 To ensure safe destruction of owned variables, call sgs_ReleaseOwned and pass the argument.
+
+=== SGS_OP_GETINDEX - index/property retrieval callback
+
+**Called** on A[B] and A.B reads in SGScript, as well as the PushIndex/PushProperty/Path function families in the C API.
+
+**Argument** specifies whether a property is required (if argument != 0).
+
+**Stack frame** contains one value: index (int or string).
+
+Special error codes: SGS_ENOTFND if the specified index/property was not found.
+
+=== SGS_OP_SETINDEX - index/property setting callback
+
+**Called** on A[B] and A.B writes in SGScript, as well as the StoreIndex/StoreProperty/Path function families in the C API.
+
+**Argument** specifies whether a property is to be set (if argument != 0).
+
+**Stack frame** contains two values: index (int or string) and value (any type).
+
+Special error codes: SGS_ENOTFND - the specified index/property was not found, SGS_EINVAL - the specified value could not be used.
+
+=== SGS_OP_CONVERT - conversion callback
+
+Depending on the argument, it is **called** by different sources and require different return values:
+- type conversion: to*** function families and other conversion triggers (like operators) in SGScript and the Convert/Get/To function families in the C API, require a value of the right type.
+- SGS_CONVOP_CLONE: called on clone/sgs_Clone, should return an exact copy of the same object
+- SGS_CONVOP_TOTYPE: called on typeof/sgs_Typeof, should return a string containing the type name
+- SGS_CONVOP_TOITER: called on foreach/sgs_PushIterator, should return an object with the SGS_OP_GETNEXT callback added
+
+**Argument** specifies the data to return.
+
+**Stack frame** contains no additional data.
+
+Special error codes: SGS_ENOTSUP - specified conversion is not supported.
+
+=== SGS_OP_SERIALIZE - serialization callback
+
+**Called** by serialize/sgs_Serialize. Requires no data but expects that sgs_Serialize/sgs_SerializeObject is successfully called once. In the case of sgs_SerializeObject, the necessary number of sgs_Serialize calls can be made before it.
+
+**Argument** is not used.
+
+**Stack frame** contains no additional data.
+
+=== SGS_OP_DUMP - debug dump callback
+
+Called by printvar/dumpvar function families in SGScript and sgs_DumpVar in the C API. Requires a string to be passed on the stack.
+
+**Argument** specifies the remaining depth of dump - if owned variables are to be dumped, they should have sgs_DumpVar called with reduced depth to avoid dumping the whole structure (sgs_DumpVar with maxdepth <= 0 returns "...")
+
+**Stack frame** contains no additional data.
+
+=== SGS_OP_GCMARK - garbage collector marking callback
+
+**Called** by gc_collect in SGScript and sgs_GCMark/sgs_GCExecute in the C API. Requires no data but expects that sgs_GCMark is called on all of the owned variables.
+
+**Argument** is not used.
+
+**Stack frame** contains no additional data.
+
+=== SGS_OP_GETNEXT - iterator control callback
+
+**Called** by foreach in SGScript and sgs_IterAdvance/sgs_IterPushData in the C API.
+
+**Argument** specifies behavior flags:
+
+- if argument == 0, iterator's position must be increased by one step and the return value must contain whether iterator has not reached end (positive value if so, otherwise - 0) or an error if callback has failed
+- otherwise, callback must push the data required (if SGS_GETNEXT_KEY is set, the key, and if SGS_GETNEXT_VALUE is set - the value, in exactly that order)
+
+**Stack frame** contains no additional data.
+
+=== SGS_OP_CALL - the "function call" callback
+
+**Called** when an object is used like a function (function call in SGScript or Call function family in the C API).
+
+**Argument** is not used.
+
+**Stack frame** contains the arguments and can possibly be expanded by one unit with sgs_Method if a method call is done.
+
+=== SGS_OP_EXPR - expression callback
+
+**Called** when an object is used in one of the following expressions, specified by the argument:
+
+- SGS_EOP_ADD: addition (+, +=), stack contains both operands
+- SGS_EOP_SUB: subtraction (-, -=), stack contains both operands
+- SGS_EOP_MUL: multiplication (*, *=), stack contains both operands
+- SGS_EOP_DIV: division (/, /=), stack contains both operands
+- SGS_EOP_MOD: modulo (%, %=), stack contains both operands
+- SGS_EOP_COMPARE: comparison (<, <=, >, >=, ==, !=, ===, !==), stack contains 2 arguments, expects integer/real value: >0 if A > B, <0 if A < B, =0 if A = B
+- SGS_EOP_NEGATE: negation (-), stack contains the object
 
 
 # Interaction with the environment [info]
@@ -4170,6 +4231,54 @@ This library contains the string handling functions. In all functions, except th
 
 
 # <<<
+
+
+# <<<
+
+
+# Additional info [info]
+# >>>
+
+
+# Serialization in SGScript [info]
+
+In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the "serialize" function and deserialization is done with "unserialize". The C API has similar functions: sgs_Serialize/sgs_SerializeObject and sgs_Unserialize, respectively.
+
+! check the "Possible gotchas" part of this page if it is intended to trust the end user with access to serialized data
+
+=== The format
+
+- a list of operations
+- each operation consists of a 'type' byte and additional data
+-- a "push" operation has the byte 'P', the data consists of the type to push (a byte consisting of one base flag from SGS_VT_*) and the binary data of the type
+-- a "call" operation has the byte 'C', the data consists of the number of arguments (4 bytes), function name length (1 byte) and the null-terminated function name itself (<length>+1 bytes)
+
+=== Serialization
+
+- "serialize" is called
+- "sgs_Serialize" is called internally
+- type of variable is determined and the data is written
+-- C functions cannot be serialized (obviously) and whenever encountered, will abort the action
+-- objects will have SGS_OP_SERIALIZE operation called
+--- if operation is not defined, everything will stop
+--- if object is an array, all variables in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to 'array'
+--- if object is a 'dict', all keys and values in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to 'dict'
+
+=== Deserialization
+
+- "unserialize" is called
+-- the global environment could be changed
+- "sgs_Unserialize" is called internally
+- "push" and "call" operations are executed, thus regenerating the data
+-- "push" operation pushes a variable on the stack
+-- "call" operation calls the specified function
+
+=== Possible gotchas
+
+- unserialization is not by default safe in the sense that any function can be executed with a carefully crafted byte buffer; this can be prevented by specifying the second parameter to the "unserialize" function. the behavior can be reproduced with the C API but it will take a bit more effort or calling the "unserialize" function from it
+- sgs_Serialize overrides the output function so any output done via "print" or "sgs_Write*" functions during serialization will corrupt the stream
+- if environment overrides are used on deserialization, remember to add "array" and "dict" to the list if you use them, they are not added automatically
+- serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items
 
 
 # <<<
