@@ -3,7 +3,26 @@ SGScript documentation - v0.9.0
 
 # SGScript - description [info]
 
-This is a programming language that is made to be fast, accessible and simple. It is similar to many but the exact combination makes it unique in comparison to others. Thus, it might be best to describe it in comparison to others, especially the ones that heavily influenced the development of SGScript.
+This is a programming language that is made to be fast, accessible and simple.
+
+    include "math";
+    
+    gradient = [ ".", "o", "O", "#", "O", "o", "." ];
+    
+    for( y = -7; y <= 7; ++y )
+    {
+        for( x = -7; x <= 7; ++x )
+        {
+            dst = sqrt( x * x + y * y ) * 0.9;
+            if( dst > 6 )
+                dst = 6;
+            chr = gradient[ dst ];
+            print chr $ ' ';
+        }
+        println();
+    }
+
+It is similar to many but the exact combination makes it unique in comparison to others. Thus, it might be best to describe it in comparison to others, especially the ones that heavily influenced the development of SGScript.
 
 --------------------------------------------------------------------------------------
 !  language  !            what it DOESN'T have in comparison to SGScript             !
@@ -31,6 +50,186 @@ The standard library includes:
 - array, dict, class, closure
 - math, string, I/O, O/S and formatting functions
 - `eval`, file import, DLL import
+
+
+# >>>
+
+
+# Code samples - SGScript [info]
+
+=== Statements
+
+    print "Text";
+    println( "!" );
+    b = rand();
+
+=== Comments
+
+    // this is a comment that ends with the line
+    
+    /* this type of comment
+       can be more than
+       one line long
+    */
+
+=== Basic calculations
+
+    a = 1, b = 2, c = 5;
+    d = a + b * c - b / a;
+    a += 3.14;
+    c = "eye" $ "sight" // stitch (concatenate) strings together!
+    d = "Ocean's " $ 11;
+
+=== Comparison
+
+    if( c > 5 )
+        print "as expected";
+    y = x <= 8.8; // result of comparison can be assigned!
+
+=== Useful shortcuts
+
+    a += 1; // short for a = a + 1
+    a++;    // short for a += 1
+    a--;
+    a = if( b > 5, 10, 20 ); // short for if( b > 5 ){ a = 10; } else { a = 20; }
+
+=== Flow control
+
+    if( a > b )
+    {
+        print "something happens only if a is greater than b";
+    }
+    else
+        print "...and here the opposite is true";
+    
+    while( a > b )
+    {
+        print "something happens as long as a is greater than b";
+        a--; // but not for too long, as we see
+    }
+    // or maybe ...
+    do
+    {   // first we do
+        print a;
+    }
+    while( a++ < 10 ); // then we check
+
+=== More useful shortcuts
+
+    for( i = 0; i < 10; i++ )
+        print i;
+    // .. is the short form for ..
+    i = 0;
+    while( i < 10 )
+    {
+        print i;
+        i++;
+    }
+    for(;;) // this is not going to stop...
+        print "x";
+
+=== More flow control
+
+    x = 5;
+    for(;;)
+    {
+        print x;
+        x--;
+        if( x < 0 )
+            break; // this says that we don't want to continue staying in the loop
+    }
+    // << this is where "break" leads us, right after the loop
+    
+    // this goes through a list
+    foreach( fruit : [ "apple", "orange", "banana" ] )
+        println( fruit );
+    
+    // .. of 2 items ..
+    list = { "1" = "apple", "2" = "orange", "3" = "banana" };
+    foreach( number, fruit : list )
+        println( number $ ". " $ fruit );
+
+=== Functions
+
+    // cornerstore of reusable code
+    function square( x )
+    {
+        return x * x;
+    }
+    print square( 5 );
+    
+    function print_quoted( text )
+    {
+        print '"' $ text $ '"';
+    }
+    print_quoted( "It works!" );
+
+=== Objects
+
+    a = [ 1, 2, "three" ];
+    a[2] = 3;
+    a[1]++;
+    
+    d = {
+        name = "test",
+        text = "hello",
+    };
+    d.name = "test, edited";
+    d.text $= ", world!";
+    println( d.text ); // hello, world!
+
+=== Interesting stuff
+
+    printvar( x ); // tells you all you want to know about "x"
+    
+    // emits an error with the given message if the first argument is false
+    assert( x > 5, "x must be greater than 5" );
+    
+    // returns the type name
+    typeof( x );
+    
+    // universal external code loader
+    include "math", "string", "something";
+
+
+# Code samples - the C API [info]
+
+=== Primary operations
+
+    // create the context
+    sgs_Context* C = sgs_CreateEngine();
+    
+    // load the built-in math library
+    sgs_LoadLib_Math( C );
+    
+    // load a file
+    sgs_ExecFile( C, "script.sgs" );
+    
+    // call a global function with 0 arguments, expecting 0 values returned
+    sgs_GlobalCall( C, "myFunction", 0, 0 );
+    
+    // destroy the context
+    sgs_DestroyEngine( C );
+
+=== Data in, data out
+
+    sgs_Context* C = sgs_CreateEngine();
+    sgs_LoadLib_Math( C );
+    
+    // push a variable on the stack
+    sgs_PushReal( C, 3.14 );
+    
+    // call a global function with 1 argument, expecting 1 value returned
+    sgs_GlobalCall( C, "sin", 1, 1 );
+    
+    // check the returned value
+    printf( "returned value: %f\n", sgs_GetReal( C, -1 ) );
+    
+    // clean the stack
+    sgs_SetStackSize( C, 0 );
+
+
+# <<<
 
 
 # Language reference [info]
