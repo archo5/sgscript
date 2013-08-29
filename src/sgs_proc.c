@@ -1591,6 +1591,18 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 			int hadthis = C->call_this;
 			C->call_this = gotthis;
 			rvc = (*func->data.C)( C );
+			if( rvc > STACKFRAMESIZE )
+			{
+				sgs_Printf( C, SGS_ERROR, "Function returned more variables than there was on the stack" );
+				rvc = 0;
+				ret = 0;
+			}
+			if( rvc < 0 )
+			{
+				sgs_Printf( C, SGS_ERROR, "The function could not be called" );
+				rvc = 0;
+				ret = 0;
+			}
 			C->call_this = hadthis;
 			C->stack_off = C->stack_base + stkoff2;
 		}
@@ -1628,6 +1640,12 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 			C->call_expect = expect;
 			C->call_this = gotthis;
 			rvc = obj_exec( C, SOP_CALL, func->data.O, 0, args );
+			if( rvc > STACKFRAMESIZE )
+			{
+				sgs_Printf( C, SGS_ERROR, "Object returned more variables than there was on the stack" );
+				rvc = 0;
+				ret = 0;
+			}
 			if( rvc < 0 )
 			{
 				sgs_Printf( C, SGS_ERROR, "The object could not be called" );
