@@ -84,6 +84,9 @@ static sgs_FuncCtx* fctx_create( SGS_CTX )
 	fctx->lastreg = -1;
 	fctx->vars = membuf_create();
 	fctx->gvars = membuf_create();
+	fctx->clsr = membuf_create();
+	fctx->inclsr = 0;
+	fctx->outclsr = 0;
 	fctx->loops = 0;
 	fctx->binfo = NULL;
 	membuf_appbuf( &fctx->gvars, C, "_G=", 3 );
@@ -96,14 +99,33 @@ static void fctx_destroy( SGS_CTX, sgs_FuncCtx* fctx )
 		fctx_binfo_rem( C, fctx, NULL );
 	membuf_destroy( &fctx->vars, C );
 	membuf_destroy( &fctx->gvars, C );
+	membuf_destroy( &fctx->clsr, C );
 	sgs_Dealloc( fctx );
 }
 
 #if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
+static void fctx_dumpvarlist( MemBuf* mb )
+{
+	char* p = mb->ptr, *pend = mb->ptr + mb->size;
+	while( p < pend )
+	{
+		if( *p == '=' )
+		{
+			if( p < pend - 1 )
+				printf( ", " );
+		}
+		else
+			putchar( *p );
+		p++;
+	}
+}
 static void fctx_dump( sgs_FuncCtx* fctx )
 {
-	printf( "Type: %s\nGlobals: %s\nVariables: %s\n", fctx->func ?
-		"Function" : "Main code", fctx->gvars.ptr, fctx->vars.ptr );
+	printf( "Type: %s\n", fctx->func ? "Function" : "Main code" );
+	printf( "Globals: " ); fctx_dumpvarlist( &fctx->gvars ); printf( "\n" );
+	printf( "Variables: " ); fctx_dumpvarlist( &fctx->vars ); printf( "\n" );
+	printf( "Closures in=%d out=%d : ", fctx->inclsr, fctx->outclsr );
+	fctx_dumpvarlist( &fctx->clsr ); printf( "\n" );
 }
 #endif
 
@@ -184,6 +206,16 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 		DOP_A( SETPROP );
 		DOP_A( GETINDEX );
 		DOP_A( SETINDEX );
+
+		case SI_GENCLSR: printf( "GEN_CLSR %d", argA ); break;
+		case SI_PUSHCLSR: printf( "PUSH_CLSR %d", argA ); break;
+		case SI_MAKECLSR: printf( "MAKE_CLSR " ); dump_rcpos( argA );
+			printf( " <= " ); dump_rcpos( argB );
+			printf( " [%d]", argC ); break;
+		case SI_GETCLSR: printf( "GET_CLSR " ); dump_rcpos( argA );
+			printf( " <= CL%d", argB ); break;
+		case SI_SETCLSR: printf( "SET_CLSR CL%d <= ", argB );
+			dump_rcpos( argC ); break;
 
 		DOP_B( SET );
 		DOP_B( CLONE );
@@ -319,6 +351,8 @@ static int preparse_varlist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	{
 		if( node->type != SFT_IDENT && node->type != SFT_KEYWORD && node->type != SFT_ARGMT )
 			goto cont; /* compatibility with explists */
+		if( find_varT( &C->fctx->clsr, node->token ) >= 0 )
+			goto cont; /* closure */
 		if( find_varT( &C->fctx->gvars, node->token ) >= 0 )
 		{
 			QPRINT( "Variable storage redefined: global -> local" );
@@ -340,6 +374,11 @@ static int preparse_gvlist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	node = node->child;
 	while( node )
 	{
+		if( find_varT( &C->fctx->clsr, node->token ) >= 0 )
+		{
+			QPRINT( "Variable storage redefined: closure -> global" );
+			return FALSE;
+		}
 		if( find_varT( &C->fctx->vars, node->token ) >= 0 )
 		{
 			QPRINT( "Variable storage redefined: local -> global" );
@@ -374,6 +413,7 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			{
 				/* add_var calls find_var internally but - GVARS vs VARS - note the difference */
 				if( find_varT( &C->fctx->gvars, node->child->token ) == -1 &&
+					find_varT( &C->fctx->clsr, node->child->token ) == -1 &&
 					add_varT( &C->fctx->vars, C, node->child->token ) )
 					comp_reg_alloc( C );
 			}
@@ -403,10 +443,11 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 	}
 	else if( node->type == SFT_FUNC )
 	{
-		FTNode* N = node->child->next->next;
+		FTNode* N = node->child->next->next->next;
 		if( N && N->type == SFT_IDENT )
 		{
 			if( find_varT( &C->fctx->gvars, N->token ) == -1 &&
+				find_varT( &C->fctx->clsr, N->token ) == -1 &&
 				add_varT( C->fctx->func ? &C->fctx->vars : &C->fctx->gvars, C, N->token ) )
 				comp_reg_alloc( C );
 		}
@@ -415,6 +456,41 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		ret &= preparse_varlists( C, func, node->child );
 	if( node->next )
 		ret &= preparse_varlists( C, func, node->next );
+	return ret;
+}
+
+static int preparse_closures( SGS_CTX, sgs_CompFunc* func, FTNode* node, int decl )
+{
+	int ret;
+	node = node->child;
+	while( node )
+	{
+		ret = add_var( &C->fctx->clsr, C, (char*) node->token + 2, node->token[ 1 ] );
+		if( !ret && decl )
+		{
+			QPRINT( "Cannot redeclare used variables with the same name" );
+			return 0;
+		}
+		if( ret )
+		{
+			C->fctx->outclsr++;
+			if( decl )
+				C->fctx->inclsr++;
+		}
+		node = node->next;
+	}
+	return 1;
+}
+
+static int preparse_clsrlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
+{
+	int ret = 1;
+	if( node->type == SFT_FUNC )
+		ret &= preparse_closures( C, func, node->child->next, 0 );
+	else if( node->child )
+		ret &= preparse_clsrlists( C, func, node->child );
+	if( node->next )
+		ret &= preparse_clsrlists( C, func, node->next );
 	return ret;
 }
 
@@ -681,6 +757,14 @@ static int compile_ident_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* 
 		return 0;
 	}
 
+	/* closures */
+	if( ( pos = find_var( &C->fctx->clsr, (char*) node->token + 2, node->token[1] ) ) >= 0 )
+	{
+		*out = comp_reg_alloc( C );
+		INSTR_WRITE( SI_GETCLSR, *out, pos, 0 );
+		return 1;
+	}
+
 	if( C->fctx->func )
 	{
 		int16_t gpos = find_var( &C->fctx->gvars, (char*) node->token + 2, node->token[ 1 ] );
@@ -718,6 +802,12 @@ static int compile_ident_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t s
 	{
 		QPRINT( "Cannot write to reserved keywords" );
 		return 0;
+	}
+
+	if( ( pos = find_var( &C->fctx->clsr, (char*) node->token + 2, node->token[1] ) ) >= 0 )
+	{
+		INSTR_WRITE( SI_SETCLSR, 0, pos, src );
+		return 1;
 	}
 
 	if( C->fctx->func )
@@ -1353,16 +1443,36 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 {
 	sgs_FuncCtx* fctx = fctx_create( C ), *bkfctx = C->fctx;
 	sgs_CompFunc* nf = make_compfunc( C );
-	int args = 0;
+	int args = 0, clsrcnt = 0;
+
+	FTNode* n_arglist = node->child;
+	FTNode* n_uselist = n_arglist->next;
+	FTNode* n_body = n_uselist->next;
+	FTNode* n_name = n_body->next;
+
+	/* pre-context-change closure-apply */
+	FUNC_ENTER;
+	if( !preparse_closures( C, func, n_uselist, 0 ) ) { goto fail; }
 
 	C->fctx = fctx;
+
 	FUNC_ENTER;
-	if( !preparse_arglist( C, nf, node->child ) ) { goto fail; }
+	if( !preparse_closures( C, nf, n_uselist, 1 ) ) { goto fail; }
+
+	FUNC_ENTER;
+	if( !preparse_arglist( C, nf, n_arglist ) ) { goto fail; }
 	args = fctx->regs;
-	if( !preparse_varlists( C, nf, node->child->next ) ) { goto fail; }
-	args += func->gotthis;
+
 	FUNC_ENTER;
-	if( !compile_node( C, nf, node->child->next ) ) { goto fail; }
+	if( !preparse_clsrlists( C, nf, n_body ) ) { goto fail; }
+
+	FUNC_ENTER;
+	if( !preparse_varlists( C, nf, n_body ) ) { goto fail; }
+	args += func->gotthis;
+
+	FUNC_ENTER;
+	if( !compile_node( C, nf, n_body ) ) { goto fail; }
+
 	comp_reg_unwind( C, 0 );
 
 	if( C->fctx->lastreg > 0xff )
@@ -1376,6 +1486,13 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 		uint16_t ln = 0;
 		membuf_insbuf( &nf->code, C, 0, &I, sizeof( I ) );
 		membuf_insbuf( &nf->lnbuf, C, 0, &ln, sizeof( ln ) );
+		if( C->fctx->outclsr > C->fctx->inclsr )
+		{
+			I = INSTR_MAKE( SI_GENCLSR, C->fctx->outclsr - C->fctx->inclsr, 0, 0 );
+			membuf_insbuf( &nf->code, C, 0, &I, sizeof( I ) );
+			membuf_insbuf( &nf->lnbuf, C, 0, &ln, sizeof( ln ) );
+		}
+		clsrcnt = C->fctx->inclsr;
 	}
 
 #if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
@@ -1387,10 +1504,20 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 
 	{
 		MemBuf ffn = membuf_create();
-		if( node->child->next->next )
-			rpts( &ffn, C, node->child->next->next );
+		if( n_name )
+			rpts( &ffn, C, n_name );
 		*out = BC_CONSTENC( add_const_f( C, func, nf, ffn.ptr, ffn.size, sgsT_LineNum( node->token ) ) );
 		membuf_destroy( &ffn, C );
+		
+		if( clsrcnt > 0 )
+		{
+			int i;
+			int16_t ro = comp_reg_alloc( C );
+			for( i = 0; i < clsrcnt; ++i )
+				INSTR_WRITE( SI_PUSHCLSR, 0, 0, 0 );
+			INSTR_WRITE( SI_MAKECLSR, ro, *out, clsrcnt );
+			*out = ro;
+		}
 	}
 	return 1;
 
@@ -1948,10 +2075,10 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			FUNC_ENTER;
 			if( !compile_func( C, func, node, &pos ) ) goto fail;
 
-			if( node->child->next->next )
+			if( node->child->next->next->next )
 			{
 				FUNC_ENTER;
-				if( !compile_node_w( C, func, node->child->next->next, pos ) ) goto fail;
+				if( !compile_node_w( C, func, node->child->next->next->next, pos ) ) goto fail;
 			}
 		}
 		break;
@@ -1997,6 +2124,8 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 	sgs_FuncCtx* fctx = fctx_create( C );
 	fctx->func = FALSE;
 	C->fctx = fctx;
+	if( !preparse_clsrlists( C, func, tree ) )
+		goto fail;
 	if( !preparse_varlists( C, func, tree ) )
 		goto fail;
 	if( !compile_node( C, func, tree ) )
@@ -2015,6 +2144,12 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 		uint16_t ln = 0;
 		membuf_insbuf( &func->code, C, 0, &I, sizeof( I ) );
 		membuf_insbuf( &func->lnbuf, C, 0, &ln, sizeof( ln ) );
+		if( C->fctx->outclsr > C->fctx->inclsr )
+		{
+			I = INSTR_MAKE( SI_GENCLSR, C->fctx->outclsr - C->fctx->inclsr, 0, 0 );
+			membuf_insbuf( &func->code, C, 0, &I, sizeof( I ) );
+			membuf_insbuf( &func->lnbuf, C, 0, &ln, sizeof( ln ) );
+		}
 	}
 
 	C->fctx = NULL;

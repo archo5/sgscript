@@ -97,6 +97,11 @@ static void ctx_init( SGS_CTX )
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
 	C->stack_off = C->stack_base;
 	C->stack_top = C->stack_base;
+	
+	C->clstk_mem = 32;
+	C->clstk_base = sgs_Alloc_n( sgs_Closure*, C->clstk_mem );
+	C->clstk_off = C->clstk_base;
+	C->clstk_top = C->clstk_base;
 
 	C->call_args = 0;
 	C->call_expect = 0;
@@ -153,13 +158,21 @@ void sgs_DestroyEngine( SGS_CTX )
 		sgs_Acquire( C, C->stack_top );
 		sgs_Release( C, C->stack_top );
 	}
-
+	while( C->clstk_base != C->clstk_top )
+	{
+		C->clstk_top--;
+		sgs_Release( C, &(*C->clstk_top)->var );
+		sgs_Dealloc( *C->clstk_top );
+	}
+	
 	sgsSTD_GlobalFree( C );
-
+	
 	sgs_GCExecute( C );
 	sgs_BreakIf( C->objs || C->objcount );
-
+	
 	sgs_Dealloc( C->stack_base );
+	
+	sgs_Dealloc( C->clstk_base );
 	
 	ht_free( &C->typetable, C );
 	

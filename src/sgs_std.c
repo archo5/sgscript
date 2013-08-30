@@ -1494,7 +1494,7 @@ static int sgsstd_class_call( SGS_CTX, sgs_VarObj* data, int unused )
 		for( i = 0; i < C->call_args; ++i )
 			sgs_PushItem( C, i );
 		sgs_GetStackItem( C, -2 - C->call_args, &fn );
-		ret = sgsVM_VarCall( C, &fn, C->call_args, C->call_expect, TRUE );
+		ret = sgsVM_VarCall( C, &fn, C->call_args, 0, C->call_expect, TRUE );
 		return ret;
 	}
 	return SGS_ENOTFND;
@@ -1600,9 +1600,9 @@ static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	int ismethod = sgs_Method( C );
 	SGSCLOSURE_HDR;
-	sgs_BreakIf( sgs_InsertVariable( C, -C->call_args - 1, &hdr->data ) );
+	sgs_InsertVariable( C, -C->call_args - 1, &hdr->data );
 	return sgsVM_VarCall( C, &hdr->func, C->call_args + 1,
-		C->call_expect, ismethod ) * C->call_expect;
+		0, C->call_expect, ismethod ) * C->call_expect;
 }
 
 static void* sgsstd_closure_functable[] =
@@ -1631,6 +1631,84 @@ static int sgsstd_closure( SGS_CTX )
 	sgs_Acquire( C, &hdr->func );
 	sgs_Acquire( C, &hdr->data );
 	return 1;
+}
+
+
+
+/*
+	real closure memory layout:
+	- sgs_Variable: function
+	- int32: closure count
+	- sgs_Closure* x ^^: closures
+*/
+
+static int sgsstd_realclsr_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+{
+	uint8_t* cl = (uint8_t*) data->data;
+	int32_t i, cc = *(int32_t*)(cl+sizeof(sgs_Variable));
+	sgs_Closure** cls = (sgs_Closure**)(cl+sizeof(sgs_Variable)+sizeof(int32_t));
+	
+	sgs_ReleaseOwned( C, (sgs_Variable*) cl, dco );
+	
+	for( i = 0; i < cc; ++i )
+	{
+		if( --cls[ i ]->refcount < 1 )
+			sgs_ReleaseOwned( C, &cls[ i ]->var, dco );
+	}
+	
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_realclsr_call( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	int ismethod = sgs_Method( C );
+	uint8_t* cl = (uint8_t*) data->data;
+	int32_t cc = *(int32_t*)(cl+sizeof(sgs_Variable));
+	sgs_Closure** cls = (sgs_Closure**)(cl+sizeof(sgs_Variable)+sizeof(int32_t));
+	
+	sgsVM_PushClosures( C, cls, cc );
+	return sgsVM_VarCall( C, (sgs_Variable*) cl, C->call_args,
+		cc, C->call_expect, ismethod ) * C->call_expect;
+}
+
+static int sgsstd_realclsr_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	uint8_t* cl = (uint8_t*) data->data;
+	int32_t i, cc = *(int32_t*)(cl+sizeof(sgs_Variable));
+	sgs_Closure** cls = (sgs_Closure**)(cl+sizeof(sgs_Variable)+sizeof(int32_t));
+	
+	sgs_GCMark( C, (sgs_Variable*) cl );
+	
+	for( i = 0; i < cc; ++i )
+	{
+		sgs_GCMark( C, &cls[ i ]->var );
+	}
+	
+	return SGS_SUCCESS;
+}
+
+static void* sgsstd_realclsr_functable[] =
+{
+	SOP_DESTRUCT, sgsstd_realclsr_destruct,
+	SOP_CALL, sgsstd_realclsr_call,
+	SOP_GCMARK, sgsstd_realclsr_gcmark,
+	SOP_END,
+};
+
+int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, int32_t clc )
+{
+	int clsz = sizeof(sgs_Closure*) * clc;
+	int memsz = clsz + sizeof(sgs_Variable) + sizeof(int32_t);
+	uint8_t* cl = (uint8_t*) sgs_PushObjectIPA( C, memsz, sgsstd_realclsr_functable );
+	
+	memcpy( cl, func, sizeof(sgs_Variable) );
+	sgs_Acquire( C, func );
+	
+	memcpy( cl + sizeof(sgs_Variable), &clc, sizeof(clc) );
+	
+	memcpy( cl + sizeof(sgs_Variable) + sizeof(clc), C->clstk_top - clc, clsz );
+	
+	return SGS_SUCCESS;
 }
 
 

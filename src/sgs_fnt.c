@@ -43,6 +43,7 @@ static void dumpnode( FTNode* N )
 	case SFT_ARGLIST: printf( "ARG_LIST" ); break;
 	case SFT_VARLIST: printf( "VAR_LIST" ); break;
 	case SFT_GVLIST: printf( "GLOBAL_VAR_LIST" ); break;
+	case SFT_USELIST: printf( "USE_LIST" ); break;
 	case SFT_EXPLIST: printf( "EXPR_LIST" ); break;
 	case SFT_ARRLIST: printf( "ARRAY_LIST" ); break;
 	case SFT_MAPLIST: printf( "MAP_LIST" ); break;
@@ -1092,7 +1093,7 @@ fail:
 
 SFTRET parse_function( SFTC, int inexp )
 {
-	FTNode *node, *nname = NULL, *nargs = NULL, *nbody = NULL;
+	FTNode *node, *nname = NULL, *nargs = NULL, *nbody = NULL, *nclos = NULL;
 	TokenList begin = SFTC_AT;
 
 	FUNC_BEGIN;
@@ -1139,10 +1140,29 @@ SFTRET parse_function( SFTC, int inexp )
 	if( !nargs ) goto fail;
 	SFTC_NEXT;
 
+	if( SFTC_ISKEY( "use" ) )
+	{
+		/* closure */
+		SFTC_NEXT;
+		if( !SFTC_IS( '(' ) )
+		{
+			SFTC_PRINTERR( "Expected '(' after 'use' in 'function'" );
+			goto fail;
+		}
+		SFTC_NEXT;
+		nclos = parse_arglist( F, ')' );
+		nclos->type = SFT_USELIST;
+		if( !nclos ) goto fail;
+		SFTC_NEXT;
+	}
+	else
+		nclos = make_node( SFT_USELIST, SFTC_AT, NULL, NULL );
+
 	nbody = parse_stmt( F );
 	if( !nbody ) goto fail;
 
-	nargs->next = nbody;
+	nargs->next = nclos;
+	nclos->next = nbody;
 	nbody->next = nname;
 	node = make_node( SFT_FUNC, begin, NULL, nargs );
 
@@ -1152,6 +1172,7 @@ SFTRET parse_function( SFTC, int inexp )
 fail:
 	if( nname ) SFTC_DESTROY( nname );
 	if( nargs ) SFTC_DESTROY( nargs );
+	if( nclos ) SFTC_DESTROY( nclos );
 	if( nbody ) SFTC_DESTROY( nbody );
 	SFTC_SETERR;
 	FUNC_END;

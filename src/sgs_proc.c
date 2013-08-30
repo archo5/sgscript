@@ -593,6 +593,95 @@ static void stk_swapLF( SGS_CTX, int pos1, int pos2 )
 
 
 /*
+	The Closure Stack
+*/
+
+static void closure_deref( SGS_CTX, sgs_Closure* cl )
+{
+	if( --cl->refcount < 1 )
+		VAR_RELEASE( &cl->var );
+}
+
+#define CLSTK_UNITSIZE sizeof( sgs_Closure* )
+
+static void clstk_makespace( SGS_CTX, int num )
+{
+	int stkoff, stkend, nsz, stksz = C->clstk_top - C->clstk_base;
+	if( stksz + num <= C->clstk_mem )
+		return;
+	stkoff = C->clstk_off - C->clstk_base;
+	stkend = C->clstk_top - C->clstk_base;
+	
+	nsz = ( stksz + num ) + C->clstk_mem * 2; /* MAX( stksz + num, C->clstk_mem * 2 ); */
+	C->clstk_base = (sgs_Closure**) sgs_Realloc( C, C->clstk_base, CLSTK_UNITSIZE * nsz );
+	C->clstk_mem = nsz;
+	C->clstk_off = C->clstk_base + stkoff;
+	C->clstk_top = C->clstk_base + stkend;
+}
+
+static void clstk_push( SGS_CTX, sgs_Closure* var )
+{
+	clstk_makespace( C, 1 );
+	var->refcount++;
+	*C->clstk_top++ = var;
+}
+
+static void clstk_push_nulls( SGS_CTX, int num )
+{
+	clstk_makespace( C, num );
+	while( num )
+	{
+		sgs_Closure* cc = sgs_Alloc( sgs_Closure );
+		cc->refcount = 1;
+		cc->var.type = VTC_NULL;
+		*C->clstk_top++ = cc;
+		num--;
+	}
+}
+
+static void clstk_clean( SGS_CTX, sgs_Closure** from, sgs_Closure** to )
+{
+	int len = to - from;
+	int oh = C->clstk_top - to;
+	sgs_Closure** p = from, **pend = to;
+	sgs_BreakIf( C->clstk_top - C->clstk_base < len );
+	sgs_BreakIf( to < from );
+
+	while( p < pend )
+	{
+		closure_deref( C, *p );
+		p++;
+	}
+
+	C->clstk_top -= len;
+
+	if( oh )
+		memmove( from, to, oh * CLSTK_UNITSIZE );
+}
+
+static void clstk_pop( SGS_CTX, int num )
+{
+	clstk_clean( C, C->clstk_top - num, C->clstk_top );
+}
+
+static sgs_Closure* clstk_get( SGS_CTX, int num )
+{
+	sgs_BreakIf( num < 0 || C->clstk_off + num >= C->clstk_top );
+	return C->clstk_off[ num ];
+}
+
+void sgsVM_PushClosures( SGS_CTX, sgs_Closure** cls, int num )
+{
+	clstk_makespace( C, num );
+	while( num-- )
+	{
+		(*cls)->refcount++;
+		*C->clstk_top++ = *cls++;
+	}
+}
+
+
+/*
 	Conversions
 */
 
@@ -1565,6 +1654,19 @@ static void vm_make_dict( SGS_CTX, int args, int16_t outpos )
 	stk_pop1( C );
 }
 
+static void vm_make_closure( SGS_CTX, int args, sgs_Variable* func, int16_t outpos )
+{
+	int ret;
+	sgs_BreakIf( C->clstk_top - C->clstk_off < args );
+	ret = sgsSTD_MakeClosure( C, func, args );
+	sgs_BreakIf( ret != SGS_SUCCESS );
+	UNUSED( ret );
+	
+	stk_getpos( C, -1 )->type |= VTF_CALL;
+	stk_setvar( C, outpos, stk_getpos( C, -1 ) );
+	stk_pop1( C );
+}
+
 
 static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount );
 
@@ -1573,15 +1675,16 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount );
 	Call the virtual machine.
 	Args must equal the number of arguments pushed before the function
 */
-static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* func )
+static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Variable* func )
 {
 	sgs_Variable V = *func;
-	int stkoff = C->stack_off - C->stack_base;
+	int stkoff = C->stack_off - C->stack_base, clsoff = C->clstk_off - C->clstk_base;
 	int rvc = 0, ret = 1, allowed;
 
 	sgs_BreakIf( sgs_StackSize( C ) < args + gotthis );
 	allowed = vm_frame_push( C, &V, NULL, NULL, 0 );
 	C->stack_off = C->stack_top - args;
+	C->clstk_off = C->clstk_top - clsr;
 
 	if( allowed )
 	{
@@ -1632,7 +1735,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 			}
 			if( F->gotthis && gotthis ) C->stack_off++;
 		}
-		else if( func->type == VTC_OBJECT )
+		else if( ( func->type & VTC_OBJECT ) == VTC_OBJECT )
 		{
 			int cargs = C->call_args, cexp = C->call_expect;
 			int hadthis = C->call_this;
@@ -1667,6 +1770,9 @@ static int vm_call( SGS_CTX, int args, int gotthis, int expect, sgs_Variable* fu
 	/* subtract gotthis from offset if pushed extra variable */
 	stk_clean( C, C->stack_off - gotthis, C->stack_top - rvc );
 	C->stack_off = C->stack_base + stkoff;
+	
+	clstk_clean( C, C->clstk_off, C->clstk_top );
+	C->clstk_off = C->clstk_base + clsoff;
 
 	if( allowed )
 		vm_frame_pop( C );
@@ -1800,7 +1906,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 			int expect = argA, args = argB, src = argC;
 			int gotthis = ( argB & 0x100 ) != 0;
 			args &= 0xff;
-			vm_call( C, args, gotthis, expect, RESVAR( src ) );
+			vm_call( C, args, 0, gotthis, expect, RESVAR( src ) );
 			break;
 		}
 
@@ -1825,6 +1931,13 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		case SI_SETPROP: { ARGS_3; vm_setprop( C, p1, p2, p3, FALSE ); break; }
 		case SI_GETINDEX: { ARGS_3; vm_getprop( C, a1, p2, p3, TRUE ); break; }
 		case SI_SETINDEX: { ARGS_3; vm_setprop( C, p1, p2, p3, TRUE ); break; }
+		
+		case SI_GENCLSR: clstk_push_nulls( C, argA ); break;
+		case SI_PUSHCLSR: clstk_push( C, clstk_get( C, argA ) ); break;
+		case SI_MAKECLSR: vm_make_closure( C, argC, RESVAR( argB ), argA ); clstk_pop( C, argC ); break;
+		case SI_GETCLSR: stk_setlvar( C, argA, &clstk_get( C, argB )->var ); break;
+		case SI_SETCLSR: { sgs_VarPtr p3 = RESVAR( argC ), cv = &clstk_get( C, argB )->var;
+			VAR_RELEASE( cv ); *cv = *p3; VAR_ACQUIRE( RESVAR( argC ) ); } break;
 
 		case SI_SET: { ARGS_2; STKVAR_RELEASE( p1 ); *p1 = *p2; break; }
 		case SI_CLONE: { ARGS_2; vm_clone( C, a1, p2 ); break; }
@@ -1972,9 +2085,9 @@ int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize, void* data, int32_t dat
 	return rvc;
 }
 
-int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int expect, int gotthis )
+int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int expect, int gotthis )
 {
-	return vm_call( C, args, gotthis, expect, var );
+	return vm_call( C, args, clsr, gotthis, expect, var );
 }
 
 
@@ -2750,7 +2863,7 @@ SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
 	func = *stk_getpos( C, -1 );
 	VAR_ACQUIRE( &func );
 	sgs_Pop( C, 1 );
-	ret = vm_call( C, args, gotthis, expect, &func ) ? SGS_SUCCESS : SGS_EINPROC;
+	ret = vm_call( C, args, 0, gotthis, expect, &func ) ? SGS_SUCCESS : SGS_EINPROC;
 	VAR_RELEASE( &func );
 	return ret;
 }

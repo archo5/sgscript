@@ -92,6 +92,7 @@
 #  define SFT_ARGLIST SGS_SFT_ARGLIST
 #  define SFT_VARLIST SGS_SFT_VARLIST
 #  define SFT_GVLIST SGS_SFT_GVLIST
+#  define SFT_USELIST SGS_SFT_USELIST
 #  define SFT_EXPLIST SGS_SFT_EXPLIST
 #  define SFT_ARRLIST SGS_SFT_ARRLIST
 #  define SFT_MAPLIST SGS_SFT_MAPLIST
@@ -134,6 +135,11 @@
 #  define SI_SETPROP SGS_SI_SETPROP
 #  define SI_GETINDEX SGS_SI_GETINDEX
 #  define SI_SETINDEX SGS_SI_SETINDEX
+#  define SI_GENCLSR SGS_SI_GENCLSR
+#  define SI_PUSHCLSR SGS_SI_PUSHCLSR
+#  define SI_MAKECLSR SGS_SI_MAKECLSR
+#  define SI_GETCLSR SGS_SI_GETCLSR
+#  define SI_SETCLSR SGS_SI_SETCLSR
 #  define SI_SET SGS_SI_SET
 #  define SI_CLONE SGS_SI_CLONE
 #  define SI_CONCAT SGS_SI_CONCAT
@@ -328,6 +334,7 @@ void          sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend );
 #define SGS_SFT_ARGLIST 11
 #define SGS_SFT_VARLIST 12
 #define SGS_SFT_GVLIST  13
+#define SGS_SFT_USELIST 14
 #define SGS_SFT_EXPLIST 15
 #define SGS_SFT_ARRLIST 16
 #define SGS_SFT_MAPLIST 17
@@ -435,6 +442,13 @@ typedef enum sgs_Instruction_e
 	SGS_SI_SETPROP,  /* (A:var, B:name, C:src)  <var> <prop> <value> => set a <prop> of <var> to <value> */
 	SGS_SI_GETINDEX, /* -- || -- */
 	SGS_SI_SETINDEX, /* -- || -- */
+
+	/* closures */
+	SGS_SI_GENCLSR,  /* (A:N)                   generates closure variables for the stack frame */
+	SGS_SI_PUSHCLSR, /* (A:src)                 pick closure variable for closure creation */
+	SGS_SI_MAKECLSR, /* (A:out, B:from, C:N)    creates a closure object containing closure vars */
+	SGS_SI_GETCLSR,  /* (A:out, B:which)        loads data from the specified closure */
+	SGS_SI_SETCLSR,  /* (B:which, C:src)        stores data to the specified closure */
 
 	/* operators */
 	/*
@@ -548,6 +562,13 @@ struct _sgs_iStr
 
 #define sgs_object_t sgs_VarObj
 
+typedef struct _sgs_Closure sgs_Closure;
+struct _sgs_Closure
+{
+	int32_t refcount;
+	sgs_Variable var;
+};
+
 
 /* hash table for variables */
 typedef struct _sgs_VHTableVar
@@ -583,7 +604,8 @@ void sgsVM_StackDump( SGS_CTX );
 
 int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize,
 	void* data, int32_t datasize, int clean, uint16_t* T );
-int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int expect, int gotthis );
+int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int expect, int gotthis );
+void sgsVM_PushClosures( SGS_CTX, sgs_Closure** cls, int num );
 
 
 sgs_Variable* sgsVM_VarMake_Dict();
@@ -611,6 +633,8 @@ struct _sgs_FuncCtx
 	int32_t regs, lastreg;
 	sgs_MemBuf vars;
 	sgs_MemBuf gvars;
+	sgs_MemBuf clsr;
+	int inclsr, outclsr;
 	int32_t loops;
 	sgs_BreakInfo* binfo;
 }
@@ -657,6 +681,12 @@ struct _sgs_Context
 	int           stack_mem;
 	sgs_VarPtr    stack_off;
 	sgs_VarPtr    stack_top;
+	
+	/* > closure pointer stack */
+	sgs_Closure** clstk_base;
+	sgs_Closure** clstk_off;
+	sgs_Closure** clstk_top;
+	int           clstk_mem;
 
 	int           call_args;
 	int           call_expect;
@@ -704,8 +734,9 @@ static const char* sgs_OpNames[] =
 	"nop",  "push", "push_nulls", "pop_n", "pop_reg",
 	"return", "jump", "jump_if_true", "jump_if_false", "call",
 	"for_prep", "for_load", "for_jump", "loadconst", "getvar", "setvar",
-	"getprop", "setprop", "getindex", "setindex", "set",
-	"clone", "concat", "negate", "bool_inv", "invert",
+	"getprop", "setprop", "getindex", "setindex",
+	"genclsr", "pushclsr", "makeclsr", "getclsr", "setclsr",
+	"set", "clone", "concat", "negate", "bool_inv", "invert",
 	"inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",
 	"seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte",
@@ -725,6 +756,7 @@ static const char* sgs_IfaceNames[] =
 int sgsSTD_PostInit( SGS_CTX );
 int sgsSTD_MakeArray( SGS_CTX, int cnt );
 int sgsSTD_MakeDict( SGS_CTX, int cnt );
+int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, int clc );
 int sgsSTD_GlobalInit( SGS_CTX );
 int sgsSTD_GlobalFree( SGS_CTX );
 int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall );
