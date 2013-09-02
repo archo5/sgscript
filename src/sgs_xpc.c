@@ -12,6 +12,11 @@
 #  define SGS_MAX_PATH 4096
 #elif defined(__linux__)
 #  include <dlfcn.h>
+#  include <unistd.h>
+#  include <stdlib.h>
+#  ifndef PATH_MAX
+#    define PATH_MAX 4096
+#  endif
 #  define SGS_MAX_PATH PATH_MAX
 #endif
 
@@ -47,7 +52,7 @@ int sgs_GetProcAddress( const char* file, const char* proc, void** out )
 
 #elif defined(__linux__)
 	void* lib;
-	char* abspath[ SGS_MAX_PATH + 1 ];
+	char abspath[ SGS_MAX_PATH + 1 ];
 	
 	if( realpath( file, abspath ) )
 	{

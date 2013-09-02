@@ -192,11 +192,11 @@ void sgs_DestroyEngine( SGS_CTX )
 	sgs_BreakIf( C->memsize > sizeof( sgs_Context ) );
 	sgs_BreakIf( C->memsize < sizeof( sgs_Context ) );
 #endif
-
-	C->memfunc( C->mfuserdata, C, 0 );
 	
 	C->print_fn = NULL;
 	C->print_ctx = NULL;
+	
+	C->memfunc( C->mfuserdata, C, 0 );
 }
 
 
