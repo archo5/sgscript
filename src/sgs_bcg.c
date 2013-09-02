@@ -1499,7 +1499,6 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	fctx_dump( fctx );
 	sgsBC_Dump( nf );
 #endif
-	fctx_destroy( C, fctx );
 	C->fctx = bkfctx;
 
 	{
@@ -1513,12 +1512,17 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 		{
 			int i;
 			int16_t ro = comp_reg_alloc( C );
+			FTNode* uli = n_uselist->child;
 			for( i = 0; i < clsrcnt; ++i )
-				INSTR_WRITE( SI_PUSHCLSR, 0, 0, 0 );
+			{
+				INSTR_WRITE( SI_PUSHCLSR, find_varT( &fctx->clsr, uli->token ), 0, 0 );
+				uli = uli->next;
+			}
 			INSTR_WRITE( SI_MAKECLSR, ro, *out, clsrcnt );
 			*out = ro;
 		}
 	}
+	fctx_destroy( C, fctx );
 	return 1;
 
 fail:

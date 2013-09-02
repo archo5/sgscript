@@ -1158,6 +1158,12 @@ SFTRET parse_function( SFTC, int inexp )
 	else
 		nclos = make_node( SFT_USELIST, SFTC_AT, NULL, NULL );
 
+	if( !SFTC_IS( '{' ) )
+	{
+		SFTC_PRINTERR( "Expected '{' or 'use'" );
+		goto fail;
+	}
+
 	nbody = parse_stmt( F );
 	if( !nbody ) goto fail;
 
