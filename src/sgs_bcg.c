@@ -1439,6 +1439,21 @@ static void rpts( MemBuf* out, SGS_CTX, FTNode* root )
 }
 
 
+static void prefix_bytecode( SGS_CTX, sgs_CompFunc* func, int args )
+{
+	instr_t I = INSTR_MAKE( SI_PUSHN, C->fctx->lastreg - args, 0, 0 );
+	uint16_t ln = 0;
+	membuf_insbuf( &func->code, C, 0, &I, sizeof( I ) );
+	membuf_insbuf( &func->lnbuf, C, 0, &ln, sizeof( ln ) );
+	if( C->fctx->outclsr > C->fctx->inclsr )
+	{
+		I = INSTR_MAKE( SI_GENCLSR, C->fctx->outclsr - C->fctx->inclsr, 0, 0 );
+		membuf_insbuf( &func->code, C, 0, &I, sizeof( I ) );
+		membuf_insbuf( &func->lnbuf, C, 0, &ln, sizeof( ln ) );
+	}
+}
+
+
 static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out )
 {
 	sgs_FuncCtx* fctx = fctx_create( C ), *bkfctx = C->fctx;
@@ -1480,20 +1495,9 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 		QPRINT( "Maximum register count exceeded" );
 		goto fail;
 	}
-
-	{
-		instr_t I = INSTR_MAKE( SI_PUSHN, C->fctx->lastreg - args, 0, 0 );
-		uint16_t ln = 0;
-		membuf_insbuf( &nf->code, C, 0, &I, sizeof( I ) );
-		membuf_insbuf( &nf->lnbuf, C, 0, &ln, sizeof( ln ) );
-		if( C->fctx->outclsr > C->fctx->inclsr )
-		{
-			I = INSTR_MAKE( SI_GENCLSR, C->fctx->outclsr - C->fctx->inclsr, 0, 0 );
-			membuf_insbuf( &nf->code, C, 0, &I, sizeof( I ) );
-			membuf_insbuf( &nf->lnbuf, C, 0, &ln, sizeof( ln ) );
-		}
-		clsrcnt = C->fctx->inclsr;
-	}
+	
+	prefix_bytecode( C, nf, args );
+	clsrcnt = C->fctx->inclsr;
 
 #if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	fctx_dump( fctx );
@@ -2143,18 +2147,7 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 		goto fail;
 	}
 
-	{
-		instr_t I = INSTR_MAKE( SI_PUSHN, C->fctx->lastreg, 0, 0 );
-		uint16_t ln = 0;
-		membuf_insbuf( &func->code, C, 0, &I, sizeof( I ) );
-		membuf_insbuf( &func->lnbuf, C, 0, &ln, sizeof( ln ) );
-		if( C->fctx->outclsr > C->fctx->inclsr )
-		{
-			I = INSTR_MAKE( SI_GENCLSR, C->fctx->outclsr - C->fctx->inclsr, 0, 0 );
-			membuf_insbuf( &func->code, C, 0, &I, sizeof( I ) );
-			membuf_insbuf( &func->lnbuf, C, 0, &ln, sizeof( ln ) );
-		}
-	}
+	prefix_bytecode( C, func, 0 );
 
 	C->fctx = NULL;
 #if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )

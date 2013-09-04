@@ -599,7 +599,10 @@ static void stk_swapLF( SGS_CTX, int pos1, int pos2 )
 static void closure_deref( SGS_CTX, sgs_Closure* cl )
 {
 	if( --cl->refcount < 1 )
+	{
 		VAR_RELEASE( &cl->var );
+		sgs_Dealloc( cl );
+	}
 }
 
 #define CLSTK_UNITSIZE sizeof( sgs_Closure* )

@@ -1653,7 +1653,10 @@ static int sgsstd_realclsr_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 	for( i = 0; i < cc; ++i )
 	{
 		if( --cls[ i ]->refcount < 1 )
+		{
 			sgs_ReleaseOwned( C, &cls[ i ]->var, dco );
+			sgs_Dealloc( cls[i] );
+		}
 	}
 	
 	return SGS_SUCCESS;
@@ -1697,7 +1700,7 @@ static void* sgsstd_realclsr_functable[] =
 
 int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, int32_t clc )
 {
-	int clsz = sizeof(sgs_Closure*) * clc;
+	int i, clsz = sizeof(sgs_Closure*) * clc;
 	int memsz = clsz + sizeof(sgs_Variable) + sizeof(int32_t);
 	uint8_t* cl = (uint8_t*) sgs_PushObjectIPA( C, memsz, sgsstd_realclsr_functable );
 	
@@ -1707,6 +1710,8 @@ int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, int32_t clc )
 	memcpy( cl + sizeof(sgs_Variable), &clc, sizeof(clc) );
 	
 	memcpy( cl + sizeof(sgs_Variable) + sizeof(clc), C->clstk_top - clc, clsz );
+	for( i = 0; i < clc; ++i )
+		(*(C->clstk_top - clc + i))->refcount++;
 	
 	return SGS_SUCCESS;
 }
