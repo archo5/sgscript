@@ -1662,6 +1662,15 @@ static int sgsstd_realclsr_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 	return SGS_SUCCESS;
 }
 
+static int sgsstd_realclsr_convert( SGS_CTX, sgs_VarObj* data, int type )
+{
+	if( type != SVT_STRING && type != SGS_CONVOP_TOTYPE )
+		return SGS_ENOTSUP;
+	UNUSED( data );
+	sgs_PushString( C, "sys.closure" );
+	return SGS_SUCCESS;
+}
+
 static int sgsstd_realclsr_call( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	int ismethod = sgs_Method( C );
@@ -1690,11 +1699,48 @@ static int sgsstd_realclsr_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
+static int sgsstd_realclsr_dump( SGS_CTX, sgs_VarObj* data, int depth )
+{
+	uint8_t* cl = (uint8_t*) data->data;
+	int32_t i, ssz, cc = *(int32_t*)(cl+sizeof(sgs_Variable));
+	sgs_Closure** cls = (sgs_Closure**)(cl+sizeof(sgs_Variable)+sizeof(int32_t));
+
+	sgs_PushString( C, "sys.closure\n{" );
+
+	ssz = sgs_StackSize( C );
+	sgs_PushString( C, "\nfunc: " );
+	sgs_PushVariable( C, (sgs_Variable*) cl ); /* function */
+	if( sgs_DumpVar( C, depth ) )
+	{
+		sgs_Pop( C, 1 );
+		sgs_PushString( C, "<error>" );
+	}
+	for( i = 0; i < cc; ++i )
+	{
+		char intro[ 64 ];
+		sprintf( intro, "\n#%d (rc=%d): ", i, cls[ i ]->refcount );
+		sgs_PushString( C, intro );
+		sgs_PushVariable( C, &cls[ i ]->var );
+		if( sgs_DumpVar( C, depth ) )
+		{
+			sgs_Pop( C, 1 );
+			sgs_PushString( C, "<error>" );
+		}
+	}
+	if( sgs_StringMultiConcat( C, sgs_StackSize( C ) - ssz ) || sgs_PadString( C ) )
+		return SGS_EINPROC;
+
+	sgs_PushString( C, "\n}" );
+	return sgs_StringMultiConcat( C, 3 );
+}
+
 static void* sgsstd_realclsr_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_realclsr_destruct,
 	SOP_CALL, sgsstd_realclsr_call,
+	SOP_CONVERT, sgsstd_realclsr_convert,
 	SOP_GCMARK, sgsstd_realclsr_gcmark,
+	SOP_DUMP, sgsstd_realclsr_dump,
 	SOP_END,
 };
 

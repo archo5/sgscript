@@ -295,6 +295,26 @@ static int find_var( MemBuf* S, char* str, int len )
 	return -1;
 }
 
+static int find_nth_var( MemBuf* S, int which, char** outstr, int* outlen )
+{
+	char* ptr = S->ptr;
+	char* pend = ptr + S->size;
+	while( which > 0 )
+	{
+		while( ptr < pend && *ptr != '=' )
+			ptr++;
+		ptr++;
+		which--;
+	}
+	if( ptr >= pend )
+		return 0;
+	*outstr = ptr;
+	while( ptr < pend && *ptr != '=' )
+		ptr++;
+	*outlen = ptr - *outstr;
+	return 1;
+}
+
 static int add_var( MemBuf* S, SGS_CTX, char* str, int len )
 {
 	int pos = find_var( S, str, len );
@@ -1441,16 +1461,45 @@ static void rpts( MemBuf* out, SGS_CTX, FTNode* root )
 
 static void prefix_bytecode( SGS_CTX, sgs_CompFunc* func, int args )
 {
+	MemBuf ncode = membuf_create();
+	MemBuf nlnbuf = membuf_create();
+
 	instr_t I = INSTR_MAKE( SI_PUSHN, C->fctx->lastreg - args, 0, 0 );
 	uint16_t ln = 0;
-	membuf_insbuf( &func->code, C, 0, &I, sizeof( I ) );
-	membuf_insbuf( &func->lnbuf, C, 0, &ln, sizeof( ln ) );
+
+	membuf_appbuf( &ncode, C, &I, sizeof( I ) );
+	membuf_appbuf( &nlnbuf, C, &ln, sizeof( ln ) );
+
 	if( C->fctx->outclsr > C->fctx->inclsr )
 	{
+		int i;
 		I = INSTR_MAKE( SI_GENCLSR, C->fctx->outclsr - C->fctx->inclsr, 0, 0 );
-		membuf_insbuf( &func->code, C, 0, &I, sizeof( I ) );
-		membuf_insbuf( &func->lnbuf, C, 0, &ln, sizeof( ln ) );
+		membuf_appbuf( &ncode, C, &I, sizeof( I ) );
+		membuf_appbuf( &nlnbuf, C, &ln, sizeof( ln ) );
+
+		for( i = 0; i < args; ++i )
+		{
+			char* varstr;
+			int varstrlen, result, which;
+			result = find_nth_var( &C->fctx->vars, i, &varstr, &varstrlen );
+			sgs_BreakIf( !result );
+			which = find_var( &C->fctx->clsr, varstr, varstrlen );
+			if( which < 0 )
+				continue;
+			I = INSTR_MAKE( SI_SETCLSR, 0, which, i );
+			membuf_appbuf( &ncode, C, &I, sizeof( I ) );
+			membuf_appbuf( &nlnbuf, C, &ln, sizeof( ln ) );
+		}
 	}
+
+	membuf_appbuf( &ncode, C, func->code.ptr, func->code.size );
+	membuf_appbuf( &nlnbuf, C, func->lnbuf.ptr, func->lnbuf.size );
+
+	membuf_destroy( &func->code, C );
+	membuf_destroy( &func->lnbuf, C );
+
+	func->code = ncode;
+	func->lnbuf = nlnbuf;
 }
 
 
