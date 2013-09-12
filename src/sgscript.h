@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 #include <string.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include <stdarg.h>
 
 #include "sgs_cfg.h"

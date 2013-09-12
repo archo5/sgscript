@@ -2,7 +2,7 @@
 #ifndef SGS_UTIL_H_INCLUDED
 #define SGS_UTIL_H_INCLUDED
 
-#include <malloc.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

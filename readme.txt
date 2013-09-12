@@ -2,14 +2,12 @@
 --- SGScript v0.8.5 ---
 
 usage:
-! only MinGW/make build path has been updated recently !
 - MinGW users:
 	* compile the makefile (add mode=release to get the release build)
 	* link against libsgscript.a from the lib/ directory (-lsgscript)
-- VC10/11 users:
-	* project file is in build/vc10/SGScript
-- Code::Blocks users:
-	* project file is in build/codeblocks
+- VC10/11 users: project file is in build/vc10/SGScript
+- Code::Blocks users: project file is in build/codeblocks
+- XCode users: project file is in build/xcode
 - include src/sgscript.h in your project and link with libsgscript.a
 
 sample code and documentation ... is in tests/ and docs/ directories
@@ -42,8 +40,9 @@ future:
 - got a suggestion? write some sample code (in the form of a test) and send it
 
 credits:
-- this piece of software is created by Arvīds Kokins (snake5)
+- developer: Arvīds Kokins (snake5)
 	* I can be reached at snake5creator [at] GMail
+- XCode project contributed by Elviss Strazdiņš
 - inspired by C, PHP, Lua, JavaScript, Squirrel and AngelScript
 
 change log:
