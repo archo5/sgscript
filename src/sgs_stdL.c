@@ -24,7 +24,7 @@
 #define STDLIB_WARN( warn ) return sgs_Printf( C, SGS_WARNING, warn );
 
 
-SGS_DECLARE void* sgsstd_file_functable[];
+SGS_DECLARE sgs_ObjCallback sgsstd_file_functable[ 7 ];
 
 
 /* path helper functions */
@@ -544,13 +544,13 @@ static int sgsstd_fmt_base64_encode( SGS_CTX )
 		while( str < strend - 2 )
 		{
 			uint32_t merged = (str[0]<<16) | (str[1]<<8) | (str[2]);
-			char bb[ 4 ] =
+			char bb[ 4 ];
 			{
-				b64_table[ (merged>>18) & 0x3f ],
-				b64_table[ (merged>>12) & 0x3f ],
-				b64_table[ (merged>>6 ) & 0x3f ],
-				b64_table[ (merged    ) & 0x3f ]
-			};
+				bb[0] = b64_table[ (merged>>18) & 0x3f ];
+				bb[1] = b64_table[ (merged>>12) & 0x3f ];
+				bb[2] = b64_table[ (merged>>6 ) & 0x3f ];
+				bb[3] = b64_table[ (merged    ) & 0x3f ];
+			}
 			membuf_appbuf( &B, C, bb, 4 );
 			str += 3;
 		}
@@ -756,8 +756,9 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 		break;
 	case 'f': case 'g': case 'G': case 'e': case 'E':
 		{
-			const int MAXSIZE = 3 + DBL_MANT_DIG - DBL_MIN_EXP;
-			char data[ MAXSIZE + 1 ];
+#define FLT_MAXSIZE (3 + DBL_MANT_DIG - DBL_MIN_EXP)
+			char data[ FLT_MAXSIZE + 1 ];
+			char tmpl[ 32 ];
 			int size;
 			sgs_Real R;
 			if( !sgs_ParseReal( C, (*psi)++, &R ) )
@@ -765,10 +766,9 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			if( F->prec < 0 )
 				F->prec = 6;
 			
-			char tmpl[ 32 ];
 			sprintf( tmpl, "%%.%d%c", F->prec, F->type );
-			snprintf( data, MAXSIZE, tmpl, R );
-			data[ MAXSIZE ] = 0;
+			snprintf( data, FLT_MAXSIZE, tmpl, R );
+			data[ FLT_MAXSIZE ] = 0;
 			size = strlen( data );
 
 			if( size < F->padcnt && !F->padrgt )
@@ -870,7 +870,7 @@ typedef struct sgsstd_fmtstream_s
 }
 sgsstd_fmtstream_t;
 
-SGS_DECLARE void* sgsstd_fmtstream_functable[];
+SGS_DECLARE sgs_ObjCallback sgsstd_fmtstream_functable[ 5 ];
 #define SGSFS_HDR sgsstd_fmtstream_t* hdr = (sgsstd_fmtstream_t*) data->data
 
 #define fs_getreadsize( hdr, lim ) MIN( hdr->buffill - hdr->bufpos, lim )
@@ -1192,9 +1192,11 @@ static int sgsstd_fmtstreamI_read_binary_int( SGS_CTX )
 	SGSBOOL ret, conv = TRUE;
 	sgs_SizeVal numbytes = 128;
 	MemBuf B = membuf_create();
-	membuf_appbuf( &B, C, "0b", 2 );
 	
 	SGSFS_IHDR( read_binary_int )
+	
+	membuf_appbuf( &B, C, "0b", 2 );
+	
 	if( !sgs_LoadArgs( C, "@>|bl", &conv, &numbytes ) )
 		return 0;
 	
@@ -1215,9 +1217,11 @@ static int sgsstd_fmtstreamI_read_octal_int( SGS_CTX )
 	SGSBOOL ret, conv = TRUE;
 	sgs_SizeVal numbytes = 128;
 	MemBuf B = membuf_create();
-	membuf_appbuf( &B, C, "0o", 2 );
 	
 	SGSFS_IHDR( read_octal_int )
+	
+	membuf_appbuf( &B, C, "0o", 2 );
+	
 	if( !sgs_LoadArgs( C, "@>|bl", &conv, &numbytes ) )
 		return 0;
 	
@@ -1260,9 +1264,11 @@ static int sgsstd_fmtstreamI_read_hex_int( SGS_CTX )
 	SGSBOOL ret, conv = TRUE;
 	sgs_SizeVal numbytes = 128;
 	MemBuf B = membuf_create();
-	membuf_appbuf( &B, C, "0x", 2 );
 	
 	SGSFS_IHDR( read_hex_int )
+	
+	membuf_appbuf( &B, C, "0x", 2 );
+	
 	if( !sgs_LoadArgs( C, "@>|bl", &conv, &numbytes ) )
 		return 0;
 	
@@ -1354,10 +1360,11 @@ static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	return SGS_ENOTFND;
 }
 
-static void* sgsstd_fmtstream_functable[] =
+static sgs_ObjCallback sgsstd_fmtstream_functable[ 5 ] =
 {
 	SOP_DESTRUCT, sgsstd_fmtstream_destroy,
 	SOP_GETINDEX, sgsstd_fmtstream_getindex,
+	SOP_END
 };
 
 static int sgsstd_fmt_parser( SGS_CTX )
@@ -1425,7 +1432,7 @@ static int srt_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 	return SGS_SUCCESS;
 }
 
-static void* srt_iface[] =
+static sgs_ObjCallback srt_iface[] =
 {
 	SOP_CALL, srt_call,
 	SOP_DESTRUCT, srt_destruct,
@@ -1486,7 +1493,7 @@ static int frt_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 	return SGS_SUCCESS;
 }
 
-static void* frt_iface[] =
+static sgs_ObjCallback frt_iface[] =
 {
 	SOP_CALL, frt_call,
 	SOP_DESTRUCT, frt_destruct,
@@ -1962,9 +1969,9 @@ static int sgsstd_fileI_write( SGS_CTX )
 #define SGS_SEEK_END 2
 static int sgsstd_fileI_seek( SGS_CTX )
 {
+	static const int seekmodes[ 3 ] = { SEEK_SET, SEEK_CUR, SEEK_END };
 	sgs_Int off, mode = SEEK_SET;
 	FIF_INIT( seek )
-	int seekmodes[ 3 ] = { SEEK_SET, SEEK_CUR, SEEK_END };
 	
 	if( !sgs_LoadArgs( C, "@>ii", &off, &mode ) )
 		return 0;
@@ -2059,7 +2066,7 @@ static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* data, int type )
 }
 
 
-static void* sgsstd_file_functable[] =
+static sgs_ObjCallback sgsstd_file_functable[ 7 ] =
 {
 	SOP_GETINDEX, sgsstd_file_getindex,
 	SOP_CONVERT, sgsstd_file_convert,
@@ -2106,7 +2113,7 @@ sgsstd_dir_t;
 
 #define DIR_HDR sgsstd_dir_t* hdr = (sgsstd_dir_t*) data->data
 
-SGS_DECLARE void* sgsstd_dir_functable[];
+SGS_DECLARE sgs_ObjCallback sgsstd_dir_functable[ 7 ];
 
 static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
@@ -2159,7 +2166,7 @@ static int sgsstd_dir_getnext( SGS_CTX, sgs_VarObj* data, int what )
 	return SGS_SUCCESS;
 }
 
-static void* sgsstd_dir_functable[] =
+static sgs_ObjCallback sgsstd_dir_functable[ 7 ] =
 {
 	SOP_DESTRUCT, sgsstd_dir_destruct,
 	SOP_CONVERT, sgsstd_dir_convert,
@@ -2549,7 +2556,8 @@ static int sgsstd_os_date_string( SGS_CTX )
 				case 'U': case 'W':
 					{
 						char pbuf[ 256 ];
-						char fmt[3] = { '%', c, 0 };
+						char fmt[3] = { '%', 0, 0 };
+						fmt[1] = c;
 						strftime( pbuf, 256, fmt, &T );
 						membuf_appbuf( &B, C, pbuf, strlen( pbuf ) );
 					}
@@ -2575,7 +2583,7 @@ static int sgsstd_os_date_string( SGS_CTX )
 					sz = 3; break;
 				case 'm': put2digs( swp, M ); sz = 2; break;
 				case 'M': put2digs( swp, m ); sz = 2; break;
-				case 'p': membuf_appbuf( &B, C, "AMPM" + H/12*2, 2 ); break;
+				case 'p': membuf_appbuf( &B, C, &"AMPM"[ H/12*2 ], 2 ); break;
 				case 'R':
 					put2digs( swp, H ); swp[2] = ':';
 					put2digs( swp + 3, m ); sz = 5;
@@ -3265,8 +3273,10 @@ static int _stringrep_ss
 		{
 			if( matchcount == matchcap )
 			{
+				int32_t* nm;
+				
 				matchcap *= 4;
-				int32_t* nm = sgs_Alloc_n( int32_t, matchcap );
+				nm = sgs_Alloc_n( int32_t, matchcap );
 				memcpy( nm, matches, sizeof( int32_t ) * matchcount );
 				if( matches != sma )
 					sgs_Dealloc( matches );

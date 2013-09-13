@@ -55,7 +55,10 @@ void membuf_destroy( MemBuf* sb, SGS_CTX )
 
 MemBuf membuf_partial( char* ch, int32_t size )
 {
-	MemBuf sb = { ch, size, size };
+	MemBuf sb;
+	sb.ptr = ch;
+	sb.size = size;
+	sb.mem = size;
 	return sb;
 }
 

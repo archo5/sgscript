@@ -90,6 +90,9 @@ tools: $(OUTDIR)/sgsjson$(LIBEXT) \
 		$(OUTDIR)/sgsc$(BINEXT)
 
 
+.PHONY: vm
+vm: $(OUTDIR)/sgsvm$(BINEXT)
+
 .PHONY: test
 test: $(OUTDIR)/sgstest$(BINEXT)
 	$(OUTDIR)/sgstest

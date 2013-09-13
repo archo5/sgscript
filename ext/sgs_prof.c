@@ -104,7 +104,11 @@ static int dumpProfMode1( SGS_PROF )
 	HTPair **pbuf = (HTPair**)
 		sgs_Malloc( P->C, sizeof(HTPair*) * P->timings.load );
 	
-	struct dtf_clos D = { pbuf, &off };
+	struct dtf_clos D;
+	{
+		D.arr = pbuf;
+		D.off = &off;
+	}
 	ht_iterate( &P->timings, dumptimingsfunc, &D );
 	
 	qsort( pbuf, off, sizeof( HTPair* ), dpm1sf );

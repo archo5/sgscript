@@ -963,6 +963,7 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 	i = 0;
 	{
 		/* passing objects where the call is formed appropriately */
+		FTNode* n;
 		int16_t argpos = -1;
 		if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
 		{
@@ -972,7 +973,7 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 			gotthis = TRUE;
 		}
 
-		FTNode* n = node->child->next->child;
+		n = node->child->next->child;
 		while( n )
 		{
 			argpos = -1;
@@ -1234,6 +1235,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 			
 			if( node->child->type == SFT_EXPLIST )
 			{
+				FTNode* n;
+				int xpct = 0;
 				int32_t bkup;
 				if( node->child->next->type != SFT_FCALL )
 				{
@@ -1242,8 +1245,7 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 				}
 				
 				/* multiwrite */
-				int xpct = 0;
-				FTNode* n = node->child->child;
+				n = node->child->child;
 				while( n )
 				{
 					xpct++;
@@ -2524,9 +2526,10 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 		SGS_VERSION_INCR,
 		sizeof( sgs_Int ),
 		sizeof( sgs_Real ),
-		( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) ? SGSBC_FLAG_LITTLE_ENDIAN : 0,
+		0,
 		0, 0, 0, 0
 	};
+	header_bytes[ 9 ] = ( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) ? SGSBC_FLAG_LITTLE_ENDIAN : 0;
 	membuf_resize( outbuf, C, 0 );
 	membuf_reserve( outbuf, C, 1000 );
 	membuf_appbuf( outbuf, C, header_bytes, 14 );
@@ -2559,9 +2562,19 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t size, sgs_CompFunc** outfunc )
 {
 	char flags = buf[ 9 ];
-	decoder_t D = { C, NULL, buf, ( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) !=
-		( ( flags & SGSBC_FLAG_LITTLE_ENDIAN ) != 0 ), fn, strlen( fn ) };
 	int32_t sz = AS_INT32( buf + 10 );
+	
+	decoder_t D;
+	{
+		D.C = C;
+		D.buf = NULL;
+		D.start = buf;
+		D.convend = ( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) !=
+			( ( flags & SGSBC_FLAG_LITTLE_ENDIAN ) != 0 );
+		D.filename = fn;
+		D.filename_len = strlen( fn );
+	}
+	
 	if( D.convend )
 		sz = esi32( sz );
 	if( sz != size )

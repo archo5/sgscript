@@ -44,7 +44,6 @@
 #  define AS_REAL SGS_AS_REAL
 
 #  define FUNC_HIT SGS_FUNC_HIT
-#  define FUNC_INFO SGS_FUNC_INFO
 #  define FUNC_ENTER SGS_FUNC_ENTER
 #  define FUNC_BEGIN SGS_FUNC_BEGIN
 #  define FUNC_END SGS_FUNC_END
@@ -146,11 +145,6 @@ static SGS_INLINE int sgs_getbin( char c ){ return c - '0'; }
 #if SGS_DEBUG && SGS_DEBUG_FLOW
 #  define SGS_FUNC_HIT( what ) \
 	printf( "Hit \"%s\" line %d in function \"%s\"\n", what, __LINE__, __FUNCTION__ );
-#  ifdef _MSC_VER
-#    define SGS_FUNC_INFO( ... ) printf( __VA_ARGS__ );
-#  else
-#    define SGS_FUNC_INFO( what... ) printf( what );
-#  endif
 #  define SGS_FUNC_ENTER \
 	printf( "Entering a function from \"%s\" at line %d\n", __FUNCTION__, __LINE__ );
 #  define SGS_FUNC_BEGIN \
@@ -159,11 +153,6 @@ static SGS_INLINE int sgs_getbin( char c ){ return c - '0'; }
 	printf( "Out of \"%s\" at line %d\n", __FUNCTION__, __LINE__ );
 #else
 #  define SGS_FUNC_HIT( what )
-#  ifdef _MSC_VER
-#    define SGS_FUNC_INFO( ... )
-#  else
-#    define SGS_FUNC_INFO( what... )
-#  endif
 #  define SGS_FUNC_ENTER
 #  define SGS_FUNC_BEGIN
 #  define SGS_FUNC_END

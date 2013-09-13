@@ -142,7 +142,7 @@ void destroy_context( SGS_CTX )
 }
 
 int sgs_dummy_func( SGS_CTX ){ return 0; }
-void* sgs_dummy_iface[] = { SOP_END };
+sgs_ObjCallback sgs_dummy_iface[] = { SOP_END };
 
 
 DEFINE_TEST( create_and_destroy )

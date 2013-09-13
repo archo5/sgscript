@@ -163,7 +163,7 @@ static void ppjob_map_free( ppjob_t* job )
 
 #define PPJOB_HDR ppjob_t* job = (ppjob_t*) data->data
 
-static void* ppjob_iface[];
+static sgs_ObjCallback ppjob_iface[ 5 ];
 #define PPJOB_IHDR( name ) \
 	ppjob_t* job; \
 	if( !sgs_Method( C ) \
@@ -175,7 +175,7 @@ static void* ppjob_iface[];
 	UNUSED( job );
 
 
-static void* ppjob_iface_job[];
+static sgs_ObjCallback ppjob_iface_job[ 3 ];
 static int pproc_sleep( SGS_CTX );
 static void* ppjob_threadfunc( void* arg )
 {
@@ -477,14 +477,14 @@ static int ppjob_destruct( SGS_CTX, sgs_VarObj* data, int prop )
 	return SGS_SUCCESS;
 }
 
-static void* ppjob_iface[] =
+static sgs_ObjCallback ppjob_iface[ 5 ] =
 {
 	SOP_GETINDEX, ppjob_getindex,
 	SOP_DESTRUCT, ppjob_destruct,
 	SOP_END
 };
 
-static void* ppjob_iface_job[] =
+static sgs_ObjCallback ppjob_iface_job[ 3 ] =
 {
 	SOP_GETINDEX, ppjob_getindex,
 	SOP_END
@@ -495,14 +495,14 @@ static int pproc_serialize_function( SGS_CTX,
 {
 	int ret;
 	MemBuf B = membuf_create();
-	sgs_CompFunc F =
+	sgs_CompFunc F;
 	{
-		membuf_create(),
-		membuf_create(),
-		membuf_create(),
-		func->gotthis,
-		func->numargs,
-	};
+		F.consts = membuf_create();
+		F.code = membuf_create();
+		F.lnbuf = membuf_create();
+		F.gotthis = func->gotthis;
+		F.numargs = func->numargs;
+	}
 	
 	membuf_appbuf( &F.consts, C, ((char*)(func+1)), func->instr_off );
 	membuf_appbuf( &F.code, C, ((char*)(func+1)) +
@@ -581,7 +581,7 @@ static int pproc_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 	return SGS_SUCCESS;
 }
 
-static void* pproc_iface[] =
+static sgs_ObjCallback pproc_iface[] =
 {
 	SOP_GETINDEX, pproc_getindex,
 	SOP_DESTRUCT, pproc_destruct,

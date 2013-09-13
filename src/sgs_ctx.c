@@ -21,17 +21,9 @@ static int fastlog2( int x )
 
 
 #if SGS_DEBUG && SGS_DEBUG_FLOW
-#  ifdef _MSC_VER
-#    define DBGINFO( ... ) sgs_Printf( C, SGS_INFO, __VA_ARGS__ )
-#  else
-#    define DBGINFO( wat... ) sgs_Printf( C, SGS_INFO, wat )
-#  endif
+#  define DBGINFO( text ) sgs_Printf( C, SGS_INFO, text )
 #else
-#  ifdef _MSC_VER
-#    define DBGINFO( ... )
-#  else
-#    define DBGINFO( wat... )
-#  endif
+#  define DBGINFO( text )
 #endif
 
 
@@ -46,10 +38,10 @@ static void default_outputfn( void* userdata, SGS_CTX, const void* ptr, sgs_Size
 static void default_printfn_noabort( void* ctx, SGS_CTX, int type, const char* msg )
 {
 	const char* errpfxs[ 3 ] = { "Info", "Warning", "Error" };
+	sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
 	type = type / 100 - 1;
 	if( type < 0 ) type = 0;
 	if( type > 2 ) type = 2;
-	sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
 	UNUSED( ctx );
 	while( p != NULL )
 	{
@@ -613,7 +605,11 @@ static void ctx_print_safe( SGS_CTX, const char* str, sgs_SizeVal size )
 		else
 		{
 			static const char* hexdigs = "0123456789ABCDEF";
-			char buf[ 4 ] = { '\\', 'x', hexdigs[ (*str & 0xf0) >> 4 ], hexdigs[ *str & 0xf ] };
+			char buf[ 4 ] = { '\\', 'x', 0, 0 };
+			{
+				buf[2] = hexdigs[ (*str & 0xf0) >> 4 ];
+				buf[3] = hexdigs[ *str & 0xf ];
+			}
 			sgs_Write( C, buf, 4 );
 		}
 		str++;
@@ -623,7 +619,7 @@ static void ctx_print_safe( SGS_CTX, const char* str, sgs_SizeVal size )
 static void dumpobj( SGS_CTX, sgs_VarObj* p )
 {
 	char buf[ 320 ];
-	void** ci = p->iface;
+	sgs_ObjCallback* ci = p->iface;
 	buf[0] = 0;
 	while( *ci )
 	{

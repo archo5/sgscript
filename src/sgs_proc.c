@@ -35,9 +35,9 @@ static int fastlog2( int x )
 #define STK_UNITSIZE sizeof( sgs_Variable )
 
 
-static int obj_exec( SGS_CTX, const void* sop, object_t* data, int arg, int args )
+static int obj_exec( SGS_CTX, const sgs_ObjCallback sop, object_t* data, int arg, int args )
 {
-	void** func = data->iface;
+	sgs_ObjCallback* func = data->iface;
 	int ret = SGS_ENOTFND, stkoff;
 	
 	while( *func != SOP_END )
@@ -214,7 +214,7 @@ static void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t
 	memcpy( str_cstr( out->data.S ), str, len );
 }
 
-static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface, int xbytes )
+static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjCallback* iface, int xbytes )
 {
 	object_t* obj = sgs_Alloc_a( object_t, xbytes );
 	obj->data = data;
@@ -233,7 +233,7 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, void** iface
 	obj->getindex = NULL;
 	obj->getnext = NULL;
 	{
-		void** i = iface;
+		sgs_ObjCallback* i = iface;
 		while( *i )
 		{
 			if( i[0] == SOP_GETINDEX )
@@ -378,7 +378,11 @@ void vht_setS( VHTable* vht, string_t* S, sgs_Variable* var, SGS_CTX )
 		{
 			uint32_t ni = vht_size( vht );
 			HTPair* p = ht_setS( &vht->ht, C, S, (void*)( (size_t) ni ) );
-			VHTableVar htv = { *var, p->str };
+			VHTableVar htv;
+			{
+				htv.var = *var;
+				htv.str = p->str;
+			}
 			vht->vars[ ni ] = htv;
 		}
 	}
@@ -921,7 +925,7 @@ static int vm_gettype( SGS_CTX )
 		if( ret != SGS_SUCCESS )
 		{
 			char bfr[ 32 ];
-			sprintf( bfr, "object (%p)", A->data.O->iface );
+			sprintf( bfr, "object (%p)", (void*) A->data.O->iface );
 			sgs_PushString( C, bfr );
 		}
 	}
@@ -1536,7 +1540,10 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		if( ta == VTC_FUNC )
 			return a->data.F - b->data.F;
 		else
-			return a->data.C == b->data.C ? 0 : a->data.C < b->data.C ? -1 : 1;
+		{
+			return a->data.C == b->data.C ? 0 :
+				((size_t)a->data.C) < ((size_t)b->data.C) ? -1 : 1;
+		}
 	}
 	if( (ta|tb) & SVT_STRING )
 	{
@@ -1974,7 +1981,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 
 #define STRICTLY_EQUAL( val ) if( p2->type != p3->type || ( p2->type == VTC_OBJECT && \
 								p2->data.O->iface != p3->data.O->iface ) ) { var_setbool( C, p1, val ); break; }
-#define VCOMPARE( op ) int cr = vm_compare( C, p2, p3 ) op 0; var_setbool( C, C->stack_off + a1, cr );
+#define VCOMPARE( op ) { int cr = vm_compare( C, p2, p3 ) op 0; var_setbool( C, C->stack_off + a1, cr ); }
 		case SI_SEQ: { ARGS_3; STRICTLY_EQUAL( FALSE ); VCOMPARE( == ); break; }
 		case SI_SNEQ: { ARGS_3; STRICTLY_EQUAL( TRUE ); VCOMPARE( != ); break; }
 		case SI_EQ: { ARGS_3; VCOMPARE( == ); break; }
@@ -2024,10 +2031,11 @@ static int funct_size( func_t* f )
 
 int sgsVM_VarSize( sgs_Variable* var )
 {
+	int out;
 	if( !var )
 		return 0;
 
-	int out = sizeof( sgs_Variable );
+	out = sizeof( sgs_Variable );
 	switch( var->type )
 	{
 	case VTC_FUNC: out += funct_size( var->data.F ); break;
@@ -2050,7 +2058,7 @@ void sgsVM_VarDump( sgs_VarPtr var )
 		print_safe( stdout, var_cstr( var ), MIN( var->data.S->size, 16 ) );
 		printf( var->data.S->size > 16 ? "...\"" : "\"" ); break;
 	case SVT_FUNC: printf( " [rc:%d]", var->data.F->refcount ); break;
-	case SVT_CFUNC: printf( " = %p", var->data.C ); break;
+	case SVT_CFUNC: printf( " = %p", (void*)(size_t) var->data.C ); break;
 	case SVT_OBJECT: printf( "TODO [object impl]" ); break;
 	}
 }
@@ -2159,14 +2167,14 @@ void sgs_PushCFunction( SGS_CTX, sgs_CFunc func )
 	stk_push_leave( C, &var );
 }
 
-void sgs_PushObject( SGS_CTX, void* data, void** iface )
+void sgs_PushObject( SGS_CTX, void* data, sgs_ObjCallback* iface )
 {
 	sgs_Variable var;
 	var_create_obj( C, &var, data, iface, 0 );
 	stk_push_leave( C, &var );
 }
 
-void* sgs_PushObjectIPA( SGS_CTX, sgs_SizeVal added, void** iface )
+void* sgs_PushObjectIPA( SGS_CTX, sgs_SizeVal added, sgs_ObjCallback* iface )
 {
 	sgs_Variable var;
 	var_create_obj( C, &var, NULL, iface, added );
@@ -2544,7 +2552,7 @@ int sgs_ArgError( SGS_CTX, int argid, int gotthis, int expect, int is_strict )
 #define argerr sgs_ArgError
 #define argerrx sgs_ArgErrorExt
 
-SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
+SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 {
 	int opt = 0;
 	int strict = 0;
@@ -2552,8 +2560,6 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 	int isig = 1;
 	int nowrite = 0;
 	int method = 0;
-	va_list args;
-	va_start( args, cmd );
 	while( *cmd )
 	{
 		switch( *cmd )
@@ -2580,7 +2586,6 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 			{
 				sgs_Printf( C, SGS_WARNING, "function expects exactly %d arguments, %d given",
 					from - method, sgs_StackSize( C ) - method );
-				va_end( args );
 				return 0;
 			}
 			break;
@@ -2590,7 +2595,6 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				if( sgs_ItemType( C, from ) != SVT_NULL )
 				{
 					argerr( C, from, method, SVT_NULL, 0 );
-					va_end( args );
 					return opt;
 				}
 				
@@ -2609,7 +2613,6 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 					( strict && sgs_ItemType( C, from ) != SVT_BOOL ) )
 				{
 					argerr( C, from, method, SVT_BOOL, strict );
-					va_end( args );
 					return opt;
 				}
 				
@@ -2638,7 +2641,6 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 					( strict && sgs_ItemType( C, from ) != SVT_INT ) )
 				{
 					argerr( C, from, method, SVT_INT, strict );
-					va_end( args );
 					return opt;
 				}
 				
@@ -2646,7 +2648,6 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				{
 					sgs_Printf( C, SGS_WARNING, "integer argument %d (%" PRId64 ") out of range [%"
 						PRId64 ",%" PRId64 "]", from, i, imin, imax );
-					va_end( args );
 					return opt;
 				}
 				else if( range < 0 )
@@ -2677,7 +2678,6 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 					( strict && sgs_ItemType( C, from ) != SVT_REAL ) )
 				{
 					argerr( C, from, method, SVT_REAL, strict );
-					va_end( args );
 					return opt;
 				}
 				
@@ -2702,7 +2702,6 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 					!sgs_ParseString( C, from, &str, &sz ) )
 				{
 					argerr( C, from, method, SVT_STRING, strict );
-					va_end( args );
 					return opt;
 				}
 				
@@ -2720,7 +2719,6 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				if( !sgs_IsCallable( C, from ) )
 				{
 					argerrx( C, from, method, "callable", "" );
-					va_end( args );
 					return opt;
 				}
 				
@@ -2734,18 +2732,17 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 		case 'a': case 't': case 'o':
 			{
 				int fcf = VTC_OBJECT;
-				void** ifc = NULL;
+				sgs_ObjCallback* ifc = NULL;
 				const char* ostr = "custom object";
 				
 				if( *cmd == 'a' ){ fcf = VTC_ARRAY; ostr = "array"; }
 				if( *cmd == 't' ){ fcf = VTC_DICT; ostr = "dict"; }
-				if( *cmd == 'o' ) ifc = va_arg( args, void** );
+				if( *cmd == 'o' ) ifc = va_arg( args, sgs_ObjCallback* );
 				
 				if( ( sgs_ItemTypeExt( C, from ) & fcf ) != fcf ||
 					( ifc != NULL && !sgs_IsObject( C, from, ifc ) ) )
 				{
 					argerrx( C, from, method, ostr, "" );
-					va_end( args );
 					return opt;
 				}
 				
@@ -2770,7 +2767,6 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 					( strict && sgs_ItemType( C, from ) == SVT_NULL ) )
 				{
 					argerrx( C, from, method, strict ? "non-null" : "any", "" );
-					va_end( args );
 					return opt;
 				}
 				
@@ -2797,7 +2793,6 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 				
 				if( !acf( C, from, args, flags ) )
 				{
-					va_end( args );
 					return opt;
 				}
 			}
@@ -2814,8 +2809,27 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 			break;
 		cmd++;
 	}
-	va_end( args );
 	return 1;
+}
+
+SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
+{
+	SGSMIXED ret;
+	va_list args;
+	va_start( args, cmd );
+	ret = sgs_LoadArgsExtVA( C, from, cmd, args );
+	va_end( args );
+	return ret;
+}
+
+SGSBOOL sgs_LoadArgs( SGS_CTX, const char* cmd, ... )
+{
+	SGSBOOL ret;
+	va_list args;
+	va_start( args, cmd );
+	ret = sgs_LoadArgsExtVA( C, 0, cmd, args ) > 0;
+	va_end( args );
+	return ret;
 }
 
 
@@ -2955,7 +2969,7 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 				int q, stksz;
 				object_t* obj = var->data.O;
 
-				sprintf( buf, "object (%p) [%d] ", obj, obj->refcount );
+				sprintf( buf, "object (%p) [%d] ", (void*) obj, obj->refcount );
 				sgs_PushString( C, buf );
 				stksz = C->stack_top - C->stack_off;
 
@@ -3101,14 +3115,14 @@ SGSRESULT sgs_CloneItem( SGS_CTX, int item )
 
 static int _serialize_function( SGS_CTX, sgs_iFunc* func, MemBuf* out )
 {
-	sgs_CompFunc F =
+	sgs_CompFunc F;
 	{
-		membuf_create(),
-		membuf_create(),
-		membuf_create(),
-		func->gotthis,
-		func->numargs,
-	};
+		F.consts = membuf_create();
+		F.code = membuf_create();
+		F.lnbuf = membuf_create();
+		F.gotthis = func->gotthis;
+		F.numargs = func->numargs;
+	}
 	
 	F.consts.ptr = ((char*)(func+1));
 	F.consts.size = F.consts.mem = func->instr_off;
@@ -3204,7 +3218,11 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 	}
 	else
 	{
-		char pb[2] = { 'P', BASETYPE( V.type ) };
+		char pb[2];
+		{
+			pb[0] = 'P';
+			pb[1] = BASETYPE( V.type );
+		}
 		sgs_Write( C, pb, 2 );
 		switch( V.type )
 		{
@@ -3255,7 +3273,14 @@ fail:
 SGSRESULT sgs_SerializeObject( SGS_CTX, int args, const char* func )
 {
 	int len = strlen( func );
-	char pb[7] = { 'C', args, args>>8, args>>16, args>>24, 0, 0 };
+	char pb[7] = { 'C', 0, 0, 0, 0, 0, 0 };
+	{
+		pb[1] = args;
+		pb[2] = args>>8;
+		pb[3] = args>>16;
+		pb[4] = args>>24;
+	}
+	
 	if( len >= 255 )
 		return SGS_EINVAL;
 	if( C->output_fn != serialize_output_func )
@@ -3464,7 +3489,7 @@ SGSRESULT sgs_Convert( SGS_CTX, int item, int type )
 
 
 
-SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, void** iface )
+SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjCallback* iface )
 {
 	int len;
 	HTPair* p;
@@ -3488,17 +3513,17 @@ SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )
 	return SGS_SUCCESS;
 }
 
-void** sgs_FindType( SGS_CTX, const char* name )
+sgs_ObjCallback* sgs_FindType( SGS_CTX, const char* name )
 {
 	int len = strlen( name );
 	HTPair* p = ht_find( &C->typetable, name, len, sgs_HashFunc( name, len ) );
 	if( p )
-		return (void**) p->ptr;
+		return (sgs_ObjCallback*) p->ptr;
 	return NULL;
 }
 
 
-SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface )
+SGSBOOL sgs_IsObject( SGS_CTX, int item, sgs_ObjCallback* iface )
 {
 	sgs_Variable* var;
 	if( !sgs_IsValidIndex( C, item ) )
@@ -3516,7 +3541,7 @@ SGSBOOL sgs_IsCallable( SGS_CTX, int item )
 		return 1;
 	if( ty & SVT_OBJECT )
 	{
-		void** ptr = sgs_GetObjectIface( C, item );
+		sgs_ObjCallback* ptr = sgs_GetObjectIface( C, item );
 		while( *ptr )
 		{
 			if( *ptr == SOP_CALL )
@@ -3804,7 +3829,7 @@ void* sgs_GetObjectData( SGS_CTX, int item )
 	return var->data.O->data;
 }
 
-void** sgs_GetObjectIface( SGS_CTX, int item )
+sgs_ObjCallback* sgs_GetObjectIface( SGS_CTX, int item )
 {
 	_OBJPREP( NULL );
 	return var->data.O->iface;
@@ -3817,7 +3842,7 @@ int sgs_SetObjectData( SGS_CTX, int item, void* data )
 	return 1;
 }
 
-int sgs_SetObjectIface( SGS_CTX, int item, void** iface )
+int sgs_SetObjectIface( SGS_CTX, int item, sgs_ObjCallback* iface )
 {
 	_OBJPREP( 0 );
 	var->data.O->iface = iface;

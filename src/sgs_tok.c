@@ -454,7 +454,9 @@ static void tp_token( SGS_CTX, MemBuf* out, TokenList t )
 				else
 				{
 					static const char* hexdigs = "0123456789ABCDEF";
-					char tmp[ 4 ] = { '\\', 'x', hexdigs[ (buf[i] & 0xf0) >> 4 ], hexdigs[ buf[i] & 0xf ] };
+					char tmp[ 4 ] = { '\\', 'x', 0, 0 };
+					tmp[2] = hexdigs[ (buf[i] & 0xf0) >> 4 ];
+					tmp[3] = hexdigs[ buf[i] & 0xf ];
 					membuf_appbuf( out, C, tmp, 4 );
 				}
 			}

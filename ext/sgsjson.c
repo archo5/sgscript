@@ -134,22 +134,22 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* str, sgs_
 							}
 							if( uchar <= 0x7ff )
 							{
-								char obuf[ 2 ] =
+								char obuf[ 2 ];
 								{
-									0xC0 | ((buf[1] & 0xC0) >> 6) | ((buf[0] & 0x7) << 2),
-									0x80 | (buf[1] & 0x3F)
-								};
+									obuf[0] = 0xC0 | ((buf[1] & 0xC0) >> 6) | ((buf[0] & 0x7) << 2);
+									obuf[1] = 0x80 | (buf[1] & 0x3F);
+								}
 								sgs_membuf_appbuf( &str, C, obuf, 2 );
 								break;
 							}
 
 							{
-								char obuf[ 3 ] =
+								char obuf[ 3 ];
 								{
-									0xE0 | ((buf[0] & 0xF0) >> 4),
-									0x80 | ((buf[0] & 0xF) << 2) | ((buf[1] & 0xC0) >> 6),
-									0x80 | (buf[1] & 0x3F)
-								};
+									obuf[0] = 0xE0 | ((buf[0] & 0xF0) >> 4);
+									obuf[1] = 0x80 | ((buf[0] & 0xF) << 2) | ((buf[1] & 0xC0) >> 6);
+									obuf[2] = 0x80 | (buf[1] & 0x3F);
+								}
 								sgs_membuf_appbuf( &str, C, obuf, 3 );
 							}
 						}
@@ -351,9 +351,10 @@ static int json_decode( SGS_CTX )
 	}
 	else
 	{
+		const char* ret = NULL;
 		sgs_MemBuf stack = sgs_membuf_create();
 		sgs_membuf_appchr( &stack, C, 0 );
-		const char* ret = json_parse( C, &stack, str, size, argc == 2 );
+		ret = json_parse( C, &stack, str, size, argc == 2 );
 		sgs_membuf_destroy( &stack, C );
 		if( ret )
 		{
@@ -401,7 +402,11 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 				{
 					if( *str == '"' || *str == '\\' )
 					{
-						char pp[] = { '\\', *str };
+						char pp[2];
+						{
+							pp[0] = '\\';
+							pp[1] = *str;
+						}
 						if( str != frm )
 							sgs_membuf_appbuf( buf, C, frm, str - frm );
 						sgs_membuf_appbuf( buf, C, pp, 2 );

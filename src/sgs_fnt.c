@@ -156,7 +156,8 @@ SFTRET parse_function( SFTC, int inexp );
 SFTRET parse_arg( SFTC, int argid, char end )
 {
 	FTNode* node = NULL;
-	char toks[ 3 ] = { ',', end, 0 };
+	char toks[ 3 ] = { ',', 0, 0 };
+	toks[1] = end;
 
 	FUNC_BEGIN;
 
@@ -626,9 +627,10 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 			{
 				int isidx = prev == ST_IDENT || prev == ')' || prev == ']';
 				char cend = SFTC_IS( '(' ) ? ')' : ']';
-				char endcstr[ 3 ] = { ',', cend, 0 };
 				FTNode* exprlist = make_node( SFTC_IS( '(' ) ? SFT_EXPLIST : SFT_ARRLIST, SFTC_AT, NULL, NULL );
 				FTNode* expr, * curexpr = NULL;
+				char endcstr[ 3 ] = { ',', 0, 0 };
+				endcstr[1] = cend;
 
 				SFTC_NEXT;
 				/* if this is an empty expression (for a function call), do not process it further */
@@ -778,7 +780,8 @@ SFTRET parse_explist( SFTC, char endtok )
 {
 	FTNode* explist = make_node( SFT_EXPLIST, SFTC_AT, NULL, NULL );
 	FTNode* curexp = NULL, *node;
-	char endtoklist[] = { ',', endtok, 0 };
+	char endtoklist[] = { ',', 0, 0 };
+	endtoklist[1] = endtok;
 
 	FUNC_BEGIN;
 
@@ -1455,7 +1458,11 @@ fail:
 FTNode* sgsFT_Compile( SGS_CTX, TokenList tlist )
 {
 	FTNode* ret;
-	FTComp F = { C, tlist };
+	FTComp F;
+	{
+		F.C = C;
+		F.at = tlist;
+	}
 	ret = parse_stmtlist( &F, 0 );
 	return ret;
 }

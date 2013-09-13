@@ -253,7 +253,7 @@ struct sgs_ObjData
 	sgs_SizeVal refcount;
 	uint8_t redblue;    /* red or blue? mark & sweep */
 	void* data;         /* should have offset=8 with packing alignment>=8 */
-	void** iface;
+	sgs_ObjCallback* iface;
 	sgs_VarObj* prev;   /* pointer to previous GC object */
 	sgs_VarObj* next;   /* pointer to next GC object */
 	/* cache */
@@ -283,7 +283,7 @@ struct _sgs_Variable
 };
 
 /* - object interface */
-#define SGS_OP( idx ) ((void*)idx)
+#define SGS_OP( idx ) ((sgs_ObjCallback)idx)
 #define SGS_OP_END        SGS_OP( 0 )
 #define SGS_OP_DESTRUCT   SGS_OP( 1 )  /* arg = should free child vars? */
 #define SGS_OP_GETINDEX   SGS_OP( 2 )  /* arg = prop? */
@@ -470,8 +470,8 @@ SGS_APIFUNC void sgs_PushReal( SGS_CTX, sgs_Real value );
 SGS_APIFUNC void sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size );
 SGS_APIFUNC void sgs_PushString( SGS_CTX, const char* str );
 SGS_APIFUNC void sgs_PushCFunction( SGS_CTX, sgs_CFunc func );
-SGS_APIFUNC void sgs_PushObject( SGS_CTX, void* data, void** iface );
-SGS_APIFUNC void* sgs_PushObjectIPA( SGS_CTX, sgs_SizeVal added, void** iface );
+SGS_APIFUNC void sgs_PushObject( SGS_CTX, void* data, sgs_ObjCallback* iface );
+SGS_APIFUNC void* sgs_PushObjectIPA( SGS_CTX, sgs_SizeVal added, sgs_ObjCallback* iface );
 SGS_APIFUNC void sgs_PushVariable( SGS_CTX, sgs_Variable* var );
 
 SGS_APIFUNC SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var );
@@ -516,8 +516,9 @@ typedef int (*sgs_ArgCheckFunc)
 #define SGS_LOADARG_INTRANGE 0x10
 #define SGS_LOADARG_INTCLAMP 0x20
 
+SGS_APIFUNC SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args );
 SGS_APIFUNC SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... );
-#define sgs_LoadArgs( C, cmd, ... ) (sgs_LoadArgsExt( C, 0, cmd, ##__VA_ARGS__ )>0)
+SGS_APIFUNC SGSBOOL sgs_LoadArgs( SGS_CTX, const char* cmd, ... );
 
 SGS_APIFUNC SGSRESULT sgs_Pop( SGS_CTX, int count );
 SGS_APIFUNC SGSRESULT sgs_PopSkip( SGS_CTX, int count, int skip );
@@ -566,11 +567,11 @@ SGS_APIFUNC char* sgs_ToStringBufFast( SGS_CTX, int item, sgs_SizeVal* outsize )
 #define sgs_ToStringFast( ctx, item ) sgs_ToStringBufFast( ctx, item, NULL )
 SGS_APIFUNC SGSRESULT sgs_Convert( SGS_CTX, int item, int type );
 
-SGS_APIFUNC SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, void** iface );
+SGS_APIFUNC SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjCallback* iface );
 SGS_APIFUNC SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name );
-SGS_APIFUNC void** sgs_FindType( SGS_CTX, const char* name );
+SGS_APIFUNC sgs_ObjCallback* sgs_FindType( SGS_CTX, const char* name );
 
-SGS_APIFUNC SGSBOOL sgs_IsObject( SGS_CTX, int item, void** iface );
+SGS_APIFUNC SGSBOOL sgs_IsObject( SGS_CTX, int item, sgs_ObjCallback* iface );
 #define sgs_IsType( C, item, name ) sgs_IsObject( C, item, sgs_FindType( C, name ) )
 SGS_APIFUNC SGSBOOL sgs_IsCallable( SGS_CTX, int item );
 SGS_APIFUNC SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size );
@@ -603,9 +604,9 @@ SGS_APIFUNC char* sgs_GetStringPtr( SGS_CTX, int item );
 SGS_APIFUNC sgs_SizeVal sgs_GetStringSize( SGS_CTX, int item );
 SGS_APIFUNC sgs_VarObj* sgs_GetObjectStruct( SGS_CTX, int item );
 SGS_APIFUNC void* sgs_GetObjectData( SGS_CTX, int item );
-SGS_APIFUNC void** sgs_GetObjectIface( SGS_CTX, int item );
+SGS_APIFUNC sgs_ObjCallback* sgs_GetObjectIface( SGS_CTX, int item );
 SGS_APIFUNC int sgs_SetObjectData( SGS_CTX, int item, void* data );
-SGS_APIFUNC int sgs_SetObjectIface( SGS_CTX, int item, void** iface );
+SGS_APIFUNC int sgs_SetObjectIface( SGS_CTX, int item, sgs_ObjCallback* iface );
 
 SGS_APIFUNC int sgs_HasFuncName( SGS_CTX );
 SGS_APIFUNC void sgs_FuncName( SGS_CTX, const char* fnliteral );

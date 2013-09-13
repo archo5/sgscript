@@ -139,7 +139,9 @@ static void prepengine( sgs_Context* C )
 	"		print( \"\\n\" );\n"
 	"		sys_errorstate();\n"
 	"	}\n"
-	"}\n"
+	"}\n";
+	/* for ISO C90 support */
+	const char* sgs_testapi2 =
 	"function testEqual( what, expect, name, onfail ){\n"
 	"	var failmsg = \"expected \\\"\" $ expect $ \"\\\", got \\\"\" $ what $ \"\\\"\";\n"
 	"	if( onfail !== null ) failmsg $= \" (\" $ onfail $ \")\";\n"
@@ -149,6 +151,10 @@ static void prepengine( sgs_Context* C )
 	;
 
 	ret = sgs_ExecString( C, sgs_testapi );
+	UNUSED( ret );
+	sgs_BreakIf( ret != SGS_SUCCESS );
+
+	ret = sgs_ExecString( C, sgs_testapi2 );
 	UNUSED( ret );
 	sgs_BreakIf( ret != SGS_SUCCESS );
 

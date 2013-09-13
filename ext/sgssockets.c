@@ -314,7 +314,7 @@ static int sockaddr_dump( SGS_CTX, sgs_VarObj* data, int depth )
 	return SGS_SUCCESS;
 }
 
-static void* sockaddr_iface[] =
+static sgs_ObjCallback sockaddr_iface[] =
 {
 	SOP_GETINDEX, sockaddr_getindex,
 	SOP_SETINDEX, sockaddr_setindex,
@@ -436,7 +436,7 @@ static int sgs_socket_gethostname( SGS_CTX )
 	Socket object
 */
 
-static void* socket_iface[];
+static sgs_ObjCallback socket_iface[ 9 ];
 #define SOCK_IHDR( name ) \
 	sgs_VarObj* data; \
 	int method_call = sgs_Method( C ); \
@@ -785,7 +785,7 @@ static int socket_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 	return SGS_SUCCESS;
 }
 
-static void* socket_iface[] =
+static sgs_ObjCallback socket_iface[ 9 ] =
 {
 	SOP_GETINDEX, socket_getindex,
 	SOP_SETINDEX, socket_setindex,
