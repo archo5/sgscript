@@ -350,8 +350,14 @@ void ht_iterate( sgs_HashTable* T, sgs_HTIterFunc func, void* userdata )
 
 double sgs_GetTime()
 {
+#ifdef __linux
+	struct timespec ts;
+	clock_gettime( CLOCK_MONOTONIC, &ts );
+	return (double) ts.tv_sec + 0.000000001 * (double) ts.tv_nsec;
+#else
 	clock_t clk = clock();
 	return (double)( clk ) / (double)( CLOCKS_PER_SEC );
+#endif
 }
 
 
