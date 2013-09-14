@@ -1286,7 +1286,7 @@ static int sgsstd_fmtstreamI_read_hex_int( SGS_CTX )
 
 static int sgsstd_fmtstreamI_check( SGS_CTX )
 {
-	char* chkstr, chr, chr2;
+	char* chkstr, chr = 0, chr2;
 	sgs_SizeVal chksize, numchk = 0;
 	SGSBOOL partial = FALSE, ci = FALSE;
 	

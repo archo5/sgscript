@@ -1481,10 +1481,12 @@ static void prefix_bytecode( SGS_CTX, sgs_CompFunc* func, int args )
 
 		for( i = 0; i < args; ++i )
 		{
-			char* varstr;
+			char* varstr = NULL;
 			int varstrlen, result, which;
 			result = find_nth_var( &C->fctx->vars, i, &varstr, &varstrlen );
 			sgs_BreakIf( !result );
+			if( !result )
+				continue;
 			which = find_var( &C->fctx->clsr, varstr, varstrlen );
 			if( which < 0 )
 				continue;
