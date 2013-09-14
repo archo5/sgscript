@@ -1047,8 +1047,8 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 
 	FUNC_BEGIN;
 	UNUSED( C );
-
-	if( node->type != SFT_IDENT || *node->token != ST_IDENT )
+	
+	if( ( node->type != SFT_IDENT && node->type != SFT_ARGMT ) || *node->token != ST_IDENT )
 		goto cannot;
 
 	if( ioff > func->code.size - 4 )
@@ -2153,9 +2153,13 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				if( pp->child )
 				{
 					int16_t arg = -1;
+					int32_t lastsize = func->code.size;
 					if( !compile_node_r( C, func, pp->child, &arg ) ) goto fail;
 					if( !pp->token || *pp->token != ST_IDENT ) goto fail;
-					compile_ident_w( C, func, pp, arg );
+					if( node->type != SFT_VARLIST || !try_optimize_last_instr_out( C, func, pp, lastsize, NULL ) )
+					{
+						compile_ident_w( C, func, pp, arg );
+					}
 					comp_reg_unwind( C, regstate );
 				}
 				pp = pp->next;
