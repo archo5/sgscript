@@ -1536,7 +1536,7 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 
 	FUNC_ENTER;
 	if( !preparse_varlists( C, nf, n_body ) ) { goto fail; }
-	args += func->gotthis;
+	args += nf->gotthis;
 
 	FUNC_ENTER;
 	if( !compile_node( C, nf, n_body ) ) { goto fail; }
