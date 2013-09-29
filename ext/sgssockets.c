@@ -165,6 +165,8 @@ static int socket_geterrnobyname( SGS_CTX )
 	Socket address object
 */
 
+static sgs_ObjCallback sockaddr_iface[ 11 ];
+
 #define GET_SAF ((struct sockaddr_storage*)data->data)->ss_family
 #define GET_SAI ((struct sockaddr_in*)data->data)
 #define GET_SAI6 ((struct sockaddr_in6*)data->data)
@@ -301,6 +303,45 @@ static int sockaddr_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
+static int sockaddr_expr( SGS_CTX, sgs_VarObj* data, int eop )
+{
+	if( eop == SGS_EOP_COMPARE )
+	{
+		sgs_Int diff = -1;
+		void *data1, *data2;
+		if( sgs_GetObjectIface( C, 0 ) != sockaddr_iface ||
+			sgs_GetObjectIface( C, 1 ) != sockaddr_iface )
+			return SGS_EINVAL;
+		data1 = sgs_GetObjectData( C, 0 );
+		data2 = sgs_GetObjectData( C, 1 );
+		if( ((struct sockaddr_storage*)data1)->ss_family != ((struct sockaddr_storage*)data2)->ss_family )
+			diff = ((struct sockaddr_storage*)data1)->ss_family - ((struct sockaddr_storage*)data2)->ss_family;
+		else if( ((struct sockaddr_storage*)data1)->ss_family == AF_INET )
+		{
+			int adiff = 0;
+			struct sockaddr_in* sa1 = (struct sockaddr_in*) data1;
+			struct sockaddr_in* sa2 = (struct sockaddr_in*) data2;
+			adiff = memcmp( &sa1->sin_addr, &sa2->sin_addr, sizeof(sa1->sin_addr) );
+			if( !adiff )
+				adiff = htons(sa1->sin_port) - htons(sa2->sin_port);
+			diff = adiff;
+		}
+		else if( ((struct sockaddr_storage*)data1)->ss_family == AF_INET )
+		{
+			int adiff = 0;
+			struct sockaddr_in6* sa1 = (struct sockaddr_in6*) data1;
+			struct sockaddr_in6* sa2 = (struct sockaddr_in6*) data2;
+			adiff = memcmp( &sa1->sin6_addr, &sa2->sin6_addr, sizeof(sa1->sin6_addr) );
+			if( !adiff )
+				adiff = htons(sa1->sin6_port) - htons(sa2->sin6_port);
+			diff = adiff;
+		}
+		sgs_PushInt( C, diff );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
 static int sockaddr_dump( SGS_CTX, sgs_VarObj* data, int depth )
 {
 	char buf[ 32 ];
@@ -314,11 +355,12 @@ static int sockaddr_dump( SGS_CTX, sgs_VarObj* data, int depth )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback sockaddr_iface[] =
+static sgs_ObjCallback sockaddr_iface[ 11 ] =
 {
 	SOP_GETINDEX, sockaddr_getindex,
 	SOP_SETINDEX, sockaddr_setindex,
 	SOP_CONVERT, sockaddr_convert,
+	SOP_EXPR, sockaddr_expr,
 	SOP_DUMP, sockaddr_dump,
 	SOP_END,
 };
@@ -346,6 +388,8 @@ static int sgs_socket_address( SGS_CTX )
 	if( af != AF_INET && af != AF_INET6 )
 		STDLIB_WARN( "argument 1 (address family)"
 			" must be either AF_INET or AF_INET6" )
+	
+	memset( &ss, 0, sizeof(ss) );
 	
 	ss.ss_family = (int16_t) af;
 	port = htons( port );
@@ -816,6 +860,46 @@ static int sgs_socket( SGS_CTX )
 	return 1;
 }
 
+static int sgs_socket_tcp( SGS_CTX )
+{
+	int S, ipv6 = 0;
+	SGSFN( "socket_tcp" );
+	
+	if( !sgs_LoadArgs( C, "|b", &ipv6 ) )
+		return 0;
+	
+	S = socket( ipv6 ? PF_INET6 : PF_INET, SOCK_STREAM, IPPROTO_TCP );
+	if( S < 0 )
+	{
+		SOCKERR;
+		STDLIB_WARN( "failed to create socket" )
+	}
+	SOCKCLEARERR;
+	
+	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
+	return 1;
+}
+
+static int sgs_socket_udp( SGS_CTX )
+{
+	int S, ipv6 = 0;
+	SGSFN( "socket_udp" );
+	
+	if( !sgs_LoadArgs( C, "|b", &ipv6 ) )
+		return 0;
+	
+	S = socket( ipv6 ? PF_INET6 : PF_INET, SOCK_DGRAM, IPPROTO_UDP );
+	if( S < 0 )
+	{
+		SOCKERR;
+		STDLIB_WARN( "failed to create socket" )
+	}
+	SOCKCLEARERR;
+	
+	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
+	return 1;
+}
+
 static int sgs_socket_select( SGS_CTX )
 {
 	struct timeval tv;
@@ -943,6 +1027,8 @@ static sgs_RegFuncConst f_sock[] =
 	{ "socket_address_frombytes", sgs_socket_address_frombytes },
 	{ "socket_gethostname", sgs_socket_gethostname },
 	{ "socket", sgs_socket },
+	{ "socket_tcp", sgs_socket_tcp },
+	{ "socket_udp", sgs_socket_udp },
 	{ "socket_select", sgs_socket_select },
 };
 
