@@ -1055,22 +1055,27 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 		goto cannot;
 
 	ioff = func->code.size - 4;
+	
+	/* check if closure variable */
+	pos = find_varT( &C->fctx->clsr, node->token );
+	if( pos >= 0 )
+		goto cannot;
 
 	/* find the variable output register */
 	if( C->fctx->func )
 	{
-		int16_t gpos = find_var( &C->fctx->gvars, (char*) node->token + 2, node->token[ 1 ] );
+		int16_t gpos = find_varT( &C->fctx->gvars, node->token );
 		if( gpos >= 0 )
 			pos = -1;
 		else
 		{
-			add_var( &C->fctx->vars, C, (char*) node->token + 2, node->token[ 1 ] );
-			pos = find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
+			add_varT( &C->fctx->vars, C, node->token );
+			pos = find_varT( &C->fctx->vars, node->token );
 		}
 	}
 	else
 	{
-		pos = find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
+		pos = find_varT( &C->fctx->vars, node->token );
 	}
 
 	/* global variable */
