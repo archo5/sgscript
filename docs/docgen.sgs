@@ -5,9 +5,6 @@ include "string", "fmt", "io", "re", "../bin/sgsjson";
 include "markdown.sgs";
 
 
-io_dir_create( "out" );
-
-
 function generate_alias( name )
 {
 	name = re_replace( name, "#[^a-zA-Z0-9_]+#", "-" );

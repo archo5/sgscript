@@ -3464,6 +3464,40 @@ SGSRESULT sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
 }
 
 
+SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
+{
+	int ret = 0, sz;
+	int pathrep = 0;
+	if( searchpath )
+	{
+		pathrep = sgs_PushGlobal( C, "SGS_PATH" ) == SGS_SUCCESS ? 1 : 2;
+		sgs_PushString( C, searchpath );
+		sgs_StoreGlobal( C, "SGS_PATH" );
+	}
+	
+	sz = sgs_StackSize( C );
+	sgs_PushString( C, name );
+	sgs_PushCFunction( C, sgsstd_include );
+	ret = sgs_Call( C, 1, 1 );
+	if( ret == SGS_SUCCESS )
+		ret = sgs_GetBool( C, -1 );
+	else
+		ret = 0;
+	sgs_SetStackSize( C, sz );
+	
+	if( pathrep == 1 )
+		sgs_StoreGlobal( C, "SGS_PATH" );
+	else if( pathrep == 2 )
+	{
+		sgs_PushGlobal( C, "_G" );
+		sgs_PushString( C, "SGS_PATH" );
+		sgs_ObjectAction( C, -2, SGS_ACT_DICT_UNSET, -1 );
+	}
+	
+	sgs_SetStackSize( C, 0 );
+	return ret;
+}
+
 SGSRESULT sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 {
 	int i, j;
@@ -3498,6 +3532,20 @@ SGSRESULT sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 				sgs_GetObjectData( C, item ), i - arg, i - 1 );
 		}
 		return SGS_SUCCESS;
+	
+	case SGS_ACT_DICT_UNSET:
+		if( sgs_ItemTypeExt( C, item ) != VTC_DICT ||
+			sgs_ItemType( C, arg ) != SVT_STRING )
+			return SGS_EINVAL;
+		else
+		{
+			sgs_Variable str;
+			sgs_GetStackItem( C, arg, &str );
+			vht_unsetS(
+				&((DictHdr*)sgs_GetObjectData( C, item ))->ht,
+				str.data.S, C );
+			return SGS_SUCCESS;
+		}
 		
 	}
 	return SGS_ENOTFND;

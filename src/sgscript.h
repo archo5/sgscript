@@ -209,6 +209,7 @@ typedef void (*sgs_HookFunc) (
 #define SGS_ACT_ARRAY_PUSH   1
 #define SGS_ACT_ARRAY_POP    2
 #define SGS_ACT_ARRAY_POPRET 3
+#define SGS_ACT_DICT_UNSET   11
 
 
 /* Context internals */
@@ -382,6 +383,15 @@ sgs_EvalFile
 );
 
 SGS_APIFUNC
+SGSBOOL
+sgs_IncludeExt
+(
+	SGS_CTX,
+	const char* name,
+	const char* searchpath
+);
+
+SGS_APIFUNC
 SGSRESULT
 sgs_Compile
 (
@@ -419,6 +429,7 @@ SGS_APIFUNC sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 #define sgs_ExecString( C, str ) sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )
 #define sgs_EvalString( C, str, rvc ) sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ), rvc )
 #define sgs_ExecFile( C, str ) sgs_EvalFile( C, str, NULL )
+#define sgs_Include( C, str ) sgs_IncludeExt( C, str, NULL )
 #define sgs_WriteStr( C, str ) sgs_Write( C, str, SGS_STRINGLENGTHFUNC( str ) )
 
 

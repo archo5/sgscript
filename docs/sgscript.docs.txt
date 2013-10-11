@@ -835,6 +835,24 @@ These are the default meanings for error codes that are honored throughout the A
 - SGS_EINVAL: passed data was not recognized
 
 
+# sgs_Include [function alias]
+
+== SGSBOOL sgs_Include( sgs_Context* C, const char* name )
+=== includes an item by the specified name, returning if completed successfully
+
+- a C version of the `include` SGS function
+- alias to `sgs_IncludeExt( C, name, NULL )`
+
+
+# sgs_IncludeExt [function]
+
+== SGSBOOL sgs_IncludeExt( sgs_Context* C, const char* name, const char* searchpath )
+=== includes an item by the specified name, optionally looking in the places specified by the search path, returning if completed successfully
+
+- a C version of the `include` SGS function
+- `searchpath` overrides SGS_PATH for the time of execution
+
+
 # sgs_LoadLib_*** [functions]
 
 == SGSRESULT sgs_LoadLib_Fmt( sgs_Context* C )
@@ -1395,6 +1413,10 @@ After a successful call, all arguments and the function will be popped off the s
 -- remove the last `arg` items from the end of the array and return them in the order they were stored (last items on array are last on stack)
 -- error codes
 --- SGS_EINVAL: `item` was not an array, `arg` was negative or bigger than size of array
+- SGS_ACT_DICT_UNSET
+-- unset a key-value pair from a dict
+-- error codes
+--- SGS_EINVAL: `item` was not a dict, `arg` was not pointing to a stack item of `string` type
 
 === error codes
 - SGS_E****: action-specific
