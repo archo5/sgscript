@@ -1184,6 +1184,7 @@ These are the default meanings for error codes that are honored throughout the A
 == int sgs_ArgErrorExt( SGS_CTX, int argid, int method, const char* expect, const char* expfx )
 === prints the argument type mismatch error
 
+- `expfx` - prefix of `expect`, put exactly before this for things like 'strict '
 - always returns 0 so it can be used to return and print an error in the same statement
 
 
@@ -1248,7 +1249,7 @@ These are the default meanings for error codes that are honored throughout the A
 - `p` -- check for `func/cfunc/object with SGS_OP_CALL` (callables) (returns SGSBOOL = 1)
 - `a` -- check for `array` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `t` -- check for `dict` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
-- `o` -- check for `object` (requires void** interface, returns sgs_VarObj* data)
+- `o` -- check for `object` (requires void** interface, returns <type>* data - the data pointer)
 - `v` -- check for any (non-null if strict, returns sgs_Variable data)
 - `x` -- call a custom checking function (requires sgs_ArgCheckFunc, everything else depends on function)
 
