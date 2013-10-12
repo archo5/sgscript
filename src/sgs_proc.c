@@ -2755,7 +2755,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 						((sgsstd_array_header_t*) O->data)->size; break;
 					case 't': *va_arg( args, sgs_SizeVal* ) =
 						vht_size( ((VHTable*) O->data) ); break;
-					case 'o': *va_arg( args, sgs_VarObj** ) = O; break;
+					case 'o': *va_arg( args, void** ) = O->data; break;
 					}
 				}
 			}

@@ -550,15 +550,15 @@ static int socketI_accept( SGS_CTX )
 
 static int socketI_connect( SGS_CTX )
 {
-	sgs_VarObj* odt;
+	struct sockaddr* odtdata;
 	
 	SOCK_IHDR( connect );
 	
-	if( !sgs_LoadArgs( C, "@>o", sockaddr_iface, &odt ) )
+	if( !sgs_LoadArgs( C, "@>o", sockaddr_iface, &odtdata ) )
 		return 0;
 	
 	sgs_PushBool( C, sockassert( C, connect( GET_SCK,
-		(struct sockaddr*) odt->data, sizeof(struct sockaddr_storage) ) != -1 ) );
+		odtdata, sizeof(struct sockaddr_storage) ) != -1 ) );
 	return 1;
 }
 
@@ -589,15 +589,14 @@ static int socketI_sendto( SGS_CTX )
 	sgs_SizeVal size;
 	sgs_Int flags = 0;
 	int ret;
-	sgs_VarObj* odt;
+	struct sockaddr* odtdata;
 	
 	SOCK_IHDR( sendto );
 	
-	if( !sgs_LoadArgs( C, "@>mo|i", &str, &size, sockaddr_iface, &odt, &flags ) )
+	if( !sgs_LoadArgs( C, "@>mo|i", &str, &size, sockaddr_iface, &odtdata, &flags ) )
 		return 0;
 	
-	ret = sendto( GET_SCK, str, size, (int) flags,
-		(struct sockaddr*) odt->data, sizeof(struct sockaddr_storage) );
+	ret = sendto( GET_SCK, str, size, (int) flags, odtdata, sizeof(struct sockaddr_storage) );
 	sockassert( C, ret >= 0 );
 	if( ret < 0 )
 		sgs_PushBool( C, 0 );

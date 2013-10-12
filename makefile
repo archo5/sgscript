@@ -64,6 +64,8 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
 	$(CC) $(PREFLAGS) -c -o $@ $< $(CFLAGS)
 
 # the libraries
+$(OUTDIR)/sgsxgmath$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsxgmath.c
+	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgsxgmath.c -shared $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgsjson$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsjson.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgsjson.c -shared $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgspproc$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgspproc.c
@@ -81,7 +83,8 @@ $(OUTDIR)/sgsc$(BINEXT): $(OUTFILE) $(EXTDIR)/sgsc.c
 	$(CC) -o $@ $(EXTDIR)/sgsc.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 
 .PHONY: tools
-tools: $(OUTDIR)/sgsjson$(LIBEXT) \
+tools: $(OUTDIR)/sgsxgmath$(LIBEXT) \
+		$(OUTDIR)/sgsjson$(LIBEXT) \
 		$(OUTDIR)/sgspproc$(LIBEXT) \
 		$(OUTDIR)/sgssockets$(LIBEXT) \
 		$(OUTDIR)/sgstest$(BINEXT) \

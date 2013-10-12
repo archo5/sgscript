@@ -3,7 +3,7 @@
 #include <math.h>
 
 #include <sgscript.h>
-#include <sgs_int.h>
+#include <sgs_util.h>
 
 
 /* disables trailing commas and other possibly useful things */
@@ -396,7 +396,7 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 		{
 			sgs_membuf_appchr( buf, C, '"' );
 			{
-				char* str = sgs_var_cstr( &var );
+				char* str = sgs_GetStringPtr( C, -1 );
 				char* frm = str, *end = str + sgs_GetStringSize( C, -1 );
 				while( str < end )
 				{
