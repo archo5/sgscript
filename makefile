@@ -64,7 +64,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c $(DEPS)
 	$(CC) $(PREFLAGS) -c -o $@ $< $(CFLAGS)
 
 # the libraries
-$(OUTDIR)/sgsxgmath$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsxgmath.c
+$(OUTDIR)/sgsxgmath$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsxgmath.c $(OUTFILE) $(EXTDIR)/sgsxgmath.h
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgsxgmath.c -shared $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgsjson$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsjson.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgsjson.c -shared $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
@@ -72,6 +72,7 @@ $(OUTDIR)/sgspproc$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgspproc.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgspproc.c -shared $(LFLAGS) -lpthread -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgssockets$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgssockets.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgssockets.c -shared $(LFLAGS) $(SOCKLIBS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+
 # the tools
 $(OUTDIR)/sgstest$(BINEXT): $(OUTFILE) $(EXTDIR)/sgstest.c $(OUTDIR)/sgsjson$(LIBEXT)
 	$(CC) -o $@ $(EXTDIR)/sgstest.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
@@ -82,27 +83,34 @@ $(OUTDIR)/sgsvm$(BINEXT): $(OUTFILE) $(EXTDIR)/sgsvm.c $(EXTDIR)/sgs_idbg.c $(EX
 $(OUTDIR)/sgsc$(BINEXT): $(OUTFILE) $(EXTDIR)/sgsc.c
 	$(CC) -o $@ $(EXTDIR)/sgsc.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 
-.PHONY: tools
-tools: $(OUTDIR)/sgsxgmath$(LIBEXT) \
-		$(OUTDIR)/sgsjson$(LIBEXT) \
-		$(OUTDIR)/sgspproc$(LIBEXT) \
-		$(OUTDIR)/sgssockets$(LIBEXT) \
-		$(OUTDIR)/sgstest$(BINEXT) \
-		$(OUTDIR)/sgsapitest$(BINEXT) \
-		$(OUTDIR)/sgsvm$(BINEXT) \
-		$(OUTDIR)/sgsc$(BINEXT)
-
-
+# library/tool aliases
+.PHONY: xgmath
+.PHONY: json
+.PHONY: pproc
+.PHONY: sockets
+.PHONY: build_test
+.PHONY: build_apitest
 .PHONY: vm
-vm: $(OUTDIR)/sgsvm$(BINEXT)
-
+.PHONY: c
 .PHONY: test
+.PHONY: apitest
+xgmath: $(OUTDIR)/sgsxgmath$(LIBEXT)
+json: $(OUTDIR)/sgsjson$(LIBEXT)
+pproc: $(OUTDIR)/sgspproc$(LIBEXT)
+sockets: $(OUTDIR)/sgssockets$(LIBEXT)
+build_test: $(OUTDIR)/sgstest$(BINEXT)
+build_apitest: $(OUTDIR)/sgsapitest$(BINEXT)
+vm: $(OUTDIR)/sgsvm$(BINEXT)
+c: $(OUTDIR)/sgsc$(BINEXT)
+
+# test tool aliases
 test: $(OUTDIR)/sgstest$(BINEXT)
 	$(OUTDIR)/sgstest
-
-.PHONY: apitest
 apitest: $(OUTDIR)/sgsapitest$(BINEXT)
 	$(OUTDIR)/sgsapitest
+
+.PHONY: tools
+tools: xgmath json pproc sockets build_test build_apitest vm c
 
 # other stuff
 # - multithreaded testing
