@@ -943,7 +943,7 @@ RX_Char* srx_Replace( srx_Context* R, const RX_Char* str, const RX_Char* rep )
 	
 	while( *from )
 	{
-		const RX_Char* ofp, *ep, *rp;
+		const RX_Char* ofp = NULL, *ep = NULL, *rp;
 		if( !srx_Match( R, from, 0 ) )
 			break;
 		srx_GetCapturedPtrs( R, 0, &ofp, &ep );

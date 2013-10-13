@@ -457,7 +457,7 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, int32_t size, int clean,
 	C->stack_off = C->stack_top;
 	C->gclist = (sgs_VarPtr) func->consts.ptr;
 	C->gclist_size = func->consts.size / sizeof( sgs_Variable );
-	returned = sgsVM_ExecFn( C, func->code.ptr, func->code.size,
+	returned = sgsVM_ExecFn( C, func->numtmp, func->code.ptr, func->code.size,
 		func->consts.ptr, func->consts.size, clean, (uint16_t*) func->lnbuf.ptr );
 	if( rvc )
 		*rvc = returned;
@@ -541,7 +541,7 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, sgs_SizeVal size, char** outbuf
 
 
 static void _recfndump( const char* constptr, sgs_SizeVal constsize,
-	const char* codeptr, sgs_SizeVal codesize )
+	const char* codeptr, sgs_SizeVal codesize, int gt, int args, int tmp, int clsr )
 {
 	sgs_Variable* var = (sgs_Variable*) constptr;
 	sgs_Variable* vend = (sgs_Variable*) ( constptr + constsize );
@@ -550,10 +550,12 @@ static void _recfndump( const char* constptr, sgs_SizeVal constsize,
 		if( var->type == SGS_VTC_FUNC )
 		{
 			_recfndump( (const char*) func_consts( var->data.F ), var->data.F->instr_off,
-				(const char*) func_bytecode( var->data.F ), var->data.F->size - var->data.F->instr_off );
+				(const char*) func_bytecode( var->data.F ), var->data.F->size - var->data.F->instr_off,
+				var->data.F->gotthis, var->data.F->numargs, var->data.F->numtmp, var->data.F->numclsr );
 		}
 		var++;
 	}
+	printf( "\nFUNC: type=%s args=%d tmp=%d closures=%d\n", gt ? "method" : "function", args, tmp, clsr );
 	sgsBC_DumpEx( constptr, constsize, codeptr, codesize );
 }
 
@@ -569,7 +571,8 @@ SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size )
 	if( rr < 0 )
 		return SGS_EINVAL;
 
-	_recfndump( func->consts.ptr, func->consts.size, func->code.ptr, func->code.size );
+	_recfndump( func->consts.ptr, func->consts.size, func->code.ptr, func->code.size,
+		func->gotthis, func->numargs, func->numtmp, func->numclsr );
 
 	sgsBC_Free( C, func );
 	return SGS_SUCCESS;
@@ -648,9 +651,10 @@ static void dumpvar( SGS_CTX, sgs_Variable* var )
 		sgs_Writef( C, var->data.S->size > 16 ? "...\"" : "\"" );
 		break;
 	case SVT_FUNC:
-		sgs_Writef( C, " [rc:%d] '%s'[%d]%s", var->data.F->refcount,
+		sgs_Writef( C, " [rc:%d] '%s'[%d]%s tmp=%d clsr=%d", var->data.F->refcount,
 			var->data.F->funcname.ptr ? var->data.F->funcname.ptr : "<anonymous>",
-			(int) var->data.F->numargs, var->data.F->gotthis ? " (method)" : "" );
+			(int) var->data.F->numargs, var->data.F->gotthis ? " (method)" : "",
+			(int) var->data.F->numtmp, (int) var->data.F->numclsr );
 		break;
 	case SVT_CFUNC: sgs_Writef( C, " = %p", var->data.C ); break;
 	case SVT_OBJECT: sgs_Writef( C, " = " ); dumpobj( C, var->data.O ); break;

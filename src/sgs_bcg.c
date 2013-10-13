@@ -44,6 +44,8 @@ static sgs_CompFunc* make_compfunc( SGS_CTX )
 	func->lnbuf = membuf_create();
 	func->gotthis = FALSE;
 	func->numargs = 0;
+	func->numtmp = 0;
+	func->numclsr = 0;
 	return func;
 }
 
@@ -175,8 +177,6 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 		case SI_NOP: printf( "NOP   " ); break;
 
 		case SI_PUSH: printf( "PUSH " ); dump_rcpos( argB ); break;
-		case SI_PUSHN: printf( "PUSH_NULLS %d", argA ); break;
-		case SI_POPN: printf( "POP_N %d", argA ); break;
 		case SI_POPR: printf( "POP_REG R%d", argA ); break;
 
 		case SI_RETN: printf( "RETURN %d", argA ); break;
@@ -629,6 +629,8 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
 	F->instr_off = nf->consts.size;
 	F->gotthis = nf->gotthis;
 	F->numargs = nf->numargs;
+	F->numtmp = nf->numtmp;
+	F->numclsr = nf->numclsr;
 
 	{
 		int lnc = nf->lnbuf.size / sizeof( uint16_t );
@@ -1470,17 +1472,12 @@ static void prefix_bytecode( SGS_CTX, sgs_CompFunc* func, int args )
 {
 	MemBuf ncode = membuf_create();
 	MemBuf nlnbuf = membuf_create();
-
-	instr_t I = INSTR_MAKE( SI_PUSHN, C->fctx->lastreg - args, 0, 0 );
-	uint16_t ln = 0;
-
-	membuf_appbuf( &ncode, C, &I, sizeof( I ) );
-	membuf_appbuf( &nlnbuf, C, &ln, sizeof( ln ) );
-
+	
 	if( C->fctx->outclsr > C->fctx->inclsr )
 	{
 		int i;
-		I = INSTR_MAKE( SI_GENCLSR, C->fctx->outclsr - C->fctx->inclsr, 0, 0 );
+		instr_t I = INSTR_MAKE( SI_GENCLSR, C->fctx->outclsr - C->fctx->inclsr, 0, 0 );
+		uint16_t ln = 0;
 		membuf_appbuf( &ncode, C, &I, sizeof( I ) );
 		membuf_appbuf( &nlnbuf, C, &ln, sizeof( ln ) );
 
@@ -1506,7 +1503,8 @@ static void prefix_bytecode( SGS_CTX, sgs_CompFunc* func, int args )
 
 	membuf_destroy( &func->code, C );
 	membuf_destroy( &func->lnbuf, C );
-
+	
+	func->numtmp = C->fctx->lastreg - args;
 	func->code = ncode;
 	func->lnbuf = nlnbuf;
 }
@@ -1555,7 +1553,7 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 	}
 	
 	prefix_bytecode( C, nf, args );
-	clsrcnt = C->fctx->inclsr;
+	nf->numclsr = clsrcnt = C->fctx->inclsr;
 
 #if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	fctx_dump( fctx );
@@ -2410,6 +2408,8 @@ static const char* bc_read_varlist( decoder_t* D, sgs_Variable* vlist, int cnt )
 	i16 instrcount
 	byte gotthis
 	byte numargs
+	byte numtmp
+	byte numclsr
 	i16 linenum
 	i16[instrcount] lineinfo
 	i32 funcname_size
@@ -2421,12 +2421,11 @@ static int bc_write_sgsfunc( func_t* F, SGS_CTX, MemBuf* outbuf )
 {
 	int16_t cc = F->instr_off / sizeof( sgs_Variable ),
 	        ic = ( F->size - F->instr_off ) / sizeof( instr_t );
-	char gt = F->gotthis, na = F->numargs;
+	char gntc[4] = { F->gotthis, F->numargs, F->numtmp, F->numclsr };
 
 	membuf_appbuf( outbuf, C, &cc, sizeof( int16_t ) );
 	membuf_appbuf( outbuf, C, &ic, sizeof( int16_t ) );
-	membuf_appchr( outbuf, C, gt );
-	membuf_appchr( outbuf, C, na );
+	membuf_appbuf( outbuf, C, gntc, 4 );
 	membuf_appbuf( outbuf, C, &F->linenum, sizeof( LineNum ) );
 	membuf_appbuf( outbuf, C, F->lineinfo, sizeof( uint16_t ) * ic );
 	membuf_appbuf( outbuf, C, &F->funcname.size, sizeof( int32_t ) );
@@ -2474,11 +2473,13 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	F->instr_off = ioff;
 	F->gotthis = AS_INT8( D->buf + 4 );
 	F->numargs = AS_INT8( D->buf + 5 );
-	F->linenum = AS_INT16( D->buf + 6 );
+	F->numtmp = AS_INT8( D->buf + 6 );
+	F->numclsr = AS_INT8( D->buf + 7 );
+	F->linenum = AS_INT16( D->buf + 8 );
 	if( D->convend )
 		F->linenum = esi16( F->linenum );
 	F->lineinfo = sgs_Alloc_n( uint16_t, (int32_t)ic );
-	D->buf += 8;
+	D->buf += 10;
 	memcpy( F->lineinfo, D->buf, sizeof( uint16_t ) * (int32_t) ic );
 	D->buf += sizeof( uint16_t ) * (int32_t) ic;
 	F->funcname = membuf_create();
@@ -2593,22 +2594,21 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t si
 	{
 		const char* ret;
 		int16_t cc, ic;
-		char gt, na;
 		sgs_CompFunc* func = make_compfunc( C );
 		cc = AS_INT16( buf + 14 );
 		ic = AS_INT16( buf + 16 );
-		gt = AS_UINT8( buf + 18 );
-		na = AS_UINT8( buf + 19 );
-		D.buf = buf + 20;
+		func->gotthis = AS_UINT8( buf + 18 );
+		func->numargs = AS_UINT8( buf + 19 );
+		func->numtmp = AS_UINT8( buf + 20 );
+		func->numclsr = AS_UINT8( buf + 21 );
+		D.buf = buf + 22;
 
 		if( D.convend )
 		{
 			cc = esi16( cc );
 			ic = esi16( ic );
 		}
-
-		func->gotthis = gt;
-		func->numargs = na;
+		
 		membuf_resize( &func->consts, C, sizeof( sgs_Variable ) * cc );
 		membuf_resize( &func->code, C, sizeof( instr_t ) * ic );
 		membuf_resize( &func->lnbuf, C, sizeof( LineNum ) * ic );

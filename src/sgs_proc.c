@@ -1737,6 +1737,8 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 				C->stack_off++;
 				gotthis = TRUE;
 			}
+			
+			stk_push_nulls( C, F->numtmp );
 
 			if( F->gotthis && gotthis ) C->stack_off--;
 			{
@@ -1866,16 +1868,6 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 			stk_push( C, &var );
 			break;
 		}
-		case SI_PUSHN:
-		{
-			int count = argA;
-			stk_makespace( C, count );
-			while( count-- )
-				(C->stack_top++)->type = VTC_NULL;
-			break;
-		}
-
-		case SI_POPN: stk_pop( C, argA ); break;
 		case SI_POPR: stk_setlvar( C, argA, stk_gettop( C ) ); stk_pop1( C ); break;
 
 		case SI_RETN:
@@ -2077,10 +2069,11 @@ void sgsVM_StackDump( SGS_CTX )
 	printf( "--\n" );
 }
 
-int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize, void* data, int32_t datasize, int clean, uint16_t* T )
+int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, int32_t codesize, void* data, int32_t datasize, int clean, uint16_t* T )
 {
 	int stkoff = C->stack_off - C->stack_base, rvc = 0, allowed;
 	allowed = vm_frame_push( C, NULL, T, (instr_t*) code, codesize / sizeof( instr_t ) );
+	stk_push_nulls( C, numtmp );
 	if( allowed )
 		rvc = vm_exec( C, (sgs_Variable*) data, datasize / sizeof( sgs_Variable* ) );
 	C->stack_off = C->stack_base + stkoff;
@@ -3122,6 +3115,8 @@ static int _serialize_function( SGS_CTX, sgs_iFunc* func, MemBuf* out )
 		F.lnbuf = membuf_create();
 		F.gotthis = func->gotthis;
 		F.numargs = func->numargs;
+		F.numtmp = func->numtmp;
+		F.numclsr = func->numclsr;
 	}
 	
 	F.consts.ptr = ((char*)(func+1));
@@ -3152,6 +3147,8 @@ static int _unserialize_function( SGS_CTX, const char* buf, sgs_SizeVal sz, sgs_
 	F->instr_off = nf->consts.size;
 	F->gotthis = nf->gotthis;
 	F->numargs = nf->numargs;
+	F->numtmp = nf->numtmp;
+	F->numclsr = nf->numclsr;
 
 	{
 		int lnc = nf->lnbuf.size / sizeof( uint16_t );

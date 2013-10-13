@@ -502,6 +502,8 @@ static int pproc_serialize_function( SGS_CTX,
 		F.lnbuf = membuf_create();
 		F.gotthis = func->gotthis;
 		F.numargs = func->numargs;
+		F.numtmp = func->numtmp;
+		F.numclsr = func->numclsr;
 	}
 	
 	membuf_appbuf( &F.consts, C, ((char*)(func+1)), func->instr_off );

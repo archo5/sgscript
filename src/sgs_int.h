@@ -117,8 +117,6 @@
 
 #  define SI_NOP SGS_SI_NOP
 #  define SI_PUSH SGS_SI_PUSH
-#  define SI_PUSHN SGS_SI_PUSHN
-#  define SI_POPN SGS_SI_POPN
 #  define SI_POPR SGS_SI_POPR
 #  define SI_RETN SGS_SI_RETN
 #  define SI_JUMP SGS_SI_JUMP
@@ -379,6 +377,8 @@ struct _sgs_CompFunc
 	sgs_MemBuf lnbuf;
 	int	   gotthis;
 	int	   numargs;
+	int    numtmp;
+	int    numclsr;
 }
 sgs_CompFunc;
 
@@ -421,8 +421,6 @@ typedef enum sgs_Instruction_e
 	SGS_SI_NOP = 0,
 
 	SGS_SI_PUSH,     /* (B:src)                 push register/constant */
-	SGS_SI_PUSHN,    /* (A:N)                   push N nulls */
-	SGS_SI_POPN,     /* (A:N)                   pop N items */
 	SGS_SI_POPR,     /* (A:out)                 pop item to register */
 
 	SGS_SI_RETN,     /* (A:N)                   exit current frame of execution, preserve N output arguments */
@@ -542,6 +540,8 @@ struct _sgs_iFunc
 	int16_t instr_off;
 	int8_t  gotthis;
 	int8_t  numargs;
+	int8_t  numtmp;
+	int8_t  numclsr;
 	sgs_LineNum linenum;
 	uint16_t* lineinfo;
 	sgs_MemBuf funcname;
@@ -602,7 +602,7 @@ void sgsVM_VarDump( sgs_Variable* var );
 
 void sgsVM_StackDump( SGS_CTX );
 
-int sgsVM_ExecFn( SGS_CTX, void* code, int32_t codesize,
+int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, int32_t codesize,
 	void* data, int32_t datasize, int clean, uint16_t* T );
 int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int expect, int gotthis );
 void sgsVM_PushClosures( SGS_CTX, sgs_Closure** cls, int num );
@@ -731,7 +731,7 @@ static const char* sgs_VarNames[] =
 
 static const char* sgs_OpNames[] =
 {
-	"nop",  "push", "push_nulls", "pop_n", "pop_reg",
+	"nop",  "push", "pop_reg",
 	"return", "jump", "jump_if_true", "jump_if_false", "call",
 	"for_prep", "for_load", "for_jump", "loadconst", "getvar", "setvar",
 	"getprop", "setprop", "getindex", "setindex",
