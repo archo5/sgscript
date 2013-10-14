@@ -13,6 +13,12 @@
 #define XGM_VMUL_INNER3(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
 #define XGM_VMUL_INNER4(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2]+(a)[3]*(b)[3])
 
+#define XGM_BB2_EXPAND_V2(b,v) \
+	if( (b)[0] > (v)[0] ) (b)[0] = (v)[0]; \
+	if( (b)[1] > (v)[1] ) (b)[1] = (v)[1]; \
+	if( (b)[2] < (v)[0] ) (b)[2] = (v)[0]; \
+	if( (b)[3] < (v)[1] ) (b)[3] = (v)[1];
+
 
 static SGSBOOL xgm_ParseVT( SGS_CTX, int item, XGM_VT* out )
 {
@@ -629,6 +635,8 @@ static int xgm_vec4_dot( SGS_CTX )
 
 /*  2 D   A A B B  */
 
+static int xgm_aabb2_expand( SGS_CTX );
+
 static int xgm_b2_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
 	XGM_OHDR;
@@ -681,6 +689,11 @@ static int xgm_b2_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( !strcmp( str, "valid" ) )
 	{
 		sgs_PushBool( C, hdr[2] >= hdr[0] && hdr[3] >= hdr[1] );
+		return SGS_SUCCESS;
+	}
+	if( !strcmp( str, "expand" ) )
+	{
+		sgs_PushCFunction( C, xgm_aabb2_expand );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTFND;
@@ -755,6 +768,34 @@ static int xgm_aabb2_intersect( SGS_CTX )
 	
 	sgs_PushBool( C, b1[0] < b2[2] && b2[0] < b1[2] && b1[1] < b2[3] && b2[1] < b1[3] );
 	return 1;
+}
+
+static int xgm_aabb2_expand( SGS_CTX )
+{
+	XGM_VT* bb, tmp[4];
+	
+	int i, ssz = sgs_StackSize( C );
+	int method_call = sgs_Method( C );
+	SGSFN( method_call ? "aabb2.expand" : "aabb2_expand" );
+	if( !sgs_IsObject( C, 0, xgm_aabb2_iface ) )
+		return sgs_ArgErrorExt( C, 0, method_call, "aabb2", "" );
+	bb = (XGM_VT*) sgs_GetObjectData( C, 0 );
+	
+	for( i = 1; i < ssz; ++i )
+	{
+		if( sgs_ParseVec2( C, i, tmp, 0 ) )
+		{
+			XGM_BB2_EXPAND_V2( bb, tmp );
+		}
+		else if( sgs_ParseAABB2( C, i, tmp ) )
+		{
+			XGM_BB2_EXPAND_V2( bb, tmp );
+			XGM_BB2_EXPAND_V2( bb, tmp + 2 );
+		}
+		else
+			return sgs_ArgErrorExt( C, i, 0, "aabb2 or vec2", "" );
+	}
+	return 0;
 }
 
 
@@ -1071,6 +1112,7 @@ SGS_APIFUNC int xgm_module_entry_point( SGS_CTX )
 	sgs_RegisterType( C, "vec2", xgm_vec2_iface );
 	sgs_RegisterType( C, "vec3", xgm_vec3_iface );
 	sgs_RegisterType( C, "vec4", xgm_vec4_iface );
+	sgs_RegisterType( C, "aabb2", xgm_aabb2_iface );
 	return SGS_SUCCESS;
 }
 
