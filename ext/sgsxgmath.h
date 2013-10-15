@@ -1,5 +1,9 @@
 
 
+#ifndef SGSXGMATH_H
+#define SGSXGMATH_H
+
+
 #include <math.h>
 #include <stdarg.h>
 
@@ -20,11 +24,11 @@ typedef struct _xgm_poly2
 xgm_poly2;
 
 
-sgs_ObjCallback xgm_vec2_iface[];
-sgs_ObjCallback xgm_vec3_iface[];
-sgs_ObjCallback xgm_vec4_iface[];
-sgs_ObjCallback xgm_aabb2_iface[];
-sgs_ObjCallback xgm_poly2_iface[];
+extern sgs_ObjCallback xgm_vec2_iface[];
+extern sgs_ObjCallback xgm_vec3_iface[];
+extern sgs_ObjCallback xgm_vec4_iface[];
+extern sgs_ObjCallback xgm_aabb2_iface[];
+extern sgs_ObjCallback xgm_poly2_iface[];
 
 SGS_APIFUNC void sgs_PushVec2( SGS_CTX, XGM_VECTOR_TYPE x, XGM_VECTOR_TYPE y );
 SGS_APIFUNC void sgs_PushVec3( SGS_CTX, XGM_VECTOR_TYPE x, XGM_VECTOR_TYPE y, XGM_VECTOR_TYPE z );
@@ -46,4 +50,7 @@ SGS_APIFUNC int sgs_ArgCheck_Vec2( SGS_CTX, int argid, va_list args, int flags )
 SGS_APIFUNC int sgs_ArgCheck_Vec3( SGS_CTX, int argid, va_list args, int flags );
 SGS_APIFUNC int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list args, int flags );
 SGS_APIFUNC int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list args, int flags );
+
+
+#endif /* SGSXGMATH_H */
 
