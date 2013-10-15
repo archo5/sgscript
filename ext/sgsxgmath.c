@@ -8,6 +8,7 @@
 #define XGM_VT XGM_VECTOR_TYPE
 #define XGM_WARNING( err ) sgs_Printf( C, SGS_WARNING, err );
 #define XGM_OHDR XGM_VT* hdr = (XGM_VT*) data->data;
+#define XGM_P2HDR xgm_poly2* poly = (xgm_poly2*) data->data;
 
 #define XGM_VMUL_INNER2(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1])
 #define XGM_VMUL_INNER3(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
@@ -800,6 +801,70 @@ static int xgm_aabb2_expand( SGS_CTX )
 
 
 
+/*  2 D   P O L Y  */
+
+static int xgm_p2_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+{
+	XGM_P2HDR;
+	if( poly->data )
+		sgs_Dealloc( poly->data );
+	return SGS_SUCCESS;
+}
+
+static int xgm_p2_getindex_aabb( SGS_CTX, xgm_poly2* poly )
+{
+	if( !poly->size )
+	{
+		XGM_WARNING( "cannot get AABB of empty poly2" );
+		return SGS_EINPROC;
+	}
+	else
+	{
+		sgs_SizeVal i;
+		XGM_VT bb[4] = {
+			poly->data[0], poly->data[1], poly->data[0], poly->data[1]
+		};
+		for( i = 2; i < poly->size; i += 2 )
+		{
+			XGM_VT* pp = poly->data + i;
+			if( bb[0] > pp[0] ) bb[0] = pp[0];
+			if( bb[1] > pp[1] ) bb[1] = pp[1];
+			if( bb[2] < pp[0] ) bb[2] = pp[0];
+			if( bb[3] < pp[1] ) bb[3] = pp[1];
+		}
+		sgs_PushAABB2p( C, bb );
+		return SGS_SUCCESS;
+	}
+}
+
+static int xgm_p2_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
+{
+	sgs_Int idx;
+	XGM_P2HDR;
+	
+	if( !isprop && sgs_ParseInt( C, 0, &idx ) )
+	{
+		if( idx < 0 || idx >= poly->size )
+			return SGS_EBOUNDS;
+		sgs_PushVec2p( C, poly->data + idx * 2 );
+		return SGS_SUCCESS;
+	}
+	
+	if( isprop )
+	{
+		char* str;
+		sgs_SizeVal size;
+		if( !sgs_ParseString( C, 0, &str, &size ) )
+			return SGS_EINVAL;
+		
+		if( !strcmp( str, "aabb" ) ) return xgm_p2_getindex_aabb( C, poly );
+	}
+	
+	return SGS_ENOTFND;
+}
+
+
+
 sgs_ObjCallback xgm_vec2_iface[] =
 {
 	SGS_OP_GETINDEX, xgm_v2_getindex,
@@ -843,6 +908,13 @@ sgs_ObjCallback xgm_aabb2_iface[] =
 	SGS_OP_END
 };
 
+sgs_ObjCallback xgm_poly2_iface[] =
+{
+	SGS_OP_DESTRUCT, xgm_p2_destruct,
+	SGS_OP_GETINDEX, xgm_p2_getindex,
+	SGS_OP_END
+};
+
 
 void sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y )
 {
@@ -875,6 +947,15 @@ void sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
 	nv[ 1 ] = y1;
 	nv[ 2 ] = x2;
 	nv[ 3 ] = y2;
+}
+
+void sgs_PushPoly2( SGS_CTX, XGM_VT* v2fn, int numverts )
+{
+	xgm_poly2* np = (xgm_poly2*) sgs_PushObjectIPA( C, sizeof(xgm_poly2), xgm_poly2_iface );
+	np->size = numverts;
+	np->mem = numverts;
+	np->data = numverts ? sgs_Alloc_n( XGM_VT, np->mem * 2 ) : NULL;
+	memcpy( np->data, v2fn, sizeof( XGM_VT ) * np->mem * 2 );
 }
 
 
