@@ -35,6 +35,28 @@ static SGSBOOL xgm_ParseVT( SGS_CTX, int item, XGM_VT* out )
 
 /*  2 D   V E C T O R  */
 
+#define VEC2_IFN( fn ) \
+	int is_method = sgs_Method( C ); \
+	sgs_FuncName( C, is_method ? "vec2." #fn : "vec2_" #fn ); \
+	if( !sgs_IsObject( C, 0, xgm_vec2_iface ) ) \
+		return sgs_ArgErrorExt( C, 0, is_method, "vec2", "" ); \
+	XGM_VT* data = (XGM_VT*) sgs_GetObjectData( C, 0 );
+
+static int xgm_v2m_rotate( SGS_CTX )
+{
+	XGM_VT angle, s, c;
+	
+	VEC2_IFN( fn );
+	
+	if( !sgs_LoadArgs( C, "@>f", &angle ) )
+		return 0;
+	
+	c = cos( angle );
+	s = sin( angle );
+	sgs_PushVec2( C, data[0] * c - data[1] * s, data[0] * s + data[1] * c );
+	return SGS_SUCCESS;
+}
+
 static int xgm_v2_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
 	XGM_OHDR;
@@ -93,6 +115,7 @@ static int xgm_v2_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( !strcmp( str, "angle" ) ){ sgs_PushReal( C, atan2( hdr[0], hdr[1] ) ); return SGS_SUCCESS; }
 	if( !strcmp( str, "perp" ) ){ sgs_PushVec2( C, -hdr[1], hdr[0] ); return SGS_SUCCESS; }
 	if( !strcmp( str, "perp2" ) ){ sgs_PushVec2( C, hdr[1], -hdr[0] ); return SGS_SUCCESS; }
+	if( !strcmp( str, "rotate" ) ){ sgs_PushCFunction( C, xgm_v2m_rotate ); return SGS_SUCCESS; }
 	return SGS_ENOTFND;
 }
 

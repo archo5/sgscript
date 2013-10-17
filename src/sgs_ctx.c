@@ -787,7 +787,8 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 		N = "<anonymous function>";
 		if( frame->func->data.F->funcname.size )
 			N = frame->func->data.F->funcname.ptr;
-		L = frame->func->data.F->lineinfo[ frame->lptr - frame->code ];
+		L = !frame->func->data.F->lineinfo ? 1 :
+			frame->func->data.F->lineinfo[ frame->lptr - frame->code ];
 		if( frame->func->data.F->filename.size )
 			F = frame->func->data.F->filename.ptr;
 		else if( frame->filename )
