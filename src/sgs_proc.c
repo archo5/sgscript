@@ -3151,8 +3151,8 @@ static int _unserialize_function( SGS_CTX, const char* buf, sgs_SizeVal sz, sgs_
 	F->numclsr = nf->numclsr;
 
 	{
-		int lnc = nf->lnbuf.size / sizeof( uint16_t );
-		F->lineinfo = sgs_Alloc_n( uint16_t, lnc );
+		int lnc = nf->lnbuf.size / sizeof( sgs_LineNum );
+		F->lineinfo = sgs_Alloc_n( sgs_LineNum, lnc );
 		memcpy( F->lineinfo, nf->lnbuf.ptr, nf->lnbuf.size );
 	}
 	F->funcname = membuf_create();

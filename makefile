@@ -72,6 +72,8 @@ $(OUTDIR)/sgspproc$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgspproc.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgspproc.c -shared $(LFLAGS) -lpthread -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgssockets$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgssockets.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgssockets.c -shared $(LFLAGS) $(SOCKLIBS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+$(OUTDIR)/sgsmeta$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsmeta.c
+	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgsmeta.c -shared $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 
 # the tools
 $(OUTDIR)/sgstest$(BINEXT): $(OUTFILE) $(EXTDIR)/sgstest.c $(OUTDIR)/sgsjson$(LIBEXT)
@@ -88,6 +90,7 @@ $(OUTDIR)/sgsc$(BINEXT): $(OUTFILE) $(EXTDIR)/sgsc.c
 .PHONY: json
 .PHONY: pproc
 .PHONY: sockets
+.PHONY: meta
 .PHONY: build_test
 .PHONY: build_apitest
 .PHONY: vm
@@ -98,6 +101,7 @@ xgmath: $(OUTDIR)/sgsxgmath$(LIBEXT)
 json: $(OUTDIR)/sgsjson$(LIBEXT)
 pproc: $(OUTDIR)/sgspproc$(LIBEXT)
 sockets: $(OUTDIR)/sgssockets$(LIBEXT)
+meta: $(OUTDIR)/sgsmeta$(LIBEXT)
 build_test: $(OUTDIR)/sgstest$(BINEXT)
 build_apitest: $(OUTDIR)/sgsapitest$(BINEXT)
 vm: $(OUTDIR)/sgsvm$(BINEXT)
@@ -110,7 +114,7 @@ apitest: $(OUTDIR)/sgsapitest$(BINEXT)
 	$(OUTDIR)/sgsapitest
 
 .PHONY: tools
-tools: xgmath json pproc sockets build_test build_apitest vm c
+tools: xgmath json pproc sockets meta build_test build_apitest vm c
 
 # other stuff
 # - multithreaded testing

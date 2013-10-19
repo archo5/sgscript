@@ -2466,6 +2466,70 @@ static int sgsstd_eval_file( SGS_CTX )
 }
 
 
+static void _sgsstd_compile_pfn( void* data, SGS_CTX, int type, const char* msg )
+{
+	int ret;
+	sgs_Variable* pvar = (sgs_Variable*) data;
+	
+	sgs_PushVariable( C, pvar );
+	
+	sgs_PushString( C, "type" );
+	sgs_PushInt( C, type );
+	sgs_PushString( C, "msg" );
+	sgs_PushString( C, msg );
+	sgs_PushDict( C, 4 );
+	
+	ret = sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
+	sgs_BreakIf( ret < 0 );
+	
+	sgs_Pop( C, 1 );
+}
+
+static int sgsstd_compile_sgs( SGS_CTX )
+{
+	int ret;
+	char* buf = NULL, *outbuf = NULL;
+	sgs_SizeVal size = 0, outsize = 0;
+	sgs_Variable var;
+	
+	sgs_PrintFunc oldpfn;
+	void* oldpctx;
+	
+	SGSFN( "compile_sgs" );
+	
+	if( !sgs_LoadArgs( C, "m", &buf, &size ) )
+		return 0;
+	
+	sgs_PushArray( C, 0 );
+	sgs_GetStackItem( C, -1, &var );
+	sgs_Acquire( C, &var );
+	sgs_Pop( C, 1 );
+	
+	oldpfn = C->print_fn;
+	oldpctx = C->print_ctx;
+	sgs_SetPrintFunc( C, _sgsstd_compile_pfn, &var );
+	SGSFN( NULL );
+	
+	ret = sgs_Compile( C, buf, size, &outbuf, &outsize );
+	
+	SGSFN( "compile_sgs" );
+	C->print_fn = oldpfn;
+	C->print_ctx = oldpctx;
+	
+	if( ret < 0 )
+		sgs_PushNull( C );
+	else
+	{
+		sgs_PushStringBuf( C, outbuf, outsize );
+		sgs_Dealloc( outbuf );
+	}
+	sgs_PushVariable( C, &var );
+	sgs_Release( C, &var );
+	
+	return 2;
+}
+
+
 static int sgsstd__inclib( SGS_CTX, const char* name, int override )
 {
 	char buf[ 16 ];
@@ -3152,7 +3216,7 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( rand ), FN( randf ), FN( srand ),
 	/* internal utils */
 	FN( pcall ), FN( assert ),
-	FN( eval ), FN( eval_file ),
+	FN( eval ), FN( eval_file ), FN( compile_sgs ),
 	FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( import_cfunc ),
 	FN( include ),

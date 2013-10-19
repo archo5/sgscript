@@ -543,7 +543,7 @@ struct _sgs_iFunc
 	int8_t  numtmp;
 	int8_t  numclsr;
 	sgs_LineNum linenum;
-	uint16_t* lineinfo;
+	sgs_LineNum* lineinfo;
 	sgs_MemBuf funcname;
 	sgs_MemBuf filename;
 };

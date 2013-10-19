@@ -633,8 +633,8 @@ static int add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
 	F->numclsr = nf->numclsr;
 
 	{
-		int lnc = nf->lnbuf.size / sizeof( uint16_t );
-		F->lineinfo = sgs_Alloc_n( uint16_t, lnc );
+		int lnc = nf->lnbuf.size / sizeof( sgs_LineNum );
+		F->lineinfo = sgs_Alloc_n( sgs_LineNum, lnc );
 		memcpy( F->lineinfo, nf->lnbuf.ptr, nf->lnbuf.size );
 	}
 	F->funcname = membuf_create();
@@ -2478,10 +2478,10 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	F->linenum = AS_INT16( D->buf + 8 );
 	if( D->convend )
 		F->linenum = esi16( F->linenum );
-	F->lineinfo = sgs_Alloc_n( uint16_t, (int32_t)ic );
+	F->lineinfo = sgs_Alloc_n( sgs_LineNum, (int32_t)ic );
 	D->buf += 10;
-	memcpy( F->lineinfo, D->buf, sizeof( uint16_t ) * (int32_t) ic );
-	D->buf += sizeof( uint16_t ) * (int32_t) ic;
+	memcpy( F->lineinfo, D->buf, sizeof( sgs_LineNum ) * (int32_t) ic );
+	D->buf += sizeof( sgs_LineNum ) * (int32_t) ic;
 	F->funcname = membuf_create();
 	bc_read_membuf( D, &F->funcname );
 	F->filename = membuf_create();
@@ -2524,6 +2524,9 @@ fail:
 	i16 instrcount
 	byte gotthis
 	byte numargs
+	byte numtmp
+	byte numclsr
+	-- -- -- -- -- 8 bytes in the previous section
 	varlist consts
 	i32[instrcount] instrs
 	linenum[instrcount] lines
@@ -2549,14 +2552,13 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 	{
 		int16_t cc = func->consts.size / sizeof( sgs_Variable ),
 		        ic = func->code.size / sizeof( instr_t );
-		char gt = func->gotthis, na = func->numargs;
+		char gntc[4] = { func->gotthis, func->numargs, func->numtmp, func->numclsr };
 
 		membuf_appbuf( outbuf, C, &cc, sizeof( int16_t ) );
 		membuf_appbuf( outbuf, C, &ic, sizeof( int16_t ) );
-		membuf_appchr( outbuf, C, gt );
-		membuf_appchr( outbuf, C, na );
+		membuf_appbuf( outbuf, C, gntc, 4 );
 
-		sgs_BreakIf( outbuf->size != 20 );
+		sgs_BreakIf( outbuf->size != 22 );
 
 		if( !bc_write_varlist( (sgs_Variable*) func->consts.ptr, C,
 			func->consts.size / sizeof( sgs_Variable ), outbuf ) )

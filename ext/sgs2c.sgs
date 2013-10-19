@@ -1,0 +1,169 @@
+
+///////////////////////////////////////////////////////////
+/// E / X / P / E / R / I / M / E / N / T / A / L /////////
+///////////////////////////////////////////////////////////
+
+include "string", "io", "../bin/sgsmeta";
+
+meta_globals();
+
+function E( txt ){ println( txt ); }
+
+
+///////////////////////////////////////////////////////////
+
+function sgs_isconstarg( arg ){ return arg & 0x100 != 0; }
+function sgs_getconstarg( arg ){ return arg & 0xff; }
+
+///////////////////////////////////////////////////////////
+
+global c_header = "
+#include <sgs_int.h>
+
+";
+
+function c_func_wrapper( fdata, fname )
+{
+	return "\nint " $ fname $ "( SGS_CTX )\n{" $
+		string_replace( fdata, "\n", "\n\t" ) $ "\n}\n";
+}
+
+function c_compile_push_op( src, consts )
+{
+	if( sgs_isconstarg( src ) )
+	{
+		return "\nsgs_PushVariable( C, &" $
+			consts[ sgs_getconstarg( src ) ].name $ " );";
+	}
+	else
+		return "\nsgs_PushItem( C, " $ src $ " );";
+}
+
+function c_compile_func_inner( fdata )
+{
+	lastreturn = false;
+	
+	output = "\n// > consts";
+	
+	foreach( cn : fdata.consts )
+	{
+		output $= "\nstatic sgs_Variable " $ cn.name $ " = { " $ cn.type $ ", ";
+		bvt = cn.type & 0xff;
+		if( bvt == VT_NULL )
+			output $= "(sgs_Int) 0";
+		else if( bvt == VT_BOOL )
+			output $= "(sgs_Bool) " $ if( cn.data, 1, 0 );
+		else if( bvt == VT_INT )
+			output $= "(sgs_Int) " $ cn.data $ "LL";
+		else if( bvt == VT_REAL )
+			output $= "(sgs_Real) " $ cn.data;
+		else if( bvt == VT_STRING )
+			output $= "(TODO) \"" $ cn.data $ "\"";
+		else if( bvt == VT_FUNC )
+			output $= cn.data.name;
+		output $= " };";
+	}
+	
+	output $= "\n// > code";
+	
+	output $= "\nsgs_SetStackSize( C, " $ fdata.numargs $ " );";
+	output $= "\nsgs_SetStackSize( C, " $ fdata.numargs + fdata.numtmp $ " );";
+	
+	foreach( op : fdata.code )
+	{
+		output $= "\n// " $ meta_opname( op.op );
+		lastreturn = false;
+		if(0);
+		else if( op.op == SI_PUSH )
+		{
+			output $= c_compile_push_op( op.b, fdata.consts );
+		}
+		else if( op.op == SI_POPR )
+		{
+			output $= "\nsgs_StoreItem( C, " $ op.a $ " );";
+		}
+		else if( op.op == SI_RETN )
+		{
+			output $= "\nreturn " $ op.a $ ";";
+			lastreturn = true;
+		}
+		else if( op.op == SI_CALL )
+		{
+			output $= c_compile_push_op( op.c, fdata.consts );
+			output $= "\nsgs_FCall( C, " $ op.b & 0xff $
+				", " $ op.a $ ", " $ op.b & ( 0x100 != 0 ) $ " );";
+		}
+		else if( op.op == SI_GETVAR )
+		{
+			output $= "\nsgs_PushGlobal( C, " $ if( sgs_isconstarg( op.b ),
+				"sgs_var_cstr( &" $ fdata.consts[ sgs_getconstarg( op.b ) ].name $ " )",
+				"sgs_GetStringPtr( C, " $ op.b $ " )" ) $ " );";
+			output $= "\nsgs_StoreItem( C, " $ op.a $ " );";
+		}
+		else if( op.op == SI_SETVAR )
+		{
+			output $= c_compile_push_op( op.c, fdata.consts );
+			output $= "\nsgs_StoreGlobal( C, " $ if( sgs_isconstarg( op.b ),
+				"sgs_var_cstr( &" $ fdata.consts[ sgs_getconstarg( op.b ) ].name $ " )",
+				"sgs_GetStringPtr( C, " $ op.b $ " )" ) $ " );";
+		}
+	}
+	
+	if( !lastreturn )
+		output $= "\nreturn 0;";
+	
+	return output;
+}
+
+function c_compile_func( fdata, name_ovr )
+{
+	output = "";
+	foreach( i, cn : fdata.consts )
+	{
+		cn.name = "C" $ i;
+		if( cn.type & VT_FUNC )
+		{
+			cn.data.name = fdata.name $ "__" $ cn.data.name;
+			output $= c_compile_func( cn.data );
+		}
+	}
+	
+	output $= c_func_wrapper( c_compile_func_inner( fdata ), name_ovr || fdata.name );
+	return output;
+}
+
+function generate_c_file( cdata )
+{
+	cdata = meta_unpack( cdata );
+	cdata.name = "sgs";
+	return c_header $ c_compile_func( cdata, "sgscript_main" );
+}
+
+///////////////////////////////////////////////////////////
+
+
+println( "SGS 2 C" );
+
+if( argc != 2 ) return E( "Error: script not specified" );
+
+script_name = argv[1];
+
+println( "Script: " $ script_name );
+
+script_data = io_file_read( script_name );
+if( !script_data ) return E( "Error: could not read script" );
+
+(compiled_data, errors) = compile_sgs( script_data );
+if( !compiled_data )
+	return E( "Error: could not compile script: " $ string_implode( errors, ", " ) );
+
+println( "Script compiled successfully!" );
+
+c_data = generate_c_file( compiled_data );
+if( !c_data )
+	return;
+
+if( !io_file_write( script_name $ ".c", c_data ) )
+	return E( "Failed to save the C file" );
+
+println( "C file was generated and saved successfully" );

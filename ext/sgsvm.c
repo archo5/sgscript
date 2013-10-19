@@ -17,6 +17,8 @@ void readme()
 	puts( "\t-v, --version: print version info" );
 	puts( "\t-s, --separate: restart the engine between scripts" );
 	puts( "\t-d, --debug: enable interactive debugging on errors" );
+	puts( "\t-p, --program: translate the following arguments into a SGS program call" );
+	puts( "\t--stats: print VM stats after running the scripts" );
 	puts( "\t--profile: enable profiling by collecting call stack timings" );
 	puts( "\t--profile-ops: enable low-level VM instruction profiling" );
 }
@@ -47,11 +49,11 @@ void sgs_close()
 		sgs_Stat( C, SGS_STAT_DUMP_STATS );
 	sgs_DestroyEngine( C );
 }
-void sgs_dofile( const char* name )
+void sgs_dofile( const char* name, int incl )
 {
-	int rv = sgs_ExecFile( C, name );
+	int rv = incl ? sgs_Include( C, name ) : sgs_ExecFile( C, name );
 
-	if( rv != SGS_SUCCESS )
+	if( rv < 0 )
 	{
 		if( rv == SGS_ENOTFND ) printf( EPFX "file was not found: %s\n", name );
 		else if( rv == SGS_EINPROC ) printf( EPFX "failed to load file: %s\n", name );
@@ -111,7 +113,7 @@ int main( int argc, char** argv )
 			sgs_PushInt( C, argc - i );
 			sgs_StoreGlobal( C, "argc" );
 			
-			sgs_dofile( argv[ i ] );
+			sgs_dofile( argv[ i ], 1 );
 			sgs_close();
 			return 0;
 		}
@@ -124,7 +126,7 @@ int main( int argc, char** argv )
 	{
 		if( argv[ i ] )
 		{
-			sgs_dofile( argv[ i ] );
+			sgs_dofile( argv[ i ], 0 );
 
 			if( sep )
 			{
