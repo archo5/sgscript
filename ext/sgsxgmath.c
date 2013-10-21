@@ -54,7 +54,7 @@ static int xgm_v2m_rotate( SGS_CTX )
 	c = cos( angle );
 	s = sin( angle );
 	sgs_PushVec2( C, data[0] * c - data[1] * s, data[0] * s + data[1] * c );
-	return SGS_SUCCESS;
+	return 1;
 }
 
 static int xgm_v2_convert( SGS_CTX, sgs_VarObj* data, int type )
