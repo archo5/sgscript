@@ -111,6 +111,10 @@ static void ctx_init( SGS_CTX )
 	C->redblue = 0;
 	C->gclist = NULL;
 	C->gclist_size = 0;
+	
+#ifdef SGS_JIT
+	sgsJIT_Init( C );
+#endif
 }
 
 sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
@@ -179,6 +183,10 @@ void sgs_DestroyEngine( SGS_CTX )
 		sf = sfn;
 	}
 	C->sf_cached = NULL;
+	
+#ifdef SGS_JIT
+	sgsJIT_Destroy( C );
+#endif
 
 #ifdef SGS_DEBUG_LEAKS
 	sgs_BreakIf( C->memsize > sizeof( sgs_Context ) );

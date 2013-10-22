@@ -704,6 +704,10 @@ struct _sgs_Context
 	uint8_t       redblue;
 	sgs_VarPtr    gclist;
 	int           gclist_size;
+	
+#ifdef SGS_JIT
+	void* jitdata;
+#endif
 };
 
 #define SGS_STACKFRAMESIZE  (C->stack_top - C->stack_off)
@@ -783,6 +787,16 @@ typedef struct sgsstd_array_iter_s
 	sgs_SizeVal off;
 }
 sgsstd_array_iter_t;
+
+
+
+#ifdef SGS_JIT
+void sgsJIT_Init( SGS_CTX );
+void sgsJIT_Destroy( SGS_CTX );
+void sgsJIT_CB_FI( SGS_CTX );
+void sgsJIT_CB_FO( SGS_CTX );
+void sgsJIT_CB_NI( SGS_CTX );
+#endif
 
 
 
