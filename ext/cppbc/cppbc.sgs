@@ -1,0 +1,628 @@
+
+include "string", "re", "fmt", "io", "os";
+
+
+global ERR_OOC = "SGS_OBJECT outside class/struct";
+
+
+function string_find_rev_any( str, what, pos )
+{
+	if( pos === null )
+		pos = str.length;
+	
+	min = pos + 1;
+	foreach( item : what )
+	{
+		npos = string_find_rev( str, item, pos );
+		if( npos !== null && npos < min )
+			min = npos;
+	}
+	
+	return if( min <= pos, min, null );
+}
+
+
+function cppbc_error( error ){ println( "ERROR: " $ error ); app_exit(1); }
+function cppbc_error_ext( error, code, pos ){ cppbc_error( error ); }
+
+
+function cppbc_preprocess( code )
+{
+	pos = 0;
+	out = "";
+	
+	for(;;)
+	{
+		match = re_match( code, "#/\\*|//|'|\"#", RE_RETURN_BOTH, pos );
+		if( match === false )
+		{
+			out $= string_part( code, pos );
+			break;
+		}
+		
+		which = match[0][0];
+		to = match[0][2];
+		
+		out $= string_part( code, pos, to );
+		
+		if( which == "/*" )
+		{
+			out $= " ";
+			pos = string_find( code, "*/" );
+			if( pos === null )
+				cppbc_error( "error in code: unfinished comment detected" );
+			pos += 2;
+		}
+		else if( which == "//" )
+		{
+			out $= " ";
+			npos = re_match( code, "#\r\n|\r|\n#", RE_RETURN_OFFSETS, to );
+			if( npos === false )
+				break;
+			pos = npos[0][1];
+		}
+		else if( which == "'" || which == "\"" )
+		{
+			regex = "#\\\\|" $ which $ "#";
+			cpos = to;
+			for(;;)
+			{
+				npos = re_match( code, regex, RE_RETURN_BOTH, cpos );
+				if( npos === false )
+					cppbc_error( "error in code: unfinished string literal detected" );
+				cpos = npos[0][2];
+				if( npos[0][0] == "\\" )
+					cpos++;
+				else
+					break;
+			}
+			out $= which;
+			pos = cpos;
+		}
+	}
+	
+	return out;
+}
+
+
+function cppbc_remove_blocks( code )
+{
+	pos = 0;
+	out = "";
+	level = 0;
+	begin = null;
+	
+	for(;;)
+	{
+		match = re_match( code, "#\\{|\\}#", RE_RETURN_BOTH, pos );
+		if( match === false )
+		{
+			out $= string_part( code, pos );
+			break;
+		}
+		
+		which = match[0][0];
+		from = match[0][1];
+		to = match[0][2];
+		
+		if( level == 0 )
+			out $= string_part( code, pos, from );
+		
+		if( which == "{" )
+		{
+			if( level == 0 )
+				begin = from;
+			level++;
+		}
+		else // }
+		{
+			level--;
+			if( level == 0 )
+			{
+				out $= ";";
+				begin = null;
+			}
+			else if( level < 0 )
+				cppbc_error( "error in code: curved bracket mismatch" );
+		}
+		pos = to;
+	}
+	
+	if( level > 0 )
+		cppbc_error( "error in code: curved bracket mismatch" );
+	
+	return out;
+}
+
+
+/* Find boundaries of block {...} "pos" is in */
+function cppbc_block_bounds( code, pos )
+{
+	upper = null;
+	lower = null;
+	level = 0;
+	
+	// LOWER bounds
+	for(;;)
+	{
+		pa = string_find_rev( code, "{", pos );
+		pb = string_find_rev( code, "}", pos );
+		if( pa === null )
+			break;
+		if( pb !== null && pb > pa )
+		{
+			pos = pb - 1;
+			level++;
+			continue;
+		}
+		else
+		{
+			pos = pa - 1;
+			level--;
+			if( level >= 0 )
+				continue;
+			lower = pa;
+			break;
+		}
+	}
+	
+	if( lower === null )
+		cppbc_error_ext( ERR_OOC, code, pos );
+	
+	// UPPER bounds
+	for(;;)
+	{
+		pa = string_find( code, "}", pos );
+		pb = string_find( code, "{", pos );
+		if( pa === null )
+			break;
+		if( pb !== null && pb < pa )
+		{
+			pos = pb + 1;
+			level++;
+			continue;
+		}
+		else
+		{
+			pos = pa + 1;
+			level--;
+			if( level >= 0 )
+				continue;
+			upper = pa;
+			break;
+		}
+	}
+	
+	if( upper === null )
+		cppbc_error_ext( ERR_OOC, code, pos );
+	
+	return [ lower, upper ];
+}
+
+
+function cppbc_get_vdchar_type( char )
+{
+	if( fmt_charcc( char, "a-zA-Z0-9_" ) )
+		return "N";
+	if( fmt_charcc( char, " \t\v\r\n" ) )
+		return "S";
+	return char;
+}
+
+
+function cppbc_find_fp_name( scode )
+{
+	if( scode.last != ")" )
+		cppbc_error( "unrecognized pointer type: \"" $ string_implode( out, "" ) $ "\"" );
+	
+	level = 0;
+	pos = scode.size - 1;
+	skipped = false;
+	while( pos > 0 )
+	{
+		item = scode[ pos ];
+		if( item == ")" )
+		{
+			level++;
+		}
+		else if( item == "(" )
+		{
+			level--;
+			if( level == 0 )
+				skipped = true;
+		}
+		else if( re_match( item, "#^[a-zA-Z0-9_]+$#" ) && skipped )
+		{
+			return pos;
+		}
+		pos--;
+	}
+	
+	return null;
+}
+
+
+function cppbc_parse_vardecl( code, bSkipName )
+{
+	out = [];
+	
+	code = string_trim( code );
+	
+	lct = null;
+	for( i = 0; i < code.length; ++i )
+	{
+		cct = cppbc_get_vdchar_type( code[i] );
+		if( cct !== lct || ( cct != "N" && cct != "S" ) )
+			out.push("");
+		lct = cct;
+		out[out.size-1] $= code[i];
+	}
+	
+	name = "";
+	if( lct == "N" )
+	{
+		// basic typedef - identifier at end
+		if( !bSkipName || out.size != 1 )
+			name = string_trim( out.pop() );
+		type = string_trim( string_implode( out, "" ) );
+	}
+	else
+	{
+		// function pointer - identifier in right side of 2nd level-0 brackets from the end
+		pos = cppbc_find_fp_name( out );
+		if( pos === null && !bSkipName )
+			cppbc_error( "could not parse type: \"" $ string_implode( out, "" ) $ "\"" );
+		if( pos !== null )
+		{
+			name = out[ pos ];
+			out.erase( pos );
+		}
+		type = string_implode( out, "" );
+	}
+	
+	return {
+		name = name,
+		type = type,
+	};
+}
+
+
+function cppbc_split_cs( code )
+{
+	code = string_trim( code );
+	if( code == "" )
+		return [];
+	
+	out = [""];
+	stack = [];
+	
+	for( i = 0; i < code.length; ++i )
+	{
+		cc = code[i];
+		if( cc == "<" || cc == "(" || cc == "[" )
+		{
+			stack.push( cc );
+		}
+		else if( cc == ">" || cc == ")" || cc == "]" )
+		{
+			if( !stack.size || stack.last != cc )
+				cppbc_error( "brace mismatch in argument list" );
+			stack.pop();
+		}
+		else if( cc == "," && stack.size == 0 )
+		{
+			out.push( "" );
+			continue;
+		}
+		
+		out[out.size-1] $= cc;
+	}
+	
+	return out;
+}
+
+
+function cppbc_examine_method( code )
+{
+	ispmatch = re_match( code, "#([a-zA-Z0-9_]+)[ \t\v\r\n]*\\(#", RE_RETURN_BOTH );
+	
+	if( ispmatch === false )
+		cppbc_error( "could not parse method" );
+	
+	name = ispmatch[1][0];
+	rvd = cppbc_parse_vardecl( string_part( code, 0, ispmatch[0][1] ), true );
+	
+	ptypes = [];
+	params = cppbc_split_cs( string_cut( code, ispmatch[0][2], -2 ) );
+	foreach( param : params )
+	{
+		pvd = cppbc_parse_vardecl( param, true );
+		ptypes.push( pvd.type );
+	}
+	
+	return {
+		what = "METHOD",
+		name = name,
+		type = rvd.type,
+		params = ptypes,
+	};
+}
+
+
+function cppbc_examine_property( code )
+{
+	access = 0;
+	
+	sp = fmt_string_parser( code );
+	
+	sp.skipcc( " \t\v\r\n" );
+	item = sp.readcc( "a-zA-Z0-9_" );
+	begoff = sp.stream_offset;
+	
+	if( item == "READ" )
+		access = -1;
+	else if( item == "WRITE" )
+		access = 1;
+	else
+		begoff = 0;
+	
+	vd = cppbc_parse_vardecl( string_part( code, begoff ) );
+	
+	return {
+		what = "PROPERTY",
+		name = vd.name,
+		type = vd.type,
+		access = access,
+	};	
+}
+
+
+function cppbc_examine_object( code, pos )
+{
+	// get class/struct bounds
+	bounds = cppbc_block_bounds( code, pos );
+	
+	// get class/struct name
+	class_pos = string_find_rev_any( code, ["class","struct"], bounds[0] );
+	if( class_pos === null )
+		cppbc_error_ext( ERR_OOC, code, pos );
+	
+	tp = fmt_string_parser( code, class_pos );
+	tp.skipcc( "a-z" );
+	tp.skipcc( " \t\v\n\r" );
+	classname = tp.readcc( "a-zA-Z0-9_" );
+	
+	// gather all properties/methods
+	blockcode = string_cut( code, bounds[0] + 1, bounds[1] - 1 );
+	blockcode = cppbc_remove_blocks( blockcode );
+	
+	items = [];
+	matches = re_match_all( blockcode, "#(SGS_METHOD|SGS_PROPERTY)(.*?);#ms", RE_RETURN_BOTH );
+	foreach( match : matches )
+	{
+		if( match[1][0] == "SGS_METHOD" )
+			item = cppbc_examine_method( match[2][0] );
+		else if( match[1][0] == "SGS_PROPERTY" )
+			item = cppbc_examine_property( match[2][0] );
+		items.push( item );
+	}
+	
+	return {
+		name = classname,
+		items = items,
+	};
+}
+
+
+function cppbc_find_objects( code )
+{
+	matches = re_match_all( code, "#SGS_OBJECT#", RE_RETURN_OFFSETS );
+	objects = [];
+	foreach( match : matches )
+	{
+		object = cppbc_examine_object( code, match[0][0] );
+		println( "Detected '" $ object.name $ "'" );
+		objects.push( object );
+	}
+	
+//	printvar_ext( objects, 10 );
+	return objects;
+}
+
+
+function cppbc_generate_code( objects, includes )
+{
+	// header
+	out = string_format( "// SGS/CPP-BC
+// warning: do not modify this file, it may be regenerated during any build
+// generated: {1}
+
+"
+	, os_date_string( "%c" ) );
+	
+	// includes
+	foreach( include : includes )
+	{
+		out $= "#include \"" $ include $ "\"\n";
+	}
+	
+	////////////////////////
+	foreach( obj : objects )
+	{
+		// method wrappers
+		foreach( item : obj.items )
+		{
+			if( item.what != "METHOD" )
+				continue;
+			
+			line = "";
+			foreach( i, param : item.params )
+			{
+				if( line != "" )
+					line $= ", ";
+				
+				getvar3rd = "";
+				ptype = param;
+				if( param[ param.length - 1 ] == "*" )
+				{
+					getvar3rd = ",true";
+					ptype = string_part( param, 0, -1 );
+				}
+				
+				line $= string_format( "sgs_GetVar<{1}>(C,{2}{3})", ptype, i + 1, getvar3rd );
+			}
+			line = string_format( "data->{1}({2})", item.name, line );
+			retval = 0;
+			if( item.type != "void" )
+			{
+				line = "sgs_PushVar(C," $ line $ ");";
+				retval = 1;
+			}
+			else
+				line $= ";";
+			
+			out $= string_translate(
+"
+static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
+{
+	int method_call = sgs_Method( C );
+	sgs_FuncName( C, method_call ? \"%OBJ%.%NAME%\" : \"%OBJ%_%NAME%\" );
+	if( !sgs_IsObject( C, 0, %OBJ%::_sgs_interface ) )
+		return sgs_ArgErrorExt( C, 0, method_call, \"%OBJ%\", \"\" );
+	%OBJ%* data = static_cast<%OBJ%*>( sgs_GetObjectData( C, 0 ) );
+	%LINE%
+	return %RETVAL%;
+}
+"
+			, { "%OBJ%" = obj.name, "%NAME%" = item.name, "%LINE%" = line, "%RETVAL%" = retval } );
+		}
+		
+		// interface functions
+		// - OP_GETINDEX
+		out $=
+"
+int " $ obj.name $ "::_sgs_getindex( SGS_CTX, sgs_VarObj* obj, int param )
+{
+	char* name;
+	if( sgs_ParseString( C, 0, &name, NULL ) )
+	{";
+		foreach( item : obj.items )
+		{
+			if( item.what == "METHOD" )
+			{
+				out $= string_translate( "
+		if( strcmp( name, \"%NAME%\" ) == 0 )
+		{
+			sgs_PushCFunction( C, _sgs_method__%OBJ%__%NAME% );
+			return SGS_SUCCESS;
+		}"
+				, { "%OBJ%" = obj.name, "%NAME%" = item.name } );
+			}
+			else if( item.what == "PROPERTY" )
+			{
+				if( item.access > 0 )
+					continue;
+				out $= string_translate( "
+		if( strcmp( name, \"%NAME%\" ) == 0 )
+		{
+			sgs_PushVar( C, static_cast<%OBJ%*>( obj->data )->%NAME% );
+			return SGS_SUCCESS;
+		}"
+				, { "%OBJ%" = obj.name, "%NAME%" = item.name } );
+			}
+		}
+		out $= "
+	}
+	return SGS_ENOTFND;
+}
+";
+		
+		// - OP_SETINDEX
+		out $=
+"
+int " $ obj.name $ "::_sgs_setindex( SGS_CTX, sgs_VarObj* obj, int param )
+{
+	char* name;
+	if( sgs_ParseString( C, 0, &name, NULL ) )
+	{";
+		foreach( item : obj.items )
+		{
+			if( item.what != "PROPERTY" )
+				continue;
+			if( item.access < 0 )
+				continue;
+			out $= string_translate( "
+		if( strcmp( name, \"%NAME%\" ) == 0 )
+		{
+			static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVar<%TYPE%>( C, 1%ISOBJ% );
+			return SGS_SUCCESS;
+		}"
+			, {
+				"%OBJ%" = obj.name,
+				"%NAME%" = item.name,
+				"%TYPE%" = item.type,
+				"%ISOBJ%" = if( item.type[ item.type.length - 1 ] == "*", "true", "" ),
+			});
+		}
+		out $= "
+	}
+	return SGS_ENOTFND;
+}
+";
+		// - OP_CONVERT
+		out $= string_translate(
+"
+int %OBJ%::_sgs_convert( SGS_CTX, sgs_VarObj* obj, int param )
+{
+	if( param == SGS_CONVOP_TOTYPE || param == SGS_VT_STRING )
+	{
+		sgs_PushString( C, \"%OBJ%\" );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+"
+		, { "%OBJ%" = obj.name } );
+		
+		// interface
+		out $= string_translate(
+"
+sgs_ObjCallback %OBJ%::_sgs_interface[] =
+{
+	SGS_OP_GETINDEX, %OBJ%::_sgs_getindex,
+	SGS_OP_SETINDEX, %OBJ%::_sgs_setindex,
+	SGS_OP_CONVERT, %OBJ%::_sgs_convert,
+	SGS_OP_END
+};
+
+"
+		, { "%OBJ%" = obj.name } );
+	}
+	
+	return out;
+}
+
+
+function cppbc_parse_file( code, includes )
+{
+	code = cppbc_preprocess( code );
+	objects = cppbc_find_objects( code );
+	gcode = cppbc_generate_code( objects, includes );
+	return gcode;
+}
+
+
+// code = cppbc_parse_file( io_file_read( "thing.h" ) );
+// io_file_write( "cppbc_thing.cpp", code );
+
+if( argc < 2 )
+	cppbc_error( "Expected 1 argument: source file" );
+
+IN = argv[1];
+ofsp = string_explode( IN, "." );
+ofsp.pop();
+OUT = "cppbc_" $ string_implode( ofsp, "." ) $ ".cpp";
+
+code = cppbc_parse_file( io_file_read( IN ), [IN] );
+io_file_write( OUT, code );
+
