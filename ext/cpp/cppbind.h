@@ -15,10 +15,10 @@
 #define SGS_CTORNAME( obj ) SGS_IFN(obj##Create)
 #define SGS_DTORNAME( obj ) SGS_IFN(obj##Destroy)
 
-#define SGS_DECLARE_IFACE_O( obj ) SGS_VDECL( void* SGS_IFN(obj)[] );
-#define SGS_DEFINE_IFACE_O( obj ) SGS_VDEF( void* SGS_IFN(obj)[] ) = {
+#define SGS_DECLARE_IFACE_O( obj ) SGS_VDECL( sgs_ObjCallback SGS_IFN(obj)[] );
+#define SGS_DEFINE_IFACE_O( obj ) SGS_VDEF( sgs_ObjCallback SGS_IFN(obj)[] ) = {
 #define SGS_DEFINE_IFACE_END SGS_OP_END, };
-#define SGS_IFACE_ENTRY( name, func ) SGS_OP_##name, (void*) func
+#define SGS_IFACE_ENTRY( name, func ) SGS_OP_##name, func
 #define SGS_IFACE_GETINDEX_O( obj ) \
 	SGS_IFACE_ENTRY(GETINDEX,SGS_GETINDEXNAME(obj))
 #define SGS_IFACE_SETINDEX_O( obj ) \
