@@ -608,7 +608,6 @@ SGS_APIFUNC int sgs_ItemTypeExt( SGS_CTX, int item );
 SGS_APIFUNC SGSBOOL sgs_Method( SGS_CTX );
 SGS_APIFUNC void sgs_Acquire( SGS_CTX, sgs_Variable* var );
 SGS_APIFUNC void sgs_Release( SGS_CTX, sgs_Variable* var );
-SGS_APIFUNC void sgs_ReleaseOwned( SGS_CTX, sgs_Variable* var, int dco );
 SGS_APIFUNC SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var );
 
 SGS_APIFUNC char* sgs_GetStringPtr( SGS_CTX, int item );

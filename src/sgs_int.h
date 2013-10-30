@@ -586,7 +586,7 @@ typedef struct _sgs_VHTable
 sgs_VHTable;
 
 void sgs_vht_init( sgs_VHTable* vht, SGS_CTX );
-void sgs_vht_free( sgs_VHTable* vht, SGS_CTX, int dco );
+void sgs_vht_free( sgs_VHTable* vht, SGS_CTX );
 sgs_VHTableVar* sgs_vht_getS( sgs_VHTable* vht, sgs_iStr* S );
 void sgs_vht_setS( sgs_VHTable* vht, sgs_iStr* S, sgs_Variable* var, SGS_CTX );
 int sgs_vht_unsetS( sgs_VHTable* vht, sgs_iStr* S, SGS_CTX );
@@ -704,6 +704,7 @@ struct _sgs_Context
 	uint8_t       redblue;
 	sgs_VarPtr    gclist;
 	int           gclist_size;
+	int           gcrun;
 	
 #ifdef SGS_JIT
 	void* jitdata;

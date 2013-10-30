@@ -710,7 +710,7 @@ These are the default meanings for error codes that are honored throughout the A
 # Object operation types [info]
 
 - SGS_OP_END: <end of list> marker op
-- SGS_OP_DESTRUCT: object destruction op (argument: whether should free child variables - 1/0)
+- SGS_OP_DESTRUCT: object destruction op
 - SGS_OP_GETINDEX: object index/property retrieval (argument: whether is a property)
 - SGS_OP_SETINDEX: object index/property store (argument: whether is a property)
 - SGS_OP_CONVERT: object conversion (argument: subtype)
@@ -1738,15 +1738,7 @@ After a successful call, all arguments and the function will be popped off the s
 == void sgs_Release( sgs_Context* C, sgs_Variable* var )
 === decrement and possibly deallocate the reference count of the variable (if it counts references)
 
-
-# sgs_ReleaseOwned [function]
-
-== void sgs_ReleaseOwned( sgs_Context* C, sgs_Variable* var, int dco )
-=== decrement and possibly deallocate the reference count of the variable (if it counts references), depending on `dco`
-
-- `dco` stands for "destroy child objects", which essentially means that if it's zero and the variable is an object, it prevents the object from being destroyed
-- expected to be called in destructors of objects may that contain reference-counted variables, using the parameter passed in the callback
-- the child objects need to be preserved in exactly once case: the garbage collector destruction phase - when all objects are scheduled for deletion, it is important to avoid destroying them twice
+- works differently while GC is running: doesn't delete objects of same context in destructor
 
 
 # sgs_GCMark [function]
@@ -2127,13 +2119,11 @@ Interface is an array of void* that contains a list of pairs, where in each the 
 
 === SGS_OP_DESTRUCT - destruction callback
 
-**Called** before the object is about to be destroyed. Argument = 0/1, whether to destroy child objects.
+**Called** before the object is about to be destroyed.
 
-**Argument** specifies whether object is destroyed via GC (if argument == 0) and cannot allow the destruction of other objects to happen at the moment.
+**Argument** is not used.
 
 **Stack frame** contains no additional data.
-
-To ensure safe destruction of owned variables, call sgs_ReleaseOwned and pass the argument.
 
 === SGS_OP_GETINDEX - index/property retrieval callback
 

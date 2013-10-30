@@ -106,7 +106,7 @@ function cppbc_remove_blocks( code )
 		to = match[0][2];
 		
 		if( level == 0 )
-			out $= string_part( code, pos, from );
+			out $= string_cut( code, pos, from - 1 );
 		
 		if( which == "{" )
 		{
@@ -465,11 +465,11 @@ function cppbc_generate_code( objects, includes )
 				ptype = param;
 				if( param[ param.length - 1 ] == "*" )
 				{
-					getvar3rd = ",true";
+					getvar3rd = "Obj";
 					ptype = string_part( param, 0, -1 );
 				}
 				
-				line $= string_format( "sgs_GetVar<{1}>(C,{2}{3})", ptype, i + 1, getvar3rd );
+				line $= string_format( "sgs_GetVar{3}<{1}>()(C,{2})", ptype, i + 1, getvar3rd );
 			}
 			line = string_format( "data->{1}({2})", item.name, line );
 			retval = 0;
@@ -554,7 +554,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_CTX, sgs_VarObj* obj, int param )
 			out $= string_translate( "
 		if( strcmp( name, \"%NAME%\" ) == 0 )
 		{
-			static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVar<%TYPE%>( C, 1%ISOBJ% );
+			static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVar<%TYPE%>()( C, 1%ISOBJ% );
 			return SGS_SUCCESS;
 		}"
 			, {

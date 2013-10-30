@@ -336,13 +336,13 @@ void vht_init( VHTable* vht, SGS_CTX )
 	vht->mem = 0;
 }
 
-void vht_free( VHTable* vht, SGS_CTX, int dco )
+void vht_free( VHTable* vht, SGS_CTX )
 {
 	int32_t i;
 	for( i = 0; i < vht_size( vht ); ++i )
 	{
 		sgs_VarPtr p = &vht->vars[ i ].var;
-		sgs_ReleaseOwned( C, p, dco );
+		sgs_Release( C, p );
 	}
 	ht_free( &vht->ht, C );
 	if( vht->vars )
@@ -2998,27 +2998,29 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 
 SGSRESULT sgs_GCExecute( SGS_CTX )
 {
+	int ret = SGS_SUCCESS;
 	sgs_VarPtr vbeg, vend;
 	object_t* p;
 
 	C->redblue = !C->redblue;
+	C->gcrun = TRUE;
 
 	/* -- MARK -- */
 	/* GCLIST / currently executed "main" function */
 	vbeg = C->gclist; vend = vbeg + C->gclist_size;
 	while( vbeg < vend ){
-		int ret = vm_gcmark( C, vbeg );
+		ret = vm_gcmark( C, vbeg );
 		if( ret != SGS_SUCCESS )
-			return ret;
+			goto end;
 		vbeg++;
 	}
 
 	/* STACK */
 	vbeg = C->stack_base; vend = C->stack_top;
 	while( vbeg < vend ){
-		int ret = vm_gcmark( C, vbeg++ );
+		ret = vm_gcmark( C, vbeg++ );
 		if( ret != SGS_SUCCESS )
-			return ret;
+			goto end;
 	}
 
 	/* GLOBALS */
@@ -3030,9 +3032,9 @@ SGSRESULT sgs_GCExecute( SGS_CTX )
 	while( p ){
 		object_t* pn = p->next;
 		if( p->redblue != C->redblue ){
-			int ret = obj_exec( C, SOP_DESTRUCT, p, FALSE, 0 );
+			ret = obj_exec( C, SOP_DESTRUCT, p, FALSE, 0 );
 			if( ret != SGS_SUCCESS && ret != SGS_ENOTFND )
-				return ret;
+				goto end;
 		}
 		p = pn;
 	}
@@ -3046,7 +3048,9 @@ SGSRESULT sgs_GCExecute( SGS_CTX )
 		p = pn;
 	}
 
-	return SGS_SUCCESS;
+end:
+	C->gcrun = FALSE;
+	return ret;
 }
 
 
@@ -3780,12 +3784,7 @@ void sgs_Acquire( SGS_CTX, sgs_Variable* var )
 
 void sgs_Release( SGS_CTX, sgs_Variable* var )
 {
-	VAR_RELEASE( var );
-}
-
-void sgs_ReleaseOwned( SGS_CTX, sgs_Variable* var, int dco )
-{
-	if( ( var->type & SVT_OBJECT ) && !dco )
+	if( ( var->type & SVT_OBJECT ) && C->gcrun )
 		return;
 	VAR_RELEASE( var );
 }

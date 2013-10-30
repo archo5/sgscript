@@ -37,14 +37,15 @@ static void sgsstd_array_reserve( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeV
 	hdr->mem = size;
 }
 
-static void sgsstd_array_clear( SGS_CTX, sgsstd_array_header_t* hdr, int dch )
+static void sgsstd_array_clear( SGS_CTX, sgsstd_array_header_t* hdr, int unused )
 {
 	sgs_Variable *var, *vend;
+	UNUSED( unused );
 	var = SGSARR_PTR( hdr );
 	vend = var + hdr->size;
 	while( var < vend )
 	{
-		sgs_ReleaseOwned( C, var, dch );
+		sgs_Release( C, var );
 		var++;
 	}
 	hdr->size = 0;
@@ -739,9 +740,10 @@ static int sgsstd_array_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 
 /* iterator */
 
-static int sgsstd_array_iter_destruct( SGS_CTX, sgs_VarObj* data, int dch )
+static int sgsstd_array_iter_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
-	sgs_ReleaseOwned( C, &((sgsstd_array_iter_t*) data->data)->ref, dch );
+	UNUSED( unused );
+	sgs_Release( C, &((sgsstd_array_iter_t*) data->data)->ref );
 	sgs_Dealloc( data->data );
 	return SGS_SUCCESS;
 }
@@ -943,10 +945,11 @@ static DictHdr* mkdict( SGS_CTX )
 
 #define HTHDR DictHdr* dh = (DictHdr*) data->data; VHTable* ht = &dh->ht;
 
-static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+static int sgsstd_dict_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	HTHDR;
-	vht_free( ht, C, dco );
+	UNUSED( unused );
+	vht_free( ht, C );
 	return SGS_SUCCESS;
 }
 
@@ -1123,9 +1126,10 @@ typedef struct sgsstd_dict_iter_s
 }
 sgsstd_dict_iter_t;
 
-static int sgsstd_dict_iter_destruct( SGS_CTX, sgs_VarObj* data, int dch )
+static int sgsstd_dict_iter_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
-	sgs_ReleaseOwned( C, &((sgsstd_dict_iter_t*) data->data)->ref, dch );
+	UNUSED( unused );
+	sgs_Release( C, &((sgsstd_dict_iter_t*) data->data)->ref );
 	sgs_Dealloc( data->data );
 	return SGS_SUCCESS;
 }
@@ -1324,9 +1328,10 @@ static int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method
 	return ret == SGS_SUCCESS;
 }
 
-static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data, int dch )
+static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	SGSCLASS_HDR;
+	UNUSED( unused );
 	if( sgsstd_class_getmethod( C, data, "__destruct" ) )
 	{
 		sgs_Variable tmp;
@@ -1341,8 +1346,8 @@ static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 			sgs_Pop( C, 1 );
 		data->refcount--;
 	}
-	sgs_ReleaseOwned( C, &hdr->data, dch );
-	sgs_ReleaseOwned( C, &hdr->inh, dch );
+	sgs_Release( C, &hdr->data );
+	sgs_Release( C, &hdr->inh );
 	return SGS_SUCCESS;
 }
 
@@ -1556,11 +1561,12 @@ sgsstd_closure_t;
 
 #define SGSCLOSURE_HDR sgsstd_closure_t* hdr = (sgsstd_closure_t*) data->data;
 
-static int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data, int dch )
+static int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	SGSCLOSURE_HDR;
-	sgs_ReleaseOwned( C, &hdr->func, dch );
-	sgs_ReleaseOwned( C, &hdr->data, dch );
+	UNUSED( unused );
+	sgs_Release( C, &hdr->func );
+	sgs_Release( C, &hdr->data );
 	return SGS_SUCCESS;
 }
 
@@ -1654,19 +1660,20 @@ static int sgsstd_closure( SGS_CTX )
 	- sgs_Closure* x ^^: closures
 */
 
-static int sgsstd_realclsr_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+static int sgsstd_realclsr_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	uint8_t* cl = (uint8_t*) data->data;
 	int32_t i, cc = *(int32_t*)(cl+sizeof(sgs_Variable));
 	sgs_Closure** cls = (sgs_Closure**)(cl+sizeof(sgs_Variable)+sizeof(int32_t));
+	UNUSED( unused );
 	
-	sgs_ReleaseOwned( C, (sgs_Variable*) cl, dco );
+	sgs_Release( C, (sgs_Variable*) cl );
 	
 	for( i = 0; i < cc; ++i )
 	{
 		if( --cls[ i ]->refcount < 1 )
 		{
-			sgs_ReleaseOwned( C, &cls[ i ]->var, dco );
+			sgs_Release( C, &cls[ i ]->var );
 			sgs_Dealloc( cls[i] );
 		}
 	}
@@ -2480,6 +2487,7 @@ static void _sgsstd_compile_pfn( void* data, SGS_CTX, int type, const char* msg 
 	sgs_PushDict( C, 4 );
 	
 	ret = sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
+	UNUSED( ret );
 	sgs_BreakIf( ret < 0 );
 	
 	sgs_Pop( C, 1 );

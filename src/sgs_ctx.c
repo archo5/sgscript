@@ -111,6 +111,7 @@ static void ctx_init( SGS_CTX )
 	C->redblue = 0;
 	C->gclist = NULL;
 	C->gclist_size = 0;
+	C->gcrun = FALSE;
 	
 #ifdef SGS_JIT
 	sgsJIT_Init( C );

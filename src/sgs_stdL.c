@@ -916,10 +916,11 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 }
 
 
-static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data, int dco )
+static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	SGSFS_HDR;
-	sgs_ReleaseOwned( C, &hdr->source, dco );
+	UNUSED( unused );
+	sgs_Release( C, &hdr->source );
 	sgs_Dealloc( hdr->buffer );
 	sgs_Dealloc( hdr );
 	return SGS_SUCCESS;
@@ -1425,10 +1426,11 @@ static int srt_call( SGS_CTX, sgs_VarObj* data, int smth )
 	}
 }
 
-static int srt_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+static int srt_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	stringread_t* srt = (stringread_t*) data->data;
-	sgs_ReleaseOwned( C, &srt->S, dco );
+	UNUSED( unused );
+	sgs_Release( C, &srt->S );
 	return SGS_SUCCESS;
 }
 
@@ -1486,10 +1488,11 @@ static int frt_call( SGS_CTX, sgs_VarObj* data, int smth )
 	return 1;
 }
 
-static int frt_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+static int frt_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	fileread_t* frt = (fileread_t*) data->data;
-	sgs_ReleaseOwned( C, &frt->F, dco );
+	UNUSED( unused );
+	sgs_Release( C, &frt->F );
 	return SGS_SUCCESS;
 }
 
