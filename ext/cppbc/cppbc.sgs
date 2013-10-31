@@ -5,6 +5,54 @@ include "string", "re", "fmt", "io", "os";
 global ERR_OOC = "SGS_OBJECT outside class/struct";
 
 
+global OBJ_IFUNCS =
+[
+	"SGS_OP_DESTRUCT",  "SOP_DESTRUCT",
+	"SGS_OP_GETINDEX",  "SOP_GETINDEX",
+	"SGS_OP_SETINDEX",  "SOP_SETINDEX",
+	"SGS_OP_CONVERT",   "SOP_CONVERT",
+	"SGS_OP_SERIALIZE", "SOP_SERIALIZE",
+	"SGS_OP_DUMP",      "SOP_DUMP",
+	"SGS_OP_GCMARK",    "SOP_GCMARK",
+	"SGS_OP_GETNEXT",   "SOP_GETNEXT",
+	"SGS_OP_CALL",      "SOP_CALL",
+	"SGS_OP_EXPR",      "SOP_EXPR",
+];
+
+global OBJ_IFUNC_REMAP =
+{
+	"SGS_OP_DESTRUCT"  = "SGS_OP_DESTRUCT",
+	"SGS_OP_GETINDEX"  = "SGS_OP_GETINDEX",
+	"SGS_OP_SETINDEX"  = "SGS_OP_SETINDEX",
+	"SGS_OP_CONVERT"   = "SGS_OP_CONVERT",
+	"SGS_OP_SERIALIZE" = "SGS_OP_SERIALIZE",
+	"SGS_OP_DUMP"      = "SGS_OP_DUMP",
+	"SGS_OP_GCMARK"    = "SGS_OP_GCMARK",
+	"SGS_OP_GETNEXT"   = "SGS_OP_GETNEXT",
+	"SGS_OP_CALL"      = "SGS_OP_CALL",
+	"SGS_OP_EXPR"      = "SGS_OP_EXPR",
+	//
+	"SOP_DESTRUCT"     = "SGS_OP_DESTRUCT",
+	"SOP_GETINDEX"     = "SGS_OP_GETINDEX",
+	"SOP_SETINDEX"     = "SGS_OP_SETINDEX",
+	"SOP_CONVERT"      = "SGS_OP_CONVERT",
+	"SOP_SERIALIZE"    = "SGS_OP_SERIALIZE",
+	"SOP_DUMP"         = "SGS_OP_DUMP",
+	"SOP_GCMARK"       = "SGS_OP_GCMARK",
+	"SOP_GETNEXT"      = "SGS_OP_GETNEXT",
+	"SOP_CALL"         = "SGS_OP_CALL",
+	"SOP_EXPR"         = "SGS_OP_EXPR",
+};
+
+global DEFAULT_OBJ_IFUNCS =
+{
+	"SGS_OP_DESTRUCT" = "_sgs_destruct",
+	"SGS_OP_GETINDEX" = "_sgs_getindex",
+	"SGS_OP_SETINDEX" = "_sgs_setindex",
+	"SGS_OP_CONVERT" = "_sgs_convert",
+};
+
+
 function string_find_rev_any( str, what, pos )
 {
 	if( pos === null )
@@ -377,6 +425,32 @@ function cppbc_examine_property( code )
 }
 
 
+function cppbc_examine_ifunc( code )
+{
+	ispmatch = re_match( code, "#([a-zA-Z0-9_]+)[ \t\v\r\n]*\\(#", RE_RETURN_BOTH );
+	if( ispmatch === false )
+		cppbc_error( "could not parse method (ifunc)" );
+	
+	typematch = re_match( code, "#([a-zA-Z0-9_]+)[ \t\v\r\n)]+#", RE_RETURN_BOTH );
+	if( typematch === false )
+		cppbc_error( "could not find interface function type" );
+	
+	name = ispmatch[1][0];
+	type = typematch[1][0];
+	
+	if( OBJ_IFUNCS.find( type ) === null )
+		cppbc_error( "unrecognized interface function type: " $ type );
+	
+	type = OBJ_IFUNC_REMAP[ type ];
+	
+	return {
+		what = "IFUNC",
+		name = name,
+		type = type,
+	};
+}
+
+
 function cppbc_examine_object( code, pos )
 {
 	// get class/struct bounds
@@ -397,13 +471,15 @@ function cppbc_examine_object( code, pos )
 	blockcode = cppbc_remove_blocks( blockcode );
 	
 	items = [];
-	matches = re_match_all( blockcode, "#(SGS_METHOD|SGS_PROPERTY)(.*?);#ms", RE_RETURN_BOTH );
+	matches = re_match_all( blockcode, "#(SGS_METHOD|SGS_PROPERTY|SGS_IFUNC)(.*?);#ms", RE_RETURN_BOTH );
 	foreach( match : matches )
 	{
 		if( match[1][0] == "SGS_METHOD" )
 			item = cppbc_examine_method( match[2][0] );
 		else if( match[1][0] == "SGS_PROPERTY" )
 			item = cppbc_examine_property( match[2][0] );
+		else if( match[1][0] == "SGS_IFUNC" )
+			item = cppbc_examine_ifunc( match[2][0] );
 		items.push( item );
 	}
 	
@@ -449,6 +525,17 @@ function cppbc_generate_code( objects, includes )
 	////////////////////////
 	foreach( obj : objects )
 	{
+		ifuncs = clone( DEFAULT_OBJ_IFUNCS );
+		
+		// load the ifuncs
+		foreach( item : obj.items )
+		{
+			if( item.what != "IFUNC" )
+				continue;
+			
+			ifuncs[ item.type ] = item.name;
+		}
+		
 		// method wrappers
 		foreach( item : obj.items )
 		{
@@ -498,6 +585,17 @@ static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 		}
 		
 		// interface functions
+		// - OP_DESTRUCT
+		out $= string_translate(
+"
+int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj, int )
+{
+	static_cast<%OBJ%*>( obj->data )->~%OBJ%();
+	return SGS_SUCCESS;
+}
+"
+		, { "%OBJ%" = obj.name } );
+		
 		// - OP_GETINDEX
 		out $=
 "
@@ -585,18 +683,20 @@ int %OBJ%::_sgs_convert( SGS_CTX, sgs_VarObj* obj, int param )
 		, { "%OBJ%" = obj.name } );
 		
 		// interface
-		out $= string_translate(
+		out $=
 "
-sgs_ObjCallback %OBJ%::_sgs_interface[] =
-{
-	SGS_OP_GETINDEX, %OBJ%::_sgs_getindex,
-	SGS_OP_SETINDEX, %OBJ%::_sgs_setindex,
-	SGS_OP_CONVERT, %OBJ%::_sgs_convert,
+sgs_ObjCallback " $ obj.name $ "::_sgs_interface[] =
+{";
+		
+		foreach( ifname, ifunc : ifuncs )
+			out $= string_format( "\n\t{1}, {2}::{3},", ifname, obj.name, ifunc );
+		
+		out $=
+"
 	SGS_OP_END
 };
 
-"
-		, { "%OBJ%" = obj.name } );
+";
 	}
 	
 	return out;

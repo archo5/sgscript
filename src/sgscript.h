@@ -286,7 +286,7 @@ struct _sgs_Variable
 /* - object interface */
 #define SGS_OP( idx ) ((sgs_ObjCallback)idx)
 #define SGS_OP_END        SGS_OP( 0 )
-#define SGS_OP_DESTRUCT   SGS_OP( 1 )  /* arg = should free child vars? */
+#define SGS_OP_DESTRUCT   SGS_OP( 1 )
 #define SGS_OP_GETINDEX   SGS_OP( 2 )  /* arg = prop? */
 #define SGS_OP_SETINDEX   SGS_OP( 3 )  /* arg = prop? */
 #define SGS_OP_CONVERT    SGS_OP( 4 )  /* arg = type(B|I|R|S)/spec. */

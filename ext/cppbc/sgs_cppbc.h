@@ -13,15 +13,16 @@
 
 #ifndef SGS_CPPBC_PROCESS
 # define SGS_OBJECT \
+	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj, int param ); \
 	static int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int param ); \
 	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj, int param ); \
 	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj, int param ); \
-	static int _sgs_create( SGS_CTX ); \
 	static sgs_ObjCallback _sgs_interface[];
 # define SGS_METHOD
 # define SGS_PROPERTY
 # define READ
 # define WRITE
+# define SGS_IFUNC( type ) static
 #endif
 
 
@@ -42,12 +43,29 @@ inline void sgs_ObjRelease( SGS_CTX, sgs_VarObj* obj )
 	sgs_Release( C, &var );
 }
 
+inline SGSRESULT sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj )
+{
+	sgs_Variable var;
+	var.type = SGS_VTC_OBJECT;
+	var.data.O = obj;
+	return sgs_GCMark( C, &var );
+}
+
 template< class T >
 class sgsHandle
 {
 public:
 	
-	sgsHandle(){};
+	sgsHandle() : object(NULL) {};
+	sgsHandle( const sgsHandle& h ) : object(NULL)
+	{
+		if( h.object->iface == T::_sgs_interface )
+		{
+			object = h.object;
+			C = h.C;
+			_acquire();
+		}
+	}
 	sgsHandle( sgs_VarObj* obj, sgs_Context* c )
 	{
 		if( obj->iface == T::_sgs_interface )
@@ -68,12 +86,14 @@ public:
 			C = h.C;
 			_acquire();
 		}
+		return *this;
 	}
 	operator T*(){ return static_cast<T*>( object->data ); }
 	T* operator -> (){ return static_cast<T*>( object->data ); }
 	
 	bool operator < ( const sgsHandle& h ) const { return object < h.object; }
 	
+	SGSRESULT gcmark() const { return sgs_ObjGCMark( C, object ); }
 	
 	sgs_VarObj* object;
 	
