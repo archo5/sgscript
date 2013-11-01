@@ -10,10 +10,11 @@ function sgsCC( el )
 	code = code.replace( /(^|[^0-9a-zA-Z])(0o[0-8]+)/g, '$1<span class="sgsNUM">$2</span>' );
 	code = code.replace( /(^|[^0-9a-zA-Z])(0x[0-9a-fA-F]+)/g, '$1<span class="sgsNUM">$2</span>' );
 	code = code.replace( /(^|[^0-9a-zA-Z])(-?[0-9]+(\.[0-9]+)?([eE][-+][0-9]+)?)/g, '$1<span class="sgsNUM">$2</span>' );
-	code = code.replace( /(^|[^0-9a-zA-Z])(if|else|do|while|for|foreach|break|continue|var|global|function|return|null|true|false)(\s|\b)/g, '$1<span class="sgsKEY">$2</span>$3' );
+	code = code.replace( /(^|[^0-9a-zA-Z])(if|else|do|while|for|foreach|break|continue|var|global|function|return|null|true|false|use)(\s|\b)/g, '$1<span class="sgsKEY">$2</span>$3' );
 	code = code.replace( /(\(|\)|\[|\]|\{|\})/g, '<span class="sgsSPC">$1</span>' );
 	code = code.replace( /(\/\/[^\n\r]*)([\r\n])/g, '<span class="sgsCOM">$1</span>$2' );
 	
+	code = code.replace(/^\s+|\s+$/g, '');
 	el.innerHTML = code;
 }
 
