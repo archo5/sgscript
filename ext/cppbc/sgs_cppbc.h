@@ -5,6 +5,7 @@
 
 #include <sgscript.h>
 #include <new>
+#include <assert.h>
 
 #ifndef SGS_CPPBC_NO_STD_STRING
 #  include <string>
@@ -114,9 +115,62 @@ inline void sgs_PushHandle( SGS_CTX, const sgsHandle<T>& val )
 }
 
 
+class sgsVariable
+{
+public:
+	
+	sgsVariable() : C(NULL) { var.type = SGS_VTC_NULL; };
+	sgsVariable( const sgsVariable& h )
+	{
+		if( h.var.type != SGS_VTC_NULL )
+		{
+			var = h.var;
+			C = h.C;
+			_acquire();
+		}
+	}
+	sgsVariable( sgs_Context* c ) : C(c) { var.type = SGS_VTC_NULL; }
+	sgsVariable( const sgs_Variable& v, sgs_Context* c )
+	{
+		if( v.type != SGS_VTC_NULL )
+		{
+			var = v;
+			C = c;
+			_acquire();
+		}
+	}
+	~sgsVariable(){ _release(); }
+	
+	const sgsVariable& operator = ( const sgsVariable& h )
+	{
+		_release();
+		if( h.var.type != SGS_VTC_NULL )
+		{
+			var = h.var;
+			C = h.C;
+			_acquire();
+		}
+		return *this;
+	}
+	
+	bool operator < ( const sgsVariable& h ) const { return var.type < h.var.type || var.data.I < h.var.data.I; }
+	
+	void push() const { assert( C ); sgs_PushVariable( C, const_cast<sgs_Variable*>( &var ) ); }
+	SGSRESULT gcmark() { if( !C ) return SGS_SUCCESS; return sgs_GCMark( C, &var ); }
+	
+	sgs_Variable var;
+	SGS_CTX;
+	
+	void _acquire(){ if( C ){ sgs_Acquire( C, &var ); } }
+	void _release(){ if( C ){ sgs_Release( C, &var ); var.type = SGS_VTC_NULL; } }
+	
+};
+
+
 template< class T > void sgs_PushVar( SGS_CTX, const T& );
 template< class T > inline void sgs_PushVar( SGS_CTX, T* v ){ sgs_PushClass( C, v ); }
 template< class T > inline void sgs_PushVar( SGS_CTX, sgsHandle<T> v ){ sgs_PushHandle( C, v ); }
+template<> inline void sgs_PushVar<sgsVariable>( SGS_CTX, const sgsVariable& v ){ assert( v.C == C ); v.push(); }
 #define SGS_DECL_PUSHVAR( type, parsefn ) template<> inline void sgs_PushVar<type>( SGS_CTX, const type& v ){ parsefn( C, v ); }
 SGS_DECL_PUSHVAR( bool, sgs_PushBool );
 #define SGS_DECL_PUSHVAR_INT( type ) SGS_DECL_PUSHVAR( type, sgs_PushInt )
@@ -183,6 +237,17 @@ struct sgs_GetVar< sgsHandle<O> >
 		if( sgs_IsObject( C, item, O::_sgs_interface ) )
 			return sgsHandle<O>( sgs_GetObjectStruct( C, item ), C );
 		return sgsHandle<O>( NULL, C );
+	}
+};
+template<>
+struct sgs_GetVar< sgsVariable >
+{
+	sgsVariable operator () ( SGS_CTX, int item ) const
+	{
+		sgsVariable tmp( C );
+		sgs_GetStackItem( C, item, &tmp.var );
+		tmp._acquire();
+		return tmp;
 	}
 };
 
