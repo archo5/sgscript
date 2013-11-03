@@ -1547,7 +1547,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_RegisterType [function]
 
-== SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, void** iface )
+== SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjCallback* iface )
 === register a type interface by mapping it to a name
 
 === error codes
@@ -1566,13 +1566,13 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_FindType [function]
 
-== void** sgs_FindType( SGS_CTX, const char* name )
+== sgs_ObjCallback* sgs_FindType( SGS_CTX, const char* name )
 === finds the type interface that is mapped to the specified name or returns NULL if that type name cannot be found
 
 
 # sgs_IsObject [function]
 
-== SGSBOOL sgs_IsObject( sgs_Context* C, int item, void** iface )
+== SGSBOOL sgs_IsObject( sgs_Context* C, int item, sgs_ObjCallback* iface )
 === returns whether the specified stack item `item` is an object with the interface pointer `iface`
 
 - if `item` is out of bounds or not an object or doesn't have the specified interface, 0 is returned
@@ -1787,7 +1787,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_GetObjectIface [function]
 
-== void** sgs_GetObjectIface( sgs_Context* C, int item )
+== sgs_ObjCallback* sgs_GetObjectIface( sgs_Context* C, int item )
 === return the object interface pointer of the specified stack item
 
 - if item is out of bounds or not an object, NULL will be returned and ...
@@ -1805,7 +1805,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_SetObjectIface [function]
 
-== int sgs_SetObjectIface( sgs_Context* C, int item, void* iface )
+== int sgs_SetObjectIface( sgs_Context* C, int item, sgs_ObjCallback* iface )
 === set the object interface pointer of the specified stack item
 
 - if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
@@ -2108,9 +2108,9 @@ Every interface function has the type `int ObjCallback ( sgs_Context* C, sgs_Var
 
 Even if pointer objects don't require interface functions, it is suggested all objects of same type still have their own interface pointer for the type for identification.
 
-Interface is an array of void* that contains a list of pairs, where in each the first value is a SGS_OP_*** constant and the second is an object interface function, and one SGS_OP_END value at the end. This is how interfaces are usually defined in code:
+Interface is an array of sgs_ObjCallback-type functions that contains a list of pairs, where in each the first value is a SGS_OP_*** constant and the second is an object interface function, and one SGS_OP_END value at the end. This is how interfaces are usually defined in code:
 
-    void* object_interface[] =
+    sgs_ObjCallback object_interface[] =
     {
         SGS_OP_DESTRUCT, object_destruct,
         SGS_OP_GETINDEX, object_getindex,
