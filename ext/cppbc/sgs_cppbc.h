@@ -18,7 +18,9 @@
 	static int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int param ); \
 	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj, int param ); \
 	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj, int param ); \
-	static sgs_ObjCallback _sgs_interface[];
+	static sgs_ObjCallback _sgs_interface[]; \
+	sgs_VarObj* m_sgsObject; \
+	SGS_CTX;
 # define SGS_METHOD
 # define SGS_PROPERTY
 # define READ
@@ -89,10 +91,15 @@ public:
 		}
 		return *this;
 	}
+	
 	operator T*(){ return static_cast<T*>( object->data ); }
+	operator const T*() const { return static_cast<T*>( object->data ); }
+	
 	T* operator -> (){ return static_cast<T*>( object->data ); }
+	const T* operator -> () const { return static_cast<T*>( object->data ); }
 	
 	bool operator < ( const sgsHandle& h ) const { return object < h.object; }
+	bool operator == ( const sgsHandle& h ) const { return object == h.object; }
 	
 	SGSRESULT gcmark() const { return sgs_ObjGCMark( C, object ); }
 	
@@ -139,6 +146,12 @@ public:
 			_acquire();
 		}
 	}
+	sgsVariable( sgs_Context* c, int item ) : C(c)
+	{
+		var.type = SGS_VTC_NULL;
+		sgs_GetStackItem( C, item, &var );
+		_acquire();
+	}
 	~sgsVariable(){ _release(); }
 	
 	const sgsVariable& operator = ( const sgsVariable& h )
@@ -154,6 +167,7 @@ public:
 	}
 	
 	bool operator < ( const sgsVariable& h ) const { return var.type < h.var.type || var.data.I < h.var.data.I; }
+	bool operator == ( const sgsVariable& h ) const { return var.type == h.var.type && var.data.I == h.var.data.I; }
 	
 	void push() const { assert( C ); sgs_PushVariable( C, const_cast<sgs_Variable*>( &var ) ); }
 	SGSRESULT gcmark() { if( !C ) return SGS_SUCCESS; return sgs_GCMark( C, &var ); }
@@ -239,27 +253,23 @@ struct sgs_GetVar< sgsHandle<O> >
 		return sgsHandle<O>( NULL, C );
 	}
 };
-template<>
-struct sgs_GetVar< sgsVariable >
-{
-	sgsVariable operator () ( SGS_CTX, int item ) const
-	{
-		sgsVariable tmp( C );
-		sgs_GetStackItem( C, item, &tmp.var );
-		tmp._acquire();
-		return tmp;
-	}
-};
+template<> struct sgs_GetVar< sgsVariable > { sgsVariable operator () ( SGS_CTX, int item ) const {
+	return sgsVariable( C, item ); } };
 
 
 template< class T > void sgs_PushClass( SGS_CTX, T* inst )
 {
 	sgs_PushObject( C, inst, T::_sgs_interface );
+	inst->m_sgsObject = sgs_GetObjectStruct( C, -1 );
+	inst->C = C;
 }
 
 template< class T > T* sgs_PushClassIPA( SGS_CTX )
 {
-	return static_cast<T*>( sgs_PushObjectIPA( C, sizeof(T), T::_sgs_interface ) );
+	T* data = static_cast<T*>( sgs_PushObjectIPA( C, sizeof(T), T::_sgs_interface ) );
+	data->m_sgsObject = sgs_GetObjectStruct( C, -1 );
+	data->C = C;
+	return data;
 }
 
 #define SGS_PUSHCLASS( C, name, args ) \

@@ -76,6 +76,9 @@ function cppbc_error_ext( error, code, pos ){ cppbc_error( error ); }
 
 function cppbc_preprocess( code )
 {
+	if( typeid(code) != VT_STRING )
+		cppbc_error( "cppbc_preprocess: expected string" );
+	
 	pos = 0;
 	out = "";
 	
@@ -180,6 +183,14 @@ function cppbc_remove_blocks( code )
 		cppbc_error( "error in code: curved bracket mismatch" );
 	
 	return out;
+}
+
+
+function cppbc_fix_type( type )
+{
+	if( type[ type.length - 1 ] == ">" )
+		type $= " ";
+	return type;
 }
 
 
@@ -556,7 +567,7 @@ function cppbc_generate_code( objects, includes )
 					ptype = string_part( param, 0, -1 );
 				}
 				
-				line $= string_format( "sgs_GetVar{3}<{1}>()(C,{2})", ptype, i + 1, getvar3rd );
+				line $= string_format( "sgs_GetVar{3}<{1}>()(C,{2})", cppbc_fix_type( ptype ), i + 1, getvar3rd );
 			}
 			line = string_format( "data->{1}({2})", item.name, line );
 			retval = 0;
@@ -658,7 +669,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_CTX, sgs_VarObj* obj, int param )
 			, {
 				"%OBJ%" = obj.name,
 				"%NAME%" = item.name,
-				"%TYPE%" = item.type,
+				"%TYPE%" = cppbc_fix_type( item.type ),
 				"%ISOBJ%" = if( item.type[ item.type.length - 1 ] == "*", "true", "" ),
 			});
 		}
@@ -719,9 +730,12 @@ if( argc < 2 )
 	cppbc_error( "Expected 1 argument: source file" );
 
 IN = argv[1];
-ofsp = string_explode( IN, "." );
+IN = string_replace( IN, "\\", "/" );
+pathspl = string_explode( IN, "/" );
+ofsp = string_explode( pathspl.pop(), "." );
 ofsp.pop();
-OUT = "cppbc_" $ string_implode( ofsp, "." ) $ ".cpp";
+pathspl.push( "cppbc_" $ string_implode( ofsp, "." ) $ ".cpp" );
+OUT = string_implode( pathspl, "/" );
 
 code = cppbc_parse_file( io_file_read( IN ), [IN] );
 io_file_write( OUT, code );
