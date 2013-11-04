@@ -446,7 +446,7 @@ SGS_APIFUNC SGSRESULT sgs_LoadLib_String( SGS_CTX );
 
 typedef struct _sgs_RegFuncConst
 {
-	char* name;
+	const char* name;
 	sgs_CFunc value;
 }
 sgs_RegFuncConst;
@@ -454,7 +454,7 @@ SGS_APIFUNC SGSRESULT sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, 
 
 typedef struct _sgs_RegIntConst
 {
-	char* name;
+	const char* name;
 	sgs_Int value;
 }
 sgs_RegIntConst;
@@ -462,7 +462,7 @@ SGS_APIFUNC SGSRESULT sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, in
 
 typedef struct _sgs_RegRealConst
 {
-	char* name;
+	const char* name;
 	sgs_Real value;
 }
 sgs_RegRealConst;

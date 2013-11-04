@@ -272,6 +272,15 @@ template< class T > T* sgs_PushClassIPA( SGS_CTX )
 	return data;
 }
 
+template< class T > T* sgs_PushClassFrom( SGS_CTX, T* inst )
+{
+	T* data = static_cast<T*>( sgs_PushObjectIPA( C, sizeof(T), T::_sgs_interface ) );
+	inst->m_sgsObject = sgs_GetObjectStruct( C, -1 );
+	inst->C = C;
+	*data = *inst;
+	return data;
+}
+
 #define SGS_PUSHCLASS( C, name, args ) \
 	(new (sgs_PushClassIPA< name >( C )) name args )
 
