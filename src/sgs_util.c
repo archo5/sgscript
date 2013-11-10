@@ -515,8 +515,8 @@ int util_strtonum( CCH** at, CCH* end, sgs_Int* outi, sgs_Real* outf )
 
 sgs_Int util_atoi( const char* str, int len )
 {
-	sgs_Int vi;
-	sgs_Real vr;
+	sgs_Int vi = 0;
+	sgs_Real vr = 0;
 	const char* p = str;
 	int ret = util_strtonum( &p, str + len, &vi, &vr );
 	if( p == str ) return 0;
@@ -527,8 +527,8 @@ sgs_Int util_atoi( const char* str, int len )
 
 sgs_Real util_atof( const char* str, int len )
 {
-	sgs_Int vi;
-	sgs_Real vr;
+	sgs_Int vi = 0;
+	sgs_Real vr = 0;
 	const char* p = str;
 	int ret = util_strtonum( &p, str + len, &vi, &vr );
 	if( p == str ) return 0;

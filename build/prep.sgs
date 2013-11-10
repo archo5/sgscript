@@ -1,0 +1,72 @@
+
+// Must be run with root as the current directory
+
+include "io", "os", "string", "re";
+
+// OS config
+OSNAME = string_tolower( os_gettype() );
+DS = if( OSNAME == "windows", "\\", "/" ); // only necessary for os_command
+ROOT = "bin" $ DS;
+
+// build variation config
+VARIATIONS =
+[
+	{ "32" = "arch=32", "64" = "arch=64" },
+	{ debug = "mode=debug", release = "mode=release" },
+];
+
+// build command config
+MAKEBIN = if( OSNAME == "windows", "mingw32-make", "make" );
+MAKECMD = "clean_objbin tools";
+if( OSNAME == "windows" )
+	MAKECMD $= " sgsexe";
+
+// --------------------------------------------
+
+buildlist = {};
+buildlist[ OSNAME ] = "";
+
+foreach( variation : VARIATIONS )
+{
+	nbl = {};
+	foreach( var_name, var_flags : variation )
+	{
+		foreach( oldvar, oldvarflags : buildlist )
+		{
+			nbl[ oldvar $ "-" $ var_name ] = oldvarflags $ " " $ var_flags;
+		}
+	}
+	buildlist = nbl;
+}
+
+mainheader = io_file_read( "src/sgscript.h" );
+match = re_match( mainheader, "%major[ \t]+([0-9]+).*?minor[ \t]+([0-9]+).*?"$
+	"incr[ \t]+([0-9]+).*?api_version[ \t]+([0-9]+)%msi", RE_RETURN_CAPTURED );
+versioninfo_plain = string_format( '{1}.{2}.{3}\n{4}', match[1], match[2], match[3], match[4] );
+versioninfo_json = string_format( '{"version":"{1}.{2}.{3}","api_version":"{4}"}',
+	match[1], match[2], match[3], match[4] );
+
+foreach( blfolder, blflags : buildlist )
+{
+	blflags = string_trim( blflags );
+	printlns
+	(
+		"",
+		"",
+		"//////////////////////////////",
+		"// build type: " $ blfolder,
+		"// build flags: " $ blflags,
+		"//////////////////////////////",
+		""
+	);
+	
+	// build
+	DIR = ROOT $ blfolder;
+	io_dir_create( DIR );
+	os_command( MAKEBIN$" OUTDIR="$DIR$" "$blflags$" "$MAKECMD );
+	
+	// write version info
+	io_file_write( DIR $ "/version", versioninfo_plain );
+	io_file_write( DIR $ "/version.json", versioninfo_json );
+}
+os_command( MAKEBIN $ " clean_obj" );

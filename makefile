@@ -26,11 +26,21 @@ else
 	LIBPFX=lib
 endif
 
+ifeq ($(arch),64)
+	ARCHFLAGS= -m64
+else
+	ifeq ($(arch),32)
+		ARCHFLAGS= -m32
+	else
+		ARCHFLAGS=
+	endif
+endif
+
 ifeq ($(mode),release)
-	CFLAGS = -O3 $(COMMONFLAGS) $(CPLATFLAGS)
+	CFLAGS = -O3 $(COMMONFLAGS) $(ARCHFLAGS) $(CPLATFLAGS)
 else
 	mode = debug
-	CFLAGS = -D_DEBUG -g $(COMMONFLAGS) $(CPLATFLAGS)
+	CFLAGS = -D_DEBUG -g $(COMMONFLAGS) $(ARCHFLAGS) $(CPLATFLAGS)
 endif
 
 ifneq ($(jit),)
@@ -50,7 +60,7 @@ ifneq ($(static),)
 	OUTFILE = $(LIBDIR)/libsgscript.a
 else
 	PREFLAGS = -DBUILDING_SGS=1 -DSGS_DLL=1 $(_XFLAGS)
-	LFLAGS = -Lbin -lsgscript
+	LFLAGS = -L$(OUTDIR) -lsgscript
 	OUTLIB = $(LIBPFX)sgscript$(LIBEXT)
 	OUTFILE = $(OUTDIR)/$(LIBPFX)sgscript$(LIBEXT)
 endif
@@ -141,7 +151,15 @@ sgsexe: $(LIBDIR)/libsgscript.a $(EXTDIR)/sgsexe.c
 	del /Q $(OUTDIR)\sgsexe$(BINEXT)
 	cmd /c move /Y $(OUTDIR)\sgsexe.tmp $(OUTDIR)\sgsexe$(BINEXT)
 
-# clean everything
+# clean build data
+.PHONY: clean_obj
+clean_obj:
+	$(RM) $(call FixPath,$(OBJDIR)/*.o)
+
+.PHONY: clean_objbin
+clean_objbin:
+	$(RM) $(call FixPath,$(OBJDIR)/*.o $(OUTDIR)/sgs* $(OUTDIR)/libsgs*)
+
 .PHONY: clean
 clean:
 	$(RM) $(call FixPath,$(OBJDIR)/*.o $(LIBDIR)/*.a $(LIBDIR)/*.lib $(OUTDIR)/sgs* $(OUTDIR)/libsgs*)

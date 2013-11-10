@@ -367,8 +367,8 @@ static sgs_ObjCallback sockaddr_iface[ 11 ] =
 
 static void push_sockaddr( SGS_CTX, struct sockaddr_storage* sa, int size )
 {
-	void* ss = sgs_PushObjectIPA( C, sizeof( struct sockaddr_storage ), sockaddr_iface );
-	memset( ss, 0, sizeof(ss) );
+	void* ss = sgs_PushObjectIPA( C, sizeof(struct sockaddr_storage), sockaddr_iface );
+	memset( ss, 0, sizeof(struct sockaddr_storage) );
 	memcpy( ss, sa, size );
 }
 

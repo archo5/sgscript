@@ -2939,7 +2939,7 @@ static int sgsstd_re_match_all( SGS_CTX )
 static int sgsstd_re_replace( SGS_CTX )
 {
 	char *str, *ptrn, *rep, *ret;
-	srx_Context* R;
+	srx_Context* R = NULL;
 	
 	SGSFN( "re_replace" );
 	
@@ -3855,13 +3855,21 @@ static int sgsstd_string_format( SGS_CTX )
 		if( c == '{' )
 		{
 			int stkid = 0, sio, ret;
+			char* tcp = fmt;
 			numitem++;
 			while( fmt < fmtend && *fmt >= '0' && *fmt <= '9' )
 			{
 				stkid *= 10;
 				stkid += *fmt++ - '0';
 			}
-
+			
+			if( tcp == fmt )
+			{
+				membuf_appchr( &B, C, c );
+				if( *fmt == '{' )
+					fmt++;
+				continue;
+			}
 			if( *fmt == ':' )
 			{
 				fmt++;
@@ -3871,7 +3879,7 @@ static int sgsstd_string_format( SGS_CTX )
 				{
 					membuf_destroy( &B, C );
 					sgs_Printf( C, SGS_WARNING, 
-						"parsing error in item %d", numitem );
+						"parsing error in item %d - failed to parse format part", numitem );
 					return 0;
 				}
 			}
@@ -3879,7 +3887,7 @@ static int sgsstd_string_format( SGS_CTX )
 			{
 				membuf_destroy( &B, C );
 				sgs_Printf( C, SGS_WARNING, 
-					"parsing error in item %d", numitem );
+					"parsing error in item %d - unexpected symbol (%c)", numitem, *fmt );
 				return 0;
 			}
 			else
