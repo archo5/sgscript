@@ -1,5 +1,5 @@
 
---- SGScript v0.8.5 ---
+--- SGScript v0.9.0 ---
 
 usage:
 - MinGW users:
@@ -46,6 +46,19 @@ credits:
 - inspired by C, PHP, Lua, JavaScript, Squirrel and AngelScript
 
 change log:
+0.9.0 (2013/11/10):
+	- bugfixes: empty subexpr, unary op chaining, expression writes
+	- implemented hooks interface
+	- created two kinds of profilers
+	- major internal refactoring (object interface & C-side handling)
+	- major stdlib upgrades (OS, date, I/O, formatting, iterables, system, regex)
+	- serialization
+	- the meta-global, environment switching
+	- unoptimized pseudo-empty statements due to possible side effects (1+funccall("x") etc.)
+	- documented stdlib / C API
+	- multiple return value capture via expression writes
+	- if(cond,true,false) pseudo-function (ternary op substitute)
+	- real closures
 0.8.5 (2013/05/01): sorted MANY things out (lots of fixes and API changes)
 	utf8<->utf32, big math/type lib. changes, debug inspector, json addon DLL,
 	upgraded the test framework, created the monkey test, doc.gen. from MD
