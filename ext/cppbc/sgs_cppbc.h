@@ -23,8 +23,11 @@
 	SGS_CTX;
 # define SGS_METHOD
 # define SGS_PROPERTY
+# define SGS_PROPERTY_FUNC( funcs )
 # define READ
 # define WRITE
+# define READ_CALLBACK
+# define WRITE_CALLBACK
 # define SGS_IFUNC( type ) static
 #endif
 

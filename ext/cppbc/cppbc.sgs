@@ -432,7 +432,77 @@ function cppbc_examine_property( code )
 		name = vd.name,
 		type = vd.type,
 		access = access,
-	};	
+	};
+}
+
+
+function cppbc_examine_property_func( code )
+{
+	access = 0;
+	
+	sp = fmt_string_parser( code );
+	
+	sp.skipcc( "( \t\v\r\n" );
+	items = [];
+	while( ( item = sp.readcc( "a-zA-Z0-9_" ) ) !== "" )
+	{
+		items.push( item );
+		sp.skipcc( " \t\v\r\n" );
+	}
+	sp.skipcc( ")" );
+	
+	items.push( "READ" ); // this will not get handled
+	readmethod = null;
+	writemethod = null;
+	readcallback = null;
+	writecallback = null;
+	lastitem = "";
+	foreach( item : items )
+	{
+		isspecitem = item == "READ" || item == "WRITE" || item == "READ_CALLBACK" || item == "WRITE_CALLBACK";
+		if( lastitem == "READ" )
+		{
+			if( isspecitem )
+				readmethod = true;
+			else
+				readmethod = item;
+		}
+		else if( lastitem == "WRITE" )
+		{
+			if( isspecitem )
+				writemethod = true;
+			else
+				writemethod = item;
+		}
+		else if( lastitem == "READ_CALLBACK" )
+		{
+			printvar(item);
+			if( isspecitem )
+				cppbc_error( "READ_CALLBACK: expected method name" );
+			else
+				readcallback = item;
+		}
+		else if( lastitem == "WRITE_CALLBACK" )
+		{
+			if( isspecitem )
+				cppbc_error( "WRITE_CALLBACK: expected method name" );
+			else
+				writecallback = item;
+		}
+		lastitem = item;
+	}
+	
+	vd = cppbc_parse_vardecl( string_part( code, sp.stream_offset ) );
+	
+	return {
+		what = "PROPERTY_FUNC",
+		name = vd.name,
+		type = vd.type,
+		read = readmethod,
+		write = writemethod,
+		readcb = readcallback,
+		writecb = writecallback,
+	};
 }
 
 
@@ -482,13 +552,15 @@ function cppbc_examine_object( code, pos )
 	blockcode = cppbc_remove_blocks( blockcode );
 	
 	items = [];
-	matches = re_match_all( blockcode, "#(SGS_METHOD|SGS_PROPERTY|SGS_IFUNC)(.*?);#ms", RE_RETURN_BOTH );
+	matches = re_match_all( blockcode, "#(SGS_PROPERTY_FUNC|SGS_METHOD|SGS_PROPERTY|SGS_IFUNC)(.*?);#ms", RE_RETURN_BOTH );
 	foreach( match : matches )
 	{
 		if( match[1][0] == "SGS_METHOD" )
 			item = cppbc_examine_method( match[2][0] );
 		else if( match[1][0] == "SGS_PROPERTY" )
 			item = cppbc_examine_property( match[2][0] );
+		else if( match[1][0] == "SGS_PROPERTY_FUNC" )
+			item = cppbc_examine_property_func( match[2][0] );
 		else if( match[1][0] == "SGS_IFUNC" )
 			item = cppbc_examine_ifunc( match[2][0] );
 		items.push( item );
@@ -617,24 +689,30 @@ int " $ obj.name $ "::_sgs_getindex( SGS_CTX, sgs_VarObj* obj, int param )
 	{";
 		foreach( item : obj.items )
 		{
+			itemline = null;
 			if( item.what == "METHOD" )
-			{
-				out $= string_translate( "
-		if( strcmp( name, \"%NAME%\" ) == 0 )
-		{
-			sgs_PushCFunction( C, _sgs_method__%OBJ%__%NAME% );
-			return SGS_SUCCESS;
-		}"
-				, { "%OBJ%" = obj.name, "%NAME%" = item.name } );
-			}
+				itemline = "sgs_PushCFunction( C, _sgs_method__%OBJ%__%NAME% );";
 			else if( item.what == "PROPERTY" )
 			{
-				if( item.access > 0 )
-					continue;
+				if( item.access <= 0 )
+					itemline = "sgs_PushVar( C, static_cast<%OBJ%*>( obj->data )->%NAME% );";
+			}
+			else if( item.what == "PROPERTY_FUNC" )
+			{
+				if( item.read === true )
+					itemline = "sgs_PushVar( C, static_cast<%OBJ%*>( obj->data )->%NAME% );";
+				else if( item.read )
+					itemline = "sgs_PushVar( C, static_cast<%OBJ%*>( obj->data )->"$item.read$"() );";
+				if( item.readcb )
+					itemline $= "\n\t\t\tstatic_cast<%OBJ%*>( obj->data )->"$item.readcb$"();";
+			}
+			
+			if( itemline )
+			{
 				out $= string_translate( "
 		if( strcmp( name, \"%NAME%\" ) == 0 )
 		{
-			sgs_PushVar( C, static_cast<%OBJ%*>( obj->data )->%NAME% );
+			"$itemline$"
 			return SGS_SUCCESS;
 		}"
 				, { "%OBJ%" = obj.name, "%NAME%" = item.name } );
@@ -656,22 +734,36 @@ int " $ obj.name $ "::_sgs_setindex( SGS_CTX, sgs_VarObj* obj, int param )
 	{";
 		foreach( item : obj.items )
 		{
-			if( item.what != "PROPERTY" )
-				continue;
-			if( item.access < 0 )
-				continue;
-			out $= string_translate( "
+			itemline = null;
+			if( item.what == "PROPERTY" )
+			{
+				if( item.access >= 0 )
+					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVar<%TYPE%>()( C, 1%ISOBJ% );";
+			}
+			else if( item.what == "PROPERTY_FUNC" )
+			{
+				if( item.write === true )
+					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVar<%TYPE%>()( C, 1%ISOBJ% );";
+				else if( item.write )
+					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.write$"( sgs_GetVar<%TYPE%>()( C, 1%ISOBJ% ) );";
+				if( item.writecb )
+					itemline $= "\n\t\t\tstatic_cast<%OBJ%*>( obj->data )->"$item.writecb$"();";
+			}
+			if( itemline )
+			{
+				out $= string_translate( "
 		if( strcmp( name, \"%NAME%\" ) == 0 )
 		{
-			static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVar<%TYPE%>()( C, 1%ISOBJ% );
+			"$itemline$"
 			return SGS_SUCCESS;
 		}"
-			, {
-				"%OBJ%" = obj.name,
-				"%NAME%" = item.name,
-				"%TYPE%" = cppbc_fix_type( item.type ),
-				"%ISOBJ%" = if( item.type[ item.type.length - 1 ] == "*", "true", "" ),
-			});
+				, {
+					"%OBJ%" = obj.name,
+					"%NAME%" = item.name,
+					"%TYPE%" = cppbc_fix_type( item.type ),
+					"%ISOBJ%" = if( item.type[ item.type.length - 1 ] == "*", "true", "" ),
+				});
+			}
 		}
 		out $= "
 	}

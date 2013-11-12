@@ -20,7 +20,7 @@ else
 	RM = rm -f
 	FixPath = $1
 	CPLATFLAGS = -fPIC
-	PLATFLAGS = -ldl -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
+	PLATFLAGS = -ldl -lrt -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
 	BINEXT=
 	LIBEXT=.so
 	LIBPFX=lib
