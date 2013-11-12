@@ -95,16 +95,16 @@ public:
 		return *this;
 	}
 	
-	operator T*(){ return static_cast<T*>( object->data ); }
-	operator const T*() const { return static_cast<T*>( object->data ); }
+	operator T*(){ return object ? static_cast<T*>( object->data ) : NULL; }
+	operator const T*() const { return object ? static_cast<T*>( object->data ) : NULL; }
 	
-	T* operator -> (){ return static_cast<T*>( object->data ); }
-	const T* operator -> () const { return static_cast<T*>( object->data ); }
+	T* operator -> (){ return object ? static_cast<T*>( object->data ) : NULL; }
+	const T* operator -> () const { return object ? static_cast<T*>( object->data ) : NULL; }
 	
 	bool operator < ( const sgsHandle& h ) const { return object < h.object; }
 	bool operator == ( const sgsHandle& h ) const { return object == h.object; }
 	
-	SGSRESULT gcmark() const { return sgs_ObjGCMark( C, object ); }
+	SGSRESULT gcmark() const { if( !object ){ return SGS_SUCCESS; } return sgs_ObjGCMark( C, object ); }
 	
 	sgs_VarObj* object;
 	
