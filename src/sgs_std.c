@@ -1692,14 +1692,14 @@ static int sgsstd_realclsr_convert( SGS_CTX, sgs_VarObj* data, int type )
 
 static int sgsstd_realclsr_call( SGS_CTX, sgs_VarObj* data, int unused )
 {
-	int ismethod = sgs_Method( C );
+	int ismethod = sgs_Method( C ), expected = C->call_expect;
 	uint8_t* cl = (uint8_t*) data->data;
 	int32_t cc = *(int32_t*)(cl+sizeof(sgs_Variable));
 	sgs_Closure** cls = (sgs_Closure**)(cl+sizeof(sgs_Variable)+sizeof(int32_t));
 	
 	sgsVM_PushClosures( C, cls, cc );
 	return sgsVM_VarCall( C, (sgs_Variable*) cl, C->call_args,
-		cc, C->call_expect, ismethod ) * C->call_expect;
+		cc, C->call_expect, ismethod ) * expected;
 }
 
 static int sgsstd_realclsr_gcmark( SGS_CTX, sgs_VarObj* data, int unused )

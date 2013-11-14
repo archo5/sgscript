@@ -1761,6 +1761,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 			C->call_expect = expect;
 			C->call_this = gotthis;
 			rvc = obj_exec( C, SOP_CALL, func->data.O, 0, args );
+			C->stack_off -= gotthis;
 			if( rvc > STACKFRAMESIZE )
 			{
 				sgs_Printf( C, SGS_ERROR, "Object returned more variables than there was on the stack" );
@@ -1773,6 +1774,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 				rvc = 0;
 				ret = 0;
 			}
+			C->stack_off += gotthis;
 			C->call_args = cargs;
 			C->call_expect = cexp;
 			C->call_this = hadthis;
