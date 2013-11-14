@@ -1570,6 +1570,20 @@ static int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
+static int sgsstd_closure_getprop( SGS_CTX, sgs_VarObj* data, int isprop )
+{
+	char* str;
+	if( sgs_ParseString( C, 0, &str, NULL ) )
+	{
+		if( !strcmp( str, "thiscall" ) )
+		{
+			sgs_PushCFunction( C, sgs_thiscall_method );
+			return SGS_SUCCESS;
+		}
+	}
+	return SGS_ENOTFND;
+}
+
 static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* data, int depth )
 {
 	SGSCLOSURE_HDR;
@@ -1626,6 +1640,7 @@ static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data, int unused )
 static sgs_ObjCallback sgsstd_closure_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_closure_destruct,
+	SOP_GETINDEX, sgsstd_closure_getprop,
 	SOP_CALL, sgsstd_closure_call,
 	SOP_CONVERT, sgsstd_closure_convert,
 	SOP_GCMARK, sgsstd_closure_gcmark,
@@ -1648,6 +1663,7 @@ static int sgsstd_closure( SGS_CTX )
 	sgs_GetStackItem( C, 1, &hdr->data );
 	sgs_Acquire( C, &hdr->func );
 	sgs_Acquire( C, &hdr->data );
+	(C->stack_top-1)->type |= VTF_CALL;
 	return 1;
 }
 
@@ -1679,6 +1695,20 @@ static int sgsstd_realclsr_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	}
 	
 	return SGS_SUCCESS;
+}
+
+static int sgsstd_realclsr_getprop( SGS_CTX, sgs_VarObj* data, int isprop )
+{
+	char* str;
+	if( sgs_ParseString( C, 0, &str, NULL ) )
+	{
+		if( !strcmp( str, "thiscall" ) )
+		{
+			sgs_PushCFunction( C, sgs_thiscall_method );
+			return SGS_SUCCESS;
+		}
+	}
+	return SGS_ENOTFND;
 }
 
 static int sgsstd_realclsr_convert( SGS_CTX, sgs_VarObj* data, int type )
@@ -1757,6 +1787,7 @@ static sgs_ObjCallback sgsstd_realclsr_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_realclsr_destruct,
 	SOP_CALL, sgsstd_realclsr_call,
+	SOP_GETINDEX, sgsstd_realclsr_getprop,
 	SOP_CONVERT, sgsstd_realclsr_convert,
 	SOP_GCMARK, sgsstd_realclsr_gcmark,
 	SOP_DUMP, sgsstd_realclsr_dump,

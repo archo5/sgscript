@@ -972,7 +972,7 @@ static int vm_gcmark( SGS_CTX, sgs_Variable* var )
 	Object property / array accessor handling
 */
 
-static int _thiscall_method( SGS_CTX )
+int sgs_thiscall_method( SGS_CTX )
 {
 	int ret;
 	if( !sgs_Method( C ) || !( sgs_ItemTypeExt( C, 0 ) & VTF_CALL ) )
@@ -1044,7 +1044,7 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx )
 	case VTC_CFUNC:
 		if( 0 == strcmp( prop, "thiscall" ) )
 		{
-			sgs_PushCFunction( C, _thiscall_method );
+			sgs_PushCFunction( C, sgs_thiscall_method );
 			return SGS_SUCCESS;
 		}
 		break;
@@ -1182,7 +1182,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 		stk_push( C, idx );
 		ret = sgsstd_array_getindex( C, obj->data.O, !isindex );
 	}
-	else if( obj->type == VTC_OBJECT )
+	else if( obj->type & SVT_OBJECT )
 	{
 		sgs_VarObj* o = obj->data.O;
 		stk_push( C, idx );
