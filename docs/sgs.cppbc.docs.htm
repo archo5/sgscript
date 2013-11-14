@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+	<html><head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>SGS/C++ binding compiler</title>
+		<link rel='stylesheet' type='text/css' href='docs.css'>
+		<script type='text/javascript' src='docs.js'></script>
+	</head><body>
+	<h1>SGS/C++ binding compiler</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGS-CPP-BC-description'>SGS/CPP-BC description</a></li><li><a href='#Tags'>Tags</a></li><li><a href='#Data-type-handling'>Data type handling</a></li><li><a href='#Helper-classes-functions'>Helper classes &amp; functions</a></li></ul></div><div><div class='item'><a name='SGS-CPP-BC-description'></a><hr><h2>SGS/CPP-BC description</h2><p>
+This is a compiler that will generate most of the binding code from a bit of markup and additional build configuration. Statistically, the gain is approximately 80% less code to write to connect your C++ code to SGScript.
+</p><p>
+The compiler can be found at &quot;ext/cppbc/cppbc.sgs&quot;. It takes one argument (which should be the header file to process) and it generates one file with the name &quot;cppbc_&quot;+header_file, thus it can be called like this: &quot;sgsvm -p path/to/cppbc.sgs path/to/my_cpp_header.h&quot;.
+</p><p>
+This is a basic example of how things are done with SGS/CPP-BC:
+</p><pre>struct UIFrame
+{
+	typedef sgsHandle&lt; UIFrame &gt; Handle;
+	
+	SGS_OBJECT;
+	
+	UIFrame();
+	
+	SGS_METHOD void event( UIEvent* e );
+	SGS_METHOD void render();
+	
+	SGS_METHOD void doMouseMove( float x, float y );
+	SGS_METHOD void doMouseButton( int btn, bool down );
+	SGS_METHOD void doKeyPress( int key, bool down );
+	
+	SGS_IFUNC(SGS_OP_GCMARK) int sgs_gcmark( SGS_CTX, sgs_VarObj* obj, int );
+	
+	SGS_PROPERTY float x;
+	SGS_PROPERTY float y;
+	SGS_PROPERTY float width;
+	SGS_PROPERTY float height;
+	SGS_PROPERTY sgsHandle&lt; UIControl &gt; root;
+	
+	float prevMouseX;
+	float prevMouseY;
+};</pre><p>
+The SGS_OBJECT tag marks the structs/classes that need to have the binding code. SGS_METHOD would then mark methods that require exporting and SGS_PROPERTY generates property exports. For read-only/write-only properties, all you&#39;d need to add is &quot;READ&quot; or &quot;WRITE&quot; after the tag.
+</p><p>
+sgsVariable and sgsHandle are classes that are used to store SGScript objects. Handles are for storing exported object pointers and variables are for everything. Handles make it easier to use the included objects, thus they are preferred to plain variable containers.
+</p><p>
+GCMARK handlers are more like the raw API but all that needs to be done in the function is calling gcmark() on each variable or handle. Due to the possibility of having many unknown kinds of containers of variables, it is unlikely that this function could ever be automatically generated, except for the most primitive of cases.
+</p></div><div class='item'><a name='Tags'></a><hr><h2>Tags</h2><h3>SGS_OBJECT</h3><p>
+Marks the objects/structures for parsing.
+</p><h3>SGS_METHOD</h3><p>
+Marks the methods that should be made available to the scripting engine.
+</p><p>
+Syntax: <code>SGS_METHOD &lt;type&gt; &lt;name&gt;(&lt;arguments&gt;);</code>
+</p><h3>SGS_PROPERTY</h3><p>
+Marks the properties that should be made available to the scripting engine. Currently supports only one property at a time.
+</p><p>
+Syntax: <code>SGS_PROPERTY [READ|WRITE] &lt;type&gt; &lt;name&gt;;</code>
+</p><p>
+Modifiers:
+</p><ul><li>READ: make the property read-only
+</li><li>WRITE: make the property write-only</li></ul><h3>SGS_PROPERTY_FUNC</h3><p>
+Marks the properties that should be made available to the scripting engine. Has additional options for reading, writing and callbacks.
+</p><p>
+Syntax: <code>SGS_PROPERTY_FUNC( &lt;tag-args&gt; ) &lt;type&gt; &lt;name&gt;;</code>
+</p><p>
+Tag arguments: a space separated list of none or more of the following constructs
+</p><ul><li>READ: allow to read from the property
+</li><li>WRITE: allow to write to the property
+</li><li>READ &lt;method&gt;: allow to read from the property, using the specified method
+</li><li>WRITE &lt;method&gt;: allow to write to the property, using the specified method
+</li><li>READ_CALLBACK &lt;method&gt;: call the specified method after reading from the variable
+</li><li>WRITE_CALLBACK &lt;method&gt;: call the specified method after writing to the variable</li></ul><h3>SGS_IFUNC</h3><p>
+Marks the method as a native object interface function that would override any generated one.
+</p><p>
+Syntax: <code>SGS_IFUNC( &lt;ifunc-type&gt; ) &lt;type&gt; &lt;name&gt;( sgs_Context*, sgs_VarObj*, int );</code>
+</p><p>
+&quot;ifunc-type&quot; must be one of SGS_OP_* defines.
+</p></div><div class='item'><a name='Data-type-handling'></a><hr><h2>Data type handling</h2><p>
+TODO sgs_PushVar, sgs_GetVar
+</p></div><div class='item'><a name='Helper-classes-functions'></a><hr><h2>Helper classes & functions</h2><p>
+TODO sgsHandle, sgsVariable, sgs_PushClass(From)
+</p></div></div>
+	</body></html>
+	

@@ -456,6 +456,18 @@ Examples:
     print "Count: ", count;
 
 
+# Built-in accessors [info]
+
+There are several built-in accessors for the variable types that are available.
+
+--------------------------------------------------------------------------------------------------------
+!    name    !  variable type  !  accessor type  !                     description                     !
+|   length   |      string     |    property     |     returns the length of the string, in bytes      |
+|  char. at  |      string     |     index       |  returns the character from the specified position  |
+|  thiscall  |   any callable  |    property     | function that allows to specify "this" for the call |
+--------------------------------------------------------------------------------------------------------
+
+
 # <<<
 
 
@@ -3286,6 +3298,7 @@ This library is loaded on initialization and contains the functions and constant
 # closure [object]
 
 - features
+-- "thiscall" property
 -- full content dump
 -- tostring = "closure"
 -- type identification (returns the string "closure")

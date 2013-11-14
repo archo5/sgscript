@@ -1,0 +1,102 @@
+SGS/C++ binding compiler
+
+
+# SGS/CPP-BC description [info]
+
+This is a compiler that will generate most of the binding code from a bit of markup and additional build configuration. Statistically, the gain is approximately 80% less code to write to connect your C++ code to SGScript.
+
+The compiler can be found at "ext/cppbc/cppbc.sgs". It takes one argument (which should be the header file to process) and it generates one file with the name "cppbc_"+header_file, thus it can be called like this: "sgsvm -p path/to/cppbc.sgs path/to/my_cpp_header.h".
+
+This is a basic example of how things are done with SGS/CPP-BC:
+
+    struct UIFrame
+    {
+    	typedef sgsHandle< UIFrame > Handle;
+    	
+    	SGS_OBJECT;
+    	
+    	UIFrame();
+    	
+    	SGS_METHOD void event( UIEvent* e );
+    	SGS_METHOD void render();
+    	
+    	SGS_METHOD void doMouseMove( float x, float y );
+    	SGS_METHOD void doMouseButton( int btn, bool down );
+    	SGS_METHOD void doKeyPress( int key, bool down );
+    	
+    	SGS_IFUNC(SGS_OP_GCMARK) int sgs_gcmark( SGS_CTX, sgs_VarObj* obj, int );
+    	
+    	SGS_PROPERTY float x;
+    	SGS_PROPERTY float y;
+    	SGS_PROPERTY float width;
+    	SGS_PROPERTY float height;
+    	SGS_PROPERTY sgsHandle< UIControl > root;
+    	
+    	float prevMouseX;
+    	float prevMouseY;
+    };
+
+The SGS_OBJECT tag marks the structs/classes that need to have the binding code. SGS_METHOD would then mark methods that require exporting and SGS_PROPERTY generates property exports. For read-only/write-only properties, all you'd need to add is "READ" or "WRITE" after the tag.
+
+sgsVariable and sgsHandle are classes that are used to store SGScript objects. Handles are for storing exported object pointers and variables are for everything. Handles make it easier to use the included objects, thus they are preferred to plain variable containers.
+
+GCMARK handlers are more like the raw API but all that needs to be done in the function is calling gcmark() on each variable or handle. Due to the possibility of having many unknown kinds of containers of variables, it is unlikely that this function could ever be automatically generated, except for the most primitive of cases.
+
+
+# Tags [info]
+
+== SGS_OBJECT
+
+Marks the objects/structures for parsing.
+
+== SGS_METHOD
+
+Marks the methods that should be made available to the scripting engine.
+
+Syntax: `SGS_METHOD <type> <name>(<arguments>);`
+
+== SGS_PROPERTY
+
+Marks the properties that should be made available to the scripting engine. Currently supports only one property at a time.
+
+Syntax: `SGS_PROPERTY [READ|WRITE] <type> <name>;`
+
+Modifiers:
+
+- READ: make the property read-only
+- WRITE: make the property write-only
+
+== SGS_PROPERTY_FUNC
+
+Marks the properties that should be made available to the scripting engine. Has additional options for reading, writing and callbacks.
+
+Syntax: `SGS_PROPERTY_FUNC( <tag-args> ) <type> <name>;`
+
+Tag arguments: a space separated list of none or more of the following constructs
+
+- READ: allow to read from the property
+- WRITE: allow to write to the property
+- READ <method>: allow to read from the property, using the specified method
+- WRITE <method>: allow to write to the property, using the specified method
+- READ_CALLBACK <method>: call the specified method after reading from the variable
+- WRITE_CALLBACK <method>: call the specified method after writing to the variable
+
+== SGS_IFUNC
+
+Marks the method as a native object interface function that would override any generated one.
+
+Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int );`
+
+"ifunc-type" must be one of SGS_OP_* defines.
+
+
+# Data type handling [info]
+
+TODO sgs_PushVar, sgs_GetVar
+
+
+# Helper classes & functions [info]
+
+TODO sgsHandle, sgsVariable, sgs_PushClass(From)
+
+
