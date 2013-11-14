@@ -1640,8 +1640,8 @@ static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data, int unused )
 static sgs_ObjCallback sgsstd_closure_functable[] =
 {
 	SOP_DESTRUCT, sgsstd_closure_destruct,
-	SOP_GETINDEX, sgsstd_closure_getprop,
 	SOP_CALL, sgsstd_closure_call,
+	SOP_GETINDEX, sgsstd_closure_getprop,
 	SOP_CONVERT, sgsstd_closure_convert,
 	SOP_GCMARK, sgsstd_closure_gcmark,
 	SOP_DUMP, sgsstd_closure_dump,

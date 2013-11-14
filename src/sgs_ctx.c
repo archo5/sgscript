@@ -158,8 +158,11 @@ void sgs_DestroyEngine( SGS_CTX )
 	while( C->clstk_base != C->clstk_top )
 	{
 		C->clstk_top--;
-		sgs_Release( C, &(*C->clstk_top)->var );
-		sgs_Dealloc( *C->clstk_top );
+		if( --(*C->clstk_top)->refcount < 1 )
+		{
+			sgs_Release( C, &(*C->clstk_top)->var );
+			sgs_Dealloc( *C->clstk_top );
+		}
 	}
 	
 	sgsSTD_GlobalFree( C );

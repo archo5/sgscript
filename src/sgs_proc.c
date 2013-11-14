@@ -3787,7 +3787,11 @@ void sgs_Acquire( SGS_CTX, sgs_Variable* var )
 void sgs_Release( SGS_CTX, sgs_Variable* var )
 {
 	if( ( var->type & SVT_OBJECT ) && C->gcrun )
+	{
+		/* if running GC, dereference without destroying */
+		(*var->data.pRC) -= 1;
 		return;
+	}
 	VAR_RELEASE( var );
 }
 
