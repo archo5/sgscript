@@ -2146,6 +2146,30 @@ static int sgsstd_tostring( SGS_CTX )
 	return 1;
 }
 
+
+static int sgsstd_parseint( SGS_CTX )
+{
+	sgs_Int i;
+	SGSFN( "parseint" );
+	if( sgs_ParseInt( C, 0, &i ) )
+		sgs_PushInt( C, i );
+	else
+		sgs_PushNull( C );
+	return 1;
+}
+
+static int sgsstd_parsereal( SGS_CTX )
+{
+	sgs_Real r;
+	SGSFN( "parsereal" );
+	if( sgs_ParseReal( C, 0, &r ) )
+		sgs_PushReal( C, r );
+	else
+		sgs_PushNull( C );
+	return 1;
+}
+
+
 static int sgsstd_typeof( SGS_CTX )
 {
 	SGSFN( "typeof" );
@@ -3242,8 +3266,10 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( isset ), FN( unset ), FN( clone ),
 	FN( get_keys ), FN( get_values ), FN( get_concat ), FN( get_merged ),
 	/* types */
-	FN( tobool ), FN( toint ), FN( toreal ), FN( tostring ), FN( typeof ),
-	FN( typeid ), FN( typeflags ), FN( is_numeric ), FN( is_callable ),
+	FN( tobool ), FN( toint ), FN( toreal ), FN( tostring ),
+	FN( parseint ), FN( parsereal ),
+	FN( typeof ), FN( typeid ), FN( typeflags ),
+	FN( is_numeric ), FN( is_callable ),
 	FN( loadtypeflags ),
 	/* I/O */
 	FN( print ), FN( println ), FN( printlns ),
