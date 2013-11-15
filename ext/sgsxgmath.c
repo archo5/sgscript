@@ -1205,11 +1205,6 @@ static sgs_RegFuncConst xgm_fconsts[] =
 };
 
 
-#ifdef SGS_COMPILE_MODULE
-#  define xgm_module_entry_point sgscript_main
-#endif
-
-
 SGS_APIFUNC int xgm_module_entry_point( SGS_CTX )
 {
 	sgs_RegFuncConsts( C, xgm_fconsts, sizeof(xgm_fconsts) / sizeof(xgm_fconsts[0]) );
@@ -1219,4 +1214,12 @@ SGS_APIFUNC int xgm_module_entry_point( SGS_CTX )
 	sgs_RegisterType( C, "aabb2", xgm_aabb2_iface );
 	return SGS_SUCCESS;
 }
+
+
+#ifdef SGS_COMPILE_MODULE
+SGS_APIFUNC int sgscript_main( SGS_CTX )
+{
+	return xgm_module_entry_point( C );
+}
+#endif
 

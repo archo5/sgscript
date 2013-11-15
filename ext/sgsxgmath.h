@@ -52,5 +52,8 @@ SGS_APIFUNC int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list args, int flags )
 SGS_APIFUNC int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list args, int flags );
 
 
+SGS_APIFUNC int xgm_module_entry_point( SGS_CTX );
+
+
 #endif /* SGSXGMATH_H */
 
