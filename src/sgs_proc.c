@@ -2796,7 +2796,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				if( range > 0 )  flags |= SGS_LOADARG_INTRANGE;
 				if( range < 0 )  flags |= SGS_LOADARG_INTCLAMP;
 				
-				if( !acf( C, from, args, flags ) )
+				if( !acf( C, from, &args, flags ) )
 				{
 					return opt;
 				}

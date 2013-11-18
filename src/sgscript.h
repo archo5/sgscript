@@ -7,7 +7,7 @@
 #define SGS_VERSION_MINOR 9
 #define SGS_VERSION_INCR  0
 #define SGS_VERSION "0.9.0"
-#define SGS_API_VERSION 2
+#define SGS_API_VERSION 3
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
@@ -517,7 +517,7 @@ typedef int (*sgs_ArgCheckFunc)
 (
 	sgs_Context* /* ctx / SGS_CTX */,
 	int /* argid */,
-	va_list /* args */,
+	va_list* /* args */,
 	int /* flags */
 );
 #define SGS_LOADARG_STRICT 0x01

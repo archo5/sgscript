@@ -1097,12 +1097,12 @@ int sgs_ParseAABB2( SGS_CTX, int pos, XGM_VT* v4f )
 }
 
 
-int sgs_ArgCheck_Vec2( SGS_CTX, int argid, va_list args, int flags )
+int sgs_ArgCheck_Vec2( SGS_CTX, int argid, va_list* args, int flags )
 {
 	XGM_VT* out = NULL;
 	XGM_VT v[2];
 	if( !( flags & SGS_LOADARG_NOWRITE ) )
-		out = va_arg( args, XGM_VT* );
+		out = va_arg( *args, XGM_VT* );
 	
 	if( sgs_ParseVec2( C, argid, v, flags & SGS_LOADARG_STRICT ? 1 : 0 ) )
 	{
@@ -1118,12 +1118,12 @@ int sgs_ArgCheck_Vec2( SGS_CTX, int argid, va_list args, int flags )
 	return sgs_ArgErrorExt( C, argid, 0, "vec2", "" );
 }
 
-int sgs_ArgCheck_Vec3( SGS_CTX, int argid, va_list args, int flags )
+int sgs_ArgCheck_Vec3( SGS_CTX, int argid, va_list* args, int flags )
 {
 	XGM_VT* out = NULL;
 	XGM_VT v[3];
 	if( !( flags & SGS_LOADARG_NOWRITE ) )
-		out = va_arg( args, XGM_VT* );
+		out = va_arg( *args, XGM_VT* );
 	
 	if( sgs_ParseVec3( C, argid, v, flags & SGS_LOADARG_STRICT ? 1 : 0 ) )
 	{
@@ -1140,12 +1140,12 @@ int sgs_ArgCheck_Vec3( SGS_CTX, int argid, va_list args, int flags )
 	return sgs_ArgErrorExt( C, argid, 0, "vec3", "" );
 }
 
-int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list args, int flags )
+int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list* args, int flags )
 {
 	XGM_VT* out = NULL;
 	XGM_VT v[4];
 	if( !( flags & SGS_LOADARG_NOWRITE ) )
-		out = va_arg( args, XGM_VT* );
+		out = va_arg( *args, XGM_VT* );
 	
 	if( sgs_ParseVec4( C, argid, v, flags & SGS_LOADARG_STRICT ? 1 : 0 ) )
 	{
@@ -1163,12 +1163,12 @@ int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list args, int flags )
 	return sgs_ArgErrorExt( C, argid, 0, "vec4", "" );
 }
 
-int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list args, int flags )
+int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list* args, int flags )
 {
 	XGM_VT* out = NULL;
 	XGM_VT v[4];
 	if( !( flags & SGS_LOADARG_NOWRITE ) )
-		out = va_arg( args, XGM_VT* );
+		out = va_arg( *args, XGM_VT* );
 	
 	if( sgs_ParseAABB2( C, argid, v ) )
 	{

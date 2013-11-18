@@ -284,8 +284,15 @@ template< class T > T* sgs_PushClassFrom( SGS_CTX, T* inst )
 	return data;
 }
 
+template< class T> T* sgs_InitPushedClass( T* inst, SGS_CTX )
+{
+	inst->C = C;
+	inst->m_sgsObject = sgs_GetObjectStruct( C, -1 );
+	return inst;
+}
+
 #define SGS_PUSHCLASS( C, name, args ) \
-	(new (sgs_PushClassIPA< name >( C )) name args )
+	sgs_InitPushedClass(new (sgs_PushClassIPA< name >( C )) name args, C )
 
 
 #endif // __SGS_CPPBC_H__

@@ -46,10 +46,10 @@ SGS_APIFUNC SGSBOOL sgs_ParseVec3( SGS_CTX, int pos, XGM_VECTOR_TYPE* v3f, int s
 SGS_APIFUNC SGSBOOL sgs_ParseVec4( SGS_CTX, int pos, XGM_VECTOR_TYPE* v4f, int strict );
 SGS_APIFUNC SGSBOOL sgs_ParseAABB2( SGS_CTX, int pos, XGM_VECTOR_TYPE* v4f );
 
-SGS_APIFUNC int sgs_ArgCheck_Vec2( SGS_CTX, int argid, va_list args, int flags );
-SGS_APIFUNC int sgs_ArgCheck_Vec3( SGS_CTX, int argid, va_list args, int flags );
-SGS_APIFUNC int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list args, int flags );
-SGS_APIFUNC int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list args, int flags );
+SGS_APIFUNC int sgs_ArgCheck_Vec2( SGS_CTX, int argid, va_list* args, int flags );
+SGS_APIFUNC int sgs_ArgCheck_Vec3( SGS_CTX, int argid, va_list* args, int flags );
+SGS_APIFUNC int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list* args, int flags );
+SGS_APIFUNC int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list* args, int flags );
 
 
 SGS_APIFUNC int xgm_module_entry_point( SGS_CTX );
