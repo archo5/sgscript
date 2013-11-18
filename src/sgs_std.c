@@ -1953,19 +1953,15 @@ static int sgsstd_dict_process( SGS_CTX )
 static int sgsstd_isset( SGS_CTX )
 {
 	int oml, ret;
-	char* str;
-	sgs_SizeVal size;
-	sgs_Variable var;
 	
 	SGSFN( "isset" );
 	
-	if( !sgs_LoadArgs( C, "vm.", &var, &str, &size ) )
+	if( !sgs_LoadArgs( C, "?v?m." ) )
 		return 0;
 
 	oml = C->minlev;
 	C->minlev = INT32_MAX;
-	sgs_Pop( C, 1 );
-	ret = sgs_PushProperty( C, str );
+	ret = sgs_PushIndexExt( C, -2, -1, 1 );
 	C->minlev = oml;
 	sgs_PushBool( C, ret == SGS_SUCCESS );
 	return 1;
