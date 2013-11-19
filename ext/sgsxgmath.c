@@ -182,8 +182,10 @@ static int xgm_v2_expr( SGS_CTX, sgs_VarObj* data, int type )
 		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
 		if( v1[0] != v2[0] )
-			return v1[0] - v2[0];
-		return v1[1] - v2[1];
+			sgs_PushReal( C, v1[0] - v2[0] );
+		else
+			sgs_PushReal( C, v1[1] - v2[1] );
+		return SGS_SUCCESS;
 	}
 	else if( type == SGS_EOP_NEGATE )
 	{
@@ -368,10 +370,12 @@ static int xgm_v3_expr( SGS_CTX, sgs_VarObj* data, int type )
 		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
 		if( v1[0] != v2[0] )
-			return v1[0] - v2[0];
-		if( v1[1] != v2[1] )
-			return v1[1] - v2[1];
-		return v1[2] - v2[2];
+			sgs_PushReal( C, v1[0] - v2[0] );
+		else if( v1[1] != v2[1] )
+			sgs_PushReal( C, v1[1] - v2[1] );
+		else
+			sgs_PushReal( C, v1[2] - v2[2] );
+		return SGS_SUCCESS;
 	}
 	else if( type == SGS_EOP_NEGATE )
 	{
@@ -591,10 +595,11 @@ static int xgm_v4_expr( SGS_CTX, sgs_VarObj* data, int type )
 		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
 		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
-		if( v1[0] != v2[0] ) return v1[0] - v2[0];
-		if( v1[1] != v2[1] ) return v1[1] - v2[1];
-		if( v1[2] != v2[2] ) return v1[2] - v2[2];
-		return v1[3] - v2[3];
+		if( v1[0] != v2[0] ) sgs_PushReal( C, v1[0] - v2[0] );
+		else if( v1[1] != v2[1] ) sgs_PushReal( C, v1[1] - v2[1] );
+		else if( v1[2] != v2[2] ) sgs_PushReal( C, v1[2] - v2[2] );
+		else sgs_PushReal( C, v1[3] - v2[3] );
+		return SGS_SUCCESS;
 	}
 	else if( type == SGS_EOP_NEGATE )
 	{
