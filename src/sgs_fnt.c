@@ -1154,8 +1154,8 @@ SFTRET parse_function( SFTC, int inexp )
 		}
 		SFTC_NEXT;
 		nclos = parse_arglist( F, ')' );
-		nclos->type = SFT_USELIST;
 		if( !nclos ) goto fail;
+		nclos->type = SFT_USELIST;
 		SFTC_NEXT;
 	}
 	else

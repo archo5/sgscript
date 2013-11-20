@@ -974,6 +974,7 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data, int depth )
 				tmp.data.S = pair->str;
 				sgs_PushString( C, "\n" );
 				sgs_PushVariable( C, &tmp );
+				sgs_ToPrintSafeString( C );
 				sgs_PushString( C, " = " );
 				sgs_PushVariable( C, &pair->var );
 				if( sgs_DumpVar( C, depth ) )

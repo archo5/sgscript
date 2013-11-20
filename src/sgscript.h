@@ -548,6 +548,7 @@ SGS_APIFUNC SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth );
 SGS_APIFUNC SGSRESULT sgs_GCExecute( SGS_CTX );
 
 SGS_APIFUNC SGSRESULT sgs_PadString( SGS_CTX );
+SGS_APIFUNC SGSRESULT sgs_ToPrintSafeString( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_StringConcat( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_StringMultiConcat( SGS_CTX, int args );
 SGS_APIFUNC SGSRESULT sgs_CloneItem( SGS_CTX, int item );

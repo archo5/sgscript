@@ -3092,6 +3092,30 @@ SGSRESULT sgs_PadString( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
+SGSRESULT sgs_ToPrintSafeString( SGS_CTX )
+{
+	char* buf = NULL;
+	sgs_SizeVal size = 0, i;
+	if( !( buf = sgs_ToStringBuf( C, -1, &size ) ) )
+		return SGS_EINPROC;
+	MemBuf mb = membuf_create();
+	for( i = 0; i < size; ++i )
+	{
+		if( isgraph( buf[ i ] ) || buf[ i ] == ' ' )
+			membuf_appchr( &mb, C, buf[ i ] );
+		else
+		{
+			char chrs[32];
+			sprintf( chrs, "\\x%02X", (int) buf[ i ] );
+			membuf_appbuf( &mb, C, chrs, 4 );
+		}
+	}
+	sgs_Pop( C, 1 );
+	sgs_PushStringBuf( C, mb.ptr, mb.size );
+	membuf_destroy( &mb, C );
+	return SGS_SUCCESS;
+}
+
 SGSRESULT sgs_StringConcat( SGS_CTX )
 {
 	if( sgs_StackSize( C ) < 2 )
