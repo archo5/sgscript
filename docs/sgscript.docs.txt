@@ -2396,6 +2396,15 @@ This library is loaded on initialization and contains the functions and constant
 - two arguments are passed to the callable: value, key
 
 
+# dict_size [function]
+
+== dict_size( dict )
+=== return the number of entries in the dict object
+
+    x = { a = 5, b = 123 };
+    dict_size( x ); // returns 2
+
+
 # isset [function]
 
 == isset( var, string key )
