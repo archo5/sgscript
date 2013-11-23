@@ -896,7 +896,7 @@ static int compile_regcopy( SGS_CTX, sgs_CompFunc* func, FTNode* node, int from,
 static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out, int expect )
 {
 	int i = 0;
-	int16_t funcpos = -1, retpos = -1, gotthis = FALSE;
+	int16_t funcpos = -1, objpos = -1, retpos = -1, gotthis = FALSE;
 	
 	/* IF (ternary-like) */
 	if( is_keyword( node->child->token, "if" ) )
@@ -949,9 +949,28 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 		return 1;
 	}
 
-	/* load function */
-	FUNC_ENTER;
-	if( !compile_node_r( C, func, node->child, &funcpos ) ) return 0;
+	/* load function (for properties, object too) */
+	if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
+	{
+		FTNode* ncc = node->child->child;
+		int16_t proppos = -1;
+		funcpos = comp_reg_alloc( C );
+		FUNC_ENTER;
+		if( !compile_node_r( C, func, ncc, &objpos ) ) return 0;
+		if( ncc->next->type == SFT_IDENT )
+			compile_ident( C, func, ncc->next, &proppos );
+		else
+		{
+			FUNC_ENTER;
+			if( !compile_node_r( C, func, ncc->next, &proppos ) ) return 0;
+		}
+		INSTR_WRITE( SI_GETPROP, funcpos, objpos, proppos );
+	}
+	else
+	{
+		FUNC_ENTER;
+		if( !compile_node_r( C, func, node->child, &funcpos ) ) return 0;
+	}
 
 	if( out )
 	{
@@ -969,9 +988,7 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 		int16_t argpos = -1;
 		if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
 		{
-			FUNC_ENTER;
-			if( !compile_node_r( C, func, node->child->child, &argpos ) ) return 0;
-			INSTR_WRITE( SI_PUSH, 0, argpos, 0 );
+			INSTR_WRITE( SI_PUSH, 0, objpos, 0 );
 			gotthis = TRUE;
 		}
 
