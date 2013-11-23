@@ -1951,6 +1951,18 @@ static int sgsstd_dict_process( SGS_CTX )
 }
 
 
+static int sgsstd_dict_size( SGS_CTX )
+{
+	sgs_SizeVal size;
+	
+	SGSFN( "dict_size" );
+	if( !sgs_LoadArgs( C, "t.", &size ) )
+		return 0;
+	
+	sgs_PushInt( C, size );
+	return 1;
+}
+
 static int sgsstd_isset( SGS_CTX )
 {
 	int oml, ret;
@@ -3260,7 +3272,7 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( array ), FN( dict ), { "class", sgsstd_class }, FN( closure ),
 	FN( array_filter ), FN( array_process ),
 	FN( dict_filter ), FN( dict_process ),
-	FN( isset ), FN( unset ), FN( clone ),
+	FN( dict_size ), FN( isset ), FN( unset ), FN( clone ),
 	FN( get_keys ), FN( get_values ), FN( get_concat ), FN( get_merged ),
 	/* types */
 	FN( tobool ), FN( toint ), FN( toreal ), FN( tostring ),

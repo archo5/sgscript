@@ -58,6 +58,10 @@ testEqual( arr.find( 3, true, 1 ), 1, "find - strict, matching offset" );
 testEqual( arr.find( 3, true, 2 ), null, "find - strict, offset, empty" );
 
 
+	section( "misc." );
+testEqual( dict_size({ a = 1, b = 2 }), 2, "dict_size" );
+
+
 	section( "include_file" );
 f2inc = "tests/s_fnexp.sgs";
 testEqual( include_file( f2inc ), true, "include_file - basic inclusion" );
