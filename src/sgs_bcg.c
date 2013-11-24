@@ -1592,7 +1592,7 @@ static int compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* out
 			FTNode* uli = n_uselist->child;
 			for( i = 0; i < clsrcnt; ++i )
 			{
-				INSTR_WRITE( SI_PUSHCLSR, find_varT( &fctx->clsr, uli->token ), 0, 0 );
+				INSTR_WRITE( SI_PUSHCLSR, find_varT( &bkfctx->clsr, uli->token ), 0, 0 );
 				uli = uli->next;
 			}
 			INSTR_WRITE( SI_MAKECLSR, ro, *out, clsrcnt );
