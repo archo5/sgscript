@@ -1410,7 +1410,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_ObjectAction [function]
 
-== SGSRESULT sgs_ObjectAction( sgs_Context* C, int item, int action, int arg )
+== SGSMIXED sgs_ObjectAction( sgs_Context* C, int item, int action, int arg )
 === execute an action on the specified stack item
 
 === actions
@@ -1426,6 +1426,22 @@ After a successful call, all arguments and the function will be popped off the s
 -- remove the last `arg` items from the end of the array and return them in the order they were stored (last items on array are last on stack)
 -- error codes
 --- SGS_EINVAL: `item` was not an array, `arg` was negative or bigger than size of array
+- SGS_ACT_ARRAY_FIND
+-- find and return the index of variable specified in `arg`
+-- error codes
+--- SGS_EINVAL: `item` was not an array
+--- SGS_EBOUNDS: `arg` was out of bounds
+--- SGS_ENOTFND: `arg` was not found inside item
+- SGS_ACT_ARRAY_RM_ONE
+-- find and remove only the first copy of variable specified in `arg`, return if found and removed
+-- error codes
+--- SGS_EINVAL: `item` was not an array
+--- SGS_EBOUNDS: `arg` was out of bounds
+- SGS_ACT_ARRAY_RM_ALL
+-- find and remove all copies of variable specified in `arg`, return how many were found and removed
+-- error codes
+--- SGS_EINVAL: `item` was not an array
+--- SGS_EBOUNDS: `arg` was out of bounds
 - SGS_ACT_DICT_UNSET
 -- unset a key-value pair from a dict
 -- error codes

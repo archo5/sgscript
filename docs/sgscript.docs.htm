@@ -675,7 +675,7 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>SGS_EINVAL: topmost variable is not a string</li></ul></div><div class='item'><a name='sgs_StringConcat-function'></a><hr><h2>sgs_StringConcat [function]</h2><h3>SGSRESULT sgs_StringConcat( sgs_Context* C )</h3><h4>concatenate the two topmost string variables in the current stack frame</h4><h4>error codes</h4><ul><li>SGS_EINPROC: not enough variables were found in the current stack frame</li></ul></div><div class='item'><a name='sgs_StringMultiConcat-function'></a><hr><h2>sgs_StringMultiConcat [function]</h2><h3>SGSRESULT sgs_StringMultiConcat( sgs_Context* C, int args )</h3><h4>concatenate the <code>args</code> number of topmost string variables in the current stack frame</h4><h4>error codes</h4><ul><li>SGS_EINVAL: not enough (less than `args`) variables were found in the current stack frame</li></ul></div><div class='item'><a name='sgs_CloneItem-function'></a><hr><h2>sgs_CloneItem [function]</h2><h3>SGSRESULT sgs_CloneItem( sgs_Context* C, int item )</h3><h4>push a copy of the specified stack item</h4><p>
 <em class='notice-bgr'>Even though operations with functions and strings succeed, functions and strings are not actually cloned since they are immutable.</em>
 </p><h4>error codes</h4><ul><li>SGS_EBOUNDS: stack item index was out of bounds
-</li><li>SGS_ENOTFND: the object does not support cloning</li></ul></div><div class='item'><a name='sgs_ObjectAction-function'></a><hr><h2>sgs_ObjectAction [function]</h2><h3>SGSRESULT sgs_ObjectAction( sgs_Context* C, int item, int action, int arg )</h3><h4>execute an action on the specified stack item</h4><h4>actions</h4><ul><li>SGS_ACT_ARRAY_PUSH
+</li><li>SGS_ENOTFND: the object does not support cloning</li></ul></div><div class='item'><a name='sgs_ObjectAction-function'></a><hr><h2>sgs_ObjectAction [function]</h2><h3>SGSMIXED sgs_ObjectAction( sgs_Context* C, int item, int action, int arg )</h3><h4>execute an action on the specified stack item</h4><h4>actions</h4><ul><li>SGS_ACT_ARRAY_PUSH
 <ul><li>append the last <code>arg</code> items on stack to the array
 </li><li>error codes
 <ul><li>SGS_EINVAL: <code>item</code> was not an array, <code>arg</code> was negative or bigger than stack frame
@@ -687,6 +687,22 @@ After a successful call, all arguments and the function will be popped off the s
 <ul><li>remove the last <code>arg</code> items from the end of the array and return them in the order they were stored (last items on array are last on stack)
 </li><li>error codes
 <ul><li>SGS_EINVAL: <code>item</code> was not an array, <code>arg</code> was negative or bigger than size of array
+</li></ul></li></ul><li>SGS_ACT_ARRAY_FIND
+<ul><li>find and return the index of variable specified in <code>arg</code>
+</li><li>error codes
+<ul><li>SGS_EINVAL: <code>item</code> was not an array
+</li><li>SGS_EBOUNDS: <code>arg</code> was out of bounds
+</li><li>SGS_ENOTFND: <code>arg</code> was not found inside item
+</li></ul></li></ul><li>SGS_ACT_ARRAY_RM_ONE
+<ul><li>find and remove only the first copy of variable specified in <code>arg</code>, return if found and removed
+</li><li>error codes
+<ul><li>SGS_EINVAL: <code>item</code> was not an array
+</li><li>SGS_EBOUNDS: <code>arg</code> was out of bounds
+</li></ul></li></ul><li>SGS_ACT_ARRAY_RM_ALL
+<ul><li>find and remove all copies of variable specified in <code>arg</code>, return how many were found and removed
+</li><li>error codes
+<ul><li>SGS_EINVAL: <code>item</code> was not an array
+</li><li>SGS_EBOUNDS: <code>arg</code> was out of bounds
 </li></ul></li></ul><li>SGS_ACT_DICT_UNSET
 <ul><li>unset a key-value pair from a dict
 </li><li>error codes

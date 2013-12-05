@@ -3636,9 +3636,9 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 	return ret;
 }
 
-SGSRESULT sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
+SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 {
-	int i, j;
+	sgs_SizeVal i, j;
 	switch( act )
 	{
 	case SGS_ACT_ARRAY_PUSH:
@@ -3670,6 +3670,63 @@ SGSRESULT sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 				sgs_GetObjectData( C, item ), i - arg, i - 1 );
 		}
 		return SGS_SUCCESS;
+	
+	case SGS_ACT_ARRAY_FIND:
+		if( sgs_ArraySize( C, item ) < 0 )
+			return SGS_EINVAL;
+		else
+		{
+			sgs_SizeVal off;
+			sgsstd_array_header_t* hdr = (sgsstd_array_header_t*)
+				sgs_GetObjectData( C, item );
+			
+			sgs_Variable comp;
+			if( !sgs_GetStackItem( C, arg, &comp ) )
+				return SGS_EBOUNDS;
+			
+			while( off < hdr->size )
+			{
+				sgs_Variable* p = SGSARR_PTR( hdr ) + off;
+				if( sgs_EqualTypes( C, p, &comp )
+					&& sgs_CompareF( C, p, &comp ) == 0 )
+				{
+					return off;
+				}
+				off++;
+			}
+		}
+		return SGS_ENOTFND;
+		
+	case SGS_ACT_ARRAY_RM_ONE:
+	case SGS_ACT_ARRAY_RM_ALL:
+		if( sgs_ArraySize( C, item ) < 0 )
+			return SGS_EINVAL;
+		else
+		{
+			sgs_SizeVal off, rmvd = 0;
+			sgsstd_array_header_t* hdr = (sgsstd_array_header_t*)
+				sgs_GetObjectData( C, item );
+			
+			sgs_Variable comp;
+			if( !sgs_GetStackItem( C, arg, &comp ) )
+				return SGS_EBOUNDS;
+			
+			while( off < hdr->size )
+			{
+				sgs_Variable* p = SGSARR_PTR( hdr ) + off;
+				if( sgs_EqualTypes( C, p, &comp )
+					&& sgs_CompareF( C, p, &comp ) == 0 )
+				{
+					sgsstd_array_erase( C, hdr, off, off );
+					rmvd++;
+					if( act == SGS_ACT_ARRAY_RM_ONE )
+						break;
+				}
+				off++;
+			}
+			return rmvd;
+		}
+		return 0;
 	
 	case SGS_ACT_DICT_UNSET:
 		if( sgs_ItemTypeExt( C, item ) != VTC_DICT ||

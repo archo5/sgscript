@@ -7,7 +7,7 @@
 #define SGS_VERSION_MINOR 9
 #define SGS_VERSION_INCR  0
 #define SGS_VERSION "0.9.0"
-#define SGS_API_VERSION 3
+#define SGS_API_VERSION 4
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
@@ -209,6 +209,9 @@ typedef void (*sgs_HookFunc) (
 #define SGS_ACT_ARRAY_PUSH   1
 #define SGS_ACT_ARRAY_POP    2
 #define SGS_ACT_ARRAY_POPRET 3
+#define SGS_ACT_ARRAY_FIND   4
+#define SGS_ACT_ARRAY_RM_ONE 5
+#define SGS_ACT_ARRAY_RM_ALL 6
 #define SGS_ACT_DICT_UNSET   11
 
 
@@ -552,7 +555,7 @@ SGS_APIFUNC SGSRESULT sgs_ToPrintSafeString( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_StringConcat( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_StringMultiConcat( SGS_CTX, int args );
 SGS_APIFUNC SGSRESULT sgs_CloneItem( SGS_CTX, int item );
-SGS_APIFUNC SGSRESULT sgs_ObjectAction( SGS_CTX, int item, int act, int arg );
+SGS_APIFUNC SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg );
 
 SGS_APIFUNC SGSRESULT sgs_Serialize( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_SerializeObject( SGS_CTX, int args, const char* func );
