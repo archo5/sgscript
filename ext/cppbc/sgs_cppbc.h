@@ -86,7 +86,7 @@ public:
 	const sgsHandle& operator = ( const sgsHandle& h )
 	{
 		_release();
-		if( h.object->iface == T::_sgs_interface )
+		if( h.object && h.object->iface == T::_sgs_interface )
 		{
 			object = h.object;
 			C = h.C;
@@ -172,8 +172,9 @@ public:
 	bool operator < ( const sgsVariable& h ) const { return var.type < h.var.type || var.data.I < h.var.data.I; }
 	bool operator == ( const sgsVariable& h ) const { return var.type == h.var.type && var.data.I == h.var.data.I; }
 	
-	void push() const { assert( C ); sgs_PushVariable( C, const_cast<sgs_Variable*>( &var ) ); }
+	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); } sgs_PushVariable( c, const_cast<sgs_Variable*>( &var ) ); }
 	SGSRESULT gcmark() { if( !C ) return SGS_SUCCESS; return sgs_GCMark( C, &var ); }
+	bool not_null(){ return var.type != SGS_VTC_NULL; }
 	
 	sgs_Variable var;
 	SGS_CTX;
