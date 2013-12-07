@@ -118,10 +118,15 @@ protected:
 template< class T >
 inline void sgs_PushHandle( SGS_CTX, const sgsHandle<T>& val )
 {
-	sgs_Variable var;
-	var.type = SGS_VTC_OBJECT;
-	var.data.O = val.object;
-	sgs_PushVariable( C, &var );
+	if( !val.object )
+		sgs_PushNull( C );
+	else
+	{
+		sgs_Variable var;
+		var.type = SGS_VTC_OBJECT;
+		var.data.O = val.object;
+		sgs_PushVariable( C, &var );
+	}
 }
 
 
