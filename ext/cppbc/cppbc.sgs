@@ -53,6 +53,26 @@ global DEFAULT_OBJ_IFUNCS =
 };
 
 
+function string_find_any( str, what, pos )
+{
+	if( pos === null )
+		pos = 0;
+	
+	max = pos - 1;
+	citem = null;
+	foreach( item : what )
+	{
+		npos = string_find( str, item, pos );
+		if( npos !== null && npos > max )
+		{
+			citem = item;
+			max = npos;
+		}
+	}
+	
+	return if( max >= pos, max, null ), citem;
+}
+
 function string_find_rev_any( str, what, pos )
 {
 	if( pos === null )
@@ -84,17 +104,14 @@ function cppbc_preprocess( code )
 	
 	for(;;)
 	{
-		match = re_match( code, "#/\\*|//|'|\"#", RE_RETURN_BOTH, pos );
-		if( match === false )
+		(to,which) = string_find_any( code, ["/*","//","'","\""], pos );
+		if( to === null )
 		{
 			out $= string_part( code, pos );
 			break;
 		}
 		
-		which = match[0][0];
-		to = match[0][2];
-		
-		out $= string_part( code, pos, to );
+		out $= string_part( code, pos, to - pos );
 		
 		if( which == "/*" )
 		{
@@ -107,10 +124,10 @@ function cppbc_preprocess( code )
 		else if( which == "//" )
 		{
 			out $= " ";
-			npos = re_match( code, "#\r\n|\r|\n#", RE_RETURN_OFFSETS, to );
-			if( npos === false )
+			npos = string_find_any( code, ["\r\n","\r","\n"], to );
+			if( npos === null )
 				break;
-			pos = npos[0][1];
+			pos = npos;
 		}
 		else if( which == "'" || which == "\"" )
 		{
