@@ -1890,14 +1890,14 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		{
 			int16_t off = argE;
 			pp += off;
-			sgs_BreakIf( pp > pend || pp < SF->code );
+			sgs_BreakIf( pp+1 > pend || pp+1 < SF->code );
 			break;
 		}
 
 		case SI_JMPT:
 		{
 			int16_t off = argE;
-			sgs_BreakIf( pp + off > pend || pp + off < SF->code );
+			sgs_BreakIf( pp+1 + off > pend || pp+1 + off < SF->code );
 			if( var_getbool( C, RESVAR( argC ) ) )
 				pp += off;
 			break;
@@ -1905,7 +1905,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		case SI_JMPF:
 		{
 			int16_t off = argE;
-			sgs_BreakIf( pp + off > pend || pp + off < SF->code );
+			sgs_BreakIf( pp+1 + off > pend || pp+1 + off < SF->code );
 			if( !var_getbool( C, RESVAR( argC ) ) )
 				pp += off;
 			break;
@@ -1925,7 +1925,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		case SI_FORJUMP:
 		{
 			int16_t off = argE;
-			sgs_BreakIf( pp > pend || pp < SF->code );
+			sgs_BreakIf( pp+1 > pend || pp+1 < SF->code );
 			if( vm_fornext( C, -1, -1, RESVAR( argC ) ) < 1 )
 				pp += off;
 			break;
