@@ -709,10 +709,11 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 			sgs_WriteStr( C, "\nGLOBAL ---- LIST ---- START ----\n" );
 			while( p < pend )
 			{
+				sgs_iStr* str = p->key.data.S;
 				sgs_WriteStr( C, "GLOBAL '" );
-				ctx_print_safe( C, str_cstr( p->str ), p->str->size );
+				ctx_print_safe( C, str_cstr( str ), str->size );
 				sgs_WriteStr( C, "' = " );
-				dumpvar( C, &p->var );
+				dumpvar( C, &p->val );
 				sgs_WriteStr( C, "\n" );
 				p++;
 			}

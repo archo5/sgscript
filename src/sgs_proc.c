@@ -341,7 +341,7 @@ void vht_free( VHTable* vht, SGS_CTX )
 	int32_t i;
 	for( i = 0; i < vht_size( vht ); ++i )
 	{
-		sgs_VarPtr p = &vht->vars[ i ].var;
+		sgs_VarPtr p = &vht->vars[ i ].val;
 		sgs_Release( C, p );
 	}
 	ht_free( &vht->ht, C );
@@ -364,8 +364,8 @@ void vht_setS( VHTable* vht, string_t* S, sgs_Variable* var, SGS_CTX )
 	VAR_ACQUIRE( var );
 	if( tv )
 	{
-		VAR_RELEASE( &tv->var );
-		tv->var = *var;
+		VAR_RELEASE( &tv->val );
+		tv->val = *var;
 	}
 	else
 	{
@@ -386,8 +386,9 @@ void vht_setS( VHTable* vht, string_t* S, sgs_Variable* var, SGS_CTX )
 			HTPair* p = ht_setS( &vht->ht, C, S, (void*)( (size_t) ni ) );
 			VHTableVar htv;
 			{
-				htv.var = *var;
-				htv.str = p->str;
+				htv.key = p->key;
+				htv.hash = p->hash;
+				htv.val = *var;
 			}
 			vht->vars[ ni ] = htv;
 		}
@@ -400,13 +401,14 @@ int vht_unsetS( VHTable* vht, string_t* S, SGS_CTX )
 	if( tvp )
 	{
 		VHTableVar* tv = vht->vars + ( ((uint32_t)(size_t) tvp->ptr) );
-		VAR_RELEASE( &tv->var );
+		VAR_RELEASE( &tv->val );
 		if( tv - vht->vars != vht_size( vht ) )
 		{
 			VHTableVar* lhtv = vht->vars + ( vht_size( vht ) - 1 );
-			tv->var = lhtv->var;
-			tv->str = lhtv->str;
-			ht_findS( &vht->ht, tv->str )->ptr = (void*)( tv - vht->vars );
+			tv->val = lhtv->val;
+			tv->key = lhtv->key;
+			tv->hash = lhtv->hash;
+			ht_findV( &vht->ht, &tv->key, tv->hash )->ptr = (void*)( tv - vht->vars );
 		}
 		ht_unset_pair( &vht->ht, C, tvp );
 		return 1;
@@ -1143,7 +1145,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 				return VM_GETPROP_ERR( SGS_EBOUNDS );
 			else
 			{
-				stk_setlvar( C, out, &ht->vars[ off ].var );
+				stk_setlvar( C, out, &ht->vars[ off ].val );
 				return SGS_SUCCESS;
 			}
 		}
@@ -1154,7 +1156,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 				return VM_GETPROP_ERR( SGS_ENOTFND );
 			else
 			{
-				stk_setlvar( C, out, &var->var );
+				stk_setlvar( C, out, &var->val );
 				return SGS_SUCCESS;
 			}
 		}
@@ -1170,7 +1172,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 					return VM_GETPROP_ERR( SGS_ENOTFND );
 				else
 				{
-					stk_setlvar( C, out, &var->var );
+					stk_setlvar( C, out, &var->val );
 					stk_pop1( C );
 					return SGS_SUCCESS;
 				}

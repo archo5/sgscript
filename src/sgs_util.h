@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #ifdef SGS_INTERNAL
 #  ifdef SGS_REALLY_INTERNAL
@@ -73,6 +72,7 @@
 #  define ht_check sgs_ht_check
 #  define ht_find sgs_ht_find
 #  define ht_findS sgs_ht_findS
+#  define ht_findV sgs_ht_findV
 #  define ht_set sgs_ht_set
 #  define ht_setS sgs_ht_setS
 #  define ht_unset sgs_ht_unset
@@ -199,9 +199,10 @@ SGS_APIFUNC sgs_Hash sgs_HashFunc( const char* str, int size );
 typedef struct _sgs_HTPair sgs_HTPair;
 struct _sgs_HTPair
 {
-	sgs_HTPair* next;
-	void*       ptr;
-	sgs_iStr*   str;
+	sgs_Variable key;
+	void*        ptr;
+	sgs_HTPair*  next;
+	sgs_Hash     hash;
 };
 
 typedef
@@ -220,8 +221,9 @@ SGS_APIFUNC void sgs_ht_clear( sgs_HashTable* T, SGS_CTX );
 SGS_APIFUNC void sgs_ht_free( sgs_HashTable* T, SGS_CTX );
 SGS_APIFUNC void sgs_ht_rehash( sgs_HashTable* T, SGS_CTX, int size );
 SGS_APIFUNC void sgs_ht_check( sgs_HashTable* T, SGS_CTX, int inc );
-SGS_APIFUNC sgs_HTPair* sgs_ht_findS( sgs_HashTable* T, sgs_iStr* S );
 SGS_APIFUNC sgs_HTPair* sgs_ht_find( sgs_HashTable* T, const char* str, int size, sgs_Hash h );
+SGS_APIFUNC sgs_HTPair* sgs_ht_findS( sgs_HashTable* T, sgs_iStr* S );
+SGS_APIFUNC sgs_HTPair* sgs_ht_findV( sgs_HashTable* T, sgs_Variable* S, sgs_Hash hash );
 SGS_APIFUNC sgs_HTPair* sgs_ht_setS( sgs_HashTable* T, SGS_CTX, sgs_iStr* S, void* ptr );
 SGS_APIFUNC sgs_HTPair* sgs_ht_set( sgs_HashTable* T, SGS_CTX, const char* str, int size, void* ptr );
 SGS_APIFUNC void sgs_ht_unset( sgs_HashTable* T, SGS_CTX, const char* str, int size );

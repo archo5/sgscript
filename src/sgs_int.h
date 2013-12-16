@@ -573,8 +573,9 @@ struct _sgs_Closure
 /* hash table for variables */
 typedef struct _sgs_VHTableVar
 {
-	sgs_Variable var;
-	sgs_iStr* str;
+	sgs_Variable key; /* rc=0, always same as inside inner table */
+	sgs_Variable val;
+	sgs_Hash hash;
 }
 sgs_VHTableVar;
 typedef struct _sgs_VHTable

@@ -903,10 +903,6 @@ static int sgsstd_array( SGS_CTX )
 	DICT
 */
 
-#ifdef SGS_DICT_CACHE_SIZE
-#define DICT_CACHE_SIZE SGS_DICT_CACHE_SIZE
-#endif
-
 #ifdef __cplusplus
 extern
 #else
@@ -918,27 +914,13 @@ typedef
 struct _DictHdr
 {
 	VHTable ht;
-#ifdef DICT_CACHE_SIZE
-	void* cachekeys[ DICT_CACHE_SIZE ];
-	int32_t cachevars[ DICT_CACHE_SIZE ];
-#endif
 }
 DictHdr;
 
 static DictHdr* mkdict( SGS_CTX )
 {
-#ifdef DICT_CACHE_SIZE
-	int i;
-#endif
 	DictHdr* dh = (DictHdr*) sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_dict_functable );
 	vht_init( &dh->ht, C );
-#ifdef DICT_CACHE_SIZE
-	for( i = 0; i < DICT_CACHE_SIZE; ++i )
-	{
-		dh->cachekeys[ i ] = NULL;
-		dh->cachevars[ i ] = 0;
-	}
-#endif
 	return dh;
 }
 
@@ -970,13 +952,11 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data, int depth )
 		{
 			while( pair < pend )
 			{
-				sgs_Variable tmp; tmp.type = VTC_STRING;
-				tmp.data.S = pair->str;
 				sgs_PushString( C, "\n" );
-				sgs_PushVariable( C, &tmp );
+				sgs_PushVariable( C, &pair->key );
 				sgs_ToPrintSafeString( C );
 				sgs_PushString( C, " = " );
-				sgs_PushVariable( C, &pair->var );
+				sgs_PushVariable( C, &pair->val );
 				if( sgs_DumpVar( C, depth ) )
 					return SGS_EINPROC;
 				pair++;
@@ -1003,7 +983,10 @@ static int sgsstd_dict_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 	pend = ht->vars + vht_size( ht );
 	while( pair < pend )
 	{
-		int ret = sgs_GCMark( C, &pair->var );
+		int ret = sgs_GCMark( C, &pair->key );
+		if( ret != SGS_SUCCESS )
+			return ret;
+		ret = sgs_GCMark( C, &pair->val );
 		if( ret != SGS_SUCCESS )
 			return ret;
 		pair++;
@@ -1024,7 +1007,7 @@ static int sgsstd_dict_getindex_exact( SGS_CTX, sgs_VarObj* data )
 	if( !pair )
 		return SGS_ENOTFND;
 
-	sgs_PushVariable( C, &pair->var );
+	sgs_PushVariable( C, &pair->val );
 	return SGS_SUCCESS;
 }
 
@@ -1041,66 +1024,18 @@ int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		int32_t off = (int32_t) (C->stack_top-1)->data.I;
 		if( off < 0 || off > vht_size( ht ) )
 			return SGS_EBOUNDS;
-		sgs_PushVariable( C, &ht->vars[ off ].var );
+		sgs_PushVariable( C, &ht->vars[ off ].val );
 		return SGS_SUCCESS;
 	}
 
-#ifdef DICT_CACHE_SIZE
-	int i, cacheable = sgs_ItemType( C, -1 ) == SVT_STRING;
-	string_t* key = (C->stack_top-1)->data.S;
-	if( cacheable )
-		cacheable = key->isconst;
-#endif
-
 	if( !sgs_ToString( C, -1 ) )
 		return SGS_EINVAL;
-
-#ifdef DICT_CACHE_SIZE
-	key = (C->stack_top-1)->data.S;
-	for( i = 0; i < DICT_CACHE_SIZE; ++i )
-	{
-		if( dh->cachekeys[ i ] == key )
-		{
-			pair = ht->vars + dh->cachevars[ i ];
-			/* for the extremely rare case when some constant is reallocated
-			in the space of a previous one and the dict has it cached,
-			we have to validate all hits */
-			if( pair->size != key->size ||
-				0 != strncmp( pair->str, str_cstr( key ), key->size ) )
-				pair = NULL;
-			else
-				cacheable = 0;
-			break;
-		}
-	}
-
-	if( !pair )
-	{
-		pair = vht_getS( ht, key );
-		if( !pair )
-			return SGS_ENOTFND;
-	}
-
-	if( cacheable )
-	{
-		for( i = DICT_CACHE_SIZE - 1; i > 0; --i )
-		{
-			dh->cachekeys[ i ] = dh->cachekeys[ i - 1 ];
-			dh->cachevars[ i ] = dh->cachevars[ i - 1 ];
-		}
-		dh->cachekeys[ 0 ] = key;
-		dh->cachevars[ 0 ] = pair - ht->vars;
-	}
-#else
-	/*
-		the old method
-	*/
+	
 	pair = vht_getS( ht, (C->stack_top-1)->data.S );
 	if( !pair )
 		return SGS_ENOTFND;
-#endif
 
-	sgs_PushVariable( C, &pair->var );
+	sgs_PushVariable( C, &pair->val );
 	return SGS_SUCCESS;
 }
 
@@ -1150,13 +1085,9 @@ static int sgsstd_dict_iter_getnext( SGS_CTX, sgs_VarObj* data, int flags )
 	else
 	{
 		if( flags & SGS_GETNEXT_KEY )
-		{
-			sgs_Variable tmp; tmp.type = VTC_STRING;
-			tmp.data.S = ht->vars[ iter->off ].str;
-			sgs_PushVariable( C, &tmp );
-		}
+			sgs_PushVariable( C, &ht->vars[ iter->off ].key );
 		if( flags & SGS_GETNEXT_VALUE )
-			sgs_PushVariable( C, &ht->vars[ iter->off ].var );
+			sgs_PushVariable( C, &ht->vars[ iter->off ].val );
 		return SGS_SUCCESS;
 	}
 }
@@ -1205,13 +1136,11 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgs_PushString( C, "{" );
 		while( pair < pend )
 		{
-			sgs_Variable tmp; tmp.type = VTC_STRING;
-			tmp.data.S = pair->str;
 			if( cnt )
 				sgs_PushString( C, "," );
-			sgs_PushVariable( C, &tmp );
+			sgs_PushVariable( C, &pair->key );
 			sgs_PushString( C, "=" );
-			sgs_PushVariable( C, &pair->var );
+			sgs_PushVariable( C, &pair->val );
 			sgs_ToStringFast( C, -1 );
 			cnt++;
 			pair++;
@@ -1225,7 +1154,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 		DictHdr* ndh = mkdict( C );
 		for( i = 0; i < htsize; ++i )
 		{
-			vht_setS( &ndh->ht, ht->vars[ i ].str, &ht->vars[ i ].var, C );
+			vht_setS( &ndh->ht, &ht->vars[ i ].key, &ht->vars[ i ].val, C );
 		}
 		(C->stack_top-1)->type = VTC_DICT;
 		return SGS_SUCCESS;
@@ -1248,13 +1177,11 @@ static int sgsstd_dict_serialize( SGS_CTX, sgs_VarObj* data, int unused )
 	UNUSED( unused );
 	while( pair < pend )
 	{
-		sgs_Variable tmp; tmp.type = VTC_STRING;
-		tmp.data.S = pair->str;
-		sgs_PushVariable( C, &tmp );
+		sgs_PushVariable( C, &pair->key );
 		ret = sgs_Serialize( C );
 		if( ret != SGS_SUCCESS )
 			return ret;
-		sgs_PushVariable( C, &pair->var );
+		sgs_PushVariable( C, &pair->val );
 		ret = sgs_Serialize( C );
 		if( ret != SGS_SUCCESS )
 			return ret;
@@ -1992,22 +1919,7 @@ static int sgsstd_unset( SGS_CTX )
 		return 0;
 	
 	dh = (DictHdr*) sgs_GetObjectData( C, 0 );
-
-#ifdef DICT_CACHE_SIZE
-	{
-		VHTableVar* tv = vht_get( &dh->ht, str, size );
-		if( tv )
-		{
-			int i;
-			int32_t idx = tv - dh->ht.vars;
-			for( i = 0; i < DICT_CACHE_SIZE; ++i )
-			{
-				if( dh->cachevars[ i ] == idx )
-					dh->cachekeys[ i ] = NULL;
-			}
-		}
-	}
-#endif
+	
 	vht_unsetS( &dh->ht, (C->stack_off+1)->data.S, C );
 
 	return 0;
@@ -3440,7 +3352,7 @@ int sgsSTD_GlobalFree( SGS_CTX )
 	pend = p + vht_size( ht );
 	while( p < pend )
 	{
-		sgs_Release( C, &p->var );
+		sgs_Release( C, &p->val );
 		p++;
 	}
 
@@ -3476,7 +3388,7 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 	else if( ( pair = vht_getS( ht, idx->data.S ) ) != NULL )
 	{
 		sgsVM_ReleaseStack( C, out );
-		*out = pair->var;
+		*out = pair->val;
 		return SGS_SUCCESS;
 	}
 	else
