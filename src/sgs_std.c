@@ -3676,7 +3676,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 			return SGS_EINVAL;
 		else
 		{
-			sgs_SizeVal off;
+			sgs_SizeVal off = 0;
 			sgsstd_array_header_t* hdr = (sgsstd_array_header_t*)
 				sgs_GetObjectData( C, item );
 			
@@ -3703,7 +3703,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 			return SGS_EINVAL;
 		else
 		{
-			sgs_SizeVal off, rmvd = 0;
+			sgs_SizeVal off = 0, rmvd = 0;
 			sgsstd_array_header_t* hdr = (sgsstd_array_header_t*)
 				sgs_GetObjectData( C, item );
 			
