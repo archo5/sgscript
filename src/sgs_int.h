@@ -201,14 +201,6 @@
 #  define str_cstr sgs_str_cstr
 #  define var_cstr sgs_var_cstr
 #  define object_t sgs_object_t
-#  define VHTable sgs_VHTable
-#  define VHTableVar sgs_VHTableVar
-#  define vht_init sgs_vht_init
-#  define vht_free sgs_vht_free
-#  define vht_get sgs_vht_get
-#  define vht_set sgs_vht_set
-#  define vht_unset sgs_vht_unset
-#  define vht_size sgs_vht_size
 #  define var_destroy_object sgsVM_VarDestroyObject
 
 #  define STACKFRAMESIZE SGS_STACKFRAMESIZE
@@ -570,30 +562,6 @@ struct _sgs_Closure
 };
 
 
-/* hash table for variables */
-typedef struct _sgs_VHTableVar
-{
-	sgs_Variable key; /* rc=0, always same as inside inner table */
-	sgs_Variable val;
-	sgs_Hash hash;
-}
-sgs_VHTableVar;
-typedef struct _sgs_VHTable
-{
-	sgs_HashTable   ht;
-	sgs_VHTableVar* vars;
-	int32_t     mem;
-}
-sgs_VHTable;
-
-void sgs_vht_init( sgs_VHTable* vht, SGS_CTX );
-void sgs_vht_free( sgs_VHTable* vht, SGS_CTX );
-sgs_VHTableVar* sgs_vht_get( sgs_VHTable* vht, sgs_Variable* K );
-void sgs_vht_set( sgs_VHTable* vht, sgs_Variable* K, sgs_Variable* var, SGS_CTX );
-int sgs_vht_unset( sgs_VHTable* vht, sgs_Variable* K, SGS_CTX );
-#define sgs_vht_size( T ) ((T)->ht.load)
-
-
 /* VM interface */
 void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t len );
 void sgsVM_VarDestroyObject( SGS_CTX, sgs_object_t* O );
@@ -677,7 +645,7 @@ struct _sgs_Context
 	uint32_t      state;
 	sgs_FuncCtx*  fctx;      /* ByteCodeGen */
 	const char*   filename;  /* filename of currently compiled code */
-	sgs_HashTable stringtable; /* string constant caching hash table */
+	sgs_VHTable   stringtable; /* string constant caching hash table */
 
 	/* virtual machine */
 	sgs_VarPtr    stack_base;
@@ -700,7 +668,7 @@ struct _sgs_Context
 	int           sf_count;
 
 	void*         data;
-	sgs_HashTable typetable;
+	sgs_VHTable   typetable;
 
 	sgs_object_t* objs;
 	int32_t       objcount;
@@ -770,7 +738,7 @@ int sgsSTD_GlobalFree( SGS_CTX );
 int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall );
 int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall );
 int sgsSTD_GlobalGC( SGS_CTX );
-int sgsSTD_GlobalIter( SGS_CTX, sgs_VHTableVar** outp, sgs_VHTableVar** outpend );
+int sgsSTD_GlobalIter( SGS_CTX, sgs_VHTVar** outp, sgs_VHTVar** outpend );
 
 
 

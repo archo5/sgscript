@@ -138,6 +138,262 @@ sgs_Hash sgs_HashVar( const sgs_Variable* v )
 
 
 
+static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
+{
+	if( BASETYPE( v1->type ) != BASETYPE( v2->type ) )
+		return 0;
+	switch( BASETYPE( v1->type ) )
+	{
+	case SVT_BOOL: return v1->data.B == v2->data.B;
+	case SVT_INT: return v1->data.I == v2->data.I;
+	case SVT_REAL: return v1->data.R == v2->data.R;
+	case SVT_STRING: return v1->data.S->size == v2->data.S->size &&
+		memcmp( var_cstr( v1 ), var_cstr( v2 ), v1->data.S->size ) == 0;
+	case SVT_FUNC: return v1->data.F == v2->data.F;
+	case SVT_CFUNC: return v1->data.C == v2->data.C;
+	case SVT_OBJECT: return v1->data.O == v2->data.O;
+	}
+	return 1;
+}
+
+
+void vht_init( sgs_VHTable* T, SGS_CTX, VHTIdx initial_pair_mem, VHTIdx initial_var_mem )
+{
+	sgs_BreakIf( initial_pair_mem < 1 );
+	sgs_BreakIf( initial_var_mem < 1 );
+	
+	T->pairs = sgs_Alloc_n( VHTIdx, initial_pair_mem );
+	T->pair_mem = initial_pair_mem;
+	T->vars = sgs_Alloc_n( VHTVar, initial_var_mem );
+	T->var_mem = initial_var_mem;
+	T->size = 0;
+	
+	memset( T->pairs, SGS_VHTIDX_EMPTY, sizeof(VHTIdx) * initial_pair_mem );
+}
+
+void vht_free( sgs_VHTable* T, SGS_CTX )
+{
+	sgs_VHTVar* p = T->vars;
+	sgs_VHTVar* pend = p + T->size;
+	while( p < pend )
+	{
+		sgs_Release( C, &p->key );
+		sgs_Release( C, &p->val );
+		p++;
+	}
+	
+	sgs_Dealloc( T->pairs );
+	sgs_Dealloc( T->vars );
+}
+
+void vht_rehash( VHTable* T, SGS_CTX, VHTIdx size )
+{
+	sgs_Hash h;
+	VHTIdx i, si, sp, idx, *np;
+	sgs_BreakIf( size < T->size );
+	
+	if( size == T->pair_mem )
+		return;
+	
+	np = sgs_Alloc_n( VHTIdx, size );
+	memset( np, SGS_VHTIDX_EMPTY, sizeof(VHTIdx) * size );
+	
+	for( si = 0; si < T->pair_mem; ++si )
+	{
+		idx = T->pairs[ si ];
+		h = T->vars[ idx ].hash;
+		if( idx >= 0 )
+		{
+			sp = i = h % size;
+			do
+			{
+				VHTIdx nidx = np[ i ];
+				if( nidx == SGS_VHTIDX_EMPTY )
+				{
+					np[ i ] = idx;
+					break;
+				}
+				i++;
+				if( i >= size )
+					i = 0;
+			}
+			while( i != sp );
+		}
+	}
+	
+	sgs_Dealloc( T->pairs );
+	T->pairs = np;
+	T->pair_mem = size;
+}
+
+void vht_reserve( VHTable* T, SGS_CTX, VHTIdx size )
+{
+	VHTVar* p;
+	if( size <= T->var_mem )
+		return;
+	
+	p = sgs_Alloc_n( VHTVar, size );
+	memcpy( p, T->vars, sizeof(VHTVar) * T->size );
+	sgs_Dealloc( T->vars );
+	T->vars = p;
+	T->var_mem = size;
+}
+
+VHTIdx vht_pair_id( VHTable* T, sgs_Variable* K, sgs_Hash hash )
+{
+	VHTIdx i, sp = hash % T->pair_mem;
+	i = sp;
+	do
+	{
+		VHTIdx idx = T->pairs[ i ];
+		if( idx == SGS_VHTIDX_EMPTY )
+			break;
+		if( idx != SGS_VHTIDX_REMOVED && equal_variables( K, &T->vars[ idx ].key ) )
+		{
+//			if( BASETYPE( K->type ) == SVT_STRING )
+//				print_safe( stdout, var_cstr( &T->vars[idx].key ), T->vars[idx].key.data.S->size );
+//			printf( " - HIT\n" );
+			return i;
+		}
+		i++;
+		if( i >= T->pair_mem )
+			i = 0;
+	}
+	while( i != sp );
+//			if( BASETYPE( K->type ) == SVT_STRING )
+//				print_safe( stdout, var_cstr( K ), K->data.S->size );
+//			printf( " - MISS\n" );
+	return -1;
+}
+
+VHTVar* vht_get( VHTable* T, sgs_Variable* K )
+{
+	VHTIdx i = vht_pair_id( T, K, sgs_HashVar( K ) );
+	if( i >= 0 )
+		return T->vars + T->pairs[ i ];
+	else
+		return NULL;
+}
+
+VHTVar* vht_get_str( VHTable* T, const char* str, sgs_SizeVal size, sgs_Hash hash )
+{
+	VHTIdx i, sp = hash % T->pair_mem;
+	i = sp;
+	do
+	{
+		VHTIdx idx = T->pairs[ i ];
+		if( idx == SGS_VHTIDX_EMPTY )
+			return NULL;
+		else
+		{
+			sgs_Variable* var = &T->vars[ idx ].key;
+			if( BASETYPE( var->type ) == SVT_STRING )
+			{
+				string_t* S = var->data.S;
+				if( S->size == size && memcmp( str_cstr( S ), str, size ) == 0 )
+					return T->vars + idx;
+			}
+		}
+		i++;
+		if( i >= T->pair_mem )
+			i = 0;
+	}
+	while( i != sp );
+	return NULL;
+}
+
+VHTVar* vht_set( VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable* V )
+{
+	sgs_Hash h = sgs_HashVar( K );
+	VHTIdx sp, i = vht_pair_id( T, K, h );
+	if( i >= 0 )
+	{
+		VHTVar* p = T->vars + T->pairs[ i ];
+		sgs_Release( C, &p->val );
+		if( V )
+		{
+			sgs_Acquire( C, V );
+			p->val = *V;
+		}
+		else
+			p->val.type = VTC_NULL;
+		return p;
+	}
+	else
+	{
+		VHTIdx osize = T->size;
+		UNUSED( osize );
+		
+		if( T->size + 1.0 >= T->pair_mem * 0.75 )
+			vht_rehash( T, C, MAX( T->pair_mem * 2, T->size + 1 ) );
+		if( T->size >= T->var_mem )
+			vht_reserve( T, C, MAX( T->size * 2, T->size + 16 ) );
+		
+		{
+			VHTVar* p = T->vars + T->size;
+			p->key = *K;
+			p->hash = h;
+			sgs_Acquire( C, K );
+			if( V )
+			{
+				p->val = *V;
+				sgs_Acquire( C, V );
+			}
+			else
+				p->val.type = VTC_NULL;
+		}
+		
+		sp = i = h % T->pair_mem;
+		do
+		{
+			VHTIdx idx = T->pairs[ i ];
+			if( idx == SGS_VHTIDX_EMPTY || idx == SGS_VHTIDX_REMOVED )
+			{
+				T->pairs[ i ] = T->size;
+				T->size++;
+				break;
+			}
+			i++;
+			if( i >= T->pair_mem )
+				i = 0;
+		}
+		while( i != sp );
+		
+		sgs_BreakIf( T->size == osize );
+		
+		return T->vars + T->size - 1;
+	}
+}
+
+void vht_unset( VHTable* T, SGS_CTX, sgs_Variable* K )
+{
+	sgs_Hash h = sgs_HashVar( K );
+	VHTIdx i = vht_pair_id( T, K, h );
+	if( i >= 0 )
+	{
+		VHTIdx idx = T->pairs[ i ];
+		VHTVar* p = T->vars + idx;
+		VHTVar bp = *p;
+		
+		T->pairs[ i ] = SGS_VHTIDX_REMOVED;
+		
+		T->size--;
+		if( p < T->vars + T->size )
+		{
+			VHTVar* ep = T->vars + T->size;
+			i = vht_pair_id( T, &ep->key, ep->hash );
+			sgs_BreakIf( i == -1 );
+			*p = *ep;
+			T->pairs[ i ] = idx;
+		}
+		
+		sgs_Release( C, &bp.key );
+		sgs_Release( C, &bp.val );
+	}
+}
+
+
+#if 0
 static void htp_remove( HTPair** p, SGS_CTX )
 {
 	HTPair* pn = (*p)->next;
@@ -260,24 +516,6 @@ HTPair* ht_findS( HashTable* T, string_t* S )
 		p = p->next;
 	}
 	return NULL;
-}
-
-static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
-{
-	if( BASETYPE( v1->type ) != BASETYPE( v2->type ) )
-		return 0;
-	switch( BASETYPE( v1->type ) )
-	{
-	case SVT_BOOL: return v1->data.B == v2->data.B;
-	case SVT_INT: return v1->data.I == v2->data.I;
-	case SVT_REAL: return v1->data.R == v2->data.R;
-	case SVT_STRING: return v1->data.S->size == v2->data.S->size &&
-		memcmp( var_cstr( v1 ), var_cstr( v2 ), v1->data.S->size ) == 0;
-	case SVT_FUNC: return v1->data.F == v2->data.F;
-	case SVT_CFUNC: return v1->data.C == v2->data.C;
-	case SVT_OBJECT: return v1->data.O == v2->data.O;
-	}
-	return 1;
 }
 
 HTPair* ht_findV( HashTable* T, sgs_Variable* V, sgs_Hash hash )
@@ -405,7 +643,7 @@ void ht_iterate( sgs_HashTable* T, sgs_HTIterFunc func, void* userdata )
 		p++;
 	}
 }
-
+#endif
 
 
 double sgs_GetTime()

@@ -179,13 +179,11 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t
 	hash = sgs_HashFunc( str, len );
 	if( len <= SGS_STRINGTABLE_MAXLEN )
 	{
-		HTPair* pair = ht_find( &C->stringtable, str, len, hash );
-		if( pair )
+		VHTVar* var = vht_get_str( &C->stringtable, str, len, hash );
+		if( var )
 		{
-			string_t* S = (string_t*) pair->ptr;
-			S->refcount++;
-			out->data.S = S;
-			out->type = VTC_STRING;
+			*out = var->key;
+			out->data.S->refcount++;
 			return;
 		}
 	}
@@ -198,7 +196,7 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t
 
 	if( len <= SGS_STRINGTABLE_MAXLEN )
 	{
-		ht_setS( &C->stringtable, C, out->data.S, out->data.S );
+		vht_set( &C->stringtable, C, out, NULL );
 		out->data.S->refcount--;
 	}
 }
@@ -328,7 +326,7 @@ static void vm_frame_pop( SGS_CTX )
 	Variable hash table
 */
 
-
+#if 0
 void vht_init( VHTable* vht, SGS_CTX )
 {
 	ht_init( &vht->ht, C, 4 );
@@ -415,7 +413,7 @@ int vht_unset( VHTable* vht, sgs_Variable* K, SGS_CTX )
 	}
 	return 0;
 }
-
+#endif
 
 
 /*
@@ -1151,7 +1149,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 		}
 		else if( idx->type == VTC_STRING )
 		{
-			VHTableVar* var = vht_get( ht, idx );
+			VHTVar* var = vht_get( ht, idx );
 			if( !var )
 				return VM_GETPROP_ERR( SGS_ENOTFND );
 			else
@@ -1167,7 +1165,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 				return VM_GETPROP_ERR( SGS_EINVAL );
 			else
 			{
-				VHTableVar* var = vht_get( ht, stk_getpos( C, -1 ) );
+				VHTVar* var = vht_get( ht, stk_getpos( C, -1 ) );
 				if( !var )
 					return VM_GETPROP_ERR( SGS_ENOTFND );
 				else
@@ -3531,33 +3529,40 @@ SGSRESULT sgs_Convert( SGS_CTX, int item, int type )
 SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjCallback* iface )
 {
 	int len;
-	HTPair* p;
+	VHTVar* p;
 	if( !iface )
 		return SGS_EINVAL;
 	len = strlen( name );
-	p = ht_find( &C->typetable, name, len, sgs_HashFunc( name, len ) );
+	p = vht_get_str( &C->typetable, name, len, sgs_HashFunc( name, len ) );
 	if( p )
 		return SGS_EINPROC;
-	ht_set( &C->typetable, C, name, len, (void*) iface );
+	{
+		sgs_Variable tmp;
+		tmp.type = VTC_INT;
+		tmp.data.I = (sgs_Int) iface;
+		sgs_PushStringBuf( C, name, len );
+		vht_set( &C->typetable, C, C->stack_top-1, &tmp );
+		sgs_Pop( C, 1 );
+	}
 	return SGS_SUCCESS;
 }
 
 SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )
 {
 	int len = strlen( name );
-	HTPair* p = ht_find( &C->typetable, name, len, sgs_HashFunc( name, len ) );
+	VHTVar* p = vht_get_str( &C->typetable, name, len, sgs_HashFunc( name, len ) );
 	if( !p )
 		return SGS_ENOTFND;
-	ht_unset_pair( &C->typetable, C, p );
+	vht_unset( &C->typetable, C, &p->key );
 	return SGS_SUCCESS;
 }
 
 sgs_ObjCallback* sgs_FindType( SGS_CTX, const char* name )
 {
 	int len = strlen( name );
-	HTPair* p = ht_find( &C->typetable, name, len, sgs_HashFunc( name, len ) );
+	VHTVar* p = vht_get_str( &C->typetable, name, len, sgs_HashFunc( name, len ) );
 	if( p )
-		return (sgs_ObjCallback*) p->ptr;
+		return (sgs_ObjCallback*) p->val.data.I;
 	return NULL;
 }
 

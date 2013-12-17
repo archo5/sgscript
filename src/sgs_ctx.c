@@ -83,7 +83,7 @@ static void ctx_init( SGS_CTX )
 	C->state = 0;
 	C->fctx = NULL;
 	C->filename = NULL;
-	ht_init( &C->stringtable, C, 256 );
+	vht_init( &C->stringtable, C, 256, 256 );
 
 	C->stack_mem = 32;
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
@@ -104,7 +104,7 @@ static void ctx_init( SGS_CTX )
 	C->sf_cached = NULL;
 	C->sf_count = 0;
 	
-	ht_init( &C->typetable, C, 32 );
+	vht_init( &C->typetable, C, 32, 32 );
 
 	C->objs = NULL;
 	C->objcount = 0;
@@ -133,16 +133,6 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	return C;
 }
 
-
-static void stringfreefunc( HTPair* p, void* userdata )
-{
-	SGS_CTX = (sgs_Context*) userdata;
-	string_t* st = (string_t*) p->ptr;
-	st->refcount--;
-	sgs_BreakIf( st->refcount > 0 );
-	sgs_BreakIf( st->refcount < 0 );
-	sgs_Dealloc( st );
-}
 
 void sgs_DestroyEngine( SGS_CTX )
 {
@@ -174,10 +164,22 @@ void sgs_DestroyEngine( SGS_CTX )
 	
 	sgs_Dealloc( C->clstk_base );
 	
-	ht_free( &C->typetable, C );
+	vht_free( &C->typetable, C );
 	
-	ht_iterate( &C->stringtable, stringfreefunc, C );
-	ht_free( &C->stringtable, C );
+	{
+		VHTVar* p = C->stringtable.vars;
+		VHTVar* pend = p + C->stringtable.size;
+		while( p < pend )
+		{
+			string_t* st = p->key.data.S;
+			st->refcount--;
+			sgs_BreakIf( st->refcount > 0 );
+			sgs_BreakIf( st->refcount < 0 );
+			sgs_Dealloc( st );
+			p++;
+		}
+	}
+	vht_free( &C->stringtable, C );
 	
 	/* free the call stack */
 	while( sf )
@@ -704,7 +706,7 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_GLOBALS:
 		{
-			VHTableVar *p, *pend;
+			VHTVar *p, *pend;
 			sgsSTD_GlobalIter( C, &p, &pend );
 			sgs_WriteStr( C, "\nGLOBAL ---- LIST ---- START ----\n" );
 			while( p < pend )

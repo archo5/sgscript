@@ -920,7 +920,7 @@ DictHdr;
 static DictHdr* mkdict( SGS_CTX )
 {
 	DictHdr* dh = (DictHdr*) sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_dict_functable );
-	vht_init( &dh->ht, C );
+	vht_init( &dh->ht, C, 4, 4 );
 	return dh;
 }
 
@@ -939,7 +939,7 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data, int depth )
 {
 	int ssz;
 	char bfr[ 32 ];
-	VHTableVar *pair, *pend;
+	VHTVar *pair, *pend;
 	HTHDR;
 	pair = ht->vars;
 	pend = ht->vars + vht_size( ht );
@@ -977,7 +977,7 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data, int depth )
 
 static int sgsstd_dict_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 {
-	VHTableVar *pair, *pend;
+	VHTVar *pair, *pend;
 	HTHDR;
 	pair = ht->vars;
 	pend = ht->vars + vht_size( ht );
@@ -996,7 +996,7 @@ static int sgsstd_dict_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 
 static int sgsstd_dict_getindex_exact( SGS_CTX, sgs_VarObj* data )
 {
-	VHTableVar* pair = NULL;
+	VHTVar* pair = NULL;
 	HTHDR;
 
 	sgs_ToString( C, -1 );
@@ -1013,7 +1013,7 @@ static int sgsstd_dict_getindex_exact( SGS_CTX, sgs_VarObj* data )
 
 int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
-	VHTableVar* pair = NULL;
+	VHTVar* pair = NULL;
 	HTHDR;
 
 	if( !prop )
@@ -1048,7 +1048,7 @@ static int sgsstd_dict_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 	sgs_GetStackItem( C, -1, &val );
 	if( !str )
 		return SGS_EINVAL;
-	vht_set( ht, (C->stack_top-2), &val, C );
+	vht_set( ht, C, (C->stack_top-2), &val );
 	return SGS_SUCCESS;
 }
 
@@ -1074,7 +1074,7 @@ static int sgsstd_dict_iter_getnext( SGS_CTX, sgs_VarObj* data, int flags )
 {
 	sgsstd_dict_iter_t* iter = (sgsstd_dict_iter_t*) data->data;
 	VHTable* ht = (VHTable*) iter->ref.data.O->data;
-	if( iter->size != ht->ht.load )
+	if( iter->size != vht_size( ht ) )
 		return SGS_EINVAL;
 
 	if( !flags )
@@ -1117,7 +1117,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 
 		iter->ref.type = VTC_DICT;
 		iter->ref.data.O = data;
-		iter->size = ht->ht.load;
+		iter->size = vht_size( ht );
 		iter->off = -1;
 		sgs_Acquire( C, &iter->ref );
 
@@ -1131,7 +1131,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 	}
 	else if( type == SVT_STRING )
 	{
-		VHTableVar *pair = ht->vars, *pend = ht->vars + vht_size( ht );
+		VHTVar *pair = ht->vars, *pend = ht->vars + vht_size( ht );
 		int cnt = 0;
 		sgs_PushString( C, "{" );
 		while( pair < pend )
@@ -1154,7 +1154,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 		DictHdr* ndh = mkdict( C );
 		for( i = 0; i < htsize; ++i )
 		{
-			vht_set( &ndh->ht, &ht->vars[ i ].key, &ht->vars[ i ].val, C );
+			vht_set( &ndh->ht, C, &ht->vars[ i ].key, &ht->vars[ i ].val );
 		}
 		(C->stack_top-1)->type = VTC_DICT;
 		return SGS_SUCCESS;
@@ -1170,7 +1170,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 static int sgsstd_dict_serialize( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	int ret;
-	VHTableVar *pair, *pend;
+	VHTVar *pair, *pend;
 	HTHDR;
 	pair = ht->vars;
 	pend = ht->vars + vht_size( ht );
@@ -1223,7 +1223,7 @@ static int sgsstd_dict( SGS_CTX )
 			return sgs_FuncArgError( C, i, SVT_STRING, 0 );
 
 		sgs_GetStackItem( C, i + 1, &val );
-		vht_set( ht, (C->stack_off+i), &val, C );
+		vht_set( ht, C, (C->stack_off+i), &val );
 	}
 
 	(C->stack_top-1)->type = VTC_DICT;
@@ -1920,7 +1920,7 @@ static int sgsstd_unset( SGS_CTX )
 	
 	dh = (DictHdr*) sgs_GetObjectData( C, 0 );
 	
-	vht_unset( &dh->ht, (C->stack_off+1), C );
+	vht_unset( &dh->ht, C, (C->stack_off+1) );
 
 	return 0;
 }
@@ -3318,7 +3318,7 @@ int sgsSTD_MakeDict( SGS_CTX, int cnt )
 		}
 
 		sgs_GetStackItem( C, i - cnt, &val );
-		vht_set( ht, (C->stack_top+i-cnt-1), &val, C );
+		vht_set( ht, C, (C->stack_top+i-cnt-1), &val );
 	}
 
 	sgs_PopSkip( C, cnt, 1 );
@@ -3344,7 +3344,7 @@ int sgsSTD_GlobalInit( SGS_CTX )
 int sgsSTD_GlobalFree( SGS_CTX )
 {
 	sgs_Variable var;
-	VHTableVar *p, *pend;
+	VHTVar *p, *pend;
 	sgs_VarObj* data = GLBP;
 	HTHDR;
 
@@ -3368,7 +3368,7 @@ int sgsSTD_GlobalFree( SGS_CTX )
 extern void sgsVM_ReleaseStack( SGS_CTX, sgs_Variable* var );
 int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall )
 {
-	VHTableVar* pair;
+	VHTVar* pair;
 	sgs_VarObj* data = GLBP;
 	HTHDR;
 
@@ -3430,7 +3430,7 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 		return SGS_SUCCESS;
 	}
 
-	vht_set( ht, idx, val, C );
+	vht_set( ht, C, idx, val );
 	return SGS_SUCCESS;
 }
 
@@ -3450,7 +3450,7 @@ int sgsSTD_GlobalGC( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
-int sgsSTD_GlobalIter( SGS_CTX, sgs_VHTableVar** outp, sgs_VHTableVar** outpend )
+int sgsSTD_GlobalIter( SGS_CTX, VHTVar** outp, VHTVar** outpend )
 {
 	sgs_VarObj* data = GLBP;
 
@@ -3649,8 +3649,8 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 			sgs_Variable str;
 			sgs_GetStackItem( C, arg, &str );
 			vht_unset(
-				&((DictHdr*)sgs_GetObjectData( C, item ))->ht,
-				&str, C );
+				&((DictHdr*)sgs_GetObjectData( C, item ))->ht, C,
+				&str );
 			return SGS_SUCCESS;
 		}
 		
