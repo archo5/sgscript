@@ -79,10 +79,12 @@ static int dpm1sf( const void* p1, const void* p2 )
 {
 	const HTPair* v1 = *(const HTPair**) p1;
 	const HTPair* v2 = *(const HTPair**) p2;
-	int cmpsz = v1->str->size < v2->str->size ? v1->str->size : v2->str->size;
-	int ret = memcmp( str_cstr( v1->str ), str_cstr( v2->str ), cmpsz );
+	const sgs_iStr* str1 = v1->key.data.S;
+	const sgs_iStr* str2 = v2->key.data.S;
+	int cmpsz = str1->size < str2->size ? str1->size : str2->size;
+	int ret = memcmp( str_cstr( str1 ), str_cstr( str2 ), cmpsz );
 	if( !ret )
-		ret = v1->str->size - v2->str->size;
+		ret = str1->size - str2->size;
 	return ret;
 }
 
@@ -118,11 +120,11 @@ static int dumpProfMode1( SGS_PROF )
 	{
 		const char *s, *send;
 		HTPair* p = pbuf[ i ];
-		s = str_cstr( p->str );
-		send = s + p->str->size;
+		s = var_cstr( &p->key );
+		send = s + p->key.data.S->size;
 		while( s < send )
 		{
-			if( s != str_cstr( p->str ) )
+			if( s != var_cstr( &p->key ) )
 				sgs_Writef( P->C, "::" );
 			sgs_Writef( P->C, "%s", s );
 			s += strlen( s ) + 1;

@@ -123,6 +123,19 @@ sgs_Hash sgs_HashFunc( const char* str, int size )
 	return h | 0x80000000;
 }
 
+sgs_Hash sgs_HashVar( const sgs_Variable* v )
+{
+	switch( BASETYPE( v->type ) )
+	{
+	case SVT_NULL: return 0;
+	case SVT_BOOL: return v->data.B;
+	case SVT_STRING: return hashFunc( var_cstr( v ), v->data.S->size );
+	case SVT_INT: case SVT_REAL: case SVT_FUNC: case SVT_CFUNC: case SVT_OBJECT:
+		return hashFunc( (const char*) &v->data, sizeof(v->data) );
+	}
+	return 0;
+}
+
 
 
 static void htp_remove( HTPair** p, SGS_CTX )
@@ -249,6 +262,24 @@ HTPair* ht_findS( HashTable* T, string_t* S )
 	return NULL;
 }
 
+static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
+{
+	if( BASETYPE( v1->type ) != BASETYPE( v2->type ) )
+		return 0;
+	switch( BASETYPE( v1->type ) )
+	{
+	case SVT_BOOL: return v1->data.B == v2->data.B;
+	case SVT_INT: return v1->data.I == v2->data.I;
+	case SVT_REAL: return v1->data.R == v2->data.R;
+	case SVT_STRING: return v1->data.S->size == v2->data.S->size &&
+		memcmp( var_cstr( v1 ), var_cstr( v2 ), v1->data.S->size ) == 0;
+	case SVT_FUNC: return v1->data.F == v2->data.F;
+	case SVT_CFUNC: return v1->data.C == v2->data.C;
+	case SVT_OBJECT: return v1->data.O == v2->data.O;
+	}
+	return 1;
+}
+
 HTPair* ht_findV( HashTable* T, sgs_Variable* V, sgs_Hash hash )
 {
 	HTPair* p = T->pairs[ hash % T->size ];
@@ -304,6 +335,31 @@ HTPair* ht_setS( HashTable* T, SGS_CTX, string_t* S, void* ptr )
 		
 		np->next = T->pairs[ S->hash % T->size ];
 		T->pairs[ S->hash % T->size ] = np;
+		T->load++;
+		p = np;
+	}
+	return p;
+}
+
+HTPair* ht_setV( HashTable* T, SGS_CTX, sgs_Variable* V, void* ptr )
+{
+	sgs_Hash h = sgs_HashVar( V );
+	HTPair* p = ht_findV( T, V, h );
+	if( p )
+		p->ptr = ptr;
+	else
+	{
+		HTPair* np = sgs_Alloc( HTPair );
+		
+		ht_check( T, C, 1 );
+		
+		np->key = *V;
+		sgs_Acquire( C, V );
+		np->hash = h;
+		np->ptr = ptr;
+		
+		np->next = T->pairs[ h % T->size ];
+		T->pairs[ h % T->size ] = np;
 		T->load++;
 		p = np;
 	}

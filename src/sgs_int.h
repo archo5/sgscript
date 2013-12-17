@@ -205,9 +205,9 @@
 #  define VHTableVar sgs_VHTableVar
 #  define vht_init sgs_vht_init
 #  define vht_free sgs_vht_free
-#  define vht_getS sgs_vht_getS
-#  define vht_setS sgs_vht_setS
-#  define vht_unsetS sgs_vht_unsetS
+#  define vht_get sgs_vht_get
+#  define vht_set sgs_vht_set
+#  define vht_unset sgs_vht_unset
 #  define vht_size sgs_vht_size
 #  define var_destroy_object sgsVM_VarDestroyObject
 
@@ -588,9 +588,9 @@ sgs_VHTable;
 
 void sgs_vht_init( sgs_VHTable* vht, SGS_CTX );
 void sgs_vht_free( sgs_VHTable* vht, SGS_CTX );
-sgs_VHTableVar* sgs_vht_getS( sgs_VHTable* vht, sgs_iStr* S );
-void sgs_vht_setS( sgs_VHTable* vht, sgs_iStr* S, sgs_Variable* var, SGS_CTX );
-int sgs_vht_unsetS( sgs_VHTable* vht, sgs_iStr* S, SGS_CTX );
+sgs_VHTableVar* sgs_vht_get( sgs_VHTable* vht, sgs_Variable* K );
+void sgs_vht_set( sgs_VHTable* vht, sgs_Variable* K, sgs_Variable* var, SGS_CTX );
+int sgs_vht_unset( sgs_VHTable* vht, sgs_Variable* K, SGS_CTX );
 #define sgs_vht_size( T ) ((T)->ht.load)
 
 

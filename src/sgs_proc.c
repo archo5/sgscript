@@ -349,18 +349,18 @@ void vht_free( VHTable* vht, SGS_CTX )
 		sgs_Dealloc( vht->vars );
 }
 
-sgs_VHTableVar* vht_getS( sgs_VHTable* vht, string_t* S )
+sgs_VHTableVar* vht_get( sgs_VHTable* vht, sgs_Variable* K )
 {
-	HTPair* pair = ht_findS( &vht->ht, S );
+	HTPair* pair = ht_findV( &vht->ht, K, sgs_HashVar( K ) );
 	if( pair )
 		return vht->vars + (size_t) pair->ptr;
 	else
 		return NULL;
 }
 
-void vht_setS( VHTable* vht, string_t* S, sgs_Variable* var, SGS_CTX )
+void vht_set( VHTable* vht, sgs_Variable* K, sgs_Variable* var, SGS_CTX )
 {
-	VHTableVar* tv = vht_getS( vht, S );
+	VHTableVar* tv = vht_get( vht, K );
 	VAR_ACQUIRE( var );
 	if( tv )
 	{
@@ -383,7 +383,7 @@ void vht_setS( VHTable* vht, string_t* S, sgs_Variable* var, SGS_CTX )
 		/* no 'else', just an extra scope */
 		{
 			uint32_t ni = vht_size( vht );
-			HTPair* p = ht_setS( &vht->ht, C, S, (void*)( (size_t) ni ) );
+			HTPair* p = ht_setV( &vht->ht, C, K, (void*)( (size_t) ni ) );
 			VHTableVar htv;
 			{
 				htv.key = p->key;
@@ -395,9 +395,9 @@ void vht_setS( VHTable* vht, string_t* S, sgs_Variable* var, SGS_CTX )
 	}
 }
 
-int vht_unsetS( VHTable* vht, string_t* S, SGS_CTX )
+int vht_unset( VHTable* vht, sgs_Variable* K, SGS_CTX )
 {
-	HTPair* tvp = ht_findS( &vht->ht, S );
+	HTPair* tvp = ht_findV( &vht->ht, K, sgs_HashVar( K ) );
 	if( tvp )
 	{
 		VHTableVar* tv = vht->vars + ( ((uint32_t)(size_t) tvp->ptr) );
@@ -1151,7 +1151,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 		}
 		else if( idx->type == VTC_STRING )
 		{
-			VHTableVar* var = vht_getS( ht, idx->data.S );
+			VHTableVar* var = vht_get( ht, idx );
 			if( !var )
 				return VM_GETPROP_ERR( SGS_ENOTFND );
 			else
@@ -1167,7 +1167,7 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 				return VM_GETPROP_ERR( SGS_EINVAL );
 			else
 			{
-				VHTableVar* var = vht_getS( ht, stk_getpos( C, -1 )->data.S );
+				VHTableVar* var = vht_get( ht, stk_getpos( C, -1 ) );
 				if( !var )
 					return VM_GETPROP_ERR( SGS_ENOTFND );
 				else

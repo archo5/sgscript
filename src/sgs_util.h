@@ -75,6 +75,7 @@
 #  define ht_findV sgs_ht_findV
 #  define ht_set sgs_ht_set
 #  define ht_setS sgs_ht_setS
+#  define ht_setV sgs_ht_setV
 #  define ht_unset sgs_ht_unset
 #  define ht_unset_pair sgs_ht_unset_pair
 #  define ht_iterate sgs_ht_iterate
@@ -195,6 +196,7 @@ static SGS_INLINE void sgs_membuf_appchr( sgs_MemBuf* mb, SGS_CTX, char chr )
 typedef uint32_t sgs_Hash;
 SGS_APIFUNC sgs_Hash sgs_HashFunc( const char* str, int size );
 #define SGS_HASH_COMPUTED( h ) ((h) != 0)
+SGS_APIFUNC sgs_Hash sgs_HashVar( const sgs_Variable* v );
 
 typedef struct _sgs_HTPair sgs_HTPair;
 struct _sgs_HTPair
@@ -223,9 +225,10 @@ SGS_APIFUNC void sgs_ht_rehash( sgs_HashTable* T, SGS_CTX, int size );
 SGS_APIFUNC void sgs_ht_check( sgs_HashTable* T, SGS_CTX, int inc );
 SGS_APIFUNC sgs_HTPair* sgs_ht_find( sgs_HashTable* T, const char* str, int size, sgs_Hash h );
 SGS_APIFUNC sgs_HTPair* sgs_ht_findS( sgs_HashTable* T, sgs_iStr* S );
-SGS_APIFUNC sgs_HTPair* sgs_ht_findV( sgs_HashTable* T, sgs_Variable* S, sgs_Hash hash );
-SGS_APIFUNC sgs_HTPair* sgs_ht_setS( sgs_HashTable* T, SGS_CTX, sgs_iStr* S, void* ptr );
+SGS_APIFUNC sgs_HTPair* sgs_ht_findV( sgs_HashTable* T, sgs_Variable* V, sgs_Hash hash );
 SGS_APIFUNC sgs_HTPair* sgs_ht_set( sgs_HashTable* T, SGS_CTX, const char* str, int size, void* ptr );
+SGS_APIFUNC sgs_HTPair* sgs_ht_setS( sgs_HashTable* T, SGS_CTX, sgs_iStr* S, void* ptr );
+SGS_APIFUNC sgs_HTPair* sgs_ht_setV( sgs_HashTable* T, SGS_CTX, sgs_Variable* V, void* ptr );
 SGS_APIFUNC void sgs_ht_unset( sgs_HashTable* T, SGS_CTX, const char* str, int size );
 SGS_APIFUNC void sgs_ht_unset_pair( sgs_HashTable* T, SGS_CTX, sgs_HTPair* pair );
 SGS_APIFUNC void sgs_ht_iterate( sgs_HashTable* T, sgs_HTIterFunc func, void* userdata );

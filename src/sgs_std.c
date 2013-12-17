@@ -1003,7 +1003,7 @@ static int sgsstd_dict_getindex_exact( SGS_CTX, sgs_VarObj* data )
 	if( sgs_ItemType( C, -1 ) != SVT_STRING )
 		return SGS_EINVAL;
 
-	pair = vht_getS( ht, (C->stack_top-1)->data.S );
+	pair = vht_get( ht, (C->stack_top-1) );
 	if( !pair )
 		return SGS_ENOTFND;
 
@@ -1031,7 +1031,7 @@ int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( !sgs_ToString( C, -1 ) )
 		return SGS_EINVAL;
 	
-	pair = vht_getS( ht, (C->stack_top-1)->data.S );
+	pair = vht_get( ht, (C->stack_top-1) );
 	if( !pair )
 		return SGS_ENOTFND;
 
@@ -1048,7 +1048,7 @@ static int sgsstd_dict_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 	sgs_GetStackItem( C, -1, &val );
 	if( !str )
 		return SGS_EINVAL;
-	vht_setS( ht, (C->stack_top-2)->data.S, &val, C );
+	vht_set( ht, (C->stack_top-2), &val, C );
 	return SGS_SUCCESS;
 }
 
@@ -1154,7 +1154,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 		DictHdr* ndh = mkdict( C );
 		for( i = 0; i < htsize; ++i )
 		{
-			vht_setS( &ndh->ht, &ht->vars[ i ].key, &ht->vars[ i ].val, C );
+			vht_set( &ndh->ht, &ht->vars[ i ].key, &ht->vars[ i ].val, C );
 		}
 		(C->stack_top-1)->type = VTC_DICT;
 		return SGS_SUCCESS;
@@ -1223,7 +1223,7 @@ static int sgsstd_dict( SGS_CTX )
 			return sgs_FuncArgError( C, i, SVT_STRING, 0 );
 
 		sgs_GetStackItem( C, i + 1, &val );
-		vht_setS( ht, (C->stack_off+i)->data.S, &val, C );
+		vht_set( ht, (C->stack_off+i), &val, C );
 	}
 
 	(C->stack_top-1)->type = VTC_DICT;
@@ -1920,7 +1920,7 @@ static int sgsstd_unset( SGS_CTX )
 	
 	dh = (DictHdr*) sgs_GetObjectData( C, 0 );
 	
-	vht_unsetS( &dh->ht, (C->stack_off+1)->data.S, C );
+	vht_unset( &dh->ht, (C->stack_off+1), C );
 
 	return 0;
 }
@@ -3318,7 +3318,7 @@ int sgsSTD_MakeDict( SGS_CTX, int cnt )
 		}
 
 		sgs_GetStackItem( C, i - cnt, &val );
-		vht_setS( ht, (C->stack_top+i-cnt-1)->data.S, &val, C );
+		vht_set( ht, (C->stack_top+i-cnt-1), &val, C );
 	}
 
 	sgs_PopSkip( C, cnt, 1 );
@@ -3385,7 +3385,7 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 		out->data.O = GLBP;
 		return SGS_SUCCESS;
 	}
-	else if( ( pair = vht_getS( ht, idx->data.S ) ) != NULL )
+	else if( ( pair = vht_get( ht, idx ) ) != NULL )
 	{
 		sgsVM_ReleaseStack( C, out );
 		*out = pair->val;
@@ -3430,7 +3430,7 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 		return SGS_SUCCESS;
 	}
 
-	vht_setS( ht, idx->data.S, val, C );
+	vht_set( ht, idx, val, C );
 	return SGS_SUCCESS;
 }
 
@@ -3648,9 +3648,9 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 		{
 			sgs_Variable str;
 			sgs_GetStackItem( C, arg, &str );
-			vht_unsetS(
+			vht_unset(
 				&((DictHdr*)sgs_GetObjectData( C, item ))->ht,
-				str.data.S, C );
+				&str, C );
 			return SGS_SUCCESS;
 		}
 		
