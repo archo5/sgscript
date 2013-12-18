@@ -89,11 +89,15 @@ void sgsVM_VarDestroyObject( SGS_CTX, object_t* O )
 static void var_destroy_string( SGS_CTX, string_t* S )
 {
 #if SGS_STRINGTABLE_MAXLEN >= 0
-	HTPair* p = S->size <= SGS_STRINGTABLE_MAXLEN ? ht_findS( &C->stringtable, S ) : NULL;
-	if( p && p->str == S )
+	sgs_Variable tmp;
+	tmp.type = VTC_STRING;
+	tmp.data.S = S;
+	VHTVar* p = S->size <= SGS_STRINGTABLE_MAXLEN ? vht_get( &C->stringtable, &tmp ) : NULL;
+	if( p && p->key.data.S == S )
 	{
 		S->refcount = 2; /* the 'less code' way to avoid double free */
-		ht_unset_pair( &C->stringtable, C, p );
+		vht_unset( &C->stringtable, C, &tmp );
+		printf( "unset string %s\n", str_cstr(S) );
 	}
 #endif
 	sgs_Dealloc( S );
@@ -320,100 +324,6 @@ static void vm_frame_pop( SGS_CTX )
 	if( C->sf_first == F )
 		C->sf_first = NULL;
 }
-
-
-/*
-	Variable hash table
-*/
-
-#if 0
-void vht_init( VHTable* vht, SGS_CTX )
-{
-	ht_init( &vht->ht, C, 4 );
-	vht->vars = NULL;
-	vht->mem = 0;
-}
-
-void vht_free( VHTable* vht, SGS_CTX )
-{
-	int32_t i;
-	for( i = 0; i < vht_size( vht ); ++i )
-	{
-		sgs_VarPtr p = &vht->vars[ i ].val;
-		sgs_Release( C, p );
-	}
-	ht_free( &vht->ht, C );
-	if( vht->vars )
-		sgs_Dealloc( vht->vars );
-}
-
-sgs_VHTableVar* vht_get( sgs_VHTable* vht, sgs_Variable* K )
-{
-	HTPair* pair = ht_findV( &vht->ht, K, sgs_HashVar( K ) );
-	if( pair )
-		return vht->vars + (size_t) pair->ptr;
-	else
-		return NULL;
-}
-
-void vht_set( VHTable* vht, sgs_Variable* K, sgs_Variable* var, SGS_CTX )
-{
-	VHTableVar* tv = vht_get( vht, K );
-	VAR_ACQUIRE( var );
-	if( tv )
-	{
-		VAR_RELEASE( &tv->val );
-		tv->val = *var;
-	}
-	else
-	{
-		if( vht->mem == vht_size( vht ) )
-		{
-			int32_t nmem = vht->mem * 2 + 4;
-			VHTableVar* narr = sgs_Alloc_n( VHTableVar, nmem );
-			memcpy( narr, vht->vars, sizeof( VHTableVar ) * vht_size( vht ) );
-			if( vht->vars )
-				sgs_Dealloc( vht->vars );
-			vht->vars = narr;
-			vht->mem = nmem;
-		}
-
-		/* no 'else', just an extra scope */
-		{
-			uint32_t ni = vht_size( vht );
-			HTPair* p = ht_setV( &vht->ht, C, K, (void*)( (size_t) ni ) );
-			VHTableVar htv;
-			{
-				htv.key = p->key;
-				htv.hash = p->hash;
-				htv.val = *var;
-			}
-			vht->vars[ ni ] = htv;
-		}
-	}
-}
-
-int vht_unset( VHTable* vht, sgs_Variable* K, SGS_CTX )
-{
-	HTPair* tvp = ht_findV( &vht->ht, K, sgs_HashVar( K ) );
-	if( tvp )
-	{
-		VHTableVar* tv = vht->vars + ( ((uint32_t)(size_t) tvp->ptr) );
-		VAR_RELEASE( &tv->val );
-		if( tv - vht->vars != vht_size( vht ) )
-		{
-			VHTableVar* lhtv = vht->vars + ( vht_size( vht ) - 1 );
-			tv->val = lhtv->val;
-			tv->key = lhtv->key;
-			tv->hash = lhtv->hash;
-			ht_findV( &vht->ht, &tv->key, tv->hash )->ptr = (void*)( tv - vht->vars );
-		}
-		ht_unset_pair( &vht->ht, C, tvp );
-		return 1;
-	}
-	return 0;
-}
-#endif
 
 
 /*
@@ -3539,7 +3449,7 @@ SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjCallback* iface )
 	{
 		sgs_Variable tmp;
 		tmp.type = VTC_INT;
-		tmp.data.I = (sgs_Int) iface;
+		tmp.data.I = (sgs_Int) (size_t) iface;
 		sgs_PushStringBuf( C, name, len );
 		vht_set( &C->typetable, C, C->stack_top-1, &tmp );
 		sgs_Pop( C, 1 );
@@ -3562,7 +3472,7 @@ sgs_ObjCallback* sgs_FindType( SGS_CTX, const char* name )
 	int len = strlen( name );
 	VHTVar* p = vht_get_str( &C->typetable, name, len, sgs_HashFunc( name, len ) );
 	if( p )
-		return (sgs_ObjCallback*) p->val.data.I;
+		return (sgs_ObjCallback*) (size_t) p->val.data.I;
 	return NULL;
 }
 

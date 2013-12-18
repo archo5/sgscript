@@ -167,6 +167,7 @@ void vht_init( sgs_VHTable* T, SGS_CTX, VHTIdx initial_pair_mem, VHTIdx initial_
 	T->vars = sgs_Alloc_n( VHTVar, initial_var_mem );
 	T->var_mem = initial_var_mem;
 	T->size = 0;
+	T->num_rem = 0;
 	
 	memset( T->pairs, SGS_VHTIDX_EMPTY, sizeof(VHTIdx) * initial_pair_mem );
 }
@@ -194,16 +195,21 @@ void vht_rehash( VHTable* T, SGS_CTX, VHTIdx size )
 	
 	if( size == T->pair_mem )
 		return;
+	if( size < 4 )
+		size = 4;
 	
 	np = sgs_Alloc_n( VHTIdx, size );
 	memset( np, SGS_VHTIDX_EMPTY, sizeof(VHTIdx) * size );
 	
+//	printf( "rehash %d -> %d (size = %d, mem = %d kB)\n", T->pair_mem, size, T->size,
+//		(size * sizeof(VHTIdx) + T->var_mem * sizeof(VHTVar)) / 1024 );
+	
 	for( si = 0; si < T->pair_mem; ++si )
 	{
 		idx = T->pairs[ si ];
-		h = T->vars[ idx ].hash;
 		if( idx >= 0 )
 		{
+			h = T->vars[ idx ].hash;
 			sp = i = h % size;
 			do
 			{
@@ -224,13 +230,22 @@ void vht_rehash( VHTable* T, SGS_CTX, VHTIdx size )
 	sgs_Dealloc( T->pairs );
 	T->pairs = np;
 	T->pair_mem = size;
+	T->num_rem = 0;
 }
 
 void vht_reserve( VHTable* T, SGS_CTX, VHTIdx size )
 {
 	VHTVar* p;
-	if( size <= T->var_mem )
+	
+	sgs_BreakIf( size < T->size );
+	
+	if( size == T->var_mem )
 		return;
+	if( size < 4 )
+		size = 4;
+	
+//	printf( "reserve %d -> %d (size = %d, mem = %d kB)\n", T->var_mem, size, T->size,
+//		(T->pair_mem * sizeof(VHTIdx) + size * sizeof(VHTVar)) / 1024 );
 	
 	p = sgs_Alloc_n( VHTVar, size );
 	memcpy( p, T->vars, sizeof(VHTVar) * T->size );
@@ -249,20 +264,12 @@ VHTIdx vht_pair_id( VHTable* T, sgs_Variable* K, sgs_Hash hash )
 		if( idx == SGS_VHTIDX_EMPTY )
 			break;
 		if( idx != SGS_VHTIDX_REMOVED && equal_variables( K, &T->vars[ idx ].key ) )
-		{
-//			if( BASETYPE( K->type ) == SVT_STRING )
-//				print_safe( stdout, var_cstr( &T->vars[idx].key ), T->vars[idx].key.data.S->size );
-//			printf( " - HIT\n" );
 			return i;
-		}
 		i++;
 		if( i >= T->pair_mem )
 			i = 0;
 	}
 	while( i != sp );
-//			if( BASETYPE( K->type ) == SVT_STRING )
-//				print_safe( stdout, var_cstr( K ), K->data.S->size );
-//			printf( " - MISS\n" );
 	return -1;
 }
 
@@ -324,10 +331,11 @@ VHTVar* vht_set( VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable* V )
 		VHTIdx osize = T->size;
 		UNUSED( osize );
 		
-		if( T->size + 1.0 >= T->pair_mem * 0.75 )
-			vht_rehash( T, C, MAX( T->pair_mem * 2, T->size + 1 ) );
+		/* prefer to rehash if too many removed (num_rem) items are found */
+		if( T->size + T->num_rem + 1.0 >= T->pair_mem * 0.7 )
+			vht_rehash( T, C, MAX( T->pair_mem * 1.5, T->size + 16 ) );
 		if( T->size >= T->var_mem )
-			vht_reserve( T, C, MAX( T->size * 2, T->size + 16 ) );
+			vht_reserve( T, C, MAX( T->size * 1.5, T->size + 16 ) );
 		
 		{
 			VHTVar* p = T->vars + T->size;
@@ -349,6 +357,8 @@ VHTVar* vht_set( VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable* V )
 			VHTIdx idx = T->pairs[ i ];
 			if( idx == SGS_VHTIDX_EMPTY || idx == SGS_VHTIDX_REMOVED )
 			{
+				if( idx == SGS_VHTIDX_REMOVED )
+					T->num_rem--;
 				T->pairs[ i ] = T->size;
 				T->size++;
 				break;
@@ -377,6 +387,7 @@ void vht_unset( VHTable* T, SGS_CTX, sgs_Variable* K )
 		
 		T->pairs[ i ] = SGS_VHTIDX_REMOVED;
 		
+		T->num_rem++;
 		T->size--;
 		if( p < T->vars + T->size )
 		{
@@ -390,260 +401,13 @@ void vht_unset( VHTable* T, SGS_CTX, sgs_Variable* K )
 		sgs_Release( C, &bp.key );
 		sgs_Release( C, &bp.val );
 	}
-}
-
-
-#if 0
-static void htp_remove( HTPair** p, SGS_CTX )
-{
-	HTPair* pn = (*p)->next;
-	HTPair* cur = *p;
-	*p = pn;
-	sgs_Release( C, &cur->key );
-	sgs_Dealloc( cur );
-}
-
-void ht_init( HashTable* T, SGS_CTX, int size )
-{
-	T->pairs = sgs_Alloc_n( HTPair*, size );
-	T->size = size;
-	T->load = 0;
-	memset( T->pairs, 0, sizeof( HTPair* ) * size );
-}
-
-void ht_clear( sgs_HashTable* T, SGS_CTX )
-{
-	HTPair** p = T->pairs, **pend = T->pairs + T->size;
-	while( p < pend )
-	{
-		while( *p )
-			htp_remove( p, C );
-		p++;
-	}
-	T->load = 0;
-}
-
-void ht_free( HashTable* T, SGS_CTX )
-{
-	ht_clear( T, C );
-	sgs_Dealloc( T->pairs );
-	T->pairs = NULL;
-	T->size = 0;
-}
-
-void ht_rehash( HashTable* T, SGS_CTX, int size )
-{
-	HTPair** np, **p = T->pairs, **pend = T->pairs + T->size;
 	
-	if( size < 1 )
-		size = 1;
-	
-	sgs_BreakIf( size < T->load );
-	np = sgs_Alloc_n( HTPair*, size );
-	memset( np, 0, sizeof( HTPair* ) * size );
-	
-	while( p < pend )
+	if( T->num_rem > T->var_mem * 0.25 + 16 )
 	{
-		HTPair* pc = *p;
-		while( pc )
-		{
-			HTPair* pn = pc->next;
-			sgs_Hash hm = pc->hash % size;
-			pc->next = np[ hm ];
-			np[ hm ] = pc;
-			pc = pn;
-		}
-		p++;
-	}
-	
-	sgs_Dealloc( T->pairs );
-	T->pairs = np;
-	T->size = size;
-}
-
-void ht_check( HashTable* T, SGS_CTX, int inc )
-{
-#if 0
-	if( T->load + inc > T->size * 0.75 )
-	{
-		int newsize = (int)( T->size * 0.6 + ( T->load + inc ) * 0.6 );
-		ht_rehash( T, C, newsize );
-	}
-	else if( T->load + inc < T->size * 0.25 )
-	{
-		int newsize = (int)( T->size * 0.5 + ( T->load + inc ) * 0.5 );
-		ht_rehash( T, C, newsize );
-	}
-#else
-	if( T->load + inc > T->size * 0.75 )
-	{
-		int newsize = (int)( T->size * 0.75 + ( T->load + inc ) * 0.75 );
-		if( newsize < T->load * 2 )
-			newsize = T->load * 2;
-		ht_rehash( T, C, newsize );
-	}
-#endif
-}
-
-HTPair* ht_find( HashTable* T, const char* str, int size, sgs_Hash h )
-{
-	HTPair* p = T->pairs[ ( h % T->size ) ];
-	while( p )
-	{
-		if( BASETYPE( p->key.type ) == SVT_STRING &&
-			p->key.data.S->size == size && !memcmp( str, var_cstr( &p->key ), size ) )
-			return p;
-		p = p->next;
-	}
-	return NULL;
-}
-
-HTPair* ht_findS( HashTable* T, string_t* S )
-{
-	HTPair* p;
-	if( !HASH_COMPUTED( S->hash ) )
-		S->hash = hashFunc( str_cstr( S ), S->size );
-	p = T->pairs[ ( S->hash % T->size ) ];
-	while( p )
-	{
-		if( BASETYPE( p->key.type ) == SVT_STRING )
-		{
-			if( S == p->key.data.S )
-				return p;
-			if( p->key.data.S->size == S->size && !memcmp( str_cstr( S ), var_cstr( &p->key ), S->size ) )
-				return p;
-		}
-		p = p->next;
-	}
-	return NULL;
-}
-
-HTPair* ht_findV( HashTable* T, sgs_Variable* V, sgs_Hash hash )
-{
-	HTPair* p = T->pairs[ hash % T->size ];
-	while( p )
-	{
-		if( equal_variables( V, &p->key ) )
-			return p;
-		p = p->next;
-	}
-	return NULL;
-}
-
-HTPair* ht_set( HashTable* T, SGS_CTX, const char* str, int size, void* ptr )
-{
-	sgs_Hash h = hashFunc( str, size );
-	HTPair* p = ht_find( T, str, size, h );
-	if( p )
-		p->ptr = ptr;
-	else
-	{
-		HTPair* np = sgs_Alloc( HTPair );
-		
-		ht_check( T, C, 1 );
-		
-		sgsVM_VarCreateString( C, &np->key, str, size );
-		np->ptr = ptr;
-		h = np->hash = np->key.data.S->hash;
-		
-		np->next = T->pairs[ h % T->size ];
-		T->pairs[ h % T->size ] = np;
-		T->load++;
-		p = np;
-	}
-	return p;
-}
-
-HTPair* ht_setS( HashTable* T, SGS_CTX, string_t* S, void* ptr )
-{
-	HTPair* p = ht_findS( T, S );
-	if( p )
-		p->ptr = ptr;
-	else
-	{
-		HTPair* np = sgs_Alloc( HTPair );
-		
-		ht_check( T, C, 1 );
-		
-		S->refcount++;
-		np->key.type = VTC_STRING;
-		np->key.data.S = S;
-		np->hash = S->hash;
-		np->ptr = ptr;
-		
-		np->next = T->pairs[ S->hash % T->size ];
-		T->pairs[ S->hash % T->size ] = np;
-		T->load++;
-		p = np;
-	}
-	return p;
-}
-
-HTPair* ht_setV( HashTable* T, SGS_CTX, sgs_Variable* V, void* ptr )
-{
-	sgs_Hash h = sgs_HashVar( V );
-	HTPair* p = ht_findV( T, V, h );
-	if( p )
-		p->ptr = ptr;
-	else
-	{
-		HTPair* np = sgs_Alloc( HTPair );
-		
-		ht_check( T, C, 1 );
-		
-		np->key = *V;
-		sgs_Acquire( C, V );
-		np->hash = h;
-		np->ptr = ptr;
-		
-		np->next = T->pairs[ h % T->size ];
-		T->pairs[ h % T->size ] = np;
-		T->load++;
-		p = np;
-	}
-	return p;
-}
-
-void ht_unset( sgs_HashTable* T, SGS_CTX, const char* str, int size )
-{
-	sgs_Hash h = hashFunc( str, size );
-	HTPair* p = ht_find( T, str, size, h );
-	if( p )
-		ht_unset_pair( T, C, p );
-}
-
-void ht_unset_pair( sgs_HashTable* T, SGS_CTX, sgs_HTPair* pair )
-{
-	sgs_Hash h = pair->hash;
-	HTPair** p = T->pairs + ( h % T->size );
-	while( *p )
-	{
-		if( *p == pair )
-		{
-			htp_remove( p, C );
-			T->load--;
-			ht_check( T, C, -1 );
-			return;
-		}
-		p = &(*p)->next;
+		vht_reserve( T, C, T->size * 0.75 + T->var_mem * 0.25 );
+		vht_rehash( T, C, T->size * 0.5 + T->var_mem * 0.5 );
 	}
 }
-
-void ht_iterate( sgs_HashTable* T, sgs_HTIterFunc func, void* userdata )
-{
-	HTPair** p = T->pairs, **pend = T->pairs + T->size;
-	while( p < pend )
-	{
-		HTPair* sp = *p;
-		while( sp )
-		{
-			func( sp, userdata );
-			sp = sp->next;
-		}
-		p++;
-	}
-}
-#endif
 
 
 double sgs_GetTime()

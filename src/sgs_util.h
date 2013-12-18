@@ -71,35 +71,6 @@
 #  define vht_set sgs_vht_set
 #  define vht_unset sgs_vht_unset
 #  define vht_size sgs_vht_size
-/*
-#  define HASH_COMPUTED SGS_HASH_COMPUTED
-
-#  define HTPair sgs_HTPair
-#  define HashTable sgs_HashTable
-#  define ht_init sgs_ht_init
-#  define ht_clear sgs_ht_clear
-#  define ht_free sgs_ht_free
-#  define ht_rehash sgs_ht_rehash
-#  define ht_check sgs_ht_check
-#  define ht_find sgs_ht_find
-#  define ht_findS sgs_ht_findS
-#  define ht_findV sgs_ht_findV
-#  define ht_set sgs_ht_set
-#  define ht_setS sgs_ht_setS
-#  define ht_setV sgs_ht_setV
-#  define ht_unset sgs_ht_unset
-#  define ht_unset_pair sgs_ht_unset_pair
-#  define ht_iterate sgs_ht_iterate
-
-#  define VHTable sgs_VHTable
-#  define VHTableVar sgs_VHTableVar
-#  define vht_init sgs_vht_init
-#  define vht_free sgs_vht_free
-#  define vht_get sgs_vht_get
-#  define vht_set sgs_vht_set
-#  define vht_unset sgs_vht_unset
-#  define vht_size sgs_vht_size
-*/
 
 #  define print_safe sgs_print_safe
 #  define util_strtonum sgs_util_strtonum
@@ -242,6 +213,7 @@ struct _sgs_VHTable
 	sgs_VHTIdx  pair_mem;
 	sgs_VHTIdx  var_mem;
 	sgs_VHTIdx  size;
+	sgs_VHTIdx  num_rem;
 }
 sgs_VHTable;
 
@@ -255,31 +227,6 @@ SGS_APIFUNC void sgs_vht_unset( sgs_VHTable* T, SGS_CTX, sgs_Variable* K );
 
 #define sgs_vht_size( T ) ((T)->size)
 
-/*
-typedef void (*sgs_VHTIterFunc) ( sgs_VHTPair*, void* );
-
-SGS_APIFUNC void sgs_ht_init( sgs_VHTable* T, SGS_CTX, int size );
-SGS_APIFUNC void sgs_ht_clear( sgs_VHTable* T, SGS_CTX );
-SGS_APIFUNC void sgs_ht_free( sgs_VHTable* T, SGS_CTX );
-SGS_APIFUNC void sgs_ht_rehash( sgs_VHTable* T, SGS_CTX, int size );
-SGS_APIFUNC void sgs_ht_check( sgs_VHTable* T, SGS_CTX, int inc );
-SGS_APIFUNC sgs_HTPair* sgs_ht_find( sgs_VHTable* T, const char* str, int size, sgs_Hash h );
-SGS_APIFUNC sgs_HTPair* sgs_ht_findS( sgs_VHTable* T, sgs_iStr* S );
-SGS_APIFUNC sgs_HTPair* sgs_ht_findV( sgs_VHTable* T, sgs_Variable* V, sgs_Hash hash );
-SGS_APIFUNC sgs_HTPair* sgs_ht_set( sgs_VHTable* T, SGS_CTX, const char* str, int size, void* ptr );
-SGS_APIFUNC sgs_HTPair* sgs_ht_setS( sgs_VHTable* T, SGS_CTX, sgs_iStr* S, void* ptr );
-SGS_APIFUNC sgs_HTPair* sgs_ht_setV( sgs_VHTable* T, SGS_CTX, sgs_Variable* V, void* ptr );
-SGS_APIFUNC void sgs_ht_unset( sgs_VHTable* T, SGS_CTX, const char* str, int size );
-SGS_APIFUNC void sgs_ht_unset_pair( sgs_VHTable* T, SGS_CTX, sgs_HTPair* pair );
-SGS_APIFUNC void sgs_ht_iterate( sgs_VHTable* T, sgs_VHTIterFunc func, void* userdata );
-
-SGS_APIFUNC void sgs_vht_init( sgs_VHTable* vht, SGS_CTX );
-SGS_APIFUNC void sgs_vht_free( sgs_VHTable* vht, SGS_CTX );
-SGS_APIFUNC sgs_VHTableVar* sgs_vht_get( sgs_VHTable* vht, sgs_Variable* K );
-SGS_APIFUNC void sgs_vht_set( sgs_VHTable* vht, sgs_Variable* K, sgs_Variable* var, SGS_CTX );
-SGS_APIFUNC int sgs_vht_unset( sgs_VHTable* vht, sgs_Variable* K, SGS_CTX );
-#define sgs_vht_size( T ) ((T)->size)
-*/
 
 SGS_APIFUNC double sgs_GetTime();
 
