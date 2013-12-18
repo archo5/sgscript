@@ -7,7 +7,7 @@
 #define SGS_VERSION_MINOR 9
 #define SGS_VERSION_INCR  0
 #define SGS_VERSION "0.9.0"
-#define SGS_API_VERSION 4
+#define SGS_API_VERSION 5
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
@@ -44,6 +44,7 @@ extern "C" {
 #  define VTF_ARRAY SGS_VTF_ARRAY
 #  define VTF_ARRAY_ITER SGS_VTF_ARRAY_ITER
 #  define VTF_DICT SGS_VTF_DICT
+#  define VTF_MAP SGS_VTF_MAP
 #  define VTC_NULL SGS_VTC_NULL
 #  define VTC_BOOL SGS_VTC_BOOL
 #  define VTC_INT SGS_VTC_INT
@@ -55,6 +56,7 @@ extern "C" {
 #  define VTC_ARRAY SGS_VTC_ARRAY
 #  define VTC_ARRAY_ITER SGS_VTC_ARRAY_ITER
 #  define VTC_DICT SGS_VTC_DICT
+#  define VTC_MAP SGS_VTC_MAP
 
 #  define SOP_END SGS_OP_END
 #  define SOP_DESTRUCT SGS_OP_DESTRUCT
@@ -213,6 +215,7 @@ typedef void (*sgs_HookFunc) (
 #define SGS_ACT_ARRAY_RM_ONE 5
 #define SGS_ACT_ARRAY_RM_ALL 6
 #define SGS_ACT_DICT_UNSET   11
+#define SGS_ACT_MAP_UNSET    21
 
 
 /* Context internals */
@@ -235,6 +238,7 @@ typedef void (*sgs_HookFunc) (
 #define SGS_VTF_ARRAY  0x1000
 #define SGS_VTF_ARRAY_ITER 0x2000
 #define SGS_VTF_DICT   0x4000
+#define SGS_VTF_MAP    0x8000
 
 /* - complete variable types */
 #define SGS_VTC_NULL    (SGS_VT_NULL)
@@ -248,6 +252,7 @@ typedef void (*sgs_HookFunc) (
 #define SGS_VTC_ARRAY   (SGS_VTC_OBJECT | SGS_VTF_ARRAY)
 #define SGS_VTC_ARRAY_ITER (SGS_VTC_OBJECT | SGS_VTF_ARRAY_ITER)
 #define SGS_VTC_DICT    (SGS_VTC_OBJECT | SGS_VTF_DICT)
+#define SGS_VTC_MAP     (SGS_VTC_OBJECT | SGS_VTF_MAP)
 
 /* - object data */
 typedef struct sgs_ObjData sgs_VarObj;
@@ -491,6 +496,7 @@ SGS_APIFUNC void sgs_PushVariable( SGS_CTX, sgs_Variable* var );
 SGS_APIFUNC SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var );
 SGS_APIFUNC SGSRESULT sgs_PushArray( SGS_CTX, sgs_SizeVal numitems );
 SGS_APIFUNC SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems );
+SGS_APIFUNC SGSRESULT sgs_PushMap( SGS_CTX, sgs_SizeVal numitems );
 
 SGS_APIFUNC SGSRESULT sgs_PushItem( SGS_CTX, int item );
 SGS_APIFUNC SGSRESULT sgs_StoreItem( SGS_CTX, int item );

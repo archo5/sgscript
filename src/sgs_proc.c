@@ -1092,6 +1092,18 @@ static int vm_getprop( SGS_CTX, int16_t out, sgs_Variable* obj, sgs_Variable* id
 		stk_push( C, idx );
 		ret = sgsstd_array_getindex( C, obj->data.O, !isindex );
 	}
+	else if( obj->type == VTC_MAP )
+	{
+		VHTable* ht = (VHTable*) obj->data.O->data;
+		VHTVar* var = vht_get( ht, idx );
+		if( !var )
+			return VM_GETPROP_ERR( SGS_ENOTFND );
+		else
+		{
+			stk_setlvar( C, out, &var->val );
+			return SGS_SUCCESS;
+		}
+	}
 	else if( obj->type & SVT_OBJECT )
 	{
 		sgs_VarObj* o = obj->data.O;
@@ -1167,6 +1179,7 @@ static int vm_clone( SGS_CTX, int16_t out, sgs_Variable* var )
 	case VTC_OBJECT:
 	case VTC_ARRAY:
 	case VTC_DICT:
+	case VTC_MAP:
 		{
 			int sz = STACKFRAMESIZE;
 			int ret = obj_exec( C, SOP_CONVERT, var->data.O, SGS_CONVOP_CLONE, 0 );
@@ -2131,6 +2144,14 @@ SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems )
 	return ret;
 }
 
+SGSRESULT sgs_PushMap( SGS_CTX, sgs_SizeVal numitems )
+{
+	int ret = sgsSTD_MakeMap( C, numitems );
+	if( ret == SGS_SUCCESS )
+		(C->stack_top-1)->type |= VTF_MAP;
+	return ret;
+}
+
 
 SGSRESULT sgs_PushItem( SGS_CTX, int item )
 {
@@ -2644,7 +2665,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 			}
 			strict = 0; nowrite = 0; from++; break;
 			
-		case 'a': case 't': case 'o':
+		case 'a': case 't': case 'h': case 'o':
 			{
 				int fcf = VTC_OBJECT;
 				sgs_ObjCallback* ifc = NULL;
@@ -2652,6 +2673,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				
 				if( *cmd == 'a' ){ fcf = VTC_ARRAY; ostr = "array"; }
 				if( *cmd == 't' ){ fcf = VTC_DICT; ostr = "dict"; }
+				if( *cmd == 'h' ){ fcf = VTC_MAP; ostr = "map"; }
 				if( *cmd == 'o' ) ifc = va_arg( args, sgs_ObjCallback* );
 				
 				if( ( sgs_ItemTypeExt( C, from ) & fcf ) != fcf ||
@@ -2668,7 +2690,8 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 					{
 					case 'a': *va_arg( args, sgs_SizeVal* ) = 
 						((sgsstd_array_header_t*) O->data)->size; break;
-					case 't': *va_arg( args, sgs_SizeVal* ) =
+					case 't':
+					case 'h': *va_arg( args, sgs_SizeVal* ) =
 						vht_size( ((VHTable*) O->data) ); break;
 					case 'o': *va_arg( args, void** ) = O->data; break;
 					}

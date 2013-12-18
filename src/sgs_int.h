@@ -732,6 +732,7 @@ static const char* sgs_IfaceNames[] =
 int sgsSTD_PostInit( SGS_CTX );
 int sgsSTD_MakeArray( SGS_CTX, int cnt );
 int sgsSTD_MakeDict( SGS_CTX, int cnt );
+int sgsSTD_MakeMap( SGS_CTX, int cnt );
 int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, int clc );
 int sgsSTD_GlobalInit( SGS_CTX );
 int sgsSTD_GlobalFree( SGS_CTX );

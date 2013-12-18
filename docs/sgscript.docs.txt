@@ -47,7 +47,7 @@ The language supports:
 
 The standard library includes:
 
-- array, dict, class, closure
+- array, dict, map, class, closure
 - math, string, I/O, O/S and formatting functions
 - `eval`, file import, DLL import
 
@@ -253,6 +253,7 @@ Extended variable types (built on `object`):
 
 - `array`: a dynamically allocated variable array
 - `dict`: a map/table structure where variables are mapped to string keys
+- `map`: a map/table structure where variables are mapped to variable keys
 - `class`: object that uses two other objects to build its interface
 - `closure`: a callable object consisting of another callable and one variable
 
@@ -713,10 +714,11 @@ These are the default meanings for error codes that are honored throughout the A
 -- SGS_VTF_ARRAY: array type flag
 -- SGS_VTF_ARRAY_ITER: array iterator type flag
 -- SGS_VTF_DICT: dict type flag
+-- SGS_VTF_MAP: map type flag
 
 - complete flag combos
 -- SGS_VTC_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]: complete variable flags
--- SGS_VTC_[ARRAY|ARRAY_ITER|DICT]: complete specialized variable flags
+-- SGS_VTC_[ARRAY|ARRAY_ITER|DICT|MAP]: complete specialized variable flags
 
 
 # Object operation types [info]
@@ -977,6 +979,17 @@ These are the default meanings for error codes that are honored throughout the A
 
 == SGSRESULT sgs_PushDict( sgs_Context* C, sgs_SizeVal numitems )
 === creates a dict from `numitems` last items on the stack, pops those items and pushes the dict
+
+- `numitems` can be even or 0, since all odd arguments are keys and all even arguments are values
+
+=== error codes
+- SGS_EINVAL: more items are selected than exist in the current stack frame or `numitems` wasn't even or 0
+
+
+# sgs_PushMap [function]
+
+== SGSRESULT sgs_PushMap( sgs_Context* C, sgs_SizeVal numitems )
+=== creates a map from `numitems` last items on the stack, pops those items and pushes the map
 
 - `numitems` can be even or 0, since all odd arguments are keys and all even arguments are values
 
@@ -1261,6 +1274,7 @@ These are the default meanings for error codes that are honored throughout the A
 - `p` -- check for `func/cfunc/object with SGS_OP_CALL` (callables) (returns SGSBOOL = 1)
 - `a` -- check for `array` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `t` -- check for `dict` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
+- `h` -- check for `map` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `o` -- check for `object` (requires void** interface, returns <type>* data - the data pointer)
 - `v` -- check for any (non-null if strict, returns sgs_Variable data)
 - `x` -- call a custom checking function (requires sgs_ArgCheckFunc, everything else depends on function)
@@ -1446,6 +1460,10 @@ After a successful call, all arguments and the function will be popped off the s
 -- unset a key-value pair from a dict
 -- error codes
 --- SGS_EINVAL: `item` was not a dict, `arg` was not pointing to a stack item of `string` type
+- SGS_ACT_MAP_UNSET
+-- unset a key-value pair from a map
+-- error codes
+--- SGS_EINVAL: `item` was not a map, `arg` was out of bounds
 
 === error codes
 - SGS_E****: action-specific
@@ -2316,7 +2334,7 @@ Most operations are directed towards the scripting engine, that is - environment
 This library is loaded on initialization and contains the functions and constants necessary to do primary actions:
 
 - execution of additional scripts
-- creating and using array, class, dict, closure
+- creating and using array, class, dict, map, closure
 - converting between variables
 - serialization / deserialization
 - operation control
@@ -2350,12 +2368,23 @@ This library is loaded on initialization and contains the functions and constant
     dict( "name", "John", "phone", 1234567890 ); // same as { name = "John", phone = 1234567890 }
 
 
+# map [function]
+
+== map( [key, value, ...] )
+=== returns a 'map' (map/hash table) object, containing the even arguments mapped to respective previous arguments
+
+- if no arguments are passed, an empty map is returned
+- if an even number of arguments is passed, function returns null and emits a warning
+
+    map( "John", "name", 1234567890, "phone" ); // useful for mapping additional data to variables or making sets
+
+
 # class [function]
 
 == class( first, second )
 === returns a class object with `first` set as the primary data source and `second` set as the secondary/backup data source
 
-- both arguments accept all kinds of variables but it's generally preferred to use only dicts / special objects
+- both arguments accept all kinds of variables but it's generally preferred to use only dicts / maps / special objects
 - refer to @CLASSES for more information on how class objects work and how to use them
 
     someCommonInterface = { printdata = function(){ print( this.data ); } };
@@ -2434,8 +2463,10 @@ This library is loaded on initialization and contains the functions and constant
 
 # unset [function]
 
-== unset( dict var, string key )
+== unset( dict|map var, (string) key )
 === removes an entry named `key` from the dictionary `var`
+
+- `key` is only required to be of `string` type if a `dict` is passed
 
 
 # clone [function]
@@ -2458,7 +2489,7 @@ This library is loaded on initialization and contains the functions and constant
 == get_keys( iterable var )
 === returns an array of keys found in the iterable object `var` or returns null and emits a warning on failure
 
-- `var` must be an iterable object (has interface OP_CONVERT defined and successfully handles a CONVOP_TOITER request) - such objects are `array`, `dict` and `io_dir`
+- `var` must be an iterable object (has interface OP_CONVERT defined and successfully handles a CONVOP_TOITER request) - such objects are `array`, `dict`, `map` and `io_dir`
 
     get_keys( [5,7,0] ); // returns [0,1,2]
     get_keys( {b=5,a=2} ); // returns ["b","a"]
@@ -2469,7 +2500,7 @@ This library is loaded on initialization and contains the functions and constant
 == get_values( iterable var )
 === returns an array of values found in the iterable object `var` or returns null and emits a warning on failure
 
-- `var` must be an iterable object (has interface OP_CONVERT defined and successfully handles a CONVOP_TOITER request) - such objects are `array`, `dict` and `io_dir`
+- `var` must be an iterable object (has interface OP_CONVERT defined and successfully handles a CONVOP_TOITER request) - such objects are `array`, `dict`, `map` and `io_dir`
 
     get_values( [5,7,0] ); // returns [5,7,0]
     get_values( {b=5,a=2} ); // returns [5,2]
@@ -3298,6 +3329,21 @@ This library is loaded on initialization and contains the functions and constant
 -- serialization
 -- GC-safe
 -- type identification (returns the string "dict")
+
+
+# map [object]
+
+- features:
+-- read/write index
+-- read/write properties
+-- full content dump
+-- tostring = quick content dump
+-- tobool = size != 0
+-- iterator
+-- cloning
+-- serialization
+-- GC-safe
+-- type identification (returns the string "map")
 
 
 # class [object]
@@ -4512,7 +4558,7 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 -- objects will have SGS_OP_SERIALIZE operation called
 --- if operation is not defined, everything will stop
 --- if object is an array, all variables in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to 'array'
---- if object is a 'dict', all keys and values in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to 'dict'
+--- if object is a 'dict' or a 'map', all keys and values in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to 'dict'
 
 === Deserialization
 
@@ -4527,7 +4573,7 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 
 - unserialization is not by default safe in the sense that any function can be executed with a carefully crafted byte buffer; this can be prevented by specifying the second parameter to the "unserialize" function. the behavior can be reproduced with the C API but it will take a bit more effort or calling the "unserialize" function from it
 - sgs_Serialize overrides the output function so any output done via "print" or "sgs_Write*" functions during serialization will corrupt the stream
-- if environment overrides are used on deserialization, remember to add "array" and "dict" to the list if you use them, they are not added automatically
+- if environment overrides are used on deserialization, remember to add "array", "dict" and "map" to the list if you use them, they are not added automatically
 - serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items
 
 

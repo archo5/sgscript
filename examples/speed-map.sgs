@@ -15,11 +15,13 @@ function fmt_bytenum( n )
 count = 100000;
 
 mem_base = sys_stat(3);
-obj = {};
+num_base = sys_stat(6);
+obj = map();
 t0 = ftime();
 for( var i = 0; i < count; ++i )
 	obj[ i ] = ftime();
 mem_load = sys_stat(3);
+num_load = sys_stat(6);
 
 t1 = ftime();
 for( var i = 0; i < count; ++i )
@@ -29,6 +31,7 @@ t2 = ftime();
 for( var i = 0; i < count; ++i )
 	unset( obj, i );
 mem_unload = sys_stat(3);
+num_unload = sys_stat(6);
 
 t3 = ftime();
 
@@ -45,6 +48,10 @@ printlns
 	"unload: " $ fmt_bytenum( mem_unload ),
 	"memory after dict free: " $ fmt_bytenum( mem_free ),
 	"delta: " $ fmt_bytenum( mem_load - mem_base ),
-	"hash table overhead: " $ fmt_bytenum( mem_unload - mem_free ),
-	"accumulated overhead: " $ fmt_bytenum( mem_free - mem_base )
+	"junk memory after unset: " $ fmt_bytenum( mem_unload - mem_free ),
+	"accumulated overhead: " $ fmt_bytenum( mem_free - mem_base ),
+	"-- allocation count --",
+	"before: " $ num_base,
+	"load: " $ num_load,
+	"unload: " $ num_unload
 );
