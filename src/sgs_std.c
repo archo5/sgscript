@@ -2037,6 +2037,18 @@ static int sgsstd_dict_size( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_map_size( SGS_CTX )
+{
+	sgs_SizeVal size;
+	
+	SGSFN( "map_size" );
+	if( !sgs_LoadArgs( C, "h.", &size ) )
+		return 0;
+	
+	sgs_PushInt( C, size );
+	return 1;
+}
+
 static int sgsstd_isset( SGS_CTX )
 {
 	int oml, ret;
@@ -2158,18 +2170,9 @@ static int sgsstd_get_concat( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_get_merged( SGS_CTX )
+static int sgsstd__get_merged__common( SGS_CTX, sgs_SizeVal ssz )
 {
-	int i, ssz = sgs_StackSize( C );
-	SGSFN( "get_merged" );
-	if( ssz < 2 )
-	{
-		return sgs_Printf( C, SGS_WARNING,
-			"function expects at least 2 arguments, got %d",
-			sgs_StackSize( C ) );
-	}
-
-	sgs_PushDict( C, 0 );
+	sgs_SizeVal i;
 	for( i = 0; i < ssz; ++i )
 	{
 		if( sgs_PushIterator( C, i ) != SGS_SUCCESS )
@@ -2179,8 +2182,7 @@ static int sgsstd_get_merged( SGS_CTX )
 			int ret;
 			/* ..., output, arg2 iter */
 			ret = sgs_IterPushData( C, -1, TRUE, TRUE );
-			if( ret != SGS_SUCCESS ) STDLIB_WARN( 
-				"failed to retrieve data from iterator" )
+			if( ret != SGS_SUCCESS ) STDLIB_WARN( "failed to retrieve data from iterator" )
 			ret = sgs_StoreIndex( C, -4, -2 );
 			if( ret != SGS_SUCCESS ) STDLIB_WARN( "failed to store data" )
 			sgs_Pop( C, 1 );
@@ -2188,6 +2190,36 @@ static int sgsstd_get_merged( SGS_CTX )
 		sgs_Pop( C, 1 );
 	}
 	return 1;
+}
+
+static int sgsstd_get_merged( SGS_CTX )
+{
+	sgs_SizeVal ssz = sgs_StackSize( C );
+	SGSFN( "get_merged" );
+	if( ssz < 2 )
+	{
+		return sgs_Printf( C, SGS_WARNING,
+			"function expects at least 2 arguments, got %d",
+			sgs_StackSize( C ) );
+	}
+
+	sgs_PushDict( C, 0 );
+	return sgsstd__get_merged__common( C, ssz );
+}
+
+static int sgsstd_get_merged_map( SGS_CTX )
+{
+	sgs_SizeVal ssz = sgs_StackSize( C );
+	SGSFN( "get_merged_map" );
+	if( ssz < 2 )
+	{
+		return sgs_Printf( C, SGS_WARNING,
+			"function expects at least 2 arguments, got %d",
+			sgs_StackSize( C ) );
+	}
+
+	sgs_PushMap( C, 0 );
+	return sgsstd__get_merged__common( C, ssz );
 }
 
 
@@ -3342,8 +3374,9 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( array ), FN( dict ), FN( map ), { "class", sgsstd_class }, FN( closure ),
 	FN( array_filter ), FN( array_process ),
 	FN( dict_filter ), FN( dict_process ),
-	FN( dict_size ), FN( isset ), FN( unset ), FN( clone ),
-	FN( get_keys ), FN( get_values ), FN( get_concat ), FN( get_merged ),
+	FN( dict_size ), FN( map_size ), FN( isset ), FN( unset ), FN( clone ),
+	FN( get_keys ), FN( get_values ), FN( get_concat ),
+	FN( get_merged ), FN( get_merged_map ),
 	/* types */
 	FN( tobool ), FN( toint ), FN( toreal ), FN( tostring ),
 	FN( parseint ), FN( parsereal ),

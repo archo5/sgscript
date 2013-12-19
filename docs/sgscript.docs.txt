@@ -2450,6 +2450,15 @@ This library is loaded on initialization and contains the functions and constant
     dict_size( x ); // returns 2
 
 
+# map_size [function]
+
+== map_size( dict )
+=== return the number of entries in the map object
+
+    x = map( 5, "a", 123, "b" );
+    map_size( x ); // returns 2
+
+
 # isset [function]
 
 == isset( var, string key )
@@ -2522,6 +2531,14 @@ This library is loaded on initialization and contains the functions and constant
     get_merged( [1,2], [3], {a="4"} ); // return {0=3,1=2,a="4"}
 
 
+# get_merged_map [function]
+
+== get_merged_map( iterable var, iterable var1, ... )
+=== returns a map of all key-value pairs found in all iterable objects passed to the function or returns null and emits a warning on failure
+
+    get_merged_map( [1,2], map(5,6), {a="4"} ); // return {0=3,1=2,int(5)=6,a="4"}
+
+
 # tobool [function]
 
 == tobool( var )
@@ -2565,6 +2582,31 @@ This library is loaded on initialization and contains the functions and constant
 
     tostring( 5 ); // returns "5"
     tostring( { "a" = "b" } ); // returns "{a=b}"
+
+
+# parseint [function]
+
+== parseint( var )
+=== returns an integer, generated from variable `var` using the @conversion rules or returns `null` on failure
+
+- this function is equivalent to @sgs_ParseInt in the C API
+
+    parseint( 5.4 ); // returns 5
+    parseint( "0xff" ); // returns 255
+    parseint( parseint ); // returns null
+
+
+# parsereal [function]
+
+== parsereal( var )
+=== returns a real value, generated from variable `var` using the @conversion rules or returns `null` on failure
+
+- this function is equivalent to @sgs_ParseReal in the C API
+
+    parsereal( 5 ); // returns 5.0
+    parsereal( "3e+2" ); // returns 300.0
+    parsereal( "0xff" ); // returns 255.0
+    parsereal( parsereal ); // returns null
 
 
 # typeof [function]
