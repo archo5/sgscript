@@ -53,6 +53,8 @@ int sgs_GetProcAddress( const char* file, const char* proc, void** out )
 	{
 		if( ret == ERROR_MOD_NOT_FOUND )
 			return SGS_XPC_NOFILE;
+		if( ret == ERROR_BAD_EXE_FORMAT )
+			return SGS_XPC_NOTLIB;
 		return SGS_XPC_LDFAIL;
 	}
 
