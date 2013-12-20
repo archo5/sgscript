@@ -50,14 +50,12 @@ typedef unsigned __int64 uint64_t;
 #  include <sys/types.h>
 #  include <sys/stat.h>
 
-#  ifdef _MSC_VER
+#  ifdef _WIN32
 #    include <direct.h>
 #    define getcwd _getcwd
 #    define mkdir _mkdir
 #    define rmdir _rmdir
 #    define stat _stat
-#    define S_IFDIR _S_IFDIR
-#    define S_IFREG _S_IFREG
 #    include "../ext/msvc/dirent.h"
 #  else
 #    include <unistd.h>
