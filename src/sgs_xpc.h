@@ -106,6 +106,8 @@ extern "C" {
 #define SGS_XPC_NOFILE -1
 #define SGS_XPC_NOPROC -2
 #define SGS_XPC_NOTSUP -3
+#define SGS_XPC_NOTLIB -4
+#define SGS_XPC_LDFAIL -5
 int sgs_GetProcAddress( const char* file, const char* proc, void** out );
 
 #ifdef __cplusplus

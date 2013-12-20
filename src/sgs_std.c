@@ -2978,6 +2978,11 @@ static int sgsstd_include( SGS_CTX )
 				goto success;
 			}
 		}
+		else if( ret != SGS_XPC_NOTLIB )
+		{
+			membuf_destroy( &mb, C );
+			return sgs_Printf( C, SGS_WARNING, "failed to load native module '%.*s'", fnsize, fnstr );
+		}
 		
 		sgs_PushString( C, mb.ptr );
 		sgs_PushString( C, " - include" );

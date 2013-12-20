@@ -4,7 +4,6 @@
 #  define WIN32_LEAN_AND_MEAN
 #  define NOSERVICE
 #  define NOUSER
-#  define NONLS
 #  define NOWH
 #  define NOMCX
 #  define NOMINMAX
@@ -28,21 +27,34 @@ int sgs_GetProcAddress( const char* file, const char* proc, void** out )
 #ifdef WIN32
 	HMODULE mod;
 	UINT pe;
-	char abspath[ SGS_MAX_PATH + 1 ];
+	WCHAR widepath[ SGS_MAX_PATH + 1 ];
+	WCHAR abspath[ SGS_MAX_PATH + 1 ];
+	WCHAR* pathstr;
 	DWORD ret;
 	
-	ret = GetFullPathNameA( file, SGS_MAX_PATH, abspath, NULL );
+	ret = MultiByteToWideChar( CP_UTF8, 0, file, -1, widepath, SGS_MAX_PATH );
+	if( ret == 0 )
+		return SGS_XPC_NOFILE;
+	widepath[ SGS_MAX_PATH ] = 0;
+	
+	pathstr = widepath;
+	ret = GetFullPathNameW( widepath, SGS_MAX_PATH, abspath, NULL );
 	if( ret > 0 && ret < SGS_MAX_PATH )
 	{
 		abspath[ SGS_MAX_PATH ] = 0;
-		file = abspath;
+		pathstr = abspath;
 	}
 
 	pe = SetErrorMode( SEM_FAILCRITICALERRORS );
-	mod = LoadLibraryA( file );
+	mod = LoadLibraryW( pathstr );
 	SetErrorMode( pe );
+	ret = GetLastError();
 	if( !mod )
-		return SGS_XPC_NOFILE;
+	{
+		if( ret == ERROR_MOD_NOT_FOUND )
+			return SGS_XPC_NOFILE;
+		return SGS_XPC_LDFAIL;
+	}
 
 	*out = (void*) GetProcAddress( mod, proc );
 	if( !*out )
