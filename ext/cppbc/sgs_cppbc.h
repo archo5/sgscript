@@ -62,17 +62,13 @@ class sgsHandle
 {
 public:
 	
-	sgsHandle() : object(NULL) {};
-	sgsHandle( const sgsHandle& h ) : object(NULL)
+	sgsHandle() : object(NULL), C(NULL) {};
+	sgsHandle( const sgsHandle& h ) : object(h.object), C(h.C)
 	{
-		if( h.object && h.object->iface == T::_sgs_interface )
-		{
-			object = h.object;
-			C = h.C;
+		if( object )
 			_acquire();
-		}
 	}
-	sgsHandle( sgs_VarObj* obj, sgs_Context* c ) : object(NULL)
+	sgsHandle( sgs_VarObj* obj, sgs_Context* c ) : object(NULL), C(NULL)
 	{
 		if( obj && obj->iface == T::_sgs_interface )
 		{
