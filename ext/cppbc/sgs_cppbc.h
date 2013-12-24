@@ -135,7 +135,7 @@ class sgsVariable
 public:
 	
 	sgsVariable() : C(NULL) { var.type = SGS_VTC_NULL; };
-	sgsVariable( const sgsVariable& h )
+	sgsVariable( const sgsVariable& h ) : var(h.var), C(h.C)
 	{
 		if( h.var.type != SGS_VTC_NULL )
 		{
