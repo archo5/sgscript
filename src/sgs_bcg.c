@@ -1114,6 +1114,12 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 		case SI_SEQ: case SI_EQ: case SI_LT: case SI_LTE:
 		case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE:
 		case SI_ARRAY: case SI_DICT:
+			{
+				char* dummy0 = NULL;
+				int dummy1 = 0;
+				if( find_nth_var( &C->fctx->vars, INSTR_GET_A( I ), &dummy0, &dummy1 ) )
+					goto cannot;
+			}
 			I = INSTR_MAKE( op, pos, argB, argC );
 			AS_UINT32( func->code.ptr + ioff ) = I;
 			if( out )
@@ -1311,16 +1317,19 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 				/* get source data register */
 				FUNC_ENTER;
 				if( !compile_node_r( C, func, node->child->next, &ireg ) ) goto fail;
-
-				if( arg )
-					*arg = ireg;
-
+				
 				FUNC_ENTER;
 				if( !try_optimize_last_instr_out( C, func, node->child, isb, arg ) )
 				{
 					/* just set the contents */
 					FUNC_ENTER;
 					if( !compile_node_w( C, func, node->child, ireg ) ) goto fail;
+				}
+				
+				if( arg )
+				{
+					FUNC_ENTER;
+					if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
 				}
 			}
 		}
