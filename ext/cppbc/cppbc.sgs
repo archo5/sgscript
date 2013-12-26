@@ -289,7 +289,7 @@ function cppbc_get_vdchar_type( char )
 function cppbc_find_fp_name( scode )
 {
 	if( scode.last != ")" )
-		cppbc_error( "unrecognized pointer type: \"" $ string_implode( out, "" ) $ "\"" );
+		cppbc_error( "unrecognized sequence: \"" $ string_implode( scode, "" ) $ "\"" );
 	
 	level = 0;
 	pos = scode.size - 1;
@@ -335,7 +335,7 @@ function cppbc_parse_vardecl( code, bSkipName )
 	}
 	
 	name = "";
-	if( lct == "N" )
+	if( lct != ")" )
 	{
 		// basic typedef - identifier at end
 		if( !bSkipName || out.size != 1 )
