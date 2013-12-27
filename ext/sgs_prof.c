@@ -16,22 +16,24 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 
 	if( evid == SGS_HOOK_ENTER )
 	{
-		const char* fname = "<error>";
-		sgs_StackFrame* sf = sgs_GetFramePtr( C, 1 );
-		sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
-		membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
-		membuf_appchr( &P->keytmp, C, 0 );
 		membuf_appbuf( &P->timetmp, C, &TM, sizeof(TM) );
 	}
-	else if( evid == SGS_HOOK_EXIT && P->keytmp.size )
+	else if( evid == SGS_HOOK_EXIT )
 	{
 		double prevTM;
 		VHTVar* pair;
-		int prevzeroat = P->keytmp.size - 1;
-		while( prevzeroat --> 0 )
-			if( P->keytmp.ptr[ prevzeroat ] == 0 )
-				break;
-
+		
+		sgs_StackFrame* sf = sgs_GetFramePtr( C, 0 );
+		membuf_resize( &P->keytmp, C, 0 );
+		while( sf )
+		{
+			const char* fname = "<error>";
+			sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
+			membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
+			membuf_appchr( &P->keytmp, C, 0 );
+			sf = sf->next;
+		}
+		
 		prevTM = AS_DOUBLE( P->timetmp.ptr + P->timetmp.size - sizeof(double) );
 		pair = vht_get_str( &P->timings, P->keytmp.ptr, P->keytmp.size,
 			sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
@@ -48,9 +50,7 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 			vht_set( &P->timings, C, C->stack_top-1, &val );
 			sgs_Pop( C, 1 );
 		}
-
-
-		membuf_resize( &P->keytmp, C, prevzeroat ? prevzeroat + 1 : 0 );
+		
 		membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(TM) );
 	}
 }
@@ -73,8 +73,8 @@ static void freeProfMode1( SGS_PROF )
 
 static int dpm1sf( const void* p1, const void* p2 )
 {
-	const VHTVar* v1 = *(const VHTVar**) p1;
-	const VHTVar* v2 = *(const VHTVar**) p2;
+	const VHTVar* v1 = (const VHTVar*) p1;
+	const VHTVar* v2 = (const VHTVar*) p2;
 	const sgs_iStr* str1 = v1->key.data.S;
 	const sgs_iStr* str2 = v2->key.data.S;
 	int cmpsz = str1->size < str2->size ? str1->size : str2->size;
@@ -87,16 +87,16 @@ static int dpm1sf( const void* p1, const void* p2 )
 
 static int dumpProfMode1( SGS_PROF )
 {
-	int i, off = 0;
+	int i;
 	VHTVar* pbuf = (VHTVar*)
 		sgs_Malloc( P->C, sizeof(VHTVar) * P->timings.size );
 	
 	memcpy( pbuf, P->timings.vars, sizeof(VHTVar) * P->timings.size );
 	
-	qsort( pbuf, off, sizeof( VHTVar* ), dpm1sf );
+	qsort( pbuf, P->timings.size, sizeof(VHTVar), dpm1sf );
 	
 	sgs_Writef( P->C, "--- Time by call stack frame ---\n" );
-	for( i = 0; i < off; ++i )
+	for( i = 0; i < P->timings.size; ++i )
 	{
 		const char *s, *send;
 		VHTVar* p = pbuf + i;
