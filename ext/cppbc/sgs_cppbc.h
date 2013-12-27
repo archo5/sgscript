@@ -189,7 +189,7 @@ public:
 template< class T > void sgs_PushVar( SGS_CTX, const T& );
 template< class T > inline void sgs_PushVar( SGS_CTX, T* v ){ sgs_PushClass( C, v ); }
 template< class T > inline void sgs_PushVar( SGS_CTX, sgsHandle<T> v ){ sgs_PushHandle( C, v ); }
-template<> inline void sgs_PushVar<sgsVariable>( SGS_CTX, const sgsVariable& v ){ assert( v.C == C ); v.push(); }
+template<> inline void sgs_PushVar<sgsVariable>( SGS_CTX, const sgsVariable& v ){ v.push( C ); }
 #define SGS_DECL_PUSHVAR( type, parsefn ) template<> inline void sgs_PushVar<type>( SGS_CTX, const type& v ){ parsefn( C, v ); }
 SGS_DECL_PUSHVAR( bool, sgs_PushBool );
 #define SGS_DECL_PUSHVAR_INT( type ) SGS_DECL_PUSHVAR( type, sgs_PushInt )
