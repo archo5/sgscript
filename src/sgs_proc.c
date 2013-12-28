@@ -1432,10 +1432,14 @@ VAR_IOP( rsh, >> )
 static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 {
 	const uint32_t ta = a->type, tb = b->type;
-	if( (ta|tb) == VTC_INT ) return (sgs_Real)( a->data.I - b->data.I );
-	if( (ta|tb) == VTC_REAL ) return a->data.R - b->data.R;
-
-	if( (ta|tb) & SVT_OBJECT )
+	
+	/* both are INT */
+	if( HAS_FLAG( ta, SVT_INT ) && HAS_FLAG( tb, SVT_INT ) ) return (sgs_Real)( a->data.I - b->data.I );
+	/* both are REAL */
+	if( HAS_FLAG( ta, SVT_REAL ) && HAS_FLAG( tb, SVT_REAL ) ) return a->data.R - b->data.R;
+	
+	/* either is OBJECT */
+	if( HAS_FLAG( ta, SVT_OBJECT ) || HAS_FLAG( tb, SVT_OBJECT ) )
 	{
 		int origsize = sgs_StackSize( C );
 		USING_STACK
@@ -1460,10 +1464,10 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		else
 			return ta - tb;
 	}
-	if( (ta|tb) & SVT_BOOL )
-		return var_getbool( C, a ) - var_getbool( C, b );
-	if( (ta|tb) & VTF_CALL )
+	/* both are callables */
+	if( HAS_FLAG( ta, VTF_CALL ) && HAS_FLAG( tb, VTF_CALL ) )
 	{
+		/* only FUNC/CFUNC types are expected to have this flag */
 		if( ta != tb )
 			return ta - tb;
 		if( ta == VTC_FUNC )
@@ -1474,7 +1478,8 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 				((size_t)a->data.C) < ((size_t)b->data.C) ? -1 : 1;
 		}
 	}
-	if( (ta|tb) & SVT_STRING )
+	/* both are STRING */
+	if( HAS_FLAG( ta, SVT_STRING ) && HAS_FLAG( tb, SVT_STRING ) )
 	{
 		int out;
 		sgs_Variable A = *a, B = *b;
@@ -1492,7 +1497,7 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		stk_pop2( C );
 		return out;
 	}
-	/* int/real */
+	/* default comparison */
 	return var_getreal( C, a ) - var_getreal( C, b );
 }
 

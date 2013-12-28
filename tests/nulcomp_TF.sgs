@@ -1,0 +1,6 @@
+
+testEqual( null < 5, true );
+testEqual( null > -5, true );
+
+testEqual( null < -5, false );
+testEqual( null > 5, false );
