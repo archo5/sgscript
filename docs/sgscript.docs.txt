@@ -40,7 +40,7 @@ However, SGScript has all of the things mentioned, and some more, possibly makin
 The language supports:
 
 - `if/else`, `while`, `for`, `do/while`, `foreach`
-- 8 variable types: null, bool, int, real, string, function, C function, object
+- 9 variable types: null, bool, int, real, string, function, C function, object, pointer
 - Multi-level break/continue
 - Multiple return values
 - First-class functions
@@ -923,8 +923,9 @@ These are the default meanings for error codes that are honored throughout the A
 == void sgs_PushStringBuf( sgs_Context* C, const char* str, sgs_SizeVal size )
 == void sgs_PushString( sgs_Context* C, const char* str )
 == void sgs_PushCFunction( sgs_Context* C, sgs_CFunc func )
-== void sgs_PushObject( sgs_Context* C, void* data, void** iface )
-== void* sgs_PushObjectIPA( sgs_Context* C, sgs_SizeVal added, void** iface )
+== void sgs_PushObject( sgs_Context* C, void* data, sgs_ObjCallback* iface )
+== void* sgs_PushObjectIPA( sgs_Context* C, sgs_SizeVal added, sgs_ObjCallback* iface )
+== void sgs_PushPtr( sgs_Context* C, void* ptr )
 == void sgs_PushVariable( sgs_Context* C, sgs_Variable* var )
 === pushes the data on the stack, as a new entry, appended to the end
 
@@ -1276,6 +1277,7 @@ These are the default meanings for error codes that are honored throughout the A
 - `t` -- check for `dict` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `h` -- check for `map` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `o` -- check for `object` (requires void** interface, returns <type>* data - the data pointer)
+- `&` -- check for `pointer` (returns void* data - the pointer)
 - `v` -- check for any (non-null if strict, returns sgs_Variable data)
 - `x` -- call a custom checking function (requires sgs_ArgCheckFunc, everything else depends on function)
 
@@ -1543,6 +1545,7 @@ After a successful call, all arguments and the function will be popped off the s
 == sgs_Bool sgs_GetBool( sgs_Context* C, int item )
 == sgs_Int sgs_GetInt( sgs_Context* C, int item )
 == sgs_Real sgs_GetReal( sgs_Context* C, int item )
+== void* sgs_GetPtr( sgs_Context* C, int item )
 === return an item from the current stack frame, converted to the specified type
 
 - if `item` is out of bounds, 0 is returned
@@ -1553,6 +1556,7 @@ After a successful call, all arguments and the function will be popped off the s
 == sgs_Bool sgs_ToBool( sgs_Context* C, int item )
 == sgs_Int sgs_ToInt( sgs_Context* C, int item )
 == sgs_Real sgs_ToReal( sgs_Context* C, int item )
+== void* sgs_ToPtr( sgs_Context* C, int item )
 === return an item from the current stack frame, converted in-place to the specified type
 
 - in-place conversion means that if the function succeeds, the item in the stack might have a different type, most likely the requested type
@@ -1655,9 +1659,11 @@ After a successful call, all arguments and the function will be popped off the s
 == SGSBOOL sgs_ParseInt( sgs_Context* C, int item, sgs_Int* out )
 == SGSBOOL sgs_ParseReal( sgs_Context* C, int item, sgs_Real* out )
 == SGSBOOL sgs_ParseString( sgs_Context* C, int item, char** out, sgs_SizeVal* size )
+== SGSBOOL sgs_ParsePtr( sgs_Context* C, int item, void** out )
 === attempts to parse the specified item of the current stack frame, returning whether parsing was successful
 
 - the parsing rules:
+-- for `sgs_ParsePtr`, unlike every other parsing function, only null/ptr types are considered valid
 -- if `item` is out of bounds, fail
 -- if item has the type `null`, `func` or `cfunc`, fail
 -- if item is of `string` type and `bool` is requested, fail
@@ -2582,6 +2588,18 @@ This library is loaded on initialization and contains the functions and constant
 
     tostring( 5 ); // returns "5"
     tostring( { "a" = "b" } ); // returns "{a=b}"
+
+
+# toptr [function]
+
+== toptr( var )
+=== returns a pointer value, generated from variable `var` using the @conversion rules
+
+- this function is equivalent to @sgs_GetPtr / @sgs_ToPtr in the C API
+
+    toptr( 5 ); // returns 5
+    toptr( "3e+2" ); // returns address of the string
+    toptr( [] ); // returns address of array data
 
 
 # parseint [function]

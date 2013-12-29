@@ -130,10 +130,8 @@ sgs_Hash sgs_HashVar( const sgs_Variable* v )
 	case SVT_NULL: return 0;
 	case SVT_BOOL: return v->data.B;
 	case SVT_STRING: return hashFunc( var_cstr( v ), v->data.S->size );
-	case SVT_INT: case SVT_REAL: case SVT_FUNC: case SVT_CFUNC: case SVT_OBJECT:
-		return hashFunc( (const char*) &v->data, sizeof(v->data) );
 	}
-	return 0;
+	return hashFunc( (const char*) &v->data, sizeof(v->data) );
 }
 
 
@@ -152,6 +150,7 @@ static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
 	case SVT_FUNC: return v1->data.F == v2->data.F;
 	case SVT_CFUNC: return v1->data.C == v2->data.C;
 	case SVT_OBJECT: return v1->data.O == v2->data.O;
+	case SVT_PTR: return v1->data.P == v2->data.P;
 	}
 	return 1;
 }

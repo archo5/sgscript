@@ -2257,6 +2257,13 @@ static int sgsstd_tostring( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_toptr( SGS_CTX )
+{
+	SGSFN( "toptr" );
+	sgs_PushPtr( C, sgs_GetPtr( C, 0 ) );
+	return 1;
+}
+
 
 static int sgsstd_parseint( SGS_CTX )
 {
@@ -2355,6 +2362,7 @@ static int sgsstd_loadtypeflags( SGS_CTX )
 		{ "VTC_FUNC", VTC_FUNC },
 		{ "VTC_CFUNC", VTC_CFUNC },
 		{ "VTC_OBJECT", VTC_OBJECT },
+		{ "VTC_PTR", VTC_PTR },
 		{ "VTC_ARRAY", VTC_ARRAY },
 		{ "VTC_ARRAY_ITER", VTC_ARRAY_ITER },
 		{ "VTC_DICT", VTC_DICT },
@@ -3383,7 +3391,7 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( get_keys ), FN( get_values ), FN( get_concat ),
 	FN( get_merged ), FN( get_merged_map ),
 	/* types */
-	FN( tobool ), FN( toint ), FN( toreal ), FN( tostring ),
+	FN( tobool ), FN( toint ), FN( toreal ), FN( tostring ), FN( toptr ),
 	FN( parseint ), FN( parsereal ),
 	FN( typeof ), FN( typeid ), FN( typeflags ),
 	FN( is_numeric ), FN( is_callable ),
@@ -3426,6 +3434,7 @@ static const sgs_RegIntConst regiconsts[] =
 	{ "VT_FUNC", SVT_FUNC },
 	{ "VT_CFUNC", SVT_CFUNC },
 	{ "VT_OBJECT", SVT_OBJECT },
+	{ "VT_PTR", SVT_PTR },
 	
 	{ "RAND_MAX", RAND_MAX },
 };

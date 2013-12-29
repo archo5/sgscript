@@ -672,6 +672,7 @@ static void dumpvar( SGS_CTX, sgs_Variable* var )
 		break;
 	case SVT_CFUNC: sgs_Writef( C, " = %p", var->data.C ); break;
 	case SVT_OBJECT: sgs_Writef( C, " = " ); dumpobj( C, var->data.O ); break;
+	case SVT_PTR: sgs_Writef( C, " = %p", var->data.P ); break;
 	}
 }
 
