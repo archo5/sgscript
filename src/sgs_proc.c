@@ -709,7 +709,7 @@ static void* var_getptr( SGS_CTX, sgs_VarPtr var )
 			}
 			stk_pop( C, sgs_StackSize( C ) - origsize );
 		}
-		break;
+		return var->data.O->data;
 	case SVT_PTR: return var->data.P;
 	}
 	return NULL;
@@ -769,6 +769,7 @@ static int init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 	case VTC_REAL: sprintf( buf, "%g", var->data.R ); var_create_str( C, out, buf, -1 ); break;
 	case VTC_FUNC: var_create_str( C, out, "Function", -1 ); break;
 	case VTC_CFUNC: var_create_str( C, out, "C Function", -1 ); break;
+	case VTC_PTR: sprintf( buf, "ptr(%p)", var->data.P ); var_create_str( C, out, buf, -1 ); break;
 	}
 	return SGS_SUCCESS;
 }
