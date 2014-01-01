@@ -2226,6 +2226,11 @@ static int sgsstd_get_merged_map( SGS_CTX )
 static int sgsstd_tobool( SGS_CTX )
 {
 	SGSFN( "tobool" );
+	if( sgs_ItemType( C, 0 ) == SVT_BOOL )
+	{
+		sgs_SetStackSize( C, 1 );
+		return 1;
+	}
 	sgs_PushBool( C, sgs_GetBool( C, 0 ) );
 	return 1;
 }
@@ -2233,6 +2238,11 @@ static int sgsstd_tobool( SGS_CTX )
 static int sgsstd_toint( SGS_CTX )
 {
 	SGSFN( "toint" );
+	if( sgs_ItemType( C, 0 ) == SVT_INT )
+	{
+		sgs_SetStackSize( C, 1 );
+		return 1;
+	}
 	sgs_PushInt( C, sgs_GetInt( C, 0 ) );
 	return 1;
 }
@@ -2240,6 +2250,11 @@ static int sgsstd_toint( SGS_CTX )
 static int sgsstd_toreal( SGS_CTX )
 {
 	SGSFN( "toreal" );
+	if( sgs_ItemType( C, 0 ) == SVT_REAL )
+	{
+		sgs_SetStackSize( C, 1 );
+		return 1;
+	}
 	sgs_PushReal( C, sgs_GetReal( C, 0 ) );
 	return 1;
 }
@@ -2249,6 +2264,11 @@ static int sgsstd_tostring( SGS_CTX )
 	char* str;
 	sgs_SizeVal sz;
 	SGSFN( "tostring" );
+	if( sgs_ItemType( C, 0 ) == SVT_STRING )
+	{
+		sgs_SetStackSize( C, 1 );
+		return 1;
+	}
 	str = sgs_ToStringBuf( C, 0, &sz );
 	if( str )
 		sgs_PushStringBuf( C, str, sz );
@@ -2260,6 +2280,11 @@ static int sgsstd_tostring( SGS_CTX )
 static int sgsstd_toptr( SGS_CTX )
 {
 	SGSFN( "toptr" );
+	if( sgs_ItemType( C, 0 ) == SVT_PTR )
+	{
+		sgs_SetStackSize( C, 1 );
+		return 1;
+	}
 	sgs_PushPtr( C, sgs_GetPtr( C, 0 ) );
 	return 1;
 }
@@ -2269,6 +2294,11 @@ static int sgsstd_parseint( SGS_CTX )
 {
 	sgs_Int i;
 	SGSFN( "parseint" );
+	if( sgs_ItemType( C, 0 ) == SVT_INT )
+	{
+		sgs_SetStackSize( C, 1 );
+		return 1;
+	}
 	if( sgs_ParseInt( C, 0, &i ) )
 		sgs_PushInt( C, i );
 	else
@@ -2280,6 +2310,11 @@ static int sgsstd_parsereal( SGS_CTX )
 {
 	sgs_Real r;
 	SGSFN( "parsereal" );
+	if( sgs_ItemType( C, 0 ) == SVT_REAL )
+	{
+		sgs_SetStackSize( C, 1 );
+		return 1;
+	}
 	if( sgs_ParseReal( C, 0, &r ) )
 		sgs_PushReal( C, r );
 	else
@@ -2339,7 +2374,7 @@ static int sgsstd_is_callable( SGS_CTX )
 	if( !sgs_LoadArgs( C, ">." ) )
 		return 0;
 	
-	sgs_PushBool( C, sgs_IsCallable( C, -1 ) );
+	sgs_PushBool( C, sgs_IsCallable( C, 0 ) );
 	return 1;
 }
 
