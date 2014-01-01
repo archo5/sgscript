@@ -75,7 +75,15 @@
 #define SGS_PRINTF_EXTRASTRING "(): "
 #define SGS_PRINTF_EXTRABYTES 4
 
+/* object pool settings
+	- size of object pool (max. number of items)
+	- max. appended memory size for pool usage */
+#define SGS_OBJPOOL_SIZE 64
+#define SGS_OBJPOOL_MAX_APPMEM 256
 
+/* inclusion system settings:
+	- name of entry point function to look for
+	- the default include path */
 #define SGS_LIB_ENTRY_POINT "sgscript_main"
 #define SGS_INCLUDE_PATH "|/?;|/?" SGS_MODULE_EXT ";|/?.sgc;|/?.sgs;?;?" SGS_MODULE_EXT ";?.sgc;?.sgs"
 

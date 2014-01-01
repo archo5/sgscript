@@ -35,6 +35,28 @@ static int fastlog2( int x )
 #define STK_UNITSIZE sizeof( sgs_Variable )
 
 
+/* to work with both insertion and removal algorithms, this function has the following rules:
+- return the index of the first found item with the right size or just after the right size
+- if all sizes are less than specified, return the size of the object pool
+*/
+static int objpool_binary_search( SGS_CTX, int appsize )
+{
+	int pmin = 0, pmax = C->objpool_size - 1;
+	while( pmin <= pmax )
+	{
+		int pos = ( pmax + pmin ) / 2;
+		int ssize = C->objpool_data[ pos ].appsize;
+		if( ssize == appsize )
+			return pos;
+		else if( ssize < appsize )
+			pmin = pos + 1;
+		else if( ssize > appsize )
+			pmax = pos - 1;
+	}
+	return pmin;
+}
+
+
 static int obj_exec( SGS_CTX, const sgs_ObjCallback sop, object_t* data, int arg, int args )
 {
 	sgs_ObjCallback* func = data->iface;
@@ -76,7 +98,28 @@ static void var_free_object( SGS_CTX, object_t* O )
 	if( O->next ) O->next->prev = O->prev;
 	if( C->objs == O )
 		C->objs = O->next;
+#if SGS_OBJPOOL_SIZE > 0
+	if( C->objpool_size < SGS_OBJPOOL_SIZE && O->appsize <= SGS_OBJPOOL_MAX_APPMEM )
+	{
+		int pos = 0;
+		if( C->objpool_size )
+		{
+			pos = objpool_binary_search( C, O->appsize );
+			if( pos < C->objpool_size )
+			{
+				memmove( C->objpool_data + pos + 1, C->objpool_data + pos,
+					sizeof( sgs_ObjPoolItem ) * ( C->objpool_size - pos ) );
+			}
+		}
+		C->objpool_data[ pos ].obj = O;
+		C->objpool_data[ pos ].appsize = O->appsize;
+		C->objpool_size++;
+	}
+	else
+		sgs_Dealloc( O );
+#else
 	sgs_Dealloc( O );
+#endif
 	C->objcount--;
 }
 
@@ -218,7 +261,26 @@ static void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, int32_t
 
 static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjCallback* iface, int xbytes )
 {
-	object_t* obj = sgs_Alloc_a( object_t, xbytes );
+	object_t* obj = NULL;
+#if SGS_OBJPOOL_SIZE > 0
+	if( xbytes <= SGS_OBJPOOL_MAX_APPMEM )
+	{
+		int pos = objpool_binary_search( C, xbytes );
+		if( pos < C->objpool_size && C->objpool_data[ pos ].appsize == xbytes )
+		{
+			obj = C->objpool_data[ pos ].obj;
+			C->objpool_size--;
+			if( pos < C->objpool_size )
+			{
+				memmove( C->objpool_data + pos, C->objpool_data + pos + 1,
+					sizeof( sgs_ObjPoolItem ) * ( C->objpool_size - pos ) );
+			}
+		}
+	}
+#endif
+	if( !obj )
+		obj = sgs_Alloc_a( object_t, xbytes );
+	obj->appsize = xbytes;
 	obj->data = data;
 	if( xbytes )
 		obj->data = ((char*)obj) + sizeof( object_t );

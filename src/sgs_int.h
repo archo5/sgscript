@@ -611,6 +611,13 @@ struct _sgs_FuncCtx
 }
 sgs_FuncCtx;
 
+typedef
+struct _sgs_ObjPoolItem
+{
+	sgs_VarObj* obj;
+	sgs_SizeVal appsize;
+}
+sgs_ObjPoolItem;
 
 typedef sgs_Variable* sgs_VarPtr;
 
@@ -648,6 +655,7 @@ struct _sgs_Context
 	sgs_VHTable   stringtable; /* string constant caching hash table */
 
 	/* virtual machine */
+	/* > main stack */
 	sgs_VarPtr    stack_base;
 	int           stack_mem;
 	sgs_VarPtr    stack_off;
@@ -658,7 +666,8 @@ struct _sgs_Context
 	sgs_Closure** clstk_off;
 	sgs_Closure** clstk_top;
 	int           clstk_mem;
-
+	
+	/* > stack frame info */
 	int           call_args;
 	int           call_expect;
 	int           call_this;
@@ -666,16 +675,24 @@ struct _sgs_Context
 	sgs_StackFrame* sf_last;
 	sgs_StackFrame* sf_cached;
 	int           sf_count;
-
-	void*         data;
-	sgs_VHTable   typetable;
-
+	
+	/* > _G (global variable dictionary) */
+	void*         _G;
+	
+	/* > object info */
 	sgs_object_t* objs;
 	int32_t       objcount;
+	/* >> object GC */
 	uint8_t       redblue;
 	sgs_VarPtr    gclist;
 	int           gclist_size;
 	int           gcrun;
+	/* >> object pool */
+	sgs_ObjPoolItem* objpool_data;
+	int32_t       objpool_size;
+	
+	/* type interface table */
+	sgs_VHTable   typetable;
 	
 #ifdef SGS_JIT
 	void* jitdata;

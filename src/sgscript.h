@@ -7,7 +7,7 @@
 #define SGS_VERSION_MINOR 9
 #define SGS_VERSION_INCR  0
 #define SGS_VERSION "0.9.0"
-#define SGS_API_VERSION 6
+#define SGS_API_VERSION 7
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
@@ -264,6 +264,7 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj*, int /* arg */ );
 struct sgs_ObjData
 {
 	sgs_SizeVal refcount;
+	sgs_SizeVal appsize;
 	uint8_t redblue;    /* red or blue? mark & sweep */
 	void* data;         /* should have offset=8 with packing alignment>=8 */
 	sgs_ObjCallback* iface;

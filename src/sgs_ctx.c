@@ -103,8 +103,6 @@ static void ctx_init( SGS_CTX )
 	C->sf_last = NULL;
 	C->sf_cached = NULL;
 	C->sf_count = 0;
-	
-	vht_init( &C->typetable, C, 32, 32 );
 
 	C->objs = NULL;
 	C->objcount = 0;
@@ -112,6 +110,14 @@ static void ctx_init( SGS_CTX )
 	C->gclist = NULL;
 	C->gclist_size = 0;
 	C->gcrun = FALSE;
+#if SGS_OBJPOOL_SIZE > 0
+	C->objpool_data = sgs_Alloc_n( sgs_ObjPoolItem, SGS_OBJPOOL_SIZE );
+#else
+	C->objpool_data = NULL;
+#endif
+	C->objpool_size = 0;
+	
+	vht_init( &C->typetable, C, 32, 32 );
 	
 #ifdef SGS_JIT
 	sgsJIT_Init( C );
@@ -192,6 +198,15 @@ void sgs_DestroyEngine( SGS_CTX )
 	
 #ifdef SGS_JIT
 	sgsJIT_Destroy( C );
+#endif
+	
+#if SGS_OBJPOOL_SIZE > 0
+	{
+		int32_t i;
+		for( i = 0; i < C->objpool_size; ++i )
+			sgs_Dealloc( C->objpool_data[ i ].obj );
+		sgs_Dealloc( C->objpool_data );
+	}
 #endif
 
 #ifdef SGS_DEBUG_LEAKS

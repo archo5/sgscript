@@ -3590,7 +3590,7 @@ int sgsSTD_MakeMap( SGS_CTX, int cnt )
 }
 
 
-#define GLBP (*(sgs_VarObj**)&C->data)
+#define GLBP (*(sgs_VarObj**)&C->_G)
 
 int sgsSTD_GlobalInit( SGS_CTX )
 {
@@ -3623,9 +3623,9 @@ int sgsSTD_GlobalFree( SGS_CTX )
 	var.type = VTC_DICT;
 	var.data.O = GLBP;
 	sgs_Release( C, &var );
-
-	C->data = NULL;
-
+	
+	GLBP = NULL;
+	
 	return SGS_SUCCESS;
 }
 
