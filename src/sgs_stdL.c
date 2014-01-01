@@ -1807,6 +1807,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 
 
 #define FVAR ((FILE*)data)
+#define IFVAR ((FILE*)data->data)
 #define FVNO_BEGIN if( FVAR ) {
 #define FVNO_END( name ) } else \
 	STDLIB_WARN( "file." #name "() - file is not opened" )
@@ -2025,10 +2026,10 @@ static int sgsstd_file_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( !sgs_ParseString( C, 0, &str, &len ) )
 		return SGS_EINVAL;
 
-	if( 0 == strcmp( str, "offset" ) ){ return sgsstd_fileP_offset( C, FVAR ); }
-	if( 0 == strcmp( str, "size" ) ){ return sgsstd_fileP_size( C, FVAR ); }
-	if( 0 == strcmp( str, "error" ) ){ return sgsstd_fileP_error( C, FVAR ); }
-	if( 0 == strcmp( str, "eof" ) ){ return sgsstd_fileP_eof( C, FVAR ); }
+	if( 0 == strcmp( str, "offset" ) ){ return sgsstd_fileP_offset( C, IFVAR ); }
+	if( 0 == strcmp( str, "size" ) ){ return sgsstd_fileP_size( C, IFVAR ); }
+	if( 0 == strcmp( str, "error" ) ){ return sgsstd_fileP_error( C, IFVAR ); }
+	if( 0 == strcmp( str, "eof" ) ){ return sgsstd_fileP_eof( C, IFVAR ); }
 
 #define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
 	if( 0 == strcmp( str, "open" ) ) IFN( sgsstd_fileI_open )
@@ -2047,8 +2048,8 @@ static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 {
 	UNUSED( C );
 	UNUSED( dch );
-	if( FVAR )
-		fclose( FVAR );
+	if( IFVAR )
+		fclose( IFVAR );
 	return SGS_SUCCESS;
 }
 
@@ -2057,7 +2058,7 @@ static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* data, int type )
 	UNUSED( data );
 	if( type == SVT_BOOL )
 	{
-		sgs_PushBool( C, !!FVAR );
+		sgs_PushBool( C, !!IFVAR );
 		return SGS_SUCCESS;
 	}
 	if( type == SVT_STRING || type == SGS_CONVOP_TOTYPE )
