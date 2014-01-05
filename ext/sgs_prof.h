@@ -13,7 +13,7 @@ struct _sgs_Prof
 	void* hctx;
 
 	int mode;
-	/* mode 1 */
+	/* mode 1 / 3 */
 	sgs_MemBuf keytmp;
 	sgs_MemBuf timetmp;
 	sgs_VHTable timings;
@@ -30,6 +30,7 @@ sgs_Prof;
 
 #define SGS_PROF_FUNCTIME 1
 #define SGS_PROF_OPTIME   2
+#define SGS_PROF_MEMUSAGE 3
 
 SGSBOOL sgs_ProfInit( SGS_CTX, SGS_PROF, int mode );
 SGSBOOL sgs_ProfClose( SGS_PROF );

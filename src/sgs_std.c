@@ -2535,6 +2535,7 @@ static int sgsstd_read_stdin( SGS_CTX )
 
 static int sgsstd_ftime( SGS_CTX )
 {
+	SGSFN( "ftime" );
 	sgs_PushReal( C, sgs_GetTime() );
 	return 1;
 }
@@ -2544,12 +2545,14 @@ static int sgsstd_ftime( SGS_CTX )
 
 static int sgsstd_rand( SGS_CTX )
 {
+	SGSFN( "rand" );
 	sgs_PushInt( C, rand() );
 	return 1;
 }
 
 static int sgsstd_randf( SGS_CTX )
 {
+	SGSFN( "randf" );
 	sgs_PushReal( C, (double) rand() / (double) RAND_MAX );
 	return 1;
 }

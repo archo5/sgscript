@@ -21,6 +21,7 @@ void readme()
 	puts( "\t--stats: print VM stats after running the scripts" );
 	puts( "\t--profile: enable profiling by collecting call stack timings" );
 	puts( "\t--profile-ops: enable low-level VM instruction profiling" );
+	puts( "\t--profile-mem: enable memory usage profiling" );
 }
 
 int sep = 0, v = 0;
@@ -87,6 +88,8 @@ int main( int argc, char** argv )
 			{ prof = 1; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--profile-ops" ) == 0 )
 			{ prof = 2; argv[ i ] = 0; }
+		else if( strcmp( argv[ i ], "--profile-mem" ) == 0 )
+			{ prof = 3; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--help" ) == 0 ||
 			strcmp( argv[ i ], "-h" ) == 0 ){ readme(); return 0; }
 		else if( strcmp( argv[ i ], "--version" ) == 0 ||

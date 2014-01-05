@@ -219,6 +219,137 @@ static int dumpProfMode2( SGS_PROF )
 }
 
 
+
+typedef struct _mode3data
+{
+	int numallocs;
+	int numfrees;
+	int numblocks;
+	double szdelta;
+}
+mode3data;
+
+static void mode3hook( void* userdata, SGS_CTX, int evid )
+{
+	SGS_PROF = (sgs_Prof*) userdata;
+	mode3data CD = { C->numallocs, C->numfrees, C->numblocks, C->memsize };
+	if( P->hfn )
+		P->hfn( P->hctx, C, evid );
+
+	if( evid == SGS_HOOK_ENTER )
+	{
+		membuf_appbuf( &P->timetmp, C, &CD, sizeof(CD) );
+	}
+	else if( evid == SGS_HOOK_EXIT )
+	{
+		mode3data prevCD, *PD;
+		VHTVar* pair;
+		
+		sgs_StackFrame* sf = sgs_GetFramePtr( C, 0 );
+		membuf_resize( &P->keytmp, C, 0 );
+		while( sf )
+		{
+			const char* fname = "<error>";
+			sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
+			membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
+			membuf_appchr( &P->keytmp, C, 0 );
+			sf = sf->next;
+		}
+		
+		memcpy( &prevCD, P->timetmp.ptr + P->timetmp.size - sizeof(CD), sizeof(CD) );
+		pair = vht_get_str( &P->timings, P->keytmp.ptr, P->keytmp.size,
+			sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
+		if( pair )
+		{
+			PD = (mode3data*) pair->val.data.P;
+		}
+		else
+		{
+			sgs_Variable val;
+			val.type = VTC_PTR;
+			val.data.P = PD = (mode3data*) sgs_Malloc( C, sizeof(CD) );
+			memset( PD, 0, sizeof(*PD) );
+			sgs_PushStringBuf( C, P->keytmp.ptr, P->keytmp.size );
+			vht_set( &P->timings, C, C->stack_top-1, &val );
+			sgs_Pop( C, 1 );
+		}
+		
+		PD->numallocs += CD.numallocs - prevCD.numallocs;
+		PD->numfrees += CD.numfrees - prevCD.numfrees;
+		PD->numblocks += CD.numblocks - prevCD.numblocks;
+		PD->szdelta += CD.szdelta - prevCD.szdelta;
+		
+		membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(CD) );
+	}
+}
+
+static int initProfMode3( SGS_PROF )
+{
+	initProfMode1( P );
+	sgs_SetHookFunc( P->C, mode3hook, P );
+	return 1;
+}
+
+static int freeProfMode3( SGS_PROF )
+{
+	sgs_SizeVal i;
+	for( i = 0; i < P->timings.size; ++i )
+	{
+		sgs_Free( P->C, P->timings.vars[ i ].val.data.P );
+	}
+	freeProfMode1( P );
+	return 1;
+}
+
+static int dpm3sf( const void* p1, const void* p2 )
+{
+	const VHTVar* v1 = (const VHTVar*) p1;
+	const VHTVar* v2 = (const VHTVar*) p2;
+	const sgs_iStr* str1 = v1->key.data.S;
+	const sgs_iStr* str2 = v2->key.data.S;
+	const mode3data* D1 = (const mode3data*) v1->val.data.P;
+	const mode3data* D2 = (const mode3data*) v2->val.data.P;
+	int cmpsz = str1->size < str2->size ? str1->size : str2->size;
+	int ret = ( D1->numallocs + D1->numfrees ) - ( D2->numallocs + D2->numfrees );
+	if( !ret ) ret = memcmp( str_cstr( str1 ), str_cstr( str2 ), cmpsz );
+	if( !ret ) ret = str1->size - str2->size;
+	return ret;
+}
+
+static int dumpProfMode3( SGS_PROF )
+{
+	int i;
+	VHTVar* pbuf = (VHTVar*) sgs_Malloc( P->C, sizeof(VHTVar) * P->timings.size );
+	
+	memcpy( pbuf, P->timings.vars, sizeof(VHTVar) * P->timings.size );
+	
+	qsort( pbuf, P->timings.size, sizeof(VHTVar), dpm3sf );
+	
+	sgs_Writef( P->C, "--- Memory usage by call stack frame ---\n" );
+	for( i = 0; i < P->timings.size; ++i )
+	{
+		const char *s, *send;
+		VHTVar* p = pbuf + i;
+		mode3data* PD = (mode3data*) p->val.data.P;
+		s = var_cstr( &p->key );
+		send = s + p->key.data.S->size;
+		while( s < send )
+		{
+			if( s != var_cstr( &p->key ) )
+				sgs_Writef( P->C, "::" );
+			sgs_Writef( P->C, "%s", s );
+			s += strlen( s ) + 1;
+		}
+		sgs_Writef( P->C, " - %d allocs, %d frees, %d delta blocks, %.3f delta memory (kB)\n",
+			PD->numallocs, PD->numfrees, PD->numblocks, PD->szdelta / 1024.0 );
+	}
+	sgs_Writef( P->C, "---\n" );
+	sgs_Free( P->C, pbuf );
+	
+	return 1;
+}
+
+
 SGSBOOL sgs_ProfInit( SGS_CTX, SGS_PROF, int mode )
 {
 	P->hfn = NULL;
@@ -234,6 +365,8 @@ SGSBOOL sgs_ProfInit( SGS_CTX, SGS_PROF, int mode )
 		return initProfMode1( P );
 	else if( mode == SGS_PROF_OPTIME )
 		return initProfMode2( P );
+	else if( mode == SGS_PROF_MEMUSAGE )
+		return initProfMode3( P );
 	return 0;
 }
 
@@ -243,6 +376,8 @@ SGSBOOL sgs_ProfClose( SGS_PROF )
 		freeProfMode1( P );
 	else if( P->mode == SGS_PROF_OPTIME )
 		freeProfMode2( P );
+	else if( P->mode == SGS_PROF_MEMUSAGE )
+		freeProfMode3( P );
 	sgs_SetHookFunc( P->C, P->hfn, P->hctx );
 	return 1;
 }
@@ -253,5 +388,7 @@ SGSBOOL sgs_ProfDump( SGS_PROF )
 		return dumpProfMode1( P );
 	else if( P->mode == SGS_PROF_OPTIME )
 		return dumpProfMode2( P );
+	else if( P->mode == SGS_PROF_MEMUSAGE )
+		return dumpProfMode3( P );
 	return 0;
 }
