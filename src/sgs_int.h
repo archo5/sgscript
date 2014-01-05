@@ -139,7 +139,7 @@
 #  define SI_GETCLSR SGS_SI_GETCLSR
 #  define SI_SETCLSR SGS_SI_SETCLSR
 #  define SI_SET SGS_SI_SET
-#  define SI_CLONE SGS_SI_CLONE
+#  define SI_MCONCAT SGS_SI_MCONCAT
 #  define SI_CONCAT SGS_SI_CONCAT
 #  define SI_NEGATE SGS_SI_NEGATE
 #  define SI_BOOL_INV SGS_SI_BOOL_INV
@@ -446,7 +446,7 @@ typedef enum sgs_Instruction_e
 		B: (A:out, B:s1)
 	*/
 	SGS_SI_SET,      /* B */
-	SGS_SI_CLONE,
+	SGS_SI_MCONCAT,  /* (A:out, B:N) */
 	SGS_SI_CONCAT,   /* A */
 	SGS_SI_NEGATE,   /* B */
 	SGS_SI_BOOL_INV,
@@ -729,7 +729,7 @@ static const char* sgs_OpNames[] =
 	"for_prep", "for_load", "for_jump", "loadconst", "getvar", "setvar",
 	"getprop", "setprop", "getindex", "setindex",
 	"genclsr", "pushclsr", "makeclsr", "getclsr", "setclsr",
-	"set", "clone", "concat", "negate", "bool_inv", "invert",
+	"set", "mconcat", "concat", "negate", "bool_inv", "invert",
 	"inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",
 	"seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte",

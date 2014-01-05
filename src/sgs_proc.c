@@ -1988,7 +1988,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 			VAR_RELEASE( cv ); *cv = *p3; VAR_ACQUIRE( RESVAR( argC ) ); } break;
 
 		case SI_SET: { ARGS_2; STKVAR_RELEASE( p1 ); *p1 = *p2; break; }
-		case SI_CLONE: { ARGS_2; vm_clone( C, a1, p2 ); break; }
+		case SI_MCONCAT: { vm_op_concat_ex( C, argB ); stk_setlvar( C, argA, stk_gettop( C ) ); stk_pop1( C ); break; }
 		case SI_CONCAT: { ARGS_3; vm_op_concat( C, a1, p2, p3 ); break; }
 		case SI_NEGATE: { ARGS_2; vm_op_negate( C, p1, p2 ); break; }
 		case SI_BOOL_INV: { ARGS_2; vm_op_boolinv( C, a1, p2 ); break; }

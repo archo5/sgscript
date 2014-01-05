@@ -11,7 +11,7 @@
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
-		SGS_VERSION_MINOR ) << SGS_VERSION_OFFSET ) | SGS_VERSION_INCR )
+        SGS_VERSION_MINOR ) << SGS_VERSION_OFFSET ) | SGS_VERSION_INCR )
 
 
 #ifdef __cplusplus
@@ -179,9 +179,9 @@ typedef void (*sgs_HookFunc) (
 
 
 /* Virtual machine state */
-#define SGS_STOP_ON_FIRST_ERROR		0x0001
-#define SGS_HAS_ERRORS				0x00010000
-#define SGS_MUST_STOP				(0x00020000 | SGS_HAS_ERRORS)
+#define SGS_STOP_ON_FIRST_ERROR 0x0001
+#define SGS_HAS_ERRORS          0x00010000
+#define SGS_MUST_STOP          (0x00020000 | SGS_HAS_ERRORS)
 
 
 /* Statistics / debugging */

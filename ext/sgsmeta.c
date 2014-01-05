@@ -37,7 +37,7 @@ int sgs_meta_globals( SGS_CTX )
 	_META_RGS( SI_SETCLSR );
 	
 	_META_RGS( SI_SET );
-	_META_RGS( SI_CLONE );
+	_META_RGS( SI_MCONCAT );
 	_META_RGS( SI_CONCAT );
 	_META_RGS( SI_NEGATE );
 	_META_RGS( SI_BOOL_INV );

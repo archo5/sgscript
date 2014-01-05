@@ -476,9 +476,42 @@ _continue:
 					FUNC_END;
 					return 0;
 				}
+				
 				se1->next = se2;
 				*tree = _make_node( C, SFT_OPER, mpptoken, NULL, se1 );
 				FUNC_END;
+				
+				if( *mpptoken == ST_OP_CAT || *mpptoken == ST_OP_CATEQ )
+				{
+					/* merge in CAT on first operand (works only with non-assignment op) */
+					if( *mpptoken == ST_OP_CAT && *se1->token == ST_OP_CAT )
+					{
+						/* target tree: tree { se1:children, se2 } */
+						FTNode* tmp = se1->child;
+						while( tmp->next )
+							tmp = tmp->next;
+						tmp->next = se2;
+						(*tree)->child = se1->child;
+						
+						se1->child = NULL;
+						se1->next = NULL;
+						sgsFT_Destroy( C, se1 );
+					}
+					/* merge in CAT on second operand */
+					if( *se2->token == ST_OP_CAT )
+					{
+						/* target tree: tree { children without se2, se2:children } */
+						FTNode* tmp = (*tree)->child;
+						while( tmp->next && tmp->next != se2 )
+							tmp = tmp->next;
+						sgs_BreakIf( tmp->next == NULL );
+						tmp->next = se2->child;
+						
+						se2->child = NULL;
+						sgsFT_Destroy( C, se2 );
+					}
+				}
+				
 				return 1;
 			}
 			/* unary operators

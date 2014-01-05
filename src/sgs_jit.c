@@ -84,8 +84,8 @@ static uint8_t baseline_flags[] =
 	OI_RET0 | OI_HAS1 | OI_HAS2, OI_HAS0 | OI_HAS1 | OI_HAS2,
 	/* genclsr, pushclsr, makeclsr, getclsr, setclsr */
 	0, OI_HAS0, OI_RET0 | OI_HAS1, OI_RET0, OI_HAS2,
-	/* set, clone, concat, negate, bool_inv, invert */
-	OI_PB, OI_PB, OI_PA, OI_PB, OI_PB, OI_PB,
+	/* set, mconcat, concat, negate, bool_inv, invert */
+	OI_PB, OI_RET0, OI_PA, OI_PB, OI_PB, OI_PB,
 	/* inc, dec, add, sub, mul, div, mod */
 	OI_PB, OI_PB, OI_PA, OI_PA, OI_PA, OI_PA, OI_PA,
 	/* and, or, xor, lsh, rsh */

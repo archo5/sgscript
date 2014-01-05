@@ -218,7 +218,8 @@ static void dump_opcode( instr_t* ptr, int32_t count )
 			dump_rcpos( argC ); break;
 
 		DOP_B( SET );
-		DOP_B( CLONE );
+		case SI_MCONCAT: printf( "MCONCAT " ); dump_rcpos( argA );
+			printf( " [%d]", argB ); break;
 		DOP_A( CONCAT );
 		DOP_B( NEGATE );
 		DOP_B( BOOL_INV );
@@ -1333,6 +1334,39 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 				}
 			}
 		}
+		/* 3+ operands (MCONCAT only) */
+		else if( *node->token == ST_OP_CATEQ && node->child &&
+			node->child->next && node->child->next->next )
+		{
+			int numch = 0;
+			FTNode* cur = node->child;
+			int16_t ireg, oreg = comp_reg_alloc( C );
+			if( C->state & SGS_MUST_STOP )
+				goto fail;
+
+			/* get source data registers */
+			while( cur )
+			{
+				int32_t bkup = C->fctx->regs;
+				
+				FUNC_ENTER;
+				if( !compile_node_r( C, func, cur, &ireg ) ) goto fail;
+				INSTR_WRITE( SI_PUSH, 0, ireg, 0 );
+				numch++;
+				cur = cur->next;
+				
+				comp_reg_unwind( C, bkup );
+			}
+			
+			INSTR_WRITE( SI_MCONCAT, oreg, numch, 0 );
+
+			if( arg )
+				*arg = oreg;
+
+			/* compile write */
+			FUNC_ENTER;
+			if( !compile_node_w( C, func, node->child, oreg ) ) goto fail;
+		}
 		/* 2 operands */
 		else
 		{
@@ -1409,6 +1443,36 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 				INSTR_WRITE( SI_SETPROP, ireg1, ireg2, oreg );
 			}
 
+		}
+		/* 3+ operands (MCONCAT only) */
+		else if( *node->token == ST_OP_CAT && node->child &&
+			node->child->next && node->child->next->next )
+		{
+			int numch = 0;
+			FTNode* cur = node->child;
+			int16_t ireg, oreg = comp_reg_alloc( C );
+			if( C->state & SGS_MUST_STOP )
+				goto fail;
+
+			/* get source data registers */
+			while( cur )
+			{
+				int32_t bkup = C->fctx->regs;
+				
+				FUNC_ENTER;
+				if( !compile_node_r( C, func, cur, &ireg ) ) goto fail;
+				INSTR_WRITE( SI_PUSH, 0, ireg, 0 );
+				numch++;
+				cur = cur->next;
+				
+				comp_reg_unwind( C, bkup );
+			}
+			
+			if( arg )
+				*arg = oreg;
+			
+			/* compile op */
+			INSTR_WRITE( SI_MCONCAT, oreg, numch, 0 );
 		}
 		else
 		{
