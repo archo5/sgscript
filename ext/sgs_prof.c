@@ -310,7 +310,8 @@ static int dpm3sf( const void* p1, const void* p2 )
 	const mode3data* D1 = (const mode3data*) v1->val.data.P;
 	const mode3data* D2 = (const mode3data*) v2->val.data.P;
 	int cmpsz = str1->size < str2->size ? str1->size : str2->size;
-	int ret = ( D1->numallocs + D1->numfrees ) - ( D2->numallocs + D2->numfrees );
+	int ret = ( D2->numallocs + D2->numfrees ) - ( D1->numallocs + D1->numfrees );
+	if( !ret ) ret = abs( D2->szdelta ) - abs( D1->szdelta );
 	if( !ret ) ret = memcmp( str_cstr( str1 ), str_cstr( str2 ), cmpsz );
 	if( !ret ) ret = str1->size - str2->size;
 	return ret;
