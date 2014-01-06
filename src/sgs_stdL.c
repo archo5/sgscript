@@ -66,10 +66,11 @@ static int path_replast( SGS_CTX, int from, int with )
 
 */
 
-static sgs_SizeVal fmt_pack_numitems(
-	SGS_CTX, const char* str, sgs_SizeVal size )
+static void fmt_pack_stats(
+	SGS_CTX, const char* str, sgs_SizeVal size,
+	sgs_SizeVal* outnumitems, sgs_SizeVal* outnumbytes )
 {
-	sgs_SizeVal cnt = 0, first = 1, mult = 0;
+	sgs_SizeVal numbytes = 0, numitems = 0, first = 1, mult = 0;
 	const char* sb = str, *strend = str + size;
 	while( str < strend )
 	{
@@ -90,17 +91,19 @@ static sgs_SizeVal fmt_pack_numitems(
 			mult = 0;
 			break;
 		/* types */
-		case 'c': case 'w': case 'l': case 'q':
-		case 'f': case 'd': case 'p':
-			cnt += mult ? mult : 1;
-			mult = 0;
-			break;
+		case 'c': numbytes += mult ? mult : 1; numitems += mult ? mult : 1; mult = 0; break;
+		case 'w': numbytes += ( mult ? mult : 1 ) * 2; numitems += mult ? mult : 1; mult = 0; break;
+		case 'l': case 'f': numbytes += ( mult ? mult : 1 ) * 4; numitems += mult ? mult : 1; mult = 0; break;
+		case 'q': case 'd': numbytes += ( mult ? mult : 1 ) * 8; numitems += mult ? mult : 1; mult = 0; break;
+		case 'p': numbytes += ( mult ? mult : 1 ) * sizeof( size_t ); numitems += mult ? mult : 1; mult = 0; break;
 		case 's':
-			cnt++;
+			numbytes += mult ? mult : 1;
+			numitems++;
 			mult = 0;
 			break;
 		/* misc. */
 		case 'x':
+			numbytes += mult ? mult : 1;
 			mult = 0;
 			break;
 		case ' ': case '\t': case '\n': case '\r': break;
@@ -115,64 +118,13 @@ static sgs_SizeVal fmt_pack_numitems(
 			break;
 		}
 	}
-	return cnt;
-}
-
-static sgs_SizeVal fmt_pack_numbytes(
-	SGS_CTX, const char* str, sgs_SizeVal size )
-{
-	sgs_SizeVal cnt = 0, first = 1, mult = 0;
-	const char* sb = str, *strend = str + size;
-	while( str < strend )
-	{
-		char c = *str++;
-		switch( c )
-		{
-		/* multipliers */
-		case '0': case '1': case '2': case '3':
-		case '4': case '5': case '6': case '7':
-		case '8': case '9':
-			mult *= 10;
-			mult += c - '0';
-			break;
-		/* endianness */
-		case '=': case '<': case '>': case '@':
-		/* sign */
-		case '+': case '-':
-			mult = 0;
-			break;
-		/* types */
-		case 'c': cnt += mult ? mult : 1; mult = 0; break;
-		case 'w': cnt += ( mult ? mult : 1 ) * 2; mult = 0; break;
-		case 'l': case 'f': cnt += ( mult ? mult : 1 ) * 4; mult = 0; break;
-		case 'q': case 'd': cnt += ( mult ? mult : 1 ) * 8; mult = 0; break;
-		case 'p': cnt += ( mult ? mult : 1 ) * sizeof( size_t ); mult = 0; break;
-		case 's':
-			cnt += mult;
-			mult = 0;
-			break;
-		/* misc. */
-		case 'x':
-			cnt += mult;
-			mult = 0;
-			break;
-		case ' ': case '\t': case '\n': case '\r': break;
-		default:
-			if( first )
-			{
-				first = 0;
-				sgs_Printf( C, SGS_WARNING, "invalid character"
-				" at position %d (there might be more)", ( str - sb + 1 ) );
-			}
-			mult = 0;
-			break;
-		}
-	}
-	return cnt;
+	
+	if( outnumitems ) *outnumitems = numitems;
+	if( outnumbytes ) *outnumbytes = numbytes;
 }
 
 static sgs_SizeVal fmt_pack( SGS_CTX,
-	const char* str, sgs_SizeVal size, MemBuf* bfr )
+	const char* str, sgs_SizeVal size, char* bfr )
 {
 	int invert = 0;
 	sgs_SizeVal si = 1, mult = 0;
@@ -225,7 +177,8 @@ static sgs_SizeVal fmt_pack( SGS_CTX,
 						bb[ b ] = bbt;
 					}
 				}
-				membuf_appbuf( bfr, C, bb, size );
+				memcpy( bfr, bb, size );
+				bfr += size;
 			}
 			mult = 0;
 			break;
@@ -249,7 +202,8 @@ static sgs_SizeVal fmt_pack( SGS_CTX,
 						bbt = bb[ 0 ]; bb[ 0 ] = bb[ 3 ]; bb[ 3 ] = bbt;
 						bbt = bb[ 1 ]; bb[ 1 ] = bb[ 2 ]; bb[ 2 ] = bbt;
 					}
-					membuf_appbuf( bfr, C, bb, 4 );
+					memcpy( bfr, bb, 4 );
+					bfr += 4;
 				}
 				else
 				{
@@ -263,7 +217,8 @@ static sgs_SizeVal fmt_pack( SGS_CTX,
 						bbt = bb[ 2 ]; bb[ 2 ] = bb[ 5 ]; bb[ 5 ] = bbt;
 						bbt = bb[ 3 ]; bb[ 3 ] = bb[ 4 ]; bb[ 4 ] = bbt;
 					}
-					membuf_appbuf( bfr, C, bb, 8 );
+					memcpy( bfr, bb, 8 );
+					bfr += 8;
 				}
 			}
 			mult = 0;
@@ -279,10 +234,11 @@ static sgs_SizeVal fmt_pack( SGS_CTX,
 					mult = 1;
 				if( asize > mult )
 					asize = mult;
-				membuf_appbuf( bfr, C, astr, asize );
+				memcpy( bfr, astr, asize );
+				bfr += asize;
 				while( asize < mult )
 				{
-					membuf_appchr( bfr, C, '\0' );
+					*bfr++ = '\0';
 					asize++;
 				}
 			}
@@ -292,7 +248,7 @@ static sgs_SizeVal fmt_pack( SGS_CTX,
 			if( !mult )
 				mult = 1;
 			while( mult-- > 0 )
-				membuf_appchr( bfr, C, '\0' );
+				*bfr++ = '\0';
 			mult = 0;
 			break;
 		case ' ': case '\t': case '\n': case '\r': break;
@@ -446,14 +402,14 @@ static int fmt_unpack( SGS_CTX, const char* str,
 static int sgsstd_fmt_pack( SGS_CTX )
 {
 	char* str;
-	sgs_SizeVal size, numitems, ret;
+	sgs_SizeVal size, numitems = 0, numbytes = 0, ret;
 	
 	SGSFN( "fmt_pack" );
 
 	if( !sgs_LoadArgs( C, "m", &str, &size ) )
 		return 0;
 
-	numitems = fmt_pack_numitems( C, str, size );
+	fmt_pack_stats( C, str, size, &numitems, &numbytes );
 	if( sgs_StackSize( C ) < numitems + 1 )
 	{
 		sgs_Printf( C, SGS_WARNING, 
@@ -463,14 +419,10 @@ static int sgsstd_fmt_pack( SGS_CTX )
 	}
 
 	{
-		MemBuf bfr = membuf_create();
-		ret = fmt_pack( C, str, size, &bfr ) - 1;
-		if( ret == numitems )
-			sgs_PushStringBuf( C, bfr.ptr, bfr.size );
-		else
-			sgs_Printf( C, SGS_WARNING, 
-				"error in arguments, could not read all" );
-		membuf_destroy( &bfr, C );
+		sgs_PushStringBuf( C, NULL, numbytes );
+		ret = fmt_pack( C, str, size, sgs_GetStringPtr( C, -1 ) ) - 1;
+		if( ret != numitems )
+			sgs_Printf( C, SGS_WARNING, "error in arguments, could not read all" );
 		return ret == numitems;
 	}
 }
@@ -478,29 +430,30 @@ static int sgsstd_fmt_pack( SGS_CTX )
 static int sgsstd_fmt_pack_count( SGS_CTX )
 {
 	char* str;
-	sgs_SizeVal size;
+	sgs_SizeVal size, numitems = 0;
 	
 	SGSFN( "fmt_pack_count" );
-
+	
 	if( !sgs_LoadArgs( C, "m", &str, &size ) )
 		return 0;
-
-	sgs_PushInt( C, fmt_pack_numitems( C, str, size ) );
+	
+	fmt_pack_stats( C, str, size, &numitems, NULL );
+	sgs_PushInt( C, numitems );
 	return 1;
 }
 
 static int sgsstd_fmt_unpack( SGS_CTX )
 {
-	sgs_SizeVal bytes, ret;
+	sgs_SizeVal bytes = 0, ret;
 	char* str, *data;
 	sgs_SizeVal size, datasize;
 	
 	SGSFN( "fmt_unpack" );
-
+	
 	if( !sgs_LoadArgs( C, "mm", &str, &size, &data, &datasize ) )
 		return 0;
-
-	bytes = fmt_pack_numbytes( C, str, size );
+	
+	fmt_pack_stats( C, str, size, NULL, &bytes );
 	if( bytes > datasize )
 		STDLIB_WARN( "not enough data to successfully unpack" )
 	ret = fmt_unpack( C, str, size, data, datasize );
@@ -512,14 +465,15 @@ static int sgsstd_fmt_unpack( SGS_CTX )
 static int sgsstd_fmt_pack_size( SGS_CTX )
 {
 	char* str;
-	sgs_SizeVal size;
+	sgs_SizeVal size, bytes = 0;
 	
 	SGSFN( "fmt_pack_size" );
-
+	
 	if( !sgs_LoadArgs( C, "m", &str, &size ) )
 		return 0;
-
-	sgs_PushInt( C, fmt_pack_numbytes( C, str, size ) );
+	
+	fmt_pack_stats( C, str, size, NULL, &bytes );
+	sgs_PushInt( C, bytes );
 	return 1;
 }
 
