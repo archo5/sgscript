@@ -542,16 +542,6 @@ struct _sgs_iFunc
 #define sgs_func_consts( pfn )   ((sgs_Variable*)(((char*)(pfn))+sizeof(sgs_iFunc)))
 #define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(((char*)(pfn))+sizeof(sgs_iFunc)+pfn->instr_off))
 
-struct _sgs_iStr
-{
-	int32_t refcount;
-	int32_t size;
-	sgs_Hash hash;
-	int isconst;
-};
-#define sgs_str_cstr( pstr ) (((char*)(pstr))+sizeof(sgs_iStr))
-#define sgs_var_cstr( var ) sgs_str_cstr( (var)->data.S )
-
 #define sgs_object_t sgs_VarObj
 
 typedef struct _sgs_Closure sgs_Closure;

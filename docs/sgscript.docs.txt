@@ -2104,6 +2104,43 @@ sgs_Errno [function (inline)]
 # <<<
 
 
+# Optimization utilities interface [info]
+# >>>
+
+
+# sgs_PushStringBuf32 [function]
+
+== void sgs_PushStringBuf32( sgs_Context* C, sgs_String32* S, const char* str, sgs_SizeVal len )
+=== pushes a temporary string variable from the specified buffer, allocated in the `sgs_String32` object
+
+- string buffer must be freed from all contexts before the memory it's allocated on is released
+- `len` is limited to 31 character
+
+
+# sgs_PushString32 [function]
+
+== void sgs_PushString32( sgs_Context* C, sgs_String32* S, const char* str )
+=== pushes a temporary string variable from the specified string, allocated in the `sgs_String32` object
+
+- string buffer must be freed from all contexts before the memory it's allocated on is released
+- alias to `sgs_PushStringBuf32( C, S, str, SGS_STRINGLENGTHFUNC(str) )`
+
+
+# sgs_CheckString32 [function]
+
+== void sgs_CheckString32( sgs_String32* S )
+=== crashes if the specified temporary string object is not freed from all contexts
+
+
+# sgs_IsFreedString32 [function]
+
+== SGSBOOL sgs_IsFreedString32( sgs_String32* S )
+=== returns whether the specified temporary string object is freed from all contexts
+
+
+# <<<
+
+
 # Interface implementation [info]
 # >>>
 

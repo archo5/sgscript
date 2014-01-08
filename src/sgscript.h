@@ -276,6 +276,16 @@ struct sgs_ObjData
 };
 
 typedef struct _sgs_iStr sgs_iStr;
+struct _sgs_iStr
+{
+	int32_t refcount;
+	int32_t size;
+	uint32_t hash;
+	int isconst;
+};
+#define sgs_str_cstr( pstr ) (((char*)(pstr))+sizeof(sgs_iStr))
+#define sgs_var_cstr( var ) sgs_str_cstr( (var)->data.S )
+
 typedef struct _sgs_iFunc sgs_iFunc;
 typedef union _sgs_VarData
 {
@@ -296,6 +306,13 @@ struct _sgs_Variable
 	uint32_t    type;
 	sgs_VarData data;
 };
+
+typedef struct _sgs_String32
+{
+	sgs_iStr data;
+	char buf[32];
+}
+sgs_String32;
 
 /* - object interface */
 #define SGS_OP( idx ) ((sgs_ObjCallback)idx)
@@ -651,6 +668,11 @@ static SGS_INLINE int sgs_Errno( SGS_CTX, int clear )
 }
 #define sgs_SetErrno( C, err ) sgs_Cntl( C, SGS_CNTL_SET_ERRNO, err )
 #define sgs_GetLastErrno( C ) sgs_Cntl( C, SGS_CNTL_GET_ERRNO, 0 )
+
+SGS_APIFUNC void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str, sgs_SizeVal len );
+#define sgs_PushString32( C, S, str ) sgs_PushStringBuf32( C, S, str, SGS_STRINGLENGTHFUNC(str) )
+SGS_APIFUNC void sgs_CheckString32( sgs_String32* S );
+SGS_APIFUNC SGSBOOL sgs_IsFreedString32( sgs_String32* S );
 
 
 #ifdef __cplusplus

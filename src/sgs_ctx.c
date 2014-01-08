@@ -857,3 +857,32 @@ int sgs_HasFuncName( SGS_CTX )
 	return !!C->sf_last && !!C->sf_last->nfname;
 }
 
+
+void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str, sgs_SizeVal len )
+{
+	sgs_BreakIf( len > 31 );
+	S->data.refcount = 1;
+	S->data.size = len;
+	S->data.hash = sgs_HashFunc( str, len );
+	S->data.isconst = 0;
+	memcpy( S->buf, str, len );
+	S->buf[ len ] = 0;
+	
+	{
+		sgs_Variable v;
+		v.type = SGS_VTC_STRING;
+		v.data.S = &S->data;
+		sgs_PushVariable( C, &v );
+	}
+}
+
+void sgs_CheckString32( sgs_String32* S )
+{
+	sgs_BreakIf( !sgs_IsFreedString32( S ) );
+}
+
+SGSBOOL sgs_IsFreedString32( sgs_String32* S )
+{
+	return S->data.refcount == 1;
+}
+
