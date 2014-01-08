@@ -110,6 +110,8 @@ static void var_free_object( SGS_CTX, object_t* O )
 				memmove( C->objpool_data + pos + 1, C->objpool_data + pos,
 					sizeof( sgs_ObjPoolItem ) * ( C->objpool_size - pos ) );
 			}
+			if( pos >= SGS_OBJPOOL_SIZE )
+				pos = SGS_OBJPOOL_SIZE - 1;
 			if( C->objpool_size >= SGS_OBJPOOL_SIZE )
 				sgs_Dealloc( C->objpool_data[ pos ].obj );
 		}
