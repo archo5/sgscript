@@ -2129,13 +2129,17 @@ sgs_Errno [function (inline)]
 # sgs_CheckString32 [function]
 
 == void sgs_CheckString32( sgs_String32* S )
-=== crashes if the specified temporary string object is not freed from all contexts
+=== attempts to trigger a debug breakpoint if the specified temporary string object is not freed from all contexts
+
+- internal function `sgs_BreakIf` is used
 
 
 # sgs_IsFreedString32 [function]
 
 == SGSBOOL sgs_IsFreedString32( sgs_String32* S )
 === returns whether the specified temporary string object is freed from all contexts
+
+- for usage with custom error outputs / assertion systems
 
 
 # <<<

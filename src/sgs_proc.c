@@ -99,21 +99,24 @@ static void var_free_object( SGS_CTX, object_t* O )
 	if( C->objs == O )
 		C->objs = O->next;
 #if SGS_OBJPOOL_SIZE > 0
-	if( C->objpool_size < SGS_OBJPOOL_SIZE && O->appsize <= SGS_OBJPOOL_MAX_APPMEM )
+	if( O->appsize <= SGS_OBJPOOL_MAX_APPMEM )
 	{
 		int pos = 0;
 		if( C->objpool_size )
 		{
 			pos = objpool_binary_search( C, O->appsize );
-			if( pos < C->objpool_size )
+			if( C->objpool_size < SGS_OBJPOOL_SIZE && pos < C->objpool_size )
 			{
 				memmove( C->objpool_data + pos + 1, C->objpool_data + pos,
 					sizeof( sgs_ObjPoolItem ) * ( C->objpool_size - pos ) );
 			}
+			if( C->objpool_size >= SGS_OBJPOOL_SIZE )
+				sgs_Dealloc( C->objpool_data[ pos ].obj );
 		}
 		C->objpool_data[ pos ].obj = O;
 		C->objpool_data[ pos ].appsize = O->appsize;
-		C->objpool_size++;
+		if( C->objpool_size < SGS_OBJPOOL_SIZE )
+			C->objpool_size++;
 	}
 	else
 		sgs_Dealloc( O );
