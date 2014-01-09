@@ -86,6 +86,15 @@ static int xgm_v2_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	sgs_SizeVal size;
 	XGM_OHDR;
 	
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetInt( C, 0 );
+		if( pos != 0 && pos != 1 )
+			return SGS_ENOTFND;
+		sgs_PushReal( C, hdr[ pos ] );
+		return SGS_SUCCESS;
+	}
+	
 	if( !sgs_ParseString( C, 0, &str, &size ) )
 		return SGS_EINVAL;
 	if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
@@ -116,22 +125,34 @@ static int xgm_v2_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	if( !strcmp( str, "perp" ) ){ sgs_PushVec2( C, -hdr[1], hdr[0] ); return SGS_SUCCESS; }
 	if( !strcmp( str, "perp2" ) ){ sgs_PushVec2( C, hdr[1], -hdr[0] ); return SGS_SUCCESS; }
 	if( !strcmp( str, "rotate" ) ){ sgs_PushCFunction( C, xgm_v2m_rotate ); return SGS_SUCCESS; }
+	if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 2 ); return SGS_SUCCESS; }
 	return SGS_ENOTFND;
 }
 
 static int xgm_v2_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
-	char* str;
-	sgs_SizeVal size;
 	sgs_Real val;
 	XGM_OHDR;
 	
-	if( !sgs_ParseString( C, 0, &str, &size ) )
-		return SGS_EINVAL;
 	if( !sgs_ParseReal( C, 1, &val ) )
 		return SGS_EINVAL;
-	if( !strcmp( str, "x" ) ){ hdr[ 0 ] = val; return SGS_SUCCESS; }
-	if( !strcmp( str, "y" ) ){ hdr[ 1 ] = val; return SGS_SUCCESS; }
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetInt( C, 0 );
+		if( pos != 0 && pos != 1 )
+			return SGS_ENOTFND;
+		hdr[ pos ] = val;
+		return SGS_SUCCESS;
+	}
+	else
+	{
+		char* str;
+		sgs_SizeVal size;
+		if( !sgs_ParseString( C, 0, &str, &size ) )
+			return SGS_EINVAL;
+		if( !strcmp( str, "x" ) ){ hdr[0] = val; return SGS_SUCCESS; }
+		if( !strcmp( str, "y" ) ){ hdr[1] = val; return SGS_SUCCESS; }
+	}
 	return SGS_ENOTFND;
 }
 
@@ -272,6 +293,15 @@ static int xgm_v3_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	sgs_SizeVal size;
 	XGM_OHDR;
 	
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetInt( C, 0 );
+		if( pos != 0 && pos != 1 && pos != 2 )
+			return SGS_ENOTFND;
+		sgs_PushReal( C, hdr[ pos ] );
+		return SGS_SUCCESS;
+	}
+	
 	if( !sgs_ParseString( C, 0, &str, &size ) )
 		return SGS_EINVAL;
 	if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
@@ -299,23 +329,35 @@ static int xgm_v3_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 			sgs_PushVec3( C, 0, 0, 0 );
 		return SGS_SUCCESS;
 	}
+	if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 3 ); return SGS_SUCCESS; }
 	return SGS_ENOTFND;
 }
 
 static int xgm_v3_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
-	char* str;
-	sgs_SizeVal size;
 	sgs_Real val;
 	XGM_OHDR;
 	
-	if( !sgs_ParseString( C, 0, &str, &size ) )
-		return SGS_EINVAL;
 	if( !sgs_ParseReal( C, 1, &val ) )
 		return SGS_EINVAL;
-	if( !strcmp( str, "x" ) ){ hdr[0] = val; return SGS_SUCCESS; }
-	if( !strcmp( str, "y" ) ){ hdr[1] = val; return SGS_SUCCESS; }
-	if( !strcmp( str, "z" ) ){ hdr[2] = val; return SGS_SUCCESS; }
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetInt( C, 0 );
+		if( pos != 0 && pos != 1 && pos != 2 )
+			return SGS_ENOTFND;
+		hdr[ pos ] = val;
+		return SGS_SUCCESS;
+	}
+	else
+	{
+		char* str;
+		sgs_SizeVal size;
+		if( !sgs_ParseString( C, 0, &str, &size ) )
+			return SGS_EINVAL;
+		if( !strcmp( str, "x" ) ){ hdr[0] = val; return SGS_SUCCESS; }
+		if( !strcmp( str, "y" ) ){ hdr[1] = val; return SGS_SUCCESS; }
+		if( !strcmp( str, "z" ) ){ hdr[2] = val; return SGS_SUCCESS; }
+	}
 	return SGS_ENOTFND;
 }
 
@@ -335,8 +377,8 @@ static int xgm_v3_expr( SGS_CTX, sgs_VarObj* data, int type )
 			( v2[0] == 0 || v2[1] == 0 || v2[2] == 0 ) )
 		{
 			const char* errstr = type == SGS_EOP_DIV ?
-				"vec2 operator '/' - division by zero" :
-				"vec2 operator '%' - modulo by zero";
+				"vec3 operator '/' - division by zero" :
+				"vec3 operator '%' - modulo by zero";
 			sgs_Printf( C, SGS_ERROR, errstr );
 			return SGS_EINPROC;
 		}
@@ -483,6 +525,15 @@ static int xgm_v4_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	sgs_SizeVal size;
 	XGM_OHDR;
 	
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetInt( C, 0 );
+		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
+			return SGS_ENOTFND;
+		sgs_PushReal( C, hdr[ pos ] );
+		return SGS_SUCCESS;
+	}
+	
 	if( !sgs_ParseString( C, 0, &str, &size ) )
 		return SGS_EINVAL;
 	if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
@@ -511,24 +562,36 @@ static int xgm_v4_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 			sgs_PushVec4( C, 0, 0, 0, 0 );
 		return SGS_SUCCESS;
 	}
+	if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 4 ); return SGS_SUCCESS; }
 	return SGS_ENOTFND;
 }
 
 static int xgm_v4_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 {
-	char* str;
-	sgs_SizeVal size;
 	sgs_Real val;
 	XGM_OHDR;
 	
-	if( !sgs_ParseString( C, 0, &str, &size ) )
-		return SGS_EINVAL;
 	if( !sgs_ParseReal( C, 1, &val ) )
 		return SGS_EINVAL;
-	if( !strcmp( str, "x" ) ){ hdr[0] = val; return SGS_SUCCESS; }
-	if( !strcmp( str, "y" ) ){ hdr[1] = val; return SGS_SUCCESS; }
-	if( !strcmp( str, "z" ) ){ hdr[2] = val; return SGS_SUCCESS; }
-	if( !strcmp( str, "w" ) ){ hdr[3] = val; return SGS_SUCCESS; }
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetInt( C, 0 );
+		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
+			return SGS_ENOTFND;
+		hdr[ pos ] = val;
+		return SGS_SUCCESS;
+	}
+	else
+	{
+		char* str;
+		sgs_SizeVal size;
+		if( !sgs_ParseString( C, 0, &str, &size ) )
+			return SGS_EINVAL;
+		if( !strcmp( str, "x" ) ){ hdr[0] = val; return SGS_SUCCESS; }
+		if( !strcmp( str, "y" ) ){ hdr[1] = val; return SGS_SUCCESS; }
+		if( !strcmp( str, "z" ) ){ hdr[2] = val; return SGS_SUCCESS; }
+		if( !strcmp( str, "w" ) ){ hdr[3] = val; return SGS_SUCCESS; }
+	}
 	return SGS_ENOTFND;
 }
 
@@ -548,8 +611,8 @@ static int xgm_v4_expr( SGS_CTX, sgs_VarObj* data, int type )
 			( v2[0] == 0 || v2[1] == 0 || v2[2] == 0 || v2[3] == 0 ) )
 		{
 			const char* errstr = type == SGS_EOP_DIV ?
-				"vec2 operator '/' - division by zero" :
-				"vec2 operator '%' - modulo by zero";
+				"vec4 operator '/' - division by zero" :
+				"vec4 operator '%' - modulo by zero";
 			sgs_Printf( C, SGS_ERROR, errstr );
 			return SGS_EINPROC;
 		}
@@ -893,6 +956,194 @@ static int xgm_p2_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 
 
 
+/*  C O L O R  */
+
+static int xgm_col_convert( SGS_CTX, sgs_VarObj* data, int type )
+{
+	XGM_OHDR;
+	if( type == SGS_CONVOP_CLONE )
+	{
+		sgs_PushColorp( C, hdr );
+		return SGS_SUCCESS;
+	}
+	else if( type == SGS_CONVOP_TOTYPE )
+	{
+		sgs_PushString( C, "color" );
+		return SGS_SUCCESS;
+	}
+	else if( type == SGS_VT_STRING )
+	{
+		char buf[ 256 ];
+		sprintf( buf, "color(%g;%g;%g;%g)", hdr[0], hdr[1], hdr[2], hdr[3] );
+		sgs_PushString( C, buf );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int xgm_col_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+{
+	char* str;
+	sgs_SizeVal size;
+	XGM_OHDR;
+	
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetInt( C, 0 );
+		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
+			return SGS_ENOTFND;
+		sgs_PushReal( C, hdr[ pos ] );
+		return SGS_SUCCESS;
+	}
+	
+	if( !sgs_ParseString( C, 0, &str, &size ) )
+		return SGS_EINVAL;
+	if( !strcmp( str, "r" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
+	if( !strcmp( str, "g" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
+	if( !strcmp( str, "b" ) ){ sgs_PushReal( C, hdr[ 2 ] ); return SGS_SUCCESS; }
+	if( !strcmp( str, "a" ) ){ sgs_PushReal( C, hdr[ 3 ] ); return SGS_SUCCESS; }
+	if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 4 ); return SGS_SUCCESS; }
+	return SGS_ENOTFND;
+}
+
+static int xgm_col_setindex( SGS_CTX, sgs_VarObj* data, int prop )
+{
+	sgs_Real val;
+	XGM_OHDR;
+	
+	if( !sgs_ParseReal( C, 1, &val ) )
+		return SGS_EINVAL;
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetInt( C, 0 );
+		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
+			return SGS_ENOTFND;
+		hdr[ pos ] = val;
+		return SGS_SUCCESS;
+	}
+	else
+	{
+		char* str;
+		sgs_SizeVal size;
+		if( !sgs_ParseString( C, 0, &str, &size ) )
+			return SGS_EINVAL;
+		if( !strcmp( str, "r" ) ){ hdr[0] = val; return SGS_SUCCESS; }
+		if( !strcmp( str, "g" ) ){ hdr[1] = val; return SGS_SUCCESS; }
+		if( !strcmp( str, "b" ) ){ hdr[2] = val; return SGS_SUCCESS; }
+		if( !strcmp( str, "a" ) ){ hdr[3] = val; return SGS_SUCCESS; }
+	}
+	return SGS_ENOTFND;
+}
+
+static int xgm_col_expr( SGS_CTX, sgs_VarObj* data, int type )
+{
+	if( type == SGS_EOP_ADD ||
+		type == SGS_EOP_SUB ||
+		type == SGS_EOP_MUL ||
+		type == SGS_EOP_DIV ||
+		type == SGS_EOP_MOD )
+	{
+		XGM_VT r[4], v1[4], v2[4];
+		if( !sgs_ParseColor( C, 0, v1, 0 ) || !sgs_ParseColor( C, 1, v2, 0 ) )
+			return SGS_EINVAL;
+		
+		if( ( type == SGS_EOP_DIV || type == SGS_EOP_MOD ) &&
+			( v2[0] == 0 || v2[1] == 0 || v2[2] == 0 || v2[3] == 0 ) )
+		{
+			const char* errstr = type == SGS_EOP_DIV ?
+				"color operator '/' - division by zero" :
+				"color operator '%' - modulo by zero";
+			sgs_Printf( C, SGS_ERROR, errstr );
+			return SGS_EINPROC;
+		}
+		
+		if( type == SGS_EOP_ADD )
+		{
+			r[0] = v1[0] + v2[0]; r[1] = v1[1] + v2[1];
+			r[2] = v1[2] + v2[2]; r[3] = v1[3] + v2[3];
+		}
+		else if( type == SGS_EOP_SUB )
+		{
+			r[0] = v1[0] - v2[0]; r[1] = v1[1] - v2[1];
+			r[2] = v1[2] - v2[2]; r[3] = v1[3] - v2[3];
+		}
+		else if( type == SGS_EOP_MUL )
+		{
+			r[0] = v1[0] * v2[0]; r[1] = v1[1] * v2[1];
+			r[2] = v1[2] * v2[2]; r[3] = v1[3] * v2[3];
+		}
+		else if( type == SGS_EOP_DIV )
+		{
+			r[0] = v1[0] / v2[0]; r[1] = v1[1] / v2[1];
+			r[2] = v1[2] / v2[2]; r[3] = v1[3] / v2[3];
+		}
+		else
+		{
+			r[0] = fmod( v1[0], v2[0] );
+			r[1] = fmod( v1[1], v2[1] );
+			r[2] = fmod( v1[2], v2[2] );
+			r[3] = fmod( v1[3], v2[3] );
+		}
+		
+		sgs_PushColorp( C, r );
+		return SGS_SUCCESS;
+	}
+	else if( type == SGS_EOP_COMPARE )
+	{
+		XGM_VT *v1, *v2;
+		if( !sgs_IsObject( C, 0, xgm_vec4_iface ) ||
+			!sgs_IsObject( C, 1, xgm_vec4_iface ) )
+			return SGS_EINVAL;
+		
+		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
+		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
+		
+		if( v1[0] != v2[0] ) sgs_PushReal( C, v1[0] - v2[0] );
+		else if( v1[1] != v2[1] ) sgs_PushReal( C, v1[1] - v2[1] );
+		else if( v1[2] != v2[2] ) sgs_PushReal( C, v1[2] - v2[2] );
+		else sgs_PushReal( C, v1[3] - v2[3] );
+		return SGS_SUCCESS;
+	}
+	else if( type == SGS_EOP_NEGATE )
+	{
+		XGM_OHDR;
+		sgs_PushColor( C, -hdr[0], -hdr[1], -hdr[2], -hdr[3] );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int xgm_col_serialize( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	XGM_OHDR;
+	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	sgs_PushReal( C, hdr[2] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	sgs_PushReal( C, hdr[3] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	return sgs_SerializeObject( C, 2, "color" );
+}
+
+static int xgm_col_dump( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	return xgm_col_convert( C, data, SGS_VT_STRING );
+}
+
+static int xgm_color( SGS_CTX )
+{
+	int argc = sgs_StackSize( C );
+	XGM_VT v[ 4 ] = { 0, 0, 0, 0 };
+	
+	SGSFN( "color" );
+	
+	if( !sgs_LoadArgs( C, "f|fff.", v, v + 1, v + 2, v + 3 ) )
+		return 0;
+	
+	sgs_PushColorvp( C, v, argc );
+	return 1;
+}
+
+
+
 sgs_ObjCallback xgm_vec2_iface[] =
 {
 	SGS_OP_GETINDEX, xgm_v2_getindex,
@@ -943,6 +1194,17 @@ sgs_ObjCallback xgm_poly2_iface[] =
 	SGS_OP_END
 };
 
+sgs_ObjCallback xgm_color_iface[] =
+{
+	SGS_OP_GETINDEX, xgm_col_getindex,
+	SGS_OP_SETINDEX, xgm_col_setindex,
+	SGS_OP_EXPR, xgm_col_expr,
+	SGS_OP_CONVERT, xgm_col_convert,
+	SGS_OP_SERIALIZE, xgm_col_serialize,
+	SGS_OP_DUMP, xgm_col_dump,
+	SGS_OP_END
+};
+
 
 void sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y )
 {
@@ -986,6 +1248,15 @@ void sgs_PushPoly2( SGS_CTX, XGM_VT* v2fn, int numverts )
 	memcpy( np->data, v2fn, sizeof( XGM_VT ) * np->mem * 2 );
 }
 
+void sgs_PushColor( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
+{
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
+	nv[ 0 ] = x;
+	nv[ 1 ] = y;
+	nv[ 2 ] = z;
+	nv[ 3 ] = w;
+}
+
 
 void sgs_PushVec2p( SGS_CTX, XGM_VT* v2f )
 {
@@ -1018,6 +1289,25 @@ void sgs_PushAABB2p( SGS_CTX, XGM_VT* v4f )
 	nv[ 1 ] = v4f[ 1 ];
 	nv[ 2 ] = v4f[ 2 ];
 	nv[ 3 ] = v4f[ 3 ];
+}
+
+void sgs_PushColorp( SGS_CTX, XGM_VT* v4f )
+{
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
+	nv[ 0 ] = v4f[ 0 ];
+	nv[ 1 ] = v4f[ 1 ];
+	nv[ 2 ] = v4f[ 2 ];
+	nv[ 3 ] = v4f[ 3 ];
+}
+
+void sgs_PushColorvp( SGS_CTX, XGM_VECTOR_TYPE* vf, int numfloats )
+{
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
+	if( numfloats == 0 ) nv[0] = nv[1] = nv[2] = nv[3] = 0;
+	else if( numfloats == 1 ) nv[0] = nv[1] = nv[2] = nv[3] = vf[0];
+	else if( numfloats == 2 ){ nv[0] = nv[1] = nv[2] = vf[0]; nv[3] = vf[1]; }
+	else if( numfloats == 3 ){ nv[0] = vf[0]; nv[1] = vf[1]; nv[2] = vf[2]; nv[3] = 1; }
+	else { nv[0] = vf[0]; nv[1] = vf[1]; nv[2] = vf[2]; nv[3] = vf[3]; }
 }
 
 
@@ -1075,7 +1365,8 @@ int sgs_ParseVec4( SGS_CTX, int pos, XGM_VT* v4f, int strict )
 	if( sgs_ItemType( C, pos ) != SGS_VT_OBJECT )
 		return 0;
 	
-	if( sgs_IsObject( C, pos, xgm_vec4_iface ) )
+	if( sgs_IsObject( C, pos, xgm_vec4_iface ) ||
+		sgs_IsObject( C, pos, xgm_color_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectData( C, pos );
 		v4f[0] = hdr[0];
@@ -1101,6 +1392,11 @@ int sgs_ParseAABB2( SGS_CTX, int pos, XGM_VT* v4f )
 	return 0;
 }
 
+int sgs_ParseColor( SGS_CTX, int pos, XGM_VT* v4f, int strict )
+{
+	return sgs_ParseVec4( C, pos, v4f, strict );
+}
+
 
 int sgs_ArgCheck_Vec2( SGS_CTX, int argid, va_list* args, int flags )
 {
@@ -1120,7 +1416,7 @@ int sgs_ArgCheck_Vec2( SGS_CTX, int argid, va_list* args, int flags )
 	}
 	if( flags & SGS_LOADARG_OPTIONAL )
 		return 1;
-	return sgs_ArgErrorExt( C, argid, 0, "vec2", "" );
+	return sgs_ArgErrorExt( C, argid, 0, "vec2", flags & SGS_LOADARG_STRICT ? "strict " : "" );
 }
 
 int sgs_ArgCheck_Vec3( SGS_CTX, int argid, va_list* args, int flags )
@@ -1142,10 +1438,10 @@ int sgs_ArgCheck_Vec3( SGS_CTX, int argid, va_list* args, int flags )
 	}
 	if( flags & SGS_LOADARG_OPTIONAL )
 		return 1;
-	return sgs_ArgErrorExt( C, argid, 0, "vec3", "" );
+	return sgs_ArgErrorExt( C, argid, 0, "vec3", flags & SGS_LOADARG_STRICT ? "strict " : "" );
 }
 
-int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list* args, int flags )
+static int sgs_ArgCheck_4F( SGS_CTX, int argid, va_list* args, int flags, const char* name )
 {
 	XGM_VT* out = NULL;
 	XGM_VT v[4];
@@ -1165,7 +1461,12 @@ int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list* args, int flags )
 	}
 	if( flags & SGS_LOADARG_OPTIONAL )
 		return 1;
-	return sgs_ArgErrorExt( C, argid, 0, "vec4", "" );
+	return sgs_ArgErrorExt( C, argid, 0, name, flags & SGS_LOADARG_STRICT ? "strict " : "" );
+}
+
+int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list* args, int flags )
+{
+	return sgs_ArgCheck_4F( C, argid, args, flags, "vec4" );
 }
 
 int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list* args, int flags )
@@ -1188,7 +1489,12 @@ int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list* args, int flags )
 	}
 	if( flags & SGS_LOADARG_OPTIONAL )
 		return 1;
-	return sgs_ArgErrorExt( C, argid, 0, "aabb2", "" );
+	return sgs_ArgErrorExt( C, argid, 0, "aabb2", flags & SGS_LOADARG_STRICT ? "strict " : "" );
+}
+
+int sgs_ArgCheck_Color( SGS_CTX, int argid, va_list* args, int flags )
+{
+	return sgs_ArgCheck_4F( C, argid, args, flags, "color" );
 }
 
 
@@ -1207,6 +1513,8 @@ static sgs_RegFuncConst xgm_fconsts[] =
 	{ "aabb2", xgm_aabb2 },
 	{ "aabb2v", xgm_aabb2v },
 	{ "aabb2_intersect", xgm_aabb2_intersect },
+	
+	{ "color", xgm_color },
 };
 
 
@@ -1217,6 +1525,7 @@ SGS_APIFUNC int xgm_module_entry_point( SGS_CTX )
 	sgs_RegisterType( C, "vec3", xgm_vec3_iface );
 	sgs_RegisterType( C, "vec4", xgm_vec4_iface );
 	sgs_RegisterType( C, "aabb2", xgm_aabb2_iface );
+	sgs_RegisterType( C, "color", xgm_color_iface );
 	return SGS_SUCCESS;
 }
 
