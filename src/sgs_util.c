@@ -18,9 +18,13 @@ void sgs_BreakIfFunc( const char* code, const char* file, int line )
 {
 	fprintf( stderr, "\n== Error detected: \"%s\", file: %s, line %d ==\n", code, file, line );
 #if defined( _MSC_VER )
-	__asm{ int 3 };
+	__debugbreak();
 #elif defined( __GNUC__ )
+#  if SGS_ARCH_X86
 	__asm__( "int $3" );
+#  else
+	__builtin_trap();
+#  endif
 #else
 	assert( 0 );
 #endif

@@ -70,16 +70,38 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 /* basic platform info */
-#ifdef _WIN32
+#if _WIN32 || __WIN32__ || __WINDOWS__
 #  define SGS_OS_TYPE "Windows"
-#elif __linux
+#elif __APPLE__
+#  define SGS_OS_TYPE "Mac OS X"
+#elif __ANDROID__
+#  define SGS_OS_TYPE "Android"
+#elif __linux || __linux__
 #  define SGS_OS_TYPE "Linux"
-#elif __unix
+#elif __unix || __unix__
 #  define SGS_OS_TYPE "Unix"
 #elif __posix
 #  define SGS_OS_TYPE "POSIX"
 #else
 #  define SGS_OS_TYPE "Unknown"
+#endif
+
+/* simplified architecture info */
+#if __arm__ || __thumb__ || _M_ARM || _M_ARMT
+#  define SGS_ARCH_ARM 1
+#endif
+#if i386 || __i386 || __i386 || _M_IX86 || _X86_ || __X86__
+#  define SGS_ARCH_X86 1
+#endif
+#if __amd64__ || __amd64 || __x86_64__ || __x86_64 || _M_X64 || _M_AMD64
+#  define SGS_ARCH_AMD64 1
+#endif
+#if __ia64__ || _IA64 || __IA64__ || _M_IA64
+#  define SGS_ARCH_IA64 1
+#endif
+#if __powerpc || __powerpc__ || __powerpc64__ || \
+	__ppc__ || __ppc64 || _M_PPC || _XENON
+#  define SGS_ARCH_PPC 1
 #endif
 
 
