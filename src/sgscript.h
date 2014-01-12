@@ -630,7 +630,7 @@ SGS_APIFUNC SGSBOOL sgs_ParsePtr( SGS_CTX, int item, void** out );
 
 SGS_APIFUNC SGSRESULT sgs_PushIterator( SGS_CTX, int item );
 SGS_APIFUNC SGSMIXED sgs_IterAdvance( SGS_CTX, int item );
-SGS_APIFUNC SGSRESULT sgs_IterPushData( SGS_CTX, int item, int key, int value );
+SGS_APIFUNC SGSMIXED sgs_IterPushData( SGS_CTX, int item, int key, int value );
 
 SGS_APIFUNC SGSMIXED sgs_ArraySize( SGS_CTX, int item );
 

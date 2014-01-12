@@ -1,15 +1,28 @@
 
+# Target platform control
+# For most sane platforms, use CC=gcc (default) or clang
+# For Android, use <some-prebuilt-gcc/clang> -DSGS_PF_ANDROID \
+#   --sysroot=NDK_ROOT\platforms\<platform>\<arch>
+# .. and uncomment this line:
+# PLATFORM=android
 CC=gcc
+
 COMMONFLAGS=-Wall
+
 SRCDIR=src
 LIBDIR=lib
 EXTDIR=ext
 OUTDIR=bin
 OBJDIR=obj
 
+ifeq ($(PLATFORM),android)
+	CPLATFLAGS = -fPIC
+	PLATFLAGS = -ldl -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
+	BINEXT=
+	LIBEXT=.so
+	LIBPFX=lib
+else
 ifdef SystemRoot
-	RM = del /Q
-	FixPath = $(subst /,\,$1)
 	CPLATFLAGS =
 	PLATFLAGS = -lkernel32
 	SOCKLIBS = -lws2_32
@@ -17,13 +30,21 @@ ifdef SystemRoot
 	LIBEXT=.dll
 	LIBPFX=
 else
-	RM = rm -f
-	FixPath = $1
 	CPLATFLAGS = -fPIC
 	PLATFLAGS = -ldl -lrt -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
+	THREADLIBS = -lpthread
 	BINEXT=
 	LIBEXT=.so
 	LIBPFX=lib
+endif
+endif
+
+ifdef SystemRoot
+	RM = del /Q
+	FixPath = $(subst /,\,$1)
+else
+	RM = rm -f
+	FixPath = $1
 endif
 
 ifeq ($(arch),64)
@@ -89,7 +110,7 @@ $(OUTDIR)/sgsxgmath$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsxgmath.c $(OUTFILE) $(EXTD
 $(OUTDIR)/sgsjson$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsjson.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgsjson.c -shared $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgspproc$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgspproc.c
-	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgspproc.c -shared $(LFLAGS) -lpthread -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgspproc.c -shared $(LFLAGS) $(THREADLIBS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgssockets$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgssockets.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgssockets.c -shared $(LFLAGS) $(SOCKLIBS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgsmeta$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsmeta.c
@@ -142,7 +163,7 @@ tools: xgmath json pproc sockets meta build_test build_apitest vm c
 test_mt: $(OUTDIR)/sgstest_mt$(BINEXT)
 	$(OUTDIR)/sgstest_mt
 $(OUTDIR)/sgstest_mt$(BINEXT): $(LIBDIR)/libsgscript.a
-	$(CC) -o $@ examples/sgstest_mt.c $(LFLAGS) -lm -lpthread $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+	$(CC) -o $@ examples/sgstest_mt.c $(LFLAGS) -lm $(THREADLIBS) $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 # - sgs2exe tool
 .PHONY: sgsexe
 sgsexe: $(LIBDIR)/libsgscript.a $(EXTDIR)/sgsexe.c

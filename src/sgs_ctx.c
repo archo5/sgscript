@@ -244,7 +244,7 @@ const char* sgs_CodeString( int type, int val )
 	}
 	else if( type == SGS_CODE_OI )
 	{
-		if( val < 0 || val >= ARRAY_SIZE( sgs_IfaceNames ) )
+		if( val < 0 || val >= (int) ARRAY_SIZE( sgs_IfaceNames ) )
 			return NULL;
 		return sgs_IfaceNames[ val ];
 	}
@@ -372,7 +372,6 @@ int sgs_Printf( SGS_CTX, int type, const char* what, ... )
 void* sgs_Memory( SGS_CTX, void* ptr, size_t size )
 {
 	void* p;
-	sgs_BreakIf( size < 0 );
 	if( size )
 	{
 		size += 16;
@@ -527,7 +526,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	fseek( f, 0, SEEK_SET );
 
 	data = sgs_Alloc_n( char, len );
-	if( fread( data, 1, len, f ) != len )
+	if( fread( data, len, 1, f ) != 1 )
 	{
 		sgs_Errno( C, 0 );
 		fclose( f );

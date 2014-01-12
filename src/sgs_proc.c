@@ -841,7 +841,7 @@ static int init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 	return SGS_SUCCESS;
 }
 
-static int vm_convert( SGS_CTX, sgs_VarPtr var, int type, int stack )
+static int vm_convert( SGS_CTX, sgs_VarPtr var, uint32_t type, int stack )
 {
 	sgs_Variable cvar;
 	int ret = SGS_ENOTSUP;
@@ -1964,7 +1964,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 		}
 
 		case SI_FORPREP: vm_forprep( C, argA, RESVAR( argB ) ); break;
-		case SI_FORLOAD: vm_fornext( C, argB < 0x100 ? argB : -1, argC < 0x100 ? argC : -1, RESVAR( argA ) ); break;
+		case SI_FORLOAD: vm_fornext( C, argB < 0x100 ? (int)argB : -1, argC < 0x100 ? (int)argC : -1, RESVAR( argA ) ); break;
 		case SI_FORJUMP:
 		{
 			int16_t off = argE;
@@ -2101,10 +2101,10 @@ void sgsVM_VarDump( sgs_VarPtr var )
 	case SVT_BOOL: printf( " = %s", var->data.B ? "True" : "False" ); break;
 	case SVT_INT: printf( " = %" PRId64, var->data.I ); break;
 	case SVT_REAL: printf( " = %f", var->data.R ); break;
-	case SVT_STRING: printf( " [rc:%d] = \"", var->data.S->refcount );
+	case SVT_STRING: printf( " [rc:%"PRId32"] = \"", var->data.S->refcount );
 		print_safe( stdout, var_cstr( var ), MIN( var->data.S->size, 16 ) );
 		printf( var->data.S->size > 16 ? "...\"" : "\"" ); break;
-	case SVT_FUNC: printf( " [rc:%d]", var->data.F->refcount ); break;
+	case SVT_FUNC: printf( " [rc:%"PRId32"]", var->data.F->refcount ); break;
 	case SVT_CFUNC: printf( " = %p", (void*)(size_t) var->data.C ); break;
 	case SVT_OBJECT: printf( "TODO [object impl]" ); break;
 	case SVT_PTR: printf( " = %p", var->data.P ); break;
@@ -2673,7 +2673,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 		
 		case 'b':
 			{
-				SGSBOOL b;
+				sgs_Bool b;
 				
 				if( !sgs_ParseBool( C, from, &b ) ||
 					( strict && sgs_ItemType( C, from ) != SVT_BOOL ) )
@@ -2684,7 +2684,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				
 				if( !nowrite )
 				{
-					*va_arg( args, SGSBOOL* ) = b;
+					*va_arg( args, sgs_Bool* ) = b;
 				}
 			}
 			strict = 0; nowrite = 0; from++; break;
@@ -3018,11 +3018,11 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 				char* source = var_cstr( var );
 				sgs_SizeVal len = var->data.S->size;
 				char* srcend = source + len;
-				sprintf( buf, "string [%d] \"", len );
+				sprintf( buf, "string [%"PRId32"] \"", len );
 				bptr += strlen( buf );
 				while( source < srcend && bptr < bend )
 				{
-					if( *source == ' ' || isgraph( *source ) )
+					if( *source == ' ' || isgraph( (int)*source ) )
 						*bptr++ = *source++;
 					else
 					{
@@ -3079,7 +3079,7 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 				int q, stksz;
 				object_t* obj = var->data.O;
 
-				sprintf( buf, "object (%p) [%d] ", (void*) obj, obj->refcount );
+				sprintf( buf, "object (%p) [%"PRId32"] ", (void*) obj, obj->refcount );
 				sgs_PushString( C, buf );
 				stksz = C->stack_top - C->stack_off;
 
@@ -3095,7 +3095,7 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 		case SVT_PTR:
 			{
 				char buf[ 32 ];
-				sprintf( "pointer (%p)", var->data.P );
+				sprintf( buf, "pointer (%p)", var->data.P );
 				sgs_PushString( C, buf );
 			}
 			break;
@@ -3213,7 +3213,7 @@ SGSRESULT sgs_ToPrintSafeString( SGS_CTX )
 	MemBuf mb = membuf_create();
 	for( i = 0; i < size; ++i )
 	{
-		if( isgraph( buf[ i ] ) || buf[ i ] == ' ' )
+		if( isgraph( (int)buf[ i ] ) || buf[ i ] == ' ' )
 			membuf_appchr( &mb, C, buf[ i ] );
 		else
 		{

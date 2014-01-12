@@ -720,7 +720,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			if( F->prec < 0 )
 				F->prec = 6;
 			
-			sprintf( tmpl, "%%.%d%c", F->prec, F->type );
+			sprintf( tmpl, "%%.%"PRId32"%c", F->prec, F->type );
 			snprintf( data, FLT_MAXSIZE, tmpl, R );
 			data[ FLT_MAXSIZE ] = 0;
 			size = strlen( data );
@@ -1266,7 +1266,7 @@ static int sgsstd_fmtstreamI_check( SGS_CTX )
 			break;
 		}
 		chr2 = chkstr[ numchk ];
-		if( chr == chr2 || ( ci && tolower( chr ) == tolower( chr2 ) ) )
+		if( chr == chr2 || ( ci && tolower( (int)chr ) == tolower( (int)chr2 ) ) )
 		{
 			hdr->bufpos++;
 			numchk++;
@@ -2672,10 +2672,13 @@ static int sgsstd_os_set_locale( SGS_CTX )
 
 static int sgsstd_os_get_locale_format( SGS_CTX )
 {
+#ifndef SGS_INVALID_LCONV
 	struct lconv* lc = localeconv();
+#endif
 	
 	sgs_SetStackSize( C, 0 );
 	
+#ifndef SGS_INVALID_LCONV
 #define PLK( name ) sgs_PushString( C, #name );
 #define PLS( name ) PLK( name ); sgs_PushString( C, lc->name );
 #define PLI( name ) PLK( name ); sgs_PushInt( C, lc->name );
@@ -2697,6 +2700,7 @@ static int sgsstd_os_get_locale_format( SGS_CTX )
 	PLI( p_sign_posn );
 	PLI( n_sign_posn );
 	PLI( int_frac_digits );
+#endif
 	
 	sgs_PushDict( C, sgs_StackSize( C ) );
 	return 1;
@@ -3487,7 +3491,7 @@ static int sgsstd_string_toupper( SGS_CTX )
 	strend = str + size;
 	while( str < strend )
 	{
-		*str = toupper( *str );
+		*str = toupper( (int)*str );
 		str++;
 	}
 	return 1;
@@ -3508,7 +3512,7 @@ static int sgsstd_string_tolower( SGS_CTX )
 	strend = str + size;
 	while( str < strend )
 	{
-		*str = tolower( *str );
+		*str = tolower( (int)*str );
 		str++;
 	}
 	return 1;

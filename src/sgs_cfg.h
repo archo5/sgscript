@@ -88,4 +88,10 @@
 #define SGS_INCLUDE_PATH "|/?;|/?" SGS_MODULE_EXT ";|/?.sgc;|/?.sgs;?;?" SGS_MODULE_EXT ";?.sgc;?.sgs"
 
 
+/* per-platform switches */
+#ifdef SGS_PF_ANDROID
+#define SGS_INVALID_LCONV /* disables os_locale_format */
+#endif
+
+
 #endif /* SGS_CFG_H_INCLUDED */

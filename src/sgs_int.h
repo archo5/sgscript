@@ -740,7 +740,7 @@ int sgsSTD_PostInit( SGS_CTX );
 int sgsSTD_MakeArray( SGS_CTX, int cnt );
 int sgsSTD_MakeDict( SGS_CTX, int cnt );
 int sgsSTD_MakeMap( SGS_CTX, int cnt );
-int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, int clc );
+int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, int32_t clc );
 int sgsSTD_GlobalInit( SGS_CTX );
 int sgsSTD_GlobalFree( SGS_CTX );
 int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall );

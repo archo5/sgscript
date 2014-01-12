@@ -137,7 +137,6 @@ static void prepengine( sgs_Context* C )
 	"		if( onfail !== null )\n"
 	"			print( \" - \", onfail );\n"
 	"		print( \"\\n\" );\n"
-	"		sys_errorstate();\n"
 	"	}\n"
 	"}\n";
 	/* for ISO C90 support */

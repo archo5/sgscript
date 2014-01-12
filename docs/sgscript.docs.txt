@@ -1261,7 +1261,7 @@ These are the default meanings for error codes that are honored throughout the A
 
 ==== parsing commands
 - `n` -- check for `null` (returns SGSBOOL = 1, always strict)
-- `b` -- check for `bool` (returns SGSBOOL)
+- `b` -- check for `bool` (returns sgs_Bool)
 - `c` -- check for `int` (returns int8_t or uint8_t, depending on sign settings, may check ranges)
 - `w` -- check for `int` (returns int16_t or uint16_t, depending on sign settings, may check ranges)
 - `l` -- check for `int` (returns int32_t or uint32_t, depending on sign settings, may check ranges)

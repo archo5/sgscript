@@ -42,7 +42,7 @@ int loadfile( const char* file, char** out, sgs_SizeVal* outsize )
 	fseek( f, 0, SEEK_SET );
 
 	data = malloc( len );
-	if( fread( data, 1, len, f ) != len )
+	if( fread( data, len, 1, f ) != 1 )
 	{
 		fclose( f );
 		free( data );
@@ -156,7 +156,7 @@ int main( int argc, char** argv )
 					pp = sp;
 					sp = strstr( sp + 1, ".sgs" );
 				}
-				if( pp - of + 4 == strlen( of ) )
+				if( pp - of + 4 == (ptrdiff_t) strlen( of ) )
 					memcpy( pp, ".sgc", 4 );
 				else
 					strcat( of, ".sgc" );
@@ -170,7 +170,7 @@ int main( int argc, char** argv )
 				return errno;
 			}
 			/* RSRC: fopen -> f */
-			if( fwrite( data2, 1, size2, f ) < size2 )
+			if( fwrite( data2, size2, 1, f ) < 1 )
 			{
 				fclose( f );
 				sgs_Free( C, data2 );

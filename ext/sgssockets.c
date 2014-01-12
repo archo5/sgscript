@@ -46,14 +46,19 @@
 
 #ifdef _WIN32
 #  define sgs_sockerror WSAGetLastError()
-#  define SOCKADDR_SIZE int
 #  define IOCTL_VALUE u_long
+#  define SOCKADDR_SIZE int
 #  define GSO_ARG5TYPE int
 #else
 #  define sgs_sockerror errno
-#  define SOCKADDR_SIZE unsigned int
 #  define IOCTL_VALUE int
-#  define GSO_ARG5TYPE unsigned int
+#  ifdef SGS_PF_ANDROID
+#    define SOCKADDR_SIZE socklen_t
+#    define GSO_ARG5TYPE socklen_t
+#  else
+#    define SOCKADDR_SIZE unsigned int
+#    define GSO_ARG5TYPE unsigned int
+#  endif
 #endif
 
 

@@ -6,7 +6,6 @@ global tests_failed, tests_ran;
 function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
 print( "\n\n-- STRINGS --\n" );
 include_library( "string" );
-include_library( "type" );
 //
 
 var a = "random string";

@@ -121,7 +121,7 @@ static int xgm_v2_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 			sgs_PushVec2( C, 0, 0 );
 		return SGS_SUCCESS;
 	}
-	if( !strcmp( str, "angle" ) ){ sgs_PushReal( C, atan2( hdr[0], hdr[1] ) ); return SGS_SUCCESS; }
+	if( !strcmp( str, "angle" ) ){ sgs_PushReal( C, atan2( hdr[1], hdr[0] ) ); return SGS_SUCCESS; }
 	if( !strcmp( str, "perp" ) ){ sgs_PushVec2( C, -hdr[1], hdr[0] ); return SGS_SUCCESS; }
 	if( !strcmp( str, "perp2" ) ){ sgs_PushVec2( C, hdr[1], -hdr[0] ); return SGS_SUCCESS; }
 	if( !strcmp( str, "rotate" ) ){ sgs_PushCFunction( C, xgm_v2m_rotate ); return SGS_SUCCESS; }

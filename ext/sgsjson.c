@@ -108,7 +108,7 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* str, sgs_
 					case 't': sgs_membuf_appchr( &str, C, '\t' ); break;
 					case 'u':
 						{
-							char hex[ 4 ];
+							uint8_t hex[ 4 ];
 							uint8_t buf[ 2 ];
 							uint16_t uchar;
 							pos++;

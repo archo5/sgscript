@@ -697,7 +697,7 @@ static int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data, int depth )
 	char bfr[ 32 ];
 	int i, ssz = sgs_StackSize( C );
 	SGSARR_HDR_OI;
-	sprintf( bfr, "array (%d)\n[", hdr->size );
+	sprintf( bfr, "array (%"PRId32")\n[", hdr->size );
 	sgs_PushString( C, bfr );
 	if( depth )
 	{
@@ -944,7 +944,7 @@ static int sgsstd_vht_dump( SGS_CTX, sgs_VarObj* data, int depth, const char* na
 	pair = ht->vars;
 	pend = ht->vars + vht_size( ht );
 	ssz = sgs_StackSize( C );
-	sprintf( bfr, "%s (%d)\n{", name, vht_size( ht ) );
+	sprintf( bfr, "%s (%"PRId32")\n{", name, vht_size( ht ) );
 	sgs_PushString( C, bfr );
 	if( depth )
 	{
@@ -1842,7 +1842,7 @@ static int sgsstd_realclsr_dump( SGS_CTX, sgs_VarObj* data, int depth )
 	for( i = 0; i < cc; ++i )
 	{
 		char intro[ 64 ];
-		sprintf( intro, "\n#%d (rc=%d): ", i, cls[ i ]->refcount );
+		sprintf( intro, "\n#%"PRId32" (rc=%"PRId32"): ", i, cls[ i ]->refcount );
 		sgs_PushString( C, intro );
 		sgs_PushVariable( C, &cls[ i ]->var );
 		if( sgs_DumpVar( C, depth ) )
