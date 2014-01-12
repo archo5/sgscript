@@ -7,7 +7,7 @@
 # PLATFORM=android
 CC=gcc
 
-COMMONFLAGS=-Wall
+COMMONFLAGS=-Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align
 
 SRCDIR=src
 LIBDIR=lib

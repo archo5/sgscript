@@ -28,8 +28,8 @@ testfile;
 
 int tf_compare( const void* p1, const void* p2 )
 {
-	testfile* f1 = (testfile*) p1;
-	testfile* f2 = (testfile*) p2;
+	const testfile* f1 = (const testfile*) p1;
+	const testfile* f2 = (const testfile*) p2;
 	if( f1->sortkey != f2->sortkey )
 		return f1->sortkey - f2->sortkey;
 	return strcmp( f1->nameonly, f2->nameonly );

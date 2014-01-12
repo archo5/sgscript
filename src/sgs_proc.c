@@ -2066,17 +2066,17 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, int32_t constcount )
 
 /* INTERNAL INERFACE */
 
-static int funct_size( func_t* f )
+static int funct_size( const func_t* f )
 {
 	int sz = f->size + f->funcname.mem + f->filename.mem;
-	sgs_Variable* beg = (sgs_Variable*) func_consts( f );
-	sgs_Variable* end = (sgs_Variable*) func_bytecode( f );
+	const sgs_Variable* beg = (const sgs_Variable*) func_c_consts( f );
+	const sgs_Variable* end = (const sgs_Variable*) func_c_bytecode( f );
 	while( beg < end )
 		sz += sgsVM_VarSize( beg++ );
 	return sz;
 }
 
-int sgsVM_VarSize( sgs_Variable* var )
+int sgsVM_VarSize( const sgs_Variable* var )
 {
 	int out;
 	if( !var )
@@ -2092,7 +2092,7 @@ int sgsVM_VarSize( sgs_Variable* var )
 	return out;
 }
 
-void sgsVM_VarDump( sgs_VarPtr var )
+void sgsVM_VarDump( const sgs_Variable* var )
 {
 	printf( "%s (size:%d)", TYPENAME( var->type ), sgsVM_VarSize( var ) );
 	switch( BASETYPE( var->type ) )
@@ -3385,17 +3385,17 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 			break;
 		case VTC_FUNC:
 			{
-				MemBuf B = membuf_create();
-				ret = _serialize_function( C, V.data.F, &B );
+				MemBuf Bf = membuf_create();
+				ret = _serialize_function( C, V.data.F, &Bf );
 				if( ret != 0 )
 				{
-					sgs_Write( C, &B.size, 4 );
-					sgs_Write( C, B.ptr, B.size );
+					sgs_Write( C, &Bf.size, 4 );
+					sgs_Write( C, Bf.ptr, Bf.size );
 					ret = SGS_SUCCESS;
 				}
 				else
 					ret = SGS_EINPROC;
-				membuf_destroy( &B, C );
+				membuf_destroy( &Bf, C );
 				if( ret != SGS_SUCCESS )
 					goto fail;
 			}
@@ -3469,13 +3469,23 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 			case SVT_INT:
 				if( str >= strend-7 )
 					return SGS_EINPROC;
-				sgs_PushInt( C, AS_INTEGER( str ) );
+				else
+				{
+					sgs_Int val;
+					AS_INTEGER( val, str );
+					sgs_PushInt( C, val );
+				}
 				str += 8;
 				break;
 			case SVT_REAL:
 				if( str >= strend-7 )
 					return SGS_EINPROC;
-				sgs_PushReal( C, AS_REAL( str ) );
+				else
+				{
+					sgs_Real val;
+					AS_REAL( val, str );
+					sgs_PushReal( C, val );
+				}
 				str += 8;
 				break;
 			case SVT_STRING:
@@ -3483,7 +3493,7 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 					sgs_SizeVal strsz;
 					if( str >= strend-3 )
 						return SGS_EINPROC;
-					strsz = AS_INT32( str );
+					AS_INT32( strsz, str );
 					str += 4;
 					if( str > strend - strsz )
 						return SGS_EINPROC;
@@ -3498,7 +3508,7 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 					sgs_iFunc* fn;
 					if( str >= strend-3 )
 						return SGS_EINPROC;
-					bcsz = AS_INT32( str );
+					AS_INT32( bcsz, str );
 					str += 4;
 					if( str > strend - bcsz )
 						return SGS_EINPROC;
@@ -3516,10 +3526,11 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 		}
 		else if( c == 'C' )
 		{
-			int argc, fnsz, ret;
+			int32_t argc;
+			int fnsz, ret;
 			if( str >= strend-4 )
 				return SGS_EINPROC;
-			argc = AS_INT32( str );
+			AS_INT32( argc, str );
 			str += 4;
 			fnsz = *str++ + 1;
 			if( str > strend - fnsz )

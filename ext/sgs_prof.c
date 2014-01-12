@@ -34,7 +34,7 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 			sf = sf->next;
 		}
 		
-		prevTM = AS_DOUBLE( P->timetmp.ptr + P->timetmp.size - sizeof(double) );
+		AS_DOUBLE( prevTM, P->timetmp.ptr + P->timetmp.size - sizeof(double) );
 		pair = vht_get_str( &P->timings, P->keytmp.ptr, P->keytmp.size,
 			sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
 		if( pair )
@@ -78,7 +78,7 @@ static int dpm1sf( const void* p1, const void* p2 )
 	const sgs_iStr* str1 = v1->key.data.S;
 	const sgs_iStr* str2 = v2->key.data.S;
 	int cmpsz = str1->size < str2->size ? str1->size : str2->size;
-	int ret = memcmp( str_cstr( str1 ), str_cstr( str2 ), cmpsz );
+	int ret = memcmp( str_c_cstr( str1 ), str_c_cstr( str2 ), cmpsz );
 	if( !ret )
 		ret = str1->size - str2->size;
 	return ret;
@@ -177,8 +177,8 @@ static void freeProfMode2( SGS_PROF )
 typedef struct { int i; uint32_t c; double t; } icts;
 static int its_sort( const void* p1, const void* p2 )
 {
-	icts* t1 = (icts*) p1;
-	icts* t2 = (icts*) p2;
+	const icts* t1 = (const icts*) p1;
+	const icts* t2 = (const icts*) p2;
 	if( t1->t != t2->t )
 		return t1->t > t2->t ? -1 : 1;
 	else if( t1->c != t2->c )
@@ -312,7 +312,7 @@ static int dpm3sf( const void* p1, const void* p2 )
 	int cmpsz = str1->size < str2->size ? str1->size : str2->size;
 	int ret = ( D2->numallocs + D2->numfrees ) - ( D1->numallocs + D1->numfrees );
 	if( !ret ) ret = abs( D2->szdelta ) - abs( D1->szdelta );
-	if( !ret ) ret = memcmp( str_cstr( str1 ), str_cstr( str2 ), cmpsz );
+	if( !ret ) ret = memcmp( str_c_cstr( str1 ), str_c_cstr( str2 ), cmpsz );
 	if( !ret ) ret = str1->size - str2->size;
 	return ret;
 }

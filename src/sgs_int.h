@@ -197,8 +197,11 @@
 #  define func_t sgs_iFunc
 #  define func_consts sgs_func_consts
 #  define func_bytecode sgs_func_bytecode
+#  define func_c_consts sgs_func_c_consts
+#  define func_c_bytecode sgs_func_c_bytecode
 #  define string_t sgs_iStr
 #  define str_cstr sgs_str_cstr
+#  define str_c_cstr sgs_str_c_cstr
 #  define var_cstr sgs_var_cstr
 #  define object_t sgs_object_t
 #  define var_destroy_object sgsVM_VarDestroyObject
@@ -541,6 +544,8 @@ struct _sgs_iFunc
 };
 #define sgs_func_consts( pfn )   ((sgs_Variable*)(((char*)(pfn))+sizeof(sgs_iFunc)))
 #define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(((char*)(pfn))+sizeof(sgs_iFunc)+pfn->instr_off))
+#define sgs_func_c_consts( pfn )   ((const sgs_Variable*)(((const char*)(pfn))+sizeof(sgs_iFunc)))
+#define sgs_func_c_bytecode( pfn ) ((const sgs_instr_t*)(((const char*)(pfn))+sizeof(sgs_iFunc)+pfn->instr_off))
 
 #define sgs_object_t sgs_VarObj
 
@@ -556,8 +561,8 @@ struct _sgs_Closure
 void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t len );
 void sgsVM_VarDestroyObject( SGS_CTX, sgs_object_t* O );
 
-int sgsVM_VarSize( sgs_Variable* var );
-void sgsVM_VarDump( sgs_Variable* var );
+int sgsVM_VarSize( const sgs_Variable* var );
+void sgsVM_VarDump( const sgs_Variable* var );
 
 void sgsVM_StackDump( SGS_CTX );
 

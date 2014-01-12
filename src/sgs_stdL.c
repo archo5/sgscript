@@ -154,31 +154,31 @@ static sgs_SizeVal fmt_pack( SGS_CTX,
 				mult = 1;
 			while( mult-- > 0 )
 			{
-				int size = 1, off = 0;
+				int padsize = 1, off = 0;
 				char bb[ 8 ];
 				sgs_Int i;
 				if( !sgs_ParseInt( C, si, &i ) )
 					return si;
 				si++;
-				if( c == 'w' ) size = 2;
-				else if( c == 'l' ) size = 4;
-				else if( c == 'q' ) size = 8;
-				else if( c == 'p' ) size = sizeof( size_t );
+				if( c == 'w' ) padsize = 2;
+				else if( c == 'l' ) padsize = 4;
+				else if( c == 'q' ) padsize = 8;
+				else if( c == 'p' ) padsize = sizeof( size_t );
 				if( O32_HOST_ORDER == O32_BIG_ENDIAN )
-					off = 7 - size;
-				memcpy( bb, ((char*)&i) + off, size );
+					off = 7 - padsize;
+				memcpy( bb, ((char*)&i) + off, padsize );
 				if( invert )
 				{
 					int a, b;
-					for( a = 0, b = size - 1; a < b; a++, b-- )
+					for( a = 0, b = padsize - 1; a < b; a++, b-- )
 					{
 						char bbt = bb[ a ];
 						bb[ a ] = bb[ b ];
 						bb[ b ] = bbt;
 					}
 				}
-				memcpy( bfr, bb, size );
-				bfr += size;
+				memcpy( bfr, bb, padsize );
+				bfr += padsize;
 			}
 			mult = 0;
 			break;
@@ -292,24 +292,24 @@ static int fmt_unpack( SGS_CTX, const char* str,
 				mult = 1;
 			while( mult-- > 0 )
 			{
-				int size = 1, off = 0;
+				int padsize = 1, off = 0;
 				sgs_Int i = 0;
 				char bb[ 8 ];
 
-				if( c == 'w' ) size = 2;
-				else if( c == 'l' ) size = 4;
-				else if( c == 'q' ) size = 8;
-				else if( c == 'p' ) size = sizeof( size_t );
+				if( c == 'w' ) padsize = 2;
+				else if( c == 'l' ) padsize = 4;
+				else if( c == 'q' ) padsize = 8;
+				else if( c == 'p' ) padsize = sizeof( size_t );
 				if( O32_HOST_ORDER == O32_BIG_ENDIAN )
-					off = 7 - size;
+					off = 7 - padsize;
 
-				memcpy( bb, data, size );
-				data += size;
+				memcpy( bb, data, padsize );
+				data += padsize;
 
 				if( invert )
 				{
 					int a, b;
-					for( a = 0, b = size - 1; a < b; a++, b-- )
+					for( a = 0, b = padsize - 1; a < b; a++, b-- )
 					{
 						char bbt = bb[ a ];
 						bb[ a ] = bb[ b ];
@@ -317,7 +317,7 @@ static int fmt_unpack( SGS_CTX, const char* str,
 					}
 				}
 
-				memcpy( ((char*)&i) + off, bb, size );
+				memcpy( ((char*)&i) + off, bb, padsize );
 				if( sign )
 				{
 					const sgs_Int SIGN = -1;
@@ -2514,9 +2514,9 @@ static int sgsstd_os_date_string( SGS_CTX )
 				case 'U': case 'W':
 					{
 						char pbuf[ 256 ];
-						char fmt[3] = { '%', 0, 0 };
-						fmt[1] = c;
-						strftime( pbuf, 256, fmt, &T );
+						char ft_fmt[3] = { '%', 0, 0 };
+						ft_fmt[1] = c;
+						strftime( pbuf, 256, ft_fmt, &T );
 						membuf_appbuf( &B, C, pbuf, strlen( pbuf ) );
 					}
 					break;

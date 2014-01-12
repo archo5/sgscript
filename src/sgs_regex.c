@@ -826,8 +826,8 @@ static void regex_dump_item( regex_item* item, int lev )
 		regex_dump_list( item->ch, lev + 1 );
 		if( item->ch2 )
 		{
-			int l = lev;
-			while( l --> 0 )
+			int l2 = lev;
+			while( l2 --> 0 )
 				printf( "- " );
 			printf( "--|\n" );
 			regex_dump_list( item->ch2, lev + 1 );

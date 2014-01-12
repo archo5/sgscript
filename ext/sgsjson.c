@@ -28,10 +28,10 @@ static void skipws( const char** p, const char* end )
 #define STK_POP sgs_membuf_resize( stack, C, stack->size - 1 )
 #define STK_PUSH( what ) sgs_membuf_appchr( stack, C, what )
 
-static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* str, sgs_SizeVal size, int proto )
+static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVal size, int proto )
 {
 	int stk = sgs_StackSize( C );
-	const char* pos = str, *end = str + size;
+	const char* pos = buf, *end = buf + size;
 	for(;;)
 	{
 		int push = 0;
@@ -109,7 +109,7 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* str, sgs_
 					case 'u':
 						{
 							uint8_t hex[ 4 ];
-							uint8_t buf[ 2 ];
+							uint8_t tmpbuf[ 2 ];
 							uint16_t uchar;
 							pos++;
 							if( sgs_hexchar( *pos ) ) pos++; else return pos;
@@ -124,20 +124,20 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* str, sgs_
 							if( hex[0] == 0xff || hex[1] == 0xff ||
 								hex[2] == 0xff || hex[3] == 0xff )
 								return pos;
-							buf[ 0 ] = ( hex[0] << 4 ) | hex[1];
-							buf[ 1 ] = ( hex[2] << 4 ) | hex[3];
-							uchar = ( buf[0]<<8 ) | buf[1];
+							tmpbuf[ 0 ] = ( hex[0] << 4 ) | hex[1];
+							tmpbuf[ 1 ] = ( hex[2] << 4 ) | hex[3];
+							uchar = ( tmpbuf[0]<<8 ) | tmpbuf[1];
 							if( uchar <= 0x7f )
 							{
-								sgs_membuf_appchr( &str, C, buf[1] );
+								sgs_membuf_appchr( &str, C, tmpbuf[1] );
 								break;
 							}
 							if( uchar <= 0x7ff )
 							{
 								char obuf[ 2 ];
 								{
-									obuf[0] = 0xC0 | ((buf[1] & 0xC0) >> 6) | ((buf[0] & 0x7) << 2);
-									obuf[1] = 0x80 | (buf[1] & 0x3F);
+									obuf[0] = 0xC0 | ((tmpbuf[1] & 0xC0) >> 6) | ((tmpbuf[0] & 0x7) << 2);
+									obuf[1] = 0x80 | (tmpbuf[1] & 0x3F);
 								}
 								sgs_membuf_appbuf( &str, C, obuf, 2 );
 								break;
@@ -146,9 +146,9 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* str, sgs_
 							{
 								char obuf[ 3 ];
 								{
-									obuf[0] = 0xE0 | ((buf[0] & 0xF0) >> 4);
-									obuf[1] = 0x80 | ((buf[0] & 0xF) << 2) | ((buf[1] & 0xC0) >> 6);
-									obuf[2] = 0x80 | (buf[1] & 0x3F);
+									obuf[0] = 0xE0 | ((tmpbuf[0] & 0xF0) >> 4);
+									obuf[1] = 0x80 | ((tmpbuf[0] & 0xF) << 2) | ((tmpbuf[1] & 0xC0) >> 6);
+									obuf[2] = 0x80 | (tmpbuf[1] & 0x3F);
 								}
 								sgs_membuf_appbuf( &str, C, obuf, 3 );
 							}
@@ -332,7 +332,7 @@ endnumparse:
 		pos++;
 	}
 /*	printf( "%d, %.*s, %d\n", stack->size, stack->size, stack->ptr, sgs_StackSize(C)-stk ); */
-	return sgs_StackSize( C ) > stk && stack->size == 1 ? NULL : str;
+	return sgs_StackSize( C ) > stk && stack->size == 1 ? NULL : buf;
 }
 
 static int json_decode( SGS_CTX )

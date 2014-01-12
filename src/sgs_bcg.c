@@ -157,10 +157,10 @@ static void dump_opcode_b1( const char* name, instr_t I )
 	printf( " <= " );
 	dump_rcpos( INSTR_GET_C( I ) );
 }
-static void dump_opcode( instr_t* ptr, int32_t count )
+static void dump_opcode( const instr_t* ptr, int32_t count )
 {
-	instr_t* pend = ptr + count;
-	instr_t* pbeg = ptr;
+	const instr_t* pend = ptr + count;
+	const instr_t* pbeg = ptr;
 	while( ptr < pend )
 	{
 		instr_t I = *ptr++;
@@ -869,15 +869,21 @@ static int compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* op
 {
 	if( *node->token == ST_NUMINT )
 	{
-		*opos = BC_CONSTENC( add_const_i( C, func, AS_INTEGER( node->token + 1 ) ) );
+		sgs_Int val;
+		AS_INTEGER( val, node->token + 1 );
+		*opos = BC_CONSTENC( add_const_i( C, func, val ) );
 	}
 	else if( *node->token == ST_NUMREAL )
 	{
-		*opos = BC_CONSTENC( add_const_r( C, func, AS_REAL( node->token + 1 ) ) );
+		sgs_Real val;
+		AS_REAL( val, node->token + 1 );
+		*opos = BC_CONSTENC( add_const_r( C, func, val ) );
 	}
 	else if( *node->token == ST_STRING )
 	{
-		*opos = BC_CONSTENC( add_const_s( C, func, AS_INT32( node->token + 1 ), (const char*) node->token + 5 ) );
+		int32_t val;
+		AS_INT32( val, node->token + 1 );
+		*opos = BC_CONSTENC( add_const_s( C, func, val, (const char*) node->token + 5 ) );
 	}
 	else
 	{
@@ -943,8 +949,13 @@ static int compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* ou
 		csz3 = func->code.size;
 		
 		INSTR_WRITE_EX( SI_NOP, 0, 0 ); /* harmful optimization prevention hack */
-		AS_UINT32( func->code.ptr + csz1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( csz2 - csz1 ) / INSTR_SIZE, exprpos );
-		AS_UINT32( func->code.ptr + csz2 - 4 ) = INSTR_MAKE_EX( SI_JUMP, ( csz3 - csz2 ) / INSTR_SIZE, 0 );
+		{
+			uint32_t instr1, instr2;
+			instr1 = INSTR_MAKE_EX( SI_JMPF, ( csz2 - csz1 ) / INSTR_SIZE, exprpos );
+			instr2 = INSTR_MAKE_EX( SI_JUMP, ( csz3 - csz2 ) / INSTR_SIZE, 0 );
+			memcpy( func->code.ptr + csz1 - 4, &instr1, sizeof(instr1) );
+			memcpy( func->code.ptr + csz2 - 4, &instr2, sizeof(instr2) );
+		}
 		
 		*out = retpos;
 		return 1;
@@ -1103,7 +1114,8 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 		goto cannot;
 
 	{
-		instr_t I = *(instr_t*)(func->code.ptr + ioff);
+		instr_t I;
+		AS_( I, func->code.ptr + ioff, instr_t );
 		int op = INSTR_GET_OP( I ), argB = INSTR_GET_B( I ), argC = INSTR_GET_C( I );
 		switch( op )
 		{
@@ -1122,7 +1134,7 @@ static int try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* nod
 					goto cannot;
 			}
 			I = INSTR_MAKE( op, pos, argB, argC );
-			AS_UINT32( func->code.ptr + ioff ) = I;
+			memcpy( func->code.ptr + ioff, &I, sizeof(I) );
 			if( out )
 				*out = pos;
 			break;
@@ -1182,7 +1194,11 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 		/* fix-up jump 1 */
 		jmp_off = func->code.size - csz;
-		AS_UINT32( func->code.ptr + csz - 4 ) = INSTR_MAKE_EX( jin, jmp_off / INSTR_SIZE, ireg1 );
+		{
+			instr_t instr;
+			instr = INSTR_MAKE_EX( jin, jmp_off / INSTR_SIZE, ireg1 );
+			memcpy( func->code.ptr + csz - 4, &instr, sizeof(instr) );
+		}
 
 		/* get source data register 2 */
 		FUNC_ENTER;
@@ -1203,7 +1219,11 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 
 		/* fix-up jump 2 */
 		jmp_off = func->code.size - csz2;
-		AS_UINT32( func->code.ptr + csz2 - 4 ) = INSTR_MAKE_EX( SI_JUMP, jmp_off / INSTR_SIZE, 0 );
+		{
+			instr_t instr;
+			instr = INSTR_MAKE_EX( SI_JUMP, jmp_off / INSTR_SIZE, 0 );
+			memcpy( func->code.ptr + csz2 - 4, &instr, sizeof(instr) );
+		}
 
 		/* re-read from assignments */
 		if( arg )
@@ -1450,7 +1470,8 @@ static int compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* arg
 		{
 			int numch = 0;
 			FTNode* cur = node->child;
-			int16_t ireg, oreg = comp_reg_alloc( C );
+			int16_t ireg;
+			oreg = comp_reg_alloc( C );
 			if( C->state & SGS_MUST_STOP )
 				goto fail;
 
@@ -1521,7 +1542,8 @@ static int compile_breaks( SGS_CTX, sgs_CompFunc* func, uint8_t iscont )
 		if( binfo->numlp == C->fctx->loops && binfo->iscont == iscont )
 		{
 			int16_t off = ( func->code.size - binfo->jdoff ) / INSTR_SIZE - 1;
-			AS_UINT32( func->code.ptr + binfo->jdoff ) = INSTR_MAKE_EX( SI_JUMP, off, 0 );
+			instr_t instr = INSTR_MAKE_EX( SI_JUMP, off, 0 );
+			memcpy( func->code.ptr + binfo->jdoff, &instr, sizeof(instr) );
 			binfo = binfo->next;
 			fctx_binfo_rem( C, C->fctx, prev );
 		}
@@ -1797,7 +1819,11 @@ static int compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, int16_t* o
 				if( args % 2 == 0 )
 				{
 					if( *n->token == ST_STRING )
-						pos = BC_CONSTENC( add_const_s( C, func, AS_INT32( n->token + 1 ), (const char*) n->token + 5 ) );
+					{
+						int32_t string_len;
+						AS_INT32( string_len, n->token + 1 );
+						pos = BC_CONSTENC( add_const_s( C, func, string_len, (const char*) n->token + 5 ) );
+					}
 					else
 						compile_ident( C, func, n, &pos );
 				}
@@ -1996,18 +2022,28 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				{
 					INSTR_WRITE_PCH();
 					jp2 = func->code.size;
-					AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE, arg );
+					{
+						instr_t instr;
+						instr = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE, arg );
+						memcpy( func->code.ptr + jp1 - 4, &instr, sizeof(instr) );
+					}
 
 					regstate = C->fctx->regs;
 					FUNC_ENTER;
 					if( !compile_node( C, func, node->child->next->next ) ) goto fail;
 					jp3 = func->code.size;
-					AS_UINT32( func->code.ptr + jp2 - 4 ) = INSTR_MAKE_EX( SI_JUMP, ( jp3 - jp2 ) / INSTR_SIZE, 0 );
+					{
+						instr_t instr;
+						instr = INSTR_MAKE_EX( SI_JUMP, ( jp3 - jp2 ) / INSTR_SIZE, 0 );
+						memcpy( func->code.ptr + jp2 - 4, &instr, sizeof(instr) );
+					}
 					comp_reg_unwind( C, regstate );
 				}
 				else
 				{
-					AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( func->code.size - jp1 ) / INSTR_SIZE, arg );
+					instr_t instr;
+					instr = INSTR_MAKE_EX( SI_JMPF, ( func->code.size - jp1 ) / INSTR_SIZE, arg );
+					memcpy( func->code.ptr + jp1 - 4, &instr, sizeof(instr) );
 				}
 			}
 		}
@@ -2040,7 +2076,11 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				jp2 = func->code.size;
 				off = i - jp2;
 				INSTR_WRITE_EX( SI_JUMP, off / INSTR_SIZE - 1, 0 );
-				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE + 1, arg );
+				{
+					instr_t instr;
+					instr = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE + 1, arg );
+					memcpy( func->code.ptr + jp1 - 4, &instr, sizeof(instr) );
+				}
 			}
 			if( !compile_breaks( C, func, 0 ) )
 				goto fail;
@@ -2111,7 +2151,9 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				INSTR_WRITE_EX( SI_JUMP, off / INSTR_SIZE - 1, 0 );
 				if( arg != -1 )
 				{
-					AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE + 1, arg );
+					instr_t instr;
+					instr = INSTR_MAKE_EX( SI_JMPF, ( jp2 - jp1 ) / INSTR_SIZE + 1, arg );
+					memcpy( func->code.ptr + jp1 - 4, &instr, sizeof(instr) );
 				}
 			}
 			if( !compile_breaks( C, func, 0 ) )
@@ -2168,11 +2210,11 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				jp2 = func->code.size;
 				off = i - jp2;
 				INSTR_WRITE_EX( SI_JUMP, off / INSTR_SIZE - 1, 0 );
-				AS_UINT32( func->code.ptr + jp1 - 4 ) = INSTR_MAKE_EX(
-					SI_FORJUMP,
-					( func->code.size - jp1 ) / INSTR_SIZE,
-					iter
-				);
+				{
+					instr_t instr;
+					instr = INSTR_MAKE_EX( SI_FORJUMP, ( func->code.size - jp1 ) / INSTR_SIZE, iter );
+					memcpy( func->code.ptr + jp1 - 4, &instr, sizeof(instr) );
+				}
 			}
 
 			if( !compile_breaks( C, func, 0 ) )
@@ -2188,7 +2230,16 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			TokenList tl = sgsT_Next( node->token );
 			int32_t blev = 1;
 			if( *tl == ST_NUMINT )
-				blev = (uint32_t)*(sgs_Int*)( tl + 1 );
+			{
+				sgs_Int tint;
+				AS_INTEGER( tint, tl + 1 );
+				if( tint < 1 || tint > 0xffff )
+				{
+					QPRINT( "Invalid break level" );
+					goto fail;
+				}
+				blev = (int32_t) tint;
+			}
 			if( blev > C->fctx->loops )
 			{
 				if( C->fctx->loops )
@@ -2208,7 +2259,16 @@ static int compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			TokenList tl = sgsT_Next( node->token );
 			int32_t blev = 1;
 			if( *tl == ST_NUMINT )
-				blev = (uint32_t)*(sgs_Int*)( tl + 1 );
+			{
+				sgs_Int tint;
+				AS_INTEGER( tint, tl + 1 );
+				if( tint < 1 || tint > 0xffff )
+				{
+					QPRINT( "Invalid continue level" );
+					goto fail;
+				}
+				blev = (int32_t) tint;
+			}
 			if( blev > C->fctx->loops )
 			{
 				if( C->fctx->loops )
@@ -2322,9 +2382,9 @@ void sgsBC_Dump( sgs_CompFunc* func )
 void sgsBC_DumpEx( const char* constptr, sgs_SizeVal constsize,
 	const char* codeptr, sgs_SizeVal codesize )
 {
-	sgs_Variable* vbeg = (sgs_Variable*) constptr;
-	sgs_Variable* vend = (sgs_Variable*) ( constptr + constsize );
-	sgs_Variable* var = vbeg;
+	const sgs_Variable* vbeg = (const sgs_Variable*) constptr;
+	const sgs_Variable* vend = (const sgs_Variable*) ( constptr + constsize );
+	const sgs_Variable* var = vbeg;
 
 	printf( "{\n" );
 	printf( "> constants:\n" );
@@ -2336,7 +2396,7 @@ void sgsBC_DumpEx( const char* constptr, sgs_SizeVal constsize,
 		var++;
 	}
 	printf( "> code:\n" );
-	dump_opcode( (instr_t*) codeptr, codesize / sizeof( instr_t ) );
+	dump_opcode( (const instr_t*) codeptr, codesize / sizeof( instr_t ) );
 	printf( "}\n" );
 }
 
@@ -2400,7 +2460,8 @@ static void bc_write_sgsstring( string_t* S, SGS_CTX, MemBuf* outbuf )
 static void bc_read_sgsstring( decoder_t* D, sgs_Variable* var )
 {
 	const char* buf = D->buf;
-	int32_t len = AS_INT32( buf );
+	int32_t len;
+	AS_INT32( len, buf );
 	if( D->convend )
 		len = esi32( len );
 	buf += 4;
@@ -2450,8 +2511,8 @@ static const char* bc_read_var( decoder_t* D, sgs_Variable* var )
 	{
 	case SVT_NULL: var->type = VTC_NULL; break;
 	case SVT_BOOL: var->type = VTC_BOOL; var->data.B = *D->buf++; break;
-	case SVT_INT: var->type = VTC_INT; var->data.I = AS_INTEGER( D->buf ); D->buf += sizeof( sgs_Int ); break;
-	case SVT_REAL: var->type = VTC_REAL; var->data.R = AS_REAL( D->buf ); D->buf += sizeof( sgs_Real ); break;
+	case SVT_INT: var->type = VTC_INT; AS_INTEGER( var->data.I, D->buf ); D->buf += sizeof( sgs_Int ); break;
+	case SVT_REAL: var->type = VTC_REAL; AS_REAL( var->data.R, D->buf ); D->buf += sizeof( sgs_Real ); break;
 	case SVT_STRING: var->type = VTC_STRING; bc_read_sgsstring( D, var ); break;
 	case SVT_FUNC: var->type = VTC_FUNC; return bc_read_sgsfunc( D, var );
 	default:
@@ -2531,7 +2592,8 @@ static int bc_write_sgsfunc( func_t* F, SGS_CTX, MemBuf* outbuf )
 static void bc_read_membuf( decoder_t* D, MemBuf* out )
 {
 	const char* buf = D->buf;
-	int32_t len = AS_INT32( buf );
+	int32_t len;
+	AS_INT32( len, buf );
 	if( D->convend )
 		len = esi32( len );
 	buf += 4;
@@ -2546,8 +2608,8 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	const char* ret;
 	SGS_CTX = D->C;
 
-	cc = AS_INT16( D->buf );
-	ic = AS_INT16( D->buf + 2 );
+	AS_INT16( cc, D->buf );
+	AS_INT16( ic, D->buf + 2 );
 
 	if( D->convend )
 	{
@@ -2561,11 +2623,11 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	F->refcount = 1;
 	F->size = size;
 	F->instr_off = ioff;
-	F->gotthis = AS_INT8( D->buf + 4 );
-	F->numargs = AS_INT8( D->buf + 5 );
-	F->numtmp = AS_INT8( D->buf + 6 );
-	F->numclsr = AS_INT8( D->buf + 7 );
-	F->linenum = AS_INT16( D->buf + 8 );
+	AS_INT8( F->gotthis, D->buf + 4 );
+	AS_INT8( F->numargs, D->buf + 5 );
+	AS_INT8( F->numtmp, D->buf + 6 );
+	AS_INT8( F->numclsr, D->buf + 7 );
+	AS_INT16( F->linenum, D->buf + 8 );
 	if( D->convend )
 		F->linenum = esi16( F->linenum );
 	F->lineinfo = sgs_Alloc_n( sgs_LineNum, (int32_t)ic );
@@ -2638,27 +2700,27 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 	membuf_resize( outbuf, C, 0 );
 	membuf_reserve( outbuf, C, 1000 );
 	membuf_appbuf( outbuf, C, header_bytes, 14 );
-
+	
 	{
 		int16_t cc = func->consts.size / sizeof( sgs_Variable ),
 		        ic = func->code.size / sizeof( instr_t );
 		char gntc[4] = { func->gotthis, func->numargs, func->numtmp, func->numclsr };
-
+		
 		membuf_appbuf( outbuf, C, &cc, sizeof( int16_t ) );
 		membuf_appbuf( outbuf, C, &ic, sizeof( int16_t ) );
 		membuf_appbuf( outbuf, C, gntc, 4 );
-
+		
 		sgs_BreakIf( outbuf->size != 22 );
-
+		
 		if( !bc_write_varlist( (sgs_Variable*) func->consts.ptr, C,
 			func->consts.size / sizeof( sgs_Variable ), outbuf ) )
 			return 0;
-
+		
 		membuf_appbuf( outbuf, C, func->code.ptr, sizeof( instr_t ) * ic );
 		membuf_appbuf( outbuf, C, func->lnbuf.ptr, sizeof( LineNum ) * ic );
-
-		AS_UINT32( outbuf->ptr + 10 ) = outbuf->size;
-
+		
+		memcpy( outbuf->ptr + 10, &outbuf->size, sizeof(int32_t) );
+		
 		return 1;
 	}
 }
@@ -2666,7 +2728,9 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t size, sgs_CompFunc** outfunc )
 {
 	char flags = buf[ 9 ];
-	int32_t sz = AS_INT32( buf + 10 );
+	int32_t sz;
+	
+	AS_INT32( sz, buf + 10 );
 	
 	decoder_t D;
 	{
@@ -2687,14 +2751,14 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t si
 		const char* ret;
 		int16_t cc, ic;
 		sgs_CompFunc* func = make_compfunc( C );
-		cc = AS_INT16( buf + 14 );
-		ic = AS_INT16( buf + 16 );
-		func->gotthis = AS_UINT8( buf + 18 );
-		func->numargs = AS_UINT8( buf + 19 );
-		func->numtmp = AS_UINT8( buf + 20 );
-		func->numclsr = AS_UINT8( buf + 21 );
+		AS_INT16( cc, buf + 14 );
+		AS_INT16( ic, buf + 16 );
+		AS_UINT8( func->gotthis, buf + 18 );
+		AS_UINT8( func->numargs, buf + 19 );
+		AS_UINT8( func->numtmp, buf + 20 );
+		AS_UINT8( func->numclsr, buf + 21 );
 		D.buf = buf + 22;
-
+		
 		if( D.convend )
 		{
 			cc = esi16( cc );
@@ -2704,7 +2768,7 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t si
 		membuf_resize( &func->consts, C, sizeof( sgs_Variable ) * cc );
 		membuf_resize( &func->code, C, sizeof( instr_t ) * ic );
 		membuf_resize( &func->lnbuf, C, sizeof( LineNum ) * ic );
-
+		
 		ret = bc_read_varlist( &D, (sgs_Variable*) func->consts.ptr, cc );
 		if( ret )
 		{

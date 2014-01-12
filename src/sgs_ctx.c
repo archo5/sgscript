@@ -382,14 +382,15 @@ void* sgs_Memory( SGS_CTX, void* ptr, size_t size )
 	if( ptr )
 	{
 		ptr = ((char*)ptr) - 16;
-		C->memsize -= AS_UINT32( ptr );
+		C->memsize -= *(uint32_t*)ptr;
 		C->numfrees++;
 		C->numblocks--;
 	}
 	p = C->memfunc( C->mfuserdata, ptr, size );
 	if( p )
 	{
-		AS_UINT32( p ) = size;
+		uint32_t size32 = (uint32_t) size;
+		memcpy( p, &size32, sizeof(size32) );
 		p = ((char*)p) + 16;
 	}
 	return p;
@@ -571,8 +572,8 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, sgs_SizeVal size, char** outbuf
 static void _recfndump( const char* constptr, sgs_SizeVal constsize,
 	const char* codeptr, sgs_SizeVal codesize, int gt, int args, int tmp, int clsr )
 {
-	sgs_Variable* var = (sgs_Variable*) constptr;
-	sgs_Variable* vend = (sgs_Variable*) ( constptr + constsize );
+	const sgs_Variable* var = (const sgs_Variable*) constptr;
+	const sgs_Variable* vend = (const sgs_Variable*) ( constptr + constsize );
 	while( var < vend )
 	{
 		if( var->type == SGS_VTC_FUNC )
@@ -712,7 +713,7 @@ SGSMIXED sgs_Stat( SGS_CTX, int type )
 					sgs_WriteStr( C, "VARIABLE -- ---- STACK ---- OFFSET ----\n" );
 				}
 				sgs_Writef( C, "VARIABLE %02d ", p - C->stack_base );
-				dumpvar( C, (sgs_Variable*) p );
+				dumpvar( C, p );
 				sgs_WriteStr( C, "\n" );
 				p++;
 			}

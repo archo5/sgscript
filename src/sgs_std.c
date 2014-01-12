@@ -302,9 +302,9 @@ static int sgsstd_arrayI_reserve( SGS_CTX )
 static SGS_INLINE int sgsarrcomp_basic( const void* p1, const void* p2, void* userdata )
 {
 	SGS_CTX = (sgs_Context*) userdata;
-	sgs_Variable *v1 = (sgs_Variable*) p1;
-	sgs_Variable *v2 = (sgs_Variable*) p2;
-	return sgs_Compare( C, v1, v2 );
+	sgs_Variable v1 = *(const sgs_Variable*) p1;
+	sgs_Variable v2 = *(const sgs_Variable*) p2;
+	return sgs_Compare( C, &v1, &v2 );
 }
 static SGS_INLINE int sgsarrcomp_basic_rev( const void* p1, const void* p2, void* userdata )
 { return sgsarrcomp_basic( p2, p1, userdata ); }
@@ -331,11 +331,11 @@ sgsarrcomp_cl2;
 static SGS_INLINE int sgsarrcomp_custom( const void* p1, const void* p2, void* userdata )
 {
 	sgsarrcomp_cl2* u = (sgsarrcomp_cl2*) userdata;
-	sgs_Variable *v1 = (sgs_Variable*) p1;
-	sgs_Variable *v2 = (sgs_Variable*) p2;
+	sgs_Variable v1 = *(const sgs_Variable*) p1;
+	sgs_Variable v2 = *(const sgs_Variable*) p2;
 	SGS_CTX = u->C;
-	sgs_PushVariable( C, v1 );
-	sgs_PushVariable( C, v2 );
+	sgs_PushVariable( C, &v1 );
+	sgs_PushVariable( C, &v2 );
 	sgs_PushVariable( C, &u->sortfunc );
 	if( sgs_Call( C, 2, 1 ) != SGS_SUCCESS )
 		return 0;
@@ -374,8 +374,8 @@ typedef struct sgsarr_smi_s
 sgsarr_smi;
 static SGS_INLINE int sgsarrcomp_smi( const void* p1, const void* p2, void* userdata )
 {
-	sgsarr_smi *v1 = (sgsarr_smi*) p1;
-	sgsarr_smi *v2 = (sgsarr_smi*) p2;
+	const sgsarr_smi *v1 = (const sgsarr_smi*) p1;
+	const sgsarr_smi *v2 = (const sgsarr_smi*) p2;
 	if( v1->value < v2->value )
 		return -1;
 	return v1->value > v2->value ? 1 : 0;

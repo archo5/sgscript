@@ -284,6 +284,7 @@ struct _sgs_iStr
 	int isconst;
 };
 #define sgs_str_cstr( pstr ) (((char*)(pstr))+sizeof(sgs_iStr))
+#define sgs_str_c_cstr( pstr ) (((const char*)(pstr))+sizeof(sgs_iStr))
 #define sgs_var_cstr( var ) sgs_str_cstr( (var)->data.S )
 
 typedef struct _sgs_iFunc sgs_iFunc;

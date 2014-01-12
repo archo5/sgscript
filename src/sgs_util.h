@@ -119,6 +119,7 @@ static SGS_INLINE int sgs_binchar( char c ){ return c == '0' || c == '1'; }
 static SGS_INLINE int sgs_getbin( char c ){ return c - '0'; }
 
 
+/*
 #define SGS_AS_( ptr, wat ) (*(wat*)(ptr))
 #define SGS_AS_INT8( ptr ) SGS_AS_( ptr, int8_t )
 #define SGS_AS_UINT8( ptr ) SGS_AS_( ptr, uint8_t )
@@ -133,6 +134,22 @@ static SGS_INLINE int sgs_getbin( char c ){ return c - '0'; }
 
 #define SGS_AS_INTEGER( ptr ) SGS_AS_( ptr, sgs_Int )
 #define SGS_AS_REAL( ptr ) SGS_AS_( ptr, sgs_Real )
+*/
+
+#define SGS_AS_( tgt, ptr, wat ) do{ memcpy( &(tgt), (ptr), sizeof(wat) ); }while(0)
+#define SGS_AS_INT8( tgt, ptr ) SGS_AS_( tgt, ptr, int8_t )
+#define SGS_AS_UINT8( tgt, ptr ) SGS_AS_( tgt, ptr, uint8_t )
+#define SGS_AS_INT16( tgt, ptr ) SGS_AS_( tgt, ptr, int16_t )
+#define SGS_AS_UINT16( tgt, ptr ) SGS_AS_( tgt, ptr, uint16_t )
+#define SGS_AS_INT32( tgt, ptr ) SGS_AS_( tgt, ptr, int32_t )
+#define SGS_AS_UINT32( tgt, ptr ) SGS_AS_( tgt, ptr, uint32_t )
+#define SGS_AS_INT64( tgt, ptr ) SGS_AS_( tgt, ptr, int64_t )
+#define SGS_AS_UINT64( tgt, ptr ) SGS_AS_( tgt, ptr, uint64_t )
+#define SGS_AS_FLOAT( tgt, ptr ) SGS_AS_( tgt, ptr, float )
+#define SGS_AS_DOUBLE( tgt, ptr ) SGS_AS_( tgt, ptr, double )
+
+#define SGS_AS_INTEGER( tgt, ptr ) SGS_AS_( tgt, ptr, sgs_Int )
+#define SGS_AS_REAL( tgt, ptr ) SGS_AS_( tgt, ptr, sgs_Real )
 
 
 /* flow/data debugging */
