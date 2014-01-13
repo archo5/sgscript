@@ -54,8 +54,22 @@ static void dumpnode( FTNode* N )
 	case SFT_DOWHILE: printf( "DO/WHILE" ); break;
 	case SFT_FOR: printf( "FOR" ); break;
 	case SFT_FOREACH: printf( "FOR_EACH" ); break;
-	case SFT_BREAK: printf( "BREAK" ); if( *sgsT_Next( N->token ) == ST_NUMINT ) printf( " %" PRId64, *(sgs_Int*)( sgsT_Next( N->token ) + 1 ) ); break;
-	case SFT_CONT: printf( "CONTINUE" ); if( *sgsT_Next( N->token ) == ST_NUMINT ) printf( " %" PRId64, *(sgs_Int*)( sgsT_Next( N->token ) + 1 ) ); break;
+	case SFT_BREAK: printf( "BREAK" );
+		if( *sgsT_Next( N->token ) == ST_NUMINT )
+		{
+			sgs_Int val;
+			AS_INTEGER( val, sgsT_Next( N->token ) + 1 );
+			printf( " %" PRId64, val );
+		}
+		break;
+	case SFT_CONT: printf( "CONTINUE" );
+		if( *sgsT_Next( N->token ) == ST_NUMINT )
+		{
+			sgs_Int val;
+			AS_INTEGER( val, sgsT_Next( N->token ) + 1 );
+			printf( " %" PRId64, val );
+		}
+		break;
 	case SFT_FUNC: printf( "FUNC" ); break;
 	default:
 		if( N->token ) sgsT_DumpToken( N->token );
@@ -1315,7 +1329,8 @@ SFTRET parse_stmt( SFTC )
 
 		if( SFTC_IS( ST_NUMINT ) )
 		{
-			sgs_Int blev = *(sgs_Int*)( SFTC_AT + 1 );
+			sgs_Int blev;
+			AS_INTEGER( blev, SFTC_AT + 1 );
 			if( blev < 1 || blev > 255 )
 			{
 				SFTC_PRINTERR( "Invalid break level (can be between 1 and 255)" );
@@ -1344,7 +1359,8 @@ SFTRET parse_stmt( SFTC )
 
 		if( SFTC_IS( ST_NUMINT ) )
 		{
-			sgs_Int blev = *(sgs_Int*)( SFTC_AT + 1 );
+			sgs_Int blev;
+			AS_INTEGER( blev, SFTC_AT + 1 );
 			if( blev < 1 || blev > 255 )
 			{
 				SFTC_PRINTERR( "Invalid continue level (can be between 1 and 255)" );

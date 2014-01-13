@@ -534,8 +534,8 @@ static int preparse_arglist( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 
 
 #define add_const_HDR \
-	sgs_Variable* vbeg = (sgs_Variable*) func->consts.ptr; \
-	sgs_Variable* vend = (sgs_Variable*) ( func->consts.ptr + func->consts.size ); \
+	sgs_Variable* vbeg = (sgs_Variable*) ASSUME_ALIGNED( func->consts.ptr, 16 ); \
+	sgs_Variable* vend = (sgs_Variable*) ASSUME_ALIGNED( func->consts.ptr + func->consts.size, 16 ); \
 	sgs_Variable* var = vbeg; \
 	sgs_Variable nvar;
 
@@ -2382,8 +2382,8 @@ void sgsBC_Dump( sgs_CompFunc* func )
 void sgsBC_DumpEx( const char* constptr, sgs_SizeVal constsize,
 	const char* codeptr, sgs_SizeVal codesize )
 {
-	const sgs_Variable* vbeg = (const sgs_Variable*) constptr;
-	const sgs_Variable* vend = (const sgs_Variable*) ( constptr + constsize );
+	const sgs_Variable* vbeg = (const sgs_Variable*) ASSUME_ALIGNED( constptr, 16 );
+	const sgs_Variable* vend = (const sgs_Variable*) ASSUME_ALIGNED( constptr + constsize, 16 );
 	const sgs_Variable* var = vbeg;
 
 	printf( "{\n" );
@@ -2396,14 +2396,14 @@ void sgsBC_DumpEx( const char* constptr, sgs_SizeVal constsize,
 		var++;
 	}
 	printf( "> code:\n" );
-	dump_opcode( (const instr_t*) codeptr, codesize / sizeof( instr_t ) );
+	dump_opcode( (const instr_t*) ASSUME_ALIGNED( codeptr, 4 ), codesize / sizeof( instr_t ) );
 	printf( "}\n" );
 }
 
 void sgsBC_Free( SGS_CTX, sgs_CompFunc* func )
 {
-	sgs_Variable* vbeg = (sgs_Variable*) func->consts.ptr;
-	sgs_Variable* vend = (sgs_Variable*) ( func->consts.ptr + func->consts.size );
+	sgs_Variable* vbeg = (sgs_Variable*) ASSUME_ALIGNED( func->consts.ptr, 16 );
+	sgs_Variable* vend = (sgs_Variable*) ASSUME_ALIGNED( func->consts.ptr + func->consts.size, 16 );
 	sgs_Variable* var = vbeg;
 	while( var < vend )
 	{
@@ -2712,7 +2712,7 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 		
 		sgs_BreakIf( outbuf->size != 22 );
 		
-		if( !bc_write_varlist( (sgs_Variable*) func->consts.ptr, C,
+		if( !bc_write_varlist( (sgs_Variable*) ASSUME_ALIGNED( func->consts.ptr, 16 ), C,
 			func->consts.size / sizeof( sgs_Variable ), outbuf ) )
 			return 0;
 		
@@ -2769,7 +2769,7 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t si
 		membuf_resize( &func->code, C, sizeof( instr_t ) * ic );
 		membuf_resize( &func->lnbuf, C, sizeof( LineNum ) * ic );
 		
-		ret = bc_read_varlist( &D, (sgs_Variable*) func->consts.ptr, cc );
+		ret = bc_read_varlist( &D, (sgs_Variable*) ASSUME_ALIGNED( func->consts.ptr, 16 ), cc );
 		if( ret )
 		{
 			sgsBC_Free( C, func );
@@ -2777,7 +2777,7 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t si
 		}
 		memcpy( func->code.ptr, D.buf, sizeof( instr_t ) * ic );
 		if( D.convend )
-			esi32_array( (int32_t*) func->code.ptr, ic );
+			esi32_array( (int32_t*) ASSUME_ALIGNED( func->code.ptr, 4 ), ic );
 		D.buf += sizeof( instr_t ) * ic;
 		memcpy( func->lnbuf.ptr, D.buf, sizeof( LineNum ) * ic );
 

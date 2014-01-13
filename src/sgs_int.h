@@ -287,8 +287,8 @@
 
 #define SGS_ST_ISSPEC( chr )    isoneof( (chr), "()[]{},;:" )
 
-#define SGS_ST_READINT( pos )   (*(int32_t*)( pos ))
-#define SGS_ST_READLN( pos )    (*(sgs_LineNum*)( pos ))
+#define SGS_ST_READINT( tgt, pos )   SGS_AS_INT32( tgt, pos )
+#define SGS_ST_READLN( tgt, pos )    SGS_AS_( tgt, pos, sgs_LineNum )
 
 
 typedef unsigned char sgs_TokenType;
@@ -542,10 +542,10 @@ struct _sgs_iFunc
 	sgs_MemBuf funcname;
 	sgs_MemBuf filename;
 };
-#define sgs_func_consts( pfn )   ((sgs_Variable*)(((char*)(pfn))+sizeof(sgs_iFunc)))
-#define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(((char*)(pfn))+sizeof(sgs_iFunc)+pfn->instr_off))
-#define sgs_func_c_consts( pfn )   ((const sgs_Variable*)(((const char*)(pfn))+sizeof(sgs_iFunc)))
-#define sgs_func_c_bytecode( pfn ) ((const sgs_instr_t*)(((const char*)(pfn))+sizeof(sgs_iFunc)+pfn->instr_off))
+#define sgs_func_consts( pfn )   ((sgs_Variable*)SGS_ASSUME_ALIGNED(((sgs_iFunc*)(pfn))+1,16))
+#define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(sgs_func_consts(pfn)+pfn->instr_off/sizeof(sgs_Variable)))
+#define sgs_func_c_consts( pfn )   ((const sgs_Variable*)SGS_ASSUME_ALIGNED(((const sgs_iFunc*)(pfn))+1,16))
+#define sgs_func_c_bytecode( pfn ) ((const sgs_instr_t*)(sgs_func_c_consts(pfn)+pfn->instr_off/sizeof(sgs_Variable)))
 
 #define sgs_object_t sgs_VarObj
 

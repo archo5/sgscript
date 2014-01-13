@@ -1754,11 +1754,11 @@ static int sgsstd_closure( SGS_CTX )
 static int sgsstd_realclsr_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	uint8_t* cl = (uint8_t*) data->data;
-	int32_t i, cc = *(int32_t*)(cl+sizeof(sgs_Variable));
-	sgs_Closure** cls = (sgs_Closure**)(cl+sizeof(sgs_Variable)+sizeof(int32_t));
+	int32_t i, cc = *(int32_t*)ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
+	sgs_Closure** cls = (sgs_Closure**)ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(int32_t),sizeof(void*));
 	UNUSED( unused );
 	
-	sgs_Release( C, (sgs_Variable*) cl );
+	sgs_Release( C, (sgs_Variable*) ASSUME_ALIGNED( cl, sizeof(void*) ) );
 	
 	for( i = 0; i < cc; ++i )
 	{
@@ -1799,21 +1799,21 @@ static int sgsstd_realclsr_call( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	int ismethod = sgs_Method( C ), expected = C->call_expect;
 	uint8_t* cl = (uint8_t*) data->data;
-	int32_t cc = *(int32_t*)(cl+sizeof(sgs_Variable));
-	sgs_Closure** cls = (sgs_Closure**)(cl+sizeof(sgs_Variable)+sizeof(int32_t));
+	int32_t cc = *(int32_t*)ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
+	sgs_Closure** cls = (sgs_Closure**)ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(int32_t),sizeof(void*));
 	
 	sgsVM_PushClosures( C, cls, cc );
-	return sgsVM_VarCall( C, (sgs_Variable*) cl, C->call_args,
+	return sgsVM_VarCall( C, (sgs_Variable*) ASSUME_ALIGNED( cl, sizeof(void*) ), C->call_args,
 		cc, C->call_expect, ismethod ) * expected;
 }
 
 static int sgsstd_realclsr_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 {
 	uint8_t* cl = (uint8_t*) data->data;
-	int32_t i, cc = *(int32_t*)(cl+sizeof(sgs_Variable));
-	sgs_Closure** cls = (sgs_Closure**)(cl+sizeof(sgs_Variable)+sizeof(int32_t));
+	int32_t i, cc = *(int32_t*)ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
+	sgs_Closure** cls = (sgs_Closure**)ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(int32_t),sizeof(void*));
 	
-	sgs_GCMark( C, (sgs_Variable*) cl );
+	sgs_GCMark( C, (sgs_Variable*) ASSUME_ALIGNED( cl, sizeof(void*) ) );
 	
 	for( i = 0; i < cc; ++i )
 	{
@@ -1826,14 +1826,14 @@ static int sgsstd_realclsr_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 static int sgsstd_realclsr_dump( SGS_CTX, sgs_VarObj* data, int depth )
 {
 	uint8_t* cl = (uint8_t*) data->data;
-	int32_t i, ssz, cc = *(int32_t*)(cl+sizeof(sgs_Variable));
-	sgs_Closure** cls = (sgs_Closure**)(cl+sizeof(sgs_Variable)+sizeof(int32_t));
+	int32_t i, ssz, cc = *(int32_t*)ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
+	sgs_Closure** cls = (sgs_Closure**)ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(int32_t),sizeof(void*));
 
 	sgs_PushString( C, "sys.closure\n{" );
 
 	ssz = sgs_StackSize( C );
 	sgs_PushString( C, "\nfunc: " );
-	sgs_PushVariable( C, (sgs_Variable*) cl ); /* function */
+	sgs_PushVariable( C, (sgs_Variable*) ASSUME_ALIGNED( cl, sizeof(void*) ) ); /* function */
 	if( sgs_DumpVar( C, depth ) )
 	{
 		sgs_Pop( C, 1 );

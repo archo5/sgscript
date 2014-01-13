@@ -154,7 +154,7 @@ static void var_destroy_string( SGS_CTX, string_t* S )
 static void var_release( SGS_CTX, sgs_VarPtr p, int notonstack );
 static void var_destroy_func( SGS_CTX, func_t* F )
 {
-	sgs_VarPtr var = (sgs_VarPtr) func_consts( F ), vend = (sgs_VarPtr) func_bytecode( F );
+	sgs_VarPtr var = (sgs_VarPtr) func_consts( F ), vend = (sgs_VarPtr) ASSUME_ALIGNED( func_bytecode( F ), 16 );
 	while( var < vend )
 	{
 		VAR_RELEASE( var );
@@ -2070,7 +2070,7 @@ static int funct_size( const func_t* f )
 {
 	int sz = f->size + f->funcname.mem + f->filename.mem;
 	const sgs_Variable* beg = (const sgs_Variable*) func_c_consts( f );
-	const sgs_Variable* end = (const sgs_Variable*) func_c_bytecode( f );
+	const sgs_Variable* end = (const sgs_Variable*) ASSUME_ALIGNED( func_c_bytecode( f ), 16 );
 	while( beg < end )
 		sz += sgsVM_VarSize( beg++ );
 	return sz;

@@ -180,7 +180,7 @@ static void readstring( SGS_CTX, MemBuf* out, LineNum* line, const char* code, i
 			membuf_appbuf( out, C, code + *at + 1, size );
 			*at += size + 1;
 			newsize = string_inplace_fix( out->ptr + numpos + 4, size );
-			*((int32_t*)( out->ptr + numpos )) = newsize;
+			memcpy( out->ptr + numpos, &newsize, sizeof(newsize) );
 			out->size -= size - newsize;
 			return;
 		}
@@ -375,7 +375,11 @@ TokenList sgsT_Next( TokenList tok )
 	case ST_NUMINT:
 		return tok + 9 + sizeof( LineNum );
 	case ST_STRING:
-		return tok + 5 + sizeof( LineNum ) + ST_READINT( tok + 1 );
+		{
+			int32_t len;
+			ST_READINT( len, tok + 1 );
+			return tok + 5 + sizeof( LineNum ) + len;
+		}
 	default:
 		return tok + 1 + sizeof( LineNum );
 	}
@@ -386,7 +390,11 @@ LineNum sgsT_LineNum( TokenList tok )
 	if( !*tok )
 		return -1;
 	tok = sgsT_Next( tok );
-	return ST_READLN( tok - 2 );
+	{
+		LineNum ln;
+		ST_READLN( ln, tok - 2 );
+		return ln;
+	}
 }
 
 
@@ -431,21 +439,26 @@ static void tp_token( SGS_CTX, MemBuf* out, TokenList t )
 		break;
 	case ST_NUMREAL:
 		{
+			sgs_Real val;
 			char tmp[ 1024 ];
-			sprintf( tmp, "%g", *((sgs_Real*)(t+1)) );
+			AS_REAL( val, t+1 );
+			sprintf( tmp, "%g", val );
 			membuf_appbuf( out, C, tmp, strlen( tmp ) );
 		}
 		break;
 	case ST_NUMINT:
 		{
+			sgs_Int val;
 			char tmp[ 24 ];
-			sprintf( tmp, "%" PRId64, *((sgs_Int*)t+1) );
+			AS_INTEGER( val, t+1 );
+			sprintf( tmp, "%" PRId64, val );
 			membuf_appbuf( out, C, tmp, strlen( tmp ) );
 		}
 		break;
 	case ST_STRING:
 		{
-			int32_t i, size = ST_READINT( t + 1 );
+			int32_t i, size;
+			ST_READINT( size, t + 1 );
 			TokenList buf = t + 5;
 			for( i = 0; i < size; ++i )
 			{
@@ -584,15 +597,27 @@ void sgsT_DumpToken( TokenList tok )
 		fwrite( "]", 1, 1, stdout );
 		break;
 	case ST_NUMREAL:
-		printf( "real(%f)", *((double*)(tok + 1)) );
+		{
+			sgs_Real val;
+			AS_REAL( val, tok + 1 );
+			printf( "real(%f)", val );
+		}
 		break;
 	case ST_NUMINT:
-		printf( "int(%" PRId64 ")", *((int64_t*)(tok + 1)) );
+		{
+			sgs_Int val;
+			AS_INTEGER( val, tok + 1 );
+			printf( "int(%" PRId64 ")", val );
+		}
 		break;
 	case ST_STRING:
-		fwrite( "str(", 1, 4, stdout );
-		print_safe( stdout, (const char*) tok + 5, ST_READINT( tok + 1 ) );
-		fwrite( ")", 1, 1, stdout );
+		{
+			int32_t len;
+			ST_READINT( len, tok + 1 );
+			fwrite( "str(", 1, 4, stdout );
+			print_safe( stdout, (const char*) tok + 5, len );
+			fwrite( ")", 1, 1, stdout );
+		}
 		break;
 #define OPR( op ) printf( "%s", op );
 	case ST_OP_SEQ: OPR( "===" ); break;
