@@ -35,27 +35,32 @@
 #define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, warn ); return 0; }
 
 
-#define sgsmutex_t pthread_mutex_t
-#define sgsthread_t pthread_t
-
-#define sgsthread_create( T, func, data ) pthread_create( &T, NULL, func, data )
-#define sgsthread_self( toT ) toT = pthread_self()
-#define sgsthread_join( T ) pthread_join( T, NULL )
-#define sgsthread_equal( T1, T2 ) pthread_equal( T1, T2 )
-
-#define sgsmutex_init( M ) pthread_mutex_init( &M, NULL )
-#define sgsmutex_destroy( M ) pthread_mutex_destroy( &M )
-#define sgsmutex_lock( M ) pthread_mutex_lock( &M )
-#define sgsmutex_unlock( M ) pthread_mutex_unlock( &M )
-
-
 #ifdef WIN32
+
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
+
 #  define sgsthread_sleep( ms ) Sleep( ms )
+
+#  define sgsmutex_t CRITICAL_SECTION
+#  define sgsthread_t HANDLE
+#  define threadret_t DWORD __stdcall
+
+#  define sgsthread_create( toT, func, data ) toT = CreateThread( NULL, 1024, func, data, 0, NULL )
+#  define sgsthread_self( toT ) toT = GetCurrentThread()
+#  define sgsthread_join( T ) WaitForMultipleObjects( 1, &T, TRUE, INFINITE )
+#  define sgsthread_equal( T1, T2 ) (T1 == T2)
+
+#  define sgsmutex_init( M ) InitializeCriticalSection( &M )
+#  define sgsmutex_destroy( M ) DeleteCriticalSection( &M )
+#  define sgsmutex_lock( M ) EnterCriticalSection( &M )
+#  define sgsmutex_unlock( M ) LeaveCriticalSection( &M )
+
+
 #else
 
 #  include <unistd.h>
+#  include <pthread.h>
 
 static void sgsthread_sleep( int ms )
 {
@@ -69,6 +74,21 @@ static void sgsthread_sleep( int ms )
 		usleep( ms * 1000 );
 	}
 }
+
+#  define sgsmutex_t pthread_mutex_t
+#  define sgsthread_t pthread_t
+#  define threadret_t void*
+
+#  define sgsthread_create( T, func, data ) pthread_create( &T, NULL, func, data )
+#  define sgsthread_self( toT ) toT = pthread_self()
+#  define sgsthread_join( T ) pthread_join( T, NULL )
+#  define sgsthread_equal( T1, T2 ) pthread_equal( T1, T2 )
+
+#  define sgsmutex_init( M ) pthread_mutex_init( &M, NULL )
+#  define sgsmutex_destroy( M ) pthread_mutex_destroy( &M )
+#  define sgsmutex_lock( M ) pthread_mutex_lock( &M )
+#  define sgsmutex_unlock( M ) pthread_mutex_unlock( &M )
+
 
 #endif
 
@@ -177,7 +197,7 @@ static sgs_ObjCallback ppjob_iface[ 5 ];
 
 static sgs_ObjCallback ppjob_iface_job[ 3 ];
 static int pproc_sleep( SGS_CTX );
-static void* ppjob_threadfunc( void* arg )
+static threadret_t ppjob_threadfunc( void* arg )
 {
 	ppjob_t* job = (ppjob_t*) arg;
 	

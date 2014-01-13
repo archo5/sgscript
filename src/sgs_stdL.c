@@ -1549,7 +1549,10 @@ static int sgsstd_io_getcwd( SGS_CTX )
 		STDLIB_WARN( "function expects 0 arguments" )
 
 	{
-		/* XPC WARNING: getcwd( NULL, 0 ) relies on undefined behavior */
+		/* XPC WARNING: getcwd( NULL, 0 ) relies on undefined behavior
+			- works on Windows, Linux
+			- does not work on Android
+		*/
 		char* cwd = getcwd( NULL, 0 );
 		if( cwd )
 		{
