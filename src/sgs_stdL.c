@@ -1538,31 +1538,27 @@ static int sgsstd_io_setcwd( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m", &str, &size ) )
 		return 0;
 	
-	CRET( chdir( str ) == 0 );
+	CRET( sgsXPC_SetCurrentDirectory( str ) == 0 );
 }
 
 static int sgsstd_io_getcwd( SGS_CTX )
 {
+	char* cwd;
 	SGSFN( "io_getcwd" );
 	
 	if( sgs_StackSize( C ) != 0 )
 		STDLIB_WARN( "function expects 0 arguments" )
-
+	
+	cwd = sgsXPC_GetCurrentDirectory();
+	sgs_Errno( C, cwd != NULL );
+	if( cwd )
 	{
-		/* XPC WARNING: getcwd( NULL, 0 ) relies on undefined behavior
-			- works on Windows, Linux
-			- does not work on Android
-		*/
-		char* cwd = getcwd( NULL, 0 );
-		if( cwd )
-		{
-			sgs_PushString( C, cwd );
-			free( cwd );
-			return 1;
-		}
-		else
-			return 0;
+		sgs_PushString( C, cwd );
+		free( cwd );
+		return 1;
 	}
+	else
+		return 0;
 }
 
 static int sgsstd_io_rename( SGS_CTX )

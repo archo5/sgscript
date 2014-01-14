@@ -2853,7 +2853,7 @@ static int sgsstd_include_shared( SGS_CTX )
 	if( !over && sgsstd__chkinc( C, 0 ) )
 		return 1;
 
-	ret = sgs_GetProcAddress( fnstr, SGS_LIB_ENTRY_POINT, (void**) &func );
+	ret = sgsXPC_GetProcAddress( fnstr, SGS_LIB_ENTRY_POINT, (void**) &func );
 	if( ret != 0 )
 	{
 		if( ret == SGS_XPC_NOFILE )
@@ -3014,7 +3014,7 @@ static int sgsstd_include( SGS_CTX )
 				"with include path '%.*s'", fnsize, fnstr, pssize, ps );
 		}
 		
-		ret = sgs_GetProcAddress( mb.ptr, SGS_LIB_ENTRY_POINT, (void**) &func );
+		ret = sgsXPC_GetProcAddress( mb.ptr, SGS_LIB_ENTRY_POINT, (void**) &func );
 		if( ret == SGS_SUCCESS )
 		{
 			ret = func( C );
@@ -3062,7 +3062,7 @@ static int sgsstd_import_cfunc( SGS_CTX )
 	if( !sgs_LoadArgs( C, "ss", &fnstr, &pnstr ) )
 		return 0;
 
-	ret = sgs_GetProcAddress( fnstr, pnstr, (void**) &func );
+	ret = sgsXPC_GetProcAddress( fnstr, pnstr, (void**) &func );
 	if( ret != 0 )
 	{
 		if( ret == SGS_XPC_NOFILE )

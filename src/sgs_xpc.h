@@ -135,7 +135,10 @@ extern "C" {
 #define SGS_XPC_NOTSUP -3
 #define SGS_XPC_NOTLIB -4
 #define SGS_XPC_LDFAIL -5
-int sgs_GetProcAddress( const char* file, const char* proc, void** out );
+int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out );
+
+char* sgsXPC_GetCurrentDirectory();
+int sgsXPC_SetCurrentDirectory( char* path );
 
 #ifdef __cplusplus
 }
