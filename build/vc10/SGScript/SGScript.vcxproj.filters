@@ -10,7 +10,7 @@
     <ClCompile Include="..\..\..\src\sgs_util.c" />
     <ClCompile Include="..\..\..\src\sgs_stdL.c" />
     <ClCompile Include="..\..\..\src\sgs_xpc.c" />
-    <ClCompile Include="..\..\..\ext\msvc\dirent.c" />
+    <ClCompile Include="..\..\..\src\sgs_regex.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\sgs_cfg.h" />
@@ -19,5 +19,6 @@
     <ClInclude Include="..\..\..\src\sgs_xpc.h" />
     <ClInclude Include="..\..\..\src\sgscript.h" />
     <ClInclude Include="..\..\..\src\sgs_int.h" />
+    <ClInclude Include="..\..\..\src\sgs_regex.h" />
   </ItemGroup>
 </Project>

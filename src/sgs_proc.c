@@ -2202,8 +2202,7 @@ void sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size )
 void sgs_PushString( SGS_CTX, const char* str )
 {
 	sgs_Variable var;
-	if( !str )
-		sgs_BreakIf( "sgs_PushString: str = NULL" );
+	sgs_BreakIf( !str && "sgs_PushString: str = NULL" );
 	var_create_str( C, &var, str, -1 );
 	stk_push_leave( C, &var );
 }

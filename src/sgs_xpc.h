@@ -94,20 +94,20 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 /* simplified architecture info */
-#if __arm__ || __thumb__ || _M_ARM || _M_ARMT
+#if defined __arm__ || defined __thumb__ || defined _M_ARM || defined _M_ARMT
 #  define SGS_ARCH_ARM 1
 #endif
-#if i386 || __i386 || __i386 || _M_IX86 || _X86_ || __X86__
+#if defined i386 || defined __i386 || defined __i386 || defined _M_IX86 || defined _X86_ || defined __X86__
 #  define SGS_ARCH_X86 1
 #endif
-#if __amd64__ || __amd64 || __x86_64__ || __x86_64 || _M_X64 || _M_AMD64
+#if defined __amd64__ || defined __amd64 || defined __x86_64__ || defined __x86_64 || defined _M_X64 || defined _M_AMD64
 #  define SGS_ARCH_AMD64 1
 #endif
-#if __ia64__ || _IA64 || __IA64__ || _M_IA64
+#if defined __ia64__ || defined _IA64 || defined __IA64__ || defined _M_IA64
 #  define SGS_ARCH_IA64 1
 #endif
-#if __powerpc || __powerpc__ || __powerpc64__ || \
-	__ppc__ || __ppc64 || _M_PPC || _XENON
+#if defined __powerpc || defined __powerpc__ || defined __powerpc64__ || \
+	defined __ppc__ || defined __ppc64 || defined _M_PPC || defined _XENON
 #  define SGS_ARCH_PPC 1
 #endif
 

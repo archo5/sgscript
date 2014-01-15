@@ -238,7 +238,7 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_
 					expnt *= 10;
 					expnt += sgs_getdec( *pos++ );
 				}
-				val *= powf( 10, expnt * sign );
+				val *= pow( 10, expnt * sign );
 			}
 endnumparse:
 			if( neg )
@@ -494,6 +494,9 @@ static int json_encode( SGS_CTX )
 #endif
 
 
+#ifdef __cplusplus
+extern "C"
+#endif
 #ifdef WIN32
 __declspec(dllexport)
 #endif

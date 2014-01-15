@@ -24,8 +24,6 @@
 	}
 */
 
-#include <pthread.h>
-
 
 #define SGS_INTERNAL
 
@@ -40,7 +38,7 @@
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
 
-#  define sgsthread_sleep( ms ) Sleep( ms )
+#  define sgsthread_sleep( ms ) Sleep( (DWORD) ms )
 
 #  define sgsmutex_t CRITICAL_SECTION
 #  define sgsthread_t HANDLE
@@ -183,7 +181,7 @@ static void ppjob_map_free( ppjob_t* job )
 
 #define PPJOB_HDR ppjob_t* job = (ppjob_t*) data->data
 
-static sgs_ObjCallback ppjob_iface[ 5 ];
+SGS_DECLARE sgs_ObjCallback ppjob_iface[ 5 ];
 #define PPJOB_IHDR( name ) \
 	ppjob_t* job; \
 	if( !sgs_Method( C ) \
@@ -195,7 +193,7 @@ static sgs_ObjCallback ppjob_iface[ 5 ];
 	UNUSED( job );
 
 
-static sgs_ObjCallback ppjob_iface_job[ 3 ];
+SGS_DECLARE sgs_ObjCallback ppjob_iface_job[ 3 ];
 static int pproc_sleep( SGS_CTX );
 static threadret_t ppjob_threadfunc( void* arg )
 {

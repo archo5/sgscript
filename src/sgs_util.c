@@ -336,9 +336,9 @@ VHTVar* vht_set( VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable* V )
 		
 		/* prefer to rehash if too many removed (num_rem) items are found */
 		if( T->size + T->num_rem + 1.0 >= T->pair_mem * 0.7 )
-			vht_rehash( T, C, MAX( T->pair_mem * 1.5, T->size + 16 ) );
+			vht_rehash( T, C, (sgs_VHTIdx) MAX( T->pair_mem * 1.5, T->size + 16 ) );
 		if( T->size >= T->var_mem )
-			vht_reserve( T, C, MAX( T->size * 1.5, T->size + 16 ) );
+			vht_reserve( T, C, (sgs_VHTIdx) MAX( T->size * 1.5, T->size + 16 ) );
 		
 		{
 			VHTVar* p = T->vars + T->size;
@@ -407,8 +407,8 @@ void vht_unset( VHTable* T, SGS_CTX, sgs_Variable* K )
 	
 	if( T->num_rem > T->var_mem * 0.25 + 16 )
 	{
-		vht_reserve( T, C, T->size * 0.75 + T->var_mem * 0.25 );
-		vht_rehash( T, C, T->size * 0.5 + T->var_mem * 0.5 );
+		vht_reserve( T, C, (sgs_VHTIdx) ( T->size * 0.75 + T->var_mem * 0.25 ) );
+		vht_rehash( T, C, (sgs_VHTIdx) ( T->size * 0.5 + T->var_mem * 0.5 ) );
 	}
 }
 

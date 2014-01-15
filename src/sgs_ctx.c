@@ -257,6 +257,8 @@ void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx )
 {
 	if( func == SGSOUTPUTFN_DEFAULT )
 		func = default_outputfn;
+	if( !ctx )
+		ctx = stdout;
 	C->output_fn = func;
 	C->output_ctx = ctx;
 }

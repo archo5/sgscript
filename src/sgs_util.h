@@ -6,6 +6,10 @@
 #include <string.h>
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef SGS_INTERNAL
 #  ifdef SGS_REALLY_INTERNAL
 #    ifndef TRUE
@@ -272,5 +276,9 @@ SGS_APIFUNC void sgs_quicksort( void *array, size_t length, size_t size,
 SGS_APIFUNC int sgs_utf8_decode( char* buf, size_t size, uint32_t* outchar );
 SGS_APIFUNC int sgs_utf8_encode( uint32_t ch, char* out );
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SGS_UTIL_H_INCLUDED */

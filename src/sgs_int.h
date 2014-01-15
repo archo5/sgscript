@@ -7,6 +7,11 @@
 #include "sgs_util.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #ifdef SGS_INTERNAL
 #  define ST_NULL SGS_ST_NULL
 #  define ST_RBRKL SGS_ST_RBRKL
@@ -294,18 +299,18 @@
 typedef unsigned char sgs_TokenType;
 typedef unsigned char* sgs_TokenList;
 
-sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length );
-void          sgsT_Free( SGS_CTX, sgs_TokenList tlist );
-sgs_TokenList sgsT_Next( sgs_TokenList tok );
-sgs_LineNum   sgsT_LineNum( sgs_TokenList tok );
+SGS_APIFUNC sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length );
+SGS_APIFUNC void          sgsT_Free( SGS_CTX, sgs_TokenList tlist );
+SGS_APIFUNC sgs_TokenList sgsT_Next( sgs_TokenList tok );
+SGS_APIFUNC sgs_LineNum   sgsT_LineNum( sgs_TokenList tok );
 
-int32_t       sgsT_ListSize( sgs_TokenList tlist );
-int32_t       sgsT_ListMemSize( sgs_TokenList tlist );
+SGS_APIFUNC int32_t       sgsT_ListSize( sgs_TokenList tlist );
+SGS_APIFUNC int32_t       sgsT_ListMemSize( sgs_TokenList tlist );
 
-void          sgsT_TokenString( SGS_CTX, sgs_MemBuf* out, sgs_TokenList tlist, sgs_TokenList tend, int xs );
+SGS_APIFUNC void          sgsT_TokenString( SGS_CTX, sgs_MemBuf* out, sgs_TokenList tlist, sgs_TokenList tend, int xs );
 
-void          sgsT_DumpToken( sgs_TokenList tok );
-void          sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend );
+SGS_APIFUNC void          sgsT_DumpToken( sgs_TokenList tok );
+SGS_APIFUNC void          sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend );
 
 
 /*
@@ -352,10 +357,10 @@ struct _sgs_FTNode
 	short         type;
 };
 
-void sgsFT_Destroy( SGS_CTX, sgs_FTNode* tree );
+SGS_APIFUNC void sgsFT_Destroy( SGS_CTX, sgs_FTNode* tree );
 
-sgs_FTNode* sgsFT_Compile( SGS_CTX, sgs_TokenList tlist );
-void sgsFT_Dump( sgs_FTNode* tree );
+SGS_APIFUNC sgs_FTNode* sgsFT_Compile( SGS_CTX, sgs_TokenList tlist );
+SGS_APIFUNC void sgsFT_Dump( sgs_FTNode* tree );
 
 
 
@@ -379,11 +384,11 @@ sgs_CompFunc;
 
 
 /* - bytecode generator */
-sgs_CompFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree );
-void sgsBC_Dump( sgs_CompFunc* func );
-void sgsBC_DumpEx( const char* constptr, sgs_SizeVal constsize,
+SGS_APIFUNC sgs_CompFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree );
+SGS_APIFUNC void sgsBC_Dump( sgs_CompFunc* func );
+SGS_APIFUNC void sgsBC_DumpEx( const char* constptr, sgs_SizeVal constsize,
 	const char* codeptr, sgs_SizeVal codesize );
-void sgsBC_Free( SGS_CTX, sgs_CompFunc* func );
+SGS_APIFUNC void sgsBC_Free( SGS_CTX, sgs_CompFunc* func );
 
 
 /*
@@ -397,7 +402,7 @@ SGS_APIFUNC const char* sgsBC_Buf2Func( SGS_CTX, const char* fn,
 
 /* validates header size and bytes one by one (except last flag byte)
 -- will return header_size on success and failed byte position on failure */
-int sgsBC_ValidateHeader( const char* buf, sgs_SizeVal size );
+SGS_APIFUNC int sgsBC_ValidateHeader( const char* buf, sgs_SizeVal size );
 #define SGS_HEADER_SIZE 14
 #define SGS_MIN_BC_SIZE 14 + SGS_HEADER_SIZE
 #define SGSBC_FLAG_LITTLE_ENDIAN 0x01
@@ -783,6 +788,10 @@ void sgsJIT_CB_FO( SGS_CTX );
 void sgsJIT_CB_NI( SGS_CTX );
 #endif
 
+
+#ifdef __cplusplus
+}
+#endif
 
 
 #endif /* SGS_INT_H_INCLUDED */

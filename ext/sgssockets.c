@@ -170,7 +170,7 @@ static int socket_geterrnobyname( SGS_CTX )
 	Socket address object
 */
 
-static sgs_ObjCallback sockaddr_iface[ 11 ];
+SGS_DECLARE sgs_ObjCallback sockaddr_iface[ 11 ];
 
 #define GET_SAF ((struct sockaddr_storage*)data->data)->ss_family
 #define GET_SAI ((struct sockaddr_in*)data->data)
@@ -231,7 +231,7 @@ static int sockaddr_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		char addr[ 64 ] = {0};
 #ifdef _WIN32
 		DWORD ioasz = 64;
-		WSAAddressToString( data->data, sizeof(struct sockaddr_storage), NULL, addr, &ioasz );
+		WSAAddressToString( (LPSOCKADDR) data->data, sizeof(struct sockaddr_storage), NULL, addr, &ioasz );
 		*strrchr( addr, ':' ) = 0;
 #else
 		if( GET_SAF == AF_INET )
@@ -251,7 +251,7 @@ static int sockaddr_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		char addr[ 64 ] = {0};
 #ifdef _WIN32
 		DWORD ioasz = 64;
-		WSAAddressToString( data->data, sizeof(struct sockaddr_storage), NULL, addr, &ioasz );
+		WSAAddressToString( (LPSOCKADDR) data->data, sizeof(struct sockaddr_storage), NULL, addr, &ioasz );
 #else
 		if( GET_SAF == AF_INET || GET_SAF == AF_INET6 )
 		{
@@ -285,8 +285,8 @@ static int sockaddr_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 		sgs_Int port;
 		if( !sgs_ParseInt( C, -1, &port ) )
 			return SGS_EINVAL;
-		if( GET_SAF == AF_INET ) GET_SAI->sin_port = htons( port );
-		else if( GET_SAF == AF_INET6 ) GET_SAI6->sin6_port = htons( port );
+		if( GET_SAF == AF_INET ) GET_SAI->sin_port = htons( (unsigned short) port );
+		else if( GET_SAF == AF_INET6 ) GET_SAI6->sin6_port = htons( (unsigned short) port );
 		return SGS_SUCCESS;
 	}
 	
@@ -485,7 +485,7 @@ static int sgs_socket_gethostname( SGS_CTX )
 	Socket object
 */
 
-static sgs_ObjCallback socket_iface[ 9 ];
+SGS_DECLARE sgs_ObjCallback socket_iface[ 9 ];
 #define SOCK_IHDR( name ) \
 	sgs_VarObj* data; \
 	int method_call = sgs_Method( C ); \
@@ -509,7 +509,7 @@ static int socketI_bind( SGS_CTX )
 	
 	memset( &sa, 0, sizeof(sa) );
 	sa.sin_family = AF_INET;
-	sa.sin_port = htons( port );
+	sa.sin_port = htons( (unsigned short) port );
 	sa.sin_addr.s_addr = htonl( INADDR_ANY );
 	ret = bind( GET_SCK, (struct sockaddr*) &sa, sizeof(sa) );
 	
@@ -612,16 +612,17 @@ static int socketI_sendto( SGS_CTX )
 
 static int socketI_recv( SGS_CTX )
 {
-	sgs_Int size, flags = 0;
+	sgs_SizeVal size;
+	sgs_Int flags = 0;
 	int ret;
 
 	SOCK_IHDR( recv );
 	
-	if( !sgs_LoadArgs( C, "@>i|i", &size, &flags ) )
+	if( !sgs_LoadArgs( C, "@>l|i", &size, &flags ) )
 		return 0;
 
 	sgs_PushStringBuf( C, NULL, size );
-	ret = recv( GET_SCK, sgs_GetStringPtr( C, -1 ), size, flags );
+	ret = recv( GET_SCK, sgs_GetStringPtr( C, -1 ), size, (int) flags );
 	sockassert( C, ret );
 	if( ret <= 0 )
 		sgs_PushBool( C, ret == 0 );
@@ -638,16 +639,17 @@ static int socketI_recvfrom( SGS_CTX )
 	struct sockaddr_storage sa = {0};
 	SOCKADDR_SIZE sa_size = sizeof( sa );
 	
-	sgs_Int size, flags = 0;
+	sgs_SizeVal size;
+	sgs_Int flags = 0;
 	int ret;
 
 	SOCK_IHDR( recvfrom );
 	
-	if( !sgs_LoadArgs( C, "@>i|i", &size, &flags ) )
+	if( !sgs_LoadArgs( C, "@>l|i", &size, &flags ) )
 		return 0;
 
 	sgs_PushStringBuf( C, NULL, size );
-	ret = recvfrom( GET_SCK, sgs_GetStringPtr( C, -1 ), size, flags,
+	ret = recvfrom( GET_SCK, sgs_GetStringPtr( C, -1 ), size, (int) flags,
 		(struct sockaddr*) &sa, &sa_size );
 	sockassert( C, ret );
 	if( ret < 0 )
@@ -852,7 +854,7 @@ static int sgs_socket( SGS_CTX )
 	if( !sgs_LoadArgs( C, "iii", &domain, &type, &protocol ) )
 		return 0;
 	
-	S = socket( domain, type, protocol );
+	S = socket( (int) domain, (int) type, (int) protocol );
 	if( S < 0 )
 	{
 		SOCKERR;
@@ -967,8 +969,8 @@ static int sgs_socket_select( SGS_CTX )
 		sgs_Pop( C, 1 );
 	}
 	
-	tv.tv_sec = floor( timeout );
-	tv.tv_usec = ( timeout - (sgs_Real) tv.tv_sec ) * 1000000;
+	tv.tv_sec = (long) floor( timeout );
+	tv.tv_usec = (long)( ( timeout - (sgs_Real) tv.tv_sec ) * 1000000 );
 	ret = select( maxsock + 1, &setR, &setW, &setE, sgs_StackSize( C ) >= 4 ? &tv : NULL );
 	sockassert( C, ret != -1 );
 	

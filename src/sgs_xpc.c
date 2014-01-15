@@ -206,7 +206,8 @@ int sgsXPC_SetCurrentDirectory( char* path )
 		return -1;
 	}
 	result = SetCurrentDirectoryW( buf16 );
-	free( buf16 );
+	if( buf16 != stack_buf16 )
+		free( buf16 );
 	if( !result )
 	{
 		DWORD error;

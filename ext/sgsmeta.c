@@ -280,7 +280,7 @@ int sgs_meta_opname( SGS_CTX )
 	if( !sgs_LoadArgs( C, "i", &op ) )
 		return 0;
 	
-	str = sgs_CodeString( SGS_CODE_OP, op );
+	str = sgs_CodeString( SGS_CODE_OP, (int) op );
 	if( str )
 	{
 		sgs_PushString( C, str );
