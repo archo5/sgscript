@@ -705,12 +705,12 @@ void quicksort( void *array, size_t length, size_t size,
 	do
 	{
 	    /* Partition the array */
-		register char *index = (char*) recursion->left;
+		register char *idx = (char*) recursion->left;
 		register char *right = (char*) recursion->right;
-		char          *left  = index;
+		char          *left  = idx;
 
 	    /* Assigning store to the left */
-		register char *store = index;
+		register char *store = idx;
 
 	    /* Pop the stack */
 		--recursion;
@@ -720,19 +720,19 @@ void quicksort( void *array, size_t length, size_t size,
 		SWAP(left + (((right - left) >> 1) / size * size),right,size)
 
 	    /* From left to right */
-		while (index < right)
+		while (idx < right)
 		{
 	        /* If item is smaller than pivot */
-			if (compare(right, index, userdata) > 0)
+			if (compare(right, idx, userdata) > 0)
 			{
 	            /* Swap item and store */
-				SWAP(index,store,size)
+				SWAP(idx,store,size)
 
 	            /* We increment store */
 				store += size;
 			}
 
-			index += size;
+			idx += size;
 		}
 
 	    /* Move the pivot to its final place */
@@ -757,7 +757,7 @@ void quicksort( void *array, size_t length, size_t size,
 /* Insertion sort inner-loop */
 #define INSERTION_SORT_LOOP(LEFT)                                 \
 	{                                                             \
-		register char *trail = index - size;                      \
+		register char *trail = idx - size;                        \
 		while (trail >= LEFT && compare(trail, trail + size, userdata) > 0) \
 		{                                                         \
 			SWAP_NEXT(trail,size)                                 \
@@ -767,12 +767,12 @@ void quicksort( void *array, size_t length, size_t size,
 
 /* Performs insertion sort left of the pivot */
 #define INSERTION_SORT_LEFT                                \
-	for (index = left + size; index < store; index +=size) \
+	for (idx = left + size; idx < store; idx +=size)       \
 		INSERTION_SORT_LOOP(left)
 
 /* Performs insertion sort right of the pivot */
 #define INSERTION_SORT_RIGHT                                        \
-	for (index = store + (size << 1); index <= right; index +=size) \
+	for (idx = store + (size << 1); idx <= right; idx +=size)       \
 		INSERTION_SORT_LOOP(store + size)
 
 /* Sorts to the left */

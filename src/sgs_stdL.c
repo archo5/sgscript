@@ -1910,12 +1910,12 @@ static int sgsstd_fileI_read( SGS_CTX )
 	FVNO_BEGIN
 		while( size > 0 )
 		{
-			int read = fread( bfr, 1, (size_t) MIN( size, 1024 ), FVAR );
-			if( read < 0 )
+			int numread = fread( bfr, 1, (size_t) MIN( size, 1024 ), FVAR );
+			if( numread < 0 )
 				sgs_Errno( C, 0 );
-			if( read <= 0 )
+			if( numread <= 0 )
 				break;
-			membuf_appbuf( &mb, C, bfr, read );
+			membuf_appbuf( &mb, C, bfr, numread );
 			size -= 1024;
 		}
 		sgs_PushStringBuf( C, mb.ptr, mb.size );

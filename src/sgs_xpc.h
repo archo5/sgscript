@@ -29,7 +29,7 @@ typedef unsigned __int64 uint64_t;
 
 #define UNUSED( x ) (void)(x)
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && ( __GNUC__ > 4 || ( __GNUC__ == 4 && __GNUC_MINOR__ >= 7 ) )
 #  define SGS_ASSUME_ALIGNED __builtin_assume_aligned
 #else
 #  define SGS_ASSUME_ALIGNED( x, a ) (x)

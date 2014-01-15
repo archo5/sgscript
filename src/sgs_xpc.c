@@ -12,8 +12,10 @@
 #  define NOMINMAX
 #  include <windows.h>
 #  define SGS_MAX_PATH 4096
-#elif defined(__linux__)
+#else
+#  include <string.h>
 #  include <dlfcn.h>
+#  include <sys/stat.h>
 #  include <unistd.h>
 #  ifndef PATH_MAX
 #    define PATH_MAX 4096
@@ -139,7 +141,7 @@ char* sgsXPC_GetCurrentDirectory()
 #else
 	char stack_buf[ SGS_MAX_PATH ];
 	char* buf;
-	int cur_size = SGS_MAX_PATH, max_size = SGS_MAX_PATH * 10, last_error = 0;
+	int cur_size = SGS_MAX_PATH, max_size = SGS_MAX_PATH * 10;
 	
 	buf = getcwd( NULL, 0 );
 	if( buf )
@@ -156,8 +158,8 @@ char* sgsXPC_GetCurrentDirectory()
 				size_t len = strlen( buf ) + 1;
 				buf = (char*) malloc( len );
 				memcpy( buf, stack_buf, len );
-				return buf;
 			}
+			return buf;
 		}
 		if( errno != ERANGE || cur_size >= max_size )
 		{
@@ -176,6 +178,7 @@ char* sgsXPC_GetCurrentDirectory()
 			return NULL;
 		}
 	}
+	return NULL;
 	
 #endif
 }
@@ -256,23 +259,43 @@ char* sgsXPC_GetModuleFileName()
 	return buf8;
 	
 #else
-	struct stat sb;
-	char* linkname;
-	ssize_t r;
+	char stack_buf[ SGS_MAX_PATH ];
+	char* buf;
+	int cur_size = SGS_MAX_PATH, max_size = SGS_MAX_PATH * 10;
 	
-	if( lstat( "/proc/self/exe", &sb ) == -1 )
-		return NULL;
-	
-	linkname = malloc( sb.st_size + 1 );
-	r = readlink( "/proc/self/exe", linkname, sb.st_size + 1 );
-	if( r > sb.st_size )
+	errno = 0;
+	buf = stack_buf;
+	for(;;)
 	{
-		errno = ETXTBSY;
-		free( linkname );
-		return NULL;
+		int res = readlink( "/proc/self/exe", buf, cur_size );
+		if( res >= 0 && res < cur_size )
+		{
+			if( buf == stack_buf )
+			{
+				size_t len = strlen( buf ) + 1;
+				buf = (char*) malloc( len );
+				memcpy( buf, stack_buf, len );
+			}
+			return buf;
+		}
+		if( errno != ERANGE || cur_size >= max_size )
+		{
+			if( buf != stack_buf )
+				free( buf );
+			return NULL;
+		}
+		cur_size *= 2;
+		if( buf == stack_buf )
+			buf = malloc( cur_size );
+		else
+			buf = realloc( buf, cur_size );
+		if( !buf )
+		{
+			errno = ENOMEM;
+			return NULL;
+		}
 	}
-	
-	return linkname;
+	return NULL;
 	
 #endif
 }

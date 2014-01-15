@@ -10,6 +10,7 @@
 *.suo
 *.opensdf
 *.sdf
+*~
 ipch
 *.user
 !output.dir
