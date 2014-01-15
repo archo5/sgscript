@@ -224,3 +224,56 @@ int sgsXPC_SetCurrentDirectory( char* path )
 #endif
 }
 
+char* sgsXPC_GetModuleFileName()
+{
+#ifdef WIN32
+	WCHAR buf16[ 32768 ];
+	DWORD buf16_size, buf8_size;
+	char* buf8;
+	
+	buf16_size = GetModuleFileNameW( NULL, buf16, 32768 );
+	if( buf16_size == 0 || buf16_size >= 32768 )
+	{
+		errno = EACCES;
+		return NULL;
+	}
+	buf16[ buf16_size ] = 0;
+	
+	buf8_size = WideCharToMultiByte( CP_UTF8, 0, buf16, buf16_size + 1, NULL, 0, NULL, NULL );
+	if( buf8_size == 0 )
+	{
+		errno = EACCES;
+		return NULL;
+	}
+	buf8 = (char*) malloc( buf8_size );
+	if( WideCharToMultiByte( CP_UTF8, 0, buf16, buf16_size, buf8, buf8_size, NULL, NULL ) == 0 )
+	{
+		free( buf8 );
+		errno = EACCES;
+		return NULL;
+	}
+	
+	return buf8;
+	
+#else
+	struct stat sb;
+	char* linkname;
+	ssize_t r;
+	
+	if( lstat( "/proc/self/exe", &sb ) == -1 )
+		return NULL;
+	
+	linkname = malloc( sb.st_size + 1 );
+	r = readlink( "/proc/self/exe", linkname, sb.st_size + 1 );
+	if( r > sb.st_size )
+	{
+		errno = ETXTBSY;
+		free( linkname );
+		return NULL;
+	}
+	
+	return linkname;
+	
+#endif
+}
+

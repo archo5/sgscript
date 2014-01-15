@@ -1546,8 +1546,8 @@ static int sgsstd_io_getcwd( SGS_CTX )
 	char* cwd;
 	SGSFN( "io_getcwd" );
 	
-	if( sgs_StackSize( C ) != 0 )
-		STDLIB_WARN( "function expects 0 arguments" )
+	if( !sgs_LoadArgs( C, "." ) )
+		return 0;
 	
 	cwd = sgsXPC_GetCurrentDirectory();
 	sgs_Errno( C, cwd != NULL );
@@ -1555,6 +1555,26 @@ static int sgsstd_io_getcwd( SGS_CTX )
 	{
 		sgs_PushString( C, cwd );
 		free( cwd );
+		return 1;
+	}
+	else
+		return 0;
+}
+
+static int sgsstd_io_getexecpath( SGS_CTX )
+{
+	char* path;
+	SGSFN( "io_getexecpath" );
+	
+	if( !sgs_LoadArgs( C, "." ) )
+		return 0;
+	
+	path = sgsXPC_GetModuleFileName();
+	sgs_Errno( C, path != NULL );
+	if( path )
+	{
+		sgs_PushString( C, path );
+		free( path );
 		return 1;
 	}
 	else
@@ -2173,6 +2193,7 @@ static const sgs_RegRealConst i_rconsts[] =
 static const sgs_RegFuncConst i_fconsts[] =
 {
 	FN( io_getcwd ), FN( io_setcwd ),
+	FN( io_getexecpath ),
 	FN( io_rename ),
 	FN( io_file_exists ), FN( io_dir_exists ), FN( io_stat ),
 	FN( io_dir_create ), FN( io_dir_delete ),

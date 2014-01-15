@@ -3758,15 +3758,21 @@ This library contains the functions necessary to work with the file system (file
 == io_setcwd( string cwd )
 === sets the current working directory, returns bool/sets errno
 
-- wraps the C library function chdir
-
 
 # io_getcwd [function]
 
 == io_getcwd()
 === returns the current working directory or null, if for some reason an error occured
 
-- wraps the C library function getcwd/_getcwd
+- in case of failure, function will set errno
+
+
+# io_getexecpath [function]
+
+== io_getexecpath()
+=== returns the path of the executable file the script is executed in
+
+- in case of failure, function will set errno
 
 
 # io_rename [function]

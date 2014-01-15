@@ -139,6 +139,7 @@ int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out );
 
 char* sgsXPC_GetCurrentDirectory();
 int sgsXPC_SetCurrentDirectory( char* path );
+char* sgsXPC_GetModuleFileName();
 
 #ifdef __cplusplus
 }

@@ -114,7 +114,8 @@ function generate_docdata( name )
 			continue;
 		newulev = P.path.size;
 		data $= uladjust( ulevel, newulev );
-		data $= "<a href='#" $ P.path_str $ "'>" $ htmlencode( P.title ) $ "</a>";
+		data $= "<a href='#" $ P.path_str $ "'>" $ htmlencode( P.title ) $ "</a>
+";
 		ulevel = newulev;
 	}
 	data $= uladjust( ulevel, 0 );

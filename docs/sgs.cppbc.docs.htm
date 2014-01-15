@@ -5,7 +5,11 @@
 		<link rel='stylesheet' type='text/css' href='docs.css'>
 		<script type='text/javascript' src='docs.js'></script>
 	</head><body>
-	<h1>SGS/C++ binding compiler</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGS-CPP-BC-description'>SGS/CPP-BC description</a></li><li><a href='#Tags'>Tags</a></li><li><a href='#Data-type-handling'>Data type handling</a></li><li><a href='#Helper-classes-functions'>Helper classes &amp; functions</a></li></ul></div><div><div class='item'><a name='SGS-CPP-BC-description'></a><hr><h2>SGS/CPP-BC description</h2><p>
+	<h1>SGS/C++ binding compiler</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGS-CPP-BC-description'>SGS/CPP-BC description</a>
+</li><li><a href='#Tags'>Tags</a>
+</li><li><a href='#Data-type-handling'>Data type handling</a>
+</li><li><a href='#Helper-classes-functions'>Helper classes &amp; functions</a>
+</li></ul></div><div><div class='item'><a name='SGS-CPP-BC-description'></a><hr><h2>SGS/CPP-BC description</h2><p>
 This is a compiler that will generate most of the binding code from a bit of markup and additional build configuration. Statistically, the gain is approximately 80% less code to write to connect your C++ code to SGScript.
 </p><p>
 The compiler can be found at &quot;ext/cppbc/cppbc.sgs&quot;. It takes one argument (which should be the header file to process) and it generates one file with the name &quot;cppbc_&quot;+header_file, thus it can be called like this: &quot;sgsvm -p path/to/cppbc.sgs path/to/my_cpp_header.h&quot;.

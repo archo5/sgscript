@@ -5,7 +5,33 @@
 		<link rel='stylesheet' type='text/css' href='docs.css'>
 		<script type='text/javascript' src='docs.js'></script>
 	</head><body>
-	<h1>SGS Sockets library</h1><div><h2>Table of Contents</h2><ul><li><a href='#Main-info'>Main info</a><ul><li><a href='#SGS-Sockets-description'>SGS Sockets - description</a></li></ul><li><a href='#C-API'>C API</a><ul><li><a href='#socket-type'>socket [type]</a></li><li><a href='#socket_address-type'>socket_address [type]</a></li></ul><li><a href='#SGScript-API'>SGScript API</a><ul><li><a href='#socket_error-function'>socket_error [function]</a></li><li><a href='#socket_geterrnobyname-function'>socket_geterrnobyname [function]</a></li><li><a href='#socket_address-object'>socket_address [object]</a></li><li><a href='#socket_address-function'>socket_address [function]</a></li><li><a href='#socket_address_frombytes-function'>socket_address_frombytes [function]</a></li><li><a href='#socket_gethostname-function'>socket_gethostname [function]</a></li><li><a href='#socket-object'>socket [object]</a></li><li><a href='#socket-bind-method'>socket.bind [method]</a></li><li><a href='#socket-listen-method'>socket.listen [method]</a></li><li><a href='#socket-accept-method'>socket.accept [method]</a></li><li><a href='#socket-connect-method'>socket.connect [method]</a></li><li><a href='#socket-send-method'>socket.send [method]</a></li><li><a href='#socket-sendto-method'>socket.sendto [method]</a></li><li><a href='#socket-recv-method'>socket.recv [method]</a></li><li><a href='#socket-recvfrom-method'>socket.recvfrom [method]</a></li><li><a href='#socket-shutdown-method'>socket.shutdown [method]</a></li><li><a href='#socket-close-method'>socket.close [method]</a></li><li><a href='#socket-getpeername-method'>socket.getpeername [method]</a></li><li><a href='#socket-function'>socket [function]</a></li><li><a href='#socket_select-function'>socket_select [function]</a></li></ul></li></ul></div><div><div class='item'><a name='Main-info'></a><hr><h2>Main info</h2></div><div class='item'><a name='SGS-Sockets-description'></a><hr><h2>SGS Sockets - description</h2><p>
+	<h1>SGS Sockets library</h1><div><h2>Table of Contents</h2><ul><li><a href='#Main-info'>Main info</a>
+<ul><li><a href='#SGS-Sockets-description'>SGS Sockets - description</a>
+</li></ul><li><a href='#C-API'>C API</a>
+<ul><li><a href='#socket-type'>socket [type]</a>
+</li><li><a href='#socket_address-type'>socket_address [type]</a>
+</li></ul><li><a href='#SGScript-API'>SGScript API</a>
+<ul><li><a href='#socket_error-function'>socket_error [function]</a>
+</li><li><a href='#socket_geterrnobyname-function'>socket_geterrnobyname [function]</a>
+</li><li><a href='#socket_address-object'>socket_address [object]</a>
+</li><li><a href='#socket_address-function'>socket_address [function]</a>
+</li><li><a href='#socket_address_frombytes-function'>socket_address_frombytes [function]</a>
+</li><li><a href='#socket_gethostname-function'>socket_gethostname [function]</a>
+</li><li><a href='#socket-object'>socket [object]</a>
+</li><li><a href='#socket-bind-method'>socket.bind [method]</a>
+</li><li><a href='#socket-listen-method'>socket.listen [method]</a>
+</li><li><a href='#socket-accept-method'>socket.accept [method]</a>
+</li><li><a href='#socket-connect-method'>socket.connect [method]</a>
+</li><li><a href='#socket-send-method'>socket.send [method]</a>
+</li><li><a href='#socket-sendto-method'>socket.sendto [method]</a>
+</li><li><a href='#socket-recv-method'>socket.recv [method]</a>
+</li><li><a href='#socket-recvfrom-method'>socket.recvfrom [method]</a>
+</li><li><a href='#socket-shutdown-method'>socket.shutdown [method]</a>
+</li><li><a href='#socket-close-method'>socket.close [method]</a>
+</li><li><a href='#socket-getpeername-method'>socket.getpeername [method]</a>
+</li><li><a href='#socket-function'>socket [function]</a>
+</li><li><a href='#socket_select-function'>socket_select [function]</a>
+</li></ul></li></ul></div><div><div class='item'><a name='Main-info'></a><hr><h2>Main info</h2></div><div class='item'><a name='SGS-Sockets-description'></a><hr><h2>SGS Sockets - description</h2><p>
 The main focus of support in this library was to support Internet sockets in a cross-platform way. Every other possible use of sockets currently is not supported.
 </p><p>
 The library is compiled to a &#39;sgssockets&#39; shared library so it can be included this way (assuming that, on Linux and similar systems, LD_LIBRARY_PATH is set correctly):
