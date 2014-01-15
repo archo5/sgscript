@@ -94,10 +94,7 @@ int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )
 #endif
 }
 
-/* unfortunately here's where the standards suck...
-	performance will be low but it's expected that ..
-	.. it will be called as rarely as possible
-*/
+
 char* sgsXPC_GetCurrentDirectory()
 {
 #ifdef WIN32
