@@ -249,7 +249,7 @@ char* sgsXPC_GetModuleFileName()
 		return NULL;
 	}
 	buf8 = (char*) malloc( buf8_size );
-	if( WideCharToMultiByte( CP_UTF8, 0, buf16, buf16_size, buf8, buf8_size, NULL, NULL ) == 0 )
+	if( WideCharToMultiByte( CP_UTF8, 0, buf16, buf16_size + 1, buf8, buf8_size, NULL, NULL ) == 0 )
 	{
 		free( buf8 );
 		errno = EACCES;
