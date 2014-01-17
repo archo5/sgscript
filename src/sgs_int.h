@@ -7,6 +7,29 @@
 #include "sgs_util.h"
 
 
+/*
+	L I M I T S
+	
+	! some limits may cancel or reduce others, ..
+	.. these are kept for the purposes of knowing the size of variables ..
+	.. to use in various systems
+	
+	- number of constants in a function: 0 - 65535
+	- number of instructions in a function: 0 - 65535
+	- string size: 0 - 2^31-1
+	- max. jump distance: 32767 instructions
+	- max. loop depth: 65535 nested loops
+		(no need to test for it since instruction count ..
+		.. effectively limits this further)
+	
+	- identifier size: 0 - 255
+	- argument count: 0 - 255
+	- total closure count in one function: 0 - 255
+	- temporary variable count (incl. args): 0 - 255
+	- useful line count in source code: 0 - 32767
+*/
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -114,6 +137,7 @@ extern "C" {
 #  define FTNode sgs_FTNode
 
 #  define CompFunc sgs_CompFunc
+#  define rcpos_t sgs_rcpos_t
 
 /* VM */
 #  define CONSTVAR SGS_CONSTVAR
@@ -375,10 +399,10 @@ struct _sgs_CompFunc
 	sgs_MemBuf consts;
 	sgs_MemBuf code;
 	sgs_MemBuf lnbuf;
-	int	   gotthis;
-	int	   numargs;
-	int    numtmp;
-	int    numclsr;
+	uint8_t gotthis; /* bool */
+	uint8_t numargs; /* guaranteed to be <= 255 by a test in `preparse_arglist` */
+	uint8_t numtmp; /* reg. count (0-255, incl. numargs) - numargs (0-255) */
+	uint8_t numclsr;
 }
 sgs_CompFunc;
 
@@ -386,8 +410,8 @@ sgs_CompFunc;
 /* - bytecode generator */
 SGS_APIFUNC sgs_CompFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree );
 SGS_APIFUNC void sgsBC_Dump( sgs_CompFunc* func );
-SGS_APIFUNC void sgsBC_DumpEx( const char* constptr, sgs_SizeVal constsize,
-	const char* codeptr, sgs_SizeVal codesize );
+SGS_APIFUNC void sgsBC_DumpEx( const char* constptr, size_t constsize,
+	const char* codeptr, size_t codesize );
 SGS_APIFUNC void sgsBC_Free( SGS_CTX, sgs_CompFunc* func );
 
 
@@ -512,19 +536,19 @@ typedef uint32_t sgs_instr_t;
 #define SGS_INSTR_MASK_A  0x00ff /* A:  8 bits */
 #define SGS_INSTR_MASK_B  0x01ff /* B:  9 bits */
 #define SGS_INSTR_MASK_C  0x01ff /* C:  9 bits */
-#define SGS_INSTR_MASK_E  0x0001ffff
+#define SGS_INSTR_MASK_E  0x0001ffff /* E: 17 bits */
 
-#define SGS_INSTR_GET_OP( x )  (((x) >> SGS_INSTR_OFF_OP) & SGS_INSTR_MASK_OP)
-#define SGS_INSTR_GET_A( x )   (((x) >> SGS_INSTR_OFF_A ) & SGS_INSTR_MASK_A )
-#define SGS_INSTR_GET_B( x )   (((x) >> SGS_INSTR_OFF_B ) & SGS_INSTR_MASK_B )
-#define SGS_INSTR_GET_C( x )   (((x) >> SGS_INSTR_OFF_C ) & SGS_INSTR_MASK_C )
-#define SGS_INSTR_GET_E( x )   (((x) >> SGS_INSTR_OFF_E ) & SGS_INSTR_MASK_E )
+#define SGS_INSTR_GET_OP( x )  ((int) (((x) >> SGS_INSTR_OFF_OP) & SGS_INSTR_MASK_OP))
+#define SGS_INSTR_GET_A( x )   ((int) (((x) >> SGS_INSTR_OFF_A ) & SGS_INSTR_MASK_A ))
+#define SGS_INSTR_GET_B( x )   ((int) (((x) >> SGS_INSTR_OFF_B ) & SGS_INSTR_MASK_B ))
+#define SGS_INSTR_GET_C( x )   ((int) (((x) >> SGS_INSTR_OFF_C ) & SGS_INSTR_MASK_C ))
+#define SGS_INSTR_GET_E( x )   ((int) (((x) >> SGS_INSTR_OFF_E ) & SGS_INSTR_MASK_E ))
 
-#define SGS_INSTR_MAKE_OP( x ) (((x) & SGS_INSTR_MASK_OP) << SGS_INSTR_OFF_OP)
-#define SGS_INSTR_MAKE_A( x )  (((x) & SGS_INSTR_MASK_A ) << SGS_INSTR_OFF_A )
-#define SGS_INSTR_MAKE_B( x )  (((x) & SGS_INSTR_MASK_B ) << SGS_INSTR_OFF_B )
-#define SGS_INSTR_MAKE_C( x )  (((x) & SGS_INSTR_MASK_C ) << SGS_INSTR_OFF_C )
-#define SGS_INSTR_MAKE_E( x )  (((x) & SGS_INSTR_MASK_E ) << SGS_INSTR_OFF_E )
+#define SGS_INSTR_MAKE_OP( x ) ((sgs_instr_t) (((x) & SGS_INSTR_MASK_OP) << SGS_INSTR_OFF_OP))
+#define SGS_INSTR_MAKE_A( x )  ((sgs_instr_t) (((x) & SGS_INSTR_MASK_A ) << SGS_INSTR_OFF_A ))
+#define SGS_INSTR_MAKE_B( x )  ((sgs_instr_t) (((x) & SGS_INSTR_MASK_B ) << SGS_INSTR_OFF_B ))
+#define SGS_INSTR_MAKE_C( x )  ((sgs_instr_t) (((x) & SGS_INSTR_MASK_C ) << SGS_INSTR_OFF_C ))
+#define SGS_INSTR_MAKE_E( x )  ((sgs_instr_t) (((x) & SGS_INSTR_MASK_E ) << SGS_INSTR_OFF_E ))
 
 #define SGS_INSTR_MAKE( op, a, b, c ) \
 	( SGS_INSTR_MAKE_OP( op ) | SGS_INSTR_MAKE_A( a ) | SGS_INSTR_MAKE_B( b ) | SGS_INSTR_MAKE_C( c ) )
@@ -536,12 +560,12 @@ typedef uint32_t sgs_instr_t;
 struct _sgs_iFunc
 {
 	int32_t refcount;
-	int32_t size;
-	int16_t instr_off;
-	int8_t  gotthis;
-	int8_t  numargs;
-	int8_t  numtmp;
-	int8_t  numclsr;
+	uint32_t size;
+	uint32_t instr_off;
+	uint8_t gotthis;
+	uint8_t numargs;
+	uint8_t numtmp;
+	uint8_t numclsr;
 	sgs_LineNum linenum;
 	sgs_LineNum* lineinfo;
 	sgs_MemBuf funcname;
@@ -597,11 +621,14 @@ struct _sgs_BreakInfo
 	uint8_t  iscont; /* is a "continue"? */
 };
 
+/* register / constant position */
+typedef int32_t sgs_rcpos_t;
+
 typedef
 struct _sgs_FuncCtx
 {
 	int32_t func;
-	int32_t regs, lastreg;
+	sgs_rcpos_t regs, lastreg;
 	sgs_MemBuf vars;
 	sgs_MemBuf gvars;
 	sgs_MemBuf clsr;

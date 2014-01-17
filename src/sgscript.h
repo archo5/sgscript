@@ -278,8 +278,8 @@ struct sgs_ObjData
 typedef struct _sgs_iStr sgs_iStr;
 struct _sgs_iStr
 {
-	int32_t refcount;
-	int32_t size;
+	sgs_SizeVal refcount;
+	uint32_t size;
 	uint32_t hash;
 	int isconst;
 };

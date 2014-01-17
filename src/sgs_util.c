@@ -57,7 +57,7 @@ void membuf_destroy( MemBuf* sb, SGS_CTX )
 	sb->ptr = NULL;
 }
 
-MemBuf membuf_partial( char* ch, int32_t size )
+MemBuf membuf_partial( char* ch, size_t size )
 {
 	MemBuf sb;
 	sb.ptr = ch;
@@ -66,7 +66,7 @@ MemBuf membuf_partial( char* ch, int32_t size )
 	return sb;
 }
 
-void membuf_reserve( MemBuf* mb, SGS_CTX, int32_t size )
+void membuf_reserve( MemBuf* mb, SGS_CTX, size_t size )
 {
 	if( size <= mb->mem )
 		return;
@@ -75,13 +75,13 @@ void membuf_reserve( MemBuf* mb, SGS_CTX, int32_t size )
 	mb->ptr = (char*) sgs_Realloc( C, mb->ptr, size );
 }
 
-void membuf_resize( MemBuf* mb, SGS_CTX, int32_t size )
+void membuf_resize( MemBuf* mb, SGS_CTX, size_t size )
 {
 	membuf_reserve( mb, C, size );
 	mb->size = size;
 }
 
-void membuf_resize_opt( MemBuf* mb, SGS_CTX, int32_t size )
+void membuf_resize_opt( MemBuf* mb, SGS_CTX, size_t size )
 {
 	if( size > mb->mem )
 		membuf_reserve( mb, C, mb->mem * 2 < size ? size : mb->mem * 2 );
@@ -89,7 +89,7 @@ void membuf_resize_opt( MemBuf* mb, SGS_CTX, int32_t size )
 		mb->size = size;
 }
 
-void membuf_insbuf( MemBuf* mb, SGS_CTX, int32_t pos, const void* buf, int32_t size )
+void membuf_insbuf( MemBuf* mb, SGS_CTX, size_t pos, const void* buf, size_t size )
 {
 	membuf_reserve( mb, C, mb->mem < mb->size + size ? MAX( mb->mem * 2, mb->size + size ) : 0 );
 	memmove( mb->ptr + pos + size, mb->ptr + pos, mb->size - pos );
@@ -97,16 +97,16 @@ void membuf_insbuf( MemBuf* mb, SGS_CTX, int32_t pos, const void* buf, int32_t s
 	mb->size += size;
 }
 
-void membuf_erase( MemBuf* mb, int32_t from, int32_t to )
+void membuf_erase( MemBuf* mb, size_t from, size_t to )
 {
-	sgs_BreakIf( from < 0 || from >= mb->size );
-	sgs_BreakIf( to < 0 || to >= mb->size );
+	sgs_BreakIf( from >= mb->size );
+	sgs_BreakIf( to >= mb->size );
 	if( mb->size - to > 1 )
 		memmove( mb->ptr + from, mb->ptr + to + 1, mb->size - to - 1 );
 	mb->size -= to - from + 1;
 }
 
-void membuf_appbuf( MemBuf* mb, SGS_CTX, const void* buf, int32_t size )
+void membuf_appbuf( MemBuf* mb, SGS_CTX, const void* buf, size_t size )
 {
 	membuf_reserve( mb, C, mb->mem < mb->size + size ? MAX( mb->mem * 2, mb->size + size ) : 0 );
 	memcpy( mb->ptr + mb->size, buf, size );

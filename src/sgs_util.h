@@ -181,9 +181,9 @@ SGS_APIFUNC void sgs_print_safe( FILE* fp, const char* buf, int32_t size );
 typedef
 struct _sgs_MemBuf
 {
-	char*   ptr;
-	int32_t size;
-	int32_t mem;
+	char*  ptr;
+	size_t size;
+	size_t mem;
 }
 sgs_MemBuf;
 
@@ -191,16 +191,16 @@ sgs_MemBuf;
 /* data buffer */
 SGS_APIFUNC sgs_MemBuf sgs_membuf_create( void );
 SGS_APIFUNC void sgs_membuf_destroy( sgs_MemBuf* sb, SGS_CTX );
-SGS_APIFUNC sgs_MemBuf sgs_membuf_partial( char* ch, int32_t size );
-SGS_APIFUNC void sgs_membuf_reserve( sgs_MemBuf* mb, SGS_CTX, int32_t size );
-SGS_APIFUNC void sgs_membuf_resize( sgs_MemBuf* mb, SGS_CTX, int32_t size );
-SGS_APIFUNC void sgs_membuf_resize_opt( sgs_MemBuf* mb, SGS_CTX, int32_t size );
-SGS_APIFUNC void sgs_membuf_insbuf( sgs_MemBuf* mb, SGS_CTX, int32_t pos, const void* buf, int32_t size );
-SGS_APIFUNC void sgs_membuf_erase( sgs_MemBuf* mb, int32_t from, int32_t to );
-SGS_APIFUNC void sgs_membuf_appbuf( sgs_MemBuf* mb, SGS_CTX, const void* buf, int32_t size );
+SGS_APIFUNC sgs_MemBuf sgs_membuf_partial( char* ch, size_t size );
+SGS_APIFUNC void sgs_membuf_reserve( sgs_MemBuf* mb, SGS_CTX, size_t size );
+SGS_APIFUNC void sgs_membuf_resize( sgs_MemBuf* mb, SGS_CTX, size_t size );
+SGS_APIFUNC void sgs_membuf_resize_opt( sgs_MemBuf* mb, SGS_CTX, size_t size );
+SGS_APIFUNC void sgs_membuf_insbuf( sgs_MemBuf* mb, SGS_CTX, size_t pos, const void* buf, size_t size );
+SGS_APIFUNC void sgs_membuf_erase( sgs_MemBuf* mb, size_t from, size_t to );
+SGS_APIFUNC void sgs_membuf_appbuf( sgs_MemBuf* mb, SGS_CTX, const void* buf, size_t size );
 static SGS_INLINE void sgs_membuf_setstr( sgs_MemBuf* mb, SGS_CTX, const char* str )
 	{ mb->size = 0; sgs_membuf_appbuf( mb, C, str, strlen( str ) + 1 ); mb->size--; }
-static SGS_INLINE void sgs_membuf_setstrbuf( sgs_MemBuf* mb, SGS_CTX, const char* str, int32_t size )
+static SGS_INLINE void sgs_membuf_setstrbuf( sgs_MemBuf* mb, SGS_CTX, const char* str, size_t size )
 	{ sgs_membuf_reserve( mb, C, size + 1 ); mb->size = 0;
 		sgs_membuf_appbuf( mb, C, str, size ); mb->ptr[ mb->size ] = 0; }
 static SGS_INLINE void sgs_membuf_appchr( sgs_MemBuf* mb, SGS_CTX, char chr )

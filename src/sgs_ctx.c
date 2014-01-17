@@ -32,7 +32,8 @@ static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "fu
 
 static void default_outputfn( void* userdata, SGS_CTX, const void* ptr, sgs_SizeVal size )
 {
-	fwrite( ptr, 1, size, (FILE*) userdata );
+	sgs_BreakIf( size < 0 );
+	fwrite( ptr, 1, (size_t) size, (FILE*) userdata );
 }
 
 static void default_printfn_noabort( void* ctx, SGS_CTX, int type, const char* msg )
