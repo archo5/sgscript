@@ -14,6 +14,8 @@ static int is_keyword( TokenList tok, const char* text )
 		strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
 }
 
+#define over_limit( x, lim ) ((x)>(lim)||(x)<(-lim))
+
 
 /* register allocation */
 
@@ -552,13 +554,13 @@ static rcpos_t add_const_null( SGS_CTX, sgs_CompFunc* func )
 	while( var < vend )
 	{
 		if( var->type == SGS_VTC_NULL )
-			return var - vbeg;
+			return (rcpos_t) ( var - vbeg ); /* warning prevented: const limit */
 		var++;
 	}
 
 	nvar.type = SGS_VTC_NULL;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
-	return vend - vbeg;
+	return (rcpos_t) ( vend - vbeg ); /* warning prevented: const limit */
 }
 
 static rcpos_t add_const_b( SGS_CTX, sgs_CompFunc* func, sgs_Bool bval )
@@ -567,14 +569,14 @@ static rcpos_t add_const_b( SGS_CTX, sgs_CompFunc* func, sgs_Bool bval )
 	while( var < vend )
 	{
 		if( var->type == SGS_VTC_BOOL && var->data.B == bval )
-			return var - vbeg;
+			return (rcpos_t) ( var - vbeg ); /* warning prevented: const limit */
 		var++;
 	}
 
 	nvar.type = SGS_VTC_BOOL;
 	nvar.data.B = bval;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
-	return vend - vbeg;
+	return (rcpos_t) ( vend - vbeg ); /* warning prevented: const limit */
 }
 
 static rcpos_t add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Int ival )
@@ -583,14 +585,14 @@ static rcpos_t add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Int ival )
 	while( var < vend )
 	{
 		if( var->type == SGS_VTC_INT && var->data.I == ival )
-			return var - vbeg;
+			return (rcpos_t) ( var - vbeg ); /* warning prevented: const limit */
 		var++;
 	}
 
 	nvar.type = SGS_VTC_INT;
 	nvar.data.I = ival;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
-	return vend - vbeg;
+	return (rcpos_t) ( vend - vbeg ); /* warning prevented: const limit */
 }
 
 static rcpos_t add_const_r( SGS_CTX, sgs_CompFunc* func, sgs_Real rval )
@@ -599,14 +601,14 @@ static rcpos_t add_const_r( SGS_CTX, sgs_CompFunc* func, sgs_Real rval )
 	while( var < vend )
 	{
 		if( var->type == SGS_VTC_REAL && var->data.R == rval )
-			return var - vbeg;
+			return (rcpos_t) ( var - vbeg ); /* warning prevented: const limit */
 		var++;
 	}
 
 	nvar.type = SGS_VTC_REAL;
 	nvar.data.R = rval;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
-	return vend - vbeg;
+	return (rcpos_t) ( vend - vbeg ); /* warning prevented: const limit */
 }
 
 static rcpos_t add_const_s( SGS_CTX, sgs_CompFunc* func, uint32_t len, const char* str )
@@ -616,7 +618,7 @@ static rcpos_t add_const_s( SGS_CTX, sgs_CompFunc* func, uint32_t len, const cha
 	{
 		if( var->type == SGS_VTC_STRING && var->data.S->size == len
 			&& memcmp( var_cstr( var ), str, len ) == 0 )
-			return var - vbeg;
+			return (rcpos_t) ( var - vbeg ); /* warning prevented: const limit */
 		var++;
 	}
 	
@@ -624,7 +626,7 @@ static rcpos_t add_const_s( SGS_CTX, sgs_CompFunc* func, uint32_t len, const cha
 
 	sgsVM_VarCreateString( C, &nvar, str, (int32_t) len );
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
-	return vend - vbeg;
+	return (rcpos_t) ( vend - vbeg ); /* warning prevented: const limit */
 }
 
 static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
@@ -635,8 +637,9 @@ static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
 	func_t* F = sgs_Alloc_a( func_t, nf->consts.size + nf->code.size );
 
 	F->refcount = 1;
-	F->size = nf->consts.size + nf->code.size;
-	F->instr_off = nf->consts.size;
+	/* warnings prevented: const/instruction limits */
+	F->size = (uint32_t) ( nf->consts.size + nf->code.size );
+	F->instr_off = (uint32_t) nf->consts.size;
 	F->gotthis = nf->gotthis;
 	F->numargs = nf->numargs;
 	F->numtmp = nf->numtmp;
@@ -904,7 +907,7 @@ static SGSBOOL compile_const( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t
 }
 
 
-static SGSBOOL compile_regcopy( SGS_CTX, sgs_CompFunc* func, FTNode* node, unsigned from, rcpos_t srcpos, rcpos_t dstpos )
+static SGSBOOL compile_regcopy( SGS_CTX, sgs_CompFunc* func, FTNode* node, size_t from, rcpos_t srcpos, rcpos_t dstpos )
 {
 	INSTR_WRITE( SI_SET, dstpos, srcpos, 0 );
 	return 1;
@@ -920,7 +923,7 @@ static SGSBOOL compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t
 	{
 		FTNode* n = node->child->next->child;
 		int argc = 0;
-		unsigned csz1, csz2, csz3;
+		size_t csz1, csz2, csz3;
 		rcpos_t exprpos = -1, srcpos = -1;
 		if( !out )
 		{
@@ -1558,7 +1561,7 @@ static SGSBOOL compile_breaks( SGS_CTX, sgs_CompFunc* func, FTNode* node, uint8_
 		{
 			/* warning prevented: jump limit */
 			ptrdiff_t off = (ptrdiff_t) ( func->code.size - binfo->jdoff ) / INSTR_SIZE - 1;
-			if( abs( off ) > 32767 )
+			if( over_limit( off, 32767 ) )
 			{
 				QPRINT( "Max. jump limit exceeded (32767 instructions) @ break/continue; reduce size of loops" );
 				return 0;
@@ -2056,7 +2059,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 						instr_t instr;
 						/* warning prevented: jump limit */
 						ptrdiff_t jmp_off = (ptrdiff_t) ( jp2 - jp1 ) / INSTR_SIZE;
-						if( abs( jmp_off ) > 32767 )
+						if( over_limit( jmp_off, 32767 ) )
 						{
 							QPRINT( "Max. jump limit exceeded (32767 instructions) @ if/else; reduce size of construct" );
 							goto fail;
@@ -2073,7 +2076,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 						instr_t instr;
 						/* warning prevented: jump limit */
 						ptrdiff_t jmp_off = (ptrdiff_t) ( jp3 - jp2 ) / INSTR_SIZE;
-						if( abs( jmp_off ) > 32767 )
+						if( over_limit( jmp_off, 32767 ) )
 						{
 							QPRINT( "Max. jump limit exceeded (32767 instructions) @ if/else; reduce size of construct" );
 							goto fail;
@@ -2088,7 +2091,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 					instr_t instr;
 					/* warning prevented: jump limit */
 					ptrdiff_t jmp_off = (ptrdiff_t) ( func->code.size - jp1 ) / INSTR_SIZE;
-					if( abs( jmp_off ) > 32767 )
+					if( over_limit( jmp_off, 32767 ) )
 					{
 						QPRINT( "Max. jump limit exceeded (32767 instructions) @ if/else; reduce size of construct" );
 						goto fail;
@@ -2128,7 +2131,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				jp2 = func->code.size;
 				/* warning prevented: jump limit */
 				off = (ptrdiff_t) ( codesize - jp2 ) / INSTR_SIZE - 1;
-				if( abs( off ) > 32767 )
+				if( over_limit( off, 32767 ) )
 				{
 					QPRINT( "Max. jump limit exceeded (32767 instructions) @ while; reduce size of loop" );
 					goto fail;
@@ -2168,7 +2171,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			comp_reg_unwind( C, regstate );
 			/* warning prevented: jump limit */
 			off = (ptrdiff_t) ( codesize - func->code.size ) / INSTR_SIZE - 1;
-			if( abs( off ) > 32767 )
+			if( over_limit( off, 32767 ) )
 			{
 				QPRINT( "Max. jump limit exceeded (32767 instructions) @ do/while; reduce size of loop" );
 				goto fail;
@@ -2216,7 +2219,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				jp2 = func->code.size;
 				/* warning prevented: jump limit */
 				off = (ptrdiff_t) ( codesize - jp2 ) / INSTR_SIZE - 1;
-				if( abs( off ) > 32767 )
+				if( over_limit( off, 32767 ) )
 				{
 					QPRINT( "Max. jump limit exceeded (32767 instructions) @ for; reduce size of loop" );
 					goto fail;
@@ -2282,7 +2285,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				jp2 = func->code.size;
 				/* warning prevented: jump limit */
 				off = (ptrdiff_t) ( codesize - jp2 ) / INSTR_SIZE - 1;
-				if( abs( off ) > 32767 )
+				if( over_limit( off, 32767 ) )
 				{
 					QPRINT( "Max. jump limit exceeded (32767 instructions) @ foreach; reduce size of loop" );
 					goto fail;
@@ -2326,8 +2329,8 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 					QPRINT( "Attempted to break while not in a loop" );
 				goto fail;
 			}
-			/* warning prevented: max loop depth */
-			fctx_binfo_add( C, C->fctx, func->code.size, (uint16_t)( C->fctx->loops + 1 - blev ), FALSE );
+			/* warnings prevented: instruction limit, max loop depth */
+			fctx_binfo_add( C, C->fctx, (uint32_t) func->code.size, (uint16_t)( C->fctx->loops + 1 - blev ), FALSE );
 			INSTR_WRITE_PCH();
 		}
 		break;
@@ -2356,8 +2359,8 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 					QPRINT( "Attempted to continue while not in a loop" );
 				goto fail;
 			}
-			/* warning prevented: max loop depth */
-			fctx_binfo_add( C, C->fctx, func->code.size, (uint16_t)( C->fctx->loops + 1 - blev ), TRUE );
+			/* warnings prevented: instruction limit, max loop depth */
+			fctx_binfo_add( C, C->fctx, (uint32_t) func->code.size, (uint16_t)( C->fctx->loops + 1 - blev ), TRUE );
 			INSTR_WRITE_PCH();
 		}
 		break;
@@ -2689,7 +2692,7 @@ static void bc_read_membuf( decoder_t* D, MemBuf* out )
 static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 {
 	func_t* F;
-	size_t coff, ioff, size;
+	uint32_t coff, ioff, size;
 	uint16_t cc, ic;
 	const char* ret;
 	SGS_CTX = D->C;
@@ -2703,8 +2706,9 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 		cc = (uint16_t) esi16( cc );
 		ic = (uint16_t) esi16( ic );
 	}
-	ioff = sizeof( sgs_Variable ) * cc;
-	coff = sizeof( instr_t ) * ic;
+	/* warnings prevented: const/instruction limits */
+	ioff = (uint32_t) sizeof( sgs_Variable ) * cc;
+	coff = (uint32_t) sizeof( instr_t ) * ic;
 	size = ioff + coff;
 
 	F = sgs_Alloc_a( func_t, size );
@@ -2758,7 +2762,7 @@ fail:
 	byte integer_size
 	byte real_size
 	byte flags
-	i32 filesize
+	u32 filesize
 	-- header end --
 	i16 constcount
 	i16 instrcount
@@ -2810,18 +2814,22 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 		membuf_appbuf( outbuf, C, func->code.ptr, sizeof( instr_t ) * ic );
 		membuf_appbuf( outbuf, C, func->lnbuf.ptr, sizeof( LineNum ) * ic );
 		
-		memcpy( outbuf->ptr + 10, &outbuf->size, sizeof(int32_t) );
+		{
+			/* warning prevented: bytecode size limit */
+			uint32_t outbufsize = (uint32_t) outbuf->size;
+			memcpy( outbuf->ptr + 10, &outbufsize, sizeof(uint32_t) );
+		}
 		
 		return 1;
 	}
 }
 
-const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t size, sgs_CompFunc** outfunc )
+const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, size_t size, sgs_CompFunc** outfunc )
 {
 	char flags = buf[ 9 ];
-	int32_t sz;
+	uint32_t sz;
 	
-	AS_INT32( sz, buf + 10 );
+	AS_UINT32( sz, buf + 10 );
 	
 	decoder_t D;
 	{
@@ -2836,7 +2844,7 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t si
 	
 	if( D.convend )
 		sz = esi32( sz );
-	if( sz != size )
+	if( (size_t) sz != size )
 		return "incomplete file";
 	{
 		const char* ret;
@@ -2878,7 +2886,7 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, int32_t si
 	}
 }
 
-int sgsBC_ValidateHeader( const char* buf, int32_t size )
+int sgsBC_ValidateHeader( const char* buf, size_t size )
 {
 	int i;
 	char validate_bytes[ 9 ] =

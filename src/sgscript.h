@@ -7,7 +7,7 @@
 #define SGS_VERSION_MINOR 9
 #define SGS_VERSION_INCR  0
 #define SGS_VERSION "0.9.0"
-#define SGS_API_VERSION 8
+#define SGS_API_VERSION 9
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
@@ -149,7 +149,7 @@ typedef void (*sgs_OutputFunc) (
 	void* /* userdata */,
 	sgs_Context* /* ctx / SGS_CTX */,
 	const void* /* ptr */,
-	sgs_SizeVal /* size */
+	size_t /* size */
 );
 
 
@@ -373,8 +373,8 @@ SGS_APIFUNC const char* sgs_CodeString( int type, int val );
 /* Core systems */
 #define SGSOUTPUTFN_DEFAULT ((sgs_OutputFunc)-1)
 SGS_APIFUNC void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx );
-SGS_APIFUNC void sgs_Write( SGS_CTX, const void* ptr, sgs_SizeVal size );
-SGS_APIFUNC void sgs_Writef( SGS_CTX, const char* what, ... );
+SGS_APIFUNC void sgs_Write( SGS_CTX, const void* ptr, size_t size );
+SGS_APIFUNC SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... );
 
 #define SGSPRINTFN_DEFAULT ((sgs_PrintFunc)-1)
 #define SGSPRINTFN_DEFAULT_NOABORT ((sgs_PrintFunc)-2)
@@ -401,7 +401,7 @@ sgs_EvalBuffer
 (
 	SGS_CTX,
 	const char* buf,
-	sgs_SizeVal size,
+	size_t size,
 	int* rvc
 );
 
@@ -429,14 +429,14 @@ sgs_Compile
 (
 	SGS_CTX,
 	const char* buf,
-	sgs_SizeVal size,
+	size_t size,
 	char** outbuf,
-	sgs_SizeVal* outsize
+	size_t* outsize
 );
 
-SGS_APIFUNC SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, sgs_SizeVal size );
+SGS_APIFUNC SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, size_t size );
 SGS_APIFUNC SGSRESULT sgs_Abort( SGS_CTX );
-SGS_APIFUNC SGSMIXED sgs_Stat( SGS_CTX, int type );
+SGS_APIFUNC ptrdiff_t sgs_Stat( SGS_CTX, int type );
 SGS_APIFUNC int32_t sgs_Cntl( SGS_CTX, int what, int32_t val );
 
 SGS_APIFUNC
@@ -670,7 +670,7 @@ static SGS_INLINE int sgs_Errno( SGS_CTX, int clear )
 #define sgs_SetErrno( C, err ) sgs_Cntl( C, SGS_CNTL_SET_ERRNO, err )
 #define sgs_GetLastErrno( C ) sgs_Cntl( C, SGS_CNTL_GET_ERRNO, 0 )
 
-SGS_APIFUNC void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str, sgs_SizeVal len );
+SGS_APIFUNC void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str, size_t len );
 #define sgs_PushString32( C, S, str ) sgs_PushStringBuf32( C, S, str, SGS_STRINGLENGTHFUNC(str) )
 SGS_APIFUNC void sgs_CheckString32( sgs_String32* S );
 SGS_APIFUNC SGSBOOL sgs_IsFreedString32( sgs_String32* S );

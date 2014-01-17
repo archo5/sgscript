@@ -2125,7 +2125,7 @@ void sgsVM_StackDump( SGS_CTX )
 	printf( "--\n" );
 }
 
-int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, int32_t codesize, void* data, int32_t datasize, int clean, uint16_t* T )
+int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, size_t codesize, void* data, size_t datasize, int clean, uint16_t* T )
 {
 	int stkoff = C->stack_off - C->stack_base, rvc = 0, allowed;
 	allowed = vm_frame_push( C, NULL, T, (instr_t*) code, codesize / sizeof( instr_t ) );
@@ -3325,7 +3325,7 @@ static int _unserialize_function( SGS_CTX, const char* buf, sgs_SizeVal sz, sgs_
 }
 
 static void serialize_output_func( void* ud,
-	SGS_CTX, const void* ptr, sgs_SizeVal datasize )
+	SGS_CTX, const void* ptr, size_t datasize )
 {
 	MemBuf* B = (MemBuf*) ud;
 	membuf_appbuf( B, C, ptr, datasize );

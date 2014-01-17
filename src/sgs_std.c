@@ -2709,7 +2709,8 @@ static int sgsstd_compile_sgs( SGS_CTX )
 {
 	int ret;
 	char* buf = NULL, *outbuf = NULL;
-	sgs_SizeVal size = 0, outsize = 0;
+	sgs_SizeVal size = 0;
+	size_t outsize = 0;
 	sgs_Variable var;
 	
 	sgs_PrintFunc oldpfn;

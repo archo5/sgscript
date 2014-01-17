@@ -397,14 +397,15 @@ DEFINE_TEST( complex_gc )
 	destroy_context( C );
 }
 
-void output_strcat( void* ud, SGS_CTX, const void* ptr, sgs_SizeVal size )
+void output_strcat( void* ud, SGS_CTX, const void* ptr, size_t size )
 {
 	char* dst = (char*) ud;
 	const char* src = (const char*) ptr;
 	
 	if( strlen( dst ) + size + 1 > 64 )
 	{
-		printf( "size: %d, whole string: %s%s\n", size, dst, src );
+		/* warning prevented: good enough for these tests */
+		printf( "size: %d, whole string: %s%s\n", (int) size, dst, src );
 		fflush( stdout );
 	}
 	atf_assert( strlen( dst ) + size + 1 <= 64 );

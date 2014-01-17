@@ -570,7 +570,7 @@ static int pprocI_add_job( SGS_CTX )
 	else
 	{
 		char* code;
-		sgs_SizeVal codesize;
+		size_t codesize;
 		if( sgs_Compile( C, str, size, &code, &codesize ) != SGS_SUCCESS )
 			STDLIB_WARN( "pproc.add_job(): failed to compile the code" )
 		str = code;

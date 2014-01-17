@@ -209,7 +209,7 @@ static SGS_INLINE void sgs_membuf_appchr( sgs_MemBuf* mb, SGS_CTX, char chr )
 
 /* hashing functions */
 typedef uint32_t sgs_Hash;
-SGS_APIFUNC sgs_Hash sgs_HashFunc( const char* str, int size );
+SGS_APIFUNC sgs_Hash sgs_HashFunc( const char* str, size_t size );
 #define SGS_HASH_COMPUTED( h ) ((h) != 0)
 SGS_APIFUNC sgs_Hash sgs_HashVar( const sgs_Variable* v );
 

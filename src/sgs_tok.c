@@ -273,7 +273,7 @@ op_read_error:
 	sgs_Printf( C, SGS_ERROR, "[line %d] invalid operator found: \"%s%s\", size=%d", line, opstr, ropsize > 3 ? "..." : "", ropsize );
 }
 
-TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length )
+TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
 {
 	int32_t i;
 	LineNum line = 1;
@@ -398,9 +398,9 @@ LineNum sgsT_LineNum( TokenList tok )
 }
 
 
-int32_t sgsT_ListSize( TokenList tlist )
+size_t sgsT_ListSize( TokenList tlist )
 {
-	int32_t i = 0;
+	size_t i = 0;
 	while( *tlist )
 	{
 		tlist = sgsT_Next( tlist );
@@ -409,7 +409,7 @@ int32_t sgsT_ListSize( TokenList tlist )
 	return i;
 }
 
-int32_t sgsT_ListMemSize( TokenList tlist )
+size_t sgsT_ListMemSize( TokenList tlist )
 {
 	TokenList last = tlist;
 	while( *last )

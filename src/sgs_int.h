@@ -27,6 +27,8 @@
 	- total closure count in one function: 0 - 255
 	- temporary variable count (incl. args): 0 - 255
 	- useful line count in source code: 0 - 32767
+	
+	- bytecode size limits: 14 - 2^32-1
 */
 
 
@@ -323,13 +325,13 @@ extern "C" {
 typedef unsigned char sgs_TokenType;
 typedef unsigned char* sgs_TokenList;
 
-SGS_APIFUNC sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, int32_t length );
+SGS_APIFUNC sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length );
 SGS_APIFUNC void          sgsT_Free( SGS_CTX, sgs_TokenList tlist );
 SGS_APIFUNC sgs_TokenList sgsT_Next( sgs_TokenList tok );
 SGS_APIFUNC sgs_LineNum   sgsT_LineNum( sgs_TokenList tok );
 
-SGS_APIFUNC int32_t       sgsT_ListSize( sgs_TokenList tlist );
-SGS_APIFUNC int32_t       sgsT_ListMemSize( sgs_TokenList tlist );
+SGS_APIFUNC size_t        sgsT_ListSize( sgs_TokenList tlist );
+SGS_APIFUNC size_t        sgsT_ListMemSize( sgs_TokenList tlist );
 
 SGS_APIFUNC void          sgsT_TokenString( SGS_CTX, sgs_MemBuf* out, sgs_TokenList tlist, sgs_TokenList tend, int xs );
 
@@ -378,7 +380,7 @@ struct _sgs_FTNode
 	sgs_TokenList token;
 	sgs_FTNode*   next;
 	sgs_FTNode*   child;
-	short         type;
+	int           type;
 };
 
 SGS_APIFUNC void sgsFT_Destroy( SGS_CTX, sgs_FTNode* tree );
@@ -422,11 +424,11 @@ SGS_APIFUNC int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf 
 
 /* assumes headers have already been validated (except size) but are still in the buffer */
 SGS_APIFUNC const char* sgsBC_Buf2Func( SGS_CTX, const char* fn,
-	const char* buf, sgs_SizeVal size, sgs_CompFunc** outfunc );
+	const char* buf, size_t size, sgs_CompFunc** outfunc );
 
 /* validates header size and bytes one by one (except last flag byte)
 -- will return header_size on success and failed byte position on failure */
-SGS_APIFUNC int sgsBC_ValidateHeader( const char* buf, sgs_SizeVal size );
+SGS_APIFUNC int sgsBC_ValidateHeader( const char* buf, size_t size );
 #define SGS_HEADER_SIZE 14
 #define SGS_MIN_BC_SIZE 14 + SGS_HEADER_SIZE
 #define SGSBC_FLAG_LITTLE_ENDIAN 0x01
@@ -595,8 +597,8 @@ void sgsVM_VarDump( const sgs_Variable* var );
 
 void sgsVM_StackDump( SGS_CTX );
 
-int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, int32_t codesize,
-	void* data, int32_t datasize, int clean, uint16_t* T );
+int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, size_t codesize,
+	void* data, size_t datasize, int clean, uint16_t* T );
 int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int expect, int gotthis );
 void sgsVM_PushClosures( SGS_CTX, sgs_Closure** cls, int num );
 
@@ -670,10 +672,10 @@ struct _sgs_Context
 	/* memory */
 	sgs_MemFunc   memfunc;
 	void*         mfuserdata;
-	uint32_t      memsize;
-	uint32_t      numallocs;
-	uint32_t      numfrees;
-	uint32_t      numblocks;
+	size_t        memsize;
+	size_t        numallocs;
+	size_t        numfrees;
+	size_t        numblocks;
 
 	/* compilation */
 	uint32_t      state;
@@ -684,7 +686,7 @@ struct _sgs_Context
 	/* virtual machine */
 	/* > main stack */
 	sgs_VarPtr    stack_base;
-	int           stack_mem;
+	uint32_t      stack_mem;
 	sgs_VarPtr    stack_off;
 	sgs_VarPtr    stack_top;
 	
@@ -692,7 +694,7 @@ struct _sgs_Context
 	sgs_Closure** clstk_base;
 	sgs_Closure** clstk_off;
 	sgs_Closure** clstk_top;
-	int           clstk_mem;
+	uint32_t      clstk_mem;
 	
 	/* > stack frame info */
 	int           call_args;
@@ -712,8 +714,8 @@ struct _sgs_Context
 	/* >> object GC */
 	uint8_t       redblue;
 	sgs_VarPtr    gclist;
-	int           gclist_size;
-	int           gcrun;
+	uint16_t      gclist_size;
+	uint16_t      gcrun;
 	/* >> object pool */
 	sgs_ObjPoolItem* objpool_data;
 	int32_t       objpool_size;

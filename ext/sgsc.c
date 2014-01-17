@@ -134,7 +134,7 @@ int main( int argc, char** argv )
 		if( action == 1 )
 		{
 			char* data2 = NULL;
-			sgs_SizeVal size2;
+			size_t size2;
 			ret = sgs_Compile( C, data, size, &data2, &size2 );
 			free( data );
 			/* FREE: loadfile */

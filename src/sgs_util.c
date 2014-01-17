@@ -115,9 +115,9 @@ void membuf_appbuf( MemBuf* mb, SGS_CTX, const void* buf, size_t size )
 
 
 #define hashFunc sgs_HashFunc
-sgs_Hash sgs_HashFunc( const char* str, int size )
+sgs_Hash sgs_HashFunc( const char* str, size_t size )
 {
-	int i;
+	size_t i;
 	sgs_Hash h = 2166136261u;
 	for( i = 0; i < size; ++i )
 	{
