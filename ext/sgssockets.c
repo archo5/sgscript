@@ -45,11 +45,13 @@
 
 
 #ifdef _WIN32
+#  define SGS_SCKID SOCKET
 #  define sgs_sockerror WSAGetLastError()
 #  define IOCTL_VALUE u_long
 #  define SOCKADDR_SIZE int
 #  define GSO_ARG5TYPE int
 #else
+#  define SGS_SCKID int
 #  define sgs_sockerror errno
 #  define IOCTL_VALUE int
 #  ifdef SGS_PF_ANDROID
@@ -94,15 +96,15 @@ static int socket_error( SGS_CTX )
 #ifdef _WIN32
 	{
 		char buf[ 1024 ];
-		int numwr = FormatMessageA
+		DWORD numwr = FormatMessageA
 		(
-			FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, e,
+			FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, (DWORD) e,
 			MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),
 			buf, 1024, NULL
 		);
 		if( !numwr )
 			STDLIB_WARN( "failed to retrieve error message" )
-		sgs_PushStringBuf( C, buf, numwr );
+		sgs_PushStringBuf( C, buf, (sgs_SizeVal) numwr );
 	}
 #else
 	sgs_PushString( C, strerror( e ) );
@@ -370,7 +372,7 @@ static sgs_ObjCallback sockaddr_iface[ 11 ] =
 	SOP_END,
 };
 
-static void push_sockaddr( SGS_CTX, struct sockaddr_storage* sa, int size )
+static void push_sockaddr( SGS_CTX, struct sockaddr_storage* sa, size_t size )
 {
 	void* ss = sgs_PushObjectIPA( C, sizeof(struct sockaddr_storage), sockaddr_iface );
 	memset( ss, 0, sizeof(struct sockaddr_storage) );
@@ -494,7 +496,7 @@ SGS_DECLARE sgs_ObjCallback socket_iface[ 9 ];
 		return sgs_ArgErrorExt( C, 0, method_call, "socket", "" ); \
 	data = sgs_GetObjectStruct( C, 0 );
 
-#define GET_SCK ((int)(size_t)data->data)
+#define GET_SCK ((SGS_SCKID)(size_t)data->data)
 
 static int socketI_bind( SGS_CTX )
 {
@@ -532,7 +534,7 @@ static int socketI_listen( SGS_CTX )
 
 static int socketI_accept( SGS_CTX )
 {
-	int S;
+	SGS_SCKID S;
 	struct sockaddr_storage sa = {0};
 	SOCKADDR_SIZE sa_size = sizeof( sa );
 	
@@ -549,7 +551,7 @@ static int socketI_accept( SGS_CTX )
 	}
 	SOCKCLEARERR;
 	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
-	push_sockaddr( C, &sa, sa_size );
+	push_sockaddr( C, &sa, (size_t) sa_size );
 	return 2;
 }
 
@@ -628,7 +630,7 @@ static int socketI_recv( SGS_CTX )
 		sgs_PushBool( C, ret == 0 );
 	else
 	{
-		(C->stack_top-1)->data.S->size = ret;
+		(C->stack_top-1)->data.S->size = (uint32_t) ret;
 		sgs_GetStringPtr( C, -1 )[ ret ] = 0;
 	}
 	return 1;
@@ -659,9 +661,9 @@ static int socketI_recvfrom( SGS_CTX )
 	}
 	else
 	{
-		(C->stack_top-1)->data.S->size = ret;
+		(C->stack_top-1)->data.S->size = (uint32_t) ret;
 		sgs_GetStringPtr( C, -1 )[ ret ] = 0;
-		push_sockaddr( C, &sa, sa_size );
+		push_sockaddr( C, &sa, (size_t) sa_size );
 		return 2;
 	}
 }
@@ -704,7 +706,7 @@ static int socketI_getpeername( SGS_CTX )
 	if( getpeername( GET_SCK, (struct sockaddr*) &sa, &sa_size ) != -1 )
 	{
 		SOCKCLEARERR;
-		push_sockaddr( C, &sa, sa_size );
+		push_sockaddr( C, &sa, (size_t) sa_size );
 		return 1;
 	}
 	
@@ -786,7 +788,7 @@ static int socket_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 		if( !sgs_ParseBool( C, -1, &bv ) )
 			return SGS_EINVAL;
 		inbv = !bv;
-		if( !sockassert( C, ioctlsocket( GET_SCK, FIONBIO, &inbv ) != -1 ) )
+		if( !sockassert( C, ioctlsocket( GET_SCK, (int) FIONBIO, &inbv ) != -1 ) )
 			sgs_Printf( C, SGS_WARNING, "failed to set the 'blocking' property of a socket" );
 		return SGS_SUCCESS;
 	}
@@ -846,7 +848,7 @@ static sgs_ObjCallback socket_iface[ 9 ] =
 
 static int sgs_socket( SGS_CTX )
 {
-	int S;
+	SGS_SCKID S;
 	sgs_Int domain, type, protocol;
 	
 	SGSFN( "socket" );
@@ -868,7 +870,8 @@ static int sgs_socket( SGS_CTX )
 
 static int sgs_socket_tcp( SGS_CTX )
 {
-	int S, ipv6 = 0;
+	SGS_SCKID S;
+	int ipv6 = 0;
 	SGSFN( "socket_tcp" );
 	
 	if( !sgs_LoadArgs( C, "|b", &ipv6 ) )
@@ -888,7 +891,8 @@ static int sgs_socket_tcp( SGS_CTX )
 
 static int sgs_socket_udp( SGS_CTX )
 {
-	int S, ipv6 = 0;
+	SGS_SCKID S;
+	int ipv6 = 0;
 	SGSFN( "socket_udp" );
 	
 	if( !sgs_LoadArgs( C, "|b", &ipv6 ) )
@@ -913,7 +917,8 @@ static int sgs_socket_select( SGS_CTX )
 	sgs_SizeVal szR, szW, szE, i;
 	fd_set setR, setW, setE;
 	sgs_VarObj* data;
-	int maxsock = 0, ret;
+	SGS_SCKID maxsock = 0;
+	int ret;
 	
 	SGSFN( "socket_select" );
 	
@@ -971,7 +976,7 @@ static int sgs_socket_select( SGS_CTX )
 	
 	tv.tv_sec = (long) floor( timeout );
 	tv.tv_usec = (long)( ( timeout - (sgs_Real) tv.tv_sec ) * 1000000 );
-	ret = select( maxsock + 1, &setR, &setW, &setE, sgs_StackSize( C ) >= 4 ? &tv : NULL );
+	ret = select( (int) maxsock + 1, &setR, &setW, &setE, sgs_StackSize( C ) >= 4 ? &tv : NULL );
 	sockassert( C, ret != -1 );
 	
 	sgs_PushString( C, "erase" );

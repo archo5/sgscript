@@ -8,8 +8,6 @@
 CC=gcc
 
 COMMONFLAGS=-Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align
-# TODO
-# COMMONFLAGS=-Werror -Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align
 
 SRCDIR=src
 LIBDIR=lib

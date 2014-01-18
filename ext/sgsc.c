@@ -29,21 +29,21 @@ void print_help()
 	        "\n" );
 }
 
-int loadfile( const char* file, char** out, sgs_SizeVal* outsize )
+int loadfile( const char* file, char** out, size_t* outsize )
 {
 	char* data;
-	sgs_SizeVal len;
+	size_t len;
 	FILE* f;
 
 	f = fopen( file, "rb" );
 	if( !f )
 		return SGS_ENOTFND;
 	fseek( f, 0, SEEK_END );
-	len = ftell( f );
+	len = (size_t) ftell( f );
 	fseek( f, 0, SEEK_SET );
 
 	data = malloc( len );
-	if( fread( data, len, 1, f ) != 1 )
+	if( fread( data, 1, len, f ) != len )
 	{
 		fclose( f );
 		free( data );
@@ -118,7 +118,7 @@ int main( int argc, char** argv )
 		int ret;
 		FILE* f;
 		char of[ 270 ];
-		sgs_SizeVal size;
+		size_t size;
 		char* data = NULL;
 		sgs_Context* C = sgs_CreateEngine(); /* RSRC: sgs_CreateEngine -> C */
 

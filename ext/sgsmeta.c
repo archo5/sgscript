@@ -75,7 +75,7 @@ int sgs_meta_globals( SGS_CTX )
 
 static int _sgs_meta_dumpfn( SGS_CTX, sgs_iFunc* func );
 
-static int _sgs_meta_dumpconstlist( SGS_CTX, sgs_Variable* var, int numvars )
+static int _sgs_meta_dumpconstlist( SGS_CTX, sgs_Variable* var, size_t numvars )
 {
 	sgs_Variable* vend = var + numvars;
 	
@@ -113,7 +113,7 @@ static int _sgs_meta_dumpconstlist( SGS_CTX, sgs_Variable* var, int numvars )
 	return 1;
 }
 
-static int _sgs_meta_dumpbclist( SGS_CTX, sgs_instr_t* data, int numinstr )
+static int _sgs_meta_dumpbclist( SGS_CTX, sgs_instr_t* data, size_t numinstr )
 {
 	sgs_instr_t* dend = data + numinstr;
 	
@@ -141,7 +141,7 @@ static int _sgs_meta_dumpbclist( SGS_CTX, sgs_instr_t* data, int numinstr )
 	return 1;
 }
 
-static int _sgs_meta_dumplnlist( SGS_CTX, sgs_LineNum* data, int numinstr )
+static int _sgs_meta_dumplnlist( SGS_CTX, sgs_LineNum* data, size_t numinstr )
 {
 	sgs_LineNum* dend = data + numinstr;
 	
@@ -162,17 +162,17 @@ static int _sgs_meta_dumpfn( SGS_CTX, sgs_iFunc* func )
 	
 	sgs_PushString( C, "consts" );
 	if( !_sgs_meta_dumpconstlist( C, sgs_func_consts( func ),
-			func->instr_off / sizeof(sgs_Variable) ) )
+			(size_t) func->instr_off / sizeof(sgs_Variable) ) )
 		return 0;
 	
 	sgs_PushString( C, "code" );
 	if( !_sgs_meta_dumpbclist( C, sgs_func_bytecode( func ),
-			( func->size - func->instr_off ) / sizeof(sgs_instr_t) ) )
+			(size_t) ( func->size - func->instr_off ) / sizeof(sgs_instr_t) ) )
 		return 0;
 	
 	sgs_PushString( C, "lines" );
 	if( !_sgs_meta_dumplnlist( C, func->lineinfo,
-			( func->size - func->instr_off ) / sizeof(sgs_instr_t) ) )
+			(size_t) ( func->size - func->instr_off ) / sizeof(sgs_instr_t) ) )
 		return 0;
 	
 	sgs_PushString( C, "gotthis" );
@@ -188,7 +188,7 @@ static int _sgs_meta_dumpfn( SGS_CTX, sgs_iFunc* func )
 	sgs_PushInt( C, func->numclsr );
 	
 	sgs_PushString( C, "name" );
-	sgs_PushStringBuf( C, func->funcname.ptr, func->funcname.size );
+	sgs_PushStringBuf( C, func->funcname.ptr, (sgs_SizeVal) func->funcname.size );
 	
 	sgs_PushString( C, "line" );
 	sgs_PushInt( C, func->linenum );
@@ -253,12 +253,12 @@ int sgs_meta_unpack( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m", &buf, &size ) )
 		return 0;
 	
-	ret = sgsBC_ValidateHeader( buf, size );
+	ret = sgsBC_ValidateHeader( buf, (size_t) size );
 	if( ret < SGS_HEADER_SIZE )
 		return sgs_Printf( C, SGS_WARNING, "compiled code header error "
 			"detected at position %d", ret );
 	
-	bfret = sgsBC_Buf2Func( C, "", buf, size, &func );
+	bfret = sgsBC_Buf2Func( C, "", buf, (size_t) size, &func );
 	if( bfret )
 		return sgs_Printf( C, SGS_WARNING, bfret );
 	

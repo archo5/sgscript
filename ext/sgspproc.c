@@ -131,7 +131,7 @@ static ppmapitem_t* ppjob_map_find(
 	ppmapitem_t* item = job->data;
 	while( item )
 	{
-		if( item->keysize == keysize && !memcmp( item->data, key, keysize ) )
+		if( item->keysize == keysize && !memcmp( item->data, key, (size_t) keysize ) )
 			return item;
 		item = item->next;
 	}
@@ -144,9 +144,9 @@ static void ppjob_map_set( ppjob_t* job,
 	ppmapitem_t* item = ppjob_map_find( job, key, keysize );
 	if( item )
 	{
-		char* nd = (char*) job->mf( job->mfud, NULL, keysize + datasize );
-		memcpy( nd, key, keysize );
-		memcpy( nd + keysize, data, datasize );
+		char* nd = (char*) job->mf( job->mfud, NULL, (size_t) ( keysize + datasize ) );
+		memcpy( nd, key, (size_t) keysize );
+		memcpy( nd + keysize, data, (size_t) datasize );
 		job->mf( job->mfud, item->data, 0 );
 		item->data = nd;
 		item->datasize = datasize;
@@ -156,9 +156,9 @@ static void ppjob_map_set( ppjob_t* job,
 		item = (ppmapitem_t*) job->mf( job->mfud, NULL, sizeof( ppmapitem_t ) );
 		item->keysize = keysize;
 		item->datasize = datasize;
-		item->data = (char*) job->mf( job->mfud, NULL, keysize + datasize );
-		memcpy( item->data, key, keysize );
-		memcpy( item->data + keysize, data, datasize );
+		item->data = (char*) job->mf( job->mfud, NULL, (size_t) ( keysize + datasize ) );
+		memcpy( item->data, key, (size_t) keysize );
+		memcpy( item->data + keysize, data, (size_t) datasize );
 		item->next = job->data;
 		job->data = item;
 	}
@@ -207,7 +207,7 @@ static threadret_t ppjob_threadfunc( void* arg )
 	sgs_PushObject( job->C, job, ppjob_iface_job );
 	sgs_StoreGlobal( job->C, "_T" );
 	
-	sgs_ExecBuffer( job->C, job->code, job->codesize );
+	sgs_ExecBuffer( job->C, job->code, (size_t) job->codesize );
 	
 	sgs_DestroyEngine( job->C );
 	
@@ -230,8 +230,8 @@ static ppjob_t* ppjob_create( SGS_CTX, char* code, sgs_SizeVal codesize )
 	sgsthread_self( job->thread );
 	sgsmutex_init( job->mutex );
 	
-	job->code = (char*) mf( mfud, NULL, codesize );
-	memcpy( job->code, code, codesize );
+	job->code = (char*) mf( mfud, NULL, (size_t) codesize );
+	memcpy( job->code, code, (size_t) codesize );
 	job->codesize = codesize;
 	
 	job->state = PPJOB_STATE_INIT;
@@ -437,7 +437,7 @@ static int ppjobI_set_if( SGS_CTX )
 			return 0;
 		}
 		else if( item->datasize == var2size && 
-			memcmp( item->data + item->keysize, var2, var2size ) == 0 )
+			memcmp( item->data + item->keysize, var2, (size_t) var2size ) == 0 )
 		{
 			ppjob_map_set( job, str, size, var, varsize );
 			sgs_PushBool( C, 1 );
@@ -539,7 +539,7 @@ static int pproc_serialize_function( SGS_CTX,
 	if( ret )
 	{
 		*out = B.ptr;
-		*outsize = B.size;
+		*outsize = (sgs_SizeVal) B.size;
 	}
 	else
 	{
@@ -552,7 +552,8 @@ static int pprocI_add_job( SGS_CTX )
 {
 	char* str;
 	sgs_SizeVal size;
-	int ssz = sgs_StackSize( C ), type;
+	sgs_StkIdx ssz = sgs_StackSize( C );
+	uint32_t type;
 	
 	if( ssz != 1 || !( type = sgs_ItemType( C, 0 ) ) ||
 		( type != SVT_FUNC && type != SVT_STRING ) ||
@@ -571,10 +572,10 @@ static int pprocI_add_job( SGS_CTX )
 	{
 		char* code;
 		size_t codesize;
-		if( sgs_Compile( C, str, size, &code, &codesize ) != SGS_SUCCESS )
+		if( sgs_Compile( C, str, (size_t) size, &code, &codesize ) != SGS_SUCCESS )
 			STDLIB_WARN( "pproc.add_job(): failed to compile the code" )
 		str = code;
-		size = codesize;
+		size = (sgs_SizeVal) codesize;
 	}
 	sgs_PushObject( C, ppjob_create( C, str, size ), ppjob_iface );
 	sgs_Dealloc( str );

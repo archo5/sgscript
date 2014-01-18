@@ -51,8 +51,8 @@ static int xgm_v2m_rotate( SGS_CTX )
 	if( !sgs_LoadArgs( C, "@>f", &angle ) )
 		return 0;
 	
-	c = cos( angle );
-	s = sin( angle );
+	c = (XGM_VT) cos( angle );
+	s = (XGM_VT) sin( angle );
 	sgs_PushVec2( C, data[0] * c - data[1] * s, data[0] * s + data[1] * c );
 	return 1;
 }
@@ -114,7 +114,7 @@ static int xgm_v2_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		XGM_VT lensq = XGM_VMUL_INNER2( hdr, hdr );
 		if( lensq )
 		{
-			lensq = 1.0f / sqrt( lensq );
+			lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
 			sgs_PushVec2( C, hdr[0] * lensq, hdr[1] * lensq );
 		}
 		else
@@ -187,7 +187,7 @@ static int xgm_v2_expr( SGS_CTX, sgs_VarObj* data, int type )
 		else if( type == SGS_EOP_DIV )
 			{ r[0] = v1[0] / v2[0]; r[1] = v1[1] / v2[1]; }
 		else
-			{ r[0] = fmod( v1[0], v2[0] ); r[1] = fmod( v1[1], v2[1] ); }
+			{ r[0] = (XGM_VT) fmod( v1[0], v2[0] ); r[1] = (XGM_VT) fmod( v1[1], v2[1] ); }
 		
 		sgs_PushVec2p( C, r );
 		return SGS_SUCCESS;
@@ -322,7 +322,7 @@ static int xgm_v3_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		XGM_VT lensq = XGM_VMUL_INNER3( hdr, hdr );
 		if( lensq )
 		{
-			lensq = 1.0f / sqrt( lensq );
+			lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
 			sgs_PushVec3( C, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq );
 		}
 		else
@@ -393,9 +393,9 @@ static int xgm_v3_expr( SGS_CTX, sgs_VarObj* data, int type )
 			{ r[0] = v1[0] / v2[0]; r[1] = v1[1] / v2[1]; r[2] = v1[2] / v2[2]; }
 		else
 		{
-			r[0] = fmod( v1[0], v2[0] );
-			r[1] = fmod( v1[1], v2[1] );
-			r[2] = fmod( v1[2], v2[2] );
+			r[0] = (XGM_VT) fmod( v1[0], v2[0] );
+			r[1] = (XGM_VT) fmod( v1[1], v2[1] );
+			r[2] = (XGM_VT) fmod( v1[2], v2[2] );
 		}
 		
 		sgs_PushVec3p( C, r );
@@ -555,7 +555,7 @@ static int xgm_v4_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		XGM_VT lensq = XGM_VMUL_INNER4( hdr, hdr );
 		if( lensq )
 		{
-			lensq = 1.0f / sqrt( lensq );
+			lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
 			sgs_PushVec4( C, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq, hdr[3] * lensq );
 		}
 		else
@@ -639,10 +639,10 @@ static int xgm_v4_expr( SGS_CTX, sgs_VarObj* data, int type )
 		}
 		else
 		{
-			r[0] = fmod( v1[0], v2[0] );
-			r[1] = fmod( v1[1], v2[1] );
-			r[2] = fmod( v1[2], v2[2] );
-			r[3] = fmod( v1[3], v2[3] );
+			r[0] = (XGM_VT) fmod( v1[0], v2[0] );
+			r[1] = (XGM_VT) fmod( v1[1], v2[1] );
+			r[2] = (XGM_VT) fmod( v1[2], v2[2] );
+			r[3] = (XGM_VT) fmod( v1[3], v2[3] );
 		}
 		
 		sgs_PushVec4p( C, r );
@@ -1079,10 +1079,10 @@ static int xgm_col_expr( SGS_CTX, sgs_VarObj* data, int type )
 		}
 		else
 		{
-			r[0] = fmod( v1[0], v2[0] );
-			r[1] = fmod( v1[1], v2[1] );
-			r[2] = fmod( v1[2], v2[2] );
-			r[3] = fmod( v1[3], v2[3] );
+			r[0] = (XGM_VT) fmod( v1[0], v2[0] );
+			r[1] = (XGM_VT) fmod( v1[1], v2[1] );
+			r[2] = (XGM_VT) fmod( v1[2], v2[2] );
+			r[3] = (XGM_VT) fmod( v1[3], v2[3] );
 		}
 		
 		sgs_PushColorp( C, r );
@@ -1244,8 +1244,8 @@ void sgs_PushPoly2( SGS_CTX, XGM_VT* v2fn, int numverts )
 	xgm_poly2* np = (xgm_poly2*) sgs_PushObjectIPA( C, sizeof(xgm_poly2), xgm_poly2_iface );
 	np->size = numverts;
 	np->mem = numverts;
-	np->data = numverts ? sgs_Alloc_n( XGM_VT, np->mem * 2 ) : NULL;
-	memcpy( np->data, v2fn, sizeof( XGM_VT ) * np->mem * 2 );
+	np->data = numverts ? sgs_Alloc_n( XGM_VT, (size_t) np->mem * 2 ) : NULL;
+	memcpy( np->data, v2fn, sizeof( XGM_VT ) * (size_t) np->mem * 2 );
 }
 
 void sgs_PushColor( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
@@ -1311,9 +1311,9 @@ void sgs_PushColorvp( SGS_CTX, XGM_VECTOR_TYPE* vf, int numfloats )
 }
 
 
-int sgs_ParseVec2( SGS_CTX, int pos, XGM_VT* v2f, int strict )
+SGSBOOL sgs_ParseVec2( SGS_CTX, int pos, XGM_VT* v2f, int strict )
 {
-	int ty = sgs_ItemType( C, pos );
+	uint32_t ty = sgs_ItemType( C, pos );
 	if( !strict && ( ty == SGS_VT_INT || ty == SGS_VT_REAL ) )
 	{
 		v2f[0] = v2f[1] = (XGM_VT) sgs_GetReal( C, pos );
@@ -1332,9 +1332,9 @@ int sgs_ParseVec2( SGS_CTX, int pos, XGM_VT* v2f, int strict )
 	return 0;
 }
 
-int sgs_ParseVec3( SGS_CTX, int pos, XGM_VT* v3f, int strict )
+SGSBOOL sgs_ParseVec3( SGS_CTX, int pos, XGM_VT* v3f, int strict )
 {
-	int ty = sgs_ItemType( C, pos );
+	uint32_t ty = sgs_ItemType( C, pos );
 	if( !strict && ( ty == SGS_VT_INT || ty == SGS_VT_REAL ) )
 	{
 		v3f[0] = v3f[1] = v3f[2] = (XGM_VT) sgs_GetReal( C, pos );
@@ -1354,9 +1354,9 @@ int sgs_ParseVec3( SGS_CTX, int pos, XGM_VT* v3f, int strict )
 	return 0;
 }
 
-int sgs_ParseVec4( SGS_CTX, int pos, XGM_VT* v4f, int strict )
+SGSBOOL sgs_ParseVec4( SGS_CTX, int pos, XGM_VT* v4f, int strict )
 {
-	int ty = sgs_ItemType( C, pos );
+	uint32_t ty = sgs_ItemType( C, pos );
 	if( !strict && ( ty == SGS_VT_INT || ty == SGS_VT_REAL ) )
 	{
 		v4f[0] = v4f[1] = v4f[2] = v4f[3] = (XGM_VT) sgs_GetReal( C, pos );
@@ -1378,7 +1378,7 @@ int sgs_ParseVec4( SGS_CTX, int pos, XGM_VT* v4f, int strict )
 	return 0;
 }
 
-int sgs_ParseAABB2( SGS_CTX, int pos, XGM_VT* v4f )
+SGSBOOL sgs_ParseAABB2( SGS_CTX, int pos, XGM_VT* v4f )
 {
 	if( sgs_IsObject( C, pos, xgm_aabb2_iface ) )
 	{
@@ -1392,7 +1392,7 @@ int sgs_ParseAABB2( SGS_CTX, int pos, XGM_VT* v4f )
 	return 0;
 }
 
-int sgs_ParseColor( SGS_CTX, int pos, XGM_VT* v4f, int strict )
+SGSBOOL sgs_ParseColor( SGS_CTX, int pos, XGM_VT* v4f, int strict )
 {
 	return sgs_ParseVec4( C, pos, v4f, strict );
 }
