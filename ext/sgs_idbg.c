@@ -26,7 +26,7 @@
 static void idbg_readStdin( SGS_IDBG )
 {
 	/* read from STDIN */
-	int wsz = 31, i = 0;
+	size_t wsz = 31, i = 0;
 	char bfr[ BFR_SIZE ];
 	membuf_resize( &D->input, D->C, 0 );
 	while( fgets( bfr, BFR_SIZE, stdin ) )

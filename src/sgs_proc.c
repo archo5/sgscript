@@ -468,7 +468,7 @@ static void stk_makespace( SGS_CTX, StkIdx num )
 	size_t nsz;
 	StkIdx stksz = (StkIdx) ( C->stack_top - C->stack_base );
 	sgs_BreakIf( num < 0 );
-	if( stksz + num <= C->stack_mem )
+	if( stksz + num <= (StkIdx) C->stack_mem )
 		return;
 	sgs_BreakIf( stksz + num < 0 ); /* overflow test */
 	stkoff = C->stack_off - C->stack_base;
@@ -612,7 +612,7 @@ static void clstk_makespace( SGS_CTX, StkIdx num )
 	size_t nsz;
 	StkIdx stksz = (StkIdx) ( C->clstk_top - C->clstk_base );
 	sgs_BreakIf( num < 0 );
-	if( stksz + num <= C->clstk_mem )
+	if( stksz + num <= (StkIdx) C->clstk_mem )
 		return;
 	sgs_BreakIf( stksz + num < 0 ); /* overflow test */
 	stkoff = C->clstk_off - C->clstk_base;
@@ -2486,7 +2486,8 @@ SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
 static SGSRESULT sgs_PushPathBuf( SGS_CTX, StkIdx item, const char* path, size_t plen, va_list* pargs )
 {
 #define args *pargs
-	int ret = sgs_PushItem( C, item ), i = 0;
+	int ret = sgs_PushItem( C, item );
+	size_t i = 0;
 	if( ret != SGS_SUCCESS )
 		return ret;
 	while( i < plen )

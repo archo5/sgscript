@@ -1417,7 +1417,7 @@ static int srt_call( SGS_CTX, sgs_VarObj* data, int smth )
 	stringread_t* srt = (stringread_t*) data->data;
 	if( !sgs_ParseInt( C, 0, &amt ) || amt > 0x7fffffff )
 		return SGS_EINVAL;
-	if( srt->off >= srt->S.data.S->size )
+	if( srt->off >= (sgs_SizeVal) srt->S.data.S->size )
 		return 0;
 	else
 	{
@@ -3036,12 +3036,6 @@ SGSRESULT sgs_LoadLib_RE( SGS_CTX )
 #define sgsSTRICT_RANGES 2
 #define sgsLEFT 1
 #define sgsRIGHT 2
-
-static SGS_INLINE int32_t idx2off( int32_t size, int32_t i )
-{
-	if( -i > size || i >= size ) return -1;
-	return i < 0 ? size + i : i;
-}
 
 static int sgsstd_string_cut( SGS_CTX )
 {
