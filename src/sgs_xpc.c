@@ -34,16 +34,17 @@ int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )
 	WCHAR widepath[ SGS_MAX_PATH + 1 ];
 	WCHAR abspath[ SGS_MAX_PATH + 1 ];
 	WCHAR* pathstr;
-	DWORD ret;
+	int ret_i;
+	DWORD ret_dw;
 	
-	ret = MultiByteToWideChar( CP_UTF8, 0, file, -1, widepath, SGS_MAX_PATH );
-	if( ret == 0 )
+	ret_i = MultiByteToWideChar( CP_UTF8, 0, file, -1, widepath, SGS_MAX_PATH );
+	if( ret_i == 0 )
 		return SGS_XPC_NOFILE;
 	widepath[ SGS_MAX_PATH ] = 0;
 	
 	pathstr = widepath;
-	ret = GetFullPathNameW( widepath, SGS_MAX_PATH, abspath, NULL );
-	if( ret > 0 && ret < SGS_MAX_PATH )
+	ret_dw = GetFullPathNameW( widepath, SGS_MAX_PATH, abspath, NULL );
+	if( ret_dw > 0 && ret_dw < SGS_MAX_PATH )
 	{
 		abspath[ SGS_MAX_PATH ] = 0;
 		pathstr = abspath;
@@ -52,12 +53,12 @@ int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )
 	pe = SetErrorMode( SEM_FAILCRITICALERRORS );
 	mod = LoadLibraryW( pathstr );
 	SetErrorMode( pe );
-	ret = GetLastError();
+	ret_dw = GetLastError();
 	if( !mod )
 	{
-		if( ret == ERROR_MOD_NOT_FOUND )
+		if( ret_dw == ERROR_MOD_NOT_FOUND )
 			return SGS_XPC_NOFILE;
-		if( ret == ERROR_BAD_EXE_FORMAT )
+		if( ret_dw == ERROR_BAD_EXE_FORMAT )
 			return SGS_XPC_NOTLIB;
 		return SGS_XPC_LDFAIL;
 	}
@@ -116,7 +117,7 @@ char* sgsXPC_GetCurrentDirectory()
 		return NULL;
 	}
 	
-	buf8_size = WideCharToMultiByte( CP_UTF8, 0, buf16, buf16_size, NULL, 0, NULL, NULL );
+	buf8_size = (DWORD) WideCharToMultiByte( CP_UTF8, 0, buf16, (int) buf16_size, NULL, 0, NULL, NULL );
 	if( buf8_size == 0 )
 	{
 		free( buf16 );
@@ -124,7 +125,7 @@ char* sgsXPC_GetCurrentDirectory()
 		return NULL;
 	}
 	buf8 = (char*) malloc( buf8_size );
-	if( WideCharToMultiByte( CP_UTF8, 0, buf16, buf16_size, buf8, buf8_size, NULL, NULL ) == 0 )
+	if( WideCharToMultiByte( CP_UTF8, 0, buf16, (int) buf16_size, buf8, (int) buf8_size, NULL, NULL ) == 0 )
 	{
 		free( buf16 );
 		free( buf8 );
@@ -191,15 +192,15 @@ int sgsXPC_SetCurrentDirectory( char* path )
 	
 	buf16 = stack_buf16;
 	path_len = strlen( path );
-	buf16_size = MultiByteToWideChar( CP_UTF8, 0, path, path_len + 1, NULL, 0 );
+	buf16_size = MultiByteToWideChar( CP_UTF8, 0, path, (int) path_len + 1, NULL, 0 );
 	if( buf16_size == 0 )
 	{
 		errno = EACCES;
 		return -1;
 	}
 	if( buf16_size > SGS_MAX_PATH )
-		buf16 = (WCHAR*) malloc( sizeof(WCHAR) * buf16_size );
-	if( MultiByteToWideChar( CP_UTF8, 0, path, path_len + 1, buf16, buf16_size ) == 0 )
+		buf16 = (WCHAR*) malloc( sizeof(WCHAR) * (size_t) buf16_size );
+	if( MultiByteToWideChar( CP_UTF8, 0, path, (int) path_len + 1, buf16, buf16_size ) == 0 )
 	{
 		free( buf16 );
 		errno = EACCES;
@@ -240,14 +241,14 @@ char* sgsXPC_GetModuleFileName()
 	}
 	buf16[ buf16_size ] = 0;
 	
-	buf8_size = WideCharToMultiByte( CP_UTF8, 0, buf16, buf16_size + 1, NULL, 0, NULL, NULL );
+	buf8_size = (DWORD) WideCharToMultiByte( CP_UTF8, 0, buf16, (int) buf16_size + 1, NULL, 0, NULL, NULL );
 	if( buf8_size == 0 )
 	{
 		errno = EACCES;
 		return NULL;
 	}
 	buf8 = (char*) malloc( buf8_size );
-	if( WideCharToMultiByte( CP_UTF8, 0, buf16, buf16_size + 1, buf8, buf8_size, NULL, NULL ) == 0 )
+	if( WideCharToMultiByte( CP_UTF8, 0, buf16, (int) buf16_size + 1, buf8, (int) buf8_size, NULL, NULL ) == 0 )
 	{
 		free( buf8 );
 		errno = EACCES;

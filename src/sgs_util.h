@@ -174,7 +174,7 @@ static SGS_INLINE int sgs_getbin( char c ){ return c - '0'; }
 #  define SGS_FUNC_END
 #endif
 
-SGS_APIFUNC void sgs_print_safe( FILE* fp, const char* buf, int32_t size );
+SGS_APIFUNC void sgs_print_safe( FILE* fp, const char* buf, size_t size );
 
 
 /* string buffer */
@@ -245,7 +245,7 @@ SGS_APIFUNC void sgs_vht_init( sgs_VHTable* T, SGS_CTX, int32_t initial_pair_mem
 SGS_APIFUNC void sgs_vht_free( sgs_VHTable* T, SGS_CTX );
 SGS_APIFUNC sgs_VHTIdx sgs_vht_pair_id( sgs_VHTable* T, sgs_Variable* K, sgs_Hash hash );
 SGS_APIFUNC sgs_VHTVar* sgs_vht_get( sgs_VHTable* T, sgs_Variable* K );
-SGS_APIFUNC sgs_VHTVar* sgs_vht_get_str( sgs_VHTable* T, const char* str, sgs_SizeVal size, sgs_Hash hash );
+SGS_APIFUNC sgs_VHTVar* sgs_vht_get_str( sgs_VHTable* T, const char* str, uint32_t size, sgs_Hash hash );
 SGS_APIFUNC sgs_VHTVar* sgs_vht_set( sgs_VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable* V );
 SGS_APIFUNC void sgs_vht_unset( sgs_VHTable* T, SGS_CTX, sgs_Variable* K );
 
@@ -257,8 +257,8 @@ SGS_APIFUNC double sgs_GetTime();
 
 /* returns 0 on failure, 1/2 on integer/real */
 SGS_APIFUNC int sgs_util_strtonum( const char** at, const char* end, sgs_Int* outi, sgs_Real* outf );
-SGS_APIFUNC sgs_Int sgs_util_atoi( const char* str, int len );
-SGS_APIFUNC sgs_Real sgs_util_atof( const char* str, int len );
+SGS_APIFUNC sgs_Int sgs_util_atoi( const char* str, size_t len );
+SGS_APIFUNC sgs_Real sgs_util_atof( const char* str, size_t len );
 
 
 

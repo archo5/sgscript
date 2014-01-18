@@ -125,7 +125,7 @@ FTComp;
 #define SFTC_AT F->at
 #define SFTC_NEXT F->at = sgsT_Next( F->at )
 #define SFTC_IS( type ) (*F->at == (type))
-/* warning prevented: char/uchar conversion */
+/* WP: char/uchar conversion */
 #define SFTC_IN( buf, sz ) isoneofN( (char) *F->at, buf, sz )
 #define SFTC_HASERR ( F->C->state & SGS_HAS_ERRORS )
 #define SFTC_SETERR F->C->state |= SGS_HAS_ERRORS
@@ -794,7 +794,7 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 			return NULL;
 		}
 		
-		/* warning prevented: char/uchar conversion */
+		/* WP: char/uchar conversion */
 		prev = (char) *SFTC_AT;
 		SFTC_NEXT;
 	}

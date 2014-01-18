@@ -83,7 +83,7 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_
 			sgs_MemBuf str = sgs_membuf_create();
 			while( pos < end && *pos != '"' )
 			{
-				uint8_t cc = *pos;
+				uint8_t cc = (uint8_t) *pos;
 #ifdef STRICT_JSON
 				if( cc <= 0x1f )
 				{
@@ -117,27 +117,27 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_
 							if( sgs_hexchar( *pos ) ) pos++; else return pos;
 							if( sgs_hexchar( *pos ) ) pos++; else return pos;
 							pos--;
-							hex[ 0 ] = sgs_gethex( *(pos-3) );
-							hex[ 1 ] = sgs_gethex( *(pos-2) );
-							hex[ 2 ] = sgs_gethex( *(pos-1) );
-							hex[ 3 ] = sgs_gethex( *pos );
+							hex[ 0 ] = (uint8_t) ( sgs_gethex( *(pos-3) ) );
+							hex[ 1 ] = (uint8_t) ( sgs_gethex( *(pos-2) ) );
+							hex[ 2 ] = (uint8_t) ( sgs_gethex( *(pos-1) ) );
+							hex[ 3 ] = (uint8_t) ( sgs_gethex( *pos ) );
 							if( hex[0] == 0xff || hex[1] == 0xff ||
 								hex[2] == 0xff || hex[3] == 0xff )
 								return pos;
-							tmpbuf[ 0 ] = ( hex[0] << 4 ) | hex[1];
-							tmpbuf[ 1 ] = ( hex[2] << 4 ) | hex[3];
-							uchar = ( tmpbuf[0]<<8 ) | tmpbuf[1];
+							tmpbuf[ 0 ] = (uint8_t) ( ( hex[0] << 4 ) | hex[1] );
+							tmpbuf[ 1 ] = (uint8_t) ( ( hex[2] << 4 ) | hex[3] );
+							uchar = (uint16_t) ( ( tmpbuf[0]<<8 ) | tmpbuf[1] );
 							if( uchar <= 0x7f )
 							{
-								sgs_membuf_appchr( &str, C, tmpbuf[1] );
+								sgs_membuf_appchr( &str, C, (char) tmpbuf[1] );
 								break;
 							}
 							if( uchar <= 0x7ff )
 							{
 								char obuf[ 2 ];
 								{
-									obuf[0] = 0xC0 | ((tmpbuf[1] & 0xC0) >> 6) | ((tmpbuf[0] & 0x7) << 2);
-									obuf[1] = 0x80 | (tmpbuf[1] & 0x3F);
+									obuf[0] = (char) ( 0xC0 | ((tmpbuf[1] & 0xC0) >> 6) | ((tmpbuf[0] & 0x7) << 2) );
+									obuf[1] = (char) ( 0x80 | (tmpbuf[1] & 0x3F) );
 								}
 								sgs_membuf_appbuf( &str, C, obuf, 2 );
 								break;
@@ -146,9 +146,9 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_
 							{
 								char obuf[ 3 ];
 								{
-									obuf[0] = 0xE0 | ((tmpbuf[0] & 0xF0) >> 4);
-									obuf[1] = 0x80 | ((tmpbuf[0] & 0xF) << 2) | ((tmpbuf[1] & 0xC0) >> 6);
-									obuf[2] = 0x80 | (tmpbuf[1] & 0x3F);
+									obuf[0] = (char) ( 0xE0 | ((tmpbuf[0] & 0xF0) >> 4) );
+									obuf[1] = (char) ( 0x80 | ((tmpbuf[0] & 0xF) << 2) | ((tmpbuf[1] & 0xC0) >> 6) );
+									obuf[2] = (char) ( 0x80 | (tmpbuf[1] & 0x3F) );
 								}
 								sgs_membuf_appbuf( &str, C, obuf, 3 );
 							}
@@ -171,7 +171,12 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_
 				sgs_membuf_destroy( &str, C );
 				return beg;
 			}
-			sgs_PushStringBuf( C, str.ptr, str.size );
+			if( str.size > 0x7fffffff )
+			{
+				sgs_membuf_destroy( &str, C );
+				return beg;
+			}
+			sgs_PushStringBuf( C, str.ptr, (sgs_SizeVal) str.size );
 			sgs_membuf_destroy( &str, C );
 			if( STK_TOP == '{' )
 			{
@@ -340,12 +345,14 @@ static int json_decode( SGS_CTX )
 	char* str;
 	sgs_SizeVal size;
 	int argc = sgs_StackSize( C );
+	
+	SGSFN( "json_decode" );
 
 	if( argc < 1 || argc > 2 ||
 		!sgs_ParseString( C, 0, &str, &size ) ||
 		( argc == 2 && sgs_ItemType( C, 1 ) != SGS_VT_OBJECT ) )
 	{
-		sgs_Printf( C, SGS_WARNING, "json_decode: unexpected arguments; "
+		sgs_Printf( C, SGS_WARNING, "unexpected arguments; "
 			"function expects 1-2 arguments: string[, object]" );
 		return 0;
 	}
@@ -408,14 +415,14 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 							pp[1] = *str;
 						}
 						if( str != frm )
-							sgs_membuf_appbuf( buf, C, frm, str - frm );
+							sgs_membuf_appbuf( buf, C, frm, (size_t) ( str - frm ) );
 						sgs_membuf_appbuf( buf, C, pp, 2 );
 						frm = str + 1;
 					}
 					str++;
 				}
 				if( str != frm )
-					sgs_membuf_appbuf( buf, C, frm, str - frm );
+					sgs_membuf_appbuf( buf, C, frm, (size_t) ( str - frm ) );
 			}
 			sgs_membuf_appchr( buf, C, '"' );
 			return 1;
@@ -474,16 +481,23 @@ static int json_encode( SGS_CTX )
 {
 	sgs_MemBuf buf = sgs_membuf_create();
 	int argc = sgs_StackSize( C ), ret;
+	
+	SGSFN( "json_encode" );
 
 	if( argc != 1 )
 	{
-		sgs_Printf( C, SGS_WARNING, "json_encode: function expects 1 argument" );
+		sgs_Printf( C, SGS_WARNING, "function expects 1 argument" );
 		return 0;
 	}
 
 	ret = encode_var( C, &buf );
+	if( buf.size > 0x7fffffff )
+	{
+		sgs_membuf_destroy( &buf, C );
+		return sgs_Printf( C, SGS_WARNING, "generated more string data than allowed to store" );
+	}
 	if( ret )
-		sgs_PushStringBuf( C, buf.ptr, buf.size );
+		sgs_PushStringBuf( C, buf.ptr, (sgs_SizeVal) buf.size );
 	sgs_membuf_destroy( &buf, C );
 	return ret;
 }

@@ -111,7 +111,7 @@ typedef struct _match_ctx
 match_ctx;
 
 
-static int regex_test( const RX_Char* str, match_ctx* ctx, int subexp );
+static int regex_test( const RX_Char* str, match_ctx* ctx );
 
 
 static int regex_match_once( match_ctx* ctx )
@@ -174,8 +174,8 @@ static int regex_match_once( match_ctx* ctx )
 	case RIT_BKREF:
 		{
 			regex_item* cap = ctx->R->caps[ (int) item->a ];
-			long len = cap->matchend - cap->matchbeg;
-			long len2 = (long) strlen( str );
+			ptrdiff_t len = cap->matchend - cap->matchbeg;
+			ptrdiff_t len2 = (ptrdiff_t) strlen( str );
 			if( len2 >= len && strncmp( cap->matchbeg, str, (size_t) len ) == 0 )
 			{
 				item->matchend += len;
@@ -191,7 +191,7 @@ static int regex_match_once( match_ctx* ctx )
 				cc.item = item->ch;
 				cc.R = ctx->R;
 			}
-			if( regex_test( str, &cc, 1 ) )
+			if( regex_test( str, &cc ) )
 			{
 				regex_item* p = item->ch;
 				while( p->next )
@@ -218,7 +218,7 @@ static int regex_match_many( match_ctx* ctx )
 			cc.item = chi;
 			cc.R = ctx->R;
 		}
-		if( regex_test( item->matchbeg, &cc, 0 ) )
+		if( regex_test( item->matchbeg, &cc ) )
 		{
 			regex_item* p = chi;
 			while( p->next )
@@ -302,7 +302,7 @@ static int regex_subexp_backtrack( regex_item* item )
 	return !!p;
 }
 
-static int regex_test( const RX_Char* str, match_ctx* ctx, int subexp )
+static int regex_test( const RX_Char* str, match_ctx* ctx )
 {
 	regex_item* p = ctx->item;
 	p->matchbeg = str;
@@ -362,7 +362,7 @@ static int regex_test_start( const RX_Char* str, match_ctx* ctx )
 	regex_item* p = ctx->item;
 	RXLOGINFO( printf( "test start - counter reset\n" ) );
 	regex_reset_one( p );
-	return regex_test( str, ctx, 0 );
+	return regex_test( str, ctx );
 }
 
 
@@ -460,7 +460,7 @@ static int regex_real_compile( srx_Context* R, int* cel, const RX_Char** pstr, i
 	item->min = 1; \
 	item->max = 1;
 
-#define _RXE( err ) do{ error = err; goto fail; }while(1)
+#define _RXE( err ) for(;;){ error = err; goto fail; }
 	
 	const RX_Char* s = *pstr;
 	regex_item* item = NULL, *citem = NULL;
@@ -921,16 +921,16 @@ RX_Char* srx_Replace( srx_Context* R, const RX_Char* str, const RX_Char* rep )
 {
 	RX_Char* out = "";
 	const RX_Char *from = str, *fromend = str + strlen( str );
-	long size = 0, mem = 0;
+	size_t size = 0, mem = 0;
 	
 #define SR_CHKSZ( szext ) \
-	if( mem - size < szext ) \
+	if( (ptrdiff_t)( mem - size ) < (ptrdiff_t)(szext) ) \
 	{ \
-		long nsz = MAX( mem * 2, size + szext ) + 1; \
+		size_t nsz = MAX( mem * 2, size + (size_t)(szext) ) + 1; \
 		RX_Char* nmem = RX_ALLOC_N( RX_Char, nsz ); \
 		if( mem ) \
 		{ \
-			memcpy( nmem, out, (size_t) size + 1 ); \
+			memcpy( nmem, out, size + 1 ); \
 			RX_FREE( out ); \
 		} \
 		out = nmem; \
@@ -939,7 +939,7 @@ RX_Char* srx_Replace( srx_Context* R, const RX_Char* str, const RX_Char* rep )
 #define SR_ADDBUF( from, to ) \
 	SR_CHKSZ( to - from ) \
 	memcpy( out + size, from, (size_t)( to - from ) ); \
-	size += to - from;
+	size += (size_t)( to - from );
 	
 	while( *from )
 	{
@@ -984,8 +984,8 @@ RX_Char* srx_Replace( srx_Context* R, const RX_Char* str, const RX_Char* rep )
 	
 	SR_ADDBUF( from, fromend );
 	{
-		char nul = 0;
-		SR_ADDBUF( &nul, &nul + 1 );
+		char nul[1] = {0};
+		SR_ADDBUF( nul, &nul[1] );
 	}
 	return out;
 }

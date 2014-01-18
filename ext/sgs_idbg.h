@@ -14,8 +14,8 @@ struct _sgs_IDbg
 	sgs_MemBuf input;
 	char iword[ 32 ];
 	int inside;
-	int stkoff;
-	int stksize;
+	ptrdiff_t stkoff;
+	ptrdiff_t stksize;
 
 	int minlev;
 }

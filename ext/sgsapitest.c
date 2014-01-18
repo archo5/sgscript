@@ -404,7 +404,7 @@ void output_strcat( void* ud, SGS_CTX, const void* ptr, size_t size )
 	
 	if( strlen( dst ) + size + 1 > 64 )
 	{
-		/* warning prevented: good enough for these tests */
+		/* WP: good enough for these tests */
 		printf( "size: %d, whole string: %s%s\n", (int) size, dst, src );
 		fflush( stdout );
 	}

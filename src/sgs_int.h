@@ -21,14 +21,21 @@
 	- max. loop depth: 65535 nested loops
 		(no need to test for it since instruction count ..
 		.. effectively limits this further)
+	- bytecode size limit: 14 - 2^32-1
+	- source size limit: 0 - 2^31-1
+	- variable size limit: string size + overhead (<=256 bytes)
+	- item type value limits: 24 bits
 	
 	- identifier size: 0 - 255
 	- argument count: 0 - 255
 	- total closure count in one function: 0 - 255
 	- temporary variable count (incl. args): 0 - 255
-	- useful line count in source code: 0 - 32767
+	- useful line count limits in source file: 0 - 32767
 	
-	- bytecode size limits: 14 - 2^32-1
+	- stack size: 0 - 2^31-1
+	- closure stack size: 0 - 2^31-1
+	- array size: 0 - 2^31-1
+	- hash table size: 0 - 2^31-1
 */
 
 
@@ -589,10 +596,10 @@ struct _sgs_Closure
 
 
 /* VM interface */
-void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, int32_t len );
+void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len );
 void sgsVM_VarDestroyObject( SGS_CTX, sgs_object_t* O );
 
-int sgsVM_VarSize( const sgs_Variable* var );
+size_t sgsVM_VarSize( const sgs_Variable* var );
 void sgsVM_VarDump( const sgs_Variable* var );
 
 void sgsVM_StackDump( SGS_CTX );
@@ -644,7 +651,7 @@ typedef
 struct _sgs_ObjPoolItem
 {
 	sgs_VarObj* obj;
-	sgs_SizeVal appsize;
+	uint32_t appsize;
 }
 sgs_ObjPoolItem;
 
@@ -728,7 +735,7 @@ struct _sgs_Context
 #endif
 };
 
-#define SGS_STACKFRAMESIZE  (C->stack_top - C->stack_off)
+#define SGS_STACKFRAMESIZE ((sgs_StkIdx)(C->stack_top - C->stack_off))
 
 
 #ifdef SGS_INTERNAL_STRINGTABLES
@@ -776,10 +783,10 @@ static const char* sgs_IfaceNames[] =
 
 /* apicall = error codes only; printfs otherwise (VM call) */
 int sgsSTD_PostInit( SGS_CTX );
-int sgsSTD_MakeArray( SGS_CTX, int cnt );
-int sgsSTD_MakeDict( SGS_CTX, int cnt );
-int sgsSTD_MakeMap( SGS_CTX, int cnt );
-int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, int32_t clc );
+int sgsSTD_MakeArray( SGS_CTX, sgs_SizeVal cnt );
+int sgsSTD_MakeDict( SGS_CTX, sgs_SizeVal cnt );
+int sgsSTD_MakeMap( SGS_CTX, sgs_SizeVal cnt );
+int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc );
 int sgsSTD_GlobalInit( SGS_CTX );
 int sgsSTD_GlobalFree( SGS_CTX );
 int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall );

@@ -29,6 +29,7 @@ typedef void* (*srx_MemFunc)
 #ifdef RX_NEED_DEFAULT_MEMFUNC
 static void* srx_DefaultMemFunc( void* userdata, void* ptr, size_t size )
 {
+	(void) userdata;
 	if( size )
 		return realloc( ptr, size );
 	free( ptr );

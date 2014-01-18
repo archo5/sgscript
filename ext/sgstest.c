@@ -35,14 +35,14 @@ int tf_compare( const void* p1, const void* p2 )
 	return strcmp( f1->nameonly, f2->nameonly );
 }
 
-int load_testfiles( const char* dir, testfile** files, int* count )
+int load_testfiles( const char* dir, testfile** files, size_t* count )
 {
 	DIR* d = opendir( dir );
 	struct dirent* e;
 	struct stat sdata;
 	char namebuf[ 260 ];
 
-	int TFM = 32, TFC = 0;
+	size_t TFM = 32, TFC = 0;
 	testfile* TF = (testfile*) malloc( sizeof( testfile ) * TFM );
 
 	while( ( e = readdir( d ) ) != NULL )
@@ -87,7 +87,7 @@ int load_testfiles( const char* dir, testfile** files, int* count )
 	return 1;
 }
 
-void free_testfiles( testfile* files, int count )
+void free_testfiles( testfile* files, size_t count )
 {
 	testfile* f = files, *fend = files + count;
 	while( f < fend )
@@ -260,7 +260,8 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 
 static void exec_tests()
 {
-	int ret, count;
+	int ret;
+	size_t count;
 	testfile* files, *f, *fend;
 	fclose( fopen( outfile, "w" ) );
 	fclose( fopen( outfile_errors, "w" ) );

@@ -31,9 +31,9 @@ void sgs_BreakIfFunc( const char* code, const char* file, int line )
 }
 
 
-void print_safe( FILE* fp, const char* buf, int32_t size )
+void print_safe( FILE* fp, const char* buf, size_t size )
 {
-	int32_t i;
+	size_t i;
 	for( i = 0; i < size; ++i )
 	{
 		if( isgraph( buf[ i ] ) || buf[ i ] == ' ' )
@@ -121,7 +121,7 @@ sgs_Hash sgs_HashFunc( const char* str, size_t size )
 	sgs_Hash h = 2166136261u;
 	for( i = 0; i < size; ++i )
 	{
-		h ^= str[ i ];
+		h ^= (sgs_Hash) (uint8_t) str[ i ];
 		h *= 16777619u;
 	}
 	return h | 0x80000000;
@@ -132,7 +132,7 @@ sgs_Hash sgs_HashVar( const sgs_Variable* v )
 	switch( BASETYPE( v->type ) )
 	{
 	case SVT_NULL: return 0;
-	case SVT_BOOL: return v->data.B;
+	case SVT_BOOL: return v->data.B != 0;
 	case SVT_STRING: return hashFunc( var_cstr( v ), v->data.S->size );
 	}
 	return hashFunc( (const char*) &v->data, sizeof(v->data) );
@@ -165,14 +165,14 @@ void vht_init( sgs_VHTable* T, SGS_CTX, VHTIdx initial_pair_mem, VHTIdx initial_
 	sgs_BreakIf( initial_pair_mem < 1 );
 	sgs_BreakIf( initial_var_mem < 1 );
 	
-	T->pairs = sgs_Alloc_n( VHTIdx, initial_pair_mem );
+	T->pairs = sgs_Alloc_n( VHTIdx, (size_t) initial_pair_mem );
 	T->pair_mem = initial_pair_mem;
-	T->vars = sgs_Alloc_n( VHTVar, initial_var_mem );
+	T->vars = sgs_Alloc_n( VHTVar, (size_t) initial_var_mem );
 	T->var_mem = initial_var_mem;
 	T->size = 0;
 	T->num_rem = 0;
 	
-	memset( T->pairs, SGS_VHTIDX_EMPTY, sizeof(VHTIdx) * initial_pair_mem );
+	memset( T->pairs, SGS_VHTIDX_EMPTY, sizeof(VHTIdx) * (size_t) initial_pair_mem );
 }
 
 void vht_free( sgs_VHTable* T, SGS_CTX )
@@ -201,8 +201,8 @@ void vht_rehash( VHTable* T, SGS_CTX, VHTIdx size )
 	if( size < 4 )
 		size = 4;
 	
-	np = sgs_Alloc_n( VHTIdx, size );
-	memset( np, SGS_VHTIDX_EMPTY, sizeof(VHTIdx) * size );
+	np = sgs_Alloc_n( VHTIdx, (size_t) size );
+	memset( np, SGS_VHTIDX_EMPTY, sizeof(VHTIdx) * (size_t) size );
 	
 //	printf( "rehash %d -> %d (size = %d, mem = %d kB)\n", T->pair_mem, size, T->size,
 //		(size * sizeof(VHTIdx) + T->var_mem * sizeof(VHTVar)) / 1024 );
@@ -213,7 +213,7 @@ void vht_rehash( VHTable* T, SGS_CTX, VHTIdx size )
 		if( idx >= 0 )
 		{
 			h = T->vars[ idx ].hash;
-			sp = i = h % size;
+			sp = i = (VHTIdx)( h % (sgs_Hash) size );
 			do
 			{
 				VHTIdx nidx = np[ i ];
@@ -250,8 +250,9 @@ void vht_reserve( VHTable* T, SGS_CTX, VHTIdx size )
 //	printf( "reserve %d -> %d (size = %d, mem = %d kB)\n", T->var_mem, size, T->size,
 //		(T->pair_mem * sizeof(VHTIdx) + size * sizeof(VHTVar)) / 1024 );
 	
-	p = sgs_Alloc_n( VHTVar, size );
-	memcpy( p, T->vars, sizeof(VHTVar) * T->size );
+	/* WP: hash table limit */
+	p = sgs_Alloc_n( VHTVar, (size_t) size );
+	memcpy( p, T->vars, sizeof(VHTVar) * (size_t) T->size );
 	sgs_Dealloc( T->vars );
 	T->vars = p;
 	T->var_mem = size;
@@ -259,7 +260,7 @@ void vht_reserve( VHTable* T, SGS_CTX, VHTIdx size )
 
 VHTIdx vht_pair_id( VHTable* T, sgs_Variable* K, sgs_Hash hash )
 {
-	VHTIdx i, sp = hash % T->pair_mem;
+	VHTIdx i, sp = (VHTIdx)( hash % (sgs_Hash) T->pair_mem );
 	i = sp;
 	do
 	{
@@ -285,9 +286,9 @@ VHTVar* vht_get( VHTable* T, sgs_Variable* K )
 		return NULL;
 }
 
-VHTVar* vht_get_str( VHTable* T, const char* str, sgs_SizeVal size, sgs_Hash hash )
+VHTVar* vht_get_str( VHTable* T, const char* str, uint32_t size, sgs_Hash hash )
 {
-	VHTIdx i, sp = hash % T->pair_mem;
+	VHTIdx i, sp = (VHTIdx)( hash % (sgs_Hash) T->pair_mem );
 	i = sp;
 	do
 	{
@@ -354,7 +355,7 @@ VHTVar* vht_set( VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable* V )
 				p->val.type = VTC_NULL;
 		}
 		
-		sp = i = h % T->pair_mem;
+		sp = i = (VHTIdx)( h % (sgs_Hash) T->pair_mem );
 		do
 		{
 			VHTIdx idx = T->pairs[ i ];
@@ -578,7 +579,7 @@ int util_strtonum( CCH** at, CCH* end, sgs_Int* outi, sgs_Real* outf )
 }
 
 
-sgs_Int util_atoi( const char* str, int len )
+sgs_Int util_atoi( const char* str, size_t len )
 {
 	sgs_Int vi = 0;
 	sgs_Real vr = 0;
@@ -590,7 +591,7 @@ sgs_Int util_atoi( const char* str, int len )
 	else return 0;
 }
 
-sgs_Real util_atof( const char* str, int len )
+sgs_Real util_atof( const char* str, size_t len )
 {
 	sgs_Int vi = 0;
 	sgs_Real vr = 0;
@@ -692,7 +693,7 @@ void quicksort( void *array, size_t length, size_t size,
 
 #if INSERTION_SORT_THRESHOLD_SHIFT != 0
 	/* Insertion sort threshold */
-	const int threshold = size << INSERTION_SORT_THRESHOLD_SHIFT;
+	const ptrdiff_t threshold = (ptrdiff_t) size << INSERTION_SORT_THRESHOLD_SHIFT;
 #endif
 	
 	if( length <= 1 )
@@ -704,31 +705,31 @@ void quicksort( void *array, size_t length, size_t size,
 
 	do
 	{
-	    /* Partition the array */
+		/* Partition the array */
 		register char *idx = (char*) recursion->left;
 		register char *right = (char*) recursion->right;
 		char          *left  = idx;
 
-	    /* Assigning store to the left */
+		/* Assigning store to the left */
 		register char *store = idx;
 
-	    /* Pop the stack */
+		/* Pop the stack */
 		--recursion;
 
-	    /* Determine a pivot (in the middle) and move it to the end */
-	    /* @modification@ changed the left address to something that works */
-		SWAP(left + (((right - left) >> 1) / size * size),right,size)
+		/* Determine a pivot (in the middle) and move it to the end */
+		/* @modification@ changed the left address to something that works */
+		SWAP(left + ((size_t)((right - left) >> 1) / size * size),right,size)
 
-	    /* From left to right */
+		/* From left to right */
 		while (idx < right)
 		{
-	        /* If item is smaller than pivot */
+			/* If item is smaller than pivot */
 			if (compare(right, idx, userdata) > 0)
 			{
-	            /* Swap item and store */
+				/* Swap item and store */
 				SWAP(idx,store,size)
 
-	            /* We increment store */
+				/* We increment store */
 				store += size;
 			}
 
@@ -844,40 +845,40 @@ int sgs_utf8_decode( char* buf, size_t size, uint32_t* outchar )
 	char c;
 	if( size == 0 )
 		return 0;
-
+	
 	c = *buf;
 	if( !( c & 0x80 ) )
 	{
-		*outchar = c;
+		*outchar = (uint32_t) c;
 		return 1;
 	}
-
+	
 	if( ( c & 0xE0 ) == 0xC0 )
 	{
 		if( size < 2 || U8NFL( buf[1] ) )
 			return - (int) MIN(size,2);
-		*outchar = ( ( ((int)(buf[0]&0x1f)) << 6 ) | ((int)(buf[1]&0x3f)) );
+		*outchar = (uint32_t) ( ( ((int)(buf[0]&0x1f)) << 6 ) | ((int)(buf[1]&0x3f)) );
 		return 2;
 	}
-
+	
 	if( ( c & 0xF0 ) == 0xE0 )
 	{
 		if( size < 3 || U8NFL( buf[1] ) || U8NFL( buf[2] ) )
 			return - (int) MIN(size,3);
-		*outchar = ( ( ((int)(buf[0]&0x0f)) << 12 ) | ( ((int)(buf[1]&0x3f)) << 6 )
+		*outchar = (uint32_t) ( ( ((int)(buf[0]&0x0f)) << 12 ) | ( ((int)(buf[1]&0x3f)) << 6 )
 			| ((int)(buf[2]&0x3f)) );
 		return 3;
 	}
-
+	
 	if( ( c & 0xF8 ) == 0xF0 )
 	{
 		if( size < 4 || U8NFL( buf[1] ) || U8NFL( buf[2] ) || U8NFL( buf[3] ) )
 			return - (int) MIN(size,4);
-		*outchar = ( ( ((int)(buf[0]&0x07)) << 18 ) | ( ((int)(buf[1]&0x3f)) << 12 )
+		*outchar = (uint32_t) ( ( ((int)(buf[0]&0x07)) << 18 ) | ( ((int)(buf[1]&0x3f)) << 12 )
 				| ( ((int)(buf[2]&0x3f)) << 6 ) | ((int)(buf[3]&0x3f)) );
 		return 4;
 	}
-
+	
 	return -1;
 }
 
@@ -890,23 +891,23 @@ int sgs_utf8_encode( uint32_t ch, char* out )
 	}
 	if( ch <= 0x7ff )
 	{
-		out[ 0 ] = 0xc0 | ( ( ch >> 6 ) & 0x1f );
-		out[ 1 ] = 0x80 | ( ch & 0x3f );
+		out[ 0 ] = (char)( 0xc0 | ( ( ch >> 6 ) & 0x1f ) );
+		out[ 1 ] = (char)( 0x80 | ( ch & 0x3f ) );
 		return 2;
 	}
 	if( ch <= 0xffff )
 	{
-		out[ 0 ] = 0xe0 | ( ( ch >> 12 ) & 0x0f );
-		out[ 1 ] = 0x80 | ( ( ch >> 6 ) & 0x3f );
-		out[ 2 ] = 0x80 | ( ch & 0x3f );
+		out[ 0 ] = (char)( 0xe0 | ( ( ch >> 12 ) & 0x0f ) );
+		out[ 1 ] = (char)( 0x80 | ( ( ch >> 6 ) & 0x3f ) );
+		out[ 2 ] = (char)( 0x80 | ( ch & 0x3f ) );
 		return 3;
 	}
 	if( ch <= 0x10ffff )
 	{
-		out[ 0 ] = 0xf0 | ( ( ch >> 18 ) & 0x07 );
-		out[ 1 ] = 0x80 | ( ( ch >> 12 ) & 0x3f );
-		out[ 2 ] = 0x80 | ( ( ch >> 6 ) & 0x3f );
-		out[ 3 ] = 0x80 | ( ch & 0x3f );
+		out[ 0 ] = (char)( 0xf0 | ( ( ch >> 18 ) & 0x07 ) );
+		out[ 1 ] = (char)( 0x80 | ( ( ch >> 12 ) & 0x3f ) );
+		out[ 2 ] = (char)( 0x80 | ( ( ch >> 6 ) & 0x3f ) );
+		out[ 3 ] = (char)( 0x80 | ( ch & 0x3f ) );
 		return 4;
 	}
 

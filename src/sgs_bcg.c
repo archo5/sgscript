@@ -315,7 +315,7 @@ static int find_nth_var( MemBuf* S, int which, char** outstr, unsigned* outlen )
 	*outstr = ptr;
 	while( ptr < pend && *ptr != '=' )
 		ptr++;
-	/* warning prevented: ptr always bigger or equal to *outstr, difference cannot exceed 255 */
+	/* WP: ptr always bigger or equal to *outstr, difference cannot exceed 255 */
 	*outlen = (unsigned) ( ptr - *outstr );
 	return 1;
 }
@@ -554,13 +554,13 @@ static rcpos_t add_const_null( SGS_CTX, sgs_CompFunc* func )
 	while( var < vend )
 	{
 		if( var->type == SGS_VTC_NULL )
-			return (rcpos_t) ( var - vbeg ); /* warning prevented: const limit */
+			return (rcpos_t) ( var - vbeg ); /* WP: const limit */
 		var++;
 	}
 
 	nvar.type = SGS_VTC_NULL;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
-	return (rcpos_t) ( vend - vbeg ); /* warning prevented: const limit */
+	return (rcpos_t) ( vend - vbeg ); /* WP: const limit */
 }
 
 static rcpos_t add_const_b( SGS_CTX, sgs_CompFunc* func, sgs_Bool bval )
@@ -569,14 +569,14 @@ static rcpos_t add_const_b( SGS_CTX, sgs_CompFunc* func, sgs_Bool bval )
 	while( var < vend )
 	{
 		if( var->type == SGS_VTC_BOOL && var->data.B == bval )
-			return (rcpos_t) ( var - vbeg ); /* warning prevented: const limit */
+			return (rcpos_t) ( var - vbeg ); /* WP: const limit */
 		var++;
 	}
 
 	nvar.type = SGS_VTC_BOOL;
 	nvar.data.B = bval;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
-	return (rcpos_t) ( vend - vbeg ); /* warning prevented: const limit */
+	return (rcpos_t) ( vend - vbeg ); /* WP: const limit */
 }
 
 static rcpos_t add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Int ival )
@@ -585,14 +585,14 @@ static rcpos_t add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Int ival )
 	while( var < vend )
 	{
 		if( var->type == SGS_VTC_INT && var->data.I == ival )
-			return (rcpos_t) ( var - vbeg ); /* warning prevented: const limit */
+			return (rcpos_t) ( var - vbeg ); /* WP: const limit */
 		var++;
 	}
 
 	nvar.type = SGS_VTC_INT;
 	nvar.data.I = ival;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
-	return (rcpos_t) ( vend - vbeg ); /* warning prevented: const limit */
+	return (rcpos_t) ( vend - vbeg ); /* WP: const limit */
 }
 
 static rcpos_t add_const_r( SGS_CTX, sgs_CompFunc* func, sgs_Real rval )
@@ -601,14 +601,14 @@ static rcpos_t add_const_r( SGS_CTX, sgs_CompFunc* func, sgs_Real rval )
 	while( var < vend )
 	{
 		if( var->type == SGS_VTC_REAL && var->data.R == rval )
-			return (rcpos_t) ( var - vbeg ); /* warning prevented: const limit */
+			return (rcpos_t) ( var - vbeg ); /* WP: const limit */
 		var++;
 	}
 
 	nvar.type = SGS_VTC_REAL;
 	nvar.data.R = rval;
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
-	return (rcpos_t) ( vend - vbeg ); /* warning prevented: const limit */
+	return (rcpos_t) ( vend - vbeg ); /* WP: const limit */
 }
 
 static rcpos_t add_const_s( SGS_CTX, sgs_CompFunc* func, uint32_t len, const char* str )
@@ -618,7 +618,7 @@ static rcpos_t add_const_s( SGS_CTX, sgs_CompFunc* func, uint32_t len, const cha
 	{
 		if( var->type == SGS_VTC_STRING && var->data.S->size == len
 			&& memcmp( var_cstr( var ), str, len ) == 0 )
-			return (rcpos_t) ( var - vbeg ); /* warning prevented: const limit */
+			return (rcpos_t) ( var - vbeg ); /* WP: const limit */
 		var++;
 	}
 	
@@ -626,7 +626,7 @@ static rcpos_t add_const_s( SGS_CTX, sgs_CompFunc* func, uint32_t len, const cha
 
 	sgsVM_VarCreateString( C, &nvar, str, (int32_t) len );
 	membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
-	return (rcpos_t) ( vend - vbeg ); /* warning prevented: const limit */
+	return (rcpos_t) ( vend - vbeg ); /* WP: const limit */
 }
 
 static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
@@ -637,7 +637,7 @@ static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
 	func_t* F = sgs_Alloc_a( func_t, nf->consts.size + nf->code.size );
 
 	F->refcount = 1;
-	/* warnings prevented: const/instruction limits */
+	/* WP: const/instruction limits */
 	F->size = (uint32_t) ( nf->consts.size + nf->code.size );
 	F->instr_off = (uint32_t) nf->consts.size;
 	F->gotthis = nf->gotthis;
@@ -667,7 +667,7 @@ static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
 	membuf_destroy( &nf->lnbuf, C );
 	sgs_Dealloc( nf );
 	
-	/* warning prevented: const limit */
+	/* WP: const limit */
 	pos = (rcpos_t) ( func->consts.size / sizeof( nvar ) );
 	nvar.type = SGS_VTC_FUNC;
 	nvar.data.F = F;
@@ -1210,7 +1210,7 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 		/* fix-up jump 1 */
 		{
 			instr_t instr;
-			/* warning prevented: instruction limit */
+			/* WP: instruction limit */
 			ptrdiff_t jmp_off = (ptrdiff_t) ( func->code.size - csz ) / INSTR_SIZE;
 			instr = INSTR_MAKE_EX( jin, jmp_off, ireg1 );
 			memcpy( func->code.ptr + csz - 4, &instr, sizeof(instr) );
@@ -1236,7 +1236,7 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 		/* fix-up jump 2 */
 		{
 			instr_t instr;
-			/* warning prevented: instruction limit */
+			/* WP: instruction limit */
 			ptrdiff_t jmp_off = (ptrdiff_t) ( func->code.size - csz2 ) / INSTR_SIZE;
 			instr = INSTR_MAKE_EX( SI_JUMP, jmp_off, 0 );
 			memcpy( func->code.ptr + csz2 - 4, &instr, sizeof(instr) );
@@ -1559,7 +1559,7 @@ static SGSBOOL compile_breaks( SGS_CTX, sgs_CompFunc* func, FTNode* node, uint8_
 	{
 		if( binfo->numlp == C->fctx->loops && binfo->iscont == iscont )
 		{
-			/* warning prevented: jump limit */
+			/* WP: jump limit */
 			ptrdiff_t off = (ptrdiff_t) ( func->code.size - binfo->jdoff ) / INSTR_SIZE - 1;
 			if( over_limit( off, 32767 ) )
 			{
@@ -1641,7 +1641,7 @@ static void prefix_bytecode( SGS_CTX, sgs_CompFunc* func, int args )
 	membuf_destroy( &func->code, C );
 	membuf_destroy( &func->lnbuf, C );
 	
-	/* warning prevented: both lastreg and args cannot exceed 255, lastreg includes args */
+	/* WP: both lastreg and args cannot exceed 255, lastreg includes args */
 	func->numtmp = (uint8_t) ( C->fctx->lastreg - args );
 	func->code = ncode;
 	func->lnbuf = nlnbuf;
@@ -1696,7 +1696,7 @@ static SGSBOOL compile_func( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 	}
 	
 	prefix_bytecode( C, nf, args );
-	/* warning prevented: closure limit */
+	/* WP: closure limit */
 	nf->numclsr = (uint8_t) ( clsrcnt = C->fctx->inclsr );
 
 #if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
@@ -2057,7 +2057,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 					jp2 = func->code.size;
 					{
 						instr_t instr;
-						/* warning prevented: jump limit */
+						/* WP: jump limit */
 						ptrdiff_t jmp_off = (ptrdiff_t) ( jp2 - jp1 ) / INSTR_SIZE;
 						if( over_limit( jmp_off, 32767 ) )
 						{
@@ -2074,7 +2074,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 					jp3 = func->code.size;
 					{
 						instr_t instr;
-						/* warning prevented: jump limit */
+						/* WP: jump limit */
 						ptrdiff_t jmp_off = (ptrdiff_t) ( jp3 - jp2 ) / INSTR_SIZE;
 						if( over_limit( jmp_off, 32767 ) )
 						{
@@ -2089,7 +2089,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				else
 				{
 					instr_t instr;
-					/* warning prevented: jump limit */
+					/* WP: jump limit */
 					ptrdiff_t jmp_off = (ptrdiff_t) ( func->code.size - jp1 ) / INSTR_SIZE;
 					if( over_limit( jmp_off, 32767 ) )
 					{
@@ -2129,7 +2129,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 					goto fail;
 
 				jp2 = func->code.size;
-				/* warning prevented: jump limit */
+				/* WP: jump limit */
 				off = (ptrdiff_t) ( codesize - jp2 ) / INSTR_SIZE - 1;
 				if( over_limit( off, 32767 ) )
 				{
@@ -2169,7 +2169,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child, &arg ) ) goto fail; /* test */
 			comp_reg_unwind( C, regstate );
-			/* warning prevented: jump limit */
+			/* WP: jump limit */
 			off = (ptrdiff_t) ( codesize - func->code.size ) / INSTR_SIZE - 1;
 			if( over_limit( off, 32767 ) )
 			{
@@ -2217,7 +2217,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 				comp_reg_unwind( C, regstate );
 
 				jp2 = func->code.size;
-				/* warning prevented: jump limit */
+				/* WP: jump limit */
 				off = (ptrdiff_t) ( codesize - jp2 ) / INSTR_SIZE - 1;
 				if( over_limit( off, 32767 ) )
 				{
@@ -2283,7 +2283,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 					goto fail;
 				
 				jp2 = func->code.size;
-				/* warning prevented: jump limit */
+				/* WP: jump limit */
 				off = (ptrdiff_t) ( codesize - jp2 ) / INSTR_SIZE - 1;
 				if( over_limit( off, 32767 ) )
 				{
@@ -2329,7 +2329,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 					QPRINT( "Attempted to break while not in a loop" );
 				goto fail;
 			}
-			/* warnings prevented: instruction limit, max loop depth */
+			/* WP: instruction limit, max loop depth */
 			fctx_binfo_add( C, C->fctx, (uint32_t) func->code.size, (uint16_t)( C->fctx->loops + 1 - blev ), FALSE );
 			INSTR_WRITE_PCH();
 		}
@@ -2359,7 +2359,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 					QPRINT( "Attempted to continue while not in a loop" );
 				goto fail;
 			}
-			/* warnings prevented: instruction limit, max loop depth */
+			/* WP: instruction limit, max loop depth */
 			fctx_binfo_add( C, C->fctx, (uint32_t) func->code.size, (uint16_t)( C->fctx->loops + 1 - blev ), TRUE );
 			INSTR_WRITE_PCH();
 		}
@@ -2571,12 +2571,12 @@ static int bc_write_sgsfunc( func_t* F, SGS_CTX, MemBuf* outbuf );
 static int bc_write_var( sgs_Variable* var, SGS_CTX, MemBuf* outbuf )
 {
 	uint8_t vt = BASETYPE( var->type );
-	/* warning prevented: don't care about the sign when serializing bitfield */
+	/* WP: don't care about the sign when serializing bitfield */
 	membuf_appchr( outbuf, C, (char) vt );
 	switch( vt )
 	{
 	case SVT_NULL: break;
-	/* warning prevented: var->data.B can only store 0/1 */
+	/* WP: var->data.B can only store 0/1 */
 	case SVT_BOOL: membuf_appchr( outbuf, C, (char) var->data.B ); break;
 	case SVT_INT: membuf_appbuf( outbuf, C, &var->data.I, sizeof( sgs_Int ) ); break;
 	case SVT_REAL: membuf_appbuf( outbuf, C, &var->data.R, sizeof( sgs_Real ) ); break;
@@ -2659,7 +2659,7 @@ static int bc_write_sgsfunc( func_t* F, SGS_CTX, MemBuf* outbuf )
 	uint16_t cc, ic;
 	uint8_t gntc[4] = { F->gotthis, F->numargs, F->numtmp, F->numclsr };
 	
-	/* warnings prevented: const/instruction limits */
+	/* WP: const/instruction limits */
 	cc = (uint16_t)( F->instr_off / sizeof( sgs_Variable ) );
 	ic = (uint16_t)( ( F->size - F->instr_off ) / sizeof( instr_t ) );
 
@@ -2702,11 +2702,11 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 
 	if( D->convend )
 	{
-		/* warning prevented: int promotion will not affect the result */
+		/* WP: int promotion will not affect the result */
 		cc = (uint16_t) esi16( cc );
 		ic = (uint16_t) esi16( ic );
 	}
-	/* warnings prevented: const/instruction limits */
+	/* WP: const/instruction limits */
 	ioff = (uint32_t) sizeof( sgs_Variable ) * cc;
 	coff = (uint32_t) sizeof( instr_t ) * ic;
 	size = ioff + coff;
@@ -2815,7 +2815,7 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 		membuf_appbuf( outbuf, C, func->lnbuf.ptr, sizeof( LineNum ) * ic );
 		
 		{
-			/* warning prevented: bytecode size limit */
+			/* WP: bytecode size limit */
 			uint32_t outbufsize = (uint32_t) outbuf->size;
 			memcpy( outbuf->ptr + 10, &outbufsize, sizeof(uint32_t) );
 		}
@@ -2860,7 +2860,7 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, size_t siz
 		
 		if( D.convend )
 		{
-			/* warning prevented: int promotion will not affect the result */
+			/* WP: int promotion will not affect the result */
 			cc = (uint16_t) esi16( cc );
 			ic = (uint16_t) esi16( ic );
 		}

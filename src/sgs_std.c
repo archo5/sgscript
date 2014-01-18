@@ -25,7 +25,7 @@ SGS_DECLARE sgs_ObjCallback sgsstd_array_functable[ 15 ];
 #define SGSARR_HDR sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data
 #define SGSARR_HDR_OI sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data->data
 #define SGSARR_HDRSIZE sizeof(sgsstd_array_header_t)
-#define SGSARR_ALLOCSIZE( cnt ) ((cnt)*SGSARR_UNIT)
+#define SGSARR_ALLOCSIZE( cnt ) ((size_t)(cnt)*SGSARR_UNIT)
 #define SGSARR_PTR( base ) (((sgsstd_array_header_t*)base)->data)
 
 static void sgsstd_array_reserve( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal size )
@@ -67,7 +67,7 @@ static void sgsstd_array_insert( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVa
 		ptr = SGSARR_PTR( hdr );
 	}
 	if( pos < hdr->size )
-		memmove( ptr + pos + cnt, ptr + pos, ( hdr->size - pos ) * SGSARR_UNIT );
+		memmove( ptr + pos + cnt, ptr + pos, SGSARR_ALLOCSIZE( hdr->size - pos ) );
 	for( i = off; i < sgs_StackSize( C ); ++i )
 	{
 		sgs_Variable* var = ptr + pos + i - off;
@@ -88,7 +88,7 @@ static void sgsstd_array_erase( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal
 	for( i = from; i <= to; ++i )
 		sgs_Release( C, ptr + i );
 	if( to1 < hdr->size )
-		memmove( ptr + from, ptr + to1, ( hdr->size - to1 ) * SGSARR_UNIT );
+		memmove( ptr + from, ptr + to1, SGSARR_ALLOCSIZE( hdr->size - to1 ) );
 	hdr->size -= cnt;
 }
 
@@ -316,7 +316,8 @@ static int sgsstd_arrayI_sort( SGS_CTX )
 	if( !sgs_LoadArgs( C, "@>|b", &rev ) )
 		return 0;
 	
-	quicksort( SGSARR_PTR( hdr ), hdr->size, sizeof( sgs_Variable ),
+	/* WP: array limit */
+	quicksort( SGSARR_PTR( hdr ), (size_t) hdr->size, sizeof( sgs_Variable ),
 		rev ? sgsarrcomp_basic_rev : sgsarrcomp_basic, C );
 	sgs_SetStackSize( C, 1 );
 	return 1;
@@ -360,7 +361,8 @@ static int sgsstd_arrayI_sort_custom( SGS_CTX )
 	if( !sgs_LoadArgs( C, "@>?p<v|b", &u.sortfunc, &rev ) )
 		return 0;
 	
-	quicksort( SGSARR_PTR( hdr ), hdr->size,
+	/* WP: array limit */
+	quicksort( SGSARR_PTR( hdr ), (size_t) hdr->size,
 		sizeof( sgs_Variable ), rev ? sgsarrcomp_custom_rev : sgsarrcomp_custom, &u );
 	sgs_SetStackSize( C, 1 );
 	return 1;
@@ -395,7 +397,8 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 		STDLIB_WARN( "array sizes must match" )
 
 	{
-		sgsarr_smi* smis = sgs_Alloc_n( sgsarr_smi, asize );
+		/* WP: array limit */
+		sgsarr_smi* smis = sgs_Alloc_n( sgsarr_smi, (size_t) asize );
 		for( i = 0; i < asize; ++i )
 		{
 			if( sgs_PushNumIndex( C, 1, i ) )
@@ -407,13 +410,13 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 			smis[ i ].pos = i;
 			sgs_Pop( C, 1 );
 		}
-		quicksort( smis, asize, sizeof( sgsarr_smi ),
+		quicksort( smis, (size_t) asize, sizeof( sgsarr_smi ),
 			rev ? sgsarrcomp_smi_rev : sgsarrcomp_smi, NULL );
 
 		{
 			sgs_Variable *p1, *p2;
 			p1 = SGSARR_PTR( hdr );
-			p2 = sgs_Alloc_n( sgs_Variable, hdr->mem );
+			p2 = sgs_Alloc_n( sgs_Variable, (size_t) hdr->mem );
 			memcpy( p2, p1, SGSARR_ALLOCSIZE( hdr->mem ) );
 			for( i = 0; i < asize; ++i )
 				p1[ i ] = p2[ smis[ i ].pos ];
@@ -821,7 +824,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgsstd_array_header_t* hdr2 = (sgsstd_array_header_t*)
 			sgs_PushObjectIPA( C, sizeof( sgsstd_array_header_t ), sgsstd_array_functable );
 		memcpy( hdr2, hdr, sizeof( sgsstd_array_header_t ) );
-		hdr2->data = sgs_Alloc_n( sgs_Variable, hdr->mem );
+		hdr2->data = sgs_Alloc_n( sgs_Variable, (size_t) hdr->mem );
 		memcpy( hdr2->data, hdr->data, SGSARR_ALLOCSIZE( hdr->mem ) );
 		{
 			sgs_Variable* ptr = SGSARR_PTR( hdr );
@@ -967,7 +970,8 @@ static int sgsstd_vht_dump( SGS_CTX, sgs_VarObj* data, int depth, const char* na
 					return SGS_EINPROC;
 				pair++;
 			}
-			if( sgs_StringMultiConcat( C, ( pend - ht->vars ) * 4 ) || sgs_PadString( C ) )
+			/* WP: stack limit */
+			if( sgs_StringMultiConcat( C, (StkIdx) ( pend - ht->vars ) * 4 ) || sgs_PadString( C ) )
 				return SGS_EINPROC;
 		}
 	}
@@ -1869,10 +1873,11 @@ static sgs_ObjCallback sgsstd_realclsr_functable[] =
 	SOP_END,
 };
 
-int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, int32_t clc )
+int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc )
 {
-	int i, clsz = sizeof(sgs_Closure*) * clc;
-	int memsz = clsz + sizeof(sgs_Variable) + sizeof(int32_t);
+	/* WP: range not affected by conversion */
+	uint32_t i, clsz = (uint32_t) sizeof(sgs_Closure*) * clc;
+	uint32_t memsz = clsz + (uint32_t) ( sizeof(sgs_Variable) + sizeof(int32_t) );
 	uint8_t* cl = (uint8_t*) sgs_PushObjectIPA( C, memsz, sgsstd_realclsr_functable );
 	
 	memcpy( cl, func, sizeof(sgs_Variable) );
@@ -2069,7 +2074,8 @@ static int sgsstd_isset( SGS_CTX )
 static int sgsstd_unset( SGS_CTX )
 {
 	char* str;
-	sgs_SizeVal size, ty;
+	sgs_SizeVal size;
+	uint32_t ty;
 	DictHdr* dh;
 	
 	SGSFN( "unset" );
@@ -2352,7 +2358,8 @@ static int sgsstd_typeflags( SGS_CTX )
 
 static int sgsstd_is_numeric( SGS_CTX )
 {
-	int res, ty = sgs_ItemTypeExt( C, 0 );
+	int res;
+	uint32_t ty = sgs_ItemTypeExt( C, 0 );
 	
 	SGSFN( "is_numeric" );
 	if( !sgs_LoadArgs( C, ">." ) )
@@ -2423,7 +2430,8 @@ static int sgsstd_print( SGS_CTX )
 	{
 		sgs_SizeVal size;
 		char* buf = sgs_ToStringBuf( C, i, &size );
-		sgs_Write( C, buf, size );
+		/* WP: string limit */
+		sgs_Write( C, buf, (size_t) size );
 	}
 	return 0;
 }
@@ -2447,7 +2455,8 @@ static int sgsstd_printlns( SGS_CTX )
 	{
 		sgs_SizeVal size;
 		char* buf = sgs_ToStringBuf( C, i, &size );
-		sgs_Write( C, buf, size );
+		/* WP: string limit */
+		sgs_Write( C, buf, (size_t) size );
 		sgs_Write( C, "\n", 1 );
 	}
 	return 0;
@@ -2468,7 +2477,8 @@ static int sgsstd_printvar( SGS_CTX )
 		{
 			sgs_SizeVal bsz;
 			char* buf = sgs_ToStringBuf( C, -1, &bsz );
-			sgs_Write( C, buf, bsz );
+			/* WP: string limit */
+			sgs_Write( C, buf, (size_t) bsz );
 			sgs_Write( C, "\n", 1 );
 		}
 		else
@@ -2495,7 +2505,8 @@ static int sgsstd_printvar_ext( SGS_CTX )
 	{
 		sgs_SizeVal bsz;
 		char* buf = sgs_ToStringBuf( C, -1, &bsz );
-		sgs_Write( C, buf, bsz );
+		/* WP: string limit */
+		sgs_Write( C, buf, (size_t) bsz );
 		sgs_Write( C, "\n", 1 );
 	}
 	else
@@ -2517,7 +2528,7 @@ static int sgsstd_read_stdin( SGS_CTX )
 	B = membuf_create();
 	while( fgets( bfr, 1024, stdin ) )
 	{
-		int len = strlen( bfr );
+		size_t len = strlen( bfr );
 		membuf_appbuf( &B, C, bfr, len );
 		if( len && !all && bfr[ len - 1 ] == '\n' )
 		{
@@ -2525,7 +2536,13 @@ static int sgsstd_read_stdin( SGS_CTX )
 			break;
 		}
 	}
-	sgs_PushStringBuf( C, B.ptr, B.size );
+	if( B.size > 0x7fffffff )
+	{
+		membuf_destroy( &B, C );
+		STDLIB_WARN( "read more bytes than allowed to store" );
+	}
+	/* WP: error condition */
+	sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
 	membuf_destroy( &B, C );
 	return 1;
 }
@@ -2663,8 +2680,9 @@ static int sgsstd_eval( SGS_CTX )
 	
 	if( !sgs_LoadArgs( C, "m", &str, &size ) )
 		return 0;
-
-	sgs_EvalBuffer( C, str, (int) size, &rvc );
+	
+	/* WP: string limit */
+	sgs_EvalBuffer( C, str, (size_t) size, &rvc );
 	return rvc;
 }
 
@@ -2731,7 +2749,8 @@ static int sgsstd_compile_sgs( SGS_CTX )
 	sgs_SetPrintFunc( C, _sgsstd_compile_pfn, &var );
 	SGSFN( NULL );
 	
-	ret = sgs_Compile( C, buf, size, &outbuf, &outsize );
+	/* WP: string limit */
+	ret = sgs_Compile( C, buf, (size_t) size, &outbuf, &outsize );
 	
 	SGSFN( "compile_sgs" );
 	C->print_fn = oldpfn;
@@ -2741,7 +2760,13 @@ static int sgsstd_compile_sgs( SGS_CTX )
 		sgs_PushNull( C );
 	else
 	{
-		sgs_PushStringBuf( C, outbuf, outsize );
+		if( outsize > 0x7fffffff )
+			sgs_PushStringBuf( C, outbuf, (sgs_SizeVal) outsize );
+		else
+		{
+			sgs_PushNull( C );
+			sgs_Printf( C, SGS_WARNING, "size of compiled code is bigger than allowed to store" );
+		}
 		sgs_Dealloc( outbuf );
 	}
 	sgs_PushVariable( C, &var );
@@ -2902,7 +2927,14 @@ static int _push_curdir( SGS_CTX )
 #endif
 		}
 		else
-			sgs_PushStringBuf( C, file, fend - file );
+		{
+			ptrdiff_t len = fend - file;
+			if( len > 0x7fffffff )
+				return 0;
+			else
+				/* WP: error condition */
+				sgs_PushStringBuf( C, file, (sgs_SizeVal) len );
+		}
 		return 1;
 	}
 	
@@ -2910,7 +2942,7 @@ static int _push_curdir( SGS_CTX )
 }
 
 static int _find_includable_file( SGS_CTX, MemBuf* tmp, char* ps,
-	sgs_SizeVal pssize, char* fn, sgs_SizeVal fnsize, char* dn, sgs_SizeVal dnsize )
+	size_t pssize, char* fn, size_t fnsize, char* dn, size_t dnsize )
 {
 	if( ( fnsize > 2 && *fn == '.' && ( fn[1] == '/' || fn[1] == '\\' ) ) ||
 #ifdef _WIN32
@@ -2999,7 +3031,7 @@ static int sgsstd_include( SGS_CTX )
 			( ps = sgs_ToStringBuf( C, -1, &pssize ) ) != NULL )
 		{
 			ps = SGS_INCLUDE_PATH;
-			pssize = strlen( ps );
+			pssize = (sgs_SizeVal) strlen( ps );
 		}
 		
 		if( _push_curdir( C ) )
@@ -3007,7 +3039,8 @@ static int sgsstd_include( SGS_CTX )
 			dnstr = sgs_GetStringPtr( C, -1 );
 			dnsize = sgs_GetStringSize( C, -1 );
 		}
-		ret = _find_includable_file( C, &mb, ps, pssize, fnstr, fnsize, dnstr, dnsize );
+		/* WP: string limit */
+		ret = _find_includable_file( C, &mb, ps, (size_t) pssize, fnstr, (size_t) fnsize, dnstr, (size_t) dnsize );
 		if( ret == 0 || mb.size == 0 )
 		{
 			membuf_destroy( &mb, C );
@@ -3316,7 +3349,7 @@ static int sgsstd_dumpvar_ext( SGS_CTX )
 static int sgsstd_gc_collect( SGS_CTX )
 {
 	int ret;
-	int32_t orvc = sgs_Stat( C, SGS_STAT_OBJCOUNT );
+	ptrdiff_t orvc = sgs_Stat( C, SGS_STAT_OBJCOUNT );
 	
 	SGSFN( "gc_collect" );
 	
@@ -3349,7 +3382,7 @@ static int sgsstd_serialize( SGS_CTX )
 
 static int check_arrayordict_fn( SGS_CTX, int argid, va_list args, int flags )
 {
-	int ty = sgs_ItemTypeExt( C, argid );
+	uint32_t ty = sgs_ItemTypeExt( C, argid );
 	if( ty != VTC_ARRAY && ty != VTC_DICT )
 		return sgs_ArgErrorExt( C, argid, 0, "array or dict", "" );
 	return 1;
@@ -3515,7 +3548,7 @@ int sgsSTD_PostInit( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
-int sgsSTD_MakeArray( SGS_CTX, int cnt )
+int sgsSTD_MakeArray( SGS_CTX, sgs_SizeVal cnt )
 {
 	int i = 0, ssz = sgs_StackSize( C );
 
@@ -3543,7 +3576,7 @@ int sgsSTD_MakeArray( SGS_CTX, int cnt )
 	}
 }
 
-int sgsSTD_MakeDict( SGS_CTX, int cnt )
+int sgsSTD_MakeDict( SGS_CTX, sgs_SizeVal cnt )
 {
 	DictHdr* dh;
 	VHTable* ht;
@@ -3572,7 +3605,7 @@ int sgsSTD_MakeDict( SGS_CTX, int cnt )
 	return SGS_SUCCESS;
 }
 
-int sgsSTD_MakeMap( SGS_CTX, int cnt )
+int sgsSTD_MakeMap( SGS_CTX, sgs_SizeVal cnt )
 {
 	DictHdr* dh;
 	VHTable* ht;

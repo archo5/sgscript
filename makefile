@@ -7,7 +7,7 @@
 # PLATFORM=android
 CC=gcc
 
-COMMONFLAGS=-Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align
+COMMONFLAGS=-Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align
 # TODO
 # COMMONFLAGS=-Werror -Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align
 
@@ -89,10 +89,10 @@ else
 endif
 
 
-_DEPS = sgs_cfg.h sgs_int.h sgs_util.h sgs_xpc.h sgscript.h sgs_regex.h $(_XDEPS)
+_DEPS = sgs_cfg.h sgs_int.h sgs_regex.h sgs_util.h sgs_xpc.h sgscript.h $(_XDEPS)
 DEPS = $(patsubst %,$(SRCDIR)/%,$(_DEPS))
 
-_OBJ = sgs_bcg.o sgs_ctx.o sgs_fnt.o sgs_proc.o sgs_std.o sgs_stdL.o sgs_tok.o sgs_util.o sgs_xpc.o sgs_regex.o $(_XOBJ)
+_OBJ = sgs_bcg.o sgs_ctx.o sgs_fnt.o sgs_proc.o sgs_regex.o sgs_std.o sgs_stdL.o sgs_tok.o sgs_util.o sgs_xpc.o $(_XOBJ)
 OBJ = $(patsubst %,$(OBJDIR)/%,$(_OBJ))
 
 # the library (default target)

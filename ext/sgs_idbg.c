@@ -31,7 +31,7 @@ static void idbg_readStdin( SGS_IDBG )
 	membuf_resize( &D->input, D->C, 0 );
 	while( fgets( bfr, BFR_SIZE, stdin ) )
 	{
-		int len = strlen( bfr );
+		size_t len = strlen( bfr );
 		membuf_appbuf( &D->input, D->C, bfr, len );
 		if( len && bfr[ len - 1 ] == '\n' )
 			break;

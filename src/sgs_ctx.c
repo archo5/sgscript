@@ -285,7 +285,7 @@ SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... )
 	
 	if( cnt >= SGS_OUTPUT_STACKBUF_SIZE )
 	{
-		/* warning prevented: false alarm */
+		/* WP: false alarm */
 		membuf_resize( &info, C, (size_t) cnt + 1 );
 		ptr = info.ptr;
 	}
@@ -354,7 +354,7 @@ int sgs_Printf( SGS_CTX, int type, const char* what, ... )
 	
 	if( C->sf_last && C->sf_last->nfname )
 	{
-		/* warning prevented: it is expected that native functions ..
+		/* WP: it is expected that native functions ..
 		.. will not set names of more than 2GB length */
 		slen = (int) strlen( C->sf_last->nfname );
 		off = slen + SGS_PRINTF_EXTRABYTES;
@@ -363,14 +363,14 @@ int sgs_Printf( SGS_CTX, int type, const char* what, ... )
 
 	if( cnt >= SGS_OUTPUT_STACKBUF_SIZE )
 	{
-		/* warning prevented: cnt is never negative */
+		/* WP: cnt is never negative */
 		membuf_resize( &info, C, (size_t) cnt + 1 );
 		ptr = info.ptr;
 	}
 	
 	if( C->sf_last && C->sf_last->nfname )
 	{
-		/* warning prevented: slen is generated from size_t, thus is never negative */
+		/* WP: slen is generated from size_t, thus is never negative */
 		memcpy( ptr, C->sf_last->nfname, (size_t) slen );
 		memcpy( ptr + slen, SGS_PRINTF_EXTRASTRING, SGS_PRINTF_EXTRABYTES );
 	}
@@ -504,7 +504,7 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, size_t size, int clean, 
 	DBGINFO( "...executing the generated function" );
 	C->stack_off = C->stack_top;
 	C->gclist = (sgs_Variable*) ASSUME_ALIGNED( func->consts.ptr, 16 );
-	/* warning prevented: const limit */
+	/* WP: const limit */
 	C->gclist_size = (uint16_t) func->consts.size / sizeof( sgs_Variable );
 	returned = sgsVM_ExecFn( C, func->numtmp, func->code.ptr, func->code.size,
 		func->consts.ptr, func->consts.size, clean, (uint16_t*) ASSUME_ALIGNED( func->lnbuf.ptr, 2 ) );
@@ -524,6 +524,10 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, size_t size, int clean, 
 SGSRESULT sgs_EvalBuffer( SGS_CTX, const char* buf, size_t size, int* rvc )
 {
 	DBGINFO( "sgs_EvalBuffer called!" );
+	
+	if( size > 0x7fffffff )
+		return SGS_EINVAL;
+	
 	return ctx_execute( C, buf, size, !rvc, rvc );
 }
 
@@ -552,7 +556,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	}
 	fseek( f, 0, SEEK_SET );
 	
-	/* warning prevented: len is always in the range of size_t */
+	/* WP: len is always in the range of size_t */
 	ulen = (size_t) len;
 	
 	data = sgs_Alloc_n( char, ulen );
@@ -578,22 +582,25 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, size_t size, char** outbuf, siz
 {
 	MemBuf mb;
 	sgs_CompFunc* func;
-
+	
+	if( size > 0x7fffffff )
+		return SGS_EINVAL;
+	
 	if( !ctx_compile( C, buf, size, &func ) )
 		return SGS_ECOMP;
-
+	
 	mb = membuf_create();
 	if( !sgsBC_Func2Buf( C, func, &mb ) )
 	{
 		membuf_destroy( &mb, C );
 		return SGS_EINPROC;
 	}
-
+	
 	*outbuf = mb.ptr;
 	*outsize = mb.size;
-
+	
 	sgsBC_Free( C, func );
-
+	
 	return SGS_SUCCESS;
 }
 
@@ -621,17 +628,20 @@ SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, size_t size )
 {
 	int rr;
 	sgs_CompFunc* func;
-
+	
+	if( size > 0x7fffffff )
+		return SGS_EINVAL;
+	
 	if( !( rr = ctx_decode( C, buf, size, &func ) ) &&
 		!ctx_compile( C, buf, size, &func ) )
 		return SGS_ECOMP;
-
+	
 	if( rr < 0 )
 		return SGS_EINVAL;
-
+	
 	_recfndump( func->consts.ptr, func->consts.size, func->code.ptr, func->code.size,
 		func->gotthis, func->numargs, func->numtmp, func->numclsr );
-
+	
 	sgsBC_Free( C, func );
 	return SGS_SUCCESS;
 }
@@ -696,7 +706,7 @@ static void dumpobj( SGS_CTX, sgs_VarObj* p )
 
 static void dumpvar( SGS_CTX, sgs_Variable* var )
 {
-	/* warning prevented: var->type base type info uses bits 1-8 */
+	/* WP: var->type base type info uses bits 1-8 */
 	sgs_Writef( C, "%s (size:%d)", g_varnames[ fastlog2( (int) BASETYPE( var->type ) << 1 ) ], sgsVM_VarSize( var ) );
 	switch( BASETYPE( var->type ) )
 	{
@@ -725,9 +735,9 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 {
 	switch( type )
 	{
-	/* warnings prevented: not important */
-	case SGS_STAT_VERSION: return C->version;
-	case SGS_STAT_APIVERSION: return C->apiversion;
+	/* WP: not important */
+	case SGS_STAT_VERSION: return (ptrdiff_t) C->version;
+	case SGS_STAT_APIVERSION: return (ptrdiff_t) C->apiversion;
 	case SGS_STAT_OBJCOUNT: return (ptrdiff_t) C->objcount;
 	case SGS_STAT_MEMSIZE: return (ptrdiff_t) C->memsize;
 	case SGS_STAT_NUMALLOCS: return (ptrdiff_t) C->numallocs;
@@ -819,7 +829,7 @@ int32_t sgs_Cntl( SGS_CTX, int what, int32_t val )
 	int32_t x;
 	switch( what )
 	{
-	/* warnings prevented: last bit of C->state is not used */
+	/* WP: last bit of C->state is not used */
 	case SGS_CNTL_STATE: x = (int32_t) C->state; C->state = (uint32_t) val; return x;
 	case SGS_CNTL_GET_STATE: return (int32_t) C->state;
 	case SGS_CNTL_MINLEV: x = C->minlev; C->minlev = val; return x;
@@ -894,7 +904,7 @@ void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str, size_t len 
 {
 	sgs_BreakIf( len > 31 );
 	S->data.refcount = 1;
-	/* warning prevented: range of len: 0-31 */
+	/* WP: range of len: 0-31 */
 	S->data.size = (uint32_t) len;
 	S->data.hash = sgs_HashFunc( str, len );
 	S->data.isconst = 0;
