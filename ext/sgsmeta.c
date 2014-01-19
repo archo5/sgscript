@@ -203,17 +203,17 @@ static int _sgs_meta_dumpcomp( SGS_CTX, sgs_CompFunc* func )
 	int ssz = sgs_StackSize( C );
 	
 	sgs_PushString( C, "consts" );
-	if( !_sgs_meta_dumpconstlist( C, (sgs_Variable*) SGS_ASSUME_ALIGNED( func->consts.ptr, 16 ),
+	if( !_sgs_meta_dumpconstlist( C, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 ),
 			func->consts.size / sizeof(sgs_Variable) ) )
 		return 0;
 	
 	sgs_PushString( C, "code" );
-	if( !_sgs_meta_dumpbclist( C, (sgs_instr_t*) SGS_ASSUME_ALIGNED( func->code.ptr, 4 ),
+	if( !_sgs_meta_dumpbclist( C, (sgs_instr_t*) (void*) SGS_ASSUME_ALIGNED( func->code.ptr, 4 ),
 			func->code.size / sizeof(sgs_instr_t) ) )
 		return 0;
 	
 	sgs_PushString( C, "lines" );
-	if( !_sgs_meta_dumplnlist( C, (sgs_LineNum*) SGS_ASSUME_ALIGNED( func->lnbuf.ptr, 2 ),
+	if( !_sgs_meta_dumplnlist( C, (sgs_LineNum*) (void*) SGS_ASSUME_ALIGNED( func->lnbuf.ptr, 4 ),
 			func->lnbuf.size / sizeof(sgs_LineNum) ) )
 		return 0;
 	

@@ -18,6 +18,7 @@
 extern "C" {
 #endif
 
+#include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -550,11 +551,17 @@ SGS_APIFUNC int sgs_ArgError( SGS_CTX, int argid, int gotthis, int expect, int i
 #define sgs_FuncArgError( C, argid, expect, strict ) sgs_ArgError( C, argid, 0, expect, strict )
 #define sgs_MethodArgError( C, argid, expect, strict ) sgs_ArgError( C, argid, 1, expect, strict )
 
+typedef struct _sgs_VAList
+{
+	va_list args;
+}
+sgs_VAList;
+
 typedef int (*sgs_ArgCheckFunc)
 (
 	sgs_Context* /* ctx / SGS_CTX */,
 	int /* argid */,
-	va_list* /* args */,
+	sgs_VAList* /* args */,
 	int /* flags */
 );
 #define SGS_LOADARG_STRICT 0x01

@@ -503,11 +503,11 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, size_t size, int clean, 
 
 	DBGINFO( "...executing the generated function" );
 	C->stack_off = C->stack_top;
-	C->gclist = (sgs_Variable*) ASSUME_ALIGNED( func->consts.ptr, 16 );
+	C->gclist = (sgs_Variable*) (void*) ASSUME_ALIGNED( func->consts.ptr, 4 );
 	/* WP: const limit */
 	C->gclist_size = (uint16_t) func->consts.size / sizeof( sgs_Variable );
 	returned = sgsVM_ExecFn( C, func->numtmp, func->code.ptr, func->code.size,
-		func->consts.ptr, func->consts.size, clean, (uint16_t*) ASSUME_ALIGNED( func->lnbuf.ptr, 2 ) );
+		func->consts.ptr, func->consts.size, clean, (uint16_t*) (void*) ASSUME_ALIGNED( func->lnbuf.ptr, 4 ) );
 	if( rvc )
 		*rvc = returned;
 	C->gclist = NULL;
@@ -608,8 +608,8 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, size_t size, char** outbuf, siz
 static void _recfndump( const char* constptr, size_t constsize,
 	const char* codeptr, size_t codesize, int gt, int args, int tmp, int clsr )
 {
-	const sgs_Variable* var = (const sgs_Variable*) ASSUME_ALIGNED( constptr, 16 );
-	const sgs_Variable* vend = (const sgs_Variable*) ASSUME_ALIGNED( constptr + constsize, 16 );
+	const sgs_Variable* var = (const sgs_Variable*) (const void*) ASSUME_ALIGNED( constptr, 4 );
+	const sgs_Variable* vend = (const sgs_Variable*) (const void*) ASSUME_ALIGNED( constptr + constsize, 4 );
 	while( var < vend )
 	{
 		if( var->type == SGS_VTC_FUNC )

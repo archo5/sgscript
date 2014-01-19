@@ -96,6 +96,10 @@ extern "C" {
 #define sgs_ARRAY_SIZE( a ) (sizeof(a)/sizeof(a[0]))
 #define sgs_HAS_FLAG( val, flag ) (((val)&(flag))==(flag))
 
+#define SGS_GLUE(a,b) __SGS_GLUE(a,b)
+#define __SGS_GLUE(a,b) a ## b
+#define SGS_CASSERT(expr, msg) typedef char SGS_GLUE (compiler_verify_, msg) [(expr) ? (+1) : (-1)]
+
 #define sgs_isoneof( chr, str ) (!!strchr( str, chr ))
 
 

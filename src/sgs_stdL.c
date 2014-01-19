@@ -1729,7 +1729,7 @@ static int sgsstd_io_dir_create( SGS_CTX )
 
 	ret = mkdir( str
 #ifndef _WIN32
-		,mode
+		, (mode_t) mode
 #endif
 	);
 	CRET( ret == 0 );
@@ -1805,7 +1805,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 		return 0;
 
 	{
-		sgs_SizeVal len, rd;
+		size_t len, rd;
 		FILE* fp = fopen( path, "rb" );
 		if( !fp )
 		{
@@ -1813,13 +1813,19 @@ static int sgsstd_io_file_read( SGS_CTX )
 			STDLIB_WARN( "failed to open file" )
 		}
 		fseek( fp, 0, SEEK_END );
-		len = ftell( fp );
+		len = (size_t) ftell( fp );
 		fseek( fp, 0, SEEK_SET );
-
-		sgs_PushStringBuf( C, NULL, len );
+		
+		if(	len > 0x7fffffff )
+		{
+			fclose( fp );
+			STDLIB_WARN( "file bigger than allowed to store" );
+		}
+		
+		sgs_PushStringBuf( C, NULL, (sgs_SizeVal) len );
 		errno = 0;
 		/* WP: string limit */
-		rd = (sgs_SizeVal) fread( sgs_GetStringPtr( C, -1 ), 1, (size_t) len, fp );
+		rd = fread( sgs_GetStringPtr( C, -1 ), 1, len, fp );
 		if( rd < len )
 			sgs_Errno( C, 0 );
 		fclose( fp );

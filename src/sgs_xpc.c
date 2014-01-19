@@ -139,7 +139,7 @@ char* sgsXPC_GetCurrentDirectory()
 #else
 	char stack_buf[ SGS_MAX_PATH ];
 	char* buf;
-	int cur_size = SGS_MAX_PATH, max_size = SGS_MAX_PATH * 10;
+	size_t cur_size = SGS_MAX_PATH, max_size = SGS_MAX_PATH * 10;
 	
 	buf = getcwd( NULL, 0 );
 	if( buf )
@@ -260,13 +260,13 @@ char* sgsXPC_GetModuleFileName()
 #else
 	char stack_buf[ SGS_MAX_PATH ];
 	char* buf;
-	int cur_size = SGS_MAX_PATH, max_size = SGS_MAX_PATH * 10;
+	size_t cur_size = SGS_MAX_PATH, max_size = SGS_MAX_PATH * 10;
 	
 	errno = 0;
 	buf = stack_buf;
 	for(;;)
 	{
-		int res = readlink( "/proc/self/exe", buf, cur_size );
+		ssize_t res = readlink( "/proc/self/exe", buf, cur_size );
 		if( res >= 0 && res < cur_size )
 		{
 			if( buf == stack_buf )

@@ -156,7 +156,7 @@ static void var_destroy_string( SGS_CTX, string_t* S )
 static void var_release( SGS_CTX, sgs_VarPtr p, int notonstack );
 static void var_destroy_func( SGS_CTX, func_t* F )
 {
-	sgs_VarPtr var = (sgs_VarPtr) func_consts( F ), vend = (sgs_VarPtr) ASSUME_ALIGNED( func_bytecode( F ), 16 );
+	sgs_VarPtr var = (sgs_VarPtr) func_consts( F ), vend = (sgs_VarPtr) (void*) ASSUME_ALIGNED( func_bytecode( F ), 16 );
 	while( var < vend )
 	{
 		VAR_RELEASE( var );
@@ -1708,7 +1708,7 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 }
 
 
-static void vm_make_array( SGS_CTX, int args, int16_t outpos )
+static void vm_make_array( SGS_CTX, int args, int outpos )
 {
 	int ret;
 	sgs_BreakIf( sgs_StackSize( C ) < args );
@@ -1721,7 +1721,7 @@ static void vm_make_array( SGS_CTX, int args, int16_t outpos )
 	stk_pop1( C );
 }
 
-static void vm_make_dict( SGS_CTX, int args, int16_t outpos )
+static void vm_make_dict( SGS_CTX, int args, int outpos )
 {
 	int ret;
 	sgs_BreakIf( sgs_StackSize( C ) < args );
@@ -2010,7 +2010,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 		
 		case SI_GENCLSR: clstk_push_nulls( C, argA ); break;
 		case SI_PUSHCLSR: clstk_push( C, clstk_get( C, argA ) ); break;
-		case SI_MAKECLSR: vm_make_closure( C, argC, RESVAR( argB ), argA ); clstk_pop( C, argC ); break;
+		case SI_MAKECLSR: vm_make_closure( C, argC, RESVAR( argB ), (int16_t) argA ); clstk_pop( C, argC ); break;
 		case SI_GETCLSR: stk_setlvar( C, argA, &clstk_get( C, argB )->var ); break;
 		case SI_SETCLSR: { sgs_VarPtr p3 = RESVAR( argC ), cv = &clstk_get( C, argB )->var;
 			VAR_RELEASE( cv ); *cv = *p3; VAR_ACQUIRE( RESVAR( argC ) ); } break;
@@ -2019,8 +2019,8 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 		case SI_MCONCAT: { vm_op_concat_ex( C, argB ); stk_setlvar( C, argA, stk_gettop( C ) ); stk_pop1( C ); break; }
 		case SI_CONCAT: { ARGS_3; vm_op_concat( C, a1, p2, p3 ); break; }
 		case SI_NEGATE: { ARGS_2; vm_op_negate( C, p1, p2 ); break; }
-		case SI_BOOL_INV: { ARGS_2; vm_op_boolinv( C, a1, p2 ); break; }
-		case SI_INVERT: { ARGS_2; vm_op_invert( C, a1, p2 ); break; }
+		case SI_BOOL_INV: { ARGS_2; vm_op_boolinv( C, (int16_t) a1, p2 ); break; }
+		case SI_INVERT: { ARGS_2; vm_op_invert( C, (int16_t) a1, p2 ); break; }
 
 		case SI_INC: { ARGS_2; vm_op_inc( C, p1, p2 ); break; }
 		case SI_DEC: { ARGS_2; vm_op_dec( C, p1, p2 ); break; }
@@ -2039,11 +2039,11 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 		case SI_DIV: { ARGS_3; vm_arith_op( C, p1, p2, p3, ARITH_OP_DIV ); break; }
 		case SI_MOD: { ARGS_3; vm_arith_op( C, p1, p2, p3, ARITH_OP_MOD ); break; }
 
-		case SI_AND: { ARGS_3; vm_op_and( C, a1, p2, p3 ); break; }
-		case SI_OR: { ARGS_3; vm_op_or( C, a1, p2, p3 ); break; }
-		case SI_XOR: { ARGS_3; vm_op_xor( C, a1, p2, p3 ); break; }
-		case SI_LSH: { ARGS_3; vm_op_lsh( C, a1, p2, p3 ); break; }
-		case SI_RSH: { ARGS_3; vm_op_rsh( C, a1, p2, p3 ); break; }
+		case SI_AND: { ARGS_3; vm_op_and( C, (int16_t) a1, p2, p3 ); break; }
+		case SI_OR: { ARGS_3; vm_op_or( C, (int16_t) a1, p2, p3 ); break; }
+		case SI_XOR: { ARGS_3; vm_op_xor( C, (int16_t) a1, p2, p3 ); break; }
+		case SI_LSH: { ARGS_3; vm_op_lsh( C, (int16_t) a1, p2, p3 ); break; }
+		case SI_RSH: { ARGS_3; vm_op_rsh( C, (int16_t) a1, p2, p3 ); break; }
 
 #define STRICTLY_EQUAL( val ) if( p2->type != p3->type || ( p2->type == VTC_OBJECT && \
 								p2->data.O->iface != p3->data.O->iface ) ) { var_setbool( C, p1, val ); break; }
@@ -2092,8 +2092,8 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 static size_t funct_size( const func_t* f )
 {
 	size_t sz = f->size + f->funcname.mem + f->filename.mem;
-	const sgs_Variable* beg = (const sgs_Variable*) func_c_consts( f );
-	const sgs_Variable* end = (const sgs_Variable*) ASSUME_ALIGNED( func_c_bytecode( f ), 16 );
+	const sgs_Variable* beg = (const sgs_Variable*) (const void*) func_c_consts( f );
+	const sgs_Variable* end = (const sgs_Variable*) (const void*) ASSUME_ALIGNED( func_c_bytecode( f ), 4 );
 	while( beg < end )
 		sz += sgsVM_VarSize( beg++ );
 	return sz;
@@ -2908,10 +2908,13 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				if( range > 0 )  flags |= SGS_LOADARG_INTRANGE;
 				if( range < 0 )  flags |= SGS_LOADARG_INTCLAMP;
 				
-				if( !acf( C, from, &args, flags ) )
+				sgs_VAList va;
+				memcpy( &va.args, &args, sizeof(va) );
+				if( !acf( C, from, &va, flags ) )
 				{
 					return opt;
 				}
+				memcpy( &args, &va.args, sizeof(va) );
 			}
 			strict = 0; nowrite = 0; from++; break;
 			

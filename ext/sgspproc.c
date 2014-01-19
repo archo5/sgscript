@@ -60,7 +60,7 @@
 #  include <unistd.h>
 #  include <pthread.h>
 
-static void sgsthread_sleep( int ms )
+static void sgsthread_sleep( uint32_t ms )
 {
 	if( ms >= 1000 )
 	{
@@ -623,7 +623,7 @@ static int pproc_sleep( SGS_CTX )
 		STDLIB_WARN( "sleep(): unexpected arguments; "
 			"function expects 1 argument: int" )
 	
-	sgsthread_sleep( ms );
+	sgsthread_sleep( (uint32_t) ms );
 	return 0;
 }
 

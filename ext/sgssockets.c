@@ -48,12 +48,17 @@
 #  define SGS_SCKID SOCKET
 #  define sgs_sockerror WSAGetLastError()
 #  define IOCTL_VALUE u_long
+#  define SOCKDATA_LEN int
+#  define SOCKDATA_SLEN int
 #  define SOCKADDR_SIZE int
 #  define GSO_ARG5TYPE int
+#  define sa_family_t int16_t
 #else
 #  define SGS_SCKID int
 #  define sgs_sockerror errno
 #  define IOCTL_VALUE int
+#  define SOCKDATA_LEN size_t
+#  define SOCKDATA_SLEN ssize_t
 #  ifdef SGS_PF_ANDROID
 #    define SOCKADDR_SIZE socklen_t
 #    define GSO_ARG5TYPE socklen_t
@@ -261,7 +266,7 @@ static int sockaddr_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 			inet_ntop( GET_SAF, GET_SAF == AF_INET ?
 				(void*) &GET_SAI->sin_addr :
 				(void*) &GET_SAI6->sin6_addr, addr, 64 );
-			sprintf( pb, ":%hu", (int) GET_SAF == AF_INET ? GET_SAI->sin_port : GET_SAI6->sin6_port );
+			sprintf( pb, ":%u", (int) GET_SAF == AF_INET ? GET_SAI->sin_port : GET_SAI6->sin6_port );
 			strcat( addr, pb );
 		}
 #endif
@@ -398,7 +403,7 @@ static int sgs_socket_address( SGS_CTX )
 	
 	memset( &ss, 0, sizeof(ss) );
 	
-	ss.ss_family = (int16_t) af;
+	ss.ss_family = (sa_family_t) af;
 	port = htons( port );
 	{
 #ifdef _WIN32
@@ -443,7 +448,7 @@ static int sgs_socket_address_frombytes( SGS_CTX )
 		STDLIB_WARN( "argument 1 (address family)"
 			" must be either AF_INET or AF_INET6" )
 	
-	ss.ss_family = (int16_t) af;
+	ss.ss_family = (sa_family_t) af;
 	port = htons( port );
 	if( af == AF_INET )
 	{
@@ -574,14 +579,14 @@ static int socketI_send( SGS_CTX )
 	char* str;
 	sgs_SizeVal size;
 	sgs_Int flags = 0;
-	int ret;
+	SOCKDATA_SLEN ret;
 	
 	SOCK_IHDR( send );
 	
 	if( !sgs_LoadArgs( C, "@>m|i", &str, &size, &flags ) )
 		return 0;
 	
-	ret = send( GET_SCK, str, size, (int) flags );
+	ret = send( GET_SCK, str, (SOCKDATA_LEN) size, (int) flags );
 	sockassert( C, ret >= 0 );
 	if( ret < 0 )
 		sgs_PushBool( C, 0 );
@@ -595,7 +600,7 @@ static int socketI_sendto( SGS_CTX )
 	char* str;
 	sgs_SizeVal size;
 	sgs_Int flags = 0;
-	int ret;
+	SOCKDATA_SLEN ret;
 	struct sockaddr* odtdata;
 	
 	SOCK_IHDR( sendto );
@@ -603,7 +608,7 @@ static int socketI_sendto( SGS_CTX )
 	if( !sgs_LoadArgs( C, "@>mo|i", &str, &size, sockaddr_iface, &odtdata, &flags ) )
 		return 0;
 	
-	ret = sendto( GET_SCK, str, size, (int) flags, odtdata, sizeof(struct sockaddr_storage) );
+	ret = sendto( GET_SCK, str, (SOCKDATA_LEN) size, (int) flags, odtdata, sizeof(struct sockaddr_storage) );
 	sockassert( C, ret >= 0 );
 	if( ret < 0 )
 		sgs_PushBool( C, 0 );
@@ -616,7 +621,7 @@ static int socketI_recv( SGS_CTX )
 {
 	sgs_SizeVal size;
 	sgs_Int flags = 0;
-	int ret;
+	SOCKDATA_SLEN ret;
 
 	SOCK_IHDR( recv );
 	
@@ -624,8 +629,8 @@ static int socketI_recv( SGS_CTX )
 		return 0;
 
 	sgs_PushStringBuf( C, NULL, size );
-	ret = recv( GET_SCK, sgs_GetStringPtr( C, -1 ), size, (int) flags );
-	sockassert( C, ret );
+	ret = recv( GET_SCK, sgs_GetStringPtr( C, -1 ), (SOCKDATA_LEN) size, (int) flags );
+	sockassert( C, ret > 0 );
 	if( ret <= 0 )
 		sgs_PushBool( C, ret == 0 );
 	else
@@ -643,7 +648,7 @@ static int socketI_recvfrom( SGS_CTX )
 	
 	sgs_SizeVal size;
 	sgs_Int flags = 0;
-	int ret;
+	SOCKDATA_SLEN ret;
 
 	SOCK_IHDR( recvfrom );
 	
@@ -651,9 +656,9 @@ static int socketI_recvfrom( SGS_CTX )
 		return 0;
 
 	sgs_PushStringBuf( C, NULL, size );
-	ret = recvfrom( GET_SCK, sgs_GetStringPtr( C, -1 ), size, (int) flags,
+	ret = recvfrom( GET_SCK, sgs_GetStringPtr( C, -1 ), (SOCKDATA_LEN) size, (int) flags,
 		(struct sockaddr*) &sa, &sa_size );
-	sockassert( C, ret );
+	sockassert( C, ret > 0 );
 	if( ret < 0 )
 	{
 		sgs_PushBool( C, 0 );

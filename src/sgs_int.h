@@ -580,6 +580,10 @@ struct _sgs_iFunc
 	sgs_MemBuf funcname;
 	sgs_MemBuf filename;
 };
+
+SGS_CASSERT( sizeof(sgs_Variable) % 4 == 0, variable_object_chaining_issue );
+SGS_CASSERT( sizeof(sgs_iFunc) % 4 == 0, ifunc_object_chaining_issue );
+
 #define sgs_func_consts( pfn )   ((sgs_Variable*)SGS_ASSUME_ALIGNED(((sgs_iFunc*)(pfn))+1,16))
 #define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(sgs_func_consts(pfn)+pfn->instr_off/sizeof(sgs_Variable)))
 #define sgs_func_c_consts( pfn )   ((const sgs_Variable*)SGS_ASSUME_ALIGNED(((const sgs_iFunc*)(pfn))+1,16))
