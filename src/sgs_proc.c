@@ -1979,10 +1979,22 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 
 		case SI_CALL:
 		{
-			int expect = argA, args = argB, src = argC;
+			sgs_Variable fnvar = *stk_getlpos( C, argC );
+			int i, expect = argA, args_from = argB & 0xff, args_to = argC;
 			int gotthis = ( argB & 0x100 ) != 0;
-			args &= 0xff;
-			vm_call( C, args, 0, gotthis, expect, RESVAR( src ) );
+			
+			stk_makespace( C, args_to - args_from );
+			for( i = args_from; i < args_to; ++i )
+				*C->stack_top++ = C->stack_off[ i ];
+			
+			vm_call( C, args_to - args_from - gotthis, 0, gotthis, expect, &fnvar );
+			
+			if( expect )
+			{
+				for( i = expect - 1; i >= 0; --i )
+					stk_setlvar( C, args_from + i, stk_gettop( C ) );
+				stk_pop( C, expect );
+			}
 			break;
 		}
 

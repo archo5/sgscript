@@ -30,6 +30,21 @@ static SGS_INLINE rcpos_t comp_reg_alloc( SGS_CTX )
 	return out;
 }
 
+static SGS_INLINE rcpos_t comp_reg_alloc_n( SGS_CTX, int n )
+{
+	rcpos_t out;
+	sgs_BreakIf( n < 1 );
+	out = comp_reg_alloc( C );
+	n--;
+	while( n --> 0 )
+	{
+		if( HAS_FLAG( C->state, SGS_MUST_STOP ) )
+			break;
+		comp_reg_alloc( C );
+	}
+	return out;
+}
+
 static SGS_INLINE void comp_reg_unwind( SGS_CTX, rcpos_t pos )
 {
 	if( C->fctx->regs > C->fctx->lastreg )
@@ -187,9 +202,9 @@ static void dump_opcode( const instr_t* ptr, size_t count )
 			printf( ", %d", (int) (int16_t) argE ); break;
 		case SI_JMPF: printf( "JMP_F " ); dump_rcpos( argC );
 			printf( ", %d", (int) (int16_t) argE ); break;
-		case SI_CALL: printf( "CALL args:%d%s expect:%d func:",
-			argB & 0xff, ( argB & 0x100 ) ? ",method" : "", argA );
-			dump_rcpos( argC ); break;
+		case SI_CALL: printf( "CALL args: %d - %d expect: %d%s",
+			argB & 0xff, argC, argA, ( argB & 0x100 ) ? ", method" : "" );
+			break;
 
 		case SI_FORPREP: printf( "FOR_PREP " ); dump_rcpos( argA );
 			printf( " <= " ); dump_rcpos( argB ); break;
@@ -471,10 +486,12 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		FTNode* N = node->child->next->next->next;
 		if( N && N->type == SFT_IDENT )
 		{
-			if( find_varT( &C->fctx->gvars, N->token ) == -1 &&
-				find_varT( &C->fctx->clsr, N->token ) == -1 &&
-				add_varT( C->fctx->func ? &C->fctx->vars : &C->fctx->gvars, C, N->token ) )
-				comp_reg_alloc( C );
+			if( find_varT( &C->fctx->gvars, N->token ) == -1 && /* if the variable hasn't been .. */
+				find_varT( &C->fctx->clsr, N->token ) == -1 && /* .. created before */
+				/* if it was successfully added */
+				add_varT( C->fctx->func ? &C->fctx->vars : &C->fctx->gvars, C, N->token ) &&
+				C->fctx->func ) /* and if it was added as a local variable */
+				comp_reg_alloc( C ); /* add a register for it */
 		}
 	}
 	else if( node->child )
@@ -720,6 +737,7 @@ static int op_pick_opcode( int oper, int binary )
 static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node );
 static SGSBOOL compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t* out );
 static SGSBOOL compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t src );
+static SGSBOOL compile_node_rrw( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t dst );
 static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t* arg, int out, int expect );
 
 
@@ -915,8 +933,7 @@ static SGSBOOL compile_regcopy( SGS_CTX, sgs_CompFunc* func, FTNode* node, size_
 
 static SGSBOOL compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t* out, int expect )
 {
-	int i = 0, gotthis = FALSE;
-	rcpos_t funcpos = -1, objpos = -1, retpos = -1;
+	int i = 0, gotthis = 0;
 	
 	/* IF (ternary-like) */
 	if( is_keyword( node->child->token, "if" ) )
@@ -924,7 +941,7 @@ static SGSBOOL compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t
 		FTNode* n = node->child->next->child;
 		int argc = 0;
 		size_t csz1, csz2, csz3;
-		rcpos_t exprpos = -1, srcpos = -1;
+		rcpos_t exprpos = -1, srcpos = -1, retpos = -1;
 		if( !out )
 		{
 			QPRINT( "'if' pseudo-function cannot be used as input for expression writes" );
@@ -974,82 +991,82 @@ static SGSBOOL compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t
 		*out = retpos;
 		return 1;
 	}
-
-	/* load function (for properties, object too) */
-	if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
-	{
-		FTNode* ncc = node->child->child;
-		rcpos_t proppos = -1;
-		funcpos = comp_reg_alloc( C );
-		FUNC_ENTER;
-		if( !compile_node_r( C, func, ncc, &objpos ) ) return 0;
-		if( ncc->next->type == SFT_IDENT )
-			compile_ident( C, func, ncc->next, &proppos );
-		else
-		{
-			FUNC_ENTER;
-			if( !compile_node_r( C, func, ncc->next, &proppos ) ) return 0;
-		}
-		INSTR_WRITE( SI_GETPROP, funcpos, objpos, proppos );
-	}
 	else
 	{
-		FUNC_ENTER;
-		if( !compile_node_r( C, func, node->child, &funcpos ) ) return 0;
-	}
-
-	if( out )
-	{
-		if( expect )
-			retpos = comp_reg_alloc( C );
-		for( i = 1; i < expect; ++i )
-			comp_reg_alloc( C );
-	}
-
-	/* load arguments */
-	i = 0;
-	{
-		/* passing objects where the call is formed appropriately */
 		FTNode* n;
-		rcpos_t argpos = -1;
+		int regc = 0;
+		rcpos_t argpos, funcpos;
+		
+		/* count the required number of registers */
 		if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
 		{
-			INSTR_WRITE( SI_PUSH, 0, objpos, 0 );
-			gotthis = TRUE;
+			gotthis = 1;
+			regc++;
 		}
-
 		n = node->child->next->child;
 		while( n )
 		{
-			argpos = -1;
-			FUNC_ENTER;
-			if( !compile_node_r( C, func, n, &argpos ) ) return 0;
-			INSTR_WRITE( SI_PUSH, 0, argpos, 0 );
-			i++;
+			regc++;
 			n = n->next;
 		}
-	}
-
-	if( gotthis )
-		i |= 0x100;
-
-	/* compile call */
-	INSTR_WRITE( SI_CALL, expect, i, funcpos );
-
-	/* compile writeback */
-	if( out )
-	{
-		while( expect )
+		regc++; /* function register */
+		if( out && regc < expect )
+			regc = expect;
+		argpos = comp_reg_alloc_n( C, regc );
+		funcpos = argpos + regc - 1;
+		
+		/* return register positions for expected data */
+		if( out )
 		{
-			rcpos_t cra;
-			expect--;
-			cra = retpos + expect;
-			out[ expect ] = cra;
-			INSTR_WRITE( SI_POPR, cra, 0, 0 );
+			int xi = expect;
+			while( xi --> 0 )
+				out[ xi ] = argpos + xi;
 		}
-	}
+		
+		/* load function (for properties, object too) */
+		if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
+		{
+			/* object pos. (this) = argpos + 0 */
+			FTNode* ncc = node->child->child;
+			rcpos_t proppos = -1;
+			FUNC_ENTER;
+			if( !compile_node_rrw( C, func, ncc, argpos ) ) return 0;
+			if( ncc->next->type == SFT_IDENT )
+				compile_ident( C, func, ncc->next, &proppos );
+			else
+			{
+				FUNC_ENTER;
+				if( !compile_node_r( C, func, ncc->next, &proppos ) ) return 0;
+			}
+			INSTR_WRITE( SI_GETPROP, funcpos, argpos, proppos );
+		}
+		else
+		{
+			FUNC_ENTER;
+			if( !compile_node_rrw( C, func, node->child, funcpos ) ) return 0;
+		}
+		
+		/* load arguments */
+		i = 0;
+		{
+			/* passing objects where the call is formed appropriately */
+			n = node->child->next->child;
+			while( n )
+			{
+				FUNC_ENTER;
+				if( !compile_node_rrw( C, func, n, argpos + i + gotthis ) ) return 0;
+				i++;
+				n = n->next;
+			}
+		}
+		
+		/* compile call */
+		INSTR_WRITE( SI_CALL, expect, gotthis ? argpos | 0x100 : argpos, funcpos );
+		
+		comp_reg_unwind( C, argpos + expect );
 
-	return 1;
+		return 1;
+	}
 }
 
 static SGSBOOL compile_index_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t* out )
@@ -1089,7 +1106,7 @@ static SGSBOOL compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos
 static SGSBOOL try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* node, size_t ioff, rcpos_t* out )
 {
 	rcpos_t pos = -1;
-
+	
 	FUNC_BEGIN;
 	UNUSED( C );
 	
@@ -1106,7 +1123,7 @@ static SGSBOOL try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode*
 	pos = find_varT( &C->fctx->clsr, node->token );
 	if( pos >= 0 )
 		goto cannot;
-
+	
 	/* find the variable output register */
 	if( C->fctx->func )
 	{
@@ -1123,11 +1140,11 @@ static SGSBOOL try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode*
 	{
 		pos = find_varT( &C->fctx->vars, node->token );
 	}
-
+	
 	/* global variable */
 	if( pos < 0 )
 		goto cannot;
-
+	
 	{
 		instr_t I;
 		AS_( I, func->code.ptr + ioff, instr_t );
@@ -1157,13 +1174,81 @@ static SGSBOOL try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode*
 			goto cannot;
 		}
 	}
-
+	
 	FUNC_END;
 	return 1;
-
+	
 cannot:
 	FUNC_END;
 	return 0;
+}
+
+static SGSBOOL try_optimize_set_op( SGS_CTX, sgs_CompFunc* func, size_t ioff, rcpos_t ireg )
+{
+	FUNC_BEGIN;
+	UNUSED( C );
+	
+	/* moved offset 4 to other side of equation to prevent unsigned underflow */
+	if( ioff + 4 > func->code.size )
+		goto cannot;
+	
+	ioff = func->code.size - 4;
+	
+	{
+		instr_t I;
+		AS_( I, func->code.ptr + ioff, instr_t );
+		int op = INSTR_GET_OP( I ), argB = INSTR_GET_B( I ), argC = INSTR_GET_C( I );
+		switch( op )
+		{
+		case SI_POPR: case SI_GETVAR: case SI_GETPROP: case SI_GETINDEX:
+		case SI_SET: case SI_CONCAT:
+		case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT:
+		case SI_ADD: case SI_SUB: case SI_MUL: case SI_DIV: case SI_MOD:
+		case SI_AND: case SI_OR: case SI_XOR: case SI_LSH: case SI_RSH:
+		case SI_SEQ: case SI_EQ: case SI_LT: case SI_LTE:
+		case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE:
+		case SI_ARRAY: case SI_DICT:
+			{
+				char* dummy0 = NULL;
+				unsigned dummy1 = 0;
+				if( find_nth_var( &C->fctx->vars, INSTR_GET_A( I ), &dummy0, &dummy1 ) )
+					goto cannot;
+			}
+			I = INSTR_MAKE( op, ireg, argB, argC );
+			memcpy( func->code.ptr + ioff, &I, sizeof(I) );
+			break;
+		default:
+			goto cannot;
+		}
+	}
+	
+	FUNC_END;
+	return 1;
+	
+cannot:
+	FUNC_END;
+	return 0;
+}
+
+static SGSBOOL compile_node_rrw( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t dst )
+{
+	rcpos_t ireg = -1, bkup = C->fctx->regs;
+	size_t newcodestart = func->code.size;
+	
+	FUNC_ENTER;
+	if( !compile_node_r( C, func, node, &ireg ) ) return 0;
+	
+	FUNC_ENTER;
+	if( !try_optimize_set_op( C, func, newcodestart, dst ) )
+	{
+		/* just set the contents */
+		FUNC_ENTER;
+		INSTR_WRITE( SI_SET, dst, ireg, 0 );
+	}
+	
+	comp_reg_unwind( C, bkup );
+	
+	return 1;
 }
 
 

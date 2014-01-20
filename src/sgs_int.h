@@ -460,7 +460,7 @@ typedef enum sgs_Instruction_e
 	SGS_SI_JUMP,     /* (E:off)                 add to instruction pointer */
 	SGS_SI_JMPT,     /* (C:src, E:off)          jump (add to instr.ptr.) if true */
 	SGS_SI_JMPF,     /* (C:src, E:off)          jump (add to instr.ptr.) if false */
-	SGS_SI_CALL,     /* (A:exp, B:args, C:src)  call a variable */
+	SGS_SI_CALL,     /* (A:exp, B:from, C:to)   call a variable */
 
 	SGS_SI_FORPREP,  /* (A:out, B:src)          retrieves the iterator to work the object */
 	SGS_SI_FORLOAD,  /* (A:iter, B:oky, C:ovl)  retrieves current key & value from iterator */
