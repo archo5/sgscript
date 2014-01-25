@@ -701,24 +701,9 @@ These are the default meanings for error codes that are honored throughout the A
 -- any other integer may be defined and returned by other interfaces
 
 
-# Variable type flags [info]
+# Variable types [info]
 
-- primary flags
--- SGS_VT_NULL: (primary null flag, actually - lack of a primary flag)
--- SGS_VT_[BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]: primary flags
-
-- property flags
--- SGS_VTF_NUM: numeric type flag
--- SGS_VTF_CALL: always-callable type flag
--- SGS_VTF_REF: reference-counted type flag
--- SGS_VTF_ARRAY: array type flag
--- SGS_VTF_ARRAY_ITER: array iterator type flag
--- SGS_VTF_DICT: dict type flag
--- SGS_VTF_MAP: map type flag
-
-- complete flag combos
--- SGS_VTC_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT]: complete variable flags
--- SGS_VTC_[ARRAY|ARRAY_ITER|DICT|MAP]: complete specialized variable flags
+-- SGS_VT_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT|PTR]
 
 
 # Object operation types [info]
@@ -926,7 +911,8 @@ These are the default meanings for error codes that are honored throughout the A
 == void sgs_PushObject( sgs_Context* C, void* data, sgs_ObjCallback* iface )
 == void* sgs_PushObjectIPA( sgs_Context* C, sgs_SizeVal added, sgs_ObjCallback* iface )
 == void sgs_PushPtr( sgs_Context* C, void* ptr )
-== void sgs_PushVariable( sgs_Context* C, sgs_Variable* var )
+== void sgs_PushObjectPtr( sgs_Context* C, sgs_VarObj* obj )
+== SGSRESULT sgs_PushVariable( sgs_Context* C, sgs_Variable* var )
 === pushes the data on the stack, as a new entry, appended to the end
 
 - sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
@@ -937,6 +923,7 @@ These are the default meanings for error codes that are honored throughout the A
 -- this allows to allocate all object data for most objects with just one allocation, instead of two
 -- the allocated memory will be returned and also available via sgs_GetObjectData( C, -1 )
 - sgs_PushVariable will increment the reference count of strings, SGS functions and objects
+-- it will also return EINVAL if type of variable isn't one of the allowed types
 - these functions do not throw an error when the stack is full since there is no way to handle that
 
 
@@ -1759,15 +1746,6 @@ After a successful call, all arguments and the function will be popped off the s
 === return the base type (first 8 bits, mask 0xff) of the specified stack item
 
 - return value will be equal to one of the SGS_VT_* macro
-- if index is invalid, return value will be 0
-
-
-# sgs_ItemTypeExt [function]
-
-== int sgs_ItemTypeExt( sgs_Context* C, int item )
-=== return the full type of the specified stack item
-
-- return value expected to be equal to one of the SGS_VTC_* macro
 - if index is invalid, return value will be 0
 
 
@@ -2684,24 +2662,11 @@ This library is loaded on initialization and contains the functions and constant
 == typeid( var )
 === returns the first 4 bits of the variable `var` type flags, as `int`
 
-- returns one of the values mapped to VT_NULL/VT_BOOL/VT_INT/VT_REAL/VT_STRING/VT_FUNC/VT_CFUNC/VT_OBJECT
+- returns one of the values mapped to VT_NULL/VT_BOOL/VT_INT/VT_REAL/VT_STRING/VT_FUNC/VT_CFUNC/VT_OBJECT/VT_PTR
 - this function is equivalent to @sgs_ItemType in the C API
 
-    typeid( 5 ) == VT_REAL; // returns 'true'
-    typeid( [] ); // returns 0x80 / VT_OBJECT
-
-
-# typeflags [function]
-
-== typeflags( var )
-=== returns the type flags of the variable `var`, as `int`
-
-- returns a bitfield, consisting of many different VT_* and VTF_* value combos, matching one of VTC_* values
-- this function is equivalent to @sgs_ItemTypeExt in the C API
-
-    typeflags( 5 ) == VTC_REAL; // returns 'true'
-    typeid( [] ) & VT_OBJECT != 0; // returns 'true'
-    typeid( "" ) & VTF_NUMERIC != 0; // returns 'false'
+    typeid( 5 ) == VT_INT; // returns 'true'
+    typeid( [] ); // returns 7 / VT_OBJECT
 
 
 # is_numeric [function]
@@ -2727,18 +2692,6 @@ This library is loaded on initialization and contains the functions and constant
     is_callable( print ); // returns 'true'
     is_callable( closure( print, 5 ) ); // returns 'true'
     is_callable( 5 ); // returns 'false'
-
-
-# loadtypeflags [function]
-
-== loadtypeflags()
-=== sets the globals beginning with VTF_ and VTC_
-
-- since these features are expected to be rarely used, they're set to be loaded on-demand, not on startup
-
-    isset( _G, "VTF_NUM" ); // returns 'false'
-    loadtypeflags();
-    isset( _G, "VTF_NUM" ); // returns 'true'
 
 
 # print, println, printlns [functions]
@@ -3151,8 +3104,8 @@ This library is loaded on initialization and contains the functions and constant
 
 # VT_*** [constants]
 
-== VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT
-=== these constants are defined to the values of the C macros (with the prefix "SVT_" in C) and can be compared with the values returned in @typeid() or @typeflags()
+== VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR
+=== these constants are defined to the values of the C macros (with the prefix "SVT_" in C with SGS_INTERNAL defined) and can be compared with the values returned in @typeid()
 
 
 # _G [superglobal]

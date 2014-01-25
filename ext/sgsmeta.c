@@ -87,7 +87,7 @@ static int _sgs_meta_dumpconstlist( SGS_CTX, sgs_Variable* var, size_t numvars )
 		sgs_PushInt( C, var->type );
 		
 		sgs_PushString( C, "data" );
-		switch( SGS_BASETYPE( var->type ) )
+		switch( var->type )
 		{
 		case SGS_VT_NULL:
 		case SGS_VT_BOOL:

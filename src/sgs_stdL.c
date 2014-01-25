@@ -744,7 +744,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			char* str;
 			sgs_SizeVal size;
 			if( F->type == 'c' &&
-				sgs_Convert( C, (*psi), VTC_STRING ) != SGS_SUCCESS )
+				sgs_Convert( C, (*psi), SVT_STRING ) != SGS_SUCCESS )
 				goto error;
 			if( !sgs_ParseString( C, (*psi)++, &str, &size ) )
 				goto error;
@@ -1455,7 +1455,7 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 	
 	srt = (stringread_t*) sgs_PushObjectIPA( C, sizeof(stringread_t), srt_iface );
 	sgs_GetStackItem( C, 0, &srt->S );
-	sgs_BreakIf( srt->S.type != VTC_STRING );
+	sgs_BreakIf( srt->S.type != SVT_STRING );
 	sgs_Acquire( C, &srt->S );
 	srt->off = (sgs_SizeVal) off;
 	sgs_StoreItem( C, 0 );
@@ -1517,7 +1517,7 @@ static int sgsstd_fmt_file_parser( SGS_CTX )
 	
 	frt = (fileread_t*) sgs_PushObjectIPA( C, sizeof(fileread_t), frt_iface );
 	sgs_GetStackItem( C, 0, &frt->F );
-	sgs_BreakIf( frt->F.type != VTC_OBJECT );
+	sgs_BreakIf( frt->F.type != SVT_OBJECT );
 	sgs_Acquire( C, &frt->F );
 	sgs_StoreItem( C, 0 );
 	sgs_SetStackSize( C, 1 );
@@ -2175,10 +2175,7 @@ static int sgsstd_dir_convert( SGS_CTX, sgs_VarObj* data, int type )
 	}
 	else if( type == SGS_CONVOP_TOITER )
 	{
-		sgs_Variable v;
-		v.type = VTC_OBJECT;
-		v.data.O = data;
-		sgs_PushVariable( C, &v );
+		sgs_PushObjectPtr( C, data );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -3455,8 +3452,8 @@ static int sgsstd_string_replace( SGS_CTX )
 	
 	SGSFN( "string_replace" );
 
-	isarr1 = sgs_ItemTypeExt( C, 1 ) == VTC_ARRAY;
-	isarr2 = sgs_ItemTypeExt( C, 2 ) == VTC_ARRAY;
+	isarr1 = sgs_IsObject( C, 1, sgsstd_array_iface );
+	isarr2 = sgs_IsObject( C, 2, sgsstd_array_iface );
 
 	if( !sgs_ParseString( C, 0, &str, &size ) )
 		return sgs_FuncArgError( C, 0, SVT_STRING, 0 );

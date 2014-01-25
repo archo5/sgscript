@@ -129,7 +129,7 @@ sgs_Hash sgs_HashFunc( const char* str, size_t size )
 
 sgs_Hash sgs_HashVar( const sgs_Variable* v )
 {
-	switch( BASETYPE( v->type ) )
+	switch( v->type )
 	{
 	case SVT_NULL: return 0;
 	case SVT_BOOL: return v->data.B != 0;
@@ -142,9 +142,9 @@ sgs_Hash sgs_HashVar( const sgs_Variable* v )
 
 static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
 {
-	if( BASETYPE( v1->type ) != BASETYPE( v2->type ) )
+	if( v1->type != v2->type )
 		return 0;
-	switch( BASETYPE( v1->type ) )
+	switch( v1->type )
 	{
 	case SVT_BOOL: return v1->data.B == v2->data.B;
 	case SVT_INT: return v1->data.I == v2->data.I;
@@ -298,7 +298,7 @@ VHTVar* vht_get_str( VHTable* T, const char* str, uint32_t size, sgs_Hash hash )
 		else
 		{
 			sgs_Variable* var = &T->vars[ idx ].key;
-			if( BASETYPE( var->type ) == SVT_STRING )
+			if( var->type == SVT_STRING )
 			{
 				string_t* S = var->data.S;
 				if( S->size == size && memcmp( str_cstr( S ), str, size ) == 0 )
@@ -327,7 +327,7 @@ VHTVar* vht_set( VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable* V )
 			p->val = *V;
 		}
 		else
-			p->val.type = VTC_NULL;
+			p->val.type = SVT_NULL;
 		return p;
 	}
 	else
@@ -352,7 +352,7 @@ VHTVar* vht_set( VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable* V )
 				sgs_Acquire( C, V );
 			}
 			else
-				p->val.type = VTC_NULL;
+				p->val.type = SVT_NULL;
 		}
 		
 		sp = i = (VHTIdx)( h % (sgs_Hash) T->pair_mem );

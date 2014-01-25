@@ -7,7 +7,7 @@
 #define SGS_VERSION_MINOR 9
 #define SGS_VERSION_INCR  0
 #define SGS_VERSION "0.9.0"
-#define SGS_API_VERSION 9
+#define SGS_API_VERSION 10
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
@@ -38,28 +38,6 @@ extern "C" {
 #  define SVT_CFUNC SGS_VT_CFUNC
 #  define SVT_OBJECT SGS_VT_OBJECT
 #  define SVT_PTR SGS_VT_PTR
-#  define VTYPE_MASK SGS_VTYPE_MASK
-#  define BASETYPE SGS_BASETYPE
-#  define VTF_NUM SGS_VTF_NUM
-#  define VTF_CALL SGS_VTF_CALL
-#  define VTF_REF SGS_VTF_REF
-#  define VTF_ARRAY SGS_VTF_ARRAY
-#  define VTF_ARRAY_ITER SGS_VTF_ARRAY_ITER
-#  define VTF_DICT SGS_VTF_DICT
-#  define VTF_MAP SGS_VTF_MAP
-#  define VTC_NULL SGS_VTC_NULL
-#  define VTC_BOOL SGS_VTC_BOOL
-#  define VTC_INT SGS_VTC_INT
-#  define VTC_REAL SGS_VTC_REAL
-#  define VTC_STRING SGS_VTC_STRING
-#  define VTC_FUNC SGS_VTC_FUNC
-#  define VTC_CFUNC SGS_VTC_CFUNC
-#  define VTC_OBJECT SGS_VTC_OBJECT
-#  define VTC_PTR SGS_VTC_PTR
-#  define VTC_ARRAY SGS_VTC_ARRAY
-#  define VTC_ARRAY_ITER SGS_VTC_ARRAY_ITER
-#  define VTC_DICT SGS_VTC_DICT
-#  define VTC_MAP SGS_VTC_MAP
 
 #  define SOP_END SGS_OP_END
 #  define SOP_DESTRUCT SGS_OP_DESTRUCT
@@ -227,40 +205,15 @@ typedef void (*sgs_HookFunc) (
 /* Context internals */
 /* - variable type flags, primary and extended */
 #define SGS_VT_NULL   0
-#define SGS_VT_BOOL   0x01
-#define SGS_VT_INT    0x02
-#define SGS_VT_REAL   0x04
-#define SGS_VT_STRING 0x08
-#define SGS_VT_FUNC   0x10
-#define SGS_VT_CFUNC  0x20
-#define SGS_VT_OBJECT 0x40
-#define SGS_VT_PTR    0x80
-
-#define SGS_VTYPE_MASK 0xff
-#define SGS_BASETYPE( x ) ( x & SGS_VTYPE_MASK )
-
-#define SGS_VTF_NUM    0x0100
-#define SGS_VTF_CALL   0x0200
-#define SGS_VTF_REF    0x0400
-#define SGS_VTF_ARRAY  0x1000
-#define SGS_VTF_ARRAY_ITER 0x2000
-#define SGS_VTF_DICT   0x4000
-#define SGS_VTF_MAP    0x8000
-
-/* - complete variable types */
-#define SGS_VTC_NULL    (SGS_VT_NULL)
-#define SGS_VTC_BOOL    (SGS_VT_BOOL)
-#define SGS_VTC_INT     (SGS_VT_INT | SGS_VTF_NUM)
-#define SGS_VTC_REAL    (SGS_VT_REAL | SGS_VTF_NUM)
-#define SGS_VTC_STRING  (SGS_VT_STRING | SGS_VTF_REF)
-#define SGS_VTC_FUNC    (SGS_VT_FUNC | SGS_VTF_CALL | SGS_VTF_REF)
-#define SGS_VTC_CFUNC   (SGS_VT_CFUNC | SGS_VTF_CALL)
-#define SGS_VTC_OBJECT  (SGS_VT_OBJECT | SGS_VTF_REF)
-#define SGS_VTC_PTR     (SGS_VT_PTR)
-#define SGS_VTC_ARRAY   (SGS_VTC_OBJECT | SGS_VTF_ARRAY)
-#define SGS_VTC_ARRAY_ITER (SGS_VTC_OBJECT | SGS_VTF_ARRAY_ITER)
-#define SGS_VTC_DICT    (SGS_VTC_OBJECT | SGS_VTF_DICT)
-#define SGS_VTC_MAP     (SGS_VTC_OBJECT | SGS_VTF_MAP)
+#define SGS_VT_BOOL   1
+#define SGS_VT_INT    2
+#define SGS_VT_REAL   3
+#define SGS_VT_STRING 4
+#define SGS_VT_FUNC   5
+#define SGS_VT_CFUNC  6
+#define SGS_VT_OBJECT 7
+#define SGS_VT_PTR    8
+#define SGS_VT__COUNT 9
 
 /* - object data */
 typedef struct sgs_ObjData sgs_VarObj;
@@ -520,7 +473,8 @@ SGS_APIFUNC void sgs_PushCFunction( SGS_CTX, sgs_CFunc func );
 SGS_APIFUNC void sgs_PushObject( SGS_CTX, void* data, sgs_ObjCallback* iface );
 SGS_APIFUNC void* sgs_PushObjectIPA( SGS_CTX, uint32_t added, sgs_ObjCallback* iface );
 SGS_APIFUNC void sgs_PushPtr( SGS_CTX, void* ptr );
-SGS_APIFUNC void sgs_PushVariable( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC void sgs_PushObjectPtr( SGS_CTX, sgs_VarObj* obj );
+SGS_APIFUNC SGSRESULT sgs_PushVariable( SGS_CTX, sgs_Variable* var );
 
 SGS_APIFUNC SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var );
 SGS_APIFUNC SGSRESULT sgs_PushArray( SGS_CTX, sgs_SizeVal numitems );
@@ -652,11 +606,13 @@ SGS_APIFUNC sgs_StkIdx sgs_StackSize( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_IsValidIndex( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSBOOL sgs_GetStackItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out );
 SGS_APIFUNC uint32_t sgs_ItemType( SGS_CTX, sgs_StkIdx item );
-SGS_APIFUNC uint32_t sgs_ItemTypeExt( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSBOOL sgs_Method( SGS_CTX );
 SGS_APIFUNC void sgs_Acquire( SGS_CTX, sgs_Variable* var );
 SGS_APIFUNC void sgs_Release( SGS_CTX, sgs_Variable* var );
 SGS_APIFUNC SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC void sgs_ObjAcquire( SGS_CTX, sgs_VarObj* obj );
+SGS_APIFUNC void sgs_ObjRelease( SGS_CTX, sgs_VarObj* obj );
+SGS_APIFUNC SGSRESULT sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj );
 
 SGS_APIFUNC char* sgs_GetStringPtr( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_SizeVal sgs_GetStringSize( SGS_CTX, sgs_StkIdx item );

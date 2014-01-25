@@ -11,15 +11,6 @@
 
 
 
-static int fastlog2( int x )
-{
-	int targetlevel = 0;
-	while( x >>= 1 )
-		++targetlevel;
-	return targetlevel;
-}
-
-
 #if SGS_DEBUG && SGS_DEBUG_FLOW
 #  define DBGINFO( text ) sgs_Printf( C, SGS_INFO, text )
 #else
@@ -27,7 +18,7 @@ static int fastlog2( int x )
 #endif
 
 
-static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "func", "cfunc", "obj" };
+static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "func", "cfunc", "obj", "ptr" };
 
 
 static void default_outputfn( void* userdata, SGS_CTX, const void* ptr, size_t size )
@@ -231,8 +222,7 @@ const char* sgs_CodeString( int type, int val )
 	}
 	else if( type == SGS_CODE_VT )
 	{
-		val = fastlog2( ( val & 0xff ) << 1 );
-		if( val < 0 || val >= 8 )
+		if( val < 0 || val >= SGS_VT__COUNT )
 			return NULL;
 		return sgs_VarNames[ val ];
 	}
@@ -612,7 +602,7 @@ static void _recfndump( const char* constptr, size_t constsize,
 	const sgs_Variable* vend = (const sgs_Variable*) (const void*) ASSUME_ALIGNED( constptr + constsize, 4 );
 	while( var < vend )
 	{
-		if( var->type == SGS_VTC_FUNC )
+		if( var->type == SGS_VT_FUNC )
 		{
 			_recfndump( (const char*) func_consts( var->data.F ), var->data.F->instr_off,
 				(const char*) func_bytecode( var->data.F ), var->data.F->size - var->data.F->instr_off,
@@ -707,8 +697,8 @@ static void dumpobj( SGS_CTX, sgs_VarObj* p )
 static void dumpvar( SGS_CTX, sgs_Variable* var )
 {
 	/* WP: var->type base type info uses bits 1-8 */
-	sgs_Writef( C, "%s (size:%d)", g_varnames[ fastlog2( (int) BASETYPE( var->type ) << 1 ) ], sgsVM_VarSize( var ) );
-	switch( BASETYPE( var->type ) )
+	sgs_Writef( C, "%s (size:%d)", g_varnames[ var->type ], sgsVM_VarSize( var ) );
+	switch( var->type )
 	{
 	case SVT_NULL: break;
 	case SVT_BOOL: sgs_Writef( C, " = %s", var->data.B ? "true" : "false" ); break;
@@ -855,7 +845,7 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 		if( frame->filename )
 			F = frame->filename;
 	}
-	else if( SGS_BASETYPE( frame->func->type ) == SGS_VT_FUNC )
+	else if( frame->func->type == SGS_VT_FUNC )
 	{
 		N = "<anonymous function>";
 		if( frame->func->data.F->funcname.size )
@@ -867,12 +857,12 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 		else if( frame->filename )
 			F = frame->filename;
 	}
-	else if( SGS_BASETYPE( frame->func->type ) == SGS_VT_CFUNC )
+	else if( frame->func->type == SGS_VT_CFUNC )
 	{
 		N = frame->nfname ? frame->nfname : "[C function]";
 		F = "[C code]";
 	}
-	else if( SGS_BASETYPE( frame->func->type ) == SGS_VT_OBJECT )
+	else if( frame->func->type == SGS_VT_OBJECT )
 	{
 		N = "<object>";
 		F = "[C code]";
@@ -913,7 +903,7 @@ void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str, size_t len 
 	
 	{
 		sgs_Variable v;
-		v.type = SGS_VTC_STRING;
+		v.type = SGS_VT_STRING;
 		v.data.S = &S->data;
 		sgs_PushVariable( C, &v );
 	}

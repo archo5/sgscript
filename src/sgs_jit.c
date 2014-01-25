@@ -13,7 +13,7 @@ typedef
 struct _traceitem
 {
 	uint32_t instr;
-	uint16_t vt0, vt1, vt2;
+	uint32_t vt0, vt1, vt2;
 	uint8_t op, flags;
 }
 traceitem;
@@ -130,9 +130,9 @@ static void sgsJIT_ProcFrame( SGS_CTX, sgs_StackFrame* sf, sgs_JIT_Trace* trace 
 		const sgs_Variable* consts = sgs_func_consts( sf->func->data.F );
 		uint32_t ci = *sf->iptr;
 		uint8_t ci_op = SGS_INSTR_GET_OP( ci );
-		uint16_t ci_a = SGS_INSTR_GET_A( ci );
-		uint16_t ci_b = SGS_INSTR_GET_B( ci );
-		uint16_t ci_c = SGS_INSTR_GET_C( ci );
+		uint16_t ci_a = (uint16_t) SGS_INSTR_GET_A( ci );
+		uint16_t ci_b = (uint16_t) SGS_INSTR_GET_B( ci );
+		uint16_t ci_c = (uint16_t) SGS_INSTR_GET_C( ci );
 		uint8_t ci_flags = baseline_flags[ ci_op ];
 		traceitem ti = { ci, JIT_TRACEITEM_NOVAR, JIT_TRACEITEM_NOVAR,
 			JIT_TRACEITEM_NOVAR, ci_op, 0 };

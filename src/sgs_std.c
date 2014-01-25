@@ -19,8 +19,6 @@
 	ARRAY
 */
 
-SGS_DECLARE sgs_ObjCallback sgsstd_array_functable[ 15 ];
-
 #define SGSARR_UNIT sizeof( sgs_Variable )
 #define SGSARR_HDR sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data
 #define SGSARR_HDR_OI sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) data->data
@@ -96,7 +94,7 @@ static void sgsstd_array_erase( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal
 	sgsstd_array_header_t* hdr; \
 	int method_call = sgs_Method( C ); \
 	SGSFN( "array." #name ); \
-	if( !sgs_IsObject( C, 0, sgsstd_array_functable ) ) \
+	if( !sgs_IsObject( C, 0, sgsstd_array_iface ) ) \
 		return sgs_ArgErrorExt( C, 0, method_call, "array", "" ); \
 	hdr = (sgsstd_array_header_t*) sgs_GetObjectData( C, 0 ); \
 	UNUSED( hdr );
@@ -264,7 +262,7 @@ static void sgsstd_array_adjust( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVa
 	}
 	while( hdr->size < cnt )
 	{
-		( SGSARR_PTR( hdr ) + (hdr->size++) )->type = VTC_NULL;
+		( SGSARR_PTR( hdr ) + (hdr->size++) )->type = SVT_NULL;
 	}
 }
 static int sgsstd_arrayI_resize( SGS_CTX )
@@ -356,7 +354,7 @@ static int sgsstd_arrayI_sort_custom( SGS_CTX )
 	SGSARR_IHDR( sort_custom );
 	
 	u.C = C;
-	u.sortfunc.type = VTC_NULL;
+	u.sortfunc.type = SVT_NULL;
 	
 	if( !sgs_LoadArgs( C, "@>?p<v|b", &u.sortfunc, &rev ) )
 		return 0;
@@ -773,7 +771,7 @@ static int sgsstd_array_iter_getnext( SGS_CTX, sgs_VarObj* data, int mask )
 	}
 }
 
-static sgs_ObjCallback sgsstd_array_iter_functable[ 5 ] =
+sgs_ObjCallback sgsstd_array_iter_iface[ 5 ] =
 {
 	SOP_DESTRUCT, sgsstd_array_iter_destruct,
 	SOP_GETNEXT, sgsstd_array_iter_getnext,
@@ -787,14 +785,13 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
 		sgsstd_array_iter_t* iter = sgs_Alloc( sgsstd_array_iter_t );
 
-		iter->ref.type = VTC_ARRAY;
+		iter->ref.type = SVT_OBJECT;
 		iter->ref.data.O = data;
 		iter->size = hdr->size;
 		iter->off = -1;
 
 		sgs_Acquire( C, &iter->ref );
-		sgs_PushObject( C, iter, sgsstd_array_iter_functable );
-		(C->stack_top-1)->type = SGS_VTC_ARRAY_ITER;
+		sgs_PushObject( C, iter, sgsstd_array_iter_iface );
 		return SGS_SUCCESS;
 	}
 	else if( type == SVT_BOOL )
@@ -822,7 +819,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_CONVOP_CLONE )
 	{
 		sgsstd_array_header_t* hdr2 = (sgsstd_array_header_t*)
-			sgs_PushObjectIPA( C, sizeof( sgsstd_array_header_t ), sgsstd_array_functable );
+			sgs_PushObjectIPA( C, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
 		memcpy( hdr2, hdr, sizeof( sgsstd_array_header_t ) );
 		hdr2->data = sgs_Alloc_n( sgs_Variable, (size_t) hdr->mem );
 		memcpy( hdr2->data, hdr->data, SGSARR_ALLOCSIZE( hdr->mem ) );
@@ -832,7 +829,6 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 			while( ptr < pend )
 				sgs_Acquire( C, ptr++ );
 		}
-		(C->stack_top-1)->type = VTC_ARRAY;
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_CONVOP_TOTYPE )
@@ -869,7 +865,7 @@ static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 	return 0;
 }
 
-static sgs_ObjCallback sgsstd_array_functable[ 15 ] =
+sgs_ObjCallback sgsstd_array_iface[ 15 ] =
 {
 	SOP_DESTRUCT, sgsstd_array_destruct,
 	SOP_GETINDEX, sgsstd_array_getindex,
@@ -887,7 +883,7 @@ static int sgsstd_array( SGS_CTX )
 	void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( objcnt ) );
 	sgs_Variable *p, *pend;
 	sgsstd_array_header_t* hdr = (sgsstd_array_header_t*)
-		sgs_PushObjectIPA( C, sizeof( sgsstd_array_header_t ), sgsstd_array_functable );
+		sgs_PushObjectIPA( C, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
 	hdr->size = objcnt;
 	hdr->mem = objcnt;
 	p = hdr->data = (sgs_Variable*) data;
@@ -897,7 +893,6 @@ static int sgsstd_array( SGS_CTX )
 		sgs_GetStackItem( C, i++, p );
 		sgs_Acquire( C, p++ );
 	}
-	(C->stack_top-1)->type = VTC_ARRAY;
 	return 1;
 }
 
@@ -957,7 +952,7 @@ static int sgsstd_vht_dump( SGS_CTX, sgs_VarObj* data, int depth, const char* na
 			{
 				sgs_PushString( C, "\n" );
 				sgs_PushVariable( C, &pair->key );
-				if( BASETYPE( pair->key.type ) == SVT_STRING )
+				if( pair->key.type == SVT_STRING )
 					sgs_ToPrintSafeString( C );
 				else
 				{
@@ -990,16 +985,9 @@ static int sgsstd_vht_dump( SGS_CTX, sgs_VarObj* data, int depth, const char* na
 	DICT
 */
 
-#ifdef __cplusplus
-extern
-#else
-static
-#endif
-sgs_ObjCallback sgsstd_dict_functable[ 15 ];
-
 static DictHdr* mkdict( SGS_CTX )
 {
-	DictHdr* dh = (DictHdr*) sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_dict_functable );
+	DictHdr* dh = (DictHdr*) sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_dict_iface );
 	vht_init( &dh->ht, C, 4, 4 );
 	return dh;
 }
@@ -1042,7 +1030,7 @@ static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	VHTVar* pair = NULL;
 	HTHDR;
 
-	if( prop && (C->stack_top-1)->type == VTC_INT )
+	if( prop && (C->stack_top-1)->type == SVT_INT )
 	{
 		int32_t off = (int32_t) (C->stack_top-1)->data.I;
 		if( off < 0 || off > vht_size( ht ) )
@@ -1122,7 +1110,7 @@ static int sgsstd_dict_iter_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback sgsstd_dict_iter_functable[ 7 ] =
+static sgs_ObjCallback sgsstd_dict_iter_iface[ 7 ] =
 {
 	SOP_DESTRUCT, sgsstd_dict_iter_destruct,
 	SOP_GETNEXT, sgsstd_dict_iter_getnext,
@@ -1138,13 +1126,13 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
 		sgsstd_dict_iter_t* iter = sgs_Alloc( sgsstd_dict_iter_t );
 
-		iter->ref.type = VTC_DICT;
+		iter->ref.type = SVT_OBJECT;
 		iter->ref.data.O = data;
 		iter->size = vht_size( ht );
 		iter->off = -1;
 		sgs_Acquire( C, &iter->ref );
 
-		sgs_PushObject( C, iter, sgsstd_dict_iter_functable );
+		sgs_PushObject( C, iter, sgsstd_dict_iter_iface );
 		return SGS_SUCCESS;
 	}
 	else if( type == SVT_BOOL )
@@ -1179,7 +1167,6 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 		{
 			vht_set( &ndh->ht, C, &ht->vars[ i ].key, &ht->vars[ i ].val );
 		}
-		(C->stack_top-1)->type = VTC_DICT;
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_CONVOP_TOTYPE )
@@ -1195,7 +1182,7 @@ static int sgsstd_dict_serialize( SGS_CTX, sgs_VarObj* data, int unused )
 	return sgsstd_vht_serialize( C, data, unused, "dict" );
 }
 
-static sgs_ObjCallback sgsstd_dict_functable[ 15 ] =
+sgs_ObjCallback sgsstd_dict_iface[ 15 ] =
 {
 	SOP_DESTRUCT, sgsstd_dict_destruct,
 	SOP_CONVERT, sgsstd_dict_convert,
@@ -1230,24 +1217,16 @@ static int sgsstd_dict( SGS_CTX )
 		sgs_GetStackItem( C, i + 1, &val );
 		vht_set( ht, C, (C->stack_off+i), &val );
 	}
-
-	(C->stack_top-1)->type = VTC_DICT;
+	
 	return 1;
 }
 
 
 /* MAP */
 
-#ifdef __cplusplus
-extern
-#else
-static
-#endif
-sgs_ObjCallback sgsstd_map_functable[ 15 ];
-
 static DictHdr* mkmap( SGS_CTX )
 {
-	DictHdr* dh = (DictHdr*) sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_map_functable );
+	DictHdr* dh = (DictHdr*) sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_map_iface );
 	vht_init( &dh->ht, C, 4, 4 );
 	return dh;
 }
@@ -1272,13 +1251,13 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
 		sgsstd_dict_iter_t* iter = sgs_Alloc( sgsstd_dict_iter_t );
 
-		iter->ref.type = VTC_MAP;
+		iter->ref.type = SVT_OBJECT;
 		iter->ref.data.O = data;
 		iter->size = vht_size( ht );
 		iter->off = -1;
 		sgs_Acquire( C, &iter->ref );
 
-		sgs_PushObject( C, iter, sgsstd_dict_iter_functable );
+		sgs_PushObject( C, iter, sgsstd_dict_iter_iface );
 		return SGS_SUCCESS;
 	}
 	else if( type == SVT_BOOL )
@@ -1314,7 +1293,6 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* data, int type )
 		{
 			vht_set( &ndh->ht, C, &ht->vars[ i ].key, &ht->vars[ i ].val );
 		}
-		(C->stack_top-1)->type = VTC_MAP;
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_CONVOP_TOTYPE )
@@ -1345,7 +1323,7 @@ static int sgsstd_map_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback sgsstd_map_functable[ 15 ] =
+sgs_ObjCallback sgsstd_map_iface[ 15 ] =
 {
 	SOP_DESTRUCT, sgsstd_map_destruct,
 	SOP_CONVERT, sgsstd_map_convert,
@@ -1375,8 +1353,7 @@ static int sgsstd_map( SGS_CTX )
 	{
 		vht_set( ht, C, C->stack_off+i, C->stack_off+i+1 );
 	}
-
-	(C->stack_top-1)->type = VTC_MAP;
+	
 	return 1;
 }
 
@@ -1413,11 +1390,8 @@ static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	UNUSED( unused );
 	if( sgsstd_class_getmethod( C, data, "__destruct" ) )
 	{
-		sgs_Variable tmp;
-		tmp.type = VTC_OBJECT;
-		tmp.data.O = data;
 		data->refcount++;
-		sgs_PushVariable( C, &tmp );
+		sgs_PushObjectPtr( C, data );
 		sgs_PushItem( C, -2 );
 		if( sgs_ThisCall( C, 0, 0 ) )
 			sgs_Pop( C, 3 );
@@ -1496,7 +1470,7 @@ static int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data, int depth )
 
 static int sgsstd_class( SGS_CTX );
 
-SGS_DECLARE sgs_ObjCallback sgsstd_class_functable[ 19 ];
+SGS_DECLARE sgs_ObjCallback sgsstd_class_iface[ 19 ];
 
 static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
@@ -1527,7 +1501,7 @@ static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgs_CloneItem( C, -1 );
 
 		hdr2 = (sgsstd_class_header_t*) sgs_PushObjectIPA( C,
-			sizeof( sgsstd_class_header_t ), sgsstd_class_functable );
+			sizeof( sgsstd_class_header_t ), sgsstd_class_iface );
 		sgs_GetStackItem( C, -1, &hdr2->data );
 		hdr2->inh = hdr->inh;
 		sgs_Acquire( C, &hdr2->data );
@@ -1582,10 +1556,8 @@ static int sgsstd_class_call( SGS_CTX, sgs_VarObj* data, int unused )
 	if( sgsstd_class_getmethod( C, data, "__call" ) )
 	{
 		int ret, i;
-		sgs_Variable var, fn;
-		var.type = VTC_OBJECT;
-		var.data.O = data;
-		sgs_PushVariable( C, &var );
+		sgs_Variable fn;
+		sgs_PushObjectPtr( C, data );
 		for( i = 0; i < C->call_args; ++i )
 			sgs_PushItem( C, i );
 		sgs_GetStackItem( C, -2 - C->call_args, &fn );
@@ -1595,7 +1567,7 @@ static int sgsstd_class_call( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_ENOTFND;
 }
 
-static sgs_ObjCallback sgsstd_class_functable[ 19 ] =
+static sgs_ObjCallback sgsstd_class_iface[ 19 ] =
 {
 	SOP_DESTRUCT, sgsstd_class_destruct,
 	SOP_GETINDEX, sgsstd_class_getindex,
@@ -1619,7 +1591,7 @@ static int sgsstd_class( SGS_CTX )
 		return 0;
 	
 	hdr = (sgsstd_class_header_t*) sgs_PushObjectIPA( C,
-		sizeof( sgsstd_class_header_t ), sgsstd_class_functable );
+		sizeof( sgsstd_class_header_t ), sgsstd_class_iface );
 	sgs_GetStackItem( C, 0, &hdr->data );
 	sgs_GetStackItem( C, 1, &hdr->inh );
 	sgs_Acquire( C, &hdr->data );
@@ -1716,7 +1688,7 @@ static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data, int unused )
 		0, C->call_expect, ismethod ) * C->call_expect;
 }
 
-static sgs_ObjCallback sgsstd_closure_functable[] =
+static sgs_ObjCallback sgsstd_closure_iface[] =
 {
 	SOP_DESTRUCT, sgsstd_closure_destruct,
 	SOP_CALL, sgsstd_closure_call,
@@ -1737,12 +1709,11 @@ static int sgsstd_closure( SGS_CTX )
 		return 0;
 	
 	hdr = (sgsstd_closure_t*) sgs_PushObjectIPA( C,
-		sizeof( sgsstd_closure_t ), sgsstd_closure_functable );
+		sizeof( sgsstd_closure_t ), sgsstd_closure_iface );
 	sgs_GetStackItem( C, 0, &hdr->func );
 	sgs_GetStackItem( C, 1, &hdr->data );
 	sgs_Acquire( C, &hdr->func );
 	sgs_Acquire( C, &hdr->data );
-	(C->stack_top-1)->type |= VTF_CALL;
 	return 1;
 }
 
@@ -1862,7 +1833,7 @@ static int sgsstd_realclsr_dump( SGS_CTX, sgs_VarObj* data, int depth )
 	return sgs_StringMultiConcat( C, 3 );
 }
 
-static sgs_ObjCallback sgsstd_realclsr_functable[] =
+static sgs_ObjCallback sgsstd_realclsr_iface[] =
 {
 	SOP_DESTRUCT, sgsstd_realclsr_destruct,
 	SOP_CALL, sgsstd_realclsr_call,
@@ -1878,7 +1849,7 @@ int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc )
 	/* WP: range not affected by conversion */
 	uint32_t i, clsz = (uint32_t) sizeof(sgs_Closure*) * clc;
 	uint32_t memsz = clsz + (uint32_t) ( sizeof(sgs_Variable) + sizeof(int32_t) );
-	uint8_t* cl = (uint8_t*) sgs_PushObjectIPA( C, memsz, sgsstd_realclsr_functable );
+	uint8_t* cl = (uint8_t*) sgs_PushObjectIPA( C, memsz, sgsstd_realclsr_iface );
 	
 	memcpy( cl, func, sizeof(sgs_Variable) );
 	sgs_Acquire( C, func );
@@ -2075,23 +2046,22 @@ static int sgsstd_unset( SGS_CTX )
 {
 	char* str;
 	sgs_SizeVal size;
-	uint32_t ty;
 	DictHdr* dh;
 	
 	SGSFN( "unset" );
 	
-	ty = sgs_ItemTypeExt( C, 0 );
-	if( !( ty & VTF_DICT ) && !( ty & VTF_MAP ) )
+	if( !sgs_IsObject( C, 0, sgsstd_dict_iface ) &&
+		!sgs_IsObject( C, 0, sgsstd_map_iface ) )
 		return sgs_ArgErrorExt( C, 0, 0, "dict / map", "" );
 	
 	dh = (DictHdr*) sgs_GetObjectData( C, 0 );
 	
-	if( ty & VTF_DICT )
+	if( sgs_IsObject( C, 0, sgsstd_dict_iface ) )
 	{
 		if( !sgs_LoadArgs( C, ">m.", &str, &size ) )
 			return 0;
 	}
-	else if( ty & VTF_MAP )
+	else
 	{
 		if( !sgs_LoadArgs( C, ">?v." ) )
 			return 0;
@@ -2347,28 +2317,20 @@ static int sgsstd_typeid( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_typeflags( SGS_CTX )
-{
-	SGSFN( "typeflags" );
-	if( !sgs_LoadArgs( C, ">." ) )
-		return 0;
-	sgs_PushInt( C, sgs_ItemTypeExt( C, 0 ) );
-	return 1;
-}
-
 static int sgsstd_is_numeric( SGS_CTX )
 {
 	int res;
-	uint32_t ty = sgs_ItemTypeExt( C, 0 );
+	uint32_t ty = sgs_ItemType( C, 0 );
 	
 	SGSFN( "is_numeric" );
 	if( !sgs_LoadArgs( C, ">." ) )
 		return 0;
 
-	if( ty == VTC_NULL || ( ty & (VTF_CALL|SVT_OBJECT) ) )
+	if( ty == SVT_NULL || ty == SVT_FUNC ||
+		ty == SVT_CFUNC || ty == SVT_OBJECT )
 		res = FALSE;
 	else
-		res = ty != VTC_STRING || sgs_IsNumericString(
+		res = ty != SVT_STRING || sgs_IsNumericString(
 			sgs_GetStringPtr( C, 0 ), sgs_GetStringSize( C, 0 ) );
 
 	sgs_PushBool( C, res );
@@ -2383,39 +2345,6 @@ static int sgsstd_is_callable( SGS_CTX )
 	
 	sgs_PushBool( C, sgs_IsCallable( C, 0 ) );
 	return 1;
-}
-
-static int sgsstd_loadtypeflags( SGS_CTX )
-{
-	static const sgs_RegIntConst tycs[] =
-	{
-		{ "VTF_NUM", VTF_NUM },
-		{ "VTF_CALL", VTF_CALL },
-		{ "VTF_REF", VTF_REF },
-		{ "VTF_ARRAY", VTF_ARRAY },
-		{ "VTF_ARRAY_ITER", VTF_ARRAY_ITER },
-		{ "VTF_DICT", VTF_DICT },
-		
-		{ "VTC_NULL", VTC_NULL },
-		{ "VTC_BOOL", VTC_BOOL },
-		{ "VTC_INT", VTC_INT },
-		{ "VTC_REAL", VTC_REAL },
-		{ "VTC_STRING", VTC_STRING },
-		{ "VTC_FUNC", VTC_FUNC },
-		{ "VTC_CFUNC", VTC_CFUNC },
-		{ "VTC_OBJECT", VTC_OBJECT },
-		{ "VTC_PTR", VTC_PTR },
-		{ "VTC_ARRAY", VTC_ARRAY },
-		{ "VTC_ARRAY_ITER", VTC_ARRAY_ITER },
-		{ "VTC_DICT", VTC_DICT },
-	};
-	
-	SGSFN( "loadtypeflags" );
-	if( !sgs_LoadArgs( C, "." ) )
-		return 0;
-	
-	sgs_RegIntConsts( C, tycs, sizeof(tycs)/sizeof(tycs[0]) );
-	return 0;
 }
 
 
@@ -2603,7 +2532,7 @@ static void sgsstd_pcall_print( void* data, SGS_CTX, int type, const char* messa
 	
 	if( P->depth > 1 )
 		ret = type; /* don't handle errors thrown inside handlers */
-	else if( P->handler.type != VTC_NULL )
+	else if( P->handler.type != SVT_NULL )
 	{
 		sgs_PushInt( C, type );
 		sgs_PushString( C, message );
@@ -2637,7 +2566,7 @@ static int sgsstd_pcall( SGS_CTX )
 	
 	P.pfn = C->print_fn;
 	P.pctx = C->print_ctx;
-	P.handler.type = VTC_NULL;
+	P.handler.type = SVT_NULL;
 	P.depth = 0;
 	if( b )
 		sgs_GetStackItem( C, 1, &P.handler );
@@ -3382,8 +3311,10 @@ static int sgsstd_serialize( SGS_CTX )
 
 static int check_arrayordict_fn( SGS_CTX, int argid, va_list args, int flags )
 {
-	uint32_t ty = sgs_ItemTypeExt( C, argid );
-	if( ty != VTC_ARRAY && ty != VTC_DICT )
+	uint32_t ty = sgs_ItemType( C, argid );
+	if( ty != SVT_OBJECT || (
+		!sgs_IsObject( C, argid, sgsstd_array_iface ) &&
+		!sgs_IsObject( C, argid, sgsstd_dict_iface ) ) )
 		return sgs_ArgErrorExt( C, argid, 0, "array or dict", "" );
 	return 1;
 }
@@ -3399,7 +3330,7 @@ static int sgsstd_unserialize( SGS_CTX )
 	
 	if( ssz >= 2 )
 	{
-		if( sgs_ItemTypeExt( C, 1 ) == VTC_ARRAY )
+		if( sgs_IsObject( C, 1, sgsstd_array_iface ) )
 		{
 			dictpos = sgs_StackSize( C );
 			sgs_PushDict( C, 0 );
@@ -3465,9 +3396,8 @@ static sgs_RegFuncConst regfuncs[] =
 	/* types */
 	FN( tobool ), FN( toint ), FN( toreal ), FN( tostring ), FN( toptr ),
 	FN( parseint ), FN( parsereal ),
-	FN( typeof ), FN( typeid ), FN( typeflags ),
+	FN( typeof ), FN( typeid ),
 	FN( is_numeric ), FN( is_callable ),
-	FN( loadtypeflags ),
 	/* I/O */
 	FN( print ), FN( println ), FN( printlns ),
 	FN( printvar ), FN( printvar_ext ),
@@ -3524,25 +3454,25 @@ int sgsSTD_PostInit( SGS_CTX )
 	ret = sgs_StoreGlobal( C, "SGS_PATH" );
 	if( ret != SGS_SUCCESS ) return ret;
 	
-	ret = sgs_RegisterType( C, "array", sgsstd_array_functable );
+	ret = sgs_RegisterType( C, "array", sgsstd_array_iface );
 	if( ret != SGS_SUCCESS ) return ret;
 	
-	ret = sgs_RegisterType( C, "array_iterator", sgsstd_array_iter_functable );
+	ret = sgs_RegisterType( C, "array_iterator", sgsstd_array_iter_iface );
 	if( ret != SGS_SUCCESS ) return ret;
 	
-	ret = sgs_RegisterType( C, "dict", sgsstd_dict_functable );
+	ret = sgs_RegisterType( C, "dict", sgsstd_dict_iface );
 	if( ret != SGS_SUCCESS ) return ret;
 	
-	ret = sgs_RegisterType( C, "dict_iterator", sgsstd_dict_iter_functable );
+	ret = sgs_RegisterType( C, "dict_iterator", sgsstd_dict_iter_iface );
 	if( ret != SGS_SUCCESS ) return ret;
 	
-	ret = sgs_RegisterType( C, "map", sgsstd_map_functable );
+	ret = sgs_RegisterType( C, "map", sgsstd_map_iface );
 	if( ret != SGS_SUCCESS ) return ret;
 	
-	ret = sgs_RegisterType( C, "class", sgsstd_class_functable );
+	ret = sgs_RegisterType( C, "class", sgsstd_class_iface );
 	if( ret != SGS_SUCCESS ) return ret;
 	
-	ret = sgs_RegisterType( C, "closure", sgsstd_closure_functable );
+	ret = sgs_RegisterType( C, "closure", sgsstd_closure_iface );
 	if( ret != SGS_SUCCESS ) return ret;
 	
 	return SGS_SUCCESS;
@@ -3559,7 +3489,7 @@ int sgsSTD_MakeArray( SGS_CTX, sgs_SizeVal cnt )
 		sgs_Variable *p, *pend;
 		void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( cnt ) );
 		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_PushObjectIPA( C,
-			sizeof( sgsstd_array_header_t ), sgsstd_array_functable );
+			sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
 
 		hdr->size = cnt;
 		hdr->mem = cnt;
@@ -3644,7 +3574,6 @@ int sgsSTD_GlobalInit( SGS_CTX )
 
 int sgsSTD_GlobalFree( SGS_CTX )
 {
-	sgs_Variable var;
 	VHTVar *p, *pend;
 	sgs_VarObj* data = GLBP;
 	HTHDR;
@@ -3656,10 +3585,8 @@ int sgsSTD_GlobalFree( SGS_CTX )
 		sgs_Release( C, &p->val );
 		p++;
 	}
-
-	var.type = VTC_DICT;
-	var.data.O = GLBP;
-	sgs_Release( C, &var );
+	
+	sgs_ObjRelease( C, GLBP );
 	
 	GLBP = NULL;
 	
@@ -3673,7 +3600,7 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 	sgs_VarObj* data = GLBP;
 	HTHDR;
 
-	if( idx->type != VTC_STRING )
+	if( idx->type != SVT_STRING )
 	{
 		sgsVM_ReleaseStack( C, out );
 		return SGS_ENOTSUP;
@@ -3682,7 +3609,7 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 	if( strcmp( str_cstr( idx->data.S ), "_G" ) == 0 )
 	{
 		sgsVM_ReleaseStack( C, out );
-		out->type = VTC_DICT;
+		out->type = SVT_OBJECT;
 		out->data.O = GLBP;
 		return SGS_SUCCESS;
 	}
@@ -3698,7 +3625,7 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 		if( !apicall )
 			sgs_Printf( C, SGS_WARNING, "variable '%s' was not found",
 				str_cstr( idx->data.S ) );
-		out->type = VTC_NULL;
+		out->type = SVT_NULL;
 		return SGS_ENOTFND;
 	}
 }
@@ -3708,14 +3635,12 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 	sgs_VarObj* data = GLBP;
 	HTHDR;
 
-	if( idx->type != VTC_STRING )
+	if( idx->type != SVT_STRING )
 		return SGS_ENOTSUP;
 
 	if( strcmp( var_cstr( idx ), "_G" ) == 0 )
 	{
-		sgs_Variable tmp;
-		
-		if( val->type != VTC_DICT )
+		if( val->type != SVT_OBJECT || val->data.O->iface != sgsstd_dict_iface )
 		{
 			if( !apicall )
 				sgs_Printf( C, SGS_ERROR, "_G only accepts 'dict' values" );
@@ -3725,9 +3650,7 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 		sgs_Acquire( C, val );
 		GLBP = val->data.O;
 		
-		tmp.type = VTC_DICT;
-		tmp.data.O = data;
-		sgs_Release( C, &tmp );
+		sgs_ObjRelease( C, data );
 		return SGS_SUCCESS;
 	}
 
@@ -3738,14 +3661,9 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 int sgsSTD_GlobalGC( SGS_CTX )
 {
 	sgs_VarObj* data = GLBP;
-
 	if( data )
 	{
-		sgs_Variable tmp;
-
-		tmp.type = VTC_DICT;
-		tmp.data.O = data;
-		if( sgs_GCMark( C, &tmp ) < 0 )
+		if( sgs_ObjGCMark( C, data ) < 0 )
 			return SGS_EINPROC;
 	}
 	return SGS_SUCCESS;
@@ -3942,7 +3860,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 		return 0;
 	
 	case SGS_ACT_DICT_UNSET:
-		if( sgs_ItemTypeExt( C, item ) != VTC_DICT ||
+		if( !sgs_IsObject( C, item, sgsstd_dict_iface ) ||
 			sgs_ItemType( C, arg ) != SVT_STRING )
 			return SGS_EINVAL;
 		else
@@ -3956,7 +3874,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 		}
 	
 	case SGS_ACT_MAP_UNSET:
-		if( sgs_ItemTypeExt( C, item ) != VTC_MAP ||
+		if( !sgs_IsObject( C, item, sgsstd_map_iface ) ||
 			!sgs_IsValidIndex( C, arg ) )
 			return SGS_EINVAL;
 		else

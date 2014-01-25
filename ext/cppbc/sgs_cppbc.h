@@ -32,31 +32,6 @@
 #endif
 
 
-// TODO: integrate these two into main API header
-inline void sgs_ObjAddRef( SGS_CTX, sgs_VarObj* obj )
-{
-	sgs_Variable var;
-	var.type = SGS_VTC_OBJECT;
-	var.data.O = obj;
-	sgs_Acquire( C, &var );
-}
-
-inline void sgs_ObjRelease( SGS_CTX, sgs_VarObj* obj )
-{
-	sgs_Variable var;
-	var.type = SGS_VTC_OBJECT;
-	var.data.O = obj;
-	sgs_Release( C, &var );
-}
-
-inline SGSRESULT sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj )
-{
-	sgs_Variable var;
-	var.type = SGS_VTC_OBJECT;
-	var.data.O = obj;
-	return sgs_GCMark( C, &var );
-}
-
 template< class T >
 class sgsHandle
 {
@@ -105,7 +80,7 @@ public:
 	sgs_VarObj* object;
 	
 protected:
-	void _acquire(){ if( object ) sgs_ObjAddRef( C, object ); }
+	void _acquire(){ if( object ) sgs_ObjAcquire( C, object ); }
 	void _release(){ if( object ){ sgs_ObjRelease( C, object ); object = NULL; } }
 	SGS_CTX;
 	
@@ -117,12 +92,7 @@ inline void sgs_PushHandle( SGS_CTX, const sgsHandle<T>& val )
 	if( !val.object )
 		sgs_PushNull( C );
 	else
-	{
-		sgs_Variable var;
-		var.type = SGS_VTC_OBJECT;
-		var.data.O = val.object;
-		sgs_PushVariable( C, &var );
-	}
+		sgs_PushObjectPtr( C, val.object );
 }
 
 
@@ -130,20 +100,20 @@ class sgsVariable
 {
 public:
 	
-	sgsVariable() : C(NULL) { var.type = SGS_VTC_NULL; };
+	sgsVariable() : C(NULL) { var.type = SVT_NULL; };
 	sgsVariable( const sgsVariable& h ) : var(h.var), C(h.C)
 	{
-		if( h.var.type != SGS_VTC_NULL )
+		if( h.var.type != SVT_NULL )
 		{
 			var = h.var;
 			C = h.C;
 			_acquire();
 		}
 	}
-	sgsVariable( sgs_Context* c ) : C(c) { var.type = SGS_VTC_NULL; }
+	sgsVariable( sgs_Context* c ) : C(c) { var.type = SVT_NULL; }
 	sgsVariable( const sgs_Variable& v, sgs_Context* c )
 	{
-		if( v.type != SGS_VTC_NULL )
+		if( v.type != SVT_NULL )
 		{
 			var = v;
 			C = c;
@@ -152,7 +122,7 @@ public:
 	}
 	sgsVariable( sgs_Context* c, int item ) : C(c)
 	{
-		var.type = SGS_VTC_NULL;
+		var.type = SVT_NULL;
 		sgs_GetStackItem( C, item, &var );
 		_acquire();
 	}
@@ -161,7 +131,7 @@ public:
 	const sgsVariable& operator = ( const sgsVariable& h )
 	{
 		_release();
-		if( h.var.type != SGS_VTC_NULL )
+		if( h.var.type != SVT_NULL )
 		{
 			var = h.var;
 			C = h.C;
@@ -175,13 +145,13 @@ public:
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); } sgs_PushVariable( c, const_cast<sgs_Variable*>( &var ) ); }
 	SGSRESULT gcmark() { if( !C ) return SGS_SUCCESS; return sgs_GCMark( C, &var ); }
-	bool not_null(){ return var.type != SGS_VTC_NULL; }
+	bool not_null(){ return var.type != SVT_NULL; }
 	
 	sgs_Variable var;
 	SGS_CTX;
 	
 	void _acquire(){ if( C ){ sgs_Acquire( C, &var ); } }
-	void _release(){ if( C ){ sgs_Release( C, &var ); var.type = SGS_VTC_NULL; } }
+	void _release(){ if( C ){ sgs_Release( C, &var ); var.type = SVT_NULL; } }
 	
 };
 

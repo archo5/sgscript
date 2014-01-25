@@ -357,12 +357,9 @@ static int sockaddr_expr( SGS_CTX, sgs_VarObj* data, int eop )
 static int sockaddr_dump( SGS_CTX, sgs_VarObj* data, int depth )
 {
 	char buf[ 32 ];
-	sgs_Variable var;
 	sprintf( buf, "socket_address [family=%hu] ", GET_SAF );
-	var.type = VTC_OBJECT;
-	var.data.O = data;
 	sgs_PushString( C, buf );
-	sgs_PushVariable( C, &var );
+	sgs_PushObjectPtr( C, data );
 	sgs_StringConcat( C );
 	return SGS_SUCCESS;
 }

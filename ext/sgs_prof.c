@@ -46,7 +46,7 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 		else
 		{
 			sgs_Variable val;
-			val.type = VTC_REAL;
+			val.type = SVT_REAL;
 			val.data.R = TM - prevTM;
 			sgs_PushStringBuf( C, P->keytmp.ptr, (sgs_SizeVal) P->keytmp.size );
 			vht_set( &P->timings, C, C->stack_top-1, &val );
@@ -268,7 +268,7 @@ static void mode3hook( void* userdata, SGS_CTX, int evid )
 		else
 		{
 			sgs_Variable val;
-			val.type = VTC_PTR;
+			val.type = SVT_PTR;
 			val.data.P = PD = (mode3data*) sgs_Malloc( C, sizeof(CD) );
 			memset( PD, 0, sizeof(*PD) );
 			sgs_PushStringBuf( C, P->keytmp.ptr, (sgs_SizeVal) P->keytmp.size );

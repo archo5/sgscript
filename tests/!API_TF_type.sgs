@@ -10,8 +10,6 @@ function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
 print( "\n\n-- TYPES --\n" );
 //
 
-loadtypeflags();
-
 var a = "random string";
 var b = "WHAT";
 var c = "banana";

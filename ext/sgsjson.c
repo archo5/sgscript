@@ -377,7 +377,7 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 {
 	sgs_Variable var;
 	sgs_GetStackItem( C, -1, &var );
-	switch( SGS_BASETYPE( var.type ) )
+	switch( var.type )
 	{
 	case SGS_VT_NULL:
 		sgs_membuf_appbuf( buf, C, "null", 4 );
@@ -434,7 +434,7 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 	case SGS_VT_OBJECT:
 		{
 			/* stack: Obj */
-			int isarr = var.type == SGS_VTC_ARRAY, first = 1;
+			int isarr = sgs_ArraySize( C, -1 ) >= 0, first = 1;
 			sgs_membuf_appchr( buf, C, isarr ? '[' : '{' );
 			if( sgs_PushIterator( C, -1 ) != SGS_SUCCESS )
 				return 0;

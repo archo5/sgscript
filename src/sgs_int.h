@@ -24,7 +24,7 @@
 	- bytecode size limit: 14 - 2^32-1
 	- source size limit: 0 - 2^31-1
 	- variable size limit: string size + overhead (<=256 bytes)
-	- item type value limits: 24 bits
+	- item type value limits: 8 bits
 	
 	- identifier size: 0 - 255
 	- argument count: 0 - 255
@@ -760,6 +760,7 @@ static const char* sgs_VarNames[] =
 	"function",
 	"C function",
 	"object",
+	"ptr",
 };
 
 static const char* sgs_OpNames[] =
@@ -817,6 +818,11 @@ typedef struct sgsstd_array_iter_s
 	sgs_SizeVal off;
 }
 sgsstd_array_iter_t;
+
+extern sgs_ObjCallback sgsstd_array_iface[ 15 ];
+extern sgs_ObjCallback sgsstd_array_iter_iface[ 5 ];
+extern sgs_ObjCallback sgsstd_dict_iface[ 15 ];
+extern sgs_ObjCallback sgsstd_map_iface[ 15 ];
 
 
 
