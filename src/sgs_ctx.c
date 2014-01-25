@@ -28,26 +28,7 @@ static void default_outputfn( void* userdata, SGS_CTX, const void* ptr, size_t s
 
 static void default_printfn_noabort( void* ctx, SGS_CTX, int type, const char* msg )
 {
-	const char* errpfxs[ 3 ] = { "Info", "Warning", "Error" };
-	sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
-	type = type / 100 - 1;
-	if( type < 0 ) type = 0;
-	if( type > 2 ) type = 2;
-	UNUSED( ctx );
-	while( p != NULL )
-	{
-		const char* file, *name;
-		int ln;
-		if( !p->next && !p->code )
-			break;
-		sgs_StackFrameInfo( C, p, &name, &file, &ln );
-		if( ln )
-			fprintf( (FILE*) ctx, "- \"%s\" in %s, line %d\n", name, file, ln );
-		else
-			fprintf( (FILE*) ctx, "- \"%s\" in %s\n", name, file );
-		p = p->next;
-	}
-	fprintf( (FILE*) ctx, "%s: %s\n", errpfxs[ type ], msg );
+	sgs_WriteErrorInfo( C, SGS_ERRORINFO_FULL, (sgs_ErrorOutputFunc) fprintf, ctx, type, msg );
 }
 
 static void default_printfn( void* ctx, SGS_CTX, int type, const char* msg )
@@ -302,24 +283,6 @@ void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
 	C->print_ctx = ctx;
 }
 
-SGSBOOL sgs_GetHookFunc( SGS_CTX, sgs_HookFunc* outf, void** outc )
-{
-	if( C->hook_fn )
-	{
-		*outf = C->hook_fn;
-		*outc = C->hook_ctx;
-		return 1;
-	}
-	return 0;
-}
-
-void sgs_SetHookFunc( SGS_CTX, sgs_HookFunc func, void* ctx )
-{
-	C->hook_fn = func;
-	C->hook_ctx = ctx;
-}
-
-
 int sgs_Printf( SGS_CTX, int type, const char* what, ... )
 {
 	char buf[ SGS_OUTPUT_STACKBUF_SIZE ];
@@ -375,6 +338,80 @@ int sgs_Printf( SGS_CTX, int type, const char* what, ... )
 	membuf_destroy( &info, C );
 	
 	return 0;
+}
+
+
+void sgs_WriteErrorInfo( SGS_CTX, int flags, sgs_ErrorOutputFunc func, void* ctx, int type, const char* msg )
+{
+	if( flags & SGS_ERRORINFO_STACK )
+	{
+		sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
+		UNUSED( ctx );
+		while( p != NULL )
+		{
+			const char* file, *name;
+			int ln;
+			if( !p->next && !p->code )
+				break;
+			sgs_StackFrameInfo( C, p, &name, &file, &ln );
+			if( ln )
+				func( ctx, "- \"%s\" in %s, line %d\n", name, file, ln );
+			else
+				func( ctx, "- \"%s\" in %s\n", name, file );
+			p = p->next;
+		}
+	}
+	if( flags & SGS_ERRORINFO_ERROR )
+	{
+		static const char* errpfxs[ 3 ] = { "Info", "Warning", "Error" };
+		type = type / 100 - 1;
+		if( type < 0 ) type = 0;
+		if( type > 2 ) type = 2;
+		func( ctx, "%s: %s\n", errpfxs[ type ], msg );
+	}
+}
+
+static void serialize_output_func( void* ud, SGS_CTX, const void* ptr, size_t datasize )
+{
+	MemBuf* B = (MemBuf*) ud;
+	membuf_appbuf( B, C, ptr, datasize );
+}
+
+void sgs_PushErrorInfo( SGS_CTX, int flags, int type, const char* msg )
+{
+	sgs_OutputFunc oldfn = C->output_fn;
+	void* oldctx = C->output_ctx;
+	
+	MemBuf B = membuf_create();
+	C->output_fn = serialize_output_func;
+	C->output_ctx = &B;
+	
+	sgs_WriteErrorInfo( C, flags, (sgs_ErrorOutputFunc) sgs_Writef, C, type, msg );
+	
+	/* WP: hopefully the error messages will not be more than 2GB long */
+	sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
+	
+	membuf_destroy( &B, C );
+	C->output_fn = oldfn;
+	C->output_ctx = oldctx;
+}
+
+
+SGSBOOL sgs_GetHookFunc( SGS_CTX, sgs_HookFunc* outf, void** outc )
+{
+	if( C->hook_fn )
+	{
+		*outf = C->hook_fn;
+		*outc = C->hook_ctx;
+		return 1;
+	}
+	return 0;
+}
+
+void sgs_SetHookFunc( SGS_CTX, sgs_HookFunc func, void* ctx )
+{
+	C->hook_fn = func;
+	C->hook_ctx = ctx;
 }
 
 

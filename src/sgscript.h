@@ -338,6 +338,14 @@ SGS_APIFUNC SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... );
 SGS_APIFUNC void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx );
 SGS_APIFUNC int sgs_Printf( SGS_CTX, int type, const char* what, ... );
 
+typedef int (*sgs_ErrorOutputFunc) ( void*, const char*, ... );
+#define SGS_ERRORINFO_STACK 0x01
+#define SGS_ERRORINFO_ERROR 0x02
+#define SGS_ERRORINFO_FULL (SGS_ERRORINFO_STACK | SGS_ERRORINFO_ERROR)
+SGS_APIFUNC void sgs_WriteErrorInfo( SGS_CTX, int flags,
+	sgs_ErrorOutputFunc func, void* ctx, int type, const char* msg );
+SGS_APIFUNC void sgs_PushErrorInfo( SGS_CTX, int flags, int type, const char* msg );
+
 SGS_APIFUNC SGSBOOL sgs_GetHookFunc( SGS_CTX, sgs_HookFunc* outf, void** outc );
 SGS_APIFUNC void sgs_SetHookFunc( SGS_CTX, sgs_HookFunc func, void* ctx );
 

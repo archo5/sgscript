@@ -65,6 +65,8 @@ static void idbgPrintFunc( void* data, SGS_CTX, int type, const char* message )
 	{
 		printf( "\n> " );
 		idbg_readStdin( D );
+		if( ferror( stdin ) )
+			break;
 		if( !*D->iword )
 			continue;
 
@@ -106,26 +108,21 @@ static void idbgPrintFunc( void* data, SGS_CTX, int type, const char* message )
 
 static int idbg_stackitem( SGS_CTX )
 {
-	int full = 0, argc = sgs_StackSize( C );
+	sgs_Bool full = 0;
 	sgs_Int off, cnt;
 	sgs_Variable* a, *b;
 	SGS_IDBG = (sgs_IDbg*) C->print_ctx;
-
-	if( argc < 1 || argc > 2 ||
-		!sgs_ParseInt( C, 0, &off ) ||
-		( argc >= 2 && !sgs_ParseBool( C, 1, &full ) ) )
-	{
-		sgs_Printf( C, SGS_WARNING, "dbg_stackitem(): "
-			"unexpected arguments; function expects int[, bool]" );
+	
+	SGSFN( "dbg_stackitem" );
+	if( !sgs_LoadArgs( C, "i|b", &off, &full ) )
 		return 0;
-	}
 
 	a = full ? C->stack_base : C->stack_base + D->stkoff;
 	b = C->stack_base + D->stksize;
 	cnt = b - a;
 	if( off >= cnt || -off > cnt )
 	{
-		sgs_Printf( C, SGS_WARNING, "dbg_stackitem(): "
+		sgs_Printf( C, SGS_WARNING, 
 			"index %d out of bounds, count = %d\n", (int) off, (int) cnt );
 		return 0;
 	}
@@ -136,34 +133,30 @@ static int idbg_stackitem( SGS_CTX )
 
 static int idbg_setstackitem( SGS_CTX )
 {
-	int full = 0, argc = sgs_StackSize( C );
+	sgs_Bool full = 0;
 	sgs_Int off, cnt;
-	sgs_Variable* a, *b, *x;
+	sgs_Variable* a, *b, *x, tmp;
 	SGS_IDBG = (sgs_IDbg*) C->print_ctx;
-
-	if( argc < 2 || argc > 3 ||
-		!sgs_ParseInt( C, 0, &off ) ||
-		( argc >= 3 && !sgs_ParseBool( C, 2, &full ) ) )
-	{
-		sgs_Printf( C, SGS_WARNING, "dbg_setstackitem(): "
-			"unexpected arguments; function expects int, any[, bool]" );
+	
+	SGSFN( "dbg_setstackitem" );
+	if( !sgs_LoadArgs( C, "i?v|b", &off, &full ) )
 		return 0;
-	}
 
 	a = full ? C->stack_base : C->stack_base + D->stkoff;
 	b = C->stack_base + D->stksize;
 	cnt = b - a;
 	if( off >= cnt || -off > cnt )
 	{
-		sgs_Printf( C, SGS_WARNING, "dbg_setstackitem(): "
+		sgs_Printf( C, SGS_WARNING,
 			"index %d out of bounds, count = %d\n", (int) off, (int) cnt );
 		return 0;
 	}
 
 	x = off >= 0 ? a + off : b + off;
-	sgs_Release( C, x );
+	tmp = *x;
+	sgs_Acquire( C, &tmp );
 	sgs_GetStackItem( C, 1, x );
-	sgs_Acquire( C, x );
+	sgs_Release( C, &tmp );
 	return 0;
 }
 
