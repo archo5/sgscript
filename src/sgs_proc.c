@@ -1013,8 +1013,7 @@ static SGSRESULT vm_gcmark( SGS_CTX, sgs_Variable* var )
 int sgs_thiscall_method( SGS_CTX )
 {
 	int ret;
-	if( !sgs_Method( C ) ||
-		!( sgs_ItemType( C, 0 ) == SVT_FUNC || sgs_ItemType( C, 0 ) == SVT_CFUNC ) )
+	if( !sgs_Method( C ) || !sgs_IsCallable( C, 0 ) )
 	{
 		sgs_Printf( C, SGS_WARNING, "thiscall() was not called on a function type" );
 		return 0;
