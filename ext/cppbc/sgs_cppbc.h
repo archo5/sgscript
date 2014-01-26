@@ -100,20 +100,20 @@ class sgsVariable
 {
 public:
 	
-	sgsVariable() : C(NULL) { var.type = SVT_NULL; };
+	sgsVariable() : C(NULL) { var.type = SGS_VT_NULL; };
 	sgsVariable( const sgsVariable& h ) : var(h.var), C(h.C)
 	{
-		if( h.var.type != SVT_NULL )
+		if( h.var.type != SGS_VT_NULL )
 		{
 			var = h.var;
 			C = h.C;
 			_acquire();
 		}
 	}
-	sgsVariable( sgs_Context* c ) : C(c) { var.type = SVT_NULL; }
+	sgsVariable( sgs_Context* c ) : C(c) { var.type = SGS_VT_NULL; }
 	sgsVariable( const sgs_Variable& v, sgs_Context* c )
 	{
-		if( v.type != SVT_NULL )
+		if( v.type != SGS_VT_NULL )
 		{
 			var = v;
 			C = c;
@@ -122,7 +122,7 @@ public:
 	}
 	sgsVariable( sgs_Context* c, int item ) : C(c)
 	{
-		var.type = SVT_NULL;
+		var.type = SGS_VT_NULL;
 		sgs_GetStackItem( C, item, &var );
 		_acquire();
 	}
@@ -131,7 +131,7 @@ public:
 	const sgsVariable& operator = ( const sgsVariable& h )
 	{
 		_release();
-		if( h.var.type != SVT_NULL )
+		if( h.var.type != SGS_VT_NULL )
 		{
 			var = h.var;
 			C = h.C;
@@ -145,13 +145,13 @@ public:
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); } sgs_PushVariable( c, const_cast<sgs_Variable*>( &var ) ); }
 	SGSRESULT gcmark() { if( !C ) return SGS_SUCCESS; return sgs_GCMark( C, &var ); }
-	bool not_null(){ return var.type != SVT_NULL; }
+	bool not_null(){ return var.type != SGS_VT_NULL; }
 	
 	sgs_Variable var;
 	SGS_CTX;
 	
 	void _acquire(){ if( C ){ sgs_Acquire( C, &var ); } }
-	void _release(){ if( C ){ sgs_Release( C, &var ); var.type = SVT_NULL; } }
+	void _release(){ if( C ){ sgs_Release( C, &var ); var.type = SGS_VT_NULL; } }
 	
 };
 
