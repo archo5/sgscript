@@ -1984,7 +1984,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 			if( expect )
 			{
 				for( i = expect - 1; i >= 0; --i )
-					stk_setlvar( C, args_from + i, stk_gettop( C ) );
+					stk_setlvar( C, args_from + i, C->stack_top - expect + i );
 				stk_pop( C, expect );
 			}
 			break;

@@ -1413,7 +1413,7 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 				for( i = 0; i < xpct; ++i )
 				{
 					FUNC_ENTER;
-					if( !compile_node_w( C, func, n, freg + xpct ) ) goto fail;
+					if( !compile_node_w( C, func, n, freg + i ) ) goto fail;
 					
 					comp_reg_unwind( C, bkup );
 					
