@@ -323,6 +323,13 @@ function cppbc_parse_vardecl( code, bSkipName )
 	out = [];
 	
 	code = string_trim( code );
+	if( string_find( code, "SGS_ALIAS" ) === 0 )
+	{
+		inbr = string_find( code, "(" );
+		outbr = string_find_rev( code, ")" );
+		code = string_part( code, inbr + 1, outbr - inbr - 1 );
+		code = string_trim( code );
+	}
 	
 	lct = null;
 	for( i = 0; i < code.length; ++i )

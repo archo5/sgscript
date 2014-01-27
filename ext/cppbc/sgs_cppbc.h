@@ -29,6 +29,7 @@
 # define READ_CALLBACK
 # define WRITE_CALLBACK
 # define SGS_IFUNC( type ) static
+# define SGS_ALIAS( func )
 #endif
 
 
