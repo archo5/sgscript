@@ -72,8 +72,8 @@ static uint8_t baseline_flags[] =
 {
 	/* nop */
 	0,
-	/* push, popr */
-	OI_HAS1, OI_RET0,
+	/* push, *removed* */
+	OI_HAS1, 0,
 	/* retn, jump, jmpt, jmpf, call */
 	0, 0, OI_HAS2, OI_HAS2, OI_HAS2,
 	/* forprep, forload, forjump */

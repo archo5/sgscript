@@ -1934,12 +1934,12 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 			stk_push( C, &var );
 			break;
 		}
-		case SI_POPR: stk_setlvar( C, argA, stk_gettop( C ) ); stk_pop1( C ); break;
 
 		case SI_RETN:
 		{
 			ret = argA;
-			sgs_BreakIf( ( C->stack_top - C->stack_off ) - stkoff < ret );
+			sgs_BreakIf( ( C->stack_top - C->stack_off ) - stkoff < ret &&
+				"internal error: stack was corrupted" );
 			pp = pend;
 			break;
 		}

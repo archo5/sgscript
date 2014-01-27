@@ -194,7 +194,6 @@ static void dump_opcode( const instr_t* ptr, size_t count )
 		case SI_NOP: printf( "NOP   " ); break;
 
 		case SI_PUSH: printf( "PUSH " ); dump_rcpos( argB ); break;
-		case SI_POPR: printf( "POP_REG R%d", argA ); break;
 
 		case SI_RETN: printf( "RETURN %d", argA ); break;
 		case SI_JUMP: printf( "JUMP %d", (int) (int16_t) argE ); break;
@@ -942,9 +941,9 @@ static SGSBOOL compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t
 		int argc = 0;
 		size_t csz1, csz2, csz3;
 		rcpos_t exprpos = -1, srcpos = -1, retpos = -1;
-		if( !out )
+		if( expect > 1 )
 		{
-			QPRINT( "'if' pseudo-function cannot be used as input for expression writes" );
+			QPRINT( "'if' pseudo-function cannot be used as input for expression writes with multiple outputs" );
 			return 0;
 		}
 		while( n )
@@ -1151,7 +1150,7 @@ static SGSBOOL try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode*
 		int op = INSTR_GET_OP( I ), argB = INSTR_GET_B( I ), argC = INSTR_GET_C( I );
 		switch( op )
 		{
-		case SI_POPR: case SI_GETVAR: case SI_GETPROP: case SI_GETINDEX:
+		case SI_GETVAR: case SI_GETPROP: case SI_GETINDEX:
 		case SI_SET: case SI_CONCAT:
 		case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT:
 		case SI_ADD: case SI_SUB: case SI_MUL: case SI_DIV: case SI_MOD:
@@ -1200,7 +1199,7 @@ static SGSBOOL try_optimize_set_op( SGS_CTX, sgs_CompFunc* func, size_t ioff, rc
 		int op = INSTR_GET_OP( I ), argB = INSTR_GET_B( I ), argC = INSTR_GET_C( I );
 		switch( op )
 		{
-		case SI_POPR: case SI_GETVAR: case SI_GETPROP: case SI_GETINDEX:
+		case SI_GETVAR: case SI_GETPROP: case SI_GETINDEX:
 		case SI_SET: case SI_CONCAT:
 		case SI_NEGATE: case SI_BOOL_INV: case SI_INVERT:
 		case SI_ADD: case SI_SUB: case SI_MUL: case SI_DIV: case SI_MOD:
@@ -1317,7 +1316,7 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 		}
 		
 		INSTR_WRITE( SI_NOP, 0, 0, 0 );
-
+		
 		/* fix-up jump 2 */
 		{
 			instr_t instr;
@@ -1326,7 +1325,7 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 			instr = INSTR_MAKE_EX( SI_JUMP, jmp_off, 0 );
 			memcpy( func->code.ptr + csz2 - 4, &instr, sizeof(instr) );
 		}
-
+		
 		/* re-read from assignments */
 		if( arg )
 		{
@@ -1344,11 +1343,11 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 	if( *node->token == ST_OP_INC || *node->token == ST_OP_DEC )
 	{
 		rcpos_t ireg, oreg;
-
+		
 		/* register with input data */
 		FUNC_ENTER;
 		if( !compile_node_r( C, func, node->child, &ireg ) ) goto fail;
-
+		
 		/* output register selection */
 		oreg = expect && node->type == SFT_OPER_P ? comp_reg_alloc( C ) : ireg;
 		if( C->state & SGS_MUST_STOP )
@@ -1357,7 +1356,7 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 		{
 			INSTR_WRITE( SI_SET, oreg, ireg, 0 );
 		}
-
+		
 		/* check for errors if this operator generates output */
 		if( expect )
 		{
@@ -1367,13 +1366,13 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 				goto fail;
 			}
 		}
-
+		
 		/* write bytecode */
 		INSTR_WRITE( *node->token == ST_OP_INC ? SI_INC : SI_DEC, ireg, ireg, 0 );
-
+		
 		if( arg )
 			*arg = oreg;
-
+		
 		/* compile writeback */
 		FUNC_ENTER;
 		if( !compile_node_w( C, func, node->child, ireg ) ) goto fail;
@@ -1390,8 +1389,9 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 			if( node->child->type == SFT_EXPLIST )
 			{
 				FTNode* n;
-				int xpct = 0;
+				int i, xpct = 0;
 				int32_t bkup;
+				rcpos_t freg;
 				if( node->child->next->type != SFT_FCALL )
 				{
 					QPRINT( "Expression writes only allowed with function call reads" );
@@ -1406,34 +1406,18 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 					n = n->next;
 				}
 				
-				if( !compile_fcall( C, func, node->child->next, NULL, xpct ) ) goto fail;
+				if( !compile_fcall( C, func, node->child->next, &freg, xpct ) ) goto fail;
 				
 				bkup = C->fctx->regs;
-				while( xpct-- )
+				n = node->child->child;
+				for( i = 0; i < xpct; ++i )
 				{
-					int i;
-					ireg = comp_reg_alloc( C );
-					if( C->state & SGS_MUST_STOP )
-						goto fail;
-					
-					isb = func->code.size;
-					INSTR_WRITE( SI_POPR, ireg, 0, 0 );
-					if( arg )
-						*arg = ireg;
-					
-					n = node->child->child;
-					for( i = 0; i < xpct; ++i )
-						n = n->next;
-					
 					FUNC_ENTER;
-					if( !try_optimize_last_instr_out( C, func, n, isb, arg ) )
-					{
-						/* just set the contents */
-						FUNC_ENTER;
-						if( !compile_node_w( C, func, n, ireg ) ) goto fail;
-					}
+					if( !compile_node_w( C, func, n, freg + xpct ) ) goto fail;
 					
 					comp_reg_unwind( C, bkup );
+					
+					n = n->next;
 				}
 			}
 			else

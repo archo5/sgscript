@@ -10,7 +10,6 @@ int sgs_meta_globals( SGS_CTX )
 	
 	_META_RGS( SI_NOP );
 	_META_RGS( SI_PUSH );
-	_META_RGS( SI_POPR );
 	
 	_META_RGS( SI_RETN );
 	_META_RGS( SI_JUMP );

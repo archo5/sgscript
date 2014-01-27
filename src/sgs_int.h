@@ -155,7 +155,6 @@ extern "C" {
 
 #  define SI_NOP SGS_SI_NOP
 #  define SI_PUSH SGS_SI_PUSH
-#  define SI_POPR SGS_SI_POPR
 #  define SI_RETN SGS_SI_RETN
 #  define SI_JUMP SGS_SI_JUMP
 #  define SI_JMPT SGS_SI_JMPT
@@ -454,7 +453,7 @@ typedef enum sgs_Instruction_e
 	SGS_SI_NOP = 0,
 
 	SGS_SI_PUSH,     /* (B:src)                 push register/constant */
-	SGS_SI_POPR,     /* (A:out)                 pop item to register */
+	SGS_SI__RM1,     /* REMOVED */
 
 	SGS_SI_RETN,     /* (A:N)                   exit current frame of execution, preserve N output arguments */
 	SGS_SI_JUMP,     /* (E:off)                 add to instruction pointer */
