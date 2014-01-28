@@ -5,7 +5,6 @@
 #include "sgsxgmath.h"
 
 
-#define XGM_VT XGM_VECTOR_TYPE
 #define XGM_WARNING( err ) sgs_Printf( C, SGS_WARNING, err );
 #define XGM_OHDR XGM_VT* hdr = (XGM_VT*) data->data;
 #define XGM_P2HDR xgm_poly2* poly = (xgm_poly2*) data->data;
@@ -434,7 +433,7 @@ static int xgm_v3_serialize( SGS_CTX, sgs_VarObj* data, int unused )
 	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
 	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
 	sgs_PushReal( C, hdr[2] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	return sgs_SerializeObject( C, 2, "vec3" );
+	return sgs_SerializeObject( C, 3, "vec3" );
 }
 
 static int xgm_v3_dump( SGS_CTX, sgs_VarObj* data, int unused )
@@ -680,7 +679,7 @@ static int xgm_v4_serialize( SGS_CTX, sgs_VarObj* data, int unused )
 	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
 	sgs_PushReal( C, hdr[2] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
 	sgs_PushReal( C, hdr[3] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	return sgs_SerializeObject( C, 2, "vec4" );
+	return sgs_SerializeObject( C, 4, "vec4" );
 }
 
 static int xgm_v4_dump( SGS_CTX, sgs_VarObj* data, int unused )
@@ -815,7 +814,7 @@ static int xgm_b2_serialize( SGS_CTX, sgs_VarObj* data, int unused )
 	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
 	sgs_PushReal( C, hdr[2] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
 	sgs_PushReal( C, hdr[3] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	return sgs_SerializeObject( C, 2, "aabb2" );
+	return sgs_SerializeObject( C, 4, "aabb2" );
 }
 
 static int xgm_b2_dump( SGS_CTX, sgs_VarObj* data, int unused )
@@ -1115,12 +1114,15 @@ static int xgm_col_expr( SGS_CTX, sgs_VarObj* data, int type )
 
 static int xgm_col_serialize( SGS_CTX, sgs_VarObj* data, int unused )
 {
+	int i;
 	XGM_OHDR;
-	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[2] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[3] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	return sgs_SerializeObject( C, 2, "color" );
+	for( i = 0; i < 4; ++i )
+	{
+		sgs_PushReal( C, hdr[0] );
+		if( sgs_Serialize( C ) )
+			return SGS_EINPROC;
+	}
+	return sgs_SerializeObject( C, 4, "color" );
 }
 
 static int xgm_col_dump( SGS_CTX, sgs_VarObj* data, int unused )
@@ -1140,6 +1142,189 @@ static int xgm_color( SGS_CTX )
 	
 	sgs_PushColorvp( C, v, argc );
 	return 1;
+}
+
+
+
+/*  4 x 4   M A T R I X  */
+
+static int xgm_m4_convert( SGS_CTX, sgs_VarObj* data, int type )
+{
+	XGM_OHDR;
+	if( type == SGS_CONVOP_CLONE )
+	{
+		sgs_PushMat4( C, hdr, 0 );
+		return SGS_SUCCESS;
+	}
+	else if( type == SGS_CONVOP_TOTYPE || type == SGS_VT_STRING )
+	{
+		sgs_PushString( C, "mat4" );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int xgm_m4_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+{
+	char* str;
+	sgs_SizeVal size;
+	XGM_OHDR;
+	
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetInt( C, 0 );
+		if( pos < 0 || pos > 15 )
+			return SGS_ENOTFND;
+		sgs_PushReal( C, hdr[ pos ] );
+		return SGS_SUCCESS;
+	}
+	
+	if( !sgs_ParseString( C, 0, &str, &size ) )
+		return SGS_EINVAL;
+	if( *str == 'm' && str[1] && str[2] && !str[3] )
+	{
+		int nx = str[1] - '0';
+		int ny = str[2] - '0';
+		if( nx >= 0 && nx < 4 && ny >= 0 && ny < 4 )
+		{
+			sgs_PushReal( C, hdr[ nx + ny * 4 ] );
+			return SGS_SUCCESS;
+		}
+	}
+	if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 16 ); return SGS_SUCCESS; }
+	return SGS_ENOTFND;
+}
+
+static int xgm_m4_setindex( SGS_CTX, sgs_VarObj* data, int prop )
+{
+	char* str;
+	sgs_SizeVal size;
+	XGM_OHDR;
+	sgs_Real val;
+	
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetInt( C, 0 );
+		if( pos < 0 || pos > 15 )
+			return SGS_ENOTFND;
+		if( sgs_ParseReal( C, 1, &val ) )
+		{
+			hdr[ pos ] = (XGM_VT) val;
+			return SGS_SUCCESS;
+		}
+		else
+			return SGS_EINVAL;
+	}
+	
+	if( !sgs_ParseString( C, 0, &str, &size ) )
+		return SGS_EINVAL;
+	if( *str == 'm' && str[1] && str[2] && !str[3] )
+	{
+		int nx = str[1] - '0';
+		int ny = str[2] - '0';
+		if( nx >= 0 && nx < 4 && ny >= 0 && ny < 4 )
+		{
+			if( sgs_ParseReal( C, 1, &val ) )
+			{
+				hdr[ nx + ny * 4 ] = (XGM_VT) val;
+				return SGS_SUCCESS;
+			}
+			else
+				return SGS_EINVAL;
+		}
+	}
+	return SGS_ENOTFND;
+}
+
+static int xgm_m4_serialize( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	int i;
+	XGM_OHDR;
+	for( i = 0; i < 16; ++i )
+	{
+		sgs_PushReal( C, hdr[0] );
+		if( sgs_Serialize( C ) )
+			return SGS_EINPROC;
+	}
+	return sgs_SerializeObject( C, 4, "mat4" );
+}
+
+static int xgm_m4_dump( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	char bfr[ 1024 ];
+	XGM_OHDR;
+	snprintf( bfr, 1024,
+		"\n%10.6g %10.6g %10.6g %10.6g"
+		"\n%10.6g %10.6g %10.6g %10.6g"
+		"\n%10.6g %10.6g %10.6g %10.6g"
+		"\n%10.6g %10.6g %10.6g %10.6g",
+		hdr[0], hdr[1], hdr[2], hdr[3],
+		hdr[4], hdr[5], hdr[6], hdr[7],
+		hdr[8], hdr[9], hdr[10], hdr[11],
+		hdr[12], hdr[13], hdr[14], hdr[15] );
+	bfr[ 1023 ] = 0;
+	sgs_PushString( C, "mat4\n(" );
+	sgs_PushString( C, bfr );
+	if( sgs_PadString( C ) ) return SGS_EINPROC;
+	sgs_PushString( C, "\n)" );
+	if( sgs_StringMultiConcat( C, 3 ) ) return SGS_EINPROC;
+	return SGS_SUCCESS;
+}
+
+static int xgm_mat4( SGS_CTX )
+{
+	XGM_VT v[ 16 ];
+	int argc = sgs_StackSize( C );
+	
+	SGSFN( "mat4" );
+	
+	if( !argc )
+	{
+		int i;
+		for( i = 0; i < 16; ++i )
+			v[ i ] = 0;
+		v[0] = v[5] = v[10] = v[15] = 1;
+		sgs_PushMat4( C, v, 0 );
+		return 1;
+	}
+	else if( argc == 1 && sgs_ParseMat4( C, 0, v ) )
+	{
+		sgs_PushMat4( C, v, 0 );
+		return 1;
+	}
+	else if( argc >= 3 && argc <= 4 )
+	{
+		if( sgs_ParseVec4( C, 0, v, 0 ) &&
+			sgs_ParseVec4( C, 1, v+4, 0 ) &&
+			sgs_ParseVec4( C, 2, v+8, 0 ) )
+		{
+			if( !sgs_ParseVec4( C, 3, v+12, 0 ) )
+			{
+				v[12] = v[13] = v[14] = 0;
+				v[15] = 1;
+			}
+			sgs_PushMat4( C, v, 0 );
+			return 1;
+		}
+	}
+	else if( argc == 16 )
+	{
+		int i;
+		for( i = 0; i < 16; ++i )
+		{
+			sgs_Real val;
+			if( !sgs_ParseReal( C, i, &val ) )
+				break;
+			v[ i ] = (XGM_VT) val;
+		}
+		if( i == 16 )
+		{
+			sgs_PushMat4( C, v, 0 );
+			return 1;
+		}
+	}
+	return sgs_Printf( C, SGS_WARNING, "expected 0 arguments or "
+		"1 mat4 argument or 3-4 vec4 arguments or 16 real arguments" );
 }
 
 
@@ -1205,6 +1390,16 @@ sgs_ObjCallback xgm_color_iface[] =
 	SGS_OP_END
 };
 
+sgs_ObjCallback xgm_mat4_iface[] =
+{
+	SGS_OP_GETINDEX, xgm_m4_getindex,
+	SGS_OP_SETINDEX, xgm_m4_setindex,
+	SGS_OP_CONVERT, xgm_m4_convert,
+	SGS_OP_SERIALIZE, xgm_m4_serialize,
+	SGS_OP_DUMP, xgm_m4_dump,
+	SGS_OP_END
+};
+
 
 void sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y )
 {
@@ -1257,6 +1452,20 @@ void sgs_PushColor( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 	nv[ 3 ] = w;
 }
 
+void sgs_PushMat4( SGS_CTX, XGM_VT* v16f, int transpose )
+{
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 16, xgm_mat4_iface );
+	if( transpose )
+	{
+		nv[ 0 ] = v16f[ 0 ]; nv[ 1 ] = v16f[ 4 ]; nv[ 2 ] = v16f[ 8 ]; nv[ 3 ] = v16f[ 12 ];
+		nv[ 4 ] = v16f[ 1 ]; nv[ 5 ] = v16f[ 5 ]; nv[ 6 ] = v16f[ 9 ]; nv[ 7 ] = v16f[ 13 ];
+		nv[ 8 ] = v16f[ 2 ]; nv[ 9 ] = v16f[ 6 ]; nv[ 10 ] = v16f[ 10 ]; nv[ 11 ] = v16f[ 14 ];
+		nv[ 12 ] = v16f[ 3 ]; nv[ 13 ] = v16f[ 7 ]; nv[ 14 ] = v16f[ 11 ]; nv[ 15 ] = v16f[ 15 ];
+	}
+	else
+		memcpy( nv, v16f, sizeof(XGM_VT) * 16 );
+}
+
 
 void sgs_PushVec2p( SGS_CTX, XGM_VT* v2f )
 {
@@ -1300,7 +1509,7 @@ void sgs_PushColorp( SGS_CTX, XGM_VT* v4f )
 	nv[ 3 ] = v4f[ 3 ];
 }
 
-void sgs_PushColorvp( SGS_CTX, XGM_VECTOR_TYPE* vf, int numfloats )
+void sgs_PushColorvp( SGS_CTX, XGM_VT* vf, int numfloats )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
 	if( numfloats == 0 ) nv[0] = nv[1] = nv[2] = nv[3] = 0;
@@ -1397,12 +1606,23 @@ SGSBOOL sgs_ParseColor( SGS_CTX, int pos, XGM_VT* v4f, int strict )
 	return sgs_ParseVec4( C, pos, v4f, strict );
 }
 
+SGSBOOL sgs_ParseMat4( SGS_CTX, int pos, XGM_VT* v16f )
+{
+	if( sgs_IsObject( C, pos, xgm_mat4_iface ) )
+	{
+		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectData( C, pos );
+		memcpy( v16f, hdr, sizeof(XGM_VT) * 16 );
+		return 1;
+	}
+	return 0;
+}
+
 
 int sgs_ArgCheck_Vec2( SGS_CTX, int argid, va_list* args, int flags )
 {
 	XGM_VT* out = NULL;
 	XGM_VT v[2];
-	if( !( flags & SGS_LOADARG_NOWRITE ) )
+	if( flags & SGS_LOADARG_WRITE )
 		out = va_arg( *args, XGM_VT* );
 	
 	if( sgs_ParseVec2( C, argid, v, flags & SGS_LOADARG_STRICT ? 1 : 0 ) )
@@ -1423,7 +1643,7 @@ int sgs_ArgCheck_Vec3( SGS_CTX, int argid, va_list* args, int flags )
 {
 	XGM_VT* out = NULL;
 	XGM_VT v[3];
-	if( !( flags & SGS_LOADARG_NOWRITE ) )
+	if( flags & SGS_LOADARG_WRITE )
 		out = va_arg( *args, XGM_VT* );
 	
 	if( sgs_ParseVec3( C, argid, v, flags & SGS_LOADARG_STRICT ? 1 : 0 ) )
@@ -1445,7 +1665,7 @@ static int sgs_ArgCheck_4F( SGS_CTX, int argid, va_list* args, int flags, const 
 {
 	XGM_VT* out = NULL;
 	XGM_VT v[4];
-	if( !( flags & SGS_LOADARG_NOWRITE ) )
+	if( flags & SGS_LOADARG_WRITE )
 		out = va_arg( *args, XGM_VT* );
 	
 	if( sgs_ParseVec4( C, argid, v, flags & SGS_LOADARG_STRICT ? 1 : 0 ) )
@@ -1473,7 +1693,7 @@ int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list* args, int flags )
 {
 	XGM_VT* out = NULL;
 	XGM_VT v[4];
-	if( !( flags & SGS_LOADARG_NOWRITE ) )
+	if( flags & SGS_LOADARG_WRITE )
 		out = va_arg( *args, XGM_VT* );
 	
 	if( sgs_ParseAABB2( C, argid, v ) )
@@ -1497,6 +1717,23 @@ int sgs_ArgCheck_Color( SGS_CTX, int argid, va_list* args, int flags )
 	return sgs_ArgCheck_4F( C, argid, args, flags, "color" );
 }
 
+int sgs_ArgCheck_Mat4( SGS_CTX, int argid, va_list* args, int flags )
+{
+	XGM_VT v[16];
+	if( sgs_ParseMat4( C, argid, v ) )
+	{
+		if( flags & SGS_LOADARG_WRITE )
+		{
+			XGM_VT* out = va_arg( *args, XGM_VT* );
+			memcpy( out, v, sizeof(v) );
+		}
+		return 1;
+	}
+	if( flags & SGS_LOADARG_OPTIONAL )
+		return 1;
+	return sgs_ArgErrorExt( C, argid, 0, "mat4", "" );
+}
+
 
 static sgs_RegFuncConst xgm_fconsts[] =
 {
@@ -1515,6 +1752,8 @@ static sgs_RegFuncConst xgm_fconsts[] =
 	{ "aabb2_intersect", xgm_aabb2_intersect },
 	
 	{ "color", xgm_color },
+	
+	{ "mat4", xgm_mat4 },
 };
 
 
@@ -1526,6 +1765,7 @@ SGS_APIFUNC int xgm_module_entry_point( SGS_CTX )
 	sgs_RegisterType( C, "vec4", xgm_vec4_iface );
 	sgs_RegisterType( C, "aabb2", xgm_aabb2_iface );
 	sgs_RegisterType( C, "color", xgm_color_iface );
+	sgs_RegisterType( C, "mat4", xgm_mat4_iface );
 	return SGS_SUCCESS;
 }
 

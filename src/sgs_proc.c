@@ -2907,7 +2907,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				int flags = 0;
 				
 				if( strict )     flags |= SGS_LOADARG_STRICT;
-				if( nowrite )    flags |= SGS_LOADARG_NOWRITE;
+				if( !nowrite )   flags |= SGS_LOADARG_WRITE;
 				if( opt )        flags |= SGS_LOADARG_OPTIONAL;
 				if( isig )       flags |= SGS_LOADARG_INTSIGN;
 				if( range > 0 )  flags |= SGS_LOADARG_INTRANGE;
