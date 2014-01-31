@@ -3916,7 +3916,7 @@ SGSBOOL sgs_ParsePtr( SGS_CTX, StkIdx item, void** out )
 	if( !sgs_IsValidIndex( C, item ) )
 		return FALSE;
 	var = stk_getpos( C, item );
-	if( var->type != SVT_NULL || var->type != SVT_PTR )
+	if( var->type != SVT_NULL && var->type != SVT_PTR )
 		return FALSE;
 	if( out )
 		*out = var->type != SVT_NULL ? var->data.P : NULL;
