@@ -30,7 +30,7 @@
 #include <sgs_int.h>
 
 #define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
-#define STDLIB_WARN( warn ) { sgs_Printf( C, SGS_WARNING, warn ); return 0; }
+#define STDLIB_WARN( warn ) { sgs_Msg( C, SGS_WARNING, warn ); return 0; }
 
 
 #ifdef WIN32
@@ -187,7 +187,7 @@ SGS_DECLARE sgs_ObjCallback ppjob_iface[ 5 ];
 	if( !sgs_Method( C ) \
 		|| !( sgs_IsObject( C, 0, ppjob_iface ) \
 		|| sgs_IsObject( C, 0, ppjob_iface_job ) ) \
-		){ sgs_Printf( C, SGS_ERROR, "ppjob." #name \
+		){ sgs_Msg( C, SGS_ERROR, "ppjob." #name \
 			"() isn't called on a ppjob" ); return 0; } \
 	job = (ppjob_t*) sgs_GetObjectData( C, 0 ); \
 	UNUSED( job );
@@ -354,7 +354,7 @@ static int ppjobI_get( SGS_CTX )
 		ppmapitem_t* item = ppjob_map_find( job, str, size );
 		if( !item )
 		{
-			sgs_Printf( C, SGS_WARNING, "ppjob.get(): "
+			sgs_Msg( C, SGS_WARNING, "ppjob.get(): "
 				"could not find item \"%.*s\"", size, str );
 			ret = 0;
 		}
@@ -366,7 +366,7 @@ static int ppjobI_get( SGS_CTX )
 				ret = 1;
 			else
 			{
-				sgs_Printf( C, SGS_WARNING, "ppjob.get(): "
+				sgs_Msg( C, SGS_WARNING, "ppjob.get(): "
 					"failed to unserialize item (error %s)",
 					sgs_CodeString( SGS_CODE_ER, ret ) );
 				ret = 0;
@@ -432,7 +432,7 @@ static int ppjobI_set_if( SGS_CTX )
 		ppmapitem_t* item = ppjob_map_find( job, str, size );
 		if( !item )
 		{
-			sgs_Printf( C, SGS_WARNING, "ppjob.set_if(): "
+			sgs_Msg( C, SGS_WARNING, "ppjob.set_if(): "
 				"could not find item \"%.*s\"", size, str );
 			return 0;
 		}

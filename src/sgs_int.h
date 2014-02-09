@@ -671,8 +671,8 @@ struct _sgs_Context
 
 	/* info output */
 	int           minlev;
-	sgs_PrintFunc print_fn;  /* printing function */
-	void*         print_ctx; /* printing context */
+	sgs_MsgFunc   msg_fn;  /* messaging function */
+	void*         msg_ctx; /* messaging context */
 	int           last_errno;
 
 	/* hook */

@@ -129,8 +129,8 @@ sgs_Context* get_context()
 	sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, outfp );
 	atf_assert( C->output_ctx == outfp );
 
-	sgs_SetPrintFunc( C, SGSPRINTFN_DEFAULT, errfp );
-	atf_assert( C->print_ctx == errfp );
+	sgs_SetMsgFunc( C, SGSMSGFN_DEFAULT, errfp );
+	atf_assert( C->msg_ctx == errfp );
 
 	return C;
 }
@@ -306,14 +306,14 @@ DEFINE_TEST( stack_propindex )
 	atf_assert( sgs_PushProperty( C, "nope" ) == SGS_EINPROC );
 
 	sgs_PushString( C, "key-one" );
-	atf_assert( sgs_PushIndex( C, 0, 1 ) == SGS_EBOUNDS );
-	atf_assert( sgs_PushIndex( C, 0, 0 ) == SGS_EINVAL );
+	atf_assert( sgs_PushIndexII( C, 0, 1, 0 ) == SGS_EBOUNDS );
+	atf_assert( sgs_PushIndexII( C, 0, 0, 0 ) == SGS_EINVAL );
 
 	sgs_PushInt( C, 15 );
-	atf_assert( sgs_PushIndex( C, -2, -1 ) == SGS_EBOUNDS );
+	atf_assert( sgs_PushIndexII( C, -2, -1, 0 ) == SGS_EBOUNDS );
 	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
 	sgs_PushInt( C, 5 );
-	atf_assert( sgs_PushIndex( C, -2, -1 ) == SGS_SUCCESS );
+	atf_assert( sgs_PushIndexII( C, -2, -1, 0 ) == SGS_SUCCESS );
 	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
 
 	sgs_PushString( C, "key-two" );

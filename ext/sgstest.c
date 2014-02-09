@@ -157,7 +157,7 @@ static void prepengine( sgs_Context* C )
 	UNUSED( ret );
 	sgs_BreakIf( ret != SGS_SUCCESS );
 
-	sgs_SetPrintFunc( C, TF_printfn, NULL );
+	sgs_SetMsgFunc( C, TF_printfn, NULL );
 }
 
 /* test statistics */
@@ -210,7 +210,7 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 	fpe = fopen( outfile_errors, "a" );
 	numallocs = 0;
 	C = sgs_CreateEngineExt( ext_memfunc, NULL );
-	sgs_SetPrintFunc( C, SGSPRINTFN_DEFAULT_NOABORT, fpe );
+	sgs_SetMsgFunc( C, SGSMSGFN_DEFAULT_NOABORT, fpe );
 
 	fprintf( fpe, "\n>>> test: %s\n", nameonly );
 	printf( "> running %20s [%s]\t", nameonly, disp == 0 ? " " : ( disp >= 0 ? "+" : "-" ) );

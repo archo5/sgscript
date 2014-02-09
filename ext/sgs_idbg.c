@@ -111,7 +111,7 @@ static int idbg_stackitem( SGS_CTX )
 	sgs_Bool full = 0;
 	sgs_Int off, cnt;
 	sgs_Variable* a, *b;
-	SGS_IDBG = (sgs_IDbg*) C->print_ctx;
+	SGS_IDBG = (sgs_IDbg*) C->msg_ctx;
 	
 	SGSFN( "dbg_stackitem" );
 	if( !sgs_LoadArgs( C, "i|b", &off, &full ) )
@@ -122,7 +122,7 @@ static int idbg_stackitem( SGS_CTX )
 	cnt = b - a;
 	if( off >= cnt || -off > cnt )
 	{
-		sgs_Printf( C, SGS_WARNING, 
+		sgs_Msg( C, SGS_WARNING, 
 			"index %d out of bounds, count = %d\n", (int) off, (int) cnt );
 		return 0;
 	}
@@ -136,7 +136,7 @@ static int idbg_setstackitem( SGS_CTX )
 	sgs_Bool full = 0;
 	sgs_Int off, cnt;
 	sgs_Variable* a, *b, *x, tmp;
-	SGS_IDBG = (sgs_IDbg*) C->print_ctx;
+	SGS_IDBG = (sgs_IDbg*) C->msg_ctx;
 	
 	SGSFN( "dbg_setstackitem" );
 	if( !sgs_LoadArgs( C, "i?v|b", &off, &full ) )
@@ -147,7 +147,7 @@ static int idbg_setstackitem( SGS_CTX )
 	cnt = b - a;
 	if( off >= cnt || -off > cnt )
 	{
-		sgs_Printf( C, SGS_WARNING,
+		sgs_Msg( C, SGS_WARNING,
 			"index %d out of bounds, count = %d\n", (int) off, (int) cnt );
 		return 0;
 	}
@@ -164,10 +164,10 @@ static int idbg_setstackitem( SGS_CTX )
 int sgs_InitIDbg( SGS_CTX, SGS_IDBG )
 {
 	D->C = C;
-	D->pfn = C->print_fn;
-	D->pctx = C->print_ctx;
-	C->print_fn = idbgPrintFunc;
-	C->print_ctx = D;
+	D->pfn = C->msg_fn;
+	D->pctx = C->msg_ctx;
+	C->msg_fn = idbgPrintFunc;
+	C->msg_ctx = D;
 
 	D->input = membuf_create();
 	D->iword[0] = 0;
@@ -184,8 +184,8 @@ int sgs_InitIDbg( SGS_CTX, SGS_IDBG )
 
 int sgs_CloseIDbg( SGS_CTX, SGS_IDBG )
 {
-	C->print_fn = D->pfn;
-	C->print_ctx = D->pctx;
+	C->msg_fn = D->pfn;
+	C->msg_ctx = D->pctx;
 	membuf_destroy( &D->input, C );
 	return SGS_SUCCESS;
 }

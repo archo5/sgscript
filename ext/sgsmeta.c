@@ -254,18 +254,18 @@ int sgs_meta_unpack( SGS_CTX )
 	
 	ret = sgsBC_ValidateHeader( buf, (size_t) size );
 	if( ret < SGS_HEADER_SIZE )
-		return sgs_Printf( C, SGS_WARNING, "compiled code header error "
+		return sgs_Msg( C, SGS_WARNING, "compiled code header error "
 			"detected at position %d", ret );
 	
 	bfret = sgsBC_Buf2Func( C, "", buf, (size_t) size, &func );
 	if( bfret )
-		return sgs_Printf( C, SGS_WARNING, bfret );
+		return sgs_Msg( C, SGS_WARNING, bfret );
 	
 	ret = _sgs_meta_dumpcomp( C, func );
 	sgsBC_Free( C, func );
 	
 	if( !ret )
-		return sgs_Printf( C, SGS_WARNING, "internal error while converting data" );
+		return sgs_Msg( C, SGS_WARNING, "internal error while converting data" );
 	
 	return 1;
 }

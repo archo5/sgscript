@@ -9,7 +9,7 @@ typedef
 struct _sgs_IDbg
 {
 	SGS_CTX;
-	sgs_PrintFunc pfn;
+	sgs_MsgFunc pfn;
 	void* pctx;
 	sgs_MemBuf input;
 	char iword[ 32 ];

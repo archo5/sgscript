@@ -634,7 +634,7 @@ The string is not a number if no numeric characters (0-9) could be parsed. (for 
 
 The interface that it defines is one of the driving forces of SGScript. It is heavily influenced by Lua, while also adding some features of PHP (Zend Engine) and Python.
 
-The most important difference is in error handling and triggers: errors detected in C can easily be non-fatal. Just like with PHP, minor errors are emitted as warnings that also propagate invalid (null) values throughout the system to effectively disable the subsequent calls and notify whoever is interested of the exact trail of errors. Furthermore, this behavior can be modified by using protected calls (pcall function) in SGScript and custom error printing callbacks in C.
+The most important difference is in error handling and triggers: errors detected in C can easily be non-fatal. Just like with PHP, minor errors are emitted as warnings that also propagate invalid (null) values throughout the system to effectively disable the subsequent calls and notify whoever is interested of the exact trail of errors. Furthermore, this behavior can be modified by using protected calls (pcall function) in SGScript and custom messaging callbacks in C.
 
 The virtual machine supports:
 
@@ -677,7 +677,7 @@ System types:
 Interface types:
 - sgs_MemFunc [void* ( void* userdata, void* ptr, size_t size )]: memory interface function
 - sgs_OutputFunc [void ( void* userdata, sgs_Context* C, const void* buf, sgs_SizeVal size )]: output function
-- sgs_PrintFunc [void ( void* userdata, sgs_Context* C, int code, const char* text )]: error printing function
+- sgs_MsgFunc [void ( void* userdata, sgs_Context* C, int code, const char* text )]: messaging function
 - sgs_HookFunc [void ( void*, sgs_Context*, int )]: debug hook function
 
 
@@ -897,6 +897,29 @@ These are the default meanings for error codes that are honored throughout the A
 
 # Data interface [info]
 # >>>
+
+
+# sgs_Init*** [functions]
+
+== void sgs_InitNull( sgs_Variable* out )
+== void sgs_InitBool( sgs_Variable* out, sgs_Bool value )
+== void sgs_InitInt( sgs_Variable* out, sgs_Int value )
+== void sgs_InitReal( sgs_Variable* out, sgs_Real value )
+== void sgs_InitStringBuf( sgs_Context* C, sgs_Variable* out, const char* str, sgs_SizeVal size )
+== void sgs_InitString( sgs_Context* C, sgs_Variable* out, const char* str )
+== void sgs_InitCFunction( sgs_Context* C, sgs_Variable* out, sgs_CFunc func )
+== void sgs_InitObject( sgs_Context* C, sgs_Variable* out, void* data, sgs_ObjCallback* iface )
+== void* sgs_InitObjectIPA( sgs_Context* C, sgs_Variable* out, sgs_SizeVal added, sgs_ObjCallback* iface )
+== void sgs_InitPtr( sgs_Context* C, sgs_Variable* out, void* ptr )
+== void sgs_InitObjectPtr( sgs_Context* C, sgs_Variable* out, sgs_VarObj* obj )
+
+- sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
+- sgs_InitStringBuf( C, NULL, size ) would allocate an uninitialized buffer
+-- it is accessible immediately by @sgs_GetString[Ptr|Size]( C, -1 )
+- sgs_InitObjectIPA stands for "initialize object, allocate memory in-place"
+-- it means that the `added` memory space will be appended to the end of object allocation
+-- this allows to allocate all object data for most objects with just one allocation, instead of two
+-- the allocated memory will be returned and also available via sgs_GetObjectData( C, -1 )
 
 
 # sgs_Push*** [functions]
@@ -1881,27 +1904,27 @@ After a successful call, all arguments and the function will be popped off the s
 - printf rules apply here
 
 
-# sgs_SetPrintFunc [function]
+# sgs_SetMsgFunc [function]
 
-== void sgs_SetPrintFunc( sgs_Context* C, sgs_PrintFunc func, void* userdata )
+== void sgs_SetMsgFunc( sgs_Context* C, sgs_MsgFunc func, void* userdata )
 === sets the function that handles and prints the error that has occured, while still being physically in that context
 
 - both subtypes of the default printing function can be set by passing these flags for `func` and a FILE* pointer for `userdata`:
--- 'SGSPRINTFN_DEFAULT' - default behavior (write stack frame, write error, abort on SGS_ERROR)
--- 'SGSPRINTFN_DEFAULT_NOABORT' - default behavior without the abort-on-errors feature
+-- 'SGSMSGFN_DEFAULT' - default behavior (write stack frame, write error, abort on SGS_ERROR)
+-- 'SGSMSGFN_DEFAULT_NOABORT' - default behavior without the abort-on-errors feature
 - default implementation writes error and stack trace to FILE* stream, specified in userdata, it can be found in sgs_ctx.c
 
 
-# sgs_Printf [function]
+# sgs_Msg [function]
 
-== int sgs_Printf( sgs_Context* C, int type, const char* what, ... )
+== int sgs_Msg( sgs_Context* C, int type, const char* what, ... )
 === prepares and prints the error specified
 
 - `type` is the output code (SGS_WARNING, SGS_ERROR etc.)
 - `what` is the error text
 -- additional function name prefix can be specified with @sgs_FuncName or the SGSFN/SGSBASEFN macros
 - `what`, the function name prefix (if set) and the variable arguments are passed to a vsprintf-like function so printf syntax rules apply
-- function always returns 0 to be compatible with most error handling cases in C functions: "return sgs_Printf( ... );"
+- function always returns 0 to be compatible with most error handling cases in C functions: "return sgs_Msg( ... );"
 
 
 # sgs_HasFuncName [function]
@@ -2143,7 +2166,7 @@ There are no forced courses of action beyond this point. However, to simplify de
 - prefer using sgs_LoadArgs, followed by sgs_LoadArgsExt, followed by the sgs_Parse***/sgs_Is***/sgs_ItemType(Ext)/... functions together with ArgError function family for error handling
 
 ==== Error handling
-- it is preferred to do most of it at the beginning, before custom allocations (VM stack doesn't count here), where it is possible to just `return sgs_Printf( C, SGS_WARNING, "Error message" )`
+- it is preferred to do most of it at the beginning, before custom allocations (VM stack doesn't count here), where it is possible to just `return sgs_Msg( C, SGS_WARNING, "Error message" )`
 - SGS_WARNING is for non-fatal errors, SGS_ERROR is for errors that make it impossible to continue (severe, undoubted logical errors fall into this category)
 - on error, functions should return nothing or null
 
@@ -2160,8 +2183,8 @@ A typical function
             return 0;
         
         if( bufsize == 0 )
-            return sgs_Printf( C, SGS_WARNING, "buffer cannot be empty" );
-        // sgs_Printf always returns 0
+            return sgs_Msg( C, SGS_WARNING, "buffer cannot be empty" );
+        // sgs_Msg always returns 0
         
         // .. do something with the passed arguments ..
         
@@ -2298,9 +2321,9 @@ Most operations are directed towards the scripting engine, that is - environment
 - the expected behavior is same as for @sgs_Memory()
 
 === Output
-- sgs_PrintFunc and sgs_OutputFunc are responsible for piping the outputs to their destinations
+- sgs_MsgFunc and sgs_OutputFunc are responsible for piping the outputs to their destinations
 - they can be set at any moment after the creation of the scripting engine context
-- sgs_PrintFunc takes the following arguments:
+- sgs_MsgFunc takes the following arguments:
 -- void* data - the user data pointer
 -- sgs_Context* C - the scripting engine context
 -- int type - the debug type (SGS_INFO, SGS_WARNING etc.)

@@ -839,19 +839,23 @@ function cppbc_parse_file( code, includes )
 }
 
 
-// code = cppbc_parse_file( io_file_read( "thing.h" ) );
-// io_file_write( "cppbc_thing.cpp", code );
-
 if( argc < 2 )
-	cppbc_error( "Expected 1 argument: source file" );
+	cppbc_error( "Expected at least 1 argument: source file" );
 
 IN = argv[1];
 IN = string_replace( IN, "\\", "/" );
-pathspl = string_explode( IN, "/" );
-ofsp = string_explode( pathspl.pop(), "." );
-ofsp.pop();
-pathspl.push( "cppbc_" $ string_implode( ofsp, "." ) $ ".cpp" );
-OUT = string_implode( pathspl, "/" );
+if( argc >= 3 )
+{
+	OUT = argv[2];
+}
+else
+{
+	pathspl = string_explode( IN, "/" );
+	ofsp = string_explode( pathspl.pop(), "." );
+	ofsp.pop();
+	pathspl.push( "cppbc_" $ string_implode( ofsp, "." ) $ ".cpp" );
+	OUT = string_implode( pathspl, "/" );
+}
 
 code = cppbc_parse_file( io_file_read( IN ), [IN] );
 io_file_write( OUT, code );

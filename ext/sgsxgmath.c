@@ -5,7 +5,7 @@
 #include "sgsxgmath.h"
 
 
-#define XGM_WARNING( err ) sgs_Printf( C, SGS_WARNING, err );
+#define XGM_WARNING( err ) sgs_Msg( C, SGS_WARNING, err );
 #define XGM_OHDR XGM_VT* hdr = (XGM_VT*) data->data;
 #define XGM_P2HDR xgm_poly2* poly = (xgm_poly2*) data->data;
 
@@ -173,7 +173,7 @@ static int xgm_v2_expr( SGS_CTX, sgs_VarObj* data, int type )
 			const char* errstr = type == SGS_EOP_DIV ?
 				"vec2 operator '/' - division by zero" :
 				"vec2 operator '%' - modulo by zero";
-			sgs_Printf( C, SGS_ERROR, errstr );
+			sgs_Msg( C, SGS_ERROR, errstr );
 			return SGS_EINPROC;
 		}
 		
@@ -378,7 +378,7 @@ static int xgm_v3_expr( SGS_CTX, sgs_VarObj* data, int type )
 			const char* errstr = type == SGS_EOP_DIV ?
 				"vec3 operator '/' - division by zero" :
 				"vec3 operator '%' - modulo by zero";
-			sgs_Printf( C, SGS_ERROR, errstr );
+			sgs_Msg( C, SGS_ERROR, errstr );
 			return SGS_EINPROC;
 		}
 		
@@ -612,7 +612,7 @@ static int xgm_v4_expr( SGS_CTX, sgs_VarObj* data, int type )
 			const char* errstr = type == SGS_EOP_DIV ?
 				"vec4 operator '/' - division by zero" :
 				"vec4 operator '%' - modulo by zero";
-			sgs_Printf( C, SGS_ERROR, errstr );
+			sgs_Msg( C, SGS_ERROR, errstr );
 			return SGS_EINPROC;
 		}
 		
@@ -1052,7 +1052,7 @@ static int xgm_col_expr( SGS_CTX, sgs_VarObj* data, int type )
 			const char* errstr = type == SGS_EOP_DIV ?
 				"color operator '/' - division by zero" :
 				"color operator '%' - modulo by zero";
-			sgs_Printf( C, SGS_ERROR, errstr );
+			sgs_Msg( C, SGS_ERROR, errstr );
 			return SGS_EINPROC;
 		}
 		
@@ -1323,7 +1323,7 @@ static int xgm_mat4( SGS_CTX )
 			return 1;
 		}
 	}
-	return sgs_Printf( C, SGS_WARNING, "expected 0 arguments or "
+	return sgs_Msg( C, SGS_WARNING, "expected 0 arguments or "
 		"1 mat4 argument or 3-4 vec4 arguments or 16 real arguments" );
 }
 

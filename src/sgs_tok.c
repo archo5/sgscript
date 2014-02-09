@@ -44,7 +44,7 @@ static void skipcomment( SGS_CTX, MemBuf* out, LineNum* line, const char* code, 
 		}
 		if( i == length )
 		{
-			sgs_Printf( C, SGS_ERROR, "[line %d] Comment has no end", init );
+			sgs_Msg( C, SGS_ERROR, "[line %d] Comment has no end", init );
 			*at = i - 1;
 		}
 		else
@@ -131,7 +131,7 @@ static void readident( SGS_CTX, MemBuf* out, const char* code, int32_t* at, int3
 		else if( sz == 256 )
 		{
 			C->state |= SGS_HAS_ERRORS;
-			sgs_Printf( C, SGS_ERROR, "[line %d] identifier too long", *at );
+			sgs_Msg( C, SGS_ERROR, "[line %d] identifier too long", *at );
 		}
 		i++;
 	}
@@ -193,7 +193,7 @@ static void readstring( SGS_CTX, MemBuf* out, LineNum* line, const char* code, i
 	}
 	
 	C->state |= SGS_MUST_STOP;
-	sgs_Printf( C, SGS_ERROR, "[line %d] end of string not found", *at );
+	sgs_Msg( C, SGS_ERROR, "[line %d] end of string not found", *at );
 }
 
 static const char* sgs_opchars = "=<>+-*/%!~&|^.$";
@@ -273,7 +273,7 @@ static void readop( SGS_CTX, MemBuf* out, LineNum line, const char* code, int32_
 	
 op_read_error:
 	C->state |= SGS_HAS_ERRORS;
-	sgs_Printf( C, SGS_ERROR, "[line %d] invalid operator found: \"%s%s\", size=%d", line, opstr, ropsize > 3 ? "..." : "", ropsize );
+	sgs_Msg( C, SGS_ERROR, "[line %d] invalid operator found: \"%s%s\", size=%d", line, opstr, ropsize > 3 ? "..." : "", ropsize );
 }
 
 TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
@@ -315,7 +315,7 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
 			if( res == 0 )
 			{
 				C->state |= SGS_HAS_ERRORS;
-				sgs_Printf( C, SGS_ERROR, "[line %d] failed to parse numeric constant", line );
+				sgs_Msg( C, SGS_ERROR, "[line %d] failed to parse numeric constant", line );
 			}
 			else if( res == 1 )
 			{
@@ -343,7 +343,7 @@ TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
 		else
 		{
 			C->state |= SGS_HAS_ERRORS;
-			sgs_Printf( C, SGS_ERROR, "[line %d], unexpected symbol: %c", line, fc );
+			sgs_Msg( C, SGS_ERROR, "[line %d], unexpected symbol: %c", line, fc );
 		}
 		
 		if( s.size != isz ) /* write a line only if successfully wrote something (a token) */

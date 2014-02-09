@@ -72,8 +72,8 @@
 
 /* postfix for function names in C functions
 	EXTRABYTES should be set to the length of EXTRASTRING */
-#define SGS_PRINTF_EXTRASTRING "(): "
-#define SGS_PRINTF_EXTRABYTES 4
+#define SGS_MSG_EXTRASTRING "(): "
+#define SGS_MSG_EXTRABYTES 4
 
 /* object pool settings
 	- size of object pool (max. number of items)

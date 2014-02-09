@@ -6,6 +6,7 @@
 # .. and uncomment this line:
 # PLATFORM=android
 CC=gcc
+CXX=g++
 
 COMMONFLAGS=-Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align
 
@@ -149,20 +150,32 @@ vm: $(OUTDIR)/sgsvm$(BINEXT)
 c: $(OUTDIR)/sgsc$(BINEXT)
 
 # test tool aliases
-test: $(OUTDIR)/sgstest$(BINEXT)
+test: build_test
 	$(OUTDIR)/sgstest
-apitest: $(OUTDIR)/sgsapitest$(BINEXT)
+apitest: build_apitest
 	$(OUTDIR)/sgsapitest
 
 .PHONY: tools
 tools: xgmath json pproc sockets meta build_test build_apitest vm c
 
 # other stuff
+# - cppbc testing
+.PHONY: cppbctest
+.PHONY: build_cppbctest
+build_cppbctest: $(OUTDIR)/sgscppbctest$(BINEXT)
+cppbctest: build_cppbctest
+	$(OUTDIR)/sgscppbctest
+$(OUTDIR)/sgscppbctest$(BINEXT): $(OUTFILE) ext/sgscppbctest.cpp ext/sgscppbctest.h $(OBJDIR)/cppbc_test.cpp
+	$(CXX) -o $@ ext/sgscppbctest.cpp $(OBJDIR)/cppbc_test.cpp $(LFLAGS) -lm $(PLATFLAGS) -I. -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
+$(OBJDIR)/cppbc_test.cpp: ext/sgscppbctest.h
+	bin/sgsvm -p ext/cppbc/cppbc.sgs ext/sgscppbctest.h $@
 # - multithreaded testing
-.PHONY: test_mt
-test_mt: $(OUTDIR)/sgstest_mt$(BINEXT)
+.PHONY: mttest
+.PHONY: build_mttest
+build_mttest: $(OUTDIR)/sgstest_mt$(BINEXT)
+mttest: build_mttest
 	$(OUTDIR)/sgstest_mt
-$(OUTDIR)/sgstest_mt$(BINEXT): $(LIBDIR)/libsgscript.a
+$(OUTDIR)/sgstest_mt$(BINEXT): $(OUTFILE)
 	$(CC) -o $@ examples/sgstest_mt.c $(LFLAGS) -lm $(THREADLIBS) $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 # - sgs2exe tool
 .PHONY: sgsexe

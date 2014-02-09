@@ -29,7 +29,7 @@ public:
 		sgs_Int I;
 		if( sgs_StackSize( C ) != 2 ||
 			!sgs_ParseInt( C, 1, &I ) )
-			return sgs_Printf( C, SGS_WARNING, "unexpected arguments" );
+			return sgs_Msg( C, SGS_WARNING, "unexpected arguments" );
 		coins += (int) I;
 		numtransactions++;
 		printf( "Transaction #%04d | before=%d after=%d\n",

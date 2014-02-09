@@ -41,7 +41,7 @@
 #define DF( x ) { #x, x }
 #define STREQ( a, b ) (0==strcmp(a,b))
 #define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
-#define STDLIB_WARN( warn ) return sgs_Printf( C, SGS_WARNING, warn );
+#define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
 
 
 #ifdef _WIN32
@@ -168,7 +168,7 @@ static int socket_geterrnobyname( SGS_CTX )
 		ekt += 2;
 	}
 	
-	sgs_Printf( C, SGS_ERROR, "this socket errno value is unsupported on this platform" );
+	sgs_Msg( C, SGS_ERROR, "this socket errno value is unsupported on this platform" );
 	return 0;
 }
 
@@ -194,20 +194,20 @@ static int sockaddr_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	{
 		if( GET_SAF == AF_INET ){ sgs_PushInt( C, ntohs( GET_SAI->sin_port ) ); }
 		else if( GET_SAF == AF_INET6 ){ sgs_PushInt( C, ntohs( GET_SAI6->sin6_port ) ); }
-		else { sgs_PushNull( C ); sgs_Printf( C, SGS_WARNING, "port supported only for AF_INET[6]" ); }
+		else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "port supported only for AF_INET[6]" ); }
 		return SGS_SUCCESS;
 	}
 	if( STREQ( name, "addr_u32" ) )
 	{
 		if( GET_SAF == AF_INET ){ sgs_PushInt( C, ntohl( GET_SAI->sin_addr.s_addr ) ); }
-		else { sgs_PushNull( C ); sgs_Printf( C, SGS_WARNING, "addr_u32 supported only for AF_INET" ); }
+		else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "addr_u32 supported only for AF_INET" ); }
 		return SGS_SUCCESS;
 	}
 	if( STREQ( name, "addr_buf" ) )
 	{
 		if( GET_SAF == AF_INET ){ sgs_PushStringBuf( C, (char*) &GET_SAI->sin_addr.s_addr, 4 ); }
 		else if( GET_SAF == AF_INET6 ){ sgs_PushStringBuf( C, (char*) &GET_SAI6->sin6_addr.s6_addr, 16 ); }
-		else { sgs_PushNull( C ); sgs_Printf( C, SGS_WARNING, "addr_buf supported only for AF_INET[6]" ); }
+		else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "addr_buf supported only for AF_INET[6]" ); }
 		return SGS_SUCCESS;
 	}
 	if( STREQ( name, "addr_bytes" ) )
@@ -230,7 +230,7 @@ static int sockaddr_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 				sgs_PushInt( C, buf[ i ] );
 			sgs_PushArray( C, sz );
 		}
-		else { sgs_PushNull( C ); sgs_Printf( C, SGS_WARNING, "addr_bytes supported only for AF_INET[6]" ); }
+		else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "addr_bytes supported only for AF_INET[6]" ); }
 		return SGS_SUCCESS;
 	}
 	if( STREQ( name, "addr_string" ) )
@@ -740,7 +740,7 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		GSO_ARG5TYPE bvl = sizeof(int);
 		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_BROADCAST, (char*) &bv, &bvl ) != -1 ) )
 		{
-			sgs_Printf( C, SGS_WARNING, "failed to retrieve the 'broadcast' property of a socket" );
+			sgs_Msg( C, SGS_WARNING, "failed to retrieve the 'broadcast' property of a socket" );
 			sgs_PushNull( C );
 		}
 		else
@@ -753,7 +753,7 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		GSO_ARG5TYPE bvl = sizeof(int);
 		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_REUSEADDR, (char*) &bv, &bvl ) != -1 ) )
 		{
-			sgs_Printf( C, SGS_WARNING, "failed to retrieve the 'reuse_addr' property of a socket" );
+			sgs_Msg( C, SGS_WARNING, "failed to retrieve the 'reuse_addr' property of a socket" );
 			sgs_PushNull( C );
 		}
 		else
@@ -766,7 +766,7 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		GSO_ARG5TYPE bvl = sizeof(int);
 		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_ERROR, (char*) &bv, &bvl ) != -1 ) )
 		{
-			sgs_Printf( C, SGS_WARNING, "failed to retrieve the 'error' property of a socket" );
+			sgs_Msg( C, SGS_WARNING, "failed to retrieve the 'error' property of a socket" );
 			sgs_PushNull( C );
 		}
 		else
@@ -791,7 +791,7 @@ static int socket_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 			return SGS_EINVAL;
 		inbv = !bv;
 		if( !sockassert( C, ioctlsocket( GET_SCK, (int) FIONBIO, &inbv ) != -1 ) )
-			sgs_Printf( C, SGS_WARNING, "failed to set the 'blocking' property of a socket" );
+			sgs_Msg( C, SGS_WARNING, "failed to set the 'blocking' property of a socket" );
 		return SGS_SUCCESS;
 	}
 	if( STREQ( name, "broadcast" ) )
@@ -800,7 +800,7 @@ static int socket_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 		if( !sgs_ParseBool( C, -1, &bv ) )
 			return SGS_EINVAL;
 		if( !sockassert( C, setsockopt( GET_SCK, SOL_SOCKET, SO_BROADCAST, (char*) &bv, sizeof(bv) ) != -1 ) )
-			sgs_Printf( C, SGS_WARNING, "failed to set the 'broadcast' property of a socket" );
+			sgs_Msg( C, SGS_WARNING, "failed to set the 'broadcast' property of a socket" );
 		return SGS_SUCCESS;
 	}
 	if( STREQ( name, "reuse_addr" ) )
@@ -809,7 +809,7 @@ static int socket_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 		if( !sgs_ParseBool( C, -1, &bv ) )
 			return SGS_EINVAL;
 		if( !sockassert( C, setsockopt( GET_SCK, SOL_SOCKET, SO_REUSEADDR, (char*) &bv, sizeof(bv) ) != -1 ) )
-			sgs_Printf( C, SGS_WARNING, "failed to set the 'reuse_addr' property of a socket" );
+			sgs_Msg( C, SGS_WARNING, "failed to set the 'reuse_addr' property of a socket" );
 		return SGS_SUCCESS;
 	}
 	
@@ -938,10 +938,10 @@ static int sgs_socket_select( SGS_CTX )
 	{
 		sgs_PushNumIndex( C, 0, i );
 		if( !sgs_IsObject( C, -1, socket_iface ) )
-			return sgs_Printf( C, SGS_WARNING, "item #%d of 'read' array is not a socket", i + 1 );
+			return sgs_Msg( C, SGS_WARNING, "item #%d of 'read' array is not a socket", i + 1 );
 		data = sgs_GetObjectStruct( C, -1 );
 		if( GET_SCK == -1 )
-			return sgs_Printf( C, SGS_WARNING, "item #%d of 'read' array is not an open socket", i + 1 );
+			return sgs_Msg( C, SGS_WARNING, "item #%d of 'read' array is not an open socket", i + 1 );
 		FD_SET( GET_SCK, &setR );
 		if( GET_SCK > maxsock )
 			maxsock = GET_SCK;
@@ -952,10 +952,10 @@ static int sgs_socket_select( SGS_CTX )
 	{
 		sgs_PushNumIndex( C, 1, i );
 		if( !sgs_IsObject( C, -1, socket_iface ) )
-			return sgs_Printf( C, SGS_WARNING, "item #%d of 'write' array is not a socket", i + 1 );
+			return sgs_Msg( C, SGS_WARNING, "item #%d of 'write' array is not a socket", i + 1 );
 		data = sgs_GetObjectStruct( C, -1 );
 		if( GET_SCK == -1 )
-			return sgs_Printf( C, SGS_WARNING, "item #%d of 'write' array is not an open socket", i + 1 );
+			return sgs_Msg( C, SGS_WARNING, "item #%d of 'write' array is not an open socket", i + 1 );
 		FD_SET( GET_SCK, &setW );
 		if( GET_SCK > maxsock )
 			maxsock = GET_SCK;
@@ -966,10 +966,10 @@ static int sgs_socket_select( SGS_CTX )
 	{
 		sgs_PushNumIndex( C, 2, i );
 		if( !sgs_IsObject( C, -1, socket_iface ) )
-			return sgs_Printf( C, SGS_WARNING, "item #%d of 'error' array is not a socket", i + 1 );
+			return sgs_Msg( C, SGS_WARNING, "item #%d of 'error' array is not a socket", i + 1 );
 		data = sgs_GetObjectStruct( C, -1 );
 		if( GET_SCK == -1 )
-			return sgs_Printf( C, SGS_WARNING, "item #%d of 'error' array is not an open socket", i + 1 );
+			return sgs_Msg( C, SGS_WARNING, "item #%d of 'error' array is not an open socket", i + 1 );
 		FD_SET( GET_SCK, &setE );
 		if( GET_SCK > maxsock )
 			maxsock = GET_SCK;
@@ -990,7 +990,7 @@ static int sgs_socket_select( SGS_CTX )
 		{
 			sgs_PushItem( C, 0 );
 			sgs_PushInt( C, i );
-			sgs_PushIndexExt( C, -2, -4, 1 );
+			sgs_PushIndexII( C, -2, -4, 1 );
 			sgs_ThisCall( C, 1, 0 );
 			i--; szR--;
 		}
@@ -1005,7 +1005,7 @@ static int sgs_socket_select( SGS_CTX )
 		{
 			sgs_PushItem( C, 1 );
 			sgs_PushInt( C, i );
-			sgs_PushIndexExt( C, -2, -4, 1 );
+			sgs_PushIndexII( C, -2, -4, 1 );
 			sgs_ThisCall( C, 1, 0 );
 			i--; szW--;
 		}
@@ -1020,7 +1020,7 @@ static int sgs_socket_select( SGS_CTX )
 		{
 			sgs_PushItem( C, 2 );
 			sgs_PushInt( C, i );
-			sgs_PushIndexExt( C, -2, -4, 1 );
+			sgs_PushIndexII( C, -2, -4, 1 );
 			sgs_ThisCall( C, 1, 0 );
 			i--; szE--;
 		}

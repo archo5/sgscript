@@ -8,8 +8,8 @@
 
 #include "sgs_int.h"
 
-#define STDLIB_WARN( warn ) return sgs_Printf( C, SGS_WARNING, warn );
-#define STDLIB_ERR( err ) return sgs_Printf( C, SGS_ERROR, err );
+#define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
+#define STDLIB_ERR( err ) return sgs_Msg( C, SGS_ERROR, err );
 
 
 /* Containers */
@@ -612,7 +612,7 @@ static int sgsstd_array_getprop( SGS_CTX, void* data )
 		else
 		{
 			sgs_PushNull( C );
-			sgs_Printf( C, SGS_WARNING, "array is empty, cannot get first item" );
+			sgs_Msg( C, SGS_WARNING, "array is empty, cannot get first item" );
 		}
 		return SGS_SUCCESS;
 	}
@@ -624,7 +624,7 @@ static int sgsstd_array_getprop( SGS_CTX, void* data )
 		else
 		{
 			sgs_PushNull( C );
-			sgs_Printf( C, SGS_WARNING, "array is empty, cannot get last item" );
+			sgs_Msg( C, SGS_WARNING, "array is empty, cannot get last item" );
 		}
 		return SGS_SUCCESS;
 	}
@@ -664,7 +664,7 @@ int sgsstd_array_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 		sgs_Int i = sgs_ToInt( C, -1 );
 		if( i < 0 || i >= hdr->size )
 		{
-			sgs_Printf( C, SGS_WARNING, "array index out of bounds" );
+			sgs_Msg( C, SGS_WARNING, "array index out of bounds" );
 			return SGS_EBOUNDS;
 		}
 		sgs_PushVariable( C, ptr + i );
@@ -683,7 +683,7 @@ static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 		sgs_Int i = sgs_ToInt( C, -2 );
 		if( i < 0 || i >= hdr->size )
 		{
-			sgs_Printf( C, SGS_WARNING, "array index out of bounds" );
+			sgs_Msg( C, SGS_WARNING, "array index out of bounds" );
 			return SGS_EBOUNDS;
 		}
 		sgs_Release( C, ptr + i );
@@ -1373,13 +1373,9 @@ sgsstd_class_header_t;
 static int sgsstd_class_getmethod( SGS_CTX, sgs_VarObj* data, const char* method )
 {
 	int ret;
-	sgs_Variable idx;
 	SGSCLASS_HDR;
-
 	sgs_PushString( C, method );
-	sgs_GetStackItem( C, -1, &idx );
-	
-	ret = sgs_PushIndexP( C, &hdr->inh, &idx );
+	ret = sgs_PushIndexPI( C, &hdr->inh, -1, TRUE );
 	sgs_PopSkip( C, 1, ret == SGS_SUCCESS ? 1 : 0 );
 	return ret == SGS_SUCCESS;
 }
@@ -1404,44 +1400,42 @@ static int sgsstd_class_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+static int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
 	int ret;
 	sgs_Variable idx;
 	SGSCLASS_HDR;
-	if( prop && strcmp( sgs_ToString( C, -1 ), "_super" ) == 0 )
+	if( isprop && sgs_ItemType( C, 0 ) == SVT_STRING && !strcmp( sgs_ToString( C, 0 ), "_super" ) )
 	{
 		sgs_PushVariable( C, &hdr->inh );
 		return SGS_SUCCESS;
 	}
-	sgs_GetStackItem( C, -1, &idx );
-
-	if( sgs_PushIndexP( C, &hdr->data, &idx ) == SGS_SUCCESS )
+	sgs_GetStackItem( C, 0, &idx );
+	
+	if( sgs_PushIndexPP( C, &hdr->data, &idx, isprop ) == SGS_SUCCESS )
 		goto success;
-
-	ret = sgs_PushIndexP( C, &hdr->inh, &idx );
+	
+	ret = sgs_PushIndexPP( C, &hdr->inh, &idx, isprop );
 	if( ret == SGS_SUCCESS )
 		goto success;
-
+	
 	return ret;
-
+	
 success:
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data, int prop )
+static int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
-	sgs_Variable k;
 	SGSCLASS_HDR;
-	if( strcmp( sgs_ToString( C, -2 ), "_super" ) == 0 )
+	if( isprop && sgs_ItemType( C, 0 ) == SVT_STRING && !strcmp( sgs_ToString( C, 0 ), "_super" ) )
 	{
 		sgs_Release( C, &hdr->inh );
-		sgs_GetStackItem( C, -1, &hdr->inh );
+		sgs_GetStackItem( C, 1, &hdr->inh );
 		sgs_Acquire( C, &hdr->inh );
 		return SGS_SUCCESS;
 	}
-	sgs_GetStackItem( C, -2, &k );
-	return sgs_StoreIndexP( C, &hdr->data, &k );
+	return sgs_StoreIndexPI( C, &hdr->data, 0, isprop );
 }
 
 static int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data, int depth )
@@ -1968,7 +1962,7 @@ static int sgsstd_dict_filter( SGS_CTX )
 		if( use )
 		{
 			/* src-dict, ... dest-dict, iterator, key, value */
-			sgs_StoreIndex( C, -4, -2 );
+			sgs_StoreIndexII( C, -4, -2, FALSE );
 		}
 		sgs_Pop( C, use ? 1 : 2 );
 	}
@@ -1992,7 +1986,7 @@ static int sgsstd_dict_process( SGS_CTX )
 		if( sgs_Call( C, 2, 1 ) )
 			STDLIB_WARN( "failed to call the processing function" )
 		/* src-dict, callable, ... iterator, key, proc.val. */
-		sgs_StoreIndex( C, 0, -2 );
+		sgs_StoreIndexII( C, 0, -2, FALSE );
 		sgs_Pop( C, 1 );
 	}
 	
@@ -2036,7 +2030,7 @@ static int sgsstd_isset( SGS_CTX )
 
 	oml = C->minlev;
 	C->minlev = INT32_MAX;
-	ret = sgs_PushIndexExt( C, -2, -1, 1 );
+	ret = sgs_PushIndexII( C, -2, -1, TRUE );
 	C->minlev = oml;
 	sgs_PushBool( C, ret == SGS_SUCCESS );
 	return 1;
@@ -2123,7 +2117,7 @@ static int sgsstd_get_concat( SGS_CTX )
 	SGSFN( "get_concat" );
 	if( ssz < 2 )
 	{
-		return sgs_Printf( C, SGS_WARNING,
+		return sgs_Msg( C, SGS_WARNING,
 			"function expects at least 2 arguments, got %d",
 			sgs_StackSize( C ) );
 	}
@@ -2159,7 +2153,7 @@ static int sgsstd__get_merged__common( SGS_CTX, sgs_SizeVal ssz )
 			/* ..., output, arg2 iter */
 			ret = sgs_IterPushData( C, -1, TRUE, TRUE );
 			if( ret != SGS_SUCCESS ) STDLIB_WARN( "failed to retrieve data from iterator" )
-			ret = sgs_StoreIndex( C, -4, -2 );
+			ret = sgs_StoreIndexII( C, -4, -2, FALSE );
 			if( ret != SGS_SUCCESS ) STDLIB_WARN( "failed to store data" )
 			sgs_Pop( C, 1 );
 		}
@@ -2174,7 +2168,7 @@ static int sgsstd_get_merged( SGS_CTX )
 	SGSFN( "get_merged" );
 	if( ssz < 2 )
 	{
-		return sgs_Printf( C, SGS_WARNING,
+		return sgs_Msg( C, SGS_WARNING,
 			"function expects at least 2 arguments, got %d",
 			sgs_StackSize( C ) );
 	}
@@ -2189,7 +2183,7 @@ static int sgsstd_get_merged_map( SGS_CTX )
 	SGSFN( "get_merged_map" );
 	if( ssz < 2 )
 	{
-		return sgs_Printf( C, SGS_WARNING,
+		return sgs_Msg( C, SGS_WARNING,
 			"function expects at least 2 arguments, got %d",
 			sgs_StackSize( C ) );
 	}
@@ -2518,7 +2512,7 @@ static int sgsstd_srand( SGS_CTX )
 
 struct pcall_printinfo
 {
-	sgs_PrintFunc pfn;
+	sgs_MsgFunc pfn;
 	void* pctx;
 	sgs_Variable handler;
 	int depth;
@@ -2564,21 +2558,21 @@ static int sgsstd_pcall( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?p|p", &b ) )
 		return 0;
 	
-	P.pfn = C->print_fn;
-	P.pctx = C->print_ctx;
+	P.pfn = C->msg_fn;
+	P.pctx = C->msg_ctx;
 	P.handler.type = SVT_NULL;
 	P.depth = 0;
 	if( b )
 		sgs_GetStackItem( C, 1, &P.handler );
 	
-	C->print_fn = sgsstd_pcall_print;
-	C->print_ctx = &P;
+	C->msg_fn = sgsstd_pcall_print;
+	C->msg_ctx = &P;
 	
 	sgs_PushItem( C, 0 );
 	sgs_Call( C, 0, 0 );
 	
-	C->print_fn = P.pfn;
-	C->print_ctx = P.pctx;
+	C->msg_fn = P.pfn;
+	C->msg_ctx = P.pctx;
 	
 	return 0;
 }
@@ -2594,7 +2588,7 @@ static int sgsstd_assert( SGS_CTX )
 	
 	SGSFN( NULL );
 	if( !sgs_GetBool( C, 0 ) )
-		sgs_Printf( C, SGS_ERROR, !str ? "assertion failed" :
+		sgs_Msg( C, SGS_ERROR, !str ? "assertion failed" :
 			"assertion failed: %s", str );
 	return 0;
 }
@@ -2660,7 +2654,7 @@ static int sgsstd_compile_sgs( SGS_CTX )
 	size_t outsize = 0;
 	sgs_Variable var;
 	
-	sgs_PrintFunc oldpfn;
+	sgs_MsgFunc oldpfn;
 	void* oldpctx;
 	
 	SGSFN( "compile_sgs" );
@@ -2673,17 +2667,17 @@ static int sgsstd_compile_sgs( SGS_CTX )
 	sgs_Acquire( C, &var );
 	sgs_Pop( C, 1 );
 	
-	oldpfn = C->print_fn;
-	oldpctx = C->print_ctx;
-	sgs_SetPrintFunc( C, _sgsstd_compile_pfn, &var );
+	oldpfn = C->msg_fn;
+	oldpctx = C->msg_ctx;
+	sgs_SetMsgFunc( C, _sgsstd_compile_pfn, &var );
 	SGSFN( NULL );
 	
 	/* WP: string limit */
 	ret = sgs_Compile( C, buf, (size_t) size, &outbuf, &outsize );
 	
 	SGSFN( "compile_sgs" );
-	C->print_fn = oldpfn;
-	C->print_ctx = oldpctx;
+	C->msg_fn = oldpfn;
+	C->msg_ctx = oldpctx;
 	
 	if( ret < 0 )
 		sgs_PushNull( C );
@@ -2694,7 +2688,7 @@ static int sgsstd_compile_sgs( SGS_CTX )
 		else
 		{
 			sgs_PushNull( C );
-			sgs_Printf( C, SGS_WARNING, "size of compiled code is bigger than allowed to store" );
+			sgs_Msg( C, SGS_WARNING, "size of compiled code is bigger than allowed to store" );
 		}
 		sgs_Dealloc( outbuf );
 	}
@@ -2787,7 +2781,7 @@ static int sgsstd_include_file( SGS_CTX )
 
 	ret = sgs_ExecFile( C, str );
 	if( ret == SGS_ENOTFND )
-		return sgs_Printf( C, SGS_WARNING, "file '%s' was not found", str );
+		return sgs_Msg( C, SGS_WARNING, "file '%s' was not found", str );
 	if( ret == SGS_SUCCESS )
 		sgsstd__setinc( C, 0 );
 	sgs_PushBool( C, ret == SGS_SUCCESS );
@@ -2812,9 +2806,9 @@ static int sgsstd_include_shared( SGS_CTX )
 	if( ret != 0 )
 	{
 		if( ret == SGS_XPC_NOFILE )
-			return sgs_Printf( C, SGS_WARNING, "file '%s' was not found", fnstr );
+			return sgs_Msg( C, SGS_WARNING, "file '%s' was not found", fnstr );
 		else if( ret == SGS_XPC_NOPROC )
-			return sgs_Printf( C, SGS_WARNING, "procedure '" SGS_LIB_ENTRY_POINT "' was not found" );
+			return sgs_Msg( C, SGS_WARNING, "procedure '" SGS_LIB_ENTRY_POINT "' was not found" );
 		else if( ret == SGS_XPC_NOTSUP )
 			STDLIB_WARN( "feature is not supported on this platform" )
 		else STDLIB_WARN( "unknown error occured" )
@@ -2973,7 +2967,7 @@ static int sgsstd_include( SGS_CTX )
 		if( ret == 0 || mb.size == 0 )
 		{
 			membuf_destroy( &mb, C );
-			return sgs_Printf( C, SGS_WARNING, "could not find '%.*s' "
+			return sgs_Msg( C, SGS_WARNING, "could not find '%.*s' "
 				"with include path '%.*s'", fnsize, fnstr, pssize, ps );
 		}
 		
@@ -2990,7 +2984,7 @@ static int sgsstd_include( SGS_CTX )
 		else if( ret != SGS_XPC_NOTLIB )
 		{
 			membuf_destroy( &mb, C );
-			return sgs_Printf( C, SGS_WARNING, "failed to load native module '%.*s'", fnsize, fnstr );
+			return sgs_Msg( C, SGS_WARNING, "failed to load native module '%.*s'", fnsize, fnstr );
 		}
 		
 		sgs_PushString( C, mb.ptr );
@@ -3004,7 +2998,7 @@ static int sgsstd_include( SGS_CTX )
 			goto success;
 	}
 	
-	sgs_Printf( C, SGS_WARNING, "could not load '%.*s'", fnsize, fnstr );
+	sgs_Msg( C, SGS_WARNING, "could not load '%.*s'", fnsize, fnstr );
 	sgs_PushBool( C, 0 );
 	return 1;
 	
@@ -3029,9 +3023,9 @@ static int sgsstd_import_cfunc( SGS_CTX )
 	if( ret != 0 )
 	{
 		if( ret == SGS_XPC_NOFILE )
-			return sgs_Printf( C, SGS_WARNING, "file '%s' was not found", fnstr );
+			return sgs_Msg( C, SGS_WARNING, "file '%s' was not found", fnstr );
 		else if( ret == SGS_XPC_NOPROC )
-			return sgs_Printf( C, SGS_WARNING, "procedure '%s' was not found", pnstr );
+			return sgs_Msg( C, SGS_WARNING, "procedure '%s' was not found", pnstr );
 		else if( ret == SGS_XPC_NOTSUP )
 			STDLIB_WARN( "feature is not supported on this platform" )
 		else STDLIB_WARN( "unknown error occured" )
@@ -3086,7 +3080,7 @@ static int sgsstd_sys_print( SGS_CTX )
 	
 	SGSFN( NULL );
 
-	sgs_Printf( C, (int) errcode, errmsg );
+	sgs_Msg( C, (int) errcode, errmsg );
 	return 0;
 }
 
@@ -3097,7 +3091,7 @@ static int sgsstd__printwrapper( SGS_CTX, const char* fn, int code )
 	if( sgs_LoadArgs( C, "s", &msg ) )
 	{
 		SGSFN( NULL );
-		sgs_Printf( C, code, msg );
+		sgs_Msg( C, code, msg );
 	}
 	return 0;
 }
@@ -3222,7 +3216,7 @@ static int sgsstd_errno_value( SGS_CTX )
 		ekt += 2;
 	}
 	
-	sgs_Printf( C, SGS_ERROR, "this errno value is unsupported" );
+	sgs_Msg( C, SGS_ERROR, "this errno value is unsupported" );
 	return 0;
 }
 
@@ -3623,7 +3617,7 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 	{
 		sgsVM_ReleaseStack( C, out );
 		if( !apicall )
-			sgs_Printf( C, SGS_WARNING, "variable '%s' was not found",
+			sgs_Msg( C, SGS_WARNING, "variable '%s' was not found",
 				str_cstr( idx->data.S ) );
 		out->type = SVT_NULL;
 		return SGS_ENOTFND;
@@ -3643,7 +3637,7 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 		if( val->type != SVT_OBJECT || val->data.O->iface != sgsstd_dict_iface )
 		{
 			if( !apicall )
-				sgs_Printf( C, SGS_ERROR, "_G only accepts 'dict' values" );
+				sgs_Msg( C, SGS_ERROR, "_G only accepts 'dict' values" );
 			return SGS_ENOTSUP;
 		}
 		

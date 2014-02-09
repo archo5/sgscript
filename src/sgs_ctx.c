@@ -12,7 +12,7 @@
 
 
 #if SGS_DEBUG && SGS_DEBUG_FLOW
-#  define DBGINFO( text ) sgs_Printf( C, SGS_INFO, text )
+#  define DBGINFO( text ) sgs_Msg( C, SGS_INFO, text )
 #else
 #  define DBGINFO( text )
 #endif
@@ -46,8 +46,8 @@ static void ctx_init( SGS_CTX )
 	C->output_fn = default_outputfn;
 	C->output_ctx = stdout;
 	C->minlev = SGS_INFO;
-	C->print_fn = default_printfn;
-	C->print_ctx = stderr;
+	C->msg_fn = default_printfn;
+	C->msg_ctx = stderr;
 	C->last_errno = 0;
 	C->hook_fn = NULL;
 	C->hook_ctx = NULL;
@@ -186,8 +186,8 @@ void sgs_DestroyEngine( SGS_CTX )
 	sgs_BreakIf( C->memsize < sizeof( sgs_Context ) );
 #endif
 	
-	C->print_fn = NULL;
-	C->print_ctx = NULL;
+	C->msg_fn = NULL;
+	C->msg_ctx = NULL;
 	
 	C->memfunc( C->mfuserdata, C, 0 );
 }
@@ -273,17 +273,17 @@ SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... )
 }
 
 
-void sgs_SetPrintFunc( SGS_CTX, sgs_PrintFunc func, void* ctx )
+void sgs_SetMsgFunc( SGS_CTX, sgs_MsgFunc func, void* ctx )
 {
-	if( func == SGSPRINTFN_DEFAULT )
+	if( func == SGSMSGFN_DEFAULT )
 		func = default_printfn;
-	else if( func == SGSPRINTFN_DEFAULT_NOABORT )
+	else if( func == SGSMSGFN_DEFAULT_NOABORT )
 		func = default_printfn_noabort;
-	C->print_fn = func;
-	C->print_ctx = ctx;
+	C->msg_fn = func;
+	C->msg_ctx = ctx;
 }
 
-int sgs_Printf( SGS_CTX, int type, const char* what, ... )
+int sgs_Msg( SGS_CTX, int type, const char* what, ... )
 {
 	char buf[ SGS_OUTPUT_STACKBUF_SIZE ];
 	MemBuf info = membuf_create();
@@ -301,7 +301,7 @@ int sgs_Printf( SGS_CTX, int type, const char* what, ... )
 	sgs_BreakIf( cnt < 0 );
 	if( cnt < 0 )
 	{
-		C->print_fn( C->print_ctx, C, SGS_ERROR, "sgs_Printf ERROR: failed to print the message" );
+		C->msg_fn( C->msg_ctx, C, SGS_ERROR, "sgs_Msg ERROR: failed to print the message" );
 		return 0;
 	}
 	
@@ -310,7 +310,7 @@ int sgs_Printf( SGS_CTX, int type, const char* what, ... )
 		/* WP: it is expected that native functions ..
 		.. will not set names of more than 2GB length */
 		slen = (int) strlen( C->sf_last->nfname );
-		off = slen + SGS_PRINTF_EXTRABYTES;
+		off = slen + SGS_MSG_EXTRABYTES;
 		cnt += off;
 	}
 
@@ -325,7 +325,7 @@ int sgs_Printf( SGS_CTX, int type, const char* what, ... )
 	{
 		/* WP: slen is generated from size_t, thus is never negative */
 		memcpy( ptr, C->sf_last->nfname, (size_t) slen );
-		memcpy( ptr + slen, SGS_PRINTF_EXTRASTRING, SGS_PRINTF_EXTRABYTES );
+		memcpy( ptr + slen, SGS_MSG_EXTRASTRING, SGS_MSG_EXTRABYTES );
 	}
 
 	va_start( args, what );
@@ -333,7 +333,7 @@ int sgs_Printf( SGS_CTX, int type, const char* what, ... )
 	va_end( args );
 	ptr[ cnt ] = 0;
 
-	C->print_fn( C->print_ctx, C, type, ptr );
+	C->msg_fn( C->msg_ctx, C, type, ptr );
 
 	membuf_destroy( &info, C );
 	
@@ -458,7 +458,7 @@ static int ctx_decode( SGS_CTX, const char* buf, size_t size, sgs_CompFunc** out
 		if( ret )
 		{
 			/* just invalid, error! */
-			sgs_Printf( C, SGS_ERROR, "Failed to read bytecode file (%s)", ret );
+			sgs_Msg( C, SGS_ERROR, "Failed to read bytecode file (%s)", ret );
 			return -1;
 		}
 	}

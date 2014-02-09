@@ -318,18 +318,11 @@ endnumparse:
 			}
 			if( STK_TOP == '[' )
 			{
-				sgs_Variable obj;
-				sgs_GetStackItem( C, -2, &obj );
-				sgs_Acquire( C, &obj );
-				sgs_PushItem( C, -2 );
-				sgs_PushProperty( C, "push" );
-				sgs_ThisCall( C, 1, 0 );
-				sgs_PushVariable( C, &obj );
-				sgs_Release( C, &obj );
+				sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
 			}
 			if( STK_TOP == ':' )
 			{
-				sgs_StoreIndex( C, -3, -2 );
+				sgs_StoreIndexII( C, -3, -2, sgs_FALSE );
 				sgs_Pop( C, 1 );
 				STK_TOP = '{';
 			}
@@ -352,7 +345,7 @@ static int json_decode( SGS_CTX )
 		!sgs_ParseString( C, 0, &str, &size ) ||
 		( argc == 2 && sgs_ItemType( C, 1 ) != SGS_VT_OBJECT ) )
 	{
-		sgs_Printf( C, SGS_WARNING, "unexpected arguments; "
+		sgs_Msg( C, SGS_WARNING, "unexpected arguments; "
 			"function expects 1-2 arguments: string[, object]" );
 		return 0;
 	}
@@ -429,7 +422,7 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 		}
 	case SGS_VT_FUNC:
 	case SGS_VT_CFUNC:
-		sgs_Printf( C, SGS_WARNING, "json_encode: cannot encode functions" );
+		sgs_Msg( C, SGS_WARNING, "json_encode: cannot encode functions" );
 		return 0;
 	case SGS_VT_OBJECT:
 		{
@@ -486,7 +479,7 @@ static int json_encode( SGS_CTX )
 
 	if( argc != 1 )
 	{
-		sgs_Printf( C, SGS_WARNING, "function expects 1 argument" );
+		sgs_Msg( C, SGS_WARNING, "function expects 1 argument" );
 		return 0;
 	}
 
@@ -494,7 +487,7 @@ static int json_encode( SGS_CTX )
 	if( buf.size > 0x7fffffff )
 	{
 		sgs_membuf_destroy( &buf, C );
-		return sgs_Printf( C, SGS_WARNING, "generated more string data than allowed to store" );
+		return sgs_Msg( C, SGS_WARNING, "generated more string data than allowed to store" );
 	}
 	if( ret )
 		sgs_PushStringBuf( C, buf.ptr, (sgs_SizeVal) buf.size );

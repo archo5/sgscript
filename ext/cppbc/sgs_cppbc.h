@@ -200,7 +200,7 @@ template<> struct sgs_GetVar<bool> { bool operator () ( SGS_CTX, int item )
 }};
 #define SGS_DECL_LOADVAR_INT( type ) \
 	template<> struct sgs_GetVar<type> { type operator () ( SGS_CTX, int item ){ \
-		sgs_Int v; if( sgs_ParseInt( C, item, &v ) ) return v; return 0; }};
+		sgs_Int v; if( sgs_ParseInt( C, item, &v ) ) return (type) v; return 0; }};
 SGS_DECL_LOADVAR_INT( signed char );
 SGS_DECL_LOADVAR_INT( unsigned char );
 SGS_DECL_LOADVAR_INT( signed short );
@@ -211,9 +211,9 @@ SGS_DECL_LOADVAR_INT( signed long );
 SGS_DECL_LOADVAR_INT( unsigned long );
 SGS_DECL_LOADVAR_INT( signed long long );
 template<> struct sgs_GetVar<float> { float operator () ( SGS_CTX, int item ){
-	sgs_Real v; if( sgs_ParseReal( C, item, &v ) ) return v; return 0; }};
+	sgs_Real v; if( sgs_ParseReal( C, item, &v ) ) return (float) v; return 0; }};
 template<> struct sgs_GetVar<double> { double operator () ( SGS_CTX, int item ){
-	sgs_Real v; if( sgs_ParseReal( C, item, &v ) ) return v; return 0; }};
+	sgs_Real v; if( sgs_ParseReal( C, item, &v ) ) return (double) v; return 0; }};
 template<> struct sgs_GetVar<char*> { char* operator () ( SGS_CTX, int item ){
 	char* str = NULL; sgs_ParseString( C, item, &str, NULL ); return str; }};
 template<> struct sgs_GetVar<std::string> { std::string operator () ( SGS_CTX, int item ){

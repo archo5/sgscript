@@ -25,7 +25,7 @@ static SGS_INLINE rcpos_t comp_reg_alloc( SGS_CTX )
 	if( out > 0xff )
 	{
 		C->state |= SGS_HAS_ERRORS | SGS_MUST_STOP;
-		sgs_Printf( C, SGS_ERROR, "Max. register count exceeded" );
+		sgs_Msg( C, SGS_ERROR, "Max. register count exceeded" );
 	}
 	return out;
 }
@@ -376,7 +376,7 @@ static void add_instr( sgs_CompFunc* func, SGS_CTX, FTNode* node, instr_t I )
 #define INSTR_WRITE_EX( op, ex, c ) INSTR( INSTR_MAKE_EX( op, ex, c ) )
 #define INSTR_WRITE_PCH() INSTR_WRITE( 63, 0, 0, 0 )
 
-#define QPRINT( str ) sgs_Printf( C, SGS_ERROR, "[line %d] " str, sgsT_LineNum( node->token ) )
+#define QPRINT( str ) sgs_Msg( C, SGS_ERROR, "[line %d] " str, sgsT_LineNum( node->token ) )
 
 
 
@@ -691,7 +691,7 @@ static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
 	return pos;
 }
 
-#define INTERNAL_ERROR( loff ) sgs_printf( C, SGS_ERROR, "INTERNAL ERROR occured in file %s [%d]", __FILE__, __LINE__ - (loff) )
+#define INTERNAL_ERROR( loff ) sgs_Msg( C, SGS_ERROR, "INTERNAL ERROR occured in file %s [%d]", __FILE__, __LINE__ - (loff) )
 
 static int op_pick_opcode( int oper, int binary )
 {
@@ -1857,7 +1857,7 @@ static SGSBOOL compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_
 		goto fail;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/w error]" );
+		sgs_Msg( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/w error]" );
 		goto fail;
 	}
 	FUNC_END;
@@ -1983,7 +1983,7 @@ static SGSBOOL compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_
 		break;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r error]" );
+		sgs_Msg( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r error]" );
 		goto fail;
 	}
 	FUNC_END;
@@ -2002,7 +2002,7 @@ static SGSBOOL compile_for_explist( SGS_CTX, sgs_CompFunc* func, FTNode* node, r
 
 	if( node->type != SFT_EXPLIST )
 	{
-		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r[fe] error]" );
+		sgs_Msg( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r[fe] error]" );
 		goto fail;
 	}
 
@@ -2475,7 +2475,7 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		break;
 
 	default:
-		sgs_Printf( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG error]" );
+		sgs_Msg( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG error]" );
 		goto fail;
 	}
 
@@ -2504,7 +2504,7 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, FTNode* tree )
 
 	if( C->fctx->lastreg > 0xff )
 	{
-		sgs_Printf( C, SGS_ERROR, "[line %d] Maximum register count exceeded",
+		sgs_Msg( C, SGS_ERROR, "[line %d] Maximum register count exceeded",
 			sgsT_LineNum( tree->token ) );
 		goto fail;
 	}

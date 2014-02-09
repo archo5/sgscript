@@ -20,8 +20,8 @@
 #define FN( x ) { #x, sgsstd_##x }
 #define FLAG( a, b ) (((a)&(b))!=0)
 #define STREQ( a, b ) (0==strcmp(a,b))
-#define STDLIB_INFO( info ) return sgs_Printf( C, SGS_INFO, info );
-#define STDLIB_WARN( warn ) return sgs_Printf( C, SGS_WARNING, warn );
+#define STDLIB_INFO( info ) return sgs_Msg( C, SGS_INFO, info );
+#define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
 
 
 SGS_DECLARE sgs_ObjCallback sgsstd_file_functable[ 7 ];
@@ -111,7 +111,7 @@ static void fmt_pack_stats(
 			if( first )
 			{
 				first = 0;
-				sgs_Printf( C, SGS_WARNING, "invalid character"
+				sgs_Msg( C, SGS_WARNING, "invalid character"
 				" at position %d (there might be more)", ( str - sb + 1 ) );
 			}
 			mult = 0;
@@ -412,7 +412,7 @@ static int sgsstd_fmt_pack( SGS_CTX )
 	fmt_pack_stats( C, str, size, &numitems, &numbytes );
 	if( sgs_StackSize( C ) < numitems + 1 )
 	{
-		sgs_Printf( C, SGS_WARNING, 
+		sgs_Msg( C, SGS_WARNING, 
 			"expected at least %d arguments, got %d\n",
 			numitems + 1, sgs_StackSize( C ) );
 		return 0;
@@ -422,7 +422,7 @@ static int sgsstd_fmt_pack( SGS_CTX )
 		sgs_PushStringBuf( C, NULL, numbytes );
 		ret = fmt_pack( C, str, size, sgs_GetStringPtr( C, -1 ) ) - 1;
 		if( ret != numitems )
-			sgs_Printf( C, SGS_WARNING, "error in arguments, could not read all" );
+			sgs_Msg( C, SGS_WARNING, "error in arguments, could not read all" );
 		return ret == numitems;
 	}
 }
@@ -571,7 +571,7 @@ static int sgsstd_fmt_base64_decode( SGS_CTX )
 			i2 = findintable( b64_table, str[1] );
 			if( no<2 ) i3 = findintable( b64_table, str[2] );
 			if( no<1 ) i4 = findintable( b64_table, str[3] );
-#define warnbyte( pos ) sgs_Printf( C, SGS_WARNING, \
+#define warnbyte( pos ) sgs_Msg( C, SGS_WARNING, \
 	"fmt_base64_decode() - wrong byte value at position %d", pos );
 			if( i1 < 0 ){ warnbyte( str-beg+1 ); e = 1; }
 			else if( i2 < 0 ){ warnbyte( str-beg+2 ); e = 1; }
@@ -593,7 +593,7 @@ static int sgsstd_fmt_base64_decode( SGS_CTX )
 				break;
 		}
 		if( str < strend )
-			sgs_Printf( C, SGS_WARNING, "extra bytes detected and ignored" );
+			sgs_Msg( C, SGS_WARNING, "extra bytes detected and ignored" );
 		/* WP: generated string is 1/(ceil(n/3)*4) of original in length (less) */
 		sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
 		membuf_destroy( &B, C );
@@ -795,13 +795,13 @@ static int sgsstd_fmt_text( SGS_CTX )
 			if( !ret )
 			{
 				membuf_destroy( &B, C );
-				sgs_Printf( C, SGS_WARNING, 
+				sgs_Msg( C, SGS_WARNING, 
 					"parsing error in item %d", numitem );
 				return 0;
 			}
 			if( !commit_fmtspec( C, &B, &F, &si ) )
 			{
-				sgs_Printf( C, SGS_WARNING, 
+				sgs_Msg( C, SGS_WARNING, 
 					"could not read item %d (arg. %d)", numitem, sio );
 			}
 		}
@@ -2876,7 +2876,7 @@ static int _regex_init( SGS_CTX, srx_Context** pR, char* ptrn )
 		case RXEEMPTY: errstr = "expression is effectively empty"; break;
 		case RXENOREF: errstr = "the specified backreference cannot be used here"; break;
 		}
-		return sgs_Printf( C, SGS_WARNING, "failed to parse the pattern"
+		return sgs_Msg( C, SGS_WARNING, "failed to parse the pattern"
 			" - %s at character %d", errstr, errnpos[1] );
 	}
 	*pR = R;
@@ -3945,7 +3945,7 @@ static int sgsstd_string_format( SGS_CTX )
 				if( !ret )
 				{
 					membuf_destroy( &B, C );
-					sgs_Printf( C, SGS_WARNING, 
+					sgs_Msg( C, SGS_WARNING, 
 						"parsing error in item %d - failed to parse format part", numitem );
 					return 0;
 				}
@@ -3953,7 +3953,7 @@ static int sgsstd_string_format( SGS_CTX )
 			else if( *fmt != '}' )
 			{
 				membuf_destroy( &B, C );
-				sgs_Printf( C, SGS_WARNING, 
+				sgs_Msg( C, SGS_WARNING, 
 					"parsing error in item %d - unexpected symbol (%c)", numitem, *fmt );
 				return 0;
 			}
@@ -3969,7 +3969,7 @@ static int sgsstd_string_format( SGS_CTX )
 			sio = stkid;
 			if( !commit_fmtspec( C, &B, &F, &stkid ) )
 			{
-				sgs_Printf( C, SGS_WARNING, 
+				sgs_Msg( C, SGS_WARNING, 
 					"could not read item %d (arg. %d)", numitem, sio );
 			}
 		}
