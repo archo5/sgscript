@@ -1737,25 +1737,27 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 static void vm_make_array( SGS_CTX, int args, int outpos )
 {
 	int ret;
+	sgs_Variable arr;
 	sgs_BreakIf( sgs_StackSize( C ) < args );
-	ret = sgsSTD_MakeArray( C, args );
+	ret = sgsSTD_MakeArray( C, &arr, args );
 	sgs_BreakIf( ret != SGS_SUCCESS );
 	UNUSED( ret );
 	
-	stk_setvar( C, outpos, stk_getpos( C, -1 ) );
-	stk_pop1( C );
+	stk_setvar( C, outpos, &arr );
+	VAR_RELEASE( &arr );
 }
 
 static void vm_make_dict( SGS_CTX, int args, int outpos )
 {
 	int ret;
+	sgs_Variable arr;
 	sgs_BreakIf( sgs_StackSize( C ) < args );
-	ret = sgsSTD_MakeDict( C, args );
+	ret = sgsSTD_MakeDict( C, &arr, args );
 	sgs_BreakIf( ret != SGS_SUCCESS );
 	UNUSED( ret );
 	
-	stk_setvar( C, outpos, stk_getpos( C, -1 ) );
-	stk_pop1( C );
+	stk_setvar( C, outpos, &arr );
+	VAR_RELEASE( &arr );
 }
 
 static void vm_make_closure( SGS_CTX, int args, sgs_Variable* func, int16_t outpos )
@@ -2263,7 +2265,7 @@ void sgs_InitString( SGS_CTX, sgs_Variable* out, const char* str )
 	VAR_ACQUIRE( out );
 }
 
-void sgs_InitCFunction( SGS_CTX, sgs_Variable* out, sgs_CFunc func )
+void sgs_InitCFunction( sgs_Variable* out, sgs_CFunc func )
 {
 	out->type = SVT_CFUNC;
 	out->data.C = func;
@@ -2282,17 +2284,34 @@ void* sgs_InitObjectIPA( SGS_CTX, sgs_Variable* out, uint32_t added, sgs_ObjCall
 	return out->data.O->data;
 }
 
-void sgs_InitPtr( SGS_CTX, sgs_Variable* out, void* ptr )
+void sgs_InitPtr( sgs_Variable* out, void* ptr )
 {
 	out->type = SVT_PTR;
 	out->data.P = ptr;
 }
 
-void sgs_InitObjectPtr( SGS_CTX, sgs_Variable* out, sgs_VarObj* obj )
+void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj )
 {
 	out->type = SVT_OBJECT;
 	out->data.O = obj;
 }
+
+
+SGSRESULT sgs_InitArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
+{
+	return sgsSTD_MakeArray( C, out, numitems );
+}
+
+SGSRESULT sgs_InitDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
+{
+	return sgsSTD_MakeDict( C, out, numitems );
+}
+
+SGSRESULT sgs_InitMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
+{
+	return sgsSTD_MakeMap( C, out, numitems );
+}
+
 
 /*
 
@@ -2387,6 +2406,40 @@ void sgs_PushObjectPtr( SGS_CTX, sgs_VarObj* obj )
 }
 
 
+SGSRESULT sgs_PushArray( SGS_CTX, sgs_SizeVal numitems )
+{
+	int res;
+	sgs_Variable var;
+	if( SGS_FAILED( res = sgsSTD_MakeArray( C, &var, numitems ) ) )
+		return res;
+	stk_push( C, &var );
+	VAR_RELEASE( &var );
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems )
+{
+	int res;
+	sgs_Variable var;
+	if( SGS_FAILED( res = sgsSTD_MakeDict( C, &var, numitems ) ) )
+		return res;
+	stk_push( C, &var );
+	VAR_RELEASE( &var );
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_PushMap( SGS_CTX, sgs_SizeVal numitems )
+{
+	int res;
+	sgs_Variable var;
+	if( SGS_FAILED( res = sgsSTD_MakeMap( C, &var, numitems ) ) )
+		return res;
+	stk_push( C, &var );
+	VAR_RELEASE( &var );
+	return SGS_SUCCESS;
+}
+
+
 SGSRESULT sgs_PushVariable( SGS_CTX, sgs_Variable* var )
 {
 	if( var->type >= SGS_VT__COUNT )
@@ -2444,21 +2497,6 @@ SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var )
 	vp = stk_insert_pos( C, pos );
 	*vp = *var;
 	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_PushArray( SGS_CTX, sgs_SizeVal numitems )
-{
-	return sgsSTD_MakeArray( C, numitems );
-}
-
-SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems )
-{
-	return sgsSTD_MakeDict( C, numitems );
-}
-
-SGSRESULT sgs_PushMap( SGS_CTX, sgs_SizeVal numitems )
-{
-	return sgsSTD_MakeMap( C, numitems );
 }
 
 
@@ -3265,15 +3303,22 @@ SGSRESULT sgs_SetStackSize( SGS_CTX, StkIdx size )
 
 */
 
+SGSRESULT sgs_FCallP( SGS_CTX, sgs_Variable* callable, int args, int expect, int gotthis )
+{
+	if( STACKFRAMESIZE < args + ( gotthis ? 1 : 0 ) )
+		return SGS_EINVAL;
+	return vm_call( C, args, 0, gotthis, expect, callable ) ? SGS_SUCCESS : SGS_EINPROC;
+}
+
 SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
 {
 	int ret;
 	sgs_Variable func;
 	int stksize = sgs_StackSize( C );
-	gotthis = !!gotthis;
+	gotthis = gotthis ? 1 : 0;
 	if( stksize < args + gotthis + 1 )
 		return SGS_EINVAL;
-
+	
 	func = *stk_getpos( C, -1 );
 	VAR_ACQUIRE( &func );
 	sgs_Pop( C, 1 );

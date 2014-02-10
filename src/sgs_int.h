@@ -787,9 +787,9 @@ static const char* sgs_IfaceNames[] =
 
 /* apicall = error codes only; printfs otherwise (VM call) */
 int sgsSTD_PostInit( SGS_CTX );
-int sgsSTD_MakeArray( SGS_CTX, sgs_SizeVal cnt );
-int sgsSTD_MakeDict( SGS_CTX, sgs_SizeVal cnt );
-int sgsSTD_MakeMap( SGS_CTX, sgs_SizeVal cnt );
+int sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
+int sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
+int sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc );
 int sgsSTD_GlobalInit( SGS_CTX );
 int sgsSTD_GlobalFree( SGS_CTX );

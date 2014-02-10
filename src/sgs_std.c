@@ -335,8 +335,7 @@ static SGS_INLINE int sgsarrcomp_custom( const void* p1, const void* p2, void* u
 	SGS_CTX = u->C;
 	sgs_PushVariable( C, &v1 );
 	sgs_PushVariable( C, &v2 );
-	sgs_PushVariable( C, &u->sortfunc );
-	if( sgs_Call( C, 2, 1 ) != SGS_SUCCESS )
+	if( sgs_CallP( C, &u->sortfunc, 2, 1 ) != SGS_SUCCESS )
 		return 0;
 	else
 	{
@@ -985,9 +984,11 @@ static int sgsstd_vht_dump( SGS_CTX, sgs_VarObj* data, int depth, const char* na
 	DICT
 */
 
-static DictHdr* mkdict( SGS_CTX )
+static DictHdr* mkdict( SGS_CTX, sgs_Variable* out )
 {
-	DictHdr* dh = (DictHdr*) sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_dict_iface );
+	DictHdr* dh = (DictHdr*) ( out
+		? sgs_InitObjectIPA( C, out, sizeof( DictHdr ), sgsstd_dict_iface )
+		: sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_dict_iface ) );
 	vht_init( &dh->ht, C, 4, 4 );
 	return dh;
 }
@@ -1162,7 +1163,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_CONVOP_CLONE )
 	{
 		int i, htsize = vht_size( ht );
-		DictHdr* ndh = mkdict( C );
+		DictHdr* ndh = mkdict( C, NULL );
 		for( i = 0; i < htsize; ++i )
 		{
 			vht_set( &ndh->ht, C, &ht->vars[ i ].key, &ht->vars[ i ].val );
@@ -1205,7 +1206,7 @@ static int sgsstd_dict( SGS_CTX )
 	if( objcnt % 2 != 0 )
 		STDLIB_WARN( "function expects 0 or an even number of arguments" )
 
-	dh = mkdict( C );
+	dh = mkdict( C, NULL );
 	ht = &dh->ht;
 
 	for( i = 0; i < objcnt; i += 2 )
@@ -1224,9 +1225,11 @@ static int sgsstd_dict( SGS_CTX )
 
 /* MAP */
 
-static DictHdr* mkmap( SGS_CTX )
+static DictHdr* mkmap( SGS_CTX, sgs_Variable* out )
 {
-	DictHdr* dh = (DictHdr*) sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_map_iface );
+	DictHdr* dh = (DictHdr*) ( out
+		? sgs_InitObjectIPA( C, out, sizeof( DictHdr ), sgsstd_map_iface )
+		: sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_map_iface ) );
 	vht_init( &dh->ht, C, 4, 4 );
 	return dh;
 }
@@ -1288,7 +1291,7 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_CONVOP_CLONE )
 	{
 		int i, htsize = vht_size( ht );
-		DictHdr* ndh = mkmap( C );
+		DictHdr* ndh = mkmap( C, NULL );
 		for( i = 0; i < htsize; ++i )
 		{
 			vht_set( &ndh->ht, C, &ht->vars[ i ].key, &ht->vars[ i ].val );
@@ -1346,7 +1349,7 @@ static int sgsstd_map( SGS_CTX )
 	if( objcnt % 2 != 0 )
 		STDLIB_WARN( "function expects 0 or an even number of arguments" )
 	
-	dh = mkmap( C );
+	dh = mkmap( C, NULL );
 	ht = &dh->ht;
 
 	for( i = 0; i < objcnt; i += 2 )
@@ -2093,10 +2096,8 @@ static int _foreach_lister( SGS_CTX, int vnk )
 	/* arg1, arg1 iter, output */
 	while( sgs_IterAdvance( C, 1 ) > 0 )
 	{
-		sgs_PushItem( C, 2 );
 		sgs_IterPushData( C, 1, !vnk, vnk );
-		sgs_PushCFunction( C, sgsstd_arrayI_push );
-		sgs_ThisCall( C, 1, 0 );
+		sgs_ObjectAction( C, 2, SGS_ACT_ARRAY_PUSH, 1 );
 	}
 	return 1;
 }
@@ -2130,10 +2131,8 @@ static int sgsstd_get_concat( SGS_CTX )
 		while( sgs_IterAdvance( C, -1 ) > 0 )
 		{
 			/* ..., output, arg2 iter */
-			sgs_PushItem( C, -2 );
-			sgs_IterPushData( C, -2, FALSE, TRUE );
-			sgs_PushCFunction( C, sgsstd_arrayI_push );
-			sgs_ThisCall( C, 1, 0 );
+			sgs_IterPushData( C, -1, FALSE, TRUE );
+			sgs_ObjectAction( C, -3, SGS_ACT_ARRAY_PUSH, 1 );
 		}
 		sgs_Pop( C, 1 );
 	}
@@ -2530,8 +2529,7 @@ static void sgsstd_pcall_print( void* data, SGS_CTX, int type, const char* messa
 	{
 		sgs_PushInt( C, type );
 		sgs_PushString( C, message );
-		sgs_PushVariable( C, &P->handler );
-		if( sgs_Call( C, 2, 1 ) )
+		if( sgs_CallP( C, &P->handler, 2, 1 ) )
 		{
 			P->pfn( P->pctx, C, SGS_ERROR, "Error detected while attempting to call error handler" );
 		}
@@ -3472,81 +3470,81 @@ int sgsSTD_PostInit( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
-int sgsSTD_MakeArray( SGS_CTX, sgs_SizeVal cnt )
+int sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 {
-	int i = 0, ssz = sgs_StackSize( C );
-
+	StkIdx i = 0, ssz = sgs_StackSize( C );
+	
 	if( ssz < cnt )
 		return SGS_EINVAL;
 	else
 	{
 		sgs_Variable *p, *pend;
 		void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( cnt ) );
-		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_PushObjectIPA( C,
-			sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
-
+		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_InitObjectIPA( C,
+			out, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
+		
 		hdr->size = cnt;
 		hdr->mem = cnt;
 		p = hdr->data = (sgs_Variable*) data;
 		pend = p + cnt;
 		while( p < pend )
 		{
-			sgs_GetStackItem( C, i++ - cnt - 1, p );
+			sgs_GetStackItem( C, i++ - cnt, p );
 			sgs_Acquire( C, p++ );
 		}
-
-		sgs_PopSkip( C, cnt, 1 );
+		
+		sgs_Pop( C, cnt );
 		return SGS_SUCCESS;
 	}
 }
 
-int sgsSTD_MakeDict( SGS_CTX, sgs_SizeVal cnt )
+int sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 {
 	DictHdr* dh;
 	VHTable* ht;
-	int i, ssz = sgs_StackSize( C );
-
+	StkIdx i, ssz = sgs_StackSize( C );
+	
 	if( cnt > ssz || cnt % 2 != 0 )
 		return SGS_EINVAL;
-
-	dh = mkdict( C );
+	
+	dh = mkdict( C, out );
 	ht = &dh->ht;
-
+	
 	for( i = 0; i < cnt; i += 2 )
 	{
 		sgs_Variable val;
-		if( !sgs_ParseString( C, i - cnt - 1, NULL, NULL ) )
+		if( !sgs_ParseString( C, i - cnt, NULL, NULL ) )
 		{
-			sgs_Pop( C, sgs_StackSize( C ) - ssz );
+			sgs_Release( C, out );
 			return SGS_EINVAL;
 		}
-
-		sgs_GetStackItem( C, i - cnt, &val );
-		vht_set( ht, C, (C->stack_top+i-cnt-1), &val );
+		
+		sgs_GetStackItem( C, i - cnt + 1, &val );
+		vht_set( ht, C, (C->stack_top+i-cnt), &val );
 	}
-
-	sgs_PopSkip( C, cnt, 1 );
+	
+	sgs_Pop( C, cnt );
 	return SGS_SUCCESS;
 }
 
-int sgsSTD_MakeMap( SGS_CTX, sgs_SizeVal cnt )
+int sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 {
 	DictHdr* dh;
 	VHTable* ht;
-	int i, ssz = sgs_StackSize( C );
-
+	StkIdx i, ssz = sgs_StackSize( C );
+	
 	if( cnt > ssz || cnt % 2 != 0 )
 		return SGS_EINVAL;
-
-	dh = mkmap( C );
+	
+	dh = mkmap( C, out );
 	ht = &dh->ht;
-
+	
 	for( i = 0; i < cnt; i += 2 )
 	{
-		vht_set( ht, C, (C->stack_top+i-cnt-1), (C->stack_top+i-cnt) );
+		vht_set( ht, C, (C->stack_top+i-cnt), (C->stack_top+i-cnt+1) );
 	}
-
-	sgs_PopSkip( C, cnt, 1 );
+	
+	sgs_Pop( C, cnt );
 	return SGS_SUCCESS;
 }
 
@@ -3556,11 +3554,7 @@ int sgsSTD_MakeMap( SGS_CTX, sgs_SizeVal cnt )
 int sgsSTD_GlobalInit( SGS_CTX )
 {
 	sgs_Variable var;
-	if( sgsSTD_MakeDict( C, 0 ) < 0 ||
-		sgs_GetStackItem( C, -1, &var ) < 0 )
-		return SGS_EINPROC;
-	sgs_Acquire( C, &var );
-	if( sgs_Pop( C, 1 ) < 0 )
+	if( SGS_FAILED( sgsSTD_MakeDict( C, &var, 0 ) ) )
 		return SGS_EINPROC;
 	GLBP = var.data.O;
 	return SGS_SUCCESS;
@@ -3731,6 +3725,7 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 {
 	int ret = 0, sz;
 	int pathrep = 0;
+	sgs_Variable incfn;
 	if( searchpath )
 	{
 		pathrep = sgs_PushGlobal( C, "SGS_PATH" ) == SGS_SUCCESS ? 1 : 2;
@@ -3740,8 +3735,8 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 	
 	sz = sgs_StackSize( C );
 	sgs_PushString( C, name );
-	sgs_PushCFunction( C, sgsstd_include );
-	ret = sgs_Call( C, 1, 1 );
+	sgs_InitCFunction( &incfn, sgsstd_include );
+	ret = sgs_CallP( C, &incfn, 1, 1 );
 	if( ret == SGS_SUCCESS )
 		ret = sgs_GetBool( C, -1 );
 	else

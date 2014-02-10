@@ -861,8 +861,7 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 	if( fs->bufsize > fs->buffill && needs )
 	{
 		sgs_PushInt( C, fs->bufsize - fs->buffill );
-		sgs_PushVariable( C, &fs->source );
-		ret = sgs_Call( C, 1, 1 );
+		ret = sgs_CallP( C, &fs->source, 1, 1 );
 		if( ret != SGS_SUCCESS )
 			return FALSE;
 		if( sgs_ItemType( C, -1 ) == SVT_NULL )
