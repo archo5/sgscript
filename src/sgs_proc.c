@@ -2466,6 +2466,27 @@ SGSRESULT sgs_PushMap( SGS_CTX, sgs_SizeVal numitems )
 #define _EL_SETMAX C->minlev = INT32_MAX;
 #define _EL_RESET C->minlev = oel;
 
+SGSRESULT sgs_GetIndexPPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* out, int isprop )
+{
+	int ret;
+	_EL_BACKUP;
+	_EL_SETMAX;
+	ret = vm_getprop( C, out, obj, idx, isprop );
+	VM_GETPROP_RETPTR( ret, out );
+	_EL_RESET;
+	return SGS_FAILED( ret ) ? ret : SGS_SUCCESS;
+}
+
+SGSRESULT sgs_SetIndexPPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val, int isprop )
+{
+	int ret;
+	_EL_BACKUP;
+	_EL_SETMAX;
+	ret = vm_setprop( C, obj, idx, val, isprop );
+	_EL_RESET;
+	return SGS_FAILED( ret ) ? ret : SGS_SUCCESS;
+}
+
 SGSRESULT sgs_PushIndexPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, int isprop )
 {
 	int ret;
@@ -2478,30 +2499,136 @@ SGSRESULT sgs_PushIndexPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, int is
 	return SGS_FAILED( ret ) ? ret : SGS_SUCCESS;
 }
 
-SGSRESULT sgs_StoreIndexPPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val, int isprop )
-{
-	int ret;
-	_EL_BACKUP;
-	_EL_SETMAX;
-	ret = vm_setprop( C, obj, idx, val, isprop );
-	_EL_RESET;
-	return SGS_FAILED( ret ) ? ret : SGS_SUCCESS;
-}
-
 SGSRESULT sgs_StoreIndexPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, int isprop )
 {
 	int ret;
 	sgs_Variable val;
 	if( !sgs_GetStackItem( C, -1, &val ) )
 		return SGS_EINPROC;
-	ret = sgs_StoreIndexPPP( C, obj, idx, &val, isprop );
+	ret = sgs_SetIndexPPP( C, obj, idx, &val, isprop );
 	if( SGS_SUCCEEDED( ret ) )
 		stk_pop1( C );
 	return ret;
 }
 
 
-SGS_APIFUNC SGSRESULT sgs_PushIndexIP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, int isprop )
+SGSRESULT sgs_GetIndexIPP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, sgs_Variable* out, int isprop )
+{
+	int res; sgs_Variable vO;
+	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetIndexPPP( C, &vO, idx, out, isprop ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_GetIndexPIP( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, sgs_Variable* out, int isprop )
+{
+	int res; sgs_Variable vI;
+	if( ( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetIndexPPP( C, obj, &vI, out, isprop ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_GetIndexIIP( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, sgs_Variable* out, int isprop )
+{
+	int res; sgs_Variable vO, vI;
+	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetIndexPPP( C, &vO, &vI, out, isprop ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_GetIndexPPI( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_StkIdx out, int isprop )
+{
+	int res; sgs_Variable vV;
+	if( ( res = sgs_GetIndexPPP( C, obj, idx, &vV, isprop ) ) ||
+		( res = sgs_SetStackItem( C, out, &vV ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_GetIndexIPI( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, sgs_StkIdx out, int isprop )
+{
+	int res; sgs_Variable vO, vV;
+	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetIndexPPP( C, &vO, idx, &vV, isprop ) ) ||
+		( res = sgs_SetStackItem( C, out, &vV ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_GetIndexPII( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, sgs_StkIdx out, int isprop )
+{
+	int res; sgs_Variable vI, vV;
+	if( ( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetIndexPPP( C, obj, &vI, &vV, isprop ) ) ||
+		( res = sgs_SetStackItem( C, out, &vV ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_GetIndexIII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, sgs_StkIdx out, int isprop )
+{
+	int res; sgs_Variable vO, vI, vV;
+	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetIndexPPP( C, &vO, &vI, &vV, isprop ) ) ||
+		( res = sgs_SetStackItem( C, out, &vV ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+
+SGSRESULT sgs_SetIndexIPP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, sgs_Variable* val, int isprop )
+{
+	int res; sgs_Variable vO;
+	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_SetIndexPPP( C, &vO, idx, val, isprop ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_SetIndexPIP( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )
+{
+	int res; sgs_Variable vI;
+	if( ( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_SetIndexPPP( C, obj, &vI, val, isprop ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_SetIndexIIP( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )
+{
+	int res; sgs_Variable vO, vI;
+	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_SetIndexPPP( C, &vO, &vI, val, isprop ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_SetIndexIPI( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, sgs_StkIdx val, int isprop )
+{
+	int res; sgs_Variable vO, vV;
+	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetStackItem( C, val, &vV ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_SetIndexPPP( C, &vO, idx, &vV, isprop ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_SetIndexPII( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )
+{
+	int res; sgs_Variable vI, vV;
+	if( ( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetStackItem( C, val, &vV ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_SetIndexPPP( C, obj, &vI, &vV, isprop ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_SetIndexIII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )
+{
+	int res; sgs_Variable vO, vI, vV;
+	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_GetStackItem( C, val, &vV ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
+		( res = sgs_SetIndexPPP( C, &vO, &vI, &vV, isprop ) ) ) return res;
+	return SGS_SUCCESS;
+}
+
+
+SGSRESULT sgs_PushIndexIP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, int isprop )
 {
 	int res; sgs_Variable vO;
 	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
@@ -2509,7 +2636,7 @@ SGS_APIFUNC SGSRESULT sgs_PushIndexIP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* id
 	return SGS_SUCCESS;
 }
 
-SGS_APIFUNC SGSRESULT sgs_PushIndexPI( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, int isprop )
+SGSRESULT sgs_PushIndexPI( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, int isprop )
 {
 	int res; sgs_Variable vI;
 	if( ( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
@@ -2517,7 +2644,7 @@ SGS_APIFUNC SGSRESULT sgs_PushIndexPI( SGS_CTX, sgs_Variable* obj, sgs_StkIdx id
 	return SGS_SUCCESS;
 }
 
-SGS_APIFUNC SGSRESULT sgs_PushIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )
+SGSRESULT sgs_PushIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )
 {
 	int res; sgs_Variable vO, vI;
 	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
@@ -2526,7 +2653,7 @@ SGS_APIFUNC SGSRESULT sgs_PushIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, 
 	return SGS_SUCCESS;
 }
 
-SGS_APIFUNC SGSRESULT sgs_StoreIndexIP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, int isprop )
+SGSRESULT sgs_StoreIndexIP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, int isprop )
 {
 	int res; sgs_Variable vO;
 	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
@@ -2534,7 +2661,7 @@ SGS_APIFUNC SGSRESULT sgs_StoreIndexIP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* i
 	return SGS_SUCCESS;
 }
 
-SGS_APIFUNC SGSRESULT sgs_StoreIndexPI( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, int isprop )
+SGSRESULT sgs_StoreIndexPI( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, int isprop )
 {
 	int res; sgs_Variable vI;
 	if( ( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
@@ -2542,65 +2669,12 @@ SGS_APIFUNC SGSRESULT sgs_StoreIndexPI( SGS_CTX, sgs_Variable* obj, sgs_StkIdx i
 	return SGS_SUCCESS;
 }
 
-SGS_APIFUNC SGSRESULT sgs_StoreIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )
+SGSRESULT sgs_StoreIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )
 {
 	int res; sgs_Variable vO, vI;
 	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
 		( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
 		( res = sgs_StoreIndexPP( C, &vO, &vI, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGS_APIFUNC SGSRESULT sgs_StoreIndexIPP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, sgs_Variable* val, int isprop )
-{
-	int res; sgs_Variable vO;
-	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
-		( res = sgs_StoreIndexPPP( C, &vO, idx, val, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGS_APIFUNC SGSRESULT sgs_StoreIndexPIP( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )
-{
-	int res; sgs_Variable vI;
-	if( ( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
-		( res = sgs_StoreIndexPPP( C, obj, &vI, val, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGS_APIFUNC SGSRESULT sgs_StoreIndexIIP( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )
-{
-	int res; sgs_Variable vO, vI;
-	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
-		( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
-		( res = sgs_StoreIndexPPP( C, &vO, &vI, val, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGS_APIFUNC SGSRESULT sgs_StoreIndexIPI( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, sgs_StkIdx val, int isprop )
-{
-	int res; sgs_Variable vO, vV;
-	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
-		( res = sgs_GetStackItem( C, val, &vV ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
-		( res = sgs_StoreIndexPPP( C, &vO, idx, &vV, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGS_APIFUNC SGSRESULT sgs_StoreIndexPII( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )
-{
-	int res; sgs_Variable vI, vV;
-	if( ( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
-		( res = sgs_GetStackItem( C, val, &vV ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
-		( res = sgs_StoreIndexPPP( C, obj, &vI, &vV, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGS_APIFUNC SGSRESULT sgs_StoreIndexIII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )
-{
-	int res; sgs_Variable vO, vI, vV;
-	if( ( res = sgs_GetStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
-		( res = sgs_GetStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
-		( res = sgs_GetStackItem( C, val, &vV ) ? SGS_SUCCESS : SGS_EBOUNDS ) ||
-		( res = sgs_StoreIndexPPP( C, &vO, &vI, &vV, isprop ) ) ) return res;
 	return SGS_SUCCESS;
 }
 
@@ -2623,7 +2697,7 @@ SGSRESULT sgs_StoreProperty( SGS_CTX, StkIdx obj, const char* name )
 		return SGS_EBOUNDS;
 	obj = stk_absindex( C, obj );
 	sgs_PushString( C, name );
-	ret = sgs_StoreIndexIII( C, obj, -1, -2, TRUE );
+	ret = sgs_SetIndexIII( C, obj, -1, -2, TRUE );
 	sgs_Pop( C, ret == SGS_SUCCESS ? 2 : 1 );
 	return ret;
 }
@@ -2797,7 +2871,7 @@ SGSRESULT sgs_StorePath( SGS_CTX, StkIdx item, const char* path, ... )
 			goto fail;
 		}
 		
-		ret = sgs_StoreIndexIPI( C, -1, &key, val, prop );
+		ret = sgs_SetIndexIPI( C, -1, &key, val, prop );
 		VAR_RELEASE( &key );
 		if( ret != SGS_SUCCESS )
 			return ret;
@@ -4207,6 +4281,16 @@ SGSBOOL sgs_GetStackItem( SGS_CTX, StkIdx item, sgs_Variable* out )
 		return FALSE;
 	*out = *stk_getpos( C, item );
 	return TRUE;
+}
+
+SGSRESULT sgs_SetStackItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* val )
+{
+	if( val->type >= SGS_VT__COUNT )
+		return SGS_EINVAL;
+	if( !sgs_IsValidIndex( C, item ) )
+		return SGS_EBOUNDS;
+	stk_setvar( C, item, val );
+	return SGS_SUCCESS;
 }
 
 uint32_t sgs_ItemType( SGS_CTX, StkIdx item )

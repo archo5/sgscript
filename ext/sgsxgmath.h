@@ -4,6 +4,11 @@
 #define SGSXGMATH_H
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include <math.h>
 #include <stdarg.h>
 
@@ -64,6 +69,10 @@ SGS_APIFUNC int sgs_ArgCheck_Mat4( SGS_CTX, int argid, va_list* args, int flags 
 
 SGS_APIFUNC int xgm_module_entry_point( SGS_CTX );
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* SGSXGMATH_H */
 
