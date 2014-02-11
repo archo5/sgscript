@@ -3549,7 +3549,7 @@ int sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 }
 
 
-#define GLBP (*(sgs_VarObj**)&C->_G)
+#define GLBP C->_G
 
 int sgsSTD_GlobalInit( SGS_CTX )
 {
@@ -3628,18 +3628,10 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 
 	if( strcmp( var_cstr( idx ), "_G" ) == 0 )
 	{
-		if( val->type != SVT_OBJECT || val->data.O->iface != sgsstd_dict_iface )
-		{
-			if( !apicall )
-				sgs_Msg( C, SGS_ERROR, "_G only accepts 'dict' values" );
-			return SGS_ENOTSUP;
-		}
-		
-		sgs_Acquire( C, val );
-		GLBP = val->data.O;
-		
-		sgs_ObjRelease( C, data );
-		return SGS_SUCCESS;
+		int ret = sgs_SetEnv( C, val );
+		if( !apicall && SGS_FAILED( ret ) )
+			sgs_Msg( C, SGS_ERROR, "_G only accepts 'dict' values" );
+		return ret;
 	}
 
 	vht_set( ht, C, idx, val );

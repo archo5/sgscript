@@ -511,6 +511,11 @@ SGS_APIFUNC SGSRESULT sgs_StoreNumIndex( SGS_CTX, sgs_StkIdx obj, sgs_Int idx );
 SGS_APIFUNC SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name );
 SGS_APIFUNC SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name );
 
+SGS_APIFUNC void sgs_GetEnv( SGS_CTX, sgs_Variable* out );
+SGS_APIFUNC SGSRESULT sgs_SetEnv( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC void sgs_PushEnv( SGS_CTX );
+SGS_APIFUNC SGSRESULT sgs_StoreEnv( SGS_CTX );
+
 SGS_APIFUNC SGSRESULT sgs_PushPath( SGS_CTX, sgs_StkIdx item, const char* path, ... );
 SGS_APIFUNC SGSRESULT sgs_StorePath( SGS_CTX, sgs_StkIdx item, const char* path, ... );
 

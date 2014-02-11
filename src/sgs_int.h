@@ -716,7 +716,7 @@ struct _sgs_Context
 	int           sf_count;
 	
 	/* > _G (global variable dictionary) */
-	void*         _G;
+	sgs_VarObj*   _G;
 	
 	/* > object info */
 	sgs_object_t* objs;

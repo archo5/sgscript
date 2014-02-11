@@ -2783,6 +2783,39 @@ SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
 	return ret;
 }
 
+void sgs_GetEnv( SGS_CTX, sgs_Variable* out )
+{
+	sgs_InitObjectPtr( out, C->_G );
+	VAR_ACQUIRE( out );
+}
+
+SGSRESULT sgs_SetEnv( SGS_CTX, sgs_Variable* var )
+{
+	if( var->type != SVT_OBJECT || var->data.O->iface != sgsstd_dict_iface )
+		return SGS_ENOTSUP;
+	sgs_ObjRelease( C, C->_G );
+	C->_G = var->data.O;
+	VAR_ACQUIRE( var );
+	return SGS_SUCCESS;
+}
+
+void sgs_PushEnv( SGS_CTX )
+{
+	sgs_PushObjectPtr( C, C->_G );
+}
+
+SGSRESULT sgs_StoreEnv( SGS_CTX )
+{
+	int ret;
+	sgs_Variable var;
+	if( !sgs_GetStackItem( C, -1, &var ) )
+		return SGS_EINPROC;
+	ret = sgs_SetEnv( C, &var );
+	if( SGS_SUCCEEDED( ret ) )
+		stk_pop1( C );
+	return SGS_SUCCESS;
+}
+
 
 /*
 	o = offset (isprop=true) (sizeval)
