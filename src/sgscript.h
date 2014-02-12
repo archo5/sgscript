@@ -448,6 +448,10 @@ typedef struct _sgs_RegRealConst
 sgs_RegRealConst;
 SGS_APIFUNC SGSRESULT sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size );
 
+SGS_APIFUNC SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface );
+SGS_APIFUNC SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name );
+SGS_APIFUNC sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name );
+
 
 /* The core interface */
 
@@ -608,6 +612,23 @@ SGS_APIFUNC SGSBOOL sgs_EqualTypes( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 
 /*
 	CONVERSION / RETRIEVAL
 */
+/* pointer versions */
+SGS_APIFUNC sgs_Bool sgs_GetBoolP( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC sgs_Int sgs_GetIntP( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC sgs_Real sgs_GetRealP( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC void* sgs_GetPtrP( SGS_CTX, sgs_Variable* var );
+
+SGS_APIFUNC sgs_Bool sgs_ToBoolP( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC sgs_Int sgs_ToIntP( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC sgs_Real sgs_ToRealP( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC void* sgs_ToPtrP( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC char* sgs_ToStringBufP( SGS_CTX, sgs_Variable* var, sgs_SizeVal* outsize );
+#define sgs_ToStringP( ctx, var ) sgs_ToStringBuf( ctx, var, NULL )
+SGS_APIFUNC char* sgs_ToStringBufFastP( SGS_CTX, sgs_Variable* var, sgs_SizeVal* outsize );
+#define sgs_ToStringFastP( ctx, var ) sgs_ToStringBufFast( ctx, var, NULL )
+SGS_APIFUNC SGSRESULT sgs_ConvertP( SGS_CTX, sgs_Variable* var, uint32_t type );
+
+/* index versions */
 SGS_APIFUNC sgs_Bool sgs_GetBool( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_Int sgs_GetInt( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_Real sgs_GetReal( SGS_CTX, sgs_StkIdx item );
@@ -622,10 +643,6 @@ SGS_APIFUNC char* sgs_ToStringBuf( SGS_CTX, sgs_StkIdx item, sgs_SizeVal* outsiz
 SGS_APIFUNC char* sgs_ToStringBufFast( SGS_CTX, sgs_StkIdx item, sgs_SizeVal* outsize );
 #define sgs_ToStringFast( ctx, item ) sgs_ToStringBufFast( ctx, item, NULL )
 SGS_APIFUNC SGSRESULT sgs_Convert( SGS_CTX, sgs_StkIdx item, uint32_t type );
-
-SGS_APIFUNC SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface );
-SGS_APIFUNC SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name );
-SGS_APIFUNC sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name );
 
 SGS_APIFUNC SGSBOOL sgs_IsObject( SGS_CTX, sgs_StkIdx item, sgs_ObjInterface* iface );
 #define sgs_IsType( C, item, name ) sgs_IsObject( C, item, sgs_FindType( C, name ) )

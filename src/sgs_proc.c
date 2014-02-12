@@ -3922,6 +3922,78 @@ SGSBOOL sgs_EqualTypes( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
 }
 
 
+/*
+	
+	CONVERSION / RETRIEVAL
+	
+*/
+/* pointer versions */
+sgs_Bool sgs_GetBoolP( SGS_CTX, sgs_Variable* var ){ return var_getbool( C, var ); }
+sgs_Int sgs_GetIntP( SGS_CTX, sgs_Variable* var ){ return var_getint( C, var ); }
+sgs_Real sgs_GetRealP( SGS_CTX, sgs_Variable* var ){ return var_getreal( C, var ); }
+void* sgs_GetPtrP( SGS_CTX, sgs_Variable* var ){ return var_getptr( C, var ); }
+
+sgs_Bool sgs_ToBoolP( SGS_CTX, sgs_Variable* var )
+{
+	if( vm_convert( C, var, SVT_BOOL, FALSE ) != SGS_SUCCESS )
+		return 0;
+	return var->data.B;
+}
+
+sgs_Int sgs_ToIntP( SGS_CTX, sgs_Variable* var )
+{
+	if( vm_convert( C, var, SVT_INT, FALSE ) != SGS_SUCCESS )
+		return 0;
+	return var->data.I;
+}
+
+sgs_Real sgs_ToRealP( SGS_CTX, sgs_Variable* var )
+{
+	if( vm_convert( C, var, SVT_REAL, FALSE ) != SGS_SUCCESS )
+		return 0;
+	return var->data.R;
+}
+
+void* sgs_ToPtrP( SGS_CTX, sgs_Variable* var )
+{
+	if( vm_convert( C, var, SVT_PTR, FALSE ) != SGS_SUCCESS )
+		return NULL;
+	return var->data.P;
+}
+
+char* sgs_ToStringBufP( SGS_CTX, sgs_Variable* var, sgs_SizeVal* outsize )
+{
+	if( var->type != SVT_STRING &&
+		vm_convert( C, var, SVT_STRING, FALSE ) != SGS_SUCCESS )
+		return NULL;
+	if( outsize )
+		/* WP: string limit */
+		*outsize = (sgs_SizeVal) var->data.S->size;
+	return var_cstr( var );
+}
+
+char* sgs_ToStringBufFastP( SGS_CTX, sgs_Variable* var, sgs_SizeVal* outsize )
+{
+	if( var->type == SVT_OBJECT )
+	{
+		sgs_PushVariable( C, var );
+		if( sgs_TypeOf( C ) )
+		{
+			sgs_Pop( C, 1 );
+			sgs_PushString( C, "object" );
+		}
+		sgs_StoreVariable( C, var );
+	}
+	return sgs_ToStringBufP( C, var, outsize );
+}
+
+SGSRESULT sgs_ConvertP( SGS_CTX, sgs_Variable* var, uint32_t type )
+{
+	return vm_convert( C, var, type, FALSE );
+}
+
+
+/* index versions */
 sgs_Bool sgs_GetBool( SGS_CTX, StkIdx item )
 {
 	sgs_Variable* var;
@@ -4025,56 +4097,6 @@ SGSRESULT sgs_Convert( SGS_CTX, StkIdx item, uint32_t type )
 	return vm_convert_stack( C, item, type );
 }
 
-
-
-SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface )
-{
-	size_t len;
-	VHTVar* p;
-	if( !iface )
-		return SGS_EINVAL;
-	len = strlen( name );
-	if( len > 0x7fffffff )
-		return SGS_EINVAL;
-	/* WP: error condition */
-	p = vht_get_str( &C->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
-	if( p )
-		return SGS_EINPROC;
-	{
-		sgs_Variable tmp;
-		tmp.type = SVT_PTR;
-		tmp.data.P = iface;
-		sgs_PushStringBuf( C, name, (sgs_SizeVal) len );
-		vht_set( &C->typetable, C, C->stack_top-1, &tmp );
-		sgs_Pop( C, 1 );
-	}
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )
-{
-	size_t len = strlen( name );
-	if( len > 0x7fffffff )
-		return SGS_EINVAL;
-	/* WP: error condition */
-	VHTVar* p = vht_get_str( &C->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
-	if( !p )
-		return SGS_ENOTFND;
-	vht_unset( &C->typetable, C, &p->key );
-	return SGS_SUCCESS;
-}
-
-sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name )
-{
-	size_t len = strlen( name );
-	if( len > 0x7fffffff )
-		return NULL;
-	/* WP: error condition */
-	VHTVar* p = vht_get_str( &C->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
-	if( p )
-		return (sgs_ObjInterface*) p->val.data.P;
-	return NULL;
-}
 
 
 SGSBOOL sgs_IsObject( SGS_CTX, StkIdx item, sgs_ObjInterface* iface )
