@@ -181,19 +181,19 @@ static void ppjob_map_free( ppjob_t* job )
 
 #define PPJOB_HDR ppjob_t* job = (ppjob_t*) data->data
 
-SGS_DECLARE sgs_ObjCallback ppjob_iface[ 5 ];
+SGS_DECLARE sgs_ObjInterface ppjob_iface;
 #define PPJOB_IHDR( name ) \
 	ppjob_t* job; \
 	if( !sgs_Method( C ) \
-		|| !( sgs_IsObject( C, 0, ppjob_iface ) \
-		|| sgs_IsObject( C, 0, ppjob_iface_job ) ) \
+		|| !( sgs_IsObject( C, 0, &ppjob_iface ) \
+		|| sgs_IsObject( C, 0, &ppjob_iface_job ) ) \
 		){ sgs_Msg( C, SGS_ERROR, "ppjob." #name \
 			"() isn't called on a ppjob" ); return 0; } \
 	job = (ppjob_t*) sgs_GetObjectData( C, 0 ); \
 	UNUSED( job );
 
 
-SGS_DECLARE sgs_ObjCallback ppjob_iface_job[ 3 ];
+SGS_DECLARE sgs_ObjInterface ppjob_iface_job;
 static int pproc_sleep( SGS_CTX );
 static threadret_t ppjob_threadfunc( void* arg )
 {
@@ -204,7 +204,7 @@ static threadret_t ppjob_threadfunc( void* arg )
 	sgs_PushCFunction( job->C, pproc_sleep );
 	sgs_StoreGlobal( job->C, "sleep" );
 	
-	sgs_PushObject( job->C, job, ppjob_iface_job );
+	sgs_PushObject( job->C, job, &ppjob_iface_job );
 	sgs_StoreGlobal( job->C, "_T" );
 	
 	sgs_ExecBuffer( job->C, job->code, (size_t) job->codesize );
@@ -495,17 +495,22 @@ static int ppjob_destruct( SGS_CTX, sgs_VarObj* data, int prop )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback ppjob_iface[ 5 ] =
+static sgs_ObjInterface ppjob_iface =
 {
-	SOP_GETINDEX, ppjob_getindex,
-	SOP_DESTRUCT, ppjob_destruct,
-	SOP_END
+	"ppjob",
+	ppjob_destruct, NULL,
+	ppjob_getindex, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL
 };
 
-static sgs_ObjCallback ppjob_iface_job[ 3 ] =
+static sgs_ObjInterface ppjob_iface_job =
 {
-	SOP_GETINDEX, ppjob_getindex,
-	SOP_END
+	"ppjob_interface",
+	NULL, NULL,
+	ppjob_getindex, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL
 };
 
 static int pproc_serialize_function( SGS_CTX,
@@ -577,7 +582,7 @@ static int pprocI_add_job( SGS_CTX )
 		str = code;
 		size = (sgs_SizeVal) codesize;
 	}
-	sgs_PushObject( C, ppjob_create( C, str, size ), ppjob_iface );
+	sgs_PushObject( C, ppjob_create( C, str, size ), &ppjob_iface );
 	sgs_Dealloc( str );
 	return 1;
 }
@@ -602,16 +607,18 @@ static int pproc_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback pproc_iface[] =
+static sgs_ObjInterface pproc_iface =
 {
-	SOP_GETINDEX, pproc_getindex,
-	SOP_DESTRUCT, pproc_destruct,
-	SOP_END
+	"pproc",
+	pproc_destruct, NULL,
+	pproc_getindex, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL
 };
 
 static int pproc_create( SGS_CTX )
 {
-	sgs_PushObject( C, NULL, pproc_iface );
+	sgs_PushObject( C, NULL, &pproc_iface );
 	return 1;
 }
 

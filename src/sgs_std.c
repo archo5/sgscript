@@ -93,7 +93,7 @@ static void sgsstd_array_erase( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal
 #define SGSARR_IHDR( name ) \
 	sgsstd_array_header_t* hdr; \
 	int method_call = sgs_Method( C ); \
-	SGSFN( "array." #name ); \
+	SGSFN( method_call ? "array." #name : "array_" #name ); \
 	if( !sgs_IsObject( C, 0, sgsstd_array_iface ) ) \
 		return sgs_ArgErrorExt( C, 0, method_call, "array", "" ); \
 	hdr = (sgsstd_array_header_t*) sgs_GetObjectData( C, 0 ); \
@@ -710,7 +710,7 @@ static int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data, int depth )
 				if( sgs_DumpVar( C, depth ) )
 					return SGS_EINPROC;
 			}
-			if( sgs_StringMultiConcat( C, hdr->size * 2 ) || sgs_PadString( C ) )
+			if( sgs_StringConcat( C, hdr->size * 2 ) || sgs_PadString( C ) )
 				return SGS_EINPROC;
 		}
 	}
@@ -721,7 +721,7 @@ static int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data, int depth )
 			return SGS_EINPROC;
 	}
 	sgs_PushString( C, "\n]" );
-	return sgs_StringMultiConcat( C, sgs_StackSize( C ) - ssz );
+	return sgs_StringConcat( C, sgs_StackSize( C ) - ssz );
 }
 
 static int sgsstd_array_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
@@ -770,12 +770,14 @@ static int sgsstd_array_iter_getnext( SGS_CTX, sgs_VarObj* data, int mask )
 	}
 }
 
-sgs_ObjCallback sgsstd_array_iter_iface[ 5 ] =
-{
-	SOP_DESTRUCT, sgsstd_array_iter_destruct,
-	SOP_GETNEXT, sgsstd_array_iter_getnext,
-	SOP_END,
-};
+sgs_ObjInterface sgsstd_array_iter_iface[1] =
+{{
+	"array_iterator",
+	sgsstd_array_iter_destruct, sgsstd_array_iter_getnext,
+	NULL, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL
+}};
 
 static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
@@ -813,7 +815,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 				sgs_PushString( C, "," );
 		}
 		sgs_PushString( C, "]" );
-		return sgs_StringMultiConcat( C, hdr->size * 2 + 1 + !hdr->size );
+		return sgs_StringConcat( C, hdr->size * 2 + 1 + !hdr->size );
 	}
 	else if( type == SGS_CONVOP_CLONE )
 	{
@@ -864,17 +866,14 @@ static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* data, int dch )
 	return 0;
 }
 
-sgs_ObjCallback sgsstd_array_iface[ 15 ] =
-{
-	SOP_DESTRUCT, sgsstd_array_destruct,
-	SOP_GETINDEX, sgsstd_array_getindex,
-	SOP_SETINDEX, sgsstd_array_setindex,
-	SOP_DUMP, sgsstd_array_dump,
-	SOP_GCMARK, sgsstd_array_gcmark,
-	SOP_CONVERT, sgsstd_array_convert,
-	SOP_SERIALIZE, sgsstd_array_serialize,
-	SOP_END,
-};
+sgs_ObjInterface sgsstd_array_iface[1] =
+{{
+	"array",
+	sgsstd_array_destruct, sgsstd_array_gcmark,
+	sgsstd_array_getindex, sgsstd_array_setindex,
+	sgsstd_array_convert, sgsstd_array_serialize, sgsstd_array_dump, NULL,
+	NULL, NULL
+}};
 
 static int sgsstd_array( SGS_CTX )
 {
@@ -965,7 +964,7 @@ static int sgsstd_vht_dump( SGS_CTX, sgs_VarObj* data, int depth, const char* na
 				pair++;
 			}
 			/* WP: stack limit */
-			if( sgs_StringMultiConcat( C, (StkIdx) ( pend - ht->vars ) * 4 ) || sgs_PadString( C ) )
+			if( sgs_StringConcat( C, (StkIdx) ( pend - ht->vars ) * 4 ) || sgs_PadString( C ) )
 				return SGS_EINPROC;
 		}
 	}
@@ -976,7 +975,7 @@ static int sgsstd_vht_dump( SGS_CTX, sgs_VarObj* data, int depth, const char* na
 			return SGS_EINPROC;
 	}
 	sgs_PushString( C, "\n}" );
-	return sgs_StringMultiConcat( C, sgs_StackSize( C ) - ssz );
+	return sgs_StringConcat( C, sgs_StackSize( C ) - ssz );
 }
 
 
@@ -1111,13 +1110,14 @@ static int sgsstd_dict_iter_gcmark( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback sgsstd_dict_iter_iface[ 7 ] =
-{
-	SOP_DESTRUCT, sgsstd_dict_iter_destruct,
-	SOP_GETNEXT, sgsstd_dict_iter_getnext,
-	SOP_GCMARK, sgsstd_dict_iter_gcmark,
-	SOP_END,
-};
+static sgs_ObjInterface sgsstd_dict_iter_iface[1] =
+{{
+	"dict_iterator",
+	sgsstd_dict_iter_destruct, sgsstd_dict_iter_gcmark,
+	NULL, NULL,
+	NULL, NULL, NULL, sgsstd_dict_iter_getnext,
+	NULL, NULL
+}};
 
 
 static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
@@ -1158,7 +1158,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 			pair++;
 		}
 		sgs_PushString( C, "}" );
-		return sgs_StringMultiConcat( C, cnt * 4 + 1 + !cnt );
+		return sgs_StringConcat( C, cnt * 4 + 1 + !cnt );
 	}
 	else if( type == SGS_CONVOP_CLONE )
 	{
@@ -1183,17 +1183,14 @@ static int sgsstd_dict_serialize( SGS_CTX, sgs_VarObj* data, int unused )
 	return sgsstd_vht_serialize( C, data, unused, "dict" );
 }
 
-sgs_ObjCallback sgsstd_dict_iface[ 15 ] =
-{
-	SOP_DESTRUCT, sgsstd_dict_destruct,
-	SOP_CONVERT, sgsstd_dict_convert,
-	SOP_GETINDEX, sgsstd_dict_getindex,
-	SOP_SETINDEX, sgsstd_dict_setindex,
-	SOP_DUMP, sgsstd_dict_dump,
-	SOP_SERIALIZE, sgsstd_dict_serialize,
-	SOP_GCMARK, sgsstd_dict_gcmark,
-	SOP_END,
-};
+sgs_ObjInterface sgsstd_dict_iface[1] =
+{{
+	"dict",
+	sgsstd_dict_destruct, sgsstd_dict_gcmark,
+	sgsstd_dict_getindex, sgsstd_dict_setindex,
+	sgsstd_dict_convert, sgsstd_dict_serialize, sgsstd_dict_dump, NULL,
+	NULL, NULL
+}};
 
 static int sgsstd_dict( SGS_CTX )
 {
@@ -1286,7 +1283,7 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* data, int type )
 			pair++;
 		}
 		sgs_PushString( C, "}" );
-		return sgs_StringMultiConcat( C, cnt * 4 + 1 + !cnt );
+		return sgs_StringConcat( C, cnt * 4 + 1 + !cnt );
 	}
 	else if( type == SGS_CONVOP_CLONE )
 	{
@@ -1326,17 +1323,14 @@ static int sgsstd_map_setindex( SGS_CTX, sgs_VarObj* data, int prop )
 	return SGS_SUCCESS;
 }
 
-sgs_ObjCallback sgsstd_map_iface[ 15 ] =
-{
-	SOP_DESTRUCT, sgsstd_map_destruct,
-	SOP_CONVERT, sgsstd_map_convert,
-	SOP_GETINDEX, sgsstd_map_getindex,
-	SOP_SETINDEX, sgsstd_map_setindex,
-	SOP_DUMP, sgsstd_map_dump,
-	SOP_SERIALIZE, sgsstd_map_serialize,
-	SOP_GCMARK, sgsstd_map_gcmark,
-	SOP_END,
-};
+sgs_ObjInterface sgsstd_map_iface[1] =
+{{
+	"map",
+	sgsstd_map_destruct, sgsstd_map_gcmark,
+	sgsstd_map_getindex, sgsstd_map_setindex,
+	sgsstd_map_convert, sgsstd_map_serialize, sgsstd_map_dump, NULL,
+	NULL, NULL
+}};
 
 static int sgsstd_map( SGS_CTX )
 {
@@ -1459,15 +1453,15 @@ static int sgsstd_class_dump( SGS_CTX, sgs_VarObj* data, int depth )
 		sgs_Pop( C, 1 );
 		sgs_PushString( C, "<error>" );
 	}
-	if( sgs_StringMultiConcat( C, 4 ) || sgs_PadString( C ) )
+	if( sgs_StringConcat( C, 4 ) || sgs_PadString( C ) )
 		return SGS_EINPROC;
 	sgs_PushString( C, "\n}" );
-	return sgs_StringMultiConcat( C, 3 );
+	return sgs_StringConcat( C, 3 );
 }
 
 static int sgsstd_class( SGS_CTX );
 
-SGS_DECLARE sgs_ObjCallback sgsstd_class_iface[ 19 ];
+SGS_DECLARE sgs_ObjInterface sgsstd_class_iface[1];
 
 static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
@@ -1564,19 +1558,14 @@ static int sgsstd_class_call( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_ENOTFND;
 }
 
-static sgs_ObjCallback sgsstd_class_iface[ 19 ] =
-{
-	SOP_DESTRUCT, sgsstd_class_destruct,
-	SOP_GETINDEX, sgsstd_class_getindex,
-	SOP_SETINDEX, sgsstd_class_setindex,
-	SOP_CONVERT, sgsstd_class_convert,
-	SOP_SERIALIZE, sgsstd_class_serialize,
-	SOP_DUMP, sgsstd_class_dump,
-	SOP_GCMARK, sgsstd_class_gcmark,
-	SOP_EXPR, sgsstd_class_expr,
-	SOP_CALL, sgsstd_class_call,
-	SOP_END,
-};
+static sgs_ObjInterface sgsstd_class_iface[1] =
+{{
+	"class",
+	sgsstd_class_destruct, sgsstd_class_gcmark,
+	sgsstd_class_getindex, sgsstd_class_setindex,
+	sgsstd_class_convert, sgsstd_class_serialize, sgsstd_class_dump, NULL,
+	sgsstd_class_call, sgsstd_class_expr,
+}};
 
 static int sgsstd_class( SGS_CTX )
 {
@@ -1618,7 +1607,7 @@ static int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_closure_getprop( SGS_CTX, sgs_VarObj* data, int isprop )
+static int sgsstd_closure_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
 	char* str;
 	if( sgs_ParseString( C, 0, &str, NULL ) )
@@ -1650,10 +1639,10 @@ static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* data, int depth )
 		sgs_Pop( C, 1 );
 		sgs_PushString( C, "<error>" );
 	}
-	if( sgs_StringMultiConcat( C, 4 ) || sgs_PadString( C ) )
+	if( sgs_StringConcat( C, 4 ) || sgs_PadString( C ) )
 		return SGS_EINPROC;
 	sgs_PushString( C, "\n}" );
-	return sgs_StringMultiConcat( C, 3 );
+	return sgs_StringConcat( C, 3 );
 }
 
 static int sgsstd_closure_convert( SGS_CTX, sgs_VarObj* data, int type )
@@ -1685,16 +1674,14 @@ static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data, int unused )
 		0, C->call_expect, ismethod ) * C->call_expect;
 }
 
-static sgs_ObjCallback sgsstd_closure_iface[] =
-{
-	SOP_DESTRUCT, sgsstd_closure_destruct,
-	SOP_CALL, sgsstd_closure_call,
-	SOP_GETINDEX, sgsstd_closure_getprop,
-	SOP_CONVERT, sgsstd_closure_convert,
-	SOP_GCMARK, sgsstd_closure_gcmark,
-	SOP_DUMP, sgsstd_closure_dump,
-	SOP_END,
-};
+static sgs_ObjInterface sgsstd_closure_iface[1] =
+{{
+	"closure",
+	sgsstd_closure_destruct, sgsstd_closure_gcmark,
+	sgsstd_closure_getindex, NULL,
+	sgsstd_closure_convert, NULL, sgsstd_closure_dump, NULL,
+	sgsstd_closure_call, NULL
+}};
 
 static int sgsstd_closure( SGS_CTX )
 {
@@ -1744,7 +1731,7 @@ static int sgsstd_realclsr_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_realclsr_getprop( SGS_CTX, sgs_VarObj* data, int isprop )
+static int sgsstd_realclsr_getindex( SGS_CTX, sgs_VarObj* data, int isprop )
 {
 	char* str;
 	if( sgs_ParseString( C, 0, &str, NULL ) )
@@ -1823,22 +1810,20 @@ static int sgsstd_realclsr_dump( SGS_CTX, sgs_VarObj* data, int depth )
 			sgs_PushString( C, "<error>" );
 		}
 	}
-	if( sgs_StringMultiConcat( C, sgs_StackSize( C ) - ssz ) || sgs_PadString( C ) )
+	if( sgs_StringConcat( C, sgs_StackSize( C ) - ssz ) || sgs_PadString( C ) )
 		return SGS_EINPROC;
 
 	sgs_PushString( C, "\n}" );
-	return sgs_StringMultiConcat( C, 3 );
+	return sgs_StringConcat( C, 3 );
 }
 
-static sgs_ObjCallback sgsstd_realclsr_iface[] =
+static sgs_ObjInterface sgsstd_realclsr_iface =
 {
-	SOP_DESTRUCT, sgsstd_realclsr_destruct,
-	SOP_CALL, sgsstd_realclsr_call,
-	SOP_GETINDEX, sgsstd_realclsr_getprop,
-	SOP_CONVERT, sgsstd_realclsr_convert,
-	SOP_GCMARK, sgsstd_realclsr_gcmark,
-	SOP_DUMP, sgsstd_realclsr_dump,
-	SOP_END,
+	"real_closure",
+	sgsstd_realclsr_destruct, sgsstd_realclsr_gcmark,
+	sgsstd_realclsr_getindex, NULL,
+	sgsstd_realclsr_convert, NULL, sgsstd_realclsr_dump, NULL,
+	sgsstd_realclsr_call, NULL
 };
 
 int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc )
@@ -1846,7 +1831,7 @@ int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc )
 	/* WP: range not affected by conversion */
 	uint32_t i, clsz = (uint32_t) sizeof(sgs_Closure*) * clc;
 	uint32_t memsz = clsz + (uint32_t) ( sizeof(sgs_Variable) + sizeof(int32_t) );
-	uint8_t* cl = (uint8_t*) sgs_PushObjectIPA( C, memsz, sgsstd_realclsr_iface );
+	uint8_t* cl = (uint8_t*) sgs_PushObjectIPA( C, memsz, &sgsstd_realclsr_iface );
 	
 	memcpy( cl, func, sizeof(sgs_Variable) );
 	sgs_Acquire( C, func );
@@ -2729,8 +2714,9 @@ static int sgsstd__chkinc( SGS_CTX, int argid )
 {
 	sgs_PushString( C, "+" );
 	sgs_PushItem( C, argid );
-	sgs_StringConcat( C );
-	if( sgs_PushGlobal( C, sgs_ToString( C, -1 ) ) != SGS_SUCCESS )
+	sgs_StringConcat( C, 2 );
+	sgs_PushEnv( C );
+	if( sgs_PushIndexII( C, -1, -2, 0 ) != SGS_SUCCESS )
 		return FALSE;
 	/* sgs_Pop( C, 2 ); [.., string, bool] - will return last */
 	return TRUE;
@@ -2738,12 +2724,13 @@ static int sgsstd__chkinc( SGS_CTX, int argid )
 
 static void sgsstd__setinc( SGS_CTX, int argid )
 {
+	sgs_PushEnv( C );
 	sgs_PushString( C, "+" );
 	sgs_PushItem( C, argid );
-	sgs_StringConcat( C );
+	sgs_StringConcat( C, 2 );
 	sgs_PushBool( C, TRUE );
-	sgs_StoreGlobal( C, sgs_ToString( C, -2 ) );
-	sgs_Pop( C, 1 );
+	sgs_SetIndexIII( C, -3, -2, -1, 0 );
+	sgs_Pop( C, 3 );
 }
 
 static int sgsstd_include_library( SGS_CTX )
@@ -2987,7 +2974,7 @@ static int sgsstd_include( SGS_CTX )
 		
 		sgs_PushString( C, mb.ptr );
 		sgs_PushString( C, " - include" );
-		sgs_StringMultiConcat( C, 2 );
+		sgs_StringConcat( C, 2 );
 		SGSFN( sgs_GetStringPtr( C, -1 ) );
 		ret = sgs_ExecFile( C, mb.ptr );
 		SGSFN( "include" );
@@ -3244,7 +3231,7 @@ static int sgsstd_dumpvar( SGS_CTX )
 	}
 	if( rc )
 	{
-		if( sgs_StringMultiConcat( C, rc ) != SGS_SUCCESS )
+		if( sgs_StringConcat( C, rc ) != SGS_SUCCESS )
 			STDLIB_ERR( "failed to concatenate the output" )
 		return 1;
 	}

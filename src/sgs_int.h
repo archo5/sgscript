@@ -818,10 +818,10 @@ typedef struct sgsstd_array_iter_s
 }
 sgsstd_array_iter_t;
 
-extern sgs_ObjCallback sgsstd_array_iface[ 15 ];
-extern sgs_ObjCallback sgsstd_array_iter_iface[ 5 ];
-extern sgs_ObjCallback sgsstd_dict_iface[ 15 ];
-extern sgs_ObjCallback sgsstd_map_iface[ 15 ];
+extern sgs_ObjInterface sgsstd_array_iface[1];
+extern sgs_ObjInterface sgsstd_array_iter_iface[1];
+extern sgs_ObjInterface sgsstd_dict_iface[1];
+extern sgs_ObjInterface sgsstd_map_iface[1];
 
 
 

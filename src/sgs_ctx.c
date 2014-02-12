@@ -224,8 +224,15 @@ const char* sgs_CodeString( int type, int val )
 }
 
 
+void sgs_GetOutputFunc( SGS_CTX, sgs_OutputFunc* outf, void** outc )
+{
+	*outf = C->output_fn;
+	*outc = C->output_ctx;
+}
+
 void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx )
 {
+	sgs_BreakIf( func == NULL );
 	if( func == SGSOUTPUTFN_DEFAULT )
 		func = default_outputfn;
 	if( !ctx )
@@ -273,8 +280,15 @@ SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... )
 }
 
 
+void sgs_GetMsgFunc( SGS_CTX, sgs_MsgFunc* outf, void** outc )
+{
+	*outf = C->msg_fn;
+	*outc = C->msg_ctx;
+}
+
 void sgs_SetMsgFunc( SGS_CTX, sgs_MsgFunc func, void* ctx )
 {
+	sgs_BreakIf( func == NULL );
 	if( func == SGSMSGFN_DEFAULT )
 		func = default_printfn;
 	else if( func == SGSMSGFN_DEFAULT_NOABORT )
@@ -716,19 +730,8 @@ static void ctx_print_safe( SGS_CTX, const char* str, size_t size )
 
 static void dumpobj( SGS_CTX, sgs_VarObj* p )
 {
-	char buf[ 320 ];
-	sgs_ObjCallback* ci = p->iface;
-	buf[0] = 0;
-	while( *ci )
-	{
-		int osi = ((int)(size_t)*ci);
-		if( *buf )
-			strcat( buf, "," );
-		strcat( buf, sgs_IfaceNames[ osi ] );
-		ci += 2;
-	}
-	sgs_Writef( C, "OBJECT %p refcount=%d data=%p iface=%p (%s) prev=%p next=%p redblue=%s",
-		p, p->refcount, p->data, p->iface, buf, p->prev, p->next, p->redblue ? "R" : "B" );
+	sgs_Writef( C, "OBJECT %p refcount=%d data=%p iface=%p prev=%p next=%p redblue=%s",
+		p, p->refcount, p->data, p->iface, p->prev, p->next, p->redblue ? "R" : "B" );
 }
 
 static void dumpvar( SGS_CTX, sgs_Variable* var )

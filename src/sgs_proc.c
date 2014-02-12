@@ -46,30 +46,7 @@ static int32_t objpool_binary_search( SGS_CTX, uint32_t appsize )
 	return pmin;
 }
 
-
-static int obj_exec( SGS_CTX, const sgs_ObjCallback sop, object_t* data, int arg, int args )
-{
-	sgs_ObjCallback* func = data->iface;
-	int ret = SGS_ENOTFND;
-	ptrdiff_t stkoff;
-	
-	while( *func != SOP_END )
-	{
-		if( *func == sop )
-		{
-			stkoff = C->stack_off - C->stack_base;
-			C->stack_off = C->stack_top - args;
-			ret = ( (sgs_ObjCallback) func[ 1 ] )( C, data, arg );
-			C->stack_off = C->stack_base + stkoff;
-			break;
-		}
-		func += 2;
-	}
-	
-	return ret;
-}
-
-static int obj_exec_specific( SGS_CTX, sgs_ObjCallback fn, object_t* data, int arg, int args )
+static int obj_exec( SGS_CTX, sgs_ObjCallback fn, object_t* data, int arg, int args )
 {
 	if( !fn )
 		return SGS_ENOTFND;
@@ -122,7 +99,7 @@ static void var_free_object( SGS_CTX, object_t* O )
 
 void sgsVM_VarDestroyObject( SGS_CTX, object_t* O )
 {
-	obj_exec( C, SOP_DESTRUCT, O, TRUE, 0 );
+	obj_exec( C, O->iface->destruct, O, TRUE, 0 );
 	var_free_object( C, O );
 }
 
@@ -258,7 +235,7 @@ static void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, sgs_Siz
 	memcpy( str_cstr( out->data.S ), str, ulen );
 }
 
-static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjCallback* iface, uint32_t xbytes )
+static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInterface* iface, uint32_t xbytes )
 {
 	object_t* obj = NULL;
 #if SGS_OBJPOOL_SIZE > 0
@@ -292,20 +269,6 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjCallb
 		obj->next->prev = obj;
 	C->objcount++;
 	C->objs = obj;
-	
-	obj->getindex = NULL;
-	obj->getnext = NULL;
-	{
-		sgs_ObjCallback* i = iface;
-		while( *i )
-		{
-			if( i[0] == SOP_GETINDEX )
-				obj->getindex = (sgs_ObjCallback) i[1];
-			else if( i[0] == SOP_GETNEXT )
-				obj->getnext = (sgs_ObjCallback) i[1];
-			i += 2;
-		}
-	}
 
 	out->type = SVT_OBJECT;
 	out->data.O = obj;
@@ -699,7 +662,7 @@ static int var_getbool( SGS_CTX, const sgs_VarPtr var )
 			int out = 1;
 			int origsize = sgs_StackSize( C );
 			stk_push( C, var );
-			if( obj_exec( C, SOP_CONVERT, var->data.O, SVT_BOOL, 0 ) == SGS_SUCCESS
+			if( obj_exec( C, var->data.O->iface->convert, var->data.O, SVT_BOOL, 0 ) == SGS_SUCCESS
 				&& sgs_ItemType( C, -1 ) == SVT_BOOL )
 				out = stk_getpos( C, -1 )->data.B;
 			stk_pop( C, sgs_StackSize( C ) - origsize );
@@ -722,7 +685,7 @@ static sgs_Int var_getint( SGS_CTX, sgs_VarPtr var )
 	case SVT_OBJECT:
 		{
 			int origsize = sgs_StackSize( C );
-			if( obj_exec( C, SOP_CONVERT, var->data.O, SVT_INT, 0 ) == SGS_SUCCESS
+			if( obj_exec( C, var->data.O->iface->convert, var->data.O, SVT_INT, 0 ) == SGS_SUCCESS
 				&& sgs_ItemType( C, -1 ) == SVT_INT )
 			{
 				sgs_Int out = stk_getpos( C, -1 )->data.I;
@@ -748,7 +711,7 @@ static sgs_Real var_getreal( SGS_CTX, sgs_Variable* var )
 	case SVT_OBJECT:
 		{
 			int origsize = sgs_StackSize( C );
-			if( obj_exec( C, SOP_CONVERT, var->data.O, SVT_REAL, 0 ) == SGS_SUCCESS
+			if( obj_exec( C, var->data.O->iface->convert, var->data.O, SVT_REAL, 0 ) == SGS_SUCCESS
 				&& sgs_ItemType( C, -1 ) == SVT_REAL )
 			{
 				sgs_Real out = stk_getpos( C, -1 )->data.R;
@@ -774,7 +737,7 @@ static void* var_getptr( SGS_CTX, sgs_VarPtr var )
 	case SVT_OBJECT:
 		{
 			int origsize = sgs_StackSize( C );
-			if( obj_exec( C, SOP_CONVERT, var->data.O, SVT_PTR, 0 ) == SGS_SUCCESS
+			if( obj_exec( C, var->data.O->iface->convert, var->data.O, SVT_PTR, 0 ) == SGS_SUCCESS
 				&& sgs_ItemType( C, -1 ) == SVT_PTR )
 			{
 				void* out = stk_getpos( C, -1 )->data.P;
@@ -887,7 +850,7 @@ static SGSRESULT vm_convert( SGS_CTX, sgs_VarPtr var, uint32_t type, StkIdx stac
 		}
 
 		stk_push( C, var );
-		ret = obj_exec( C, SOP_CONVERT, var->data.O, (int) type, 1 );
+		ret = obj_exec( C, var->data.O->iface->convert, var->data.O, (int) type, 1 );
 		if( ret == SGS_SUCCESS )
 		{
 			cvar = *stk_getpos( C, -1 );
@@ -963,7 +926,7 @@ static SGSRESULT vm_gettype( SGS_CTX )
 	A = stk_getpos( C, -1 );
 	if( A->type == SVT_OBJECT )
 	{
-		int ret = obj_exec( C, SOP_CONVERT, A->data.O, SGS_CONVOP_TOTYPE, 0 );
+		int ret = obj_exec( C, A->data.O->iface->convert, A->data.O, SGS_CONVOP_TOTYPE, 0 );
 		if( ret != SGS_SUCCESS )
 		{
 			char bfr[ 32 ];
@@ -999,7 +962,7 @@ static SGSRESULT vm_gcmark( SGS_CTX, sgs_Variable* var )
 	if( var->type != SVT_OBJECT || var->data.O->redblue == C->redblue )
 		return SGS_SUCCESS;
 	var->data.O->redblue = C->redblue;
-	ret = obj_exec( C, SOP_GCMARK, var->data.O, 0, 0 );
+	ret = obj_exec( C, var->data.O->iface->gcmark, var->data.O, 0, 0 );
 	if( ret == SGS_ENOTFND )
 		ret = SGS_SUCCESS; /* assume no owned objects */
 	stk_pop( C, STACKFRAMESIZE - ssz );
@@ -1186,13 +1149,6 @@ static SGSMIXED vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj, 
 {
 	int ret, origsize = STACKFRAMESIZE, isobj = obj->type == SVT_OBJECT;
 	
-	/*
-	if( isprop && idx->type != SVT_STRING && idx->type != SVT_INT )
-	{
-		return VM_GETPROP_ERR( SGS_EINVAL );
-	}
-	else
-	*/
 	if( isobj && obj->data.O->iface == sgsstd_dict_iface )
 	{
 		VHTable* ht = (VHTable*) obj->data.O->data;
@@ -1265,7 +1221,7 @@ static SGSMIXED vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj, 
 	{
 		sgs_VarObj* o = obj->data.O;
 		stk_push( C, idx );
-		ret = obj_exec_specific( C, o->getindex, o, isprop, 1 );
+		ret = obj_exec( C, o->iface->getindex, o, isprop, 1 );
 		if( !ret )
 			ret = 1;
 	}
@@ -1310,7 +1266,7 @@ static SGSRESULT vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_
 		C->stack_top[ 1 ] = *src;
 		C->stack_top += 2;
 
-		ret = obj_exec( C, SOP_SETINDEX, o, isprop, 2 );
+		ret = obj_exec( C, o->iface->setindex, o, isprop, 2 );
 	}
 	else
 		ret = SGS_ENOTFND;
@@ -1339,7 +1295,7 @@ static SGSRESULT vm_clone( SGS_CTX, StkIdx out, sgs_Variable* var )
 	case SVT_OBJECT:
 		{
 			int sz = STACKFRAMESIZE;
-			int ret = obj_exec( C, SOP_CONVERT, var->data.O, SGS_CONVOP_CLONE, 0 );
+			int ret = obj_exec( C, var->data.O->iface->convert, var->data.O, SGS_CONVOP_CLONE, 0 );
 			if( ret != SGS_SUCCESS )
 			{
 				stk_setlvar_null( C, out );
@@ -1415,7 +1371,7 @@ static SGSBOOL vm_op_negate( SGS_CTX, sgs_VarPtr out, sgs_Variable *A )
 			/* WP: stack limit */
 			StkIdx ofs = (StkIdx) ( out - C->stack_off ), ssz = STACKFRAMESIZE;
 			stk_push( C, A );
-			if( obj_exec( C, SOP_EXPR, A->data.O, SGS_EOP_NEGATE, 1 ) == SGS_SUCCESS )
+			if( obj_exec( C, A->data.O->iface->expr, A->data.O, SGS_EOP_NEGATE, 1 ) == SGS_SUCCESS )
 			{
 				out = C->stack_off + ofs;
 				STKVAR_RELEASE( out );
@@ -1513,8 +1469,8 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 		*C->stack_top++ = *a;
 		*C->stack_top++ = *b;
 
-		if( ( a->type == SVT_OBJECT && obj_exec( C, SOP_EXPR, a->data.O, op, 2 ) == SGS_SUCCESS ) ||
-			( b->type == SVT_OBJECT && obj_exec( C, SOP_EXPR, b->data.O, op, 2 ) == SGS_SUCCESS ) )
+		if( ( a->type == SVT_OBJECT && obj_exec( C, a->data.O->iface->expr, a->data.O, op, 2 ) == SGS_SUCCESS ) ||
+			( b->type == SVT_OBJECT && obj_exec( C, b->data.O->iface->expr, b->data.O, op, 2 ) == SGS_SUCCESS ) )
 		{
 			USING_STACK
 			STKVAR_RELEASE( C->stack_off + ofs );
@@ -1608,8 +1564,8 @@ static sgs_Real vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		*C->stack_top++ = *a;
 		*C->stack_top++ = *b;
 
-		if( ( ta == SVT_OBJECT && obj_exec( C, SOP_EXPR, a->data.O, SGS_EOP_COMPARE, 2 ) == SGS_SUCCESS ) ||
-			( tb == SVT_OBJECT && obj_exec( C, SOP_EXPR, b->data.O, SGS_EOP_COMPARE, 2 ) == SGS_SUCCESS ) )
+		if( ( ta == SVT_OBJECT && obj_exec( C, a->data.O->iface->expr, a->data.O, SGS_EOP_COMPARE, 2 ) == SGS_SUCCESS ) ||
+			( tb == SVT_OBJECT && obj_exec( C, b->data.O->iface->expr, b->data.O, SGS_EOP_COMPARE, 2 ) == SGS_SUCCESS ) )
 		{
 			USING_STACK
 			sgs_Real out = var_getreal( C, --C->stack_top );
@@ -1676,7 +1632,7 @@ static int vm_forprep( SGS_CTX, int outiter, sgs_VarPtr obj )
 		return SGS_ENOTSUP;
 	}
 
-	ret = obj_exec( C, SOP_CONVERT, obj->data.O, SGS_CONVOP_TOITER, 0 );
+	ret = obj_exec( C, obj->data.O->iface->convert, obj->data.O, SGS_CONVOP_TOITER, 0 );
 	if( ret != SGS_SUCCESS )
 	{
 		stk_pop( C, STACKFRAMESIZE - ssz );
@@ -1717,7 +1673,7 @@ static int vm_fornext( SGS_CTX, int outkey, int outval, sgs_VarPtr iter )
 		}
 	}
 	if( iter->type != SVT_OBJECT ||
-		( out = obj_exec_specific( C, iter->data.O->getnext, iter->data.O, flags, 0 ) ) < 0 )
+		( out = obj_exec( C, iter->data.O->iface->getnext, iter->data.O, flags, 0 ) ) < 0 )
 	{
 		sgs_Msg( C, SGS_ERROR, "Failed to retrieve data from iterator" );
 		out = SGS_EINPROC;
@@ -1851,7 +1807,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 			C->call_args = args;
 			C->call_expect = expect;
 			C->call_this = gotthis;
-			rvc = obj_exec( C, SOP_CALL, func->data.O, 0, args );
+			rvc = obj_exec( C, func->data.O->iface->call, func->data.O, 0, args );
 			C->stack_off -= gotthis;
 			if( rvc > STACKFRAMESIZE )
 			{
@@ -2271,13 +2227,13 @@ void sgs_InitCFunction( sgs_Variable* out, sgs_CFunc func )
 	out->data.C = func;
 }
 
-void sgs_InitObject( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjCallback* iface )
+void sgs_InitObject( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInterface* iface )
 {
 	var_create_obj( C, out, data, iface, 0 );
 	VAR_ACQUIRE( out );
 }
 
-void* sgs_InitObjectIPA( SGS_CTX, sgs_Variable* out, uint32_t added, sgs_ObjCallback* iface )
+void* sgs_InitObjectIPA( SGS_CTX, sgs_Variable* out, uint32_t added, sgs_ObjInterface* iface )
 {
 	var_create_obj( C, out, NULL, iface, added );
 	VAR_ACQUIRE( out );
@@ -2374,14 +2330,14 @@ void sgs_PushCFunction( SGS_CTX, sgs_CFunc func )
 	stk_push_leave( C, &var );
 }
 
-void sgs_PushObject( SGS_CTX, void* data, sgs_ObjCallback* iface )
+void sgs_PushObject( SGS_CTX, void* data, sgs_ObjInterface* iface )
 {
 	sgs_Variable var;
 	var_create_obj( C, &var, data, iface, 0 );
 	stk_push_leave( C, &var );
 }
 
-void* sgs_PushObjectIPA( SGS_CTX, uint32_t added, sgs_ObjCallback* iface )
+void* sgs_PushObjectIPA( SGS_CTX, uint32_t added, sgs_ObjInterface* iface )
 {
 	sgs_Variable var;
 	var_create_obj( C, &var, NULL, iface, added );
@@ -3179,13 +3135,13 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 			
 		case 'a': case 't': case 'h': case 'o':
 			{
-				sgs_ObjCallback* ifc = NULL;
+				sgs_ObjInterface* ifc = NULL;
 				const char* ostr = "custom object";
 				
 				if( *cmd == 'a' ){ ifc = sgsstd_array_iface; ostr = "array"; }
 				if( *cmd == 't' ){ ifc = sgsstd_dict_iface; ostr = "dict"; }
 				if( *cmd == 'h' ){ ifc = sgsstd_map_iface; ostr = "map"; }
-				if( *cmd == 'o' ) ifc = va_arg( args, sgs_ObjCallback* );
+				if( *cmd == 'o' ) ifc = va_arg( args, sgs_ObjInterface* );
 				
 				if( sgs_ItemType( C, from ) != SVT_OBJECT ||
 					( ifc != NULL && !sgs_IsObject( C, from, ifc ) ) )
@@ -3477,12 +3433,12 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 				sgs_PushString( C, buf );
 				stksz = C->stack_top - C->stack_off;
 
-				ret = obj_exec( C, SOP_DUMP, obj, maxdepth - 1, 1 );
+				ret = obj_exec( C, obj->iface->dump, obj, maxdepth - 1, 1 );
 				q = ret == SGS_SUCCESS ? 1 : 0;
 				/* WP: stack limit */
 				sgs_PopSkip( C, (StkIdx) ( C->stack_top - C->stack_off - stksz - q ), q );
 				if( q )
-					sgs_StringConcat( C );
+					sgs_StringConcat( C, 2 );
 				if( ret == SGS_ENOTFND ) /* object most probably doesn't support the dumping interface */
 					ret = SGS_SUCCESS;
 			}
@@ -3541,7 +3497,7 @@ SGSRESULT sgs_GCExecute( SGS_CTX )
 	while( p ){
 		object_t* pn = p->next;
 		if( p->redblue != C->redblue ){
-			ret = obj_exec( C, SOP_DESTRUCT, p, FALSE, 0 );
+			ret = obj_exec( C, p->iface->destruct, p, FALSE, 0 );
 			if( ret != SGS_SUCCESS && ret != SGS_ENOTFND )
 				goto end;
 		}
@@ -3629,16 +3585,7 @@ SGSRESULT sgs_ToPrintSafeString( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
-SGSRESULT sgs_StringConcat( SGS_CTX )
-{
-	if( sgs_StackSize( C ) < 2 )
-		return SGS_EINPROC;
-	vm_op_concat( C, stk_absindex( C, -1 ), stk_getpos( C, -2 ), stk_getpos( C, -1 ) );
-	stk_popskip( C, 1, 1 );
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_StringMultiConcat( SGS_CTX, StkIdx args )
+SGSRESULT sgs_StringConcat( SGS_CTX, StkIdx args )
 {
 	return vm_op_concat_ex( C, args ) ? SGS_SUCCESS : SGS_EINVAL;
 }
@@ -3756,7 +3703,7 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 	if( V.type == SVT_OBJECT )
 	{
 		int ssz = sgs_StackSize( C );
-		ret = obj_exec( C, SOP_SERIALIZE, V.data.O, 0, 0 );
+		ret = obj_exec( C, V.data.O->iface->serialize, V.data.O, 0, 0 );
 		sgs_Pop( C, sgs_StackSize( C ) - ssz );
 		if( ret != SGS_SUCCESS )
 			goto fail;
@@ -4080,7 +4027,7 @@ SGSRESULT sgs_Convert( SGS_CTX, StkIdx item, uint32_t type )
 
 
 
-SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjCallback* iface )
+SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface )
 {
 	size_t len;
 	VHTVar* p;
@@ -4117,7 +4064,7 @@ SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )
 	return SGS_SUCCESS;
 }
 
-sgs_ObjCallback* sgs_FindType( SGS_CTX, const char* name )
+sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name )
 {
 	size_t len = strlen( name );
 	if( len > 0x7fffffff )
@@ -4125,12 +4072,12 @@ sgs_ObjCallback* sgs_FindType( SGS_CTX, const char* name )
 	/* WP: error condition */
 	VHTVar* p = vht_get_str( &C->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
 	if( p )
-		return (sgs_ObjCallback*) p->val.data.P;
+		return (sgs_ObjInterface*) p->val.data.P;
 	return NULL;
 }
 
 
-SGSBOOL sgs_IsObject( SGS_CTX, StkIdx item, sgs_ObjCallback* iface )
+SGSBOOL sgs_IsObject( SGS_CTX, StkIdx item, sgs_ObjInterface* iface )
 {
 	sgs_Variable* var;
 	if( !sgs_IsValidIndex( C, item ) )
@@ -4146,16 +4093,8 @@ SGSBOOL sgs_IsCallable( SGS_CTX, StkIdx item )
 
 	if( ty == SVT_FUNC || ty == SVT_CFUNC )
 		return 1;
-	if( ty == SVT_OBJECT )
-	{
-		sgs_ObjCallback* ptr = sgs_GetObjectIface( C, item );
-		while( *ptr )
-		{
-			if( *ptr == SOP_CALL )
-				return 1;
-			ptr += 2;
-		}
-	}
+	if( ty == SVT_OBJECT && sgs_GetObjectIface( C, item )->call )
+		return 1;
 	return 0;
 }
 
@@ -4478,7 +4417,7 @@ void* sgs_GetObjectData( SGS_CTX, StkIdx item )
 	return var->data.O->data;
 }
 
-sgs_ObjCallback* sgs_GetObjectIface( SGS_CTX, StkIdx item )
+sgs_ObjInterface* sgs_GetObjectIface( SGS_CTX, StkIdx item )
 {
 	_OBJPREP( NULL );
 	return var->data.O->iface;
@@ -4491,7 +4430,7 @@ int sgs_SetObjectData( SGS_CTX, StkIdx item, void* data )
 	return 1;
 }
 
-int sgs_SetObjectIface( SGS_CTX, StkIdx item, sgs_ObjCallback* iface )
+int sgs_SetObjectIface( SGS_CTX, StkIdx item, sgs_ObjInterface* iface )
 {
 	_OBJPREP( 0 );
 	var->data.O->iface = iface;

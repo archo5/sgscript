@@ -24,7 +24,7 @@
 #define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
 
 
-SGS_DECLARE sgs_ObjCallback sgsstd_file_functable[ 7 ];
+SGS_DECLARE sgs_ObjInterface sgsstd_file_iface;
 
 
 /* path helper functions */
@@ -837,7 +837,7 @@ typedef struct sgsstd_fmtstream_s
 }
 sgsstd_fmtstream_t;
 
-SGS_DECLARE sgs_ObjCallback sgsstd_fmtstream_functable[ 5 ];
+SGS_DECLARE sgs_ObjInterface sgsstd_fmtstream_iface;
 #define SGSFS_HDR sgsstd_fmtstream_t* hdr = (sgsstd_fmtstream_t*) data->data
 
 #define fs_getreadsize( hdr, lim ) MIN( hdr->buffill - hdr->bufpos, lim )
@@ -898,7 +898,7 @@ static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data, int unused )
 	sgsstd_fmtstream_t* hdr; \
 	int method_call = sgs_Method( C ); \
 	SGSFN( "fmtstream." #name ); \
-	if( !sgs_IsObject( C, 0, sgsstd_fmtstream_functable ) )\
+	if( !sgs_IsObject( C, 0, &sgsstd_fmtstream_iface ) )\
 		return sgs_ArgErrorExt( C, 0, method_call, "fmtstream", "" ); \
 	hdr = (sgsstd_fmtstream_t*) sgs_GetObjectData( C, 0 ); \
 	UNUSED( hdr );
@@ -1362,11 +1362,13 @@ static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	return SGS_ENOTFND;
 }
 
-static sgs_ObjCallback sgsstd_fmtstream_functable[ 5 ] =
+static sgs_ObjInterface sgsstd_fmtstream_iface =
 {
-	SOP_DESTRUCT, sgsstd_fmtstream_destroy,
-	SOP_GETINDEX, sgsstd_fmtstream_getindex,
-	SOP_END
+	"fmtstream",
+	sgsstd_fmtstream_destroy, NULL,
+	sgsstd_fmtstream_getindex, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL
 };
 
 static int sgsstd_fmt_parser( SGS_CTX )
@@ -1396,7 +1398,7 @@ static int sgsstd_fmt_parser( SGS_CTX )
 		hdr->buffill = 0;
 		hdr->bufpos = 0;
 		hdr->state = FMTSTREAM_STATE_INIT;
-		sgs_PushObject( C, hdr, sgsstd_fmtstream_functable );
+		sgs_PushObject( C, hdr, &sgsstd_fmtstream_iface );
 		return 1;
 	}
 }
@@ -1436,11 +1438,13 @@ static int srt_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback srt_iface[] =
+static sgs_ObjInterface srt_iface =
 {
-	SOP_CALL, srt_call,
-	SOP_DESTRUCT, srt_destruct,
-	SOP_END
+	"fmt_parser_string_reader",
+	srt_destruct, NULL,
+	NULL, NULL,
+	NULL, NULL, NULL, NULL,
+	srt_call, NULL
 };
 
 static int sgsstd_fmt_string_parser( SGS_CTX )
@@ -1452,7 +1456,7 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?m|ii", &off, &bufsize ) )
 		return 0;
 	
-	srt = (stringread_t*) sgs_PushObjectIPA( C, sizeof(stringread_t), srt_iface );
+	srt = (stringread_t*) sgs_PushObjectIPA( C, sizeof(stringread_t), &srt_iface );
 	sgs_GetStackItem( C, 0, &srt->S );
 	sgs_BreakIf( srt->S.type != SVT_STRING );
 	sgs_Acquire( C, &srt->S );
@@ -1498,11 +1502,13 @@ static int frt_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback frt_iface[] =
+static sgs_ObjInterface frt_iface =
 {
-	SOP_CALL, frt_call,
-	SOP_DESTRUCT, frt_destruct,
-	SOP_END
+	"fmt_parser_file_reader",
+	frt_destruct, NULL,
+	NULL, NULL,
+	NULL, NULL, NULL, NULL,
+	frt_call, NULL
 };
 
 static int sgsstd_fmt_file_parser( SGS_CTX )
@@ -1511,10 +1517,10 @@ static int sgsstd_fmt_file_parser( SGS_CTX )
 	sgs_Int bufsize = 1024;
 	
 	SGSFN( "fmt_file_parser" );
-	if( !sgs_LoadArgs( C, "?o|i", sgsstd_file_functable, &bufsize ) )
+	if( !sgs_LoadArgs( C, "?o|i", &sgsstd_file_iface, &bufsize ) )
 		return 0;
 	
-	frt = (fileread_t*) sgs_PushObjectIPA( C, sizeof(fileread_t), frt_iface );
+	frt = (fileread_t*) sgs_PushObjectIPA( C, sizeof(fileread_t), &frt_iface );
 	sgs_GetStackItem( C, 0, &frt->F );
 	sgs_BreakIf( frt->F.type != SVT_OBJECT );
 	sgs_Acquire( C, &frt->F );
@@ -1842,13 +1848,13 @@ static int sgsstd_io_file_read( SGS_CTX )
 #define FVNO_END( name ) } else \
 	STDLIB_WARN( "file." #name "() - file is not opened" )
 
-/* sgsstd_file_functable declaration is at the top */
+/* sgsstd_file_iface declaration is at the top */
 
 #define FIF_INIT( fname ) \
 	void* data; \
 	int method_call = sgs_Method( C ); \
-	SGSFN( "file." #fname ); \
-	if( !sgs_IsObject( C, 0, sgsstd_file_functable ) ) \
+	SGSFN( method_call ? "file." #fname : "file_" #fname ); \
+	if( !sgs_IsObject( C, 0, &sgsstd_file_iface ) ) \
 		return sgs_ArgErrorExt( C, 0, method_call, "file", "" ); \
 	data = sgs_GetObjectData( C, 0 );
 
@@ -2107,12 +2113,13 @@ static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* data, int type )
 }
 
 
-static sgs_ObjCallback sgsstd_file_functable[ 7 ] =
+static sgs_ObjInterface sgsstd_file_iface =
 {
-	SOP_GETINDEX, sgsstd_file_getindex,
-	SOP_CONVERT, sgsstd_file_convert,
-	SOP_DESTRUCT, sgsstd_file_destruct,
-	SOP_END,
+	"file",
+	sgsstd_file_destruct, NULL,
+	sgsstd_file_getindex, NULL,
+	sgsstd_file_convert, NULL, NULL, NULL,
+	NULL, NULL
 };
 
 static int sgsstd_io_file( SGS_CTX )
@@ -2137,7 +2144,7 @@ static int sgsstd_io_file( SGS_CTX )
 	sgs_Errno( C, !!fp );
 
 pushobj:
-	sgs_PushObject( C, fp, sgsstd_file_functable );
+	sgs_PushObject( C, fp, &sgsstd_file_iface );
 	return 1;
 }
 
@@ -2154,7 +2161,7 @@ sgsstd_dir_t;
 
 #define DIR_HDR sgsstd_dir_t* hdr = (sgsstd_dir_t*) data->data
 
-SGS_DECLARE sgs_ObjCallback sgsstd_dir_functable[ 7 ];
+SGS_DECLARE sgs_ObjInterface sgsstd_dir_iface;
 
 static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
@@ -2204,12 +2211,13 @@ static int sgsstd_dir_getnext( SGS_CTX, sgs_VarObj* data, int what )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjCallback sgsstd_dir_functable[ 7 ] =
+static sgs_ObjInterface sgsstd_dir_iface =
 {
-	SOP_DESTRUCT, sgsstd_dir_destruct,
-	SOP_CONVERT, sgsstd_dir_convert,
-	SOP_GETNEXT, sgsstd_dir_getnext,
-	SOP_END,
+	"directory_iterator",
+	sgsstd_dir_destruct, NULL,
+	NULL, NULL,
+	sgsstd_dir_convert, NULL, NULL, sgsstd_dir_getnext,
+	NULL, NULL
 };
 
 static int sgsstd_io_dir( SGS_CTX )
@@ -2232,7 +2240,7 @@ static int sgsstd_io_dir( SGS_CTX )
 	hdr->dir = dp;
 	hdr->name = NULL;
 
-	sgs_PushObject( C, hdr, sgsstd_dir_functable );
+	sgs_PushObject( C, hdr, &sgsstd_dir_iface );
 	return 1;
 }
 
@@ -3701,7 +3709,7 @@ static int sgsstd_string_implode( SGS_CTX )
 		if( sgs_PushNumIndex( C, 0, i ) )
 			STDLIB_WARN( "failed to read from array" )
 	}
-	sgs_StringMultiConcat( C, i * 2 - 1 );
+	sgs_StringConcat( C, i * 2 - 1 );
 	return 1;
 }
 
