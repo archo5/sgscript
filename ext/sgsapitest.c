@@ -142,14 +142,14 @@ void destroy_context( SGS_CTX )
 }
 
 int sgs_dummy_func( SGS_CTX ){ return 0; }
-sgs_ObjInterface sgs_dummy_iface =
-{
+sgs_ObjInterface sgs_dummy_iface[1] =
+{{
 	"dummy",
 	NULL, NULL,
 	NULL, NULL,
 	NULL, NULL, NULL, NULL,
 	NULL, NULL
-};
+}};
 
 
 DEFINE_TEST( create_and_destroy )
@@ -175,7 +175,7 @@ DEFINE_TEST( stack_101 )
 	sgs_PushStringBuf( C, "what is this", 7 );
 	sgs_PushString( C, "what is this" );
 	sgs_PushCFunction( C, sgs_dummy_func );
-	sgs_PushObject( C, NULL, &sgs_dummy_iface );
+	sgs_PushObject( C, NULL, sgs_dummy_iface );
 	sgs_PushVariable( C, &sgs_dummy_var );
 
 	atf_assert( C->stack_base == C->stack_off );
@@ -201,7 +201,7 @@ DEFINE_TEST( stack_101 )
 	atf_assert_string( var_cstr( C->stack_off+5 ), "what is this" );
 	atf_assert( C->stack_off[6].data.C == sgs_dummy_func );
 	atf_assert( C->stack_off[7].data.O->data == NULL );
-	atf_assert( C->stack_off[7].data.O->iface == &sgs_dummy_iface );
+	atf_assert( C->stack_off[7].data.O->iface == sgs_dummy_iface );
 
 	atf_assert( sgs_Pop( C, 10 ) == SGS_EINVAL );
 	atf_assert( sgs_StackSize( C ) == 9 );

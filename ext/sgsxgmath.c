@@ -37,7 +37,7 @@ static SGSBOOL xgm_ParseVT( SGS_CTX, int item, XGM_VT* out )
 #define VEC2_IFN( fn ) \
 	int is_method = sgs_Method( C ); \
 	sgs_FuncName( C, is_method ? "vec2." #fn : "vec2_" #fn ); \
-	if( !sgs_IsObject( C, 0, &xgm_vec2_iface ) ) \
+	if( !sgs_IsObject( C, 0, xgm_vec2_iface ) ) \
 		return sgs_ArgErrorExt( C, 0, is_method, "vec2", "" ); \
 	XGM_VT* data = (XGM_VT*) sgs_GetObjectData( C, 0 );
 
@@ -194,8 +194,8 @@ static int xgm_v2_expr( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_EOP_COMPARE )
 	{
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObject( C, 0, &xgm_vec2_iface ) ||
-			!sgs_IsObject( C, 1, &xgm_vec2_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_vec2_iface ) ||
+			!sgs_IsObject( C, 1, xgm_vec2_iface ) )
 			return SGS_EINVAL;
 		
 		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
@@ -403,8 +403,8 @@ static int xgm_v3_expr( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_EOP_COMPARE )
 	{
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObject( C, 0, &xgm_vec3_iface ) ||
-			!sgs_IsObject( C, 1, &xgm_vec3_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_vec3_iface ) ||
+			!sgs_IsObject( C, 1, xgm_vec3_iface ) )
 			return SGS_EINVAL;
 		
 		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
@@ -650,8 +650,8 @@ static int xgm_v4_expr( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_EOP_COMPARE )
 	{
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObject( C, 0, &xgm_vec4_iface ) ||
-			!sgs_IsObject( C, 1, &xgm_vec4_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_vec4_iface ) ||
+			!sgs_IsObject( C, 1, xgm_vec4_iface ) )
 			return SGS_EINVAL;
 		
 		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
@@ -841,7 +841,7 @@ static int xgm_aabb2v( SGS_CTX )
 	
 	SGSFN( "aabb2v" );
 	
-	if( !sgs_LoadArgs( C, "!x!x", &xgm_vec2_iface, b, &xgm_vec2_iface, b + 2 ) )
+	if( !sgs_LoadArgs( C, "!x!x", xgm_vec2_iface, b, xgm_vec2_iface, b + 2 ) )
 		return 0;
 	
 	sgs_PushAABB2p( C, b );
@@ -854,7 +854,7 @@ static int xgm_aabb2_intersect( SGS_CTX )
 	
 	SGSFN( "aabb2_intersect" );
 	
-	if( !sgs_LoadArgs( C, "xx", &xgm_aabb2_iface, b1, &xgm_aabb2_iface, b2 ) )
+	if( !sgs_LoadArgs( C, "xx", xgm_aabb2_iface, b1, xgm_aabb2_iface, b2 ) )
 		return 0;
 	
 	sgs_PushBool( C, b1[0] < b2[2] && b2[0] < b1[2] && b1[1] < b2[3] && b2[1] < b1[3] );
@@ -868,7 +868,7 @@ static int xgm_aabb2_expand( SGS_CTX )
 	int i, ssz = sgs_StackSize( C );
 	int method_call = sgs_Method( C );
 	SGSFN( method_call ? "aabb2.expand" : "aabb2_expand" );
-	if( !sgs_IsObject( C, 0, &xgm_aabb2_iface ) )
+	if( !sgs_IsObject( C, 0, xgm_aabb2_iface ) )
 		return sgs_ArgErrorExt( C, 0, method_call, "aabb2", "" );
 	bb = (XGM_VT*) sgs_GetObjectData( C, 0 );
 	
@@ -1090,8 +1090,8 @@ static int xgm_col_expr( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_EOP_COMPARE )
 	{
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObject( C, 0, &xgm_vec4_iface ) ||
-			!sgs_IsObject( C, 1, &xgm_vec4_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_vec4_iface ) ||
+			!sgs_IsObject( C, 1, xgm_vec4_iface ) )
 			return SGS_EINVAL;
 		
 		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
@@ -1329,80 +1329,80 @@ static int xgm_mat4( SGS_CTX )
 
 
 
-sgs_ObjInterface xgm_vec2_iface =
-{
+sgs_ObjInterface xgm_vec2_iface[1] =
+{{
 	"vec2",
 	NULL, NULL,
 	xgm_v2_getindex, xgm_v2_setindex,
 	xgm_v2_convert, xgm_v2_serialize, xgm_v2_dump, NULL,
 	NULL, xgm_v2_expr
-};
+}};
 
-sgs_ObjInterface xgm_vec3_iface =
-{
+sgs_ObjInterface xgm_vec3_iface[1] =
+{{
 	"vec3",
 	NULL, NULL,
 	xgm_v3_getindex, xgm_v3_setindex,
 	xgm_v3_convert, xgm_v3_serialize, xgm_v3_dump, NULL,
 	NULL, xgm_v3_expr
-};
+}};
 
-sgs_ObjInterface xgm_vec4_iface =
-{
+sgs_ObjInterface xgm_vec4_iface[1] =
+{{
 	"vec4",
 	NULL, NULL,
 	xgm_v4_getindex, xgm_v4_setindex,
 	xgm_v4_convert, xgm_v4_serialize, xgm_v4_dump, NULL,
 	NULL, xgm_v4_expr
-};
+}};
 
-sgs_ObjInterface xgm_aabb2_iface =
-{
+sgs_ObjInterface xgm_aabb2_iface[1] =
+{{
 	"aabb2",
 	NULL, NULL,
 	xgm_b2_getindex, xgm_b2_setindex,
 	xgm_b2_convert, xgm_b2_serialize, xgm_b2_dump, NULL,
 	NULL, NULL
-};
+}};
 
-sgs_ObjInterface xgm_poly2_iface =
-{
+sgs_ObjInterface xgm_poly2_iface[1] =
+{{
 	"poly2",
 	xgm_p2_destruct, NULL,
 	xgm_p2_getindex, NULL,
 	NULL, NULL, NULL, NULL,
 	NULL, NULL
-};
+}};
 
-sgs_ObjInterface xgm_color_iface =
-{
+sgs_ObjInterface xgm_color_iface[1] =
+{{
 	"color",
 	NULL, NULL,
 	xgm_col_getindex, xgm_col_setindex,
 	xgm_col_convert, xgm_col_serialize, xgm_col_dump, NULL,
 	NULL, xgm_col_expr
-};
+}};
 
-sgs_ObjInterface xgm_mat4_iface =
-{
+sgs_ObjInterface xgm_mat4_iface[1] =
+{{
 	"mat4",
 	NULL, NULL,
 	xgm_m4_getindex, xgm_m4_setindex,
 	xgm_m4_convert, xgm_m4_serialize, xgm_m4_dump, NULL,
 	NULL, NULL
-};
+}};
 
 
 void sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 2, &xgm_vec2_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 2, xgm_vec2_iface );
 	nv[ 0 ] = x;
 	nv[ 1 ] = y;
 }
 
 void sgs_PushVec3( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 3, &xgm_vec3_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 3, xgm_vec3_iface );
 	nv[ 0 ] = x;
 	nv[ 1 ] = y;
 	nv[ 2 ] = z;
@@ -1410,7 +1410,7 @@ void sgs_PushVec3( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z )
 
 void sgs_PushVec4( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, &xgm_vec4_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_vec4_iface );
 	nv[ 0 ] = x;
 	nv[ 1 ] = y;
 	nv[ 2 ] = z;
@@ -1419,7 +1419,7 @@ void sgs_PushVec4( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 
 void sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, &xgm_aabb2_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
 	nv[ 0 ] = x1;
 	nv[ 1 ] = y1;
 	nv[ 2 ] = x2;
@@ -1428,7 +1428,7 @@ void sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
 
 void sgs_PushPoly2( SGS_CTX, XGM_VT* v2fn, int numverts )
 {
-	xgm_poly2* np = (xgm_poly2*) sgs_PushObjectIPA( C, sizeof(xgm_poly2), &xgm_poly2_iface );
+	xgm_poly2* np = (xgm_poly2*) sgs_PushObjectIPA( C, sizeof(xgm_poly2), xgm_poly2_iface );
 	np->size = numverts;
 	np->mem = numverts;
 	np->data = numverts ? sgs_Alloc_n( XGM_VT, (size_t) np->mem * 2 ) : NULL;
@@ -1437,7 +1437,7 @@ void sgs_PushPoly2( SGS_CTX, XGM_VT* v2fn, int numverts )
 
 void sgs_PushColor( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, &xgm_color_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
 	nv[ 0 ] = x;
 	nv[ 1 ] = y;
 	nv[ 2 ] = z;
@@ -1446,7 +1446,7 @@ void sgs_PushColor( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 
 void sgs_PushMat4( SGS_CTX, XGM_VT* v16f, int transpose )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 16, &xgm_mat4_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 16, xgm_mat4_iface );
 	if( transpose )
 	{
 		nv[ 0 ] = v16f[ 0 ]; nv[ 1 ] = v16f[ 4 ]; nv[ 2 ] = v16f[ 8 ]; nv[ 3 ] = v16f[ 12 ];
@@ -1461,14 +1461,14 @@ void sgs_PushMat4( SGS_CTX, XGM_VT* v16f, int transpose )
 
 void sgs_PushVec2p( SGS_CTX, XGM_VT* v2f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 2, &xgm_vec2_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 2, xgm_vec2_iface );
 	nv[ 0 ] = v2f[ 0 ];
 	nv[ 1 ] = v2f[ 1 ];
 }
 
 void sgs_PushVec3p( SGS_CTX, XGM_VT* v3f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 3, &xgm_vec3_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 3, xgm_vec3_iface );
 	nv[ 0 ] = v3f[ 0 ];
 	nv[ 1 ] = v3f[ 1 ];
 	nv[ 2 ] = v3f[ 2 ];
@@ -1476,7 +1476,7 @@ void sgs_PushVec3p( SGS_CTX, XGM_VT* v3f )
 
 void sgs_PushVec4p( SGS_CTX, XGM_VT* v4f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, &xgm_vec4_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_vec4_iface );
 	nv[ 0 ] = v4f[ 0 ];
 	nv[ 1 ] = v4f[ 1 ];
 	nv[ 2 ] = v4f[ 2 ];
@@ -1485,7 +1485,7 @@ void sgs_PushVec4p( SGS_CTX, XGM_VT* v4f )
 
 void sgs_PushAABB2p( SGS_CTX, XGM_VT* v4f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, &xgm_aabb2_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
 	nv[ 0 ] = v4f[ 0 ];
 	nv[ 1 ] = v4f[ 1 ];
 	nv[ 2 ] = v4f[ 2 ];
@@ -1494,7 +1494,7 @@ void sgs_PushAABB2p( SGS_CTX, XGM_VT* v4f )
 
 void sgs_PushColorp( SGS_CTX, XGM_VT* v4f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, &xgm_color_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
 	nv[ 0 ] = v4f[ 0 ];
 	nv[ 1 ] = v4f[ 1 ];
 	nv[ 2 ] = v4f[ 2 ];
@@ -1503,7 +1503,7 @@ void sgs_PushColorp( SGS_CTX, XGM_VT* v4f )
 
 void sgs_PushColorvp( SGS_CTX, XGM_VT* vf, int numfloats )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, &xgm_color_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
 	if( numfloats == 0 ) nv[0] = nv[1] = nv[2] = nv[3] = 0;
 	else if( numfloats == 1 ) nv[0] = nv[1] = nv[2] = nv[3] = vf[0];
 	else if( numfloats == 2 ){ nv[0] = nv[1] = nv[2] = vf[0]; nv[3] = vf[1]; }
@@ -1523,7 +1523,7 @@ SGSBOOL sgs_ParseVec2( SGS_CTX, int pos, XGM_VT* v2f, int strict )
 	if( sgs_ItemType( C, pos ) != SGS_VT_OBJECT )
 		return 0;
 	
-	if( sgs_IsObject( C, pos, &xgm_vec2_iface ) )
+	if( sgs_IsObject( C, pos, xgm_vec2_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectData( C, pos );
 		v2f[0] = hdr[0];
@@ -1544,7 +1544,7 @@ SGSBOOL sgs_ParseVec3( SGS_CTX, int pos, XGM_VT* v3f, int strict )
 	if( sgs_ItemType( C, pos ) != SGS_VT_OBJECT )
 		return 0;
 	
-	if( sgs_IsObject( C, pos, &xgm_vec3_iface ) )
+	if( sgs_IsObject( C, pos, xgm_vec3_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectData( C, pos );
 		v3f[0] = hdr[0];
@@ -1566,8 +1566,8 @@ SGSBOOL sgs_ParseVec4( SGS_CTX, int pos, XGM_VT* v4f, int strict )
 	if( sgs_ItemType( C, pos ) != SGS_VT_OBJECT )
 		return 0;
 	
-	if( sgs_IsObject( C, pos, &xgm_vec4_iface ) ||
-		sgs_IsObject( C, pos, &xgm_color_iface ) )
+	if( sgs_IsObject( C, pos, xgm_vec4_iface ) ||
+		sgs_IsObject( C, pos, xgm_color_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectData( C, pos );
 		v4f[0] = hdr[0];
@@ -1581,7 +1581,7 @@ SGSBOOL sgs_ParseVec4( SGS_CTX, int pos, XGM_VT* v4f, int strict )
 
 SGSBOOL sgs_ParseAABB2( SGS_CTX, int pos, XGM_VT* v4f )
 {
-	if( sgs_IsObject( C, pos, &xgm_aabb2_iface ) )
+	if( sgs_IsObject( C, pos, xgm_aabb2_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectData( C, pos );
 		v4f[0] = hdr[0];
@@ -1600,7 +1600,7 @@ SGSBOOL sgs_ParseColor( SGS_CTX, int pos, XGM_VT* v4f, int strict )
 
 SGSBOOL sgs_ParseMat4( SGS_CTX, int pos, XGM_VT* v16f )
 {
-	if( sgs_IsObject( C, pos, &xgm_mat4_iface ) )
+	if( sgs_IsObject( C, pos, xgm_mat4_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectData( C, pos );
 		memcpy( v16f, hdr, sizeof(XGM_VT) * 16 );
@@ -1752,12 +1752,12 @@ static sgs_RegFuncConst xgm_fconsts[] =
 SGS_APIFUNC int xgm_module_entry_point( SGS_CTX )
 {
 	sgs_RegFuncConsts( C, xgm_fconsts, sizeof(xgm_fconsts) / sizeof(xgm_fconsts[0]) );
-	sgs_RegisterType( C, "vec2", &xgm_vec2_iface );
-	sgs_RegisterType( C, "vec3", &xgm_vec3_iface );
-	sgs_RegisterType( C, "vec4", &xgm_vec4_iface );
-	sgs_RegisterType( C, "aabb2", &xgm_aabb2_iface );
-	sgs_RegisterType( C, "color", &xgm_color_iface );
-	sgs_RegisterType( C, "mat4", &xgm_mat4_iface );
+	sgs_RegisterType( C, "vec2", xgm_vec2_iface );
+	sgs_RegisterType( C, "vec3", xgm_vec3_iface );
+	sgs_RegisterType( C, "vec4", xgm_vec4_iface );
+	sgs_RegisterType( C, "aabb2", xgm_aabb2_iface );
+	sgs_RegisterType( C, "color", xgm_color_iface );
+	sgs_RegisterType( C, "mat4", xgm_mat4_iface );
 	return SGS_SUCCESS;
 }
 

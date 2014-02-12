@@ -24,7 +24,7 @@
 #define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
 
 
-SGS_DECLARE sgs_ObjInterface sgsstd_file_iface;
+SGS_DECLARE sgs_ObjInterface sgsstd_file_iface[1];
 
 
 /* path helper functions */
@@ -837,7 +837,7 @@ typedef struct sgsstd_fmtstream_s
 }
 sgsstd_fmtstream_t;
 
-SGS_DECLARE sgs_ObjInterface sgsstd_fmtstream_iface;
+SGS_DECLARE sgs_ObjInterface sgsstd_fmtstream_iface[1];
 #define SGSFS_HDR sgsstd_fmtstream_t* hdr = (sgsstd_fmtstream_t*) data->data
 
 #define fs_getreadsize( hdr, lim ) MIN( hdr->buffill - hdr->bufpos, lim )
@@ -898,7 +898,7 @@ static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data, int unused )
 	sgsstd_fmtstream_t* hdr; \
 	int method_call = sgs_Method( C ); \
 	SGSFN( "fmtstream." #name ); \
-	if( !sgs_IsObject( C, 0, &sgsstd_fmtstream_iface ) )\
+	if( !sgs_IsObject( C, 0, sgsstd_fmtstream_iface ) )\
 		return sgs_ArgErrorExt( C, 0, method_call, "fmtstream", "" ); \
 	hdr = (sgsstd_fmtstream_t*) sgs_GetObjectData( C, 0 ); \
 	UNUSED( hdr );
@@ -1362,14 +1362,14 @@ static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
 	return SGS_ENOTFND;
 }
 
-static sgs_ObjInterface sgsstd_fmtstream_iface =
-{
+static sgs_ObjInterface sgsstd_fmtstream_iface[1] =
+{{
 	"fmtstream",
 	sgsstd_fmtstream_destroy, NULL,
 	sgsstd_fmtstream_getindex, NULL,
 	NULL, NULL, NULL, NULL,
 	NULL, NULL
-};
+}};
 
 static int sgsstd_fmt_parser( SGS_CTX )
 {
@@ -1398,7 +1398,7 @@ static int sgsstd_fmt_parser( SGS_CTX )
 		hdr->buffill = 0;
 		hdr->bufpos = 0;
 		hdr->state = FMTSTREAM_STATE_INIT;
-		sgs_PushObject( C, hdr, &sgsstd_fmtstream_iface );
+		sgs_PushObject( C, hdr, sgsstd_fmtstream_iface );
 		return 1;
 	}
 }
@@ -1438,14 +1438,14 @@ static int srt_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjInterface srt_iface =
-{
+static sgs_ObjInterface srt_iface[1] =
+{{
 	"fmt_parser_string_reader",
 	srt_destruct, NULL,
 	NULL, NULL,
 	NULL, NULL, NULL, NULL,
 	srt_call, NULL
-};
+}};
 
 static int sgsstd_fmt_string_parser( SGS_CTX )
 {
@@ -1456,7 +1456,7 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?m|ii", &off, &bufsize ) )
 		return 0;
 	
-	srt = (stringread_t*) sgs_PushObjectIPA( C, sizeof(stringread_t), &srt_iface );
+	srt = (stringread_t*) sgs_PushObjectIPA( C, sizeof(stringread_t), srt_iface );
 	sgs_GetStackItem( C, 0, &srt->S );
 	sgs_BreakIf( srt->S.type != SVT_STRING );
 	sgs_Acquire( C, &srt->S );
@@ -1502,14 +1502,14 @@ static int frt_destruct( SGS_CTX, sgs_VarObj* data, int unused )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjInterface frt_iface =
-{
+static sgs_ObjInterface frt_iface[1] =
+{{
 	"fmt_parser_file_reader",
 	frt_destruct, NULL,
 	NULL, NULL,
 	NULL, NULL, NULL, NULL,
 	frt_call, NULL
-};
+}};
 
 static int sgsstd_fmt_file_parser( SGS_CTX )
 {
@@ -1517,10 +1517,10 @@ static int sgsstd_fmt_file_parser( SGS_CTX )
 	sgs_Int bufsize = 1024;
 	
 	SGSFN( "fmt_file_parser" );
-	if( !sgs_LoadArgs( C, "?o|i", &sgsstd_file_iface, &bufsize ) )
+	if( !sgs_LoadArgs( C, "?o|i", sgsstd_file_iface, &bufsize ) )
 		return 0;
 	
-	frt = (fileread_t*) sgs_PushObjectIPA( C, sizeof(fileread_t), &frt_iface );
+	frt = (fileread_t*) sgs_PushObjectIPA( C, sizeof(fileread_t), frt_iface );
 	sgs_GetStackItem( C, 0, &frt->F );
 	sgs_BreakIf( frt->F.type != SVT_OBJECT );
 	sgs_Acquire( C, &frt->F );
@@ -1854,7 +1854,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 	void* data; \
 	int method_call = sgs_Method( C ); \
 	SGSFN( method_call ? "file." #fname : "file_" #fname ); \
-	if( !sgs_IsObject( C, 0, &sgsstd_file_iface ) ) \
+	if( !sgs_IsObject( C, 0, sgsstd_file_iface ) ) \
 		return sgs_ArgErrorExt( C, 0, method_call, "file", "" ); \
 	data = sgs_GetObjectData( C, 0 );
 
@@ -2113,14 +2113,14 @@ static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* data, int type )
 }
 
 
-static sgs_ObjInterface sgsstd_file_iface =
-{
+static sgs_ObjInterface sgsstd_file_iface[1] =
+{{
 	"file",
 	sgsstd_file_destruct, NULL,
 	sgsstd_file_getindex, NULL,
 	sgsstd_file_convert, NULL, NULL, NULL,
 	NULL, NULL
-};
+}};
 
 static int sgsstd_io_file( SGS_CTX )
 {
@@ -2144,7 +2144,7 @@ static int sgsstd_io_file( SGS_CTX )
 	sgs_Errno( C, !!fp );
 
 pushobj:
-	sgs_PushObject( C, fp, &sgsstd_file_iface );
+	sgs_PushObject( C, fp, sgsstd_file_iface );
 	return 1;
 }
 
@@ -2161,7 +2161,7 @@ sgsstd_dir_t;
 
 #define DIR_HDR sgsstd_dir_t* hdr = (sgsstd_dir_t*) data->data
 
-SGS_DECLARE sgs_ObjInterface sgsstd_dir_iface;
+SGS_DECLARE sgs_ObjInterface sgsstd_dir_iface[1];
 
 static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 {
@@ -2211,14 +2211,14 @@ static int sgsstd_dir_getnext( SGS_CTX, sgs_VarObj* data, int what )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjInterface sgsstd_dir_iface =
-{
+static sgs_ObjInterface sgsstd_dir_iface[1] =
+{{
 	"directory_iterator",
 	sgsstd_dir_destruct, NULL,
 	NULL, NULL,
 	sgsstd_dir_convert, NULL, NULL, sgsstd_dir_getnext,
 	NULL, NULL
-};
+}};
 
 static int sgsstd_io_dir( SGS_CTX )
 {
@@ -2240,7 +2240,7 @@ static int sgsstd_io_dir( SGS_CTX )
 	hdr->dir = dp;
 	hdr->name = NULL;
 
-	sgs_PushObject( C, hdr, &sgsstd_dir_iface );
+	sgs_PushObject( C, hdr, sgsstd_dir_iface );
 	return 1;
 }
 

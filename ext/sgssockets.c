@@ -177,7 +177,7 @@ static int socket_geterrnobyname( SGS_CTX )
 	Socket address object
 */
 
-SGS_DECLARE sgs_ObjInterface sockaddr_iface;
+SGS_DECLARE sgs_ObjInterface sockaddr_iface[1];
 
 #define GET_SAF ((struct sockaddr_storage*)data->data)->ss_family
 #define GET_SAI ((struct sockaddr_in*)data->data)
@@ -321,8 +321,8 @@ static int sockaddr_expr( SGS_CTX, sgs_VarObj* data, int eop )
 	{
 		sgs_Int diff = -1;
 		void *data1, *data2;
-		if( sgs_GetObjectIface( C, 0 ) != &sockaddr_iface ||
-			sgs_GetObjectIface( C, 1 ) != &sockaddr_iface )
+		if( sgs_GetObjectIface( C, 0 ) != sockaddr_iface ||
+			sgs_GetObjectIface( C, 1 ) != sockaddr_iface )
 			return SGS_EINVAL;
 		data1 = sgs_GetObjectData( C, 0 );
 		data2 = sgs_GetObjectData( C, 1 );
@@ -364,18 +364,18 @@ static int sockaddr_dump( SGS_CTX, sgs_VarObj* data, int depth )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjInterface sockaddr_iface =
-{
+static sgs_ObjInterface sockaddr_iface[1] =
+{{
 	"sockaddr",
 	NULL, NULL,
 	sockaddr_getindex, sockaddr_setindex,
 	sockaddr_convert, NULL, sockaddr_dump, NULL,
 	NULL, sockaddr_expr
-};
+}};
 
 static void push_sockaddr( SGS_CTX, struct sockaddr_storage* sa, size_t size )
 {
-	void* ss = sgs_PushObjectIPA( C, sizeof(struct sockaddr_storage), &sockaddr_iface );
+	void* ss = sgs_PushObjectIPA( C, sizeof(struct sockaddr_storage), sockaddr_iface );
 	memset( ss, 0, sizeof(struct sockaddr_storage) );
 	memcpy( ss, sa, size );
 }
@@ -488,12 +488,12 @@ static int sgs_socket_gethostname( SGS_CTX )
 	Socket object
 */
 
-SGS_DECLARE sgs_ObjInterface socket_iface;
+SGS_DECLARE sgs_ObjInterface socket_iface[1];
 #define SOCK_IHDR( name ) \
 	sgs_VarObj* data; \
 	int method_call = sgs_Method( C ); \
 	SGSFN( "socket." #name ); \
-	if( !sgs_IsObject( C, 0, &socket_iface ) ) \
+	if( !sgs_IsObject( C, 0, socket_iface ) ) \
 		return sgs_ArgErrorExt( C, 0, method_call, "socket", "" ); \
 	data = sgs_GetObjectStruct( C, 0 );
 
@@ -551,7 +551,7 @@ static int socketI_accept( SGS_CTX )
 		STDLIB_WARN( "failed to accept connection" )
 	}
 	SOCKCLEARERR;
-	sgs_PushObject( C, (void*) (size_t) S, &socket_iface );
+	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
 	push_sockaddr( C, &sa, (size_t) sa_size );
 	return 2;
 }
@@ -562,7 +562,7 @@ static int socketI_connect( SGS_CTX )
 	
 	SOCK_IHDR( connect );
 	
-	if( !sgs_LoadArgs( C, "@>o", &sockaddr_iface, &odtdata ) )
+	if( !sgs_LoadArgs( C, "@>o", sockaddr_iface, &odtdata ) )
 		return 0;
 	
 	sgs_PushBool( C, sockassert( C, connect( GET_SCK,
@@ -601,7 +601,7 @@ static int socketI_sendto( SGS_CTX )
 	
 	SOCK_IHDR( sendto );
 	
-	if( !sgs_LoadArgs( C, "@>mo|i", &str, &size, &sockaddr_iface, &odtdata, &flags ) )
+	if( !sgs_LoadArgs( C, "@>mo|i", &str, &size, sockaddr_iface, &odtdata, &flags ) )
 		return 0;
 	
 	ret = sendto( GET_SCK, str, (SOCKDATA_LEN) size, (int) flags, odtdata, sizeof(struct sockaddr_storage) );
@@ -838,14 +838,14 @@ static int socket_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjInterface socket_iface =
-{
+static sgs_ObjInterface socket_iface[1] =
+{{
 	"socket",
 	socket_destruct, NULL,
 	socket_getindex, socket_setindex,
 	socket_convert, NULL, NULL, NULL,
 	NULL, NULL
-};
+}};
 
 static int sgs_socket( SGS_CTX )
 {
@@ -865,7 +865,7 @@ static int sgs_socket( SGS_CTX )
 	}
 	SOCKCLEARERR;
 	
-	sgs_PushObject( C, (void*) (size_t) S, &socket_iface );
+	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
 	return 1;
 }
 
@@ -886,7 +886,7 @@ static int sgs_socket_tcp( SGS_CTX )
 	}
 	SOCKCLEARERR;
 	
-	sgs_PushObject( C, (void*) (size_t) S, &socket_iface );
+	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
 	return 1;
 }
 
@@ -907,7 +907,7 @@ static int sgs_socket_udp( SGS_CTX )
 	}
 	SOCKCLEARERR;
 	
-	sgs_PushObject( C, (void*) (size_t) S, &socket_iface );
+	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
 	return 1;
 }
 
@@ -936,7 +936,7 @@ static int sgs_socket_select( SGS_CTX )
 	for( i = 0; i < szR; ++i )
 	{
 		sgs_PushNumIndex( C, 0, i );
-		if( !sgs_IsObject( C, -1, &socket_iface ) )
+		if( !sgs_IsObject( C, -1, socket_iface ) )
 			return sgs_Msg( C, SGS_WARNING, "item #%d of 'read' array is not a socket", i + 1 );
 		data = sgs_GetObjectStruct( C, -1 );
 		if( GET_SCK == -1 )
@@ -950,7 +950,7 @@ static int sgs_socket_select( SGS_CTX )
 	for( i = 0; i < szW; ++i )
 	{
 		sgs_PushNumIndex( C, 1, i );
-		if( !sgs_IsObject( C, -1, &socket_iface ) )
+		if( !sgs_IsObject( C, -1, socket_iface ) )
 			return sgs_Msg( C, SGS_WARNING, "item #%d of 'write' array is not a socket", i + 1 );
 		data = sgs_GetObjectStruct( C, -1 );
 		if( GET_SCK == -1 )
@@ -964,7 +964,7 @@ static int sgs_socket_select( SGS_CTX )
 	for( i = 0; i < szE; ++i )
 	{
 		sgs_PushNumIndex( C, 2, i );
-		if( !sgs_IsObject( C, -1, &socket_iface ) )
+		if( !sgs_IsObject( C, -1, socket_iface ) )
 			return sgs_Msg( C, SGS_WARNING, "item #%d of 'error' array is not a socket", i + 1 );
 		data = sgs_GetObjectStruct( C, -1 );
 		if( GET_SCK == -1 )
@@ -1078,8 +1078,8 @@ int sockets_module_entry_point( SGS_CTX )
 	sgs_PushInt( C, 0 );
 	sgs_StoreGlobal( C, SCKERRVN );
 	
-	sgs_RegisterType( C, "socket", &socket_iface );
-	sgs_RegisterType( C, "socket_address", &sockaddr_iface );
+	sgs_RegisterType( C, "socket", socket_iface );
+	sgs_RegisterType( C, "socket_address", sockaddr_iface );
 	
 	ret = sgs_RegFuncConsts( C, f_sock, sizeof(f_sock) / sizeof(f_sock[0]) );
 	if( ret != SGS_SUCCESS ) return ret;

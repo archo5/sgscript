@@ -29,13 +29,13 @@ typedef struct _xgm_poly2
 xgm_poly2;
 
 
-extern sgs_ObjInterface xgm_vec2_iface;
-extern sgs_ObjInterface xgm_vec3_iface;
-extern sgs_ObjInterface xgm_vec4_iface;
-extern sgs_ObjInterface xgm_aabb2_iface;
-extern sgs_ObjInterface xgm_poly2_iface;
-extern sgs_ObjInterface xgm_color_iface;
-extern sgs_ObjInterface xgm_mat4_iface;
+extern sgs_ObjInterface xgm_vec2_iface[1];
+extern sgs_ObjInterface xgm_vec3_iface[1];
+extern sgs_ObjInterface xgm_vec4_iface[1];
+extern sgs_ObjInterface xgm_aabb2_iface[1];
+extern sgs_ObjInterface xgm_poly2_iface[1];
+extern sgs_ObjInterface xgm_color_iface[1];
+extern sgs_ObjInterface xgm_mat4_iface[1];
 
 SGS_APIFUNC void sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y );
 SGS_APIFUNC void sgs_PushVec3( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z );
