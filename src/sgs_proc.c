@@ -25,6 +25,14 @@
 #define STK_UNITSIZE sizeof( sgs_Variable )
 
 
+typedef union intreal_s
+{
+	sgs_Int i;
+	sgs_Real r;
+}
+intreal_t;
+
+
 /* to work with both insertion and removal algorithms, this function has the following rules:
 - return the index of the first found item with the right size or just after the right size
 - if all sizes are less than specified, return the size of the object pool
@@ -3993,6 +4001,111 @@ SGSRESULT sgs_ConvertP( SGS_CTX, sgs_Variable* var, uint32_t type )
 }
 
 
+SGSBOOL sgs_IsObjectP( SGS_CTX, sgs_Variable* var, sgs_ObjInterface* iface )
+{
+	return var->type == SVT_OBJECT && var->data.O->iface == iface;
+}
+
+SGSBOOL sgs_IsCallableP( SGS_CTX, sgs_Variable* var )
+{
+	uint32_t ty = var->type;
+	if( ty == SVT_FUNC || ty == SVT_CFUNC )
+		return 1;
+	if( ty == SVT_OBJECT && var->data.O->iface->call )
+		return 1;
+	return 0;
+}
+
+SGSBOOL sgs_ParseBoolP( SGS_CTX, sgs_Variable* var, sgs_Bool* out )
+{
+	uint32_t ty;
+	ty = var->type;
+	if( ty == SVT_NULL || ty == SVT_CFUNC || ty == SVT_FUNC || ty == SVT_STRING )
+		return FALSE;
+	if( out )
+		*out = sgs_GetBoolP( C, var );
+	return TRUE;
+}
+
+SGSBOOL sgs_ParseIntP( SGS_CTX, sgs_Variable* var, sgs_Int* out )
+{
+	sgs_Int i;
+	if( var->type == SVT_NULL || var->type == SVT_FUNC || var->type == SVT_CFUNC )
+		return FALSE;
+	if( var->type == SVT_STRING )
+	{
+		intreal_t OIR;
+		const char* ostr = var_cstr( var );
+		const char* str = ostr;
+		int res = util_strtonum( &str, str + var->data.S->size, &OIR.i, &OIR.r );
+		
+		if( str == ostr )    return FALSE;
+		if( res == 1 )       i = OIR.i;
+		else if( res == 2 )  i = (sgs_Int) OIR.r;
+		else                 return FALSE;
+	}
+	else
+		i = sgs_GetIntP( C, var );
+	if( out )
+		*out = i;
+	return TRUE;
+}
+
+SGSBOOL sgs_ParseRealP( SGS_CTX, sgs_Variable* var, sgs_Real* out )
+{
+	sgs_Real r;
+	if( var->type == SVT_NULL || var->type == SVT_FUNC || var->type == SVT_CFUNC )
+		return FALSE;
+	if( var->type == SVT_STRING )
+	{
+		intreal_t OIR;
+		const char* ostr = var_cstr( var );
+		const char* str = ostr;
+		int res = util_strtonum( &str, str + var->data.S->size, &OIR.i, &OIR.r );
+		
+		if( str == ostr )    return FALSE;
+		if( res == 1 )       r = (sgs_Real) OIR.i;
+		else if( res == 2 )  r = OIR.r;
+		else                 return FALSE;
+	}
+	else
+		r = sgs_GetRealP( C, var );
+	if( out )
+		*out = r;
+	return TRUE;
+}
+
+SGSBOOL sgs_ParseStringP( SGS_CTX, sgs_Variable* var, char** out, sgs_SizeVal* size )
+{
+	char* str;
+	uint32_t ty;
+	ty = var->type;
+	if( ty == SVT_NULL || ty == SVT_FUNC || ty == SVT_CFUNC )
+		return FALSE;
+	str = sgs_ToStringBufP( C, var, size );
+	if( out )
+		*out = str;
+	return str != NULL;
+}
+
+SGSBOOL sgs_ParsePtrP( SGS_CTX, sgs_Variable* var, void** out )
+{
+	if( var->type != SVT_NULL && var->type != SVT_PTR )
+		return FALSE;
+	if( out )
+		*out = var->type != SVT_NULL ? var->data.P : NULL;
+	return TRUE;
+}
+
+SGSMIXED sgs_ArraySizeP( SGS_CTX, sgs_Variable* var )
+{
+	if( var->type != SVT_OBJECT ||
+		var->data.O->iface != sgsstd_array_iface )
+		return SGS_EINVAL;
+	return ((sgsstd_array_header_t*)var->data.O->data)->size;
+}
+
+
 /* index versions */
 sgs_Bool sgs_GetBool( SGS_CTX, StkIdx item )
 {
@@ -4098,7 +4211,6 @@ SGSRESULT sgs_Convert( SGS_CTX, StkIdx item, uint32_t type )
 }
 
 
-
 SGSBOOL sgs_IsObject( SGS_CTX, StkIdx item, sgs_ObjInterface* iface )
 {
 	sgs_Variable* var;
@@ -4108,11 +4220,10 @@ SGSBOOL sgs_IsObject( SGS_CTX, StkIdx item, sgs_ObjInterface* iface )
 	return var->type == SVT_OBJECT && var->data.O->iface == iface;
 }
 
-
 SGSBOOL sgs_IsCallable( SGS_CTX, StkIdx item )
 {
 	uint32_t ty = sgs_ItemType( C, item );
-
+	
 	if( ty == SVT_FUNC || ty == SVT_CFUNC )
 		return 1;
 	if( ty == SVT_OBJECT && sgs_GetObjectIface( C, item )->call )
@@ -4120,90 +4231,25 @@ SGSBOOL sgs_IsCallable( SGS_CTX, StkIdx item )
 	return 0;
 }
 
-
-typedef union intreal_s
-{
-	sgs_Int i;
-	sgs_Real r;
-}
-intreal_t;
-
-SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )
-{
-	intreal_t out;
-	const char* ostr = str;
-	return util_strtonum( &str, str + size, &out.i, &out.r ) != 0 && str != ostr;
-}
-
 SGSBOOL sgs_ParseBool( SGS_CTX, StkIdx item, sgs_Bool* out )
 {
-	sgs_Bool i;
-	uint32_t ty;
 	if( !sgs_IsValidIndex( C, item ) )
 		return FALSE;
-	ty = sgs_ItemType( C, item );
-	if( ty == SVT_NULL || ty == SVT_CFUNC || ty == SVT_FUNC || ty == SVT_STRING )
-		return FALSE;
-	i = sgs_GetBool( C, item );
-	if( out )
-		*out = i;
-	return TRUE;
+	return sgs_ParseBoolP( C, stk_getpos( C, item ), out );
 }
 
 SGSBOOL sgs_ParseInt( SGS_CTX, StkIdx item, sgs_Int* out )
 {
-	sgs_Int i;
-	sgs_Variable* var;
 	if( !sgs_IsValidIndex( C, item ) )
 		return FALSE;
-	var = stk_getpos( C, item );
-	if( var->type == SVT_NULL || var->type == SVT_FUNC || var->type == SVT_CFUNC )
-		return FALSE;
-	if( var->type == SVT_STRING )
-	{
-		intreal_t OIR;
-		const char* ostr = var_cstr( var );
-		const char* str = ostr;
-		int res = util_strtonum( &str, str + var->data.S->size, &OIR.i, &OIR.r );
-
-		if( str == ostr )    return FALSE;
-		if( res == 1 )       i = OIR.i;
-		else if( res == 2 )  i = (sgs_Int) OIR.r;
-		else                 return FALSE;
-	}
-	else
-		i = sgs_GetInt( C, item );
-	if( out )
-		*out = i;
-	return TRUE;
+	return sgs_ParseIntP( C, stk_getpos( C, item ), out );
 }
 
 SGSBOOL sgs_ParseReal( SGS_CTX, StkIdx item, sgs_Real* out )
 {
-	sgs_Real r;
-	sgs_Variable* var;
 	if( !sgs_IsValidIndex( C, item ) )
 		return FALSE;
-	var = stk_getpos( C, item );
-	if( var->type == SVT_NULL || var->type == SVT_FUNC || var->type == SVT_CFUNC )
-		return FALSE;
-	if( var->type == SVT_STRING )
-	{
-		intreal_t OIR;
-		const char* ostr = var_cstr( var );
-		const char* str = ostr;
-		int res = util_strtonum( &str, str + var->data.S->size, &OIR.i, &OIR.r );
-
-		if( str == ostr )    return FALSE;
-		if( res == 1 )       r = (sgs_Real) OIR.i;
-		else if( res == 2 )  r = OIR.r;
-		else                 return FALSE;
-	}
-	else
-		r = sgs_GetReal( C, item );
-	if( out )
-		*out = r;
-	return TRUE;
+	return sgs_ParseRealP( C, stk_getpos( C, item ), out );
 }
 
 SGSBOOL sgs_ParseString( SGS_CTX, StkIdx item, char** out, sgs_SizeVal* size )
@@ -4223,15 +4269,17 @@ SGSBOOL sgs_ParseString( SGS_CTX, StkIdx item, char** out, sgs_SizeVal* size )
 
 SGSBOOL sgs_ParsePtr( SGS_CTX, StkIdx item, void** out )
 {
-	sgs_Variable* var;
 	if( !sgs_IsValidIndex( C, item ) )
 		return FALSE;
-	var = stk_getpos( C, item );
-	if( var->type != SVT_NULL && var->type != SVT_PTR )
-		return FALSE;
-	if( out )
-		*out = var->type != SVT_NULL ? var->data.P : NULL;
-	return TRUE;
+	return sgs_ParsePtrP( C, stk_getpos( C, item ), out );
+}
+
+SGSMIXED sgs_ArraySize( SGS_CTX, StkIdx item )
+{
+	if( sgs_ItemType( C, item ) != SVT_OBJECT ||
+		sgs_GetObjectIface( C, item ) != sgsstd_array_iface )
+		return SGS_EINVAL;
+	return ((sgsstd_array_header_t*)sgs_GetObjectData( C, item ))->size;
 }
 
 
@@ -4288,12 +4336,12 @@ SGSMIXED sgs_IterPushData( SGS_CTX, StkIdx item, int key, int value )
 	return ret;
 }
 
-SGSMIXED sgs_ArraySize( SGS_CTX, StkIdx item )
+
+SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )
 {
-	if( sgs_ItemType( C, item ) != SVT_OBJECT ||
-		sgs_GetObjectIface( C, item ) != sgsstd_array_iface )
-		return SGS_EINVAL;
-	return ((sgsstd_array_header_t*)sgs_GetObjectData( C, item ))->size;
+	intreal_t out;
+	const char* ostr = str;
+	return util_strtonum( &str, str + size, &out.i, &out.r ) != 0 && str != ostr;
 }
 
 
