@@ -20,11 +20,13 @@
 #define FN( x ) { #x, sgsstd_##x }
 #define FLAG( a, b ) (((a)&(b))!=0)
 #define STREQ( a, b ) (0==strcmp(a,b))
+#define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
 #define STDLIB_INFO( info ) return sgs_Msg( C, SGS_INFO, info );
 #define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
 
 
 SGS_DECLARE sgs_ObjInterface sgsstd_file_iface[1];
+static int sgsstd_fileI_read( SGS_CTX );
 
 
 /* path helper functions */
@@ -744,7 +746,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			char* str;
 			sgs_SizeVal size;
 			if( F->type == 'c' &&
-				sgs_Convert( C, (*psi), SVT_STRING ) != SGS_SUCCESS )
+				sgs_ToString( C, (*psi) ) == NULL )
 				goto error;
 			if( !sgs_ParseString( C, (*psi)++, &str, &size ) )
 				goto error;
@@ -884,10 +886,9 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 }
 
 
-static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data, int unused )
+static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data )
 {
 	SGSFS_HDR;
-	UNUSED( unused );
 	sgs_Release( C, &hdr->source );
 	sgs_Dealloc( hdr->buffer );
 	sgs_Dealloc( hdr );
@@ -1331,33 +1332,31 @@ static int sgsstd_fmtstreamI_check( SGS_CTX )
 
 
 
-static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
 {
 	char* str;
-	sgs_SizeVal size;
 	SGSFS_HDR;
-	if( !sgs_ParseString( C, 0, &str, &size ) )
-		STDLIB_WARN( "fmt_parser: could not read property string" )
-	
-#define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
-	if STREQ( str, "read" ) IFN( sgsstd_fmtstreamI_read )
-	else if STREQ( str, "getchar" ) IFN( sgsstd_fmtstreamI_getchar )
-	else if STREQ( str, "readcc" ) IFN( sgsstd_fmtstreamI_readcc )
-	else if STREQ( str, "skipcc" ) IFN( sgsstd_fmtstreamI_skipcc )
-	else if STREQ( str, "read_real" ) IFN( sgsstd_fmtstreamI_read_real )
-	else if STREQ( str, "read_int" ) IFN( sgsstd_fmtstreamI_read_int )
-	else if STREQ( str, "read_binary_int" ) IFN( sgsstd_fmtstreamI_read_binary_int )
-	else if STREQ( str, "read_octal_int" ) IFN( sgsstd_fmtstreamI_read_octal_int )
-	else if STREQ( str, "read_decimal_int" ) IFN( sgsstd_fmtstreamI_read_decimal_int )
-	else if STREQ( str, "read_hex_int" ) IFN( sgsstd_fmtstreamI_read_hex_int )
-	else if STREQ( str, "check" ) IFN( sgsstd_fmtstreamI_check )
-	
-	else if( 0 == strcmp( str, "at_end" ) ){
-		sgs_PushBool( C, hdr->state == FMTSTREAM_STATE_END );
-		return SGS_SUCCESS; }
-	else if( 0 == strcmp( str, "stream_offset" ) ){
-		sgs_PushInt( C, hdr->streamoff + hdr->bufpos );
-		return SGS_SUCCESS; }
+	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	{
+		if STREQ( str, "read" ) IFN( sgsstd_fmtstreamI_read )
+		else if STREQ( str, "getchar" ) IFN( sgsstd_fmtstreamI_getchar )
+		else if STREQ( str, "readcc" ) IFN( sgsstd_fmtstreamI_readcc )
+		else if STREQ( str, "skipcc" ) IFN( sgsstd_fmtstreamI_skipcc )
+		else if STREQ( str, "read_real" ) IFN( sgsstd_fmtstreamI_read_real )
+		else if STREQ( str, "read_int" ) IFN( sgsstd_fmtstreamI_read_int )
+		else if STREQ( str, "read_binary_int" ) IFN( sgsstd_fmtstreamI_read_binary_int )
+		else if STREQ( str, "read_octal_int" ) IFN( sgsstd_fmtstreamI_read_octal_int )
+		else if STREQ( str, "read_decimal_int" ) IFN( sgsstd_fmtstreamI_read_decimal_int )
+		else if STREQ( str, "read_hex_int" ) IFN( sgsstd_fmtstreamI_read_hex_int )
+		else if STREQ( str, "check" ) IFN( sgsstd_fmtstreamI_check )
+		
+		else if( 0 == strcmp( str, "at_end" ) ){
+			sgs_PushBool( C, hdr->state == FMTSTREAM_STATE_END );
+			return SGS_SUCCESS; }
+		else if( 0 == strcmp( str, "stream_offset" ) ){
+			sgs_PushInt( C, hdr->streamoff + hdr->bufpos );
+			return SGS_SUCCESS; }
+	}
 	
 	return SGS_ENOTFND;
 }
@@ -1412,7 +1411,7 @@ typedef struct _stringread_t
 stringread_t;
 
 
-static int srt_call( SGS_CTX, sgs_VarObj* data, int smth )
+static int srt_call( SGS_CTX, sgs_VarObj* data )
 {
 	sgs_Int amt;
 	stringread_t* srt = (stringread_t*) data->data;
@@ -1430,10 +1429,9 @@ static int srt_call( SGS_CTX, sgs_VarObj* data, int smth )
 	}
 }
 
-static int srt_destruct( SGS_CTX, sgs_VarObj* data, int unused )
+static int srt_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	stringread_t* srt = (stringread_t*) data->data;
-	UNUSED( unused );
 	sgs_Release( C, &srt->S );
 	return SGS_SUCCESS;
 }
@@ -1475,7 +1473,7 @@ typedef struct _fileread_t
 fileread_t;
 
 
-static int frt_call( SGS_CTX, sgs_VarObj* data, int smth )
+static int frt_call( SGS_CTX, sgs_VarObj* data )
 {
 	sgs_Int amt;
 	FILE* fp;
@@ -1487,17 +1485,15 @@ static int frt_call( SGS_CTX, sgs_VarObj* data, int smth )
 		return 0;
 	sgs_PushVariable( C, &frt->F );
 	sgs_PushInt( C, amt );
-	sgs_PushItem( C, -2 );
-	sgs_PushProperty( C, "read" );
+	sgs_PushCFunction( C, sgsstd_fileI_read );
 	if( sgs_ThisCall( C, 1, 1 ) )
 		return SGS_EINPROC;
 	return 1;
 }
 
-static int frt_destruct( SGS_CTX, sgs_VarObj* data, int unused )
+static int frt_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	fileread_t* frt = (fileread_t*) data->data;
-	UNUSED( unused );
 	sgs_Release( C, &frt->F );
 	return SGS_SUCCESS;
 }
@@ -2060,37 +2056,31 @@ static int sgsstd_fileI_setbuf( SGS_CTX )
 }
 
 
-static int sgsstd_file_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+static int sgsstd_file_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
 {
 	char* str;
-	sgs_SizeVal len;
-	if( !prop )
-		return SGS_ENOTSUP;
-	if( !sgs_ParseString( C, 0, &str, &len ) )
-		return SGS_EINVAL;
-
-	if( 0 == strcmp( str, "offset" ) ){ return sgsstd_fileP_offset( C, IFVAR ); }
-	if( 0 == strcmp( str, "size" ) ){ return sgsstd_fileP_size( C, IFVAR ); }
-	if( 0 == strcmp( str, "error" ) ){ return sgsstd_fileP_error( C, IFVAR ); }
-	if( 0 == strcmp( str, "eof" ) ){ return sgsstd_fileP_eof( C, IFVAR ); }
-
-#define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
-	if( 0 == strcmp( str, "open" ) ) IFN( sgsstd_fileI_open )
-	if( 0 == strcmp( str, "close" ) ) IFN( sgsstd_fileI_close )
-	if( 0 == strcmp( str, "read" ) ) IFN( sgsstd_fileI_read )
-	if( 0 == strcmp( str, "write" ) ) IFN( sgsstd_fileI_write )
-	if( 0 == strcmp( str, "seek" ) ) IFN( sgsstd_fileI_seek )
-	if( 0 == strcmp( str, "flush" ) ) IFN( sgsstd_fileI_flush )
-	if( 0 == strcmp( str, "setbuf" ) ) IFN( sgsstd_fileI_setbuf )
-#undef IFN
-
+	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	{
+		if STREQ( str, "is_open" ){ sgs_PushBool( C, !!IFVAR ); return SGS_SUCCESS; }
+		if STREQ( str, "offset" ){ return sgsstd_fileP_offset( C, IFVAR ); }
+		if STREQ( str, "size" ){ return sgsstd_fileP_size( C, IFVAR ); }
+		if STREQ( str, "error" ){ return sgsstd_fileP_error( C, IFVAR ); }
+		if STREQ( str, "eof" ){ return sgsstd_fileP_eof( C, IFVAR ); }
+		
+		if STREQ( str, "open" ) IFN( sgsstd_fileI_open )
+		if STREQ( str, "close" ) IFN( sgsstd_fileI_close )
+		if STREQ( str, "read" ) IFN( sgsstd_fileI_read )
+		if STREQ( str, "write" ) IFN( sgsstd_fileI_write )
+		if STREQ( str, "seek" ) IFN( sgsstd_fileI_seek )
+		if STREQ( str, "flush" ) IFN( sgsstd_fileI_flush )
+		if STREQ( str, "setbuf" ) IFN( sgsstd_fileI_setbuf )
+	}
 	return SGS_ENOTFND;
 }
 
-static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* data, int dch )
+static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	UNUSED( C );
-	UNUSED( dch );
 	if( IFVAR )
 		fclose( IFVAR );
 	return SGS_SUCCESS;
@@ -2102,11 +2092,6 @@ static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* data, int type )
 	if( type == SVT_BOOL )
 	{
 		sgs_PushBool( C, !!IFVAR );
-		return SGS_SUCCESS;
-	}
-	if( type == SVT_STRING || type == SGS_CONVOP_TOTYPE )
-	{
-		sgs_PushString( C, "file" );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -2163,7 +2148,7 @@ sgsstd_dir_t;
 
 SGS_DECLARE sgs_ObjInterface sgsstd_dir_iface[1];
 
-static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	DIR_HDR;
 	UNUSED( C );
@@ -2174,12 +2159,7 @@ static int sgsstd_dir_destruct( SGS_CTX, sgs_VarObj* data, int dco )
 
 static int sgsstd_dir_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( type == SVT_STRING || type == SGS_CONVOP_TOTYPE )
-	{
-		sgs_PushString( C, "directory_iterator" );
-		return SGS_SUCCESS;
-	}
-	else if( type == SGS_CONVOP_TOITER )
+	if( type == SGS_CONVOP_TOITER )
 	{
 		sgs_PushObjectPtr( C, data );
 		return SGS_SUCCESS;

@@ -8,7 +8,7 @@
 CC=gcc
 CXX=g++
 
-COMMONFLAGS=-Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align
+COMMONFLAGS=-fwrapv -Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align
 
 SRCDIR=src
 LIBDIR=lib

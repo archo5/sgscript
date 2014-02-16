@@ -120,7 +120,6 @@ void sgs_DestroyEngine( SGS_CTX )
 	while( C->stack_base != C->stack_top )
 	{
 		C->stack_top--;
-		sgs_Acquire( C, C->stack_top );
 		sgs_Release( C, C->stack_top );
 	}
 	while( C->clstk_base != C->clstk_top )
@@ -705,8 +704,6 @@ SGSRESULT sgs_Abort( SGS_CTX )
 
 
 
-/* g_varnames ^^ */
-
 static void ctx_print_safe( SGS_CTX, const char* str, size_t size )
 {
 	const char* strend = str + size;
@@ -734,8 +731,15 @@ static void dumpobj( SGS_CTX, sgs_VarObj* p )
 		p, p->refcount, p->data, p->iface, p->prev, p->next, p->redblue ? "R" : "B" );
 }
 
+/* g_varnames ^^ */
+
 static void dumpvar( SGS_CTX, sgs_Variable* var )
 {
+	if( var->type > SVT_PTR )
+	{
+		sgs_Writef( C, "INVALID TYPE %d\n", (int) var->type );
+		return;
+	}
 	/* WP: var->type base type info uses bits 1-8 */
 	sgs_Writef( C, "%s (size:%d)", g_varnames[ var->type ], sgsVM_VarSize( var ) );
 	switch( var->type )
@@ -847,6 +851,32 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 			sgs_Writef( C, "# objects: %d\n", C->objcount );
 			sgs_Writef( C, "GC state: %s\n", C->redblue ? "red" : "blue" );
 			sgs_WriteStr( C, "---- ---- ---- -----\n" );
+		}
+		return SGS_SUCCESS;
+	case SGS_STAT_XDUMP_STACK:
+		{
+			ptrdiff_t i = 0, ssz = C->stack_top - C->stack_base;
+			sgs_WriteStr( C, "\nVARIABLE -- ---- STACK ---- BASE ----\n" );
+			while( i < ssz )
+			{
+				sgs_Variable* p = C->stack_base + i;
+				if( p == C->stack_off )
+				{
+					sgs_WriteStr( C, "VARIABLE -- ---- STACK ---- OFFSET ----\n" );
+				}
+				sgs_Writef( C, "VARIABLE %02d ", (int) i );
+				dumpvar( C, p );
+				sgs_WriteStr( C, "\n" );
+				sgs_PushVariable( C, p );
+				if( SGS_SUCCEEDED( sgs_DumpVar( C, 6 ) ) )
+				{
+					sgs_WriteStr( C, sgs_ToString( C, -1 ) );
+					sgs_Pop( C, 1 );
+					sgs_WriteStr( C, "\n" );
+				}
+				i++;
+			}
+			sgs_WriteStr( C, "VARIABLE -- ---- STACK ---- TOP ----\n" );
 		}
 		return SGS_SUCCESS;
 	default:

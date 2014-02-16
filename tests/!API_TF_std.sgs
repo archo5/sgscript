@@ -81,7 +81,7 @@ else
 	libfile $= ".so";
 	section( "include_shared ("$libfile$", OS="$os_gettype()$")" );
 testEqual( include_shared( libfile ), true, "include_shared - sgscript_main call [1]" );
-testEqual( json_decode$'', 'C Function', "include_shared - sgscript_main call [2]" );
+testEqual( json_decode$'', 'C function', "include_shared - sgscript_main call [2]" );
 
 	section( "import_cfunc" );
 testEqual( typeof( import_cfunc( libfile, "sgscript_main" ) ), "cfunc", "import_cfunc - retrieval of entry point" );

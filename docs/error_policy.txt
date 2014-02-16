@@ -2,6 +2,16 @@
 - E: error
 - W: warning
 
+main policy guidelines:
+- anything that prevents the script from executing code is an Error
+- anything that has more chance of being unexpected than not is an Error
+	-- for example, when given types/values don't support the intended operation
+	-- not having properties may be expected so it's a warning - breaks while debugging, no issues otherwise
+- the main exception is cascading failures
+	-- should disable code paths not stop things while still being detectable
+	-- null variables are key to this - most parsing functions don't accept them, they're returned on errors
+
+
 CONTEXT
 E Failed to read bytecode file (incomplete file|invalid variable type found)
 
