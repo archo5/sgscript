@@ -749,7 +749,7 @@ static int sgsstd_array_iter_getnext( SGS_CTX, sgs_VarObj* data, int mask )
 	sgsstd_array_iter_t* iter = (sgsstd_array_iter_t*) data->data;
 	sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) iter->ref.data.O->data;
 	if( iter->size != hdr->size )
-		return SGS_EINVAL;
+		return SGS_EINPROC;
 
 	if( !mask )
 	{
@@ -1235,14 +1235,14 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* data, int type )
 	HTHDR;
 	if( type == SGS_CONVOP_TOITER )
 	{
-		sgsstd_dict_iter_t* iter = sgs_Alloc( sgsstd_dict_iter_t );
+		sgsstd_dict_iter_t* iter = (sgsstd_dict_iter_t*)
+			sgs_PushObjectIPA( C, sizeof(*iter), sgsstd_dict_iter_iface );
 		
 		sgs_InitObjectPtr( &iter->ref, data );
 		sgs_Acquire( C, &iter->ref );
 		iter->size = vht_size( ht );
 		iter->off = -1;
 		
-		sgs_PushObject( C, iter, sgsstd_dict_iter_iface );
 		return SGS_SUCCESS;
 	}
 	else if( type == SVT_BOOL )

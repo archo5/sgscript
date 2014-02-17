@@ -319,8 +319,8 @@ static int sockaddr_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variab
 	{
 		sgs_Int diff = -1;
 		void *data1, *data2;
-		if( !sgs_IsObjectP( C, A, sockaddr_iface ) ||
-			!sgs_IsObjectP( C, B, sockaddr_iface ) )
+		if( !sgs_IsObjectP( A, sockaddr_iface ) ||
+			!sgs_IsObjectP( B, sockaddr_iface ) )
 			return SGS_EINVAL;
 		data1 = sgs_GetObjectDataP( A );
 		data2 = sgs_GetObjectDataP( B );

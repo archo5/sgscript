@@ -95,7 +95,7 @@ int main( int argc, char* argv[] )
 	}
 
 	data = malloc( scriptsize );
-	SetFilePointer( fh, -4-scriptsize, NULL, FILE_END );
+	SetFilePointer( fh, -4-(LONG)scriptsize, NULL, FILE_END );
 	ReadFile( fh, data, scriptsize, &read, NULL );
 	CloseHandle( fh );
 	

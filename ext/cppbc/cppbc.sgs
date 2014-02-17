@@ -49,8 +49,23 @@ global DEFAULT_OBJ_IFUNCS =
 	"SGS_OP_DESTRUCT" = "_sgs_destruct",
 	"SGS_OP_GETINDEX" = "_sgs_getindex",
 	"SGS_OP_SETINDEX" = "_sgs_setindex",
-	"SGS_OP_CONVERT" = "_sgs_convert",
 };
+
+global OBJ_IFUNC_POS =
+{
+	"SGS_OP_DESTRUCT"  = 0,
+	"SGS_OP_GCMARK"    = 1,
+	"SGS_OP_GETINDEX"  = 2,
+	"SGS_OP_SETINDEX"  = 3,
+	"SGS_OP_CONVERT"   = 4,
+	"SGS_OP_SERIALIZE" = 5,
+	"SGS_OP_DUMP"      = 6,
+	"SGS_OP_GETNEXT"   = 7,
+	"SGS_OP_CALL"      = 8,
+	"SGS_OP_EXPR"      = 9,
+};
+
+global OBJ_IFUNC_COUNT = 10;
 
 
 function string_find_any( str, what, pos )
@@ -695,7 +710,7 @@ static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 		// - OP_DESTRUCT
 		out $= string_translate(
 "
-int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj, int )
+int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	static_cast<%OBJ%*>( obj->data )->~%OBJ%();
 	return SGS_SUCCESS;
@@ -706,10 +721,10 @@ int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj, int )
 		// - OP_GETINDEX
 		out $=
 "
-int " $ obj.name $ "::_sgs_getindex( SGS_CTX, sgs_VarObj* obj, int param )
+int " $ obj.name $ "::_sgs_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int param )
 {
 	char* name;
-	if( sgs_ParseString( C, 0, &name, NULL ) )
+	if( sgs_ParseStringP( C, key, &name, NULL ) )
 	{";
 		foreach( item : obj.items )
 		{
@@ -751,10 +766,10 @@ int " $ obj.name $ "::_sgs_getindex( SGS_CTX, sgs_VarObj* obj, int param )
 		// - OP_SETINDEX
 		out $=
 "
-int " $ obj.name $ "::_sgs_setindex( SGS_CTX, sgs_VarObj* obj, int param )
+int " $ obj.name $ "::_sgs_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int isprop )
 {
 	char* name;
-	if( sgs_ParseString( C, 0, &name, NULL ) )
+	if( sgs_ParseStringP( C, key, &name, NULL ) )
 	{";
 		foreach( item : obj.items )
 		{
@@ -762,14 +777,14 @@ int " $ obj.name $ "::_sgs_setindex( SGS_CTX, sgs_VarObj* obj, int param )
 			if( item.what == "PROPERTY" )
 			{
 				if( item.access >= 0 )
-					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVar<%TYPE%>()( C, 1%ISOBJ% );";
+					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVarP<%TYPE%>()( C, val%ISOBJ% );";
 			}
 			else if( item.what == "PROPERTY_FUNC" )
 			{
 				if( item.write === true )
-					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVar<%TYPE%>()( C, 1%ISOBJ% );";
+					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVarP<%TYPE%>()( C, val%ISOBJ% );";
 				else if( item.write )
-					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.write$"( sgs_GetVar<%TYPE%>()( C, 1%ISOBJ% ) );";
+					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.write$"( sgs_GetVarP<%TYPE%>()( C, val%ISOBJ% ) );";
 				if( item.writecb )
 					itemline $= "\n\t\t\tstatic_cast<%OBJ%*>( obj->data )->"$item.writecb$"();";
 			}
@@ -794,34 +809,23 @@ int " $ obj.name $ "::_sgs_setindex( SGS_CTX, sgs_VarObj* obj, int param )
 	return SGS_ENOTFND;
 }
 ";
-		// - OP_CONVERT
-		out $= string_translate(
-"
-int %OBJ%::_sgs_convert( SGS_CTX, sgs_VarObj* obj, int param )
-{
-	if( param == SGS_CONVOP_TOTYPE || param == SGS_VT_STRING )
-	{
-		sgs_PushString( C, \"%OBJ%\" );
-		return SGS_SUCCESS;
-	}
-	return SGS_ENOTSUP;
-}
-"
-		, { "%OBJ%" = obj.name } );
-		
 		// interface
-		out $=
-"
-sgs_ObjCallback " $ obj.name $ "::_sgs_interface[] =
-{";
-		
+		funcnames = [].resize( OBJ_IFUNC_COUNT );
 		foreach( ifname, ifunc : ifuncs )
-			out $= string_format( "\n\t{1}, {2}::{3},", ifname, obj.name, ifunc );
+			funcnames[ OBJ_IFUNC_POS[ ifname ] ] = ifunc;
+		out $=
+"
+sgs_ObjInterface " $ obj.name $ "::_sgs_interface[1] =
+{{
+	\"" $ obj.name $ "\",
+	";
+		
+		foreach( ifunc : funcnames )
+			out $= if( ifunc === null, "NULL, ", string_format( "{1}::{2}, ", obj.name, ifunc ) );
 		
 		out $=
 "
-	SGS_OP_END
-};
+}};
 
 ";
 	}

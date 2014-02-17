@@ -4181,12 +4181,12 @@ char* sgs_ToStringBufFastP( SGS_CTX, sgs_Variable* var, sgs_SizeVal* outsize )
 }
 
 
-SGSBOOL sgs_IsObjectP( SGS_CTX, sgs_Variable* var, sgs_ObjInterface* iface )
+SGSBOOL sgs_IsObjectP( sgs_Variable* var, sgs_ObjInterface* iface )
 {
 	return var->type == SVT_OBJECT && var->data.O->iface == iface;
 }
 
-SGSBOOL sgs_IsCallableP( SGS_CTX, sgs_Variable* var )
+SGSBOOL sgs_IsCallableP( sgs_Variable* var )
 {
 	uint32_t ty = var->type;
 	if( ty == SVT_FUNC || ty == SVT_CFUNC )

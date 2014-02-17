@@ -14,11 +14,11 @@
 
 #ifndef SGS_CPPBC_PROCESS
 # define SGS_OBJECT \
-	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj, int param ); \
-	static int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int param ); \
-	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj, int param ); \
-	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj, int param ); \
-	static sgs_ObjCallback _sgs_interface[]; \
+	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int type ); \
+	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int isprop ); \
+	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int isprop ); \
+	static sgs_ObjInterface _sgs_interface[1]; \
 	sgs_VarObj* m_sgsObject; \
 	SGS_CTX;
 # define SGS_METHOD

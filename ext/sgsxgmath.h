@@ -37,6 +37,21 @@ extern sgs_ObjInterface xgm_poly2_iface[1];
 extern sgs_ObjInterface xgm_color_iface[1];
 extern sgs_ObjInterface xgm_mat4_iface[1];
 
+SGS_APIFUNC void sgs_InitVec2( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y );
+SGS_APIFUNC void sgs_InitVec3( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z );
+SGS_APIFUNC void sgs_InitVec4( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w );
+SGS_APIFUNC void sgs_InitAABB2( SGS_CTX, sgs_Variable* var, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 );
+SGS_APIFUNC void sgs_InitPoly2( SGS_CTX, sgs_Variable* var, XGM_VT* v2fn, int numverts );
+SGS_APIFUNC void sgs_InitColor( SGS_CTX, sgs_Variable* var, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a );
+SGS_APIFUNC void sgs_InitMat4( SGS_CTX, sgs_Variable* var, XGM_VT* v16f, int transpose );
+
+SGS_APIFUNC void sgs_InitVec2p( SGS_CTX, sgs_Variable* var, XGM_VT* v2f );
+SGS_APIFUNC void sgs_InitVec3p( SGS_CTX, sgs_Variable* var, XGM_VT* v3f );
+SGS_APIFUNC void sgs_InitVec4p( SGS_CTX, sgs_Variable* var, XGM_VT* v4f );
+SGS_APIFUNC void sgs_InitAABB2p( SGS_CTX, sgs_Variable* var, XGM_VT* v4f );
+SGS_APIFUNC void sgs_InitColorp( SGS_CTX, sgs_Variable* var, XGM_VT* v4f );
+SGS_APIFUNC void sgs_InitColorvp( SGS_CTX, sgs_Variable* var, XGM_VT* vf, int numfloats );
+
 SGS_APIFUNC void sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y );
 SGS_APIFUNC void sgs_PushVec3( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z );
 SGS_APIFUNC void sgs_PushVec4( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w );

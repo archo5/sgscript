@@ -642,8 +642,8 @@ SGS_APIFUNC char* sgs_ToStringBufP( SGS_CTX, sgs_Variable* var, sgs_SizeVal* out
 SGS_APIFUNC char* sgs_ToStringBufFastP( SGS_CTX, sgs_Variable* var, sgs_SizeVal* outsize );
 #define sgs_ToStringFastP( ctx, var ) sgs_ToStringBufFast( ctx, var, NULL )
 
-SGS_APIFUNC SGSBOOL sgs_IsObjectP( SGS_CTX, sgs_Variable* var, sgs_ObjInterface* iface );
-SGS_APIFUNC SGSBOOL sgs_IsCallableP( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC SGSBOOL sgs_IsObjectP( sgs_Variable* var, sgs_ObjInterface* iface );
+SGS_APIFUNC SGSBOOL sgs_IsCallableP( sgs_Variable* var );
 SGS_APIFUNC SGSBOOL sgs_ParseBoolP( SGS_CTX, sgs_Variable* var, sgs_Bool* out );
 SGS_APIFUNC SGSBOOL sgs_ParseIntP( SGS_CTX, sgs_Variable* var, sgs_Int* out );
 SGS_APIFUNC SGSBOOL sgs_ParseRealP( SGS_CTX, sgs_Variable* var, sgs_Real* out );
