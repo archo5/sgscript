@@ -52,6 +52,13 @@ SGS_APIFUNC void sgs_PushAABB2p( SGS_CTX, XGM_VT* v4f );
 SGS_APIFUNC void sgs_PushColorp( SGS_CTX, XGM_VT* v4f );
 SGS_APIFUNC void sgs_PushColorvp( SGS_CTX, XGM_VT* vf, int numfloats );
 
+SGS_APIFUNC SGSBOOL sgs_ParseVec2P( SGS_CTX, sgs_Variable* var, XGM_VT* v2f, int strict );
+SGS_APIFUNC SGSBOOL sgs_ParseVec3P( SGS_CTX, sgs_Variable* var, XGM_VT* v3f, int strict );
+SGS_APIFUNC SGSBOOL sgs_ParseVec4P( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict );
+SGS_APIFUNC SGSBOOL sgs_ParseAABB2P( SGS_CTX, sgs_Variable* var, XGM_VT* v4f );
+SGS_APIFUNC SGSBOOL sgs_ParseColorP( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict );
+SGS_APIFUNC SGSBOOL sgs_ParseMat4P( SGS_CTX, sgs_Variable* var, XGM_VT* v16f );
+
 SGS_APIFUNC SGSBOOL sgs_ParseVec2( SGS_CTX, int pos, XGM_VT* v2f, int strict );
 SGS_APIFUNC SGSBOOL sgs_ParseVec3( SGS_CTX, int pos, XGM_VT* v3f, int strict );
 SGS_APIFUNC SGSBOOL sgs_ParseVec4( SGS_CTX, int pos, XGM_VT* v4f, int strict );

@@ -183,149 +183,147 @@ SGS_DECLARE sgs_ObjInterface sockaddr_iface[1];
 #define GET_SAI ((struct sockaddr_in*)data->data)
 #define GET_SAI6 ((struct sockaddr_in6*)data->data)
 
-static int sockaddr_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+static void sockaddr_push_full_addr_string( SGS_CTX, sgs_VarObj* data )
+{
+	char addr[ 64 ] = {0};
+#ifdef _WIN32
+	DWORD ioasz = 64;
+	WSAAddressToString( (LPSOCKADDR) data->data, sizeof(struct sockaddr_storage), NULL, addr, &ioasz );
+#else
+	if( GET_SAF == AF_INET || GET_SAF == AF_INET6 )
+	{
+		char pb[ 8 ];
+		inet_ntop( GET_SAF, GET_SAF == AF_INET ?
+			(void*) &GET_SAI->sin_addr :
+			(void*) &GET_SAI6->sin6_addr, addr, 64 );
+		sprintf( pb, ":%u", (int) GET_SAF == AF_INET ? GET_SAI->sin_port : GET_SAI6->sin6_port );
+		strcat( addr, pb );
+	}
+#endif
+	addr[ 64-1 ] = 0;
+	if( *addr )
+		sgs_PushString( C, addr );
+	else
+		sgs_PushString( C, "-" );
+}
+
+static int sockaddr_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
 {
 	char* name;
-	if( !sgs_ParseString( C, 0, &name, NULL ) )
-		return SGS_ENOTSUP;
-	
-	if( STREQ( name, "family" ) ){ sgs_PushInt( C, GET_SAF ); return SGS_SUCCESS; }
-	if( STREQ( name, "port" ) )
+	if( sgs_ParseStringP( C, key, &name, NULL ) )
 	{
-		if( GET_SAF == AF_INET ){ sgs_PushInt( C, ntohs( GET_SAI->sin_port ) ); }
-		else if( GET_SAF == AF_INET6 ){ sgs_PushInt( C, ntohs( GET_SAI6->sin6_port ) ); }
-		else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "port supported only for AF_INET[6]" ); }
-		return SGS_SUCCESS;
-	}
-	if( STREQ( name, "addr_u32" ) )
-	{
-		if( GET_SAF == AF_INET ){ sgs_PushInt( C, ntohl( GET_SAI->sin_addr.s_addr ) ); }
-		else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "addr_u32 supported only for AF_INET" ); }
-		return SGS_SUCCESS;
-	}
-	if( STREQ( name, "addr_buf" ) )
-	{
-		if( GET_SAF == AF_INET ){ sgs_PushStringBuf( C, (char*) &GET_SAI->sin_addr.s_addr, 4 ); }
-		else if( GET_SAF == AF_INET6 ){ sgs_PushStringBuf( C, (char*) &GET_SAI6->sin6_addr.s6_addr, 16 ); }
-		else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "addr_buf supported only for AF_INET[6]" ); }
-		return SGS_SUCCESS;
-	}
-	if( STREQ( name, "addr_bytes" ) )
-	{
-		char* buf = NULL;
-		int i, sz = 0;
-		if( GET_SAF == AF_INET )
+		if( STREQ( name, "family" ) ){ sgs_PushInt( C, GET_SAF ); return SGS_SUCCESS; }
+		if( STREQ( name, "port" ) )
 		{
-			buf = (char*) &GET_SAI->sin_addr.s_addr;
-			sz = 4;
+			if( GET_SAF == AF_INET ){ sgs_PushInt( C, ntohs( GET_SAI->sin_port ) ); }
+			else if( GET_SAF == AF_INET6 ){ sgs_PushInt( C, ntohs( GET_SAI6->sin6_port ) ); }
+			else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "port supported only for AF_INET[6]" ); }
+			return SGS_SUCCESS;
 		}
-		else if( GET_SAF == AF_INET6 )
+		if( STREQ( name, "addr_u32" ) )
 		{
-			buf = (char*) &GET_SAI6->sin6_addr.s6_addr;
-			sz = 16;
+			if( GET_SAF == AF_INET ){ sgs_PushInt( C, ntohl( GET_SAI->sin_addr.s_addr ) ); }
+			else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "addr_u32 supported only for AF_INET" ); }
+			return SGS_SUCCESS;
 		}
-		if( buf )
+		if( STREQ( name, "addr_buf" ) )
 		{
-			for( i = 0; i < sz; ++i )
-				sgs_PushInt( C, buf[ i ] );
-			sgs_PushArray( C, sz );
+			if( GET_SAF == AF_INET ){ sgs_PushStringBuf( C, (char*) &GET_SAI->sin_addr.s_addr, 4 ); }
+			else if( GET_SAF == AF_INET6 ){ sgs_PushStringBuf( C, (char*) &GET_SAI6->sin6_addr.s6_addr, 16 ); }
+			else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "addr_buf supported only for AF_INET[6]" ); }
+			return SGS_SUCCESS;
 		}
-		else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "addr_bytes supported only for AF_INET[6]" ); }
-		return SGS_SUCCESS;
-	}
-	if( STREQ( name, "addr_string" ) )
-	{
-		char addr[ 64 ] = {0};
+		if( STREQ( name, "addr_bytes" ) )
+		{
+			char* buf = NULL;
+			int i, sz = 0;
+			if( GET_SAF == AF_INET )
+			{
+				buf = (char*) &GET_SAI->sin_addr.s_addr;
+				sz = 4;
+			}
+			else if( GET_SAF == AF_INET6 )
+			{
+				buf = (char*) &GET_SAI6->sin6_addr.s6_addr;
+				sz = 16;
+			}
+			if( buf )
+			{
+				for( i = 0; i < sz; ++i )
+					sgs_PushInt( C, buf[ i ] );
+				sgs_PushArray( C, sz );
+			}
+			else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "addr_bytes supported only for AF_INET[6]" ); }
+			return SGS_SUCCESS;
+		}
+		if( STREQ( name, "addr_string" ) )
+		{
+			char addr[ 64 ] = {0};
 #ifdef _WIN32
-		DWORD ioasz = 64;
-		WSAAddressToString( (LPSOCKADDR) data->data, sizeof(struct sockaddr_storage), NULL, addr, &ioasz );
-		*strrchr( addr, ':' ) = 0;
+			DWORD ioasz = 64;
+			WSAAddressToString( (LPSOCKADDR) data->data, sizeof(struct sockaddr_storage), NULL, addr, &ioasz );
+			*strrchr( addr, ':' ) = 0;
 #else
-		if( GET_SAF == AF_INET )
-			inet_ntop( GET_SAF, &GET_SAI->sin_addr, addr, 64 );
-		else if( GET_SAF == AF_INET6 )
-			inet_ntop( GET_SAF, &GET_SAI6->sin6_addr, addr, 64 );
+			if( GET_SAF == AF_INET )
+				inet_ntop( GET_SAF, &GET_SAI->sin_addr, addr, 64 );
+			else if( GET_SAF == AF_INET6 )
+				inet_ntop( GET_SAF, &GET_SAI6->sin6_addr, addr, 64 );
 #endif
-		addr[ 64-1 ] = 0;
-		if( *addr )
-			sgs_PushString( C, addr );
-		else
-			sgs_PushString( C, "-" );
-		return SGS_SUCCESS;
-	}
-	if( STREQ( name, "full_addr_string" ) )
-	{
-		char addr[ 64 ] = {0};
-#ifdef _WIN32
-		DWORD ioasz = 64;
-		WSAAddressToString( (LPSOCKADDR) data->data, sizeof(struct sockaddr_storage), NULL, addr, &ioasz );
-#else
-		if( GET_SAF == AF_INET || GET_SAF == AF_INET6 )
-		{
-			char pb[ 8 ];
-			inet_ntop( GET_SAF, GET_SAF == AF_INET ?
-				(void*) &GET_SAI->sin_addr :
-				(void*) &GET_SAI6->sin6_addr, addr, 64 );
-			sprintf( pb, ":%u", (int) GET_SAF == AF_INET ? GET_SAI->sin_port : GET_SAI6->sin6_port );
-			strcat( addr, pb );
+			addr[ 64-1 ] = 0;
+			if( *addr )
+				sgs_PushString( C, addr );
+			else
+				sgs_PushString( C, "-" );
+			return SGS_SUCCESS;
 		}
-#endif
-		addr[ 64-1 ] = 0;
-		if( *addr )
-			sgs_PushString( C, addr );
-		else
-			sgs_PushString( C, "-" );
-		return SGS_SUCCESS;
+		if( STREQ( name, "full_addr_string" ) )
+		{
+			sockaddr_push_full_addr_string( C, data );
+			return SGS_SUCCESS;
+		}
 	}
-	
 	return SGS_ENOTFND;
 }
 
-static int sockaddr_setindex( SGS_CTX, sgs_VarObj* data, int prop )
+static int sockaddr_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int prop )
 {
 	char* name;
-	if( !sgs_ParseString( C, 0, &name, NULL ) )
-		return SGS_ENOTSUP;
-	
-	if( STREQ( name, "port" ) )
+	if( sgs_ParseStringP( C, key, &name, NULL ) )
 	{
-		sgs_Int port;
-		if( !sgs_ParseInt( C, -1, &port ) )
-			return SGS_EINVAL;
-		if( GET_SAF == AF_INET ) GET_SAI->sin_port = htons( (unsigned short) port );
-		else if( GET_SAF == AF_INET6 ) GET_SAI6->sin6_port = htons( (unsigned short) port );
-		return SGS_SUCCESS;
+		if( STREQ( name, "port" ) )
+		{
+			sgs_Int port;
+			if( !sgs_ParseIntP( C, val, &port ) )
+				return SGS_EINVAL;
+			if( GET_SAF == AF_INET ) GET_SAI->sin_port = htons( (unsigned short) port );
+			else if( GET_SAF == AF_INET6 ) GET_SAI6->sin6_port = htons( (unsigned short) port );
+			return SGS_SUCCESS;
+		}
 	}
-	
 	return SGS_ENOTFND;
 }
 
 static int sockaddr_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( type == SGS_CONVOP_TOTYPE )
+	if( type == SVT_STRING )
 	{
-		sgs_PushString( C, "socket_address" );
-		return SGS_SUCCESS;
-	}
-	else if( type == SVT_STRING )
-	{
-		sgs_PushProperty( C, "full_addr_string" );
+		sockaddr_push_full_addr_string( C, data );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
 }
 
-static int sockaddr_expr( SGS_CTX, sgs_VarObj* data, int eop )
+static int sockaddr_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int eop )
 {
 	if( eop == SGS_EOP_COMPARE )
 	{
 		sgs_Int diff = -1;
 		void *data1, *data2;
-		if( sgs_GetObjectIface( C, 0 ) != sockaddr_iface ||
-			sgs_GetObjectIface( C, 1 ) != sockaddr_iface )
+		if( !sgs_IsObjectP( C, A, sockaddr_iface ) ||
+			!sgs_IsObjectP( C, B, sockaddr_iface ) )
 			return SGS_EINVAL;
-		data1 = sgs_GetObjectData( C, 0 );
-		data2 = sgs_GetObjectData( C, 1 );
+		data1 = sgs_GetObjectDataP( A );
+		data2 = sgs_GetObjectDataP( B );
 		if( ((struct sockaddr_storage*)data1)->ss_family != ((struct sockaddr_storage*)data2)->ss_family )
 			diff = ((struct sockaddr_storage*)data1)->ss_family - ((struct sockaddr_storage*)data2)->ss_family;
 		else if( ((struct sockaddr_storage*)data1)->ss_family == AF_INET )
@@ -715,114 +713,107 @@ static int socketI_getpeername( SGS_CTX )
 	STDLIB_WARN( "failed to get peer name" )
 }
 
-static int socket_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+static int socket_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
 {
 	char* name;
-	if( !sgs_ParseString( C, 0, &name, NULL ) )
-		return SGS_ENOTSUP;
-	
-	if( STREQ( name, "bind" ) ) IFN( socketI_bind )
-	if( STREQ( name, "listen" ) ) IFN( socketI_listen )
-	if( STREQ( name, "accept" ) ) IFN( socketI_accept )
-	if( STREQ( name, "connect" ) ) IFN( socketI_connect )
-	if( STREQ( name, "send" ) ) IFN( socketI_send )
-	if( STREQ( name, "sendto" ) ) IFN( socketI_sendto )
-	if( STREQ( name, "recv" ) ) IFN( socketI_recv )
-	if( STREQ( name, "recvfrom" ) ) IFN( socketI_recvfrom )
-	if( STREQ( name, "shutdown" ) ) IFN( socketI_shutdown )
-	if( STREQ( name, "close" ) ) IFN( socketI_close )
-	if( STREQ( name, "getpeername" ) ) IFN( socketI_getpeername )
-	
-	if( STREQ( name, "broadcast" ) )
+	if( sgs_ParseStringP( C, key, &name, NULL ) )
 	{
-		int bv;
-		GSO_ARG5TYPE bvl = sizeof(int);
-		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_BROADCAST, (char*) &bv, &bvl ) != -1 ) )
+		if( STREQ( name, "bind" ) ) IFN( socketI_bind )
+		if( STREQ( name, "listen" ) ) IFN( socketI_listen )
+		if( STREQ( name, "accept" ) ) IFN( socketI_accept )
+		if( STREQ( name, "connect" ) ) IFN( socketI_connect )
+		if( STREQ( name, "send" ) ) IFN( socketI_send )
+		if( STREQ( name, "sendto" ) ) IFN( socketI_sendto )
+		if( STREQ( name, "recv" ) ) IFN( socketI_recv )
+		if( STREQ( name, "recvfrom" ) ) IFN( socketI_recvfrom )
+		if( STREQ( name, "shutdown" ) ) IFN( socketI_shutdown )
+		if( STREQ( name, "close" ) ) IFN( socketI_close )
+		if( STREQ( name, "getpeername" ) ) IFN( socketI_getpeername )
+		
+		if( STREQ( name, "broadcast" ) )
 		{
-			sgs_Msg( C, SGS_WARNING, "failed to retrieve the 'broadcast' property of a socket" );
-			sgs_PushNull( C );
+			int bv;
+			GSO_ARG5TYPE bvl = sizeof(int);
+			if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_BROADCAST, (char*) &bv, &bvl ) != -1 ) )
+			{
+				sgs_Msg( C, SGS_WARNING, "failed to retrieve the 'broadcast' property of a socket" );
+				sgs_PushNull( C );
+			}
+			else
+				sgs_PushBool( C, bv );
+			return SGS_SUCCESS;
 		}
-		else
-			sgs_PushBool( C, bv );
-		return SGS_SUCCESS;
-	}
-	if( STREQ( name, "reuse_addr" ) )
-	{
-		int bv;
-		GSO_ARG5TYPE bvl = sizeof(int);
-		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_REUSEADDR, (char*) &bv, &bvl ) != -1 ) )
+		if( STREQ( name, "reuse_addr" ) )
 		{
-			sgs_Msg( C, SGS_WARNING, "failed to retrieve the 'reuse_addr' property of a socket" );
-			sgs_PushNull( C );
+			int bv;
+			GSO_ARG5TYPE bvl = sizeof(int);
+			if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_REUSEADDR, (char*) &bv, &bvl ) != -1 ) )
+			{
+				sgs_Msg( C, SGS_WARNING, "failed to retrieve the 'reuse_addr' property of a socket" );
+				sgs_PushNull( C );
+			}
+			else
+				sgs_PushBool( C, bv );
+			return SGS_SUCCESS;
 		}
-		else
-			sgs_PushBool( C, bv );
-		return SGS_SUCCESS;
-	}
-	if( STREQ( name, "error" ) )
-	{
-		int bv;
-		GSO_ARG5TYPE bvl = sizeof(int);
-		if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_ERROR, (char*) &bv, &bvl ) != -1 ) )
+		if( STREQ( name, "error" ) )
 		{
-			sgs_Msg( C, SGS_WARNING, "failed to retrieve the 'error' property of a socket" );
-			sgs_PushNull( C );
+			int bv;
+			GSO_ARG5TYPE bvl = sizeof(int);
+			if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_ERROR, (char*) &bv, &bvl ) != -1 ) )
+			{
+				sgs_Msg( C, SGS_WARNING, "failed to retrieve the 'error' property of a socket" );
+				sgs_PushNull( C );
+			}
+			else
+				sgs_PushBool( C, bv );
+			return SGS_SUCCESS;
 		}
-		else
-			sgs_PushBool( C, bv );
-		return SGS_SUCCESS;
 	}
-	
 	return SGS_ENOTFND;
 }
 
-static int socket_setindex( SGS_CTX, sgs_VarObj* data, int prop )
+static int socket_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int prop )
 {
 	char* name;
-	if( !sgs_ParseString( C, 0, &name, NULL ) )
-		return SGS_ENOTSUP;
-	
-	if( STREQ( name, "blocking" ) )
+	if( sgs_ParseStringP( C, key, &name, NULL ) )
 	{
-		int bv;
-		IOCTL_VALUE inbv;
-		if( !sgs_ParseBool( C, -1, &bv ) )
-			return SGS_EINVAL;
-		inbv = !bv;
-		if( !sockassert( C, ioctlsocket( GET_SCK, (int) FIONBIO, &inbv ) != -1 ) )
-			sgs_Msg( C, SGS_WARNING, "failed to set the 'blocking' property of a socket" );
-		return SGS_SUCCESS;
+		if( STREQ( name, "blocking" ) )
+		{
+			int bv;
+			IOCTL_VALUE inbv;
+			if( !sgs_ParseBoolP( C, val, &bv ) )
+				return SGS_EINVAL;
+			inbv = !bv;
+			if( !sockassert( C, ioctlsocket( GET_SCK, (int) FIONBIO, &inbv ) != -1 ) )
+				sgs_Msg( C, SGS_WARNING, "failed to set the 'blocking' property of a socket" );
+			return SGS_SUCCESS;
+		}
+		if( STREQ( name, "broadcast" ) )
+		{
+			int bv;
+			if( !sgs_ParseBoolP( C, val, &bv ) )
+				return SGS_EINVAL;
+			if( !sockassert( C, setsockopt( GET_SCK, SOL_SOCKET, SO_BROADCAST, (char*) &bv, sizeof(bv) ) != -1 ) )
+				sgs_Msg( C, SGS_WARNING, "failed to set the 'broadcast' property of a socket" );
+			return SGS_SUCCESS;
+		}
+		if( STREQ( name, "reuse_addr" ) )
+		{
+			int bv;
+			if( !sgs_ParseBoolP( C, val, &bv ) )
+				return SGS_EINVAL;
+			if( !sockassert( C, setsockopt( GET_SCK, SOL_SOCKET, SO_REUSEADDR, (char*) &bv, sizeof(bv) ) != -1 ) )
+				sgs_Msg( C, SGS_WARNING, "failed to set the 'reuse_addr' property of a socket" );
+			return SGS_SUCCESS;
+		}
 	}
-	if( STREQ( name, "broadcast" ) )
-	{
-		int bv;
-		if( !sgs_ParseBool( C, -1, &bv ) )
-			return SGS_EINVAL;
-		if( !sockassert( C, setsockopt( GET_SCK, SOL_SOCKET, SO_BROADCAST, (char*) &bv, sizeof(bv) ) != -1 ) )
-			sgs_Msg( C, SGS_WARNING, "failed to set the 'broadcast' property of a socket" );
-		return SGS_SUCCESS;
-	}
-	if( STREQ( name, "reuse_addr" ) )
-	{
-		int bv;
-		if( !sgs_ParseBool( C, -1, &bv ) )
-			return SGS_EINVAL;
-		if( !sockassert( C, setsockopt( GET_SCK, SOL_SOCKET, SO_REUSEADDR, (char*) &bv, sizeof(bv) ) != -1 ) )
-			sgs_Msg( C, SGS_WARNING, "failed to set the 'reuse_addr' property of a socket" );
-		return SGS_SUCCESS;
-	}
-	
 	return SGS_ENOTFND;
 }
 
 static int socket_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( type == SGS_CONVOP_TOTYPE || type == SVT_STRING )
-	{
-		sgs_PushString( C, "socket" );
-		return SGS_SUCCESS;
-	}
-	else if( type == SVT_BOOL )
+	if( type == SVT_BOOL )
 	{
 		sgs_PushBool( C, GET_SCK != -1 );
 		return SGS_SUCCESS;
@@ -830,9 +821,8 @@ static int socket_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int socket_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+static int socket_destruct( SGS_CTX, sgs_VarObj* data )
 {
-	UNUSED( dco );
 	if( GET_SCK != -1 )
 		closesocket( GET_SCK );
 	return SGS_SUCCESS;

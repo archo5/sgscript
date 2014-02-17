@@ -695,6 +695,14 @@ SGS_APIFUNC void sgs_ObjAcquire( SGS_CTX, sgs_VarObj* obj );
 SGS_APIFUNC void sgs_ObjRelease( SGS_CTX, sgs_VarObj* obj );
 SGS_APIFUNC SGSRESULT sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj );
 
+SGS_APIFUNC char* sgs_GetStringPtrP( sgs_Variable* var );
+SGS_APIFUNC sgs_SizeVal sgs_GetStringSizeP( sgs_Variable* var );
+SGS_APIFUNC sgs_VarObj* sgs_GetObjectStructP( sgs_Variable* var );
+SGS_APIFUNC void* sgs_GetObjectDataP( sgs_Variable* var );
+SGS_APIFUNC sgs_ObjInterface* sgs_GetObjectIfaceP( sgs_Variable* var );
+SGS_APIFUNC int sgs_SetObjectDataP( sgs_Variable* var, void* data );
+SGS_APIFUNC int sgs_SetObjectIfaceP( sgs_Variable* var, sgs_ObjInterface* iface );
+
 SGS_APIFUNC char* sgs_GetStringPtr( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_SizeVal sgs_GetStringSize( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_VarObj* sgs_GetObjectStruct( SGS_CTX, sgs_StkIdx item );

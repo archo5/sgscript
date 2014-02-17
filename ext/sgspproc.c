@@ -459,28 +459,25 @@ static int ppjobP_state( SGS_CTX, sgs_VarObj* data )
 }
 
 
-static int ppjob_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+static int ppjob_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
 {
 	char* str;
-	sgs_SizeVal size;
-	
-	if( !sgs_ParseString( C, 0, &str, &size ) )
-		return SGS_ENOTFND;
-	
-	if( 0 == strcmp( str, "start" ) ) IFN( ppjobI_start )
-	else if( 0 == strcmp( str, "wait" ) ) IFN( ppjobI_wait )
-	
-	else if( 0 == strcmp( str, "has" ) ) IFN( ppjobI_has )
-	else if( 0 == strcmp( str, "get" ) ) IFN( ppjobI_get )
-	else if( 0 == strcmp( str, "set" ) ) IFN( ppjobI_set )
-	else if( 0 == strcmp( str, "set_if" ) ) IFN( ppjobI_set_if )
-	
-	else if( 0 == strcmp( str, "state" ) ) return ppjobP_state( C, data );
-	
+	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	{
+		if( 0 == strcmp( str, "start" ) ) IFN( ppjobI_start )
+		else if( 0 == strcmp( str, "wait" ) ) IFN( ppjobI_wait )
+		
+		else if( 0 == strcmp( str, "has" ) ) IFN( ppjobI_has )
+		else if( 0 == strcmp( str, "get" ) ) IFN( ppjobI_get )
+		else if( 0 == strcmp( str, "set" ) ) IFN( ppjobI_set )
+		else if( 0 == strcmp( str, "set_if" ) ) IFN( ppjobI_set_if )
+		
+		else if( 0 == strcmp( str, "state" ) ) return ppjobP_state( C, data );
+	}
 	return SGS_ENOTFND;
 }
 
-static int ppjob_destruct( SGS_CTX, sgs_VarObj* data, int prop )
+static int ppjob_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	PPJOB_HDR;
 	
@@ -587,21 +584,17 @@ static int pprocI_add_job( SGS_CTX )
 }
 
 
-static int pproc_getindex( SGS_CTX, sgs_VarObj* data, int prop )
+static int pproc_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
 {
 	char* str;
-	sgs_SizeVal size;
-	
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseString( C, 0, &str, &size ) )
-		return SGS_ENOTFND;
-	
-	if( 0 == strcmp( str, "add_job" ) ) IFN( pprocI_add_job )
-	
+	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	{
+		if( 0 == strcmp( str, "add_job" ) ) IFN( pprocI_add_job )
+	}
 	return SGS_ENOTFND;
 }
 
-static int pproc_destruct( SGS_CTX, sgs_VarObj* data, int dco )
+static int pproc_destruct( SGS_CTX, sgs_VarObj* data )
 {
 	return SGS_SUCCESS;
 }

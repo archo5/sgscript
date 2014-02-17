@@ -4629,6 +4629,62 @@ SGSRESULT sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj )
 	sgs_BreakIf( what );\
 	if( what ) return fval;
 
+
+#define _OBJPREP_P( ret ) \
+	DBLCHK( var->type != SVT_OBJECT, ret )
+
+char* sgs_GetStringPtrP( sgs_Variable* var )
+{
+	DBLCHK( var->type != SVT_STRING, NULL )
+	return var_cstr( var );
+}
+
+sgs_SizeVal sgs_GetStringSizeP( sgs_Variable* var )
+{
+	DBLCHK( var->type != SVT_STRING, 0 )
+	/* WP: string limit */
+	return (sgs_SizeVal) var->data.S->size;
+}
+
+sgs_VarObj* sgs_GetObjectStructP( sgs_Variable* var )
+{
+	_OBJPREP_P( NULL );
+	return var->data.O;
+}
+
+void* sgs_GetObjectDataP( sgs_Variable* var )
+{
+	_OBJPREP_P( NULL );
+	return var->data.O->data;
+}
+
+sgs_ObjInterface* sgs_GetObjectIfaceP( sgs_Variable* var )
+{
+	_OBJPREP_P( NULL );
+	return var->data.O->iface;
+}
+
+int sgs_SetObjectDataP( sgs_Variable* var, void* data )
+{
+	_OBJPREP_P( 0 );
+	var->data.O->data = data;
+	return 1;
+}
+
+int sgs_SetObjectIfaceP( sgs_Variable* var, sgs_ObjInterface* iface )
+{
+	_OBJPREP_P( 0 );
+	var->data.O->iface = iface;
+	return 1;
+}
+
+
+#define _OBJPREP( ret ) \
+	sgs_Variable* var; \
+	DBLCHK( !sgs_IsValidIndex( C, item ), ret ) \
+	var = stk_getpos( C, item ); \
+	DBLCHK( var->type != SVT_OBJECT, ret )
+
 char* sgs_GetStringPtr( SGS_CTX, StkIdx item )
 {
 	sgs_Variable* var;
@@ -4647,12 +4703,6 @@ sgs_SizeVal sgs_GetStringSize( SGS_CTX, StkIdx item )
 	/* WP: string limit */
 	return (sgs_SizeVal) var->data.S->size;
 }
-
-#define _OBJPREP( ret ) \
-	sgs_Variable* var; \
-	DBLCHK( !sgs_IsValidIndex( C, item ), ret ) \
-	var = stk_getpos( C, item ); \
-	DBLCHK( var->type != SVT_OBJECT, ret )
 
 sgs_VarObj* sgs_GetObjectStruct( SGS_CTX, StkIdx item )
 {
