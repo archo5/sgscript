@@ -821,6 +821,7 @@ sgsstd_array_iter_t;
 extern sgs_ObjInterface sgsstd_array_iface[1];
 extern sgs_ObjInterface sgsstd_array_iter_iface[1];
 extern sgs_ObjInterface sgsstd_dict_iface[1];
+extern sgs_ObjInterface sgsstd_dict_iter_iface[1];
 extern sgs_ObjInterface sgsstd_map_iface[1];
 
 

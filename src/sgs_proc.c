@@ -848,7 +848,10 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 			sgs_VarObj* O = var->data.O;
 			_STACK_PREPARE;
 			if( !O->iface->convert )
-				goto defobjconv;
+			{
+				var_create_str( C, out, O->iface->name, -1 );
+				break;
+			}
 			_STACK_PROTECT;
 			ret = O->iface->convert( C, O, SVT_STRING );
 			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_STRING )
@@ -860,7 +863,6 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 			}
 			else
 			{
-defobjconv:
 				var_create_str( C, out, O->iface->name, -1 );
 				_STACK_UNPROTECT;
 			}
@@ -1812,13 +1814,16 @@ static SGSMIXED vm_fornext( SGS_CTX, StkIdx outkey, StkIdx outval, sgs_VarPtr it
 		sgs_Msg( C, SGS_ERROR, "Failed to retrieve data from iterator" );
 		return ret;
 	}
+	_STACK_UNPROTECT_SKIP( expargs );
 	
-	if( flags )
+	if( !flags )
+		return ret;
+	else
 	{
 		if( outkey >= 0 ) stk_setlvar( C, outkey, stk_getpos( C, -2 + (outval<0) ) );
 		if( outval >= 0 ) stk_setlvar( C, outval, stk_gettop( C ) );
+		stk_pop( C, expargs );
 	}
-	_STACK_UNPROTECT;
 	
 	return SGS_SUCCESS;
 }
@@ -1885,12 +1890,12 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 	
 	gotthis = !!gotthis;
 	stkcallbase = C->stack_top - args - gotthis - C->stack_base;
-
+	
 	sgs_BreakIf( STACKFRAMESIZE < args + gotthis );
 	allowed = vm_frame_push( C, &V, NULL, NULL, 0 );
 	C->stack_off = C->stack_top - args;
 	C->clstk_off = C->clstk_top - clsr;
-
+	
 	if( allowed )
 	{
 		if( func->type == SVT_CFUNC )
@@ -3507,8 +3512,7 @@ SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
 		return SGS_EINVAL;
 	
 	func = *stk_getpos( C, -1 );
-	VAR_ACQUIRE( &func );
-	sgs_Pop( C, 1 );
+	stk_pop1nr( C );
 	ret = vm_call( C, args, 0, gotthis, expect, &func ) ? SGS_SUCCESS : SGS_EINPROC;
 	VAR_RELEASE( &func );
 	return ret;

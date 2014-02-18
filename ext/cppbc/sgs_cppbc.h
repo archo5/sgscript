@@ -16,8 +16,8 @@
 # define SGS_OBJECT \
 	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj ); \
 	static int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int type ); \
-	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int isprop ); \
-	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int isprop ); \
+	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int isprop ); \
+	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int isprop ); \
 	static sgs_ObjInterface _sgs_interface[1]; \
 	sgs_VarObj* m_sgsObject; \
 	SGS_CTX;
@@ -127,6 +127,11 @@ public:
 		sgs_GetStackItem( C, item, &var );
 		_acquire();
 	}
+	sgsVariable( sgs_Context* c, sgs_Variable* v ) : C(c)
+	{
+		var = *v;
+		_acquire();
+	}
 	~sgsVariable(){ _release(); }
 	
 	const sgsVariable& operator = ( const sgsVariable& h )
@@ -157,6 +162,7 @@ public:
 };
 
 
+/* PushVar [stack] */
 template< class T > void sgs_PushVar( SGS_CTX, const T& );
 template< class T > inline void sgs_PushVar( SGS_CTX, T* v ){ sgs_PushClass( C, v ); }
 template< class T > inline void sgs_PushVar( SGS_CTX, sgsHandle<T> v ){ sgs_PushHandle( C, v ); }
@@ -182,6 +188,7 @@ template<> inline void sgs_PushVar<std::string>( SGS_CTX, const std::string& v )
 #endif
 
 
+/* GETVAR [stack] */
 template< class T > struct sgs_GetVar {
 	T operator () ( SGS_CTX, int item );
 };
@@ -198,18 +205,18 @@ template<> struct sgs_GetVar<bool> { bool operator () ( SGS_CTX, int item )
 		return v;
 	return false;
 }};
-#define SGS_DECL_LOADVAR_INT( type ) \
+#define SGS_DECL_GETVAR_INT( type ) \
 	template<> struct sgs_GetVar<type> { type operator () ( SGS_CTX, int item ){ \
 		sgs_Int v; if( sgs_ParseInt( C, item, &v ) ) return (type) v; return 0; }};
-SGS_DECL_LOADVAR_INT( signed char );
-SGS_DECL_LOADVAR_INT( unsigned char );
-SGS_DECL_LOADVAR_INT( signed short );
-SGS_DECL_LOADVAR_INT( unsigned short );
-SGS_DECL_LOADVAR_INT( signed int );
-SGS_DECL_LOADVAR_INT( unsigned int );
-SGS_DECL_LOADVAR_INT( signed long );
-SGS_DECL_LOADVAR_INT( unsigned long );
-SGS_DECL_LOADVAR_INT( signed long long );
+SGS_DECL_GETVAR_INT( signed char );
+SGS_DECL_GETVAR_INT( unsigned char );
+SGS_DECL_GETVAR_INT( signed short );
+SGS_DECL_GETVAR_INT( unsigned short );
+SGS_DECL_GETVAR_INT( signed int );
+SGS_DECL_GETVAR_INT( unsigned int );
+SGS_DECL_GETVAR_INT( signed long );
+SGS_DECL_GETVAR_INT( unsigned long );
+SGS_DECL_GETVAR_INT( signed long long );
 template<> struct sgs_GetVar<float> { float operator () ( SGS_CTX, int item ){
 	sgs_Real v; if( sgs_ParseReal( C, item, &v ) ) return (float) v; return 0; }};
 template<> struct sgs_GetVar<double> { double operator () ( SGS_CTX, int item ){
@@ -231,6 +238,58 @@ struct sgs_GetVar< sgsHandle<O> >
 };
 template<> struct sgs_GetVar< sgsVariable > { sgsVariable operator () ( SGS_CTX, int item ) const {
 	return sgsVariable( C, item ); } };
+
+
+/* GETVARP [pointer] */
+template< class T > struct sgs_GetVarP {
+	T operator () ( SGS_CTX, sgs_Variable* var );
+};
+template< class T > struct sgs_GetVarObjP { T* operator () ( SGS_CTX, sgs_Variable* var )
+{
+	if( sgs_IsObjectP( var, T::_sgs_interface ) )
+		return static_cast<T*>( sgs_GetObjectDataP( var ) );
+	return NULL;
+}};
+template<> struct sgs_GetVarP<bool> { bool operator () ( SGS_CTX, sgs_Variable* var )
+{
+	sgs_Bool v;
+	if( sgs_ParseBoolP( C, var, &v ) )
+		return v;
+	return false;
+}};
+#define SGS_DECL_GETVARP_INT( type ) \
+	template<> struct sgs_GetVarP<type> { type operator () ( SGS_CTX, sgs_Variable* var ){ \
+		sgs_Int v; if( sgs_ParseIntP( C, var, &v ) ) return (type) v; return 0; }};
+SGS_DECL_GETVARP_INT( signed char );
+SGS_DECL_GETVARP_INT( unsigned char );
+SGS_DECL_GETVARP_INT( signed short );
+SGS_DECL_GETVARP_INT( unsigned short );
+SGS_DECL_GETVARP_INT( signed int );
+SGS_DECL_GETVARP_INT( unsigned int );
+SGS_DECL_GETVARP_INT( signed long );
+SGS_DECL_GETVARP_INT( unsigned long );
+SGS_DECL_GETVARP_INT( signed long long );
+template<> struct sgs_GetVarP<float> { float operator () ( SGS_CTX, sgs_Variable* var ){
+	sgs_Real v; if( sgs_ParseRealP( C, var, &v ) ) return (float) v; return 0; }};
+template<> struct sgs_GetVarP<double> { double operator () ( SGS_CTX, sgs_Variable* var ){
+	sgs_Real v; if( sgs_ParseRealP( C, var, &v ) ) return (double) v; return 0; }};
+template<> struct sgs_GetVarP<char*> { char* operator () ( SGS_CTX, sgs_Variable* var ){
+	char* str = NULL; sgs_ParseStringP( C, var, &str, NULL ); return str; }};
+template<> struct sgs_GetVarP<std::string> { std::string operator () ( SGS_CTX, sgs_Variable* var ){
+	char* str; sgs_SizeVal size; if( sgs_ParseStringP( C, var, &str, &size ) )
+		return std::string( str, size ); return std::string(); }};
+template< class O >
+struct sgs_GetVarP< sgsHandle<O> >
+{
+	sgsHandle<O> operator () ( SGS_CTX, sgs_Variable* var ) const
+	{
+		if( sgs_IsObjectP( var, O::_sgs_interface ) )
+			return sgsHandle<O>( sgs_GetObjectStructP( var ), C );
+		return sgsHandle<O>( NULL, C );
+	}
+};
+template<> struct sgs_GetVarP< sgsVariable > { sgsVariable operator () ( SGS_CTX, sgs_Variable* var ) const {
+	return sgsVariable( C, var ); } };
 
 
 template< class T > void sgs_PushClass( SGS_CTX, T* inst )

@@ -1102,7 +1102,7 @@ static int sgsstd_dict_iter_gcmark( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjInterface sgsstd_dict_iter_iface[1] =
+sgs_ObjInterface sgsstd_dict_iter_iface[1] =
 {{
 	"dict_iterator",
 	sgsstd_dict_iter_destruct, sgsstd_dict_iter_gcmark,
