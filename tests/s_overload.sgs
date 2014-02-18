@@ -8,7 +8,8 @@ global vec2_iface =
 	__negate = function(){ return vec2( -this.x, -this.y ); },
 	__compare = function( a, b ){ var out = a.x - b.x; if( out ) return a.y - b.y; else return out; },
 	__call = function( something ){ print( "THIS IS VEC2[", this.x, ",", this.y, "]... in other news: ", something, "!\n" ); }, 
-	__tostr = function(){ return "vec2(" $ this.x $ "," $ this.y $ ")"; }
+	__tostr = function(){ return "vec2(" $ this.x $ "," $ this.y $ ")"; },
+	__typeof = function(){ return "vec2"; },
 };
 function vec2( x, y )
 {
@@ -32,3 +33,4 @@ print( "A < B: ", A < B, "\n" );
 print( "A == A: ", A == A, "\n" );
 print( "A < A: ", A < A, "\n" );
 A( "cheese" );
+print( typeof( A ) );

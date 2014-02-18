@@ -1448,6 +1448,7 @@ static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 	case SVT_STRING: op = "__tostr"; break;
 	case SVT_PTR: op = "__toptr"; break;
 	case SGS_CONVOP_CLONE: op = "__clone"; break;
+	case SGS_CONVOP_TYPEOF: op = "__typeof"; break;
 	}
 	
 	if( op == NULL )
@@ -1455,7 +1456,9 @@ static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 	
 	if( sgsstd_class_getmethod( C, data, op, &method ) )
 	{
-		int ret = sgs_ThisCallP( C, &method, 0, 1 );
+		int ret;
+		sgs_PushObjectPtr( C, data );
+		ret = sgs_ThisCallP( C, &method, 0, 1 );
 		sgs_Release( C, &method );
 		return ret;
 	}

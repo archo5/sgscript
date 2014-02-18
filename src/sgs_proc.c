@@ -980,7 +980,25 @@ static SGSRESULT vm_gettype( SGS_CTX )
 	case SVT_STRING: ty = "string"; break;
 	case SVT_CFUNC:  ty = "cfunc"; break;
 	case SVT_FUNC:   ty = "func"; break;
-	case SVT_OBJECT: ty = A->data.O->iface->name ? A->data.O->iface->name : "object"; break;
+	case SVT_OBJECT:
+		{
+			sgs_VarObj* O = A->data.O;
+			if( O->iface->convert )
+			{
+				int ret;
+				_STACK_PREPARE;
+				_STACK_PROTECT;
+				ret = O->iface->convert( C, O, SGS_CONVOP_TYPEOF );
+				if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
+				{
+					_STACK_UNPROTECT_SKIP( 1 );
+					return SGS_SUCCESS;
+				}
+				_STACK_UNPROTECT;
+			}
+			ty = A->data.O->iface->name ? A->data.O->iface->name : "object";
+		}
+		break;
 	case SVT_PTR:    ty = "pointer"; break;
 	}
 	
@@ -2826,13 +2844,14 @@ SGSRESULT sgs_StoreIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, int isprop 
 }
 
 
-SGSRESULT sgs_PushProperty( SGS_CTX, const char* name )
+SGSRESULT sgs_PushProperty( SGS_CTX, sgs_StkIdx obj, const char* name )
 {
 	int ret;
-	if( STACKFRAMESIZE < 1 )
-		return SGS_EINPROC;
+	if( !sgs_IsValidIndex( C, obj ) )
+		return SGS_EBOUNDS;
+	obj = stk_absindex( C, obj );
 	sgs_PushString( C, name );
-	ret = sgs_PushIndexII( C, -2, -1, TRUE );
+	ret = sgs_PushIndexII( C, obj, -1, TRUE );
 	stk_popskip( C, 1, SGS_SUCCEEDED( ret ) ? 1 : 0 );
 	return ret;
 }

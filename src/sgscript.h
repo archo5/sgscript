@@ -5,8 +5,8 @@
 
 #define SGS_VERSION_MAJOR 0
 #define SGS_VERSION_MINOR 9
-#define SGS_VERSION_INCR  0
-#define SGS_VERSION "0.9.0"
+#define SGS_VERSION_INCR  5
+#define SGS_VERSION "0.9.5"
 #define SGS_API_VERSION 12
 
 #define SGS_VERSION_OFFSET 8
@@ -38,20 +38,7 @@ extern "C" {
 #  define SVT_CFUNC SGS_VT_CFUNC
 #  define SVT_OBJECT SGS_VT_OBJECT
 #  define SVT_PTR SGS_VT_PTR
-/*
-#  define SOP_END SGS_OP_END
-#  define SOP_DESTRUCT SGS_OP_DESTRUCT
-#  define SOP_GETINDEX SGS_OP_GETINDEX
-#  define SOP_SETINDEX SGS_OP_SETINDEX
-#  define SOP_CONVERT SGS_OP_CONVERT
-#  define SOP_SERIALIZE SGS_OP_SERIALIZE
-#  define SOP_DUMP SGS_OP_DUMP
-#  define SOP_GCMARK SGS_OP_GCMARK
-#  define SOP_GETNEXT SGS_OP_GETNEXT
-#  define SOP_CALL SGS_OP_CALL
-#  define SOP_EXPR SGS_OP_EXPR
-#  define SOP_FLAGS SGS_OP_FLAGS
-*/
+
 #  define StkIdx sgs_StkIdx
 #endif
 
@@ -303,21 +290,6 @@ typedef struct _sgs_String32
 }
 sgs_String32;
 
-/* - object interface */
-#if 0
-#define SGS_OP( idx ) ((sgs_ObjCallback)idx)
-#define SGS_OP_END        SGS_OP( 0 )
-#define SGS_OP_DESTRUCT   SGS_OP( 1 )
-#define SGS_OP_GETINDEX   SGS_OP( 2 )  /* arg = prop? */
-#define SGS_OP_SETINDEX   SGS_OP( 3 )  /* arg = prop? */
-#define SGS_OP_CONVERT    SGS_OP( 4 )  /* arg = type(B|I|R|S)/spec. */
-#define SGS_OP_SERIALIZE  SGS_OP( 5 )
-#define SGS_OP_DUMP       SGS_OP( 6 )  /* arg = depth */
-#define SGS_OP_GCMARK     SGS_OP( 7 )
-#define SGS_OP_GETNEXT    SGS_OP( 8 )  /* arg = flags */
-#define SGS_OP_CALL       SGS_OP( 9 )
-#define SGS_OP_EXPR       SGS_OP(10 )  /* arg = op */
-#endif
 
 /* parameter flags / special values */
 #define SGS_GETNEXT_KEY   0x01
@@ -332,6 +304,7 @@ sgs_String32;
 #define SGS_EOP_NEGATE    6
 
 #define SGS_CONVOP_CLONE  0x10000
+#define SGS_CONVOP_TYPEOF 0x20000
 #define SGS_CONVOP_TOITER 0x30000
 
 
@@ -537,7 +510,7 @@ SGS_APIFUNC SGSRESULT sgs_StoreIndexPI( SGS_CTX, sgs_Variable* obj, sgs_StkIdx i
 SGS_APIFUNC SGSRESULT sgs_StoreIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, int isprop );
 
 /* special case sub-variable access */
-SGS_APIFUNC SGSRESULT sgs_PushProperty( SGS_CTX, const char* name );
+SGS_APIFUNC SGSRESULT sgs_PushProperty( SGS_CTX, sgs_StkIdx obj, const char* name );
 SGS_APIFUNC SGSRESULT sgs_StoreProperty( SGS_CTX, sgs_StkIdx obj, const char* name );
 SGS_APIFUNC SGSRESULT sgs_PushNumIndex( SGS_CTX, sgs_StkIdx obj, sgs_Int idx );
 SGS_APIFUNC SGSRESULT sgs_StoreNumIndex( SGS_CTX, sgs_StkIdx obj, sgs_Int idx );

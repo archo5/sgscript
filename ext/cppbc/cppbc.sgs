@@ -5,64 +5,25 @@ include "string", "re", "fmt", "io", "os";
 global ERR_OOC = "SGS_OBJECT outside class/struct";
 
 
-global OBJ_IFUNCS =
-[
-	"SGS_OP_DESTRUCT",  "SOP_DESTRUCT",
-	"SGS_OP_GETINDEX",  "SOP_GETINDEX",
-	"SGS_OP_SETINDEX",  "SOP_SETINDEX",
-	"SGS_OP_CONVERT",   "SOP_CONVERT",
-	"SGS_OP_SERIALIZE", "SOP_SERIALIZE",
-	"SGS_OP_DUMP",      "SOP_DUMP",
-	"SGS_OP_GCMARK",    "SOP_GCMARK",
-	"SGS_OP_GETNEXT",   "SOP_GETNEXT",
-	"SGS_OP_CALL",      "SOP_CALL",
-	"SGS_OP_EXPR",      "SOP_EXPR",
-];
-
-global OBJ_IFUNC_REMAP =
-{
-	"SGS_OP_DESTRUCT"  = "SGS_OP_DESTRUCT",
-	"SGS_OP_GETINDEX"  = "SGS_OP_GETINDEX",
-	"SGS_OP_SETINDEX"  = "SGS_OP_SETINDEX",
-	"SGS_OP_CONVERT"   = "SGS_OP_CONVERT",
-	"SGS_OP_SERIALIZE" = "SGS_OP_SERIALIZE",
-	"SGS_OP_DUMP"      = "SGS_OP_DUMP",
-	"SGS_OP_GCMARK"    = "SGS_OP_GCMARK",
-	"SGS_OP_GETNEXT"   = "SGS_OP_GETNEXT",
-	"SGS_OP_CALL"      = "SGS_OP_CALL",
-	"SGS_OP_EXPR"      = "SGS_OP_EXPR",
-	//
-	"SOP_DESTRUCT"     = "SGS_OP_DESTRUCT",
-	"SOP_GETINDEX"     = "SGS_OP_GETINDEX",
-	"SOP_SETINDEX"     = "SGS_OP_SETINDEX",
-	"SOP_CONVERT"      = "SGS_OP_CONVERT",
-	"SOP_SERIALIZE"    = "SGS_OP_SERIALIZE",
-	"SOP_DUMP"         = "SGS_OP_DUMP",
-	"SOP_GCMARK"       = "SGS_OP_GCMARK",
-	"SOP_GETNEXT"      = "SGS_OP_GETNEXT",
-	"SOP_CALL"         = "SGS_OP_CALL",
-	"SOP_EXPR"         = "SGS_OP_EXPR",
-};
-
 global DEFAULT_OBJ_IFUNCS =
 {
-	"SGS_OP_DESTRUCT" = "_sgs_destruct",
-	"SGS_OP_GETINDEX" = "_sgs_getindex",
-	"SGS_OP_SETINDEX" = "_sgs_setindex",
+	"destruct" = "_sgs_destruct",
+	"getindex" = "_sgs_getindex",
+	"setindex" = "_sgs_setindex",
 };
 
 global OBJ_IFUNC_POS =
 {
-	"SGS_OP_DESTRUCT"  = 0,
-	"SGS_OP_GCMARK"    = 1,
-	"SGS_OP_GETINDEX"  = 2,
-	"SGS_OP_SETINDEX"  = 3,
-	"SGS_OP_CONVERT"   = 4,
-	"SGS_OP_SERIALIZE" = 5,
-	"SGS_OP_DUMP"      = 6,
-	"SGS_OP_GETNEXT"   = 7,
-	"SGS_OP_CALL"      = 8,
-	"SGS_OP_EXPR"      = 9,
+	"destruct"  = 0,
+	"gcmark"    = 1,
+	"getindex"  = 2,
+	"setindex"  = 3,
+	"convert"   = 4,
+	"serialize" = 5,
+	"dump"      = 6,
+	"getnext"   = 7,
+	"call"      = 8,
+	"expr"      = 9,
 };
 
 global OBJ_IFUNC_COUNT = 10;
@@ -422,6 +383,7 @@ function cppbc_split_cs( code )
 
 function cppbc_examine_method( code )
 {
+	code = string_trim( code );
 	ispmatch = re_match( code, "#([a-zA-Z0-9_]+)[ \t\v\r\n]*\\(#", RE_RETURN_BOTH );
 	
 	if( ispmatch === false )
@@ -558,10 +520,9 @@ function cppbc_examine_ifunc( code )
 	name = ispmatch[1][0];
 	type = typematch[1][0];
 	
-	if( OBJ_IFUNCS.find( type ) === null )
+	type = string_tolower( type );
+	if( !isset( OBJ_IFUNC_POS, type ) )
 		cppbc_error( "unrecognized interface function type: " $ type );
-	
-	type = OBJ_IFUNC_REMAP[ type ];
 	
 	return {
 		what = "IFUNC",
@@ -591,7 +552,7 @@ function cppbc_examine_object( code, pos )
 	blockcode = cppbc_remove_blocks( blockcode );
 	
 	items = [];
-	matches = re_match_all( blockcode, "#(SGS_PROPERTY_FUNC|SGS_METHOD|SGS_PROPERTY|SGS_IFUNC)(.*?);#ms", RE_RETURN_BOTH );
+	matches = re_match_all( blockcode, "#(SGS_PROPERTY_FUNC|SGS_METHOD|SGS_PROPERTY|SGS_IFUNC)(.*?)[;\\{]#ms", RE_RETURN_BOTH );
 	foreach( match : matches )
 	{
 		if( match[1][0] == "SGS_METHOD" )

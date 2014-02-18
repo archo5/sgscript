@@ -310,7 +310,7 @@ DEFINE_TEST( stack_propindex )
 {
 	SGS_CTX = get_context();
 	
-	atf_assert( sgs_PushProperty( C, "nope" ) == SGS_EINPROC );
+	atf_assert( sgs_PushProperty( C, -1, "nope" ) == SGS_EBOUNDS );
 	
 	sgs_PushString( C, "key-one" );
 	atf_assert( sgs_PushIndexII( C, 0, 1, 0 ) == SGS_EBOUNDS );
