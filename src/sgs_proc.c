@@ -3423,6 +3423,21 @@ SGSBOOL sgs_LoadArgs( SGS_CTX, const char* cmd, ... )
 	return ret;
 }
 
+SGSBOOL sgs_ParseMethod( SGS_CTX, sgs_ObjInterface* iface, void** ptrout,
+	const char* method_name, const char* func_name )
+{
+	int method_call = sgs_Method( C );
+	SGSFN( method_call ? method_name : func_name );
+	if( !sgs_IsObject( C, 0, iface ) )
+	{
+		sgs_ArgErrorExt( C, 0, method_call, iface->name, "" );
+		return FALSE;
+	}
+	*ptrout = sgs_GetObjectData( C, 0 );
+	sgs_ForceHideThis( C );
+	return TRUE;
+}
+
 
 SGSRESULT sgs_Pop( SGS_CTX, StkIdx count )
 {
@@ -4607,6 +4622,20 @@ SGSBOOL sgs_HideThis( SGS_CTX )
 	}
 	return FALSE;
 }
+
+SGSBOOL sgs_ForceHideThis( SGS_CTX )
+{
+	if( !C->sf_last )
+		return FALSE;
+	if( HAS_FLAG( C->sf_last->flags, SGS_SF_METHOD ) )
+		return sgs_HideThis( C );
+	if( STACKFRAMESIZE < 1 )
+		return FALSE;
+	C->stack_off++;
+	C->sf_last->flags = ( C->sf_last->flags | SGS_SF_METHOD ) & (uint8_t) (~SGS_SF_HASTHIS);
+	return TRUE;
+}
+
 
 void sgs_Acquire( SGS_CTX, sgs_Variable* var )
 {

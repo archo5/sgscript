@@ -190,7 +190,7 @@ void vht_free( sgs_VHTable* T, SGS_CTX )
 	sgs_Dealloc( T->vars );
 }
 
-void vht_rehash( VHTable* T, SGS_CTX, VHTIdx size )
+static void vht_rehash( VHTable* T, SGS_CTX, VHTIdx size )
 {
 	sgs_Hash h;
 	VHTIdx i, si, sp, idx, *np;
@@ -236,7 +236,7 @@ void vht_rehash( VHTable* T, SGS_CTX, VHTIdx size )
 	T->num_rem = 0;
 }
 
-void vht_reserve( VHTable* T, SGS_CTX, VHTIdx size )
+static void vht_reserve( VHTable* T, SGS_CTX, VHTIdx size )
 {
 	VHTVar* p;
 	
@@ -258,7 +258,7 @@ void vht_reserve( VHTable* T, SGS_CTX, VHTIdx size )
 	T->var_mem = size;
 }
 
-VHTIdx vht_pair_id( VHTable* T, sgs_Variable* K, sgs_Hash hash )
+static VHTIdx vht_pair_id( VHTable* T, sgs_Variable* K, sgs_Hash hash )
 {
 	VHTIdx i, sp = (VHTIdx)( hash % (sgs_Hash) T->pair_mem );
 	i = sp;

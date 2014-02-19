@@ -22,6 +22,7 @@ extern "C" {
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 #include "sgs_cfg.h"
 #include "sgs_xpc.h"
@@ -560,6 +561,10 @@ typedef int (*sgs_ArgCheckFunc)
 SGS_APIFUNC SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args );
 SGS_APIFUNC SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... );
 SGS_APIFUNC SGSBOOL sgs_LoadArgs( SGS_CTX, const char* cmd, ... );
+SGS_APIFUNC SGSBOOL sgs_ParseMethod( SGS_CTX, sgs_ObjInterface* iface, void** ptrout,
+	const char* method_name, const char* func_name );
+#define SGS_PARSE_METHOD( C, iface, ptr, objname, methodname ) \
+	sgs_ParseMethod( C, iface, (void**) &ptr, #objname "." #methodname, #objname "_" #methodname )
 
 SGS_APIFUNC SGSRESULT sgs_Pop( SGS_CTX, sgs_StkIdx count );
 SGS_APIFUNC SGSRESULT sgs_PopSkip( SGS_CTX, sgs_StkIdx count, sgs_StkIdx skip );
@@ -667,6 +672,9 @@ SGS_APIFUNC SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size );
 	EXTENSION UTILITIES
 */
 SGS_APIFUNC SGSBOOL sgs_Method( SGS_CTX );
+SGS_APIFUNC SGSBOOL sgs_HideThis( SGS_CTX );
+SGS_APIFUNC SGSBOOL sgs_ForceHideThis( SGS_CTX );
+
 SGS_APIFUNC void sgs_Acquire( SGS_CTX, sgs_Variable* var );
 SGS_APIFUNC void sgs_Release( SGS_CTX, sgs_Variable* var );
 SGS_APIFUNC SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var );
@@ -708,6 +716,31 @@ SGS_APIFUNC void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str,
 #define sgs_PushString32( C, S, str ) sgs_PushStringBuf32( C, S, str, SGS_STRINGLENGTHFUNC(str) )
 SGS_APIFUNC void sgs_CheckString32( sgs_String32* S );
 SGS_APIFUNC SGSBOOL sgs_IsFreedString32( sgs_String32* S );
+
+
+/* predefined output / messaging functions */
+
+static SGS_INLINE void sgs_StdOutputFunc( void* userdata, SGS_CTX, const void* ptr, size_t size )
+{
+	UNUSED( C );
+	fwrite( ptr, 1, size, (FILE*) userdata );
+}
+
+static SGS_INLINE void sgs_StdMsgFunc_NoAbort( void* ctx, SGS_CTX, int type, const char* msg )
+{
+	sgs_WriteErrorInfo( C, SGS_ERRORINFO_FULL, (sgs_ErrorOutputFunc) fprintf, ctx, type, msg );
+}
+
+static SGS_INLINE void sgs_StdMsgFunc( void* ctx, SGS_CTX, int type, const char* msg )
+{
+	sgs_StdMsgFunc_NoAbort( ctx, C, type, msg );
+	if( type >= SGS_ERROR )
+		sgs_Abort( C );
+}
+
+
+/* utility macros */
+#define SGS_RETURN_THIS( C ) sgs_Method( C ); sgs_SetStackSize( C, 1 ); return 1;
 
 
 #ifdef __cplusplus

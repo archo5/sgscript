@@ -89,23 +89,19 @@ static void sgsstd_array_erase( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal
 	hdr->size -= cnt;
 }
 
+
 #define SGSARR_IHDR( name ) \
 	sgsstd_array_header_t* hdr; \
-	int method_call = sgs_Method( C ); \
-	SGSFN( method_call ? "array." #name : "array_" #name ); \
-	if( !sgs_IsObject( C, 0, sgsstd_array_iface ) ) \
-		return sgs_ArgErrorExt( C, 0, method_call, "array", "" ); \
-	hdr = (sgsstd_array_header_t*) sgs_GetObjectData( C, 0 ); \
+	if( !SGS_PARSE_METHOD( C, sgsstd_array_iface, hdr, array, name ) ) return 0; \
 	UNUSED( hdr );
-/* after this, the counting starts from 1 because of sgs_Method */
 
 
 static int sgsstd_arrayI_push( SGS_CTX )
 {
 	SGSARR_IHDR( push );
-	sgsstd_array_insert( C, hdr, hdr->size, 1 );
-	sgs_SetStackSize( C, 1 );
-	return 1;
+	sgsstd_array_insert( C, hdr, hdr->size, 0 );
+	
+	SGS_RETURN_THIS( C );
 }
 static int sgsstd_arrayI_pop( SGS_CTX )
 {
@@ -134,9 +130,9 @@ static int sgsstd_arrayI_shift( SGS_CTX )
 static int sgsstd_arrayI_unshift( SGS_CTX )
 {
 	SGSARR_IHDR( unshift );
-	sgsstd_array_insert( C, hdr, 0, 1 );
-	sgs_SetStackSize( C, 1 );
-	return 1;
+	sgsstd_array_insert( C, hdr, 0, 0 );
+	
+	SGS_RETURN_THIS( C );
 }
 
 static int sgsstd_arrayI_insert( SGS_CTX )
@@ -144,7 +140,7 @@ static int sgsstd_arrayI_insert( SGS_CTX )
 	sgs_Int at;
 	SGSARR_IHDR( insert );
 	
-	if( !sgs_LoadArgs( C, "@>i?v", &at ) )
+	if( !sgs_LoadArgs( C, "i?v", &at ) )
 		return 0;
 
 	if( at < 0 )
@@ -152,9 +148,9 @@ static int sgsstd_arrayI_insert( SGS_CTX )
 	if( at < 0 || at > hdr->size )
 		STDLIB_WARN( "index out of bounds" )
 
-	sgsstd_array_insert( C, hdr, (sgs_SizeVal) at, 2 );
-	sgs_SetStackSize( C, 1 );
-	return 1;
+	sgsstd_array_insert( C, hdr, (sgs_SizeVal) at, 1 );
+	
+	SGS_RETURN_THIS( C );
 }
 static int sgsstd_arrayI_erase( SGS_CTX )
 {
@@ -162,7 +158,7 @@ static int sgsstd_arrayI_erase( SGS_CTX )
 	sgs_Int at, at2;
 	SGSARR_IHDR( erase );
 	
-	if( !sgs_LoadArgs( C, "@>i|i", &at, &at2 ) )
+	if( !sgs_LoadArgs( C, "i|i", &at, &at2 ) )
 		return 0;
 
 	if( at < 0 )
@@ -185,15 +181,15 @@ static int sgsstd_arrayI_erase( SGS_CTX )
 	}
 
 	sgsstd_array_erase( C, hdr, (sgs_SizeVal) at, (sgs_SizeVal) at2 );
-	sgs_SetStackSize( C, 1 );
-	return 1;
+	
+	SGS_RETURN_THIS( C );
 }
 static int sgsstd_arrayI_part( SGS_CTX )
 {
 	sgs_SizeVal from, max = 0x7fffffff, to, i;
 	SGSARR_IHDR( part );
 	
-	if( !sgs_LoadArgs( C, "@>l|l", &from, &max ) )
+	if( !sgs_LoadArgs( C, "l|l", &from, &max ) )
 		return 0;
 	
 	if( max < 0 )
@@ -225,15 +221,16 @@ static int sgsstd_arrayI_clear( SGS_CTX )
 {
 	SGSARR_IHDR( clear );
 	sgsstd_array_clear( C, hdr );
-	sgs_Pop( C, sgs_StackSize( C ) - 1 );
-	return 1;
+	
+	SGS_RETURN_THIS( C );
 }
 
 static int sgsstd_arrayI_reverse( SGS_CTX )
 {
 	SGSARR_IHDR( reverse );
 	
-	if( !sgs_LoadArgs( C, "@>." ) )
+	/* emit a warning if any arguments are passed */
+	if( !sgs_LoadArgs( C, "." ) )
 		return 0;
 	
 	{
@@ -248,8 +245,7 @@ static int sgsstd_arrayI_reverse( SGS_CTX )
 		}
 	}
 	
-	sgs_SetStackSize( C, 1 );
-	return 1;
+	SGS_RETURN_THIS( C );
 }
 
 static void sgsstd_array_adjust( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal cnt )
@@ -269,7 +265,7 @@ static int sgsstd_arrayI_resize( SGS_CTX )
 	sgs_SizeVal sz;
 	SGSARR_IHDR( resize );
 	
-	if( !sgs_LoadArgs( C, "@>l", &sz ) )
+	if( !sgs_LoadArgs( C, "l", &sz ) )
 		return 0;
 	
 	if( sz < 0 )
@@ -277,23 +273,23 @@ static int sgsstd_arrayI_resize( SGS_CTX )
 
 	sgsstd_array_reserve( C, hdr, sz );
 	sgsstd_array_adjust( C, hdr, sz );
-	sgs_Pop( C, sgs_StackSize( C ) - 1 );
-	return 1;
+	
+	SGS_RETURN_THIS( C );
 }
 static int sgsstd_arrayI_reserve( SGS_CTX )
 {
 	sgs_SizeVal sz;
 	SGSARR_IHDR( reserve );
 	
-	if( !sgs_LoadArgs( C, "@>l", &sz ) )
+	if( !sgs_LoadArgs( C, "l", &sz ) )
 		return 0;
 	
 	if( sz < 0 )
 		STDLIB_WARN( "argument 1 (size) must be bigger than or equal to 0" )
 
 	sgsstd_array_reserve( C, hdr, sz );
-	sgs_Pop( C, sgs_StackSize( C ) - 1 );
-	return 1;
+	
+	SGS_RETURN_THIS( C );
 }
 
 static SGS_INLINE int sgsarrcomp_basic( const void* p1, const void* p2, void* userdata )
@@ -310,14 +306,14 @@ static int sgsstd_arrayI_sort( SGS_CTX )
 	int rev = 0;
 	SGSARR_IHDR( sort );
 	
-	if( !sgs_LoadArgs( C, "@>|b", &rev ) )
+	if( !sgs_LoadArgs( C, "|b", &rev ) )
 		return 0;
 	
 	/* WP: array limit */
 	quicksort( SGSARR_PTR( hdr ), (size_t) hdr->size, sizeof( sgs_Variable ),
 		rev ? sgsarrcomp_basic_rev : sgsarrcomp_basic, C );
-	sgs_SetStackSize( C, 1 );
-	return 1;
+	
+	SGS_RETURN_THIS( C );
 }
 
 typedef struct sgsarrcomp_cl2_s
@@ -354,14 +350,14 @@ static int sgsstd_arrayI_sort_custom( SGS_CTX )
 	u.C = C;
 	u.sortfunc.type = SVT_NULL;
 	
-	if( !sgs_LoadArgs( C, "@>?p<v|b", &u.sortfunc, &rev ) )
+	if( !sgs_LoadArgs( C, "?p<v|b", &u.sortfunc, &rev ) )
 		return 0;
 	
 	/* WP: array limit */
 	quicksort( SGSARR_PTR( hdr ), (size_t) hdr->size,
 		sizeof( sgs_Variable ), rev ? sgsarrcomp_custom_rev : sgsarrcomp_custom, &u );
-	sgs_SetStackSize( C, 1 );
-	return 1;
+	
+	SGS_RETURN_THIS( C );
 }
 
 typedef struct sgsarr_smi_s
@@ -384,20 +380,20 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 {
 	sgs_SizeVal i, asize = 0;
 	int rev = 0;
-	SGSARR_IHDR( sort_mapped );
 	
-	if( !sgs_LoadArgs( C, "@>a|b", &asize, &rev ) )
+	SGSARR_IHDR( sort_mapped );
+	if( !sgs_LoadArgs( C, "a|b", &asize, &rev ) )
 		return 0;
-
+	
 	if( asize != hdr->size )
 		STDLIB_WARN( "array sizes must match" )
-
+	
 	{
 		/* WP: array limit */
 		sgsarr_smi* smis = sgs_Alloc_n( sgsarr_smi, (size_t) asize );
 		for( i = 0; i < asize; ++i )
 		{
-			if( sgs_PushNumIndex( C, 1, i ) )
+			if( sgs_PushNumIndex( C, 0, i ) )
 			{
 				sgs_Dealloc( smis );
 				STDLIB_WARN( "error in mapping array" )
@@ -408,7 +404,7 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 		}
 		quicksort( smis, (size_t) asize, sizeof( sgsarr_smi ),
 			rev ? sgsarrcomp_smi_rev : sgsarrcomp_smi, NULL );
-
+		
 		{
 			sgs_Variable *p1, *p2;
 			p1 = SGSARR_PTR( hdr );
@@ -418,11 +414,10 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 				p1[ i ] = p2[ smis[ i ].pos ];
 			sgs_Dealloc( p2 );
 		}
-
+		
 		sgs_Dealloc( smis );
-
-		sgs_SetStackSize( C, 1 );
-		return 1;
+		
+		SGS_RETURN_THIS( C );
 	}
 }
 
@@ -431,9 +426,9 @@ static int sgsstd_arrayI_find( SGS_CTX )
 	sgs_Variable comp;
 	int strict = FALSE;
 	sgs_SizeVal off = 0;
-	SGSARR_IHDR( find );
 	
-	if( !sgs_LoadArgs( C, "@>v|bl", &comp, &strict, &off ) )
+	SGSARR_IHDR( find );
+	if( !sgs_LoadArgs( C, "v|bl", &comp, &strict, &off ) )
 		return 0;
 	
 	while( off < hdr->size )
@@ -455,9 +450,9 @@ static int sgsstd_arrayI_remove( SGS_CTX )
 	sgs_Variable comp;
 	int strict = FALSE, all = FALSE, rmvd = 0;
 	sgs_SizeVal off = 0;
-	SGSARR_IHDR( remove );
 	
-	if( !sgs_LoadArgs( C, "@>v|bbl", &comp, &strict, &all, &off ) )
+	SGSARR_IHDR( remove );
+	if( !sgs_LoadArgs( C, "v|bbl", &comp, &strict, &all, &off ) )
 		return 0;
 	
 	while( off < hdr->size )
@@ -518,7 +513,7 @@ static int sgsstd_arrayI_unique( SGS_CTX )
 	void* nadata;
 	
 	SGSARR_IHDR( unique );
-	if( !sgs_LoadArgs( C, "@>|b", &strconv ) )
+	if( !sgs_LoadArgs( C, "|b", &strconv ) )
 		return 0;
 	
 	sgs_SetStackSize( C, 1 );
@@ -529,7 +524,7 @@ static int sgsstd_arrayI_unique( SGS_CTX )
 		sgs_PushVariable( C, SGSARR_PTR( hdr ) + off );
 		if( !_in_array( C, nadata, strconv ) )
 		{
-			sgsstd_array_insert( C, (sgsstd_array_header_t*) nadata, asz, 2 );
+			sgsstd_array_insert( C, (sgsstd_array_header_t*) nadata, asz, 1 );
 			asz++;
 		}
 		sgs_Pop( C, 1 );
@@ -546,7 +541,7 @@ static int sgsstd_arrayI_random( SGS_CTX )
 	sgsstd_array_header_t* nadata;
 	
 	SGSARR_IHDR( random );
-	if( !sgs_LoadArgs( C, "@>i", &num ) )
+	if( !sgs_LoadArgs( C, "i", &num ) )
 		return 0;
 	
 	if( num < 0 )
@@ -558,7 +553,7 @@ static int sgsstd_arrayI_random( SGS_CTX )
 	while( num-- )
 	{
 		sgs_PushVariable( C, SGSARR_PTR( hdr ) + ( rand() % hdr->size ) );
-		sgsstd_array_insert( C, nadata, asz, 2 );
+		sgsstd_array_insert( C, nadata, asz, 1 );
 		asz++;
 		sgs_Pop( C, 1 );
 	}
@@ -572,7 +567,7 @@ static int sgsstd_arrayI_shuffle( SGS_CTX )
 	sgs_SizeVal i, j;
 	
 	SGSARR_IHDR( shuffle );
-	if( !sgs_LoadArgs( C, "@>." ) )
+	if( !sgs_LoadArgs( C, "." ) )
 		return 0;
 	
 	for( i = hdr->size - 1; i >= 1; i-- )

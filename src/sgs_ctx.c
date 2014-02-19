@@ -21,32 +21,14 @@
 static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "func", "cfunc", "obj", "ptr" };
 
 
-static void default_outputfn( void* userdata, SGS_CTX, const void* ptr, size_t size )
-{
-	fwrite( ptr, 1, size, (FILE*) userdata );
-}
-
-static void default_printfn_noabort( void* ctx, SGS_CTX, int type, const char* msg )
-{
-	sgs_WriteErrorInfo( C, SGS_ERRORINFO_FULL, (sgs_ErrorOutputFunc) fprintf, ctx, type, msg );
-}
-
-static void default_printfn( void* ctx, SGS_CTX, int type, const char* msg )
-{
-	default_printfn_noabort( ctx, C, type, msg );
-	if( type >= SGS_ERROR )
-		sgs_Abort( C );
-}
-
-
 static void ctx_init( SGS_CTX )
 {
 	C->version = SGS_VERSION_INT;
 	C->apiversion = SGS_API_VERSION;
-	C->output_fn = default_outputfn;
+	C->output_fn = sgs_StdOutputFunc;
 	C->output_ctx = stdout;
 	C->minlev = SGS_INFO;
-	C->msg_fn = default_printfn;
+	C->msg_fn = sgs_StdMsgFunc;
 	C->msg_ctx = stderr;
 	C->last_errno = 0;
 	C->hook_fn = NULL;
@@ -229,8 +211,8 @@ void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx )
 {
 	sgs_BreakIf( func == NULL );
 	if( func == SGSOUTPUTFN_DEFAULT )
-		func = default_outputfn;
-	if( !ctx )
+		func = sgs_StdOutputFunc;
+	if( !ctx && func == sgs_StdOutputFunc )
 		ctx = stdout;
 	C->output_fn = func;
 	C->output_ctx = ctx;
@@ -285,9 +267,11 @@ void sgs_SetMsgFunc( SGS_CTX, sgs_MsgFunc func, void* ctx )
 {
 	sgs_BreakIf( func == NULL );
 	if( func == SGSMSGFN_DEFAULT )
-		func = default_printfn;
+		func = sgs_StdMsgFunc;
 	else if( func == SGSMSGFN_DEFAULT_NOABORT )
-		func = default_printfn_noabort;
+		func = sgs_StdMsgFunc_NoAbort;
+	if( !ctx && ( func == sgs_StdMsgFunc || func == sgs_StdMsgFunc_NoAbort ) )
+		ctx = stderr;
 	C->msg_fn = func;
 	C->msg_ctx = ctx;
 }
