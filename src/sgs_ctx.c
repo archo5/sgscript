@@ -51,12 +51,12 @@ static void ctx_init( SGS_CTX )
 	C->last_errno = 0;
 	C->hook_fn = NULL;
 	C->hook_ctx = NULL;
-
+	
 	C->state = 0;
 	C->fctx = NULL;
 	C->filename = NULL;
 	vht_init( &C->stringtable, C, 256, 256 );
-
+	
 	C->stack_mem = 32;
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
 	C->stack_off = C->stack_base;
@@ -66,16 +66,12 @@ static void ctx_init( SGS_CTX )
 	C->clstk_base = sgs_Alloc_n( sgs_Closure*, C->clstk_mem );
 	C->clstk_off = C->clstk_base;
 	C->clstk_top = C->clstk_base;
-
-	C->call_args = 0;
-	C->call_expect = 0;
-	C->call_this = FALSE;
-
+	
 	C->sf_first = NULL;
 	C->sf_last = NULL;
 	C->sf_cached = NULL;
 	C->sf_count = 0;
-
+	
 	C->objs = NULL;
 	C->objcount = 0;
 	C->redblue = 0;

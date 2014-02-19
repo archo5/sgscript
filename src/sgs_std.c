@@ -1543,9 +1543,9 @@ static int sgsstd_class_call( SGS_CTX, sgs_VarObj* data )
 	{
 		int ret, i;
 		sgs_PushObjectPtr( C, data );
-		for( i = 0; i < C->call_args; ++i )
+		for( i = 0; i < C->sf_last->argcount; ++i )
 			sgs_PushItem( C, i );
-		ret = sgsVM_VarCall( C, &method, C->call_args, 0, C->call_expect, TRUE );
+		ret = sgsVM_VarCall( C, &method, C->sf_last->argcount, 0, C->sf_last->expected, TRUE );
 		sgs_Release( C, &method );
 		return ret;
 	}
@@ -1653,9 +1653,9 @@ static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data )
 {
 	int ismethod = sgs_Method( C );
 	SGSCLOSURE_HDR;
-	sgs_InsertVariable( C, -C->call_args - 1, &hdr->data );
-	return sgsVM_VarCall( C, &hdr->func, C->call_args + 1,
-		0, C->call_expect, ismethod ) * C->call_expect;
+	sgs_InsertVariable( C, -C->sf_last->argcount - 1, &hdr->data );
+	return sgsVM_VarCall( C, &hdr->func, C->sf_last->argcount + 1,
+		0, C->sf_last->expected, ismethod ) * C->sf_last->expected;
 }
 
 static sgs_ObjInterface sgsstd_closure_iface[1] =
@@ -1730,14 +1730,14 @@ static int sgsstd_realclsr_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* ke
 
 static int sgsstd_realclsr_call( SGS_CTX, sgs_VarObj* data )
 {
-	int ismethod = sgs_Method( C ), expected = C->call_expect;
+	int ismethod = sgs_Method( C ), expected = C->sf_last->expected;
 	uint8_t* cl = (uint8_t*) data->data;
 	int32_t cc = *(int32_t*) (void*) ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
 	sgs_Closure** cls = (sgs_Closure**) (void*) ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(int32_t),sizeof(void*));
 	
 	sgsVM_PushClosures( C, cls, cc );
-	return sgsVM_VarCall( C, (sgs_Variable*) (void*) ASSUME_ALIGNED( cl, sizeof(void*) ), C->call_args,
-		cc, C->call_expect, ismethod ) * expected;
+	return sgsVM_VarCall( C, (sgs_Variable*) (void*) ASSUME_ALIGNED( cl, sizeof(void*) ), C->sf_last->argcount,
+		cc, C->sf_last->expected, ismethod ) * expected;
 }
 
 static int sgsstd_realclsr_gcmark( SGS_CTX, sgs_VarObj* data )

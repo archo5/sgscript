@@ -28,6 +28,7 @@
 	
 	- identifier size: 0 - 255
 	- argument count: 0 - 255
+	- returned value count: 0 - 255
 	- total closure count in one function: 0 - 255
 	- temporary variable count (incl. args): 0 - 255
 	- useful line count limits in source file: 0 - 32767
@@ -707,9 +708,6 @@ struct _sgs_Context
 	uint32_t      clstk_mem;
 	
 	/* > stack frame info */
-	int           call_args;
-	int           call_expect;
-	int           call_this;
 	sgs_StackFrame* sf_first;
 	sgs_StackFrame* sf_last;
 	sgs_StackFrame* sf_cached;

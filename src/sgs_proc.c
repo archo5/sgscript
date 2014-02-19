@@ -1916,11 +1916,14 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 	
 	if( allowed )
 	{
+		/* WP: argument count limit */
+		C->sf_last->argcount = (uint8_t) args;
+		/* WP: returned value count limit */
+		C->sf_last->expected = (uint8_t) expect;
+		C->sf_last->flags = gotthis ? SGS_SF_METHOD : 0;
+		
 		if( func->type == SVT_CFUNC )
 		{
-			int hadthis = C->call_this;
-			C->call_this = gotthis;
-			
 			rvc = (*func->data.C)( C );
 			if( rvc > STACKFRAMESIZE )
 			{
@@ -1934,14 +1937,15 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 				rvc = 0;
 				ret = 0;
 			}
-			
-			C->call_this = hadthis;
 		}
 		else if( func->type == SVT_FUNC )
 		{
 			func_t* F = func->data.F;
 			int stkargs = args + ( F->gotthis && gotthis );
 			int expargs = F->numargs + F->gotthis;
+			/* add flag to specify presence of "this" */
+			if( F->gotthis )
+				C->sf_last->flags |= SGS_SF_HASTHIS;
 			/* fix argument stack */
 			if( stkargs > expargs )
 				stk_pop( C, stkargs - expargs );
@@ -1969,11 +1973,6 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 		else if( func->type == SVT_OBJECT )
 		{
 			sgs_VarObj* O = func->data.O;
-			int cargs = C->call_args, cexp = C->call_expect;
-			int hadthis = C->call_this;
-			C->call_args = args;
-			C->call_expect = expect;
-			C->call_this = gotthis;
 			
 			rvc = SGS_ENOTSUP;
 			if( O->iface->call )
@@ -1991,10 +1990,6 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 				rvc = 0;
 				ret = 0;
 			}
-			
-			C->call_args = cargs;
-			C->call_expect = cexp;
-			C->call_this = hadthis;
 		}
 		else
 		{
@@ -4591,14 +4586,26 @@ SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )
 
 SGSBOOL sgs_Method( SGS_CTX )
 {
-	if( C->call_this )
+	if( C->sf_last && HAS_FLAG( C->sf_last->flags, SGS_SF_METHOD ) &&
+		!HAS_FLAG( C->sf_last->flags, SGS_SF_HASTHIS ) )
 	{
 		C->stack_off--;
-		C->call_this = FALSE;
+		C->sf_last->flags |= SGS_SF_HASTHIS;
 		return TRUE;
 	}
-	else
-		return FALSE;
+	return FALSE;
+}
+
+SGSBOOL sgs_HideThis( SGS_CTX )
+{
+	if( C->sf_last && HAS_FLAG( C->sf_last->flags, (SGS_SF_METHOD|SGS_SF_HASTHIS) ) )
+	{
+		C->stack_off++;
+		/* WP: implicit conversion to int */
+		C->sf_last->flags &= (uint8_t) ~SGS_SF_HASTHIS;
+		return TRUE;
+	}
+	return FALSE;
 }
 
 void sgs_Acquire( SGS_CTX, sgs_Variable* var )

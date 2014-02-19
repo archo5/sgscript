@@ -81,6 +81,9 @@ typedef int (*sgs_CFunc) ( sgs_Context* );
 #define sgs_Float sgs_Real
 
 
+#define SGS_SF_METHOD  0x01
+#define SGS_SF_HASTHIS 0x02
+
 struct _sgs_StackFrame
 {
 	sgs_Variable*   func;
@@ -94,6 +97,9 @@ struct _sgs_StackFrame
 	sgs_StackFrame* prev;
 	sgs_StackFrame* next;
 	sgs_StackFrame* cached;
+	uint8_t argcount;
+	uint8_t expected;
+	uint8_t flags;
 };
 
 
