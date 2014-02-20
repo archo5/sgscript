@@ -510,21 +510,22 @@ static int sgsstd_arrayI_unique( SGS_CTX )
 {
 	int strconv = FALSE;
 	sgs_SizeVal off = 0, asz = 0;
+	sgs_StkIdx stkoff;
 	void* nadata;
 	
 	SGSARR_IHDR( unique );
 	if( !sgs_LoadArgs( C, "|b", &strconv ) )
 		return 0;
 	
-	sgs_SetStackSize( C, 1 );
 	sgs_PushArray( C, 0 );
 	nadata = sgs_GetObjectData( C, -1 );
+	stkoff = sgs_StackSize( C );
 	while( off < hdr->size )
 	{
 		sgs_PushVariable( C, SGSARR_PTR( hdr ) + off );
 		if( !_in_array( C, nadata, strconv ) )
 		{
-			sgsstd_array_insert( C, (sgsstd_array_header_t*) nadata, asz, 1 );
+			sgsstd_array_insert( C, (sgsstd_array_header_t*) nadata, asz, stkoff );
 			asz++;
 		}
 		sgs_Pop( C, 1 );
@@ -539,6 +540,7 @@ static int sgsstd_arrayI_random( SGS_CTX )
 	sgs_Int num;
 	sgs_SizeVal asz = 0;
 	sgsstd_array_header_t* nadata;
+	sgs_StkIdx stkoff;
 	
 	SGSARR_IHDR( random );
 	if( !sgs_LoadArgs( C, "i", &num ) )
@@ -547,13 +549,13 @@ static int sgsstd_arrayI_random( SGS_CTX )
 	if( num < 0 )
 		STDLIB_WARN( "argument 1 (count) cannot be negative" )
 	
-	sgs_SetStackSize( C, 1 );
 	sgs_PushArray( C, 0 );
+	stkoff = sgs_StackSize( C );
 	nadata = (sgsstd_array_header_t*) sgs_GetObjectData( C, -1 );
 	while( num-- )
 	{
 		sgs_PushVariable( C, SGSARR_PTR( hdr ) + ( rand() % hdr->size ) );
-		sgsstd_array_insert( C, nadata, asz, 1 );
+		sgsstd_array_insert( C, nadata, asz, stkoff );
 		asz++;
 		sgs_Pop( C, 1 );
 	}
@@ -578,7 +580,7 @@ static int sgsstd_arrayI_shuffle( SGS_CTX )
 		SGSARR_PTR( hdr )[ j ] = tmp;
 	}
 	
-	return 1;
+	SGS_RETURN_THIS( C );
 }
 
 static int sgsstd_array_getprop( SGS_CTX, void* data, sgs_Variable* key )
