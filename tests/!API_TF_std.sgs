@@ -1,11 +1,10 @@
 
-global ERRORS;
-global tests_failed, tests_ran;
+global ERRORS, tests_failed, tests_ran;
 
 //
 function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
 print( "\n\n-- CORE FUNCTIONS --\n" );
-include "type", "os";
+include "os";
 //
 
 var asz = [ 10, "huh", {}, 0.25, "end!" ];
@@ -57,9 +56,44 @@ testEqual( arr.find( "3", true ), null, "find - strict, empty" );
 testEqual( arr.find( 3, true, 1 ), 1, "find - strict, matching offset" );
 testEqual( arr.find( 3, true, 2 ), null, "find - strict, offset, empty" );
 
+TA = [false,0,1,2,3,[],{},[4]];
+testEqual( ''$TA.part( 2, 3 ), "[1,2,3]", "part - indices 2 to 4" );
+testEqual( ''$TA.part( -11, 5 ), "[false,0]", "part - from -11, 5 items" );
+testEqual( ''$TA.part( -11 ), "[false,0,1,2,3,array,dict,array]", "part - from -11 fwd (all)" );
+testEqual( ''$TA.part( 11 ), "[]", "part - from 11 fwd (empty)" );
+
+	section( "more array utils" );
+testEqual( [1,2,3,3,4].unique()$'', "[1,2,3,4]", "unique - basic" );
+testEqual( [1,2,3,"3",4].unique()$'', "[1,2,3,3,4]", "unique - mixed types" );
+testEqual( [1,2,3,"3",4].unique(true)$'', "[1,2,3,4]", "unique - string comparison" );
+testEqual( typeof([1,2,"3",3,4].unique(true)[2]), "string", "unique - string comparison, swapped" );
+
+testEqual( [1,2,3,4].random(3).size, 3, "random - 3 of 4" );
+testEqual( [1,2,3,4].random(4).size, 4, "random - 4 of 4" );
+testEqual( [1,2,3,4].random(7).size, 7, "random - 7 of 4" );
 
 	section( "misc." );
 testEqual( dict_size({ a = 1, b = 2 }), 2, "dict_size" );
+
+TA = [false,0,1,2,3,[],{},[4]];
+testEqual( ''$array_filter( TA ), "[1,2,3,array]", "array_filter - basic" );
+testEqual( ''$array_filter( TA, function(x){return x>=1&&x<=3;} ), "[1,2,3]", "array_filter - 1 to 3" );
+testEqual( ''$array_filter( TA, function(x){return !x;} ), "[false,0,array,dict]", "array_filter - inverted" );
+
+testEqual( ''$array_process( clone(TA), function(x){return if(x>=1&&x<=3,1,0);} ), "[0,0,1,1,1,0,0,0]", "array_process - 1 to 3" );
+testEqual( ''$array_process( clone(TA), function(x){return toint(x) + 10;} ), "[10,10,11,12,13,10,10,10]", "array_process - add 10" );
+testEqual( ''$array_process( clone(TA), tostring ), "[false,0,1,2,3,[],{},[4]]", "array_process - convert to string" );
+
+TD = { a = 3, b = false, c = "4", "5" = 0 };
+testEqual( ''$dict_filter( TD ), "{a=3,c=4}", "dict_filter - basic" );
+testEqual( ''$dict_filter( TD, function(x){ return x >= 1 && x <= 5; } ), "{a=3,c=4}", "dict_filter - 1 to 5" );
+testEqual( ''$dict_filter( TD, function(x){return !x;} ), "{b=false,5=0}", "dict_filter - inverted" );
+testEqual( ''$dict_filter( TD, function(x,k){ return toint(k); } ), "{5=0}", "dict_filter - key-based" );
+
+testEqual( ''$dict_process( clone(TD), function(x){ return if(x>=1&&x<=5,1,0); } ), "{a=1,b=0,c=1,5=0}", "dict_process - 1 to 5" );
+testEqual( ''$dict_process( clone(TD), function(x){return toint(x) + 10;} ), "{a=13,b=10,c=14,5=10}", "dict_process - add 10" );
+testEqual( ''$dict_process( clone(TD), tostring ), "{a=3,b=false,c=4,5=0}", "dict_process - convert to string" );
+testEqual( ''$dict_process( clone(TD), function(x,k){ return k; } ), "{a=a,b=b,c=c,5=5}", "dict_process - set from key" );
 
 
 	section( "include_file" );

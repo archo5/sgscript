@@ -4145,7 +4145,7 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 }
 
 
-sgs_Real sgs_CompareF( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
+int sgs_Compare( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
 {
 	return vm_compare( C, v1, v2 );
 }

@@ -48,11 +48,11 @@ static void sgsstd_array_clear( SGS_CTX, sgsstd_array_header_t* hdr )
 	hdr->size = 0;
 }
 
-/* off = offset in stack to start inserting from (1 = the first argument in methods) */
-static void sgsstd_array_insert( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal pos, int off )
+/* off = offset in stack to start inserting from */
+static void sgsstd_array_insert( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal pos, StkIdx off )
 {
 	int i;
-	sgs_SizeVal cnt = sgs_StackSize( C ) - off;
+	StkIdx cnt = sgs_StackSize( C ) - off;
 	sgs_SizeVal nsz = hdr->size + cnt;
 	sgs_Variable* ptr = SGSARR_PTR( hdr );
 
@@ -71,6 +71,25 @@ static void sgsstd_array_insert( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVa
 		sgs_GetStackItem( C, i, var );
 		sgs_Acquire( C, var );
 	}
+	hdr->size = nsz;
+}
+
+static void sgsstd_array_insert_p( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal pos, sgs_Variable* var )
+{
+	sgs_SizeVal nsz = hdr->size + 1;
+	sgs_Variable* ptr = SGSARR_PTR( hdr );
+
+	if( nsz > hdr->mem )
+	{
+		sgsstd_array_reserve( C, hdr, MAX( nsz, hdr->mem * 2 ) );
+		ptr = SGSARR_PTR( hdr );
+	}
+	if( pos < hdr->size )
+		memmove( ptr + pos + 1, ptr + pos, SGSARR_ALLOCSIZE( hdr->size - pos ) );
+	
+	ptr[ pos ] = *var;
+	sgs_Acquire( C, var );
+	
 	hdr->size = nsz;
 }
 
@@ -207,10 +226,20 @@ static int sgsstd_arrayI_part( SGS_CTX )
 		from = MAX( from, 0 );
 		to = MIN( to, hdr->size );
 		
-		for( i = from; i < to; ++i )
+		if( from < to )
 		{
-			sgs_PushVariable( C, SGSARR_PTR( hdr ) + i );
-			sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
+			sgs_Variable *psrc, *pdst;
+			sgs_SizeVal cnt = to - from;
+			sgsstd_array_header_t* nhdr = (sgsstd_array_header_t*) sgs_GetObjectData( C, -1 );
+			sgsstd_array_reserve( C, nhdr, to - from );
+			nhdr->size = cnt;
+			psrc = SGSARR_PTR( hdr ) + from;
+			pdst = SGSARR_PTR( nhdr );
+			for( i = 0; i < cnt; ++i )
+			{
+				pdst[ i ] = psrc[ i ];
+				sgs_Acquire( C, pdst + i );
+			}
 		}
 	}
 	
@@ -435,7 +464,7 @@ static int sgsstd_arrayI_find( SGS_CTX )
 	{
 		sgs_Variable* p = SGSARR_PTR( hdr ) + off;
 		if( ( !strict || sgs_EqualTypes( C, p, &comp ) )
-			&& sgs_CompareF( C, p, &comp ) == 0 )
+			&& sgs_Compare( C, p, &comp ) == 0 )
 		{
 			sgs_PushInt( C, off );
 			return 1;
@@ -459,7 +488,7 @@ static int sgsstd_arrayI_remove( SGS_CTX )
 	{
 		sgs_Variable* p = SGSARR_PTR( hdr ) + off;
 		if( ( !strict || sgs_EqualTypes( C, p, &comp ) )
-			&& sgs_CompareF( C, p, &comp ) == 0 )
+			&& sgs_Compare( C, p, &comp ) == 0 )
 		{
 			sgsstd_array_erase( C, hdr, off, off );
 			rmvd++;
@@ -473,44 +502,51 @@ static int sgsstd_arrayI_remove( SGS_CTX )
 	return 1;
 }
 
-static int _in_array( SGS_CTX, void* data, int strconv )
+static int _in_array( SGS_CTX, void* data, sgs_Variable* var, int strconv )
 {
-	int found = 0;
 	sgs_SizeVal off = 0;
 	SGSARR_HDR;
 	
-	while( off < hdr->size )
+	if( !strconv )
 	{
-		sgs_PushVariable( C, SGSARR_PTR( hdr ) + off );
-		if( strconv )
+		while( off < hdr->size )
 		{
-			sgs_PushItem( C, -2 );
-			sgs_ToString( C, -2 );
-			sgs_ToString( C, -1 );
+			sgs_Variable* cur = SGSARR_PTR( hdr ) + off;
+			if( sgs_EqualTypes( C, var, cur ) && sgs_Compare( C, var, cur ) == 0 )
+				return TRUE;
+			off++;
 		}
-		
-		/* the comparison */
-		{
-			sgs_Variable A, B;
-			sgs_GetStackItem( C, -2, &A );
-			sgs_GetStackItem( C, -1, &B );
-			found = sgs_EqualTypes( C, &A, &B )
-				&& sgs_CompareF( C, &A, &B ) == 0;
-		}
-		
-		sgs_Pop( C, strconv ? 2 : 1 );
-		if( found )
-			break;
-		off++;
+		return FALSE;
 	}
-	return found;
+	else
+	{
+		int found = 0;
+		sgs_Variable A, B;
+		
+		A = *var;
+		sgs_Acquire( C, &A );
+		sgs_ToStringP( C, &A );
+		while( off < hdr->size )
+		{
+			B = SGSARR_PTR( hdr )[ off ];
+			sgs_Acquire( C, &B );
+			sgs_ToStringP( C, &B );
+			
+			found = sgs_EqualTypes( C, &A, &B ) && sgs_Compare( C, &A, &B ) == 0;
+			sgs_Release( C, &B );
+			if( found )
+				break;
+			off++;
+		}
+		sgs_Release( C, &A );
+		return found;
+	}
 }
 
 static int sgsstd_arrayI_unique( SGS_CTX )
 {
 	int strconv = FALSE;
 	sgs_SizeVal off = 0, asz = 0;
-	sgs_StkIdx stkoff;
 	void* nadata;
 	
 	SGSARR_IHDR( unique );
@@ -519,16 +555,14 @@ static int sgsstd_arrayI_unique( SGS_CTX )
 	
 	sgs_PushArray( C, 0 );
 	nadata = sgs_GetObjectData( C, -1 );
-	stkoff = sgs_StackSize( C );
 	while( off < hdr->size )
 	{
-		sgs_PushVariable( C, SGSARR_PTR( hdr ) + off );
-		if( !_in_array( C, nadata, strconv ) )
+		sgs_Variable* var = SGSARR_PTR( hdr ) + off;
+		if( !_in_array( C, nadata, var, strconv ) )
 		{
-			sgsstd_array_insert( C, (sgsstd_array_header_t*) nadata, asz, stkoff );
+			sgsstd_array_insert_p( C, (sgsstd_array_header_t*) nadata, asz, var );
 			asz++;
 		}
-		sgs_Pop( C, 1 );
 		off++;
 	}
 	
@@ -3762,7 +3796,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 			{
 				sgs_Variable* p = SGSARR_PTR( hdr ) + off;
 				if( sgs_EqualTypes( C, p, &comp )
-					&& sgs_CompareF( C, p, &comp ) == 0 )
+					&& sgs_Compare( C, p, &comp ) == 0 )
 				{
 					return off;
 				}
@@ -3789,7 +3823,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 			{
 				sgs_Variable* p = SGSARR_PTR( hdr ) + off;
 				if( sgs_EqualTypes( C, p, &comp )
-					&& sgs_CompareF( C, p, &comp ) == 0 )
+					&& sgs_Compare( C, p, &comp ) == 0 )
 				{
 					sgsstd_array_erase( C, hdr, off, off );
 					rmvd++;
