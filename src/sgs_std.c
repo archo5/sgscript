@@ -571,27 +571,23 @@ static int sgsstd_arrayI_unique( SGS_CTX )
 
 static int sgsstd_arrayI_random( SGS_CTX )
 {
-	sgs_Int num;
-	sgs_SizeVal asz = 0;
+	sgs_SizeVal num, asz = 0;
 	sgsstd_array_header_t* nadata;
-	sgs_StkIdx stkoff;
 	
 	SGSARR_IHDR( random );
-	if( !sgs_LoadArgs( C, "i", &num ) )
+	if( !sgs_LoadArgs( C, "l", &num ) )
 		return 0;
 	
 	if( num < 0 )
 		STDLIB_WARN( "argument 1 (count) cannot be negative" )
 	
 	sgs_PushArray( C, 0 );
-	stkoff = sgs_StackSize( C );
 	nadata = (sgsstd_array_header_t*) sgs_GetObjectData( C, -1 );
+	sgsstd_array_reserve( C, nadata, num );
 	while( num-- )
 	{
-		sgs_PushVariable( C, SGSARR_PTR( hdr ) + ( rand() % hdr->size ) );
-		sgsstd_array_insert( C, nadata, asz, stkoff );
+		sgsstd_array_insert_p( C, nadata, asz, SGSARR_PTR( hdr ) + ( rand() % hdr->size ) );
 		asz++;
-		sgs_Pop( C, 1 );
 	}
 	
 	return 1;
