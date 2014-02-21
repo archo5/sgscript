@@ -1406,9 +1406,14 @@ static int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, 
 {
 	int ret;
 	SGSCLASS_HDR;
-	if( isprop && sgs_ItemType( C, 0 ) == SVT_STRING && !strcmp( sgs_ToStringP( C, key ), "_super" ) )
+	if( isprop && key->type == SVT_STRING && !strcmp( sgs_ToStringP( C, key ), "_super" ) )
 	{
 		sgs_PushVariable( C, &hdr->inh );
+		return SGS_SUCCESS;
+	}
+	if( isprop && key->type == SVT_STRING && !strcmp( sgs_ToStringP( C, key ), "_data" ) )
+	{
+		sgs_PushVariable( C, &hdr->data );
 		return SGS_SUCCESS;
 	}
 	
@@ -1425,9 +1430,16 @@ static int sgsstd_class_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, 
 static int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* val, int isprop )
 {
 	SGSCLASS_HDR;
-	if( isprop && sgs_ItemType( C, 0 ) == SVT_STRING && !strcmp( sgs_ToString( C, 0 ), "_super" ) )
+	if( isprop && key->type == SVT_STRING && !strcmp( sgs_ToStringP( C, key ), "_super" ) )
 	{
 		sgs_Assign( C, &hdr->inh, val );
+		return SGS_SUCCESS;
+	}
+	if( isprop && key->type == SVT_STRING && !strcmp( sgs_ToStringP( C, key ), "_data" ) )
+	{
+		if( val->type == SVT_OBJECT && val->data.O == data )
+			return SGS_EINVAL;
+		sgs_Assign( C, &hdr->data, val );
 		return SGS_SUCCESS;
 	}
 	return sgs_SetIndexPPP( C, &hdr->data, key, val, isprop );
