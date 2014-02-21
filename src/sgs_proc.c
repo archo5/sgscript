@@ -1144,6 +1144,11 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 		sgs_Msg( C, SGS_WARNING, "Invalid value type used for %s",
 			isprop ? "property read" : "index read" );
 	}
+	else if( type == SGS_EINPROC )
+	{
+		sgs_Msg( C, SGS_ERROR, "%s read process interrupted, possibly by infinite recursion",
+			isprop ? "Property" : "Index" );
+	}
 	else
 	{
 		sgs_Msg( C, SGS_WARNING, "Unknown error on %s",
@@ -1173,6 +1178,11 @@ static SGSRESULT vm_runerr_setprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 	{
 		sgs_Msg( C, SGS_WARNING, "Invalid value type used for %s",
 			isprop ? "property write" : "index write" );
+	}
+	else if( type == SGS_EINPROC )
+	{
+		sgs_Msg( C, SGS_ERROR, "%s write process interrupted, possibly by infinite recursion",
+			isprop ? "Property" : "Index" );
 	}
 	else
 	{
@@ -1264,10 +1274,9 @@ static SGSMIXED vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj, 
 	{
 		VHTVar* var;
 		VHTable* ht = (VHTable*) obj->data.O->data;
-		sgs_Variable idxvar = *idx;
-		VAR_ACQUIRE( &idxvar );
-		var = vht_get( ht, &idxvar );
-		VAR_RELEASE( &idxvar );
+		/* vht_get does not modify search key */
+		var = vht_get( ht, idx );
+		
 		if( !var )
 			return VM_GETPROP_ERR( SGS_ENOTFND );
 		else
@@ -1281,10 +1290,17 @@ static SGSMIXED vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj, 
 		sgs_VarObj* O = obj->data.O;
 		sgs_Variable idxvar = *idx;
 		_STACK_PREPARE;
+		
+		if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
+			return SGS_EINPROC;
+		C->sf_count++;
+		
 		_STACK_PROTECT;
 		VAR_ACQUIRE( &idxvar );
 		ret = O->iface->getindex( C, O, &idxvar, isprop );
 		VAR_RELEASE( &idxvar );
+		
+		C->sf_count--;
 		if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
 		{
 			_STACK_UNPROTECT_SKIP( 1 );
@@ -1335,12 +1351,19 @@ static SGSRESULT vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_
 		sgs_Variable srcvar = *src;
 		sgs_VarObj* O = obj->data.O;
 		_STACK_PREPARE;
+		
+		if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
+			return SGS_EINPROC;
+		C->sf_count++;
+		
 		_STACK_PROTECT;
 		VAR_ACQUIRE( &idxvar );
 		VAR_ACQUIRE( &srcvar );
 		ret = O->iface->setindex( C, O, &idxvar, &srcvar, isprop );
 		VAR_RELEASE( &idxvar );
 		VAR_RELEASE( &srcvar );
+		
+		C->sf_count--;
 		_STACK_UNPROTECT;
 	}
 	else

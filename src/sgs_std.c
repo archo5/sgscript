@@ -1432,6 +1432,8 @@ static int sgsstd_class_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, 
 	SGSCLASS_HDR;
 	if( isprop && key->type == SVT_STRING && !strcmp( sgs_ToStringP( C, key ), "_super" ) )
 	{
+		if( val->type == SVT_OBJECT && val->data.O == data )
+			return SGS_EINVAL;
 		sgs_Assign( C, &hdr->inh, val );
 		return SGS_SUCCESS;
 	}
@@ -1506,15 +1508,20 @@ static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
 		sgsstd_class_header_t* hdr2;
 		SGSCLASS_HDR;
-		sgs_PushVariable( C, &hdr->data );
-		sgs_CloneItem( C, -1 );
 		
 		hdr2 = (sgsstd_class_header_t*) sgs_PushObjectIPA( C,
 			sizeof( sgsstd_class_header_t ), sgsstd_class_iface );
+		
+		sgs_PushVariable( C, &hdr->data );
+		sgs_CloneItem( C, -1 );
 		sgs_GetStackItem( C, -1, &hdr2->data );
+		
 		hdr2->inh = hdr->inh;
+		
 		sgs_Acquire( C, &hdr2->data );
 		sgs_Acquire( C, &hdr2->inh );
+		
+		sgs_SetStackSize( C, 1 );
 		return SGS_SUCCESS;
 	}
 	
