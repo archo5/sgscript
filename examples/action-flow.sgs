@@ -33,7 +33,7 @@ function Action.createTimed( init )
 		if( this.time <= 0 )
 			this.end();
 		else if( data )
-			data.thiscall( this );
+			data.call( this );
 	}
 
 	if( !isset( init, "time" ) )

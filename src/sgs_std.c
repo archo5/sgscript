@@ -1651,9 +1651,14 @@ static int sgsstd_closure_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key
 	char* str;
 	if( sgs_ParseStringP( C, key, &str, NULL ) )
 	{
-		if( !strcmp( str, "thiscall" ) )
+		if( !strcmp( str, "call" ) )
 		{
-			sgs_PushCFunction( C, sgs_thiscall_method );
+			sgs_PushCFunction( C, sgs_specfn_call );
+			return SGS_SUCCESS;
+		}
+		if( !strcmp( str, "apply" ) )
+		{
+			sgs_PushCFunction( C, sgs_specfn_apply );
 			return SGS_SUCCESS;
 		}
 	}
@@ -1765,9 +1770,14 @@ static int sgsstd_realclsr_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* ke
 	char* str;
 	if( sgs_ParseStringP( C, key, &str, NULL ) )
 	{
-		if( !strcmp( str, "thiscall" ) )
+		if( !strcmp( str, "call" ) )
 		{
-			sgs_PushCFunction( C, sgs_thiscall_method );
+			sgs_PushCFunction( C, sgs_specfn_call );
+			return SGS_SUCCESS;
+		}
+		if( !strcmp( str, "apply" ) )
+		{
+			sgs_PushCFunction( C, sgs_specfn_apply );
 			return SGS_SUCCESS;
 		}
 	}
@@ -3411,6 +3421,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* utils */
 	FN( rand ), FN( randf ), FN( srand ),
 	/* internal utils */
+	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
 	FN( pcall ), FN( assert ),
 	FN( eval ), FN( eval_file ), FN( compile_sgs ),
 	FN( include_library ), FN( include_file ),

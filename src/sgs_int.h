@@ -618,7 +618,8 @@ sgs_Variable* sgsVM_VarMake_Dict();
 
 int sgsVM_RegStdLibs( SGS_CTX );
 
-int sgs_thiscall_method( SGS_CTX );
+int sgs_specfn_call( SGS_CTX );
+int sgs_specfn_apply( SGS_CTX );
 
 
 /*

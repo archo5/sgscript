@@ -4,10 +4,10 @@ function fn1( x ) use( a )
 {
 	printlns( this, x, a );
 }
-fn1.thiscall( true, "arg1" );
+fn1.call( true, "arg1" );
 
 fn2 = closure(function( a, x )
 {
 	printlns( this, x, a );
 }, a);
-fn2.thiscall( true, "arg2" );
+fn2.call( true, "arg2" );

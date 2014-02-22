@@ -465,7 +465,7 @@ There are several built-in accessors for the variable types that are available.
 !    name    !  variable type  !  accessor type  !                     description                     !
 |   length   |      string     |    property     |     returns the length of the string, in bytes      |
 |  char. at  |      string     |     index       |  returns the character from the specified position  |
-|  thiscall  |   any callable  |    property     | function that allows to specify "this" for the call |
+|    call    |   any callable  |    property     | function that allows to specify "this" for the call |
 --------------------------------------------------------------------------------------------------------
 
 
@@ -563,7 +563,7 @@ This section shows some ways of implementing various often-used constructs in SG
     function B.func()
     {
         // needless to say, this is not the preferred way to do software design in SGScript
-    	this._super._super.func.thiscall( this );
+    	this._super._super.func.call( this );
         println( "override" );
     }
     A.func_A = A.func; // make a duplicate entry that will not be overridden
@@ -2515,7 +2515,7 @@ This library is loaded on initialization and contains the functions and constant
     x = { a = 5 };
     isset( x, "a" ); // returns 'true'
     isset( x, "b" ); // returns 'false'
-    isset( print, "thiscall" ); // returns 'true' -- works with built-in special properties too
+    isset( print, "call" ); // returns 'true' -- works with built-in special properties too
 
 
 # unset [function]
@@ -3446,7 +3446,7 @@ This library is loaded on initialization and contains the functions and constant
 # closure [object]
 
 - features
--- "thiscall" property
+-- "call" property
 -- full content dump
 -- tostring = "closure"
 -- type identification (returns the string "closure")

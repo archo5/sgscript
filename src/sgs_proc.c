@@ -1029,28 +1029,52 @@ static SGSRESULT vm_gcmark( SGS_CTX, sgs_Variable* var )
 	Object property / array accessor handling
 */
 
-int sgs_thiscall_method( SGS_CTX )
+int sgs_specfn_call( SGS_CTX )
 {
 	int ret;
-	if( !sgs_Method( C ) || !sgs_IsCallable( C, 0 ) )
-	{
-		sgs_Msg( C, SGS_WARNING, "thiscall() was not called on a function type" );
-		return 0;
-	}
+	int method_call = sgs_Method( C );
+	SGSFN( "call" );
+	if( !sgs_IsCallable( C, 0 ) )
+		return sgs_Msg( C, SGS_WARNING, "not called on function type" );
 	if( sgs_StackSize( C ) < 2 )
 	{
-		sgs_Msg( C, SGS_WARNING, "thiscall() expects at least one argument (this)" );
+		sgs_Msg( C, SGS_WARNING, method_call ?
+			"at least one argument expected (this)" :
+			"at least two arguments expected (function, this)" );
 		return 0;
 	}
 	
 	sgs_PushItem( C, 0 );
-	ret = sgs_ThisCall( C, sgs_StackSize( C ) - 3, 1 );
+	ret = sgs_ThisCall( C, sgs_StackSize( C ) - 3, C->sf_last->expected );
 	if( ret != SGS_SUCCESS )
+		return sgs_Msg( C, SGS_WARNING, "failed with error %d", ret );
+	return C->sf_last->expected;
+}
+
+int sgs_specfn_apply( SGS_CTX )
+{
+	int ret;
+	int method_call = sgs_Method( C );
+	sgs_SizeVal i, asize;
+	SGSFN( "apply" );
+	if( !sgs_IsCallable( C, 0 ) )
+		return sgs_Msg( C, SGS_WARNING, "not called on function type" );
+	if( ( asize = sgs_ArraySize( C, 2 ) ) < 0 )
+		return sgs_Msg( C, SGS_WARNING, "argument %d is not an array", method_call ? 2 : 3 );
+	if( sgs_StackSize( C ) < 3 )
 	{
-		sgs_Msg( C, SGS_WARNING, "thiscall() failed with error %d", ret );
-		return 0;
+		return sgs_Msg( C, SGS_WARNING, method_call ?
+			"two argument expected (this, args)" :
+			"three arguments expected (function, this, args)" );
 	}
-	return 1;
+	
+	for( i = 0; i < asize; ++i )
+		sgs_PushNumIndex( C, 2, i );
+	sgs_PushItem( C, 0 );
+	ret = sgs_ThisCall( C, asize, C->sf_last->expected );
+	if( ret != SGS_SUCCESS )
+		return sgs_Msg( C, SGS_WARNING, "failed with error %d", ret );
+	return C->sf_last->expected;
 }
 
 
@@ -1092,7 +1116,7 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* ob
 		switch( obj->type )
 		{
 		case SVT_STRING:
-			if( 0 == strcmp( prop, "length" ) )
+			if( !strcmp( prop, "length" ) )
 			{
 				outmaybe->type = SVT_INT;
 				outmaybe->data.I = obj->data.S->size;
@@ -1101,10 +1125,16 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* ob
 			break;
 		case SVT_FUNC:
 		case SVT_CFUNC:
-			if( 0 == strcmp( prop, "thiscall" ) )
+			if( !strcmp( prop, "call" ) )
 			{
 				outmaybe->type = SVT_CFUNC;
-				outmaybe->data.C = sgs_thiscall_method;
+				outmaybe->data.C = sgs_specfn_call;
+				return 0;
+			}
+			if( !strcmp( prop, "apply" ) )
+			{
+				outmaybe->type = SVT_CFUNC;
+				outmaybe->data.C = sgs_specfn_apply;
 				return 0;
 			}
 			break;

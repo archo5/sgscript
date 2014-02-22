@@ -11,7 +11,7 @@ print( "calling 2 arg obj func with 1 arg: " );		obj.func( "1" );			print( "\n" 
 print( "calling 2 arg method with 3 args: " );	obj.method( "1", "2", "3" );	print( "\n" );
 print( "calling 2 arg method with 1 arg: " );	obj.method( "1" );				print( "\n" );
 
-print( "calling 2 arg method v2 with 3 args: " );	obj["method"].thiscall( "1", "2", "3" );	print( "\n" );
-print( "calling 2 arg method v2 with 1 arg: " );	obj["method"].thiscall( "1" );				print( "\n" );
-print( "calling 2 arg method v2 with 4 args: " );	obj["method"].thiscall( "1", "2", "3", "4" );	print( "\n" );
-print( "calling 2 arg method v2 with 2 args: " );	obj["method"].thiscall( "1", "2" );				print( "\n" );
+print( "calling 2 arg method v2 with 3 args: " );	obj["method"].call( "1", "2", "3" );	print( "\n" );
+print( "calling 2 arg method v2 with 1 arg: " );	obj["method"].call( "1" );				print( "\n" );
+print( "calling 2 arg method v2 with 4 args: " );	obj["method"].call( "1", "2", "3", "4" );	print( "\n" );
+print( "calling 2 arg method v2 with 2 args: " );	obj["method"].call( "1", "2" );				print( "\n" );
