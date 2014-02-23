@@ -559,6 +559,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	FILE* f;
 	char* data;
 	const char* ofn;
+	char magic[4];
 	DBGINFO( "sgs_EvalFile called!" );
 	
 	f = fopen( file, "rb" );
@@ -575,6 +576,24 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 		return SGS_EINPROC;
 	}
 	fseek( f, 0, SEEK_SET );
+	
+	if( len > 4 )
+	{
+		if( fread( magic, 1, 4, f ) != 4 )
+		{
+			sgs_Errno( C, 0 );
+			fclose( f );
+			return SGS_EINPROC;
+		}
+		if( ( magic[0] == 0x7f && magic[1] == 'E' && magic[2] == 'L' && magic[3] == 'F' ) // ELF binary
+		 || ( magic[0] == 'M' && magic[1] == 'Z' ) ) // DOS binary / DOS stub for PE binary
+		{
+			sgs_Errno( C, 1 );
+			fclose( f );
+			return SGS_EINVAL;
+		}
+		fseek( f, 0, SEEK_SET );
+	}
 	
 	/* WP: len is always in the range of size_t */
 	ulen = (size_t) len;

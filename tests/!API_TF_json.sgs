@@ -1,5 +1,10 @@
 
+global ERRORS;
+ERRORS = "";
 include "bin/sgsjson";
+
+testEqual( typeof(json_encode), "cfunc", "sgsjson library is loaded" );
+testEqual( ERRORS, "", "sgsjson library loaded without errors" );
 
 function tostr( x )
 {
@@ -26,6 +31,7 @@ function tostr( x )
 	else
 		return tostring(x);
 }
+
 
 tests =
 {

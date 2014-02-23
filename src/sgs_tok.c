@@ -64,8 +64,8 @@ static int32_t string_inplace_fix( char* str, int32_t len )
 			if( *ipos >= '0' && *ipos <= '7' )
 			{
 				int oct = *ipos++ - '0';
-				if( *ipos >= '0' && *ipos <= '7' ){ oct *= 8; oct += *ipos++ - '0'; }
-				if( *ipos >= '0' && *ipos <= '7' ){ oct *= 8; oct += *ipos++ - '0'; }
+				if( ipos < iend && *ipos >= '0' && *ipos <= '7' ){ oct *= 8; oct += *ipos++ - '0'; }
+				if( ipos < iend && *ipos >= '0' && *ipos <= '7' ){ oct *= 8; oct += *ipos++ - '0'; }
 				ipos--;
 				if( oct > 0xffff ) *opos++ = (char)( oct >> 8 );
 				if( oct > 0xff ) *opos++ = (char)( oct >> 4 );

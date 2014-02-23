@@ -2967,6 +2967,18 @@ static int sgsstd_include( SGS_CTX )
 				"with include path '%.*s'", fnsize, fnstr, pssize, ps );
 		}
 		
+		sgs_PushString( C, mb.ptr );
+		sgs_PushString( C, " - include" );
+		sgs_StringConcat( C, 2 );
+		SGSFN( sgs_GetStringPtr( C, -1 ) );
+		ret = sgs_ExecFile( C, mb.ptr );
+		SGSFN( "include" );
+		if( ret == SGS_SUCCESS )
+		{
+			membuf_destroy( &mb, C );
+			goto success;
+		}
+		
 		ret = sgsXPC_GetProcAddress( mb.ptr, SGS_LIB_ENTRY_POINT, (void**) &func );
 		if( ret == SGS_SUCCESS )
 		{
@@ -2977,21 +2989,13 @@ static int sgsstd_include( SGS_CTX )
 				goto success;
 			}
 		}
-		else if( ret != SGS_XPC_NOTLIB )
+		else
 		{
 			membuf_destroy( &mb, C );
 			return sgs_Msg( C, SGS_WARNING, "failed to load native module '%.*s'", fnsize, fnstr );
 		}
 		
-		sgs_PushString( C, mb.ptr );
-		sgs_PushString( C, " - include" );
-		sgs_StringConcat( C, 2 );
-		SGSFN( sgs_GetStringPtr( C, -1 ) );
-		ret = sgs_ExecFile( C, mb.ptr );
-		SGSFN( "include" );
 		membuf_destroy( &mb, C );
-		if( ret == SGS_SUCCESS )
-			goto success;
 	}
 	
 	sgs_Msg( C, SGS_WARNING, "could not load '%.*s'", fnsize, fnstr );

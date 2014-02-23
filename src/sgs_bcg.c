@@ -1016,11 +1016,7 @@ static SGSBOOL compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t
 		
 		/* return register positions for expected data */
 		if( out )
-		{
-			int xi = expect;
-			while( xi --> 0 )
-				out[ xi ] = argpos + xi;
-		}
+			*out = argpos;
 		
 		/* load function (for properties, object too) */
 		if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
