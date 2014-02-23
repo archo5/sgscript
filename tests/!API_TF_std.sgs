@@ -13,6 +13,63 @@ function customSort( a, b ){ return a - b + ( a % 2 - b % 2 ) * 5000; } // even 
 var mapping = [ 1, 3, 2, 5, 4 ];
 var arr2 = [ 1, 5, 7, 3, 9 ];
 
+	section( "conversions (to*)" );
+convars =
+[
+	null, 0, 573, 3.14, 0.001, true, false,
+	"", "abc..", "\0\0", "\0wat\0is\0this\0\0", print, section,
+	[], [1,2], {}, map(), class({},{}),
+];
+boolvars =
+[
+	false, false, true, true, true, true, false,
+	false, true, true, true, true, true,
+	false, true, false, false, true,
+];
+intvars =
+[
+	0, 0, 573, 3, 0, 1, 0,
+	0, 0, 0, 0, 0, 0,
+	0, 0, 0, 0, 0,
+];
+realvars =
+[
+	0.0, 0.0, 573.0, 3.14, 0.001, 1.0, 0.0,
+	0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+	0.0, 0.0, 0.0, 0.0, 0.0,
+];
+stringvars =
+[
+	"null", "0", "573", "3.14", "0.001", "true", "false",
+	"", "abc..", "\0\0", "\0wat\0is\0this\0\0", "C function", "function",
+	"[]", "[1,2]", "{}", "[map]{}", "class"
+];
+for( i = 0; i < convars.size; ++i )
+	testEqual( tobool( convars[i] ), boolvars[i], "tobool - variable #"$i );
+for( i = 0; i < convars.size; ++i )
+	testEqual( toint( convars[i] ), intvars[i], "toint - variable #"$i );
+for( i = 0; i < convars.size; ++i )
+	testEqual( toreal( convars[i] ), realvars[i], "toreal - variable #"$i );
+for( i = 0; i < convars.size; ++i )
+	testEqual( tostring( convars[i] ), stringvars[i], "tostring - variable #"$i );
+
+	section( "utility functions" );
+sstruct = {
+	"0" = null,
+	a = false, b = true,
+	c = 0, d = 12124, e = -89235,
+	f = 0.0, g = 12.346,
+	h = "", i = "abc..",
+	j = section,
+	k = [], l = [1,2,3],
+	m = { a = 1, b = 2 }, n = {},
+	o = map( 1, 2, 3, 4 ),
+};
+sstruct_string = "{0=null,a=false,b=true,c=0,d=12124,e=-89235,f=0,g=12.346,"
+	$"h=,i=abc..,j=function,k=array,l=array,m=dict,n=dict,o=map}";
+testEqual( typeof(serialize(sstruct)), "string", "serialize - no errors" );
+testEqual( ''$unserialize(serialize(sstruct)), sstruct_string, "(un)serialize - roundtrip" );
+
 	section( "array basic ops" );
 testEqual( clone(arr).insert(0,1,4)$'', '[1,4,9,3,6,2,8]', "insert at beginning" );
 testEqual( clone(arr).insert(-1,1,4)$'', '[9,3,6,2,8,1,4]', "insert at end" );

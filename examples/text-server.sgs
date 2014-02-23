@@ -5,10 +5,10 @@ function ee(){ return "(error: " $ string_trim( socket_error(true) ) $ ")"; }
 
 S = socket( PF_INET, SOCK_STREAM, IPPROTO_TCP );
 if( !S )
-	sys_print( SGS_ERROR, "Failed to create socket " $ ee() );
+	ERROR( "Failed to create socket " $ ee() );
 
 if( !S.bind_port( 8080 ) || !S.listen( 10 ) )
-	sys_print( SGS_ERROR, "Failed to configure socket " $ ee() );
+	ERROR( "Failed to configure socket " $ ee() );
 
 for(;;)
 {

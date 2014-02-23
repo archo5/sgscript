@@ -2816,7 +2816,7 @@ This library is loaded on initialization and contains the functions and constant
     function handler( type, msg )
     {
         if( string_find( msg, "not found" ) !== null )
-            sys_print( type, "nooooooooooo" );
+            sys_msg( type, "nooooooooooo" );
     }
     
     function handler2( type, msg )
@@ -2947,9 +2947,9 @@ This library is loaded on initialization and contains the functions and constant
     include "ext/a.sgs", "a.sgs";
 
 
-# sys_print [function]
+# sys_msg [function]
 
-== sys_print( int code, string message )
+== sys_msg( int code, string message )
 === passes a message to the internal messaging system (one that's commonly used to report errors and warnings)
 
 ! Different codes can be handled differently by the system. By default, SGS_ERROR code will stop execution and return to C code as soon as possible.
@@ -2963,7 +2963,7 @@ This library is loaded on initialization and contains the functions and constant
 === passes a message to the internal messaging system
 
 - the name of this function is written in all caps to avoid shadowing by a common variable name
-- works exactly like `sys_print( SGS_INFO, message )`
+- works exactly like `sys_msg( SGS_INFO, message )`
 
 
 # WARNING [function]
@@ -2972,7 +2972,7 @@ This library is loaded on initialization and contains the functions and constant
 === passes a message to the internal messaging system
 
 - the name of this function is written in all caps for consistency with the other two
-- works exactly like `sys_print( SGS_INFO, message )`
+- works exactly like `sys_msg( SGS_INFO, message )`
 
 
 # ERROR [function]
@@ -2983,7 +2983,7 @@ This library is loaded on initialization and contains the functions and constant
 ! By default, SGS_ERROR code (the one this function uses internally) will stop execution and return to C code as soon as possible.
 
 - the name of this function is written in all caps to avoid shadowing by a common variable name
-- works exactly like `sys_print( SGS_INFO, message )`
+- works exactly like `sys_msg( SGS_INFO, message )`
 
 
 # sys_abort [function]

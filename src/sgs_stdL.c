@@ -3857,7 +3857,7 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 		cnt = sgs_utf8_encode( (uint32_t) cp, tmp );
 		if( !cnt )
 		{
-			strcpy( tmp, SGS_UNICODE_INVCHAR_STR );
+			memcpy( tmp, SGS_UNICODE_INVCHAR_STR, SGS_UNICODE_INVCHAR_LEN );
 			cnt = SGS_UNICODE_INVCHAR_LEN;
 		}
 		/* WP: pointless */

@@ -853,13 +853,19 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 				break;
 			}
 			_STACK_PROTECT;
-			ret = O->iface->convert( C, O, SVT_STRING );
+			if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
+				ret = SGS_EINPROC;
+			else
+			{
+				C->sf_count++;
+				ret = O->iface->convert( C, O, SVT_STRING );
+				C->sf_count--;
+			}
 			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_STRING )
 			{
 				*out = *stk_gettop( C );
-				out->data.S->refcount++; /* HACK TO PREVENT PREMATURE FREE */
+				out->data.S->refcount++; /* cancel release from stack to transfer successfully */
 				_STACK_UNPROTECT;
-				out->data.S->refcount--;
 			}
 			else
 			{
@@ -925,51 +931,65 @@ static void vm_convert_ptr( SGS_CTX, sgs_Variable* var )
 }
 
 
+#define CI stk_getpos( C, item )
 static void vm_convert_stack_bool( SGS_CTX, StkIdx item )
 {
-	if( stk_getpos( C, item )->type != SVT_BOOL )
-		var_setbool( C, stk_getpos( C, item ), var_getbool( C, stk_getpos( C, item ) ) );
+	if( CI->type != SVT_BOOL )
+	{
+		sgs_Bool v = var_getbool( C, CI );
+		var_setbool( C, CI, v );
+	}
 }
 
 static void vm_convert_stack_int( SGS_CTX, StkIdx item )
 {
-	if( stk_getpos( C, item )->type != SVT_INT )
-		var_setint( C, stk_getpos( C, item ), var_getint( C, stk_getpos( C, item ) ) );
+	if( CI->type != SVT_INT )
+	{
+		sgs_Int v = var_getint( C, CI );
+		var_setint( C, CI, v );
+	}
 }
 
 static void vm_convert_stack_real( SGS_CTX, StkIdx item )
 {
-	if( stk_getpos( C, item )->type != SVT_REAL )
-		var_setreal( C, stk_getpos( C, item ), var_getreal( C, stk_getpos( C, item ) ) );
+	if( CI->type != SVT_REAL )
+	{
+		sgs_Real v = var_getreal( C, CI );
+		var_setreal( C, CI, v );
+	}
 }
 
 static void vm_convert_stack_string( SGS_CTX, StkIdx item )
 {
 	sgs_Variable out;
-	if( sgs_ItemType( C, item ) == SVT_STRING )
+	if( CI->type == SVT_STRING )
 		return;
-	init_var_string( C, &out, stk_getpos( C, item ) );
+	init_var_string( C, &out, CI );
 	stk_setvar_leave( C, item, &out );
 }
 
 static void vm_convert_stack_ptr( SGS_CTX, StkIdx item )
 {
-	if( stk_getpos( C, item )->type != SVT_PTR )
-		var_setptr( C, stk_getpos( C, item ), var_getptr( C, stk_getpos( C, item ) ) );
+	if( CI->type != SVT_PTR )
+	{
+		void* v = var_getptr( C, CI );
+		var_setptr( C, CI, v );
+	}
 }
+#undef CI
 
 
 /*
 	VM mutation
 */
 
-static SGSRESULT vm_gettype( SGS_CTX )
+static SGSRESULT vm_gettype( SGS_CTX, StkIdx item )
 {
 	const char* ty = "ERROR";
 	sgs_Variable* A;
-	if( sgs_StackSize( C ) <= 0 )
-		return SGS_EINPROC;
-	A = stk_gettop( C );
+	if( !sgs_IsValidIndex( C, item ) )
+		return SGS_EBOUNDS;
+	A = stk_getpos( C, item );
 	
 	switch( A->type )
 	{
@@ -996,7 +1016,7 @@ static SGSRESULT vm_gettype( SGS_CTX )
 				}
 				_STACK_UNPROTECT;
 			}
-			ty = A->data.O->iface->name ? A->data.O->iface->name : "object";
+			ty = O->iface->name ? O->iface->name : "object";
 		}
 		break;
 	case SVT_PTR:    ty = "pointer"; break;
@@ -3611,9 +3631,9 @@ SGSRESULT sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect )
 	return ret;
 }
 
-SGSRESULT sgs_TypeOf( SGS_CTX )
+SGSRESULT sgs_TypeOf( SGS_CTX, StkIdx item )
 {
-	return vm_gettype( C );
+	return vm_gettype( C, item );
 }
 
 SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
@@ -4259,7 +4279,7 @@ char* sgs_ToStringBufFastP( SGS_CTX, sgs_Variable* var, sgs_SizeVal* outsize )
 	if( var->type == SVT_OBJECT )
 	{
 		sgs_PushVariable( C, var );
-		sgs_TypeOf( C );
+		sgs_TypeOf( C, -1 );
 		sgs_StoreVariable( C, var );
 		stk_pop1( C );
 	}
@@ -4462,7 +4482,7 @@ char* sgs_ToStringBufFast( SGS_CTX, StkIdx item, sgs_SizeVal* outsize )
 	{
 		StkIdx g = stk_absindex( C, item );
 		stk_push( C, stk_getlpos( C, g ) );
-		sgs_TypeOf( C );
+		sgs_TypeOf( C, -1 );
 		stk_setlvar( C, g, stk_getpos( C, -1 ) );
 		stk_pop2( C );
 	}

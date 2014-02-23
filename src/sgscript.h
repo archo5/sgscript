@@ -589,7 +589,7 @@ SGS_APIFUNC SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis );
 #define sgs_Call( C, args, expect ) sgs_FCall( C, args, expect, 0 )
 #define sgs_ThisCall( C, args, expect ) sgs_FCall( C, args, expect, 1 )
 SGS_APIFUNC SGSRESULT sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );
-SGS_APIFUNC SGSRESULT sgs_TypeOf( SGS_CTX );
+SGS_APIFUNC SGSRESULT sgs_TypeOf( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth );
 SGS_APIFUNC SGSRESULT sgs_GCExecute( SGS_CTX );
 
