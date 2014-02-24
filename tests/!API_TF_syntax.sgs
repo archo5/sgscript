@@ -5,7 +5,16 @@ global tests_failed, tests_ran;
 //
 function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
 print( "\n\n-- SYNTAX --\n" );
+include "string";
 //
+
+function str2ias( str )
+{
+	out = [];
+	for( i = 0; i < str.length; ++i )
+		out.push( string_charcode( str[ i ] ) );
+	return tostring( out );
+}
 
 	section( "integer constants" );
 testEqual( eval( "return tostring(1234567890);" ), "1234567890", "long integer" );
@@ -28,6 +37,26 @@ testEqual( eval( "return 0.1e+  ;" ), 0.1, "incomplete but valid exp real with s
 testEqual( eval( "return 0.1e  ;" ), 0.1, "incomplete but valid exp real with space 2" );
 testEqual( eval( "return 0.1e+;" ), 0.1, "incomplete but valid exp real" );
 testEqual( eval( "return 0.1e;" ), 0.1, "incomplete but valid exp real 2" );
+
+	section( "string constants" );
+testEqual( eval( "return str2ias('\\0');" ), "[0]", "oct - 1 char - valid (0)" );
+testEqual( eval( "return str2ias('\\7');" ), "[7]", "oct - 1 char - valid (7)" );
+testEqual( eval( "return str2ias('\\77');" ), "[63]", "oct - 2 chars - valid (77)" );
+testEqual( eval( "return str2ias('\\777');" ), "[31,255]", "oct - 3 chars - valid (777)" );
+testEqual( eval( "return str2ias('\\7777');" ), "[31,255,55]", "oct - 3 chars - valid (777) + char 7" );
+testEqual( eval( "return str2ias('\\x0');" ), "[120,48]", "hex - 1 char - valid, broken hex (0)" );
+testEqual( eval( "return str2ias('\\x00');" ), "[0]", "hex - 2 chars - valid (00)" );
+testEqual( eval( "return str2ias('\\x000');" ), "[0,48]", "hex - 3 chars - valid, broken hex (000)" );
+testEqual( eval( "return str2ias('\\x0000');" ), "[0,0]", "hex - 4 chars - valid (0000)" );
+testEqual( eval( "return str2ias('\\x00000');" ), "[0,0,48]", "hex - 5 chars - valid, broken hex (00000)" );
+testEqual( eval( "return str2ias('\\a\\b\\f\\n\\r\\t\\v\\\\\\'\\\"');" ),
+	"[7,8,12,10,13,9,11,92,39,34]", "escaped characters" );
+
+	section( "keywords" );
+keywords = ["var","global","null","true","false","if","else","do","while",
+	"for","foreach","break","continue","function","use","return","this"];
+foreach( kw : keywords )
+	testEqual( eval( kw$"=5;" ), null, "recognized keyword '"$kw$"' as wrong for left side of assignment" );
 
 
 //
