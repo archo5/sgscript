@@ -1,0 +1,35 @@
+
+global ERRORS;
+global tests_failed, tests_ran;
+
+//
+function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
+print( "\n\n-- SYNTAX --\n" );
+//
+
+	section( "integer constants" );
+testEqual( eval( "return tostring(1234567890);" ), "1234567890", "long integer" );
+testEqual( eval( "return tostring(-1234567890);" ), "-1234567890", "long negative integer" );
+testEqual( eval( "return tostring(00000000001);" ), "1", "0-pfx decimal number" );
+testEqual( eval( "return tostring(13489de2984);" ), null, "invalid decimal number" );
+testEqual( eval( "return tostring(0b001011012);" ), null, "invalid binary number" );
+testEqual( eval( "return tostring(0b001de1010);" ), null, "invalid binary number 2" );
+testEqual( eval( "return tostring(0o014367438);" ), null, "invalid octal number" );
+testEqual( eval( "return tostring(0o21405ef12);" ), null, "invalid octal number 2" );
+testEqual( eval( "return tostring(0xdcbABCD);" ), "231451597", "multicap hex number" );
+testEqual( eval( "return tostring(0xx0123);" ), null, "invalid hex number" );
+testEqual( eval( "return tostring(0q0);" ), null, "invalid number type char" );
+
+	section( "real constants" );
+testEqual( eval( "return toint(1.0);" ), 1, "basic real" );
+testEqual( eval( "return toint(1e+1);" ), 10, "exp real" );
+testEqual( eval( "return toint(0.0001e+13);" ), 1000000000, "exp real 2" );
+testEqual( eval( "return 0.1e+  ;" ), 0.1, "incomplete but valid exp real with space" );
+testEqual( eval( "return 0.1e  ;" ), 0.1, "incomplete but valid exp real with space 2" );
+testEqual( eval( "return 0.1e+;" ), 0.1, "incomplete but valid exp real" );
+testEqual( eval( "return 0.1e;" ), 0.1, "incomplete but valid exp real 2" );
+
+
+//
+print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );
+//
