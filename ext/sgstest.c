@@ -291,6 +291,7 @@ __cdecl
 #endif
 main( int argc, char** argv )
 {
+	setvbuf( stdout, NULL, _IONBF, 0 );
 	printf( "\n//\n/// SGScript test framework\n//\n" );
 
 	if( argc > 1 )

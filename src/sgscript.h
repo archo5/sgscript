@@ -99,6 +99,7 @@ struct _sgs_StackFrame
 	sgs_StackFrame* next;
 	sgs_StackFrame* cached;
 	uint8_t argcount;
+	uint8_t inexp;
 	uint8_t expected;
 	uint8_t flags;
 };

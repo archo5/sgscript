@@ -2500,6 +2500,29 @@ static int sgsstd_srand( SGS_CTX )
 
 /* internal utils */
 
+static int sgsstd_va_get_args( SGS_CTX )
+{
+	sgs_StackFrame* sf;
+	SGSFN( "va_get_args" );
+	if( !C->sf_last || !C->sf_last->prev )
+		STDLIB_WARN( "not called from function" )
+	sf = C->sf_last->prev;
+	
+	/* TODO */
+	sgs_PushArray( C, 0 );
+	return 1;
+}
+
+static int sgsstd_va_arg_count( SGS_CTX )
+{
+	SGSFN( "va_get_args" );
+	if( !C->sf_last || !C->sf_last->prev )
+		STDLIB_WARN( "not called from function" )
+	sgs_PushInt( C, C->sf_last->prev->argcount );
+	return 1;
+}
+
+
 struct pcall_printinfo
 {
 	sgs_MsgFunc pfn;
@@ -3404,6 +3427,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* utils */
 	FN( rand ), FN( randf ), FN( srand ),
 	/* internal utils */
+	FN( va_get_args ), FN( va_arg_count ),
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
 	FN( pcall ), FN( assert ),
 	FN( eval ), FN( eval_file ), FN( compile_sgs ),

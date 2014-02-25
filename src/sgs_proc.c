@@ -547,6 +547,30 @@ static void stk_pop2( SGS_CTX )
 	VAR_RELEASE( C->stack_top + 1 );
 }
 
+static void varr_reverse( sgs_Variable* beg, sgs_Variable* end )
+{
+	sgs_Variable tmp;
+	end--;
+	while( beg < end )
+	{
+		tmp = *beg;
+		*beg = *end;
+		*end = tmp;
+		beg++;
+		end--;
+	}
+}
+
+static void stk_transpose( SGS_CTX, StkIdx first, StkIdx all )
+{
+	/* assuming:
+		- first >= 0 (1+)
+		- all > first (implies all > 1 -- 2+)
+	*/
+	varr_reverse( C->stack_top - all, C->stack_top - all + first );
+	varr_reverse( C->stack_top - all, C->stack_top );
+}
+
 
 /*
 	The Closure Stack
@@ -1991,6 +2015,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 	{
 		/* WP: argument count limit */
 		C->sf_last->argcount = (uint8_t) args;
+		C->sf_last->inexp = (uint8_t) args;
 		/* WP: returned value count limit */
 		C->sf_last->expected = (uint8_t) expect;
 		C->sf_last->flags = gotthis ? SGS_SF_METHOD : 0;
@@ -2016,12 +2041,18 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 			func_t* F = func->data.F;
 			int stkargs = args + ( F->gotthis && gotthis );
 			int expargs = F->numargs + F->gotthis;
+			
+			C->sf_last->inexp = F->numargs;
+			
 			/* add flag to specify presence of "this" */
 			if( F->gotthis )
 				C->sf_last->flags |= SGS_SF_HASTHIS;
 			/* fix argument stack */
 			if( stkargs > expargs )
-				stk_pop( C, stkargs - expargs );
+			{
+				stk_transpose( C, expargs, stkargs );
+				C->stack_off += stkargs - expargs;
+			}
 			else
 				stk_push_nulls( C, expargs - stkargs );
 			/* if <this> was expected but wasn't properly passed, insert a NULL in its place */

@@ -56,7 +56,7 @@ testEqual( eval( "return str2ias('\\a\\b\\f\\n\\r\\t\\v\\\\\\'\\\"');" ),
 keywords = ["var","global","null","true","false","if","else","do","while",
 	"for","foreach","break","continue","function","use","return","this"];
 foreach( kw : keywords )
-	testEqual( eval( kw$"=5;" ), null, "recognized keyword '"$kw$"' as wrong for left side of assignment" );
+	testEqual( eval( "("$kw$")=5;" ), null, "recognized keyword '"$kw$"' as wrong for left side of assignment" );
 
 
 //
