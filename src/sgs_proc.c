@@ -1112,6 +1112,7 @@ int sgs_specfn_apply( SGS_CTX )
 			"three arguments expected (function, this, args)" );
 	}
 	
+	sgs_PushItem( C, 1 );
 	for( i = 0; i < asize; ++i )
 		sgs_PushNumIndex( C, 2, i );
 	sgs_PushItem( C, 0 );
@@ -2013,7 +2014,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 	
 	if( allowed )
 	{
-		C->sf_last->argbeg = C->stack_off - C->stack_base;
+		C->sf_last->argbeg = stkcallbase;
 		C->sf_last->argend = C->stack_top - C->stack_base;
 		/* WP: argument count limit */
 		C->sf_last->argcount = (uint8_t) args;
