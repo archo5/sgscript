@@ -2502,20 +2502,31 @@ static int sgsstd_srand( SGS_CTX )
 
 static int sgsstd_va_get_args( SGS_CTX )
 {
+	uint8_t i, xac;
 	sgs_StackFrame* sf;
 	SGSFN( "va_get_args" );
 	if( !C->sf_last || !C->sf_last->prev )
 		STDLIB_WARN( "not called from function" )
 	sf = C->sf_last->prev;
+	/* WP: argument count limit */
 	
-	/* TODO */
-	sgs_PushArray( C, 0 );
+	/* accepted arguments */
+	for( i = 0; i < sf->inexp; ++i )
+		sgs_PushVariable( C, C->stack_base + sf->argend - sf->inexp + i );
+	/* extra arguments */
+	if( sf->argcount > sf->inexp )
+	{
+		xac = (uint8_t)( sf->argcount - sf->inexp );
+		for( i = 0; i < xac; ++i )
+			sgs_PushVariable( C, C->stack_base + sf->argbeg + xac - 1 - i );
+	}
+	sgs_PushArray( C, sf->argcount );
 	return 1;
 }
 
 static int sgsstd_va_arg_count( SGS_CTX )
 {
-	SGSFN( "va_get_args" );
+	SGSFN( "va_arg_count" );
 	if( !C->sf_last || !C->sf_last->prev )
 		STDLIB_WARN( "not called from function" )
 	sgs_PushInt( C, C->sf_last->prev->argcount );

@@ -2013,6 +2013,8 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 	
 	if( allowed )
 	{
+		C->sf_last->argbeg = C->stack_off - C->stack_base;
+		C->sf_last->argend = C->stack_top - C->stack_base;
 		/* WP: argument count limit */
 		C->sf_last->argcount = (uint8_t) args;
 		C->sf_last->inexp = (uint8_t) args;

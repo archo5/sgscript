@@ -98,6 +98,8 @@ struct _sgs_StackFrame
 	sgs_StackFrame* prev;
 	sgs_StackFrame* next;
 	sgs_StackFrame* cached;
+	sgs_StkIdx argbeg;
+	sgs_StkIdx argend;
 	uint8_t argcount;
 	uint8_t inexp;
 	uint8_t expected;
