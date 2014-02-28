@@ -2711,7 +2711,7 @@ static int sgsstd_compile_sgs( SGS_CTX )
 		sgs_PushNull( C );
 	else
 	{
-		if( outsize > 0x7fffffff )
+		if( outsize <= 0x7fffffff )
 			sgs_PushStringBuf( C, outbuf, (sgs_SizeVal) outsize );
 		else
 		{
