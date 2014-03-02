@@ -29,14 +29,11 @@ function E( txt ){ println( txt ); }
 function sgs_isconstarg( arg ){ return arg & 0x100 != 0; }
 function sgs_getconstarg( arg ){ return arg & 0xff; }
 function sgs_srcptr( arg ){ return if( sgs_isconstarg( arg ), "CN+" $ sgs_getconstarg( arg ), "T+" $ arg ); }
-function sgs_e2off( arg ){ arg &= 0xffff; if( arg > 0x7fff ) arg -= 0xffff; return arg; }
+function sgs_e2off( arg ){ arg &= 0xffff; if( arg > 0x7fff ) arg -= 0x10000; return arg; }
 
 ///////////////////////////////////////////////////////////
 
-global c_header = "
-#include <sgscript.h>
-
-";
+global c_header = "#include <sgscript.h>\n";
 
 function c_func_wrapper( fdata, fname )
 {
@@ -117,9 +114,7 @@ function c_compile_initop( R, what, count )
 
 function c_compile_func_inner( fdata )
 {
-	lastreturn = false;
-	
-	output = "";
+	output = "\nint ret = 0;";
 	if( fdata.numtmp )
 		output $= "\nsgs_Variable T[ " $ fdata.numtmp $ " ];";
 	if( fdata.consts.size )
@@ -144,7 +139,7 @@ function c_compile_func_inner( fdata )
 				", \"" $ c_safe_str( cn.data ) $ "\", " $ cn.data.length $ " );";
 		}
 		else if( ty == VT_FUNC )
-			output $= "\n// (TODO FUNC CONSTANT) " $ cn.data.name;
+			output $= "\nsgs_InitCFunction( CN+" $ i $ ", " $ cn.data.name $ " );";
 	}
 	
 	// walk all instructions to get all jump positions
@@ -164,7 +159,6 @@ function c_compile_func_inner( fdata )
 			output $= c_compile_label( op_pos );
 		
 		output $= "\n// " $ meta_opname( op.op );
-		lastreturn = false;
 		
 		if(0);
 		
@@ -177,8 +171,7 @@ function c_compile_func_inner( fdata )
 		// FLOW CONTROL
 		else if( op.op == SI_RETN )
 		{
-			output $= "\nreturn " $ op.a $ ";";
-			lastreturn = true;
+			output $= "\nret = " $ op.a $ ";\ngoto _ret;";
 		}
 		else if( op.op == SI_JUMP )
 		{
@@ -334,15 +327,16 @@ function c_compile_func_inner( fdata )
 	
 	op_pos = fdata.code.size;
 	if( isset( jumppos, op_pos ) )
-	{
 		output $= c_compile_label( op_pos );
-		lastreturn = false;
-	}
 	
 	output $= "\n// ---";
 	
-	if( !lastreturn )
-		output $= "\nreturn 0;";
+	output $= "\n_ret:";
+	for( i = 0; i < fdata.numtmp; ++i )
+		output $= "\nsgs_Release( C, T+" $ i $ " );";
+	foreach( i, : fdata.consts )
+		output $= "\nsgs_Release( C, CN+" $ i $ " );";
+	output $= "\nreturn ret;";
 	
 	return output;
 }

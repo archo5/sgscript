@@ -3014,10 +3014,10 @@ static int sgsstd_include( SGS_CTX )
 		}
 		
 		ret = sgsXPC_GetProcAddress( mb.ptr, SGS_LIB_ENTRY_POINT, (void**) &func );
-		if( ret == SGS_SUCCESS )
+		if( SGS_SUCCEEDED( ret ) )
 		{
 			ret = func( C );
-			if( ret == SGS_SUCCESS )
+			if( SGS_SUCCEEDED( ret ) )
 			{
 				membuf_destroy( &mb, C );
 				goto success;
