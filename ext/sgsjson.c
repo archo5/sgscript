@@ -504,10 +504,7 @@ static int json_encode( SGS_CTX )
 #ifdef __cplusplus
 extern "C"
 #endif
-#ifdef WIN32
-__declspec(dllexport)
-#endif
-int json_module_entry_point( SGS_CTX )
+SGS_APIFUNC int json_module_entry_point( SGS_CTX )
 {
 	sgs_PushCFunction( C, json_decode );
 	sgs_StoreGlobal( C, "json_decode" );

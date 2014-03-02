@@ -519,6 +519,10 @@ SGS_APIFUNC SGSRESULT sgs_StoreIndexIP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* i
 SGS_APIFUNC SGSRESULT sgs_StoreIndexPI( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, int isprop );
 SGS_APIFUNC SGSRESULT sgs_StoreIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, int isprop );
 
+/* raw & simplified global access */
+SGS_APIFUNC SGSRESULT sgs_GetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* out );
+SGS_APIFUNC SGSRESULT sgs_SetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* val );
+
 /* special case sub-variable access */
 SGS_APIFUNC SGSRESULT sgs_PushProperty( SGS_CTX, sgs_StkIdx obj, const char* name );
 SGS_APIFUNC SGSRESULT sgs_StoreProperty( SGS_CTX, sgs_StkIdx obj, const char* name );

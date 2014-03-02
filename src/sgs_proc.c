@@ -2946,6 +2946,19 @@ SGSRESULT sgs_StoreIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, int isprop 
 }
 
 
+SGSRESULT sgs_GetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* out )
+{
+	sgs_Variable vO; vO.type = SVT_OBJECT; vO.data.O = C->_G;
+	return sgs_GetIndexPPP( C, &vO, idx, out, 0 );
+}
+
+SGSRESULT sgs_SetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
+{
+	sgs_Variable vO; vO.type = SVT_OBJECT; vO.data.O = C->_G;
+	return sgs_SetIndexPPP( C, &vO, idx, val, 0 );
+}
+
+
 SGSRESULT sgs_PushProperty( SGS_CTX, sgs_StkIdx obj, const char* name )
 {
 	int ret;
