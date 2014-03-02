@@ -82,9 +82,9 @@ function c_compile_arith( R, A, B, type )
 function c_compile_binop( R, A, B, op )
 {
 	getA = "sgs_GetIntP( C, " $ sgs_srcptr( A ) $ " )";
-	return "\nsgs_Release( C, T+" $ R $ " );"
-		$ "\nsgs_InitInt( T+" $ R $ ", " $ if( B === null, op $ getA,
-		getA $ " " $ op $ " sgs_GetIntP( C, " $ sgs_srcptr( B ) $ " )" ) $ " );";
+	return "\n{ sgs_Int V = " $ if( B === null, op $ getA,
+		getA $ " " $ op $ " sgs_GetIntP( C, " $ sgs_srcptr( B ) $ " )" ) $ ";"
+		$ "\nsgs_Release( C, T+" $ R $ " ); sgs_InitInt( T+" $ R $ ", V ); }";
 }
 
 function c_compile_comparison( R, A, B, sign )
@@ -96,13 +96,13 @@ function c_compile_comparison( R, A, B, sign )
 		strict = true;
 		dsv = if( sign == "==", "0", "1" );
 	}
-	out = "\nsgs_Release( C, T+" $ R $ " );"
-		$ "\nsgs_InitBool( T+" $ R $ ", ";
 	spA = sgs_srcptr( A );
 	spB = sgs_srcptr( B );
+	out = "\n{ int V = ";
 	if( strict )
 		out $= "!sgs_EqualTypes( " $ spA $ ", " $ spB $ " ) ? " $ dsv $ " : ";
-	out $= "(sgs_Compare( C, " $ spA $ ", " $ spB $ " ) " $ sign $ " 0) );";
+	out $= "(sgs_Compare( C, " $ spA $ ", " $ spB $ " ) " $ sign $ " 0);";
+	out $= "\nsgs_Release( C, T+" $ R $ " ); sgs_InitBool( T+" $ R $ ", V ); }";
 	return out;
 }
 
@@ -120,6 +120,9 @@ function c_compile_func_inner( fdata )
 		output $= "\nsgs_Variable T[ " $ fdata.numargs + fdata.numtmp $ " ];";
 	if( fdata.consts.size )
 		output $= "\nsgs_Variable CN[ " $ fdata.consts.size $ " ];";
+	
+	if( fdata.gotthis )
+		output $= "\nsgs_Method( C );";
 	
 	for( i = 0; i < fdata.numargs; ++i )
 		output $= "\nsgs_PushItem( C, " $ i $ " );\nsgs_StoreVariable( C, T+" $ i $ " );";
@@ -216,16 +219,40 @@ function c_compile_func_inner( fdata )
 		// ITERATORS
 		else if( op.op == SI_FORPREP )
 		{
-			output $= "\nsgs_Release( C, T+" $ op.a $ " );";
-			output $= "\nsgs_GetIteratorP( C, " $ sgs_srcptr( op.b ) $ ", T+" $ op.a $ " );";
+			if( op.a == op.b )
+			{
+				output $= "\n{ sgs_Variable V = T[" $ op.a $ "];"
+					$ "\nsgs_GetIteratorP( C, " $ sgs_srcptr( op.b ) $ ", T+" $ op.a $ " );"
+					$ "\nsgs_Release( C, &V ); }";
+			}
+			else
+			{
+				output $= "\nsgs_Release( C, T+" $ op.a $ " );"
+					$ "\nsgs_GetIteratorP( C, " $ sgs_srcptr( op.b ) $ ", T+" $ op.a $ " );";
+			}
 		}
 		else if( op.op == SI_FORLOAD )
 		{
-			if( op.b & 0xff == op.b ) output $= "\nsgs_Release( C, T+" $ op.b $ " );";
-			if( op.c & 0xff == op.c ) output $= "\nsgs_Release( C, T+" $ op.c $ " );";
-			output $= "\nsgs_IterGetDataP( C, " $ sgs_srcptr( op.a ) $ ", "
-				$ if( op.b & 0xff == op.b, "T+" $ op.b, "NULL" ) $ ", "
-				$ if( op.c & 0xff == op.c, "T+" $ op.c, "NULL" ) $ " );";
+			if( op.a == op.b || op.a == op.c )
+			{
+				output $= "\n{";
+				if( op.b & 0xff == op.b ) output $= " sgs_Variable VB = T[" $ op.b $ "];";
+				if( op.c & 0xff == op.c ) output $= " sgs_Variable VC = T[" $ op.c $ "];";
+				output $= "\nsgs_IterGetDataP( C, " $ sgs_srcptr( op.a ) $ ", "
+					$ if( op.b & 0xff == op.b, "T+" $ op.b, "NULL" ) $ ", "
+					$ if( op.c & 0xff == op.c, "T+" $ op.c, "NULL" ) $ " );";
+				if( op.b & 0xff == op.b ) output $= "sgs_Release( C, &VB ); ";
+				if( op.c & 0xff == op.c ) output $= "sgs_Release( C, &VC ); ";
+				output $= "}";
+			}
+			else
+			{
+				if( op.b & 0xff == op.b ) output $= "\nsgs_Release( C, T+" $ op.b $ " );";
+				if( op.c & 0xff == op.c ) output $= "\nsgs_Release( C, T+" $ op.c $ " );";
+				output $= "\nsgs_IterGetDataP( C, " $ sgs_srcptr( op.a ) $ ", "
+					$ if( op.b & 0xff == op.b, "T+" $ op.b, "NULL" ) $ ", "
+					$ if( op.c & 0xff == op.c, "T+" $ op.c, "NULL" ) $ " );";
+			}
 		}
 		else if( op.op == SI_FORJUMP )
 		{
@@ -240,8 +267,17 @@ function c_compile_func_inner( fdata )
 		}
 		else if( op.op == SI_GETVAR )
 		{
-			output $= "\nsgs_Release( C, T+" $ op.a $ " );"
-				$ "\nsgs_GetGlobalPP( C, " $ sgs_srcptr( op.b ) $ ", T+" $ op.a $ " );";
+			if( op.a == op.b )
+			{
+				output $= "\n{ sgs_Variable V = T[" $ op.a $ "];"
+					$ "\nsgs_GetGlobalPP( C, " $ sgs_srcptr( op.b ) $ ", T+" $ op.a $ " );"
+					$ "\nsgs_Release( C, &V ); }";
+			}
+			else
+			{
+				output $= "\nsgs_Release( C, T+" $ op.a $ " );"
+					$ "\nsgs_GetGlobalPP( C, " $ sgs_srcptr( op.b ) $ ", T+" $ op.a $ " );";
+			}
 		}
 		else if( op.op == SI_SETVAR )
 		{
@@ -249,9 +285,19 @@ function c_compile_func_inner( fdata )
 		}
 		else if( op.op == SI_GETPROP )
 		{
-			output $= "\nsgs_Release( C, T+" $ op.a $ " );"
-				$ "\nsgs_GetIndexPPP( C, " $ sgs_srcptr( op.b ) $ ", "
-				$ sgs_srcptr( op.c ) $ ", T+" $ op.a $ ", 1 );";
+			if( op.a == op.b || op.a == op.c )
+			{
+				output $= "\n{ sgs_Variable V = T[" $ op.a $ "];"
+					$ "\nsgs_GetIndexPPP( C, " $ sgs_srcptr( op.b ) $ ", "
+					$ sgs_srcptr( op.c ) $ ", T+" $ op.a $ ", 1 );"
+					$ "\nsgs_Release( C, &V ); }";
+			}
+			else
+			{
+				output $= "\nsgs_Release( C, T+" $ op.a $ " );"
+					$ "\nsgs_GetIndexPPP( C, " $ sgs_srcptr( op.b ) $ ", "
+					$ sgs_srcptr( op.c ) $ ", T+" $ op.a $ ", 1 );";
+			}
 		}
 		else if( op.op == SI_SETPROP )
 		{
@@ -260,9 +306,19 @@ function c_compile_func_inner( fdata )
 		}
 		else if( op.op == SI_GETINDEX )
 		{
-			output $= "\nsgs_Release( C, T+" $ op.a $ " );"
-				$ "\nsgs_GetIndexPPP( C, " $ sgs_srcptr( op.b ) $ ", "
-				$ sgs_srcptr( op.c ) $ ", T+" $ op.a $ ", 0 );";
+			if( op.a == op.b || op.a == op.c )
+			{
+				output $= "\n{ sgs_Variable V = T[" $ op.a $ "];"
+					$ "\nsgs_GetIndexPPP( C, " $ sgs_srcptr( op.b ) $ ", "
+					$ sgs_srcptr( op.c ) $ ", T+" $ op.a $ ", 0 );"
+					$ "\nsgs_Release( C, &V ); }";
+			}
+			else
+			{
+				output $= "\nsgs_Release( C, T+" $ op.a $ " );"
+					$ "\nsgs_GetIndexPPP( C, " $ sgs_srcptr( op.b ) $ ", "
+					$ sgs_srcptr( op.c ) $ ", T+" $ op.a $ ", 0 );";
+			}
 		}
 		else if( op.op == SI_SETINDEX )
 		{
@@ -271,6 +327,7 @@ function c_compile_func_inner( fdata )
 		}
 		
 		// CLOSURES
+		// -- TODO --
 		
 		// SPECIAL OPERATORS
 		else if( op.op == SI_SET )
@@ -285,16 +342,16 @@ function c_compile_func_inner( fdata )
 		}
 		else if( op.op == SI_CONCAT )
 		{
-			output $= "\nsgs_Release( C, T+" $ op.a $ " );"
-				$ "\nsgs_PushVariable( C, " $ sgs_srcptr( op.b ) $ " );"
+			output $= "\nsgs_PushVariable( C, " $ sgs_srcptr( op.b ) $ " );"
 				$ "\nsgs_PushVariable( C, " $ sgs_srcptr( op.c ) $ " );"
+				$ "\nsgs_Release( C, T+" $ op.a $ " );"
 				$ "\nsgs_StringConcat( C, 2 );\nsgs_StoreVariable( C, T+" $ op.a $ " );";
 		}
 		else if( op.op == SI_NEGATE ) output $= c_compile_arith( op.a, op.b, null, "NEGATE" );
 		else if( op.op == SI_BOOL_INV )
 		{
-			output $= "\nsgs_Release( C, T+" $ op.a $ " );"
-				$ "\nsgs_InitBool( T+" $ op.a $ ", !sgs_GetBoolP( C, " $ sgs_srcptr( op.b ) $ " ) );";
+			output $= "\n{ int V = !sgs_GetBoolP( C, " $ sgs_srcptr( op.b ) $ " );"
+				$ "\nsgs_Release( C, T+" $ op.a $ " ); sgs_InitBool( T+" $ op.a $ ", V ); }";
 		}
 		else if( op.op == SI_INVERT ) output $= c_compile_binop( op.a, op.b, null, "~" );
 		
