@@ -1578,18 +1578,19 @@ static void vm_op_invert( SGS_CTX, int16_t out, sgs_Variable *A )
 	var_setint( C, C->stack_off + out, val );
 }
 
-
-#define VAR_MOP( pfx, op ) \
-static void vm_op_##pfx( SGS_CTX, sgs_VarPtr out, sgs_Variable *A ) { \
-	switch( A->type ){ \
-		case SVT_INT: var_setint( C, out, A->data.I op ); break; \
-		case SVT_REAL: var_setreal( C, out, A->data.R op ); break; \
-		default: var_setnull( C, out ); \
-			sgs_Msg( C, SGS_ERROR, "Cannot " #pfx "rement non-numeric variables!" ); break; \
-	} }
-
-VAR_MOP( inc, +1 )
-VAR_MOP( dec, -1 )
+static SGSRESULT vm_op_incdec( SGS_CTX, sgs_VarPtr out, sgs_Variable *A, int diff )
+{
+	switch( A->type )
+	{
+	case SVT_INT: var_setint( C, out, A->data.I + diff ); break;
+	case SVT_REAL: var_setreal( C, out, A->data.R + diff ); break;
+	default:
+		var_setnull( C, out );
+		sgs_Msg( C, SGS_ERROR, "Cannot %screment non-numeric variables!", diff > 0 ? "in" : "de" );
+		return SGS_EINVAL;
+	}
+	return SGS_SUCCESS;
+}
 
 
 #define ARITH_OP_ADD	SGS_EOP_ADD
@@ -1597,38 +1598,36 @@ VAR_MOP( dec, -1 )
 #define ARITH_OP_MUL	SGS_EOP_MUL
 #define ARITH_OP_DIV	SGS_EOP_DIV
 #define ARITH_OP_MOD	SGS_EOP_MOD
-static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, uint8_t op )
+static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, int op )
 {
 	if( a->type == SVT_REAL && b->type == SVT_REAL )
 	{
 		sgs_Real A = a->data.R, B = b->data.R, R;
 		switch( op ){
-			/*
 			case ARITH_OP_ADD: R = A + B; break;
 			case ARITH_OP_SUB: R = A - B; break;
 			case ARITH_OP_MUL: R = A * B; break;
-			*/
 			case ARITH_OP_DIV: if( B == 0 ) goto div0err; R = A / B; break;
 			case ARITH_OP_MOD: if( B == 0 ) goto div0err; R = fmod( A, B ); break;
 			default: R = 0; break;
 		}
 		var_setreal( C, out, R );
-		return;
+		return SGS_SUCCESS;
 	}
 	if( a->type == SVT_INT && b->type == SVT_INT )
 	{
-		sgs_Int A = a->data.I, B = b->data.I;
+		sgs_Int A = a->data.I, B = b->data.I, R;
 		switch( op ){
-			/*
 			case ARITH_OP_ADD: R = A + B; break;
 			case ARITH_OP_SUB: R = A - B; break;
 			case ARITH_OP_MUL: R = A * B; break;
-			*/
 			case ARITH_OP_DIV: if( B == 0 ) goto div0err;
-				var_setreal( C, out, ((sgs_Real) A) / ((sgs_Real) B) ); break;
-			case ARITH_OP_MOD: if( B == 0 ) goto div0err; var_setint( C, out, A % B ); break;
-			default: var_setint( C, out, 0 ); break;
+				var_setreal( C, out, ((sgs_Real) A) / ((sgs_Real) B) ); return SGS_SUCCESS; break;
+			case ARITH_OP_MOD: if( B == 0 ) goto div0err; R = A % B; break;
+			default: R = 0; break;
 		}
+		var_setint( C, out, R );
+		return SGS_SUCCESS;
 	}
 	
 	if( a->type == SVT_OBJECT || b->type == SVT_OBJECT )
@@ -1654,7 +1653,7 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 			{
 				VAR_RELEASE( &lA );
 				VAR_RELEASE( &lB );
-				return;
+				return SGS_SUCCESS;
 			}
 		}
 		
@@ -1672,7 +1671,7 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 			{
 				VAR_RELEASE( &lA );
 				VAR_RELEASE( &lB );
-				return;
+				return SGS_SUCCESS;
 			}
 		}
 		
@@ -1710,21 +1709,22 @@ static void vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, ui
 			case ARITH_OP_SUB: R = A - B; break;
 			case ARITH_OP_MUL: R = A * B; break;
 			case ARITH_OP_DIV: if( B == 0 ) goto div0err;
-				var_setreal( C, out, ((sgs_Real) A) / ((sgs_Real) B) ); return;
+				var_setreal( C, out, ((sgs_Real) A) / ((sgs_Real) B) ); return SGS_SUCCESS;
 			case ARITH_OP_MOD: if( B == 0 ) goto div0err; R = A % B; break;
 			default: R = 0; break;
 		}
 		var_setint( C, out, R );
 	}
-	return;
+	return SGS_SUCCESS;
 	
 div0err:
 	VAR_RELEASE( out );
 	sgs_Msg( C, SGS_ERROR, "Division by 0" );
-	return;
+	return SGS_EINPROC;
 fail:
 	VAR_RELEASE( out );
 	sgs_Msg( C, SGS_ERROR, "Specified arithmetic operation is not supported on the given set of arguments" );
+	return SGS_EINVAL;
 }
 
 
@@ -2291,8 +2291,8 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 		case SI_BOOL_INV: { ARGS_2; vm_op_boolinv( C, (int16_t) a1, p2 ); break; }
 		case SI_INVERT: { ARGS_2; vm_op_invert( C, (int16_t) a1, p2 ); break; }
 
-		case SI_INC: { ARGS_2; vm_op_inc( C, p1, p2 ); break; }
-		case SI_DEC: { ARGS_2; vm_op_dec( C, p1, p2 ); break; }
+		case SI_INC: { ARGS_2; vm_op_incdec( C, p1, p2, +1 ); break; }
+		case SI_DEC: { ARGS_2; vm_op_incdec( C, p1, p2, -1 ); break; }
 		case SI_ADD: { ARGS_3;
 			if( p2->type == SVT_REAL && p3->type == SVT_REAL ){ var_setreal( C, p1, p2->data.R + p3->data.R ); break; }
 			if( p2->type == SVT_INT && p3->type == SVT_INT ){ var_setint( C, p1, p2->data.I + p3->data.I ); break; }
@@ -3635,6 +3635,21 @@ void sgs_Assign( SGS_CTX, sgs_Variable* var_to, sgs_Variable* var_from )
 	VAR_RELEASE( var_to );
 	*var_to = *var_from;
 	VAR_ACQUIRE( var_to );
+}
+
+SGSRESULT sgs_ArithOp( SGS_CTX, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op )
+{
+	VAR_RELEASE( out );
+	if( op < 0 || op > SGS_EOP_NEGATE )
+		return SGS_ENOTSUP;
+	if( op == SGS_EOP_NEGATE )
+		return vm_op_negate( C, out, A ) ? SGS_SUCCESS : SGS_EINVAL;
+	return vm_arith_op( C, out, A, B, op );
+}
+
+SGSRESULT sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc )
+{
+	return vm_op_incdec( C, out, A, inc ? 1 : -1 );
 }
 
 

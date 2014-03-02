@@ -317,6 +317,12 @@ sgs_String32;
 #define SGS_CONVOP_TYPEOF 0x20000
 #define SGS_CONVOP_TOITER 0x30000
 
+#define SGS_BOP_AND       0
+#define SGS_BOP_OR        1
+#define SGS_BOP_XOR       2
+#define SGS_BOP_LSH       3
+#define SGS_BOP_RSH       4
+
 
 /* Engine context */
 #define SGS_CTX sgs_Context* C
@@ -585,6 +591,8 @@ SGS_APIFUNC SGSRESULT sgs_SetStackItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* 
 SGS_APIFUNC uint32_t sgs_ItemType( SGS_CTX, sgs_StkIdx item );
 
 SGS_APIFUNC void sgs_Assign( SGS_CTX, sgs_Variable* var_to, sgs_Variable* var_from );
+SGS_APIFUNC SGSRESULT sgs_ArithOp( SGS_CTX, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op );
+SGS_APIFUNC SGSRESULT sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc );
 
 /*
 	OPERATIONS
