@@ -5,13 +5,13 @@
 
 // Coverage:
 // +
-// PUSH, RETN, JUMP, JMPT, JMPF, CALL, LOADCONST
-// GETVAR, SETVAR, GETPROP, SETPROP, GETINDEX, SETINDEX
+// PUSH, RETN, JUMP, JMPT, JMPF, CALL
+// FORPREP, FORLOAD, FORJUMP
+// LOADCONST, GETVAR, SETVAR, GETPROP, SETPROP, GETINDEX, SETINDEX
 // SET, MCONCAT, CONCAT
 // SEQ, SNEQ, EQ, NEQ, LT, GTE, GT, LTE
 // ARRAY, DICT
 // -
-// FORPREP, FORLOAD, FORJUMP
 // GENCLSR, PUSHCLSR, MAKECLSR, GETCLSR, SETCLSR
 // NEGATE, BOOL_INV, INVERT
 // INC, DEC, ADD, SUB, MUL, DIV, MOD
@@ -30,6 +30,7 @@ function E( txt ){ println( txt ); }
 function sgs_isconstarg( arg ){ return arg & 0x100 != 0; }
 function sgs_getconstarg( arg ){ return arg & 0xff; }
 function sgs_srcptr( arg ){ return if( sgs_isconstarg( arg ), "CN+" $ sgs_getconstarg( arg ), "T+" $ arg ); }
+function sgs_e2off( arg ){ arg &= 0xffff; if( arg > 0x7fff ) arg -= 0xffff; return arg; }
 
 ///////////////////////////////////////////////////////////
 
@@ -132,8 +133,11 @@ function c_compile_func_inner( fdata )
 	jumppos = {};
 	foreach( op_pos, op : fdata.code )
 	{
-		if( op.op == SI_JUMP || op.op == SI_JMPT || op.op == SI_JMPF )
-			jumppos[ op_pos + 1 + op.e ] = true;
+		if( op.op == SI_JUMP ||
+			op.op == SI_JMPT ||
+			op.op == SI_JMPF ||
+			op.op == SI_FORJUMP )
+			jumppos[ op_pos + 1 + sgs_e2off( op.e ) ] = true;
 	}
 	
 	foreach( op_pos, op : fdata.code )
@@ -160,17 +164,17 @@ function c_compile_func_inner( fdata )
 		}
 		else if( op.op == SI_JUMP )
 		{
-			output $= "\n" $ c_compile_jump( op_pos + 1 + op.e );
+			output $= "\n" $ c_compile_jump( op_pos + 1 + sgs_e2off( op.e ) );
 		}
 		else if( op.op == SI_JMPT )
 		{
 			output $= "\nif( sgs_GetBoolP( C, " $ sgs_srcptr( op.c )
-				$ " ) ) " $ c_compile_jump( op_pos + 1 + op.e );
+				$ " ) ) " $ c_compile_jump( op_pos + 1 + sgs_e2off( op.e ) );
 		}
 		else if( op.op == SI_JMPF )
 		{
 			output $= "\nif( !sgs_GetBoolP( C, " $ sgs_srcptr( op.c )
-				$ " ) ) " $ c_compile_jump( op_pos + 1 + op.e );
+				$ " ) ) " $ c_compile_jump( op_pos + 1 + sgs_e2off( op.e ) );
 		}
 		else if( op.op == SI_CALL )
 		{
@@ -195,11 +199,29 @@ function c_compile_func_inner( fdata )
 		}
 		
 		// ITERATORS
+		else if( op.op == SI_FORPREP )
+		{
+			output $= "\nsgs_Release( C, T+" $ op.a $ " );";
+			output $= "\nsgs_GetIteratorP( C, " $ sgs_srcptr( op.b ) $ ", T+" $ op.a $ " );";
+		}
+		else if( op.op == SI_FORLOAD )
+		{
+			if( op.b & 0xff == op.b ) output $= "\nsgs_Release( C, T+" $ op.b $ " );";
+			if( op.c & 0xff == op.c ) output $= "\nsgs_Release( C, T+" $ op.c $ " );";
+			output $= "\nsgs_IterGetDataP( C, " $ sgs_srcptr( op.a ) $ ", "
+				$ if( op.b & 0xff == op.b, "T+" $ op.b, "NULL" ) $ ", "
+				$ if( op.c & 0xff == op.c, "T+" $ op.c, "NULL" ) $ " );";
+		}
+		else if( op.op == SI_FORJUMP )
+		{
+			output $= "\nif( sgs_IterAdvanceP( C, " $ sgs_srcptr( op.c ) $ " ) <= 0 )"
+				$ "\n\t" $ c_compile_jump( op_pos + 1 + sgs_e2off( op.e ) );
+		}
 		
 		// SUBITEMS
 		else if( op.op == SI_LOADCONST )
 		{
-			output $= "\nsgs_Assign( C, T+" $ op.c $ ", CN+" $ op.e $ " );";
+			output $= "\nsgs_Assign( C, T+" $ op.c $ ", CN+" $ sgs_e2off( op.e ) $ " );";
 		}
 		else if( op.op == SI_GETVAR )
 		{

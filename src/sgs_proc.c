@@ -4609,27 +4609,21 @@ SGSMIXED sgs_ArraySize( SGS_CTX, StkIdx item )
 }
 
 
-SGSRESULT sgs_PushIterator( SGS_CTX, StkIdx item )
+SGSRESULT sgs_PushIteratorP( SGS_CTX, sgs_Variable* var )
 {
 	int ret;
-	sgs_Variable var;
-	if( !sgs_GetStackItem( C, item, &var ) )
-		return SGS_EBOUNDS;
 	sgs_PushNull( C );
-	ret = vm_forprep( C, stk_absindex( C, -1 ), &var );
+	ret = vm_forprep( C, stk_absindex( C, -1 ), var );
 	if( SGS_FAILED( ret ) )
 		stk_pop1( C );
 	return ret;
 }
 
-SGSRESULT sgs_GetIterator( SGS_CTX, StkIdx item, sgs_Variable* out )
+SGSRESULT sgs_GetIteratorP( SGS_CTX, sgs_Variable* var, sgs_Variable* out )
 {
 	int ret;
-	sgs_Variable var;
-	if( !sgs_GetStackItem( C, item, &var ) )
-		return SGS_EBOUNDS;
 	sgs_PushNull( C );
-	ret = vm_forprep( C, stk_absindex( C, -1 ), &var );
+	ret = vm_forprep( C, stk_absindex( C, -1 ), var );
 	if( SGS_FAILED( ret ) )
 		stk_pop1( C );
 	else
@@ -4637,27 +4631,21 @@ SGSRESULT sgs_GetIterator( SGS_CTX, StkIdx item, sgs_Variable* out )
 	return ret;
 }
 
-SGSMIXED sgs_IterAdvance( SGS_CTX, StkIdx item )
+SGSMIXED sgs_IterAdvanceP( SGS_CTX, sgs_Variable* var )
 {
-	_EL_BACKUP;
 	sgs_SizeVal ret;
-	sgs_Variable var;
-	if( !sgs_GetStackItem( C, item, &var ) )
-		return SGS_EBOUNDS;
+	_EL_BACKUP;
 	_EL_SETMAX;
-	ret = vm_fornext( C, -1, -1, &var );
+	ret = vm_fornext( C, -1, -1, var );
 	_EL_RESET;
 	return ret;
 }
 
-SGSMIXED sgs_IterPushData( SGS_CTX, StkIdx item, int key, int value )
+SGSMIXED sgs_IterPushDataP( SGS_CTX, sgs_Variable* var, int key, int value )
 {
 	_EL_BACKUP;
 	sgs_SizeVal ret;
-	sgs_Variable var;
 	StkIdx idkey, idval;
-	if( !sgs_GetStackItem( C, item, &var ) )
-		return SGS_EBOUNDS;
 	if( !key && !value )
 		return SGS_SUCCESS;
 	if( key )
@@ -4673,26 +4661,23 @@ SGSMIXED sgs_IterPushData( SGS_CTX, StkIdx item, int key, int value )
 	}
 	else idval = -1;
 	_EL_SETMAX;
-	ret = vm_fornext( C, idkey, idval, &var );
+	ret = vm_fornext( C, idkey, idval, var );
 	_EL_RESET;
 	if( SGS_FAILED( ret ) )
 		stk_pop( C, !!key + !!value );
 	return ret;
 }
 
-SGSMIXED sgs_IterGetData( SGS_CTX, sgs_StkIdx item, sgs_Variable* key, sgs_Variable* value )
+SGSMIXED sgs_IterGetDataP( SGS_CTX, sgs_Variable* var, sgs_Variable* key, sgs_Variable* value )
 {
 	_EL_BACKUP;
 	sgs_SizeVal ret;
-	sgs_Variable var;
-	if( !sgs_GetStackItem( C, item, &var ) )
-		return SGS_EBOUNDS;
 	if( !key && !value )
 		return SGS_SUCCESS;
 	if( key ) sgs_PushNull( C );
 	if( value ) sgs_PushNull( C );
 	_EL_SETMAX;
-	ret = vm_fornext( C, key?stk_absindex(C,value?-2:-1):-1, value?stk_absindex(C,-1):-1, &var );
+	ret = vm_fornext( C, key?stk_absindex(C,value?-2:-1):-1, value?stk_absindex(C,-1):-1, var );
 	_EL_RESET;
 	if( SGS_SUCCEEDED( ret ) )
 	{
@@ -4702,6 +4687,47 @@ SGSMIXED sgs_IterGetData( SGS_CTX, sgs_StkIdx item, sgs_Variable* key, sgs_Varia
 	else
 		stk_pop( C, !!key + !!value );
 	return ret;
+}
+
+
+SGSRESULT sgs_PushIterator( SGS_CTX, StkIdx item )
+{
+	sgs_Variable var;
+	if( !sgs_GetStackItem( C, item, &var ) )
+		return SGS_EBOUNDS;
+	return sgs_PushIteratorP( C, &var );
+}
+
+SGSRESULT sgs_GetIterator( SGS_CTX, StkIdx item, sgs_Variable* out )
+{
+	sgs_Variable var;
+	if( !sgs_GetStackItem( C, item, &var ) )
+		return SGS_EBOUNDS;
+	return sgs_GetIteratorP( C, &var, out );
+}
+
+SGSMIXED sgs_IterAdvance( SGS_CTX, StkIdx item )
+{
+	sgs_Variable var;
+	if( !sgs_GetStackItem( C, item, &var ) )
+		return SGS_EBOUNDS;
+	return sgs_IterAdvanceP( C, &var );
+}
+
+SGSMIXED sgs_IterPushData( SGS_CTX, StkIdx item, int key, int value )
+{
+	sgs_Variable var;
+	if( !sgs_GetStackItem( C, item, &var ) )
+		return SGS_EBOUNDS;
+	return sgs_IterPushDataP( C, &var, key, value );
+}
+
+SGSMIXED sgs_IterGetData( SGS_CTX, sgs_StkIdx item, sgs_Variable* key, sgs_Variable* value )
+{
+	sgs_Variable var;
+	if( !sgs_GetStackItem( C, item, &var ) )
+		return SGS_EBOUNDS;
+	return sgs_IterGetDataP( C, &var, key, value );
 }
 
 
