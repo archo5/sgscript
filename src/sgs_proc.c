@@ -3632,6 +3632,8 @@ uint32_t sgs_ItemType( SGS_CTX, StkIdx item )
 
 void sgs_Assign( SGS_CTX, sgs_Variable* var_to, sgs_Variable* var_from )
 {
+	if( var_to == var_from )
+		return;
 	VAR_RELEASE( var_to );
 	*var_to = *var_from;
 	VAR_ACQUIRE( var_to );
@@ -3639,9 +3641,11 @@ void sgs_Assign( SGS_CTX, sgs_Variable* var_to, sgs_Variable* var_from )
 
 SGSRESULT sgs_ArithOp( SGS_CTX, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op )
 {
-	VAR_RELEASE( out );
 	if( op < 0 || op > SGS_EOP_NEGATE )
+	{
+		VAR_RELEASE( out );
 		return SGS_ENOTSUP;
+	}
 	if( op == SGS_EOP_NEGATE )
 		return vm_op_negate( C, out, A ) ? SGS_SUCCESS : SGS_EINVAL;
 	return vm_arith_op( C, out, A, B, op );

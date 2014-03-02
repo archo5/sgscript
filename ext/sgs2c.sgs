@@ -114,14 +114,17 @@ function c_compile_initop( R, what, count )
 
 function c_compile_func_inner( fdata )
 {
-	output = "\nint ret = 0;";
-	if( fdata.numtmp )
-		output $= "\nsgs_Variable T[ " $ fdata.numtmp $ " ];";
+	output = "\nint ret = 0;"
+		$ "\nSGSFN( \"" $ c_safe_str( fdata.rname ) $ "\" );";
+	if( fdata.numargs + fdata.numtmp )
+		output $= "\nsgs_Variable T[ " $ fdata.numargs + fdata.numtmp $ " ];";
 	if( fdata.consts.size )
 		output $= "\nsgs_Variable CN[ " $ fdata.consts.size $ " ];";
 	
+	for( i = 0; i < fdata.numargs; ++i )
+		output $= "\nsgs_PushItem( C, " $ i $ " );\nsgs_StoreVariable( C, T+" $ i $ " );";
 	for( i = 0; i < fdata.numtmp; ++i )
-		output $= "\nsgs_InitNull( T+" $ i $ " );";
+		output $= "\nsgs_InitNull( T+" $ fdata.numargs + i $ " );";
 	foreach( i, cn : fdata.consts )
 	{
 		ty = cn.type;
@@ -203,8 +206,9 @@ function c_compile_func_inner( fdata )
 			{
 				for( i = call_expect - 1; i >= 0; --i )
 				{
-					output $= "\nsgs_Release( C, T+" $ i $ " );";
-					output $= "\nsgs_StoreVariable( C, T+" $ i $ " );";
+					si = call_from + i;
+					output $= "\nsgs_Release( C, T+" $ si $ " );";
+					output $= "\nsgs_StoreVariable( C, T+" $ si $ " );";
 				}
 			}
 		}
@@ -349,7 +353,16 @@ function c_compile_func( fdata, name_ovr )
 		cn.name = "C" $ i;
 		if( cn.type == VT_FUNC )
 		{
-			cn.data.name = fdata.name $ "__" $ cn.data.name;
+			if( cn.data.name )
+			{
+				cn.data.rname = cn.data.name;
+				cn.data.name = fdata.name $ "__" $ cn.data.name;
+			}
+			else
+			{
+				cn.data.rname = "<anonymous>";
+				cn.data.name = fdata.name $ "__" $ i $ "_anon";
+			}
 			output $= c_compile_func( cn.data );
 		}
 	}
@@ -361,6 +374,7 @@ function c_compile_func( fdata, name_ovr )
 function generate_c_file( cdata )
 {
 	cdata = meta_unpack( cdata );
+	cdata.rname = "<main>";
 	cdata.name = "sgs";
 	return c_header $ c_compile_func( cdata, "sgscript_main" );
 }
