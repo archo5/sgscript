@@ -101,7 +101,7 @@ function c_compile_initop( R, what, count )
 
 function c_compile_func_inner( fdata )
 {
-	output = "\nint ret = 0;"
+	output = "\nint i, ret = 0; (void)(i);"
 		$ "\nSGSFN( \"" $ c_safe_str( fdata.rname ) $ "\" );";
 	if( fdata.numargs + fdata.numtmp )
 		output $= "\nsgs_Variable T[ " $ fdata.numargs + fdata.numtmp $ " ];";
@@ -113,8 +113,8 @@ function c_compile_func_inner( fdata )
 	
 	for( i = 0; i < fdata.numargs; ++i )
 		output $= "\nsgs_PushItem( C, " $ i $ " );\nsgs_StoreVariable( C, T+" $ i $ " );";
-	for( i = 0; i < fdata.numtmp; ++i )
-		output $= "\nsgs_InitNull( T+" $ fdata.numargs + i $ " );";
+	output $= "\nfor( i = " $ fdata.numargs $ "; i < " $ fdata.numargs + fdata.numtmp $ "; ++i )"
+		$ "\n\tT[ i ].type = SGS_VT_NULL;";
 	foreach( i, cn : fdata.consts )
 	{
 		ty = cn.type;
@@ -409,10 +409,8 @@ function c_compile_func_inner( fdata )
 	output $= "\n// ---";
 	
 	output $= "\n_ret:";
-	for( i = 0; i < fdata.numtmp; ++i )
-		output $= "\nsgs_Release( C, T+" $ i $ " );";
-	foreach( i, : fdata.consts )
-		output $= "\nsgs_Release( C, CN+" $ i $ " );";
+	output $= "\nsgs_ReleaseArray( C, T, " $ fdata.numargs + fdata.numtmp $ " );";
+	output $= "\nsgs_ReleaseArray( C, CN, " $ fdata.consts.size $ " );";
 	output $= "\nreturn ret;";
 	
 	return output;

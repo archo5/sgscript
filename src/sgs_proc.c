@@ -2014,8 +2014,9 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 	
 	if( allowed )
 	{
-		C->sf_last->argbeg = stkcallbase;
-		C->sf_last->argend = C->stack_top - C->stack_base;
+		/* WP (x2): stack size limit */
+		C->sf_last->argbeg = (StkIdx) stkcallbase;
+		C->sf_last->argend = (StkIdx) ( C->stack_top - C->stack_base );
 		/* WP: argument count limit */
 		C->sf_last->argcount = (uint8_t) args;
 		C->sf_last->inexp = (uint8_t) args;
@@ -4884,6 +4885,13 @@ void sgs_Release( SGS_CTX, sgs_Variable* var )
 		return;
 	}
 	VAR_RELEASE( var );
+}
+
+void sgs_ReleaseArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count )
+{
+	sgs_Variable* vend = var + count;
+	while( var < vend )
+		sgs_Release( C, var++ );
 }
 
 SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var )
