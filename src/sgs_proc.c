@@ -3658,6 +3658,73 @@ SGSRESULT sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc )
 
 
 /*
+	
+	CLOSURES
+	
+*/
+
+SGSRESULT sgs_ClPushNulls( SGS_CTX, sgs_StkIdx num )
+{
+	if( num < 0 )
+		return SGS_EINVAL;
+	clstk_push_nulls( C, num );
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_ClPushItem( SGS_CTX, sgs_StkIdx item )
+{
+	if( item < 0 || C->clstk_off + item >= C->clstk_top )
+		return SGS_EBOUNDS;
+	clstk_push( C, clstk_get( C, item ) );
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_ClPop( SGS_CTX, sgs_StkIdx num )
+{
+	if( C->clstk_top + num > C->clstk_top )
+		return SGS_EINPROC;
+	clstk_pop( C, num );
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_MakeClosure( SGS_CTX, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out )
+{
+	int ret;
+	if( C->clstk_top - C->clstk_off < clcount )
+		return SGS_EINPROC;
+	/* WP: range not affected by conversion */
+	ret = sgsSTD_MakeClosure( C, func, (uint32_t) clcount );
+	sgs_BreakIf( ret != SGS_SUCCESS );
+	UNUSED( ret );
+	
+	*out = *stk_gettop( C );
+	stk_pop1nr( C );
+	clstk_pop( C, clcount );
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_ClGetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out )
+{
+	if( item < 0 || C->clstk_off + item >= C->clstk_top )
+		return SGS_EBOUNDS;
+	*out = clstk_get( C, item )->var;
+	VAR_ACQUIRE( out );
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var )
+{
+	if( item < 0 || C->clstk_off + item >= C->clstk_top )
+		return SGS_EBOUNDS;
+	sgs_Variable* cv = &clstk_get( C, item )->var;
+	VAR_RELEASE( cv );
+	*cv = *var;
+	VAR_ACQUIRE( var );
+	return SGS_SUCCESS;
+}
+
+
+/*
 
 	OPERATIONS
 

@@ -595,6 +595,16 @@ SGS_APIFUNC SGSRESULT sgs_ArithOp( SGS_CTX, sgs_Variable* out, sgs_Variable* A, 
 SGS_APIFUNC SGSRESULT sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc );
 
 /*
+	CLOSURES
+*/
+SGS_APIFUNC SGSRESULT sgs_ClPushNulls( SGS_CTX, sgs_StkIdx num );
+SGS_APIFUNC SGSRESULT sgs_ClPushItem( SGS_CTX, sgs_StkIdx item );
+SGS_APIFUNC SGSRESULT sgs_ClPop( SGS_CTX, sgs_StkIdx num );
+SGS_APIFUNC SGSRESULT sgs_MakeClosure( SGS_CTX, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out );
+SGS_APIFUNC SGSRESULT sgs_ClGetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out );
+SGS_APIFUNC SGSRESULT sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var );
+
+/*
 	OPERATIONS
 */
 SGS_APIFUNC SGSRESULT sgs_FCallP( SGS_CTX, sgs_Variable* callable, int args, int expect, int gotthis );

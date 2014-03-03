@@ -3,19 +3,6 @@
 /// E / X / P / E / R / I / M / E / N / T / A / L /////////
 ///////////////////////////////////////////////////////////
 
-// Coverage:
-// +
-// PUSH, RETN, JUMP, JMPT, JMPF, CALL
-// FORPREP, FORLOAD, FORJUMP
-// LOADCONST, GETVAR, SETVAR, GETPROP, SETPROP, GETINDEX, SETINDEX
-// SET, MCONCAT, CONCAT, NEGATE, BOOL_INV, INVERT
-// INC, DEC, ADD, SUB, MUL, DIV, MOD
-// AND, OR, XOR, LSH, RSH
-// SEQ, SNEQ, EQ, NEQ, LT, GTE, GT, LTE
-// ARRAY, DICT
-// -
-// GENCLSR, PUSHCLSR, MAKECLSR, GETCLSR, SETCLSR
-
 
 include "string", "io", "fmt", "../bin/sgsmeta";
 
@@ -327,7 +314,36 @@ function c_compile_func_inner( fdata )
 		}
 		
 		// CLOSURES
-		// -- TODO --
+		else if( op.op == SI_GENCLSR )
+		{
+			output $= "\nsgs_ClPushNulls( C, " $ op.a $ " );";
+		}
+		else if( op.op == SI_PUSHCLSR )
+		{
+			output $= "\nsgs_ClPushItem( C, " $ op.a $ " );";
+		}
+		else if( op.op == SI_MAKECLSR )
+		{
+			if( op.a == op.b )
+			{
+				output $= "\n{ sgs_Variable V = T[" $ op.a $ "];"
+					$ "\nsgs_MakeClosure( C, " $ sgs_srcptr( op.b ) $ ", " $ op.c $ ", T+" $ op.a $ " );"
+					$ "\nsgs_Release( C, &V ); }";
+			}
+			else
+			{
+				output $= "\nsgs_MakeClosure( C, " $ sgs_srcptr( op.b ) $ ", " $ op.c $ ", T+" $ op.a $ " );";
+			}
+		}
+		else if( op.op == SI_GETCLSR )
+		{
+			output $= "\nsgs_Release( C, T+" $ op.a $ " );"
+				$ "\nsgs_ClGetItem( C, " $ op.b $ ", T+" $ op.a $ " );";
+		}
+		else if( op.op == SI_SETCLSR )
+		{
+			output $= "\nsgs_ClSetItem( C, " $ op.b $ ", " $ sgs_srcptr( op.c ) $ " );";
+		}
 		
 		// SPECIAL OPERATORS
 		else if( op.op == SI_SET )
