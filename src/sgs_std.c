@@ -50,14 +50,7 @@ static void sgsstd_array_reserve( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeV
 
 static void sgsstd_array_clear( SGS_CTX, sgsstd_array_header_t* hdr )
 {
-	sgs_Variable *var, *vend;
-	var = SGSARR_PTR( hdr );
-	vend = var + hdr->size;
-	while( var < vend )
-	{
-		sgs_Release( C, var );
-		var++;
-	}
+	sgs_ReleaseArray( C, SGSARR_PTR( hdr ), hdr->size );
 	hdr->size = 0;
 }
 
@@ -765,15 +758,7 @@ static int sgsstd_array_dump( SGS_CTX, sgs_VarObj* data, int depth )
 static int sgsstd_array_gcmark( SGS_CTX, sgs_VarObj* data )
 {
 	SGSARR_HDR_OI;
-	sgs_Variable* var = SGSARR_PTR( data->data );
-	sgs_Variable* vend = var + hdr->size;
-	while( var < vend )
-	{
-		int ret = sgs_GCMark( C, var++ );
-		if( ret != SGS_SUCCESS )
-			return ret;
-	}
-	return SGS_SUCCESS;
+	return sgs_GCMarkArray( C, SGSARR_PTR( hdr ), hdr->size );
 }
 
 /* iterator */

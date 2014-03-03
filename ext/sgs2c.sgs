@@ -28,6 +28,18 @@ function c_func_wrapper( fdata, fname )
 		string_replace( fdata, "\n", "\n\t" ) $ "\n}\n";
 }
 
+function c_ifunc_wrapper( fdata, fname )
+{
+	return "\nstatic int " $ fname $ "( SGS_CTX, sgs_VarObj* obj )\n{" $
+		string_replace( fdata, "\n", "\n\t" ) $ "\n}\n";
+}
+
+function c_sfunc_wrapper( fdata, fname )
+{
+	return "\nstatic int " $ fname $ "( SGS_CTX, sgs_Variable* out )\n{" $
+		string_replace( fdata, "\n", "\n\t" ) $ "\n}\n";
+}
+
 function c_safe_str( str )
 {
 	out = "";
@@ -99,22 +111,9 @@ function c_compile_initop( R, what, count )
 		$ "\nsgs_Init" $ what $ "( C, T+" $ R $ ", " $ count $ " );";
 }
 
-function c_compile_func_inner( fdata )
+function c_compile_const_init( fdata )
 {
-	output = "\nint i, ret = 0; (void)(i);"
-		$ "\nSGSFN( \"" $ c_safe_str( fdata.rname ) $ "\" );";
-	if( fdata.numargs + fdata.numtmp )
-		output $= "\nsgs_Variable T[ " $ fdata.numargs + fdata.numtmp $ " ];";
-	if( fdata.consts.size )
-		output $= "\nsgs_Variable CN[ " $ fdata.consts.size $ " ];";
-	
-	if( fdata.gotthis )
-		output $= "\nsgs_Method( C );";
-	
-	for( i = 0; i < fdata.numargs; ++i )
-		output $= "\nsgs_PushItem( C, " $ i $ " );\nsgs_StoreVariable( C, T+" $ i $ " );";
-	output $= "\nfor( i = " $ fdata.numargs $ "; i < " $ fdata.numargs + fdata.numtmp $ "; ++i )"
-		$ "\n\tT[ i ].type = SGS_VT_NULL;";
+	output = "";
 	foreach( i, cn : fdata.consts )
 	{
 		ty = cn.type;
@@ -132,8 +131,39 @@ function c_compile_func_inner( fdata )
 				", \"" $ c_safe_str( cn.data ) $ "\", " $ cn.data.length $ " );";
 		}
 		else if( ty == VT_FUNC )
-			output $= "\nsgs_InitCFunction( CN+" $ i $ ", " $ cn.data.name $ " );";
+			output $= "\nI" $ cn.data.name $ "( C, CN+" $ i $ " );";
 	}
+	return output;
+}
+
+function c_compile_func_inner( fdata, iswhole )
+{
+	output = "\nint ret = 0;"
+		$ "\nSGSFN( \"" $ c_safe_str( fdata.rname ) $ "\" );";
+	if( fdata.numargs + fdata.numtmp )
+		output $= "\nsgs_Variable T[ " $ fdata.numargs + fdata.numtmp $ " ];";
+	if( fdata.consts.size )
+	{
+		if( iswhole )
+			output $= "\nsgs_Variable CN[ " $ fdata.consts.size $ " ];";
+		else
+			output $= "\nsgs_Variable* CN = (sgs_Variable*) obj->data;";
+	}
+	
+	if( fdata.gotthis )
+		output $= "\nsgs_Method( C );";
+	
+	for( i = 0; i < fdata.numargs; ++i )
+		output $= "\nsgs_PushItem( C, " $ i $ " );\nsgs_StoreVariable( C, T+" $ i $ " );";
+	
+	if( fdata.numtmp )
+	{
+		output $= "\n{ int i; for( i = " $ fdata.numargs $ "; i < " $ fdata.numargs + fdata.numtmp $ "; ++i )"
+			$ "\n\tT[ i ].type = SGS_VT_NULL; }";
+	}
+	
+	if( iswhole )
+		output $= c_compile_const_init( fdata );
 	
 	// walk all instructions to get all jump positions
 	jumppos = {};
@@ -410,9 +440,29 @@ function c_compile_func_inner( fdata )
 	
 	output $= "\n_ret:";
 	output $= "\nsgs_ReleaseArray( C, T, " $ fdata.numargs + fdata.numtmp $ " );";
-	output $= "\nsgs_ReleaseArray( C, CN, " $ fdata.consts.size $ " );";
+	if( iswhole )
+		output $= "\nsgs_ReleaseArray( C, CN, " $ fdata.consts.size $ " );";
 	output $= "\nreturn ret;";
 	
+	return output;
+}
+
+function c_compile_dtor_inner( fdata )
+{
+	return "\nsgs_ReleaseArray( C, (sgs_Variable*) obj->data, " $ fdata.consts.size $ " );";
+}
+
+function c_compile_gcmk_inner( fdata )
+{
+	return "\nsgs_GCMarkArray( C, (sgs_Variable*) obj->data, " $ fdata.consts.size $ " );";
+}
+
+function c_compile_init_inner( fdata, funcname )
+{
+	output = "\nsgs_Variable* CN = (sgs_Variable*)"
+		$ "\n\tsgs_InitObjectIPA( C, out, sizeof(sgs_Variable) * "
+		$ fdata.consts.size $ ", T" $ funcname $ " );";
+	output $= c_compile_const_init( fdata );
 	return output;
 }
 
@@ -438,7 +488,24 @@ function c_compile_func( fdata, name_ovr )
 		}
 	}
 	
-	output $= c_func_wrapper( c_compile_func_inner( fdata ), name_ovr || fdata.name );
+	funcname = name_ovr || fdata.name;
+	if( name_ovr === "sgscript_main" )
+	{
+		output $= c_func_wrapper( c_compile_func_inner( fdata, true ), funcname );
+	}
+	else
+	{
+		output $= c_ifunc_wrapper( c_compile_func_inner( fdata ), "F" $ funcname );
+		output $= c_ifunc_wrapper( c_compile_dtor_inner( fdata ), "D" $ funcname );
+		output $= c_ifunc_wrapper( c_compile_gcmk_inner( fdata ), "G" $ funcname );
+		output $= "\nstatic sgs_ObjInterface T" $ funcname $ "[1] ="
+			$ "\n{{\n\t\"func\","
+			$ "\n\tD" $ funcname $ ", G" $ funcname $ ","
+			$ "\n\tNULL, NULL,"
+			$ "\n\tNULL, NULL, NULL, NULL,"
+			$ "\n\tF" $ funcname $ ", NULL\n}};\n";
+		output $= c_sfunc_wrapper( c_compile_init_inner( fdata, funcname ), "I" $ funcname );
+	}
 	return output;
 }
 

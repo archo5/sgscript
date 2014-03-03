@@ -4899,6 +4899,18 @@ SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var )
 	return vm_gcmark( C, var );
 }
 
+SGSRESULT sgs_GCMarkArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count )
+{
+	SGSRESULT res = SGS_SUCCESS;
+	sgs_Variable* vend = var + count;
+	while( var < vend )
+	{
+		if( SGS_FAILED( vm_gcmark( C, var++ ) ) )
+			res = SGS_EINPROC;
+	}
+	return res;
+}
+
 void sgs_ObjAcquire( SGS_CTX, sgs_VarObj* obj )
 {
 	sgs_Variable var;
