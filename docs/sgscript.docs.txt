@@ -1755,9 +1755,9 @@ After a successful call, all arguments and the function will be popped off the s
 - both positive (first = 0) and negative (last = -1) indices are supported
 
 
-# sgs_GetStackItem [function]
+# sgs_PeekStackItem [function]
 
-== SGSBOOL sgs_GetStackItem( sgs_Context* C, int item, sgs_Variable* out )
+== SGSBOOL sgs_PeekStackItem( sgs_Context* C, int item, sgs_Variable* out )
 === write the data of the specified stack variable if the index is valid
 
 - function returns whether the stack index was valid

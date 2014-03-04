@@ -75,7 +75,6 @@ static void sgsstd_array_insert( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVa
 	{
 		sgs_Variable* var = ptr + pos + i - off;
 		sgs_GetStackItem( C, i, var );
-		sgs_Acquire( C, var );
 	}
 	hdr->size = nsz;
 }
@@ -908,10 +907,7 @@ static int sgsstd_array( SGS_CTX )
 	p = hdr->data = (sgs_Variable*) data;
 	pend = p + objcnt;
 	while( p < pend )
-	{
-		sgs_GetStackItem( C, i++, p );
-		sgs_Acquire( C, p++ );
-	}
+		sgs_GetStackItem( C, i++, p++ );
 	return 1;
 }
 
@@ -1223,7 +1219,7 @@ static int sgsstd_dict( SGS_CTX )
 		if( !sgs_ParseString( C, i, NULL, NULL ) )
 			return sgs_FuncArgError( C, i, SVT_STRING, 0 );
 		
-		sgs_GetStackItem( C, i + 1, &val );
+		sgs_PeekStackItem( C, i + 1, &val );
 		vht_set( ht, C, (C->stack_off+i), &val );
 	}
 	
@@ -1512,7 +1508,7 @@ static int sgsstd_class_convert( SGS_CTX, sgs_VarObj* data, int type )
 		
 		sgs_PushVariable( C, &hdr->data );
 		sgs_CloneItem( C, -1 );
-		sgs_GetStackItem( C, -1, &hdr2->data );
+		sgs_PeekStackItem( C, -1, &hdr2->data );
 		
 		hdr2->inh = hdr->inh;
 		
@@ -1618,8 +1614,6 @@ static int sgsstd_class( SGS_CTX )
 		sizeof( sgsstd_class_header_t ), sgsstd_class_iface );
 	sgs_GetStackItem( C, 0, &hdr->data );
 	sgs_GetStackItem( C, 1, &hdr->inh );
-	sgs_Acquire( C, &hdr->data );
-	sgs_Acquire( C, &hdr->inh );
 	return 1;
 }
 
@@ -1729,8 +1723,6 @@ static int sgsstd_closure( SGS_CTX )
 		sizeof( sgsstd_closure_t ), sgsstd_closure_iface );
 	sgs_GetStackItem( C, 0, &hdr->func );
 	sgs_GetStackItem( C, 1, &hdr->data );
-	sgs_Acquire( C, &hdr->func );
-	sgs_Acquire( C, &hdr->data );
 	return 1;
 }
 
@@ -2571,10 +2563,7 @@ static int sgsstd_pcall( SGS_CTX )
 	P.handler.type = SVT_NULL;
 	P.depth = 0;
 	if( b )
-	{
 		sgs_GetStackItem( C, 1, &P.handler );
-		sgs_Acquire( C, &P.handler );
-	}
 	
 	C->msg_fn = sgsstd_pcall_print;
 	C->msg_ctx = &P;
@@ -2677,7 +2666,6 @@ static int sgsstd_compile_sgs( SGS_CTX )
 	
 	sgs_PushArray( C, 0 );
 	sgs_GetStackItem( C, -1, &var );
-	sgs_Acquire( C, &var );
 	sgs_Pop( C, 1 );
 	
 	oldpfn = C->msg_fn;
@@ -3514,10 +3502,7 @@ int sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 		p = hdr->data = (sgs_Variable*) data;
 		pend = p + cnt;
 		while( p < pend )
-		{
-			sgs_GetStackItem( C, i++ - cnt, p );
-			sgs_Acquire( C, p++ );
-		}
+			sgs_GetStackItem( C, i++ - cnt, p++ );
 		
 		sgs_Pop( C, cnt );
 		return SGS_SUCCESS;
@@ -3818,7 +3803,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 				sgs_GetObjectData( C, item );
 			
 			sgs_Variable comp;
-			if( !sgs_GetStackItem( C, arg, &comp ) )
+			if( !sgs_PeekStackItem( C, arg, &comp ) )
 				return SGS_EBOUNDS;
 			
 			while( off < hdr->size )
@@ -3845,7 +3830,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 				sgs_GetObjectData( C, item );
 			
 			sgs_Variable comp;
-			if( !sgs_GetStackItem( C, arg, &comp ) )
+			if( !sgs_PeekStackItem( C, arg, &comp ) )
 				return SGS_EBOUNDS;
 			
 			while( off < hdr->size )
@@ -3872,7 +3857,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 		else
 		{
 			sgs_Variable str;
-			sgs_GetStackItem( C, arg, &str );
+			sgs_PeekStackItem( C, arg, &str );
 			vht_unset(
 				&((DictHdr*)sgs_GetObjectData( C, item ))->ht, C,
 				&str );
@@ -3886,7 +3871,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 		else
 		{
 			sgs_Variable key;
-			sgs_GetStackItem( C, arg, &key );
+			sgs_PeekStackItem( C, arg, &key );
 			vht_unset(
 				&((DictHdr*)sgs_GetObjectData( C, item ))->ht, C,
 				&key );

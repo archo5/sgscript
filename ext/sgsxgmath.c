@@ -1695,25 +1695,25 @@ SGSBOOL sgs_ParseMat4P( SGS_CTX, sgs_Variable* var, XGM_VT* v16f )
 SGSBOOL sgs_ParseVec2( SGS_CTX, int pos, XGM_VT* v2f, int strict )
 {
 	sgs_Variable tmp;
-	return sgs_GetStackItem( C, pos, &tmp ) && sgs_ParseVec2P( C, &tmp, v2f, strict );
+	return sgs_PeekStackItem( C, pos, &tmp ) && sgs_ParseVec2P( C, &tmp, v2f, strict );
 }
 
 SGSBOOL sgs_ParseVec3( SGS_CTX, int pos, XGM_VT* v3f, int strict )
 {
 	sgs_Variable tmp;
-	return sgs_GetStackItem( C, pos, &tmp ) && sgs_ParseVec3P( C, &tmp, v3f, strict );
+	return sgs_PeekStackItem( C, pos, &tmp ) && sgs_ParseVec3P( C, &tmp, v3f, strict );
 }
 
 SGSBOOL sgs_ParseVec4( SGS_CTX, int pos, XGM_VT* v4f, int strict )
 {
 	sgs_Variable tmp;
-	return sgs_GetStackItem( C, pos, &tmp ) && sgs_ParseVec4P( C, &tmp, v4f, strict );
+	return sgs_PeekStackItem( C, pos, &tmp ) && sgs_ParseVec4P( C, &tmp, v4f, strict );
 }
 
 SGSBOOL sgs_ParseAABB2( SGS_CTX, int pos, XGM_VT* v4f )
 {
 	sgs_Variable tmp;
-	return sgs_GetStackItem( C, pos, &tmp ) && sgs_ParseAABB2P( C, &tmp, v4f );
+	return sgs_PeekStackItem( C, pos, &tmp ) && sgs_ParseAABB2P( C, &tmp, v4f );
 }
 
 SGSBOOL sgs_ParseColor( SGS_CTX, int pos, XGM_VT* v4f, int strict )
@@ -1724,7 +1724,7 @@ SGSBOOL sgs_ParseColor( SGS_CTX, int pos, XGM_VT* v4f, int strict )
 SGSBOOL sgs_ParseMat4( SGS_CTX, int pos, XGM_VT* v16f )
 {
 	sgs_Variable tmp;
-	return sgs_GetStackItem( C, pos, &tmp ) && sgs_ParseMat4P( C, &tmp, v16f );
+	return sgs_PeekStackItem( C, pos, &tmp ) && sgs_ParseMat4P( C, &tmp, v16f );
 }
 
 

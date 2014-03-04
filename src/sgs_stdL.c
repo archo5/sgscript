@@ -1385,7 +1385,6 @@ static int sgsstd_fmt_parser( SGS_CTX )
 		sgsstd_fmtstream_t* hdr = (sgsstd_fmtstream_t*)
 			sgs_PushObjectIPA( C, sizeof(*hdr), sgsstd_fmtstream_iface );
 		sgs_GetStackItem( C, 0, &hdr->source );
-		sgs_Acquire( C, &hdr->source );
 		hdr->streamoff = 0;
 		hdr->bufsize = (int) bufsize;
 		hdr->buffer = sgs_Alloc_n( char, (size_t) hdr->bufsize );
@@ -1451,7 +1450,6 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 	srt = (stringread_t*) sgs_PushObjectIPA( C, sizeof(stringread_t), srt_iface );
 	sgs_GetStackItem( C, 0, &srt->S );
 	sgs_BreakIf( srt->S.type != SVT_STRING );
-	sgs_Acquire( C, &srt->S );
 	srt->off = (sgs_SizeVal) off;
 	sgs_StoreItem( C, 0 );
 	sgs_SetStackSize( C, 1 );
@@ -1513,7 +1511,6 @@ static int sgsstd_fmt_file_parser( SGS_CTX )
 	frt = (fileread_t*) sgs_PushObjectIPA( C, sizeof(fileread_t), frt_iface );
 	sgs_GetStackItem( C, 0, &frt->F );
 	sgs_BreakIf( frt->F.type != SVT_OBJECT );
-	sgs_Acquire( C, &frt->F );
 	sgs_StoreItem( C, 0 );
 	sgs_SetStackSize( C, 1 );
 	sgs_PushInt( C, bufsize );

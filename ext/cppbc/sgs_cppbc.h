@@ -124,7 +124,7 @@ public:
 	sgsVariable( sgs_Context* c, int item ) : C(c)
 	{
 		var.type = SGS_VT_NULL;
-		sgs_GetStackItem( C, item, &var );
+		sgs_PeekStackItem( C, item, &var );
 		_acquire();
 	}
 	sgsVariable( sgs_Context* c, sgs_Variable* v ) : C(c)

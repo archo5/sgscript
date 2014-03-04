@@ -565,7 +565,7 @@ static int pprocI_add_job( SGS_CTX )
 	if( type == SVT_FUNC )
 	{
 		sgs_Variable var;
-		if( !sgs_GetStackItem( C, 0, &var ) ||
+		if( !sgs_PeekStackItem( C, 0, &var ) ||
 			!pproc_serialize_function( C, var.data.F, &str, &size ) )
 			STDLIB_WARN( "pproc.add_job(): failed to serialize function" )
 	}

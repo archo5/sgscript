@@ -8,7 +8,7 @@ include "string", "io", "fmt", "../bin/sgsmeta";
 
 meta_globals();
 
-function E( txt ){ println( txt ); }
+function E( txt ){ println( "ERROR: ", txt ); app_exit(1); }
 
 
 ///////////////////////////////////////////////////////////
@@ -522,13 +522,18 @@ function generate_c_file( cdata )
 
 println( "SGS 2 C" );
 
-if( argc != 2 ) return E( "Error: script not specified" );
+if( argc < 2 )
+	return E( "Error: script not specified" );
 
-script_name = argv[1];
+IN = argv[1];
+if( argc >= 3 )
+	OUT = argv[2];
+else
+	OUT = IN $ ".c";
 
-println( "Script: " $ script_name );
+println( "Script: " $ IN );
 
-script_data = io_file_read( script_name );
+script_data = io_file_read( IN );
 if( !script_data ) return E( "Error: could not read script" );
 
 (compiled_data, errors) = compile_sgs( script_data );
@@ -541,7 +546,7 @@ c_data = generate_c_file( compiled_data );
 if( !c_data )
 	return;
 
-if( !io_file_write( script_name $ ".c", c_data ) )
+if( !io_file_write( OUT, c_data ) )
 	return E( "Failed to save the C file" );
 
 println( "C file was generated and saved successfully" );
