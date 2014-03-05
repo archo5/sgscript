@@ -3595,7 +3595,7 @@ int sgsSTD_GlobalFree( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
-int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall )
+int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 {
 	VHTVar* pair;
 	sgs_VarObj* data = GLBP;
@@ -3627,13 +3627,12 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx, int apicall
 	else
 	{
 		sgs_Release( C, out );
-		if( !apicall )
-			sgs_Msg( C, SGS_WARNING, "variable '%s' was not found", str_cstr( idx->data.S ) );
+		sgs_Msg( C, SGS_WARNING, "variable '%s' was not found", str_cstr( idx->data.S ) );
 		return SGS_ENOTFND;
 	}
 }
 
-int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall )
+int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 {
 	sgs_VarObj* data = GLBP;
 	HTHDR;
@@ -3644,7 +3643,7 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val, int apicall
 	if( strcmp( var_cstr( idx ), "_G" ) == 0 )
 	{
 		int ret = sgs_SetEnv( C, val );
-		if( !apicall && SGS_FAILED( ret ) )
+		if( SGS_FAILED( ret ) )
 			sgs_Msg( C, SGS_ERROR, "_G only accepts 'dict' values" );
 		return ret;
 	}

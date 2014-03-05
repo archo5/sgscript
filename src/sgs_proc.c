@@ -2271,8 +2271,8 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 #define ARGS_2 const sgs_VarPtr p2 = RESVAR( argB );
 #define ARGS_3 const sgs_VarPtr p2 = RESVAR( argB ), p3 = RESVAR( argC );
 		case SI_LOADCONST: { stk_setlvar( C, argC, cptr + argE ); break; }
-		case SI_GETVAR: { ARGS_2; sgsSTD_GlobalGet( C, p1, p2, FALSE ); break; }
-		case SI_SETVAR: { ARGS_3; sgsSTD_GlobalSet( C, p2, p3, FALSE ); break; }
+		case SI_GETVAR: { ARGS_2; sgsSTD_GlobalGet( C, p1, p2 ); break; }
+		case SI_SETVAR: { ARGS_3; sgsSTD_GlobalSet( C, p2, p3 ); break; }
 		case SI_GETPROP: { ARGS_3; vm_getprop_safe( C, a1, p2, p3, TRUE ); break; }
 		case SI_SETPROP: { ARGS_3; vm_setprop( C, p1, p2, p3, TRUE ); break; }
 		case SI_GETINDEX: { ARGS_3; vm_getprop_safe( C, a1, p2, p3, FALSE ); break; }
@@ -2949,8 +2949,13 @@ SGSRESULT sgs_StoreIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, int isprop 
 
 SGSRESULT sgs_GetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* out )
 {
-	sgs_Variable vO; vO.type = SVT_OBJECT; vO.data.O = C->_G;
-	return sgs_GetIndexPPP( C, &vO, idx, out, 0 );
+	int ret;
+	_EL_BACKUP;
+	out->type = SVT_NULL;
+	_EL_SETMAX;
+	ret = sgsSTD_GlobalGet( C, out, idx );
+	_EL_RESET;
+	return ret;
 }
 
 SGSRESULT sgs_SetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
@@ -3003,13 +3008,16 @@ SGSRESULT sgs_StoreNumIndex( SGS_CTX, StkIdx obj, sgs_Int idx )
 SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name )
 {
 	int ret;
+	_EL_BACKUP;
 	sgs_Variable str;
 	sgs_VarPtr pos;
 	sgs_PushString( C, name );
 	pos = stk_getpos( C, -1 );
 	str = *pos;
 	sgs_Acquire( C, &str );
-	ret = sgsSTD_GlobalGet( C, pos, pos, 1 );
+	_EL_SETMAX;
+	ret = sgsSTD_GlobalGet( C, pos, pos );
+	_EL_RESET;
 	sgs_Release( C, &str );
 	if( ret != SGS_SUCCESS )
 		sgs_Pop( C, 1 );
@@ -3019,10 +3027,13 @@ SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name )
 SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
 {
 	int ret;
+	_EL_BACKUP;
 	if( sgs_StackSize( C ) < 1 )
 		return SGS_EINPROC;
 	sgs_PushString( C, name );
-	ret = sgsSTD_GlobalSet( C, stk_getpos( C, -1 ), stk_getpos( C, -2 ), 1 );
+	_EL_SETMAX;
+	ret = sgsSTD_GlobalSet( C, stk_getpos( C, -1 ), stk_getpos( C, -2 ) );
+	_EL_RESET;
 	sgs_Pop( C, ret == SGS_SUCCESS ? 2 : 1 );
 	return ret;
 }
