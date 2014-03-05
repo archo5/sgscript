@@ -439,7 +439,8 @@ function c_compile_func_inner( fdata, iswhole )
 	output $= "\n// ---";
 	
 	output $= "\n_ret:";
-	output $= "\nsgs_ReleaseArray( C, T, " $ fdata.numargs + fdata.numtmp $ " );";
+	if( fdata.numargs + fdata.numtmp )
+		output $= "\nsgs_ReleaseArray( C, T, " $ fdata.numargs + fdata.numtmp $ " );";
 	if( iswhole )
 		output $= "\nsgs_ReleaseArray( C, CN, " $ fdata.consts.size $ " );";
 	output $= "\nreturn ret;";
