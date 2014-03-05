@@ -184,7 +184,7 @@ SGS_DECL_PUSHVAR( double, sgs_PushReal );
 //SGS_DECL_PUSHVAR( char*, sgs_PushString );
 SGS_DECL_PUSHVAR( sgs_CFunc, sgs_PushCFunction );
 #ifndef SGS_CPPBC_NO_STD_STRING
-template<> inline void sgs_PushVar<std::string>( SGS_CTX, const std::string& v ){ sgs_PushStringBuf( C, v.c_str(), v.size() ); }
+template<> inline void sgs_PushVar<std::string>( SGS_CTX, const std::string& v ){ sgs_PushStringBuf( C, v.c_str(), (sgs_SizeVal) v.size() ); }
 #endif
 
 
@@ -301,7 +301,7 @@ template< class T > void sgs_PushClass( SGS_CTX, T* inst )
 
 template< class T > T* sgs_PushClassIPA( SGS_CTX )
 {
-	T* data = static_cast<T*>( sgs_PushObjectIPA( C, sizeof(T), T::_sgs_interface ) );
+	T* data = static_cast<T*>( sgs_PushObjectIPA( C, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
 	data->m_sgsObject = sgs_GetObjectStruct( C, -1 );
 	data->C = C;
 	return data;
@@ -309,7 +309,7 @@ template< class T > T* sgs_PushClassIPA( SGS_CTX )
 
 template< class T > T* sgs_PushClassFrom( SGS_CTX, T* inst )
 {
-	T* data = static_cast<T*>( sgs_PushObjectIPA( C, sizeof(T), T::_sgs_interface ) );
+	T* data = static_cast<T*>( sgs_PushObjectIPA( C, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
 	inst->m_sgsObject = sgs_GetObjectStruct( C, -1 );
 	inst->C = C;
 	*data = *inst;

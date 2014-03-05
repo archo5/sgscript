@@ -672,7 +672,8 @@ struct _sgs_Context
 	void*         output_ctx; /* output context */
 
 	/* info output */
-	int           minlev;
+	int32_t       minlev;
+	int32_t       apilev;
 	sgs_MsgFunc   msg_fn;  /* messaging function */
 	void*         msg_ctx; /* messaging context */
 	int           last_errno;

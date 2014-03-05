@@ -28,6 +28,7 @@ static void ctx_init( SGS_CTX )
 	C->output_fn = sgs_StdOutputFunc;
 	C->output_ctx = stdout;
 	C->minlev = SGS_INFO;
+	C->apilev = SGS_ERROR;
 	C->msg_fn = sgs_StdMsgFunc;
 	C->msg_ctx = stderr;
 	C->last_errno = 0;
@@ -893,6 +894,8 @@ int32_t sgs_Cntl( SGS_CTX, int what, int32_t val )
 	case SGS_CNTL_GET_STATE: return (int32_t) C->state;
 	case SGS_CNTL_MINLEV: x = C->minlev; C->minlev = val; return x;
 	case SGS_CNTL_GET_MINLEV: return C->minlev;
+	case SGS_CNTL_APILEV: x = C->apilev; C->apilev = val; return x;
+	case SGS_CNTL_GET_APILEV: return C->apilev;
 	case SGS_CNTL_ERRNO: x = C->last_errno; C->last_errno = val ? 0 : errno; return x;
 	case SGS_CNTL_SET_ERRNO: x = C->last_errno; C->last_errno = val; return x;
 	case SGS_CNTL_GET_ERRNO: return C->last_errno;

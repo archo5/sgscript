@@ -92,6 +92,22 @@ SGS_APIFUNC int sgs_ArgCheck_Mat4( SGS_CTX, int argid, va_list* args, int flags 
 SGS_APIFUNC int xgm_module_entry_point( SGS_CTX );
 
 
+/* utility macros */
+#define SGS_RETURN_VEC2( value ) { sgs_PushVec2p( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_VEC3( value ) { sgs_PushVec3p( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_VEC4( value ) { sgs_PushVec4p( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_AABB2( value ) { sgs_PushAABB2p( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_COLOR( value ) { sgs_PushColorp( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_MAT4( value ) { sgs_PushMat4( C, value, 0 ); return SGS_SUCCESS; }
+
+#define SGS_PARSE_VEC2( outptr, strict ) { return sgs_ParseVec2P( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
+#define SGS_PARSE_VEC3( outptr, strict ) { return sgs_ParseVec3P( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
+#define SGS_PARSE_VEC4( outptr, strict ) { return sgs_ParseVec4P( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
+#define SGS_PARSE_AABB2( outptr ) { return sgs_ParseAABB2P( C, val, outptr ) ? SGS_SUCCESS : SGS_EINVAL; }
+#define SGS_PARSE_COLOR( outptr, strict ) { return sgs_ParseColorP( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
+#define SGS_PARSE_MAT4( outptr ) { return sgs_ParseMat4P( C, val, outptr ) ? SGS_SUCCESS : SGS_EINVAL; }
+
+
 #ifdef __cplusplus
 }
 #endif

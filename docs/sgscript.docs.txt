@@ -1537,7 +1537,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_EqualTypes [function]
 
-== SGSBOOL sgs_EqualTypes( sgs_Context* C, sgs_Variable* v1, sgs_Variable* v2 )
+== SGSBOOL sgs_EqualTypes( sgs_Variable* v1, sgs_Variable* v2 )
 === return if types of both variables are exactly equal
 
 - both type variables and interface pointers (only if both variables are objects) are checked for equality

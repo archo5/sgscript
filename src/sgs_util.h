@@ -22,6 +22,7 @@ extern "C" {
 #    define MAX sgs_MAX
 #    define ARRAY_SIZE sgs_ARRAY_SIZE
 #    define HAS_FLAG sgs_HAS_FLAG
+#    define HAS_ANY_FLAG sgs_HAS_ANY_FLAG
 #  endif
 #  define LineNum sgs_LineNum
 #  define isoneof sgs_isoneof
@@ -95,6 +96,7 @@ extern "C" {
 #define sgs_MIN( a, b ) ((a)<(b)?(a):(b))
 #define sgs_ARRAY_SIZE( a ) (sizeof(a)/sizeof(a[0]))
 #define sgs_HAS_FLAG( val, flag ) (((val)&(flag))==(flag))
+#define sgs_HAS_ANY_FLAG( val, flag ) (((val)&(flag))!=0)
 
 #define SGS_GLUE(a,b) __SGS_GLUE(a,b)
 #define __SGS_GLUE(a,b) a ## b

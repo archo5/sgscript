@@ -468,7 +468,7 @@ static int sgsstd_arrayI_find( SGS_CTX )
 	while( off < hdr->size )
 	{
 		sgs_Variable* p = SGSARR_PTR( hdr ) + off;
-		if( ( !strict || sgs_EqualTypes( C, p, &comp ) )
+		if( ( !strict || sgs_EqualTypes( p, &comp ) )
 			&& sgs_Compare( C, p, &comp ) == 0 )
 		{
 			sgs_PushInt( C, off );
@@ -492,7 +492,7 @@ static int sgsstd_arrayI_remove( SGS_CTX )
 	while( off < hdr->size )
 	{
 		sgs_Variable* p = SGSARR_PTR( hdr ) + off;
-		if( ( !strict || sgs_EqualTypes( C, p, &comp ) )
+		if( ( !strict || sgs_EqualTypes( p, &comp ) )
 			&& sgs_Compare( C, p, &comp ) == 0 )
 		{
 			sgsstd_array_erase( C, hdr, off, off );
@@ -517,7 +517,7 @@ static int _in_array( SGS_CTX, void* data, sgs_Variable* var, int strconv )
 		while( off < hdr->size )
 		{
 			sgs_Variable* cur = SGSARR_PTR( hdr ) + off;
-			if( sgs_EqualTypes( C, var, cur ) && sgs_Compare( C, var, cur ) == 0 )
+			if( sgs_EqualTypes( var, cur ) && sgs_Compare( C, var, cur ) == 0 )
 				return TRUE;
 			off++;
 		}
@@ -537,7 +537,7 @@ static int _in_array( SGS_CTX, void* data, sgs_Variable* var, int strconv )
 			sgs_Acquire( C, &B );
 			sgs_ToStringP( C, &B );
 			
-			found = sgs_EqualTypes( C, &A, &B ) && sgs_Compare( C, &A, &B ) == 0;
+			found = sgs_EqualTypes( &A, &B ) && sgs_Compare( C, &A, &B ) == 0;
 			sgs_Release( C, &B );
 			if( found )
 				break;
@@ -2029,11 +2029,16 @@ static int sgsstd_map_size( SGS_CTX )
 
 static int sgsstd_isset( SGS_CTX )
 {
+	int ret;
+	int32_t oldapilev;
 	SGSFN( "isset" );
 	if( !sgs_LoadArgs( C, "?v?m." ) )
 		return 0;
 	
-	sgs_PushBool( C, sgs_PushIndexII( C, 0, 1, TRUE ) == SGS_SUCCESS );
+	oldapilev = sgs_Cntl( C, SGS_CNTL_APILEV, SGS_ERROR );
+	ret = sgs_PushIndexII( C, 0, 1, TRUE ) == SGS_SUCCESS;
+	sgs_Cntl( C, SGS_CNTL_APILEV, oldapilev );
+	sgs_PushBool( C, ret );
 	return 1;
 }
 
@@ -3809,7 +3814,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 			while( off < hdr->size )
 			{
 				sgs_Variable* p = SGSARR_PTR( hdr ) + off;
-				if( sgs_EqualTypes( C, p, &comp )
+				if( sgs_EqualTypes( p, &comp )
 					&& sgs_Compare( C, p, &comp ) == 0 )
 				{
 					return off;
@@ -3836,7 +3841,7 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 			while( off < hdr->size )
 			{
 				sgs_Variable* p = SGSARR_PTR( hdr ) + off;
-				if( sgs_EqualTypes( C, p, &comp )
+				if( sgs_EqualTypes( p, &comp )
 					&& sgs_Compare( C, p, &comp ) == 0 )
 				{
 					sgsstd_array_erase( C, hdr, off, off );

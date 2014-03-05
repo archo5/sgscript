@@ -2729,7 +2729,7 @@ SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var )
 
 
 #define _EL_BACKUP int32_t oel = C->minlev;
-#define _EL_SETMAX C->minlev = INT32_MAX;
+#define _EL_SETMAX C->minlev = C->apilev;
 #define _EL_RESET C->minlev = oel;
 
 SGSRESULT sgs_GetIndexPPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* out, int isprop )
@@ -4369,7 +4369,7 @@ int sgs_Compare( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
 	return vm_compare( C, v1, v2 );
 }
 
-SGSBOOL sgs_EqualTypes( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
+SGSBOOL sgs_EqualTypes( sgs_Variable* v1, sgs_Variable* v2 )
 {
 	return v1->type == v2->type && ( v1->type != SVT_OBJECT
 		|| v1->data.O->iface == v2->data.O->iface );
@@ -4517,6 +4517,27 @@ SGSBOOL sgs_ParseStringP( SGS_CTX, sgs_Variable* var, char** out, sgs_SizeVal* s
 	if( out )
 		*out = str;
 	return str != NULL;
+}
+
+SGSBOOL sgs_ParseObjectPtrP( SGS_CTX, sgs_Variable* var,
+	sgs_ObjInterface* iface, sgs_VarObj** out, int strict )
+{
+	if( !strict && var->type == SGS_VT_NULL )
+	{
+		if( *out )
+			sgs_ObjRelease( C, *out );
+		*out = NULL;
+		return TRUE;
+	}
+	if( sgs_IsObjectP( var, iface ) )
+	{
+		if( *out )
+			sgs_ObjRelease( C, *out );
+		*out = sgs_GetObjectStructP( var );
+		sgs_ObjAcquire( C, *out );
+		return TRUE;
+	}
+	return FALSE;
 }
 
 SGSBOOL sgs_ParsePtrP( SGS_CTX, sgs_Variable* var, void** out )
@@ -4692,6 +4713,14 @@ SGSBOOL sgs_ParseString( SGS_CTX, StkIdx item, char** out, sgs_SizeVal* size )
 	return str != NULL;
 }
 
+SGSBOOL sgs_ParseObjectPtr( SGS_CTX, sgs_StkIdx item,
+	sgs_ObjInterface* iface, sgs_VarObj** out, int strict )
+{
+	if( !sgs_IsValidIndex( C, item ) )
+		return FALSE;
+	return sgs_ParseObjectPtrP( C, stk_getpos( C, item ), iface, out, strict );
+}
+
 SGSBOOL sgs_ParsePtr( SGS_CTX, StkIdx item, void** out )
 {
 	if( !sgs_IsValidIndex( C, item ) )
@@ -4705,6 +4734,51 @@ SGSMIXED sgs_ArraySize( SGS_CTX, StkIdx item )
 		sgs_GetObjectIface( C, item ) != sgsstd_array_iface )
 		return SGS_EINVAL;
 	return ((sgsstd_array_header_t*)sgs_GetObjectData( C, item ))->size;
+}
+
+
+sgs_Bool sgs_GlobalBool( SGS_CTX, const char* name )
+{
+	sgs_Bool v;
+	if( SGS_FAILED( sgs_PushGlobal( C, name ) ) )
+		return 0;
+	v = var_getbool( C, stk_gettop( C ) );
+	stk_pop1( C );
+	return v;
+}
+
+sgs_Int sgs_GlobalInt( SGS_CTX, const char* name )
+{
+	sgs_Int v;
+	if( SGS_FAILED( sgs_PushGlobal( C, name ) ) )
+		return 0;
+	v = var_getint( C, stk_gettop( C ) );
+	stk_pop1( C );
+	return v;
+}
+
+sgs_Real sgs_GlobalReal( SGS_CTX, const char* name )
+{
+	sgs_Real v;
+	if( SGS_FAILED( sgs_PushGlobal( C, name ) ) )
+		return 0;
+	v = var_getreal( C, stk_gettop( C ) );
+	stk_pop1( C );
+	return v;
+}
+
+char* sgs_GlobalStringBuf( SGS_CTX, const char* name, sgs_SizeVal* outsize )
+{
+	char* buf;
+	if( SGS_FAILED( sgs_PushGlobal( C, name ) ) )
+		return NULL;
+	if( !sgs_ParseString( C, -1, &buf, outsize ) )
+	{
+		stk_pop1( C );
+		return NULL;
+	}
+	stk_pop1( C );
+	return buf;
 }
 
 
@@ -4945,6 +5019,11 @@ SGSRESULT sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj )
 	var.type = SVT_OBJECT;
 	var.data.O = obj;
 	return sgs_GCMark( C, &var );
+}
+
+void sgs_ObjCallDtor( SGS_CTX, sgs_VarObj* obj )
+{
+	var_destruct_object( C, obj );
 }
 
 

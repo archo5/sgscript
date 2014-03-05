@@ -18,48 +18,11 @@
 #include "sgs_regex.h"
 
 #define FN( x ) { #x, sgsstd_##x }
-#define FLAG( a, b ) (((a)&(b))!=0)
-#define STREQ( a, b ) (0==strcmp(a,b))
-#define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
-#define STDLIB_INFO( info ) return sgs_Msg( C, SGS_INFO, info );
 #define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
 
 
 SGS_DECLARE sgs_ObjInterface sgsstd_file_iface[1];
 static int sgsstd_fileI_read( SGS_CTX );
-
-
-/* path helper functions */
-
-#if 0
-static int32_t findlastof( const char* str, int32_t len, const char* of )
-{
-	const char* ptr = str + len;
-	while( ptr-- > str )
-	{
-		const char* pof = of;
-		while( *pof )
-		{
-			if( *pof == *ptr )
-				return ptr - str;
-			pof++;
-		}
-	}
-	return -1;
-}
-
-static int path_replast( SGS_CTX, int from, int with )
-{
-	sgs_SizeVal size, pos;
-	char* buf = sgs_ToStringBuf( C, from, &size );
-	if( !buf || ( pos = findlastof( buf, size, "/\\" ) ) < 0 )
-	{
-		return !sgs_PushItem( C, with );
-	}
-	sgs_PushStringBuf( C, buf, pos + 1 );
-	return !( sgs_PushItem( C, with ) || sgs_StringConcat( C ) );
-}
-#endif
 
 
 /*  - - - - - - - - - -
@@ -840,7 +803,7 @@ typedef struct sgsstd_fmtstream_s
 sgsstd_fmtstream_t;
 
 SGS_DECLARE sgs_ObjInterface sgsstd_fmtstream_iface[1];
-#define SGSFS_HDR sgsstd_fmtstream_t* hdr = (sgsstd_fmtstream_t*) data->data
+#define SGSFS_HDR sgsstd_fmtstream_t* hdr = (sgsstd_fmtstream_t*) obj->data
 
 #define fs_getreadsize( hdr, lim ) MIN( hdr->buffill - hdr->bufpos, lim )
 
@@ -886,7 +849,7 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 }
 
 
-static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* obj )
 {
 	SGSFS_HDR;
 	sgs_Release( C, &hdr->source );
@@ -1326,33 +1289,26 @@ static int sgsstd_fmtstreamI_check( SGS_CTX )
 
 
 
-static int sgsstd_fmtstream_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int sgsstd_fmtstream_getindex( SGS_ARGS_GETINDEXFUNC )
 {
-	char* str;
 	SGSFS_HDR;
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
-	{
-		if STREQ( str, "read" ) IFN( sgsstd_fmtstreamI_read )
-		else if STREQ( str, "getchar" ) IFN( sgsstd_fmtstreamI_getchar )
-		else if STREQ( str, "readcc" ) IFN( sgsstd_fmtstreamI_readcc )
-		else if STREQ( str, "skipcc" ) IFN( sgsstd_fmtstreamI_skipcc )
-		else if STREQ( str, "read_real" ) IFN( sgsstd_fmtstreamI_read_real )
-		else if STREQ( str, "read_int" ) IFN( sgsstd_fmtstreamI_read_int )
-		else if STREQ( str, "read_binary_int" ) IFN( sgsstd_fmtstreamI_read_binary_int )
-		else if STREQ( str, "read_octal_int" ) IFN( sgsstd_fmtstreamI_read_octal_int )
-		else if STREQ( str, "read_decimal_int" ) IFN( sgsstd_fmtstreamI_read_decimal_int )
-		else if STREQ( str, "read_hex_int" ) IFN( sgsstd_fmtstreamI_read_hex_int )
-		else if STREQ( str, "check" ) IFN( sgsstd_fmtstreamI_check )
-		
-		else if( 0 == strcmp( str, "at_end" ) ){
-			sgs_PushBool( C, hdr->state == FMTSTREAM_STATE_END );
-			return SGS_SUCCESS; }
-		else if( 0 == strcmp( str, "stream_offset" ) ){
-			sgs_PushInt( C, hdr->streamoff + hdr->bufpos );
-			return SGS_SUCCESS; }
-	}
-	
-	return SGS_ENOTFND;
+	SGS_BEGIN_INDEXFUNC
+		/* functions */
+		SGS_CASE( "read" )             SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read )
+		SGS_CASE( "getchar" )          SGS_RETURN_CFUNC( sgsstd_fmtstreamI_getchar )
+		SGS_CASE( "readcc" )           SGS_RETURN_CFUNC( sgsstd_fmtstreamI_readcc )
+		SGS_CASE( "skipcc" )           SGS_RETURN_CFUNC( sgsstd_fmtstreamI_skipcc )
+		SGS_CASE( "read_real" )        SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_real )
+		SGS_CASE( "read_int" )         SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_int )
+		SGS_CASE( "read_binary_int" )  SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_binary_int )
+		SGS_CASE( "read_octal_int" )   SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_octal_int )
+		SGS_CASE( "read_decimal_int" ) SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_decimal_int )
+		SGS_CASE( "read_hex_int" )     SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_hex_int )
+		SGS_CASE( "check" )            SGS_RETURN_CFUNC( sgsstd_fmtstreamI_check )
+		/* properties */
+		SGS_CASE( "at_end" )           SGS_RETURN_BOOL( hdr->state == FMTSTREAM_STATE_END )
+		SGS_CASE( "stream_offset" )    SGS_RETURN_INT( hdr->streamoff + hdr->bufpos )
+	SGS_END_INDEXFUNC
 }
 
 static sgs_ObjInterface sgsstd_fmtstream_iface[1] =
@@ -1830,7 +1786,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 
 
 #define FVAR ((FILE*)data)
-#define IFVAR ((FILE*)data->data)
+#define IFVAR ((FILE*)obj->data)
 #define FVNO_BEGIN if( FVAR ) {
 #define FVNO_END( name ) } else \
 	STDLIB_WARN( "file." #name "() - file is not opened" )
@@ -2044,29 +2000,26 @@ static int sgsstd_fileI_setbuf( SGS_CTX )
 }
 
 
-static int sgsstd_file_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int sgsstd_file_getindex( SGS_ARGS_GETINDEXFUNC )
 {
-	char* str;
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
-	{
-		if STREQ( str, "is_open" ){ sgs_PushBool( C, !!IFVAR ); return SGS_SUCCESS; }
-		if STREQ( str, "offset" ){ return sgsstd_fileP_offset( C, IFVAR ); }
-		if STREQ( str, "size" ){ return sgsstd_fileP_size( C, IFVAR ); }
-		if STREQ( str, "error" ){ return sgsstd_fileP_error( C, IFVAR ); }
-		if STREQ( str, "eof" ){ return sgsstd_fileP_eof( C, IFVAR ); }
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "is_open" ) SGS_RETURN_BOOL( !!IFVAR )
+		SGS_CASE( "offset" )  { return sgsstd_fileP_offset( C, IFVAR ); }
+		SGS_CASE( "size" )    { return sgsstd_fileP_size( C, IFVAR ); }
+		SGS_CASE( "error" )   { return sgsstd_fileP_error( C, IFVAR ); }
+		SGS_CASE( "eof" )     { return sgsstd_fileP_eof( C, IFVAR ); }
 		
-		if STREQ( str, "open" ) IFN( sgsstd_fileI_open )
-		if STREQ( str, "close" ) IFN( sgsstd_fileI_close )
-		if STREQ( str, "read" ) IFN( sgsstd_fileI_read )
-		if STREQ( str, "write" ) IFN( sgsstd_fileI_write )
-		if STREQ( str, "seek" ) IFN( sgsstd_fileI_seek )
-		if STREQ( str, "flush" ) IFN( sgsstd_fileI_flush )
-		if STREQ( str, "setbuf" ) IFN( sgsstd_fileI_setbuf )
-	}
-	return SGS_ENOTFND;
+		SGS_CASE( "open" )    SGS_RETURN_CFUNC( sgsstd_fileI_open )
+		SGS_CASE( "close" )   SGS_RETURN_CFUNC( sgsstd_fileI_close )
+		SGS_CASE( "read" )    SGS_RETURN_CFUNC( sgsstd_fileI_read )
+		SGS_CASE( "write" )   SGS_RETURN_CFUNC( sgsstd_fileI_write )
+		SGS_CASE( "seek" )    SGS_RETURN_CFUNC( sgsstd_fileI_seek )
+		SGS_CASE( "flush" )   SGS_RETURN_CFUNC( sgsstd_fileI_flush )
+		SGS_CASE( "setbuf" )  SGS_RETURN_CFUNC( sgsstd_fileI_setbuf )
+	SGS_END_INDEXFUNC
 }
 
-static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* data )
+static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	UNUSED( C );
 	if( IFVAR )
@@ -2074,9 +2027,9 @@ static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
-	UNUSED( data );
+	UNUSED( obj );
 	if( type == SVT_BOOL )
 	{
 		sgs_PushBool( C, !!IFVAR );
@@ -3030,12 +2983,12 @@ static int sgsstd_string_cut( SGS_CTX )
 	if( sgs_LoadArgsExt( C, 2, "|ii", &i2, &flags ) < 1 )
 		return 0;
 	
-	if( FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
+	if( HAS_FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
 		STDLIB_WARN( "detected negative indices" );
 	
 	i1 = i1 < 0 ? size + i1 : i1;
 	i2 = i2 < 0 ? size + i2 : i2;
-	if( FLAG( flags, sgsSTRICT_RANGES ) &&
+	if( HAS_FLAG( flags, sgsSTRICT_RANGES ) &&
 		( i1 > i2 || i1 < 0 || i2 < 0 || i1 >= size || i2 >= size ) )
 		STDLIB_WARN( "invalid character range" );
 	
@@ -3065,12 +3018,12 @@ static int sgsstd_string_part( SGS_CTX )
 	if( sgs_LoadArgsExt( C, 2, "|ii", &i2, &flags ) < 1 )
 		return 0;
 	
-	if( FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
+	if( HAS_FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
 		STDLIB_WARN( "detected negative indices" );
 	
 	i1 = i1 < 0 ? size + i1 : i1;
 	i2 = i2 < 0 ? size + i2 : i2;
-	if( FLAG( flags, sgsSTRICT_RANGES ) &&
+	if( HAS_FLAG( flags, sgsSTRICT_RANGES ) &&
 		( i1 < 0 || i1 + i2 < 0 || i2 < 0 || i1 >= size || i1 + i2 > size ) )
 		STDLIB_WARN( "invalid character range" );
 	
@@ -3116,7 +3069,7 @@ static int sgsstd_string_pad( SGS_CTX )
 	if( !sgs_LoadArgs( C, "mi|mi", &str, &size, &tgtsize, &pad, &padsize, &flags ) )
 		return 0;
 	
-	if( tgtsize <= size || !FLAG( flags, sgsLEFT | sgsRIGHT ) )
+	if( tgtsize <= size || !HAS_ANY_FLAG( flags, sgsLEFT | sgsRIGHT ) )
 	{
 		sgs_PushItem( C, 0 );
 		return 1;
@@ -3124,9 +3077,9 @@ static int sgsstd_string_pad( SGS_CTX )
 	
 	sgs_PushStringBuf( C, NULL, (sgs_SizeVal) tgtsize );
 	sout = sgs_GetStringPtr( C, -1 );
-	if( FLAG( flags, sgsLEFT ) )
+	if( HAS_FLAG( flags, sgsLEFT ) )
 	{
-		if( FLAG( flags, sgsRIGHT ) )
+		if( HAS_FLAG( flags, sgsRIGHT ) )
 		{
 			sgs_Int pp = tgtsize - size;
 			lpad = pp / 2 + pp % 2;
@@ -3523,19 +3476,19 @@ static int sgsstd_string_trim( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m|mi", &str, &size, &list, &listsize, &flags ) )
 		return 0;
 	
-	if( !FLAG( flags, sgsLEFT | sgsRIGHT ) )
+	if( !HAS_ANY_FLAG( flags, sgsLEFT | sgsRIGHT ) )
 	{
 		sgs_PushItem( C, 0 );
 		return 1;
 	}
 	
 	strend = str + size;
-	if( flags & sgsLEFT )
+	if( HAS_FLAG( flags, sgsLEFT ) )
 	{
 		while( str < strend && stdlib_isoneof( *str, list, listsize ) )
 			str++;
 	}
-	if( flags & sgsRIGHT )
+	if( HAS_FLAG( flags, sgsRIGHT ) )
 	{
 		while( str < strend && stdlib_isoneof( *(strend-1), list, listsize ) )
 			strend--;
