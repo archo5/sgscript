@@ -2,7 +2,6 @@
 
 #include <math.h>
 
-#define SGS_INTERNAL
 #include <sgs_int.h>
 
 #include "sgs_prof.h"
@@ -18,26 +17,26 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 
 	if( evid == SGS_HOOK_ENTER )
 	{
-		membuf_appbuf( &P->timetmp, C, &TM, sizeof(TM) );
+		sgs_membuf_appbuf( &P->timetmp, C, &TM, sizeof(TM) );
 	}
 	else if( evid == SGS_HOOK_EXIT )
 	{
 		double prevTM;
-		VHTVar* pair;
+		sgs_VHTVar* pair;
 		
 		sgs_StackFrame* sf = sgs_GetFramePtr( C, 0 );
-		membuf_resize( &P->keytmp, C, 0 );
+		sgs_membuf_resize( &P->keytmp, C, 0 );
 		while( sf )
 		{
 			const char* fname = "<error>";
 			sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
-			membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
-			membuf_appchr( &P->keytmp, C, 0 );
+			sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
+			sgs_membuf_appchr( &P->keytmp, C, 0 );
 			sf = sf->next;
 		}
 		
-		AS_DOUBLE( prevTM, P->timetmp.ptr + P->timetmp.size - sizeof(double) );
-		pair = vht_get_str( &P->timings, P->keytmp.ptr, (uint32_t) P->keytmp.size,
+		SGS_AS_DOUBLE( prevTM, P->timetmp.ptr + P->timetmp.size - sizeof(double) );
+		pair = sgs_vht_get_str( &P->timings, P->keytmp.ptr, (uint32_t) P->keytmp.size,
 			sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
 		if( pair )
 		{
@@ -46,41 +45,40 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 		else
 		{
 			sgs_Variable val;
-			val.type = SVT_REAL;
-			val.data.R = TM - prevTM;
+			sgs_InitReal( &val, TM - prevTM );
 			sgs_PushStringBuf( C, P->keytmp.ptr, (sgs_SizeVal) P->keytmp.size );
-			vht_set( &P->timings, C, C->stack_top-1, &val );
+			sgs_vht_set( &P->timings, C, C->stack_top-1, &val );
 			sgs_Pop( C, 1 );
 		}
 		
-		membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(TM) );
+		sgs_membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(TM) );
 	}
 }
 
 static int initProfMode1( SGS_PROF )
 {
-	P->keytmp = membuf_create();
-	P->timetmp = membuf_create();
-	vht_init( &P->timings, P->C, 128, 128 );
+	P->keytmp = sgs_membuf_create();
+	P->timetmp = sgs_membuf_create();
+	sgs_vht_init( &P->timings, P->C, 128, 128 );
 	sgs_SetHookFunc( P->C, mode1hook, P );
 	return 1;
 }
 
 static void freeProfMode1( SGS_PROF )
 {
-	membuf_destroy( &P->keytmp, P->C );
-	membuf_destroy( &P->timetmp, P->C );
-	vht_free( &P->timings, P->C );
+	sgs_membuf_destroy( &P->keytmp, P->C );
+	sgs_membuf_destroy( &P->timetmp, P->C );
+	sgs_vht_free( &P->timings, P->C );
 }
 
 static int dpm1sf( const void* p1, const void* p2 )
 {
-	const VHTVar* v1 = (const VHTVar*) p1;
-	const VHTVar* v2 = (const VHTVar*) p2;
+	const sgs_VHTVar* v1 = (const sgs_VHTVar*) p1;
+	const sgs_VHTVar* v2 = (const sgs_VHTVar*) p2;
 	const sgs_iStr* str1 = v1->key.data.S;
 	const sgs_iStr* str2 = v2->key.data.S;
 	uint32_t cmpsz = str1->size < str2->size ? str1->size : str2->size;
-	int ret = memcmp( str_c_cstr( str1 ), str_c_cstr( str2 ), cmpsz );
+	int ret = memcmp( sgs_str_c_cstr( str1 ), sgs_str_c_cstr( str2 ), cmpsz );
 	if( !ret )
 		ret = (int)( str1->size - str2->size );
 	return ret;
@@ -90,23 +88,23 @@ static int dpm1sf( const void* p1, const void* p2 )
 static int dumpProfMode1( SGS_PROF )
 {
 	int i;
-	VHTVar* pbuf = (VHTVar*)
-		sgs_Malloc( P->C, sizeof(VHTVar) * (size_t) P->timings.size );
+	sgs_VHTVar* pbuf = (sgs_VHTVar*)
+		sgs_Malloc( P->C, sizeof(sgs_VHTVar) * (size_t) P->timings.size );
 	
-	memcpy( pbuf, P->timings.vars, sizeof(VHTVar) * (size_t) P->timings.size );
+	memcpy( pbuf, P->timings.vars, sizeof(sgs_VHTVar) * (size_t) P->timings.size );
 	
-	qsort( pbuf, (size_t) P->timings.size, sizeof(VHTVar), dpm1sf );
+	qsort( pbuf, (size_t) P->timings.size, sizeof(sgs_VHTVar), dpm1sf );
 	
 	sgs_Writef( P->C, "--- Time by call stack frame ---\n" );
 	for( i = 0; i < P->timings.size; ++i )
 	{
 		const char *s, *send;
-		VHTVar* p = pbuf + i;
-		s = var_cstr( &p->key );
+		sgs_VHTVar* p = pbuf + i;
+		s = sgs_var_cstr( &p->key );
 		send = s + p->key.data.S->size;
 		while( s < send )
 		{
-			if( s != var_cstr( &p->key ) )
+			if( s != sgs_var_cstr( &p->key ) )
 				sgs_Writef( P->C, "::" );
 			sgs_Writef( P->C, "%s", s );
 			s += strlen( s ) + 1;
@@ -240,26 +238,26 @@ static void mode3hook( void* userdata, SGS_CTX, int evid )
 
 	if( evid == SGS_HOOK_ENTER )
 	{
-		membuf_appbuf( &P->timetmp, C, &CD, sizeof(CD) );
+		sgs_membuf_appbuf( &P->timetmp, C, &CD, sizeof(CD) );
 	}
 	else if( evid == SGS_HOOK_EXIT )
 	{
 		mode3data prevCD, *PD;
-		VHTVar* pair;
+		sgs_VHTVar* pair;
 		
 		sgs_StackFrame* sf = sgs_GetFramePtr( C, 0 );
-		membuf_resize( &P->keytmp, C, 0 );
+		sgs_membuf_resize( &P->keytmp, C, 0 );
 		while( sf )
 		{
 			const char* fname = "<error>";
 			sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
-			membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
-			membuf_appchr( &P->keytmp, C, 0 );
+			sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
+			sgs_membuf_appchr( &P->keytmp, C, 0 );
 			sf = sf->next;
 		}
 		
 		memcpy( &prevCD, P->timetmp.ptr + P->timetmp.size - sizeof(CD), sizeof(CD) );
-		pair = vht_get_str( &P->timings, P->keytmp.ptr, (uint32_t) P->keytmp.size,
+		pair = sgs_vht_get_str( &P->timings, P->keytmp.ptr, (uint32_t) P->keytmp.size,
 			sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
 		if( pair )
 		{
@@ -268,11 +266,11 @@ static void mode3hook( void* userdata, SGS_CTX, int evid )
 		else
 		{
 			sgs_Variable val;
-			val.type = SVT_PTR;
+			val.type = SGS_VT_PTR;
 			val.data.P = PD = (mode3data*) sgs_Malloc( C, sizeof(CD) );
 			memset( PD, 0, sizeof(*PD) );
 			sgs_PushStringBuf( C, P->keytmp.ptr, (sgs_SizeVal) P->keytmp.size );
-			vht_set( &P->timings, C, C->stack_top-1, &val );
+			sgs_vht_set( &P->timings, C, C->stack_top-1, &val );
 			sgs_Pop( C, 1 );
 		}
 		
@@ -281,7 +279,7 @@ static void mode3hook( void* userdata, SGS_CTX, int evid )
 		PD->numblocks += CD.numblocks - prevCD.numblocks;
 		PD->szdelta += CD.szdelta - prevCD.szdelta;
 		
-		membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(CD) );
+		sgs_membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(CD) );
 	}
 }
 
@@ -305,8 +303,8 @@ static int freeProfMode3( SGS_PROF )
 
 static int dpm3sf( const void* p1, const void* p2 )
 {
-	const VHTVar* v1 = (const VHTVar*) p1;
-	const VHTVar* v2 = (const VHTVar*) p2;
+	const sgs_VHTVar* v1 = (const sgs_VHTVar*) p1;
+	const sgs_VHTVar* v2 = (const sgs_VHTVar*) p2;
 	const sgs_iStr* str1 = v1->key.data.S;
 	const sgs_iStr* str2 = v2->key.data.S;
 	const mode3data* D1 = (const mode3data*) v1->val.data.P;
@@ -319,7 +317,7 @@ static int dpm3sf( const void* p1, const void* p2 )
 		double abs2 = fabs( D1->szdelta );
 		ret = abs1 == abs2 ? 0 : ( abs1 < abs2 ? -1 : 1 );
 	}
-	if( !ret ) ret = memcmp( str_c_cstr( str1 ), str_c_cstr( str2 ), cmpsz );
+	if( !ret ) ret = memcmp( sgs_str_c_cstr( str1 ), sgs_str_c_cstr( str2 ), cmpsz );
 	if( !ret ) ret = (int)( str1->size - str2->size );
 	return ret;
 }
@@ -327,23 +325,23 @@ static int dpm3sf( const void* p1, const void* p2 )
 static int dumpProfMode3( SGS_PROF )
 {
 	int i;
-	VHTVar* pbuf = (VHTVar*) sgs_Malloc( P->C, sizeof(VHTVar) * (size_t) P->timings.size );
+	sgs_VHTVar* pbuf = (sgs_VHTVar*) sgs_Malloc( P->C, sizeof(sgs_VHTVar) * (size_t) P->timings.size );
 	
-	memcpy( pbuf, P->timings.vars, sizeof(VHTVar) * (size_t) P->timings.size );
+	memcpy( pbuf, P->timings.vars, sizeof(sgs_VHTVar) * (size_t) P->timings.size );
 	
-	qsort( pbuf, (size_t) P->timings.size, sizeof(VHTVar), dpm3sf );
+	qsort( pbuf, (size_t) P->timings.size, sizeof(sgs_VHTVar), dpm3sf );
 	
 	sgs_Writef( P->C, "--- Memory usage by call stack frame ---\n" );
 	for( i = 0; i < P->timings.size; ++i )
 	{
 		const char *s, *send;
-		VHTVar* p = pbuf + i;
+		sgs_VHTVar* p = pbuf + i;
 		mode3data* PD = (mode3data*) p->val.data.P;
-		s = var_cstr( &p->key );
+		s = sgs_var_cstr( &p->key );
 		send = s + p->key.data.S->size;
 		while( s < send )
 		{
-			if( s != var_cstr( &p->key ) )
+			if( s != sgs_var_cstr( &p->key ) )
 				sgs_Writef( P->C, "::" );
 			sgs_Writef( P->C, "%s", s );
 			s += strlen( s ) + 1;

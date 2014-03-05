@@ -2,7 +2,6 @@
 
 #include <ctype.h>
 
-#define SGS_INTERNAL
 #include <sgs_int.h>
 
 #include "sgs_idbg.h"
@@ -28,15 +27,15 @@ static void idbg_readStdin( SGS_IDBG )
 	/* read from STDIN */
 	size_t wsz = 31, i = 0;
 	char bfr[ BFR_SIZE ];
-	membuf_resize( &D->input, D->C, 0 );
+	sgs_membuf_resize( &D->input, D->C, 0 );
 	while( fgets( bfr, BFR_SIZE, stdin ) )
 	{
 		size_t len = strlen( bfr );
-		membuf_appbuf( &D->input, D->C, bfr, len );
+		sgs_membuf_appbuf( &D->input, D->C, bfr, len );
 		if( len && bfr[ len - 1 ] == '\n' )
 			break;
 	}
-	membuf_appchr( &D->input, D->C, 0 );
+	sgs_membuf_appchr( &D->input, D->C, 0 );
 
 	/* parse first word */
 	while( i < wsz && i < D->input.size && isalpha( D->input.ptr[ i ] ) )
@@ -90,12 +89,12 @@ static void idbgPrintFunc( void* data, SGS_CTX, int type, const char* message )
 		if( STREQ( D->iword, "print" ) )
 		{
 			int rvc = 0;
-			MemBuf prepstr = membuf_create();
-			membuf_appbuf( &prepstr, C, "return (", 8 );
-			membuf_appbuf( &prepstr, C, D->input.ptr + 5, D->input.size - 5 );
-			membuf_appbuf( &prepstr, C, ");", 2 );
+			sgs_MemBuf prepstr = sgs_membuf_create();
+			sgs_membuf_appbuf( &prepstr, C, "return (", 8 );
+			sgs_membuf_appbuf( &prepstr, C, D->input.ptr + 5, D->input.size - 5 );
+			sgs_membuf_appbuf( &prepstr, C, ");", 2 );
 			sgs_EvalBuffer( C, prepstr.ptr, prepstr.size, &rvc );
-			membuf_destroy( &prepstr, C );
+			sgs_membuf_destroy( &prepstr, C );
 			sgs_PushGlobal( C, "printvars" );
 			sgs_Call( C, rvc, 0 );
 		}
@@ -169,7 +168,7 @@ int sgs_InitIDbg( SGS_CTX, SGS_IDBG )
 	C->msg_fn = idbgPrintFunc;
 	C->msg_ctx = D;
 
-	D->input = membuf_create();
+	D->input = sgs_membuf_create();
 	D->iword[0] = 0;
 	D->inside = 0;
 	D->minlev = SGS_WARNING;
@@ -186,7 +185,7 @@ int sgs_CloseIDbg( SGS_CTX, SGS_IDBG )
 {
 	C->msg_fn = D->pfn;
 	C->msg_ctx = D->pctx;
-	membuf_destroy( &D->input, C );
+	sgs_membuf_destroy( &D->input, C );
 	return SGS_SUCCESS;
 }
 
