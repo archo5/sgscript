@@ -824,7 +824,7 @@ These are the default meanings for error codes that are honored throughout the A
 
 # sgs_EvalFile [function]
 
-== SGSRESULT sgs_ExecFile( sgs_Context* C, const char* filename, int* rvc )
+== SGSRESULT sgs_EvalFile( sgs_Context* C, const char* filename, int* rvc )
 === compiles and executes a file containing script text or bytecode, optionally leaving the return values on stack and returning the number of values via `rvc`
 
 - if `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call
@@ -907,11 +907,11 @@ These are the default meanings for error codes that are honored throughout the A
 == void sgs_InitReal( sgs_Variable* out, sgs_Real value )
 == void sgs_InitStringBuf( sgs_Context* C, sgs_Variable* out, const char* str, sgs_SizeVal size )
 == void sgs_InitString( sgs_Context* C, sgs_Variable* out, const char* str )
-== void sgs_InitCFunction( sgs_Context* C, sgs_Variable* out, sgs_CFunc func )
+== void sgs_InitCFunction( sgs_Variable* out, sgs_CFunc func )
 == void sgs_InitObject( sgs_Context* C, sgs_Variable* out, void* data, sgs_ObjCallback* iface )
 == void* sgs_InitObjectIPA( sgs_Context* C, sgs_Variable* out, sgs_SizeVal added, sgs_ObjCallback* iface )
-== void sgs_InitPtr( sgs_Context* C, sgs_Variable* out, void* ptr )
-== void sgs_InitObjectPtr( sgs_Context* C, sgs_Variable* out, sgs_VarObj* obj )
+== void sgs_InitPtr( sgs_Variable* out, void* ptr )
+== void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj )
 
 - sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
 - sgs_InitStringBuf( C, NULL, size ) would allocate an uninitialized buffer
@@ -1170,7 +1170,7 @@ These are the default meanings for error codes that are honored throughout the A
 
 # sgs_PushPath [function]
 
-== sgs_PushPath( sgs_Context* C, int item, const char* path, ... )
+== SGSRESULT sgs_PushPath( sgs_Context* C, int item, const char* path, ... )
 === push the variable specified by starting point `item` and traversal path `path`
 
 ! The safety of this function is similar to that of the printf family of functions. Be explicit in what types you pass to the variable argument list to avoid errors.
@@ -1201,7 +1201,7 @@ These are the default meanings for error codes that are honored throughout the A
 
 # sgs_StorePath [function]
 
-== sgs_StorePath( sgs_Context* C, int item, const char* path, ... )
+== SGSRESULT sgs_StorePath( sgs_Context* C, int item, const char* path, ... )
 === copy and pop the topmost item on stack to variable specified by starting point `item` and traversal path `path`
 
 ! The safety of this function is similar to that of the printf family of functions. Be explicit in what types you pass to the variable argument list to avoid errors.
@@ -1765,11 +1765,11 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_ItemType [function]
 
-== int sgs_ItemType( sgs_Context* C, int item )
-=== return the base type (first 8 bits, mask 0xff) of the specified stack item
+== uint32_t sgs_ItemType( sgs_Context* C, int item )
+=== return the type ID of the specified stack item
 
 - return value will be equal to one of the SGS_VT_* macro
-- if index is invalid, return value will be 0
+- if index is invalid, return value will be 0 (SGS_VT_NULL)
 
 
 # sgs_Method [function]
@@ -1890,7 +1890,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_WriteStr [function alias]
 
-== void sgs_Write( sgs_Context* C, const char* str )
+== void sgs_WriteStr( sgs_Context* C, const char* str )
 === passes the specified string to the output function
 
 - alias to `sgs_Write( C, str, SGS_STRINGLENGTHFUNC( str ) )`
@@ -2198,18 +2198,20 @@ A typical function
 
 # Object interface [info]
 
-Every interface function has the type `int ObjCallback ( sgs_Context* C, sgs_VarObj* data, int arg )`. Not every of them has to be implemented (none of them are required) but for all non-pointer objects it helps to have at least one of them.
+Every interface function has the type `int ObjCallback ( sgs_Context* C, sgs_VarObj* data, ... )`. Not every of them has to be implemented (none of them are required) but for all non-pointer objects it helps to have at least one of them.
 
-Even if pointer objects don't require interface functions, it is suggested all objects of same type still have their own interface pointer for the type for identification.
+Interface is a structure that contains of an array and 10 function pointers in the following order: destruct, gcmark, getindex, setindex, convert, serialize, dump, getnext, call, expr. This is how interfaces are usually defined in code:
 
-Interface is an array of sgs_ObjCallback-type functions that contains a list of pairs, where in each the first value is a SGS_OP_*** constant and the second is an object interface function, and one SGS_OP_END value at the end. This is how interfaces are usually defined in code:
+    sgs_ObjInterface object_interface[1] =
+    {{
+        "object_type_name",
+        object_destruct, NULL,  /* destruct, gcmark */
+        object_getindex, NULL,  /* getindex, setindex */
+        NULL, NULL, NULL, NULL, /* convert, serialize, dump, getnext */
+        NULL, NULL              /* call, expr */
+    }};
 
-    sgs_ObjCallback object_interface[] =
-    {
-        SGS_OP_DESTRUCT, object_destruct,
-        SGS_OP_GETINDEX, object_getindex,
-        SGS_OP_END
-    };
+The interface is defined as an array with size=1 to later be able to use it in code without prepending "&" to the name.
 
 === SGS_OP_DESTRUCT - destruction callback
 

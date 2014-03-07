@@ -450,20 +450,25 @@ function c_compile_func_inner( fdata, iswhole )
 
 function c_compile_dtor_inner( fdata )
 {
-	return "\nsgs_ReleaseArray( C, (sgs_Variable*) obj->data, " $ fdata.consts.size $ " );";
+	return "\nsgs_ReleaseArray( C, (sgs_Variable*) obj->data, " $ fdata.consts.size $ " );"
+		$ "\nreturn SGS_SUCCESS;";
 }
 
 function c_compile_gcmk_inner( fdata )
 {
-	return "\nsgs_GCMarkArray( C, (sgs_Variable*) obj->data, " $ fdata.consts.size $ " );";
+	return "\nreturn sgs_GCMarkArray( C, (sgs_Variable*) obj->data, " $ fdata.consts.size $ " );";
 }
 
 function c_compile_init_inner( fdata, funcname )
 {
-	output = "\nsgs_Variable* CN = (sgs_Variable*)"
-		$ "\n\tsgs_InitObjectIPA( C, out, sizeof(sgs_Variable) * "
+	if( fdata.consts.size )
+		output = "\nsgs_Variable* CN = (sgs_Variable*)\n\t";
+	else
+		output = "\n";
+	output $= "sgs_InitObjectIPA( C, out, sizeof(sgs_Variable) * "
 		$ fdata.consts.size $ ", T" $ funcname $ " );";
 	output $= c_compile_const_init( fdata );
+	output $= "\nreturn SGS_SUCCESS;";
 	return output;
 }
 
