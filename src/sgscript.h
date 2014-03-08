@@ -653,6 +653,7 @@ SGS_APIFUNC char* sgs_ToStringBufFastP( SGS_CTX, sgs_Variable* var, sgs_SizeVal*
 #define sgs_ToStringFastP( ctx, var ) sgs_ToStringBufFast( ctx, var, NULL )
 
 SGS_APIFUNC SGSBOOL sgs_IsObjectP( sgs_Variable* var, sgs_ObjInterface* iface );
+#define sgs_IsTypeP( C, var, name ) sgs_IsObject( C, var, sgs_FindType( C, name ) )
 SGS_APIFUNC SGSBOOL sgs_IsCallableP( sgs_Variable* var );
 SGS_APIFUNC SGSBOOL sgs_ParseBoolP( SGS_CTX, sgs_Variable* var, sgs_Bool* out );
 SGS_APIFUNC SGSBOOL sgs_ParseIntP( SGS_CTX, sgs_Variable* var, sgs_Int* out );
@@ -684,9 +685,9 @@ SGS_APIFUNC SGSBOOL sgs_IsCallable( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSBOOL sgs_ParseBool( SGS_CTX, sgs_StkIdx item, sgs_Bool* out );
 SGS_APIFUNC SGSBOOL sgs_ParseInt( SGS_CTX, sgs_StkIdx item, sgs_Int* out );
 SGS_APIFUNC SGSBOOL sgs_ParseReal( SGS_CTX, sgs_StkIdx item, sgs_Real* out );
+SGS_APIFUNC SGSBOOL sgs_ParseString( SGS_CTX, sgs_StkIdx item, char** out, sgs_SizeVal* size );
 SGS_APIFUNC SGSBOOL sgs_ParseObjectPtr( SGS_CTX, sgs_StkIdx item,
 	sgs_ObjInterface* iface, sgs_VarObj** out, int strict );
-SGS_APIFUNC SGSBOOL sgs_ParseString( SGS_CTX, sgs_StkIdx item, char** out, sgs_SizeVal* size );
 SGS_APIFUNC SGSBOOL sgs_ParsePtr( SGS_CTX, sgs_StkIdx item, void** out );
 SGS_APIFUNC SGSMIXED sgs_ArraySize( SGS_CTX, sgs_StkIdx item );
 
@@ -760,6 +761,8 @@ static SGS_INLINE int sgs_Errno( SGS_CTX, int clear )
 #define sgs_SetErrno( C, err ) sgs_Cntl( C, SGS_CNTL_SET_ERRNO, err )
 #define sgs_GetLastErrno( C ) sgs_Cntl( C, SGS_CNTL_GET_ERRNO, 0 )
 
+SGS_APIFUNC void sgs_InitStringBuf32( sgs_Variable* var, sgs_String32* S, const char* str, size_t len );
+#define sgs_InitString32( var, S, str ) sgs_InitStringBuf32( var, S, str, SGS_STRINGLENGTHFUNC(str) )
 SGS_APIFUNC void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str, size_t len );
 #define sgs_PushString32( C, S, str ) sgs_PushStringBuf32( C, S, str, SGS_STRINGLENGTHFUNC(str) )
 SGS_APIFUNC void sgs_CheckString32( sgs_String32* S );

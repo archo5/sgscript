@@ -2,14 +2,15 @@
 	<html><head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 		<title>SGS/C++ binding compiler</title>
-		<link rel='stylesheet' type='text/css' href='docs.css'>
-		<script type='text/javascript' src='docs.js'></script>
+		<link rel="stylesheet" type="text/css" href="docs.css">
+		<script type="text/javascript" src="docs.js"></script>
 	</head><body>
 	<h1>SGS/C++ binding compiler</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGS-CPP-BC-description'>SGS/CPP-BC description</a>
 </li><li><a href='#Tags'>Tags</a>
 </li><li><a href='#Data-type-handling'>Data type handling</a>
 </li><li><a href='#Helper-classes-functions'>Helper classes &amp; functions</a>
-</li></ul></div><div><div class='item'><a name='SGS-CPP-BC-description'></a><hr><h2>SGS/CPP-BC description</h2><p>
+</li></ul></div><div>
+<div class='item'><a name='SGS-CPP-BC-description'></a><hr><h2>SGS/CPP-BC description</h2><p>
 This is a compiler that will generate most of the binding code from a bit of markup and additional build configuration. Statistically, the gain is approximately 80% less code to write to connect your C++ code to SGScript.
 </p><p>
 The compiler can be found at &quot;ext/cppbc/cppbc.sgs&quot;. It takes one argument (which should be the header file to process) and it generates one file with the name &quot;cppbc_&quot;+header_file, thus it can be called like this: &quot;sgsvm -p path/to/cppbc.sgs path/to/my_cpp_header.h&quot;.
@@ -46,7 +47,8 @@ The SGS_OBJECT tag marks the structs/classes that need to have the binding code.
 sgsVariable and sgsHandle are classes that are used to store SGScript objects. Handles are for storing exported object pointers and variables are for everything. Handles make it easier to use the included objects, thus they are preferred to plain variable containers.
 </p><p>
 GCMARK handlers are more like the raw API but all that needs to be done in the function is calling gcmark() on each variable or handle. Due to the possibility of having many unknown kinds of containers of variables, it is unlikely that this function could ever be automatically generated, except for the most primitive of cases.
-</p></div><div class='item'><a name='Tags'></a><hr><h2>Tags</h2><h3>SGS_OBJECT</h3><p>
+</p></div>
+<div class='item'><a name='Tags'></a><hr><h2>Tags</h2><h3>SGS_OBJECT</h3><p>
 Marks the objects/structures for parsing.
 </p><h3>SGS_METHOD</h3><p>
 Marks the methods that should be made available to the scripting engine.
@@ -76,10 +78,13 @@ Marks the method as a native object interface function that would override any g
 Syntax: <code>SGS_IFUNC( &lt;ifunc-type&gt; ) &lt;type&gt; &lt;name&gt;( sgs_Context*, sgs_VarObj*, int );</code>
 </p><p>
 &quot;ifunc-type&quot; must be one of SGS_OP_* defines.
-</p></div><div class='item'><a name='Data-type-handling'></a><hr><h2>Data type handling</h2><p>
+</p></div>
+<div class='item'><a name='Data-type-handling'></a><hr><h2>Data type handling</h2><p>
 TODO sgs_PushVar, sgs_GetVar
-</p></div><div class='item'><a name='Helper-classes-functions'></a><hr><h2>Helper classes & functions</h2><p>
+</p></div>
+<div class='item'><a name='Helper-classes-functions'></a><hr><h2>Helper classes &amp; functions</h2><p>
 TODO sgsHandle, sgsVariable, sgs_PushClass(From)
-</p></div></div>
+</p></div>
+</div>
 	</body></html>
 	

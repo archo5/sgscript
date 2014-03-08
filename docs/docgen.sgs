@@ -1,13 +1,18 @@
 
-println( "--- SGScript documentation generator ---" );
+global WEB;
+if( !isset( _G, "WEB" ) )
+	WEB = false;
+
+if( !WEB )
+	println( "--- SGScript documentation generator ---" );
 
 include "string", "fmt", "io", "re", "../bin/sgsjson";
-include "markdown.sgs";
+include "markdown";
 
 
 function generate_alias( name )
 {
-	name = re_replace( name, "#[^a-zA-Z0-9_]+#", "-" );
+	name = re_replace( name, "#[^a-zA-Z0-9]+#", "-" );
 	name = string_trim( name, "-" );
 //	name = string_tolower( name );
 	return name;
@@ -20,7 +25,12 @@ function full_alias( name, type )
 	return generate_alias( name );
 }
 
-function generate_docdata( name )
+
+///////////////////////
+// LOADING & PARSING //
+///////////////////////
+
+function load_docfile( name )
 {
 	println( "parsing documentation file '" $ name $ "'..." );
 
@@ -37,7 +47,17 @@ function generate_docdata( name )
 		if( line.length < 1 || line[0] != "#" )
 		{
 			if( tags.size && isset( tags.last, "lines" ) )
-				tags.last.lines.push( line );
+			{
+				if( string_find( line, "~!~" ) === 0 && string_find( line, "=" ) !== false )
+				{
+					paramdata = string_explode( string_part( line, 3 ), "=" );
+					key = string_trim( paramdata.shift() );
+					value = string_trim( string_implode( paramdata, "=" ) );
+					tags.last[ key ] = value;
+				}
+				else
+					tags.last.lines.push( line );
+			}
 			
 			continue;
 		}
@@ -66,28 +86,56 @@ function generate_docdata( name )
 			}
 		}
 	}
+	
+	return doc_title, tags;
+}
 
+
+///////////////////////
+//   RENDERING       //
+///////////////////////
+
+function render_pages( tags )
+{
 	/*
 		GENERATE PAGES
 	*/
-
+	
 	pgstack = [];
 	lastpage = null;
 	parts = [];
-	toclist = [];
-	foreach( tag : tags )
+	to_render = [];
+	foreach( tag_id, tag : tags )
 	{
 		if( tag.type == "+" )
 		{
 			alias = full_alias( tag.pagename, tag.pagetype );
 			path = clone( pgstack ).push( alias );
-			path_str = alias; // string_implode( path, '/' );
+			ipath = string_implode( path, "/" );
+			path_str = alias; // string_implode( path, "/" );
 			title = tag.pagename;
 			if( tag.pagetype != "info" )
 				title $= " [" $ tag.pagetype $ "]";
 			lastpage = alias;
-			body = string_implode( tag.lines, "\n" );
-			parts.push({ path = path, path_str = path_str, title = title, body = body });
+			part =
+			{
+				path = path,
+				ipath = ipath,
+				path_str = path_str,
+				pagename = tag.pagename,
+				pagetype = tag.pagetype,
+				title = title,
+				body = null
+			};
+			if( isset( tag, "render" ) )
+			{
+				to_render.push({ mode = tag.render, filter_type = tag.filter_type, part = part });
+			}
+			else
+			{
+				part.body = string_implode( tag.lines, "\n" );
+			}
+			parts.push( part );
 		}
 		else if( tag.type == ">" )
 		{
@@ -98,19 +146,73 @@ function generate_docdata( name )
 			pgstack.pop();
 		}
 	}
-	parts.unshift({ path = [], path_str = "", title = "SGScript documentation", body = "" });
+	
+	foreach( render_item : to_render )
+	{
+		if( render_item.mode == "list_pages_asc" )
+		{
+			part = render_item.part;
+			types = string_explode( render_item.filter_type, "," );
+			array_process( types, function( v ){ return string_trim( v ); } );
+			
+			basepath = clone( part.path );
+			basepath[ basepath.size - 1 ] = "";
+			basepath = string_implode( basepath, "/" );
+			
+			items = [];
+			foreach( P : parts )
+			{
+				if( string_find( P.ipath, basepath ) === 0 && types.find( P.pagetype ) !== null )
+				{
+					items.push( "- @\"" $ P.title $ "\"" );
+				}
+			}
+			items.sort();
+			
+			part.body = string_implode( items, "\n" );
+		}
+	}
+	
+	return parts;
+}
 
 
-	println( "generating and writing html pages..." );
+///////////////////////
+//   COMPOSITION     //
+///////////////////////
 
-	title = doc_title;
-	data = "<h1>"$title$"</h1>";
+function find_closest_pathstr( link, pages )
+{
+	matches = [];
+	foreach( P : pages )
+	{
+		if( string_find( P.path_str, link ) === 0 )
+			matches.push( P.path_str );
+	}
+	if( matches )
+	{
+		matches.sort_custom( function( a, b ){ return a.length - b.length; } );
+		return matches[ 0 ];
+	}
+	return link;
+}
 
+function linkhandler_htm( title, link, pages )
+{
+	link ||= generate_alias( title );
+	link = find_closest_pathstr( link, pages );
+	return '<a href="#' $ htmlencode( link ) $ '">' $ htmlencode( title ) $ '</a>';
+}
+
+function output_data_htm( name, doc_title, tags, pages )
+{
+	data = "<h1>" $ htmlencode( doc_title ) $ "</h1>";
+	
 	data $= "<div><h2>Table of Contents</h2>";
 	ulevel = 0;
-	foreach( P : parts )
+	foreach( P : pages )
 	{
-		if( !P.path_str )
+		if( !P.path_str || P.pagetype != "info" )
 			continue;
 		newulev = P.path.size;
 		data $= uladjust( ulevel, newulev );
@@ -120,75 +222,86 @@ function generate_docdata( name )
 	}
 	data $= uladjust( ulevel, 0 );
 	data $= "</div>";
-
+	
+	mdlh = function( title, link ) use( pages ){ return linkhandler_htm( title, link, pages ); };
+	
 	data $= "<div>";
-	foreach( P : parts )
+	foreach( P : pages )
 	{
 		if( !P.path_str )
 			continue;
 		
-		h = "h" $ ( P.path.size + 1 );
-
-		content = markdown2html( P.body );
-	//	io_file_write( "out/" $ string_replace( P.path_str, ".", "-" ) $ ".htm", content );
-		
-		data $= "<div class='item'>";
+		data $= "\n<div class='item'>";
 		data $= "<a name='" $ P.path_str $ "'></a>";
 		data $= "<hr><h2>";
-		data $= P.title;
-	//	if( P.path_str )
-	//		data $= " <small>(" $ P.path_str $ ")</small>";
+		data $= htmlencode( P.title );
 		data $= "</h2>";
 		
-		tocitem_from = data.length;
-		data $= content;
-		tocitem_to = data.length;
+		data $= markdown2html( P.body, mdlh );
 		
 		data $= "</div>";
-		
-		toclist.push([ tocitem_from, tocitem_to, string_implode( P.path, "/" ), P.title ]);
 	}
-	data $= "</div>";
-
+	data $= "\n</div>";
+	
 	fullfile = '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" '$
 		'"http://www.w3.org/TR/html4/loose.dtd">
 	<html><head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>'$title$"</title>
-		<link rel='stylesheet' type='text/css' href='docs.css'>
-		<script type='text/javascript' src='docs.js'></script>
+		<title>' $ htmlencode( doc_title ) $ '</title>
+		<link rel="stylesheet" type="text/css" href="docs.css">
+		<script type="text/javascript" src="docs.js"></script>
 	</head><body>
-	";
-	
-	foreach( tocitem : toclist )
-	{
-		tocitem[ 0 ] += fullfile.length;
-		tocitem[ 1 ] += fullfile.length;
-	}
-	
-	fullfile $= data $ "
+	'  $ data $ '
 	</body></html>
-	";
+	';
 	
 	io_file_write( name $ ".htm", fullfile );
-	
-	io_file_write( name $ ".toc", json_encode( toclist ) );
-	/*
-	array_process( toclist, function(x){ return string_implode( x, " " ); } );
-	io_file_write( name $ ".toc", string_implode( toclist, "\n" ) );
-	*/
 }
 
-
-foreach( real, filename : io_dir( "." ) )
+function linkhandler_web( title, link, pages )
 {
-	if( !real ) continue;
-	if( string_compare( filename, ".docs.txt", 0, -9 ) != 0 )
-		continue;
-	fn = string_explode( filename, "." );
-	fn.pop();
-	fn = string_implode( fn, "." );
-	generate_docdata( fn );
+	link ||= generate_alias( title );
+	link = find_closest_pathstr( link, pages );
+	return '<a href="' $ htmlencode( link ) $ '">' $ htmlencode( title ) $ '</a>';
 }
+
+function output_data_web( name, doc_title, tags, pages )
+{
+	mdlh = function( title, link ) use( pages ){ return linkhandler_web( title, link, pages ); };
+	
+	toclist = [];
+	data = "";
+	foreach( P : pages )
+	{
+		if( !P.path_str )
+			continue;
+		
+		tocitem_from = data.length;
+		data $= markdown2html( P.body, mdlh );
+		tocitem_to = data.length;
+		
+		toclist.push([ tocitem_from, tocitem_to, string_implode( P.path, "/" ), P.title ]);
+	}
+	
+	io_file_write( "out/" $ name $ ".htm", data );
+	io_file_write( "out/" $ name $ ".toc", json_encode( toclist ) );
+}
+
+function generate_docdata( name )
+{
+	(doc_title,tags) = load_docfile( name );
+	pages = render_pages( tags );
+	
+	if( WEB )
+		output_data_web( name, doc_title, tags, pages );
+	else
+		output_data_htm( name, doc_title, tags, pages );
+}
+
+
+generate_docdata( "sgscript.docs" );
+generate_docdata( "sgs.cppbc.docs" );
+generate_docdata( "sgs.sockets.docs" );
+
 
 println( "done!" );

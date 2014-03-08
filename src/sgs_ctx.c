@@ -1012,7 +1012,7 @@ int sgs_HasFuncName( SGS_CTX )
 }
 
 
-void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str, size_t len )
+void sgs_InitStringBuf32( sgs_Variable* var, sgs_String32* S, const char* str, size_t len )
 {
 	sgs_BreakIf( len > 31 );
 	S->data.refcount = 1;
@@ -1023,12 +1023,15 @@ void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str, size_t len 
 	memcpy( S->buf, str, len );
 	S->buf[ len ] = 0;
 	
-	{
-		sgs_Variable v;
-		v.type = SGS_VT_STRING;
-		v.data.S = &S->data;
-		sgs_PushVariable( C, &v );
-	}
+	var->type = SGS_VT_STRING;
+	var->data.S = &S->data;
+}
+
+void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str, size_t len )
+{
+	sgs_Variable var;
+	sgs_InitStringBuf32( &var, S, str, len );
+	sgs_PushVariable( C, &var );
 }
 
 void sgs_CheckString32( sgs_String32* S )

@@ -2822,7 +2822,7 @@ static int _regex_match( SGS_CTX, srx_Context* R, char* str, sgs_SizeVal off, sg
 			int i, numcaps = srx_GetCaptureCount( R );
 			for( i = 0; i < numcaps; ++i )
 			{
-				const char *cf, *ct;
+				const char *cf = NULL, *ct = NULL;
 				if( srx_GetCapturedPtrs( R, i, &cf, &ct ) )
 				{
 					if( flags & REGEX_RETURN_CAPTURED )
@@ -2830,8 +2830,14 @@ static int _regex_match( SGS_CTX, srx_Context* R, char* str, sgs_SizeVal off, sg
 						sgs_PushStringBuf( C, cf, (sgs_SizeVal) ( ct - cf ) );
 					if( flags & REGEX_RETURN_OFFSETS )
 					{
-						sgs_PushInt( C, cf - str );
-						sgs_PushInt( C, ct - str );
+						if( cf )
+							sgs_PushInt( C, cf - str );
+						else
+							sgs_PushNull( C );
+						if( ct )
+							sgs_PushInt( C, ct - str );
+						else
+							sgs_PushNull( C );
 					}
 					if( ( flags & REGEX_RETURN_BOTH ) > 1 )
 						sgs_PushArray( C, flags & REGEX_RETURN_BOTH );

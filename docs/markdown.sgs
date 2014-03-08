@@ -26,10 +26,26 @@ function uladjust( prev, cur )
 		return string_repeat( "</li></ul>", prev - cur ) $ ["","<li>"][ cur > 0 ];
 }
 
-function markdown2html( text )
+function re_replace_callback( text, pattern, callback )
 {
-	function mdinline( text )
+	matches = re_match_all( text, pattern, RE_RETURN_BOTH );
+	matches.reverse();
+	foreach( match : matches )
 	{
+		str = callback( match );
+		text = string_part( text, 0, match[0][1] ) $ str $ string_part( text, match[0][2] );
+	}
+	return text;
+}
+
+function markdown2html( text, linkhandler )
+{
+	linkhandler ||= function( title, link ){ return link || title; };
+	
+	function mdinline( text, linkhandler )
+	{
+		text = string_replace( text, "\"", "\xff" ); // encode double quotes to avoid html-encoding
+		
 		text = htmlencode( text );
 		bdcc = "(^|[ \n\r\t,.])";
 		edcc = "($|[ \n\r\t,.])";
@@ -42,6 +58,20 @@ function markdown2html( text )
 		text = re_replace( text,
 			"#"$bdcc$"`([^`]+)`"$edcc$"#",
 			"$1<code>$2</code>$3" );
+		
+		text = re_replace_callback( text, "#"$bdcc$"@\xff([^\xff]+)\xff(<([^>]+)>)?"$edcc$"#",
+		function( match ) use( linkhandler )
+		{
+			return match[1][0] $ linkhandler( match[2][0], match[4][0] ) $ match[5][0];
+		});
+		text = re_replace_callback( text, "#"$bdcc$"@([^ ]+)(<([^>]+)>)?"$edcc$"#",
+		function( match ) use( linkhandler )
+		{
+			return match[1][0] $ linkhandler( match[2][0], match[4][0] ) $ match[5][0];
+		});
+		
+		text = string_replace( text, "\xff", "&quot;" ); // re-encode double quotes to html
+		
 		return text;
 	}
 	
@@ -81,7 +111,7 @@ function markdown2html( text )
 						if( !s.length )
 							continue;
 						s = string_replace( s, "-~OR~-", "|" );
-						lout $= string_format( "<{1}>{2}</{1}>", tag, mdinline( s ) );
+						lout $= string_format( "<{1}>{2}</{1}>", tag, mdinline( s, linkhandler ) );
 					}
 					lines[ i ] = "<tr>" $ lout $ "</tr>";
 					
@@ -94,7 +124,7 @@ function markdown2html( text )
 		}
 		else if( !string_compare( L, "- ", 2 ) )
 		{
-			lines[ i ] = "</p><ul><li>" $ mdinline( string_trim( L, "- ", STRING_TRIM_LEFT ) );
+			lines[ i ] = "</p><ul><li>" $ mdinline( string_trim( L, "- ", STRING_TRIM_LEFT ), linkhandler );
 			i++;
 			ulevel = 1;
 			while( i < lines.size )
@@ -109,7 +139,7 @@ function markdown2html( text )
 					i--;
 					break;
 				}
-				lines[ i ] = uladjust( ulevel, dashcnt ) $ mdinline( string_trim( L, "- ", STRING_TRIM_LEFT ) );
+				lines[ i ] = uladjust( ulevel, dashcnt ) $ mdinline( string_trim( L, "- ", STRING_TRIM_LEFT ), linkhandler );
 				ulevel = dashcnt;
 				i++;
 			}
@@ -118,7 +148,7 @@ function markdown2html( text )
 		}
 		else if( !string_compare( L, "! ", 2 ) )
 		{
-			lines[ i ] = "<em class='notice-bgr'>" $ mdinline( string_trim( L, "! ", STRING_TRIM_LEFT ) ) $ "</em>";
+			lines[ i ] = "<em class='notice-bgr'>" $ mdinline( string_trim( L, "! ", STRING_TRIM_LEFT ), linkhandler ) $ "</em>";
 		}
 		else if( !string_compare( L, "    ", 4 ) )
 		{
@@ -143,14 +173,14 @@ function markdown2html( text )
 			cnt = L.length - string_trim( L, "=", STRING_TRIM_LEFT ).length + 1;
 			if( cnt > 6 ) cnt = 6;
 			L = string_trim( L, "= \t\v\r\n" );
-			lines[ i ] = "</p><h"$cnt$">" $ mdinline( L ) $ "</h"$cnt$"><p>";
+			lines[ i ] = "</p><h"$cnt$">" $ mdinline( L, linkhandler ) $ "</h"$cnt$"><p>";
 		}
 		else if( string_trim( L ) == "" )
 		{
 			lines[ i ] = "</p><p>";
 		}
 		else
-			lines[ i ] = mdinline( L );
+			lines[ i ] = mdinline( L, linkhandler );
 	}
 	
 	out = "<p>" $ string_implode( lines, "\n" ) $ "</p>";
