@@ -199,7 +199,8 @@ function find_closest_pathstr( link, pages )
 
 function linkhandler_htm( title, link, pages )
 {
-	link ||= generate_alias( title );
+	link ||= title;
+	link = generate_alias( link );
 	link = find_closest_pathstr( link, pages );
 	return '<a href="#' $ htmlencode( link ) $ '">' $ htmlencode( title ) $ '</a>';
 }
@@ -260,7 +261,8 @@ function output_data_htm( name, doc_title, tags, pages )
 
 function linkhandler_web( title, link, pages )
 {
-	link ||= generate_alias( title );
+	link ||= title;
+	link = generate_alias( link );
 	link = find_closest_pathstr( link, pages );
 	return '<a href="' $ htmlencode( link ) $ '">' $ htmlencode( title ) $ '</a>';
 }

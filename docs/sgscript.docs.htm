@@ -1213,7 +1213,7 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-IsType-function-alias'></a><hr><h2>sgs_IsType [function alias]</h2><h3>SGSBOOL sgs_IsType( sgs_Context* C, sgs_StkIdx item, const char* type )</h3><h4>returns whether the specified stack item <code>item</code> is an object of the specified type</h4><ul><li>alias of <code>sgs_IsObject( C, item, sgs_FindType( C, type ) )</code></li></ul></div>
 <div class='item'><a name='sgs-IsCallable-function'></a><hr><h2>sgs_IsCallable [function]</h2><h3>SGSBOOL sgs_IsCallable( sgs_Context* C, sgs_StkIdx item )</h3><h4>returns whether the specified stack item <code>item</code> is callable</h4><ul><li>callable variables are either SGS functions or C functions or objects with the SGS_OP_CALL interface implemented
 </li><li>if <code>item</code> is out of bounds, 0 is returned</li></ul></div>
-<div class='item'><a name='sgs-IsNumericString-function'></a><hr><h2>sgs_IsNumericString [function]</h2><h3>SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )</h3><h4>checks if the string is convertible to an integer/real</h4><ul><li>more info at <a href="#lt-Numeric">&amp;lt;Numeric</a> string parsing rules&gt;</li></ul></div>
+<div class='item'><a name='sgs-IsNumericString-function'></a><hr><h2>sgs_IsNumericString [function]</h2><h3>SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )</h3><h4>checks if the string is convertible to an integer/real</h4><ul><li>more info at @&lt;Numeric string parsing rules&gt;</li></ul></div>
 <div class='item'><a name='sgs-Parse-functions'></a><hr><h2>sgs_Parse*** [functions]</h2><h3>SGSBOOL sgs_ParseBool( sgs_Context* C, sgs_StkIdx item, sgs_Bool* out )</h3><h3>SGSBOOL sgs_ParseInt( sgs_Context* C, sgs_StkIdx item, sgs_Int* out )</h3><h3>SGSBOOL sgs_ParseReal( sgs_Context* C, sgs_StkIdx item, sgs_Real* out )</h3><h3>SGSBOOL sgs_ParseString( sgs_Context* C, sgs_StkIdx item, char** out, sgs_SizeVal* size )</h3><h3>SGSBOOL sgs_ParsePtr( sgs_Context* C, sgs_StkIdx item, void** out )</h3><h4>attempts to parse the specified item of the current stack frame, returning whether parsing was successful</h4><ul><li>the parsing rules:
 <ul><li>for <code>sgs_ParsePtr</code>, unlike every other parsing function, only null/ptr types are considered valid
 </li><li>if <code>item</code> is out of bounds, fail
@@ -1692,11 +1692,11 @@ gc_collect(); // a is freed now</pre></div>
 print data; // prints random-ish garbage
 print unserialize(data); // prints {name=A,info=B}</pre></div>
 <div class='item'><a name='unserialize-function'></a><hr><h2>unserialize [function]</h2><h3>unserialize( string data )</h3><h4>recreates a variable from the buffer with serialized data or returns null and emits a warning on failure</h4><ul><li>this function will internally call global object creation functions specified in the data, so they must be defined and the state could change in the process
-</li><li>for more info on serialization in SGScript, refer to <a href="#lt-Serialization">&amp;lt;Serialization</a> in SGScript&gt;</li></ul><pre>data = serialize({ name = &quot;A&quot;, info = &quot;B&quot; });
+</li><li>for more info on serialization in SGScript, refer to <a href="#Serialization-in-SGScript">Serialization in SGScript</a></li></ul><pre>data = serialize({ name = &quot;A&quot;, info = &quot;B&quot; });
 print data; // prints random-ish garbage
 print unserialize(data); // prints {name=A,info=B}</pre></div>
 <div class='item'><a name='SGS-constants'></a><hr><h2>SGS_*** [constants]</h2><h3>SGS_INFO, SGS_WARNING, SGS_ERROR</h3><h4>defined to the values of the C macros, respectively 100, 200 and 300</h4></div>
-<div class='item'><a name='VT-constants'></a><hr><h2>VT_*** [constants]</h2><h3>VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR</h3><h4>these constants are defined to the values of the C macros (with the prefix &quot;SVT_&quot; in C with SGS_INTERNAL defined) and can be compared with the values returned in <a href="#typeid-function">typeid()</a></h4></div>
+<div class='item'><a name='VT-constants'></a><hr><h2>VT_*** [constants]</h2><h3>VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR</h3><h4>these constants are defined to the values of the C macros (with the prefix &quot;SGS_VT_&quot; in C) and can be compared with the values returned in <a href="#typeid-function">typeid()</a></h4></div>
 <div class='item'><a name='G-superglobal'></a><hr><h2>_G [superglobal]</h2><h3>A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals and change the gloal dictionary.</h3><pre>_G[&quot;$diff&quot;] = 5; // no way to access this via usual globals
 _G = {}; // global value dictionary is changed, previous functions are lost unless stored somewhere</pre></div>
 <div class='item'><a name='array-object'></a><hr><h2>array [object]</h2><ul><li>read-only properties
@@ -1730,8 +1730,7 @@ _G = {}; // global value dictionary is changed, previous functions are lost unle
 </li><li>iterator
 </li><li>cloning
 </li><li>serialization
-</li><li>GC-safe
-</li><li>type identification (returns the string &quot;array&quot;)</li></ul></li></ul></div>
+</li><li>GC-safe</li></ul></li></ul></div>
 <div class='item'><a name='array-push-method'></a><hr><h2>array.push [method]</h2><h3>array.push( ... )</h3><h4>appends the variables passed to the end of array in the same order, returns the array for chaining</h4><pre>a = [ 5 ];
 a.push( 6, 7 ).push( 8 ); // a = [5,6,7,8]</pre></div>
 <div class='item'><a name='array-pop-method'></a><hr><h2>array.pop [method]</h2><h3>array.pop()</h3><h4>removes one item from the end of array or emits a warning if there are no items in the array, returns the removed item</h4><pre>a = [ 5 ];
@@ -1845,9 +1844,30 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li>GC-safe</li></ul></li></ul></div>
 <div class='item'><a name='Formatting-library-fmt'></a><hr><h2>Formatting library (&quot;fmt&quot;)</h2><p>
 This library includes functions and objects for parsing binary and text buffers.
-</p><ul><li>binary format -- fmt_pack, fmt_unpack, fmt_pack_count, fmt_pack_size
-</li><li>base64 format -- fmt_base64_encode, fmt_base64_decode
-</li><li>text format -- fmt_parser, fmt_text, fmt_charcc</li></ul></div>
+</p><ul><li>binary format -- <a href="#fmt-pack-function">fmt_pack,</a> @fmt_unpack, <a href="#fmt-pack-count-function">fmt_pack_count,</a> @fmt_pack_size
+</li><li>base64 format -- <a href="#fmt-base64-encode-function">fmt_base64_encode,</a> @fmt_base64_decode
+</li><li>text format -- <a href="#fmt-parser-object">fmt_parser,</a> @fmt_text, <a href="#fmt-charcc-function">fmt_charcc</a></li></ul><h4>Functions:</h4><ul><li><a href="#fmt-pack-function">fmt_pack</a> - pack variables into a byte buffer, according to the format string
+</li><li><a href="#fmt-unpack-function">fmt_unpack</a> - unpack byte buffer to an array of variables, according to the format string
+</li><li><a href="#fmt-pack-count-function">fmt_pack_count</a> - returns the number of items found in a packing format string
+</li><li><a href="#fmt-pack-size-function">fmt_pack_size</a> - returns the number of bytes found in a packing format string
+</li><li><a href="#fmt-base64-encode-function">fmt_base64_encode</a> - encodes a byte buffer in base64 character buffer (A-Za-z0-9+/)
+</li><li><a href="#fmt-base64-decode-function">fmt_base64_decode</a> - decodes a base64 character buffer (A-Za-z0-9+/) to a byte buffer
+</li><li><a href="#fmt-text-function">fmt_text</a> - formats specified variables according to the format string
+</li><li><a href="#fmt-parser-object">fmt_parser</a> - creates a text parser object with the specified stream reading function
+</li><li><a href="#fmt-string-parser-function">fmt_string_parser</a> - creates a text parser object that reads from the specified string
+</li><li><a href="#fmt-file-parser-function">fmt_file_parser</a> - creates a text parser object that reads from the specified file
+</li><li><a href="#fmt-charcc-function">fmt_charcc</a> - checks if a character is in the character class</li></ul><h4>Objects and their methods:</h4><ul><li><a href="#fmt-parser-object">fmt_parser</a> - formatted text string-parsing object
+</li><li><a href="#fmt-parser-read-method">read</a> - read the specified number of characters from the stream
+</li><li><a href="#fmt-parser-getchar-method">getchar</a> - read one character from the stream
+</li><li><a href="#fmt-parser-readcc-method">readcc</a> - read characters while they match the specified class
+</li><li><a href="#fmt-parser-skipcc-method">skipcc</a> - skip characters while they match the specified class
+</li><li><a href="#fmt-parser-read-real-method">read_real</a> - read with the real value character class, optionally return real
+</li><li><a href="#fmt-parser-read-int-method">read_int</a> - read with the integer value character class, optionally return integer
+</li><li><a href="#fmt-parser-read-binary-int-method">read_binary_int</a> - read with the binary integer character class, optionally return integer
+</li><li><a href="#fmt-parser-read-octal-int-method">read_octal_int</a> - read with the octal integer character class, optionally return integer
+</li><li><a href="#fmt-parser-read-decimal-int-method">read_decimal_int</a> - read with the decimal integer character class, optionally return integer
+</li><li><a href="#fmt-parser-read-hex-int-method">read_hex_int</a> - read with the hexadecimal integer character class, optionally return integer
+</li><li><a href="#fmt-parser-check-method">check</a> - check for presence of a string in stream</li></ul></div>
 <div class='item'><a name='fmt-pack-function'></a><hr><h2>fmt_pack [function]</h2><h3>fmt_pack( string fmt, ... )</h3><h4>packs the given arguments using the format <code>fmt</code> and returns the byte buffer or returns null and emits a warning on failure</h4><ul><li>the format: character command list
 <ul><li>0-9: add a digit to multiplier
 </li><li>=/&lt;/&gt;/@: &quot;=&quot; sets host byte order, &quot;&lt;&quot; - little endian byte order, &quot;&gt;&quot; - big endian, &quot;@&quot; - inverted
@@ -1866,7 +1886,9 @@ This library includes functions and objects for parsing binary and text buffers.
 <div class='item'><a name='fmt-pack-size-function'></a><hr><h2>fmt_pack_size [function]</h2><h3>fmt_pack_size( string fmt )</h3><h4>calculates the number of bytes generated by a successful fmt_pack call / required to successfully unpack data using the given format</h4><ul><li>refer to <a href="#fmt-pack-function">fmt_pack()</a> for more info about the format</li></ul><pre>print fmt_pack_size( &quot;3ld&quot; ); // prints 20</pre></div>
 <div class='item'><a name='fmt-base64-encode-function'></a><hr><h2>fmt_base64_encode [function]</h2><h3>fmt_base64_encode( string data )</h3><h4>encodes data to produce base64 text data</h4><ul><li>encoding is done using the following table (shortened): &quot;A-Za-z0-9+/&quot;</li></ul><pre>print fmt_base64_encode( &quot;hello world&quot; ); // prints &quot;aGVsbG8gd29ybGQ=&quot;</pre></div>
 <div class='item'><a name='fmt-base64-decode-function'></a><hr><h2>fmt_base64_decode [function]</h2><h3>fmt_base64_decode( string b64text )</h3><h4>decodes base64 text data</h4><ul><li>decoding is done using the table mentioned in <a href="#fmt-base64-encode-function">fmt_base64_encode()</a></li></ul><pre>fmt_base64_decode( fmt_base64_encode( &quot;hello world&quot; ) ) == &quot;hello world&quot; // returns true</pre></div>
-<div class='item'><a name='fmt-text-function'></a><hr><h2>fmt_text [function]</h2><h3>fmt_text( string text, ... )</h3><h4>parses all format specifiers in <code>text</code> and returns the result</h4><ul><li>the general format of a format specifier is as follows: {fmt[size][.prec][r][p&lt;char&gt;]}
+<div class='item'><a name='fmt-text-function'></a><hr><h2>fmt_text [function]</h2><h3>fmt_text( string text, ... )</h3><h4>parses all format specifiers in <code>text</code> and returns the result</h4><p>
+<em class='notice-bgr'>see <a href="#string-format-function">string_format</a> if you need position (argument index) specifications in the format string</em>
+</p><ul><li>the general format of a format specifier is as follows: {fmt[size][.prec][r][p&lt;char&gt;]}
 <ul><li>fmt: one-character output type (b-binary, o-octal, d-decimal, x/X-hexadecimal, f-floating-point, g/G-compact floating-point, e/E-scientific floating-point, s-valid string, c-always converted to string)
 </li><li>size: minimum number of characters to print
 </li><li>prec: precision of floating-point variables, string length limit
@@ -1889,17 +1911,17 @@ fmt_charcc( &quot;x&quot;, &quot;a-zA-Z0-9&quot; ); // returns true</pre></div>
 * read-only properties
  - [bool] at_end
  - [bool] stream_offset
- - [cfunc] read
- - [cfunc] getchar
- - [cfunc] readcc
- - [cfunc] skipcc
- - [cfunc] read_real
- - [cfunc] read_int
- - [cfunc] read_binary_int
- - [cfunc] read_octal_int
- - [cfunc] read_decimal_int
- - [cfunc] read_hex_int
- - [cfunc] check
+ - [cfunc] <a href="#fmt-parser-read-method">read</a>
+ - [cfunc] <a href="#fmt-parser-getchar-method">getchar</a>
+ - [cfunc] <a href="#fmt-parser-readcc-method">readcc</a>
+ - [cfunc] <a href="#fmt-parser-skipcc-method">skipcc</a>
+ - [cfunc] <a href="#fmt-parser-read-real-method">read_real</a>
+ - [cfunc] <a href="#fmt-parser-read-int-method">read_int</a>
+ - [cfunc] <a href="#fmt-parser-read-binary-int-method">read_binary_int</a>
+ - [cfunc] <a href="#fmt-parser-read-octal-int-method">read_octal_int</a>
+ - [cfunc] <a href="#fmt-parser-read-decimal-int-method">read_decimal_int</a>
+ - [cfunc] <a href="#fmt-parser-read-hex-int-method">read_hex_int</a>
+ - [cfunc] <a href="#fmt-parser-check-method">check</a>
 * other features:
  - GC-safe
 </p></div>
@@ -1931,14 +1953,37 @@ stream.skipcc( &quot;^a-z&quot; ); // returns 1</pre></div>
 </li><li>if <code>partial</code> is true, function returns the number of characters successfully matched instead of whether everything has been matched</li></ul></div>
 <div class='item'><a name='I-O-library-io'></a><hr><h2>I/O library (&quot;io&quot;)</h2><p>
 This library contains the functions necessary to work with the file system (files and directories).
-</p></div>
+</p><h4>Functions:</h4><ul><li><a href="#io-setcwd-function">io_setcwd</a> - set the current working directory
+</li><li><a href="#io-getcwd-function">io_getcwd</a> - returns the current working directory
+</li><li><a href="#io-getexecpath-function">io_getexecpath</a> - returns the absolute executable path
+</li><li><a href="#io-rename-function">io_rename</a> - rename or move a file system item
+</li><li><a href="#io-file-exists-function">io_file_exists</a> - returns whether the specified file exists and is accessible
+</li><li><a href="#io-dir-exists-function">io_dir_exists</a> - returns whether the specified directory exists and is accessible
+</li><li><a href="#io-stat-function">io_stat</a> - returns information about a file system item
+</li><li><a href="#io-dir-create-function">io_dir_create</a> - create a directory
+</li><li><a href="#io-dir-delete-function">io_dir_delete</a> - remove a directory
+</li><li><a href="#io-file-delete-function">io_file_delete</a> - deletes a file
+</li><li><a href="#io-file-write-method">io_file_write</a> - writes byte buffer to file, creating or overwriting it, as necessary
+</li><li><a href="#io-file-read-method">io_file_read</a> - reads byte buffer from a file
+</li><li><a href="#io-file-object">io_file</a> - creates a <a href="#io-file-object">io_file</a> object, optionally opening it
+</li><li><a href="#io-dir-function">io_dir</a> - creates a <a href="#io-dir-function">io_dir</a> directory iterator object, set to read a specific directory</li></ul><h4>Objects and their methods:</h4><ul><li><a href="#io-file-object">io_file</a> - file object
+<ul><li><a href="#io-file-open-method">open</a> - open a file
+</li><li><a href="#io-file-close-method">close</a> - close the currently open file (if any)
+</li><li><a href="#io-file-read-method">read</a> - read from the open file
+</li><li><a href="#io-file-write-method">write</a> - write to the open file
+</li><li><a href="#io-file-seek-method">seek</a> - change read/write position in file
+</li><li><a href="#io-file-flush-method">flush</a> - flush the write buffer
+</li><li><a href="#io-file-setbuf-method">setbuf</a> - change the size and flush trigger of the write buffer or disables it
+</li></ul><li><a href="#io-dir-function">io_dir</a> - directory iterator object, for use in &quot;foreach&quot;</li></ul><h4>Constants:</h4><ul><li><a href="#FILE-constants">FILE_***</a> - mode constants for <a href="#io-file-open-method">io_file.open</a> / <a href="#io-file-function">io_file [function]</a>
+</li><li><a href="#SEEK-constants">SEEK_***</a> - mode constants for <a href="#io-file-seek-method">io_file.seek</a>
+</li><li><a href="#FST-constants">FST_***</a> - file system item type constants for <a href="#io-stat-function">io_stat</a></li></ul></div>
 <div class='item'><a name='io-setcwd-function'></a><hr><h2>io_setcwd [function]</h2><h3>io_setcwd( string cwd )</h3><h4>sets the current working directory, returns bool/sets errno</h4></div>
 <div class='item'><a name='io-getcwd-function'></a><hr><h2>io_getcwd [function]</h2><h3>io_getcwd()</h3><h4>returns the current working directory or null, if for some reason an error occured</h4><ul><li>in case of failure, function will set errno</li></ul></div>
 <div class='item'><a name='io-getexecpath-function'></a><hr><h2>io_getexecpath [function]</h2><h3>io_getexecpath()</h3><h4>returns the path of the executable file the script is executed in</h4><ul><li>in case of failure, function will set errno</li></ul></div>
 <div class='item'><a name='io-rename-function'></a><hr><h2>io_rename [function]</h2><h3>io_rename( string path, string newpath )</h3><h4>attempts to rename the file, returns bool/sets errno</h4><ul><li>wraps the C library function rename
 </li><li>to avoid moving the file/directory, make sure both paths are of the same origin</li></ul></div>
 <div class='item'><a name='io-file-exists-function'></a><hr><h2>io_file_exists [function]</h2><h3>io_file_exists( string file )</h3><h4>checks if file exists and is accessible by the process at the moment, returns true on success, false otherwise</h4><ul><li>uses the C library functions fopen/fclose</li></ul></div>
-<div class='item'><a name='io-dir-exists-function'></a><hr><h2>io_dir_exists [function]</h2><h3>io_dir_exists( string dir )</h3><h4>checks if directory exists and is accessible by the process at the moment, returns true on success, false otherwise</h4><ul><li>uses the C library functions opendir,closedir where supported, _findfirst,_findclose otherwise (Windows/MSVC)</li></ul></div>
+<div class='item'><a name='io-dir-exists-function'></a><hr><h2>io_dir_exists [function]</h2><h3>io_dir_exists( string dir )</h3><h4>checks if directory exists and is accessible by the process at the moment, returns true on success, false otherwise</h4><ul><li>uses the C library functions opendir,closedir where supported properly, Windows API Find*** functions otherwise</li></ul></div>
 <div class='item'><a name='io-stat-function'></a><hr><h2>io_stat [function]</h2><h3>io_stat( string fsitem )</h3><h4>returns info about the file system item <code>fsitem</code>, as dict</h4><ul><li>the returned object contains the following properties:
 <ul><li>atime: last access time
 </li><li>ctime: creation time
@@ -1957,18 +2002,16 @@ This library contains the functions necessary to work with the file system (file
 </li><li>[int] size
 </li><li>[bool] error
 </li><li>[bool] eof
-</li><li>[cfunc] open
-</li><li>[cfunc] close
-</li><li>[cfunc] read
-</li><li>[cfunc] write
-</li><li>[cfunc] seek
-</li><li>[cfunc] flush
-</li><li>[cfunc] setbuf
+</li><li>[cfunc] <a href="#io-file-open-method">open</a>
+</li><li>[cfunc] <a href="#io-file-close-method">close</a>
+</li><li>[cfunc] <a href="#io-file-read-method">read</a>
+</li><li>[cfunc] <a href="#io-file-write-method">write</a>
+</li><li>[cfunc] <a href="#io-file-seek-method">seek</a>
+</li><li>[cfunc] <a href="#io-file-flush-method">flush</a>
+</li><li>[cfunc] <a href="#io-file-setbuf-method">setbuf</a>
 </li></ul><li>other features:
-<ul><li>tostring = &quot;file&quot;
-</li><li>tobool = returns whether file is open or not
-</li><li>GC-safe
-</li><li>type identification (returns the string &quot;file&quot;)</li></ul></li></ul></div>
+<ul><li>tobool = returns whether file is open or not
+</li><li>GC-safe</li></ul></li></ul></div>
 <div class='item'><a name='io-file-open-method'></a><hr><h2>io_file.open [method]</h2><h3>io_file.open( string name, int mode )</h3><h4>closes the previously open file if any, opens the file <code>name</code> for operation mode <code>mode</code>, returns bool/sets errno</h4><ul><li><code>mode</code> must be one of FILE_READ, FILE_WRITE or FILE_READ|FILE_WRITE
 </li><li>file is always opened in binary mode</li></ul><pre>f = io_file();
 f.open( &quot;file&quot; ); // returns true or false, sets errno accordingly</pre></div>
@@ -1989,12 +2032,29 @@ f.close(); // returns false</pre></div>
 </li><li>GC-safe
 </li><li>type identification (returns the string &quot;directory_iterator&quot;)</li></ul></li></ul></div>
 <div class='item'><a name='io-dir-function'></a><hr><h2>io_dir [function]</h2><h3>io_dir( string dir )</h3><h4>creates a directory iterator for the directory <code>dir</code>, sets errno, returns null and emits a warning on failure</h4></div>
-<div class='item'><a name='FILE-constants'></a><hr><h2>FILE_*** [constants]</h2><h3>FILE_READ, FILE_WRITE</h3><h4>mode constants for <a href="#io-file-open-method">io_file.open()</a> / <a href="#io-file-object">io_file()</a></h4></div>
-<div class='item'><a name='SEEK-constants'></a><hr><h2>SEEK_*** [constants]</h2><h3>SEEK_SET, SEEK_CUR, SEEK_END</h3><h4>mode constants for <a href="#io-file-seek-method">io_file.seek()</a></h4></div>
-<div class='item'><a name='FST-constants'></a><hr><h2>FST_*** [constants]</h2><h3>FST_UNKNOWN, FST_FILE, FST_DIR</h3><h4>file system item type constants for <a href="#io-stat-function">io_stat()</a></h4></div>
+<div class='item'><a name='FILE-constants'></a><hr><h2>FILE_*** [constants]</h2><h3>FILE_READ, FILE_WRITE</h3><h4>mode constants for <a href="#io-file-open-method">io_file.open</a> / <a href="#io-file-function">io_file [function]</a></h4></div>
+<div class='item'><a name='SEEK-constants'></a><hr><h2>SEEK_*** [constants]</h2><h3>SEEK_SET, SEEK_CUR, SEEK_END</h3><h4>mode constants for <a href="#io-file-seek-method">io_file.seek</a></h4></div>
+<div class='item'><a name='FST-constants'></a><hr><h2>FST_*** [constants]</h2><h3>FST_UNKNOWN, FST_FILE, FST_DIR</h3><h4>file system item type constants for <a href="#io-stat-function">io_stat</a></h4></div>
 <div class='item'><a name='Math-library-math'></a><hr><h2>Math library (&quot;math&quot;)</h2><p>
 This library contains the basic math functions for processing real values.
-</p></div>
+</p><h4>Functions:</h4><p>
+ - <a href="#abs-function">abs</a> - returns the absolute value of x
+ - <a href="#floor-function">floor</a> - returns rounded-down value of x
+ - <a href="#ceil-function">ceil</a> - returns the rounded-up value of x
+ - <a href="#round-function">round</a> - returns the rounded-to-nearest-integer value of x
+ - <a href="#pow-function">pow</a> - returns x to the power of y
+ - <a href="#sqrt-function">sqrt</a> - returns a square root of x
+ - <a href="#log-function">log</a> - returns the logarithm (power) of x for base y
+ - <a href="#sin-function">sin</a> - returns the sine of x
+ - <a href="#cos-function">cos</a> - returns the cosine of x
+ - <a href="#tan-function">tan</a> - returns the tangent of x
+ - <a href="#asin-function">asin</a> - returns arcsine (angle for sine value) of x
+ - <a href="#acos-function">acos</a> - returns arccosine (angle for cosine value) of x
+ - <a href="#atan-function">atan</a> - returns arctangent (angle for tangent value) of x
+ - <a href="#atan2-function">atan2</a> - returns arctangent of x and y, using both values to extend the range of returned value
+ - <a href="#deg2rad-function">deg2rad</a> - returns x degrees as radians
+ - <a href="#rad2deg-function">rad2deg</a> - returns x radians as degrees
+</p><h4>Constants:</h4><ul><li><a href="#Main-types">M_***</a> - mathematical constants</li></ul></div>
 <div class='item'><a name='abs-function'></a><hr><h2>abs [function]</h2><h3>abs( x )</h3><h4>returns the absolute value of <code>x</code>, as <code>real</code></h4><pre>abs( 2.2 ); // real (2.2)
 abs( -3.1 ); // real (3.1)</pre></div>
 <div class='item'><a name='floor-function'></a><hr><h2>floor [function]</h2><h3>floor( x )</h3><h4>returns the largest integer that is not bigger than <code>x</code>, as <code>real</code></h4><pre>floor( 3.4 ); // real (3)
@@ -2051,11 +2111,25 @@ rad2deg( -M_PI / 2 ); // real (-90)</pre></div>
 <div class='item'><a name='M-constants'></a><hr><h2>M_*** [constants]</h2><h3>M_PI</h3><h4>the ratio of circumference of a circle to its diameter (pi)</h4><ul><li>the value of this constant is <code>3.14159265358979323846</code></li></ul><h3>M_E</h3><h4>the natural logarithmic base (e)</h4><ul><li>the value of this constant is <code>2.7182818284590452354</code></li></ul></div>
 <div class='item'><a name='OS-library-os'></a><hr><h2>OS library (&quot;os&quot;)</h2><ul><li>environment variables
 </li><li>time and date
-</li><li>locale / regional settings</li></ul></div>
+</li><li>locale / regional settings</li></ul><h4>Functions:</h4><ul><li><a href="#os-gettype-function">os_gettype</a> - returns the name of closest known OS type match, defined at compile time
+</li><li><a href="#os-command-function">os_command</a> - pass command to OS command processor
+</li><li><a href="#os-getenv-function">os_getenv</a> - returns the value of the specified environment variable
+</li><li><a href="#os-putenv-function">os_putenv</a> - set an environment variable
+</li><li><a href="#os-time-function">os_time</a> - returns the time in seconds, optionally from a different time zone
+</li><li><a href="#os-get-timezone-function">os_get_timezone</a> - returns the time zone set in OS, optionally as string
+</li><li><a href="#os-date-string-function">os_date_string</a> - format a time value into a string
+</li><li><a href="#os-parse-time-function">os_parse_time</a> - split time value into components
+</li><li><a href="#os-make-time-function">os_make_time</a> - make a time value from components
+</li><li><a href="#os-get-locale-function">os_get_locale</a> - returns current locale of the specified category
+</li><li><a href="#os-set-locale-function">os_set_locale</a> - set locale for the specified category
+</li><li><a href="#os-get-locale-format-function">os_get_locale_format</a> - returns locale formatting info
+</li><li><a href="#os-locale-strcmp-function">os_locale_strcmp</a> - compare two strings using locale</li></ul><h4>Constants:</h4><ul><li><a href="#LC-constants">LC_***</a> - locale categories</li></ul></div>
 <div class='item'><a name='os-gettype-function'></a><hr><h2>os_gettype [function]</h2><h3>os_gettype()</h3><h4>returns the name of the closest known match for the operating system type, defined at library compile time</h4><ul><li>the function can detect and return the following OSes at the moment (with the preprocessor define in braces):
-<ul><li>&quot;Windows&quot; (_WIN32)
-</li><li>&quot;Linux&quot; (__linux)
-</li><li>&quot;Unix&quot; (__unix)
+<ul><li>&quot;Windows&quot; (_WIN32/__WIN32__/__WINDOWS__)
+</li><li>&quot;Mac OS X&quot; (__APPLE__)
+</li><li>&quot;Android&quot; (__ANDROID__)
+</li><li>&quot;Linux&quot; (__linux/__linux__)
+</li><li>&quot;Unix&quot; (__unix/__unix__)
 </li><li>&quot;POSIX&quot; (__posix)
 </li><li>&quot;Unknown&quot; (..any other)</li></ul></li></ul></div>
 <div class='item'><a name='os-command-function'></a><hr><h2>os_command [function]</h2><h3>os_command( string cmd )</h3><h4>passes a command to the OS command processor, returns the integer return value</h4><p>
@@ -2063,8 +2137,8 @@ rad2deg( -M_PI / 2 ); // real (-90)</pre></div>
 </p><ul><li>uses the C library function &#39;system&#39;</li></ul></div>
 <div class='item'><a name='os-getenv-function'></a><hr><h2>os_getenv [function]</h2><h3>os_getenv( string var )</h3><h4>returns the value for the environment variable <code>var</code> or null, if there is no such value</h4></div>
 <div class='item'><a name='os-putenv-function'></a><hr><h2>os_putenv [function]</h2><h3>os_putenv( string cmd )</h3><h4>sets the value for the environment variable specified in command <code>cmd</code>, returns success as bool</h4><ul><li><code>cmd</code> has the format &quot;&lt;name&gt;=&lt;value&gt;&quot;</li></ul></div>
-<div class='item'><a name='os-time-function'></a><hr><h2>os_time [function]</h2><h3>os_time( real tz = &lt;local&gt; )</h3><h4>returns the time in seconds, as integer, optionally from a different timezone <code>tz</code></h4></div>
-<div class='item'><a name='os-get-timezone-function'></a><hr><h2>os_get_timezone [function]</h2><h3>os_get_timezone( bool as_string = false )</h3><h4>returns the timezone set in the operating system, optionally as string in the format &quot;(+/-)HH:MM&quot;</h4></div>
+<div class='item'><a name='os-time-function'></a><hr><h2>os_time [function]</h2><h3>os_time( real tz = &lt;local&gt; )</h3><h4>returns the time in seconds, as integer, optionally from a different time zone <code>tz</code></h4></div>
+<div class='item'><a name='os-get-timezone-function'></a><hr><h2>os_get_timezone [function]</h2><h3>os_get_timezone( bool as_string = false )</h3><h4>returns the time zone set in the operating system, optionally as string in the format &quot;(+/-)HH:MM&quot;</h4></div>
 <div class='item'><a name='os-date-string-function'></a><hr><h2>os_date_string [function]</h2><h3>os_date_string( string fmt, int time = os_time() )</h3><h4>returns the date/time string in the format <code>fmt</code>, optionally for a different time <code>time</code></h4><ul><li>the following item specifiers are supported (*-local-specific):
 <ul><li>%a: abbreviated weekday name *
 </li><li>%A: full weekday name *
@@ -2126,7 +2200,9 @@ These constants specify the categories for which locale can be changed.
 </li><li>LC_TIME: os_date_string</li></ul></div>
 <div class='item'><a name='Regular-expression-library-re'></a><hr><h2>Regular expression library (&quot;re&quot;)</h2><p>
 This library includes regular expression match &amp; replace functions.
-</p></div>
+</p><h4>Functions:</h4><ul><li><a href="#re-match-function">re_match</a> - check for first match in string for pattern
+</li><li><a href="#re-match-all-function">re_match_all</a> - check for all matches in string for pattern
+</li><li><a href="#re-replace-function">re_replace</a> - replace all matches in string for pattern with the specified string</li></ul><h4>Constants:</h4><ul><li><a href="#RE-RETURN-constants">RE_RETURN_***</a> - flag constants for <a href="#re-match-function">re_match</a> / <a href="#re-match-all-function">re_match_all</a></li></ul></div>
 <div class='item'><a name='re-match-function'></a><hr><h2>re_match [function]</h2><h3>re_match( string str, string pattern, int flags = 0, int offset = 0 )</h3><h4>check for matches in string <code>str</code> for <code>pattern</code>, returning whether a match was found or details of the first match, as specified in <code>flags</code></h4><ul><li><code>offset</code> specifies the character to start matching from, negative offset is subtracted from the end
 </li><li><code>flags</code> expect RE_RETURN_CAPTURED, RE_RETURN_OFFSETS or RE_RETURN_BOTH, which is a combination of the previous two
 <ul><li>if <code>flags</code> is one of the special values, function returns an array of captured ranges
@@ -2139,9 +2215,39 @@ This library includes regular expression match &amp; replace functions.
 <ul><li>each entry is same as in <a href="#re-match-function">re_match</a></li></ul></li></ul></li></ul></div>
 <div class='item'><a name='re-replace-function'></a><hr><h2>re_replace [function]</h2><h3>re_replace( string str, string pattern, string replacement )</h3><h4>find and replace all occurrences of <code>pattern</code> in string <code>str</code> with the <code>replacement</code> string</h4><ul><li>replacement string can contain backreferences in the forms &quot;$[0-9]&quot; or &quot;\[0-9]&quot; (in a string constant, a double backslash is required due to rules in SGScript)
 <ul><li>there can be up to 10 backreferences, 0-9, 0 being the whole match</li></ul></li></ul></div>
+<div class='item'><a name='RE-RETURN-constants'></a><hr><h2>RE_RETURN_*** [constants]</h2><p>
+These constants are used in <a href="#re-match-function">re_match</a> / <a href="#re-match-all-function">re_match_all</a> to specify the format of the return value.
+</p><p>
+If none of these are specified (`flags` = 0), only the success state is returned (true/false/match count).
+</p><ul><li>RE_RETURN_CAPTURED - return the captured string
+</li><li>RE_RETURN_OFFSETS - return array of start/end offsets
+</li><li>RE_RETURN_BOTH - return both the captured string and the start/end offsets in an array</li></ul></div>
 <div class='item'><a name='String-library-string'></a><hr><h2>String library (&quot;string&quot;)</h2><p>
 This library contains the string handling functions. In all functions, except the utf-8 ones, it is assumed that strings are byte buffers where each byte is one character. If correct indices are applied, many of them will work with multibyte strings.
-</p></div>
+</p><h4>Functions:</h4><ul><li><a href="#string-cut-function">string_cut</a> - extract a substring from a string from the specified beginning / end offsets
+</li><li><a href="#string-part-function">string_part</a> - extract a substring from a string from the specified offset and length
+</li><li><a href="#string-reverse-function">string_reverse</a> - reverse the order of bytes in a string
+</li><li><a href="#string-pad-function">string_pad</a> - pad one or both sides of a string with a pattern string up to the specified length
+</li><li><a href="#string-repeat-function">string_repeat</a> - concatenate several copies of the specified string
+</li><li><a href="#string-count-function">string_count</a> - count occurences of a substring in a string
+</li><li><a href="#string-find-function">string_find</a> - find first substring in the string, optionally after the specified position
+</li><li><a href="#string-find-rev-function">string_find_rev</a> - find a substring by walking the string backwards, optionally before the specified position
+</li><li><a href="#string-replace-function">string_replace</a> - replace parts of string according to match / replacement strings or arrays
+</li><li><a href="#string-translate-function">string_translate</a> - replace parts of string according to the provided match -&gt; replacement mapping dict
+</li><li><a href="#string-trim-function">string_trim</a> - trim one or both sides of string, removing the specified or default character set
+</li><li><a href="#string-toupper-function">string_toupper</a> - convert all ASCII lowercase characters into uppercase equivalents
+</li><li><a href="#string-tolower-function">string_tolower</a> - convert all ASCII uppercase characters into lowercase equivalents
+</li><li><a href="#string-compare-function">string_compare</a> - compare strings as byte arrays
+</li><li><a href="#string-implode-function">string_implode</a> - combine an array of strings, putting a separator string between each two consecutive strings
+</li><li><a href="#string-explode-function">string_explode</a> - split string into parts, separated by the specified separator string
+</li><li><a href="#string-charcode-function">string_charcode</a> - get the character code (byte value, as integer) from the specified position in string
+</li><li><a href="#string-frombytes-function">string_frombytes</a> - make a string from an array of integer values, interpreted as bytes
+</li><li><a href="#string-utf8-decode-function">string_utf8_decode</a> - decode a UTF-8 string into an array of code points
+</li><li><a href="#string-utf8-encode-function">string_utf8_encode</a> - encode an array of code points into a UTF-8 string
+</li><li><a href="#string-format-function">string_format</a> - format variables according to the specified format string</li></ul><h4>Constants:</h4><ul><li>STRING_NO_REV_INDEX - used by <a href="#string-cut-function">string_cut</a> / <a href="#string-part-function">string_part</a> - disable handling of negative indices
+</li><li>STRING_STRICT_RANGES - used by <a href="#string-cut-function">string_cut</a> / <a href="#string-part-function">string_part</a> - disable handling of out-of-bounds indices
+</li><li>STRING_TRIM_LEFT, STRING_TRIM_RIGHT - used by <a href="#string-trim-function">string_trim</a> - specify sides to be trimmed
+</li><li>STRING_PAD_LEFT, STRING_PAD_RIGHT - used by <a href="#string-pad-function">string_pad</a> - specify sides to be padded</li></ul></div>
 <div class='item'><a name='string-cut-function'></a><hr><h2>string_cut [function]</h2><h3>string_cut( string str, int from[, int to[, int flags]] )</h3><h4>returns a part of string <code>str</code>, <code>from</code> and <code>to</code> being positions of the first and last character returned, respectively</h4><ul><li>if <code>to</code> is not specified, <code>to</code> is assumed to be the position of the last character in string <code>str</code>
 </li><li>if <code>from</code> or <code>to</code> are negative, they point to characters before the end of string (-1 being the last one)
 </li><li>available values for `flags`:
@@ -2202,30 +2308,32 @@ string_utf8_decode( &quot;標準&quot; ); // [27161,28310]</pre></div>
 </p><ul><li>invalid code points will add &quot;\xEF\xBF\xBD&quot; (0xFFFD code point as UTF-8) to the string</li></ul><pre>string_utf8_encode( [112,105,101] ); // string [3] &quot;pie&quot;
 string_utf8_decode( [1082,1086,1076] ); // string [6] &quot;код&quot;
 string_utf8_decode( [27161,28310] ); // string [6] &quot;標準&quot;</pre></div>
-<div class='item'><a name='string-format-function'></a><hr><h2>string_format [function]</h2><h3>string_format( string text, ... )</h3><h4>parses all format specifiers in <code>text</code> and returns the result</h4><ul><li>the format specifier has the form {&lt;id&gt;:&lt;specifier&gt;} where &quot;id&quot; is the argument index to use and specifier is a <a href="#fmt-text-function">fmt_text</a> specifier
+<div class='item'><a name='string-format-function'></a><hr><h2>string_format [function]</h2><h3>string_format( string text, ... )</h3><h4>parses all format specifiers in <code>text</code> and returns the result</h4><p>
+<em class='notice-bgr'>see <a href="#fmt-text-function">fmt_text</a> if you don&#39;t need the position (argument index) specifications</em>
+</p><ul><li>the format specifier has the form {&lt;id&gt;:&lt;specifier&gt;} where &quot;id&quot; is the argument index to use and specifier is a <a href="#fmt-text-function">fmt_text</a> specifier
 </li><li>argument indices to be used in specifiers start from 1</li></ul><pre>print string_format( &quot;{1:d} -&gt; {1:x}&quot;, 1337 ); // prints &quot;1337 -&gt; 539&quot;</pre></div>
 <div class='item'><a name='Additional-info'></a><hr><h2>Additional info</h2></div>
 <div class='item'><a name='Serialization-in-SGScript'></a><hr><h2>Serialization in SGScript</h2><p>
-In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the &quot;serialize&quot; function and deserialization is done with &quot;unserialize&quot;. The C API has similar functions: sgs_Serialize/sgs_SerializeObject and sgs_Unserialize, respectively.
+In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the &quot;<a href="#serialize-function">serialize</a>&quot; function and deserialization is done with &quot;<a href="#unserialize-function">unserialize</a>&quot;. The C API has similar functions: <a href="#sgs-Serialize-function">sgs_Serialize</a> / <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> and <a href="#sgs-Unserialize-function">sgs_Unserialize,</a> respectively.
 </p><p>
 <em class='notice-bgr'>check the &quot;Possible gotchas&quot; part of this page if it is intended to trust the end user with access to serialized data</em>
 </p><h4>The format</h4><ul><li>a list of operations
 </li><li>each operation consists of a &#39;type&#39; byte and additional data
 <ul><li>a &quot;push&quot; operation has the byte &#39;P&#39;, the data consists of the type to push (a byte consisting of one base flag from SGS_VT_*) and the binary data of the type
-</li><li>a &quot;call&quot; operation has the byte &#39;C&#39;, the data consists of the number of arguments (4 bytes), function name length (1 byte) and the null-terminated function name itself (&lt;length&gt;+1 bytes)</li></ul></li></ul><h4>Serialization</h4><ul><li>&quot;serialize&quot; is called
-</li><li>&quot;sgs_Serialize&quot; is called internally
+</li><li>a &quot;call&quot; operation has the byte &#39;C&#39;, the data consists of the number of arguments (4 bytes), function name length (1 byte) and the null-terminated function name itself (&lt;length&gt;+1 bytes)</li></ul></li></ul><h4>Serialization</h4><ul><li>&quot;<a href="#serialize-function">serialize</a>&quot; is called
+</li><li>&quot;<a href="#sgs-Serialize-function">sgs_Serialize</a>&quot; is called internally
 </li><li>type of variable is determined and the data is written
 <ul><li>C functions cannot be serialized (obviously) and whenever encountered, will abort the action
-</li><li>objects will have SGS_OP_SERIALIZE operation called
+</li><li>objects will have SERIALIZE operation called
 <ul><li>if operation is not defined, everything will stop
-</li><li>if object is an array, all variables in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to &#39;array&#39;
-</li><li>if object is a &#39;dict&#39; or a &#39;map&#39;, all keys and values in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to &#39;dict&#39;</li></ul></li></ul></li></ul><h4>Deserialization</h4><ul><li>&quot;unserialize&quot; is called
+</li><li>if object is an array, all variables in it will be serialized using <a href="#sgs-Serialize-function">sgs_Serialize</a> and <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> will generate a call to &#39;array&#39;
+</li><li>if object is a &#39;dict&#39; or a &#39;map&#39;, all keys and values in it will be serialized using <a href="#sgs-Serialize-function">sgs_Serialize</a> and <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> will generate a call to &#39;dict&#39;</li></ul></li></ul></li></ul><h4>Deserialization</h4><ul><li>&quot;<a href="#unserialize-function">unserialize</a>&quot; is called
 <ul><li>the global environment could be changed
-</li></ul><li>&quot;sgs_Unserialize&quot; is called internally
+</li></ul><li>&quot;<a href="#sgs-Unserialize-function">sgs_Unserialize</a>&quot; is called internally
 </li><li>&quot;push&quot; and &quot;call&quot; operations are executed, thus regenerating the data
 <ul><li>&quot;push&quot; operation pushes a variable on the stack
 </li><li>&quot;call&quot; operation calls the specified function</li></ul></li></ul><h4>Possible gotchas</h4><ul><li>unserialization is not by default safe in the sense that any function can be executed with a carefully crafted byte buffer; this can be prevented by specifying the second parameter to the &quot;unserialize&quot; function. the behavior can be reproduced with the C API but it will take a bit more effort or calling the &quot;unserialize&quot; function from it
-</li><li>sgs_Serialize overrides the output function so any output done via &quot;print&quot; or &quot;sgs_Write*&quot; functions during serialization will corrupt the stream
+</li><li><a href="#sgs-Serialize-function">sgs_Serialize</a> overrides the output function so any output done via &quot;print&quot; or &quot;sgs_Write*&quot; functions during serialization will corrupt the stream
 </li><li>if environment overrides are used on deserialization, remember to add &quot;array&quot;, &quot;dict&quot; and &quot;map&quot; to the list if you use them, they are not added automatically
 </li><li>serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items</li></ul></div>
 </div>

@@ -3318,7 +3318,7 @@ This library is loaded on initialization and contains the functions and constant
 === recreates a variable from the buffer with serialized data or returns null and emits a warning on failure
 
 - this function will internally call global object creation functions specified in the data, so they must be defined and the state could change in the process
-- for more info on serialization in SGScript, refer to @<Serialization in SGScript>
+- for more info on serialization in SGScript, refer to @"Serialization in SGScript"
 
     data = serialize({ name = "A", info = "B" });
     print data; // prints random-ish garbage
@@ -3334,12 +3334,12 @@ This library is loaded on initialization and contains the functions and constant
 # VT_*** [constants]
 
 == VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR
-=== these constants are defined to the values of the C macros (with the prefix "SVT_" in C with SGS_INTERNAL defined) and can be compared with the values returned in @typeid()
+=== these constants are defined to the values of the C macros (with the prefix "SGS_VT_" in C) and can be compared with the values returned in @typeid()
 
 
 # _G [superglobal]
 
-== A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals and change the gloal dictionary.
+== A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals and change the global dictionary.
 
     _G["$diff"] = 5; // no way to access this via usual globals
     _G = {}; // global value dictionary is changed, previous functions are lost unless stored somewhere
@@ -3379,7 +3379,6 @@ This library is loaded on initialization and contains the functions and constant
 -- cloning
 -- serialization
 -- GC-safe
--- type identification (returns the string "array")
 
 
 # array.push [method]
@@ -3667,9 +3666,38 @@ This library is loaded on initialization and contains the functions and constant
 
 This library includes functions and objects for parsing binary and text buffers.
 
-- binary format -- fmt_pack, fmt_unpack, fmt_pack_count, fmt_pack_size
-- base64 format -- fmt_base64_encode, fmt_base64_decode
-- text format -- fmt_parser, fmt_text, fmt_charcc
+- binary format -- @fmt_pack, @fmt_unpack, @fmt_pack_count, @fmt_pack_size
+- base64 format -- @fmt_base64_encode, @fmt_base64_decode
+- text format -- @fmt_parser, @fmt_text, @fmt_charcc
+
+=== Functions:
+
+- @fmt_pack - pack variables into a byte buffer, according to the format string
+- @fmt_unpack - unpack byte buffer to an array of variables, according to the format string
+- @fmt_pack_count - returns the number of items found in a packing format string
+- @fmt_pack_size - returns the number of bytes found in a packing format string
+- @fmt_base64_encode - encodes a byte buffer in base64 character buffer (A-Za-z0-9+/)
+- @fmt_base64_decode - decodes a base64 character buffer (A-Za-z0-9+/) to a byte buffer
+- @fmt_text - formats specified variables according to the format string
+- @fmt_parser - creates a text parser object with the specified stream reading function
+- @fmt_string_parser - creates a text parser object that reads from the specified string
+- @fmt_file_parser - creates a text parser object that reads from the specified file
+- @fmt_charcc - checks if a character is in the character class
+
+=== Objects and their methods:
+
+- @fmt_parser - formatted text string-parsing object
+- @read<fmt_parser.read> - read the specified number of characters from the stream
+- @getchar<fmt_parser.getchar> - read one character from the stream
+- @readcc<fmt_parser.readcc> - read characters while they match the specified class
+- @skipcc<fmt_parser.skipcc> - skip characters while they match the specified class
+- @read_real<fmt_parser.read_real> - read with the real value character class, optionally return real
+- @read_int<fmt_parser.read_int> - read with the integer value character class, optionally return integer
+- @read_binary_int<fmt_parser.read_binary_int> - read with the binary integer character class, optionally return integer
+- @read_octal_int<fmt_parser.read_octal_int> - read with the octal integer character class, optionally return integer
+- @read_decimal_int<fmt_parser.read_decimal_int> - read with the decimal integer character class, optionally return integer
+- @read_hex_int<fmt_parser.read_hex_int> - read with the hexadecimal integer character class, optionally return integer
+- @check<fmt_parser.check> - check for presence of a string in stream
 
 # >>>
 
@@ -3751,6 +3779,8 @@ This library includes functions and objects for parsing binary and text buffers.
 == fmt_text( string text, ... )
 === parses all format specifiers in `text` and returns the result
 
+! see @string_format if you need position (argument index) specifications in the format string
+
 - the general format of a format specifier is as follows: {fmt[size][.prec][r][p<char>]}
 -- fmt: one-character output type (b-binary, o-octal, d-decimal, x/X-hexadecimal, f-floating-point, g/G-compact floating-point, e/E-scientific floating-point, s-valid string, c-always converted to string)
 -- size: minimum number of characters to print
@@ -3811,17 +3841,17 @@ This library includes functions and objects for parsing binary and text buffers.
 * read-only properties
  - [bool] at_end
  - [bool] stream_offset
- - [cfunc] read
- - [cfunc] getchar
- - [cfunc] readcc
- - [cfunc] skipcc
- - [cfunc] read_real
- - [cfunc] read_int
- - [cfunc] read_binary_int
- - [cfunc] read_octal_int
- - [cfunc] read_decimal_int
- - [cfunc] read_hex_int
- - [cfunc] check
+ - [cfunc] @read<fmt_parser.read>
+ - [cfunc] @getchar<fmt_parser.getchar>
+ - [cfunc] @readcc<fmt_parser.readcc>
+ - [cfunc] @skipcc<fmt_parser.skipcc>
+ - [cfunc] @read_real<fmt_parser.read_real>
+ - [cfunc] @read_int<fmt_parser.read_int>
+ - [cfunc] @read_binary_int<fmt_parser.read_binary_int>
+ - [cfunc] @read_octal_int<fmt_parser.read_octal_int>
+ - [cfunc] @read_decimal_int<fmt_parser.read_decimal_int>
+ - [cfunc] @read_hex_int<fmt_parser.read_hex_int>
+ - [cfunc] @check<fmt_parser.check>
 * other features:
  - GC-safe
 
@@ -3932,6 +3962,41 @@ This library includes functions and objects for parsing binary and text buffers.
 
 This library contains the functions necessary to work with the file system (files and directories).
 
+=== Functions:
+
+- @io_setcwd - set the current working directory
+- @io_getcwd - returns the current working directory
+- @io_getexecpath - returns the absolute executable path
+- @io_rename - rename or move a file system item
+- @io_file_exists - returns whether the specified file exists and is accessible
+- @io_dir_exists - returns whether the specified directory exists and is accessible
+- @io_stat - returns information about a file system item
+- @io_dir_create - create a directory
+- @io_dir_delete - remove a directory
+- @io_file_delete - deletes a file
+- @io_file_write - writes byte buffer to file, creating or overwriting it, as necessary
+- @io_file_read - reads byte buffer from a file
+- @io_file - creates a @io_file object, optionally opening it
+- @io_dir - creates a @io_dir directory iterator object, set to read a specific directory
+
+=== Objects and their methods:
+
+- @io_file - file object
+-- @open<io_file.open> - open a file
+-- @close<io_file.close> - close the currently open file (if any)
+-- @read<io_file.read> - read from the open file
+-- @write<io_file.write> - write to the open file
+-- @seek<io_file.seek> - change read/write position in file
+-- @flush<io_file.flush> - flush the write buffer
+-- @setbuf<io_file.setbuf> - change the size and flush trigger of the write buffer or disables it
+- @io_dir - directory iterator object, for use in "foreach"
+
+=== Constants:
+
+- @FILE_*** - mode constants for @io_file.open / @"io_file [function]"
+- @SEEK_*** - mode constants for @io_file.seek
+- @FST_*** - file system item type constants for @io_stat
+
 # >>>
 
 
@@ -3979,7 +4044,7 @@ This library contains the functions necessary to work with the file system (file
 == io_dir_exists( string dir )
 === checks if directory exists and is accessible by the process at the moment, returns true on success, false otherwise
 
-- uses the C library functions opendir,closedir where supported, _findfirst,_findclose otherwise (Windows/MSVC)
+- uses the C library functions opendir,closedir where supported properly, Windows API Find*** functions otherwise
 
 
 # io_stat [function]
@@ -4040,18 +4105,16 @@ This library contains the functions necessary to work with the file system (file
 -- [int] size
 -- [bool] error
 -- [bool] eof
--- [cfunc] open
--- [cfunc] close
--- [cfunc] read
--- [cfunc] write
--- [cfunc] seek
--- [cfunc] flush
--- [cfunc] setbuf
+-- [cfunc] @open<io_file.open>
+-- [cfunc] @close<io_file.close>
+-- [cfunc] @read<io_file.read>
+-- [cfunc] @write<io_file.write>
+-- [cfunc] @seek<io_file.seek>
+-- [cfunc] @flush<io_file.flush>
+-- [cfunc] @setbuf<io_file.setbuf>
 - other features:
--- tostring = "file"
 -- tobool = returns whether file is open or not
 -- GC-safe
--- type identification (returns the string "file")
 
 
 # io_file.open [method]
@@ -4138,19 +4201,19 @@ This library contains the functions necessary to work with the file system (file
 # FILE_*** [constants]
 
 == FILE_READ, FILE_WRITE
-=== mode constants for @io_file.open() / @io_file()
+=== mode constants for @io_file.open / @"io_file [function]"
 
 
 # SEEK_*** [constants]
 
 == SEEK_SET, SEEK_CUR, SEEK_END
-=== mode constants for @io_file.seek()
+=== mode constants for @io_file.seek
 
 
 # FST_*** [constants]
 
 == FST_UNKNOWN, FST_FILE, FST_DIR
-=== file system item type constants for @io_stat()
+=== file system item type constants for @io_stat
 
 
 # <<<
@@ -4159,6 +4222,29 @@ This library contains the functions necessary to work with the file system (file
 # Math library ("math") [info]
 
 This library contains the basic math functions for processing real values.
+
+=== Functions:
+
+ - @abs - returns the absolute value of x
+ - @floor - returns rounded-down value of x
+ - @ceil - returns the rounded-up value of x
+ - @round - returns the rounded-to-nearest-integer value of x
+ - @pow - returns x to the power of y
+ - @sqrt - returns a square root of x
+ - @log - returns the logarithm (power) of x for base y
+ - @sin - returns the sine of x
+ - @cos - returns the cosine of x
+ - @tan - returns the tangent of x
+ - @asin - returns arcsine (angle for sine value) of x
+ - @acos - returns arccosine (angle for cosine value) of x
+ - @atan - returns arctangent (angle for tangent value) of x
+ - @atan2 - returns arctangent of x and y, using both values to extend the range of returned value
+ - @deg2rad - returns x degrees as radians
+ - @rad2deg - returns x radians as degrees
+
+=== Constants:
+
+- @M_*** - mathematical constants
 
 # >>>
 
@@ -4362,6 +4448,26 @@ This library contains the basic math functions for processing real values.
 - time and date
 - locale / regional settings
 
+=== Functions:
+
+- @os_gettype - returns the name of closest known OS type match, defined at compile time
+- @os_command - pass command to OS command processor
+- @os_getenv - returns the value of the specified environment variable
+- @os_putenv - set an environment variable
+- @os_time - returns the time in seconds, optionally from a different time zone
+- @os_get_timezone - returns the time zone set in OS, optionally as string
+- @os_date_string - format a time value into a string
+- @os_parse_time - split time value into components
+- @os_make_time - make a time value from components
+- @os_get_locale - returns current locale of the specified category
+- @os_set_locale - set locale for the specified category
+- @os_get_locale_format - returns locale formatting info
+- @os_locale_strcmp - compare two strings using locale
+
+=== Constants:
+
+- @LC_*** - locale categories
+
 # >>>
 
 
@@ -4371,9 +4477,11 @@ This library contains the basic math functions for processing real values.
 === returns the name of the closest known match for the operating system type, defined at library compile time
 
 - the function can detect and return the following OSes at the moment (with the preprocessor define in braces):
--- "Windows" (_WIN32)
--- "Linux" (__linux)
--- "Unix" (__unix)
+-- "Windows" (_WIN32/__WIN32__/__WINDOWS__)
+-- "Mac OS X" (__APPLE__)
+-- "Android" (__ANDROID__)
+-- "Linux" (__linux/__linux__)
+-- "Unix" (__unix/__unix__)
 -- "POSIX" (__posix)
 -- "Unknown" (..any other)
 
@@ -4405,13 +4513,13 @@ This library contains the basic math functions for processing real values.
 # os_time [function]
 
 == os_time( real tz = <local> )
-=== returns the time in seconds, as integer, optionally from a different timezone `tz`
+=== returns the time in seconds, as integer, optionally from a different time zone `tz`
 
 
 # os_get_timezone [function]
 
 == os_get_timezone( bool as_string = false )
-=== returns the timezone set in the operating system, optionally as string in the format "(+/-)HH:MM"
+=== returns the time zone set in the operating system, optionally as string in the format "(+/-)HH:MM"
 
 
 # os_date_string [function]
@@ -4531,6 +4639,16 @@ These constants specify the categories for which locale can be changed.
 
 This library includes regular expression match & replace functions.
 
+=== Functions:
+
+- @re_match - check for first match in string for pattern
+- @re_match_all - check for all matches in string for pattern
+- @re_replace - replace all matches in string for pattern with the specified string
+
+=== Constants:
+
+- @RE_RETURN_*** - flag constants for @re_match / @re_match_all
+
 # >>>
 
 
@@ -4567,12 +4685,54 @@ This library includes regular expression match & replace functions.
 -- there can be up to 10 backreferences, 0-9, 0 being the whole match
 
 
+# RE_RETURN_*** [constants]
+
+These constants are used in @re_match / @re_match_all to specify the format of the return value.
+
+If none of these are specified (`flags` = 0), only the success state is returned (true/false/match count).
+
+- RE_RETURN_CAPTURED - return the captured string
+- RE_RETURN_OFFSETS - return array of start/end offsets
+- RE_RETURN_BOTH - return both the captured string and the start/end offsets in an array
+
+
 # <<<
 
 
 # String library ("string") [info]
 
 This library contains the string handling functions. In all functions, except the utf-8 ones, it is assumed that strings are byte buffers where each byte is one character. If correct indices are applied, many of them will work with multibyte strings.
+
+=== Functions:
+
+- @string_cut - extract a substring from a string from the specified beginning / end offsets
+- @string_part - extract a substring from a string from the specified offset and length
+- @string_reverse - reverse the order of bytes in a string
+- @string_pad - pad one or both sides of a string with a pattern string up to the specified length
+- @string_repeat - concatenate several copies of the specified string
+- @string_count - count occurences of a substring in a string
+- @string_find - find first substring in the string, optionally after the specified position
+- @string_find_rev - find a substring by walking the string backwards, optionally before the specified position
+- @string_replace - replace parts of string according to match / replacement strings or arrays
+- @string_translate - replace parts of string according to the provided match -> replacement mapping dict
+- @string_trim - trim one or both sides of string, removing the specified or default character set
+- @string_toupper - convert all ASCII lowercase characters into uppercase equivalents
+- @string_tolower - convert all ASCII uppercase characters into lowercase equivalents
+- @string_compare - compare strings as byte arrays
+- @string_implode - combine an array of strings, putting a separator string between each two consecutive strings
+- @string_explode - split string into parts, separated by the specified separator string
+- @string_charcode - get the character code (byte value, as integer) from the specified position in string
+- @string_frombytes - make a string from an array of integer values, interpreted as bytes
+- @string_utf8_decode - decode a UTF-8 string into an array of code points
+- @string_utf8_encode - encode an array of code points into a UTF-8 string
+- @string_format - format variables according to the specified format string
+
+=== Constants:
+
+- STRING_NO_REV_INDEX - used by @string_cut / @string_part - disable handling of negative indices
+- STRING_STRICT_RANGES - used by @string_cut / @string_part - disable handling of out-of-bounds indices
+- STRING_TRIM_LEFT, STRING_TRIM_RIGHT - used by @string_trim - specify sides to be trimmed
+- STRING_PAD_LEFT, STRING_PAD_RIGHT - used by @string_pad - specify sides to be padded
 
 # >>>
 
@@ -4809,6 +4969,8 @@ This library contains the string handling functions. In all functions, except th
 == string_format( string text, ... )
 === parses all format specifiers in `text` and returns the result
 
+! see @fmt_text if you don't need the position (argument index) specifications
+
 - the format specifier has the form {<id>:<specifier>} where "id" is the argument index to use and specifier is a @fmt_text specifier
 - argument indices to be used in specifiers start from 1
 
@@ -4827,7 +4989,7 @@ This library contains the string handling functions. In all functions, except th
 
 # Serialization in SGScript [info]
 
-In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the "serialize" function and deserialization is done with "unserialize". The C API has similar functions: sgs_Serialize/sgs_SerializeObject and sgs_Unserialize, respectively.
+In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the "@serialize" function and deserialization is done with "@unserialize". The C API has similar functions: @sgs_Serialize / @sgs_SerializeObject and @sgs_Unserialize, respectively.
 
 ! check the "Possible gotchas" part of this page if it is intended to trust the end user with access to serialized data
 
@@ -4840,20 +5002,20 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 
 === Serialization
 
-- "serialize" is called
-- "sgs_Serialize" is called internally
+- "@serialize" is called
+- "@sgs_Serialize" is called internally
 - type of variable is determined and the data is written
 -- C functions cannot be serialized (obviously) and whenever encountered, will abort the action
--- objects will have SGS_OP_SERIALIZE operation called
+-- objects will have SERIALIZE operation called
 --- if operation is not defined, everything will stop
---- if object is an array, all variables in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to 'array'
---- if object is a 'dict' or a 'map', all keys and values in it will be serialized using sgs_Serialize and sgs_SerializeObject will generate a call to 'dict'
+--- if object is an array, all variables in it will be serialized using @sgs_Serialize and @sgs_SerializeObject will generate a call to 'array'
+--- if object is a 'dict' or a 'map', all keys and values in it will be serialized using @sgs_Serialize and @sgs_SerializeObject will generate a call to 'dict'
 
 === Deserialization
 
-- "unserialize" is called
+- "@unserialize" is called
 -- the global environment could be changed
-- "sgs_Unserialize" is called internally
+- "@sgs_Unserialize" is called internally
 - "push" and "call" operations are executed, thus regenerating the data
 -- "push" operation pushes a variable on the stack
 -- "call" operation calls the specified function
@@ -4861,7 +5023,7 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 === Possible gotchas
 
 - unserialization is not by default safe in the sense that any function can be executed with a carefully crafted byte buffer; this can be prevented by specifying the second parameter to the "unserialize" function. the behavior can be reproduced with the C API but it will take a bit more effort or calling the "unserialize" function from it
-- sgs_Serialize overrides the output function so any output done via "print" or "sgs_Write*" functions during serialization will corrupt the stream
+- @sgs_Serialize overrides the output function so any output done via "print" or "sgs_Write*" functions during serialization will corrupt the stream
 - if environment overrides are used on deserialization, remember to add "array", "dict" and "map" to the list if you use them, they are not added automatically
 - serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items
 

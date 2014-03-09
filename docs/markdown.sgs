@@ -44,11 +44,12 @@ function markdown2html( text, linkhandler )
 	
 	function mdinline( text, linkhandler )
 	{
-		text = string_replace( text, "\"", "\xff" ); // encode double quotes to avoid html-encoding
+		// HTML HIDING
+		text = string_translate( text, { "\"" = "\xFF", "<" = "\xFD", ">" = "\xFE" } );
 		
 		text = htmlencode( text );
-		bdcc = "(^|[ \n\r\t,.])";
-		edcc = "($|[ \n\r\t,.])";
+		bdcc = "(^|[ \xFF\n\r\t,.])";
+		edcc = "($|[ \xFF\n\r\t,.])";
 		text = re_replace( text,
 			"#"$bdcc$"\\*\\*([^*]+)\\*\\*"$edcc$"#",
 			"$1<b>$2</b>$3" );
@@ -59,18 +60,23 @@ function markdown2html( text, linkhandler )
 			"#"$bdcc$"`([^`]+)`"$edcc$"#",
 			"$1<code>$2</code>$3" );
 		
-		text = re_replace_callback( text, "#"$bdcc$"@\xff([^\xff]+)\xff(<([^>]+)>)?"$edcc$"#",
+		text = re_replace_callback( text, "#"$bdcc$"@\xFF([^\xFF\xFD]+)\xFF(\xFD([^\xFE]+)\xFE)?"$edcc$"#",
 		function( match ) use( linkhandler )
 		{
+			if( !re_match( match[0][0], "#[a-zA-Z0-9]#" ) )
+				return match[0][0];
 			return match[1][0] $ linkhandler( match[2][0], match[4][0] ) $ match[5][0];
 		});
-		text = re_replace_callback( text, "#"$bdcc$"@([^ ]+)(<([^>]+)>)?"$edcc$"#",
+		text = re_replace_callback( text, "#"$bdcc$"@([^ \xFF\xFD]+)(\xFD([^\xFE]+)\xFE)?"$edcc$"#",
 		function( match ) use( linkhandler )
 		{
+			if( !re_match( match[0][0], "#[a-zA-Z0-9]#" ) )
+				return match[0][0];
 			return match[1][0] $ linkhandler( match[2][0], match[4][0] ) $ match[5][0];
 		});
 		
-		text = string_replace( text, "\xff", "&quot;" ); // re-encode double quotes to html
+		// HTML UNHIDING
+		text = string_translate( text, { "\xFF" = "&quot;", "\xFD" = "&lt;", "\xFE" = "&gt;" } );
 		
 		return text;
 	}

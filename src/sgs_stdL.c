@@ -2826,8 +2826,15 @@ static int _regex_match( SGS_CTX, srx_Context* R, char* str, sgs_SizeVal off, sg
 				if( srx_GetCapturedPtrs( R, i, &cf, &ct ) )
 				{
 					if( flags & REGEX_RETURN_CAPTURED )
-						/* WP: string limit */
-						sgs_PushStringBuf( C, cf, (sgs_SizeVal) ( ct - cf ) );
+					{
+						if( ct && cf )
+						{
+							/* WP: string limit */
+							sgs_PushStringBuf( C, cf, (sgs_SizeVal) ( ct - cf ) );
+						}
+						else
+							sgs_PushNull( C );
+					}
 					if( flags & REGEX_RETURN_OFFSETS )
 					{
 						if( cf )
@@ -3520,8 +3527,8 @@ static int sgsstd_string_toupper( SGS_CTX )
 	strend = str + size;
 	while( str < strend )
 	{
-		/* WP: this is awful */
-		*str = (char) toupper( (int)*str );
+		if( *str >= 'a' && *str <= 'z' )
+			*str = (char)( *str + 'A' - 'a' );
 		str++;
 	}
 	return 1;
@@ -3542,8 +3549,8 @@ static int sgsstd_string_tolower( SGS_CTX )
 	strend = str + size;
 	while( str < strend )
 	{
-		/* WP: this is awful */
-		*str = (char) tolower( (int)*str );
+		if( *str >= 'A' && *str <= 'Z' )
+			*str = (char)( *str + 'a' - 'A' );
 		str++;
 	}
 	return 1;

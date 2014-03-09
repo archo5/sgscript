@@ -936,7 +936,8 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 	}
 	else if( frame->func->type == SGS_VT_OBJECT )
 	{
-		N = "<object>";
+		sgs_VarObj* O = frame->func->data.O;
+		N = O->iface->name ? O->iface->name : "<object>";
 		F = "[C code]";
 	}
 	if( name ) *name = N;
