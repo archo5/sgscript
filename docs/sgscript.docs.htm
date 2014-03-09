@@ -10,7 +10,8 @@
 </li><li><a href='#Code-samples-the-C-API'>Code samples - the C API</a>
 </li></ul><li><a href='#Language-reference'>Language reference</a>
 <ul><li><a href='#Variable-types'>Variable types</a>
-</li><li><a href='#Code-structure'>Code structure</a>
+<ul><li><a href='#Conversion-rules'>Conversion rules</a>
+</li></ul><li><a href='#Code-structure'>Code structure</a>
 <ul><li><a href='#Constants'>Constants</a>
 </li><li><a href='#Identifiers'>Identifiers</a>
 </li><li><a href='#Expressions'>Expressions</a>
@@ -242,7 +243,24 @@ Extended variable types (built on `object`):
 </li><li>`dict`: a map/table structure where variables are mapped to string keys
 </li><li>`map`: a map/table structure where variables are mapped to variable keys
 </li><li>`class`: object that uses two other objects to build its interface
-</li><li>`closure`: a callable object consisting of another callable and one variable</li></ul></div>
+</li><li>`closure`: a callable object consisting of another callable and one variable
+</li><li>`sys.closure`: a callable object consisting of another callable and several variables; created only in C</li></ul></div>
+<div class='item'><a name='Conversion-rules'></a><hr><h2>Conversion rules</h2><p>
+<table>
+<tr><th>from  \  to</th><th>bool</th><th>int</th><th>real</th><th>string</th><th>ptr</th></tr>
+<tr><td>null</td><td>false</td><td>0</td><td>0.0</td><td>&quot;null&quot;</td><td>NULL</td></tr>
+<tr><td>bool</td><td>-</td><td>0/1</td><td>0.0/1.0</td><td>&quot;false&quot;/&quot;true&quot;</td><td>NULL/0x1</td></tr>
+<tr><td>int</td><td>0 =&gt; false, otherwise true</td><td>-</td><td>-</td><td>-</td><td>cast</td></tr>
+<tr><td>real</td><td>0.0 =&gt; false, otherwise true</td><td>round to nearest</td><td>-</td><td>sprintf %g</td><td>cast</td></tr>
+<tr><td>string</td><td>empty =&gt; false, otherwise true</td><td>*1</td><td>*1</td><td>-</td><td>char*</td></tr>
+<tr><td>func</td><td>true</td><td>0</td><td>0.0</td><td>&quot;function&quot;</td><td>NULL</td></tr>
+<tr><td>cfunc</td><td>true</td><td>0</td><td>0.0</td><td>&quot;C function&quot;</td><td>NULL</td></tr>
+<tr><td>object *2</td><td>true</td><td>0</td><td>0.0</td><td>&quot;object&quot;</td><td>data ptr.</td></tr>
+<tr><td>ptr</td><td>NULL =&gt; false, otherwise true</td><td>cast</td><td>cast</td><td>sprintf ptr(%p)</td><td>-</td></tr>
+</table>
+</p><ul><li>&quot;-&quot; means the conversion is not necessary, does not affect data or the effect of conversion should be immediately obvious
+</li><li>*1) see <a href="#Numeric-string-parsing-rules">Numeric string parsing rules</a> for more info
+</li><li>*2) these are the default values, overrides can be provided in CONVERT function and type name for string</li></ul></div>
 <div class='item'><a name='Code-structure'></a><hr><h2>Code structure</h2><p>
 Code can contain constants, identifiers, expressions and statements. Statements usually include expressions but expressions can also include statements, specifically - function expressions.
 </p></div>
@@ -1408,7 +1426,7 @@ Special error codes: SGS_ENOTFND - the specified index/property was not found, S
 Depending on the argument, it is <b>called</b> by different sources and require different return values:
 </p><ul><li>type conversion: to*** function families and other conversion triggers (like operators) in SGScript and the Convert/Get/To function families in the C API, require a value of the right type.
 </li><li>SGS_CONVOP_CLONE: called on clone/sgs_Clone, should return an exact copy of the same object
-</li><li>SGS_CONVOP_TOTYPE: called on typeof/sgs_Typeof, should return a string containing the type name
+</li><li>SGS_CONVOP_TOTYPE: called on typeof/sgs_TypeOf, should return a string containing the type name
 </li><li>SGS_CONVOP_TOITER: called on foreach/sgs_PushIterator, should return an object with the SGS_OP_GETNEXT callback added</li></ul><p>
 <b>Argument</b> specifies the data to return.
 </p><p>
@@ -1500,19 +1518,120 @@ This library is loaded on initialization and contains the functions and constant
 </li><li>error handling and throwing
 </li><li>global environment modification
 </li><li>standard input / output
-</li><li>data debugging</li></ul></div>
-<div class='item'><a name='array-function'></a><hr><h2>array [function]</h2><h3>array( ... )</h3><h4>returns an array, containing the arguments</h4><ul><li>similar to the array literal, though somewhat limited</li></ul><pre>array( &quot;5&quot;, 6, 7.0 ) // same as [&quot;5&quot;,6,7.0]</pre></div>
-<div class='item'><a name='dict-function'></a><hr><h2>dict [function]</h2><h3>dict( [key, value, ...] )</h3><h4>returns a &#39;dict&#39; (dictionary/hash table) object, containing the even arguments mapped to respective previous arguments</h4><ul><li>if no arguments are passed, an empty dictionary is returned
+</li><li>data debugging</li></ul><h4>Functions:</h4><ul><li>containers
+<ul><li><a href="#array-function">array</a> - returns an array containing the specified variables
+</li><li><a href="#dict-function">dict</a> - returns a key-value map object (string keys) containing the specified variables
+</li><li><a href="#map-function">map</a> - returns a key-value map object (many key types) containing the specified variables
+</li><li><a href="#class-function">class</a> - returns an index fallback / overloading object, linking both specified variables
+</li><li><a href="#closure-function">closure</a> - returns a basic closure object that consists of one variable and one callable
+</li><li><a href="#array-filter-function">array_filter</a> - returns an array that is filtered with a truth test or the specified function
+</li><li><a href="#array-process-function">array_process</a> - convert all array elements by a function
+</li><li><a href="#dict-filter-function">dict_filter</a> - returns a dict object that is filtered with a truth test or the specified function
+</li><li><a href="#dict-process-function">dict_process</a> - convert all dictionary elements by a function
+</li><li><a href="#dict-size-function">dict_size</a> - returns the number of items in a dict
+</li><li><a href="#map-size-function">map_size</a> - returns the number of items in a map
+</li><li><a href="#isset-function">isset</a> - checks if the specified property is available
+</li><li><a href="#unset-function">unset</a> - unsets the specified property (only for dict/map objects)
+</li><li><a href="#clone-function">clone</a> - returns the cloned variable or the same if immutable
+</li><li><a href="#get-keys-function">get_keys</a> - returns an array of keys from an iterable
+</li><li><a href="#get-values-function">get_values</a> - returns an array of values from an iterable
+</li><li><a href="#get-concat-function">get_concat</a> - returns an array with all values from all iterables concatenated together in order
+</li><li><a href="#get-merged-function">get_merged</a> - returns a dict with all mappings merged
+</li><li><a href="#get-merged-map-function">get_merged_map</a> - returns a map with all mappings merged
+</li></ul><li>type info and conversion
+<ul><li><a href="#tobool-function">tobool</a> - returns a variable, converted to boolean
+</li><li><a href="#toint-function">toint</a> - returns a variable, converted to an integer
+</li><li><a href="#toreal-function">toreal</a> - returns a variable, converted to a real value
+</li><li><a href="#tostring-function">tostring</a> - returns a variable, converted to a string
+</li><li><a href="#toptr-function">toptr</a> - returns a variable, converted to pointer
+</li><li><a href="#parseint-function">parseint</a> - try to parse a variable as integer, return the value or null on failure
+</li><li><a href="#parsereal-function">parsereal</a> - try to parse a variable as string, return the value or null on failure
+</li><li><a href="#typeof-function">typeof</a> - returns the type string of a variable
+</li><li><a href="#typeid-function">typeid</a> - returns type ID of a variable
+</li><li><a href="#is-numeric-function">is_numeric</a> - returns if variable is a numeric type
+</li><li><a href="#is-callable-function">is_callable</a> - returns if variable can be called as a function
+</li></ul><li>input/output
+<ul><li><a href="#print-println-printlns-functions">print, println, printlns</a> - write variables to output callback/stream
+</li><li><a href="#printvar-function">printvar</a> - write variable dumps to output callback/stream
+</li><li><a href="#printvar-ext-function">printvar_ext</a> - write variable dump to output callback/stream, optionally specifying max. recursion depth
+</li><li><a href="#read-stdin-function">read_stdin</a> - attempt to read from standard input file (stdin)
+</li></ul><li>operating system
+<ul><li><a href="#ftime-function">ftime</a> - returns an always increasing time value, in seconds, as a real value
+</li></ul><li>utilities
+<ul><li><a href="#rand-function">rand</a> - returns a random integer between 0 and RAND_MAX
+</li><li><a href="#randf-function">randf</a> - returns a random real value between 0 and 1
+</li><li><a href="#srand-function">srand</a> - reseed random number generator
+</li></ul><li>SGS-specific utilities
+<ul><li><a href="#va-get-args-function">va_get_args</a> - returns an array of all arguments passed to calling function
+</li><li><a href="#va-arg-count-function">va_arg_count</a> - returns the number of all arguments passed to calling function
+</li><li><a href="#sys-call-function">sys_call</a> - call a function/callable dynamically (function and <code>this</code> specified at runtime)
+</li><li><a href="#sys-apply-function">sys_apply</a> - call a function/callable even more dynamically (argument count also specified at runtime)
+</li><li><a href="#pcall-function">pcall</a> - do a protected call by trapping all internal messages in the specified callback
+</li><li><a href="#assert-function">assert</a> - emit an error if a condition does not evaluate to <code>true</code>
+</li><li><a href="#eval-function">eval</a> - compile and run script code, retrieve return values
+</li><li><a href="#eval-file-function">eval_file</a> - compile and rune script file, retrieve return values
+</li><li><a href="#compile-sgs-function">compile_sgs</a> - compile script code
+</li><li><a href="#include-library-function">include_library</a> - load a built-in library
+</li><li><a href="#include-file-function">include_file</a> - load a script file
+</li><li><a href="#include-shared-function">include_shared</a> - load a dynamically linked library / shared object (.DLL/.SO)
+</li><li><a href="#import-cfunc-function">import_cfunc</a> - load a C function from .DLL/.SO
+</li><li><a href="#include-function">include</a> - load many types of files
+</li><li><a href="#sys-curfile-function">sys_curfile</a> - returns the origin file of the calling function
+</li><li><a href="#sys-curfiledir-function">sys_curfiledir</a> - returns the directory of the origin file of the calling function
+</li><li><a href="#sys-msg-function">sys_msg</a> - emit a system message
+</li><li><a href="#INFO-function">INFO</a> - emit an INFO message
+</li><li><a href="#WARNING-function">WARNING</a> - emit a WARNING message
+</li><li><a href="#ERROR-function">ERROR</a> - emit an ERROR message
+</li><li><a href="#sys-abort-function">sys_abort</a> - stop the execution of the calling SGS function
+</li><li><a href="#app-abort-function">app_abort</a> - abort execution of application (exit application immediately with an error)
+</li><li><a href="#app-exit-function">app_exit</a> - exit application immediately
+</li><li><a href="#sys-replevel-function">sys_replevel</a> - change the minimum message reporting level
+</li><li><a href="#sys-stat-function">sys_stat</a> - write info about system state
+</li><li><a href="#errno-function">errno</a> - return current errno value as number or string
+</li><li><a href="#errno-string-function">errno_string</a> - return specified or current errno value as string
+</li><li><a href="#errno-value-function">errno_value</a> - return the errno value corresponding to the name
+</li><li><a href="#dumpvar-function">dumpvar</a> - returns the dump string of variables
+</li><li><a href="#dumpvar-ext-function">dumpvar_ext</a> - returns the dump string of a variable, optionally specifying max. recursion depth
+</li><li><a href="#gc-collect-function">gc_collect</a> - run the garbage collector to remove inaccessible objects
+</li><li><a href="#serialize-function">serialize</a> - returns a byte buffer containing info necessary to later recreate variable structure
+</li><li><a href="#unserialize-function">unserialize</a> - recreate variable structure from a byte buffer</li></ul></li></ul><h4>Objects and their methods:</h4><ul><li><a href="#array-object">array</a>
+<ul><li><a href="#array-push-method">push</a>
+</li><li><a href="#array-pop-method">pop</a>
+</li><li><a href="#array-shift-method">shift</a>
+</li><li><a href="#array-unshift-method">unshift</a>
+</li><li><a href="#array-insert-method">insert</a>
+</li><li><a href="#array-erase-method">erase</a>
+</li><li><a href="#array-part-method">part</a>
+</li><li><a href="#array-clear-method">clear</a>
+</li><li><a href="#array-reverse-method">reverse</a>
+</li><li><a href="#array-resize-method">resize</a>
+</li><li><a href="#array-reserve-method">reserve</a>
+</li><li><a href="#array-sort-method">sort</a>
+</li><li><a href="#array-sort-custom-method">sort_custom</a>
+</li><li><a href="#array-sort-mapped-method">sort_mapped</a>
+</li><li><a href="#array-find-method">find</a>
+</li><li><a href="#array-remove-method">remove</a>
+</li><li><a href="#array-unique-method">unique</a>
+</li><li><a href="#array-random-method">random</a>
+</li><li><a href="#array-shuffle-method">shuffle</a>
+</li></ul><li><a href="#dict-object">dict</a>
+</li><li><a href="#map-object">map</a>
+</li><li><a href="#class-object">class</a>
+</li><li><a href="#closure-object">closure</a></li></ul><h4>Constants:</h4><ul><li><a href="#SGS-constants">SGS_***</a> - error levels
+</li><li><a href="#VT-constants">VT_***</a> - variable type IDs
+</li><li><a href="#RAND-MAX-constant">RAND_MAX</a> - maximum value that can be returned by <a href="#rand-function">rand</a></li></ul><h4>Other:</h4><ul><li><a href="#G-superglobal">_G</a> - environment superglobal, a dict containing all global variable names and values; can be changed</li></ul></div>
+<div class='item'><a name='array-function'></a><hr><h2>array [function]</h2><h3>array( ... )</h3><h4>returns an <a href="#array-object">array</a>, containing the arguments</h4><ul><li>similar to the array literal, though somewhat limited</li></ul><pre>array( &quot;5&quot;, 6, 7.0 ) // same as [&quot;5&quot;,6,7.0]</pre></div>
+<div class='item'><a name='dict-function'></a><hr><h2>dict [function]</h2><h3>dict( [key, value, ...] )</h3><h4>returns a &#39;<a href="#dict-object">dict</a>&#39; (dictionary/hash table) object, containing the even arguments mapped to respective previous arguments</h4><ul><li>if no arguments are passed, an empty dictionary is returned
 </li><li>if an even number of arguments is passed, function returns null and emits a warning
 </li><li>all even arguments must be strings or convertible to strings</li></ul><pre>dict( &quot;name&quot;, &quot;John&quot;, &quot;phone&quot;, 1234567890 ); // same as { name = &quot;John&quot;, phone = 1234567890 }</pre></div>
-<div class='item'><a name='map-function'></a><hr><h2>map [function]</h2><h3>map( [key, value, ...] )</h3><h4>returns a &#39;map&#39; (map/hash table) object, containing the even arguments mapped to respective previous arguments</h4><ul><li>if no arguments are passed, an empty map is returned
+<div class='item'><a name='map-function'></a><hr><h2>map [function]</h2><h3>map( [key, value, ...] )</h3><h4>returns a &#39;<a href="#map-object">map</a>&#39; (map/hash table) object, containing the even arguments mapped to respective previous arguments</h4><ul><li>if no arguments are passed, an empty map is returned
 </li><li>if an even number of arguments is passed, function returns null and emits a warning</li></ul><pre>map( &quot;John&quot;, &quot;name&quot;, 1234567890, &quot;phone&quot; ); // useful for mapping additional data to variables or making sets</pre></div>
-<div class='item'><a name='class-function'></a><hr><h2>class [function]</h2><h3>class( first, second )</h3><h4>returns a class object with <code>first</code> set as the primary data source and <code>second</code> set as the secondary/backup data source</h4><ul><li>both arguments accept all kinds of variables but it&#39;s generally preferred to use only dicts / maps / special objects
+<div class='item'><a name='class-function'></a><hr><h2>class [function]</h2><h3>class( first, second )</h3><h4>returns a <a href="#class-object">class</a> object with <code>first</code> set as the primary data source and <code>second</code> set as the secondary/backup data source</h4><ul><li>both arguments accept all kinds of variables but it&#39;s generally preferred to use only dicts / maps / special objects
 </li><li>refer to <a href="#CLASSES">CLASSES</a> for more information on how class objects work and how to use them</li></ul><pre>someCommonInterface = { printdata = function(){ print( this.data ); } };
 c = class( { data = &quot;5&quot; }, someCommonInterface );
 c.data = &quot;6&quot;;
 c.printdata(); // prints 6</pre></div>
-<div class='item'><a name='closure-function'></a><hr><h2>closure [function]</h2><h3>closure( callable, data )</h3><h4>returns a closure object with <code>callable</code> set as the callable variable and <code>data</code> set as the first argument for the closure call</h4><ul><li>second argument accepts all kinds of variables, first requires a variable that can be called (SGScript function / C function / object with OP_CALL interface function defined)
+<div class='item'><a name='closure-function'></a><hr><h2>closure [function]</h2><h3>closure( callable, data )</h3><h4>returns a <a href="#closure-object">closure</a> object with <code>callable</code> set as the callable variable and <code>data</code> set as the first argument for the closure call</h4><ul><li>second argument accepts all kinds of variables, first requires a variable that can be called (SGScript function / C function / object with OP_CALL interface function defined)
 </li><li>refer to <a href="#CLOSURES">CLOSURES</a> for more information on how closure objects work and how to use them</li></ul><pre>counter = closure( function( data ){ return data[0]++; }, [0] );
 print( counter() ); print( counter() ); // prints &quot;01&quot;</pre></div>
 <div class='item'><a name='array-filter-function'></a><hr><h2>array_filter [function]</h2><h3>array_filter( array[, callable] )</h3><h4>return an array with the items that convert to boolean &#39;true&#39;, optionally preprocessed by a callable</h4><ul><li>two arguments are passed to the callable: value, index</li></ul><pre>array_filter([ 0, 1, 2, 3 ]); // returns [1,2,3]</pre></div>
@@ -1541,26 +1660,26 @@ get_values( {b=5,a=2} ); // returns [5,2]</pre></div>
 <div class='item'><a name='get-concat-function'></a><hr><h2>get_concat [function]</h2><h3>get_concat( iterable var, iterable var1, ... )</h3><h4>returns an array of values found in all iterable objects passed to the function or returns null and emits a warning on failure</h4><pre>get_concat( [1,2], {a=&quot;5&quot;,b=8} ); // returns [1,2,&quot;5&quot;,8]</pre></div>
 <div class='item'><a name='get-merged-function'></a><hr><h2>get_merged [function]</h2><h3>get_merged( iterable var, iterable var1, ... )</h3><h4>returns a dict of all key-value pairs found in all iterable objects passed to the function or returns null and emits a warning on failure</h4><pre>get_merged( [1,2], [3], {a=&quot;4&quot;} ); // return {0=3,1=2,a=&quot;4&quot;}</pre></div>
 <div class='item'><a name='get-merged-map-function'></a><hr><h2>get_merged_map [function]</h2><h3>get_merged_map( iterable var, iterable var1, ... )</h3><h4>returns a map of all key-value pairs found in all iterable objects passed to the function or returns null and emits a warning on failure</h4><pre>get_merged_map( [1,2], map(5,6), {a=&quot;4&quot;} ); // return {0=3,1=2,int(5)=6,a=&quot;4&quot;}</pre></div>
-<div class='item'><a name='tobool-function'></a><hr><h2>tobool [function]</h2><h3>tobool( var )</h3><h4>returns a boolean, generated from variable <code>var</code> using the <a href="#conversion">conversion</a> rules</h4><ul><li>this function is equivalent to <a href="#sgs-GetBool">sgs_GetBool</a> / <a href="#sgs-ToBool">sgs_ToBool</a> in the C API</li></ul><pre>tobool( 5 ); // returns &#39;true&#39;
+<div class='item'><a name='tobool-function'></a><hr><h2>tobool [function]</h2><h3>tobool( var )</h3><h4>returns a boolean, generated from variable <code>var</code> using the <a href="#Conversion-rules">Conversion rules</a></h4><ul><li>this function is equivalent to <a href="#sgs-Get-functions">sgs_GetBool</a> / <a href="#sgs-To-functions">sgs_ToBool</a> in the C API</li></ul><pre>tobool( 5 ); // returns &#39;true&#39;
 tobool( &quot;&quot; ); // returns &#39;false&#39;</pre></div>
-<div class='item'><a name='toint-function'></a><hr><h2>toint [function]</h2><h3>toint( var )</h3><h4>returns an integer, generated from variable <code>var</code> using the <a href="#conversion">conversion</a> rules</h4><ul><li>this function is equivalent to <a href="#sgs-GetInt">sgs_GetInt</a> / <a href="#sgs-ToInt">sgs_ToInt</a> in the C API</li></ul><pre>toint( 5.4 ); // returns 5
+<div class='item'><a name='toint-function'></a><hr><h2>toint [function]</h2><h3>toint( var )</h3><h4>returns an integer, generated from variable <code>var</code> using the <a href="#Conversion-rules">Conversion rules</a></h4><ul><li>this function is equivalent to <a href="#sgs-Get-functions">sgs_GetInt</a> / <a href="#sgs-To-functions">sgs_ToInt</a> in the C API</li></ul><pre>toint( 5.4 ); // returns 5
 toint( &quot;0xff&quot; ); // returns 255</pre></div>
-<div class='item'><a name='toreal-function'></a><hr><h2>toreal [function]</h2><h3>toreal( var )</h3><h4>returns a real value, generated from variable <code>var</code> using the <a href="#conversion">conversion</a> rules</h4><ul><li>this function is equivalent to <a href="#sgs-GetReal">sgs_GetReal</a> / <a href="#sgs-ToReal">sgs_ToReal</a> in the C API</li></ul><pre>toreal( 5 ); // returns 5.0
+<div class='item'><a name='toreal-function'></a><hr><h2>toreal [function]</h2><h3>toreal( var )</h3><h4>returns a real value, generated from variable <code>var</code> using the <a href="#Conversion-rules">Conversion rules</a></h4><ul><li>this function is equivalent to <a href="#sgs-Get-functions">sgs_GetReal</a> / <a href="#sgs-To-functions">sgs_ToReal</a> in the C API</li></ul><pre>toreal( 5 ); // returns 5.0
 toreal( &quot;3e+2&quot; ); // returns 300.0
 toreal( &quot;0xff&quot; ); // returns 255.0</pre></div>
-<div class='item'><a name='tostring-function'></a><hr><h2>tostring [function]</h2><h3>tostring( var )</h3><h4>returns a string value, generated from variable <code>var</code> using the <a href="#conversion">conversion</a> rules</h4><ul><li>this function is equivalent to <a href="#sgs-ToStringBuf-Fast-functions">sgs_ToString</a> in the C API</li></ul><pre>tostring( 5 ); // returns &quot;5&quot;
+<div class='item'><a name='tostring-function'></a><hr><h2>tostring [function]</h2><h3>tostring( var )</h3><h4>returns a string value, generated from variable <code>var</code> using the <a href="#Conversion-rules">Conversion rules</a></h4><ul><li>this function is equivalent to <a href="#sgs-To-functions">sgs_ToString</a> in the C API</li></ul><pre>tostring( 5 ); // returns &quot;5&quot;
 tostring( { &quot;a&quot; = &quot;b&quot; } ); // returns &quot;{a=b}&quot;</pre></div>
-<div class='item'><a name='toptr-function'></a><hr><h2>toptr [function]</h2><h3>toptr( var )</h3><h4>returns a pointer value, generated from variable <code>var</code> using the <a href="#conversion">conversion</a> rules</h4><ul><li>this function is equivalent to <a href="#sgs-GetPtr">sgs_GetPtr</a> / <a href="#sgs-ToPtr">sgs_ToPtr</a> in the C API</li></ul><pre>toptr( 5 ); // returns 5
+<div class='item'><a name='toptr-function'></a><hr><h2>toptr [function]</h2><h3>toptr( var )</h3><h4>returns a pointer value, generated from variable <code>var</code> using the <a href="#Conversion-rules">Conversion rules</a></h4><ul><li>this function is equivalent to <a href="#sgs-Get-functions">sgs_GetPtr</a> / <a href="#sgs-To-functions">sgs_ToPtr</a> in the C API</li></ul><pre>toptr( 5 ); // returns 5
 toptr( &quot;3e+2&quot; ); // returns address of the string
 toptr( [] ); // returns address of array data</pre></div>
-<div class='item'><a name='parseint-function'></a><hr><h2>parseint [function]</h2><h3>parseint( var )</h3><h4>returns an integer, generated from variable <code>var</code> using the <a href="#conversion">conversion</a> rules or returns <code>null</code> on failure</h4><ul><li>this function is equivalent to <a href="#sgs-ParseInt">sgs_ParseInt</a> in the C API</li></ul><pre>parseint( 5.4 ); // returns 5
+<div class='item'><a name='parseint-function'></a><hr><h2>parseint [function]</h2><h3>parseint( var )</h3><h4>returns an integer, generated from variable <code>var</code> using the <a href="#Conversion-rules">Conversion rules</a> or returns <code>null</code> on failure</h4><ul><li>this function is equivalent to <a href="#sgs-Parse-functions">sgs_ParseInt</a> in the C API</li></ul><pre>parseint( 5.4 ); // returns 5
 parseint( &quot;0xff&quot; ); // returns 255
 parseint( parseint ); // returns null</pre></div>
-<div class='item'><a name='parsereal-function'></a><hr><h2>parsereal [function]</h2><h3>parsereal( var )</h3><h4>returns a real value, generated from variable <code>var</code> using the <a href="#conversion">conversion</a> rules or returns <code>null</code> on failure</h4><ul><li>this function is equivalent to <a href="#sgs-ParseReal">sgs_ParseReal</a> in the C API</li></ul><pre>parsereal( 5 ); // returns 5.0
+<div class='item'><a name='parsereal-function'></a><hr><h2>parsereal [function]</h2><h3>parsereal( var )</h3><h4>returns a real value, generated from variable <code>var</code> using the <a href="#Conversion-rules">Conversion rules</a> or returns <code>null</code> on failure</h4><ul><li>this function is equivalent to <a href="#sgs-Parse-functions">sgs_ParseReal</a> in the C API</li></ul><pre>parsereal( 5 ); // returns 5.0
 parsereal( &quot;3e+2&quot; ); // returns 300.0
 parsereal( &quot;0xff&quot; ); // returns 255.0
 parsereal( parsereal ); // returns null</pre></div>
-<div class='item'><a name='typeof-function'></a><hr><h2>typeof [function]</h2><h3>typeof( var )</h3><h4>returns the type name of variable <code>var</code>, as string</h4><ul><li>this function is equivalent to <a href="#sgs-Typeof">sgs_Typeof</a> in the C API</li></ul><pre>typeof( 5 ); // returns &quot;real&quot;
+<div class='item'><a name='typeof-function'></a><hr><h2>typeof [function]</h2><h3>typeof( var )</h3><h4>returns the type name of variable <code>var</code>, as string</h4><ul><li>this function is equivalent to <a href="#sgs-TypeOf-function">sgs_TypeOf</a> in the C API</li></ul><pre>typeof( 5 ); // returns &quot;real&quot;
 typeof( [] ); // returns &quot;array&quot;</pre></div>
 <div class='item'><a name='typeid-function'></a><hr><h2>typeid [function]</h2><h3>typeid( var )</h3><h4>returns the first 4 bits of the variable <code>var</code> type flags, as <code>int</code></h4><ul><li>returns one of the values mapped to VT_NULL/VT_BOOL/VT_INT/VT_REAL/VT_STRING/VT_FUNC/VT_CFUNC/VT_OBJECT/VT_PTR
 </li><li>this function is equivalent to <a href="#sgs-ItemType-function">sgs_ItemType</a> in the C API</li></ul><pre>typeid( 5 ) == VT_INT; // returns &#39;true&#39;
@@ -1572,12 +1691,12 @@ is_numeric( &quot;what&quot; ); // returns false</pre></div>
 <div class='item'><a name='is-callable-function'></a><hr><h2>is_callable [function]</h2><h3>is_callable( var )</h3><h4>returns whether the variable <code>var</code> is callable - a function (func/cfunc) or an object with OP_CALL defined</h4><ul><li>this function is equivalent to <a href="#sgs-IsCallable-function">sgs_IsCallable</a> in the C API</li></ul><pre>is_callable( print ); // returns &#39;true&#39;
 is_callable( closure( print, 5 ) ); // returns &#39;true&#39;
 is_callable( 5 ); // returns &#39;false&#39;</pre></div>
-<div class='item'><a name='print-println-printlns-functions'></a><hr><h2>print, println, printlns [functions]</h2><h3>print( ... ), println( ... ), printlns( ... ),</h3><h4>passes all arguments, converted to strings, to the <a href="#output">output</a> callback</h4><ul><li>print passes arguments without modifications
+<div class='item'><a name='print-println-printlns-functions'></a><hr><h2>print, println, printlns [functions]</h2><h3>print( ... ), println( ... ), printlns( ... ),</h3><h4>passes all arguments, converted to strings, to the output callback</h4><ul><li>print passes arguments without modifications
 </li><li>println passes a newline character after all variables
 </li><li>printlns passes a newline character after each variable</li></ul><pre>print( 5, &quot;x&quot; ); // prints &quot;5x&quot;
 println( 5, &quot;x&quot; ); // prints &quot;5x\n&quot;
 printlns( 5, &quot;x&quot; ); // prints &quot;5\nx\n&quot;</pre></div>
-<div class='item'><a name='printvar-ext-function'></a><hr><h2>printvar_ext [function]</h2><h3>printvar_ext( var, int maxdepth = 5 )</h3><h4>passes a dump of the variable (informative string version) to the <a href="#output">output</a> callback, allowing to optionally specify the maximum depth of the dump (how deep it is allowed to look for sub-variables)</h4><pre>printvar_ext( 5 ); // prints &quot;real (5)&quot;
+<div class='item'><a name='printvar-ext-function'></a><hr><h2>printvar_ext [function]</h2><h3>printvar_ext( var, int maxdepth = 5 )</h3><h4>passes a dump of the variable (informative string version) to the output callback, allowing to optionally specify the maximum depth of the dump (how deep it is allowed to look for sub-variables)</h4><pre>printvar_ext( 5 ); // prints &quot;real (5)&quot;
 printvar_ext( &quot;wat&quot; ); // prints &quot;string [3] &quot;wat&quot;&quot;
 printvar_ext( [{a=[{}]}], 2 ); /* prints:
 object (003C5F90) [0] array (1)
@@ -1595,10 +1714,18 @@ process( read_stdin(true) ); // loads all piped input</pre></div>
 <div class='item'><a name='ftime-function'></a><hr><h2>ftime [function]</h2><h3>ftime()</h3><h4>returns a value that is increased by a total of 1 each second (time), as real</h4><ul><li>guaranteed to offer sub-second precision unless stated otherwise for any specific platform</li></ul><pre>start = ftime();
 do_something_big();
 println( &quot;That took &quot; $ ftime() - start $ &quot; seconds.&quot; );</pre></div>
-<div class='item'><a name='rand-function'></a><hr><h2>rand [function]</h2><h3>rand()</h3><h4>returns a random &#39;int&#39; value in the range [0;RAND_MAX) - from 0, inclusive, to RAND_MAX, exclusive</h4></div>
-<div class='item'><a name='randf-function'></a><hr><h2>randf [function]</h2><h3>randf()</h3><h4>returns a random &#39;real&#39; value in the range [0;1) - from 0, inclusive, to 1, exclusive</h4></div>
+<div class='item'><a name='rand-function'></a><hr><h2>rand [function]</h2><h3>rand()</h3><h4>returns a random &#39;int&#39; value in the range [0;RAND_MAX] - from 0, inclusive, to RAND_MAX, inclusive</h4></div>
+<div class='item'><a name='randf-function'></a><hr><h2>randf [function]</h2><h3>randf()</h3><h4>returns a random &#39;real&#39; value in the range [0;1] - from 0, inclusive, to 1, inclusive</h4></div>
 <div class='item'><a name='srand-function'></a><hr><h2>srand [function]</h2><h3>srand( int seed )</h3><h4>specify a different seed value for the built-in pseudo-random number generator</h4><pre>srand( 5 ); // restart the generator with the value specified
 srand( ftime() ); // restart the generator depending on the second the code was executed</pre></div>
+<div class='item'><a name='va-get-args-function'></a><hr><h2>va_get_args [function]</h2><h3>va_get_args()</h3><h4>return an array containing all arguments passed to the calling function</h4></div>
+<div class='item'><a name='va-arg-count-function'></a><hr><h2>va_arg_count [function]</h2><h3>va_arg_count()</h3><h4>return the number of arguments passed to the calling function</h4></div>
+<div class='item'><a name='sys-call-function'></a><hr><h2>sys_call [function]</h2><h3>sys_call( func, this[, args..] )</h3><h4>calls the specified function with the specified <code>this</code> value and argument list</h4><p>
+<em class='notice-bgr'>if argument count is only known at runtime, see <a href="#sys-apply-function">sys_apply</a></em>
+</p><ul><li>C functions, SGS functions, closure objects and real closures have this function under the &quot;call&quot; property</li></ul></div>
+<div class='item'><a name='sys-apply-function'></a><hr><h2>sys_apply [function]</h2><h3>sys_apply( func, this, args )</h3><h4>calls the specified function with the specified <code>this</code> value and argument array</h4><p>
+<em class='notice-bgr'>if argument count is known at compile time, prefer <a href="#sys-call-function">sys_call</a> to this function</em>
+</p><ul><li>C functions, SGS functions, closure objects and real closures have this function under the &quot;apply&quot; property</li></ul></div>
 <div class='item'><a name='pcall-function'></a><hr><h2>pcall [function]</h2><h3>pcall( callable func[, callable errh ])</h3><h4>calls the callable <code>func</code>, hiding internal errors from the caller or optionally passing them to callable <code>errh</code></h4><ul><li><code>errh</code> error handler is called with two arguments - <code>int error_type, string message</code> - and expected to return 0-1 arguments ([int])
 </li><li>error handler must return 0/null/nothing if the error has been successfully processed or the new error type otherwise
 <ul><li>errors thrown inside the handler will not be caught so any error can be transformed to any other
@@ -1622,6 +1749,7 @@ pcall(function(){ print x; }, handler2 ); // changed type to error</pre></div>
 <div class='item'><a name='assert-function'></a><hr><h2>assert [function]</h2><h3>assert( var condition[, string message] )</h3><h4>if condition evaluates to &#39;false&#39;, emits an error &quot;assertion failed&quot; or if message is defined, &quot;assertion failed: &lt;message&gt;&quot;</h4><pre>assert( text, &quot;text was not defined&quot; );</pre></div>
 <div class='item'><a name='eval-function'></a><hr><h2>eval [function]</h2><h3>eval( string code )</h3><h4>returns the result of evaluating the passed <code>code</code> string as SGScript code</h4><ul><li>this function is equivalent to <a href="#sgs-EvalBuffer-sgs-EvalString">sgs_EvalBuffer/@sgs_EvalString</a> in the C API</li></ul><pre>eval(&quot;print 5;&quot;); // prints 5</pre></div>
 <div class='item'><a name='eval-file-function'></a><hr><h2>eval_file [function]</h2><h3>eval_file( string filename )</h3><h4>returns the result of evaluating the file pointed to by <code>filename</code> as SGScript code</h4><ul><li>this function is equivalent to <a href="#sgs-EvalFile-function">sgs_EvalFile</a> in the C API</li></ul><pre>eval_file(&quot;myfile.sgs&quot;); // ???</pre></div>
+<div class='item'><a name='compile-sgs-function'></a><hr><h2>compile_sgs [function]</h2><h3>compile_sgs( string code )</h3><h4>returns the generated bytecode or null + error info</h4><ul><li>this function is equivalent to <a href="#sgs-Compile">sgs_Compile</a> in the C API</li></ul><pre>compile_sgs( io_file_read( &quot;myfile.sgs&quot; ) ); // ???</pre></div>
 <div class='item'><a name='include-library-function'></a><hr><h2>include_library [function]</h2><h3>include_library( string lib[, bool override ] )</h3><h4>loads the global variables of the specific library <code>lib</code> in the state, returns success, as <code>bool</code>, emits a warning on failure</h4><ul><li>lib must be one of &#39;fmt&#39;, &#39;io&#39;, &#39;math&#39;, &#39;os&#39;, &#39;string&#39;
 </li><li>if <code>override</code> is specified, library will be reloaded even if it was already loaded before
 </li><li>this function is equivalent to the sgs_LoadLib_* functions in the C API</li></ul><pre>printvar( sin ); // warning, null
@@ -1675,7 +1803,7 @@ print( 5 ); // this line is not reached</pre></div>
 magic = calculate_magic(); // any warnings are never processed at this point
 sys_replevel( old_level ); // restore the old reported level</pre></div>
 <div class='item'><a name='sys-stat-function'></a><hr><h2>sys_stat [function]</h2><h3>sys_stat( code )</h3><h4>prints info about virtual machine state, everything is implementation-defined</h4><ul><li>accepted codes are the same as for <a href="#sgs-Stat-function">sgs_Stat,</a> which this function is equivalent to</li></ul><pre>sys_stat( 11 ); // dumps all globals</pre></div>
-<div class='item'><a name='errno-function'></a><hr><h2>errno [function]</h2><h3>errno( as_string = false )</h3><h4>returns the last relevant error number for the C standard library, as an integer or a string if <code>as_string</code> is set</h4><ul><li>last relevant error number is defined by <a href="#sgs-Errno-sgs-SetErrno">sgs_Errno/@sgs_SetErrno</a> C API functions</li></ul><pre>data = io_file_read( &quot;doesnotexist&quot; ); // file that does not exist
+<div class='item'><a name='errno-function'></a><hr><h2>errno [function]</h2><h3>errno( as_string = false )</h3><h4>returns the last relevant error number for the C standard library, as an integer or a string if <code>as_string</code> is set</h4><ul><li>last relevant error number is defined by <a href="#sgs-Errno">sgs_Errno</a> / <a href="#sgs-SetErrno-function-alias">sgs_SetErrno</a> C API functions</li></ul><pre>data = io_file_read( &quot;doesnotexist&quot; ); // file that does not exist
 print errno(); // prints 2
 print errno(true); // prints &quot;No such file or directory&quot; on Windows</pre></div>
 <div class='item'><a name='errno-string-function'></a><hr><h2>errno_string [function]</h2><h3>errno_string( int code )</h3><h4>returns the error string for the given code</h4><ul><li>errno_string(errno()) is equivalent to errno(true)</li></ul><pre>print errno_string(2); // prints &quot;No such file or directory&quot; on Windows</pre></div>
@@ -1689,39 +1817,41 @@ a.push(a); // creates a circular dependency
 a = null; // a is not actually freed
 gc_collect(); // a is freed now</pre></div>
 <div class='item'><a name='serialize-function'></a><hr><h2>serialize [function]</h2><h3>serialize( var )</h3><h4>converts the variable to a byte buffer (string), containing the serialized data that can be recreated with <a href="#unserialize-function">unserialize()</a> or returns null and emits a warning on failure</h4><ul><li>C functions and objects without OP_SERIALIZE implemented cannot be serialized</li></ul><pre>data = serialize({ name = &quot;A&quot;, info = &quot;B&quot; });
-print data; // prints random-ish garbage
+print data; // prints random-looking, yet deterministic garbage
 print unserialize(data); // prints {name=A,info=B}</pre></div>
 <div class='item'><a name='unserialize-function'></a><hr><h2>unserialize [function]</h2><h3>unserialize( string data )</h3><h4>recreates a variable from the buffer with serialized data or returns null and emits a warning on failure</h4><ul><li>this function will internally call global object creation functions specified in the data, so they must be defined and the state could change in the process
 </li><li>for more info on serialization in SGScript, refer to <a href="#Serialization-in-SGScript">Serialization in SGScript</a></li></ul><pre>data = serialize({ name = &quot;A&quot;, info = &quot;B&quot; });
-print data; // prints random-ish garbage
+print data; // prints random-looking, yet deterministic garbage
 print unserialize(data); // prints {name=A,info=B}</pre></div>
 <div class='item'><a name='SGS-constants'></a><hr><h2>SGS_*** [constants]</h2><h3>SGS_INFO, SGS_WARNING, SGS_ERROR</h3><h4>defined to the values of the C macros, respectively 100, 200 and 300</h4></div>
 <div class='item'><a name='VT-constants'></a><hr><h2>VT_*** [constants]</h2><h3>VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR</h3><h4>these constants are defined to the values of the C macros (with the prefix &quot;SGS_VT_&quot; in C) and can be compared with the values returned in <a href="#typeid-function">typeid()</a></h4></div>
-<div class='item'><a name='G-superglobal'></a><hr><h2>_G [superglobal]</h2><h3>A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals and change the gloal dictionary.</h3><pre>_G[&quot;$diff&quot;] = 5; // no way to access this via usual globals
+<div class='item'><a name='RAND-MAX-constant'></a><hr><h2>RAND_MAX [constant]</h2><h3>RAND_MAX</h3><h4>the maximum number that can be returned by <a href="#rand-function">rand()</a></h4></div>
+<div class='item'><a name='G-superglobal'></a><hr><h2>_G [superglobal]</h2><h3>A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals and change the global dictionary.</h3><pre>_G[&quot;$diff&quot;] = 5; // no way to access this via usual globals
 _G = {}; // global value dictionary is changed, previous functions are lost unless stored somewhere</pre></div>
 <div class='item'><a name='array-object'></a><hr><h2>array [object]</h2><ul><li>read-only properties
 <ul><li>[int] size
 </li><li>[int] capacity
 </li><li>[var] first (valid if array is not empty, otherwise a warning is thrown and &#39;null&#39; is returned)
 </li><li>[var] last (similar to &#39;first&#39;)
-</li><li>[cfunc] push
-</li><li>[cfunc] pop
-</li><li>[cfunc] shift
-</li><li>[cfunc] unshift
-</li><li>[cfunc] insert
-</li><li>[cfunc] erase
-</li><li>[cfunc] clear
-</li><li>[cfunc] reverse
-</li><li>[cfunc] resize
-</li><li>[cfunc] reserve
-</li><li>[cfunc] sort
-</li><li>[cfunc] sort_custom
-</li><li>[cfunc] sort_mapped
-</li><li>[cfunc] find
-</li><li>[cfunc] remove
-</li><li>[cfunc] unique
-</li><li>[cfunc] random
-</li><li>[cfunc] shuffle
+</li><li>[cfunc] <a href="#array-push-method">push</a>
+</li><li>[cfunc] <a href="#array-pop-method">pop</a>
+</li><li>[cfunc] <a href="#array-shift-method">shift</a>
+</li><li>[cfunc] <a href="#array-unshift-method">unshift</a>
+</li><li>[cfunc] <a href="#array-insert-method">insert</a>
+</li><li>[cfunc] <a href="#array-erase-method">erase</a>
+</li><li>[cfunc] <a href="#array-part-method">part</a>
+</li><li>[cfunc] <a href="#array-clear-method">clear</a>
+</li><li>[cfunc] <a href="#array-reverse-method">reverse</a>
+</li><li>[cfunc] <a href="#array-resize-method">resize</a>
+</li><li>[cfunc] <a href="#array-reserve-method">reserve</a>
+</li><li>[cfunc] <a href="#array-sort-method">sort</a>
+</li><li>[cfunc] <a href="#array-sort-custom-method">sort_custom</a>
+</li><li>[cfunc] <a href="#array-sort-mapped-method">sort_mapped</a>
+</li><li>[cfunc] <a href="#array-find-method">find</a>
+</li><li>[cfunc] <a href="#array-remove-method">remove</a>
+</li><li>[cfunc] <a href="#array-unique-method">unique</a>
+</li><li>[cfunc] <a href="#array-random-method">random</a>
+</li><li>[cfunc] <a href="#array-shuffle-method">shuffle</a>
 </li></ul><li>other features:
 <ul><li>read/write integer index
 </li><li>full content dump

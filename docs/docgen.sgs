@@ -194,6 +194,7 @@ function find_closest_pathstr( link, pages )
 		matches.sort_custom( function( a, b ){ return a.length - b.length; } );
 		return matches[ 0 ];
 	}
+	println( "warning: match for link '" $ link $ "' was not found!" );
 	return link;
 }
 

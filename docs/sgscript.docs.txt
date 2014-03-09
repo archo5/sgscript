@@ -256,6 +256,32 @@ Extended variable types (built on `object`):
 - `map`: a map/table structure where variables are mapped to variable keys
 - `class`: object that uses two other objects to build its interface
 - `closure`: a callable object consisting of another callable and one variable
+- `sys.closure`: a callable object consisting of another callable and several variables; created only in C
+
+# >>>
+
+
+# Conversion rules [info]
+
+-------------------------------------------------------------------------------------------------------------------
+!  from  \  to  !               bool               !         int        !   real   !     string      !     ptr    !
+|    null       |               false              |          0         |    0.0   |     "null"      |     NULL   |
+|    bool       |                -                 |         0/1        |  0.0/1.0 | "false"/"true"  |  NULL/0x1  |
+|    int        |    0 => false, otherwise true    |          -         |     -    |       -         |    cast    |
+|    real       |   0.0 => false, otherwise true   |  round to nearest  |     -    |   sprintf %g    |    cast    |
+|    string     |  empty => false, otherwise true  |         *1         |    *1    |       -         |   char*    |
+|    func       |               true               |          0         |    0.0   |   "function"    |    NULL    |
+|    cfunc      |               true               |          0         |    0.0   |  "C function"   |    NULL    |
+|    object *2  |               true               |          0         |    0.0   |    "object"     |  data ptr. |
+|    ptr        |  NULL => false, otherwise true   |         cast       |   cast   | sprintf ptr(%p) |      -     |
+-------------------------------------------------------------------------------------------------------------------
+
+- "-" means the conversion is not necessary, does not affect data or the effect of conversion should be immediately obvious
+- *1) see @"Numeric string parsing rules" for more info
+- *2) these are the default values, overrides can be provided in CONVERT function and type name for string
+
+
+# <<<
 
 
 # Code structure [info]
@@ -2450,7 +2476,7 @@ Special error codes: SGS_ENOTFND - the specified index/property was not found, S
 Depending on the argument, it is **called** by different sources and require different return values:
 - type conversion: to*** function families and other conversion triggers (like operators) in SGScript and the Convert/Get/To function families in the C API, require a value of the right type.
 - SGS_CONVOP_CLONE: called on clone/sgs_Clone, should return an exact copy of the same object
-- SGS_CONVOP_TOTYPE: called on typeof/sgs_Typeof, should return a string containing the type name
+- SGS_CONVOP_TOTYPE: called on typeof/sgs_TypeOf, should return a string containing the type name
 - SGS_CONVOP_TOITER: called on foreach/sgs_PushIterator, should return an object with the SGS_OP_GETNEXT callback added
 
 **Argument** specifies the data to return.
@@ -2597,13 +2623,130 @@ This library is loaded on initialization and contains the functions and constant
 - standard input / output
 - data debugging
 
+=== Functions:
+
+- containers
+-- @array<array [function]> - returns an array containing the specified variables
+-- @dict<dict [function]> - returns a key-value map object (string keys) containing the specified variables
+-- @map<map [function]> - returns a key-value map object (many key types) containing the specified variables
+-- @class<class [function]> - returns an index fallback / overloading object, linking both specified variables
+-- @closure<closure [function]> - returns a basic closure object that consists of one variable and one callable
+-- @array_filter - returns an array that is filtered with a truth test or the specified function
+-- @array_process - convert all array elements by a function
+-- @dict_filter - returns a dict object that is filtered with a truth test or the specified function
+-- @dict_process - convert all dictionary elements by a function
+-- @dict_size - returns the number of items in a dict
+-- @map_size - returns the number of items in a map
+-- @isset - checks if the specified property is available
+-- @unset - unsets the specified property (only for dict/map objects)
+-- @clone - returns the cloned variable or the same if immutable
+-- @get_keys - returns an array of keys from an iterable
+-- @get_values - returns an array of values from an iterable
+-- @get_concat - returns an array with all values from all iterables concatenated together in order
+-- @get_merged - returns a dict with all mappings merged
+-- @get_merged_map - returns a map with all mappings merged
+- type info and conversion
+-- @tobool - returns a variable, converted to boolean
+-- @toint - returns a variable, converted to an integer
+-- @toreal - returns a variable, converted to a real value
+-- @tostring - returns a variable, converted to a string
+-- @toptr - returns a variable, converted to pointer
+-- @parseint - try to parse a variable as integer, return the value or null on failure
+-- @parsereal - try to parse a variable as string, return the value or null on failure
+-- @typeof - returns the type string of a variable
+-- @typeid - returns type ID of a variable
+-- @is_numeric - returns if variable is a numeric type
+-- @is_callable - returns if variable can be called as a function
+- input/output
+-- @"print, println, printlns" - write variables to output callback/stream
+-- @printvar - write variable dumps to output callback/stream
+-- @printvar_ext - write variable dump to output callback/stream, optionally specifying max. recursion depth
+-- @read_stdin - attempt to read from standard input file (stdin)
+- operating system
+-- @ftime - returns an always increasing time value, in seconds, as a real value
+- utilities
+-- @rand - returns a random integer between 0 and RAND_MAX
+-- @randf - returns a random real value between 0 and 1
+-- @srand - reseed random number generator
+- SGS-specific utilities
+-- @va_get_args - returns an array of all arguments passed to calling function
+-- @va_arg_count - returns the number of all arguments passed to calling function
+-- @sys_call - call a function/callable dynamically (function and `this` specified at runtime)
+-- @sys_apply - call a function/callable even more dynamically (argument count also specified at runtime)
+-- @pcall - do a protected call by trapping all internal messages in the specified callback
+-- @assert - emit an error if a condition does not evaluate to `true`
+-- @eval - compile and run script code, retrieve return values
+-- @eval_file - compile and rune script file, retrieve return values
+-- @compile_sgs - compile script code
+-- @include_library - load a built-in library
+-- @include_file - load a script file
+-- @include_shared - load a dynamically linked library / shared object (.DLL/.SO)
+-- @import_cfunc - load a C function from .DLL/.SO
+-- @include - load many types of files
+-- @sys_curfile - returns the origin file of the calling function
+-- @sys_curfiledir - returns the directory of the origin file of the calling function
+-- @sys_msg - emit a system message
+-- @INFO - emit an INFO message
+-- @WARNING - emit a WARNING message
+-- @ERROR - emit an ERROR message
+-- @sys_abort - stop the execution of the calling SGS function
+-- @app_abort - abort execution of application (exit application immediately with an error)
+-- @app_exit - exit application immediately
+-- @sys_replevel - change the minimum message reporting level
+-- @sys_stat - write info about system state
+-- @errno - return current errno value as number or string
+-- @errno_string - return specified or current errno value as string
+-- @errno_value - return the errno value corresponding to the name
+-- @dumpvar - returns the dump string of variables
+-- @dumpvar_ext - returns the dump string of a variable, optionally specifying max. recursion depth
+-- @gc_collect - run the garbage collector to remove inaccessible objects
+-- @serialize - returns a byte buffer containing info necessary to later recreate variable structure
+-- @unserialize - recreate variable structure from a byte buffer
+
+=== Objects and their methods:
+
+- @array<array [object]>
+-- @push<array.push>
+-- @pop<array.pop>
+-- @shift<array.shift>
+-- @unshift<array.unshift>
+-- @insert<array.insert>
+-- @erase<array.erase>
+-- @part<array.part>
+-- @clear<array.clear>
+-- @reverse<array.reverse>
+-- @resize<array.resize>
+-- @reserve<array.reserve>
+-- @sort<array.sort>
+-- @sort_custom<array.sort_custom>
+-- @sort_mapped<array.sort_mapped>
+-- @find<array.find>
+-- @remove<array.remove>
+-- @unique<array.unique>
+-- @random<array.random>
+-- @shuffle<array.shuffle>
+- @dict<dict [object]>
+- @map<map [object]>
+- @class<class [object]>
+- @closure<closure [object]>
+
+=== Constants:
+
+- @SGS_*** - error levels
+- @VT_*** - variable type IDs
+- @RAND_MAX - maximum value that can be returned by @rand
+
+=== Other:
+
+- @_G<_G [superglobal]> - environment superglobal, a dict containing all global variable names and values; can be changed
+
 # >>>
 
 
 # array [function]
 
 == array( ... )
-=== returns an array, containing the arguments
+=== returns an @array<array [object]>, containing the arguments
 
 - similar to the array literal, though somewhat limited
 
@@ -2613,7 +2756,7 @@ This library is loaded on initialization and contains the functions and constant
 # dict [function]
 
 == dict( [key, value, ...] )
-=== returns a 'dict' (dictionary/hash table) object, containing the even arguments mapped to respective previous arguments
+=== returns a '@dict<dict [object]>' (dictionary/hash table) object, containing the even arguments mapped to respective previous arguments
 
 - if no arguments are passed, an empty dictionary is returned
 - if an even number of arguments is passed, function returns null and emits a warning
@@ -2625,7 +2768,7 @@ This library is loaded on initialization and contains the functions and constant
 # map [function]
 
 == map( [key, value, ...] )
-=== returns a 'map' (map/hash table) object, containing the even arguments mapped to respective previous arguments
+=== returns a '@map<map [object]>' (map/hash table) object, containing the even arguments mapped to respective previous arguments
 
 - if no arguments are passed, an empty map is returned
 - if an even number of arguments is passed, function returns null and emits a warning
@@ -2636,7 +2779,7 @@ This library is loaded on initialization and contains the functions and constant
 # class [function]
 
 == class( first, second )
-=== returns a class object with `first` set as the primary data source and `second` set as the secondary/backup data source
+=== returns a @class<class [object]> object with `first` set as the primary data source and `second` set as the secondary/backup data source
 
 - both arguments accept all kinds of variables but it's generally preferred to use only dicts / maps / special objects
 - refer to @CLASSES for more information on how class objects work and how to use them
@@ -2650,7 +2793,7 @@ This library is loaded on initialization and contains the functions and constant
 # closure [function]
 
 == closure( callable, data )
-=== returns a closure object with `callable` set as the callable variable and `data` set as the first argument for the closure call
+=== returns a @closure<closure [object]> object with `callable` set as the callable variable and `data` set as the first argument for the closure call
 
 - second argument accepts all kinds of variables, first requires a variable that can be called (SGScript function / C function / object with OP_CALL interface function defined)
 - refer to @CLOSURES for more information on how closure objects work and how to use them
@@ -2796,9 +2939,9 @@ This library is loaded on initialization and contains the functions and constant
 # tobool [function]
 
 == tobool( var )
-=== returns a boolean, generated from variable `var` using the @conversion rules
+=== returns a boolean, generated from variable `var` using the @"Conversion rules"
 
-- this function is equivalent to @sgs_GetBool / @sgs_ToBool in the C API
+- this function is equivalent to @sgs_GetBool<sgs_Get***> / @sgs_ToBool<sgs_To***> in the C API
 
     tobool( 5 ); // returns 'true'
     tobool( "" ); // returns 'false'
@@ -2807,9 +2950,9 @@ This library is loaded on initialization and contains the functions and constant
 # toint [function]
 
 == toint( var )
-=== returns an integer, generated from variable `var` using the @conversion rules
+=== returns an integer, generated from variable `var` using the @"Conversion rules"
 
-- this function is equivalent to @sgs_GetInt / @sgs_ToInt in the C API
+- this function is equivalent to @sgs_GetInt<sgs_Get***> / @sgs_ToInt<sgs_To***> in the C API
 
     toint( 5.4 ); // returns 5
     toint( "0xff" ); // returns 255
@@ -2818,9 +2961,9 @@ This library is loaded on initialization and contains the functions and constant
 # toreal [function]
 
 == toreal( var )
-=== returns a real value, generated from variable `var` using the @conversion rules
+=== returns a real value, generated from variable `var` using the @"Conversion rules"
 
-- this function is equivalent to @sgs_GetReal / @sgs_ToReal in the C API
+- this function is equivalent to @sgs_GetReal<sgs_Get***> / @sgs_ToReal<sgs_To***> in the C API
 
     toreal( 5 ); // returns 5.0
     toreal( "3e+2" ); // returns 300.0
@@ -2830,9 +2973,9 @@ This library is loaded on initialization and contains the functions and constant
 # tostring [function]
 
 == tostring( var )
-=== returns a string value, generated from variable `var` using the @conversion rules
+=== returns a string value, generated from variable `var` using the @"Conversion rules"
 
-- this function is equivalent to @sgs_ToString in the C API
+- this function is equivalent to @sgs_ToString<sgs_To***> in the C API
 
     tostring( 5 ); // returns "5"
     tostring( { "a" = "b" } ); // returns "{a=b}"
@@ -2841,9 +2984,9 @@ This library is loaded on initialization and contains the functions and constant
 # toptr [function]
 
 == toptr( var )
-=== returns a pointer value, generated from variable `var` using the @conversion rules
+=== returns a pointer value, generated from variable `var` using the @"Conversion rules"
 
-- this function is equivalent to @sgs_GetPtr / @sgs_ToPtr in the C API
+- this function is equivalent to @sgs_GetPtr<sgs_Get***> / @sgs_ToPtr<sgs_To***> in the C API
 
     toptr( 5 ); // returns 5
     toptr( "3e+2" ); // returns address of the string
@@ -2853,9 +2996,9 @@ This library is loaded on initialization and contains the functions and constant
 # parseint [function]
 
 == parseint( var )
-=== returns an integer, generated from variable `var` using the @conversion rules or returns `null` on failure
+=== returns an integer, generated from variable `var` using the @"Conversion rules" or returns `null` on failure
 
-- this function is equivalent to @sgs_ParseInt in the C API
+- this function is equivalent to @sgs_ParseInt<sgs_Parse***> in the C API
 
     parseint( 5.4 ); // returns 5
     parseint( "0xff" ); // returns 255
@@ -2865,9 +3008,9 @@ This library is loaded on initialization and contains the functions and constant
 # parsereal [function]
 
 == parsereal( var )
-=== returns a real value, generated from variable `var` using the @conversion rules or returns `null` on failure
+=== returns a real value, generated from variable `var` using the @"Conversion rules" or returns `null` on failure
 
-- this function is equivalent to @sgs_ParseReal in the C API
+- this function is equivalent to @sgs_ParseReal<sgs_Parse***> in the C API
 
     parsereal( 5 ); // returns 5.0
     parsereal( "3e+2" ); // returns 300.0
@@ -2880,7 +3023,7 @@ This library is loaded on initialization and contains the functions and constant
 == typeof( var )
 === returns the type name of variable `var`, as string
 
-- this function is equivalent to @sgs_Typeof in the C API
+- this function is equivalent to @sgs_TypeOf in the C API
 
     typeof( 5 ); // returns "real"
     typeof( [] ); // returns "array"
@@ -2926,7 +3069,7 @@ This library is loaded on initialization and contains the functions and constant
 # print, println, printlns [functions]
 
 == print( ... ), println( ... ), printlns( ... ),
-=== passes all arguments, converted to strings, to the @output callback
+=== passes all arguments, converted to strings, to the output callback
 - print passes arguments without modifications
 - println passes a newline character after all variables
 - printlns passes a newline character after each variable
@@ -2939,7 +3082,7 @@ This library is loaded on initialization and contains the functions and constant
 # printvar_ext [function]
 
 == printvar_ext( var, int maxdepth = 5 )
-=== passes a dump of the variable (informative string version) to the @output callback, allowing to optionally specify the maximum depth of the dump (how deep it is allowed to look for sub-variables)
+=== passes a dump of the variable (informative string version) to the output callback, allowing to optionally specify the maximum depth of the dump (how deep it is allowed to look for sub-variables)
 
     printvar_ext( 5 ); // prints "real (5)"
     printvar_ext( "wat" ); // prints "string [3] "wat""
@@ -2989,13 +3132,13 @@ This library is loaded on initialization and contains the functions and constant
 # rand [function]
 
 == rand()
-=== returns a random 'int' value in the range [0;RAND_MAX) - from 0, inclusive, to RAND_MAX, exclusive
+=== returns a random 'int' value in the range [0;RAND_MAX] - from 0, inclusive, to RAND_MAX, inclusive
 
 
 # randf [function]
 
 == randf()
-=== returns a random 'real' value in the range [0;1) - from 0, inclusive, to 1, exclusive
+=== returns a random 'real' value in the range [0;1] - from 0, inclusive, to 1, inclusive
 
 
 # srand [function]
@@ -3005,6 +3148,38 @@ This library is loaded on initialization and contains the functions and constant
 
     srand( 5 ); // restart the generator with the value specified
     srand( ftime() ); // restart the generator depending on the second the code was executed
+
+
+# va_get_args [function]
+
+== va_get_args()
+=== return an array containing all arguments passed to the calling function
+
+
+# va_arg_count [function]
+
+== va_arg_count()
+=== return the number of arguments passed to the calling function
+
+
+# sys_call [function]
+
+== sys_call( func, this[, args..] )
+=== calls the specified function with the specified `this` value and argument list
+
+! if argument count is only known at runtime, see @sys_apply
+
+- C functions, SGS functions, closure objects and real closures have this function under the "call" property
+
+
+# sys_apply [function]
+
+== sys_apply( func, this, args )
+=== calls the specified function with the specified `this` value and argument array
+
+! if argument count is known at compile time, prefer @sys_call to this function
+
+- C functions, SGS functions, closure objects and real closures have this function under the "apply" property
 
 
 # pcall [function]
@@ -3062,6 +3237,16 @@ This library is loaded on initialization and contains the functions and constant
 - this function is equivalent to @sgs_EvalFile in the C API
 
     eval_file("myfile.sgs"); // ???
+
+
+# compile_sgs [function]
+
+== compile_sgs( string code )
+=== returns the generated bytecode or null + error info
+
+- this function is equivalent to @sgs_Compile in the C API
+
+    compile_sgs( io_file_read( "myfile.sgs" ) ); // ???
 
 
 # include_library [function]
@@ -3242,7 +3427,7 @@ This library is loaded on initialization and contains the functions and constant
 == errno( as_string = false )
 === returns the last relevant error number for the C standard library, as an integer or a string if `as_string` is set
 
-- last relevant error number is defined by @sgs_Errno/@sgs_SetErrno C API functions
+- last relevant error number is defined by @sgs_Errno / @sgs_SetErrno C API functions
 
     data = io_file_read( "doesnotexist" ); // file that does not exist
     print errno(); // prints 2
@@ -3308,7 +3493,7 @@ This library is loaded on initialization and contains the functions and constant
 - C functions and objects without OP_SERIALIZE implemented cannot be serialized
 
     data = serialize({ name = "A", info = "B" });
-    print data; // prints random-ish garbage
+    print data; // prints random-looking, yet deterministic garbage
     print unserialize(data); // prints {name=A,info=B}
 
 
@@ -3321,7 +3506,7 @@ This library is loaded on initialization and contains the functions and constant
 - for more info on serialization in SGScript, refer to @"Serialization in SGScript"
 
     data = serialize({ name = "A", info = "B" });
-    print data; // prints random-ish garbage
+    print data; // prints random-looking, yet deterministic garbage
     print unserialize(data); // prints {name=A,info=B}
 
 
@@ -3335,6 +3520,12 @@ This library is loaded on initialization and contains the functions and constant
 
 == VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR
 === these constants are defined to the values of the C macros (with the prefix "SGS_VT_" in C) and can be compared with the values returned in @typeid()
+
+
+# RAND_MAX [constant]
+
+== RAND_MAX
+=== the maximum number that can be returned by @rand()
 
 
 # _G [superglobal]
@@ -3352,24 +3543,25 @@ This library is loaded on initialization and contains the functions and constant
 -- [int] capacity
 -- [var] first (valid if array is not empty, otherwise a warning is thrown and 'null' is returned)
 -- [var] last (similar to 'first')
--- [cfunc] push
--- [cfunc] pop
--- [cfunc] shift
--- [cfunc] unshift
--- [cfunc] insert
--- [cfunc] erase
--- [cfunc] clear
--- [cfunc] reverse
--- [cfunc] resize
--- [cfunc] reserve
--- [cfunc] sort
--- [cfunc] sort_custom
--- [cfunc] sort_mapped
--- [cfunc] find
--- [cfunc] remove
--- [cfunc] unique
--- [cfunc] random
--- [cfunc] shuffle
+-- [cfunc] @push<array.push>
+-- [cfunc] @pop<array.pop>
+-- [cfunc] @shift<array.shift>
+-- [cfunc] @unshift<array.unshift>
+-- [cfunc] @insert<array.insert>
+-- [cfunc] @erase<array.erase>
+-- [cfunc] @part<array.part>
+-- [cfunc] @clear<array.clear>
+-- [cfunc] @reverse<array.reverse>
+-- [cfunc] @resize<array.resize>
+-- [cfunc] @reserve<array.reserve>
+-- [cfunc] @sort<array.sort>
+-- [cfunc] @sort_custom<array.sort_custom>
+-- [cfunc] @sort_mapped<array.sort_mapped>
+-- [cfunc] @find<array.find>
+-- [cfunc] @remove<array.remove>
+-- [cfunc] @unique<array.unique>
+-- [cfunc] @random<array.random>
+-- [cfunc] @shuffle<array.shuffle>
 - other features:
 -- read/write integer index
 -- full content dump

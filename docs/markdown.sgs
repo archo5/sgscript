@@ -45,11 +45,16 @@ function markdown2html( text, linkhandler )
 	function mdinline( text, linkhandler )
 	{
 		// HTML HIDING
-		text = string_translate( text, { "\"" = "\xFF", "<" = "\xFD", ">" = "\xFE" } );
+		text = string_translate( text, {
+			"\"" = "\xFF",
+			"<" = "\xFD",
+			">" = "\xFE",
+			"'" = "\xFC"
+		} );
 		
 		text = htmlencode( text );
-		bdcc = "(^|[ \xFF\n\r\t,.])";
-		edcc = "($|[ \xFF\n\r\t,.])";
+		bdcc = "(^|[ \xFF\xFC\n\r\t,.])";
+		edcc = "($|[ \xFF\xFC\n\r\t,.])";
 		text = re_replace( text,
 			"#"$bdcc$"\\*\\*([^*]+)\\*\\*"$edcc$"#",
 			"$1<b>$2</b>$3" );
@@ -76,7 +81,12 @@ function markdown2html( text, linkhandler )
 		});
 		
 		// HTML UNHIDING
-		text = string_translate( text, { "\xFF" = "&quot;", "\xFD" = "&lt;", "\xFE" = "&gt;" } );
+		text = string_translate( text, {
+			"\xFF" = "&quot;",
+			"\xFD" = "&lt;",
+			"\xFE" = "&gt;",
+			"\xFC" = "&#39;"
+		} );
 		
 		return text;
 	}
