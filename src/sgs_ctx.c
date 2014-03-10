@@ -586,8 +586,9 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 			fclose( f );
 			return SGS_EINPROC;
 		}
-		if( ( magic[0] == 0x7f && magic[1] == 'E' && magic[2] == 'L' && magic[3] == 'F' ) // ELF binary
-		 || ( magic[0] == 'M' && magic[1] == 'Z' ) ) // DOS binary / DOS stub for PE binary
+		if( ( magic[0] == 0x7f && magic[1] == 'E' && magic[2] == 'L' && magic[3] == 'F' ) /* ELF binary */
+		 || ( magic[0] == 'M' && magic[1] == 'Z' ) /* DOS binary / DOS stub for PE binary */
+		 || ( magic[0] == 0xCA && magic[1] == 0xFE && magic[2] == 0xBA && magic[3] == 0xBE ) ) /* Mach-O binary */
 		{
 			sgs_Errno( C, 1 );
 			fclose( f );

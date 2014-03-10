@@ -49,7 +49,7 @@ int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )
 		abspath[ SGS_MAX_PATH ] = 0;
 		pathstr = abspath;
 	}
-
+	
 	pe = SetErrorMode( SEM_FAILCRITICALERRORS );
 	mod = LoadLibraryW( pathstr );
 	SetErrorMode( pe );
@@ -62,14 +62,14 @@ int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )
 			return SGS_XPC_NOTLIB;
 		return SGS_XPC_LDFAIL;
 	}
-
+	
 	*out = (void*) GetProcAddress( mod, proc );
 	if( !*out )
 		return SGS_XPC_NOPROC;
-
+	
 	return 0;
-
-#elif defined(__linux__)
+	
+#else
 	void* lib;
 	char abspath[ SGS_MAX_PATH + 1 ];
 	
@@ -82,15 +82,12 @@ int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )
 	lib = dlopen( file, RTLD_NOW );
 	if( !lib )
 		return SGS_XPC_NOFILE;
-
+	
 	*out = (void*) dlsym( lib, proc );
 	if( !*out )
 		return SGS_XPC_NOPROC;
-
+	
 	return 0;
-
-#else
-	return SGS_XPC_NOTSUP;
 	
 #endif
 }

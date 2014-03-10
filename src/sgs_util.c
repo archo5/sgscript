@@ -204,8 +204,10 @@ static void vht_rehash( VHTable* T, SGS_CTX, VHTIdx size )
 	np = sgs_Alloc_n( VHTIdx, (size_t) size );
 	memset( np, SGS_VHTIDX_EMPTY, sizeof(VHTIdx) * (size_t) size );
 	
-//	printf( "rehash %d -> %d (size = %d, mem = %d kB)\n", T->pair_mem, size, T->size,
-//		(size * sizeof(VHTIdx) + T->var_mem * sizeof(VHTVar)) / 1024 );
+#if 0
+	printf( "rehash %d -> %d (size = %d, mem = %d kB)\n", T->pair_mem, size, T->size,
+		(size * sizeof(VHTIdx) + T->var_mem * sizeof(VHTVar)) / 1024 );
+#endif
 	
 	for( si = 0; si < T->pair_mem; ++si )
 	{
@@ -247,8 +249,10 @@ static void vht_reserve( VHTable* T, SGS_CTX, VHTIdx size )
 	if( size < 4 )
 		size = 4;
 	
-//	printf( "reserve %d -> %d (size = %d, mem = %d kB)\n", T->var_mem, size, T->size,
-//		(T->pair_mem * sizeof(VHTIdx) + size * sizeof(VHTVar)) / 1024 );
+#if 0
+	printf( "reserve %d -> %d (size = %d, mem = %d kB)\n", T->var_mem, size, T->size,
+		(T->pair_mem * sizeof(VHTIdx) + size * sizeof(VHTVar)) / 1024 );
+#endif
 	
 	/* WP: hash table limit */
 	p = sgs_Alloc_n( VHTVar, (size_t) size );
