@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 	<html><head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>SGScript documentation - v0.9.0</title>
+		<title>SGScript documentation - v0.9.5</title>
 		<link rel="stylesheet" type="text/css" href="docs.css">
 		<script type="text/javascript" src="docs.js"></script>
 	</head><body>
-	<h1>SGScript documentation - v0.9.0</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGScript-description'>SGScript - description</a>
+	<h1>SGScript documentation - v0.9.5</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGScript-description'>SGScript - description</a>
 <ul><li><a href='#Code-samples-SGScript'>Code samples - SGScript</a>
 </li><li><a href='#Code-samples-the-C-API'>Code samples - the C API</a>
 </li></ul><li><a href='#Language-reference'>Language reference</a>
@@ -51,7 +51,7 @@
 </li><li><a href='#Utility-functions'>Utility functions</a>
 </li><li><a href='#ALL-functions-A-Z'>ALL functions (A-Z)</a>
 </li></ul><li><a href='#Interface-implementation'>Interface implementation</a>
-<ul><li><a href='#Functions'>Functions</a>
+<ul><li><a href='#C-Functions'>C Functions</a>
 </li><li><a href='#Object-interface'>Object interface</a>
 </li><li><a href='#Interaction-with-the-environment'>Interaction with the environment</a>
 </li></ul><li><a href='#Commonly-required-advanced-tasks'>Commonly required advanced tasks</a>
@@ -295,6 +295,7 @@ Special keywords and hardcoded constants:
 <tr><td>var</td><td>restricted keyword</td><td>variable declaration</td></tr>
 <tr><td>global</td><td>restricted keyword</td><td>variable declaration</td></tr>
 <tr><td>function</td><td>restricted keyword</td><td>function definition</td></tr>
+<tr><td>use</td><td>restricted keyword</td><td>function definition</td></tr>
 <tr><td>if</td><td>restricted keyword</td><td>&quot;if&quot; statement</td></tr>
 <tr><td>else</td><td>restricted keyword</td><td>&quot;if/else&quot; statement</td></tr>
 <tr><td>do</td><td>restricted keyword</td><td>&quot;do/while&quot; statement</td></tr>
@@ -629,13 +630,13 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-Cntl-function">sgs_Cntl</a> - set and/or retrieve various states in the system</li></ul></div>
 <div class='item'><a name='Memory-management'></a><hr><h2>Memory management</h2><ul><li><a href="#sgs-DefaultMemFunc">sgs_DefaultMemFunc</a> - example memory management callback
 </li><li><a href="#sgs-Memory-function">sgs_Memory</a> - allocate/reallocate/free memory
-</li><li><a href="#sgs-Malloc">sgs_Malloc</a> - allocate specified amount of memory
-</li><li><a href="#sgs-Free">sgs_Free</a> - free a previously allocated memory pointer
-</li><li><a href="#sgs-Realloc">sgs_Realloc</a> - allocate/reallocate/free memory (requires implicit sgs_Context* C)
-</li><li><a href="#sgs-Alloc">sgs_Alloc</a> - allocate object (requires implicit sgs_Context* C)
-</li><li><a href="#sgs-Alloc-n">sgs_Alloc_n</a> - allocate an array of objects (requires implicit sgs_Context* C)
-</li><li><a href="#sgs-Alloc-a">sgs_Alloc_a</a> - allocate object + additional memory (requires implicit sgs_Context* C)
-</li><li><a href="#sgs-Dealloc">sgs_Dealloc</a> - free a previously allocated memory pointer (requires implicit sgs_Context* C)</li></ul></div>
+</li><li><a href="#Memory-allocation-macros-macros">sgs_Malloc</a> - allocate specified amount of memory
+</li><li><a href="#Memory-allocation-macros-macros">sgs_Free</a> - free a previously allocated memory pointer
+</li><li><a href="#Memory-allocation-macros-macros">sgs_Realloc</a> - allocate/reallocate/free memory (requires implicit sgs_Context* C)
+</li><li><a href="#Memory-allocation-macros-macros">sgs_Alloc</a> - allocate object (requires implicit sgs_Context* C)
+</li><li><a href="#Memory-allocation-macros-macros">sgs_Alloc_n</a> - allocate an array of objects (requires implicit sgs_Context* C)
+</li><li><a href="#Memory-allocation-macros-macros">sgs_Alloc_a</a> - allocate object + additional memory (requires implicit sgs_Context* C)
+</li><li><a href="#Memory-allocation-macros-macros">sgs_Dealloc</a> - free a previously allocated memory pointer (requires implicit sgs_Context* C)</li></ul></div>
 <div class='item'><a name='Input-output'></a><hr><h2>Input / output</h2><ul><li><a href="#sgs-GetOutputFunc">sgs_GetOutputFunc</a> - return the current output callback and its user data pointer
 </li><li><a href="#sgs-SetOutputFunc-function">sgs_SetOutputFunc</a> - set the output callback and its user data pointer
 </li><li><a href="#sgs-Write-function">sgs_Write</a> - pass a character buffer to the output callback
@@ -659,8 +660,8 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-Cntl-function">sgs_Cntl</a> - set and/or retrieve various states in the system
 </li><li><a href="#sgs-ArgErrorExt-function">sgs_ArgErrorExt</a> - emit an argument type mismatch error with additional formatting options
 </li><li><a href="#sgs-ArgError-function">sgs_ArgError</a> - emit an argument type mismatch error
-</li><li><a href="#sgs-FuncArgError">sgs_FuncArgError</a> - emit an argument type mismatch error (alias for states where <code>this</code> variable is hidden)
-</li><li><a href="#sgs-MethodArgError">sgs_MethodArgError</a> - emit an argument type mismatch error (alias for states where <code>this</code> variable is NOT hidden)</li></ul></div>
+</li><li><a href="#sgs-ArgError-function">sgs_FuncArgError</a> - emit an argument type mismatch error (alias for states where <code>this</code> variable is hidden)
+</li><li><a href="#sgs-ArgError-function">sgs_MethodArgError</a> - emit an argument type mismatch error (alias for states where <code>this</code> variable is NOT hidden)</li></ul></div>
 <div class='item'><a name='Code-handling'></a><hr><h2>Code handling</h2><ul><li><a href="#sgs-ExecBuffer-function-alias">sgs_ExecBuffer</a> - execute a character buffer
 </li><li><a href="#sgs-EvalBuffer-function">sgs_EvalBuffer</a> - execute a character buffer, keep returned variables on stack
 </li><li><a href="#sgs-ExecFile-function-alias">sgs_ExecFile</a> - execute a file
@@ -683,48 +684,48 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-GlobalCall-function">sgs_GlobalCall</a> - call a global function
 </li><li><a href="#sgs-Abort-function">sgs_Abort</a> - abort the execution of the previous SGS functions up to the last C function before them
 </li><li><a href="#sgs-Cntl-function">sgs_Cntl</a> - set and/or retrieve various states in the system</li></ul></div>
-<div class='item'><a name='Binding-helpers'></a><hr><h2>Binding helpers</h2><ul><li><a href="#sgs-LoadLib-Fmt">sgs_LoadLib_Fmt</a> - load the formatting library
-</li><li><a href="#sgs-LoadLib-IO">sgs_LoadLib_IO</a> - load the input/output library
-</li><li><a href="#sgs-LoadLib-Math">sgs_LoadLib_Math</a> - load the math library
-</li><li><a href="#sgs-LoadLib-OS">sgs_LoadLib_OS</a> - load the operating system library
-</li><li><a href="#sgs-LoadLib-RE">sgs_LoadLib_RE</a> - load the regular expression library
-</li><li><a href="#sgs-LoadLib-String">sgs_LoadLib_String</a> - load the string library
-</li><li><a href="#sgs-RegFuncConsts">sgs_RegFuncConsts</a> - register a list of global C function constants
-</li><li><a href="#sgs-RegIntConsts">sgs_RegIntConsts</a> - register a list of global integer constants
-</li><li><a href="#sgs-RegRealConsts">sgs_RegRealConsts</a> - register a list of global real value constants</li></ul></div>
+<div class='item'><a name='Binding-helpers'></a><hr><h2>Binding helpers</h2><ul><li><a href="#sgs-LoadLib-functions">sgs_LoadLib_Fmt</a> - load the formatting library
+</li><li><a href="#sgs-LoadLib-functions">sgs_LoadLib_IO</a> - load the input/output library
+</li><li><a href="#sgs-LoadLib-functions">sgs_LoadLib_Math</a> - load the math library
+</li><li><a href="#sgs-LoadLib-functions">sgs_LoadLib_OS</a> - load the operating system library
+</li><li><a href="#sgs-LoadLib-functions">sgs_LoadLib_RE</a> - load the regular expression library
+</li><li><a href="#sgs-LoadLib-functions">sgs_LoadLib_String</a> - load the string library
+</li><li><a href="#sgs-Reg-Consts-function">sgs_RegFuncConsts</a> - register a list of global C function constants
+</li><li><a href="#sgs-Reg-Consts-function">sgs_RegIntConsts</a> - register a list of global integer constants
+</li><li><a href="#sgs-Reg-Consts-function">sgs_RegRealConsts</a> - register a list of global real value constants</li></ul></div>
 <div class='item'><a name='Object-type-storage'></a><hr><h2>Object type storage</h2><ul><li><a href="#sgs-RegisterType-function">sgs_RegisterType</a> - register an object interface pointer by name
 </li><li><a href="#sgs-UnregisterType-function">sgs_UnregisterType</a> - unregister an object interface pointer by name
 </li><li><a href="#sgs-FindType-function">sgs_FindType</a> - find a registered object interface pointer by name
 </li><li><a href="#sgs-IsType-function-alias">sgs_IsType</a> - check if variable on stack is of specified registered type</li></ul></div>
-<div class='item'><a name='Variable-initialization'></a><hr><h2>Variable initialization</h2><ul><li><a href="#sgs-InitNull">sgs_InitNull</a> - initialize variable to a null variable
-</li><li><a href="#sgs-InitBool">sgs_InitBool</a> - initialize variable to a boolean variable
-</li><li><a href="#sgs-InitInt">sgs_InitInt</a> - initialize variable to an integer
-</li><li><a href="#sgs-InitReal">sgs_InitReal</a> - initialize variable to a real value
-</li><li><a href="#sgs-InitStringBuf">sgs_InitStringBuf</a> - initialize variable to a new char buffer
-</li><li><a href="#sgs-InitString">sgs_InitString</a> - initialize variable to a new string
-</li><li><a href="#sgs-InitCFunction">sgs_InitCFunction</a> - initialize variable to C function
-</li><li><a href="#sgs-InitObject">sgs_InitObject</a> - initialize variable to a new object
-</li><li><a href="#sgs-InitObjectIPA">sgs_InitObjectIPA</a> - initialize variable to a new object with additional memory allocated in-place for the internal - data pointer
-</li><li><a href="#sgs-InitPtr">sgs_InitPtr</a> - initialize variable to a pointer variable
-</li><li><a href="#sgs-InitObjectPtr">sgs_InitObjectPtr</a> - initialize variable to an existing object and acquire it
+<div class='item'><a name='Variable-initialization'></a><hr><h2>Variable initialization</h2><ul><li><a href="#sgs-Init-functions">sgs_InitNull</a> - initialize variable to a null variable
+</li><li><a href="#sgs-Init-functions">sgs_InitBool</a> - initialize variable to a boolean variable
+</li><li><a href="#sgs-Init-functions">sgs_InitInt</a> - initialize variable to an integer
+</li><li><a href="#sgs-Init-functions">sgs_InitReal</a> - initialize variable to a real value
+</li><li><a href="#sgs-Init-functions">sgs_InitStringBuf</a> - initialize variable to a new char buffer
+</li><li><a href="#sgs-Init-functions">sgs_InitString</a> - initialize variable to a new string
+</li><li><a href="#sgs-Init-functions">sgs_InitCFunction</a> - initialize variable to C function
+</li><li><a href="#sgs-Init-functions">sgs_InitObject</a> - initialize variable to a new object
+</li><li><a href="#sgs-Init-functions">sgs_InitObjectIPA</a> - initialize variable to a new object with additional memory allocated in-place for the internal data pointer
+</li><li><a href="#sgs-Init-functions">sgs_InitPtr</a> - initialize variable to a pointer variable
+</li><li><a href="#sgs-Init-functions">sgs_InitObjectPtr</a> - initialize variable to an existing object and acquire it
 </li><li><a href="#sgs-InitArray">sgs_InitArray</a> - initialize variable to a new array, optionally using the specified number of pushed items on stack
 </li><li><a href="#sgs-InitDict">sgs_InitDict</a> - initialize variable to a new dict, optionally using the specified number of pushed items on stack
 </li><li><a href="#sgs-InitMap">sgs_InitMap</a> - initialize variable to a new map, optionally using the specified number of pushed items on stack</li></ul></div>
-<div class='item'><a name='Stack-primary-interface'></a><hr><h2>Stack primary interface</h2><ul><li><a href="#sgs-PushNull">sgs_PushNull</a> - push a null variable
-</li><li><a href="#sgs-PushBool">sgs_PushBool</a> - push a boolean variable
-</li><li><a href="#sgs-PushInt">sgs_PushInt</a> - push an integer
-</li><li><a href="#sgs-PushReal">sgs_PushReal</a> - push a real value
-</li><li><a href="#sgs-PushStringBuf32-function">sgs_PushStringBuf</a> - push a new string from char buffer
-</li><li><a href="#sgs-PushString32-function">sgs_PushString</a> - push a new string
-</li><li><a href="#sgs-PushCFunction">sgs_PushCFunction</a> - push a C function
-</li><li><a href="#sgs-PushObject">sgs_PushObject</a> - push a new object
-</li><li><a href="#sgs-PushObjectIPA">sgs_PushObjectIPA</a> - push a new object with additional memory allocated in-place for the internal data pointer
-</li><li><a href="#sgs-PushPtr">sgs_PushPtr</a> - push a pointer
-</li><li><a href="#sgs-PushObjectPtr">sgs_PushObjectPtr</a> - push an object pointer
+<div class='item'><a name='Stack-primary-interface'></a><hr><h2>Stack primary interface</h2><ul><li><a href="#sgs-Push-functions">sgs_PushNull</a> - push a null variable
+</li><li><a href="#sgs-Push-functions">sgs_PushBool</a> - push a boolean variable
+</li><li><a href="#sgs-Push-functions">sgs_PushInt</a> - push an integer
+</li><li><a href="#sgs-Push-functions">sgs_PushReal</a> - push a real value
+</li><li><a href="#sgs-Push-functions">sgs_PushStringBuf</a> - push a new string from char buffer
+</li><li><a href="#sgs-Push-functions">sgs_PushString</a> - push a new string
+</li><li><a href="#sgs-Push-functions">sgs_PushCFunction</a> - push a C function
+</li><li><a href="#sgs-Push-functions">sgs_PushObject</a> - push a new object
+</li><li><a href="#sgs-Push-functions">sgs_PushObjectIPA</a> - push a new object with additional memory allocated in-place for the internal data pointer
+</li><li><a href="#sgs-Push-functions">sgs_PushPtr</a> - push a pointer
+</li><li><a href="#sgs-Push-functions">sgs_PushObjectPtr</a> - push an object pointer
 </li><li><a href="#sgs-PushArray-function">sgs_PushArray</a> - push a new array variable, optionally using the specified number of pushed items on stack
 </li><li><a href="#sgs-PushDict-function">sgs_PushDict</a> - push a new dict variable, optionally using the specified number of pushed items on stack
 </li><li><a href="#sgs-PushMap-function">sgs_PushMap</a> - push a new map variable, optionally using the specified number of pushed items on stack
-</li><li><a href="#sgs-PushVariable">sgs_PushVariable</a> - push the specified variable
+</li><li><a href="#sgs-Push-functions">sgs_PushVariable</a> - push the specified variable
 </li><li><a href="#sgs-StoreVariable">sgs_StoreVariable</a> - retrieve, acquire and pop the topmost variable on stack
 </li><li><a href="#sgs-PushItem-function">sgs_PushItem</a> - retrieve and push the specified variable on stack
 </li><li><a href="#sgs-StoreItem-function">sgs_StoreItem</a> - store and pop the topmost variable to the specified position after removal in stack
@@ -736,7 +737,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-AbsIndex">sgs_AbsIndex</a> - convert stack index to positive if possible (if it&#39;s &lt;0 or &gt;=StackSize, then it&#39;s invalid)
 </li><li><a href="#sgs-IsValidIndex-function">sgs_IsValidIndex</a> - check if specified stack index is valid
 </li><li><a href="#sgs-PeekStackItem-function">sgs_PeekStackItem</a> - retrieve without acquisition the specified variable on stack
-</li><li><a href="#sgs-GetStackItem">sgs_GetStackItem</a> - retrieve and acquire the specified variable on stack
+</li><li><a href="#sgs-GetStackItem-function">sgs_GetStackItem</a> - retrieve and acquire the specified variable on stack
 </li><li><a href="#sgs-SetStackItem">sgs_SetStackItem</a> - assign variable to the specified variable on stack
 </li><li><a href="#sgs-ItemType-function">sgs_ItemType</a> - return the variable type of the specified variable on stack
 </li><li><a href="#sgs-LoadArgsExtVA">sgs_LoadArgsExtVA</a> - parse the stack as an argument list with additional options (for custom wrapper functions)
@@ -767,8 +768,8 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-StorePath-function">sgs_StorePath</a> - store and pop the topmost stack item into a path of sub-items</li></ul></div>
 <div class='item'><a name='Argument-handling'></a><hr><h2>Argument handling</h2><ul><li><a href="#sgs-ArgErrorExt-function">sgs_ArgErrorExt</a> - emit an argument type mismatch error with additional formatting options
 </li><li><a href="#sgs-ArgError-function">sgs_ArgError</a> - emit an argument type mismatch error
-</li><li><a href="#sgs-FuncArgError">sgs_FuncArgError</a> - emit an argument type mismatch error (alias for states where <code>this</code> variable is hidden)
-</li><li><a href="#sgs-MethodArgError">sgs_MethodArgError</a> - emit an argument type mismatch error (alias for states where <code>this</code> variable is NOT hidden)
+</li><li><a href="#sgs-ArgError-function">sgs_FuncArgError</a> - emit an argument type mismatch error (alias for states where <code>this</code> variable is hidden)
+</li><li><a href="#sgs-ArgError-function">sgs_MethodArgError</a> - emit an argument type mismatch error (alias for states where <code>this</code> variable is NOT hidden)
 </li><li><a href="#sgs-LoadArgsExtVA">sgs_LoadArgsExtVA</a> - parse the stack as an argument list with additional options (for custom wrapper functions)
 </li><li><a href="#sgs-LoadArgsExt-function">sgs_LoadArgsExt</a> - parse the stack as an argument list with additional options
 </li><li><a href="#sgs-LoadArgsExt-function">sgs_LoadArgs</a> - parse the stack as an argument list
@@ -800,49 +801,49 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-MakeClosure">sgs_MakeClosure</a> - make a callable closure object from the specified callable and number of closures on stack
 </li><li><a href="#sgs-ClGetItem">sgs_ClGetItem</a> - retrieve the variable from a closure on stack
 </li><li><a href="#sgs-ClSetItem">sgs_ClSetItem</a> - set the variable to a closure on stack</li></ul></div>
-<div class='item'><a name='Data-retrieval-conversion'></a><hr><h2>Data retrieval &amp; conversion</h2><ul><li><a href="#sgs-GetBoolP">sgs_GetBoolP</a> - return the boolean version of the variable
-</li><li><a href="#sgs-GetIntP">sgs_GetIntP</a> - return the integer version of the variable
-</li><li><a href="#sgs-GetRealP">sgs_GetRealP</a> - return the real value version of the variable
-</li><li><a href="#sgs-GetPtrP">sgs_GetPtrP</a> - return the pointer version of the variable
-</li><li><a href="#sgs-ToBoolP">sgs_ToBoolP</a> - convert variable to a boolear value and return it
-</li><li><a href="#sgs-ToIntP">sgs_ToIntP</a> - convert variable to an integer and return it
-</li><li><a href="#sgs-ToRealP">sgs_ToRealP</a> - convert variable to a real value and return it
-</li><li><a href="#sgs-ToPtrP">sgs_ToPtrP</a> - convert variable to a pointer and return it
-</li><li><a href="#sgs-ToStringBufP">sgs_ToStringBufP</a> - convert variable to a string, returning size
-</li><li><a href="#sgs-ToStringP">sgs_ToStringP</a> - convert variable to a string
-</li><li><a href="#sgs-ToStringBufFastP">sgs_ToStringBufFastP</a> - convert variable to a string, preventing possible recursion and returning size
-</li><li><a href="#sgs-ToStringFastP">sgs_ToStringFastP</a> - convert variable to a string, preventing possible recursion
+<div class='item'><a name='Data-retrieval-conversion'></a><hr><h2>Data retrieval &amp; conversion</h2><ul><li><a href="#sgs-Get-functions">sgs_GetBoolP</a> - return the boolean version of the variable
+</li><li><a href="#sgs-Get-functions">sgs_GetIntP</a> - return the integer version of the variable
+</li><li><a href="#sgs-Get-functions">sgs_GetRealP</a> - return the real value version of the variable
+</li><li><a href="#sgs-Get-functions">sgs_GetPtrP</a> - return the pointer version of the variable
+</li><li><a href="#sgs-To-functions">sgs_ToBoolP</a> - convert variable to a boolear value and return it
+</li><li><a href="#sgs-To-functions">sgs_ToIntP</a> - convert variable to an integer and return it
+</li><li><a href="#sgs-To-functions">sgs_ToRealP</a> - convert variable to a real value and return it
+</li><li><a href="#sgs-To-functions">sgs_ToPtrP</a> - convert variable to a pointer and return it
+</li><li><a href="#sgs-ToStringBuf-Fast-P-functions">sgs_ToStringBufP</a> - convert variable to a string, returning size
+</li><li><a href="#sgs-ToString-Fast-P-function-aliases">sgs_ToStringP</a> - convert variable to a string
+</li><li><a href="#sgs-ToStringBuf-Fast-P-functions">sgs_ToStringBufFastP</a> - convert variable to a string, preventing possible recursion and returning size
+</li><li><a href="#sgs-ToString-Fast-P-function-aliases">sgs_ToStringFastP</a> - convert variable to a string, preventing possible recursion
 </li><li><a href="#sgs-IsObjectP">sgs_IsObjectP</a> - check if variable is an object and has the specified interface pointer
 </li><li><a href="#sgs-IsTypeP">sgs_IsTypeP</a> - check if variable is of specified registered type
 </li><li><a href="#sgs-IsCallableP">sgs_IsCallableP</a> - check if variable is callable (SGS function, C function or object with CALL impl.)
-</li><li><a href="#sgs-ParseBoolP">sgs_ParseBoolP</a> - validate conversion, optionally return boolean value from variable, if possible
-</li><li><a href="#sgs-ParseIntP">sgs_ParseIntP</a> - validate conversion, optionally return integer value from variable, if possible
-</li><li><a href="#sgs-ParseRealP">sgs_ParseRealP</a> - validate conversion, optionally return real value from variable, if possible
-</li><li><a href="#sgs-ParseStringP">sgs_ParseStringP</a> - validate conversion, optionally return string or buffer from variable, if possible
-</li><li><a href="#sgs-ParseObjectPtrP">sgs_ParseObjectPtrP</a> - validate conversion, optionally return object pointer from variable, if possible
-</li><li><a href="#sgs-ParsePtrP">sgs_ParsePtrP</a> - validate conversion, optionally return pointer from variable, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParseBoolP</a> - validate conversion, optionally return boolean value from variable, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParseIntP</a> - validate conversion, optionally return integer value from variable, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParseRealP</a> - validate conversion, optionally return real value from variable, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParseStringP</a> - validate conversion, optionally return string or buffer from variable, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParseObjectPtrP</a> - validate conversion, optionally return object pointer from variable, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParsePtrP</a> - validate conversion, optionally return pointer from variable, if possible
 </li><li><a href="#sgs-ArraySizeP">sgs_ArraySizeP</a> - retrieve size of array variable, if possible
-</li><li><a href="#sgs-GetBool">sgs_GetBool</a> - return the boolean version of the variable on stack
-</li><li><a href="#sgs-GetInt">sgs_GetInt</a> - return the integer version of the variable on stack
-</li><li><a href="#sgs-GetReal">sgs_GetReal</a> - return the real value version of the variable on stack
-</li><li><a href="#sgs-GetPtr">sgs_GetPtr</a> - return the pointer version of the variable on stack
-</li><li><a href="#sgs-ToBool">sgs_ToBool</a> - convert variable on stack to a boolear value and return it
-</li><li><a href="#sgs-ToInt">sgs_ToInt</a> - convert variable on stack to an integer and return it
-</li><li><a href="#sgs-ToReal">sgs_ToReal</a> - convert variable on stack to a real value and return it
-</li><li><a href="#sgs-ToPtr">sgs_ToPtr</a> - convert variable on stack to a pointer and return it
-</li><li><a href="#sgs-ToStringBuf-Fast-functions">sgs_ToStringBuf</a> - convert variable on stack to a string, returning size
-</li><li><a href="#sgs-ToStringBuf-Fast-functions">sgs_ToString</a> - convert variable on stack to a string
-</li><li><a href="#sgs-ToStringBufFast">sgs_ToStringBufFast</a> - convert variable on stack to a string, preventing possible recursion and returning size
-</li><li><a href="#sgs-ToStringFast">sgs_ToStringFast</a> - convert variable on stack to a string, preventing possible recursion
+</li><li><a href="#sgs-Get-functions">sgs_GetBool</a> - return the boolean version of the variable on stack
+</li><li><a href="#sgs-Get-functions">sgs_GetInt</a> - return the integer version of the variable on stack
+</li><li><a href="#sgs-Get-functions">sgs_GetReal</a> - return the real value version of the variable on stack
+</li><li><a href="#sgs-Get-functions">sgs_GetPtr</a> - return the pointer version of the variable on stack
+</li><li><a href="#sgs-To-functions">sgs_ToBool</a> - convert variable on stack to a boolear value and return it
+</li><li><a href="#sgs-To-functions">sgs_ToInt</a> - convert variable on stack to an integer and return it
+</li><li><a href="#sgs-To-functions">sgs_ToReal</a> - convert variable on stack to a real value and return it
+</li><li><a href="#sgs-To-functions">sgs_ToPtr</a> - convert variable on stack to a pointer and return it
+</li><li><a href="#sgs-ToStringBuf-Fast-P-functions">sgs_ToStringBuf</a> - convert variable on stack to a string, returning size
+</li><li><a href="#sgs-ToString-Fast-P-function-aliases">sgs_ToString</a> - convert variable on stack to a string
+</li><li><a href="#sgs-ToStringBuf-Fast-P-functions">sgs_ToStringBufFast</a> - convert variable on stack to a string, preventing possible recursion and returning size
+</li><li><a href="#sgs-ToString-Fast-P-function-aliases">sgs_ToStringFast</a> - convert variable on stack to a string, preventing possible recursion
 </li><li><a href="#sgs-IsObject-function">sgs_IsObject</a> - check if variable on stack is an object and has the specified interface pointer
 </li><li><a href="#sgs-IsType-function-alias">sgs_IsType</a> - check if variable on stack is of specified registered type
 </li><li><a href="#sgs-IsCallable-function">sgs_IsCallable</a> - check if variable on stack is callable (SGS function, C function or object with CALL impl.)
-</li><li><a href="#sgs-ParseBool">sgs_ParseBool</a> - validate conversion, optionally return boolean value from variable on stack, if possible
-</li><li><a href="#sgs-ParseInt">sgs_ParseInt</a> - validate conversion, optionally return integer value from variable on stack, if possible
-</li><li><a href="#sgs-ParseReal">sgs_ParseReal</a> - validate conversion, optionally return real value from variable on stack, if possible
-</li><li><a href="#sgs-ParseString">sgs_ParseString</a> - validate conversion, optionally return string or buffer from variable on stack, if possible
-</li><li><a href="#sgs-ParseObjectPtr">sgs_ParseObjectPtr</a> - validate conversion, optionally return object pointer from variable on stack, if possible
-</li><li><a href="#sgs-ParsePtr">sgs_ParsePtr</a> - validate conversion, optionally return pointer from variable on stack, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParseBool</a> - validate conversion, optionally return boolean value from variable on stack, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParseInt</a> - validate conversion, optionally return integer value from variable on stack, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParseReal</a> - validate conversion, optionally return real value from variable on stack, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParseString</a> - validate conversion, optionally return string or buffer from variable on stack, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParseObjectPtr</a> - validate conversion, optionally return object pointer from variable on stack, if possible
+</li><li><a href="#sgs-Parse-functions">sgs_ParsePtr</a> - validate conversion, optionally return pointer from variable on stack, if possible
 </li><li><a href="#sgs-ArraySize-function">sgs_ArraySize</a> - retrieve size of array variable on stack, if possible
 </li><li><a href="#sgs-GlobalBool">sgs_GlobalBool</a> - retrieve global by name as bool
 </li><li><a href="#sgs-GlobalInt">sgs_GlobalInt</a> - retrieve global by name as integer
@@ -925,6 +926,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-GetObjectData-function">sgs_GetObjectData [function]</a>
 </li><li><a href="#sgs-GetObjectIface-function">sgs_GetObjectIface [function]</a>
 </li><li><a href="#sgs-GetObjectStruct-function">sgs_GetObjectStruct [function]</a>
+</li><li><a href="#sgs-GetStackItem-function">sgs_GetStackItem [function]</a>
 </li><li><a href="#sgs-GetStringPtr-function">sgs_GetStringPtr [function]</a>
 </li><li><a href="#sgs-GetStringSize-function">sgs_GetStringSize [function]</a>
 </li><li><a href="#sgs-GlobalCall-function">sgs_GlobalCall [function]</a>
@@ -986,8 +988,8 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-StoreProperty-function">sgs_StoreProperty [function]</a>
 </li><li><a href="#sgs-StringConcat-function">sgs_StringConcat [function]</a>
 </li><li><a href="#sgs-To-functions">sgs_To*** [functions]</a>
-</li><li><a href="#sgs-ToString-Fast-function-aliases">sgs_ToString(Fast) [function aliases]</a>
-</li><li><a href="#sgs-ToStringBuf-Fast-functions">sgs_ToStringBuf(Fast) [functions]</a>
+</li><li><a href="#sgs-ToString-Fast-P-function-aliases">sgs_ToString(Fast)(P) [function aliases]</a>
+</li><li><a href="#sgs-ToStringBuf-Fast-P-functions">sgs_ToStringBuf(Fast)(P) [functions]</a>
 </li><li><a href="#sgs-TypeOf-function">sgs_TypeOf [function]</a>
 </li><li><a href="#sgs-UnregisterType-function">sgs_UnregisterType [function]</a>
 </li><li><a href="#sgs-Unserialize-function">sgs_Unserialize [function]</a>
@@ -1082,13 +1084,13 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li>C string: null-terminated char* string
 </li><li>buffer: char* byte array, size is specified in the previous argument
 </li><li>property?: if yes, property access is used (object.property), otherwise index access is used (object[index])</li></ul></li></ul><h4>error codes</h4><ul><li>SGS_EINVAL: invalid symbol found in path / corresponding variable arguments had an invalid value
-</li><li>other errors, as returned by <a href="#sgs-PushIndexExt">sgs_PushIndexExt()</a></li></ul></div>
+</li><li>other errors, as returned by <a href="#sgs-PushIndex">sgs_PushIndex***()</a></li></ul></div>
 <div class='item'><a name='sgs-StorePath-function'></a><hr><h2>sgs_StorePath [function]</h2><h3>SGSRESULT sgs_StorePath( sgs_Context* C, sgs_StkIdx item, const char* path, ... )</h3><h4>copy and pop the topmost item on stack to variable specified by starting point <code>item</code> and traversal path <code>path</code></h4><p>
 <em class='notice-bgr'>The safety of this function is similar to that of the printf family of functions. Be explicit in what types you pass to the variable argument list to avoid errors.</em>
 </p><ul><li>the syntax of <code>path</code> is the same as with <a href="#sgs-PushPath-function">sgs_PushPath()</a>
 </li><li>the last item on the path (or in the case of an empty path, the starting point) is accessed with a store operation, the rest - with a push operation</li></ul><h4>error codes</h4><ul><li>SGS_EINVAL: invalid symbol found in path / corresponding variable arguments had an invalid value
 </li><li>SGS_EINPROC: current stack frame is empty
-</li><li>other errors, as returned by <a href="#sgs-PushIndexExt">sgs_PushIndexExt()</a> or <a href="#sgs-StoreIndexExt">sgs_StoreIndexExt()</a></li></ul></div>
+</li><li>other errors, as returned by <a href="#sgs-PushIndex">sgs_PushIndex***()</a> or <a href="#sgs-StoreIndex">sgs_StoreIndex***()</a></li></ul></div>
 <div class='item'><a name='sgs-ArgErrorExt-function'></a><hr><h2>sgs_ArgErrorExt [function]</h2><h3>int sgs_ArgErrorExt( SGS_CTX, int argid, int method, const char* expect, const char* expfx )</h3><h4>prints the argument type mismatch error</h4><ul><li><code>expfx</code> - prefix of <code>expect</code>, put exactly before this for things like &#39;strict &#39;
 </li><li>always returns 0 so it can be used to return and print an error in the same statement</li></ul></div>
 <div class='item'><a name='sgs-ArgError-function'></a><hr><h2>sgs_ArgError [function]</h2><h3>int sgs_ArgError( sgs_Context* C, int argid, int expect, int is_strict )</h3><h4>prints the argument type mismatch error</h4><ul><li>always returns 0 so it can be used to return and print an error in the same statement</li></ul></div>
@@ -1217,12 +1219,15 @@ After a successful call, all arguments and the function will be popped off the s
 </p></div>
 <div class='item'><a name='sgs-Compare-function'></a><hr><h2>sgs_Compare [function]</h2><h3>int sgs_Compare( sgs_Context* C, sgs_Variable* v1, sgs_Variable* v2 )</h3><h4>return the difference between variables, as int -1/0/1</h4></div>
 <div class='item'><a name='sgs-EqualTypes-function'></a><hr><h2>sgs_EqualTypes [function]</h2><h3>SGSBOOL sgs_EqualTypes( sgs_Variable* v1, sgs_Variable* v2 )</h3><h4>return if types of both variables are exactly equal</h4><ul><li>both type variables and interface pointers (only if both variables are objects) are checked for equality</li></ul></div>
-<div class='item'><a name='sgs-Get-functions'></a><hr><h2>sgs_Get*** [functions]</h2><h3>sgs_Bool sgs_GetBool( sgs_Context* C, sgs_StkIdx item )</h3><h3>sgs_Int sgs_GetInt( sgs_Context* C, sgs_StkIdx item )</h3><h3>sgs_Real sgs_GetReal( sgs_Context* C, sgs_StkIdx item )</h3><h3>void* sgs_GetPtr( sgs_Context* C, sgs_StkIdx item )</h3><h4>return an item from the current stack frame, converted to the specified type</h4><ul><li>if <code>item</code> is out of bounds, 0 is returned</li></ul></div>
-<div class='item'><a name='sgs-To-functions'></a><hr><h2>sgs_To*** [functions]</h2><h3>sgs_Bool sgs_ToBool( sgs_Context* C, sgs_StkIdx item )</h3><h3>sgs_Int sgs_ToInt( sgs_Context* C, sgs_StkIdx item )</h3><h3>sgs_Real sgs_ToReal( sgs_Context* C, sgs_StkIdx item )</h3><h3>void* sgs_ToPtr( sgs_Context* C, sgs_StkIdx item )</h3><h4>return an item from the current stack frame, converted in-place to the specified type</h4><ul><li>in-place conversion means that if the function succeeds, the item in the stack might have a different type, most likely the requested type</li></ul></div>
-<div class='item'><a name='sgs-ToStringBuf-Fast-functions'></a><hr><h2>sgs_ToStringBuf(Fast) [functions]</h2><h3>char* sgs_ToStringBuf( sgs_Context* C, sgs_StkIdx item, sgs_SizeVal* outsize )</h3><h3>char* sgs_ToStringBufFast( sgs_Context* C, sgs_StkIdx item, sgs_SizeVal* outsize )</h3><h4>return an item from the current stack frame, converted in-place to string</h4><ul><li>if <code>item</code> is out of bounds or conversion fails, NULL is returned
+<div class='item'><a name='sgs-Get-functions'></a><hr><h2>sgs_Get*** [functions]</h2><h3>sgs_Bool sgs_GetBool( sgs_Context* C, sgs_StkIdx item )</h3><h3>sgs_Int sgs_GetInt( sgs_Context* C, sgs_StkIdx item )</h3><h3>sgs_Real sgs_GetReal( sgs_Context* C, sgs_StkIdx item )</h3><h3>void* sgs_GetPtr( sgs_Context* C, sgs_StkIdx item )</h3><h4>return an item from the current stack frame, converted to the specified type</h4><h3>sgs_Bool sgs_GetBoolP( sgs_Context* C, sgs_Variable* var )</h3><h3>sgs_Int sgs_GetIntP( sgs_Context* C, sgs_Variable* var )</h3><h3>sgs_Real sgs_GetRealP( sgs_Context* C, sgs_Variable* var )</h3><h3>void* sgs_GetPtrP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the value of the specified variable, converted to the specified type</h4><ul><li>if <code>item</code> is out of bounds, 0 is returned</li></ul></div>
+<div class='item'><a name='sgs-To-functions'></a><hr><h2>sgs_To*** [functions]</h2><h3>sgs_Bool sgs_ToBool( sgs_Context* C, sgs_StkIdx item )</h3><h3>sgs_Int sgs_ToInt( sgs_Context* C, sgs_StkIdx item )</h3><h3>sgs_Real sgs_ToReal( sgs_Context* C, sgs_StkIdx item )</h3><h3>void* sgs_ToPtr( sgs_Context* C, sgs_StkIdx item )</h3><h4>return an item from the current stack frame, converted in-place to the specified type</h4><h3>sgs_Bool sgs_ToBoolP( sgs_Context* C, sgs_Variable* var )</h3><h3>sgs_Int sgs_ToIntP( sgs_Context* C, sgs_Variable* var )</h3><h3>sgs_Real sgs_ToRealP( sgs_Context* C, sgs_Variable* var )</h3><h3>void* sgs_GetPtrP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the value of the specified variable, converted in-place to the specified type</h4><ul><li>in ***P functions previous variable is properly released before conversion takes place and reacquired afterwards
+</li><li>in-place conversion means that if the function succeeds, the variable will have the requested type</li></ul></div>
+<div class='item'><a name='sgs-ToStringBuf-Fast-P-functions'></a><hr><h2>sgs_ToStringBuf(Fast)(P) [functions]</h2><h3>char* sgs_ToStringBuf( sgs_Context* C, sgs_StkIdx item, sgs_SizeVal* outsize )</h3><h3>char* sgs_ToStringBufFast( sgs_Context* C, sgs_StkIdx item, sgs_SizeVal* outsize )</h3><h4>return an item from the current stack frame, converted in-place to string</h4><h3>char* sgs_ToStringBufP( sgs_Context* C, sgs_Variable* var, sgs_SizeVal* outsize )</h3><h3>char* sgs_ToStringBufFastP( sgs_Context* C, sgs_Variable* var, sgs_SizeVal* outsize )</h3><h4>return the value of the specified variable, converted in-place to string</h4><ul><li>in ***P functions previous variable is properly released before conversion takes place and reacquired afterwards
+</li><li>if <code>item</code> is out of bounds or conversion fails, NULL is returned
 </li><li>the &#39;fast&#39; version uses type name conversion on object, instead of string conversion - this is to avoid recursion while generating a short description about object contents
 </li><li>length of string is returned to the value that <code>outsize</code> points to</li></ul></div>
-<div class='item'><a name='sgs-ToString-Fast-function-aliases'></a><hr><h2>sgs_ToString(Fast) [function aliases]</h2><h3>char* sgs_ToString( sgs_Context* C, sgs_StkIdx item )</h3><h3>char* sgs_ToStringFast( sgs_Context* C, sgs_StkIdx item )</h3><h4>return an item from the current stack frame, converted in-place to string</h4><ul><li>aliases of <a href="#sgs-ToStringBuf-Fast-functions">sgs_ToStringBuf()</a> and <a href="#sgs-ToStringBufFast">sgs_ToStringBufFast()</a> with the third argument set to NULL</li></ul></div>
+<div class='item'><a name='sgs-ToString-Fast-P-function-aliases'></a><hr><h2>sgs_ToString(Fast)(P) [function aliases]</h2><h3>char* sgs_ToString( sgs_Context* C, sgs_StkIdx item )</h3><h3>char* sgs_ToStringFast( sgs_Context* C, sgs_StkIdx item )</h3><h4>return an item from the current stack frame, converted in-place to string</h4><h3>char* sgs_ToStringP( sgs_Context* C, sgs_Variable* var )</h3><h3>char* sgs_ToStringFastP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the value of the specified variable, converted in-place to string</h4><ul><li>in ***P functions previous variable is properly released before conversion takes place and reacquired afterwards
+</li><li>these are aliases of <a href="#sgs-ToStringBuf-Fast-P-functions">sgs_ToStringBuf(Fast)(P)</a> with the third argument set to NULL</li></ul></div>
 <div class='item'><a name='sgs-RegisterType-function'></a><hr><h2>sgs_RegisterType [function]</h2><h3>SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface )</h3><h4>register a type interface by mapping it to a name</h4><h4>error codes</h4><ul><li>SGS_EINVAL: iface was NULL
 </li><li>SGS_EINPROC: the name is already used</li></ul></div>
 <div class='item'><a name='sgs-UnregisterType-function'></a><hr><h2>sgs_UnregisterType [function]</h2><h3>SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )</h3><h4>unregister a type interface by its name</h4><h4>error codes</h4><ul><li>SGS_ENOTFND: the specified type name was not mapped to any interface</li></ul></div>
@@ -1232,13 +1237,13 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-IsCallable-function'></a><hr><h2>sgs_IsCallable [function]</h2><h3>SGSBOOL sgs_IsCallable( sgs_Context* C, sgs_StkIdx item )</h3><h4>returns whether the specified stack item <code>item</code> is callable</h4><ul><li>callable variables are either SGS functions or C functions or objects with the SGS_OP_CALL interface implemented
 </li><li>if <code>item</code> is out of bounds, 0 is returned</li></ul></div>
 <div class='item'><a name='sgs-IsNumericString-function'></a><hr><h2>sgs_IsNumericString [function]</h2><h3>SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )</h3><h4>checks if the string is convertible to an integer/real</h4><ul><li>more info at @&lt;Numeric string parsing rules&gt;</li></ul></div>
-<div class='item'><a name='sgs-Parse-functions'></a><hr><h2>sgs_Parse*** [functions]</h2><h3>SGSBOOL sgs_ParseBool( sgs_Context* C, sgs_StkIdx item, sgs_Bool* out )</h3><h3>SGSBOOL sgs_ParseInt( sgs_Context* C, sgs_StkIdx item, sgs_Int* out )</h3><h3>SGSBOOL sgs_ParseReal( sgs_Context* C, sgs_StkIdx item, sgs_Real* out )</h3><h3>SGSBOOL sgs_ParseString( sgs_Context* C, sgs_StkIdx item, char** out, sgs_SizeVal* size )</h3><h3>SGSBOOL sgs_ParsePtr( sgs_Context* C, sgs_StkIdx item, void** out )</h3><h4>attempts to parse the specified item of the current stack frame, returning whether parsing was successful</h4><ul><li>the parsing rules:
-<ul><li>for <code>sgs_ParsePtr</code>, unlike every other parsing function, only null/ptr types are considered valid
+<div class='item'><a name='sgs-Parse-functions'></a><hr><h2>sgs_Parse*** [functions]</h2><h3>SGSBOOL sgs_ParseBool( sgs_Context* C, sgs_StkIdx item, sgs_Bool* out )</h3><h3>SGSBOOL sgs_ParseInt( sgs_Context* C, sgs_StkIdx item, sgs_Int* out )</h3><h3>SGSBOOL sgs_ParseReal( sgs_Context* C, sgs_StkIdx item, sgs_Real* out )</h3><h3>SGSBOOL sgs_ParseString( sgs_Context* C, sgs_StkIdx item, char** out, sgs_SizeVal* size )</h3><h3>SGSBOOL sgs_ParseObjectPtr( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface, sgs_VarObj** out, int strict )</h3><h3>SGSBOOL sgs_ParsePtr( sgs_Context* C, sgs_StkIdx item, void** out )</h3><h4>attempts to parse the specified item of the current stack frame, returning whether parsing was successful</h4><h3>SGSBOOL sgs_ParseBoolP( sgs_Context* C, sgs_Variable* var, sgs_Bool* out )</h3><h3>SGSBOOL sgs_ParseIntP( sgs_Context* C, sgs_Variable* var, sgs_Int* out )</h3><h3>SGSBOOL sgs_ParseRealP( sgs_Context* C, sgs_Variable* var, sgs_Real* out )</h3><h3>SGSBOOL sgs_ParseStringP( sgs_Context* C, sgs_Variable* var, char** out, sgs_SizeVal* size )</h3><h3>SGSBOOL sgs_ParseObjectPtrP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface, sgs_VarObj** out, int strict )</h3><h3>SGSBOOL sgs_ParsePtrP( sgs_Context* C, sgs_Variable* var, void** out )</h3><h4>attempts to parse the specified varuabke, returning whether parsing was successful</h4><ul><li>the parsing rules:
+<ul><li>for `sgs_ParsePtr`/`sgs_ParsePtrP`, unlike every other parsing function, only null/ptr types are considered valid
+</li><li>for `sgs_ParseObjectPtr`/`sgs_ParseObjectPtrP`, only objects with the specified interface <code>iface</code> are valid unless strict = 0, then <code>null</code> is valid too
 </li><li>if <code>item</code> is out of bounds, fail
 </li><li>if item has the type <code>null</code>, <code>func</code> or <code>cfunc</code>, fail
 </li><li>if item is of <code>string</code> type and <code>bool</code> is requested, fail
 </li><li>if item is of <code>string</code> type and `int`/`real` is requested, try to convert
-</li><li>if item is of <code>object</code> type, success of conversion depends on implementation of the object interface and the rules of sgs_GetBool/sgs_GetInt/sgs_GetReal/sgs_ToStringBuf
 </li><li>everything else succeeds</li></ul></li></ul></div>
 <div class='item'><a name='sgs-PushIterator-function'></a><hr><h2>sgs_PushIterator [function]</h2><h3>SGSRESULT sgs_PushIterator( sgs_Context* C, sgs_StkIdx item )</h3><h4>create an iterator from the specified item of the current stack frame</h4><ul><li>iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value
 </li><li>iterator starts at the pre-first position, so nothing can be read before the initial state</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
@@ -1256,7 +1261,10 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-ArraySize-function'></a><hr><h2>sgs_ArraySize [function]</h2><h3>SGSMIXED sgs_ArraySize( sgs_Context* C, sgs_StkIdx item )</h3><h4>check if the specified stack item is an array and return its size or error code on failure</h4><h4>error codes</h4><ul><li>SGS_EINVAL: index out of bounds / variable was not an array</li></ul></div>
 <div class='item'><a name='sgs-StackSize-function'></a><hr><h2>sgs_StackSize [function]</h2><h3>int sgs_StackSize( sgs_Context* C )</h3><h4>return the size of the current stack frame</h4></div>
 <div class='item'><a name='sgs-IsValidIndex-function'></a><hr><h2>sgs_IsValidIndex [function]</h2><h3>SGSBOOL sgs_IsValidIndex( sgs_Context* C, sgs_StkIdx item )</h3><h4>return whether the specified stack index points to an item in the current stack frame</h4><ul><li>both positive (first = 0) and negative (last = -1) indices are supported</li></ul></div>
-<div class='item'><a name='sgs-PeekStackItem-function'></a><hr><h2>sgs_PeekStackItem [function]</h2><h3>SGSBOOL sgs_PeekStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>write the data of the specified stack variable if the index is valid</h4><ul><li>function returns whether the stack index was valid</li></ul></div>
+<div class='item'><a name='sgs-PeekStackItem-function'></a><hr><h2>sgs_PeekStackItem [function]</h2><h3>SGSBOOL sgs_PeekStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>write the data of the specified stack variable if the index is valid</h4><p>
+<em class='notice-bgr'>this function does not acquire the variable and thus CANNOT be used in functions that modify it, such as <a href="#sgs-Assign">sgs_Assign</a> or <a href="#sgs-To-functions">sgs_To***;</a> to acquire variable on retrieval, see <a href="#sgs-GetStackItem-function">sgs_GetStackItem</a> or <a href="#sgs-Acquire-function">sgs_Acquire</a></em>
+</p><ul><li>function returns whether the stack index was valid</li></ul></div>
+<div class='item'><a name='sgs-GetStackItem-function'></a><hr><h2>sgs_GetStackItem [function]</h2><h3>SGSBOOL sgs_PeekStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>write the data of the specified stack variable and increments its reference count if the index is valid</h4><ul><li>function returns whether the stack index was valid</li></ul></div>
 <div class='item'><a name='sgs-ItemType-function'></a><hr><h2>sgs_ItemType [function]</h2><h3>uint32_t sgs_ItemType( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the type ID of the specified stack item</h4><ul><li>return value will be equal to one of the SGS_VT_* macro
 </li><li>if index is invalid, return value will be 0 (SGS_VT_NULL)</li></ul></div>
 <div class='item'><a name='sgs-Method-function'></a><hr><h2>sgs_Method [function]</h2><h3>SGSBOOL sgs_Method( sgs_Context* C )</h3><h4>unlock the &#39;this&#39; variable, return if the function was called as a method (and thus variable was unlocked)</h4><ul><li>method calls look like this: &quot;object.method(...)&quot;</li></ul></div>
@@ -1303,7 +1311,7 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li><code>ptr</code> != NULL, <code>size</code> == 0: <code>ptr</code> is freed, NULL is returned
 </li><li><code>ptr</code> == NULL, <code>size</code> != 0: a new block of memory is allocated and returned
 </li><li><code>ptr</code> == NULL, <code>size</code> == 0: nothing is done, NULL is returned</li></ul></li></ul></div>
-<div class='item'><a name='memory-allocation-macros-macros'></a><hr><h2>memory allocation macros [macros]</h2><h3>Memory allocation macros</h3><h4>these macros allow slightly simplified handling of memory</h4><ul><li>`sgs_Malloc( C, size )`: allocates the memory (alias to `sgs_Memory( C, NULL, size )`)
+<div class='item'><a name='Memory-allocation-macros-macros'></a><hr><h2>Memory allocation macros [macros]</h2><h3>Memory allocation macros</h3><h4>these macros allow slightly simplified handling of memory</h4><ul><li>`sgs_Malloc( C, size )`: allocates the memory (alias to `sgs_Memory( C, NULL, size )`)
 </li><li>`sgs_Free( C, ptr )`: frees the memory (alias to `sgs_Memory( C, ptr, 0 )`)
 </li><li>sgs_Realloc: alias to sgs_Memory
 </li><li>the following macros expect that the variable sgs_Context* C is in the scope
@@ -1356,7 +1364,7 @@ sgs_Errno [function (inline)]
 <div class='item'><a name='sgs-CheckString32-function'></a><hr><h2>sgs_CheckString32 [function]</h2><h3>void sgs_CheckString32( sgs_String32* S )</h3><h4>attempts to trigger a debug breakpoint if the specified temporary string object is not freed from all contexts</h4><ul><li>internal function <code>sgs_BreakIf</code> is used</li></ul></div>
 <div class='item'><a name='sgs-IsFreedString32-function'></a><hr><h2>sgs_IsFreedString32 [function]</h2><h3>SGSBOOL sgs_IsFreedString32( sgs_String32* S )</h3><h4>returns whether the specified temporary string object is freed from all contexts</h4><ul><li>for usage with custom error outputs / assertion systems</li></ul></div>
 <div class='item'><a name='Interface-implementation'></a><hr><h2>Interface implementation</h2></div>
-<div class='item'><a name='Functions'></a><hr><h2>Functions</h2><p>
+<div class='item'><a name='C-Functions'></a><hr><h2>C Functions</h2><p>
 A C function has the type <code>int CFunc( sgs_Context* )</code>. It receives the context that called it and must return the number of return values pushed on stack.
 </p><h4>Conventions</h4><p>
 There are no forced courses of action beyond this point. However, to simplify development, some conventions were established and are used throughout the standard library and are suggested to follow.
@@ -1400,64 +1408,69 @@ Interface is a structure that contains of an array and 10 function pointers in t
     NULL, NULL              /* call, expr */
 }};</pre><p>
 The interface is defined as an array with size=1 to later be able to use it in code without prepending &quot;&amp;&quot; to the name.
-</p><h4>SGS_OP_DESTRUCT - destruction callback</h4><p>
-<b>Called</b> before the object is about to be destroyed.
+</p><h4>DESTRUCT - destruction callback</h4><h5>When called:</h5><ul><li>Before the object is about to be destroyed.
+</li><li>On <a href="#sgs-ObjCallDtor">sgs_ObjCallDtor</a></li></ul><h5>Additional arguments:</h5><p>
+None.
+</p><h5>Stack frame:</h5><p>
+Empty.
+</p><h5>Return values:</h5><p>
+Non-negative value if successful, negative on error.
+</p><h5>Additional notes:</h5><p>
+It is important to minimize the possibility of failure here. The system cannot help in any way if memory or ownership states are corrupted.
+</p><h4>GETINDEX - index/property retrieval callback</h4><h5>When called:</h5><ul><li>On A[B] (index) and A.B (property) reads in SGScript.
+</li><li>Index/Property/Path function families in the C API.</li></ul><h5>Additional arguments:</h5><ul><li>sgs_Variable* key -- key variable to be used to find a sub-item
+</li><li>int isprop -- (0/1) whether this is a property read (1) or index read (0)</li></ul><h5>Stack frame:</h5><p>
+Empty at beginning. Expected to have at least one item on stack after a successful index/property read. The topmost one is used.
+</p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.
+</li><li>Use SGS_ENOTFND if the specified index/property was not found.</li></ul><h5>Additional notes:</h5><p>
+It is safe to use conversion functions on the key variable.
+</p><h4>SETINDEX - index/property setting callback</h4><h5>When called:</h5><ul><li>On A[B] (index) and A.B (property) writes in SGScript.
+</li><li>Index/Property/Path function families in the C API.</li></ul><h5>Additional arguments:</h5><ul><li>sgs_Variable* key -- key variable to be used to find a sub-item
+</li><li>sgs_Variable* value -- value variable to be used in setting the value of the sub-item
+</li><li>int isprop -- (0/1) whether this is a property read (1) or index read (0)</li></ul><h5>Stack frame:</h5><p>
+Empty.
+</p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.
+</li><li>Use SGS_ENOTFND if the specified index/property was not found.
+</li><li>Use SGS_EINVAL if the given value could not be used.</li></ul><h5>Additional notes:</h5><p>
+It is safe to use conversion functions on both variables.
+</p><h4>CONVERT - conversion callback</h4><h5>When called:</h5><p>
+Depending on the argument, it is called by different sources:
+</p><ul><li>type conversion: to*** function families and other conversion triggers (like operators) in SGScript and the Get/To/Parse function families in the C API.
+</li><li>SGS_CONVOP_CLONE: called on <a href="#clone-function">clone</a> / <a href="#sgs-CloneItem-function">sgs_Clone</a>
+</li><li>SGS_CONVOP_TYPEOF: called on <a href="#typeof-function">typeof</a> / <a href="#sgs-TypeOf-function">sgs_TypeOf</a>
+</li><li>SGS_CONVOP_TOITER: called on foreach / <a href="#sgs-PushIterator-P">sgs_PushIterator(P)</a> / <a href="#sgs-GetIterator-P">sgs_GetIterator(P)</a></li></ul><h5>Additional arguments:</h5><ul><li>int type -- one of SGS_VT_[BOOL|INT|REAL|STRING|PTR] or SGS_CONVOP_CLONE / SGS_CONVOP_TYPEOF / SGS_CONVOP_TOITER</li></ul><h5>Stack frame:</h5><p>
+Empty at beginning. Expected to have at least one item on stack after a successful conversion. The topmost one is used.
 </p><p>
-<b>Argument</b> is not used.
-</p><p>
-<b>Stack frame</b> contains no additional data.
-</p><h4>SGS_OP_GETINDEX - index/property retrieval callback</h4><p>
-<b>Called</b> on A[B] and A.B reads in SGScript, as well as the PushIndex/PushProperty/Path function families in the C API.
-</p><p>
-<b>Argument</b> specifies whether a property is required (if argument != 0).
-</p><p>
-<b>Stack frame</b> contains one value: index (int or string).
-</p><p>
-Special error codes: SGS_ENOTFND if the specified index/property was not found.
-</p><h4>SGS_OP_SETINDEX - index/property setting callback</h4><p>
-<b>Called</b> on A[B] and A.B writes in SGScript, as well as the StoreIndex/StoreProperty/Path function families in the C API.
-</p><p>
-<b>Argument</b> specifies whether a property is to be set (if argument != 0).
-</p><p>
-<b>Stack frame</b> contains two values: index (int or string) and value (any type).
-</p><p>
-Special error codes: SGS_ENOTFND - the specified index/property was not found, SGS_EINVAL - the specified value could not be used.
-</p><h4>SGS_OP_CONVERT - conversion callback</h4><p>
-Depending on the argument, it is <b>called</b> by different sources and require different return values:
-</p><ul><li>type conversion: to*** function families and other conversion triggers (like operators) in SGScript and the Convert/Get/To function families in the C API, require a value of the right type.
-</li><li>SGS_CONVOP_CLONE: called on clone/sgs_Clone, should return an exact copy of the same object
-</li><li>SGS_CONVOP_TOTYPE: called on typeof/sgs_TypeOf, should return a string containing the type name
-</li><li>SGS_CONVOP_TOITER: called on foreach/sgs_PushIterator, should return an object with the SGS_OP_GETNEXT callback added</li></ul><p>
-<b>Argument</b> specifies the data to return.
-</p><p>
-<b>Stack frame</b> contains no additional data.
-</p><p>
-Special error codes: SGS_ENOTSUP - specified conversion is not supported.
-</p><h4>SGS_OP_SERIALIZE - serialization callback</h4><p>
-<b>Called</b> by serialize/sgs_Serialize. Requires no data but expects that sgs_Serialize/sgs_SerializeObject is successfully called once. In the case of sgs_SerializeObject, the necessary number of sgs_Serialize calls can be made before it.
-</p><p>
-<b>Argument</b> is not used.
-</p><p>
-<b>Stack frame</b> contains no additional data.
-</p><h4>SGS_OP_DUMP - debug dump callback</h4><p>
-Called by printvar/dumpvar function families in SGScript and sgs_DumpVar in the C API. Requires a string to be passed on the stack.
-</p><p>
-<b>Argument</b> specifies the remaining depth of dump - if owned variables are to be dumped, they should have sgs_DumpVar called with reduced depth to avoid dumping the whole structure (sgs_DumpVar with maxdepth &lt;= 0 returns &quot;...&quot;)
-</p><p>
-<b>Stack frame</b> contains no additional data.
-</p><h4>SGS_OP_GCMARK - garbage collector marking callback</h4><p>
-<b>Called</b> by gc_collect in SGScript and sgs_GCMark/sgs_GCExecute in the C API. Requires no data but expects that sgs_GCMark is called on all of the owned variables.
-</p><p>
-<b>Argument</b> is not used.
-</p><p>
-<b>Stack frame</b> contains no additional data.
-</p><h4>SGS_OP_GETNEXT - iterator control callback</h4><p>
-<b>Called</b> by foreach in SGScript and sgs_IterAdvance/sgs_IterPushData in the C API.
-</p><p>
-<b>Argument</b> specifies behavior flags:
-</p><ul><li>if argument == 0, iterator&#39;s position must be increased by one step and the return value must contain whether iterator has not reached end (positive value if so, otherwise - 0) or an error if callback has failed
-</li><li>otherwise, callback must push the data required (if SGS_GETNEXT_KEY is set, the key, and if SGS_GETNEXT_VALUE is set - the value, in exactly that order)</li></ul><p>
-<b>Stack frame</b> contains no additional data.
+Depending on the argument, it requires different variable types on stack:
+</p><ul><li>type conversions require a value of the right type.
+</li><li>SGS_CONVOP_CLONE should return an exact copy of the same object
+</li><li>SGS_CONVOP_TYPEOF should return a string containing the type name
+</li><li>SGS_CONVOP_TOITER should return an object with a GETNEXT callback</li></ul><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.
+</li><li>Use SGS_ENOTSUP if specified conversion is not supported.</li></ul><h5>Additional notes:</h5><ul><li>It should be safe to give the wrong variable type but errors may not be triggered in such cases.</li></ul><h4>SERIALIZE - serialization callback</h4><h5>When called:</h5><ul><li><a href="#serialize-function">serialize</a> in SGScript.
+</li><li><a href="#sgs-Serialize-function">sgs_Serialize</a> in the C API.</li></ul><h5>Additional arguments:</h5><p>
+None.
+</p><h5>Stack frame:</h5><p>
+Empty.
+</p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.</li></ul><h5>Additional notes:</h5><p>
+Callback requires no data but expects that <a href="#sgs-Serialize-function">sgs_Serialize</a> / <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> is successfully called once. In the case of sgs_SerializeObject, the necessary number (equal to argument count, passed to the function) of sgs_Serialize calls must be made before it.
+</p><h4>DUMP - debug dump callback</h4><h5>When called:</h5><ul><li><a href="#printvar-function">printvar,</a> @dumpvar, <a href="#printvar-ext-function">printvar_ext,</a> @dumpvar_ext in SGScript.
+</li><li><a href="#sgs-DumpVar-function">sgs_DumpVar</a> in the C API.</li></ul><h5>Additional arguments:</h5><ul><li>int maxdepth -- remaining recursion depth of dump to be passed on to <a href="#sgs-DumpVar-function">sgs_DumpVar</a> calls.</li></ul><h5>Stack frame:</h5><p>
+Empty at beginning. Expected to have at least one item on stack after a successful conversion. The topmost one is used.
+</p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.</li></ul><h5>Additional notes:</h5><ul><li>Callback expects a string variable on the top of the stack.
+</li><li><a href="#sgs-DumpVar-function">sgs_DumpVar</a> with maxdepth &lt;= 0 returns &quot;...&quot;, so it is not necessary to handle such cases beyond passing the parameter.</li></ul><h4>GCMARK - garbage collector marking callback</h4><h5>When called:</h5><ul><li><a href="#gc-execute">gc_execute</a> in SGScript.
+</li><li><a href="#sgs-GCMark-function">sgs_GCMark</a> / <a href="#sgs-GCExecute-function">sgs_GCExecute</a> in the C API.</li></ul><h5>Additional arguments:</h5><p>
+None.
+</p><h5>Stack frame:</h5><p>
+Empty.
+</p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.</li></ul><h5>Additional notes:</h5><ul><li>Callback expects that sgs_GCMark is called on all of the owned variables.
+</li><li>It is important to minimize the possibility of failure here. The system cannot help in any way if memory or ownership states are corrupted.</li></ul><h4>GETNEXT - iterator control callback</h4><h5>When called:</h5><ul><li>foreach in SGScript.
+</li><li><a href="#sgs-IterAdvance-P">sgs_IterAdvance(P)</a> / <a href="#sgs-IterPushData-P">sgs_IterPushData(P)</a> / <a href="#sgs-IterGetData-P">sgs_IterGetData(P)</a></li></ul><h5>Additional arguments:</h5><ul><li>int act -- specifies the actions that should be taken in this call.
+<ul><li>if argument == 0, iterator&#39;s position must be increased by one step and the return value must contain whether iterator has not reached end (positive value if so, otherwise - 0) or an error if callback has failed
+</li><li>otherwise, callback must push the data required (if SGS_GETNEXT_KEY is set, the key, and if SGS_GETNEXT_VALUE is set - the value, in exactly that order)</li></ul></li></ul><h5>Stack frame:</h5><p>
+Empty at beginning. Expects at least one (if either flag is set, but not both) or two (if both flags are set) variables on success. Key first, value second.
+</p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.
+</li><li>if argument == 0, must return whether iterator has not reached end (positive value if so, otherwise - 0)</li></ul><h5>Additional notes:</h5><p>
+None.
 </p><h4>SGS_OP_CALL - the &quot;function call&quot; callback</h4><p>
 <b>Called</b> when an object is used like a function (function call in SGScript or Call function family in the C API).
 </p><p>
