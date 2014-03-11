@@ -864,16 +864,16 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-GetObjectIface-function">sgs_GetObjectIface</a> - get interface pointer of object variable on stack
 </li><li><a href="#sgs-SetObjectData-function">sgs_SetObjectData</a> - set data pointer of object variable on stack
 </li><li><a href="#sgs-SetObjectIface-function">sgs_SetObjectIface</a> - set interface pointer of object variable on stack</li></ul></div>
-<div class='item'><a name='Iterators'></a><hr><h2>Iterators</h2><ul><li><a href="#sgs-PushIteratorP">sgs_PushIteratorP</a> - create and push iterator from variable pointer
-</li><li><a href="#sgs-GetIteratorP">sgs_GetIteratorP</a> - create iterator from variable pointer
-</li><li><a href="#sgs-IterAdvanceP">sgs_IterAdvanceP</a> - advance iterator, specified by its variable pointer
-</li><li><a href="#sgs-IterPushDataP">sgs_IterPushDataP</a> - extract and push data of current iteration of the iterator, specified by its variable pointer
-</li><li><a href="#sgs-IterGetDataP">sgs_IterGetDataP</a> - extract data of current iteration of the iterator, specified by its variable pointer
-</li><li><a href="#sgs-PushIterator-function">sgs_PushIterator</a> - create and push iterator from variable on stack
-</li><li><a href="#sgs-GetIterator">sgs_GetIterator</a> - create iterator from variable on stack
-</li><li><a href="#sgs-IterAdvance-function">sgs_IterAdvance</a> - advance iterator, specified by its stack index
-</li><li><a href="#sgs-IterPushData-function">sgs_IterPushData</a> - extract and push data of current iteration of the iterator variable on stack
-</li><li><a href="#sgs-IterGetData">sgs_IterGetData</a> - extract data of current iteration of the iterator variable on stack</li></ul></div>
+<div class='item'><a name='Iterators'></a><hr><h2>Iterators</h2><ul><li><a href="#sgs-PushIterator-P-function">sgs_PushIteratorP</a> - create and push iterator from variable pointer
+</li><li><a href="#sgs-GetIterator-P-function">sgs_GetIteratorP</a> - create iterator from variable pointer
+</li><li><a href="#sgs-IterAdvance-P-function">sgs_IterAdvanceP</a> - advance iterator, specified by its variable pointer
+</li><li><a href="#sgs-IterPushData-P-function">sgs_IterPushDataP</a> - extract and push data of current iteration of the iterator, specified by its variable pointer
+</li><li><a href="#sgs-IterGetData-P-function">sgs_IterGetDataP</a> - extract data of current iteration of the iterator, specified by its variable pointer
+</li><li><a href="#sgs-PushIterator-P-function">sgs_PushIterator</a> - create and push iterator from variable on stack
+</li><li><a href="#sgs-GetIterator-P-function">sgs_GetIterator</a> - create iterator from variable on stack
+</li><li><a href="#sgs-IterAdvance-P-function">sgs_IterAdvance</a> - advance iterator, specified by its stack index
+</li><li><a href="#sgs-IterPushData-P-function">sgs_IterPushData</a> - extract and push data of current iteration of the iterator variable on stack
+</li><li><a href="#sgs-IterGetData-P-function">sgs_IterGetData</a> - extract data of current iteration of the iterator variable on stack</li></ul></div>
 <div class='item'><a name='Variable-ownership'></a><hr><h2>Variable ownership</h2><ul><li><a href="#sgs-Acquire-function">sgs_Acquire</a> - increment reference count of a variable if the type implements reference counting
 </li><li><a href="#sgs-Release-function">sgs_Release</a> - decrement reference count and possibly destroy a variable if the type implements ref.counting
 </li><li><a href="#sgs-ReleaseArray">sgs_ReleaseArray</a> - release an array of variables
@@ -922,6 +922,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-Get-functions">sgs_Get*** [functions]</a>
 </li><li><a href="#sgs-GetFramePtr-function">sgs_GetFramePtr [function]</a>
 </li><li><a href="#sgs-GetHookFunc-function">sgs_GetHookFunc [function]</a>
+</li><li><a href="#sgs-GetIterator-P-function">sgs_GetIterator(P) [function]</a>
 </li><li><a href="#sgs-GetLastErrno-function-alias">sgs_GetLastErrno [function alias]</a>
 </li><li><a href="#sgs-GetObjectData-function">sgs_GetObjectData [function]</a>
 </li><li><a href="#sgs-GetObjectIface-function">sgs_GetObjectIface [function]</a>
@@ -942,8 +943,9 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-IsType-function-alias">sgs_IsType [function alias]</a>
 </li><li><a href="#sgs-IsValidIndex-function">sgs_IsValidIndex [function]</a>
 </li><li><a href="#sgs-ItemType-function">sgs_ItemType [function]</a>
-</li><li><a href="#sgs-IterAdvance-function">sgs_IterAdvance [function]</a>
-</li><li><a href="#sgs-IterPushData-function">sgs_IterPushData [function]</a>
+</li><li><a href="#sgs-IterAdvance-P-function">sgs_IterAdvance(P) [function]</a>
+</li><li><a href="#sgs-IterGetData-P-function">sgs_IterGetData(P) [function]</a>
+</li><li><a href="#sgs-IterPushData-P-function">sgs_IterPushData(P) [function]</a>
 </li><li><a href="#sgs-LoadArgs-function-alias">sgs_LoadArgs [function alias]</a>
 </li><li><a href="#sgs-LoadArgsExt-function">sgs_LoadArgsExt [function]</a>
 </li><li><a href="#sgs-LoadLib-functions">sgs_LoadLib_*** [functions]</a>
@@ -961,7 +963,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-PushDict-function">sgs_PushDict [function]</a>
 </li><li><a href="#sgs-PushGlobal-function">sgs_PushGlobal [function]</a>
 </li><li><a href="#sgs-PushItem-function">sgs_PushItem [function]</a>
-</li><li><a href="#sgs-PushIterator-function">sgs_PushIterator [function]</a>
+</li><li><a href="#sgs-PushIterator-P-function">sgs_PushIterator(P) [function]</a>
 </li><li><a href="#sgs-PushMap-function">sgs_PushMap [function]</a>
 </li><li><a href="#sgs-PushNumIndex-function">sgs_PushNumIndex [function]</a>
 </li><li><a href="#sgs-PushPath-function">sgs_PushPath [function]</a>
@@ -1151,7 +1153,7 @@ After a successful call, all arguments and the function will be popped off the s
 <em class='notice-bgr'>Stack is returned to the expected state only if the return value is equal to SGS_SUCCESS or SGS_EINPROC. Otherwise, it&#39;s left exactly as it was before the call.</em>
 </p><h4>error codes</h4><ul><li>SGS_EINPROC: topmost item on stack was not callable
 </li><li>SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + 1`)</li></ul></div>
-<div class='item'><a name='sgs-This-Call-function-aliases'></a><hr><h2>sgs_(This)Call [function aliases]</h2><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><ul><li>aliases to <a href="#sgs-FCall-function">sgs_FCall(),</a> for the first <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
+<div class='item'><a name='sgs-This-Call-function-aliases'></a><hr><h2>sgs_(This)Call [function aliases]</h2><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><ul><li>aliases to <a href="#sgs-FCall-function">sgs_FCall()</a>, for the first <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
 <div class='item'><a name='sgs-GlobalCall-function'></a><hr><h2>sgs_GlobalCall [function]</h2><h3>SGSRESULT sgs_GlobalCall( sgs_Context* C, const char* name, int args, int expect )</h3><h4>call the global variable <code>name</code> as a function</h4><ul><li>combination of <a href="#sgs-PushGlobal-function">sgs_PushGlobal()</a> and <a href="#sgs-Call">sgs_Call()</a></li></ul></div>
 <div class='item'><a name='sgs-TypeOf-function'></a><hr><h2>sgs_TypeOf [function]</h2><h3>SGSRESULT sgs_TypeOf( sgs_Context* C )</h3><h4>return the type name string of topmost variable in current stack frame</h4><ul><li>if the object does not support the specific part of the conversion interface function, a string of format &quot;object (%p)&quot; is returned to ensure expected type name comparison capabilities</li></ul><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame was empty</li></ul></div>
 <div class='item'><a name='sgs-DumpVar-function'></a><hr><h2>sgs_DumpVar [function]</h2><h3>SGSRESULT sgs_DumpVar( sgs_Context* C, int maxdepth )</h3><h4>convert the topmost variable of current stack frame to a highly informative string that should display the contents of the variable, up to <code>maxdepth</code> depth</h4><ul><li>if object does not have the SGS_OP_DUMP interface function implemented, only its pointer in memory and reference count are displayed</li></ul><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame was empty
@@ -1245,17 +1247,26 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>if item is of <code>string</code> type and <code>bool</code> is requested, fail
 </li><li>if item is of <code>string</code> type and `int`/`real` is requested, try to convert
 </li><li>everything else succeeds</li></ul></li></ul></div>
-<div class='item'><a name='sgs-PushIterator-function'></a><hr><h2>sgs_PushIterator [function]</h2><h3>SGSRESULT sgs_PushIterator( sgs_Context* C, sgs_StkIdx item )</h3><h4>create an iterator from the specified item of the current stack frame</h4><ul><li>iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value
+<div class='item'><a name='sgs-PushIterator-P-function'></a><hr><h2>sgs_PushIterator(P) [function]</h2><h3>SGSRESULT sgs_PushIterator( sgs_Context* C, sgs_StkIdx item )</h3><h4>create and push an iterator from the specified item of the current stack frame</h4><h3>SGSRESULT sgs_PushIteratorP( sgs_Context* C, sgs_Variable* var )</h3><h4>create and push an iterator from the specified variable</h4><ul><li>iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value
 </li><li>iterator starts at the pre-first position, so nothing can be read before the initial state</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
 </li><li>SGS_ENOTSUP: variable type does not support iterators (only objects support them)
 </li><li>SGS_ENOTFND: object type does not support iterators (iterator conversion request failed)
 </li><li>any other code can be returned by the object</li></ul></div>
-<div class='item'><a name='sgs-IterAdvance-function'></a><hr><h2>sgs_IterAdvance [function]</h2><h3>SGSMIXED sgs_IterAdvance( sgs_Context* C, sgs_StkIdx item )</h3><h4>advance the iterator to the next position, returning if the current position is still in range or an error code on failure</h4><ul><li>this is the way it&#39;s expected to be usually called: <code>while( sgs_IterAdvance( C, item ) &gt; 0 ){ ... sgs_IterPushData ... }</code></li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
+<div class='item'><a name='sgs-GetIterator-P-function'></a><hr><h2>sgs_GetIterator(P) [function]</h2><h3>SGSRESULT sgs_GetIterator( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>create an iterator from the specified item of the current stack frame</h4><h3>SGSRESULT sgs_GetIteratorP( sgs_Context* C, sgs_Variable* var, sgs_Variable* out )</h3><h4>create an iterator from the specified variable</h4><ul><li>iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value
+</li><li>iterator starts at the pre-first position, so nothing can be read before the initial state</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
+</li><li>SGS_ENOTSUP: variable type does not support iterators (only objects support them)
+</li><li>SGS_ENOTFND: object type does not support iterators (iterator conversion request failed)
+</li><li>any other code can be returned by the object</li></ul></div>
+<div class='item'><a name='sgs-IterAdvance-P-function'></a><hr><h2>sgs_IterAdvance(P) [function]</h2><h3>SGSMIXED sgs_IterAdvance( sgs_Context* C, sgs_StkIdx item )</h3><h3>SGSMIXED sgs_IterAdvanceP( sgs_Context* C, sgs_Variable* var )</h3><h4>advance the iterator to the next position, returning if the current position is still in range or an error code on failure</h4><ul><li>this is the way it&#39;s expected to be usually called: <code>while( sgs_IterAdvance( C, item ) &gt; 0 ){ ... sgs_IterPushData ... }</code></li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
 </li><li>SGS_EINVAL: iterated object changed in a way that iterator does not support (currently a size equality test)
 </li><li>SGS_EINPROC: internal failure in the object interface</li></ul></div>
-<div class='item'><a name='sgs-IterPushData-function'></a><hr><h2>sgs_IterPushData [function]</h2><h3>SGSRESULT sgs_IterPushData( sgs_Context* C, sgs_StkIdx item, int key, int value )</h3><h4>load and push the data associated with the current position</h4><ul><li><code>key</code> and <code>value</code> are booleans that specify if the respective value should be returned
+<div class='item'><a name='sgs-IterPushData-P-function'></a><hr><h2>sgs_IterPushData(P) [function]</h2><h3>SGSRESULT sgs_IterPushData( sgs_Context* C, sgs_StkIdx item, int key, int value )</h3><h3>SGSRESULT sgs_IterPushDataP( sgs_Context* C, sgs_Variable* var, int key, int value )</h3><h4>load and push data associated with the current position</h4><ul><li><code>key</code> and <code>value</code> are booleans that specify if the respective value should be returned
 </li><li>first the key is pushed, then the value
 </li><li>if neither <code>key</code> nor <code>value</code> are expected, the call succeeds and doesn&#39;t push anything</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
+</li><li>SGS_EINVAL: iterated object changed in a way that iterator does not support
+</li><li>SGS_EINPROC: internal failure in the object interface</li></ul></div>
+<div class='item'><a name='sgs-IterGetData-P-function'></a><hr><h2>sgs_IterGetData(P) [function]</h2><h3>SGSRESULT sgs_IterGetData( sgs_Context* C, sgs_StkIdx item, sgs_Variable* key, sgs_Variable* value )</h3><h3>SGSRESULT sgs_IterGetDataP( sgs_Context* C, sgs_Variable* var, sgs_Variable* key, sgs_Variable* value )</h3><h4>load data associated with the current position</h4><ul><li><code>key</code> and <code>value</code> are variables where the data is written if the pointer is not NULL
+</li><li>if neither <code>key</code> nor <code>value</code> are expected, the call succeeds and doesn&#39;t retrieve anything</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
 </li><li>SGS_EINVAL: iterated object changed in a way that iterator does not support
 </li><li>SGS_EINPROC: internal failure in the object interface</li></ul></div>
 <div class='item'><a name='sgs-ArraySize-function'></a><hr><h2>sgs_ArraySize [function]</h2><h3>SGSMIXED sgs_ArraySize( sgs_Context* C, sgs_StkIdx item )</h3><h4>check if the specified stack item is an array and return its size or error code on failure</h4><h4>error codes</h4><ul><li>SGS_EINVAL: index out of bounds / variable was not an array</li></ul></div>
@@ -1438,7 +1449,7 @@ Depending on the argument, it is called by different sources:
 </p><ul><li>type conversion: to*** function families and other conversion triggers (like operators) in SGScript and the Get/To/Parse function families in the C API.
 </li><li>SGS_CONVOP_CLONE: called on <a href="#clone-function">clone</a> / <a href="#sgs-CloneItem-function">sgs_Clone</a>
 </li><li>SGS_CONVOP_TYPEOF: called on <a href="#typeof-function">typeof</a> / <a href="#sgs-TypeOf-function">sgs_TypeOf</a>
-</li><li>SGS_CONVOP_TOITER: called on foreach / <a href="#sgs-PushIterator-P">sgs_PushIterator(P)</a> / <a href="#sgs-GetIterator-P">sgs_GetIterator(P)</a></li></ul><h5>Additional arguments:</h5><ul><li>int type -- one of SGS_VT_[BOOL|INT|REAL|STRING|PTR] or SGS_CONVOP_CLONE / SGS_CONVOP_TYPEOF / SGS_CONVOP_TOITER</li></ul><h5>Stack frame:</h5><p>
+</li><li>SGS_CONVOP_TOITER: called on foreach / <a href="#sgs-PushIterator-P-function">sgs_PushIterator(P)</a> / <a href="#sgs-GetIterator-P-function">sgs_GetIterator(P)</a></li></ul><h5>Additional arguments:</h5><ul><li>int type -- one of SGS_VT_[BOOL|INT|REAL|STRING|PTR] or SGS_CONVOP_CLONE / SGS_CONVOP_TYPEOF / SGS_CONVOP_TOITER</li></ul><h5>Stack frame:</h5><p>
 Empty at beginning. Expected to have at least one item on stack after a successful conversion. The topmost one is used.
 </p><p>
 Depending on the argument, it requires different variable types on stack:
@@ -1453,39 +1464,47 @@ None.
 Empty.
 </p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.</li></ul><h5>Additional notes:</h5><p>
 Callback requires no data but expects that <a href="#sgs-Serialize-function">sgs_Serialize</a> / <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> is successfully called once. In the case of sgs_SerializeObject, the necessary number (equal to argument count, passed to the function) of sgs_Serialize calls must be made before it.
-</p><h4>DUMP - debug dump callback</h4><h5>When called:</h5><ul><li><a href="#printvar-function">printvar,</a> @dumpvar, <a href="#printvar-ext-function">printvar_ext,</a> @dumpvar_ext in SGScript.
+</p><h4>DUMP - debug dump callback</h4><h5>When called:</h5><ul><li><a href="#printvar-function">printvar</a>, <a href="#dumpvar-function">dumpvar</a>, <a href="#printvar-ext-function">printvar_ext</a>, <a href="#dumpvar-ext-function">dumpvar_ext</a> in SGScript.
 </li><li><a href="#sgs-DumpVar-function">sgs_DumpVar</a> in the C API.</li></ul><h5>Additional arguments:</h5><ul><li>int maxdepth -- remaining recursion depth of dump to be passed on to <a href="#sgs-DumpVar-function">sgs_DumpVar</a> calls.</li></ul><h5>Stack frame:</h5><p>
 Empty at beginning. Expected to have at least one item on stack after a successful conversion. The topmost one is used.
 </p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.</li></ul><h5>Additional notes:</h5><ul><li>Callback expects a string variable on the top of the stack.
-</li><li><a href="#sgs-DumpVar-function">sgs_DumpVar</a> with maxdepth &lt;= 0 returns &quot;...&quot;, so it is not necessary to handle such cases beyond passing the parameter.</li></ul><h4>GCMARK - garbage collector marking callback</h4><h5>When called:</h5><ul><li><a href="#gc-execute">gc_execute</a> in SGScript.
+</li><li><a href="#sgs-DumpVar-function">sgs_DumpVar</a> with maxdepth &lt;= 0 returns &quot;...&quot;, so it is not necessary to handle such cases beyond passing the parameter.</li></ul><h4>GCMARK - garbage collector marking callback</h4><h5>When called:</h5><ul><li><a href="#gc-collect-function">gc_collect</a> in SGScript.
 </li><li><a href="#sgs-GCMark-function">sgs_GCMark</a> / <a href="#sgs-GCExecute-function">sgs_GCExecute</a> in the C API.</li></ul><h5>Additional arguments:</h5><p>
 None.
 </p><h5>Stack frame:</h5><p>
 Empty.
 </p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.</li></ul><h5>Additional notes:</h5><ul><li>Callback expects that sgs_GCMark is called on all of the owned variables.
 </li><li>It is important to minimize the possibility of failure here. The system cannot help in any way if memory or ownership states are corrupted.</li></ul><h4>GETNEXT - iterator control callback</h4><h5>When called:</h5><ul><li>foreach in SGScript.
-</li><li><a href="#sgs-IterAdvance-P">sgs_IterAdvance(P)</a> / <a href="#sgs-IterPushData-P">sgs_IterPushData(P)</a> / <a href="#sgs-IterGetData-P">sgs_IterGetData(P)</a></li></ul><h5>Additional arguments:</h5><ul><li>int act -- specifies the actions that should be taken in this call.
+</li><li><a href="#sgs-IterAdvance-P-function">sgs_IterAdvance(P)</a> / <a href="#sgs-IterPushData-P-function">sgs_IterPushData(P)</a> / <a href="#sgs-IterGetData-P-function">sgs_IterGetData(P)</a></li></ul><h5>Additional arguments:</h5><ul><li>int act -- specifies the actions that should be taken in this call.
 <ul><li>if argument == 0, iterator&#39;s position must be increased by one step and the return value must contain whether iterator has not reached end (positive value if so, otherwise - 0) or an error if callback has failed
 </li><li>otherwise, callback must push the data required (if SGS_GETNEXT_KEY is set, the key, and if SGS_GETNEXT_VALUE is set - the value, in exactly that order)</li></ul></li></ul><h5>Stack frame:</h5><p>
 Empty at beginning. Expects at least one (if either flag is set, but not both) or two (if both flags are set) variables on success. Key first, value second.
 </p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.
 </li><li>if argument == 0, must return whether iterator has not reached end (positive value if so, otherwise - 0)</li></ul><h5>Additional notes:</h5><p>
 None.
-</p><h4>SGS_OP_CALL - the &quot;function call&quot; callback</h4><p>
-<b>Called</b> when an object is used like a function (function call in SGScript or Call function family in the C API).
-</p><p>
-<b>Argument</b> is not used.
-</p><p>
-<b>Stack frame</b> contains the arguments and can possibly be expanded by one unit with sgs_Method if a method call is done.
-</p><h4>SGS_OP_EXPR - expression callback</h4><p>
-<b>Called</b> when an object is used in one of the following expressions, specified by the argument:
-</p><ul><li>SGS_EOP_ADD: addition (+, +=), stack contains both operands
-</li><li>SGS_EOP_SUB: subtraction (-, -=), stack contains both operands
-</li><li>SGS_EOP_MUL: multiplication (*, *=), stack contains both operands
-</li><li>SGS_EOP_DIV: division (/, /=), stack contains both operands
-</li><li>SGS_EOP_MOD: modulo (%, %=), stack contains both operands
-</li><li>SGS_EOP_COMPARE: comparison (&lt;, &lt;=, &gt;, &gt;=, ==, !=, ===, !==), stack contains 2 arguments, expects integer/real value: &gt;0 if A &gt; B, &lt;0 if A &lt; B, =0 if A = B
-</li><li>SGS_EOP_NEGATE: negation (-), stack contains the object</li></ul></div>
+</p><h4>CALL - the &quot;function call&quot; callback</h4><h5>When called:</h5><ul><li>when an object is used like a function
+<ul><li><code>object_variable( .. )</code> in SGScript
+</li><li>Call function family in the C API</li></ul></li></ul><h5>Additional arguments:</h5><p>
+None.
+</p><h5>Stack frame:</h5><p>
+Contains all the same things as any C function call would: optional <code>this</code> variable and optional argument list. Expects at least the returned number of items after the call to be used as return values.
+</p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.
+</li><li>On success, the number returned is the number of variables returned by the function.</li></ul><h5>Additional notes:</h5><p>
+None.
+</p><h4>EXPR - expression callback</h4><h4>When called:</h4><ul><li>On arithmetic operations with the object as one or both operands in SGScript.
+</li><li>On <a href="#sgs-ArithOp">sgs_ArithOp</a> in the C API.</li></ul><h5>Additional arguments:</h5><ul><li>sgs_Variable* A - the first (left side) operand or the only one in case of SGS_EOP_NEGATE
+</li><li>sgs_Variable* B - the second (right side) operand or NULL in case of SGS_EOP_NEGATE
+</li><li>int op - operation type, one of SGS_EOP_[ADD|SUB|MUL|DIV|MOD|COMPARE|NEGATE]</li></ul><h5>Stack frame:</h5><p>
+Empty at beginning. Expects at least one variable on success (the topmost one will be used).
+</p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.</li></ul><h5>Additional notes:</h5><ul><li>SGS_EOP_COMPARE expects int/real value: &gt;0 if A &gt; B, &lt;0 if A &lt; B, =0 if A = B</li></ul><p>
+The full list of operators triggering the operations:
+</p><ul><li>SGS_EOP_ADD: binary +, +=
+</li><li>SGS_EOP_SUB: binary -, -=
+</li><li>SGS_EOP_MUL: *, *=
+</li><li>SGS_EOP_DIV: /, /=
+</li><li>SGS_EOP_MOD: %, %=
+</li><li>SGS_EOP_COMPARE: &lt;, &lt;=, &gt;, &gt;=, ==, !=, ===, !==
+</li><li>SGS_EOP_NEGATE: unary -</li></ul></div>
 <div class='item'><a name='Interaction-with-the-environment'></a><hr><h2>Interaction with the environment</h2><p>
 Most operations are directed towards the scripting engine, that is - environment makes a function call and scripting engine handles it. For everything else, there are callbacks.
 </p><h4>Memory allocation</h4><ul><li>sgs_MemFunc must be specified in creation of the scripting engine context
@@ -1512,14 +1531,18 @@ Most operations are directed towards the scripting engine, that is - environment
 <ul><li>SGS_HOOK_ENTER - function was entered
 </li><li>SGS_HOOK_EXIT - function was exited
 </li><li>SGS_HOOK_STEP - instruction is about to be executed</li></ul></li></ul></li></ul></div>
-<div class='item'><a name='Commonly-required-advanced-tasks'></a><hr><h2>Commonly required advanced tasks</h2><h4>Method handling</h4><ul><li>version 1: plain method handling:</li></ul><pre>sgs_FuncName( C, &quot;&lt;object&gt;.&lt;method&gt;&quot; );
+<div class='item'><a name='Commonly-required-advanced-tasks'></a><hr><h2>Commonly required advanced tasks</h2><h4>Method handling</h4><ul><li>the preferred way to handle methods with a specific object type for `this`:</li></ul><pre>ObjectDataStruct* data;
+if( !SGS_PARSE_METHOD( C, Object_interface_pointer, data, Object_name, Method_name ) )
+    return 0;</pre><ul><li>the OLD way, version 1:</li></ul><pre>sgs_FuncName( C, &quot;&lt;object&gt;.&lt;method&gt;&quot; );
 if( !sgs_Method( C ) || !sgs_IsObject( C, 0, Object_interface_pointer ) )
     return sgs_ArgErrorExt( C, 0, 1, &quot;&lt;object&gt;&quot;, &quot;&quot; );
-ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );</pre><ul><li>version 2: Method + function handling (function that can be called as a method too)</li></ul><pre>int method_call = sgs_Method( C );
+ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
+sgs_HideThis( C );</pre><ul><li>the OLD way, version 2: Method + function handling (function that can be called as a method too)</li></ul><pre>int method_call = sgs_Method( C );
 sgs_FuncName( C, method_call ? &quot;&lt;object&gt;.&lt;method&gt;&quot; : &quot;&lt;object_function&gt;&quot; );
 if( !sgs_IsObject( C, 0, Object_interface_pointer ) )
     return sgs_ArgErrorExt( C, 0, method_call, &quot;&lt;object&gt;&quot;, &quot;&quot; );
-ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );</pre></div>
+ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
+sgs_ForceHideThis( C );</pre><ul><li>the reason why the first method is preferred to others is: it&#39;s shorter, does pretty much the same thing and resolves to <a href="#sgs-ParseMethod">sgs_ParseMethod</a>, which allows sharing more code and rebuilding the <a href="#SGS-PARSE-METHOD">SGS_PARSE_METHOD</a> macro abstraction, if necessary</li></ul></div>
 <div class='item'><a name='Standard-library-reference'></a><hr><h2>Standard library reference</h2></div>
 <div class='item'><a name='Core-library'></a><hr><h2>Core library</h2><p>
 This library is loaded on initialization and contains the functions and constants necessary to do primary actions:
@@ -1760,7 +1783,7 @@ pcall(function(){ print x; }); // nothing
 pcall(function(){ print x; }, handler ); // renamed warning
 pcall(function(){ print x; }, handler2 ); // changed type to error</pre></div>
 <div class='item'><a name='assert-function'></a><hr><h2>assert [function]</h2><h3>assert( var condition[, string message] )</h3><h4>if condition evaluates to &#39;false&#39;, emits an error &quot;assertion failed&quot; or if message is defined, &quot;assertion failed: &lt;message&gt;&quot;</h4><pre>assert( text, &quot;text was not defined&quot; );</pre></div>
-<div class='item'><a name='eval-function'></a><hr><h2>eval [function]</h2><h3>eval( string code )</h3><h4>returns the result of evaluating the passed <code>code</code> string as SGScript code</h4><ul><li>this function is equivalent to <a href="#sgs-EvalBuffer-sgs-EvalString">sgs_EvalBuffer/@sgs_EvalString</a> in the C API</li></ul><pre>eval(&quot;print 5;&quot;); // prints 5</pre></div>
+<div class='item'><a name='eval-function'></a><hr><h2>eval [function]</h2><h3>eval( string code )</h3><h4>returns the result of evaluating the passed <code>code</code> string as SGScript code</h4><ul><li>this function is equivalent to <a href="#sgs-EvalBuffer-function">sgs_EvalBuffer</a> / <a href="#sgs-EvalString-function-alias">sgs_EvalString</a> in the C API</li></ul><pre>eval(&quot;print 5;&quot;); // prints 5</pre></div>
 <div class='item'><a name='eval-file-function'></a><hr><h2>eval_file [function]</h2><h3>eval_file( string filename )</h3><h4>returns the result of evaluating the file pointed to by <code>filename</code> as SGScript code</h4><ul><li>this function is equivalent to <a href="#sgs-EvalFile-function">sgs_EvalFile</a> in the C API</li></ul><pre>eval_file(&quot;myfile.sgs&quot;); // ???</pre></div>
 <div class='item'><a name='compile-sgs-function'></a><hr><h2>compile_sgs [function]</h2><h3>compile_sgs( string code )</h3><h4>returns the generated bytecode or null + error info</h4><ul><li>this function is equivalent to <a href="#sgs-Compile">sgs_Compile</a> in the C API</li></ul><pre>compile_sgs( io_file_read( &quot;myfile.sgs&quot; ) ); // ???</pre></div>
 <div class='item'><a name='include-library-function'></a><hr><h2>include_library [function]</h2><h3>include_library( string lib[, bool override ] )</h3><h4>loads the global variables of the specific library <code>lib</code> in the state, returns success, as <code>bool</code>, emits a warning on failure</h4><ul><li>lib must be one of &#39;fmt&#39;, &#39;io&#39;, &#39;math&#39;, &#39;os&#39;, &#39;string&#39;
@@ -1815,7 +1838,7 @@ print( 5 ); // this line is not reached</pre></div>
 </p><pre>old_level = sys_replevel( SGS_ERROR ); // report only errors or worse
 magic = calculate_magic(); // any warnings are never processed at this point
 sys_replevel( old_level ); // restore the old reported level</pre></div>
-<div class='item'><a name='sys-stat-function'></a><hr><h2>sys_stat [function]</h2><h3>sys_stat( code )</h3><h4>prints info about virtual machine state, everything is implementation-defined</h4><ul><li>accepted codes are the same as for <a href="#sgs-Stat-function">sgs_Stat,</a> which this function is equivalent to</li></ul><pre>sys_stat( 11 ); // dumps all globals</pre></div>
+<div class='item'><a name='sys-stat-function'></a><hr><h2>sys_stat [function]</h2><h3>sys_stat( code )</h3><h4>prints info about virtual machine state, everything is implementation-defined</h4><ul><li>accepted codes are the same as for <a href="#sgs-Stat-function">sgs_Stat</a>, which this function is equivalent to</li></ul><pre>sys_stat( 11 ); // dumps all globals</pre></div>
 <div class='item'><a name='errno-function'></a><hr><h2>errno [function]</h2><h3>errno( as_string = false )</h3><h4>returns the last relevant error number for the C standard library, as an integer or a string if <code>as_string</code> is set</h4><ul><li>last relevant error number is defined by <a href="#sgs-Errno">sgs_Errno</a> / <a href="#sgs-SetErrno-function-alias">sgs_SetErrno</a> C API functions</li></ul><pre>data = io_file_read( &quot;doesnotexist&quot; ); // file that does not exist
 print errno(); // prints 2
 print errno(true); // prints &quot;No such file or directory&quot; on Windows</pre></div>
@@ -1889,7 +1912,7 @@ a.unshift( 6, 7 ); // a = [6,7,5] now</pre></div>
 </li><li>end of array can be inserted to using position &lt;size&gt; or -1</li></ul></li></ul><pre>a = [ 5, 7 ];
 a.insert( 1, 6 ); // inserts 6 at position 1 (before item with index 1)
 a.insert( -1, 8 ); // appends to the end of array, a = [5,6,7,8] now</pre></div>
-<div class='item'><a name='array-erase-method'></a><hr><h2>array.erase [method]</h2><h3>array.erase( int[, int] )</h3><h4>erases item or a range of items from the array, depending on the arguments passed or emits a warning on failure, returns the array for chaining</h4><ul><li>both arguments have same index processing rules as <a href="#array-insert-method">array.insert(),</a> but with one difference - if both arguments are passed, after resolving (converting negative indices to positive ones, if there are any), first must be smaller than second</li></ul><pre>a = [ 5, 6, 7, 8 ];
+<div class='item'><a name='array-erase-method'></a><hr><h2>array.erase [method]</h2><h3>array.erase( int[, int] )</h3><h4>erases item or a range of items from the array, depending on the arguments passed or emits a warning on failure, returns the array for chaining</h4><ul><li>both arguments have same index processing rules as <a href="#array-object">array</a>.insert(), but with one difference - if both arguments are passed, after resolving (converting negative indices to positive ones, if there are any), first must be smaller than second</li></ul><pre>a = [ 5, 6, 7, 8 ];
 a.erase( 1, 2 ); // erases all items between position 1 and 2, including; gives a = [5,8]
 a.erase( 0 ); // a = [8]</pre></div>
 <div class='item'><a name='array-part-method'></a><hr><h2>array.part [method]</h2><h3>array.part( int from[, int max ] )</h3><h4>returns a new array starting from index <code>from</code>, with the max. size <code>max</code></h4><ul><li>if <code>from</code> is negative, it is subtracted from the end of array
@@ -1917,7 +1940,7 @@ a.capacity( 5 ); // a.capacity = 5 and two variable additions can now happen wit
 <div class='item'><a name='array-sort-method'></a><hr><h2>array.sort [method]</h2><h3>array.sort([ bool reverse ])</h3><h4>sorts the array using the <a href="#sgs-Compare-function">sgs_Compare</a> C API function for comparisons, returns the array for chaining</h4><ul><li>if <code>reverse</code> is true, array is sorted in the reverse order</li></ul><pre>a = [ 6, 8, 7, 5 ];
 a.sort(); // a = [5,6,7,8]</pre></div>
 <div class='item'><a name='array-sort-custom-method'></a><hr><h2>array.sort_custom [method]</h2><h3>array.sort_custom( callable[, bool reverse ] )</h3><h4>sorts the array using the callable for comparisons, returns the array for chaining</h4><p>
-<em class='notice-bgr'>This function is considerably slower than <a href="#array-sort-method">array.sort</a> or <a href="#array-sort-mapped-method">array.sort_mapped</a> so prefer those if performance matters.</em>
+<em class='notice-bgr'>This function is considerably slower than <a href="#array-object">array</a>.sort or <a href="#array-object">array</a>.sort_mapped so prefer those if performance matters.</em>
 </p><ul><li>callable must return a number, specifying the relative order of the two passed arguments: less than 0 if first variable should be placed before second, greater than 0 if first variable should be placed after second, or 0 if it doesn&#39;t matter
 </li><li>if <code>reverse</code> is true, array is sorted in the reverse order</li></ul><pre>a = [ 6, 8, 7, 5 ];
 // this code will sort numbers into odd/even ones and in ascending order
@@ -1930,14 +1953,14 @@ a.sort_mapped( b ); // a = [6,8,5,7]</pre></div>
 <div class='item'><a name='array-find-method'></a><hr><h2>array.find [method]</h2><h3>array.find( var item[, bool strict[, int from ]] )</h3><h4>attempts to find <code>item</code> in array, starting from 0 or the index passed with <code>from</code>, if it exists, using basic or strict equality comparisons (depending on `strict`), returning the index or &#39;null&#39; if item was not found</h4><ul><li>if strict comparisons are enabled, variable types are also checked for equality</li></ul><pre>a = [ 5, 6, 7, 8 ];
 a.find( &quot;7&quot; ); // returns 2
 a.find( &quot;7&quot;, true ); // returns null</pre></div>
-<div class='item'><a name='array-remove-method'></a><hr><h2>array.remove [method]</h2><h3>array.remove( var item[, bool strict[, bool all[, int from ]]] )</h3><h4>attepts to find and remove first or all <code>item</code> variables in array (depending on `all`), according to the rules specified in <a href="#array-find-method">array.find(),</a> returning the number of removed items</h4><pre>a = [ 5, 2, 6, 7, 8, 2 ];
+<div class='item'><a name='array-remove-method'></a><hr><h2>array.remove [method]</h2><h3>array.remove( var item[, bool strict[, bool all[, int from ]]] )</h3><h4>attepts to find and remove first or all <code>item</code> variables in array (depending on `all`), according to the rules specified in <a href="#array-object">array</a>.find(), returning the number of removed items</h4><pre>a = [ 5, 2, 6, 7, 8, 2 ];
 a.remove( &quot;7&quot; ); // returns 1; a = [5,2,6,8,2]
 a.remove( &quot;6&quot;, true ); // returns 0; a remains unchanged
 a.remove( 2, false, true ); // returns 2; a = [5,6,8]</pre></div>
 <div class='item'><a name='array-unique-method'></a><hr><h2>array.unique [method]</h2><h3>array.unique( bool strconv = false )</h3><h4>returns an array without duplicates, where a duplicate is a strictly equal variable or a string conversion match</h4><ul><li>if <code>strconv</code> is true, items are converted to strings before comparison</li></ul><pre>a = [ 5, 3, 2, 3, 2, &quot;3&quot; ];
 a.unique(); // returns [5,3,2,&quot;3&quot;]
 a.unique( true ); // returns [5,3,2]</pre></div>
-<div class='item'><a name='array-random-method'></a><hr><h2>array.random [method]</h2><h3>array.random( int num )</h3><h4>return <code>num</code> randomly chosen items from the array</h4><ul><li>to retrieve a part of the array in random order without duplicates, <a href="#array-shuffle-method">array.shuffle</a> can be used
+<div class='item'><a name='array-random-method'></a><hr><h2>array.random [method]</h2><h3>array.random( int num )</h3><h4>return <code>num</code> randomly chosen items from the array</h4><ul><li>to retrieve a part of the array in random order without duplicates, <a href="#array-object">array</a>.shuffle can be used
 </li><li>items after RAND_MAX will currently not be returned</li></ul></div>
 <div class='item'><a name='array-shuffle-method'></a><hr><h2>array.shuffle [method]</h2><h3>array.shuffle()</h3><h4>change the order of items in the array</h4></div>
 <div class='item'><a name='dict-object'></a><hr><h2>dict [object]</h2><ul><li>features:
@@ -1987,9 +2010,9 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li>GC-safe</li></ul></li></ul></div>
 <div class='item'><a name='Formatting-library-fmt'></a><hr><h2>Formatting library (&quot;fmt&quot;)</h2><p>
 This library includes functions and objects for parsing binary and text buffers.
-</p><ul><li>binary format -- <a href="#fmt-pack-function">fmt_pack,</a> @fmt_unpack, <a href="#fmt-pack-count-function">fmt_pack_count,</a> @fmt_pack_size
-</li><li>base64 format -- <a href="#fmt-base64-encode-function">fmt_base64_encode,</a> @fmt_base64_decode
-</li><li>text format -- <a href="#fmt-parser-object">fmt_parser,</a> @fmt_text, <a href="#fmt-charcc-function">fmt_charcc</a></li></ul><h4>Functions:</h4><ul><li><a href="#fmt-pack-function">fmt_pack</a> - pack variables into a byte buffer, according to the format string
+</p><ul><li>binary format -- <a href="#fmt-pack-function">fmt_pack</a>, <a href="#fmt-unpack-function">fmt_unpack</a>, <a href="#fmt-pack-count-function">fmt_pack_count</a>, <a href="#fmt-pack-size-function">fmt_pack_size</a>
+</li><li>base64 format -- <a href="#fmt-base64-encode-function">fmt_base64_encode</a>, <a href="#fmt-base64-decode-function">fmt_base64_decode</a>
+</li><li>text format -- <a href="#fmt-parser-object">fmt_parser</a>, <a href="#fmt-text-function">fmt_text</a>, <a href="#fmt-charcc-function">fmt_charcc</a></li></ul><h4>Functions:</h4><ul><li><a href="#fmt-pack-function">fmt_pack</a> - pack variables into a byte buffer, according to the format string
 </li><li><a href="#fmt-unpack-function">fmt_unpack</a> - unpack byte buffer to an array of variables, according to the format string
 </li><li><a href="#fmt-pack-count-function">fmt_pack_count</a> - returns the number of items found in a packing format string
 </li><li><a href="#fmt-pack-size-function">fmt_pack_size</a> - returns the number of bytes found in a packing format string
@@ -2117,8 +2140,8 @@ This library contains the functions necessary to work with the file system (file
 </li><li><a href="#io-file-seek-method">seek</a> - change read/write position in file
 </li><li><a href="#io-file-flush-method">flush</a> - flush the write buffer
 </li><li><a href="#io-file-setbuf-method">setbuf</a> - change the size and flush trigger of the write buffer or disables it
-</li></ul><li><a href="#io-dir-function">io_dir</a> - directory iterator object, for use in &quot;foreach&quot;</li></ul><h4>Constants:</h4><ul><li><a href="#FILE-constants">FILE_***</a> - mode constants for <a href="#io-file-open-method">io_file.open</a> / <a href="#io-file-function">io_file [function]</a>
-</li><li><a href="#SEEK-constants">SEEK_***</a> - mode constants for <a href="#io-file-seek-method">io_file.seek</a>
+</li></ul><li><a href="#io-dir-function">io_dir</a> - directory iterator object, for use in &quot;foreach&quot;</li></ul><h4>Constants:</h4><ul><li><a href="#FILE-constants">FILE_***</a> - mode constants for <a href="#io-file-object">io_file</a>.open / <a href="#io-file-function">io_file [function]</a>
+</li><li><a href="#SEEK-constants">SEEK_***</a> - mode constants for <a href="#io-file-object">io_file</a>.seek
 </li><li><a href="#FST-constants">FST_***</a> - file system item type constants for <a href="#io-stat-function">io_stat</a></li></ul></div>
 <div class='item'><a name='io-setcwd-function'></a><hr><h2>io_setcwd [function]</h2><h3>io_setcwd( string cwd )</h3><h4>sets the current working directory, returns bool/sets errno</h4></div>
 <div class='item'><a name='io-getcwd-function'></a><hr><h2>io_getcwd [function]</h2><h3>io_getcwd()</h3><h4>returns the current working directory or null, if for some reason an error occured</h4><ul><li>in case of failure, function will set errno</li></ul></div>
@@ -2166,7 +2189,7 @@ f.close(); // returns false</pre></div>
 <div class='item'><a name='io-file-seek-method'></a><hr><h2>io_file.seek [method]</h2><h3>io_file.seek( int off, int mode )</h3><h4>sets the offset in file, returns bool/sets errno</h4><ul><li><code>mode</code> must be one of SEEK_SET (sets as-is), SEEK_CUR (sets relative to current), SEEK_END (sets relative to end)</li></ul></div>
 <div class='item'><a name='io-file-flush-method'></a><hr><h2>io_file.flush [method]</h2><h3>io_file.flush()</h3><h4>flushes a buffered file, returns bool</h4></div>
 <div class='item'><a name='io-file-setbuf-method'></a><hr><h2>io_file.setbuf [method]</h2><h3>io_file.setbuf( int size )</h3><h4>sets the size of file buffer (0 to disable buffering), returns bool</h4><ul><li>buffering allows to avoid committing each write immediately to disk, resulting in a performance gain, however it may introduce issues if application is expected to fail at any moment, resulting in some data not being written in such cases</li></ul></div>
-<div class='item'><a name='io-file-function'></a><hr><h2>io_file [function]</h2><h3>io_file([ string name, int mode ])</h3><h4>creates and returns a file, optionally allowing to open it on creation</h4><ul><li>see <a href="#io-file-open-method">io_file.open()</a> for more info on opening the file</li></ul></div>
+<div class='item'><a name='io-file-function'></a><hr><h2>io_file [function]</h2><h3>io_file([ string name, int mode ])</h3><h4>creates and returns a file, optionally allowing to open it on creation</h4><ul><li>see <a href="#io-file-object">io_file</a>.open() for more info on opening the file</li></ul></div>
 <div class='item'><a name='io-dir-directory-iterator-object'></a><hr><h2>io_dir (directory_iterator) [object]</h2><ul><li>features:
 <ul><li>tostring = &quot;directory_iterator&quot;
 </li><li>iterator interface (key = whether real item, value = item name)
@@ -2175,8 +2198,8 @@ f.close(); // returns false</pre></div>
 </li><li>GC-safe
 </li><li>type identification (returns the string &quot;directory_iterator&quot;)</li></ul></li></ul></div>
 <div class='item'><a name='io-dir-function'></a><hr><h2>io_dir [function]</h2><h3>io_dir( string dir )</h3><h4>creates a directory iterator for the directory <code>dir</code>, sets errno, returns null and emits a warning on failure</h4></div>
-<div class='item'><a name='FILE-constants'></a><hr><h2>FILE_*** [constants]</h2><h3>FILE_READ, FILE_WRITE</h3><h4>mode constants for <a href="#io-file-open-method">io_file.open</a> / <a href="#io-file-function">io_file [function]</a></h4></div>
-<div class='item'><a name='SEEK-constants'></a><hr><h2>SEEK_*** [constants]</h2><h3>SEEK_SET, SEEK_CUR, SEEK_END</h3><h4>mode constants for <a href="#io-file-seek-method">io_file.seek</a></h4></div>
+<div class='item'><a name='FILE-constants'></a><hr><h2>FILE_*** [constants]</h2><h3>FILE_READ, FILE_WRITE</h3><h4>mode constants for <a href="#io-file-object">io_file</a>.open / <a href="#io-file-function">io_file [function]</a></h4></div>
+<div class='item'><a name='SEEK-constants'></a><hr><h2>SEEK_*** [constants]</h2><h3>SEEK_SET, SEEK_CUR, SEEK_END</h3><h4>mode constants for <a href="#io-file-object">io_file</a>.seek</h4></div>
 <div class='item'><a name='FST-constants'></a><hr><h2>FST_*** [constants]</h2><h3>FST_UNKNOWN, FST_FILE, FST_DIR</h3><h4>file system item type constants for <a href="#io-stat-function">io_stat</a></h4></div>
 <div class='item'><a name='Math-library-math'></a><hr><h2>Math library (&quot;math&quot;)</h2><p>
 This library contains the basic math functions for processing real values.
@@ -2353,7 +2376,7 @@ This library includes regular expression match &amp; replace functions.
 </li></ul></li></ul><li>the first character in the pattern specifies a delimiter that separates the pattern from modifiers
 <ul><li>example pattern strings: &quot;/^[a-z]+/mi&quot;, &quot;#[a-z0-9_]+.*?#s&quot;
 </li></ul><li>more info about the supported features and modifiers at https://github.com/snake5/sgregex</li></ul></div>
-<div class='item'><a name='re-match-all-function'></a><hr><h2>re_match_all [function]</h2><h3>re_match_all( string str, string pattern, int flags = 0, int offset = 0 )</h3><h4>check for matches in string <code>str</code> for <code>pattern</code>, returning the number of matches or details of all matches, as specified in <code>flags</code></h4><ul><li>similar to <a href="#re-match-function">re_match,</a> only difference is in the return value:
+<div class='item'><a name='re-match-all-function'></a><hr><h2>re_match_all [function]</h2><h3>re_match_all( string str, string pattern, int flags = 0, int offset = 0 )</h3><h4>check for matches in string <code>str</code> for <code>pattern</code>, returning the number of matches or details of all matches, as specified in <code>flags</code></h4><ul><li>similar to <a href="#re-match-function">re_match</a>, only difference is in the return value:
 <ul><li>if <code>flags</code> is one of the special values, function returns an array of matches where each match is an array of captured ranges
 <ul><li>each entry is same as in <a href="#re-match-function">re_match</a></li></ul></li></ul></li></ul></div>
 <div class='item'><a name='re-replace-function'></a><hr><h2>re_replace [function]</h2><h3>re_replace( string str, string pattern, string replacement )</h3><h4>find and replace all occurrences of <code>pattern</code> in string <code>str</code> with the <code>replacement</code> string</h4><ul><li>replacement string can contain backreferences in the forms &quot;$[0-9]&quot; or &quot;\[0-9]&quot; (in a string constant, a double backslash is required due to rules in SGScript)
@@ -2457,7 +2480,7 @@ string_utf8_decode( [27161,28310] ); // string [6] &quot;標準&quot;</pre></div
 </li><li>argument indices to be used in specifiers start from 1</li></ul><pre>print string_format( &quot;{1:d} -&gt; {1:x}&quot;, 1337 ); // prints &quot;1337 -&gt; 539&quot;</pre></div>
 <div class='item'><a name='Additional-info'></a><hr><h2>Additional info</h2></div>
 <div class='item'><a name='Serialization-in-SGScript'></a><hr><h2>Serialization in SGScript</h2><p>
-In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the &quot;<a href="#serialize-function">serialize</a>&quot; function and deserialization is done with &quot;<a href="#unserialize-function">unserialize</a>&quot;. The C API has similar functions: <a href="#sgs-Serialize-function">sgs_Serialize</a> / <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> and <a href="#sgs-Unserialize-function">sgs_Unserialize,</a> respectively.
+In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the &quot;<a href="#serialize-function">serialize</a>&quot; function and deserialization is done with &quot;<a href="#unserialize-function">unserialize</a>&quot;. The C API has similar functions: <a href="#sgs-Serialize-function">sgs_Serialize</a> / <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> and <a href="#sgs-Unserialize-function">sgs_Unserialize</a>, respectively.
 </p><p>
 <em class='notice-bgr'>check the &quot;Possible gotchas&quot; part of this page if it is intended to trust the end user with access to serialized data</em>
 </p><h4>The format</h4><ul><li>a list of operations

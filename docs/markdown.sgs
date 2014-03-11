@@ -72,7 +72,7 @@ function markdown2html( text, linkhandler )
 				return match[0][0];
 			return match[1][0] $ linkhandler( match[2][0], match[4][0] ) $ match[5][0];
 		});
-		text = re_replace_callback( text, "#"$bdcc$"@([^ \xFF\xFD]+)(\xFD([^\xFE]+)\xFE)?"$edcc$"#",
+		text = re_replace_callback( text, "#"$bdcc$"@([^ \xFF\xFD\n\r\t,.]+)(\xFD([^\xFE]+)\xFE)?"$edcc$"#",
 		function( match ) use( linkhandler )
 		{
 			if( !re_match( match[0][0], "#[a-zA-Z0-9]#" ) )

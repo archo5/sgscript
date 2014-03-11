@@ -1756,8 +1756,8 @@ static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 	/* either is OBJECT */
 	if( ta == SVT_OBJECT || tb == SVT_OBJECT )
 	{
-		int ret = SGS_ENOTSUP;
-		sgs_Int out = _SGS_SIGNDIFF( ta, tb );
+		int ret = SGS_ENOTSUP, suc;
+		sgs_Real out = _SGS_SIGNDIFF( ta, tb );
 		sgs_Variable lA = *a, lB = *b;
 		VAR_ACQUIRE( &lA );
 		VAR_ACQUIRE( &lB );
@@ -1769,10 +1769,11 @@ static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 			_STACK_PROTECT;
 			ret = O->iface->expr( C, O, &lA, &lB, SGS_EOP_COMPARE );
 			USING_STACK
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
-				out = var_getint( C, C->stack_top - 1 );
+			suc = SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1;
+			if( suc )
+				out = var_getreal( C, C->stack_top - 1 );
 			_STACK_UNPROTECT;
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
+			if( suc )
 			{
 				VAR_RELEASE( &lA );
 				VAR_RELEASE( &lB );
@@ -1787,10 +1788,11 @@ static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 			_STACK_PROTECT;
 			ret = O->iface->expr( C, O, &lA, &lB, SGS_EOP_COMPARE );
 			USING_STACK
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
-				out = var_getint( C, C->stack_top - 1 );
+			suc = SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1;
+			if( suc )
+				out = var_getreal( C, C->stack_top - 1 );
 			_STACK_UNPROTECT;
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
+			if( suc )
 			{
 				VAR_RELEASE( &lA );
 				VAR_RELEASE( &lB );
