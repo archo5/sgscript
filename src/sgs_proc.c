@@ -1821,9 +1821,13 @@ static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 			return _SGS_SIGNDIFF( a->data.C, b->data.C );
 	}
 	
-	/* both are STRING */
-	if( ta == SVT_STRING && tb == SVT_STRING )
+	/* either is STRING */
+	if( ta == SVT_STRING || tb == SVT_STRING )
 	{
+		/* other is NULL */
+		if( ta == SVT_NULL || tb == SVT_NULL )
+			return _SGS_SIGNDIFF( ta, tb );
+		
 		ptrdiff_t out;
 		sgs_Variable A = *a, B = *b;
 		stk_push( C, &A );

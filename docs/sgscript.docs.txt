@@ -751,7 +751,7 @@ These are the default meanings for error codes that are honored throughout the A
 
 Iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value.
 
-The C API has @"several functions"<Iterators> used to deal with iterators. There are essentially three kinds of functions: initialization (@"PushIterator(P)", @"GetIterator(P)"), advancing (@"IterAdvance(P)") and data retrieval (@"IterPushData(P)", @"IterGetData(P)").
+The C API has @"several functions"<Iterators> used to deal with iterators. There are essentially three kinds of functions: initialization ( @"sgs_PushIterator(P)", @"sgs_GetIterator(P)" ), advancing ( @"sgs_IterAdvance(P)" ) and data retrieval ( @"sgs_IterPushData(P)", @"sgs_IterGetData(P)" ).
 
 Iterator starts at the pre-first position (-1 in terms of indices), so nothing can be read initially, before the first advance. This allows to implement iterator handling with rather simple code:
 

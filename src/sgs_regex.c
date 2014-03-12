@@ -259,6 +259,7 @@ static void regex_reset_one( regex_item* p )
 	if( p->ch ) regex_full_reset( p->ch );
 	if( p->ch2 ) regex_full_reset( p->ch2 );
 	p->pos = p->ch;
+	p->matchbeg = p->matchend = NULL;
 	p->counter = p->flags & RIF_LAZY ? p->min : p->max;
 }
 static void regex_full_reset( regex_item* p )
