@@ -743,6 +743,63 @@ These are the default meanings for error codes that are honored throughout the A
 # <<< (Constants and types)
 
 
+# Concepts & systems [info]
+# >>>
+
+
+# Iterator system [info]
+
+Iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value.
+
+The C API has @"several functions"<Iterators> used to deal with iterators. There are essentially three kinds of functions: initialization (@"PushIterator(P)", @"GetIterator(P)"), advancing (@"IterAdvance(P)") and data retrieval (@"IterPushData(P)", @"IterGetData(P)").
+
+Iterator starts at the pre-first position (-1 in terms of indices), so nothing can be read initially, before the first advance. This allows to implement iterator handling with rather simple code:
+
+    initialize;
+    while( advance > 0 )
+    {
+        retrieve key and/or value;
+        ..do something else..;
+    }
+    free;
+
+A more real example follows:
+
+    // assuming iterable object is at the top of the stack
+    sgs_PushIterator( C, -1 );
+    while( sgs_IterAdvance( C, -1 ) > 0 )
+    {
+        sgs_StackIdx ssz = sgs_StackSize( C );
+        
+        sgs_IterPushData( C, -1, 1, 1 ); // push both key and value
+        
+        sgs_SetStackSize( C, ssz ); // restore stack to have iterator at -1 again
+    }
+    sgs_Pop( C, 1 ); // pop the iterator
+
+Another example using pointers:
+
+    sgs_Variable iterator, iterable, key, value;
+    // .. assuming iterable is initalized here ..
+    sgs_GetIteratorP( C, &iterable, &iterator );
+    while( sgs_IterAdvanceP( C, &iterator ) > 0 )
+    {
+        sgs_IterGetDataP( C, &iterator, NULL, &value );
+        // .. use value ..
+        sgs_Release( C, &value );
+        
+        sgs_IterGetDataP( C, &iterator, &key, &value );
+        // .. use key and value ..
+        sgs_Release( C, &key );
+        sgs_Release( C, &value );
+    }
+    sgs_Release( C, &iterator );
+    // .. release the iterable or not, depending on how it was initialized ..
+
+
+# <<< (Concepts & systems)
+
+
 # Functions [info]
 # >>>
 
@@ -1040,23 +1097,25 @@ These are the default meanings for error codes that are honored throughout the A
 - @sgs_GlobalReal - retrieve global by name as real
 - @sgs_GlobalStringBuf - retrieve global by name as string buffer
 - @sgs_GlobalString - retrieve global by name as string
-- @sgs_GetStringPtrP - get string pointer from variable pointer
-- @sgs_GetStringSizeP - get string size from variable pointer
-- @sgs_GetObjectStructP - get object pointer from variable pointer
-- @sgs_GetObjectDataP - get data pointer of object variable pointer
-- @sgs_GetObjectIfaceP - get interface pointer of object variable pointer
-- @sgs_SetObjectDataP - set data pointer of object variable pointer
-- @sgs_SetObjectIfaceP - set interface pointer of object variable pointer
-- @sgs_GetStringPtr - get string pointer from variable on stack
-- @sgs_GetStringSize - get string size from variable on stack
-- @sgs_GetObjectStruct - get object pointer from variable on stack
-- @sgs_GetObjectData - get data pointer of object variable on stack
-- @sgs_GetObjectIface - get interface pointer of object variable on stack
-- @sgs_SetObjectData - set data pointer of object variable on stack
-- @sgs_SetObjectIface - set interface pointer of object variable on stack
+- @sgs_GetStringPtrP<sgs_GetStringPtr(P)> - get string pointer from variable pointer
+- @sgs_GetStringSizeP<sgs_GetStringSize(P)> - get string size from variable pointer
+- @sgs_GetObjectStructP<sgs_GetObjectStruct(P)> - get object pointer from variable pointer
+- @sgs_GetObjectDataP<sgs_GetObjectData(P)> - get data pointer of object variable pointer
+- @sgs_GetObjectIfaceP<sgs_GetObjectIface(P)> - get interface pointer of object variable pointer
+- @sgs_SetObjectDataP<sgs_SetObjectData(P)> - set data pointer of object variable pointer
+- @sgs_SetObjectIfaceP<sgs_SetObjectIface(P)> - set interface pointer of object variable pointer
+- @sgs_GetStringPtr<sgs_GetStringPtr(P)> - get string pointer from variable on stack
+- @sgs_GetStringSize<sgs_GetStringSize(P)> - get string size from variable on stack
+- @sgs_GetObjectStruct<sgs_GetObjectStruct(P)> - get object pointer from variable on stack
+- @sgs_GetObjectData<sgs_GetObjectData(P)> - get data pointer of object variable on stack
+- @sgs_GetObjectIface<sgs_GetObjectIface(P)> - get interface pointer of object variable on stack
+- @sgs_SetObjectData<sgs_SetObjectData(P)> - set data pointer of object variable on stack
+- @sgs_SetObjectIface<sgs_SetObjectIface(P)> - set interface pointer of object variable on stack
 
 
 # Iterators [info]
+
+- see @"Iterator system" for info on how these functions are to be used
 
 - @sgs_PushIteratorP<sgs_PushIterator(P)> - create and push iterator from variable pointer
 - @sgs_GetIteratorP<sgs_GetIterator(P)> - create iterator from variable pointer
@@ -1960,7 +2019,7 @@ After a successful call, all arguments and the function will be popped off the s
 -- everything else succeeds
 
 
-# sgs_PushIterator(P) [function]
+# sgs_PushIterator(P) [functions]
 
 == SGSRESULT sgs_PushIterator( sgs_Context* C, sgs_StkIdx item )
 === create and push an iterator from the specified item of the current stack frame
@@ -1968,8 +2027,7 @@ After a successful call, all arguments and the function will be popped off the s
 == SGSRESULT sgs_PushIteratorP( sgs_Context* C, sgs_Variable* var )
 === create and push an iterator from the specified variable
 
-- iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value
-- iterator starts at the pre-first position, so nothing can be read before the initial state
+- see @"Iterator system" for more info about iterators
 
 === error codes
 - SGS_EBOUNDS: index out of bounds
@@ -1978,7 +2036,7 @@ After a successful call, all arguments and the function will be popped off the s
 - any other code can be returned by the object
 
 
-# sgs_GetIterator(P) [function]
+# sgs_GetIterator(P) [functions]
 
 == SGSRESULT sgs_GetIterator( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )
 === create an iterator from the specified item of the current stack frame
@@ -1986,8 +2044,7 @@ After a successful call, all arguments and the function will be popped off the s
 == SGSRESULT sgs_GetIteratorP( sgs_Context* C, sgs_Variable* var, sgs_Variable* out )
 === create an iterator from the specified variable
 
-- iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value
-- iterator starts at the pre-first position, so nothing can be read before the initial state
+- see @"Iterator system" for more info about iterators
 
 === error codes
 - SGS_EBOUNDS: index out of bounds
@@ -1996,13 +2053,14 @@ After a successful call, all arguments and the function will be popped off the s
 - any other code can be returned by the object
 
 
-# sgs_IterAdvance(P) [function]
+# sgs_IterAdvance(P) [functions]
 
 == SGSMIXED sgs_IterAdvance( sgs_Context* C, sgs_StkIdx item )
 == SGSMIXED sgs_IterAdvanceP( sgs_Context* C, sgs_Variable* var )
 === advance the iterator to the next position, returning if the current position is still in range or an error code on failure
 
 - this is the way it's expected to be usually called: `while( sgs_IterAdvance( C, item ) > 0 ){ ... sgs_IterPushData ... }`
+- see @"Iterator system" for more info about iterators
 
 === error codes
 - SGS_EBOUNDS: index out of bounds
@@ -2010,7 +2068,7 @@ After a successful call, all arguments and the function will be popped off the s
 - SGS_EINPROC: internal failure in the object interface
 
 
-# sgs_IterPushData(P) [function]
+# sgs_IterPushData(P) [functions]
 
 == SGSRESULT sgs_IterPushData( sgs_Context* C, sgs_StkIdx item, int key, int value )
 == SGSRESULT sgs_IterPushDataP( sgs_Context* C, sgs_Variable* var, int key, int value )
@@ -2019,6 +2077,7 @@ After a successful call, all arguments and the function will be popped off the s
 - `key` and `value` are booleans that specify if the respective value should be returned
 - first the key is pushed, then the value
 - if neither `key` nor `value` are expected, the call succeeds and doesn't push anything
+- see @"Iterator system" for more info about iterators
 
 === error codes
 - SGS_EBOUNDS: index out of bounds
@@ -2026,7 +2085,7 @@ After a successful call, all arguments and the function will be popped off the s
 - SGS_EINPROC: internal failure in the object interface
 
 
-# sgs_IterGetData(P) [function]
+# sgs_IterGetData(P) [functions]
 
 == SGSRESULT sgs_IterGetData( sgs_Context* C, sgs_StkIdx item, sgs_Variable* key, sgs_Variable* value )
 == SGSRESULT sgs_IterGetDataP( sgs_Context* C, sgs_Variable* var, sgs_Variable* key, sgs_Variable* value )
@@ -2034,6 +2093,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 - `key` and `value` are variables where the data is written if the pointer is not NULL
 - if neither `key` nor `value` are expected, the call succeeds and doesn't retrieve anything
+- see @"Iterator system" for more info about iterators
 
 === error codes
 - SGS_EBOUNDS: index out of bounds
@@ -2124,64 +2184,85 @@ After a successful call, all arguments and the function will be popped off the s
 - to be called in the SGS_OP_GCMARK object callback
 
 
-# sgs_GetStringPtr [function]
+# sgs_GetStringPtr(P) [functions]
 
 == char* sgs_GetStringPtr( sgs_Context* C, sgs_StkIdx item )
 === return the string data pointer of the specified stack item
+
+== char* sgs_GetStringPtrP( sgs_Context* C, sgs_Variable* var )
+=== return the string data pointer of the specified variable
 
 - if item is out of bounds or not a string, NULL will be returned and ...
 -- in a debug build, one of the BreakIf macros will go off and stop the action
 
 
-# sgs_GetStringSize [function]
+# sgs_GetStringSize(P) [functions]
 
 == sgs_SizeVal sgs_GetStringSize( sgs_Context* C, sgs_StkIdx item )
 === return the string size of the specified stack item
+
+== sgs_SizeVal sgs_GetStringSizeP( sgs_Context* C, sgs_Variable* var )
+=== return the string size of the specified variable
 
 - if item is out of bounds or not a string, 0 will be returned and ...
 -- in a debug build, one of the BreakIf macros will go off and stop the action
 
 
-# sgs_GetObjectStruct [function]
+# sgs_GetObjectStruct(P) [functions]
 
 == sgs_VarObj* sgs_GetObjectStruct( sgs_Context* C, sgs_StkIdx item )
 === return the object's internal data pointer of the specified stack item
 
+== sgs_VarObj* sgs_GetObjectStructP( sgs_Context* C, sgs_Variable* var )
+=== return the object's internal data pointer of the specified variable
+
 - if item is out of bounds or not an object, NULL will be returned and ...
 -- in a debug build, one of the BreakIf macros will go off and stop the action
 
 
-# sgs_GetObjectData [function]
+# sgs_GetObjectData(P) [functions]
 
 == void* sgs_GetObjectData( sgs_Context* C, sgs_StkIdx item )
 === return the object data pointer of the specified stack item
 
+== void* sgs_GetObjectDataP( sgs_Context* C, sgs_Variable* var )
+=== return the object data pointer of the specified variable
+
 - if item is out of bounds or not an object, NULL will be returned and ...
 -- in a debug build, one of the BreakIf macros will go off and stop the action
 
 
-# sgs_GetObjectIface [function]
+# sgs_GetObjectIface(P) [functions]
 
 == sgs_ObjInterface* sgs_GetObjectIface( sgs_Context* C, sgs_StkIdx item )
 === return the object interface pointer of the specified stack item
 
+== sgs_ObjInterface* sgs_GetObjectIfaceP( sgs_Context* C, sgs_Variable* var )
+=== return the object interface pointer of the specified variable
+
 - if item is out of bounds or not an object, NULL will be returned and ...
 -- in a debug build, one of the BreakIf macros will go off and stop the action
 
 
-# sgs_SetObjectData [function]
+# sgs_SetObjectData(P) [functions]
 
 == int sgs_SetObjectData( sgs_Context* C, sgs_StkIdx item, void* data )
 === set the object data pointer of the specified stack item
+
+== int sgs_SetObjectDataP( sgs_Context* C, sgs_Variable* var, void* data )
+=== set the object data pointer of the specified variable
 
 - if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
 -- in a debug build, one of the BreakIf macros will go off and stop the action
 
 
-# sgs_SetObjectIface [function]
+# sgs_SetObjectIface(P) [functions]
 
 == int sgs_SetObjectIface( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )
 === set the object interface pointer of the specified stack item
+
+== int sgs_SetObjectIfaceP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface )
+=== set the object interface pointer of the specified variable
 
 - if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
 -- in a debug build, one of the BreakIf macros will go off and stop the action
