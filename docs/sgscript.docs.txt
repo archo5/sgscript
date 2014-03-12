@@ -882,12 +882,12 @@ Another example using pointers:
 
 # Execution control [info]
 
-- @sgs_FCallP - call variable as function
-- @sgs_CallP - call variable as function without `this` passed to it
-- @sgs_ThisCallP - call variable as function function with `this` passed to it
-- @sgs_FCall - call the topmost stack item as function
-- @sgs_Call - call the topmost stack item as function without `this` passed to it
-- @sgs_ThisCall - call the topmost stack item as function with `this` passed to it
+- @sgs_FCallP<sgs_FCall(P)> - call variable as function
+- @sgs_CallP<sgs_(This)Call(P)> - call variable as function without `this` passed to it
+- @sgs_ThisCallP<sgs_(This)Call(P)> - call variable as function function with `this` passed to it
+- @sgs_FCall<sgs_FCall(P)> - call the topmost stack item as function
+- @sgs_Call<sgs_(This)Call(P)> - call the topmost stack item as function without `this` passed to it
+- @sgs_ThisCall<sgs_(This)Call(P)> - call the topmost stack item as function with `this` passed to it
 - @sgs_GlobalCall - call a global function
 - @sgs_Abort - abort the execution of the previous SGS functions up to the last C function before them
 - @sgs_Cntl - set and/or retrieve various states in the system
@@ -963,8 +963,8 @@ Another example using pointers:
 - @sgs_GetStackItem - retrieve and acquire the specified variable on stack
 - @sgs_SetStackItem - assign variable to the specified variable on stack
 - @sgs_ItemType - return the variable type of the specified variable on stack
-- @sgs_LoadArgsExtVA - parse the stack as an argument list with additional options (for custom wrapper functions)
-- @sgs_LoadArgsExt - parse the stack as an argument list with additional options
+- @sgs_LoadArgsExtVA<sgs_LoadArgsExt(VA)> - parse the stack as an argument list with additional options (for custom wrapper functions)
+- @sgs_LoadArgsExt<sgs_LoadArgsExt(VA)> - parse the stack as an argument list with additional options
 - @sgs_LoadArgs - parse the stack as an argument list
 - @sgs_ParseMethod - the `this` object variable handling function, using the macro is preferred to this
 - @SGS_PARSE_METHOD - automagically handle a `this` object variable regardless of the way its passed
@@ -1060,9 +1060,9 @@ Another example using pointers:
 - @sgs_ToStringP<sgs_ToString(Fast)(P)> - convert variable to a string
 - @sgs_ToStringBufFastP<sgs_ToStringBuf(Fast)(P)> - convert variable to a string, preventing possible recursion and returning size
 - @sgs_ToStringFastP<sgs_ToString(Fast)(P)> - convert variable to a string, preventing possible recursion
-- @sgs_IsObjectP - check if variable is an object and has the specified interface pointer
-- @sgs_IsTypeP - check if variable is of specified registered type
-- @sgs_IsCallableP - check if variable is callable (SGS function, C function or object with CALL impl.)
+- @sgs_IsObjectP<sgs_IsObject(P)> - check if variable is an object and has the specified interface pointer
+- @sgs_IsTypeP<sgs_IsType(P)> - check if variable is of specified registered type
+- @sgs_IsCallableP<sgs_IsCallable(P)> - check if variable is callable (SGS function, C function or object with CALL impl.)
 - @sgs_ParseBoolP<sgs_Parse***> - validate conversion, optionally return boolean value from variable, if possible
 - @sgs_ParseIntP<sgs_Parse***> - validate conversion, optionally return integer value from variable, if possible
 - @sgs_ParseRealP<sgs_Parse***> - validate conversion, optionally return real value from variable, if possible
@@ -1082,9 +1082,9 @@ Another example using pointers:
 - @sgs_ToString<sgs_ToString(Fast)(P)> - convert variable on stack to a string
 - @sgs_ToStringBufFast<sgs_ToStringBuf(Fast)(P)> - convert variable on stack to a string, preventing possible recursion and returning size
 - @sgs_ToStringFast<sgs_ToString(Fast)(P)> - convert variable on stack to a string, preventing possible recursion
-- @sgs_IsObject - check if variable on stack is an object and has the specified interface pointer
-- @sgs_IsType - check if variable on stack is of specified registered type
-- @sgs_IsCallable - check if variable on stack is callable (SGS function, C function or object with CALL impl.)
+- @sgs_IsObject<sgs_IsObject(P)> - check if variable on stack is an object and has the specified interface pointer
+- @sgs_IsType<sgs_IsType(P)> - check if variable on stack is of specified registered type
+- @sgs_IsCallable<sgs_IsCallable(P)> - check if variable on stack is callable (SGS function, C function or object with CALL impl.)
 - @sgs_ParseBool<sgs_Parse***> - validate conversion, optionally return boolean value from variable on stack, if possible
 - @sgs_ParseInt<sgs_Parse***> - validate conversion, optionally return integer value from variable on stack, if possible
 - @sgs_ParseReal<sgs_Parse***> - validate conversion, optionally return real value from variable on stack, if possible
@@ -1332,11 +1332,11 @@ Another example using pointers:
 
 - sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
 - sgs_InitStringBuf( C, NULL, size ) would allocate an uninitialized buffer
--- it is accessible immediately by @sgs_GetString[Ptr|Size]( C, -1 )
+-- it is accessible immediately by @sgs_GetStringPtrP<sgs_GetStringPtr(P)> / @sgs_GetStringSizeP<sgs_GetStringSize(P)>
 - sgs_InitObjectIPA stands for "initialize object, allocate memory in-place"
 -- it means that the `added` memory space will be appended to the end of object allocation
 -- this allows to allocate all object data for most objects with just one allocation, instead of two
--- the allocated memory will be returned and also available via sgs_GetObjectData( C, -1 )
+-- the allocated memory will be returned and also available via @sgs_GetObjectDataP<sgs_GetObjectData(P)>
 
 
 # sgs_Push*** [functions]
@@ -1357,11 +1357,11 @@ Another example using pointers:
 
 - sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
 - sgs_PushStringBuf( C, NULL, size ) would allocate an uninitialized buffer
--- it is accessible immediately by @sgs_GetString[Ptr|Size]( C, -1 )
+-- it is accessible immediately by @"sgs_GetStringPtr( C, -1 )"<sgs_GetStringPtr(P)> / @"sgs_GetStringSize( C, -1 )"<sgs_GetStringSize(P)>
 - sgs_PushObjectIPA stands for "push object, allocate memory in-place"
 -- it means that the `added` memory space will be appended to the end of object allocation
 -- this allows to allocate all object data for most objects with just one allocation, instead of two
--- the allocated memory will be returned and also available via sgs_GetObjectData( C, -1 )
+-- the allocated memory will be returned and also available via @"sgs_GetObjectData( C, -1 )"<sgs_GetObjectData(P)>
 - sgs_PushVariable will increment the reference count of strings, SGS functions and objects
 -- it will also return EINVAL if type of variable isn't one of the allowed types
 - these functions do not throw an error when the stack is full since there is no way to handle that
@@ -1585,9 +1585,10 @@ Another example using pointers:
 - alias to `sgs_ArgError( C, argid, Func/Method => 0/1, expect, is_strict )`
 
 
-# sgs_LoadArgsExt [function]
+# sgs_LoadArgsExt(VA) [function]
 
 == SGSMIXED sgs_LoadArgsExt( sgs_Context* C, int from, const char* cmd, ... )
+== SGSMIXED sgs_LoadArgsExtVA( sgs_Context* C, int from, const char* cmd, va_list args )
 === parse the stack items and retrieve their data according to `cmd`, starting from item `from`
 
 - for anything function requires, pass the value; for anything it returns - the pointer to the value
@@ -1625,7 +1626,7 @@ Another example using pointers:
 - `r` -- check for `real` (returns sgs_Real)
 - `s` -- check for `string` (returns char*)
 - `m` -- check for `string` (returns char* string and sgs_SizeVal size)
-- `p` -- check for `func/cfunc/object with SGS_OP_CALL` (callables) (returns SGSBOOL = 1)
+- `p` -- check for `func/cfunc/object with CALL` (callables) (returns SGSBOOL = 1)
 - `a` -- check for `array` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `t` -- check for `dict` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `h` -- check for `map` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
@@ -1643,20 +1644,24 @@ Another example using pointers:
 == SGSBOOL sgs_LoadArgs( sgs_Context* C, const char* cmd, ... )
 === parse the stack items and retrieve their data according to `cmd`, starting from item 0
 
-! unlike sgs_LoadArgsExt, it returns `bool` - whether all required arguments have been successfully parsed
+! unlike @sgs_LoadArgsExt(VA), it returns `bool` - whether all required arguments have been successfully parsed
 
-- for more info on syntax and usage, refer to @sgs_LoadArgsExt
+- for more info on syntax and usage, refer to @sgs_LoadArgsExt(VA)
 - alias to `sgs_LoadArgsExt( C, 0, cmd, ... )>0`
 
 
 
 
 
-# sgs_FCall [function]
+# sgs_FCall(P) [functions]
 
 == SGSRESULT sgs_FCall( sgs_Context* C, int args, int expect, int gotthis )
 === call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack
 
+== SGSRESULT sgs_FCallP( sgs_Context* C, sgs_Variable* var, int args, int expect, int gotthis )
+=== call the variable with the arguments on stack, returning the expected number of variables on stack
+
+- `var`: the callable variable to call as a function
 - `args`: the primary variables to be passed to the function, in the same order they are in the stack
 - `expect`: the number of variables to be left after a successful call
 - `gotthis`: whether the function is a method and an additional argument needs to be passed as the 'this' value before others
@@ -1671,22 +1676,26 @@ After a successful call, all arguments and the function will be popped off the s
 - a callable is one of the following:
 -- SGS function
 -- C function
--- object with SGS_OP_CALL interface function defined
+-- object with CALL interface function defined
 
 ! Stack is returned to the expected state only if the return value is equal to SGS_SUCCESS or SGS_EINPROC. Otherwise, it's left exactly as it was before the call.
 
 === error codes
 - SGS_EINPROC: topmost item on stack was not callable
-- SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + 1`)
+- SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + (is_sgs_FCallP?0:1)`)
 
 
-# sgs_(This)Call [function aliases]
+# sgs_(This)Call(P) [function aliases]
 
 == SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )
 == SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )
 === call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack
 
-- aliases to @sgs_FCall(), for the first `gotthis = 0`, for the second `gotthis = 1`.
+== SGSRESULT sgs_Call( sgs_Context* C, sgs_Variable* var, int args, int expect )
+== SGSRESULT sgs_ThisCall( sgs_Context* C, sgs_Variable* var, int args, int expect )
+=== call the variable with the arguments on stack, returning the expected number of variables on stack
+
+- aliases to @sgs_FCall(P), for the first function of each group `gotthis = 0`, for the second `gotthis = 1`.
 
 
 # sgs_GlobalCall [function]
@@ -1694,7 +1703,12 @@ After a successful call, all arguments and the function will be popped off the s
 == SGSRESULT sgs_GlobalCall( sgs_Context* C, const char* name, int args, int expect )
 === call the global variable `name` as a function
 
-- combination of @sgs_PushGlobal() and @sgs_Call()
+- combination of global function retrieval and function call; see @sgs_PushGlobal and @sgs_FCall(P) for more info on behavior
+
+=== error codes
+- SGS_ENOTFND: global variable was not found
+- SGS_EINPROC: item found was not callable
+- SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0)`)
 
 
 # sgs_TypeOf [function]
@@ -1713,7 +1727,7 @@ After a successful call, all arguments and the function will be popped off the s
 == SGSRESULT sgs_DumpVar( sgs_Context* C, int maxdepth )
 === convert the topmost variable of current stack frame to a highly informative string that should display the contents of the variable, up to `maxdepth` depth
 
-- if object does not have the SGS_OP_DUMP interface function implemented, only its pointer in memory and reference count are displayed
+- if object does not have the DUMP interface function implemented, only its pointer in memory and reference count are displayed
 
 === error codes
 - SGS_EINPROC: current stack frame was empty
@@ -1726,11 +1740,11 @@ After a successful call, all arguments and the function will be popped off the s
 === call the garbage collector on the VM
 
 - this procedure may take some time if the object graph is big
-- during the procedure, the SGS_OP_GCMARK interface functions of objects are invoked for the objects visible from entry points (like stack and global table)
+- during the procedure, the GCMARK interface functions of objects are invoked for the objects visible from entry points (like stack and global table)
 - aborting the procedure via error codes could lead the system into an unrecoverable state
 
 === error codes
-- any code can be returned by SGS_OP_GCMARK and SGS_OP_DESTRUCT functions, doing so would abort the process if the code is not either SGS_SUCCESS or SGS_ENOTFND
+- any code can be returned by GCMARK and DESTRUCT functions, doing so would abort the process if the code is not either SGS_SUCCESS or SGS_ENOTFND
 
 
 # sgs_PadString [function]
@@ -1819,7 +1833,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 - the following variable types can be serialized:
 -- null, bool, int, real, string, func (SGS function)
--- objects with the SGS_OP_SERIALIZE interface function defined
+-- objects with the SERIALIZE interface function defined
 
 - serialized data has the following format:
 -- a list of 'P' or 'C' commands
@@ -1958,29 +1972,41 @@ After a successful call, all arguments and the function will be popped off the s
 === finds the type interface that is mapped to the specified name or returns NULL if that type name cannot be found
 
 
-# sgs_IsObject [function]
+# sgs_IsObject(P) [functions]
 
 == SGSBOOL sgs_IsObject( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )
 === returns whether the specified stack item `item` is an object with the interface pointer `iface`
 
 - if `item` is out of bounds or not an object or doesn't have the specified interface, 0 is returned
 
+== SGSBOOL sgs_IsObjectP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface )
+=== returns whether the specified variable `var` is an object with the interface pointer `iface`
 
-# sgs_IsType [function alias]
+
+# sgs_IsType(P) [function aliases]
 
 == SGSBOOL sgs_IsType( sgs_Context* C, sgs_StkIdx item, const char* type )
 === returns whether the specified stack item `item` is an object of the specified type
 
 - alias of `sgs_IsObject( C, item, sgs_FindType( C, type ) )`
 
+== SGSBOOL sgs_IsTypeP( sgs_Context* C, sgs_Variable* var, const char* type )
+=== returns whether the specified variable `var` is an object of the specified type
 
-# sgs_IsCallable [function]
+- alias of `sgs_IsObjectP( C, var, sgs_FindType( C, type ) )`
+
+
+# sgs_IsCallable(P) [functions]
 
 == SGSBOOL sgs_IsCallable( sgs_Context* C, sgs_StkIdx item )
 === returns whether the specified stack item `item` is callable
 
-- callable variables are either SGS functions or C functions or objects with the SGS_OP_CALL interface implemented
 - if `item` is out of bounds, 0 is returned
+
+== SGSBOOL sgs_IsCallableP( sgs_Context* C, sgs_Variable* var )
+=== returns whether the specified variable `var` is callable
+
+- callable variables are either SGS functions or C functions or objects with the CALL interface implemented
 
 
 # sgs_IsNumericString [function]
@@ -2181,7 +2207,7 @@ After a successful call, all arguments and the function will be popped off the s
 == SGSRESULT sgs_GCMark( sgs_Context* C, sgs_Variable* var )
 === mark the specified variable as reachable for the garbage collector
 
-- to be called in the SGS_OP_GCMARK object callback
+- to be called in the GCMARK object callback
 
 
 # sgs_GetStringPtr(P) [functions]
@@ -2412,7 +2438,6 @@ After a successful call, all arguments and the function will be popped off the s
 -- SGS_CODE_ER: error codes (SGS_ERROR, SGS_WARNING, ...)
 -- SGS_CODE_VT: variable types (SGS_VT_BOOL, SGS_VT_FUNC, ...)
 -- SGS_CODE_OP: VM instructions (SGS_SI_PUSH, SGS_SI_FORPREP, ... [internal])
--- SGS_CODE_OI: object interface function types (SGS_OP_GETINDEX, SGS_OP_GCMARK, ...)
 
 
 # sgs_Abort [function]
@@ -2555,7 +2580,7 @@ There are no forced courses of action beyond this point. However, to simplify de
 - there are no restrictions on function names, however it helps to mark the scripting engine functions with a common prefix and if they wrap a native function, including the name of the wrapped function is suggested
 
 ==== Argument loading
-- prefer using sgs_LoadArgs, followed by sgs_LoadArgsExt, followed by the sgs_Parse***/sgs_Is***/sgs_ItemType(Ext)/... functions together with ArgError function family for error handling
+- prefer using @sgs_LoadArgs, followed by @sgs_LoadArgsExt, followed by the sgs_Parse***/sgs_Is***/sgs_ItemType(Ext)/... functions together with ArgError function family for error handling
 
 ==== Error handling
 - it is preferred to do most of it at the beginning, before custom allocations (VM stack doesn't count here), where it is possible to just `return sgs_Msg( C, SGS_WARNING, "Error message" )`

@@ -2184,7 +2184,6 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 #endif
 		UNUSED( sgs_ErrNames );
 		UNUSED( sgs_OpNames );
-		UNUSED( sgs_IfaceNames );
 
 		if( C->hook_fn )
 			C->hook_fn( C->hook_ctx, C, SGS_HOOK_STEP );

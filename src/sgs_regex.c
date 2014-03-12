@@ -71,6 +71,7 @@ struct _regex_item
 	regex_item* prev;
 	regex_item* next;
 	regex_item* ch, *ch2;
+	regex_item* pos;
 	
 	RX_Char* range;
 	int count;
@@ -119,7 +120,7 @@ static int regex_match_once( match_ctx* ctx )
 	int i;
 	regex_item* item = ctx->item;
 	const RX_Char* str = item->matchend;
-	RXLOGINFO( printf( "type %d action at %p (%.5s)\n", item->type, str, str ) );
+	RXLOGINFO( printf( "type %d char %d action at %p (%.5s)\n", item->type, (int) item->a, str, str ) );
 	switch( item->type )
 	{
 	case RIT_MATCH:
@@ -188,7 +189,7 @@ static int regex_match_once( match_ctx* ctx )
 			match_ctx cc;
 			{
 				cc.string = ctx->string;
-				cc.item = item->ch;
+				cc.item = item->pos;
 				cc.R = ctx->R;
 			}
 			if( regex_test( str, &cc ) )
@@ -196,6 +197,7 @@ static int regex_match_once( match_ctx* ctx )
 				regex_item* p = item->ch;
 				while( p->next )
 					p = p->next;
+				item->pos = p;
 				item->matchend = p->matchend;
 				return 1;
 			}
@@ -256,6 +258,7 @@ static void regex_reset_one( regex_item* p )
 {
 	if( p->ch ) regex_full_reset( p->ch );
 	if( p->ch2 ) regex_full_reset( p->ch2 );
+	p->pos = p->ch;
 	p->counter = p->flags & RIF_LAZY ? p->min : p->max;
 }
 static void regex_full_reset( regex_item* p )
@@ -270,12 +273,11 @@ static void regex_full_reset( regex_item* p )
 static int regex_subexp_backtrack( regex_item* item )
 {
 	int chgh = 0;
-	regex_item* p = item->ch;
-	while( p->next )
-		p = p->next;
+	regex_item* p = item->pos;
 	
 	while( p )
 	{
+		RXLOGINFO( printf( "backtracker at type %d char %d\n", p->type, (int) p->a ) );
 		if( chgh && p->type == RIT_SUBEXP && regex_subexp_backtrack( p ) )
 			break;
 		else if( p->flags & RIF_LAZY )
@@ -316,14 +318,21 @@ static int regex_test( const RX_Char* str, match_ctx* ctx )
 			cc.item = p;
 			cc.R = ctx->R;
 		}
+		RXLOGINFO( printf( "match_many: item %p type %d at position %p (%.5s)\n", (void*) p, p->type, p->matchbeg, p->matchbeg ) );
 		res = regex_match_many( &cc );
 		if( res < 0 )
+		{
+			RXLOGINFO( printf( "test of subexp %p FAILED\n", (void*) ctx->item ) );
 			return -1;
+		}
 		else if( res > 0 )
 		{
 			p = p->next;
 			if( !p )
+			{
+				RXLOGINFO( printf( "test of subexp %p SUCCEEDED\n", (void*) ctx->item ) );
 				return 1;
+			}
 			RXLOGINFO( printf( "moving on to type %d action\n", p->type ) );
 			p->matchbeg = p->prev->matchend;
 		}
@@ -352,7 +361,10 @@ static int regex_test( const RX_Char* str, match_ctx* ctx )
 				chgh = 1;
 			}
 			if( !p )
+			{
+				RXLOGINFO( printf( "test of subexp %p BT-ENDED\n", (void*) ctx->item ) );
 				return 0;
+			}
 		}
 	}
 }
@@ -559,6 +571,7 @@ static int regex_real_compile( srx_Context* R, int* cel, const RX_Char** pstr, i
 				r = regex_real_compile( R, cel, &s, 1, &item->ch );
 				if( r )
 					_RXE( r );
+				item->pos = item->ch;
 				if( *s != ')' )
 					_RXE( RXEUNEXP );
 				if( cap >= 0 )
@@ -761,7 +774,7 @@ srx_Context* srx_CreateExt( const RX_Char* str, const RX_Char* mods, int* errnpo
 		item->type = RIT_SUBEXP;
 		item->min = 1;
 		item->max = 1;
-		item->ch = R->root;
+		item->pos = item->ch = R->root;
 		R->caps[ 0 ] = R->root = item;
 	}
 fail:
@@ -771,6 +784,7 @@ fail:
 		errnpos[0] = (int)( uerr ? ( uerr & 0xf ) | 0xfffffff0 : 0 );
 		errnpos[1] = (int)( ( uerr & 0xfffffff0 ) >> 4 );
 	}
+	RXLOGINFO( if( R ) srx_DumpToStdout(R) );
 	return R;
 }
 

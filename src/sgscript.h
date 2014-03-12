@@ -226,9 +226,7 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj*, int /* arg */ );
 
 typedef int (*sgs_OC_Self) ( sgs_Context*, sgs_VarObj* );
 typedef int (*sgs_OC_SlPr) ( sgs_Context*, sgs_VarObj*, int );
-typedef int (*sgs_OC_Var1) ( sgs_Context*, sgs_VarObj*, sgs_Variable* );
 typedef int (*sgs_OC_V1Pr) ( sgs_Context*, sgs_VarObj*, sgs_Variable*, int );
-typedef int (*sgs_OC_Var2) ( sgs_Context*, sgs_VarObj*, sgs_Variable*, sgs_Variable* );
 typedef int (*sgs_OC_V2Pr) ( sgs_Context*, sgs_VarObj*, sgs_Variable*, sgs_Variable*, int );
 
 typedef struct _sgs_ObjInterface
@@ -346,7 +344,6 @@ SGS_APIFUNC void sgs_DestroyEngine( SGS_CTX );
 #define SGS_CODE_ER 0 /* error codes */
 #define SGS_CODE_VT 1 /* variable type */
 #define SGS_CODE_OP 2 /* VM instruction */
-#define SGS_CODE_OI 3 /* object interface */
 SGS_APIFUNC const char* sgs_CodeString( int type, int val );
 
 

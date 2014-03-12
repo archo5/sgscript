@@ -776,12 +776,6 @@ static const char* sgs_OpNames[] =
 	"array", "dict"
 };
 
-static const char* sgs_IfaceNames[] =
-{
-	"end", "destruct", "getindex", "setindex", "convert",
-	"dump", "gcmark", "getnext", "call", "expr", "flags"
-};
-
 #endif
 
 

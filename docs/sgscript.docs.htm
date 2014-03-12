@@ -28,6 +28,8 @@
 </li><li><a href='#Error-codes'>Error codes</a>
 </li><li><a href='#Variable-types'>Variable types</a>
 </li><li><a href='#Constant-registration-types'>Constant registration types</a>
+</li></ul><li><a href='#Concepts-systems'>Concepts &amp; systems</a>
+<ul><li><a href='#Iterator-system'>Iterator system</a>
 </li></ul><li><a href='#Functions'>Functions</a>
 <ul><li><a href='#Context-management'>Context management</a>
 </li><li><a href='#Memory-management'>Memory management</a>
@@ -618,6 +620,49 @@ These are the default meanings for error codes that are honored throughout the A
 <div class='item'><a name='Constant-registration-types'></a><hr><h2>Constant registration types</h2><ul><li>struct sgs_RegFuncConst { char* name; sgs_CFunc value; }
 </li><li>struct sgs_RegIntConst { char* name; sgs_Int value; }
 </li><li>struct sgs_RegRealConst { char* name; sgs_Real value; }</li></ul></div>
+<div class='item'><a name='Concepts-systems'></a><hr><h2>Concepts &amp; systems</h2></div>
+<div class='item'><a name='Iterator-system'></a><hr><h2>Iterator system</h2><p>
+Iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value.
+</p><p>
+The C API has <a href="#Iterators">several functions</a> used to deal with iterators. There are essentially three kinds of functions: initialization (@&quot;PushIterator(P)&quot;, @&quot;GetIterator(P)&quot;), advancing (@&quot;IterAdvance(P)&quot;) and data retrieval (@&quot;IterPushData(P)&quot;, @&quot;IterGetData(P)&quot;).
+</p><p>
+Iterator starts at the pre-first position (-1 in terms of indices), so nothing can be read initially, before the first advance. This allows to implement iterator handling with rather simple code:
+</p><pre>initialize;
+while( advance &gt; 0 )
+{
+    retrieve key and/or value;
+    ..do something else..;
+}
+free;</pre><p>
+A more real example follows:
+</p><pre>// assuming iterable object is at the top of the stack
+sgs_PushIterator( C, -1 );
+while( sgs_IterAdvance( C, -1 ) &gt; 0 )
+{
+    sgs_StackIdx ssz = sgs_StackSize( C );
+    
+    sgs_IterPushData( C, -1, 1, 1 ); // push both key and value
+    
+    sgs_SetStackSize( C, ssz ); // restore stack to have iterator at -1 again
+}
+sgs_Pop( C, 1 ); // pop the iterator</pre><p>
+Another example using pointers:
+</p><pre>sgs_Variable iterator, iterable, key, value;
+// .. assuming iterable is initalized here ..
+sgs_GetIteratorP( C, &amp;iterable, &amp;iterator );
+while( sgs_IterAdvanceP( C, &amp;iterator ) &gt; 0 )
+{
+    sgs_IterGetDataP( C, &amp;iterator, NULL, &amp;value );
+    // .. use value ..
+    sgs_Release( C, &amp;value );
+    
+    sgs_IterGetDataP( C, &amp;iterator, &amp;key, &amp;value );
+    // .. use key and value ..
+    sgs_Release( C, &amp;key );
+    sgs_Release( C, &amp;value );
+}
+sgs_Release( C, &amp;iterator );
+// .. release the iterable or not, depending on how it was initialized ..</pre></div>
 <div class='item'><a name='Functions'></a><hr><h2>Functions</h2></div>
 <div class='item'><a name='Context-management'></a><hr><h2>Context management</h2><ul><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngine</a> - create scripting engine context
 </li><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngineExt</a> - create scripting engine context and pass a custom memory function
@@ -675,12 +720,12 @@ These are the default meanings for error codes that are honored throughout the A
 <div class='item'><a name='Introspection'></a><hr><h2>Introspection</h2><ul><li><a href="#sgs-Stat-function">sgs_Stat</a> - retrieve or dump various parts of VM state
 </li><li><a href="#sgs-StackFrameInfo">sgs_StackFrameInfo</a> - retrieve preprocessed info from stack frame
 </li><li><a href="#sgs-GetFramePtr-function">sgs_GetFramePtr</a> - return a stack frame pointer</li></ul></div>
-<div class='item'><a name='Execution-control'></a><hr><h2>Execution control</h2><ul><li><a href="#sgs-FCallP">sgs_FCallP</a> - call variable as function
-</li><li><a href="#sgs-CallP">sgs_CallP</a> - call variable as function without <code>this</code> passed to it
-</li><li><a href="#sgs-ThisCallP">sgs_ThisCallP</a> - call variable as function function with <code>this</code> passed to it
-</li><li><a href="#sgs-FCall-function">sgs_FCall</a> - call the topmost stack item as function
-</li><li><a href="#sgs-Call">sgs_Call</a> - call the topmost stack item as function without <code>this</code> passed to it
-</li><li><a href="#sgs-ThisCall">sgs_ThisCall</a> - call the topmost stack item as function with <code>this</code> passed to it
+<div class='item'><a name='Execution-control'></a><hr><h2>Execution control</h2><ul><li><a href="#sgs-FCall-P-functions">sgs_FCallP</a> - call variable as function
+</li><li><a href="#sgs-This-Call-P-function-aliases">sgs_CallP</a> - call variable as function without <code>this</code> passed to it
+</li><li><a href="#sgs-This-Call-P-function-aliases">sgs_ThisCallP</a> - call variable as function function with <code>this</code> passed to it
+</li><li><a href="#sgs-FCall-P-functions">sgs_FCall</a> - call the topmost stack item as function
+</li><li><a href="#sgs-This-Call-P-function-aliases">sgs_Call</a> - call the topmost stack item as function without <code>this</code> passed to it
+</li><li><a href="#sgs-This-Call-P-function-aliases">sgs_ThisCall</a> - call the topmost stack item as function with <code>this</code> passed to it
 </li><li><a href="#sgs-GlobalCall-function">sgs_GlobalCall</a> - call a global function
 </li><li><a href="#sgs-Abort-function">sgs_Abort</a> - abort the execution of the previous SGS functions up to the last C function before them
 </li><li><a href="#sgs-Cntl-function">sgs_Cntl</a> - set and/or retrieve various states in the system</li></ul></div>
@@ -696,7 +741,7 @@ These are the default meanings for error codes that are honored throughout the A
 <div class='item'><a name='Object-type-storage'></a><hr><h2>Object type storage</h2><ul><li><a href="#sgs-RegisterType-function">sgs_RegisterType</a> - register an object interface pointer by name
 </li><li><a href="#sgs-UnregisterType-function">sgs_UnregisterType</a> - unregister an object interface pointer by name
 </li><li><a href="#sgs-FindType-function">sgs_FindType</a> - find a registered object interface pointer by name
-</li><li><a href="#sgs-IsType-function-alias">sgs_IsType</a> - check if variable on stack is of specified registered type</li></ul></div>
+</li><li><a href="#sgs-IsType-P-function-aliases">sgs_IsType</a> - check if variable on stack is of specified registered type</li></ul></div>
 <div class='item'><a name='Variable-initialization'></a><hr><h2>Variable initialization</h2><ul><li><a href="#sgs-Init-functions">sgs_InitNull</a> - initialize variable to a null variable
 </li><li><a href="#sgs-Init-functions">sgs_InitBool</a> - initialize variable to a boolean variable
 </li><li><a href="#sgs-Init-functions">sgs_InitInt</a> - initialize variable to an integer
@@ -740,9 +785,9 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-GetStackItem-function">sgs_GetStackItem</a> - retrieve and acquire the specified variable on stack
 </li><li><a href="#sgs-SetStackItem">sgs_SetStackItem</a> - assign variable to the specified variable on stack
 </li><li><a href="#sgs-ItemType-function">sgs_ItemType</a> - return the variable type of the specified variable on stack
-</li><li><a href="#sgs-LoadArgsExtVA">sgs_LoadArgsExtVA</a> - parse the stack as an argument list with additional options (for custom wrapper functions)
-</li><li><a href="#sgs-LoadArgsExt-function">sgs_LoadArgsExt</a> - parse the stack as an argument list with additional options
-</li><li><a href="#sgs-LoadArgsExt-function">sgs_LoadArgs</a> - parse the stack as an argument list
+</li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExtVA</a> - parse the stack as an argument list with additional options (for custom wrapper functions)
+</li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt</a> - parse the stack as an argument list with additional options
+</li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgs</a> - parse the stack as an argument list
 </li><li><a href="#sgs-ParseMethod">sgs_ParseMethod</a> - the <code>this</code> object variable handling function, using the macro is preferred to this
 </li><li><a href="#SGS-PARSE-METHOD">SGS_PARSE_METHOD</a> - automagically handle a <code>this</code> object variable regardless of the way its passed
 </li><li><a href="#sgs-Method-function">sgs_Method</a> - unhide the first variable on stack if there is a hidden <code>this</code> variable
@@ -771,8 +816,8 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-ArgError-function">sgs_FuncArgError</a> - emit an argument type mismatch error (alias for states where <code>this</code> variable is hidden)
 </li><li><a href="#sgs-ArgError-function">sgs_MethodArgError</a> - emit an argument type mismatch error (alias for states where <code>this</code> variable is NOT hidden)
 </li><li><a href="#sgs-LoadArgsExtVA">sgs_LoadArgsExtVA</a> - parse the stack as an argument list with additional options (for custom wrapper functions)
-</li><li><a href="#sgs-LoadArgsExt-function">sgs_LoadArgsExt</a> - parse the stack as an argument list with additional options
-</li><li><a href="#sgs-LoadArgsExt-function">sgs_LoadArgs</a> - parse the stack as an argument list
+</li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt</a> - parse the stack as an argument list with additional options
+</li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgs</a> - parse the stack as an argument list
 </li><li><a href="#sgs-ParseMethod">sgs_ParseMethod</a> - the <code>this</code> object variable handling function, using the macro is preferred to this
 </li><li><a href="#SGS-PARSE-METHOD">SGS_PARSE_METHOD</a> - automagically handle a <code>this</code> object variable regardless of the way its passed
 </li><li><a href="#sgs-Method-function">sgs_Method</a> - unhide the first variable on stack if there is a hidden <code>this</code> variable
@@ -813,9 +858,9 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-ToString-Fast-P-function-aliases">sgs_ToStringP</a> - convert variable to a string
 </li><li><a href="#sgs-ToStringBuf-Fast-P-functions">sgs_ToStringBufFastP</a> - convert variable to a string, preventing possible recursion and returning size
 </li><li><a href="#sgs-ToString-Fast-P-function-aliases">sgs_ToStringFastP</a> - convert variable to a string, preventing possible recursion
-</li><li><a href="#sgs-IsObjectP">sgs_IsObjectP</a> - check if variable is an object and has the specified interface pointer
-</li><li><a href="#sgs-IsTypeP">sgs_IsTypeP</a> - check if variable is of specified registered type
-</li><li><a href="#sgs-IsCallableP">sgs_IsCallableP</a> - check if variable is callable (SGS function, C function or object with CALL impl.)
+</li><li><a href="#sgs-IsObject-P-functions">sgs_IsObjectP</a> - check if variable is an object and has the specified interface pointer
+</li><li><a href="#sgs-IsType-P-function-aliases">sgs_IsTypeP</a> - check if variable is of specified registered type
+</li><li><a href="#sgs-IsCallable-P-functions">sgs_IsCallableP</a> - check if variable is callable (SGS function, C function or object with CALL impl.)
 </li><li><a href="#sgs-Parse-functions">sgs_ParseBoolP</a> - validate conversion, optionally return boolean value from variable, if possible
 </li><li><a href="#sgs-Parse-functions">sgs_ParseIntP</a> - validate conversion, optionally return integer value from variable, if possible
 </li><li><a href="#sgs-Parse-functions">sgs_ParseRealP</a> - validate conversion, optionally return real value from variable, if possible
@@ -835,9 +880,9 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-ToString-Fast-P-function-aliases">sgs_ToString</a> - convert variable on stack to a string
 </li><li><a href="#sgs-ToStringBuf-Fast-P-functions">sgs_ToStringBufFast</a> - convert variable on stack to a string, preventing possible recursion and returning size
 </li><li><a href="#sgs-ToString-Fast-P-function-aliases">sgs_ToStringFast</a> - convert variable on stack to a string, preventing possible recursion
-</li><li><a href="#sgs-IsObject-function">sgs_IsObject</a> - check if variable on stack is an object and has the specified interface pointer
-</li><li><a href="#sgs-IsType-function-alias">sgs_IsType</a> - check if variable on stack is of specified registered type
-</li><li><a href="#sgs-IsCallable-function">sgs_IsCallable</a> - check if variable on stack is callable (SGS function, C function or object with CALL impl.)
+</li><li><a href="#sgs-IsObject-P-functions">sgs_IsObject</a> - check if variable on stack is an object and has the specified interface pointer
+</li><li><a href="#sgs-IsType-P-function-aliases">sgs_IsType</a> - check if variable on stack is of specified registered type
+</li><li><a href="#sgs-IsCallable-P-functions">sgs_IsCallable</a> - check if variable on stack is callable (SGS function, C function or object with CALL impl.)
 </li><li><a href="#sgs-Parse-functions">sgs_ParseBool</a> - validate conversion, optionally return boolean value from variable on stack, if possible
 </li><li><a href="#sgs-Parse-functions">sgs_ParseInt</a> - validate conversion, optionally return integer value from variable on stack, if possible
 </li><li><a href="#sgs-Parse-functions">sgs_ParseReal</a> - validate conversion, optionally return real value from variable on stack, if possible
@@ -850,30 +895,30 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-GlobalReal">sgs_GlobalReal</a> - retrieve global by name as real
 </li><li><a href="#sgs-GlobalStringBuf">sgs_GlobalStringBuf</a> - retrieve global by name as string buffer
 </li><li><a href="#sgs-GlobalString">sgs_GlobalString</a> - retrieve global by name as string
-</li><li><a href="#sgs-GetStringPtrP">sgs_GetStringPtrP</a> - get string pointer from variable pointer
-</li><li><a href="#sgs-GetStringSizeP">sgs_GetStringSizeP</a> - get string size from variable pointer
-</li><li><a href="#sgs-GetObjectStructP">sgs_GetObjectStructP</a> - get object pointer from variable pointer
-</li><li><a href="#sgs-GetObjectDataP">sgs_GetObjectDataP</a> - get data pointer of object variable pointer
-</li><li><a href="#sgs-GetObjectIfaceP">sgs_GetObjectIfaceP</a> - get interface pointer of object variable pointer
-</li><li><a href="#sgs-SetObjectDataP">sgs_SetObjectDataP</a> - set data pointer of object variable pointer
-</li><li><a href="#sgs-SetObjectIfaceP">sgs_SetObjectIfaceP</a> - set interface pointer of object variable pointer
-</li><li><a href="#sgs-GetStringPtr-function">sgs_GetStringPtr</a> - get string pointer from variable on stack
-</li><li><a href="#sgs-GetStringSize-function">sgs_GetStringSize</a> - get string size from variable on stack
-</li><li><a href="#sgs-GetObjectStruct-function">sgs_GetObjectStruct</a> - get object pointer from variable on stack
-</li><li><a href="#sgs-GetObjectData-function">sgs_GetObjectData</a> - get data pointer of object variable on stack
-</li><li><a href="#sgs-GetObjectIface-function">sgs_GetObjectIface</a> - get interface pointer of object variable on stack
-</li><li><a href="#sgs-SetObjectData-function">sgs_SetObjectData</a> - set data pointer of object variable on stack
-</li><li><a href="#sgs-SetObjectIface-function">sgs_SetObjectIface</a> - set interface pointer of object variable on stack</li></ul></div>
-<div class='item'><a name='Iterators'></a><hr><h2>Iterators</h2><ul><li><a href="#sgs-PushIterator-P-function">sgs_PushIteratorP</a> - create and push iterator from variable pointer
-</li><li><a href="#sgs-GetIterator-P-function">sgs_GetIteratorP</a> - create iterator from variable pointer
-</li><li><a href="#sgs-IterAdvance-P-function">sgs_IterAdvanceP</a> - advance iterator, specified by its variable pointer
-</li><li><a href="#sgs-IterPushData-P-function">sgs_IterPushDataP</a> - extract and push data of current iteration of the iterator, specified by its variable pointer
-</li><li><a href="#sgs-IterGetData-P-function">sgs_IterGetDataP</a> - extract data of current iteration of the iterator, specified by its variable pointer
-</li><li><a href="#sgs-PushIterator-P-function">sgs_PushIterator</a> - create and push iterator from variable on stack
-</li><li><a href="#sgs-GetIterator-P-function">sgs_GetIterator</a> - create iterator from variable on stack
-</li><li><a href="#sgs-IterAdvance-P-function">sgs_IterAdvance</a> - advance iterator, specified by its stack index
-</li><li><a href="#sgs-IterPushData-P-function">sgs_IterPushData</a> - extract and push data of current iteration of the iterator variable on stack
-</li><li><a href="#sgs-IterGetData-P-function">sgs_IterGetData</a> - extract data of current iteration of the iterator variable on stack</li></ul></div>
+</li><li><a href="#sgs-GetStringPtr-P-functions">sgs_GetStringPtrP</a> - get string pointer from variable pointer
+</li><li><a href="#sgs-GetStringSize-P-functions">sgs_GetStringSizeP</a> - get string size from variable pointer
+</li><li><a href="#sgs-GetObjectStruct-P-functions">sgs_GetObjectStructP</a> - get object pointer from variable pointer
+</li><li><a href="#sgs-GetObjectData-P-functions">sgs_GetObjectDataP</a> - get data pointer of object variable pointer
+</li><li><a href="#sgs-GetObjectIface-P-functions">sgs_GetObjectIfaceP</a> - get interface pointer of object variable pointer
+</li><li><a href="#sgs-SetObjectData-P-functions">sgs_SetObjectDataP</a> - set data pointer of object variable pointer
+</li><li><a href="#sgs-SetObjectIface-P-functions">sgs_SetObjectIfaceP</a> - set interface pointer of object variable pointer
+</li><li><a href="#sgs-GetStringPtr-P-functions">sgs_GetStringPtr</a> - get string pointer from variable on stack
+</li><li><a href="#sgs-GetStringSize-P-functions">sgs_GetStringSize</a> - get string size from variable on stack
+</li><li><a href="#sgs-GetObjectStruct-P-functions">sgs_GetObjectStruct</a> - get object pointer from variable on stack
+</li><li><a href="#sgs-GetObjectData-P-functions">sgs_GetObjectData</a> - get data pointer of object variable on stack
+</li><li><a href="#sgs-GetObjectIface-P-functions">sgs_GetObjectIface</a> - get interface pointer of object variable on stack
+</li><li><a href="#sgs-SetObjectData-P-functions">sgs_SetObjectData</a> - set data pointer of object variable on stack
+</li><li><a href="#sgs-SetObjectIface-P-functions">sgs_SetObjectIface</a> - set interface pointer of object variable on stack</li></ul></div>
+<div class='item'><a name='Iterators'></a><hr><h2>Iterators</h2><ul><li>see <a href="#Iterator-system">Iterator system</a> for info on how these functions are to be used</li></ul><ul><li><a href="#sgs-PushIterator-P-functions">sgs_PushIteratorP</a> - create and push iterator from variable pointer
+</li><li><a href="#sgs-GetIterator-P-functions">sgs_GetIteratorP</a> - create iterator from variable pointer
+</li><li><a href="#sgs-IterAdvance-P-functions">sgs_IterAdvanceP</a> - advance iterator, specified by its variable pointer
+</li><li><a href="#sgs-IterPushData-P-functions">sgs_IterPushDataP</a> - extract and push data of current iteration of the iterator, specified by its variable pointer
+</li><li><a href="#sgs-IterGetData-P-functions">sgs_IterGetDataP</a> - extract data of current iteration of the iterator, specified by its variable pointer
+</li><li><a href="#sgs-PushIterator-P-functions">sgs_PushIterator</a> - create and push iterator from variable on stack
+</li><li><a href="#sgs-GetIterator-P-functions">sgs_GetIterator</a> - create iterator from variable on stack
+</li><li><a href="#sgs-IterAdvance-P-functions">sgs_IterAdvance</a> - advance iterator, specified by its stack index
+</li><li><a href="#sgs-IterPushData-P-functions">sgs_IterPushData</a> - extract and push data of current iteration of the iterator variable on stack
+</li><li><a href="#sgs-IterGetData-P-functions">sgs_IterGetData</a> - extract data of current iteration of the iterator variable on stack</li></ul></div>
 <div class='item'><a name='Variable-ownership'></a><hr><h2>Variable ownership</h2><ul><li><a href="#sgs-Acquire-function">sgs_Acquire</a> - increment reference count of a variable if the type implements reference counting
 </li><li><a href="#sgs-Release-function">sgs_Release</a> - decrement reference count and possibly destroy a variable if the type implements ref.counting
 </li><li><a href="#sgs-ReleaseArray">sgs_ReleaseArray</a> - release an array of variables
@@ -891,7 +936,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-IsNumericString-function">sgs_IsNumericString</a> - check if string is going to be parsed as a number by the internal parser</li></ul></div>
 <div class='item'><a name='ALL-functions-A-Z'></a><hr><h2>ALL functions (A-Z)</h2><ul><li><a href="#SGSBASEFN-function-alias">SGSBASEFN [function alias]</a>
 </li><li><a href="#SGSFN-function-alias">SGSFN [function alias]</a>
-</li><li><a href="#sgs-This-Call-function-aliases">sgs_(This)Call [function aliases]</a>
+</li><li><a href="#sgs-This-Call-P-function-aliases">sgs_(This)Call(P) [function aliases]</a>
 </li><li><a href="#sgs-ArgError-function-aliases">sgs_***ArgError [function aliases]</a>
 </li><li><a href="#sgs-Abort-function">sgs_Abort [function]</a>
 </li><li><a href="#sgs-Acquire-function">sgs_Acquire [function]</a>
@@ -914,7 +959,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-ExecBuffer-function-alias">sgs_ExecBuffer [function alias]</a>
 </li><li><a href="#sgs-ExecFile-function-alias">sgs_ExecFile [function alias]</a>
 </li><li><a href="#sgs-ExecString-function-alias">sgs_ExecString [function alias]</a>
-</li><li><a href="#sgs-FCall-function">sgs_FCall [function]</a>
+</li><li><a href="#sgs-FCall-P-functions">sgs_FCall(P) [functions]</a>
 </li><li><a href="#sgs-FindType-function">sgs_FindType [function]</a>
 </li><li><a href="#sgs-FuncName-function">sgs_FuncName [function]</a>
 </li><li><a href="#sgs-GCExecute-function">sgs_GCExecute [function]</a>
@@ -922,32 +967,32 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-Get-functions">sgs_Get*** [functions]</a>
 </li><li><a href="#sgs-GetFramePtr-function">sgs_GetFramePtr [function]</a>
 </li><li><a href="#sgs-GetHookFunc-function">sgs_GetHookFunc [function]</a>
-</li><li><a href="#sgs-GetIterator-P-function">sgs_GetIterator(P) [function]</a>
+</li><li><a href="#sgs-GetIterator-P-functions">sgs_GetIterator(P) [functions]</a>
 </li><li><a href="#sgs-GetLastErrno-function-alias">sgs_GetLastErrno [function alias]</a>
-</li><li><a href="#sgs-GetObjectData-function">sgs_GetObjectData [function]</a>
-</li><li><a href="#sgs-GetObjectIface-function">sgs_GetObjectIface [function]</a>
-</li><li><a href="#sgs-GetObjectStruct-function">sgs_GetObjectStruct [function]</a>
+</li><li><a href="#sgs-GetObjectData-P-functions">sgs_GetObjectData(P) [functions]</a>
+</li><li><a href="#sgs-GetObjectIface-P-functions">sgs_GetObjectIface(P) [functions]</a>
+</li><li><a href="#sgs-GetObjectStruct-P-functions">sgs_GetObjectStruct(P) [functions]</a>
 </li><li><a href="#sgs-GetStackItem-function">sgs_GetStackItem [function]</a>
-</li><li><a href="#sgs-GetStringPtr-function">sgs_GetStringPtr [function]</a>
-</li><li><a href="#sgs-GetStringSize-function">sgs_GetStringSize [function]</a>
+</li><li><a href="#sgs-GetStringPtr-P-functions">sgs_GetStringPtr(P) [functions]</a>
+</li><li><a href="#sgs-GetStringSize-P-functions">sgs_GetStringSize(P) [functions]</a>
 </li><li><a href="#sgs-GlobalCall-function">sgs_GlobalCall [function]</a>
 </li><li><a href="#sgs-HasFuncName-function">sgs_HasFuncName [function]</a>
 </li><li><a href="#sgs-Include-function-alias">sgs_Include [function alias]</a>
 </li><li><a href="#sgs-IncludeExt-function">sgs_IncludeExt [function]</a>
 </li><li><a href="#sgs-Init-functions">sgs_Init*** [functions]</a>
 </li><li><a href="#sgs-InsertVariable-function">sgs_InsertVariable [function]</a>
-</li><li><a href="#sgs-IsCallable-function">sgs_IsCallable [function]</a>
+</li><li><a href="#sgs-IsCallable-P-functions">sgs_IsCallable(P) [functions]</a>
 </li><li><a href="#sgs-IsFreedString32-function">sgs_IsFreedString32 [function]</a>
 </li><li><a href="#sgs-IsNumericString-function">sgs_IsNumericString [function]</a>
-</li><li><a href="#sgs-IsObject-function">sgs_IsObject [function]</a>
-</li><li><a href="#sgs-IsType-function-alias">sgs_IsType [function alias]</a>
+</li><li><a href="#sgs-IsObject-P-functions">sgs_IsObject(P) [functions]</a>
+</li><li><a href="#sgs-IsType-P-function-aliases">sgs_IsType(P) [function aliases]</a>
 </li><li><a href="#sgs-IsValidIndex-function">sgs_IsValidIndex [function]</a>
 </li><li><a href="#sgs-ItemType-function">sgs_ItemType [function]</a>
-</li><li><a href="#sgs-IterAdvance-P-function">sgs_IterAdvance(P) [function]</a>
-</li><li><a href="#sgs-IterGetData-P-function">sgs_IterGetData(P) [function]</a>
-</li><li><a href="#sgs-IterPushData-P-function">sgs_IterPushData(P) [function]</a>
+</li><li><a href="#sgs-IterAdvance-P-functions">sgs_IterAdvance(P) [functions]</a>
+</li><li><a href="#sgs-IterGetData-P-functions">sgs_IterGetData(P) [functions]</a>
+</li><li><a href="#sgs-IterPushData-P-functions">sgs_IterPushData(P) [functions]</a>
 </li><li><a href="#sgs-LoadArgs-function-alias">sgs_LoadArgs [function alias]</a>
-</li><li><a href="#sgs-LoadArgsExt-function">sgs_LoadArgsExt [function]</a>
+</li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt(VA) [function]</a>
 </li><li><a href="#sgs-LoadLib-functions">sgs_LoadLib_*** [functions]</a>
 </li><li><a href="#sgs-Memory-function">sgs_Memory [function]</a>
 </li><li><a href="#sgs-Method-function">sgs_Method [function]</a>
@@ -963,7 +1008,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-PushDict-function">sgs_PushDict [function]</a>
 </li><li><a href="#sgs-PushGlobal-function">sgs_PushGlobal [function]</a>
 </li><li><a href="#sgs-PushItem-function">sgs_PushItem [function]</a>
-</li><li><a href="#sgs-PushIterator-P-function">sgs_PushIterator(P) [function]</a>
+</li><li><a href="#sgs-PushIterator-P-functions">sgs_PushIterator(P) [functions]</a>
 </li><li><a href="#sgs-PushMap-function">sgs_PushMap [function]</a>
 </li><li><a href="#sgs-PushNumIndex-function">sgs_PushNumIndex [function]</a>
 </li><li><a href="#sgs-PushPath-function">sgs_PushPath [function]</a>
@@ -978,8 +1023,8 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><a href="#sgs-SetErrno-function-alias">sgs_SetErrno [function alias]</a>
 </li><li><a href="#sgs-SetHookFunc-function">sgs_SetHookFunc [function]</a>
 </li><li><a href="#sgs-SetMsgFunc-function">sgs_SetMsgFunc [function]</a>
-</li><li><a href="#sgs-SetObjectData-function">sgs_SetObjectData [function]</a>
-</li><li><a href="#sgs-SetObjectIface-function">sgs_SetObjectIface [function]</a>
+</li><li><a href="#sgs-SetObjectData-P-functions">sgs_SetObjectData(P) [functions]</a>
+</li><li><a href="#sgs-SetObjectIface-P-functions">sgs_SetObjectIface(P) [functions]</a>
 </li><li><a href="#sgs-SetOutputFunc-function">sgs_SetOutputFunc [function]</a>
 </li><li><a href="#sgs-StackSize-function">sgs_StackSize [function]</a>
 </li><li><a href="#sgs-Stat-function">sgs_Stat [function]</a>
@@ -1029,18 +1074,18 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li>using both at the same time should be reserved to special cases only</li></ul></li></ul><h4>error codes</h4><ul><li>SGS_E****: first error encountered (operation stopped somewhere in the middle)</li></ul></div>
 <div class='item'><a name='sgs-Init-functions'></a><hr><h2>sgs_Init*** [functions]</h2><h3>void sgs_InitNull( sgs_Variable* out )</h3><h3>void sgs_InitBool( sgs_Variable* out, sgs_Bool value )</h3><h3>void sgs_InitInt( sgs_Variable* out, sgs_Int value )</h3><h3>void sgs_InitReal( sgs_Variable* out, sgs_Real value )</h3><h3>void sgs_InitStringBuf( sgs_Context* C, sgs_Variable* out, const char* str, sgs_SizeVal size )</h3><h3>void sgs_InitString( sgs_Context* C, sgs_Variable* out, const char* str )</h3><h3>void sgs_InitCFunction( sgs_Variable* out, sgs_CFunc func )</h3><h3>void sgs_InitObject( sgs_Context* C, sgs_Variable* out, void* data, sgs_ObjInterface* iface )</h3><h3>void* sgs_InitObjectIPA( sgs_Context* C, sgs_Variable* out, sgs_SizeVal added, sgs_ObjInterface* iface )</h3><h3>void sgs_InitPtr( sgs_Variable* out, void* ptr )</h3><h3>void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj )</h3><ul><li>sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
 </li><li>sgs_InitStringBuf( C, NULL, size ) would allocate an uninitialized buffer
-<ul><li>it is accessible immediately by <a href="#sgs-GetString-Ptr-Size">sgs_GetString[Ptr|Size](</a> C, -1 )
+<ul><li>it is accessible immediately by <a href="#sgs-GetStringPtr-P-functions">sgs_GetStringPtrP</a> / <a href="#sgs-GetStringSize-P-functions">sgs_GetStringSizeP</a>
 </li></ul><li>sgs_InitObjectIPA stands for &quot;initialize object, allocate memory in-place&quot;
 <ul><li>it means that the <code>added</code> memory space will be appended to the end of object allocation
 </li><li>this allows to allocate all object data for most objects with just one allocation, instead of two
-</li><li>the allocated memory will be returned and also available via sgs_GetObjectData( C, -1 )</li></ul></li></ul></div>
+</li><li>the allocated memory will be returned and also available via <a href="#sgs-GetObjectData-P-functions">sgs_GetObjectDataP</a></li></ul></li></ul></div>
 <div class='item'><a name='sgs-Push-functions'></a><hr><h2>sgs_Push*** [functions]</h2><h3>void sgs_PushNull( sgs_Context* C )</h3><h3>void sgs_PushBool( sgs_Context* C, sgs_Bool value )</h3><h3>void sgs_PushInt( sgs_Context* C, sgs_Int value )</h3><h3>void sgs_PushReal( sgs_Context* C, sgs_Real value )</h3><h3>void sgs_PushStringBuf( sgs_Context* C, const char* str, sgs_SizeVal size )</h3><h3>void sgs_PushString( sgs_Context* C, const char* str )</h3><h3>void sgs_PushCFunction( sgs_Context* C, sgs_CFunc func )</h3><h3>void sgs_PushObject( sgs_Context* C, void* data, sgs_ObjInterface* iface )</h3><h3>void* sgs_PushObjectIPA( sgs_Context* C, sgs_SizeVal added, sgs_ObjInterface* iface )</h3><h3>void sgs_PushPtr( sgs_Context* C, void* ptr )</h3><h3>void sgs_PushObjectPtr( sgs_Context* C, sgs_VarObj* obj )</h3><h3>SGSRESULT sgs_PushVariable( sgs_Context* C, sgs_Variable* var )</h3><h4>pushes the data on the stack, as a new entry, appended to the end</h4><ul><li>sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
 </li><li>sgs_PushStringBuf( C, NULL, size ) would allocate an uninitialized buffer
-<ul><li>it is accessible immediately by <a href="#sgs-GetString-Ptr-Size">sgs_GetString[Ptr|Size](</a> C, -1 )
+<ul><li>it is accessible immediately by <a href="#sgs-GetStringPtr-P-functions">sgs_GetStringPtr( C, -1 )</a> / <a href="#sgs-GetStringSize-P-functions">sgs_GetStringSize( C, -1 )</a>
 </li></ul><li>sgs_PushObjectIPA stands for &quot;push object, allocate memory in-place&quot;
 <ul><li>it means that the <code>added</code> memory space will be appended to the end of object allocation
 </li><li>this allows to allocate all object data for most objects with just one allocation, instead of two
-</li><li>the allocated memory will be returned and also available via sgs_GetObjectData( C, -1 )
+</li><li>the allocated memory will be returned and also available via <a href="#sgs-GetObjectData-P-functions">sgs_GetObjectData( C, -1 )</a>
 </li></ul><li>sgs_PushVariable will increment the reference count of strings, SGS functions and objects
 <ul><li>it will also return EINVAL if type of variable isn&#39;t one of the allowed types
 </li></ul><li>these functions do not throw an error when the stack is full since there is no way to handle that</li></ul></div>
@@ -1098,7 +1143,7 @@ These are the default meanings for error codes that are honored throughout the A
 <div class='item'><a name='sgs-ArgError-function'></a><hr><h2>sgs_ArgError [function]</h2><h3>int sgs_ArgError( sgs_Context* C, int argid, int expect, int is_strict )</h3><h4>prints the argument type mismatch error</h4><ul><li>always returns 0 so it can be used to return and print an error in the same statement</li></ul></div>
 <div class='item'><a name='sgs-ArgError-function-aliases'></a><hr><h2>sgs_***ArgError [function aliases]</h2><h3>int sgs_FuncArgError( sgs_Context* C, int argid, int expect, int is_strict )</h3><h3>int sgs_MethodArgError( sgs_Context* C, int argid, int expect, int is_strict )</h3><h4>prints the argument type mismatch error</h4><ul><li>always returns 0 so it can be used to return and print an error in the same statement
 </li><li>alias to <code>sgs_ArgError( C, argid, Func/Method =&gt; 0/1, expect, is_strict )</code></li></ul></div>
-<div class='item'><a name='sgs-LoadArgsExt-function'></a><hr><h2>sgs_LoadArgsExt [function]</h2><h3>SGSMIXED sgs_LoadArgsExt( sgs_Context* C, int from, const char* cmd, ... )</h3><h4>parse the stack items and retrieve their data according to <code>cmd</code>, starting from item <code>from</code></h4><ul><li>for anything function requires, pass the value; for anything it returns - the pointer to the value
+<div class='item'><a name='sgs-LoadArgsExt-VA-function'></a><hr><h2>sgs_LoadArgsExt(VA) [function]</h2><h3>SGSMIXED sgs_LoadArgsExt( sgs_Context* C, int from, const char* cmd, ... )</h3><h3>SGSMIXED sgs_LoadArgsExtVA( sgs_Context* C, int from, const char* cmd, va_list args )</h3><h4>parse the stack items and retrieve their data according to <code>cmd</code>, starting from item <code>from</code></h4><ul><li>for anything function requires, pass the value; for anything it returns - the pointer to the value
 </li><li><code>cmd</code> is a string consisting of one-character commands
 </li><li>the commands are grouped into two kinds: control commands and parsing commands
 </li><li>function returns whether all required arguments have been parsed successfully
@@ -1127,7 +1172,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><code>r</code> -- check for <code>real</code> (returns sgs_Real)
 </li><li><code>s</code> -- check for <code>string</code> (returns char*)
 </li><li><code>m</code> -- check for <code>string</code> (returns char* string and sgs_SizeVal size)
-</li><li><code>p</code> -- check for <code>func/cfunc/object with SGS_OP_CALL</code> (callables) (returns SGSBOOL = 1)
+</li><li><code>p</code> -- check for <code>func/cfunc/object with CALL</code> (callables) (returns SGSBOOL = 1)
 </li><li><code>a</code> -- check for <code>array</code> (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 </li><li><code>t</code> -- check for <code>dict</code> (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 </li><li><code>h</code> -- check for <code>map</code> (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
@@ -1136,10 +1181,11 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li><code>v</code> -- check for any (non-null if strict, returns sgs_Variable data)
 </li><li><code>x</code> -- call a custom checking function (requires sgs_ArgCheckFunc, everything else depends on function)</li></ul><h4>error codes</h4><ul><li>SGS_EINVAL: error in <code>cmd</code> (wrong character/argument pointer moved before 0)</li></ul></div>
 <div class='item'><a name='sgs-LoadArgs-function-alias'></a><hr><h2>sgs_LoadArgs [function alias]</h2><h3>SGSBOOL sgs_LoadArgs( sgs_Context* C, const char* cmd, ... )</h3><h4>parse the stack items and retrieve their data according to <code>cmd</code>, starting from item 0</h4><p>
-<em class='notice-bgr'>unlike sgs_LoadArgsExt, it returns <code>bool</code> - whether all required arguments have been successfully parsed</em>
-</p><ul><li>for more info on syntax and usage, refer to <a href="#sgs-LoadArgsExt-function">sgs_LoadArgsExt</a>
+<em class='notice-bgr'>unlike <a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt(VA)</a>, it returns <code>bool</code> - whether all required arguments have been successfully parsed</em>
+</p><ul><li>for more info on syntax and usage, refer to <a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt(VA)</a>
 </li><li>alias to <code>sgs_LoadArgsExt( C, 0, cmd, ... )&gt;0</code></li></ul></div>
-<div class='item'><a name='sgs-FCall-function'></a><hr><h2>sgs_FCall [function]</h2><h3>SGSRESULT sgs_FCall( sgs_Context* C, int args, int expect, int gotthis )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><ul><li>`args`: the primary variables to be passed to the function, in the same order they are in the stack
+<div class='item'><a name='sgs-FCall-P-functions'></a><hr><h2>sgs_FCall(P) [functions]</h2><h3>SGSRESULT sgs_FCall( sgs_Context* C, int args, int expect, int gotthis )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><h3>SGSRESULT sgs_FCallP( sgs_Context* C, sgs_Variable* var, int args, int expect, int gotthis )</h3><h4>call the variable with the arguments on stack, returning the expected number of variables on stack</h4><ul><li>`var`: the callable variable to call as a function
+</li><li>`args`: the primary variables to be passed to the function, in the same order they are in the stack
 </li><li>`expect`: the number of variables to be left after a successful call
 </li><li>`gotthis`: whether the function is a method and an additional argument needs to be passed as the &#39;this&#39; value before others</li></ul><p>
 After a successful call, all arguments and the function will be popped off the stack and the expected number of variables will appear in their place. If the underlying callable does not return enough arguments, &#39;null&#39; variables will be pushed instead. If the number of returned values is bigger than expected, only the first expected return values will stay on the stack.
@@ -1149,18 +1195,20 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>[callable]</li></ul></li></ul><ul><li>a callable is one of the following:
 <ul><li>SGS function
 </li><li>C function
-</li><li>object with SGS_OP_CALL interface function defined</li></ul></li></ul><p>
+</li><li>object with CALL interface function defined</li></ul></li></ul><p>
 <em class='notice-bgr'>Stack is returned to the expected state only if the return value is equal to SGS_SUCCESS or SGS_EINPROC. Otherwise, it&#39;s left exactly as it was before the call.</em>
 </p><h4>error codes</h4><ul><li>SGS_EINPROC: topmost item on stack was not callable
-</li><li>SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + 1`)</li></ul></div>
-<div class='item'><a name='sgs-This-Call-function-aliases'></a><hr><h2>sgs_(This)Call [function aliases]</h2><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><ul><li>aliases to <a href="#sgs-FCall-function">sgs_FCall()</a>, for the first <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
-<div class='item'><a name='sgs-GlobalCall-function'></a><hr><h2>sgs_GlobalCall [function]</h2><h3>SGSRESULT sgs_GlobalCall( sgs_Context* C, const char* name, int args, int expect )</h3><h4>call the global variable <code>name</code> as a function</h4><ul><li>combination of <a href="#sgs-PushGlobal-function">sgs_PushGlobal()</a> and <a href="#sgs-Call">sgs_Call()</a></li></ul></div>
+</li><li>SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + (is_sgs_FCallP?0:1)`)</li></ul></div>
+<div class='item'><a name='sgs-This-Call-P-function-aliases'></a><hr><h2>sgs_(This)Call(P) [function aliases]</h2><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><h3>SGSRESULT sgs_Call( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h4>call the variable with the arguments on stack, returning the expected number of variables on stack</h4><ul><li>aliases to <a href="#sgs-FCall-P-functions">sgs_FCall(P)</a>, for the first function of each group <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
+<div class='item'><a name='sgs-GlobalCall-function'></a><hr><h2>sgs_GlobalCall [function]</h2><h3>SGSRESULT sgs_GlobalCall( sgs_Context* C, const char* name, int args, int expect )</h3><h4>call the global variable <code>name</code> as a function</h4><ul><li>combination of global function retrieval and function call; see <a href="#sgs-PushGlobal-function">sgs_PushGlobal</a> and <a href="#sgs-FCall-P-functions">sgs_FCall(P)</a> for more info on behavior</li></ul><h4>error codes</h4><ul><li>SGS_ENOTFND: global variable was not found
+</li><li>SGS_EINPROC: item found was not callable
+</li><li>SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0)`)</li></ul></div>
 <div class='item'><a name='sgs-TypeOf-function'></a><hr><h2>sgs_TypeOf [function]</h2><h3>SGSRESULT sgs_TypeOf( sgs_Context* C )</h3><h4>return the type name string of topmost variable in current stack frame</h4><ul><li>if the object does not support the specific part of the conversion interface function, a string of format &quot;object (%p)&quot; is returned to ensure expected type name comparison capabilities</li></ul><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame was empty</li></ul></div>
-<div class='item'><a name='sgs-DumpVar-function'></a><hr><h2>sgs_DumpVar [function]</h2><h3>SGSRESULT sgs_DumpVar( sgs_Context* C, int maxdepth )</h3><h4>convert the topmost variable of current stack frame to a highly informative string that should display the contents of the variable, up to <code>maxdepth</code> depth</h4><ul><li>if object does not have the SGS_OP_DUMP interface function implemented, only its pointer in memory and reference count are displayed</li></ul><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame was empty
+<div class='item'><a name='sgs-DumpVar-function'></a><hr><h2>sgs_DumpVar [function]</h2><h3>SGSRESULT sgs_DumpVar( sgs_Context* C, int maxdepth )</h3><h4>convert the topmost variable of current stack frame to a highly informative string that should display the contents of the variable, up to <code>maxdepth</code> depth</h4><ul><li>if object does not have the DUMP interface function implemented, only its pointer in memory and reference count are displayed</li></ul><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame was empty
 </li><li>SGS_EINVAL: invalid base variable type found in variable (not really expected to happen unless custom variable creation is done)</li></ul></div>
 <div class='item'><a name='sgs-GCExecute-function'></a><hr><h2>sgs_GCExecute [function]</h2><h3>SGSRESULT sgs_GCExecute( sgs_Context* C )</h3><h4>call the garbage collector on the VM</h4><ul><li>this procedure may take some time if the object graph is big
-</li><li>during the procedure, the SGS_OP_GCMARK interface functions of objects are invoked for the objects visible from entry points (like stack and global table)
-</li><li>aborting the procedure via error codes could lead the system into an unrecoverable state</li></ul><h4>error codes</h4><ul><li>any code can be returned by SGS_OP_GCMARK and SGS_OP_DESTRUCT functions, doing so would abort the process if the code is not either SGS_SUCCESS or SGS_ENOTFND</li></ul></div>
+</li><li>during the procedure, the GCMARK interface functions of objects are invoked for the objects visible from entry points (like stack and global table)
+</li><li>aborting the procedure via error codes could lead the system into an unrecoverable state</li></ul><h4>error codes</h4><ul><li>any code can be returned by GCMARK and DESTRUCT functions, doing so would abort the process if the code is not either SGS_SUCCESS or SGS_ENOTFND</li></ul></div>
 <div class='item'><a name='sgs-PadString-function'></a><hr><h2>sgs_PadString [function]</h2><h3>SGSRESULT sgs_PadString( sgs_Context* C )</h3><h4>append two spaces after every newline in the topmost variable of current stack frame</h4><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame is empty
 </li><li>SGS_EINVAL: topmost variable is not a string</li></ul></div>
 <div class='item'><a name='sgs-StringConcat-function'></a><hr><h2>sgs_StringConcat [function]</h2><h3>SGSRESULT sgs_StringConcat( sgs_Context* C, int args )</h3><h4>concatenate the <code>args</code> number of topmost string variables in the current stack frame</h4><h4>error codes</h4><ul><li>SGS_EINVAL: not enough (less than `args`) variables were found in the current stack frame</li></ul></div>
@@ -1207,7 +1255,7 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>SGS_ENOTFND: action was not found</li></ul></div>
 <div class='item'><a name='sgs-Serialize-function'></a><hr><h2>sgs_Serialize [function]</h2><h3>SGSRESULT sgs_Serialize( sgs_Context* C )</h3><h4>serialize the topmost variable of the current stack frame (convert to a binary recreation instruction stream)</h4><ul><li>the following variable types can be serialized:
 <ul><li>null, bool, int, real, string, func (SGS function)
-</li><li>objects with the SGS_OP_SERIALIZE interface function defined</li></ul></li></ul><ul><li>serialized data has the following format:
+</li><li>objects with the SERIALIZE interface function defined</li></ul></li></ul><ul><li>serialized data has the following format:
 <ul><li>a list of &#39;P&#39; or &#39;C&#39; commands
 </li><li>&#39;P&#39; (push) command: byte - variable type; variable data
 <ul><li>variable data: nothing for null, byte for bool, int64 for int, double for real, int32 + char[] for string
@@ -1234,10 +1282,9 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>SGS_EINPROC: the name is already used</li></ul></div>
 <div class='item'><a name='sgs-UnregisterType-function'></a><hr><h2>sgs_UnregisterType [function]</h2><h3>SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )</h3><h4>unregister a type interface by its name</h4><h4>error codes</h4><ul><li>SGS_ENOTFND: the specified type name was not mapped to any interface</li></ul></div>
 <div class='item'><a name='sgs-FindType-function'></a><hr><h2>sgs_FindType [function]</h2><h3>sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name )</h3><h4>finds the type interface that is mapped to the specified name or returns NULL if that type name cannot be found</h4></div>
-<div class='item'><a name='sgs-IsObject-function'></a><hr><h2>sgs_IsObject [function]</h2><h3>SGSBOOL sgs_IsObject( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )</h3><h4>returns whether the specified stack item <code>item</code> is an object with the interface pointer <code>iface</code></h4><ul><li>if <code>item</code> is out of bounds or not an object or doesn&#39;t have the specified interface, 0 is returned</li></ul></div>
-<div class='item'><a name='sgs-IsType-function-alias'></a><hr><h2>sgs_IsType [function alias]</h2><h3>SGSBOOL sgs_IsType( sgs_Context* C, sgs_StkIdx item, const char* type )</h3><h4>returns whether the specified stack item <code>item</code> is an object of the specified type</h4><ul><li>alias of <code>sgs_IsObject( C, item, sgs_FindType( C, type ) )</code></li></ul></div>
-<div class='item'><a name='sgs-IsCallable-function'></a><hr><h2>sgs_IsCallable [function]</h2><h3>SGSBOOL sgs_IsCallable( sgs_Context* C, sgs_StkIdx item )</h3><h4>returns whether the specified stack item <code>item</code> is callable</h4><ul><li>callable variables are either SGS functions or C functions or objects with the SGS_OP_CALL interface implemented
-</li><li>if <code>item</code> is out of bounds, 0 is returned</li></ul></div>
+<div class='item'><a name='sgs-IsObject-P-functions'></a><hr><h2>sgs_IsObject(P) [functions]</h2><h3>SGSBOOL sgs_IsObject( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )</h3><h4>returns whether the specified stack item <code>item</code> is an object with the interface pointer <code>iface</code></h4><ul><li>if <code>item</code> is out of bounds or not an object or doesn&#39;t have the specified interface, 0 is returned</li></ul><h3>SGSBOOL sgs_IsObjectP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface )</h3><h4>returns whether the specified variable <code>var</code> is an object with the interface pointer <code>iface</code></h4></div>
+<div class='item'><a name='sgs-IsType-P-function-aliases'></a><hr><h2>sgs_IsType(P) [function aliases]</h2><h3>SGSBOOL sgs_IsType( sgs_Context* C, sgs_StkIdx item, const char* type )</h3><h4>returns whether the specified stack item <code>item</code> is an object of the specified type</h4><ul><li>alias of <code>sgs_IsObject( C, item, sgs_FindType( C, type ) )</code></li></ul><h3>SGSBOOL sgs_IsTypeP( sgs_Context* C, sgs_Variable* var, const char* type )</h3><h4>returns whether the specified variable <code>var</code> is an object of the specified type</h4><ul><li>alias of <code>sgs_IsObjectP( C, var, sgs_FindType( C, type ) )</code></li></ul></div>
+<div class='item'><a name='sgs-IsCallable-P-functions'></a><hr><h2>sgs_IsCallable(P) [functions]</h2><h3>SGSBOOL sgs_IsCallable( sgs_Context* C, sgs_StkIdx item )</h3><h4>returns whether the specified stack item <code>item</code> is callable</h4><ul><li>if <code>item</code> is out of bounds, 0 is returned</li></ul><h3>SGSBOOL sgs_IsCallableP( sgs_Context* C, sgs_Variable* var )</h3><h4>returns whether the specified variable <code>var</code> is callable</h4><ul><li>callable variables are either SGS functions or C functions or objects with the CALL interface implemented</li></ul></div>
 <div class='item'><a name='sgs-IsNumericString-function'></a><hr><h2>sgs_IsNumericString [function]</h2><h3>SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )</h3><h4>checks if the string is convertible to an integer/real</h4><ul><li>more info at @&lt;Numeric string parsing rules&gt;</li></ul></div>
 <div class='item'><a name='sgs-Parse-functions'></a><hr><h2>sgs_Parse*** [functions]</h2><h3>SGSBOOL sgs_ParseBool( sgs_Context* C, sgs_StkIdx item, sgs_Bool* out )</h3><h3>SGSBOOL sgs_ParseInt( sgs_Context* C, sgs_StkIdx item, sgs_Int* out )</h3><h3>SGSBOOL sgs_ParseReal( sgs_Context* C, sgs_StkIdx item, sgs_Real* out )</h3><h3>SGSBOOL sgs_ParseString( sgs_Context* C, sgs_StkIdx item, char** out, sgs_SizeVal* size )</h3><h3>SGSBOOL sgs_ParseObjectPtr( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface, sgs_VarObj** out, int strict )</h3><h3>SGSBOOL sgs_ParsePtr( sgs_Context* C, sgs_StkIdx item, void** out )</h3><h4>attempts to parse the specified item of the current stack frame, returning whether parsing was successful</h4><h3>SGSBOOL sgs_ParseBoolP( sgs_Context* C, sgs_Variable* var, sgs_Bool* out )</h3><h3>SGSBOOL sgs_ParseIntP( sgs_Context* C, sgs_Variable* var, sgs_Int* out )</h3><h3>SGSBOOL sgs_ParseRealP( sgs_Context* C, sgs_Variable* var, sgs_Real* out )</h3><h3>SGSBOOL sgs_ParseStringP( sgs_Context* C, sgs_Variable* var, char** out, sgs_SizeVal* size )</h3><h3>SGSBOOL sgs_ParseObjectPtrP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface, sgs_VarObj** out, int strict )</h3><h3>SGSBOOL sgs_ParsePtrP( sgs_Context* C, sgs_Variable* var, void** out )</h3><h4>attempts to parse the specified varuabke, returning whether parsing was successful</h4><ul><li>the parsing rules:
 <ul><li>for `sgs_ParsePtr`/`sgs_ParsePtrP`, unlike every other parsing function, only null/ptr types are considered valid
@@ -1247,26 +1294,27 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>if item is of <code>string</code> type and <code>bool</code> is requested, fail
 </li><li>if item is of <code>string</code> type and `int`/`real` is requested, try to convert
 </li><li>everything else succeeds</li></ul></li></ul></div>
-<div class='item'><a name='sgs-PushIterator-P-function'></a><hr><h2>sgs_PushIterator(P) [function]</h2><h3>SGSRESULT sgs_PushIterator( sgs_Context* C, sgs_StkIdx item )</h3><h4>create and push an iterator from the specified item of the current stack frame</h4><h3>SGSRESULT sgs_PushIteratorP( sgs_Context* C, sgs_Variable* var )</h3><h4>create and push an iterator from the specified variable</h4><ul><li>iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value
-</li><li>iterator starts at the pre-first position, so nothing can be read before the initial state</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
+<div class='item'><a name='sgs-PushIterator-P-functions'></a><hr><h2>sgs_PushIterator(P) [functions]</h2><h3>SGSRESULT sgs_PushIterator( sgs_Context* C, sgs_StkIdx item )</h3><h4>create and push an iterator from the specified item of the current stack frame</h4><h3>SGSRESULT sgs_PushIteratorP( sgs_Context* C, sgs_Variable* var )</h3><h4>create and push an iterator from the specified variable</h4><ul><li>see <a href="#Iterator-system">Iterator system</a> for more info about iterators</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
 </li><li>SGS_ENOTSUP: variable type does not support iterators (only objects support them)
 </li><li>SGS_ENOTFND: object type does not support iterators (iterator conversion request failed)
 </li><li>any other code can be returned by the object</li></ul></div>
-<div class='item'><a name='sgs-GetIterator-P-function'></a><hr><h2>sgs_GetIterator(P) [function]</h2><h3>SGSRESULT sgs_GetIterator( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>create an iterator from the specified item of the current stack frame</h4><h3>SGSRESULT sgs_GetIteratorP( sgs_Context* C, sgs_Variable* var, sgs_Variable* out )</h3><h4>create an iterator from the specified variable</h4><ul><li>iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value
-</li><li>iterator starts at the pre-first position, so nothing can be read before the initial state</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
+<div class='item'><a name='sgs-GetIterator-P-functions'></a><hr><h2>sgs_GetIterator(P) [functions]</h2><h3>SGSRESULT sgs_GetIterator( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>create an iterator from the specified item of the current stack frame</h4><h3>SGSRESULT sgs_GetIteratorP( sgs_Context* C, sgs_Variable* var, sgs_Variable* out )</h3><h4>create an iterator from the specified variable</h4><ul><li>see <a href="#Iterator-system">Iterator system</a> for more info about iterators</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
 </li><li>SGS_ENOTSUP: variable type does not support iterators (only objects support them)
 </li><li>SGS_ENOTFND: object type does not support iterators (iterator conversion request failed)
 </li><li>any other code can be returned by the object</li></ul></div>
-<div class='item'><a name='sgs-IterAdvance-P-function'></a><hr><h2>sgs_IterAdvance(P) [function]</h2><h3>SGSMIXED sgs_IterAdvance( sgs_Context* C, sgs_StkIdx item )</h3><h3>SGSMIXED sgs_IterAdvanceP( sgs_Context* C, sgs_Variable* var )</h3><h4>advance the iterator to the next position, returning if the current position is still in range or an error code on failure</h4><ul><li>this is the way it&#39;s expected to be usually called: <code>while( sgs_IterAdvance( C, item ) &gt; 0 ){ ... sgs_IterPushData ... }</code></li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
+<div class='item'><a name='sgs-IterAdvance-P-functions'></a><hr><h2>sgs_IterAdvance(P) [functions]</h2><h3>SGSMIXED sgs_IterAdvance( sgs_Context* C, sgs_StkIdx item )</h3><h3>SGSMIXED sgs_IterAdvanceP( sgs_Context* C, sgs_Variable* var )</h3><h4>advance the iterator to the next position, returning if the current position is still in range or an error code on failure</h4><ul><li>this is the way it&#39;s expected to be usually called: <code>while( sgs_IterAdvance( C, item ) &gt; 0 ){ ... sgs_IterPushData ... }</code>
+</li><li>see <a href="#Iterator-system">Iterator system</a> for more info about iterators</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
 </li><li>SGS_EINVAL: iterated object changed in a way that iterator does not support (currently a size equality test)
 </li><li>SGS_EINPROC: internal failure in the object interface</li></ul></div>
-<div class='item'><a name='sgs-IterPushData-P-function'></a><hr><h2>sgs_IterPushData(P) [function]</h2><h3>SGSRESULT sgs_IterPushData( sgs_Context* C, sgs_StkIdx item, int key, int value )</h3><h3>SGSRESULT sgs_IterPushDataP( sgs_Context* C, sgs_Variable* var, int key, int value )</h3><h4>load and push data associated with the current position</h4><ul><li><code>key</code> and <code>value</code> are booleans that specify if the respective value should be returned
+<div class='item'><a name='sgs-IterPushData-P-functions'></a><hr><h2>sgs_IterPushData(P) [functions]</h2><h3>SGSRESULT sgs_IterPushData( sgs_Context* C, sgs_StkIdx item, int key, int value )</h3><h3>SGSRESULT sgs_IterPushDataP( sgs_Context* C, sgs_Variable* var, int key, int value )</h3><h4>load and push data associated with the current position</h4><ul><li><code>key</code> and <code>value</code> are booleans that specify if the respective value should be returned
 </li><li>first the key is pushed, then the value
-</li><li>if neither <code>key</code> nor <code>value</code> are expected, the call succeeds and doesn&#39;t push anything</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
+</li><li>if neither <code>key</code> nor <code>value</code> are expected, the call succeeds and doesn&#39;t push anything
+</li><li>see <a href="#Iterator-system">Iterator system</a> for more info about iterators</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
 </li><li>SGS_EINVAL: iterated object changed in a way that iterator does not support
 </li><li>SGS_EINPROC: internal failure in the object interface</li></ul></div>
-<div class='item'><a name='sgs-IterGetData-P-function'></a><hr><h2>sgs_IterGetData(P) [function]</h2><h3>SGSRESULT sgs_IterGetData( sgs_Context* C, sgs_StkIdx item, sgs_Variable* key, sgs_Variable* value )</h3><h3>SGSRESULT sgs_IterGetDataP( sgs_Context* C, sgs_Variable* var, sgs_Variable* key, sgs_Variable* value )</h3><h4>load data associated with the current position</h4><ul><li><code>key</code> and <code>value</code> are variables where the data is written if the pointer is not NULL
-</li><li>if neither <code>key</code> nor <code>value</code> are expected, the call succeeds and doesn&#39;t retrieve anything</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
+<div class='item'><a name='sgs-IterGetData-P-functions'></a><hr><h2>sgs_IterGetData(P) [functions]</h2><h3>SGSRESULT sgs_IterGetData( sgs_Context* C, sgs_StkIdx item, sgs_Variable* key, sgs_Variable* value )</h3><h3>SGSRESULT sgs_IterGetDataP( sgs_Context* C, sgs_Variable* var, sgs_Variable* key, sgs_Variable* value )</h3><h4>load data associated with the current position</h4><ul><li><code>key</code> and <code>value</code> are variables where the data is written if the pointer is not NULL
+</li><li>if neither <code>key</code> nor <code>value</code> are expected, the call succeeds and doesn&#39;t retrieve anything
+</li><li>see <a href="#Iterator-system">Iterator system</a> for more info about iterators</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
 </li><li>SGS_EINVAL: iterated object changed in a way that iterator does not support
 </li><li>SGS_EINPROC: internal failure in the object interface</li></ul></div>
 <div class='item'><a name='sgs-ArraySize-function'></a><hr><h2>sgs_ArraySize [function]</h2><h3>SGSMIXED sgs_ArraySize( sgs_Context* C, sgs_StkIdx item )</h3><h4>check if the specified stack item is an array and return its size or error code on failure</h4><h4>error codes</h4><ul><li>SGS_EINVAL: index out of bounds / variable was not an array</li></ul></div>
@@ -1281,20 +1329,20 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-Method-function'></a><hr><h2>sgs_Method [function]</h2><h3>SGSBOOL sgs_Method( sgs_Context* C )</h3><h4>unlock the &#39;this&#39; variable, return if the function was called as a method (and thus variable was unlocked)</h4><ul><li>method calls look like this: &quot;object.method(...)&quot;</li></ul></div>
 <div class='item'><a name='sgs-Acquire-function'></a><hr><h2>sgs_Acquire [function]</h2><h3>void sgs_Acquire( sgs_Context* C, sgs_Variable* var )</h3><h4>increment the reference count of the variable (if it counts references)</h4></div>
 <div class='item'><a name='sgs-Release-function'></a><hr><h2>sgs_Release [function]</h2><h3>void sgs_Release( sgs_Context* C, sgs_Variable* var )</h3><h4>decrement and possibly deallocate the reference count of the variable (if it counts references)</h4><ul><li>works differently while GC is running: doesn&#39;t delete objects of same context in destructor</li></ul></div>
-<div class='item'><a name='sgs-GCMark-function'></a><hr><h2>sgs_GCMark [function]</h2><h3>SGSRESULT sgs_GCMark( sgs_Context* C, sgs_Variable* var )</h3><h4>mark the specified variable as reachable for the garbage collector</h4><ul><li>to be called in the SGS_OP_GCMARK object callback</li></ul></div>
-<div class='item'><a name='sgs-GetStringPtr-function'></a><hr><h2>sgs_GetStringPtr [function]</h2><h3>char* sgs_GetStringPtr( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the string data pointer of the specified stack item</h4><ul><li>if item is out of bounds or not a string, NULL will be returned and ...
+<div class='item'><a name='sgs-GCMark-function'></a><hr><h2>sgs_GCMark [function]</h2><h3>SGSRESULT sgs_GCMark( sgs_Context* C, sgs_Variable* var )</h3><h4>mark the specified variable as reachable for the garbage collector</h4><ul><li>to be called in the GCMARK object callback</li></ul></div>
+<div class='item'><a name='sgs-GetStringPtr-P-functions'></a><hr><h2>sgs_GetStringPtr(P) [functions]</h2><h3>char* sgs_GetStringPtr( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the string data pointer of the specified stack item</h4><h3>char* sgs_GetStringPtrP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the string data pointer of the specified variable</h4><ul><li>if item is out of bounds or not a string, NULL will be returned and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul></div>
-<div class='item'><a name='sgs-GetStringSize-function'></a><hr><h2>sgs_GetStringSize [function]</h2><h3>sgs_SizeVal sgs_GetStringSize( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the string size of the specified stack item</h4><ul><li>if item is out of bounds or not a string, 0 will be returned and ...
+<div class='item'><a name='sgs-GetStringSize-P-functions'></a><hr><h2>sgs_GetStringSize(P) [functions]</h2><h3>sgs_SizeVal sgs_GetStringSize( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the string size of the specified stack item</h4><h3>sgs_SizeVal sgs_GetStringSizeP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the string size of the specified variable</h4><ul><li>if item is out of bounds or not a string, 0 will be returned and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul></div>
-<div class='item'><a name='sgs-GetObjectStruct-function'></a><hr><h2>sgs_GetObjectStruct [function]</h2><h3>sgs_VarObj* sgs_GetObjectStruct( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the object&#39;s internal data pointer of the specified stack item</h4><ul><li>if item is out of bounds or not an object, NULL will be returned and ...
+<div class='item'><a name='sgs-GetObjectStruct-P-functions'></a><hr><h2>sgs_GetObjectStruct(P) [functions]</h2><h3>sgs_VarObj* sgs_GetObjectStruct( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the object&#39;s internal data pointer of the specified stack item</h4><h3>sgs_VarObj* sgs_GetObjectStructP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the object&#39;s internal data pointer of the specified variable</h4><ul><li>if item is out of bounds or not an object, NULL will be returned and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul></div>
-<div class='item'><a name='sgs-GetObjectData-function'></a><hr><h2>sgs_GetObjectData [function]</h2><h3>void* sgs_GetObjectData( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the object data pointer of the specified stack item</h4><ul><li>if item is out of bounds or not an object, NULL will be returned and ...
+<div class='item'><a name='sgs-GetObjectData-P-functions'></a><hr><h2>sgs_GetObjectData(P) [functions]</h2><h3>void* sgs_GetObjectData( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the object data pointer of the specified stack item</h4><h3>void* sgs_GetObjectDataP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the object data pointer of the specified variable</h4><ul><li>if item is out of bounds or not an object, NULL will be returned and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul></div>
-<div class='item'><a name='sgs-GetObjectIface-function'></a><hr><h2>sgs_GetObjectIface [function]</h2><h3>sgs_ObjInterface* sgs_GetObjectIface( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the object interface pointer of the specified stack item</h4><ul><li>if item is out of bounds or not an object, NULL will be returned and ...
+<div class='item'><a name='sgs-GetObjectIface-P-functions'></a><hr><h2>sgs_GetObjectIface(P) [functions]</h2><h3>sgs_ObjInterface* sgs_GetObjectIface( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the object interface pointer of the specified stack item</h4><h3>sgs_ObjInterface* sgs_GetObjectIfaceP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the object interface pointer of the specified variable</h4><ul><li>if item is out of bounds or not an object, NULL will be returned and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul></div>
-<div class='item'><a name='sgs-SetObjectData-function'></a><hr><h2>sgs_SetObjectData [function]</h2><h3>int sgs_SetObjectData( sgs_Context* C, sgs_StkIdx item, void* data )</h3><h4>set the object data pointer of the specified stack item</h4><ul><li>if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
+<div class='item'><a name='sgs-SetObjectData-P-functions'></a><hr><h2>sgs_SetObjectData(P) [functions]</h2><h3>int sgs_SetObjectData( sgs_Context* C, sgs_StkIdx item, void* data )</h3><h4>set the object data pointer of the specified stack item</h4><h3>int sgs_SetObjectDataP( sgs_Context* C, sgs_Variable* var, void* data )</h3><h4>set the object data pointer of the specified variable</h4><ul><li>if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul></div>
-<div class='item'><a name='sgs-SetObjectIface-function'></a><hr><h2>sgs_SetObjectIface [function]</h2><h3>int sgs_SetObjectIface( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )</h3><h4>set the object interface pointer of the specified stack item</h4><ul><li>if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
+<div class='item'><a name='sgs-SetObjectIface-P-functions'></a><hr><h2>sgs_SetObjectIface(P) [functions]</h2><h3>int sgs_SetObjectIface( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )</h3><h4>set the object interface pointer of the specified stack item</h4><h3>int sgs_SetObjectIfaceP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface )</h3><h4>set the object interface pointer of the specified variable</h4><ul><li>if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul></div>
 <div class='item'><a name='sgs-SetOutputFunc-function'></a><hr><h2>sgs_SetOutputFunc [function]</h2><h3>void sgs_SetOutputFunc( sgs_Context* C, sgs_OutputFunc func, void* userdata )</h3><h4>sets the function used in &#39;print&#39; function</h4><ul><li>default implementation copies data to FILE* stream, specified in userdata, it can be found in sgs_ctx.c</li></ul></div>
 <div class='item'><a name='sgs-Write-function'></a><hr><h2>sgs_Write [function]</h2><h3>void sgs_Write( sgs_Context* C, const void* ptr, sgs_SizeVal size )</h3><h4>passes the specified data to the output function</h4><ul><li>the default output function prints the data to the specified FILE* stream (stdout by default)</li></ul></div>
@@ -1334,8 +1382,7 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-CodeString-function'></a><hr><h2>sgs_CodeString [function]</h2><h3>const char* sgs_CodeString( int type, int val )</h3><h4>returns a string for the enumeration <code>type</code> value <code>val</code></h4><ul><li>there are 4 enumerations to have value names returned for:
 <ul><li>SGS_CODE_ER: error codes (SGS_ERROR, SGS_WARNING, ...)
 </li><li>SGS_CODE_VT: variable types (SGS_VT_BOOL, SGS_VT_FUNC, ...)
-</li><li>SGS_CODE_OP: VM instructions (SGS_SI_PUSH, SGS_SI_FORPREP, ... [internal])
-</li><li>SGS_CODE_OI: object interface function types (SGS_OP_GETINDEX, SGS_OP_GCMARK, ...)</li></ul></li></ul></div>
+</li><li>SGS_CODE_OP: VM instructions (SGS_SI_PUSH, SGS_SI_FORPREP, ... [internal])</li></ul></li></ul></div>
 <div class='item'><a name='sgs-Abort-function'></a><hr><h2>sgs_Abort [function]</h2><h3>SGSRESULT sgs_Abort( sgs_Context* C )</h3><h4>stops execution of current SGS functions up to the last C function in the stack, excluding the current</h4><h4>error codes</h4><ul><li>SGS_ENOTFND: last or next to last function in the stack was not a SGS function</li></ul></div>
 <div class='item'><a name='sgs-Stat-function'></a><hr><h2>sgs_Stat [function]</h2><h3>ptrdiff_t sgs_Stat( sgs_Context* C, int type )</h3><h4>returns or prints information about state of SGScript VM</h4><ul><li>the following <code>type</code> values are supported:
 <ul><li>SGS_STAT_VERSION: returns the version number of the VM
@@ -1380,7 +1427,7 @@ A C function has the type <code>int CFunc( sgs_Context* )</code>. It receives th
 </p><h4>Conventions</h4><p>
 There are no forced courses of action beyond this point. However, to simplify development, some conventions were established and are used throughout the standard library and are suggested to follow.
 </p><h5>General structure</h5><ul><li>the usage of SGS_CTX in argument list is suggested to enable the use of certain macros that assume the availability of <code>sgs_Context* C</code>
-</li><li>there are no restrictions on function names, however it helps to mark the scripting engine functions with a common prefix and if they wrap a native function, including the name of the wrapped function is suggested</li></ul><h5>Argument loading</h5><ul><li>prefer using sgs_LoadArgs, followed by sgs_LoadArgsExt, followed by the sgs_Parse***/sgs_Is***/sgs_ItemType(Ext)/... functions together with ArgError function family for error handling</li></ul><h5>Error handling</h5><ul><li>it is preferred to do most of it at the beginning, before custom allocations (VM stack doesn&#39;t count here), where it is possible to just <code>return sgs_Msg( C, SGS_WARNING, &quot;Error message&quot; )</code>
+</li><li>there are no restrictions on function names, however it helps to mark the scripting engine functions with a common prefix and if they wrap a native function, including the name of the wrapped function is suggested</li></ul><h5>Argument loading</h5><ul><li>prefer using <a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgs</a>, followed by <a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt</a>, followed by the sgs_Parse***/sgs_Is***/sgs_ItemType(Ext)/... functions together with ArgError function family for error handling</li></ul><h5>Error handling</h5><ul><li>it is preferred to do most of it at the beginning, before custom allocations (VM stack doesn&#39;t count here), where it is possible to just <code>return sgs_Msg( C, SGS_WARNING, &quot;Error message&quot; )</code>
 </li><li>SGS_WARNING is for non-fatal errors, SGS_ERROR is for errors that make it impossible to continue (severe, undoubted logical errors fall into this category)
 </li><li>on error, functions should return nothing or null</li></ul><p>
 A typical function
@@ -1449,7 +1496,7 @@ Depending on the argument, it is called by different sources:
 </p><ul><li>type conversion: to*** function families and other conversion triggers (like operators) in SGScript and the Get/To/Parse function families in the C API.
 </li><li>SGS_CONVOP_CLONE: called on <a href="#clone-function">clone</a> / <a href="#sgs-CloneItem-function">sgs_Clone</a>
 </li><li>SGS_CONVOP_TYPEOF: called on <a href="#typeof-function">typeof</a> / <a href="#sgs-TypeOf-function">sgs_TypeOf</a>
-</li><li>SGS_CONVOP_TOITER: called on foreach / <a href="#sgs-PushIterator-P-function">sgs_PushIterator(P)</a> / <a href="#sgs-GetIterator-P-function">sgs_GetIterator(P)</a></li></ul><h5>Additional arguments:</h5><ul><li>int type -- one of SGS_VT_[BOOL|INT|REAL|STRING|PTR] or SGS_CONVOP_CLONE / SGS_CONVOP_TYPEOF / SGS_CONVOP_TOITER</li></ul><h5>Stack frame:</h5><p>
+</li><li>SGS_CONVOP_TOITER: called on foreach / <a href="#sgs-PushIterator-P-functions">sgs_PushIterator(P)</a> / <a href="#sgs-GetIterator-P-functions">sgs_GetIterator(P)</a></li></ul><h5>Additional arguments:</h5><ul><li>int type -- one of SGS_VT_[BOOL|INT|REAL|STRING|PTR] or SGS_CONVOP_CLONE / SGS_CONVOP_TYPEOF / SGS_CONVOP_TOITER</li></ul><h5>Stack frame:</h5><p>
 Empty at beginning. Expected to have at least one item on stack after a successful conversion. The topmost one is used.
 </p><p>
 Depending on the argument, it requires different variable types on stack:
@@ -1475,7 +1522,7 @@ None.
 Empty.
 </p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.</li></ul><h5>Additional notes:</h5><ul><li>Callback expects that sgs_GCMark is called on all of the owned variables.
 </li><li>It is important to minimize the possibility of failure here. The system cannot help in any way if memory or ownership states are corrupted.</li></ul><h4>GETNEXT - iterator control callback</h4><h5>When called:</h5><ul><li>foreach in SGScript.
-</li><li><a href="#sgs-IterAdvance-P-function">sgs_IterAdvance(P)</a> / <a href="#sgs-IterPushData-P-function">sgs_IterPushData(P)</a> / <a href="#sgs-IterGetData-P-function">sgs_IterGetData(P)</a></li></ul><h5>Additional arguments:</h5><ul><li>int act -- specifies the actions that should be taken in this call.
+</li><li><a href="#sgs-IterAdvance-P-functions">sgs_IterAdvance(P)</a> / <a href="#sgs-IterPushData-P-functions">sgs_IterPushData(P)</a> / <a href="#sgs-IterGetData-P-functions">sgs_IterGetData(P)</a></li></ul><h5>Additional arguments:</h5><ul><li>int act -- specifies the actions that should be taken in this call.
 <ul><li>if argument == 0, iterator&#39;s position must be increased by one step and the return value must contain whether iterator has not reached end (positive value if so, otherwise - 0) or an error if callback has failed
 </li><li>otherwise, callback must push the data required (if SGS_GETNEXT_KEY is set, the key, and if SGS_GETNEXT_VALUE is set - the value, in exactly that order)</li></ul></li></ul><h5>Stack frame:</h5><p>
 Empty at beginning. Expects at least one (if either flag is set, but not both) or two (if both flags are set) variables on success. Key first, value second.
@@ -1724,7 +1771,7 @@ typeid( [] ); // returns 7 / VT_OBJECT</pre></div>
 <ul><li>convertible objects are not numeric since validation requires an interface call and unnecessary interface calls cannot be made
 </li><li>null value is considered to be the lack of a better value, thus it cannot be considered valid, even though it always maps implicitly to the integer 0</li></ul></li></ul><pre>is_numeric( 12.124 ); // returns true
 is_numeric( &quot;what&quot; ); // returns false</pre></div>
-<div class='item'><a name='is-callable-function'></a><hr><h2>is_callable [function]</h2><h3>is_callable( var )</h3><h4>returns whether the variable <code>var</code> is callable - a function (func/cfunc) or an object with OP_CALL defined</h4><ul><li>this function is equivalent to <a href="#sgs-IsCallable-function">sgs_IsCallable</a> in the C API</li></ul><pre>is_callable( print ); // returns &#39;true&#39;
+<div class='item'><a name='is-callable-function'></a><hr><h2>is_callable [function]</h2><h3>is_callable( var )</h3><h4>returns whether the variable <code>var</code> is callable - a function (func/cfunc) or an object with OP_CALL defined</h4><ul><li>this function is equivalent to <a href="#sgs-IsCallable-P-functions">sgs_IsCallable</a> in the C API</li></ul><pre>is_callable( print ); // returns &#39;true&#39;
 is_callable( closure( print, 5 ) ); // returns &#39;true&#39;
 is_callable( 5 ); // returns &#39;false&#39;</pre></div>
 <div class='item'><a name='print-println-printlns-functions'></a><hr><h2>print, println, printlns [functions]</h2><h3>print( ... ), println( ... ), printlns( ... ),</h3><h4>passes all arguments, converted to strings, to the output callback</h4><ul><li>print passes arguments without modifications

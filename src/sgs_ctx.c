@@ -191,12 +191,6 @@ const char* sgs_CodeString( int type, int val )
 			return NULL;
 		return sgs_OpNames[ val ];
 	}
-	else if( type == SGS_CODE_OI )
-	{
-		if( val < 0 || val >= (int) ARRAY_SIZE( sgs_IfaceNames ) )
-			return NULL;
-		return sgs_IfaceNames[ val ];
-	}
 	else
 		return NULL;
 }
