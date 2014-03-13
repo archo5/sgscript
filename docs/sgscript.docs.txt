@@ -822,6 +822,39 @@ Another example using pointers:
     // .. release the iterable or not, depending on how it was initialized ..
 
 
+# Garbage collection system [info]
+
+The garbage collector currently implemented is a basic stop-the-world mark-and-sweep algorithm that goes over all objects and recursively marks them as available.
+
+The marking is done on the variable named `redblue`, which contains 0 or 1 and in all avaiable objects is synced with the same variable for the context. On each pass, the bit is flipped for all available objects, so all objects that didn't have the bit flipped can be safely removed.
+
+The garbage collector is invoked with @sgs_GCExecute in the C API and @gc_collect in SGScript.
+
+Sub-objects are marked as available in the GCMARK callback with @sgs_GCMark(Array) / @sgs_ObjGCMark functions.
+
+
+# Classes [info]
+
+Classes are objects that enable operator/interface overloading and two-layer index retrieval.
+
+Overloadable operators/interfaces:
+
+- basic math: +, - (both unary and binary), *, /, %
+- comparison
+- conversions to bool, int, real, string
+- typeof string retrieval
+- cloning
+
+Two-layer index retrieval is simply trying to read the index from a different source if the first source fails to come up with something. In other languages, metatable and prototype is the name of a table that is the second source. This allows to avoid storing functions and other data that is equal to all instances of some object type.
+
+
+# Closures [info]
+
+Closures are a combination of one callable and some data. They are meant to simplify interfaces and code around places where it was important for functions to have access to call-invariant (same on every call) data.
+
+There are two types of closures in SGScript ...TODO... WHY?
+
+
 # <<< (Concepts & systems)
 
 
@@ -875,8 +908,8 @@ Another example using pointers:
 - @sgs_SetErrno - set the internal errno value
 - @sgs_GetLastErrno - return the currently set internal errno value
 - @sgs_StdOutputFunc - example output callback
-- @sgs_StdMsgFunc_NoAbort - example messaging callback that does not abort on errors
-- @sgs_StdMsgFunc - example messaging callback
+- @sgs_StdMsgFunc_NoAbort<sgs_StdMsgFunc(_NoAbort)> - example messaging callback that does not abort on errors
+- @sgs_StdMsgFunc<sgs_StdMsgFunc(_NoAbort)> - example messaging callback
 - @sgs_Cntl - set and/or retrieve various states in the system
 - @sgs_ArgErrorExt - emit an argument type mismatch error with additional formatting options
 - @sgs_ArgError - emit an argument type mismatch error
@@ -994,8 +1027,8 @@ Another example using pointers:
 - @sgs_ParseMethod - the `this` object variable handling function, using the macro is preferred to this
 - @SGS_PARSE_METHOD - automagically handle a `this` object variable regardless of the way its passed
 - @sgs_Method - unhide the first variable on stack if there is a hidden `this` variable
-- @sgs_HideThis - hide the first variable on stack if the stack already doesn't contain a hidden `this` variable
-- @sgs_ForceHideThis - hide the first variable even if it wasn't previously hidden before unhiding
+- @sgs_HideThis<sgs_(Force)HideThis> - hide the first variable on stack if the stack already doesn't contain a hidden `this` variable
+- @sgs_ForceHideThis<sgs_(Force)HideThis> - hide the first variable even if it wasn't previously hidden before unhiding
 
 
 # Sub-item usage [info]
@@ -1026,14 +1059,14 @@ Another example using pointers:
 - @sgs_ArgError - emit an argument type mismatch error
 - @sgs_FuncArgError<sgs_***ArgError> - emit an argument type mismatch error (alias for states where `this` variable is hidden)
 - @sgs_MethodArgError<sgs_***ArgError> - emit an argument type mismatch error (alias for states where `this` variable is NOT hidden)
-- @sgs_LoadArgsExtVA - parse the stack as an argument list with additional options (for custom wrapper functions)
-- @sgs_LoadArgsExt - parse the stack as an argument list with additional options
+- @sgs_LoadArgsExtVA<sgs_LoadArgsExt(VA)> - parse the stack as an argument list with additional options (for custom wrapper functions)
+- @sgs_LoadArgsExt<sgs_LoadArgsExt(VA)> - parse the stack as an argument list with additional options
 - @sgs_LoadArgs - parse the stack as an argument list
 - @sgs_ParseMethod - the `this` object variable handling function, using the macro is preferred to this
 - @SGS_PARSE_METHOD - automagically handle a `this` object variable regardless of the way its passed
 - @sgs_Method - unhide the first variable on stack if there is a hidden `this` variable
-- @sgs_HideThis - hide the first variable on stack if the stack already doesn't contain a hidden `this` variable
-- @sgs_ForceHideThis - hide the first variable even if it wasn't previously hidden before unhiding
+- @sgs_HideThis<sgs_(Force)HideThis> - hide the first variable on stack if the stack already doesn't contain a hidden `this` variable
+- @sgs_ForceHideThis<sgs_(Force)HideThis> - hide the first variable even if it wasn't previously hidden before unhiding
 
 
 # Virtual machine operations [info]
@@ -1156,11 +1189,12 @@ Another example using pointers:
 
 # Variable ownership [info]
 
-- @sgs_Acquire - increment reference count of a variable if the type implements reference counting
-- @sgs_Release - decrement reference count and possibly destroy a variable if the type implements ref.counting
-- @sgs_ReleaseArray - release an array of variables
-- @sgs_GCMark - mark a variable as available to prevent GC from removing it
-- @sgs_GCMarkArray - mark an array of variables as available
+- @sgs_Acquire<sgs_Acquire(Array)> - increment reference count of a variable if the type implements reference counting
+- @sgs_AcquireArray<sgs_Acquire(Array)> - acquire an array of variables
+- @sgs_Release<sgs_Release(Array)> - decrement reference count and possibly destroy a variable if the type implements ref.counting
+- @sgs_ReleaseArray<sgs_Release(Array)> - release an array of variables
+- @sgs_GCMark<sgs_GCMark(Array)> - mark a variable as available to prevent GC from removing it
+- @sgs_GCMarkArray<sgs_GCMark(Array)> - mark an array of variables as available
 - @sgs_ObjAcquire - acquire an object variable by its sgs_VarObj pointer
 - @sgs_ObjRelease - release an object variable by its sgs_VarObj pointer
 - @sgs_ObjGCMark - mark an object variable by its sgs_VarObj pointer
@@ -1302,8 +1336,37 @@ Another example using pointers:
 == SGSBOOL sgs_IncludeExt( sgs_Context* C, const char* name, const char* searchpath )
 === includes an item by the specified name, optionally looking in the places specified by the search path, returning if completed successfully
 
-- a C version of the `include` SGS function
+- a C version of the @include SGS function
 - `searchpath` overrides SGS_PATH for the time of execution
+
+
+# sgs_Compile [function]
+
+== SGSRESULT sgs_Compile( sgs_Context* C, const char* buf, size_t size, char** outbuf, size_t* outsize )
+=== compile a buffer of SGScript code, returning the compiled code buffer on success
+
+- a C version of @compile_sgs SGS function
+- `outbuf` must be freed after usage with one of the relevant memory handling functions
+- `outbuf` and `outsize` will only contain valid buffer (pointer and size) on success
+- all info/warning/error messages are passed to the @"Messaging system"
+
+=== error codes
+- SGS_ECOMP: compiler error
+- SGS_EINVAL: passed data was too big
+- SGS_EINPROC: failed to serialize bytecode
+
+
+# sgs_DumpCompiled [function]
+
+== SGSRESULT sgs_DumpCompiled( sgs_Context* C, const char* buf, size_t size )
+=== dump compiled bytecode or SGScript code buffer to stdout
+
+- code is compiled before dumping if SGScript code is passed
+-- in that case, all info/warning/error messages are passed to the @"Messaging system"
+
+=== error codes
+- SGS_ECOMP: compiler error
+- SGS_EINVAL: passed data was too big
 
 
 # sgs_LoadLib_*** [functions]
@@ -1362,6 +1425,37 @@ Another example using pointers:
 -- it means that the `added` memory space will be appended to the end of object allocation
 -- this allows to allocate all object data for most objects with just one allocation, instead of two
 -- the allocated memory will be returned and also available via @sgs_GetObjectDataP<sgs_GetObjectData(P)>
+
+
+# sgs_InitArray [function]
+
+== SGSRESULT sgs_InitArray( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )
+=== creates an array at `out` from `numitems` last items on the stack, pops those items
+
+=== error codes
+- SGS_EINVAL: more items are selected than exist in the current stack frame
+
+
+# sgs_InitDict [function]
+
+== SGSRESULT sgs_InitDict( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )
+=== creates a dict at `out` from `numitems` last items on the stack, pops those items
+
+- `numitems` can be even or 0, since all odd arguments are keys and all even arguments are values
+
+=== error codes
+- SGS_EINVAL: more items are selected than exist in the current stack frame or `numitems` wasn't even or 0
+
+
+# sgs_InitMap [function]
+
+== SGSRESULT sgs_InitMap( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )
+=== creates a map at `out` from `numitems` last items on the stack, pops those items
+
+- `numitems` can be even or 0, since all odd arguments are keys and all even arguments are values
+
+=== error codes
+- SGS_EINVAL: more items are selected than exist in the current stack frame or `numitems` wasn't even or 0
 
 
 # sgs_Push*** [functions]
@@ -1675,6 +1769,30 @@ Another example using pointers:
 - alias to `sgs_LoadArgsExt( C, 0, cmd, ... )>0`
 
 
+# sgs_ParseMethod [function]
+
+
+# SGS_PARSE_METHOD [function alias]
+
+
+# sgs_Method [function]
+
+== SGSBOOL sgs_Method( sgs_Context* C )
+=== unlock the 'this' variable, return if the function was called as a method (and thus variable was unlocked)
+
+- method calls look like this: "object.method(...)"
+
+
+# sgs_(Force)HideThis [functions]
+
+== SGSBOOL sgs_HideThis( sgs_Context* C )
+== SGSBOOL sgs_ForceHideThis( sgs_Context* C )
+=== hide the 'this' variable, return if successful
+
+- sgs_ForceHideThis attempts to hide the first item on stack even if it didn't belong to the call, sgs_HideThis only does it if it belongs to the call and was hidden before
+- the hiding method is stack offset pointer shift
+
+
 
 
 
@@ -1775,11 +1893,20 @@ After a successful call, all arguments and the function will be popped off the s
 # sgs_PadString [function]
 
 == SGSRESULT sgs_PadString( sgs_Context* C )
-=== append two spaces after every newline in the topmost variable of current stack frame
+=== replace the topmost variable of current stack frame with a string variable where two spaces are appended after every newline
 
 === error codes
-- SGS_EINPROC: current stack frame is empty
+- SGS_EINPROC: current stack frame is empty or output string size exceeds limit
 - SGS_EINVAL: topmost variable is not a string
+
+
+# sgs_ToPrintSafeString [function]
+
+== SGSRESULT sgs_ToPrintSafeString( sgs_Context* C )
+=== replace the topmost variable of current stack frame with a string where all non-printable (except space), non-ASCII characters converted to a character hex code
+
+=== error codes
+- SGS_EINPROC: current stack frame is empty or output string size exceeds limit
 
 
 # sgs_StringConcat [function]
@@ -2205,34 +2332,57 @@ After a successful call, all arguments and the function will be popped off the s
 - if index is invalid, return value will be 0 (SGS_VT_NULL)
 
 
-# sgs_Method [function]
-
-== SGSBOOL sgs_Method( sgs_Context* C )
-=== unlock the 'this' variable, return if the function was called as a method (and thus variable was unlocked)
-
-- method calls look like this: "object.method(...)"
-
-
-# sgs_Acquire [function]
+# sgs_Acquire(Array) [function]
 
 == void sgs_Acquire( sgs_Context* C, sgs_Variable* var )
-=== increment the reference count of the variable (if it counts references)
+== void sgs_AcquireArray( sgs_Context* C, sgs_Variable* var, sgs_SizeVal count )
+=== increment the reference count of the specified variables (if they count references)
 
 
-# sgs_Release [function]
+# sgs_Release(Array) [function]
 
 == void sgs_Release( sgs_Context* C, sgs_Variable* var )
-=== decrement and possibly deallocate the reference count of the variable (if it counts references)
+== void sgs_ReleaseArray( sgs_Context* C, sgs_Variable* var, sgs_SizeVal count )
+=== decrement and possibly deallocate the reference count of the specified variables (if they count references)
 
 - works differently while GC is running: doesn't delete objects of same context in destructor
 
 
-# sgs_GCMark [function]
+# sgs_GCMark(Array) [function]
 
 == SGSRESULT sgs_GCMark( sgs_Context* C, sgs_Variable* var )
-=== mark the specified variable as reachable for the garbage collector
+== SGSRESULT sgs_GCMarkArray( sgs_Context* C, sgs_Variable* var, sgs_SizeVal count )
+=== mark the specified variables as reachable for the garbage collector
 
 - to be called in the GCMARK object callback
+
+
+# sgs_ObjAcquire [function]
+
+== void sgs_ObjAcquire( sgs_Context* C, sgs_VarObj* obj )
+=== increment reference count of the specified object
+
+
+# sgs_ObjRelease [function]
+
+== void sgs_ObjRelease( sgs_Context* C, sgs_VarObj* obj )
+=== decrement reference count and possibly delete the specified object
+
+
+# sgs_ObjGCMark [function]
+
+== SGSRESULT sgs_ObjGCMark( sgs_Context* C, sgs_VarObj* obj )
+=== mark the specified object as accessible to avoid its destruction by the @"Garbage collection system"
+
+- to be called in the GCMARK object callback
+
+
+# sgs_ObjCallDtor [function]
+
+== void sgs_ObjCallDtor( sgs_Context* C, sgs_VarObj* obj )
+=== call the DESTRUCT object callback
+
+- this function is to be used in cases where objects are owned by a single entity but have handles all over the place - calling this function would not delete the object but would free its resources, thus leaving handles intact, with their states updated
 
 
 # sgs_GetStringPtr(P) [functions]
@@ -2322,12 +2472,28 @@ After a successful call, all arguments and the function will be popped off the s
 
 
 
+# sgs_StdOutputFunc [function]
+
+== void sgs_StdOutputFunc( void* userdata, sgs_Context* C, const void* ptr, size_t size )
+=== standard output function assumes userdata to be FILE* type and writes the passed buffer to it
+
+
+# sgs_GetOutputFunc [function]
+
+== void sgs_GetOutputFunc( sgs_Context* C, sgs_OutputFunc* outfunc, void** outuserdata )
+=== retrieves the currently set output function
+
+- validity of the returned function pointer is assured as long as engine internals are not touched anywhere
+
+
 # sgs_SetOutputFunc [function]
 
 == void sgs_SetOutputFunc( sgs_Context* C, sgs_OutputFunc func, void* userdata )
 === sets the function used in 'print' function
 
-- default implementation copies data to FILE* stream, specified in userdata, it can be found in sgs_ctx.c
+- default output function can be set by passing SGSOUTPUTFN_DEFAULT to func with userdata as FILE*, allocated using the same C runtime that SGScript uses
+- default implementation - @sgs_StdOutputFunc - copies data to FILE* stream, specified in userdata
+-- to use this function with non-default (stderr) stream, pass it explicity due to the possibility of having different runtime libraries linked to different binaries
 
 
 # sgs_Write [function]
@@ -2354,15 +2520,33 @@ After a successful call, all arguments and the function will be popped off the s
 - printf rules apply here
 
 
+# sgs_StdMsgFunc(_NoAbort) [functions]
+
+== void sgs_StdMsgFunc( void* ctx, SGS_CTX, int type, const char* msg )
+== void sgs_StdMsgFunc_NoAbort( void* ctx, SGS_CTX, int type, const char* msg )
+=== writes error info with @sgs_WriteErrorInfo to userdata with fprintf, assuming userdata is FILE*
+
+
+# sgs_GetMsgFunc [function]
+
+== void sgs_GetMsgFunc( sgs_Context* C, sgs_MsgFunc* outfunc, void** outuserdata )
+=== retrieves the currently set messaging function
+
+- info about the system is at the @"Messaging system" page
+- validity of the returned function pointer is assured as long as engine internals are not touched anywhere
+
+
 # sgs_SetMsgFunc [function]
 
 == void sgs_SetMsgFunc( sgs_Context* C, sgs_MsgFunc func, void* userdata )
-=== sets the function that handles and prints the error that has occured, while still being physically in that context
+=== sets the function that handles and prints messages (more commonly, warnings and errors), while still being physically in that context
 
-- both subtypes of the default printing function can be set by passing these flags for `func` and a FILE* pointer for `userdata`:
+- info about the system is at the @"Messaging system" page
+- both subtypes of the default messaging function can be set by passing these flags for `func` with userdata as FILE*, allocated using the same C runtime that SGScript uses
 -- 'SGSMSGFN_DEFAULT' - default behavior (write stack frame, write error, abort on SGS_ERROR)
 -- 'SGSMSGFN_DEFAULT_NOABORT' - default behavior without the abort-on-errors feature
-- default implementation writes error and stack trace to FILE* stream, specified in userdata, it can be found in sgs_ctx.c
+- default implementations - @sgs_StdMsgFunc(_NoAbort) writes error and stack trace to FILE* stream, specified in userdata
+-- to use these functions with non-default (stderr) stream, pass them explicity due to the possibility of having different runtime libraries linked to different binaries
 
 
 # sgs_Msg [function]
@@ -2370,6 +2554,7 @@ After a successful call, all arguments and the function will be popped off the s
 == int sgs_Msg( sgs_Context* C, int type, const char* what, ... )
 === prepares and prints the error specified
 
+- info about the system is at the @"Messaging system" page
 - `type` is the output code (SGS_WARNING, SGS_ERROR etc.)
 - `what` is the error text
 -- additional function name prefix can be specified with @sgs_FuncName or the SGSFN/SGSBASEFN macros
@@ -2421,6 +2606,21 @@ After a successful call, all arguments and the function will be popped off the s
 
 == SGSBOOL sgs_GetHookFunc( sgs_Context* C, sgs_HookFunc* outfunc, void** outctx )
 === writes the hook function and user data pointer that was set (if any), returns whether anything was written
+
+
+# sgs_DefaultMemFunc [function]
+
+== void* sgs_DefaultMemFunc( void* userdata, void* ptr, size_t size )
+=== the default memory allocation function
+
+expected behavior: same as for @sgs_Memory
+
+sample implementation (same as in sgscript.h):
+
+    if( ptr && size ) return realloc( ptr, size );
+    else if( size )   return malloc( size );
+    if( ptr )         free( ptr );
+    return NULL;
 
 
 # sgs_Memory [function]
@@ -2515,6 +2715,14 @@ After a successful call, all arguments and the function will be popped off the s
 - everything else does nothing and returns 0
 
 
+# sgs_StackFrameInfo [function]
+
+== void sgs_StackFrameInfo( sgs_Context* C, sgs_StackFrame* frame, const char** name, const char** file, int* line )
+=== helps to retrieve file name, function name and line number of the specified stack frame
+
+- each non-NULL pointer is initialized with valid data; even if it may not be very helpful (for example, all anonymous functions get the same name - "<anonymous function>")
+
+
 # sgs_GetFramePtr [function]
 
 == sgs_StackFrame* sgs_GetFramePtr( sgs_Context* C, int end )
@@ -2523,7 +2731,7 @@ After a successful call, all arguments and the function will be popped off the s
 - if `end` is not 0, pointer to topmost frame is returned, otherwise a pointer to first frame is returned
 
 
-sgs_Errno [function (inline)]
+# sgs_Errno [function alias]
 
 == int sgs_Errno( sgs_Context* C, int clear )
 === copies errno to internal errno value if `clear` is not 0, otherwise internal errno value is set to 0, returns `clear`
@@ -2929,8 +3137,8 @@ Most operations are directed towards the scripting engine, that is - environment
 - sgs_MemFunc must be specified in creation of the scripting engine context
 - sgs_MemFunc (re)allocates and frees memory
 - unlike realloc, if size = 0, this function must return NULL
-- sgs_DefaultMemFunc is the sample implementation
-- the expected behavior is same as for @sgs_Memory()
+- @sgs_DefaultMemFunc is the sample implementation
+- the expected behavior is same as for @sgs_Memory
 
 === Output
 - sgs_MsgFunc and sgs_OutputFunc are responsible for piping the outputs to their destinations
@@ -2940,11 +3148,13 @@ Most operations are directed towards the scripting engine, that is - environment
 -- sgs_Context* C - the scripting engine context
 -- int type - the debug type (SGS_INFO, SGS_WARNING etc.)
 -- const char* message - the debug message
+-- @sgs_StdMsgFunc(_NoAbort) are the sample implementations
 - sgs_OutputFunc takes the following arguments:
 -- void* data - the user data pointer
 -- sgs_Context* C - the scripting engine context
 -- const void* ptr - the data to write
 -- sgs_SizeVal size - the size of data to write
+-- @sgs_StdOutputFunc is the sample implementation
 
 === Execution notifications
 - sgs_HookFunc must be set to retrieve events of that kind
@@ -3171,7 +3381,7 @@ This library is loaded on initialization and contains the functions and constant
 === returns a @class<class [object]> object with `first` set as the primary data source and `second` set as the secondary/backup data source
 
 - both arguments accept all kinds of variables but it's generally preferred to use only dicts / maps / special objects
-- refer to @CLASSES for more information on how class objects work and how to use them
+- refer to @Classes for more information on how class objects work and how to use them
 
     someCommonInterface = { printdata = function(){ print( this.data ); } };
     c = class( { data = "5" }, someCommonInterface );
@@ -3185,7 +3395,7 @@ This library is loaded on initialization and contains the functions and constant
 === returns a @closure<closure [object]> object with `callable` set as the callable variable and `data` set as the first argument for the closure call
 
 - second argument accepts all kinds of variables, first requires a variable that can be called (SGScript function / C function / object with OP_CALL interface function defined)
-- refer to @CLOSURES for more information on how closure objects work and how to use them
+- refer to @Closures for more information on how closure objects work and how to use them
 
     counter = closure( function( data ){ return data[0]++; }, [0] );
     print( counter() ); print( counter() ); // prints "01"

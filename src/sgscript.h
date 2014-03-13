@@ -719,6 +719,7 @@ SGS_APIFUNC SGSBOOL sgs_HideThis( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_ForceHideThis( SGS_CTX );
 
 SGS_APIFUNC void sgs_Acquire( SGS_CTX, sgs_Variable* var );
+SGS_APIFUNC void sgs_AcquireArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count );
 SGS_APIFUNC void sgs_Release( SGS_CTX, sgs_Variable* var );
 SGS_APIFUNC void sgs_ReleaseArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count );
 SGS_APIFUNC SGSRESULT sgs_GCMark( SGS_CTX, sgs_Variable* var );

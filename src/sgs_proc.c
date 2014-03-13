@@ -4978,6 +4978,13 @@ void sgs_Acquire( SGS_CTX, sgs_Variable* var )
 	VAR_ACQUIRE( var );
 }
 
+void sgs_AcquireArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count )
+{
+	sgs_Variable* vend = var + count;
+	while( var < vend )
+		sgs_Acquire( C, var++ );
+}
+
 void sgs_Release( SGS_CTX, sgs_Variable* var )
 {
 	if( var->type == SVT_OBJECT && C->gcrun )
