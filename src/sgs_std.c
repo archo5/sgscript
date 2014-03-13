@@ -3092,7 +3092,7 @@ static int sgsstd_sys_msg( SGS_CTX )
 	
 	SGSFN( NULL );
 	
-	sgs_Msg( C, (int) errcode, errmsg );
+	sgs_Msg( C, (int) errcode, "%s", errmsg );
 	return 0;
 }
 
@@ -3103,7 +3103,7 @@ static int sgsstd__msgwrapper( SGS_CTX, const char* fn, int code )
 	if( sgs_LoadArgs( C, "s", &msg ) )
 	{
 		SGSFN( NULL );
-		sgs_Msg( C, code, msg );
+		sgs_Msg( C, code, "%s", msg );
 	}
 	return 0;
 }

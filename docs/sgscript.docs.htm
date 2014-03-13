@@ -29,7 +29,8 @@
 </li><li><a href='#Variable-types'>Variable types</a>
 </li><li><a href='#Constant-registration-types'>Constant registration types</a>
 </li></ul><li><a href='#Concepts-systems'>Concepts &amp; systems</a>
-<ul><li><a href='#Iterator-system'>Iterator system</a>
+<ul><li><a href='#Messaging-system'>Messaging system</a>
+</li><li><a href='#Iterator-system'>Iterator system</a>
 </li></ul><li><a href='#Functions'>Functions</a>
 <ul><li><a href='#Context-management'>Context management</a>
 </li><li><a href='#Memory-management'>Memory management</a>
@@ -621,6 +622,21 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li>struct sgs_RegIntConst { char* name; sgs_Int value; }
 </li><li>struct sgs_RegRealConst { char* name; sgs_Real value; }</li></ul></div>
 <div class='item'><a name='Concepts-systems'></a><hr><h2>Concepts &amp; systems</h2></div>
+<div class='item'><a name='Messaging-system'></a><hr><h2>Messaging system</h2><p>
+Messages are combinations of importance code and a null-terminated string that holds the message itself. The messaging system&#39;s purpose generally is to notify about problems and allow handling them to some extent.
+</p><p>
+The C API has a function for sending messages - <a href="#sgs-Msg-function">sgs_Msg</a> - and two for dealing with the current callback - <a href="#sgs-SetMsgFunc-function">sgs_SetMsgFunc</a> / <a href="#sgs-GetMsgFunc">sgs_GetMsgFunc</a>.
+</p><p>
+The <a href="#sgs-Msg-function">sgs_Msg</a> function basically generates the full string from the format string and calls the callback that is currently set. Due to the data association and accessibility, various systems can be implemented on top of it:
+</p><h5>Logging</h5><p>
+All messages can simply be logged. For the most simple approach, the <a href="#sgs-StdOutputFunc">sgs_StdOutputFunc</a> callback can be used with any FILE* for the data pointer.
+</p><h5>A limited amount of exception handling</h5><p>
+This system can be used to break out of any point in SGS code up until the last C function. For this, <a href="#pcall-function">pcall</a> can be used together with a callback that calls <a href="#sys-abort-function">sys_abort</a> when necessary.
+</p><h5>Debugging</h5><p>
+On each warning or error, debugging code can be triggered. It can be an interactive console debugger (as implemented in ext/sgs_idbg), it could also be code that dumps the relevant state and sends it to the developer.
+</p><h5>Hidden data collection</h5><p>
+Similarly to exception handling, <a href="#pcall-function">pcall</a> can be used also for gathering messages otherwise skipped by the system. The sub-zero importance range is generally hidden - there&#39;s 2^31 values to use to mark special messages - however, <a href="#sys-replevel-function">sys_replevel</a> or <a href="#sgs-Cntl-function">sgs_Cntl</a> with SGS_CNTL_(SET_)MINLEV must be used to enable that range.
+</p></div>
 <div class='item'><a name='Iterator-system'></a><hr><h2>Iterator system</h2><p>
 Iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value.
 </p><p>

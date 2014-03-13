@@ -747,6 +747,31 @@ These are the default meanings for error codes that are honored throughout the A
 # >>>
 
 
+# Messaging system [info]
+
+Messages are combinations of importance code and a null-terminated string that holds the message itself. The messaging system's purpose generally is to notify about problems and allow handling them to some extent.
+
+The C API has a function for sending messages - @sgs_Msg - and two for dealing with the current callback - @sgs_SetMsgFunc / @sgs_GetMsgFunc.
+
+The @sgs_Msg function basically generates the full string from the format string and calls the callback that is currently set. Due to the data association and accessibility, various systems can be implemented on top of it:
+
+==== Logging
+
+All messages can simply be logged. For the most simple approach, the @sgs_StdOutputFunc callback can be used with any FILE* for the data pointer.
+
+==== A limited amount of exception handling
+
+This system can be used to break out of any point in SGS code up until the last C function. For this, @pcall can be used together with a callback that calls @sys_abort when necessary.
+
+==== Debugging
+
+On each warning or error, debugging code can be triggered. It can be an interactive console debugger (as implemented in ext/sgs_idbg), it could also be code that dumps the relevant state and sends it to the developer.
+
+==== Hidden data collection
+
+Similarly to exception handling, @pcall can be used also for gathering messages otherwise skipped by the system. The sub-zero importance range is generally hidden - there's 2^31 values to use to mark special messages - however, @sys_replevel or @sgs_Cntl with SGS_CNTL_(SET_)MINLEV must be used to enable that range.
+
+
 # Iterator system [info]
 
 Iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value.
