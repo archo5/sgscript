@@ -340,21 +340,14 @@ static int json_decode( SGS_CTX )
 	int argc = sgs_StackSize( C );
 	
 	SGSFN( "json_decode" );
-
-	if( argc < 1 || argc > 2 ||
-		!sgs_ParseString( C, 0, &str, &size ) ||
-		( argc == 2 && sgs_ItemType( C, 1 ) != SGS_VT_OBJECT ) )
-	{
-		sgs_Msg( C, SGS_WARNING, "unexpected arguments; "
-			"function expects 1-2 arguments: string[, object]" );
+	if( !sgs_LoadArgs( C, "m|?o", &str, &size, NULL ) )
 		return 0;
-	}
-	else
+	
 	{
 		const char* ret = NULL;
 		sgs_MemBuf stack = sgs_membuf_create();
 		sgs_membuf_appchr( &stack, C, 0 );
-		ret = json_parse( C, &stack, str, size, argc == 2 );
+		ret = json_parse( C, &stack, str, size, argc >= 2 );
 		sgs_membuf_destroy( &stack, C );
 		if( ret )
 		{

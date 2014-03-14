@@ -110,9 +110,9 @@ The language supports:
 </li><li>9 variable types: null, bool, int, real, string, function, C function, object, pointer
 </li><li>Multi-level break/continue
 </li><li>Multiple return values
-</li><li>First-class functions</li></ul><p>
+</li><li>First-class functions and ability to attach variables to functions (creating closures)</li></ul><p>
 The standard library includes:
-</p><ul><li>array, dict, map, class, closure
+</p><ul><li>array, dict, map, class
 </li><li>math, string, I/O, O/S and formatting functions
 </li><li><code>eval</code>, file import, DLL import</li></ul></div>
 <div class='item'><a name='Code-samples-SGScript'></a><hr><h2>Code samples - SGScript</h2><h4>Statements</h4><pre>print &quot;Text&quot;;
@@ -249,8 +249,7 @@ Extended variable types (built on `object`):
 </li><li>`dict`: a map/table structure where variables are mapped to string keys
 </li><li>`map`: a map/table structure where variables are mapped to variable keys
 </li><li>`class`: object that uses two other objects to build its interface
-</li><li>`closure`: a callable object consisting of another callable and one variable
-</li><li>`sys.closure`: a callable object consisting of another callable and several variables; created only in C</li></ul></div>
+</li><li>`closure`: a callable object consisting of another callable and several variables</li></ul></div>
 <div class='item'><a name='Conversion-rules'></a><hr><h2>Conversion rules</h2><p>
 <table>
 <tr><th>from  \  to</th><th>bool</th><th>int</th><th>real</th><th>string</th><th>ptr</th></tr>
@@ -703,10 +702,11 @@ Overloadable operators/interfaces:
 Two-layer index retrieval is simply trying to read the index from a different source if the first source fails to come up with something. In other languages, metatable and prototype is the name of a table that is the second source. This allows to avoid storing functions and other data that is equal to all instances of some object type.
 </p></div>
 <div class='item'><a name='Closures'></a><hr><h2>Closures</h2><p>
-Closures are a combination of one callable and some data. They are meant to simplify interfaces and code around places where it was important for functions to have access to call-invariant (same on every call) data.
+Closures are a combination of one callable and some variables. They are meant to simplify interfaces and code around places where it was important for functions to have access to call-invariant (same on every call) data.
 </p><p>
-There are two types of closures in SGScript ...TODO... WHY?
-</p></div>
+Closures can be created from both SGScript and the C API, though both options have their limitations.
+</p><ul><li>In SGScript, closures can be created by letting functions &quot;use&quot; a variable, e.g. by writing <code>function func( args ) use( closures ){ ..body.. }</code>
+</li><li>In the C API, closures can be created with <a href="#sgs-MakeClosure">sgs_MakeClosure</a>, though this requires knowledge about the receiving function&#39;s ability to use them. This means that even though there are no variable type limits, it is much more practical to create closures from native functions (both plain and object interface functions) with the C API.</li></ul></div>
 <div class='item'><a name='Functions'></a><hr><h2>Functions</h2></div>
 <div class='item'><a name='Context-management'></a><hr><h2>Context management</h2><ul><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngine</a> - create scripting engine context
 </li><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngineExt</a> - create scripting engine context and pass a custom memory function
@@ -1757,7 +1757,6 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#dict-function">dict</a> - returns a key-value map object (string keys) containing the specified variables
 </li><li><a href="#map-function">map</a> - returns a key-value map object (many key types) containing the specified variables
 </li><li><a href="#class-function">class</a> - returns an index fallback / overloading object, linking both specified variables
-</li><li><a href="#closure-function">closure</a> - returns a basic closure object that consists of one variable and one callable
 </li><li><a href="#array-filter-function">array_filter</a> - returns an array that is filtered with a truth test or the specified function
 </li><li><a href="#array-process-function">array_process</a> - convert all array elements by a function
 </li><li><a href="#dict-filter-function">dict_filter</a> - returns a dict object that is filtered with a truth test or the specified function
@@ -1850,8 +1849,7 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#array-shuffle-method">shuffle</a>
 </li></ul><li><a href="#dict-object">dict</a>
 </li><li><a href="#map-object">map</a>
-</li><li><a href="#class-object">class</a>
-</li><li><a href="#closure-object">closure</a></li></ul><h4>Constants:</h4><ul><li><a href="#SGS-constants">SGS_***</a> - error levels
+</li><li><a href="#class-object">class</a></li></ul><h4>Constants:</h4><ul><li><a href="#SGS-constants">SGS_***</a> - error levels
 </li><li><a href="#VT-constants">VT_***</a> - variable type IDs
 </li><li><a href="#RAND-MAX-constant">RAND_MAX</a> - maximum value that can be returned by <a href="#rand-function">rand</a></li></ul><h4>Other:</h4><ul><li><a href="#G-superglobal">_G</a> - environment superglobal, a dict containing all global variable names and values; can be changed</li></ul></div>
 <div class='item'><a name='array-function'></a><hr><h2>array [function]</h2><h3>array( ... )</h3><h4>returns an <a href="#array-object">array</a>, containing the arguments</h4><ul><li>similar to the array literal, though somewhat limited</li></ul><pre>array( &quot;5&quot;, 6, 7.0 ) // same as [&quot;5&quot;,6,7.0]</pre></div>
@@ -1865,9 +1863,6 @@ This library is loaded on initialization and contains the functions and constant
 c = class( { data = &quot;5&quot; }, someCommonInterface );
 c.data = &quot;6&quot;;
 c.printdata(); // prints 6</pre></div>
-<div class='item'><a name='closure-function'></a><hr><h2>closure [function]</h2><h3>closure( callable, data )</h3><h4>returns a <a href="#closure-object">closure</a> object with <code>callable</code> set as the callable variable and <code>data</code> set as the first argument for the closure call</h4><ul><li>second argument accepts all kinds of variables, first requires a variable that can be called (SGScript function / C function / object with OP_CALL interface function defined)
-</li><li>refer to <a href="#Closures">Closures</a> for more information on how closure objects work and how to use them</li></ul><pre>counter = closure( function( data ){ return data[0]++; }, [0] );
-print( counter() ); print( counter() ); // prints &quot;01&quot;</pre></div>
 <div class='item'><a name='array-filter-function'></a><hr><h2>array_filter [function]</h2><h3>array_filter( array[, callable] )</h3><h4>return an array with the items that convert to boolean &#39;true&#39;, optionally preprocessed by a callable</h4><ul><li>two arguments are passed to the callable: value, index</li></ul><pre>array_filter([ 0, 1, 2, 3 ]); // returns [1,2,3]</pre></div>
 <div class='item'><a name='array-process-function'></a><hr><h2>array_process [function]</h2><h3>array_process( array, callable )</h3><h4>return an array with the items passed through a callable</h4><ul><li>two arguments are passed to the callable: value, index</li></ul></div>
 <div class='item'><a name='dict-filter-function'></a><hr><h2>dict_filter [function]</h2><h3>dict_filter( dict[, callable] )</h3><h4>return a dict with the items that convert to boolean &#39;true&#39;, optionally preprocessed by a callable</h4><ul><li>two arguments are passed to the callable: value, key</li></ul><pre>dict_filter({ a = 0, b = 1 }); // returns {b=1}</pre></div>
@@ -1923,7 +1918,7 @@ typeid( [] ); // returns 7 / VT_OBJECT</pre></div>
 </li><li>null value is considered to be the lack of a better value, thus it cannot be considered valid, even though it always maps implicitly to the integer 0</li></ul></li></ul><pre>is_numeric( 12.124 ); // returns true
 is_numeric( &quot;what&quot; ); // returns false</pre></div>
 <div class='item'><a name='is-callable-function'></a><hr><h2>is_callable [function]</h2><h3>is_callable( var )</h3><h4>returns whether the variable <code>var</code> is callable - a function (func/cfunc) or an object with OP_CALL defined</h4><ul><li>this function is equivalent to <a href="#sgs-IsCallable-P-functions">sgs_IsCallable</a> in the C API</li></ul><pre>is_callable( print ); // returns &#39;true&#39;
-is_callable( closure( print, 5 ) ); // returns &#39;true&#39;
+is_callable( function(){} ); // returns &#39;true&#39;
 is_callable( 5 ); // returns &#39;false&#39;</pre></div>
 <div class='item'><a name='print-println-printlns-functions'></a><hr><h2>print, println, printlns [functions]</h2><h3>print( ... ), println( ... ), printlns( ... ),</h3><h4>passes all arguments, converted to strings, to the output callback</h4><ul><li>print passes arguments without modifications
 </li><li>println passes a newline character after all variables
@@ -2199,13 +2194,6 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li>overridable object call
 </li><li>serialization
 </li><li>GC-safe</li></ul></li></ul></div>
-<div class='item'><a name='closure-object'></a><hr><h2>closure [object]</h2><ul><li>features
-<ul><li>&quot;call&quot; property
-</li><li>full content dump
-</li><li>tostring = &quot;closure&quot;
-</li><li>type identification (returns the string &quot;closure&quot;)
-</li><li>object call to callable, using the attached first argument
-</li><li>GC-safe</li></ul></li></ul></div>
 <div class='item'><a name='Formatting-library-fmt'></a><hr><h2>Formatting library (&quot;fmt&quot;)</h2><p>
 This library includes functions and objects for parsing binary and text buffers.
 </p><ul><li>binary format -- <a href="#fmt-pack-function">fmt_pack</a>, <a href="#fmt-unpack-function">fmt_unpack</a>, <a href="#fmt-pack-count-function">fmt_pack_count</a>, <a href="#fmt-pack-size-function">fmt_pack_size</a>
@@ -2264,7 +2252,7 @@ print fmt_text( &quot;pi: {f10.10r} {g10r} {E10r}&quot;, M_PI, M_PI, M_PI ); // 
 <div class='item'><a name='fmt-parser-function'></a><hr><h2>fmt_parser [function]</h2><h3>fmt_parser( callable[, buffersize ] )</h3><h4>creates a <a href="#fmt-parser-object">fmt_parser</a> object, connected to the callable</h4><ul><li>the callable is a function that returns at most the number of bytes requested from the stream
 <ul><li>if previous request reached end, subsequent requests must return &#39;null&#39;</li></ul></li></ul><pre>f = io_file( &quot;test.txt&quot;, FILE_READ );
 // usually it is easier to use @fmt_file_parser instead of the next line of code
-p = fmt_parser( closure( function(file,num){ if( file.eof() ) return null; return file.read( num ); }, f ) );</pre></div>
+p = fmt_parser( function( num ) use( file ){ if( file.eof() ) return null; return file.read( num ); } );</pre></div>
 <div class='item'><a name='fmt-string-parser-function'></a><hr><h2>fmt_string_parser [function]</h2><h3>fmt_string_parser( string, offset = 0[, buffersize ] )</h3><h4>creates a <a href="#fmt-parser-object">fmt_parser</a> object, connected to a string reader object, initialized to the given offset and buffer size</h4><pre>p = fmt_string_parser( &quot;this is a test&quot; );
 p.readcc( &quot;a-z&quot; ); // returns &quot;this&quot;</pre></div>
 <div class='item'><a name='fmt-file-parser-function'></a><hr><h2>fmt_file_parser [function]</h2><h3>fmt_file_parser( file[, buffersize ] )</h3><h4>creates a <a href="#fmt-parser-object">fmt_parser</a> object, connected to a file reader object, initialized to the given buffer size</h4><pre>p = fmt_file_parser( io_file( &quot;something.txt&quot;, FILE_READ ) );

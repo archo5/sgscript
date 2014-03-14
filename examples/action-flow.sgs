@@ -27,25 +27,33 @@ function Action.create( init )
 
 function Action.createTimed( init )
 {
-	function my_ontick( data )
-	{
-		this.time -= DT; 
-		if( this.time <= 0 )
-			this.end();
-		else if( data )
-			data.call( this );
-	}
-
 	if( !isset( init, "time" ) )
 		init.time = 1.0;
 	if( !isset( init, "type" ) )
 		init.type = "Timed";
-
+	
 	if( isset( init, "ontick" ) )
-		init.ontick = closure( my_ontick, init.ontick );
+	{
+		oldtick = init.ontick;
+		init.ontick = function() use( oldtick )
+		{
+			this.time -= DT;
+			if( this.time <= 0 )
+				this.end();
+			else if( oldtick )
+				oldtick.call( this );
+		};
+	}
 	else
-		init.ontick = my_ontick;
-
+	{
+		init.ontick = function()
+		{
+			this.time -= DT;
+			if( this.time <= 0 )
+				this.end();
+		};
+	}
+	
 	return Action.create( init );
 }
 

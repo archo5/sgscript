@@ -5,9 +5,4 @@ function fn1( x ) use( a )
 	printlns( this, x, a );
 }
 fn1.call( true, "arg1" );
-
-fn2 = closure(function( a, x )
-{
-	printlns( this, x, a );
-}, a);
-fn2.call( true, "arg2" );
+fn1.apply( false, [ "arg2" ]);
