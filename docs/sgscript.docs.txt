@@ -1073,9 +1073,9 @@ There are two types of closures in SGScript ...TODO... WHY?
 
 - @sgs_Assign - release the current variable and acquire-assign to it from the source
 - @sgs_ArithOp - run an arithmetic operation (+,-,*,/,%) on two variables to generate a third one
+- @sgs_IncDec - increment or decrement the specified variable
 - @sgs_Compare - check if both variables compare equal to each other
 - @sgs_EqualTypes - check if both variables have the same type and object interface (if both are objects)
-- @sgs_IncDec - increment or decrement the specified variable
 - @sgs_TypeOf - convert the topmost variable on stack to a type name string
 - @sgs_DumpVar - convert the topmost variable on stack to a string that contains detailed info about its contents
 - @sgs_GCExecute - run the garbage collection system to remove all unreachable objects
@@ -1127,7 +1127,7 @@ There are two types of closures in SGScript ...TODO... WHY?
 - @sgs_ParseStringP<sgs_Parse***> - validate conversion, optionally return string or buffer from variable, if possible
 - @sgs_ParseObjectPtrP<sgs_Parse***> - validate conversion, optionally return object pointer from variable, if possible
 - @sgs_ParsePtrP<sgs_Parse***> - validate conversion, optionally return pointer from variable, if possible
-- @sgs_ArraySizeP - retrieve size of array variable, if possible
+- @sgs_ArraySizeP<sgs_ArraySize(P)> - retrieve size of array variable, if possible
 - @sgs_GetBool<sgs_Get*> - return the boolean version of the variable on stack
 - @sgs_GetInt<sgs_Get*> - return the integer version of the variable on stack
 - @sgs_GetReal<sgs_Get*> - return the real value version of the variable on stack
@@ -1149,7 +1149,7 @@ There are two types of closures in SGScript ...TODO... WHY?
 - @sgs_ParseString<sgs_Parse***> - validate conversion, optionally return string or buffer from variable on stack, if possible
 - @sgs_ParseObjectPtr<sgs_Parse***> - validate conversion, optionally return object pointer from variable on stack, if possible
 - @sgs_ParsePtr<sgs_Parse***> - validate conversion, optionally return pointer from variable on stack, if possible
-- @sgs_ArraySize - retrieve size of array variable on stack, if possible
+- @sgs_ArraySize<sgs_ArraySize(P)> - retrieve size of array variable on stack, if possible
 - @sgs_GlobalBool - retrieve global by name as bool
 - @sgs_GlobalInt - retrieve global by name as integer
 - @sgs_GlobalReal - retrieve global by name as real
@@ -1486,6 +1486,15 @@ There are two types of closures in SGScript ...TODO... WHY?
 - these functions do not throw an error when the stack is full since there is no way to handle that
 
 
+# sgs_StoreVariable [function]
+
+== SGSRESULT sgs_StoreVariable( sgs_Context* C, sgs_Variable* var )
+=== copy the topmost item of the current stack frame to the specified place, acquire it and pop it
+
+=== error codes
+- SGS_ENOTFND: stack frame is empty
+
+
 # sgs_Pop [function]
 
 == SGSRESULT sgs_Pop( sgs_Context* C, int count )
@@ -1679,7 +1688,7 @@ There are two types of closures in SGScript ...TODO... WHY?
 
 # sgs_ArgErrorExt [function]
 
-== int sgs_ArgErrorExt( SGS_CTX, int argid, int method, const char* expect, const char* expfx )
+== int sgs_ArgErrorExt( sgs_Context* C, int argid, int method, const char* expect, const char* expfx )
 === prints the argument type mismatch error
 
 - `expfx` - prefix of `expect`, put exactly before this for things like 'strict '
@@ -2017,6 +2026,46 @@ After a successful call, all arguments and the function will be popped off the s
 ! Be mindful of the data sources you use - calls to any global function can be placed in the instruction stream.
 
 
+# sgs_Assign [function]
+
+== void sgs_Assign( sgs_Context* C, sgs_Variable* var_to, sgs_Variable* var_from )
+=== release `var_to`, copy `var_from` to `var_to`, acquire the new value
+
+
+# sgs_ArithOp [function]
+
+== SGSRESULT sgs_ArithOp( sgs_Context* C, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op )
+=== perform the specified operation on variables A and B, returning the value on `out`
+
+! this function prints errors, exactly like VM would (internally there are the same functions)
+
+- this function can perform 5 operations, which are specified by passing the following values to `op`:
+-- SGS_EOP_ADD: +
+-- SGS_EOP_SUB: - (binary)
+-- SGS_EOP_MUL: *
+-- SGS_EOP_DIV: /
+-- SGS_EOP_MOD: %
+-- SGS_EOP_NEGATE: - (unary, uses only `A`)
+
+=== error codes
+- SGS_ENOTSUP: operation not supported (invalid operation ID)
+- SGS_EINVAL: specified arithmetic operation is not supported by the given set of arguments
+- SGS_EINPROC: division by 0
+
+
+# sgs_IncDec [function]
+
+== SGSRESULT sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc )
+=== increment or decrement the specified variable `A` to the output `out`
+
+! this function prints errors, exactly like VM would (internally there are the same functions)
+
+- if inc is non-zero, variable is incremented; otherwise it is decremented
+
+=== error codes
+- SGS_EINVAL: variable was not int or real
+
+
 # sgs_Compare [function]
 
 == int sgs_Compare( sgs_Context* C, sgs_Variable* v1, sgs_Variable* v2 )
@@ -2101,7 +2150,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_RegisterType [function]
 
-== SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface )
+== SGSRESULT sgs_RegisterType( sgs_Context* C, const char* name, sgs_ObjInterface* iface )
 === register a type interface by mapping it to a name
 
 === error codes
@@ -2111,7 +2160,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_UnregisterType [function]
 
-== SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )
+== SGSRESULT sgs_UnregisterType( sgs_Context* C, const char* name )
 === unregister a type interface by its name
 
 === error codes
@@ -2120,7 +2169,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_FindType [function]
 
-== sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name )
+== sgs_ObjInterface* sgs_FindType( sgs_Context* C, const char* name )
 === finds the type interface that is mapped to the specified name or returns NULL if that type name cannot be found
 
 
@@ -2279,10 +2328,11 @@ After a successful call, all arguments and the function will be popped off the s
 - SGS_EINPROC: internal failure in the object interface
 
 
-# sgs_ArraySize [function]
+# sgs_ArraySize(P) [functions]
 
 == SGSMIXED sgs_ArraySize( sgs_Context* C, sgs_StkIdx item )
-=== check if the specified stack item is an array and return its size or error code on failure
+== SGSMIXED sgs_ArraySizeP( sgs_Context* C, sgs_Variable* var )
+=== check if the specified stack item or variable is an array and return its size or error code on failure
 
 === error codes
 - SGS_EINVAL: index out of bounds / variable was not an array
@@ -2293,8 +2343,25 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_StackSize [function]
 
-== int sgs_StackSize( sgs_Context* C )
+== sgs_StkIdx sgs_StackSize( sgs_Context* C )
 === return the size of the current stack frame
+
+
+# sgs_SetStackSize [function]
+
+== SGSRESULT sgs_SetStackSize( sgs_Context* C, sgs_StkIdx size )
+=== resizes the current stack frame to fit the specified amount of items
+
+- if the current number of items is less than needed, stack is null-variable-padded at the end
+- if the current number of items is more than needed, the unnecessary amount of items is popped
+
+
+# sgs_AbsIndex [function]
+
+== sgs_StkIdx sgs_AbsIndex( sgs_Context* C, sgs_StkIdx item )
+=== attempt to convert a negative stack index into a positive one
+
+! this function can still return negative values - make sure that valid values are passed to it or check if the returned value is in the range [ 0; stack_frame_size )
 
 
 # sgs_IsValidIndex [function]
@@ -2317,10 +2384,20 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_GetStackItem [function]
 
-== SGSBOOL sgs_PeekStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )
+== SGSBOOL sgs_GetStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )
 === write the data of the specified stack variable and increments its reference count if the index is valid
 
 - function returns whether the stack index was valid
+
+
+# sgs_SetStackItem [function]
+
+== SGSRESULT sgs_SetStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* val )
+=== copy the specified variable to the specified position in stack
+
+=== error codes
+- SGS_EINVAL: invalid variable type detected (corrupted data)
+- SGS_EBOUNDS: index out of bounds
 
 
 # sgs_ItemType [function]
@@ -2522,8 +2599,8 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_StdMsgFunc(_NoAbort) [functions]
 
-== void sgs_StdMsgFunc( void* ctx, SGS_CTX, int type, const char* msg )
-== void sgs_StdMsgFunc_NoAbort( void* ctx, SGS_CTX, int type, const char* msg )
+== void sgs_StdMsgFunc( void* ctx, sgs_Context* C, int type, const char* msg )
+== void sgs_StdMsgFunc_NoAbort( void* ctx, sgs_Context* C, int type, const char* msg )
 === writes error info with @sgs_WriteErrorInfo to userdata with fprintf, assuming userdata is FILE*
 
 
@@ -2560,6 +2637,36 @@ After a successful call, all arguments and the function will be popped off the s
 -- additional function name prefix can be specified with @sgs_FuncName or the SGSFN/SGSBASEFN macros
 - `what`, the function name prefix (if set) and the variable arguments are passed to a vsprintf-like function so printf syntax rules apply
 - function always returns 0 to be compatible with most error handling cases in C functions: "return sgs_Msg( ... );"
+
+
+# sgs_WriteErrorInfo [function]
+
+== void sgs_WriteErrorInfo( sgs_Context* C, int flags, sgs_ErrorOutputFunc func, void* ctx, int type, const char* msg )
+=== writes error info using the error output function specified
+
+the error output function type has the following definition:
+
+    typedef int (*sgs_ErrorOutputFunc) ( void*, const char*, ... );
+
+- error output function has the same type as fprintf and sgs_Writef
+- `type` and `msg` should be passed from the messaging callback - they are the same type number / error message
+- `flags` should be one of SGS_ERRORINFO_STACK, SGS_ERRORINFO_ERROR, SGS_ERRORINFO_FULL
+-- SGS_ERRORINFO_STACK only writes the stack frame
+-- SGS_ERRORINFO_ERROR only writes the error message
+-- SGS_ERRORINFO_FULL writes both
+
+
+
+# sgs_PushErrorInfo [function]
+
+== void sgs_PushErrorInfo( sgs_Context* C, int flags, int type, const char* msg )
+=== pushes a string generated from error info
+
+- `type` and `msg` should be passed from the messaging callback - they are the same type number / error message
+- `flags` should be one of SGS_ERRORINFO_STACK, SGS_ERRORINFO_ERROR, SGS_ERRORINFO_FULL
+-- SGS_ERRORINFO_STACK only writes the stack frame
+-- SGS_ERRORINFO_ERROR only writes the error message
+-- SGS_ERRORINFO_FULL writes both
 
 
 # sgs_HasFuncName [function]

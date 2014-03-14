@@ -734,8 +734,8 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li><a href="#sgs-GetMsgFunc-function">sgs_GetMsgFunc</a> - return the current messaging callback and its user data pointer
 </li><li><a href="#sgs-SetMsgFunc-function">sgs_SetMsgFunc</a> - set the messaging callback and its user data pointer
 </li><li><a href="#sgs-Msg-function">sgs_Msg</a> - invoke the messaging system
-</li><li><a href="#sgs-WriteErrorInfo">sgs_WriteErrorInfo</a> - write message info to output callback
-</li><li><a href="#sgs-PushErrorInfo">sgs_PushErrorInfo</a> - push message info to stack
+</li><li><a href="#sgs-WriteErrorInfo-function">sgs_WriteErrorInfo</a> - write message info to output callback
+</li><li><a href="#sgs-PushErrorInfo-function">sgs_PushErrorInfo</a> - push message info to stack
 </li><li><a href="#sgs-HasFuncName-function">sgs_HasFuncName</a> - check if current C function has a name set
 </li><li><a href="#sgs-FuncName-function">sgs_FuncName</a> - set current C function name
 </li><li><a href="#SGSFN-function-alias">SGSFN</a> - set current C function name
@@ -815,19 +815,19 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li><a href="#sgs-PushDict-function">sgs_PushDict</a> - push a new dict variable, optionally using the specified number of pushed items on stack
 </li><li><a href="#sgs-PushMap-function">sgs_PushMap</a> - push a new map variable, optionally using the specified number of pushed items on stack
 </li><li><a href="#sgs-Push-functions">sgs_PushVariable</a> - push the specified variable
-</li><li><a href="#sgs-StoreVariable">sgs_StoreVariable</a> - retrieve, acquire and pop the topmost variable on stack
+</li><li><a href="#sgs-StoreVariable-function">sgs_StoreVariable</a> - retrieve, acquire and pop the topmost variable on stack
 </li><li><a href="#sgs-PushItem-function">sgs_PushItem</a> - retrieve and push the specified variable on stack
 </li><li><a href="#sgs-StoreItem-function">sgs_StoreItem</a> - store and pop the topmost variable to the specified position after removal in stack
 </li><li><a href="#sgs-InsertVariable-function">sgs_InsertVariable</a> - insert a variable on stack in the specified position
 </li><li><a href="#sgs-Pop-function">sgs_Pop</a> - pop the specified number of items from stack
 </li><li><a href="#sgs-PopSkip-function">sgs_PopSkip</a> - pop the specified number of items from stack, skipping some topmost items
 </li><li><a href="#sgs-StackSize-function">sgs_StackSize</a> - return the size of the current stack frame
-</li><li><a href="#sgs-SetStackSize">sgs_SetStackSize</a> - resize the current stack frame
-</li><li><a href="#sgs-AbsIndex">sgs_AbsIndex</a> - convert stack index to positive if possible (if it&#39;s &lt;0 or &gt;=StackSize, then it&#39;s invalid)
+</li><li><a href="#sgs-SetStackSize-function">sgs_SetStackSize</a> - resize the current stack frame
+</li><li><a href="#sgs-AbsIndex-function">sgs_AbsIndex</a> - convert stack index to positive if possible (if it&#39;s &lt;0 or &gt;=StackSize, then it&#39;s invalid)
 </li><li><a href="#sgs-IsValidIndex-function">sgs_IsValidIndex</a> - check if specified stack index is valid
 </li><li><a href="#sgs-PeekStackItem-function">sgs_PeekStackItem</a> - retrieve without acquisition the specified variable on stack
 </li><li><a href="#sgs-GetStackItem-function">sgs_GetStackItem</a> - retrieve and acquire the specified variable on stack
-</li><li><a href="#sgs-SetStackItem">sgs_SetStackItem</a> - assign variable to the specified variable on stack
+</li><li><a href="#sgs-SetStackItem-function">sgs_SetStackItem</a> - assign variable to the specified variable on stack
 </li><li><a href="#sgs-ItemType-function">sgs_ItemType</a> - return the variable type of the specified variable on stack
 </li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExtVA</a> - parse the stack as an argument list with additional options (for custom wrapper functions)
 </li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt</a> - parse the stack as an argument list with additional options
@@ -867,11 +867,11 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li><a href="#sgs-Method-function">sgs_Method</a> - unhide the first variable on stack if there is a hidden <code>this</code> variable
 </li><li><a href="#sgs-Force-HideThis-functions">sgs_HideThis</a> - hide the first variable on stack if the stack already doesn&#39;t contain a hidden <code>this</code> variable
 </li><li><a href="#sgs-Force-HideThis-functions">sgs_ForceHideThis</a> - hide the first variable even if it wasn&#39;t previously hidden before unhiding</li></ul></div>
-<div class='item'><a name='Virtual-machine-operations'></a><hr><h2>Virtual machine operations</h2><ul><li><a href="#sgs-Assign">sgs_Assign</a> - release the current variable and acquire-assign to it from the source
-</li><li><a href="#sgs-ArithOp">sgs_ArithOp</a> - run an arithmetic operation (+,-,*,/,%) on two variables to generate a third one
+<div class='item'><a name='Virtual-machine-operations'></a><hr><h2>Virtual machine operations</h2><ul><li><a href="#sgs-Assign-function">sgs_Assign</a> - release the current variable and acquire-assign to it from the source
+</li><li><a href="#sgs-ArithOp-function">sgs_ArithOp</a> - run an arithmetic operation (+,-,*,/,%) on two variables to generate a third one
+</li><li><a href="#sgs-IncDec-function">sgs_IncDec</a> - increment or decrement the specified variable
 </li><li><a href="#sgs-Compare-function">sgs_Compare</a> - check if both variables compare equal to each other
 </li><li><a href="#sgs-EqualTypes-function">sgs_EqualTypes</a> - check if both variables have the same type and object interface (if both are objects)
-</li><li><a href="#sgs-IncDec">sgs_IncDec</a> - increment or decrement the specified variable
 </li><li><a href="#sgs-TypeOf-function">sgs_TypeOf</a> - convert the topmost variable on stack to a type name string
 </li><li><a href="#sgs-DumpVar-function">sgs_DumpVar</a> - convert the topmost variable on stack to a string that contains detailed info about its contents
 </li><li><a href="#sgs-GCExecute-function">sgs_GCExecute</a> - run the garbage collection system to remove all unreachable objects
@@ -911,7 +911,7 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li><a href="#sgs-Parse-functions">sgs_ParseStringP</a> - validate conversion, optionally return string or buffer from variable, if possible
 </li><li><a href="#sgs-Parse-functions">sgs_ParseObjectPtrP</a> - validate conversion, optionally return object pointer from variable, if possible
 </li><li><a href="#sgs-Parse-functions">sgs_ParsePtrP</a> - validate conversion, optionally return pointer from variable, if possible
-</li><li><a href="#sgs-ArraySizeP">sgs_ArraySizeP</a> - retrieve size of array variable, if possible
+</li><li><a href="#sgs-ArraySize-P-functions">sgs_ArraySizeP</a> - retrieve size of array variable, if possible
 </li><li><a href="#sgs-Get-functions">sgs_GetBool</a> - return the boolean version of the variable on stack
 </li><li><a href="#sgs-Get-functions">sgs_GetInt</a> - return the integer version of the variable on stack
 </li><li><a href="#sgs-Get-functions">sgs_GetReal</a> - return the real value version of the variable on stack
@@ -933,7 +933,7 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li><a href="#sgs-Parse-functions">sgs_ParseString</a> - validate conversion, optionally return string or buffer from variable on stack, if possible
 </li><li><a href="#sgs-Parse-functions">sgs_ParseObjectPtr</a> - validate conversion, optionally return object pointer from variable on stack, if possible
 </li><li><a href="#sgs-Parse-functions">sgs_ParsePtr</a> - validate conversion, optionally return pointer from variable on stack, if possible
-</li><li><a href="#sgs-ArraySize-function">sgs_ArraySize</a> - retrieve size of array variable on stack, if possible
+</li><li><a href="#sgs-ArraySize-P-functions">sgs_ArraySize</a> - retrieve size of array variable on stack, if possible
 </li><li><a href="#sgs-GlobalBool">sgs_GlobalBool</a> - retrieve global by name as bool
 </li><li><a href="#sgs-GlobalInt">sgs_GlobalInt</a> - retrieve global by name as integer
 </li><li><a href="#sgs-GlobalReal">sgs_GlobalReal</a> - retrieve global by name as real
@@ -986,10 +986,13 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li><a href="#sgs-This-Call-P-function-aliases">sgs_(This)Call(P) [function aliases]</a>
 </li><li><a href="#sgs-ArgError-function-aliases">sgs_***ArgError [function aliases]</a>
 </li><li><a href="#sgs-Abort-function">sgs_Abort [function]</a>
+</li><li><a href="#sgs-AbsIndex-function">sgs_AbsIndex [function]</a>
 </li><li><a href="#sgs-Acquire-Array-function">sgs_Acquire(Array) [function]</a>
 </li><li><a href="#sgs-ArgError-function">sgs_ArgError [function]</a>
 </li><li><a href="#sgs-ArgErrorExt-function">sgs_ArgErrorExt [function]</a>
-</li><li><a href="#sgs-ArraySize-function">sgs_ArraySize [function]</a>
+</li><li><a href="#sgs-ArithOp-function">sgs_ArithOp [function]</a>
+</li><li><a href="#sgs-ArraySize-P-functions">sgs_ArraySize(P) [functions]</a>
+</li><li><a href="#sgs-Assign-function">sgs_Assign [function]</a>
 </li><li><a href="#sgs-CheckString32-function">sgs_CheckString32 [function]</a>
 </li><li><a href="#sgs-CloneItem-function">sgs_CloneItem [function]</a>
 </li><li><a href="#sgs-Cntl-function">sgs_Cntl [function]</a>
@@ -1030,6 +1033,7 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li><a href="#sgs-GetStringSize-P-functions">sgs_GetStringSize(P) [functions]</a>
 </li><li><a href="#sgs-GlobalCall-function">sgs_GlobalCall [function]</a>
 </li><li><a href="#sgs-HasFuncName-function">sgs_HasFuncName [function]</a>
+</li><li><a href="#sgs-IncDec-function">sgs_IncDec [function]</a>
 </li><li><a href="#sgs-Include-function-alias">sgs_Include [function alias]</a>
 </li><li><a href="#sgs-IncludeExt-function">sgs_IncludeExt [function]</a>
 </li><li><a href="#sgs-Init-functions">sgs_Init*** [functions]</a>
@@ -1067,6 +1071,7 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li><a href="#sgs-Push-functions">sgs_Push*** [functions]</a>
 </li><li><a href="#sgs-PushArray-function">sgs_PushArray [function]</a>
 </li><li><a href="#sgs-PushDict-function">sgs_PushDict [function]</a>
+</li><li><a href="#sgs-PushErrorInfo-function">sgs_PushErrorInfo [function]</a>
 </li><li><a href="#sgs-PushGlobal-function">sgs_PushGlobal [function]</a>
 </li><li><a href="#sgs-PushItem-function">sgs_PushItem [function]</a>
 </li><li><a href="#sgs-PushIterator-P-functions">sgs_PushIterator(P) [functions]</a>
@@ -1087,6 +1092,8 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li><a href="#sgs-SetObjectData-P-functions">sgs_SetObjectData(P) [functions]</a>
 </li><li><a href="#sgs-SetObjectIface-P-functions">sgs_SetObjectIface(P) [functions]</a>
 </li><li><a href="#sgs-SetOutputFunc-function">sgs_SetOutputFunc [function]</a>
+</li><li><a href="#sgs-SetStackItem-function">sgs_SetStackItem [function]</a>
+</li><li><a href="#sgs-SetStackSize-function">sgs_SetStackSize [function]</a>
 </li><li><a href="#sgs-StackFrameInfo-function">sgs_StackFrameInfo [function]</a>
 </li><li><a href="#sgs-StackSize-function">sgs_StackSize [function]</a>
 </li><li><a href="#sgs-Stat-function">sgs_Stat [function]</a>
@@ -1097,6 +1104,7 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li><a href="#sgs-StoreNumIndex-function">sgs_StoreNumIndex [function]</a>
 </li><li><a href="#sgs-StorePath-function">sgs_StorePath [function]</a>
 </li><li><a href="#sgs-StoreProperty-function">sgs_StoreProperty [function]</a>
+</li><li><a href="#sgs-StoreVariable-function">sgs_StoreVariable [function]</a>
 </li><li><a href="#sgs-StringConcat-function">sgs_StringConcat [function]</a>
 </li><li><a href="#sgs-To-functions">sgs_To*** [functions]</a>
 </li><li><a href="#sgs-ToPrintSafeString-function">sgs_ToPrintSafeString [function]</a>
@@ -1106,6 +1114,7 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li><a href="#sgs-UnregisterType-function">sgs_UnregisterType [function]</a>
 </li><li><a href="#sgs-Unserialize-function">sgs_Unserialize [function]</a>
 </li><li><a href="#sgs-Write-function">sgs_Write [function]</a>
+</li><li><a href="#sgs-WriteErrorInfo-function">sgs_WriteErrorInfo [function]</a>
 </li><li><a href="#sgs-WriteStr-function-alias">sgs_WriteStr [function alias]</a>
 </li><li><a href="#sgs-Writef-function">sgs_Writef [function]</a></li></ul></div>
 <div class='item'><a name='sgs-CreateEngine-function-alias'></a><hr><h2>sgs_CreateEngine [function alias]</h2><h3>sgs_Context* sgs_CreateEngine()</h3><h4>returns a new scripting engine context</h4><ul><li>alias to <code>sgs_CreateEngineExt( sgs_DefaultMemFunc, NULL )</code></li></ul></div>
@@ -1166,6 +1175,7 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li></ul><li>sgs_PushVariable will increment the reference count of strings, SGS functions and objects
 <ul><li>it will also return EINVAL if type of variable isn&#39;t one of the allowed types
 </li></ul><li>these functions do not throw an error when the stack is full since there is no way to handle that</li></ul></div>
+<div class='item'><a name='sgs-StoreVariable-function'></a><hr><h2>sgs_StoreVariable [function]</h2><h3>SGSRESULT sgs_StoreVariable( sgs_Context* C, sgs_Variable* var )</h3><h4>copy the topmost item of the current stack frame to the specified place, acquire it and pop it</h4><h4>error codes</h4><ul><li>SGS_ENOTFND: stack frame is empty</li></ul></div>
 <div class='item'><a name='sgs-Pop-function'></a><hr><h2>sgs_Pop [function]</h2><h3>SGSRESULT sgs_Pop( sgs_Context* C, int count )</h3><h4>pops <code>count</code> variables off the current frame of the stack</h4><h4>error codes</h4><ul><li>SGS_EINVAL: <code>count</code> was bigger than the number of items in the current stack frame or <code>count</code> is less than 0</li></ul></div>
 <div class='item'><a name='sgs-PopSkip-function'></a><hr><h2>sgs_PopSkip [function]</h2><h3>SGSRESULT sgs_PopSkip( sgs_Context* C, int count, int skip )</h3><h4>pops <code>count</code> variables off the current frame of the stack, skipping the last <code>skip</code> elements</h4><h4>error codes</h4><ul><li>SGS_EINVAL: <code>count+skip</code> was bigger than the number of items in the current stack frame or <code>count</code> is less than 0 or <code>skip</code> is less than 0</li></ul></div>
 <div class='item'><a name='sgs-InsertVariable-function'></a><hr><h2>sgs_InsertVariable [function]</h2><h3>SGSRESULT sgs_InsertVariable( sgs_Context* C, int pos, sgs_Variable* var )</h3><h4>inserts a variable <code>var</code> at a given index <code>pos</code> of the current stack frame, increasing its reference count</h4><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds</li></ul></div>
@@ -1215,7 +1225,7 @@ There are two types of closures in SGScript ...TODO... WHY?
 </li><li>the last item on the path (or in the case of an empty path, the starting point) is accessed with a store operation, the rest - with a push operation</li></ul><h4>error codes</h4><ul><li>SGS_EINVAL: invalid symbol found in path / corresponding variable arguments had an invalid value
 </li><li>SGS_EINPROC: current stack frame is empty
 </li><li>other errors, as returned by <a href="#sgs-PushIndex">sgs_PushIndex***()</a> or <a href="#sgs-StoreIndex">sgs_StoreIndex***()</a></li></ul></div>
-<div class='item'><a name='sgs-ArgErrorExt-function'></a><hr><h2>sgs_ArgErrorExt [function]</h2><h3>int sgs_ArgErrorExt( SGS_CTX, int argid, int method, const char* expect, const char* expfx )</h3><h4>prints the argument type mismatch error</h4><ul><li><code>expfx</code> - prefix of <code>expect</code>, put exactly before this for things like &#39;strict &#39;
+<div class='item'><a name='sgs-ArgErrorExt-function'></a><hr><h2>sgs_ArgErrorExt [function]</h2><h3>int sgs_ArgErrorExt( sgs_Context* C, int argid, int method, const char* expect, const char* expfx )</h3><h4>prints the argument type mismatch error</h4><ul><li><code>expfx</code> - prefix of <code>expect</code>, put exactly before this for things like &#39;strict &#39;
 </li><li>always returns 0 so it can be used to return and print an error in the same statement</li></ul></div>
 <div class='item'><a name='sgs-ArgError-function'></a><hr><h2>sgs_ArgError [function]</h2><h3>int sgs_ArgError( sgs_Context* C, int argid, int expect, int is_strict )</h3><h4>prints the argument type mismatch error</h4><ul><li>always returns 0 so it can be used to return and print an error in the same statement</li></ul></div>
 <div class='item'><a name='sgs-ArgError-function-aliases'></a><hr><h2>sgs_***ArgError [function aliases]</h2><h3>int sgs_FuncArgError( sgs_Context* C, int argid, int expect, int is_strict )</h3><h3>int sgs_MethodArgError( sgs_Context* C, int argid, int expect, int is_strict )</h3><h4>prints the argument type mismatch error</h4><ul><li>always returns 0 so it can be used to return and print an error in the same statement
@@ -1350,6 +1360,21 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-Unserialize-function'></a><hr><h2>sgs_Unserialize [function]</h2><h3>SGSRESULT sgs_Unserialize( sgs_Context* C )</h3><h4>unserialize the topmost string variable of the current stack frame (run the binary recreation instruction stream)</h4><p>
 <em class='notice-bgr'>Be mindful of the data sources you use - calls to any global function can be placed in the instruction stream.</em>
 </p></div>
+<div class='item'><a name='sgs-Assign-function'></a><hr><h2>sgs_Assign [function]</h2><h3>void sgs_Assign( sgs_Context* C, sgs_Variable* var_to, sgs_Variable* var_from )</h3><h4>release <code>var_to</code>, copy <code>var_from</code> to <code>var_to</code>, acquire the new value</h4></div>
+<div class='item'><a name='sgs-ArithOp-function'></a><hr><h2>sgs_ArithOp [function]</h2><h3>SGSRESULT sgs_ArithOp( sgs_Context* C, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op )</h3><h4>perform the specified operation on variables A and B, returning the value on <code>out</code></h4><p>
+<em class='notice-bgr'>this function prints errors, exactly like VM would (internally there are the same functions)</em>
+</p><ul><li>this function can perform 5 operations, which are specified by passing the following values to `op`:
+<ul><li>SGS_EOP_ADD: +
+</li><li>SGS_EOP_SUB: - (binary)
+</li><li>SGS_EOP_MUL: *
+</li><li>SGS_EOP_DIV: /
+</li><li>SGS_EOP_MOD: %
+</li><li>SGS_EOP_NEGATE: - (unary, uses only `A`)</li></ul></li></ul><h4>error codes</h4><ul><li>SGS_ENOTSUP: operation not supported (invalid operation ID)
+</li><li>SGS_EINVAL: specified arithmetic operation is not supported by the given set of arguments
+</li><li>SGS_EINPROC: division by 0</li></ul></div>
+<div class='item'><a name='sgs-IncDec-function'></a><hr><h2>sgs_IncDec [function]</h2><h3>SGSRESULT sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc )</h3><h4>increment or decrement the specified variable <code>A</code> to the output <code>out</code></h4><p>
+<em class='notice-bgr'>this function prints errors, exactly like VM would (internally there are the same functions)</em>
+</p><ul><li>if inc is non-zero, variable is incremented; otherwise it is decremented</li></ul><h4>error codes</h4><ul><li>SGS_EINVAL: variable was not int or real</li></ul></div>
 <div class='item'><a name='sgs-Compare-function'></a><hr><h2>sgs_Compare [function]</h2><h3>int sgs_Compare( sgs_Context* C, sgs_Variable* v1, sgs_Variable* v2 )</h3><h4>return the difference between variables, as int -1/0/1</h4></div>
 <div class='item'><a name='sgs-EqualTypes-function'></a><hr><h2>sgs_EqualTypes [function]</h2><h3>SGSBOOL sgs_EqualTypes( sgs_Variable* v1, sgs_Variable* v2 )</h3><h4>return if types of both variables are exactly equal</h4><ul><li>both type variables and interface pointers (only if both variables are objects) are checked for equality</li></ul></div>
 <div class='item'><a name='sgs-Get-functions'></a><hr><h2>sgs_Get*** [functions]</h2><h3>sgs_Bool sgs_GetBool( sgs_Context* C, sgs_StkIdx item )</h3><h3>sgs_Int sgs_GetInt( sgs_Context* C, sgs_StkIdx item )</h3><h3>sgs_Real sgs_GetReal( sgs_Context* C, sgs_StkIdx item )</h3><h3>void* sgs_GetPtr( sgs_Context* C, sgs_StkIdx item )</h3><h4>return an item from the current stack frame, converted to the specified type</h4><h3>sgs_Bool sgs_GetBoolP( sgs_Context* C, sgs_Variable* var )</h3><h3>sgs_Int sgs_GetIntP( sgs_Context* C, sgs_Variable* var )</h3><h3>sgs_Real sgs_GetRealP( sgs_Context* C, sgs_Variable* var )</h3><h3>void* sgs_GetPtrP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the value of the specified variable, converted to the specified type</h4><ul><li>if <code>item</code> is out of bounds, 0 is returned</li></ul></div>
@@ -1361,10 +1386,10 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>length of string is returned to the value that <code>outsize</code> points to</li></ul></div>
 <div class='item'><a name='sgs-ToString-Fast-P-function-aliases'></a><hr><h2>sgs_ToString(Fast)(P) [function aliases]</h2><h3>char* sgs_ToString( sgs_Context* C, sgs_StkIdx item )</h3><h3>char* sgs_ToStringFast( sgs_Context* C, sgs_StkIdx item )</h3><h4>return an item from the current stack frame, converted in-place to string</h4><h3>char* sgs_ToStringP( sgs_Context* C, sgs_Variable* var )</h3><h3>char* sgs_ToStringFastP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the value of the specified variable, converted in-place to string</h4><ul><li>in ***P functions previous variable is properly released before conversion takes place and reacquired afterwards
 </li><li>these are aliases of <a href="#sgs-ToStringBuf-Fast-P-functions">sgs_ToStringBuf(Fast)(P)</a> with the third argument set to NULL</li></ul></div>
-<div class='item'><a name='sgs-RegisterType-function'></a><hr><h2>sgs_RegisterType [function]</h2><h3>SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface )</h3><h4>register a type interface by mapping it to a name</h4><h4>error codes</h4><ul><li>SGS_EINVAL: iface was NULL
+<div class='item'><a name='sgs-RegisterType-function'></a><hr><h2>sgs_RegisterType [function]</h2><h3>SGSRESULT sgs_RegisterType( sgs_Context* C, const char* name, sgs_ObjInterface* iface )</h3><h4>register a type interface by mapping it to a name</h4><h4>error codes</h4><ul><li>SGS_EINVAL: iface was NULL
 </li><li>SGS_EINPROC: the name is already used</li></ul></div>
-<div class='item'><a name='sgs-UnregisterType-function'></a><hr><h2>sgs_UnregisterType [function]</h2><h3>SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )</h3><h4>unregister a type interface by its name</h4><h4>error codes</h4><ul><li>SGS_ENOTFND: the specified type name was not mapped to any interface</li></ul></div>
-<div class='item'><a name='sgs-FindType-function'></a><hr><h2>sgs_FindType [function]</h2><h3>sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name )</h3><h4>finds the type interface that is mapped to the specified name or returns NULL if that type name cannot be found</h4></div>
+<div class='item'><a name='sgs-UnregisterType-function'></a><hr><h2>sgs_UnregisterType [function]</h2><h3>SGSRESULT sgs_UnregisterType( sgs_Context* C, const char* name )</h3><h4>unregister a type interface by its name</h4><h4>error codes</h4><ul><li>SGS_ENOTFND: the specified type name was not mapped to any interface</li></ul></div>
+<div class='item'><a name='sgs-FindType-function'></a><hr><h2>sgs_FindType [function]</h2><h3>sgs_ObjInterface* sgs_FindType( sgs_Context* C, const char* name )</h3><h4>finds the type interface that is mapped to the specified name or returns NULL if that type name cannot be found</h4></div>
 <div class='item'><a name='sgs-IsObject-P-functions'></a><hr><h2>sgs_IsObject(P) [functions]</h2><h3>SGSBOOL sgs_IsObject( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )</h3><h4>returns whether the specified stack item <code>item</code> is an object with the interface pointer <code>iface</code></h4><ul><li>if <code>item</code> is out of bounds or not an object or doesn&#39;t have the specified interface, 0 is returned</li></ul><h3>SGSBOOL sgs_IsObjectP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface )</h3><h4>returns whether the specified variable <code>var</code> is an object with the interface pointer <code>iface</code></h4></div>
 <div class='item'><a name='sgs-IsType-P-function-aliases'></a><hr><h2>sgs_IsType(P) [function aliases]</h2><h3>SGSBOOL sgs_IsType( sgs_Context* C, sgs_StkIdx item, const char* type )</h3><h4>returns whether the specified stack item <code>item</code> is an object of the specified type</h4><ul><li>alias of <code>sgs_IsObject( C, item, sgs_FindType( C, type ) )</code></li></ul><h3>SGSBOOL sgs_IsTypeP( sgs_Context* C, sgs_Variable* var, const char* type )</h3><h4>returns whether the specified variable <code>var</code> is an object of the specified type</h4><ul><li>alias of <code>sgs_IsObjectP( C, var, sgs_FindType( C, type ) )</code></li></ul></div>
 <div class='item'><a name='sgs-IsCallable-P-functions'></a><hr><h2>sgs_IsCallable(P) [functions]</h2><h3>SGSBOOL sgs_IsCallable( sgs_Context* C, sgs_StkIdx item )</h3><h4>returns whether the specified stack item <code>item</code> is callable</h4><ul><li>if <code>item</code> is out of bounds, 0 is returned</li></ul><h3>SGSBOOL sgs_IsCallableP( sgs_Context* C, sgs_Variable* var )</h3><h4>returns whether the specified variable <code>var</code> is callable</h4><ul><li>callable variables are either SGS functions or C functions or objects with the CALL interface implemented</li></ul></div>
@@ -1400,13 +1425,20 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>see <a href="#Iterator-system">Iterator system</a> for more info about iterators</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
 </li><li>SGS_EINVAL: iterated object changed in a way that iterator does not support
 </li><li>SGS_EINPROC: internal failure in the object interface</li></ul></div>
-<div class='item'><a name='sgs-ArraySize-function'></a><hr><h2>sgs_ArraySize [function]</h2><h3>SGSMIXED sgs_ArraySize( sgs_Context* C, sgs_StkIdx item )</h3><h4>check if the specified stack item is an array and return its size or error code on failure</h4><h4>error codes</h4><ul><li>SGS_EINVAL: index out of bounds / variable was not an array</li></ul></div>
-<div class='item'><a name='sgs-StackSize-function'></a><hr><h2>sgs_StackSize [function]</h2><h3>int sgs_StackSize( sgs_Context* C )</h3><h4>return the size of the current stack frame</h4></div>
+<div class='item'><a name='sgs-ArraySize-P-functions'></a><hr><h2>sgs_ArraySize(P) [functions]</h2><h3>SGSMIXED sgs_ArraySize( sgs_Context* C, sgs_StkIdx item )</h3><h3>SGSMIXED sgs_ArraySizeP( sgs_Context* C, sgs_Variable* var )</h3><h4>check if the specified stack item or variable is an array and return its size or error code on failure</h4><h4>error codes</h4><ul><li>SGS_EINVAL: index out of bounds / variable was not an array</li></ul></div>
+<div class='item'><a name='sgs-StackSize-function'></a><hr><h2>sgs_StackSize [function]</h2><h3>sgs_StkIdx sgs_StackSize( sgs_Context* C )</h3><h4>return the size of the current stack frame</h4></div>
+<div class='item'><a name='sgs-SetStackSize-function'></a><hr><h2>sgs_SetStackSize [function]</h2><h3>SGSRESULT sgs_SetStackSize( sgs_Context* C, sgs_StkIdx size )</h3><h4>resizes the current stack frame to fit the specified amount of items</h4><ul><li>if the current number of items is less than needed, stack is null-variable-padded at the end
+</li><li>if the current number of items is more than needed, the unnecessary amount of items is popped</li></ul></div>
+<div class='item'><a name='sgs-AbsIndex-function'></a><hr><h2>sgs_AbsIndex [function]</h2><h3>sgs_StkIdx sgs_AbsIndex( sgs_Context* C, sgs_StkIdx item )</h3><h4>attempt to convert a negative stack index into a positive one</h4><p>
+<em class='notice-bgr'>this function can still return negative values - make sure that valid values are passed to it or check if the returned value is in the range [ 0; stack_frame_size )</em>
+</p></div>
 <div class='item'><a name='sgs-IsValidIndex-function'></a><hr><h2>sgs_IsValidIndex [function]</h2><h3>SGSBOOL sgs_IsValidIndex( sgs_Context* C, sgs_StkIdx item )</h3><h4>return whether the specified stack index points to an item in the current stack frame</h4><ul><li>both positive (first = 0) and negative (last = -1) indices are supported</li></ul></div>
 <div class='item'><a name='sgs-PeekStackItem-function'></a><hr><h2>sgs_PeekStackItem [function]</h2><h3>SGSBOOL sgs_PeekStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>write the data of the specified stack variable if the index is valid</h4><p>
-<em class='notice-bgr'>this function does not acquire the variable and thus CANNOT be used in functions that modify it, such as <a href="#sgs-Assign">sgs_Assign</a> or <a href="#sgs-To-functions">sgs_To***;</a> to acquire variable on retrieval, see <a href="#sgs-GetStackItem-function">sgs_GetStackItem</a> or <a href="#sgs-Acquire-Array-function">sgs_Acquire</a></em>
+<em class='notice-bgr'>this function does not acquire the variable and thus CANNOT be used in functions that modify it, such as <a href="#sgs-Assign-function">sgs_Assign</a> or <a href="#sgs-To-functions">sgs_To***;</a> to acquire variable on retrieval, see <a href="#sgs-GetStackItem-function">sgs_GetStackItem</a> or <a href="#sgs-Acquire-Array-function">sgs_Acquire</a></em>
 </p><ul><li>function returns whether the stack index was valid</li></ul></div>
-<div class='item'><a name='sgs-GetStackItem-function'></a><hr><h2>sgs_GetStackItem [function]</h2><h3>SGSBOOL sgs_PeekStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>write the data of the specified stack variable and increments its reference count if the index is valid</h4><ul><li>function returns whether the stack index was valid</li></ul></div>
+<div class='item'><a name='sgs-GetStackItem-function'></a><hr><h2>sgs_GetStackItem [function]</h2><h3>SGSBOOL sgs_GetStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>write the data of the specified stack variable and increments its reference count if the index is valid</h4><ul><li>function returns whether the stack index was valid</li></ul></div>
+<div class='item'><a name='sgs-SetStackItem-function'></a><hr><h2>sgs_SetStackItem [function]</h2><h3>SGSRESULT sgs_SetStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* val )</h3><h4>copy the specified variable to the specified position in stack</h4><h4>error codes</h4><ul><li>SGS_EINVAL: invalid variable type detected (corrupted data)
+</li><li>SGS_EBOUNDS: index out of bounds</li></ul></div>
 <div class='item'><a name='sgs-ItemType-function'></a><hr><h2>sgs_ItemType [function]</h2><h3>uint32_t sgs_ItemType( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the type ID of the specified stack item</h4><ul><li>return value will be equal to one of the SGS_VT_* macro
 </li><li>if index is invalid, return value will be 0 (SGS_VT_NULL)</li></ul></div>
 <div class='item'><a name='sgs-Acquire-Array-function'></a><hr><h2>sgs_Acquire(Array) [function]</h2><h3>void sgs_Acquire( sgs_Context* C, sgs_Variable* var )</h3><h3>void sgs_AcquireArray( sgs_Context* C, sgs_Variable* var, sgs_SizeVal count )</h3><h4>increment the reference count of the specified variables (if they count references)</h4></div>
@@ -1438,7 +1470,7 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-Write-function'></a><hr><h2>sgs_Write [function]</h2><h3>void sgs_Write( sgs_Context* C, const void* ptr, sgs_SizeVal size )</h3><h4>passes the specified data to the output function</h4><ul><li>the default output function prints the data to the specified FILE* stream (stdout by default)</li></ul></div>
 <div class='item'><a name='sgs-WriteStr-function-alias'></a><hr><h2>sgs_WriteStr [function alias]</h2><h3>void sgs_WriteStr( sgs_Context* C, const char* str )</h3><h4>passes the specified string to the output function</h4><ul><li>alias to <code>sgs_Write( C, str, SGS_STRINGLENGTHFUNC( str ) )</code></li></ul></div>
 <div class='item'><a name='sgs-Writef-function'></a><hr><h2>sgs_Writef [function]</h2><h3>void sgs_Writef( sgs_Context* C, const char* what, ... )</h3><h4>passes the arguments through a vsprintf-like function to expand the data and passes it to the specified output function</h4><ul><li>printf rules apply here</li></ul></div>
-<div class='item'><a name='sgs-StdMsgFunc-NoAbort-functions'></a><hr><h2>sgs_StdMsgFunc(_NoAbort) [functions]</h2><h3>void sgs_StdMsgFunc( void* ctx, SGS_CTX, int type, const char* msg )</h3><h3>void sgs_StdMsgFunc_NoAbort( void* ctx, SGS_CTX, int type, const char* msg )</h3><h4>writes error info with <a href="#sgs-WriteErrorInfo">sgs_WriteErrorInfo</a> to userdata with fprintf, assuming userdata is FILE*</h4></div>
+<div class='item'><a name='sgs-StdMsgFunc-NoAbort-functions'></a><hr><h2>sgs_StdMsgFunc(_NoAbort) [functions]</h2><h3>void sgs_StdMsgFunc( void* ctx, sgs_Context* C, int type, const char* msg )</h3><h3>void sgs_StdMsgFunc_NoAbort( void* ctx, sgs_Context* C, int type, const char* msg )</h3><h4>writes error info with <a href="#sgs-WriteErrorInfo-function">sgs_WriteErrorInfo</a> to userdata with fprintf, assuming userdata is FILE*</h4></div>
 <div class='item'><a name='sgs-GetMsgFunc-function'></a><hr><h2>sgs_GetMsgFunc [function]</h2><h3>void sgs_GetMsgFunc( sgs_Context* C, sgs_MsgFunc* outfunc, void** outuserdata )</h3><h4>retrieves the currently set messaging function</h4><ul><li>info about the system is at the <a href="#Messaging-system">Messaging system</a> page
 </li><li>validity of the returned function pointer is assured as long as engine internals are not touched anywhere</li></ul></div>
 <div class='item'><a name='sgs-SetMsgFunc-function'></a><hr><h2>sgs_SetMsgFunc [function]</h2><h3>void sgs_SetMsgFunc( sgs_Context* C, sgs_MsgFunc func, void* userdata )</h3><h4>sets the function that handles and prints messages (more commonly, warnings and errors), while still being physically in that context</h4><ul><li>info about the system is at the <a href="#Messaging-system">Messaging system</a> page
@@ -1453,6 +1485,19 @@ After a successful call, all arguments and the function will be popped off the s
 <ul><li>additional function name prefix can be specified with <a href="#sgs-FuncName-function">sgs_FuncName</a> or the SGSFN/SGSBASEFN macros
 </li></ul><li><code>what</code>, the function name prefix (if set) and the variable arguments are passed to a vsprintf-like function so printf syntax rules apply
 </li><li>function always returns 0 to be compatible with most error handling cases in C functions: &quot;return sgs_Msg( ... );&quot;</li></ul></div>
+<div class='item'><a name='sgs-WriteErrorInfo-function'></a><hr><h2>sgs_WriteErrorInfo [function]</h2><h3>void sgs_WriteErrorInfo( sgs_Context* C, int flags, sgs_ErrorOutputFunc func, void* ctx, int type, const char* msg )</h3><h4>writes error info using the error output function specified</h4><p>
+the error output function type has the following definition:
+</p><pre>typedef int (*sgs_ErrorOutputFunc) ( void*, const char*, ... );</pre><ul><li>error output function has the same type as fprintf and sgs_Writef
+</li><li><code>type</code> and <code>msg</code> should be passed from the messaging callback - they are the same type number / error message
+</li><li><code>flags</code> should be one of SGS_ERRORINFO_STACK, SGS_ERRORINFO_ERROR, SGS_ERRORINFO_FULL
+<ul><li>SGS_ERRORINFO_STACK only writes the stack frame
+</li><li>SGS_ERRORINFO_ERROR only writes the error message
+</li><li>SGS_ERRORINFO_FULL writes both</li></ul></li></ul></div>
+<div class='item'><a name='sgs-PushErrorInfo-function'></a><hr><h2>sgs_PushErrorInfo [function]</h2><h3>void sgs_PushErrorInfo( sgs_Context* C, int flags, int type, const char* msg )</h3><h4>pushes a string generated from error info</h4><ul><li><code>type</code> and <code>msg</code> should be passed from the messaging callback - they are the same type number / error message
+</li><li><code>flags</code> should be one of SGS_ERRORINFO_STACK, SGS_ERRORINFO_ERROR, SGS_ERRORINFO_FULL
+<ul><li>SGS_ERRORINFO_STACK only writes the stack frame
+</li><li>SGS_ERRORINFO_ERROR only writes the error message
+</li><li>SGS_ERRORINFO_FULL writes both</li></ul></li></ul></div>
 <div class='item'><a name='sgs-HasFuncName-function'></a><hr><h2>sgs_HasFuncName [function]</h2><h3>int sgs_HasFuncName( sgs_Context* C )</h3><h4>checks if the currently executed function (last stack frame) has a name literal set</h4></div>
 <div class='item'><a name='sgs-FuncName-function'></a><hr><h2>sgs_FuncName [function]</h2><h3>void sgs_FuncName( sgs_Context* C, const char* fnliteral )</h3><h4>sets the function name string for the currently executed function (last stack frame)</h4><ul><li>the argument is expected to stay alive for the duration of the function call
 <ul><li>this makes string literals safe for the call, everything else should be avoided</li></ul></li></ul></div>
@@ -1643,7 +1688,7 @@ Contains all the same things as any C function call would: optional <code>this</
 </li><li>On success, the number returned is the number of variables returned by the function.</li></ul><h5>Additional notes:</h5><p>
 None.
 </p><h4>EXPR - expression callback</h4><h4>When called:</h4><ul><li>On arithmetic operations with the object as one or both operands in SGScript.
-</li><li>On <a href="#sgs-ArithOp">sgs_ArithOp</a> in the C API.</li></ul><h5>Additional arguments:</h5><ul><li>sgs_Variable* A - the first (left side) operand or the only one in case of SGS_EOP_NEGATE
+</li><li>On <a href="#sgs-ArithOp-function">sgs_ArithOp</a> in the C API.</li></ul><h5>Additional arguments:</h5><ul><li>sgs_Variable* A - the first (left side) operand or the only one in case of SGS_EOP_NEGATE
 </li><li>sgs_Variable* B - the second (right side) operand or NULL in case of SGS_EOP_NEGATE
 </li><li>int op - operation type, one of SGS_EOP_[ADD|SUB|MUL|DIV|MOD|COMPARE|NEGATE]</li></ul><h5>Stack frame:</h5><p>
 Empty at beginning. Expects at least one variable on success (the topmost one will be used).
