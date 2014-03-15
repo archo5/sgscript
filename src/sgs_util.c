@@ -115,6 +115,7 @@ void membuf_appbuf( MemBuf* mb, SGS_CTX, const void* buf, size_t size )
 
 
 #define hashFunc sgs_HashFunc
+#define hasHash 0x80000000
 sgs_Hash sgs_HashFunc( const char* str, size_t size )
 {
 	size_t i;
@@ -124,18 +125,30 @@ sgs_Hash sgs_HashFunc( const char* str, size_t size )
 		h ^= (sgs_Hash) (uint8_t) str[ i ];
 		h *= 16777619u;
 	}
-	return h | 0x80000000;
+	return h | hasHash;
 }
 
 sgs_Hash sgs_HashVar( const sgs_Variable* v )
 {
+	size_t size;
 	switch( v->type )
 	{
-	case SVT_NULL: return 0;
-	case SVT_BOOL: return v->data.B != 0;
+	/* special */
+	case SVT_NULL: return 0 | hasHash;
+	case SVT_BOOL: return ( v->data.B != 0 ) | hasHash;
 	case SVT_STRING: return hashFunc( var_cstr( v ), v->data.S->size );
+	/* data */
+	case SVT_INT: size = sizeof( sgs_Int ); break;
+	case SVT_REAL: size = sizeof( sgs_Real ); break;
+	case SVT_FUNC:
+	case SVT_CFUNC:
+	case SVT_OBJECT:
+	case SVT_PTR:
+		size = sizeof( void* ); break;
+	default:
+		return 0 | hasHash;
 	}
-	return hashFunc( (const char*) &v->data, sizeof(v->data) );
+	return hashFunc( (const char*) &v->data, size );
 }
 
 
