@@ -27,9 +27,8 @@ public:
 	{
 		int orig = coins;
 		sgs_Int I;
-		if( sgs_StackSize( C ) != 2 ||
-			!sgs_ParseInt( C, 1, &I ) )
-			return sgs_Msg( C, SGS_WARNING, "unexpected arguments" );
+		if( !sgs_LoadArgs( C, "i", &I ) )
+			return 0;
 		coins += (int) I;
 		numtransactions++;
 		printf( "Transaction #%04d | before=%d after=%d\n",
@@ -50,17 +49,19 @@ SGS_BEGIN_GENERIC_GETINDEXFUNC
 SGS_END_GENERIC_GETINDEXFUNC;
 SGS_BEGIN_GENERIC_SETINDEXFUNC
 	SGS_GIF_CUSTOM( name,
-		char* str; sgs_SizeVal strlen;
-		if( !sgs_ParseString( C, 1, &str, &strlen ) )
+		char* name; sgs_SizeVal namelen;
+		if( !sgs_ParseStringP( C, val, &name, &namelen ) )
 			return SGS_EINVAL;
-		item->name.assign( str, strlen );
+		item->name.assign( name, namelen );
 	)
 SGS_END_GENERIC_SETINDEXFUNC;
 SGS_GENERIC_DESTRUCTOR;
 SGS_DEFINE_IFACE
-	SGS_IFACE_GETINDEX,
-	SGS_IFACE_SETINDEX,
-	SGS_IFACE_DESTRUCT,
+	"Account",
+	SGS_IFACE_DESTRUCT, NULL,
+	SGS_IFACE_GETINDEX, SGS_IFACE_SETINDEX,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL
 SGS_DEFINE_IFACE_END;
 SGS_DEFINE_EMPTY_CTORFUNC;
 #undef SGS_CLASS
@@ -72,12 +73,12 @@ a = Account();\n\
 a.Add( 1337 );\n\
 print 'reading from property: ' $ a.coins $ '\\n';\n\
 a.name = 'special';\n\
-printvars( a.name, a.transaction_count, a.coins );\n\
+printvar( a.name, a.transaction_count, a.coins );\n\
 ";
 
 int main( int argc, char* argv[] )
 {
-	printf( "CPP binding test...\n" );
+	printf( "\n//\n/// SGScript / CPPBIND test\n//\n" );
 	
 	SGS_CTX = sgs_CreateEngine();
 	

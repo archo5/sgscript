@@ -169,6 +169,14 @@ $(OUTDIR)/sgscppbctest$(BINEXT): $(OUTFILE) ext/sgscppbctest.cpp ext/sgscppbctes
 	$(CXX) -o $@ ext/sgscppbctest.cpp $(OBJDIR)/cppbc_test.cpp $(LFLAGS) -lm $(PLATFLAGS) -I. -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OBJDIR)/cppbc_test.cpp: ext/sgscppbctest.h
 	bin/sgsvm -p ext/cppbc/cppbc.sgs ext/sgscppbctest.h $@
+# - cppbind testing
+.PHONY: cppbindtest
+.PHONY: build_cppbindtest
+build_cppbindtest: $(OUTDIR)/sgscppbindtest$(BINEXT)
+cppbindtest: build_cppbindtest
+	$(OUTDIR)/sgscppbindtest
+$(OUTDIR)/sgscppbindtest$(BINEXT): $(OUTFILE)
+	$(CXX) -o $@ ext/cpp/cppbind_example.cpp $(LFLAGS) -lm $(PLATFLAGS) -I. -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 # - multithreaded testing
 .PHONY: mttest
 .PHONY: build_mttest

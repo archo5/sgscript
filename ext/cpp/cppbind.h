@@ -15,53 +15,44 @@
 #define SGS_CTORNAME( obj ) SGS_IFN(obj##Create)
 #define SGS_DTORNAME( obj ) SGS_IFN(obj##Destroy)
 
-#define SGS_DECLARE_IFACE_O( obj ) SGS_VDECL( sgs_ObjCallback SGS_IFN(obj)[] );
-#define SGS_DEFINE_IFACE_O( obj ) SGS_VDEF( sgs_ObjCallback SGS_IFN(obj)[] ) = {
-#define SGS_DEFINE_IFACE_END SGS_OP_END, };
-#define SGS_IFACE_ENTRY( name, func ) SGS_OP_##name, func
-#define SGS_IFACE_GETINDEX_O( obj ) \
-	SGS_IFACE_ENTRY(GETINDEX,SGS_GETINDEXNAME(obj))
-#define SGS_IFACE_SETINDEX_O( obj ) \
-	SGS_IFACE_ENTRY(SETINDEX,SGS_SETINDEXNAME(obj))
-#define SGS_IFACE_DESTRUCT_O( obj ) \
-	SGS_IFACE_ENTRY(DESTRUCT,SGS_DTORNAME(obj))
+#define SGS_DECLARE_IFACE_O( obj ) SGS_VDECL( sgs_ObjInterface SGS_IFN(obj)[1] );
+#define SGS_DEFINE_IFACE_O( obj ) SGS_VDEF( sgs_ObjInterface SGS_IFN(obj)[1] ) = {{
+#define SGS_DEFINE_IFACE_END }};
+#define SGS_IFACE_GETINDEX_O( obj ) SGS_GETINDEXNAME(obj)
+#define SGS_IFACE_SETINDEX_O( obj ) SGS_SETINDEXNAME(obj)
+#define SGS_IFACE_DESTRUCT_O( obj ) SGS_DTORNAME(obj)
 
 #define SGS_IFNHDR( obj, funcname ) \
-	sgs_VarObj* data; SGSFN( #funcname ); obj* item; \
-	if( !sgs_Method( C ) || !sgs_IsObject( C, 0, SGS_IFN(obj) ) ) \
-		return sgs_Msg( C, SGS_WARNING, "method not called on " #obj );\
-	data = sgs_GetObjectStruct( C, 0 ); item = (obj*) data->data;
+	obj* item; if( !SGS_PARSE_METHOD( C, SGS_IFN(obj), item, #obj, #funcname ) ) return 0;
 #define SGS_METHOD_WRAPPER_O( obj, funcname ) \
 	int SGS_METHODNAME(obj,funcname)(SGS_CTX){SGS_IFNHDR(obj,funcname) \
 	return item->funcname(C);}
 
 #define SGS_DEFINE_GETINDEXFUNC_O( obj ) int SGS_GETINDEXNAME(obj) \
-	(SGS_CTX,sgs_VarObj*data,int is_property)
+	(SGS_CTX,sgs_VarObj*data,sgs_Variable*key,int isprop)
 #define SGS_BEGIN_GENERIC_GETINDEXFUNC_O( obj ) SGS_DEFINE_GETINDEXFUNC_O(obj){\
-	char* property_name;obj*item;if(!sgs_ParseString(C,0,&property_name,NULL))\
-	return SGS_EINVAL; item = (obj*) data->data;
-#define SGS_END_GENERIC_GETINDEXFUNC return SGS_ENOTFND; }
+	char* str;obj*item = (obj*) data->data;(void)item;if(sgs_ParseStringP(C,key,&str,NULL)){
+#define SGS_END_GENERIC_GETINDEXFUNC } return SGS_ENOTFND; }
 #define SGS_GIF_CUSTOM( ename, code ) \
-	if(strcmp(property_name,#ename)==0){code;return SGS_SUCCESS;}
+	if(strcmp(str,#ename)==0){code;return SGS_SUCCESS;}
 #define SGS_GIF_METHOD_O( obj, funcname ) SGS_GIF_CUSTOM(funcname, \
 	sgs_PushCFunction(C,SGS_METHODNAME(obj,funcname)))
 #define SGS_GIF_GETTER( name ) SGS_GIF_CUSTOM(name, \
 	return item->getter_##name(C); )
 
 #define SGS_DEFINE_SETINDEXFUNC( obj ) int SGS_SETINDEXNAME(obj) \
-	(SGS_CTX,sgs_VarObj*data,int is_property)
+	(SGS_CTX,sgs_VarObj*data,sgs_Variable*key,sgs_Variable*val,int isprop)
 #define SGS_BEGIN_GENERIC_SETINDEXFUNC_O( obj ) SGS_DEFINE_SETINDEXFUNC(obj){\
-	char* property_name;obj*item;if(!sgs_ParseString(C,0,&property_name,NULL))\
-	return SGS_EINVAL; item = (obj*) data->data;
-#define SGS_END_GENERIC_SETINDEXFUNC return SGS_ENOTFND; }
+	char* str;obj*item = (obj*) data->data;(void)item;if(sgs_ParseStringP(C,key,&str,NULL)){
+#define SGS_END_GENERIC_SETINDEXFUNC } return SGS_ENOTFND; }
 #define SGS_GIF_SETTER( name ) SGS_GIF_CUSTOM(name, \
-	return item->setter_##name(C); )
+	return item->setter_##name(C,val); )
 	
 
 #define SGS_GENERIC_DESTRUCTOR_O( obj ) \
-	int SGS_DTORNAME(obj)(SGS_CTX,sgs_VarObj*data,int dco) \
+	int SGS_DTORNAME(obj)(SGS_CTX,sgs_VarObj*data) \
 	{ delete (obj*) data->data; return SGS_SUCCESS; }
-#define SGS_GENERIC_IFPUSH( obj ) sgs_PushObject( C, new obj, SGS_IFN(obj) )
+#define SGS_GENERIC_IFPUSH( obj ) new (sgs_PushObjectIPA( C, sizeof(obj), SGS_IFN(obj) )) obj
 #define SGS_DEFINE_CTORFUNC_O( obj ) int SGS_CTORNAME(obj)(SGS_CTX)
 #define SGS_DEFINE_EMPTY_CTORFUNC_O( obj ) SGS_DEFINE_CTORFUNC_O(obj) \
 	{ SGS_GENERIC_IFPUSH( obj ); return 1; }
