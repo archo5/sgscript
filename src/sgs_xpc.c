@@ -255,7 +255,7 @@ char* sgsXPC_GetModuleFileName()
 	return buf8;
 	
 #else
-	char stack_buf[ SGS_MAX_PATH ];
+	char stack_buf[ SGS_MAX_PATH + 1 ];
 	char* buf;
 	size_t cur_size = SGS_MAX_PATH, max_size = SGS_MAX_PATH * 10;
 	
@@ -266,6 +266,7 @@ char* sgsXPC_GetModuleFileName()
 		ssize_t res = readlink( "/proc/self/exe", buf, cur_size );
 		if( res >= 0 && res < cur_size )
 		{
+			buf[ res ] = 0;
 			if( buf == stack_buf )
 			{
 				size_t len = strlen( buf ) + 1;
