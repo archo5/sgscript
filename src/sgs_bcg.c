@@ -1251,28 +1251,28 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 {
 	int assign = ST_OP_ASSIGN( *node->token );
 	FUNC_BEGIN;
-
+	
 	/* Boolean ops */
 	if( ST_OP_BOOL( *node->token ) )
 	{
 		int jin;
 		rcpos_t ireg1, ireg2, oreg = 0;
 		size_t csz, csz2;
-
+		
 		if( !assign )
 			oreg = comp_reg_alloc( C );
 		if( C->state & SGS_MUST_STOP )
 			goto fail;
-
+		
 		/* get source data register */
 		FUNC_ENTER;
 		if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
-
+		
 		/* write cond. jump */
 		jin = ( *node->token == ST_OP_BLAND || *node->token == ST_OP_BLAEQ ) ? SI_JMPT : SI_JMPF;
 		INSTR_WRITE_PCH();
 		csz = func->code.size;
-
+		
 		/* compile write of value 1 */
 		if( assign )
 		{
@@ -1283,10 +1283,10 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 		{
 			INSTR_WRITE( SI_SET, oreg, ireg1, 0 );
 		}
-
+		
 		INSTR_WRITE_PCH();
 		csz2 = func->code.size;
-
+		
 		/* fix-up jump 1 */
 		{
 			instr_t instr;
@@ -1295,11 +1295,11 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 			instr = INSTR_MAKE_EX( jin, jmp_off, ireg1 );
 			memcpy( func->code.ptr + csz - 4, &instr, sizeof(instr) );
 		}
-
+		
 		/* get source data register 2 */
 		FUNC_ENTER;
 		if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
-
+		
 		/* compile write of value 2 */
 		if( assign )
 		{
@@ -1446,7 +1446,7 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 			rcpos_t ireg, oreg = comp_reg_alloc( C );
 			if( C->state & SGS_MUST_STOP )
 				goto fail;
-
+			
 			/* get source data registers */
 			while( cur )
 			{
@@ -1462,10 +1462,10 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 			}
 			
 			INSTR_WRITE( SI_MCONCAT, oreg, numch, 0 );
-
+			
 			if( arg )
 				*arg = oreg;
-
+			
 			/* compile write */
 			FUNC_ENTER;
 			if( !compile_node_w( C, func, node->child, oreg ) ) goto fail;
@@ -1474,39 +1474,47 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 		else
 		{
 			int op;
+			size_t isb = func->code.size;
 			rcpos_t ireg1, ireg2, oreg = comp_reg_alloc( C );
 			if( C->state & SGS_MUST_STOP )
 				goto fail;
-
+			
 			/* get source data registers */
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
-
+			
 			/* compile op */
 			op = op_pick_opcode( *node->token, 1 );
 			INSTR_WRITE( op, oreg, ireg1, ireg2 );
-
-			if( arg )
-				*arg = oreg;
-
-			/* compile write */
+			
 			FUNC_ENTER;
-			if( !compile_node_w( C, func, node->child, oreg ) ) goto fail;
+			if( !try_optimize_last_instr_out( C, func, node->child, isb, arg ) )
+			{
+				/* just set the contents */
+				FUNC_ENTER;
+				if( !compile_node_w( C, func, node->child, oreg ) ) goto fail;
+			}
+			
+			if( arg )
+			{
+				FUNC_ENTER;
+				if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
+			}
 		}
 	}
 	/* Any other */
 	else
 	{
 		rcpos_t ireg1, ireg2, oreg;
-
+		
 		if( expect > 1 )
 		{
 			QPRINT( "Too many expected outputs for operator" );
 			goto fail;
 		}
-
+		
 		if( *node->token == ST_OP_MMBR )
 		{
 			/* oreg points to output register if "out", source register otherwise */
@@ -1520,11 +1528,11 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 			}
 			else
 				oreg = *arg;
-
+			
 			/* get source data registers */
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
-
+			
 			if( node->child->next->type == SFT_IDENT )
 				compile_ident( C, func, node->child->next, &ireg2 );
 			else
@@ -1532,7 +1540,7 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 				FUNC_ENTER;
 				if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
 			}
-
+			
 			/* compile op */
 			if( out )
 				INSTR_WRITE( SI_GETPROP, oreg, ireg1, ireg2 );
@@ -1545,7 +1553,6 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 				}
 				INSTR_WRITE( SI_SETPROP, ireg1, ireg2, oreg );
 			}
-
 		}
 		/* 3+ operands (MCONCAT only) */
 		else if( *node->token == ST_OP_CAT && node->child &&
@@ -1557,7 +1564,7 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 			oreg = comp_reg_alloc( C );
 			if( C->state & SGS_MUST_STOP )
 				goto fail;
-
+			
 			/* get source data registers */
 			while( cur )
 			{
@@ -1581,11 +1588,11 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 		else
 		{
 			int op;
-
+			
 			oreg = comp_reg_alloc( C );
 			if( C->state & SGS_MUST_STOP )
 				goto fail;
-
+			
 			/* get source data registers */
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
@@ -1594,10 +1601,10 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 				FUNC_ENTER;
 				if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
 			}
-
+			
 			if( arg )
 				*arg = oreg;
-
+			
 			/* compile op */
 			op = op_pick_opcode( *node->token, !!node->child->next );
 			if( node->child->next )
@@ -1606,10 +1613,10 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 				INSTR_WRITE( op, oreg, ireg1, 0 );
 		}
 	}
-
+	
 	FUNC_END;
 	return 1;
-
+	
 fail:
 	C->state |= SGS_HAS_ERRORS;
 	FUNC_END;
