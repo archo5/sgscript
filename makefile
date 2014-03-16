@@ -118,7 +118,7 @@ $(OUTDIR)/sgsmeta$(LIBEXT): $(OUTFILE) $(EXTDIR)/sgsmeta.c
 	$(CC) -DSGS_COMPILE_MODULE -o $@ $(EXTDIR)/sgsmeta.c -shared $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 
 # the tools
-$(OUTDIR)/sgstest$(BINEXT): $(OUTFILE) $(EXTDIR)/sgstest.c $(OUTDIR)/sgsjson$(LIBEXT)
+$(OUTDIR)/sgstest$(BINEXT): $(OUTFILE) $(EXTDIR)/sgstest.c
 	$(CC) -o $@ $(EXTDIR)/sgstest.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OUTDIR)/sgsapitest$(BINEXT): $(OUTFILE) $(EXTDIR)/sgsapitest.c
 	$(CC) -o $@ $(EXTDIR)/sgsapitest.c $(LFLAGS) -lm $(PLATFLAGS) -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
@@ -144,7 +144,7 @@ json: $(OUTDIR)/sgsjson$(LIBEXT)
 pproc: $(OUTDIR)/sgspproc$(LIBEXT)
 sockets: $(OUTDIR)/sgssockets$(LIBEXT)
 meta: $(OUTDIR)/sgsmeta$(LIBEXT)
-build_test: $(OUTDIR)/sgstest$(BINEXT)
+build_test: $(OUTDIR)/sgstest$(BINEXT) json xgmath
 build_apitest: $(OUTDIR)/sgsapitest$(BINEXT)
 vm: $(OUTDIR)/sgsvm$(BINEXT)
 c: $(OUTDIR)/sgsc$(BINEXT)

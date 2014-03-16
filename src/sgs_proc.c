@@ -1646,10 +1646,18 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 			_STACK_PROTECT;
 			ret = O->iface->expr( C, O, &lA, &lB, op );
 			USING_STACK
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
-				stk_setlvar( C, ofs, C->stack_top - 1 );
-			_STACK_UNPROTECT;
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
+			ret = SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1;
+			if( ret )
+			{
+				_STACK_UNPROTECT_SKIP( 1 );
+				stk_setlvar_leave( C, ofs, C->stack_top - 1 );
+				C->stack_top--; /* skip acquire/release */
+			}
+			else
+			{
+				_STACK_UNPROTECT;
+			}
+			if( ret )
 			{
 				VAR_RELEASE( &lA );
 				VAR_RELEASE( &lB );
@@ -1664,10 +1672,18 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 			_STACK_PROTECT;
 			ret = O->iface->expr( C, O, &lA, &lB, op );
 			USING_STACK
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
-				stk_setlvar( C, ofs, C->stack_top - 1 );
-			_STACK_UNPROTECT;
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
+			ret = SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1;
+			if( ret )
+			{
+				_STACK_UNPROTECT_SKIP( 1 );
+				stk_setlvar_leave( C, ofs, C->stack_top - 1 );
+				C->stack_top--; /* skip acquire/release */
+			}
+			else
+			{
+				_STACK_UNPROTECT;
+			}
+			if( ret )
 			{
 				VAR_RELEASE( &lA );
 				VAR_RELEASE( &lB );

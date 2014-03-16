@@ -567,6 +567,113 @@ static int sgsstd_fmt_base64_decode( SGS_CTX )
 }
 
 
+#define FMT_NUMBER_BINARY  1
+#define FMT_NUMBER_OCTAL   2
+#define FMT_NUMBER_DECIMAL 3
+#define FMT_NUMBER_HEX     4
+#define FMT_NUMBER_HEX_UC  5
+#define FMT_NUMBER_HEX_LC  6
+
+static int fs_check_cc( const char* str, sgs_SizeVal size, char c );
+
+static int sgsstd_fmt_custom_encode( SGS_CTX )
+{
+	int type, mindigits;
+	sgs_Int numtype, nummindigits = 0;
+	char* str, *ccstr, *prefixstr, *postfixstr = NULL;
+	sgs_SizeVal i, size, ccsize, prefixsize, postfixsize = 0;
+	MemBuf mb = membuf_create();
+	
+	static const char* lchex = "0123456789abcdef";
+	static const char* uchex = "0123456789ABCDEF";
+	
+	SGSFN( "fmt_custom_encode" );
+	if( !sgs_LoadArgs( C, "mmmi|im", &str, &size, &ccstr, &ccsize,
+		&prefixstr, &prefixsize, &numtype, &nummindigits, &postfixstr, &postfixsize ) )
+		return 0;
+	
+	type = (int) numtype;
+	mindigits = (int) nummindigits;
+	if( type < 1 || type > 6 )
+		STDLIB_WARN( "unknown number type (argument 4)" )
+	if( mindigits > 8 )
+		STDLIB_WARN( "min. number of digits (argument 5) must be less than or equal to 8" )
+	else if( mindigits < 0 )
+		mindigits = 0;
+	
+	for( i = 0; i < size; ++i )
+	{
+		int chr = (int) (uint8_t) str[ i ];
+		if( fs_check_cc( ccstr, ccsize, (char) chr ) )
+		{
+			int ndigs = mindigits;
+			char numbuf[ 9 ], *p;
+			
+			membuf_appbuf( &mb, C, prefixstr, (size_t) prefixsize );
+			
+			p = numbuf + 8;
+			*p = 0;
+			switch( numtype )
+			{
+			case FMT_NUMBER_BINARY:
+				while( chr && ndigs-- > 0 )
+				{
+					*--p = (char)( ( chr & 1 ) + '0' );
+					chr >>= 1;
+				}
+				break;
+			case FMT_NUMBER_OCTAL:
+				while( chr && ndigs-- > 0 )
+				{
+					*--p = (char)( ( chr & 0x7 ) + '0' );
+					chr >>= 3;
+				}
+				break;
+			case FMT_NUMBER_DECIMAL:
+				while( chr && ndigs-- > 0 )
+				{
+					*--p = (char)( ( chr % 10 ) + '0' );
+					chr /= 10;
+				}
+				break;
+			case FMT_NUMBER_HEX:
+			case FMT_NUMBER_HEX_LC:
+				while( chr && ndigs-- > 0 )
+				{
+					*--p = lchex[ chr & 0xf ];
+					chr >>= 4;
+				}
+			case FMT_NUMBER_HEX_UC:
+				while( chr && ndigs-- > 0 )
+				{
+					*--p = uchex[ chr & 0xf ];
+					chr >>= 4;
+				}
+				break;
+			}
+			
+			membuf_appbuf( &mb, C, p, (size_t)( numbuf + 8 - p ) );
+			if( postfixstr )
+				membuf_appbuf( &mb, C, postfixstr, (size_t) postfixsize );
+		}
+		else
+			membuf_appchr( &mb, C, (char) chr );
+	}
+	
+	if( mb.size > 0x7fffffff )
+		STDLIB_WARN( "output was bigger than allowed to store" )
+	sgs_PushStringBuf( C, mb.ptr, (sgs_SizeVal) mb.size );
+	membuf_destroy( &mb, C );
+	return 1;
+}
+
+static int sgsstd_fmt_custom_decode( SGS_CTX )
+{
+	SGSFN( "fmt_custom_decode" );
+	return 0;
+}
+
+
 struct fmtspec
 {
 	char* end;
@@ -1497,6 +1604,7 @@ static const sgs_RegFuncConst f_fconsts[] =
 	FN( fmt_pack ), FN( fmt_pack_count ),
 	FN( fmt_unpack ), FN( fmt_pack_size ),
 	FN( fmt_base64_encode ), FN( fmt_base64_decode ),
+	FN( fmt_custom_encode ), FN( fmt_custom_decode ),
 	FN( fmt_text ), FN( fmt_parser ),
 	FN( fmt_string_parser ), FN( fmt_file_parser ),
 	FN( fmt_charcc ),
