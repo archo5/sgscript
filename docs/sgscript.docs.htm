@@ -837,22 +837,22 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-Method-function">sgs_Method</a> - unhide the first variable on stack if there is a hidden <code>this</code> variable
 </li><li><a href="#sgs-Force-HideThis-functions">sgs_HideThis</a> - hide the first variable on stack if the stack already doesn&#39;t contain a hidden <code>this</code> variable
 </li><li><a href="#sgs-Force-HideThis-functions">sgs_ForceHideThis</a> - hide the first variable even if it wasn&#39;t previously hidden before unhiding</li></ul></div>
-<div class='item'><a name='Sub-item-usage'></a><hr><h2>Sub-item usage</h2><ul><li><a href="#sgs-GetIndex">sgs_GetIndex***</a> - retrieve a sub-item
-</li><li><a href="#sgs-SetIndex">sgs_SetIndex***</a> - set a sub-item
-</li><li><a href="#sgs-PushIndex">sgs_PushIndex**</a> - retrieve and push a sub-item
-</li><li><a href="#sgs-StoreIndex">sgs_StoreIndex**</a> - store and pop a sub-item
-</li><li><a href="#sgs-GetGlobalPP">sgs_GetGlobalPP</a> - retrieve a global variable
-</li><li><a href="#sgs-SetGlobalPP">sgs_SetGlobalPP</a> - set a global variable
+<div class='item'><a name='Sub-item-usage'></a><hr><h2>Sub-item usage</h2><ul><li><a href="#sgs-GetIndex-functions">sgs_GetIndex***</a> - retrieve a sub-item
+</li><li><a href="#sgs-SetIndex-functions">sgs_SetIndex***</a> - set a sub-item
+</li><li><a href="#sgs-PushIndex-functions">sgs_PushIndex**</a> - retrieve and push a sub-item
+</li><li><a href="#sgs-StoreIndex-functions">sgs_StoreIndex**</a> - store and pop a sub-item
+</li><li><a href="#sgs-GetGlobalPP-function">sgs_GetGlobalPP</a> - retrieve a global variable
+</li><li><a href="#sgs-SetGlobalPP-function">sgs_SetGlobalPP</a> - set a global variable
 </li><li><a href="#sgs-PushProperty-function">sgs_PushProperty</a> - retrieve and push the string property of a variable on stack
 </li><li><a href="#sgs-StoreProperty-function">sgs_StoreProperty</a> - store and pop the topmost stack item to a string property of a variable on stack
 </li><li><a href="#sgs-PushNumIndex-function">sgs_PushNumIndex</a> - retrieve and push the integer index of a variable on stack
 </li><li><a href="#sgs-StoreNumIndex-function">sgs_StoreNumIndex</a> - store and pop the topmost stack item to an integer index of a variable on stack
 </li><li><a href="#sgs-PushGlobal-function">sgs_PushGlobal</a> - retrieve and push the global variable, specified by a string
 </li><li><a href="#sgs-StoreGlobal-function">sgs_StoreGlobal</a> - store and pop the topmost stack item as a global variable, specified by a string
-</li><li><a href="#sgs-GetEnv">sgs_GetEnv</a> - retrieve the global environment hash table (dict)
-</li><li><a href="#sgs-SetEnv">sgs_SetEnv</a> - set the variable as the global environment hash table (dict), if possible
-</li><li><a href="#sgs-PushEnv">sgs_PushEnv</a> - push the global environment hash table (dict)
-</li><li><a href="#sgs-StoreEnv">sgs_StoreEnv</a> - store and pop the topmost stack item as the global environment hash table (dict), if possible
+</li><li><a href="#sgs-GetEnv-function">sgs_GetEnv</a> - retrieve the global environment hash table (dict)
+</li><li><a href="#sgs-SetEnv-function">sgs_SetEnv</a> - set the variable as the global environment hash table (dict), if possible
+</li><li><a href="#sgs-PushEnv-function">sgs_PushEnv</a> - push the global environment hash table (dict)
+</li><li><a href="#sgs-StoreEnv-function">sgs_StoreEnv</a> - store and pop the topmost stack item as the global environment hash table (dict), if possible
 </li><li><a href="#sgs-PushPath-function">sgs_PushPath</a> - retrieve and push a variable from a path of sub-items
 </li><li><a href="#sgs-StorePath-function">sgs_StorePath</a> - store and pop the topmost stack item into a path of sub-items</li></ul></div>
 <div class='item'><a name='Argument-handling'></a><hr><h2>Argument handling</h2><ul><li><a href="#sgs-ArgErrorExt-function">sgs_ArgErrorExt</a> - emit an argument type mismatch error with additional formatting options
@@ -1019,8 +1019,11 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-GCExecute-function">sgs_GCExecute [function]</a>
 </li><li><a href="#sgs-GCMark-Array-function">sgs_GCMark(Array) [function]</a>
 </li><li><a href="#sgs-Get-functions">sgs_Get*** [functions]</a>
+</li><li><a href="#sgs-GetEnv-function">sgs_GetEnv [function]</a>
 </li><li><a href="#sgs-GetFramePtr-function">sgs_GetFramePtr [function]</a>
+</li><li><a href="#sgs-GetGlobalPP-function">sgs_GetGlobalPP [function]</a>
 </li><li><a href="#sgs-GetHookFunc-function">sgs_GetHookFunc [function]</a>
+</li><li><a href="#sgs-GetIndex-functions">sgs_GetIndex*** [functions]</a>
 </li><li><a href="#sgs-GetIterator-P-functions">sgs_GetIterator(P) [functions]</a>
 </li><li><a href="#sgs-GetLastErrno-function-alias">sgs_GetLastErrno [function alias]</a>
 </li><li><a href="#sgs-GetMsgFunc-function">sgs_GetMsgFunc [function]</a>
@@ -1071,8 +1074,10 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-Push-functions">sgs_Push*** [functions]</a>
 </li><li><a href="#sgs-PushArray-function">sgs_PushArray [function]</a>
 </li><li><a href="#sgs-PushDict-function">sgs_PushDict [function]</a>
+</li><li><a href="#sgs-PushEnv-function">sgs_PushEnv [function]</a>
 </li><li><a href="#sgs-PushErrorInfo-function">sgs_PushErrorInfo [function]</a>
 </li><li><a href="#sgs-PushGlobal-function">sgs_PushGlobal [function]</a>
+</li><li><a href="#sgs-PushIndex-functions">sgs_PushIndex** [functions]</a>
 </li><li><a href="#sgs-PushItem-function">sgs_PushItem [function]</a>
 </li><li><a href="#sgs-PushIterator-P-functions">sgs_PushIterator(P) [functions]</a>
 </li><li><a href="#sgs-PushMap-function">sgs_PushMap [function]</a>
@@ -1086,8 +1091,11 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-Release-Array-function">sgs_Release(Array) [function]</a>
 </li><li><a href="#sgs-Serialize-function">sgs_Serialize [function]</a>
 </li><li><a href="#sgs-SerializeObject-function">sgs_SerializeObject [function]</a>
+</li><li><a href="#sgs-SetEnv-function">sgs_SetEnv [function]</a>
 </li><li><a href="#sgs-SetErrno-function-alias">sgs_SetErrno [function alias]</a>
+</li><li><a href="#sgs-SetGlobalPP-function">sgs_SetGlobalPP [function]</a>
 </li><li><a href="#sgs-SetHookFunc-function">sgs_SetHookFunc [function]</a>
+</li><li><a href="#sgs-SetIndex-functions">sgs_SetIndex*** [functions]</a>
 </li><li><a href="#sgs-SetMsgFunc-function">sgs_SetMsgFunc [function]</a>
 </li><li><a href="#sgs-SetObjectData-P-functions">sgs_SetObjectData(P) [functions]</a>
 </li><li><a href="#sgs-SetObjectIface-P-functions">sgs_SetObjectIface(P) [functions]</a>
@@ -1099,7 +1107,9 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-Stat-function">sgs_Stat [function]</a>
 </li><li><a href="#sgs-StdMsgFunc-NoAbort-functions">sgs_StdMsgFunc(_NoAbort) [functions]</a>
 </li><li><a href="#sgs-StdOutputFunc-function">sgs_StdOutputFunc [function]</a>
+</li><li><a href="#sgs-StoreEnv-function">sgs_StoreEnv [function]</a>
 </li><li><a href="#sgs-StoreGlobal-function">sgs_StoreGlobal [function]</a>
+</li><li><a href="#sgs-StoreIndex-functions">sgs_StoreIndex** [functions]</a>
 </li><li><a href="#sgs-StoreItem-function">sgs_StoreItem [function]</a>
 </li><li><a href="#sgs-StoreNumIndex-function">sgs_StoreNumIndex [function]</a>
 </li><li><a href="#sgs-StorePath-function">sgs_StorePath [function]</a>
@@ -1184,6 +1194,24 @@ Closures can be created from both SGScript and the C API, though both options ha
 <div class='item'><a name='sgs-PushMap-function'></a><hr><h2>sgs_PushMap [function]</h2><h3>SGSRESULT sgs_PushMap( sgs_Context* C, sgs_SizeVal numitems )</h3><h4>creates a map from <code>numitems</code> last items on the stack, pops those items and pushes the map</h4><ul><li><code>numitems</code> can be even or 0, since all odd arguments are keys and all even arguments are values</li></ul><h4>error codes</h4><ul><li>SGS_EINVAL: more items are selected than exist in the current stack frame or <code>numitems</code> wasn&#39;t even or 0</li></ul></div>
 <div class='item'><a name='sgs-PushItem-function'></a><hr><h2>sgs_PushItem [function]</h2><h3>SGSRESULT sgs_PushItem( sgs_Context* C, sgs_StkIdx item )</h3><h4>copy an item from the current stack frame and append it to the end of the stack</h4><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds</li></ul></div>
 <div class='item'><a name='sgs-StoreItem-function'></a><hr><h2>sgs_StoreItem [function]</h2><h3>SGSRESULT sgs_StoreItem( sgs_Context* C, sgs_StkIdx item )</h3><h4>copy last item in current stack frame to index <code>item</code> and pop it</h4><ul><li><code>item</code> refers to a position after the pop operation, therefore -1 means one element before the last etc.</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds</li></ul></div>
+<div class='item'><a name='sgs-GetIndex-functions'></a><hr><h2>sgs_GetIndex*** [functions]</h2><h3>SGSRESULT sgs_GetIndexPPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* out, int isprop )</h3><h3>SGSRESULT sgs_GetIndexIPP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_Variable* out, int isprop )</h3><h3>SGSRESULT sgs_GetIndexPIP( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_Variable* out, int isprop )</h3><h3>SGSRESULT sgs_GetIndexIIP( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_Variable* out, int isprop )</h3><h3>SGSRESULT sgs_GetIndexPPI( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_StkIdx out, int isprop )</h3><h3>SGSRESULT sgs_GetIndexIPI( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_StkIdx out, int isprop )</h3><h3>SGSRESULT sgs_GetIndexPII( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_StkIdx out, int isprop )</h3><h3>SGSRESULT sgs_GetIndexIII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_StkIdx out, int isprop )</h3><h4>retrieve index/property <code>idx</code> from the specified variable <code>obj</code> to the position <code>out</code>, specifying retrieval type via <code>isprop</code></h4><ul><li>last 3 letters in function name determines the type for parameters 2, 3 and 4: P for pointers, I for stack indices</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: something was not pointing inside the current stack frame
+</li><li>SGS_ENOTFND: index/property was not found
+</li><li>other codes may appear if returned by custom objects</li></ul></div>
+<div class='item'><a name='sgs-SetIndex-functions'></a><hr><h2>sgs_SetIndex*** [functions]</h2><h3>SGSRESULT sgs_SetIndexPPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val, int isprop )</h3><h3>SGSRESULT sgs_SetIndexIPP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_Variable* val, int isprop )</h3><h3>SGSRESULT sgs_SetIndexPIP( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )</h3><h3>SGSRESULT sgs_SetIndexIIP( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )</h3><h3>SGSRESULT sgs_SetIndexPPI( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_StkIdx val, int isprop )</h3><h3>SGSRESULT sgs_SetIndexIPI( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_StkIdx val, int isprop )</h3><h3>SGSRESULT sgs_SetIndexPII( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )</h3><h3>SGSRESULT sgs_SetIndexIII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )</h3><h4>set index/property <code>idx</code> in the specified variable <code>obj</code> to the value <code>val</code>, specifying type via <code>isprop</code></h4><ul><li>last 3 letters in function name determines the type for parameters 2, 3 and 4: P for pointers, I for stack indices</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: something was not pointing inside the current stack frame
+</li><li>SGS_ENOTFND: index/property was not found
+</li><li>SGS_EINVAL: specified value could not be used
+</li><li>other codes may appear if returned by custom objects</li></ul></div>
+<div class='item'><a name='sgs-PushIndex-functions'></a><hr><h2>sgs_PushIndex** [functions]</h2><h3>SGSRESULT sgs_PushIndexPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, int isprop )</h3><h3>SGSRESULT sgs_PushIndexIP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, int isprop )</h3><h3>SGSRESULT sgs_PushIndexPI( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, int isprop )</h3><h3>SGSRESULT sgs_PushIndexII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )</h3><h4>retrieve and push index/property <code>idx</code> from the specified variable <code>obj</code>, specifying retrieval type via <code>isprop</code></h4><ul><li>last 2 letters in function name determines the type for parameters 2 and 3: P for pointers, I for stack indices</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: something was not pointing inside the current stack frame
+</li><li>SGS_ENOTFND: index/property was not found
+</li><li>other codes may appear if returned by custom objects</li></ul></div>
+<div class='item'><a name='sgs-StoreIndex-functions'></a><hr><h2>sgs_StoreIndex** [functions]</h2><h3>SGSRESULT sgs_StoreIndexPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, int isprop )</h3><h3>SGSRESULT sgs_StoreIndexIP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, int isprop )</h3><h3>SGSRESULT sgs_StoreIndexPI( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, int isprop )</h3><h3>SGSRESULT sgs_StoreIndexII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )</h3><h4>set index/property <code>idx</code> in the specified variable <code>obj</code> to the topmost variable in stack, specifying type via <code>isprop</code>, then pop the topmost variable in stack if successful</h4><ul><li>last 2 letters in function name determines the type for parameters 2 and 3: P for pointers, I for stack indices</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: something was not pointing inside the current stack frame
+</li><li>SGS_ENOTFND: index/property was not found
+</li><li>SGS_EINVAL: specified value could not be used
+</li><li>SGS_EINPROC: current stack frame is empty
+</li><li>other codes may appear if returned by custom objects</li></ul></div>
+<div class='item'><a name='sgs-GetGlobalPP-function'></a><hr><h2>sgs_GetGlobalPP [function]</h2><h3>SGSRESULT sgs_GetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* out )</h3><h4>retrieve a global variable by index <code>idx</code> to position <code>out</code></h4><h4>error codes</h4><ul><li>SGS_ENOTSUP: <code>idx</code> was not a string
+</li><li>SGS_ENOTFND: index was not found</li></ul></div>
+<div class='item'><a name='sgs-SetGlobalPP-function'></a><hr><h2>sgs_SetGlobalPP [function]</h2><h3>SGSRESULT sgs_SetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )</h3><h4>set a global variable <code>val</code> to index <code>idx</code></h4><h4>error codes</h4><ul><li>SGS_ENOTSUP: <code>idx</code> was not a string / <code>idx</code> was _G and <code>val</code> was not a dict</li></ul></div>
 <div class='item'><a name='sgs-PushProperty-function'></a><hr><h2>sgs_PushProperty [function]</h2><h3>SGSRESULT sgs_PushProperty( sgs_Context* C, sgs_StkIdx obj, const char* name )</h3><h4>load and push the property of the item <code>obj</code> in the current stack frame</h4><h4>error codes</h4><ul><li>SGS_EBOUNDS: <code>obj</code> was not pointing inside the current stack frame
 </li><li>SGS_EINPROC: current stack frame is empty
 </li><li>SGS_ENOTFND: property was not found
@@ -1199,7 +1227,12 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li>other codes may appear if returned by custom objects</li></ul></div>
 <div class='item'><a name='sgs-PushGlobal-function'></a><hr><h2>sgs_PushGlobal [function]</h2><h3>SGSRESULT sgs_PushGlobal( sgs_Context* C, const char* name )</h3><h4>push the global variable <code>name</code> on the stack</h4><h4>error codes</h4><ul><li>SGS_ENOTFND: variable was not found</li></ul></div>
 <div class='item'><a name='sgs-StoreGlobal-function'></a><hr><h2>sgs_StoreGlobal [function]</h2><h3>SGSRESULT sgs_StoreGlobal( sgs_Context* C, const char* name )</h3><h4>copy and pop the topmost stack item to the global variable <code>name</code></h4><ul><li>_G is the environment table (a superglobal, list of global variable names and values)</li></ul><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame was empty
-</li><li>SGS_ENOTSUP: _G only accepts dict values</li></ul></div>
+</li><li>SGS_ENOTSUP: variable was not a dict (_G only accepts dict values)</li></ul></div>
+<div class='item'><a name='sgs-GetEnv-function'></a><hr><h2>sgs_GetEnv [function]</h2><h3>void sgs_GetEnv( SGS_CTX, sgs_Variable* out )</h3><h4>retrieve the global environment dict variable (_G)</h4></div>
+<div class='item'><a name='sgs-SetEnv-function'></a><hr><h2>sgs_SetEnv [function]</h2><h3>SGSRESULT sgs_SetEnv( SGS_CTX, sgs_Variable* var )</h3><h4>set a global environment dict variable from the variable <code>var</code></h4><h4>error codes</h4><ul><li>SGS_ENOTSUP: variable was not a dict (_G only accepts dict values)</li></ul></div>
+<div class='item'><a name='sgs-PushEnv-function'></a><hr><h2>sgs_PushEnv [function]</h2><h3>void sgs_PushEnv( SGS_CTX )</h3><h4>retrieve and push the global environment dict variable (_G)</h4></div>
+<div class='item'><a name='sgs-StoreEnv-function'></a><hr><h2>sgs_StoreEnv [function]</h2><h3>SGSRESULT sgs_StoreEnv( SGS_CTX )</h3><h4>set a global environment dict variable from the topmost stack item, then pop it if successful</h4><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame was empty
+</li><li>SGS_ENOTSUP: variable was not a dict (_G only accepts dict values)</li></ul></div>
 <div class='item'><a name='sgs-PushPath-function'></a><hr><h2>sgs_PushPath [function]</h2><h3>SGSRESULT sgs_PushPath( sgs_Context* C, sgs_StkIdx item, const char* path, ... )</h3><h4>push the variable specified by starting point <code>item</code> and traversal path <code>path</code></h4><p>
 <em class='notice-bgr'>The safety of this function is similar to that of the printf family of functions. Be explicit in what types you pass to the variable argument list to avoid errors.</em>
 </p><ul><li>the syntax of `path`:
@@ -1218,13 +1251,13 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li>C string: null-terminated char* string
 </li><li>buffer: char* byte array, size is specified in the previous argument
 </li><li>property?: if yes, property access is used (object.property), otherwise index access is used (object[index])</li></ul></li></ul><h4>error codes</h4><ul><li>SGS_EINVAL: invalid symbol found in path / corresponding variable arguments had an invalid value
-</li><li>other errors, as returned by <a href="#sgs-PushIndex">sgs_PushIndex***()</a></li></ul></div>
+</li><li>other errors, as returned by <a href="#sgs-PushIndex-functions">sgs_PushIndex***()</a></li></ul></div>
 <div class='item'><a name='sgs-StorePath-function'></a><hr><h2>sgs_StorePath [function]</h2><h3>SGSRESULT sgs_StorePath( sgs_Context* C, sgs_StkIdx item, const char* path, ... )</h3><h4>copy and pop the topmost item on stack to variable specified by starting point <code>item</code> and traversal path <code>path</code></h4><p>
 <em class='notice-bgr'>The safety of this function is similar to that of the printf family of functions. Be explicit in what types you pass to the variable argument list to avoid errors.</em>
-</p><ul><li>the syntax of <code>path</code> is the same as with <a href="#sgs-PushPath-function">sgs_PushPath()</a>
+</p><ul><li>the syntax of <code>path</code> is the same as with <a href="#sgs-PushPath-function">sgs_PushPath</a>
 </li><li>the last item on the path (or in the case of an empty path, the starting point) is accessed with a store operation, the rest - with a push operation</li></ul><h4>error codes</h4><ul><li>SGS_EINVAL: invalid symbol found in path / corresponding variable arguments had an invalid value
 </li><li>SGS_EINPROC: current stack frame is empty
-</li><li>other errors, as returned by <a href="#sgs-PushIndex">sgs_PushIndex***()</a> or <a href="#sgs-StoreIndex">sgs_StoreIndex***()</a></li></ul></div>
+</li><li>other errors, as returned by <a href="#sgs-PushIndex-functions">sgs_PushIndex***</a> or <a href="#sgs-StoreIndex-functions">sgs_StoreIndex***</a></li></ul></div>
 <div class='item'><a name='sgs-ArgErrorExt-function'></a><hr><h2>sgs_ArgErrorExt [function]</h2><h3>int sgs_ArgErrorExt( sgs_Context* C, int argid, int method, const char* expect, const char* expfx )</h3><h4>prints the argument type mismatch error</h4><ul><li><code>expfx</code> - prefix of <code>expect</code>, put exactly before this for things like &#39;strict &#39;
 </li><li>always returns 0 so it can be used to return and print an error in the same statement</li></ul></div>
 <div class='item'><a name='sgs-ArgError-function'></a><hr><h2>sgs_ArgError [function]</h2><h3>int sgs_ArgError( sgs_Context* C, int argid, int expect, int is_strict )</h3><h4>prints the argument type mismatch error</h4><ul><li>always returns 0 so it can be used to return and print an error in the same statement</li></ul></div>
@@ -1936,7 +1969,7 @@ object (003C5F90) [0] array (1)
   }
 ]
 */</pre></div>
-<div class='item'><a name='printvar-function'></a><hr><h2>printvar [function]</h2><h3>printvar( var, ... )</h3><h4>same as a list of printvar(var); calls for each argument</h4><ul><li>refer to <a href="#printvar-ext-function">printvar_ext()</a> for more info</li></ul></div>
+<div class='item'><a name='printvar-function'></a><hr><h2>printvar [function]</h2><h3>printvar( var, ... )</h3><h4>same as a list of printvar(var); calls for each argument</h4><ul><li>refer to <a href="#printvar-ext-function">printvar_ext</a> for more info</li></ul></div>
 <div class='item'><a name='read-stdin-function'></a><hr><h2>read_stdin [function]</h2><h3>read_stdin( bool all = false )</h3><h4>reads from the standard input</h4><ul><li>if <code>all</code> is set to &#39;true&#39;, all standard input is read up to EOF (useful for piped input)
 </li><li>if <code>all</code> is set to &#39;false&#39; or not set at all, input is read up to (and excluding) the next newline character</li></ul><pre>print &quot;Name: &quot;; name = read_stdin(); // waits for user input
 process( read_stdin(true) ); // loads all piped input</pre></div>

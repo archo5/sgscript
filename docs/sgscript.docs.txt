@@ -1575,6 +1575,100 @@ Closures can be created from both SGScript and the C API, though both options ha
 - SGS_EBOUNDS: index out of bounds
 
 
+# sgs_GetIndex*** [functions]
+
+== SGSRESULT sgs_GetIndexPPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* out, int isprop )
+== SGSRESULT sgs_GetIndexIPP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_Variable* out, int isprop )
+== SGSRESULT sgs_GetIndexPIP( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_Variable* out, int isprop )
+== SGSRESULT sgs_GetIndexIIP( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_Variable* out, int isprop )
+== SGSRESULT sgs_GetIndexPPI( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_StkIdx out, int isprop )
+== SGSRESULT sgs_GetIndexIPI( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_StkIdx out, int isprop )
+== SGSRESULT sgs_GetIndexPII( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_StkIdx out, int isprop )
+== SGSRESULT sgs_GetIndexIII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_StkIdx out, int isprop )
+=== retrieve index/property `idx` from the specified variable `obj` to the position `out`, specifying retrieval type via `isprop`
+
+- last 3 letters in function name determines the type for parameters 2, 3 and 4: P for pointers, I for stack indices
+
+=== error codes
+- SGS_EBOUNDS: something was not pointing inside the current stack frame
+- SGS_ENOTFND: index/property was not found
+- other codes may appear if returned by custom objects
+
+
+# sgs_SetIndex*** [functions]
+
+== SGSRESULT sgs_SetIndexPPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val, int isprop )
+== SGSRESULT sgs_SetIndexIPP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_Variable* val, int isprop )
+== SGSRESULT sgs_SetIndexPIP( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )
+== SGSRESULT sgs_SetIndexIIP( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )
+== SGSRESULT sgs_SetIndexPPI( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_StkIdx val, int isprop )
+== SGSRESULT sgs_SetIndexIPI( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_StkIdx val, int isprop )
+== SGSRESULT sgs_SetIndexPII( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )
+== SGSRESULT sgs_SetIndexIII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )
+=== set index/property `idx` in the specified variable `obj` to the value `val`, specifying type via `isprop`
+
+- last 3 letters in function name determines the type for parameters 2, 3 and 4: P for pointers, I for stack indices
+
+=== error codes
+- SGS_EBOUNDS: something was not pointing inside the current stack frame
+- SGS_ENOTFND: index/property was not found
+- SGS_EINVAL: specified value could not be used
+- other codes may appear if returned by custom objects
+
+
+# sgs_PushIndex** [functions]
+
+== SGSRESULT sgs_PushIndexPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, int isprop )
+== SGSRESULT sgs_PushIndexIP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, int isprop )
+== SGSRESULT sgs_PushIndexPI( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, int isprop )
+== SGSRESULT sgs_PushIndexII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )
+=== retrieve and push index/property `idx` from the specified variable `obj`, specifying retrieval type via `isprop`
+
+- last 2 letters in function name determines the type for parameters 2 and 3: P for pointers, I for stack indices
+
+=== error codes
+- SGS_EBOUNDS: something was not pointing inside the current stack frame
+- SGS_ENOTFND: index/property was not found
+- other codes may appear if returned by custom objects
+
+
+# sgs_StoreIndex** [functions]
+
+== SGSRESULT sgs_StoreIndexPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, int isprop )
+== SGSRESULT sgs_StoreIndexIP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, int isprop )
+== SGSRESULT sgs_StoreIndexPI( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, int isprop )
+== SGSRESULT sgs_StoreIndexII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )
+=== set index/property `idx` in the specified variable `obj` to the topmost variable in stack, specifying type via `isprop`, then pop the topmost variable in stack if successful
+
+- last 2 letters in function name determines the type for parameters 2 and 3: P for pointers, I for stack indices
+
+=== error codes
+- SGS_EBOUNDS: something was not pointing inside the current stack frame
+- SGS_ENOTFND: index/property was not found
+- SGS_EINVAL: specified value could not be used
+- SGS_EINPROC: current stack frame is empty
+- other codes may appear if returned by custom objects
+
+
+# sgs_GetGlobalPP [function]
+
+== SGSRESULT sgs_GetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* out )
+=== retrieve a global variable by index `idx` to position `out`
+
+=== error codes
+- SGS_ENOTSUP: `idx` was not a string
+- SGS_ENOTFND: index was not found
+
+
+# sgs_SetGlobalPP [function]
+
+== SGSRESULT sgs_SetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
+=== set a global variable `val` to index `idx`
+
+=== error codes
+- SGS_ENOTSUP: `idx` was not a string / `idx` was _G and `val` was not a dict
+
+
 # sgs_PushProperty [function]
 
 == SGSRESULT sgs_PushProperty( sgs_Context* C, sgs_StkIdx obj, const char* name )
@@ -1638,7 +1732,38 @@ Closures can be created from both SGScript and the C API, though both options ha
 
 === error codes
 - SGS_EINPROC: current stack frame was empty
-- SGS_ENOTSUP: _G only accepts dict values
+- SGS_ENOTSUP: variable was not a dict (_G only accepts dict values)
+
+
+# sgs_GetEnv [function]
+
+== void sgs_GetEnv( SGS_CTX, sgs_Variable* out )
+=== retrieve the global environment dict variable (_G)
+
+
+# sgs_SetEnv [function]
+
+== SGSRESULT sgs_SetEnv( SGS_CTX, sgs_Variable* var )
+=== set a global environment dict variable from the variable `var`
+
+=== error codes
+- SGS_ENOTSUP: variable was not a dict (_G only accepts dict values)
+
+
+# sgs_PushEnv [function]
+
+== void sgs_PushEnv( SGS_CTX )
+=== retrieve and push the global environment dict variable (_G)
+
+
+# sgs_StoreEnv [function]
+
+== SGSRESULT sgs_StoreEnv( SGS_CTX )
+=== set a global environment dict variable from the topmost stack item, then pop it if successful
+
+=== error codes
+- SGS_EINPROC: current stack frame was empty
+- SGS_ENOTSUP: variable was not a dict (_G only accepts dict values)
 
 
 # sgs_PushPath [function]
@@ -1679,13 +1804,13 @@ Closures can be created from both SGScript and the C API, though both options ha
 
 ! The safety of this function is similar to that of the printf family of functions. Be explicit in what types you pass to the variable argument list to avoid errors.
 
-- the syntax of `path` is the same as with @sgs_PushPath()
+- the syntax of `path` is the same as with @sgs_PushPath
 - the last item on the path (or in the case of an empty path, the starting point) is accessed with a store operation, the rest - with a push operation
 
 === error codes
 - SGS_EINVAL: invalid symbol found in path / corresponding variable arguments had an invalid value
 - SGS_EINPROC: current stack frame is empty
-- other errors, as returned by @sgs_PushIndex***() or @sgs_StoreIndex***()
+- other errors, as returned by @sgs_PushIndex*** or @sgs_StoreIndex***
 
 
 # sgs_ArgErrorExt [function]
@@ -3796,7 +3921,7 @@ This library is loaded on initialization and contains the functions and constant
 == printvar( var, ... )
 === same as a list of printvar(var); calls for each argument
 
-- refer to @printvar_ext() for more info
+- refer to @printvar_ext for more info
 
 
 # read_stdin [function]
