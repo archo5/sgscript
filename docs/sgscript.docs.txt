@@ -854,7 +854,9 @@ Closures are a combination of one callable and some variables. They are meant to
 Closures can be created from both SGScript and the C API, though both options have their limitations.
 
 - In SGScript, closures can be created by letting functions "use" a variable, e.g. by writing `function func( args ) use( closures ){ ..body.. }`
-- In the C API, closures can be created with @sgs_MakeClosure, though this requires knowledge about the receiving function's ability to use them. This means that even though there are no variable type limits, it is much more practical to create closures from native functions (both plain and object interface functions) with the C API.
+- In the C API, closures can be created with @sgs_MakeClosure, though this requires knowledge about the receiving function's ability to use them. This means that even though there are no variable type limits, it is more practical to create closures from native functions (both plain and object interface functions) with the C API. Though **prefer objects for callables if function-data bindings are necessary at the native code level**.
+
+Closure stack in the C API is technically very similar to main stack, with one important difference - functions do not accept negative indices.
 
 
 # <<< (Concepts & systems)
@@ -1152,11 +1154,11 @@ Closures can be created from both SGScript and the C API, though both options ha
 - @sgs_ParseObjectPtr<sgs_Parse***> - validate conversion, optionally return object pointer from variable on stack, if possible
 - @sgs_ParsePtr<sgs_Parse***> - validate conversion, optionally return pointer from variable on stack, if possible
 - @sgs_ArraySize<sgs_ArraySize(P)> - retrieve size of array variable on stack, if possible
-- @sgs_GlobalBool - retrieve global by name as bool
-- @sgs_GlobalInt - retrieve global by name as integer
-- @sgs_GlobalReal - retrieve global by name as real
-- @sgs_GlobalStringBuf - retrieve global by name as string buffer
-- @sgs_GlobalString - retrieve global by name as string
+- @sgs_GlobalBool<sgs_Global***> - retrieve global by name as bool
+- @sgs_GlobalInt<sgs_Global***> - retrieve global by name as integer
+- @sgs_GlobalReal<sgs_Global***> - retrieve global by name as real
+- @sgs_GlobalStringBuf<sgs_Global***> - retrieve global by name as string buffer
+- @sgs_GlobalString<sgs_Global***> - retrieve global by name as string
 - @sgs_GetStringPtrP<sgs_GetStringPtr(P)> - get string pointer from variable pointer
 - @sgs_GetStringSizeP<sgs_GetStringSize(P)> - get string size from variable pointer
 - @sgs_GetObjectStructP<sgs_GetObjectStruct(P)> - get object pointer from variable pointer
@@ -2054,6 +2056,60 @@ After a successful call, all arguments and the function will be popped off the s
 - SGS_EINVAL: not enough (less than `args`) variables were found in the current stack frame
 
 
+# sgs_ClPushNulls [function]
+
+== SGSRESULT sgs_ClPushNulls( sgs_Context* C, sgs_StkIdx num )
+=== push `num` empty closures to the closure stack
+
+=== error codes
+- SGS_EINVAL: `num` was less than 0
+
+
+# sgs_ClPushItem [function]
+
+== SGSRESULT sgs_ClPushItem( sgs_Context* C, sgs_StkIdx item )
+=== push a variable `item` on stack as a closure to the closure stack
+
+=== error codes
+- SGS_EBOUNDS: index out of bounds
+
+
+# sgs_ClPop [function]
+
+== SGSRESULT sgs_ClPop( sgs_Context* C, sgs_StkIdx num )
+=== pop `num` closures from the closure stack
+
+=== error codes
+- SGS_EINPROC: attempted to pop more closures than there are on the stack
+
+
+# sgs_MakeClosure [function]
+
+== SGSRESULT sgs_MakeClosure( sgs_Context* C, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out )
+=== make a callable closure object from the specified callable `func` and `clcount` closures on stack, return it at position `out`
+
+=== error codes
+- SGS_EINPROC: attempted to use more closures than there are on the stack
+
+
+# sgs_ClGetItem [function]
+
+== SGSRESULT sgs_ClGetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )
+=== retrieve the variable from a closure `item` on stack
+
+=== error codes
+- SGS_EBOUNDS: index out of bounds
+
+
+# sgs_ClSetItem [function]
+
+== SGSRESULT sgs_ClSetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* var )
+=== set the variable `var` to a closure `item` on stack
+
+=== error codes
+- SGS_EBOUNDS: index out of bounds
+
+
 # sgs_CloneItem [function]
 
 == SGSRESULT sgs_CloneItem( sgs_Context* C, sgs_StkIdx item )
@@ -2371,6 +2427,24 @@ After a successful call, all arguments and the function will be popped off the s
 -- if item is of `string` type and `bool` is requested, fail
 -- if item is of `string` type and `int`/`real` is requested, try to convert
 -- everything else succeeds
+
+
+# sgs_Global*** [functions]
+
+== sgs_Bool sgs_GlobalBool( SGS_CTX, const char* name )
+== sgs_Int sgs_GlobalInt( SGS_CTX, const char* name )
+== sgs_Real sgs_GlobalReal( SGS_CTX, const char* name )
+== char* sgs_GlobalStringBuf( SGS_CTX, const char* name, sgs_SizeVal* outsize )
+== char* sgs_GlobalString( SGS_CTX, const char* name )
+=== retrieve a global variable, converted to the specified type
+
+! sgs_GlobalString[Buf] **pushes the variable on the stack** to be able to reliably return the string pointer
+
+- if variable is not found, 0 / NULL is returned
+- if string cannot be parsed (variable is null or a function), NULL is returned
+-- this is done because converting these values does not yield useful results with global variables
+
+
 
 
 # sgs_PushIterator(P) [functions]

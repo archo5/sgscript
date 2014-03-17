@@ -706,7 +706,9 @@ Closures are a combination of one callable and some variables. They are meant to
 </p><p>
 Closures can be created from both SGScript and the C API, though both options have their limitations.
 </p><ul><li>In SGScript, closures can be created by letting functions &quot;use&quot; a variable, e.g. by writing <code>function func( args ) use( closures ){ ..body.. }</code>
-</li><li>In the C API, closures can be created with <a href="#sgs-MakeClosure">sgs_MakeClosure</a>, though this requires knowledge about the receiving function&#39;s ability to use them. This means that even though there are no variable type limits, it is much more practical to create closures from native functions (both plain and object interface functions) with the C API.</li></ul></div>
+</li><li>In the C API, closures can be created with <a href="#sgs-MakeClosure-function">sgs_MakeClosure</a>, though this requires knowledge about the receiving function&#39;s ability to use them. This means that even though there are no variable type limits, it is more practical to create closures from native functions (both plain and object interface functions) with the C API. Though <b>prefer objects for callables if function-data bindings are necessary at the native code level</b>.</li></ul><p>
+Closure stack in the C API is technically very similar to main stack, with one important difference - functions do not accept negative indices.
+</p></div>
 <div class='item'><a name='Functions'></a><hr><h2>Functions</h2></div>
 <div class='item'><a name='Context-management'></a><hr><h2>Context management</h2><ul><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngine</a> - create scripting engine context
 </li><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngineExt</a> - create scripting engine context and pass a custom memory function
@@ -884,12 +886,12 @@ Closures can be created from both SGScript and the C API, though both options ha
 <div class='item'><a name='String-helpers'></a><hr><h2>String helpers</h2><ul><li><a href="#sgs-PadString-function">sgs_PadString</a> - return a string with two spaces appended to all newline characters
 </li><li><a href="#sgs-ToPrintSafeString-function">sgs_ToPrintSafeString</a> - return a string with all non-printable (except space), non-ASCII characters converted to a character hex code
 </li><li><a href="#sgs-StringConcat-function">sgs_StringConcat</a> - concatenate two or more variables into a string</li></ul></div>
-<div class='item'><a name='Closures'></a><hr><h2>Closures</h2><ul><li><a href="#sgs-ClPushNulls">sgs_ClPushNulls</a> - push a number of empty closures to the closure stack
-</li><li><a href="#sgs-ClPushItem">sgs_ClPushItem</a> - push a variable on stack as a closure to the closure stack
-</li><li><a href="#sgs-ClPop">sgs_ClPop</a> - pop a number of closures from the closure stack
-</li><li><a href="#sgs-MakeClosure">sgs_MakeClosure</a> - make a callable closure object from the specified callable and number of closures on stack
-</li><li><a href="#sgs-ClGetItem">sgs_ClGetItem</a> - retrieve the variable from a closure on stack
-</li><li><a href="#sgs-ClSetItem">sgs_ClSetItem</a> - set the variable to a closure on stack</li></ul></div>
+<div class='item'><a name='Closures'></a><hr><h2>Closures</h2><ul><li><a href="#sgs-ClPushNulls-function">sgs_ClPushNulls</a> - push a number of empty closures to the closure stack
+</li><li><a href="#sgs-ClPushItem-function">sgs_ClPushItem</a> - push a variable on stack as a closure to the closure stack
+</li><li><a href="#sgs-ClPop-function">sgs_ClPop</a> - pop a number of closures from the closure stack
+</li><li><a href="#sgs-MakeClosure-function">sgs_MakeClosure</a> - make a callable closure object from the specified callable and number of closures on stack
+</li><li><a href="#sgs-ClGetItem-function">sgs_ClGetItem</a> - retrieve the variable from a closure on stack
+</li><li><a href="#sgs-ClSetItem-function">sgs_ClSetItem</a> - set the variable to a closure on stack</li></ul></div>
 <div class='item'><a name='Data-retrieval-conversion'></a><hr><h2>Data retrieval &amp; conversion</h2><ul><li><a href="#sgs-Get-functions">sgs_GetBoolP</a> - return the boolean version of the variable
 </li><li><a href="#sgs-Get-functions">sgs_GetIntP</a> - return the integer version of the variable
 </li><li><a href="#sgs-Get-functions">sgs_GetRealP</a> - return the real value version of the variable
@@ -934,11 +936,11 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-Parse-functions">sgs_ParseObjectPtr</a> - validate conversion, optionally return object pointer from variable on stack, if possible
 </li><li><a href="#sgs-Parse-functions">sgs_ParsePtr</a> - validate conversion, optionally return pointer from variable on stack, if possible
 </li><li><a href="#sgs-ArraySize-P-functions">sgs_ArraySize</a> - retrieve size of array variable on stack, if possible
-</li><li><a href="#sgs-GlobalBool">sgs_GlobalBool</a> - retrieve global by name as bool
-</li><li><a href="#sgs-GlobalInt">sgs_GlobalInt</a> - retrieve global by name as integer
-</li><li><a href="#sgs-GlobalReal">sgs_GlobalReal</a> - retrieve global by name as real
-</li><li><a href="#sgs-GlobalStringBuf">sgs_GlobalStringBuf</a> - retrieve global by name as string buffer
-</li><li><a href="#sgs-GlobalString">sgs_GlobalString</a> - retrieve global by name as string
+</li><li><a href="#sgs-Global-functions">sgs_GlobalBool</a> - retrieve global by name as bool
+</li><li><a href="#sgs-Global-functions">sgs_GlobalInt</a> - retrieve global by name as integer
+</li><li><a href="#sgs-Global-functions">sgs_GlobalReal</a> - retrieve global by name as real
+</li><li><a href="#sgs-Global-functions">sgs_GlobalStringBuf</a> - retrieve global by name as string buffer
+</li><li><a href="#sgs-Global-functions">sgs_GlobalString</a> - retrieve global by name as string
 </li><li><a href="#sgs-GetStringPtr-P-functions">sgs_GetStringPtrP</a> - get string pointer from variable pointer
 </li><li><a href="#sgs-GetStringSize-P-functions">sgs_GetStringSizeP</a> - get string size from variable pointer
 </li><li><a href="#sgs-GetObjectStruct-P-functions">sgs_GetObjectStructP</a> - get object pointer from variable pointer
@@ -994,6 +996,11 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-ArraySize-P-functions">sgs_ArraySize(P) [functions]</a>
 </li><li><a href="#sgs-Assign-function">sgs_Assign [function]</a>
 </li><li><a href="#sgs-CheckString32-function">sgs_CheckString32 [function]</a>
+</li><li><a href="#sgs-ClGetItem-function">sgs_ClGetItem [function]</a>
+</li><li><a href="#sgs-ClPop-function">sgs_ClPop [function]</a>
+</li><li><a href="#sgs-ClPushItem-function">sgs_ClPushItem [function]</a>
+</li><li><a href="#sgs-ClPushNulls-function">sgs_ClPushNulls [function]</a>
+</li><li><a href="#sgs-ClSetItem-function">sgs_ClSetItem [function]</a>
 </li><li><a href="#sgs-CloneItem-function">sgs_CloneItem [function]</a>
 </li><li><a href="#sgs-Cntl-function">sgs_Cntl [function]</a>
 </li><li><a href="#sgs-CodeString-function">sgs_CodeString [function]</a>
@@ -1034,6 +1041,7 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-GetStackItem-function">sgs_GetStackItem [function]</a>
 </li><li><a href="#sgs-GetStringPtr-P-functions">sgs_GetStringPtr(P) [functions]</a>
 </li><li><a href="#sgs-GetStringSize-P-functions">sgs_GetStringSize(P) [functions]</a>
+</li><li><a href="#sgs-Global-functions">sgs_Global*** [functions]</a>
 </li><li><a href="#sgs-GlobalCall-function">sgs_GlobalCall [function]</a>
 </li><li><a href="#sgs-HasFuncName-function">sgs_HasFuncName [function]</a>
 </li><li><a href="#sgs-IncDec-function">sgs_IncDec [function]</a>
@@ -1057,6 +1065,7 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-LoadArgs-function-alias">sgs_LoadArgs [function alias]</a>
 </li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt(VA) [function]</a>
 </li><li><a href="#sgs-LoadLib-functions">sgs_LoadLib_*** [functions]</a>
+</li><li><a href="#sgs-MakeClosure-function">sgs_MakeClosure [function]</a>
 </li><li><a href="#sgs-Memory-function">sgs_Memory [function]</a>
 </li><li><a href="#sgs-Method-function">sgs_Method [function]</a>
 </li><li><a href="#sgs-Msg-function">sgs_Msg [function]</a>
@@ -1338,6 +1347,12 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>SGS_EINVAL: topmost variable is not a string</li></ul></div>
 <div class='item'><a name='sgs-ToPrintSafeString-function'></a><hr><h2>sgs_ToPrintSafeString [function]</h2><h3>SGSRESULT sgs_ToPrintSafeString( sgs_Context* C )</h3><h4>replace the topmost variable of current stack frame with a string where all non-printable (except space), non-ASCII characters converted to a character hex code</h4><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame is empty or output string size exceeds limit</li></ul></div>
 <div class='item'><a name='sgs-StringConcat-function'></a><hr><h2>sgs_StringConcat [function]</h2><h3>SGSRESULT sgs_StringConcat( sgs_Context* C, int args )</h3><h4>concatenate the <code>args</code> number of topmost string variables in the current stack frame</h4><h4>error codes</h4><ul><li>SGS_EINVAL: not enough (less than `args`) variables were found in the current stack frame</li></ul></div>
+<div class='item'><a name='sgs-ClPushNulls-function'></a><hr><h2>sgs_ClPushNulls [function]</h2><h3>SGSRESULT sgs_ClPushNulls( sgs_Context* C, sgs_StkIdx num )</h3><h4>push <code>num</code> empty closures to the closure stack</h4><h4>error codes</h4><ul><li>SGS_EINVAL: <code>num</code> was less than 0</li></ul></div>
+<div class='item'><a name='sgs-ClPushItem-function'></a><hr><h2>sgs_ClPushItem [function]</h2><h3>SGSRESULT sgs_ClPushItem( sgs_Context* C, sgs_StkIdx item )</h3><h4>push a variable <code>item</code> on stack as a closure to the closure stack</h4><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds</li></ul></div>
+<div class='item'><a name='sgs-ClPop-function'></a><hr><h2>sgs_ClPop [function]</h2><h3>SGSRESULT sgs_ClPop( sgs_Context* C, sgs_StkIdx num )</h3><h4>pop <code>num</code> closures from the closure stack</h4><h4>error codes</h4><ul><li>SGS_EINPROC: attempted to pop more closures than there are on the stack</li></ul></div>
+<div class='item'><a name='sgs-MakeClosure-function'></a><hr><h2>sgs_MakeClosure [function]</h2><h3>SGSRESULT sgs_MakeClosure( sgs_Context* C, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out )</h3><h4>make a callable closure object from the specified callable <code>func</code> and <code>clcount</code> closures on stack, return it at position <code>out</code></h4><h4>error codes</h4><ul><li>SGS_EINPROC: attempted to use more closures than there are on the stack</li></ul></div>
+<div class='item'><a name='sgs-ClGetItem-function'></a><hr><h2>sgs_ClGetItem [function]</h2><h3>SGSRESULT sgs_ClGetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>retrieve the variable from a closure <code>item</code> on stack</h4><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds</li></ul></div>
+<div class='item'><a name='sgs-ClSetItem-function'></a><hr><h2>sgs_ClSetItem [function]</h2><h3>SGSRESULT sgs_ClSetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* var )</h3><h4>set the variable <code>var</code> to a closure <code>item</code> on stack</h4><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds</li></ul></div>
 <div class='item'><a name='sgs-CloneItem-function'></a><hr><h2>sgs_CloneItem [function]</h2><h3>SGSRESULT sgs_CloneItem( sgs_Context* C, sgs_StkIdx item )</h3><h4>push a copy of the specified stack item</h4><p>
 <em class='notice-bgr'>Even though operations with functions and strings succeed, functions and strings are not actually cloned since they are immutable.</em>
 </p><h4>error codes</h4><ul><li>SGS_EBOUNDS: stack item index was out of bounds
@@ -1435,6 +1450,11 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>if item is of <code>string</code> type and <code>bool</code> is requested, fail
 </li><li>if item is of <code>string</code> type and `int`/`real` is requested, try to convert
 </li><li>everything else succeeds</li></ul></li></ul></div>
+<div class='item'><a name='sgs-Global-functions'></a><hr><h2>sgs_Global*** [functions]</h2><h3>sgs_Bool sgs_GlobalBool( SGS_CTX, const char* name )</h3><h3>sgs_Int sgs_GlobalInt( SGS_CTX, const char* name )</h3><h3>sgs_Real sgs_GlobalReal( SGS_CTX, const char* name )</h3><h3>char* sgs_GlobalStringBuf( SGS_CTX, const char* name, sgs_SizeVal* outsize )</h3><h3>char* sgs_GlobalString( SGS_CTX, const char* name )</h3><h4>retrieve a global variable, converted to the specified type</h4><p>
+<em class='notice-bgr'>sgs_GlobalString[Buf] <b>pushes the variable on the stack</b> to be able to reliably return the string pointer</em>
+</p><ul><li>if variable is not found, 0 / NULL is returned
+</li><li>if string cannot be parsed (variable is null or a function), NULL is returned
+<ul><li>this is done because converting these values does not yield useful results with global variables</li></ul></li></ul></div>
 <div class='item'><a name='sgs-PushIterator-P-functions'></a><hr><h2>sgs_PushIterator(P) [functions]</h2><h3>SGSRESULT sgs_PushIterator( sgs_Context* C, sgs_StkIdx item )</h3><h4>create and push an iterator from the specified item of the current stack frame</h4><h3>SGSRESULT sgs_PushIteratorP( sgs_Context* C, sgs_Variable* var )</h3><h4>create and push an iterator from the specified variable</h4><ul><li>see <a href="#Iterator-system">Iterator system</a> for more info about iterators</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
 </li><li>SGS_ENOTSUP: variable type does not support iterators (only objects support them)
 </li><li>SGS_ENOTFND: object type does not support iterators (iterator conversion request failed)

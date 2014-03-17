@@ -4809,7 +4809,6 @@ char* sgs_GlobalStringBuf( SGS_CTX, const char* name, sgs_SizeVal* outsize )
 		stk_pop1( C );
 		return NULL;
 	}
-	stk_pop1( C );
 	return buf;
 }
 
