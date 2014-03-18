@@ -1258,7 +1258,7 @@ static int xgm_v2a_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 	for( i = 0; i < vc; ++i )
 	{
 		char bfr[ 128 ];
-		snprintf( bfr, 128, "\n%10.6g %10.6g" );
+		snprintf( bfr, 128, "\n%10.6g %10.6g", v2arr->data[ i * 2 ], v2arr->data[ i * 2 + 1 ] );
 		bfr[ 127 ] = 0;
 		sgs_PushString( C, bfr );
 	}

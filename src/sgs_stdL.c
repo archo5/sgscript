@@ -1625,6 +1625,11 @@ SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
 	
 */
 
+#ifdef _WIN32
+# define ftell( fp ) ftello64( fp )
+# define fseek( fp, ofs, orig ) fseeko64( fp, ofs, orig )
+#endif
+
 #define CRET( suc ) sgs_PushBool( C, sgs_Errno( C, suc ) ); return 1;
 
 #define FILE_READ 1
@@ -1861,7 +1866,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 		return 0;
 	
 	{
-		size_t len, rd;
+		int64_t len, rd;
 		FILE* fp = fopen( path, "rb" );
 		if( !fp )
 		{
@@ -1869,7 +1874,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 			STDLIB_WARN( "failed to open file" )
 		}
 		fseek( fp, 0, SEEK_END );
-		len = (size_t) ftell( fp );
+		len = ftell( fp );
 		fseek( fp, 0, SEEK_SET );
 		
 		if(	len > 0x7fffffff )
@@ -1881,7 +1886,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 		sgs_PushStringBuf( C, NULL, (sgs_SizeVal) len );
 		errno = 0;
 		/* WP: string limit */
-		rd = fread( sgs_GetStringPtr( C, -1 ), 1, len, fp );
+		rd = fread( sgs_GetStringPtr( C, -1 ), 1, (size_t) len, fp );
 		if( rd < len )
 			sgs_Errno( C, 0 );
 		fclose( fp );
@@ -1909,7 +1914,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 
 static int sgsstd_fileP_offset( SGS_CTX, FILE* fp )
 {
-	long pos;
+	int64_t pos;
 	if( !fp )
 		STDLIB_WARN( "file.offset - file is not opened" )
 	
@@ -1925,7 +1930,7 @@ static int sgsstd_fileP_size( SGS_CTX, FILE* fp )
 		STDLIB_WARN( "file.size - file is not opened" )
 	
 	{
-		long size;
+		int64_t size;
 		fpos_t pos;
 		if( fgetpos( fp, &pos ) < 0 )
 		{
@@ -2065,7 +2070,7 @@ static int sgsstd_fileI_write( SGS_CTX )
 static int sgsstd_fileI_seek( SGS_CTX )
 {
 	static const int seekmodes[ 3 ] = { SEEK_SET, SEEK_CUR, SEEK_END };
-	sgs_Int off, mode = SEEK_SET;
+	sgs_Int off, mode = SGS_SEEK_SET;
 	FILE_IHDR( seek )
 	
 	if( !sgs_LoadArgs( C, "ii", &off, &mode ) )
@@ -2075,7 +2080,7 @@ static int sgsstd_fileI_seek( SGS_CTX )
 		STDLIB_WARN( "'mode' not one of SEEK_(SET|CUR|END)" )
 	
 	FVNO_BEGIN
-		sgs_PushBool( C, !fseek( FVAR, (sgs_SizeVal) off, seekmodes[ mode ] ) );
+		sgs_PushBool( C, !fseek( FVAR, off, seekmodes[ mode ] ) );
 		return 1;
 	FVNO_END( eof )
 }
