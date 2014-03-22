@@ -4251,9 +4251,11 @@ fail:
 		sgs_SetOutputFunc( C, dofn, doud );
 		if( ret == SGS_SUCCESS )
 		{
-			sgs_Msg( C, SGS_WARNING, "Serialized string too long" );
 			if( B.size > 0x7fffffff )
+			{
+				sgs_Msg( C, SGS_WARNING, "Serialized string too long" );
 				ret = SGS_EINVAL;
+			}
 			else
 				/* WP: added error condition */
 				sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
