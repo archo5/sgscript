@@ -727,6 +727,7 @@ SGS_APIFUNC SGSRESULT sgs_GCMarkArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal c
 SGS_APIFUNC void sgs_ObjAcquire( SGS_CTX, sgs_VarObj* obj );
 SGS_APIFUNC void sgs_ObjRelease( SGS_CTX, sgs_VarObj* obj );
 SGS_APIFUNC SGSRESULT sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj );
+SGS_APIFUNC void sgs_ObjAssign( SGS_CTX, sgs_VarObj** dest, sgs_VarObj* src );
 SGS_APIFUNC void sgs_ObjCallDtor( SGS_CTX, sgs_VarObj* obj );
 
 SGS_APIFUNC char* sgs_GetStringPtrP( sgs_Variable* var );

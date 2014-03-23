@@ -974,6 +974,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-ObjAcquire-function">sgs_ObjAcquire</a> - acquire an object variable by its sgs_VarObj pointer
 </li><li><a href="#sgs-ObjRelease-function">sgs_ObjRelease</a> - release an object variable by its sgs_VarObj pointer
 </li><li><a href="#sgs-ObjGCMark-function">sgs_ObjGCMark</a> - mark an object variable by its sgs_VarObj pointer
+</li><li><a href="#sgs-ObjAssign-function">sgs_ObjAssign</a> - assign object pointer, handling acquisition/release properly
 </li><li><a href="#sgs-ObjCallDtor-function">sgs_ObjCallDtor</a> - call the destruction function of an object variable if it&#39;s defined</li></ul></div>
 <div class='item'><a name='String32-optimization-interface'></a><hr><h2>String32 optimization interface</h2><ul><li><a href="#sgs-PushStringBuf32-function">sgs_PushStringBuf32</a> - initialize and push string32 object on stack
 </li><li><a href="#sgs-PushString32-function">sgs_PushString32</a> - initialize and push string32 object on stack
@@ -1070,6 +1071,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-Method-function">sgs_Method [function]</a>
 </li><li><a href="#sgs-Msg-function">sgs_Msg [function]</a>
 </li><li><a href="#sgs-ObjAcquire-function">sgs_ObjAcquire [function]</a>
+</li><li><a href="#sgs-ObjAssign-function">sgs_ObjAssign [function]</a>
 </li><li><a href="#sgs-ObjCallDtor-function">sgs_ObjCallDtor [function]</a>
 </li><li><a href="#sgs-ObjGCMark-function">sgs_ObjGCMark [function]</a>
 </li><li><a href="#sgs-ObjRelease-function">sgs_ObjRelease [function]</a>
@@ -1277,7 +1279,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li>the commands are grouped into two kinds: control commands and parsing commands
 </li><li>function returns whether all required arguments have been parsed successfully
 <ul><li>thus, if function returns &lt; 1, state of outputs is somewhat unknown unless filled with defaults
-</li><li>it is guaranteed that all arguments will be parsed from first (specified) forward, not in any other way</li></ul></li></ul><p>
+</li><li>it is guaranteed that all arguments will be parsed from first (specified) forward, not in any other way
+</li></ul><li><code>null</code> values in optional arguments are skipped (this may not apply to custom checking functions)</li></ul><p>
 <em class='notice-bgr'>unlike sgs_LoadArgs, it returns <code>SGSMIXED</code> and must be checked differently (&quot;ret.val. &gt; 0&quot;, if same output needed)</em>
 </p><h5>control commands</h5><ul><li><code>?</code> -- only check, do not write the result and do not require a pointer to write the data to
 </li><li><code>!</code> -- enable strict parsing for the next item (requires exactly the type specified
@@ -1500,6 +1503,10 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-ObjAcquire-function'></a><hr><h2>sgs_ObjAcquire [function]</h2><h3>void sgs_ObjAcquire( sgs_Context* C, sgs_VarObj* obj )</h3><h4>increment reference count of the specified object</h4></div>
 <div class='item'><a name='sgs-ObjRelease-function'></a><hr><h2>sgs_ObjRelease [function]</h2><h3>void sgs_ObjRelease( sgs_Context* C, sgs_VarObj* obj )</h3><h4>decrement reference count and possibly delete the specified object</h4></div>
 <div class='item'><a name='sgs-ObjGCMark-function'></a><hr><h2>sgs_ObjGCMark [function]</h2><h3>SGSRESULT sgs_ObjGCMark( sgs_Context* C, sgs_VarObj* obj )</h3><h4>mark the specified object as accessible to avoid its destruction by the <a href="#Garbage-collection-system">Garbage collection system</a></h4><ul><li>to be called in the GCMARK object callback</li></ul></div>
+<div class='item'><a name='sgs-ObjAssign-function'></a><hr><h2>sgs_ObjAssign [function]</h2><h3>void sgs_ObjAssign( sgs_Context* C, sgs_VarObj** dest, sgs_VarObj* src )</h3><h4>assign object pointer, handling acquisition/release properly</h4><ul><li><code>*dest</code> and <code>src</code> must be NULL or valid pointers to objects
+</li><li>if <code>src</code> is not NULL, it is acquired
+</li><li>if <code>*dest</code> is not NULL, it is released
+</li><li>after the function call, <code>*dest</code> is equal to <code>src</code></li></ul></div>
 <div class='item'><a name='sgs-ObjCallDtor-function'></a><hr><h2>sgs_ObjCallDtor [function]</h2><h3>void sgs_ObjCallDtor( sgs_Context* C, sgs_VarObj* obj )</h3><h4>call the DESTRUCT object callback</h4><ul><li>this function is to be used in cases where objects are owned by a single entity but have handles all over the place - calling this function would not delete the object but would free its resources, thus leaving handles intact, with their states updated</li></ul></div>
 <div class='item'><a name='sgs-GetStringPtr-P-functions'></a><hr><h2>sgs_GetStringPtr(P) [functions]</h2><h3>char* sgs_GetStringPtr( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the string data pointer of the specified stack item</h4><h3>char* sgs_GetStringPtrP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the string data pointer of the specified variable</h4><ul><li>if item is out of bounds or not a string, NULL will be returned and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul></div>

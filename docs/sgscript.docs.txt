@@ -1202,6 +1202,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_ObjAcquire - acquire an object variable by its sgs_VarObj pointer
 - @sgs_ObjRelease - release an object variable by its sgs_VarObj pointer
 - @sgs_ObjGCMark - mark an object variable by its sgs_VarObj pointer
+- @sgs_ObjAssign - assign object pointer, handling acquisition/release properly
 - @sgs_ObjCallDtor - call the destruction function of an object variable if it's defined
 
 
@@ -1854,6 +1855,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - function returns whether all required arguments have been parsed successfully
 -- thus, if function returns < 1, state of outputs is somewhat unknown unless filled with defaults
 -- it is guaranteed that all arguments will be parsed from first (specified) forward, not in any other way
+- `null` values in optional arguments are skipped (this may not apply to custom checking functions)
 
 ! unlike sgs_LoadArgs, it returns `SGSMIXED` and must be checked differently ("ret.val. > 0", if same output needed)
 
@@ -2653,6 +2655,17 @@ After a successful call, all arguments and the function will be popped off the s
 === mark the specified object as accessible to avoid its destruction by the @"Garbage collection system"
 
 - to be called in the GCMARK object callback
+
+
+# sgs_ObjAssign [function]
+
+== void sgs_ObjAssign( sgs_Context* C, sgs_VarObj** dest, sgs_VarObj* src )
+=== assign object pointer, handling acquisition/release properly
+
+- `*dest` and `src` must be NULL or valid pointers to objects
+- if `src` is not NULL, it is acquired
+- if `*dest` is not NULL, it is released
+- after the function call, `*dest` is equal to `src`
 
 
 # sgs_ObjCallDtor [function]

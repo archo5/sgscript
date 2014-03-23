@@ -3333,6 +3333,13 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 			{
 				sgs_Bool b;
 				
+				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
+				{
+					if( !nowrite )
+						va_arg( args, sgs_Bool* );
+					break;
+				}
+				
 				if( !sgs_ParseBool( C, from, &b ) ||
 					( strict && sgs_ItemType( C, from ) != SVT_BOOL ) )
 				{
@@ -3350,6 +3357,22 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 		case 'c': case 'w': case 'l': case 'q': case 'i':
 			{
 				sgs_Int i, imin = INT64_MIN, imax = INT64_MAX;
+				
+				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
+				{
+					if( !nowrite )
+					{
+						switch( *cmd )
+						{
+						case 'c': va_arg( args, uint8_t* ); break;
+						case 'w': va_arg( args, uint16_t* ); break;
+						case 'l': va_arg( args, uint32_t* ); break;
+						case 'q': va_arg( args, uint64_t* ); break;
+						case 'i': va_arg( args, sgs_Int* ); break;
+						}
+					}
+					break;
+				}
 				
 				if( range )
 				{
@@ -3398,6 +3421,20 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 			{
 				sgs_Real r;
 				
+				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
+				{
+					if( !nowrite )
+					{
+						switch( *cmd )
+						{
+						case 'f': va_arg( args, float* ); break;
+						case 'd': va_arg( args, double* ); break;
+						case 'r': va_arg( args, sgs_Real* ); break;
+						}
+					}
+					break;
+				}
+				
 				if( !sgs_ParseReal( C, from, &r ) ||
 					( strict && sgs_ItemType( C, from ) != SVT_REAL ) )
 				{
@@ -3422,6 +3459,17 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				char* str;
 				sgs_SizeVal sz;
 				
+				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
+				{
+					if( !nowrite )
+					{
+						va_arg( args, char** );
+						if( *cmd == 'm' )
+							va_arg( args, sgs_SizeVal* );
+					}
+					break;
+				}
+				
 				if( ( strict && sgs_ItemType( C, from ) != SVT_STRING ) ||
 					!sgs_ParseString( C, from, &str, &sz ) )
 				{
@@ -3440,6 +3488,13 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 		
 		case 'p':
 			{
+				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
+				{
+					if( !nowrite )
+						va_arg( args, SGSBOOL* );
+					break;
+				}
+				
 				if( !sgs_IsCallable( C, from ) )
 				{
 					argerrx( C, from, method, "callable", "" );
@@ -3462,6 +3517,21 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				if( *cmd == 't' ){ ifc = sgsstd_dict_iface; ostr = "dict"; }
 				if( *cmd == 'h' ){ ifc = sgsstd_map_iface; ostr = "map"; }
 				if( *cmd == 'o' ) ifc = va_arg( args, sgs_ObjInterface* );
+				
+				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
+				{
+					if( !nowrite )
+					{
+						switch( *cmd )
+						{
+						case 'a': va_arg( args, sgs_SizeVal* ); break;
+						case 't':
+						case 'h': va_arg( args, sgs_SizeVal* ); break;
+						case 'o': va_arg( args, void** ); break;
+						}
+					}
+					break;
+				}
 				
 				if( sgs_ItemType( C, from ) != SVT_OBJECT ||
 					( ifc != NULL && !sgs_IsObject( C, from, ifc ) ) )
@@ -3489,6 +3559,14 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 		case '&':
 			{
 				void* ptr;
+				
+				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
+				{
+					if( !nowrite )
+						va_arg( args, void** );
+					break;
+				}
+				
 				if( !sgs_ParsePtr( C, from, &ptr ) )
 				{
 					argerrx( C, from, method, "pointer", "" );
@@ -3504,6 +3582,13 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 			
 		case 'v':
 			{
+				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
+				{
+					if( !nowrite )
+						va_arg( args, sgs_Variable* );
+					break;
+				}
+				
 				if( from >= sgs_StackSize( C ) ||
 					( strict && sgs_ItemType( C, from ) == SVT_NULL ) )
 				{
@@ -5059,6 +5144,15 @@ SGSRESULT sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj )
 	var.type = SVT_OBJECT;
 	var.data.O = obj;
 	return sgs_GCMark( C, &var );
+}
+
+void sgs_ObjAssign( SGS_CTX, sgs_VarObj** dest, sgs_VarObj* src )
+{
+	if( *dest )
+		sgs_ObjRelease( C, *dest );
+	*dest = src;
+	if( src )
+		sgs_ObjAcquire( C, src );
 }
 
 void sgs_ObjCallDtor( SGS_CTX, sgs_VarObj* obj )
