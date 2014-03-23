@@ -438,7 +438,7 @@ static int preparse_varlists( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		ret &= preparse_varlist( C, func, node );
 	else if( node->type == SFT_GVLIST )
 		ret &= preparse_gvlist( C, func, node );
-	else if( node->token && is_keyword( node->token, "this" ) )
+	else if( node->type == SFT_KEYWORD && node->token && is_keyword( node->token, "this" ) )
 	{
 		func->gotthis = TRUE;
 		if( preadd_thisvar( &C->fctx->vars, C ) )
