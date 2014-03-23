@@ -7,7 +7,7 @@
 
 #define XGM_WARNING( err ) sgs_Msg( C, SGS_WARNING, err )
 #define XGM_OHDR XGM_VT* hdr = (XGM_VT*) data->data;
-#define XGM_V2AHDR xgm_vtarray* v2arr = (xgm_vtarray*) data->data;
+#define XGM_FLAHDR xgm_vtarray* flarr = (xgm_vtarray*) data->data;
 
 #define XGM_VMUL_INNER2(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1])
 #define XGM_VMUL_INNER3(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
@@ -19,6 +19,17 @@
 	if( (b)[2] < (v)[0] ) (b)[2] = (v)[0]; \
 	if( (b)[3] < (v)[1] ) (b)[3] = (v)[1];
 
+
+SGSBOOL sgs_ParseVT( SGS_CTX, sgs_StkIdx item, XGM_VT* out )
+{
+	sgs_Real val;
+	if( sgs_ParseReal( C, item, &val ) )
+	{
+		*out = (XGM_VT) val;
+		return 1;
+	}
+	return 0;
+}
 
 SGSBOOL sgs_ParseVTP( SGS_CTX, sgs_Variable* var, XGM_VT* out )
 {
@@ -1216,53 +1227,53 @@ static int xgm_mat4( SGS_CTX )
 
 
 
-/*  V E C 2 A R R A Y  */
+/*  F L O A T A R R A Y  */
 
-static int xgm_v2a_destruct( SGS_CTX, sgs_VarObj* data )
+static int xgm_fla_destruct( SGS_CTX, sgs_VarObj* data )
 {
-	XGM_V2AHDR;
-	if( v2arr->data )
-		sgs_Dealloc( v2arr->data );
+	XGM_FLAHDR;
+	if( flarr->data )
+		sgs_Dealloc( flarr->data );
 	return SGS_SUCCESS;
 }
 
-static int xgm_v2a_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int xgm_fla_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	XGM_V2AHDR;
+	XGM_FLAHDR;
 	if( type == SGS_CONVOP_CLONE )
 	{
-		sgs_PushVec2Array( C, v2arr->data, v2arr->size );
+		sgs_PushFloatArray( C, flarr->data, flarr->size );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
 }
 
-static int xgm_v2a_serialize( SGS_CTX, sgs_VarObj* data )
+static int xgm_fla_serialize( SGS_CTX, sgs_VarObj* data )
 {
 	sgs_SizeVal i;
-	XGM_V2AHDR;
-	for( i = 0; i < v2arr->size * 2; ++i )
+	XGM_FLAHDR;
+	for( i = 0; i < flarr->size * 2; ++i )
 	{
-		sgs_PushReal( C, v2arr->data[ i ] );
+		sgs_PushReal( C, flarr->data[ i ] );
 		if( sgs_Serialize( C ) )
 			return SGS_EINPROC;
 	}
-	return sgs_SerializeObject( C, v2arr->size * 2, "vec2array" );
+	return sgs_SerializeObject( C, flarr->size * 2, "floatarray" );
 }
 
-static int xgm_v2a_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
+static int xgm_fla_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 {
-	XGM_V2AHDR;
-	sgs_SizeVal i, vc = v2arr->size > 64 ? 64 : v2arr->size;
+	XGM_FLAHDR;
+	sgs_SizeVal i, vc = flarr->size > 64 ? 64 : flarr->size;
 	sgs_PushString( C, "\n{" );
 	for( i = 0; i < vc; ++i )
 	{
 		char bfr[ 128 ];
-		snprintf( bfr, 128, "\n%10.6g %10.6g", v2arr->data[ i * 2 ], v2arr->data[ i * 2 + 1 ] );
+		snprintf( bfr, 128, "\n%10.6g", flarr->data[ i ] );
 		bfr[ 127 ] = 0;
 		sgs_PushString( C, bfr );
 	}
-	if( vc < v2arr->size )
+	if( vc < flarr->size )
 	{
 		sgs_PushString( C, "\n..." );
 		vc++;
@@ -1275,22 +1286,22 @@ static int xgm_v2a_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 	return SGS_SUCCESS;
 }
 
-static int xgm_v2a_getindex_aabb( SGS_CTX, xgm_vtarray* v2arr )
+static int xgm_fla_getindex_aabb2( SGS_CTX, xgm_vtarray* flarr )
 {
-	if( !v2arr->size )
+	if( flarr->size < 2 )
 	{
-		XGM_WARNING( "cannot get AABB of empty vec2array" );
+		XGM_WARNING( "cannot get AABB2 of floatarray with size < 2" );
 		return SGS_EINPROC;
 	}
 	else
 	{
 		sgs_SizeVal i;
 		XGM_VT bb[4] = {
-			v2arr->data[0], v2arr->data[1], v2arr->data[0], v2arr->data[1]
+			flarr->data[0], flarr->data[1], flarr->data[0], flarr->data[1]
 		};
-		for( i = 2; i < v2arr->size; i += 2 )
+		for( i = 2; i < flarr->size; i += 2 )
 		{
-			XGM_VT* pp = v2arr->data + i;
+			XGM_VT* pp = flarr->data + i;
 			if( bb[0] > pp[0] ) bb[0] = pp[0];
 			if( bb[1] > pp[1] ) bb[1] = pp[1];
 			if( bb[2] < pp[0] ) bb[2] = pp[0];
@@ -1301,119 +1312,236 @@ static int xgm_v2a_getindex_aabb( SGS_CTX, xgm_vtarray* v2arr )
 	}
 }
 
-static int xgm_v2a_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
-{
-	XGM_V2AHDR;
-	XGM_VT val[2];
-	if( key->type == SGS_VT_INT )
-	{
-		sgs_Int pos = sgs_GetIntP( C, key );
-		if( pos < 0 || pos >= v2arr->size )
-			return XGM_WARNING( "index out of bounds" );
-		if( sgs_ParseVec2P( C, vv, val, 0 ) )
-		{
-			v2arr->data[ pos * 2 + 0 ] = val[0];
-			v2arr->data[ pos * 2 + 1 ] = val[1];
-			return SGS_SUCCESS;
-		}
-		else
-			return SGS_EINVAL;
-	}
-	
-	return SGS_ENOTFND;
-}
-
 /* methods */
-#define XGM_V2A_IHDR( funcname ) xgm_vtarray* v2arr; \
-	if( !SGS_PARSE_METHOD( C, xgm_vec2arr_iface, v2arr, vec2array, funcname ) ) return 0;
+#define XGM_FLA_IHDR( funcname ) xgm_vtarray* flarr; \
+	if( !SGS_PARSE_METHOD( C, xgm_floatarr_iface, flarr, floatarray, funcname ) ) return 0;
 
-#define XGM_V2A_BINOPMETHOD( opname, assignop ) \
-static int xgm_v2a_##opname( SGS_CTX ) \
+#define XGM_FLA_UNOPMETHOD( opname, opcode ) \
+static int xgm_fla_##opname( SGS_CTX ) \
 { \
-	XGM_VT v2f[ 2 ], *v2fa; \
-	sgs_SizeVal i, sz; \
+	sgs_SizeVal i; \
+	XGM_VT R, A; \
+	UNUSED( A ); \
 	 \
-	XGM_V2A_IHDR( opname ) \
+	XGM_FLA_IHDR( opname ) \
 	 \
-	if( sgs_ParseVec2( C, 0, v2f, 0 ) ) \
+	for( i = 0; i < flarr->size; ++i ) \
 	{ \
-		sz = v2arr->size * 2; \
-		for( i = 0; i < sz; i += 2 ) \
-		{ \
-			v2arr->data[ i+0 ] assignop v2f[ 0 ]; \
-			v2arr->data[ i+1 ] assignop v2f[ 1 ]; \
-		} \
-		return 0; \
+		A = flarr->data[ i ]; opcode; flarr->data[ i ] = R; \
 	} \
-	 \
-	if( sgs_ParseVec2Array( C, 0, &v2fa, &sz ) ) \
-	{ \
-		if( sz != v2arr->size ) \
-			return XGM_WARNING( "array sizes don't match" ); \
-		for( i = 0; i < sz; ++i ) \
-		{ \
-			v2arr->data[ i * 2 + 0 ] assignop v2fa[ i * 2 + 0 ]; \
-			v2arr->data[ i * 2 + 1 ] assignop v2fa[ i * 2 + 1 ]; \
-		} \
-		return 0; \
-	} \
-	 \
-	return XGM_WARNING( "expected real, vec2 or vec2array" ); \
+	return 0; \
 }
 
-XGM_V2A_BINOPMETHOD( add, += );
-XGM_V2A_BINOPMETHOD( sub, -= );
-XGM_V2A_BINOPMETHOD( mul, *= );
-XGM_V2A_BINOPMETHOD( div, /= );
+XGM_FLA_UNOPMETHOD( clear, R = 0 );
+XGM_FLA_UNOPMETHOD( set1, R = 1 );
+XGM_FLA_UNOPMETHOD( negate, R = -A );
 
-static int xgm_v2a_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
+#define XGM_FLA_BINOPMETHOD( opname, opcode ) \
+static int xgm_fla_##opname( SGS_CTX ) \
+{ \
+	XGM_VT v4f1[ 4 ] = {0}; \
+	XGM_VT* vfa1 = v4f1; \
+	sgs_SizeVal i, sz, unit1 = 1, stride1 = 0; \
+	XGM_VT R, A, B; \
+	UNUSED( A ); \
+	 \
+	XGM_FLA_IHDR( opname ) \
+	 \
+	if( sgs_ParseVec2( C, 0, vfa1, 0 ) ) unit1 = 2; \
+	else if( sgs_ParseVec3( C, 0, vfa1, 0 ) ) unit1 = 3; \
+	else if( sgs_ParseVec4( C, 0, vfa1, 0 ) ) unit1 = 4; \
+	if( sgs_ParseFloatArray( C, 0, &vfa1, &sz ) ) \
+	{ \
+		if( sz != flarr->size ) \
+			return XGM_WARNING( "array sizes don't match" ); \
+		stride1 = 1; \
+	} \
+	else return XGM_WARNING( "expected real, vec[2|3|4] or floatarray" ); \
+	 \
+	for( i = 0; i < flarr->size; ++i ) \
+	{ \
+		A = flarr->data[ i ]; B = vfa1[ i % unit1 ]; opcode; flarr->data[ i ] = R; \
+		vfa1 += stride1; \
+	} \
+	return 0; \
+}
+
+XGM_FLA_BINOPMETHOD( assign, R = B );
+XGM_FLA_BINOPMETHOD( negate_from, R = -B );
+XGM_FLA_BINOPMETHOD( add_assign, R = A + B );
+XGM_FLA_BINOPMETHOD( sub_assign, R = A - B );
+XGM_FLA_BINOPMETHOD( mul_assign, R = A * B );
+XGM_FLA_BINOPMETHOD( div_assign, R = A / B );
+XGM_FLA_BINOPMETHOD( mod_assign, R = fmodf( A, B ) );
+XGM_FLA_BINOPMETHOD( pow_assign, R = (XGM_VT) pow( A, B ) );
+
+#define XGM_FLA_TEROPMETHOD( opname, opcode ) \
+static int xgm_fla_##opname( SGS_CTX ) \
+{ \
+	XGM_VT v4f1[ 4 ] = {0}, v4f2[ 4 ] = {0}; \
+	XGM_VT* vfa1 = v4f1, *vfa2 = v4f2; \
+	sgs_SizeVal i, sz, unit1 = 0, unit2 = 1, stride1 = 0, stride2 = 0; \
+	XGM_VT R, A, B, T; \
+	UNUSED( T ); \
+	 \
+	XGM_FLA_IHDR( opname ) \
+	 \
+	if( sgs_ParseVec2( C, 0, vfa1, 0 ) ) unit1 = 2; \
+	else if( sgs_ParseVec3( C, 0, vfa1, 0 ) ) unit1 = 3; \
+	else if( sgs_ParseVec4( C, 0, vfa1, 0 ) ) unit1 = 4; \
+	else if( sgs_ParseFloatArray( C, 0, &vfa1, &sz ) ) \
+	{ \
+		if( sz != flarr->size ) \
+			return XGM_WARNING( "array sizes (this : argument 1) don't match" ); \
+		stride1 = 1; \
+	} \
+	else return XGM_WARNING( "expected real, vec[2|3|4] or floatarray as argument 1" ); \
+	 \
+	if( sgs_ParseVec2( C, 1, vfa2, 0 ) ) unit2 = 2; \
+	else if( sgs_ParseVec3( C, 1, vfa2, 0 ) ) unit2 = 3; \
+	else if( sgs_ParseVec4( C, 1, vfa2, 0 ) ) unit2 = 4; \
+	else if( sgs_ParseFloatArray( C, 1, &vfa2, &sz ) ) \
+	{ \
+		if( sz != flarr->size ) \
+			return XGM_WARNING( "array sizes (this : argument 2) don't match" ); \
+		stride2 = 1; \
+	} \
+	else return XGM_WARNING( "expected real, vec[2|3|4] or floatarray as argument 2" ); \
+	 \
+	for( i = 0; i < flarr->size; ++i ) \
+	{ \
+		T = flarr->data[ i ]; A = vfa1[ i % unit1 ]; B = vfa2[ i % unit2 ]; opcode; flarr->data[ i ] = R; \
+		vfa1 += stride1; \
+		vfa2 += stride2; \
+	} \
+	return 0; \
+}
+
+XGM_FLA_TEROPMETHOD( add, R = A + B );
+XGM_FLA_TEROPMETHOD( sub, R = A - B );
+XGM_FLA_TEROPMETHOD( mul, R = A * B );
+XGM_FLA_TEROPMETHOD( div, R = A / B );
+XGM_FLA_TEROPMETHOD( mod, R = fmodf( A, B ) );
+XGM_FLA_TEROPMETHOD( pow, R = (XGM_VT) pow( A, B ) );
+
+static XGM_VT randlerp( XGM_VT A, XGM_VT B ){ XGM_VT t = (XGM_VT) rand() / (XGM_VT) RAND_MAX; return A * (1-t) + B * t; }
+XGM_FLA_TEROPMETHOD( randbox, R = randlerp( A, B ) );
+XGM_FLA_TEROPMETHOD( randext, R = randlerp( A - B, A + B ) );
+
+static int xgm_fla_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
 {
-	sgs_Int idx;
-	XGM_V2AHDR;
-	
-	if( !isprop && sgs_ParseIntP( C, key, &idx ) )
-	{
-		if( idx < 0 || idx >= v2arr->size )
-			return SGS_EBOUNDS;
-		sgs_PushVec2p( C, v2arr->data + idx * 2 );
-		return SGS_SUCCESS;
-	}
+	XGM_FLAHDR;
 	
 	if( isprop )
 	{
 		char* str;
 		if( sgs_ParseStringP( C, key, &str, NULL ) )
 		{
-			if( !strcmp( str, "aabb" ) ) return xgm_v2a_getindex_aabb( C, v2arr );
-			if( !strcmp( str, "size" ) ){ sgs_PushInt( C, v2arr->size / 2 ); return SGS_SUCCESS; }
+			if( !strcmp( str, "aabb2" ) ) return xgm_fla_getindex_aabb2( C, flarr );
+			if( !strcmp( str, "size" ) ){ sgs_PushInt( C, flarr->size ); return SGS_SUCCESS; }
+			if( !strcmp( str, "size2" ) ){ sgs_PushInt( C, flarr->size / 2 ); return SGS_SUCCESS; }
+			if( !strcmp( str, "size3" ) ){ sgs_PushInt( C, flarr->size / 3 ); return SGS_SUCCESS; }
+			if( !strcmp( str, "size4" ) ){ sgs_PushInt( C, flarr->size / 4 ); return SGS_SUCCESS; }
+			if( !strcmp( str, "size16" ) ){ sgs_PushInt( C, flarr->size / 16 ); return SGS_SUCCESS; }
 			
-			SGS_CASE( "add" ) SGS_RETURN_CFUNC( xgm_v2a_add )
-			SGS_CASE( "sub" ) SGS_RETURN_CFUNC( xgm_v2a_sub )
-			SGS_CASE( "mul" ) SGS_RETURN_CFUNC( xgm_v2a_mul )
-			SGS_CASE( "div" ) SGS_RETURN_CFUNC( xgm_v2a_div )
+			SGS_CASE( "clear" ) SGS_RETURN_CFUNC( xgm_fla_clear )
+			SGS_CASE( "set1" ) SGS_RETURN_CFUNC( xgm_fla_set1 )
+			SGS_CASE( "negate" ) SGS_RETURN_CFUNC( xgm_fla_negate )
+			
+			SGS_CASE( "assign" ) SGS_RETURN_CFUNC( xgm_fla_assign )
+			SGS_CASE( "negate_from" ) SGS_RETURN_CFUNC( xgm_fla_negate_from )
+			SGS_CASE( "add_assign" ) SGS_RETURN_CFUNC( xgm_fla_add_assign )
+			SGS_CASE( "sub_assign" ) SGS_RETURN_CFUNC( xgm_fla_sub_assign )
+			SGS_CASE( "mul_assign" ) SGS_RETURN_CFUNC( xgm_fla_mul_assign )
+			SGS_CASE( "div_assign" ) SGS_RETURN_CFUNC( xgm_fla_div_assign )
+			SGS_CASE( "mod_assign" ) SGS_RETURN_CFUNC( xgm_fla_mod_assign )
+			SGS_CASE( "pow_assign" ) SGS_RETURN_CFUNC( xgm_fla_pow_assign )
+			
+			SGS_CASE( "add" ) SGS_RETURN_CFUNC( xgm_fla_add )
+			SGS_CASE( "sub" ) SGS_RETURN_CFUNC( xgm_fla_sub )
+			SGS_CASE( "mul" ) SGS_RETURN_CFUNC( xgm_fla_mul )
+			SGS_CASE( "div" ) SGS_RETURN_CFUNC( xgm_fla_div )
+			SGS_CASE( "mod" ) SGS_RETURN_CFUNC( xgm_fla_mod )
+			SGS_CASE( "pow" ) SGS_RETURN_CFUNC( xgm_fla_pow )
+			SGS_CASE( "randbox" ) SGS_RETURN_CFUNC( xgm_fla_randbox )
+			SGS_CASE( "randext" ) SGS_RETURN_CFUNC( xgm_fla_randext )
 		}
 	}
 	
 	return SGS_ENOTFND;
 }
 
-static XGM_VT* _xgm_pushv2a( SGS_CTX, sgs_SizeVal size )
+static XGM_VT* _xgm_pushvxa( SGS_CTX, sgs_SizeVal size, sgs_SizeVal cc )
 {
-	xgm_vtarray* np = (xgm_vtarray*) sgs_PushObjectIPA( C, sizeof(xgm_vtarray), xgm_vec2arr_iface );
-	np->size = size;
-	np->mem = size;
-	np->data = size ? sgs_Alloc_n( XGM_VT, (size_t) np->mem * 2 ) : NULL;
+	xgm_vtarray* np = (xgm_vtarray*) sgs_PushObjectIPA( C, sizeof(xgm_vtarray), xgm_floatarr_iface );
+	np->size = size * cc;
+	np->mem = size * cc;
+	np->data = size ? sgs_Alloc_n( XGM_VT, (size_t)( np->mem * cc ) ) : NULL;
 	return np->data;
+}
+
+static int xgm_floatarray_buffer( SGS_CTX )
+{
+	XGM_VT* data;
+	sgs_Int size;
+	sgs_SizeVal i, sz;
+	SGSFN( "floatarray_buffer" );
+	
+	if( !sgs_LoadArgs( C, "i", &size ) )
+		return 0;
+	sz = (sgs_SizeVal) size;
+	data = _xgm_pushvxa( C, sz, 1 );
+	for( i = 0; i < sz; ++i )
+		data[ i ] = 0;
+	return 1;
+}
+
+static int xgm_floatarray( SGS_CTX )
+{
+	sgs_SizeVal asize;
+	
+	SGSFN( "floatarray" );
+	/* create floatarray from array */
+	if( ( asize = sgs_ArraySize( C, 0 ) ) >= 0 )
+	{
+		XGM_VT* fdata = _xgm_pushvxa( C, asize, 1 );
+		sgs_PushIterator( C, 0 );
+		while( sgs_IterAdvance( C, -1 ) > 0 )
+		{
+			sgs_IterPushData( C, -1, 0, 1 );
+			if( !sgs_ParseVT( C, -1, fdata ) )
+				return XGM_WARNING( "failed to parse array" );
+			fdata++;
+			sgs_Pop( C, 1 );
+		}
+		sgs_Pop( C, 1 );
+		return 1;
+	}
+	
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT || sgs_ItemType( C, 0 ) == SGS_VT_REAL )
+	{
+		sgs_StkIdx i, ssz = sgs_StackSize( C );
+		XGM_VT* fdata = _xgm_pushvxa( C, ssz, 1 );
+		for( i = 0; i < ssz; ++i )
+		{
+			fdata[ 0 ] = (XGM_VT) sgs_GetReal( C, i );
+			fdata++;
+		}
+		return 1;
+	}
+	
+	return XGM_WARNING( "expected array of floats or float list" );
 }
 
 static int xgm_vec2array( SGS_CTX )
 {
 	sgs_SizeVal asize;
 	
+	SGSFN( "vec2array" );
 	/* create vec2array from array */
 	if( ( asize = sgs_ArraySize( C, 0 ) ) >= 0 )
 	{
-		XGM_VT* fdata = _xgm_pushv2a( C, asize );
+		XGM_VT* fdata = _xgm_pushvxa( C, asize, 2 );
 		sgs_PushIterator( C, 0 );
 		while( sgs_IterAdvance( C, -1 ) > 0 )
 		{
@@ -1431,7 +1559,7 @@ static int xgm_vec2array( SGS_CTX )
 	if( sgs_IsObject( C, 0, xgm_vec2_iface ) )
 	{
 		sgs_StkIdx i, ssz = sgs_StackSize( C );
-		XGM_VT* fdata = _xgm_pushv2a( C, ssz );
+		XGM_VT* fdata = _xgm_pushvxa( C, ssz, 2 );
 		for( i = 0; i < ssz; ++i )
 		{
 			if( !sgs_ParseVec2( C, i, fdata, 1 ) )
@@ -1447,7 +1575,7 @@ static int xgm_vec2array( SGS_CTX )
 		XGM_VT* fdata;
 		if( ssz % 2 != 0 )
 			return XGM_WARNING( "scalar argument count not multiple of 2" );
-		fdata = _xgm_pushv2a( C, ssz );
+		fdata = _xgm_pushvxa( C, ssz, 2 );
 		for( i = 0; i < ssz; i += 2 )
 		{
 			fdata[ 0 ] = (XGM_VT) sgs_GetReal( C, i+0 );
@@ -1458,6 +1586,119 @@ static int xgm_vec2array( SGS_CTX )
 	}
 	
 	return XGM_WARNING( "expected array of vec2, array of arrays, vec2 list or float list" );
+}
+
+static int xgm_vec3array( SGS_CTX )
+{
+	sgs_SizeVal asize;
+	
+	SGSFN( "vec3array" );
+	/* create vec3array from array */
+	if( ( asize = sgs_ArraySize( C, 0 ) ) >= 0 )
+	{
+		XGM_VT* fdata = _xgm_pushvxa( C, asize, 3 );
+		sgs_PushIterator( C, 0 );
+		while( sgs_IterAdvance( C, -1 ) > 0 )
+		{
+			sgs_IterPushData( C, -1, 0, 1 );
+			if( !sgs_ParseVec3( C, -1, fdata, 0 ) )
+				return XGM_WARNING( "failed to parse array" );
+			fdata += 3;
+			sgs_Pop( C, 1 );
+		}
+		sgs_Pop( C, 1 );
+		return 1;
+	}
+	
+	/* create vec3array from list of vec3 */
+	if( sgs_IsObject( C, 0, xgm_vec3_iface ) )
+	{
+		sgs_StkIdx i, ssz = sgs_StackSize( C );
+		XGM_VT* fdata = _xgm_pushvxa( C, ssz, 3 );
+		for( i = 0; i < ssz; ++i )
+		{
+			if( !sgs_ParseVec3( C, i, fdata, 1 ) )
+				return sgs_Msg( C, SGS_WARNING, "failed to parse argument %d as vec3", i + 1 );
+			fdata += 3;
+		}
+		return 1;
+	}
+	
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT || sgs_ItemType( C, 0 ) == SGS_VT_REAL )
+	{
+		sgs_StkIdx i, ssz = sgs_StackSize( C );
+		XGM_VT* fdata;
+		if( ssz % 3 != 0 )
+			return XGM_WARNING( "scalar argument count not multiple of 3" );
+		fdata = _xgm_pushvxa( C, ssz, 3 );
+		for( i = 0; i < ssz; i += 3 )
+		{
+			fdata[ 0 ] = (XGM_VT) sgs_GetReal( C, i+0 );
+			fdata[ 1 ] = (XGM_VT) sgs_GetReal( C, i+1 );
+			fdata[ 2 ] = (XGM_VT) sgs_GetReal( C, i+2 );
+			fdata += 3;
+		}
+		return 1;
+	}
+	
+	return XGM_WARNING( "expected array of vec3, array of arrays, vec3 list or float list" );
+}
+
+static int xgm_vec4array( SGS_CTX )
+{
+	sgs_SizeVal asize;
+	
+	SGSFN( "vec4array" );
+	/* create vec4array from array */
+	if( ( asize = sgs_ArraySize( C, 0 ) ) >= 0 )
+	{
+		XGM_VT* fdata = _xgm_pushvxa( C, asize, 4 );
+		sgs_PushIterator( C, 0 );
+		while( sgs_IterAdvance( C, -1 ) > 0 )
+		{
+			sgs_IterPushData( C, -1, 0, 1 );
+			if( !sgs_ParseVec4( C, -1, fdata, 0 ) )
+				return XGM_WARNING( "failed to parse array" );
+			fdata += 4;
+			sgs_Pop( C, 1 );
+		}
+		sgs_Pop( C, 1 );
+		return 1;
+	}
+	
+	/* create vec4array from list of vec4 */
+	if( sgs_IsObject( C, 0, xgm_vec4_iface ) )
+	{
+		sgs_StkIdx i, ssz = sgs_StackSize( C );
+		XGM_VT* fdata = _xgm_pushvxa( C, ssz, 4 );
+		for( i = 0; i < ssz; ++i )
+		{
+			if( !sgs_ParseVec4( C, i, fdata, 1 ) )
+				return sgs_Msg( C, SGS_WARNING, "failed to parse argument %d as vec4", i + 1 );
+			fdata += 4;
+		}
+		return 1;
+	}
+	
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT || sgs_ItemType( C, 0 ) == SGS_VT_REAL )
+	{
+		sgs_StkIdx i, ssz = sgs_StackSize( C );
+		XGM_VT* fdata;
+		if( ssz % 4 != 0 )
+			return XGM_WARNING( "scalar argument count not multiple of 4" );
+		fdata = _xgm_pushvxa( C, ssz, 4 );
+		for( i = 0; i < ssz; i += 4 )
+		{
+			fdata[ 0 ] = (XGM_VT) sgs_GetReal( C, i+0 );
+			fdata[ 1 ] = (XGM_VT) sgs_GetReal( C, i+1 );
+			fdata[ 2 ] = (XGM_VT) sgs_GetReal( C, i+2 );
+			fdata[ 3 ] = (XGM_VT) sgs_GetReal( C, i+3 );
+			fdata += 4;
+		}
+		return 1;
+	}
+	
+	return XGM_WARNING( "expected array of vec4, array of arrays, vec4 list or float list" );
 }
 
 
@@ -1516,12 +1757,12 @@ sgs_ObjInterface xgm_mat4_iface[1] =
 	NULL, NULL
 }};
 
-sgs_ObjInterface xgm_vec2arr_iface[1] =
+sgs_ObjInterface xgm_floatarr_iface[1] =
 {{
 	"vec2array",
-	xgm_v2a_destruct, NULL,
-	xgm_v2a_getindex, xgm_v2a_setindex,
-	xgm_v2a_convert, xgm_v2a_serialize, xgm_v2a_dump, NULL,
+	xgm_fla_destruct, NULL,
+	xgm_fla_getindex, NULL,
+	xgm_fla_convert, xgm_fla_serialize, xgm_fla_dump, NULL,
 	NULL, NULL
 }};
 
@@ -1582,13 +1823,13 @@ void sgs_InitMat4( SGS_CTX, sgs_Variable* var, XGM_VT* v16f, int transpose )
 		memcpy( nv, v16f, sizeof(XGM_VT) * 16 );
 }
 
-void sgs_InitVec2Array( SGS_CTX, sgs_Variable* var, XGM_VT* v2fn, sgs_SizeVal size )
+void sgs_InitFloatArray( SGS_CTX, sgs_Variable* var, XGM_VT* vfn, sgs_SizeVal size )
 {
-	xgm_vtarray* np = (xgm_vtarray*) sgs_InitObjectIPA( C, var, sizeof(xgm_vtarray), xgm_vec2arr_iface );
+	xgm_vtarray* np = (xgm_vtarray*) sgs_InitObjectIPA( C, var, sizeof(xgm_vtarray), xgm_floatarr_iface );
 	np->size = size;
 	np->mem = size;
-	np->data = size ? sgs_Alloc_n( XGM_VT, (size_t) np->mem * 2 ) : NULL;
-	memcpy( np->data, v2fn, sizeof( XGM_VT ) * (size_t) np->mem * 2 );
+	np->data = size ? sgs_Alloc_n( XGM_VT, (size_t) np->mem ) : NULL;
+	memcpy( np->data, vfn, sizeof( XGM_VT ) * (size_t) np->mem );
 }
 
 
@@ -1701,13 +1942,13 @@ void sgs_PushMat4( SGS_CTX, XGM_VT* v16f, int transpose )
 		memcpy( nv, v16f, sizeof(XGM_VT) * 16 );
 }
 
-void sgs_PushVec2Array( SGS_CTX, XGM_VT* v2fn, sgs_SizeVal size )
+void sgs_PushFloatArray( SGS_CTX, XGM_VT* vfn, sgs_SizeVal size )
 {
-	xgm_vtarray* np = (xgm_vtarray*) sgs_PushObjectIPA( C, sizeof(xgm_vtarray), xgm_vec2arr_iface );
+	xgm_vtarray* np = (xgm_vtarray*) sgs_PushObjectIPA( C, sizeof(xgm_vtarray), xgm_floatarr_iface );
 	np->size = size;
 	np->mem = size;
-	np->data = size ? sgs_Alloc_n( XGM_VT, (size_t) np->mem * 2 ) : NULL;
-	memcpy( np->data, v2fn, sizeof( XGM_VT ) * (size_t) np->mem * 2 );
+	np->data = size ? sgs_Alloc_n( XGM_VT, (size_t) np->mem ) : NULL;
+	memcpy( np->data, vfn, sizeof( XGM_VT ) * (size_t) np->mem );
 }
 
 
@@ -1858,9 +2099,9 @@ SGSBOOL sgs_ParseMat4P( SGS_CTX, sgs_Variable* var, XGM_VT* v16f )
 	return 0;
 }
 
-SGSBOOL sgs_ParseVec2ArrayP( SGS_CTX, sgs_Variable* var, XGM_VT** v2fa, sgs_SizeVal* osz )
+SGSBOOL sgs_ParseFloatArrayP( SGS_CTX, sgs_Variable* var, XGM_VT** v2fa, sgs_SizeVal* osz )
 {
-	if( sgs_IsObjectP( var, xgm_vec2arr_iface ) )
+	if( sgs_IsObjectP( var, xgm_floatarr_iface ) )
 	{
 		xgm_vtarray* data = (xgm_vtarray*) sgs_GetObjectDataP( var );
 		if( v2fa ) *v2fa = data->data;
@@ -1906,10 +2147,10 @@ SGSBOOL sgs_ParseMat4( SGS_CTX, sgs_StkIdx item, XGM_VT* v16f )
 	return sgs_PeekStackItem( C, item, &tmp ) && sgs_ParseMat4P( C, &tmp, v16f );
 }
 
-SGSBOOL sgs_ParseVec2Array( SGS_CTX, sgs_StkIdx item, XGM_VT** v2fa, sgs_SizeVal* osz )
+SGSBOOL sgs_ParseFloatArray( SGS_CTX, sgs_StkIdx item, XGM_VT** v2fa, sgs_SizeVal* osz )
 {
 	sgs_Variable tmp;
-	return sgs_PeekStackItem( C, item, &tmp ) && sgs_ParseVec2ArrayP( C, &tmp, v2fa, osz );
+	return sgs_PeekStackItem( C, item, &tmp ) && sgs_ParseFloatArrayP( C, &tmp, v2fa, osz );
 }
 
 
@@ -2029,20 +2270,21 @@ int sgs_ArgCheck_Mat4( SGS_CTX, int argid, va_list* args, int flags )
 	return sgs_ArgErrorExt( C, argid, 0, "mat4", "" );
 }
 
-int sgs_ArgCheck_Vec2Array( SGS_CTX, int argid, va_list* args, int flags )
+int sgs_ArgCheck_FloatArray( SGS_CTX, int argid, va_list* args, int flags )
 {
-	if( sgs_ParseVec2Array( C, argid, NULL, NULL ) )
+	xgm_vtarray** out = NULL;
+	if( flags & SGS_LOADARG_WRITE )
+		out = va_arg( *args, xgm_vtarray** );
+	
+	if( sgs_ParseFloatArray( C, argid, NULL, NULL ) )
 	{
-		if( flags & SGS_LOADARG_WRITE )
-		{
-			xgm_vtarray** out = va_arg( *args, xgm_vtarray** );
+		if( out )
 			*out = (xgm_vtarray*) sgs_GetObjectData( C, argid );
-		}
 		return 1;
 	}
 	if( flags & SGS_LOADARG_OPTIONAL )
 		return 1;
-	return sgs_ArgErrorExt( C, argid, 0, "vec2array", "" );
+	return sgs_ArgErrorExt( C, argid, 0, "floatarray", "" );
 }
 
 
@@ -2066,7 +2308,11 @@ static sgs_RegFuncConst xgm_fconsts[] =
 	
 	{ "mat4", xgm_mat4 },
 	
+	{ "floatarray_buffer", xgm_floatarray_buffer },
+	{ "floatarray", xgm_floatarray },
 	{ "vec2array", xgm_vec2array },
+	{ "vec3array", xgm_vec3array },
+	{ "vec4array", xgm_vec4array },
 };
 
 
@@ -2079,7 +2325,7 @@ SGS_APIFUNC int xgm_module_entry_point( SGS_CTX )
 	sgs_RegisterType( C, "aabb2", xgm_aabb2_iface );
 	sgs_RegisterType( C, "color", xgm_color_iface );
 	sgs_RegisterType( C, "vec4", xgm_vec4_iface );
-	sgs_RegisterType( C, "vec2array", xgm_vec2arr_iface );
+	sgs_RegisterType( C, "floatarray", xgm_floatarr_iface );
 	return SGS_SUCCESS;
 }
 
