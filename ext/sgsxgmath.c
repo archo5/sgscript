@@ -1428,6 +1428,36 @@ static XGM_VT randlerp( XGM_VT A, XGM_VT B ){ XGM_VT t = (XGM_VT) rand() / (XGM_
 XGM_FLA_TEROPMETHOD( randbox, R = randlerp( A, B ) );
 XGM_FLA_TEROPMETHOD( randext, R = randlerp( A - B, A + B ) );
 
+#define XGM_FLA_CONVMETHOD( opname, typename ) \
+static int xgm_fla_##opname( SGS_CTX ) \
+{ \
+	float scale = 1; \
+	sgs_SizeVal i; \
+	typename* data; \
+	XGM_FLA_IHDR( opname ) \
+	if( !sgs_LoadArgs( C, "|f", &scale ) ) \
+		return 0; \
+	 \
+	sgs_PushStringBuf( C, NULL, (sgs_SizeVal) ( sizeof(typename) * (size_t) flarr->size ) ); \
+	data = (typename*) sgs_GetStringPtr( C, -1 ); \
+	for( i = 0; i < flarr->size; ++i ) \
+	{ \
+		data[ i ] = (typename) ( flarr->data[ i ] * scale ); \
+	} \
+	return 1; \
+}
+
+XGM_FLA_CONVMETHOD( to_int8_buffer, int8_t );
+XGM_FLA_CONVMETHOD( to_int16_buffer, int16_t );
+XGM_FLA_CONVMETHOD( to_int32_buffer, int32_t );
+XGM_FLA_CONVMETHOD( to_int64_buffer, int64_t );
+XGM_FLA_CONVMETHOD( to_uint8_buffer, uint8_t );
+XGM_FLA_CONVMETHOD( to_uint16_buffer, uint16_t );
+XGM_FLA_CONVMETHOD( to_uint32_buffer, uint32_t );
+XGM_FLA_CONVMETHOD( to_uint64_buffer, uint64_t );
+XGM_FLA_CONVMETHOD( to_float32_buffer, float );
+XGM_FLA_CONVMETHOD( to_float64_buffer, double );
+
 static int xgm_fla_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
 {
 	XGM_FLAHDR;
@@ -1465,6 +1495,17 @@ static int xgm_fla_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int i
 			SGS_CASE( "pow" ) SGS_RETURN_CFUNC( xgm_fla_pow )
 			SGS_CASE( "randbox" ) SGS_RETURN_CFUNC( xgm_fla_randbox )
 			SGS_CASE( "randext" ) SGS_RETURN_CFUNC( xgm_fla_randext )
+			
+			SGS_CASE( "to_int8_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_int8_buffer )
+			SGS_CASE( "to_int16_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_int16_buffer )
+			SGS_CASE( "to_int32_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_int32_buffer )
+			SGS_CASE( "to_int64_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_int64_buffer )
+			SGS_CASE( "to_uint8_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_uint8_buffer )
+			SGS_CASE( "to_uint16_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_uint16_buffer )
+			SGS_CASE( "to_uint32_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_uint32_buffer )
+			SGS_CASE( "to_uint64_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_uint64_buffer )
+			SGS_CASE( "to_float32_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_float32_buffer )
+			SGS_CASE( "to_float64_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_float64_buffer )
 		}
 	}
 	
@@ -1700,6 +1741,34 @@ static int xgm_vec4array( SGS_CTX )
 	
 	return XGM_WARNING( "expected array of vec4, array of arrays, vec4 list or float list" );
 }
+
+#define XGM_FLA_BUFCREATEFUNC( funcname, typename ) \
+static int xgm_##funcname( SGS_CTX ) \
+{ \
+	float scale = 1; \
+	sgs_SizeVal i, bufsize, offset = 0, stride = 1; \
+	typename* bufdata; \
+	XGM_VT* data; \
+	if( !sgs_LoadArgs( C, "m|fll", &bufdata, &bufsize, &scale, &stride, &offset ) ) \
+		return 0; \
+	 \
+	bufsize /= (sgs_SizeVal) sizeof( typename ); \
+	data = _xgm_pushvxa( C, bufsize, 1 ); \
+	for( i = offset; i < bufsize; i += stride ) \
+		*data++ = scale * (XGM_VT) bufdata[ i ]; \
+	return 1; \
+}
+
+XGM_FLA_BUFCREATEFUNC( floatarray_from_int8_buffer, int8_t );
+XGM_FLA_BUFCREATEFUNC( floatarray_from_int16_buffer, int16_t );
+XGM_FLA_BUFCREATEFUNC( floatarray_from_int32_buffer, int32_t );
+XGM_FLA_BUFCREATEFUNC( floatarray_from_int64_buffer, int64_t );
+XGM_FLA_BUFCREATEFUNC( floatarray_from_uint8_buffer, uint8_t );
+XGM_FLA_BUFCREATEFUNC( floatarray_from_uint16_buffer, uint16_t );
+XGM_FLA_BUFCREATEFUNC( floatarray_from_uint32_buffer, uint32_t );
+XGM_FLA_BUFCREATEFUNC( floatarray_from_uint64_buffer, uint64_t );
+XGM_FLA_BUFCREATEFUNC( floatarray_from_float32_buffer, float );
+XGM_FLA_BUFCREATEFUNC( floatarray_from_float64_buffer, double );
 
 
 
@@ -2313,6 +2382,16 @@ static sgs_RegFuncConst xgm_fconsts[] =
 	{ "vec2array", xgm_vec2array },
 	{ "vec3array", xgm_vec3array },
 	{ "vec4array", xgm_vec4array },
+	{ "floatarray_from_int8_buffer", xgm_floatarray_from_int8_buffer },
+	{ "floatarray_from_int16_buffer", xgm_floatarray_from_int16_buffer },
+	{ "floatarray_from_int32_buffer", xgm_floatarray_from_int32_buffer },
+	{ "floatarray_from_int64_buffer", xgm_floatarray_from_int64_buffer },
+	{ "floatarray_from_uint8_buffer", xgm_floatarray_from_uint8_buffer },
+	{ "floatarray_from_uint16_buffer", xgm_floatarray_from_uint16_buffer },
+	{ "floatarray_from_uint32_buffer", xgm_floatarray_from_uint32_buffer },
+	{ "floatarray_from_uint64_buffer", xgm_floatarray_from_uint64_buffer },
+	{ "floatarray_from_float32_buffer", xgm_floatarray_from_float32_buffer },
+	{ "floatarray_from_float64_buffer", xgm_floatarray_from_float64_buffer },
 };
 
 
