@@ -1508,7 +1508,35 @@ static int xgm_fla_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int i
 			SGS_CASE( "to_float64_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_float64_buffer )
 		}
 	}
+	else
+	{
+		sgs_SizeVal pos = (sgs_SizeVal) sgs_GetIntP( C, key );
+		if( pos < 0 || pos > flarr->size )
+			return SGS_ENOTFND;
+		sgs_PushReal( C, flarr->data[ pos ] );
+		return SGS_SUCCESS;
+	}
 	
+	return SGS_ENOTFND;
+}
+
+static int xgm_fla_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int isprop )
+{
+	sgs_Real val;
+	XGM_FLAHDR;
+	if( key->type == SGS_VT_INT )
+	{
+		sgs_SizeVal pos = (sgs_SizeVal) sgs_GetIntP( C, key );
+		if( pos < 0 || pos > flarr->size )
+			return SGS_ENOTFND;
+		if( sgs_ParseRealP( C, vv, &val ) )
+		{
+			flarr->data[ pos ] = (XGM_VT) val;
+			return SGS_SUCCESS;
+		}
+		else
+			return SGS_EINVAL;
+	}
 	return SGS_ENOTFND;
 }
 
@@ -1830,7 +1858,7 @@ sgs_ObjInterface xgm_floatarr_iface[1] =
 {{
 	"vec2array",
 	xgm_fla_destruct, NULL,
-	xgm_fla_getindex, NULL,
+	xgm_fla_getindex, xgm_fla_setindex,
 	xgm_fla_convert, xgm_fla_serialize, xgm_fla_dump, NULL,
 	NULL, NULL
 }};
