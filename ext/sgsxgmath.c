@@ -1800,6 +1800,34 @@ XGM_FLA_BUFCREATEFUNC( floatarray_from_float64_buffer, double );
 
 
 
+/* UTILITY FUNCTIONS */
+
+static int xgm_ray_plane_intersect( SGS_CTX )
+{
+	/* vec3 ray_pos, vec3 ray_dir, vec4 plane; returns <distance to intersection, signed origin distance from plane> / <false> on (near-)parallel */
+	XGM_VT pos[3], dir[3], plane[4], sigdst, dirdot;
+	SGSFN( "ray_plane_intersect" );
+	if( !sgs_LoadArgs( C, "xxx", sgs_ArgCheck_Vec3, pos, sgs_ArgCheck_Vec3, dir, sgs_ArgCheck_Vec4, plane ) )
+		return 0;
+	
+	sigdst = XGM_VMUL_INNER3( pos, plane ) - plane[3];
+	dirdot = XGM_VMUL_INNER3( dir, plane );
+	
+	if( fabs( dirdot ) < XGM_SMALL_VT )
+	{
+		sgs_PushBool( C, 0 );
+		return 1;
+	}
+	else
+	{
+		sgs_PushReal( C, -sigdst / dirdot );
+		sgs_PushReal( C, sigdst );
+		return 2;
+	}
+}
+
+
+
 sgs_ObjInterface xgm_vec2_iface[1] =
 {{
 	"vec2",
@@ -2420,6 +2448,8 @@ static sgs_RegFuncConst xgm_fconsts[] =
 	{ "floatarray_from_uint64_buffer", xgm_floatarray_from_uint64_buffer },
 	{ "floatarray_from_float32_buffer", xgm_floatarray_from_float32_buffer },
 	{ "floatarray_from_float64_buffer", xgm_floatarray_from_float64_buffer },
+	
+	{ "ray_plane_intersect", xgm_ray_plane_intersect },
 };
 
 

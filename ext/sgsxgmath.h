@@ -19,6 +19,8 @@ extern "C" {
 #define XGM_VT float
 #endif
 
+#define XGM_SMALL_VT 0.0001f
+
 
 typedef struct _xgm_vtarray
 {
