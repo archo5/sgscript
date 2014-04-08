@@ -133,28 +133,53 @@ static int xgm_v2_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 	return SGS_ENOTFND;
 }
 
-static int xgm_v2_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_v2_setindex( SGS_ARGS_SETINDEXFUNC )
 {
-	sgs_Real val;
-	XGM_OHDR;
+	XGM_VT* hdr = (XGM_VT*) obj->data;
 	
-	if( !sgs_ParseRealP( C, vv, &val ) )
-		return SGS_EINVAL;
 	if( key->type == SGS_VT_INT )
 	{
+		sgs_Real vv;
+		if( !sgs_ParseRealP( C, val, &vv ) )
+			return SGS_EINVAL;
 		sgs_Int pos = sgs_GetIntP( C, key );
 		if( pos != 0 && pos != 1 )
 			return SGS_ENOTFND;
-		hdr[ pos ] = (XGM_VT) val;
+		hdr[ pos ] = (XGM_VT) vv;
 		return SGS_SUCCESS;
 	}
 	else
 	{
+		sgs_Real vv;
 		char* str;
 		if( !sgs_ParseStringP( C, key, &str, NULL ) )
 			return SGS_EINVAL;
-		if( !strcmp( str, "x" ) ){ hdr[0] = (XGM_VT) val; return SGS_SUCCESS; }
-		if( !strcmp( str, "y" ) ){ hdr[1] = (XGM_VT) val; return SGS_SUCCESS; }
+		SGS_CASE( "x" )
+		{
+			if( !sgs_ParseRealP( C, val, &vv ) )
+				return SGS_EINVAL;
+			hdr[0] = (XGM_VT) vv;
+			return SGS_SUCCESS;
+		}
+		SGS_CASE( "y" )
+		{
+			if( !sgs_ParseRealP( C, val, &vv ) )
+				return SGS_EINVAL;
+			hdr[1] = (XGM_VT) vv;
+			return SGS_SUCCESS;
+		}
+		SGS_CASE( "angle" )
+		{
+			if( !sgs_ParseRealP( C, val, &vv ) )
+				return SGS_EINVAL;
+			XGM_VT curang = (XGM_VT) atan2( hdr[1], hdr[0] );
+			XGM_VT c = (XGM_VT) cos( (XGM_VT) vv - curang );
+			XGM_VT s = (XGM_VT) sin( (XGM_VT) vv - curang );
+			XGM_VT x = hdr[0] * c - hdr[1] * s,
+			       y = hdr[0] * s + hdr[1] * c;
+			hdr[0] = x; hdr[1] = y;
+			return SGS_SUCCESS;
+		}
 	}
 	return SGS_ENOTFND;
 }
@@ -1056,6 +1081,14 @@ typedef XGM_VT VEC3[3];
 typedef XGM_VT VEC4[4];
 typedef VEC4 MAT4[4];
 
+#define MAT4_DUMP( M ) \
+	puts( "--- MATRIX DUMP ---" ); \
+	printf( "%g %g %g %g\n", M[0][0], M[0][1], M[0][2], M[0][3] ); \
+	printf( "%g %g %g %g\n", M[1][0], M[1][1], M[1][2], M[1][3] ); \
+	printf( "%g %g %g %g\n", M[2][0], M[2][1], M[2][2], M[2][3] ); \
+	printf( "%g %g %g %g\n", M[3][0], M[3][1], M[3][2], M[3][3] ); \
+	puts( "--- --- END --- ---" );
+
 void MAT4_Transpose( MAT4 mtx )
 {
 	XGM_VT tmp;
@@ -1071,22 +1104,24 @@ void MAT4_Transpose( MAT4 mtx )
 
 void MAT4_Multiply( MAT4 out, MAT4 A, MAT4 B )
 {
-	out[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0] + A[0][3] * B[3][0];
-	out[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1] + A[0][3] * B[3][1];
-	out[0][2] = A[0][0] * B[0][2] + A[0][1] * B[1][2] + A[0][2] * B[2][2] + A[0][3] * B[3][2];
-	out[0][3] = A[0][0] * B[0][3] + A[0][1] * B[1][3] + A[0][2] * B[2][3] + A[0][3] * B[3][3];
-	out[1][0] = A[1][0] * B[0][0] + A[1][1] * B[1][0] + A[1][2] * B[2][0] + A[1][3] * B[3][0];
-	out[1][1] = A[1][0] * B[0][1] + A[1][1] * B[1][1] + A[1][2] * B[2][1] + A[1][3] * B[3][1];
-	out[1][2] = A[1][0] * B[0][2] + A[1][1] * B[1][2] + A[1][2] * B[2][2] + A[1][3] * B[3][2];
-	out[1][3] = A[1][0] * B[0][3] + A[1][1] * B[1][3] + A[1][2] * B[2][3] + A[1][3] * B[3][3];
-	out[2][0] = A[2][0] * B[0][0] + A[2][1] * B[1][0] + A[2][2] * B[2][0] + A[2][3] * B[3][0];
-	out[2][1] = A[2][0] * B[0][1] + A[2][1] * B[1][1] + A[2][2] * B[2][1] + A[2][3] * B[3][1];
-	out[2][2] = A[2][0] * B[0][2] + A[2][1] * B[1][2] + A[2][2] * B[2][2] + A[2][3] * B[3][2];
-	out[2][3] = A[2][0] * B[0][3] + A[2][1] * B[1][3] + A[2][2] * B[2][3] + A[2][3] * B[3][3];
-	out[3][0] = A[3][0] * B[0][0] + A[3][1] * B[1][0] + A[3][2] * B[2][0] + A[3][3] * B[3][0];
-	out[3][1] = A[3][0] * B[0][1] + A[3][1] * B[1][1] + A[3][2] * B[2][1] + A[3][3] * B[3][1];
-	out[3][2] = A[3][0] * B[0][2] + A[3][1] * B[1][2] + A[3][2] * B[2][2] + A[3][3] * B[3][2];
-	out[3][3] = A[3][0] * B[0][3] + A[3][1] * B[1][3] + A[3][2] * B[2][3] + A[3][3] * B[3][3];
+	MAT4 tmp;
+	tmp[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0] + A[0][3] * B[3][0];
+	tmp[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1] + A[0][3] * B[3][1];
+	tmp[0][2] = A[0][0] * B[0][2] + A[0][1] * B[1][2] + A[0][2] * B[2][2] + A[0][3] * B[3][2];
+	tmp[0][3] = A[0][0] * B[0][3] + A[0][1] * B[1][3] + A[0][2] * B[2][3] + A[0][3] * B[3][3];
+	tmp[1][0] = A[1][0] * B[0][0] + A[1][1] * B[1][0] + A[1][2] * B[2][0] + A[1][3] * B[3][0];
+	tmp[1][1] = A[1][0] * B[0][1] + A[1][1] * B[1][1] + A[1][2] * B[2][1] + A[1][3] * B[3][1];
+	tmp[1][2] = A[1][0] * B[0][2] + A[1][1] * B[1][2] + A[1][2] * B[2][2] + A[1][3] * B[3][2];
+	tmp[1][3] = A[1][0] * B[0][3] + A[1][1] * B[1][3] + A[1][2] * B[2][3] + A[1][3] * B[3][3];
+	tmp[2][0] = A[2][0] * B[0][0] + A[2][1] * B[1][0] + A[2][2] * B[2][0] + A[2][3] * B[3][0];
+	tmp[2][1] = A[2][0] * B[0][1] + A[2][1] * B[1][1] + A[2][2] * B[2][1] + A[2][3] * B[3][1];
+	tmp[2][2] = A[2][0] * B[0][2] + A[2][1] * B[1][2] + A[2][2] * B[2][2] + A[2][3] * B[3][2];
+	tmp[2][3] = A[2][0] * B[0][3] + A[2][1] * B[1][3] + A[2][2] * B[2][3] + A[2][3] * B[3][3];
+	tmp[3][0] = A[3][0] * B[0][0] + A[3][1] * B[1][0] + A[3][2] * B[2][0] + A[3][3] * B[3][0];
+	tmp[3][1] = A[3][0] * B[0][1] + A[3][1] * B[1][1] + A[3][2] * B[2][1] + A[3][3] * B[3][1];
+	tmp[3][2] = A[3][0] * B[0][2] + A[3][1] * B[1][2] + A[3][2] * B[2][2] + A[3][3] * B[3][2];
+	tmp[3][3] = A[3][0] * B[0][3] + A[3][1] * B[1][3] + A[3][2] * B[2][3] + A[3][3] * B[3][3];
+	memcpy( out, tmp, sizeof(tmp) );
 };
 
 int MAT4_Invert( MAT4 out, MAT4 M )
@@ -1403,7 +1438,7 @@ static int xgm_m4i_translate( SGS_CTX )
 		return 0;
 	
 	MAT4_Translate( tmp, x, y, z );
-	if( reset )
+	if( !reset )
 		MAT4_Multiply( *M, *M, tmp );
 	else
 		memcpy( *M, tmp, sizeof(tmp) );
@@ -1422,7 +1457,7 @@ static int xgm_m4i_translate_v3( SGS_CTX )
 		return 0;
 	
 	MAT4_Translate( tmp, v3[0], v3[1], v3[2] );
-	if( reset )
+	if( !reset )
 		MAT4_Multiply( *M, *M, tmp );
 	else
 		memcpy( *M, tmp, sizeof(tmp) );
@@ -1441,7 +1476,7 @@ static int xgm_m4i_rotateX( SGS_CTX )
 		return 0;
 	
 	MAT4_RotateDefaultAxis( tmp, 1, 2, angle );
-	if( reset )
+	if( !reset )
 		MAT4_Multiply( *M, *M, tmp );
 	else
 		memcpy( *M, tmp, sizeof(tmp) );
@@ -1460,7 +1495,7 @@ static int xgm_m4i_rotateY( SGS_CTX )
 		return 0;
 	
 	MAT4_RotateDefaultAxis( tmp, 0, 2, angle );
-	if( reset )
+	if( !reset )
 		MAT4_Multiply( *M, *M, tmp );
 	else
 		memcpy( *M, tmp, sizeof(tmp) );
@@ -1479,7 +1514,7 @@ static int xgm_m4i_rotateZ( SGS_CTX )
 		return 0;
 	
 	MAT4_RotateDefaultAxis( tmp, 0, 1, angle );
-	if( reset )
+	if( !reset )
 		MAT4_Multiply( *M, *M, tmp );
 	else
 		memcpy( *M, tmp, sizeof(tmp) );
@@ -1498,7 +1533,7 @@ static int xgm_m4i_rotate_axis_angle( SGS_CTX )
 		return 0;
 	
 	MAT4_RotateAxisAngle( tmp, x, y, z, angle );
-	if( reset )
+	if( !reset )
 		MAT4_Multiply( *M, *M, tmp );
 	else
 		memcpy( *M, tmp, sizeof(tmp) );
@@ -1517,7 +1552,7 @@ static int xgm_m4i_rotate_axis_angle_v3( SGS_CTX )
 		return 0;
 	
 	MAT4_RotateAxisAngle( tmp, v3[0], v3[1], v3[2], angle );
-	if( reset )
+	if( !reset )
 		MAT4_Multiply( *M, *M, tmp );
 	else
 		memcpy( *M, tmp, sizeof(tmp) );
@@ -1536,7 +1571,7 @@ static int xgm_m4i_scale( SGS_CTX )
 		return 0;
 	
 	MAT4_Scale( tmp, x, y, z );
-	if( reset )
+	if( !reset )
 		MAT4_Multiply( *M, *M, tmp );
 	else
 		memcpy( *M, tmp, sizeof(tmp) );
@@ -1555,7 +1590,7 @@ static int xgm_m4i_scale_v3( SGS_CTX )
 		return 0;
 	
 	MAT4_Scale( tmp, v3[0], v3[1], v3[2] );
-	if( reset )
+	if( !reset )
 		MAT4_Multiply( *M, *M, tmp );
 	else
 		memcpy( *M, tmp, sizeof(tmp) );
