@@ -179,6 +179,12 @@ function cppbc_remove_blocks( code )
 }
 
 
+function cppbc_type_is_voidptr( type )
+{
+	return string_replace( type, [" ","\t","\n","\r"], "" ) == "void*";
+}
+
+
 function cppbc_fix_type( type )
 {
 	if( type[ type.length - 1 ] == ">" )
@@ -384,6 +390,14 @@ function cppbc_split_cs( code )
 function cppbc_examine_method( code )
 {
 	code = string_trim( code );
+	if( string_find( code, "SGS_ALIAS" ) === 0 )
+	{
+		inbr = string_find( code, "(" );
+		outbr = string_find_rev( code, ")" );
+		code = string_part( code, inbr + 1, outbr - inbr - 1 );
+		code = string_trim( code );
+	}
+	
 	ispmatch = re_match( code, "#([a-zA-Z0-9_]+)[ \t\v\r\n]*\\(#", RE_RETURN_BOTH );
 	
 	if( ispmatch === false )
@@ -641,7 +655,7 @@ function cppbc_generate_code( objects, includes )
 				
 				line $= string_format( "sgs_GetVar{3}<{1}>()(C,{2})", cppbc_fix_type( ptype ), i + 1, getvar3rd );
 			}
-			line = string_format( "data->{1}({2})", item.name, line );
+			line = string_format( "data->{1}( {2} )", item.name, line );
 			retval = 0;
 			if( item.type != "void" )
 			{
@@ -655,11 +669,7 @@ function cppbc_generate_code( objects, includes )
 "
 static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 {
-	int method_call = sgs_Method( C );
-	sgs_FuncName( C, method_call ? \"%OBJ%.%NAME%\" : \"%OBJ%_%NAME%\" );
-	if( !sgs_IsObject( C, 0, %OBJ%::_sgs_interface ) )
-		return sgs_ArgErrorExt( C, 0, method_call, \"%OBJ%\", \"\" );
-	%OBJ%* data = static_cast<%OBJ%*>( sgs_GetObjectData( C, 0 ) );
+	%OBJ%* data; if( !SGS_PARSE_METHOD( C, %OBJ%::_sgs_interface, data, %OBJ%, %NAME% ) ) return 0;
 	%LINE%
 	return %RETVAL%;
 }
@@ -682,11 +692,9 @@ int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
 		// - OP_GETINDEX
 		out $=
 "
-int " $ obj.name $ "::_sgs_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int param )
+int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 {
-	char* name;
-	if( sgs_ParseStringP( C, key, &name, NULL ) )
-	{";
+	SGS_BEGIN_INDEXFUNC";
 		foreach( item : obj.items )
 		{
 			itemline = null;
@@ -695,14 +703,14 @@ int " $ obj.name $ "::_sgs_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key
 			else if( item.what == "PROPERTY" )
 			{
 				if( item.access <= 0 )
-					itemline = "sgs_PushVar( C, static_cast<%OBJ%*>( obj->data )->%NAME% );";
+					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->%NAME% );";
 			}
 			else if( item.what == "PROPERTY_FUNC" )
 			{
 				if( item.read === true )
-					itemline = "sgs_PushVar( C, static_cast<%OBJ%*>( obj->data )->%NAME% );";
+					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->%NAME% );";
 				else if( item.read )
-					itemline = "sgs_PushVar( C, static_cast<%OBJ%*>( obj->data )->"$item.read$"() );";
+					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.read$"() );";
 				if( item.readcb )
 					itemline $= "\n\t\t\tstatic_cast<%OBJ%*>( obj->data )->"$item.readcb$"();";
 			}
@@ -710,64 +718,56 @@ int " $ obj.name $ "::_sgs_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key
 			if( itemline )
 			{
 				out $= string_translate( "
-		if( strcmp( name, \"%NAME%\" ) == 0 )
-		{
-			"$itemline$"
-			return SGS_SUCCESS;
-		}"
-				, { "%OBJ%" = obj.name, "%NAME%" = item.name } );
+		SGS_CASE( \"%NAME%\" ){ "$itemline$" return SGS_SUCCESS; }"
+				, {
+					"%OBJ%" = obj.name,
+					"%NAME%" = item.name,
+					"%TYPEFUNC%" = if( cppbc_type_is_voidptr( item.type ), "sgs_PushPtr", "sgs_PushVar" ),
+				} );
 			}
 		}
 		out $= "
-	}
-	return SGS_ENOTFND;
+	SGS_END_INDEXFUNC;
 }
 ";
 		
 		// - OP_SETINDEX
 		out $=
 "
-int " $ obj.name $ "::_sgs_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int isprop )
+int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 {
-	char* name;
-	if( sgs_ParseStringP( C, key, &name, NULL ) )
-	{";
+	SGS_BEGIN_INDEXFUNC";
 		foreach( item : obj.items )
 		{
 			itemline = null;
 			if( item.what == "PROPERTY" )
 			{
 				if( item.access >= 0 )
-					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVarP<%TYPE%>()( C, val%ISOBJ% );";
+					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = %TYPEFUNC%( C, val%ISOBJ% );";
 			}
 			else if( item.what == "PROPERTY_FUNC" )
 			{
 				if( item.write === true )
-					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = sgs_GetVarP<%TYPE%>()( C, val%ISOBJ% );";
+					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = %TYPEFUNC%( C, val%ISOBJ% );";
 				else if( item.write )
-					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.write$"( sgs_GetVarP<%TYPE%>()( C, val%ISOBJ% ) );";
+					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.write$"( %TYPEFUNC%( C, val%ISOBJ% ) );";
 				if( item.writecb )
 					itemline $= "\n\t\t\tstatic_cast<%OBJ%*>( obj->data )->"$item.writecb$"();";
 			}
 			if( itemline )
 			{
 				out $= string_translate( "
-		if( strcmp( name, \"%NAME%\" ) == 0 )
-		{
-			"$itemline$"
-			return SGS_SUCCESS;
-		}"
+		SGS_CASE( \"%NAME%\" ){ "$itemline$" return SGS_SUCCESS; }"
 				, {
 					"%OBJ%" = obj.name,
 					"%NAME%" = item.name,
-					"%TYPE%" = cppbc_fix_type( item.type ),
-					"%ISOBJ%" = if( item.type[ item.type.length - 1 ] == "*", "true", "" ),
+					"%TYPEFUNC%" = if( cppbc_type_is_voidptr( item.type ), "sgs_GetPtrP", "sgs_GetVarP<" $ cppbc_fix_type( item.type ) $ ">()" ),
+					"%ISOBJ%" = if( string_part( item.type, 0, 4 ) != "void" && item.type[ item.type.length - 1 ] == "*", ", true", "" ),
 				});
 			}
 		}
 		out $= "
-	}
-	return SGS_ENOTFND;
+	SGS_END_INDEXFUNC;
 }
 ";
 		// interface
