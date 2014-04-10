@@ -2541,7 +2541,7 @@ void sgs_InitColor( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XG
 	nv[ 3 ] = w;
 }
 
-void sgs_InitMat4( SGS_CTX, sgs_Variable* var, XGM_VT* v16f, int transpose )
+void sgs_InitMat4( SGS_CTX, sgs_Variable* var, const XGM_VT* v16f, int transpose )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 16, xgm_mat4_iface );
 	if( transpose )
@@ -2555,7 +2555,7 @@ void sgs_InitMat4( SGS_CTX, sgs_Variable* var, XGM_VT* v16f, int transpose )
 		memcpy( nv, v16f, sizeof(XGM_VT) * 16 );
 }
 
-void sgs_InitFloatArray( SGS_CTX, sgs_Variable* var, XGM_VT* vfn, sgs_SizeVal size )
+void sgs_InitFloatArray( SGS_CTX, sgs_Variable* var, const XGM_VT* vfn, sgs_SizeVal size )
 {
 	xgm_vtarray* np = (xgm_vtarray*) sgs_InitObjectIPA( C, var, sizeof(xgm_vtarray), xgm_floatarr_iface );
 	np->size = size;
@@ -2565,14 +2565,14 @@ void sgs_InitFloatArray( SGS_CTX, sgs_Variable* var, XGM_VT* vfn, sgs_SizeVal si
 }
 
 
-void sgs_InitVec2p( SGS_CTX, sgs_Variable* var, XGM_VT* v2f )
+void sgs_InitVec2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v2f )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 2, xgm_vec2_iface );
 	nv[ 0 ] = v2f[ 0 ];
 	nv[ 1 ] = v2f[ 1 ];
 }
 
-void sgs_InitVec3p( SGS_CTX, sgs_Variable* var, XGM_VT* v3f )
+void sgs_InitVec3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 3, xgm_vec3_iface );
 	nv[ 0 ] = v3f[ 0 ];
@@ -2580,7 +2580,7 @@ void sgs_InitVec3p( SGS_CTX, sgs_Variable* var, XGM_VT* v3f )
 	nv[ 2 ] = v3f[ 2 ];
 }
 
-void sgs_InitVec4p( SGS_CTX, sgs_Variable* var, XGM_VT* v4f )
+void sgs_InitVec4p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_vec4_iface );
 	nv[ 0 ] = v4f[ 0 ];
@@ -2589,7 +2589,7 @@ void sgs_InitVec4p( SGS_CTX, sgs_Variable* var, XGM_VT* v4f )
 	nv[ 3 ] = v4f[ 3 ];
 }
 
-void sgs_InitAABB2p( SGS_CTX, sgs_Variable* var, XGM_VT* v4f )
+void sgs_InitAABB2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
 	nv[ 0 ] = v4f[ 0 ];
@@ -2598,7 +2598,7 @@ void sgs_InitAABB2p( SGS_CTX, sgs_Variable* var, XGM_VT* v4f )
 	nv[ 3 ] = v4f[ 3 ];
 }
 
-void sgs_InitColorp( SGS_CTX, sgs_Variable* var, XGM_VT* v4f )
+void sgs_InitColorp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_color_iface );
 	nv[ 0 ] = v4f[ 0 ];
@@ -2607,7 +2607,7 @@ void sgs_InitColorp( SGS_CTX, sgs_Variable* var, XGM_VT* v4f )
 	nv[ 3 ] = v4f[ 3 ];
 }
 
-void sgs_InitColorvp( SGS_CTX, sgs_Variable* var, XGM_VT* vf, int numfloats )
+void sgs_InitColorvp( SGS_CTX, sgs_Variable* var, const XGM_VT* vf, int numfloats )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_color_iface );
 	if( numfloats == 0 ) nv[0] = nv[1] = nv[2] = nv[3] = 0;
@@ -2660,7 +2660,7 @@ void sgs_PushColor( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 	nv[ 3 ] = w;
 }
 
-void sgs_PushMat4( SGS_CTX, XGM_VT* v16f, int transpose )
+void sgs_PushMat4( SGS_CTX, const XGM_VT* v16f, int transpose )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 16, xgm_mat4_iface );
 	if( transpose )
@@ -2674,7 +2674,7 @@ void sgs_PushMat4( SGS_CTX, XGM_VT* v16f, int transpose )
 		memcpy( nv, v16f, sizeof(XGM_VT) * 16 );
 }
 
-void sgs_PushFloatArray( SGS_CTX, XGM_VT* vfn, sgs_SizeVal size )
+void sgs_PushFloatArray( SGS_CTX, const XGM_VT* vfn, sgs_SizeVal size )
 {
 	xgm_vtarray* np = (xgm_vtarray*) sgs_PushObjectIPA( C, sizeof(xgm_vtarray), xgm_floatarr_iface );
 	np->size = size;
@@ -2684,14 +2684,14 @@ void sgs_PushFloatArray( SGS_CTX, XGM_VT* vfn, sgs_SizeVal size )
 }
 
 
-void sgs_PushVec2p( SGS_CTX, XGM_VT* v2f )
+void sgs_PushVec2p( SGS_CTX, const XGM_VT* v2f )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 2, xgm_vec2_iface );
 	nv[ 0 ] = v2f[ 0 ];
 	nv[ 1 ] = v2f[ 1 ];
 }
 
-void sgs_PushVec3p( SGS_CTX, XGM_VT* v3f )
+void sgs_PushVec3p( SGS_CTX, const XGM_VT* v3f )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 3, xgm_vec3_iface );
 	nv[ 0 ] = v3f[ 0 ];
@@ -2699,7 +2699,7 @@ void sgs_PushVec3p( SGS_CTX, XGM_VT* v3f )
 	nv[ 2 ] = v3f[ 2 ];
 }
 
-void sgs_PushVec4p( SGS_CTX, XGM_VT* v4f )
+void sgs_PushVec4p( SGS_CTX, const XGM_VT* v4f )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_vec4_iface );
 	nv[ 0 ] = v4f[ 0 ];
@@ -2708,7 +2708,7 @@ void sgs_PushVec4p( SGS_CTX, XGM_VT* v4f )
 	nv[ 3 ] = v4f[ 3 ];
 }
 
-void sgs_PushAABB2p( SGS_CTX, XGM_VT* v4f )
+void sgs_PushAABB2p( SGS_CTX, const XGM_VT* v4f )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
 	nv[ 0 ] = v4f[ 0 ];
@@ -2717,7 +2717,7 @@ void sgs_PushAABB2p( SGS_CTX, XGM_VT* v4f )
 	nv[ 3 ] = v4f[ 3 ];
 }
 
-void sgs_PushColorp( SGS_CTX, XGM_VT* v4f )
+void sgs_PushColorp( SGS_CTX, const XGM_VT* v4f )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
 	nv[ 0 ] = v4f[ 0 ];
@@ -2726,7 +2726,7 @@ void sgs_PushColorp( SGS_CTX, XGM_VT* v4f )
 	nv[ 3 ] = v4f[ 3 ];
 }
 
-void sgs_PushColorvp( SGS_CTX, XGM_VT* vf, int numfloats )
+void sgs_PushColorvp( SGS_CTX, const XGM_VT* vf, int numfloats )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
 	if( numfloats == 0 ) nv[0] = nv[1] = nv[2] = nv[3] = 0;
