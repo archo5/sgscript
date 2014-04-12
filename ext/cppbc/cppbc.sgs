@@ -653,7 +653,7 @@ function cppbc_generate_code( objects, includes )
 					ptype = string_part( param, 0, -1 );
 				}
 				
-				line $= string_format( "sgs_GetVar{3}<{1}>()(C,{2})", cppbc_fix_type( ptype ), i + 1, getvar3rd );
+				line $= string_format( "sgs_GetVar{3}<{1}>()(C,{2})", cppbc_fix_type( ptype ), i, getvar3rd );
 			}
 			line = string_format( "data->{1}( {2} )", item.name, line );
 			retval = 0;
