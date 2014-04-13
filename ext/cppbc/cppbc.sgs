@@ -34,19 +34,19 @@ function string_find_any( str, what, pos )
 	if( pos === null )
 		pos = 0;
 	
-	max = pos - 1;
+	max = str.length;
 	citem = null;
 	foreach( item : what )
 	{
 		npos = string_find( str, item, pos );
-		if( npos !== null && npos > max )
+		if( npos !== null && npos < max )
 		{
 			citem = item;
 			max = npos;
 		}
 	}
 	
-	return if( max >= pos, max, null ), citem;
+	return if( max < str.length, max, null ), citem;
 }
 
 function string_find_rev_any( str, what, pos )
@@ -187,6 +187,9 @@ function cppbc_type_is_voidptr( type )
 
 function cppbc_fix_type( type )
 {
+	if( !string_trim( type ) )
+		return cppbc_error( "missing type detected" );
+	
 	if( type[ type.length - 1 ] == ">" )
 		type $= " ";
 	return type;
@@ -656,14 +659,13 @@ function cppbc_generate_code( objects, includes )
 				line $= string_format( "sgs_GetVar{3}<{1}>()(C,{2})", cppbc_fix_type( ptype ), i, getvar3rd );
 			}
 			line = string_format( "data->{1}( {2} )", item.name, line );
-			retval = 0;
-			if( item.type != "void" )
-			{
-				line = "sgs_PushVar(C," $ line $ ");";
-				retval = 1;
-			}
+			
+			if( item.type == "SGS_MULTRET" )
+				line = "return " $ line $ ";";
+			else if( item.type != "void" )
+				line = "sgs_PushVar(C," $ line $ "); return 1;";
 			else
-				line $= ";";
+				line $= "; return 0;";
 			
 			out $= string_translate(
 "
@@ -671,10 +673,9 @@ static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 {
 	%OBJ%* data; if( !SGS_PARSE_METHOD( C, %OBJ%::_sgs_interface, data, %OBJ%, %NAME% ) ) return 0;
 	%LINE%
-	return %RETVAL%;
 }
 "
-			, { "%OBJ%" = obj.name, "%NAME%" = item.name, "%LINE%" = line, "%RETVAL%" = retval } );
+			, { "%OBJ%" = obj.name, "%NAME%" = item.name, "%LINE%" = line } );
 		}
 		
 		// interface functions

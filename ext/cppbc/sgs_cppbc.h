@@ -13,15 +13,18 @@
 
 
 #ifndef SGS_CPPBC_PROCESS
-# define SGS_OBJECT \
+# define SGS_OBJECT_LITE \
 	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj ); \
 	static int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int type ); \
 	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int isprop ); \
 	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int isprop ); \
-	static sgs_ObjInterface _sgs_interface[1]; \
+	static sgs_ObjInterface _sgs_interface[1];
+# define SGS_OBJECT \
+	SGS_OBJECT_LITE \
 	sgs_VarObj* m_sgsObject; \
 	SGS_CTX;
 # define SGS_METHOD
+# define SGS_MULTRET int
 # define SGS_PROPERTY
 # define SGS_PROPERTY_FUNC( funcs )
 # define READ
@@ -30,6 +33,13 @@
 # define WRITE_CALLBACK
 # define SGS_IFUNC( type ) static
 # define SGS_ALIAS( func )
+
+#define SGS_DEFAULT_LITE_OBJECT_INTERFACE( name ) \
+	template<> inline void sgs_PushVar<name>( SGS_CTX, const name& v ){ sgs_PushLiteClassFrom( C, &v ); } \
+	template<> struct sgs_GetVar<name> { name operator () ( SGS_CTX, sgs_StkIdx item ){ \
+		if( sgs_IsObject( C, item, name::_sgs_interface ) ) return *(name*)sgs_GetObjectData( C, -1 ); return name(); }}; \
+	template<> struct sgs_GetVarP<name> { name operator () ( SGS_CTX, sgs_Variable* val ){ \
+		if( sgs_IsObjectP( val, name::_sgs_interface ) ) return *(name*)sgs_GetObjectDataP( val ); return name(); }};
 #endif
 
 
@@ -298,7 +308,6 @@ template< class T > void sgs_PushClass( SGS_CTX, T* inst )
 	inst->m_sgsObject = sgs_GetObjectStruct( C, -1 );
 	inst->C = C;
 }
-
 template< class T > T* sgs_PushClassIPA( SGS_CTX )
 {
 	T* data = static_cast<T*>( sgs_PushObjectIPA( C, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
@@ -306,7 +315,6 @@ template< class T > T* sgs_PushClassIPA( SGS_CTX )
 	data->C = C;
 	return data;
 }
-
 template< class T > T* sgs_PushClassFrom( SGS_CTX, T* inst )
 {
 	T* data = static_cast<T*>( sgs_PushObjectIPA( C, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
@@ -315,16 +323,24 @@ template< class T > T* sgs_PushClassFrom( SGS_CTX, T* inst )
 	*data = *inst;
 	return data;
 }
-
 template< class T> T* sgs_InitPushedClass( T* inst, SGS_CTX )
 {
 	inst->C = C;
 	inst->m_sgsObject = sgs_GetObjectStruct( C, -1 );
 	return inst;
 }
+#define SGS_PUSHCLASS( C, name, args ) sgs_InitPushedClass(new (sgs_PushClassIPA< name >( C )) name args, C )
 
-#define SGS_PUSHCLASS( C, name, args ) \
-	sgs_InitPushedClass(new (sgs_PushClassIPA< name >( C )) name args, C )
+
+template< class T > void sgs_PushLiteClass( SGS_CTX, T* inst ){ sgs_PushObject( C, inst, T::_sgs_interface ); }
+template< class T > T* sgs_PushLiteClassIPA( SGS_CTX ){ return static_cast<T*>( sgs_PushObjectIPA( C, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) ); }
+template< class T > T* sgs_PushLiteClassFrom( SGS_CTX, const T* inst )
+{
+	T* data = static_cast<T*>( sgs_PushObjectIPA( C, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
+	*data = *inst;
+	return data;
+}
+#define SGS_PUSHLITECLASS( C, name, args ) (new (sgs_PushLiteClassIPA< name >( C )) name args )
 
 
 #endif // __SGS_CPPBC_H__
