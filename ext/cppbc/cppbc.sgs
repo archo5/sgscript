@@ -187,11 +187,17 @@ function cppbc_type_is_voidptr( type )
 
 function cppbc_fix_type( type )
 {
-	if( !string_trim( type ) )
+	type = string_trim( type );
+	type = string_trim( re_replace( type, "#^const([ \t\n\r])#", "$1" ) );
+	type = string_trim( re_replace( type, "#&$#", "" ) );
+	type = string_trim( re_replace( type, "#([ \t\n\r])const$#", "$1" ) );
+	
+	if( !type )
 		return cppbc_error( "missing type detected" );
 	
-	if( type[ type.length - 1 ] == ">" )
+	if( type.length && type[ type.length - 1 ] == ">" )
 		type $= " ";
+	
 	return type;
 }
 
@@ -462,7 +468,7 @@ function cppbc_examine_property_func( code )
 	
 	sp.skipcc( "( \t\v\r\n" );
 	items = [];
-	while( ( item = sp.readcc( "a-zA-Z0-9_" ) ) !== "" )
+	while( ( item = sp.readcc( "a-zA-Z0-9_." ) ) !== "" )
 	{
 		items.push( item );
 		sp.skipcc( " \t\v\r\n" );
@@ -474,10 +480,11 @@ function cppbc_examine_property_func( code )
 	writemethod = null;
 	readcallback = null;
 	writecallback = null;
+	varname = null;
 	lastitem = "";
 	foreach( item : items )
 	{
-		isspecitem = item == "READ" || item == "WRITE" || item == "READ_CALLBACK" || item == "WRITE_CALLBACK";
+		isspecitem = item == "READ" || item == "WRITE" || item == "READ_CALLBACK" || item == "WRITE_CALLBACK" || item == "VARNAME";
 		if( lastitem == "READ" )
 		{
 			if( isspecitem )
@@ -494,7 +501,6 @@ function cppbc_examine_property_func( code )
 		}
 		else if( lastitem == "READ_CALLBACK" )
 		{
-			printvar(item);
 			if( isspecitem )
 				cppbc_error( "READ_CALLBACK: expected method name" );
 			else
@@ -506,6 +512,13 @@ function cppbc_examine_property_func( code )
 				cppbc_error( "WRITE_CALLBACK: expected method name" );
 			else
 				writecallback = item;
+		}
+		else if( lastitem == "VARNAME" )
+		{
+			if( isspecitem )
+				cppbc_error( "VARNAME: expected variable name" );
+			else
+				varname = item;
 		}
 		lastitem = item;
 	}
@@ -520,6 +533,7 @@ function cppbc_examine_property_func( code )
 		write = writemethod,
 		readcb = readcallback,
 		writecb = writecallback,
+		varname = varname,
 	};
 }
 
@@ -555,9 +569,15 @@ function cppbc_examine_object( code, pos )
 	bounds = cppbc_block_bounds( code, pos );
 	
 	// get class/struct name
-	class_pos = string_find_rev_any( code, ["class","struct"], bounds[0] );
-	if( class_pos === null )
-		cppbc_error_ext( ERR_OOC, code, pos );
+	class_pos = bounds[0] + 1;
+	for(;;)
+	{
+		class_pos = string_find_rev_any( code, ["class","struct"], class_pos - 1 );
+		if( class_pos === null )
+			cppbc_error_ext( ERR_OOC, code, pos );
+		if( re_match( string_part( code, class_pos - 1, 8 ), "#(^|[ \t\v\n\r])(class|struct)[ \t\v\n\r]#" ) )
+			break;
+	}
 	
 	tp = fmt_string_parser( code, class_pos );
 	tp.skipcc( "a-z" );
@@ -709,7 +729,7 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 			else if( item.what == "PROPERTY_FUNC" )
 			{
 				if( item.read === true )
-					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->%NAME% );";
+					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$(item.varname||item.name)$" );";
 				else if( item.read )
 					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.read$"() );";
 				if( item.readcb )
@@ -749,7 +769,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			else if( item.what == "PROPERTY_FUNC" )
 			{
 				if( item.write === true )
-					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = %TYPEFUNC%( C, val%ISOBJ% );";
+					itemline = "static_cast<%OBJ%*>( obj->data )->"$(item.varname||item.name)$" = %TYPEFUNC%( C, val%ISOBJ% );";
 				else if( item.write )
 					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.write$"( %TYPEFUNC%( C, val%ISOBJ% ) );";
 				if( item.writecb )

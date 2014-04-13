@@ -27,6 +27,7 @@
 # define SGS_MULTRET int
 # define SGS_PROPERTY
 # define SGS_PROPERTY_FUNC( funcs )
+# define VARNAME
 # define READ
 # define WRITE
 # define READ_CALLBACK
@@ -162,6 +163,9 @@ public:
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); } sgs_PushVariable( c, const_cast<sgs_Variable*>( &var ) ); }
 	SGSRESULT gcmark() { if( !C ) return SGS_SUCCESS; return sgs_GCMark( C, &var ); }
 	bool not_null(){ return var.type != SGS_VT_NULL; }
+	bool is_object( sgs_ObjInterface* iface ){ return sgs_IsObjectP( &var, iface ); }
+	template< class T > bool is_handle(){ return sgs_IsObjectP( &var, T::_sgs_interface ); }
+	template< class T > T* get_object_data(){ return (T*) sgs_GetObjectDataP( &var ); }
 	
 	sgs_Variable var;
 	SGS_CTX;
