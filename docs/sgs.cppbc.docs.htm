@@ -6,10 +6,12 @@
 		<script type="text/javascript" src="docs.js"></script>
 	</head><body>
 	<h1>SGS/C++ binding compiler</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGS-CPP-BC-description'>SGS/CPP-BC description</a>
+</li><li><a href='#Common-usage-patterns'>Common usage patterns</a>
 </li><li><a href='#Tags'>Tags</a>
 </li><li><a href='#Data-type-handling'>Data type handling</a>
 </li><li><a href='#Helper-classes-functions'>Helper classes &amp; functions</a>
-</li></ul></div><div>
+<ul><li><a href='#TODO'>TODO</a>
+</li></ul></li></ul></div><div>
 <div class='item'><a name='SGS-CPP-BC-description'></a><hr><h2>SGS/CPP-BC description</h2><p>
 This is a compiler that will generate most of the binding code from a bit of markup and additional build configuration. Statistically, the gain is approximately 80% less code to write to connect your C++ code to SGScript.
 </p><p>
@@ -31,7 +33,7 @@ This is a basic example of how things are done with SGS/CPP-BC:
 	SGS_METHOD void doMouseButton( int btn, bool down );
 	SGS_METHOD void doKeyPress( int key, bool down );
 	
-	SGS_IFUNC(SGS_OP_GCMARK) int sgs_gcmark( SGS_CTX, sgs_VarObj* obj, int );
+	SGS_IFUNC(GCMARK) int sgs_gcmark( SGS_CTX, sgs_VarObj* obj, int );
 	
 	SGS_PROPERTY float x;
 	SGS_PROPERTY float y;
@@ -44,20 +46,27 @@ This is a basic example of how things are done with SGS/CPP-BC:
 };</pre><p>
 The SGS_OBJECT tag marks the structs/classes that need to have the binding code. SGS_METHOD would then mark methods that require exporting and SGS_PROPERTY generates property exports. For read-only/write-only properties, all you&#39;d need to add is &quot;READ&quot; or &quot;WRITE&quot; after the tag.
 </p><p>
-sgsVariable and sgsHandle are classes that are used to store SGScript objects. Handles are for storing exported object pointers and variables are for everything. Handles make it easier to use the included objects, thus they are preferred to plain variable containers.
+<a href="#sgsVariable-class">sgsVariable</a> and <a href="#sgsHandle-class">sgsHandle</a> are classes that are used to store SGScript objects. Handles are for storing exported object pointers and variables are for everything. Handles make it easier to use the included objects, thus they are preferred to plain variable containers.
 </p><p>
 GCMARK handlers are more like the raw API but all that needs to be done in the function is calling gcmark() on each variable or handle. Due to the possibility of having many unknown kinds of containers of variables, it is unlikely that this function could ever be automatically generated, except for the most primitive of cases.
 </p></div>
-<div class='item'><a name='Tags'></a><hr><h2>Tags</h2><h3>SGS_OBJECT</h3><p>
+<div class='item'><a name='Common-usage-patterns'></a><hr><h2>Common usage patterns</h2><h4>declare a variable and bind it</h4><pre>SGS_PROPERTY float x;</pre><h4>bind an inherited variable</h4><pre>SGS_PROPERTY SGS_ALIAS( float x );</pre><h4>bind &amp; declare variable with post-write callback</h4><pre>SGS_PROPERTY_FUNC( READ WRITE WRITE_CALLBACK myWriteCallback ) float x;</pre><h4>bind a fake variable (based on get/set functions)</h4><pre>SGS_PROPERTY_FUNC( READ getX WRITE setX ) SGS_ALIAS( float x );</pre><h4>bind &amp; declare a variable with two different names</h4><pre>SGS_PROPERTY_FUNC( READ WRITE VARNAME sgsName ) float x;</pre><h4>bind an inherited/previously defined variable</h4><pre>SGS_PROPERTY_FUNC( READ WRITE VARNAME sgsName ) SGS_ALIAS( float x );</pre><h4>declare a method and bind it</h4><pre>SGS_METHOD float calc( float x );</pre><h4>declare a vararg method with variable return value count</h4><pre>SGS_METHOD SGS_MULTRET complexFunc();</pre></div>
+<div class='item'><a name='Tags'></a><hr><h2>Tags</h2><h3>SGS_OBJECT</h3><h3>SGS_OBJECT_LITE</h3><p>
 Marks the objects/structures for parsing.
+</p><p>
+SGS_OBJECT_LITE does not add helper variables (sgs_VarObj* m_sgsObject; sgs_Context* C) to the class
 </p><h3>SGS_METHOD</h3><p>
 Marks the methods that should be made available to the scripting engine.
 </p><p>
 Syntax: <code>SGS_METHOD &lt;type&gt; &lt;name&gt;(&lt;arguments&gt;);</code>
-</p><h3>SGS_PROPERTY</h3><p>
+</p><p>
+Alt. syntax (bind without declaration): <code>SGS_METHOD SGS_ALIAS( &lt;type&gt; &lt;name&gt;(&lt;arguments&gt;) );</code>
+</p><ul><li>SGS_MULTRET can be used as &lt;type&gt; to allow the return value specify the number of return values pushed (like a usual SGScript C function)</li></ul><h3>SGS_PROPERTY</h3><p>
 Marks the properties that should be made available to the scripting engine. Currently supports only one property at a time.
 </p><p>
 Syntax: <code>SGS_PROPERTY [READ|WRITE] &lt;type&gt; &lt;name&gt;;</code>
+</p><p>
+Alt. syntax (bind without declaration): <code>SGS_PROPERTY [READ|WRITE] SGS_ALIAS( &lt;type&gt; &lt;name&gt; );</code>
 </p><p>
 Modifiers:
 </p><ul><li>READ: make the property read-only
@@ -66,24 +75,47 @@ Marks the properties that should be made available to the scripting engine. Has 
 </p><p>
 Syntax: <code>SGS_PROPERTY_FUNC( &lt;tag-args&gt; ) &lt;type&gt; &lt;name&gt;;</code>
 </p><p>
+Alt. syntax (bind without declaration): <code>SGS_PROPERTY_FUNC( &lt;tag-args&gt; ) SGS_ALIAS( &lt;type&gt; &lt;name&gt; );</code>
+</p><p>
 Tag arguments: a space separated list of none or more of the following constructs
 </p><ul><li>READ: allow to read from the property
 </li><li>WRITE: allow to write to the property
 </li><li>READ &lt;method&gt;: allow to read from the property, using the specified method
 </li><li>WRITE &lt;method&gt;: allow to write to the property, using the specified method
 </li><li>READ_CALLBACK &lt;method&gt;: call the specified method after reading from the variable
-</li><li>WRITE_CALLBACK &lt;method&gt;: call the specified method after writing to the variable</li></ul><h3>SGS_IFUNC</h3><p>
+</li><li>WRITE_CALLBACK &lt;method&gt;: call the specified method after writing to the variable
+</li><li>VARNAME: specify a different name for the real variable (more useful with alt. syntax)</li></ul><h3>SGS_IFUNC</h3><p>
 Marks the method as a native object interface function that would override any generated one.
 </p><p>
 Syntax: <code>SGS_IFUNC( &lt;ifunc-type&gt; ) &lt;type&gt; &lt;name&gt;( sgs_Context*, sgs_VarObj*, int );</code>
 </p><p>
 &quot;ifunc-type&quot; must be one of SGS_OP_* defines.
 </p></div>
-<div class='item'><a name='Data-type-handling'></a><hr><h2>Data type handling</h2><p>
-TODO sgs_PushVar, sgs_GetVar
-</p></div>
-<div class='item'><a name='Helper-classes-functions'></a><hr><h2>Helper classes &amp; functions</h2><p>
-TODO sgsHandle, sgsVariable, sgs_PushClass(From)
+<div class='item'><a name='Data-type-handling'></a><hr><h2>Data type handling</h2><h3>template&lt; class T &gt; void sgs_PushVar( SGS_CTX, const T&amp; );</h3><h4>pushes the specified variable on the stack, automatically converting it to the most appropriate SGScript type</h4><h3>template&lt; class T &gt; struct sgs_GetVar {  T operator () ( SGS_CTX, int item );  };</h3><h4>takes the specified stack item and converts it to the required type</h4><h3>template&lt; class T &gt; struct sgs_GetVarP {  T operator () ( SGS_CTX, sgs_Variable* var );  };</h3><h3>template&lt; class T &gt; struct sgs_GetVarObjP {  T* operator () ( SGS_CTX, sgs_Variable* var );  };</h3><h4>takes the specified variable and converts it to the required type</h4><ul><li>bindings exist for all basic types (except unsigned int64, since it cannot be represented properly), sgsHandle, sgsVariable, and class pointers</li></ul></div>
+<div class='item'><a name='Helper-classes-functions'></a><hr><h2>Helper classes &amp; functions</h2><ul><li><a href="#sgsHandle-class">sgsHandle</a> - the class used for handling SGS_OBJECT classes
+</li><li><a href="#sgsVariable-class">sgsVariable</a> - the class used for handling all SGScript variables</li></ul></div>
+<div class='item'><a name='sgsHandle-class'></a><hr><h2>sgsHandle [class]</h2><h3>template&lt; class T &gt; class sgsHandle</h3><h4>Variables</h4><ul><li><code>sgs_VarObj* object</code> - the pointer to object with interface equal to T::_sgs_interface or NULL</li></ul><h4>Constructors</h4><ul><li><code>sgsHandle()</code> - initializes a NULL handle
+</li><li><code>sgsHandle( const sgsHandle&amp; h )</code> - initializes a handle from another handle
+</li><li><code>sgsHandle( sgs_VarObj* obj, sgs_Context* c )</code> - initializes a handle from object pointer if it has the right interface, otherwise handle is initialized to NULL</li></ul><h4>Methods</h4><ul><li><code>SGSRESULT gcmark()</code> - mark the object in handle as accessible (using sgs_ObjGCMark)</li></ul><h4>Operators</h4><ul><li><code>const sgsHandle&amp; operator = ( const sgsHandle&amp; h )</code> - handle assignment
+</li><li><code>operator T*()</code>, <code>operator const T*() const</code> - implicit conversion to valid T* or NULL
+</li><li><code>T* operator -&gt; ()</code>, <code>const T* operator -&gt; () const</code> - object access
+</li><li><code>bool operator &lt;</code>, <code>bool operator ==</code> - comparison operators (the required minimum used for sorting)</li></ul></div>
+<div class='item'><a name='sgsVariable-class'></a><hr><h2>sgsVariable [class]</h2><h3>class sgsVariable</h3><h4>Variables</h4><ul><li><code>sgs_Variable var</code> - the internal variable data
+</li><li><code>SGS_CTX</code> (`sgs_Context* C`) - associated context</li></ul><h4>Constructors</h4><ul><li><code>sgsVariable()</code> - initializes a NULL variable
+</li><li><code>sgsVariable( const sgsVariable&amp; h )</code> - initializes variable from another variable
+</li><li><code>sgsVariable( sgs_Context* c )</code> - initialize a NULL variable and associate context
+</li><li><code>sgsVariable( sgs_Context* c, int item )</code> - initialize a variable from current stack frame
+</li><li><code>sgsVariable( sgs_Context* c, sgs_Variable* v )</code> - initialize a variable from data pointer</li></ul><h4>Methods</h4><ul><li><code>void push( sgs_Context* c = NULL )</code> - push the variable (optionally specify context if variable might not have it)
+</li><li><code>SGSRESULT gcmark()</code> - mark the variable as accessible (using sgs_GCMark)
+</li><li><code>bool not_null()</code> - return if variable is not NULL
+</li><li><code>bool is_object( sgs_ObjInterface* iface )</code> - check if variable is an object with the specified interface
+</li><li><code>template&lt; class T &gt; bool is_handle()</code> - check if variable is an instance of the specified SGS_OBJECT class
+</li><li><code>template&lt; class T &gt; T* get_object_data()</code> - get object pointer from variable (WARNING: this method does not do any safety checks)
+</li><li><code>void _acquire()</code> - increment reference count on variable
+</li><li><code>void _release()</code> - decrement reference count on variable, remove it from the class</li></ul><h4>Operators</h4><ul><li><code>const sgsVariable&amp; operator = ( const sgsVariable&amp; h )</code> - handle assignment
+</li><li><code>bool operator &lt;</code>, <code>bool operator ==</code> - comparison operators (the required minimum used for sorting)</li></ul></div>
+<div class='item'><a name='TODO'></a><hr><h2>TODO</h2><p>
+sgs_PushClass(From)..
 </p></div>
 </div>
 	</body></html>
