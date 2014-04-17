@@ -10,8 +10,7 @@
 </li><li><a href='#Tags'>Tags</a>
 </li><li><a href='#Data-type-handling'>Data type handling</a>
 </li><li><a href='#Helper-classes-functions'>Helper classes &amp; functions</a>
-<ul><li><a href='#TODO'>TODO</a>
-</li></ul></li></ul></div><div>
+</li></ul></div><div>
 <div class='item'><a name='SGS-CPP-BC-description'></a><hr><h2>SGS/CPP-BC description</h2><p>
 This is a compiler that will generate most of the binding code from a bit of markup and additional build configuration. Statistically, the gain is approximately 80% less code to write to connect your C++ code to SGScript.
 </p><p>
@@ -94,11 +93,11 @@ Syntax: <code>SGS_IFUNC( &lt;ifunc-type&gt; ) &lt;type&gt; &lt;name&gt;( sgs_Con
 <div class='item'><a name='Data-type-handling'></a><hr><h2>Data type handling</h2><h3>template&lt; class T &gt; void sgs_PushVar( SGS_CTX, const T&amp; );</h3><h4>pushes the specified variable on the stack, automatically converting it to the most appropriate SGScript type</h4><h3>template&lt; class T &gt; struct sgs_GetVar {  T operator () ( SGS_CTX, int item );  };</h3><h4>takes the specified stack item and converts it to the required type</h4><h3>template&lt; class T &gt; struct sgs_GetVarP {  T operator () ( SGS_CTX, sgs_Variable* var );  };</h3><h3>template&lt; class T &gt; struct sgs_GetVarObjP {  T* operator () ( SGS_CTX, sgs_Variable* var );  };</h3><h4>takes the specified variable and converts it to the required type</h4><ul><li>bindings exist for all basic types (except unsigned int64, since it cannot be represented properly), sgsHandle, sgsVariable, and class pointers</li></ul></div>
 <div class='item'><a name='Helper-classes-functions'></a><hr><h2>Helper classes &amp; functions</h2><h4>Classes</h4><ul><li><a href="#sgsHandle-class">sgsHandle</a> - the class used for handling SGS_OBJECT classes
 </li><li><a href="#sgsVariable-class">sgsVariable</a> - the class used for handling all SGScript variables</li></ul><h4>Functions</h4><ul><li><a href="#sgs-PushHandle-function">sgs_PushHandle</a> - push handle on stack
-</li><li><a href="#sgs-PushClass-function">sgs_PushClass</a> - push new class instance on stack
-</li><li><a href="#sgs-PushClassIPA-function">sgs_PushClassIPA</a> - allocate new class instance, push it on stack
-</li><li><a href="#sgs-PushClassFrom-function">sgs_PushClassFrom</a> - push a copy of class instance on stack
+</li><li><a href="#sgs-Push-Lite-Class-function">sgs_Push(Lite)Class</a> - push new class instance on stack
+</li><li><a href="#sgs-Push-Lite-ClassIPA-function">sgs_Push(Lite)ClassIPA</a> - allocate new class instance, push it on stack
+</li><li><a href="#sgs-Push-Lite-ClassFrom-function">sgs_Push(Lite)ClassFrom</a> - push a copy of class instance on stack
 </li><li><a href="#sgs-InitPushedClass-function">sgs_InitPushedClass</a> - initialize internal class pointers
-</li><li><a href="#SGS-PUSHCLASS-function-alias">SGS_PUSHCLASS</a> - push a new instance of class, using the specified arguments for constructor</li></ul></div>
+</li><li><a href="#sgs-Push-Lite-Class-function">sgs_Push(Lite)Class</a> - push a new instance of class, using the specified arguments for constructor</li></ul></div>
 <div class='item'><a name='sgsHandle-class'></a><hr><h2>sgsHandle [class]</h2><h3>template&lt; class T &gt; class sgsHandle</h3><h4>Variables</h4><ul><li><code>sgs_VarObj* object</code> - the pointer to object with interface equal to T::_sgs_interface or NULL
 </li><li><code>SGS_CTX</code> (`sgs_Context* C`) - associated context</li></ul><h4>Constructors</h4><ul><li><code>sgsHandle()</code> - initializes a NULL handle
 </li><li><code>sgsHandle( const sgsHandle&amp; h )</code> - initializes a handle from another handle
@@ -123,21 +122,18 @@ Syntax: <code>SGS_IFUNC( &lt;ifunc-type&gt; ) &lt;type&gt; &lt;name&gt;( sgs_Con
 </li><li><code>void _release()</code> - decrement reference count on variable, remove it from the class</li></ul><h4>Operators</h4><ul><li><code>const sgsVariable&amp; operator = ( const sgsVariable&amp; h )</code> - handle assignment
 </li><li><code>bool operator &lt;</code>, <code>bool operator ==</code> - comparison operators (the required minimum used for sorting)</li></ul></div>
 <div class='item'><a name='sgs-PushHandle-function'></a><hr><h2>sgs_PushHandle [function]</h2><h3>template&lt; class T &gt; inline void sgs_PushHandle( SGS_CTX, const sgsHandle&lt;T&gt;&amp; val )</h3><h4>push the specified class handle on stack</h4><ul><li>NULL is pushed if handle doesn&#39;t point to a class</li></ul></div>
-<div class='item'><a name='sgs-PushClass-function'></a><hr><h2>sgs_PushClass [function]</h2><h3>template&lt; class T &gt; void sgs_PushClass( SGS_CTX, T* inst )</h3><h4>push a new instance of the class on stack</h4><p>
-<em class='notice-bgr'>This function should not be used with existing instances, as it would make two or more SGScript objects responsible for the same data. Use <a href="#Data-type-handling">sgs_PushVar</a>, <a href="#sgs-PushHandle-function">sgs_PushHandle</a> or <a href="#sgs-PushClassFrom-function">sgs_PushClassFrom</a> with existing instances.</em>
+<div class='item'><a name='sgs-Push-Lite-Class-function'></a><hr><h2>sgs_Push(Lite)Class [function]</h2><h3>template&lt; class T &gt; void sgs_PushClass( SGS_CTX, T* inst )</h3><h3>template&lt; class T &gt; void sgs_PushLiteClass( SGS_CTX, T* inst )</h3><h4>push a new instance of the class on stack</h4><p>
+<em class='notice-bgr'>This function should not be used with existing instances, as it would make two or more SGScript objects responsible for the same data. Use <a href="#Data-type-handling">sgs_PushVar</a>, <a href="#sgs-PushHandle-function">sgs_PushHandle</a> or <a href="#sgs-Push-Lite-ClassFrom-function">sgs_Push(Lite)ClassFrom</a> with existing instances.</em>
 </p></div>
-<div class='item'><a name='sgs-PushClassIPA-function'></a><hr><h2>sgs_PushClassIPA [function]</h2><h3>template&lt; class T &gt; T* sgs_PushClassIPA( SGS_CTX )</h3><h4>allocate a class in-place, push it on the stack</h4><ul><li>To be used with placement new.</li></ul><p>
-<em class='notice-bgr'>This function should not be used with existing instances, as it would make two or more SGScript objects responsible for the same data. Use <a href="#Data-type-handling">sgs_PushVar</a>, <a href="#sgs-PushHandle-function">sgs_PushHandle</a> or <a href="#sgs-PushClassFrom-function">sgs_PushClassFrom</a> with existing instances.</em>
+<div class='item'><a name='sgs-Push-Lite-ClassIPA-function'></a><hr><h2>sgs_Push(Lite)ClassIPA [function]</h2><h3>template&lt; class T &gt; T* sgs_PushClassIPA( SGS_CTX )</h3><h3>template&lt; class T &gt; T* sgs_PushLiteClassIPA( SGS_CTX )</h3><h4>allocate a class in-place, push it on the stack</h4><ul><li>To be used with placement new.</li></ul><p>
+<em class='notice-bgr'>This function should not be used with existing instances, as it would make two or more SGScript objects responsible for the same data. Use <a href="#Data-type-handling">sgs_PushVar</a>, <a href="#sgs-PushHandle-function">sgs_PushHandle</a> or <a href="#sgs-Push-Lite-ClassFrom-function">sgs_Push(Lite)ClassFrom</a> with existing instances.</em>
 </p></div>
-<div class='item'><a name='sgs-PushClassFrom-function'></a><hr><h2>sgs_PushClassFrom [function]</h2><h3>template&lt; class T &gt; T* sgs_PushClassFrom( SGS_CTX, T* inst )</h3><h4>push a copy of the specified class instance on stack</h4></div>
+<div class='item'><a name='sgs-Push-Lite-ClassFrom-function'></a><hr><h2>sgs_Push(Lite)ClassFrom [function]</h2><h3>template&lt; class T &gt; T* sgs_PushClassFrom( SGS_CTX, T* inst )</h3><h3>template&lt; class T &gt; T* sgs_PushLiteClassFrom( SGS_CTX, const T* inst )</h3><h4>push a copy of the specified class instance on stack</h4></div>
 <div class='item'><a name='sgs-InitPushedClass-function'></a><hr><h2>sgs_InitPushedClass [function]</h2><h3>template&lt; class T&gt; T* sgs_InitPushedClass( T* inst, SGS_CTX )</h3><h4>set context / object pointers to class</h4><ul><li>return value is <code>inst</code></li></ul></div>
-<div class='item'><a name='SGS-PUSHCLASS-function-alias'></a><hr><h2>SGS_PUSHCLASS [function alias]</h2><h3>SGS_PUSHCLASS( C, name, args )</h3><h4>push a new instance of the specified class, using the specified arguments for constructor</h4><ul><li>this is the preferred method to create class object instances
+<div class='item'><a name='SGS-PUSH-LITE-CLASS-function-alias'></a><hr><h2>SGS_PUSH(LITE)CLASS [function alias]</h2><h3>SGS_PUSHCLASS( C, name, args )</h3><h3>SGS_PUSHLITECLASS( C, name, args )</h3><h4>push a new instance of the specified class, using the specified arguments for constructor</h4><ul><li>this is the preferred method to create class object instances
 </li><li>returns the pointer to class instance</li></ul><p>
 Usage example:
 </p><pre>SGS_PUSHCLASS( C, myClass, ( param1, 5.0f ) );</pre></div>
-<div class='item'><a name='TODO'></a><hr><h2>TODO</h2><p>
-sgs_PushLiteClass(From)..
-</p></div>
 </div>
 	</body></html>
 	

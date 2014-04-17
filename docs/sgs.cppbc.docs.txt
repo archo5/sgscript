@@ -164,11 +164,11 @@ Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int
 === Functions
 
 - @sgs_PushHandle - push handle on stack
-- @sgs_PushClass - push new class instance on stack
-- @sgs_PushClassIPA - allocate new class instance, push it on stack
-- @sgs_PushClassFrom - push a copy of class instance on stack
+- @sgs_Push(Lite)Class - push new class instance on stack
+- @sgs_Push(Lite)ClassIPA - allocate new class instance, push it on stack
+- @sgs_Push(Lite)ClassFrom - push a copy of class instance on stack
 - @sgs_InitPushedClass - initialize internal class pointers
-- @SGS_PUSHCLASS - push a new instance of class, using the specified arguments for constructor
+- @sgs_Push(Lite)Class - push a new instance of class, using the specified arguments for constructor
 
 
 # >>>
@@ -245,27 +245,30 @@ Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int
 - NULL is pushed if handle doesn't point to a class
 
 
-# sgs_PushClass [function]
+# sgs_Push(Lite)Class [function]
 
 == template< class T > void sgs_PushClass( SGS_CTX, T* inst )
+== template< class T > void sgs_PushLiteClass( SGS_CTX, T* inst )
 === push a new instance of the class on stack
 
-! This function should not be used with existing instances, as it would make two or more SGScript objects responsible for the same data. Use @sgs_PushVar<Data type handling>, @sgs_PushHandle or @sgs_PushClassFrom with existing instances.
+! This function should not be used with existing instances, as it would make two or more SGScript objects responsible for the same data. Use @sgs_PushVar<Data type handling>, @sgs_PushHandle or @sgs_Push(Lite)ClassFrom with existing instances.
 
 
-# sgs_PushClassIPA [function]
+# sgs_Push(Lite)ClassIPA [function]
 
 == template< class T > T* sgs_PushClassIPA( SGS_CTX )
+== template< class T > T* sgs_PushLiteClassIPA( SGS_CTX )
 === allocate a class in-place, push it on the stack
 
 - To be used with placement new.
 
-! This function should not be used with existing instances, as it would make two or more SGScript objects responsible for the same data. Use @sgs_PushVar<Data type handling>, @sgs_PushHandle or @sgs_PushClassFrom with existing instances.
+! This function should not be used with existing instances, as it would make two or more SGScript objects responsible for the same data. Use @sgs_PushVar<Data type handling>, @sgs_PushHandle or @sgs_Push(Lite)ClassFrom with existing instances.
 
 
-# sgs_PushClassFrom [function]
+# sgs_Push(Lite)ClassFrom [function]
 
 == template< class T > T* sgs_PushClassFrom( SGS_CTX, T* inst )
+== template< class T > T* sgs_PushLiteClassFrom( SGS_CTX, const T* inst )
 === push a copy of the specified class instance on stack
 
 
@@ -277,9 +280,10 @@ Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int
 - return value is `inst`
 
 
-# SGS_PUSHCLASS [function alias]
+# SGS_PUSH(LITE)CLASS [function alias]
 
 == SGS_PUSHCLASS( C, name, args )
+== SGS_PUSHLITECLASS( C, name, args )
 === push a new instance of the specified class, using the specified arguments for constructor
 
 - this is the preferred method to create class object instances
@@ -288,11 +292,6 @@ Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int
 Usage example:
 
     SGS_PUSHCLASS( C, myClass, ( param1, 5.0f ) );
-
-
-# TODO [info]
-
-sgs_PushLiteClass(From)..
 
 
 # <<<
