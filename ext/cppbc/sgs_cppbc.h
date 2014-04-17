@@ -90,12 +90,10 @@ public:
 	SGSRESULT gcmark() const { if( !object ){ return SGS_SUCCESS; } return sgs_ObjGCMark( C, object ); }
 	
 	sgs_VarObj* object;
-	
-protected:
-	void _acquire(){ if( object ) sgs_ObjAcquire( C, object ); }
-	void _release(){ if( object ){ sgs_ObjRelease( C, object ); object = NULL; } }
 	SGS_CTX;
 	
+	void _acquire(){ if( object ) sgs_ObjAcquire( C, object ); }
+	void _release(){ if( object ){ sgs_ObjRelease( C, object ); object = NULL; } }
 };
 
 template< class T >

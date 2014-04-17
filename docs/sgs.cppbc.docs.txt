@@ -156,8 +156,19 @@ Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int
 # Helper classes & functions [info]
 
 
+=== Classes
+
 - @sgsHandle - the class used for handling SGS_OBJECT classes
 - @sgsVariable - the class used for handling all SGScript variables
+
+=== Functions
+
+- @sgs_PushHandle - push handle on stack
+- @sgs_PushClass - push new class instance on stack
+- @sgs_PushClassIPA - allocate new class instance, push it on stack
+- @sgs_PushClassFrom - push a copy of class instance on stack
+- @sgs_InitPushedClass - initialize internal class pointers
+- @SGS_PUSHCLASS - push a new instance of class, using the specified arguments for constructor
 
 
 # >>>
@@ -170,6 +181,7 @@ Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int
 === Variables
 
 - `sgs_VarObj* object` - the pointer to object with interface equal to T::_sgs_interface or NULL
+- `SGS_CTX` (`sgs_Context* C`) - associated context
 
 === Constructors
 
@@ -180,6 +192,8 @@ Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int
 === Methods
 
 - `SGSRESULT gcmark()` - mark the object in handle as accessible (using sgs_ObjGCMark)
+- `void _acquire()` - increment reference count on variable
+- `void _release()` - decrement reference count on variable, remove it from the class
 
 === Operators
 
@@ -223,9 +237,62 @@ Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int
 - `bool operator <`, `bool operator ==` - comparison operators (the required minimum used for sorting)
 
 
+# sgs_PushHandle [function]
+
+== template< class T > inline void sgs_PushHandle( SGS_CTX, const sgsHandle<T>& val )
+=== push the specified class handle on stack
+
+- NULL is pushed if handle doesn't point to a class
+
+
+# sgs_PushClass [function]
+
+== template< class T > void sgs_PushClass( SGS_CTX, T* inst )
+=== push a new instance of the class on stack
+
+! This function should not be used with existing instances, as it would make two or more SGScript objects responsible for the same data. Use @sgs_PushVar<Data type handling>, @sgs_PushHandle or @sgs_PushClassFrom with existing instances.
+
+
+# sgs_PushClassIPA [function]
+
+== template< class T > T* sgs_PushClassIPA( SGS_CTX )
+=== allocate a class in-place, push it on the stack
+
+- To be used with placement new.
+
+! This function should not be used with existing instances, as it would make two or more SGScript objects responsible for the same data. Use @sgs_PushVar<Data type handling>, @sgs_PushHandle or @sgs_PushClassFrom with existing instances.
+
+
+# sgs_PushClassFrom [function]
+
+== template< class T > T* sgs_PushClassFrom( SGS_CTX, T* inst )
+=== push a copy of the specified class instance on stack
+
+
+# sgs_InitPushedClass [function]
+
+== template< class T> T* sgs_InitPushedClass( T* inst, SGS_CTX )
+=== set context / object pointers to class
+
+- return value is `inst`
+
+
+# SGS_PUSHCLASS [function alias]
+
+== SGS_PUSHCLASS( C, name, args )
+=== push a new instance of the specified class, using the specified arguments for constructor
+
+- this is the preferred method to create class object instances
+- returns the pointer to class instance
+
+Usage example:
+
+    SGS_PUSHCLASS( C, myClass, ( param1, 5.0f ) );
+
+
 # TODO [info]
 
-sgs_PushClass(From)..
+sgs_PushLiteClass(From)..
 
 
 # <<<

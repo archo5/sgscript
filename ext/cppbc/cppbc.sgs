@@ -269,7 +269,7 @@ function cppbc_block_bounds( code, pos )
 
 function cppbc_get_vdchar_type( char )
 {
-	if( fmt_charcc( char, "a-zA-Z0-9_" ) )
+	if( fmt_charcc( char, "a-zA-Z0-9_." ) )
 		return "N";
 	if( fmt_charcc( char, " \t\v\r\n" ) )
 		return "S";
@@ -720,16 +720,16 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 		{
 			itemline = null;
 			if( item.what == "METHOD" )
-				itemline = "sgs_PushCFunction( C, _sgs_method__%OBJ%__%NAME% );";
+				itemline = "sgs_PushCFunction( C, _sgs_method__%OBJ%__"$item.name$" );";
 			else if( item.what == "PROPERTY" )
 			{
 				if( item.access <= 0 )
-					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->%NAME% );";
+					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.name$" );";
 			}
 			else if( item.what == "PROPERTY_FUNC" )
 			{
 				if( item.read === true )
-					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$(item.varname||item.name)$" );";
+					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.name$" );";
 				else if( item.read )
 					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.read$"() );";
 				if( item.readcb )
@@ -742,7 +742,7 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( \"%NAME%\" ){ "$itemline$" return SGS_SUCCESS; }"
 				, {
 					"%OBJ%" = obj.name,
-					"%NAME%" = item.name,
+					"%NAME%" = if( isset( item, "varname" ), item.varname || item.name, item.name ),
 					"%TYPEFUNC%" = if( cppbc_type_is_voidptr( item.type ), "sgs_PushPtr", "sgs_PushVar" ),
 				} );
 			}
@@ -764,12 +764,12 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			if( item.what == "PROPERTY" )
 			{
 				if( item.access >= 0 )
-					itemline = "static_cast<%OBJ%*>( obj->data )->%NAME% = %TYPEFUNC%( C, val%ISOBJ% );";
+					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.name$" = %TYPEFUNC%( C, val%ISOBJ% );";
 			}
 			else if( item.what == "PROPERTY_FUNC" )
 			{
 				if( item.write === true )
-					itemline = "static_cast<%OBJ%*>( obj->data )->"$(item.varname||item.name)$" = %TYPEFUNC%( C, val%ISOBJ% );";
+					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.name$" = %TYPEFUNC%( C, val%ISOBJ% );";
 				else if( item.write )
 					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.write$"( %TYPEFUNC%( C, val%ISOBJ% ) );";
 				if( item.writecb )
@@ -781,7 +781,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( \"%NAME%\" ){ "$itemline$" return SGS_SUCCESS; }"
 				, {
 					"%OBJ%" = obj.name,
-					"%NAME%" = item.name,
+					"%NAME%" = if( isset( item, "varname" ), item.varname || item.name, item.name ),
 					"%TYPEFUNC%" = if( cppbc_type_is_voidptr( item.type ), "sgs_GetPtrP", "sgs_GetVarP<" $ cppbc_fix_type( item.type ) $ ">()" ),
 					"%ISOBJ%" = if( string_part( item.type, 0, 4 ) != "void" && item.type[ item.type.length - 1 ] == "*", ", true", "" ),
 				});
