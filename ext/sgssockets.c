@@ -453,7 +453,7 @@ static int sgs_socket_address_frombytes( SGS_CTX )
 		sai->sin_port = port;
 		memcpy( &sai->sin_addr.s_addr, buf, 4 );
 	}
-	else /* AF_INET6 */
+	else if( af == AF_INET6 )
 	{
 		struct sockaddr_in6* sai = (struct sockaddr_in6*) &ss;
 		if( bufsize != 16 )
@@ -462,8 +462,59 @@ static int sgs_socket_address_frombytes( SGS_CTX )
 		sai->sin6_port = port;
 		memcpy( sai->sin6_addr.s6_addr, buf, 16 );
 	}
+	else
+		STDLIB_WARN( "unsupported address family" );
 	
 	push_sockaddr( C, &ss, sizeof(ss) );
+	return 1;
+}
+
+static int sgs_socket_getaddrinfo( SGS_CTX )
+{
+	sgs_StkIdx sz0, sz1;
+	struct addrinfo hints, *list = NULL, *pp;
+	char *addr, *servport;
+	sgs_Int socktype = SOCK_STREAM, af = AF_UNSPEC;
+	
+	SGSFN( "socket_getaddrinfo" );
+	/* address, port, socktype, address_family */
+	if( !sgs_LoadArgs( C, "ss|ii", &addr, &servport, &socktype, &af ) )
+		return 0;
+	
+	memset( &hints, 0, sizeof(hints) );
+	hints.ai_socktype = (int) socktype;
+	hints.ai_family = (int) af;
+	
+	if( !sockassert( C, getaddrinfo( addr, servport, &hints, &list ) == 0 ) )
+		STDLIB_WARN( "failed to get address info" )
+	
+	pp = list;
+	sz0 = sgs_StackSize( C );
+	while( pp )
+	{
+		sz1 = sgs_StackSize( C );
+		
+		sgs_PushString( C, "flags" );
+		sgs_PushInt( C, pp->ai_flags );
+		sgs_PushString( C, "family" );
+		sgs_PushInt( C, pp->ai_family );
+		sgs_PushString( C, "socktype" );
+		sgs_PushInt( C, pp->ai_socktype );
+		sgs_PushString( C, "protocol" );
+		sgs_PushInt( C, pp->ai_protocol );
+		sgs_PushString( C, "canonname" );
+		if( pp->ai_canonname )
+			sgs_PushString( C, pp->ai_canonname );
+		else
+			sgs_PushNull( C );
+		sgs_PushString( C, "addr" );
+		push_sockaddr( C, (struct sockaddr_storage*) pp->ai_addr, pp->ai_addrlen );
+		
+		sgs_PushDict( C, sgs_StackSize( C ) - sz1 );
+		pp = pp->ai_next;
+	}
+	freeaddrinfo( list );
+	sgs_PushArray( C, sgs_StackSize( C ) - sz0 );
 	return 1;
 }
 
@@ -756,6 +807,52 @@ static int socket_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 				sgs_PushBool( C, bv );
 			return SGS_SUCCESS;
 		}
+		if( STREQ( name, "send_timeout" ) )
+		{
+#ifdef _WIN32
+			DWORD tv;
+#else
+			struct timeval tv;
+#endif
+			GSO_ARG5TYPE tvl = sizeof(tv);
+			if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_SNDTIMEO, (char*) &tv, &tvl ) != -1 ) )
+			{
+				sgs_Msg( C, SGS_WARNING, "failed to retrieve the 'send_timeout' property of a socket" );
+				sgs_PushNull( C );
+			}
+			else
+			{
+#ifdef _WIN32
+				sgs_PushReal( C, (sgs_Real) 0.001 * (sgs_Real) tv );
+#else
+				sgs_PushReal( C, (sgs_Real) tv.tv_sec + (sgs_Real) 0.000001 * (sgs_Real) tv.tv_usec );
+#endif
+			}
+			return SGS_SUCCESS;
+		}
+		if( STREQ( name, "recv_timeout" ) )
+		{
+#ifdef _WIN32
+			DWORD tv;
+#else
+			struct timeval tv;
+#endif
+			GSO_ARG5TYPE tvl = sizeof(tv);
+			if( !sockassert( C, getsockopt( GET_SCK, SOL_SOCKET, SO_RCVTIMEO, (char*) &tv, &tvl ) != -1 ) )
+			{
+				sgs_Msg( C, SGS_WARNING, "failed to retrieve the 'recv_timeout' property of a socket" );
+				sgs_PushNull( C );
+			}
+			else
+			{
+#ifdef _WIN32
+				sgs_PushReal( C, (sgs_Real) 0.001 * (sgs_Real) tv );
+#else
+				sgs_PushReal( C, (sgs_Real) tv.tv_sec + (sgs_Real) 0.000001 * (sgs_Real) tv.tv_usec );
+#endif
+			}
+			return SGS_SUCCESS;
+		}
 		if( STREQ( name, "error" ) )
 		{
 			int bv;
@@ -805,6 +902,38 @@ static int socket_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 				return SGS_EINVAL;
 			if( !sockassert( C, setsockopt( GET_SCK, SOL_SOCKET, SO_REUSEADDR, (char*) &bv, sizeof(bv) ) != -1 ) )
 				sgs_Msg( C, SGS_WARNING, "failed to set the 'reuse_addr' property of a socket" );
+			return SGS_SUCCESS;
+		}
+		if( STREQ( name, "send_timeout" ) )
+		{
+			sgs_Real tm;
+#ifdef _WIN32
+			DWORD tv = (DWORD) ( tm * 1000 );
+#else
+			struct timeval tv;
+			tv.tv_sec = (int32_t) floor( tm );
+			tv.tv_usec = (int32_t) ( fmod( tm, 1.0f ) * 1000000 );
+#endif
+			if( !sgs_ParseRealP( C, val, &tm ) )
+				return SGS_EINVAL;
+			if( !sockassert( C, setsockopt( GET_SCK, SOL_SOCKET, SO_SNDTIMEO, (char*) &tv, sizeof(tv) ) != -1 ) )
+				sgs_Msg( C, SGS_WARNING, "failed to set the 'send_timeout' property of a socket" );
+			return SGS_SUCCESS;
+		}
+		if( STREQ( name, "recv_timeout" ) )
+		{
+			sgs_Real tm;
+#ifdef _WIN32
+			DWORD tv = (DWORD) ( tm * 1000 );
+#else
+			struct timeval tv;
+			tv.tv_sec = (int32_t) floor( tm );
+			tv.tv_usec = (int32_t) ( fmod( tm, 1.0f ) * 1000000 );
+#endif
+			if( !sgs_ParseRealP( C, val, &tm ) )
+				return SGS_EINVAL;
+			if( !sockassert( C, setsockopt( GET_SCK, SOL_SOCKET, SO_RCVTIMEO, (char*) &tv, sizeof(tv) ) != -1 ) )
+				sgs_Msg( C, SGS_WARNING, "failed to set the 'recv_timeout' property of a socket" );
 			return SGS_SUCCESS;
 		}
 	}
@@ -1027,6 +1156,7 @@ static sgs_RegFuncConst f_sock[] =
 	{ "socket_geterrnobyname", socket_geterrnobyname },
 	{ "socket_address", sgs_socket_address },
 	{ "socket_address_frombytes", sgs_socket_address_frombytes },
+	{ "socket_getaddrinfo", sgs_socket_getaddrinfo },
 	{ "socket_gethostname", sgs_socket_gethostname },
 	{ "socket", sgs_socket },
 	{ "socket_tcp", sgs_socket_tcp },
