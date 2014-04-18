@@ -49,7 +49,56 @@ The SGS_OBJECT tag marks the structs/classes that need to have the binding code.
 </p><p>
 GCMARK handlers are more like the raw API but all that needs to be done in the function is calling gcmark() on each variable or handle. Due to the possibility of having many unknown kinds of containers of variables, it is unlikely that this function could ever be automatically generated, except for the most primitive of cases.
 </p></div>
-<div class='item'><a name='Common-usage-patterns'></a><hr><h2>Common usage patterns</h2><h4>declare a variable and bind it</h4><pre>SGS_PROPERTY float x;</pre><h4>bind an inherited variable</h4><pre>SGS_PROPERTY SGS_ALIAS( float x );</pre><h4>bind &amp; declare variable with post-write callback</h4><pre>SGS_PROPERTY_FUNC( READ WRITE WRITE_CALLBACK myWriteCallback ) float x;</pre><h4>bind a fake variable (based on get/set functions)</h4><pre>SGS_PROPERTY_FUNC( READ getX WRITE setX ) SGS_ALIAS( float x );</pre><h4>bind &amp; declare a variable with two different names</h4><pre>SGS_PROPERTY_FUNC( READ WRITE VARNAME sgsName ) float x;</pre><h4>bind an inherited/previously defined variable</h4><pre>SGS_PROPERTY_FUNC( READ WRITE VARNAME sgsName ) SGS_ALIAS( float x );</pre><h4>declare a method and bind it</h4><pre>SGS_METHOD float calc( float x );</pre><h4>declare a vararg method with variable return value count</h4><pre>SGS_METHOD SGS_MULTRET complexFunc();</pre></div>
+<div class='item'><a name='Common-usage-patterns'></a><hr><h2>Common usage patterns</h2><h4>declare a variable and bind it</h4><pre>SGS_PROPERTY float x;</pre><h4>bind an inherited variable</h4><pre>SGS_PROPERTY SGS_ALIAS( float x );</pre><h4>bind &amp; declare variable with post-write callback</h4><pre>SGS_PROPERTY_FUNC( READ WRITE WRITE_CALLBACK myWriteCallback ) float x;</pre><h4>bind a fake variable (based on get/set functions)</h4><pre>SGS_PROPERTY_FUNC( READ getX WRITE setX ) SGS_ALIAS( float x );</pre><h4>bind &amp; declare a variable with two different names</h4><pre>SGS_PROPERTY_FUNC( READ WRITE VARNAME sgsName ) float x;</pre><h4>bind an inherited/previously defined variable</h4><pre>SGS_PROPERTY_FUNC( READ WRITE VARNAME sgsName ) SGS_ALIAS( float x );</pre><h4>declare a method and bind it</h4><pre>SGS_METHOD float calc( float x );</pre><h4>declare a vararg method with variable return value count</h4><pre>SGS_METHOD SGS_MULTRET complexFunc();</pre><h4>handle class stub</h4><pre>typedef sgsHandle&lt; struct sgsObj &gt; sgsObjHandle;
+struct sgsObj
+{
+    SGS_OBJECT;
+    
+    static sgsObjHandle HandleFromPtr( Obj* ); // resolve the link through object&#39;s user data pointer or some similar method
+    
+    sgsObj( Obj* obj ) : m_obj( obj ){}
+    ~sgsObj(){ cleanup(); }
+    void cleanup() // this is pulled out of constructor in case it might be called by a parent object to invalidate the handle on destruction of the owning system
+    {
+        if( m_obj )
+        {
+            // *** free m_obj ***
+            m_obj = NULL;
+        }
+    }
+    Obj* m_obj;
+    
+    // declare additional properties and methods with SGS_PROPERTY(_FUNC) and SGS_METHOD, respectively
+    // most properties/methods will most likely have to include a NULL test for m_obj, like this:
+    int _getProp(){ return m_obj ? m_obj-&gt;GetProp() : 0; }
+    void _setProp( int v ){ if( m_obj ) m_obj-&gt;SetProp( v ); }
+    SGS_PROPERTY_FUNC( READ _getProp WRITE _setProp ) SGS_ALIAS( int prop );
+};</pre><h4>data struct stub</h4><pre>struct sgsData : Data
+{
+    SGS_OBJECT_LITE;
+    
+    sgsData(){}
+    sgsData( const Data&amp; t ) : Data( t ){}
+    
+    // properties with direct access (non-private)
+    SGS_PROPERTY SGS_ALIAS( item1 );
+    
+    // data struct properties (original type: SubData, wrapped type: sgsSubData)
+    sgsSubData _getSubData(){ return subData; }
+    void _setSubData( const sgsSubData&amp; sd ){ subData = sd; }
+    SGS_PROPERTY_FUNC( READ _getSubData WRITE _setSubData ) SGS_ALIAS( sgsSubData subData );
+    
+    // properties with method access
+    int _getProp(){ return GetProp(); }
+    void _setProp( int v ){ SetProp( v ); }
+    SGS_PROPERTY_FUNC( READ _getProp WRITE _setProp ) SGS_ALIAS( int prop );
+    
+    // aliases (second names) for all properties:
+    SGS_PROPERTY_FUNC( READ WRITE VARNAME item1alt ) SGS_ALIAS( item1 );
+    SGS_PROPERTY_FUNC( READ _getSubData WRITE _setSubData VARNAME subDataAlt ) SGS_ALIAS( sgsSubData subData );
+    SGS_PROPERTY_FUNC( READ _getProp WRITE _setProp VARNAME propAlt ) SGS_ALIAS( int prop );
+};
+SGS_DEFAULT_LITE_OBJECT_INTERFACE( sgsData ); // this line can be replaced with a modified combo of sgs_PushVar/sgs_GetVar/sgs_GetVarP declarations</pre></div>
 <div class='item'><a name='Tags'></a><hr><h2>Tags</h2><h3>SGS_OBJECT</h3><h3>SGS_OBJECT_LITE</h3><p>
 Marks the objects/structures for parsing.
 </p><p>

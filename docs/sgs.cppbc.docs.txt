@@ -78,6 +78,63 @@ GCMARK handlers are more like the raw API but all that needs to be done in the f
 
     SGS_METHOD SGS_MULTRET complexFunc();
 
+=== handle class stub
+
+    typedef sgsHandle< struct sgsObj > sgsObjHandle;
+    struct sgsObj
+    {
+        SGS_OBJECT;
+        
+        static sgsObjHandle HandleFromPtr( Obj* ); // resolve the link through object's user data pointer or some similar method
+        
+        sgsObj( Obj* obj ) : m_obj( obj ){}
+        ~sgsObj(){ cleanup(); }
+        void cleanup() // this is pulled out of constructor in case it might be called by a parent object to invalidate the handle on destruction of the owning system
+        {
+            if( m_obj )
+            {
+                // *** free m_obj ***
+                m_obj = NULL;
+            }
+        }
+        Obj* m_obj;
+        
+        // declare additional properties and methods with SGS_PROPERTY(_FUNC) and SGS_METHOD, respectively
+        // most properties/methods will most likely have to include a NULL test for m_obj, like this:
+        int _getProp(){ return m_obj ? m_obj->GetProp() : 0; }
+        void _setProp( int v ){ if( m_obj ) m_obj->SetProp( v ); }
+        SGS_PROPERTY_FUNC( READ _getProp WRITE _setProp ) SGS_ALIAS( int prop );
+    };
+
+=== data struct stub
+
+    struct sgsData : Data
+    {
+        SGS_OBJECT_LITE;
+        
+        sgsData(){}
+        sgsData( const Data& t ) : Data( t ){}
+        
+        // properties with direct access (non-private)
+        SGS_PROPERTY SGS_ALIAS( item1 );
+        
+        // data struct properties (original type: SubData, wrapped type: sgsSubData)
+        sgsSubData _getSubData(){ return subData; }
+        void _setSubData( const sgsSubData& sd ){ subData = sd; }
+        SGS_PROPERTY_FUNC( READ _getSubData WRITE _setSubData ) SGS_ALIAS( sgsSubData subData );
+        
+        // properties with method access
+        int _getProp(){ return GetProp(); }
+        void _setProp( int v ){ SetProp( v ); }
+        SGS_PROPERTY_FUNC( READ _getProp WRITE _setProp ) SGS_ALIAS( int prop );
+        
+        // aliases (second names) for all properties:
+        SGS_PROPERTY_FUNC( READ WRITE VARNAME item1alt ) SGS_ALIAS( item1 );
+        SGS_PROPERTY_FUNC( READ _getSubData WRITE _setSubData VARNAME subDataAlt ) SGS_ALIAS( sgsSubData subData );
+        SGS_PROPERTY_FUNC( READ _getProp WRITE _setProp VARNAME propAlt ) SGS_ALIAS( int prop );
+    };
+    SGS_DEFAULT_LITE_OBJECT_INTERFACE( sgsData ); // this line can be replaced with a modified combo of sgs_PushVar/sgs_GetVar/sgs_GetVarP declarations
+
 
 # Tags [info]
 
