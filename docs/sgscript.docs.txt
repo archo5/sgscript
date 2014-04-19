@@ -3609,6 +3609,7 @@ This library is loaded on initialization and contains the functions and constant
 -- @include - load many types of files
 -- @sys_curfile - returns the origin file of the calling function
 -- @sys_curfiledir - returns the directory of the origin file of the calling function
+-- @sys_backtrace - returns call stack info
 -- @sys_msg - emit a system message
 -- @INFO - emit an INFO message
 -- @WARNING - emit a WARNING message
@@ -4267,6 +4268,20 @@ This library is loaded on initialization and contains the functions and constant
     print( sys_curfiledir() ); // prints "."
     // b.sgs
     include "ext/a.sgs", "a.sgs";
+
+
+# sys_backtrace [function]
+
+== sys_backtrace( bool as_string = false )
+=== returns the call stack function/line/file list, either as array of dicts, or as a string, formatted exactly like in error messages (via @sgs_PushErrorInfo)
+
+- in the dict, there are three keys:
+-- func (string)
+-- line (null/int)
+-- file (string)
+
+    errprint( sys_backtrace( true ) ); // print backtrace to stderr
+    println( sys_backtrace().last.func ); // print name of current function
 
 
 # sys_msg [function]

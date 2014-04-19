@@ -1872,6 +1872,7 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#include-function">include</a> - load many types of files
 </li><li><a href="#sys-curfile-function">sys_curfile</a> - returns the origin file of the calling function
 </li><li><a href="#sys-curfiledir-function">sys_curfiledir</a> - returns the directory of the origin file of the calling function
+</li><li><a href="#sys-backtrace-function">sys_backtrace</a> - returns call stack info
 </li><li><a href="#sys-msg-function">sys_msg</a> - emit a system message
 </li><li><a href="#INFO-function">INFO</a> - emit an INFO message
 </li><li><a href="#WARNING-function">WARNING</a> - emit a WARNING message
@@ -2077,6 +2078,11 @@ print( sys_curfiledir() ); // prints &quot;ext&quot;
 print( sys_curfiledir() ); // prints &quot;.&quot;
 // b.sgs
 include &quot;ext/a.sgs&quot;, &quot;a.sgs&quot;;</pre></div>
+<div class='item'><a name='sys-backtrace-function'></a><hr><h2>sys_backtrace [function]</h2><h3>sys_backtrace( bool as_string = false )</h3><h4>returns the call stack function/line/file list, either as array of dicts, or as a string, formatted exactly like in error messages (via <a href="#sgs-PushErrorInfo-function">sgs_PushErrorInfo)</a></h4><ul><li>in the dict, there are three keys:
+<ul><li>func (string)
+</li><li>line (null/int)
+</li><li>file (string)</li></ul></li></ul><pre>errprint( sys_backtrace( true ) ); // print backtrace to stderr
+println( sys_backtrace().last.func ); // print name of current function</pre></div>
 <div class='item'><a name='sys-msg-function'></a><hr><h2>sys_msg [function]</h2><h3>sys_msg( int code, string message )</h3><h4>passes a message to the internal messaging system (one that&#39;s commonly used to report errors and warnings)</h4><p>
 <em class='notice-bgr'>Different codes can be handled differently by the system. By default, SGS_ERROR code will stop execution and return to C code as soon as possible.</em>
 </p><ul><li><code>code</code> is the code to use to pass the message (ex. SGS_INFO, SGS_WARNING, SGS_ERROR)</li></ul></div>

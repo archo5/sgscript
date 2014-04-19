@@ -3057,6 +3057,47 @@ static int sgsstd_sys_curfiledir( SGS_CTX )
 	return _push_curdir( C );
 }
 
+static int sgsstd_sys_backtrace( SGS_CTX )
+{
+	sgs_Bool as_errinfo = 0;
+	SGSFN( "sys_backtrace" );
+	
+	if( !sgs_LoadArgs( C, "|b", &as_errinfo ) )
+		return 0;
+	
+	if( as_errinfo )
+		sgs_PushErrorInfo( C, SGS_ERRORINFO_STACK, 0, NULL );
+	else
+	{
+		sgs_StkIdx sz = sgs_StackSize( C );
+		sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
+		while( p != NULL )
+		{
+			const char* file, *name;
+			int ln;
+			if( !p->next && !p->code )
+				break;
+			sgs_StackFrameInfo( C, p, &name, &file, &ln );
+			
+			sgs_PushString( C, "func" );
+			sgs_PushString( C, name );
+			sgs_PushString( C, "line" );
+			if( ln )
+				sgs_PushInt( C, ln );
+			else
+				sgs_PushNull( C );
+			sgs_PushString( C, "file" );
+			sgs_PushString( C, file );
+			
+			sgs_PushDict( C, 6 );
+			
+			p = p->next;
+		}
+		sgs_PushArray( C, sgs_StackSize( C ) - sz );
+	}
+	return 1;
+}
+
 static int sgsstd_sys_msg( SGS_CTX )
 {
 	char* errmsg;
@@ -3401,7 +3442,7 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( include_library ), FN( include_file ),
 	FN( include_shared ), FN( import_cfunc ),
 	FN( include ),
-	FN( sys_curfile ), FN( sys_curfiledir ),
+	FN( sys_curfile ), FN( sys_curfiledir ), FN( sys_backtrace ),
 	FN( sys_msg ), FN( INFO ), FN( WARNING ), FN( ERROR ),
 	FN( sys_abort ), FN( app_abort ), FN( app_exit ),
 	FN( sys_replevel ), FN( sys_stat ),
