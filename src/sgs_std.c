@@ -2369,6 +2369,52 @@ static int sgsstd_srand( SGS_CTX )
 	return 0;
 }
 
+static int sgsstd_hash_fnv( SGS_CTX )
+{
+	uint8_t* buf;
+	sgs_SizeVal i, bufsize;
+	uint32_t hv = 2166136261u;
+	sgs_Bool as_hexstr = 0;
+	SGSFN( "hash_fnv" );
+	if( !sgs_LoadArgs( C, "m|b", &buf, &bufsize, &as_hexstr ) )
+		return 0;
+	for( i = 0; i < bufsize; ++i )
+	{
+		hv ^= buf[ i ];
+		hv *= 16777619u;
+	}
+	if( as_hexstr )
+	{
+		char hexstr[ 9 ] = {0};
+		sprintf( hexstr, "%08x", hv );
+		sgs_PushStringBuf( C, hexstr, 8 );
+	}
+	else
+		sgs_PushInt( C, hv );
+	return 1;
+}
+
+static int sgsstd_hash_crc32( SGS_CTX )
+{
+	uint8_t* buf;
+	sgs_SizeVal bufsize;
+	uint32_t hv;
+	sgs_Bool as_hexstr = 0;
+	SGSFN( "hash_crc32" );
+	if( !sgs_LoadArgs( C, "m|b", &buf, &bufsize, &as_hexstr ) )
+		return 0;
+	hv = sgs_crc32( buf, (size_t) bufsize, 0 );
+	if( as_hexstr )
+	{
+		char hexstr[ 9 ] = {0};
+		sprintf( hexstr, "%08x", hv );
+		sgs_PushStringBuf( C, hexstr, 8 );
+	}
+	else
+		sgs_PushInt( C, hv );
+	return 1;
+}
+
 
 /* internal utils */
 
@@ -3304,7 +3350,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* OS */
 	FN( ftime ),
 	/* utils */
-	FN( rand ), FN( randf ), FN( srand ),
+	FN( rand ), FN( randf ), FN( srand ), FN( hash_fnv ), FN( hash_crc32 ),
 	/* internal utils */
 	FN( va_get_args ), FN( va_arg_count ),
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },

@@ -1854,6 +1854,8 @@ This library is loaded on initialization and contains the functions and constant
 <ul><li><a href="#rand-function">rand</a> - returns a random integer between 0 and RAND_MAX
 </li><li><a href="#randf-function">randf</a> - returns a random real value between 0 and 1
 </li><li><a href="#srand-function">srand</a> - reseed random number generator
+</li><li><a href="#hash-fnv-function">hash_fnv</a> - generate a hash using the FNV-1a algorithm
+</li><li><a href="#hash-crc32-function">hash_crc32</a> - generate a hash/checksum using the crc32 algorithm
 </li></ul><li>SGS-specific utilities
 <ul><li><a href="#va-get-args-function">va_get_args</a> - returns an array of all arguments passed to calling function
 </li><li><a href="#va-arg-count-function">va_arg_count</a> - returns the number of all arguments passed to calling function
@@ -2007,6 +2009,8 @@ println( &quot;That took &quot; $ ftime() - start $ &quot; seconds.&quot; );</pr
 <div class='item'><a name='randf-function'></a><hr><h2>randf [function]</h2><h3>randf()</h3><h4>returns a random &#39;real&#39; value in the range [0;1] - from 0, inclusive, to 1, inclusive</h4></div>
 <div class='item'><a name='srand-function'></a><hr><h2>srand [function]</h2><h3>srand( int seed )</h3><h4>specify a different seed value for the built-in pseudo-random number generator</h4><pre>srand( 5 ); // restart the generator with the value specified
 srand( ftime() ); // restart the generator depending on the second the code was executed</pre></div>
+<div class='item'><a name='hash-fnv-function'></a><hr><h2>hash_fnv [function]</h2><h3>hash_fnv( string buf, bool as_hexstring = false )</h3><h4>generate a hash, using the FNV-1a algorithm</h4><ul><li>if <code>as_hexstring</code> is true, an 8 characters long string containing the hexadecimal fixed-length hash value is returned, otherwise the value is returned as integer</li></ul></div>
+<div class='item'><a name='hash-crc32-function'></a><hr><h2>hash_crc32 [function]</h2><h3>hash_crc32( string buf, bool as_hexstring = false )</h3><h4>generate a hash/checksum, using the CRC32 algorithm</h4><ul><li>if <code>as_hexstring</code> is true, an 8 characters long string containing the hexadecimal fixed-length hash/checksum value is returned, otherwise the value is returned as integer</li></ul></div>
 <div class='item'><a name='va-get-args-function'></a><hr><h2>va_get_args [function]</h2><h3>va_get_args()</h3><h4>return an array containing all arguments passed to the calling function</h4></div>
 <div class='item'><a name='va-arg-count-function'></a><hr><h2>va_arg_count [function]</h2><h3>va_arg_count()</h3><h4>return the number of arguments passed to the calling function</h4></div>
 <div class='item'><a name='sys-call-function'></a><hr><h2>sys_call [function]</h2><h3>sys_call( func, this[, args..] )</h3><h4>calls the specified function with the specified <code>this</code> value and argument list</h4><p>

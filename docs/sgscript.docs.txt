@@ -3587,6 +3587,8 @@ This library is loaded on initialization and contains the functions and constant
 -- @rand - returns a random integer between 0 and RAND_MAX
 -- @randf - returns a random real value between 0 and 1
 -- @srand - reseed random number generator
+-- @hash_fnv - generate a hash using the FNV-1a algorithm
+-- @hash_crc32 - generate a hash/checksum using the crc32 algorithm
 - SGS-specific utilities
 -- @va_get_args - returns an array of all arguments passed to calling function
 -- @va_arg_count - returns the number of all arguments passed to calling function
@@ -4054,6 +4056,22 @@ This library is loaded on initialization and contains the functions and constant
 
     srand( 5 ); // restart the generator with the value specified
     srand( ftime() ); // restart the generator depending on the second the code was executed
+
+
+# hash_fnv [function]
+
+== hash_fnv( string buf, bool as_hexstring = false )
+=== generate a hash, using the FNV-1a algorithm
+
+- if `as_hexstring` is true, an 8 characters long string containing the hexadecimal fixed-length hash value is returned, otherwise the value is returned as integer
+
+
+# hash_crc32 [function]
+
+== hash_crc32( string buf, bool as_hexstring = false )
+=== generate a hash/checksum, using the CRC32 algorithm
+
+- if `as_hexstring` is true, an 8 characters long string containing the hexadecimal fixed-length hash/checksum value is returned, otherwise the value is returned as integer
 
 
 # va_get_args [function]

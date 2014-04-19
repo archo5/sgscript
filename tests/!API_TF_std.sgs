@@ -152,6 +152,13 @@ testEqual( ''$dict_process( clone(TD), function(x){return toint(x) + 10;} ), "{a
 testEqual( ''$dict_process( clone(TD), tostring ), "{a=3,b=false,c=4,5=0}", "dict_process - convert to string" );
 testEqual( ''$dict_process( clone(TD), function(x,k){ return k; } ), "{a=a,b=b,c=c,5=5}", "dict_process - set from key" );
 
+testEqual( hash_fnv( "something" ), 2118605163, "fnv hash - as int" );
+testEqual( hash_fnv( "something", true ), "7e47596b", "fnv hash - as string" );
+testEqual( hash_fnv( "something" ) == hash_fnv( "somethjng" ), false, "fnv hash - collisions" );
+testEqual( hash_crc32( "something" ), 165294587, "crc32 hash - as int" );
+testEqual( hash_crc32( "something", true ), "09da31fb", "crc32 hash - as string" );
+testEqual( hash_crc32( "something" ) == hash_crc32( "somethjng" ), false, "crc32 hash - collisions" );
+
 
 	section( "include_file" );
 f2inc = "tests/s_fnexp.sgs";
