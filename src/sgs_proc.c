@@ -17,8 +17,11 @@
 #define IS_REFTYPE( type ) ( type == SVT_STRING || type == SVT_FUNC || type == SVT_OBJECT )
 
 
-#define VAR_ACQUIRE( pvar ) { if( IS_REFTYPE( (pvar)->type ) ) (*(pvar)->data.pRC)++; }
-#define VAR_RELEASE( pvar ) { if( IS_REFTYPE( (pvar)->type ) ) var_release( C, pvar ); }
+#define VAR_ACQUIRE( pvar ) { \
+	if( IS_REFTYPE( (pvar)->type ) ) (*(pvar)->data.pRC)++; }
+#define VAR_RELEASE( pvar ) { \
+	if( IS_REFTYPE( (pvar)->type ) ) var_release( C, pvar ); \
+	(pvar)->type = SVT_NULL; }
 
 
 #define STK_UNITSIZE sizeof( sgs_Variable )
@@ -164,7 +167,6 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 {
 	uint32_t type = p->type;
 	(*p->data.pRC) -= 1;
-	p->type = SVT_NULL;
 	
 	if( (*p->data.pRC) <= 0 )
 	{
