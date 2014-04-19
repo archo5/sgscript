@@ -872,8 +872,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_CreateEngineExt - create scripting engine context and pass a custom memory function
 - @sgs_DestroyEngine - validate memory statistics and destroy engine context
 - @sgs_DefaultMemFunc - example memory management callback
-- @sgs_GetOutputFunc - return the current output callback and its user data pointer
-- @sgs_SetOutputFunc - set the output callback and its user data pointer
+- @sgs_Get(Err)OutputFunc - return the current output callback and its user data pointer
+- @sgs_Set(Err)OutputFunc - set the output callback and its user data pointer
 - @sgs_GetMsgFunc - return the current messaging callback and its user data pointer
 - @sgs_SetMsgFunc - set the messaging callback and its user data pointer
 - @sgs_Cntl - set and/or retrieve various states in the system
@@ -894,11 +894,11 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # Input / output [info]
 
-- @sgs_GetOutputFunc - return the current output callback and its user data pointer
-- @sgs_SetOutputFunc - set the output callback and its user data pointer
-- @sgs_Write - pass a character buffer to the output callback
-- @sgs_Writef - pass a formatted string to the output callback
-- @sgs_WriteStr - pass a null-terminated string to the output callback
+- @sgs_Get(Err)OutputFunc - return the current output callback and its user data pointer
+- @sgs_Set(Err)OutputFunc - set the output callback and its user data pointer
+- @sgs_(Err)Write - pass a character buffer to the output callback
+- @sgs_(Err)Writef - pass a formatted string to the output callback
+- @sgs_(Err)WriteStr - pass a null-terminated string to the output callback
 - @sgs_GetMsgFunc - return the current messaging callback and its user data pointer
 - @sgs_SetMsgFunc - set the messaging callback and its user data pointer
 - @sgs_Msg - invoke the messaging system
@@ -2769,41 +2769,45 @@ After a successful call, all arguments and the function will be popped off the s
 === standard output function assumes userdata to be FILE* type and writes the passed buffer to it
 
 
-# sgs_GetOutputFunc [function]
+# sgs_Get(Err)OutputFunc [function]
 
 == void sgs_GetOutputFunc( sgs_Context* C, sgs_OutputFunc* outfunc, void** outuserdata )
-=== retrieves the currently set output function
+== void sgs_GetErrOutputFunc( sgs_Context* C, sgs_OutputFunc* outfunc, void** outuserdata )
+=== retrieves the currently set (error) output function
 
 - validity of the returned function pointer is assured as long as engine internals are not touched anywhere
 
 
-# sgs_SetOutputFunc [function]
+# sgs_Set(Err)OutputFunc [function]
 
 == void sgs_SetOutputFunc( sgs_Context* C, sgs_OutputFunc func, void* userdata )
-=== sets the function used in 'print' function
+== void sgs_SetErrOutputFunc( sgs_Context* C, sgs_OutputFunc func, void* userdata )
+=== sets the function used in 'print'/'errprint' function family
 
 - default output function can be set by passing SGSOUTPUTFN_DEFAULT to func with userdata as FILE*, allocated using the same C runtime that SGScript uses
 - default implementation - @sgs_StdOutputFunc - copies data to FILE* stream, specified in userdata
 -- to use this function with non-default (stderr) stream, pass it explicity due to the possibility of having different runtime libraries linked to different binaries
 
 
-# sgs_Write [function]
+# sgs_(Err)Write [function]
 
 == void sgs_Write( sgs_Context* C, const void* ptr, sgs_SizeVal size )
-=== passes the specified data to the output function
+== void sgs_ErrWrite( sgs_Context* C, const void* ptr, sgs_SizeVal size )
+=== passes the specified data to the (error) output function
 
-- the default output function prints the data to the specified FILE* stream (stdout by default)
+- the default output function prints the data to the specified FILE* stream (stdout/stderr by default)
 
 
-# sgs_WriteStr [function alias]
+# sgs_(Err)WriteStr [function alias]
 
 == void sgs_WriteStr( sgs_Context* C, const char* str )
-=== passes the specified string to the output function
+== void sgs_ErrWriteStr( sgs_Context* C, const char* str )
+=== passes the specified string to the (error) output function
 
-- alias to `sgs_Write( C, str, SGS_STRINGLENGTHFUNC( str ) )`
+- alias to `sgs_(Err)Write( C, str, SGS_STRINGLENGTHFUNC( str ) )`
 
 
-# sgs_Writef [function]
+# sgs_(Err)Writef [function]
 
 == void sgs_Writef( sgs_Context* C, const char* what, ... )
 === passes the arguments through a vsprintf-like function to expand the data and passes it to the specified output function
@@ -2833,11 +2837,10 @@ After a successful call, all arguments and the function will be popped off the s
 === sets the function that handles and prints messages (more commonly, warnings and errors), while still being physically in that context
 
 - info about the system is at the @"Messaging system" page
-- both subtypes of the default messaging function can be set by passing these flags for `func` with userdata as FILE*, allocated using the same C runtime that SGScript uses
+- both subtypes of the default messaging function can be set by passing these flags for `func`
 -- 'SGSMSGFN_DEFAULT' - default behavior (write stack frame, write error, abort on SGS_ERROR)
 -- 'SGSMSGFN_DEFAULT_NOABORT' - default behavior without the abort-on-errors feature
-- default implementations - @sgs_StdMsgFunc(_NoAbort) writes error and stack trace to FILE* stream, specified in userdata
--- to use these functions with non-default (stderr) stream, pass them explicity due to the possibility of having different runtime libraries linked to different binaries
+- default implementations - @sgs_StdMsgFunc(_NoAbort) passes error and stack trace to @sgs_ErrWrite<sgs_(Err)Write)
 
 
 # sgs_Msg [function]
@@ -2862,7 +2865,7 @@ the error output function type has the following definition:
 
     typedef int (*sgs_ErrorOutputFunc) ( void*, const char*, ... );
 
-- error output function has the same type as fprintf and sgs_Writef
+- error output function has the same type as fprintf, sgs_Writef and sgs_ErrWritef
 - `type` and `msg` should be passed from the messaging callback - they are the same type number / error message
 - `flags` should be one of SGS_ERRORINFO_STACK, SGS_ERRORINFO_ERROR, SGS_ERRORINFO_FULL
 -- SGS_ERRORINFO_STACK only writes the stack frame
@@ -3577,7 +3580,7 @@ This library is loaded on initialization and contains the functions and constant
 -- @is_numeric - returns if variable is a numeric type
 -- @is_callable - returns if variable can be called as a function
 - input/output
--- @"print, println, printlns" - write variables to output callback/stream
+-- @"print, println, printlns, errprint, errprintln, errprintlns" - write variables to output callback/stream
 -- @printvar - write variable dumps to output callback/stream
 -- @printvar_ext - write variable dump to output callback/stream, optionally specifying max. recursion depth
 -- @read_stdin - attempt to read from standard input file (stdin)
@@ -3974,17 +3977,21 @@ This library is loaded on initialization and contains the functions and constant
     is_callable( 5 ); // returns 'false'
 
 
-# print, println, printlns [functions]
+# print, println, printlns, errprint, errprintln, errprintlns [functions]
 
 == print( ... ), println( ... ), printlns( ... ),
-=== passes all arguments, converted to strings, to the output callback
-- print passes arguments without modifications
-- println passes a newline character after all variables
-- printlns passes a newline character after each variable
+== errprint( ... ), errprintln( ... ), errprintlns( ... ),
+=== passes all arguments, converted to strings, to the (error) output callback
+- (err)print passes arguments without modifications
+- (err)println passes a newline character after all variables
+- (err)printlns passes a newline character after each variable
 
     print( 5, "x" ); // prints "5x"
     println( 5, "x" ); // prints "5x\n"
     printlns( 5, "x" ); // prints "5\nx\n"
+    errprint( 5, "x" ); // prints "5x" to error output stream
+    errprintln( 5, "x" ); // prints "5x\n" to error output stream
+    errprintlns( 5, "x" ); // prints "5\nx\n" to error output stream
 
 
 # printvar_ext [function]

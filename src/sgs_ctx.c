@@ -27,6 +27,8 @@ static void ctx_init( SGS_CTX )
 	C->apiversion = SGS_API_VERSION;
 	C->output_fn = sgs_StdOutputFunc;
 	C->output_ctx = stdout;
+	C->erroutput_fn = sgs_StdOutputFunc;
+	C->erroutput_ctx = stderr;
 	C->minlev = SGS_INFO;
 	C->apilev = SGS_ERROR;
 	C->msg_fn = sgs_StdMsgFunc;
@@ -251,6 +253,61 @@ SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... )
 	return TRUE;
 }
 
+void sgs_GetErrOutputFunc( SGS_CTX, sgs_OutputFunc* outf, void** outc )
+{
+	*outf = C->erroutput_fn;
+	*outc = C->erroutput_ctx;
+}
+
+void sgs_SetErrOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx )
+{
+	sgs_BreakIf( func == NULL );
+	if( func == SGSOUTPUTFN_DEFAULT )
+		func = sgs_StdOutputFunc;
+	if( !ctx && func == sgs_StdOutputFunc )
+		ctx = stderr;
+	C->erroutput_fn = func;
+	C->erroutput_ctx = ctx;
+}
+
+void sgs_ErrWrite( SGS_CTX, const void* ptr, size_t size )
+{
+	C->erroutput_fn( C->erroutput_ctx, C, ptr, size );
+}
+
+SGSBOOL sgs_ErrWritef( SGS_CTX, const char* what, ... )
+{
+	char buf[ SGS_OUTPUT_STACKBUF_SIZE ];
+	MemBuf info = membuf_create();
+	int cnt;
+	va_list args;
+	char* ptr = buf;
+	
+	va_start( args, what );
+	cnt = SGS_VSPRINTF_LEN( what, args );
+	va_end( args );
+	
+	if( cnt < 0 )
+		return FALSE;
+	
+	if( cnt >= SGS_OUTPUT_STACKBUF_SIZE )
+	{
+		/* WP: false alarm */
+		membuf_resize( &info, C, (size_t) cnt + 1 );
+		ptr = info.ptr;
+	}
+	
+	va_start( args, what );
+	vsprintf( ptr, what, args );
+	va_end( args );
+	ptr[ cnt ] = 0;
+	
+	sgs_ErrWriteStr( C, ptr );
+	
+	membuf_destroy( &info, C );
+	return TRUE;
+}
+
 
 void sgs_GetMsgFunc( SGS_CTX, sgs_MsgFunc* outf, void** outc )
 {
@@ -266,7 +323,7 @@ void sgs_SetMsgFunc( SGS_CTX, sgs_MsgFunc func, void* ctx )
 	else if( func == SGSMSGFN_DEFAULT_NOABORT )
 		func = sgs_StdMsgFunc_NoAbort;
 	if( !ctx && ( func == sgs_StdMsgFunc || func == sgs_StdMsgFunc_NoAbort ) )
-		ctx = stderr;
+		ctx = NULL;
 	C->msg_fn = func;
 	C->msg_ctx = ctx;
 }

@@ -129,8 +129,8 @@ sgs_Context* get_context()
 	sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, outfp );
 	atf_assert( C->output_ctx == outfp );
 	
-	sgs_SetMsgFunc( C, SGSMSGFN_DEFAULT, errfp );
-	atf_assert( C->msg_ctx == errfp );
+	sgs_SetErrOutputFunc( C, SGSOUTPUTFN_DEFAULT, errfp );
+	atf_assert( C->erroutput_ctx == errfp );
 	
 	return C;
 }

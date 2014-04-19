@@ -670,6 +670,8 @@ struct _sgs_Context
 	/* output */
 	sgs_OutputFunc output_fn; /* output function */
 	void*         output_ctx; /* output context */
+	sgs_OutputFunc erroutput_fn; /* error output function */
+	void*         erroutput_ctx; /* error output context */
 
 	/* info output */
 	int32_t       minlev;

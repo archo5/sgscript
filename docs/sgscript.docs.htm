@@ -714,8 +714,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngineExt</a> - create scripting engine context and pass a custom memory function
 </li><li><a href="#sgs-DestroyEngine-function">sgs_DestroyEngine</a> - validate memory statistics and destroy engine context
 </li><li><a href="#sgs-DefaultMemFunc-function">sgs_DefaultMemFunc</a> - example memory management callback
-</li><li><a href="#sgs-GetOutputFunc-function">sgs_GetOutputFunc</a> - return the current output callback and its user data pointer
-</li><li><a href="#sgs-SetOutputFunc-function">sgs_SetOutputFunc</a> - set the output callback and its user data pointer
+</li><li><a href="#sgs-Get-Err-OutputFunc-function">sgs_Get(Err)OutputFunc</a> - return the current output callback and its user data pointer
+</li><li><a href="#sgs-Set-Err-OutputFunc-function">sgs_Set(Err)OutputFunc</a> - set the output callback and its user data pointer
 </li><li><a href="#sgs-GetMsgFunc-function">sgs_GetMsgFunc</a> - return the current messaging callback and its user data pointer
 </li><li><a href="#sgs-SetMsgFunc-function">sgs_SetMsgFunc</a> - set the messaging callback and its user data pointer
 </li><li><a href="#sgs-Cntl-function">sgs_Cntl</a> - set and/or retrieve various states in the system</li></ul></div>
@@ -728,11 +728,11 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#Memory-allocation-macros-macros">sgs_Alloc_n</a> - allocate an array of objects (requires implicit sgs_Context* C)
 </li><li><a href="#Memory-allocation-macros-macros">sgs_Alloc_a</a> - allocate object + additional memory (requires implicit sgs_Context* C)
 </li><li><a href="#Memory-allocation-macros-macros">sgs_Dealloc</a> - free a previously allocated memory pointer (requires implicit sgs_Context* C)</li></ul></div>
-<div class='item'><a name='Input-output'></a><hr><h2>Input / output</h2><ul><li><a href="#sgs-GetOutputFunc-function">sgs_GetOutputFunc</a> - return the current output callback and its user data pointer
-</li><li><a href="#sgs-SetOutputFunc-function">sgs_SetOutputFunc</a> - set the output callback and its user data pointer
-</li><li><a href="#sgs-Write-function">sgs_Write</a> - pass a character buffer to the output callback
-</li><li><a href="#sgs-Writef-function">sgs_Writef</a> - pass a formatted string to the output callback
-</li><li><a href="#sgs-WriteStr-function-alias">sgs_WriteStr</a> - pass a null-terminated string to the output callback
+<div class='item'><a name='Input-output'></a><hr><h2>Input / output</h2><ul><li><a href="#sgs-Get-Err-OutputFunc-function">sgs_Get(Err)OutputFunc</a> - return the current output callback and its user data pointer
+</li><li><a href="#sgs-Set-Err-OutputFunc-function">sgs_Set(Err)OutputFunc</a> - set the output callback and its user data pointer
+</li><li><a href="#sgs-Err-Write-function">sgs_(Err)Write</a> - pass a character buffer to the output callback
+</li><li><a href="#sgs-Err-Writef-function">sgs_(Err)Writef</a> - pass a formatted string to the output callback
+</li><li><a href="#sgs-Err-WriteStr-function-alias">sgs_(Err)WriteStr</a> - pass a null-terminated string to the output callback
 </li><li><a href="#sgs-GetMsgFunc-function">sgs_GetMsgFunc</a> - return the current messaging callback and its user data pointer
 </li><li><a href="#sgs-SetMsgFunc-function">sgs_SetMsgFunc</a> - set the messaging callback and its user data pointer
 </li><li><a href="#sgs-Msg-function">sgs_Msg</a> - invoke the messaging system
@@ -985,6 +985,9 @@ Closure stack in the C API is technically very similar to main stack, with one i
 <div class='item'><a name='ALL-functions-A-Z'></a><hr><h2>ALL functions (A-Z)</h2><ul><li><a href="#SGSBASEFN-function-alias">SGSBASEFN [function alias]</a>
 </li><li><a href="#SGSFN-function-alias">SGSFN [function alias]</a>
 </li><li><a href="#SGS-PARSE-METHOD-function-alias">SGS_PARSE_METHOD [function alias]</a>
+</li><li><a href="#sgs-Err-Write-function">sgs_(Err)Write [function]</a>
+</li><li><a href="#sgs-Err-WriteStr-function-alias">sgs_(Err)WriteStr [function alias]</a>
+</li><li><a href="#sgs-Err-Writef-function">sgs_(Err)Writef [function]</a>
 </li><li><a href="#sgs-Force-HideThis-functions">sgs_(Force)HideThis [functions]</a>
 </li><li><a href="#sgs-This-Call-P-function-aliases">sgs_(This)Call(P) [function aliases]</a>
 </li><li><a href="#sgs-ArgError-function-aliases">sgs_***ArgError [function aliases]</a>
@@ -1026,6 +1029,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-FuncName-function">sgs_FuncName [function]</a>
 </li><li><a href="#sgs-GCExecute-function">sgs_GCExecute [function]</a>
 </li><li><a href="#sgs-GCMark-Array-function">sgs_GCMark(Array) [function]</a>
+</li><li><a href="#sgs-Get-Err-OutputFunc-function">sgs_Get(Err)OutputFunc [function]</a>
 </li><li><a href="#sgs-Get-functions">sgs_Get*** [functions]</a>
 </li><li><a href="#sgs-GetEnv-function">sgs_GetEnv [function]</a>
 </li><li><a href="#sgs-GetFramePtr-function">sgs_GetFramePtr [function]</a>
@@ -1038,7 +1042,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-GetObjectData-P-functions">sgs_GetObjectData(P) [functions]</a>
 </li><li><a href="#sgs-GetObjectIface-P-functions">sgs_GetObjectIface(P) [functions]</a>
 </li><li><a href="#sgs-GetObjectStruct-P-functions">sgs_GetObjectStruct(P) [functions]</a>
-</li><li><a href="#sgs-GetOutputFunc-function">sgs_GetOutputFunc [function]</a>
 </li><li><a href="#sgs-GetStackItem-function">sgs_GetStackItem [function]</a>
 </li><li><a href="#sgs-GetStringPtr-P-functions">sgs_GetStringPtr(P) [functions]</a>
 </li><li><a href="#sgs-GetStringSize-P-functions">sgs_GetStringSize(P) [functions]</a>
@@ -1102,6 +1105,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-Release-Array-function">sgs_Release(Array) [function]</a>
 </li><li><a href="#sgs-Serialize-function">sgs_Serialize [function]</a>
 </li><li><a href="#sgs-SerializeObject-function">sgs_SerializeObject [function]</a>
+</li><li><a href="#sgs-Set-Err-OutputFunc-function">sgs_Set(Err)OutputFunc [function]</a>
 </li><li><a href="#sgs-SetEnv-function">sgs_SetEnv [function]</a>
 </li><li><a href="#sgs-SetErrno-function-alias">sgs_SetErrno [function alias]</a>
 </li><li><a href="#sgs-SetGlobalPP-function">sgs_SetGlobalPP [function]</a>
@@ -1110,7 +1114,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-SetMsgFunc-function">sgs_SetMsgFunc [function]</a>
 </li><li><a href="#sgs-SetObjectData-P-functions">sgs_SetObjectData(P) [functions]</a>
 </li><li><a href="#sgs-SetObjectIface-P-functions">sgs_SetObjectIface(P) [functions]</a>
-</li><li><a href="#sgs-SetOutputFunc-function">sgs_SetOutputFunc [function]</a>
 </li><li><a href="#sgs-SetStackItem-function">sgs_SetStackItem [function]</a>
 </li><li><a href="#sgs-SetStackSize-function">sgs_SetStackSize [function]</a>
 </li><li><a href="#sgs-StackFrameInfo-function">sgs_StackFrameInfo [function]</a>
@@ -1134,10 +1137,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-TypeOf-function">sgs_TypeOf [function]</a>
 </li><li><a href="#sgs-UnregisterType-function">sgs_UnregisterType [function]</a>
 </li><li><a href="#sgs-Unserialize-function">sgs_Unserialize [function]</a>
-</li><li><a href="#sgs-Write-function">sgs_Write [function]</a>
-</li><li><a href="#sgs-WriteErrorInfo-function">sgs_WriteErrorInfo [function]</a>
-</li><li><a href="#sgs-WriteStr-function-alias">sgs_WriteStr [function alias]</a>
-</li><li><a href="#sgs-Writef-function">sgs_Writef [function]</a></li></ul></div>
+</li><li><a href="#sgs-WriteErrorInfo-function">sgs_WriteErrorInfo [function]</a></li></ul></div>
 <div class='item'><a name='sgs-CreateEngine-function-alias'></a><hr><h2>sgs_CreateEngine [function alias]</h2><h3>sgs_Context* sgs_CreateEngine()</h3><h4>returns a new scripting engine context</h4><ul><li>alias to <code>sgs_CreateEngineExt( sgs_DefaultMemFunc, NULL )</code></li></ul></div>
 <div class='item'><a name='sgs-CreateEngineExt-function'></a><hr><h2>sgs_CreateEngineExt [function]</h2><h3>sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )</h3><h4>returns a new scripting engine context, attached to the specified allocator</h4></div>
 <div class='item'><a name='sgs-DestroyEngine-function'></a><hr><h2>sgs_DestroyEngine [function]</h2><h3>sgs_DestroyEngine( sgs_Context* C )</h3><h4>destroys the passed context and frees all memory associated to it</h4></div>
@@ -1523,22 +1523,21 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-SetObjectIface-P-functions'></a><hr><h2>sgs_SetObjectIface(P) [functions]</h2><h3>int sgs_SetObjectIface( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )</h3><h4>set the object interface pointer of the specified stack item</h4><h3>int sgs_SetObjectIfaceP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface )</h3><h4>set the object interface pointer of the specified variable</h4><ul><li>if item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul></div>
 <div class='item'><a name='sgs-StdOutputFunc-function'></a><hr><h2>sgs_StdOutputFunc [function]</h2><h3>void sgs_StdOutputFunc( void* userdata, sgs_Context* C, const void* ptr, size_t size )</h3><h4>standard output function assumes userdata to be FILE* type and writes the passed buffer to it</h4></div>
-<div class='item'><a name='sgs-GetOutputFunc-function'></a><hr><h2>sgs_GetOutputFunc [function]</h2><h3>void sgs_GetOutputFunc( sgs_Context* C, sgs_OutputFunc* outfunc, void** outuserdata )</h3><h4>retrieves the currently set output function</h4><ul><li>validity of the returned function pointer is assured as long as engine internals are not touched anywhere</li></ul></div>
-<div class='item'><a name='sgs-SetOutputFunc-function'></a><hr><h2>sgs_SetOutputFunc [function]</h2><h3>void sgs_SetOutputFunc( sgs_Context* C, sgs_OutputFunc func, void* userdata )</h3><h4>sets the function used in &#39;print&#39; function</h4><ul><li>default output function can be set by passing SGSOUTPUTFN_DEFAULT to func with userdata as FILE*, allocated using the same C runtime that SGScript uses
+<div class='item'><a name='sgs-Get-Err-OutputFunc-function'></a><hr><h2>sgs_Get(Err)OutputFunc [function]</h2><h3>void sgs_GetOutputFunc( sgs_Context* C, sgs_OutputFunc* outfunc, void** outuserdata )</h3><h3>void sgs_GetErrOutputFunc( sgs_Context* C, sgs_OutputFunc* outfunc, void** outuserdata )</h3><h4>retrieves the currently set (error) output function</h4><ul><li>validity of the returned function pointer is assured as long as engine internals are not touched anywhere</li></ul></div>
+<div class='item'><a name='sgs-Set-Err-OutputFunc-function'></a><hr><h2>sgs_Set(Err)OutputFunc [function]</h2><h3>void sgs_SetOutputFunc( sgs_Context* C, sgs_OutputFunc func, void* userdata )</h3><h3>void sgs_SetErrOutputFunc( sgs_Context* C, sgs_OutputFunc func, void* userdata )</h3><h4>sets the function used in &#39;print&#39;/&#39;errprint&#39; function family</h4><ul><li>default output function can be set by passing SGSOUTPUTFN_DEFAULT to func with userdata as FILE*, allocated using the same C runtime that SGScript uses
 </li><li>default implementation - <a href="#sgs-StdOutputFunc-function">sgs_StdOutputFunc</a> - copies data to FILE* stream, specified in userdata
 <ul><li>to use this function with non-default (stderr) stream, pass it explicity due to the possibility of having different runtime libraries linked to different binaries</li></ul></li></ul></div>
-<div class='item'><a name='sgs-Write-function'></a><hr><h2>sgs_Write [function]</h2><h3>void sgs_Write( sgs_Context* C, const void* ptr, sgs_SizeVal size )</h3><h4>passes the specified data to the output function</h4><ul><li>the default output function prints the data to the specified FILE* stream (stdout by default)</li></ul></div>
-<div class='item'><a name='sgs-WriteStr-function-alias'></a><hr><h2>sgs_WriteStr [function alias]</h2><h3>void sgs_WriteStr( sgs_Context* C, const char* str )</h3><h4>passes the specified string to the output function</h4><ul><li>alias to <code>sgs_Write( C, str, SGS_STRINGLENGTHFUNC( str ) )</code></li></ul></div>
-<div class='item'><a name='sgs-Writef-function'></a><hr><h2>sgs_Writef [function]</h2><h3>void sgs_Writef( sgs_Context* C, const char* what, ... )</h3><h4>passes the arguments through a vsprintf-like function to expand the data and passes it to the specified output function</h4><ul><li>printf rules apply here</li></ul></div>
+<div class='item'><a name='sgs-Err-Write-function'></a><hr><h2>sgs_(Err)Write [function]</h2><h3>void sgs_Write( sgs_Context* C, const void* ptr, sgs_SizeVal size )</h3><h3>void sgs_ErrWrite( sgs_Context* C, const void* ptr, sgs_SizeVal size )</h3><h4>passes the specified data to the (error) output function</h4><ul><li>the default output function prints the data to the specified FILE* stream (stdout/stderr by default)</li></ul></div>
+<div class='item'><a name='sgs-Err-WriteStr-function-alias'></a><hr><h2>sgs_(Err)WriteStr [function alias]</h2><h3>void sgs_WriteStr( sgs_Context* C, const char* str )</h3><h3>void sgs_ErrWriteStr( sgs_Context* C, const char* str )</h3><h4>passes the specified string to the (error) output function</h4><ul><li>alias to <code>sgs_(Err)Write( C, str, SGS_STRINGLENGTHFUNC( str ) )</code></li></ul></div>
+<div class='item'><a name='sgs-Err-Writef-function'></a><hr><h2>sgs_(Err)Writef [function]</h2><h3>void sgs_Writef( sgs_Context* C, const char* what, ... )</h3><h4>passes the arguments through a vsprintf-like function to expand the data and passes it to the specified output function</h4><ul><li>printf rules apply here</li></ul></div>
 <div class='item'><a name='sgs-StdMsgFunc-NoAbort-functions'></a><hr><h2>sgs_StdMsgFunc(_NoAbort) [functions]</h2><h3>void sgs_StdMsgFunc( void* ctx, sgs_Context* C, int type, const char* msg )</h3><h3>void sgs_StdMsgFunc_NoAbort( void* ctx, sgs_Context* C, int type, const char* msg )</h3><h4>writes error info with <a href="#sgs-WriteErrorInfo-function">sgs_WriteErrorInfo</a> to userdata with fprintf, assuming userdata is FILE*</h4></div>
 <div class='item'><a name='sgs-GetMsgFunc-function'></a><hr><h2>sgs_GetMsgFunc [function]</h2><h3>void sgs_GetMsgFunc( sgs_Context* C, sgs_MsgFunc* outfunc, void** outuserdata )</h3><h4>retrieves the currently set messaging function</h4><ul><li>info about the system is at the <a href="#Messaging-system">Messaging system</a> page
 </li><li>validity of the returned function pointer is assured as long as engine internals are not touched anywhere</li></ul></div>
 <div class='item'><a name='sgs-SetMsgFunc-function'></a><hr><h2>sgs_SetMsgFunc [function]</h2><h3>void sgs_SetMsgFunc( sgs_Context* C, sgs_MsgFunc func, void* userdata )</h3><h4>sets the function that handles and prints messages (more commonly, warnings and errors), while still being physically in that context</h4><ul><li>info about the system is at the <a href="#Messaging-system">Messaging system</a> page
-</li><li>both subtypes of the default messaging function can be set by passing these flags for <code>func</code> with userdata as FILE*, allocated using the same C runtime that SGScript uses
+</li><li>both subtypes of the default messaging function can be set by passing these flags for <code>func</code>
 <ul><li>&#39;SGSMSGFN_DEFAULT&#39; - default behavior (write stack frame, write error, abort on SGS_ERROR)
 </li><li>&#39;SGSMSGFN_DEFAULT_NOABORT&#39; - default behavior without the abort-on-errors feature
-</li></ul><li>default implementations - <a href="#sgs-StdMsgFunc-NoAbort-functions">sgs_StdMsgFunc(_NoAbort)</a> writes error and stack trace to FILE* stream, specified in userdata
-<ul><li>to use these functions with non-default (stderr) stream, pass them explicity due to the possibility of having different runtime libraries linked to different binaries</li></ul></li></ul></div>
+</li></ul><li>default implementations - <a href="#sgs-StdMsgFunc-NoAbort-functions">sgs_StdMsgFunc(_NoAbort)</a> passes error and stack trace to @sgs_ErrWrite&lt;sgs_(Err)Write)</li></ul></div>
 <div class='item'><a name='sgs-Msg-function'></a><hr><h2>sgs_Msg [function]</h2><h3>int sgs_Msg( sgs_Context* C, int type, const char* what, ... )</h3><h4>prepares and prints the error specified</h4><ul><li>info about the system is at the <a href="#Messaging-system">Messaging system</a> page
 </li><li><code>type</code> is the output code (SGS_WARNING, SGS_ERROR etc.)
 </li><li><code>what</code> is the error text
@@ -1547,7 +1546,7 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>function always returns 0 to be compatible with most error handling cases in C functions: &quot;return sgs_Msg( ... );&quot;</li></ul></div>
 <div class='item'><a name='sgs-WriteErrorInfo-function'></a><hr><h2>sgs_WriteErrorInfo [function]</h2><h3>void sgs_WriteErrorInfo( sgs_Context* C, int flags, sgs_ErrorOutputFunc func, void* ctx, int type, const char* msg )</h3><h4>writes error info using the error output function specified</h4><p>
 the error output function type has the following definition:
-</p><pre>typedef int (*sgs_ErrorOutputFunc) ( void*, const char*, ... );</pre><ul><li>error output function has the same type as fprintf and sgs_Writef
+</p><pre>typedef int (*sgs_ErrorOutputFunc) ( void*, const char*, ... );</pre><ul><li>error output function has the same type as fprintf, sgs_Writef and sgs_ErrWritef
 </li><li><code>type</code> and <code>msg</code> should be passed from the messaging callback - they are the same type number / error message
 </li><li><code>flags</code> should be one of SGS_ERRORINFO_STACK, SGS_ERRORINFO_ERROR, SGS_ERRORINFO_FULL
 <ul><li>SGS_ERRORINFO_STACK only writes the stack frame
@@ -1844,7 +1843,7 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#is-numeric-function">is_numeric</a> - returns if variable is a numeric type
 </li><li><a href="#is-callable-function">is_callable</a> - returns if variable can be called as a function
 </li></ul><li>input/output
-<ul><li><a href="#print-println-printlns-functions">print, println, printlns</a> - write variables to output callback/stream
+<ul><li><a href="#print-println-printlns-errprint-errprintln-errprintlns-functions">print, println, printlns, errprint, errprintln, errprintlns</a> - write variables to output callback/stream
 </li><li><a href="#printvar-function">printvar</a> - write variable dumps to output callback/stream
 </li><li><a href="#printvar-ext-function">printvar_ext</a> - write variable dump to output callback/stream, optionally specifying max. recursion depth
 </li><li><a href="#read-stdin-function">read_stdin</a> - attempt to read from standard input file (stdin)
@@ -1982,11 +1981,14 @@ is_numeric( &quot;what&quot; ); // returns false</pre></div>
 <div class='item'><a name='is-callable-function'></a><hr><h2>is_callable [function]</h2><h3>is_callable( var )</h3><h4>returns whether the variable <code>var</code> is callable - a function (func/cfunc) or an object with OP_CALL defined</h4><ul><li>this function is equivalent to <a href="#sgs-IsCallable-P-functions">sgs_IsCallable</a> in the C API</li></ul><pre>is_callable( print ); // returns &#39;true&#39;
 is_callable( function(){} ); // returns &#39;true&#39;
 is_callable( 5 ); // returns &#39;false&#39;</pre></div>
-<div class='item'><a name='print-println-printlns-functions'></a><hr><h2>print, println, printlns [functions]</h2><h3>print( ... ), println( ... ), printlns( ... ),</h3><h4>passes all arguments, converted to strings, to the output callback</h4><ul><li>print passes arguments without modifications
-</li><li>println passes a newline character after all variables
-</li><li>printlns passes a newline character after each variable</li></ul><pre>print( 5, &quot;x&quot; ); // prints &quot;5x&quot;
+<div class='item'><a name='print-println-printlns-errprint-errprintln-errprintlns-functions'></a><hr><h2>print, println, printlns, errprint, errprintln, errprintlns [functions]</h2><h3>print( ... ), println( ... ), printlns( ... ),</h3><h3>errprint( ... ), errprintln( ... ), errprintlns( ... ),</h3><h4>passes all arguments, converted to strings, to the (error) output callback</h4><ul><li>(err)print passes arguments without modifications
+</li><li>(err)println passes a newline character after all variables
+</li><li>(err)printlns passes a newline character after each variable</li></ul><pre>print( 5, &quot;x&quot; ); // prints &quot;5x&quot;
 println( 5, &quot;x&quot; ); // prints &quot;5x\n&quot;
-printlns( 5, &quot;x&quot; ); // prints &quot;5\nx\n&quot;</pre></div>
+printlns( 5, &quot;x&quot; ); // prints &quot;5\nx\n&quot;
+errprint( 5, &quot;x&quot; ); // prints &quot;5x&quot; to error output stream
+errprintln( 5, &quot;x&quot; ); // prints &quot;5x\n&quot; to error output stream
+errprintlns( 5, &quot;x&quot; ); // prints &quot;5\nx\n&quot; to error output stream</pre></div>
 <div class='item'><a name='printvar-ext-function'></a><hr><h2>printvar_ext [function]</h2><h3>printvar_ext( var, int maxdepth = 5 )</h3><h4>passes a dump of the variable (informative string version) to the output callback, allowing to optionally specify the maximum depth of the dump (how deep it is allowed to look for sub-variables)</h4><pre>printvar_ext( 5 ); // prints &quot;real (5)&quot;
 printvar_ext( &quot;wat&quot; ); // prints &quot;string [3] &quot;wat&quot;&quot;
 printvar_ext( [{a=[{}]}], 2 ); /* prints:

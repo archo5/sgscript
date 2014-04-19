@@ -354,6 +354,11 @@ SGS_APIFUNC void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx );
 SGS_APIFUNC void sgs_Write( SGS_CTX, const void* ptr, size_t size );
 SGS_APIFUNC SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... );
 
+SGS_APIFUNC void sgs_GetErrOutputFunc( SGS_CTX, sgs_OutputFunc* outf, void** outc );
+SGS_APIFUNC void sgs_SetErrOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx );
+SGS_APIFUNC void sgs_ErrWrite( SGS_CTX, const void* ptr, size_t size );
+SGS_APIFUNC SGSBOOL sgs_ErrWritef( SGS_CTX, const char* what, ... );
+
 #define SGSMSGFN_DEFAULT ((sgs_MsgFunc)-1)
 #define SGSMSGFN_DEFAULT_NOABORT ((sgs_MsgFunc)-2)
 SGS_APIFUNC void sgs_GetMsgFunc( SGS_CTX, sgs_MsgFunc* outf, void** outc );
@@ -406,6 +411,7 @@ SGS_APIFUNC sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 #define sgs_ExecFile( C, str ) sgs_EvalFile( C, str, NULL )
 #define sgs_Include( C, str ) sgs_IncludeExt( C, str, NULL )
 #define sgs_WriteStr( C, str ) sgs_Write( C, str, SGS_STRINGLENGTHFUNC( str ) )
+#define sgs_ErrWriteStr( C, str ) sgs_ErrWrite( C, str, SGS_STRINGLENGTHFUNC( str ) )
 
 
 /* Additional libraries */
@@ -778,7 +784,8 @@ static SGS_INLINE void sgs_StdOutputFunc( void* userdata, SGS_CTX, const void* p
 
 static SGS_INLINE void sgs_StdMsgFunc_NoAbort( void* ctx, SGS_CTX, int type, const char* msg )
 {
-	sgs_WriteErrorInfo( C, SGS_ERRORINFO_FULL, (sgs_ErrorOutputFunc) fprintf, ctx, type, msg );
+	UNUSED( ctx );
+	sgs_WriteErrorInfo( C, SGS_ERRORINFO_FULL, (sgs_ErrorOutputFunc) sgs_ErrWritef, C, type, msg );
 }
 
 static SGS_INLINE void sgs_StdMsgFunc( void* ctx, SGS_CTX, int type, const char* msg )

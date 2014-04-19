@@ -2246,6 +2246,47 @@ static int sgsstd_printlns( SGS_CTX )
 	return 0;
 }
 
+static int sgsstd_errprint( SGS_CTX )
+{
+	StkIdx i, ssz;
+	SGSBASEFN( "errprint" );
+	ssz = sgs_StackSize( C );
+	for( i = 0; i < ssz; ++i )
+	{
+		sgs_SizeVal size;
+		char* buf = sgs_ToStringBuf( C, i, &size );
+		/* WP: string limit */
+		sgs_ErrWrite( C, buf, (size_t) size );
+	}
+	return 0;
+}
+
+static int sgsstd_errprintln( SGS_CTX )
+{
+	SGSFN( "errprintln" );
+	sgsstd_errprint( C );
+	sgs_ErrWrite( C, "\n", 1 );
+	return 0;
+}
+
+static int sgsstd_errprintlns( SGS_CTX )
+{
+	StkIdx i, ssz;
+	ssz = sgs_StackSize( C );
+	
+	SGSFN( "errprintlns" );
+	
+	for( i = 0; i < ssz; ++i )
+	{
+		sgs_SizeVal size;
+		char* buf = sgs_ToStringBuf( C, i, &size );
+		/* WP: string limit */
+		sgs_ErrWrite( C, buf, (size_t) size );
+		sgs_ErrWrite( C, "\n", 1 );
+	}
+	return 0;
+}
+
 static int sgsstd_printvar( SGS_CTX )
 {
 	int res;
@@ -3345,6 +3386,7 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( is_numeric ), FN( is_callable ),
 	/* I/O */
 	FN( print ), FN( println ), FN( printlns ),
+	FN( errprint ), FN( errprintln ), FN( errprintlns ),
 	FN( printvar ), FN( printvar_ext ),
 	FN( read_stdin ),
 	/* OS */
