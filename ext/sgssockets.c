@@ -34,14 +34,14 @@
 #endif
 
 
-#define SGS_INTERNAL
-
-#include <sgs_int.h>
+#include <sgscript.h>
+#include <sgs_util.h>
 
 #define DF( x ) { #x, x }
 #define STREQ( a, b ) (0==strcmp(a,b))
 #define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
 #define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
+#define SOCK_IBUFSZ 1024
 
 
 #ifdef _WIN32
@@ -305,7 +305,7 @@ static int sockaddr_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_
 
 static int sockaddr_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( type == SVT_STRING )
+	if( type == SGS_VT_STRING )
 	{
 		sockaddr_push_full_addr_string( C, data );
 		return SGS_SUCCESS;
@@ -667,22 +667,29 @@ static int socketI_recv( SGS_CTX )
 	sgs_SizeVal size;
 	sgs_Int flags = 0;
 	SOCKDATA_SLEN ret;
-
+	char buf[ SOCK_IBUFSZ ], *ptr;
+	sgs_MemBuf mb = sgs_membuf_create();
+	
 	SOCK_IHDR( recv );
 	
 	if( !sgs_LoadArgs( C, "@>l|i", &size, &flags ) )
 		return 0;
-
-	sgs_PushStringBuf( C, NULL, size );
-	ret = recv( GET_SCK, sgs_GetStringPtr( C, -1 ), (SOCKDATA_LEN) size, (int) flags );
+	
+	if( size > SOCK_IBUFSZ )
+	{
+		sgs_membuf_resize( &mb, C, (size_t) size );
+		ptr = (char*) mb.ptr;
+	}
+	else
+		ptr = buf;
+	
+	ret = recv( GET_SCK, ptr, (SOCKDATA_LEN) size, (int) flags );
 	sockassert( C, ret > 0 );
 	if( ret <= 0 )
 		sgs_PushBool( C, ret == 0 );
 	else
-	{
-		(C->stack_top-1)->data.S->size = (uint32_t) ret;
-		sgs_GetStringPtr( C, -1 )[ ret ] = 0;
-	}
+		sgs_PushStringBuf( C, ptr, size );
+	sgs_membuf_destroy( &mb, C );
 	return 1;
 }
 
@@ -694,14 +701,23 @@ static int socketI_recvfrom( SGS_CTX )
 	sgs_SizeVal size;
 	sgs_Int flags = 0;
 	SOCKDATA_SLEN ret;
-
+	char buf[ SOCK_IBUFSZ ], *ptr;
+	sgs_MemBuf mb = sgs_membuf_create();
+	
 	SOCK_IHDR( recvfrom );
 	
 	if( !sgs_LoadArgs( C, "@>l|i", &size, &flags ) )
 		return 0;
-
-	sgs_PushStringBuf( C, NULL, size );
-	ret = recvfrom( GET_SCK, sgs_GetStringPtr( C, -1 ), (SOCKDATA_LEN) size, (int) flags,
+	
+	if( size > SOCK_IBUFSZ )
+	{
+		sgs_membuf_resize( &mb, C, (size_t) size );
+		ptr = (char*) mb.ptr;
+	}
+	else
+		ptr = buf;
+	
+	ret = recvfrom( GET_SCK, ptr, (SOCKDATA_LEN) size, (int) flags,
 		(struct sockaddr*) &sa, &sa_size );
 	sockassert( C, ret > 0 );
 	if( ret < 0 )
@@ -711,8 +727,7 @@ static int socketI_recvfrom( SGS_CTX )
 	}
 	else
 	{
-		(C->stack_top-1)->data.S->size = (uint32_t) ret;
-		sgs_GetStringPtr( C, -1 )[ ret ] = 0;
+		sgs_PushStringBuf( C, ptr, size );
 		push_sockaddr( C, &sa, (size_t) sa_size );
 		return 2;
 	}
@@ -942,7 +957,7 @@ static int socket_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 
 static int socket_convert( SGS_CTX, sgs_VarObj* data, int type )
 {
-	if( type == SVT_BOOL )
+	if( type == SGS_VT_BOOL )
 	{
 		sgs_PushBool( C, GET_SCK != -1 );
 		return SGS_SUCCESS;
