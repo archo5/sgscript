@@ -688,7 +688,7 @@ static int socketI_recv( SGS_CTX )
 	if( ret <= 0 )
 		sgs_PushBool( C, ret == 0 );
 	else
-		sgs_PushStringBuf( C, ptr, size );
+		sgs_PushStringBuf( C, ptr, ret );
 	sgs_membuf_destroy( &mb, C );
 	return 1;
 }
@@ -727,7 +727,7 @@ static int socketI_recvfrom( SGS_CTX )
 	}
 	else
 	{
-		sgs_PushStringBuf( C, ptr, size );
+		sgs_PushStringBuf( C, ptr, ret );
 		push_sockaddr( C, &sa, (size_t) sa_size );
 		return 2;
 	}

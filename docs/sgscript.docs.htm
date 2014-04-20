@@ -1335,7 +1335,9 @@ After a successful call, all arguments and the function will be popped off the s
 <ul><li>SGS function
 </li><li>C function
 </li><li>object with CALL interface function defined</li></ul></li></ul><p>
-<em class='notice-bgr'>Stack is returned to the expected state only if the return value is equal to SGS_SUCCESS or SGS_EINPROC. Otherwise, it&#39;s left exactly as it was before the call.</em>
+<em class='notice-bgr'>Stack is returned to the expected state only if the return value implies success (&gt;= 0) or is equal to SGS_EINPROC. Otherwise, it&#39;s left exactly as it was before the call.</em>
+</p><p>
+<em class='notice-bgr'>The return value <code>1</code> is returned if function call was aborted.</em>
 </p><h4>error codes</h4><ul><li>SGS_EINPROC: topmost item on stack was not callable
 </li><li>SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + (is_sgs_FCallP?0:1)`)</li></ul></div>
 <div class='item'><a name='sgs-This-Call-P-function-aliases'></a><hr><h2>sgs_(This)Call(P) [function aliases]</h2><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><h3>SGSRESULT sgs_Call( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h4>call the variable with the arguments on stack, returning the expected number of variables on stack</h4><ul><li>aliases to <a href="#sgs-FCall-P-functions">sgs_FCall(P)</a>, for the first function of each group <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>

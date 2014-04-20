@@ -2513,12 +2513,16 @@ static void sgsstd_pcall_print( void* data, SGS_CTX, int type, const char* messa
 	{
 		sgs_PushInt( C, type );
 		sgs_PushString( C, message );
-		if( sgs_CallP( C, &P->handler, 2, 1 ) )
+		ret = sgs_CallP( C, &P->handler, 2, 1 );
+		if( SGS_FAILED( ret ) )
 		{
+			ret = 0;
 			P->pfn( P->pctx, C, SGS_ERROR, "Error detected while attempting to call error handler" );
 		}
 		else
 		{
+			if( ret )
+				sgs_Abort( C );
 			ret = (int) sgs_GetInt( C, -1 );
 			sgs_Pop( C, 1 );
 		}

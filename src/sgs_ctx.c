@@ -177,8 +177,10 @@ const char* sgs_CodeString( int type, int val )
 {
 	if( type == SGS_CODE_ER )
 	{
-		if( val < SGS_EINPROC || val > SGS_SUCCESS )
-			return NULL;
+		if( val < SGS_EINPROC )
+			return "UNKNOWN ERROR";
+		if( val > SGS_SUCCESS )
+			val = 0;
 		return sgs_ErrNames[  -  val ];
 	}
 	else if( type == SGS_CODE_VT )
@@ -751,6 +753,7 @@ SGSRESULT sgs_Abort( SGS_CTX )
 	while( sf && sf->iptr )
 	{
 		sf->iptr = sf->iend;
+		sf->flags |= SGS_SF_ABORTED;
 		sf = sf->prev;
 	}
 	return SGS_SUCCESS;

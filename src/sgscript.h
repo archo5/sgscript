@@ -84,6 +84,7 @@ typedef int (*sgs_CFunc) ( sgs_Context* );
 
 #define SGS_SF_METHOD  0x01
 #define SGS_SF_HASTHIS 0x02
+#define SGS_SF_ABORTED 0x04
 
 struct _sgs_StackFrame
 {

@@ -1963,7 +1963,9 @@ After a successful call, all arguments and the function will be popped off the s
 -- C function
 -- object with CALL interface function defined
 
-! Stack is returned to the expected state only if the return value is equal to SGS_SUCCESS or SGS_EINPROC. Otherwise, it's left exactly as it was before the call.
+! Stack is returned to the expected state only if the return value implies success (>= 0) or is equal to SGS_EINPROC. Otherwise, it's left exactly as it was before the call.
+
+! The return value `1` is returned if function call was aborted.
 
 === error codes
 - SGS_EINPROC: topmost item on stack was not callable

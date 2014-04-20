@@ -1096,8 +1096,9 @@ int sgs_specfn_call( SGS_CTX )
 	
 	sgs_PushItem( C, 0 );
 	ret = sgs_ThisCall( C, sgs_StackSize( C ) - 3, C->sf_last->expected );
-	if( ret != SGS_SUCCESS )
-		return sgs_Msg( C, SGS_WARNING, "failed with error %d", ret );
+	if( SGS_FAILED( ret ) )
+		return sgs_Msg( C, SGS_WARNING, "failed with error %d (%s)", ret,
+			sgs_CodeString( SGS_CODE_ER, ret ) );
 	return C->sf_last->expected;
 }
 
@@ -1123,8 +1124,9 @@ int sgs_specfn_apply( SGS_CTX )
 		sgs_PushNumIndex( C, 2, i );
 	sgs_PushItem( C, 0 );
 	ret = sgs_ThisCall( C, asize, C->sf_last->expected );
-	if( ret != SGS_SUCCESS )
-		return sgs_Msg( C, SGS_WARNING, "failed with error %d", ret );
+	if( SGS_FAILED( ret ) )
+		return sgs_Msg( C, SGS_WARNING, "failed with error %d (%s)", ret,
+			sgs_CodeString( SGS_CODE_ER, ret ) );
 	return C->sf_last->expected;
 }
 
@@ -2151,7 +2153,11 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 	C->clstk_off = C->clstk_base + clsoff;
 	
 	if( allowed )
+	{
+		if( ret && C->sf_last->flags & SGS_SF_ABORTED )
+			ret = -1;
 		vm_frame_pop( C );
+	}
 	
 	if( rvc > expect )
 		stk_pop( C, rvc - expect );
@@ -3885,9 +3891,12 @@ SGSRESULT sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var )
 
 SGSRESULT sgs_FCallP( SGS_CTX, sgs_Variable* callable, int args, int expect, int gotthis )
 {
+	int ret;
 	if( STACKFRAMESIZE < args + ( gotthis ? 1 : 0 ) )
 		return SGS_EINVAL;
-	return vm_call( C, args, 0, gotthis, expect, callable ) ? SGS_SUCCESS : SGS_EINPROC;
+	ret = vm_call( C, args, 0, gotthis, expect, callable );
+	if( ret == -1 ) return 1;
+	return ret ? SGS_SUCCESS : SGS_EINPROC;
 }
 
 SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
@@ -3901,18 +3910,19 @@ SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
 	
 	func = *stk_getpos( C, -1 );
 	stk_pop1nr( C );
-	ret = vm_call( C, args, 0, gotthis, expect, &func ) ? SGS_SUCCESS : SGS_EINPROC;
+	ret = vm_call( C, args, 0, gotthis, expect, &func );
 	VAR_RELEASE( &func );
-	return ret;
+	if( ret == -1 ) return 1;
+	return ret ? SGS_SUCCESS : SGS_EINPROC;
 }
 
 SGSRESULT sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect )
 {
 	int ret;
 	ret = sgs_PushGlobal( C, name );
-	if( ret != SGS_SUCCESS ) return ret;
+	if( SGS_FAILED( ret ) ) return ret;
 	ret = sgs_Call( C, args, expect );
-	if( ret != SGS_SUCCESS )
+	if( ret == SGS_EINVAL )
 		sgs_Pop( C, 1 );
 	return ret;
 }
