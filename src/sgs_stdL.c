@@ -753,8 +753,9 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 		{
 			static const char* hextbl = "0123456789abcdef0123456789ABCDEF";
 			const char* tbl = hextbl;
-			int radix, size, i, sign = 0;
+			int radix, size, i, ofs, sign = 0;
 			sgs_Int I;
+			uint64_t U;
 			if( !sgs_ParseInt( C, (*psi)++, &I ) )
 				goto error;
 			
@@ -766,22 +767,27 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			if( F->type == 'X' )
 				tbl += 16;
 			
-			if( I < 0 )
+			if( I < 0 && F->type == 'd' )
 			{
 				sign = 1;
-				I = -I;
+				U = (uint64_t) -I;
 			}
-			size = 1 + (int) floor( log( (double) MAX(1,I) ) / log( (double) radix ) ) + sign;
+			else
+				U = (uint64_t) I;
+			size = 1 + (int) floor( log( (double) MAX(1,U) ) / log( (double) radix ) ) + sign;
 			
 			if( size < F->padcnt && !F->padrgt )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
+			if( sign )
+				membuf_appchr( B, C, '-' );
+			ofs = (int) B->size;
+			membuf_resize( B, C, (size_t)( ofs + size ) );
 			for( i = size - 1; i >= 0; --i )
 			{
 				/* WP: conversion does not affect range */
-				int cv = (int) ( I / (sgs_Int) pow( (double) radix, i ) ) % radix;
-				if( sign )
-					membuf_appchr( B, C, '-' );
-				membuf_appchr( B, C, tbl[ cv ] );
+				int cv = (int) ( U % (uint64_t) radix );
+				U /= (uint64_t) radix;
+				B->ptr[ ofs + i ] = tbl[ cv ];
 			}
 			if( size < F->padcnt && F->padrgt )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
