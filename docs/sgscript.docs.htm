@@ -357,6 +357,7 @@ There are 5 types of action for expressions in SGScript: arithmetic, binary, boo
 <tr><td>not equal</td><td><code>   A  !=  B   </code></td><td>comparison</td><td>no</td><td>2</td></tr>
 <tr><td>strict equality</td><td><code>   A  ===  B  </code></td><td>comparison</td><td>no</td><td>2</td></tr>
 <tr><td>strict inequality</td><td><code>   A  !==  B  </code></td><td>comparison</td><td>no</td><td>2</td></tr>
+<tr><td>error suppression</td><td><code>     @ A      </code></td><td>special</td><td>no</td><td>1</td></tr>
 <tr><td>declare-local</td><td><code>   var A      </code></td><td>special</td><td>maybe</td><td>any</td></tr>
 <tr><td>declare-global</td><td><code>   global A   </code></td><td>special</td><td>maybe</td><td>any</td></tr>
 <tr><td>array literal</td><td><code> [ A, B, .. ] </code></td><td>special</td><td>no</td><td>any</td></tr>
@@ -380,7 +381,8 @@ Some notes on the special cases:
 </li><li>[declare] variables can be redeclared as long as they maintain their access level
 </li><li>[property,index] whether property or index expressions set data depends if they&#39;re on the receiving (left) end of an assignment expression
 </li><li>[inline if] 3 inputs are required, 2 are actually used (as if <code>if(A){return B;}else{return C;}</code> was used)
-</li><li>[subexpression] subexpressions can set data if they are set up like this: &lt;subexpression&gt; = &lt;function-call&gt; - this is the way to read more than one return value from a function</li></ul></div>
+</li><li>[subexpression] subexpressions can set data if they are set up like this: &lt;subexpression&gt; = &lt;function-call&gt; - this is the way to read more than one return value from a function
+</li><li>[error suppression] the <code>@</code> operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn&#39;t an error</li></ul></div>
 <div class='item'><a name='Statements'></a><hr><h2>Statements</h2><p>
 There are 4 statement types in SGScript:
 </p><h4>Container statements</h4><p>
@@ -1616,6 +1618,8 @@ return NULL;</pre></div>
 </li><li>SGS_CNTL_ERRNO: if <code>val</code> is true, sets internal errno to 0, otherwise - to <code>errno</code>, returns the previous value
 </li><li>SGS_CNTL_SET_ERRNO: sets internal errno to <code>val</code>, returns the previous value
 </li><li>SGS_CNTL_GET_ERRNO: returns the currently set internal errno
+</li><li>SGS_CNTL_ERRSUP: sets error suppression lock count to <code>val</code>, returns the previous value
+</li><li>SGS_CNTL_GET_ERRSUP: returns the currently set error suppression lock count for the last stack frame
 </li></ul><li>everything else does nothing and returns 0</li></ul></div>
 <div class='item'><a name='sgs-StackFrameInfo-function'></a><hr><h2>sgs_StackFrameInfo [function]</h2><h3>void sgs_StackFrameInfo( sgs_Context* C, sgs_StackFrame* frame, const char** name, const char** file, int* line )</h3><h4>helps to retrieve file name, function name and line number of the specified stack frame</h4><ul><li>each non-NULL pointer is initialized with valid data; even if it may not be very helpful (for example, all anonymous functions get the same name - &quot;&lt;anonymous function&gt;&quot;)</li></ul></div>
 <div class='item'><a name='sgs-GetFramePtr-function'></a><hr><h2>sgs_GetFramePtr [function]</h2><h3>sgs_StackFrame* sgs_GetFramePtr( sgs_Context* C, int end )</h3><h4>returns a call stack frame pointer</h4><ul><li>if <code>end</code> is not 0, pointer to topmost frame is returned, otherwise a pointer to first frame is returned</li></ul></div>

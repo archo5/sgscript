@@ -335,10 +335,12 @@ int sgs_Msg( SGS_CTX, int type, const char* what, ... )
 	int off = 0, cnt = 0, slen = 0;
 	va_list args;
 	char* ptr = buf;
-
-	if( type < C->minlev )
-		return 0;
-
+	
+	/* error level filter */
+	if( type < C->minlev ) return 0;
+	/* error suppression */
+	if( C->sf_last && C->sf_last->errsup > 0 ) return 0;
+	
 	va_start( args, what );
 	cnt = SGS_VSPRINTF_LEN( what, args );
 	va_end( args );
@@ -951,6 +953,15 @@ int32_t sgs_Cntl( SGS_CTX, int what, int32_t val )
 	case SGS_CNTL_ERRNO: x = C->last_errno; C->last_errno = val ? 0 : errno; return x;
 	case SGS_CNTL_SET_ERRNO: x = C->last_errno; C->last_errno = val; return x;
 	case SGS_CNTL_GET_ERRNO: return C->last_errno;
+	case SGS_CNTL_ERRSUP:
+		if( C->sf_last )
+		{
+			x = C->sf_last->errsup;
+			C->sf_last->errsup = (int16_t) val;
+			return x;
+		}
+		return 0;
+	case SGS_CNTL_GET_ERRSUP: return C->sf_last ? C->sf_last->errsup : 0;
 	}
 	return 0;
 }

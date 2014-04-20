@@ -380,7 +380,8 @@ static int level_exp( SGS_CTX, FTNode** tree )
 		/* op tests */
 		binary = node->type == SFT_OPER;
 		if( binary )	binary = prev && node->next;
-		if( binary )	binary = prev->type != SFT_OPER || *prev->token == ST_OP_INC || *prev->token == ST_OP_DEC;
+		if( binary )	binary = prev->type != SFT_OPER || 
+			*prev->token == ST_OP_INC || *prev->token == ST_OP_DEC;
 
 		/* HACK: discard unary operators following unary operators */
 		if( !binary && !isfcall && mpp && mpp->next == node && ST_OP_UNARY( *mpp->token ) )
@@ -465,7 +466,8 @@ _continue:
 			}
 
 			/* binary operators */
-			if( mpp != *tree && mpp->next && ( prev->type != SFT_OPER || *prev->token == ST_OP_INC || *prev->token == ST_OP_DEC ) )
+			if( mpp != *tree && mpp->next && 
+				( prev->type != SFT_OPER || *prev->token == ST_OP_INC || *prev->token == ST_OP_DEC ) )
 			{
 				TokenList mpptoken = mpp->token;
 				int ret1, ret2;

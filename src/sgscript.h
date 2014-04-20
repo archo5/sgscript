@@ -100,6 +100,7 @@ struct _sgs_StackFrame
 	sgs_StackFrame* cached;
 	sgs_StkIdx argbeg;
 	sgs_StkIdx argend;
+	int32_t errsup;
 	uint8_t argcount;
 	uint8_t inexp;
 	uint8_t expected;
@@ -194,6 +195,8 @@ typedef void (*sgs_HookFunc) (
 #define SGS_CNTL_ERRNO      7
 #define SGS_CNTL_SET_ERRNO  8
 #define SGS_CNTL_GET_ERRNO  9
+#define SGS_CNTL_ERRSUP     10
+#define SGS_CNTL_GET_ERRSUP 11
 
 
 /* Object actions */

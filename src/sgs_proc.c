@@ -317,8 +317,12 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, instr_t* cod
 	F->filename = C->filename;
 	F->next = NULL;
 	F->prev = C->sf_last;
+	F->errsup = 0;
 	if( C->sf_last )
+	{
+		F->errsup = C->sf_last->errsup;
 		C->sf_last->next = F;
+	}
 	else
 		C->sf_first = F;
 	C->sf_last = F;
@@ -1223,6 +1227,7 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 	}
 	else if( type == SGS_EINPROC )
 	{
+		sgs_Cntl( C, SGS_CNTL_ERRSUP, 0 ); /* fatal error */
 		sgs_Msg( C, SGS_ERROR, "%s read process interrupted, possibly by infinite recursion",
 			isprop ? "Property" : "Index" );
 	}
@@ -1258,6 +1263,7 @@ static SGSRESULT vm_runerr_setprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 	}
 	else if( type == SGS_EINPROC )
 	{
+		sgs_Cntl( C, SGS_CNTL_ERRSUP, 0 ); /* fatal error */
 		sgs_Msg( C, SGS_ERROR, "%s write process interrupted, possibly by infinite recursion",
 			isprop ? "Property" : "Index" );
 	}
@@ -1528,17 +1534,19 @@ static void vm_op_concat( SGS_CTX, StkIdx out, sgs_Variable* A, sgs_Variable* B 
 
 static SGSBOOL vm_op_negate( SGS_CTX, sgs_Variable* out, sgs_Variable* A )
 {
+	sgs_Variable lA = *A;
+	VAR_ACQUIRE( &lA );
 	VAR_RELEASE( out );
-	switch( A->type )
+	switch( lA.type )
 	{
 	case SVT_NULL: /* guaranteed to be NULL after release */ break;
-	case SVT_BOOL: var_initint( out, -A->data.B ); break;
-	case SVT_INT: var_initint( out, -A->data.I ); break;
-	case SVT_REAL: var_initreal( out, -A->data.R ); break;
+	case SVT_BOOL: var_initint( out, -lA.data.B ); break;
+	case SVT_INT: var_initint( out, -lA.data.I ); break;
+	case SVT_REAL: var_initreal( out, -lA.data.R ); break;
 	case SVT_OBJECT:
 		{
 			int ret = SGS_ENOTFND;
-			sgs_VarObj* O = A->data.O;
+			sgs_VarObj* O = lA.data.O;
 			/* WP: stack limit */
 			if( O->iface->expr )
 			{
@@ -1559,12 +1567,15 @@ static SGSBOOL vm_op_negate( SGS_CTX, sgs_Variable* out, sgs_Variable* A )
 				/* guaranteed to be NULL after release */
 			}
 		}
+		VAR_RELEASE( &lA );
 		return 0;
 	default:
-		sgs_Msg( C, SGS_WARNING, "Negating variable of type %s is not supported.", TYPENAME( A->type ) );
+		sgs_Msg( C, SGS_WARNING, "Negating variable of type %s is not supported.", TYPENAME( lA.type ) );
+		VAR_RELEASE( &lA );
 		return 0;
 	}
 	
+	VAR_RELEASE( &lA );
 	return 1;
 }
 
@@ -2218,6 +2229,16 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 		{
 			sgs_Variable var = *RESVAR( argB );
 			stk_push( C, &var );
+			break;
+		}
+		
+		case SI_INT:
+		{
+			switch( argC )
+			{
+			case SGS_INT_ERRSUP_INC: SF->errsup++; break;
+			case SGS_INT_ERRSUP_DEC: SF->errsup--; break;
+			}
 			break;
 		}
 

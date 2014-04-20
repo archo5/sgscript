@@ -196,8 +196,9 @@ static void readstring( SGS_CTX, MemBuf* out, LineNum* line, const char* code, i
 	sgs_Msg( C, SGS_ERROR, "[line %d] end of string not found", *at );
 }
 
-static const char* sgs_opchars = "=<>+-*/%!~&|^.$";
-static const char* sgs_operators = "===;!==;==;!=;<=;>=;+=;-=;*=;/=;%=;&=;|=;^=;<<=;>>=;$=;<<;>>;&&=;||=;&&;||;<;>;=;++;--;+;-;*;/;%;&;|;^;.;$;!;~";
+static const char* sgs_opchars = "=<>+-*/%!~&|^.$@";
+static const char* sgs_operators = "===;!==;==;!=;<=;>=;+=;-=;*=;/=;%=;&=;|=;^=;<<=;>>=;$=;"
+	"<<;>>;&&=;||=;&&;||;<;>;=;++;--;+;-;*;/;%;&;|;^;.;$;!;~;@";
 static const sgs_TokenType sgs_optable[] =
 {
 	ST_OP_SEQ, ST_OP_SNEQ, ST_OP_EQ, ST_OP_NEQ, ST_OP_LEQ, ST_OP_GEQ,
@@ -206,7 +207,7 @@ static const sgs_TokenType sgs_optable[] =
 	ST_OP_LSH, ST_OP_RSH, ST_OP_BLAEQ, ST_OP_BLOEQ, ST_OP_BLAND, ST_OP_BLOR,
 	ST_OP_LESS, ST_OP_GRTR, ST_OP_SET, ST_OP_INC, ST_OP_DEC,
 	ST_OP_ADD, ST_OP_SUB, ST_OP_MUL, ST_OP_DIV, ST_OP_MOD, ST_OP_AND,
-	ST_OP_OR, ST_OP_XOR, ST_OP_MMBR, ST_OP_CAT, ST_OP_NOT, ST_OP_INV
+	ST_OP_OR, ST_OP_XOR, ST_OP_MMBR, ST_OP_CAT, ST_OP_NOT, ST_OP_INV, ST_OP_ERSUP
 };
 static const char sgs_opsep = ';';
 
@@ -657,6 +658,7 @@ void sgsT_DumpToken( TokenList tok )
 	case ST_OP_LSH: OPR( "<<" ); break;
 	case ST_OP_RSH: OPR( ">>" ); break;
 	case ST_OP_MMBR: OPR( "." ); break;
+	case ST_OP_ERSUP: OPR( "@" ); break;
 	case ST_OP_CAT: OPR( "$" ); break;
 	case ST_OP_NOT: OPR( "!" ); break;
 	case ST_OP_INV: OPR( "~" ); break;

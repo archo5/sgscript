@@ -384,6 +384,7 @@ There are 5 types of action for expressions in SGScript: arithmetic, binary, boo
 |  not equal              |`   A  !=  B   `|   comparison   |  no    |   2   |
 |  strict equality        |`   A  ===  B  `|   comparison   |  no    |   2   |
 |  strict inequality      |`   A  !==  B  `|   comparison   |  no    |   2   |
+|  error suppression      |`     @ A      `|    special     |  no    |   1   |
 |  declare-local          |`   var A      `|    special     | maybe  |  any  |
 |  declare-global         |`   global A   `|    special     | maybe  |  any  |
 |  array literal          |` [ A, B, .. ] `|    special     |  no    |  any  |
@@ -409,6 +410,7 @@ Some notes on the special cases:
 - [property,index] whether property or index expressions set data depends if they're on the receiving (left) end of an assignment expression
 - [inline if] 3 inputs are required, 2 are actually used (as if `if(A){return B;}else{return C;}` was used)
 - [subexpression] subexpressions can set data if they are set up like this: <subexpression> = <function-call> - this is the way to read more than one return value from a function
+- [error suppression] the `@` operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn't an error
 
 
 # Statements [info]
@@ -3036,6 +3038,8 @@ sample implementation (same as in sgscript.h):
 -- SGS_CNTL_ERRNO: if `val` is true, sets internal errno to 0, otherwise - to `errno`, returns the previous value
 -- SGS_CNTL_SET_ERRNO: sets internal errno to `val`, returns the previous value
 -- SGS_CNTL_GET_ERRNO: returns the currently set internal errno
+-- SGS_CNTL_ERRSUP: sets error suppression lock count to `val`, returns the previous value
+-- SGS_CNTL_GET_ERRSUP: returns the currently set error suppression lock count for the last stack frame
 - everything else does nothing and returns 0
 
 

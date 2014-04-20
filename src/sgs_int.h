@@ -83,7 +83,7 @@ extern "C" {
 #  define ST_OP_BLOEQ SGS_ST_OP_BLOEQ
 #  define ST_OP_CATEQ SGS_ST_OP_CATEQ
 #  define ST_OP_SET SGS_ST_OP_SET
-#  define ST_OP_MSET SGS_ST_OP_MSET
+#  define ST_OP_ERSUP SGS_ST_OP_ERSUP
 #  define ST_OP_BLAND SGS_ST_OP_BLAND
 #  define ST_OP_BLOR SGS_ST_OP_BLOR
 #  define ST_OP_ADD SGS_ST_OP_ADD
@@ -156,6 +156,7 @@ extern "C" {
 
 #  define SI_NOP SGS_SI_NOP
 #  define SI_PUSH SGS_SI_PUSH
+#  define SI_INT SGS_SI_INT
 #  define SI_RETN SGS_SI_RETN
 #  define SI_JUMP SGS_SI_JUMP
 #  define SI_JMPT SGS_SI_JMPT
@@ -293,7 +294,7 @@ extern "C" {
 #define SGS_ST_OP_BLOEQ 219 /* ||=  */
 #define SGS_ST_OP_CATEQ 220 /* $=   */
 #define SGS_ST_OP_SET   221 /* =    */
-/* ------- RESERVED --- 222 ------- */
+#define SGS_ST_OP_ERSUP 222 /* @    */
 #define SGS_ST_OP_BLAND 223 /* &&   */
 #define SGS_ST_OP_BLOR  224 /* ||   */
 #define SGS_ST_OP_ADD   225 /* +    */
@@ -314,14 +315,16 @@ extern "C" {
 #define SGS_ST_OP_DEC   240 /* --   */
 
 #define SGS_ST_ISOP( chr )      ( (chr) >= 200 && (chr) <= 240 )
-#define SGS_ST_OP_UNARY( chr )  ( (chr) == SGS_ST_OP_ADD || (chr) == SGS_ST_OP_SUB || ( (chr) >= SGS_ST_OP_NOT && (chr) <= SGS_ST_OP_DEC ) )
-#define SGS_ST_OP_BINARY( chr ) ( (chr) >= 200 && (chr) <= 236 )
-#define SGS_ST_OP_ASSIGN( chr ) ( (chr) >= 208 && (chr) <= 222 )
+#define SGS_ST_OP_UNARY( chr )  ( (chr) == SGS_ST_OP_ERSUP || (chr) == SGS_ST_OP_ADD || \
+	(chr) == SGS_ST_OP_SUB || ( (chr) >= SGS_ST_OP_NOT && (chr) <= SGS_ST_OP_DEC ) )
+#define SGS_ST_OP_BINARY( chr ) ( (chr) >= 200 && (chr) <= 236 && (chr) != 222 )
+#define SGS_ST_OP_ASSIGN( chr ) ( (chr) >= 208 && (chr) <= 221 )
 #define SGS_ST_OP_BINMUL( chr ) ( (chr) == SGS_ST_OP_MUL || (chr) == SGS_ST_OP_DIV || (chr) == SGS_ST_OP_MOD )
 #define SGS_ST_OP_BINADD( chr ) ( (chr) == SGS_ST_OP_ADD || (chr) == SGS_ST_OP_SUB )
 #define SGS_ST_OP_BINOPS( chr ) ( (chr) >= SGS_ST_OP_AND && (chr) <= SGS_ST_OP_RSH )
 #define SGS_ST_OP_COMP( chr )   ( (chr) >= 200 && (chr) <= 207 )
-#define SGS_ST_OP_BOOL( chr )   ( (chr) == SGS_ST_OP_BLAEQ || (chr) == SGS_ST_OP_BLOEQ || (chr) == SGS_ST_OP_BLAND || (chr) == SGS_ST_OP_BLOR )
+#define SGS_ST_OP_BOOL( chr )   ( (chr) == SGS_ST_OP_BLAEQ || (chr) == SGS_ST_OP_BLOEQ || \
+	(chr) == SGS_ST_OP_BLAND || (chr) == SGS_ST_OP_BLOR )
 
 #define SGS_ST_ISSPEC( chr )    isoneof( (chr), "()[]{},;:" )
 
@@ -337,13 +340,13 @@ SGS_APIFUNC void          sgsT_Free( SGS_CTX, sgs_TokenList tlist );
 SGS_APIFUNC sgs_TokenList sgsT_Next( sgs_TokenList tok );
 SGS_APIFUNC sgs_LineNum   sgsT_LineNum( sgs_TokenList tok );
 
-SGS_APIFUNC size_t        sgsT_ListSize( sgs_TokenList tlist );
-SGS_APIFUNC size_t        sgsT_ListMemSize( sgs_TokenList tlist );
+SGS_APIFUNC size_t sgsT_ListSize( sgs_TokenList tlist );
+SGS_APIFUNC size_t sgsT_ListMemSize( sgs_TokenList tlist );
 
-SGS_APIFUNC void          sgsT_TokenString( SGS_CTX, sgs_MemBuf* out, sgs_TokenList tlist, sgs_TokenList tend, int xs );
+SGS_APIFUNC void sgsT_TokenString( SGS_CTX, sgs_MemBuf* out, sgs_TokenList tlist, sgs_TokenList tend, int xs );
 
-SGS_APIFUNC void          sgsT_DumpToken( sgs_TokenList tok );
-SGS_APIFUNC void          sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend );
+SGS_APIFUNC void sgsT_DumpToken( sgs_TokenList tok );
+SGS_APIFUNC void sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend );
 
 
 /*
@@ -449,12 +452,15 @@ SGS_APIFUNC int sgsBC_ValidateHeader( const char* buf, size_t size );
 #define SGS_CONSTENC( x ) ((x)|0x100)
 #define SGS_CONSTDEC( x ) ((x)&0xff)
 
+#define SGS_INT_ERRSUP_INC 1
+#define SGS_INT_ERRSUP_DEC 2
+
 typedef enum sgs_Instruction_e
 {
 	SGS_SI_NOP = 0,
 
 	SGS_SI_PUSH,     /* (B:src)                 push register/constant */
-	SGS_SI__RM1,     /* REMOVED */
+	SGS_SI_INT,      /* (C:type)                invoke a system state change */
 
 	SGS_SI_RETN,     /* (A:N)                   exit current frame of execution, preserve N output arguments */
 	SGS_SI_JUMP,     /* (E:off)                 add to instruction pointer */
@@ -587,7 +593,8 @@ SGS_CASSERT( sizeof(sgs_iFunc) % 4 == 0, ifunc_object_chaining_issue );
 #define sgs_func_consts( pfn )   ((sgs_Variable*)SGS_ASSUME_ALIGNED(((sgs_iFunc*)(pfn))+1,16))
 #define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(sgs_func_consts(pfn)+pfn->instr_off/sizeof(sgs_Variable)))
 #define sgs_func_c_consts( pfn )   ((const sgs_Variable*)SGS_ASSUME_ALIGNED(((const sgs_iFunc*)(pfn))+1,16))
-#define sgs_func_c_bytecode( pfn ) ((const sgs_instr_t*)(sgs_func_c_consts(pfn)+pfn->instr_off/sizeof(sgs_Variable)))
+#define sgs_func_c_bytecode( pfn ) \
+	((const sgs_instr_t*)(sgs_func_c_consts(pfn)+pfn->instr_off/sizeof(sgs_Variable)))
 
 #define sgs_object_t sgs_VarObj
 
@@ -766,7 +773,7 @@ static const char* sgs_VarNames[] =
 
 static const char* sgs_OpNames[] =
 {
-	"nop",  "push", "pop_reg",
+	"nop",  "push", "int",
 	"return", "jump", "jump_if_true", "jump_if_false", "call",
 	"for_prep", "for_load", "for_jump", "loadconst", "getvar", "setvar",
 	"getprop", "setprop", "getindex", "setindex",

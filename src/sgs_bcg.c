@@ -194,6 +194,7 @@ static void dump_opcode( const instr_t* ptr, size_t count )
 		case SI_NOP: printf( "NOP   " ); break;
 
 		case SI_PUSH: printf( "PUSH " ); dump_rcpos( argB ); break;
+		case SI_INT: printf( "INT %d", argC ); break;
 
 		case SI_RETN: printf( "RETURN %d", argA ); break;
 		case SI_JUMP: printf( "JUMP %d", (int) (int16_t) argE ); break;
@@ -1252,8 +1253,38 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 	int assign = ST_OP_ASSIGN( *node->token );
 	FUNC_BEGIN;
 	
+	/* Error suppression op */
+	if( *node->token == ST_OP_ERSUP )
+	{
+		size_t csz;
+		INSTR_WRITE( SI_INT, 0, 0, SGS_INT_ERRSUP_INC );
+		csz = func->code.size;
+		
+		if( out && expect )
+		{
+			FUNC_ENTER;
+			if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
+		}
+		else
+		{
+			FUNC_ENTER;
+			if( !compile_node( C, func, node->child ) ) goto fail;
+		}
+		
+		if( func->code.size > csz )
+		{
+			/* write INT ERRSUP_DEC if any code was written */
+			INSTR_WRITE( SI_INT, 0, 0, SGS_INT_ERRSUP_DEC );
+		}
+		else
+		{
+			/* otherwise, remove the already written IN ERRSUP_INC */
+			func->code.size -= 4;
+		}
+		return 1;
+	}
 	/* Boolean ops */
-	if( ST_OP_BOOL( *node->token ) )
+	else if( ST_OP_BOOL( *node->token ) )
 	{
 		int jin;
 		rcpos_t ireg1, ireg2, oreg = 0;
