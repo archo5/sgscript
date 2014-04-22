@@ -1892,7 +1892,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 		sgs_PushStringBuf( C, NULL, (sgs_SizeVal) len );
 		errno = 0;
 		/* WP: string limit */
-		rd = fread( sgs_GetStringPtr( C, -1 ), 1, (size_t) len, fp );
+		rd = (int64_t) fread( sgs_GetStringPtr( C, -1 ), 1, (size_t) len, fp );
 		if( rd < len )
 			sgs_Errno( C, 0 );
 		fclose( fp );
