@@ -841,7 +841,7 @@ static int xgm_aabb2v( SGS_CTX )
 	
 	SGSFN( "aabb2v" );
 	
-	if( !sgs_LoadArgs( C, "!x!x", xgm_vec2_iface, b, xgm_vec2_iface, b + 2 ) )
+	if( !sgs_LoadArgs( C, "!x!x", sgs_ArgCheck_Vec2, b, sgs_ArgCheck_Vec2, b + 2 ) )
 		return 0;
 	
 	sgs_PushAABB2p( C, b );
@@ -854,7 +854,7 @@ static int xgm_aabb2_intersect( SGS_CTX )
 	
 	SGSFN( "aabb2_intersect" );
 	
-	if( !sgs_LoadArgs( C, "xx", xgm_aabb2_iface, b1, xgm_aabb2_iface, b2 ) )
+	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_AABB2, b1, sgs_ArgCheck_AABB2, b2 ) )
 		return 0;
 	
 	sgs_PushBool( C, b1[0] < b2[2] && b2[0] < b1[2] && b1[1] < b2[3] && b2[1] < b1[3] );
@@ -1957,7 +1957,7 @@ static int xgm_fla_##opname( SGS_CTX ) \
 	if( sgs_ParseVec2( C, 0, vfa1, 0 ) ) unit1 = 2; \
 	else if( sgs_ParseVec3( C, 0, vfa1, 0 ) ) unit1 = 3; \
 	else if( sgs_ParseVec4( C, 0, vfa1, 0 ) ) unit1 = 4; \
-	if( sgs_ParseFloatArray( C, 0, &vfa1, &sz ) ) \
+	else if( sgs_ParseFloatArray( C, 0, &vfa1, &sz ) ) \
 	{ \
 		if( sz != flarr->size ) \
 			return XGM_WARNING( "array sizes don't match" ); \
@@ -1987,7 +1987,7 @@ static int xgm_fla_##opname( SGS_CTX ) \
 { \
 	XGM_VT v4f1[ 4 ] = {0}, v4f2[ 4 ] = {0}; \
 	XGM_VT* vfa1 = v4f1, *vfa2 = v4f2; \
-	sgs_SizeVal i, sz, unit1 = 0, unit2 = 1, stride1 = 0, stride2 = 0; \
+	sgs_SizeVal i, sz, unit1 = 1, unit2 = 1, stride1 = 0, stride2 = 0; \
 	XGM_VT R, A, B, T; \
 	UNUSED( T ); \
 	 \
@@ -2034,6 +2034,9 @@ XGM_FLA_TEROPMETHOD( pow, R = (XGM_VT) pow( A, B ) );
 static XGM_VT randlerp( XGM_VT A, XGM_VT B ){ XGM_VT t = (XGM_VT) rand() / (XGM_VT) RAND_MAX; return A * (1-t) + B * t; }
 XGM_FLA_TEROPMETHOD( randbox, R = randlerp( A, B ) );
 XGM_FLA_TEROPMETHOD( randext, R = randlerp( A - B, A + B ) );
+
+XGM_FLA_TEROPMETHOD( multiply_add_assign, R = T + A * B );
+XGM_FLA_TEROPMETHOD( lerp_to, R = T * (1-B) + A * B );
 
 #define XGM_FLA_CONVMETHOD( opname, typename ) \
 static int xgm_fla_##opname( SGS_CTX ) \
@@ -2102,6 +2105,8 @@ static int xgm_fla_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int i
 			SGS_CASE( "pow" ) SGS_RETURN_CFUNC( xgm_fla_pow )
 			SGS_CASE( "randbox" ) SGS_RETURN_CFUNC( xgm_fla_randbox )
 			SGS_CASE( "randext" ) SGS_RETURN_CFUNC( xgm_fla_randext )
+			SGS_CASE( "multiply_add_assign" ) SGS_RETURN_CFUNC( xgm_fla_multiply_add_assign )
+			SGS_CASE( "lerp_to" ) SGS_RETURN_CFUNC( xgm_fla_lerp_to )
 			
 			SGS_CASE( "to_int8_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_int8_buffer )
 			SGS_CASE( "to_int16_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_int16_buffer )
