@@ -3,6 +3,8 @@
 #include <errno.h>
 #include <math.h>
 #ifdef _WIN32
+#  undef _WIN32_WINNT
+#  define _WIN32_WINNT _WIN32_WINNT_WINXP
 #  include <winsock2.h>
 #  include <ws2tcpip.h>
 #else

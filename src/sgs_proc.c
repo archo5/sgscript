@@ -1233,6 +1233,10 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 		sgs_Msg( C, SGS_ERROR, "%s read process interrupted, possibly by infinite recursion",
 			isprop ? "Property" : "Index" );
 	}
+	else if( type == SGS_ENOTSUP )
+	{
+		sgs_Msg( C, SGS_WARNING, "Operation not supported on the given variable type" );
+	}
 	else
 	{
 		sgs_Msg( C, SGS_WARNING, "Unknown error on %s",
@@ -1268,6 +1272,10 @@ static SGSRESULT vm_runerr_setprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 		sgs_Cntl( C, SGS_CNTL_ERRSUP, 0 ); /* fatal error */
 		sgs_Msg( C, SGS_ERROR, "%s write process interrupted, possibly by infinite recursion",
 			isprop ? "Property" : "Index" );
+	}
+	else if( type == SGS_ENOTSUP )
+	{
+		sgs_Msg( C, SGS_WARNING, "Operation not supported on the given variable type" );
 	}
 	else
 	{
