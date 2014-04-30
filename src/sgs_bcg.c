@@ -998,7 +998,8 @@ static SGSBOOL compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t
 		rcpos_t argpos, funcpos;
 		
 		/* count the required number of registers */
-		if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
+		if( node->child->type == SFT_OPER &&
+			( *node->child->token == ST_OP_MMBR || *node->child->token == ST_OP_NOT ) )
 		{
 			gotthis = 1;
 			regc++;
@@ -1020,21 +1021,30 @@ static SGSBOOL compile_fcall( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t
 			*out = argpos;
 		
 		/* load function (for properties, object too) */
-		if( node->child->type == SFT_OPER && *node->child->token == ST_OP_MMBR )
+		if( node->child->type == SFT_OPER &&
+			( *node->child->token == ST_OP_MMBR || *node->child->token == ST_OP_NOT ) )
 		{
 			/* object pos. (this) = argpos + 0 */
 			FTNode* ncc = node->child->child;
 			rcpos_t proppos = -1;
 			FUNC_ENTER;
 			if( !compile_node_rrw( C, func, ncc, argpos ) ) return 0;
-			if( ncc->next->type == SFT_IDENT )
-				compile_ident( C, func, ncc->next, &proppos );
+			if( *node->child->token == ST_OP_MMBR )
+			{
+				if( ncc->next->type == SFT_IDENT )
+					compile_ident( C, func, ncc->next, &proppos );
+				else
+				{
+					FUNC_ENTER;
+					if( !compile_node_r( C, func, ncc->next, &proppos ) ) return 0;
+				}
+				INSTR_WRITE( SI_GETPROP, funcpos, argpos, proppos );
+			}
 			else
 			{
 				FUNC_ENTER;
-				if( !compile_node_r( C, func, ncc->next, &proppos ) ) return 0;
+				if( !compile_node_rrw( C, func, ncc->next, funcpos ) ) return 0;
 			}
-			INSTR_WRITE( SI_GETPROP, funcpos, argpos, proppos );
 		}
 		else
 		{
