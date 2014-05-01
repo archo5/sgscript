@@ -2031,7 +2031,10 @@ XGM_FLA_TEROPMETHOD( div, R = A / B );
 XGM_FLA_TEROPMETHOD( mod, R = fmodf( A, B ) );
 XGM_FLA_TEROPMETHOD( pow, R = (XGM_VT) pow( A, B ) );
 
-static XGM_VT randlerp( XGM_VT A, XGM_VT B ){ XGM_VT t = (XGM_VT) rand() / (XGM_VT) RAND_MAX; return A * (1-t) + B * t; }
+static XGM_VT randlerp( XGM_VT A, XGM_VT B )
+{
+	XGM_VT t = (XGM_VT) rand() / (XGM_VT) RAND_MAX; return A * (1-t) + B * t;
+}
 XGM_FLA_TEROPMETHOD( randbox, R = randlerp( A, B ) );
 XGM_FLA_TEROPMETHOD( randext, R = randlerp( A - B, A + B ) );
 
@@ -2416,7 +2419,9 @@ XGM_FLA_BUFCREATEFUNC( floatarray_from_float64_buffer, double );
 
 static int xgm_ray_plane_intersect( SGS_CTX )
 {
-	/* vec3 ray_pos, vec3 ray_dir, vec4 plane; returns <distance to intersection, signed origin distance from plane> / <false> on (near-)parallel */
+	/* vec3 ray_pos, vec3 ray_dir, vec4 plane;
+		returns <distance to intersection, signed origin distance from plane>
+			\ <false> on (near-)parallel */
 	XGM_VT pos[3], dir[3], plane[4], sigdst, dirdot;
 	SGSFN( "ray_plane_intersect" );
 	if( !sgs_LoadArgs( C, "xxx", sgs_ArgCheck_Vec3, pos, sgs_ArgCheck_Vec3, dir, sgs_ArgCheck_Vec4, plane ) )

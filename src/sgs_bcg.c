@@ -1556,6 +1556,16 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 			goto fail;
 		}
 		
+		if( /* no operands, unary used as binary, binary used as unary */
+			( !node->child ) ||
+			( ST_OP_UNARY( *node->token ) && !ST_OP_BINARY( *node->token ) && node->child->next ) ||
+			( !ST_OP_UNARY( *node->token ) && ST_OP_BINARY( *node->token ) && !node->child->next )
+		)
+		{
+			QPRINT( "Invalid expression" );
+			goto fail;
+		}
+		
 		if( *node->token == ST_OP_MMBR )
 		{
 			/* oreg points to output register if "out", source register otherwise */

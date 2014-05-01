@@ -395,6 +395,7 @@ There are 5 types of action for expressions in SGScript: arithmetic, binary, boo
 |  property               |`   A  .  B    `|    special     | maybe  |   2   |
 |  index                  |`   A [ B ]    `|    special     | maybe  |   2   |
 |  function call          |`  A ([B,..])  `|    special     |  no    | <=256 |
+|  comp. function call    |` O!A ([B,..]) `|    special     |  no    | <=256 |
 |  function definition    |` function A.. `|    special     | maybe  |   0   |
 |  inline if              |`  if(A,B,C)   `|    special     |  no    |  3(2) |
 |  subexpression          |` ( A[, ..] )  `|    special     | maybe  |  any  |
@@ -411,6 +412,45 @@ Some notes on the special cases:
 - [inline if] 3 inputs are required, 2 are actually used (as if `if(A){return B;}else{return C;}` was used)
 - [subexpression] subexpressions can set data if they are set up like this: <subexpression> = <function-call> - this is the way to read more than one return value from a function
 - [error suppression] the `@` operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn't an error
+
+==== compatible function call / inheritance call / global method call (` O!A ([B,..]) `)
+
+CFC is created to encourage users to reduce memory usage without sacrificing clarity of code. It is a short-hand, optimized version of the .call method / sys_call function for callables.
+
+Properties:
+
+- uses the same symbol as boolean inversion operator
+- usage: simplified & optimized calling of non-integrated compatible functions
+-- instead of `comp_func.call( object, arg1 )` write `object!comp_func( arg1 )`
+-- instead of putting functions with data / class interfaces, requiring pointless memory usage, allows to easily keep them separate
+-- simplify inheritance-like code models to the extent permitted by a dynamic language
+
+Example WITHOUT:
+
+    function create_object()
+    {
+        object = { x = 0, y = 0 };
+        function object.move( x, y ){ this.x = x; this.y = y; @this.move_callback(); }
+        function object.tick( delta ){ this.move( this.x + delta, this.y ); }
+        return object;
+    }
+
+Example WITH:
+
+    function Object_Move( x, y ){ this.x = x; this.y = y; @this.move_callback(); }
+    function create_object()
+    {
+        object = { x = 0, y = 0 };
+        function object.tick( delta ){ this!Object_Move( this.x + delta, this.y ); }
+        return object;
+    }
+
+Now, by itself it may not mean much, however let's see what happens if the following code is used:
+
+    for( i = 0; i < 100; ++i )
+        objects.push( create_object() );
+
+Without the usage of a global method, there's a key 'move' in each object that points to the function. In real software there may be no less than 10 such keys in many instances of many objects. And if there are no overrides planned for it, there's no need for it to be there but we can't really move it. Classes are an option that involves a few more allocations and it requires more memory to use them. Using `.call/sys_call` or replacing `this` with an argument would sacrifice readability and the option to relocate functions, as well as performance, this being a double call. This is where CFC comes in - syntax allows to clearly state the object and function used, and the required interface for the object to be compatible with said function.
 
 
 # Statements [info]

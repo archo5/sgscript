@@ -368,6 +368,7 @@ There are 5 types of action for expressions in SGScript: arithmetic, binary, boo
 <tr><td>property</td><td><code>   A  .  B    </code></td><td>special</td><td>maybe</td><td>2</td></tr>
 <tr><td>index</td><td><code>   A [ B ]    </code></td><td>special</td><td>maybe</td><td>2</td></tr>
 <tr><td>function call</td><td><code>  A ([B,..])  </code></td><td>special</td><td>no</td><td>&lt;=256</td></tr>
+<tr><td>comp. function call</td><td><code> O!A ([B,..]) </code></td><td>special</td><td>no</td><td>&lt;=256</td></tr>
 <tr><td>function definition</td><td><code> function A.. </code></td><td>special</td><td>maybe</td><td>0</td></tr>
 <tr><td>inline if</td><td><code>  if(A,B,C)   </code></td><td>special</td><td>no</td><td>3(2)</td></tr>
 <tr><td>subexpression</td><td><code> ( A[, ..] )  </code></td><td>special</td><td>maybe</td><td>any</td></tr>
@@ -382,7 +383,36 @@ Some notes on the special cases:
 </li><li>[property,index] whether property or index expressions set data depends if they&#39;re on the receiving (left) end of an assignment expression
 </li><li>[inline if] 3 inputs are required, 2 are actually used (as if <code>if(A){return B;}else{return C;}</code> was used)
 </li><li>[subexpression] subexpressions can set data if they are set up like this: &lt;subexpression&gt; = &lt;function-call&gt; - this is the way to read more than one return value from a function
-</li><li>[error suppression] the <code>@</code> operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn&#39;t an error</li></ul></div>
+</li><li>[error suppression] the <code>@</code> operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn&#39;t an error</li></ul><h5>compatible function call / inheritance call / global method call (` O!A ([B,..]) `)</h5><p>
+CFC is created to encourage users to reduce memory usage without sacrificing clarity of code. It is a short-hand, optimized version of the .call method / sys_call function for callables.
+</p><p>
+Properties:
+</p><ul><li>uses the same symbol as boolean inversion operator
+</li><li>usage: simplified &amp; optimized calling of non-integrated compatible functions
+<ul><li>instead of <code>comp_func.call( object, arg1 )</code> write <code>object!comp_func( arg1 )</code>
+</li><li>instead of putting functions with data / class interfaces, requiring pointless memory usage, allows to easily keep them separate
+</li><li>simplify inheritance-like code models to the extent permitted by a dynamic language</li></ul></li></ul><p>
+Example WITHOUT:
+</p><pre>function create_object()
+{
+    object = { x = 0, y = 0 };
+    function object.move( x, y ){ this.x = x; this.y = y; @this.move_callback(); }
+    function object.tick( delta ){ this.move( this.x + delta, this.y ); }
+    return object;
+}</pre><p>
+Example WITH:
+</p><pre>function Object_Move( x, y ){ this.x = x; this.y = y; @this.move_callback(); }
+function create_object()
+{
+    object = { x = 0, y = 0 };
+    function object.tick( delta ){ this!Object_Move( this.x + delta, this.y ); }
+    return object;
+}</pre><p>
+Now, by itself it may not mean much, however let&#39;s see what happens if the following code is used:
+</p><pre>for( i = 0; i &lt; 100; ++i )
+    objects.push( create_object() );</pre><p>
+Without the usage of a global method, there&#39;s a key &#39;move&#39; in each object that points to the function. In real software there may be no less than 10 such keys in many instances of many objects. And if there are no overrides planned for it, there&#39;s no need for it to be there but we can&#39;t really move it. Classes are an option that involves a few more allocations and it requires more memory to use them. Using <code>.call/sys_call</code> or replacing <code>this</code> with an argument would sacrifice readability and the option to relocate functions, as well as performance, this being a double call. This is where CFC comes in - syntax allows to clearly state the object and function used, and the required interface for the object to be compatible with said function.
+</p></div>
 <div class='item'><a name='Statements'></a><hr><h2>Statements</h2><p>
 There are 4 statement types in SGScript:
 </p><h4>Container statements</h4><p>

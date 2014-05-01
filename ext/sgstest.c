@@ -9,7 +9,6 @@
 #include "sgs_int.h"
 
 
-const char* outfile_internal = "tests-output-internal.log";
 const char* outfile = "tests-output.log";
 const char* outfile_errors = "tests-errors.log";
 
@@ -218,10 +217,7 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 
 	if( strstr( nameonly, "TF" ) != NULL )
 	{
-		fp = fopen( outfile_internal, "w" );
-		sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, fp );
 		prepengine( C );
-		fclose( fp );
 	}
 
 	fp = fopen( outfile, "a" );
