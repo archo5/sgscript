@@ -1,0 +1,491 @@
+SGS eXtended Game Math library
+
+
+# Description [info]
+
+The goal of this library is to provide the mathematical objects commonly used in games:
+
+- all values have 32 bit floating point type unless otherwise noted
+- @vec2<vec2 [object]>, @vec3<vec3 [object]>, @vec4<vec4 [object]> (2,3 and 4 dimension vectors)
+- @mat4<mat4 [object]> (4x4 matrix)
+- @aabb2<aabb2 [object]> (2D axis-aligned bounding box)
+- @color<color [object]> (red, green, blue, alpha values)
+- @floatarray<floatarray [object]> (array of floating point values)
+
+    include "sgsxgmath";
+
+
+# SGScript API [info]
+
+- @"vec2 (object)"<vec2 [object]>
+- @"vec2 (function)"<vec2 [function]> - create a vec2 object
+- @vec2_dot - return dot product of two 2D vectors
+- @"vec3 (object)"<vec3 [object]>
+- @"vec3 (function)"<vec3 [function]> - create a vec3 object
+- @vec3_dot - return dot product of two 3D vectors
+- @vec3_cross - return cross product of two 3D vectors
+- @"vec4 (object)"<vec4 [object]>
+- @"vec4 (function)"<vec4 [function]> - create a vec4 object
+- @vec4_dot - return dot product of two 4D vectors
+- @"aabb2 (object)"<aabb2 [object]>
+- @"aabb2 (function)"<aabb2 [function]> - create a 2D AABB from 4 real values
+- @aabb2v - create a 2D AABB from 2 2D vectors
+- @aabb2_intersect - intersect two 2D AABB values
+- @aabb2_expand - return a 2D AABB containing all given 2D vectors and AABB
+- @"All SGScript objects (A-Z)"
+- @"All SGScript functions (A-Z)"
+
+
+# >>>
+
+
+# vec2 [object]
+
+- methods
+-- @rotate<vec2.rotate> - return vector, rotated by specified angle
+- read-only properties
+-- [real] length
+-- [real] length_squared
+-- [vec2] normalized - return a vector with length = 1 if possible, length = 0 if too short
+-- [vec2] perp - returns vec2(-y,x) - 90 degree clockwise vector
+-- [vec2] perp2 - returns vec2(y,-x) - 90 degree counter-clockwise vector
+-- [int] size - returns 2 - the number of components in this vector
+- read/write properties
+-- [real] x
+-- [real] y
+-- [real] angle
+- overloaded operators
+-- `+` - adds two vec2/real values
+-- `-` - subtracts two vec2/real values
+-- `*` - multiplies two vec2/real values
+-- `/` - divides two vec2/real values
+-- `%` - returns modulo of two vec2/real values
+-- comparison between vec2 values: first by X, then by Y
+-- unary `-` - returns negated vec2
+- other features:
+-- cloning support
+-- serialization support
+-- indexing support for indices 0 - 1: returns/sets the specified sub-value
+-- tostring, dump = "vec2(<x>;<y>)"
+
+
+# vec2.rotate [method]
+
+== vec2.rotate( real angle )
+=== return vec2, rotated by angle in radians
+
+
+# vec2 [function]
+
+== vec2( real x[, real y ])
+=== create a vec2 value from 1 - 2 real values
+
+- if only one argument is given, it is used for both `x` and `y`
+
+
+# vec2_dot [function]
+
+== vec2_dot( vec2 v1, vec2 v2 )
+=== return the dot product of both vectors
+
+- returns `v1.x * v2.x + v1.y * v2.y`
+
+
+# vec3 [object]
+
+- read-only properties
+-- [real] length
+-- [real] length_squared
+-- [vec3] normalized - return a vector with length = 1 if possible, length = 0 if too short
+-- [int] size - returns 3 - the number of components in this vector
+- read/write properties
+-- [real] x
+-- [real] y
+-- [real] z
+- overloaded operators
+-- `+` - adds two vec3/real values
+-- `-` - subtracts two vec3/real values
+-- `*` - multiplies two vec3/real values
+-- `/` - divides two vec3/real values
+-- `%` - returns modulo of two vec3/real values
+-- comparison between vec3 values: first by X, then by Y, then by Z
+-- unary `-` - returns negated vec3
+- other features:
+-- cloning support
+-- serialization support
+-- indexing support for indices 0 - 2: returns/sets the specified sub-value
+-- tostring, dump = "vec3(<x>;<y>;<z>)"
+
+
+# vec3 [function]
+
+== vec3( real x[, real y[, real z ]])
+=== create a vec3 value from 1 or 3 real values
+
+- if only one argument is given, it is used for `x`, `y` and `z`
+
+
+# vec3_dot [function]
+
+== vec3_dot( vec3 v1, vec3 v2 )
+=== return the dot product of both vectors
+
+- returns `v1.x * v2.x + v1.y * v2.y + v1.z * v2.z`
+
+
+# vec3_cross [function]
+
+== vec3_cross( vec3 v1, vec3 v2 )
+=== return the cross product of both vectors
+
+- returns `vec3( v1.y * v2.z - v1.z * v2.y, v1.z * v2.x - v1.x * v2.z, v1.x * v2.y - v1.y * v2.x )`
+
+
+# vec4 [object]
+
+- read-only properties
+-- [real] length
+-- [real] length_squared
+-- [vec4] normalized - return a vector with length = 1 if possible, length = 0 if too short
+-- [int] size - returns 4 - the number of components in this vector
+- read/write properties
+-- [real] x
+-- [real] y
+-- [real] z
+-- [real] w
+- overloaded operators
+-- `+` - adds two vec4/real values
+-- `-` - subtracts two vec4/real values
+-- `*` - multiplies two vec4/real values
+-- `/` - divides two vec4/real values
+-- `%` - returns modulo of two vec4/real values
+-- comparison between vec4 values: first by X, then by Y, then by Z, then by W
+-- unary `-` - returns negated vec4
+- other features:
+-- cloning support
+-- serialization support
+-- indexing support for indices 0 - 3: returns/sets the specified sub-value
+-- tostring, dump = "vec4(<x>;<y>;<z>;<w>)"
+
+
+# vec4 [function]
+
+== vec4( real x[, real y[, real z[, real w ]]])
+=== create a vec4 value from 1, 2 or 4 real values
+
+- if only one argument is given, it is used for `x`, `y`, `z` and `w`
+- if two arguments are given, use argument 1 for `x`, `y` and `z`; argument 2 for `w`
+
+
+# vec4_dot [function]
+
+== vec4_dot( vec4 v1, vec4 v2 )
+=== return the dot product of both vectors
+
+- returns `v1.x * v2.x + v1.y * v2.y + v1.z * v2.z + v1.w * v2.w`
+
+
+# aabb2 [object]
+# aabb2 [function]
+# aabb2v [function]
+# aabb2_intersect [function]
+# aabb2_expand [function]
+
+
+# color [object]
+
+- read-only properties
+-- [int] size - returns 4 - the number of components in this vector
+- read/write properties
+-- [real] r
+-- [real] g
+-- [real] b
+-- [real] a
+- overloaded operators
+-- `+` - adds two color/real values
+-- `-` - subtracts two color/real values
+-- `*` - multiplies two color/real values
+-- `/` - divides two color/real values
+-- `%` - returns modulo of two color/real values
+-- comparison between color values: first by R, then by G, then by B, then by A
+-- unary `-` - returns negated color
+- other features:
+-- cloning support
+-- serialization support
+-- indexing support for indices 0 - 3: returns/sets the specified sub-value
+-- tostring, dump = "color(<r>;<g>;<b>;<a>)"
+
+
+# color [function]
+
+== color( real r[, real g[, real b[, real a ]]])
+=== create a color value from 1 to 4 real values
+
+- if one argument is given, it is used for all components
+- if two arguments are given, argument 1 is used for R, G and B, argument 2 is used for A
+- if three arguments are given, they're used for R, G and B; 1 is the value of A
+
+
+# mat4 [object]
+# mat4.identity [method]
+# mat4.multiply [method]
+# mat4.multiply_left [method]
+# mat4.multiply2 [method]
+# mat4.transpose [method]
+# mat4.transpose_from [method]
+# mat4.invert [method]
+# mat4.invert_from [method]
+# mat4.translate [method]
+# mat4.translate_v3 [method]
+# mat4.rotateX [method]
+# mat4.rotateY [method]
+# mat4.rotateZ [method]
+# mat4.rotate_axis_angle [method]
+# mat4.rotate_axis_angle_v3 [method]
+# mat4.scale [method]
+# mat4.scale_v3 [method]
+# mat4.transform [method]
+# mat4.transform_pos [method]
+# mat4.transform_normal [method]
+# mat4 [function]
+
+
+# floatarray [object]
+# floatarray.clear [method]
+# floatarray.set1 [method]
+# floatarray.negate [method]
+# floatarray.assign [method]
+# floatarray.negate_from [method]
+# floatarray.add_assign [method]
+# floatarray.sub_assign [method]
+# floatarray.mul_assign [method]
+# floatarray.div_assign [method]
+# floatarray.mod_assign [method]
+# floatarray.pow_assign [method]
+# floatarray.add [method]
+# floatarray.sub [method]
+# floatarray.mul [method]
+# floatarray.div [method]
+# floatarray.mod [method]
+# floatarray.pow [method]
+# floatarray.randbox [method]
+# floatarray.randext [method]
+# floatarray.multiply_add_assign [method]
+# floatarray.lerp_to [method]
+# floatarray.to_int8_buffer [method]
+# floatarray.to_int16_buffer [method]
+# floatarray.to_int32_buffer [method]
+# floatarray.to_int64_buffer [method]
+# floatarray.to_uint8_buffer [method]
+# floatarray.to_uint16_buffer [method]
+# floatarray.to_uint32_buffer [method]
+# floatarray.to_uint64_buffer [method]
+# floatarray.to_float32_buffer [method]
+# floatarray.to_float64_buffer [method]
+# floatarray_buffer [function]
+# floatarray [function]
+# vec2array [function]
+# vec3array [function]
+# vec4array [function]
+# floatarray_from_int8_buffer [function]
+# floatarray_from_int16_buffer [function]
+# floatarray_from_int32_buffer [function]
+# floatarray_from_int64_buffer [function]
+# floatarray_from_uint8_buffer [function]
+# floatarray_from_uint16_buffer [function]
+# floatarray_from_uint32_buffer [function]
+# floatarray_from_uint64_buffer [function]
+# floatarray_from_float32_buffer [function]
+# floatarray_from_float64_buffer [function]
+
+# ray_plane_intersect [function]
+
+
+# All SGScript objects (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = object
+
+
+# All SGScript functions (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = function,functions,function alias,function aliases
+
+
+# <<<
+
+
+# C API [info]
+
+
+- @xgm_vtarray - @floatarray<floatarray [object]> data
+- @xgm_vec2_iface - @vec2<vec2 [object]> interface
+- @xgm_vec3_iface - @vec3<vec3 [object]> interface
+- @xgm_vec4_iface - @vec4<vec4 [object]> interface
+- @xgm_aabb2_iface - @aabb2<aabb2 [object]> interface
+- @xgm_color_iface - @color<color [object]> interface
+- @xgm_mat4_iface - @mat4<mat4 [object]> interface
+- @xgm_floatarr_iface - @floatarray<floatarray [object]> interface
+- @sgs_InitVec2
+- @sgs_InitVec3
+- @sgs_InitVec4
+- @sgs_InitAABB2
+- @sgs_InitColor
+- @sgs_InitMat4
+- @sgs_InitFloatArray
+- @sgs_InitVec2p
+- @sgs_InitVec3p
+- @sgs_InitVec4p
+- @sgs_InitAABB2p
+- @sgs_InitColorp
+- @sgs_InitColorvp
+- @sgs_PushVec2
+- @sgs_PushVec3
+- @sgs_PushVec4
+- @sgs_PushAABB2
+- @sgs_PushColor
+- @sgs_PushMat4
+- @sgs_PushFloatArray
+- @sgs_PushVec2p
+- @sgs_PushVec3p
+- @sgs_PushVec4p
+- @sgs_PushAABB2p
+- @sgs_PushColorp
+- @sgs_PushColorvp
+- @sgs_ParseVT
+- @sgs_ParseVTP
+- @sgs_ParseVec2P
+- @sgs_ParseVec3P
+- @sgs_ParseVec4P
+- @sgs_ParseAABB2P
+- @sgs_ParseColorP
+- @sgs_ParseMat4P
+- @sgs_ParseFloatArrayP
+- @sgs_ParseVec2
+- @sgs_ParseVec3
+- @sgs_ParseVec4
+- @sgs_ParseAABB2
+- @sgs_ParseColor
+- @sgs_ParseMat4
+- @sgs_ParseFloatArray
+- @sgs_ArgCheck_Vec2
+- @sgs_ArgCheck_Vec3
+- @sgs_ArgCheck_Vec4
+- @sgs_ArgCheck_AABB2
+- @sgs_ArgCheck_Color
+- @sgs_ArgCheck_Mat4
+- @sgs_ArgCheck_FloatArray
+- @SGS_RETURN_VEC2
+- @SGS_RETURN_VEC3
+- @SGS_RETURN_VEC4
+- @SGS_RETURN_VEC2P
+- @SGS_RETURN_VEC3P
+- @SGS_RETURN_VEC4P
+- @SGS_RETURN_AABB2
+- @SGS_RETURN_COLOR
+- @SGS_RETURN_MAT4
+- @SGS_PARSE_VEC2
+- @SGS_PARSE_VEC3
+- @SGS_PARSE_VEC4
+- @SGS_PARSE_AABB2
+- @SGS_PARSE_COLOR
+- @SGS_PARSE_MAT4
+- @"All C interfaces (A-Z)"
+- @"All C functions (A-Z)"
+
+
+# >>>
+
+
+# xgm_vtarray [struct]
+
+# xgm_vec2_iface [interface]
+# xgm_vec3_iface [interface]
+# xgm_vec4_iface [interface]
+# xgm_aabb2_iface [interface]
+# xgm_color_iface [interface]
+# xgm_mat4_iface [interface]
+# xgm_floatarr_iface [interface]
+
+# sgs_InitVec2 [function]
+# sgs_InitVec3 [function]
+# sgs_InitVec4 [function]
+# sgs_InitAABB2 [function]
+# sgs_InitColor [function]
+# sgs_InitMat4 [function]
+# sgs_InitFloatArray [function]
+# sgs_InitVec2p [function]
+# sgs_InitVec3p [function]
+# sgs_InitVec4p [function]
+# sgs_InitAABB2p [function]
+# sgs_InitColorp [function]
+# sgs_InitColorvp [function]
+# sgs_PushVec2 [function]
+# sgs_PushVec3 [function]
+# sgs_PushVec4 [function]
+# sgs_PushAABB2 [function]
+# sgs_PushColor [function]
+# sgs_PushMat4 [function]
+# sgs_PushFloatArray [function]
+# sgs_PushVec2p [function]
+# sgs_PushVec3p [function]
+# sgs_PushVec4p [function]
+# sgs_PushAABB2p [function]
+# sgs_PushColorp [function]
+# sgs_PushColorvp [function]
+# sgs_ParseVT [function]
+# sgs_ParseVTP [function]
+# sgs_ParseVec2P [function]
+# sgs_ParseVec3P [function]
+# sgs_ParseVec4P [function]
+# sgs_ParseAABB2P [function]
+# sgs_ParseColorP [function]
+# sgs_ParseMat4P [function]
+# sgs_ParseFloatArrayP [function]
+# sgs_ParseVec2 [function]
+# sgs_ParseVec3 [function]
+# sgs_ParseVec4 [function]
+# sgs_ParseAABB2 [function]
+# sgs_ParseColor [function]
+# sgs_ParseMat4 [function]
+# sgs_ParseFloatArray [function]
+# sgs_ArgCheck_Vec2 [function]
+# sgs_ArgCheck_Vec3 [function]
+# sgs_ArgCheck_Vec4 [function]
+# sgs_ArgCheck_AABB2 [function]
+# sgs_ArgCheck_Color [function]
+# sgs_ArgCheck_Mat4 [function]
+# sgs_ArgCheck_FloatArray [function]
+
+# SGS_RETURN_VEC2 [function alias]
+# SGS_RETURN_VEC3 [function alias]
+# SGS_RETURN_VEC4 [function alias]
+# SGS_RETURN_VEC2P [function alias]
+# SGS_RETURN_VEC3P [function alias]
+# SGS_RETURN_VEC4P [function alias]
+# SGS_RETURN_AABB2 [function alias]
+# SGS_RETURN_COLOR [function alias]
+# SGS_RETURN_MAT4 [function alias]
+# SGS_PARSE_VEC2 [function alias]
+# SGS_PARSE_VEC3 [function alias]
+# SGS_PARSE_VEC4 [function alias]
+# SGS_PARSE_AABB2 [function alias]
+# SGS_PARSE_COLOR [function alias]
+# SGS_PARSE_MAT4 [function alias]
+
+
+# All C interfaces (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = struct,interface
+
+
+# All C functions (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = function,functions,function alias,function aliases
+
+
+# <<<
+

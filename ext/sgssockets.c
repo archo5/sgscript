@@ -338,7 +338,7 @@ static int sockaddr_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variab
 				adiff = htons(sa1->sin_port) - htons(sa2->sin_port);
 			diff = adiff;
 		}
-		else if( ((struct sockaddr_storage*)data1)->ss_family == AF_INET )
+		else if( ((struct sockaddr_storage*)data1)->ss_family == AF_INET6 )
 		{
 			int adiff = 0;
 			struct sockaddr_in6* sa1 = (struct sockaddr_in6*) data1;
@@ -418,11 +418,13 @@ static int sgs_socket_address( SGS_CTX )
 		struct sockaddr_in* sai = (struct sockaddr_in*) &ss;
 		sai->sin_port = port;
 	}
-	else /* AF_INET6 */
+	else if( af == AF_INET6 )
 	{
 		struct sockaddr_in6* sai = (struct sockaddr_in6*) &ss;
 		sai->sin6_port = port;
 	}
+	else
+		STDLIB_WARN( "INTERNAL ERROR (unexpected AF value)" )
 	
 	push_sockaddr( C, &ss, sizeof(ss) );
 	return 1;
@@ -986,14 +988,14 @@ static sgs_ObjInterface socket_iface[1] =
 static int sgs_socket( SGS_CTX )
 {
 	SGS_SCKID S;
-	sgs_Int domain, type, protocol;
+	sgs_Int addrfamily, type, protocol;
 	
 	SGSFN( "socket" );
 	
-	if( !sgs_LoadArgs( C, "iii", &domain, &type, &protocol ) )
+	if( !sgs_LoadArgs( C, "iii", &addrfamily, &type, &protocol ) )
 		return 0;
 	
-	S = socket( (int) domain, (int) type, (int) protocol );
+	S = socket( (int) addrfamily, (int) type, (int) protocol );
 	if( S < 0 )
 	{
 		SOCKERR;

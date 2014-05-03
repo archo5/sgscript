@@ -305,6 +305,7 @@ function generate_docdata( name )
 generate_docdata( "sgscript.docs" );
 generate_docdata( "sgs.cppbc.docs" );
 generate_docdata( "sgs.sockets.docs" );
+generate_docdata( "sgs.xgmath.docs" );
 
 
 println( "done!" );

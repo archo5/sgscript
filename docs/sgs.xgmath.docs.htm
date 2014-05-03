@@ -1,0 +1,475 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+	<html><head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>SGS eXtended Game Math library</title>
+		<link rel="stylesheet" type="text/css" href="docs.css">
+		<script type="text/javascript" src="docs.js"></script>
+	</head><body>
+	<h1>SGS eXtended Game Math library</h1><div><h2>Table of Contents</h2><ul><li><a href='#Description'>Description</a>
+</li><li><a href='#SGScript-API'>SGScript API</a>
+<ul><li><a href='#All-SGScript-objects-A-Z'>All SGScript objects (A-Z)</a>
+</li><li><a href='#All-SGScript-functions-A-Z'>All SGScript functions (A-Z)</a>
+</li></ul><li><a href='#C-API'>C API</a>
+<ul><li><a href='#All-C-interfaces-A-Z'>All C interfaces (A-Z)</a>
+</li><li><a href='#All-C-functions-A-Z'>All C functions (A-Z)</a>
+</li></ul></li></ul></div><div>
+<div class='item'><a name='Description'></a><hr><h2>Description</h2><p>
+The goal of this library is to provide the mathematical objects commonly used in games:
+</p><ul><li>all values have 32 bit floating point type unless otherwise noted
+</li><li><a href="#vec2-object">vec2</a>, <a href="#vec3-object">vec3</a>, <a href="#vec4-object">vec4</a> (2,3 and 4 dimension vectors)
+</li><li><a href="#mat4-object">mat4</a> (4x4 matrix)
+</li><li><a href="#aabb2-object">aabb2</a> (2D axis-aligned bounding box)
+</li><li><a href="#color-object">color</a> (red, green, blue, alpha values)
+</li><li><a href="#floatarray-object">floatarray</a> (array of floating point values)</li></ul><pre>include &quot;sgsxgmath&quot;;</pre></div>
+<div class='item'><a name='SGScript-API'></a><hr><h2>SGScript API</h2><ul><li><a href="#vec2-object">vec2 (object)</a>
+</li><li><a href="#vec2-function">vec2 (function)</a> - create a vec2 object
+</li><li><a href="#vec2-dot-function">vec2_dot</a> - return dot product of two 2D vectors
+</li><li><a href="#vec3-object">vec3 (object)</a>
+</li><li><a href="#vec3-function">vec3 (function)</a> - create a vec3 object
+</li><li><a href="#vec3-dot-function">vec3_dot</a> - return dot product of two 3D vectors
+</li><li><a href="#vec3-cross-function">vec3_cross</a> - return cross product of two 3D vectors
+</li><li><a href="#vec4-object">vec4 (object)</a>
+</li><li><a href="#vec4-function">vec4 (function)</a> - create a vec4 object
+</li><li><a href="#vec4-dot-function">vec4_dot</a> - return dot product of two 4D vectors
+</li><li><a href="#aabb2-object">aabb2 (object)</a>
+</li><li><a href="#aabb2-function">aabb2 (function)</a> - create a 2D AABB from 4 real values
+</li><li><a href="#aabb2v-function">aabb2v</a> - create a 2D AABB from 2 2D vectors
+</li><li><a href="#aabb2-intersect-function">aabb2_intersect</a> - intersect two 2D AABB values
+</li><li><a href="#aabb2-expand-function">aabb2_expand</a> - return a 2D AABB containing all given 2D vectors and AABB
+</li><li><a href="#All-SGScript-objects-A-Z">All SGScript objects (A-Z)</a>
+</li><li><a href="#All-SGScript-functions-A-Z">All SGScript functions (A-Z)</a></li></ul></div>
+<div class='item'><a name='vec2-object'></a><hr><h2>vec2 [object]</h2><ul><li>methods
+<ul><li><a href="#vec2-rotate-method">rotate</a> - return vector, rotated by specified angle
+</li></ul><li>read-only properties
+<ul><li>[real] length
+</li><li>[real] length_squared
+</li><li>[vec2] normalized - return a vector with length = 1 if possible, length = 0 if too short
+</li><li>[vec2] perp - returns vec2(-y,x) - 90 degree clockwise vector
+</li><li>[vec2] perp2 - returns vec2(y,-x) - 90 degree counter-clockwise vector
+</li><li>[int] size - returns 2 - the number of components in this vector
+</li></ul><li>read/write properties
+<ul><li>[real] x
+</li><li>[real] y
+</li><li>[real] angle
+</li></ul><li>overloaded operators
+<ul><li><code>+</code> - adds two vec2/real values
+</li><li><code>-</code> - subtracts two vec2/real values
+</li><li><code>*</code> - multiplies two vec2/real values
+</li><li><code>/</code> - divides two vec2/real values
+</li><li><code>%</code> - returns modulo of two vec2/real values
+</li><li>comparison between vec2 values: first by X, then by Y
+</li><li>unary <code>-</code> - returns negated vec2
+</li></ul><li>other features:
+<ul><li>cloning support
+</li><li>serialization support
+</li><li>indexing support for indices 0 - 1: returns/sets the specified sub-value
+</li><li>tostring, dump = &quot;vec2(&lt;x&gt;;&lt;y&gt;)&quot;</li></ul></li></ul></div>
+<div class='item'><a name='vec2-rotate-method'></a><hr><h2>vec2.rotate [method]</h2><h3>vec2.rotate( real angle )</h3><h4>return vec2, rotated by angle in radians</h4></div>
+<div class='item'><a name='vec2-function'></a><hr><h2>vec2 [function]</h2><h3>vec2( real x[, real y ])</h3><h4>create a vec2 value from 1 - 2 real values</h4><ul><li>if only one argument is given, it is used for both <code>x</code> and <code>y</code></li></ul></div>
+<div class='item'><a name='vec2-dot-function'></a><hr><h2>vec2_dot [function]</h2><h3>vec2_dot( vec2 v1, vec2 v2 )</h3><h4>return the dot product of both vectors</h4><ul><li>returns <code>v1.x <i> v2.x + v1.y </i> v2.y</code></li></ul></div>
+<div class='item'><a name='vec3-object'></a><hr><h2>vec3 [object]</h2><ul><li>read-only properties
+<ul><li>[real] length
+</li><li>[real] length_squared
+</li><li>[vec3] normalized - return a vector with length = 1 if possible, length = 0 if too short
+</li><li>[int] size - returns 3 - the number of components in this vector
+</li></ul><li>read/write properties
+<ul><li>[real] x
+</li><li>[real] y
+</li><li>[real] z
+</li></ul><li>overloaded operators
+<ul><li><code>+</code> - adds two vec3/real values
+</li><li><code>-</code> - subtracts two vec3/real values
+</li><li><code>*</code> - multiplies two vec3/real values
+</li><li><code>/</code> - divides two vec3/real values
+</li><li><code>%</code> - returns modulo of two vec3/real values
+</li><li>comparison between vec3 values: first by X, then by Y, then by Z
+</li><li>unary <code>-</code> - returns negated vec3
+</li></ul><li>other features:
+<ul><li>cloning support
+</li><li>serialization support
+</li><li>indexing support for indices 0 - 2: returns/sets the specified sub-value
+</li><li>tostring, dump = &quot;vec3(&lt;x&gt;;&lt;y&gt;;&lt;z&gt;)&quot;</li></ul></li></ul></div>
+<div class='item'><a name='vec3-function'></a><hr><h2>vec3 [function]</h2><h3>vec3( real x[, real y[, real z ]])</h3><h4>create a vec3 value from 1 or 3 real values</h4><ul><li>if only one argument is given, it is used for <code>x</code>, <code>y</code> and <code>z</code></li></ul></div>
+<div class='item'><a name='vec3-dot-function'></a><hr><h2>vec3_dot [function]</h2><h3>vec3_dot( vec3 v1, vec3 v2 )</h3><h4>return the dot product of both vectors</h4><ul><li>returns <code>v1.x <i> v2.x + v1.y </i> v2.y + v1.z * v2.z</code></li></ul></div>
+<div class='item'><a name='vec3-cross-function'></a><hr><h2>vec3_cross [function]</h2><h3>vec3_cross( vec3 v1, vec3 v2 )</h3><h4>return the cross product of both vectors</h4><ul><li>returns <code>vec3( v1.y <i> v2.z - v1.z </i> v2.y, v1.z <i> v2.x - v1.x </i> v2.z, v1.x <i> v2.y - v1.y </i> v2.x )</code></li></ul></div>
+<div class='item'><a name='vec4-object'></a><hr><h2>vec4 [object]</h2><ul><li>read-only properties
+<ul><li>[real] length
+</li><li>[real] length_squared
+</li><li>[vec4] normalized - return a vector with length = 1 if possible, length = 0 if too short
+</li><li>[int] size - returns 4 - the number of components in this vector
+</li></ul><li>read/write properties
+<ul><li>[real] x
+</li><li>[real] y
+</li><li>[real] z
+</li><li>[real] w
+</li></ul><li>overloaded operators
+<ul><li><code>+</code> - adds two vec4/real values
+</li><li><code>-</code> - subtracts two vec4/real values
+</li><li><code>*</code> - multiplies two vec4/real values
+</li><li><code>/</code> - divides two vec4/real values
+</li><li><code>%</code> - returns modulo of two vec4/real values
+</li><li>comparison between vec4 values: first by X, then by Y, then by Z, then by W
+</li><li>unary <code>-</code> - returns negated vec4
+</li></ul><li>other features:
+<ul><li>cloning support
+</li><li>serialization support
+</li><li>indexing support for indices 0 - 3: returns/sets the specified sub-value
+</li><li>tostring, dump = &quot;vec4(&lt;x&gt;;&lt;y&gt;;&lt;z&gt;;&lt;w&gt;)&quot;</li></ul></li></ul></div>
+<div class='item'><a name='vec4-function'></a><hr><h2>vec4 [function]</h2><h3>vec4( real x[, real y[, real z[, real w ]]])</h3><h4>create a vec4 value from 1, 2 or 4 real values</h4><ul><li>if only one argument is given, it is used for <code>x</code>, <code>y</code>, <code>z</code> and <code>w</code>
+</li><li>if two arguments are given, use argument 1 for <code>x</code>, <code>y</code> and `z`; argument 2 for <code>w</code></li></ul></div>
+<div class='item'><a name='vec4-dot-function'></a><hr><h2>vec4_dot [function]</h2><h3>vec4_dot( vec4 v1, vec4 v2 )</h3><h4>return the dot product of both vectors</h4><ul><li>returns <code>v1.x <i> v2.x + v1.y </i> v2.y + v1.z <i> v2.z + v1.w </i> v2.w</code></li></ul></div>
+<div class='item'><a name='aabb2-object'></a><hr><h2>aabb2 [object]</h2></div>
+<div class='item'><a name='aabb2-function'></a><hr><h2>aabb2 [function]</h2></div>
+<div class='item'><a name='aabb2v-function'></a><hr><h2>aabb2v [function]</h2></div>
+<div class='item'><a name='aabb2-intersect-function'></a><hr><h2>aabb2_intersect [function]</h2></div>
+<div class='item'><a name='aabb2-expand-function'></a><hr><h2>aabb2_expand [function]</h2></div>
+<div class='item'><a name='color-object'></a><hr><h2>color [object]</h2><ul><li>read-only properties
+<ul><li>[int] size - returns 4 - the number of components in this vector
+</li></ul><li>read/write properties
+<ul><li>[real] r
+</li><li>[real] g
+</li><li>[real] b
+</li><li>[real] a
+</li></ul><li>overloaded operators
+<ul><li><code>+</code> - adds two color/real values
+</li><li><code>-</code> - subtracts two color/real values
+</li><li><code>*</code> - multiplies two color/real values
+</li><li><code>/</code> - divides two color/real values
+</li><li><code>%</code> - returns modulo of two color/real values
+</li><li>comparison between color values: first by R, then by G, then by B, then by A
+</li><li>unary <code>-</code> - returns negated color
+</li></ul><li>other features:
+<ul><li>cloning support
+</li><li>serialization support
+</li><li>indexing support for indices 0 - 3: returns/sets the specified sub-value
+</li><li>tostring, dump = &quot;color(&lt;r&gt;;&lt;g&gt;;&lt;b&gt;;&lt;a&gt;)&quot;</li></ul></li></ul></div>
+<div class='item'><a name='color-function'></a><hr><h2>color [function]</h2><h3>color( real r[, real g[, real b[, real a ]]])</h3><h4>create a color value from 1 to 4 real values</h4><ul><li>if one argument is given, it is used for all components
+</li><li>if two arguments are given, argument 1 is used for R, G and B, argument 2 is used for A
+</li><li>if three arguments are given, they&#39;re used for R, G and B; 1 is the value of A</li></ul></div>
+<div class='item'><a name='mat4-object'></a><hr><h2>mat4 [object]</h2></div>
+<div class='item'><a name='mat4-identity-method'></a><hr><h2>mat4.identity [method]</h2></div>
+<div class='item'><a name='mat4-multiply-method'></a><hr><h2>mat4.multiply [method]</h2></div>
+<div class='item'><a name='mat4-multiply-left-method'></a><hr><h2>mat4.multiply_left [method]</h2></div>
+<div class='item'><a name='mat4-multiply2-method'></a><hr><h2>mat4.multiply2 [method]</h2></div>
+<div class='item'><a name='mat4-transpose-method'></a><hr><h2>mat4.transpose [method]</h2></div>
+<div class='item'><a name='mat4-transpose-from-method'></a><hr><h2>mat4.transpose_from [method]</h2></div>
+<div class='item'><a name='mat4-invert-method'></a><hr><h2>mat4.invert [method]</h2></div>
+<div class='item'><a name='mat4-invert-from-method'></a><hr><h2>mat4.invert_from [method]</h2></div>
+<div class='item'><a name='mat4-translate-method'></a><hr><h2>mat4.translate [method]</h2></div>
+<div class='item'><a name='mat4-translate-v3-method'></a><hr><h2>mat4.translate_v3 [method]</h2></div>
+<div class='item'><a name='mat4-rotateX-method'></a><hr><h2>mat4.rotateX [method]</h2></div>
+<div class='item'><a name='mat4-rotateY-method'></a><hr><h2>mat4.rotateY [method]</h2></div>
+<div class='item'><a name='mat4-rotateZ-method'></a><hr><h2>mat4.rotateZ [method]</h2></div>
+<div class='item'><a name='mat4-rotate-axis-angle-method'></a><hr><h2>mat4.rotate_axis_angle [method]</h2></div>
+<div class='item'><a name='mat4-rotate-axis-angle-v3-method'></a><hr><h2>mat4.rotate_axis_angle_v3 [method]</h2></div>
+<div class='item'><a name='mat4-scale-method'></a><hr><h2>mat4.scale [method]</h2></div>
+<div class='item'><a name='mat4-scale-v3-method'></a><hr><h2>mat4.scale_v3 [method]</h2></div>
+<div class='item'><a name='mat4-transform-method'></a><hr><h2>mat4.transform [method]</h2></div>
+<div class='item'><a name='mat4-transform-pos-method'></a><hr><h2>mat4.transform_pos [method]</h2></div>
+<div class='item'><a name='mat4-transform-normal-method'></a><hr><h2>mat4.transform_normal [method]</h2></div>
+<div class='item'><a name='mat4-function'></a><hr><h2>mat4 [function]</h2></div>
+<div class='item'><a name='floatarray-object'></a><hr><h2>floatarray [object]</h2></div>
+<div class='item'><a name='floatarray-clear-method'></a><hr><h2>floatarray.clear [method]</h2></div>
+<div class='item'><a name='floatarray-set1-method'></a><hr><h2>floatarray.set1 [method]</h2></div>
+<div class='item'><a name='floatarray-negate-method'></a><hr><h2>floatarray.negate [method]</h2></div>
+<div class='item'><a name='floatarray-assign-method'></a><hr><h2>floatarray.assign [method]</h2></div>
+<div class='item'><a name='floatarray-negate-from-method'></a><hr><h2>floatarray.negate_from [method]</h2></div>
+<div class='item'><a name='floatarray-add-assign-method'></a><hr><h2>floatarray.add_assign [method]</h2></div>
+<div class='item'><a name='floatarray-sub-assign-method'></a><hr><h2>floatarray.sub_assign [method]</h2></div>
+<div class='item'><a name='floatarray-mul-assign-method'></a><hr><h2>floatarray.mul_assign [method]</h2></div>
+<div class='item'><a name='floatarray-div-assign-method'></a><hr><h2>floatarray.div_assign [method]</h2></div>
+<div class='item'><a name='floatarray-mod-assign-method'></a><hr><h2>floatarray.mod_assign [method]</h2></div>
+<div class='item'><a name='floatarray-pow-assign-method'></a><hr><h2>floatarray.pow_assign [method]</h2></div>
+<div class='item'><a name='floatarray-add-method'></a><hr><h2>floatarray.add [method]</h2></div>
+<div class='item'><a name='floatarray-sub-method'></a><hr><h2>floatarray.sub [method]</h2></div>
+<div class='item'><a name='floatarray-mul-method'></a><hr><h2>floatarray.mul [method]</h2></div>
+<div class='item'><a name='floatarray-div-method'></a><hr><h2>floatarray.div [method]</h2></div>
+<div class='item'><a name='floatarray-mod-method'></a><hr><h2>floatarray.mod [method]</h2></div>
+<div class='item'><a name='floatarray-pow-method'></a><hr><h2>floatarray.pow [method]</h2></div>
+<div class='item'><a name='floatarray-randbox-method'></a><hr><h2>floatarray.randbox [method]</h2></div>
+<div class='item'><a name='floatarray-randext-method'></a><hr><h2>floatarray.randext [method]</h2></div>
+<div class='item'><a name='floatarray-multiply-add-assign-method'></a><hr><h2>floatarray.multiply_add_assign [method]</h2></div>
+<div class='item'><a name='floatarray-lerp-to-method'></a><hr><h2>floatarray.lerp_to [method]</h2></div>
+<div class='item'><a name='floatarray-to-int8-buffer-method'></a><hr><h2>floatarray.to_int8_buffer [method]</h2></div>
+<div class='item'><a name='floatarray-to-int16-buffer-method'></a><hr><h2>floatarray.to_int16_buffer [method]</h2></div>
+<div class='item'><a name='floatarray-to-int32-buffer-method'></a><hr><h2>floatarray.to_int32_buffer [method]</h2></div>
+<div class='item'><a name='floatarray-to-int64-buffer-method'></a><hr><h2>floatarray.to_int64_buffer [method]</h2></div>
+<div class='item'><a name='floatarray-to-uint8-buffer-method'></a><hr><h2>floatarray.to_uint8_buffer [method]</h2></div>
+<div class='item'><a name='floatarray-to-uint16-buffer-method'></a><hr><h2>floatarray.to_uint16_buffer [method]</h2></div>
+<div class='item'><a name='floatarray-to-uint32-buffer-method'></a><hr><h2>floatarray.to_uint32_buffer [method]</h2></div>
+<div class='item'><a name='floatarray-to-uint64-buffer-method'></a><hr><h2>floatarray.to_uint64_buffer [method]</h2></div>
+<div class='item'><a name='floatarray-to-float32-buffer-method'></a><hr><h2>floatarray.to_float32_buffer [method]</h2></div>
+<div class='item'><a name='floatarray-to-float64-buffer-method'></a><hr><h2>floatarray.to_float64_buffer [method]</h2></div>
+<div class='item'><a name='floatarray-buffer-function'></a><hr><h2>floatarray_buffer [function]</h2></div>
+<div class='item'><a name='floatarray-function'></a><hr><h2>floatarray [function]</h2></div>
+<div class='item'><a name='vec2array-function'></a><hr><h2>vec2array [function]</h2></div>
+<div class='item'><a name='vec3array-function'></a><hr><h2>vec3array [function]</h2></div>
+<div class='item'><a name='vec4array-function'></a><hr><h2>vec4array [function]</h2></div>
+<div class='item'><a name='floatarray-from-int8-buffer-function'></a><hr><h2>floatarray_from_int8_buffer [function]</h2></div>
+<div class='item'><a name='floatarray-from-int16-buffer-function'></a><hr><h2>floatarray_from_int16_buffer [function]</h2></div>
+<div class='item'><a name='floatarray-from-int32-buffer-function'></a><hr><h2>floatarray_from_int32_buffer [function]</h2></div>
+<div class='item'><a name='floatarray-from-int64-buffer-function'></a><hr><h2>floatarray_from_int64_buffer [function]</h2></div>
+<div class='item'><a name='floatarray-from-uint8-buffer-function'></a><hr><h2>floatarray_from_uint8_buffer [function]</h2></div>
+<div class='item'><a name='floatarray-from-uint16-buffer-function'></a><hr><h2>floatarray_from_uint16_buffer [function]</h2></div>
+<div class='item'><a name='floatarray-from-uint32-buffer-function'></a><hr><h2>floatarray_from_uint32_buffer [function]</h2></div>
+<div class='item'><a name='floatarray-from-uint64-buffer-function'></a><hr><h2>floatarray_from_uint64_buffer [function]</h2></div>
+<div class='item'><a name='floatarray-from-float32-buffer-function'></a><hr><h2>floatarray_from_float32_buffer [function]</h2></div>
+<div class='item'><a name='floatarray-from-float64-buffer-function'></a><hr><h2>floatarray_from_float64_buffer [function]</h2></div>
+<div class='item'><a name='ray-plane-intersect-function'></a><hr><h2>ray_plane_intersect [function]</h2></div>
+<div class='item'><a name='All-SGScript-objects-A-Z'></a><hr><h2>All SGScript objects (A-Z)</h2><ul><li><a href="#aabb2-object">aabb2 [object]</a>
+</li><li><a href="#color-object">color [object]</a>
+</li><li><a href="#floatarray-object">floatarray [object]</a>
+</li><li><a href="#mat4-object">mat4 [object]</a>
+</li><li><a href="#vec2-object">vec2 [object]</a>
+</li><li><a href="#vec3-object">vec3 [object]</a>
+</li><li><a href="#vec4-object">vec4 [object]</a></li></ul></div>
+<div class='item'><a name='All-SGScript-functions-A-Z'></a><hr><h2>All SGScript functions (A-Z)</h2><ul><li><a href="#aabb2-function">aabb2 [function]</a>
+</li><li><a href="#aabb2-expand-function">aabb2_expand [function]</a>
+</li><li><a href="#aabb2-intersect-function">aabb2_intersect [function]</a>
+</li><li><a href="#aabb2v-function">aabb2v [function]</a>
+</li><li><a href="#color-function">color [function]</a>
+</li><li><a href="#floatarray-function">floatarray [function]</a>
+</li><li><a href="#floatarray-buffer-function">floatarray_buffer [function]</a>
+</li><li><a href="#floatarray-from-float32-buffer-function">floatarray_from_float32_buffer [function]</a>
+</li><li><a href="#floatarray-from-float64-buffer-function">floatarray_from_float64_buffer [function]</a>
+</li><li><a href="#floatarray-from-int16-buffer-function">floatarray_from_int16_buffer [function]</a>
+</li><li><a href="#floatarray-from-int32-buffer-function">floatarray_from_int32_buffer [function]</a>
+</li><li><a href="#floatarray-from-int64-buffer-function">floatarray_from_int64_buffer [function]</a>
+</li><li><a href="#floatarray-from-int8-buffer-function">floatarray_from_int8_buffer [function]</a>
+</li><li><a href="#floatarray-from-uint16-buffer-function">floatarray_from_uint16_buffer [function]</a>
+</li><li><a href="#floatarray-from-uint32-buffer-function">floatarray_from_uint32_buffer [function]</a>
+</li><li><a href="#floatarray-from-uint64-buffer-function">floatarray_from_uint64_buffer [function]</a>
+</li><li><a href="#floatarray-from-uint8-buffer-function">floatarray_from_uint8_buffer [function]</a>
+</li><li><a href="#mat4-function">mat4 [function]</a>
+</li><li><a href="#ray-plane-intersect-function">ray_plane_intersect [function]</a>
+</li><li><a href="#vec2-function">vec2 [function]</a>
+</li><li><a href="#vec2-dot-function">vec2_dot [function]</a>
+</li><li><a href="#vec2array-function">vec2array [function]</a>
+</li><li><a href="#vec3-function">vec3 [function]</a>
+</li><li><a href="#vec3-cross-function">vec3_cross [function]</a>
+</li><li><a href="#vec3-dot-function">vec3_dot [function]</a>
+</li><li><a href="#vec3array-function">vec3array [function]</a>
+</li><li><a href="#vec4-function">vec4 [function]</a>
+</li><li><a href="#vec4-dot-function">vec4_dot [function]</a>
+</li><li><a href="#vec4array-function">vec4array [function]</a></li></ul></div>
+<div class='item'><a name='C-API'></a><hr><h2>C API</h2><ul><li><a href="#xgm-vtarray-struct">xgm_vtarray</a> - <a href="#floatarray-object">floatarray</a> data
+</li><li><a href="#xgm-vec2-iface-interface">xgm_vec2_iface</a> - <a href="#vec2-object">vec2</a> interface
+</li><li><a href="#xgm-vec3-iface-interface">xgm_vec3_iface</a> - <a href="#vec3-object">vec3</a> interface
+</li><li><a href="#xgm-vec4-iface-interface">xgm_vec4_iface</a> - <a href="#vec4-object">vec4</a> interface
+</li><li><a href="#xgm-aabb2-iface-interface">xgm_aabb2_iface</a> - <a href="#aabb2-object">aabb2</a> interface
+</li><li><a href="#xgm-color-iface-interface">xgm_color_iface</a> - <a href="#color-object">color</a> interface
+</li><li><a href="#xgm-mat4-iface-interface">xgm_mat4_iface</a> - <a href="#mat4-object">mat4</a> interface
+</li><li><a href="#xgm-floatarr-iface-interface">xgm_floatarr_iface</a> - <a href="#floatarray-object">floatarray</a> interface
+</li><li><a href="#sgs-InitVec2-function">sgs_InitVec2</a>
+</li><li><a href="#sgs-InitVec3-function">sgs_InitVec3</a>
+</li><li><a href="#sgs-InitVec4-function">sgs_InitVec4</a>
+</li><li><a href="#sgs-InitAABB2-function">sgs_InitAABB2</a>
+</li><li><a href="#sgs-InitColor-function">sgs_InitColor</a>
+</li><li><a href="#sgs-InitMat4-function">sgs_InitMat4</a>
+</li><li><a href="#sgs-InitFloatArray-function">sgs_InitFloatArray</a>
+</li><li><a href="#sgs-InitVec2p-function">sgs_InitVec2p</a>
+</li><li><a href="#sgs-InitVec3p-function">sgs_InitVec3p</a>
+</li><li><a href="#sgs-InitVec4p-function">sgs_InitVec4p</a>
+</li><li><a href="#sgs-InitAABB2p-function">sgs_InitAABB2p</a>
+</li><li><a href="#sgs-InitColorp-function">sgs_InitColorp</a>
+</li><li><a href="#sgs-InitColorvp-function">sgs_InitColorvp</a>
+</li><li><a href="#sgs-PushVec2-function">sgs_PushVec2</a>
+</li><li><a href="#sgs-PushVec3-function">sgs_PushVec3</a>
+</li><li><a href="#sgs-PushVec4-function">sgs_PushVec4</a>
+</li><li><a href="#sgs-PushAABB2-function">sgs_PushAABB2</a>
+</li><li><a href="#sgs-PushColor-function">sgs_PushColor</a>
+</li><li><a href="#sgs-PushMat4-function">sgs_PushMat4</a>
+</li><li><a href="#sgs-PushFloatArray-function">sgs_PushFloatArray</a>
+</li><li><a href="#sgs-PushVec2p-function">sgs_PushVec2p</a>
+</li><li><a href="#sgs-PushVec3p-function">sgs_PushVec3p</a>
+</li><li><a href="#sgs-PushVec4p-function">sgs_PushVec4p</a>
+</li><li><a href="#sgs-PushAABB2p-function">sgs_PushAABB2p</a>
+</li><li><a href="#sgs-PushColorp-function">sgs_PushColorp</a>
+</li><li><a href="#sgs-PushColorvp-function">sgs_PushColorvp</a>
+</li><li><a href="#sgs-ParseVT-function">sgs_ParseVT</a>
+</li><li><a href="#sgs-ParseVTP-function">sgs_ParseVTP</a>
+</li><li><a href="#sgs-ParseVec2P-function">sgs_ParseVec2P</a>
+</li><li><a href="#sgs-ParseVec3P-function">sgs_ParseVec3P</a>
+</li><li><a href="#sgs-ParseVec4P-function">sgs_ParseVec4P</a>
+</li><li><a href="#sgs-ParseAABB2P-function">sgs_ParseAABB2P</a>
+</li><li><a href="#sgs-ParseColorP-function">sgs_ParseColorP</a>
+</li><li><a href="#sgs-ParseMat4P-function">sgs_ParseMat4P</a>
+</li><li><a href="#sgs-ParseFloatArrayP-function">sgs_ParseFloatArrayP</a>
+</li><li><a href="#sgs-ParseVec2-function">sgs_ParseVec2</a>
+</li><li><a href="#sgs-ParseVec3-function">sgs_ParseVec3</a>
+</li><li><a href="#sgs-ParseVec4-function">sgs_ParseVec4</a>
+</li><li><a href="#sgs-ParseAABB2-function">sgs_ParseAABB2</a>
+</li><li><a href="#sgs-ParseColor-function">sgs_ParseColor</a>
+</li><li><a href="#sgs-ParseMat4-function">sgs_ParseMat4</a>
+</li><li><a href="#sgs-ParseFloatArray-function">sgs_ParseFloatArray</a>
+</li><li><a href="#sgs-ArgCheck-Vec2-function">sgs_ArgCheck_Vec2</a>
+</li><li><a href="#sgs-ArgCheck-Vec3-function">sgs_ArgCheck_Vec3</a>
+</li><li><a href="#sgs-ArgCheck-Vec4-function">sgs_ArgCheck_Vec4</a>
+</li><li><a href="#sgs-ArgCheck-AABB2-function">sgs_ArgCheck_AABB2</a>
+</li><li><a href="#sgs-ArgCheck-Color-function">sgs_ArgCheck_Color</a>
+</li><li><a href="#sgs-ArgCheck-Mat4-function">sgs_ArgCheck_Mat4</a>
+</li><li><a href="#sgs-ArgCheck-FloatArray-function">sgs_ArgCheck_FloatArray</a>
+</li><li><a href="#SGS-RETURN-VEC2-function-alias">SGS_RETURN_VEC2</a>
+</li><li><a href="#SGS-RETURN-VEC3-function-alias">SGS_RETURN_VEC3</a>
+</li><li><a href="#SGS-RETURN-VEC4-function-alias">SGS_RETURN_VEC4</a>
+</li><li><a href="#SGS-RETURN-VEC2P-function-alias">SGS_RETURN_VEC2P</a>
+</li><li><a href="#SGS-RETURN-VEC3P-function-alias">SGS_RETURN_VEC3P</a>
+</li><li><a href="#SGS-RETURN-VEC4P-function-alias">SGS_RETURN_VEC4P</a>
+</li><li><a href="#SGS-RETURN-AABB2-function-alias">SGS_RETURN_AABB2</a>
+</li><li><a href="#SGS-RETURN-COLOR-function-alias">SGS_RETURN_COLOR</a>
+</li><li><a href="#SGS-RETURN-MAT4-function-alias">SGS_RETURN_MAT4</a>
+</li><li><a href="#SGS-PARSE-VEC2-function-alias">SGS_PARSE_VEC2</a>
+</li><li><a href="#SGS-PARSE-VEC3-function-alias">SGS_PARSE_VEC3</a>
+</li><li><a href="#SGS-PARSE-VEC4-function-alias">SGS_PARSE_VEC4</a>
+</li><li><a href="#SGS-PARSE-AABB2-function-alias">SGS_PARSE_AABB2</a>
+</li><li><a href="#SGS-PARSE-COLOR-function-alias">SGS_PARSE_COLOR</a>
+</li><li><a href="#SGS-PARSE-MAT4-function-alias">SGS_PARSE_MAT4</a>
+</li><li><a href="#All-C-interfaces-A-Z">All C interfaces (A-Z)</a>
+</li><li><a href="#All-C-functions-A-Z">All C functions (A-Z)</a></li></ul></div>
+<div class='item'><a name='xgm-vtarray-struct'></a><hr><h2>xgm_vtarray [struct]</h2></div>
+<div class='item'><a name='xgm-vec2-iface-interface'></a><hr><h2>xgm_vec2_iface [interface]</h2></div>
+<div class='item'><a name='xgm-vec3-iface-interface'></a><hr><h2>xgm_vec3_iface [interface]</h2></div>
+<div class='item'><a name='xgm-vec4-iface-interface'></a><hr><h2>xgm_vec4_iface [interface]</h2></div>
+<div class='item'><a name='xgm-aabb2-iface-interface'></a><hr><h2>xgm_aabb2_iface [interface]</h2></div>
+<div class='item'><a name='xgm-color-iface-interface'></a><hr><h2>xgm_color_iface [interface]</h2></div>
+<div class='item'><a name='xgm-mat4-iface-interface'></a><hr><h2>xgm_mat4_iface [interface]</h2></div>
+<div class='item'><a name='xgm-floatarr-iface-interface'></a><hr><h2>xgm_floatarr_iface [interface]</h2></div>
+<div class='item'><a name='sgs-InitVec2-function'></a><hr><h2>sgs_InitVec2 [function]</h2></div>
+<div class='item'><a name='sgs-InitVec3-function'></a><hr><h2>sgs_InitVec3 [function]</h2></div>
+<div class='item'><a name='sgs-InitVec4-function'></a><hr><h2>sgs_InitVec4 [function]</h2></div>
+<div class='item'><a name='sgs-InitAABB2-function'></a><hr><h2>sgs_InitAABB2 [function]</h2></div>
+<div class='item'><a name='sgs-InitColor-function'></a><hr><h2>sgs_InitColor [function]</h2></div>
+<div class='item'><a name='sgs-InitMat4-function'></a><hr><h2>sgs_InitMat4 [function]</h2></div>
+<div class='item'><a name='sgs-InitFloatArray-function'></a><hr><h2>sgs_InitFloatArray [function]</h2></div>
+<div class='item'><a name='sgs-InitVec2p-function'></a><hr><h2>sgs_InitVec2p [function]</h2></div>
+<div class='item'><a name='sgs-InitVec3p-function'></a><hr><h2>sgs_InitVec3p [function]</h2></div>
+<div class='item'><a name='sgs-InitVec4p-function'></a><hr><h2>sgs_InitVec4p [function]</h2></div>
+<div class='item'><a name='sgs-InitAABB2p-function'></a><hr><h2>sgs_InitAABB2p [function]</h2></div>
+<div class='item'><a name='sgs-InitColorp-function'></a><hr><h2>sgs_InitColorp [function]</h2></div>
+<div class='item'><a name='sgs-InitColorvp-function'></a><hr><h2>sgs_InitColorvp [function]</h2></div>
+<div class='item'><a name='sgs-PushVec2-function'></a><hr><h2>sgs_PushVec2 [function]</h2></div>
+<div class='item'><a name='sgs-PushVec3-function'></a><hr><h2>sgs_PushVec3 [function]</h2></div>
+<div class='item'><a name='sgs-PushVec4-function'></a><hr><h2>sgs_PushVec4 [function]</h2></div>
+<div class='item'><a name='sgs-PushAABB2-function'></a><hr><h2>sgs_PushAABB2 [function]</h2></div>
+<div class='item'><a name='sgs-PushColor-function'></a><hr><h2>sgs_PushColor [function]</h2></div>
+<div class='item'><a name='sgs-PushMat4-function'></a><hr><h2>sgs_PushMat4 [function]</h2></div>
+<div class='item'><a name='sgs-PushFloatArray-function'></a><hr><h2>sgs_PushFloatArray [function]</h2></div>
+<div class='item'><a name='sgs-PushVec2p-function'></a><hr><h2>sgs_PushVec2p [function]</h2></div>
+<div class='item'><a name='sgs-PushVec3p-function'></a><hr><h2>sgs_PushVec3p [function]</h2></div>
+<div class='item'><a name='sgs-PushVec4p-function'></a><hr><h2>sgs_PushVec4p [function]</h2></div>
+<div class='item'><a name='sgs-PushAABB2p-function'></a><hr><h2>sgs_PushAABB2p [function]</h2></div>
+<div class='item'><a name='sgs-PushColorp-function'></a><hr><h2>sgs_PushColorp [function]</h2></div>
+<div class='item'><a name='sgs-PushColorvp-function'></a><hr><h2>sgs_PushColorvp [function]</h2></div>
+<div class='item'><a name='sgs-ParseVT-function'></a><hr><h2>sgs_ParseVT [function]</h2></div>
+<div class='item'><a name='sgs-ParseVTP-function'></a><hr><h2>sgs_ParseVTP [function]</h2></div>
+<div class='item'><a name='sgs-ParseVec2P-function'></a><hr><h2>sgs_ParseVec2P [function]</h2></div>
+<div class='item'><a name='sgs-ParseVec3P-function'></a><hr><h2>sgs_ParseVec3P [function]</h2></div>
+<div class='item'><a name='sgs-ParseVec4P-function'></a><hr><h2>sgs_ParseVec4P [function]</h2></div>
+<div class='item'><a name='sgs-ParseAABB2P-function'></a><hr><h2>sgs_ParseAABB2P [function]</h2></div>
+<div class='item'><a name='sgs-ParseColorP-function'></a><hr><h2>sgs_ParseColorP [function]</h2></div>
+<div class='item'><a name='sgs-ParseMat4P-function'></a><hr><h2>sgs_ParseMat4P [function]</h2></div>
+<div class='item'><a name='sgs-ParseFloatArrayP-function'></a><hr><h2>sgs_ParseFloatArrayP [function]</h2></div>
+<div class='item'><a name='sgs-ParseVec2-function'></a><hr><h2>sgs_ParseVec2 [function]</h2></div>
+<div class='item'><a name='sgs-ParseVec3-function'></a><hr><h2>sgs_ParseVec3 [function]</h2></div>
+<div class='item'><a name='sgs-ParseVec4-function'></a><hr><h2>sgs_ParseVec4 [function]</h2></div>
+<div class='item'><a name='sgs-ParseAABB2-function'></a><hr><h2>sgs_ParseAABB2 [function]</h2></div>
+<div class='item'><a name='sgs-ParseColor-function'></a><hr><h2>sgs_ParseColor [function]</h2></div>
+<div class='item'><a name='sgs-ParseMat4-function'></a><hr><h2>sgs_ParseMat4 [function]</h2></div>
+<div class='item'><a name='sgs-ParseFloatArray-function'></a><hr><h2>sgs_ParseFloatArray [function]</h2></div>
+<div class='item'><a name='sgs-ArgCheck-Vec2-function'></a><hr><h2>sgs_ArgCheck_Vec2 [function]</h2></div>
+<div class='item'><a name='sgs-ArgCheck-Vec3-function'></a><hr><h2>sgs_ArgCheck_Vec3 [function]</h2></div>
+<div class='item'><a name='sgs-ArgCheck-Vec4-function'></a><hr><h2>sgs_ArgCheck_Vec4 [function]</h2></div>
+<div class='item'><a name='sgs-ArgCheck-AABB2-function'></a><hr><h2>sgs_ArgCheck_AABB2 [function]</h2></div>
+<div class='item'><a name='sgs-ArgCheck-Color-function'></a><hr><h2>sgs_ArgCheck_Color [function]</h2></div>
+<div class='item'><a name='sgs-ArgCheck-Mat4-function'></a><hr><h2>sgs_ArgCheck_Mat4 [function]</h2></div>
+<div class='item'><a name='sgs-ArgCheck-FloatArray-function'></a><hr><h2>sgs_ArgCheck_FloatArray [function]</h2></div>
+<div class='item'><a name='SGS-RETURN-VEC2-function-alias'></a><hr><h2>SGS_RETURN_VEC2 [function alias]</h2></div>
+<div class='item'><a name='SGS-RETURN-VEC3-function-alias'></a><hr><h2>SGS_RETURN_VEC3 [function alias]</h2></div>
+<div class='item'><a name='SGS-RETURN-VEC4-function-alias'></a><hr><h2>SGS_RETURN_VEC4 [function alias]</h2></div>
+<div class='item'><a name='SGS-RETURN-VEC2P-function-alias'></a><hr><h2>SGS_RETURN_VEC2P [function alias]</h2></div>
+<div class='item'><a name='SGS-RETURN-VEC3P-function-alias'></a><hr><h2>SGS_RETURN_VEC3P [function alias]</h2></div>
+<div class='item'><a name='SGS-RETURN-VEC4P-function-alias'></a><hr><h2>SGS_RETURN_VEC4P [function alias]</h2></div>
+<div class='item'><a name='SGS-RETURN-AABB2-function-alias'></a><hr><h2>SGS_RETURN_AABB2 [function alias]</h2></div>
+<div class='item'><a name='SGS-RETURN-COLOR-function-alias'></a><hr><h2>SGS_RETURN_COLOR [function alias]</h2></div>
+<div class='item'><a name='SGS-RETURN-MAT4-function-alias'></a><hr><h2>SGS_RETURN_MAT4 [function alias]</h2></div>
+<div class='item'><a name='SGS-PARSE-VEC2-function-alias'></a><hr><h2>SGS_PARSE_VEC2 [function alias]</h2></div>
+<div class='item'><a name='SGS-PARSE-VEC3-function-alias'></a><hr><h2>SGS_PARSE_VEC3 [function alias]</h2></div>
+<div class='item'><a name='SGS-PARSE-VEC4-function-alias'></a><hr><h2>SGS_PARSE_VEC4 [function alias]</h2></div>
+<div class='item'><a name='SGS-PARSE-AABB2-function-alias'></a><hr><h2>SGS_PARSE_AABB2 [function alias]</h2></div>
+<div class='item'><a name='SGS-PARSE-COLOR-function-alias'></a><hr><h2>SGS_PARSE_COLOR [function alias]</h2></div>
+<div class='item'><a name='SGS-PARSE-MAT4-function-alias'></a><hr><h2>SGS_PARSE_MAT4 [function alias]</h2></div>
+<div class='item'><a name='All-C-interfaces-A-Z'></a><hr><h2>All C interfaces (A-Z)</h2><ul><li><a href="#xgm-aabb2-iface-interface">xgm_aabb2_iface [interface]</a>
+</li><li><a href="#xgm-color-iface-interface">xgm_color_iface [interface]</a>
+</li><li><a href="#xgm-floatarr-iface-interface">xgm_floatarr_iface [interface]</a>
+</li><li><a href="#xgm-mat4-iface-interface">xgm_mat4_iface [interface]</a>
+</li><li><a href="#xgm-vec2-iface-interface">xgm_vec2_iface [interface]</a>
+</li><li><a href="#xgm-vec3-iface-interface">xgm_vec3_iface [interface]</a>
+</li><li><a href="#xgm-vec4-iface-interface">xgm_vec4_iface [interface]</a>
+</li><li><a href="#xgm-vtarray-struct">xgm_vtarray [struct]</a></li></ul></div>
+<div class='item'><a name='All-C-functions-A-Z'></a><hr><h2>All C functions (A-Z)</h2><ul><li><a href="#SGS-PARSE-AABB2-function-alias">SGS_PARSE_AABB2 [function alias]</a>
+</li><li><a href="#SGS-PARSE-COLOR-function-alias">SGS_PARSE_COLOR [function alias]</a>
+</li><li><a href="#SGS-PARSE-MAT4-function-alias">SGS_PARSE_MAT4 [function alias]</a>
+</li><li><a href="#SGS-PARSE-VEC2-function-alias">SGS_PARSE_VEC2 [function alias]</a>
+</li><li><a href="#SGS-PARSE-VEC3-function-alias">SGS_PARSE_VEC3 [function alias]</a>
+</li><li><a href="#SGS-PARSE-VEC4-function-alias">SGS_PARSE_VEC4 [function alias]</a>
+</li><li><a href="#SGS-RETURN-AABB2-function-alias">SGS_RETURN_AABB2 [function alias]</a>
+</li><li><a href="#SGS-RETURN-COLOR-function-alias">SGS_RETURN_COLOR [function alias]</a>
+</li><li><a href="#SGS-RETURN-MAT4-function-alias">SGS_RETURN_MAT4 [function alias]</a>
+</li><li><a href="#SGS-RETURN-VEC2-function-alias">SGS_RETURN_VEC2 [function alias]</a>
+</li><li><a href="#SGS-RETURN-VEC2P-function-alias">SGS_RETURN_VEC2P [function alias]</a>
+</li><li><a href="#SGS-RETURN-VEC3-function-alias">SGS_RETURN_VEC3 [function alias]</a>
+</li><li><a href="#SGS-RETURN-VEC3P-function-alias">SGS_RETURN_VEC3P [function alias]</a>
+</li><li><a href="#SGS-RETURN-VEC4-function-alias">SGS_RETURN_VEC4 [function alias]</a>
+</li><li><a href="#SGS-RETURN-VEC4P-function-alias">SGS_RETURN_VEC4P [function alias]</a>
+</li><li><a href="#sgs-ArgCheck-AABB2-function">sgs_ArgCheck_AABB2 [function]</a>
+</li><li><a href="#sgs-ArgCheck-Color-function">sgs_ArgCheck_Color [function]</a>
+</li><li><a href="#sgs-ArgCheck-FloatArray-function">sgs_ArgCheck_FloatArray [function]</a>
+</li><li><a href="#sgs-ArgCheck-Mat4-function">sgs_ArgCheck_Mat4 [function]</a>
+</li><li><a href="#sgs-ArgCheck-Vec2-function">sgs_ArgCheck_Vec2 [function]</a>
+</li><li><a href="#sgs-ArgCheck-Vec3-function">sgs_ArgCheck_Vec3 [function]</a>
+</li><li><a href="#sgs-ArgCheck-Vec4-function">sgs_ArgCheck_Vec4 [function]</a>
+</li><li><a href="#sgs-InitAABB2-function">sgs_InitAABB2 [function]</a>
+</li><li><a href="#sgs-InitAABB2p-function">sgs_InitAABB2p [function]</a>
+</li><li><a href="#sgs-InitColor-function">sgs_InitColor [function]</a>
+</li><li><a href="#sgs-InitColorp-function">sgs_InitColorp [function]</a>
+</li><li><a href="#sgs-InitColorvp-function">sgs_InitColorvp [function]</a>
+</li><li><a href="#sgs-InitFloatArray-function">sgs_InitFloatArray [function]</a>
+</li><li><a href="#sgs-InitMat4-function">sgs_InitMat4 [function]</a>
+</li><li><a href="#sgs-InitVec2-function">sgs_InitVec2 [function]</a>
+</li><li><a href="#sgs-InitVec2p-function">sgs_InitVec2p [function]</a>
+</li><li><a href="#sgs-InitVec3-function">sgs_InitVec3 [function]</a>
+</li><li><a href="#sgs-InitVec3p-function">sgs_InitVec3p [function]</a>
+</li><li><a href="#sgs-InitVec4-function">sgs_InitVec4 [function]</a>
+</li><li><a href="#sgs-InitVec4p-function">sgs_InitVec4p [function]</a>
+</li><li><a href="#sgs-ParseAABB2-function">sgs_ParseAABB2 [function]</a>
+</li><li><a href="#sgs-ParseAABB2P-function">sgs_ParseAABB2P [function]</a>
+</li><li><a href="#sgs-ParseColor-function">sgs_ParseColor [function]</a>
+</li><li><a href="#sgs-ParseColorP-function">sgs_ParseColorP [function]</a>
+</li><li><a href="#sgs-ParseFloatArray-function">sgs_ParseFloatArray [function]</a>
+</li><li><a href="#sgs-ParseFloatArrayP-function">sgs_ParseFloatArrayP [function]</a>
+</li><li><a href="#sgs-ParseMat4-function">sgs_ParseMat4 [function]</a>
+</li><li><a href="#sgs-ParseMat4P-function">sgs_ParseMat4P [function]</a>
+</li><li><a href="#sgs-ParseVT-function">sgs_ParseVT [function]</a>
+</li><li><a href="#sgs-ParseVTP-function">sgs_ParseVTP [function]</a>
+</li><li><a href="#sgs-ParseVec2-function">sgs_ParseVec2 [function]</a>
+</li><li><a href="#sgs-ParseVec2P-function">sgs_ParseVec2P [function]</a>
+</li><li><a href="#sgs-ParseVec3-function">sgs_ParseVec3 [function]</a>
+</li><li><a href="#sgs-ParseVec3P-function">sgs_ParseVec3P [function]</a>
+</li><li><a href="#sgs-ParseVec4-function">sgs_ParseVec4 [function]</a>
+</li><li><a href="#sgs-ParseVec4P-function">sgs_ParseVec4P [function]</a>
+</li><li><a href="#sgs-PushAABB2-function">sgs_PushAABB2 [function]</a>
+</li><li><a href="#sgs-PushAABB2p-function">sgs_PushAABB2p [function]</a>
+</li><li><a href="#sgs-PushColor-function">sgs_PushColor [function]</a>
+</li><li><a href="#sgs-PushColorp-function">sgs_PushColorp [function]</a>
+</li><li><a href="#sgs-PushColorvp-function">sgs_PushColorvp [function]</a>
+</li><li><a href="#sgs-PushFloatArray-function">sgs_PushFloatArray [function]</a>
+</li><li><a href="#sgs-PushMat4-function">sgs_PushMat4 [function]</a>
+</li><li><a href="#sgs-PushVec2-function">sgs_PushVec2 [function]</a>
+</li><li><a href="#sgs-PushVec2p-function">sgs_PushVec2p [function]</a>
+</li><li><a href="#sgs-PushVec3-function">sgs_PushVec3 [function]</a>
+</li><li><a href="#sgs-PushVec3p-function">sgs_PushVec3p [function]</a>
+</li><li><a href="#sgs-PushVec4-function">sgs_PushVec4 [function]</a>
+</li><li><a href="#sgs-PushVec4p-function">sgs_PushVec4p [function]</a></li></ul></div>
+</div>
+	</body></html>
+	
