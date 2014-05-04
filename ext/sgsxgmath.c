@@ -806,6 +806,27 @@ static int xgm_b2_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 	return SGS_ENOTFND;
 }
 
+static int xgm_b2_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+{
+	if( type == SGS_EOP_COMPARE )
+	{
+		XGM_VT *v1, *v2;
+		if( !sgs_IsObjectP( A, xgm_aabb2_iface ) ||
+			!sgs_IsObjectP( B, xgm_aabb2_iface ) )
+			return SGS_EINVAL;
+		
+		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
+		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		
+		if( v1[0] != v2[0] ) sgs_PushReal( C, v1[0] - v2[0] );
+		else if( v1[1] != v2[1] ) sgs_PushReal( C, v1[1] - v2[1] );
+		else if( v1[2] != v2[2] ) sgs_PushReal( C, v1[2] - v2[2] );
+		else sgs_PushReal( C, v1[3] - v2[3] );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
 static int xgm_b2_serialize( SGS_CTX, sgs_VarObj* data )
 {
 	XGM_OHDR;
@@ -1691,7 +1712,8 @@ static int xgm_m4_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 			int ny = str[2] - '0';
 			if( nx >= 0 && nx < 4 && ny >= 0 && ny < 4 )
 			{
-				sgs_PushReal( C, hdr[ nx + ny * 4 ] );
+				/* rows = x, columns = y, matrix is column-major */
+				sgs_PushReal( C, hdr[ ny + nx * 4 ] );
 				return SGS_SUCCESS;
 			}
 		}
@@ -1729,7 +1751,8 @@ static int xgm_m4_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 			{
 				if( sgs_ParseRealP( C, vv, &val ) )
 				{
-					hdr[ nx + ny * 4 ] = (XGM_VT) val;
+					/* rows = x, columns = y, matrix is column-major */
+					hdr[ ny + nx * 4 ] = (XGM_VT) val;
 					return SGS_SUCCESS;
 				}
 				else
@@ -1738,6 +1761,34 @@ static int xgm_m4_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 		}
 	}
 	return SGS_ENOTFND;
+}
+
+static int xgm_m4_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+{
+	if( type == SGS_EOP_COMPARE )
+	{
+		int i;
+		XGM_VT *v1, *v2;
+		if( !sgs_IsObjectP( A, xgm_mat4_iface ) ||
+			!sgs_IsObjectP( B, xgm_mat4_iface ) )
+			return SGS_EINVAL;
+		
+		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
+		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		
+		for( i = 0; i < 15; ++i )
+		{
+			if( v1[i] != v2[i] )
+			{
+				sgs_PushReal( C, v1[i] - v2[0] );
+				break;
+			}
+		}
+		if( i == 15 )
+			sgs_PushReal( C, 0 );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
 }
 
 static int xgm_m4_serialize( SGS_CTX, sgs_VarObj* data )
@@ -1763,10 +1814,10 @@ static int xgm_m4_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 		"\n%10.6g %10.6g %10.6g %10.6g"
 		"\n%10.6g %10.6g %10.6g %10.6g"
 		"\n%10.6g %10.6g %10.6g %10.6g",
-		hdr[0], hdr[1], hdr[2], hdr[3],
-		hdr[4], hdr[5], hdr[6], hdr[7],
-		hdr[8], hdr[9], hdr[10], hdr[11],
-		hdr[12], hdr[13], hdr[14], hdr[15] );
+		hdr[0], hdr[4], hdr[8], hdr[12],
+		hdr[1], hdr[5], hdr[9], hdr[13],
+		hdr[2], hdr[6], hdr[10], hdr[14],
+		hdr[3], hdr[7], hdr[11], hdr[15] );
 	bfr[ 1023 ] = 0;
 	sgs_PushString( C, "mat4\n(" );
 	sgs_PushString( C, bfr );
@@ -1859,13 +1910,13 @@ static int xgm_fla_serialize( SGS_CTX, sgs_VarObj* data )
 {
 	sgs_SizeVal i;
 	XGM_FLAHDR;
-	for( i = 0; i < flarr->size * 2; ++i )
+	for( i = 0; i < flarr->size; ++i )
 	{
 		sgs_PushReal( C, flarr->data[ i ] );
 		if( sgs_Serialize( C ) )
 			return SGS_EINPROC;
 	}
-	return sgs_SerializeObject( C, flarr->size * 2, "floatarray" );
+	return sgs_SerializeObject( C, flarr->size, "floatarray" );
 }
 
 static int xgm_fla_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
@@ -2269,7 +2320,7 @@ static int xgm_vec2array( SGS_CTX )
 		return 1;
 	}
 	
-	return XGM_WARNING( "expected array of vec2, array of arrays, vec2 list or float list" );
+	return XGM_WARNING( "expected array of vec2, vec2 list or float list" );
 }
 
 static int xgm_vec3array( SGS_CTX )
@@ -2325,7 +2376,7 @@ static int xgm_vec3array( SGS_CTX )
 		return 1;
 	}
 	
-	return XGM_WARNING( "expected array of vec3, array of arrays, vec3 list or float list" );
+	return XGM_WARNING( "expected array of vec3, vec3 list or float list" );
 }
 
 static int xgm_vec4array( SGS_CTX )
@@ -2382,7 +2433,7 @@ static int xgm_vec4array( SGS_CTX )
 		return 1;
 	}
 	
-	return XGM_WARNING( "expected array of vec4, array of arrays, vec4 list or float list" );
+	return XGM_WARNING( "expected array of vec4, vec4 list or float list" );
 }
 
 #define XGM_FLA_BUFCREATEFUNC( funcname, typename ) \
@@ -2478,7 +2529,7 @@ sgs_ObjInterface xgm_aabb2_iface[1] =
 	NULL, NULL,
 	xgm_b2_getindex, xgm_b2_setindex,
 	xgm_b2_convert, xgm_b2_serialize, xgm_b2_dump, NULL,
-	NULL, NULL
+	NULL, xgm_b2_expr
 }};
 
 sgs_ObjInterface xgm_color_iface[1] =
@@ -2496,7 +2547,7 @@ sgs_ObjInterface xgm_mat4_iface[1] =
 	NULL, NULL,
 	xgm_m4_getindex, xgm_m4_setindex,
 	xgm_m4_convert, xgm_m4_serialize, xgm_m4_dump, NULL,
-	NULL, NULL
+	NULL, xgm_m4_expr
 }};
 
 sgs_ObjInterface xgm_floatarr_iface[1] =

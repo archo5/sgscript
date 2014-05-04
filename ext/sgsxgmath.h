@@ -104,11 +104,13 @@ SGS_APIFUNC int xgm_module_entry_point( SGS_CTX );
 #define SGS_RETURN_VEC2( x, y ) { sgs_PushVec2( C, (XGM_VT)(x), (XGM_VT)(y) ); return SGS_SUCCESS; }
 #define SGS_RETURN_VEC3( x, y, z ) { sgs_PushVec3( C, (XGM_VT)(x), (XGM_VT)(y), (XGM_VT)(z) ); return SGS_SUCCESS; }
 #define SGS_RETURN_VEC4( x, y, z, w ) { sgs_PushVec4( C, (XGM_VT)(x), (XGM_VT)(y), (XGM_VT)(z), (XGM_VT)(w) ); return SGS_SUCCESS; }
+#define SGS_RETURN_AABB2( x1, y1, x2, y2 ) { sgs_PushAABB2( C, (XGM_VT)(x1), (XGM_VT)(y1), (XGM_VT)(x2), (XGM_VT)(y2) ); return SGS_SUCCESS; }
+#define SGS_RETURN_COLOR( r, g, b, a ) { sgs_PushColor( C, (XGM_VT)(r), (XGM_VT)(g), (XGM_VT)(b), (XGM_VT)(a) ); return SGS_SUCCESS; }
 #define SGS_RETURN_VEC2P( value ) { sgs_PushVec2p( C, value ); return SGS_SUCCESS; }
 #define SGS_RETURN_VEC3P( value ) { sgs_PushVec3p( C, value ); return SGS_SUCCESS; }
 #define SGS_RETURN_VEC4P( value ) { sgs_PushVec4p( C, value ); return SGS_SUCCESS; }
-#define SGS_RETURN_AABB2( value ) { sgs_PushAABB2p( C, value ); return SGS_SUCCESS; }
-#define SGS_RETURN_COLOR( value ) { sgs_PushColorp( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_AABB2P( value ) { sgs_PushAABB2p( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_COLORP( value ) { sgs_PushColorp( C, value ); return SGS_SUCCESS; }
 #define SGS_RETURN_MAT4( value ) { sgs_PushMat4( C, value, 0 ); return SGS_SUCCESS; }
 
 #define SGS_PARSE_VEC2( outptr, strict ) { return sgs_ParseVec2P( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }

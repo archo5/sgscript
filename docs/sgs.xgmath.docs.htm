@@ -7,7 +7,8 @@
 	</head><body>
 	<h1>SGS eXtended Game Math library</h1><div><h2>Table of Contents</h2><ul><li><a href='#Description'>Description</a>
 </li><li><a href='#SGScript-API'>SGScript API</a>
-<ul><li><a href='#All-SGScript-objects-A-Z'>All SGScript objects (A-Z)</a>
+<ul><li><a href='#floatarray-data-transformation-methods'>floatarray data transformation methods</a>
+</li><li><a href='#All-SGScript-objects-A-Z'>All SGScript objects (A-Z)</a>
 </li><li><a href='#All-SGScript-functions-A-Z'>All SGScript functions (A-Z)</a>
 </li></ul><li><a href='#C-API'>C API</a>
 <ul><li><a href='#All-C-interfaces-A-Z'>All C interfaces (A-Z)</a>
@@ -20,7 +21,11 @@ The goal of this library is to provide the mathematical objects commonly used in
 </li><li><a href="#mat4-object">mat4</a> (4x4 matrix)
 </li><li><a href="#aabb2-object">aabb2</a> (2D axis-aligned bounding box)
 </li><li><a href="#color-object">color</a> (red, green, blue, alpha values)
-</li><li><a href="#floatarray-object">floatarray</a> (array of floating point values)</li></ul><pre>include &quot;sgsxgmath&quot;;</pre></div>
+</li><li><a href="#floatarray-object">floatarray</a> (array of floating point values)</li></ul><p>
+The library is compiled to a &#39;sgsxgmath&#39; shared library so it can be included this way (assuming that, on Linux and similar systems, LD_LIBRARY_PATH is set correctly):
+</p><pre>include &quot;sgsxgmath&quot;;</pre><p>
+<em class='notice-bgr'>It is extremely important that only one instance of this library is loaded in the application for constant sharing to enable object interface recognition.</em>
+</p></div>
 <div class='item'><a name='SGScript-API'></a><hr><h2>SGScript API</h2><ul><li><a href="#vec2-object">vec2 (object)</a>
 </li><li><a href="#vec2-function">vec2 (function)</a> - create a vec2 object
 </li><li><a href="#vec2-dot-function">vec2_dot</a> - return dot product of two 2D vectors
@@ -35,7 +40,17 @@ The goal of this library is to provide the mathematical objects commonly used in
 </li><li><a href="#aabb2-function">aabb2 (function)</a> - create a 2D AABB from 4 real values
 </li><li><a href="#aabb2v-function">aabb2v</a> - create a 2D AABB from 2 2D vectors
 </li><li><a href="#aabb2-intersect-function">aabb2_intersect</a> - intersect two 2D AABB values
-</li><li><a href="#aabb2-expand-function">aabb2_expand</a> - return a 2D AABB containing all given 2D vectors and AABB
+</li><li><a href="#color-object">color (object)</a>
+</li><li><a href="#color-function">color (function)</a>
+</li><li><a href="#mat4-object">mat4 (object)</a>
+</li><li><a href="#mat4-function">mat4 (function)</a>
+</li><li><a href="#floatarray-object">floatarray (object)</a>
+</li><li><a href="#floatarray-function">floatarray (function)</a> - create floatarray from array/list of int/real values
+</li><li><a href="#floatarray-buffer-function">floatarray_buffer</a> - create 0-initialized floatarray
+</li><li><a href="#vec2array-function">vec2array</a> - create floatarray from array/list of int/real/vec2 values
+</li><li><a href="#vec3array-function">vec3array</a> - create floatarray from array/list of int/real/vec3 values
+</li><li><a href="#vec4array-function">vec4array</a> - create floatarray from array/list of int/real/vec4 values
+</li><li><a href="#floatarray-from-buffer-function">floatarray_from_*_buffer</a> - create floatarray from byte buffer
 </li><li><a href="#All-SGScript-objects-A-Z">All SGScript objects (A-Z)</a>
 </li><li><a href="#All-SGScript-functions-A-Z">All SGScript functions (A-Z)</a></li></ul></div>
 <div class='item'><a name='vec2-object'></a><hr><h2>vec2 [object]</h2><ul><li>methods
@@ -62,7 +77,8 @@ The goal of this library is to provide the mathematical objects commonly used in
 </li></ul><li>other features:
 <ul><li>cloning support
 </li><li>serialization support
-</li><li>indexing support for indices 0 - 1: returns/sets the specified sub-value
+</li><li>GC-safe
+</li><li>indexing support for indices 0 - 1: returns/sets the specified subvalue
 </li><li>tostring, dump = &quot;vec2(&lt;x&gt;;&lt;y&gt;)&quot;</li></ul></li></ul></div>
 <div class='item'><a name='vec2-rotate-method'></a><hr><h2>vec2.rotate [method]</h2><h3>vec2.rotate( real angle )</h3><h4>return vec2, rotated by angle in radians</h4></div>
 <div class='item'><a name='vec2-function'></a><hr><h2>vec2 [function]</h2><h3>vec2( real x[, real y ])</h3><h4>create a vec2 value from 1 - 2 real values</h4><ul><li>if only one argument is given, it is used for both <code>x</code> and <code>y</code></li></ul></div>
@@ -87,7 +103,8 @@ The goal of this library is to provide the mathematical objects commonly used in
 </li></ul><li>other features:
 <ul><li>cloning support
 </li><li>serialization support
-</li><li>indexing support for indices 0 - 2: returns/sets the specified sub-value
+</li><li>GC-safe
+</li><li>indexing support for indices 0 - 2: returns/sets the specified subvalue
 </li><li>tostring, dump = &quot;vec3(&lt;x&gt;;&lt;y&gt;;&lt;z&gt;)&quot;</li></ul></li></ul></div>
 <div class='item'><a name='vec3-function'></a><hr><h2>vec3 [function]</h2><h3>vec3( real x[, real y[, real z ]])</h3><h4>create a vec3 value from 1 or 3 real values</h4><ul><li>if only one argument is given, it is used for <code>x</code>, <code>y</code> and <code>z</code></li></ul></div>
 <div class='item'><a name='vec3-dot-function'></a><hr><h2>vec3_dot [function]</h2><h3>vec3_dot( vec3 v1, vec3 v2 )</h3><h4>return the dot product of both vectors</h4><ul><li>returns <code>v1.x <i> v2.x + v1.y </i> v2.y + v1.z * v2.z</code></li></ul></div>
@@ -113,16 +130,40 @@ The goal of this library is to provide the mathematical objects commonly used in
 </li></ul><li>other features:
 <ul><li>cloning support
 </li><li>serialization support
-</li><li>indexing support for indices 0 - 3: returns/sets the specified sub-value
+</li><li>GC-safe
+</li><li>indexing support for indices 0 - 3: returns/sets the specified subvalue
 </li><li>tostring, dump = &quot;vec4(&lt;x&gt;;&lt;y&gt;;&lt;z&gt;;&lt;w&gt;)&quot;</li></ul></li></ul></div>
 <div class='item'><a name='vec4-function'></a><hr><h2>vec4 [function]</h2><h3>vec4( real x[, real y[, real z[, real w ]]])</h3><h4>create a vec4 value from 1, 2 or 4 real values</h4><ul><li>if only one argument is given, it is used for <code>x</code>, <code>y</code>, <code>z</code> and <code>w</code>
 </li><li>if two arguments are given, use argument 1 for <code>x</code>, <code>y</code> and `z`; argument 2 for <code>w</code></li></ul></div>
 <div class='item'><a name='vec4-dot-function'></a><hr><h2>vec4_dot [function]</h2><h3>vec4_dot( vec4 v1, vec4 v2 )</h3><h4>return the dot product of both vectors</h4><ul><li>returns <code>v1.x <i> v2.x + v1.y </i> v2.y + v1.z <i> v2.z + v1.w </i> v2.w</code></li></ul></div>
-<div class='item'><a name='aabb2-object'></a><hr><h2>aabb2 [object]</h2></div>
-<div class='item'><a name='aabb2-function'></a><hr><h2>aabb2 [function]</h2></div>
-<div class='item'><a name='aabb2v-function'></a><hr><h2>aabb2v [function]</h2></div>
-<div class='item'><a name='aabb2-intersect-function'></a><hr><h2>aabb2_intersect [function]</h2></div>
-<div class='item'><a name='aabb2-expand-function'></a><hr><h2>aabb2_expand [function]</h2></div>
+<div class='item'><a name='aabb2-object'></a><hr><h2>aabb2 [object]</h2><p>
+In this object, assume 1 = min and 2 = max.
+</p><ul><li>methods
+<ul><li><a href="#aabb2-expand-function">expand</a> - include other vec2/aabb2 items in current AABB
+</li></ul><li>read-only properties
+<ul><li>[real] width -- x2 - x1
+</li><li>[real] height -- y2 - y1
+</li><li>[vec2] center -- (p1 + p2) / 2
+</li><li>[real] area -- width * height
+</li><li>[bool] valid -- returns if x1 &lt;= x2 and y1 &lt;= y2
+</li></ul><li>read/write properties
+<ul><li>[real] x1
+</li><li>[real] y1
+</li><li>[real] x2
+</li><li>[real] y2
+</li><li>[vec2] p1
+</li><li>[vec2] p2
+</li></ul><li>overloaded operators
+<ul><li>comparison between aabb2 values: first by X1, then by Y1, then by X2, then by Y2
+</li></ul><li>other features:
+<ul><li>cloning support
+</li><li>serialization support
+</li><li>GC-safe
+</li><li>tostring, dump = &quot;aabb2(&lt;x1&gt;;&lt;y1&gt; - &lt;x2&gt;;&lt;y2&gt;)&quot;</li></ul></li></ul></div>
+<div class='item'><a name='aabb2-expand-function'></a><hr><h2>aabb2.expand( ... ) [function]</h2><h3>aabb2.expand( ... )</h3><h4>include other vec2/aabb2 items in current AABB</h4></div>
+<div class='item'><a name='aabb2-function'></a><hr><h2>aabb2 [function]</h2><h3>aabb2( real x1, real y1, real x2, real y2 )</h3><h4>create a 2D AABB object from 4 real values</h4></div>
+<div class='item'><a name='aabb2v-function'></a><hr><h2>aabb2v [function]</h2><h3>aabb2v( vec2 p1, vec2 p2 )</h3><h4>create a 2D AABB object from 2 vec2 values</h4></div>
+<div class='item'><a name='aabb2-intersect-function'></a><hr><h2>aabb2_intersect [function]</h2><h3>aabb2_intersect( aabb2 bb1, aabb2 bb2 )</h3><h4>check if two AABBs intersect</h4></div>
 <div class='item'><a name='color-object'></a><hr><h2>color [object]</h2><ul><li>read-only properties
 <ul><li>[int] size - returns 4 - the number of components in this vector
 </li></ul><li>read/write properties
@@ -141,81 +182,162 @@ The goal of this library is to provide the mathematical objects commonly used in
 </li></ul><li>other features:
 <ul><li>cloning support
 </li><li>serialization support
-</li><li>indexing support for indices 0 - 3: returns/sets the specified sub-value
+</li><li>GC-safe
+</li><li>indexing support for indices 0 - 3: returns/sets the specified subvalue
 </li><li>tostring, dump = &quot;color(&lt;r&gt;;&lt;g&gt;;&lt;b&gt;;&lt;a&gt;)&quot;</li></ul></li></ul></div>
 <div class='item'><a name='color-function'></a><hr><h2>color [function]</h2><h3>color( real r[, real g[, real b[, real a ]]])</h3><h4>create a color value from 1 to 4 real values</h4><ul><li>if one argument is given, it is used for all components
 </li><li>if two arguments are given, argument 1 is used for R, G and B, argument 2 is used for A
 </li><li>if three arguments are given, they&#39;re used for R, G and B; 1 is the value of A</li></ul></div>
-<div class='item'><a name='mat4-object'></a><hr><h2>mat4 [object]</h2></div>
-<div class='item'><a name='mat4-identity-method'></a><hr><h2>mat4.identity [method]</h2></div>
-<div class='item'><a name='mat4-multiply-method'></a><hr><h2>mat4.multiply [method]</h2></div>
-<div class='item'><a name='mat4-multiply-left-method'></a><hr><h2>mat4.multiply_left [method]</h2></div>
-<div class='item'><a name='mat4-multiply2-method'></a><hr><h2>mat4.multiply2 [method]</h2></div>
-<div class='item'><a name='mat4-transpose-method'></a><hr><h2>mat4.transpose [method]</h2></div>
-<div class='item'><a name='mat4-transpose-from-method'></a><hr><h2>mat4.transpose_from [method]</h2></div>
-<div class='item'><a name='mat4-invert-method'></a><hr><h2>mat4.invert [method]</h2></div>
-<div class='item'><a name='mat4-invert-from-method'></a><hr><h2>mat4.invert_from [method]</h2></div>
-<div class='item'><a name='mat4-translate-method'></a><hr><h2>mat4.translate [method]</h2></div>
-<div class='item'><a name='mat4-translate-v3-method'></a><hr><h2>mat4.translate_v3 [method]</h2></div>
-<div class='item'><a name='mat4-rotateX-method'></a><hr><h2>mat4.rotateX [method]</h2></div>
-<div class='item'><a name='mat4-rotateY-method'></a><hr><h2>mat4.rotateY [method]</h2></div>
-<div class='item'><a name='mat4-rotateZ-method'></a><hr><h2>mat4.rotateZ [method]</h2></div>
-<div class='item'><a name='mat4-rotate-axis-angle-method'></a><hr><h2>mat4.rotate_axis_angle [method]</h2></div>
-<div class='item'><a name='mat4-rotate-axis-angle-v3-method'></a><hr><h2>mat4.rotate_axis_angle_v3 [method]</h2></div>
-<div class='item'><a name='mat4-scale-method'></a><hr><h2>mat4.scale [method]</h2></div>
-<div class='item'><a name='mat4-scale-v3-method'></a><hr><h2>mat4.scale_v3 [method]</h2></div>
-<div class='item'><a name='mat4-transform-method'></a><hr><h2>mat4.transform [method]</h2></div>
-<div class='item'><a name='mat4-transform-pos-method'></a><hr><h2>mat4.transform_pos [method]</h2></div>
-<div class='item'><a name='mat4-transform-normal-method'></a><hr><h2>mat4.transform_normal [method]</h2></div>
-<div class='item'><a name='mat4-function'></a><hr><h2>mat4 [function]</h2></div>
-<div class='item'><a name='floatarray-object'></a><hr><h2>floatarray [object]</h2></div>
-<div class='item'><a name='floatarray-clear-method'></a><hr><h2>floatarray.clear [method]</h2></div>
-<div class='item'><a name='floatarray-set1-method'></a><hr><h2>floatarray.set1 [method]</h2></div>
-<div class='item'><a name='floatarray-negate-method'></a><hr><h2>floatarray.negate [method]</h2></div>
-<div class='item'><a name='floatarray-assign-method'></a><hr><h2>floatarray.assign [method]</h2></div>
-<div class='item'><a name='floatarray-negate-from-method'></a><hr><h2>floatarray.negate_from [method]</h2></div>
-<div class='item'><a name='floatarray-add-assign-method'></a><hr><h2>floatarray.add_assign [method]</h2></div>
-<div class='item'><a name='floatarray-sub-assign-method'></a><hr><h2>floatarray.sub_assign [method]</h2></div>
-<div class='item'><a name='floatarray-mul-assign-method'></a><hr><h2>floatarray.mul_assign [method]</h2></div>
-<div class='item'><a name='floatarray-div-assign-method'></a><hr><h2>floatarray.div_assign [method]</h2></div>
-<div class='item'><a name='floatarray-mod-assign-method'></a><hr><h2>floatarray.mod_assign [method]</h2></div>
-<div class='item'><a name='floatarray-pow-assign-method'></a><hr><h2>floatarray.pow_assign [method]</h2></div>
-<div class='item'><a name='floatarray-add-method'></a><hr><h2>floatarray.add [method]</h2></div>
-<div class='item'><a name='floatarray-sub-method'></a><hr><h2>floatarray.sub [method]</h2></div>
-<div class='item'><a name='floatarray-mul-method'></a><hr><h2>floatarray.mul [method]</h2></div>
-<div class='item'><a name='floatarray-div-method'></a><hr><h2>floatarray.div [method]</h2></div>
-<div class='item'><a name='floatarray-mod-method'></a><hr><h2>floatarray.mod [method]</h2></div>
-<div class='item'><a name='floatarray-pow-method'></a><hr><h2>floatarray.pow [method]</h2></div>
-<div class='item'><a name='floatarray-randbox-method'></a><hr><h2>floatarray.randbox [method]</h2></div>
-<div class='item'><a name='floatarray-randext-method'></a><hr><h2>floatarray.randext [method]</h2></div>
-<div class='item'><a name='floatarray-multiply-add-assign-method'></a><hr><h2>floatarray.multiply_add_assign [method]</h2></div>
-<div class='item'><a name='floatarray-lerp-to-method'></a><hr><h2>floatarray.lerp_to [method]</h2></div>
-<div class='item'><a name='floatarray-to-int8-buffer-method'></a><hr><h2>floatarray.to_int8_buffer [method]</h2></div>
-<div class='item'><a name='floatarray-to-int16-buffer-method'></a><hr><h2>floatarray.to_int16_buffer [method]</h2></div>
-<div class='item'><a name='floatarray-to-int32-buffer-method'></a><hr><h2>floatarray.to_int32_buffer [method]</h2></div>
-<div class='item'><a name='floatarray-to-int64-buffer-method'></a><hr><h2>floatarray.to_int64_buffer [method]</h2></div>
-<div class='item'><a name='floatarray-to-uint8-buffer-method'></a><hr><h2>floatarray.to_uint8_buffer [method]</h2></div>
-<div class='item'><a name='floatarray-to-uint16-buffer-method'></a><hr><h2>floatarray.to_uint16_buffer [method]</h2></div>
-<div class='item'><a name='floatarray-to-uint32-buffer-method'></a><hr><h2>floatarray.to_uint32_buffer [method]</h2></div>
-<div class='item'><a name='floatarray-to-uint64-buffer-method'></a><hr><h2>floatarray.to_uint64_buffer [method]</h2></div>
-<div class='item'><a name='floatarray-to-float32-buffer-method'></a><hr><h2>floatarray.to_float32_buffer [method]</h2></div>
-<div class='item'><a name='floatarray-to-float64-buffer-method'></a><hr><h2>floatarray.to_float64_buffer [method]</h2></div>
-<div class='item'><a name='floatarray-buffer-function'></a><hr><h2>floatarray_buffer [function]</h2></div>
-<div class='item'><a name='floatarray-function'></a><hr><h2>floatarray [function]</h2></div>
-<div class='item'><a name='vec2array-function'></a><hr><h2>vec2array [function]</h2></div>
-<div class='item'><a name='vec3array-function'></a><hr><h2>vec3array [function]</h2></div>
-<div class='item'><a name='vec4array-function'></a><hr><h2>vec4array [function]</h2></div>
-<div class='item'><a name='floatarray-from-int8-buffer-function'></a><hr><h2>floatarray_from_int8_buffer [function]</h2></div>
-<div class='item'><a name='floatarray-from-int16-buffer-function'></a><hr><h2>floatarray_from_int16_buffer [function]</h2></div>
-<div class='item'><a name='floatarray-from-int32-buffer-function'></a><hr><h2>floatarray_from_int32_buffer [function]</h2></div>
-<div class='item'><a name='floatarray-from-int64-buffer-function'></a><hr><h2>floatarray_from_int64_buffer [function]</h2></div>
-<div class='item'><a name='floatarray-from-uint8-buffer-function'></a><hr><h2>floatarray_from_uint8_buffer [function]</h2></div>
-<div class='item'><a name='floatarray-from-uint16-buffer-function'></a><hr><h2>floatarray_from_uint16_buffer [function]</h2></div>
-<div class='item'><a name='floatarray-from-uint32-buffer-function'></a><hr><h2>floatarray_from_uint32_buffer [function]</h2></div>
-<div class='item'><a name='floatarray-from-uint64-buffer-function'></a><hr><h2>floatarray_from_uint64_buffer [function]</h2></div>
-<div class='item'><a name='floatarray-from-float32-buffer-function'></a><hr><h2>floatarray_from_float32_buffer [function]</h2></div>
-<div class='item'><a name='floatarray-from-float64-buffer-function'></a><hr><h2>floatarray_from_float64_buffer [function]</h2></div>
-<div class='item'><a name='ray-plane-intersect-function'></a><hr><h2>ray_plane_intersect [function]</h2></div>
+<div class='item'><a name='mat4-object'></a><hr><h2>mat4 [object]</h2><p>
+A column-major matrix
+</p><ul><li>methods
+<ul><li><a href="#mat4-identity-method">identity</a> - set matrix to identity
+</li><li><a href="#mat4-multiply-method">multiply</a> - multiply this matrix with another one
+</li><li><a href="#mat4-multiply-left-method">multiply_left</a> - left-multiply this matrix with another one
+</li><li><a href="#mat4-multiply2-method">multiply2</a> - multiply two matrices into this one
+</li><li><a href="#mat4-transpose-method">transpose</a> - transpose matrix
+</li><li><a href="#mat4-transpose-from-method">transpose_from</a> - transpose another matrix into this one
+</li><li><a href="#mat4-invert-method">invert</a> - invert matrix
+</li><li><a href="#mat4-invert-from-method">invert_from</a> - invert another matrix into this one
+</li><li><a href="#mat4-translate-method">translate</a> - set or multiply a translation matrix
+</li><li><a href="#mat4-translate-v3-method">translate_v3</a> - set or multiply a translation matrix (vec3 argument)
+</li><li><a href="#mat4-rotateX-method">rotateX</a> - set or multiply a X-axis rotation matrix
+</li><li><a href="#mat4-rotateY-method">rotateY</a> - set or multiply a Y-axis rotation matrix
+</li><li><a href="#mat4-rotateZ-method">rotateZ</a> - set or multiply a Z-axis rotation matrix
+</li><li><a href="#mat4-rotate-axis-angle-method">rotate_axis_angle</a> - set or multiply a custom axis rotation matrix
+</li><li><a href="#mat4-rotate-axis-angle-v3-method">rotate_axis_angle_v3</a> - set or multiply a custom axis rotation matrix (vec3 argument)
+</li><li><a href="#mat4-scale-method">scale</a> - set or multiply a scale matrix
+</li><li><a href="#mat4-scale-v3-method">scale_v3</a> - set or multiply a scale matrix (vec3 argument)
+</li><li><a href="#mat4-transform-method">transform</a> - transform a 4D vector
+</li><li><a href="#mat4-transform-pos-method">transform_pos</a> - transform a 3D position vector
+</li><li><a href="#mat4-transform-normal-method">transform_normal</a> - transform a 3D normal vector
+</li></ul><li>read-only properties
+<ul><li>[int] size - returns 16 - the number of components in this vector
+</li></ul><li>read/write properties
+<ul><li>[real] m[0-3][0-3]
+</li></ul><li>overloaded operators
+<ul><li>comparison between subvalues: column-major subvalue order
+</li></ul><li>other features:
+<ul><li>cloning support
+</li><li>serialization support
+</li><li>GC-safe
+</li><li>indexing support for indices 0 - 15: returns/sets the specified subvalue
+</li><li>tostring = &quot;mat4&quot;
+</li><li>dump:</li></ul></li></ul><pre>mat4
+(
+	&lt;m00&gt; &lt;m10&gt; &lt;m20&gt; &lt;m30&gt;
+	&lt;m01&gt; &lt;m11&gt; &lt;m21&gt; &lt;m31&gt;
+	&lt;m02&gt; &lt;m12&gt; &lt;m22&gt; &lt;m32&gt;
+	&lt;m03&gt; &lt;m13&gt; &lt;m23&gt; &lt;m33&gt;
+)</pre></div>
+<div class='item'><a name='mat4-identity-method'></a><hr><h2>mat4.identity [method]</h2><h3>mat4.identity()</h3><h4>set the matrix to identity</h4></div>
+<div class='item'><a name='mat4-multiply-method'></a><hr><h2>mat4.multiply [method]</h2><h3>mat4.multiply( mat4 m )</h3><h4>multiply this matrix and another matrix, putting the other matrix on the right side of multiplication</h4></div>
+<div class='item'><a name='mat4-multiply-left-method'></a><hr><h2>mat4.multiply_left [method]</h2><h3>mat4.multiply_left( mat4 m )</h3><h4>multiply this matrix and another matrix, putting the other matrix on the left side of multiplication</h4></div>
+<div class='item'><a name='mat4-multiply2-method'></a><hr><h2>mat4.multiply2 [method]</h2><h3>mat4.multiply2( mat4 m1, mat4 m2 )</h3><h4>multiply two matrices into this matrix</h4></div>
+<div class='item'><a name='mat4-transpose-method'></a><hr><h2>mat4.transpose [method]</h2><h3>mat4.transpose()</h3><h4>transpose this matrix into itself</h4></div>
+<div class='item'><a name='mat4-transpose-from-method'></a><hr><h2>mat4.transpose_from [method]</h2><h3>mat4.transpose_from( mat4 m )</h3><h4>transpose another matrix into this matrix</h4></div>
+<div class='item'><a name='mat4-invert-method'></a><hr><h2>mat4.invert [method]</h2><h3>mat4.invert()</h3><h4>invert this matrix into itself, return if successful</h4></div>
+<div class='item'><a name='mat4-invert-from-method'></a><hr><h2>mat4.invert_from [method]</h2><h3>mat4.invert_from( mat4 m )</h3><h4>invert another matrix into this matrix</h4></div>
+<div class='item'><a name='mat4-translate-method'></a><hr><h2>mat4.translate [method]</h2><h3>mat4.translate( real x, real y, real z[, bool reset ])</h3><h4>generate a translation matrix and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat4-translate-v3-method'></a><hr><h2>mat4.translate_v3 [method]</h2><h3>mat4.translate_v3( vec3 v[, bool reset ])</h3><h4>generate a translation matrix and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat4-rotateX-method'></a><hr><h2>mat4.rotateX [method]</h2><h3>mat4.rotateX( real a[, bool reset ])</h3><h4>generate a rotation matrix (rotation around X axis) and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat4-rotateY-method'></a><hr><h2>mat4.rotateY [method]</h2><h3>mat4.rotateY( real a[, bool reset ])</h3><h4>generate a rotation matrix (rotation around Y axis) and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat4-rotateZ-method'></a><hr><h2>mat4.rotateZ [method]</h2><h3>mat4.rotateZ( real a[, bool reset ])</h3><h4>generate a rotation matrix (rotation around Z axis) and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat4-rotate-axis-angle-method'></a><hr><h2>mat4.rotate_axis_angle [method]</h2><h3>mat4.rotate_axis_angle( real x, real y, real z, real a[, bool reset ])</h3><h4>generate a rotation matrix (rotation around specified axis) and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat4-rotate-axis-angle-v3-method'></a><hr><h2>mat4.rotate_axis_angle_v3 [method]</h2><h3>mat4.rotate_axis_angle( vec3 v, real a[, bool reset ])</h3><h4>generate a rotation matrix (rotation around specified axis) and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat4-scale-method'></a><hr><h2>mat4.scale [method]</h2><h3>mat4.scale( real x, real y, real z[, bool reset ])</h3><h4>generate a scale matrix and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat4-scale-v3-method'></a><hr><h2>mat4.scale_v3 [method]</h2><h3>mat4.scale_v3( vec3 v[, bool reset ])</h3><h4>generate a scale matrix and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat4-transform-method'></a><hr><h2>mat4.transform [method]</h2><h3>mat4.transform( vec4 v )</h3><h4>multiply a 4D vector by this matrix</h4></div>
+<div class='item'><a name='mat4-transform-pos-method'></a><hr><h2>mat4.transform_pos [method]</h2><h3>mat4.transform_pos( vec3 v )</h3><h4>multiply a 3D position vector by this matrix</h4><ul><li>multiply vec4( v.x, v.y, v.z, 1 ) by this matrix, return vec3( x / w, y / w, z / w )</li></ul></div>
+<div class='item'><a name='mat4-transform-normal-method'></a><hr><h2>mat4.transform_normal [method]</h2><h3>mat4.transform_normal( vec3 v )</h3><h4>multiply a 3D normal vector by this matrix</h4><ul><li>multiply vec4( v.x, v.y, v.z, 0 ) by this matrix, return vec3( x, y, z )</li></ul></div>
+<div class='item'><a name='mat4-function'></a><hr><h2>mat4 [function]</h2><h3>mat4( mat4 m )</h3><h4>copy the matrix</h4><h3>mat4( vec4 row1, vec4 row2, vec4 row3[, vec4 row4 ])</h3><h4>create a matrix from 3 or 4 rows</h4><h3>mat4( real v[16] )</h3><h4>create a matrix from 16 real values</h4></div>
+<div class='item'><a name='floatarray-object'></a><hr><h2>floatarray [object]</h2><ul><li>methods
+<ul><li><a href="#floatarray-clear-method">clear</a> - set all values to 0
+</li><li><a href="#floatarray-set1-method">set1</a> - set all values to 1
+</li><li><a href="#floatarray-negate-method">negate</a> - negate all values
+</li><li><a href="#floatarray-assign-method">assign</a> - copy values from another source
+</li><li><a href="#floatarray-negate-from-method">negate_from</a> - copy negated values
+</li><li><a href="#floatarray-assign-method">*[_assign]</a> - combine values with arithmetic operations
+</li><li><a href="#floatarray-randbox-method">randbox</a> - set values to random between two sources
+</li><li><a href="#floatarray-randext-method">randext</a> - set values to random around source 1 in the range of source 2
+</li><li><a href="#floatarray-multiply-add-assign-method">multiply_add_assign</a> - multiply two sources and add the result to this one
+</li><li><a href="#floatarray-lerp-to-method">lerp_to</a> - linearly interpolate this source and another to the factor of the third one
+</li><li><a href="#floatarray-to-buffer-method">to_*_buffer</a> - convert values to byte buffer, optionally scaling them
+</li></ul><li>read-only properties
+<ul><li>[int] size - returns array size - the number of values in this array
+</li><li>[int] size2 - returns array size / 2 - the number of vec2 values in this array
+</li><li>[int] size3 - returns array size / 3 - the number of vec3 values in this array
+</li><li>[int] size4 - returns array size / 4 - the number of vec4 values in this array
+</li><li>[int] size16 - returns array size / 16 - the number of mat4 values in this array
+</li></ul><li>other features:
+<ul><li>cloning support
+</li><li>serialization support
+</li><li>GC-safe
+</li><li>indexing support for indices 0 - (size-1): returns/sets the specified subvalue
+</li><li>tostring = &quot;floatarray&quot;
+</li><li>dump: first 64 values, array formatting</li></ul></li></ul></div>
+<div class='item'><a name='floatarray-data-transformation-methods'></a><hr><h2>floatarray data transformation methods</h2><ul><li>&#39;source&#39; type can take <code>int</code>, <code>real</code>, <code>vec2</code>, <code>vec3</code>, <code>vec4</code>, <code>mat4</code> and <code>floatarray</code> sources.
+</li><li>source values are accessed, indexed by (i % source.size)
+</li><li>function works on all values inside array</li></ul></div>
+<div class='item'><a name='floatarray-clear-method'></a><hr><h2>floatarray.clear [method]</h2><h3>floatarray.clear()</h3><h4>set all values to 0</h4><p>
+<em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
+</p></div>
+<div class='item'><a name='floatarray-set1-method'></a><hr><h2>floatarray.set1 [method]</h2><h3>floatarray.set1()</h3><h4>set all values to 1</h4><p>
+<em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
+</p></div>
+<div class='item'><a name='floatarray-negate-method'></a><hr><h2>floatarray.negate [method]</h2><h3>floatarray.negate()</h3><h4>swap the sign on all values</h4><p>
+<em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
+</p></div>
+<div class='item'><a name='floatarray-assign-method'></a><hr><h2>floatarray.assign [method]</h2><h3>floatarray.assign( s1 )</h3><h4>copy values from another source</h4><p>
+<em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
+</p></div>
+<div class='item'><a name='floatarray-negate-from-method'></a><hr><h2>floatarray.negate_from [method]</h2><h3>floatarray.negate_from( s1 )</h3><h4>copy negated values from another source</h4><p>
+<em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
+</p></div>
+<div class='item'><a name='floatarray-assign-add-sub-mul-div-mod-pow-methods'></a><hr><h2>floatarray.*[_assign] (add|sub|mul|div|mod|pow) [methods]</h2><h3>floatarray.add( s1, s2 )</h3><h4>add values from two sources to this floatarray (this = s1 + s2)</h4><h3>floatarray.sub( s1, s2 )</h3><h4>subtract values from two sources to this floatarray (this = s1 - s2)</h4><h3>floatarray.mul( s1, s2 )</h3><h4>multiply values from two sources to this floatarray (this = s1 * s2)</h4><h3>floatarray.div( s1, s2 )</h3><h4>divide values from two sources to this floatarray (this = s1 / s2)</h4><h3>floatarray.mod( s1, s2 )</h3><h4>set modulo from two sources to this floatarray (this = s1 % s2)</h4><h3>floatarray.pow( s1, s2 )</h3><h4>set power of two sources to this floatarray (this = s1 ^ s2)</h4><h3>floatarray.add_assign( s1 )</h3><h4>add values from another source to floatarray (this = this + s1)</h4><h3>floatarray.sub_assign( s1 )</h3><h4>subtract values from another source to floatarray (this = this - s1)</h4><h3>floatarray.mul_assign( s1 )</h3><h4>subtract values from another source to floatarray (this = this * s1)</h4><h3>floatarray.div_assign( s1 )</h3><h4>subtract values from another source to floatarray (this = this / s1)</h4><h3>floatarray.mod_assign( s1 )</h3><h4>subtract values from another source to floatarray (this = this % s1)</h4><h3>floatarray.pow_assign( s1 )</h3><h4>subtract values from another source to floatarray (this = this ^ s1)</h4><p>
+<em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
+</p></div>
+<div class='item'><a name='floatarray-randbox-method'></a><hr><h2>floatarray.randbox [method]</h2><h3>floatarray.randbox( s1, s2 )</h3><h4>set values to random between two sources (`this = lerp( s1, s2, randf() )`)</h4><p>
+<em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
+</p></div>
+<div class='item'><a name='floatarray-randext-method'></a><hr><h2>floatarray.randext [method]</h2><h3>floatarray.randext( s1, s2 )</h3><h4>set values to random around source 1 in the range of source 2 (`this = lerp( s1 - s2, s1 + s2, randf() )`)</h4><p>
+<em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
+</p></div>
+<div class='item'><a name='floatarray-multiply-add-assign-method'></a><hr><h2>floatarray.multiply_add_assign [method]</h2><h3>floatarray.multiply_add_assign( s1, s2 )</h3><h4>multiply two sources and add the result to this one (`this += s1 * s2`)</h4><p>
+<em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
+</p></div>
+<div class='item'><a name='floatarray-lerp-to-method'></a><hr><h2>floatarray.lerp_to [method]</h2><h3>floatarray.lerp_to( s1, s2 )</h3><h4>linearly interpolate this source and another to the factor of the third one (`this = lerp( this, s1, s2 )`)</h4><p>
+<em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
+</p></div>
+<div class='item'><a name='floatarray-to-buffer-method'></a><hr><h2>floatarray.to_*_buffer [method]</h2><h3>floatarray.to_int8_buffer( real scale = 1 )</h3><h3>floatarray.to_int16_buffer( real scale = 1 )</h3><h3>floatarray.to_int32_buffer( real scale = 1 )</h3><h3>floatarray.to_int64_buffer( real scale = 1 )</h3><h3>floatarray.to_uint8_buffer( real scale = 1 )</h3><h3>floatarray.to_uint16_buffer( real scale = 1 )</h3><h3>floatarray.to_uint32_buffer( real scale = 1 )</h3><h3>floatarray.to_uint64_buffer( real scale = 1 )</h3><h3>floatarray.to_float32_buffer( real scale = 1 )</h3><h3>floatarray.to_float64_buffer( real scale = 1 )</h3><h4>create a byte buffer from floatarray contents, optionally scaling the values</h4></div>
+<div class='item'><a name='floatarray-buffer-function'></a><hr><h2>floatarray_buffer [function]</h2><h3>floatarray_buffer( int size )</h3><h4>create a floatarray of the specified size, filled with zeroes</h4></div>
+<div class='item'><a name='floatarray-function'></a><hr><h2>floatarray [function]</h2><h3>floatarray([ int/real v0, ... ])</h3><h4>create a floatarray from a list of int/real values</h4><h3>floatarray( array varr )</h3><h4>create a floatarray from an array of int/real values</h4></div>
+<div class='item'><a name='vec2array-function'></a><hr><h2>vec2array [function]</h2><h3>vec2array([ int/real v0, ... ])</h3><h4>create a floatarray from a list of int/real values (must be a multiple of 2)</h4><h3>vec2array([ vec2 v0, ... ])</h3><h4>create a floatarray from a list of vec2 values</h4><h3>vec2array( array varr )</h3><h4>create a floatarray from an array of vec2 values</h4></div>
+<div class='item'><a name='vec3array-function'></a><hr><h2>vec3array [function]</h2><h3>vec3array([ int/real v0, ... ])</h3><h4>create a floatarray from a list of int/real values (must be a multiple of 3)</h4><h3>vec3array([ vec3 v0, ... ])</h3><h4>create a floatarray from a list of vec3 values</h4><h3>vec3array( array varr )</h3><h4>create a floatarray from an array of vec3 values</h4></div>
+<div class='item'><a name='vec4array-function'></a><hr><h2>vec4array [function]</h2><h3>vec4array([ int/real v0, ... ])</h3><h4>create a floatarray from a list of int/real values (must be a multiple of 4)</h4><h3>vec4array([ vec4 v0, ... ])</h3><h4>create a floatarray from a list of vec4 values</h4><h3>vec4array( array varr )</h3><h4>create a floatarray from an array of vec4 values</h4></div>
+<div class='item'><a name='floatarray-from-buffer-function'></a><hr><h2>floatarray_from_*_buffer [function]</h2><h3>floatarray_from_int8_buffer( string buffer, scale = 1, stride = 1, offset = 0 )</h3><h3>floatarray_from_int16_buffer( string buffer, scale = 1, stride = 1, offset = 0 )</h3><h3>floatarray_from_int32_buffer( string buffer, scale = 1, stride = 1, offset = 0 )</h3><h3>floatarray_from_int64_buffer( string buffer, scale = 1, stride = 1, offset = 0 )</h3><h3>floatarray_from_uint8_buffer( string buffer, scale = 1, stride = 1, offset = 0 )</h3><h3>floatarray_from_uint16_buffer( string buffer, scale = 1, stride = 1, offset = 0 )</h3><h3>floatarray_from_uint32_buffer( string buffer, scale = 1, stride = 1, offset = 0 )</h3><h3>floatarray_from_uint64_buffer( string buffer, scale = 1, stride = 1, offset = 0 )</h3><h3>floatarray_from_float32_buffer( string buffer, scale = 1, stride = 1, offset = 0 )</h3><h3>floatarray_from_float64_buffer( string buffer, scale = 1, stride = 1, offset = 0 )</h3><h4>create a floatarray from byte buffer, optionally specifying scale, stride and offset to first value</h4></div>
+<div class='item'><a name='ray-plane-intersect-function'></a><hr><h2>ray_plane_intersect [function]</h2><h3>ray_plane_intersect( vec3 ray_pos, vec3 ray_dir, vec4 plane )</h3><h4>tests for an intersection between ray and plane, returning all relevant output data</h4><ul><li>if ray is (near-)parallel to plane, false is returned
+<ul><li>otherwise, signed distance along ray and signed origin distance from plane are returned
+</li><li>if signed distance along ray to plane is larger than 0, plane is in front of ray
+</li><li>if signed distance from origin to plane is larger than 0, ray origin is in front of the plane</li></ul></li></ul></div>
 <div class='item'><a name='All-SGScript-objects-A-Z'></a><hr><h2>All SGScript objects (A-Z)</h2><ul><li><a href="#aabb2-object">aabb2 [object]</a>
 </li><li><a href="#color-object">color [object]</a>
 </li><li><a href="#floatarray-object">floatarray [object]</a>
@@ -224,22 +346,13 @@ The goal of this library is to provide the mathematical objects commonly used in
 </li><li><a href="#vec3-object">vec3 [object]</a>
 </li><li><a href="#vec4-object">vec4 [object]</a></li></ul></div>
 <div class='item'><a name='All-SGScript-functions-A-Z'></a><hr><h2>All SGScript functions (A-Z)</h2><ul><li><a href="#aabb2-function">aabb2 [function]</a>
-</li><li><a href="#aabb2-expand-function">aabb2_expand [function]</a>
+</li><li><a href="#aabb2-expand-function">aabb2.expand( ... ) [function]</a>
 </li><li><a href="#aabb2-intersect-function">aabb2_intersect [function]</a>
 </li><li><a href="#aabb2v-function">aabb2v [function]</a>
 </li><li><a href="#color-function">color [function]</a>
 </li><li><a href="#floatarray-function">floatarray [function]</a>
 </li><li><a href="#floatarray-buffer-function">floatarray_buffer [function]</a>
-</li><li><a href="#floatarray-from-float32-buffer-function">floatarray_from_float32_buffer [function]</a>
-</li><li><a href="#floatarray-from-float64-buffer-function">floatarray_from_float64_buffer [function]</a>
-</li><li><a href="#floatarray-from-int16-buffer-function">floatarray_from_int16_buffer [function]</a>
-</li><li><a href="#floatarray-from-int32-buffer-function">floatarray_from_int32_buffer [function]</a>
-</li><li><a href="#floatarray-from-int64-buffer-function">floatarray_from_int64_buffer [function]</a>
-</li><li><a href="#floatarray-from-int8-buffer-function">floatarray_from_int8_buffer [function]</a>
-</li><li><a href="#floatarray-from-uint16-buffer-function">floatarray_from_uint16_buffer [function]</a>
-</li><li><a href="#floatarray-from-uint32-buffer-function">floatarray_from_uint32_buffer [function]</a>
-</li><li><a href="#floatarray-from-uint64-buffer-function">floatarray_from_uint64_buffer [function]</a>
-</li><li><a href="#floatarray-from-uint8-buffer-function">floatarray_from_uint8_buffer [function]</a>
+</li><li><a href="#floatarray-from-buffer-function">floatarray_from_*_buffer [function]</a>
 </li><li><a href="#mat4-function">mat4 [function]</a>
 </li><li><a href="#ray-plane-intersect-function">ray_plane_intersect [function]</a>
 </li><li><a href="#vec2-function">vec2 [function]</a>
@@ -252,224 +365,64 @@ The goal of this library is to provide the mathematical objects commonly used in
 </li><li><a href="#vec4-function">vec4 [function]</a>
 </li><li><a href="#vec4-dot-function">vec4_dot [function]</a>
 </li><li><a href="#vec4array-function">vec4array [function]</a></li></ul></div>
-<div class='item'><a name='C-API'></a><hr><h2>C API</h2><ul><li><a href="#xgm-vtarray-struct">xgm_vtarray</a> - <a href="#floatarray-object">floatarray</a> data
-</li><li><a href="#xgm-vec2-iface-interface">xgm_vec2_iface</a> - <a href="#vec2-object">vec2</a> interface
-</li><li><a href="#xgm-vec3-iface-interface">xgm_vec3_iface</a> - <a href="#vec3-object">vec3</a> interface
-</li><li><a href="#xgm-vec4-iface-interface">xgm_vec4_iface</a> - <a href="#vec4-object">vec4</a> interface
-</li><li><a href="#xgm-aabb2-iface-interface">xgm_aabb2_iface</a> - <a href="#aabb2-object">aabb2</a> interface
-</li><li><a href="#xgm-color-iface-interface">xgm_color_iface</a> - <a href="#color-object">color</a> interface
-</li><li><a href="#xgm-mat4-iface-interface">xgm_mat4_iface</a> - <a href="#mat4-object">mat4</a> interface
-</li><li><a href="#xgm-floatarr-iface-interface">xgm_floatarr_iface</a> - <a href="#floatarray-object">floatarray</a> interface
-</li><li><a href="#sgs-InitVec2-function">sgs_InitVec2</a>
-</li><li><a href="#sgs-InitVec3-function">sgs_InitVec3</a>
-</li><li><a href="#sgs-InitVec4-function">sgs_InitVec4</a>
-</li><li><a href="#sgs-InitAABB2-function">sgs_InitAABB2</a>
-</li><li><a href="#sgs-InitColor-function">sgs_InitColor</a>
-</li><li><a href="#sgs-InitMat4-function">sgs_InitMat4</a>
-</li><li><a href="#sgs-InitFloatArray-function">sgs_InitFloatArray</a>
-</li><li><a href="#sgs-InitVec2p-function">sgs_InitVec2p</a>
-</li><li><a href="#sgs-InitVec3p-function">sgs_InitVec3p</a>
-</li><li><a href="#sgs-InitVec4p-function">sgs_InitVec4p</a>
-</li><li><a href="#sgs-InitAABB2p-function">sgs_InitAABB2p</a>
-</li><li><a href="#sgs-InitColorp-function">sgs_InitColorp</a>
-</li><li><a href="#sgs-InitColorvp-function">sgs_InitColorvp</a>
-</li><li><a href="#sgs-PushVec2-function">sgs_PushVec2</a>
-</li><li><a href="#sgs-PushVec3-function">sgs_PushVec3</a>
-</li><li><a href="#sgs-PushVec4-function">sgs_PushVec4</a>
-</li><li><a href="#sgs-PushAABB2-function">sgs_PushAABB2</a>
-</li><li><a href="#sgs-PushColor-function">sgs_PushColor</a>
-</li><li><a href="#sgs-PushMat4-function">sgs_PushMat4</a>
-</li><li><a href="#sgs-PushFloatArray-function">sgs_PushFloatArray</a>
-</li><li><a href="#sgs-PushVec2p-function">sgs_PushVec2p</a>
-</li><li><a href="#sgs-PushVec3p-function">sgs_PushVec3p</a>
-</li><li><a href="#sgs-PushVec4p-function">sgs_PushVec4p</a>
-</li><li><a href="#sgs-PushAABB2p-function">sgs_PushAABB2p</a>
-</li><li><a href="#sgs-PushColorp-function">sgs_PushColorp</a>
-</li><li><a href="#sgs-PushColorvp-function">sgs_PushColorvp</a>
-</li><li><a href="#sgs-ParseVT-function">sgs_ParseVT</a>
-</li><li><a href="#sgs-ParseVTP-function">sgs_ParseVTP</a>
-</li><li><a href="#sgs-ParseVec2P-function">sgs_ParseVec2P</a>
-</li><li><a href="#sgs-ParseVec3P-function">sgs_ParseVec3P</a>
-</li><li><a href="#sgs-ParseVec4P-function">sgs_ParseVec4P</a>
-</li><li><a href="#sgs-ParseAABB2P-function">sgs_ParseAABB2P</a>
-</li><li><a href="#sgs-ParseColorP-function">sgs_ParseColorP</a>
-</li><li><a href="#sgs-ParseMat4P-function">sgs_ParseMat4P</a>
-</li><li><a href="#sgs-ParseFloatArrayP-function">sgs_ParseFloatArrayP</a>
-</li><li><a href="#sgs-ParseVec2-function">sgs_ParseVec2</a>
-</li><li><a href="#sgs-ParseVec3-function">sgs_ParseVec3</a>
-</li><li><a href="#sgs-ParseVec4-function">sgs_ParseVec4</a>
-</li><li><a href="#sgs-ParseAABB2-function">sgs_ParseAABB2</a>
-</li><li><a href="#sgs-ParseColor-function">sgs_ParseColor</a>
-</li><li><a href="#sgs-ParseMat4-function">sgs_ParseMat4</a>
-</li><li><a href="#sgs-ParseFloatArray-function">sgs_ParseFloatArray</a>
-</li><li><a href="#sgs-ArgCheck-Vec2-function">sgs_ArgCheck_Vec2</a>
-</li><li><a href="#sgs-ArgCheck-Vec3-function">sgs_ArgCheck_Vec3</a>
-</li><li><a href="#sgs-ArgCheck-Vec4-function">sgs_ArgCheck_Vec4</a>
-</li><li><a href="#sgs-ArgCheck-AABB2-function">sgs_ArgCheck_AABB2</a>
-</li><li><a href="#sgs-ArgCheck-Color-function">sgs_ArgCheck_Color</a>
-</li><li><a href="#sgs-ArgCheck-Mat4-function">sgs_ArgCheck_Mat4</a>
-</li><li><a href="#sgs-ArgCheck-FloatArray-function">sgs_ArgCheck_FloatArray</a>
-</li><li><a href="#SGS-RETURN-VEC2-function-alias">SGS_RETURN_VEC2</a>
-</li><li><a href="#SGS-RETURN-VEC3-function-alias">SGS_RETURN_VEC3</a>
-</li><li><a href="#SGS-RETURN-VEC4-function-alias">SGS_RETURN_VEC4</a>
-</li><li><a href="#SGS-RETURN-VEC2P-function-alias">SGS_RETURN_VEC2P</a>
-</li><li><a href="#SGS-RETURN-VEC3P-function-alias">SGS_RETURN_VEC3P</a>
-</li><li><a href="#SGS-RETURN-VEC4P-function-alias">SGS_RETURN_VEC4P</a>
-</li><li><a href="#SGS-RETURN-AABB2-function-alias">SGS_RETURN_AABB2</a>
-</li><li><a href="#SGS-RETURN-COLOR-function-alias">SGS_RETURN_COLOR</a>
-</li><li><a href="#SGS-RETURN-MAT4-function-alias">SGS_RETURN_MAT4</a>
-</li><li><a href="#SGS-PARSE-VEC2-function-alias">SGS_PARSE_VEC2</a>
-</li><li><a href="#SGS-PARSE-VEC3-function-alias">SGS_PARSE_VEC3</a>
-</li><li><a href="#SGS-PARSE-VEC4-function-alias">SGS_PARSE_VEC4</a>
-</li><li><a href="#SGS-PARSE-AABB2-function-alias">SGS_PARSE_AABB2</a>
-</li><li><a href="#SGS-PARSE-COLOR-function-alias">SGS_PARSE_COLOR</a>
-</li><li><a href="#SGS-PARSE-MAT4-function-alias">SGS_PARSE_MAT4</a>
+<div class='item'><a name='C-API'></a><hr><h2>C API</h2><ul><li>XGM_VT - floating point type used throughout the API, alias of <code>float</code> by default
+</li><li><a href="#xgm-vtarray-struct">xgm_vtarray</a> - <a href="#floatarray-object">floatarray</a> data
+</li><li><a href="#xgm-iface-interfaces">xgm_*_iface</a> - object interfaces
+</li><li><a href="#sgs-Init-functions">sgs_Init*</a> - xgmath object off-stack initialization functions
+</li><li><a href="#sgs-Push-functions">sgs_Push*</a> - xgmath object initialization functions that push new instance on stack
+</li><li><a href="#sgs-Parse-functions">sgs_Parse*</a> - xgmath object parsing functions
+</li><li><a href="#sgs-ArgCheck-functions">sgs_ArgCheck_*</a> - xgmath LoadArgs parsing functions
+</li><li><a href="#SGS-RETURN-functions">SGS_RETURN_*</a> - xgmath GETINDEX output macros
+</li><li><a href="#SGS-PARSE-functions">SGS_PARSE_*</a> - xgmath SETINDEX input macros
 </li><li><a href="#All-C-interfaces-A-Z">All C interfaces (A-Z)</a>
 </li><li><a href="#All-C-functions-A-Z">All C functions (A-Z)</a></li></ul></div>
-<div class='item'><a name='xgm-vtarray-struct'></a><hr><h2>xgm_vtarray [struct]</h2></div>
-<div class='item'><a name='xgm-vec2-iface-interface'></a><hr><h2>xgm_vec2_iface [interface]</h2></div>
-<div class='item'><a name='xgm-vec3-iface-interface'></a><hr><h2>xgm_vec3_iface [interface]</h2></div>
-<div class='item'><a name='xgm-vec4-iface-interface'></a><hr><h2>xgm_vec4_iface [interface]</h2></div>
-<div class='item'><a name='xgm-aabb2-iface-interface'></a><hr><h2>xgm_aabb2_iface [interface]</h2></div>
-<div class='item'><a name='xgm-color-iface-interface'></a><hr><h2>xgm_color_iface [interface]</h2></div>
-<div class='item'><a name='xgm-mat4-iface-interface'></a><hr><h2>xgm_mat4_iface [interface]</h2></div>
-<div class='item'><a name='xgm-floatarr-iface-interface'></a><hr><h2>xgm_floatarr_iface [interface]</h2></div>
-<div class='item'><a name='sgs-InitVec2-function'></a><hr><h2>sgs_InitVec2 [function]</h2></div>
-<div class='item'><a name='sgs-InitVec3-function'></a><hr><h2>sgs_InitVec3 [function]</h2></div>
-<div class='item'><a name='sgs-InitVec4-function'></a><hr><h2>sgs_InitVec4 [function]</h2></div>
-<div class='item'><a name='sgs-InitAABB2-function'></a><hr><h2>sgs_InitAABB2 [function]</h2></div>
-<div class='item'><a name='sgs-InitColor-function'></a><hr><h2>sgs_InitColor [function]</h2></div>
-<div class='item'><a name='sgs-InitMat4-function'></a><hr><h2>sgs_InitMat4 [function]</h2></div>
-<div class='item'><a name='sgs-InitFloatArray-function'></a><hr><h2>sgs_InitFloatArray [function]</h2></div>
-<div class='item'><a name='sgs-InitVec2p-function'></a><hr><h2>sgs_InitVec2p [function]</h2></div>
-<div class='item'><a name='sgs-InitVec3p-function'></a><hr><h2>sgs_InitVec3p [function]</h2></div>
-<div class='item'><a name='sgs-InitVec4p-function'></a><hr><h2>sgs_InitVec4p [function]</h2></div>
-<div class='item'><a name='sgs-InitAABB2p-function'></a><hr><h2>sgs_InitAABB2p [function]</h2></div>
-<div class='item'><a name='sgs-InitColorp-function'></a><hr><h2>sgs_InitColorp [function]</h2></div>
-<div class='item'><a name='sgs-InitColorvp-function'></a><hr><h2>sgs_InitColorvp [function]</h2></div>
-<div class='item'><a name='sgs-PushVec2-function'></a><hr><h2>sgs_PushVec2 [function]</h2></div>
-<div class='item'><a name='sgs-PushVec3-function'></a><hr><h2>sgs_PushVec3 [function]</h2></div>
-<div class='item'><a name='sgs-PushVec4-function'></a><hr><h2>sgs_PushVec4 [function]</h2></div>
-<div class='item'><a name='sgs-PushAABB2-function'></a><hr><h2>sgs_PushAABB2 [function]</h2></div>
-<div class='item'><a name='sgs-PushColor-function'></a><hr><h2>sgs_PushColor [function]</h2></div>
-<div class='item'><a name='sgs-PushMat4-function'></a><hr><h2>sgs_PushMat4 [function]</h2></div>
-<div class='item'><a name='sgs-PushFloatArray-function'></a><hr><h2>sgs_PushFloatArray [function]</h2></div>
-<div class='item'><a name='sgs-PushVec2p-function'></a><hr><h2>sgs_PushVec2p [function]</h2></div>
-<div class='item'><a name='sgs-PushVec3p-function'></a><hr><h2>sgs_PushVec3p [function]</h2></div>
-<div class='item'><a name='sgs-PushVec4p-function'></a><hr><h2>sgs_PushVec4p [function]</h2></div>
-<div class='item'><a name='sgs-PushAABB2p-function'></a><hr><h2>sgs_PushAABB2p [function]</h2></div>
-<div class='item'><a name='sgs-PushColorp-function'></a><hr><h2>sgs_PushColorp [function]</h2></div>
-<div class='item'><a name='sgs-PushColorvp-function'></a><hr><h2>sgs_PushColorvp [function]</h2></div>
-<div class='item'><a name='sgs-ParseVT-function'></a><hr><h2>sgs_ParseVT [function]</h2></div>
-<div class='item'><a name='sgs-ParseVTP-function'></a><hr><h2>sgs_ParseVTP [function]</h2></div>
-<div class='item'><a name='sgs-ParseVec2P-function'></a><hr><h2>sgs_ParseVec2P [function]</h2></div>
-<div class='item'><a name='sgs-ParseVec3P-function'></a><hr><h2>sgs_ParseVec3P [function]</h2></div>
-<div class='item'><a name='sgs-ParseVec4P-function'></a><hr><h2>sgs_ParseVec4P [function]</h2></div>
-<div class='item'><a name='sgs-ParseAABB2P-function'></a><hr><h2>sgs_ParseAABB2P [function]</h2></div>
-<div class='item'><a name='sgs-ParseColorP-function'></a><hr><h2>sgs_ParseColorP [function]</h2></div>
-<div class='item'><a name='sgs-ParseMat4P-function'></a><hr><h2>sgs_ParseMat4P [function]</h2></div>
-<div class='item'><a name='sgs-ParseFloatArrayP-function'></a><hr><h2>sgs_ParseFloatArrayP [function]</h2></div>
-<div class='item'><a name='sgs-ParseVec2-function'></a><hr><h2>sgs_ParseVec2 [function]</h2></div>
-<div class='item'><a name='sgs-ParseVec3-function'></a><hr><h2>sgs_ParseVec3 [function]</h2></div>
-<div class='item'><a name='sgs-ParseVec4-function'></a><hr><h2>sgs_ParseVec4 [function]</h2></div>
-<div class='item'><a name='sgs-ParseAABB2-function'></a><hr><h2>sgs_ParseAABB2 [function]</h2></div>
-<div class='item'><a name='sgs-ParseColor-function'></a><hr><h2>sgs_ParseColor [function]</h2></div>
-<div class='item'><a name='sgs-ParseMat4-function'></a><hr><h2>sgs_ParseMat4 [function]</h2></div>
-<div class='item'><a name='sgs-ParseFloatArray-function'></a><hr><h2>sgs_ParseFloatArray [function]</h2></div>
-<div class='item'><a name='sgs-ArgCheck-Vec2-function'></a><hr><h2>sgs_ArgCheck_Vec2 [function]</h2></div>
-<div class='item'><a name='sgs-ArgCheck-Vec3-function'></a><hr><h2>sgs_ArgCheck_Vec3 [function]</h2></div>
-<div class='item'><a name='sgs-ArgCheck-Vec4-function'></a><hr><h2>sgs_ArgCheck_Vec4 [function]</h2></div>
-<div class='item'><a name='sgs-ArgCheck-AABB2-function'></a><hr><h2>sgs_ArgCheck_AABB2 [function]</h2></div>
-<div class='item'><a name='sgs-ArgCheck-Color-function'></a><hr><h2>sgs_ArgCheck_Color [function]</h2></div>
-<div class='item'><a name='sgs-ArgCheck-Mat4-function'></a><hr><h2>sgs_ArgCheck_Mat4 [function]</h2></div>
-<div class='item'><a name='sgs-ArgCheck-FloatArray-function'></a><hr><h2>sgs_ArgCheck_FloatArray [function]</h2></div>
-<div class='item'><a name='SGS-RETURN-VEC2-function-alias'></a><hr><h2>SGS_RETURN_VEC2 [function alias]</h2></div>
-<div class='item'><a name='SGS-RETURN-VEC3-function-alias'></a><hr><h2>SGS_RETURN_VEC3 [function alias]</h2></div>
-<div class='item'><a name='SGS-RETURN-VEC4-function-alias'></a><hr><h2>SGS_RETURN_VEC4 [function alias]</h2></div>
-<div class='item'><a name='SGS-RETURN-VEC2P-function-alias'></a><hr><h2>SGS_RETURN_VEC2P [function alias]</h2></div>
-<div class='item'><a name='SGS-RETURN-VEC3P-function-alias'></a><hr><h2>SGS_RETURN_VEC3P [function alias]</h2></div>
-<div class='item'><a name='SGS-RETURN-VEC4P-function-alias'></a><hr><h2>SGS_RETURN_VEC4P [function alias]</h2></div>
-<div class='item'><a name='SGS-RETURN-AABB2-function-alias'></a><hr><h2>SGS_RETURN_AABB2 [function alias]</h2></div>
-<div class='item'><a name='SGS-RETURN-COLOR-function-alias'></a><hr><h2>SGS_RETURN_COLOR [function alias]</h2></div>
-<div class='item'><a name='SGS-RETURN-MAT4-function-alias'></a><hr><h2>SGS_RETURN_MAT4 [function alias]</h2></div>
-<div class='item'><a name='SGS-PARSE-VEC2-function-alias'></a><hr><h2>SGS_PARSE_VEC2 [function alias]</h2></div>
-<div class='item'><a name='SGS-PARSE-VEC3-function-alias'></a><hr><h2>SGS_PARSE_VEC3 [function alias]</h2></div>
-<div class='item'><a name='SGS-PARSE-VEC4-function-alias'></a><hr><h2>SGS_PARSE_VEC4 [function alias]</h2></div>
-<div class='item'><a name='SGS-PARSE-AABB2-function-alias'></a><hr><h2>SGS_PARSE_AABB2 [function alias]</h2></div>
-<div class='item'><a name='SGS-PARSE-COLOR-function-alias'></a><hr><h2>SGS_PARSE_COLOR [function alias]</h2></div>
-<div class='item'><a name='SGS-PARSE-MAT4-function-alias'></a><hr><h2>SGS_PARSE_MAT4 [function alias]</h2></div>
-<div class='item'><a name='All-C-interfaces-A-Z'></a><hr><h2>All C interfaces (A-Z)</h2><ul><li><a href="#xgm-aabb2-iface-interface">xgm_aabb2_iface [interface]</a>
-</li><li><a href="#xgm-color-iface-interface">xgm_color_iface [interface]</a>
-</li><li><a href="#xgm-floatarr-iface-interface">xgm_floatarr_iface [interface]</a>
-</li><li><a href="#xgm-mat4-iface-interface">xgm_mat4_iface [interface]</a>
-</li><li><a href="#xgm-vec2-iface-interface">xgm_vec2_iface [interface]</a>
-</li><li><a href="#xgm-vec3-iface-interface">xgm_vec3_iface [interface]</a>
-</li><li><a href="#xgm-vec4-iface-interface">xgm_vec4_iface [interface]</a>
+<div class='item'><a name='xgm-vtarray-struct'></a><hr><h2>xgm_vtarray [struct]</h2><h3>xgm_vtarray</h3><h4><a href="#floatarray-object">floatarray</a> data</h4><ul><li>properties:
+<ul><li>XGM_VT* data - array of floating point values
+</li><li>sgs_SizeVal size - current size of array (current item count)
+</li><li>sgs_SizeVal mem - max. size of array (capacity, allocated item count)</li></ul></li></ul></div>
+<div class='item'><a name='xgm-iface-interfaces'></a><hr><h2>xgm_*_iface [interfaces]</h2><h3>sgs_ObjInterface xgm_vec2_iface[1]</h3><h4>interface for <a href="#vec2-object">vec2</a> objects</h4><h3>sgs_ObjInterface xgm_vec3_iface[1]</h3><h4>interface for <a href="#vec3-object">vec3</a> objects</h4><h3>sgs_ObjInterface xgm_vec4_iface[1]</h3><h4>interface for <a href="#vec4-object">vec4</a> objects</h4><h3>sgs_ObjInterface xgm_aabb2_iface[1]</h3><h4>interface for <a href="#aabb2-object">aabb2</a> objects</h4><h3>sgs_ObjInterface xgm_color_iface[1]</h3><h4>interface for <a href="#color-object">color</a> objects</h4><h3>sgs_ObjInterface xgm_mat4_iface[1]</h3><h4>interface for <a href="#mat4-object">mat4</a> objects</h4><h3>sgs_ObjInterface xgm_floatarr_iface[1]</h3><h4>interface for <a href="#floatarray-object">floatarray</a> objects</h4></div>
+<div class='item'><a name='sgs-Init-functions'></a><hr><h2>sgs_Init* [functions]</h2><h3>void sgs_InitVec2( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y )</h3><h3>void sgs_InitVec3( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z )</h3><h3>void sgs_InitVec4( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )</h3><h3>void sgs_InitAABB2( SGS_CTX, sgs_Variable* var, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )</h3><h3>void sgs_InitColor( SGS_CTX, sgs_Variable* var, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )</h3><h3>void sgs_InitMat4( SGS_CTX, sgs_Variable* var, const XGM_VT* v16f, int transpose )</h3><h3>void sgs_InitFloatArray( SGS_CTX, sgs_Variable* var, const XGM_VT* vfn, sgs_SizeVal size )</h3><h3>void sgs_InitVec2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v2f )</h3><h3>void sgs_InitVec3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f )</h3><h3>void sgs_InitVec4p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )</h3><h3>void sgs_InitAABB2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )</h3><h3>void sgs_InitColorp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )</h3><h3>void sgs_InitColorvp( SGS_CTX, sgs_Variable* var, const XGM_VT* vf, int numfloats )</h3><h4>initialize a variable of the right type to the specified arguments</h4><p>
+Notes:
+</p><ul><li>v*f - array of the specified number of XGM_VT values
+</li><li>sgs_InitColorvp accepts 0, 1, 2, 3 or 4 for <code>numfloats</code>
+<ul><li>if 0: R, G, B, A = 0
+</li><li>if 1: R, G, B, A = arg1
+</li><li>if 2: R, G, B = arg1; A = arg2
+</li><li>if 3: R = arg1; G = arg2; B = arg3; A = 1
+</li><li>otherwise arguments are mapped to components sequentially
+</li></ul><li>the <code>p</code> postfix for functions means that function accepts arrays instead of plain values, if that&#39;s what the non -p function takes</li></ul></div>
+<div class='item'><a name='sgs-Push-functions'></a><hr><h2>sgs_Push* [functions]</h2><h3>void sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y )</h3><h3>void sgs_PushVec3( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z )</h3><h3>void sgs_PushVec4( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )</h3><h3>void sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )</h3><h3>void sgs_PushColor( SGS_CTX, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )</h3><h3>void sgs_PushMat4( SGS_CTX, const XGM_VT* v16f, int transpose )</h3><h3>void sgs_PushFloatArray( SGS_CTX, const XGM_VT* vfn, sgs_SizeVal size )</h3><h3>void sgs_PushVec2p( SGS_CTX, const XGM_VT* v2f )</h3><h3>void sgs_PushVec3p( SGS_CTX, const XGM_VT* v3f )</h3><h3>void sgs_PushVec4p( SGS_CTX, const XGM_VT* v4f )</h3><h3>void sgs_PushAABB2p( SGS_CTX, const XGM_VT* v4f )</h3><h3>void sgs_PushColorp( SGS_CTX, const XGM_VT* v4f )</h3><h3>void sgs_PushColorvp( SGS_CTX, const XGM_VT* vf, int numfloats )</h3><h4>push a new variable on stack of the right type, initialized to the specified arguments</h4><p>
+<em class='notice-bgr'>For notes, refer to <a href="#sgs-Init-functions">sgs_Init*</a></em>
+</p></div>
+<div class='item'><a name='sgs-Parse-functions'></a><hr><h2>sgs_Parse* [functions]</h2><h3>SGSBOOL sgs_ParseVTP( SGS_CTX, sgs_Variable* var, XGM_VT* out )</h3><h3>SGSBOOL sgs_ParseVec2P( SGS_CTX, sgs_Variable* var, XGM_VT* v2f, int strict )</h3><h3>SGSBOOL sgs_ParseVec3P( SGS_CTX, sgs_Variable* var, XGM_VT* v3f, int strict )</h3><h3>SGSBOOL sgs_ParseVec4P( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict )</h3><h3>SGSBOOL sgs_ParseAABB2P( SGS_CTX, sgs_Variable* var, XGM_VT* v4f )</h3><h3>SGSBOOL sgs_ParseColorP( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict )</h3><h3>SGSBOOL sgs_ParseMat4P( SGS_CTX, sgs_Variable* var, XGM_VT* v16f )</h3><h3>SGSBOOL sgs_ParseFloatArrayP( SGS_CTX, sgs_Variable* var, XGM_VT** vfa, sgs_SizeVal* osz )</h3><h4>parse the specified variable to retrieve object data</h4><h3>SGSBOOL sgs_ParseVT( SGS_CTX, sgs_StkIdx item, XGM_VT* out )</h3><h3>SGSBOOL sgs_ParseVec2( SGS_CTX, sgs_StkIdx item, XGM_VT* v2f, int strict )</h3><h3>SGSBOOL sgs_ParseVec3( SGS_CTX, sgs_StkIdx item, XGM_VT* v3f, int strict )</h3><h3>SGSBOOL sgs_ParseVec4( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )</h3><h3>SGSBOOL sgs_ParseAABB2( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f )</h3><h3>SGSBOOL sgs_ParseColor( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )</h3><h3>SGSBOOL sgs_ParseMat4( SGS_CTX, sgs_StkIdx item, XGM_VT* v16f )</h3><h3>SGSBOOL sgs_ParseFloatArray( SGS_CTX, sgs_StkIdx item, XGM_VT** vfa, sgs_SizeVal* osz )</h3><h4>parse the specified stack item to retrieve object data</h4><ul><li><code>strict</code> means that only the object of the specified type is allowed to be parsed
+<ul><li>otherwise, real values are parsed too</li></ul></li></ul></div>
+<div class='item'><a name='sgs-ArgCheck-functions'></a><hr><h2>sgs_ArgCheck_* [functions]</h2><h3>int sgs_ArgCheck_Vec2( SGS_CTX, int argid, va_list* args, int flags )</h3><h3>int sgs_ArgCheck_Vec3( SGS_CTX, int argid, va_list* args, int flags )</h3><h3>int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list* args, int flags )</h3><h3>int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list* args, int flags )</h3><h3>int sgs_ArgCheck_Color( SGS_CTX, int argid, va_list* args, int flags )</h3><h3>int sgs_ArgCheck_Mat4( SGS_CTX, int argid, va_list* args, int flags )</h3><h3>int sgs_ArgCheck_FloatArray( SGS_CTX, int argid, va_list* args, int flags )</h3><h4>argument parsing functions for sgs_LoadArgs* function family</h4><ul><li>variable argument list expectations:
+<ul><li>Vec2: XGM_VT[2] if output is enabled
+</li><li>Vec3: XGM_VT[3] if output is enabled
+</li><li>Vec4: XGM_VT[4] if output is enabled
+</li><li>AABB2: XGM_VT[4] if output is enabled
+</li><li>Color: XGM_VT[4] if output is enabled
+</li><li>Mat4: XGM_VT[16] if output is enabled
+</li><li>FloatArray: <a href="#xgm-vtarray-struct">xgm_vtarray**</a> if output is enabled</li></ul></li></ul></div>
+<div class='item'><a name='SGS-RETURN-functions'></a><hr><h2>SGS_RETURN_* [functions]</h2><h3>SGS_RETURN_VEC2( XGM_VT x, XGM_VT y )</h3><h3>SGS_RETURN_VEC3( XGM_VT x, XGM_VT y, XGM_VT z )</h3><h3>SGS_RETURN_VEC4( XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )</h3><h3>SGS_RETURN_AABB2( XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )</h3><h3>SGS_RETURN_COLOR( XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )</h3><h3>SGS_RETURN_VEC2P( XGM_VT* v2f )</h3><h3>SGS_RETURN_VEC3P( XGM_VT* v3f )</h3><h3>SGS_RETURN_VEC4P( XGM_VT* v4f )</h3><h3>SGS_RETURN_AABB2P( XGM_VT* v4f )</h3><h3>SGS_RETURN_COLORP( XGM_VT* v4f )</h3><h3>SGS_RETURN_MAT4( XGM_VT* v16f )</h3><h4>push the specified value and return SGS_SUCCESS</h4><ul><li>these macros are meant to be used in GETINDEX object interface functions
+</li><li>assuming SGS_CTX (`sgs_Context* C`)</li></ul></div>
+<div class='item'><a name='SGS-PARSE-functions'></a><hr><h2>SGS_PARSE_* [functions]</h2><h3>SGS_PARSE_VEC2( outptr, strict )</h3><h3>SGS_PARSE_VEC3( outptr, strict )</h3><h3>SGS_PARSE_VEC4( outptr, strict )</h3><h3>SGS_PARSE_AABB2( outptr )</h3><h3>SGS_PARSE_COLOR( outptr, strict )</h3><h3>SGS_PARSE_MAT4( outptr )</h3><h4>parse input variable in a SETINDEX object interface function</h4><ul><li><code>outptr</code> requires the following data:
+<ul><li>VEC2: XGM_VT[2]
+</li><li>VEC3: XGM_VT[3]
+</li><li>VEC4: XGM_VT[4]
+</li><li>AABB2: XGM_VT[4]
+</li><li>COLOR: XGM_VT[4]
+</li><li>MAT4: XGM_VT[16]
+</li></ul><li>assuming SGS_CTX (`sgs_Context* C`)
+</li><li>assuming <code>sgs_Variable* val</code> (from SGS_ARGS_SETINDEXFUNC)</li></ul></div>
+<div class='item'><a name='All-C-interfaces-A-Z'></a><hr><h2>All C interfaces (A-Z)</h2><ul><li><a href="#xgm-iface-interfaces">xgm_*_iface [interfaces]</a>
 </li><li><a href="#xgm-vtarray-struct">xgm_vtarray [struct]</a></li></ul></div>
-<div class='item'><a name='All-C-functions-A-Z'></a><hr><h2>All C functions (A-Z)</h2><ul><li><a href="#SGS-PARSE-AABB2-function-alias">SGS_PARSE_AABB2 [function alias]</a>
-</li><li><a href="#SGS-PARSE-COLOR-function-alias">SGS_PARSE_COLOR [function alias]</a>
-</li><li><a href="#SGS-PARSE-MAT4-function-alias">SGS_PARSE_MAT4 [function alias]</a>
-</li><li><a href="#SGS-PARSE-VEC2-function-alias">SGS_PARSE_VEC2 [function alias]</a>
-</li><li><a href="#SGS-PARSE-VEC3-function-alias">SGS_PARSE_VEC3 [function alias]</a>
-</li><li><a href="#SGS-PARSE-VEC4-function-alias">SGS_PARSE_VEC4 [function alias]</a>
-</li><li><a href="#SGS-RETURN-AABB2-function-alias">SGS_RETURN_AABB2 [function alias]</a>
-</li><li><a href="#SGS-RETURN-COLOR-function-alias">SGS_RETURN_COLOR [function alias]</a>
-</li><li><a href="#SGS-RETURN-MAT4-function-alias">SGS_RETURN_MAT4 [function alias]</a>
-</li><li><a href="#SGS-RETURN-VEC2-function-alias">SGS_RETURN_VEC2 [function alias]</a>
-</li><li><a href="#SGS-RETURN-VEC2P-function-alias">SGS_RETURN_VEC2P [function alias]</a>
-</li><li><a href="#SGS-RETURN-VEC3-function-alias">SGS_RETURN_VEC3 [function alias]</a>
-</li><li><a href="#SGS-RETURN-VEC3P-function-alias">SGS_RETURN_VEC3P [function alias]</a>
-</li><li><a href="#SGS-RETURN-VEC4-function-alias">SGS_RETURN_VEC4 [function alias]</a>
-</li><li><a href="#SGS-RETURN-VEC4P-function-alias">SGS_RETURN_VEC4P [function alias]</a>
-</li><li><a href="#sgs-ArgCheck-AABB2-function">sgs_ArgCheck_AABB2 [function]</a>
-</li><li><a href="#sgs-ArgCheck-Color-function">sgs_ArgCheck_Color [function]</a>
-</li><li><a href="#sgs-ArgCheck-FloatArray-function">sgs_ArgCheck_FloatArray [function]</a>
-</li><li><a href="#sgs-ArgCheck-Mat4-function">sgs_ArgCheck_Mat4 [function]</a>
-</li><li><a href="#sgs-ArgCheck-Vec2-function">sgs_ArgCheck_Vec2 [function]</a>
-</li><li><a href="#sgs-ArgCheck-Vec3-function">sgs_ArgCheck_Vec3 [function]</a>
-</li><li><a href="#sgs-ArgCheck-Vec4-function">sgs_ArgCheck_Vec4 [function]</a>
-</li><li><a href="#sgs-InitAABB2-function">sgs_InitAABB2 [function]</a>
-</li><li><a href="#sgs-InitAABB2p-function">sgs_InitAABB2p [function]</a>
-</li><li><a href="#sgs-InitColor-function">sgs_InitColor [function]</a>
-</li><li><a href="#sgs-InitColorp-function">sgs_InitColorp [function]</a>
-</li><li><a href="#sgs-InitColorvp-function">sgs_InitColorvp [function]</a>
-</li><li><a href="#sgs-InitFloatArray-function">sgs_InitFloatArray [function]</a>
-</li><li><a href="#sgs-InitMat4-function">sgs_InitMat4 [function]</a>
-</li><li><a href="#sgs-InitVec2-function">sgs_InitVec2 [function]</a>
-</li><li><a href="#sgs-InitVec2p-function">sgs_InitVec2p [function]</a>
-</li><li><a href="#sgs-InitVec3-function">sgs_InitVec3 [function]</a>
-</li><li><a href="#sgs-InitVec3p-function">sgs_InitVec3p [function]</a>
-</li><li><a href="#sgs-InitVec4-function">sgs_InitVec4 [function]</a>
-</li><li><a href="#sgs-InitVec4p-function">sgs_InitVec4p [function]</a>
-</li><li><a href="#sgs-ParseAABB2-function">sgs_ParseAABB2 [function]</a>
-</li><li><a href="#sgs-ParseAABB2P-function">sgs_ParseAABB2P [function]</a>
-</li><li><a href="#sgs-ParseColor-function">sgs_ParseColor [function]</a>
-</li><li><a href="#sgs-ParseColorP-function">sgs_ParseColorP [function]</a>
-</li><li><a href="#sgs-ParseFloatArray-function">sgs_ParseFloatArray [function]</a>
-</li><li><a href="#sgs-ParseFloatArrayP-function">sgs_ParseFloatArrayP [function]</a>
-</li><li><a href="#sgs-ParseMat4-function">sgs_ParseMat4 [function]</a>
-</li><li><a href="#sgs-ParseMat4P-function">sgs_ParseMat4P [function]</a>
-</li><li><a href="#sgs-ParseVT-function">sgs_ParseVT [function]</a>
-</li><li><a href="#sgs-ParseVTP-function">sgs_ParseVTP [function]</a>
-</li><li><a href="#sgs-ParseVec2-function">sgs_ParseVec2 [function]</a>
-</li><li><a href="#sgs-ParseVec2P-function">sgs_ParseVec2P [function]</a>
-</li><li><a href="#sgs-ParseVec3-function">sgs_ParseVec3 [function]</a>
-</li><li><a href="#sgs-ParseVec3P-function">sgs_ParseVec3P [function]</a>
-</li><li><a href="#sgs-ParseVec4-function">sgs_ParseVec4 [function]</a>
-</li><li><a href="#sgs-ParseVec4P-function">sgs_ParseVec4P [function]</a>
-</li><li><a href="#sgs-PushAABB2-function">sgs_PushAABB2 [function]</a>
-</li><li><a href="#sgs-PushAABB2p-function">sgs_PushAABB2p [function]</a>
-</li><li><a href="#sgs-PushColor-function">sgs_PushColor [function]</a>
-</li><li><a href="#sgs-PushColorp-function">sgs_PushColorp [function]</a>
-</li><li><a href="#sgs-PushColorvp-function">sgs_PushColorvp [function]</a>
-</li><li><a href="#sgs-PushFloatArray-function">sgs_PushFloatArray [function]</a>
-</li><li><a href="#sgs-PushMat4-function">sgs_PushMat4 [function]</a>
-</li><li><a href="#sgs-PushVec2-function">sgs_PushVec2 [function]</a>
-</li><li><a href="#sgs-PushVec2p-function">sgs_PushVec2p [function]</a>
-</li><li><a href="#sgs-PushVec3-function">sgs_PushVec3 [function]</a>
-</li><li><a href="#sgs-PushVec3p-function">sgs_PushVec3p [function]</a>
-</li><li><a href="#sgs-PushVec4-function">sgs_PushVec4 [function]</a>
-</li><li><a href="#sgs-PushVec4p-function">sgs_PushVec4p [function]</a></li></ul></div>
+<div class='item'><a name='All-C-functions-A-Z'></a><hr><h2>All C functions (A-Z)</h2><ul><li><a href="#SGS-PARSE-functions">SGS_PARSE_* [functions]</a>
+</li><li><a href="#SGS-RETURN-functions">SGS_RETURN_* [functions]</a>
+</li><li><a href="#sgs-ArgCheck-functions">sgs_ArgCheck_* [functions]</a>
+</li><li><a href="#sgs-Init-functions">sgs_Init* [functions]</a>
+</li><li><a href="#sgs-Parse-functions">sgs_Parse* [functions]</a>
+</li><li><a href="#sgs-Push-functions">sgs_Push* [functions]</a></li></ul></div>
 </div>
 	</body></html>
 	
