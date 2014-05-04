@@ -12,6 +12,8 @@ include "markdown";
 
 function generate_alias( name )
 {
+	if( string_find( name, "//" ) !== null )
+		return name;
 	name = re_replace( name, "#[^a-zA-Z0-9]+#", "-" );
 	name = string_trim( name, "-" );
 //	name = string_tolower( name );
@@ -202,8 +204,9 @@ function linkhandler_htm( title, link, pages )
 {
 	link ||= title;
 	link = generate_alias( link );
-	link = find_closest_pathstr( link, pages );
-	return '<a href="#' $ htmlencode( link ) $ '">' $ htmlencode( title ) $ '</a>';
+	if( string_find( link, "//" ) === null )
+		link = "#" $ find_closest_pathstr( link, pages );
+	return '<a href="' $ htmlencode( link ) $ '">' $ htmlencode( title ) $ '</a>';
 }
 
 function output_data_htm( name, doc_title, tags, pages )
@@ -264,7 +267,8 @@ function linkhandler_web( title, link, pages )
 {
 	link ||= title;
 	link = generate_alias( link );
-	link = find_closest_pathstr( link, pages );
+	if( string_find( link, "//" ) === null )
+		link = find_closest_pathstr( link, pages );
 	return '<a href="' $ htmlencode( link ) $ '">' $ htmlencode( title ) $ '</a>';
 }
 
@@ -302,10 +306,18 @@ function generate_docdata( name )
 }
 
 
-generate_docdata( "sgscript.docs" );
-generate_docdata( "sgs.cppbc.docs" );
-generate_docdata( "sgs.sockets.docs" );
-generate_docdata( "sgs.xgmath.docs" );
+file = @argv[1];
+if( file )
+	generate_docdata( file );
+else
+{
+	generate_docdata( "sgscript.docs" );
+	generate_docdata( "sgs.cppbc.docs" );
+	generate_docdata( "sgs.sockets.docs" );
+	generate_docdata( "sgs.xgmath.docs" );
+	generate_docdata( "sgs.json.docs" );
+	generate_docdata( "sgs.meta.docs" );
+}
 
 
 println( "done!" );

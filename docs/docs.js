@@ -5,7 +5,7 @@ function sgsCC( el )
 	code += "\n";
 	
 	code = code.replace( /("(?:[^"\\]|\\.)*")/g, '<span class="sgsSTR">$1</span>' );
-	code = code.replace( /('(?:[^"\\]|\\.)*')/g, '<span class="sgsSTR">$1</span>' );
+	code = code.replace( /('(?:[^'\\]|\\.)*')/g, '<span class="sgsSTR">$1</span>' );
 	code = code.replace( /(^|[^0-9a-zA-Z])(0b[0-1]+)/g, '$1<span class="sgsNUM">$2</span>' );
 	code = code.replace( /(^|[^0-9a-zA-Z])(0o[0-8]+)/g, '$1<span class="sgsNUM">$2</span>' );
 	code = code.replace( /(^|[^0-9a-zA-Z])(0x[0-9a-fA-F]+)/g, '$1<span class="sgsNUM">$2</span>' );
