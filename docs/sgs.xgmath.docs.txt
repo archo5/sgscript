@@ -21,33 +21,36 @@ The library is compiled to a 'sgsxgmath' shared library so it can be included th
 
 # SGScript API [info]
 
-- @"vec2 (object)"<vec2 [object]>
-- @"vec2 (function)"<vec2 [function]> - create a vec2 object
+=== Objects:
+
+- @vec2<vec2 [object]>
+- @vec3<vec3 [object]>
+- @vec4<vec4 [object]>
+- @aabb2<aabb2 [object]>
+- @color<color [object]>
+- @mat4<mat4 [object]>
+- @floatarray<floatarray [object]>
+
+=== Functions:
+
+- @vec2<vec2 [function]> - create a vec2 object
 - @vec2_dot - return dot product of two 2D vectors
-- @"vec3 (object)"<vec3 [object]>
-- @"vec3 (function)"<vec3 [function]> - create a vec3 object
+- @vec3<vec3 [function]> - create a vec3 object
 - @vec3_dot - return dot product of two 3D vectors
 - @vec3_cross - return cross product of two 3D vectors
-- @"vec4 (object)"<vec4 [object]>
-- @"vec4 (function)"<vec4 [function]> - create a vec4 object
+- @vec4<vec4 [function]> - create a vec4 object
 - @vec4_dot - return dot product of two 4D vectors
-- @"aabb2 (object)"<aabb2 [object]>
-- @"aabb2 (function)"<aabb2 [function]> - create a 2D AABB from 4 real values
+- @aabb2<aabb2 [function]> - create a 2D AABB from 4 real values
 - @aabb2v - create a 2D AABB from 2 2D vectors
 - @aabb2_intersect - intersect two 2D AABB values
-- @"color (object)"<color [object]>
-- @"color (function)"<color [function]>
-- @"mat4 (object)"<mat4 [object]>
-- @"mat4 (function)"<mat4 [function]>
-- @"floatarray (object)"<floatarray [object]>
-- @"floatarray (function)"<floatarray [function]> - create floatarray from array/list of int/real values
+- @color<color [function]>
+- @mat4<mat4 [function]>
+- @floatarray<floatarray [function]> - create floatarray from array/list of int/real values
 - @floatarray_buffer - create 0-initialized floatarray
 - @vec2array - create floatarray from array/list of int/real/vec2 values
 - @vec3array - create floatarray from array/list of int/real/vec3 values
 - @vec4array - create floatarray from array/list of int/real/vec4 values
 - @floatarray_from_*_buffer - create floatarray from byte buffer
-- @"All SGScript objects (A-Z)"
-- @"All SGScript functions (A-Z)"
 
 
 # >>>
@@ -748,7 +751,6 @@ A column-major matrix
 
 # C API [info]
 
-
 - XGM_VT - floating point type used throughout the API, alias of `float` by default
 - @xgm_vtarray - @floatarray<floatarray [object]> data
 - @xgm_*_iface - object interfaces
@@ -758,8 +760,6 @@ A column-major matrix
 - @sgs_ArgCheck_* - xgmath LoadArgs parsing functions
 - @SGS_RETURN_* - xgmath GETINDEX output macros
 - @SGS_PARSE_* - xgmath SETINDEX input macros
-- @"All C interfaces (A-Z)"
-- @"All C functions (A-Z)"
 
 
 # >>>

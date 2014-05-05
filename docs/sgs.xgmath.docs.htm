@@ -26,33 +26,30 @@ The library is compiled to a &#39;sgsxgmath&#39; shared library so it can be inc
 </p><pre>include &quot;sgsxgmath&quot;;</pre><p>
 <em class='notice-bgr'>It is extremely important that only one instance of this library is loaded in the application for constant sharing to enable object interface recognition.</em>
 </p></div>
-<div class='item'><a name='SGScript-API'></a><hr><h2>SGScript API</h2><ul><li><a href="#vec2-object">vec2 (object)</a>
-</li><li><a href="#vec2-function">vec2 (function)</a> - create a vec2 object
+<div class='item'><a name='SGScript-API'></a><hr><h2>SGScript API</h2><h4>Objects:</h4><ul><li><a href="#vec2-object">vec2</a>
+</li><li><a href="#vec3-object">vec3</a>
+</li><li><a href="#vec4-object">vec4</a>
+</li><li><a href="#aabb2-object">aabb2</a>
+</li><li><a href="#color-object">color</a>
+</li><li><a href="#mat4-object">mat4</a>
+</li><li><a href="#floatarray-object">floatarray</a></li></ul><h4>Functions:</h4><ul><li><a href="#vec2-function">vec2</a> - create a vec2 object
 </li><li><a href="#vec2-dot-function">vec2_dot</a> - return dot product of two 2D vectors
-</li><li><a href="#vec3-object">vec3 (object)</a>
-</li><li><a href="#vec3-function">vec3 (function)</a> - create a vec3 object
+</li><li><a href="#vec3-function">vec3</a> - create a vec3 object
 </li><li><a href="#vec3-dot-function">vec3_dot</a> - return dot product of two 3D vectors
 </li><li><a href="#vec3-cross-function">vec3_cross</a> - return cross product of two 3D vectors
-</li><li><a href="#vec4-object">vec4 (object)</a>
-</li><li><a href="#vec4-function">vec4 (function)</a> - create a vec4 object
+</li><li><a href="#vec4-function">vec4</a> - create a vec4 object
 </li><li><a href="#vec4-dot-function">vec4_dot</a> - return dot product of two 4D vectors
-</li><li><a href="#aabb2-object">aabb2 (object)</a>
-</li><li><a href="#aabb2-function">aabb2 (function)</a> - create a 2D AABB from 4 real values
+</li><li><a href="#aabb2-function">aabb2</a> - create a 2D AABB from 4 real values
 </li><li><a href="#aabb2v-function">aabb2v</a> - create a 2D AABB from 2 2D vectors
 </li><li><a href="#aabb2-intersect-function">aabb2_intersect</a> - intersect two 2D AABB values
-</li><li><a href="#color-object">color (object)</a>
-</li><li><a href="#color-function">color (function)</a>
-</li><li><a href="#mat4-object">mat4 (object)</a>
-</li><li><a href="#mat4-function">mat4 (function)</a>
-</li><li><a href="#floatarray-object">floatarray (object)</a>
-</li><li><a href="#floatarray-function">floatarray (function)</a> - create floatarray from array/list of int/real values
+</li><li><a href="#color-function">color</a>
+</li><li><a href="#mat4-function">mat4</a>
+</li><li><a href="#floatarray-function">floatarray</a> - create floatarray from array/list of int/real values
 </li><li><a href="#floatarray-buffer-function">floatarray_buffer</a> - create 0-initialized floatarray
 </li><li><a href="#vec2array-function">vec2array</a> - create floatarray from array/list of int/real/vec2 values
 </li><li><a href="#vec3array-function">vec3array</a> - create floatarray from array/list of int/real/vec3 values
 </li><li><a href="#vec4array-function">vec4array</a> - create floatarray from array/list of int/real/vec4 values
-</li><li><a href="#floatarray-from-buffer-function">floatarray_from_*_buffer</a> - create floatarray from byte buffer
-</li><li><a href="#All-SGScript-objects-A-Z">All SGScript objects (A-Z)</a>
-</li><li><a href="#All-SGScript-functions-A-Z">All SGScript functions (A-Z)</a></li></ul></div>
+</li><li><a href="#floatarray-from-buffer-function">floatarray_from_*_buffer</a> - create floatarray from byte buffer</li></ul></div>
 <div class='item'><a name='vec2-object'></a><hr><h2>vec2 [object]</h2><ul><li>methods
 <ul><li><a href="#vec2-rotate-method">rotate</a> - return vector, rotated by specified angle
 </li></ul><li>read-only properties
@@ -373,9 +370,7 @@ A column-major matrix
 </li><li><a href="#sgs-Parse-functions">sgs_Parse*</a> - xgmath object parsing functions
 </li><li><a href="#sgs-ArgCheck-functions">sgs_ArgCheck_*</a> - xgmath LoadArgs parsing functions
 </li><li><a href="#SGS-RETURN-functions">SGS_RETURN_*</a> - xgmath GETINDEX output macros
-</li><li><a href="#SGS-PARSE-functions">SGS_PARSE_*</a> - xgmath SETINDEX input macros
-</li><li><a href="#All-C-interfaces-A-Z">All C interfaces (A-Z)</a>
-</li><li><a href="#All-C-functions-A-Z">All C functions (A-Z)</a></li></ul></div>
+</li><li><a href="#SGS-PARSE-functions">SGS_PARSE_*</a> - xgmath SETINDEX input macros</li></ul></div>
 <div class='item'><a name='xgm-vtarray-struct'></a><hr><h2>xgm_vtarray [struct]</h2><h3>xgm_vtarray</h3><h4><a href="#floatarray-object">floatarray</a> data</h4><ul><li>properties:
 <ul><li>XGM_VT* data - array of floating point values
 </li><li>sgs_SizeVal size - current size of array (current item count)
