@@ -2,26 +2,6 @@
 
 /*
 	Parallel processing module
-
-	works by creating a system for managing script execution jobs
-	
-	pproc_init( num_threads = null )
-	- creates the job system and returns it
-	- default num_threads = max(1,num_free_threads)
-	
-	pproc
-	{
-		> add_job( code )
-	}
-	
-	ppjob
-	{
-		> start
-		> wait
-		> set( key, val )
-		> get( key )
-		- state
-	}
 */
 
 
@@ -33,7 +13,7 @@
 #define STDLIB_WARN( warn ) { sgs_Msg( C, SGS_WARNING, warn ); return 0; }
 
 
-#ifdef WIN32
+#ifdef _WIN32
 
 #  define WIN32_LEAN_AND_MEAN
 #  include <windows.h>
@@ -92,9 +72,9 @@ static void sgsthread_sleep( uint32_t ms )
 
 
 
-#define PPJOB_STATE_INIT    0
-#define PPJOB_STATE_RUNNING 1
-#define PPJOB_STATE_DONE    2
+#define PP_STATE_INIT    0
+#define PP_STATE_RUNNING 1
+#define PP_STATE_DONE    2
 
 typedef struct _ppmapitem_t ppmapitem_t;
 struct _ppmapitem_t
@@ -105,7 +85,7 @@ struct _ppmapitem_t
 	ppmapitem_t* next;
 };
 
-typedef struct _ppjob_t
+typedef struct _ppthread_t
 {
 	volatile int state;
 	
@@ -122,12 +102,12 @@ typedef struct _ppjob_t
 	
 	ppmapitem_t* data;
 }
-ppjob_t;
+ppthread_t;
 
 
-static ppmapitem_t* ppjob_map_find( ppjob_t* job, char* key, sgs_SizeVal keysize )
+static ppmapitem_t* ppthread_map_find( ppthread_t* THR, char* key, sgs_SizeVal keysize )
 {
-	ppmapitem_t* item = job->data;
+	ppmapitem_t* item = THR->data;
 	while( item )
 	{
 		if( item->keysize == keysize && !memcmp( item->data, key, (size_t) keysize ) )
@@ -137,224 +117,211 @@ static ppmapitem_t* ppjob_map_find( ppjob_t* job, char* key, sgs_SizeVal keysize
 	return NULL;
 }
 
-static void ppjob_map_set( ppjob_t* job,
+static void ppthread_map_set( ppthread_t* THR,
 	char* key, sgs_SizeVal keysize, char* data, sgs_SizeVal datasize )
 {
-	ppmapitem_t* item = ppjob_map_find( job, key, keysize );
+	ppmapitem_t* item = ppthread_map_find( THR, key, keysize );
 	if( item )
 	{
-		char* nd = (char*) job->mf( job->mfud, NULL, (size_t) ( keysize + datasize ) );
+		char* nd = (char*) THR->mf( THR->mfud, NULL, (size_t) ( keysize + datasize ) );
 		memcpy( nd, key, (size_t) keysize );
 		memcpy( nd + keysize, data, (size_t) datasize );
-		job->mf( job->mfud, item->data, 0 );
+		THR->mf( THR->mfud, item->data, 0 );
 		item->data = nd;
 		item->datasize = datasize;
 	}
 	else
 	{
-		item = (ppmapitem_t*) job->mf( job->mfud, NULL, sizeof( ppmapitem_t ) );
+		item = (ppmapitem_t*) THR->mf( THR->mfud, NULL, sizeof( ppmapitem_t ) );
 		item->keysize = keysize;
 		item->datasize = datasize;
-		item->data = (char*) job->mf( job->mfud, NULL, (size_t) ( keysize + datasize ) );
+		item->data = (char*) THR->mf( THR->mfud, NULL, (size_t) ( keysize + datasize ) );
 		memcpy( item->data, key, (size_t) keysize );
 		memcpy( item->data + keysize, data, (size_t) datasize );
-		item->next = job->data;
-		job->data = item;
+		item->next = THR->data;
+		THR->data = item;
 	}
 }
 
-static void ppjob_map_free( ppjob_t* job )
+static void ppthread_map_free( ppthread_t* THR )
 {
-	ppmapitem_t* item = job->data;
+	ppmapitem_t* item = THR->data;
 	while( item )
 	{
 		ppmapitem_t* N = item;
 		item = item->next;
 		
-		job->mf( job->mfud, N->data, 0 );
-		job->mf( job->mfud, N, 0 );
+		THR->mf( THR->mfud, N->data, 0 );
+		THR->mf( THR->mfud, N, 0 );
 	}
-	job->data = NULL;
+	THR->data = NULL;
 }
 
 
-#define PPJOB_HDR ppjob_t* job = (ppjob_t*) data->data
+#define PPTHREAD_HDR ppthread_t* THR = (ppthread_t*) obj->data
 
-SGS_DECLARE sgs_ObjInterface ppjob_iface[1];
-#define PPJOB_IHDR( name ) \
-	ppjob_t* job; \
-	if( !sgs_Method( C ) \
-		|| !( sgs_IsObject( C, 0, ppjob_iface ) \
-		|| sgs_IsObject( C, 0, ppjob_iface_job ) ) \
-		){ sgs_Msg( C, SGS_ERROR, "ppjob." #name \
-			"() isn't called on a ppjob" ); return 0; } \
-	job = (ppjob_t*) sgs_GetObjectData( C, 0 ); \
-	UNUSED( job );
+SGS_DECLARE sgs_ObjInterface ppthread_iface[1];
+#define PPTHREAD_IHDR( name ) ppthread_t* THR; \
+	int method_call = sgs_Method( C ); \
+	SGSFN( method_call ? "ppthread." #name : "ppthread_" #name ); \
+	if( !method_call \
+		|| !( sgs_IsObject( C, 0, ppthread_iface ) \
+		|| sgs_IsObject( C, 0, ppthread_iface_thr ) ) \
+		) STDLIB_WARN( "expected ppthread as 'this'" ) \
+	THR = (ppthread_t*) sgs_GetObjectData( C, 0 ); \
+	UNUSED( THR );
 
 
-SGS_DECLARE sgs_ObjInterface ppjob_iface_job[1];
+SGS_DECLARE sgs_ObjInterface ppthread_iface_thr[1];
 static int pproc_sleep( SGS_CTX );
-static threadret_t ppjob_threadfunc( void* arg )
+static threadret_t ppthread_threadfunc( void* arg )
 {
-	ppjob_t* job = (ppjob_t*) arg;
+	ppthread_t* THR = (ppthread_t*) arg;
 	
-	job->C = sgs_CreateEngineExt( job->mf, job->mfud );
+	THR->C = sgs_CreateEngineExt( THR->mf, THR->mfud );
 	
-	sgs_PushCFunction( job->C, pproc_sleep );
-	sgs_StoreGlobal( job->C, "sleep" );
+	sgs_PushCFunction( THR->C, pproc_sleep );
+	sgs_StoreGlobal( THR->C, "pproc_sleep" );
 	
-	sgs_PushObject( job->C, job, ppjob_iface_job );
-	sgs_StoreGlobal( job->C, "_T" );
+	sgs_PushObject( THR->C, THR, ppthread_iface_thr );
+	sgs_StoreGlobal( THR->C, "_T" );
 	
-	sgs_ExecBuffer( job->C, job->code, (size_t) job->codesize );
+	sgs_ExecBuffer( THR->C, THR->code, (size_t) THR->codesize );
 	
-	sgs_DestroyEngine( job->C );
+	sgs_DestroyEngine( THR->C );
 	
-	sgsmutex_lock( job->mutex );
-	job->state = PPJOB_STATE_DONE;
-	sgsmutex_unlock( job->mutex );
+	sgsmutex_lock( THR->mutex );
+	THR->state = PP_STATE_DONE;
+	sgsmutex_unlock( THR->mutex );
 	
 	return 0;
 }
 
 
-static ppjob_t* ppjob_create( SGS_CTX, char* code, sgs_SizeVal codesize )
+static ppthread_t* ppthread_create( SGS_CTX, char* code, sgs_SizeVal codesize )
 {
 	sgs_MemFunc mf = C->memfunc;
 	void* mfud = C->mfuserdata;
 	
-	ppjob_t* job = (ppjob_t*) mf( mfud, NULL, sizeof( ppjob_t ) );
+	ppthread_t* THR = (ppthread_t*) mf( mfud, NULL, sizeof( ppthread_t ) );
 	
-	sgsthread_self( job->self );
-	sgsthread_self( job->thread );
-	sgsmutex_init( job->mutex );
+	sgsthread_self( THR->self );
+	sgsthread_self( THR->thread );
+	sgsmutex_init( THR->mutex );
 	
-	job->code = (char*) mf( mfud, NULL, (size_t) codesize );
-	memcpy( job->code, code, (size_t) codesize );
-	job->codesize = codesize;
+	THR->code = (char*) mf( mfud, NULL, (size_t) codesize );
+	memcpy( THR->code, code, (size_t) codesize );
+	THR->codesize = codesize;
 	
-	job->state = PPJOB_STATE_INIT;
+	THR->state = PP_STATE_INIT;
 	
-	job->mf = mf;
-	job->mfud = mfud;
+	THR->mf = mf;
+	THR->mfud = mfud;
 	
-	job->data = NULL;
+	THR->data = NULL;
 	
-	return job;
+	return THR;
 }
 
-static void ppjob_destroy( ppjob_t* job )
+static void ppthread_destroy( ppthread_t* THR )
 {
-	sgs_MemFunc mf = job->mf;
-	void* mfud = job->mfud;
+	sgs_MemFunc mf = THR->mf;
+	void* mfud = THR->mfud;
 	/* SGS_CTX should already be destroyed here */
-	mf( mfud, job->code, 0 );
+	mf( mfud, THR->code, 0 );
 	
-	ppjob_map_free( job );
+	ppthread_map_free( THR );
 	
-	sgsmutex_destroy( job->mutex );
-	mf( mfud, job, 0 );
+	sgsmutex_destroy( THR->mutex );
+	mf( mfud, THR, 0 );
 }
 
-static int ppjob_start( ppjob_t* job )
+static int ppthread_start( ppthread_t* THR )
 {
 	int ret;
-	sgsmutex_lock( job->mutex );
+	sgsmutex_lock( THR->mutex );
 	
-	if( !sgsthread_equal( job->self, job->thread ) )
+	if( !sgsthread_equal( THR->self, THR->thread ) )
 		ret = 0;
-	else if( job->state == PPJOB_STATE_RUNNING )
+	else if( THR->state == PP_STATE_RUNNING )
 		ret = 0;
 	else
 	{
-		job->state = PPJOB_STATE_RUNNING;
-		sgsthread_create( job->thread, ppjob_threadfunc, job );
+		THR->state = PP_STATE_RUNNING;
+		sgsthread_create( THR->thread, ppthread_threadfunc, THR );
 		ret = 1;
 	}
 	
-	sgsmutex_unlock( job->mutex );
+	sgsmutex_unlock( THR->mutex );
 	return ret;
 }
 
-static int ppjob_wait( ppjob_t* job )
+static int ppthread_wait( ppthread_t* THR )
 {
-	if( !sgsthread_equal( job->self, job->thread ) )
+	if( !sgsthread_equal( THR->self, THR->thread ) )
 	{
-		sgsthread_join( job->thread );
+		sgsthread_join( THR->thread );
 		return 1;
 	}
 	return 0;
 }
 
 
-static int ppjobI_start( SGS_CTX )
+static int ppthreadI_start( SGS_CTX )
 {
-	int ssz = sgs_StackSize( C );
-	PPJOB_IHDR( start );
+	PPTHREAD_IHDR( start );
+	if( !sgs_LoadArgs( C, "." ) )
+		return 0;
 	
-	if( ssz != 0 )
-		STDLIB_WARN( "ppjob.start(): unexpected arguments" )
-	
-	sgs_PushBool( C, ppjob_start( job ) );
+	sgs_PushBool( C, ppthread_start( THR ) );
 	return 1;
 }
 
-static int ppjobI_wait( SGS_CTX )
+static int ppthreadI_wait( SGS_CTX )
 {
-	int ssz = sgs_StackSize( C );
-	PPJOB_IHDR( wait );
+	PPTHREAD_IHDR( wait );
+	if( !sgs_LoadArgs( C, "." ) )
+		return 0;
 	
-	if( ssz != 0 )
-		STDLIB_WARN( "ppjob.wait(): unexpected arguments" )
-	
-	sgs_PushBool( C, ppjob_wait( job ) );
+	sgs_PushBool( C, ppthread_wait( THR ) );
 	return 1;
 }
 
-static int ppjobI_has( SGS_CTX )
+static int ppthreadI_has( SGS_CTX )
 {
 	char* str;
 	sgs_SizeVal size;
-	int ssz = sgs_StackSize( C );
-	PPJOB_IHDR( has );
 	
-	if( ssz != 1 ||
-		!sgs_ParseString( C, 1, &str, &size ) ||
-		size == 0 )
-		STDLIB_WARN( "ppjob.has(): unexpected arguments; "
-			"function expects 1 argument: string (size > 0)" )
+	PPTHREAD_IHDR( has );
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 	
-	sgsmutex_lock( job->mutex );
+	sgsmutex_lock( THR->mutex );
 	{
-		ppmapitem_t* item = ppjob_map_find( job, str, size );
+		ppmapitem_t* item = ppthread_map_find( THR, str, size );
 		sgs_PushBool( C, !!item );
 	}
-	sgsmutex_unlock( job->mutex );
+	sgsmutex_unlock( THR->mutex );
 	
 	return 1;
 }
 
-static int ppjobI_get( SGS_CTX )
+static int ppthreadI_get( SGS_CTX )
 {
 	int ret;
 	char* str;
 	sgs_SizeVal size;
-	int ssz = sgs_StackSize( C );
-	PPJOB_IHDR( get );
 	
-	if( ssz != 1 ||
-		!sgs_ParseString( C, 1, &str, &size ) ||
-		size == 0 )
-		STDLIB_WARN( "ppjob.get(): unexpected arguments; "
-			"function expects 1 argument: string (size > 0)" )
+	PPTHREAD_IHDR( get );
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
+		return 0;
 	
-	sgsmutex_lock( job->mutex );
+	sgsmutex_lock( THR->mutex );
 	{
-		ppmapitem_t* item = ppjob_map_find( job, str, size );
+		ppmapitem_t* item = ppthread_map_find( THR, str, size );
 		if( !item )
 		{
-			sgs_Msg( C, SGS_WARNING, "ppjob.get(): "
-				"could not find item \"%.*s\"", size, str );
+			sgs_Msg( C, SGS_WARNING, "could not find item \"%.*s\"", size, str );
 			ret = 0;
 		}
 		else
@@ -365,146 +332,135 @@ static int ppjobI_get( SGS_CTX )
 				ret = 1;
 			else
 			{
-				sgs_Msg( C, SGS_WARNING, "ppjob.get(): "
-					"failed to unserialize item (error %s)",
+				sgs_Msg( C, SGS_WARNING, "failed to unserialize item (error %s)",
 					sgs_CodeString( SGS_CODE_ER, ret ) );
 				ret = 0;
 			}
 		}
 	}
-	sgsmutex_unlock( job->mutex );
+	sgsmutex_unlock( THR->mutex );
 	
 	return ret;
 }
 
-static int ppjobI_set( SGS_CTX )
+static int ppthreadI_set( SGS_CTX )
 {
 	char* str, *var;
 	sgs_SizeVal size, varsize;
-	int ssz = sgs_StackSize( C );
-	PPJOB_IHDR( set );
 	
-	if( ssz != 2 ||
-		!sgs_ParseString( C, 1, &str, &size ) ||
-		size == 0 ||
-		sgs_Serialize( C ) != SGS_SUCCESS ||
-		!sgs_ParseString( C, -1, &var, &varsize ) )
-		STDLIB_WARN( "ppjob.set(): unexpected arguments; "
-			"function expects 2 arguments: string (size > 0), serializable" )
+	PPTHREAD_IHDR( set );
+	if( !sgs_LoadArgs( C, "m?v", &str, &size ) )
+		return 0;
 	
-	sgsmutex_lock( job->mutex );
-	ppjob_map_set( job, str, size, var, varsize );
-	sgsmutex_unlock( job->mutex );
+	sgs_SetStackSize( C, 2 );
+	if( SGS_FAILED( sgs_Serialize( C ) ) || !sgs_ParseString( C, -1, &var, &varsize ) )
+		STDLIB_WARN( "failed to serialize item (argument 2)" )
+	
+	sgsmutex_lock( THR->mutex );
+	ppthread_map_set( THR, str, size, var, varsize );
+	sgsmutex_unlock( THR->mutex );
 	
 	sgs_PushBool( C, 1 );
 	return 1;
 }
 
-static int ppjobI_set_if( SGS_CTX )
+static int ppthreadI_set_if( SGS_CTX )
 {
+	int ret = -1;
 	char* str, *var, *var2;
 	sgs_SizeVal size, varsize, var2size;
-	int ssz = sgs_StackSize( C );
-	PPJOB_IHDR( set_if );
 	
-#define PPJOBI_SET_IF_MSG "ppjob.set_if(): unexpected arguments; " \
-			"function expects 3 arguments: string (size > 0), " \
-			"serializable, serializable"
+	PPTHREAD_IHDR( set_if );
+	if( !sgs_LoadArgs( C, "m?v?v", &str, &size ) )
+		return 0;
 	
-	if( ssz != 3 ||
-		!sgs_ParseString( C, 1, &str, &size ) ||
-		size == 0 )
-		STDLIB_WARN( PPJOBI_SET_IF_MSG )
+	sgs_PushItem( C, 1 );
+	if( SGS_FAILED( sgs_Serialize( C ) ) || !sgs_ParseString( C, -1, &var, &varsize ) )
+		STDLIB_WARN( "failed to serialize item (argument 2)" )
 	
 	sgs_PushItem( C, 2 );
-	if( sgs_Serialize( C ) != SGS_SUCCESS ||
-		!sgs_ParseString( C, -1, &var, &varsize ) )
-		STDLIB_WARN( PPJOBI_SET_IF_MSG )
+	if( SGS_FAILED( sgs_Serialize( C ) ) || !sgs_ParseString( C, -1, &var2, &var2size ) )
+		STDLIB_WARN( "failed to serialize item (argument 3)" )
 	
-	sgs_PushItem( C, 3 );
-	if( sgs_Serialize( C ) != SGS_SUCCESS ||
-		!sgs_ParseString( C, -1, &var2, &var2size ) )
-		STDLIB_WARN( PPJOBI_SET_IF_MSG )
-	
-	sgsmutex_lock( job->mutex );
+	sgsmutex_lock( THR->mutex );
 	{
-		ppmapitem_t* item = ppjob_map_find( job, str, size );
+		ppmapitem_t* item = ppthread_map_find( THR, str, size );
 		if( !item )
 		{
-			sgs_Msg( C, SGS_WARNING, "ppjob.set_if(): "
-				"could not find item \"%.*s\"", size, str );
-			return 0;
+			sgs_Msg( C, SGS_WARNING, "could not find item \"%.*s\"", size, str );
+			ret = 0;
 		}
 		else if( item->datasize == var2size && 
 			memcmp( item->data + item->keysize, var2, (size_t) var2size ) == 0 )
 		{
-			ppjob_map_set( job, str, size, var, varsize );
+			ppthread_map_set( THR, str, size, var, varsize );
 			sgs_PushBool( C, 1 );
+			ret = 1;
 		}
 		else
+		{
 			sgs_PushBool( C, 0 );
+			ret = 1;
+		}
 	}
-	sgsmutex_unlock( job->mutex );
+	sgsmutex_unlock( THR->mutex );
 	
-	return 1;
+	return ret;
 }
 
-static int ppjobP_state( SGS_CTX, sgs_VarObj* data )
+static int ppthreadP_state( SGS_CTX, sgs_VarObj* obj )
 {
 	int state;
-	PPJOB_HDR;
-	state = job->state;
+	PPTHREAD_HDR;
+	state = THR->state;
 	sgs_PushInt( C, state );
 	return SGS_SUCCESS;
 }
 
 
-static int ppjob_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int ppthread_getindex( SGS_ARGS_GETINDEXFUNC )
 {
-	char* str;
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
-	{
-		if( 0 == strcmp( str, "start" ) ) IFN( ppjobI_start )
-		else if( 0 == strcmp( str, "wait" ) ) IFN( ppjobI_wait )
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "start" )  IFN( ppthreadI_start )
+		SGS_CASE( "wait" )   IFN( ppthreadI_wait )
 		
-		else if( 0 == strcmp( str, "has" ) ) IFN( ppjobI_has )
-		else if( 0 == strcmp( str, "get" ) ) IFN( ppjobI_get )
-		else if( 0 == strcmp( str, "set" ) ) IFN( ppjobI_set )
-		else if( 0 == strcmp( str, "set_if" ) ) IFN( ppjobI_set_if )
+		SGS_CASE( "has" )    IFN( ppthreadI_has )
+		SGS_CASE( "get" )    IFN( ppthreadI_get )
+		SGS_CASE( "set" )    IFN( ppthreadI_set )
+		SGS_CASE( "set_if" ) IFN( ppthreadI_set_if )
 		
-		else if( 0 == strcmp( str, "state" ) ) return ppjobP_state( C, data );
-	}
-	return SGS_ENOTFND;
+		SGS_CASE( "state" )  return ppthreadP_state( C, obj );
+	SGS_END_INDEXFUNC;
 }
 
-static int ppjob_destruct( SGS_CTX, sgs_VarObj* data )
+static int ppthread_destruct( SGS_CTX, sgs_VarObj* obj )
 {
-	PPJOB_HDR;
+	PPTHREAD_HDR;
 	
-	if( job->state == PPJOB_STATE_RUNNING )
+	if( THR->state == PP_STATE_RUNNING )
 	{
-		sgsthread_join( job->thread );
+		sgsthread_join( THR->thread );
 	}
 	
-	ppjob_destroy( job );
+	ppthread_destroy( THR );
 	
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjInterface ppjob_iface[1] =
+static sgs_ObjInterface ppthread_iface[1] =
 {{
-	"ppjob",
-	ppjob_destruct, NULL,
-	ppjob_getindex, NULL,
+	"ppthread",
+	ppthread_destruct, NULL,
+	ppthread_getindex, NULL,
 	NULL, NULL, NULL, NULL,
 	NULL, NULL
 }};
 
-static sgs_ObjInterface ppjob_iface_job[1] =
+static sgs_ObjInterface ppthread_iface_thr[1] =
 {{
-	"ppjob_interface",
+	"ppthread_interface",
 	NULL, NULL,
-	ppjob_getindex, NULL,
+	ppthread_getindex, NULL,
 	NULL, NULL, NULL, NULL,
 	NULL, NULL
 }};
@@ -549,78 +505,46 @@ static int pproc_serialize_function( SGS_CTX,
 	return ret;
 }
 
-static int pprocI_add_job( SGS_CTX )
+static int pproc_create_thread( SGS_CTX )
 {
 	char* str;
 	sgs_SizeVal size;
 	sgs_StkIdx ssz = sgs_StackSize( C );
 	uint32_t type;
 	
+	SGSFN( "pproc_create_thread" );
 	if( ssz != 1 || !( type = sgs_ItemType( C, 0 ) ) ||
 		( type != SVT_FUNC && type != SVT_STRING ) ||
 		( type == SVT_STRING && !sgs_ParseString( C, 0, &str, &size ) ) )
-		STDLIB_WARN( "pproc.add_job(): unexpected arguments; "
-			"function expects 1 argument: string|function" )
+		return sgs_ArgErrorExt( C, 0, 0, "string/function", "" );
 	
 	if( type == SVT_FUNC )
 	{
 		sgs_Variable var;
 		if( !sgs_PeekStackItem( C, 0, &var ) ||
 			!pproc_serialize_function( C, var.data.F, &str, &size ) )
-			STDLIB_WARN( "pproc.add_job(): failed to serialize function" )
+			STDLIB_WARN( "failed to serialize function" )
 	}
 	else
 	{
 		char* code;
 		size_t codesize;
 		if( sgs_Compile( C, str, (size_t) size, &code, &codesize ) != SGS_SUCCESS )
-			STDLIB_WARN( "pproc.add_job(): failed to compile the code" )
+			STDLIB_WARN( "failed to compile the code" )
 		str = code;
 		size = (sgs_SizeVal) codesize;
 	}
-	sgs_PushObject( C, ppjob_create( C, str, size ), ppjob_iface );
+	sgs_PushObject( C, ppthread_create( C, str, size ), ppthread_iface );
 	sgs_Dealloc( str );
-	return 1;
-}
-
-
-static int pproc_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
-{
-	char* str;
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
-	{
-		if( 0 == strcmp( str, "add_job" ) ) IFN( pprocI_add_job )
-	}
-	return SGS_ENOTFND;
-}
-
-static int pproc_destruct( SGS_CTX, sgs_VarObj* data )
-{
-	return SGS_SUCCESS;
-}
-
-static sgs_ObjInterface pproc_iface =
-{
-	"pproc",
-	pproc_destruct, NULL,
-	pproc_getindex, NULL,
-	NULL, NULL, NULL, NULL,
-	NULL, NULL
-};
-
-static int pproc_create( SGS_CTX )
-{
-	sgs_PushObject( C, NULL, &pproc_iface );
 	return 1;
 }
 
 static int pproc_sleep( SGS_CTX )
 {
 	sgs_Int ms;
-	if( sgs_StackSize( C ) != 1 ||
-		!sgs_ParseInt( C, 0, &ms ) )
-		STDLIB_WARN( "sleep(): unexpected arguments; "
-			"function expects 1 argument: int" )
+	SGSFN( "pproc_sleep" );
+	if( !sgs_LoadArgs( C, "i", &ms ) )
+		return 0;
 	
 	sgsthread_sleep( (uint32_t) ms );
 	return 0;
@@ -632,14 +556,14 @@ static int pproc_sleep( SGS_CTX )
 #endif
 
 
-#ifdef WIN32
+#ifdef _WIN32
 __declspec(dllexport)
 #endif
 int pproc_module_entry_point( SGS_CTX )
 {
-	sgs_PushCFunction( C, pproc_create );
-	sgs_StoreGlobal( C, "pproc_create" );
+	sgs_PushCFunction( C, pproc_create_thread );
+	sgs_StoreGlobal( C, "pproc_create_thread" );
 	sgs_PushCFunction( C, pproc_sleep );
-	sgs_StoreGlobal( C, "sleep" );
+	sgs_StoreGlobal( C, "pproc_sleep" );
 	return SGS_SUCCESS;
 }

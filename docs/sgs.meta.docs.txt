@@ -1,4 +1,4 @@
-SGS metaprogramming helper library
+SGScript Metaprogramming helper library
 
 
 # Description [info]
@@ -12,9 +12,14 @@ The library is compiled to a 'sgsmeta' shared library so it can be included this
 
 # SGScript API [info]
 
+=== Functions:
+
 - @meta_globals - load all global constants
 - @meta_unpack - parse a bytecode buffer
 - @meta_opname - retrieve bytecode instruction name by ID
+
+=== Constants:
+
 - @SI_ - instruction code/ID constants
 
 

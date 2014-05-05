@@ -63,13 +63,20 @@
 </li></ul><li><a href='#Commonly-required-advanced-tasks'>Commonly required advanced tasks</a>
 </li></ul><li><a href='#Standard-library-reference'>Standard library reference</a>
 <ul><li><a href='#Core-library'>Core library</a>
-</li><li><a href='#Formatting-library-fmt'>Formatting library (&quot;fmt&quot;)</a>
-</li><li><a href='#I-O-library-io'>I/O library (&quot;io&quot;)</a>
-</li><li><a href='#Math-library-math'>Math library (&quot;math&quot;)</a>
-</li><li><a href='#OS-library-os'>OS library (&quot;os&quot;)</a>
-</li><li><a href='#Regular-expression-library-re'>Regular expression library (&quot;re&quot;)</a>
-</li><li><a href='#String-library-string'>String library (&quot;string&quot;)</a>
-</li></ul><li><a href='#Additional-info'>Additional info</a>
+<ul><li><a href='#ALL-SGScript-core-functions-A-Z'>ALL SGScript core functions (A-Z)</a>
+</li></ul><li><a href='#Formatting-library-fmt'>Formatting library (&quot;fmt&quot;)</a>
+<ul><li><a href='#ALL-SGScript-formatting-functions-A-Z'>ALL SGScript formatting functions (A-Z)</a>
+</li></ul><li><a href='#I-O-library-io'>I/O library (&quot;io&quot;)</a>
+<ul><li><a href='#ALL-SGScript-I-O-functions-A-Z'>ALL SGScript I/O functions (A-Z)</a>
+</li></ul><li><a href='#Math-library-math'>Math library (&quot;math&quot;)</a>
+<ul><li><a href='#ALL-SGScript-math-functions-A-Z'>ALL SGScript math functions (A-Z)</a>
+</li></ul><li><a href='#OS-library-os'>OS library (&quot;os&quot;)</a>
+<ul><li><a href='#ALL-SGScript-OS-functions-A-Z'>ALL SGScript OS functions (A-Z)</a>
+</li></ul><li><a href='#Regular-expression-library-re'>Regular expression library (&quot;re&quot;)</a>
+<ul><li><a href='#ALL-SGScript-RegExp-functions-A-Z'>ALL SGScript RegExp functions (A-Z)</a>
+</li></ul><li><a href='#String-library-string'>String library (&quot;string&quot;)</a>
+<ul><li><a href='#ALL-SGScript-string-functions-A-Z'>ALL SGScript string functions (A-Z)</a>
+</li></ul></li></ul><li><a href='#Additional-info'>Additional info</a>
 <ul><li><a href='#Serialization-in-SGScript'>Serialization in SGScript</a>
 </li></ul></li></ul></div><div>
 <div class='item'><a name='SGScript-description'></a><hr><h2>SGScript - description</h2><p>
@@ -2302,6 +2309,79 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li>overridable object call
 </li><li>serialization
 </li><li>GC-safe</li></ul></li></ul></div>
+<div class='item'><a name='ALL-SGScript-core-functions-A-Z'></a><hr><h2>ALL SGScript core functions (A-Z)</h2><ul><li><a href="#ERROR-function">ERROR [function]</a>
+</li><li><a href="#INFO-function">INFO [function]</a>
+</li><li><a href="#WARNING-function">WARNING [function]</a>
+</li><li><a href="#app-abort-function">app_abort [function]</a>
+</li><li><a href="#app-exit-function">app_exit [function]</a>
+</li><li><a href="#array-function">array [function]</a>
+</li><li><a href="#array-filter-function">array_filter [function]</a>
+</li><li><a href="#array-process-function">array_process [function]</a>
+</li><li><a href="#assert-function">assert [function]</a>
+</li><li><a href="#class-function">class [function]</a>
+</li><li><a href="#clone-function">clone [function]</a>
+</li><li><a href="#compile-sgs-function">compile_sgs [function]</a>
+</li><li><a href="#dict-function">dict [function]</a>
+</li><li><a href="#dict-filter-function">dict_filter [function]</a>
+</li><li><a href="#dict-process-function">dict_process [function]</a>
+</li><li><a href="#dict-size-function">dict_size [function]</a>
+</li><li><a href="#dumpvar-function">dumpvar [function]</a>
+</li><li><a href="#dumpvar-ext-function">dumpvar_ext [function]</a>
+</li><li><a href="#errno-function">errno [function]</a>
+</li><li><a href="#errno-string-function">errno_string [function]</a>
+</li><li><a href="#errno-value-function">errno_value [function]</a>
+</li><li><a href="#eval-function">eval [function]</a>
+</li><li><a href="#eval-file-function">eval_file [function]</a>
+</li><li><a href="#ftime-function">ftime [function]</a>
+</li><li><a href="#gc-collect-function">gc_collect [function]</a>
+</li><li><a href="#get-concat-function">get_concat [function]</a>
+</li><li><a href="#get-keys-function">get_keys [function]</a>
+</li><li><a href="#get-merged-function">get_merged [function]</a>
+</li><li><a href="#get-merged-map-function">get_merged_map [function]</a>
+</li><li><a href="#get-values-function">get_values [function]</a>
+</li><li><a href="#hash-crc32-function">hash_crc32 [function]</a>
+</li><li><a href="#hash-fnv-function">hash_fnv [function]</a>
+</li><li><a href="#import-cfunc-function">import_cfunc [function]</a>
+</li><li><a href="#include-function">include [function]</a>
+</li><li><a href="#include-file-function">include_file [function]</a>
+</li><li><a href="#include-library-function">include_library [function]</a>
+</li><li><a href="#include-shared-function">include_shared [function]</a>
+</li><li><a href="#is-callable-function">is_callable [function]</a>
+</li><li><a href="#is-numeric-function">is_numeric [function]</a>
+</li><li><a href="#isset-function">isset [function]</a>
+</li><li><a href="#map-function">map [function]</a>
+</li><li><a href="#map-size-function">map_size [function]</a>
+</li><li><a href="#parseint-function">parseint [function]</a>
+</li><li><a href="#parsereal-function">parsereal [function]</a>
+</li><li><a href="#pcall-function">pcall [function]</a>
+</li><li><a href="#print-println-printlns-errprint-errprintln-errprintlns-functions">print, println, printlns, errprint, errprintln, errprintlns [functions]</a>
+</li><li><a href="#printvar-function">printvar [function]</a>
+</li><li><a href="#printvar-ext-function">printvar_ext [function]</a>
+</li><li><a href="#rand-function">rand [function]</a>
+</li><li><a href="#randf-function">randf [function]</a>
+</li><li><a href="#read-stdin-function">read_stdin [function]</a>
+</li><li><a href="#serialize-function">serialize [function]</a>
+</li><li><a href="#srand-function">srand [function]</a>
+</li><li><a href="#sys-abort-function">sys_abort [function]</a>
+</li><li><a href="#sys-apply-function">sys_apply [function]</a>
+</li><li><a href="#sys-backtrace-function">sys_backtrace [function]</a>
+</li><li><a href="#sys-call-function">sys_call [function]</a>
+</li><li><a href="#sys-curfile-function">sys_curfile [function]</a>
+</li><li><a href="#sys-curfiledir-function">sys_curfiledir [function]</a>
+</li><li><a href="#sys-msg-function">sys_msg [function]</a>
+</li><li><a href="#sys-replevel-function">sys_replevel [function]</a>
+</li><li><a href="#sys-stat-function">sys_stat [function]</a>
+</li><li><a href="#tobool-function">tobool [function]</a>
+</li><li><a href="#toint-function">toint [function]</a>
+</li><li><a href="#toptr-function">toptr [function]</a>
+</li><li><a href="#toreal-function">toreal [function]</a>
+</li><li><a href="#tostring-function">tostring [function]</a>
+</li><li><a href="#typeid-function">typeid [function]</a>
+</li><li><a href="#typeof-function">typeof [function]</a>
+</li><li><a href="#unserialize-function">unserialize [function]</a>
+</li><li><a href="#unset-function">unset [function]</a>
+</li><li><a href="#va-arg-count-function">va_arg_count [function]</a>
+</li><li><a href="#va-get-args-function">va_get_args [function]</a></li></ul></div>
 <div class='item'><a name='Formatting-library-fmt'></a><hr><h2>Formatting library (&quot;fmt&quot;)</h2><p>
 This library includes functions and objects for parsing binary and text buffers.
 </p><ul><li>binary format -- <a href="#fmt-pack-function">fmt_pack</a>, <a href="#fmt-unpack-function">fmt_unpack</a>, <a href="#fmt-pack-count-function">fmt_pack_count</a>, <a href="#fmt-pack-size-function">fmt_pack_size</a>
@@ -2411,6 +2491,17 @@ stream.skipcc( &quot;^a-z&quot; ); // returns 1</pre></div>
 <div class='item'><a name='fmt-parser-read-hex-int-method'></a><hr><h2>fmt_parser.read_hex_int [method]</h2><h3>fmt_parser.read_hex_int( bool as_int = true )</h3><h4>returns characters read with the character class &quot;0-9a-fA-F&quot;, optionally returned as an int value</h4></div>
 <div class='item'><a name='fmt-parser-check-method'></a><hr><h2>fmt_parser.check [method]</h2><h3>fmt_parser.check( string str, bool ci = false, bool partial = false )</h3><h4>returns whether the specified string was found at the current position</h4><ul><li><code>ci</code> makes matching case-insensitive
 </li><li>if <code>partial</code> is true, function returns the number of characters successfully matched instead of whether everything has been matched</li></ul></div>
+<div class='item'><a name='ALL-SGScript-formatting-functions-A-Z'></a><hr><h2>ALL SGScript formatting functions (A-Z)</h2><ul><li><a href="#fmt-base64-decode-function">fmt_base64_decode [function]</a>
+</li><li><a href="#fmt-base64-encode-function">fmt_base64_encode [function]</a>
+</li><li><a href="#fmt-charcc-function">fmt_charcc [function]</a>
+</li><li><a href="#fmt-file-parser-function">fmt_file_parser [function]</a>
+</li><li><a href="#fmt-pack-function">fmt_pack [function]</a>
+</li><li><a href="#fmt-pack-count-function">fmt_pack_count [function]</a>
+</li><li><a href="#fmt-pack-size-function">fmt_pack_size [function]</a>
+</li><li><a href="#fmt-parser-function">fmt_parser [function]</a>
+</li><li><a href="#fmt-string-parser-function">fmt_string_parser [function]</a>
+</li><li><a href="#fmt-text-function">fmt_text [function]</a>
+</li><li><a href="#fmt-unpack-function">fmt_unpack [function]</a></li></ul></div>
 <div class='item'><a name='I-O-library-io'></a><hr><h2>I/O library (&quot;io&quot;)</h2><p>
 This library contains the functions necessary to work with the file system (files and directories).
 </p><h4>Functions:</h4><ul><li><a href="#io-setcwd-function">io_setcwd</a> - set the current working directory
@@ -2495,26 +2586,38 @@ f.close(); // returns false</pre></div>
 <div class='item'><a name='FILE-constants'></a><hr><h2>FILE_*** [constants]</h2><h3>FILE_READ, FILE_WRITE</h3><h4>mode constants for <a href="#io-file-object">io_file</a>.open / <a href="#io-file-function">io_file [function]</a></h4></div>
 <div class='item'><a name='SEEK-constants'></a><hr><h2>SEEK_*** [constants]</h2><h3>SEEK_SET, SEEK_CUR, SEEK_END</h3><h4>mode constants for <a href="#io-file-object">io_file</a>.seek</h4></div>
 <div class='item'><a name='FST-constants'></a><hr><h2>FST_*** [constants]</h2><h3>FST_UNKNOWN, FST_FILE, FST_DIR</h3><h4>file system item type constants for <a href="#io-stat-function">io_stat</a></h4></div>
+<div class='item'><a name='ALL-SGScript-I-O-functions-A-Z'></a><hr><h2>ALL SGScript I/O functions (A-Z)</h2><ul><li><a href="#io-dir-function">io_dir [function]</a>
+</li><li><a href="#io-dir-create-function">io_dir_create [function]</a>
+</li><li><a href="#io-dir-delete-function">io_dir_delete [function]</a>
+</li><li><a href="#io-dir-exists-function">io_dir_exists [function]</a>
+</li><li><a href="#io-file-function">io_file [function]</a>
+</li><li><a href="#io-file-delete-function">io_file_delete [function]</a>
+</li><li><a href="#io-file-exists-function">io_file_exists [function]</a>
+</li><li><a href="#io-file-read-function">io_file_read [function]</a>
+</li><li><a href="#io-file-write-function">io_file_write [function]</a>
+</li><li><a href="#io-getcwd-function">io_getcwd [function]</a>
+</li><li><a href="#io-getexecpath-function">io_getexecpath [function]</a>
+</li><li><a href="#io-rename-function">io_rename [function]</a>
+</li><li><a href="#io-setcwd-function">io_setcwd [function]</a>
+</li><li><a href="#io-stat-function">io_stat [function]</a></li></ul></div>
 <div class='item'><a name='Math-library-math'></a><hr><h2>Math library (&quot;math&quot;)</h2><p>
 This library contains the basic math functions for processing real values.
-</p><h4>Functions:</h4><p>
- - <a href="#abs-function">abs</a> - returns the absolute value of x
- - <a href="#floor-function">floor</a> - returns rounded-down value of x
- - <a href="#ceil-function">ceil</a> - returns the rounded-up value of x
- - <a href="#round-function">round</a> - returns the rounded-to-nearest-integer value of x
- - <a href="#pow-function">pow</a> - returns x to the power of y
- - <a href="#sqrt-function">sqrt</a> - returns a square root of x
- - <a href="#log-function">log</a> - returns the logarithm (power) of x for base y
- - <a href="#sin-function">sin</a> - returns the sine of x
- - <a href="#cos-function">cos</a> - returns the cosine of x
- - <a href="#tan-function">tan</a> - returns the tangent of x
- - <a href="#asin-function">asin</a> - returns arcsine (angle for sine value) of x
- - <a href="#acos-function">acos</a> - returns arccosine (angle for cosine value) of x
- - <a href="#atan-function">atan</a> - returns arctangent (angle for tangent value) of x
- - <a href="#atan2-function">atan2</a> - returns arctangent of x and y, using both values to extend the range of returned value
- - <a href="#deg2rad-function">deg2rad</a> - returns x degrees as radians
- - <a href="#rad2deg-function">rad2deg</a> - returns x radians as degrees
-</p><h4>Constants:</h4><ul><li><a href="#Main-types">M_***</a> - mathematical constants</li></ul></div>
+</p><h4>Functions:</h4><ul><li><a href="#abs-function">abs</a> - returns the absolute value of x
+</li><li><a href="#floor-function">floor</a> - returns rounded-down value of x
+</li><li><a href="#ceil-function">ceil</a> - returns the rounded-up value of x
+</li><li><a href="#round-function">round</a> - returns the rounded-to-nearest-integer value of x
+</li><li><a href="#pow-function">pow</a> - returns x to the power of y
+</li><li><a href="#sqrt-function">sqrt</a> - returns a square root of x
+</li><li><a href="#log-function">log</a> - returns the logarithm (power) of x for base y
+</li><li><a href="#sin-function">sin</a> - returns the sine of x
+</li><li><a href="#cos-function">cos</a> - returns the cosine of x
+</li><li><a href="#tan-function">tan</a> - returns the tangent of x
+</li><li><a href="#asin-function">asin</a> - returns arcsine (angle for sine value) of x
+</li><li><a href="#acos-function">acos</a> - returns arccosine (angle for cosine value) of x
+</li><li><a href="#atan-function">atan</a> - returns arctangent (angle for tangent value) of x
+</li><li><a href="#atan2-function">atan2</a> - returns arctangent of x and y, using both values to extend the range of returned value
+</li><li><a href="#deg2rad-function">deg2rad</a> - returns x degrees as radians
+</li><li><a href="#rad2deg-function">rad2deg</a> - returns x radians as degrees</li></ul><h4>Constants:</h4><ul><li><a href="#Main-types">M_***</a> - mathematical constants</li></ul></div>
 <div class='item'><a name='abs-function'></a><hr><h2>abs [function]</h2><h3>abs( x )</h3><h4>returns the absolute value of <code>x</code>, as <code>real</code></h4><pre>abs( 2.2 ); // real (2.2)
 abs( -3.1 ); // real (3.1)</pre></div>
 <div class='item'><a name='floor-function'></a><hr><h2>floor [function]</h2><h3>floor( x )</h3><h4>returns the largest integer that is not bigger than <code>x</code>, as <code>real</code></h4><pre>floor( 3.4 ); // real (3)
@@ -2569,6 +2672,22 @@ deg2rad( -90 ); // real (-1.5708)</pre></div>
 rad2deg( M_PI ); // real (180)
 rad2deg( -M_PI / 2 ); // real (-90)</pre></div>
 <div class='item'><a name='M-constants'></a><hr><h2>M_*** [constants]</h2><h3>M_PI</h3><h4>the ratio of circumference of a circle to its diameter (pi)</h4><ul><li>the value of this constant is <code>3.14159265358979323846</code></li></ul><h3>M_E</h3><h4>the natural logarithmic base (e)</h4><ul><li>the value of this constant is <code>2.7182818284590452354</code></li></ul></div>
+<div class='item'><a name='ALL-SGScript-math-functions-A-Z'></a><hr><h2>ALL SGScript math functions (A-Z)</h2><ul><li><a href="#abs-function">abs [function]</a>
+</li><li><a href="#acos-function">acos [function]</a>
+</li><li><a href="#asin-function">asin [function]</a>
+</li><li><a href="#atan-function">atan [function]</a>
+</li><li><a href="#atan2-function">atan2 [function]</a>
+</li><li><a href="#ceil-function">ceil [function]</a>
+</li><li><a href="#cos-function">cos [function]</a>
+</li><li><a href="#deg2rad-function">deg2rad [function]</a>
+</li><li><a href="#floor-function">floor [function]</a>
+</li><li><a href="#log-function">log [function]</a>
+</li><li><a href="#pow-function">pow [function]</a>
+</li><li><a href="#rad2deg-function">rad2deg [function]</a>
+</li><li><a href="#round-function">round [function]</a>
+</li><li><a href="#sin-function">sin [function]</a>
+</li><li><a href="#sqrt-function">sqrt [function]</a>
+</li><li><a href="#tan-function">tan [function]</a></li></ul></div>
 <div class='item'><a name='OS-library-os'></a><hr><h2>OS library (&quot;os&quot;)</h2><ul><li>environment variables
 </li><li>time and date
 </li><li>locale / regional settings</li></ul><h4>Functions:</h4><ul><li><a href="#os-gettype-function">os_gettype</a> - returns the name of closest known OS type match, defined at compile time
@@ -2658,6 +2777,19 @@ These constants specify the categories for which locale can be changed.
 </li><li>LC_MONETARY: os_get_locale_format
 </li><li>LC_NUMERIC: os_get_locale_format
 </li><li>LC_TIME: os_date_string</li></ul></div>
+<div class='item'><a name='ALL-SGScript-OS-functions-A-Z'></a><hr><h2>ALL SGScript OS functions (A-Z)</h2><ul><li><a href="#os-command-function">os_command [function]</a>
+</li><li><a href="#os-date-string-function">os_date_string [function]</a>
+</li><li><a href="#os-get-locale-function">os_get_locale [function]</a>
+</li><li><a href="#os-get-locale-format-function">os_get_locale_format [function]</a>
+</li><li><a href="#os-get-timezone-function">os_get_timezone [function]</a>
+</li><li><a href="#os-getenv-function">os_getenv [function]</a>
+</li><li><a href="#os-gettype-function">os_gettype [function]</a>
+</li><li><a href="#os-locale-strcmp-function">os_locale_strcmp [function]</a>
+</li><li><a href="#os-make-time-function">os_make_time [function]</a>
+</li><li><a href="#os-parse-time-function">os_parse_time [function]</a>
+</li><li><a href="#os-putenv-function">os_putenv [function]</a>
+</li><li><a href="#os-set-locale-function">os_set_locale [function]</a>
+</li><li><a href="#os-time-function">os_time [function]</a></li></ul></div>
 <div class='item'><a name='Regular-expression-library-re'></a><hr><h2>Regular expression library (&quot;re&quot;)</h2><p>
 This library includes regular expression match &amp; replace functions.
 </p><h4>Functions:</h4><ul><li><a href="#re-match-function">re_match</a> - check for first match in string for pattern
@@ -2682,6 +2814,9 @@ If none of these are specified (`flags` = 0), only the success state is returned
 </p><ul><li>RE_RETURN_CAPTURED - return the captured string
 </li><li>RE_RETURN_OFFSETS - return array of start/end offsets
 </li><li>RE_RETURN_BOTH - return both the captured string and the start/end offsets in an array</li></ul></div>
+<div class='item'><a name='ALL-SGScript-RegExp-functions-A-Z'></a><hr><h2>ALL SGScript RegExp functions (A-Z)</h2><ul><li><a href="#re-match-function">re_match [function]</a>
+</li><li><a href="#re-match-all-function">re_match_all [function]</a>
+</li><li><a href="#re-replace-function">re_replace [function]</a></li></ul></div>
 <div class='item'><a name='String-library-string'></a><hr><h2>String library (&quot;string&quot;)</h2><p>
 This library contains the string handling functions. In all functions, except the utf-8 ones, it is assumed that strings are byte buffers where each byte is one character. If correct indices are applied, many of them will work with multibyte strings.
 </p><h4>Functions:</h4><ul><li><a href="#string-cut-function">string_cut</a> - extract a substring from a string from the specified beginning / end offsets
@@ -2772,6 +2907,27 @@ string_utf8_decode( [27161,28310] ); // string [6] &quot;標準&quot;</pre></div
 <em class='notice-bgr'>see <a href="#fmt-text-function">fmt_text</a> if you don&#39;t need the position (argument index) specifications</em>
 </p><ul><li>the format specifier has the form {&lt;id&gt;:&lt;specifier&gt;} where &quot;id&quot; is the argument index to use and specifier is a <a href="#fmt-text-function">fmt_text</a> specifier
 </li><li>argument indices to be used in specifiers start from 1</li></ul><pre>print string_format( &quot;{1:d} -&gt; {1:x}&quot;, 1337 ); // prints &quot;1337 -&gt; 539&quot;</pre></div>
+<div class='item'><a name='ALL-SGScript-string-functions-A-Z'></a><hr><h2>ALL SGScript string functions (A-Z)</h2><ul><li><a href="#string-charcode-function">string_charcode [function]</a>
+</li><li><a href="#string-compare-function">string_compare [function]</a>
+</li><li><a href="#string-count-function">string_count [function]</a>
+</li><li><a href="#string-cut-function">string_cut [function]</a>
+</li><li><a href="#string-explode-function">string_explode [function]</a>
+</li><li><a href="#string-find-function">string_find [function]</a>
+</li><li><a href="#string-find-rev-function">string_find_rev [function]</a>
+</li><li><a href="#string-format-function">string_format [function]</a>
+</li><li><a href="#string-frombytes-function">string_frombytes [function]</a>
+</li><li><a href="#string-implode-function">string_implode [function]</a>
+</li><li><a href="#string-pad-function">string_pad [function]</a>
+</li><li><a href="#string-part-function">string_part [function]</a>
+</li><li><a href="#string-repeat-function">string_repeat [function]</a>
+</li><li><a href="#string-replace-function">string_replace [function]</a>
+</li><li><a href="#string-reverse-function">string_reverse [function]</a>
+</li><li><a href="#string-tolower-function">string_tolower [function]</a>
+</li><li><a href="#string-toupper-function">string_toupper [function]</a>
+</li><li><a href="#string-translate-function">string_translate [function]</a>
+</li><li><a href="#string-trim-function">string_trim [function]</a>
+</li><li><a href="#string-utf8-decode-function">string_utf8_decode [function]</a>
+</li><li><a href="#string-utf8-encode-function">string_utf8_encode [function]</a></li></ul></div>
 <div class='item'><a name='Additional-info'></a><hr><h2>Additional info</h2></div>
 <div class='item'><a name='Serialization-in-SGScript'></a><hr><h2>Serialization in SGScript</h2><p>
 In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the &quot;<a href="#serialize-function">serialize</a>&quot; function and deserialization is done with &quot;<a href="#unserialize-function">unserialize</a>&quot;. The C API has similar functions: <a href="#sgs-Serialize-function">sgs_Serialize</a> / <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> and <a href="#sgs-Unserialize-function">sgs_Unserialize</a>, respectively.

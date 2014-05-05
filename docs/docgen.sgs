@@ -83,7 +83,14 @@ function load_docfile( name )
 				{
 					page_name = string_trim( string_cut( line, 2, pos1 - 1 ) );
 					page_type = string_trim( string_part( line, pos1 + 1, pos2 - pos1 - 1 ) );
-					tags.push({ id = id, type = "+", pagename = page_name, pagetype = page_type, lines = [] });
+					tags.push
+					({
+						id = id,
+						type = "+",
+						pagename = page_name,
+						pagetype = page_type,
+						lines = []
+					});
 				}
 			}
 		}
@@ -272,6 +279,184 @@ function linkhandler_web( title, link, pages )
 	return '<a href="' $ htmlencode( link ) $ '">' $ htmlencode( title ) $ '</a>';
 }
 
+
+/// SEARCH DATA
+function html_to_text( text )
+{
+	text = re_replace( text, "#<[^>]+>#", "" );
+	text = string_translate( text, {
+		"&quot;" = "\"",
+		"&#39;" = "\'",
+		"&lt;" = "<",
+		"&gt;" = ">",
+		"&amp;" = "&",
+	});
+	return text;
+}
+
+global unnecessary_words = string_explode(
+	"and,or,if,else,for,but,when,is,not,however,it,this,to,the,in,thus,be,that,of,"$
+	"get,set,does,doesn,t,a,all,none,some,many,with,its,can,also,the,there,are,do,"$
+	"while,yes,no,maybe,any,than,then,pre,post,isn",
+	"," );
+function necessary_word( word )
+{
+	if( word.length <= 3 )
+		return null;
+	return unnecessary_words.find( word ) === null;
+}
+
+function normalize_word( word )
+{
+	return re_replace( word, "#(tion|ing|er|ed|es|y|e|s|t)$#", "" );
+}
+
+function split_into_normalized_words( text )
+{
+	text = re_replace( text, "#[^a-zA-Z0-9]+#", " " );
+	words = string_explode( text, " " );
+	out = [].reserve( words.size );
+	foreach( word : words )
+	{
+		word = string_tolower( word );
+		if( word && necessary_word( word ) )
+		{
+			word = normalize_word( word );
+			if( necessary_word( word ) )
+				out.push( word );
+		}
+	}
+	return out;
+}
+
+function set_insert( set, item )
+{
+	if( isset( set, item ) )
+		return set[ item ];
+	else
+	{
+		id = dict_size( set );
+		set[ item ] = id;
+		return id;
+	}
+}
+
+function mapset_insert( mapset, key, value )
+{
+	if( !isset( mapset, key ) )
+		mapset[ key ] = {};
+	return set_insert( mapset[ key ], value );
+}
+
+global Indexer = {};
+function Indexer.create()
+{
+	data =
+	{
+		words = {},
+		pages = {},
+		firsttwo = {},
+	};
+	return class( data, Indexer );
+}
+function Indexer.addPage( page_url )
+{
+	page_id = dict_size( this.pages );
+	this.pages[ page_url ] = page_id;
+	return page_id;
+}
+function Indexer.index( page_id, text, factor )
+{
+	factor = toreal( factor );
+	if( !factor )
+		return WARNING( "invalid factor specified" );
+	wordlist = split_into_normalized_words( text );
+	
+	foreach( word : wordlist )
+	{
+		wordinfo = @this.words[ word ];
+		
+		if( !wordinfo )
+		{
+			word_id = dict_size( this.words );
+			this.words[ word ] = wordinfo = [ word_id, word, {} ];
+		}
+		else
+			word_id = wordinfo[0];
+		
+		wordpages = wordinfo[2];
+		if( !isset( wordpages, page_id ) )
+			wordpages[ page_id ] = factor;
+		else
+			wordpages[ page_id ] += factor;
+		
+		ftw = string_part( word, 0, 2 );
+		mapset_insert( this.firsttwo, ftw, word_id );
+	}
+}
+function Indexer.getData()
+{
+	out_words = [];
+	out_pages = [];
+	out_firsttwo = {};
+	
+	foreach( word : this.words )
+		out_words.push([ word[1], word[2] ]);
+	
+	foreach( page ,: this.pages )
+		out_pages.push( page );
+	
+	foreach( key, item : this.firsttwo )
+	{
+		widlist = [];
+		foreach( wid ,: item )
+			widlist.push( toint( wid ) );
+		out_firsttwo[ key ] = widlist;
+	}
+	
+	return
+	{
+		words = out_words,
+		pages = out_pages,
+		firsttwo = out_firsttwo,
+	};
+}
+
+function generate_search_data_web( pages )
+{
+	/*
+		Expected search process:
+		INPUT: word-list
+		OUTPUT: page-list, sorted
+		DATA:
+		- words - array( word[ word_text, pages = array( pageref[ page_id, factor ] ) ] )
+		- pages - array( page[ page_url ] )
+		- firsttwo - map( {string,2} => array( word_id ) )
+		ALGORITHM:
+		- gather possible-word-id-list from word-list via 'firsttwo'
+		- gather word-id-list from possible-word-id-list by filtering via 'words.word_text'
+		- gather page-id-list from word-id-list via 'words.pages', add factors
+		- sort page-id-list by factor
+	*/
+	
+	indexer = Indexer.create();
+	
+	foreach( P : pages )
+	{
+		page_id = indexer.addPage( P.path_str );
+		
+		pp_title = string_trim( re_replace( P.title, "#^(.*)\\[.*?\\]$#", "$1" ) );
+		pp_text = html_to_text( P.body );
+		
+		indexer.index( page_id, pp_title, 1.3 );
+		indexer.index( page_id, pp_text, 1.0 );
+	}
+	
+	return indexer.getData();
+}
+///
+
+
 function output_data_web( name, doc_title, tags, pages )
 {
 	mdlh = function( title, link ) use( pages ){ return linkhandler_web( title, link, pages ); };
@@ -290,8 +475,11 @@ function output_data_web( name, doc_title, tags, pages )
 		toclist.push([ tocitem_from, tocitem_to, string_implode( P.path, "/" ), P.title ]);
 	}
 	
+	searchdata = generate_search_data_web( pages );
+	
 	io_file_write( "out/" $ name $ ".htm", data );
 	io_file_write( "out/" $ name $ ".toc", json_encode( toclist ) );
+	io_file_write( "out/" $ name $ ".sda", json_encode( searchdata ) );
 }
 
 function generate_docdata( name )

@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 	<html><head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>SGS Sockets library</title>
+		<title>SGScript Sockets library</title>
 		<link rel="stylesheet" type="text/css" href="docs.css">
 		<script type="text/javascript" src="docs.js"></script>
 	</head><body>
-	<h1>SGS Sockets library</h1><div><h2>Table of Contents</h2><ul><li><a href='#Description'>Description</a>
+	<h1>SGScript Sockets library</h1><div><h2>Table of Contents</h2><ul><li><a href='#Description'>Description</a>
 </li><li><a href='#SGScript-API'>SGScript API</a>
 <ul><li><a href='#All-SGScript-functions-A-Z'>All SGScript functions (A-Z)</a>
 </li><li><a href='#All-SGScript-constants-A-Z'>All SGScript constants (A-Z)</a>
@@ -16,26 +16,22 @@ The main focus of support in this library was to support Internet sockets in a c
 </p><p>
 The library is compiled to a &#39;sgssockets&#39; shared library so it can be included this way (assuming that, on Linux and similar systems, LD_LIBRARY_PATH is set correctly):
 </p><pre>include &quot;sgssockets&quot;;</pre></div>
-<div class='item'><a name='SGScript-API'></a><hr><h2>SGScript API</h2><ul><li><a href="#socket-error-function">socket_error</a> - retrieve last error message, optionally as string
+<div class='item'><a name='SGScript-API'></a><hr><h2>SGScript API</h2><h4>Objects:</h4><ul><li><a href="#socket-address-object">socket_address</a>
+</li><li><a href="#socket-object">socket</a></li></ul><h4>Functions:</h4><ul><li><a href="#socket-error-function">socket_error</a> - retrieve last error message, optionally as string
 </li><li><a href="#socket-geterrnobyname-function">socket_geterrnobyname</a> - retrieve socket errno value by name
-</li><li><a href="#socket-address-object">socket_address (object)</a>
-</li><li><a href="#socket-address-function">socket_address (function)</a> - create socket address object from address string
+</li><li><a href="#socket-address-function">socket_address</a> - create socket address object from address string
 </li><li><a href="#socket-address-frombytes-function">socket_address_frombytes</a> - create socket address object from address byte buffer (sockaddr struct)
 </li><li><a href="#socket-getaddrinfo-function">socket_getaddrinfo</a> - create socket address from domain name
 </li><li><a href="#socket-gethostname-function">socket_gethostname</a> - retrieve hostname of device
-</li><li><a href="#socket-object">socket (object)</a>
-</li><li><a href="#socket-function">socket (function)</a> - create a socket
+</li><li><a href="#socket-function">socket</a> - create a socket
 </li><li><a href="#socket-tcp-function">socket_tcp</a> - create a TCP socket
 </li><li><a href="#socket-udp-function">socket_udp</a> - create a UDP socket
-</li><li><a href="#socket-select-function">socket_select</a> - wait for socket state changes
-</li><li><a href="#AF-PF-constants">AF_/PF_</a> - address/protocol families
+</li><li><a href="#socket-select-function">socket_select</a> - wait for socket state changes</li></ul><h4>Constants:</h4><ul><li><a href="#AF-PF-constants">AF_/PF_</a> - address/protocol families
 </li><li><a href="#SOCK-constants">SOCK_</a> - socket types
 </li><li><a href="#IPPROTO-constants">IPPROTO_</a> - Internet protocol types
 </li><li><a href="#MSG-constants">MSG_</a> - transfer flags
 </li><li><a href="#SHUT-constants">SHUT_</a> - shutdown flags (non-Windows version)
-</li><li><a href="#SD-constants">SD_</a> - shutdown flags (Windows version)
-</li><li><a href="#All-SGScript-functions-A-Z">All SGScript functions (A-Z)</a>
-</li><li><a href="#All-SGScript-constants-A-Z">All SGScript constants (A-Z)</a></li></ul></div>
+</li><li><a href="#SD-constants">SD_</a> - shutdown flags (Windows version)</li></ul></div>
 <div class='item'><a name='socket-error-function'></a><hr><h2>socket_error [function]</h2><h3>socket_error( bool as_text = false )</h3><h4>returns the last error received from working with the sockets, possibly as text</h4></div>
 <div class='item'><a name='socket-geterrnobyname-function'></a><hr><h2>socket_geterrnobyname [function]</h2><h3>socket_geterrnobyname( string name )</h3><h4>returns a socket error code as integer by its name (for example, &quot;EWOULDBLOCK&quot;)</h4><ul><li>error codes can differ between platforms so it is expected to retrieve the required ones from the function for comparisons</li></ul></div>
 <div class='item'><a name='socket-address-object'></a><hr><h2>socket_address [object]</h2><ul><li>read-only properties

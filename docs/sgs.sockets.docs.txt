@@ -1,4 +1,4 @@
-SGS Sockets library
+SGScript Sockets library
 
 
 # Description [info]
@@ -13,26 +13,32 @@ The library is compiled to a 'sgssockets' shared library so it can be included t
 
 # SGScript API [info]
 
+=== Objects:
+
+- @"socket_address"<socket_address [object]>
+- @"socket"<socket [object]>
+
+=== Functions:
+
 - @"socket_error"<socket_error [function]> - retrieve last error message, optionally as string
 - @"socket_geterrnobyname"<socket_geterrnobyname [function]> - retrieve socket errno value by name
-- @"socket_address (object)"<socket_address [object]>
-- @"socket_address (function)"<socket_address [function]> - create socket address object from address string
+- @"socket_address"<socket_address [function]> - create socket address object from address string
 - @"socket_address_frombytes"<socket_address_frombytes [function]> - create socket address object from address byte buffer (sockaddr struct)
 - @"socket_getaddrinfo"<socket_getaddrinfo [function]> - create socket address from domain name
 - @"socket_gethostname"<socket_gethostname [function]> - retrieve hostname of device
-- @"socket (object)"<socket [object]>
-- @"socket (function)"<socket [function]> - create a socket
+- @"socket"<socket [function]> - create a socket
 - @"socket_tcp"<socket_tcp [function]> - create a TCP socket
 - @"socket_udp"<socket_udp [function]> - create a UDP socket
 - @"socket_select"<socket_select [function]> - wait for socket state changes
+
+=== Constants:
+
 - @"AF_/PF_"<AF_/PF_ [constants]> - address/protocol families
 - @"SOCK_"<SOCK_ [constants]> - socket types
 - @"IPPROTO_"<IPPROTO_ [constants]> - Internet protocol types
 - @"MSG_"<MSG_ [constants]> - transfer flags
 - @"SHUT_"<SHUT_ [constants]> - shutdown flags (non-Windows version)
 - @"SD_"<SD_ [constants]> - shutdown flags (Windows version)
-- @"All SGScript functions (A-Z)"
-- @"All SGScript constants (A-Z)"
 
 
 # >>>

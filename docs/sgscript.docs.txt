@@ -4832,6 +4832,13 @@ This library is loaded on initialization and contains the functions and constant
 -- GC-safe
 
 
+
+# ALL SGScript core functions (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = function,functions,function alias,function aliases
+
+
 # <<<
 
 
@@ -5128,6 +5135,13 @@ This library includes functions and objects for parsing binary and text buffers.
 - if `partial` is true, function returns the number of characters successfully matched instead of whether everything has been matched
 
 
+
+# ALL SGScript formatting functions (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = function,functions,function alias,function aliases
+
+
 # <<<
 
 
@@ -5389,6 +5403,13 @@ This library contains the functions necessary to work with the file system (file
 === file system item type constants for @io_stat
 
 
+
+# ALL SGScript I/O functions (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = function,functions,function alias,function aliases
+
+
 # <<<
 
 
@@ -5398,22 +5419,22 @@ This library contains the basic math functions for processing real values.
 
 === Functions:
 
- - @abs - returns the absolute value of x
- - @floor - returns rounded-down value of x
- - @ceil - returns the rounded-up value of x
- - @round - returns the rounded-to-nearest-integer value of x
- - @pow - returns x to the power of y
- - @sqrt - returns a square root of x
- - @log - returns the logarithm (power) of x for base y
- - @sin - returns the sine of x
- - @cos - returns the cosine of x
- - @tan - returns the tangent of x
- - @asin - returns arcsine (angle for sine value) of x
- - @acos - returns arccosine (angle for cosine value) of x
- - @atan - returns arctangent (angle for tangent value) of x
- - @atan2 - returns arctangent of x and y, using both values to extend the range of returned value
- - @deg2rad - returns x degrees as radians
- - @rad2deg - returns x radians as degrees
+- @abs - returns the absolute value of x
+- @floor - returns rounded-down value of x
+- @ceil - returns the rounded-up value of x
+- @round - returns the rounded-to-nearest-integer value of x
+- @pow - returns x to the power of y
+- @sqrt - returns a square root of x
+- @log - returns the logarithm (power) of x for base y
+- @sin - returns the sine of x
+- @cos - returns the cosine of x
+- @tan - returns the tangent of x
+- @asin - returns arcsine (angle for sine value) of x
+- @acos - returns arccosine (angle for cosine value) of x
+- @atan - returns arctangent (angle for tangent value) of x
+- @atan2 - returns arctangent of x and y, using both values to extend the range of returned value
+- @deg2rad - returns x degrees as radians
+- @rad2deg - returns x radians as degrees
 
 === Constants:
 
@@ -5608,6 +5629,13 @@ This library contains the basic math functions for processing real values.
 == M_E
 === the natural logarithmic base (e)
 - the value of this constant is `2.7182818284590452354`
+
+
+
+# ALL SGScript math functions (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = function,functions,function alias,function aliases
 
 
 # <<<
@@ -5805,6 +5833,13 @@ These constants specify the categories for which locale can be changed.
 - LC_TIME: os_date_string
 
 
+
+# ALL SGScript OS functions (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = function,functions,function alias,function aliases
+
+
 # <<<
 
 
@@ -5867,6 +5902,13 @@ If none of these are specified (`flags` = 0), only the success state is returned
 - RE_RETURN_CAPTURED - return the captured string
 - RE_RETURN_OFFSETS - return array of start/end offsets
 - RE_RETURN_BOTH - return both the captured string and the start/end offsets in an array
+
+
+
+# ALL SGScript RegExp functions (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = function,functions,function alias,function aliases
 
 
 # <<<
@@ -6148,6 +6190,13 @@ This library contains the string handling functions. In all functions, except th
 - argument indices to be used in specifiers start from 1
 
     print string_format( "{1:d} -> {1:x}", 1337 ); // prints "1337 -> 539"
+
+
+
+# ALL SGScript string functions (A-Z) [info]
+
+~!~ render = list_pages_asc
+~!~ filter_type = function,functions,function alias,function aliases
 
 
 # <<<

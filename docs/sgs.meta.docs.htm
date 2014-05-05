@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 	<html><head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>SGS metaprogramming helper library</title>
+		<title>SGScript Metaprogramming helper library</title>
 		<link rel="stylesheet" type="text/css" href="docs.css">
 		<script type="text/javascript" src="docs.js"></script>
 	</head><body>
-	<h1>SGS metaprogramming helper library</h1><div><h2>Table of Contents</h2><ul><li><a href='#Description'>Description</a>
+	<h1>SGScript Metaprogramming helper library</h1><div><h2>Table of Contents</h2><ul><li><a href='#Description'>Description</a>
 </li><li><a href='#SGScript-API'>SGScript API</a>
 </li></ul></div><div>
 <div class='item'><a name='Description'></a><hr><h2>Description</h2><p>
@@ -13,10 +13,9 @@ The goal of this library is to provide further tools for handling the compilatio
 </p><p>
 The library is compiled to a &#39;sgsmeta&#39; shared library so it can be included this way (assuming that, on Linux and similar systems, LD_LIBRARY_PATH is set correctly):
 </p><pre>include &quot;sgsmeta&quot;;</pre></div>
-<div class='item'><a name='SGScript-API'></a><hr><h2>SGScript API</h2><ul><li><a href="#meta-globals-function">meta_globals</a> - load all global constants
+<div class='item'><a name='SGScript-API'></a><hr><h2>SGScript API</h2><h4>Functions:</h4><ul><li><a href="#meta-globals-function">meta_globals</a> - load all global constants
 </li><li><a href="#meta-unpack-function">meta_unpack</a> - parse a bytecode buffer
-</li><li><a href="#meta-opname-function">meta_opname</a> - retrieve bytecode instruction name by ID
-</li><li><a href="#SI-constants">SI_</a> - instruction code/ID constants</li></ul></div>
+</li><li><a href="#meta-opname-function">meta_opname</a> - retrieve bytecode instruction name by ID</li></ul><h4>Constants:</h4><ul><li><a href="#SI-constants">SI_</a> - instruction code/ID constants</li></ul></div>
 <div class='item'><a name='meta-globals-function'></a><hr><h2>meta_globals [function]</h2><h3>meta_globals()</h3><h4>load all global constants</h4><ul><li>for now, only instruction code/ID constants are loaded (the <a href="#SI-constants">SI_</a> prefix)
 </li><li>to load them into another <code>dict</code> variable, environment can be altered by setting <code>_G</code></li></ul></div>
 <div class='item'><a name='meta-unpack-function'></a><hr><h2>meta_unpack [function]</h2><h3>meta_unpack( string bytecode_buffer )</h3><h4>parse a bytecode buffer</h4><ul><li>returns a dict containing root function or false/warning on failure</li></ul><p>

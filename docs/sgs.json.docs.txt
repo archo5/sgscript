@@ -1,4 +1,4 @@
-SGS JSON library
+SGScript JSON library
 
 
 # Description [info]
@@ -11,6 +11,8 @@ The library is compiled to a 'sgsjson' shared library so it can be included this
 
 
 # SGScript API [info]
+
+=== Functions:
 
 - @json_encode - encode SGScript variable structure as JSON string
 - @json_decode - decode JSON string to SGScript variable structure

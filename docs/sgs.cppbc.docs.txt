@@ -1,4 +1,4 @@
-SGS/C++ binding compiler
+SGScript/C++ binding compiler
 
 
 # SGS/CPP-BC description [info]

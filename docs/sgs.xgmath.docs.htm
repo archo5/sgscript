@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 	<html><head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>SGS eXtended Game Math library</title>
+		<title>SGScript eXtended Game Math library</title>
 		<link rel="stylesheet" type="text/css" href="docs.css">
 		<script type="text/javascript" src="docs.js"></script>
 	</head><body>
-	<h1>SGS eXtended Game Math library</h1><div><h2>Table of Contents</h2><ul><li><a href='#Description'>Description</a>
+	<h1>SGScript eXtended Game Math library</h1><div><h2>Table of Contents</h2><ul><li><a href='#Description'>Description</a>
 </li><li><a href='#SGScript-API'>SGScript API</a>
 <ul><li><a href='#floatarray-data-transformation-methods'>floatarray data transformation methods</a>
 </li><li><a href='#All-SGScript-objects-A-Z'>All SGScript objects (A-Z)</a>
@@ -134,7 +134,7 @@ The library is compiled to a &#39;sgsxgmath&#39; shared library so it can be inc
 </li><li>indexing support for indices 0 - 3: returns/sets the specified subvalue
 </li><li>tostring, dump = &quot;vec4(&lt;x&gt;;&lt;y&gt;;&lt;z&gt;;&lt;w&gt;)&quot;</li></ul></li></ul></div>
 <div class='item'><a name='vec4-function'></a><hr><h2>vec4 [function]</h2><h3>vec4( real x[, real y[, real z[, real w ]]])</h3><h4>create a vec4 value from 1, 2 or 4 real values</h4><ul><li>if only one argument is given, it is used for <code>x</code>, <code>y</code>, <code>z</code> and <code>w</code>
-</li><li>if two arguments are given, use argument 1 for <code>x</code>, <code>y</code> and `z`; argument 2 for <code>w</code></li></ul></div>
+</li><li>if two arguments are given, use argument 1 for <code>x</code>, <code>y</code> and <code>z</code> ; argument 2 for <code>w</code></li></ul></div>
 <div class='item'><a name='vec4-dot-function'></a><hr><h2>vec4_dot [function]</h2><h3>vec4_dot( vec4 v1, vec4 v2 )</h3><h4>return the dot product of both vectors</h4><ul><li>returns <code>v1.x <i> v2.x + v1.y </i> v2.y + v1.z <i> v2.z + v1.w </i> v2.w</code></li></ul></div>
 <div class='item'><a name='aabb2-object'></a><hr><h2>aabb2 [object]</h2><p>
 In this object, assume 1 = min and 2 = max.
