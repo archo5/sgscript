@@ -92,7 +92,7 @@ function cppbc_preprocess( code )
 		if( which == "/*" )
 		{
 			out $= " ";
-			pos = string_find( code, "*/" );
+			pos = string_find( code, "*/", to );
 			if( pos === null )
 				cppbc_error( "error in code: unfinished comment detected" );
 			pos += 2;
