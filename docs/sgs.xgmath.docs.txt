@@ -518,7 +518,7 @@ A column-major matrix
 -- @negate<floatarray.negate> - negate all values
 -- @assign<floatarray.assign> - copy values from another source
 -- @negate_from<floatarray.negate_from> - copy negated values
--- @*[_assign]<floatarray.*[_assign]> - combine values with arithmetic operations
+-- @*[_assign]<floatarray.*[_assign] (add> - combine values with arithmetic operations
 -- @randbox<floatarray.randbox> - set values to random between two sources
 -- @randext<floatarray.randext> - set values to random around source 1 in the range of source 2
 -- @multiply_add_assign<floatarray.multiply_add_assign> - multiply two sources and add the result to this one
