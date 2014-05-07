@@ -814,8 +814,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgsstd_array_iter_t* iter = (sgsstd_array_iter_t*)
 			sgs_PushObjectIPA( C, sizeof(*iter), sgsstd_array_iter_iface );
 		
-		sgs_InitObjectPtr( &iter->ref, data );
-		sgs_Acquire( C, &iter->ref );
+		sgs_InitObjectPtr( &iter->ref, data ); /* acquires ref */
 		iter->size = hdr->size;
 		iter->off = -1;
 		
@@ -1141,8 +1140,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgsstd_dict_iter_t* iter = (sgsstd_dict_iter_t*)
 			sgs_PushObjectIPA( C, sizeof(*iter), sgsstd_dict_iter_iface );
 		
-		sgs_InitObjectPtr( &iter->ref, data );
-		sgs_Acquire( C, &iter->ref );
+		sgs_InitObjectPtr( &iter->ref, data ); /* acquires ref */
 		iter->size = vht_size( ht );
 		iter->off = -1;
 		
@@ -1259,8 +1257,7 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* data, int type )
 		sgsstd_dict_iter_t* iter = (sgsstd_dict_iter_t*)
 			sgs_PushObjectIPA( C, sizeof(*iter), sgsstd_dict_iter_iface );
 		
-		sgs_InitObjectPtr( &iter->ref, data );
-		sgs_Acquire( C, &iter->ref );
+		sgs_InitObjectPtr( &iter->ref, data ); /* acquires ref */
 		iter->size = vht_size( ht );
 		iter->off = -1;
 		

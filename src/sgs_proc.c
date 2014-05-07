@@ -3099,7 +3099,6 @@ SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
 void sgs_GetEnv( SGS_CTX, sgs_Variable* out )
 {
 	sgs_InitObjectPtr( out, C->_G );
-	VAR_ACQUIRE( out );
 }
 
 SGSRESULT sgs_SetEnv( SGS_CTX, sgs_Variable* var )
