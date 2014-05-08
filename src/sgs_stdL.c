@@ -3961,6 +3961,95 @@ fail:
 	STDLIB_WARN( "failed to read the array" )
 }
 
+static int sgsstd_string_utf8_offset( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size, which, from = 0;
+	SGSFN( "string_utf8_offset" );
+	
+	if( !sgs_LoadArgs( C, "ml|l", &str, &size, &which, &from ) )
+		return 0;
+	
+	if( from < 0 )
+		from += size;
+	if( from < 0 || from > size - ( size > 0 ? 1 : 0 ) )
+		STDLIB_WARN( "starting offset out of bounds" )
+	
+	if( which < 0 )
+		STDLIB_WARN( "negative character number is not allowed" )
+	
+	str += from;
+	size -= from;
+	while( which > 0 )
+	{
+		uint32_t outchar = SGS_UNICODE_INVCHAR;
+		/* WP: string limit */
+		int ret = sgs_utf8_decode( str, (size_t) size, &outchar );
+		if( !ret )
+			break;
+		ret = abs( ret );
+		str += ret;
+		size -= ret;
+		which--;
+	}
+	
+	sgs_PushInt( C, from );
+	sgs_PushBool( C, which == 0 );
+	return 2;
+}
+
+static int sgsstd_string_utf8_length( SGS_CTX )
+{
+	char* str;
+	sgs_SizeVal size, cc = 0;
+	sgs_SizeVal flags = 0, i1 = 0, i2;
+	
+	SGSFN( "string_utf8_length" );
+	
+	if( !sgs_LoadArgs( C, "m|l", &str, &size, &i1 ) )
+		return 0;
+	
+	i2 = size - i1;
+	if( sgs_StackSize( C ) > 2 )
+	{
+		if( sgs_LoadArgsExt( C, 2, "|ll", &i2, &flags ) < 1 )
+			return 0;
+	}
+	
+	if( HAS_FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
+		STDLIB_WARN( "detected negative indices" );
+	
+	i1 = i1 < 0 ? size + i1 : i1;
+	i2 = i2 < 0 ? size + i2 : i2;
+	if( HAS_FLAG( flags, sgsSTRICT_RANGES ) &&
+		( i1 < 0 || i1 + i2 < 0 || i2 < 0 || i1 >= size || i1 + i2 > size ) )
+		STDLIB_WARN( "invalid character range" );
+	
+	if( i2 <= 0 || i1 >= size || i1 + i2 < 0 )
+		sgs_PushInt( C, 0 );
+	else
+	{
+		i2 += i1 - 1;
+		i1 = MAX( 0, MIN( i1, size - 1 ) );
+		i2 = MAX( 0, MIN( i2, size - 1 ) );
+		
+		str += i1;
+		size = i2 - i1 + 1;
+		while( size > 0 )
+		{
+			uint32_t outchar = SGS_UNICODE_INVCHAR;
+			/* WP: string limit */
+			int ret = sgs_utf8_decode( str, (size_t) size, &outchar );
+			ret = abs( ret );
+			str += ret;
+			size -= ret;
+			cc++;
+		}
+		sgs_PushInt( C, cc );
+	}
+	return 1;
+}
+
 
 static int sgsstd_string_format( SGS_CTX )
 {
@@ -4072,6 +4161,7 @@ static const sgs_RegFuncConst s_fconsts[] =
 	FN( string_implode ), FN( string_explode ),
 	FN( string_charcode ), FN( string_frombytes ),
 	FN( string_utf8_decode ), FN( string_utf8_encode ),
+	FN( string_utf8_offset ), FN( string_utf8_length ),
 	FN( string_format ),
 };
 
