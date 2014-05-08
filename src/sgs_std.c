@@ -2079,6 +2079,44 @@ static int sgsstd_get_merged_map( SGS_CTX )
 	return sgsstd__get_merged__common( C, ssz );
 }
 
+static int sgsstd_get_iterator( SGS_CTX )
+{
+	SGSFN( "get_iterator" );
+	if( !sgs_LoadArgs( C, "?!v" ) )
+		return 0;
+	if( SGS_FAILED( sgs_PushIterator( C, 0 ) ) )
+		STDLIB_WARN( "failed to retrieve iterator" );
+	return 1;
+}
+
+static int sgsstd_iter_advance( SGS_CTX )
+{
+	int ret;
+	SGSFN( "iter_advance" );
+	if( !sgs_LoadArgs( C, "?!v" ) )
+		return 0;
+	ret = sgs_IterAdvance( C, 0 );
+	if( SGS_FAILED( ret ) )
+		STDLIB_WARN( "failed to advance iterator" )
+	sgs_PushBool( C, ret != 0 );
+	return 1;
+}
+
+static int sgsstd_iter_getdata( SGS_CTX )
+{
+	int ret;
+	sgs_Bool pushkey = 0, pushval = 1;
+	SGSFN( "iter_getdata" );
+	if( !sgs_LoadArgs( C, "?!v|bb", &pushkey, &pushval ) )
+		return 0;
+	if( pushkey + pushval == 0 )
+		STDLIB_WARN( "no data requested from iterator" );
+	ret = sgs_IterPushData( C, 0, pushkey, pushval );
+	if( SGS_FAILED( ret ) )
+		STDLIB_WARN( "failed to retrieve data from iterator" );
+	return pushkey + pushval;
+}
+
 
 static int sgsstd_tobool( SGS_CTX )
 {
@@ -3421,6 +3459,7 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( dict_size ), FN( map_size ), FN( isset ), FN( unset ), FN( clone ),
 	FN( get_keys ), FN( get_values ), FN( get_concat ),
 	FN( get_merged ), FN( get_merged_map ),
+	FN( get_iterator ), FN( iter_advance ), FN( iter_getdata ),
 	/* types */
 	FN( tobool ), FN( toint ), FN( toreal ), FN( tostring ), FN( toptr ),
 	FN( parseint ), FN( parsereal ),

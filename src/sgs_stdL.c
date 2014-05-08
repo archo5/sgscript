@@ -3990,6 +3990,7 @@ static int sgsstd_string_utf8_offset( SGS_CTX )
 		ret = abs( ret );
 		str += ret;
 		size -= ret;
+		from += ret;
 		which--;
 	}
 	

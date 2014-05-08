@@ -1140,7 +1140,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_StringConcat - concatenate two or more variables into a string
 
 
-# Closures [info]
+# Closure handling [info]
 
 - @sgs_ClPushNulls - push a number of empty closures to the closure stack
 - @sgs_ClPushItem - push a variable on stack as a closure to the closure stack
@@ -3613,6 +3613,9 @@ This library is loaded on initialization and contains the functions and constant
 -- @get_concat - returns an array with all values from all iterables concatenated together in order
 -- @get_merged - returns a dict with all mappings merged
 -- @get_merged_map - returns a map with all mappings merged
+-- @get_iterator - returns an iterator from the passed object, if it has one
+-- @iter_advance - advances an iterator to the next position, returning if there is any more data to read
+-- @iter_getdata - returns key/value data from iterator
 - type info and conversion
 -- @tobool - returns a variable, converted to boolean
 -- @toint - returns a variable, converted to an integer
@@ -3892,6 +3895,42 @@ This library is loaded on initialization and contains the functions and constant
 === returns a map of all key-value pairs found in all iterable objects passed to the function or returns null and emits a warning on failure
 
     get_merged_map( [1,2], map(5,6), {a="4"} ); // return {0=3,1=2,int(5)=6,a="4"}
+
+
+# get_iterator [function]
+
+== get_iterator( iterable var )
+=== returns an iterator from the passed object, if it has one
+
+- More info about iterators: @"Iterator system"
+
+    get_iterator( [ 5 ] ); // returns array iterator for the specified array
+
+
+# iter_advance [function]
+
+== iter_advance( iterator var )
+=== advances an iterator to the next position, returning if there is any more data to read
+
+- More info about iterators: @"Iterator system"
+
+    it = get_iterator( [ 5 ] ); // retrieves iterator from array [5]
+    iter_advance( it ); // returns true, indicating that the current position is still a valid one
+
+
+# iter_getdata [function]
+
+== iter_getdata( iterator var, bool pushkey = false, bool pushvalue = true )
+=== returns key/value data from iterator
+
+- if key is requested, it is returned first
+- if neither key not value are requested, `null` is returned and a warning is emitted
+
+- More info about iterators: @"Iterator system"
+
+    it = get_iterator( [ 5 ] ); // retrieves iterator from array [5]
+    iter_advance( it ); // returns true, indicating that the current position is still a valid one
+    (key,value) = iter_getdata( it, true ); // returns 0, 5  -- key, value
 
 
 # tobool [function]
@@ -4491,10 +4530,13 @@ This library is loaded on initialization and contains the functions and constant
 
 # unserialize [function]
 
-== unserialize( string data )
+== unserialize( string data[, array|dict funcs ])
 === recreates a variable from the buffer with serialized data or returns null and emits a warning on failure
 
 - this function will internally call global object creation functions specified in the data, so they must be defined and the state could change in the process
+- the list of allowed functions can be optionally specified in the second parameter
+-- if array is passed, all functions with the specified names are loaded from global environment
+-- if dict is passed, it is expected to be a map to be set as the temporary global environment
 - for more info on serialization in SGScript, refer to @"Serialization in SGScript"
 
     data = serialize({ name = "A", info = "B" });
@@ -5940,6 +5982,8 @@ This library contains the string handling functions. In all functions, except th
 - @string_frombytes - make a string from an array of integer values, interpreted as bytes
 - @string_utf8_decode - decode a UTF-8 string into an array of code points
 - @string_utf8_encode - encode an array of code points into a UTF-8 string
+- @string_utf8_offset - get byte offset of a specific character
+- @string_utf8_length - get UTF-8 length of string or its part
 - @string_format - format variables according to the specified format string
 
 === Constants:
@@ -6177,6 +6221,25 @@ This library contains the string handling functions. In all functions, except th
     string_utf8_encode( [112,105,101] ); // string [3] "pie"
     string_utf8_decode( [1082,1086,1076] ); // string [6] "код"
     string_utf8_decode( [27161,28310] ); // string [6] "標準"
+
+
+# string_utf8_offset [function]
+
+== string_utf8_offset( string ustr, int charnum[, int byteoff ])
+=== returns byte offset of character in UTF-8 string, optionally skipping the specified number of bytes
+
+- valid character numbers are 0 to actual number of characters from specified byte offset
+- valid byte offsets are 0 to ustr.length
+
+    string_utf8_offset( "標準", 2 ); // returns 6
+
+
+# string_utf8_length [function]
+
+== string_utf8_length( string ustr, int byteoff = 0[, int numbytes[, int flags ]])
+=== returns length of UTF-8 string or the specified part of it
+
+    string_utf8_length( "標準", 3 ); // returns 1
 
 
 # string_format [function]

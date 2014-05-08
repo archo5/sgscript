@@ -182,6 +182,25 @@ testEqual( string_utf8_encode( [1082,1086,1076] ), "код", "string_utf8_encode
 testEqual( string_utf8_encode( [27161,28310] ), "標準", "string_utf8_encode - chinese (?) code points" );
 testEqual( string_utf8_encode( [36215,38957] ), "起頭", "string_utf8_encode - big code points" );
 
+	section( "string_utf8_offset" );
+utf8strings = [ "pie", "āži", "код", "標準", "起頭" ];
+utf8offsets1 = [ 1, 2, 2, 3, 3 ];
+utf8offsets2 = [ 3, 3, 3, 2, 2 ];
+utf8offsets3 = [ 3, 4, 4, 3, 3 ];
+testEqual( string_utf8_offset( "any", 0 ), 0, "string_utf8_offset - offset 0" );
+testEqual( string_utf8_offset( "", 0 ), 0, "string_utf8_offset - offset 0, empty string" );
+foreach( i, v : utf8strings )
+	testEqual( string_utf8_offset( v, 1 ), utf8offsets1[ i ], "string_utf8_offset - index 1, offset 0, string " $ i+1 );
+foreach( i, v : utf8strings )
+	testEqual( string_utf8_offset( v, 1, 2 ), utf8offsets3[ i ], "string_utf8_offset - index 1, offset 1, string " $ i+1 );
+foreach( i, v : utf8strings )
+	testEqual( string_utf8_offset( v, utf8offsets2[ i ] ), v.length, "string_utf8_offset - index =size, offset 0, string " $ i+1 );
+
+	section( "string_utf8_length" );
+foreach( i, v : utf8strings )
+	testEqual( string_utf8_length( v ), utf8offsets2[ i ], "string_utf8_length - string "$i+1$" length" );
+// the rest should be covered by string_part
+
 
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );
