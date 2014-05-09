@@ -3917,40 +3917,60 @@ static int sgsstd_string_utf8_decode( SGS_CTX )
 
 static int sgsstd_string_utf8_encode( SGS_CTX )
 {
+	int cnt;
+	char tmp[ 4 ];
+	sgs_Int cp;
 	MemBuf buf = membuf_create();
-	sgs_SizeVal size;
+	sgs_SizeVal i, asz;
 	
 	SGSFN( "string_utf8_encode" );
 	
-	if( !sgs_LoadArgs( C, "a", &size ) )
-		return 0;
-	
-	if( sgs_PushIterator( C, 0 ) < 0 )
-		goto fail;
-	
-	while( sgs_IterAdvance( C, -1 ) > 0 )
+	asz = sgs_ArraySize( C, 0 );
+	if( asz >= 0 )
 	{
-		int cnt;
-		char tmp[ 4 ];
-		sgs_Int cp;
-		if( sgs_IterPushData( C, -1, FALSE, TRUE ) < 0 )
-			goto fail;
-		cp = sgs_GetInt( C, -1 );
-		cnt = sgs_utf8_encode( (uint32_t) cp, tmp );
-		if( !cnt )
+		/* should stick with one allocation for most text data */
+		membuf_reserve( &buf, C, (size_t) ( asz * 1.3 ) );
+		for( i = 0; i < asz; ++i )
 		{
-			memcpy( tmp, SGS_UNICODE_INVCHAR_STR, SGS_UNICODE_INVCHAR_LEN );
-			cnt = SGS_UNICODE_INVCHAR_LEN;
+			if( SGS_FAILED( sgs_PushNumIndex( C, 0, i ) ) )
+				goto fail;
+			cp = sgs_GetInt( C, -1 );
+			cnt = sgs_utf8_encode( (uint32_t) cp, tmp );
+			if( !cnt )
+			{
+				memcpy( tmp, SGS_UNICODE_INVCHAR_STR, SGS_UNICODE_INVCHAR_LEN );
+				cnt = SGS_UNICODE_INVCHAR_LEN;
+			}
+			/* WP: pointless */
+			membuf_appbuf( &buf, C, tmp, (size_t) cnt );
+			sgs_Pop( C, 1 );
 		}
-		/* WP: pointless */
-		membuf_appbuf( &buf, C, tmp, (size_t) cnt );
-		sgs_Pop( C, 1 );
 	}
+	else
+	{
+		asz = sgs_StackSize( C );
+		/* should stick with one allocation for most text data */
+		membuf_reserve( &buf, C, (size_t) ( asz * 1.3 ) );
+		for( i = 0; i < asz; ++i )
+		{
+			cp = sgs_GetInt( C, i );
+			cnt = sgs_utf8_encode( (uint32_t) cp, tmp );
+			if( !cnt )
+			{
+				memcpy( tmp, SGS_UNICODE_INVCHAR_STR, SGS_UNICODE_INVCHAR_LEN );
+				cnt = SGS_UNICODE_INVCHAR_LEN;
+			}
+			/* WP: pointless */
+			membuf_appbuf( &buf, C, tmp, (size_t) cnt );
+		}
+	}
+	
 	if( buf.size > 0x7fffffff )
 	{
 		membuf_destroy( &buf, C );
 		STDLIB_WARN( "generated more string data than allowed to store" );
 	}
+	
 	/* WP: error condition */
 	sgs_PushStringBuf( C, buf.ptr, (sgs_SizeVal) buf.size );
 	membuf_destroy( &buf, C );
@@ -4048,6 +4068,113 @@ static int sgsstd_string_utf8_length( SGS_CTX )
 		}
 		sgs_PushInt( C, cc );
 	}
+	return 1;
+}
+
+
+static sgs_ObjInterface utf8_iterator_iface[1];
+
+typedef struct _utf8iter
+{
+	sgs_iStr* str;
+	sgs_SizeVal i;
+}
+utf8iter;
+
+#define U8I_HDR utf8iter* IT = (utf8iter*) obj->data;
+
+static int utf8it_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+	U8I_HDR;
+	sgs_Variable var;
+	var.type = SVT_STRING;
+	var.data.S = IT->str;
+	sgs_Release( C, &var );
+	return SGS_SUCCESS;
+}
+
+static int utf8it_convert( SGS_CTX, sgs_VarObj* obj, int type )
+{
+	U8I_HDR;
+	if( type == SGS_CONVOP_CLONE )
+	{
+		utf8iter* it2;
+		sgs_Variable var;
+		var.type = SVT_STRING;
+		var.data.S = IT->str;
+		sgs_Acquire( C, &var );
+		it2 = (utf8iter*) sgs_PushObjectIPA( C, sizeof(utf8iter), utf8_iterator_iface );
+		memcpy( it2, obj->data, sizeof(*it2) );
+		return SGS_SUCCESS;
+	}
+	else if( type == SGS_CONVOP_TOITER )
+	{
+		sgs_PushObjectPtr( C, obj );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int utf8it_serialize( SGS_CTX, sgs_VarObj* obj )
+{
+	int ret;
+	U8I_HDR;
+	sgs_Variable var;
+	var.type = SVT_STRING;
+	var.data.S = IT->str;
+	sgs_PushVariable( C, &var );
+	if( SGS_FAILED( ret = sgs_Serialize( C ) ) )
+		return ret;
+	return sgs_SerializeObject( C, 1, "string_utf8_iterator" );
+}
+
+static int utf8it_getnext( SGS_CTX, sgs_VarObj* obj, int what )
+{
+	uint32_t outchar = SGS_UNICODE_INVCHAR;
+	U8I_HDR;
+	if( !what )
+	{
+		if( IT->str->size <= IT->i )
+			return 0;
+		/* WP: string limit */
+		int ret = sgs_utf8_decode( str_cstr( IT->str ) + IT->i, IT->str->size + (size_t) IT->i, &outchar );
+		ret = abs( ret );
+		IT->i += ret;
+		return IT->i >= 0 && IT->i < (sgs_SizeVal) IT->str->size;
+	}
+	else
+	{
+		if( what & SGS_GETNEXT_KEY )
+			sgs_PushInt( C, IT->i );
+		if( what & SGS_GETNEXT_VALUE )
+		{
+			sgs_utf8_decode( str_cstr( IT->str ) + IT->i, IT->str->size + (size_t) IT->i, &outchar );
+			sgs_PushInt( C, outchar );
+		}
+		return SGS_SUCCESS;
+	}
+}
+
+static sgs_ObjInterface utf8_iterator_iface[1] =
+{{
+	"utf8_iterator",
+	utf8it_destruct, NULL,
+	NULL, NULL,
+	utf8it_convert, utf8it_serialize, NULL, utf8it_getnext,
+	NULL, NULL,
+}};
+
+static int sgsstd_string_utf8_iterator( SGS_CTX )
+{
+	sgs_Variable var;
+	utf8iter* IT;
+	SGSFN( "string_utf8_iterator" );
+	if( !sgs_LoadArgs( C, "?s" ) )
+		return 0;
+	IT = (utf8iter*) sgs_PushObjectIPA( C, sizeof(utf8iter), utf8_iterator_iface );
+	sgs_GetStackItem( C, 0, &var );
+	IT->str = var.data.S;
+	IT->i = -1;
 	return 1;
 }
 
@@ -4163,6 +4290,7 @@ static const sgs_RegFuncConst s_fconsts[] =
 	FN( string_charcode ), FN( string_frombytes ),
 	FN( string_utf8_decode ), FN( string_utf8_encode ),
 	FN( string_utf8_offset ), FN( string_utf8_length ),
+	FN( string_utf8_iterator ),
 	FN( string_format ),
 };
 

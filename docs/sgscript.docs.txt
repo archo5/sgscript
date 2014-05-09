@@ -6214,6 +6214,9 @@ This library contains the string handling functions. In all functions, except th
 == string_utf8_encode( array cplist )
 === returns a UTF-8 string, composed from the Unicode code point list `cplist`
 
+== string_utf8_encode([ int cp0[, int cp1, ... ]])
+=== returns a UTF-8 string, composed from the Unicode code point list passed in argument list
+
 ! Without proper terminal software UTF-8 strings will not be displayed correctly (as is the case on Windows).
 
 - invalid code points will add "\xEF\xBF\xBD" (0xFFFD code point as UTF-8) to the string
