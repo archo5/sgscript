@@ -4134,16 +4134,23 @@ static int utf8it_getnext( SGS_CTX, sgs_VarObj* obj, int what )
 	U8I_HDR;
 	if( !what )
 	{
-		if( IT->str->size <= IT->i )
+		if( (sgs_SizeVal) IT->str->size <= IT->i )
 			return 0;
+		if( IT->i < 0 )
+		{
+			IT->i = 0;
+			return 1;
+		}
 		/* WP: string limit */
 		int ret = sgs_utf8_decode( str_cstr( IT->str ) + IT->i, IT->str->size + (size_t) IT->i, &outchar );
 		ret = abs( ret );
 		IT->i += ret;
-		return IT->i >= 0 && IT->i < (sgs_SizeVal) IT->str->size;
+		return IT->i >= 0 && IT->i < (sgs_SizeVal) IT->str->size ? 1 : 0;
 	}
 	else
 	{
+		if( IT->i < 0 || IT->i >= (sgs_SizeVal) IT->str->size )
+			return SGS_EINVAL;
 		if( what & SGS_GETNEXT_KEY )
 			sgs_PushInt( C, IT->i );
 		if( what & SGS_GETNEXT_VALUE )

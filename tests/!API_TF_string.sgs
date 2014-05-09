@@ -181,6 +181,11 @@ testEqual( string_utf8_encode( [257,382,105] ), "āži", "string_utf8_encode - b
 testEqual( string_utf8_encode( [1082,1086,1076] ), "код", "string_utf8_encode - russian code points" );
 testEqual( string_utf8_encode( [27161,28310] ), "標準", "string_utf8_encode - chinese (?) code points" );
 testEqual( string_utf8_encode( [36215,38957] ), "起頭", "string_utf8_encode - big code points" );
+testEqual( string_utf8_encode( 112,105,101 ), "pie", "string_utf8_encode ALT - ASCII code points" );
+testEqual( string_utf8_encode( 257,382,105 ), "āži", "string_utf8_encode ALT - baltic code points" );
+testEqual( string_utf8_encode( 1082,1086,1076 ), "код", "string_utf8_encode ALT - russian code points" );
+testEqual( string_utf8_encode( 27161,28310 ), "標準", "string_utf8_encode ALT - chinese (?) code points" );
+testEqual( string_utf8_encode( 36215,38957 ), "起頭", "string_utf8_encode ALT - big code points" );
 
 	section( "string_utf8_offset" );
 utf8strings = [ "pie", "āži", "код", "標準", "起頭" ];
@@ -200,6 +205,32 @@ foreach( i, v : utf8strings )
 foreach( i, v : utf8strings )
 	testEqual( string_utf8_length( v ), utf8offsets2[ i ], "string_utf8_length - string "$i+1$" length" );
 // the rest should be covered by string_part
+
+	section( "string_utf8_iterator" );
+ERRORS = "";
+uit = string_utf8_iterator( "код" );
+testEqual( typeof(uit), "utf8_iterator", "string_utf8_iterator - creation" );
+testEqual( typeof(get_iterator( uit )), "utf8_iterator", "string_utf8_iterator - self-retrieve" );
+testEqual( iter_getdata( uit ), null, "string_utf8_iterator - getdata 0" );
+//
+testEqual( iter_advance( uit ), true, "string_utf8_iterator - advance 1" );
+(k,v) = iter_getdata( uit, true );
+testEqual( k, 0, "string_utf8_iterator - getdata 1 key" );
+testEqual( v, 1082, "string_utf8_iterator - getdata 1 value" );
+//
+testEqual( iter_advance( uit ), true, "string_utf8_iterator - advance 2" );
+(k,v) = iter_getdata( uit, true );
+testEqual( k, 2, "string_utf8_iterator - getdata 2 key" );
+testEqual( v, 1086, "string_utf8_iterator - getdata 2 value" );
+//
+testEqual( iter_advance( uit ), true, "string_utf8_iterator - advance 3" );
+(k,v) = iter_getdata( uit, true );
+testEqual( k, 4, "string_utf8_iterator - getdata 3 key" );
+testEqual( v, 1076, "string_utf8_iterator - getdata 3 value" );
+//
+testEqual( iter_advance( uit ), false, "string_utf8_iterator - advance 4 (end)" );
+testEqual( iter_getdata( uit ), null, "string_utf8_iterator - getdata 4 (end)" );
+testEqual( ERRORS, "[W:iter_getdata(): failed to retrieve data from iterator][W:iter_getdata(): failed to retrieve data from iterator]", "string_utf8_iterator - errors" );
 
 
 //

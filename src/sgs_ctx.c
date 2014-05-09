@@ -30,7 +30,7 @@ static void ctx_init( SGS_CTX )
 	C->erroutput_fn = sgs_StdOutputFunc;
 	C->erroutput_ctx = stderr;
 	C->minlev = SGS_INFO;
-	C->apilev = SGS_ERROR;
+	C->apilev = SGS_ERROR + 1;
 	C->msg_fn = sgs_StdMsgFunc;
 	C->msg_ctx = stderr;
 	C->last_errno = 0;
