@@ -123,7 +123,7 @@ function render_pages( tags )
 			ipath = string_implode( path, "/" );
 			path_str = alias; // string_implode( path, "/" );
 			title = tag.pagename;
-			if( tag.pagetype != "info" )
+			if( tag.pagetype != "info" && tag.pagetype != "toc" )
 				title $= " [" $ tag.pagetype $ "]";
 			lastpage = alias;
 			part =
@@ -220,20 +220,34 @@ function output_data_htm( name, doc_title, tags, pages )
 {
 	data = "<h1>" $ htmlencode( doc_title ) $ "</h1>";
 	
-	data $= "<div><h2>Table of Contents</h2>";
-	ulevel = 0;
+	// check if TOC already exists
+	has_toc = false;
 	foreach( P : pages )
 	{
-		if( !P.path_str || P.pagetype != "info" )
-			continue;
-		newulev = P.path.size;
-		data $= uladjust( ulevel, newulev );
-		data $= "<a href='#" $ P.path_str $ "'>" $ htmlencode( P.title ) $ "</a>
-";
-		ulevel = newulev;
+		if( P.pagetype == "toc" )
+		{
+			has_toc = true;
+			break;
+		}
 	}
-	data $= uladjust( ulevel, 0 );
-	data $= "</div>";
+	
+	// add TOC if there's none
+	if( !has_toc )
+	{
+		data $= "<div><h2>Table of Contents</h2>";
+		ulevel = 0;
+		foreach( P : pages )
+		{
+			if( !P.path_str || P.pagetype != "info" )
+				continue;
+			newulev = P.path.size;
+			data $= uladjust( ulevel, newulev );
+			data $= "<a href='#" $ P.path_str $ "'>" $ htmlencode( P.title ) $ "</a>\r\n";
+			ulevel = newulev;
+		}
+		data $= uladjust( ulevel, 0 );
+		data $= "</div>";
+	}
 	
 	mdlh = function( title, link ) use( pages ){ return linkhandler_htm( title, link, pages ); };
 	
@@ -308,12 +322,14 @@ function necessary_word( word )
 
 function normalize_word( word )
 {
+	if( string_find( word, "_" ) !== null )
+		return word;
 	return re_replace( word, "#(tion|ing|er|ed|es|y|e|s|t)$#", "" );
 }
 
 function split_into_normalized_words( text )
 {
-	text = re_replace( text, "#[^a-zA-Z0-9]+#", " " );
+	text = re_replace( text, "#[^a-zA-Z0-9_]+#", " " );
 	words = string_explode( text, " " );
 	out = [].reserve( words.size );
 	foreach( word : words )
@@ -505,6 +521,7 @@ else
 	generate_docdata( "sgs.xgmath.docs" );
 	generate_docdata( "sgs.json.docs" );
 	generate_docdata( "sgs.meta.docs" );
+	generate_docdata( "sgscript.tutorial" );
 }
 
 

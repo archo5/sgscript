@@ -295,18 +295,21 @@ Code can contain constants, identifiers, expressions and statements. Statements 
 
 Available constant formats:
 
---------------------------------------------------
-!     type     !   subtype    !     examples     !
-|  null        |      -       |      null        |
-|  bool        |      -       |    true, false   |
-|  int         |   decimal    |  1413, -583, 0   |
-|  int         |    binary    |   0b0101, 0b11   |
-|  int         |    octal     | 0o644, 0o1, 0o77 |
-|  int         |  hexadecimal |   0x1f, 0xCA5    |
-|  real        |    basic     |   0.14, -25.48   |
-|  real        |  scientific  |  1.5e-5, 1e+10   |
-|  string      |      -       |  "text", '1\n2'  |
---------------------------------------------------
+-------------------------------------------------------
+!     type     !   subtype    !        examples       !
+|  null        |      -       |         null          |
+|  bool        |      -       |       true, false     |
+|  int         |   decimal    |     1413, -583, 0     |
+|  int         |    binary    |      0b0101, 0b11     |
+|  int         |    octal     |    0o644, 0o1, 0o77   |
+|  int         |  hexadecimal |      0x1f, 0xCA5      |
+|  real        |    basic     |      0.14, -25.48     |
+|  real        |  scientific  |     1.5e-5, 1e+10     |
+|  string      |    normal    |     "text", '1\n2'    |
+|  string      |  unescaped*  | """text""", '''1\2''' |
+-------------------------------------------------------
+
+*) unescaped strings don't parse their contents at all, and the ending markers (""" or ''') cannot be escaped
 
 
 # Identifiers [info]

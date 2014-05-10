@@ -1,0 +1,66 @@
+SGScript tutorial
+
+
+# Table of Contents [toc]
+
+- @"The language" - learn all you need to know to write SGScript code
+-- @"Quick Start" - quickly covers the basics but doesn't get into much detail
+-- @"Language structure" - the basic building blocks
+-- @"Expressions" - doing math and more
+-- @"Statements" - flow control and code structure
+- @"Building with SGScript" - find out how to build SGScript and integrate it into your project
+- @"Using the C API" - interacting natively with the virtual machine
+
+
+# The language [info]
+
+    println( "Hello, world!" );
+
+SGScript is a dynamic, procedural language, similar in syntax to many other programming languages, including C and JavaScript. It consists of various operations and structures that can be combined to specify operations and data that they use.
+
+If you want to quickly get started on writing code, this is the page to read:
+
+- @"Quick Start" - quickly covers the basics but doesn't get into much detail
+
+In case you want to find out more about the specifics, you can read the following pages:
+
+- @"Language structure" - the basic building blocks
+- @"Expressions" - doing math and more
+- @"Statements" - flow control and code structure
+
+
+# >>>
+
+
+# Quick Start [info]
+
+    function f( a, b )
+    {
+    	println( a );
+    	return b * 2 + 777;
+    }
+    x = f( 12.34, 5 );
+    println( x );
+
+What can be deduced from this piece of code:
+
+- Basic function definitions have the following syntax: `function <name> ( <argument-list> ) { <code> }`
+- Argument list is a comma-separated list of names or nothing.
+- Names, also called "identifiers", can have the folowing symbols: a-z, A-Z, _, 0-9, but they cannot start with a digit, because only numbers can start with a digit.
+- Numbers use the point (".") as decimal digit separator.
+- Functions may return with or without data.
+- When they do, that data can be retrieved from the call.
+- A basic function call has the syntax `<name> <subexpression>`
+- A subexpression has the syntax `( <expression-list> )`
+- Expression list is a comma-separated list of expressions or nothing.
+- There are arithmetic operators available that take two items at each side (called "binary operators").
+- The operators used there are those of addition ("+") and multiplication ("*").
+
+What could be deduced from running the code:
+
+- `println` is a function that prints the given variables to standard output and moves write cursor to the next line.
+- Order of arithmetic operations is mathematically correct.
+
+
+# <<<
+

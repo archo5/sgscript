@@ -289,8 +289,11 @@ Available constant formats:
 <tr><td>int</td><td>hexadecimal</td><td>0x1f, 0xCA5</td></tr>
 <tr><td>real</td><td>basic</td><td>0.14, -25.48</td></tr>
 <tr><td>real</td><td>scientific</td><td>1.5e-5, 1e+10</td></tr>
-<tr><td>string</td><td>-</td><td>&quot;text&quot;, &#39;1\n2&#39;</td></tr>
+<tr><td>string</td><td>normal</td><td>&quot;text&quot;, &#39;1\n2&#39;</td></tr>
+<tr><td>string</td><td>unescaped*</td><td>&quot;&quot;&quot;text&quot;&quot;&quot;, &#39;&#39;&#39;1\2&#39;&#39;&#39;</td></tr>
 </table>
+</p><p>
+*) unescaped strings don&#39;t parse their contents at all, and the ending markers (&quot;&quot;&quot; or &#39;&#39;&#39;) cannot be escaped
 </p></div>
 <div class='item'><a name='Identifiers'></a><hr><h2>Identifiers</h2><p>
 Identifiers can contain letters (a-z, A-Z), numbers (0-9) or underscores (&quot;_&quot;) but they cannot begin with a number.

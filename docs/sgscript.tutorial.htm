@@ -1,0 +1,49 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+	<html><head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>SGScript tutorial</title>
+		<link rel="stylesheet" type="text/css" href="docs.css">
+		<script type="text/javascript" src="docs.js"></script>
+	</head><body>
+	<h1>SGScript tutorial</h1><div>
+<div class='item'><a name='Table-of-Contents-toc'></a><hr><h2>Table of Contents</h2><ul><li><a href="#The-language">The language</a> - learn all you need to know to write SGScript code
+<ul><li><a href="#Quick-Start">Quick Start</a> - quickly covers the basics but doesn&#39;t get into much detail
+</li><li><a href="#Language-structure">Language structure</a> - the basic building blocks
+</li><li><a href="#Expressions">Expressions</a> - doing math and more
+</li><li><a href="#Statements">Statements</a> - flow control and code structure
+</li></ul><li><a href="#Building-with-SGScript">Building with SGScript</a> - find out how to build SGScript and integrate it into your project
+</li><li><a href="#Using-the-C-API">Using the C API</a> - interacting natively with the virtual machine</li></ul></div>
+<div class='item'><a name='The-language'></a><hr><h2>The language</h2><pre>println( &quot;Hello, world!&quot; );</pre><p>
+SGScript is a dynamic, procedural language, similar in syntax to many other programming languages, including C and JavaScript. It consists of various operations and structures that can be combined to specify operations and data that they use.
+</p><p>
+If you want to quickly get started on writing code, this is the page to read:
+</p><ul><li><a href="#Quick-Start">Quick Start</a> - quickly covers the basics but doesn&#39;t get into much detail</li></ul><p>
+In case you want to find out more about the specifics, you can read the following pages:
+</p><ul><li><a href="#Language-structure">Language structure</a> - the basic building blocks
+</li><li><a href="#Expressions">Expressions</a> - doing math and more
+</li><li><a href="#Statements">Statements</a> - flow control and code structure</li></ul></div>
+<div class='item'><a name='Quick-Start'></a><hr><h2>Quick Start</h2><pre>function f( a, b )
+{
+	println( a );
+	return b * 2 + 777;
+}
+x = f( 12.34, 5 );
+println( x );</pre><p>
+What can be deduced from this piece of code:
+</p><ul><li>Basic function definitions have the following syntax: <code>function &lt;name&gt; ( &lt;argument-list&gt; ) { &lt;code&gt; }</code>
+</li><li>Argument list is a comma-separated list of names or nothing.
+</li><li>Names, also called &quot;identifiers&quot;, can have the folowing symbols: a-z, A-Z, _, 0-9, but they cannot start with a digit, because only numbers can start with a digit.
+</li><li>Numbers use the point (&quot;.&quot;) as decimal digit separator.
+</li><li>Functions may return with or without data.
+</li><li>When they do, that data can be retrieved from the call.
+</li><li>A basic function call has the syntax <code>&lt;name&gt; &lt;subexpression&gt;</code>
+</li><li>A subexpression has the syntax <code>( &lt;expression-list&gt; )</code>
+</li><li>Expression list is a comma-separated list of expressions or nothing.
+</li><li>There are arithmetic operators available that take two items at each side (called &quot;binary operators&quot;).
+</li><li>The operators used there are those of addition (&quot;+&quot;) and multiplication (&quot;*&quot;).</li></ul><p>
+What could be deduced from running the code:
+</p><ul><li><code>println</code> is a function that prints the given variables to standard output and moves write cursor to the next line.
+</li><li>Order of arithmetic operations is mathematically correct.</li></ul></div>
+</div>
+	</body></html>
+	
