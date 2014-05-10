@@ -162,9 +162,33 @@ static void readident( SGS_CTX, MemBuf* out, const char* code, int32_t* at, int3
 
 static void readstring( SGS_CTX, MemBuf* out, LineNum* line, const char* code, int32_t* at, int32_t length )
 {
+	int32_t begln = *line;
 	int32_t i = *at + 1;
 	char endchr = code[ *at ];
 	int escaped = FALSE;
+	
+	if( i + 1 < length && code[i] == endchr && code[i+1] == endchr )
+	{
+		/* string without escape code parsing */
+		int32_t beg = i + 2;
+		i = beg + 2;
+		while( i < length )
+		{
+			char c = code[ i ];
+			if( detectline( code, i ) )
+				(*line)++;
+			if( c == endchr && code[i-1] == endchr && code[i-2] == endchr )
+			{
+				int32_t size = i - beg - 2;
+				membuf_appchr( out, C, ST_STRING );
+				membuf_appbuf( out, C, (char*) &size, 4 );
+				membuf_appbuf( out, C, code + beg, (size_t) size );
+				*at = i;
+				return;
+			}
+			i++;
+		}
+	}
 	
 	while( i < length )
 	{
@@ -193,7 +217,7 @@ static void readstring( SGS_CTX, MemBuf* out, LineNum* line, const char* code, i
 	}
 	
 	C->state |= SGS_MUST_STOP;
-	sgs_Msg( C, SGS_ERROR, "[line %d] end of string not found", *at );
+	sgs_Msg( C, SGS_ERROR, "[line %d] end of string not found", begln );
 }
 
 static const char* sgs_opchars = "=<>+-*/%!~&|^.$@";
