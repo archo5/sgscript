@@ -1490,12 +1490,12 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-IsCallable-P-functions'></a><hr><h2>sgs_IsCallable(P) [functions]</h2><h3>SGSBOOL sgs_IsCallable( sgs_Context* C, sgs_StkIdx item )</h3><h4>returns whether the specified stack item <code>item</code> is callable</h4><ul><li>if <code>item</code> is out of bounds, 0 is returned</li></ul><h3>SGSBOOL sgs_IsCallableP( sgs_Context* C, sgs_Variable* var )</h3><h4>returns whether the specified variable <code>var</code> is callable</h4><ul><li>callable variables are either SGS functions or C functions or objects with the CALL interface implemented</li></ul></div>
 <div class='item'><a name='sgs-IsNumericString-function'></a><hr><h2>sgs_IsNumericString [function]</h2><h3>SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size )</h3><h4>checks if the string is convertible to an integer/real</h4><ul><li>more info at @&lt;Numeric string parsing rules&gt;</li></ul></div>
 <div class='item'><a name='sgs-Parse-functions'></a><hr><h2>sgs_Parse*** [functions]</h2><h3>SGSBOOL sgs_ParseBool( sgs_Context* C, sgs_StkIdx item, sgs_Bool* out )</h3><h3>SGSBOOL sgs_ParseInt( sgs_Context* C, sgs_StkIdx item, sgs_Int* out )</h3><h3>SGSBOOL sgs_ParseReal( sgs_Context* C, sgs_StkIdx item, sgs_Real* out )</h3><h3>SGSBOOL sgs_ParseString( sgs_Context* C, sgs_StkIdx item, char** out, sgs_SizeVal* size )</h3><h3>SGSBOOL sgs_ParseObjectPtr( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface, sgs_VarObj** out, int strict )</h3><h3>SGSBOOL sgs_ParsePtr( sgs_Context* C, sgs_StkIdx item, void** out )</h3><h4>attempts to parse the specified item of the current stack frame, returning whether parsing was successful</h4><h3>SGSBOOL sgs_ParseBoolP( sgs_Context* C, sgs_Variable* var, sgs_Bool* out )</h3><h3>SGSBOOL sgs_ParseIntP( sgs_Context* C, sgs_Variable* var, sgs_Int* out )</h3><h3>SGSBOOL sgs_ParseRealP( sgs_Context* C, sgs_Variable* var, sgs_Real* out )</h3><h3>SGSBOOL sgs_ParseStringP( sgs_Context* C, sgs_Variable* var, char** out, sgs_SizeVal* size )</h3><h3>SGSBOOL sgs_ParseObjectPtrP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface, sgs_VarObj** out, int strict )</h3><h3>SGSBOOL sgs_ParsePtrP( sgs_Context* C, sgs_Variable* var, void** out )</h3><h4>attempts to parse the specified varuabke, returning whether parsing was successful</h4><ul><li>the parsing rules:
-<ul><li>for `sgs_ParsePtr`/`sgs_ParsePtrP`, unlike every other parsing function, only null/ptr types are considered valid
-</li><li>for `sgs_ParseObjectPtr`/`sgs_ParseObjectPtrP`, only objects with the specified interface <code>iface</code> are valid unless strict = 0, then <code>null</code> is valid too
+<ul><li>for <code>sgs_ParsePtr</code>/<code>sgs_ParsePtrP</code>, unlike every other parsing function, only null/ptr types are considered valid
+</li><li>for <code>sgs_ParseObjectPtr</code>/<code>sgs_ParseObjectPtrP</code>, only objects with the specified interface <code>iface</code> are valid unless strict = 0, then <code>null</code> is valid too
 </li><li>if <code>item</code> is out of bounds, fail
 </li><li>if item has the type <code>null</code>, <code>func</code> or <code>cfunc</code>, fail
 </li><li>if item is of <code>string</code> type and <code>bool</code> is requested, fail
-</li><li>if item is of <code>string</code> type and `int`/`real` is requested, try to convert
+</li><li>if item is of <code>string</code> type and <code>int</code>/<code>real</code> is requested, try to convert
 </li><li>everything else succeeds</li></ul></li></ul></div>
 <div class='item'><a name='sgs-Global-functions'></a><hr><h2>sgs_Global*** [functions]</h2><h3>sgs_Bool sgs_GlobalBool( SGS_CTX, const char* name )</h3><h3>sgs_Int sgs_GlobalInt( SGS_CTX, const char* name )</h3><h3>sgs_Real sgs_GlobalReal( SGS_CTX, const char* name )</h3><h3>char* sgs_GlobalStringBuf( SGS_CTX, const char* name, sgs_SizeVal* outsize )</h3><h3>char* sgs_GlobalString( SGS_CTX, const char* name )</h3><h4>retrieve a global variable, converted to the specified type</h4><p>
 <em class='notice-bgr'>sgs_GlobalString[Buf] <b>pushes the variable on the stack</b> to be able to reliably return the string pointer</em>
@@ -2416,17 +2416,17 @@ This library includes functions and objects for parsing binary and text buffers.
 </li><li><a href="#fmt-string-parser-function">fmt_string_parser</a> - creates a text parser object that reads from the specified string
 </li><li><a href="#fmt-file-parser-function">fmt_file_parser</a> - creates a text parser object that reads from the specified file
 </li><li><a href="#fmt-charcc-function">fmt_charcc</a> - checks if a character is in the character class</li></ul><h4>Objects and their methods:</h4><ul><li><a href="#fmt-parser-object">fmt_parser</a> - formatted text string-parsing object
-</li><li><a href="#fmt-parser-read-method">read</a> - read the specified number of characters from the stream
+<ul><li><a href="#fmt-parser-read-method">read</a> - read the specified number of characters from the stream
 </li><li><a href="#fmt-parser-getchar-method">getchar</a> - read one character from the stream
 </li><li><a href="#fmt-parser-readcc-method">readcc</a> - read characters while they match the specified class
 </li><li><a href="#fmt-parser-skipcc-method">skipcc</a> - skip characters while they match the specified class
 </li><li><a href="#fmt-parser-read-real-method">read_real</a> - read with the real value character class, optionally return real
 </li><li><a href="#fmt-parser-read-int-method">read_int</a> - read with the integer value character class, optionally return integer
-</li><li><a href="#fmt-parser-read-binary-int-method">read_binary_int</a> - read with the binary integer character class, optionally return integer
-</li><li><a href="#fmt-parser-read-octal-int-method">read_octal_int</a> - read with the octal integer character class, optionally return integer
-</li><li><a href="#fmt-parser-read-decimal-int-method">read_decimal_int</a> - read with the decimal integer character class, optionally return integer
-</li><li><a href="#fmt-parser-read-hex-int-method">read_hex_int</a> - read with the hexadecimal integer character class, optionally return integer
-</li><li><a href="#fmt-parser-check-method">check</a> - check for presence of a string in stream</li></ul></div>
+</li><li><a href="#fmt-parser-read-binary-int-method">read_binary_int</a> - read with the binary integer character class, optionally -return integer
+</li><li><a href="#fmt-parser-read-octal-int-method">read_octal_int</a> - read with the octal integer character class, optionally return -integer
+</li><li><a href="#fmt-parser-read-decimal-int-method">read_decimal_int</a> - read with the decimal integer character class, optionally -return integer
+</li><li><a href="#fmt-parser-read-hex-int-method">read_hex_int</a> - read with the hexadecimal integer character class, optionally return -integer
+</li><li><a href="#fmt-parser-check-method">check</a> - check for presence of a string in stream</li></ul></li></ul></div>
 <div class='item'><a name='fmt-pack-function'></a><hr><h2>fmt_pack [function]</h2><h3>fmt_pack( string fmt, ... )</h3><h4>packs the given arguments using the format <code>fmt</code> and returns the byte buffer or returns null and emits a warning on failure</h4><ul><li>the format: character command list
 <ul><li>0-9: add a digit to multiplier
 </li><li>=/&lt;/&gt;/@: &quot;=&quot; sets host byte order, &quot;&lt;&quot; - little endian byte order, &quot;&gt;&quot; - big endian, &quot;@&quot; - inverted
@@ -2466,24 +2466,22 @@ p.readcc( &quot;a-z&quot; ); // returns &quot;this&quot;</pre></div>
 p.readcc( &quot;a-z&quot; ); // returns something</pre></div>
 <div class='item'><a name='fmt-charcc-function'></a><hr><h2>fmt_charcc [function]</h2><h3>fmt_charcc( string char, string class )</h3><h4>checks if the first character of string <code>char</code> is included in the character class <code>class</code></h4><ul><li>character class is a regex-like list of specific symbols and ranges (its low and high symbols separated by &quot;-&quot;), optionally prepended by &quot;^&quot; that inverts the scope of the class</li></ul><pre>fmt_charcc( &quot;.&quot;, &quot;a-zA-Z0-9&quot; ); // returns false
 fmt_charcc( &quot;x&quot;, &quot;a-zA-Z0-9&quot; ); // returns true</pre></div>
-<div class='item'><a name='fmt-parser-object'></a><hr><h2>fmt_parser [object]</h2><p>
-* read-only properties
- - [bool] at_end
- - [bool] stream_offset
- - [cfunc] <a href="#fmt-parser-read-method">read</a>
- - [cfunc] <a href="#fmt-parser-getchar-method">getchar</a>
- - [cfunc] <a href="#fmt-parser-readcc-method">readcc</a>
- - [cfunc] <a href="#fmt-parser-skipcc-method">skipcc</a>
- - [cfunc] <a href="#fmt-parser-read-real-method">read_real</a>
- - [cfunc] <a href="#fmt-parser-read-int-method">read_int</a>
- - [cfunc] <a href="#fmt-parser-read-binary-int-method">read_binary_int</a>
- - [cfunc] <a href="#fmt-parser-read-octal-int-method">read_octal_int</a>
- - [cfunc] <a href="#fmt-parser-read-decimal-int-method">read_decimal_int</a>
- - [cfunc] <a href="#fmt-parser-read-hex-int-method">read_hex_int</a>
- - [cfunc] <a href="#fmt-parser-check-method">check</a>
-* other features:
- - GC-safe
-</p></div>
+<div class='item'><a name='fmt-parser-object'></a><hr><h2>fmt_parser [object]</h2><ul><li>read-only properties
+<ul><li>[bool] at_end
+</li><li>[bool] stream_offset
+</li><li>[cfunc] <a href="#fmt-parser-read-method">read</a>
+</li><li>[cfunc] <a href="#fmt-parser-getchar-method">getchar</a>
+</li><li>[cfunc] <a href="#fmt-parser-readcc-method">readcc</a>
+</li><li>[cfunc] <a href="#fmt-parser-skipcc-method">skipcc</a>
+</li><li>[cfunc] <a href="#fmt-parser-read-real-method">read_real</a>
+</li><li>[cfunc] <a href="#fmt-parser-read-int-method">read_int</a>
+</li><li>[cfunc] <a href="#fmt-parser-read-binary-int-method">read_binary_int</a>
+</li><li>[cfunc] <a href="#fmt-parser-read-octal-int-method">read_octal_int</a>
+</li><li>[cfunc] <a href="#fmt-parser-read-decimal-int-method">read_decimal_int</a>
+</li><li>[cfunc] <a href="#fmt-parser-read-hex-int-method">read_hex_int</a>
+</li><li>[cfunc] <a href="#fmt-parser-check-method">check</a>
+</li></ul><li>other features:
+<ul><li>GC-safe</li></ul></li></ul></div>
 <div class='item'><a name='fmt-parser-read-method'></a><hr><h2>fmt_parser.read [method]</h2><h3>fmt_parser.read( int num )</h3><h4>reads at most <code>num</code> bytes from stream and returns them as string</h4><ul><li>if 0 bytes are returned, it&#39;s quite safe to assume that the function has reached the end of file but check the at_end property to be sure
 </li><li>may return null and emit a warning on unexpected read errors</li></ul><pre>stream = fmt_string_parser( &quot;action&quot; );
 stream.read( 5 ); // returns &quot;actio&quot;</pre></div>
@@ -2868,13 +2866,13 @@ This library contains the string handling functions. In all functions, except th
 </li><li>if <code>from</code> or <code>to</code> are negative, they point to characters before the end of string (-1 being the last one)
 </li><li>available values for `flags`:
 <ul><li><code>STRING_NO_REV_INDEX</code> - emit warnings on negative indices, instead of handling them
-</li><li><code>STRING_STRICT_RANGES</code> - emit warnings on out of bounds `from`/`to` values instead of silently ignoring the outside characters</li></ul></li></ul><pre>string_cut( &quot;01234567&quot;, 3, 5 ); // string [3] &quot;345&quot;</pre></div>
+</li><li><code>STRING_STRICT_RANGES</code> - emit warnings on out of bounds <code>from</code>/<code>to</code> values instead of silently ignoring the outside characters</li></ul></li></ul><pre>string_cut( &quot;01234567&quot;, 3, 5 ); // string [3] &quot;345&quot;</pre></div>
 <div class='item'><a name='string-part-function'></a><hr><h2>string_part [function]</h2><h3>string_part( string str, int from[, int len[, int flags]] )</h3><h4>returns a part of string <code>str</code>, starting at <code>from</code>, at most <code>len</code> characters</h4><ul><li>if <code>len</code> is not specified, <code>len</code> is assumed to be the number of characters between <code>from</code> and the end of string <code>str</code>
 </li><li>if <code>from</code> is negative, it points to characters before the end of string (-1 being the last one)
 </li><li>if <code>len</code> is negative, the maximum length of returned string is the sum of <code>len</code> and string <code>str</code> length
 </li><li>available values for `flags`:
 <ul><li><code>STRING_NO_REV_INDEX</code> - emit warnings on negative indices, instead of handling them
-</li><li><code>STRING_STRICT_RANGES</code> - emit warnings on out of bounds `from`/`len` values instead of silently ignoring the outside characters</li></ul></li></ul><pre>string_part( &quot;01234567&quot;, 3, 3 ); // string [3] &quot;345&quot;</pre></div>
+</li><li><code>STRING_STRICT_RANGES</code> - emit warnings on out of bounds <code>from</code>/<code>len</code> values instead of silently ignoring the outside characters</li></ul></li></ul><pre>string_part( &quot;01234567&quot;, 3, 3 ); // string [3] &quot;345&quot;</pre></div>
 <div class='item'><a name='string-reverse-function'></a><hr><h2>string_reverse [function]</h2><h3>string_reverse( string str )</h3><h4>returns <code>str</code> with all the bytes in reversed order</h4><p>
 <em class='notice-bgr'>This function will not work correctly with multibyte-encoded strings.</em>
 </p><pre>string_reverse( &quot;noitca&quot; ); // string [6] &quot;action&quot;</pre></div>

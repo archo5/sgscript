@@ -1,5 +1,5 @@
 
-include "string", "re";
+include "string", "re", "fmt";
 
 
 global htmlencode_repmap =
@@ -53,8 +53,8 @@ function markdown2html( text, linkhandler )
 		} );
 		
 		text = htmlencode( text );
-		bdcc = "(^|[ \xFF\xFC\n\r\t,.])";
-		edcc = "($|[ \xFF\xFC\n\r\t,.])";
+		bdcc = "(^|[ \xFF\xFC\n\r\t,./])";
+		edcc = "($|[ \xFF\xFC\n\r\t,./])";
 		text = re_replace( text,
 			"#"$bdcc$"\\*\\*([^*]+)\\*\\*"$edcc$"#",
 			"$1<b>$2</b>$3" );
@@ -113,21 +113,24 @@ function markdown2html( text, linkhandler )
 					
 					while( ( nL = re_replace( L, "#(`.*)\\|(.*`)#", "$1-~OR~-$2" ) ) != L )
 						L = nL;
+					while( ( nL = re_replace( L, "#(`.*)\\!(.*`)#", "$1-~EXCL~-$2" ) ) != L )
+						L = nL;
 					
-					tag = "td";
-					spl = string_explode( L, "|" );
-					if( spl.size == 1 )
+					strparser = fmt_string_parser( L );
+					strparser.skipcc( "^|!" );
+					while( !strparser.at_end )
 					{
-						spl = string_explode( L, "!" );
-						tag = "th";
-					}
-					foreach( s : spl )
-					{
-						s = string_trim( s );
-						if( !s.length )
+						tag = if( strparser.getchar() == "!", "th", "td" );
+						s = strparser.readcc( "^!|" );
+						if( !s )
 							continue;
+						s = string_trim( s );
 						s = string_replace( s, "-~OR~-", "|" );
-						lout $= string_format( "<{1}>{2}</{1}>", tag, mdinline( s, linkhandler ) );
+						s = string_replace( s, "-~EXCL~-", "!" );
+						s = mdinline( s, linkhandler );
+						if( !s )
+							s = "&nbsp;";
+						lout $= string_format( "<{1}>{2}</{1}>", tag, s );
 					}
 					lines[ i ] = "<tr>" $ lout $ "</tr>";
 					

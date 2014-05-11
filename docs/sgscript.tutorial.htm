@@ -7,43 +7,149 @@
 	</head><body>
 	<h1>SGScript tutorial</h1><div>
 <div class='item'><a name='Table-of-Contents-toc'></a><hr><h2>Table of Contents</h2><ul><li><a href="#The-language">The language</a> - learn all you need to know to write SGScript code
-<ul><li><a href="#Quick-Start">Quick Start</a> - quickly covers the basics but doesn&#39;t get into much detail
-</li><li><a href="#Language-structure">Language structure</a> - the basic building blocks
-</li><li><a href="#Expressions">Expressions</a> - doing math and more
-</li><li><a href="#Statements">Statements</a> - flow control and code structure
+<ul><li><a href="#The-basics">The basics</a> - quickly covers the basics but doesn&#39;t get into much detail
+</li><li><a href="#Data-types">Data types</a> - handling complex data
+</li><li><a href="#Flow-control">Flow control</a> - how to run a part of the code, at specific moments
+</li><li><a href="#Advanced-concepts">Advanced concepts</a>
 </li></ul><li><a href="#Building-with-SGScript">Building with SGScript</a> - find out how to build SGScript and integrate it into your project
 </li><li><a href="#Using-the-C-API">Using the C API</a> - interacting natively with the virtual machine</li></ul></div>
 <div class='item'><a name='The-language'></a><hr><h2>The language</h2><pre>println( &quot;Hello, world!&quot; );</pre><p>
 SGScript is a dynamic, procedural language, similar in syntax to many other programming languages, including C and JavaScript. It consists of various operations and structures that can be combined to specify operations and data that they use.
-</p><p>
-If you want to quickly get started on writing code, this is the page to read:
-</p><ul><li><a href="#Quick-Start">Quick Start</a> - quickly covers the basics but doesn&#39;t get into much detail</li></ul><p>
-In case you want to find out more about the specifics, you can read the following pages:
-</p><ul><li><a href="#Language-structure">Language structure</a> - the basic building blocks
-</li><li><a href="#Expressions">Expressions</a> - doing math and more
-</li><li><a href="#Statements">Statements</a> - flow control and code structure</li></ul></div>
-<div class='item'><a name='Quick-Start'></a><hr><h2>Quick Start</h2><pre>function f( a, b )
+</p><ul><li><a href="#The-basics">The basics</a> - quickly covers the basics but doesn&#39;t get into much detail
+</li><li><a href="#Flow-control">Flow control</a> - how to run a part of the code, at specific moments
+</li><li><a href="#Advanced-concepts">Advanced concepts</a> - handling complex data</li></ul></div>
+<div class='item'><a name='The-basics'></a><hr><h2>The basics</h2><ul><li>Functions are reusable blocks of code. To call a function means to do what&#39;s specified in the function.</li></ul><pre>function printText()
 {
-	println( a );
-	return b * 2 + 777;
+	println( &quot;text&quot; );
 }
-x = f( 12.34, 5 );
-println( x );</pre><p>
-What can be deduced from this piece of code:
-</p><ul><li>Basic function definitions have the following syntax: <code>function &lt;name&gt; ( &lt;argument-list&gt; ) { &lt;code&gt; }</code>
+printText();</pre><ul><li>Basic function definitions have the following syntax: <code>function &lt;name&gt; ( &lt;argument-list&gt; ) { &lt;code&gt; }</code>
 </li><li>Argument list is a comma-separated list of names or nothing.
 </li><li>Names, also called &quot;identifiers&quot;, can have the folowing symbols: a-z, A-Z, _, 0-9, but they cannot start with a digit, because only numbers can start with a digit.
+</li><li>User-defined names cannot collide with so-called keywords - special names, like <code>function</code></li></ul><pre>y = 15.51;
+x = 3 * y + 10;
+x * y;</pre><ul><li>Each expression statement ends with &quot;;&quot;.
+</li><li>Useful expression statements include an assignment operator or a function call, or both.
+</li><li>All expression statements presented so far - except the last one - are useful.
+</li><li>The assignment operator is &quot;=&quot;. It simply assigns the value on the right side to the item on the left side.
 </li><li>Numbers use the point (&quot;.&quot;) as decimal digit separator.
-</li><li>Functions may return with or without data.
-</li><li>When they do, that data can be retrieved from the call.
+</li><li>There are arithmetic operators available that take two items at each side (called &quot;binary operators&quot;).
+</li><li>The operators used in the example are those of addition (&quot;+&quot;) and multiplication (&quot;*&quot;).</li></ul><pre>include &quot;math&quot;;
+function sinc( x )
+{
+	xpi = x * M_PI;
+	return sin( xpi ) / xpi;
+}
+sinc3 = sinc( 3 );</pre><ul><li>Functions may return with or without data. When they do return data, that data can be retrieved from the call.
 </li><li>A basic function call has the syntax <code>&lt;name&gt; &lt;subexpression&gt;</code>
 </li><li>A subexpression has the syntax <code>( &lt;expression-list&gt; )</code>
 </li><li>Expression list is a comma-separated list of expressions or nothing.
-</li><li>There are arithmetic operators available that take two items at each side (called &quot;binary operators&quot;).
-</li><li>The operators used there are those of addition (&quot;+&quot;) and multiplication (&quot;*&quot;).</li></ul><p>
-What could be deduced from running the code:
-</p><ul><li><code>println</code> is a function that prints the given variables to standard output and moves write cursor to the next line.
-</li><li>Order of arithmetic operations is mathematically correct.</li></ul></div>
+</li><li>The <code>include</code> statement loads a library or a code file.
+</li><li><code>math</code> is one of the few built-in libraries. In this example, it defines the function <code>sin</code> and the constant <code>M_PI</code></li></ul><pre>x = 1; y = 2;
+x += y;
+++x;
+--y;</pre><ul><li>Shortcuts exist for common operations: combined assignment operators and increment/decrement operators.
+</li><li>Most non-assignment binary operators have their assignment counterparts. The difference is that they assign the calculated value to the left side of the expression.
+</li><li>Increment/decrement operators are shortcuts for <code>x += 1</code> and <code>x -= 1</code>, respectively.
+<ul><li>There are alternative versions of these operators that will be covered later.</li></ul></li></ul><pre>x = 5; y = 3;
+x *= y * ( y + x );
+y -= x + x * y;
+y += 5 * y += y;
+printvar( y );
+println( dumpvar( x ) );</pre><ul><li>There&#39;s very few limits on how the expressions can be combined so it&#39;s up to you to write them in a way the meaning is clear both to you and the compiler.
+</li><li>A very useful tool for finding out the contents of a variable are the <code>printvar</code> / <code>dumpvar</code> functions.
+</li><li><code>println</code> is a function that prints the given variables to standard output and moves write cursor to the next line.
+</li><li>Order of arithmetic operations is mathematically correct: sub-expressions <code>( .. )</code> are evaluated first, then multiplication <code>*</code> / division <code>/</code> / modulo (remainder) <code>%</code> , and then - addition <code>+</code> and subtraction <code>-</code> .</li></ul><pre>x = 5;
+global y = 6;
+function z()
+{
+	a = 7;
+	global b = 8;
+	function c(){}
+}</pre><ul><li>Variables are the currency of this language.
+</li><li>There are 4 types of variable storage, two of which are covered in the example: local and global variables.
+</li><li>In the example, variables x, a, c are local and y, z, b are global.
+<ul><li>All new variables are local by default.
+</li><li>The keyword <code>global</code> specifies a list of variables that are global and allows to assign their values.
+</li><li>A function definition creates a global function variable outside other functions, local otherwise.</li></ul></li></ul><pre>// testing the assignment operator
+a = 5;
+/* this ----------
+-- should print --
+------------- 5 */
+println( a ); ////</pre><ul><li>Code can contain comments. They can be used to communicate between various users and maybe even compilers of the code.
+<ul><li>The SGScript compiler completely ignores comments.
+</li></ul><li>There are two types of comments: single-line comments <code>// ...</code> and multiline comments <code>/<i> ... </i>/</code></li></ul></div>
+<div class='item'><a name='Data-types'></a><hr><h2>Data types</h2><pre>arr = [ 1, 3, 5, 7 ];
+println( arr[2] ); // prints 5
+println( arr[4] ); // warning: index out of bounds
+println( arr.size ); // prints 4</pre><ul><li>Array is a complex data type, a subtype of object. It contains a list of other variables.
+</li><li>Sub-variables can be accessed with index <code>[ .. ]</code> and property <code>.</code> operators.
+<ul><li>Be aware that not all sub-variables can be read and not all of them can be written. Systems will often report the same warnings for variables that don&#39;t exist and those that don&#39;t support the required operation.
+</li></ul><li>The array&#39;s <code>size</code> property returns the length of the array, the number of variables in it.</li></ul><pre>arr = [];
+arr.push( 5 );
+x = arr.pop();
+arr.unshift( 4 );
+y = arr.shift();</pre><ul><li>Objects can have methods. Methods can be called through property access, this compiles to a special call where the object is passed through a special channel.
+</li><li>Other sub-variable accessors don&#39;t support the method call, however it is possible to invoke in other ways, to be described in further sections.
+</li><li>Array methods shown in the example are the stack/queue interface of the array. Push/pop deals with the end of the array, shift/unshift works on the beginning.
+</li><li>More info on array and its methods can be found in the documentation: <a href="docs://sgscript/array-object">array [object]</a></li></ul></div>
+<div class='item'><a name='Flow-control'></a><hr><h2>Flow control</h2><pre>if( a &gt; 5 )
+{
+	println( &quot;&#39;a&#39; is greater than 5&quot; );
+	if( a &lt; 10 )
+		println( &quot;...but less than 10&quot; );
+}
+else
+	println( &quot;&#39;a&#39; is not greater than 5&quot; );</pre><ul><li>It is possible to only run code if a certain condition is true, using the <code>if</code> statement.
+</li><li>If/else statement has the following syntax: <code>if ( &lt;expression&gt; ) &lt;statement&gt;</code>, optionally followed by <code>else &lt;statement&gt;</code>
+</li><li><code>{ .. }</code> is a block statement, it can be used anywhere a statement can be used
+</li><li><code>&gt;</code> (&quot;greater than&quot;) is one of 8 comparison operators. The others are:
+<ul><li><code>&lt;</code> - &quot;less than&quot;
+</li><li><code>&gt;=</code> - &quot;greater or equal&quot;
+</li><li><code>&lt;=</code> - &quot;less or equal&quot;
+</li><li><code>==</code> - &quot;equal&quot;
+</li><li><code>!=</code> - &quot;not equal&quot;
+</li><li><code>===</code> - &quot;strict equality&quot; (not only value must be equal, types must also be same)
+</li><li><code>!==</code> - &quot;strict inequality&quot; (inverse of strict equality)
+</li></ul><li>These operators are not limited to <code>if</code> and other such statements, they can be used as any other operator.
+</li><li>These operators return the type <code>bool</code> , it has only two values - <code>true</code> and <code>false</code></li></ul><pre>while( a &gt; 5 )
+{
+	println( a );
+	--a;
+}
+for( i = 0; i &lt; 5; ++i )
+	println( i );</pre><ul><li>There are 6 kinds of loops in SGScript:
+<ul><li>The &#39;while&#39; loop: <code>while ( &lt;expression&gt; ) &lt;statement&gt;</code>
+</li><li>The &#39;for&#39; loop: <code>for ( &lt;expression-list&gt; ; &lt;expression&gt; ; &lt;expression-list&gt; ) &lt;statement&gt;</code>
+<ul><li>It is a shortcut for a while loop where first expression/list is run before the loop, second - as the condition, third - before each jumpback.
+</li></ul><li>The &#39;do-while&#39; loop: <code>do &lt;statement&gt; while ( &lt;expression&gt; )</code>
+</li><li>The &#39;foreach-value&#39; loop: <code>foreach ( &lt;name&gt; : &lt;expression&gt; ) &lt;statement&gt;</code>
+</li><li>The &#39;foreach-key&#39; loop: <code>foreach ( &lt;name&gt; , : &lt;expression&gt; ) &lt;statement&gt;</code>
+</li><li>The &#39;foreach-key-value&#39; loop: <code>foreach ( &lt;name&gt; , &lt;name&gt; : &lt;expression&gt; )</code></li></ul></li></ul></div>
+<div class='item'><a name='Advanced-concepts'></a><hr><h2>Advanced concepts</h2><h4>Bitwise operations</h4><pre>hex = 0x12400;
+bin = 0b10011010;
+b_or = hex | bin ^ hex &amp; bin;</pre><ul><li>There are constant formats and bitwise operations for dealing with integers on the bit level.
+</li><li>The following <i>integer</i> constant formats are available:
+<ul><li>Binary (base 2): begins with &quot;0b&quot;, followed by some binary digits (0,1)
+</li><li>Octal (base 8): begins with &quot;0o&quot;, followed by some octal digits (0-7)
+</li><li>Decimal (base 10): contains only decimal digits (0-9)
+</li><li>Hexadecimal (base 16): begins with &quot;0x&quot;, followed by some hexadecimal digits (0-9,a-f,A-F)
+</li></ul><li>These operators are available for doing bitwise operations:
+<ul><li>binary AND / AND-assign: <code>&amp;, &amp;=</code> - returns 1 if both sides are 1
+</li><li>binary OR / OR-assign: <code>|, |=</code> - returns 1 if any side is 1
+</li><li>binary XOR / XOR-assign: <code>^, ^=</code> - returns 1 if either side is 1, but not both
+</li><li>unary NOT: <code>~</code> - inverts bits
+</li><li>left shift / left shift-assign: <code>&lt;&lt;, &lt;&lt;=</code> - move all bits to the left (more significant positions)
+</li><li>right shift / right shift-assign: <code>&gt;&gt;, &gt;&gt;=</code> - move all bits to the right (less significant positions)</li></ul></li></ul><p>
+<em class='notice-bgr'>The main difference from other languages is that the integer type by default is 64 bits long. Left/right shift rules are equal to those of the C language. Thus, it is safe to use only shift distances between 0 and 63.</em>
+</p><p>
+Truth tables for AND/OR/XOR operations
+</p><p>
+<table>
+<tr><th>AND</th><th>0</th><th>1</th><td>&nbsp;</td><th>OR</th><th>0</th><th>1</th><td>&nbsp;</td><th>XOR</th><th>0</th><th>1</th></tr>
+<tr><th>0</th><td>0</td><td>0</td><td>&nbsp;</td><th>0</th><td>0</td><td>1</td><td>&nbsp;</td><th>0</th><td>0</td><td>1</td></tr>
+<tr><th>1</th><td>0</td><td>1</td><td>&nbsp;</td><th>1</th><td>1</td><td>1</td><td>&nbsp;</td><th>1</th><td>1</td><td>0</td></tr>
+</table>
+</p></div>
 </div>
 	</body></html>
 	

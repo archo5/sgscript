@@ -4,10 +4,10 @@ SGScript tutorial
 # Table of Contents [toc]
 
 - @"The language" - learn all you need to know to write SGScript code
--- @"Quick Start" - quickly covers the basics but doesn't get into much detail
--- @"Language structure" - the basic building blocks
--- @"Expressions" - doing math and more
--- @"Statements" - flow control and code structure
+-- @"The basics" - quickly covers the basics but doesn't get into much detail
+-- @"Data types" - handling complex data
+-- @"Flow control" - how to run a part of the code, at specific moments
+-- @"Advanced concepts"
 - @"Building with SGScript" - find out how to build SGScript and integrate it into your project
 - @"Using the C API" - interacting natively with the virtual machine
 
@@ -18,48 +18,205 @@ SGScript tutorial
 
 SGScript is a dynamic, procedural language, similar in syntax to many other programming languages, including C and JavaScript. It consists of various operations and structures that can be combined to specify operations and data that they use.
 
-If you want to quickly get started on writing code, this is the page to read:
-
-- @"Quick Start" - quickly covers the basics but doesn't get into much detail
-
-In case you want to find out more about the specifics, you can read the following pages:
-
-- @"Language structure" - the basic building blocks
-- @"Expressions" - doing math and more
-- @"Statements" - flow control and code structure
+- @"The basics" - quickly covers the basics but doesn't get into much detail
+- @"Flow control" - how to run a part of the code, at specific moments
+- @"Advanced concepts" - handling complex data
 
 
 # >>>
 
 
-# Quick Start [info]
+# The basics [info]
 
-    function f( a, b )
+- Functions are reusable blocks of code. To call a function means to do what's specified in the function.
+
+    function printText()
     {
-    	println( a );
-    	return b * 2 + 777;
+    	println( "text" );
     }
-    x = f( 12.34, 5 );
-    println( x );
-
-What can be deduced from this piece of code:
+    printText();
 
 - Basic function definitions have the following syntax: `function <name> ( <argument-list> ) { <code> }`
 - Argument list is a comma-separated list of names or nothing.
 - Names, also called "identifiers", can have the folowing symbols: a-z, A-Z, _, 0-9, but they cannot start with a digit, because only numbers can start with a digit.
+- User-defined names cannot collide with so-called keywords - special names, like `function`
+
+    y = 15.51;
+    x = 3 * y + 10;
+    x * y;
+
+- Each expression statement ends with ";".
+- Useful expression statements include an assignment operator or a function call, or both.
+- All expression statements presented so far - except the last one - are useful.
+- The assignment operator is "=". It simply assigns the value on the right side to the item on the left side.
 - Numbers use the point (".") as decimal digit separator.
-- Functions may return with or without data.
-- When they do, that data can be retrieved from the call.
+- There are arithmetic operators available that take two items at each side (called "binary operators").
+- The operators used in the example are those of addition ("+") and multiplication ("*").
+
+    include "math";
+    function sinc( x )
+    {
+    	xpi = x * M_PI;
+    	return sin( xpi ) / xpi;
+    }
+    sinc3 = sinc( 3 );
+
+- Functions may return with or without data. When they do return data, that data can be retrieved from the call.
 - A basic function call has the syntax `<name> <subexpression>`
 - A subexpression has the syntax `( <expression-list> )`
 - Expression list is a comma-separated list of expressions or nothing.
-- There are arithmetic operators available that take two items at each side (called "binary operators").
-- The operators used there are those of addition ("+") and multiplication ("*").
+- The `include` statement loads a library or a code file.
+- `math` is one of the few built-in libraries. In this example, it defines the function `sin` and the constant `M_PI`
 
-What could be deduced from running the code:
+    x = 1; y = 2;
+    x += y;
+    ++x;
+    --y;
 
+- Shortcuts exist for common operations: combined assignment operators and increment/decrement operators.
+- Most non-assignment binary operators have their assignment counterparts. The difference is that they assign the calculated value to the left side of the expression.
+- Increment/decrement operators are shortcuts for `x += 1` and `x -= 1`, respectively.
+-- There are alternative versions of these operators that will be covered later.
+
+    x = 5; y = 3;
+    x *= y * ( y + x );
+    y -= x + x * y;
+    y += 5 * y += y;
+    printvar( y );
+    println( dumpvar( x ) );
+
+- There's very few limits on how the expressions can be combined so it's up to you to write them in a way the meaning is clear both to you and the compiler.
+- A very useful tool for finding out the contents of a variable are the `printvar` / `dumpvar` functions.
 - `println` is a function that prints the given variables to standard output and moves write cursor to the next line.
-- Order of arithmetic operations is mathematically correct.
+- Order of arithmetic operations is mathematically correct: sub-expressions `( .. )` are evaluated first, then multiplication `*` / division `/` / modulo (remainder) `%` , and then - addition `+` and subtraction `-` .
+
+    x = 5;
+    global y = 6;
+    function z()
+    {
+    	a = 7;
+    	global b = 8;
+    	function c(){}
+    }
+
+- Variables are the currency of this language.
+- There are 4 types of variable storage, two of which are covered in the example: local and global variables.
+- In the example, variables x, a, c are local and y, z, b are global.
+-- All new variables are local by default.
+-- The keyword `global` specifies a list of variables that are global and allows to assign their values.
+-- A function definition creates a global function variable outside other functions, local otherwise.
+
+    // testing the assignment operator
+    a = 5;
+    /* this ----------
+    -- should print --
+    ------------- 5 */
+    println( a ); ////
+
+- Code can contain comments. They can be used to communicate between various users and maybe even compilers of the code.
+-- The SGScript compiler completely ignores comments.
+- There are two types of comments: single-line comments `// ...` and multiline comments `/* ... */`
+
+
+# Data types [info]
+
+    arr = [ 1, 3, 5, 7 ];
+    println( arr[2] ); // prints 5
+    println( arr[4] ); // warning: index out of bounds
+    println( arr.size ); // prints 4
+
+- Array is a complex data type, a subtype of object. It contains a list of other variables.
+- Sub-variables can be accessed with index `[ .. ]` and property `.` operators.
+-- Be aware that not all sub-variables can be read and not all of them can be written. Systems will often report the same warnings for variables that don't exist and those that don't support the required operation.
+- The array's `size` property returns the length of the array, the number of variables in it.
+
+    arr = [];
+    arr.push( 5 );
+    x = arr.pop();
+    arr.unshift( 4 );
+    y = arr.shift();
+
+- Objects can have methods. Methods can be called through property access, this compiles to a special call where the object is passed through a special channel.
+- Other sub-variable accessors don't support the method call, however it is possible to invoke in other ways, to be described in further sections.
+- Array methods shown in the example are the stack/queue interface of the array. Push/pop deals with the end of the array, shift/unshift works on the beginning.
+- More info on array and its methods can be found in the documentation: @"array [object]"<docs://sgscript/array-object>
+
+
+# Flow control [info]
+
+    if( a > 5 )
+    {
+    	println( "'a' is greater than 5" );
+    	if( a < 10 )
+    		println( "...but less than 10" );
+    }
+    else
+    	println( "'a' is not greater than 5" );
+
+- It is possible to only run code if a certain condition is true, using the `if` statement.
+- If/else statement has the following syntax: `if ( <expression> ) <statement>`, optionally followed by `else <statement>`
+- `{ .. }` is a block statement, it can be used anywhere a statement can be used
+- `>` ("greater than") is one of 8 comparison operators. The others are:
+-- `<` - "less than"
+-- `>=` - "greater or equal"
+-- `<=` - "less or equal"
+-- `==` - "equal"
+-- `!=` - "not equal"
+-- `===` - "strict equality" (not only value must be equal, types must also be same)
+-- `!==` - "strict inequality" (inverse of strict equality)
+- These operators are not limited to `if` and other such statements, they can be used as any other operator.
+- These operators return the type `bool` , it has only two values - `true` and `false`
+
+    while( a > 5 )
+    {
+    	println( a );
+    	--a;
+    }
+    for( i = 0; i < 5; ++i )
+    	println( i );
+
+- There are 6 kinds of loops in SGScript:
+-- The 'while' loop: `while ( <expression> ) <statement>`
+-- The 'for' loop: `for ( <expression-list> ; <expression> ; <expression-list> ) <statement>`
+--- It is a shortcut for a while loop where first expression/list is run before the loop, second - as the condition, third - before each jumpback.
+-- The 'do-while' loop: `do <statement> while ( <expression> )`
+-- The 'foreach-value' loop: `foreach ( <name> : <expression> ) <statement>`
+-- The 'foreach-key' loop: `foreach ( <name> , : <expression> ) <statement>`
+-- The 'foreach-key-value' loop: `foreach ( <name> , <name> : <expression> )`
+
+
+# Advanced concepts [info]
+
+=== Bitwise operations
+
+    hex = 0x12400;
+    bin = 0b10011010;
+    b_or = hex | bin ^ hex & bin;
+
+- There are constant formats and bitwise operations for dealing with integers on the bit level.
+- The following *integer* constant formats are available:
+-- Binary (base 2): begins with "0b", followed by some binary digits (0,1)
+-- Octal (base 8): begins with "0o", followed by some octal digits (0-7)
+-- Decimal (base 10): contains only decimal digits (0-9)
+-- Hexadecimal (base 16): begins with "0x", followed by some hexadecimal digits (0-9,a-f,A-F)
+- These operators are available for doing bitwise operations:
+-- binary AND / AND-assign: `&, &=` - returns 1 if both sides are 1
+-- binary OR / OR-assign: `|, |=` - returns 1 if any side is 1
+-- binary XOR / XOR-assign: `^, ^=` - returns 1 if either side is 1, but not both
+-- unary NOT: `~` - inverts bits
+-- left shift / left shift-assign: `<<, <<=` - move all bits to the left (more significant positions)
+-- right shift / right shift-assign: `>>, >>=` - move all bits to the right (less significant positions)
+
+! The main difference from other languages is that the integer type by default is 64 bits long. Left/right shift rules are equal to those of the C language. Thus, it is safe to use only shift distances between 0 and 63.
+
+Truth tables for AND/OR/XOR operations
+
+-----------------------------------------------------------
+! AND !  0  !  1  | !  OR !  0  !  1  | ! XOR !  0  !  1  |
+!  0  |  0  |  0  | !  0  |  0  |  1  | !  0  |  0  |  1  |
+!  1  |  0  |  1  | !  1  |  1  |  1  | !  1  |  1  |  0  |
+-----------------------------------------------------------
+
 
 
 # <<<

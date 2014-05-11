@@ -4912,17 +4912,17 @@ This library includes functions and objects for parsing binary and text buffers.
 === Objects and their methods:
 
 - @fmt_parser - formatted text string-parsing object
-- @read<fmt_parser.read> - read the specified number of characters from the stream
-- @getchar<fmt_parser.getchar> - read one character from the stream
-- @readcc<fmt_parser.readcc> - read characters while they match the specified class
-- @skipcc<fmt_parser.skipcc> - skip characters while they match the specified class
-- @read_real<fmt_parser.read_real> - read with the real value character class, optionally return real
-- @read_int<fmt_parser.read_int> - read with the integer value character class, optionally return integer
-- @read_binary_int<fmt_parser.read_binary_int> - read with the binary integer character class, optionally return integer
-- @read_octal_int<fmt_parser.read_octal_int> - read with the octal integer character class, optionally return integer
-- @read_decimal_int<fmt_parser.read_decimal_int> - read with the decimal integer character class, optionally return integer
-- @read_hex_int<fmt_parser.read_hex_int> - read with the hexadecimal integer character class, optionally return integer
-- @check<fmt_parser.check> - check for presence of a string in stream
+-- @read<fmt_parser.read> - read the specified number of characters from the stream
+-- @getchar<fmt_parser.getchar> - read one character from the stream
+-- @readcc<fmt_parser.readcc> - read characters while they match the specified class
+-- @skipcc<fmt_parser.skipcc> - skip characters while they match the specified class
+-- @read_real<fmt_parser.read_real> - read with the real value character class, optionally return real
+-- @read_int<fmt_parser.read_int> - read with the integer value character class, optionally return integer
+-- @read_binary_int<fmt_parser.read_binary_int> - read with the binary integer character class, optionally -return integer
+-- @read_octal_int<fmt_parser.read_octal_int> - read with the octal integer character class, optionally return -integer
+-- @read_decimal_int<fmt_parser.read_decimal_int> - read with the decimal integer character class, optionally -return integer
+-- @read_hex_int<fmt_parser.read_hex_int> - read with the hexadecimal integer character class, optionally return -integer
+-- @check<fmt_parser.check> - check for presence of a string in stream
 
 # >>>
 
@@ -5063,22 +5063,22 @@ This library includes functions and objects for parsing binary and text buffers.
 
 # fmt_parser [object]
 
-* read-only properties
- - [bool] at_end
- - [bool] stream_offset
- - [cfunc] @read<fmt_parser.read>
- - [cfunc] @getchar<fmt_parser.getchar>
- - [cfunc] @readcc<fmt_parser.readcc>
- - [cfunc] @skipcc<fmt_parser.skipcc>
- - [cfunc] @read_real<fmt_parser.read_real>
- - [cfunc] @read_int<fmt_parser.read_int>
- - [cfunc] @read_binary_int<fmt_parser.read_binary_int>
- - [cfunc] @read_octal_int<fmt_parser.read_octal_int>
- - [cfunc] @read_decimal_int<fmt_parser.read_decimal_int>
- - [cfunc] @read_hex_int<fmt_parser.read_hex_int>
- - [cfunc] @check<fmt_parser.check>
-* other features:
- - GC-safe
+- read-only properties
+-- [bool] at_end
+-- [bool] stream_offset
+-- [cfunc] @read<fmt_parser.read>
+-- [cfunc] @getchar<fmt_parser.getchar>
+-- [cfunc] @readcc<fmt_parser.readcc>
+-- [cfunc] @skipcc<fmt_parser.skipcc>
+-- [cfunc] @read_real<fmt_parser.read_real>
+-- [cfunc] @read_int<fmt_parser.read_int>
+-- [cfunc] @read_binary_int<fmt_parser.read_binary_int>
+-- [cfunc] @read_octal_int<fmt_parser.read_octal_int>
+-- [cfunc] @read_decimal_int<fmt_parser.read_decimal_int>
+-- [cfunc] @read_hex_int<fmt_parser.read_hex_int>
+-- [cfunc] @check<fmt_parser.check>
+- other features:
+-- GC-safe
 
 
 # fmt_parser.read [method]
