@@ -209,11 +209,30 @@ function find_closest_pathstr( link, pages )
 
 function linkhandler_htm( title, link, pages )
 {
+	tgt = false;
 	link ||= title;
 	link = generate_alias( link );
 	if( string_find( link, "//" ) === null )
 		link = "#" $ find_closest_pathstr( link, pages );
-	return '<a href="' $ htmlencode( link ) $ '">' $ htmlencode( title ) $ '</a>';
+	else
+	{
+		tgt = true;
+		if( string_find( link, "docs://" ) !== null )
+		{
+			link = string_trim( string_replace( link, "docs://", "" ) );
+			parts = string_explode( link, "/" );
+			if( parts.size != 2 )
+				println( "warning: wrong ext.docs link" );
+			else
+			{
+				link = parts[0] $ ".docs.htm";
+				if( parts[1] )
+					link $= "#" $ parts[1];
+			}
+		}
+	}
+	return '<a href="' $ htmlencode( link ) $ '"' $
+		if( tgt, ' target="_blank"', '' ) $ '>' $ htmlencode( title ) $ '</a>';
 }
 
 function output_data_htm( name, doc_title, tags, pages )
@@ -286,11 +305,15 @@ function output_data_htm( name, doc_title, tags, pages )
 
 function linkhandler_web( title, link, pages )
 {
+	tgt = false;
 	link ||= title;
 	link = generate_alias( link );
 	if( string_find( link, "//" ) === null )
 		link = find_closest_pathstr( link, pages );
-	return '<a href="' $ htmlencode( link ) $ '">' $ htmlencode( title ) $ '</a>';
+	else
+		tgt = true;
+	return '<a href="' $ htmlencode( link ) $ '"' $
+		if( tgt, ' target="_blank"', '' ) $ '>' $ htmlencode( title ) $ '</a>';
 }
 
 

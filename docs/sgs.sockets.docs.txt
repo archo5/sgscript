@@ -106,19 +106,20 @@ The library is compiled to a 'sgssockets' shared library so it can be included t
 
 # socket [object]
 
+- methods
+-- @bind<socket.bind [method]> - bind socket to port
+-- @listen<socket.listen [method]> - wait for connection requests, return if successful
+-- @accept<socket.accept [method]> - accept an incoming connection, retrieve connecting socket
+-- @connect<socket.connect [method]> - connect to a remote address
+-- @send<socket.send [method]> - send data over socket
+-- @sendto<socket.sendto [method]> - send data to specified address over socket
+-- @recv<socket.recv [method]> - receive data from socket
+-- @recvfrom<socket.recvfrom [method]> - receive connectionless data and sender address from socket
+-- @shutdown<socket.shutdown [method]> - shut down socket access (partially or fully)
+-- @close<socket.close [method]> - close socket, disabling further operations
+-- @getpeername<socket.getpeername [method]> - get hostname of connected device
 - read-only properties
 -- [int] error - the last error code specifically for the socket
--- [cfunc] @bind<socket.bind [method]> - bind socket to port
--- [cfunc] @listen<socket.listen [method]> - wait for connection requests, return if successful
--- [cfunc] @accept<socket.accept [method]> - accept an incoming connection, retrieve connecting socket
--- [cfunc] @connect<socket.connect [method]> - connect to a remote address
--- [cfunc] @send<socket.send [method]> - send data over socket
--- [cfunc] @sendto<socket.sendto [method]> - send data to specified address over socket
--- [cfunc] @recv<socket.recv [method]> - receive data from socket
--- [cfunc] @recvfrom<socket.recvfrom [method]> - receive connectionless data and sender address from socket
--- [cfunc] @shutdown<socket.shutdown [method]> - shut down socket access (partially or fully)
--- [cfunc] @close<socket.close [method]> - close socket, disabling further operations
--- [cfunc] @getpeername<socket.getpeername [method]> - get hostname of connected device
 - write-only properties
 -- [bool] blocking - whether the socket is blocking
 - read/write properties

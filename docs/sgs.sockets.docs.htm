@@ -52,19 +52,20 @@ The library is compiled to a &#39;sgssockets&#39; shared library so it can be in
 <div class='item'><a name='socket-address-frombytes-function'></a><hr><h2>socket_address_frombytes [function]</h2><h3>socket_address_frombytes( int addrfamily, string addrbytes[, int port ])</h3><h4>create address from byte buffer, optionally set port</h4><ul><li>only AF_INET and AF_INET6 are supported at the moment</li></ul></div>
 <div class='item'><a name='socket-getaddrinfo-function'></a><hr><h2>socket_getaddrinfo [function]</h2><h3>socket_getaddrinfo( string addrstring, string port[, int hint_socktype[, int hint_addrfamily ]])</h3><h4>resolve domain name to address, optionally specifying socket type and address family needed</h4></div>
 <div class='item'><a name='socket-gethostname-function'></a><hr><h2>socket_gethostname [function]</h2><h3>socket_gethostname()</h3><h4>return the host name of computer</h4></div>
-<div class='item'><a name='socket-object'></a><hr><h2>socket [object]</h2><ul><li>read-only properties
+<div class='item'><a name='socket-object'></a><hr><h2>socket [object]</h2><ul><li>methods
+<ul><li><a href="#socket-bind-method">bind</a> - bind socket to port
+</li><li><a href="#socket-listen-method">listen</a> - wait for connection requests, return if successful
+</li><li><a href="#socket-accept-method">accept</a> - accept an incoming connection, retrieve connecting socket
+</li><li><a href="#socket-connect-method">connect</a> - connect to a remote address
+</li><li><a href="#socket-send-method">send</a> - send data over socket
+</li><li><a href="#socket-sendto-method">sendto</a> - send data to specified address over socket
+</li><li><a href="#socket-recv-method">recv</a> - receive data from socket
+</li><li><a href="#socket-recvfrom-method">recvfrom</a> - receive connectionless data and sender address from socket
+</li><li><a href="#socket-shutdown-method">shutdown</a> - shut down socket access (partially or fully)
+</li><li><a href="#socket-close-method">close</a> - close socket, disabling further operations
+</li><li><a href="#socket-getpeername-method">getpeername</a> - get hostname of connected device
+</li></ul><li>read-only properties
 <ul><li>[int] error - the last error code specifically for the socket
-</li><li>[cfunc] <a href="#socket-bind-method">bind</a> - bind socket to port
-</li><li>[cfunc] <a href="#socket-listen-method">listen</a> - wait for connection requests, return if successful
-</li><li>[cfunc] <a href="#socket-accept-method">accept</a> - accept an incoming connection, retrieve connecting socket
-</li><li>[cfunc] <a href="#socket-connect-method">connect</a> - connect to a remote address
-</li><li>[cfunc] <a href="#socket-send-method">send</a> - send data over socket
-</li><li>[cfunc] <a href="#socket-sendto-method">sendto</a> - send data to specified address over socket
-</li><li>[cfunc] <a href="#socket-recv-method">recv</a> - receive data from socket
-</li><li>[cfunc] <a href="#socket-recvfrom-method">recvfrom</a> - receive connectionless data and sender address from socket
-</li><li>[cfunc] <a href="#socket-shutdown-method">shutdown</a> - shut down socket access (partially or fully)
-</li><li>[cfunc] <a href="#socket-close-method">close</a> - close socket, disabling further operations
-</li><li>[cfunc] <a href="#socket-getpeername-method">getpeername</a> - get hostname of connected device
 </li></ul><li>write-only properties
 <ul><li>[bool] blocking - whether the socket is blocking
 </li></ul><li>read/write properties

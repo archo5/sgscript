@@ -4575,30 +4575,31 @@ This library is loaded on initialization and contains the functions and constant
 
 # array [object]
 
+- methods
+-- @push<array.push>
+-- @pop<array.pop>
+-- @shift<array.shift>
+-- @unshift<array.unshift>
+-- @insert<array.insert>
+-- @erase<array.erase>
+-- @part<array.part>
+-- @clear<array.clear>
+-- @reverse<array.reverse>
+-- @resize<array.resize>
+-- @reserve<array.reserve>
+-- @sort<array.sort>
+-- @sort_custom<array.sort_custom>
+-- @sort_mapped<array.sort_mapped>
+-- @find<array.find>
+-- @remove<array.remove>
+-- @unique<array.unique>
+-- @random<array.random>
+-- @shuffle<array.shuffle>
 - read-only properties
 -- [int] size
 -- [int] capacity
 -- [var] first (valid if array is not empty, otherwise a warning is thrown and 'null' is returned)
 -- [var] last (similar to 'first')
--- [cfunc] @push<array.push>
--- [cfunc] @pop<array.pop>
--- [cfunc] @shift<array.shift>
--- [cfunc] @unshift<array.unshift>
--- [cfunc] @insert<array.insert>
--- [cfunc] @erase<array.erase>
--- [cfunc] @part<array.part>
--- [cfunc] @clear<array.clear>
--- [cfunc] @reverse<array.reverse>
--- [cfunc] @resize<array.resize>
--- [cfunc] @reserve<array.reserve>
--- [cfunc] @sort<array.sort>
--- [cfunc] @sort_custom<array.sort_custom>
--- [cfunc] @sort_mapped<array.sort_mapped>
--- [cfunc] @find<array.find>
--- [cfunc] @remove<array.remove>
--- [cfunc] @unique<array.unique>
--- [cfunc] @random<array.random>
--- [cfunc] @shuffle<array.shuffle>
 - other features:
 -- read/write integer index
 -- full content dump
@@ -5063,20 +5064,21 @@ This library includes functions and objects for parsing binary and text buffers.
 
 # fmt_parser [object]
 
+- methods
+-- @read<fmt_parser.read>
+-- @getchar<fmt_parser.getchar>
+-- @readcc<fmt_parser.readcc>
+-- @skipcc<fmt_parser.skipcc>
+-- @read_real<fmt_parser.read_real>
+-- @read_int<fmt_parser.read_int>
+-- @read_binary_int<fmt_parser.read_binary_int>
+-- @read_octal_int<fmt_parser.read_octal_int>
+-- @read_decimal_int<fmt_parser.read_decimal_int>
+-- @read_hex_int<fmt_parser.read_hex_int>
+-- @check<fmt_parser.check>
 - read-only properties
 -- [bool] at_end
 -- [bool] stream_offset
--- [cfunc] @read<fmt_parser.read>
--- [cfunc] @getchar<fmt_parser.getchar>
--- [cfunc] @readcc<fmt_parser.readcc>
--- [cfunc] @skipcc<fmt_parser.skipcc>
--- [cfunc] @read_real<fmt_parser.read_real>
--- [cfunc] @read_int<fmt_parser.read_int>
--- [cfunc] @read_binary_int<fmt_parser.read_binary_int>
--- [cfunc] @read_octal_int<fmt_parser.read_octal_int>
--- [cfunc] @read_decimal_int<fmt_parser.read_decimal_int>
--- [cfunc] @read_hex_int<fmt_parser.read_hex_int>
--- [cfunc] @check<fmt_parser.check>
 - other features:
 -- GC-safe
 
@@ -5332,18 +5334,19 @@ This library contains the functions necessary to work with the file system (file
 
 # io_file [object]
 
+- methods
+-- @open<io_file.open>
+-- @close<io_file.close>
+-- @read<io_file.read>
+-- @write<io_file.write>
+-- @seek<io_file.seek>
+-- @flush<io_file.flush>
+-- @setbuf<io_file.setbuf>
 - read-only properties
 -- [int] offset
 -- [int] size
 -- [bool] error
 -- [bool] eof
--- [cfunc] @open<io_file.open>
--- [cfunc] @close<io_file.close>
--- [cfunc] @read<io_file.read>
--- [cfunc] @write<io_file.write>
--- [cfunc] @seek<io_file.seek>
--- [cfunc] @flush<io_file.flush>
--- [cfunc] @setbuf<io_file.setbuf>
 - other features:
 -- tobool = returns whether file is open or not
 -- GC-safe

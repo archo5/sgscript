@@ -5,10 +5,11 @@ SGScript tutorial
 
 - @"The language" - learn all you need to know to write SGScript code
 -- @"The basics" - quickly covers the basics but doesn't get into much detail
--- @"Data types" - handling complex data
+-- @"Data types" - handling all kinds of data
 -- @"Flow control" - how to run a part of the code, at specific moments
--- @"Advanced concepts"
+-- @"Advanced concepts" - not the first necessary things, helpful nonetheless
 - @"Building with SGScript" - find out how to build SGScript and integrate it into your project
+-- @"Building with GNU Make"
 - @"Using the C API" - interacting natively with the virtual machine
 
 
@@ -19,8 +20,9 @@ SGScript tutorial
 SGScript is a dynamic, procedural language, similar in syntax to many other programming languages, including C and JavaScript. It consists of various operations and structures that can be combined to specify operations and data that they use.
 
 - @"The basics" - quickly covers the basics but doesn't get into much detail
+- @"Data types" - handling all kinds of data
 - @"Flow control" - how to run a part of the code, at specific moments
-- @"Advanced concepts" - handling complex data
+- @"Advanced concepts" - not the first necessary things, helpful nonetheless
 
 
 # >>>
@@ -120,6 +122,28 @@ SGScript is a dynamic, procedural language, similar in syntax to many other prog
 
 # Data types [info]
 
+    a = null;
+    b = true;
+    c = 123;
+    d = 123.456;
+    e = "text";
+
+- There's a total of 9 data types in SGScript: null, boolean, integer, real number, string, function, C function, object and pointer.
+- `null` is the 'no value' type. There is only one value for the type.
+- Boolean is a `true`/`false` type.
+- Integers and real numbers are two ways to represent numbers in the language. Both have their uses, however generally they're interchangable.
+- The `string` type stores an array of bytes, generally meant to store text but can be used for any data.
+
+    f = function(){ return 4; };
+    g = println;
+    h = io_file(); // returns a file object
+    i = toptr(100);
+
+- Functions and C functions are not as much data types as they are code types. One represents a function defined in SGScript code and another represents a function defined in C/C++ code.
+-- As with numbers, both function types are generally interchangable but have some major differences.
+- Objects are universal, yet somewhat heavy types with a variable number of subtypes. They can represent data structures as well as interfaces and even act like functions.
+- Pointers are basically integers that have restricted manipulation capabilities and a separate processing chain, useful for passing handles and memory addresses in a safe way.
+
     arr = [ 1, 3, 5, 7 ];
     println( arr[2] ); // prints 5
     println( arr[4] ); // warning: index out of bounds
@@ -165,7 +189,7 @@ SGScript is a dynamic, procedural language, similar in syntax to many other prog
 -- `===` - "strict equality" (not only value must be equal, types must also be same)
 -- `!==` - "strict inequality" (inverse of strict equality)
 - These operators are not limited to `if` and other such statements, they can be used as any other operator.
-- These operators return the type `bool` , it has only two values - `true` and `false`
+- These operators return the type `bool`, it has only two values - `true` and `false`
 
     while( a > 5 )
     {
@@ -217,6 +241,77 @@ Truth tables for AND/OR/XOR operations
 !  1  |  0  |  1  | !  1  |  1  |  1  | !  1  |  1  |  0  |
 -----------------------------------------------------------
 
+
+
+# <<<
+
+
+# Building with SGScript [info]
+
+This section describes all supported ways to compile SGScript and integrate it into your project.
+
+- @"Building with GNU Make"
+
+
+# >>>
+
+
+# Building with GNU Make [info]
+
+=== Required software
+
+- @"GNU Make"<http://www.gnu.org/software/make/>
+- @GCC<http://gcc.gnu.org/>
+- On Windows, @MinGW<http://www.mingw.org/> can be used (it includes both).
+
+=== Building
+
+- Open a terminal window in file root.
+- Run `make` (`mingw32-make` on windows), optionally specifying targets and options.
+- On Windows, a batch file can be used to enable the usage of `make` (create a file `make.bat` in `C:\MinGW\bin` directory or equivalent, add the directory to PATH if it's not there):
+
+    @ECHO OFF
+    mingw32-make %*
+
+=== Build options
+
+Targets:
+
+- libraries & tools
+-- <no target>: build just the library
+-- xgmath: build @"eXtended Game Math library"<docs://sgs.xgmath/>
+-- json: build JSON library
+-- pproc: build Parallel Processing library
+-- sockets: build Sockets library
+-- meta: build Metaprogramming helper library
+-- vm: build the virtual machine (sgsvm)
+-- c: build the compiler (sgsc)
+-- sgsexe: build SGScript EXE builder
+- testing
+-- build_test: build language test application
+-- build_apitest: build API test application
+-- build_cppbctest: build C++/BC test application
+-- build_cppbindtest: build lite C++ binding test application
+-- build_mttest: build multithreading safety test application
+-- test: build and run language test application
+-- apitest: build and run API test application
+-- cppbctest: build C++/BC test application
+-- cppbindtest: build lite C++ binding test application
+-- mttest: build multithreading safety test application
+- other
+-- clean: clean all
+-- clean_obj: clean only intermediate build files
+-- clean_objbin: clean intermediate build files and binaries
+
+Options:
+
+- arch=[32|64] - target architecture (x86/x64), default depends on compiler
+- mode=[debug|release] - whether it's a debug or a release build (default=debug)
+- static=[1|0] - whether to build a static library or a dynamic one (default=0: dynamic)
+
+=== Additional build options & platforms
+
+- To build on Android, modify the makefile according to the comment in the beginning of that file.
 
 
 # <<<

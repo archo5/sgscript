@@ -2188,30 +2188,31 @@ print unserialize(data); // prints {name=A,info=B}</pre></div>
 <div class='item'><a name='RAND-MAX-constant'></a><hr><h2>RAND_MAX [constant]</h2><h3>RAND_MAX</h3><h4>the maximum number that can be returned by <a href="#rand-function">rand()</a></h4></div>
 <div class='item'><a name='G-superglobal'></a><hr><h2>_G [superglobal]</h2><h3>A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals and change the global dictionary.</h3><pre>_G[&quot;$diff&quot;] = 5; // no way to access this via usual globals
 _G = {}; // global value dictionary is changed, previous functions are lost unless stored somewhere</pre></div>
-<div class='item'><a name='array-object'></a><hr><h2>array [object]</h2><ul><li>read-only properties
+<div class='item'><a name='array-object'></a><hr><h2>array [object]</h2><ul><li>methods
+<ul><li><a href="#array-push-method">push</a>
+</li><li><a href="#array-pop-method">pop</a>
+</li><li><a href="#array-shift-method">shift</a>
+</li><li><a href="#array-unshift-method">unshift</a>
+</li><li><a href="#array-insert-method">insert</a>
+</li><li><a href="#array-erase-method">erase</a>
+</li><li><a href="#array-part-method">part</a>
+</li><li><a href="#array-clear-method">clear</a>
+</li><li><a href="#array-reverse-method">reverse</a>
+</li><li><a href="#array-resize-method">resize</a>
+</li><li><a href="#array-reserve-method">reserve</a>
+</li><li><a href="#array-sort-method">sort</a>
+</li><li><a href="#array-sort-custom-method">sort_custom</a>
+</li><li><a href="#array-sort-mapped-method">sort_mapped</a>
+</li><li><a href="#array-find-method">find</a>
+</li><li><a href="#array-remove-method">remove</a>
+</li><li><a href="#array-unique-method">unique</a>
+</li><li><a href="#array-random-method">random</a>
+</li><li><a href="#array-shuffle-method">shuffle</a>
+</li></ul><li>read-only properties
 <ul><li>[int] size
 </li><li>[int] capacity
 </li><li>[var] first (valid if array is not empty, otherwise a warning is thrown and &#39;null&#39; is returned)
 </li><li>[var] last (similar to &#39;first&#39;)
-</li><li>[cfunc] <a href="#array-push-method">push</a>
-</li><li>[cfunc] <a href="#array-pop-method">pop</a>
-</li><li>[cfunc] <a href="#array-shift-method">shift</a>
-</li><li>[cfunc] <a href="#array-unshift-method">unshift</a>
-</li><li>[cfunc] <a href="#array-insert-method">insert</a>
-</li><li>[cfunc] <a href="#array-erase-method">erase</a>
-</li><li>[cfunc] <a href="#array-part-method">part</a>
-</li><li>[cfunc] <a href="#array-clear-method">clear</a>
-</li><li>[cfunc] <a href="#array-reverse-method">reverse</a>
-</li><li>[cfunc] <a href="#array-resize-method">resize</a>
-</li><li>[cfunc] <a href="#array-reserve-method">reserve</a>
-</li><li>[cfunc] <a href="#array-sort-method">sort</a>
-</li><li>[cfunc] <a href="#array-sort-custom-method">sort_custom</a>
-</li><li>[cfunc] <a href="#array-sort-mapped-method">sort_mapped</a>
-</li><li>[cfunc] <a href="#array-find-method">find</a>
-</li><li>[cfunc] <a href="#array-remove-method">remove</a>
-</li><li>[cfunc] <a href="#array-unique-method">unique</a>
-</li><li>[cfunc] <a href="#array-random-method">random</a>
-</li><li>[cfunc] <a href="#array-shuffle-method">shuffle</a>
 </li></ul><li>other features:
 <ul><li>read/write integer index
 </li><li>full content dump
@@ -2466,20 +2467,21 @@ p.readcc( &quot;a-z&quot; ); // returns &quot;this&quot;</pre></div>
 p.readcc( &quot;a-z&quot; ); // returns something</pre></div>
 <div class='item'><a name='fmt-charcc-function'></a><hr><h2>fmt_charcc [function]</h2><h3>fmt_charcc( string char, string class )</h3><h4>checks if the first character of string <code>char</code> is included in the character class <code>class</code></h4><ul><li>character class is a regex-like list of specific symbols and ranges (its low and high symbols separated by &quot;-&quot;), optionally prepended by &quot;^&quot; that inverts the scope of the class</li></ul><pre>fmt_charcc( &quot;.&quot;, &quot;a-zA-Z0-9&quot; ); // returns false
 fmt_charcc( &quot;x&quot;, &quot;a-zA-Z0-9&quot; ); // returns true</pre></div>
-<div class='item'><a name='fmt-parser-object'></a><hr><h2>fmt_parser [object]</h2><ul><li>read-only properties
+<div class='item'><a name='fmt-parser-object'></a><hr><h2>fmt_parser [object]</h2><ul><li>methods
+<ul><li><a href="#fmt-parser-read-method">read</a>
+</li><li><a href="#fmt-parser-getchar-method">getchar</a>
+</li><li><a href="#fmt-parser-readcc-method">readcc</a>
+</li><li><a href="#fmt-parser-skipcc-method">skipcc</a>
+</li><li><a href="#fmt-parser-read-real-method">read_real</a>
+</li><li><a href="#fmt-parser-read-int-method">read_int</a>
+</li><li><a href="#fmt-parser-read-binary-int-method">read_binary_int</a>
+</li><li><a href="#fmt-parser-read-octal-int-method">read_octal_int</a>
+</li><li><a href="#fmt-parser-read-decimal-int-method">read_decimal_int</a>
+</li><li><a href="#fmt-parser-read-hex-int-method">read_hex_int</a>
+</li><li><a href="#fmt-parser-check-method">check</a>
+</li></ul><li>read-only properties
 <ul><li>[bool] at_end
 </li><li>[bool] stream_offset
-</li><li>[cfunc] <a href="#fmt-parser-read-method">read</a>
-</li><li>[cfunc] <a href="#fmt-parser-getchar-method">getchar</a>
-</li><li>[cfunc] <a href="#fmt-parser-readcc-method">readcc</a>
-</li><li>[cfunc] <a href="#fmt-parser-skipcc-method">skipcc</a>
-</li><li>[cfunc] <a href="#fmt-parser-read-real-method">read_real</a>
-</li><li>[cfunc] <a href="#fmt-parser-read-int-method">read_int</a>
-</li><li>[cfunc] <a href="#fmt-parser-read-binary-int-method">read_binary_int</a>
-</li><li>[cfunc] <a href="#fmt-parser-read-octal-int-method">read_octal_int</a>
-</li><li>[cfunc] <a href="#fmt-parser-read-decimal-int-method">read_decimal_int</a>
-</li><li>[cfunc] <a href="#fmt-parser-read-hex-int-method">read_hex_int</a>
-</li><li>[cfunc] <a href="#fmt-parser-check-method">check</a>
 </li></ul><li>other features:
 <ul><li>GC-safe</li></ul></li></ul></div>
 <div class='item'><a name='fmt-parser-read-method'></a><hr><h2>fmt_parser.read [method]</h2><h3>fmt_parser.read( int num )</h3><h4>reads at most <code>num</code> bytes from stream and returns them as string</h4><ul><li>if 0 bytes are returned, it&#39;s quite safe to assume that the function has reached the end of file but check the at_end property to be sure
@@ -2565,18 +2567,19 @@ This library contains the functions necessary to work with the file system (file
 <div class='item'><a name='io-file-delete-function'></a><hr><h2>io_file_delete [function]</h2><h3>io_file_delete( string path )</h3><h4>attempts to delete a file at the specified path, returns bool/sets errno</h4><ul><li>uses the C library function remove</li></ul></div>
 <div class='item'><a name='io-file-write-function'></a><hr><h2>io_file_write [function]</h2><h3>io_file_write( string path, string data )</h3><h4>writes the byte buffer <code>data</code> to the file pointed to by <code>path</code>, returns bool/sets errno</h4></div>
 <div class='item'><a name='io-file-read-function'></a><hr><h2>io_file_read [function]</h2><h3>io_file_read( string path )</h3><h4>reads the byte buffer from file at <code>path</code>, returns buffer as string or null/sets errno</h4></div>
-<div class='item'><a name='io-file-object'></a><hr><h2>io_file [object]</h2><ul><li>read-only properties
+<div class='item'><a name='io-file-object'></a><hr><h2>io_file [object]</h2><ul><li>methods
+<ul><li><a href="#io-file-open-method">open</a>
+</li><li><a href="#io-file-close-method">close</a>
+</li><li><a href="#io-file-read-method">read</a>
+</li><li><a href="#io-file-write-method">write</a>
+</li><li><a href="#io-file-seek-method">seek</a>
+</li><li><a href="#io-file-flush-method">flush</a>
+</li><li><a href="#io-file-setbuf-method">setbuf</a>
+</li></ul><li>read-only properties
 <ul><li>[int] offset
 </li><li>[int] size
 </li><li>[bool] error
 </li><li>[bool] eof
-</li><li>[cfunc] <a href="#io-file-open-method">open</a>
-</li><li>[cfunc] <a href="#io-file-close-method">close</a>
-</li><li>[cfunc] <a href="#io-file-read-method">read</a>
-</li><li>[cfunc] <a href="#io-file-write-method">write</a>
-</li><li>[cfunc] <a href="#io-file-seek-method">seek</a>
-</li><li>[cfunc] <a href="#io-file-flush-method">flush</a>
-</li><li>[cfunc] <a href="#io-file-setbuf-method">setbuf</a>
 </li></ul><li>other features:
 <ul><li>tobool = returns whether file is open or not
 </li><li>GC-safe</li></ul></li></ul></div>
