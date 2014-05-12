@@ -12,7 +12,11 @@
 
 void readme()
 {
-	puts( "syntax: sgsvm [files|options]" );
+	puts( "syntax:" );
+	puts( "\tsgsvm [files|options]" );
+	puts( "\tsgsvm [options] -p <file>[, <arguments>]" );
+	puts( "" );
+	puts( "options:" );
 	puts( "\t-h, --help: print this text" );
 	puts( "\t-v, --version: print version info" );
 	puts( "\t-s, --separate: restart the engine between scripts" );

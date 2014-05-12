@@ -227,7 +227,7 @@ function linkhandler_htm( title, link, pages )
 			{
 				link = parts[0] $ ".docs.htm";
 				if( parts[1] )
-					link $= "#" $ parts[1];
+					link $= "#" $ generate_alias( parts[1] );
 			}
 		}
 	}
@@ -311,7 +311,22 @@ function linkhandler_web( title, link, pages )
 	if( string_find( link, "//" ) === null )
 		link = find_closest_pathstr( link, pages );
 	else
+	{
 		tgt = true;
+		if( string_find( link, "docs://" ) !== null )
+		{
+			link = string_trim( string_replace( link, "docs://", "" ) );
+			parts = string_explode( link, "/" );
+			if( parts.size != 2 )
+				println( "warning: wrong ext.docs link" );
+			else
+			{
+				link = "docs://" $ parts[0];
+				if( parts[1] )
+					link $= "/" $ generate_alias( parts[1] );
+			}
+		}
+	}
 	return '<a href="' $ htmlencode( link ) $ '"' $
 		if( tgt, ' target="_blank"', '' ) $ '>' $ htmlencode( title ) $ '</a>';
 }

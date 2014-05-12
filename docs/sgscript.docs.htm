@@ -76,7 +76,18 @@
 <ul><li><a href='#ALL-SGScript-RegExp-functions-A-Z'>ALL SGScript RegExp functions (A-Z)</a>
 </li></ul><li><a href='#String-library-string'>String library (&quot;string&quot;)</a>
 <ul><li><a href='#ALL-SGScript-string-functions-A-Z'>ALL SGScript string functions (A-Z)</a>
-</li></ul></li></ul><li><a href='#Additional-info'>Additional info</a>
+</li></ul></li></ul><li><a href='#Included-tools'>Included tools</a>
+<ul><li><a href='#Virtual-Machine-sgsvm'>Virtual Machine (sgsvm)</a>
+</li><li><a href='#Compiler-sgsc'>Compiler (sgsc)</a>
+</li><li><a href='#Executable-generator-for-Windows-sgsexe'>Executable generator for Windows (sgsexe)</a>
+</li><li><a href='#Language-test-application-sgstest'>Language test application (sgstest)</a>
+</li><li><a href='#API-test-application-sgsapitest'>API test application (sgsapitest)</a>
+</li><li><a href='#C-binding-compiler-test-application-sgscppbctest'>C++ binding compiler test application (sgscppbctest)</a>
+</li><li><a href='#Lightweight-C-binding-test-application-sgscppbindtest'>Lightweight C++ binding test application (sgscppbindtest)</a>
+</li><li><a href='#Multithreading-safety-test-application-mttest'>Multithreading safety test application (mttest)</a>
+</li><li><a href='#Profiler'>Profiler</a>
+</li><li><a href='#Interactive-debugger'>Interactive debugger</a>
+</li></ul><li><a href='#Additional-info'>Additional info</a>
 <ul><li><a href='#Serialization-in-SGScript'>Serialization in SGScript</a>
 </li></ul></li></ul></div><div>
 <div class='item'><a name='SGScript-description'></a><hr><h2>SGScript - description</h2><p>
@@ -243,20 +254,20 @@ sgs_SetStackSize( C, 0 );</pre></div>
 <div class='item'><a name='Language-reference'></a><hr><h2>Language reference</h2></div>
 <div class='item'><a name='Variable-types'></a><hr><h2>Variable types</h2><p>
 SGScript has 8 primary variable types:
-</p><ul><li>`null`: the &#39;lack of a better value&#39; type
-</li><li>`bool`: boolean, true/false
-</li><li>`int`: signed integer
-</li><li>`real`: floating point number
-</li><li>`string`: byte buffer
-</li><li>`(SGS) function`: function that was defined in and compiled from SGScript code
-</li><li>`C function`: function defined in C code
-</li><li>`object`: the extension type and container for complex built-in types</li></ul><p>
+</p><ul><li><code>null</code>: the &#39;lack of a better value&#39; type
+</li><li><code>bool</code>: boolean, true/false
+</li><li><code>int</code>: signed integer
+</li><li><code>real</code>: floating point number
+</li><li><code>string</code>: byte buffer
+</li><li><code>(SGS) function</code>: function that was defined in and compiled from SGScript code
+</li><li><code>C function</code>: function defined in C code
+</li><li><code>object</code>: the extension type and container for complex built-in types</li></ul><p>
 Extended variable types (built on `object`):
-</p><ul><li>`array`: a dynamically allocated variable array
-</li><li>`dict`: a map/table structure where variables are mapped to string keys
-</li><li>`map`: a map/table structure where variables are mapped to variable keys
-</li><li>`class`: object that uses two other objects to build its interface
-</li><li>`closure`: a callable object consisting of another callable and several variables</li></ul></div>
+</p><ul><li><code>array</code>: a dynamically allocated variable array
+</li><li><code>dict</code>: a map/table structure where variables are mapped to string keys
+</li><li><code>map</code>: a map/table structure where variables are mapped to variable keys
+</li><li><code>class</code>: object that uses two other objects to build its interface
+</li><li><code>closure</code>: a callable object consisting of another callable and several variables</li></ul></div>
 <div class='item'><a name='Conversion-rules'></a><hr><h2>Conversion rules</h2><p>
 <table>
 <tr><th>from  \  to</th><th>bool</th><th>int</th><th>real</th><th>string</th><th>ptr</th></tr>
@@ -1288,7 +1299,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li>SGS_ENOTSUP: variable was not a dict (_G only accepts dict values)</li></ul></div>
 <div class='item'><a name='sgs-PushPath-function'></a><hr><h2>sgs_PushPath [function]</h2><h3>SGSRESULT sgs_PushPath( sgs_Context* C, sgs_StkIdx item, const char* path, ... )</h3><h4>push the variable specified by starting point <code>item</code> and traversal path <code>path</code></h4><p>
 <em class='notice-bgr'>The safety of this function is similar to that of the printf family of functions. Be explicit in what types you pass to the variable argument list to avoid errors.</em>
-</p><ul><li>the syntax of `path`:
+</p><ul><li>the syntax of <code>path</code>:
 <ul><li>a list of letters, specifying a sub-variable to request (o,p,s,i,k,n)</li></ul></li></ul><h5>table of accepted letters</h5><p>
 <table>
 <tr><th>letter</th><th>property?</th><th>variable arguments</th><th>virtual machine access mode / description</th></tr>
@@ -1363,10 +1374,10 @@ Closure stack in the C API is technically very similar to main stack, with one i
 <div class='item'><a name='sgs-Method-function'></a><hr><h2>sgs_Method [function]</h2><h3>SGSBOOL sgs_Method( sgs_Context* C )</h3><h4>unlock the &#39;this&#39; variable, return if the function was called as a method (and thus variable was unlocked)</h4><ul><li>method calls look like this: &quot;object.method(...)&quot;</li></ul></div>
 <div class='item'><a name='sgs-Force-HideThis-functions'></a><hr><h2>sgs_(Force)HideThis [functions]</h2><h3>SGSBOOL sgs_HideThis( sgs_Context* C )</h3><h3>SGSBOOL sgs_ForceHideThis( sgs_Context* C )</h3><h4>hide the &#39;this&#39; variable, return if successful</h4><ul><li>sgs_ForceHideThis attempts to hide the first item on stack even if it didn&#39;t belong to the call, sgs_HideThis only does it if it belongs to the call and was hidden before
 </li><li>the hiding method is stack offset pointer shift</li></ul></div>
-<div class='item'><a name='sgs-FCall-P-functions'></a><hr><h2>sgs_FCall(P) [functions]</h2><h3>SGSRESULT sgs_FCall( sgs_Context* C, int args, int expect, int gotthis )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><h3>SGSRESULT sgs_FCallP( sgs_Context* C, sgs_Variable* var, int args, int expect, int gotthis )</h3><h4>call the variable with the arguments on stack, returning the expected number of variables on stack</h4><ul><li>`var`: the callable variable to call as a function
-</li><li>`args`: the primary variables to be passed to the function, in the same order they are in the stack
-</li><li>`expect`: the number of variables to be left after a successful call
-</li><li>`gotthis`: whether the function is a method and an additional argument needs to be passed as the &#39;this&#39; value before others</li></ul><p>
+<div class='item'><a name='sgs-FCall-P-functions'></a><hr><h2>sgs_FCall(P) [functions]</h2><h3>SGSRESULT sgs_FCall( sgs_Context* C, int args, int expect, int gotthis )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><h3>SGSRESULT sgs_FCallP( sgs_Context* C, sgs_Variable* var, int args, int expect, int gotthis )</h3><h4>call the variable with the arguments on stack, returning the expected number of variables on stack</h4><ul><li><code>var</code>: the callable variable to call as a function
+</li><li><code>args</code>: the primary variables to be passed to the function, in the same order they are in the stack
+</li><li><code>expect</code>: the number of variables to be left after a successful call
+</li><li><code>gotthis</code>: whether the function is a method and an additional argument needs to be passed as the &#39;this&#39; value before others</li></ul><p>
 After a successful call, all arguments and the function will be popped off the stack and the expected number of variables will appear in their place. If the underlying callable does not return enough arguments, &#39;null&#39; variables will be pushed instead. If the number of returned values is bigger than expected, only the first expected return values will stay on the stack.
 </p><ul><li>expected stack structure:
 <ul><li>(if gotthis != 0) [this]
@@ -1458,7 +1469,7 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-Assign-function'></a><hr><h2>sgs_Assign [function]</h2><h3>void sgs_Assign( sgs_Context* C, sgs_Variable* var_to, sgs_Variable* var_from )</h3><h4>release <code>var_to</code>, copy <code>var_from</code> to <code>var_to</code>, acquire the new value</h4></div>
 <div class='item'><a name='sgs-ArithOp-function'></a><hr><h2>sgs_ArithOp [function]</h2><h3>SGSRESULT sgs_ArithOp( sgs_Context* C, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op )</h3><h4>perform the specified operation on variables A and B, returning the value on <code>out</code></h4><p>
 <em class='notice-bgr'>this function prints errors, exactly like VM would (internally there are the same functions)</em>
-</p><ul><li>this function can perform 5 operations, which are specified by passing the following values to `op`:
+</p><ul><li>this function can perform 5 operations, which are specified by passing the following values to <code>op</code>:
 <ul><li>SGS_EOP_ADD: +
 </li><li>SGS_EOP_SUB: - (binary)
 </li><li>SGS_EOP_MUL: *
@@ -1622,14 +1633,14 @@ return NULL;</pre></div>
 </li><li><code>ptr</code> != NULL, <code>size</code> == 0: <code>ptr</code> is freed, NULL is returned
 </li><li><code>ptr</code> == NULL, <code>size</code> != 0: a new block of memory is allocated and returned
 </li><li><code>ptr</code> == NULL, <code>size</code> == 0: nothing is done, NULL is returned</li></ul></li></ul></div>
-<div class='item'><a name='Memory-allocation-macros-macros'></a><hr><h2>Memory allocation macros [macros]</h2><h3>Memory allocation macros</h3><h4>these macros allow slightly simplified handling of memory</h4><ul><li>`sgs_Malloc( C, size )`: allocates the memory (alias to `sgs_Memory( C, NULL, size )`)
-</li><li>`sgs_Free( C, ptr )`: frees the memory (alias to `sgs_Memory( C, ptr, 0 )`)
+<div class='item'><a name='Memory-allocation-macros-macros'></a><hr><h2>Memory allocation macros [macros]</h2><h3>Memory allocation macros</h3><h4>these macros allow slightly simplified handling of memory</h4><ul><li><code>sgs_Malloc( C, size )</code>: allocates the memory (alias to `sgs_Memory( C, NULL, size )`)
+</li><li><code>sgs_Free( C, ptr )</code>: frees the memory (alias to `sgs_Memory( C, ptr, 0 )`)
 </li><li>sgs_Realloc: alias to sgs_Memory
 </li><li>the following macros expect that the variable sgs_Context* C is in the scope
-<ul><li>`sgs_Alloc( what )`: allocates enough memory to fit the specified type <code>what</code>
-</li><li>`sgs_Alloc_n( what, n )`: allocates enough memory to fit <code>n</code> instances of the specified type <code>what</code>
-</li><li>`sgs_Alloc_a( what, app )`: allocates enough memory to fit the specified type <code>what</code> and <code>app</code> more bytes
-</li><li>`sgs_Dealloc( ptr )`: frees the memory
+<ul><li><code>sgs_Alloc( what )</code>: allocates enough memory to fit the specified type <code>what</code>
+</li><li><code>sgs_Alloc_n( what, n )</code>: allocates enough memory to fit <code>n</code> instances of the specified type <code>what</code>
+</li><li><code>sgs_Alloc_a( what, app )</code>: allocates enough memory to fit the specified type <code>what</code> and <code>app</code> more bytes
+</li><li><code>sgs_Dealloc( ptr )</code>: frees the memory
 </li></ul><li>all of these functions, including sgs_Memory, work on the same heap, thus they are interchangeable</li></ul></div>
 <div class='item'><a name='sgs-CodeString-function'></a><hr><h2>sgs_CodeString [function]</h2><h3>const char* sgs_CodeString( int type, int val )</h3><h4>returns a string for the enumeration <code>type</code> value <code>val</code></h4><ul><li>there are 4 enumerations to have value names returned for:
 <ul><li>SGS_CODE_ER: error codes (SGS_ERROR, SGS_WARNING, ...)
@@ -1834,7 +1845,7 @@ Most operations are directed towards the scripting engine, that is - environment
 <ul><li>SGS_HOOK_ENTER - function was entered
 </li><li>SGS_HOOK_EXIT - function was exited
 </li><li>SGS_HOOK_STEP - instruction is about to be executed</li></ul></li></ul></li></ul></div>
-<div class='item'><a name='Commonly-required-advanced-tasks'></a><hr><h2>Commonly required advanced tasks</h2><h4>Method handling</h4><ul><li>the preferred way to handle methods with a specific object type for `this`:</li></ul><pre>ObjectDataStruct* data;
+<div class='item'><a name='Commonly-required-advanced-tasks'></a><hr><h2>Commonly required advanced tasks</h2><h4>Method handling</h4><ul><li>the preferred way to handle methods with a specific object type for <code>this</code>:</li></ul><pre>ObjectDataStruct* data;
 if( !SGS_PARSE_METHOD( C, Object_interface_pointer, data, Object_name, Method_name ) )
     return 0;</pre><ul><li>the OLD way, version 1:</li></ul><pre>sgs_FuncName( C, &quot;&lt;object&gt;.&lt;method&gt;&quot; );
 if( !sgs_Method( C ) || !sgs_IsObject( C, 0, Object_interface_pointer ) )
@@ -2867,20 +2878,20 @@ This library contains the string handling functions. In all functions, except th
 </li><li>STRING_PAD_LEFT, STRING_PAD_RIGHT - used by <a href="#string-pad-function">string_pad</a> - specify sides to be padded</li></ul></div>
 <div class='item'><a name='string-cut-function'></a><hr><h2>string_cut [function]</h2><h3>string_cut( string str, int from[, int to[, int flags]] )</h3><h4>returns a part of string <code>str</code>, <code>from</code> and <code>to</code> being positions of the first and last character returned, respectively</h4><ul><li>if <code>to</code> is not specified, <code>to</code> is assumed to be the position of the last character in string <code>str</code>
 </li><li>if <code>from</code> or <code>to</code> are negative, they point to characters before the end of string (-1 being the last one)
-</li><li>available values for `flags`:
+</li><li>available values for <code>flags</code>:
 <ul><li><code>STRING_NO_REV_INDEX</code> - emit warnings on negative indices, instead of handling them
 </li><li><code>STRING_STRICT_RANGES</code> - emit warnings on out of bounds <code>from</code>/<code>to</code> values instead of silently ignoring the outside characters</li></ul></li></ul><pre>string_cut( &quot;01234567&quot;, 3, 5 ); // string [3] &quot;345&quot;</pre></div>
 <div class='item'><a name='string-part-function'></a><hr><h2>string_part [function]</h2><h3>string_part( string str, int from[, int len[, int flags]] )</h3><h4>returns a part of string <code>str</code>, starting at <code>from</code>, at most <code>len</code> characters</h4><ul><li>if <code>len</code> is not specified, <code>len</code> is assumed to be the number of characters between <code>from</code> and the end of string <code>str</code>
 </li><li>if <code>from</code> is negative, it points to characters before the end of string (-1 being the last one)
 </li><li>if <code>len</code> is negative, the maximum length of returned string is the sum of <code>len</code> and string <code>str</code> length
-</li><li>available values for `flags`:
+</li><li>available values for <code>flags</code>:
 <ul><li><code>STRING_NO_REV_INDEX</code> - emit warnings on negative indices, instead of handling them
 </li><li><code>STRING_STRICT_RANGES</code> - emit warnings on out of bounds <code>from</code>/<code>len</code> values instead of silently ignoring the outside characters</li></ul></li></ul><pre>string_part( &quot;01234567&quot;, 3, 3 ); // string [3] &quot;345&quot;</pre></div>
 <div class='item'><a name='string-reverse-function'></a><hr><h2>string_reverse [function]</h2><h3>string_reverse( string str )</h3><h4>returns <code>str</code> with all the bytes in reversed order</h4><p>
 <em class='notice-bgr'>This function will not work correctly with multibyte-encoded strings.</em>
 </p><pre>string_reverse( &quot;noitca&quot; ); // string [6] &quot;action&quot;</pre></div>
 <div class='item'><a name='string-pad-function'></a><hr><h2>string_pad [function]</h2><h3>string_pad( string str, int tgtsize, string padstr = &quot; &quot;, int flags = STRING_PAD_RIGHT )</h3><h4>return the string <code>str</code>, padded from template <code>padstr</code> up to the size <code>tgtsize</code> according to <code>flags</code></h4><ul><li>if <code>str</code> is longer than <code>tgtsize</code>, it is returned without changes
-</li><li>available values for `flags`:
+</li><li>available values for <code>flags</code>:
 <ul><li><code>STRING_PAD_LEFT</code> - pad the string at the left side
 </li><li><code>STRING_PAD_RIGHT</code> - pad the string at the right side
 </li><li>if both flags are OR&#39;ed together, the string <code>str</code> is centered
@@ -2900,7 +2911,7 @@ string_find_rev( &quot;what&quot;, &quot;hat&quot;, 2 ); // int 1</pre></div>
 string_replace( &quot;abcd&quot;, [&quot;a&quot;,&quot;b&quot;,&quot;c&quot;,&quot;d&quot;], [1,2,3,4] ); // string [4] &quot;1234&quot;
 string_replace( &quot;1234&quot;, [&quot;1&quot;,&quot;2&quot;,&quot;3&quot;,&quot;4&quot;], [&quot;x&quot;,&quot;y&quot;] ); // string [4] &quot;xyxy&quot;</pre></div>
 <div class='item'><a name='string-translate-function'></a><hr><h2>string_translate [function]</h2><h3>string_translate( string str, iterable repmap )</h3><h4>replaces parts of string <code>str</code>, specified in the keys of <code>repmap</code>, to the matching values of the same iterable</h4><pre>string_translate( &quot;found %a files and %b folders&quot;, {&quot;%a&quot; = 5, &quot;%b&quot; = 17} ); // string [28] &quot;found 5 files and 17 folders&quot;</pre></div>
-<div class='item'><a name='string-trim-function'></a><hr><h2>string_trim [function]</h2><h3>string_trim( string str, string chars = &quot; \t\r\n&quot;, int flags = STRING_TRIM_LEFT | STRING_TRIM_RIGHT )</h3><h4>removes the specified characters from the specified sides of the string</h4><ul><li>available values for `flags`:
+<div class='item'><a name='string-trim-function'></a><hr><h2>string_trim [function]</h2><h3>string_trim( string str, string chars = &quot; \t\r\n&quot;, int flags = STRING_TRIM_LEFT | STRING_TRIM_RIGHT )</h3><h4>removes the specified characters from the specified sides of the string</h4><ul><li>available values for <code>flags</code>:
 <ul><li><code>STRING_TRIM_LEFT</code> - trim the string from the left side
 </li><li><code>STRING_TRIM_RIGHT</code> - trim the string from the right side</li></ul></li></ul><pre>string_trim( &quot;  space  &quot; ); // string [5] &quot;space&quot;
 string_trim( &quot;..something!..&quot;, &quot;.!&quot;, STRING_TRIM_RIGHT ); // string [11] &quot;..something&quot;</pre></div>
@@ -2955,6 +2966,95 @@ string_utf8_decode( [27161,28310] ); // string [6] &quot;標準&quot;</pre></div
 </li><li><a href="#string-utf8-encode-function">string_utf8_encode [function]</a>
 </li><li><a href="#string-utf8-length-function">string_utf8_length [function]</a>
 </li><li><a href="#string-utf8-offset-function">string_utf8_offset [function]</a></li></ul></div>
+<div class='item'><a name='Included-tools'></a><hr><h2>Included tools</h2><h4>Executables</h4><ul><li><a href="#Virtual-Machine-sgsvm">Virtual Machine (sgsvm)</a>
+</li><li><a href="#Compiler-sgsc">Compiler (sgsc)</a>
+</li><li><a href="#Executable-generator-for-Windows-sgsexe">Executable generator for Windows (sgsexe)</a>
+</li><li><a href="#Language-test-application-sgstest">Language test application (sgstest)</a>
+</li><li><a href="#API-test-application-sgsapitest">API test application (sgsapitest)</a>
+</li><li><a href="#C-binding-compiler-test-application-sgscppbctest">C++ binding compiler test application (sgscppbctest)</a>
+</li><li><a href="#Lightweight-C-binding-test-application-sgscppbindtest">Lightweight C++ binding test application (sgscppbindtest)</a>
+</li><li><a href="#Multithreading-safety-test-application-mttest">Multithreading safety test application (mttest)</a></li></ul><h4>Extensions</h4><ul><li><a href="#Profiler">Profiler</a>
+</li><li><a href="#Interactive-debugger">Interactive debugger</a></li></ul></div>
+<div class='item'><a name='Virtual-Machine-sgsvm'></a><hr><h2>Virtual Machine (sgsvm)</h2><p>
+This is the default standalone environment for SGScript, useful for running scripts in a portable way.
+</p><h4>Command line syntax</h4><pre>sgsvm [files|options]
+sgsvm [options] -p|--program &lt;srcname&gt;[, &lt;arguments&gt;]</pre><h4>Options</h4><ul><li><code>-h</code>, <code>--help</code>: print help text, displaying command line syntax
+</li><li><code>-v</code>, <code>--version</code>: print version info
+</li><li><code>-s</code>, <code>--separate</code>: restart the engine between scripts
+</li><li><code>-d</code>, <code>--debug</code>: enable interactive debugging on errors
+</li><li><code>-p</code>, <code>--program</code>: translate the following arguments into a SGS program call
+</li><li><code>--stats</code>: print VM stats after running the scripts
+<ul><li>prints number of allocations, frees, memory blocks and size, object count, GC state
+</li></ul><li><code>--profile</code>: enable profiling by collecting call stack timings
+</li><li><code>--profile-ops</code>: enable low-level VM instruction profiling
+</li><li><code>--profile-mem</code>: enable memory usage profiling</li></ul><h4>Example usage</h4><ul><li><code>sgsvm -d -p appMain param=1</code> - run application <code>appMain</code> with debugging, passing argument &#39;param=1&#39;
+</li><li><code>sgsvm one.sgs two.sgs</code> - run file <code>one.sgs</code>, followed by <code>two.sgs</code>, in the same environment</li></ul><h4>Additional info</h4><ul><li>Program mode defines global <code>argc</code> and <code>argv</code> variables, generated from arguments after the flag.
+</li><li>It is possible to execute multiple files, this is so that environment could be prepared by one file and used by another one.
+</li><li>Profilers dump their data to standard output before freeing the engine (after end of each separately executed script or at the end of all scripts).</li></ul></div>
+<div class='item'><a name='Compiler-sgsc'></a><hr><h2>Compiler (sgsc)</h2><p>
+This is the standalone script compiler and instruction listing generator for SGScript.
+</p><h4>Command line syntax</h4><pre>sgsc [file|options]</pre><h4>Additional info</h4><ul><li><code>-h</code>: print help info
+</li><li><code>-c</code>: compile the file
+</li><li><code>-d</code>: dump bytecode to standard output
+</li><li><code>-o</code>: specify bytecode output file (default: remove .sgs on end, add .sgc)</li></ul><h4>Example usage</h4><ul><li><code>sgsc -c src.sgs</code> - compile <code>src.sgs</code> to <code>src.sgc</code>
+</li><li><code>sgsc -d src.sgs</code> - compile <code>src.sgs</code>, dump generated bytecode</li></ul></div>
+<div class='item'><a name='Executable-generator-for-Windows-sgsexe'></a><hr><h2>Executable generator for Windows (sgsexe)</h2><p>
+Utility to combine a single script with the virtual machine. After compilation, the executable passes all input arguments as-is as <code>argc</code> and <code>argv</code> to the script.
+</p><h4>Command line syntax</h4><pre>sgsexe &lt;output-file&gt; &lt;script-file&gt;</pre></div>
+<div class='item'><a name='Language-test-application-sgstest'></a><hr><h2>Language test application (sgstest)</h2><p>
+The application runs all test scripts in <code>./tests</code> directory. File handling rules are as follows:
+</p><ul><li>Ignore files with <code>!_</code> prefix.
+</li><li>Require compilation success for tests with <code>s_</code> prefix.
+</li><li>Require compilation failure for tests with <code>f_</code> prefix.
+</li><li>If there is no prefix, require that the system does not crash.
+</li><li>If a file name as <code>TF</code> in it, use the advanced testing framework.
+</li><li>Files are sorted according to the logical order of testing: requirements grow with test file number:
+<ul><li>first sort by whether testing framework (TF) is required (files that don&#39;t need it go first);
+</li><li>then sort by whether compilation success is required (files that do need it go first);
+</li><li>finally, sort by whether compilation state is expected (files that do need it go first);</li></ul></li></ul><p>
+The sort order broken down:
+</p><ul><li>1. <code>s_</code> tests without <code>TF</code>
+</li><li>2. <code>f_</code> tests without <code>TF</code>
+</li><li>3. tests without prefix and <code>TF</code>
+</li><li>4. <code>s_</code> tests with <code>TF</code>
+</li><li>5. <code>f_</code> tests with <code>TF</code> (none such tests exist because it would make no sense to have them)
+</li><li>6. tests without prefix but with <code>TF</code></li></ul><p>
+The application <code>sgstest</code> must be run from root, like so: <code>bin/sgstest</code>. It generates two log files: <code>./tests-errors.log</code> and <code>./tests-output.log</code>.
+</p></div>
+<div class='item'><a name='API-test-application-sgsapitest'></a><hr><h2>API test application (sgsapitest)</h2><p>
+This application tests the core programming interface. It generates two log files: <code>./apitests-errors.log</code> and <code>./apitests-output.log</code>.
+</p></div>
+<div class='item'><a name='C-binding-compiler-test-application-sgscppbctest'></a><hr><h2>C++ binding compiler test application (sgscppbctest)</h2><p>
+This application tests the C++ programming interface that utilizes the <a href="sgs.cppbc.docs.htm" target="_blank">binding compiler</a>.
+</p></div>
+<div class='item'><a name='Lightweight-C-binding-test-application-sgscppbindtest'></a><hr><h2>Lightweight C++ binding test application (sgscppbindtest)</h2><p>
+This application tests the C++ programming interface that utilizes the lightweight binding extension.
+</p></div>
+<div class='item'><a name='Multithreading-safety-test-application-mttest'></a><hr><h2>Multithreading safety test application (mttest)</h2><p>
+This application tests the SGScript engine&#39;s ability to work with more than one thread (different instances for each) at the same time.
+</p></div>
+<div class='item'><a name='Profiler'></a><hr><h2>Profiler</h2><p>
+This is an engine profiler hook extension. It supports three processing modes.
+</p><h4>Modes</h4><ul><li>Function timing profiler: use SGS_PROF_FUNCTIME to initialize
+</li><li>Instruction timing profiler: use SGS_PROF_OPTIME to initialize
+</li><li>Memory usage profiler: use SGS_PROF_MEMUSAGE to initialize</li></ul><h4>Functions</h4><ul><li>SGSBOOL sgs_ProfInit( SGS_CTX, SGS_PROF, int mode ) - initialize the profiler
+</li><li>SGSBOOL sgs_ProfClose( SGS_PROF ) - free the profiler
+</li><li>SGSBOOL sgs_ProfDump( SGS_PROF ) - dump the data</li></ul><h4>Usage example</h4><pre>sgs_Prof profiler; // keep this allocated while it is linked to engine
+// initialize and attach the profiler
+sgs_ProfInit( contextPtr, &amp;profiler, [SGS_PROF_FUNCTIME|SGS_PROF_OPTIME|SGS_PROF_MEMUSAGE] );
+// ...do things with the engine...
+sgs_ProfDump( &amp;profiler ); // dump the data (done through @sgs_Write* functions)
+// free the profiler - must be done before freeing the engine
+sgs_ProfClose( &amp;profiler );</pre></div>
+<div class='item'><a name='Interactive-debugger'></a><hr><h2>Interactive debugger</h2><p>
+This is an engine debugging hook extension. It provides the opportunity to interactively introspect the engine state on each message (info/warning/error).
+</p><h4>Functions</h4><ul><li>int sgs_InitIDbg( SGS_CTX, SGS_IDBG ) - initialize the debugger
+</li><li>int sgs_CloseIDbg( SGS_CTX, SGS_IDBG ) - free the debugger</li></ul><h4>Usage example</h4><pre>sgs_IDbg debugger; // keep this allocated while it is linked to engine
+// initialize and attach the debugger
+sgs_InitIDbg( contextPtr, &amp;debugger );
+// ...do things with the engine...
+// free the debugger
+sgs_CloseIDbg( contextPtr, &amp;debugger );</pre></div>
 <div class='item'><a name='Additional-info'></a><hr><h2>Additional info</h2></div>
 <div class='item'><a name='Serialization-in-SGScript'></a><hr><h2>Serialization in SGScript</h2><p>
 In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the &quot;<a href="#serialize-function">serialize</a>&quot; function and deserialization is done with &quot;<a href="#unserialize-function">unserialize</a>&quot;. The C API has similar functions: <a href="#sgs-Serialize-function">sgs_Serialize</a> / <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> and <a href="#sgs-Unserialize-function">sgs_Unserialize</a>, respectively.

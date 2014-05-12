@@ -53,8 +53,8 @@ function markdown2html( text, linkhandler )
 		} );
 		
 		text = htmlencode( text );
-		bdcc = "(^|[ \xFF\xFC\n\r\t,./])";
-		edcc = "($|[ \xFF\xFC\n\r\t,./])";
+		bdcc = "(^|[ \xFF\xFC\n\r\t,.;:/])";
+		edcc = "($|[ \xFF\xFC\n\r\t,.;:/])";
 		text = re_replace( text,
 			"#"$bdcc$"\\*\\*([^*]+)\\*\\*"$edcc$"#",
 			"$1<b>$2</b>$3" );

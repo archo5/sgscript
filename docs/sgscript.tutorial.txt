@@ -280,24 +280,24 @@ Targets:
 - libraries & tools
 -- <no target>: build just the library
 -- xgmath: build @"eXtended Game Math library"<docs://sgs.xgmath/>
--- json: build JSON library
--- pproc: build Parallel Processing library
--- sockets: build Sockets library
--- meta: build Metaprogramming helper library
--- vm: build the virtual machine (sgsvm)
--- c: build the compiler (sgsc)
--- sgsexe: build SGScript EXE builder
+-- json: build @"JSON library"<docs://sgs.json/>
+-- pproc: build @"Parallel Processing library"<docs://sgs.pproc/>
+-- sockets: build @"Sockets library"<docs://sgs.sockets/>
+-- meta: build @"Metaprogramming helper library"<docs://sgs.meta/>
+-- vm: build the @"virtual machine (sgsvm)"<docs://sgscript/Virtual Machine (sgsvm)>
+-- c: build the @"compiler (sgsc)"<docs://sgscript/Compiler (sgsc)>
+-- sgsexe: build @"SGScript EXE builder"<docs://sgscript/Executable generator for Windows (sgsexe)>
 - testing
 -- build_test: build language test application
 -- build_apitest: build API test application
--- build_cppbctest: build C++/BC test application
+-- build_cppbctest: build C++ binding compiler test application
 -- build_cppbindtest: build lite C++ binding test application
 -- build_mttest: build multithreading safety test application
 -- test: build and run language test application
--- apitest: build and run API test application
--- cppbctest: build C++/BC test application
--- cppbindtest: build lite C++ binding test application
--- mttest: build multithreading safety test application
+-- apitest: build and run and run API test application
+-- cppbctest: build and run C++ binding compiler test application
+-- cppbindtest: build and run lite C++ binding test application
+-- mttest: build and run multithreading safety test application
 - other
 -- clean: clean all
 -- clean_obj: clean only intermediate build files
