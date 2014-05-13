@@ -1883,7 +1883,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 		len = ftell( fp );
 		fseek( fp, 0, SEEK_SET );
 		
-		if(	len > 0x7fffffff )
+		if( len > 0x7fffffff )
 		{
 			fclose( fp );
 			STDLIB_WARN( "file bigger than allowed to store" );
