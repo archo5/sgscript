@@ -71,10 +71,6 @@ static void ctx_init( SGS_CTX )
 	C->objpool_size = 0;
 	
 	vht_init( &C->typetable, C, 32, 32 );
-	
-#ifdef SGS_JIT
-	sgsJIT_Init( C );
-#endif
 }
 
 sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
@@ -147,10 +143,6 @@ void sgs_DestroyEngine( SGS_CTX )
 		sf = sfn;
 	}
 	C->sf_cached = NULL;
-	
-#ifdef SGS_JIT
-	sgsJIT_Destroy( C );
-#endif
 	
 #if SGS_OBJPOOL_SIZE > 0
 	{

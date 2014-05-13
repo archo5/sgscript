@@ -251,6 +251,9 @@ Truth tables for AND/OR/XOR operations
 This section describes all supported ways to compile SGScript and integrate it into your project.
 
 - @"Building with GNU Make"
+- @"Building with IDEs"
+- @"Building with other tools"
+- @"Including SGScript into your project"
 
 
 # >>>
@@ -288,18 +291,18 @@ Targets:
 -- c: build the @"compiler (sgsc)"<docs://sgscript/Compiler (sgsc)>
 -- sgsexe: build @"SGScript EXE builder"<docs://sgscript/Executable generator for Windows (sgsexe)>
 - testing
--- build_test: build language test application
--- build_apitest: build API test application
--- build_cppbctest: build C++ binding compiler test application
--- build_cppbindtest: build lite C++ binding test application
--- build_mttest: build multithreading safety test application
--- test: build and run language test application
--- apitest: build and run and run API test application
--- cppbctest: build and run C++ binding compiler test application
--- cppbindtest: build and run lite C++ binding test application
--- mttest: build and run multithreading safety test application
+-- build_test: build @"language test application"<docs://sgscript/Language test application (sgstest)>
+-- build_apitest: build @"API test application"<docs://sgscript/API test application (sgsapitest)>
+-- build_cppbctest: build @"C++ binding compiler test application"<docs://sgscript/C++ binding compiler test application (sgscppbctest)>
+-- build_cppbindtest: build @"lightweight C++ binding test application"<docs://sgscript/Lightweight C++ binding test application (sgscppbindtest)>
+-- build_mttest: build @"multithreading safety test application"<docs://sgscript/Multithreading safety test application (mttest)>
+-- test: build and run @"language test application"<docs://sgscript/Language test application (sgstest)>
+-- apitest: build and run @"API test application"<docs://sgscript/API test application (sgsapitest)>
+-- cppbctest: build and run @"C++ binding compiler test application"<docs://sgscript/C++ binding compiler test application (sgscppbctest)>
+-- cppbindtest: build and run @"lightweight C++ binding test application"<docs://sgscript/Lightweight C++ binding test application (sgscppbindtest)>
+-- mttest: build and run @"multithreading safety test application"<docs://sgscript/Multithreading safety test application (mttest)>
 - other
--- clean: clean all
+-- clean: clean all generated files
 -- clean_obj: clean only intermediate build files
 -- clean_objbin: clean intermediate build files and binaries
 
@@ -312,6 +315,47 @@ Options:
 === Additional build options & platforms
 
 - To build on Android, modify the makefile according to the comment in the beginning of that file.
+
+
+# Building with IDEs [info]
+
+All IDE-related build data is under the `build` directory.
+
+=== Supported IDEs
+
+- Code::Blocks (`build/codeblocks`)
+- Visual Studio 2010 (and newer versions) (`build/vc10`)
+
+=== IDEs with necessary files but without support
+
+- XCode (`build/xcode`)
+
+
+# Building with other tools [info]
+
+=== CMake
+
+There is a file `CMakeLists.txt` in the root directory of the project. It only builds the dynamic library at the moment.
+
+=== File integration
+
+The code is made to support various compilers and compile under C and C++ so it is quite safe to just drag & drop it into your project.
+
+
+# Including SGScript into your project [info]
+
+There are generally two ways to include SGScript: link the library or include the files directly.
+
+! Note: Including the files isn't an option if SGScript modules are to be used.
+
+For simplified inclusion of files, add `src/` and `ext/` to the include paths.
+
+- The main SGScript API is defined in the file `src/sgscript.h`.
+-- Requires the SGScript library to be linked to the project or have the files (`src/*`) compiled in.
+- Utility library is available in `src/sgs_util.h`.
+-- Requires the SGScript library to be linked to the project or have the files (`src/*`) compiled in.
+- eXtended Game Math library can be found in `ext/sgsxgmath.h`.
+-- Requires the eXtended Game Math library to be linked to the project or have the files (`ext/sgsxgmath.c`) compiled in.
 
 
 # <<<

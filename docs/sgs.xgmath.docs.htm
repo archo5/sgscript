@@ -312,16 +312,16 @@ A column-major matrix
 <div class='item'><a name='floatarray-assign-add-sub-mul-div-mod-pow-methods'></a><hr><h2>floatarray.*[_assign] (add|sub|mul|div|mod|pow) [methods]</h2><h3>floatarray.add( s1, s2 )</h3><h4>add values from two sources to this floatarray (this = s1 + s2)</h4><h3>floatarray.sub( s1, s2 )</h3><h4>subtract values from two sources to this floatarray (this = s1 - s2)</h4><h3>floatarray.mul( s1, s2 )</h3><h4>multiply values from two sources to this floatarray (this = s1 * s2)</h4><h3>floatarray.div( s1, s2 )</h3><h4>divide values from two sources to this floatarray (this = s1 / s2)</h4><h3>floatarray.mod( s1, s2 )</h3><h4>set modulo from two sources to this floatarray (this = s1 % s2)</h4><h3>floatarray.pow( s1, s2 )</h3><h4>set power of two sources to this floatarray (this = s1 ^ s2)</h4><h3>floatarray.add_assign( s1 )</h3><h4>add values from another source to floatarray (this = this + s1)</h4><h3>floatarray.sub_assign( s1 )</h3><h4>subtract values from another source to floatarray (this = this - s1)</h4><h3>floatarray.mul_assign( s1 )</h3><h4>subtract values from another source to floatarray (this = this * s1)</h4><h3>floatarray.div_assign( s1 )</h3><h4>subtract values from another source to floatarray (this = this / s1)</h4><h3>floatarray.mod_assign( s1 )</h3><h4>subtract values from another source to floatarray (this = this % s1)</h4><h3>floatarray.pow_assign( s1 )</h3><h4>subtract values from another source to floatarray (this = this ^ s1)</h4><p>
 <em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
 </p></div>
-<div class='item'><a name='floatarray-randbox-method'></a><hr><h2>floatarray.randbox [method]</h2><h3>floatarray.randbox( s1, s2 )</h3><h4>set values to random between two sources (`this = lerp( s1, s2, randf() )`)</h4><p>
+<div class='item'><a name='floatarray-randbox-method'></a><hr><h2>floatarray.randbox [method]</h2><h3>floatarray.randbox( s1, s2 )</h3><h4>set values to random between two sources (<code>this = lerp( s1, s2, randf() )</code>)</h4><p>
 <em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
 </p></div>
-<div class='item'><a name='floatarray-randext-method'></a><hr><h2>floatarray.randext [method]</h2><h3>floatarray.randext( s1, s2 )</h3><h4>set values to random around source 1 in the range of source 2 (`this = lerp( s1 - s2, s1 + s2, randf() )`)</h4><p>
+<div class='item'><a name='floatarray-randext-method'></a><hr><h2>floatarray.randext [method]</h2><h3>floatarray.randext( s1, s2 )</h3><h4>set values to random around source 1 in the range of source 2 (<code>this = lerp( s1 - s2, s1 + s2, randf() )</code>)</h4><p>
 <em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
 </p></div>
-<div class='item'><a name='floatarray-multiply-add-assign-method'></a><hr><h2>floatarray.multiply_add_assign [method]</h2><h3>floatarray.multiply_add_assign( s1, s2 )</h3><h4>multiply two sources and add the result to this one (`this += s1 * s2`)</h4><p>
+<div class='item'><a name='floatarray-multiply-add-assign-method'></a><hr><h2>floatarray.multiply_add_assign [method]</h2><h3>floatarray.multiply_add_assign( s1, s2 )</h3><h4>multiply two sources and add the result to this one (<code>this += s1 * s2</code>)</h4><p>
 <em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
 </p></div>
-<div class='item'><a name='floatarray-lerp-to-method'></a><hr><h2>floatarray.lerp_to [method]</h2><h3>floatarray.lerp_to( s1, s2 )</h3><h4>linearly interpolate this source and another to the factor of the third one (`this = lerp( this, s1, s2 )`)</h4><p>
+<div class='item'><a name='floatarray-lerp-to-method'></a><hr><h2>floatarray.lerp_to [method]</h2><h3>floatarray.lerp_to( s1, s2 )</h3><h4>linearly interpolate this source and another to the factor of the third one (<code>this = lerp( this, s1, s2 )</code>)</h4><p>
 <em class='notice-bgr'>for more info, refer to this page: <a href="#floatarray-data-transformation-methods">floatarray data transformation methods</a></em>
 </p></div>
 <div class='item'><a name='floatarray-to-buffer-method'></a><hr><h2>floatarray.to_*_buffer [method]</h2><h3>floatarray.to_int8_buffer( real scale = 1 )</h3><h3>floatarray.to_int16_buffer( real scale = 1 )</h3><h3>floatarray.to_int32_buffer( real scale = 1 )</h3><h3>floatarray.to_int64_buffer( real scale = 1 )</h3><h3>floatarray.to_uint8_buffer( real scale = 1 )</h3><h3>floatarray.to_uint16_buffer( real scale = 1 )</h3><h3>floatarray.to_uint32_buffer( real scale = 1 )</h3><h3>floatarray.to_uint64_buffer( real scale = 1 )</h3><h3>floatarray.to_float32_buffer( real scale = 1 )</h3><h3>floatarray.to_float64_buffer( real scale = 1 )</h3><h4>create a byte buffer from floatarray contents, optionally scaling the values</h4></div>
@@ -400,7 +400,7 @@ Notes:
 </li><li>Mat4: XGM_VT[16] if output is enabled
 </li><li>FloatArray: <a href="#xgm-vtarray-struct">xgm_vtarray**</a> if output is enabled</li></ul></li></ul></div>
 <div class='item'><a name='SGS-RETURN-functions'></a><hr><h2>SGS_RETURN_* [functions]</h2><h3>SGS_RETURN_VEC2( XGM_VT x, XGM_VT y )</h3><h3>SGS_RETURN_VEC3( XGM_VT x, XGM_VT y, XGM_VT z )</h3><h3>SGS_RETURN_VEC4( XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )</h3><h3>SGS_RETURN_AABB2( XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )</h3><h3>SGS_RETURN_COLOR( XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )</h3><h3>SGS_RETURN_VEC2P( XGM_VT* v2f )</h3><h3>SGS_RETURN_VEC3P( XGM_VT* v3f )</h3><h3>SGS_RETURN_VEC4P( XGM_VT* v4f )</h3><h3>SGS_RETURN_AABB2P( XGM_VT* v4f )</h3><h3>SGS_RETURN_COLORP( XGM_VT* v4f )</h3><h3>SGS_RETURN_MAT4( XGM_VT* v16f )</h3><h4>push the specified value and return SGS_SUCCESS</h4><ul><li>these macros are meant to be used in GETINDEX object interface functions
-</li><li>assuming SGS_CTX (`sgs_Context* C`)</li></ul></div>
+</li><li>assuming SGS_CTX (<code>sgs_Context* C</code>)</li></ul></div>
 <div class='item'><a name='SGS-PARSE-functions'></a><hr><h2>SGS_PARSE_* [functions]</h2><h3>SGS_PARSE_VEC2( outptr, strict )</h3><h3>SGS_PARSE_VEC3( outptr, strict )</h3><h3>SGS_PARSE_VEC4( outptr, strict )</h3><h3>SGS_PARSE_AABB2( outptr )</h3><h3>SGS_PARSE_COLOR( outptr, strict )</h3><h3>SGS_PARSE_MAT4( outptr )</h3><h4>parse input variable in a SETINDEX object interface function</h4><ul><li><code>outptr</code> requires the following data:
 <ul><li>VEC2: XGM_VT[2]
 </li><li>VEC3: XGM_VT[3]
@@ -408,7 +408,7 @@ Notes:
 </li><li>AABB2: XGM_VT[4]
 </li><li>COLOR: XGM_VT[4]
 </li><li>MAT4: XGM_VT[16]
-</li></ul><li>assuming SGS_CTX (`sgs_Context* C`)
+</li></ul><li>assuming SGS_CTX (<code>sgs_Context* C</code>)
 </li><li>assuming <code>sgs_Variable* val</code> (from SGS_ARGS_SETINDEXFUNC)</li></ul></div>
 <div class='item'><a name='All-C-interfaces-A-Z'></a><hr><h2>All C interfaces (A-Z)</h2><ul><li><a href="#xgm-iface-interfaces">xgm_*_iface [interfaces]</a>
 </li><li><a href="#xgm-vtarray-struct">xgm_vtarray [struct]</a></li></ul></div>

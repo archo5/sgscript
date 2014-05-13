@@ -65,16 +65,6 @@ else
 	CFLAGS = -D_DEBUG -g $(COMMONFLAGS) $(ARCHFLAGS) $(CPLATFLAGS)
 endif
 
-ifneq ($(jit),)
-	_XDEPS =
-	_XOBJ = sgs_jit.o
-	_XFLAGS = -DSGS_JIT=1
-else
-	_XDEPS =
-	_XOBJ =
-	_XFLAGS =
-endif
-
 ifneq ($(static),)
 	PREFLAGS = -DBUILDING_SGS=1 $(_XFLAGS)
 	LFLAGS = -lsgscript

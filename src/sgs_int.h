@@ -741,10 +741,6 @@ struct _sgs_Context
 	
 	/* type interface table */
 	sgs_VHTable   typetable;
-	
-#ifdef SGS_JIT
-	void* jitdata;
-#endif
 };
 
 #define SGS_STACKFRAMESIZE ((sgs_StkIdx)(C->stack_top - C->stack_off))
@@ -827,14 +823,6 @@ extern sgs_ObjInterface sgsstd_dict_iter_iface[1];
 extern sgs_ObjInterface sgsstd_map_iface[1];
 
 
-
-#ifdef SGS_JIT
-void sgsJIT_Init( SGS_CTX );
-void sgsJIT_Destroy( SGS_CTX );
-void sgsJIT_CB_FI( SGS_CTX );
-void sgsJIT_CB_FO( SGS_CTX );
-void sgsJIT_CB_NI( SGS_CTX );
-#endif
 
 
 #ifdef __cplusplus

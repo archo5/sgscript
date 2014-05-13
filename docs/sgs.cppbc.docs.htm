@@ -148,7 +148,7 @@ Syntax: <code>SGS_IFUNC( &lt;ifunc-type&gt; ) &lt;type&gt; &lt;name&gt;( sgs_Con
 </li><li><a href="#sgs-InitPushedClass-function">sgs_InitPushedClass</a> - initialize internal class pointers
 </li><li><a href="#sgs-Push-Lite-Class-function">sgs_Push(Lite)Class</a> - push a new instance of class, using the specified arguments for constructor</li></ul></div>
 <div class='item'><a name='sgsHandle-class'></a><hr><h2>sgsHandle [class]</h2><h3>template&lt; class T &gt; class sgsHandle</h3><h4>Variables</h4><ul><li><code>sgs_VarObj* object</code> - the pointer to object with interface equal to T::_sgs_interface or NULL
-</li><li><code>SGS_CTX</code> (`sgs_Context* C`) - associated context</li></ul><h4>Constructors</h4><ul><li><code>sgsHandle()</code> - initializes a NULL handle
+</li><li><code>SGS_CTX</code> (<code>sgs_Context* C</code>) - associated context</li></ul><h4>Constructors</h4><ul><li><code>sgsHandle()</code> - initializes a NULL handle
 </li><li><code>sgsHandle( const sgsHandle&amp; h )</code> - initializes a handle from another handle
 </li><li><code>sgsHandle( sgs_VarObj* obj, sgs_Context* c )</code> - initializes a handle from object pointer if it has the right interface, otherwise handle is initialized to NULL</li></ul><h4>Methods</h4><ul><li><code>SGSRESULT gcmark()</code> - mark the object in handle as accessible (using sgs_ObjGCMark)
 </li><li><code>void _acquire()</code> - increment reference count on variable
@@ -157,7 +157,7 @@ Syntax: <code>SGS_IFUNC( &lt;ifunc-type&gt; ) &lt;type&gt; &lt;name&gt;( sgs_Con
 </li><li><code>T* operator -&gt; ()</code>, <code>const T* operator -&gt; () const</code> - object access
 </li><li><code>bool operator &lt;</code>, <code>bool operator ==</code> - comparison operators (the required minimum used for sorting)</li></ul></div>
 <div class='item'><a name='sgsVariable-class'></a><hr><h2>sgsVariable [class]</h2><h3>class sgsVariable</h3><h4>Variables</h4><ul><li><code>sgs_Variable var</code> - the internal variable data
-</li><li><code>SGS_CTX</code> (`sgs_Context* C`) - associated context</li></ul><h4>Constructors</h4><ul><li><code>sgsVariable()</code> - initializes a NULL variable
+</li><li><code>SGS_CTX</code> (<code>sgs_Context* C</code>) - associated context</li></ul><h4>Constructors</h4><ul><li><code>sgsVariable()</code> - initializes a NULL variable
 </li><li><code>sgsVariable( const sgsVariable&amp; h )</code> - initializes variable from another variable
 </li><li><code>sgsVariable( sgs_Context* c )</code> - initialize a NULL variable and associate context
 </li><li><code>sgsVariable( sgs_Context* c, int item )</code> - initialize a variable from current stack frame

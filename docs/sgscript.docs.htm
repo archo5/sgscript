@@ -262,7 +262,7 @@ SGScript has 8 primary variable types:
 </li><li><code>(SGS) function</code>: function that was defined in and compiled from SGScript code
 </li><li><code>C function</code>: function defined in C code
 </li><li><code>object</code>: the extension type and container for complex built-in types</li></ul><p>
-Extended variable types (built on `object`):
+Extended variable types (built on <code>object</code>):
 </p><ul><li><code>array</code>: a dynamically allocated variable array
 </li><li><code>dict</code>: a map/table structure where variables are mapped to string keys
 </li><li><code>map</code>: a map/table structure where variables are mapped to variable keys
@@ -404,7 +404,7 @@ Some notes on the special cases:
 </li><li>[property,index] whether property or index expressions set data depends if they&#39;re on the receiving (left) end of an assignment expression
 </li><li>[inline if] 3 inputs are required, 2 are actually used (as if <code>if(A){return B;}else{return C;}</code> was used)
 </li><li>[subexpression] subexpressions can set data if they are set up like this: &lt;subexpression&gt; = &lt;function-call&gt; - this is the way to read more than one return value from a function
-</li><li>[error suppression] the <code>@</code> operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn&#39;t an error</li></ul><h5>compatible function call / inheritance call / global method call (` O!A ([B,..]) `)</h5><p>
+</li><li>[error suppression] the <code>@</code> operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn&#39;t an error</li></ul><h5>compatible function call / inheritance call / global method call (<code> O!A ([B,..]) </code>)</h5><p>
 CFC is created to encourage users to reduce memory usage without sacrificing clarity of code. It is a short-hand, optimized version of the .call method / sys_call function for callables.
 </p><p>
 Properties:
@@ -1390,11 +1390,11 @@ After a successful call, all arguments and the function will be popped off the s
 </p><p>
 <em class='notice-bgr'>The return value <code>1</code> is returned if function call was aborted.</em>
 </p><h4>error codes</h4><ul><li>SGS_EINPROC: topmost item on stack was not callable
-</li><li>SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + (is_sgs_FCallP?0:1)`)</li></ul></div>
+</li><li>SGS_EINVAL: not enough values in current stack frame (must have at least <code>args + (gotthis?1:0) + (is_sgs_FCallP?0:1)</code>)</li></ul></div>
 <div class='item'><a name='sgs-This-Call-P-function-aliases'></a><hr><h2>sgs_(This)Call(P) [function aliases]</h2><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><h3>SGSRESULT sgs_Call( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h4>call the variable with the arguments on stack, returning the expected number of variables on stack</h4><ul><li>aliases to <a href="#sgs-FCall-P-functions">sgs_FCall(P)</a>, for the first function of each group <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
 <div class='item'><a name='sgs-GlobalCall-function'></a><hr><h2>sgs_GlobalCall [function]</h2><h3>SGSRESULT sgs_GlobalCall( sgs_Context* C, const char* name, int args, int expect )</h3><h4>call the global variable <code>name</code> as a function</h4><ul><li>combination of global function retrieval and function call; see <a href="#sgs-PushGlobal-function">sgs_PushGlobal</a> and <a href="#sgs-FCall-P-functions">sgs_FCall(P)</a> for more info on behavior</li></ul><h4>error codes</h4><ul><li>SGS_ENOTFND: global variable was not found
 </li><li>SGS_EINPROC: item found was not callable
-</li><li>SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0)`)</li></ul></div>
+</li><li>SGS_EINVAL: not enough values in current stack frame (must have at least <code>args + (gotthis?1:0)</code>)</li></ul></div>
 <div class='item'><a name='sgs-TypeOf-function'></a><hr><h2>sgs_TypeOf [function]</h2><h3>SGSRESULT sgs_TypeOf( sgs_Context* C )</h3><h4>return the type name string of topmost variable in current stack frame</h4><ul><li>if the object does not support the specific part of the conversion interface function, a string of format &quot;object (%p)&quot; is returned to ensure expected type name comparison capabilities</li></ul><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame was empty</li></ul></div>
 <div class='item'><a name='sgs-DumpVar-function'></a><hr><h2>sgs_DumpVar [function]</h2><h3>SGSRESULT sgs_DumpVar( sgs_Context* C, int maxdepth )</h3><h4>convert the topmost variable of current stack frame to a highly informative string that should display the contents of the variable, up to <code>maxdepth</code> depth</h4><ul><li>if object does not have the DUMP interface function implemented, only its pointer in memory and reference count are displayed</li></ul><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame was empty
 </li><li>SGS_EINVAL: invalid base variable type found in variable (not really expected to happen unless custom variable creation is done)</li></ul></div>
@@ -1404,7 +1404,7 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-PadString-function'></a><hr><h2>sgs_PadString [function]</h2><h3>SGSRESULT sgs_PadString( sgs_Context* C )</h3><h4>replace the topmost variable of current stack frame with a string variable where two spaces are appended after every newline</h4><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame is empty or output string size exceeds limit
 </li><li>SGS_EINVAL: topmost variable is not a string</li></ul></div>
 <div class='item'><a name='sgs-ToPrintSafeString-function'></a><hr><h2>sgs_ToPrintSafeString [function]</h2><h3>SGSRESULT sgs_ToPrintSafeString( sgs_Context* C )</h3><h4>replace the topmost variable of current stack frame with a string where all non-printable (except space), non-ASCII characters converted to a character hex code</h4><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame is empty or output string size exceeds limit</li></ul></div>
-<div class='item'><a name='sgs-StringConcat-function'></a><hr><h2>sgs_StringConcat [function]</h2><h3>SGSRESULT sgs_StringConcat( sgs_Context* C, int args )</h3><h4>concatenate the <code>args</code> number of topmost string variables in the current stack frame</h4><h4>error codes</h4><ul><li>SGS_EINVAL: not enough (less than `args`) variables were found in the current stack frame</li></ul></div>
+<div class='item'><a name='sgs-StringConcat-function'></a><hr><h2>sgs_StringConcat [function]</h2><h3>SGSRESULT sgs_StringConcat( sgs_Context* C, int args )</h3><h4>concatenate the <code>args</code> number of topmost string variables in the current stack frame</h4><h4>error codes</h4><ul><li>SGS_EINVAL: not enough (less than <code>args</code>) variables were found in the current stack frame</li></ul></div>
 <div class='item'><a name='sgs-ClPushNulls-function'></a><hr><h2>sgs_ClPushNulls [function]</h2><h3>SGSRESULT sgs_ClPushNulls( sgs_Context* C, sgs_StkIdx num )</h3><h4>push <code>num</code> empty closures to the closure stack</h4><h4>error codes</h4><ul><li>SGS_EINVAL: <code>num</code> was less than 0</li></ul></div>
 <div class='item'><a name='sgs-ClPushItem-function'></a><hr><h2>sgs_ClPushItem [function]</h2><h3>SGSRESULT sgs_ClPushItem( sgs_Context* C, sgs_StkIdx item )</h3><h4>push a variable <code>item</code> on stack as a closure to the closure stack</h4><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds</li></ul></div>
 <div class='item'><a name='sgs-ClPop-function'></a><hr><h2>sgs_ClPop [function]</h2><h3>SGSRESULT sgs_ClPop( sgs_Context* C, sgs_StkIdx num )</h3><h4>pop <code>num</code> closures from the closure stack</h4><h4>error codes</h4><ul><li>SGS_EINPROC: attempted to pop more closures than there are on the stack</li></ul></div>
@@ -1475,7 +1475,7 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>SGS_EOP_MUL: *
 </li><li>SGS_EOP_DIV: /
 </li><li>SGS_EOP_MOD: %
-</li><li>SGS_EOP_NEGATE: - (unary, uses only `A`)</li></ul></li></ul><h4>error codes</h4><ul><li>SGS_ENOTSUP: operation not supported (invalid operation ID)
+</li><li>SGS_EOP_NEGATE: - (unary, uses only <code>A</code>)</li></ul></li></ul><h4>error codes</h4><ul><li>SGS_ENOTSUP: operation not supported (invalid operation ID)
 </li><li>SGS_EINVAL: specified arithmetic operation is not supported by the given set of arguments
 </li><li>SGS_EINPROC: division by 0</li></ul></div>
 <div class='item'><a name='sgs-IncDec-function'></a><hr><h2>sgs_IncDec [function]</h2><h3>SGSRESULT sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc )</h3><h4>increment or decrement the specified variable <code>A</code> to the output <code>out</code></h4><p>
@@ -1633,8 +1633,8 @@ return NULL;</pre></div>
 </li><li><code>ptr</code> != NULL, <code>size</code> == 0: <code>ptr</code> is freed, NULL is returned
 </li><li><code>ptr</code> == NULL, <code>size</code> != 0: a new block of memory is allocated and returned
 </li><li><code>ptr</code> == NULL, <code>size</code> == 0: nothing is done, NULL is returned</li></ul></li></ul></div>
-<div class='item'><a name='Memory-allocation-macros-macros'></a><hr><h2>Memory allocation macros [macros]</h2><h3>Memory allocation macros</h3><h4>these macros allow slightly simplified handling of memory</h4><ul><li><code>sgs_Malloc( C, size )</code>: allocates the memory (alias to `sgs_Memory( C, NULL, size )`)
-</li><li><code>sgs_Free( C, ptr )</code>: frees the memory (alias to `sgs_Memory( C, ptr, 0 )`)
+<div class='item'><a name='Memory-allocation-macros-macros'></a><hr><h2>Memory allocation macros [macros]</h2><h3>Memory allocation macros</h3><h4>these macros allow slightly simplified handling of memory</h4><ul><li><code>sgs_Malloc( C, size )</code>: allocates the memory (alias to <code>sgs_Memory( C, NULL, size )</code>)
+</li><li><code>sgs_Free( C, ptr )</code>: frees the memory (alias to <code>sgs_Memory( C, ptr, 0 )</code>)
 </li><li>sgs_Realloc: alias to sgs_Memory
 </li><li>the following macros expect that the variable sgs_Context* C is in the scope
 <ul><li><code>sgs_Alloc( what )</code>: allocates enough memory to fit the specified type <code>what</code>
@@ -2286,10 +2286,10 @@ a.sort_custom( function(a,b){return a-b+(b%2-a%2)*1000; } ); // a = [5,7,6,8]</p
 </li><li>if <code>reverse</code> is true, array is sorted in the reverse order</li></ul><pre>a = [ 5, 6, 7, 8 ];
 b = [ 3, 1, 4, 2 ];
 a.sort_mapped( b ); // a = [6,8,5,7]</pre></div>
-<div class='item'><a name='array-find-method'></a><hr><h2>array.find [method]</h2><h3>array.find( var item[, bool strict[, int from ]] )</h3><h4>attempts to find <code>item</code> in array, starting from 0 or the index passed with <code>from</code>, if it exists, using basic or strict equality comparisons (depending on `strict`), returning the index or &#39;null&#39; if item was not found</h4><ul><li>if strict comparisons are enabled, variable types are also checked for equality</li></ul><pre>a = [ 5, 6, 7, 8 ];
+<div class='item'><a name='array-find-method'></a><hr><h2>array.find [method]</h2><h3>array.find( var item[, bool strict[, int from ]] )</h3><h4>attempts to find <code>item</code> in array, starting from 0 or the index passed with <code>from</code>, if it exists, using basic or strict equality comparisons (depending on <code>strict</code>), returning the index or &#39;null&#39; if item was not found</h4><ul><li>if strict comparisons are enabled, variable types are also checked for equality</li></ul><pre>a = [ 5, 6, 7, 8 ];
 a.find( &quot;7&quot; ); // returns 2
 a.find( &quot;7&quot;, true ); // returns null</pre></div>
-<div class='item'><a name='array-remove-method'></a><hr><h2>array.remove [method]</h2><h3>array.remove( var item[, bool strict[, bool all[, int from ]]] )</h3><h4>attepts to find and remove first or all <code>item</code> variables in array (depending on `all`), according to the rules specified in <a href="#array-object">array</a>.find(), returning the number of removed items</h4><pre>a = [ 5, 2, 6, 7, 8, 2 ];
+<div class='item'><a name='array-remove-method'></a><hr><h2>array.remove [method]</h2><h3>array.remove( var item[, bool strict[, bool all[, int from ]]] )</h3><h4>attepts to find and remove first or all <code>item</code> variables in array (depending on <code>all</code>), according to the rules specified in <a href="#array-object">array</a>.find(), returning the number of removed items</h4><pre>a = [ 5, 2, 6, 7, 8, 2 ];
 a.remove( &quot;7&quot; ); // returns 1; a = [5,2,6,8,2]
 a.remove( &quot;6&quot;, true ); // returns 0; a remains unchanged
 a.remove( 2, false, true ); // returns 2; a = [5,6,8]</pre></div>
@@ -2663,7 +2663,7 @@ ceil( -3.1 ); // real (-3)</pre></div>
 round( 3.8 ); // real (4)
 round( 4.2 ); // real (4)
 round( -3.1 ); // real (-3)</pre></div>
-<div class='item'><a name='pow-function'></a><hr><h2>pow [function]</h2><h3>pow( x, y )</h3><h4>returns <code>x</code> raised to the power <code>y</code>, as <code>real</code></h4><ul><li>If base (`x`) is negative and exponent (`y`) is not an integral value, or if base is zero and exponent is negative, function returns <code>null</code> and emits a warning message.</li></ul><pre>pow( 2, 5 ); // real (32)
+<div class='item'><a name='pow-function'></a><hr><h2>pow [function]</h2><h3>pow( x, y )</h3><h4>returns <code>x</code> raised to the power <code>y</code>, as <code>real</code></h4><ul><li>If base (<code>x</code>) is negative and exponent (<code>y</code>) is not an integral value, or if base is zero and exponent is negative, function returns <code>null</code> and emits a warning message.</li></ul><pre>pow( 2, 5 ); // real (32)
 pow( 9, 0.5 ); // real (3)
 pow( -1, 0.5 ); // null; Warning: pow(): mathematical error</pre></div>
 <div class='item'><a name='sqrt-function'></a><hr><h2>sqrt [function]</h2><h3>sqrt( x )</h3><h4>returns the square root of <code>x</code>, as <code>real</code></h4><ul><li>If <code>x</code> is negative, function returns <code>null</code> and emits a warning message.</li></ul><pre>sqrt( 16 ); // real (4)
@@ -2841,7 +2841,7 @@ This library includes regular expression match &amp; replace functions.
 <div class='item'><a name='RE-RETURN-constants'></a><hr><h2>RE_RETURN_*** [constants]</h2><p>
 These constants are used in <a href="#re-match-function">re_match</a> / <a href="#re-match-all-function">re_match_all</a> to specify the format of the return value.
 </p><p>
-If none of these are specified (`flags` = 0), only the success state is returned (true/false/match count).
+If none of these are specified (<code>flags</code> = 0), only the success state is returned (true/false/match count).
 </p><ul><li>RE_RETURN_CAPTURED - return the captured string
 </li><li>RE_RETURN_OFFSETS - return array of start/end offsets
 </li><li>RE_RETURN_BOTH - return both the captured string and the start/end offsets in an array</li></ul></div>

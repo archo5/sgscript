@@ -168,11 +168,14 @@ Truth tables for AND/OR/XOR operations
 </p></div>
 <div class='item'><a name='Building-with-SGScript'></a><hr><h2>Building with SGScript</h2><p>
 This section describes all supported ways to compile SGScript and integrate it into your project.
-</p><ul><li><a href="#Building-with-GNU-Make">Building with GNU Make</a></li></ul></div>
+</p><ul><li><a href="#Building-with-GNU-Make">Building with GNU Make</a>
+</li><li><a href="#Building-with-IDEs">Building with IDEs</a>
+</li><li><a href="#Building-with-other-tools">Building with other tools</a>
+</li><li><a href="#Including-SGScript-into-your-project">Including SGScript into your project</a></li></ul></div>
 <div class='item'><a name='Building-with-GNU-Make'></a><hr><h2>Building with GNU Make</h2><h4>Required software</h4><ul><li><a href="http://www.gnu.org/software/make/" target="_blank">GNU Make</a>
 </li><li><a href="http://gcc.gnu.org/" target="_blank">GCC</a>
 </li><li>On Windows, <a href="http://www.mingw.org/" target="_blank">MinGW</a> can be used (it includes both).</li></ul><h4>Building</h4><ul><li>Open a terminal window in file root.
-</li><li>Run <code>make</code> (`mingw32-make` on windows), optionally specifying targets and options.
+</li><li>Run <code>make</code> (<code>mingw32-make</code> on windows), optionally specifying targets and options.
 </li><li>On Windows, a batch file can be used to enable the usage of <code>make</code> (create a file <code>make.bat</code> in <code>C:\MinGW\bin</code> directory or equivalent, add the directory to PATH if it&#39;s not there):</li></ul><pre>@ECHO OFF
 mingw32-make %*</pre><h4>Build options</h4><p>
 Targets:
@@ -187,24 +190,45 @@ Targets:
 </li><li>c: build the <a href="sgscript.docs.htm#Compiler-sgsc" target="_blank">compiler (sgsc)</a>
 </li><li>sgsexe: build <a href="sgscript.docs.htm#Executable-generator-for-Windows-sgsexe" target="_blank">SGScript EXE builder</a>
 </li></ul><li>testing
-<ul><li>build_test: build language test application
-</li><li>build_apitest: build API test application
-</li><li>build_cppbctest: build C++ binding compiler test application
-</li><li>build_cppbindtest: build lite C++ binding test application
-</li><li>build_mttest: build multithreading safety test application
-</li><li>test: build and run language test application
-</li><li>apitest: build and run and run API test application
-</li><li>cppbctest: build and run C++ binding compiler test application
-</li><li>cppbindtest: build and run lite C++ binding test application
-</li><li>mttest: build and run multithreading safety test application
+<ul><li>build_test: build <a href="sgscript.docs.htm#Language-test-application-sgstest" target="_blank">language test application</a>
+</li><li>build_apitest: build <a href="sgscript.docs.htm#API-test-application-sgsapitest" target="_blank">API test application</a>
+</li><li>build_cppbctest: build <a href="sgscript.docs.htm#C-binding-compiler-test-application-sgscppbctest" target="_blank">C++ binding compiler test application</a>
+</li><li>build_cppbindtest: build <a href="sgscript.docs.htm#Lightweight-C-binding-test-application-sgscppbindtest" target="_blank">lightweight C++ binding test application</a>
+</li><li>build_mttest: build <a href="sgscript.docs.htm#Multithreading-safety-test-application-mttest" target="_blank">multithreading safety test application</a>
+</li><li>test: build and run <a href="sgscript.docs.htm#Language-test-application-sgstest" target="_blank">language test application</a>
+</li><li>apitest: build and run <a href="sgscript.docs.htm#API-test-application-sgsapitest" target="_blank">API test application</a>
+</li><li>cppbctest: build and run <a href="sgscript.docs.htm#C-binding-compiler-test-application-sgscppbctest" target="_blank">C++ binding compiler test application</a>
+</li><li>cppbindtest: build and run <a href="sgscript.docs.htm#Lightweight-C-binding-test-application-sgscppbindtest" target="_blank">lightweight C++ binding test application</a>
+</li><li>mttest: build and run <a href="sgscript.docs.htm#Multithreading-safety-test-application-mttest" target="_blank">multithreading safety test application</a>
 </li></ul><li>other
-<ul><li>clean: clean all
+<ul><li>clean: clean all generated files
 </li><li>clean_obj: clean only intermediate build files
 </li><li>clean_objbin: clean intermediate build files and binaries</li></ul></li></ul><p>
 Options:
 </p><ul><li>arch=[32|64] - target architecture (x86/x64), default depends on compiler
 </li><li>mode=[debug|release] - whether it&#39;s a debug or a release build (default=debug)
 </li><li>static=[1|0] - whether to build a static library or a dynamic one (default=0: dynamic)</li></ul><h4>Additional build options &amp; platforms</h4><ul><li>To build on Android, modify the makefile according to the comment in the beginning of that file.</li></ul></div>
+<div class='item'><a name='Building-with-IDEs'></a><hr><h2>Building with IDEs</h2><p>
+All IDE-related build data is under the <code>build</code> directory.
+</p><h4>Supported IDEs</h4><ul><li>Code::Blocks (<code>build/codeblocks</code>)
+</li><li>Visual Studio 2010 (and newer versions) (<code>build/vc10</code>)</li></ul><h4>IDEs with necessary files but without support</h4><ul><li>XCode (<code>build/xcode</code>)</li></ul></div>
+<div class='item'><a name='Building-with-other-tools'></a><hr><h2>Building with other tools</h2><h4>CMake</h4><p>
+There is a file <code>CMakeLists.txt</code> in the root directory of the project. It only builds the dynamic library at the moment.
+</p><h4>File integration</h4><p>
+The code is made to support various compilers and compile under C and C++ so it is quite safe to just drag &amp; drop it into your project.
+</p></div>
+<div class='item'><a name='Including-SGScript-into-your-project'></a><hr><h2>Including SGScript into your project</h2><p>
+There are generally two ways to include SGScript: link the library or include the files directly.
+</p><p>
+<em class='notice-bgr'>Note: Including the files isn&#39;t an option if SGScript modules are to be used.</em>
+</p><p>
+For simplified inclusion of files, add <code>src/</code> and <code>ext/</code> to the include paths.
+</p><ul><li>The main SGScript API is defined in the file <code>src/sgscript.h</code>.
+<ul><li>Requires the SGScript library to be linked to the project or have the files (<code>src/*</code>) compiled in.
+</li></ul><li>Utility library is available in <code>src/sgs_util.h</code>.
+<ul><li>Requires the SGScript library to be linked to the project or have the files (<code>src/*</code>) compiled in.
+</li></ul><li>XGMath library can be found in <code>ext/sgsxgmath.h</code>.
+<ul><li>Requires the XGMath library to be linked to the project or have the files (<code>ext/sgsxgmath.c</code>) compiled in.</li></ul></li></ul></div>
 </div>
 	</body></html>
 	

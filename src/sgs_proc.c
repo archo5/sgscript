@@ -327,9 +327,6 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, instr_t* cod
 		C->sf_first = F;
 	C->sf_last = F;
 	
-#ifdef SGS_JIT
-	sgsJIT_CB_FI( C );
-#endif
 	if( C->hook_fn )
 		C->hook_fn( C->hook_ctx, C, SGS_HOOK_ENTER );
 	
@@ -340,9 +337,6 @@ static void vm_frame_pop( SGS_CTX )
 {
 	sgs_StackFrame* F = C->sf_last;
 	
-#ifdef SGS_JIT
-	sgsJIT_CB_FO( C );
-#endif
 	if( C->hook_fn )
 		C->hook_fn( C->hook_ctx, C, SGS_HOOK_EXIT );
 	
@@ -2400,9 +2394,6 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 			break;
 		}
 		sgs_BreakIf( STACKFRAMESIZE < stkoff );
-#ifdef SGS_JIT
-		sgsJIT_CB_NI( C );
-#endif
 		
 		SF->lptr = ++SF->iptr;
 	}
