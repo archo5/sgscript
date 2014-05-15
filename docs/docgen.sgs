@@ -548,19 +548,24 @@ function generate_docdata( name )
 }
 
 
-file = @argv[1];
-if( file )
-	generate_docdata( file );
-else
+function main()
 {
-	generate_docdata( "sgscript.docs" );
-	generate_docdata( "sgs.cppbc.docs" );
-	generate_docdata( "sgs.sockets.docs" );
-	generate_docdata( "sgs.xgmath.docs" );
-	generate_docdata( "sgs.json.docs" );
-	generate_docdata( "sgs.meta.docs" );
-	generate_docdata( "sgscript.tutorial" );
+	file = @argv[1];
+	if( file )
+		generate_docdata( file );
+	else
+	{
+		generate_docdata( "sgscript.docs" );
+		generate_docdata( "sgs.cppbc.docs" );
+		generate_docdata( "sgs.sockets.docs" );
+		generate_docdata( "sgs.xgmath.docs" );
+		generate_docdata( "sgs.json.docs" );
+		generate_docdata( "sgs.meta.docs" );
+		generate_docdata( "sgscript.tutorial" );
+	}
+	
+	println( "done!" );
 }
 
+main();
 
-println( "done!" );

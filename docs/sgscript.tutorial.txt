@@ -9,6 +9,7 @@ SGScript tutorial
 -- @"Flow control" - how to run a part of the code, at specific moments
 -- @"Advanced concepts" - not the first necessary things, helpful nonetheless
 - @"Building with SGScript" - find out how to build SGScript and integrate it into your project
+-- @"Downloading SGScript"
 -- @"Building with GNU Make"
 -- @"Building with IDEs"
 -- @"Building with other tools"
@@ -305,6 +306,7 @@ Truth tables for AND/OR/XOR operations
 
 This section describes all supported ways to compile SGScript and integrate it into your project.
 
+- @"Downloading SGScript"
 - @"Building with GNU Make"
 - @"Building with IDEs"
 - @"Building with other tools"
@@ -312,6 +314,13 @@ This section describes all supported ways to compile SGScript and integrate it i
 
 
 # >>>
+
+
+# Downloading SGScript [info]
+
+There are two kinds of downloads - source and binaries. All downloads are available in the @"download page"<http://www.sgscript.org/download>. Source files are hosted on @Github<https://github.com/snake5/sgscript>.
+
+Even though `master` branch is supposed to be the 'stable' branch, it is highly suggested that `apidev` branch is tried first since it is the most up-to-date branch, it is expected that generally less bugs are there. `master` branch is more thoroughly tested at the time of release and `apidev` may contain recent changes that subtly break the build.
 
 
 # Building with GNU Make [info]
@@ -324,8 +333,11 @@ This section describes all supported ways to compile SGScript and integrate it i
 
 === Building
 
-- Open a terminal window in file root.
-- Run `make` (`mingw32-make` on windows), optionally specifying targets and options.
+- Open a terminal (`cmd` on Windows, `sh` on Linux/Mac) window in SGScript source root directory.
+- Run `make` (`mingw32-make` on Windows), optionally specifying targets and options.
+-- The syntax is `make <target|option>[, <target|option> ...]`
+-- To build only the library, just write `make`;
+-- To build all tools (VM, compiler, plug-in modules), write `make tools`.
 - On Windows, a batch file can be used to enable the usage of `make` (create a file `make.bat` in `C:\MinGW\bin` directory or equivalent, add the directory to PATH if it's not there):
 
     @ECHO OFF

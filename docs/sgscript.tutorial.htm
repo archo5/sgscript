@@ -12,7 +12,8 @@
 </li><li><a href="#Flow-control">Flow control</a> - how to run a part of the code, at specific moments
 </li><li><a href="#Advanced-concepts">Advanced concepts</a> - not the first necessary things, helpful nonetheless
 </li></ul><li><a href="#Building-with-SGScript">Building with SGScript</a> - find out how to build SGScript and integrate it into your project
-<ul><li><a href="#Building-with-GNU-Make">Building with GNU Make</a>
+<ul><li><a href="#Downloading-SGScript">Downloading SGScript</a>
+</li><li><a href="#Building-with-GNU-Make">Building with GNU Make</a>
 </li><li><a href="#Building-with-IDEs">Building with IDEs</a>
 </li><li><a href="#Building-with-other-tools">Building with other tools</a>
 </li><li><a href="#Including-SGScript-into-your-project">Including SGScript into your project</a>
@@ -207,15 +208,24 @@ Truth tables for AND/OR/XOR operations
 </p></div>
 <div class='item'><a name='Building-with-SGScript'></a><hr><h2>Building with SGScript</h2><p>
 This section describes all supported ways to compile SGScript and integrate it into your project.
-</p><ul><li><a href="#Building-with-GNU-Make">Building with GNU Make</a>
+</p><ul><li><a href="#Downloading-SGScript">Downloading SGScript</a>
+</li><li><a href="#Building-with-GNU-Make">Building with GNU Make</a>
 </li><li><a href="#Building-with-IDEs">Building with IDEs</a>
 </li><li><a href="#Building-with-other-tools">Building with other tools</a>
 </li><li><a href="#Including-SGScript-into-your-project">Including SGScript into your project</a></li></ul></div>
+<div class='item'><a name='Downloading-SGScript'></a><hr><h2>Downloading SGScript</h2><p>
+There are two kinds of downloads - source and binaries. All downloads are available in the <a href="http://www.sgscript.org/download" target="_blank">download page</a>. Source files are hosted on <a href="https://github.com/snake5/sgscript" target="_blank">Github</a>.
+</p><p>
+Even though <code>master</code> branch is supposed to be the &#39;stable&#39; branch, it is highly suggested that <code>apidev</code> branch is tried first since it is the most up-to-date branch, it is expected that generally less bugs are there. <code>master</code> branch is more thoroughly tested at the time of release and <code>apidev</code> may contain recent changes that subtly break the build.
+</p></div>
 <div class='item'><a name='Building-with-GNU-Make'></a><hr><h2>Building with GNU Make</h2><h4>Required software</h4><ul><li><a href="http://www.gnu.org/software/make/" target="_blank">GNU Make</a>
 </li><li><a href="http://gcc.gnu.org/" target="_blank">GCC</a>
-</li><li>On Windows, <a href="http://www.mingw.org/" target="_blank">MinGW</a> can be used (it includes both).</li></ul><h4>Building</h4><ul><li>Open a terminal window in file root.
-</li><li>Run <code>make</code> (<code>mingw32-make</code> on windows), optionally specifying targets and options.
-</li><li>On Windows, a batch file can be used to enable the usage of <code>make</code> (create a file <code>make.bat</code> in <code>C:\MinGW\bin</code> directory or equivalent, add the directory to PATH if it&#39;s not there):</li></ul><pre>@ECHO OFF
+</li><li>On Windows, <a href="http://www.mingw.org/" target="_blank">MinGW</a> can be used (it includes both).</li></ul><h4>Building</h4><ul><li>Open a terminal (<code>cmd</code> on Windows, <code>sh</code> on Linux/Mac) window in SGScript source root directory.
+</li><li>Run <code>make</code> (<code>mingw32-make</code> on Windows), optionally specifying targets and options.
+<ul><li>The syntax is <code>make &lt;target|option&gt;[, &lt;target|option&gt; ...]</code>
+</li><li>To build only the library, just write <code>make</code>;
+</li><li>To build all tools (VM, compiler, plug-in modules), write <code>make tools</code>.
+</li></ul><li>On Windows, a batch file can be used to enable the usage of <code>make</code> (create a file <code>make.bat</code> in <code>C:\MinGW\bin</code> directory or equivalent, add the directory to PATH if it&#39;s not there):</li></ul><pre>@ECHO OFF
 mingw32-make %*</pre><h4>Build options</h4><p>
 Targets:
 </p><ul><li>libraries &amp; tools
