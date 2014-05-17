@@ -31,7 +31,7 @@ ifdef SystemRoot
 	LIBEXT=.dll
 	LIBPFX=
 else
-	CPLATFLAGS = -fPIC
+	CPLATFLAGS = -fPIC -D_FILE_OFFSET_BITS=64
 	PLATFLAGS = -ldl -lrt -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
 	THREADLIBS = -lpthread
 	BINEXT=

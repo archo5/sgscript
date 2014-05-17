@@ -1634,6 +1634,9 @@ SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
 #ifdef _WIN32
 # define ftell( fp ) ftello64( fp )
 # define fseek( fp, ofs, orig ) fseeko64( fp, ofs, orig )
+#else
+# define ftell( fp ) ftello( fp )
+# define fseek( fp, ofs, orig ) fseeko( fp, ofs, orig )
 #endif
 
 #define CRET( suc ) sgs_PushBool( C, sgs_Errno( C, suc ) ); return 1;
