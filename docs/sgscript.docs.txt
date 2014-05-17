@@ -6503,6 +6503,74 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 - serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items
 
 
+# Secure sandbox environment [info]
+
+To ensure safety of the underlying environment, there are functions that need to be protected or disabled.
+
+== Critical (access to file system, possibility of taking control of the machine):
+
+- core functions:
+-- @include_library - access to file system, can load other libraries
+-- @include_shared - access to file system, can run some library code
+-- @include_file - access to file system, can run script files
+-- @include<include [function]> - access to file system, can load other libraries, can run script files or some library code
+-- @import_cfunc - access to file system, can run some library code
+-- @eval_file - access to file system, can run script files
+- @"All functions in I/O library"<I/O library> - access to file system
+- @"OS library":
+-- @os_command - can run any terminal command
+
+== Information control (access to data about the system
+
+- @"Most functions in OS library"<OS library> - access to environment variables, system date/time info / process locale info.
+- core functions:
+-- @printvar, @printvar_ext, @dumpvar, @dumpvar_ext, @sys_stat, @toptr - access to memory layout of engine objects
+
+== Sandbox example
+
+    restrict = function( name )
+    {
+        println( "==\n= The use of '" $ name $ "' is restricted!\n==" );
+    };
+    closure = function( clbl, data )
+    {
+        return function() use( clbl, data )
+        {
+            args = va_get_args();
+            args.unshift( data );
+            sys_apply( clbl, this, args );
+        };
+    };
+    safe_include_lib = function( data, libname )
+    {
+        libname = tostring( libname );
+        if( ["string","math","re","fmt","os"].find( libname ) === null )
+        {
+            println( "info: cannot include files and system access libraries here" );
+            return;
+        }
+        data( libname );
+        if( libname == "os" )
+        {
+            unset( _G, "os_command" );
+            unset( _G, "os_getenv" );
+            unset( _G, "os_putenv" );
+        }
+    };
+    safe_include = function( libname )
+    {
+        return include_library( libname );
+    };
+    global include_library = closure( safe_include_lib, include_library );
+    global include = safe_include;
+    global include_shared = closure( restrict, "include_shared" );
+    global import_cfunc = closure( restrict, "import_cfunc" );
+    global include_file = closure( restrict, "include_file" );
+    global eval_file = closure( restrict, "eval_file" );
+    
+    include "string", "math", "re", "fmt", "os";
+
+
 # <<<
 
 

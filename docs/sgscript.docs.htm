@@ -89,6 +89,7 @@
 </li><li><a href='#Interactive-debugger'>Interactive debugger</a>
 </li></ul><li><a href='#Additional-info'>Additional info</a>
 <ul><li><a href='#Serialization-in-SGScript'>Serialization in SGScript</a>
+</li><li><a href='#Secure-sandbox-environment'>Secure sandbox environment</a>
 </li></ul></li></ul></div><div>
 <div class='item'><a name='SGScript-description'></a><hr><h2>SGScript - description</h2><p>
 This is a programming language that is made to be fast, accessible and simple.
@@ -3079,6 +3080,60 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 </li><li><a href="#sgs-Serialize-function">sgs_Serialize</a> overrides the output function so any output done via &quot;print&quot; or &quot;sgs_Write*&quot; functions during serialization will corrupt the stream
 </li><li>if environment overrides are used on deserialization, remember to add &quot;array&quot;, &quot;dict&quot; and &quot;map&quot; to the list if you use them, they are not added automatically
 </li><li>serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items</li></ul></div>
+<div class='item'><a name='Secure-sandbox-environment'></a><hr><h2>Secure sandbox environment</h2><p>
+To ensure safety of the underlying environment, there are functions that need to be protected or disabled.
+</p><h3>Critical (access to file system, possibility of taking control of the machine):</h3><ul><li>core functions:
+<ul><li><a href="#include-library-function">include_library</a> - access to file system, can load other libraries
+</li><li><a href="#include-shared-function">include_shared</a> - access to file system, can run some library code
+</li><li><a href="#include-file-function">include_file</a> - access to file system, can run script files
+</li><li><a href="#include-function">include</a> - access to file system, can load other libraries, can run script files or some library code
+</li><li><a href="#import-cfunc-function">import_cfunc</a> - access to file system, can run some library code
+</li><li><a href="#eval-file-function">eval_file</a> - access to file system, can run script files
+</li></ul><li><a href="#I-O-library-io">All functions in I/O library</a> - access to file system
+</li><li><a href="#OS-library-os">OS library</a>:
+<ul><li><a href="#os-command-function">os_command</a> - can run any terminal command</li></ul></li></ul><h3>Information control (access to data about the system</h3><ul><li><a href="#OS-library-os">Most functions in OS library</a> - access to environment variables, system date/time info / process locale info.
+</li><li>core functions:
+<ul><li><a href="#printvar-function">printvar</a>, <a href="#printvar-ext-function">printvar_ext</a>, <a href="#dumpvar-function">dumpvar</a>, <a href="#dumpvar-ext-function">dumpvar_ext</a>, <a href="#sys-stat-function">sys_stat</a>, <a href="#toptr-function">toptr</a> - access to memory layout of engine objects</li></ul></li></ul><h3>Sandbox example</h3><pre>restrict = function( name )
+{
+    println( &quot;==\n= The use of &#39;&quot; $ name $ &quot;&#39; is restricted!\n==&quot; );
+};
+closure = function( clbl, data )
+{
+    return function() use( clbl, data )
+    {
+        args = va_get_args();
+        args.unshift( data );
+        sys_apply( clbl, this, args );
+    };
+};
+safe_include_lib = function( data, libname )
+{
+    libname = tostring( libname );
+    if( [&quot;string&quot;,&quot;math&quot;,&quot;re&quot;,&quot;fmt&quot;,&quot;os&quot;].find( libname ) === null )
+    {
+        println( &quot;info: cannot include files and system access libraries here&quot; );
+        return;
+    }
+    data( libname );
+    if( libname == &quot;os&quot; )
+    {
+        unset( _G, &quot;os_command&quot; );
+        unset( _G, &quot;os_getenv&quot; );
+        unset( _G, &quot;os_putenv&quot; );
+    }
+};
+safe_include = function( libname )
+{
+    return include_library( libname );
+};
+global include_library = closure( safe_include_lib, include_library );
+global include = safe_include;
+global include_shared = closure( restrict, &quot;include_shared&quot; );
+global import_cfunc = closure( restrict, &quot;import_cfunc&quot; );
+global include_file = closure( restrict, &quot;include_file&quot; );
+global eval_file = closure( restrict, &quot;eval_file&quot; );
+
+include &quot;string&quot;, &quot;math&quot;, &quot;re&quot;, &quot;fmt&quot;, &quot;os&quot;;</pre></div>
 </div>
 	</body></html>
 	

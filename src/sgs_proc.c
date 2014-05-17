@@ -2032,6 +2032,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount );
 	- function expects the following items on stack: [this][args]
 	- before call, stack is set up to display only the [args] part
 	- [this] can be uncovered with sgs_Method
+	- arguments are transposed to form [invextraargs][this][reqargs]
 	- return value count is checked against the active range at the moment of return
 	- upon return, this function replaces [this][args] with [expect]
 */
@@ -2087,25 +2088,30 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 			
 			C->sf_last->inexp = F->numargs;
 			
+			/* if <this> was expected but wasn't properly passed, insert a NULL in its place */
+			if( F->gotthis && !gotthis )
+			{
+				stk_insert_null( C, 0 );
+				C->stack_off++;
+				C->sf_last->argend++;
+				gotthis = TRUE;
+				stkargs = args + ( F->gotthis && gotthis );
+			}
+			/* if <this> wasn't expected but was passed, ignore it */
+			
 			/* add flag to specify presence of "this" */
 			if( F->gotthis )
 				C->sf_last->flags |= SGS_SF_HASTHIS;
 			/* fix argument stack */
 			if( stkargs > expargs )
 			{
-				stk_transpose( C, expargs, stkargs );
-				C->stack_off += stkargs - expargs;
+				int first = F->numargs + gotthis;
+				int all = args + gotthis;
+				stk_transpose( C, first, all );
+				C->stack_off += all - first;
 			}
 			else
 				stk_push_nulls( C, expargs - stkargs );
-			/* if <this> was expected but wasn't properly passed, insert a NULL in its place */
-			/* if <this> wasn't expected but was passed, ignore it */
-			if( F->gotthis && !gotthis )
-			{
-				stk_insert_null( C, 0 );
-				C->stack_off++;
-				gotthis = TRUE;
-			}
 			
 			stk_push_nulls( C, F->numtmp );
 
@@ -4016,7 +4022,13 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 				membuf_destroy( &mb, C );
 			}
 			break;
-		case SVT_CFUNC: sgs_PushString( C, "C function" ); break;
+		case SVT_CFUNC:
+			{
+				char buf[ 32 ];
+				sprintf( buf, "C function (%p)", var->data.C );
+				sgs_PushString( C, buf );
+			}
+			break;
 		case SVT_OBJECT:
 			{
 				char buf[ 32 ];

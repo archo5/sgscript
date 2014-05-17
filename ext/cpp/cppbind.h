@@ -52,7 +52,7 @@
 #define SGS_GENERIC_DESTRUCTOR_O( obj ) \
 	int SGS_DTORNAME(obj)(SGS_CTX,sgs_VarObj*data) \
 	{ ((obj*) data->data)->~obj(); return SGS_SUCCESS; }
-#define SGS_GENERIC_IFPUSH( obj ) new (sgs_PushObjectIPA( C, sizeof(obj), SGS_IFN(obj) )) obj
+#define SGS_GENERIC_IFPUSH( obj ) new (sgs_PushObjectIPA( C, (uint32_t) sizeof(obj), SGS_IFN(obj) )) obj
 #define SGS_DEFINE_CTORFUNC_O( obj ) int SGS_CTORNAME(obj)(SGS_CTX)
 #define SGS_DEFINE_EMPTY_CTORFUNC_O( obj ) SGS_DEFINE_CTORFUNC_O(obj) \
 	{ SGS_GENERIC_IFPUSH( obj ); return 1; }

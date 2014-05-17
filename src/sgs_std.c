@@ -2496,7 +2496,7 @@ static int sgsstd_hash_crc32( SGS_CTX )
 
 static int sgsstd_va_get_args( SGS_CTX )
 {
-	uint8_t i, xac;
+	uint8_t i, xac, pcnt;
 	sgs_StackFrame* sf;
 	SGSFN( "va_get_args" );
 	if( !C->sf_last || !C->sf_last->prev )
@@ -2505,14 +2505,17 @@ static int sgsstd_va_get_args( SGS_CTX )
 	/* WP: argument count limit */
 	
 	/* accepted arguments */
-	for( i = 0; i < sf->inexp; ++i )
-		sgs_PushVariable( C, C->stack_base + sf->argend - sf->inexp + i );
+	pcnt = MIN( sf->argcount, sf->inexp );
+	for( i = 0; i < pcnt; ++i )
+		sgs_PushVariable( C, C->stack_base + sf->argend - pcnt + i );
 	/* extra arguments */
 	if( sf->argcount > sf->inexp )
 	{
+		sgs_Variable* tpv;
 		xac = (uint8_t)( sf->argcount - sf->inexp );
+		tpv = C->stack_base + sf->argbeg + xac - 1;
 		for( i = 0; i < xac; ++i )
-			sgs_PushVariable( C, C->stack_base + sf->argbeg + xac - 1 - i );
+			sgs_PushVariable( C, tpv - i );
 	}
 	sgs_PushArray( C, sf->argcount );
 	return 1;
