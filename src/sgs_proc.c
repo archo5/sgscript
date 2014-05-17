@@ -3303,7 +3303,7 @@ int sgs_ArgError( SGS_CTX, int argid, int gotthis, int expect, int is_strict )
 #define argerr sgs_ArgError
 #define argerrx sgs_ArgErrorExt
 
-SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
+SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 {
 	int opt = 0;
 	int strict = 0;
@@ -3351,7 +3351,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				
 				if( !nowrite )
 				{
-					*va_arg( args, SGSBOOL* ) = 1;
+					*va_arg( *args, SGSBOOL* ) = 1;
 				}
 			}
 			strict = 0; nowrite = 0; from++; break;
@@ -3363,7 +3363,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
 				{
 					if( !nowrite )
-						va_arg( args, sgs_Bool* );
+						va_arg( *args, sgs_Bool* );
 					break;
 				}
 				
@@ -3376,7 +3376,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				
 				if( !nowrite )
 				{
-					*va_arg( args, sgs_Bool* ) = b;
+					*va_arg( *args, sgs_Bool* ) = b;
 				}
 			}
 			strict = 0; nowrite = 0; from++; break;
@@ -3391,11 +3391,11 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 					{
 						switch( *cmd )
 						{
-						case 'c': va_arg( args, uint8_t* ); break;
-						case 'w': va_arg( args, uint16_t* ); break;
-						case 'l': va_arg( args, uint32_t* ); break;
-						case 'q': va_arg( args, uint64_t* ); break;
-						case 'i': va_arg( args, sgs_Int* ); break;
+						case 'c': va_arg( *args, uint8_t* ); break;
+						case 'w': va_arg( *args, uint16_t* ); break;
+						case 'l': va_arg( *args, uint32_t* ); break;
+						case 'q': va_arg( *args, uint64_t* ); break;
+						case 'i': va_arg( *args, sgs_Int* ); break;
 						}
 					}
 					break;
@@ -3434,11 +3434,11 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				{
 					switch( *cmd )
 					{
-					case 'c': *va_arg( args, uint8_t* ) = (uint8_t) i; break;
-					case 'w': *va_arg( args, uint16_t* ) = (uint16_t) i; break;
-					case 'l': *va_arg( args, uint32_t* ) = (uint32_t) i; break;
-					case 'q': *va_arg( args, uint64_t* ) = (uint64_t) i; break;
-					case 'i': *va_arg( args, sgs_Int* ) = i; break;
+					case 'c': *va_arg( *args, uint8_t* ) = (uint8_t) i; break;
+					case 'w': *va_arg( *args, uint16_t* ) = (uint16_t) i; break;
+					case 'l': *va_arg( *args, uint32_t* ) = (uint32_t) i; break;
+					case 'q': *va_arg( *args, uint64_t* ) = (uint64_t) i; break;
+					case 'i': *va_arg( *args, sgs_Int* ) = i; break;
 					}
 				}
 			}
@@ -3454,9 +3454,9 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 					{
 						switch( *cmd )
 						{
-						case 'f': va_arg( args, float* ); break;
-						case 'd': va_arg( args, double* ); break;
-						case 'r': va_arg( args, sgs_Real* ); break;
+						case 'f': va_arg( *args, float* ); break;
+						case 'd': va_arg( *args, double* ); break;
+						case 'r': va_arg( *args, sgs_Real* ); break;
 						}
 					}
 					break;
@@ -3473,9 +3473,9 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				{
 					switch( *cmd )
 					{
-					case 'f': *va_arg( args, float* ) = (float) r; break;
-					case 'd': *va_arg( args, double* ) = r; break;
-					case 'r': *va_arg( args, sgs_Real* ) = r; break;
+					case 'f': *va_arg( *args, float* ) = (float) r; break;
+					case 'd': *va_arg( *args, double* ) = r; break;
+					case 'r': *va_arg( *args, sgs_Real* ) = r; break;
 					}
 				}
 			}
@@ -3490,9 +3490,9 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				{
 					if( !nowrite )
 					{
-						va_arg( args, char** );
+						va_arg( *args, char** );
 						if( *cmd == 'm' )
-							va_arg( args, sgs_SizeVal* );
+							va_arg( *args, sgs_SizeVal* );
 					}
 					break;
 				}
@@ -3506,9 +3506,9 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				
 				if( !nowrite )
 				{
-					*va_arg( args, char** ) = str;
+					*va_arg( *args, char** ) = str;
 					if( *cmd == 'm' )
-						*va_arg( args, sgs_SizeVal* ) = sz;
+						*va_arg( *args, sgs_SizeVal* ) = sz;
 				}
 			}
 			strict = 0; nowrite = 0; from++; break;
@@ -3518,7 +3518,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
 				{
 					if( !nowrite )
-						va_arg( args, SGSBOOL* );
+						va_arg( *args, SGSBOOL* );
 					break;
 				}
 				
@@ -3530,7 +3530,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				
 				if( !nowrite )
 				{
-					*va_arg( args, SGSBOOL* ) = 1;
+					*va_arg( *args, SGSBOOL* ) = 1;
 				}
 			}
 			strict = 0; nowrite = 0; from++; break;
@@ -3543,7 +3543,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				if( *cmd == 'a' ){ ifc = sgsstd_array_iface; ostr = "array"; }
 				if( *cmd == 't' ){ ifc = sgsstd_dict_iface; ostr = "dict"; }
 				if( *cmd == 'h' ){ ifc = sgsstd_map_iface; ostr = "map"; }
-				if( *cmd == 'o' ) ifc = va_arg( args, sgs_ObjInterface* );
+				if( *cmd == 'o' ) ifc = va_arg( *args, sgs_ObjInterface* );
 				
 				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
 				{
@@ -3551,10 +3551,10 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 					{
 						switch( *cmd )
 						{
-						case 'a': va_arg( args, sgs_SizeVal* ); break;
+						case 'a': va_arg( *args, sgs_SizeVal* ); break;
 						case 't':
-						case 'h': va_arg( args, sgs_SizeVal* ); break;
-						case 'o': va_arg( args, void** ); break;
+						case 'h': va_arg( *args, sgs_SizeVal* ); break;
+						case 'o': va_arg( *args, void** ); break;
 						}
 					}
 					break;
@@ -3572,12 +3572,12 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 					sgs_VarObj* O = sgs_GetObjectStruct( C, from );
 					switch( *cmd )
 					{
-					case 'a': *va_arg( args, sgs_SizeVal* ) = 
+					case 'a': *va_arg( *args, sgs_SizeVal* ) = 
 						((sgsstd_array_header_t*) O->data)->size; break;
 					case 't':
-					case 'h': *va_arg( args, sgs_SizeVal* ) =
+					case 'h': *va_arg( *args, sgs_SizeVal* ) =
 						vht_size( ((VHTable*) O->data) ); break;
-					case 'o': *va_arg( args, void** ) = O->data; break;
+					case 'o': *va_arg( *args, void** ) = O->data; break;
 					}
 				}
 			}
@@ -3590,7 +3590,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
 				{
 					if( !nowrite )
-						va_arg( args, void** );
+						va_arg( *args, void** );
 					break;
 				}
 				
@@ -3602,7 +3602,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				
 				if( !nowrite )
 				{
-					*va_arg( args, void** ) = ptr;
+					*va_arg( *args, void** ) = ptr;
 				}
 			}
 			strict = 0; nowrite = 0; from++; break;
@@ -3612,7 +3612,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				if( opt && sgs_ItemType( C, from ) == SVT_NULL )
 				{
 					if( !nowrite )
-						va_arg( args, sgs_Variable* );
+						va_arg( *args, sgs_Variable* );
 					break;
 				}
 				
@@ -3625,7 +3625,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				
 				if( !nowrite )
 				{
-					int owr = sgs_PeekStackItem( C, from, va_arg( args, sgs_Variable* ) );
+					int owr = sgs_PeekStackItem( C, from, va_arg( *args, sgs_Variable* ) );
 					UNUSED( owr );
 					sgs_BreakIf( !owr );
 				}
@@ -3634,7 +3634,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 			
 		case 'x':
 			{
-				sgs_ArgCheckFunc acf = va_arg( args, sgs_ArgCheckFunc );
+				sgs_ArgCheckFunc acf = va_arg( *args, sgs_ArgCheckFunc );
 				int flags = 0;
 				
 				if( strict )     flags |= SGS_LOADARG_STRICT;
@@ -3644,13 +3644,10 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args )
 				if( range > 0 )  flags |= SGS_LOADARG_INTRANGE;
 				if( range < 0 )  flags |= SGS_LOADARG_INTCLAMP;
 				
-				sgs_VAList va;
-				memcpy( &va.args, &args, sizeof(va) );
-				if( !acf( C, from, &va, flags ) )
+				if( !acf( C, from, args, flags ) )
 				{
 					return opt;
 				}
-				memcpy( &args, &va.args, sizeof(va) );
 			}
 			strict = 0; nowrite = 0; from++; break;
 			
@@ -3673,7 +3670,7 @@ SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... )
 	SGSMIXED ret;
 	va_list args;
 	va_start( args, cmd );
-	ret = sgs_LoadArgsExtVA( C, from, cmd, args );
+	ret = sgs_LoadArgsExtVA( C, from, cmd, &args );
 	va_end( args );
 	return ret;
 }
@@ -3683,7 +3680,7 @@ SGSBOOL sgs_LoadArgs( SGS_CTX, const char* cmd, ... )
 	SGSBOOL ret;
 	va_list args;
 	va_start( args, cmd );
-	ret = sgs_LoadArgsExtVA( C, 0, cmd, args ) > 0;
+	ret = sgs_LoadArgsExtVA( C, 0, cmd, &args ) > 0;
 	va_end( args );
 	return ret;
 }

@@ -483,7 +483,7 @@ static int sgsstd_fmt_base64_encode( SGS_CTX )
 			
 			bb[ 0 ] = b64_table[ (merged>>18) & 0x3f ];
 			bb[ 1 ] = b64_table[ (merged>>12) & 0x3f ];
-			bb[ 2 ] = str < strend-1 ? b64_table[ (merged>>6) & 0x3f ] : '=';
+			bb[ 2 ] = (char)( str < strend-1 ? b64_table[ (merged>>6) & 0x3f ] : '=' );
 			bb[ 3 ] = '=';
 			membuf_appbuf( &B, C, bb, 4 );
 		}

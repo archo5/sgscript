@@ -1891,7 +1891,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 # sgs_LoadArgsExt(VA) [function]
 
 == SGSMIXED sgs_LoadArgsExt( sgs_Context* C, int from, const char* cmd, ... )
-== SGSMIXED sgs_LoadArgsExtVA( sgs_Context* C, int from, const char* cmd, va_list args )
+== SGSMIXED sgs_LoadArgsExtVA( sgs_Context* C, int from, const char* cmd, va_list* args )
 === parse the stack items and retrieve their data according to `cmd`, starting from item `from`
 
 - for anything function requires, pass the value; for anything it returns - the pointer to the value

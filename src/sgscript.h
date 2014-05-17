@@ -560,17 +560,11 @@ SGS_APIFUNC int sgs_ArgError( SGS_CTX, int argid, int gotthis, int expect, int i
 #define sgs_FuncArgError( C, argid, expect, strict ) sgs_ArgError( C, argid, 0, expect, strict )
 #define sgs_MethodArgError( C, argid, expect, strict ) sgs_ArgError( C, argid, 1, expect, strict )
 
-typedef struct _sgs_VAList
-{
-	va_list args;
-}
-sgs_VAList;
-
 typedef int (*sgs_ArgCheckFunc)
 (
 	sgs_Context* /* ctx / SGS_CTX */,
 	int /* argid */,
-	sgs_VAList* /* args */,
+	va_list* /* args */,
 	int /* flags */
 );
 #define SGS_LOADARG_STRICT 0x01
@@ -580,7 +574,7 @@ typedef int (*sgs_ArgCheckFunc)
 #define SGS_LOADARG_INTRANGE 0x10
 #define SGS_LOADARG_INTCLAMP 0x20
 
-SGS_APIFUNC SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list args );
+SGS_APIFUNC SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args );
 SGS_APIFUNC SGSMIXED sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... );
 SGS_APIFUNC SGSBOOL sgs_LoadArgs( SGS_CTX, const char* cmd, ... );
 SGS_APIFUNC SGSBOOL sgs_ParseMethod( SGS_CTX, sgs_ObjInterface* iface, void** ptrout,

@@ -692,7 +692,10 @@ static int socketI_recv( SGS_CTX )
 	if( ret <= 0 )
 		sgs_PushBool( C, ret == 0 );
 	else
-		sgs_PushStringBuf( C, ptr, ret );
+	{
+		/* WP: previously provided output limit */
+		sgs_PushStringBuf( C, ptr, (sgs_SizeVal) ret );
+	}
 	sgs_membuf_destroy( &mb, C );
 	return 1;
 }
@@ -731,7 +734,8 @@ static int socketI_recvfrom( SGS_CTX )
 	}
 	else
 	{
-		sgs_PushStringBuf( C, ptr, ret );
+		/* WP: previously provided output limit */
+		sgs_PushStringBuf( C, ptr, (sgs_SizeVal) ret );
 		push_sockaddr( C, &sa, (size_t) sa_size );
 		return 2;
 	}

@@ -2584,11 +2584,11 @@ void sgs_InitVec4( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM
 	nv[ 3 ] = w;
 }
 
-void sgs_InitAABB2( SGS_CTX, sgs_Variable* var, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
+void sgs_InitAABB2( SGS_CTX, sgs_Variable* var, XGM_VT x1, XGM_VT y1_shdef, XGM_VT x2, XGM_VT y2 )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
 	nv[ 0 ] = x1;
-	nv[ 1 ] = y1;
+	nv[ 1 ] = y1_shdef; /* shadowed declaration warning */
 	nv[ 2 ] = x2;
 	nv[ 3 ] = y2;
 }
@@ -2703,11 +2703,11 @@ void sgs_PushVec4( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 	nv[ 3 ] = w;
 }
 
-void sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
+void sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1_shdef, XGM_VT x2, XGM_VT y2 )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
 	nv[ 0 ] = x1;
-	nv[ 1 ] = y1;
+	nv[ 1 ] = y1_shdef; /* shadowed declaration warning */
 	nv[ 2 ] = x2;
 	nv[ 3 ] = y2;
 }
