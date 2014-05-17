@@ -1918,6 +1918,7 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#hash-crc32-function">hash_crc32</a> - generate a hash/checksum using the crc32 algorithm
 </li></ul><li>SGS-specific utilities
 <ul><li><a href="#va-get-args-function">va_get_args</a> - returns an array of all arguments passed to calling function
+</li><li><a href="#va-get-arg-function">va_get_arg</a> - returns one of the arguments passed to calling function
 </li><li><a href="#va-arg-count-function">va_arg_count</a> - returns the number of all arguments passed to calling function
 </li><li><a href="#sys-call-function">sys_call</a> - call a function/callable dynamically (function and <code>this</code> specified at runtime)
 </li><li><a href="#sys-apply-function">sys_apply</a> - call a function/callable even more dynamically (argument count also specified at runtime)
@@ -2083,6 +2084,7 @@ srand( ftime() ); // restart the generator depending on the second the code was 
 <div class='item'><a name='hash-fnv-function'></a><hr><h2>hash_fnv [function]</h2><h3>hash_fnv( string buf, bool as_hexstring = false )</h3><h4>generate a hash, using the FNV-1a algorithm</h4><ul><li>if <code>as_hexstring</code> is true, an 8 characters long string containing the hexadecimal fixed-length hash value is returned, otherwise the value is returned as integer</li></ul></div>
 <div class='item'><a name='hash-crc32-function'></a><hr><h2>hash_crc32 [function]</h2><h3>hash_crc32( string buf, bool as_hexstring = false )</h3><h4>generate a hash/checksum, using the CRC32 algorithm</h4><ul><li>if <code>as_hexstring</code> is true, an 8 characters long string containing the hexadecimal fixed-length hash/checksum value is returned, otherwise the value is returned as integer</li></ul></div>
 <div class='item'><a name='va-get-args-function'></a><hr><h2>va_get_args [function]</h2><h3>va_get_args()</h3><h4>return an array containing all arguments passed to the calling function</h4></div>
+<div class='item'><a name='va-get-arg-function'></a><hr><h2>va_get_arg [function]</h2><h3>va_get_arg()</h3><h4>returns one of the arguments passed to calling function</h4></div>
 <div class='item'><a name='va-arg-count-function'></a><hr><h2>va_arg_count [function]</h2><h3>va_arg_count()</h3><h4>return the number of arguments passed to the calling function</h4></div>
 <div class='item'><a name='sys-call-function'></a><hr><h2>sys_call [function]</h2><h3>sys_call( func, this[, args..] )</h3><h4>calls the specified function with the specified <code>this</code> value and argument list</h4><p>
 <em class='notice-bgr'>if argument count is only known at runtime, see <a href="#sys-apply-function">sys_apply</a></em>
@@ -2413,6 +2415,7 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#unserialize-function">unserialize [function]</a>
 </li><li><a href="#unset-function">unset [function]</a>
 </li><li><a href="#va-arg-count-function">va_arg_count [function]</a>
+</li><li><a href="#va-get-arg-function">va_get_arg [function]</a>
 </li><li><a href="#va-get-args-function">va_get_args [function]</a></li></ul></div>
 <div class='item'><a name='Formatting-library-fmt'></a><hr><h2>Formatting library (&quot;fmt&quot;)</h2><p>
 This library includes functions and objects for parsing binary and text buffers.

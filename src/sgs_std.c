@@ -2521,6 +2521,45 @@ static int sgsstd_va_get_args( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_va_get_arg( SGS_CTX )
+{
+	sgs_Int argnum;
+	uint8_t i, xac, pcnt;
+	sgs_StackFrame* sf;
+	SGSFN( "va_get_arg" );
+	if( !C->sf_last || !C->sf_last->prev )
+		STDLIB_WARN( "not called from function" )
+	if( !sgs_LoadArgs( C, "i", &argnum ) )
+		return 0;
+	sf = C->sf_last->prev;
+	if( argnum < 0 || argnum >= sf->argcount )
+		STDLIB_WARN( "argument ID out of bounds" )
+	
+	/* WP: argument count limit */
+	i = (uint8_t) argnum;
+	
+	/* accepted arguments */
+	pcnt = MIN( sf->argcount, sf->inexp );
+	if( i < pcnt )
+	{
+		sgs_PushVariable( C, C->stack_base + sf->argend - pcnt + i );
+	}
+	else
+	/* extra arguments */
+	if( sf->argcount > sf->inexp )
+	{
+		sgs_Variable* tpv;
+		i = (uint8_t)( i - pcnt );
+		xac = (uint8_t)( sf->argcount - sf->inexp );
+		tpv = C->stack_base + sf->argbeg + xac - 1;
+		sgs_PushVariable( C, tpv - i );
+	}
+	else
+		sgs_PushNull( C );
+	
+	return 1;
+}
+
 static int sgsstd_va_arg_count( SGS_CTX )
 {
 	SGSFN( "va_arg_count" );
@@ -3478,7 +3517,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* utils */
 	FN( rand ), FN( randf ), FN( srand ), FN( hash_fnv ), FN( hash_crc32 ),
 	/* internal utils */
-	FN( va_get_args ), FN( va_arg_count ),
+	FN( va_get_args ), FN( va_get_arg ), FN( va_arg_count ),
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
 	FN( pcall ), FN( assert ),
 	FN( eval ), FN( eval_file ), FN( compile_sgs ),

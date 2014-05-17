@@ -3646,6 +3646,7 @@ This library is loaded on initialization and contains the functions and constant
 -- @hash_crc32 - generate a hash/checksum using the crc32 algorithm
 - SGS-specific utilities
 -- @va_get_args - returns an array of all arguments passed to calling function
+-- @va_get_arg - returns one of the arguments passed to calling function
 -- @va_arg_count - returns the number of all arguments passed to calling function
 -- @sys_call - call a function/callable dynamically (function and `this` specified at runtime)
 -- @sys_apply - call a function/callable even more dynamically (argument count also specified at runtime)
@@ -4174,6 +4175,12 @@ This library is loaded on initialization and contains the functions and constant
 
 == va_get_args()
 === return an array containing all arguments passed to the calling function
+
+
+# va_get_arg [function]
+
+== va_get_arg()
+=== returns one of the arguments passed to calling function
 
 
 # va_arg_count [function]
