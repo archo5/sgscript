@@ -4289,8 +4289,8 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 	int ret = SGS_SUCCESS;
 	sgs_Variable V;
 	MemBuf B = membuf_create();
-	sgs_OutputFunc dofn;
-	void* doud;
+	sgs_OutputFunc dofn = NULL;
+	void* doud = NULL;
 	int ep = C->output_fn != serialize_output_func;
 
 	if( !sgs_PeekStackItem( C, -1, &V ) )
