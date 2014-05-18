@@ -69,6 +69,7 @@ extern "C" {
 #  define ST_OP_GEQ SGS_ST_OP_GEQ
 #  define ST_OP_LESS SGS_ST_OP_LESS
 #  define ST_OP_GRTR SGS_ST_OP_GRTR
+#  define ST_OP_RWCMP SGS_ST_OP_RWCMP
 #  define ST_OP_ADDEQ SGS_ST_OP_ADDEQ
 #  define ST_OP_SUBEQ SGS_ST_OP_SUBEQ
 #  define ST_OP_MULEQ SGS_ST_OP_MULEQ
@@ -203,6 +204,7 @@ extern "C" {
 #  define SI_GTE SGS_SI_GTE
 #  define SI_GT SGS_SI_GT
 #  define SI_LTE SGS_SI_LTE
+#  define SI_RAWCMP SGS_SI_RAWCMP
 #  define SI_ARRAY SGS_SI_ARRAY
 #  define SI_DICT SGS_SI_DICT
 
@@ -280,49 +282,50 @@ extern "C" {
 #define SGS_ST_OP_GEQ   205 /* >=   */
 #define SGS_ST_OP_LESS  206 /* <    */
 #define SGS_ST_OP_GRTR  207 /* >    */
-#define SGS_ST_OP_ADDEQ 208 /* +=   */
-#define SGS_ST_OP_SUBEQ 209 /* -=   */
-#define SGS_ST_OP_MULEQ 210 /* *=   */
-#define SGS_ST_OP_DIVEQ 211 /* /=   */
-#define SGS_ST_OP_MODEQ 212 /* %=   */
-#define SGS_ST_OP_ANDEQ 213 /* &=   */
-#define SGS_ST_OP_OREQ  214 /* |=   */
-#define SGS_ST_OP_XOREQ 215 /* ^=   */
-#define SGS_ST_OP_LSHEQ 216 /* <<=  */
-#define SGS_ST_OP_RSHEQ 217 /* >>=  */
-#define SGS_ST_OP_BLAEQ 218 /* &&=  */
-#define SGS_ST_OP_BLOEQ 219 /* ||=  */
-#define SGS_ST_OP_CATEQ 220 /* $=   */
-#define SGS_ST_OP_SET   221 /* =    */
-#define SGS_ST_OP_ERSUP 222 /* @    */
-#define SGS_ST_OP_BLAND 223 /* &&   */
-#define SGS_ST_OP_BLOR  224 /* ||   */
-#define SGS_ST_OP_ADD   225 /* +    */
-#define SGS_ST_OP_SUB   226 /* -    */
-#define SGS_ST_OP_MUL   227 /* *    */
-#define SGS_ST_OP_DIV   228 /* /    */
-#define SGS_ST_OP_MOD   229 /* %    */
-#define SGS_ST_OP_AND   230 /* &    */
-#define SGS_ST_OP_OR    231 /* |    */
-#define SGS_ST_OP_XOR   232 /* ^    */
-#define SGS_ST_OP_LSH   233 /* <<   */
-#define SGS_ST_OP_RSH   234 /* >>   */
-#define SGS_ST_OP_MMBR  235 /* .    */
-#define SGS_ST_OP_CAT   236 /* $    */
-#define SGS_ST_OP_NOT   237 /* !    */
-#define SGS_ST_OP_INV   238 /* ~    */
-#define SGS_ST_OP_INC   239 /* ++   */
-#define SGS_ST_OP_DEC   240 /* --   */
+#define SGS_ST_OP_RWCMP 208 /* <=>  */
+#define SGS_ST_OP_ADDEQ 209 /* +=   */
+#define SGS_ST_OP_SUBEQ 210 /* -=   */
+#define SGS_ST_OP_MULEQ 211 /* *=   */
+#define SGS_ST_OP_DIVEQ 212 /* /=   */
+#define SGS_ST_OP_MODEQ 213 /* %=   */
+#define SGS_ST_OP_ANDEQ 214 /* &=   */
+#define SGS_ST_OP_OREQ  215 /* |=   */
+#define SGS_ST_OP_XOREQ 216 /* ^=   */
+#define SGS_ST_OP_LSHEQ 217 /* <<=  */
+#define SGS_ST_OP_RSHEQ 218 /* >>=  */
+#define SGS_ST_OP_BLAEQ 219 /* &&=  */
+#define SGS_ST_OP_BLOEQ 220 /* ||=  */
+#define SGS_ST_OP_CATEQ 221 /* $=   */
+#define SGS_ST_OP_SET   222 /* =    */
+#define SGS_ST_OP_ERSUP 223 /* @    */
+#define SGS_ST_OP_BLAND 224 /* &&   */
+#define SGS_ST_OP_BLOR  225 /* ||   */
+#define SGS_ST_OP_ADD   226 /* +    */
+#define SGS_ST_OP_SUB   227 /* -    */
+#define SGS_ST_OP_MUL   228 /* *    */
+#define SGS_ST_OP_DIV   229 /* /    */
+#define SGS_ST_OP_MOD   230 /* %    */
+#define SGS_ST_OP_AND   231 /* &    */
+#define SGS_ST_OP_OR    232 /* |    */
+#define SGS_ST_OP_XOR   233 /* ^    */
+#define SGS_ST_OP_LSH   234 /* <<   */
+#define SGS_ST_OP_RSH   235 /* >>   */
+#define SGS_ST_OP_MMBR  236 /* .    */
+#define SGS_ST_OP_CAT   237 /* $    */
+#define SGS_ST_OP_NOT   238 /* !    */
+#define SGS_ST_OP_INV   239 /* ~    */
+#define SGS_ST_OP_INC   240 /* ++   */
+#define SGS_ST_OP_DEC   241 /* --   */
 
-#define SGS_ST_ISOP( chr )      ( (chr) >= 200 && (chr) <= 240 )
+#define SGS_ST_ISOP( chr )      ( (chr) >= 200 && (chr) <= 241 )
 #define SGS_ST_OP_UNARY( chr )  ( (chr) == SGS_ST_OP_ERSUP || (chr) == SGS_ST_OP_ADD || \
 	(chr) == SGS_ST_OP_SUB || ( (chr) >= SGS_ST_OP_NOT && (chr) <= SGS_ST_OP_DEC ) )
-#define SGS_ST_OP_BINARY( chr ) ( (chr) >= 200 && (chr) <= 236 && (chr) != 222 )
-#define SGS_ST_OP_ASSIGN( chr ) ( (chr) >= 208 && (chr) <= 221 )
+#define SGS_ST_OP_BINARY( chr ) ( (chr) >= 200 && (chr) <= 237 && (chr) != 223 )
+#define SGS_ST_OP_ASSIGN( chr ) ( (chr) >= 209 && (chr) <= 222 )
 #define SGS_ST_OP_BINMUL( chr ) ( (chr) == SGS_ST_OP_MUL || (chr) == SGS_ST_OP_DIV || (chr) == SGS_ST_OP_MOD )
 #define SGS_ST_OP_BINADD( chr ) ( (chr) == SGS_ST_OP_ADD || (chr) == SGS_ST_OP_SUB )
 #define SGS_ST_OP_BINOPS( chr ) ( (chr) >= SGS_ST_OP_AND && (chr) <= SGS_ST_OP_RSH )
-#define SGS_ST_OP_COMP( chr )   ( (chr) >= 200 && (chr) <= 207 )
+#define SGS_ST_OP_COMP( chr )   ( (chr) >= 200 && (chr) <= 208 )
 #define SGS_ST_OP_BOOL( chr )   ( (chr) == SGS_ST_OP_BLAEQ || (chr) == SGS_ST_OP_BLOEQ || \
 	(chr) == SGS_ST_OP_BLAND || (chr) == SGS_ST_OP_BLOR )
 
@@ -521,6 +524,7 @@ typedef enum sgs_Instruction_e
 	SGS_SI_GTE,
 	SGS_SI_GT,
 	SGS_SI_LTE,
+	SGS_SI_RAWCMP,
 
 	/* specials */
 	SGS_SI_ARRAY,    /* (A:out, B:args) */
@@ -777,7 +781,7 @@ static const char* sgs_OpNames[] =
 	"set", "mconcat", "concat", "negate", "bool_inv", "invert",
 	"inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",
-	"seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte",
+	"seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte", "rawcmp",
 	"array", "dict"
 };
 

@@ -2384,6 +2384,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 		case SI_GTE: { ARGS_3; VCOMPARE( >= ); break; }
 		case SI_GT: { ARGS_3; VCOMPARE( > ); break; }
 		case SI_LTE: { ARGS_3; VCOMPARE( <= ); break; }
+		case SI_RAWCMP: { ARGS_3; var_setint( C, C->stack_off + a1, vm_compare( C, p2, p3 ) ); break; }
 
 		case SI_ARRAY: { vm_make_array( C, argB, argA ); break; }
 		case SI_DICT: { vm_make_dict( C, argB, argA ); break; }

@@ -64,6 +64,7 @@ int sgs_meta_globals( SGS_CTX )
 	_META_RGS( SI_GTE );
 	_META_RGS( SI_GT );
 	_META_RGS( SI_LTE );
+	_META_RGS( SI_RAWCMP );
 	
 	_META_RGS( SI_ARRAY );
 	_META_RGS( SI_DICT );

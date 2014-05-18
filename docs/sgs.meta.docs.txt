@@ -132,6 +132,7 @@ SGScript instruction code/type/ID constants.
 - SI_GTE - test if one variable is greater than or equal to other
 - SI_GT - test if one variable is greater than other
 - SI_LTE - test if one variable is less than or equal to other
+- SI_RAWCMP - return variable difference as -1/0/1
 - SI_ARRAY - create an array from stack items
 - SI_DICT - create a dict from stack items
 

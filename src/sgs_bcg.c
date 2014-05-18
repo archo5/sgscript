@@ -265,6 +265,8 @@ static void dump_opcode( const instr_t* ptr, size_t count )
 		DOP_A( NEQ );
 		DOP_A( GT );
 		DOP_A( GTE );
+		
+		DOP_A( RAWCMP );
 #undef DOP_A
 #undef DOP_B
 
@@ -728,6 +730,7 @@ static int op_pick_opcode( int oper, int binary )
 	case ST_OP_LEQ: return SI_LTE;
 	case ST_OP_GRTR: return SI_GT;
 	case ST_OP_GEQ: return SI_GTE;
+	case ST_OP_RWCMP: return SI_RAWCMP;
 
 	default: return 0;
 	}
@@ -1163,7 +1166,7 @@ static SGSBOOL try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode*
 		case SI_ADD: case SI_SUB: case SI_MUL: case SI_DIV: case SI_MOD:
 		case SI_AND: case SI_OR: case SI_XOR: case SI_LSH: case SI_RSH:
 		case SI_SEQ: case SI_EQ: case SI_LT: case SI_LTE:
-		case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE:
+		case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE: case SI_RAWCMP:
 		case SI_ARRAY: case SI_DICT:
 			{
 				char* dummy0 = NULL;
@@ -1212,7 +1215,7 @@ static SGSBOOL try_optimize_set_op( SGS_CTX, sgs_CompFunc* func, size_t ioff, rc
 		case SI_ADD: case SI_SUB: case SI_MUL: case SI_DIV: case SI_MOD:
 		case SI_AND: case SI_OR: case SI_XOR: case SI_LSH: case SI_RSH:
 		case SI_SEQ: case SI_EQ: case SI_LT: case SI_LTE:
-		case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE:
+		case SI_SNEQ: case SI_NEQ: case SI_GT: case SI_GTE: case SI_RAWCMP:
 		case SI_ARRAY: case SI_DICT:
 			{
 				char* dummy0 = NULL;

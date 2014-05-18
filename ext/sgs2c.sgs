@@ -426,6 +426,7 @@ function c_compile_func_inner( fdata, iswhole )
 		else if( op.op == SI_GT ) output $= c_compile_comparison( op.a, op.b, op.c, ">" );
 		else if( op.op == SI_LTE ) output $= c_compile_comparison( op.a, op.b, op.c, "<=" );
 		else if( op.op == SI_GTE ) output $= c_compile_comparison( op.a, op.b, op.c, ">=" );
+		else if( op.op == SI_RAWCMP ) output $= c_compile_comparison( op.a, op.b, op.c, "<=>" );
 		
 		// SPECIAL ACTIONS
 		else if( op.op == SI_ARRAY ) output $= c_compile_initop( op.a, "Array", op.b );

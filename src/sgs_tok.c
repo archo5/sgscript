@@ -221,11 +221,11 @@ static void readstring( SGS_CTX, MemBuf* out, LineNum* line, const char* code, i
 }
 
 static const char* sgs_opchars = "=<>+-*/%!~&|^.$@";
-static const char* sgs_operators = "===;!==;==;!=;<=;>=;+=;-=;*=;/=;%=;&=;|=;^=;<<=;>>=;$=;"
+static const char* sgs_operators = "<=>;===;!==;==;!=;<=;>=;+=;-=;*=;/=;%=;&=;|=;^=;<<=;>>=;$=;"
 	"<<;>>;&&=;||=;&&;||;<;>;=;++;--;+;-;*;/;%;&;|;^;.;$;!;~;@";
 static const sgs_TokenType sgs_optable[] =
 {
-	ST_OP_SEQ, ST_OP_SNEQ, ST_OP_EQ, ST_OP_NEQ, ST_OP_LEQ, ST_OP_GEQ,
+	ST_OP_RWCMP, ST_OP_SEQ, ST_OP_SNEQ, ST_OP_EQ, ST_OP_NEQ, ST_OP_LEQ, ST_OP_GEQ,
 	ST_OP_ADDEQ, ST_OP_SUBEQ, ST_OP_MULEQ, ST_OP_DIVEQ, ST_OP_MODEQ,
 	ST_OP_ANDEQ, ST_OP_OREQ, ST_OP_XOREQ, ST_OP_LSHEQ, ST_OP_RSHEQ, ST_OP_CATEQ,
 	ST_OP_LSH, ST_OP_RSH, ST_OP_BLAEQ, ST_OP_BLOEQ, ST_OP_BLAND, ST_OP_BLOR,
@@ -503,6 +503,7 @@ static void tp_token( SGS_CTX, MemBuf* out, TokenList t )
 		}
 		break;
 #define OPR( op ) membuf_appbuf( out, C, op, strlen(op) )
+	case ST_OP_RWCMP: OPR( "<=>" ); break;
 	case ST_OP_SEQ: OPR( "===" ); break;
 	case ST_OP_SNEQ: OPR( "!==" ); break;
 	case ST_OP_EQ: OPR( "==" ); break;
@@ -647,6 +648,7 @@ void sgsT_DumpToken( TokenList tok )
 		}
 		break;
 #define OPR( op ) printf( "%s", op );
+	case ST_OP_RWCMP: OPR( "<=>" ); break;
 	case ST_OP_SEQ: OPR( "===" ); break;
 	case ST_OP_SNEQ: OPR( "!==" ); break;
 	case ST_OP_EQ: OPR( "==" ); break;
