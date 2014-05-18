@@ -3631,8 +3631,14 @@ This library is loaded on initialization and contains the functions and constant
 -- @parsereal - try to parse a variable as string, return the value or null on failure
 -- @typeof - returns the type string of a variable
 -- @typeid - returns type ID of a variable
+-- @typeptr - returns type interface pointer from object variables
+-- @typeptr_by_name - returns type interface pointer by its name
 -- @is_numeric - returns if variable is a numeric type
 -- @is_callable - returns if variable can be called as a function
+-- @is_array - returns if variable is an array
+-- @is_dict - returns if variable is a dict
+-- @is_map - returns if variable is a map
+-- @is_iterable - returns if variable is iterable
 - input/output
 -- @"print, println, printlns, errprint, errprintln, errprintlns" - write variables to output callback/stream
 -- @printvar - write variable dumps to output callback/stream
@@ -4044,6 +4050,26 @@ This library is loaded on initialization and contains the functions and constant
     typeid( [] ); // returns 7 / VT_OBJECT
 
 
+# typeptr [function]
+
+== typeptr( var )
+=== returns type interface pointer from object variables or null pointer from other variables
+
+    typeptr( 5 ); // returns ptr(0)
+    typeptr( [] ); // returns ptr(...), NOT ptr(0)
+
+
+# typeptr_by_name [function]
+
+== typeptr_by_name( string name )
+=== returns type interface pointer by its name or null pointer if name is not assigned to a pointer
+
+- equivalent to @sgs_FindType in the C API
+
+    typeptr_by_name( "array" ); // returns ptr(...)
+    typeptr_by_name( "array" ) == typeptr( [] ); // returns 'true'
+
+
 # is_numeric [function]
 
 == is_numeric( var )
@@ -4067,6 +4093,45 @@ This library is loaded on initialization and contains the functions and constant
     is_callable( print ); // returns 'true'
     is_callable( function(){} ); // returns 'true'
     is_callable( 5 ); // returns 'false'
+
+
+# is_array [function]
+
+== is_array( var )
+=== returns if variable is an array
+
+    is_array( print ); // returns 'false'
+    is_array( [] ); // returns 'true'
+
+
+# is_dict [function]
+
+== is_dict( var )
+=== returns if variable is a dict
+
+    is_dict( 5 ); // returns 'false'
+    is_dict( [] ); // returns 'false'
+    is_dict( {} ); // returns 'true'
+
+
+# is_map [function]
+
+== is_map( var )
+=== returns if variable is a map
+
+    is_map( "map" ); // returns 'false'
+    is_map( {} ); // returns 'false'
+    is_map( map() ); // returns 'true'
+
+
+# is_iterable [function]
+
+== is_iterable( var )
+=== returns if variable is iterable
+
+    is_iterable( print ); // returns 'false'
+    is_iterable( [] ); // returns 'true'
+    is_iterable( {} ); // returns 'true'
 
 
 # print, println, printlns, errprint, errprintln, errprintlns [functions]

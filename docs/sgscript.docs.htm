@@ -1903,8 +1903,14 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#parsereal-function">parsereal</a> - try to parse a variable as string, return the value or null on failure
 </li><li><a href="#typeof-function">typeof</a> - returns the type string of a variable
 </li><li><a href="#typeid-function">typeid</a> - returns type ID of a variable
+</li><li><a href="#typeptr-function">typeptr</a> - returns type interface pointer from object variables
+</li><li><a href="#typeptr-by-name-function">typeptr_by_name</a> - returns type interface pointer by its name
 </li><li><a href="#is-numeric-function">is_numeric</a> - returns if variable is a numeric type
 </li><li><a href="#is-callable-function">is_callable</a> - returns if variable can be called as a function
+</li><li><a href="#is-array-function">is_array</a> - returns if variable is an array
+</li><li><a href="#is-dict-function">is_dict</a> - returns if variable is a dict
+</li><li><a href="#is-map-function">is_map</a> - returns if variable is a map
+</li><li><a href="#is-iterable-function">is_iterable</a> - returns if variable is iterable
 </li></ul><li>input/output
 <ul><li><a href="#print-println-printlns-errprint-errprintln-errprintlns-functions">print, println, printlns, errprint, errprintln, errprintlns</a> - write variables to output callback/stream
 </li><li><a href="#printvar-function">printvar</a> - write variable dumps to output callback/stream
@@ -2046,6 +2052,10 @@ typeof( [] ); // returns &quot;array&quot;</pre></div>
 <div class='item'><a name='typeid-function'></a><hr><h2>typeid [function]</h2><h3>typeid( var )</h3><h4>returns the first 4 bits of the variable <code>var</code> type flags, as <code>int</code></h4><ul><li>returns one of the values mapped to VT_NULL/VT_BOOL/VT_INT/VT_REAL/VT_STRING/VT_FUNC/VT_CFUNC/VT_OBJECT/VT_PTR
 </li><li>this function is equivalent to <a href="#sgs-ItemType-function">sgs_ItemType</a> in the C API</li></ul><pre>typeid( 5 ) == VT_INT; // returns &#39;true&#39;
 typeid( [] ); // returns 7 / VT_OBJECT</pre></div>
+<div class='item'><a name='typeptr-function'></a><hr><h2>typeptr [function]</h2><h3>typeptr( var )</h3><h4>returns type interface pointer from object variables or null pointer from other variables</h4><pre>typeptr( 5 ); // returns ptr(0)
+typeptr( [] ); // returns ptr(...), NOT ptr(0)</pre></div>
+<div class='item'><a name='typeptr-by-name-function'></a><hr><h2>typeptr_by_name [function]</h2><h3>typeptr_by_name( string name )</h3><h4>returns type interface pointer by its name or null pointer if name is not assigned to a pointer</h4><ul><li>equivalent to <a href="#sgs-FindType-function">sgs_FindType</a> in the C API</li></ul><pre>typeptr_by_name( &quot;array&quot; ); // returns ptr(...)
+typeptr_by_name( &quot;array&quot; ) == typeptr( [] ); // returns &#39;true&#39;</pre></div>
 <div class='item'><a name='is-numeric-function'></a><hr><h2>is_numeric [function]</h2><h3>is_numeric( var )</h3><h4>returns whether the variable <code>var</code> is numeric - one of bool/int/real or a numeric string</h4><ul><li>all types that can always be converted to numbers are considered numeric, with two exceptions:
 <ul><li>convertible objects are not numeric since validation requires an interface call and unnecessary interface calls cannot be made
 </li><li>null value is considered to be the lack of a better value, thus it cannot be considered valid, even though it always maps implicitly to the integer 0</li></ul></li></ul><pre>is_numeric( 12.124 ); // returns true
@@ -2053,6 +2063,17 @@ is_numeric( &quot;what&quot; ); // returns false</pre></div>
 <div class='item'><a name='is-callable-function'></a><hr><h2>is_callable [function]</h2><h3>is_callable( var )</h3><h4>returns whether the variable <code>var</code> is callable - a function (func/cfunc) or an object with OP_CALL defined</h4><ul><li>this function is equivalent to <a href="#sgs-IsCallable-P-functions">sgs_IsCallable</a> in the C API</li></ul><pre>is_callable( print ); // returns &#39;true&#39;
 is_callable( function(){} ); // returns &#39;true&#39;
 is_callable( 5 ); // returns &#39;false&#39;</pre></div>
+<div class='item'><a name='is-array-function'></a><hr><h2>is_array [function]</h2><h3>is_array( var )</h3><h4>returns if variable is an array</h4><pre>is_array( print ); // returns &#39;false&#39;
+is_array( [] ); // returns &#39;true&#39;</pre></div>
+<div class='item'><a name='is-dict-function'></a><hr><h2>is_dict [function]</h2><h3>is_dict( var )</h3><h4>returns if variable is a dict</h4><pre>is_dict( 5 ); // returns &#39;false&#39;
+is_dict( [] ); // returns &#39;false&#39;
+is_dict( {} ); // returns &#39;true&#39;</pre></div>
+<div class='item'><a name='is-map-function'></a><hr><h2>is_map [function]</h2><h3>is_map( var )</h3><h4>returns if variable is a map</h4><pre>is_map( &quot;map&quot; ); // returns &#39;false&#39;
+is_map( {} ); // returns &#39;false&#39;
+is_map( map() ); // returns &#39;true&#39;</pre></div>
+<div class='item'><a name='is-iterable-function'></a><hr><h2>is_iterable [function]</h2><h3>is_iterable( var )</h3><h4>returns if variable is iterable</h4><pre>is_iterable( print ); // returns &#39;false&#39;
+is_iterable( [] ); // returns &#39;true&#39;
+is_iterable( {} ); // returns &#39;true&#39;</pre></div>
 <div class='item'><a name='print-println-printlns-errprint-errprintln-errprintlns-functions'></a><hr><h2>print, println, printlns, errprint, errprintln, errprintlns [functions]</h2><h3>print( ... ), println( ... ), printlns( ... ),</h3><h3>errprint( ... ), errprintln( ... ), errprintlns( ... ),</h3><h4>passes all arguments, converted to strings, to the (error) output callback</h4><ul><li>(err)print passes arguments without modifications
 </li><li>(err)println passes a newline character after all variables
 </li><li>(err)printlns passes a newline character after each variable</li></ul><pre>print( 5, &quot;x&quot; ); // prints &quot;5x&quot;
@@ -2380,7 +2401,11 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#include-file-function">include_file [function]</a>
 </li><li><a href="#include-library-function">include_library [function]</a>
 </li><li><a href="#include-shared-function">include_shared [function]</a>
+</li><li><a href="#is-array-function">is_array [function]</a>
 </li><li><a href="#is-callable-function">is_callable [function]</a>
+</li><li><a href="#is-dict-function">is_dict [function]</a>
+</li><li><a href="#is-iterable-function">is_iterable [function]</a>
+</li><li><a href="#is-map-function">is_map [function]</a>
 </li><li><a href="#is-numeric-function">is_numeric [function]</a>
 </li><li><a href="#isset-function">isset [function]</a>
 </li><li><a href="#iter-advance-function">iter_advance [function]</a>
@@ -2414,6 +2439,8 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#tostring-function">tostring [function]</a>
 </li><li><a href="#typeid-function">typeid [function]</a>
 </li><li><a href="#typeof-function">typeof [function]</a>
+</li><li><a href="#typeptr-function">typeptr [function]</a>
+</li><li><a href="#typeptr-by-name-function">typeptr_by_name [function]</a>
 </li><li><a href="#unserialize-function">unserialize [function]</a>
 </li><li><a href="#unset-function">unset [function]</a>
 </li><li><a href="#va-arg-count-function">va_arg_count [function]</a>

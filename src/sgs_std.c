@@ -2206,6 +2206,28 @@ static int sgsstd_typeid( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_typeptr( SGS_CTX )
+{
+	SGSFN( "typeptr" );
+	if( !sgs_LoadArgs( C, ">." ) )
+		return 0;
+	if( sgs_ItemType( C, 0 ) == SVT_OBJECT )
+		sgs_PushPtr( C, sgs_GetObjectIface( C, 0 ) );
+	else
+		sgs_PushPtr( C, NULL );
+	return 1;
+}
+
+static int sgsstd_typeptr_by_name( SGS_CTX )
+{
+	char* typename;
+	SGSFN( "typeptr_by_name" );
+	if( !sgs_LoadArgs( C, "s", &typename ) )
+		return 0;
+	sgs_PushPtr( C, sgs_FindType( C, typename ) );
+	return 1;
+}
+
 static int sgsstd_is_numeric( SGS_CTX )
 {
 	int res;
@@ -2234,6 +2256,34 @@ static int sgsstd_is_callable( SGS_CTX )
 		return 0;
 	
 	sgs_PushBool( C, sgs_IsCallable( C, 0 ) );
+	return 1;
+}
+
+static int sgsstd_is_array( SGS_CTX )
+{
+	SGSFN( "is_array" );
+	sgs_PushBool( C, sgs_IsObject( C, 0, sgsstd_array_iface ) );
+	return 1;
+}
+
+static int sgsstd_is_dict( SGS_CTX )
+{
+	SGSFN( "is_dict" );
+	sgs_PushBool( C, sgs_IsObject( C, 0, sgsstd_dict_iface ) );
+	return 1;
+}
+
+static int sgsstd_is_map( SGS_CTX )
+{
+	SGSFN( "is_map" );
+	sgs_PushBool( C, sgs_IsObject( C, 0, sgsstd_map_iface ) );
+	return 1;
+}
+
+static int sgsstd_is_iterable( SGS_CTX )
+{
+	SGSFN( "is_iterable" );
+	sgs_PushBool( C, sgs_PushIterator( C, 0 ) == SGS_SUCCESS );
 	return 1;
 }
 
@@ -3505,8 +3555,9 @@ static sgs_RegFuncConst regfuncs[] =
 	/* types */
 	FN( tobool ), FN( toint ), FN( toreal ), FN( tostring ), FN( toptr ),
 	FN( parseint ), FN( parsereal ),
-	FN( typeof ), FN( typeid ),
+	FN( typeof ), FN( typeid ), FN( typeptr ), FN( typeptr_by_name ),
 	FN( is_numeric ), FN( is_callable ),
+	FN( is_array ), FN( is_dict ), FN( is_map ), FN( is_iterable ),
 	/* I/O */
 	FN( print ), FN( println ), FN( printlns ),
 	FN( errprint ), FN( errprintln ), FN( errprintlns ),
