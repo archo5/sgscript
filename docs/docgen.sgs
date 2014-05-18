@@ -299,6 +299,8 @@ function output_data_htm( name, doc_title, tags, pages )
 	'  $ data $ '
 	</body></html>
 	';
+
+	fullfile = string_replace( fullfile, ["\r\n","\r"], "\n" );
 	
 	io_file_write( name $ ".htm", fullfile );
 }

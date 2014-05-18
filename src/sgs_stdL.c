@@ -2897,22 +2897,23 @@ SGSRESULT sgs_LoadLib_OS( SGS_CTX )
 #define REGEX_RETURN_OFFSETS 2
 #define REGEX_RETURN_BOTH (REGEX_RETURN_CAPTURED|REGEX_RETURN_OFFSETS)
 
-static int _regex_init( SGS_CTX, srx_Context** pR, char* ptrn )
+static int _regex_init( SGS_CTX, srx_Context** pR, const char* ptrn, sgs_SizeVal ptrnsize )
 {
 	srx_Context* R;
 	int errnpos[2] = {0,0};
-	char conchar, *delpos;
+	char conchar;
+	const char *delpos, *ptrnend = ptrn + ptrnsize;
 	
 	if( !*ptrn )
 		STDLIB_WARN( "argument 2 (pattern) is empty" )
 	conchar = *ptrn;
-	delpos = strchr( ptrn + 1, conchar );
-	if( !delpos )
+	delpos = ptrn + 1;
+	while( delpos < ptrnend && *delpos != conchar )
+		delpos++;
+	if( delpos >= ptrnend )
 		STDLIB_WARN( "unmatched pattern/modifier separator defined at character 0" )
 	
-	*delpos = 0; /* slightly evil */
-	R = srx_CreateExt( ptrn + 1, delpos + 1, errnpos, C->memfunc, C->mfuserdata );
-	*delpos = conchar;
+	R = srx_CreateExt( ptrn + 1, (size_t)( delpos - ptrn - 1 ), delpos + 1, errnpos, C->memfunc, C->mfuserdata );
 	if( !R )
 	{
 		const char* errstr = "unknown error";
@@ -2934,9 +2935,9 @@ static int _regex_init( SGS_CTX, srx_Context** pR, char* ptrn )
 	return 1;
 }
 
-static int _regex_match( SGS_CTX, srx_Context* R, char* str, sgs_SizeVal off, sgs_Int flags )
+static int _regex_match( SGS_CTX, srx_Context* R, char* str, sgs_SizeVal size, sgs_SizeVal off, sgs_Int flags )
 {
-	int ret = srx_Match( R, str, off );
+	int ret = srx_MatchExt( R, str, (size_t) size, (size_t) off );
 	if( ret )
 	{
 		if( flags & REGEX_RETURN_BOTH )
@@ -2985,23 +2986,23 @@ static int sgsstd_re_match( SGS_CTX )
 {
 	char *str, *ptrn;
 	int ret;
-	sgs_SizeVal strsize, off = 0;
+	sgs_SizeVal strsize, ptrnsize, off = 0;
 	sgs_Int flags = 0;
 	srx_Context* R;
 	
 	SGSFN( "re_match" );
 	
-	if( !sgs_LoadArgs( C, "ms|il", &str, &strsize, &ptrn, &flags, &off ) )
+	if( !sgs_LoadArgs( C, "mm|il", &str, &strsize, &ptrn, &ptrnsize, &flags, &off ) )
 		return 0;
 	
 	if( off < 0 ) off += strsize;
 	if( off < 0 || off > strsize )
 		STDLIB_WARN( "argument 5 (offset) out of bounds" )
 	
-	if( !_regex_init( C, &R, ptrn ) )
+	if( !_regex_init( C, &R, ptrn, ptrnsize ) )
 		return 0;
 	
-	ret = _regex_match( C, R, str, off, flags );
+	ret = _regex_match( C, R, str, strsize, off, flags );
 	if( ret >= 0 )
 		sgs_PushBool( C, ret );
 	
@@ -3012,28 +3013,29 @@ static int sgsstd_re_match( SGS_CTX )
 static int sgsstd_re_match_all( SGS_CTX )
 {
 	char *str, *ptrn;
-	int ret, cnt = 0, noff;
-	sgs_SizeVal strsize, off = 0;
+	int ret, cnt = 0;
+	size_t noff;
+	sgs_SizeVal strsize, ptrnsize, off = 0;
 	sgs_Int flags = 0;
 	srx_Context* R;
 	
 	SGSFN( "re_match_all" );
 	
-	if( !sgs_LoadArgs( C, "ms|il", &str, &strsize, &ptrn, &flags, &off ) )
+	if( !sgs_LoadArgs( C, "mm|il", &str, &strsize, &ptrn, &ptrnsize, &flags, &off ) )
 		return 0;
 	
 	if( off < 0 ) off += strsize;
 	if( off < 0 || off > strsize )
 		STDLIB_WARN( "argument 5 (offset) out of bounds" )
 	
-	if( !_regex_init( C, &R, ptrn ) )
+	if( !_regex_init( C, &R, ptrn, ptrnsize ) )
 		return 0;
 	
-	while( ( ret = _regex_match( C, R, str, off, flags ) ) != 0 )
+	while( ( ret = _regex_match( C, R, str, strsize, off, flags ) ) != 0 )
 	{
 		srx_GetCaptured( R, 0, NULL, &noff );
 		if( off != noff )
-			off = noff;
+			off = (sgs_SizeVal) noff; /* WP: string size limit */
 		else
 			off++;
 		cnt++;
@@ -3050,20 +3052,23 @@ static int sgsstd_re_match_all( SGS_CTX )
 static int sgsstd_re_replace( SGS_CTX )
 {
 	char *str, *ptrn, *rep, *ret;
+	sgs_SizeVal strsize, ptrnsize, repsize;
+	size_t outsize = 0;
 	srx_Context* R = NULL;
 	
 	SGSFN( "re_replace" );
 	
-	if( !sgs_LoadArgs( C, "sss", &str, &ptrn, &rep ) )
+	if( !sgs_LoadArgs( C, "mmm", &str, &strsize, &ptrn, &ptrnsize, &rep, &repsize ) )
 		return 0;
 	
-	if( !_regex_init( C, &R, ptrn ) )
+	if( !_regex_init( C, &R, ptrn, ptrnsize ) )
 		return 0;
 	
-	ret = srx_Replace( R, str, rep );
-	sgs_PushString( C, ret );
+	ret = srx_ReplaceExt( R, str, (size_t) strsize, rep, (size_t) repsize, &outsize );
+	sgs_PushStringBuf( C, ret, (sgs_SizeVal) outsize );
 	srx_FreeReplaced( R, ret );
 	
+	srx_Destroy( R );
 	return 1;
 }
 
