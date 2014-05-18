@@ -297,7 +297,8 @@ static int part_weight( FTNode* part, int isfcall, int binary )
 		if( binary )
 		{
 			if( ST_OP_BOOL( type ) )	return 30;
-			if( ST_OP_COMP( type ) )	return 28;
+			if( type == ST_OP_RWCMP )   return 28; /* lower split prio .. */
+			if( ST_OP_COMP( type ) )	return 29; /* .. than other comp ops */
 			if( type == ST_OP_CAT )		return 27;
 			if( ST_OP_BINOPS( type ) )	return 26;
 			if( ST_OP_BINADD( type ) )	return 25;
