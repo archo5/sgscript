@@ -379,6 +379,7 @@ There are 5 types of action for expressions in SGScript: arithmetic, binary, boo
 <tr><td>not equal</td><td><code>   A  !=  B   </code></td><td>comparison</td><td>no</td><td>2</td></tr>
 <tr><td>strict equality</td><td><code>   A  ===  B  </code></td><td>comparison</td><td>no</td><td>2</td></tr>
 <tr><td>strict inequality</td><td><code>   A  !==  B  </code></td><td>comparison</td><td>no</td><td>2</td></tr>
+<tr><td>raw comparison</td><td><code>   A  &lt;=&gt;  B  </code></td><td>comparison</td><td>no</td><td>2</td></tr>
 <tr><td>error suppression</td><td><code>     @ A      </code></td><td>special</td><td>no</td><td>1</td></tr>
 <tr><td>declare-local</td><td><code>   var A      </code></td><td>special</td><td>maybe</td><td>any</td></tr>
 <tr><td>declare-global</td><td><code>   global A   </code></td><td>special</td><td>maybe</td><td>any</td></tr>
@@ -405,7 +406,8 @@ Some notes on the special cases:
 </li><li>[property,index] whether property or index expressions set data depends if they&#39;re on the receiving (left) end of an assignment expression
 </li><li>[inline if] 3 inputs are required, 2 are actually used (as if <code>if(A){return B;}else{return C;}</code> was used)
 </li><li>[subexpression] subexpressions can set data if they are set up like this: &lt;subexpression&gt; = &lt;function-call&gt; - this is the way to read more than one return value from a function
-</li><li>[error suppression] the <code>@</code> operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn&#39;t an error</li></ul><h5>compatible function call / inheritance call / global method call (<code> O!A ([B,..]) </code>)</h5><p>
+</li><li>[error suppression] the <code>@</code> operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn&#39;t an error
+</li><li>[function] the full function definition expression syntax: <code>function &lt;name&gt; ( &lt;args&gt; ) [ use ( &lt;use-list&gt; ) ]</code>, followed by either <code>{ ... }</code> or <code>= ... ;</code>. &lt;name&gt;, &lt;args&gt; and the &#39;use&#39; block are all optional.</li></ul><h5>compatible function call / inheritance call / global method call (<code> O!A ([B,..]) </code>)</h5><p>
 CFC is created to encourage users to reduce memory usage without sacrificing clarity of code. It is a short-hand, optimized version of the .call method / sys_call function for callables.
 </p><p>
 Properties:

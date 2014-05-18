@@ -387,6 +387,7 @@ There are 5 types of action for expressions in SGScript: arithmetic, binary, boo
 |  not equal              |`   A  !=  B   `|   comparison   |  no    |   2   |
 |  strict equality        |`   A  ===  B  `|   comparison   |  no    |   2   |
 |  strict inequality      |`   A  !==  B  `|   comparison   |  no    |   2   |
+|  raw comparison         |`   A  <=>  B  `|   comparison   |  no    |   2   |
 |  error suppression      |`     @ A      `|    special     |  no    |   1   |
 |  declare-local          |`   var A      `|    special     | maybe  |  any  |
 |  declare-global         |`   global A   `|    special     | maybe  |  any  |
@@ -415,6 +416,7 @@ Some notes on the special cases:
 - [inline if] 3 inputs are required, 2 are actually used (as if `if(A){return B;}else{return C;}` was used)
 - [subexpression] subexpressions can set data if they are set up like this: <subexpression> = <function-call> - this is the way to read more than one return value from a function
 - [error suppression] the `@` operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn't an error
+- [function] the full function definition expression syntax: `function <name> ( <args> ) [ use ( <use-list> ) ]`, followed by either `{ ... }` or `= ... ;`. <name>, <args> and the 'use' block are all optional.
 
 ==== compatible function call / inheritance call / global method call (` O!A ([B,..]) `)
 
