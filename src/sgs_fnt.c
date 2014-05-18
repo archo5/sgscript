@@ -1149,11 +1149,12 @@ fail:
 
 SFTRET parse_function( SFTC, int inexp )
 {
+	int hasname = 0;
 	FTNode *node, *nname = NULL, *nargs = NULL, *nbody = NULL, *nclos = NULL;
 	TokenList begin = SFTC_AT;
-
+	
 	FUNC_BEGIN;
-
+	
 	SFTC_NEXT;
 	if( !inexp )
 	{
@@ -1162,6 +1163,11 @@ SFTRET parse_function( SFTC, int inexp )
 			SFTC_PRINTERR( "Expected identifier after 'function'" );
 			goto fail;
 		}
+	}
+	
+	if( SFTC_IS( ST_IDENT ) )
+	{
+		hasname = 1;
 		nname = make_node( SFT_IDENT, SFTC_AT, NULL, NULL );
 		SFTC_NEXT;
 		if( SFTC_IS( ST_OP_MMBR ) )
@@ -1180,22 +1186,22 @@ SFTRET parse_function( SFTC, int inexp )
 			}
 		}
 	}
-
+	
 	if( !SFTC_IS( '(' ) )
 	{
-		if( inexp )
+		if( !hasname )
 			SFTC_PRINTERR( "Expected '(' after 'function'" );
 		else
 			SFTC_PRINTERR( "Expected '(' after 'function' and its name" );
 		goto fail;
 	}
-
+	
 	SFTC_NEXT;
-
+	
 	nargs = parse_arglist( F, ')' );
 	if( !nargs ) goto fail;
 	SFTC_NEXT;
-
+	
 	if( SFTC_ISKEY( "use" ) )
 	{
 		/* closure */
@@ -1213,24 +1219,35 @@ SFTRET parse_function( SFTC, int inexp )
 	}
 	else
 		nclos = make_node( SFT_USELIST, SFTC_AT, NULL, NULL );
-
-	if( !SFTC_IS( '{' ) )
+	
+	if( !SFTC_IS( '{' ) && !SFTC_IS( ST_OP_SET ) )
 	{
-		SFTC_PRINTERR( "Expected '{' or 'use'" );
+		SFTC_PRINTERR( "Expected '{', '=' or 'use'" );
 		goto fail;
 	}
-
-	nbody = parse_stmt( F );
-	if( !nbody ) goto fail;
-
+	
+	if( SFTC_IS( ST_OP_SET ) )
+	{
+		SFTC_NEXT;
+		nbody = parse_explist( F, ';' );
+		if( !nbody ) goto fail;
+		nbody->type = SFT_RETURN;
+		SFTC_NEXT;
+	}
+	else
+	{
+		nbody = parse_stmt( F );
+		if( !nbody ) goto fail;
+	}
+	
 	nargs->next = nclos;
 	nclos->next = nbody;
 	nbody->next = nname;
 	node = make_node( SFT_FUNC, begin, NULL, nargs );
-
+	
 	FUNC_END;
 	return node;
-
+	
 fail:
 	if( nname ) SFTC_DESTROY( nname );
 	if( nargs ) SFTC_DESTROY( nargs );
