@@ -39,6 +39,7 @@ static void dumpnode( FTNode* N )
 	{
 	case SFT_FCALL: printf( "FCALL" ); break;
 	case SFT_INDEX: printf( "INDEX" ); break;
+	case SFT_MIDXSET: printf( "MULTI_INDEX_SET" ); break;
 	case SFT_ARGMT: printf( "ARG " ); sgsT_DumpToken( N->token ); break;
 	case SFT_ARGLIST: printf( "ARG_LIST" ); break;
 	case SFT_VARLIST: printf( "VAR_LIST" ); break;
@@ -396,13 +397,13 @@ static int level_exp( SGS_CTX, FTNode** tree )
 			weight = curwt;
 			mpp = node;
 		}
-
+		
 		/* move to next */
 _continue:
 		prev = node;
 		node = node->next;
 	}
-
+	
 	if( mpp )
 	{
 		/* function call */
@@ -417,9 +418,21 @@ _continue:
 					se1i->next = NULL;
 				se1i = se1i->next;
 			}
-
+			
 			FUNC_ENTER;
 			ret1 = level_exp( C, &se1 );
+			
+			if( mpp->type == SFT_ARRLIST && !mpp->child && mpp->next && mpp->next->type == SFT_MAPLIST )
+			{
+				/* a multiset expression */
+				mpp->type = SFT_MIDXSET;
+				mpp->child = se1;
+				mpp->child->next = mpp->next;
+				mpp->next = NULL;
+				*tree = mpp;
+				return 1;
+			}
+			
 			FUNC_ENTER;
 			ret2 = level_exp( C, &se2 );
 			FUNC_END;

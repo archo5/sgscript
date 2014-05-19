@@ -1111,6 +1111,43 @@ static SGSBOOL compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos
 	return 1;
 }
 
+static SGSBOOL compile_midxset( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t* out )
+{
+	FTNode* mapi;
+	rcpos_t var, name, src;
+	rcpos_t regpos = C->fctx->regs, regpos2;
+	FUNC_ENTER;
+	if( !compile_node_r( C, func, node->child, &var ) ) return 0;
+	regpos2 = C->fctx->regs;
+	mapi = node->child->next->child;
+	while( mapi )
+	{
+		if( *mapi->token == ST_STRING )
+		{
+			uint32_t string_len;
+			AS_UINT32( string_len, mapi->token + 1 );
+			name = BC_CONSTENC( add_const_s( C, func, string_len, (const char*) mapi->token + 5 ) );
+		}
+		else
+		{
+			compile_ident( C, func, mapi, &name );
+		}
+		mapi = mapi->next;
+		
+		FUNC_ENTER;
+		if( !compile_node_r( C, func, mapi, &src ) ) return 0;
+		mapi = mapi->next;
+		
+		INSTR_WRITE( SI_SETINDEX, var, name, src );
+		comp_reg_unwind( C, regpos2 );
+	}
+	if( out )
+		*out = var;
+	else
+		comp_reg_unwind( C, regpos );
+	return 1;
+}
+
 
 static SGSBOOL try_optimize_last_instr_out( SGS_CTX, sgs_CompFunc* func, FTNode* node, size_t ioff, rcpos_t* out )
 {
@@ -1907,7 +1944,12 @@ static SGSBOOL compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_
 		FUNC_HIT( "W_INDEX" );
 		if( !compile_index_w( C, func, node, src ) ) goto fail;
 		break;
-	
+		
+	case SFT_MIDXSET:
+		FUNC_HIT( "MIDXSET" );
+		QPRINT( "Cannot write to multi-index-set expression" );
+		break;
+		
 	case SFT_EXPLIST:
 		FUNC_HIT( "W_EXPLIST" );
 		QPRINT( "Expression writes only allowed with function call reads" );
@@ -2019,7 +2061,12 @@ static SGSBOOL compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_
 		FUNC_HIT( "R_INDEX" );
 		if( !compile_index_r( C, func, node, out ) ) goto fail;
 		break;
-
+		
+	case SFT_MIDXSET:
+		FUNC_HIT( "MIDXSET" );
+		if( !compile_midxset( C, func, node, out ) ) goto fail;
+		break;
+		
 	case SFT_EXPLIST:
 		FUNC_HIT( "R_EXPLIST" );
 		{
@@ -2106,7 +2153,12 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		FUNC_HIT( "INDEX" );
 		if( !compile_index_r( C, func, node, NULL ) ) goto fail;
 		break;
-
+		
+	case SFT_MIDXSET:
+		FUNC_HIT( "MIDXSET" );
+		if( !compile_midxset( C, func, node, NULL ) ) goto fail;
+		break;
+		
 	case SFT_FCALL:
 		FUNC_HIT( "FCALL" );
 		if( !compile_fcall( C, func, node, NULL, 0 ) ) goto fail;
