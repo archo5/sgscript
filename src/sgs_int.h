@@ -595,6 +595,7 @@ struct _sgs_iFunc
 
 SGS_CASSERT( sizeof(sgs_Variable) % 4 == 0, variable_object_chaining_issue );
 SGS_CASSERT( sizeof(sgs_iFunc) % 4 == 0, ifunc_object_chaining_issue );
+SGS_CASSERT( sizeof(sgs_iStr) % 8 == 0, istr_object_storage_compat_issue );
 
 #define sgs_func_consts( pfn )   ((sgs_Variable*)SGS_ASSUME_ALIGNED(((sgs_iFunc*)(pfn))+1,16))
 #define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(sgs_func_consts(pfn)+pfn->instr_off/sizeof(sgs_Variable)))

@@ -8,7 +8,13 @@
 CC=gcc
 CXX=g++
 
-COMMONFLAGS=-fwrapv -Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -static-libgcc
+COMMONFLAGS_CI=-fwrapv -Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align
+
+ifeq ($(findstring clang,$(shell $(CC) -v 2>&1)),clang)
+	COMMONFLAGS=$(COMMONFLAGS_CI)
+else
+	COMMONFLAGS=$(COMMONFLAGS_CI) -static-libgcc
+endif
 
 SRCDIR=src
 LIBDIR=lib
@@ -32,7 +38,11 @@ ifdef SystemRoot
 	LIBPFX=
 else
 	CPLATFLAGS = -fPIC -D_FILE_OFFSET_BITS=64
-	PLATFLAGS = -ldl -lrt -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
+	ifeq ($(shell uname -s),Darwin)
+		PLATFLAGS = -ldl -Wl,-rpath,'$$ORIGIN'
+	else
+		PLATFLAGS = -ldl -lrt -Wl,-rpath,'$$ORIGIN' -Wl,-z,origin
+	endif
 	THREADLIBS = -lpthread
 	BINEXT=
 	LIBEXT=.so
@@ -44,7 +54,7 @@ ifdef SystemRoot
 	RM = del /Q
 	FixPath = $(subst /,\,$1)
 else
-	RM = rm -f
+	RM = rm -rf
 	FixPath = $1
 endif
 
@@ -155,7 +165,7 @@ tools: xgmath json pproc sockets meta build_test build_apitest vm c
 build_cppbctest: $(OUTDIR)/sgscppbctest$(BINEXT)
 cppbctest: build_cppbctest
 	$(OUTDIR)/sgscppbctest
-$(OUTDIR)/sgscppbctest$(BINEXT): $(OUTFILE) ext/sgscppbctest.cpp ext/sgscppbctest.h $(OBJDIR)/cppbc_test.cpp
+$(OUTDIR)/sgscppbctest$(BINEXT): $(OUTFILE) ext/sgscppbctest.cpp ext/sgscppbctest.h $(OBJDIR)/cppbc_test.cpp ext/cppbc/sgs_cppbc.h
 	$(CXX) -o $@ ext/sgscppbctest.cpp $(OBJDIR)/cppbc_test.cpp $(LFLAGS) -lm $(PLATFLAGS) -I. -I$(SRCDIR) -L$(LIBDIR) $(CFLAGS)
 $(OBJDIR)/cppbc_test.cpp: ext/sgscppbctest.h
 	bin/sgsvm -p ext/cppbc/cppbc.sgs ext/sgscppbctest.h $@

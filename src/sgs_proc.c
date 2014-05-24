@@ -397,12 +397,6 @@ static SGS_INLINE void stk_setvar_leave( SGS_CTX, StkIdx stkid, sgs_VarPtr var )
 	VAR_RELEASE( vpos );
 	*vpos = *var;
 }
-static SGS_INLINE void stk_setvar_null( SGS_CTX, StkIdx stkid )
-{
-	sgs_VarPtr vpos = stk_getpos( C, stkid );
-	VAR_RELEASE( vpos );
-	/* already set to SVT_NULL */
-}
 
 #define stk_getlpos( C, stkid ) (C->stack_off + stkid)
 static SGS_INLINE void stk_setlvar( SGS_CTX, StkIdx stkid, sgs_VarPtr var )
@@ -1851,7 +1845,7 @@ static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		if( ta == SVT_FUNC )
 			return _SGS_SIGNDIFF( a->data.F, b->data.F );
 		else
-			return _SGS_SIGNDIFF( a->data.C, b->data.C );
+			return _SGS_SIGNDIFF( (void*)a->data.C, (void*)b->data.C );
 	}
 	
 	/* either is STRING */

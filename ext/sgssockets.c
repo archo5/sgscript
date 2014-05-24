@@ -49,6 +49,7 @@
 #ifdef _WIN32
 #  define SGS_SCKID SOCKET
 #  define sgs_sockerror WSAGetLastError()
+#  define IOCTLCONV( x ) (int)(x)
 #  define IOCTL_VALUE u_long
 #  define SOCKDATA_LEN int
 #  define SOCKDATA_SLEN int
@@ -58,6 +59,7 @@
 #else
 #  define SGS_SCKID int
 #  define sgs_sockerror errno
+#  define IOCTLCONV( x ) x
 #  define IOCTL_VALUE int
 #  define SOCKDATA_LEN size_t
 #  define SOCKDATA_SLEN ssize_t
@@ -357,7 +359,7 @@ static int sockaddr_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variab
 static int sockaddr_dump( SGS_CTX, sgs_VarObj* data, int depth )
 {
 	char buf[ 32 ];
-	sprintf( buf, "socket_address [family=%hu] ", GET_SAF );
+	sprintf( buf, "socket_address [family=%hu] ", (unsigned short) GET_SAF );
 	sgs_PushString( C, buf );
 	sgs_PushObjectPtr( C, data );
 	sgs_StringConcat( C, 2 );
@@ -512,7 +514,7 @@ static int sgs_socket_getaddrinfo( SGS_CTX )
 		else
 			sgs_PushNull( C );
 		sgs_PushString( C, "addr" );
-		push_sockaddr( C, (struct sockaddr_storage*) pp->ai_addr, pp->ai_addrlen );
+		push_sockaddr( C, (struct sockaddr_storage*) (void*) pp->ai_addr, pp->ai_addrlen );
 		
 		sgs_PushDict( C, sgs_StackSize( C ) - sz1 );
 		pp = pp->ai_next;
@@ -905,7 +907,7 @@ static int socket_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 			if( !sgs_ParseBoolP( C, val, &bv ) )
 				return SGS_EINVAL;
 			inbv = !bv;
-			if( !sockassert( C, ioctlsocket( GET_SCK, (int) FIONBIO, &inbv ) != -1 ) )
+			if( !sockassert( C, ioctlsocket( GET_SCK, IOCTLCONV( FIONBIO ), &inbv ) != -1 ) )
 				sgs_Msg( C, SGS_WARNING, "failed to set the 'blocking' property of a socket" );
 			return SGS_SUCCESS;
 		}
@@ -929,7 +931,7 @@ static int socket_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 		}
 		if( STREQ( name, "send_timeout" ) )
 		{
-			sgs_Real tm;
+			sgs_Real tm = 0.0;
 #ifdef _WIN32
 			DWORD tv = (DWORD) ( tm * 1000 );
 #else
@@ -945,7 +947,7 @@ static int socket_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 		}
 		if( STREQ( name, "recv_timeout" ) )
 		{
-			sgs_Real tm;
+			sgs_Real tm = 0.0;
 #ifdef _WIN32
 			DWORD tv = (DWORD) ( tm * 1000 );
 #else
@@ -1118,7 +1120,7 @@ static int sgs_socket_select( SGS_CTX )
 	}
 	
 	tv.tv_sec = (long) floor( timeout );
-	tv.tv_usec = (long)( ( timeout - (sgs_Real) tv.tv_sec ) * 1000000 );
+	tv.tv_usec = (int32_t)( ( timeout - (sgs_Real) tv.tv_sec ) * 1000000 );
 	ret = select( (int) maxsock + 1, &setR, &setW, &setE, sgs_StackSize( C ) >= 4 ? &tv : NULL );
 	sockassert( C, ret != -1 );
 	

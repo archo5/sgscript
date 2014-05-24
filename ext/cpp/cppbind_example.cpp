@@ -52,7 +52,7 @@ SGS_BEGIN_GENERIC_SETINDEXFUNC
 		char* name; sgs_SizeVal namelen;
 		if( !sgs_ParseStringP( C, val, &name, &namelen ) )
 			return SGS_EINVAL;
-		item->name.assign( name, namelen );
+		item->name.assign( name, (size_t) namelen );
 	)
 SGS_END_GENERIC_SETINDEXFUNC;
 SGS_GENERIC_DESTRUCTOR;

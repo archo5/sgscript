@@ -2092,6 +2092,7 @@ XGM_FLA_TEROPMETHOD( randext, R = randlerp( A - B, A + B ) );
 XGM_FLA_TEROPMETHOD( multiply_add_assign, R = T + A * B );
 XGM_FLA_TEROPMETHOD( lerp_to, R = T * (1-B) + A * B );
 
+/* WP: assuming string buffer data alignment >= 8 */
 #define XGM_FLA_CONVMETHOD( opname, typename ) \
 static int xgm_fla_##opname( SGS_CTX ) \
 { \
@@ -2103,7 +2104,7 @@ static int xgm_fla_##opname( SGS_CTX ) \
 		return 0; \
 	 \
 	sgs_PushStringBuf( C, NULL, (sgs_SizeVal) ( sizeof(typename) * (size_t) flarr->size ) ); \
-	data = (typename*) sgs_GetStringPtr( C, -1 ); \
+	data = (typename*) (void*) sgs_GetStringPtr( C, -1 ); \
 	for( i = 0; i < flarr->size; ++i ) \
 	{ \
 		data[ i ] = (typename) ( flarr->data[ i ] * scale ); \

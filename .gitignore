@@ -16,3 +16,4 @@ ipch
 !output.dir
 /docs/out/*
 /docs/*.toc
+.DS_Store

@@ -181,7 +181,7 @@ template< class T > inline void sgs_PushVar( SGS_CTX, sgsHandle<T> v ){ sgs_Push
 template<> inline void sgs_PushVar<sgsVariable>( SGS_CTX, const sgsVariable& v ){ v.push( C ); }
 #define SGS_DECL_PUSHVAR( type, parsefn ) template<> inline void sgs_PushVar<type>( SGS_CTX, const type& v ){ parsefn( C, v ); }
 SGS_DECL_PUSHVAR( bool, sgs_PushBool );
-#define SGS_DECL_PUSHVAR_INT( type ) SGS_DECL_PUSHVAR( type, sgs_PushInt )
+#define SGS_DECL_PUSHVAR_INT( type ) template<> inline void sgs_PushVar<type>( SGS_CTX, const type& v ){ sgs_PushInt( C, (sgs_Int) v ); }
 SGS_DECL_PUSHVAR_INT( signed char );
 SGS_DECL_PUSHVAR_INT( unsigned char );
 SGS_DECL_PUSHVAR_INT( signed short );
@@ -191,6 +191,7 @@ SGS_DECL_PUSHVAR_INT( unsigned int );
 SGS_DECL_PUSHVAR_INT( signed long );
 SGS_DECL_PUSHVAR_INT( unsigned long );
 SGS_DECL_PUSHVAR_INT( signed long long );
+SGS_DECL_PUSHVAR_INT( unsigned long long );
 SGS_DECL_PUSHVAR( float, sgs_PushReal );
 SGS_DECL_PUSHVAR( double, sgs_PushReal );
 //SGS_DECL_PUSHVAR( char*, sgs_PushString );
@@ -237,7 +238,7 @@ template<> struct sgs_GetVar<char*> { char* operator () ( SGS_CTX, int item ){
 	char* str = NULL; sgs_ParseString( C, item, &str, NULL ); return str; }};
 template<> struct sgs_GetVar<std::string> { std::string operator () ( SGS_CTX, int item ){
 	char* str; sgs_SizeVal size; if( sgs_ParseString( C, item, &str, &size ) )
-		return std::string( str, size ); return std::string(); }};
+		return std::string( str, (size_t) size ); return std::string(); }};
 template< class O >
 struct sgs_GetVar< sgsHandle<O> >
 {
@@ -289,7 +290,7 @@ template<> struct sgs_GetVarP<char*> { char* operator () ( SGS_CTX, sgs_Variable
 	char* str = NULL; sgs_ParseStringP( C, var, &str, NULL ); return str; }};
 template<> struct sgs_GetVarP<std::string> { std::string operator () ( SGS_CTX, sgs_Variable* var ){
 	char* str; sgs_SizeVal size; if( sgs_ParseStringP( C, var, &str, &size ) )
-		return std::string( str, size ); return std::string(); }};
+		return std::string( str, (size_t) size ); return std::string(); }};
 template< class O >
 struct sgs_GetVarP< sgsHandle<O> >
 {
