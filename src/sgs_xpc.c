@@ -21,6 +21,9 @@
 #    define PATH_MAX 4096
 #  endif
 #  define SGS_MAX_PATH PATH_MAX
+#  if defined(__APPLE__) && defined(__MACH__)
+#    include <mach-o/dyld.h>
+#  endif
 #endif
 
 #include "sgs_xpc.h"
@@ -253,6 +256,39 @@ char* sgsXPC_GetModuleFileName()
 	}
 	
 	return buf8;
+	
+#elif defined(__APPLE__) && (__MACH__)
+	char stack_buf[ SGS_MAX_PATH + 1 ];
+	char* buf;
+	uint32_t bufsize = SGS_MAX_PATH;
+	errno = 0;
+	if( _NSGetExecutablePath( stack_buf, &bufsize ) == 0 )
+	{
+		size_t len = strlen( stack_buf ) + 1;
+		buf = (char*) malloc( len );
+		if( buf )
+			memcpy( buf, stack_buf, len );
+		else
+			errno = ENOMEM;
+		return buf;
+	}
+	else
+	{
+		buf = (char*) malloc( bufsize + 1 );
+		if( !buf )
+		{
+			errno = ENOMEM;
+			return NULL;
+		}
+		if( _NSGetExecutablePath( buf, &bufsize ) != 0 )
+		{
+			errno = EACCES;
+			free( buf );
+			return NULL;
+		}
+		buf[ bufsize ] = 0;
+		return buf;
+	}
 	
 #else
 	char stack_buf[ SGS_MAX_PATH + 1 ];
