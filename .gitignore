@@ -17,3 +17,4 @@ ipch
 /docs/out/*
 /docs/*.toc
 .DS_Store
+xcuserdata
