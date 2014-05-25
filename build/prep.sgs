@@ -3,17 +3,60 @@
 
 include "io", "os", "string", "re";
 
+
 // OS config
-OSNAME = string_tolower( os_gettype() );
-DS = if( OSNAME == "windows", "\\", "/" ); // only necessary for os_command
-ROOT = "bin" $ DS;
+global OSNAMES_TR = { "mac os x" = "osx" };
+global OSNAME = string_tolower( os_gettype() );
+global OSNAME = @OSNAMES_TR[ OSNAME ] || OSNAME;
+global DS = if( OSNAME == "windows", "\\", "/" ); // only necessary for os_command
+global ROOT = "bin" $ DS;
+if( OSNAME == "windows" || OSNAME == "osx" )
+{
+	// .ZIP
+	function os_make_archive( archname, folder )
+	{
+		if( OSNAME == "osx" )
+			os_command( string_format( "zip -r -9 -X {1}.zip {2}", archname, folder ) );
+		else
+		{
+			locations_7z =
+			[
+				"""C:\Program Files\7-Zip\7z.exe""",
+				"""C:\Program Files (x86)\7-Zip\7z.exe"""
+			];
+			done = false;
+			foreach( bin7z : locations_7z )
+			{
+				if( !io_file_exists( bin7z ) )
+					continue;
+				
+				// try to run 7-zip
+				os_command( string_format( '"{1}" a -mx9 -tzip {2}.zip {3}', bin7z, archname, folder ) );
+				
+				done = true;
+				break;
+			}
+			if( !done )
+				ERROR( "could not find 7-Zip" );
+		}
+	}
+}
+else
+{
+	// .TAR.GZ
+	function os_make_archive( archname, folder )
+	{
+		os_command( string_format( "tar -zcvf {1}.tar.gz {2}", archname, folder ) );
+	}
+}
 
 // build variation config
 VARIATIONS =
 [
-	{ "32" = "arch=32", "64" = "arch=64" },
 	{ debug = "mode=debug", release = "mode=release" },
 ];
+if( OSNAME == "windows" || OSNAME == "linux" || OSNAME == "unix" || OSNAME == "osx" )
+	VARIATIONS.unshift({ "x86" = "target=" $ OSNAME $ "-x86", "x64" = "target=" $ OSNAME $ "-x64" });
 
 // build command config
 MAKEBIN = if( OSNAME == "windows", "mingw32-make", "make" );
@@ -45,7 +88,9 @@ match = re_match( mainheader, "%major[ \t]+([0-9]+).*?minor[ \t]+([0-9]+).*?"$
 versioninfo_plain = string_format( '{1}.{2}.{3}\n{4}', match[1], match[2], match[3], match[4] );
 versioninfo_json = string_format( '{"version":"{1}.{2}.{3}","api_version":"{4}"}',
 	match[1], match[2], match[3], match[4] );
+versiontext = string_format( '{1}.{2}.{3}', match[1], match[2], match[3] );
 
+cwd = io_getcwd();
 foreach( blfolder, blflags : buildlist )
 {
 	blflags = string_trim( blflags );
@@ -65,8 +110,13 @@ foreach( blfolder, blflags : buildlist )
 	io_dir_create( DIR );
 	os_command( MAKEBIN$" OUTDIR="$DIR$" "$blflags$" "$MAKECMD );
 	
+	// generate archive
+	io_setcwd( cwd $ "/bin" );
+	os_make_archive( blfolder $ "_" $ versiontext, blfolder );
+	io_setcwd( cwd );
+	
 	// write version info
-	io_file_write( DIR $ "/version", versioninfo_plain );
-	io_file_write( DIR $ "/version.json", versioninfo_json );
+//	io_file_write( DIR $ "/version", versioninfo_plain );
+//	io_file_write( DIR $ "/version.json", versioninfo_json );
 }
 os_command( MAKEBIN $ " clean_obj" );

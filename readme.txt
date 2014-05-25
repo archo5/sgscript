@@ -1,10 +1,10 @@
 
---- SGScript v0.9.0 ---
+--- SGScript v0.9.5 ---
 
 usage:
 - MinGW users:
 	* compile the makefile (add mode=release to get the release build)
-	* link against libsgscript.a from the lib/ directory (-lsgscript)
+	* link with -lsgscript from the bin/ directory (-Lbin)
 - VC10/11 users: project file is in build/vc10/SGScript
 - Code::Blocks users: project file is in build/codeblocks
 - XCode users: project file is in build/xcode
@@ -43,9 +43,22 @@ credits:
 - developer: Arvīds Kokins (snake5)
 	* I can be reached at snake5creator [at] GMail
 - XCode project contributed by Elviss Strazdiņš
-- inspired by C, PHP, Lua, JavaScript, Squirrel and AngelScript
 
 change log:
+0.9.5 (2014/05/25):
+	- full Mac OS X support
+	- bugfixes: lots of those (regex is finally stable)
+	- memory usage profiler
+	- map object
+	- syntax/VM upgrades (multi-index set, compatible call, unescaped strings, ...
+		... error suppression, named anonymous and short functions, var.arg. support)
+	- stdlib upgrades (core, utf8, io)
+	- xgmath (floatarray, matrix), sockets module upgrades
+	- C API upgrades (major refactor for variable pointer support, output system)
+	- almost fully documented the whole system, upgraded documentation system
+	- cppbc upgraded and fully tested with heavy C++ projects (sgs-box2d) + documented
+	- sgs2c experimental script developed to maximum bytecode compatibility
+	- code is mostly warning-free on all supported platforms
 0.9.0 (2013/11/10):
 	- bugfixes: empty subexpr, unary op chaining, expression writes
 	- implemented hooks interface
