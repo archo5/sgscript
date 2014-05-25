@@ -829,6 +829,10 @@ extern sgs_ObjInterface sgsstd_dict_iface[1];
 extern sgs_ObjInterface sgsstd_dict_iter_iface[1];
 extern sgs_ObjInterface sgsstd_map_iface[1];
 
+#define SGSIFACE_ARRAY SGS_IF_DLL( sgsstd_array_iface, sgs_FindType( C, "array" ) )
+#define SGSIFACE_DICT SGS_IF_DLL( sgsstd_dict_iface, sgs_FindType( C, "dict" ) )
+#define SGSIFACE_MAP SGS_IF_DLL( sgsstd_map_iface, sgs_FindType( C, "map" ) )
+
 
 
 

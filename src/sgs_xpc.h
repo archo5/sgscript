@@ -52,6 +52,12 @@ typedef unsigned __int64 uint64_t;
 #  define SGS_APIFUNC
 #endif
 
+#if SGS_DLL
+#  define SGS_IF_DLL( dll, nodll ) dll
+#else
+#  define SGS_IF_DLL( dll, nodll ) nodll
+#endif
+
 
 #ifdef SGS_USE_FILESYSTEM
 #  include <sys/types.h>

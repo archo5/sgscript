@@ -1000,9 +1000,12 @@ static int sgsstd_vht_dump( SGS_CTX, sgs_VarObj* data, int depth, const char* na
 
 static DictHdr* mkdict( SGS_CTX, sgs_Variable* out )
 {
+	sgs_ObjInterface* iface = SGSIFACE_DICT;
+	if( !iface )
+		iface = sgsstd_dict_iface;
 	DictHdr* dh = (DictHdr*) ( out
-		? sgs_InitObjectIPA( C, out, sizeof( DictHdr ), sgsstd_dict_iface )
-		: sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_dict_iface ) );
+		? sgs_InitObjectIPA( C, out, sizeof( DictHdr ), iface )
+		: sgs_PushObjectIPA( C, sizeof( DictHdr ), iface ) );
 	vht_init( &dh->ht, C, 4, 4 );
 	return dh;
 }
@@ -1230,8 +1233,8 @@ static int sgsstd_dict( SGS_CTX )
 static DictHdr* mkmap( SGS_CTX, sgs_Variable* out )
 {
 	DictHdr* dh = (DictHdr*) ( out
-		? sgs_InitObjectIPA( C, out, sizeof( DictHdr ), sgsstd_map_iface )
-		: sgs_PushObjectIPA( C, sizeof( DictHdr ), sgsstd_map_iface ) );
+		? sgs_InitObjectIPA( C, out, sizeof( DictHdr ), SGSIFACE_MAP )
+		: sgs_PushObjectIPA( C, sizeof( DictHdr ), SGSIFACE_MAP ) );
 	vht_init( &dh->ht, C, 4, 4 );
 	return dh;
 }
@@ -3652,7 +3655,7 @@ int sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 		sgs_Variable *p, *pend;
 		void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( cnt ) );
 		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_InitObjectIPA( C,
-			out, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
+			out, sizeof( sgsstd_array_header_t ), SGSIFACE_ARRAY );
 		
 		hdr->size = cnt;
 		hdr->mem = cnt;

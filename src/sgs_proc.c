@@ -4706,7 +4706,7 @@ SGSBOOL sgs_ParsePtrP( SGS_CTX, sgs_Variable* var, void** out )
 SGSMIXED sgs_ArraySizeP( SGS_CTX, sgs_Variable* var )
 {
 	if( var->type != SVT_OBJECT ||
-		var->data.O->iface != sgsstd_array_iface )
+		var->data.O->iface != SGSIFACE_ARRAY )
 		return SGS_EINVAL;
 	return ((sgsstd_array_header_t*)var->data.O->data)->size;
 }
@@ -4885,7 +4885,7 @@ SGSBOOL sgs_ParsePtr( SGS_CTX, StkIdx item, void** out )
 SGSMIXED sgs_ArraySize( SGS_CTX, StkIdx item )
 {
 	if( sgs_ItemType( C, item ) != SVT_OBJECT ||
-		sgs_GetObjectIface( C, item ) != sgsstd_array_iface )
+		sgs_GetObjectIface( C, item ) != SGSIFACE_ARRAY )
 		return SGS_EINVAL;
 	return ((sgsstd_array_header_t*)sgs_GetObjectData( C, item ))->size;
 }
