@@ -322,6 +322,9 @@ function cppbc_parse_vardecl( code, bSkipName )
 		code = string_trim( code );
 	}
 	
+	// strip bitfield size
+	code = re_replace( code, "#[ \n\r\t]*:[ \n\r\t]*[0-9]+$#", "" );
+	
 	lct = null;
 	for( i = 0; i < code.length; ++i )
 	{

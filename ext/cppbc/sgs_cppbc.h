@@ -7,7 +7,7 @@
 #include <new>
 #include <assert.h>
 
-#ifndef SGS_CPPBC_NO_STD_STRING
+#ifdef SGS_CPPBC_WITH_STD_STRING
 #  include <string>
 #endif
 
@@ -86,6 +86,7 @@ public:
 	
 	bool operator < ( const sgsHandle& h ) const { return object < h.object; }
 	bool operator == ( const sgsHandle& h ) const { return object == h.object; }
+	bool operator != ( const sgsHandle& h ) const { return object != h.object; }
 	
 	SGSRESULT gcmark() const { if( !object ){ return SGS_SUCCESS; } return sgs_ObjGCMark( C, object ); }
 	
@@ -104,6 +105,71 @@ inline void sgs_PushHandle( SGS_CTX, const sgsHandle<T>& val )
 	else
 		sgs_PushObjectPtr( C, val.object );
 }
+
+
+class sgsString
+{
+public:
+	
+	sgsString() : str(NULL), C(NULL) {};
+	sgsString( const sgsString& h ) : str(h.str), C(h.C) { _acquire(); }
+	sgsString( sgs_iStr* s, sgs_Context* c ) : str(s), C(c) { _acquire(); }
+	sgsString( int item, sgs_Context* c ) : str(NULL), C(c)
+	{
+		if( sgs_ParseString( C, item, NULL, NULL ) )
+		{
+			sgs_Variable v;
+			sgs_GetStackItem( C, item, &v );
+			str = v.data.S;
+		}
+	}
+	sgsString( const char* s, size_t sz, sgs_Context* c ) : str(NULL), C(c)
+	{
+		assert( sz <= 0x7fffffff );
+		sgs_Variable v;
+		sgs_InitStringBuf( C, &v, s, (sgs_SizeVal) sz );
+		str = v.data.S;
+	}
+	sgsString( const char* s, sgs_Context* c ) : str(NULL), C(c)
+	{
+		sgs_Variable v;
+		sgs_InitString( C, &v, s );
+		str = v.data.S;
+	}
+	~sgsString(){ _release(); }
+	
+	const sgsString& operator = ( const sgsString& s )
+	{
+		_release();
+		if( s.str )
+		{
+			str = s.str;
+			C = s.C;
+			_acquire();
+		}
+		return *this;
+	}
+	
+	const char* c_str() const { return str ? sgs_str_cstr( str ) : NULL; }
+	size_t size() const { return str ? (size_t) str->size : 0; }
+#ifdef SGS_CPPBC_WITH_STD_STRING
+	bool get_string( std::string& out ){ if( str ){ out = std::string( sgs_str_cstr( str ), str->size ); return true; } return false; }
+#endif
+	
+	bool operator < ( const sgsString& s ) const { return str < s.str; }
+	bool operator == ( const sgsString& s ) const { return str == s.str; }
+	bool operator != ( const sgsString& s ) const { return str != s.str; }
+	
+	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); }
+		sgs_Variable v; v.type = str ? SGS_VT_STRING : SGS_VT_NULL; v.data.S = str; sgs_PushVariable( c, &v ); }
+	bool not_null(){ return !!str; }
+	
+	sgs_iStr* str;
+	SGS_CTX;
+	
+	void _acquire(){ if( str ){ sgs_Variable v; v.type = SGS_VT_STRING; v.data.S = str; sgs_Acquire( C, &v ); } }
+	void _release(){ if( str ){ sgs_Variable v; v.type = SGS_VT_STRING; v.data.S = str; sgs_Release( C, &v ); str = NULL; } }
+};
 
 
 class sgsVariable
@@ -157,6 +223,7 @@ public:
 	
 	bool operator < ( const sgsVariable& h ) const { return var.type < h.var.type || var.data.I < h.var.data.I; }
 	bool operator == ( const sgsVariable& h ) const { return var.type == h.var.type && var.data.I == h.var.data.I; }
+	bool operator != ( const sgsVariable& h ) const { return var.type != h.var.type && var.data.I != h.var.data.I; }
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); } sgs_PushVariable( c, const_cast<sgs_Variable*>( &var ) ); }
 	SGSRESULT gcmark() { if( !C ) return SGS_SUCCESS; return sgs_GCMark( C, &var ); }
@@ -194,9 +261,9 @@ SGS_DECL_PUSHVAR_INT( signed long long );
 SGS_DECL_PUSHVAR_INT( unsigned long long );
 SGS_DECL_PUSHVAR( float, sgs_PushReal );
 SGS_DECL_PUSHVAR( double, sgs_PushReal );
-//SGS_DECL_PUSHVAR( char*, sgs_PushString );
+template<> inline void sgs_PushVar<sgsString>( SGS_CTX, const sgsString& v ){ v.push( C ); }
 SGS_DECL_PUSHVAR( sgs_CFunc, sgs_PushCFunction );
-#ifndef SGS_CPPBC_NO_STD_STRING
+#ifdef SGS_CPPBC_WITH_STD_STRING
 template<> inline void sgs_PushVar<std::string>( SGS_CTX, const std::string& v ){ sgs_PushStringBuf( C, v.c_str(), (sgs_SizeVal) v.size() ); }
 #endif
 
@@ -236,9 +303,12 @@ template<> struct sgs_GetVar<double> { double operator () ( SGS_CTX, int item ){
 	sgs_Real v; if( sgs_ParseReal( C, item, &v ) ) return (double) v; return 0; }};
 template<> struct sgs_GetVar<char*> { char* operator () ( SGS_CTX, int item ){
 	char* str = NULL; sgs_ParseString( C, item, &str, NULL ); return str; }};
+template<> struct sgs_GetVar<sgsString> { sgsString operator () ( SGS_CTX, int item ){ return sgsString( item, C ); }};
+#ifdef SGS_CPPBC_WITH_STD_STRING
 template<> struct sgs_GetVar<std::string> { std::string operator () ( SGS_CTX, int item ){
 	char* str; sgs_SizeVal size; if( sgs_ParseString( C, item, &str, &size ) )
 		return std::string( str, (size_t) size ); return std::string(); }};
+#endif
 template< class O >
 struct sgs_GetVar< sgsHandle<O> >
 {
@@ -288,9 +358,14 @@ template<> struct sgs_GetVarP<double> { double operator () ( SGS_CTX, sgs_Variab
 	sgs_Real v; if( sgs_ParseRealP( C, var, &v ) ) return (double) v; return 0; }};
 template<> struct sgs_GetVarP<char*> { char* operator () ( SGS_CTX, sgs_Variable* var ){
 	char* str = NULL; sgs_ParseStringP( C, var, &str, NULL ); return str; }};
+template<> struct sgs_GetVarP<sgsString> { sgsString operator () ( SGS_CTX, sgs_Variable* var ){
+	sgsString S; if( sgs_ParseStringP( C, var, NULL, NULL ) ) S = sgsString( var->data.S, C );
+	return S; }};
+#ifdef SGS_CPPBC_WITH_STD_STRING
 template<> struct sgs_GetVarP<std::string> { std::string operator () ( SGS_CTX, sgs_Variable* var ){
 	char* str; sgs_SizeVal size; if( sgs_ParseStringP( C, var, &str, &size ) )
 		return std::string( str, (size_t) size ); return std::string(); }};
+#endif
 template< class O >
 struct sgs_GetVarP< sgsHandle<O> >
 {
