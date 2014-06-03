@@ -2883,7 +2883,7 @@ If none of these are specified (<code>flags</code> = 0), only the success state 
 </li><li><a href="#re-replace-function">re_replace [function]</a></li></ul></div>
 <div class='item'><a name='String-library-string'></a><hr><h2>String library (&quot;string&quot;)</h2><p>
 This library contains the string handling functions. In all functions, except the utf-8 ones, it is assumed that strings are byte buffers where each byte is one character. If correct indices are applied, many of them will work with multibyte strings.
-</p><h4>Functions:</h4><ul><li><a href="#string-cut-function">string_cut</a> - extract a substring from a string from the specified beginning / end offsets
+</p><h4>Objects:</h4><ul><li><a href="#string-utf8-iterator-object">string_utf8_iterator</a> - UTF-8 code point iterator</li></ul><h4>Functions:</h4><ul><li><a href="#string-cut-function">string_cut</a> - extract a substring from a string from the specified beginning / end offsets
 </li><li><a href="#string-part-function">string_part</a> - extract a substring from a string from the specified offset and length
 </li><li><a href="#string-reverse-function">string_reverse</a> - reverse the order of bytes in a string
 </li><li><a href="#string-pad-function">string_pad</a> - pad one or both sides of a string with a pattern string up to the specified length
@@ -2905,10 +2905,20 @@ This library contains the string handling functions. In all functions, except th
 </li><li><a href="#string-utf8-encode-function">string_utf8_encode</a> - encode an array of code points into a UTF-8 string
 </li><li><a href="#string-utf8-offset-function">string_utf8_offset</a> - get byte offset of a specific character
 </li><li><a href="#string-utf8-length-function">string_utf8_length</a> - get UTF-8 length of string or its part
+</li><li><a href="#string-utf8-iterator-function">string_utf8_iterator</a> - create an iterator for UTF-8 code points in a string
 </li><li><a href="#string-format-function">string_format</a> - format variables according to the specified format string</li></ul><h4>Constants:</h4><ul><li>STRING_NO_REV_INDEX - used by <a href="#string-cut-function">string_cut</a> / <a href="#string-part-function">string_part</a> - disable handling of negative indices
 </li><li>STRING_STRICT_RANGES - used by <a href="#string-cut-function">string_cut</a> / <a href="#string-part-function">string_part</a> - disable handling of out-of-bounds indices
 </li><li>STRING_TRIM_LEFT, STRING_TRIM_RIGHT - used by <a href="#string-trim-function">string_trim</a> - specify sides to be trimmed
 </li><li>STRING_PAD_LEFT, STRING_PAD_RIGHT - used by <a href="#string-pad-function">string_pad</a> - specify sides to be padded</li></ul></div>
+<div class='item'><a name='string-utf8-iterator-object'></a><hr><h2>string_utf8_iterator [object]</h2><ul><li>read/write properties:
+<ul><li>[int] offset - returns the point in string from which last character was retrieved, can set point in string from which next character will be retrieved
+</li></ul><li>read-only properties:
+<ul><li>[string] string - returns the string currently being iterated on
+</li></ul><li>other features:
+<ul><li>iterator (self)
+</li><li>cloning
+</li><li>serialization
+</li><li>GC-safe</li></ul></li></ul></div>
 <div class='item'><a name='string-cut-function'></a><hr><h2>string_cut [function]</h2><h3>string_cut( string str, int from[, int to[, int flags]] )</h3><h4>returns a part of string <code>str</code>, <code>from</code> and <code>to</code> being positions of the first and last character returned, respectively</h4><ul><li>if <code>to</code> is not specified, <code>to</code> is assumed to be the position of the last character in string <code>str</code>
 </li><li>if <code>from</code> or <code>to</code> are negative, they point to characters before the end of string (-1 being the last one)
 </li><li>available values for <code>flags</code>:
@@ -2972,6 +2982,9 @@ string_utf8_decode( [27161,28310] ); // string [6] &quot;標準&quot;</pre></div
 <div class='item'><a name='string-utf8-offset-function'></a><hr><h2>string_utf8_offset [function]</h2><h3>string_utf8_offset( string ustr, int charnum[, int byteoff ])</h3><h4>returns byte offset of character in UTF-8 string, optionally skipping the specified number of bytes</h4><ul><li>valid character numbers are 0 to actual number of characters from specified byte offset
 </li><li>valid byte offsets are 0 to ustr.length</li></ul><pre>string_utf8_offset( &quot;標準&quot;, 2 ); // returns 6</pre></div>
 <div class='item'><a name='string-utf8-length-function'></a><hr><h2>string_utf8_length [function]</h2><h3>string_utf8_length( string ustr, int byteoff = 0[, int numbytes[, int flags ]])</h3><h4>returns length of UTF-8 string or the specified part of it</h4><pre>string_utf8_length( &quot;標準&quot;, 3 ); // returns 1</pre></div>
+<div class='item'><a name='string-utf8-iterator-function'></a><hr><h2>string_utf8_iterator [function]</h2><h3>string_utf8_iterator( string ustr, int byteoff = 0 )</h3><h4>creates a UTF-8 code point iterator object</h4><pre>it = string_utf8_iterator( &quot;標準&quot; ); // returns string_utf8_iterator object
+iter_advance( it ); // go to position 0
+iter_getdata( it ); // returns 27161</pre></div>
 <div class='item'><a name='string-format-function'></a><hr><h2>string_format [function]</h2><h3>string_format( string text, ... )</h3><h4>parses all format specifiers in <code>text</code> and returns the result</h4><p>
 <em class='notice-bgr'>see <a href="#fmt-text-function">fmt_text</a> if you don&#39;t need the position (argument index) specifications</em>
 </p><ul><li>the format specifier has the form {&lt;id&gt;:&lt;specifier&gt;} where &quot;id&quot; is the argument index to use and specifier is a <a href="#fmt-text-function">fmt_text</a> specifier
@@ -2997,6 +3010,7 @@ string_utf8_decode( [27161,28310] ); // string [6] &quot;標準&quot;</pre></div
 </li><li><a href="#string-trim-function">string_trim [function]</a>
 </li><li><a href="#string-utf8-decode-function">string_utf8_decode [function]</a>
 </li><li><a href="#string-utf8-encode-function">string_utf8_encode [function]</a>
+</li><li><a href="#string-utf8-iterator-function">string_utf8_iterator [function]</a>
 </li><li><a href="#string-utf8-length-function">string_utf8_length [function]</a>
 </li><li><a href="#string-utf8-offset-function">string_utf8_offset [function]</a></li></ul></div>
 <div class='item'><a name='Included-tools'></a><hr><h2>Included tools</h2><h4>Executables</h4><ul><li><a href="#Virtual-Machine-sgsvm">Virtual Machine (sgsvm)</a>

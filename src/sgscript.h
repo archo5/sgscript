@@ -809,6 +809,7 @@ static SGS_INLINE void sgs_StdMsgFunc( void* ctx, SGS_CTX, int type, const char*
 #define SGS_RETURN_REAL( value ) { sgs_PushReal( C, value ); return SGS_SUCCESS; }
 #define SGS_RETURN_CFUNC( value ) { sgs_PushCFunction( C, value ); return SGS_SUCCESS; }
 #define SGS_RETURN_OBJECT( value ) { sgs_PushObjectPtr( C, value ); return SGS_SUCCESS; }
+#define SGS_RETURN_VAR( value ) { sgs_PushVariable( C, value ); return SGS_SUCCESS; }
 
 #define SGS_PARSE_BOOL( out ) { sgs_Bool V; if( sgs_ParseBoolP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
 #define SGS_PARSE_INT( out ) { sgs_Int V; if( sgs_ParseIntP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }

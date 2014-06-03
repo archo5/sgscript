@@ -4080,12 +4080,15 @@ static int sgsstd_string_utf8_length( SGS_CTX )
 }
 
 
+/* pre-positioned iterator flag, iter. doesn't advance once if set */
+#define U8I_PREPOS 0x80000000
+
 static sgs_ObjInterface utf8_iterator_iface[1];
 
 typedef struct _utf8iter
 {
 	sgs_iStr* str;
-	sgs_SizeVal i;
+	uint32_t i;
 }
 utf8iter;
 
@@ -4099,6 +4102,38 @@ static int utf8it_destruct( SGS_CTX, sgs_VarObj* obj )
 	var.data.S = IT->str;
 	sgs_Release( C, &var );
 	return SGS_SUCCESS;
+}
+
+static int utf8it_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	U8I_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "string" )
+		{
+			sgs_Variable var;
+			var.type = SVT_STRING;
+			var.data.S = IT->str;
+			SGS_RETURN_VAR( &var );
+		}
+		SGS_CASE( "offset" ) SGS_RETURN_INT( IT->i )
+	SGS_END_INDEXFUNC;
+}
+
+static int utf8it_setindex( SGS_ARGS_SETINDEXFUNC )
+{
+	U8I_HDR;
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "offset" )
+		{
+			sgs_Int V;
+			if( sgs_ParseIntP( C, val, &V ) )
+			{
+				IT->i = U8I_PREPOS | (uint32_t) V;
+				return SGS_SUCCESS;
+			}
+			return SGS_EINVAL;
+		}
+	SGS_END_INDEXFUNC;
 }
 
 static int utf8it_convert( SGS_CTX, sgs_VarObj* obj, int type )
@@ -4142,17 +4177,17 @@ static int utf8it_getnext( SGS_CTX, sgs_VarObj* obj, int what )
 	U8I_HDR;
 	if( !what )
 	{
-		if( (sgs_SizeVal) IT->str->size <= IT->i )
-			return 0;
-		if( IT->i < 0 )
+		if( IT->i & U8I_PREPOS )
 		{
-			IT->i = 0;
+			IT->i &= ~U8I_PREPOS;
 			return 1;
 		}
+		if( (sgs_SizeVal) IT->str->size <= IT->i )
+			return 0;
 		/* WP: string limit */
 		int ret = sgs_utf8_decode( str_cstr( IT->str ) + IT->i, IT->str->size + (size_t) IT->i, &outchar );
 		ret = abs( ret );
-		IT->i += ret;
+		IT->i += (uint32_t) ret;
 		return IT->i >= 0 && IT->i < (sgs_SizeVal) IT->str->size ? 1 : 0;
 	}
 	else
@@ -4174,22 +4209,23 @@ static sgs_ObjInterface utf8_iterator_iface[1] =
 {{
 	"utf8_iterator",
 	utf8it_destruct, NULL,
-	NULL, NULL,
+	utf8it_getindex, utf8it_setindex,
 	utf8it_convert, utf8it_serialize, NULL, utf8it_getnext,
 	NULL, NULL,
 }};
 
 static int sgsstd_string_utf8_iterator( SGS_CTX )
 {
+	sgs_Int pos = 0;
 	sgs_Variable var;
 	utf8iter* IT;
 	SGSFN( "string_utf8_iterator" );
-	if( !sgs_LoadArgs( C, "?s" ) )
+	if( !sgs_LoadArgs( C, "?s|i", &pos ) )
 		return 0;
 	IT = (utf8iter*) sgs_PushObjectIPA( C, sizeof(utf8iter), utf8_iterator_iface );
 	sgs_GetStackItem( C, 0, &var );
 	IT->str = var.data.S;
-	IT->i = -1;
+	IT->i = (uint32_t) pos | U8I_PREPOS;
 	return 1;
 }
 

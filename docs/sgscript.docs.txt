@@ -6040,6 +6040,10 @@ If none of these are specified (`flags` = 0), only the success state is returned
 
 This library contains the string handling functions. In all functions, except the utf-8 ones, it is assumed that strings are byte buffers where each byte is one character. If correct indices are applied, many of them will work with multibyte strings.
 
+=== Objects:
+
+- @string_utf8_iterator<string_utf8_iterator [object]> - UTF-8 code point iterator
+
 === Functions:
 
 - @string_cut - extract a substring from a string from the specified beginning / end offsets
@@ -6064,6 +6068,7 @@ This library contains the string handling functions. In all functions, except th
 - @string_utf8_encode - encode an array of code points into a UTF-8 string
 - @string_utf8_offset - get byte offset of a specific character
 - @string_utf8_length - get UTF-8 length of string or its part
+- @string_utf8_iterator<string_utf8_iterator [function]> - create an iterator for UTF-8 code points in a string
 - @string_format - format variables according to the specified format string
 
 === Constants:
@@ -6074,6 +6079,19 @@ This library contains the string handling functions. In all functions, except th
 - STRING_PAD_LEFT, STRING_PAD_RIGHT - used by @string_pad - specify sides to be padded
 
 # >>>
+
+
+# string_utf8_iterator [object]
+
+- read/write properties:
+-- [int] offset - returns the point in string from which last character was retrieved, can set point in string from which next character will be retrieved
+- read-only properties:
+-- [string] string - returns the string currently being iterated on
+- other features:
+-- iterator (self)
+-- cloning
+-- serialization
+-- GC-safe
 
 
 # string_cut [function]
@@ -6323,6 +6341,16 @@ This library contains the string handling functions. In all functions, except th
 === returns length of UTF-8 string or the specified part of it
 
     string_utf8_length( "標準", 3 ); // returns 1
+
+
+# string_utf8_iterator [function]
+
+== string_utf8_iterator( string ustr, int byteoff = 0 )
+=== creates a UTF-8 code point iterator object
+
+    it = string_utf8_iterator( "標準" ); // returns string_utf8_iterator object
+    iter_advance( it ); // go to position 0
+    iter_getdata( it ); // returns 27161
 
 
 # string_format [function]
