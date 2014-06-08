@@ -2,6 +2,8 @@
 include "string", "re", "fmt", "io", "os";
 
 
+global BRACE_START_MAP = { ">" = "<", "]" = "[", "}" = "{", ")" = "(" };
+
 global ERR_OOC = "SGS_OBJECT outside class/struct";
 
 
@@ -382,8 +384,10 @@ function cppbc_split_cs( code )
 		}
 		else if( cc == ">" || cc == ")" || cc == "]" )
 		{
-			if( !stack.size || stack.last != cc )
-				cppbc_error( "brace mismatch in argument list" );
+			if( @BRACE_START_MAP[ cc ] )
+				tcc = BRACE_START_MAP[ cc ];
+			if( !stack.size || stack.last != tcc )
+				cppbc_error( "brace mismatch in argument list, stack: "$stack );
 			stack.pop();
 		}
 		else if( cc == "," && stack.size == 0 )
