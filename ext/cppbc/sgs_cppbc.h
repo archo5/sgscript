@@ -45,6 +45,20 @@
 
 
 template< class T >
+class sgsMaybe /* nullable PODs */
+{
+public:
+	sgsMaybe() : isset(false) {};
+	sgsMaybe( const T& val ) : data(val), isset(true) {}
+	
+	void set( const T& val ){ data = val; isset = true; }
+	void unset(){ isset = false; }
+	
+	T data;
+	bool isset;
+};
+
+template< class T >
 class sgsHandle
 {
 public:
@@ -244,6 +258,7 @@ public:
 /* PushVar [stack] */
 template< class T > void sgs_PushVar( SGS_CTX, const T& );
 template< class T > inline void sgs_PushVar( SGS_CTX, T* v ){ sgs_PushClass( C, v ); }
+template< class T > inline void sgs_PushVar( SGS_CTX, sgsMaybe<T> v ){ if( v.isset ) sgs_PushVar( C, v.data ); else sgs_PushNull( C ); }
 template< class T > inline void sgs_PushVar( SGS_CTX, sgsHandle<T> v ){ sgs_PushHandle( C, v ); }
 template<> inline void sgs_PushVar<sgsVariable>( SGS_CTX, const sgsVariable& v ){ v.push( C ); }
 #define SGS_DECL_PUSHVAR( type, parsefn ) template<> inline void sgs_PushVar<type>( SGS_CTX, const type& v ){ parsefn( C, v ); }
@@ -310,6 +325,16 @@ template<> struct sgs_GetVar<std::string> { std::string operator () ( SGS_CTX, i
 		return std::string( str, (size_t) size ); return std::string(); }};
 #endif
 template< class O >
+struct sgs_GetVar< sgsMaybe<O> >
+{
+	sgsMaybe<O> operator () ( SGS_CTX, int item ) const
+	{
+		if( sgs_ItemType( C, item ) != SGS_VT_NULL )
+			return sgsMaybe<O>( sgs_GetVar<O>()( C, item ) );
+		return sgsMaybe<O>();
+	}
+};
+template< class O >
 struct sgs_GetVar< sgsHandle<O> >
 {
 	sgsHandle<O> operator () ( SGS_CTX, int item ) const
@@ -366,6 +391,16 @@ template<> struct sgs_GetVarP<std::string> { std::string operator () ( SGS_CTX, 
 	char* str; sgs_SizeVal size; if( sgs_ParseStringP( C, var, &str, &size ) )
 		return std::string( str, (size_t) size ); return std::string(); }};
 #endif
+template< class O >
+struct sgs_GetVarP< sgsMaybe<O> >
+{
+	sgsMaybe<O> operator () ( SGS_CTX, sgs_Variable* var ) const
+	{
+		if( var->type != SGS_VT_NULL )
+			return sgsMaybe<O>( sgs_GetVarP<O>()( C, var ) );
+		return sgsMaybe<O>();
+	}
+};
 template< class O >
 struct sgs_GetVarP< sgsHandle<O> >
 {
