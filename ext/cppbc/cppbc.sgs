@@ -56,11 +56,11 @@ function string_find_rev_any( str, what, pos )
 	if( pos === null )
 		pos = str.length;
 	
-	min = pos + 1;
+	min = 0;
 	foreach( item : what )
 	{
 		npos = string_find_rev( str, item, pos );
-		if( npos !== null && npos < min )
+		if( npos !== null && npos > min )
 			min = npos;
 	}
 	
