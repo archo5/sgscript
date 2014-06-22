@@ -3070,7 +3070,7 @@ static int sgsstd_include( SGS_CTX )
 		
 		ret = sgs_PushGlobal( C, "SGS_PATH" );
 		if( ret != SGS_SUCCESS ||
-			( ps = sgs_ToStringBuf( C, -1, &pssize ) ) != NULL )
+			( ps = sgs_ToStringBuf( C, -1, &pssize ) ) == NULL )
 		{
 			ps = SGS_INCLUDE_PATH;
 			pssize = (sgs_SizeVal) strlen( ps );

@@ -1201,7 +1201,7 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 	if( type == SGS_ENOTFND )
 	{
 		char* p;
-		const char* err = isprop ? "Property not found" : "Cannot find value by index";
+		const char* err = isprop ? "Readable property not found" : "Cannot find readable value by index";
 		stk_push( C, idx );
 		p = sgs_ToString( C, -1 );
 		sgs_Msg( C, SGS_WARNING, "%s: \"%s\"", err, p );
@@ -1212,8 +1212,8 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 	}
 	else if( type == SGS_EINVAL )
 	{
-		sgs_Msg( C, SGS_WARNING, "Invalid value type used for %s",
-			isprop ? "property read" : "index read" );
+		sgs_Msg( C, SGS_WARNING, "Invalid value type used for %s read",
+			isprop ? "property" : "index" );
 	}
 	else if( type == SGS_EINPROC )
 	{
@@ -1223,12 +1223,12 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 	}
 	else if( type == SGS_ENOTSUP )
 	{
-		sgs_Msg( C, SGS_WARNING, "Operation not supported on the given variable type" );
+		sgs_Msg( C, SGS_WARNING, "%s read operation not supported on the given variable type",
+			isprop ? "Property" : "Index" );
 	}
 	else
 	{
-		sgs_Msg( C, SGS_WARNING, "Unknown error on %s",
-			isprop ? "property read" : "index read" );
+		sgs_Msg( C, SGS_WARNING, "Unknown error on %s read", isprop ? "property" : "index" );
 	}
 	
 	stk_pop( C, STACKFRAMESIZE - origsize );
@@ -1241,7 +1241,7 @@ static SGSRESULT vm_runerr_setprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 	if( type == SGS_ENOTFND )
 	{
 		char* p;
-		const char* err = isprop ? "Property not found" : "Cannot find value by index";
+		const char* err = isprop ? "Writable property not found" : "Cannot find writable value by index";
 		stk_push( C, idx );
 		p = sgs_ToString( C, -1 );
 		sgs_Msg( C, SGS_WARNING, "%s: \"%s\"", err, p );
@@ -1252,8 +1252,8 @@ static SGSRESULT vm_runerr_setprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 	}
 	else if( type == SGS_EINVAL )
 	{
-		sgs_Msg( C, SGS_WARNING, "Invalid value type used for %s",
-			isprop ? "property write" : "index write" );
+		sgs_Msg( C, SGS_WARNING, "Invalid value type used for %s write",
+			isprop ? "property" : "index" );
 	}
 	else if( type == SGS_EINPROC )
 	{
@@ -1263,12 +1263,12 @@ static SGSRESULT vm_runerr_setprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 	}
 	else if( type == SGS_ENOTSUP )
 	{
-		sgs_Msg( C, SGS_WARNING, "Operation not supported on the given variable type" );
+		sgs_Msg( C, SGS_WARNING, "%s write operation not supported on the given variable type",
+			isprop ? "Property" : "Index" );
 	}
 	else
 	{
-		sgs_Msg( C, SGS_WARNING, "Unknown error on %s",
-			isprop ? "property write" : "index write" );
+		sgs_Msg( C, SGS_WARNING, "Unknown error on %s write", isprop ? "property" : "index" );
 	}
 	
 	stk_pop( C, STACKFRAMESIZE - origsize );
