@@ -130,7 +130,7 @@ function markdown2html( text, linkhandler )
 						s = mdinline( s, linkhandler );
 						if( !s )
 							s = "&nbsp;";
-						lout $= string_format( "<{1}>{2}</{1}>", tag, s );
+						lout $= string_format( 5 + tag.length * 2 + s.length, "<{1}>{2}</{1}>", tag, s );
 					}
 					lines[ i ] = "<tr>" $ lout $ "</tr>";
 					

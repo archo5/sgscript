@@ -1698,7 +1698,9 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 			
 			/* compile op */
 			op = op_pick_opcode( *node->token, !!node->child->next );
-			if( node->child->next )
+			if( !op )
+				INSTR_WRITE( SI_SET, oreg, ireg1, 0 );
+			else if( node->child->next )
 				INSTR_WRITE( op, oreg, ireg1, ireg2 );
 			else
 				INSTR_WRITE( op, oreg, ireg1, 0 );

@@ -5025,8 +5025,9 @@ This library includes functions and objects for parsing binary and text buffers.
 # fmt_unpack [function]
 
 == fmt_unpack( string fmt, string data )
-=== unpacks the byte buffer `data` using the format `fmt`, returns array of unpacked items
+=== unpacks the byte buffer `data` using the format `fmt`, returns unpacked items (possibly in an array)
 
+- if '#' can be found in the format string, all data is returned in, otherwise 
 - unpacks c/w/l/q/p to integers, f/d to floats, s to strings
 - if signed numbers are expected (as set by the "-" modifier), the sign bit of the expected type is extended to the end of the native integer type, this makes the loaded integer signed
 - refer to @fmt_pack() for more info about the format
@@ -5076,11 +5077,12 @@ This library includes functions and objects for parsing binary and text buffers.
 
 # fmt_text [function]
 
-== fmt_text( string text, ... )
+== fmt_text( [int prealloc,] string text, ... )
 === parses all format specifiers in `text` and returns the result
 
 ! see @string_format if you need position (argument index) specifications in the format string
 
+- `prealloc` specifies number of bytes to be preallocated on the buffer to avoid continuous reallocations during string generation
 - the general format of a format specifier is as follows: {fmt[size][.prec][r][p<char>]}
 -- fmt: one-character output type (b-binary, o-octal, d-decimal, x/X-hexadecimal, f-floating-point, g/G-compact floating-point, e/E-scientific floating-point, s-valid string, c-always converted to string)
 -- size: minimum number of characters to print
@@ -6355,11 +6357,12 @@ This library contains the string handling functions. In all functions, except th
 
 # string_format [function]
 
-== string_format( string text, ... )
+== string_format( [int prealloc,] string text, ... )
 === parses all format specifiers in `text` and returns the result
 
 ! see @fmt_text if you don't need the position (argument index) specifications
 
+- `prealloc` specifies number of bytes to be preallocated on the buffer to avoid continuous reallocations during string generation
 - the format specifier has the form {<id>:<specifier>} where "id" is the argument index to use and specifier is a @fmt_text specifier
 - argument indices to be used in specifiers start from 1
 

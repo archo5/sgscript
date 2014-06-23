@@ -49,6 +49,8 @@ static void fmt_pack_stats(
 			mult *= 10;
 			mult += c - '0';
 			break;
+		/* return mode */
+		case '#':
 		/* endianness */
 		case '=': case '<': case '>': case '@':
 		/* sign */
@@ -106,6 +108,8 @@ static sgs_SizeVal fmt_pack( SGS_CTX,
 			mult *= 10;
 			mult += c - '0';
 			break;
+		/* return mode */
+		case '#': break;
 		/* modifiers */
 		case '=': invert = 0; mult = 0; break;
 		case '<': invert = O32_HOST_ORDER != O32_LITTLE_ENDIAN; mult = 0; break;
@@ -228,7 +232,7 @@ static sgs_SizeVal fmt_pack( SGS_CTX,
 static int fmt_unpack( SGS_CTX, const char* str,
 	sgs_SizeVal size, const char* data, sgs_SizeVal datasize )
 {
-	int invert = 0, sign = 0;
+	int invert = 0, sign = 0, noarray = 0;
 	sgs_SizeVal si = 0, mult = 0;
 	const char* strend = str + size, *dataend = data + datasize;
 	while( str < strend )
@@ -243,6 +247,8 @@ static int fmt_unpack( SGS_CTX, const char* str,
 			mult *= 10;
 			mult += c - '0';
 			break;
+		/* return mode */
+		case '#': noarray = 1; break;
 		/* modifiers */
 		case '=': invert = 0; mult = 0; break;
 		case '<': invert = O32_HOST_ORDER != O32_LITTLE_ENDIAN; mult = 0; break;
@@ -361,6 +367,12 @@ static int fmt_unpack( SGS_CTX, const char* str,
 	}
 	sgs_BreakIf( data > dataend );
 	UNUSED( dataend );
+	if( si >= 0 && !noarray )
+	{
+		if( SGS_FAILED( sgs_PushArray( C, si ) ) )
+			STDLIB_WARN( "failed to create array" )
+		si = 1;
+	}
 	return si;
 }
 
@@ -409,7 +421,7 @@ static int sgsstd_fmt_pack_count( SGS_CTX )
 
 static int sgsstd_fmt_unpack( SGS_CTX )
 {
-	sgs_SizeVal bytes = 0, ret;
+	sgs_SizeVal bytes = 0;
 	char* str, *data;
 	sgs_SizeVal size, datasize;
 	
@@ -421,10 +433,7 @@ static int sgsstd_fmt_unpack( SGS_CTX )
 	fmt_pack_stats( C, str, size, NULL, &bytes );
 	if( bytes > datasize )
 		STDLIB_WARN( "not enough data to successfully unpack" )
-	ret = fmt_unpack( C, str, size, data, datasize );
-	if( ret < 0 || sgs_PushArray( C, ret ) != SGS_SUCCESS )
-		return 0;
-	return 1;
+	return fmt_unpack( C, str, size, data, datasize );
 }
 
 static int sgsstd_fmt_pack_size( SGS_CTX )
@@ -857,6 +866,19 @@ static int sgsstd_fmt_text( SGS_CTX )
 	
 	SGSFN( "fmt_text" );
 	
+	if( sgs_ItemType( C, 0 ) == SVT_INT || sgs_ItemType( C, 0 ) == SVT_REAL )
+	{
+		sgs_Int numbytes;
+		sgs_ParseInt( C, 0, &numbytes );
+		if( numbytes > 0 && numbytes < 0x7fffffff )
+			membuf_reserve( &B, C, (size_t) numbytes );
+		
+		/* acknowledge the existence of argument 0, but only here */
+		if( !sgs_LoadArgs( C, ">m", &fmt, &fmtsize ) )
+			return 0;
+		sgs_ForceHideThis( C ); /* hide argument 0  */
+	}
+	else
 	if( !sgs_LoadArgs( C, "m", &fmt, &fmtsize ) )
 		return 0;
 	
@@ -4239,6 +4261,19 @@ static int sgsstd_string_format( SGS_CTX )
 	
 	SGSFN( "string_format" );
 	
+	if( sgs_ItemType( C, 0 ) == SVT_INT || sgs_ItemType( C, 0 ) == SVT_REAL )
+	{
+		sgs_Int numbytes;
+		sgs_ParseInt( C, 0, &numbytes );
+		if( numbytes > 0 && numbytes < 0x7fffffff )
+			membuf_reserve( &B, C, (size_t) numbytes );
+		
+		/* acknowledge the existence of argument 0, but only here */
+		if( !sgs_LoadArgs( C, ">m", &fmt, &fmtsize ) )
+			return 0;
+		sgs_ForceHideThis( C ); /* hide argument 0  */
+	}
+	else
 	if( !sgs_LoadArgs( C, "m", &fmt, &fmtsize ) )
 		return 0;
 	
