@@ -233,8 +233,30 @@ testEqual( iter_getdata( uit ), null, "string_utf8_iterator - getdata 4 (end)" )
 testEqual( ERRORS, "[W:iter_getdata(): failed to retrieve data from iterator][W:iter_getdata(): failed to retrieve data from iterator]", "string_utf8_iterator - errors" );
 
 	section( "string_format" );
-testEqual( string_format( "{1:d}", 5 ), "5", "string_format - basic number" );
 testEqual( string_format( 6, "{1:d}", 5 ), "5", "string_format - preallocation" );
+
+testEqual( string_format( "{1:d}", 5 ), "5", "string_format - basic number" );
+testEqual( string_format( "{1:d}", -5 ), "-5", "string_format - negative number" );
+testEqual( string_format( "{1:d}", -999 ), "-999", "string_format - negative number 2" );
+testEqual( string_format( "{1:d}", 0 ), "0", "string_format - zero" );
+
+testEqual( string_format( "{1:x}", 5 ), "5", "string_format - hex" );
+testEqual( string_format( "{1:X}", 999 ), "3E7", "string_format - hex 2" );
+testEqual( string_format( "{1:x}", -5 ), "fffffffffffffffb", "string_format - negative hex" );
+testEqual( string_format( "{1:X}", -999 ), "FFFFFFFFFFFFFC19", "string_format - negative hex 2" );
+testEqual( string_format( "{1:x}", 0 ), "0", "string_format - hex zero" );
+
+testEqual( string_format( "{1:o}", 5 ), "5", "string_format - oct" );
+testEqual( string_format( "{1:o}", 999 ), "1747", "string_format - oct 2" );
+testEqual( string_format( "{1:o}", -5 ), "1777777777777777777773", "string_format - negative oct" );
+testEqual( string_format( "{1:o}", -999 ), "1777777777777777776031", "string_format - negative oct 2" );
+testEqual( string_format( "{1:o}", 0 ), "0", "string_format - oct zero" );
+
+testEqual( string_format( "{1:b}", 5 ), "101", "string_format - bin" );
+testEqual( string_format( "{1:b}", 999 ), "1111100111", "string_format - bin 2" );
+testEqual( string_format( "{1:b}", -5 ), "1111111111111111111111111111111111111111111111111111111111111011", "string_format - negative bin" );
+testEqual( string_format( "{1:b}", -999 ), "1111111111111111111111111111111111111111111111111111110000011001", "string_format - negative bin 2" );
+testEqual( string_format( "{1:b}", 0 ), "0", "string_format - bin zero" );
 
 
 //

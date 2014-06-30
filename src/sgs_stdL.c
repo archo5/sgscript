@@ -764,7 +764,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			const char* tbl = hextbl;
 			int radix, size, i, ofs, sign = 0;
 			sgs_Int I;
-			uint64_t U;
+			uint64_t U, CU;
 			if( !sgs_ParseInt( C, (*psi)++, &I ) )
 				goto error;
 			
@@ -783,15 +783,25 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			}
 			else
 				U = (uint64_t) I;
-			size = 1 + (int) floor( log( (double) MAX(1,U) ) / log( (double) radix ) ) + sign;
+			
+			size = 0;
+			CU = U;
+			while( CU > 0 )
+			{
+				CU /= (uint64_t) radix;
+				size++;
+			}
+			if( size < 1 )
+				size = 1;
+			size += sign;
 			
 			if( size < F->padcnt && !F->padrgt )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
 			if( sign )
 				membuf_appchr( B, C, '-' );
 			ofs = (int) B->size;
-			membuf_resize( B, C, (size_t)( ofs + size ) );
-			for( i = size - 1; i >= 0; --i )
+			membuf_resize( B, C, (size_t)( ofs + size - sign ) );
+			for( i = size - 1 - sign; i >= 0; --i )
 			{
 				/* WP: conversion does not affect range */
 				int cv = (int) ( U % (uint64_t) radix );
