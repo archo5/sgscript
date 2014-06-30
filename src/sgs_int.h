@@ -128,6 +128,7 @@ extern "C" {
 #  define SFT_FCALL SGS_SFT_FCALL
 #  define SFT_INDEX SGS_SFT_INDEX
 #  define SFT_MIDXSET SGS_SFT_MIDXSET
+#  define SFT_MPROPSET SGS_SFT_MPROPSET
 #  define SFT_ARGMT SGS_SFT_ARGMT
 #  define SFT_ARGLIST SGS_SFT_ARGLIST
 #  define SFT_VARLIST SGS_SFT_VARLIST
@@ -368,6 +369,7 @@ SGS_APIFUNC void sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend );
 #define SGS_SFT_FCALL   6
 #define SGS_SFT_INDEX   7
 #define SGS_SFT_MIDXSET 8
+#define SGS_SFT_MPROPSET 9
 /* statement data */
 #define SGS_SFT_ARGMT   10
 #define SGS_SFT_ARGLIST 11

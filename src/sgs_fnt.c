@@ -40,6 +40,7 @@ static void dumpnode( FTNode* N )
 	case SFT_FCALL: printf( "FCALL" ); break;
 	case SFT_INDEX: printf( "INDEX" ); break;
 	case SFT_MIDXSET: printf( "MULTI_INDEX_SET" ); break;
+	case SFT_MPROPSET: printf( "MULTI_PROPERTY_SET" ); break;
 	case SFT_ARGMT: printf( "ARG " ); sgsT_DumpToken( N->token ); break;
 	case SFT_ARGLIST: printf( "ARG_LIST" ); break;
 	case SFT_VARLIST: printf( "VAR_LIST" ); break;
@@ -421,22 +422,30 @@ _continue:
 			
 			FUNC_ENTER;
 			ret1 = level_exp( C, &se1 );
+			if( !ret1 )
+			{
+				*tree = NULL;
+				if( se1 ) sgsFT_Destroy( C, se1 );
+				if( se2 ) sgsFT_Destroy( C, se2 );
+				FUNC_END;
+				return 0;
+			}
 			
 			if( mpp->type == SFT_ARRLIST && !mpp->child && mpp->next && mpp->next->type == SFT_MAPLIST )
 			{
-				/* a multiset expression */
+				/* a multiset (index) expression */
 				mpp->type = SFT_MIDXSET;
 				mpp->child = se1;
 				mpp->child->next = mpp->next;
 				mpp->next = NULL;
 				*tree = mpp;
+				FUNC_END;
 				return 1;
 			}
 			
 			FUNC_ENTER;
 			ret2 = level_exp( C, &se2 );
-			FUNC_END;
-			if( !ret1 || !ret2 )
+			if( !ret2 )
 			{
 				*tree = NULL;
 				if( se1 ) sgsFT_Destroy( C, se1 );
@@ -461,13 +470,15 @@ _continue:
 				se2->child = NULL;
 				sgsFT_Destroy( C, se2 );
 				*tree = _make_node( C, SFT_INDEX, mpp_token, NULL, se1 );
+				FUNC_END;
 				return 1;
 			}
 			se1->next = se2;
 			*tree = _make_node( C, SFT_FCALL, mpp_token, NULL, se1 );
+			FUNC_END;
 			return 1;
 		}
-
+		
 		/* binary ops */
 		if( mpp->type == SFT_OPER )
 		{
@@ -479,7 +490,7 @@ _continue:
 				while( prev->next != mpp )
 					prev = prev->next;
 			}
-
+			
 			/* binary operators */
 			if( mpp != *tree && mpp->next && 
 				( prev->type != SFT_OPER || *prev->token == ST_OP_INC || *prev->token == ST_OP_DEC ) )
@@ -494,13 +505,36 @@ _continue:
 					se1i = se1i->next;
 				}
 				mpp->next = NULL;
-				sgsFT_Destroy( C, mpp );
-
+				
 				FUNC_ENTER;
 				ret1 = level_exp( C, &se1 );
+				if( !ret1 )
+				{
+					*tree = NULL;
+					if( se1 ) sgsFT_Destroy( C, se1 );
+					if( se2 ) sgsFT_Destroy( C, se2 );
+					sgsFT_Destroy( C, mpp );
+					FUNC_END;
+					return 0;
+				}
+				
+				if( mpptoken && *mpptoken == ST_OP_MMBR && !mpp->child && se2->type == SFT_MAPLIST )
+				{
+					/* a multiset (property) expression */
+					mpp->type = SFT_MPROPSET;
+					mpp->child = se1;
+					mpp->child->next = se2;
+					mpp->next = NULL;
+					*tree = mpp;
+					FUNC_END;
+					return 1;
+				}
+				
+				sgsFT_Destroy( C, mpp );
+				
 				FUNC_ENTER;
 				ret2 = level_exp( C, &se2 );
-				if( !ret1 || !ret2 )
+				if( !ret2 )
 				{
 					*tree = NULL;
 					if( se1 ) sgsFT_Destroy( C, se1 );
@@ -544,6 +578,7 @@ _continue:
 					}
 				}
 				
+				FUNC_END;
 				return 1;
 			}
 			/* unary operators

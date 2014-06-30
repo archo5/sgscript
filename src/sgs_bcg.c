@@ -1111,7 +1111,7 @@ static SGSBOOL compile_index_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos
 	return 1;
 }
 
-static SGSBOOL compile_midxset( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t* out )
+static SGSBOOL compile_midxset( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t* out, int isprop )
 {
 	FTNode* mapi;
 	rcpos_t var, name, src;
@@ -1138,7 +1138,7 @@ static SGSBOOL compile_midxset( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos
 		if( !compile_node_r( C, func, mapi, &src ) ) return 0;
 		mapi = mapi->next;
 		
-		INSTR_WRITE( SI_SETINDEX, var, name, src );
+		INSTR_WRITE( isprop ? SI_SETPROP : SI_SETINDEX, var, name, src );
 		comp_reg_unwind( C, regpos2 );
 	}
 	if( out )
@@ -1952,6 +1952,11 @@ static SGSBOOL compile_node_w( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_
 		QPRINT( "Cannot write to multi-index-set expression" );
 		break;
 		
+	case SFT_MPROPSET:
+		FUNC_HIT( "MPROPSET" );
+		QPRINT( "Cannot write to multi-property-set expression" );
+		break;
+		
 	case SFT_EXPLIST:
 		FUNC_HIT( "W_EXPLIST" );
 		QPRINT( "Expression writes only allowed with function call reads" );
@@ -2066,7 +2071,12 @@ static SGSBOOL compile_node_r( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_
 		
 	case SFT_MIDXSET:
 		FUNC_HIT( "MIDXSET" );
-		if( !compile_midxset( C, func, node, out ) ) goto fail;
+		if( !compile_midxset( C, func, node, out, 0 ) ) goto fail;
+		break;
+		
+	case SFT_MPROPSET:
+		FUNC_HIT( "MPROPSET" );
+		if( !compile_midxset( C, func, node, out, 1 ) ) goto fail;
 		break;
 		
 	case SFT_EXPLIST:
@@ -2158,7 +2168,12 @@ static SGSBOOL compile_node( SGS_CTX, sgs_CompFunc* func, FTNode* node )
 		
 	case SFT_MIDXSET:
 		FUNC_HIT( "MIDXSET" );
-		if( !compile_midxset( C, func, node, NULL ) ) goto fail;
+		if( !compile_midxset( C, func, node, NULL, 0 ) ) goto fail;
+		break;
+		
+	case SFT_MPROPSET:
+		FUNC_HIT( "MPROPSET" );
+		if( !compile_midxset( C, func, node, NULL, 1 ) ) goto fail;
 		break;
 		
 	case SFT_FCALL:
