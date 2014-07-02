@@ -2006,7 +2006,7 @@ c.printdata(); // prints 6</pre></div>
 dict_size( x ); // returns 2</pre></div>
 <div class='item'><a name='map-size-function'></a><hr><h2>map_size [function]</h2><h3>map_size( dict )</h3><h4>return the number of entries in the map object</h4><pre>x = map( 5, &quot;a&quot;, 123, &quot;b&quot; );
 map_size( x ); // returns 2</pre></div>
-<div class='item'><a name='isset-function'></a><hr><h2>isset [function]</h2><h3>isset( var, string key )</h3><h4>returns whether a property named <code>key</code> is accessible (exists) in variable <code>var</code></h4><pre>x = { a = 5 };
+<div class='item'><a name='isset-function'></a><hr><h2>isset [function]</h2><h3>isset( var, key )</h3><h4>returns whether a property <code>key</code> is readable (exists) in variable <code>var</code></h4><pre>x = { a = 5 };
 isset( x, &quot;a&quot; ); // returns &#39;true&#39;
 isset( x, &quot;b&quot; ); // returns &#39;false&#39;
 isset( print, &quot;call&quot; ); // returns &#39;true&#39; -- works with built-in special properties too</pre></div>

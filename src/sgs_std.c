@@ -1922,7 +1922,7 @@ static int sgsstd_isset( SGS_CTX )
 	int ret;
 	int32_t oldapilev;
 	SGSFN( "isset" );
-	if( !sgs_LoadArgs( C, "?v?m." ) )
+	if( !sgs_LoadArgs( C, "?v?v." ) )
 		return 0;
 	
 	oldapilev = sgs_Cntl( C, SGS_CNTL_APILEV, SGS_ERROR );

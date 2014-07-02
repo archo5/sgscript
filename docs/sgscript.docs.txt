@@ -3834,8 +3834,8 @@ This library is loaded on initialization and contains the functions and constant
 
 # isset [function]
 
-== isset( var, string key )
-=== returns whether a property named `key` is accessible (exists) in variable `var`
+== isset( var, key )
+=== returns whether a property `key` is readable (exists) in variable `var`
 
     x = { a = 5 };
     isset( x, "a" ); // returns 'true'
