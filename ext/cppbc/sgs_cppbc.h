@@ -164,12 +164,15 @@ public:
 	
 	const sgsHandle& operator = ( const sgsHandle& h )
 	{
-		_release();
-		if( h.object && h.object->iface == T::_sgs_interface )
+		if( object != h.object )
 		{
-			object = h.object;
-			C = h.C;
-			_acquire();
+			_release();
+			if( h.object && h.object->iface == T::_sgs_interface )
+			{
+				object = h.object;
+				C = h.C;
+				_acquire();
+			}
 		}
 		return *this;
 	}
@@ -240,12 +243,15 @@ public:
 	
 	const sgsString& operator = ( const sgsString& s )
 	{
-		_release();
-		if( s.str )
+		if( !same_as( s ) )
 		{
-			str = s.str;
-			C = s.C;
-			_acquire();
+			_release();
+			if( s.str )
+			{
+				str = s.str;
+				C = s.C;
+				_acquire();
+			}
 		}
 		return *this;
 	}
@@ -318,19 +324,22 @@ public:
 	
 	const sgsVariable& operator = ( const sgsVariable& h )
 	{
-		_release();
-		if( h.var.type != SGS_VT_NULL )
+		if( *this != h )
 		{
-			var = h.var;
-			C = h.C;
-			_acquire();
+			_release();
+			if( h.var.type != SGS_VT_NULL )
+			{
+				var = h.var;
+				C = h.C;
+				_acquire();
+			}
 		}
 		return *this;
 	}
 	
 	bool operator < ( const sgsVariable& h ) const { return var.type < h.var.type || var.data.I < h.var.data.I; }
 	bool operator == ( const sgsVariable& h ) const { return var.type == h.var.type && var.data.I == h.var.data.I; }
-	bool operator != ( const sgsVariable& h ) const { return var.type != h.var.type && var.data.I != h.var.data.I; }
+	bool operator != ( const sgsVariable& h ) const { return var.type != h.var.type || var.data.I != h.var.data.I; }
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); } sgs_PushVariable( c, const_cast<sgs_Variable*>( &var ) ); }
 	SGSRESULT gcmark() { if( !C ) return SGS_SUCCESS; return sgs_GCMark( C, &var ); }
