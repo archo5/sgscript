@@ -256,9 +256,21 @@ public:
 	bool get_string( std::string& out ){ if( str ){ out = std::string( sgs_str_cstr( str ), str->size ); return true; } return false; }
 #endif
 	
-	bool operator < ( const sgsString& s ) const { return str < s.str; }
-	bool operator == ( const sgsString& s ) const { return str == s.str; }
-	bool operator != ( const sgsString& s ) const { return str != s.str; }
+	int compare( const sgsString& s ) const
+	{
+		int null1 = str == NULL;
+		int null2 = s.str == NULL;
+		if( null1 || null2 )
+			return null2 - null1;
+		int cmp = memcmp( sgs_str_cstr( str ), sgs_str_cstr( s.str ), str->size < s.str->size ? str->size : s.str->size );
+		if( cmp )
+			return cmp;
+		return str->size == s.str->size ? 0 : ( str->size < s.str->size ? -1 : 1 );
+	}
+	bool operator < ( const sgsString& s ) const { return compare( s ) < 0; }
+	bool operator == ( const sgsString& s ) const { return compare( s ) == 0; }
+	bool operator != ( const sgsString& s ) const { return compare( s ) != 0; }
+	bool same_as( const sgsString& s ) const { return str == s.str; } 
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); }
 		sgs_Variable v; v.type = str ? SGS_VT_STRING : SGS_VT_NULL; v.data.S = str; sgs_PushVariable( c, &v ); }
