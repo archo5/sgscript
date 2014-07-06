@@ -1813,7 +1813,7 @@ static int sgsstd_io_stat( SGS_CTX )
 			sgs_PushInt( C, FST_UNKNOWN );
 		sgs_PushString( C, "size" );
 		sgs_PushInt( C, data.st_size );
-		return sgs_PushDict( C, 10 );
+		return SGS_SUCCEEDED( sgs_PushDict( C, 10 ) );
 	}
 }
 
