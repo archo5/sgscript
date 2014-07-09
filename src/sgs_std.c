@@ -1926,7 +1926,7 @@ static int sgsstd_isset( SGS_CTX )
 		return 0;
 	
 	oldapilev = sgs_Cntl( C, SGS_CNTL_APILEV, SGS_ERROR );
-	ret = sgs_PushIndexII( C, 0, 1, TRUE ) == SGS_SUCCESS;
+	ret = sgs_PushIndexII( C, 0, 1, FALSE ) == SGS_SUCCESS;
 	sgs_Cntl( C, SGS_CNTL_APILEV, oldapilev );
 	sgs_PushBool( C, ret );
 	return 1;
