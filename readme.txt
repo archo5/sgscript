@@ -30,8 +30,7 @@ features:
 	* testing framework is in ext/sgstest.c => bin/sgstest ("make test" to run)
 - object-oriented constructs (dict, class, closure, overloadable operators)
 
-development:
-- urge-oriented. I work on what I want to, at the moment.
+bugs:
 ! if you think you've found a bug, pop me an email to snake5creator [at] GMail
 	* don't forget to include a test sample, as small as possible!
 
@@ -45,12 +44,12 @@ credits:
 - XCode project contributed by Elviss Strazdiņš
 
 change log:
-0.9.5 (2014/05/25):
+0.9.5 (2014/05/25, updated 2014/07/11):
 	- full Mac OS X support
 	- bugfixes: lots of those (regex is finally stable)
 	- memory usage profiler
 	- map object
-	- syntax/VM upgrades (multi-index set, compatible call, unescaped strings, ...
+	- syntax/VM upgrades (multi-index/property set, compatible call, unescaped strings, ...
 		... error suppression, named anonymous and short functions, var.arg. support)
 	- stdlib upgrades (core, utf8, io)
 	- xgmath (floatarray, matrix), sockets module upgrades
