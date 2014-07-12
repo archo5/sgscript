@@ -33,13 +33,20 @@ int loadfile( const char* file, char** out, size_t* outsize )
 {
 	char* data;
 	size_t len;
+	ssize_t ftrv;
 	FILE* f;
 
 	f = fopen( file, "rb" );
 	if( !f )
 		return SGS_ENOTFND;
 	fseek( f, 0, SEEK_END );
-	len = (size_t) ftell( f );
+	ftrv = ftell( f );
+	if( ftrv < 0 )
+	{
+		fclose( f );
+		return SGS_EINPROC;
+	}
+	len = (size_t) ftrv;
 	fseek( f, 0, SEEK_SET );
 
 	data = malloc( len );

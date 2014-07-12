@@ -110,10 +110,11 @@ static int32_t string_inplace_fix( char* str, int32_t len )
 }
 
 
-static int ident_equal( const char* ptr, int size, const char* what )
+#define STRLIT_LEN(lit) (sizeof(lit)-1)
+#define STRLIT_BUF(lit) lit, STRLIT_LEN(lit)
+
+static int ident_equal( const char* ptr, int size, const char* what, int wlen )
 {
-	/* WP: ident limit */
-	int wlen = (int) strlen( what );
 	return size == wlen && memcmp( ptr, what, (size_t) size ) == 0;
 }
 static void readident( SGS_CTX, MemBuf* out, const char* code, int32_t* at, int32_t length )
@@ -137,23 +138,23 @@ static void readident( SGS_CTX, MemBuf* out, const char* code, int32_t* at, int3
 	}
 	if( sz >= 255 ) sz = 255;
 	out->ptr[ pos_rev + 1 ] = (char) sz;
-	if( ident_equal( out->ptr + pos_rev + 2, sz, "var" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "global" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "null" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "true" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "false" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "if" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "else" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "do" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "while" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "for" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "foreach" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "break" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "continue" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "function" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "use" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "return" ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, "this" ) )
+	if( ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("var") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("global") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("null") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("true") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("false") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("if") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("else") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("do") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("while") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("for") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("foreach") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("break") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("continue") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("function") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("use") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("return") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("this") ) )
 	{
 		out->ptr[ pos_rev ] = ST_KEYWORD;
 	}
@@ -502,7 +503,7 @@ static void tp_token( SGS_CTX, MemBuf* out, TokenList t )
 			}
 		}
 		break;
-#define OPR( op ) membuf_appbuf( out, C, op, strlen(op) )
+#define OPR( op ) membuf_appbuf( out, C, STRLIT_BUF(op) )
 	case ST_OP_RWCMP: OPR( "<=>" ); break;
 	case ST_OP_SEQ: OPR( "===" ); break;
 	case ST_OP_SNEQ: OPR( "!==" ); break;

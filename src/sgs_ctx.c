@@ -621,6 +621,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	if( len < 0 )
 	{
 		sgs_Errno( C, 0 );
+		fclose( f );
 		return SGS_EINPROC;
 	}
 	fseek( f, 0, SEEK_SET );

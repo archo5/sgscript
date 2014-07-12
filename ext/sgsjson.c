@@ -362,7 +362,8 @@ static int json_decode( SGS_CTX )
 static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 {
 	sgs_Variable var;
-	sgs_PeekStackItem( C, -1, &var );
+	if( !sgs_PeekStackItem( C, -1, &var ) )
+		sgs_InitNull( &var );
 	switch( var.type )
 	{
 	case SGS_VT_NULL:

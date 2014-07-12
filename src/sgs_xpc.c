@@ -202,7 +202,8 @@ int sgsXPC_SetCurrentDirectory( char* path )
 		buf16 = (WCHAR*) malloc( sizeof(WCHAR) * (size_t) buf16_size );
 	if( MultiByteToWideChar( CP_UTF8, 0, path, (int) path_len + 1, buf16, buf16_size ) == 0 )
 	{
-		free( buf16 );
+		if( buf16 != stack_buf16 )
+			free( buf16 );
 		errno = EACCES;
 		return -1;
 	}

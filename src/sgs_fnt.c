@@ -462,7 +462,7 @@ _continue:
 						"in an array accessor", sgsT_LineNum( mpp_token ) );
 					*tree = NULL;
 					if( se1 ) sgsFT_Destroy( C, se1 );
-					if( se2 ) sgsFT_Destroy( C, se2 );
+					/* if( se2 ) */ sgsFT_Destroy( C, se2 );
 					FUNC_END;
 					return 0;
 				}

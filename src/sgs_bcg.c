@@ -1560,6 +1560,12 @@ static SGSBOOL compile_oper( SGS_CTX, sgs_CompFunc* func, FTNode* node, rcpos_t*
 			if( C->state & SGS_MUST_STOP )
 				goto fail;
 			
+			if( !node->child || !node->child->next )
+			{
+				QPRINT( "Internal error (binary operator doesn't have 2 operands)" );
+				goto fail;
+			}
+			
 			/* get source data registers */
 			FUNC_ENTER;
 			if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
@@ -2699,6 +2705,8 @@ void sgsBC_Free( SGS_CTX, sgs_CompFunc* func )
 
 /* bytecode serialization */
 
+#define SGSNOMINDEC( cnt ) (D->end - D->buf < (ssize_t)(cnt))
+
 #define esi16( x ) ( (((x)&0xff)<<8) | (((x)>>8)&0xff) )
 
 #define esi32( x ) (\
@@ -2708,12 +2716,21 @@ void sgsBC_Free( SGS_CTX, sgs_CompFunc* func )
 typedef struct decoder_s
 {
 	SGS_CTX;
-	const char* buf, *start;
+	const char* buf, *start, *end;
 	char convend;
 	const char* filename;
 	size_t filename_len;
 }
 decoder_t;
+
+static void esi16_array( uint16_t* data, unsigned cnt )
+{
+	unsigned i;
+	for( i = 0; i < cnt; ++i )
+	{
+		data[ i ] = (uint16_t) esi16( data[ i ] );
+	}
+}
 
 static void esi32_array( uint32_t* data, unsigned cnt )
 {
@@ -2735,16 +2752,26 @@ static void bc_write_sgsstring( string_t* S, SGS_CTX, MemBuf* outbuf )
 	membuf_appbuf( outbuf, C, str_cstr( S ), S->size );
 }
 
-static void bc_read_sgsstring( decoder_t* D, sgs_Variable* var )
+static const char* bc_read_sgsstring( decoder_t* D, sgs_Variable* var )
 {
 	const char* buf = D->buf;
 	int32_t len;
+	
+	if( SGSNOMINDEC( 4 ) )
+		return "data error";
+	
 	AS_INT32( len, buf );
 	if( D->convend )
 		len = esi32( len );
 	buf += 4;
+	
+	if( SGSNOMINDEC( len ) )
+		return "data error";
+	
 	sgsVM_VarCreateString( D->C, var, buf, len );
 	D->buf = buf + len;
+	
+	return NULL;
 }
 
 
@@ -2786,15 +2813,40 @@ static int bc_write_var( sgs_Variable* var, SGS_CTX, MemBuf* outbuf )
 static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var );
 static const char* bc_read_var( decoder_t* D, sgs_Variable* var )
 {
-	uint8_t vt = (uint8_t) *D->buf++;
+	uint8_t vt;
+	
+	if( SGSNOMINDEC( 1 ) )
+		return "data error";
+	
+	vt = (uint8_t) *D->buf++;
 	var->type = vt;
 	switch( vt )
 	{
 	case SVT_NULL: break;
-	case SVT_BOOL: var->data.B = *D->buf++; break;
-	case SVT_INT: AS_INTEGER( var->data.I, D->buf ); D->buf += sizeof( sgs_Int ); break;
-	case SVT_REAL: AS_REAL( var->data.R, D->buf ); D->buf += sizeof( sgs_Real ); break;
-	case SVT_STRING: bc_read_sgsstring( D, var ); break;
+	case SVT_BOOL:
+		if( SGSNOMINDEC( 1 ) )
+			return "data error";
+		
+		var->data.B = *D->buf++ ? 1 : 0;
+		break;
+		
+	case SVT_INT:
+		if( SGSNOMINDEC( sizeof( sgs_Int ) ) )
+			return "data error";
+		
+		AS_INTEGER( var->data.I, D->buf );
+		D->buf += sizeof( sgs_Int );
+		break;
+		
+	case SVT_REAL:
+		if( SGSNOMINDEC( sizeof( sgs_Real ) ) )
+			return "data error";
+		
+		AS_REAL( var->data.R, D->buf );
+		D->buf += sizeof( sgs_Real );
+		break;
+		
+	case SVT_STRING: return bc_read_sgsstring( D, var );
 	case SVT_FUNC: return bc_read_sgsfunc( D, var );
 	default:
 		var->type = SVT_NULL;
@@ -2875,28 +2927,46 @@ static int bc_write_sgsfunc( func_t* F, SGS_CTX, MemBuf* outbuf )
 	return 1;
 }
 
-static void bc_read_membuf( decoder_t* D, MemBuf* out )
+static const char* bc_read_membuf( decoder_t* D, MemBuf* out )
 {
 	const char* buf = D->buf;
 	uint32_t len;
+	
+	if( SGSNOMINDEC( 4 ) )
+		return "data error";
+	
 	AS_UINT32( len, buf );
 	if( D->convend )
 		len = (uint32_t) esi32( len );
 	buf += 4;
+	
+	if( SGSNOMINDEC( len ) )
+		return "data error";
+	
 	membuf_setstrbuf( out, D->C, buf, len );
 	D->buf = buf + len;
+	
+	return NULL;
 }
+
 static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 {
-	func_t* F;
+	func_t* F = NULL;
 	uint32_t coff, ioff, size;
 	uint16_t cc, ic;
-	const char* ret;
+	const char* ret = "data error";
 	SGS_CTX = D->C;
-
+	
+	if( SGSNOMINDEC( 10 ) )
+		goto fail;
+	
 	AS_UINT16( cc, D->buf );
 	AS_UINT16( ic, D->buf + 2 );
-
+	
+	/* basic tests to avoid allocating too much memory */
+	if( SGSNOMINDEC( 10 + (ssize_t) ( cc + ic * sizeof(sgs_LineNum) ) ) )
+		goto fail;
+	
 	if( D->convend )
 	{
 		/* WP: int promotion will not affect the result */
@@ -2907,7 +2977,7 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	ioff = (uint32_t) sizeof( sgs_Variable ) * cc;
 	coff = (uint32_t) sizeof( instr_t ) * ic;
 	size = ioff + coff;
-
+	
 	F = sgs_Alloc_a( func_t, size );
 	F->refcount = 1;
 	F->size = size;
@@ -2921,18 +2991,31 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 		F->linenum = (sgs_LineNum) esi16( F->linenum );
 	F->lineinfo = sgs_Alloc_n( sgs_LineNum, ic );
 	D->buf += 10;
+	
+	if( SGSNOMINDEC( sizeof( sgs_LineNum ) * ic ) )
+		goto fail;
+	
 	memcpy( F->lineinfo, D->buf, sizeof( sgs_LineNum ) * ic );
 	D->buf += sizeof( sgs_LineNum ) * ic;
+	if( D->convend )
+		esi16_array( (uint16_t*) F->lineinfo, ic );
+	
 	F->funcname = membuf_create();
-	bc_read_membuf( D, &F->funcname );
+	ret = bc_read_membuf( D, &F->funcname );
+	if( ret )
+		goto fail;
+	
 	F->filename = membuf_create();
 	membuf_setstrbuf( &F->filename, C, D->filename, D->filename_len );
-
+	
 	/* the main data */
 	ret = bc_read_varlist( D, func_consts( F ), cc );
 	if( ret )
 		goto fail;
-
+	
+	ret = "data error";
+	if( SGSNOMINDEC( coff ) )
+		goto fail;
 	memcpy( func_bytecode( F ), D->buf, coff );
 	if( D->convend )
 		esi32_array( func_bytecode( F ), coff / sizeof( instr_t ) );
@@ -2942,10 +3025,14 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	return NULL;
 
 fail:
-	sgs_Dealloc( F->lineinfo );
-	membuf_destroy( &F->funcname, C );
-	membuf_destroy( &F->filename, C );
-	sgs_Dealloc( F );
+	if( F )
+	{
+		/* everything is allocated together, between error jumps */
+		sgs_Dealloc( F->lineinfo );
+		membuf_destroy( &F->funcname, C );
+		membuf_destroy( &F->filename, C );
+		sgs_Dealloc( F );
+	}
 	return ret;
 }
 
@@ -3023,28 +3110,34 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, MemBuf* outbuf )
 
 const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, size_t size, sgs_CompFunc** outfunc )
 {
-	char flags = buf[ 9 ];
+	char flags;
 	uint32_t sz;
 	
+	if( size < 22 )
+		return "data error";
+	
+	flags = buf[ 9 ];
 	AS_UINT32( sz, buf + 10 );
 	
-	decoder_t D;
+	decoder_t Dstorage, *D;
+	D = &Dstorage; /* macro compatibility */
 	{
-		D.C = C;
-		D.buf = NULL;
-		D.start = buf;
-		D.convend = ( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) !=
+		D->C = C;
+		D->buf = NULL;
+		D->start = buf;
+		D->end = buf + size;
+		D->convend = ( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) !=
 			( ( flags & SGSBC_FLAG_LITTLE_ENDIAN ) != 0 );
-		D.filename = fn;
-		D.filename_len = strlen( fn );
+		D->filename = fn;
+		D->filename_len = strlen( fn );
 	}
 	
-	if( D.convend )
+	if( D->convend )
 		sz = esi32( sz );
 	if( (size_t) sz != size )
-		return "incomplete file";
+		return "data error";
 	{
-		const char* ret;
+		const char* ret = "data error";
 		uint16_t cc, ic;
 		sgs_CompFunc* func = make_compfunc( C );
 		AS_UINT16( cc, buf + 14 );
@@ -3053,33 +3146,52 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, size_t siz
 		AS_UINT8( func->numargs, buf + 19 );
 		AS_UINT8( func->numtmp, buf + 20 );
 		AS_UINT8( func->numclsr, buf + 21 );
-		D.buf = buf + 22;
+		D->buf = buf + 22;
 		
-		if( D.convend )
+		if( D->convend )
 		{
 			/* WP: int promotion will not affect the result */
 			cc = (uint16_t) esi16( cc );
 			ic = (uint16_t) esi16( ic );
 		}
 		
+		if( SGSNOMINDEC( cc + ic * sizeof( LineNum ) ) )
+		{
+			sgsBC_Free( C, func );
+			return "data error";
+		}
+		
 		membuf_resize( &func->consts, C, sizeof( sgs_Variable ) * cc );
 		membuf_resize( &func->code, C, sizeof( instr_t ) * ic );
 		membuf_resize( &func->lnbuf, C, sizeof( LineNum ) * ic );
 		
-		ret = bc_read_varlist( &D, (sgs_Variable*) (void*) ASSUME_ALIGNED( func->consts.ptr, 4 ), cc );
+		ret = bc_read_varlist( D, (sgs_Variable*) (void*) ASSUME_ALIGNED( func->consts.ptr, 4 ), cc );
 		if( ret )
 		{
 			sgsBC_Free( C, func );
 			return ret;
 		}
-		memcpy( func->code.ptr, D.buf, sizeof( instr_t ) * ic );
-		if( D.convend )
+		
+		ret = "data error";
+		if( SGSNOMINDEC( sizeof( instr_t ) * ic ) )
+			goto free_fail;
+		
+		memcpy( func->code.ptr, D->buf, sizeof( instr_t ) * ic );
+		if( D->convend )
 			esi32_array( (instr_t*) (void*) ASSUME_ALIGNED( func->code.ptr, 4 ), ic );
-		D.buf += sizeof( instr_t ) * ic;
-		memcpy( func->lnbuf.ptr, D.buf, sizeof( LineNum ) * ic );
+		D->buf += sizeof( instr_t ) * ic;
+		
+		if( SGSNOMINDEC( sizeof( LineNum ) * ic ) )
+			goto free_fail;
+		
+		memcpy( func->lnbuf.ptr, D->buf, sizeof( LineNum ) * ic );
 
 		*outfunc = func;
 		return NULL;
+		
+free_fail:
+		sgsBC_Free( C, func );
+		return ret;
 	}
 }
 

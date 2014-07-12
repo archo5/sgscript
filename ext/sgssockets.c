@@ -48,6 +48,7 @@
 
 #ifdef _WIN32
 #  define SGS_SCKID SOCKET
+#  define SGS_NOSOCK INVALID_SOCKET
 #  define sgs_sockerror WSAGetLastError()
 #  define IOCTLCONV( x ) (int)(x)
 #  define IOCTL_VALUE u_long
@@ -58,6 +59,7 @@
 #  define sa_family_t int16_t
 #else
 #  define SGS_SCKID int
+#  define SGS_NOSOCK -1
 #  define sgs_sockerror errno
 #  define IOCTLCONV( x ) x
 #  define IOCTL_VALUE int
@@ -600,7 +602,7 @@ static int socketI_accept( SGS_CTX )
 		return 0;
 	
 	S = accept( GET_SCK, (struct sockaddr*) &sa, &sa_size );
-	if( S == -1 )
+	if( S == SGS_NOSOCK )
 	{
 		SOCKERR;
 		STDLIB_WARN( "failed to accept connection" )
@@ -1002,7 +1004,7 @@ static int sgs_socket( SGS_CTX )
 		return 0;
 	
 	S = socket( (int) addrfamily, (int) type, (int) protocol );
-	if( S < 0 )
+	if( S == SGS_NOSOCK )
 	{
 		SOCKERR;
 		STDLIB_WARN( "failed to create socket" )
@@ -1023,7 +1025,7 @@ static int sgs_socket_tcp( SGS_CTX )
 		return 0;
 	
 	S = socket( ipv6 ? PF_INET6 : PF_INET, SOCK_STREAM, IPPROTO_TCP );
-	if( S < 0 )
+	if( S == SGS_NOSOCK )
 	{
 		SOCKERR;
 		STDLIB_WARN( "failed to create socket" )
@@ -1044,7 +1046,7 @@ static int sgs_socket_udp( SGS_CTX )
 		return 0;
 	
 	S = socket( ipv6 ? PF_INET6 : PF_INET, SOCK_DGRAM, IPPROTO_UDP );
-	if( S < 0 )
+	if( S == SGS_NOSOCK )
 	{
 		SOCKERR;
 		STDLIB_WARN( "failed to create socket" )

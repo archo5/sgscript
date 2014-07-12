@@ -4,7 +4,7 @@ a2 = [2,4,6];
 a3 = [7,8,9];
 a4 = [1,2,3,4,2,5,4];
 d1 = { a = "b", c = "d" };
-printvars
+printvar
 (
 	get_concat( a1, a2, a3 ),
 	get_merged( d1, a4, a1 ),

@@ -449,7 +449,7 @@ DEFINE_TEST( debugging )
 	sgs_PushReal( C, 3.14 );
 	sgs_PushString( C, "wat" );
 	sgs_EvalString( C, "return function(){};", &rvc );
-	sgs_PushGlobal( C, "print" );
+	atf_assert( sgs_PushGlobal( C, "print" ) == SGS_SUCCESS );
 	sgs_PushArray( C, 0 );
 	sgs_PushDict( C, 0 );
 	

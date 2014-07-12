@@ -878,8 +878,7 @@ static int sgsstd_fmt_text( SGS_CTX )
 	
 	if( sgs_ItemType( C, 0 ) == SVT_INT || sgs_ItemType( C, 0 ) == SVT_REAL )
 	{
-		sgs_Int numbytes;
-		sgs_ParseInt( C, 0, &numbytes );
+		sgs_Int numbytes = sgs_GetInt( C, 0 );
 		if( numbytes > 0 && numbytes < 0x7fffffff )
 			membuf_reserve( &B, C, (size_t) numbytes );
 		
@@ -1985,7 +1984,11 @@ static int sgsstd_fileP_size( SGS_CTX, FILE* fp )
 			return SGS_EINPROC;
 		}
 		sgs_PushInt( C, size );
-		fsetpos( fp, &pos );
+		if( fsetpos( fp, &pos ) != 0 )
+		{
+			sgs_Errno( C, 0 );
+			return SGS_EINPROC;
+		}
 		sgs_Errno( C, 1 );
 		return SGS_SUCCESS;
 	}
@@ -4220,11 +4223,11 @@ static int utf8it_getnext( SGS_CTX, sgs_VarObj* obj, int what )
 		int ret = sgs_utf8_decode( str_cstr( IT->str ) + IT->i, IT->str->size + (size_t) IT->i, &outchar );
 		ret = abs( ret );
 		IT->i += (uint32_t) ret;
-		return IT->i >= 0 && IT->i < (sgs_SizeVal) IT->str->size ? 1 : 0;
+		return IT->i < (sgs_SizeVal) IT->str->size ? 1 : 0;
 	}
 	else
 	{
-		if( IT->i < 0 || IT->i >= (sgs_SizeVal) IT->str->size )
+		if( IT->i >= (sgs_SizeVal) IT->str->size )
 			return SGS_EINVAL;
 		if( what & SGS_GETNEXT_KEY )
 			sgs_PushInt( C, IT->i );
@@ -4273,8 +4276,7 @@ static int sgsstd_string_format( SGS_CTX )
 	
 	if( sgs_ItemType( C, 0 ) == SVT_INT || sgs_ItemType( C, 0 ) == SVT_REAL )
 	{
-		sgs_Int numbytes;
-		sgs_ParseInt( C, 0, &numbytes );
+		sgs_Int numbytes = sgs_GetInt( C, 0 );
 		if( numbytes > 0 && numbytes < 0x7fffffff )
 			membuf_reserve( &B, C, (size_t) numbytes );
 		

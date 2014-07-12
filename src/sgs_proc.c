@@ -194,14 +194,14 @@ static void var_create_0str( SGS_CTX, sgs_VarPtr out, uint32_t len )
 void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len )
 {
 	sgs_Hash hash;
-	uint32_t ulen = (uint32_t) len; /* WP: string limit */
+	uint32_t ulen;
 	sgs_BreakIf( !str );
 	
-	if( len < 0 )
-		ulen = (uint32_t) strlen( str ); /* WP: string limit */
+	ulen = len >= 0 ? (uint32_t) len : (uint32_t) strlen( str ); /* WP: string limit */
 	
 	hash = sgs_HashFunc( str, ulen );
-	if( (int32_t) ulen <= SGS_STRINGTABLE_MAXLEN )
+#if SGS_STRINGTABLE_MAXLEN >= 0
+	if( ulen <= SGS_STRINGTABLE_MAXLEN )
 	{
 		VHTVar* var = vht_get_str( &C->stringtable, str, ulen, hash );
 		if( var )
@@ -211,6 +211,7 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_Siz
 			return;
 		}
 	}
+#endif
 	
 	var_create_0str( C, out, ulen );
 	memcpy( str_cstr( out->data.S ), str, ulen );
@@ -2309,7 +2310,12 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, rcpos_t constcount )
 		}
 
 		case SI_FORPREP: vm_forprep( C, argA, RESVAR( argB ) ); break;
-		case SI_FORLOAD: vm_fornext( C, argB < 0x100 ? (int)argB : -1, argC < 0x100 ? (int)argC : -1, RESVAR( argA ) ); break;
+		case SI_FORLOAD:
+			vm_fornext( C,
+				argB < 0x100 ? (int)argB : -1,
+				argC < 0x100 ? (int)argC : -1,
+				stk_getlpos( C, argA ) );
+			break;
 		case SI_FORJUMP:
 		{
 			rcpos_t off = argE;
@@ -3249,7 +3255,7 @@ SGSRESULT sgs_StorePath( SGS_CTX, StkIdx item, const char* path, ... )
 		ret = sgs_SetIndexIPI( C, -1, &key, val, prop );
 		VAR_RELEASE( &key );
 		if( ret != SGS_SUCCESS )
-			return ret;
+			goto fail;
 		ssz--;
 	}
 fail:

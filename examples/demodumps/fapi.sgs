@@ -21,7 +21,7 @@ printlns
 );
 
 foreach( t, i : io_dir( "." ) )
-	printvars( t, i );
+	printvar( t, i );
 
 foreach( t, i : io_dir( "nonexistent" ) )
-	printvars( t, i );
+	printvar( t, i );

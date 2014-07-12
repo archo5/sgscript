@@ -1001,8 +1001,10 @@ static int sgsstd_vht_dump( SGS_CTX, sgs_VarObj* data, int depth, const char* na
 static DictHdr* mkdict( SGS_CTX, sgs_Variable* out )
 {
 	sgs_ObjInterface* iface = SGSIFACE_DICT;
+	SGS_IF_DLL( ;,
 	if( !iface )
 		iface = sgsstd_dict_iface;
+	)
 	DictHdr* dh = (DictHdr*) ( out
 		? sgs_InitObjectIPA( C, out, sizeof( DictHdr ), iface )
 		: sgs_PushObjectIPA( C, sizeof( DictHdr ), iface ) );
@@ -1220,7 +1222,8 @@ static int sgsstd_dict( SGS_CTX )
 		if( !sgs_ParseString( C, i, NULL, NULL ) )
 			return sgs_FuncArgError( C, i, SVT_STRING, 0 );
 		
-		sgs_PeekStackItem( C, i + 1, &val );
+		if( !sgs_PeekStackItem( C, i + 1, &val ) )
+			STDLIB_ERR( "Internal error, stack state changed while building dict" )
 		vht_set( ht, C, (C->stack_off+i), &val );
 	}
 	
@@ -2022,7 +2025,8 @@ static int sgsstd_get_concat( SGS_CTX )
 		while( sgs_IterAdvance( C, -1 ) > 0 )
 		{
 			/* ..., output, arg2 iter */
-			sgs_IterPushData( C, -1, FALSE, TRUE );
+			if( SGS_FAILED( sgs_IterPushData( C, -1, FALSE, TRUE ) ) )
+				STDLIB_ERR( "failed to retrieve data from iterator" )
 			sgs_ObjectAction( C, -3, SGS_ACT_ARRAY_PUSH, 1 );
 		}
 		sgs_Pop( C, 1 );
@@ -2042,9 +2046,9 @@ static int sgsstd__get_merged__common( SGS_CTX, sgs_SizeVal ssz )
 			int ret;
 			/* ..., output, arg2 iter */
 			ret = sgs_IterPushData( C, -1, TRUE, TRUE );
-			if( ret != SGS_SUCCESS ) STDLIB_WARN( "failed to retrieve data from iterator" )
+			if( ret != SGS_SUCCESS ) STDLIB_ERR( "failed to retrieve data from iterator" )
 			ret = sgs_StoreIndexII( C, -4, -2, FALSE );
-			if( ret != SGS_SUCCESS ) STDLIB_WARN( "failed to store data" )
+			if( ret != SGS_SUCCESS ) STDLIB_ERR( "failed to store data" )
 			sgs_Pop( C, 1 );
 		}
 		sgs_Pop( C, 1 );
@@ -2971,7 +2975,7 @@ static int _push_curdir( SGS_CTX )
 		else
 		{
 			ptrdiff_t len = fend - file;
-			if( len > 0x7fffffff )
+			if( sizeof(ptrdiff_t) > 4 && len > 0x7fffffff )
 				return 0;
 			else
 				/* WP: error condition */
@@ -3405,7 +3409,6 @@ static int sgsstd_dumpvar( SGS_CTX )
 			char ebuf[ 64 ];
 			sprintf( ebuf, "unknown error while dumping variable #%d", i + 1 );
 			STDLIB_ERR( ebuf );
-			sgs_Pop( C, 1 );
 		}
 	}
 	if( rc )
@@ -3908,7 +3911,7 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 		sgs_StoreGlobal( C, "SGS_PATH" );
 	else if( pathrep == 2 )
 	{
-		sgs_PushGlobal( C, "_G" );
+		sgs_PushEnv( C );
 		sgs_PushString( C, "SGS_PATH" );
 		sgs_ObjectAction( C, -2, SGS_ACT_DICT_UNSET, -1 );
 	}
@@ -4010,27 +4013,27 @@ SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
 		return 0;
 		
 	case SGS_ACT_DICT_UNSET:
-		if( !sgs_IsObject( C, item, sgsstd_dict_iface ) ||
-			sgs_ItemType( C, arg ) != SVT_STRING )
-			return SGS_EINVAL;
-		else
-		{
-			sgs_Variable str;
-			sgs_PeekStackItem( C, arg, &str );
-			vht_unset(
-				&((DictHdr*)sgs_GetObjectData( C, item ))->ht, C,
-				&str );
-			return SGS_SUCCESS;
-		}
-		
-	case SGS_ACT_MAP_UNSET:
-		if( !sgs_IsObject( C, item, sgsstd_map_iface ) ||
-			!sgs_IsValidIndex( C, arg ) )
+		if( !sgs_IsObject( C, item, sgsstd_dict_iface ) )
 			return SGS_EINVAL;
 		else
 		{
 			sgs_Variable key;
-			sgs_PeekStackItem( C, arg, &key );
+			if( !sgs_PeekStackItem( C, arg, &key ) )
+				return SGS_EINVAL;
+			vht_unset(
+				&((DictHdr*)sgs_GetObjectData( C, item ))->ht, C,
+				&key );
+			return SGS_SUCCESS;
+		}
+		
+	case SGS_ACT_MAP_UNSET:
+		if( !sgs_IsObject( C, item, sgsstd_map_iface ) )
+			return SGS_EINVAL;
+		else
+		{
+			sgs_Variable key;
+			if( !sgs_PeekStackItem( C, arg, &key ) )
+				return SGS_EINVAL;
 			vht_unset(
 				&((DictHdr*)sgs_GetObjectData( C, item ))->ht, C,
 				&key );

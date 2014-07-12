@@ -1938,7 +1938,8 @@ static int xgm_fla_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 	}
 	if( vc > 1 ) /* concatenate all numbers and "..." if it exists" */
 		sgs_StringConcat( C, vc );
-	sgs_PadString( C );
+	if( SGS_FAILED( sgs_PadString( C ) ) )
+		return SGS_EINPROC;
 	sgs_PushString( C, "\n}" );
 	sgs_StringConcat( C, 3 );
 	return SGS_SUCCESS;
