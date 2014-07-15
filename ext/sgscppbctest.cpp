@@ -4,7 +4,15 @@
 
 void pushVec3( SGS_CTX, float x, float y, float z )
 {
-	SGS_PUSHCLASS( C, Vec3, (x,y,z) );
+	SGS_PUSHLITECLASS( C, Vec3, (x,y,z) );
+}
+
+Account::Handle pushAccount( SGS_CTX, sgsString name )
+{
+	Account* acc = SGS_PUSHCLASS( C, Account, () );
+	if( name.not_null() )
+		acc->name = name;
+	return Account::Handle( acc );
 }
 
 int main( int argc, char** argv )
@@ -36,6 +44,24 @@ int main( int argc, char** argv )
 	sgs_PushProperty( C, -2, "setLength" );
 	sgs_ThisCall( C, 1, 0 );
 	sgs_GlobalCall( C, "print", 1, 0 );
+	
+	printf( "\n> push accounts A and B: " );
+	Account::Handle aA = pushAccount( C, sgsString( C, "A for 'Artist'" ) );
+	Account::Handle aB = pushAccount( C, sgsString( C, "B for 'Benefactor'" ) );
+	
+	printf( "\n> print objects:\n" );
+	aA.push( C );
+	aB.push( C );
+	sgs_GlobalCall( C, "printlns", 2, 0 );
+	
+	printf( "\n> perform a transaction:\n" );
+	aB.push( C );
+	aA.push( C );
+	sgs_PushReal( C, 3.74 );
+	sgs_PushString( C, "EUR" );
+	sgs_PushProperty( C, -3, "sendMoney" );
+	sgs_ThisCall( C, 3, 1 ); // 1 `this`, 3 arguments, 1 function on stack
+	sgs_GlobalCall( C, "print", 1, 0 ); // 1 argument on stack
 	
 	printf( "\n" );
 	sgs_DestroyEngine( C );

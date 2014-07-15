@@ -30,6 +30,7 @@ This is a basic example of how things are done with SGS/CPP-BC:
     	SGS_PROPERTY float y;
     	SGS_PROPERTY float width;
     	SGS_PROPERTY float height;
+        SGS_PROPERTY sgsString name;
     	SGS_PROPERTY sgsHandle< UIControl > root;
     	
     	float prevMouseX;
@@ -129,7 +130,7 @@ GCMARK handlers are more like the raw API but all that needs to be done in the f
         SGS_PROPERTY_FUNC( READ _getProp WRITE _setProp ) SGS_ALIAS( int prop );
         
         // aliases (second names) for all properties:
-        SGS_PROPERTY_FUNC( READ WRITE VARNAME item1alt ) SGS_ALIAS( item1 );
+        SGS_PROPERTY_FUNC( READ WRITE VARNAME item1alt ) SGS_ALIAS( bool item1 );
         SGS_PROPERTY_FUNC( READ _getSubData WRITE _setSubData VARNAME subDataAlt ) SGS_ALIAS( sgsSubData subData );
         SGS_PROPERTY_FUNC( READ _getProp WRITE _setProp VARNAME propAlt ) SGS_ALIAS( int prop );
     };
@@ -215,7 +216,10 @@ Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int
 
 === Classes
 
+- @sgsMaybe - the class used for handling nullable values
+- @sgsArrayIterator - the compatible array iterator class
 - @sgsHandle - the class used for handling SGS_OBJECT classes
+- @sgsString - the string interface and handling class
 - @sgsVariable - the class used for handling all SGScript variables
 
 === Functions
@@ -231,9 +235,61 @@ Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int
 # >>>
 
 
+# sgsMaybe [class]
+
+== template< class T > class sgsMaybe
+
+This is the class used for handling nullable values.
+
+=== Variables
+
+- `T data` - the data variable
+- `bool isset` - specifies whether the data variable contains any useful data (false if value is `null`)
+
+=== Constructors
+
+- `sgsMaybe()` - initializes a `null` nullable value
+- `sgsMaybe( const T& val )` - initializes a nullable value from another such value
+
+=== Methods
+
+- `void set( const T& val )` - sets the variable to the specified (non-`null`) value
+- `void unset()` - sets the variable to null
+
+
+# sgsArrayIterator [class]
+
+template< class OwningClass > class sgsArrayIterator
+
+This is an array access iterator class for the owning class that supports array indexing and size retrieval. The owning class needs to have these specific access points:
+
+- `static const char* IteratorTypeName` - used for the object name definition
+- `T operator [] ( sgs_SizeVal i ) const` - used to retrieve the specific item
+- `sgs_SizeVal size() const` - used to retrieve item count
+
+=== Variables
+
+- `OwningClass* m_owner` - the owning class (SGS_OBJECT)
+- `sgs_SizeVal m_origsize` - original item count, retrieved from object
+- `sgs_SizeVal m_offset` - current item offset
+
+=== Constructors
+
+- `sgsArrayIterator( OwningClass* owner )` - create an iterator for a SGS_OBJECT
+- `sgsArrayIterator( const sgsArrayIterator& other )` - create a copy of an iterator
+
+=== Methods
+
+- `int gcmark()` - implements the GCMARK callback, not to be generally called directly
+- `int convert( SGS_CTX, sgs_VarObj* obj, int to )` - implements the CONVERT callback, not to be generally called directly
+- `int getnext( SGS_CTX, int mode )` - implements the GETNEXT callback, not to be generally called directly
+
+
 # sgsHandle [class]
 
 == template< class T > class sgsHandle
+
+This is the class used for handling SGS_OBJECT classes.
 
 === Variables
 
@@ -244,25 +300,72 @@ Syntax: `SGS_IFUNC( <ifunc-type> ) <type> <name>( sgs_Context*, sgs_VarObj*, int
 
 - `sgsHandle()` - initializes a NULL handle
 - `sgsHandle( const sgsHandle& h )` - initializes a handle from another handle
-- `sgsHandle( sgs_VarObj* obj, sgs_Context* c )` - initializes a handle from object pointer if it has the right interface, otherwise handle is initialized to NULL
+- `sgsHandle( sgs_Context* c, sgs_VarObj* obj )` - initializes a handle from object pointer if it has the right interface, otherwise handle is initialized to NULL
+- `sgsHandle( sgs_Context* c, sgs_StkIdx item )` - initializes a handle from stack index if it has the right interface, otherwise handle is initialized to NULL
+- `sgsHandle( sgs_Context* c, sgs_Variable* var )` - initializes a handle from variable pointer if it has the right interface, otherwise handle is initialized to NULL
+- `explicit sgsHandle( T* obj )` - initializes a handle from class (SGS_OBJECT) instance pointer
 
 === Methods
 
 - `SGSRESULT gcmark()` - mark the object in handle as accessible (using sgs_ObjGCMark)
+- `void push( sgs_Context* c = NULL )` - push the handle on the stack as object/null
+- `bool not_null()` - returns if object handle points to an instance
 - `void _acquire()` - increment reference count on variable
 - `void _release()` - decrement reference count on variable, remove it from the class
+- `sgsVariable get_variable()` - creates and returns a @sgsVariable from this handle
 
 === Operators
 
 - `const sgsHandle& operator = ( const sgsHandle& h )` - handle assignment
 - `operator T*()`, `operator const T*() const` - implicit conversion to valid T* or NULL
 - `T* operator -> ()`, `const T* operator -> () const` - object access
-- `bool operator <`, `bool operator ==` - comparison operators (the required minimum used for sorting)
+- `bool operator <`, `bool operator ==`, `bool operator !=` - comparison operators
+
+
+# sgsString [class]
+
+== class sgsString
+
+This is the string interface and handling class.
+
+=== Variables
+
+- `sgs_iStr* str` - the string data pointer
+- `SGS_CTX` (`sgs_Context* C`) - associated context
+
+=== Constructors
+
+- `sgsString()` - initializes a NULL handle
+- `sgsString( const sgsString& h )` - initializes a handle from another handle
+- `sgsString( sgs_Context* c, sgs_iStr* s )` - initializes a handle from string data pointer
+- `sgsString( sgs_Context* c, sgs_StkIdx item )` - initializes a handle from stack index if it has the right interface, otherwise handle is initialized to NULL
+- `sgsString( sgs_Context* c, sgs_Variable* var )` - initializes a handle from variable pointer if it has the right interface, otherwise handle is initialized to NULL
+- `sgsString( sgs_Context* c, const char* s, size_t sz )` - creates a new string buffer and sets the handle to it
+- `sgsString( sgs_Context* c, const char* s )` - creates a new 0-terminated string and sets the handle to it
+
+=== Methods
+
+- `const char* c_str()` - returns C string pointer or NULL for NULL handles
+- `size_t size()` - returns string buffer size or 0 for NULL handles
+- `bool get_string( std::string& out )` - creates a std::string for valid handles, returns if handle is valid (available only with `SGS_CPPBC_WITH_STD_STRING` defined)
+- `int compare( const sgsString& s ) const` - compare this string with another one (strcmp return rules)
+- `bool same_as( const sgsString& s ) const` - returns if this string is exactly the same as the other string
+- `void push( sgs_Context* c = NULL )` - push the handle on the stack as string/null
+- `bool not_null()` - returns if string handle points to a string
+- `void _acquire()` - increment reference count on variable
+- `void _release()` - decrement reference count on variable, remove it from the class
+
+=== Operators
+
+- `const sgsString& operator = ( const sgsString& h )` - string assignment
+- `bool operator <`, `bool operator ==`, `bool operator !=` - comparison operators
 
 
 # sgsVariable [class]
 
 == class sgsVariable
+
+This is the class used for handling all SGScript variables.
 
 === Variables
 

@@ -38,6 +38,7 @@ This is a basic example of how things are done with SGS/CPP-BC:
 	SGS_PROPERTY float y;
 	SGS_PROPERTY float width;
 	SGS_PROPERTY float height;
+    SGS_PROPERTY sgsString name;
 	SGS_PROPERTY sgsHandle&lt; UIControl &gt; root;
 	
 	float prevMouseX;
@@ -94,7 +95,7 @@ struct sgsObj
     SGS_PROPERTY_FUNC( READ _getProp WRITE _setProp ) SGS_ALIAS( int prop );
     
     // aliases (second names) for all properties:
-    SGS_PROPERTY_FUNC( READ WRITE VARNAME item1alt ) SGS_ALIAS( item1 );
+    SGS_PROPERTY_FUNC( READ WRITE VARNAME item1alt ) SGS_ALIAS( bool item1 );
     SGS_PROPERTY_FUNC( READ _getSubData WRITE _setSubData VARNAME subDataAlt ) SGS_ALIAS( sgsSubData subData );
     SGS_PROPERTY_FUNC( READ _getProp WRITE _setProp VARNAME propAlt ) SGS_ALIAS( int prop );
 };
@@ -140,23 +141,73 @@ Syntax: <code>SGS_IFUNC( &lt;ifunc-type&gt; ) &lt;type&gt; &lt;name&gt;( sgs_Con
 &quot;ifunc-type&quot; must be one of SGS_OP_* defines.
 </p></div>
 <div class='item'><a name='Data-type-handling'></a><hr><h2>Data type handling</h2><h3>template&lt; class T &gt; void sgs_PushVar( SGS_CTX, const T&amp; );</h3><h4>pushes the specified variable on the stack, automatically converting it to the most appropriate SGScript type</h4><h3>template&lt; class T &gt; struct sgs_GetVar {  T operator () ( SGS_CTX, int item );  };</h3><h4>takes the specified stack item and converts it to the required type</h4><h3>template&lt; class T &gt; struct sgs_GetVarP {  T operator () ( SGS_CTX, sgs_Variable* var );  };</h3><h3>template&lt; class T &gt; struct sgs_GetVarObjP {  T* operator () ( SGS_CTX, sgs_Variable* var );  };</h3><h4>takes the specified variable and converts it to the required type</h4><ul><li>bindings exist for all basic types (except unsigned int64, since it cannot be represented properly), sgsHandle, sgsVariable, and class pointers</li></ul></div>
-<div class='item'><a name='Helper-classes-functions'></a><hr><h2>Helper classes &amp; functions</h2><h4>Classes</h4><ul><li><a href="#sgsHandle-class">sgsHandle</a> - the class used for handling SGS_OBJECT classes
+<div class='item'><a name='Helper-classes-functions'></a><hr><h2>Helper classes &amp; functions</h2><h4>Classes</h4><ul><li><a href="#sgsMaybe-class">sgsMaybe</a> - the class used for handling nullable values
+</li><li><a href="#sgsArrayIterator-class">sgsArrayIterator</a> - the compatible array iterator class
+</li><li><a href="#sgsHandle-class">sgsHandle</a> - the class used for handling SGS_OBJECT classes
+</li><li><a href="#sgsString-class">sgsString</a> - the string interface and handling class
 </li><li><a href="#sgsVariable-class">sgsVariable</a> - the class used for handling all SGScript variables</li></ul><h4>Functions</h4><ul><li><a href="#sgs-PushHandle-function">sgs_PushHandle</a> - push handle on stack
 </li><li><a href="#sgs-Push-Lite-Class-function">sgs_Push(Lite)Class</a> - push new class instance on stack
 </li><li><a href="#sgs-Push-Lite-ClassIPA-function">sgs_Push(Lite)ClassIPA</a> - allocate new class instance, push it on stack
 </li><li><a href="#sgs-Push-Lite-ClassFrom-function">sgs_Push(Lite)ClassFrom</a> - push a copy of class instance on stack
 </li><li><a href="#sgs-InitPushedClass-function">sgs_InitPushedClass</a> - initialize internal class pointers
 </li><li><a href="#sgs-Push-Lite-Class-function">sgs_Push(Lite)Class</a> - push a new instance of class, using the specified arguments for constructor</li></ul></div>
-<div class='item'><a name='sgsHandle-class'></a><hr><h2>sgsHandle [class]</h2><h3>template&lt; class T &gt; class sgsHandle</h3><h4>Variables</h4><ul><li><code>sgs_VarObj* object</code> - the pointer to object with interface equal to T::_sgs_interface or NULL
+<div class='item'><a name='sgsMaybe-class'></a><hr><h2>sgsMaybe [class]</h2><h3>template&lt; class T &gt; class sgsMaybe</h3><p>
+This is the class used for handling nullable values.
+</p><h4>Variables</h4><ul><li><code>T data</code> - the data variable
+</li><li><code>bool isset</code> - specifies whether the data variable contains any useful data (false if value is <code>null</code>)</li></ul><h4>Constructors</h4><ul><li><code>sgsMaybe()</code> - initializes a <code>null</code> nullable value
+</li><li><code>sgsMaybe( const T&amp; val )</code> - initializes a nullable value from another such value</li></ul><h4>Methods</h4><ul><li><code>void set( const T&amp; val )</code> - sets the variable to the specified (non-`null`) value
+</li><li><code>void unset()</code> - sets the variable to null</li></ul></div>
+<div class='item'><a name='sgsArrayIterator-class'></a><hr><h2>sgsArrayIterator [class]</h2><p>
+template&lt; class OwningClass &gt; class sgsArrayIterator
+</p><p>
+This is an array access iterator class for the owning class that supports array indexing and size retrieval. The owning class needs to have these specific access points:
+</p><ul><li><code>static const char* IteratorTypeName</code> - used for the object name definition
+</li><li><code>T operator [] ( sgs_SizeVal i ) const</code> - used to retrieve the specific item
+</li><li><code>sgs_SizeVal size() const</code> - used to retrieve item count</li></ul><h4>Variables</h4><ul><li><code>OwningClass* m_owner</code> - the owning class (SGS_OBJECT)
+</li><li><code>sgs_SizeVal m_origsize</code> - original item count, retrieved from object
+</li><li><code>sgs_SizeVal m_offset</code> - current item offset</li></ul><h4>Constructors</h4><ul><li><code>sgsArrayIterator( OwningClass* owner )</code> - create an iterator for a SGS_OBJECT
+</li><li><code>sgsArrayIterator( const sgsArrayIterator&amp; other )</code> - create a copy of an iterator</li></ul><h4>Methods</h4><ul><li><code>int gcmark()</code> - implements the GCMARK callback, not to be generally called directly
+</li><li><code>int convert( SGS_CTX, sgs_VarObj* obj, int to )</code> - implements the CONVERT callback, not to be generally called directly
+</li><li><code>int getnext( SGS_CTX, int mode )</code> - implements the GETNEXT callback, not to be generally called directly</li></ul></div>
+<div class='item'><a name='sgsHandle-class'></a><hr><h2>sgsHandle [class]</h2><h3>template&lt; class T &gt; class sgsHandle</h3><p>
+This is the class used for handling SGS_OBJECT classes.
+</p><h4>Variables</h4><ul><li><code>sgs_VarObj* object</code> - the pointer to object with interface equal to T::_sgs_interface or NULL
 </li><li><code>SGS_CTX</code> (<code>sgs_Context* C</code>) - associated context</li></ul><h4>Constructors</h4><ul><li><code>sgsHandle()</code> - initializes a NULL handle
 </li><li><code>sgsHandle( const sgsHandle&amp; h )</code> - initializes a handle from another handle
-</li><li><code>sgsHandle( sgs_VarObj* obj, sgs_Context* c )</code> - initializes a handle from object pointer if it has the right interface, otherwise handle is initialized to NULL</li></ul><h4>Methods</h4><ul><li><code>SGSRESULT gcmark()</code> - mark the object in handle as accessible (using sgs_ObjGCMark)
+</li><li><code>sgsHandle( sgs_Context* c, sgs_VarObj* obj )</code> - initializes a handle from object pointer if it has the right interface, otherwise handle is initialized to NULL
+</li><li><code>sgsHandle( sgs_Context* c, sgs_StkIdx item )</code> - initializes a handle from stack index if it has the right interface, otherwise handle is initialized to NULL
+</li><li><code>sgsHandle( sgs_Context* c, sgs_Variable* var )</code> - initializes a handle from variable pointer if it has the right interface, otherwise handle is initialized to NULL
+</li><li><code>explicit sgsHandle( T* obj )</code> - initializes a handle from class (SGS_OBJECT) instance pointer</li></ul><h4>Methods</h4><ul><li><code>SGSRESULT gcmark()</code> - mark the object in handle as accessible (using sgs_ObjGCMark)
+</li><li><code>void push( sgs_Context* c = NULL )</code> - push the handle on the stack as object/null
+</li><li><code>bool not_null()</code> - returns if object handle points to an instance
 </li><li><code>void _acquire()</code> - increment reference count on variable
-</li><li><code>void _release()</code> - decrement reference count on variable, remove it from the class</li></ul><h4>Operators</h4><ul><li><code>const sgsHandle&amp; operator = ( const sgsHandle&amp; h )</code> - handle assignment
+</li><li><code>void _release()</code> - decrement reference count on variable, remove it from the class
+</li><li><code>sgsVariable get_variable()</code> - creates and returns a <a href="#sgsVariable-class">sgsVariable</a> from this handle</li></ul><h4>Operators</h4><ul><li><code>const sgsHandle&amp; operator = ( const sgsHandle&amp; h )</code> - handle assignment
 </li><li><code>operator T*()</code>, <code>operator const T*() const</code> - implicit conversion to valid T* or NULL
 </li><li><code>T* operator -&gt; ()</code>, <code>const T* operator -&gt; () const</code> - object access
-</li><li><code>bool operator &lt;</code>, <code>bool operator ==</code> - comparison operators (the required minimum used for sorting)</li></ul></div>
-<div class='item'><a name='sgsVariable-class'></a><hr><h2>sgsVariable [class]</h2><h3>class sgsVariable</h3><h4>Variables</h4><ul><li><code>sgs_Variable var</code> - the internal variable data
+</li><li><code>bool operator &lt;</code>, <code>bool operator ==</code>, <code>bool operator !=</code> - comparison operators</li></ul></div>
+<div class='item'><a name='sgsString-class'></a><hr><h2>sgsString [class]</h2><h3>class sgsString</h3><p>
+This is the string interface and handling class.
+</p><h4>Variables</h4><ul><li><code>sgs_iStr* str</code> - the string data pointer
+</li><li><code>SGS_CTX</code> (<code>sgs_Context* C</code>) - associated context</li></ul><h4>Constructors</h4><ul><li><code>sgsString()</code> - initializes a NULL handle
+</li><li><code>sgsString( const sgsString&amp; h )</code> - initializes a handle from another handle
+</li><li><code>sgsString( sgs_Context* c, sgs_iStr* s )</code> - initializes a handle from string data pointer
+</li><li><code>sgsString( sgs_Context* c, sgs_StkIdx item )</code> - initializes a handle from stack index if it has the right interface, otherwise handle is initialized to NULL
+</li><li><code>sgsString( sgs_Context* c, sgs_Variable* var )</code> - initializes a handle from variable pointer if it has the right interface, otherwise handle is initialized to NULL
+</li><li><code>sgsString( sgs_Context* c, const char* s, size_t sz )</code> - creates a new string buffer and sets the handle to it
+</li><li><code>sgsString( sgs_Context* c, const char* s )</code> - creates a new 0-terminated string and sets the handle to it</li></ul><h4>Methods</h4><ul><li><code>const char* c_str()</code> - returns C string pointer or NULL for NULL handles
+</li><li><code>size_t size()</code> - returns string buffer size or 0 for NULL handles
+</li><li><code>bool get_string( std::string&amp; out )</code> - creates a std::string for valid handles, returns if handle is valid (available only with <code>SGS_CPPBC_WITH_STD_STRING</code> defined)
+</li><li><code>int compare( const sgsString&amp; s ) const</code> - compare this string with another one (strcmp return rules)
+</li><li><code>bool same_as( const sgsString&amp; s ) const</code> - returns if this string is exactly the same as the other string
+</li><li><code>void push( sgs_Context* c = NULL )</code> - push the handle on the stack as string/null
+</li><li><code>bool not_null()</code> - returns if string handle points to a string
+</li><li><code>void _acquire()</code> - increment reference count on variable
+</li><li><code>void _release()</code> - decrement reference count on variable, remove it from the class</li></ul><h4>Operators</h4><ul><li><code>const sgsString&amp; operator = ( const sgsString&amp; h )</code> - string assignment
+</li><li><code>bool operator &lt;</code>, <code>bool operator ==</code>, <code>bool operator !=</code> - comparison operators</li></ul></div>
+<div class='item'><a name='sgsVariable-class'></a><hr><h2>sgsVariable [class]</h2><h3>class sgsVariable</h3><p>
+This is the class used for handling all SGScript variables.
+</p><h4>Variables</h4><ul><li><code>sgs_Variable var</code> - the internal variable data
 </li><li><code>SGS_CTX</code> (<code>sgs_Context* C</code>) - associated context</li></ul><h4>Constructors</h4><ul><li><code>sgsVariable()</code> - initializes a NULL variable
 </li><li><code>sgsVariable( const sgsVariable&amp; h )</code> - initializes variable from another variable
 </li><li><code>sgsVariable( sgs_Context* c )</code> - initialize a NULL variable and associate context
