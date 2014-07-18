@@ -278,6 +278,57 @@ For simplified inclusion of files, add <code>src/</code> and <code>ext/</code> t
 <ul><li>Requires the SGScript library to be linked to the project or have the files (<code>src/*</code>) compiled in.
 </li></ul><li>eXtended Game Math library can be found in <code>ext/sgsxgmath.h</code>.
 <ul><li>Requires the eXtended Game Math library to be linked to the project or have the files (<code>ext/sgsxgmath.c</code>) compiled in.</li></ul></li></ul></div>
+<div class='item'><a name='Using-the-C-API'></a><hr><h2>Using the C API</h2><p>
+This section describes various use cases and how to apply the SGScript C API to achieve the expected results.
+</p><ul><li><a href="#Starting-up-and-running-code">Starting up and running code</a>
+</li><li><a href="#Making-your-own-native-functions">Making your own native functions</a> (TODO)
+</li><li><a href="#Native-object-interfaces">Native object interfaces</a> (TODO)</li></ul></div>
+<div class='item'><a name='Starting-up-and-running-code'></a><hr><h2>Starting up and running code</h2><pre>SGS_CTX = sgs_CreateEngine(); // SGS_CTX is alias to `sgs_Context* C`
+sgs_Include( C, &quot;something&quot; );
+sgs_ExecFile( C, &quot;myscript.sgs&quot; );
+sgs_DestroyEngine( C );</pre><ul><li>To do any kinds of operations with the scripting engine, it is first required to create it with <code>sgs_CreateEngine</code> or <code>sgs_CreateEngineExt</code>.
+</li><li>When it&#39;s no longer necessary, it should be destroyed with <code>sgs_DestroyEngine</code> to free all used resources.
+</li><li>Scripts can be loaded in many different ways. In this case, lookup differs:
+<ul><li><code>sgs_Include</code> tries to find the right file using the search path, and it supports loading of native libraries.
+</li><li><code>sgs_ExecFile</code> supports only script files (both compiled and source).</li></ul></li></ul><pre>sgs_GlobalCall( C, &quot;main&quot;, 0, 0 ); // may fail but it&#39;s not important in this case</pre><ul><li>There are many ways to call functions. The easiest way is to call a global function.
+</li><li>The arguments for <code>sgs_GlobalCall</code> are:
+<ul><li>context pointer
+</li><li>global variable name
+</li><li>number of arguments to be passed (taken from the stack)
+</li><li>number of expected return values (to be pushed on stack if successfully called the function)</li></ul></li></ul><pre>sgs_PushBool( C, 1 );
+sgs_PushInt( C, 42 );
+sgs_PushReal( C, 3.14159 );
+sgs_PushString( C, &quot;some C string&quot; );
+sgs_PushStringBuf( C, &quot;not\0really\0C\0string&quot;, 19 );
+sgs_PushPtr( C, C );
+sgs_PushGlobal( C, &quot;main&quot; ); // assuming this does not fail
+sgs_Call( C, 6, 1 ); // calls function from global &#39;main&#39; with 6 arguments and expects 1 value in return
+// again, it&#39;s assumed that sgs_Call does not fail - but it may, so checking return value with SGS_SUCCEEDED / SGS_FAILED macros is a very good idea</pre><ul><li>Function arguments can be passed by pushing data on the stack.
+</li><li>There are many kinds of pushing functions, some of these push exact data.
+<ul><li>Others push data from internal sources - therefore they can fail..
+</li><li>..for example, PushGlobal may not find a variable with that name.
+</li></ul><li>There are also function-calling functions. They have certain expectations:
+<ul><li>1. Function must be the last (topmost) item on stack.
+</li><li>2. There must be at least N more items on stack - where N is total argument count.
+</li><li>3. Function argument must be callable (function type / object with &#39;call&#39; interface function)</li></ul></li></ul><pre>if( SGS_FAILED( sgs_GlobalCall( C, &quot;func&quot;, 0, 3 ) ) )
+    /* handle the error */; // it is important this time since stack state matters
+sgs_Int i = sgs_GetInt( C, -3 ); // first return value
+const char* string_ptr = NULL;
+sgs_SizeVal string_size = 0;
+if( sgs_ParseString( C, -2, &amp;string_ptr, &amp;string_length ) )
+    /* successfully parsed a string, deal with it */;
+sgs_Bool b = sgs_GetBool( C, -1 );
+sgs_Pop( C, 3 ); // remove all 3 returned values from top of the stack</pre><ul><li>There are various ways to validate and read back data from the engine:
+<ul><li>Get*** functions: return converted data without doing in-place conversions
+</li><li>To*** functions: convert data in-place, then return it
+</li><li>Parse*** functions: check if we can convert, then return converted data
+</li></ul><li>Items are removed from top of the stack with <code>sgs_Pop</code>.</li></ul></div>
+<div class='item'><a name='Making-your-own-native-functions'></a><hr><h2>Making your own native functions</h2><p>
+TODO
+</p></div>
+<div class='item'><a name='Native-object-interfaces'></a><hr><h2>Native object interfaces</h2><p>
+TODO
+</p></div>
 </div>
 	</body></html>
 	

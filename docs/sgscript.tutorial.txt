@@ -427,3 +427,85 @@ For simplified inclusion of files, add `src/` and `ext/` to the include paths.
 
 # <<<
 
+
+# Using the C API [info]
+
+This section describes various use cases and how to apply the SGScript C API to achieve the expected results.
+
+- @"Starting up and running code"
+- @"Making your own native functions" (TODO)
+- @"Native object interfaces" (TODO)
+
+
+# >>>
+
+# Starting up and running code [info]
+
+    SGS_CTX = sgs_CreateEngine(); // SGS_CTX is alias to `sgs_Context* C`
+    sgs_Include( C, "something" );
+    sgs_ExecFile( C, "myscript.sgs" );
+    sgs_DestroyEngine( C );
+
+- To do any kinds of operations with the scripting engine, it is first required to create it with `sgs_CreateEngine` or `sgs_CreateEngineExt`.
+- When it's no longer necessary, it should be destroyed with `sgs_DestroyEngine` to free all used resources.
+- Scripts can be loaded in many different ways. In this case, lookup differs:
+-- `sgs_Include` tries to find the right file using the search path, and it supports loading of native libraries.
+-- `sgs_ExecFile` supports only script files (both compiled and source).
+
+    sgs_GlobalCall( C, "main", 0, 0 ); // may fail but it's not important in this case
+
+- There are many ways to call functions. The easiest way is to call a global function.
+- The arguments for `sgs_GlobalCall` are:
+-- context pointer
+-- global variable name
+-- number of arguments to be passed (taken from the stack)
+-- number of expected return values (to be pushed on stack if successfully called the function)
+
+    sgs_PushBool( C, 1 );
+    sgs_PushInt( C, 42 );
+    sgs_PushReal( C, 3.14159 );
+    sgs_PushString( C, "some C string" );
+    sgs_PushStringBuf( C, "not\0really\0C\0string", 19 );
+    sgs_PushPtr( C, C );
+    sgs_PushGlobal( C, "main" ); // assuming this does not fail
+    sgs_Call( C, 6, 1 ); // calls function from global 'main' with 6 arguments and expects 1 value in return
+    // again, it's assumed that sgs_Call does not fail - but it may, so checking return value with SGS_SUCCEEDED / SGS_FAILED macros is a very good idea
+
+- Function arguments can be passed by pushing data on the stack.
+- There are many kinds of pushing functions, some of these push exact data.
+-- Others push data from internal sources - therefore they can fail..
+-- ..for example, PushGlobal may not find a variable with that name.
+- There are also function-calling functions. They have certain expectations:
+-- 1. Function must be the last (topmost) item on stack.
+-- 2. There must be at least N more items on stack - where N is total argument count.
+-- 3. Function argument must be callable (function type / object with 'call' interface function)
+
+    if( SGS_FAILED( sgs_GlobalCall( C, "func", 0, 3 ) ) )
+        /* handle the error */; // it is important this time since stack state matters
+    sgs_Int i = sgs_GetInt( C, -3 ); // first return value
+    const char* string_ptr = NULL;
+    sgs_SizeVal string_size = 0;
+    if( sgs_ParseString( C, -2, &string_ptr, &string_length ) )
+        /* successfully parsed a string, deal with it */;
+    sgs_Bool b = sgs_GetBool( C, -1 );
+    sgs_Pop( C, 3 ); // remove all 3 returned values from top of the stack
+
+- There are various ways to validate and read back data from the engine:
+-- Get*** functions: return converted data without doing in-place conversions
+-- To*** functions: convert data in-place, then return it
+-- Parse*** functions: check if we can convert, then return converted data
+- Items are removed from top of the stack with `sgs_Pop`.
+
+
+# Making your own native functions [info]
+
+TODO
+
+
+# Native object interfaces [info]
+
+TODO
+
+
+# <<<
+
