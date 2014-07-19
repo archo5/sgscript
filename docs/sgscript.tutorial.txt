@@ -433,7 +433,7 @@ For simplified inclusion of files, add `src/` and `ext/` to the include paths.
 This section describes various use cases and how to apply the SGScript C API to achieve the expected results.
 
 - @"Starting up and running code"
-- @"Making your own native functions" (TODO)
+- @"Making your own native functions"
 - @"Native object interfaces" (TODO)
 
 
@@ -450,7 +450,8 @@ This section describes various use cases and how to apply the SGScript C API to 
 - When it's no longer necessary, it should be destroyed with `sgs_DestroyEngine` to free all used resources.
 - Scripts can be loaded in many different ways. In this case, lookup differs:
 -- `sgs_Include` tries to find the right file using the search path, and it supports loading of native libraries.
--- `sgs_ExecFile` supports only script files (both compiled and source).
+--- The search path is a special string on SGS_PATH that contains a combination of possible locations and extensions.
+-- `sgs_ExecFile` expects a specific file and supports only script files (both compiled and source).
 
     sgs_GlobalCall( C, "main", 0, 0 ); // may fail but it's not important in this case
 
@@ -469,16 +470,20 @@ This section describes various use cases and how to apply the SGScript C API to 
     sgs_PushPtr( C, C );
     sgs_PushGlobal( C, "main" ); // assuming this does not fail
     sgs_Call( C, 6, 1 ); // calls function from global 'main' with 6 arguments and expects 1 value in return
-    // again, it's assumed that sgs_Call does not fail - but it may, so checking return value with SGS_SUCCEEDED / SGS_FAILED macros is a very good idea
+    // again, it's assumed that sgs_Call does not fail
+    // ...but it may, so checking return value with SGS_SUCCEEDED / SGS_FAILED macros is a very good idea
 
 - Function arguments can be passed by pushing data on the stack.
 - There are many kinds of pushing functions, some of these push exact data.
 -- Others push data from internal sources - therefore they can fail..
--- ..for example, PushGlobal may not find a variable with that name.
+-- ..for example, PushGlobal may not find a variable with that name - in that case, nothing is pushed and SGS_ENOTFND is returned.
 - There are also function-calling functions. They have certain expectations:
 -- 1. Function must be the last (topmost) item on stack.
 -- 2. There must be at least N more items on stack - where N is total argument count.
 -- 3. Function argument must be callable (function type / object with 'call' interface function)
+- If a call fails...
+-- stack size issues - stack is left unchanged
+-- execution errors - stack has the expected number of return values, all set to `null`
 
     if( SGS_FAILED( sgs_GlobalCall( C, "func", 0, 3 ) ) )
         /* handle the error */; // it is important this time since stack state matters
@@ -493,13 +498,49 @@ This section describes various use cases and how to apply the SGScript C API to 
 - There are various ways to validate and read back data from the engine:
 -- Get*** functions: return converted data without doing in-place conversions
 -- To*** functions: convert data in-place, then return it
--- Parse*** functions: check if we can convert, then return converted data
+-- Parse*** functions: check if it's possible to convert, then return converted data
 - Items are removed from top of the stack with `sgs_Pop`.
 
 
 # Making your own native functions [info]
 
-TODO
+    int sample_func( SGS_CTX )
+    {
+        char* str;
+        float q = 1;
+        SGSFN( "sample_func" );
+        if( sgs_LoadArgs( "s|f", &str, &q ) )
+            return 0;
+        // ... some more code here ...
+        sgs_PushBool( C, 1 );
+        return 1; // < number of return values or a negative number on failure
+    }
+
+- all C functions must have the return type `int` and one `sgs_Context*` argument
+- `SGSFN` is used to set the name of the function, the name will be used in:
+-- error printing
+-- profiler output generation
+- `sgs_LoadArgs` does type-based argument parsing
+-- 's' requires a value that can be converted to a string, returns to passed char**
+-- 'f' requires a value that can be converted to a real value, returns to passed float*
+-- '|' makes all arguments after it optional (always initialize data passed to those!)
+-- there are many more options and features for this function, for the whole list, see @"sgs_LoadArgs"<docs://sgscript/sgs_LoadArgsExt(VA) [function]>
+
+    // method #1
+    sgs_PushCFunction( C, sample_func );
+    sgs_StoreGlobal( C, "sample_func" );
+    // method #2
+    sgs_RegFuncConst funcs[] = { { "sample_func", sample_func } };
+    sgs_RegFuncConsts( C, funcs, sizeof(funcs) / sizeof(funcs[0]) );
+    // method #3
+    sgs_RegFuncConst funcs2[] = { { "sample_func", sample_func }, SGS_RC_END() };
+    sgs_RegFuncConsts( C, funcs2, -1 );
+
+- Before you can access your functions, it's necessary to register them.
+- The easiest way to register functions is to set them as global variables.
+- All of these methods register the same function at the same spot.
+- The first method is the easiest (and used internally by the other two) but it expands quickly with function size.
+- The second method is for array buffer registration, the third one registers a NULL-terminated list.
 
 
 # Native object interfaces [info]
