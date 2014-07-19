@@ -327,7 +327,18 @@ sgs_Pop( C, 3 ); // remove all 3 returned values from top of the stack</pre><ul>
 <ul><li>Get*** functions: return converted data without doing in-place conversions
 </li><li>To*** functions: convert data in-place, then return it
 </li><li>Parse*** functions: check if it&#39;s possible to convert, then return converted data
-</li></ul><li>Items are removed from top of the stack with <code>sgs_Pop</code>.</li></ul></div>
+</li></ul><li>Items are removed from top of the stack with <code>sgs_Pop</code>.</li></ul><pre>sgs_PushBool( C, 1 );
+sgs_PushInt( C, 42 );
+sgs_PushReal( C, 3.14159 );
+sgs_PushArray( C, 3 ); // pushes an array with 3 items, made from 3 topmost stack items
+
+sgs_PushString( C, &quot;some C string&quot; );
+sgs_PushStringBuf( C, &quot;not\0really\0C\0string&quot;, 19 );
+sgs_PushDict( C, 2 ); // pushes a dictionary with one entry, made from 2 topmost stack items</pre><ul><li>Basic objects (array, dict, map) can be easily pushed on the stack too.
+</li><li><code>sgs_PushArray</code> takes the specified number of topmost stack items, puts them into the array and removes them from the stack
+</li><li><code>sgs_PushDict</code> and <code>sgs_PushMap</code> take the specified number of topmost stack items, map values to keys and remove them from the stack
+<ul><li>The number of items must be a multiple of 2. First item of each pair is a key, second - value for that key.
+</li><li>Keys can be repeated, only the last value is used.</li></ul></li></ul></div>
 <div class='item'><a name='Making-your-own-native-functions'></a><hr><h2>Making your own native functions</h2><pre>int sample_func( SGS_CTX )
 {
     char* str;
@@ -354,14 +365,63 @@ sgs_RegFuncConst funcs[] = { { &quot;sample_func&quot;, sample_func } };
 sgs_RegFuncConsts( C, funcs, sizeof(funcs) / sizeof(funcs[0]) );
 // method #3
 sgs_RegFuncConst funcs2[] = { { &quot;sample_func&quot;, sample_func }, SGS_RC_END() };
-sgs_RegFuncConsts( C, funcs2, -1 );</pre><ul><li>Before you can access your functions, it&#39;s necessary to register them.
+sgs_RegFuncConsts( C, funcs2, -1 );</pre><ul><li>Before you can access your functions from scripts, it&#39;s necessary to register them.
 </li><li>The easiest way to register functions is to set them as global variables.
 </li><li>All of these methods register the same function at the same spot.
-</li><li>The first method is the easiest (and used internally by the other two) but it expands quickly with function size.
+</li><li>The first method is the easiest (and used internally by the next two) but it expands quickly with function size.
 </li><li>The second method is for array buffer registration, the third one registers a NULL-terminated list.</li></ul></div>
-<div class='item'><a name='Native-object-interfaces'></a><hr><h2>Native object interfaces</h2><p>
-TODO
-</p></div>
+<div class='item'><a name='Native-object-interfaces'></a><hr><h2>Native object interfaces</h2><pre>sgs_ObjInterface object_iface[1] =
+{{
+    &quot;object_name&quot;,          // type name
+    NULL, NULL,             // destruct, gcmark
+    NULL, NULL,             // getindex, setindex
+    NULL, NULL, NULL, NULL, // convert, serialize, dump, getnext
+    NULL, NULL              // call, expr
+}};</pre><ul><li>This is the minimal object interface definition. It defines the name and implements no callbacks.
+</li><li>The slightly unusual syntax is actually a definition of an interface array with one element.
+<ul><li>This effectively creates a pointer to interface, which is the only way the interface is requested by any API function.
+</li></ul><li>Interface must be accessible until there&#39;s at least one object using it. It can usually be defined as a global/static variable.</li></ul><pre>sgs_PushObject( C, malloc( sizeof( mystruct ) ), object_iface );
+sgs_PushObjectIPA( C, sizeof( mystruct ), object_iface ); // preferred method</pre><ul><li>There are two ways to create objects. Pointer to external data / in-place allocation.
+<ul><li>First way simply means that a data pointer is set to whatever value you want.
+</li><li>Second way sets the data pointer to memory space followed by internal data, for which the internal data allocation is extended by the specified number of bytes.
+<ul><li>The in-place allocated block does not need to be freed explicity.
+</li><li>This generally requires one less allocation to be performed.</li></ul></li></ul></li></ul><p>
+<em class='notice-bgr'>It is very important that all memory operations on in-place allocated blocks do not, at any time, operate beyond the boundaries of those blocks. Be especially wary of putting arrays at the beginning of a structure since accidentally applying negative indices to such arrays could create issues that are extremely hard to debug.</em>
+</p><pre>int object_destruct( SGS_CTX, sgs_VarObj* obj )
+{
+    free( obj-&gt;data );
+    return SGS_SUCCESS;
+}</pre><ul><li>This is a very basic object destruction callback. It simply assumes that the data pointer was malloc&#39;ed and frees it.
+</li><li>All callbacks return <code>int</code> and have the same first two arguments (<code>sgs_Context*</code> and <code>sgs_VarObj*</code>).
+</li><li>In all callbacks, negative return values are error codes and non-negative (&gt;= 0) imply success.</li></ul><pre>int object_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int is_property )
+{
+    char* str;
+    if( sgs_ParseStringP( C, key, &amp;str, NULL ) )
+    {
+        if( strcmp( str, &quot;data_pointer&quot; ) == 0 ){ sgs_PushPtr( C, obj-&gt;data ); return SGS_SUCCESS; }
+        
+        if( strcmp( str, &quot;do_something&quot; ) == 0 ){ sgs_PushCFunction( C, object_do_something ); return SGS_SUCCESS; }
+        if( strcmp( str, &quot;do_smth_else&quot; ) == 0 ){ sgs_PushCFunction( C, object_do_smth_else ); return SGS_SUCCESS; }
+    }
+    return SGS_ENOTFND; // return that the specified key was not found in object
+}
+// a slightly cleaner but less hands-on, the macro-based version:
+int object_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+    SGS_BEGIN_INDEXFUNC
+        SGS_CASE( &quot;data_pointer&quot; ) { sgs_PushPtr( C, obj-&gt;data ); return SGS_SUCCESS; }
+        
+        SGS_CASE( &quot;do_something&quot; ) SGS_RETURN_CFUNC( object_do_something )
+        SGS_CASE( &quot;do_smth_else&quot; ) SGS_RETURN_CFUNC( object_do_smth_else )
+    SGS_END_INDEXFUNC
+}</pre><ul><li>This is a very basic index/property reading callback.
+<ul><li>On request for key <code>data_pointer</code>, it returns pointer to allocated memory.
+</li><li>On requests for the other two keys, it returns the associated methods.
+</li></ul><li><code>sgs_ParseStringP</code> is the pointer interface equivalent to <code>sgs_ParseString</code>.
+</li><li><code>key</code> variable is allocated and freed by caller.
+</li><li>Both presented versions are practically interchangeable.
+</li><li>This error code (SGS_ENOTFND), coming from this callback, has a specific behavior: it may trigger a &#39;property/index not found&#39; warning.
+<ul><li>It is <i>NOT</i> recommended to return SGS_SUCCESS and send the warning manually because return code is passed back to API functions.</li></ul></li></ul></div>
 </div>
 	</body></html>
 	
