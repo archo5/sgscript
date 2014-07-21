@@ -3887,9 +3887,11 @@ SGSRESULT sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
 
 SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 {
-	int ret = 0, sz;
+	int ret = 0, sz, sz0;
 	int pathrep = 0;
 	sgs_Variable incfn;
+	
+	sz0 = sgs_StackSize( C );
 	if( searchpath )
 	{
 		pathrep = sgs_PushGlobal( C, "SGS_PATH" ) == SGS_SUCCESS ? 1 : 2;
@@ -3911,12 +3913,12 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 		sgs_StoreGlobal( C, "SGS_PATH" );
 	else if( pathrep == 2 )
 	{
-		sgs_PushEnv( C );
+		sgs_PushGlobal( C, "_G" );
 		sgs_PushString( C, "SGS_PATH" );
 		sgs_ObjectAction( C, -2, SGS_ACT_DICT_UNSET, -1 );
 	}
 	
-	sgs_SetStackSize( C, 0 );
+	sgs_SetStackSize( C, sz0 );
 	return ret;
 }
 
