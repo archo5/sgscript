@@ -3913,7 +3913,7 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 		sgs_StoreGlobal( C, "SGS_PATH" );
 	else if( pathrep == 2 )
 	{
-		sgs_PushGlobal( C, "_G" );
+		sgs_PushEnv( C );
 		sgs_PushString( C, "SGS_PATH" );
 		sgs_ObjectAction( C, -2, SGS_ACT_DICT_UNSET, -1 );
 	}
