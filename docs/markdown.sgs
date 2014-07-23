@@ -194,6 +194,13 @@ function markdown2html( text, linkhandler )
 			L = string_trim( L, "= \t\v\r\n" );
 			lines[ i ] = "</p><h"$cnt$">" $ mdinline( L, linkhandler ) $ "</h"$cnt$"><p>";
 		}
+		else if( !string_compare( L, "[+] ", 4 ) || !string_compare( L, "[-] ", 4 ) )
+		{
+			prepart = string_part( L, 0, 3 );
+			lines[ i ] = "<div class='al-" $ if( prepart == "[+]", "pro", "con" ) $ "'><span class='inner'>"
+				$ "<span class='mark'>" $ prepart $ "</span>"
+				$ string_part( L, 3 ) $ "</span></div>";
+		}
 		else if( string_trim( L ) == "" )
 		{
 			lines[ i ] = "</p><p>";

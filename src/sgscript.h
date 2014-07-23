@@ -64,6 +64,8 @@ extern "C" {
 /* Code tests */
 #define SGS_FAILED( e ) ((e)<0)
 #define SGS_SUCCEEDED( e ) ((e)>=0)
+#define SGS_CALL_TRIED( e ) ((e)!=SGS_EINVAL)
+#define SGS_CALL_FAILED( e ) ((e)==SGS_EINVAL)
 
 
 /* Accessible / transferable data */

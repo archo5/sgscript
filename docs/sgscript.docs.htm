@@ -137,51 +137,96 @@ The standard library includes:
 </p><ul><li>array, dict, map, class
 </li><li>math, string, I/O, O/S and formatting functions
 </li><li><code>eval</code>, file import, DLL import</li></ul></div>
-<div class='item'><a name='Why-SGScript'></a><hr><h2>Why SGScript?</h2><h3>Native serialization</h3><h5>[+] SGScript, Python</h5><h5>[-] JavaScript, Lua, Squirrel</h5><p>
+<div class='item'><a name='Why-SGScript'></a><hr><h2>Why SGScript?</h2><h3>Native serialization</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> JavaScript, Lua, Squirrel</span></div>
+</p><p>
 Without any extra work, most of the data can be converted to a byte buffer so that it could be stored in a file or sent over a network and later converted back again. Languages that don&#39;t have it will require extra effort to get it and make sure it works with all kinds of custom objects. How much extra effort? Well, try googling for &quot;lua serialize userdata&quot;. I didn&#39;t find a single way. SGScript - easy: <a href="https://github.com/snake5/sgscript/blob/6e9349a5a1ef5210ee440301b889f9afd78291be/ext/sgsxgmath.c#L248" target="_blank">https://github.com/snake5/sgscript/blob/6e9349a5a1ef5210ee440301b889f9afd78291be/ext/sgsxgmath.c#L248</a>
-</p><h3>Reference counted memory management support</h3><h5>[+] SGScript, Python, Squirrel</h5><h5>[-] JavaScript, Lua</h5><p>
+</p><h3>Reference counted memory management support</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python, Squirrel</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> JavaScript, Lua</span></div>
+</p><p>
 This is a preferred method to garbage collection since it releases resources as soon as possible, avoiding random stalls throughout the game and thus providing a smooth gameplay experience. There are algorithms that reduce these stalls (incremental/generational garbage collection) but, given enough objects, they will be noticeable again. Source: <a href="http://sealedabstract.com/rants/why-mobile-web-apps-are-slow/" target="_blank">http://sealedabstract.com/rants/why-mobile-web-apps-are-slow/</a>
-</p><h3>Custom native objects with complex links</h3><h5>[+] SGScript, Python, JavaScript (partial support)</h5><h5>[-] Lua, Squirrel</h5><p>
+</p><h3>Custom native objects with complex links</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python, JavaScript (partial support)</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua, Squirrel</span></div>
+</p><p>
 These are objects that can be created in C/C++, with special interfaces that support operator overloading, serialization, debug printing, conversions, cloning, type name and iterator retrieval, index and property retrieval. If not used, this feature has no cost, however it helps greatly with defining fast and accessible interfaces by encapsulating native resource management and access. To see what SGScript objects are all about, check the previous GitHub link, there&#39;s quite a lot of them.
-</p><h3>Native arrays</h3><h5>[+] SGScript, Python, Squirrel, JavaScript (partial support)</h5><h5>[-] Lua</h5><p>
+</p><h3>Native arrays</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python, Squirrel, JavaScript (partial support)</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua</span></div>
+</p><p>
 Native arrays (not to be confused with arrays that contain native data types, that is a subset of these) offer increased performance and memory-friendly storage over arrays made from hash tables. Array stores size as uint32, capacity as uint32 and values (16 bytes + extended data in SGScript) x size. A table would store all the same + keys (16 bytes + extended data) + hash array (size may differ but it&#39;s generally another array with size, capacity and a list of hash and index values). When arrays are considered, less (memory usage) is more (capacity).
-</p><h3>Map support (all non-string/number keys)</h3><h5>[+] SGScript, Python, JavaScript (requires the support of an extension)</h5><h5>[-] Lua, Squirrel (some types are not supported in both)</h5><p>
+</p><h3>Map support (all non-string/number keys)</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python, JavaScript (requires the support of an extension)</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua, Squirrel (some types are not supported in both)</span></div>
+</p><p>
 The ability to map any variable to any other variable provides extended metadata storage possibilities - it can be stored without modifying the original variable.
 </p><pre>m = map();
-m[ sprite_obj ] = { high = 5 };</pre><h3>Game math library</h3><h5>[+] SGScript, Python, Lua, JavaScript</h5><h5>[-] Squirrel</h5><p>
+m[ sprite_obj ] = { high = 5 };</pre><h3>Game math library</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python, Lua, JavaScript</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Squirrel</span></div>
+</p><p>
 A library with vector/matrix objects and functions for games. Not having to rewrite at least the bindings for it saves a lot of time.
-</p><h3>Native debugging/profiling facilities</h3><h5>[+] SGScript, Python, JavaScript (support differs between JS engines)</h5><h5>[-] Lua, Squirrel</h5><p>
+</p><h3>Native debugging/profiling facilities</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python, JavaScript (support differs between JS engines)</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua, Squirrel</span></div>
+</p><p>
 Introspective debugging and time/memory usage profiling can help resolve various issues found. SGScript supports call stack time, instruction time and call stack memory usage profilers out-of-the-box. At any point, all data can be dumped via the built-in output facilities that can be rerouted to any file or parser.
 </p><p>
 They are written in C to ensure a practically minimal performance impact while profiling. Significantly less than if the profiler was written in Lua, which is the main solution there.
 There&#39;s also access to some stats in SGScript so it is easy to see, for example, how many new allocations were done each frame.
-</p><h3>Advanced native function argument parsing facilities.</h3><h5>[+] SGScript, Python</h5><h5>[-] Lua, Squirrel, JavaScript</h5><p>
+</p><h3>Advanced native function argument parsing facilities.</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua, Squirrel, JavaScript</span></div>
+</p><p>
 Every modern scripting engine should have a function that parses and validates function arguments according to a specification and puts the data in the specified locations. With bigger functions it saves you from writing a lot of boilerplate code.
 </p><h5>SGScript:</h5><pre>SGSFN( &quot;fmt_string_parser&quot; );
 if( !sgs_LoadArgs( C, &quot;?m|ii&quot;, &amp;off, &amp;bufsize ) ) // in case of type mismatch, emits a warning
     return 0; // ... and returns here to continue execution</pre><h5>Lua: (source: <a href="http://forums.tigsource.com/index.php?topic=36737.0" target="_blank">http://forums.tigsource.com/index.php?topic=36737.0</a>)</h5><pre>float x  =luaL_checknumber(L,1); // in case of type mismatch, emits a fatal error, cannot continue script execution after this function call
 float y  =luaL_checknumber(L,2); // same here
-const char* str=luaL_checkstring(L,3); // same here</pre><h3>Non-fatal error messaging facilities without exceptions</h3><h5>[+] SGScript</h5><h5>[-] Python, Lua, Squirrel, JavaScript</h5><p>
+const char* str=luaL_checkstring(L,3); // same here</pre><h3>Non-fatal error messaging facilities without exceptions</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Python, Lua, Squirrel, JavaScript</span></div>
+</p><p>
 This feature allows you to try and continue execution after a failed function call or intercept the error for debugging with the option of continuing later anyway. This is useful when code is published and there&#39;s a necessity to avoid going back to bug fixing immediately, before gathering more information about the state of the program.
 </p><p>
 Why exceptions don&#39;t fit the criteria: they force the code to break out of the original execution path, thus severely reducing the usefulness of error suppression with logging.
 </p><pre>name = string_cut( other.name ); // warning: missing argument 2; after call, name = null
 // name gets printed somewhere as &#39;null&#39; or is invisible due to some other function not accepting null for a string
-// everything else works</pre><h3>Built-in introspective pretty-printing (variable dumps)</h3><h5>[+] SGScript, Python, JavaScript</h5><h5>[-] Lua, Squirrel</h5><p>
+// everything else works</pre><h3>Built-in introspective pretty-printing (variable dumps)</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python, JavaScript</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua, Squirrel</span></div>
+</p><p>
 This is a very useful feature to have when you need to debug data (i.e. always). Simply passing a variable to some function (for example, printvar) prints some useful information about it - the type, contents, linked resources.
-</p><h3>Warning suppression on missing property access</h3><h5>[+] SGScript, Python (requires exception handling code)</h5><h5>[-] Lua, Squirrel, JavaScript (no warnings about it at all)</h5><p>
+</p><h3>Warning suppression on missing property access</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python (requires exception handling code)</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua, Squirrel, JavaScript (no warnings about it at all)</span></div>
+</p><p>
 This feature allows to specify, per-read, whether the property is expected to be there or not.
 </p><pre>a = obj.prop; // expected, emits a warning if not found
 b = @obj.prop; // might not be there, no error</pre><p>
 This also works for many other actions, like function calls and assignments.
-</p><h3>Custom native iterators</h3><h5>[+] SGScript, Python</h5><h5>[-] JavaScript, Lua, Squirrel</h5><p>
+</p><h3>Custom native iterators</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> JavaScript, Lua, Squirrel</span></div>
+</p><p>
 An extension for custom native objects, it allows to create objects that can be foreach&#39;ed through.
-</p><pre>foreach( entry : io_dir( &quot;.&quot; ) ) println( entry ); // prints the contents of current directory</pre><h3>Dual access dictionaries</h3><h5>[+] SGScript, Lua, JavaScript, Squirrel</h5><h5>[-] Python</h5><p>
+</p><pre>foreach( entry : io_dir( &quot;.&quot; ) ) println( entry ); // prints the contents of current directory</pre><h3>Dual access dictionaries</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Lua, JavaScript, Squirrel</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Python</span></div>
+</p><p>
 The ability to access simple dictionaries just like any other object visually and syntactically reduces code complexity.
 </p><pre>a.b = x; // simple
-a[&quot;b&quot;] = x; // not so simple</pre><h3>Explicit closures</h3><h5>[+] SGScript</h5><h5>[-] Lua, JavaScript, Squirrel, Python</h5><p>
+a[&quot;b&quot;] = x; // not so simple</pre><h3>Explicit closures</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua, JavaScript, Squirrel, Python</span></div>
+</p><p>
 Explicit closures (specifying which local variables to pass over to the newly defined function) make it easier to read code using closures and prevents closure-related accidents, like having a variable changed unexpectedly.
-</p><h3>Multi-index/property-set operation without temporary tables</h3><h5>[+] SGScript</h5><h5>[-] Lua, JavaScript, Squirrel, Python</h5><p>
+</p><h3>Multi-index/property-set operation without temporary tables</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua, JavaScript, Squirrel, Python</span></div>
+</p><p>
 Simplifying code further without the introduction of sub-optimal memory access patterns.
 SGScript:
 </p><pre>obj.{ // object name written only once, accessed only once
@@ -199,9 +244,15 @@ obj.d = 4 // property write
 Lua, method 2:
 </p><pre>for k, v in pairs({ a = 1, b = 2, c = 3, d = 4 }) do // create table, property write x4, function call, create closure
     obj[ k ] = v // object access x4, property write x4
-end</pre><h3>C-like syntax</h3><h5>[+] SGScript, JavaScript, Squirrel</h5><h5>[-] Lua, Python</h5><p>
+end</pre><h3>C-like syntax</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, JavaScript, Squirrel</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua, Python</span></div>
+</p><p>
 With the overwhelming majority of code being written in C-like languages (<a href="http://www.tiobe.com/index.php/content/paperinfo/tpci/index.html" target="_blank">http://www.tiobe.com/index.php/content/paperinfo/tpci/index.html</a>), having a compatible syntax helps when you need to copy code - there&#39;s simply less changes to perform.
-</p><h3>Indices start at 0</h3><h5>[+] SGScript, JavaScript, Squirrel, Python</h5><h5>[-] Lua</h5><p>
+</p><h3>Indices start at 0</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, JavaScript, Squirrel, Python</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua</span></div>
+</p><p>
 Even though it is argued that it may help someone understand code better (which is actually hard to prove), I have a few arguments to make against it:
 </p><ul><li>Array index is generally the distance (or as programmers would rather say, offset) from first element. 1 - 1 = 0. Not a distance from 0th element that doesn&#39;t even exist. Not the first element itself because elements have no keys in arrays.
 </li><li>Programming languages don&#39;t exist in a vacuum. Almost every other programming language treats indices as distances (offsets). Going against the grain makes it hard to interpret both languages at once for comparison or interface design. Whoever has to write that binding, has to keep in mind this difference for every array access made in the binding area. This is brain power not spent well.
@@ -964,7 +1015,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-ItemType-function">sgs_ItemType</a> - return the variable type of the specified variable on stack
 </li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExtVA</a> - parse the stack as an argument list with additional options (for custom wrapper functions)
 </li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt</a> - parse the stack as an argument list with additional options
-</li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgs</a> - parse the stack as an argument list
+</li><li><a href="#sgs-LoadArgs-function-alias">sgs_LoadArgs</a> - parse the stack as an argument list
 </li><li><a href="#sgs-ParseMethod-function">sgs_ParseMethod</a> - the <code>this</code> object variable handling function, using the macro is preferred to this
 </li><li><a href="#SGS-PARSE-METHOD-function-alias">SGS_PARSE_METHOD</a> - automagically handle a <code>this</code> object variable regardless of the way its passed
 </li><li><a href="#sgs-Method-function">sgs_Method</a> - unhide the first variable on stack if there is a hidden <code>this</code> variable
@@ -994,7 +1045,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-ArgError-function">sgs_MethodArgError</a> - emit an argument type mismatch error (alias for states where <code>this</code> variable is NOT hidden)
 </li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExtVA</a> - parse the stack as an argument list with additional options (for custom wrapper functions)
 </li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt</a> - parse the stack as an argument list with additional options
-</li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgs</a> - parse the stack as an argument list
+</li><li><a href="#sgs-LoadArgs-function-alias">sgs_LoadArgs</a> - parse the stack as an argument list
 </li><li><a href="#sgs-ParseMethod-function">sgs_ParseMethod</a> - the <code>this</code> object variable handling function, using the macro is preferred to this
 </li><li><a href="#SGS-PARSE-METHOD-function-alias">SGS_PARSE_METHOD</a> - automagically handle a <code>this</code> object variable regardless of the way its passed
 </li><li><a href="#sgs-Method-function">sgs_Method</a> - unhide the first variable on stack if there is a hidden <code>this</code> variable
@@ -1412,7 +1463,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 <ul><li>thus, if function returns &lt; 1, state of outputs is somewhat unknown unless filled with defaults
 </li><li>it is guaranteed that all arguments will be parsed from first (specified) forward, not in any other way
 </li></ul><li><code>null</code> values in optional arguments are skipped (this may not apply to custom checking functions)</li></ul><p>
-<em class='notice-bgr'>unlike sgs_LoadArgs, it returns <code>SGSMIXED</code> and must be checked differently (&quot;ret.val. &gt; 0&quot;, if same output needed)</em>
+<em class='notice-bgr'>unlike <a href="#sgs-LoadArgs-function-alias">sgs_LoadArgs</a>, it returns <code>SGSMIXED</code> and must be checked differently (&quot;ret.val. &gt; 0&quot;, if same output needed)</em>
 </p><h5>control commands</h5><ul><li><code>?</code> -- only check, do not write the result and do not require a pointer to write the data to
 </li><li><code>!</code> -- enable strict parsing for the next item (requires exactly the type specified
 </li><li><code>-</code>,<code>+</code> -- enable (-) or disable (+) treating integers as signed (default = true)
@@ -1469,7 +1520,7 @@ After a successful call, all arguments and the function will be popped off the s
 <em class='notice-bgr'>The return value <code>1</code> is returned if function call was aborted.</em>
 </p><h4>error codes</h4><ul><li>SGS_EINPROC: topmost item on stack was not callable
 </li><li>SGS_EINVAL: not enough values in current stack frame (must have at least <code>args + (gotthis?1:0) + (is_sgs_FCallP?0:1)</code>)</li></ul></div>
-<div class='item'><a name='sgs-This-Call-P-function-aliases'></a><hr><h2>sgs_(This)Call(P) [function aliases]</h2><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><h3>SGSRESULT sgs_Call( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h4>call the variable with the arguments on stack, returning the expected number of variables on stack</h4><ul><li>aliases to <a href="#sgs-FCall-P-functions">sgs_FCall(P)</a>, for the first function of each group <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
+<div class='item'><a name='sgs-This-Call-P-function-aliases'></a><hr><h2>sgs_(This)Call(P) [function aliases]</h2><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><h3>SGSRESULT sgs_CallP( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCallP( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h4>call the variable with the arguments on stack, returning the expected number of variables on stack</h4><ul><li>aliases to <a href="#sgs-FCall-P-functions">sgs_FCall(P)</a>, for the first function of each group <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
 <div class='item'><a name='sgs-GlobalCall-function'></a><hr><h2>sgs_GlobalCall [function]</h2><h3>SGSRESULT sgs_GlobalCall( sgs_Context* C, const char* name, int args, int expect )</h3><h4>call the global variable <code>name</code> as a function</h4><ul><li>combination of global function retrieval and function call; see <a href="#sgs-PushGlobal-function">sgs_PushGlobal</a> and <a href="#sgs-FCall-P-functions">sgs_FCall(P)</a> for more info on behavior</li></ul><h4>error codes</h4><ul><li>SGS_ENOTFND: global variable was not found
 </li><li>SGS_EINPROC: item found was not callable
 </li><li>SGS_EINVAL: not enough values in current stack frame (must have at least <code>args + (gotthis?1:0)</code>)</li></ul></div>
@@ -1770,7 +1821,7 @@ A C function has the type <code>int CFunc( sgs_Context* )</code>. It receives th
 </p><h4>Conventions</h4><p>
 There are no forced courses of action beyond this point. However, to simplify development, some conventions were established and are used throughout the standard library and are suggested to follow.
 </p><h5>General structure</h5><ul><li>the usage of SGS_CTX in argument list is suggested to enable the use of certain macros that assume the availability of <code>sgs_Context* C</code>
-</li><li>there are no restrictions on function names, however it helps to mark the scripting engine functions with a common prefix and if they wrap a native function, including the name of the wrapped function is suggested</li></ul><h5>Argument loading</h5><ul><li>prefer using <a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgs</a>, followed by <a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt</a>, followed by the sgs_Parse***/sgs_Is***/sgs_ItemType(Ext)/... functions together with ArgError function family for error handling</li></ul><h5>Error handling</h5><ul><li>it is preferred to do most of it at the beginning, before custom allocations (VM stack doesn&#39;t count here), where it is possible to just <code>return sgs_Msg( C, SGS_WARNING, &quot;Error message&quot; )</code>
+</li><li>there are no restrictions on function names, however it helps to mark the scripting engine functions with a common prefix and if they wrap a native function, including the name of the wrapped function is suggested</li></ul><h5>Argument loading</h5><ul><li>prefer using <a href="#sgs-LoadArgs-function-alias">sgs_LoadArgs</a>, followed by <a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt</a>, followed by the sgs_Parse***/sgs_Is***/sgs_ItemType(Ext)/... functions together with ArgError function family for error handling</li></ul><h5>Error handling</h5><ul><li>it is preferred to do most of it at the beginning, before custom allocations (VM stack doesn&#39;t count here), where it is possible to just <code>return sgs_Msg( C, SGS_WARNING, &quot;Error message&quot; )</code>
 </li><li>SGS_WARNING is for non-fatal errors, SGS_ERROR is for errors that make it impossible to continue (severe, undoubted logical errors fall into this category)
 </li><li>on error, functions should return nothing or null</li></ul><p>
 A typical function

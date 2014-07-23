@@ -50,18 +50,31 @@ int main( int argc, char** argv )
 	Account::Handle aB = pushAccount( C, sgsString( C, "B for 'Benefactor'" ) );
 	
 	printf( "\n> print objects:\n" );
-	aA.push( C );
-	aB.push( C );
-	sgs_GlobalCall( C, "printlns", 2, 0 );
+	{
+		SGS_SCOPE;
+		{
+			SGS_CSCOPE( C ); // just for testing
+			aA.push( C );
+			aB.push( C );
+			sgs_GlobalCall( C, "printlns", 2, 0 );
+		}
+	}
 	
 	printf( "\n> perform a transaction:\n" );
-	aB.push( C );
-	aA.push( C );
-	sgs_PushReal( C, 3.74 );
-	sgs_PushString( C, "EUR" );
-	sgs_PushProperty( C, -3, "sendMoney" );
-	sgs_ThisCall( C, 3, 1 ); // 1 `this`, 3 arguments, 1 function on stack
-	sgs_GlobalCall( C, "print", 1, 0 ); // 1 argument on stack
+	{
+		sgsScope scope1( C );
+		aB.push( C );
+		aA.push( C );
+		sgs_PushReal( C, 3.74 );
+		sgs_PushString( C, "EUR" );
+		sgs_PushProperty( C, -3, "sendMoney" );
+		sgs_ThisCall( C, 3, 1 ); // 1 `this`, 3 arguments, 1 function on stack
+		sgs_GlobalCall( C, "print", 1, 0 ); // 1 argument on stack
+		
+		puts( scope1.is_restored() ? "\n- stack restored" : "! stack NOT RESTORED" );
+		sgs_PushNull( C );
+		puts( scope1.is_restored() ? "\n! stack restore state UNCHANGED" : "- stack restore state changed" );
+	}
 	
 	printf( "\n" );
 	sgs_DestroyEngine( C );

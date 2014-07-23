@@ -27,6 +27,10 @@ code:hover i { display: inline-block; position: absolute; z-index: 2; border-rad
 .notice { background: #79C; color: #FFF; font-weight: bold; padding: 4px; margin: 4px 8px 4px 4px; display: inline-block; font-size: 16px; border: 1px solid #68B;
 	width: 20px; height: 20px; text-align: center; text-shadow: 0px 0px 5px #FFF, 0px 0px 9px #FFF, 0px 0px 13px #FFF; font-family: monospace; border-radius: 1px; }
 i.note { color: #AAA; font-size: 13px; }
+.al-pro .inner { color: #006400; }
+.al-con .inner { color: #b22222; }
+.al-pro .inner, .al-con .inner { display: inline-block; padding: 2px 0; }
+.al-pro .mark, .al-con .mark { padding: 2px 2px 2px 0; }
 dt { font-weight: bold; }
 
 .sgsCOM, pre > .sgsCOM *, code > .sgsCOM * { color: #5A3; }

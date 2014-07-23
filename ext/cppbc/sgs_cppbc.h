@@ -44,6 +44,29 @@
 #endif
 
 
+#define TOKENPASTE_(x, y) x ## y
+#define TOKENPASTE(x, y) TOKENPASTE_(x, y)
+
+
+class sgsScope
+{
+public:
+	sgsScope( sgs_Context* c ) : C(c), m_stackSize( sgs_StackSize( c ) ){}
+	~sgsScope()
+	{
+		assert( m_stackSize <= sgs_StackSize( C ) );
+		sgs_SetStackSize( C, m_stackSize );
+	}
+	
+	bool is_restored(){ return sgs_StackSize( C ) == m_stackSize; }
+	
+	SGS_CTX;
+	sgs_StkIdx m_stackSize;
+};
+#define SGS_CSCOPE( C ) sgsScope TOKENPASTE( _scp, __LINE__ ) ( C )
+#define SGS_SCOPE SGS_CSCOPE( C )
+
+
 template< class T >
 class sgsMaybe /* nullable PODs */
 {
