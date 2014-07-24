@@ -4047,7 +4047,8 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 				
 				if( !q )
 				{
-					sprintf( buf, "object (%p) [%"PRId32"] %s", (void*) obj, obj->refcount, obj->iface->name );
+					sprintf( buf, "object (%p) [%"PRId32"] %s", (void*) obj, obj->refcount,
+						obj->iface->name ? obj->iface->name : "<unnamed>" );
 					sgs_PushString( C, buf );
 				}
 				else
