@@ -961,6 +961,11 @@ int32_t sgs_Cntl( SGS_CTX, int what, int32_t val )
 		}
 		return 0;
 	case SGS_CNTL_GET_ERRSUP: return C->sf_last ? C->sf_last->errsup : 0;
+	case SGS_CNTL_SERIALMODE:
+		x = C->state & SGS_SERIALIZE_MODE2 ? 2 : 1;
+		if( val == 2 ) C->state |= SGS_SERIALIZE_MODE2;
+		else C->state &= (uint32_t) ~SGS_SERIALIZE_MODE2;
+		return x;
 	}
 	return 0;
 }

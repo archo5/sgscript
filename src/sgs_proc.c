@@ -4033,12 +4033,9 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 		case SVT_OBJECT:
 			{
 				char buf[ 32 ];
-				int q;
+				int q = 0;
 				_STACK_PREPARE;
 				object_t* obj = var->data.O;
-				
-				sprintf( buf, "object (%p) [%"PRId32"] ", (void*) obj, obj->refcount );
-				sgs_PushString( C, buf );
 				
 				if( obj->iface->dump )
 				{
@@ -4046,10 +4043,15 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 					ret = obj->iface->dump( C, obj, maxdepth - 1 );
 					q = SGS_SUCCEEDED( ret );
 					_STACK_UNPROTECT_SKIP( q );
-					
-					if( q )
-						sgs_StringConcat( C, 2 );
 				}
+				
+				if( !q )
+				{
+					sprintf( buf, "object (%p) [%"PRId32"] %s", (void*) obj, obj->refcount, obj->iface->name );
+					sgs_PushString( C, buf );
+				}
+				else
+					sgs_ToString( C, -1 );
 			}
 			break;
 		case SVT_PTR:
@@ -4416,14 +4418,8 @@ SGSRESULT sgs_SerializeObject( SGS_CTX, StkIdx args, const char* func )
 	return SGS_SUCCESS;
 }
 
-SGSRESULT sgs_Unserialize( SGS_CTX )
+SGSRESULT sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 {
-	char* str, *strend;
-	sgs_SizeVal size;
-	if( !sgs_ParseString( C, -1, &str, &size ) )
-		return SGS_EINVAL;
-
-	strend = str + size;
 	while( str < strend )
 	{
 		char c = *str++;
@@ -4511,7 +4507,7 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 			if( str > strend - fnsz )
 				return SGS_EINPROC;
 			ret = sgs_GlobalCall( C, str, argc, 1 );
-			if( ret != SGS_SUCCESS )
+			if( SGS_FAILED( ret ) )
 				return ret;
 			str += fnsz;
 		}
@@ -4521,6 +4517,203 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 		}
 	}
 	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
+{
+	sgs_Variable var;
+	SGSRESULT res = SGS_EINPROC;
+	MemBuf mb = membuf_create();
+	
+	while( str < strend )
+	{
+		char c = *str++;
+		if( c == 'P' )
+		{
+			if( str >= strend )
+				goto fail;
+			c = *str++;
+			switch( c )
+			{
+			case SVT_NULL: sgs_InitNull( &var ); break;
+			case SVT_BOOL:
+				if( str >= strend )
+					goto fail;
+				sgs_InitBool( &var, *str++ );
+				break;
+			case SVT_INT:
+				if( str >= strend-7 )
+					goto fail;
+				else
+				{
+					sgs_Int val;
+					AS_INTEGER( val, str );
+					sgs_InitInt( &var, val );
+				}
+				str += 8;
+				break;
+			case SVT_REAL:
+				if( str >= strend-7 )
+					goto fail;
+				else
+				{
+					sgs_Real val;
+					AS_REAL( val, str );
+					sgs_InitReal( &var, val );
+				}
+				str += 8;
+				break;
+			case SVT_STRING:
+				{
+					sgs_SizeVal strsz;
+					if( str >= strend-3 )
+						goto fail;
+					AS_INT32( strsz, str );
+					str += 4;
+					if( str > strend - strsz )
+						goto fail;
+					sgs_InitStringBuf( C, &var, str, strsz );
+					str += strsz;
+				}
+				break;
+			case SVT_FUNC:
+				{
+					sgs_SizeVal bcsz;
+					sgs_iFunc* fn;
+					if( str >= strend-3 )
+						goto fail;
+					AS_INT32( bcsz, str );
+					str += 4;
+					if( str > strend - bcsz )
+						goto fail;
+					/* WP: conversion does not affect values */
+					if( !_unserialize_function( C, str, (size_t) bcsz, &fn ) )
+						goto fail;
+					var.type = SVT_FUNC;
+					var.data.F = fn;
+					str += bcsz;
+				}
+				break;
+			default:
+				goto fail;
+			}
+		}
+		else if( c == 'C' )
+		{
+			sgs_StkIdx subsz;
+			int32_t i, pos, argc;
+			int fnsz, ret;
+			if( str >= strend-4 )
+				goto fail;
+			AS_INT32( argc, str );
+			str += 4;
+			for( i = 0; i < argc; ++i )
+			{
+				if( str >= strend-4 )
+					goto fail;
+				AS_INT32( pos, str );
+				str += 4;
+				if( pos < 0 || pos >= mb.size / sizeof(sgs_Variable) )
+					goto fail;
+				sgs_PushVariable( C, ((sgs_Variable*) mb.ptr) + pos );
+			}
+			fnsz = *str++ + 1;
+			if( str > strend - fnsz )
+				goto fail;
+			subsz = sgs_StackSize( C );
+			ret = sgs_GlobalCall( C, str, argc, 1 );
+			if( SGS_FAILED( ret ) || subsz - sgs_StackSize( C ) < 1 )
+			{
+				res = ret;
+				goto fail;
+			}
+			sgs_GetStackItem( C, -1, &var );
+			sgs_SetStackSize( C, subsz );
+			str += fnsz;
+		}
+		else
+		{
+			goto fail;
+		}
+		membuf_appbuf( &mb, C, &var, sizeof(var) );
+	}
+	
+	if( mb.size )
+		sgs_PushVariable( C, (sgs_Variable*)( mb.ptr + mb.size - sizeof(sgs_Variable) ) );
+	res = mb.size ? SGS_SUCCESS : SGS_EINPROC;
+fail:
+	{
+		sgs_Variable* ptr = (sgs_Variable*) mb.ptr;
+		sgs_Variable* pend = (sgs_Variable*) ( mb.ptr + mb.size );
+		while( ptr < pend )
+		{
+			sgs_Release( C, ptr++ );
+		}
+	}
+	membuf_destroy( &mb, C );
+	return res;
+}
+
+
+SGSRESULT sgs_Unserialize( SGS_CTX )
+{
+	SGSRESULT res;
+	sgs_StkIdx stksz;
+	char* str, *strend;
+	sgs_SizeVal size;
+	if( !sgs_ParseString( C, -1, &str, &size ) )
+		return SGS_EINVAL;
+	
+	strend = str + size;
+	
+	stksz = sgs_StackSize( C );
+	if( C->state & SGS_CNTL_SERIALMODE )
+		res = sgs_UnserializeInt_V2( C, str, strend );
+	else
+		res = sgs_UnserializeInt_V1( C, str, strend );
+	sgs_SetStackSize( C, stksz + SGS_SUCCEEDED( res ) );
+	return res;
+}
+
+
+SGSRESULT sgs_SerializeV1( SGS_CTX )
+{
+	int32_t old;
+	SGSRESULT res;
+	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 1 );
+	res = sgs_Serialize( C );
+	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
+	return res;
+}
+
+SGSRESULT sgs_UnserializeV1( SGS_CTX )
+{
+	int32_t old;
+	SGSRESULT res;
+	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 1 );
+	res = sgs_Unserialize( C );
+	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
+	return res;
+}
+
+SGSRESULT sgs_SerializeV2( SGS_CTX )
+{
+	int32_t old;
+	SGSRESULT res;
+	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 2 );
+	res = sgs_Serialize( C );
+	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
+	return res;
+}
+
+SGSRESULT sgs_UnserializeV2( SGS_CTX )
+{
+	int32_t old;
+	SGSRESULT res;
+	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 2 );
+	res = sgs_Unserialize( C );
+	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
+	return res;
 }
 
 

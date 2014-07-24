@@ -170,6 +170,7 @@ typedef void (*sgs_HookFunc) (
 #define SGS_STOP_ON_FIRST_ERROR 0x0001
 #define SGS_HAS_ERRORS          0x00010000
 #define SGS_MUST_STOP          (0x00020000 | SGS_HAS_ERRORS)
+#define SGS_SERIALIZE_MODE2     0x0004
 
 
 /* Statistics / debugging */
@@ -200,6 +201,7 @@ typedef void (*sgs_HookFunc) (
 #define SGS_CNTL_GET_ERRNO  9
 #define SGS_CNTL_ERRSUP     10
 #define SGS_CNTL_GET_ERRSUP 11
+#define SGS_CNTL_SERIALMODE 12
 
 
 /* Object actions */
@@ -633,6 +635,11 @@ SGS_APIFUNC SGSMIXED sgs_ObjectAction( SGS_CTX, sgs_StkIdx item, int act, int ar
 SGS_APIFUNC SGSRESULT sgs_Serialize( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_SerializeObject( SGS_CTX, sgs_StkIdx args, const char* func );
 SGS_APIFUNC SGSRESULT sgs_Unserialize( SGS_CTX );
+
+SGS_APIFUNC SGSRESULT sgs_SerializeV1( SGS_CTX );
+SGS_APIFUNC SGSRESULT sgs_UnserializeV1( SGS_CTX );
+SGS_APIFUNC SGSRESULT sgs_SerializeV2( SGS_CTX );
+SGS_APIFUNC SGSRESULT sgs_UnserializeV2( SGS_CTX );
 
 SGS_APIFUNC int sgs_Compare( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 );
 SGS_APIFUNC SGSBOOL sgs_EqualTypes( sgs_Variable* v1, sgs_Variable* v2 );

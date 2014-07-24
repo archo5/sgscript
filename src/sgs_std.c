@@ -3453,21 +3453,22 @@ static int sgsstd_gc_collect( SGS_CTX )
 }
 
 
-static int sgsstd_serialize( SGS_CTX )
+static int sgsstd_serialize_core( SGS_CTX, int which )
 {
 	int ret;
-	
-	SGSFN( "serialize" );
 	
 	if( !sgs_LoadArgs( C, "?v." ) )
 		return 0;
 	
-	ret = sgs_Serialize( C );
+	ret = which ? sgs_SerializeV2( C ) : sgs_SerializeV1( C );
 	if( ret == SGS_SUCCESS )
 		return 1;
 	else
 		STDLIB_ERR( "failed to serialize" )
 }
+
+static int sgsstd_serialize( SGS_CTX ){ SGSFN( "serialize" ); return sgsstd_serialize_core( C, 0 ); }
+static int sgsstd_serialize2( SGS_CTX ){ SGSFN( "serialize2" ); return sgsstd_serialize_core( C, 1 ); }
 
 
 static int check_arrayordict_fn( SGS_CTX, int argid, va_list args, int flags )
@@ -3480,13 +3481,11 @@ static int check_arrayordict_fn( SGS_CTX, int argid, va_list args, int flags )
 	return 1;
 }
 
-static int sgsstd_unserialize( SGS_CTX )
+static int sgsstd_unserialize_core( SGS_CTX, int which )
 {
 	int ret;
 	StkIdx ssz = sgs_StackSize( C ), dictpos;
 	sgs_Variable env;
-	
-	SGSFN( "unserialize" );
 	
 	if( !sgs_LoadArgs( C, "?s|x", check_arrayordict_fn ) )
 		return 0;
@@ -3525,7 +3524,7 @@ static int sgsstd_unserialize( SGS_CTX )
 		sgs_PushItem( C, 0 );
 	}
 	
-	ret = sgs_Unserialize( C );
+	ret = which ? sgs_UnserializeV2( C ) : sgs_UnserializeV1( C );
 	
 	if( ssz >= 2 )
 	{
@@ -3544,6 +3543,9 @@ static int sgsstd_unserialize( SGS_CTX )
 	else
 		STDLIB_ERR( "unknown error" )
 }
+
+static int sgsstd_unserialize( SGS_CTX ){ SGSFN( "unserialize" ); return sgsstd_unserialize_core( C, 0 ); }
+static int sgsstd_unserialize2( SGS_CTX ){ SGSFN( "unserialize2" ); return sgsstd_unserialize_core( C, 1 ); }
 
 
 /* register all */
@@ -3589,6 +3591,7 @@ static sgs_RegFuncConst regfuncs[] =
 	FN( dumpvar ), FN( dumpvar_ext ),
 	FN( gc_collect ),
 	FN( serialize ), FN( unserialize ),
+	FN( serialize2 ), FN( unserialize2 ),
 };
 
 static const sgs_RegIntConst regiconsts[] =
