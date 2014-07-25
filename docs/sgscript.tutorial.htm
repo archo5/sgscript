@@ -17,7 +17,11 @@
 </li><li><a href="#Building-with-IDEs">Building with IDEs</a>
 </li><li><a href="#Building-with-other-tools">Building with other tools</a>
 </li><li><a href="#Including-SGScript-into-your-project">Including SGScript into your project</a>
-</li></ul><li><a href="#Using-the-C-API">Using the C API</a> - interacting natively with the virtual machine</li></ul></div>
+</li></ul><li><a href="#Using-the-C-API">Using the C API</a> - interacting natively with the virtual machine
+<ul><li><a href="#Starting-up-and-running-code">Starting up and running code</a>
+</li><li><a href="#Making-your-own-native-functions">Making your own native functions</a>
+</li><li><a href="#Sub-item-property-index-data-access">Sub-item (property/index) data access</a>
+</li><li><a href="#Native-object-interfaces">Native object interfaces</a></li></ul></li></ul></div>
 <div class='item'><a name='The-language'></a><hr><h2>The language</h2><pre>println( &quot;Hello, world!&quot; );</pre><p>
 SGScript is a dynamic, procedural language, similar in syntax to many other programming languages, including C and JavaScript. It consists of various operations and structures that can be combined to specify operations and data that they use.
 </p><ul><li><a href="#The-basics">The basics</a> - quickly covers the basics but doesn&#39;t get into much detail
@@ -282,7 +286,8 @@ For simplified inclusion of files, add <code>src/</code> and <code>ext/</code> t
 This section describes various use cases and how to apply the SGScript C API to achieve the expected results.
 </p><ul><li><a href="#Starting-up-and-running-code">Starting up and running code</a>
 </li><li><a href="#Making-your-own-native-functions">Making your own native functions</a>
-</li><li><a href="#Native-object-interfaces">Native object interfaces</a> (TODO)</li></ul></div>
+</li><li><a href="#Sub-item-property-index-data-access">Sub-item (property/index) data access</a>
+</li><li><a href="#Native-object-interfaces">Native object interfaces</a></li></ul></div>
 <div class='item'><a name='Starting-up-and-running-code'></a><hr><h2>Starting up and running code</h2><pre>SGS_CTX = sgs_CreateEngine(); // SGS_CTX is alias to `sgs_Context* C`
 sgs_Include( C, &quot;something&quot; );
 sgs_ExecFile( C, &quot;myscript.sgs&quot; );
@@ -315,7 +320,7 @@ sgs_Call( C, 6, 1 ); // calls function from global &#39;main&#39; with 6 argumen
 </li><li>3. Function argument must be callable (function type / object with &#39;call&#39; interface function)
 </li></ul><li>If a call fails...
 <ul><li>stack size issues - stack is left unchanged
-</li><li>execution errors - stack has the expected number of return values, all set to <code>null</code></li></ul></li></ul><pre>if( SGS_FAILED( sgs_GlobalCall( C, &quot;func&quot;, 0, 3 ) ) )
+</li><li>execution errors - stack has the expected number of return values, all set to <code>null</code></li></ul></li></ul><pre>if( SGS_CALL_FAILED( sgs_GlobalCall( C, &quot;func&quot;, 0, 3 ) ) )
     /* handle the error */; // it is important this time since stack state matters
 sgs_Int i = sgs_GetInt( C, -3 ); // first return value
 const char* string_ptr = NULL;
@@ -370,6 +375,54 @@ sgs_RegFuncConsts( C, funcs2, -1 );</pre><ul><li>Before you can access your func
 </li><li>All of these methods register the same function at the same spot.
 </li><li>The first method is the easiest (and used internally by the next two) but it expands quickly with function size.
 </li><li>The second method is for array buffer registration, the third one registers a NULL-terminated list.</li></ul></div>
+<div class='item'><a name='Sub-item-property-index-data-access'></a><hr><h2>Sub-item (property/index) data access</h2><pre>// push the &#39;print&#39; function
+// method 1
+sgs_PushGlobal( C, &quot;print&quot; );
+// method 2
+sgs_PushEnv( C );
+sgs_PushProperty( C, -1, &quot;print&quot; );
+sgs_PopSkip( C, 1, 1 );
+// method 3
+sgs_PushEnv( C );
+sgs_PushString( C, &quot;print&quot; );
+sgs_PushIndexII( C, -2, -1, 1 );</pre><ul><li>Sub-items are variables that can be found inside other variables via property/index access.
+</li><li>The API offers a huge variety of functions that deal with sub-items.
+</li><li>It is important to note the cascading nature of these API functions - if one doesn&#39;t do the exact thing, there&#39;s usually a function that gives more control.
+</li><li>All of these three global property retrieval methods offer various levels of control.
+<ul><li>To take more control means also taking responsibility for stack state and error codes.
+<ul><li>This is clearly not done in the example but is highly encouraged at all times, as good practice.</li></ul></li></ul></li></ul><pre>sgs_PushDict( C, 0 );
+sgs_PushString( C, &quot;test&quot; );
+sgs_SetIndexIII( C, -2, -1, -1, 0 );
+// result: {test=test}</pre><ul><li>It is possible to both read and write from/to sub-items.
+</li><li>There are 4 sets of functions, each with a different prefix and behavior semantic.
+<ul><li>Get*** functions load the property/index to the specified prepared location.
+</li><li>Set*** functions save the property/index, taking it from the specified location.
+</li><li>Push*** functions load the property/index and push it at the top of the stack.
+</li><li>Store*** functions save the property/index, taking it from topmost stack item which is removed from stack afterwards.</li></ul></li></ul><p>
+<em class='notice-bgr'>Prefer index access (isprop=0) to property access since the general convention is that indices provide raw access but property access can be augmented with function calls.</em>
+</p><pre>sgs_Variable dict, key;
+sgs_InitDict( C, &amp;dict, 0 );
+sgs_InitString( C, &amp;key, &quot;test&quot; );
+sgs_PushInt( C, 5 ):
+sgs_SetIndexPPI( C, &amp;dict, &amp;key, -1, 0 ); // PPI = pointer, pointer, (stack) index/item
+// result: {test=5}
+sgs_PushVariable( C, &amp;dict );
+sgs_Release( C, &amp;dict );
+sgs_Release( C, &amp;key );</pre><ul><li>There are pointer equivalents for many API functions. They&#39;re usually denoted with an additional uppercase P in the name.
+<ul><li>The situation is a bit different with Index functions: P denotes a pointer argument, I - a stack index/item.
+</li></ul><li>Both API parts are there to be useful at the right moment. Here&#39;s how to decide what to use:
+<ul><li>Use stack-based APIs when you need to...
+<ul><li>deal with function calls - those are stack-only;
+</li><li>want to have your variables auto-freed on function exit - locally stored variables need to be manually released, stack variables do not;
+</li></ul><li>Use pointer-based APIs when you need to...
+<ul><li>deal with object interfaces - those are pointers-only;
+</li><li>permanently store data in a manner that makes it completely unavailable to the script writer;
+</li><li>name your variables - stack items don&#39;t have names and indices might be shifting, making it hard to know what is what;</li></ul></li></ul></li></ul><pre>sgs_PushInt( C, 3 );
+sgs_PushInt( C, 4 );
+sgs_PushInt( C, 5 );
+sgs_PushArray( C, 3 );
+sgs_PushNumIndex( C, -1, 1 ); // pushes [int 4]
+sgs_PushPath( C, -1, &quot;i&quot;, (sgs_SizeVal) 1 ); // pushes [int 4] too</pre><ul><li>There are a few other shortcuts like <a href="sgscript.docs.htm#sgs-PushNumIndex-function" target="_blank">sgs_PushNumIndex</a> and <a href="sgscript.docs.htm#sgs-PushPath-function" target="_blank">sgs_PushPath</a> that are worth considering when dealing with sub-items.</li></ul></div>
 <div class='item'><a name='Native-object-interfaces'></a><hr><h2>Native object interfaces</h2><pre>sgs_ObjInterface object_iface[1] =
 {{
     &quot;object_name&quot;,          // type name
