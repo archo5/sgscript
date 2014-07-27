@@ -117,6 +117,11 @@ static void var_destruct_object( SGS_CTX, object_t* O )
 		if( SGS_FAILED( ret ) )
 			sgs_Msg( C, SGS_ERROR, "failed to call the destructor" );
 	}
+	if( O->metaobj )
+	{
+		sgs_ObjRelease( C, O->metaobj );
+		O->metaobj = NULL;
+	}
 }
 void sgsVM_VarDestroyObject( SGS_CTX, object_t* O )
 {
@@ -269,6 +274,7 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInter
 	obj->refcount = 1;
 	if( obj->next ) /* ! */
 		obj->next->prev = obj;
+	obj->metaobj = NULL;
 	C->objcount++;
 	C->objs = obj;
 	
@@ -1060,6 +1066,11 @@ static SGSRESULT vm_gcmark( SGS_CTX, sgs_Variable* var )
 		_STACK_PROTECT;
 		ret = O->iface->gcmark( C, O );
 		_STACK_UNPROTECT;
+		if( O->metaobj )
+		{
+			if( SGS_FAILED( sgs_ObjGCMark( C, O->metaobj ) ) )
+				return SGS_EINPROC;
+		}
 		return ret;
 	}
 }
@@ -1197,12 +1208,26 @@ extern int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* idx, i
 
 
 
-static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sgs_Variable* idx, int isprop )
+/* PREDECL */
+static SGSMIXED vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj, sgs_Variable* idx, int isprop );
+
+static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize,
+	sgs_Variable* outmaybe, sgs_Variable* obj, sgs_Variable* idx, int isprop )
 {
 	if( type == SGS_ENOTFND )
 	{
 		char* p;
-		const char* err = isprop ? "Readable property not found" : "Cannot find readable value by index";
+		const char* err;
+		
+		if( obj->type == SVT_OBJECT && obj->data.O->metaobj )
+		{
+			sgs_Variable tmp;
+			tmp.type = SVT_OBJECT;
+			tmp.data.O = obj->data.O->metaobj;
+			return vm_getprop( C, outmaybe, &tmp, idx, isprop );
+		}
+		
+		err = isprop ? "Readable property not found" : "Cannot find readable value by index";
 		stk_push( C, idx );
 		p = sgs_ToString( C, -1 );
 		sgs_Msg( C, SGS_WARNING, "%s: \"%s\"", err, p );
@@ -1235,7 +1260,7 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 	stk_pop( C, STACKFRAMESIZE - origsize );
 	return type;
 }
-#define VM_GETPROP_ERR( type ) vm_runerr_getprop( C, type, origsize, idx, isprop )
+#define VM_GETPROP_ERR( type ) vm_runerr_getprop( C, type, origsize, outmaybe, obj, idx, isprop )
 
 static SGSRESULT vm_runerr_setprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sgs_Variable* idx, int isprop )
 {
@@ -5395,6 +5420,15 @@ void sgs_ObjCallDtor( SGS_CTX, sgs_VarObj* obj )
 	var_destruct_object( C, obj );
 }
 
+void sgs_ObjSetMetaObj( SGS_CTX, sgs_VarObj* obj, sgs_VarObj* metaobj )
+{
+	if( obj->metaobj )
+		sgs_ObjRelease( C, obj->metaobj );
+	obj->metaobj = metaobj;
+	if( metaobj )
+		sgs_ObjAcquire( C, metaobj );
+}
+
 
 #define DBLCHK( what, fval )\
 	sgs_BreakIf( what );\
@@ -5435,17 +5469,32 @@ sgs_ObjInterface* sgs_GetObjectIfaceP( sgs_Variable* var )
 	return var->data.O->iface;
 }
 
-int sgs_SetObjectDataP( sgs_Variable* var, void* data )
+SGSBOOL sgs_SetObjectDataP( sgs_Variable* var, void* data )
 {
 	_OBJPREP_P( 0 );
 	var->data.O->data = data;
 	return 1;
 }
 
-int sgs_SetObjectIfaceP( sgs_Variable* var, sgs_ObjInterface* iface )
+SGSBOOL sgs_SetObjectIfaceP( sgs_Variable* var, sgs_ObjInterface* iface )
 {
 	_OBJPREP_P( 0 );
 	var->data.O->iface = iface;
+	return 1;
+}
+
+SGSBOOL sgs_UnsetObjectMetaObjP( SGS_CTX, sgs_Variable* var )
+{
+	_OBJPREP_P( 0 );
+	sgs_ObjSetMetaObj( C, var->data.O, NULL );
+	return 1;
+}
+
+SGSBOOL sgs_SetObjectMetaObjP( SGS_CTX, sgs_Variable* var, sgs_Variable* metaobj )
+{
+	_OBJPREP_P( 0 );
+	DBLCHK( metaobj->type != SVT_OBJECT && metaobj->type != SVT_NULL, 0 )
+	sgs_ObjSetMetaObj( C, var->data.O, metaobj->type == SVT_OBJECT ? metaobj->data.O : NULL );
 	return 1;
 }
 
@@ -5493,17 +5542,35 @@ sgs_ObjInterface* sgs_GetObjectIface( SGS_CTX, StkIdx item )
 	return var->data.O->iface;
 }
 
-int sgs_SetObjectData( SGS_CTX, StkIdx item, void* data )
+SGSBOOL sgs_SetObjectData( SGS_CTX, StkIdx item, void* data )
 {
 	_OBJPREP( 0 );
 	var->data.O->data = data;
 	return 1;
 }
 
-int sgs_SetObjectIface( SGS_CTX, StkIdx item, sgs_ObjInterface* iface )
+SGSBOOL sgs_SetObjectIface( SGS_CTX, StkIdx item, sgs_ObjInterface* iface )
 {
 	_OBJPREP( 0 );
 	var->data.O->iface = iface;
+	return 1;
+}
+
+SGSBOOL sgs_UnsetObjectMetaObj( SGS_CTX, sgs_StkIdx item )
+{
+	_OBJPREP( 0 );
+	sgs_ObjSetMetaObj( C, var->data.O, NULL );
+	return 1;
+}
+
+SGSBOOL sgs_SetObjectMetaObj( SGS_CTX, sgs_StkIdx item, sgs_StkIdx metaitem )
+{
+	sgs_Variable* var2;
+	_OBJPREP( 0 );
+	DBLCHK( !sgs_IsValidIndex( C, metaitem ), 0 ) \
+	var2 = stk_getpos( C, metaitem ); \
+	DBLCHK( var2->type != SVT_OBJECT && var2->type != SVT_NULL, 0 )
+	sgs_ObjSetMetaObj( C, var->data.O, var2->type == SVT_OBJECT ? var2->data.O : NULL );
 	return 1;
 }
 

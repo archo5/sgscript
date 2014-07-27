@@ -2627,6 +2627,38 @@ static int sgsstd_va_arg_count( SGS_CTX )
 }
 
 
+static int acf_object( SGS_CTX, int argid, va_list* args, int flags )
+{
+	if( sgs_ItemType( C, argid ) != SVT_OBJECT )
+		return sgs_ArgError( C, argid, 0, SVT_OBJECT, 1 );
+	return 1;
+}
+
+static int sgsstd_metaobj_set( SGS_CTX )
+{
+	SGSFN( "metaobj_set" );
+	if( !sgs_LoadArgs( C, "?x?v", acf_object ) )
+		return 0;
+	sgs_PushBool( C, sgs_SetObjectMetaObj( C, 0, 1 ) );
+	return 1;
+}
+
+static int sgsstd_metaobj_get( SGS_CTX )
+{
+	sgs_VarObj* obj;
+	SGSFN( "metaobj_get" );
+	if( !sgs_LoadArgs( C, "?x", acf_object ) )
+		return 0;
+	obj = sgs_GetObjectStruct( C, 0 );
+	if( obj->metaobj )
+	{
+		sgs_PushObjectPtr( C, obj->metaobj );
+		return 1;
+	}
+	return 0;
+}
+
+
 struct pcall_printinfo
 {
 	sgs_MsgFunc pfn;
@@ -3578,6 +3610,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* internal utils */
 	FN( va_get_args ), FN( va_get_arg ), FN( va_arg_count ),
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
+	FN( metaobj_set ), FN( metaobj_get ),
 	FN( pcall ), FN( assert ),
 	FN( eval ), FN( eval_file ), FN( compile_sgs ),
 	FN( include_library ), FN( include_file ),
