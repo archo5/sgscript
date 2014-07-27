@@ -1218,17 +1218,18 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize,
 	{
 		char* p;
 		const char* err;
+		sgs_Variable cidx = *idx;
 		
 		if( obj->type == SVT_OBJECT && obj->data.O->metaobj )
 		{
 			sgs_Variable tmp;
 			tmp.type = SVT_OBJECT;
 			tmp.data.O = obj->data.O->metaobj;
-			return vm_getprop( C, outmaybe, &tmp, idx, isprop );
+			return vm_getprop( C, outmaybe, &tmp, &cidx, isprop );
 		}
 		
 		err = isprop ? "Readable property not found" : "Cannot find readable value by index";
-		stk_push( C, idx );
+		stk_push( C, &cidx );
 		p = sgs_ToString( C, -1 );
 		sgs_Msg( C, SGS_WARNING, "%s: \"%s\"", err, p );
 	}
