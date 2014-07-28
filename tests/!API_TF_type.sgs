@@ -28,7 +28,7 @@ testEqual( is_numeric( "1E+2" ) && is_numeric( "-123.456" ) && is_numeric( "0x7f
 testEqual( !is_callable( _N ) && !is_callable( _B ) && !is_callable( _I ) && !is_callable( _R ) &&
 	!is_callable( _S ) && is_callable( _F ) && is_callable( _C ), true, "is_callable - basic tests" );
 testEqual( is_callable( _O ), false, "is_callable - non-callable object" );
-testEqual( is_callable( class( 0, 0 ) ), true, "is_callable - callable object" );
+testEqual( is_callable( function()use(a){} ), true, "is_callable - callable object" );
 
 	section( "is_* - specific" );
 testEqual( !is_array( _N ) && !is_array( _B ) && !is_array( _I ) && !is_array( _R ) && !is_array( _S ) &&

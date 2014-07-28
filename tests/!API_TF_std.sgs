@@ -18,7 +18,7 @@ convars =
 [
 	null, 0, 573, 3.14, 0.001, true, false,
 	"", "abc..", "\0\0", "\0wat\0is\0this\0\0", print, section,
-	[], [1,2], {}, map(), class({},{}),
+	[], [1,2], {}, map(), class({a=1},{__tostring=function(){return "claZZ";}}),
 ];
 boolvars =
 [
@@ -42,7 +42,7 @@ stringvars =
 [
 	"null", "0", "573", "3.14", "0.001", "true", "false",
 	"", "abc..", "\0\0", "\0wat\0is\0this\0\0", "C function", "function",
-	"[]", "[1,2]", "{}", "[map]{}", "class"
+	"[]", "[1,2]", "{}", "[map]{}", "claZZ"
 ];
 for( i = 0; i < convars.size; ++i )
 	testEqual( tobool( convars[i] ), boolvars[i], "tobool - variable #"$i );

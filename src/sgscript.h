@@ -262,6 +262,7 @@ struct sgs_ObjData
 	sgs_SizeVal refcount;
 	uint32_t appsize;
 	uint8_t redblue;    /* red or blue? mark & sweep */
+	uint8_t mm_enable;  /* use metamethods? */
 	void* data;         /* should have offset=8 with packing alignment>=8 */
 	sgs_ObjInterface* iface;
 	sgs_VarObj* prev;   /* pointer to previous GC object */
@@ -586,6 +587,8 @@ SGS_APIFUNC SGSBOOL sgs_ParseMethod( SGS_CTX, sgs_ObjInterface* iface, void** pt
 	const char* method_name, const char* func_name );
 #define SGS_PARSE_METHOD( C, iface, ptr, objname, methodname ) \
 	sgs_ParseMethod( C, iface, (void**) &ptr, #objname "." #methodname, #objname "_" #methodname )
+
+SGS_APIFUNC int sgs_ArgCheck_Object( SGS_CTX, int argid, va_list* args, int flags );
 
 SGS_APIFUNC SGSRESULT sgs_Pop( SGS_CTX, sgs_StkIdx count );
 SGS_APIFUNC SGSRESULT sgs_PopSkip( SGS_CTX, sgs_StkIdx count, sgs_StkIdx skip );

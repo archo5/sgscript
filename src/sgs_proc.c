@@ -672,6 +672,30 @@ void sgsVM_PushClosures( SGS_CTX, sgs_Closure** cls, int num )
 
 
 /*
+	Meta-methods
+*/
+
+int _call_metamethod( SGS_CTX, sgs_VarObj* obj, const char* name, size_t namelen, int args, SGSRESULT* ret )
+{
+	int res;
+	if( !obj->metaobj )
+		return 0;
+	
+	/* TODO OPTIMIZE NAME */
+	sgs_PushObjectPtr( C, obj );
+	sgs_PushStringBuf( C, name, (sgs_SizeVal) namelen );
+	if( SGS_FAILED( sgs_PushIndexII( C, -2, -1, 0 ) ) )
+		return 0;
+	
+	sgs_PopSkip( C, 2, 1 );
+	res = sgs_Call( C, args, 1 );
+	if( ret )
+		*ret = res;
+	return 1;
+}
+
+
+/*
 	Conversions
 */
 
@@ -869,10 +893,10 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 	case SVT_CFUNC: var_create_str( C, out, "C function", 10 ); break;
 	case SVT_OBJECT:
 		{
-			int ret;
+			SGSRESULT ret;
 			sgs_VarObj* O = var->data.O;
 			_STACK_PREPARE;
-			if( !O->iface->convert )
+			if( !O->iface->convert && !O->mm_enable )
 			{
 				var_create_str( C, out, O->iface->name, -1 );
 				break;
@@ -880,6 +904,8 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 			_STACK_PROTECT;
 			if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
 				ret = SGS_EINPROC;
+			else if( O->mm_enable && _call_metamethod( C, O, "__tostring", sizeof("__tostring")-1, 0, &ret ) )
+				;
 			else
 			{
 				C->sf_count++;
@@ -3731,6 +3757,26 @@ SGSBOOL sgs_ParseMethod( SGS_CTX, sgs_ObjInterface* iface, void** ptrout,
 	*ptrout = sgs_GetObjectData( C, 0 );
 	sgs_ForceHideThis( C );
 	return TRUE;
+}
+
+
+int sgs_ArgCheck_Object( SGS_CTX, int argid, va_list* args, int flags )
+{
+	uint32_t ity;
+	sgs_VarObj** out = NULL;
+	if( flags & SGS_LOADARG_WRITE )
+		out = va_arg( *args, sgs_VarObj** );
+	
+	ity = sgs_ItemType( C, argid );
+	if( ity == SVT_OBJECT || ( !( flags & SGS_LOADARG_STRICT ) && ity != SVT_NULL ) )
+	{
+		if( out )
+			*out = ity != SVT_NULL ? sgs_GetObjectStruct( C, argid ) : NULL;
+		return 1;
+	}
+	if( flags & SGS_LOADARG_OPTIONAL )
+		return 1;
+	return sgs_ArgError( C, argid, 0, SVT_OBJECT, 1 );
 }
 
 

@@ -1604,7 +1604,7 @@ static sgs_ObjInterface sgsstd_class_iface[1] =
 	sgsstd_class_call, sgsstd_class_expr,
 }};
 
-static int sgsstd_class( SGS_CTX )
+static int sgsstd_class___( SGS_CTX )
 {
 	sgsstd_class_header_t* hdr;
 	
@@ -1617,6 +1617,17 @@ static int sgsstd_class( SGS_CTX )
 		sizeof( sgsstd_class_header_t ), sgsstd_class_iface );
 	sgs_GetStackItem( C, 0, &hdr->data );
 	sgs_GetStackItem( C, 1, &hdr->inh );
+	return 1;
+}
+
+static int sgsstd_class( SGS_CTX )
+{
+	SGSFN( "class" );
+	if( !sgs_LoadArgs( C, "?!x?!x", sgs_ArgCheck_Object, sgs_ArgCheck_Object ) )
+		return 0;
+	sgs_SetObjectMetaObj( C, 0, 1 );
+	sgs_GetObjectStruct( C, 0 )->mm_enable = 1;
+	sgs_SetStackSize( C, 1 );
 	return 1;
 }
 
@@ -2627,19 +2638,13 @@ static int sgsstd_va_arg_count( SGS_CTX )
 }
 
 
-static int acf_object( SGS_CTX, int argid, va_list* args, int flags )
-{
-	if( sgs_ItemType( C, argid ) != SVT_OBJECT )
-		return sgs_ArgError( C, argid, 0, SVT_OBJECT, 1 );
-	return 1;
-}
-
 static int sgsstd_metaobj_set( SGS_CTX )
 {
 	SGSFN( "metaobj_set" );
-	if( !sgs_LoadArgs( C, "?x?v", acf_object ) )
+	if( !sgs_LoadArgs( C, "?!x?x", sgs_ArgCheck_Object, sgs_ArgCheck_Object ) )
 		return 0;
-	sgs_PushBool( C, sgs_SetObjectMetaObj( C, 0, 1 ) );
+	sgs_SetObjectMetaObj( C, 0, 1 );
+	sgs_SetStackSize( C, 1 );
 	return 1;
 }
 
@@ -2647,7 +2652,7 @@ static int sgsstd_metaobj_get( SGS_CTX )
 {
 	sgs_VarObj* obj;
 	SGSFN( "metaobj_get" );
-	if( !sgs_LoadArgs( C, "?x", acf_object ) )
+	if( !sgs_LoadArgs( C, "?!x", sgs_ArgCheck_Object ) )
 		return 0;
 	obj = sgs_GetObjectStruct( C, 0 );
 	if( obj->metaobj )
@@ -2656,6 +2661,26 @@ static int sgsstd_metaobj_get( SGS_CTX )
 		return 1;
 	}
 	return 0;
+}
+
+static int sgsstd_metamethods_enable( SGS_CTX )
+{
+	sgs_Bool enable;
+	SGSFN( "metamethods_enable" );
+	if( !sgs_LoadArgs( C, "?!xb", sgs_ArgCheck_Object, &enable ) )
+		return 0;
+	sgs_GetObjectStruct( C, 0 )->mm_enable = !!enable;
+	sgs_SetStackSize( C, 1 );
+	return 1;
+}
+
+static int sgsstd_metamethods_test( SGS_CTX )
+{
+	SGSFN( "metamethods_test" );
+	if( !sgs_LoadArgs( C, "?!x", sgs_ArgCheck_Object ) )
+		return 0;
+	sgs_PushBool( C, sgs_GetObjectStruct( C, 0 )->mm_enable );
+	return 1;
 }
 
 
@@ -3610,7 +3635,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* internal utils */
 	FN( va_get_args ), FN( va_get_arg ), FN( va_arg_count ),
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
-	FN( metaobj_set ), FN( metaobj_get ),
+	FN( metaobj_set ), FN( metaobj_get ), FN( metamethods_enable ), FN( metamethods_test ),
 	FN( pcall ), FN( assert ),
 	FN( eval ), FN( eval_file ), FN( compile_sgs ),
 	FN( include_library ), FN( include_file ),
