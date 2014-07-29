@@ -304,6 +304,7 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInter
 	if( obj->next ) /* ! */
 		obj->next->prev = obj;
 	obj->metaobj = NULL;
+	obj->mm_enable = FALSE;
 	C->objcount++;
 	C->objs = obj;
 	
@@ -1650,6 +1651,17 @@ static SGSRESULT vm_clone( SGS_CTX, sgs_Variable* var )
 	{
 		int ret = SGS_ENOTFND;
 		sgs_VarObj* O = var->data.O;
+		if( O->mm_enable )
+		{
+			_STACK_PREPARE;
+			_STACK_PROTECT;
+			sgs_PushObjectPtr( C, O );
+			if( _call_metamethod( C, O, "__clone", sizeof("__clone")-1, 0, NULL ) )
+			{
+				_STACK_UNPROTECT_SKIP( 1 );
+				return SGS_SUCCESS;
+			}
+		}
 		if( O->iface->convert )
 		{
 			_STACK_PREPARE;
@@ -1723,11 +1735,28 @@ static SGSBOOL vm_op_negate( SGS_CTX, sgs_Variable* out, sgs_Variable* A )
 			int ret = SGS_ENOTFND;
 			sgs_VarObj* O = lA.data.O;
 			/* WP: stack limit */
+			if( O->mm_enable )
+			{
+				_STACK_PREPARE;
+				StkIdx ofs;
+				_STACK_PROTECT;
+				ofs = (StkIdx) ( out - C->stack_off );
+				sgs_PushObjectPtr( C, O );
+				if( _call_metamethod( C, O, "__negate", sizeof("__negate")-1, 0, NULL ) )
+				{
+					C->stack_off[ ofs ] = *stk_gettop( C );
+					stk_pop1nr( C );
+					_STACK_UNPROTECT;
+					goto done;
+				}
+				_STACK_UNPROTECT;
+			}
 			if( O->iface->expr )
 			{
 				_STACK_PREPARE;
-				StkIdx ofs = (StkIdx) ( out - C->stack_off );
+				StkIdx ofs;
 				_STACK_PROTECT;
+				ofs = (StkIdx) ( out - C->stack_off );
 				ret = O->iface->expr( C, O, A, NULL, SGS_EOP_NEGATE );
 				if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
 				{
@@ -1750,6 +1779,7 @@ static SGSBOOL vm_op_negate( SGS_CTX, sgs_Variable* out, sgs_Variable* A )
 		return 0;
 	}
 	
+done:
 	VAR_RELEASE( &lA );
 	return 1;
 }
@@ -1786,6 +1816,14 @@ static SGSRESULT vm_op_incdec( SGS_CTX, sgs_VarPtr out, sgs_Variable *A, int dif
 #define ARITH_OP_MUL	SGS_EOP_MUL
 #define ARITH_OP_DIV	SGS_EOP_DIV
 #define ARITH_OP_MOD	SGS_EOP_MOD
+static const char* mm_arith_ops[] =
+{
+	"__add",
+	"__sub",
+	"__mul",
+	"__div",
+	"__mod",
+};
 static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, int op )
 {
 	if( a->type == SVT_REAL && b->type == SVT_REAL )
@@ -1821,11 +1859,58 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 	if( a->type == SVT_OBJECT || b->type == SVT_OBJECT )
 	{
 		int ret;
+		StkIdx ofs;
 		sgs_Variable lA = *a, lB = *b;
 		VAR_ACQUIRE( &lA );
 		VAR_ACQUIRE( &lB );
 		/* WP: stack limit */
-		StkIdx ofs = (StkIdx) ( out - C->stack_off );
+		ofs = (StkIdx) ( out - C->stack_off );
+		
+		if( a->type == SVT_OBJECT && a->data.O->mm_enable )
+		{
+			sgs_VarObj* O = a->data.O;
+			_STACK_PREPARE;
+			_STACK_PROTECT;
+			sgs_PushObjectPtr( C, O );
+			sgs_PushObjectPtr( C, O );
+			sgs_PushObjectPtr( C, b->data.O );
+			if( _call_metamethod( C, O, mm_arith_ops[ op ], 5, 2, NULL ) )
+			{
+				_STACK_UNPROTECT_SKIP( 1 );
+				stk_setlvar_leave( C, ofs, C->stack_top - 1 );
+				C->stack_top--; /* skip acquire/release */
+				VAR_RELEASE( &lA );
+				VAR_RELEASE( &lB );
+				return SGS_SUCCESS;
+			}
+			else
+			{
+				_STACK_UNPROTECT;
+			}
+		}
+		
+		if( b->type == SVT_OBJECT && b->data.O->mm_enable )
+		{
+			sgs_VarObj* O = b->data.O;
+			_STACK_PREPARE;
+			_STACK_PROTECT;
+			sgs_PushObjectPtr( C, O );
+			sgs_PushObjectPtr( C, a->data.O );
+			sgs_PushObjectPtr( C, O );
+			if( _call_metamethod( C, O, mm_arith_ops[ op ], 5, 2, NULL ) )
+			{
+				_STACK_UNPROTECT_SKIP( 1 );
+				stk_setlvar_leave( C, ofs, C->stack_top - 1 );
+				C->stack_top--; /* skip acquire/release */
+				VAR_RELEASE( &lA );
+				VAR_RELEASE( &lB );
+				return SGS_SUCCESS;
+			}
+			else
+			{
+				_STACK_UNPROTECT;
+			}
+		}
 		
 		if( a->type == SVT_OBJECT && a->data.O->iface->expr )
 		{
@@ -1840,16 +1925,13 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 				_STACK_UNPROTECT_SKIP( 1 );
 				stk_setlvar_leave( C, ofs, C->stack_top - 1 );
 				C->stack_top--; /* skip acquire/release */
+				VAR_RELEASE( &lA );
+				VAR_RELEASE( &lB );
+				return SGS_SUCCESS;
 			}
 			else
 			{
 				_STACK_UNPROTECT;
-			}
-			if( ret )
-			{
-				VAR_RELEASE( &lA );
-				VAR_RELEASE( &lB );
-				return SGS_SUCCESS;
 			}
 		}
 		
@@ -1866,16 +1948,13 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 				_STACK_UNPROTECT_SKIP( 1 );
 				stk_setlvar_leave( C, ofs, C->stack_top - 1 );
 				C->stack_top--; /* skip acquire/release */
+				VAR_RELEASE( &lA );
+				VAR_RELEASE( &lB );
+				return SGS_SUCCESS;
 			}
 			else
 			{
 				_STACK_UNPROTECT;
-			}
-			if( ret )
-			{
-				VAR_RELEASE( &lA );
-				VAR_RELEASE( &lB );
-				return SGS_SUCCESS;
 			}
 		}
 		
@@ -1965,6 +2044,50 @@ static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		sgs_Variable lA = *a, lB = *b;
 		VAR_ACQUIRE( &lA );
 		VAR_ACQUIRE( &lB );
+		
+		if( ta == SVT_OBJECT && a->data.O->mm_enable )
+		{
+			sgs_VarObj* O = a->data.O;
+			_STACK_PREPARE;
+			_STACK_PROTECT;
+			sgs_PushObjectPtr( C, O );
+			sgs_PushObjectPtr( C, O );
+			sgs_PushObjectPtr( C, b->data.O );
+			if( _call_metamethod( C, O, "__compare", sizeof("__compare")-1, 2, NULL ) )
+			{
+				out = var_getreal( C, C->stack_top - 1 );
+				_STACK_UNPROTECT;
+				VAR_RELEASE( &lA );
+				VAR_RELEASE( &lB );
+				return _SGS_SIGNDIFF( out, 0 );
+			}
+			else
+			{
+				_STACK_UNPROTECT;
+			}
+		}
+		
+		if( tb == SVT_OBJECT && b->data.O->mm_enable )
+		{
+			sgs_VarObj* O = b->data.O;
+			_STACK_PREPARE;
+			_STACK_PROTECT;
+			sgs_PushObjectPtr( C, O );
+			sgs_PushObjectPtr( C, a->data.O );
+			sgs_PushObjectPtr( C, O );
+			if( _call_metamethod( C, O, "__compare", sizeof("__compare")-1, 2, NULL ) )
+			{
+				out = var_getreal( C, C->stack_top - 1 );
+				_STACK_UNPROTECT;
+				VAR_RELEASE( &lA );
+				VAR_RELEASE( &lB );
+				return _SGS_SIGNDIFF( out, 0 );
+			}
+			else
+			{
+				_STACK_UNPROTECT;
+			}
+		}
 		
 		if( ta == SVT_OBJECT && a->data.O->iface->expr )
 		{
