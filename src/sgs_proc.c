@@ -48,6 +48,35 @@ typedef union intreal_s
 intreal_t;
 
 
+/*
+	Meta-methods
+*/
+
+static int _call_metamethod( SGS_CTX, sgs_VarObj* obj, const char* name, size_t namelen, int args, SGSRESULT* ret )
+{
+	int res;
+	if( !obj->metaobj )
+		return 0;
+	
+	/* TODO OPTIMIZE NAME */
+	sgs_PushObjectPtr( C, obj->metaobj );
+	sgs_PushStringBuf( C, name, (sgs_SizeVal) namelen );
+	if( SGS_FAILED( sgs_PushIndexII( C, -2, -1, 0 ) ) )
+	{
+		sgs_Pop( C, 2 );
+		return 0;
+	}
+	
+	sgs_PopSkip( C, 2, 1 );
+	res = sgs_ThisCall( C, args, 1 );
+	if( SGS_CALL_FAILED( res ) )
+		return 0;
+	if( ret )
+		*ret = res;
+	return SGS_SUCCEEDED( ret );
+}
+
+
 /* to work with both insertion and removal algorithms, this function has the following rules:
 - return the index of the first found item with the right size or just after the right size
 - if all sizes are less than specified, return the size of the object pool
@@ -293,7 +322,7 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, instr_t* cod
 	
 	if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
 	{
-		sgs_Msg( C, SGS_ERROR, "Max. call stack size reached" );
+		sgs_Msg( C, SGS_ERROR, SGS_ERRMSG_CALLSTACKLIMIT );
 		return 0;
 	}
 	
@@ -672,30 +701,6 @@ void sgsVM_PushClosures( SGS_CTX, sgs_Closure** cls, int num )
 
 
 /*
-	Meta-methods
-*/
-
-int _call_metamethod( SGS_CTX, sgs_VarObj* obj, const char* name, size_t namelen, int args, SGSRESULT* ret )
-{
-	int res;
-	if( !obj->metaobj )
-		return 0;
-	
-	/* TODO OPTIMIZE NAME */
-	sgs_PushObjectPtr( C, obj );
-	sgs_PushStringBuf( C, name, (sgs_SizeVal) namelen );
-	if( SGS_FAILED( sgs_PushIndexII( C, -2, -1, 0 ) ) )
-		return 0;
-	
-	sgs_PopSkip( C, 2, 1 );
-	res = sgs_Call( C, args, 1 );
-	if( ret )
-		*ret = res;
-	return 1;
-}
-
-
-/*
 	Conversions
 */
 
@@ -713,25 +718,47 @@ static sgs_Bool var_getbool( SGS_CTX, const sgs_VarPtr var )
 	case SVT_CFUNC: return TRUE;
 	case SVT_OBJECT:
 		{
-			int ret;
 			sgs_VarObj* O = var->data.O;
 			_STACK_PREPARE;
-			if( !O->iface->convert )
-				return TRUE;
-			_STACK_PROTECT;
-			ret = O->iface->convert( C, O, SVT_BOOL );
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_BOOL )
+			if( O->mm_enable )
 			{
-				sgs_Bool v = stk_gettop( C )->data.B;
+				_STACK_PROTECT;
+				sgs_PushObjectPtr( C, O );
+				if( _call_metamethod( C, O, "__tobool", sizeof("__tobool")-1, 0, NULL ) &&
+					sgs_ItemType( C, 0 ) == SVT_BOOL )
+				{
+					sgs_Bool v = !!stk_gettop( C )->data.B;
+					_STACK_UNPROTECT;
+					return v;
+				}
 				_STACK_UNPROTECT;
-				return v;
 			}
-			_STACK_UNPROTECT;
+			if( O->iface->convert )
+			{
+				SGSRESULT ret = SGS_EINPROC;
+				_STACK_PROTECT;
+				if( C->sf_count < SGS_MAX_CALL_STACK_SIZE )
+				{
+					C->sf_count++;
+					ret = O->iface->convert( C, O, SVT_BOOL );
+					C->sf_count--;
+				}
+				else
+					sgs_Msg( C, SGS_ERROR, SGS_ERRMSG_CALLSTACKLIMIT );
+				
+				if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_BOOL )
+				{
+					sgs_Bool v = !!stk_gettop( C )->data.B;
+					_STACK_UNPROTECT;
+					return v;
+				}
+				_STACK_UNPROTECT;
+			}
 			return TRUE;
 		}
 	case SVT_PTR: return var->data.P != NULL;
-	default: return FALSE;
 	}
+	return FALSE;
 }
 
 static sgs_Int var_getint( SGS_CTX, sgs_VarPtr var )
@@ -744,20 +771,42 @@ static sgs_Int var_getint( SGS_CTX, sgs_VarPtr var )
 	case SVT_STRING: return util_atoi( str_cstr( var->data.S ), var->data.S->size );
 	case SVT_OBJECT:
 		{
-			int ret;
 			sgs_VarObj* O = var->data.O;
 			_STACK_PREPARE;
-			if( !O->iface->convert )
-				break;
-			_STACK_PROTECT;
-			ret = O->iface->convert( C, O, SVT_INT );
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_INT )
+			if( O->mm_enable )
 			{
-				sgs_Int v = stk_gettop( C )->data.I;
+				_STACK_PROTECT;
+				sgs_PushObjectPtr( C, O );
+				if( _call_metamethod( C, O, "__toint", sizeof("__toint")-1, 0, NULL ) &&
+					sgs_ItemType( C, 0 ) == SVT_INT )
+				{
+					sgs_Int v = stk_gettop( C )->data.I;
+					_STACK_UNPROTECT;
+					return v;
+				}
 				_STACK_UNPROTECT;
-				return v;
 			}
-			_STACK_UNPROTECT;
+			if( O->iface->convert )
+			{
+				SGSRESULT ret = SGS_EINPROC;
+				_STACK_PROTECT;
+				if( C->sf_count < SGS_MAX_CALL_STACK_SIZE )
+				{
+					C->sf_count++;
+					ret = O->iface->convert( C, O, SVT_INT );
+					C->sf_count--;
+				}
+				else
+					sgs_Msg( C, SGS_ERROR, SGS_ERRMSG_CALLSTACKLIMIT );
+				
+				if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_INT )
+				{
+					sgs_Int v = stk_gettop( C )->data.I;
+					_STACK_UNPROTECT;
+					return v;
+				}
+				_STACK_UNPROTECT;
+			}
 		}
 		break;
 	case SVT_PTR: return (sgs_Int) (size_t) var->data.P;
@@ -775,20 +824,42 @@ static sgs_Real var_getreal( SGS_CTX, sgs_Variable* var )
 	case SVT_STRING: return util_atof( str_cstr( var->data.S ), var->data.S->size );
 	case SVT_OBJECT:
 		{
-			int ret;
 			sgs_VarObj* O = var->data.O;
 			_STACK_PREPARE;
-			if( !O->iface->convert )
-				break;
-			_STACK_PROTECT;
-			ret = O->iface->convert( C, O, SVT_REAL );
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_REAL )
+			if( O->mm_enable )
 			{
-				sgs_Real v = stk_gettop( C )->data.R;
+				_STACK_PROTECT;
+				sgs_PushObjectPtr( C, O );
+				if( _call_metamethod( C, O, "__toreal", sizeof("__toreal")-1, 0, NULL ) &&
+					sgs_ItemType( C, 0 ) == SVT_REAL )
+				{
+					sgs_Real v = stk_gettop( C )->data.R;
+					_STACK_UNPROTECT;
+					return v;
+				}
 				_STACK_UNPROTECT;
-				return v;
 			}
-			_STACK_UNPROTECT;
+			if( O->iface->convert )
+			{
+				SGSRESULT ret = SGS_EINPROC;
+				_STACK_PROTECT;
+				if( C->sf_count < SGS_MAX_CALL_STACK_SIZE )
+				{
+					C->sf_count++;
+					ret = O->iface->convert( C, O, SVT_REAL );
+					C->sf_count--;
+				}
+				else
+					sgs_Msg( C, SGS_ERROR, SGS_ERRMSG_CALLSTACKLIMIT );
+				
+				if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_REAL )
+				{
+					sgs_Real v = stk_gettop( C )->data.R;
+					_STACK_UNPROTECT;
+					return v;
+				}
+				_STACK_UNPROTECT;
+			}
 		}
 		break;
 	case SVT_PTR: return (sgs_Real) (size_t) var->data.P;
@@ -806,20 +877,42 @@ static void* var_getptr( SGS_CTX, sgs_VarPtr var )
 	case SVT_STRING: return (void*) (size_t) str_cstr( var->data.S );
 	case SVT_OBJECT:
 		{
-			int ret;
 			sgs_VarObj* O = var->data.O;
 			_STACK_PREPARE;
-			if( !O->iface->convert )
-				break;
-			_STACK_PROTECT;
-			ret = O->iface->convert( C, O, SVT_PTR );
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_PTR )
+			if( O->mm_enable )
 			{
-				void* v = stk_gettop( C )->data.P;
+				_STACK_PROTECT;
+				sgs_PushObjectPtr( C, O );
+				if( _call_metamethod( C, O, "__toptr", sizeof("__toptr")-1, 0, NULL ) &&
+					sgs_ItemType( C, 0 ) == SVT_PTR )
+				{
+					void* v = stk_gettop( C )->data.P;
+					_STACK_UNPROTECT;
+					return v;
+				}
 				_STACK_UNPROTECT;
-				return v;
 			}
-			_STACK_UNPROTECT;
+			if( O->iface->convert )
+			{
+				SGSRESULT ret = SGS_EINPROC;
+				_STACK_PROTECT;
+				if( C->sf_count < SGS_MAX_CALL_STACK_SIZE )
+				{
+					C->sf_count++;
+					ret = O->iface->convert( C, O, SVT_PTR );
+					C->sf_count--;
+				}
+				else
+					sgs_Msg( C, SGS_ERROR, SGS_ERRMSG_CALLSTACKLIMIT );
+				
+				if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_PTR )
+				{
+					void* v = stk_gettop( C )->data.P;
+					_STACK_UNPROTECT;
+					return v;
+				}
+				_STACK_UNPROTECT;
+			}
 			return O->data;
 		}
 	case SVT_PTR: return var->data.P;
@@ -893,36 +986,46 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 	case SVT_CFUNC: var_create_str( C, out, "C function", 10 ); break;
 	case SVT_OBJECT:
 		{
-			SGSRESULT ret;
 			sgs_VarObj* O = var->data.O;
 			_STACK_PREPARE;
-			if( !O->iface->convert && !O->mm_enable )
+			
+			if( O->mm_enable )
 			{
-				var_create_str( C, out, O->iface->name, -1 );
-				break;
-			}
-			_STACK_PROTECT;
-			if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
-				ret = SGS_EINPROC;
-			else if( O->mm_enable && _call_metamethod( C, O, "__tostring", sizeof("__tostring")-1, 0, &ret ) )
-				;
-			else
-			{
-				C->sf_count++;
-				ret = O->iface->convert( C, O, SVT_STRING );
-				C->sf_count--;
-			}
-			if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_STRING )
-			{
-				*out = *stk_gettop( C );
-				out->data.S->refcount++; /* cancel release from stack to transfer successfully */
+				_STACK_PROTECT;
+				sgs_PushObjectPtr( C, O );
+				if( _call_metamethod( C, O, "__tostring", sizeof("__tostring")-1, 0, NULL ) &&
+					sgs_ItemType( C, 0 ) == SVT_STRING )
+				{
+					*out = *stk_gettop( C );
+					out->data.S->refcount++; /* cancel release from stack to transfer successfully */
+					_STACK_UNPROTECT;
+					break;
+				}
 				_STACK_UNPROTECT;
 			}
-			else
+			if( O->iface->convert )
 			{
-				var_create_str( C, out, O->iface->name, -1 );
+				SGSRESULT ret = SGS_EINPROC;
+				_STACK_PROTECT;
+				if( C->sf_count < SGS_MAX_CALL_STACK_SIZE )
+				{
+					C->sf_count++;
+					ret = O->iface->convert( C, O, SVT_STRING );
+					C->sf_count--;
+				}
+				else
+					sgs_Msg( C, SGS_ERROR, SGS_ERRMSG_CALLSTACKLIMIT );
+				
+				if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SVT_STRING )
+				{
+					*out = *stk_gettop( C );
+					out->data.S->refcount++; /* cancel release from stack to transfer successfully */
+					_STACK_UNPROTECT;
+					break;
+				}
 				_STACK_UNPROTECT;
 			}
+			var_create_str( C, out, O->iface->name, -1 );
 		}
 		break;
 	case SVT_PTR: sprintf( buf, "ptr(%p)", var->data.P ); var_create_str( C, out, buf, -1 ); break;
@@ -1054,13 +1157,34 @@ static SGSRESULT vm_gettype( SGS_CTX, StkIdx item )
 	case SVT_OBJECT:
 		{
 			sgs_VarObj* O = A->data.O;
+			_STACK_PREPARE;
+			
+			if( O->mm_enable )
+			{
+				_STACK_PROTECT;
+				sgs_PushObjectPtr( C, O );
+				if( _call_metamethod( C, O, "__typeof", sizeof("__typeof")-1, 0, NULL ) &&
+					sgs_ItemType( C, 0 ) == SVT_STRING )
+				{
+					_STACK_UNPROTECT_SKIP( 1 );
+					return SGS_SUCCESS;
+				}
+				_STACK_UNPROTECT;
+			}
 			if( O->iface->convert )
 			{
-				int ret;
-				_STACK_PREPARE;
+				SGSRESULT ret = SGS_EINPROC;
 				_STACK_PROTECT;
-				ret = O->iface->convert( C, O, SGS_CONVOP_TYPEOF );
-				if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 )
+				if( C->sf_count < SGS_MAX_CALL_STACK_SIZE )
+				{
+					C->sf_count++;
+					ret = O->iface->convert( C, O, SGS_CONVOP_TYPEOF );
+					C->sf_count--;
+				}
+				else
+					sgs_Msg( C, SGS_ERROR, SGS_ERRMSG_CALLSTACKLIMIT );
+				
+				if( SGS_SUCCEEDED( ret ) && STACKFRAMESIZE >= 1 && sgs_ItemType( C, 0 ) == SVT_STRING )
 				{
 					_STACK_UNPROTECT_SKIP( 1 );
 					return SGS_SUCCESS;

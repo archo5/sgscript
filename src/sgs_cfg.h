@@ -55,6 +55,10 @@
 #endif
 
 
+/* SGScript error messages */
+#define SGS_ERRMSG_CALLSTACKLIMIT "Max. call stack size reached"
+
+
 /* bytes reserved initially for token storage
 	used to prevent multiple reallocations in the beginning */
 #define SGS_TOKENLIST_PREALLOC 1024
