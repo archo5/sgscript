@@ -2422,7 +2422,34 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 			sgs_VarObj* O = func->data.O;
 			
 			rvc = SGS_ENOTSUP;
-			if( O->iface->call )
+			if( O->mm_enable )
+			{
+				sgs_Variable objfunc;
+				sgs_PushString( C, "__call" );
+				rvc = sgs_GetIndexPIP( C, &V, -1, &objfunc, 0 );
+				stk_pop1( C );
+				if( SGS_SUCCEEDED( rvc ) )
+				{
+					if( gotthis )
+						sgs_Method( C );
+					else
+					{
+						sgs_InsertVariable( C, 0, &V );
+						gotthis = 1;
+					}
+					if( vm_call( C, args, clsr, gotthis, expect, &objfunc ) )
+						rvc = expect;
+					else
+						rvc = SGS_EINPROC;
+					sgs_Release( C, &objfunc );
+				}
+				else
+				{
+					rvc = SGS_ENOTSUP;
+				}
+			}
+			
+			if( rvc == SGS_ENOTSUP && O->iface->call )
 				rvc = O->iface->call( C, O );
 			
 			if( rvc > STACKFRAMESIZE )

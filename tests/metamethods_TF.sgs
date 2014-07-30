@@ -20,10 +20,12 @@ global iface =
 	__div = function(a,b){ called.div = this; return class({a=a.a/b.a,b=a.b/b.b},iface); },
 	__mod = function(a,b){ called.mod = this; return class({a=a.a%b.a,b=a.b%b.b},iface); },
 	__compare = function(a,b){ called.compare = this; return a.a <=> b.a || a.b <=> b.b; },
+	__call = function(a,b){ called.call = this; return a,b; },
 };
 class( obj, iface );
 class( obj2, iface );
 class( objcp, iface );
+cntnr = { me = obj };
 
 testEqual( metaobj_get(obj), iface, "metaobj - is set?" );
 
@@ -68,3 +70,9 @@ testEqual( @called.mod, obj, "metamethod - mod - correctly called" );
 
 testEqual( obj==objcp, true, "metamethod - compare - result" );
 testEqual( @called.compare, obj, "metamethod - compare - correctly called" );
+
+testEqual( obj(5), 5, "metamethod - call/1 - result" );
+testEqual( @called.call, obj, "metamethod - call/1 - correctly called" );
+
+testEqual( cntnr.me(5), 5, "metamethod - call/2 - result" );
+testEqual( @called.call, cntnr, "metamethod - call/2 - correctly called" );
