@@ -169,7 +169,6 @@ static void var_destroy_string( SGS_CTX, string_t* S )
 	{
 		S->refcount = 2; /* the 'less code' way to avoid double free */
 		vht_unset( &C->stringtable, C, &tmp );
-		printf( "unset string %s\n", str_cstr(S) );
 	}
 #endif
 	sgs_Dealloc( S );
