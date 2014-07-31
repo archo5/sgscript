@@ -5750,6 +5750,21 @@ void sgs_ObjSetMetaObj( SGS_CTX, sgs_VarObj* obj, sgs_VarObj* metaobj )
 		sgs_ObjAcquire( C, metaobj );
 }
 
+sgs_VarObj* sgs_ObjGetMetaObj( sgs_VarObj* obj )
+{
+	return obj->metaobj;
+}
+
+void sgs_ObjSetMetaMethodEnable( sgs_VarObj* obj, SGSBOOL enable )
+{
+	obj->mm_enable = !!enable;
+}
+
+SGSBOOL sgs_ObjGetMetaMethodEnable( sgs_VarObj* obj )
+{
+	return obj->mm_enable;
+}
+
 
 #define DBLCHK( what, fval )\
 	sgs_BreakIf( what );\
@@ -5801,21 +5816,6 @@ SGSBOOL sgs_SetObjectIfaceP( sgs_Variable* var, sgs_ObjInterface* iface )
 {
 	_OBJPREP_P( 0 );
 	var->data.O->iface = iface;
-	return 1;
-}
-
-SGSBOOL sgs_UnsetObjectMetaObjP( SGS_CTX, sgs_Variable* var )
-{
-	_OBJPREP_P( 0 );
-	sgs_ObjSetMetaObj( C, var->data.O, NULL );
-	return 1;
-}
-
-SGSBOOL sgs_SetObjectMetaObjP( SGS_CTX, sgs_Variable* var, sgs_Variable* metaobj )
-{
-	_OBJPREP_P( 0 );
-	DBLCHK( metaobj->type != SVT_OBJECT && metaobj->type != SVT_NULL, 0 )
-	sgs_ObjSetMetaObj( C, var->data.O, metaobj->type == SVT_OBJECT ? metaobj->data.O : NULL );
 	return 1;
 }
 
@@ -5874,24 +5874,6 @@ SGSBOOL sgs_SetObjectIface( SGS_CTX, StkIdx item, sgs_ObjInterface* iface )
 {
 	_OBJPREP( 0 );
 	var->data.O->iface = iface;
-	return 1;
-}
-
-SGSBOOL sgs_UnsetObjectMetaObj( SGS_CTX, sgs_StkIdx item )
-{
-	_OBJPREP( 0 );
-	sgs_ObjSetMetaObj( C, var->data.O, NULL );
-	return 1;
-}
-
-SGSBOOL sgs_SetObjectMetaObj( SGS_CTX, sgs_StkIdx item, sgs_StkIdx metaitem )
-{
-	sgs_Variable* var2;
-	_OBJPREP( 0 );
-	DBLCHK( !sgs_IsValidIndex( C, metaitem ), 0 ) \
-	var2 = stk_getpos( C, metaitem ); \
-	DBLCHK( var2->type != SVT_OBJECT && var2->type != SVT_NULL, 0 )
-	sgs_ObjSetMetaObj( C, var->data.O, var2->type == SVT_OBJECT ? var2->data.O : NULL );
 	return 1;
 }
 

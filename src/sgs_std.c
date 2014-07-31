@@ -1361,11 +1361,12 @@ static int sgsstd_map( SGS_CTX )
 
 static int sgsstd_class( SGS_CTX )
 {
+	sgs_VarObj *obj1, *obj2;
 	SGSFN( "class" );
-	if( !sgs_LoadArgs( C, "?!x?!x", sgs_ArgCheck_Object, sgs_ArgCheck_Object ) )
+	if( !sgs_LoadArgs( C, "!x!x", sgs_ArgCheck_Object, &obj1, sgs_ArgCheck_Object, &obj2 ) )
 		return 0;
-	sgs_SetObjectMetaObj( C, 0, 1 );
-	sgs_GetObjectStruct( C, 0 )->mm_enable = 1;
+	sgs_ObjSetMetaObj( C, obj1, obj2 );
+	sgs_ObjSetMetaMethodEnable( obj1, TRUE );
 	sgs_SetStackSize( C, 1 );
 	return 1;
 }
@@ -2379,10 +2380,11 @@ static int sgsstd_va_arg_count( SGS_CTX )
 
 static int sgsstd_metaobj_set( SGS_CTX )
 {
+	sgs_VarObj *obj1, *obj2;
 	SGSFN( "metaobj_set" );
-	if( !sgs_LoadArgs( C, "?!x?x", sgs_ArgCheck_Object, sgs_ArgCheck_Object ) )
+	if( !sgs_LoadArgs( C, "!xx", sgs_ArgCheck_Object, &obj1, sgs_ArgCheck_Object, &obj2 ) )
 		return 0;
-	sgs_SetObjectMetaObj( C, 0, 1 );
+	sgs_ObjSetMetaObj( C, obj1, obj2 );
 	sgs_SetStackSize( C, 1 );
 	return 1;
 }
@@ -2391,12 +2393,12 @@ static int sgsstd_metaobj_get( SGS_CTX )
 {
 	sgs_VarObj* obj;
 	SGSFN( "metaobj_get" );
-	if( !sgs_LoadArgs( C, "?!x", sgs_ArgCheck_Object ) )
+	if( !sgs_LoadArgs( C, "!x", sgs_ArgCheck_Object, &obj ) )
 		return 0;
-	obj = sgs_GetObjectStruct( C, 0 );
-	if( obj->metaobj )
+	obj = sgs_ObjGetMetaObj( obj );
+	if( obj )
 	{
-		sgs_PushObjectPtr( C, obj->metaobj );
+		sgs_PushObjectPtr( C, obj );
 		return 1;
 	}
 	return 0;
@@ -2404,21 +2406,23 @@ static int sgsstd_metaobj_get( SGS_CTX )
 
 static int sgsstd_metamethods_enable( SGS_CTX )
 {
+	sgs_VarObj* obj;
 	sgs_Bool enable;
 	SGSFN( "metamethods_enable" );
-	if( !sgs_LoadArgs( C, "?!xb", sgs_ArgCheck_Object, &enable ) )
+	if( !sgs_LoadArgs( C, "!xb", sgs_ArgCheck_Object, &obj, &enable ) )
 		return 0;
-	sgs_GetObjectStruct( C, 0 )->mm_enable = !!enable;
+	sgs_ObjSetMetaMethodEnable( obj, enable );
 	sgs_SetStackSize( C, 1 );
 	return 1;
 }
 
 static int sgsstd_metamethods_test( SGS_CTX )
 {
+	sgs_VarObj* obj;
 	SGSFN( "metamethods_test" );
-	if( !sgs_LoadArgs( C, "?!x", sgs_ArgCheck_Object ) )
+	if( !sgs_LoadArgs( C, "!x", sgs_ArgCheck_Object, &obj ) )
 		return 0;
-	sgs_PushBool( C, sgs_GetObjectStruct( C, 0 )->mm_enable );
+	sgs_PushBool( C, sgs_ObjGetMetaMethodEnable( obj ) );
 	return 1;
 }
 

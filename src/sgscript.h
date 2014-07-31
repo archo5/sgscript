@@ -747,6 +747,9 @@ SGS_APIFUNC SGSRESULT sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj );
 SGS_APIFUNC void sgs_ObjAssign( SGS_CTX, sgs_VarObj** dest, sgs_VarObj* src );
 SGS_APIFUNC void sgs_ObjCallDtor( SGS_CTX, sgs_VarObj* obj );
 SGS_APIFUNC void sgs_ObjSetMetaObj( SGS_CTX, sgs_VarObj* obj, sgs_VarObj* metaobj );
+SGS_APIFUNC sgs_VarObj* sgs_ObjGetMetaObj( sgs_VarObj* obj );
+SGS_APIFUNC void sgs_ObjSetMetaMethodEnable( sgs_VarObj* obj, SGSBOOL enable );
+SGS_APIFUNC SGSBOOL sgs_ObjGetMetaMethodEnable( sgs_VarObj* obj );
 
 SGS_APIFUNC char* sgs_GetStringPtrP( sgs_Variable* var );
 SGS_APIFUNC sgs_SizeVal sgs_GetStringSizeP( sgs_Variable* var );
@@ -755,8 +758,6 @@ SGS_APIFUNC void* sgs_GetObjectDataP( sgs_Variable* var );
 SGS_APIFUNC sgs_ObjInterface* sgs_GetObjectIfaceP( sgs_Variable* var );
 SGS_APIFUNC SGSBOOL sgs_SetObjectDataP( sgs_Variable* var, void* data );
 SGS_APIFUNC SGSBOOL sgs_SetObjectIfaceP( sgs_Variable* var, sgs_ObjInterface* iface );
-SGS_APIFUNC SGSBOOL sgs_UnsetObjectMetaObjP( SGS_CTX, sgs_Variable* var );
-SGS_APIFUNC SGSBOOL sgs_SetObjectMetaObjP( SGS_CTX, sgs_Variable* var, sgs_Variable* metaobj );
 
 SGS_APIFUNC char* sgs_GetStringPtr( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_SizeVal sgs_GetStringSize( SGS_CTX, sgs_StkIdx item );
@@ -765,8 +766,6 @@ SGS_APIFUNC void* sgs_GetObjectData( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_ObjInterface* sgs_GetObjectIface( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSBOOL sgs_SetObjectData( SGS_CTX, sgs_StkIdx item, void* data );
 SGS_APIFUNC SGSBOOL sgs_SetObjectIface( SGS_CTX, sgs_StkIdx item, sgs_ObjInterface* iface );
-SGS_APIFUNC SGSBOOL sgs_UnsetObjectMetaObj( SGS_CTX, sgs_StkIdx item );
-SGS_APIFUNC SGSBOOL sgs_SetObjectMetaObj( SGS_CTX, sgs_StkIdx item, sgs_StkIdx metaitem );
 
 SGS_APIFUNC int sgs_HasFuncName( SGS_CTX );
 SGS_APIFUNC void sgs_FuncName( SGS_CTX, const char* fnliteral );
