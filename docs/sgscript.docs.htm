@@ -33,6 +33,7 @@
 <ul><li><a href='#Messaging-system'>Messaging system</a>
 </li><li><a href='#Iterator-system'>Iterator system</a>
 </li><li><a href='#Garbage-collection-system'>Garbage collection system</a>
+</li><li><a href='#Metamethods'>Metamethods</a>
 </li><li><a href='#Classes'>Classes</a>
 </li><li><a href='#Closures'>Closures</a>
 </li></ul><li><a href='#Functions'>Functions</a>
@@ -668,20 +669,7 @@ function SampleClass.__call( x )
 {
     return SampleClass.Create( x );
 }
-SampleClass = class( null, SampleClass );
-// Be aware that this method involves some runtime overhead.
-// Prefer simply giving the construction function (or the interface variable) a different name:
-function createSampleClass( x )
-{
-    data = { c = x };
-    return class( data, SampleClass );
-}
-
-// destructor
-function SampleClass.__destruct()
-{
-    this.c = null;
-}
+metamethods_enable( SampleClass, true );
 
 // many more special methods are available for &#39;class&#39; objects</pre></div>
 <div class='item'><a name='Inheritance'></a><hr><h2>Inheritance</h2><pre>// class A - base class
@@ -872,16 +860,50 @@ The garbage collector is invoked with <a href="#sgs-GCExecute-function">sgs_GCEx
 </p><p>
 Sub-objects are marked as available in the GCMARK callback with <a href="#sgs-GCMark-Array-function">sgs_GCMark(Array)</a> / <a href="#sgs-ObjGCMark-function">sgs_ObjGCMark</a> functions.
 </p></div>
+<div class='item'><a name='Metamethods'></a><hr><h2>Metamethods</h2><p>
+List of available metamethods:
+</p><h4>__typeof</h4><ul><li><b>When called</b>: on type string retrieval (<a href="#typeof-function">typeof</a> / <a href="#sgs-TypeOf-function">sgs_TypeOf)</a>
+</li><li><b>Arguments</b>: none
+</li><li><b>Return value</b>: type string</li></ul><h4>__clone</h4><ul><li><b>When called</b>: on cloning operation (<a href="#clone-function">clone</a> / <a href="#sgs-CloneItem-function">sgs_Clone)</a>
+</li><li><b>Arguments</b>: none
+</li><li><b>Return value</b>: the item to return as the cloned object</li></ul><h4>__tobool</h4><ul><li><b>When called</b>: on bool value retrieval
+</li><li><b>Arguments</b>: none
+</li><li><b>Return value</b>: bool</li></ul><h4>__toint</h4><ul><li><b>When called</b>: on integer value retrieval
+</li><li><b>Arguments</b>: none
+</li><li><b>Return value</b>: integer</li></ul><h4>__toreal</h4><ul><li><b>When called</b>: on real value retrieval
+</li><li><b>Arguments</b>: none
+</li><li><b>Return value</b>: real</li></ul><h4>__tostring</h4><ul><li><b>When called</b>: on string value retrieval
+</li><li><b>Arguments</b>: none
+</li><li><b>Return value</b>: string</li></ul><h4>__toptr</h4><ul><li><b>When called</b>: on pointer value retrieval
+</li><li><b>Arguments</b>: none
+</li><li><b>Return value</b>: pointer</li></ul><h4>__negate</h4><ul><li><b>When called</b>: on negation (<code>-obj</code>)
+</li><li><b>Arguments</b>: none
+</li><li><b>Return value</b>: the negated object</li></ul><h4>__add</h4><ul><li><b>When called</b>: on addition (<code>var1 + var2</code>) when one of the variables has this interface defined
+</li><li><b>Arguments</b>: operands A and B (types are not restricted)
+</li><li><b>Return value</b>: the product of addition</li></ul><h4>__sub</h4><ul><li><b>When called</b>: on subtraction (<code>var1 - var2</code>) when one of the variables has this interface defined
+</li><li><b>Arguments</b>: operands A and B (types are not restricted)
+</li><li><b>Return value</b>: the product of subtraction</li></ul><h4>__mul</h4><ul><li><b>When called</b>: on multiplication (<code>var1 * var2</code>) when one of the variables has this interface defined
+</li><li><b>Arguments</b>: operands A and B (types are not restricted)
+</li><li><b>Return value</b>: the product of multiplication</li></ul><h4>__div</h4><ul><li><b>When called</b>: on division (<code>var1 / var2</code>) when one of the variables has this interface defined
+</li><li><b>Arguments</b>: operands A and B (types are not restricted)
+</li><li><b>Return value</b>: the product of division</li></ul><h4>__mod</h4><ul><li><b>When called</b>: on modulo (<code>var1 % var2</code>) when one of the variables has this interface defined
+</li><li><b>Arguments</b>: operands A and B (types are not restricted)
+</li><li><b>Return value</b>: the product of modulo</li></ul><h4>__compare</h4><ul><li><b>When called</b>: on comparison (<code>var1 + var2</code>) when one of the variables has this interface defined
+</li><li><b>Arguments</b>: operands A and B (types are not restricted)
+</li><li><b>Return value</b>: the result of comparison (real value indicating &lt; 0 if A&lt;B, &gt; 0 if A&gt;B, = 0 if A=B)</li></ul><h4>__call</h4><ul><li><b>When called</b>: on function call
+</li><li><b>Arguments</b>: arguments from the original call
+</li><li><b>Return value</b>: any</li></ul></div>
 <div class='item'><a name='Classes'></a><hr><h2>Classes</h2><p>
 Classes are objects that enable operator/interface overloading and two-layer index retrieval.
 </p><p>
-Overloadable operators/interfaces:
+Overloadable operators/interfaces (<a href="#Metamethods">Metamethods):</a>
 </p><ul><li>basic math: +, - (both unary and binary), *, /, %
 </li><li>comparison
 </li><li>conversions to bool, int, real, string
 </li><li>typeof string retrieval
-</li><li>cloning</li></ul><p>
-Two-layer index retrieval is simply trying to read the index from a different source if the first source fails to come up with something. In other languages, metatable and prototype is the name of a table that is the second source. This allows to avoid storing functions and other data that is equal to all instances of some object type.
+</li><li>cloning
+</li><li>function call</li></ul><p>
+Two-layer index retrieval is simply trying to read the index from a different object (meta-object) if the first object fails to come up with something. In other languages, metatable and prototype is the name of a table that is the second source. This allows to avoid storing functions and other data that is equal to all instances of some object type.
 </p></div>
 <div class='item'><a name='Closures'></a><hr><h2>Closures</h2><p>
 Closures are a combination of one callable and some variables. They are meant to simplify interfaces and code around places where it was important for functions to have access to call-invariant (same on every call) data.
@@ -1157,7 +1179,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-ObjRelease-function">sgs_ObjRelease</a> - release an object variable by its sgs_VarObj pointer
 </li><li><a href="#sgs-ObjGCMark-function">sgs_ObjGCMark</a> - mark an object variable by its sgs_VarObj pointer
 </li><li><a href="#sgs-ObjAssign-function">sgs_ObjAssign</a> - assign object pointer, handling acquisition/release properly
-</li><li><a href="#sgs-ObjCallDtor-function">sgs_ObjCallDtor</a> - call the destruction function of an object variable if it&#39;s defined</li></ul></div>
+</li><li><a href="#sgs-ObjCallDtor-function">sgs_ObjCallDtor</a> - call the destruction function of an object variable if it&#39;s defined
+</li><li><a href="#sgs-ObjSetMetaObj-function">sgs_ObjSetMetaObj</a> - set meta-object of an object</li></ul></div>
 <div class='item'><a name='String32-optimization-interface'></a><hr><h2>String32 optimization interface</h2><ul><li><a href="#sgs-PushStringBuf32-function">sgs_PushStringBuf32</a> - initialize and push string32 object on stack
 </li><li><a href="#sgs-PushString32-function">sgs_PushString32</a> - initialize and push string32 object on stack
 </li><li><a href="#sgs-CheckString32-function">sgs_CheckString32</a> - trigger a breakpoint if string32 object is not freed
@@ -1260,6 +1283,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-ObjCallDtor-function">sgs_ObjCallDtor [function]</a>
 </li><li><a href="#sgs-ObjGCMark-function">sgs_ObjGCMark [function]</a>
 </li><li><a href="#sgs-ObjRelease-function">sgs_ObjRelease [function]</a>
+</li><li><a href="#sgs-ObjSetMetaObj-function">sgs_ObjSetMetaObj [function]</a>
 </li><li><a href="#sgs-ObjectAction-function">sgs_ObjectAction [function]</a>
 </li><li><a href="#sgs-PadString-function">sgs_PadString [function]</a>
 </li><li><a href="#sgs-Parse-functions">sgs_Parse*** [functions]</a>
@@ -1692,6 +1716,7 @@ After a successful call, all arguments and the function will be popped off the s
 </li><li>if <code>*dest</code> is not NULL, it is released
 </li><li>after the function call, <code>*dest</code> is equal to <code>src</code></li></ul></div>
 <div class='item'><a name='sgs-ObjCallDtor-function'></a><hr><h2>sgs_ObjCallDtor [function]</h2><h3>void sgs_ObjCallDtor( sgs_Context* C, sgs_VarObj* obj )</h3><h4>call the DESTRUCT object callback</h4><ul><li>this function is to be used in cases where objects are owned by a single entity but have handles all over the place - calling this function would not delete the object but would free its resources, thus leaving handles intact, with their states updated</li></ul></div>
+<div class='item'><a name='sgs-ObjSetMetaObj-function'></a><hr><h2>sgs_ObjSetMetaObj [function]</h2><h3>void sgs_ObjSetMetaObj( sgs_Context* C, sgs_VarObj* obj, sgs_VarObj* metaobj )</h3><h4>set <code>metaobj</code> as the meta-object of object <code>obj</code></h4><ul><li><code>obj</code> must always point to an object, <code>metaobj</code> can be NULL</li></ul></div>
 <div class='item'><a name='sgs-GetStringPtr-P-functions'></a><hr><h2>sgs_GetStringPtr(P) [functions]</h2><h3>char* sgs_GetStringPtr( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the string data pointer of the specified stack item</h4><h3>char* sgs_GetStringPtrP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the string data pointer of the specified variable</h4><ul><li>if item is out of bounds or not a string, NULL will be returned and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action</li></ul></li></ul></div>
 <div class='item'><a name='sgs-GetStringSize-P-functions'></a><hr><h2>sgs_GetStringSize(P) [functions]</h2><h3>sgs_SizeVal sgs_GetStringSize( sgs_Context* C, sgs_StkIdx item )</h3><h4>return the string size of the specified stack item</h4><h3>sgs_SizeVal sgs_GetStringSizeP( sgs_Context* C, sgs_Variable* var )</h3><h4>return the string size of the specified variable</h4><ul><li>if item is out of bounds or not a string, 0 will be returned and ...
@@ -2054,6 +2079,10 @@ This library is loaded on initialization and contains the functions and constant
 <ul><li><a href="#va-get-args-function">va_get_args</a> - returns an array of all arguments passed to calling function
 </li><li><a href="#va-get-arg-function">va_get_arg</a> - returns one of the arguments passed to calling function
 </li><li><a href="#va-arg-count-function">va_arg_count</a> - returns the number of all arguments passed to calling function
+</li><li><a href="#metaobj-set-function">metaobj_set</a> - sets the meta-object of an object
+</li><li><a href="#metaobj-get-function">metaobj_get</a> - retrieves the meta-object of an object
+</li><li><a href="#metamethods-enable-function">metamethods_enable</a> - enables or disables metamethod support for an object
+</li><li><a href="#metamethods-test-function">metamethods_test</a> - retrieves metamethod support state
 </li><li><a href="#sys-call-function">sys_call</a> - call a function/callable dynamically (function and <code>this</code> specified at runtime)
 </li><li><a href="#sys-apply-function">sys_apply</a> - call a function/callable even more dynamically (argument count also specified at runtime)
 </li><li><a href="#pcall-function">pcall</a> - do a protected call by trapping all internal messages in the specified callback
@@ -2106,8 +2135,7 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#array-random-method">random</a>
 </li><li><a href="#array-shuffle-method">shuffle</a>
 </li></ul><li><a href="#dict-object">dict</a>
-</li><li><a href="#map-object">map</a>
-</li><li><a href="#class-object">class</a></li></ul><h4>Constants:</h4><ul><li><a href="#SGS-constants">SGS_***</a> - error levels
+</li><li><a href="#map-object">map</a></li></ul><h4>Constants:</h4><ul><li><a href="#SGS-constants">SGS_***</a> - error levels
 </li><li><a href="#VT-constants">VT_***</a> - variable type IDs
 </li><li><a href="#RAND-MAX-constant">RAND_MAX</a> - maximum value that can be returned by <a href="#rand-function">rand</a></li></ul><h4>Other:</h4><ul><li><a href="#G-superglobal">_G</a> - environment superglobal, a dict containing all global variable names and values; can be changed</li></ul></div>
 <div class='item'><a name='array-function'></a><hr><h2>array [function]</h2><h3>array( ... )</h3><h4>returns an <a href="#array-object">array</a>, containing the arguments</h4><ul><li>similar to the array literal, though somewhat limited</li></ul><pre>array( &quot;5&quot;, 6, 7.0 ) // same as [&quot;5&quot;,6,7.0]</pre></div>
@@ -2116,8 +2144,7 @@ This library is loaded on initialization and contains the functions and constant
 </li><li>all even arguments must be strings or convertible to strings</li></ul><pre>dict( &quot;name&quot;, &quot;John&quot;, &quot;phone&quot;, 1234567890 ); // same as { name = &quot;John&quot;, phone = 1234567890 }</pre></div>
 <div class='item'><a name='map-function'></a><hr><h2>map [function]</h2><h3>map( [key, value, ...] )</h3><h4>returns a &#39;<a href="#map-object">map</a>&#39; (map/hash table) object, containing the even arguments mapped to respective previous arguments</h4><ul><li>if no arguments are passed, an empty map is returned
 </li><li>if an even number of arguments is passed, function returns null and emits a warning</li></ul><pre>map( &quot;John&quot;, &quot;name&quot;, 1234567890, &quot;phone&quot; ); // useful for mapping additional data to variables or making sets</pre></div>
-<div class='item'><a name='class-function'></a><hr><h2>class [function]</h2><h3>class( first, second )</h3><h4>returns a <a href="#class-object">class</a> object with <code>first</code> set as the primary data source and <code>second</code> set as the secondary/backup data source</h4><ul><li>both arguments accept all kinds of variables but it&#39;s generally preferred to use only dicts / maps / special objects
-</li><li>refer to <a href="#Classes">Classes</a> for more information on how class objects work and how to use them</li></ul><pre>someCommonInterface = { printdata = function(){ print( this.data ); } };
+<div class='item'><a name='class-function'></a><hr><h2>class [function]</h2><h3>class( object obj, object metaobj )</h3><h4>sets <code>metaobj</code> as meta-object for <code>obj</code> and enables <a href="#Metamethods">metamethods</a> for <code>obj</code>, returns <code>obj</code></h4><ul><li>refer to <a href="#Classes">Classes</a> for more information on how class objects work and how to use them</li></ul><pre>someCommonInterface = { printdata = function(){ print( this.data ); } };
 c = class( { data = &quot;5&quot; }, someCommonInterface );
 c.data = &quot;6&quot;;
 c.printdata(); // prints 6</pre></div>
@@ -2235,6 +2262,10 @@ srand( ftime() ); // restart the generator depending on the second the code was 
 <div class='item'><a name='va-get-args-function'></a><hr><h2>va_get_args [function]</h2><h3>va_get_args()</h3><h4>return an array containing all arguments passed to the calling function</h4></div>
 <div class='item'><a name='va-get-arg-function'></a><hr><h2>va_get_arg [function]</h2><h3>va_get_arg()</h3><h4>returns one of the arguments passed to calling function</h4></div>
 <div class='item'><a name='va-arg-count-function'></a><hr><h2>va_arg_count [function]</h2><h3>va_arg_count()</h3><h4>return the number of arguments passed to the calling function</h4></div>
+<div class='item'><a name='metaobj-set-function'></a><hr><h2>metaobj_set [function]</h2><h3>metaobj_set( object obj, object metaobj )</h3><h4>sets the meta-object of an object</h4></div>
+<div class='item'><a name='metaobj-get-function'></a><hr><h2>metaobj_get [function]</h2><h3>metaobj_get( object obj )</h3><h4>retrieves the meta-object of an object</h4></div>
+<div class='item'><a name='metamethods-enable-function'></a><hr><h2>metamethods_enable [function]</h2><h3>metamethods_enable( object obj, bool enable )</h3><h4>enables or disables metamethod support for an object</h4></div>
+<div class='item'><a name='metamethods-test-function'></a><hr><h2>metamethods_test [function]</h2><h3>metamethods_test( object obj )</h3><h4>retrieves metamethod support state</h4></div>
 <div class='item'><a name='sys-call-function'></a><hr><h2>sys_call [function]</h2><h3>sys_call( func, this[, args..] )</h3><h4>calls the specified function with the specified <code>this</code> value and argument list</h4><p>
 <em class='notice-bgr'>if argument count is only known at runtime, see <a href="#sys-apply-function">sys_apply</a></em>
 </p><ul><li>C functions, SGS functions, closure objects and real closures have this function under the &quot;call&quot; property</li></ul></div>
@@ -2473,22 +2504,6 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li>serialization
 </li><li>GC-safe
 </li><li>type identification (returns the string &quot;map&quot;)</li></ul></li></ul></div>
-<div class='item'><a name='class-object'></a><hr><h2>class [object]</h2><ul><li>read/write properties
-<ul><li>[var] _super
-</li></ul><li>other features
-<ul><li>read/write pass-through index
-</li><li>read/write pass-through properties (except string &quot;_super&quot;)
-</li><li>full content dump
-</li><li>tobool = ENOTSUP, overridable via &quot;__tobool&quot;
-</li><li>toint = ENOTSUP, overridable via &quot;__toint&quot;
-</li><li>toreal = ENOTSUP, overridable via &quot;__toreal&quot;
-</li><li>tostring = &quot;class&quot;, overridable via &quot;__tostring&quot;
-</li><li>cloning, overridable via &quot;__clone&quot;
-</li><li>type identification (returns the string &quot;class&quot;, overridable via &quot;__typeof&quot;)
-</li><li>overridable arithmetic/comparison operations
-</li><li>overridable object call
-</li><li>serialization
-</li><li>GC-safe</li></ul></li></ul></div>
 <div class='item'><a name='ALL-SGScript-core-functions-A-Z'></a><hr><h2>ALL SGScript core functions (A-Z)</h2><ul><li><a href="#ERROR-function">ERROR [function]</a>
 </li><li><a href="#INFO-function">INFO [function]</a>
 </li><li><a href="#WARNING-function">WARNING [function]</a>
@@ -2538,6 +2553,10 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#iter-getdata-function">iter_getdata [function]</a>
 </li><li><a href="#map-function">map [function]</a>
 </li><li><a href="#map-size-function">map_size [function]</a>
+</li><li><a href="#metamethods-enable-function">metamethods_enable [function]</a>
+</li><li><a href="#metamethods-test-function">metamethods_test [function]</a>
+</li><li><a href="#metaobj-get-function">metaobj_get [function]</a>
+</li><li><a href="#metaobj-set-function">metaobj_set [function]</a>
 </li><li><a href="#parseint-function">parseint [function]</a>
 </li><li><a href="#parsereal-function">parsereal [function]</a>
 </li><li><a href="#pcall-function">pcall [function]</a>

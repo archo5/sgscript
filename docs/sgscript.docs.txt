@@ -770,20 +770,7 @@ This section shows some ways of implementing various often-used constructs in SG
     {
         return SampleClass.Create( x );
     }
-    SampleClass = class( null, SampleClass );
-    // Be aware that this method involves some runtime overhead.
-    // Prefer simply giving the construction function (or the interface variable) a different name:
-    function createSampleClass( x )
-    {
-        data = { c = x };
-        return class( data, SampleClass );
-    }
-    
-    // destructor
-    function SampleClass.__destruct()
-    {
-        this.c = null;
-    }
+    metamethods_enable( SampleClass, true );
     
     // many more special methods are available for 'class' objects
 
@@ -1049,19 +1036,115 @@ The garbage collector is invoked with @sgs_GCExecute in the C API and @gc_collec
 Sub-objects are marked as available in the GCMARK callback with @sgs_GCMark(Array) / @sgs_ObjGCMark functions.
 
 
+# Metamethods [info]
+
+List of available metamethods:
+
+=== __typeof
+
+- **When called**: on type string retrieval (@typeof / @sgs_TypeOf)
+- **Arguments**: none
+- **Return value**: type string
+
+=== __clone
+
+- **When called**: on cloning operation (@clone / @sgs_Clone)
+- **Arguments**: none
+- **Return value**: the item to return as the cloned object
+
+=== __tobool
+
+- **When called**: on bool value retrieval
+- **Arguments**: none
+- **Return value**: bool
+
+=== __toint
+
+- **When called**: on integer value retrieval
+- **Arguments**: none
+- **Return value**: integer
+
+=== __toreal
+
+- **When called**: on real value retrieval
+- **Arguments**: none
+- **Return value**: real
+
+=== __tostring
+
+- **When called**: on string value retrieval
+- **Arguments**: none
+- **Return value**: string
+
+=== __toptr
+
+- **When called**: on pointer value retrieval
+- **Arguments**: none
+- **Return value**: pointer
+
+=== __negate
+
+- **When called**: on negation (`-obj`)
+- **Arguments**: none
+- **Return value**: the negated object
+
+=== __add
+
+- **When called**: on addition (`var1 + var2`) when one of the variables has this interface defined
+- **Arguments**: operands A and B (types are not restricted)
+- **Return value**: the product of addition
+
+=== __sub
+
+- **When called**: on subtraction (`var1 - var2`) when one of the variables has this interface defined
+- **Arguments**: operands A and B (types are not restricted)
+- **Return value**: the product of subtraction
+
+=== __mul
+
+- **When called**: on multiplication (`var1 * var2`) when one of the variables has this interface defined
+- **Arguments**: operands A and B (types are not restricted)
+- **Return value**: the product of multiplication
+
+=== __div
+
+- **When called**: on division (`var1 / var2`) when one of the variables has this interface defined
+- **Arguments**: operands A and B (types are not restricted)
+- **Return value**: the product of division
+
+=== __mod
+
+- **When called**: on modulo (`var1 % var2`) when one of the variables has this interface defined
+- **Arguments**: operands A and B (types are not restricted)
+- **Return value**: the product of modulo
+
+=== __compare
+
+- **When called**: on comparison (`var1 + var2`) when one of the variables has this interface defined
+- **Arguments**: operands A and B (types are not restricted)
+- **Return value**: the result of comparison (real value indicating < 0 if A<B, > 0 if A>B, = 0 if A=B)
+
+=== __call
+
+- **When called**: on function call
+- **Arguments**: arguments from the original call
+- **Return value**: any
+
+
 # Classes [info]
 
 Classes are objects that enable operator/interface overloading and two-layer index retrieval.
 
-Overloadable operators/interfaces:
+Overloadable operators/interfaces (@Metamethods):
 
 - basic math: +, - (both unary and binary), *, /, %
 - comparison
 - conversions to bool, int, real, string
 - typeof string retrieval
 - cloning
+- function call
 
-Two-layer index retrieval is simply trying to read the index from a different source if the first source fails to come up with something. In other languages, metatable and prototype is the name of a table that is the second source. This allows to avoid storing functions and other data that is equal to all instances of some object type.
+Two-layer index retrieval is simply trying to read the index from a different object (meta-object) if the first object fails to come up with something. In other languages, metatable and prototype is the name of a table that is the second source. This allows to avoid storing functions and other data that is equal to all instances of some object type.
 
 
 # Closures [info]
@@ -1421,6 +1504,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_ObjGCMark - mark an object variable by its sgs_VarObj pointer
 - @sgs_ObjAssign - assign object pointer, handling acquisition/release properly
 - @sgs_ObjCallDtor - call the destruction function of an object variable if it's defined
+- @sgs_ObjSetMetaObj - set meta-object of an object
 
 
 # String32 optimization interface [info]
@@ -2895,6 +2979,14 @@ After a successful call, all arguments and the function will be popped off the s
 - this function is to be used in cases where objects are owned by a single entity but have handles all over the place - calling this function would not delete the object but would free its resources, thus leaving handles intact, with their states updated
 
 
+# sgs_ObjSetMetaObj [function]
+
+== void sgs_ObjSetMetaObj( sgs_Context* C, sgs_VarObj* obj, sgs_VarObj* metaobj )
+=== set `metaobj` as the meta-object of object `obj`
+
+- `obj` must always point to an object, `metaobj` can be NULL
+
+
 # sgs_GetStringPtr(P) [functions]
 
 == char* sgs_GetStringPtr( sgs_Context* C, sgs_StkIdx item )
@@ -3826,6 +3918,10 @@ This library is loaded on initialization and contains the functions and constant
 -- @va_get_args - returns an array of all arguments passed to calling function
 -- @va_get_arg - returns one of the arguments passed to calling function
 -- @va_arg_count - returns the number of all arguments passed to calling function
+-- @metaobj_set - sets the meta-object of an object
+-- @metaobj_get - retrieves the meta-object of an object
+-- @metamethods_enable - enables or disables metamethod support for an object
+-- @metamethods_test - retrieves metamethod support state
 -- @sys_call - call a function/callable dynamically (function and `this` specified at runtime)
 -- @sys_apply - call a function/callable even more dynamically (argument count also specified at runtime)
 -- @pcall - do a protected call by trapping all internal messages in the specified callback
@@ -3883,7 +3979,6 @@ This library is loaded on initialization and contains the functions and constant
 -- @shuffle<array.shuffle>
 - @dict<dict [object]>
 - @map<map [object]>
-- @class<class [object]>
 
 === Constants:
 
@@ -3933,10 +4028,9 @@ This library is loaded on initialization and contains the functions and constant
 
 # class [function]
 
-== class( first, second )
-=== returns a @class<class [object]> object with `first` set as the primary data source and `second` set as the secondary/backup data source
+== class( object obj, object metaobj )
+=== sets `metaobj` as meta-object for `obj` and enables @metamethods<Metamethods> for `obj`, returns `obj`
 
-- both arguments accept all kinds of variables but it's generally preferred to use only dicts / maps / special objects
 - refer to @Classes for more information on how class objects work and how to use them
 
     someCommonInterface = { printdata = function(){ print( this.data ); } };
@@ -4424,6 +4518,30 @@ This library is loaded on initialization and contains the functions and constant
 
 == va_arg_count()
 === return the number of arguments passed to the calling function
+
+
+# metaobj_set [function]
+
+== metaobj_set( object obj, object metaobj )
+=== sets the meta-object of an object
+
+
+# metaobj_get [function]
+
+== metaobj_get( object obj )
+=== retrieves the meta-object of an object
+
+
+# metamethods_enable [function]
+
+== metamethods_enable( object obj, bool enable )
+=== enables or disables metamethod support for an object
+
+
+# metamethods_test [function]
+
+== metamethods_test( object obj )
+=== retrieves metamethod support state
 
 
 # sys_call [function]
@@ -5100,26 +5218,6 @@ This library is loaded on initialization and contains the functions and constant
 -- serialization
 -- GC-safe
 -- type identification (returns the string "map")
-
-
-# class [object]
-
-- read/write properties
--- [var] _super
-- other features
--- read/write pass-through index
--- read/write pass-through properties (except string "_super")
--- full content dump
--- tobool = ENOTSUP, overridable via "__tobool"
--- toint = ENOTSUP, overridable via "__toint"
--- toreal = ENOTSUP, overridable via "__toreal"
--- tostring = "class", overridable via "__tostring"
--- cloning, overridable via "__clone"
--- type identification (returns the string "class", overridable via "__typeof")
--- overridable arithmetic/comparison operations
--- overridable object call
--- serialization
--- GC-safe
 
 
 
