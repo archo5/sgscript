@@ -824,22 +824,24 @@ Notes:
 
 # sgs_Push* [functions]
 
-== void sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y )
-== void sgs_PushVec3( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z )
-== void sgs_PushVec4( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
-== void sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
-== void sgs_PushColor( SGS_CTX, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )
-== void sgs_PushMat4( SGS_CTX, const XGM_VT* v16f, int transpose )
-== void sgs_PushFloatArray( SGS_CTX, const XGM_VT* vfn, sgs_SizeVal size )
-== void sgs_PushVec2p( SGS_CTX, const XGM_VT* v2f )
-== void sgs_PushVec3p( SGS_CTX, const XGM_VT* v3f )
-== void sgs_PushVec4p( SGS_CTX, const XGM_VT* v4f )
-== void sgs_PushAABB2p( SGS_CTX, const XGM_VT* v4f )
-== void sgs_PushColorp( SGS_CTX, const XGM_VT* v4f )
-== void sgs_PushColorvp( SGS_CTX, const XGM_VT* vf, int numfloats )
+== SGSONE sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y )
+== SGSONE sgs_PushVec3( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z )
+== SGSONE sgs_PushVec4( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
+== SGSONE sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
+== SGSONE sgs_PushColor( SGS_CTX, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )
+== SGSONE sgs_PushMat4( SGS_CTX, const XGM_VT* v16f, int transpose )
+== SGSONE sgs_PushFloatArray( SGS_CTX, const XGM_VT* vfn, sgs_SizeVal size )
+== SGSONE sgs_PushVec2p( SGS_CTX, const XGM_VT* v2f )
+== SGSONE sgs_PushVec3p( SGS_CTX, const XGM_VT* v3f )
+== SGSONE sgs_PushVec4p( SGS_CTX, const XGM_VT* v4f )
+== SGSONE sgs_PushAABB2p( SGS_CTX, const XGM_VT* v4f )
+== SGSONE sgs_PushColorp( SGS_CTX, const XGM_VT* v4f )
+== SGSONE sgs_PushColorvp( SGS_CTX, const XGM_VT* vf, int numfloats )
 === push a new variable on stack of the right type, initialized to the specified arguments
 
 ! For notes, refer to @sgs_Init*
+
+- most functions here always return 1 (SGSONE), making them suitable for a "return sgs_Push***" construct
 
 
 # sgs_Parse* [functions]

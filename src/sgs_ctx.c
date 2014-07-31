@@ -3,8 +3,6 @@
 #include <ctype.h>
 #include <errno.h>
 
-#define SGS_INTERNAL
-#define SGS_REALLY_INTERNAL
 #define SGS_INTERNAL_STRINGTABLES
 
 #include "sgs_int.h"
@@ -40,7 +38,7 @@ static void ctx_init( SGS_CTX )
 	C->state = 0;
 	C->fctx = NULL;
 	C->filename = NULL;
-	vht_init( &C->stringtable, C, 256, 256 );
+	sgs_vht_init( &C->stringtable, C, 256, 256 );
 	
 	C->stack_mem = 32;
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
@@ -62,7 +60,7 @@ static void ctx_init( SGS_CTX )
 	C->redblue = 0;
 	C->gclist = NULL;
 	C->gclist_size = 0;
-	C->gcrun = FALSE;
+	C->gcrun = SGS_FALSE;
 #if SGS_OBJPOOL_SIZE > 0
 	C->objpool_data = sgs_Alloc_n( sgs_ObjPoolItem, SGS_OBJPOOL_SIZE );
 #else
@@ -70,7 +68,7 @@ static void ctx_init( SGS_CTX )
 #endif
 	C->objpool_size = 0;
 	
-	vht_init( &C->typetable, C, 32, 32 );
+	sgs_vht_init( &C->typetable, C, 32, 32 );
 }
 
 sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
@@ -118,14 +116,14 @@ void sgs_DestroyEngine( SGS_CTX )
 	
 	sgs_Dealloc( C->clstk_base );
 	
-	vht_free( &C->typetable, C );
+	sgs_vht_free( &C->typetable, C );
 	
 	{
-		VHTVar* p = C->stringtable.vars;
-		VHTVar* pend = p + C->stringtable.size;
+		sgs_VHTVar* p = C->stringtable.vars;
+		sgs_VHTVar* pend = p + C->stringtable.size;
 		while( p < pend )
 		{
-			string_t* st = p->key.data.S;
+			sgs_iStr* st = p->key.data.S;
 			st->refcount--;
 			sgs_BreakIf( st->refcount > 0 );
 			sgs_BreakIf( st->refcount < 0 );
@@ -133,7 +131,7 @@ void sgs_DestroyEngine( SGS_CTX )
 			p++;
 		}
 	}
-	vht_free( &C->stringtable, C );
+	sgs_vht_free( &C->stringtable, C );
 	
 	/* free the call stack */
 	while( sf )
@@ -172,7 +170,7 @@ const char* sgs_CodeString( int type, int val )
 		if( val < SGS_EINPROC )
 			return "UNKNOWN ERROR";
 		if( val > SGS_SUCCESS )
-			val = 0;
+			val = SGS_SUCCESS;
 		return sgs_ErrNames[  -  val ];
 	}
 	else if( type == SGS_CODE_VT )
@@ -217,7 +215,7 @@ void sgs_Write( SGS_CTX, const void* ptr, size_t size )
 SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... )
 {
 	char buf[ SGS_OUTPUT_STACKBUF_SIZE ];
-	MemBuf info = membuf_create();
+	sgs_MemBuf info = sgs_membuf_create();
 	int cnt;
 	va_list args;
 	char* ptr = buf;
@@ -227,12 +225,12 @@ SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... )
 	va_end( args );
 	
 	if( cnt < 0 )
-		return FALSE;
+		return SGS_FALSE;
 	
 	if( cnt >= SGS_OUTPUT_STACKBUF_SIZE )
 	{
 		/* WP: false alarm */
-		membuf_resize( &info, C, (size_t) cnt + 1 );
+		sgs_membuf_resize( &info, C, (size_t) cnt + 1 );
 		ptr = info.ptr;
 	}
 	
@@ -243,8 +241,8 @@ SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... )
 	
 	sgs_WriteStr( C, ptr );
 	
-	membuf_destroy( &info, C );
-	return TRUE;
+	sgs_membuf_destroy( &info, C );
+	return SGS_TRUE;
 }
 
 void sgs_GetErrOutputFunc( SGS_CTX, sgs_OutputFunc* outf, void** outc )
@@ -272,7 +270,7 @@ void sgs_ErrWrite( SGS_CTX, const void* ptr, size_t size )
 SGSBOOL sgs_ErrWritef( SGS_CTX, const char* what, ... )
 {
 	char buf[ SGS_OUTPUT_STACKBUF_SIZE ];
-	MemBuf info = membuf_create();
+	sgs_MemBuf info = sgs_membuf_create();
 	int cnt;
 	va_list args;
 	char* ptr = buf;
@@ -282,12 +280,12 @@ SGSBOOL sgs_ErrWritef( SGS_CTX, const char* what, ... )
 	va_end( args );
 	
 	if( cnt < 0 )
-		return FALSE;
+		return SGS_FALSE;
 	
 	if( cnt >= SGS_OUTPUT_STACKBUF_SIZE )
 	{
 		/* WP: false alarm */
-		membuf_resize( &info, C, (size_t) cnt + 1 );
+		sgs_membuf_resize( &info, C, (size_t) cnt + 1 );
 		ptr = info.ptr;
 	}
 	
@@ -298,8 +296,8 @@ SGSBOOL sgs_ErrWritef( SGS_CTX, const char* what, ... )
 	
 	sgs_ErrWriteStr( C, ptr );
 	
-	membuf_destroy( &info, C );
-	return TRUE;
+	sgs_membuf_destroy( &info, C );
+	return SGS_TRUE;
 }
 
 
@@ -322,10 +320,10 @@ void sgs_SetMsgFunc( SGS_CTX, sgs_MsgFunc func, void* ctx )
 	C->msg_ctx = ctx;
 }
 
-int sgs_Msg( SGS_CTX, int type, const char* what, ... )
+SGSZERO sgs_Msg( SGS_CTX, int type, const char* what, ... )
 {
 	char buf[ SGS_OUTPUT_STACKBUF_SIZE ];
-	MemBuf info = membuf_create();
+	sgs_MemBuf info = sgs_membuf_create();
 	int off = 0, cnt = 0, slen = 0;
 	va_list args;
 	char* ptr = buf;
@@ -358,7 +356,7 @@ int sgs_Msg( SGS_CTX, int type, const char* what, ... )
 	if( cnt >= SGS_OUTPUT_STACKBUF_SIZE )
 	{
 		/* WP: cnt is never negative */
-		membuf_resize( &info, C, (size_t) cnt + 1 );
+		sgs_membuf_resize( &info, C, (size_t) cnt + 1 );
 		ptr = info.ptr;
 	}
 	
@@ -376,7 +374,7 @@ int sgs_Msg( SGS_CTX, int type, const char* what, ... )
 
 	C->msg_fn( C->msg_ctx, C, type, ptr );
 
-	membuf_destroy( &info, C );
+	sgs_membuf_destroy( &info, C );
 	
 	return 0;
 }
@@ -386,7 +384,7 @@ void sgs_WriteErrorInfo( SGS_CTX, int flags, sgs_ErrorOutputFunc func, void* ctx
 {
 	if( flags & SGS_ERRORINFO_STACK )
 	{
-		sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
+		sgs_StackFrame* p = sgs_GetFramePtr( C, SGS_FALSE );
 		UNUSED( ctx );
 		while( p != NULL )
 		{
@@ -414,8 +412,8 @@ void sgs_WriteErrorInfo( SGS_CTX, int flags, sgs_ErrorOutputFunc func, void* ctx
 
 static void serialize_output_func( void* ud, SGS_CTX, const void* ptr, size_t datasize )
 {
-	MemBuf* B = (MemBuf*) ud;
-	membuf_appbuf( B, C, ptr, datasize );
+	sgs_MemBuf* B = (sgs_MemBuf*) ud;
+	sgs_membuf_appbuf( B, C, ptr, datasize );
 }
 
 void sgs_PushErrorInfo( SGS_CTX, int flags, int type, const char* msg )
@@ -423,7 +421,7 @@ void sgs_PushErrorInfo( SGS_CTX, int flags, int type, const char* msg )
 	sgs_OutputFunc oldfn = C->output_fn;
 	void* oldctx = C->output_ctx;
 	
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	C->output_fn = serialize_output_func;
 	C->output_ctx = &B;
 	
@@ -432,7 +430,7 @@ void sgs_PushErrorInfo( SGS_CTX, int flags, int type, const char* msg )
 	/* WP: hopefully the error messages will not be more than 2GB long */
 	sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
 	
-	membuf_destroy( &B, C );
+	sgs_membuf_destroy( &B, C );
 	C->output_fn = oldfn;
 	C->output_ctx = oldctx;
 }
@@ -511,8 +509,8 @@ static int ctx_decode( SGS_CTX, const char* buf, size_t size, sgs_CompFunc** out
 static int ctx_compile( SGS_CTX, const char* buf, size_t size, sgs_CompFunc** out )
 {
 	sgs_CompFunc* func = NULL;
-	TokenList tlist = NULL;
-	FTNode* ftree = NULL;
+	sgs_TokenList tlist = NULL;
+	sgs_FTNode* ftree = NULL;
 
 	C->state = 0;
 
@@ -571,11 +569,11 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, size_t size, int clean, 
 
 	DBGINFO( "...executing the generated function" );
 	C->stack_off = C->stack_top;
-	C->gclist = (sgs_Variable*) (void*) ASSUME_ALIGNED( func->consts.ptr, 4 );
+	C->gclist = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 );
 	/* WP: const limit */
 	C->gclist_size = (uint16_t) func->consts.size / sizeof( sgs_Variable );
 	returned = sgsVM_ExecFn( C, func->numtmp, func->code.ptr, func->code.size,
-		func->consts.ptr, func->consts.size, clean, (uint16_t*) (void*) ASSUME_ALIGNED( func->lnbuf.ptr, 4 ) );
+		func->consts.ptr, func->consts.size, clean, (uint16_t*) (void*) SGS_ASSUME_ALIGNED( func->lnbuf.ptr, 4 ) );
 	if( rvc )
 		*rvc = returned;
 	C->gclist = NULL;
@@ -663,7 +661,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	
 	ofn = C->filename;
 	C->filename = file;
-	ret = ctx_execute( C, data, ulen, rvc ? FALSE : TRUE, rvc );
+	ret = ctx_execute( C, data, ulen, rvc ? SGS_FALSE : SGS_TRUE, rvc );
 	C->filename = ofn;
 	
 	sgs_Dealloc( data );
@@ -672,7 +670,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 
 SGSRESULT sgs_Compile( SGS_CTX, const char* buf, size_t size, char** outbuf, size_t* outsize )
 {
-	MemBuf mb;
+	sgs_MemBuf mb;
 	sgs_CompFunc* func;
 	
 	if( size > 0x7fffffff )
@@ -681,10 +679,10 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, size_t size, char** outbuf, siz
 	if( !ctx_compile( C, buf, size, &func ) )
 		return SGS_ECOMP;
 	
-	mb = membuf_create();
+	mb = sgs_membuf_create();
 	if( !sgsBC_Func2Buf( C, func, &mb ) )
 	{
-		membuf_destroy( &mb, C );
+		sgs_membuf_destroy( &mb, C );
 		return SGS_EINPROC;
 	}
 	
@@ -700,14 +698,14 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, size_t size, char** outbuf, siz
 static void _recfndump( const char* constptr, size_t constsize,
 	const char* codeptr, size_t codesize, int gt, int args, int tmp, int clsr )
 {
-	const sgs_Variable* var = (const sgs_Variable*) (const void*) ASSUME_ALIGNED( constptr, 4 );
-	const sgs_Variable* vend = (const sgs_Variable*) (const void*) ASSUME_ALIGNED( constptr + constsize, 4 );
+	const sgs_Variable* var = (const sgs_Variable*) (const void*) SGS_ASSUME_ALIGNED( constptr, 4 );
+	const sgs_Variable* vend = (const sgs_Variable*) (const void*) SGS_ASSUME_ALIGNED( constptr + constsize, 4 );
 	while( var < vend )
 	{
 		if( var->type == SGS_VT_FUNC )
 		{
-			_recfndump( (const char*) func_consts( var->data.F ), var->data.F->instr_off,
-				(const char*) func_bytecode( var->data.F ), var->data.F->size - var->data.F->instr_off,
+			_recfndump( (const char*) sgs_func_consts( var->data.F ), var->data.F->instr_off,
+				(const char*) sgs_func_bytecode( var->data.F ), var->data.F->size - var->data.F->instr_off,
 				var->data.F->gotthis, var->data.F->numargs, var->data.F->numtmp, var->data.F->numclsr );
 		}
 		var++;
@@ -788,7 +786,7 @@ static void dumpobj( SGS_CTX, sgs_VarObj* p )
 
 static void dumpvar( SGS_CTX, sgs_Variable* var )
 {
-	if( var->type > SVT_PTR )
+	if( var->type > SGS_VT_PTR )
 	{
 		sgs_Writef( C, "INVALID TYPE %d\n", (int) var->type );
 		return;
@@ -797,24 +795,24 @@ static void dumpvar( SGS_CTX, sgs_Variable* var )
 	sgs_Writef( C, "%s (size:%d)", g_varnames[ var->type ], sgsVM_VarSize( var ) );
 	switch( var->type )
 	{
-	case SVT_NULL: break;
-	case SVT_BOOL: sgs_Writef( C, " = %s", var->data.B ? "true" : "false" ); break;
-	case SVT_INT: sgs_Writef( C, " = %" PRId64, var->data.I ); break;
-	case SVT_REAL: sgs_Writef( C, " = %f", var->data.R ); break;
-	case SVT_STRING:
+	case SGS_VT_NULL: break;
+	case SGS_VT_BOOL: sgs_Writef( C, " = %s", var->data.B ? "true" : "false" ); break;
+	case SGS_VT_INT: sgs_Writef( C, " = %" PRId64, var->data.I ); break;
+	case SGS_VT_REAL: sgs_Writef( C, " = %f", var->data.R ); break;
+	case SGS_VT_STRING:
 		sgs_Writef( C, " [rc:%d] = \"", var->data.S->refcount );
-		ctx_print_safe( C, var_cstr( var ), MIN( var->data.S->size, 16 ) );
+		ctx_print_safe( C, sgs_var_cstr( var ), SGS_MIN( var->data.S->size, 16 ) );
 		sgs_Writef( C, var->data.S->size > 16 ? "...\"" : "\"" );
 		break;
-	case SVT_FUNC:
+	case SGS_VT_FUNC:
 		sgs_Writef( C, " [rc:%d] '%s'[%d]%s tmp=%d clsr=%d", var->data.F->refcount,
 			var->data.F->funcname.ptr ? var->data.F->funcname.ptr : "<anonymous>",
 			(int) var->data.F->numargs, var->data.F->gotthis ? " (method)" : "",
 			(int) var->data.F->numtmp, (int) var->data.F->numclsr );
 		break;
-	case SVT_CFUNC: sgs_Writef( C, " = %p", var->data.C ); break;
-	case SVT_OBJECT: sgs_Writef( C, " = " ); dumpobj( C, var->data.O ); break;
-	case SVT_PTR: sgs_Writef( C, " = %p", var->data.P ); break;
+	case SGS_VT_CFUNC: sgs_Writef( C, " = %p", var->data.C ); break;
+	case SGS_VT_OBJECT: sgs_Writef( C, " = " ); dumpobj( C, var->data.O ); break;
+	case SGS_VT_PTR: sgs_Writef( C, " = %p", var->data.P ); break;
 	}
 }
 
@@ -850,14 +848,14 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_GLOBALS:
 		{
-			VHTVar *p, *pend;
+			sgs_VHTVar *p, *pend;
 			sgsSTD_GlobalIter( C, &p, &pend );
 			sgs_WriteStr( C, "\nGLOBAL ---- LIST ---- START ----\n" );
 			while( p < pend )
 			{
 				sgs_iStr* str = p->key.data.S;
 				sgs_WriteStr( C, "GLOBAL '" );
-				ctx_print_safe( C, str_cstr( str ), str->size );
+				ctx_print_safe( C, sgs_str_cstr( str ), str->size );
 				sgs_WriteStr( C, "' = " );
 				dumpvar( C, &p->val );
 				sgs_WriteStr( C, "\n" );
@@ -868,7 +866,7 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_OBJECTS:
 		{
-			object_t* p = C->objs;
+			sgs_VarObj* p = C->objs;
 			sgs_WriteStr( C, "\nOBJECT ---- LIST ---- START ----\n" );
 			while( p )
 			{
@@ -881,7 +879,7 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_FRAMES:
 		{
-			sgs_StackFrame* p = sgs_GetFramePtr( C, FALSE );
+			sgs_StackFrame* p = sgs_GetFramePtr( C, SGS_FALSE );
 			sgs_WriteStr( C, "\nFRAME ---- LIST ---- START ----\n" );
 			while( p != NULL )
 			{
@@ -1021,22 +1019,22 @@ sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end )
 SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface )
 {
 	size_t len;
-	VHTVar* p;
+	sgs_VHTVar* p;
 	if( !iface )
 		return SGS_EINVAL;
 	len = strlen( name );
 	if( len > 0x7fffffff )
 		return SGS_EINVAL;
 	/* WP: error condition */
-	p = vht_get_str( &C->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
+	p = sgs_vht_get_str( &C->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
 	if( p )
 		return SGS_EINPROC;
 	{
 		sgs_Variable tmp;
-		tmp.type = SVT_PTR;
+		tmp.type = SGS_VT_PTR;
 		tmp.data.P = iface;
 		sgs_PushStringBuf( C, name, (sgs_SizeVal) len );
-		vht_set( &C->typetable, C, C->stack_top-1, &tmp );
+		sgs_vht_set( &C->typetable, C, C->stack_top-1, &tmp );
 		sgs_Pop( C, 1 );
 	}
 	return SGS_SUCCESS;
@@ -1048,10 +1046,10 @@ SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )
 	if( len > 0x7fffffff )
 		return SGS_EINVAL;
 	/* WP: error condition */
-	VHTVar* p = vht_get_str( &C->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
+	sgs_VHTVar* p = sgs_vht_get_str( &C->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
 	if( !p )
 		return SGS_ENOTFND;
-	vht_unset( &C->typetable, C, &p->key );
+	sgs_vht_unset( &C->typetable, C, &p->key );
 	return SGS_SUCCESS;
 }
 
@@ -1061,7 +1059,7 @@ sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name )
 	if( len > 0x7fffffff )
 		return NULL;
 	/* WP: error condition */
-	VHTVar* p = vht_get_str( &C->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
+	sgs_VHTVar* p = sgs_vht_get_str( &C->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
 	if( p )
 		return (sgs_ObjInterface*) p->val.data.P;
 	return NULL;

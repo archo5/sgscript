@@ -5,12 +5,10 @@
 */
 
 
-#define SGS_INTERNAL
-
 #include <sgs_int.h>
 
 #define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
-#define STDLIB_WARN( warn ) { sgs_Msg( C, SGS_WARNING, warn ); return 0; }
+#define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
 
 
 #ifdef _WIN32
@@ -469,29 +467,29 @@ static int pproc_serialize_function( SGS_CTX,
 	sgs_iFunc* func, char** out, sgs_SizeVal* outsize )
 {
 	int ret;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	sgs_CompFunc F;
 	{
-		F.consts = membuf_create();
-		F.code = membuf_create();
-		F.lnbuf = membuf_create();
+		F.consts = sgs_membuf_create();
+		F.code = sgs_membuf_create();
+		F.lnbuf = sgs_membuf_create();
 		F.gotthis = func->gotthis;
 		F.numargs = func->numargs;
 		F.numtmp = func->numtmp;
 		F.numclsr = func->numclsr;
 	}
 	
-	membuf_appbuf( &F.consts, C, ((char*)(func+1)), func->instr_off );
-	membuf_appbuf( &F.code, C, ((char*)(func+1)) +
+	sgs_membuf_appbuf( &F.consts, C, ((char*)(func+1)), func->instr_off );
+	sgs_membuf_appbuf( &F.code, C, ((char*)(func+1)) +
 		func->instr_off, func->size - func->instr_off );
-	membuf_appbuf( &F.lnbuf, C, func->lineinfo,
+	sgs_membuf_appbuf( &F.lnbuf, C, func->lineinfo,
 		( func->size - func->instr_off ) / 2 );
 	
 	ret = sgsBC_Func2Buf( C, &F, &B );
 	
-	membuf_destroy( &F.consts, C );
-	membuf_destroy( &F.code, C );
-	membuf_destroy( &F.lnbuf, C );
+	sgs_membuf_destroy( &F.consts, C );
+	sgs_membuf_destroy( &F.code, C );
+	sgs_membuf_destroy( &F.lnbuf, C );
 	
 	if( ret )
 	{
@@ -500,7 +498,7 @@ static int pproc_serialize_function( SGS_CTX,
 	}
 	else
 	{
-		membuf_destroy( &B, C );
+		sgs_membuf_destroy( &B, C );
 	}
 	return ret;
 }
@@ -514,11 +512,11 @@ static int pproc_create_thread( SGS_CTX )
 	
 	SGSFN( "pproc_create_thread" );
 	if( ssz != 1 || !( type = sgs_ItemType( C, 0 ) ) ||
-		( type != SVT_FUNC && type != SVT_STRING ) ||
-		( type == SVT_STRING && !sgs_ParseString( C, 0, &str, &size ) ) )
+		( type != SGS_VT_FUNC && type != SGS_VT_STRING ) ||
+		( type == SGS_VT_STRING && !sgs_ParseString( C, 0, &str, &size ) ) )
 		return sgs_ArgErrorExt( C, 0, 0, "string/function", "" );
 	
-	if( type == SVT_FUNC )
+	if( type == SGS_VT_FUNC )
 	{
 		sgs_Variable var;
 		if( !sgs_PeekStackItem( C, 0, &var ) ||

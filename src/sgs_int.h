@@ -45,214 +45,6 @@ extern "C" {
 #endif
 
 
-#ifdef SGS_INTERNAL
-#  define ST_NULL SGS_ST_NULL
-#  define ST_RBRKL SGS_ST_RBRKL
-#  define ST_RBRKR SGS_ST_RBRKR
-#  define ST_SBRKL SGS_ST_SBRKL
-#  define ST_SBRKR SGS_ST_SBRKR
-#  define ST_CBRKL SGS_ST_CBRKL
-#  define ST_CBRKR SGS_ST_CBRKR
-#  define ST_ARGSEP SGS_ST_ARGSEP
-#  define ST_STSEP SGS_ST_STSEP
-#  define ST_PICKSEP SGS_ST_PICKSEP
-#  define ST_IDENT SGS_ST_IDENT
-#  define ST_KEYWORD SGS_ST_KEYWORD
-#  define ST_NUMREAL SGS_ST_NUMREAL
-#  define ST_NUMINT SGS_ST_NUMINT
-#  define ST_STRING SGS_ST_STRING
-#  define ST_OP_SEQ SGS_ST_OP_SEQ
-#  define ST_OP_SNEQ SGS_ST_OP_SNEQ
-#  define ST_OP_EQ SGS_ST_OP_EQ
-#  define ST_OP_NEQ SGS_ST_OP_NEQ
-#  define ST_OP_LEQ SGS_ST_OP_LEQ
-#  define ST_OP_GEQ SGS_ST_OP_GEQ
-#  define ST_OP_LESS SGS_ST_OP_LESS
-#  define ST_OP_GRTR SGS_ST_OP_GRTR
-#  define ST_OP_RWCMP SGS_ST_OP_RWCMP
-#  define ST_OP_ADDEQ SGS_ST_OP_ADDEQ
-#  define ST_OP_SUBEQ SGS_ST_OP_SUBEQ
-#  define ST_OP_MULEQ SGS_ST_OP_MULEQ
-#  define ST_OP_DIVEQ SGS_ST_OP_DIVEQ
-#  define ST_OP_MODEQ SGS_ST_OP_MODEQ
-#  define ST_OP_ANDEQ SGS_ST_OP_ANDEQ
-#  define ST_OP_OREQ SGS_ST_OP_OREQ
-#  define ST_OP_XOREQ SGS_ST_OP_XOREQ
-#  define ST_OP_LSHEQ SGS_ST_OP_LSHEQ
-#  define ST_OP_RSHEQ SGS_ST_OP_RSHEQ
-#  define ST_OP_BLAEQ SGS_ST_OP_BLAEQ
-#  define ST_OP_BLOEQ SGS_ST_OP_BLOEQ
-#  define ST_OP_CATEQ SGS_ST_OP_CATEQ
-#  define ST_OP_SET SGS_ST_OP_SET
-#  define ST_OP_ERSUP SGS_ST_OP_ERSUP
-#  define ST_OP_BLAND SGS_ST_OP_BLAND
-#  define ST_OP_BLOR SGS_ST_OP_BLOR
-#  define ST_OP_ADD SGS_ST_OP_ADD
-#  define ST_OP_SUB SGS_ST_OP_SUB
-#  define ST_OP_MUL SGS_ST_OP_MUL
-#  define ST_OP_DIV SGS_ST_OP_DIV
-#  define ST_OP_MOD SGS_ST_OP_MOD
-#  define ST_OP_AND SGS_ST_OP_AND
-#  define ST_OP_OR SGS_ST_OP_OR
-#  define ST_OP_XOR SGS_ST_OP_XOR
-#  define ST_OP_LSH SGS_ST_OP_LSH
-#  define ST_OP_RSH SGS_ST_OP_RSH
-#  define ST_OP_MMBR SGS_ST_OP_MMBR
-#  define ST_OP_CAT SGS_ST_OP_CAT
-#  define ST_OP_NOT SGS_ST_OP_NOT
-#  define ST_OP_INV SGS_ST_OP_INV
-#  define ST_OP_INC SGS_ST_OP_INC
-#  define ST_OP_DEC SGS_ST_OP_DEC
-#  define ST_ISOP SGS_ST_ISOP
-#  define ST_OP_UNARY SGS_ST_OP_UNARY
-#  define ST_OP_BINARY SGS_ST_OP_BINARY
-#  define ST_OP_ASSIGN SGS_ST_OP_ASSIGN
-#  define ST_OP_BINMUL SGS_ST_OP_BINMUL
-#  define ST_OP_BINADD SGS_ST_OP_BINADD
-#  define ST_OP_BINOPS SGS_ST_OP_BINOPS
-#  define ST_OP_COMP SGS_ST_OP_COMP
-#  define ST_OP_BOOL SGS_ST_OP_BOOL
-#  define ST_ISSPEC SGS_ST_ISSPEC
-#  define ST_READINT SGS_ST_READINT
-#  define ST_READLN SGS_ST_READLN
-
-/* #  define TokenType sgs_TokenType */
-#  define TokenList sgs_TokenList
-
-#  define SFT_NULL SGS_SFT_NULL
-#  define SFT_IDENT SGS_SFT_IDENT
-#  define SFT_KEYWORD SGS_SFT_KEYWORD
-#  define SFT_CONST SGS_SFT_CONST
-#  define SFT_OPER SGS_SFT_OPER
-#  define SFT_OPER_P SGS_SFT_OPER_P
-#  define SFT_FCALL SGS_SFT_FCALL
-#  define SFT_INDEX SGS_SFT_INDEX
-#  define SFT_MIDXSET SGS_SFT_MIDXSET
-#  define SFT_MPROPSET SGS_SFT_MPROPSET
-#  define SFT_ARGMT SGS_SFT_ARGMT
-#  define SFT_ARGLIST SGS_SFT_ARGLIST
-#  define SFT_VARLIST SGS_SFT_VARLIST
-#  define SFT_GVLIST SGS_SFT_GVLIST
-#  define SFT_USELIST SGS_SFT_USELIST
-#  define SFT_EXPLIST SGS_SFT_EXPLIST
-#  define SFT_ARRLIST SGS_SFT_ARRLIST
-#  define SFT_MAPLIST SGS_SFT_MAPLIST
-#  define SFT_RETURN SGS_SFT_RETURN
-#  define SFT_BLOCK SGS_SFT_BLOCK
-#  define SFT_IFELSE SGS_SFT_IFELSE
-#  define SFT_WHILE SGS_SFT_WHILE
-#  define SFT_DOWHILE SGS_SFT_DOWHILE
-#  define SFT_FOR SGS_SFT_FOR
-#  define SFT_FOREACH SGS_SFT_FOREACH
-#  define SFT_BREAK SGS_SFT_BREAK
-#  define SFT_CONT SGS_SFT_CONT
-#  define SFT_FUNC SGS_SFT_FUNC
-#  define FTNode sgs_FTNode
-
-#  define CompFunc sgs_CompFunc
-#  define rcpos_t sgs_rcpos_t
-
-/* VM */
-#  define CONSTVAR SGS_CONSTVAR
-#  define CONSTENC SGS_CONSTENC
-#  define CONSTDEC SGS_CONSTDEC
-
-#  define SI_NOP SGS_SI_NOP
-#  define SI_PUSH SGS_SI_PUSH
-#  define SI_INT SGS_SI_INT
-#  define SI_RETN SGS_SI_RETN
-#  define SI_JUMP SGS_SI_JUMP
-#  define SI_JMPT SGS_SI_JMPT
-#  define SI_JMPF SGS_SI_JMPF
-#  define SI_CALL SGS_SI_CALL
-#  define SI_FORPREP SGS_SI_FORPREP
-#  define SI_FORLOAD SGS_SI_FORLOAD
-#  define SI_FORJUMP SGS_SI_FORJUMP
-#  define SI_LOADCONST SGS_SI_LOADCONST
-#  define SI_GETVAR SGS_SI_GETVAR
-#  define SI_SETVAR SGS_SI_SETVAR
-#  define SI_GETPROP SGS_SI_GETPROP
-#  define SI_SETPROP SGS_SI_SETPROP
-#  define SI_GETINDEX SGS_SI_GETINDEX
-#  define SI_SETINDEX SGS_SI_SETINDEX
-#  define SI_GENCLSR SGS_SI_GENCLSR
-#  define SI_PUSHCLSR SGS_SI_PUSHCLSR
-#  define SI_MAKECLSR SGS_SI_MAKECLSR
-#  define SI_GETCLSR SGS_SI_GETCLSR
-#  define SI_SETCLSR SGS_SI_SETCLSR
-#  define SI_SET SGS_SI_SET
-#  define SI_MCONCAT SGS_SI_MCONCAT
-#  define SI_CONCAT SGS_SI_CONCAT
-#  define SI_NEGATE SGS_SI_NEGATE
-#  define SI_BOOL_INV SGS_SI_BOOL_INV
-#  define SI_INVERT SGS_SI_INVERT
-#  define SI_INC SGS_SI_INC
-#  define SI_DEC SGS_SI_DEC
-#  define SI_ADD SGS_SI_ADD
-#  define SI_SUB SGS_SI_SUB
-#  define SI_MUL SGS_SI_MUL
-#  define SI_DIV SGS_SI_DIV
-#  define SI_MOD SGS_SI_MOD
-#  define SI_AND SGS_SI_AND
-#  define SI_OR SGS_SI_OR
-#  define SI_XOR SGS_SI_XOR
-#  define SI_LSH SGS_SI_LSH
-#  define SI_RSH SGS_SI_RSH
-#  define SI_SEQ SGS_SI_SEQ
-#  define SI_SNEQ SGS_SI_SNEQ
-#  define SI_EQ SGS_SI_EQ
-#  define SI_NEQ SGS_SI_NEQ
-#  define SI_LT SGS_SI_LT
-#  define SI_GTE SGS_SI_GTE
-#  define SI_GT SGS_SI_GT
-#  define SI_LTE SGS_SI_LTE
-#  define SI_RAWCMP SGS_SI_RAWCMP
-#  define SI_ARRAY SGS_SI_ARRAY
-#  define SI_DICT SGS_SI_DICT
-
-#  define instr_t sgs_instr_t
-
-#  define INSTR_SIZE SGS_INSTR_SIZE
-#  define INSTR_OFF_OP SGS_INSTR_OFF_OP
-#  define INSTR_OFF_A SGS_INSTR_OFF_A
-#  define INSTR_OFF_B SGS_INSTR_OFF_B
-#  define INSTR_OFF_C SGS_INSTR_OFF_C
-#  define INSTR_OFF_E SGS_INSTR_OFF_E
-#  define INSTR_MASK_OP SGS_INSTR_MASK_OP
-#  define INSTR_MASK_A SGS_INSTR_MASK_A
-#  define INSTR_MASK_B SGS_INSTR_MASK_B
-#  define INSTR_MASK_C SGS_INSTR_MASK_C
-#  define INSTR_MASK_E SGS_INSTR_MASK_E
-#  define INSTR_GET_OP SGS_INSTR_GET_OP
-#  define INSTR_GET_A SGS_INSTR_GET_A
-#  define INSTR_GET_B SGS_INSTR_GET_B
-#  define INSTR_GET_C SGS_INSTR_GET_C
-#  define INSTR_GET_E SGS_INSTR_GET_E
-#  define INSTR_MAKE_OP SGS_INSTR_MAKE_OP
-#  define INSTR_MAKE_A SGS_INSTR_MAKE_A
-#  define INSTR_MAKE_B SGS_INSTR_MAKE_B
-#  define INSTR_MAKE_C SGS_INSTR_MAKE_C
-#  define INSTR_MAKE_E SGS_INSTR_MAKE_E
-#  define INSTR_MAKE SGS_INSTR_MAKE
-#  define INSTR_MAKE_EX SGS_INSTR_MAKE_EX
-#  define INSTR_RECOMB_E SGS_INSTR_RECOMB_E
-
-#  define func_t sgs_iFunc
-#  define func_consts sgs_func_consts
-#  define func_bytecode sgs_func_bytecode
-#  define func_c_consts sgs_func_c_consts
-#  define func_c_bytecode sgs_func_c_bytecode
-#  define string_t sgs_iStr
-#  define str_cstr sgs_str_cstr
-#  define str_c_cstr sgs_str_c_cstr
-#  define var_cstr sgs_var_cstr
-#  define object_t sgs_object_t
-#  define var_destroy_object sgsVM_VarDestroyObject
-
-#  define STACKFRAMESIZE SGS_STACKFRAMESIZE
-#endif
-
-
 
 /*
 	Token stream
@@ -331,7 +123,7 @@ extern "C" {
 #define SGS_ST_OP_BOOL( chr )   ( (chr) == SGS_ST_OP_BLAEQ || (chr) == SGS_ST_OP_BLOEQ || \
 	(chr) == SGS_ST_OP_BLAND || (chr) == SGS_ST_OP_BLOR )
 
-#define SGS_ST_ISSPEC( chr )    isoneof( (chr), "()[]{},;:" )
+#define SGS_ST_ISSPEC( chr )    sgs_isoneof( (chr), "()[]{},;:" )
 
 #define SGS_ST_READINT( tgt, pos )   SGS_AS_INT32( tgt, pos )
 #define SGS_ST_READLN( tgt, pos )    SGS_AS_( tgt, pos, sgs_LineNum )
@@ -605,7 +397,6 @@ SGS_CASSERT( sizeof(sgs_iStr) % 8 == 0, istr_object_storage_compat_issue );
 #define sgs_func_c_bytecode( pfn ) \
 	((const sgs_instr_t*)(sgs_func_c_consts(pfn)+pfn->instr_off/sizeof(sgs_Variable)))
 
-#define sgs_object_t sgs_VarObj
 
 typedef struct _sgs_Closure sgs_Closure;
 struct _sgs_Closure
@@ -617,7 +408,7 @@ struct _sgs_Closure
 
 /* VM interface */
 void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len );
-void sgsVM_VarDestroyObject( SGS_CTX, sgs_object_t* O );
+void sgsVM_VarDestroyObject( SGS_CTX, sgs_VarObj* O );
 
 size_t sgsVM_VarSize( const sgs_Variable* var );
 void sgsVM_VarDump( const sgs_Variable* var );
@@ -737,7 +528,7 @@ struct _sgs_Context
 	sgs_VarObj*   _G;
 	
 	/* > object info */
-	sgs_object_t* objs;
+	sgs_VarObj*   objs;
 	int32_t       objcount;
 	/* >> object GC */
 	uint8_t       redblue;

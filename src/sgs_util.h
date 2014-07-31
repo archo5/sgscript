@@ -10,93 +10,17 @@
 extern "C" {
 #endif
 
-#ifdef SGS_INTERNAL
-#  ifdef SGS_REALLY_INTERNAL
-#    ifndef TRUE
-#      define TRUE sgs_TRUE
-#    endif
-#    ifndef FALSE
-#      define FALSE sgs_FALSE
-#    endif
-#    define MIN sgs_MIN
-#    define MAX sgs_MAX
-#    define ARRAY_SIZE sgs_ARRAY_SIZE
-#    define HAS_FLAG sgs_HAS_FLAG
-#    define HAS_ANY_FLAG sgs_HAS_ANY_FLAG
-#  endif
-#  define LineNum sgs_LineNum
-#  define isoneof sgs_isoneof
-#  define hexchar sgs_hexchar
-#  define gethex sgs_gethex
-#  define decchar sgs_decchar
-#  define getdec sgs_getdec
-#  define octchar sgs_octchar
-#  define getoct sgs_getoct
-#  define binchar sgs_binchar
-#  define getbin sgs_getbin
-#  define AS_ SGS_AS_
-#  define AS_INT8 SGS_AS_INT8
-#  define AS_UINT8 SGS_AS_UINT8
-#  define AS_INT16 SGS_AS_INT16
-#  define AS_UINT16 SGS_AS_UINT16
-#  define AS_INT32 SGS_AS_INT32
-#  define AS_UINT32 SGS_AS_UINT32
-#  define AS_INT64 SGS_AS_INT64
-#  define AS_UINT64 SGS_AS_UINT64
-#  define AS_FLOAT SGS_AS_FLOAT
-#  define AS_DOUBLE SGS_AS_DOUBLE
-#  define AS_INTEGER SGS_AS_INTEGER
-#  define AS_REAL SGS_AS_REAL
-#  define ASSUME_ALIGNED SGS_ASSUME_ALIGNED
-
-#  define FUNC_HIT SGS_FUNC_HIT
-#  define FUNC_ENTER SGS_FUNC_ENTER
-#  define FUNC_BEGIN SGS_FUNC_BEGIN
-#  define FUNC_END SGS_FUNC_END
-
-#  define MemBuf sgs_MemBuf
-#  define membuf_create sgs_membuf_create
-#  define membuf_destroy sgs_membuf_destroy
-#  define membuf_partial sgs_membuf_partial
-#  define membuf_reserve sgs_membuf_reserve
-#  define membuf_resize sgs_membuf_resize
-#  define membuf_resize_opt sgs_membuf_resize_opt
-#  define membuf_insbuf sgs_membuf_insbuf
-#  define membuf_erase sgs_membuf_erase
-#  define membuf_appbuf sgs_membuf_appbuf
-#  define membuf_setstr sgs_membuf_setstr
-#  define membuf_setstrbuf sgs_membuf_setstrbuf
-#  define membuf_appchr sgs_membuf_appchr
-
-#  define VHTIdx sgs_VHTIdx
-#  define VHTVar sgs_VHTVar
-#  define VHTable sgs_VHTable
-#  define vht_init sgs_vht_init
-#  define vht_free sgs_vht_free
-#  define vht_get sgs_vht_get
-#  define vht_get_str sgs_vht_get_str
-#  define vht_set sgs_vht_set
-#  define vht_unset sgs_vht_unset
-#  define vht_size sgs_vht_size
-
-#  define print_safe sgs_print_safe
-#  define util_strtonum sgs_util_strtonum
-#  define util_atoi sgs_util_atoi
-#  define util_atof sgs_util_atof
-#  define quicksort sgs_quicksort
-#endif
-
 #include "sgscript.h"
 
 
 /* useful shortcut definitions */
-#define sgs_TRUE 1
-#define sgs_FALSE 0
-#define sgs_MAX( a, b ) ((a)>(b)?(a):(b))
-#define sgs_MIN( a, b ) ((a)<(b)?(a):(b))
-#define sgs_ARRAY_SIZE( a ) (sizeof(a)/sizeof(a[0]))
-#define sgs_HAS_FLAG( val, flag ) (((val)&(flag))==(flag))
-#define sgs_HAS_ANY_FLAG( val, flag ) (((val)&(flag))!=0)
+#define SGS_TRUE 1
+#define SGS_FALSE 0
+#define SGS_MAX( a, b ) ((a)>(b)?(a):(b))
+#define SGS_MIN( a, b ) ((a)<(b)?(a):(b))
+#define SGS_ARRAY_SIZE( a ) (sizeof(a)/sizeof(a[0]))
+#define SGS_HAS_FLAG( val, flag ) (((val)&(flag))==(flag))
+#define SGS_HAS_ANY_FLAG( val, flag ) (((val)&(flag))!=0)
 
 #define SGS_GLUE(a,b) __SGS_GLUE(a,b)
 #define __SGS_GLUE(a,b) a ## b
@@ -148,19 +72,19 @@ static SGS_INLINE int sgs_getbin( char c ){ return c - '0'; }
 
 /* flow/data debugging */
 #if SGS_DEBUG && SGS_DEBUG_FLOW
-#  define SGS_FUNC_HIT( what ) \
+#  define SGS_FN_HIT( what ) \
 	printf( "Hit \"%s\" line %d in function \"%s\"\n", what, __LINE__, __FUNCTION__ );
-#  define SGS_FUNC_ENTER \
+#  define SGS_FN_ENTER \
 	printf( "Entering a function from \"%s\" at line %d\n", __FUNCTION__, __LINE__ );
-#  define SGS_FUNC_BEGIN \
+#  define SGS_FN_BEGIN \
 	printf( "Inside \"%s\"\n", __FUNCTION__ );
-#  define SGS_FUNC_END \
+#  define SGS_FN_END \
 	printf( "Out of \"%s\" at line %d\n", __FUNCTION__, __LINE__ );
 #else
-#  define SGS_FUNC_HIT( what )
-#  define SGS_FUNC_ENTER
-#  define SGS_FUNC_BEGIN
-#  define SGS_FUNC_END
+#  define SGS_FN_HIT( what )
+#  define SGS_FN_ENTER
+#  define SGS_FN_BEGIN
+#  define SGS_FN_END
 #endif
 
 SGS_APIFUNC void sgs_print_safe( FILE* fp, const char* buf, size_t size );

@@ -272,7 +272,7 @@ endnumparse:
 			if( *pos == 'r' ) pos++; else return pos;
 			if( *pos == 'u' ) pos++; else return pos;
 			if( *pos == 'e' ) pos++; else return pos;
-			sgs_PushBool( C, sgs_TRUE );
+			sgs_PushBool( C, SGS_TRUE );
 			pos--;
 			push = 1;
 		}
@@ -283,7 +283,7 @@ endnumparse:
 			if( *pos == 'l' ) pos++; else return pos;
 			if( *pos == 's' ) pos++; else return pos;
 			if( *pos == 'e' ) pos++; else return pos;
-			sgs_PushBool( C, sgs_FALSE );
+			sgs_PushBool( C, SGS_FALSE );
 			pos--;
 			push = 1;
 		}
@@ -322,7 +322,7 @@ endnumparse:
 			}
 			if( STK_TOP == ':' )
 			{
-				sgs_StoreIndexII( C, -3, -2, sgs_FALSE );
+				sgs_StoreIndexII( C, -3, -2, SGS_FALSE );
 				sgs_Pop( C, 1 );
 				STK_TOP = '{';
 			}

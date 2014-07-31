@@ -1766,17 +1766,17 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_Push*** [functions]
 
-== void sgs_PushNull( sgs_Context* C )
-== void sgs_PushBool( sgs_Context* C, sgs_Bool value )
-== void sgs_PushInt( sgs_Context* C, sgs_Int value )
-== void sgs_PushReal( sgs_Context* C, sgs_Real value )
-== void sgs_PushStringBuf( sgs_Context* C, const char* str, sgs_SizeVal size )
-== void sgs_PushString( sgs_Context* C, const char* str )
-== void sgs_PushCFunction( sgs_Context* C, sgs_CFunc func )
-== void sgs_PushObject( sgs_Context* C, void* data, sgs_ObjInterface* iface )
+== SGSONE sgs_PushNull( sgs_Context* C )
+== SGSONE sgs_PushBool( sgs_Context* C, sgs_Bool value )
+== SGSONE sgs_PushInt( sgs_Context* C, sgs_Int value )
+== SGSONE sgs_PushReal( sgs_Context* C, sgs_Real value )
+== SGSONE sgs_PushStringBuf( sgs_Context* C, const char* str, sgs_SizeVal size )
+== SGSONE sgs_PushString( sgs_Context* C, const char* str )
+== SGSONE sgs_PushCFunction( sgs_Context* C, sgs_CFunc func )
+== SGSONE sgs_PushObject( sgs_Context* C, void* data, sgs_ObjInterface* iface )
 == void* sgs_PushObjectIPA( sgs_Context* C, sgs_SizeVal added, sgs_ObjInterface* iface )
-== void sgs_PushPtr( sgs_Context* C, void* ptr )
-== void sgs_PushObjectPtr( sgs_Context* C, sgs_VarObj* obj )
+== SGSONE sgs_PushPtr( sgs_Context* C, void* ptr )
+== SGSONE sgs_PushObjectPtr( sgs_Context* C, sgs_VarObj* obj )
 == SGSRESULT sgs_PushVariable( sgs_Context* C, sgs_Variable* var )
 === pushes the data on the stack, as a new entry, appended to the end
 
@@ -1790,6 +1790,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - sgs_PushVariable will increment the reference count of strings, SGS functions and objects
 -- it will also return EINVAL if type of variable isn't one of the allowed types
 - these functions do not throw an error when the stack is full since there is no way to handle that
+- most functions here always return 1 (SGSONE), making them suitable for a "return sgs_Push***" construct
 
 
 # sgs_StoreVariable [function]

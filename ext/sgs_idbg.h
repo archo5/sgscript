@@ -2,6 +2,12 @@
 #ifndef SGS_IDBG_H_INCLUDED
 #define SGS_IDBG_H_INCLUDED
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 #include <sgscript.h>
 #include <sgs_util.h>
 
@@ -26,5 +32,9 @@ sgs_IDbg;
 int sgs_InitIDbg( SGS_CTX, SGS_IDBG );
 int sgs_CloseIDbg( SGS_CTX, SGS_IDBG );
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

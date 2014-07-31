@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <time.h>
 
-#define SGS_INTERNAL
 #define SGS_USE_FILESYSTEM
 
 #include "sgscript.h"

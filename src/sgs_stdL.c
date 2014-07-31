@@ -10,8 +10,6 @@
 #include <float.h>
 #include <locale.h>
 
-#define SGS_INTERNAL
-#define SGS_REALLY_INTERNAL
 #define SGS_USE_FILESYSTEM
 
 #include "sgs_int.h"
@@ -467,7 +465,7 @@ static int sgsstd_fmt_base64_encode( SGS_CTX )
 		return 0;
 	
 	{
-		MemBuf B = membuf_create();
+		sgs_MemBuf B = sgs_membuf_create();
 		char* strend = str + size;
 		while( str < strend - 2 )
 		{
@@ -479,7 +477,7 @@ static int sgsstd_fmt_base64_encode( SGS_CTX )
 				bb[2] = b64_table[ (merged>>6 ) & 0x3f ];
 				bb[3] = b64_table[ (merged    ) & 0x3f ];
 			}
-			membuf_appbuf( &B, C, bb, 4 );
+			sgs_membuf_appbuf( &B, C, bb, 4 );
 			str += 3;
 		}
 		/* last bytes */
@@ -494,15 +492,15 @@ static int sgsstd_fmt_base64_encode( SGS_CTX )
 			bb[ 1 ] = b64_table[ (merged>>12) & 0x3f ];
 			bb[ 2 ] = (char)( str < strend-1 ? b64_table[ (merged>>6) & 0x3f ] : '=' );
 			bb[ 3 ] = '=';
-			membuf_appbuf( &B, C, bb, 4 );
+			sgs_membuf_appbuf( &B, C, bb, 4 );
 		}
 		if( B.size > 0x7fffffff )
 		{
-			membuf_destroy( &B, C );
+			sgs_membuf_destroy( &B, C );
 			STDLIB_WARN( "generated more string data than allowed to store" );
 		}
 		sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
-		membuf_destroy( &B, C );
+		sgs_membuf_destroy( &B, C );
 		return 1;
 	}
 }
@@ -531,7 +529,7 @@ static int sgsstd_fmt_base64_decode( SGS_CTX )
 		return 0;
 	
 	{
-		MemBuf B = membuf_create();
+		sgs_MemBuf B = sgs_membuf_create();
 		char* beg = str;
 		char* strend = str + size;
 		while( str < strend - 3 )
@@ -554,14 +552,14 @@ static int sgsstd_fmt_base64_decode( SGS_CTX )
 #undef warnbyte
 			if( e )
 			{
-				membuf_destroy( &B, C );
+				sgs_membuf_destroy( &B, C );
 				return 0;
 			}
 			merged = (i1<<18) | (i2<<12) | (i3<<6) | (i4);
 			bb[ 0 ] = (char)( (merged>>16) & 0xff );
 			bb[ 1 ] = (char)( (merged>>8) & 0xff );
 			bb[ 2 ] = (char)( merged & 0xff );
-			membuf_appbuf( &B, C, bb, (size_t) ( 3 - no ) );
+			sgs_membuf_appbuf( &B, C, bb, (size_t) ( 3 - no ) );
 			str += 4;
 			if( no )
 				break;
@@ -570,7 +568,7 @@ static int sgsstd_fmt_base64_decode( SGS_CTX )
 			sgs_Msg( C, SGS_WARNING, "extra bytes detected and ignored" );
 		/* WP: generated string is 1/(ceil(n/3)*4) of original in length (less) */
 		sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
-		membuf_destroy( &B, C );
+		sgs_membuf_destroy( &B, C );
 		return 1;
 	}
 }
@@ -591,7 +589,7 @@ static int sgsstd_fmt_custom_encode( SGS_CTX )
 	sgs_Int numtype, nummindigits = 0;
 	char* str, *ccstr, *prefixstr, *postfixstr = NULL;
 	sgs_SizeVal i, size, ccsize, prefixsize, postfixsize = 0;
-	MemBuf mb = membuf_create();
+	sgs_MemBuf mb = sgs_membuf_create();
 	
 	static const char* lchex = "0123456789abcdef";
 	static const char* uchex = "0123456789ABCDEF";
@@ -618,7 +616,7 @@ static int sgsstd_fmt_custom_encode( SGS_CTX )
 			int ndigs = mindigits;
 			char numbuf[ 9 ], *p;
 			
-			membuf_appbuf( &mb, C, prefixstr, (size_t) prefixsize );
+			sgs_membuf_appbuf( &mb, C, prefixstr, (size_t) prefixsize );
 			
 			p = numbuf + 8;
 			*p = 0;
@@ -661,18 +659,18 @@ static int sgsstd_fmt_custom_encode( SGS_CTX )
 				break;
 			}
 			
-			membuf_appbuf( &mb, C, p, (size_t)( numbuf + 8 - p ) );
+			sgs_membuf_appbuf( &mb, C, p, (size_t)( numbuf + 8 - p ) );
 			if( postfixstr )
-				membuf_appbuf( &mb, C, postfixstr, (size_t) postfixsize );
+				sgs_membuf_appbuf( &mb, C, postfixstr, (size_t) postfixsize );
 		}
 		else
-			membuf_appchr( &mb, C, (char) chr );
+			sgs_membuf_appchr( &mb, C, (char) chr );
 	}
 	
 	if( mb.size > 0x7fffffff )
 		STDLIB_WARN( "output was bigger than allowed to store" )
 	sgs_PushStringBuf( C, mb.ptr, (sgs_SizeVal) mb.size );
-	membuf_destroy( &mb, C );
+	sgs_membuf_destroy( &mb, C );
 	return 1;
 }
 
@@ -709,7 +707,7 @@ static int parse_fmtspec( struct fmtspec* out, char* fmt, char* fmtend )
 		return 1;
 	}
 	
-	if( !isoneof( out->type, "bodxXfgGeEsc{" ) )
+	if( !sgs_isoneof( out->type, "bodxXfgGeEsc{" ) )
 		return 0;
 	
 	if( fmt >= fmtend ) return 0;
@@ -748,13 +746,13 @@ static int parse_fmtspec( struct fmtspec* out, char* fmt, char* fmtend )
 	return 1;
 }
 
-static void _padbuf( MemBuf* B, SGS_CTX, char pc, int cnt )
+static void _padbuf( sgs_MemBuf* B, SGS_CTX, char pc, int cnt )
 {
 	while( cnt --> 0 )
-		membuf_appchr( B, C, pc );
+		sgs_membuf_appchr( B, C, pc );
 }
 
-static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
+static int commit_fmtspec( SGS_CTX, sgs_MemBuf* B, struct fmtspec* F, int* psi )
 {
 	switch( F->type )
 	{
@@ -798,9 +796,9 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			if( size < F->padcnt && !F->padrgt )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
 			if( sign )
-				membuf_appchr( B, C, '-' );
+				sgs_membuf_appchr( B, C, '-' );
 			ofs = (int) B->size;
-			membuf_resize( B, C, (size_t)( ofs + size - sign ) );
+			sgs_membuf_resize( B, C, (size_t)( ofs + size - sign ) );
 			for( i = size - 1 - sign; i >= 0; --i )
 			{
 				/* WP: conversion does not affect range */
@@ -831,7 +829,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 			
 			if( size < F->padcnt && !F->padrgt )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
-			membuf_appbuf( B, C, data, (size_t) size );
+			sgs_membuf_appbuf( B, C, data, (size_t) size );
 			if( size < F->padcnt && F->padrgt )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
 		}
@@ -849,13 +847,13 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 				size = F->prec;
 			if( size < F->padcnt && !F->padrgt )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
-			membuf_appbuf( B, C, str, (size_t) size );
+			sgs_membuf_appbuf( B, C, str, (size_t) size );
 			if( size < F->padcnt && F->padrgt )
 				_padbuf( B, C, F->padchr, F->padcnt - size );
 		}
 		break;
 	case '{':
-		membuf_appchr( B, C, '{' );
+		sgs_membuf_appchr( B, C, '{' );
 		break;
 	default:
 		goto error;
@@ -863,7 +861,7 @@ static int commit_fmtspec( SGS_CTX, MemBuf* B, struct fmtspec* F, int* psi )
 	return 1;
 	
 error:
-	membuf_appbuf( B, C, "#error#", 7 );
+	sgs_membuf_appbuf( B, C, "#error#", 7 );
 	return 0;
 }
 
@@ -871,16 +869,16 @@ static int sgsstd_fmt_text( SGS_CTX )
 {
 	char* fmt, *fmtend;
 	sgs_SizeVal fmtsize;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	int numitem = 0, si = 1;
 	
 	SGSFN( "fmt_text" );
 	
-	if( sgs_ItemType( C, 0 ) == SVT_INT || sgs_ItemType( C, 0 ) == SVT_REAL )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT || sgs_ItemType( C, 0 ) == SGS_VT_REAL )
 	{
 		sgs_Int numbytes = sgs_GetInt( C, 0 );
 		if( numbytes > 0 && numbytes < 0x7fffffff )
-			membuf_reserve( &B, C, (size_t) numbytes );
+			sgs_membuf_reserve( &B, C, (size_t) numbytes );
 		
 		/* acknowledge the existence of argument 0, but only here */
 		if( !sgs_LoadArgs( C, ">m", &fmt, &fmtsize ) )
@@ -903,7 +901,7 @@ static int sgsstd_fmt_text( SGS_CTX )
 			fmt = F.end;
 			if( !ret )
 			{
-				membuf_destroy( &B, C );
+				sgs_membuf_destroy( &B, C );
 				sgs_Msg( C, SGS_WARNING, 
 					"parsing error in item %d", numitem );
 				return 0;
@@ -915,17 +913,17 @@ static int sgsstd_fmt_text( SGS_CTX )
 			}
 		}
 		else
-			membuf_appchr( &B, C, c );
+			sgs_membuf_appchr( &B, C, c );
 	}
 	
 	if( B.size > 0x7fffffff )
 	{
-		membuf_destroy( &B, C );
+		sgs_membuf_destroy( &B, C );
 		STDLIB_WARN( "generated more string data than allowed to store" );
 	}
 	/* WP: error condition */
 	sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
-	membuf_destroy( &B, C );
+	sgs_membuf_destroy( &B, C );
 	return 1;
 }
 
@@ -949,7 +947,7 @@ sgsstd_fmtstream_t;
 SGS_DECLARE sgs_ObjInterface sgsstd_fmtstream_iface[1];
 #define SGSFS_HDR sgsstd_fmtstream_t* hdr = (sgsstd_fmtstream_t*) obj->data
 
-#define fs_getreadsize( hdr, lim ) MIN( hdr->buffill - hdr->bufpos, lim )
+#define fs_getreadsize( hdr, lim ) SGS_MIN( hdr->buffill - hdr->bufpos, lim )
 
 static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 {
@@ -973,7 +971,7 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 		ret = sgs_CallP( C, &fs->source, 1, 1 );
 		if( ret != SGS_SUCCESS )
 			return FALSE;
-		if( sgs_ItemType( C, -1 ) == SVT_NULL )
+		if( sgs_ItemType( C, -1 ) == SGS_VT_NULL )
 		{
 			sgs_Pop( C, 1 );
 			fs->state = FMTSTREAM_STATE_END;
@@ -1009,7 +1007,7 @@ static int sgsstd_fmtstream_destroy( SGS_CTX, sgs_VarObj* obj )
 static int sgsstd_fmtstreamI_read( SGS_CTX )
 {
 	sgs_SizeVal numbytes;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	
 	SGSFS_IHDR( read )
 	
@@ -1023,21 +1021,21 @@ static int sgsstd_fmtstreamI_read( SGS_CTX )
 			sgs_SizeVal readamt = fs_getreadsize( hdr, numbytes );
 			if( readamt )
 				/* WP: conversion does not affect range */
-				membuf_appbuf( &B, C, hdr->buffer + hdr->bufpos, (size_t) readamt );
+				sgs_membuf_appbuf( &B, C, hdr->buffer + hdr->bufpos, (size_t) readamt );
 			numbytes -= readamt;
 			hdr->bufpos += readamt;
 			if( numbytes <= 0 )
 				break;
 			if( !readamt && !fs_refill( C, hdr ) )
 			{
-				membuf_destroy( &B, C );
+				sgs_membuf_destroy( &B, C );
 				STDLIB_WARN( "unexpected read error" )
 			}
 		}
 	}
 	/* WP: conversion does not affect range; string limit */
 	sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
-	membuf_destroy( &B, C );
+	sgs_membuf_destroy( &B, C );
 	return 1;
 }
 
@@ -1127,7 +1125,7 @@ static int fs_check_cc( const char* str, sgs_SizeVal size, char c )
 }
 
 static int _stream_readcc( SGS_CTX, sgsstd_fmtstream_t* hdr,
-	MemBuf* B, sgs_SizeVal numbytes, char* ccstr, sgs_SizeVal ccsize )
+	sgs_MemBuf* B, sgs_SizeVal numbytes, char* ccstr, sgs_SizeVal ccsize )
 {
 	if( numbytes > 0 )
 	{
@@ -1139,7 +1137,7 @@ static int _stream_readcc( SGS_CTX, sgsstd_fmtstream_t* hdr,
 				char c = hdr->buffer[ hdr->bufpos ];
 				if( !fs_check_cc( ccstr, ccsize, c ) )
 					break;
-				membuf_appchr( B, C, c );
+				sgs_membuf_appchr( B, C, c );
 			}
 			numbytes -= readamt;
 			hdr->bufpos += readamt;
@@ -1160,7 +1158,7 @@ static int sgsstd_fmtstreamI_readcc( SGS_CTX )
 	int ret;
 	char* ccstr;
 	sgs_SizeVal numbytes = 0x7fffffff, ccsize;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	
 	SGSFS_IHDR( readcc )
 	
@@ -1174,7 +1172,7 @@ static int sgsstd_fmtstreamI_readcc( SGS_CTX )
 	if( ret )
 		/* WP: conversion does not affect range; string limit */
 		sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
-	membuf_destroy( &B, C );
+	sgs_membuf_destroy( &B, C );
 	return ret;
 }
 
@@ -1221,7 +1219,7 @@ static int sgsstd_fmtstreamI_read_real( SGS_CTX )
 {
 	SGSBOOL ret, conv = TRUE;
 	sgs_SizeVal numbytes = 128;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	
 	SGSFS_IHDR( read_real )
 	if( !sgs_LoadArgs( C, "|bl", &conv, &numbytes ) )
@@ -1231,16 +1229,16 @@ static int sgsstd_fmtstreamI_read_real( SGS_CTX )
 	if( ret )
 	{
 		if( conv )
-			sgs_PushReal( C, util_atof( B.ptr, B.size ) );
+			sgs_PushReal( C, sgs_util_atof( B.ptr, B.size ) );
 		else if( B.size > 0x7fffffff )
 		{
-			membuf_destroy( &B, C );
+			sgs_membuf_destroy( &B, C );
 			STDLIB_WARN( "read more data than allowed to store" );
 		}
 		else
 			sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
 	}
-	membuf_destroy( &B, C );
+	sgs_membuf_destroy( &B, C );
 	return ret;
 }
 
@@ -1248,7 +1246,7 @@ static int sgsstd_fmtstreamI_read_int( SGS_CTX )
 {
 	SGSBOOL ret, conv = TRUE;
 	sgs_SizeVal numbytes = 128;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	
 	SGSFS_IHDR( read_int )
 	if( !sgs_LoadArgs( C, "|bl", &conv, &numbytes ) )
@@ -1258,16 +1256,16 @@ static int sgsstd_fmtstreamI_read_int( SGS_CTX )
 	if( ret )
 	{
 		if( conv )
-			sgs_PushInt( C, util_atoi( B.ptr, B.size ) );
+			sgs_PushInt( C, sgs_util_atoi( B.ptr, B.size ) );
 		else if( B.size > 0x7fffffff )
 		{
-			membuf_destroy( &B, C );
+			sgs_membuf_destroy( &B, C );
 			STDLIB_WARN( "read more data than allowed to store" );
 		}
 		else
 			sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
 	}
-	membuf_destroy( &B, C );
+	sgs_membuf_destroy( &B, C );
 	return ret;
 }
 
@@ -1275,11 +1273,11 @@ static int sgsstd_fmtstreamI_read_binary_int( SGS_CTX )
 {
 	SGSBOOL ret, conv = TRUE;
 	sgs_SizeVal numbytes = 128;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	
 	SGSFS_IHDR( read_binary_int )
 	
-	membuf_appbuf( &B, C, "0b", 2 );
+	sgs_membuf_appbuf( &B, C, "0b", 2 );
 	
 	if( !sgs_LoadArgs( C, "|bl", &conv, &numbytes ) )
 		return 0;
@@ -1288,16 +1286,16 @@ static int sgsstd_fmtstreamI_read_binary_int( SGS_CTX )
 	if( ret )
 	{
 		if( conv )
-			sgs_PushInt( C, util_atoi( B.ptr, B.size ) );
+			sgs_PushInt( C, sgs_util_atoi( B.ptr, B.size ) );
 		else if( B.size > 0x7fffffff )
 		{
-			membuf_destroy( &B, C );
+			sgs_membuf_destroy( &B, C );
 			STDLIB_WARN( "read more data than allowed to store" );
 		}
 		else
 			sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
 	}
-	membuf_destroy( &B, C );
+	sgs_membuf_destroy( &B, C );
 	return ret;
 }
 
@@ -1305,11 +1303,11 @@ static int sgsstd_fmtstreamI_read_octal_int( SGS_CTX )
 {
 	SGSBOOL ret, conv = TRUE;
 	sgs_SizeVal numbytes = 128;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	
 	SGSFS_IHDR( read_octal_int )
 	
-	membuf_appbuf( &B, C, "0o", 2 );
+	sgs_membuf_appbuf( &B, C, "0o", 2 );
 	
 	if( !sgs_LoadArgs( C, "|bl", &conv, &numbytes ) )
 		return 0;
@@ -1318,16 +1316,16 @@ static int sgsstd_fmtstreamI_read_octal_int( SGS_CTX )
 	if( ret )
 	{
 		if( conv )
-			sgs_PushInt( C, util_atoi( B.ptr, B.size ) );
+			sgs_PushInt( C, sgs_util_atoi( B.ptr, B.size ) );
 		else if( B.size > 0x7fffffff )
 		{
-			membuf_destroy( &B, C );
+			sgs_membuf_destroy( &B, C );
 			STDLIB_WARN( "read more data than allowed to store" );
 		}
 		else
 			sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
 	}
-	membuf_destroy( &B, C );
+	sgs_membuf_destroy( &B, C );
 	return ret;
 }
 
@@ -1335,7 +1333,7 @@ static int sgsstd_fmtstreamI_read_decimal_int( SGS_CTX )
 {
 	SGSBOOL ret, conv = TRUE;
 	sgs_SizeVal numbytes = 128;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	
 	SGSFS_IHDR( read_decimal_int )
 	if( !sgs_LoadArgs( C, "|bl", &conv, &numbytes ) )
@@ -1345,16 +1343,16 @@ static int sgsstd_fmtstreamI_read_decimal_int( SGS_CTX )
 	if( ret )
 	{
 		if( conv )
-			sgs_PushInt( C, util_atoi( B.ptr, B.size ) );
+			sgs_PushInt( C, sgs_util_atoi( B.ptr, B.size ) );
 		else if( B.size > 0x7fffffff )
 		{
-			membuf_destroy( &B, C );
+			sgs_membuf_destroy( &B, C );
 			STDLIB_WARN( "read more data than allowed to store" );
 		}
 		else
 			sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
 	}
-	membuf_destroy( &B, C );
+	sgs_membuf_destroy( &B, C );
 	return ret;
 }
 
@@ -1362,11 +1360,11 @@ static int sgsstd_fmtstreamI_read_hex_int( SGS_CTX )
 {
 	SGSBOOL ret, conv = TRUE;
 	sgs_SizeVal numbytes = 128;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	
 	SGSFS_IHDR( read_hex_int )
 	
-	membuf_appbuf( &B, C, "0x", 2 );
+	sgs_membuf_appbuf( &B, C, "0x", 2 );
 	
 	if( !sgs_LoadArgs( C, "|bl", &conv, &numbytes ) )
 		return 0;
@@ -1375,16 +1373,16 @@ static int sgsstd_fmtstreamI_read_hex_int( SGS_CTX )
 	if( ret )
 	{
 		if( conv )
-			sgs_PushInt( C, util_atoi( B.ptr, B.size ) );
+			sgs_PushInt( C, sgs_util_atoi( B.ptr, B.size ) );
 		else if( B.size > 0x7fffffff )
 		{
-			membuf_destroy( &B, C );
+			sgs_membuf_destroy( &B, C );
 			STDLIB_WARN( "read more data than allowed to store" );
 		}
 		else
 			sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
 	}
-	membuf_destroy( &B, C );
+	sgs_membuf_destroy( &B, C );
 	return ret;
 }
 
@@ -1515,8 +1513,8 @@ static int srt_call( SGS_CTX, sgs_VarObj* data )
 	else
 	{
 		/* WP: string limit */
-		sgs_SizeVal rn = MIN( (sgs_SizeVal) srt->S.data.S->size - srt->off, (sgs_SizeVal) amt );
-		sgs_PushStringBuf( C, str_cstr( srt->S.data.S ) + srt->off, rn );
+		sgs_SizeVal rn = SGS_MIN( (sgs_SizeVal) srt->S.data.S->size - srt->off, (sgs_SizeVal) amt );
+		sgs_PushStringBuf( C, sgs_str_cstr( srt->S.data.S ) + srt->off, rn );
 		srt->off += rn;
 		return 1;
 	}
@@ -1549,7 +1547,7 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 	
 	srt = (stringread_t*) sgs_PushObjectIPA( C, sizeof(stringread_t), srt_iface );
 	sgs_GetStackItem( C, 0, &srt->S );
-	sgs_BreakIf( srt->S.type != SVT_STRING );
+	sgs_BreakIf( srt->S.type != SGS_VT_STRING );
 	srt->off = (sgs_SizeVal) off;
 	sgs_StoreItem( C, 0 );
 	sgs_SetStackSize( C, 1 );
@@ -1610,7 +1608,7 @@ static int sgsstd_fmt_file_parser( SGS_CTX )
 	
 	frt = (fileread_t*) sgs_PushObjectIPA( C, sizeof(fileread_t), frt_iface );
 	sgs_GetStackItem( C, 0, &frt->F );
-	sgs_BreakIf( frt->F.type != SVT_OBJECT );
+	sgs_BreakIf( frt->F.type != SGS_VT_OBJECT );
 	sgs_StoreItem( C, 0 );
 	sgs_SetStackSize( C, 1 );
 	sgs_PushInt( C, bufsize );
@@ -1650,7 +1648,7 @@ static const sgs_RegFuncConst f_fconsts[] =
 SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
 {
 	int ret;
-	ret = sgs_RegFuncConsts( C, f_fconsts, ARRAY_SIZE( f_fconsts ) );
+	ret = sgs_RegFuncConsts( C, f_fconsts, SGS_ARRAY_SIZE( f_fconsts ) );
 	return ret;
 }
 
@@ -2059,7 +2057,7 @@ static int sgsstd_fileI_close( SGS_CTX )
 
 static int sgsstd_fileI_read( SGS_CTX )
 {
-	MemBuf mb = membuf_create();
+	sgs_MemBuf mb = sgs_membuf_create();
 	char bfr[ 1024 ];
 	sgs_Int size;
 	FILE_IHDR( read )
@@ -2073,19 +2071,19 @@ static int sgsstd_fileI_read( SGS_CTX )
 	FVNO_BEGIN
 		while( size > 0 )
 		{
-			size_t numread = fread( bfr, 1, (size_t) MIN( size, 1024 ), FVAR );
+			size_t numread = fread( bfr, 1, (size_t) SGS_MIN( size, 1024 ), FVAR );
 			if( numread <= 0 )
 			{
 				if( ferror( FVAR ) )
 					sgs_Errno( C, 0 );
 				break;
 			}
-			membuf_appbuf( &mb, C, bfr, numread );
+			sgs_membuf_appbuf( &mb, C, bfr, numread );
 			size -= 1024;
 		}
 		sgs_BreakIf( mb.size > 0x7fffffff );
 		sgs_PushStringBuf( C, mb.ptr, (sgs_SizeVal) mb.size );
-		membuf_destroy( &mb, C );
+		sgs_membuf_destroy( &mb, C );
 		sgs_Errno( C, 1 );
 		return 1;
 	FVNO_END( write )
@@ -2187,7 +2185,7 @@ static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* obj )
 static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	UNUSED( obj );
-	if( type == SVT_BOOL )
+	if( type == SGS_VT_BOOL )
 	{
 		sgs_PushBool( C, !!IFVAR );
 		return SGS_SUCCESS;
@@ -2352,9 +2350,9 @@ static const sgs_RegFuncConst i_fconsts[] =
 SGSRESULT sgs_LoadLib_IO( SGS_CTX )
 {
 	int ret;
-	ret = sgs_RegRealConsts( C, i_rconsts, ARRAY_SIZE( i_rconsts ) );
+	ret = sgs_RegRealConsts( C, i_rconsts, SGS_ARRAY_SIZE( i_rconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegFuncConsts( C, i_fconsts, ARRAY_SIZE( i_fconsts ) );
+	ret = sgs_RegFuncConsts( C, i_fconsts, SGS_ARRAY_SIZE( i_fconsts ) );
 	return ret;
 }
 
@@ -2503,9 +2501,9 @@ static const sgs_RegFuncConst m_fconsts[] =
 SGSRESULT sgs_LoadLib_Math( SGS_CTX )
 {
 	int ret;
-	ret = sgs_RegRealConsts( C, m_rconsts, ARRAY_SIZE( m_rconsts ) );
+	ret = sgs_RegRealConsts( C, m_rconsts, SGS_ARRAY_SIZE( m_rconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegFuncConsts( C, m_fconsts, ARRAY_SIZE( m_fconsts ) );
+	ret = sgs_RegFuncConsts( C, m_fconsts, SGS_ARRAY_SIZE( m_fconsts ) );
 	return ret;
 }
 
@@ -2641,7 +2639,7 @@ static int sgsstd_os_date_string( SGS_CTX )
 	sgs_SizeVal fmtsize;
 	sgs_Int uts;
 	struct tm T;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	int ssz = sgs_StackSize( C );
 	
 	SGSFN( "os_date_string" );
@@ -2684,7 +2682,7 @@ static int sgsstd_os_date_string( SGS_CTX )
 						char ft_fmt[3] = { '%', 0, 0 };
 						ft_fmt[1] = c;
 						strftime( pbuf, 256, ft_fmt, &T );
-						membuf_appbuf( &B, C, pbuf, strlen( pbuf ) );
+						sgs_membuf_appbuf( &B, C, pbuf, strlen( pbuf ) );
 					}
 					break;
 				case 'C': put2digs( swp, Y / 100 ); sz = 2; break;
@@ -2708,7 +2706,7 @@ static int sgsstd_os_date_string( SGS_CTX )
 					sz = 3; break;
 				case 'm': put2digs( swp, M ); sz = 2; break;
 				case 'M': put2digs( swp, m ); sz = 2; break;
-				case 'p': membuf_appbuf( &B, C, &"AMPM"[ H/12*2 ], 2 ); break;
+				case 'p': sgs_membuf_appbuf( &B, C, &"AMPM"[ H/12*2 ], 2 ); break;
 				case 'R':
 					put2digs( swp, H ); swp[2] = ':';
 					put2digs( swp + 3, m ); sz = 5;
@@ -2736,24 +2734,24 @@ static int sgsstd_os_date_string( SGS_CTX )
 					sprintf( swp, "%" PRId64, (sgs_Int) ttv );
 					sz = (int) strlen( swp ); break;
 				/* leftovers */
-				case '%': membuf_appchr( &B, C, '%' ); break;
-				default: membuf_appbuf( &B, C, fmt - 2, 2 ); break;
+				case '%': sgs_membuf_appchr( &B, C, '%' ); break;
+				default: sgs_membuf_appbuf( &B, C, fmt - 2, 2 ); break;
 				}
 				if( sz )
-					membuf_appbuf( &B, C, swp, (size_t) sz );
+					sgs_membuf_appbuf( &B, C, swp, (size_t) sz );
 			}
 			else
-				membuf_appchr( &B, C, c );
+				sgs_membuf_appchr( &B, C, c );
 		}
 		
 		if( B.size > 0x7fffffff )
 		{
-			membuf_destroy( &B, C );
+			sgs_membuf_destroy( &B, C );
 			STDLIB_WARN( "generated more string data than allowed to store" );
 		}
 		/* WP: error condition */
 		sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
-		membuf_destroy( &B, C );
+		sgs_membuf_destroy( &B, C );
 		return 1;
 	}
 }
@@ -2914,9 +2912,9 @@ static const sgs_RegFuncConst o_fconsts[] =
 SGSRESULT sgs_LoadLib_OS( SGS_CTX )
 {
 	int ret;
-	ret = sgs_RegFuncConsts( C, o_fconsts, ARRAY_SIZE( o_fconsts ) );
+	ret = sgs_RegFuncConsts( C, o_fconsts, SGS_ARRAY_SIZE( o_fconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegIntConsts( C, o_iconsts, ARRAY_SIZE( o_iconsts ) );
+	ret = sgs_RegIntConsts( C, o_iconsts, SGS_ARRAY_SIZE( o_iconsts ) );
 	return ret;
 }
 
@@ -3124,9 +3122,9 @@ static const sgs_RegFuncConst r_fconsts[] =
 SGSRESULT sgs_LoadLib_RE( SGS_CTX )
 {
 	int ret;
-	ret = sgs_RegIntConsts( C, r_iconsts, ARRAY_SIZE( r_iconsts ) );
+	ret = sgs_RegIntConsts( C, r_iconsts, SGS_ARRAY_SIZE( r_iconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegFuncConsts( C, r_fconsts, ARRAY_SIZE( r_fconsts ) );
+	ret = sgs_RegFuncConsts( C, r_fconsts, SGS_ARRAY_SIZE( r_fconsts ) );
 	return ret;
 }
 
@@ -3158,12 +3156,12 @@ static int sgsstd_string_cut( SGS_CTX )
 	if( sgs_LoadArgsExt( C, 2, "|ii", &i2, &flags ) < 1 )
 		return 0;
 	
-	if( HAS_FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
+	if( SGS_HAS_FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
 		STDLIB_WARN( "detected negative indices" );
 	
 	i1 = i1 < 0 ? size + i1 : i1;
 	i2 = i2 < 0 ? size + i2 : i2;
-	if( HAS_FLAG( flags, sgsSTRICT_RANGES ) &&
+	if( SGS_HAS_FLAG( flags, sgsSTRICT_RANGES ) &&
 		( i1 > i2 || i1 < 0 || i2 < 0 || i1 >= size || i2 >= size ) )
 		STDLIB_WARN( "invalid character range" );
 	
@@ -3171,8 +3169,8 @@ static int sgsstd_string_cut( SGS_CTX )
 		sgs_PushStringBuf( C, "", 0 );
 	else
 	{
-		i1 = MAX( 0, MIN( i1, size - 1 ) );
-		i2 = MAX( 0, MIN( i2, size - 1 ) );
+		i1 = SGS_MAX( 0, SGS_MIN( i1, size - 1 ) );
+		i2 = SGS_MAX( 0, SGS_MIN( i2, size - 1 ) );
 		sgs_PushStringBuf( C, str + i1, (sgs_SizeVal) i2 - (sgs_SizeVal) i1 + 1 );
 	}
 	return 1;
@@ -3193,12 +3191,12 @@ static int sgsstd_string_part( SGS_CTX )
 	if( sgs_LoadArgsExt( C, 2, "|ii", &i2, &flags ) < 1 )
 		return 0;
 	
-	if( HAS_FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
+	if( SGS_HAS_FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
 		STDLIB_WARN( "detected negative indices" );
 	
 	i1 = i1 < 0 ? size + i1 : i1;
 	i2 = i2 < 0 ? size + i2 : i2;
-	if( HAS_FLAG( flags, sgsSTRICT_RANGES ) &&
+	if( SGS_HAS_FLAG( flags, sgsSTRICT_RANGES ) &&
 		( i1 < 0 || i1 + i2 < 0 || i2 < 0 || i1 >= size || i1 + i2 > size ) )
 		STDLIB_WARN( "invalid character range" );
 	
@@ -3207,8 +3205,8 @@ static int sgsstd_string_part( SGS_CTX )
 	else
 	{
 		i2 += i1 - 1;
-		i1 = MAX( 0, MIN( i1, size - 1 ) );
-		i2 = MAX( 0, MIN( i2, size - 1 ) );
+		i1 = SGS_MAX( 0, SGS_MIN( i1, size - 1 ) );
+		i2 = SGS_MAX( 0, SGS_MIN( i2, size - 1 ) );
 		sgs_PushStringBuf( C, str + i1, (sgs_SizeVal) i2 - (sgs_SizeVal) i1 + 1 );
 	}
 	return 1;
@@ -3244,7 +3242,7 @@ static int sgsstd_string_pad( SGS_CTX )
 	if( !sgs_LoadArgs( C, "mi|mi", &str, &size, &tgtsize, &pad, &padsize, &flags ) )
 		return 0;
 	
-	if( tgtsize <= size || !HAS_ANY_FLAG( flags, sgsLEFT | sgsRIGHT ) )
+	if( tgtsize <= size || !SGS_HAS_ANY_FLAG( flags, sgsLEFT | sgsRIGHT ) )
 	{
 		sgs_PushItem( C, 0 );
 		return 1;
@@ -3252,9 +3250,9 @@ static int sgsstd_string_pad( SGS_CTX )
 	
 	sgs_PushStringBuf( C, NULL, (sgs_SizeVal) tgtsize );
 	sout = sgs_GetStringPtr( C, -1 );
-	if( HAS_FLAG( flags, sgsLEFT ) )
+	if( SGS_HAS_FLAG( flags, sgsLEFT ) )
 	{
-		if( HAS_FLAG( flags, sgsRIGHT ) )
+		if( SGS_HAS_FLAG( flags, sgsRIGHT ) )
 		{
 			sgs_Int pp = tgtsize - size;
 			lpad = pp / 2 + pp % 2;
@@ -3349,7 +3347,7 @@ static int sgsstd_string_find( SGS_CTX )
 	
 	strend = str + size - subsize;
 	ostr = str;
-	str += from >= 0 ? from : MAX( 0, size + from );
+	str += from >= 0 ? from : SGS_MAX( 0, size + from );
 	while( str <= strend )
 	{
 		/* WP: string limit */
@@ -3379,8 +3377,8 @@ static int sgsstd_string_find_rev( SGS_CTX )
 	
 	ostr = str;
 	str += from >= 0 ?
-		MIN( from, size - subsize ) :
-		MIN( size - subsize, size + from );
+		SGS_MIN( from, size - subsize ) :
+		SGS_MIN( size - subsize, size + from );
 	while( str >= ostr )
 	{
 		/* WP: string limit */
@@ -3559,7 +3557,7 @@ static int sgsstd_string_replace( SGS_CTX )
 	isarr2 = sgs_IsObject( C, 2, sgsstd_array_iface );
 	
 	if( !sgs_ParseString( C, 0, &str, &size ) )
-		return sgs_FuncArgError( C, 0, SVT_STRING, 0 );
+		return sgs_FuncArgError( C, 0, SGS_VT_STRING, 0 );
 	
 	if( isarr1 && isarr2 )
 	{
@@ -3567,7 +3565,7 @@ static int sgsstd_string_replace( SGS_CTX )
 	}
 	
 	if( isarr2 )
-		return sgs_FuncArgError( C, 2, SVT_STRING, 0 );
+		return sgs_FuncArgError( C, 2, SGS_VT_STRING, 0 );
 	
 	ret = sgs_ParseString( C, 2, &rep, &repsize );
 	if( isarr1 && ret )
@@ -3585,16 +3583,16 @@ static int sgsstd_string_replace( SGS_CTX )
 		return _stringrep_ss( C, str, size, sub, subsize, rep, repsize );
 	}
 	
-	if( sgs_ItemType( C, 1 ) != SVT_STRING && !isarr1 )
+	if( sgs_ItemType( C, 1 ) != SGS_VT_STRING && !isarr1 )
 		return sgs_ArgErrorExt( C, 1, 0, "array or string", "" );
 	if( isarr1 )
 	{
-		if( sgs_ItemType( C, 2 ) != SVT_STRING && !isarr2 )
+		if( sgs_ItemType( C, 2 ) != SGS_VT_STRING && !isarr2 )
 			return sgs_ArgErrorExt( C, 2, 0, "array or string", "" );
 	}
 	else
 	{
-		if( sgs_ItemType( C, 2 ) != SVT_STRING )
+		if( sgs_ItemType( C, 2 ) != SGS_VT_STRING )
 			return sgs_ArgErrorExt( C, 2, 0, "string", "" );
 	}
 	STDLIB_WARN( "unhandled argument error" )
@@ -3651,19 +3649,19 @@ static int sgsstd_string_trim( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m|mi", &str, &size, &list, &listsize, &flags ) )
 		return 0;
 	
-	if( !HAS_ANY_FLAG( flags, sgsLEFT | sgsRIGHT ) )
+	if( !SGS_HAS_ANY_FLAG( flags, sgsLEFT | sgsRIGHT ) )
 	{
 		sgs_PushItem( C, 0 );
 		return 1;
 	}
 	
 	strend = str + size;
-	if( HAS_FLAG( flags, sgsLEFT ) )
+	if( SGS_HAS_FLAG( flags, sgsLEFT ) )
 	{
 		while( str < strend && stdlib_isoneof( *str, list, listsize ) )
 			str++;
 	}
-	if( HAS_FLAG( flags, sgsRIGHT ) )
+	if( SGS_HAS_FLAG( flags, sgsRIGHT ) )
 	{
 		while( str < strend && stdlib_isoneof( *(strend-1), list, listsize ) )
 			strend--;
@@ -3734,11 +3732,11 @@ static int sgsstd_string_compare( SGS_CTX )
 	{
 		if( max > 0 )
 		{
-			str1size = MIN( str1size, max );
-			str2size = MIN( str2size, max );
+			str1size = SGS_MIN( str1size, max );
+			str2size = SGS_MIN( str2size, max );
 		}
 		/* WP: string limit */
-		ret = memcmp( str1, str2, (size_t) MIN( str1size, str2size ) );
+		ret = memcmp( str1, str2, (size_t) SGS_MIN( str1size, str2size ) );
 		if( !ret )
 		{
 			if( str1size < str2size ) ret = -1;
@@ -3963,7 +3961,7 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 	int cnt;
 	char tmp[ 4 ];
 	sgs_Int cp;
-	MemBuf buf = membuf_create();
+	sgs_MemBuf buf = sgs_membuf_create();
 	sgs_SizeVal i, asz;
 	
 	SGSFN( "string_utf8_encode" );
@@ -3972,7 +3970,7 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 	if( asz >= 0 )
 	{
 		/* should stick with one allocation for most text data */
-		membuf_reserve( &buf, C, (size_t) ( asz * 1.3 ) );
+		sgs_membuf_reserve( &buf, C, (size_t) ( asz * 1.3 ) );
 		for( i = 0; i < asz; ++i )
 		{
 			if( SGS_FAILED( sgs_PushNumIndex( C, 0, i ) ) )
@@ -3985,7 +3983,7 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 				cnt = SGS_UNICODE_INVCHAR_LEN;
 			}
 			/* WP: pointless */
-			membuf_appbuf( &buf, C, tmp, (size_t) cnt );
+			sgs_membuf_appbuf( &buf, C, tmp, (size_t) cnt );
 			sgs_Pop( C, 1 );
 		}
 	}
@@ -3993,7 +3991,7 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 	{
 		asz = sgs_StackSize( C );
 		/* should stick with one allocation for most text data */
-		membuf_reserve( &buf, C, (size_t) ( asz * 1.3 ) );
+		sgs_membuf_reserve( &buf, C, (size_t) ( asz * 1.3 ) );
 		for( i = 0; i < asz; ++i )
 		{
 			cp = sgs_GetInt( C, i );
@@ -4004,23 +4002,23 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 				cnt = SGS_UNICODE_INVCHAR_LEN;
 			}
 			/* WP: pointless */
-			membuf_appbuf( &buf, C, tmp, (size_t) cnt );
+			sgs_membuf_appbuf( &buf, C, tmp, (size_t) cnt );
 		}
 	}
 	
 	if( buf.size > 0x7fffffff )
 	{
-		membuf_destroy( &buf, C );
+		sgs_membuf_destroy( &buf, C );
 		STDLIB_WARN( "generated more string data than allowed to store" );
 	}
 	
 	/* WP: error condition */
 	sgs_PushStringBuf( C, buf.ptr, (sgs_SizeVal) buf.size );
-	membuf_destroy( &buf, C );
+	sgs_membuf_destroy( &buf, C );
 	return 1;
 	
 fail:
-	membuf_destroy( &buf, C );
+	sgs_membuf_destroy( &buf, C );
 	STDLIB_WARN( "failed to read the array" )
 }
 
@@ -4080,12 +4078,12 @@ static int sgsstd_string_utf8_length( SGS_CTX )
 			return 0;
 	}
 	
-	if( HAS_FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
+	if( SGS_HAS_FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
 		STDLIB_WARN( "detected negative indices" );
 	
 	i1 = i1 < 0 ? size + i1 : i1;
 	i2 = i2 < 0 ? size + i2 : i2;
-	if( HAS_FLAG( flags, sgsSTRICT_RANGES ) &&
+	if( SGS_HAS_FLAG( flags, sgsSTRICT_RANGES ) &&
 		( i1 < 0 || i1 + i2 < 0 || i2 < 0 || i1 >= size || i1 + i2 > size ) )
 		STDLIB_WARN( "invalid character range" );
 	
@@ -4094,8 +4092,8 @@ static int sgsstd_string_utf8_length( SGS_CTX )
 	else
 	{
 		i2 += i1 - 1;
-		i1 = MAX( 0, MIN( i1, size - 1 ) );
-		i2 = MAX( 0, MIN( i2, size - 1 ) );
+		i1 = SGS_MAX( 0, SGS_MIN( i1, size - 1 ) );
+		i2 = SGS_MAX( 0, SGS_MIN( i2, size - 1 ) );
 		
 		str += i1;
 		size = i2 - i1 + 1;
@@ -4133,7 +4131,7 @@ static int utf8it_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	U8I_HDR;
 	sgs_Variable var;
-	var.type = SVT_STRING;
+	var.type = SGS_VT_STRING;
 	var.data.S = IT->str;
 	sgs_Release( C, &var );
 	return SGS_SUCCESS;
@@ -4146,7 +4144,7 @@ static int utf8it_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "string" )
 		{
 			sgs_Variable var;
-			var.type = SVT_STRING;
+			var.type = SGS_VT_STRING;
 			var.data.S = IT->str;
 			SGS_RETURN_VAR( &var );
 		}
@@ -4178,7 +4176,7 @@ static int utf8it_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	{
 		utf8iter* it2;
 		sgs_Variable var;
-		var.type = SVT_STRING;
+		var.type = SGS_VT_STRING;
 		var.data.S = IT->str;
 		sgs_Acquire( C, &var );
 		it2 = (utf8iter*) sgs_PushObjectIPA( C, sizeof(utf8iter), utf8_iterator_iface );
@@ -4198,7 +4196,7 @@ static int utf8it_serialize( SGS_CTX, sgs_VarObj* obj )
 	int ret;
 	U8I_HDR;
 	sgs_Variable var;
-	var.type = SVT_STRING;
+	var.type = SGS_VT_STRING;
 	var.data.S = IT->str;
 	sgs_PushVariable( C, &var );
 	if( SGS_FAILED( ret = sgs_Serialize( C ) ) )
@@ -4220,7 +4218,7 @@ static int utf8it_getnext( SGS_CTX, sgs_VarObj* obj, int what )
 		if( (sgs_SizeVal) IT->str->size <= IT->i )
 			return 0;
 		/* WP: string limit */
-		int ret = sgs_utf8_decode( str_cstr( IT->str ) + IT->i, IT->str->size + (size_t) IT->i, &outchar );
+		int ret = sgs_utf8_decode( sgs_str_cstr( IT->str ) + IT->i, IT->str->size + (size_t) IT->i, &outchar );
 		ret = abs( ret );
 		IT->i += (uint32_t) ret;
 		return IT->i < (sgs_SizeVal) IT->str->size ? 1 : 0;
@@ -4233,7 +4231,7 @@ static int utf8it_getnext( SGS_CTX, sgs_VarObj* obj, int what )
 			sgs_PushInt( C, IT->i );
 		if( what & SGS_GETNEXT_VALUE )
 		{
-			sgs_utf8_decode( str_cstr( IT->str ) + IT->i, IT->str->size + (size_t) IT->i, &outchar );
+			sgs_utf8_decode( sgs_str_cstr( IT->str ) + IT->i, IT->str->size + (size_t) IT->i, &outchar );
 			sgs_PushInt( C, outchar );
 		}
 		return SGS_SUCCESS;
@@ -4269,16 +4267,16 @@ static int sgsstd_string_format( SGS_CTX )
 {
 	char* fmt, *fmtend;
 	sgs_SizeVal fmtsize;
-	MemBuf B = membuf_create();
+	sgs_MemBuf B = sgs_membuf_create();
 	int numitem = 0;
 	
 	SGSFN( "string_format" );
 	
-	if( sgs_ItemType( C, 0 ) == SVT_INT || sgs_ItemType( C, 0 ) == SVT_REAL )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT || sgs_ItemType( C, 0 ) == SGS_VT_REAL )
 	{
 		sgs_Int numbytes = sgs_GetInt( C, 0 );
 		if( numbytes > 0 && numbytes < 0x7fffffff )
-			membuf_reserve( &B, C, (size_t) numbytes );
+			sgs_membuf_reserve( &B, C, (size_t) numbytes );
 		
 		/* acknowledge the existence of argument 0, but only here */
 		if( !sgs_LoadArgs( C, ">m", &fmt, &fmtsize ) )
@@ -4307,7 +4305,7 @@ static int sgsstd_string_format( SGS_CTX )
 			
 			if( tcp == fmt )
 			{
-				membuf_appchr( &B, C, c );
+				sgs_membuf_appchr( &B, C, c );
 				if( *fmt == '{' )
 					fmt++;
 				continue;
@@ -4319,7 +4317,7 @@ static int sgsstd_string_format( SGS_CTX )
 				fmt = F.end;
 				if( !ret )
 				{
-					membuf_destroy( &B, C );
+					sgs_membuf_destroy( &B, C );
 					sgs_Msg( C, SGS_WARNING, 
 						"parsing error in item %d - failed to parse format part", numitem );
 					return 0;
@@ -4327,7 +4325,7 @@ static int sgsstd_string_format( SGS_CTX )
 			}
 			else if( *fmt != '}' )
 			{
-				membuf_destroy( &B, C );
+				sgs_membuf_destroy( &B, C );
 				sgs_Msg( C, SGS_WARNING, 
 					"parsing error in item %d - unexpected symbol (%c)", numitem, *fmt );
 				return 0;
@@ -4349,17 +4347,17 @@ static int sgsstd_string_format( SGS_CTX )
 			}
 		}
 		else
-			membuf_appchr( &B, C, c );
+			sgs_membuf_appchr( &B, C, c );
 	}
 	
 	if( B.size > 0x7fffffff )
 	{
-		membuf_destroy( &B, C );
+		sgs_membuf_destroy( &B, C );
 		STDLIB_WARN( "generated more string data than allowed to store" );
 	}
 	/* WP: error condition */
 	sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
-	membuf_destroy( &B, C );
+	sgs_membuf_destroy( &B, C );
 	return 1;
 }
 
@@ -4395,9 +4393,9 @@ static const sgs_RegFuncConst s_fconsts[] =
 SGSRESULT sgs_LoadLib_String( SGS_CTX )
 {
 	int ret;
-	ret = sgs_RegIntConsts( C, s_iconsts, ARRAY_SIZE( s_iconsts ) );
+	ret = sgs_RegIntConsts( C, s_iconsts, SGS_ARRAY_SIZE( s_iconsts ) );
 	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegFuncConsts( C, s_fconsts, ARRAY_SIZE( s_fconsts ) );
+	ret = sgs_RegFuncConsts( C, s_fconsts, SGS_ARRAY_SIZE( s_fconsts ) );
 	return ret;
 }
 
