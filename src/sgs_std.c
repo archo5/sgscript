@@ -421,7 +421,7 @@ static int sgsstd_arrayI_sort_mapped( SGS_CTX )
 		sgsarr_smi* smis = sgs_Alloc_n( sgsarr_smi, (size_t) asize );
 		for( i = 0; i < asize; ++i )
 		{
-			if( sgs_PushNumIndex( C, 0, i ) )
+			if( SGS_FAILED( sgs_PushNumIndex( C, 0, i ) ) )
 			{
 				sgs_Dealloc( smis );
 				STDLIB_WARN( "error in mapping array" )
@@ -1531,7 +1531,7 @@ static int sgsstd_array_filter( SGS_CTX )
 			{
 				sgs_PushInt( C, off );
 				sgs_PushItem( C, 1 );
-				if( sgs_Call( C, 2, 1 ) )
+				if( sgs_Call( C, 2, 1 ) != SGS_SUCCESS )
 					STDLIB_WARN( "failed to call the filter function" )
 			}
 			use = sgs_GetBool( C, -1 );
@@ -1569,7 +1569,7 @@ static int sgsstd_array_process( SGS_CTX )
 			sgs_PushVariable( C, SGSARR_PTR( hdr ) + off );
 			sgs_PushInt( C, off );
 			sgs_PushItem( C, 1 );
-			if( sgs_Call( C, 2, 1 ) )
+			if( sgs_Call( C, 2, 1 ) != SGS_SUCCESS )
 				STDLIB_WARN( "failed to call the processing function" )
 			sgs_StoreNumIndex( C, 0, off );
 			off++;
@@ -1592,14 +1592,14 @@ static int sgsstd_dict_filter( SGS_CTX )
 	sgs_PushIterator( C, 0 );
 	while( sgs_IterAdvance( C, -1 ) > 0 )
 	{
-		if( sgs_IterPushData( C, -1, 1, 1 ) )
+		if( sgs_IterPushData( C, -1, 1, 1 ) != SGS_SUCCESS )
 			STDLIB_WARN( "failed to read iterator (was dict changed in callback?)" )
 		if( cset )
 		{
 			sgs_PushItem( C, -1 );
 			sgs_PushItem( C, -3 );
 			sgs_PushItem( C, 1 );
-			if( sgs_Call( C, 2, 1 ) )
+			if( sgs_Call( C, 2, 1 ) != SGS_SUCCESS )
 				STDLIB_WARN( "failed to call the filter function" )
 		}
 		use = sgs_GetBool( C, -1 );
@@ -1625,11 +1625,11 @@ static int sgsstd_dict_process( SGS_CTX )
 	sgs_PushIterator( C, 0 );
 	while( sgs_IterAdvance( C, -1 ) > 0 )
 	{
-		if( sgs_IterPushData( C, -1, 1, 1 ) )
+		if( sgs_IterPushData( C, -1, 1, 1 ) != SGS_SUCCESS )
 			STDLIB_WARN( "failed to read iterator (was dict changed in callback?)" )
 		sgs_PushItem( C, -2 );
 		sgs_PushItem( C, 1 );
-		if( sgs_Call( C, 2, 1 ) )
+		if( sgs_Call( C, 2, 1 ) != SGS_SUCCESS )
 			STDLIB_WARN( "failed to call the processing function" )
 		/* src-dict, callable, ... iterator, key, proc.val. */
 		sgs_StoreIndexII( C, 0, -2, SGS_FALSE );
@@ -2449,7 +2449,7 @@ static void sgsstd_pcall_print( void* data, SGS_CTX, int type, const char* messa
 		}
 		else
 		{
-			if( ret )
+			if( ret == SGS_SUCABRT )
 				sgs_Abort( C );
 			ret = (int) sgs_GetInt( C, -1 );
 			sgs_Pop( C, 1 );

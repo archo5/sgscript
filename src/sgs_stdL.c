@@ -1576,7 +1576,7 @@ static int frt_call( SGS_CTX, sgs_VarObj* data )
 	sgs_PushVariable( C, &frt->F );
 	sgs_PushInt( C, amt );
 	sgs_PushCFunction( C, sgsstd_fileI_read );
-	if( sgs_ThisCall( C, 1, 1 ) )
+	if( sgs_ThisCall( C, 1, 1 ) != SGS_SUCCESS )
 		return SGS_EINPROC;
 	return 1;
 }
@@ -3492,7 +3492,7 @@ static int _stringrep_as
 	
 	for( i = 0; i < arrsize; ++i )
 	{
-		if( sgs_PushNumIndex( C, 1, i ) )   goto fail;
+		if( sgs_PushNumIndex( C, 1, i ) != SGS_SUCCESS )   goto fail;
 		if( !sgs_ParseString( C, -1, &substr, &subsize ) )
 			goto fail;
 		
@@ -3522,11 +3522,11 @@ static int _stringrep_aa( SGS_CTX, char* str, int32_t size )
 	
 	for( i = 0; i < arrsize; ++i )
 	{
-		if( sgs_PushNumIndex( C, 1, i ) )   goto fail;
+		if( sgs_PushNumIndex( C, 1, i ) != SGS_SUCCESS )   goto fail;
 		if( !sgs_ParseString( C, -1, &substr, &subsize ) )
 			goto fail;
 		
-		if( sgs_PushNumIndex( C, 2, i % reparrsize ) )   goto fail;
+		if( sgs_PushNumIndex( C, 2, i % reparrsize ) != SGS_SUCCESS )   goto fail;
 		if( !sgs_ParseString( C, -1, &repstr, &repsize ) )
 			goto fail;
 		
@@ -3800,7 +3800,7 @@ static int sgsstd_string_implode( SGS_CTX )
 	{
 		if( i )
 			sgs_PushItem( C, 1 );
-		if( sgs_PushNumIndex( C, 0, i ) )
+		if( sgs_PushNumIndex( C, 0, i ) != SGS_SUCCESS )
 			STDLIB_WARN( "failed to read from array" )
 	}
 	sgs_StringConcat( C, i * 2 - 1 );

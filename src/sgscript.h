@@ -38,8 +38,8 @@ extern "C" {
 
 
 /* Output codes */
-#define SGS_STKSUC   1  /* 'stack success' (no errors, returning 1 variable on stack) */
 #define SGS_SUCCESS  0  /* success (no errors) */
+#define SGS_SUCABRT  1  /* success (aborted) */
 #define SGS_ENOTFND -1  /* item was not found */
 #define SGS_ECOMP   -2  /* compile error */
 #define SGS_ENOTOBJ -3  /* argument was not an object */

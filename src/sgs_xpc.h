@@ -69,7 +69,7 @@ typedef unsigned __int64 uint64_t;
 #    define mkdir _mkdir
 #    define rmdir _rmdir
 #    define stat _stat
-#    include "../ext/msvc/dirent.h"
+#    include "sgs_msvc_dirent.h"
 #  else
 #    include <unistd.h>
 #    include <dirent.h>

@@ -169,8 +169,8 @@ const char* sgs_CodeString( int type, int val )
 	{
 		if( val < SGS_EINPROC )
 			return "UNKNOWN ERROR";
-		if( val > SGS_SUCCESS )
-			val = SGS_SUCCESS;
+		if( SGS_SUCCEEDED( val ) )
+			val = 0;
 		return sgs_ErrNames[  -  val ];
 	}
 	else if( type == SGS_CODE_VT )
