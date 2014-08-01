@@ -653,22 +653,18 @@ int nom_method_B( SGS_CTX )
 	return 1;
 }
 
+int nom_iface( SGS_CTX );
 int nom_ctor( SGS_CTX )
 {
 	SGSFN( "nom::nom" );
-	sgs_Method( C );
-	if( sgs_ItemType( C, 0 ) != SGS_VT_OBJECT )
-		return sgs_Msg( C, SGS_WARNING, "metaobj(this) is not an object" );
+	sgs_PushInterface( C, nom_iface );
 	sgs_PushDict( C, 0 );
-	sgs_ObjSetMetaObj( C, sgs_GetObjectStruct( C, -1 ), sgs_GetObjectStruct( C, 0 ) );
+	sgs_ObjSetMetaObj( C, sgs_GetObjectStruct( C, -1 ), sgs_GetObjectStruct( C, -2 ) );
 	return 1;
 }
 
-DEFINE_TEST( native_obj_meta )
+int nom_iface( SGS_CTX )
 {
-	SGS_CTX = get_context();
-	
-	/* create metaobject */
 	sgs_PushString( C, "method_A" );
 	sgs_PushCFunction( C, nom_method_A );
 	sgs_PushString( C, "method_B" );
@@ -676,10 +672,17 @@ DEFINE_TEST( native_obj_meta )
 	sgs_PushString( C, "__call" );
 	sgs_PushCFunction( C, nom_ctor );
 	atf_assert( sgs_PushDict( C, 6 ) == SGS_SUCCESS );
-	atf_assert( sgs_StackSize( C ) == 1 );
+	atf_assert( sgs_StackSize( C ) >= 1 );
 	sgs_ObjSetMetaMethodEnable( sgs_GetObjectStruct( C, -1 ), 1 );
+	return 1;
+}
+
+DEFINE_TEST( native_obj_meta )
+{
+	SGS_CTX = get_context();
 	
 	/* register as ctor/iface */
+	sgs_PushInterface( C, nom_iface );
 	sgs_StoreGlobal( C, "nom" );
 	
 	/* try creating and running the object */

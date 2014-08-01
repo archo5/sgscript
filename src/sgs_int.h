@@ -503,7 +503,6 @@ struct _sgs_Context
 	uint32_t      state;
 	sgs_FuncCtx*  fctx;      /* ByteCodeGen */
 	const char*   filename;  /* filename of currently compiled code */
-	sgs_VHTable   stringtable; /* string constant caching hash table */
 
 	/* virtual machine */
 	/* > main stack */
@@ -539,8 +538,10 @@ struct _sgs_Context
 	sgs_ObjPoolItem* objpool_data;
 	int32_t       objpool_size;
 	
-	/* type interface table */
-	sgs_VHTable   typetable;
+	/* tables / cache */
+	sgs_VHTable   typetable; /* type interface table */
+	sgs_VHTable   stringtable; /* string constant caching hash table */
+	sgs_VHTable   ifacetable; /* interface generator => object table */
 };
 
 #define SGS_STACKFRAMESIZE ((sgs_StkIdx)(C->stack_top - C->stack_off))

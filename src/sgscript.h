@@ -251,6 +251,7 @@ struct sgs_ObjData
 	uint32_t appsize;
 	uint8_t redblue;    /* red or blue? mark & sweep */
 	uint8_t mm_enable;  /* use metamethods? */
+	uint8_t is_iface;   /* whether is also in the interface table */
 	void* data;         /* should have offset=8 with packing alignment>=8 */
 	sgs_ObjInterface* iface;
 	sgs_VarObj* prev;   /* pointer to previous GC object */
@@ -450,6 +451,8 @@ SGS_APIFUNC SGSRESULT sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, 
 SGS_APIFUNC SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface );
 SGS_APIFUNC SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name );
 SGS_APIFUNC sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name );
+
+SGS_APIFUNC SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn );
 
 
 /* The core interface */

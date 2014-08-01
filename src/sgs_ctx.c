@@ -38,7 +38,6 @@ static void ctx_init( SGS_CTX )
 	C->state = 0;
 	C->fctx = NULL;
 	C->filename = NULL;
-	sgs_vht_init( &C->stringtable, C, 256, 256 );
 	
 	C->stack_mem = 32;
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
@@ -69,6 +68,8 @@ static void ctx_init( SGS_CTX )
 	C->objpool_size = 0;
 	
 	sgs_vht_init( &C->typetable, C, 32, 32 );
+	sgs_vht_init( &C->stringtable, C, 256, 256 );
+	sgs_vht_init( &C->ifacetable, C, 64, 64 );
 }
 
 sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
@@ -111,6 +112,9 @@ void sgs_DestroyEngine( SGS_CTX )
 	
 	sgs_GCExecute( C );
 	sgs_BreakIf( C->objs || C->objcount );
+	
+	/* table should be empty here */
+	sgs_vht_free( &C->ifacetable, C );
 	
 	sgs_Dealloc( C->stack_base );
 	
@@ -1063,6 +1067,43 @@ sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name )
 	if( p )
 		return (sgs_ObjInterface*) p->val.data.P;
 	return NULL;
+}
+
+SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
+{
+	sgs_VHTVar* vv;
+	sgs_Variable key;
+	
+	sgs_InitCFunction( &key, igfn );
+	vv = sgs_vht_get( &C->ifacetable, &key );
+	if( vv )
+	{
+		sgs_PushVariable( C, &vv->val );
+		return SGS_SUCCESS;
+	}
+	else
+	{
+		sgs_VarObj* obj;
+		sgs_Variable val;
+		sgs_StkIdx ssz;
+		SGSRESULT res;
+		
+		ssz = sgs_StackSize( C );
+		res = sgs_CallP( C, &key, 0, 1 );
+		if( SGS_FAILED( res ) ||
+			sgs_ItemType( C, ssz ) != SGS_VT_OBJECT ||
+			!sgs_PeekStackItem( C, ssz, &val ) )
+		{
+			sgs_SetStackSize( C, ssz );
+			return SGS_EINPROC;
+		}
+		sgs_PeekStackItem( C, ssz, &val );
+		sgs_vht_set( &C->ifacetable, C, &key, &val );
+		obj = sgs_GetObjectStruct( C, ssz );
+		obj->is_iface = 1;
+		obj->refcount--; /* being in interface table doesn't count */
+		return SGS_SUCCESS;
+	}
 }
 
 

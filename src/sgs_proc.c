@@ -100,6 +100,22 @@ static int32_t objpool_binary_search( SGS_CTX, uint32_t appsize )
 
 static void var_free_object( SGS_CTX, sgs_VarObj* O )
 {
+	if( O->is_iface )
+	{
+		sgs_VHTVar* p = C->ifacetable.vars;
+		sgs_VHTVar* pend = p + C->ifacetable.size;
+		while( p < pend )
+		{
+			if( p->val.type == SGS_VT_OBJECT && p->val.data.O == O )
+			{
+				sgs_Variable K = p->key;
+				O->refcount = 2;
+				sgs_vht_unset( &C->ifacetable, C, &K );
+				break;
+			}
+			p++;
+		}
+	}
 	if( O->prev ) O->prev->next = O->next;
 	if( O->next ) O->next->prev = O->prev;
 	if( C->objs == O )
@@ -304,6 +320,7 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInter
 		obj->next->prev = obj;
 	obj->metaobj = NULL;
 	obj->mm_enable = SGS_FALSE;
+	obj->is_iface = SGS_FALSE;
 	C->objcount++;
 	C->objs = obj;
 	
