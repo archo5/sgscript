@@ -3393,7 +3393,7 @@ SGSRESULT sgs_StoreProperty( SGS_CTX, StkIdx obj, const char* name )
 	obj = stk_absindex( C, obj );
 	sgs_PushString( C, name );
 	ret = sgs_SetIndexIII( C, obj, -1, -2, SGS_TRUE );
-	stk_pop( C, ret == SGS_SUCCESS ? 2 : 1 );
+	stk_pop( C, SGS_SUCCEEDED( ret ) ? 2 : 1 );
 	return ret;
 }
 
@@ -3442,7 +3442,25 @@ SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
 	_EL_SETMAX;
 	ret = sgsSTD_GlobalSet( C, stk_getpos( C, -1 ), stk_getpos( C, -2 ) );
 	_EL_RESET;
-	sgs_Pop( C, ret == SGS_SUCCESS ? 2 : 1 );
+	sgs_Pop( C, SGS_SUCCEEDED( ret ) ? 2 : 1 );
+	return ret;
+}
+
+SGSRESULT sgs_PushPropertyP( SGS_CTX, sgs_Variable* var, const char* name )
+{
+	int ret;
+	sgs_PushString( C, name );
+	ret = sgs_PushIndexPI( C, var, -1, SGS_TRUE );
+	stk_popskip( C, 1, SGS_SUCCEEDED( ret ) ? 1 : 0 );
+	return ret;
+}
+
+SGSRESULT sgs_StorePropertyP( SGS_CTX, sgs_Variable* var, const char* name )
+{
+	int ret;
+	sgs_PushString( C, name );
+	ret = sgs_SetIndexPII( C, var, -1, -2, SGS_TRUE );
+	stk_pop( C, SGS_SUCCEEDED( ret ) ? 2 : 1 );
 	return ret;
 }
 

@@ -431,6 +431,8 @@ typedef struct _sgs_RegFuncConst
 }
 sgs_RegFuncConst;
 SGS_APIFUNC SGSRESULT sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size );
+SGS_APIFUNC SGSRESULT sgs_StoreFuncConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegFuncConst* list, int size );
+SGS_APIFUNC SGSRESULT sgs_StoreFuncConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegFuncConst* list, int size );
 
 typedef struct _sgs_RegIntConst
 {
@@ -439,6 +441,8 @@ typedef struct _sgs_RegIntConst
 }
 sgs_RegIntConst;
 SGS_APIFUNC SGSRESULT sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size );
+SGS_APIFUNC SGSRESULT sgs_StoreIntConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegIntConst* list, int size );
+SGS_APIFUNC SGSRESULT sgs_StoreIntConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegIntConst* list, int size );
 
 typedef struct _sgs_RegRealConst
 {
@@ -447,6 +451,8 @@ typedef struct _sgs_RegRealConst
 }
 sgs_RegRealConst;
 SGS_APIFUNC SGSRESULT sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size );
+SGS_APIFUNC SGSRESULT sgs_StoreRealConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegRealConst* list, int size );
+SGS_APIFUNC SGSRESULT sgs_StoreRealConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegRealConst* list, int size );
 
 SGS_APIFUNC SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface );
 SGS_APIFUNC SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name );
@@ -542,6 +548,9 @@ SGS_APIFUNC SGSRESULT sgs_PushNumIndex( SGS_CTX, sgs_StkIdx obj, sgs_Int idx );
 SGS_APIFUNC SGSRESULT sgs_StoreNumIndex( SGS_CTX, sgs_StkIdx obj, sgs_Int idx );
 SGS_APIFUNC SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name );
 SGS_APIFUNC SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name );
+
+SGS_APIFUNC SGSRESULT sgs_PushPropertyP( SGS_CTX, sgs_Variable* var, const char* name );
+SGS_APIFUNC SGSRESULT sgs_StorePropertyP( SGS_CTX, sgs_Variable* var, const char* name );
 
 SGS_APIFUNC void sgs_GetEnv( SGS_CTX, sgs_Variable* out );
 SGS_APIFUNC SGSRESULT sgs_SetEnv( SGS_CTX, sgs_Variable* var );

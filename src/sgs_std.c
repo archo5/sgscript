@@ -612,13 +612,46 @@ static int sgsstd_arrayI_shuffle( SGS_CTX )
 	SGS_RETURN_THIS( C );
 }
 
+
+static int sgsstd_array( SGS_CTX );
+static sgs_RegFuncConst array_iface_fconsts[] =
+{
+	{ "push", sgsstd_arrayI_push },
+	{ "pop", sgsstd_arrayI_pop },
+	{ "shift", sgsstd_arrayI_shift },
+	{ "unshift", sgsstd_arrayI_unshift },
+	{ "insert", sgsstd_arrayI_insert },
+	{ "erase", sgsstd_arrayI_erase },
+	{ "part", sgsstd_arrayI_part },
+	{ "clear", sgsstd_arrayI_clear },
+	{ "reverse", sgsstd_arrayI_reverse },
+	{ "resize", sgsstd_arrayI_resize },
+	{ "reserve", sgsstd_arrayI_reserve },
+	{ "sort", sgsstd_arrayI_sort },
+	{ "sort_custom", sgsstd_arrayI_sort_custom },
+	{ "sort_mapped", sgsstd_arrayI_sort_mapped },
+	{ "find", sgsstd_arrayI_find },
+	{ "remove", sgsstd_arrayI_remove },
+	{ "unique", sgsstd_arrayI_unique },
+	{ "random", sgsstd_arrayI_random },
+	{ "shuffle", sgsstd_arrayI_shuffle },
+	{ "__call", sgsstd_array },
+};
+
+static int sgsstd_array_iface_gen( SGS_CTX )
+{
+	sgs_PushDict( C, 0 );
+	sgs_StoreFuncConsts( C, sgs_StackSize( C ) - 1, array_iface_fconsts, SGS_ARRAY_SIZE(array_iface_fconsts) );
+	sgs_ObjSetMetaMethodEnable( sgs_GetObjectStruct( C, -1 ), 1 );
+	return 1;
+}
+
 static int sgsstd_array_getprop( SGS_CTX, void* data, sgs_Variable* key )
 {
 	char* name;
 	SGSARR_HDR;
 	if( sgs_ParseStringP( C, key, &name, NULL ) )
 	{
-		sgs_CFunc func;
 		if( 0 == strcmp( name, "size" ) )
 		{
 			sgs_PushInt( C, hdr->size );
@@ -651,29 +684,6 @@ static int sgsstd_array_getprop( SGS_CTX, void* data, sgs_Variable* key )
 			}
 			return SGS_SUCCESS;
 		}
-		else if( 0 == strcmp( name, "push" ) )      func = sgsstd_arrayI_push;
-		else if( 0 == strcmp( name, "pop" ) )       func = sgsstd_arrayI_pop;
-		else if( 0 == strcmp( name, "shift" ) )     func = sgsstd_arrayI_shift;
-		else if( 0 == strcmp( name, "unshift" ) )   func = sgsstd_arrayI_unshift;
-		else if( 0 == strcmp( name, "insert" ) )    func = sgsstd_arrayI_insert;
-		else if( 0 == strcmp( name, "erase" ) )     func = sgsstd_arrayI_erase;
-		else if( 0 == strcmp( name, "part" ) )      func = sgsstd_arrayI_part;
-		else if( 0 == strcmp( name, "clear" ) )     func = sgsstd_arrayI_clear;
-		else if( 0 == strcmp( name, "reverse" ) )   func = sgsstd_arrayI_reverse;
-		else if( 0 == strcmp( name, "resize" ) )    func = sgsstd_arrayI_resize;
-		else if( 0 == strcmp( name, "reserve" ) )   func = sgsstd_arrayI_reserve;
-		else if( 0 == strcmp( name, "sort" ) )      func = sgsstd_arrayI_sort;
-		else if( 0 == strcmp( name, "sort_custom" ) ) func = sgsstd_arrayI_sort_custom;
-		else if( 0 == strcmp( name, "sort_mapped" ) ) func = sgsstd_arrayI_sort_mapped;
-		else if( 0 == strcmp( name, "find" ) )      func = sgsstd_arrayI_find;
-		else if( 0 == strcmp( name, "remove" ) )    func = sgsstd_arrayI_remove;
-		else if( 0 == strcmp( name, "unique" ) )    func = sgsstd_arrayI_unique;
-		else if( 0 == strcmp( name, "random" ) )    func = sgsstd_arrayI_random;
-		else if( 0 == strcmp( name, "shuffle" ) )   func = sgsstd_arrayI_shuffle;
-		else return SGS_ENOTFND;
-		
-		sgs_PushCFunction( C, func );
-		return SGS_SUCCESS;
 	}
 	return SGS_ENOTFND;
 }
@@ -849,6 +859,11 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 			while( ptr < pend )
 				sgs_Acquire( C, ptr++ );
 		}
+		
+		sgs_PushInterface( C, sgsstd_array_iface_gen );
+		sgs_ObjSetMetaObj( C, sgs_GetObjectStruct( C, -2 ), sgs_GetObjectStruct( C, -1 ) );
+		sgs_Pop( C, 1 );
+		
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -901,6 +916,11 @@ static int sgsstd_array( SGS_CTX )
 	pend = p + objcnt;
 	while( p < pend )
 		sgs_GetStackItem( C, i++, p++ );
+	
+	sgs_PushInterface( C, sgsstd_array_iface_gen );
+	sgs_ObjSetMetaObj( C, sgs_GetObjectStruct( C, -2 ), sgs_GetObjectStruct( C, -1 ) );
+	sgs_Pop( C, 1 );
+	
 	return 1;
 }
 
@@ -3347,7 +3367,7 @@ static int sgsstd_unserialize2( SGS_CTX ){ SGSFN( "unserialize2" ); return sgsst
 static sgs_RegFuncConst regfuncs[] =
 {
 	/* containers */
-	FN( array ), FN( dict ), FN( map ), { "class", sgsstd_class },
+	/* FN( array ), -- object */ FN( dict ), FN( map ), { "class", sgsstd_class },
 	FN( array_filter ), FN( array_process ),
 	FN( dict_filter ), FN( dict_process ),
 	FN( dict_size ), FN( map_size ), FN( isset ), FN( unset ), FN( clone ),
@@ -3417,6 +3437,11 @@ int sgsSTD_PostInit( SGS_CTX )
 	ret = sgs_RegFuncConsts( C, regfuncs, SGS_ARRAY_SIZE( regfuncs ) );
 	if( ret != SGS_SUCCESS ) return ret;
 	
+	ret = sgs_PushInterface( C, sgsstd_array_iface_gen );
+	if( ret != SGS_SUCCESS ) return ret;
+	ret = sgs_StoreGlobal( C, "array" );
+	if( ret != SGS_SUCCESS ) return ret;
+	
 	sgs_PushString( C, SGS_INCLUDE_PATH );
 	ret = sgs_StoreGlobal( C, "SGS_PATH" );
 	if( ret != SGS_SUCCESS ) return ret;
@@ -3463,6 +3488,11 @@ int sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 			sgs_GetStackItem( C, i++ - cnt, p++ );
 		
 		sgs_Pop( C, cnt );
+		
+		sgs_PushInterface( C, sgsstd_array_iface_gen );
+		sgs_ObjSetMetaObj( C, sgs_GetObjectStructP( out ), sgs_GetObjectStruct( C, -1 ) );
+		sgs_Pop( C, 1 );
+		
 		return SGS_SUCCESS;
 	}
 }
@@ -3673,6 +3703,98 @@ SGSRESULT sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
 			break;
 		sgs_PushReal( C, list->value );
 		ret = sgs_StoreGlobal( C, list->name );
+		if( ret != SGS_SUCCESS ) return ret;
+		list++;
+	}
+	return SGS_SUCCESS;
+}
+
+
+SGSRESULT sgs_StoreFuncConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegFuncConst* list, int size )
+{
+	int ret;
+	while( size-- )
+	{
+		if( !list->name )
+			break;
+		sgs_PushCFunction( C, list->value );
+		ret = sgs_StoreProperty( C, item, list->name );
+		if( ret != SGS_SUCCESS ) return ret;
+		list++;
+	}
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_StoreIntConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegIntConst* list, int size )
+{
+	int ret;
+	while( size-- )
+	{
+		if( !list->name )
+			break;
+		sgs_PushInt( C, list->value );
+		ret = sgs_StoreProperty( C, item, list->name );
+		if( ret != SGS_SUCCESS ) return ret;
+		list++;
+	}
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_StoreRealConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegRealConst* list, int size )
+{
+	int ret;
+	while( size-- )
+	{
+		if( !list->name )
+			break;
+		sgs_PushReal( C, list->value );
+		ret = sgs_StoreProperty( C, item, list->name );
+		if( ret != SGS_SUCCESS ) return ret;
+		list++;
+	}
+	return SGS_SUCCESS;
+}
+
+
+SGSRESULT sgs_StoreFuncConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegFuncConst* list, int size )
+{
+	int ret;
+	while( size-- )
+	{
+		if( !list->name )
+			break;
+		sgs_PushCFunction( C, list->value );
+		ret = sgs_StorePropertyP( C, var, list->name );
+		if( ret != SGS_SUCCESS ) return ret;
+		list++;
+	}
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_StoreIntConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegIntConst* list, int size )
+{
+	int ret;
+	while( size-- )
+	{
+		if( !list->name )
+			break;
+		sgs_PushInt( C, list->value );
+		ret = sgs_StorePropertyP( C, var, list->name );
+		if( ret != SGS_SUCCESS ) return ret;
+		list++;
+	}
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_StoreRealConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegRealConst* list, int size )
+{
+	int ret;
+	while( size-- )
+	{
+		if( !list->name )
+			break;
+		sgs_PushReal( C, list->value );
+		ret = sgs_StorePropertyP( C, var, list->name );
 		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}

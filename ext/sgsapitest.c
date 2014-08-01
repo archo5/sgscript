@@ -154,6 +154,15 @@ sgs_ObjInterface sgs_dummy_iface[1] =
 DEFINE_TEST( create_and_destroy )
 {
 	SGS_CTX = get_context();
+	sgs_Writef( C, "New context memory usage: %d B (%.2f kB)\n", (int) C->memsize, (double) C->memsize / 1024.0 );
+	destroy_context( C );
+}
+
+DEFINE_TEST( array_mem )
+{
+	SGS_CTX = get_context();
+	sgs_PushArray( C, 0 );
+	sgs_Writef( C, "context[array] memory usage: %d B (%.2f kB)\n", (int) C->memsize, (double) C->memsize / 1024.0 );
 	destroy_context( C );
 }
 
@@ -702,6 +711,7 @@ DEFINE_TEST( native_obj_meta )
 test_t all_tests[] =
 {
 	TST( create_and_destroy ),
+	TST( array_mem ),
 	TST( stack_101 ),
 	TST( stack_insert ),
 	TST( stack_arraydict ),
