@@ -1126,7 +1126,6 @@ void sgs_InitStringBuf32( sgs_Variable* var, sgs_String32* S, const char* str, s
 	/* WP: range of len: 0-31 */
 	S->data.size = (uint32_t) len;
 	S->data.hash = sgs_HashFunc( str, len );
-	S->data.isconst = 0;
 	memcpy( S->buf, str, len );
 	S->buf[ len ] = 0;
 	

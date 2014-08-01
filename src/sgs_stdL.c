@@ -394,11 +394,12 @@ static int sgsstd_fmt_pack( SGS_CTX )
 	}
 	
 	{
-		sgs_PushStringBuf( C, NULL, numbytes );
+		sgs_PushStringAlloc( C, numbytes );
 		ret = fmt_pack( C, str, size, sgs_GetStringPtr( C, -1 ) ) - 1;
 		if( ret != numitems )
 			sgs_Msg( C, SGS_WARNING, "error in arguments, could not read all" );
-		return ret == numitems;
+		sgs_FinalizeStringAlloc( C, -1 );
+		return 1;
 	}
 }
 
@@ -1921,7 +1922,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 			STDLIB_WARN( "file bigger than allowed to store" );
 		}
 		
-		sgs_PushStringBuf( C, NULL, (sgs_SizeVal) len );
+		sgs_PushStringAlloc( C, (sgs_SizeVal) len );
 		errno = 0;
 		/* WP: string limit */
 		rd = (int64_t) fread( sgs_GetStringPtr( C, -1 ), 1, (size_t) len, fp );
@@ -1931,6 +1932,7 @@ static int sgsstd_io_file_read( SGS_CTX )
 		if( rd < len )
 			STDLIB_WARN( "failed to read file" )
 		
+		sgs_FinalizeStringAlloc( C, -1 );
 		return 1;
 	}
 }
@@ -3222,12 +3224,13 @@ static int sgsstd_string_reverse( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m", &str, &size ) )
 		return 0;
 	
-	sgs_PushStringBuf( C, NULL, size );
+	sgs_PushStringAlloc( C, size );
 	sout = sgs_GetStringPtr( C, -1 );
 	
 	for( i = 0; i < size; ++i )
 		sout[ size - i - 1 ] = str[ i ];
 	
+	sgs_FinalizeStringAlloc( C, -1 );
 	return 1;
 }
 
@@ -3248,7 +3251,7 @@ static int sgsstd_string_pad( SGS_CTX )
 		return 1;
 	}
 	
-	sgs_PushStringBuf( C, NULL, (sgs_SizeVal) tgtsize );
+	sgs_PushStringAlloc( C, (sgs_SizeVal) tgtsize );
 	sout = sgs_GetStringPtr( C, -1 );
 	if( SGS_HAS_FLAG( flags, sgsLEFT ) )
 	{
@@ -3272,6 +3275,7 @@ static int sgsstd_string_pad( SGS_CTX )
 		size++;
 	}
 	
+	sgs_FinalizeStringAlloc( C, -1 );
 	return 1;
 }
 
@@ -3289,7 +3293,7 @@ static int sgsstd_string_repeat( SGS_CTX )
 	if( count < 0 )
 		STDLIB_WARN( "argument 2 (count) must be at least 0" )
 	
-	sgs_PushStringBuf( C, NULL, (sgs_SizeVal) count * size );
+	sgs_PushStringAlloc( C, (sgs_SizeVal) count * size );
 	sout = sgs_GetStringPtr( C, -1 );
 	while( count-- )
 	{
@@ -3297,6 +3301,7 @@ static int sgsstd_string_repeat( SGS_CTX )
 		memcpy( sout, str, (size_t) size );
 		sout += size;
 	}
+	sgs_FinalizeStringAlloc( C, -1 );
 	return 1;
 }
 
@@ -3445,7 +3450,7 @@ static int _stringrep_ss
 	}
 	
 	outlen = size + ( repsize - subsize ) * matchcount;
-	sgs_PushStringBuf( C, NULL, outlen );
+	sgs_PushStringAlloc( C, outlen );
 	
 	i = str;
 	o = sgs_GetStringPtr( C, -1 );
@@ -3475,6 +3480,7 @@ static int _stringrep_ss
 	if( matches != sma )
 		sgs_Dealloc( matches );
 	
+	sgs_FinalizeStringAlloc( C, -1 );
 	return 1;
 }
 static int _stringrep_as
@@ -3682,7 +3688,8 @@ static int sgsstd_string_toupper( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m", &str, &size ) )
 		return 0;
 	
-	sgs_PushStringBuf( C, str, size );
+	sgs_PushStringAlloc( C, size );
+	memcpy( sgs_GetStringPtr( C, -1 ), str, (size_t) size );
 	str = sgs_GetStringPtr( C, -1 );
 	strend = str + size;
 	while( str < strend )
@@ -3691,6 +3698,7 @@ static int sgsstd_string_toupper( SGS_CTX )
 			*str = (char)( *str + 'A' - 'a' );
 		str++;
 	}
+	sgs_FinalizeStringAlloc( C, -1 );
 	return 1;
 }
 
@@ -3704,7 +3712,8 @@ static int sgsstd_string_tolower( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m", &str, &size ) )
 		return 0;
 	
-	sgs_PushStringBuf( C, str, size );
+	sgs_PushStringAlloc( C, size );
+	memcpy( sgs_GetStringPtr( C, -1 ), str, (size_t) size );
 	str = sgs_GetStringPtr( C, -1 );
 	strend = str + size;
 	while( str < strend )
@@ -3713,6 +3722,7 @@ static int sgsstd_string_tolower( SGS_CTX )
 			*str = (char)( *str + 'a' - 'A' );
 		str++;
 	}
+	sgs_FinalizeStringAlloc( C, -1 );
 	return 1;
 }
 
@@ -3909,8 +3919,8 @@ static int sgsstd_string_frombytes( SGS_CTX )
 		}
 	}
 	
-	sgs_PushStringBuf( C, NULL, size );
-	buf = sgs_ToString( C, -1 );
+	sgs_PushStringAlloc( C, size );
+	buf = sgs_GetStringPtr( C, -1 );
 	if( sgs_PushIterator( C, 0 ) < 0 )
 		goto fail;
 	
@@ -3926,6 +3936,7 @@ static int sgsstd_string_frombytes( SGS_CTX )
 		sgs_Pop( C, 1 );
 	}
 	sgs_Pop( C, 1 );
+	sgs_FinalizeStringAlloc( C, -1 );
 	return 1;
 
 fail:

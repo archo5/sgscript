@@ -177,14 +177,28 @@ void sgsVM_VarDestroyObject( SGS_CTX, sgs_VarObj* O )
 static void var_destroy_string( SGS_CTX, sgs_iStr* S )
 {
 #if SGS_STRINGTABLE_MAXLEN >= 0
-	sgs_Variable tmp;
-	tmp.type = SGS_VT_STRING;
-	tmp.data.S = S;
-	sgs_VHTVar* p = (int32_t) S->size <= SGS_STRINGTABLE_MAXLEN ? sgs_vht_get( &C->stringtable, &tmp ) : NULL;
-	if( p && p->key.data.S == S )
+	if( S->size <= SGS_STRINGTABLE_MAXLEN )
 	{
-		S->refcount = 2; /* the 'less code' way to avoid double free */
-		sgs_vht_unset( &C->stringtable, C, &tmp );
+		sgs_VHTVar* p;
+		sgs_Variable tmp;
+		tmp.type = SGS_VT_STRING;
+		tmp.data.S = S;
+		p = sgs_vht_get( &C->stringtable, &tmp );
+		if( p )
+		{
+#  if SGS_DEBUG && SGS_DEBUG_EXTRA
+			if( p->key.data.S != S )
+			{
+				printf( "WATWATWAT: (%d) |my>| [%d,%d] %d,%s |st>| [%d,%d] %d,%s\n",
+					(int) sgs_HashFunc( sgs_str_cstr( S ), S->size ),
+					(int) S->refcount, (int) S->hash, (int) S->size, sgs_str_cstr( S ),
+					(int) p->key.data.S->refcount, (int) p->key.data.S->hash, (int) p->key.data.S->size, sgs_str_cstr( p->key.data.S ) );
+			}
+#  endif
+			sgs_BreakIf( p->key.data.S != S );
+			S->refcount = 2; /* the 'less code' way to avoid double free */
+			sgs_vht_unset( &C->stringtable, C, &tmp );
+		}
 	}
 #endif
 	sgs_Dealloc( S );
@@ -236,7 +250,6 @@ static void var_create_0str( SGS_CTX, sgs_VarPtr out, uint32_t len )
 	out->data.S->refcount = 1;
 	out->data.S->size = len;
 	out->data.S->hash = 0;
-	out->data.S->isconst = 0;
 	sgs_var_cstr( out )[ len ] = 0;
 }
 
@@ -244,9 +257,9 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_Siz
 {
 	sgs_Hash hash;
 	uint32_t ulen;
-	sgs_BreakIf( !str );
+	sgs_BreakIf( !str && len );
 	
-	ulen = len >= 0 ? (uint32_t) len : (uint32_t) strlen( str ); /* WP: string limit */
+	ulen = (uint32_t) len; /* WP: string limit */
 	
 	hash = sgs_HashFunc( str, ulen );
 #if SGS_STRINGTABLE_MAXLEN >= 0
@@ -265,7 +278,6 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_Siz
 	var_create_0str( C, out, ulen );
 	memcpy( sgs_str_cstr( out->data.S ), str, ulen );
 	out->data.S->hash = hash;
-	out->data.S->isconst = 1;
 	
 	if( (int32_t) ulen <= SGS_STRINGTABLE_MAXLEN )
 	{
@@ -276,14 +288,44 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_Siz
 
 static void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len )
 {
-	uint32_t ulen = (uint32_t) len; /* WP: string limit */
-	sgs_BreakIf( !str );
+	sgsVM_VarCreateString( C, out, str, len );
+}
+static void var_create_cstr( SGS_CTX, sgs_Variable* out, const char* str )
+{
+	sgsVM_VarCreateString( C, out, str, (sgs_SizeVal) SGS_STRINGLENGTHFUNC(str) );
+}
+
+static void var_finalize_str( SGS_CTX, sgs_Variable* out )
+{
+	char* str;
+	sgs_Hash hash;
+	uint32_t ulen;
 	
-	if( len < 0 )
-		ulen = (uint32_t) strlen( str ); /* WP: string limit */
+	str = sgs_str_cstr( out->data.S );
+	ulen = out->data.S->size;
+	hash = sgs_HashFunc( str, ulen );
 	
-	var_create_0str( C, out, ulen );
-	memcpy( sgs_str_cstr( out->data.S ), str, ulen );
+#if SGS_STRINGTABLE_MAXLEN >= 0
+	if( ulen <= SGS_STRINGTABLE_MAXLEN )
+	{
+		sgs_VHTVar* var = sgs_vht_get_str( &C->stringtable, str, ulen, hash );
+		if( var )
+		{
+			sgs_Dealloc( out->data.S ); /* avoid querying the string table here */
+			*out = var->key;
+			out->data.S->refcount++;
+			return;
+		}
+	}
+#endif
+	
+	out->data.S->hash = hash;
+	
+	if( (int32_t) ulen <= SGS_STRINGTABLE_MAXLEN )
+	{
+		sgs_vht_set( &C->stringtable, C, out, NULL );
+		out->data.S->refcount--;
+	}
 }
 
 static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInterface* iface, uint32_t xbytes )
@@ -997,8 +1039,8 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 	{
 	case SGS_VT_NULL: var_create_str( C, out, "null", 4 ); break;
 	case SGS_VT_BOOL: if( var->data.B ) var_create_str( C, out, "true", 4 ); else var_create_str( C, out, "false", 5 ); break;
-	case SGS_VT_INT: sprintf( buf, "%" PRId64, var->data.I ); var_create_str( C, out, buf, -1 ); break;
-	case SGS_VT_REAL: sprintf( buf, "%g", var->data.R ); var_create_str( C, out, buf, -1 ); break;
+	case SGS_VT_INT: sprintf( buf, "%" PRId64, var->data.I ); var_create_cstr( C, out, buf ); break;
+	case SGS_VT_REAL: sprintf( buf, "%g", var->data.R ); var_create_cstr( C, out, buf ); break;
 	case SGS_VT_FUNC: var_create_str( C, out, "function", 8 ); break;
 	case SGS_VT_CFUNC: var_create_str( C, out, "C function", 10 ); break;
 	case SGS_VT_OBJECT:
@@ -1042,10 +1084,13 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 				}
 				_STACK_UNPROTECT;
 			}
-			var_create_str( C, out, O->iface->name, -1 );
+			var_create_cstr( C, out, O->iface->name );
 		}
 		break;
-	case SGS_VT_PTR: sprintf( buf, "ptr(%p)", var->data.P ); var_create_str( C, out, buf, -1 ); break;
+	case SGS_VT_PTR:
+		sprintf( buf, "ptr(%p)", var->data.P );
+		var_create_cstr( C, out, buf );
+		break;
 	}
 	sgs_BreakIf( out->type != SGS_VT_STRING );
 }
@@ -1719,6 +1764,7 @@ static SGSBOOL vm_op_concat_ex( SGS_CTX, StkIdx args )
 		memcpy( sgs_var_cstr( &N ) + curoff, sgs_var_cstr( var ), var->data.S->size );
 		curoff += var->data.S->size;
 	}
+	var_finalize_str( C, &N );
 	stk_setvar_leave( C, -args, &N );
 	stk_pop( C, args - 1 );
 	return 1;
@@ -2882,16 +2928,18 @@ void sgs_InitReal( sgs_Variable* out, sgs_Real value )
 
 void sgs_InitStringBuf( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal size )
 {
-	if( str )
-		var_create_str( C, out, str, size );
-	else
-		var_create_0str( C, out, (uint32_t) size ); /* WP: string limit */
+	sgs_BreakIf( !str && size && "sgs_InitStringBuf: str = NULL" );
+	var_create_str( C, out, str, size );
 }
 
 void sgs_InitString( SGS_CTX, sgs_Variable* out, const char* str )
 {
+	size_t sz;
 	sgs_BreakIf( !str && "sgs_InitString: str = NULL" );
-	var_create_str( C, out, str, -1 );
+	sz = SGS_STRINGLENGTHFUNC(str);
+	sgs_BreakIf( sz > 0x7fffffff && "sgs_InitString: size exceeded" );
+	/* WP: error detection */
+	var_create_str( C, out, str, (sgs_SizeVal) sz );
 }
 
 void sgs_InitCFunction( sgs_Variable* out, sgs_CFunc func )
@@ -2983,19 +3031,21 @@ SGSONE sgs_PushReal( SGS_CTX, sgs_Real value )
 SGSONE sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size )
 {
 	sgs_Variable var;
-	if( str )
-		var_create_str( C, &var, str, size );
-	else
-		var_create_0str( C, &var, (uint32_t) size ); /* WP: string limit */
+	sgs_BreakIf( !str && size && "sgs_PushStringBuf: str = NULL" );
+	var_create_str( C, &var, str, size );
 	stk_push_leave( C, &var );
 	return 1;
 }
 
 SGSONE sgs_PushString( SGS_CTX, const char* str )
 {
+	size_t sz;
 	sgs_Variable var;
-	sgs_BreakIf( !str && "sgs_PushString: str = NULL" );
-	var_create_str( C, &var, str, -1 );
+	sgs_BreakIf( !str && "sgs_InitString: str = NULL" );
+	sz = SGS_STRINGLENGTHFUNC(str);
+	sgs_BreakIf( sz > 0x7fffffff && "sgs_InitString: size exceeded" );
+	/* WP: error detection */
+	var_create_str( C, &var, str, (sgs_SizeVal) sz );
 	stk_push_leave( C, &var );
 	return 1;
 }
@@ -3134,6 +3184,40 @@ SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var )
 	VAR_ACQUIRE( var );
 	return SGS_SUCCESS;
 }
+
+
+/* string generation */
+void sgs_PushStringAlloc( SGS_CTX, sgs_SizeVal size )
+{
+	sgs_Variable var;
+	var_create_0str( C, &var, (uint32_t) size );
+	stk_push_leave( C, &var );
+}
+
+void sgs_InitStringAlloc( SGS_CTX, sgs_Variable* var, sgs_SizeVal size )
+{
+	var_create_0str( C, var, (uint32_t) size );
+}
+
+SGSRESULT sgs_FinalizeStringAlloc( SGS_CTX, sgs_StkIdx item )
+{
+	SGSRESULT res;
+	sgs_Variable var;
+	if( !sgs_PeekStackItem( C, item, &var ) )
+		return SGS_EBOUNDS;
+	res = sgs_FinalizeStringAllocP( C, &var );
+	*stk_getpos( C, item ) = var;
+	return res;
+}
+
+SGSRESULT sgs_FinalizeStringAllocP( SGS_CTX, sgs_Variable* var )
+{
+	if( var->type != SGS_VT_STRING )
+		return SGS_EINVAL;
+	var_finalize_str( C, var );
+	return SGS_SUCCESS;
+}
+
 
 
 #define _EL_BACKUP int32_t oel = C->minlev;
@@ -4541,8 +4625,9 @@ SGSRESULT sgs_PadString( SGS_CTX )
 			if( cstr[ i ] == '\n' ) i++; else cstr++;
 		if( var->data.S->size + i * padsize > 0x7fffffff )
 			return SGS_EINPROC;
+		
 		/* WP: implemented error condition */
-		sgs_PushStringBuf( C, NULL, (StkIdx) ( var->data.S->size + i * padsize ) );
+		sgs_PushStringAlloc( C, (sgs_SizeVal)( var->data.S->size + i * padsize ) );
 		cstr = sgs_var_cstr( stk_getpos( C, -2 ) );
 		ostr = sgs_var_cstr( stk_getpos( C, -1 ) );
 		while( *cstr )
@@ -4556,9 +4641,9 @@ SGSRESULT sgs_PadString( SGS_CTX )
 			}
 			cstr++;
 		}
+		sgs_PopSkip( C, 1, 1 );
+		return sgs_FinalizeStringAlloc( C, -1 );
 	}
-	sgs_PopSkip( C, 1, 1 );
-	return SGS_SUCCESS;
 }
 
 SGSRESULT sgs_ToPrintSafeString( SGS_CTX )

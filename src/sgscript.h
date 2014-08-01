@@ -265,7 +265,6 @@ struct _sgs_iStr
 	sgs_SizeVal refcount;
 	uint32_t size;
 	uint32_t hash;
-	int isconst;
 };
 #define sgs_str_cstr( pstr ) (((char*)(pstr))+sizeof(sgs_iStr))
 #define sgs_str_c_cstr( pstr ) (((const char*)(pstr))+sizeof(sgs_iStr))
@@ -506,6 +505,12 @@ SGS_APIFUNC SGSRESULT sgs_StoreVariable( SGS_CTX, sgs_Variable* var );
 SGS_APIFUNC SGSRESULT sgs_PushItem( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSRESULT sgs_StoreItem( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var );
+
+/* string generation */
+SGS_APIFUNC void sgs_PushStringAlloc( SGS_CTX, sgs_SizeVal size );
+SGS_APIFUNC void sgs_InitStringAlloc( SGS_CTX, sgs_Variable* var, sgs_SizeVal size );
+SGS_APIFUNC SGSRESULT sgs_FinalizeStringAlloc( SGS_CTX, sgs_StkIdx item );
+SGS_APIFUNC SGSRESULT sgs_FinalizeStringAllocP( SGS_CTX, sgs_Variable* var );
 
 /* almost-raw access */
 SGS_APIFUNC SGSRESULT sgs_GetIndexPPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* out, int isprop );

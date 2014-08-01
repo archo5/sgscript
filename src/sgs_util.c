@@ -159,8 +159,9 @@ static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
 	case SGS_VT_BOOL: return v1->data.B == v2->data.B;
 	case SGS_VT_INT: return v1->data.I == v2->data.I;
 	case SGS_VT_REAL: return v1->data.R == v2->data.R;
-	case SGS_VT_STRING: return v1->data.S->size == v2->data.S->size &&
-		memcmp( sgs_var_cstr( v1 ), sgs_var_cstr( v2 ), v1->data.S->size ) == 0;
+	case SGS_VT_STRING: if( v1->data.S == v2->data.S ) return 1;
+		return v1->data.S->size == v2->data.S->size &&
+			memcmp( sgs_var_cstr( v1 ), sgs_var_cstr( v2 ), v1->data.S->size ) == 0;
 	case SGS_VT_FUNC: return v1->data.F == v2->data.F;
 	case SGS_VT_CFUNC: return v1->data.C == v2->data.C;
 	case SGS_VT_OBJECT: return v1->data.O == v2->data.O;
