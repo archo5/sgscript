@@ -1106,6 +1106,14 @@ SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 	}
 }
 
+SGSRESULT sgs_InitInterface( SGS_CTX, sgs_Variable* var, sgs_CFunc igfn )
+{
+	SGSRESULT res = sgs_PushInterface( C, igfn );
+	if( res == SGS_SUCCESS )
+		sgs_StoreVariable( C, var );
+	return res;
+}
+
 
 void sgs_FuncName( SGS_CTX, const char* fnliteral )
 {

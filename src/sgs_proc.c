@@ -2225,6 +2225,13 @@ static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		vm_convert_stack_string( C, -1 );
 		a = stk_getpos( C, -2 );
 		b = stk_getpos( C, -1 );
+#if SGS_STRINGTABLE_MAXLEN >= 0x7fffffff
+		if( a->data.S == b->data.S )
+		{
+			stk_pop2( C );
+			return 0;
+		}
+#endif
 		out = memcmp( sgs_var_cstr( a ), sgs_var_cstr( b ), SGS_MIN( a->data.S->size, b->data.S->size ) );
 		if( out == 0 && a->data.S->size != b->data.S->size )
 			out = (ptrdiff_t) ( a->data.S->size - b->data.S->size );

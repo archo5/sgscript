@@ -28,7 +28,7 @@ It is similar to many but the exact combination makes it unique in comparison to
 !  language  !            what it DOESN'T have in comparison to SGScript             !
 |     C      |  dynamic typing, built-in serialization                               |
 |    Lua     |  built-in serialization, C-like syntax, proper indexing, arrays, ...  |
-|    PHP     |  consistency, lightweight design                                      |
+|    PHP     |  consistency, lightweight design, fully dynamic state                 |
 | JavaScript |  environmental awareness, determinism, built-in serialization, ...    |
 |   Python   |  C-like syntax, lightweight design                                    |
 --------------------------------------------------------------------------------------
@@ -49,7 +49,7 @@ The language supports:
 
 The standard library includes:
 
-- array, dict, map, class
+- array, dict, map
 - math, string, I/O, O/S and formatting functions
 - `eval`, file import, DLL import
 
@@ -415,6 +415,7 @@ SGScript has 8 primary variable types:
 - `(SGS) function`: function that was defined in and compiled from SGScript code
 - `C function`: function defined in C code
 - `object`: the extension type and container for complex built-in types
+- `ptr`: the pointer type
 
 Extended variable types (built on `object`):
 
@@ -512,7 +513,7 @@ Special keywords and hardcoded constants:
 
 Expressions can be categorized in many different ways: type of action, appearance, whether it also assigns the value somewhere or if its purpose has a special meaning.
 
-There are 5 types of action for expressions in SGScript: arithmetic, binary, boolean, comparison and special.
+There are 5 types of action for expressions in SGScript: arithmetic, bitwise, logical, comparison and special.
 
 ------------------------------------------------------------------------------
 !     expression          !   appearance   ! type of action ! assign ! # in. !
@@ -530,22 +531,22 @@ There are 5 types of action for expressions in SGScript: arithmetic, binary, boo
 |  multiply-assign        |`   A  *=  B   `|   arithmetic   |  yes   |   2   |
 |  divide-assign          |`   A  /=  B   `|   arithmetic   |  yes   |   2   |
 |  modulo-assign          |`   A  %=  B   `|   arithmetic   |  yes   |   2   |
-|  binary AND             |`   A  &  B    `|     binary     |  no    |   2   |
-|  binary OR              |`   A  |  B    `|     binary     |  no    |   2   |
-|  binary XOR             |`   A  ^  B    `|     binary     |  no    |   2   |
-|  left shift             |`   A  <<  B   `|     binary     |  no    |   2   |
-|  right shift            |`   A  >>  B   `|     binary     |  no    |   2   |
-|  binary AND-assign      |`   A  &=  B   `|     binary     |  yes   |   2   |
-|  binary OR-assign       |`   A  |=  B   `|     binary     |  yes   |   2   |
-|  binary XOR-assign      |`   A  ^=  B   `|     binary     |  yes   |   2   |
-|  left shift-assign      |`   A  <<=  B  `|     binary     |  yes   |   2   |
-|  right shift-assign     |`   A  >>=  B  `|     binary     |  yes   |   2   |
-|  binary invert          |`     ~ A      `|     binary     |  no    |   1   |
-|  boolean AND            |`   A  &&  B   `|     boolean    |  no    |   2   |
-|  boolean OR             |`   A  ||  B   `|     boolean    |  no    |   2   |
-|  boolean AND-assign     |`   A  &&=  B  `|     boolean    |  yes   |   2   |
-|  boolean OR-assign      |`   A  ||=  B  `|     boolean    |  yes   |   2   |
-|  boolean invert         |`     ! A      `|     boolean    |  no    |   1   |
+|  bitwise AND            |`   A  &  B    `|     bitwise    |  no    |   2   |
+|  bitwise OR             |`   A  |  B    `|     bitwise    |  no    |   2   |
+|  bitwise XOR            |`   A  ^  B    `|     bitwise    |  no    |   2   |
+|  left shift             |`   A  <<  B   `|     bitwise    |  no    |   2   |
+|  right shift            |`   A  >>  B   `|     bitwise    |  no    |   2   |
+|  bitwise AND-assign     |`   A  &=  B   `|     bitwise    |  yes   |   2   |
+|  bitwise OR-assign      |`   A  |=  B   `|     bitwise    |  yes   |   2   |
+|  bitwise XOR-assign     |`   A  ^=  B   `|     bitwise    |  yes   |   2   |
+|  left shift-assign      |`   A  <<=  B  `|     bitwise    |  yes   |   2   |
+|  right shift-assign     |`   A  >>=  B  `|     bitwise    |  yes   |   2   |
+|  bitwise invert         |`     ~ A      `|     bitwise    |  no    |   1   |
+|  logical AND            |`   A  &&  B   `|     logical    |  no    |   2   |
+|  logical OR             |`   A  ||  B   `|     logical    |  no    |   2   |
+|  logical AND-assign     |`   A  &&=  B  `|     logical    |  yes   |   2   |
+|  logical OR-assign      |`   A  ||=  B  `|     logical    |  yes   |   2   |
+|  logical invert         |`     ! A      `|     logical    |  no    |   1   |
 |  less than              |`   A  <  B    `|   comparison   |  no    |   2   |
 |  less than or equal     |`   A  <=  B   `|   comparison   |  no    |   2   |
 |  greater than           |`   A  >  B    `|   comparison   |  no    |   2   |
@@ -890,6 +891,8 @@ Return types:
 - SGSRESULT [int]: output code (success = 0, failure: < 0 )
 - SGSBOOL [int]: simplified output code (success = 1, failure = 0)
 - SGSMIXED [int32_t] output code / value (success + value: >= 0, failure: < 0)
+- SGSONE [int]: always returns 1
+- SGSZERO [int]: always returns 0
 
 Virtual machine / language types:
 - sgs_Bool [int32_t]: boolean value
@@ -932,9 +935,17 @@ These are the default meanings for error codes that are honored throughout the A
 -- any other integer may be defined and returned by other interfaces
 
 
-# Variable types [info]
+# Variable type codes [info]
 
--- SGS_VT_[NULL|BOOL|INT|REAL|STRING|FUNC|CFUNC|OBJECT|PTR]
+- SGS_VT_NULL: null
+- SGS_VT_BOOL: boolean
+- SGS_VT_INT: integer
+- SGS_VT_REAL: real value
+- SGS_VT_STRING: string
+- SGS_VT_FUNC: SGS function
+- SGS_VT_CFUNC: C function
+- SGS_VT_OBJECT: object
+- SGS_VT_PTR: pointer
 
 
 # Constant registration types [info]
@@ -1267,6 +1278,9 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_RegFuncConsts<sgs_Reg***Consts> - register a list of global C function constants
 - @sgs_RegIntConsts<sgs_Reg***Consts> - register a list of global integer constants
 - @sgs_RegRealConsts<sgs_Reg***Consts> - register a list of global real value constants
+- @sgs_StoreFuncConsts(P)<sgs_Store***Consts(P)> - store a list of C function constants in the specified variable
+- @sgs_StoreIntConsts(P)<sgs_Store***Consts(P)> - store a list of integer constants in the specified variable
+- @sgs_StoreRealConsts(P)<sgs_Store***Consts(P)> - store a list of real value constants in the specified variable
 
 
 # Object type storage [info]
@@ -1275,6 +1289,9 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_UnregisterType - unregister an object interface pointer by name
 - @sgs_FindType - find a registered object interface pointer by name
 - @sgs_IsType - check if variable on stack is of specified registered type
+- @sgs_IsTypeP<sgs_IsType(P)> - check if variable is of specified registered type
+- @sgs_PushInterface - push a cached/generated object
+- @sgs_InitInterface - initialize a variable to a cached/generated object
 
 
 # Variable initialization [info]
@@ -1334,6 +1351,9 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_Method - unhide the first variable on stack if there is a hidden `this` variable
 - @sgs_HideThis<sgs_(Force)HideThis> - hide the first variable on stack if the stack already doesn't contain a hidden `this` variable
 - @sgs_ForceHideThis<sgs_(Force)HideThis> - hide the first variable even if it wasn't previously hidden before unhiding
+- @sgs_StoreFuncConsts(P)<sgs_Store***Consts(P)> - store a list of C function constants in the specified variable
+- @sgs_StoreIntConsts(P)<sgs_Store***Consts(P)> - store a list of integer constants in the specified variable
+- @sgs_StoreRealConsts(P)<sgs_Store***Consts(P)> - store a list of real value constants in the specified variable
 
 
 # Sub-item usage [info]
@@ -1344,8 +1364,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_StoreIndex** - store and pop a sub-item
 - @sgs_GetGlobalPP - retrieve a global variable
 - @sgs_SetGlobalPP - set a global variable
-- @sgs_PushProperty - retrieve and push the string property of a variable on stack
-- @sgs_StoreProperty - store and pop the topmost stack item to a string property of a variable on stack
+- @sgs_PushProperty(P) - retrieve and push the string property of a variable on stack
+- @sgs_StoreProperty(P) - store and pop the topmost stack item to a string property of a variable on stack
 - @sgs_PushNumIndex - retrieve and push the integer index of a variable on stack
 - @sgs_StoreNumIndex - store and pop the topmost stack item to an integer index of a variable on stack
 - @sgs_PushGlobal - retrieve and push the global variable, specified by a string
@@ -1372,6 +1392,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_Method - unhide the first variable on stack if there is a hidden `this` variable
 - @sgs_HideThis<sgs_(Force)HideThis> - hide the first variable on stack if the stack already doesn't contain a hidden `this` variable
 - @sgs_ForceHideThis<sgs_(Force)HideThis> - hide the first variable even if it wasn't previously hidden before unhiding
+- @sgs_ArgCheck_Object - argument parsing function for parsing any objects
 
 
 # Virtual machine operations [info]
@@ -1388,8 +1409,10 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_CloneItem - clone the topmost stack item if it's mutable
 - @sgs_ObjectAction - execute actions on object variable on stack
 - @sgs_Serialize - serialize the topmost variable on stack by converting it recursively to an instruction stream
+- @sgs_SerializeV(1|2) - perform serialization with a specific method
 - @sgs_SerializeObject - emit a call to the specified function to the serialized stream
 - @sgs_Unserialize - unserialize the topmost variable on stack by running its serialized instruction stream
+- @sgs_UnserializeV(1|2) - perform unserialization with a specific method
 
 
 # String helpers [info]
@@ -1474,6 +1497,10 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_GetObjectIface<sgs_GetObjectIface(P)> - get interface pointer of object variable on stack
 - @sgs_SetObjectData<sgs_SetObjectData(P)> - set data pointer of object variable on stack
 - @sgs_SetObjectIface<sgs_SetObjectIface(P)> - set interface pointer of object variable on stack
+- @sgs_ObjSetMetaObj - set meta-object of an object
+- @sgs_ObjGetMetaObj - retrieve meta-object of an object
+- @sgs_ObjSetMetaMethodEnable - enable or disable metamethod support for an object
+- @sgs_ObjGetMetaMethodEnable - check if metamethod support is enabled for an object
 
 
 # Iterators [info]
@@ -1506,6 +1533,16 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_ObjAssign - assign object pointer, handling acquisition/release properly
 - @sgs_ObjCallDtor - call the destruction function of an object variable if it's defined
 - @sgs_ObjSetMetaObj - set meta-object of an object
+- @sgs_ObjGetMetaObj - retrieve meta-object of an object
+- @sgs_ObjSetMetaMethodEnable - enable or disable metamethod support for an object
+- @sgs_ObjGetMetaMethodEnable - check if metamethod support is enabled for an object
+
+
+# String generation helper interface [info]
+
+- @sgs_PushStringAlloc - push an uninitialized string buffer
+- @sgs_InitStringAlloc - set an uninitialized string buffer to a variable
+- @sgs_FinalizeStringAlloc(P) - finalize (prepare for usage) an uninitialized string buffer
 
 
 # String32 optimization interface [info]
@@ -1975,10 +2012,13 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - SGS_ENOTSUP: `idx` was not a string / `idx` was _G and `val` was not a dict
 
 
-# sgs_PushProperty [function]
+# sgs_PushProperty(P) [functions]
 
 == SGSRESULT sgs_PushProperty( sgs_Context* C, sgs_StkIdx obj, const char* name )
 === load and push the property of the item `obj` in the current stack frame
+
+== SGSRESULT sgs_PushPropertyP( sgs_Context* C, sgs_Variable* var, const char* name )
+=== load and push the property of the variable `var` in the current stack frame
 
 === error codes
 - SGS_EBOUNDS: `obj` was not pointing inside the current stack frame
@@ -1987,10 +2027,13 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - other codes may appear if returned by custom objects
 
 
-# sgs_StoreProperty [function]
+# sgs_StoreProperty(P) [functions]
 
 == SGSRESULT sgs_StoreProperty( sgs_Context* C, sgs_StkIdx obj, const char* name )
-=== copy and pop the topmost item of the current stack frame to the property `name` of variable `obj`
+=== copy and pop the topmost item of the current stack frame to the property `name` of item `obj`
+
+== SGSRESULT sgs_StorePropertyP( sgs_Context* C, sgs_Variable* var, const char* name )
+=== copy and pop the topmost item of the current stack frame to the property `name` of variable `var`
 
 === error codes
 - SGS_EBOUNDS: `obj` was not pointing inside the current stack frame
@@ -2119,6 +2162,27 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - other errors, as returned by @sgs_PushIndex*** or @sgs_StoreIndex***
 
 
+# sgs_Store***Consts(P) [functions]
+
+== SGSRESULT sgs_StoreFuncConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegFuncConst* list, int size )
+== SGSRESULT sgs_StoreIntConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegIntConst* list, int size )
+== SGSRESULT sgs_StoreRealConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegRealConst* list, int size )
+=== loads the specified list of constants in the specified stack item
+
+== SGSRESULT sgs_StoreFuncConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegFuncConst* list, int size )
+== SGSRESULT sgs_StoreIntConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegIntConst* list, int size )
+== SGSRESULT sgs_StoreRealConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegRealConst* list, int size )
+=== loads the specified list of constants in the specified variable
+
+- the end of list can be specified in two ways
+-- set the size to `sizeof(list)/sizeof(list[0])`
+-- set the size to -1 and end the list with `SGS_RC_END()`
+-- using both at the same time should be reserved to special cases only
+
+=== error codes
+- SGS_E****: first error encountered (operation stopped somewhere in the middle)
+
+
 # sgs_ArgErrorExt [function]
 
 == int sgs_ArgErrorExt( sgs_Context* C, int argid, int method, const char* expect, const char* expfx )
@@ -2234,6 +2298,16 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 - sgs_ForceHideThis attempts to hide the first item on stack even if it didn't belong to the call, sgs_HideThis only does it if it belongs to the call and was hidden before
 - the hiding method is stack offset pointer shift
+
+
+# sgs_ArgCheck_Object [function]
+
+== int sgs_ArgCheck_Object( sgs_Context* C, int argid, va_list* args, int flags )
+=== argument parsing function for parsing any objects
+
+- to be used with @sgs_LoadArgs<sgs_LoadArgs [function alias]> and related functions
+- strictness controls whether `null` is accepted
+- returned value: sgs_VarObj* (expects sgs_VarObj** argument for it)
 
 
 
@@ -2498,6 +2572,17 @@ After a successful call, all arguments and the function will be popped off the s
 - SGS_EINPROC: unknown memory error
 
 
+# sgs_SerializeV(1|2) [functions]
+
+== SGSRESULT sgs_SerializeV1( sgs_Context* C )
+== SGSRESULT sgs_SerializeV2( sgs_Context* C )
+=== serialize the topmost variable of the current stack frame with a specific method
+
+! For more info, see @sgs_Serialize
+
+- specifies the method to use while serializing the variable and resets it after serialization
+
+
 # sgs_SerializeObject [function]
 
 == SGSRESULT sgs_SerializeObject( sgs_Context* C, int args, const char* func )
@@ -2516,6 +2601,17 @@ After a successful call, all arguments and the function will be popped off the s
 ! Be mindful of the data sources you use - calls to any global function can be placed in the instruction stream.
 
 
+# sgs_UnserializeV(1|2) [functions]
+
+== SGSRESULT sgs_UnserializeV1( sgs_Context* C )
+== SGSRESULT sgs_UnserializeV2( sgs_Context* C )
+=== unserialize the topmost string variable of the current stack frame
+
+! For more info, see @sgs_Unserialize
+
+- specifies the method to use while unserializing the variable and resets it after unserialization
+
+
 # sgs_Assign [function]
 
 == void sgs_Assign( sgs_Context* C, sgs_Variable* var_to, sgs_Variable* var_from )
@@ -2529,7 +2625,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 ! this function prints errors, exactly like VM would (internally there are the same functions)
 
-- this function can perform 5 operations, which are specified by passing the following values to `op`:
+- this function can perform 6 operations, which are specified by passing the following values to `op`:
 -- SGS_EOP_ADD: +
 -- SGS_EOP_SUB: - (binary)
 -- SGS_EOP_MUL: *
@@ -2661,6 +2757,28 @@ After a successful call, all arguments and the function will be popped off the s
 
 == sgs_ObjInterface* sgs_FindType( sgs_Context* C, const char* name )
 === finds the type interface that is mapped to the specified name or returns NULL if that type name cannot be found
+
+
+# sgs_PushInterface [function]
+
+== SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
+=== push a cached/generated object
+
+- if object is not in cache, it is generated from the specified function
+
+=== error codes
+- SGS_EINPROC: failed to generated the object
+
+
+# sgs_InitInterface [function]
+
+== SGSRESULT sgs_InitInterface( SGS_CTX, sgs_Variable* var, sgs_CFunc igfn )
+=== initialize a variable to a cached/generated object
+
+- if object is not in cache, it is generated from the specified function
+
+=== error codes
+- SGS_EINPROC: failed to generated the object
 
 
 # sgs_IsObject(P) [functions]
@@ -2987,6 +3105,33 @@ After a successful call, all arguments and the function will be popped off the s
 === set `metaobj` as the meta-object of object `obj`
 
 - `obj` must always point to an object, `metaobj` can be NULL
+
+
+# sgs_ObjGetMetaObj [function]
+
+== sgs_VarObj* sgs_ObjGetMetaObj( sgs_VarObj* obj )
+=== retrieve meta-object of an object
+
+- to retrieve an object from variable, use @sgs_GetObjectStruct(P)
+- `obj` must always point to an object
+
+
+# sgs_ObjSetMetaMethodEnable [function]
+
+== void sgs_ObjSetMetaMethodEnable( sgs_VarObj* obj, SGSBOOL enable )
+=== enable or disable metamethod support for an object
+
+- to retrieve an object from variable, use @sgs_GetObjectStruct(P)
+- `obj` must always point to an object
+
+
+# sgs_ObjGetMetaMethodEnable [function]
+
+== SGSBOOL sgs_ObjGetMetaMethodEnable( sgs_VarObj* obj )
+=== check if metamethod support is enabled for an object
+
+- to retrieve an object from variable, use @sgs_GetObjectStruct(P)
+- `obj` must always point to an object
 
 
 # sgs_GetStringPtr(P) [functions]
@@ -3351,6 +3496,9 @@ sample implementation (same as in sgscript.h):
 -- SGS_CNTL_GET_ERRNO: returns the currently set internal errno
 -- SGS_CNTL_ERRSUP: sets error suppression lock count to `val`, returns the previous value
 -- SGS_CNTL_GET_ERRSUP: returns the currently set error suppression lock count for the last stack frame
+-- SGS_CNTL_SERIALMODE: sets serialization mode to `val`, returns the previous value
+--- mode 2 is set with '2' - the reference-preserving algorithm
+--- mode 1 is set with any other number, the performance-oriented algorithm
 - everything else does nothing and returns 0
 
 
@@ -3393,6 +3541,43 @@ sample implementation (same as in sgscript.h):
 === returns the currently set internal errno variable
 
 - alias to `sgs_Cntl( C, SGS_CNTL_GET_ERRNO, 0 )`
+
+
+
+
+
+# sgs_PushStringAlloc [function]
+
+== void sgs_PushStringAlloc( sgs_Context* C, sgs_SizeVal size )
+=== push an uninitialized string buffer
+
+Created string is a valid resource in terms of acquisition/release but not hashed and internalized yet, thus it cannot be used in indexing/comparison functions until it's finalized, see @sgs_FinalizeStringAlloc(P).
+
+- it is safe to write string data (to pointer retrieved from @sgs_GetStringPtr(P) function) up until finalization
+
+
+# sgs_InitStringAlloc [function]
+
+== void sgs_InitStringAlloc( sgs_Context* C, sgs_Variable* var, sgs_SizeVal size )
+=== set an uninitialized string buffer to a variable
+
+Created string is a valid resource in terms of acquisition/release but not hashed and internalized yet, thus it cannot be used in indexing/comparison functions until it's finalized, see @sgs_FinalizeStringAlloc(P).
+
+- it is safe to write string data (to pointer retrieved from @sgs_GetStringPtr(P) function) up until finalization
+
+
+# sgs_FinalizeStringAlloc(P) [functions]
+
+== SGSRESULT sgs_FinalizeStringAlloc( sgs_Context* C, sgs_StkIdx item )
+== SGSRESULT sgs_FinalizeStringAllocP( sgs_Context* C, sgs_Variable* var )
+=== finalize (prepare for usage) an uninitialized string buffer
+
+- preparations include string hashing and internalization (release of owned copy in favor of exact same string in string table)
+- after using these functions, string data cannot be modified
+
+=== error codes
+- SGS_EBOUNDS: index out of bounds
+- SGS_EINVAL: invalid variable type
 
 
 
@@ -3614,8 +3799,8 @@ Depending on the argument, it requires different variable types on stack:
 
 ==== When called:
 
-- @serialize in SGScript.
-- @sgs_Serialize in the C API.
+- @serialize, @serialize2 in SGScript.
+- @sgs_Serialize, @sgs_SerializeV(1|2) in the C API.
 
 ==== Additional arguments:
 
@@ -3957,7 +4142,7 @@ This library is loaded on initialization and contains the functions and constant
 -- @serialize - returns a byte buffer containing info necessary to later recreate variable structure
 -- @unserialize - recreate variable structure from a byte buffer
 
-=== Objects and their methods:
+=== Objects and their built-in methods:
 
 - @array<array [object]>
 -- @push<array.push>
@@ -4000,9 +4185,16 @@ This library is loaded on initialization and contains the functions and constant
 == array( ... )
 === returns an @array<array [object]>, containing the arguments
 
-- similar to the array literal, though somewhat limited
+- similar to the array literal, though somewhat limited (number of arguments is limited to 255 in the language, but not the API/serialization system)
 
     array( "5", 6, 7.0 ) // same as ["5",6,7.0]
+
+- the implementation of `array` is an object with __call metamethod. New methods can be added to `array`:
+
+    function array.join( separator )
+    {
+        return string_implode( this, separator );
+    }
 
 
 # dict [function]
@@ -4895,6 +5087,14 @@ This library is loaded on initialization and contains the functions and constant
     print unserialize(data); // prints {name=A,info=B}
 
 
+# serialize2 [function]
+
+== serialize2( var )
+=== converts the variable to a byte buffer (string), containing the serialized data that can be recreated with @unserialize2() or returns null and emits a warning on failure
+
+- for more info on function behavior, refer to @serialize
+
+
 # unserialize [function]
 
 == unserialize( string data[, array|dict funcs ])
@@ -4909,6 +5109,15 @@ This library is loaded on initialization and contains the functions and constant
     data = serialize({ name = "A", info = "B" });
     print data; // prints random-looking, yet deterministic garbage
     print unserialize(data); // prints {name=A,info=B}
+
+
+# unserialize2 [function]
+
+== unserialize( string data[, array|dict funcs ])
+=== recreates a variable from the buffer with serialized data or returns null and emits a warning on failure
+
+- for more info on function behavior, refer to @unserialize
+- for more info on serialization in SGScript, refer to @"Serialization in SGScript"
 
 
 # SGS_*** [constants]
@@ -4939,7 +5148,7 @@ This library is loaded on initialization and contains the functions and constant
 
 # array [object]
 
-- methods
+- built-in methods
 -- @push<array.push>
 -- @pop<array.pop>
 -- @shift<array.shift>
@@ -4973,6 +5182,7 @@ This library is loaded on initialization and contains the functions and constant
 -- cloning
 -- serialization
 -- GC-safe
+-- meta-object (global @array<array [function]>)
 
 
 # array.push [method]
@@ -6839,7 +7049,7 @@ This is an engine debugging hook extension. It provides the opportunity to inter
 
 # Serialization in SGScript [info]
 
-In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the "@serialize" function and deserialization is done with "@unserialize". The C API has similar functions: @sgs_Serialize / @sgs_SerializeObject and @sgs_Unserialize, respectively.
+In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the "@serialize" function and deserialization is done with "@unserialize". The C API has similar functions: @sgs_Serialize / @sgs_SerializeV(1|2) / @sgs_SerializeObject and @sgs_Unserialize, respectively.
 
 ! check the "Possible gotchas" part of this page if it is intended to trust the end user with access to serialized data
 
@@ -6852,8 +7062,8 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 
 === Serialization
 
-- "@serialize" is called
-- "@sgs_Serialize" is called internally
+- "@serialize" or "@serialize2" is called
+- "@sgs_Serialize" or "@sgs_SerializeV(1|2)" is called internally
 - type of variable is determined and the data is written
 -- C functions cannot be serialized (obviously) and whenever encountered, will abort the action
 -- objects will have SERIALIZE operation called

@@ -111,18 +111,16 @@ void sgs_membuf_appbuf( sgs_MemBuf* mb, SGS_CTX, const void* buf, size_t size )
 }
 
 
-#define hashFunc sgs_HashFunc
-#define hasHash 0x80000000
 sgs_Hash sgs_HashFunc( const char* str, size_t size )
 {
-	size_t i;
+	size_t i, adv = size / 127 + 1;
 	sgs_Hash h = 2166136261u;
-	for( i = 0; i < size; ++i )
+	for( i = 0; i < size; i += adv )
 	{
 		h ^= (sgs_Hash) (uint8_t) str[ i ];
 		h *= 16777619u;
 	}
-	return h | hasHash;
+	return h;
 }
 
 sgs_Hash sgs_HashVar( const sgs_Variable* v )
@@ -131,9 +129,9 @@ sgs_Hash sgs_HashVar( const sgs_Variable* v )
 	switch( v->type )
 	{
 	/* special */
-	case SGS_VT_NULL: return 0 | hasHash;
-	case SGS_VT_BOOL: return ( v->data.B != 0 ) | hasHash;
-	case SGS_VT_STRING: return hashFunc( sgs_var_cstr( v ), v->data.S->size );
+	case SGS_VT_NULL: return 0;
+	case SGS_VT_BOOL: return ( v->data.B != 0 );
+	case SGS_VT_STRING: return sgs_HashFunc( sgs_var_cstr( v ), v->data.S->size );
 	/* data */
 	case SGS_VT_INT: size = sizeof( sgs_Int ); break;
 	case SGS_VT_REAL: size = sizeof( sgs_Real ); break;
@@ -143,9 +141,9 @@ sgs_Hash sgs_HashVar( const sgs_Variable* v )
 	case SGS_VT_PTR:
 		size = sizeof( void* ); break;
 	default:
-		return 0 | hasHash;
+		return 0;
 	}
-	return hashFunc( (const char*) &v->data, size );
+	return sgs_HashFunc( (const char*) &v->data, size );
 }
 
 
@@ -159,9 +157,14 @@ static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
 	case SGS_VT_BOOL: return v1->data.B == v2->data.B;
 	case SGS_VT_INT: return v1->data.I == v2->data.I;
 	case SGS_VT_REAL: return v1->data.R == v2->data.R;
-	case SGS_VT_STRING: if( v1->data.S == v2->data.S ) return 1;
+	case SGS_VT_STRING:
+#if SGS_STRINGTABLE_MAXLEN >= 0x7fffffff
+		return v1->data.S == v2->data.S;
+#else
+		if( v1->data.S == v2->data.S ) return 1;
 		return v1->data.S->size == v2->data.S->size &&
 			memcmp( sgs_var_cstr( v1 ), sgs_var_cstr( v2 ), v1->data.S->size ) == 0;
+#endif
 	case SGS_VT_FUNC: return v1->data.F == v2->data.F;
 	case SGS_VT_CFUNC: return v1->data.C == v2->data.C;
 	case SGS_VT_OBJECT: return v1->data.O == v2->data.O;
@@ -310,7 +313,7 @@ sgs_VHTVar* sgs_vht_get_str( sgs_VHTable* T, const char* str, uint32_t size, sgs
 		sgs_VHTIdx idx = T->pairs[ i ];
 		if( idx == SGS_VHTIDX_EMPTY )
 			return NULL;
-		else
+		else if( idx != SGS_VHTIDX_REMOVED )
 		{
 			sgs_Variable* var = &T->vars[ idx ].key;
 			if( var->type == SGS_VT_STRING )

@@ -458,6 +458,7 @@ SGS_APIFUNC SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name );
 SGS_APIFUNC sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name );
 
 SGS_APIFUNC SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn );
+SGS_APIFUNC SGSRESULT sgs_InitInterface( SGS_CTX, sgs_Variable* var, sgs_CFunc igfn );
 
 
 /* The core interface */
