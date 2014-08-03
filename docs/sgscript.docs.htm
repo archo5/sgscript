@@ -41,7 +41,7 @@
 </li><li><a href='#Memory-management'>Memory management</a>
 </li><li><a href='#Input-output'>Input / output</a>
 </li><li><a href='#Code-handling'>Code handling</a>
-</li><li><a href='#Introspection'>Introspection</a>
+</li><li><a href='#Introspection-debugging-helpers'>Introspection / debugging helpers</a>
 </li><li><a href='#Execution-control'>Execution control</a>
 </li><li><a href='#Binding-helpers'>Binding helpers</a>
 </li><li><a href='#Object-type-storage'>Object type storage</a>
@@ -527,7 +527,7 @@ There are 5 types of action for expressions in SGScript: arithmetic, bitwise, lo
 </p><p>
 Some notes on the special cases:
 </p><ul><li>[increment,decrement] pre-increment and pre-decrement operators return the modified value, post- operators - the original one
-</li><li>[boolean] all boolean operators except &#39;boolean invert&#39; (which returns bool) set/return one of the two operands passed
+</li><li>[logical] all logical operators except &#39;logical invert&#39; (which returns bool) set/return one of the two operands passed
 </li><li>[equality] strict (in)equality operators are the same as their non-strict counterparts with one difference: they do type checking, for example <code>5 == 5.0</code> would return &#39;true&#39; and <code>5 === 5.0</code> would return &#39;false&#39;
 </li><li>[declare] declarations only actually set the data if they include the assignment expression, otherwise only the type is internally noted for other references
 </li><li>[declare] variables can be redeclared as long as they maintain their access level
@@ -540,7 +540,7 @@ Some notes on the special cases:
 CFC is created to encourage users to reduce memory usage without sacrificing clarity of code. It is a short-hand, optimized version of the .call method / sys_call function for callables.
 </p><p>
 Properties:
-</p><ul><li>uses the same symbol as boolean inversion operator
+</p><ul><li>uses the same symbol as logical inversion operator
 </li><li>usage: simplified &amp; optimized calling of non-integrated compatible functions
 <ul><li>instead of <code>comp_func.call( object, arg1 )</code> write <code>object!comp_func( arg1 )</code>
 </li><li>instead of putting functions with data / class interfaces, requiring pointless memory usage, allows to easily keep them separate
@@ -978,9 +978,15 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-IncludeExt-function">sgs_IncludeExt</a> - include an item from the file system, optionally specifying a search path
 </li><li><a href="#sgs-Compile-function">sgs_Compile</a> - compile character buffer to bytecode buffer
 </li><li><a href="#sgs-DumpCompiled-function">sgs_DumpCompiled</a> - dump bytecode/constant info from a compiled bytecode buffer</li></ul></div>
-<div class='item'><a name='Introspection'></a><hr><h2>Introspection</h2><ul><li><a href="#sgs-Stat-function">sgs_Stat</a> - retrieve or dump various parts of VM state
+<div class='item'><a name='Introspection-debugging-helpers'></a><hr><h2>Introspection / debugging helpers</h2><ul><li><a href="#sgs-Stat-function">sgs_Stat</a> - retrieve or dump various parts of VM state
 </li><li><a href="#sgs-StackFrameInfo-function">sgs_StackFrameInfo</a> - retrieve preprocessed info from stack frame
-</li><li><a href="#sgs-GetFramePtr-function">sgs_GetFramePtr</a> - return a stack frame pointer</li></ul></div>
+</li><li><a href="#sgs-GetFramePtr-function">sgs_GetFramePtr</a> - return a stack frame pointer
+</li><li><a href="#sgs-DebugDumpVarExt-P-functions">sgs_DebugDumpVarExt(P)</a> - push a string containing variable data and return const char* to it
+</li><li><a href="#sgs-DebugDumpVar-P-function-aliases">sgs_DebugDumpVar(P)</a> - push a variable dump string and return const char* to it
+</li><li><a href="#sgs-DebugPrintVar-P-function-aliases">sgs_DebugPrintVar(P)</a> - push a string, converted from variable and return const char* to it
+</li><li><a href="#sgs-CodeString-function">sgs_CodeString</a> - retrieve a name string for the specified constant
+</li><li><a href="#sgs-WriteErrorInfo-function">sgs_WriteErrorInfo</a> - write message info to output callback
+</li><li><a href="#sgs-PushErrorInfo-function">sgs_PushErrorInfo</a> - push message info to stack</li></ul></div>
 <div class='item'><a name='Execution-control'></a><hr><h2>Execution control</h2><ul><li><a href="#sgs-FCall-P-functions">sgs_FCallP</a> - call variable as function
 </li><li><a href="#sgs-This-Call-P-function-aliases">sgs_CallP</a> - call variable as function without <code>this</code> passed to it
 </li><li><a href="#sgs-This-Call-P-function-aliases">sgs_ThisCallP</a> - call variable as function function with <code>this</code> passed to it
@@ -1251,6 +1257,9 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-Compile-function">sgs_Compile [function]</a>
 </li><li><a href="#sgs-CreateEngine-function-alias">sgs_CreateEngine [function alias]</a>
 </li><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngineExt [function]</a>
+</li><li><a href="#sgs-DebugDumpVar-P-function-aliases">sgs_DebugDumpVar(P) [function aliases]</a>
+</li><li><a href="#sgs-DebugDumpVarExt-P-functions">sgs_DebugDumpVarExt(P) [functions]</a>
+</li><li><a href="#sgs-DebugPrintVar-P-function-aliases">sgs_DebugPrintVar(P) [function aliases]</a>
 </li><li><a href="#sgs-DefaultMemFunc-function">sgs_DefaultMemFunc [function]</a>
 </li><li><a href="#sgs-DestroyEngine-function">sgs_DestroyEngine [function]</a>
 </li><li><a href="#sgs-DumpCompiled-function">sgs_DumpCompiled [function]</a>
@@ -1607,6 +1616,12 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-GCExecute-function'></a><hr><h2>sgs_GCExecute [function]</h2><h3>SGSRESULT sgs_GCExecute( sgs_Context* C )</h3><h4>call the garbage collector on the VM</h4><ul><li>this procedure may take some time if the object graph is big
 </li><li>during the procedure, the GCMARK interface functions of objects are invoked for the objects visible from entry points (like stack and global table)
 </li><li>aborting the procedure via error codes could lead the system into an unrecoverable state</li></ul><h4>error codes</h4><ul><li>any code can be returned by GCMARK and DESTRUCT functions, doing so would abort the process if the code is not either SGS_SUCCESS or SGS_ENOTFND</li></ul></div>
+<div class='item'><a name='sgs-DebugDumpVarExt-P-functions'></a><hr><h2>sgs_DebugDumpVarExt(P) [functions]</h2><h3>const char* sgs_DebugDumpVarExt( sgs_Context* C, sgs_StkIdx item, int maxdepth )</h3><h3>const char* sgs_DebugDumpVarExtP( sgs_Context* C, sgs_Variable* var, int maxdepth )</h3><h4>push a string containing variable data and return const char* to it</h4><ul><li>if <code>maxdepth</code> is negative, variable is converted to a normal string (sgs_ToString) instead of dump string (sgs_DumpVar)
+</li><li>all error cases (index out of bounds, failed to dump) return strings too, so function behavior is consistent regardless of state</li></ul></div>
+<div class='item'><a name='sgs-DebugDumpVar-P-function-aliases'></a><hr><h2>sgs_DebugDumpVar(P) [function aliases]</h2><h3>const char* sgs_DebugDumpVar( sgs_Context* C, sgs_StkIdx item )</h3><h3>const char* sgs_DebugDumpVarP( sgs_Context* C, sgs_Variable* var )</h3><h4>push a variable dump string and return const char* to it</h4><ul><li>alias to <code>sgs_DebugDumpVarExt( C, item, 5 )</code> / <code>sgs_DebugDumpVarExtP( C, var, 5 )</code>
+</li><li>for more info, see <a href="#sgs-DebugDumpVarExt-P-functions">sgs_DebugDumpVarExt(P)</a></li></ul></div>
+<div class='item'><a name='sgs-DebugPrintVar-P-function-aliases'></a><hr><h2>sgs_DebugPrintVar(P) [function aliases]</h2><h3>const char* sgs_DebugPrintVar( sgs_Context* C, sgs_StkIdx item )</h3><h3>const char* sgs_DebugPrintVarP( sgs_Context* C, sgs_Variable* var )</h3><h4>push a string, converted from variable and return const char* to it</h4><ul><li>alias to <code>sgs_DebugDumpVarExt( C, item, -1 )</code> / <code>sgs_DebugDumpVarExtP( C, var, -1 )</code>
+</li><li>for more info, see <a href="#sgs-DebugDumpVarExt-P-functions">sgs_DebugDumpVarExt(P)</a></li></ul></div>
 <div class='item'><a name='sgs-PadString-function'></a><hr><h2>sgs_PadString [function]</h2><h3>SGSRESULT sgs_PadString( sgs_Context* C )</h3><h4>replace the topmost variable of current stack frame with a string variable where two spaces are appended after every newline</h4><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame is empty or output string size exceeds limit
 </li><li>SGS_EINVAL: topmost variable is not a string</li></ul></div>
 <div class='item'><a name='sgs-ToPrintSafeString-function'></a><hr><h2>sgs_ToPrintSafeString [function]</h2><h3>SGSRESULT sgs_ToPrintSafeString( sgs_Context* C )</h3><h4>replace the topmost variable of current stack frame with a string where all non-printable (except space), non-ASCII characters converted to a character hex code</h4><h4>error codes</h4><ul><li>SGS_EINPROC: current stack frame is empty or output string size exceeds limit</li></ul></div>
@@ -3346,7 +3361,9 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 </p><h4>The format</h4><ul><li>a list of operations
 </li><li>each operation consists of a &#39;type&#39; byte and additional data
 <ul><li>a &quot;push&quot; operation has the byte &#39;P&#39;, the data consists of the type to push (a byte consisting of one base flag from SGS_VT_*) and the binary data of the type
-</li><li>a &quot;call&quot; operation has the byte &#39;C&#39;, the data consists of the number of arguments (4 bytes), function name length (1 byte) and the null-terminated function name itself (&lt;length&gt;+1 bytes)</li></ul></li></ul><h4>Serialization</h4><ul><li>&quot;<a href="#serialize-function">serialize</a>&quot; or &quot;<a href="#serialize2-function">serialize2</a>&quot; is called
+</li><li>a &quot;call&quot; operation has the byte &#39;C&#39;, the following data differs between formats:
+<ul><li>MODE 1: number of arguments (4 bytes), function name length (1 byte) and the null-terminated function name itself (&lt;length&gt;+1 bytes)
+</li><li>MODE 2: number of arguments (4 bytes), function name length (1 byte), argument indices (4 bytes for each, count as previously specified) and the null-terminated function name itself (&lt;length&gt;+1 bytes)</li></ul></li></ul></li></ul><h4>Serialization</h4><ul><li>&quot;<a href="#serialize-function">serialize</a>&quot; or &quot;<a href="#serialize2-function">serialize2</a>&quot; is called
 </li><li>&quot;<a href="#sgs-Serialize-function">sgs_Serialize</a>&quot; or &quot;<a href="#sgs-SerializeV-1-2-functions">sgs_SerializeV(1|2)</a>&quot; is called internally
 </li><li>type of variable is determined and the data is written
 <ul><li>C functions cannot be serialized (obviously) and whenever encountered, will abort the action
@@ -3359,7 +3376,6 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 </li><li>&quot;push&quot; and &quot;call&quot; operations are executed, thus regenerating the data
 <ul><li>&quot;push&quot; operation pushes a variable on the stack
 </li><li>&quot;call&quot; operation calls the specified function</li></ul></li></ul><h4>Possible gotchas</h4><ul><li>unserialization is not by default safe in the sense that any function can be executed with a carefully crafted byte buffer; this can be prevented by specifying the second parameter to the &quot;unserialize&quot; function. the behavior can be reproduced with the C API but it will take a bit more effort or calling the &quot;unserialize&quot; function from it
-</li><li><a href="#sgs-Serialize-function">sgs_Serialize</a> overrides the output function so any output done via &quot;print&quot; or &quot;sgs_Write*&quot; functions during serialization will corrupt the stream
 </li><li>if environment overrides are used on deserialization, remember to add &quot;array&quot;, &quot;dict&quot; and &quot;map&quot; to the list if you use them, they are not added automatically
 </li><li>serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items</li></ul></div>
 <div class='item'><a name='Secure-sandbox-environment'></a><hr><h2>Secure sandbox environment</h2><p>

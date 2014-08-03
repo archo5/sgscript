@@ -36,7 +36,7 @@ void sgs_print_safe( FILE* fp, const char* buf, size_t size )
 		if( isgraph( buf[ i ] ) || buf[ i ] == ' ' )
 			fputc( buf[ i ], fp );
 		else
-			fprintf( fp, "\\x%02X", (int) buf[ i ] );
+			fprintf( fp, "\\x%02X", (int) (unsigned char) buf[ i ] );
 	}
 }
 
@@ -96,11 +96,12 @@ void sgs_membuf_insbuf( sgs_MemBuf* mb, SGS_CTX, size_t pos, const void* buf, si
 
 void sgs_membuf_erase( sgs_MemBuf* mb, size_t from, size_t to )
 {
-	sgs_BreakIf( from >= mb->size );
-	sgs_BreakIf( to >= mb->size );
-	if( mb->size - to > 1 )
-		memmove( mb->ptr + from, mb->ptr + to + 1, mb->size - to - 1 );
-	mb->size -= to - from + 1;
+	sgs_BreakIf( from > mb->size );
+	sgs_BreakIf( to > mb->size );
+	sgs_BreakIf( from > to );
+	if( mb->size - to > 0 )
+		memmove( mb->ptr + from, mb->ptr + to, mb->size - to );
+	mb->size -= to - from;
 }
 
 void sgs_membuf_appbuf( sgs_MemBuf* mb, SGS_CTX, const void* buf, size_t size )

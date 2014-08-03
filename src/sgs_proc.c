@@ -4613,6 +4613,48 @@ end:
 }
 
 
+const char* sgs_DebugDumpVarExt( SGS_CTX, sgs_StkIdx item, int maxdepth )
+{
+	if( SGS_FAILED( sgs_PushItem( C, item ) ) )
+	{
+		char buf[128];
+		sprintf( buf, "<stack index out of bounds: %d (stack size=%d)>", (int) item, (int) sgs_StackSize( C ) );
+		sgs_PushString( C, buf );
+	}
+	else if( maxdepth < 0 )
+	{
+		return sgs_ToString( C, -1 );
+	}
+	else
+	{
+		if( SGS_FAILED( sgs_DumpVar( C, maxdepth ) ) )
+		{
+			sgs_Pop( C, 1 );
+			sgs_PushString( C, "<failed to dump variable>" );
+		}
+	}
+	return sgs_GetStringPtr( C, -1 );
+}
+
+const char* sgs_DebugDumpVarExtP( SGS_CTX, sgs_Variable* var, int maxdepth )
+{
+	sgs_PushVariable( C, var );
+	if( maxdepth < 0 )
+	{
+		return sgs_ToString( C, -1 );
+	}
+	else
+	{
+		if( SGS_FAILED( sgs_DumpVar( C, maxdepth ) ) )
+		{
+			sgs_Pop( C, 1 );
+			sgs_PushString( C, "<failed to dump variable>" );
+		}
+		return sgs_GetStringPtr( C, -1 );
+	}
+}
+
+
 SGSRESULT sgs_PadString( SGS_CTX )
 {
 	const char* padding = "  ";
@@ -4667,7 +4709,7 @@ SGSRESULT sgs_ToPrintSafeString( SGS_CTX )
 		else
 		{
 			char chrs[32];
-			sprintf( chrs, "\\x%02X", (int) buf[ i ] );
+			sprintf( chrs, "\\x%02X", (int) (unsigned char) buf[ i ] );
 			sgs_membuf_appbuf( &mb, C, chrs, 4 );
 		}
 	}
@@ -4766,31 +4808,30 @@ static int _unserialize_function( SGS_CTX, const char* buf, size_t sz, sgs_iFunc
 	return 1;
 }
 
-static void serialize_output_func( void* ud,
-	SGS_CTX, const void* ptr, size_t datasize )
-{
-	sgs_MemBuf* B = (sgs_MemBuf*) ud;
-	sgs_membuf_appbuf( B, C, ptr, datasize );
-}
 
-SGSRESULT sgs_Serialize( SGS_CTX )
+typedef struct sgs_serialize1_data
+{
+	int mode;
+	sgs_MemBuf data;
+}
+sgs_serialize1_data;
+
+SGSRESULT sgs_SerializeInt_V1( SGS_CTX )
 {
 	int ret = SGS_SUCCESS;
 	sgs_Variable V;
-	sgs_MemBuf B = sgs_membuf_create();
-	sgs_OutputFunc dofn = NULL;
-	void* doud = NULL;
-	int ep = C->output_fn != serialize_output_func;
+	void* prev_serialize_state = C->serialize_state;
+	sgs_serialize1_data SD = { 1, sgs_membuf_create() }, *pSD;
+	int ep = !C->serialize_state || *(int*)C->serialize_state != 1;
 
 	if( !sgs_PeekStackItem( C, -1, &V ) )
 		return SGS_EBOUNDS;
 
 	if( ep )
 	{
-		dofn = C->output_fn;
-		doud = C->output_ctx;
-		sgs_SetOutputFunc( C, serialize_output_func, &B );
+		C->serialize_state = &SD;
 	}
+	pSD = (sgs_serialize1_data*) C->serialize_state;
 
 	if( V.type == SGS_VT_OBJECT )
 	{
@@ -4814,6 +4855,12 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 		ret = SGS_EINVAL;
 		goto fail;
 	}
+	else if( V.type == SGS_VT_PTR )
+	{
+		sgs_Msg( C, SGS_WARNING, "Cannot serialize pointers" );
+		ret = SGS_EINVAL;
+		goto fail;
+	}
 	else
 	{
 		char pb[2];
@@ -4822,33 +4869,31 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 			/* WP: basetype limited to bits 0-7, sign interpretation does not matter */
 			pb[1] = (char) V.type;
 		}
-		sgs_Write( C, pb, 2 );
+		sgs_membuf_appbuf( &pSD->data, C, pb, 2 );
 		switch( V.type )
 		{
 		case SGS_VT_NULL: break;
 		/* WP: V.data.B uses only bit 0 */
-		case SGS_VT_BOOL: { char b = (char) V.data.B; sgs_Write( C, &b, 1 ); } break;
-		case SGS_VT_INT: sgs_Write( C, &V.data.I, sizeof( sgs_Int ) ); break;
-		case SGS_VT_REAL: sgs_Write( C, &V.data.R, sizeof( sgs_Real ) ); break;
+		case SGS_VT_BOOL: { char b = (char) V.data.B; sgs_membuf_appbuf( &pSD->data, C, &b, 1 ); } break;
+		case SGS_VT_INT: sgs_membuf_appbuf( &pSD->data, C, &V.data.I, sizeof( sgs_Int ) ); break;
+		case SGS_VT_REAL: sgs_membuf_appbuf( &pSD->data, C, &V.data.R, sizeof( sgs_Real ) ); break;
 		case SGS_VT_STRING:
-			sgs_Write( C, &V.data.S->size, 4 );
-			sgs_Write( C, sgs_var_cstr( &V ), V.data.S->size );
+			sgs_membuf_appbuf( &pSD->data, C, &V.data.S->size, 4 );
+			sgs_membuf_appbuf( &pSD->data, C, sgs_var_cstr( &V ), V.data.S->size );
 			break;
 		case SGS_VT_FUNC:
 			{
-				sgs_MemBuf Bf = sgs_membuf_create();
-				ret = _serialize_function( C, V.data.F, &Bf );
-				if( ret != 0 )
+				size_t szbefore = pSD->data.size;
+				if( !_serialize_function( C, V.data.F, &pSD->data ) )
 				{
-					sgs_Write( C, &Bf.size, 4 );
-					sgs_Write( C, Bf.ptr, Bf.size );
-					ret = SGS_SUCCESS;
+					ret = SGS_EINPROC;
+					goto fail;
 				}
 				else
-					ret = SGS_EINPROC;
-				sgs_membuf_destroy( &Bf, C );
-				if( ret != SGS_SUCCESS )
-					goto fail;
+				{
+					uint32_t szdiff = (uint32_t) ( pSD->data.size - szbefore );
+					sgs_membuf_insbuf( &pSD->data, C, szbefore, &szdiff, sizeof(szdiff) );
+				}
 			}
 			break;
 		default:
@@ -4858,30 +4903,34 @@ SGSRESULT sgs_Serialize( SGS_CTX )
 		}
 	}
 
-	sgs_Pop( C, 1 );
 fail:
 	if( ep )
 	{
-		sgs_SetOutputFunc( C, dofn, doud );
 		if( ret == SGS_SUCCESS )
 		{
-			if( B.size > 0x7fffffff )
+			if( SD.data.size > 0x7fffffff )
 			{
 				sgs_Msg( C, SGS_WARNING, "Serialized string too long" );
 				ret = SGS_EINVAL;
 			}
 			else
+			{
+				sgs_Pop( C, 1 );
 				/* WP: added error condition */
-				sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
+				sgs_PushStringBuf( C, SD.data.ptr, (sgs_SizeVal) SD.data.size );
+			}
 		}
-		sgs_membuf_destroy( &B, C );
+		sgs_membuf_destroy( &SD.data, C );
+		C->serialize_state = prev_serialize_state;
 	}
+	else
+		sgs_Pop( C, 1 );
 	return ret;
 }
 
-SGSRESULT sgs_SerializeObject( SGS_CTX, StkIdx args, const char* func )
+SGSRESULT sgs_SerializeObjectInt_V1( SGS_CTX, StkIdx args, const char* func, size_t fnsize )
 {
-	size_t len = strlen( func );
+	sgs_serialize1_data* pSD;
 	char pb[7] = { 'C', 0, 0, 0, 0, 0, 0 };
 	{
 		/* WP: they were pointless */
@@ -4891,16 +4940,15 @@ SGSRESULT sgs_SerializeObject( SGS_CTX, StkIdx args, const char* func )
 		pb[4] = (char)((args>>24)&0xff);
 	}
 	
-	if( len >= 255 )
-		return SGS_EINVAL;
-	if( C->output_fn != serialize_output_func )
+	if( !C->serialize_state || *(int*)C->serialize_state != 1 )
 		return SGS_EINPROC;
+	pSD = (sgs_serialize1_data*) C->serialize_state;
 	
 	/* WP: have error condition + sign interpretation doesn't matter */
-	pb[ 5 ] = (char) len;
-	sgs_Write( C, pb, 6 );
-	sgs_Write( C, func, len );
-	sgs_Write( C, pb + 6, 1 );
+	pb[ 5 ] = (char) fnsize;
+	sgs_membuf_appbuf( &pSD->data, C, pb, 6 );
+	sgs_membuf_appbuf( &pSD->data, C, func, fnsize );
+	sgs_membuf_appbuf( &pSD->data, C, pb + 6, 1 );
 	return SGS_SUCCESS;
 }
 
@@ -5005,12 +5053,235 @@ SGSRESULT sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 	return SGS_SUCCESS;
 }
 
+
+typedef struct sgs_serialize2_data
+{
+	int mode;
+	sgs_VHTable servartable;
+	sgs_MemBuf argarray;
+	sgs_VarObj* curObj;
+}
+sgs_serialize2_data;
+
+SGSRESULT sgs_SerializeInt_V2( SGS_CTX )
+{
+	int ret = SGS_SUCCESS;
+	sgs_Variable V;
+	void* prev_serialize_state = C->serialize_state;
+	sgs_serialize2_data SD, *pSD;
+	int ep = !C->serialize_state || *(int*)C->serialize_state != 2;
+	
+	if( !sgs_PeekStackItem( C, -1, &V ) )
+		return SGS_EBOUNDS;
+	
+	if( ep )
+	{
+		SD.mode = 2;
+		sgs_vht_init( &SD.servartable, C, 64, 64 );
+		SD.argarray = sgs_membuf_create();
+		SD.curObj = NULL;
+		C->serialize_state = &SD;
+	}
+	pSD = (sgs_serialize2_data*) C->serialize_state;
+	
+	if( V.type == SGS_VT_OBJECT )
+	{
+		sgs_VarObj* O = V.data.O;
+		sgs_VarObj* prevObj = pSD->curObj;
+		_STACK_PREPARE;
+		if( !O->iface->serialize )
+		{
+			sgs_Msg( C, SGS_WARNING, "Cannot serialize object of type '%s'", O->iface->name );
+			ret = SGS_ENOTSUP;
+			goto fail;
+		}
+		pSD->curObj = O;
+		_STACK_PROTECT;
+		ret = O->iface->serialize( C, O );
+		_STACK_UNPROTECT;
+		pSD->curObj = prevObj;
+		if( SGS_FAILED( ret ) )
+			goto fail;
+	}
+	else if( V.type == SGS_VT_CFUNC )
+	{
+		sgs_Msg( C, SGS_WARNING, "Cannot serialize C functions" );
+		ret = SGS_EINVAL;
+		goto fail;
+	}
+	else if( V.type == SGS_VT_PTR )
+	{
+		sgs_Msg( C, SGS_WARNING, "Cannot serialize pointers" );
+		ret = SGS_EINVAL;
+		goto fail;
+	}
+	else
+	{
+		sgs_StkIdx argidx;
+		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &V );
+		if( vv )
+			argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
+		else
+		{
+			sgs_Variable idxvar;
+			argidx = sgs_vht_size( &pSD->servartable );
+			idxvar.type = SGS_VT_INT;
+			idxvar.data.I = argidx;
+			sgs_vht_set( &pSD->servartable, C, &V, &idxvar );
+		}
+		sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+	}
+	
+fail:
+	if( ep )
+	{
+		if( ret == SGS_SUCCESS )
+		{
+			sgs_MemBuf B = sgs_membuf_create();
+			
+			/* combine all serialization info */
+			{
+				sgs_VHTVar* p = SD.servartable.vars;
+				sgs_VHTVar* pend = p + SD.servartable.size;
+				while( p < pend )
+				{
+					sgs_Variable* pKV = &p->key;
+					if( pKV->type == SGS_VT_OBJECT )
+					{
+						/* object, serialized to block */
+						sgs_membuf_appbuf( &B, C, sgs_var_cstr( &p->val ), p->val.data.S->size );
+					}
+					else
+					{
+						/* other, non-CFunc variables */
+						char pb[2];
+						{
+							pb[0] = 'P';
+							/* WP: basetype limited to bits 0-7, sign interpretation does not matter */
+							pb[1] = (char) pKV->type;
+						}
+						sgs_membuf_appbuf( &B, C, pb, 2 );
+						switch( pKV->type )
+						{
+						case SGS_VT_NULL: break;
+						/* WP: pKV->data.B uses only bit 0 */
+						case SGS_VT_BOOL: { char b = (char) pKV->data.B; sgs_membuf_appbuf( &B, C, &b, 1 ); } break;
+						case SGS_VT_INT: sgs_membuf_appbuf( &B, C, &pKV->data.I, sizeof( sgs_Int ) ); break;
+						case SGS_VT_REAL: sgs_membuf_appbuf( &B, C, &pKV->data.R, sizeof( sgs_Real ) ); break;
+						case SGS_VT_STRING:
+							sgs_membuf_appbuf( &B, C, &pKV->data.S->size, 4 );
+							sgs_membuf_appbuf( &B, C, sgs_var_cstr( pKV ), pKV->data.S->size );
+							break;
+						case SGS_VT_FUNC:
+							{
+								size_t szbefore = B.size;
+								if( !_serialize_function( C, pKV->data.F, &B ) )
+								{
+									ret = SGS_EINPROC;
+									goto fail2;
+								}
+								else
+								{
+									uint32_t szdiff = (uint32_t) ( B.size - szbefore );
+									sgs_membuf_insbuf( &B, C, szbefore, &szdiff, sizeof(szdiff) );
+								}
+							}
+							break;
+						default:
+							sgs_Msg( C, SGS_ERROR, "sgs_Serialize: Unknown memory error" );
+							ret = SGS_EINPROC;
+							goto fail2;
+						}
+					}
+					p++;
+				}
+			}
+			
+			if( B.size > 0x7fffffff )
+			{
+				sgs_Msg( C, SGS_WARNING, "Serialized string too long" );
+				ret = SGS_EINVAL;
+			}
+			else
+			{
+				sgs_Pop( C, 1 );
+				/* WP: added error condition */
+				sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
+			}
+fail2:
+			sgs_membuf_destroy( &B, C );
+		}
+		sgs_vht_free( &SD.servartable, C );
+		sgs_membuf_destroy( &SD.argarray, C );
+		C->serialize_state = prev_serialize_state;
+	}
+	else
+		sgs_Pop( C, 1 );
+	return ret;
+}
+
+SGSRESULT sgs_SerializeObjectInt_V2( SGS_CTX, StkIdx args, const char* func, size_t fnsize )
+{
+	size_t argsize;
+	sgs_VHTVar* vv;
+	sgs_Variable V;
+	sgs_StkIdx argidx;
+	sgs_serialize2_data* pSD;
+	if( !C->serialize_state || *(int*)C->serialize_state != 2 )
+		return SGS_EINPROC;
+	pSD = (sgs_serialize2_data*) C->serialize_state;
+	
+	if( args < 0 || args > pSD->argarray.size / 4 )
+		return SGS_EINVAL; /* too many arguments specified */
+	/* WP: added error condition */
+	argsize = sizeof(sgs_StkIdx) * (size_t) args;
+	
+	V.type = SGS_VT_OBJECT;
+	V.data.O = pSD->curObj;
+	vv = sgs_vht_get( &pSD->servartable, &V );
+	if( vv )
+		argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
+	else
+	{
+		sgs_Variable srlzdata;
+		char* pbuf;
+		char pb[6] = { 'C', 0, 0, 0, 0, 0 };
+		{
+			/* WP: they were pointless */
+			pb[1] = (char)((args)&0xff);
+			pb[2] = (char)((args>>8)&0xff);
+			pb[3] = (char)((args>>16)&0xff);
+			pb[4] = (char)((args>>24)&0xff);
+		}
+		
+		/* WP: TODO error condition */
+		sgs_InitStringAlloc( C, &srlzdata, (sgs_SizeVal)( 6 + argsize + fnsize + 1 ) );
+		pbuf = sgs_var_cstr( &srlzdata );
+		/* WP: have error condition + sign interpretation doesn't matter */
+		pb[ 5 ] = (char) fnsize;
+		memcpy( pbuf, pb, 6 );
+		memcpy( pbuf + 6, pSD->argarray.ptr + pSD->argarray.size - argsize, argsize );
+		memcpy( pbuf + 6 + argsize, func, fnsize );
+		pbuf[ 6 + argsize + fnsize ] = 0;
+		
+		argidx = sgs_vht_size( &pSD->servartable );
+		sgs_vht_set( &pSD->servartable, C, &V, &srlzdata );
+		sgs_Release( C, &srlzdata );
+	}
+	sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - argsize, pSD->argarray.size );
+	sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+	
+	return SGS_SUCCESS;
+}
+
 SGSRESULT sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 {
 	sgs_Variable var;
 	SGSRESULT res = SGS_EINPROC;
 	sgs_MemBuf mb = sgs_membuf_create();
+	_STACK_PREPARE;
 	
+	_STACK_PROTECT;
 	while( str < strend )
 	{
 		char c = *str++;
@@ -5077,6 +5348,7 @@ SGSRESULT sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 						goto fail;
 					var.type = SGS_VT_FUNC;
 					var.data.F = fn;
+					fn->refcount++;
 					str += bcsz;
 				}
 				break;
@@ -5089,10 +5361,11 @@ SGSRESULT sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			sgs_StkIdx subsz;
 			int32_t i, pos, argc;
 			int fnsz, ret;
-			if( str >= strend-4 )
+			if( str >= strend-5 )
 				goto fail;
 			SGS_AS_INT32( argc, str );
 			str += 4;
+			fnsz = *str++ + 1;
 			for( i = 0; i < argc; ++i )
 			{
 				if( str >= strend-4 )
@@ -5103,12 +5376,11 @@ SGSRESULT sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 					goto fail;
 				sgs_PushVariable( C, ((sgs_Variable*) mb.ptr) + pos );
 			}
-			fnsz = *str++ + 1;
 			if( str > strend - fnsz )
 				goto fail;
-			subsz = sgs_StackSize( C );
+			subsz = sgs_StackSize( C ) - argc;
 			ret = sgs_GlobalCall( C, str, argc, 1 );
-			if( SGS_FAILED( ret ) || subsz - sgs_StackSize( C ) < 1 )
+			if( SGS_FAILED( ret ) || sgs_StackSize( C ) - subsz < 1 )
 			{
 				res = ret;
 				goto fail;
@@ -5128,6 +5400,7 @@ SGSRESULT sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 		sgs_PushVariable( C, (sgs_Variable*)( mb.ptr + mb.size - sizeof(sgs_Variable) ) );
 	res = mb.size ? SGS_SUCCESS : SGS_EINPROC;
 fail:
+	_STACK_UNPROTECT_SKIP( SGS_SUCCEEDED( res ) );
 	{
 		sgs_Variable* ptr = (sgs_Variable*) mb.ptr;
 		sgs_Variable* pend = (sgs_Variable*) ( mb.ptr + mb.size );
@@ -5141,23 +5414,50 @@ fail:
 }
 
 
+SGSRESULT sgs_Serialize( SGS_CTX )
+{
+	SGSRESULT res;
+	sgs_StkIdx stksz = sgs_StackSize( C );
+	if( !stksz )
+		return SGS_EBOUNDS;
+	
+	if( C->state & SGS_CNTL_SERIALMODE )
+		res = sgs_SerializeInt_V2( C );
+	else
+		res = sgs_SerializeInt_V1( C );
+	return res;
+}
+
+SGSRESULT sgs_SerializeObject( SGS_CTX, StkIdx args, const char* func )
+{
+	SGSRESULT res;
+	size_t fnsize = strlen( func );
+	if( fnsize >= 255 )
+		return SGS_EINVAL;
+	if( C->state & SGS_CNTL_SERIALMODE )
+		res = sgs_SerializeObjectInt_V2( C, args, func, fnsize );
+	else
+		res = sgs_SerializeObjectInt_V1( C, args, func, fnsize );
+	return res;
+}
+
 SGSRESULT sgs_Unserialize( SGS_CTX )
 {
 	SGSRESULT res;
-	sgs_StkIdx stksz;
 	char* str, *strend;
 	sgs_SizeVal size;
-	if( !sgs_ParseString( C, -1, &str, &size ) )
+	_STACK_PREPARE;
+	if( !sgs_ParseString( C, -1, &str, &size ) || !size )
 		return SGS_EINVAL;
 	
 	strend = str + size;
 	
-	stksz = sgs_StackSize( C );
+	_STACK_PROTECT;
 	if( C->state & SGS_CNTL_SERIALMODE )
 		res = sgs_UnserializeInt_V2( C, str, strend );
 	else
 		res = sgs_UnserializeInt_V1( C, str, strend );
-	sgs_SetStackSize( C, stksz + SGS_SUCCEEDED( res ) );
+	_STACK_UNPROTECT_SKIP( SGS_SUCCEEDED( res ) );
 	return res;
 }
 

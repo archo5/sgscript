@@ -636,6 +636,13 @@ SGS_APIFUNC SGSRESULT sgs_TypeOf( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth );
 SGS_APIFUNC SGSRESULT sgs_GCExecute( SGS_CTX );
 
+SGS_APIFUNC const char* sgs_DebugDumpVarExt( SGS_CTX, sgs_StkIdx item, int maxdepth );
+#define sgs_DebugDumpVar( C, item ) sgs_DebugDumpVarExt( C, item, 5 )
+#define sgs_DebugPrintVar( C, item ) sgs_DebugDumpVarExt( C, item, -1 )
+SGS_APIFUNC const char* sgs_DebugDumpVarExtP( SGS_CTX, sgs_Variable* var, int maxdepth );
+#define sgs_DebugDumpVarP( C, var ) sgs_DebugDumpVarExtP( C, var, 5 )
+#define sgs_DebugPrintVarP( C, var ) sgs_DebugDumpVarExtP( C, var, -1 )
+
 SGS_APIFUNC SGSRESULT sgs_PadString( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_ToPrintSafeString( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_StringConcat( SGS_CTX, sgs_StkIdx args );

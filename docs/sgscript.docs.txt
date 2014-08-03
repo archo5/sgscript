@@ -578,7 +578,7 @@ There are 5 types of action for expressions in SGScript: arithmetic, bitwise, lo
 Some notes on the special cases:
 
 - [increment,decrement] pre-increment and pre-decrement operators return the modified value, post- operators - the original one
-- [boolean] all boolean operators except 'boolean invert' (which returns bool) set/return one of the two operands passed
+- [logical] all logical operators except 'logical invert' (which returns bool) set/return one of the two operands passed
 - [equality] strict (in)equality operators are the same as their non-strict counterparts with one difference: they do type checking, for example `5 == 5.0` would return 'true' and `5 === 5.0` would return 'false'
 - [declare] declarations only actually set the data if they include the assignment expression, otherwise only the type is internally noted for other references
 - [declare] variables can be redeclared as long as they maintain their access level
@@ -595,7 +595,7 @@ CFC is created to encourage users to reduce memory usage without sacrificing cla
 
 Properties:
 
-- uses the same symbol as boolean inversion operator
+- uses the same symbol as logical inversion operator
 - usage: simplified & optimized calling of non-integrated compatible functions
 -- instead of `comp_func.call( object, arg1 )` write `object!comp_func( arg1 )`
 -- instead of putting functions with data / class interfaces, requiring pointless memory usage, allows to easily keep them separate
@@ -1247,11 +1247,17 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_DumpCompiled - dump bytecode/constant info from a compiled bytecode buffer
 
 
-# Introspection [info]
+# Introspection / debugging helpers [info]
 
 - @sgs_Stat - retrieve or dump various parts of VM state
 - @sgs_StackFrameInfo - retrieve preprocessed info from stack frame
 - @sgs_GetFramePtr - return a stack frame pointer
+- @sgs_DebugDumpVarExt(P) - push a string containing variable data and return const char* to it
+- @sgs_DebugDumpVar(P) - push a variable dump string and return const char* to it
+- @sgs_DebugPrintVar(P) - push a string, converted from variable and return const char* to it
+- @sgs_CodeString - retrieve a name string for the specified constant
+- @sgs_WriteErrorInfo - write message info to output callback
+- @sgs_PushErrorInfo - push message info to stack
 
 
 # Execution control [info]
@@ -2407,6 +2413,36 @@ After a successful call, all arguments and the function will be popped off the s
 
 === error codes
 - any code can be returned by GCMARK and DESTRUCT functions, doing so would abort the process if the code is not either SGS_SUCCESS or SGS_ENOTFND
+
+
+# sgs_DebugDumpVarExt(P) [functions]
+
+== const char* sgs_DebugDumpVarExt( sgs_Context* C, sgs_StkIdx item, int maxdepth )
+== const char* sgs_DebugDumpVarExtP( sgs_Context* C, sgs_Variable* var, int maxdepth )
+=== push a string containing variable data and return const char* to it
+
+- if `maxdepth` is negative, variable is converted to a normal string (sgs_ToString) instead of dump string (sgs_DumpVar)
+- all error cases (index out of bounds, failed to dump) return strings too, so function behavior is consistent regardless of state
+
+
+# sgs_DebugDumpVar(P) [function aliases]
+
+== const char* sgs_DebugDumpVar( sgs_Context* C, sgs_StkIdx item )
+== const char* sgs_DebugDumpVarP( sgs_Context* C, sgs_Variable* var )
+=== push a variable dump string and return const char* to it
+
+- alias to `sgs_DebugDumpVarExt( C, item, 5 )` / `sgs_DebugDumpVarExtP( C, var, 5 )`
+- for more info, see @sgs_DebugDumpVarExt(P)
+
+
+# sgs_DebugPrintVar(P) [function aliases]
+
+== const char* sgs_DebugPrintVar( sgs_Context* C, sgs_StkIdx item )
+== const char* sgs_DebugPrintVarP( sgs_Context* C, sgs_Variable* var )
+=== push a string, converted from variable and return const char* to it
+
+- alias to `sgs_DebugDumpVarExt( C, item, -1 )` / `sgs_DebugDumpVarExtP( C, var, -1 )`
+- for more info, see @sgs_DebugDumpVarExt(P)
 
 
 # sgs_PadString [function]
@@ -7058,7 +7094,9 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 - a list of operations
 - each operation consists of a 'type' byte and additional data
 -- a "push" operation has the byte 'P', the data consists of the type to push (a byte consisting of one base flag from SGS_VT_*) and the binary data of the type
--- a "call" operation has the byte 'C', the data consists of the number of arguments (4 bytes), function name length (1 byte) and the null-terminated function name itself (<length>+1 bytes)
+-- a "call" operation has the byte 'C', the following data differs between formats:
+--- MODE 1: number of arguments (4 bytes), function name length (1 byte) and the null-terminated function name itself (<length>+1 bytes)
+--- MODE 2: number of arguments (4 bytes), function name length (1 byte), argument indices (4 bytes for each, count as previously specified) and the null-terminated function name itself (<length>+1 bytes)
 
 === Serialization
 
@@ -7083,7 +7121,6 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 === Possible gotchas
 
 - unserialization is not by default safe in the sense that any function can be executed with a carefully crafted byte buffer; this can be prevented by specifying the second parameter to the "unserialize" function. the behavior can be reproduced with the C API but it will take a bit more effort or calling the "unserialize" function from it
-- @sgs_Serialize overrides the output function so any output done via "print" or "sgs_Write*" functions during serialization will corrupt the stream
 - if environment overrides are used on deserialization, remember to add "array", "dict" and "map" to the list if you use them, they are not added automatically
 - serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items
 

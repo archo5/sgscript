@@ -239,7 +239,7 @@ SGS_APIFUNC const char* sgsBC_Buf2Func( SGS_CTX, const char* fn,
 -- will return header_size on success and failed byte position on failure */
 SGS_APIFUNC int sgsBC_ValidateHeader( const char* buf, size_t size );
 #define SGS_HEADER_SIZE 14
-#define SGS_MIN_BC_SIZE 14 + SGS_HEADER_SIZE
+#define SGS_MIN_BC_SIZE 8 + SGS_HEADER_SIZE
 #define SGSBC_FLAG_LITTLE_ENDIAN 0x01
 
 
@@ -473,24 +473,25 @@ struct _sgs_Context
 {
 	uint32_t      version;
 	uint32_t      apiversion;
-
+	
 	/* output */
 	sgs_OutputFunc output_fn; /* output function */
 	void*         output_ctx; /* output context */
 	sgs_OutputFunc erroutput_fn; /* error output function */
 	void*         erroutput_ctx; /* error output context */
-
+	void*         serialize_state; /* current serialization state */
+	
 	/* info output */
 	int32_t       minlev;
 	int32_t       apilev;
 	sgs_MsgFunc   msg_fn;  /* messaging function */
 	void*         msg_ctx; /* messaging context */
 	int           last_errno;
-
+	
 	/* hook */
 	sgs_HookFunc  hook_fn;
 	void*         hook_ctx;
-
+	
 	/* memory */
 	sgs_MemFunc   memfunc;
 	void*         mfuserdata;
@@ -498,12 +499,12 @@ struct _sgs_Context
 	size_t        numallocs;
 	size_t        numfrees;
 	size_t        numblocks;
-
+	
 	/* compilation */
 	uint32_t      state;
 	sgs_FuncCtx*  fctx;      /* ByteCodeGen */
 	const char*   filename;  /* filename of currently compiled code */
-
+	
 	/* virtual machine */
 	/* > main stack */
 	sgs_VarPtr    stack_base;

@@ -3060,6 +3060,7 @@ fail:
 */
 int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf )
 {
+	size_t origobsize = outbuf->size;
 	char header_bytes[ 14 ] =
 	{
 		'S', 'G', 'S', 0,
@@ -3072,8 +3073,7 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf )
 		0, 0, 0, 0
 	};
 	header_bytes[ 9 ] = ( O32_HOST_ORDER == O32_LITTLE_ENDIAN ) ? SGSBC_FLAG_LITTLE_ENDIAN : 0;
-	sgs_membuf_resize( outbuf, C, 0 );
-	sgs_membuf_reserve( outbuf, C, 1000 );
+	sgs_membuf_reserve( outbuf, C, origobsize + 1000 );
 	sgs_membuf_appbuf( outbuf, C, header_bytes, 14 );
 	
 	{
@@ -3088,8 +3088,6 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf )
 		sgs_membuf_appbuf( outbuf, C, &ic, sizeof( ic ) );
 		sgs_membuf_appbuf( outbuf, C, gntc, 4 );
 		
-		sgs_BreakIf( outbuf->size != 22 );
-		
 		if( !bc_write_varlist( (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 ), C,
 			cc, outbuf ) )
 			return 0;
@@ -3099,8 +3097,8 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf )
 		
 		{
 			/* WP: bytecode size limit */
-			uint32_t outbufsize = (uint32_t) outbuf->size;
-			memcpy( outbuf->ptr + 10, &outbufsize, sizeof(uint32_t) );
+			uint32_t outbufsize = (uint32_t) ( outbuf->size - origobsize );
+			memcpy( outbuf->ptr + origobsize + 10, &outbufsize, sizeof(uint32_t) );
 		}
 		
 		return 1;
