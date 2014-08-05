@@ -339,6 +339,26 @@ DEFINE_TEST( stack_propindex )
 	destroy_context( C );
 }
 
+static sgs_RegIntConst nidxints[] =
+{
+	{ "test", 42 },
+	{ NULL, 0 },
+};
+DEFINE_TEST( stack_negidx )
+{
+	SGS_CTX = get_context();
+	
+	atf_assert( sgs_PushDict( C, 0 ) == SGS_SUCCESS );
+	
+	atf_assert( sgs_StoreIntConsts( C, -1, nidxints, -1 ) == SGS_SUCCESS );
+	atf_assert( sgs_PushProperty( C, -1, "test" ) == SGS_SUCCESS );
+	atf_assert( sgs_GetInt( C, -1 ) == 42 );
+	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 1 );
+	
+	destroy_context( C );
+}
+
 DEFINE_TEST( globals_101 )
 {
 	SGS_CTX = get_context();
@@ -672,16 +692,20 @@ int nom_ctor( SGS_CTX )
 	return 1;
 }
 
+static sgs_RegFuncConst nom_funcs[] =
+{
+	{ "method_A", nom_method_A },
+	{ "method_B", nom_method_B },
+	{ "__call", nom_ctor },
+	{ NULL, NULL },
+};
+
 int nom_iface( SGS_CTX )
 {
-	sgs_PushString( C, "method_A" );
-	sgs_PushCFunction( C, nom_method_A );
-	sgs_PushString( C, "method_B" );
-	sgs_PushCFunction( C, nom_method_B );
-	sgs_PushString( C, "__call" );
-	sgs_PushCFunction( C, nom_ctor );
-	atf_assert( sgs_PushDict( C, 6 ) == SGS_SUCCESS );
-	atf_assert( sgs_StackSize( C ) >= 1 );
+	SGSFN( "nom_iface" );
+	atf_assert( sgs_PushDict( C, 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_StoreFuncConsts( C, -1, nom_funcs, -1 ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 1 );
 	sgs_ObjSetMetaMethodEnable( sgs_GetObjectStruct( C, -1 ), 1 );
 	return 1;
 }
@@ -717,6 +741,7 @@ test_t all_tests[] =
 	TST( stack_arraydict ),
 	TST( stack_pushstore ),
 	TST( stack_propindex ),
+	TST( stack_negidx ),
 	TST( globals_101 ),
 	TST( libraries ),
 	TST( function_calls ),

@@ -132,6 +132,9 @@ extern "C" {
 typedef unsigned char sgs_TokenType;
 typedef unsigned char* sgs_TokenList;
 
+SGS_APIFUNC int sgsT_IsKeyword( sgs_TokenList tok, const char* text );
+SGS_APIFUNC int sgsT_IsIdent( sgs_TokenList tok, const char* text );
+
 SGS_APIFUNC sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length );
 SGS_APIFUNC void          sgsT_Free( SGS_CTX, sgs_TokenList tlist );
 SGS_APIFUNC sgs_TokenList sgsT_Next( sgs_TokenList tok );

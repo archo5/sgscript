@@ -414,12 +414,14 @@ SGS_APIFUNC sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 
 /* Additional libraries */
 
+#if !SGS_NO_STDLIB
 SGS_APIFUNC SGSRESULT sgs_LoadLib_Fmt( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_LoadLib_IO( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_LoadLib_Math( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_LoadLib_OS( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_LoadLib_RE( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_LoadLib_String( SGS_CTX );
+#endif
 
 #define SGS_RC_END() { NULL, NULL }
 

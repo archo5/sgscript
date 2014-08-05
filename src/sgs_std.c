@@ -5,8 +5,12 @@
 
 #include "sgs_int.h"
 
-#define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
-#define STDLIB_ERR( err ) return sgs_Msg( C, SGS_ERROR, err );
+#ifndef STDLIB_WARN
+#  define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
+#endif
+#ifndef STDLIB_ERR
+#  define STDLIB_ERR( err ) return sgs_Msg( C, SGS_ERROR, err );
+#endif
 
 
 static int sgsstd_expectnum( SGS_CTX, sgs_StkIdx n )
@@ -1058,7 +1062,7 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* data, int depth )
 	return sgsstd_vht_dump( C, data, depth, "dict" );
 }
 
-static int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+/* ref'd in sgs_proc.c */ int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
 {
 	sgs_VHTVar* pair = NULL;
 	HTHDR;
@@ -2646,12 +2650,14 @@ static int sgsstd__inclib( SGS_CTX, const char* name, int override )
 		return SGS_SUCCESS;
 	}
 	
+#if !SGS_NO_STDLIB
 	if( strcmp( name, "fmt" ) == 0 ) ret = sgs_LoadLib_Fmt( C );
 	else if( strcmp( name, "io" ) == 0 ) ret = sgs_LoadLib_IO( C );
 	else if( strcmp( name, "math" ) == 0 ) ret = sgs_LoadLib_Math( C );
 	else if( strcmp( name, "os" ) == 0 ) ret = sgs_LoadLib_OS( C );
 	else if( strcmp( name, "re" ) == 0 ) ret = sgs_LoadLib_RE( C );
 	else if( strcmp( name, "string" ) == 0 ) ret = sgs_LoadLib_String( C );
+#endif
 	
 	if( ret == SGS_SUCCESS )
 	{
@@ -3363,50 +3369,52 @@ static int sgsstd_unserialize2( SGS_CTX ){ SGSFN( "unserialize2" ); return sgsst
 
 
 /* register all */
-#define FN( name ) { #name, sgsstd_##name }
+#ifndef STDLIB_FN
+#  define STDLIB_FN( x ) { #x, sgsstd_##x }
+#endif
 static sgs_RegFuncConst regfuncs[] =
 {
 	/* containers */
-	/* FN( array ), -- object */ FN( dict ), FN( map ), { "class", sgsstd_class },
-	FN( array_filter ), FN( array_process ),
-	FN( dict_filter ), FN( dict_process ),
-	FN( dict_size ), FN( map_size ), FN( isset ), FN( unset ), FN( clone ),
-	FN( get_keys ), FN( get_values ), FN( get_concat ),
-	FN( get_merged ), FN( get_merged_map ),
-	FN( get_iterator ), FN( iter_advance ), FN( iter_getdata ),
+	/* STDLIB_FN( array ), -- object */ STDLIB_FN( dict ), STDLIB_FN( map ), { "class", sgsstd_class },
+	STDLIB_FN( array_filter ), STDLIB_FN( array_process ),
+	STDLIB_FN( dict_filter ), STDLIB_FN( dict_process ),
+	STDLIB_FN( dict_size ), STDLIB_FN( map_size ), STDLIB_FN( isset ), STDLIB_FN( unset ), STDLIB_FN( clone ),
+	STDLIB_FN( get_keys ), STDLIB_FN( get_values ), STDLIB_FN( get_concat ),
+	STDLIB_FN( get_merged ), STDLIB_FN( get_merged_map ),
+	STDLIB_FN( get_iterator ), STDLIB_FN( iter_advance ), STDLIB_FN( iter_getdata ),
 	/* types */
-	FN( tobool ), FN( toint ), FN( toreal ), FN( tostring ), FN( toptr ),
-	FN( parseint ), FN( parsereal ),
-	FN( typeof ), FN( typeid ), FN( typeptr ), FN( typeptr_by_name ),
-	FN( is_numeric ), FN( is_callable ),
-	FN( is_array ), FN( is_dict ), FN( is_map ), FN( is_iterable ),
+	STDLIB_FN( tobool ), STDLIB_FN( toint ), STDLIB_FN( toreal ), STDLIB_FN( tostring ), STDLIB_FN( toptr ),
+	STDLIB_FN( parseint ), STDLIB_FN( parsereal ),
+	STDLIB_FN( typeof ), STDLIB_FN( typeid ), STDLIB_FN( typeptr ), STDLIB_FN( typeptr_by_name ),
+	STDLIB_FN( is_numeric ), STDLIB_FN( is_callable ),
+	STDLIB_FN( is_array ), STDLIB_FN( is_dict ), STDLIB_FN( is_map ), STDLIB_FN( is_iterable ),
 	/* I/O */
-	FN( print ), FN( println ), FN( printlns ),
-	FN( errprint ), FN( errprintln ), FN( errprintlns ),
-	FN( printvar ), FN( printvar_ext ),
-	FN( read_stdin ),
+	STDLIB_FN( print ), STDLIB_FN( println ), STDLIB_FN( printlns ),
+	STDLIB_FN( errprint ), STDLIB_FN( errprintln ), STDLIB_FN( errprintlns ),
+	STDLIB_FN( printvar ), STDLIB_FN( printvar_ext ),
+	STDLIB_FN( read_stdin ),
 	/* OS */
-	FN( ftime ),
+	STDLIB_FN( ftime ),
 	/* utils */
-	FN( rand ), FN( randf ), FN( srand ), FN( hash_fnv ), FN( hash_crc32 ),
+	STDLIB_FN( rand ), STDLIB_FN( randf ), STDLIB_FN( srand ), STDLIB_FN( hash_fnv ), STDLIB_FN( hash_crc32 ),
 	/* internal utils */
-	FN( va_get_args ), FN( va_get_arg ), FN( va_arg_count ),
+	STDLIB_FN( va_get_args ), STDLIB_FN( va_get_arg ), STDLIB_FN( va_arg_count ),
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
-	FN( metaobj_set ), FN( metaobj_get ), FN( metamethods_enable ), FN( metamethods_test ),
-	FN( pcall ), FN( assert ),
-	FN( eval ), FN( eval_file ), FN( compile_sgs ),
-	FN( include_library ), FN( include_file ),
-	FN( include_shared ), FN( import_cfunc ),
-	FN( include ),
-	FN( sys_curfile ), FN( sys_curfiledir ), FN( sys_backtrace ),
-	FN( sys_msg ), FN( INFO ), FN( WARNING ), FN( ERROR ),
-	FN( sys_abort ), FN( app_abort ), FN( app_exit ),
-	FN( sys_replevel ), FN( sys_stat ),
-	FN( errno ), FN( errno_string ), FN( errno_value ),
-	FN( dumpvar ), FN( dumpvar_ext ),
-	FN( gc_collect ),
-	FN( serialize ), FN( unserialize ),
-	FN( serialize2 ), FN( unserialize2 ),
+	STDLIB_FN( metaobj_set ), STDLIB_FN( metaobj_get ), STDLIB_FN( metamethods_enable ), STDLIB_FN( metamethods_test ),
+	STDLIB_FN( pcall ), STDLIB_FN( assert ),
+	STDLIB_FN( eval ), STDLIB_FN( eval_file ), STDLIB_FN( compile_sgs ),
+	STDLIB_FN( include_library ), STDLIB_FN( include_file ),
+	STDLIB_FN( include_shared ), STDLIB_FN( import_cfunc ),
+	STDLIB_FN( include ),
+	STDLIB_FN( sys_curfile ), STDLIB_FN( sys_curfiledir ), STDLIB_FN( sys_backtrace ),
+	STDLIB_FN( sys_msg ), STDLIB_FN( INFO ), STDLIB_FN( WARNING ), STDLIB_FN( ERROR ),
+	STDLIB_FN( sys_abort ), STDLIB_FN( app_abort ), STDLIB_FN( app_exit ),
+	STDLIB_FN( sys_replevel ), STDLIB_FN( sys_stat ),
+	STDLIB_FN( errno ), STDLIB_FN( errno_string ), STDLIB_FN( errno_value ),
+	STDLIB_FN( dumpvar ), STDLIB_FN( dumpvar_ext ),
+	STDLIB_FN( gc_collect ),
+	STDLIB_FN( serialize ), STDLIB_FN( unserialize ),
+	STDLIB_FN( serialize2 ), STDLIB_FN( unserialize2 ),
 };
 
 static const sgs_RegIntConst regiconsts[] =
@@ -3713,12 +3721,17 @@ SGSRESULT sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
 SGSRESULT sgs_StoreFuncConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegFuncConst* list, int size )
 {
 	int ret;
+	sgs_Variable tgt, key, val;
+	if( !sgs_PeekStackItem( C, item, &tgt ) )
+		return SGS_EBOUNDS;
 	while( size-- )
 	{
 		if( !list->name )
 			break;
-		sgs_PushCFunction( C, list->value );
-		ret = sgs_StoreProperty( C, item, list->name );
+		sgs_InitCFunction( &val, list->value );
+		sgs_InitString( C, &key, list->name );
+		ret = sgs_SetIndexPPP( C, &tgt, &key, &val, 1 );
+		sgs_Release( C, &key );
 		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
@@ -3728,12 +3741,17 @@ SGSRESULT sgs_StoreFuncConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegFuncConst*
 SGSRESULT sgs_StoreIntConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegIntConst* list, int size )
 {
 	int ret;
+	sgs_Variable tgt, key, val;
+	if( !sgs_PeekStackItem( C, item, &tgt ) )
+		return SGS_EBOUNDS;
 	while( size-- )
 	{
 		if( !list->name )
 			break;
-		sgs_PushInt( C, list->value );
-		ret = sgs_StoreProperty( C, item, list->name );
+		sgs_InitInt( &val, list->value );
+		sgs_InitString( C, &key, list->name );
+		ret = sgs_SetIndexPPP( C, &tgt, &key, &val, 1 );
+		sgs_Release( C, &key );
 		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
@@ -3743,12 +3761,17 @@ SGSRESULT sgs_StoreIntConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegIntConst* l
 SGSRESULT sgs_StoreRealConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegRealConst* list, int size )
 {
 	int ret;
+	sgs_Variable tgt, key, val;
+	if( !sgs_PeekStackItem( C, item, &tgt ) )
+		return SGS_EBOUNDS;
 	while( size-- )
 	{
 		if( !list->name )
 			break;
-		sgs_PushReal( C, list->value );
-		ret = sgs_StoreProperty( C, item, list->name );
+		sgs_InitReal( &val, list->value );
+		sgs_InitString( C, &key, list->name );
+		ret = sgs_SetIndexPPP( C, &tgt, &key, &val, 1 );
+		sgs_Release( C, &key );
 		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
@@ -3759,12 +3782,15 @@ SGSRESULT sgs_StoreRealConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegRealConst*
 SGSRESULT sgs_StoreFuncConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegFuncConst* list, int size )
 {
 	int ret;
+	sgs_Variable key, val;
 	while( size-- )
 	{
 		if( !list->name )
 			break;
-		sgs_PushCFunction( C, list->value );
-		ret = sgs_StorePropertyP( C, var, list->name );
+		sgs_InitCFunction( &val, list->value );
+		sgs_InitString( C, &key, list->name );
+		ret = sgs_SetIndexPPP( C, var, &key, &val, 1 );
+		sgs_Release( C, &key );
 		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
@@ -3774,12 +3800,15 @@ SGSRESULT sgs_StoreFuncConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegFuncCon
 SGSRESULT sgs_StoreIntConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegIntConst* list, int size )
 {
 	int ret;
+	sgs_Variable key, val;
 	while( size-- )
 	{
 		if( !list->name )
 			break;
-		sgs_PushInt( C, list->value );
-		ret = sgs_StorePropertyP( C, var, list->name );
+		sgs_InitInt( &val, list->value );
+		sgs_InitString( C, &key, list->name );
+		ret = sgs_SetIndexPPP( C, var, &key, &val, 1 );
+		sgs_Release( C, &key );
 		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}
@@ -3789,12 +3818,15 @@ SGSRESULT sgs_StoreIntConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegIntConst
 SGSRESULT sgs_StoreRealConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegRealConst* list, int size )
 {
 	int ret;
+	sgs_Variable key, val;
 	while( size-- )
 	{
 		if( !list->name )
 			break;
-		sgs_PushReal( C, list->value );
-		ret = sgs_StorePropertyP( C, var, list->name );
+		sgs_InitReal( &val, list->value );
+		sgs_InitString( C, &key, list->name );
+		ret = sgs_SetIndexPPP( C, var, &key, &val, 1 );
+		sgs_Release( C, &key );
 		if( ret != SGS_SUCCESS ) return ret;
 		list++;
 	}

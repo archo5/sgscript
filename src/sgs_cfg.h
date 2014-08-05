@@ -11,6 +11,11 @@
 #  endif
 #endif
 
+/* compile without standard libraries */
+#ifndef SGS_NO_STDLIB
+#  define SGS_NO_STDLIB 0
+#endif
+
 /* stage output dumps */
 #ifndef SGS_DEBUG_DATA
 #  define SGS_DEBUG_DATA 0

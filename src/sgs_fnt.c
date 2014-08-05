@@ -14,18 +14,6 @@ static int isoneofN( char ch, const char* what, int size )
 	return 0;
 }
 
-static int is_keyword( sgs_TokenList tok, const char* text )
-{
-	return *tok == SGS_ST_KEYWORD && tok[ 1 ] == strlen( text ) &&
-		strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
-}
-
-static int is_ident( sgs_TokenList tok, const char* text )
-{
-	return *tok == SGS_ST_IDENT && tok[ 1 ] == strlen( text ) &&
-		strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
-}
-
 
 /* debugging */
 
@@ -128,8 +116,8 @@ FTComp;
 #define SFTC_IN( buf, sz ) isoneofN( (char) *F->at, buf, sz )
 #define SFTC_HASERR ( F->C->state & SGS_HAS_ERRORS )
 #define SFTC_SETERR F->C->state |= SGS_HAS_ERRORS
-#define SFTC_ISKEY( name ) is_keyword( F->at, name )
-#define SFTC_IS_ID( name ) is_ident( F->at, name )
+#define SFTC_ISKEY( name ) sgsT_IsKeyword( F->at, name )
+#define SFTC_IS_ID( name ) sgsT_IsIdent( F->at, name )
 #define SFTC_LINENUM sgsT_LineNum( F->at )
 #define SFTC_PRINTERR( what ) sgs_Msg( F->C, SGS_ERROR, "[line %d] " what, SFTC_LINENUM )
 #define SFTC_UNEXP sgs_Msg( F->C, SGS_ERROR, "Unexpected end of code", SFTC_LINENUM )

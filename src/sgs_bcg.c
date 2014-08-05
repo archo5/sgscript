@@ -5,13 +5,6 @@
 #define rcpos_t sgs_rcpos_t
 
 
-static int is_keyword( sgs_TokenList tok, const char* text )
-{
-	return *tok == SGS_ST_KEYWORD &&
-		tok[ 1 ] == strlen( text ) &&
-		strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
-}
-
 #define over_limit( x, lim ) ((x)>(lim)||(x)<(-lim))
 
 
@@ -440,7 +433,7 @@ static int preparse_varlists( SGS_FNTCMP_ARGS )
 		ret &= preparse_varlist( C, func, node );
 	else if( node->type == SGS_SFT_GVLIST )
 		ret &= preparse_gvlist( C, func, node );
-	else if( node->type == SGS_SFT_KEYWORD && node->token && is_keyword( node->token, "this" ) )
+	else if( node->type == SGS_SFT_KEYWORD && node->token && sgsT_IsKeyword( node->token, "this" ) )
 	{
 		func->gotthis = SGS_TRUE;
 		if( preadd_thisvar( &C->fctx->vars, C ) )
@@ -776,19 +769,19 @@ static void compile_ident( SGS_FNTCMP_ARGS, rcpos_t* out )
 static SGSBOOL compile_ident_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 {
 	rcpos_t pos;
-	if( is_keyword( node->token, "null" ) )
+	if( sgsT_IsKeyword( node->token, "null" ) )
 	{
 		pos = add_const_null( C, func );
 		*out = BC_CONSTENC( pos );
 		return 1;
 	}
-	if( is_keyword( node->token, "true" ) )
+	if( sgsT_IsKeyword( node->token, "true" ) )
 	{
 		pos = add_const_b( C, func, SGS_TRUE );
 		*out = BC_CONSTENC( pos );
 		return 1;
 	}
-	if( is_keyword( node->token, "false" ) )
+	if( sgsT_IsKeyword( node->token, "false" ) )
 	{
 		pos = add_const_b( C, func, SGS_FALSE );
 		*out = BC_CONSTENC( pos );
@@ -796,7 +789,7 @@ static SGSBOOL compile_ident_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 	}
 	if( *node->token == SGS_ST_KEYWORD )
 	{
-		if( is_keyword( node->token, "this" ) )
+		if( sgsT_IsKeyword( node->token, "this" ) )
 		{
 			if( func->gotthis )
 			{
@@ -938,7 +931,7 @@ static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 	int i = 0, gotthis = 0;
 	
 	/* IF (ternary-like) */
-	if( is_keyword( node->child->token, "if" ) )
+	if( sgsT_IsKeyword( node->child->token, "if" ) )
 	{
 		sgs_FTNode* n = node->child->next->child;
 		int argc = 0;

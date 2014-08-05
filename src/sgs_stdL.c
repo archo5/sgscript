@@ -1,4 +1,5 @@
 
+#if !SGS_NO_STDLIB
 
 /* for the constants... */
 #define _USE_MATH_DEFINES
@@ -15,8 +16,12 @@
 #include "sgs_int.h"
 #include "sgs_regex.h"
 
-#define FN( x ) { #x, sgsstd_##x }
-#define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
+#ifndef STDLIB_FN
+#  define STDLIB_FN( x ) { #x, sgsstd_##x }
+#endif
+#ifndef STDLIB_WARN
+#  define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
+#endif
 
 
 SGS_DECLARE sgs_ObjInterface sgsstd_file_iface[1];
@@ -1637,13 +1642,13 @@ static int sgsstd_fmt_charcc( SGS_CTX )
 
 static const sgs_RegFuncConst f_fconsts[] =
 {
-	FN( fmt_pack ), FN( fmt_pack_count ),
-	FN( fmt_unpack ), FN( fmt_pack_size ),
-	FN( fmt_base64_encode ), FN( fmt_base64_decode ),
-	FN( fmt_custom_encode ), FN( fmt_custom_decode ),
-	FN( fmt_text ), FN( fmt_parser ),
-	FN( fmt_string_parser ), FN( fmt_file_parser ),
-	FN( fmt_charcc ),
+	STDLIB_FN( fmt_pack ), STDLIB_FN( fmt_pack_count ),
+	STDLIB_FN( fmt_unpack ), STDLIB_FN( fmt_pack_size ),
+	STDLIB_FN( fmt_base64_encode ), STDLIB_FN( fmt_base64_decode ),
+	STDLIB_FN( fmt_custom_encode ), STDLIB_FN( fmt_custom_decode ),
+	STDLIB_FN( fmt_text ), STDLIB_FN( fmt_parser ),
+	STDLIB_FN( fmt_string_parser ), STDLIB_FN( fmt_file_parser ),
+	STDLIB_FN( fmt_charcc ),
 };
 
 SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
@@ -2339,14 +2344,14 @@ static const sgs_RegRealConst i_rconsts[] =
 
 static const sgs_RegFuncConst i_fconsts[] =
 {
-	FN( io_getcwd ), FN( io_setcwd ),
-	FN( io_getexecpath ),
-	FN( io_rename ),
-	FN( io_file_exists ), FN( io_dir_exists ), FN( io_stat ),
-	FN( io_dir_create ), FN( io_dir_delete ),
-	FN( io_file_delete ),
-	FN( io_file_write ), FN( io_file_read ),
-	FN( io_file ), FN( io_dir ),
+	STDLIB_FN( io_getcwd ), STDLIB_FN( io_setcwd ),
+	STDLIB_FN( io_getexecpath ),
+	STDLIB_FN( io_rename ),
+	STDLIB_FN( io_file_exists ), STDLIB_FN( io_dir_exists ), STDLIB_FN( io_stat ),
+	STDLIB_FN( io_dir_create ), STDLIB_FN( io_dir_delete ),
+	STDLIB_FN( io_file_delete ),
+	STDLIB_FN( io_file_write ), STDLIB_FN( io_file_read ),
+	STDLIB_FN( io_file ), STDLIB_FN( io_dir ),
 };
 
 SGSRESULT sgs_LoadLib_IO( SGS_CTX )
@@ -2493,11 +2498,11 @@ static const sgs_RegRealConst m_rconsts[] =
 
 static const sgs_RegFuncConst m_fconsts[] =
 {
-	FN( abs ), FN( floor ), FN( ceil ), FN( round ),
-	FN( pow ), FN( sqrt ), FN( log ),
-	FN( sin ), FN( cos ), FN( tan ),
-	FN( asin ), FN( acos ), FN( atan ), FN( atan2 ),
-	FN( deg2rad ), FN( rad2deg ),
+	STDLIB_FN( abs ), STDLIB_FN( floor ), STDLIB_FN( ceil ), STDLIB_FN( round ),
+	STDLIB_FN( pow ), STDLIB_FN( sqrt ), STDLIB_FN( log ),
+	STDLIB_FN( sin ), STDLIB_FN( cos ), STDLIB_FN( tan ),
+	STDLIB_FN( asin ), STDLIB_FN( acos ), STDLIB_FN( atan ), STDLIB_FN( atan2 ),
+	STDLIB_FN( deg2rad ), STDLIB_FN( rad2deg ),
 };
 
 SGSRESULT sgs_LoadLib_Math( SGS_CTX )
@@ -2903,12 +2908,12 @@ static const sgs_RegIntConst o_iconsts[] =
 
 static const sgs_RegFuncConst o_fconsts[] =
 {
-	FN( os_gettype ), FN( os_command ),
-	FN( os_getenv ), FN( os_putenv ),
-	FN( os_time ), FN( os_get_timezone ), FN( os_date_string ),
-	FN( os_parse_time ), FN( os_make_time ),
-	FN( os_get_locale ), FN( os_set_locale ),
-	FN( os_get_locale_format ), FN( os_locale_strcmp ),
+	STDLIB_FN( os_gettype ), STDLIB_FN( os_command ),
+	STDLIB_FN( os_getenv ), STDLIB_FN( os_putenv ),
+	STDLIB_FN( os_time ), STDLIB_FN( os_get_timezone ), STDLIB_FN( os_date_string ),
+	STDLIB_FN( os_parse_time ), STDLIB_FN( os_make_time ),
+	STDLIB_FN( os_get_locale ), STDLIB_FN( os_set_locale ),
+	STDLIB_FN( os_get_locale_format ), STDLIB_FN( os_locale_strcmp ),
 };
 
 SGSRESULT sgs_LoadLib_OS( SGS_CTX )
@@ -3117,8 +3122,8 @@ static const sgs_RegIntConst r_iconsts[] =
 
 static const sgs_RegFuncConst r_fconsts[] =
 {
-	FN( re_match ), FN( re_match_all ),
-	FN( re_replace ),
+	STDLIB_FN( re_match ), STDLIB_FN( re_match_all ),
+	STDLIB_FN( re_replace ),
 };
 
 SGSRESULT sgs_LoadLib_RE( SGS_CTX )
@@ -4385,20 +4390,20 @@ static const sgs_RegIntConst s_iconsts[] =
 
 static const sgs_RegFuncConst s_fconsts[] =
 {
-	FN( string_cut ), FN( string_part ),
-	FN( string_reverse ), FN( string_pad ),
-	FN( string_repeat ), FN( string_count ),
-	FN( string_find ), FN( string_find_rev ),
-	FN( string_replace ), FN( string_translate ),
-	FN( string_trim ),
-	FN( string_toupper ), FN( string_tolower ),
-	FN( string_compare ),
-	FN( string_implode ), FN( string_explode ),
-	FN( string_charcode ), FN( string_frombytes ),
-	FN( string_utf8_decode ), FN( string_utf8_encode ),
-	FN( string_utf8_offset ), FN( string_utf8_length ),
-	FN( string_utf8_iterator ),
-	FN( string_format ),
+	STDLIB_FN( string_cut ), STDLIB_FN( string_part ),
+	STDLIB_FN( string_reverse ), STDLIB_FN( string_pad ),
+	STDLIB_FN( string_repeat ), STDLIB_FN( string_count ),
+	STDLIB_FN( string_find ), STDLIB_FN( string_find_rev ),
+	STDLIB_FN( string_replace ), STDLIB_FN( string_translate ),
+	STDLIB_FN( string_trim ),
+	STDLIB_FN( string_toupper ), STDLIB_FN( string_tolower ),
+	STDLIB_FN( string_compare ),
+	STDLIB_FN( string_implode ), STDLIB_FN( string_explode ),
+	STDLIB_FN( string_charcode ), STDLIB_FN( string_frombytes ),
+	STDLIB_FN( string_utf8_decode ), STDLIB_FN( string_utf8_encode ),
+	STDLIB_FN( string_utf8_offset ), STDLIB_FN( string_utf8_length ),
+	STDLIB_FN( string_utf8_iterator ),
+	STDLIB_FN( string_format ),
 };
 
 SGSRESULT sgs_LoadLib_String( SGS_CTX )
@@ -4410,4 +4415,6 @@ SGSRESULT sgs_LoadLib_String( SGS_CTX )
 	return ret;
 }
 
+
+#endif /* !SGS_NO_STDLIB */
 

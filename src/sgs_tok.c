@@ -7,6 +7,19 @@
 #include "sgs_int.h"
 
 
+int sgsT_IsKeyword( sgs_TokenList tok, const char* text )
+{
+	return *tok == SGS_ST_KEYWORD && tok[ 1 ] == strlen( text ) &&
+		strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
+}
+
+int sgsT_IsIdent( sgs_TokenList tok, const char* text )
+{
+	return *tok == SGS_ST_IDENT && tok[ 1 ] == strlen( text ) &&
+		strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
+}
+
+
 static SGS_INLINE int detectline( const char* code, int32_t at )
 {
 	return code[ at ] == '\r' || ( code[ at ] == '\n' && ( at == 0 || code[ at - 1 ] != '\r' ) );
