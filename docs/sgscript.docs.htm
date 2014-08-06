@@ -56,7 +56,6 @@
 </li><li><a href='#Iterators'>Iterators</a>
 </li><li><a href='#Variable-ownership'>Variable ownership</a>
 </li><li><a href='#String-generation-helper-interface'>String generation helper interface</a>
-</li><li><a href='#String32-optimization-interface'>String32 optimization interface</a>
 </li><li><a href='#Utility-functions'>Utility functions</a>
 </li><li><a href='#ALL-functions-A-Z'>ALL functions (A-Z)</a>
 </li></ul><li><a href='#Interface-implementation'>Interface implementation</a>
@@ -1220,10 +1219,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 <div class='item'><a name='String-generation-helper-interface'></a><hr><h2>String generation helper interface</h2><ul><li><a href="#sgs-PushStringAlloc-function">sgs_PushStringAlloc</a> - push an uninitialized string buffer
 </li><li><a href="#sgs-InitStringAlloc-function">sgs_InitStringAlloc</a> - set an uninitialized string buffer to a variable
 </li><li><a href="#sgs-FinalizeStringAlloc-P-functions">sgs_FinalizeStringAlloc(P)</a> - finalize (prepare for usage) an uninitialized string buffer</li></ul></div>
-<div class='item'><a name='String32-optimization-interface'></a><hr><h2>String32 optimization interface</h2><ul><li><a href="#sgs-PushStringBuf32-function">sgs_PushStringBuf32</a> - initialize and push string32 object on stack
-</li><li><a href="#sgs-PushString32-function">sgs_PushString32</a> - initialize and push string32 object on stack
-</li><li><a href="#sgs-CheckString32-function">sgs_CheckString32</a> - trigger a breakpoint if string32 object is not freed
-</li><li><a href="#sgs-IsFreedString32-function">sgs_IsFreedString32</a> - check if string32 object is freed</li></ul></div>
 <div class='item'><a name='Utility-functions'></a><hr><h2>Utility functions</h2><ul><li><a href="#sgs-CodeString-function">sgs_CodeString</a> - retrieve a name string for the specified constant
 </li><li><a href="#sgs-IsNumericString-function">sgs_IsNumericString</a> - check if string is going to be parsed as a number by the internal parser</li></ul></div>
 <div class='item'><a name='ALL-functions-A-Z'></a><hr><h2>ALL functions (A-Z)</h2><ul><li><a href="#SGSBASEFN-function-alias">SGSBASEFN [function alias]</a>
@@ -1244,7 +1239,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-ArithOp-function">sgs_ArithOp [function]</a>
 </li><li><a href="#sgs-ArraySize-P-functions">sgs_ArraySize(P) [functions]</a>
 </li><li><a href="#sgs-Assign-function">sgs_Assign [function]</a>
-</li><li><a href="#sgs-CheckString32-function">sgs_CheckString32 [function]</a>
 </li><li><a href="#sgs-ClGetItem-function">sgs_ClGetItem [function]</a>
 </li><li><a href="#sgs-ClPop-function">sgs_ClPop [function]</a>
 </li><li><a href="#sgs-ClPushItem-function">sgs_ClPushItem [function]</a>
@@ -1308,7 +1302,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-InitStringAlloc-function">sgs_InitStringAlloc [function]</a>
 </li><li><a href="#sgs-InsertVariable-function">sgs_InsertVariable [function]</a>
 </li><li><a href="#sgs-IsCallable-P-functions">sgs_IsCallable(P) [functions]</a>
-</li><li><a href="#sgs-IsFreedString32-function">sgs_IsFreedString32 [function]</a>
 </li><li><a href="#sgs-IsNumericString-function">sgs_IsNumericString [function]</a>
 </li><li><a href="#sgs-IsObject-P-functions">sgs_IsObject(P) [functions]</a>
 </li><li><a href="#sgs-IsType-P-function-aliases">sgs_IsType(P) [function aliases]</a>
@@ -1354,9 +1347,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-PushNumIndex-function">sgs_PushNumIndex [function]</a>
 </li><li><a href="#sgs-PushPath-function">sgs_PushPath [function]</a>
 </li><li><a href="#sgs-PushProperty-P-functions">sgs_PushProperty(P) [functions]</a>
-</li><li><a href="#sgs-PushString32-function">sgs_PushString32 [function]</a>
 </li><li><a href="#sgs-PushStringAlloc-function">sgs_PushStringAlloc [function]</a>
-</li><li><a href="#sgs-PushStringBuf32-function">sgs_PushStringBuf32 [function]</a>
 </li><li><a href="#sgs-Reg-Consts-function">sgs_Reg***Consts [function]</a>
 </li><li><a href="#sgs-RegisterType-function">sgs_RegisterType [function]</a>
 </li><li><a href="#sgs-Release-Array-function">sgs_Release(Array) [function]</a>
@@ -1928,12 +1919,6 @@ Created string is a valid resource in terms of acquisition/release but not hashe
 <div class='item'><a name='sgs-FinalizeStringAlloc-P-functions'></a><hr><h2>sgs_FinalizeStringAlloc(P) [functions]</h2><h3>SGSRESULT sgs_FinalizeStringAlloc( sgs_Context* C, sgs_StkIdx item )</h3><h3>SGSRESULT sgs_FinalizeStringAllocP( sgs_Context* C, sgs_Variable* var )</h3><h4>finalize (prepare for usage) an uninitialized string buffer</h4><ul><li>preparations include string hashing and internalization (release of owned copy in favor of exact same string in string table)
 </li><li>after using these functions, string data cannot be modified</li></ul><h4>error codes</h4><ul><li>SGS_EBOUNDS: index out of bounds
 </li><li>SGS_EINVAL: invalid variable type</li></ul></div>
-<div class='item'><a name='sgs-PushStringBuf32-function'></a><hr><h2>sgs_PushStringBuf32 [function]</h2><h3>void sgs_PushStringBuf32( sgs_Context* C, sgs_String32* S, const char* str, sgs_SizeVal len )</h3><h4>pushes a temporary string variable from the specified buffer, allocated in the <code>sgs_String32</code> object</h4><ul><li>string buffer must be freed from all contexts before the memory it&#39;s allocated on is released
-</li><li><code>len</code> is limited to 31 character</li></ul></div>
-<div class='item'><a name='sgs-PushString32-function'></a><hr><h2>sgs_PushString32 [function]</h2><h3>void sgs_PushString32( sgs_Context* C, sgs_String32* S, const char* str )</h3><h4>pushes a temporary string variable from the specified string, allocated in the <code>sgs_String32</code> object</h4><ul><li>string buffer must be freed from all contexts before the memory it&#39;s allocated on is released
-</li><li>alias to <code>sgs_PushStringBuf32( C, S, str, SGS_STRINGLENGTHFUNC(str) )</code></li></ul></div>
-<div class='item'><a name='sgs-CheckString32-function'></a><hr><h2>sgs_CheckString32 [function]</h2><h3>void sgs_CheckString32( sgs_String32* S )</h3><h4>attempts to trigger a debug breakpoint if the specified temporary string object is not freed from all contexts</h4><ul><li>internal function <code>sgs_BreakIf</code> is used</li></ul></div>
-<div class='item'><a name='sgs-IsFreedString32-function'></a><hr><h2>sgs_IsFreedString32 [function]</h2><h3>SGSBOOL sgs_IsFreedString32( sgs_String32* S )</h3><h4>returns whether the specified temporary string object is freed from all contexts</h4><ul><li>for usage with custom error outputs / assertion systems</li></ul></div>
 <div class='item'><a name='Interface-implementation'></a><hr><h2>Interface implementation</h2></div>
 <div class='item'><a name='C-Functions'></a><hr><h2>C Functions</h2><p>
 A C function has the type <code>int CFunc( sgs_Context* )</code>. It receives the context that called it and must return the number of return values pushed on stack.

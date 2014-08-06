@@ -291,13 +291,6 @@ struct _sgs_Variable
 	sgs_VarData data;
 };
 
-typedef struct _sgs_String32
-{
-	sgs_iStr data;
-	char buf[32];
-}
-sgs_String32;
-
 
 /* parameter flags / special values */
 #define SGS_GETNEXT_KEY   0x01
@@ -795,13 +788,6 @@ static SGS_INLINE int sgs_Errno( SGS_CTX, int clear )
 }
 #define sgs_SetErrno( C, err ) sgs_Cntl( C, SGS_CNTL_SET_ERRNO, err )
 #define sgs_GetLastErrno( C ) sgs_Cntl( C, SGS_CNTL_GET_ERRNO, 0 )
-
-SGS_APIFUNC void sgs_InitStringBuf32( sgs_Variable* var, sgs_String32* S, const char* str, size_t len );
-#define sgs_InitString32( var, S, str ) sgs_InitStringBuf32( var, S, str, SGS_STRINGLENGTHFUNC(str) )
-SGS_APIFUNC void sgs_PushStringBuf32( SGS_CTX, sgs_String32* S, const char* str, size_t len );
-#define sgs_PushString32( C, S, str ) sgs_PushStringBuf32( C, S, str, SGS_STRINGLENGTHFUNC(str) )
-SGS_APIFUNC void sgs_CheckString32( sgs_String32* S );
-SGS_APIFUNC SGSBOOL sgs_IsFreedString32( sgs_String32* S );
 
 
 /* predefined output / messaging functions */

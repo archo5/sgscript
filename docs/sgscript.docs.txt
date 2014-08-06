@@ -1551,14 +1551,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_FinalizeStringAlloc(P) - finalize (prepare for usage) an uninitialized string buffer
 
 
-# String32 optimization interface [info]
-
-- @sgs_PushStringBuf32 - initialize and push string32 object on stack
-- @sgs_PushString32 - initialize and push string32 object on stack
-- @sgs_CheckString32 - trigger a breakpoint if string32 object is not freed
-- @sgs_IsFreedString32 - check if string32 object is freed
-
-
 # Utility functions [info]
 
 - @sgs_CodeString - retrieve a name string for the specified constant
@@ -3614,43 +3606,6 @@ Created string is a valid resource in terms of acquisition/release but not hashe
 === error codes
 - SGS_EBOUNDS: index out of bounds
 - SGS_EINVAL: invalid variable type
-
-
-
-
-
-# sgs_PushStringBuf32 [function]
-
-== void sgs_PushStringBuf32( sgs_Context* C, sgs_String32* S, const char* str, sgs_SizeVal len )
-=== pushes a temporary string variable from the specified buffer, allocated in the `sgs_String32` object
-
-- string buffer must be freed from all contexts before the memory it's allocated on is released
-- `len` is limited to 31 character
-
-
-# sgs_PushString32 [function]
-
-== void sgs_PushString32( sgs_Context* C, sgs_String32* S, const char* str )
-=== pushes a temporary string variable from the specified string, allocated in the `sgs_String32` object
-
-- string buffer must be freed from all contexts before the memory it's allocated on is released
-- alias to `sgs_PushStringBuf32( C, S, str, SGS_STRINGLENGTHFUNC(str) )`
-
-
-# sgs_CheckString32 [function]
-
-== void sgs_CheckString32( sgs_String32* S )
-=== attempts to trigger a debug breakpoint if the specified temporary string object is not freed from all contexts
-
-- internal function `sgs_BreakIf` is used
-
-
-# sgs_IsFreedString32 [function]
-
-== SGSBOOL sgs_IsFreedString32( sgs_String32* S )
-=== returns whether the specified temporary string object is freed from all contexts
-
-- for usage with custom error outputs / assertion systems
 
 
 # <<< (Functions)
