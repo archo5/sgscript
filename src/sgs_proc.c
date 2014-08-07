@@ -3194,16 +3194,18 @@ SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var )
 
 
 /* string generation */
-void sgs_PushStringAlloc( SGS_CTX, sgs_SizeVal size )
+char* sgs_PushStringAlloc( SGS_CTX, sgs_SizeVal size )
 {
 	sgs_Variable var;
 	var_create_0str( C, &var, (uint32_t) size );
 	stk_push_leave( C, &var );
+	return sgs_var_cstr( &var );
 }
 
-void sgs_InitStringAlloc( SGS_CTX, sgs_Variable* var, sgs_SizeVal size )
+char* sgs_InitStringAlloc( SGS_CTX, sgs_Variable* var, sgs_SizeVal size )
 {
 	var_create_0str( C, var, (uint32_t) size );
+	return sgs_var_cstr( var );
 }
 
 SGSRESULT sgs_FinalizeStringAlloc( SGS_CTX, sgs_StkIdx item )

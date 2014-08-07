@@ -94,7 +94,7 @@
 	- name of entry point function to look for
 	- the default include path */
 #define SGS_LIB_ENTRY_POINT "sgscript_main"
-#define SGS_INCLUDE_PATH "|/?;|/?" SGS_MODULE_EXT ";|/?.sgc;|/?.sgs;?;?" SGS_MODULE_EXT ";?.sgc;?.sgs"
+#define SGS_INCLUDE_PATH "|/?;|/?" SGS_MODULE_EXT ";|/?.sgc;|/?.sgs;?;?" SGS_MODULE_EXT ";?.sgc;?.sgs;@/?;@/?" SGS_MODULE_EXT ";@/?.sgc;@/?.sgs"
 
 
 /* per-platform switches */

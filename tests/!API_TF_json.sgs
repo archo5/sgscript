@@ -1,7 +1,7 @@
 
 global ERRORS;
 ERRORS = "";
-include "bin/sgsjson";
+include "sgsjson";
 
 testEqual( typeof(json_encode), "cfunc", "sgsjson library is loaded" );
 testEqual( ERRORS, "", "sgsjson library loaded without errors" );

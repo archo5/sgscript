@@ -503,8 +503,8 @@ SGS_APIFUNC SGSRESULT sgs_StoreItem( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var );
 
 /* string generation */
-SGS_APIFUNC void sgs_PushStringAlloc( SGS_CTX, sgs_SizeVal size );
-SGS_APIFUNC void sgs_InitStringAlloc( SGS_CTX, sgs_Variable* var, sgs_SizeVal size );
+SGS_APIFUNC char* sgs_PushStringAlloc( SGS_CTX, sgs_SizeVal size );
+SGS_APIFUNC char* sgs_InitStringAlloc( SGS_CTX, sgs_Variable* var, sgs_SizeVal size );
 SGS_APIFUNC SGSRESULT sgs_FinalizeStringAlloc( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSRESULT sgs_FinalizeStringAllocP( SGS_CTX, sgs_Variable* var );
 

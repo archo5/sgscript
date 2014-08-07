@@ -6,25 +6,8 @@ if( !isset( _G, "WEB" ) )
 if( !WEB )
 	println( "--- SGScript documentation generator ---" );
 
-include "string", "fmt", "io", "re";
+include "string", "fmt", "io", "re", "sgsjson";
 include "markdown";
-
-
-// append executable directory to path to find sgsjson
-global SGS_PATH;
-execpath = io_getexecpath();
-execpath = string_explode( string_replace( execpath, "\\", "/" ), "/" );
-execpath.pop();
-curdir = io_getcwd();
-if( io_setcwd( string_implode( execpath, "/" ) ) )
-{
-	if( !include( "sgsjson" ) )
-	{
-		println( "Failed to include the SGScript JSON library" );
-		return;
-	}
-	io_setcwd( curdir );
-}
 
 
 function generate_alias( name )

@@ -3,7 +3,7 @@ global ERRORS;
 global tests_failed, tests_ran;
 
 ERRORS = "";
-include "bin/sgsxgmath";
+include "sgsxgmath";
 
 testEqual( typeof(vec2), "cfunc", "sgsxgmath library is loaded" );
 testEqual( ERRORS, "", "sgsxgmath library loaded without errors" );

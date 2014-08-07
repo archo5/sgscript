@@ -1910,10 +1910,10 @@ return NULL;</pre></div>
 <ul><li><code>sgs_PushBool( C, sgs_Errno( C, rename( a, b ) == 0 ) )</code></li></ul></li></ul></div>
 <div class='item'><a name='sgs-SetErrno-function-alias'></a><hr><h2>sgs_SetErrno [function alias]</h2><h3>int sgs_SetErrno( sgs_Context* C, int err )</h3><h4>sets a specific value <code>err</code> to the internal errno variable</h4><ul><li>alias to <code>sgs_Cntl( C, SGS_CNTL_SET_ERRNO, err )</code></li></ul></div>
 <div class='item'><a name='sgs-GetLastErrno-function-alias'></a><hr><h2>sgs_GetLastErrno [function alias]</h2><h3>int sgs_GetLastErrno( sgs_Context* C )</h3><h4>returns the currently set internal errno variable</h4><ul><li>alias to <code>sgs_Cntl( C, SGS_CNTL_GET_ERRNO, 0 )</code></li></ul></div>
-<div class='item'><a name='sgs-PushStringAlloc-function'></a><hr><h2>sgs_PushStringAlloc [function]</h2><h3>void sgs_PushStringAlloc( sgs_Context* C, sgs_SizeVal size )</h3><h4>push an uninitialized string buffer</h4><p>
+<div class='item'><a name='sgs-PushStringAlloc-function'></a><hr><h2>sgs_PushStringAlloc [function]</h2><h3>char* sgs_PushStringAlloc( sgs_Context* C, sgs_SizeVal size )</h3><h4>push an uninitialized string buffer, returns pointer to buffer</h4><p>
 Created string is a valid resource in terms of acquisition/release but not hashed and internalized yet, thus it cannot be used in indexing/comparison functions until it&#39;s finalized, see <a href="#sgs-FinalizeStringAlloc-P-functions">sgs_FinalizeStringAlloc(P)</a>.
 </p><ul><li>it is safe to write string data (to pointer retrieved from <a href="#sgs-GetStringPtr-P-functions">sgs_GetStringPtr(P)</a> function) up until finalization</li></ul></div>
-<div class='item'><a name='sgs-InitStringAlloc-function'></a><hr><h2>sgs_InitStringAlloc [function]</h2><h3>void sgs_InitStringAlloc( sgs_Context* C, sgs_Variable* var, sgs_SizeVal size )</h3><h4>set an uninitialized string buffer to a variable</h4><p>
+<div class='item'><a name='sgs-InitStringAlloc-function'></a><hr><h2>sgs_InitStringAlloc [function]</h2><h3>char* sgs_InitStringAlloc( sgs_Context* C, sgs_Variable* var, sgs_SizeVal size )</h3><h4>set an uninitialized string buffer to a variable, returns pointer to buffer</h4><p>
 Created string is a valid resource in terms of acquisition/release but not hashed and internalized yet, thus it cannot be used in indexing/comparison functions until it&#39;s finalized, see <a href="#sgs-FinalizeStringAlloc-P-functions">sgs_FinalizeStringAlloc(P)</a>.
 </p><ul><li>it is safe to write string data (to pointer retrieved from <a href="#sgs-GetStringPtr-P-functions">sgs_GetStringPtr(P)</a> function) up until finalization</li></ul></div>
 <div class='item'><a name='sgs-FinalizeStringAlloc-P-functions'></a><hr><h2>sgs_FinalizeStringAlloc(P) [functions]</h2><h3>SGSRESULT sgs_FinalizeStringAlloc( sgs_Context* C, sgs_StkIdx item )</h3><h3>SGSRESULT sgs_FinalizeStringAllocP( sgs_Context* C, sgs_Variable* var )</h3><h4>finalize (prepare for usage) an uninitialized string buffer</h4><ul><li>preparations include string hashing and internalization (release of owned copy in favor of exact same string in string table)
@@ -2176,6 +2176,9 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#include-function">include</a> - load many types of files
 </li><li><a href="#sys-curfile-function">sys_curfile</a> - returns the origin file of the calling function
 </li><li><a href="#sys-curfiledir-function">sys_curfiledir</a> - returns the directory of the origin file of the calling function
+</li><li><a href="#sys-curprocfile-function">sys_curprocfile</a> - returns the path to current process file
+</li><li><a href="#sys-curprocdir-function">sys_curprocdir</a> - returns the path to the directory of current process file
+</li><li><a href="#multiply-path-ext-lists-function">multiply_path_ext_lists</a> - combine prefix/suffix path lists
 </li><li><a href="#sys-backtrace-function">sys_backtrace</a> - returns call stack info
 </li><li><a href="#sys-msg-function">sys_msg</a> - emit a system message
 </li><li><a href="#INFO-function">INFO</a> - emit an INFO message
@@ -2410,6 +2413,11 @@ print( sys_curfiledir() ); // prints &quot;ext&quot;
 print( sys_curfiledir() ); // prints &quot;.&quot;
 // b.sgs
 include &quot;ext/a.sgs&quot;, &quot;a.sgs&quot;;</pre></div>
+<div class='item'><a name='sys-curprocfile-function'></a><hr><h2>sys_curprocfile [function]</h2><h3>sys_curprocfile()</h3><h4>returns the path of the executable file the script is executed in</h4><ul><li>in case of failure, function will set errno</li></ul></div>
+<div class='item'><a name='sys-curprocdir-function'></a><hr><h2>sys_curprocdir [function]</h2><h3>sys_curprocdir()</h3><h4>returns the path to the directory of the executable file the script is executed in</h4></div>
+<div class='item'><a name='multiply-path-ext-lists-function'></a><hr><h2>multiply_path_ext_lists [function]</h2><h3>multiply_path_ext_lists( string prefixes, string joiner = &quot;/&quot;[, string suffixes ])</h3><h4>combines <code>prefixes</code> (paths) and <code>suffixes</code> (extensions) through the <code>joiner</code> string to create an array of paths</h4><ul><li>default value of <code>suffixes</code> is platform-specific and equal to the last logical half of the initial SGS_PATH value
+<ul><li>from code: <code>suffixes = &quot;?;?&quot; SGS_MODULE_EXT &quot;;?.sgc;?.sgs&quot;</code> (SGS_MODULE_EXT is either &quot;.dll&quot; or &quot;.so&quot;)
+</li></ul><li><code>prefixes</code> and <code>suffixes</code> are expected to be in the SGS_PATH format - semicolon-separated (;) strings</li></ul></div>
 <div class='item'><a name='sys-backtrace-function'></a><hr><h2>sys_backtrace [function]</h2><h3>sys_backtrace( bool as_string = false )</h3><h4>returns the call stack function/line/file list, either as array of dicts, or as a string, formatted exactly like in error messages (via <a href="#sgs-PushErrorInfo-function">sgs_PushErrorInfo)</a></h4><ul><li>in the dict, there are three keys:
 <ul><li>func (string)
 </li><li>line (null/int)
@@ -2643,6 +2651,7 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#metamethods-test-function">metamethods_test [function]</a>
 </li><li><a href="#metaobj-get-function">metaobj_get [function]</a>
 </li><li><a href="#metaobj-set-function">metaobj_set [function]</a>
+</li><li><a href="#multiply-path-ext-lists-function">multiply_path_ext_lists [function]</a>
 </li><li><a href="#parseint-function">parseint [function]</a>
 </li><li><a href="#parsereal-function">parsereal [function]</a>
 </li><li><a href="#pcall-function">pcall [function]</a>
@@ -2661,6 +2670,8 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#sys-call-function">sys_call [function]</a>
 </li><li><a href="#sys-curfile-function">sys_curfile [function]</a>
 </li><li><a href="#sys-curfiledir-function">sys_curfiledir [function]</a>
+</li><li><a href="#sys-curprocdir-function">sys_curprocdir [function]</a>
+</li><li><a href="#sys-curprocfile-function">sys_curprocfile [function]</a>
 </li><li><a href="#sys-msg-function">sys_msg [function]</a>
 </li><li><a href="#sys-replevel-function">sys_replevel [function]</a>
 </li><li><a href="#sys-stat-function">sys_stat [function]</a>

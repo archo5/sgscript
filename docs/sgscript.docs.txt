@@ -3576,8 +3576,8 @@ sample implementation (same as in sgscript.h):
 
 # sgs_PushStringAlloc [function]
 
-== void sgs_PushStringAlloc( sgs_Context* C, sgs_SizeVal size )
-=== push an uninitialized string buffer
+== char* sgs_PushStringAlloc( sgs_Context* C, sgs_SizeVal size )
+=== push an uninitialized string buffer, returns pointer to buffer
 
 Created string is a valid resource in terms of acquisition/release but not hashed and internalized yet, thus it cannot be used in indexing/comparison functions until it's finalized, see @sgs_FinalizeStringAlloc(P).
 
@@ -3586,8 +3586,8 @@ Created string is a valid resource in terms of acquisition/release but not hashe
 
 # sgs_InitStringAlloc [function]
 
-== void sgs_InitStringAlloc( sgs_Context* C, sgs_Variable* var, sgs_SizeVal size )
-=== set an uninitialized string buffer to a variable
+== char* sgs_InitStringAlloc( sgs_Context* C, sgs_Variable* var, sgs_SizeVal size )
+=== set an uninitialized string buffer to a variable, returns pointer to buffer
 
 Created string is a valid resource in terms of acquisition/release but not hashed and internalized yet, thus it cannot be used in indexing/comparison functions until it's finalized, see @sgs_FinalizeStringAlloc(P).
 
@@ -4114,6 +4114,9 @@ This library is loaded on initialization and contains the functions and constant
 -- @include - load many types of files
 -- @sys_curfile - returns the origin file of the calling function
 -- @sys_curfiledir - returns the directory of the origin file of the calling function
+-- @sys_curprocfile - returns the path to current process file
+-- @sys_curprocdir - returns the path to the directory of current process file
+-- @multiply_path_ext_lists - combine prefix/suffix path lists
 -- @sys_backtrace - returns call stack info
 -- @sys_msg - emit a system message
 -- @INFO - emit an INFO message
@@ -4903,6 +4906,30 @@ This library is loaded on initialization and contains the functions and constant
     print( sys_curfiledir() ); // prints "."
     // b.sgs
     include "ext/a.sgs", "a.sgs";
+
+
+# sys_curprocfile [function]
+
+== sys_curprocfile()
+=== returns the path of the executable file the script is executed in
+
+- in case of failure, function will set errno
+
+
+# sys_curprocdir [function]
+
+== sys_curprocdir()
+=== returns the path to the directory of the executable file the script is executed in
+
+
+# multiply_path_ext_lists [function]
+
+== multiply_path_ext_lists( string prefixes, string joiner = "/"[, string suffixes ])
+=== combines `prefixes` (paths) and `suffixes` (extensions) through the `joiner` string to create an array of paths
+
+- default value of `suffixes` is platform-specific and equal to the last logical half of the initial SGS_PATH value
+-- from code: `suffixes = "?;?" SGS_MODULE_EXT ";?.sgc;?.sgs"` (SGS_MODULE_EXT is either ".dll" or ".so")
+- `prefixes` and `suffixes` are expected to be in the SGS_PATH format - semicolon-separated (;) strings
 
 
 # sys_backtrace [function]

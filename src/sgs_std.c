@@ -2807,8 +2807,24 @@ static int _push_curdir( SGS_CTX )
 	return 0;
 }
 
+static int _push_procdir( SGS_CTX )
+{
+	char* mfn = sgsXPC_GetModuleFileName();
+	if( mfn )
+	{
+		char* mfnend = mfn + strlen( mfn );
+		while( mfnend > mfn && *mfnend != '/' && *mfnend != '\\' )
+			mfnend--;
+		sgs_PushStringBuf( C, mfn, mfnend - mfn );
+		free( mfn );
+		return 1;
+	}
+	else
+		return 0;
+}
+
 static int _find_includable_file( SGS_CTX, sgs_MemBuf* tmp, char* ps,
-	size_t pssize, char* fn, size_t fnsize, char* dn, size_t dnsize )
+	size_t pssize, char* fn, size_t fnsize, char* dn, size_t dnsize, char* pd, size_t pdsize )
 {
 	if( ( fnsize > 2 && *fn == '.' && ( fn[1] == '/' || fn[1] == '\\' ) ) ||
 #ifdef _WIN32
@@ -2849,6 +2865,16 @@ static int _find_includable_file( SGS_CTX, sgs_MemBuf* tmp, char* ps,
 							goto notthispath;
 						}
 					}
+					else if( *psc == '@' )
+					{
+						if( pd )
+							sgs_membuf_appbuf( tmp, C, pd, pdsize );
+						else
+						{
+							psc = ps;
+							goto notthispath;
+						}
+					}
 					else
 						sgs_membuf_appchr( tmp, C, *psc );
 					psc++;
@@ -2870,8 +2896,8 @@ notthispath:
 
 static int sgsstd_include( SGS_CTX )
 {
-	char* fnstr, *dnstr = NULL;
-	sgs_SizeVal fnsize, dnsize = 0;
+	char* fnstr, *dnstr = NULL, *pdstr = NULL;
+	sgs_SizeVal fnsize, dnsize = 0, pdsize = 0;
 	int over = 0, ret;
 	
 	SGSFN( "include" );
@@ -2905,8 +2931,13 @@ static int sgsstd_include( SGS_CTX )
 			dnstr = sgs_GetStringPtr( C, -1 );
 			dnsize = sgs_GetStringSize( C, -1 );
 		}
+		if( _push_procdir( C ) )
+		{
+			pdstr = sgs_GetStringPtr( C, -1 );
+			pdsize = sgs_GetStringSize( C, -1 );
+		}
 		/* WP: string limit */
-		ret = _find_includable_file( C, &mb, ps, (size_t) pssize, fnstr, (size_t) fnsize, dnstr, (size_t) dnsize );
+		ret = _find_includable_file( C, &mb, ps, (size_t) pssize, fnstr, (size_t) fnsize, dnstr, (size_t) dnsize, pdstr, (size_t) pdsize );
 		if( ret == 0 || mb.size == 0 )
 		{
 			sgs_membuf_destroy( &mb, C );
@@ -3013,6 +3044,90 @@ static int sgsstd_sys_curfiledir( SGS_CTX )
 		STDLIB_WARN( "function expects 0 arguments" )
 	
 	return _push_curdir( C );
+}
+
+static int sgsstd_sys_curprocfile( SGS_CTX )
+{
+	char* path;
+	SGSFN( "sys_curprocfile" );
+	
+	if( sgs_StackSize( C ) )
+		STDLIB_WARN( "function expects 0 arguments" )
+	
+	path = sgsXPC_GetModuleFileName();
+	sgs_Errno( C, path != NULL );
+	if( path )
+	{
+		sgs_PushString( C, path );
+		free( path );
+		return 1;
+	}
+	else
+		return 0;
+}
+
+static int sgsstd_sys_curprocdir( SGS_CTX )
+{
+	SGSFN( "sys_curprocdir" );
+	
+	if( sgs_StackSize( C ) )
+		STDLIB_WARN( "function expects 0 arguments" )
+	
+	return _push_procdir( C );
+}
+
+static int sgsstd_multiply_path_ext_lists( SGS_CTX )
+{
+	char *pp, *ss, *prefixes, *osfx, *suffixes = "?;?" SGS_MODULE_EXT ";?.sgc;?.sgs", *joinstr = "/";
+	size_t joinstrlen;
+	SGSFN( "multiply_path_ext_lists" );
+	
+	if( !sgs_LoadArgs( C, "s|ss", &prefixes, &joinstr, &suffixes ) )
+		return 0;
+	
+	joinstrlen = strlen( joinstr );
+	
+	sgs_PushArray( C, 0 );
+	osfx = suffixes;
+	pp = prefixes;
+	for(;;)
+	{
+		if( *pp == ';' || *pp == '\0' )
+		{
+			ss = suffixes = osfx;
+			for(;;)
+			{
+				if( *ss == ';' || *ss == '\0' )
+				{
+					char* tmp;
+					/* WP: assume no wrap-arounds on string iteration */
+					size_t pplen = (size_t) ( pp - prefixes );
+					size_t sslen = (size_t) ( ss - suffixes );
+					if( pplen + sslen + joinstrlen > 0x7fffffff )
+						STDLIB_WARN( "generated path size is bigger than allowed to store" )
+					/* WP: error condition */
+					tmp = sgs_PushStringAlloc( C, (sgs_SizeVal)( pplen + sslen + joinstrlen ) );
+					memcpy( tmp, prefixes, pplen );
+					memcpy( tmp + pplen, joinstr, joinstrlen );
+					memcpy( tmp + pplen + joinstrlen, suffixes, sslen );
+					sgs_FinalizeStringAlloc( C, -1 );
+					sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
+					if( !*ss )
+						break;
+					suffixes = ++ss;
+				}
+				else
+					ss += !!*ss;
+			}
+			if( !*pp )
+				break;
+			prefixes = ++pp;
+		}
+		else
+			pp += !!*pp;
+	}
+	
+	return 1;
 }
 
 static int sgsstd_sys_backtrace( SGS_CTX )
@@ -3406,8 +3521,9 @@ static sgs_RegFuncConst regfuncs[] =
 	STDLIB_FN( include_library ), STDLIB_FN( include_file ),
 	STDLIB_FN( include_shared ), STDLIB_FN( import_cfunc ),
 	STDLIB_FN( include ),
-	STDLIB_FN( sys_curfile ), STDLIB_FN( sys_curfiledir ), STDLIB_FN( sys_backtrace ),
-	STDLIB_FN( sys_msg ), STDLIB_FN( INFO ), STDLIB_FN( WARNING ), STDLIB_FN( ERROR ),
+	STDLIB_FN( sys_curfile ), STDLIB_FN( sys_curfiledir ), STDLIB_FN( sys_curprocfile ), STDLIB_FN( sys_curprocdir ),
+	STDLIB_FN( multiply_path_ext_lists ),
+	STDLIB_FN( sys_backtrace ), STDLIB_FN( sys_msg ), STDLIB_FN( INFO ), STDLIB_FN( WARNING ), STDLIB_FN( ERROR ),
 	STDLIB_FN( sys_abort ), STDLIB_FN( app_abort ), STDLIB_FN( app_exit ),
 	STDLIB_FN( sys_replevel ), STDLIB_FN( sys_stat ),
 	STDLIB_FN( errno ), STDLIB_FN( errno_string ), STDLIB_FN( errno_value ),
