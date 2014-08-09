@@ -38,3 +38,4 @@ dt { font-weight: bold; }
 .sgsKEY { color: #13C; }
 .sgsSPC { color: #341; font-weight: bold; }
 .sgsNUM { color: #481; }
+pre a, code a { text-decoration: underline; }
