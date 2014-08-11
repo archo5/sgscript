@@ -976,7 +976,7 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 		sgs_PushInt( C, fs->bufsize - fs->buffill );
 		ret = sgs_CallP( C, &fs->source, 1, 1 );
 		if( ret != SGS_SUCCESS )
-			return FALSE;
+			return SGS_FALSE;
 		if( sgs_ItemType( C, -1 ) == SGS_VT_NULL )
 		{
 			sgs_Pop( C, 1 );
@@ -985,7 +985,7 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 		}
 		if( !sgs_ParseString( C, -1, &str, &size ) ||
 			size > fs->bufsize - fs->buffill )
-			return FALSE;
+			return SGS_FALSE;
 		if( size )
 			/* WP: conversion does not affect range */
 			memcpy( fs->buffer + fs->bufpos, str, (size_t) size );
@@ -1223,7 +1223,7 @@ static int sgsstd_fmtstreamI_skipcc( SGS_CTX )
 
 static int sgsstd_fmtstreamI_read_real( SGS_CTX )
 {
-	SGSBOOL ret, conv = TRUE;
+	SGSBOOL ret, conv = SGS_TRUE;
 	sgs_SizeVal numbytes = 128;
 	sgs_MemBuf B = sgs_membuf_create();
 	
@@ -1250,7 +1250,7 @@ static int sgsstd_fmtstreamI_read_real( SGS_CTX )
 
 static int sgsstd_fmtstreamI_read_int( SGS_CTX )
 {
-	SGSBOOL ret, conv = TRUE;
+	SGSBOOL ret, conv = SGS_TRUE;
 	sgs_SizeVal numbytes = 128;
 	sgs_MemBuf B = sgs_membuf_create();
 	
@@ -1277,7 +1277,7 @@ static int sgsstd_fmtstreamI_read_int( SGS_CTX )
 
 static int sgsstd_fmtstreamI_read_binary_int( SGS_CTX )
 {
-	SGSBOOL ret, conv = TRUE;
+	SGSBOOL ret, conv = SGS_TRUE;
 	sgs_SizeVal numbytes = 128;
 	sgs_MemBuf B = sgs_membuf_create();
 	
@@ -1307,7 +1307,7 @@ static int sgsstd_fmtstreamI_read_binary_int( SGS_CTX )
 
 static int sgsstd_fmtstreamI_read_octal_int( SGS_CTX )
 {
-	SGSBOOL ret, conv = TRUE;
+	SGSBOOL ret, conv = SGS_TRUE;
 	sgs_SizeVal numbytes = 128;
 	sgs_MemBuf B = sgs_membuf_create();
 	
@@ -1337,7 +1337,7 @@ static int sgsstd_fmtstreamI_read_octal_int( SGS_CTX )
 
 static int sgsstd_fmtstreamI_read_decimal_int( SGS_CTX )
 {
-	SGSBOOL ret, conv = TRUE;
+	SGSBOOL ret, conv = SGS_TRUE;
 	sgs_SizeVal numbytes = 128;
 	sgs_MemBuf B = sgs_membuf_create();
 	
@@ -1364,7 +1364,7 @@ static int sgsstd_fmtstreamI_read_decimal_int( SGS_CTX )
 
 static int sgsstd_fmtstreamI_read_hex_int( SGS_CTX )
 {
-	SGSBOOL ret, conv = TRUE;
+	SGSBOOL ret, conv = SGS_TRUE;
 	sgs_SizeVal numbytes = 128;
 	sgs_MemBuf B = sgs_membuf_create();
 	
@@ -1396,7 +1396,7 @@ static int sgsstd_fmtstreamI_check( SGS_CTX )
 {
 	char* chkstr, chr = 0, chr2;
 	sgs_SizeVal chksize, numchk = 0;
-	SGSBOOL partial = FALSE, ci = FALSE;
+	SGSBOOL partial = SGS_FALSE, ci = SGS_FALSE;
 	
 	SGSFS_IHDR( skipcc )
 	if( !sgs_LoadArgs( C, "m|bb", &chkstr, &chksize, &ci, &partial ) )
@@ -1895,7 +1895,7 @@ static int sgsstd_io_file_write( SGS_CTX )
 	}
 	
 	sgs_Errno( C, 1 );
-	sgs_PushBool( C, TRUE );
+	sgs_PushBool( C, SGS_TRUE );
 	return 1;
 }
 
@@ -3312,7 +3312,7 @@ static int sgsstd_string_repeat( SGS_CTX )
 
 static int sgsstd_string_count( SGS_CTX )
 {
-	int overlap = FALSE;
+	int overlap = SGS_FALSE;
 	char* str, *sub, *strend;
 	sgs_SizeVal size, subsize, ret = 0;
 	
@@ -3643,10 +3643,10 @@ static SGS_INLINE int stdlib_isoneof( char c, char* from, int fsize )
 	while( from < fend )
 	{
 		if( c == *from )
-			return TRUE;
+			return SGS_TRUE;
 		from++;
 	}
-	return FALSE;
+	return SGS_FALSE;
 }
 
 static int sgsstd_string_trim( SGS_CTX )
@@ -3932,7 +3932,7 @@ static int sgsstd_string_frombytes( SGS_CTX )
 	while( sgs_IterAdvance( C, -1 ) > 0 )
 	{
 		sgs_Int b;
-		if( sgs_IterPushData( C, -1, FALSE, TRUE ) < 0 )
+		if( sgs_IterPushData( C, -1, SGS_FALSE, SGS_TRUE ) < 0 )
 			goto fail;
 		b = sgs_GetInt( C, -1 );
 		if( b < 0 || b > 255 )
