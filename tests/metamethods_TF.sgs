@@ -21,6 +21,10 @@ global iface =
 	__mod = function(a,b){ called.mod = this; return class({a=a.a%b.a,b=a.b%b.b},iface); },
 	__compare = function(a,b){ called.compare = this; return a.a <=> b.a || a.b <=> b.b; },
 	__call = function(a,b){ called.call = this; return a,b; },
+	__getindex = function(k){ called.getindex = this; m = metaobj_get(this);
+		if( isset( m, k ) ) return m[ k ];
+		return "[" $ k $ "]"; },
+	__setindex = function(k,v){ called.setindex = this; this[k] = v; this["_did_set_"$k] = true; },
 };
 class( obj, iface );
 class( obj2, iface );
@@ -76,3 +80,11 @@ testEqual( @called.call, obj, "metamethod - call/1 - correctly called" );
 
 testEqual( cntnr.me(5), 5, "metamethod - call/2 - result" );
 testEqual( @called.call, cntnr, "metamethod - call/2 - correctly called" );
+
+testEqual( obj.undef, "[undef]", "metamethod - getindex - result" );
+testEqual( @called.getindex, obj, "metamethod - getindex - correctly called" );
+
+obj.smth = 1;
+testEqual( obj.smth, 1, "metamethod - setindex - result" );
+testEqual( obj._did_set_smth, true, "metamethod - setindex - side effect test" );
+testEqual( @called.setindex, obj, "metamethod - setindex - correctly called" );

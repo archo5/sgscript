@@ -362,6 +362,7 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInter
 		obj->next->prev = obj;
 	obj->metaobj = NULL;
 	obj->mm_enable = SGS_FALSE;
+	obj->in_setindex = SGS_FALSE;
 	obj->is_iface = SGS_FALSE;
 	C->objcount++;
 	C->objs = obj;
@@ -1435,6 +1436,20 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize,
 		if( obj->type == SGS_VT_OBJECT && obj->data.O->metaobj )
 		{
 			sgs_Variable tmp;
+			if( obj->data.O->mm_enable )
+			{
+				_STACK_PREPARE;
+				_STACK_PROTECT;
+				sgs_PushObjectPtr( C, obj->data.O );
+				sgs_PushVariable( C, idx );
+				if( _call_metamethod( C, obj->data.O, "__getindex", sizeof("__getindex")-1, 1, NULL ) )
+				{
+					_STACK_UNPROTECT_SKIP( 1 );
+					return 1;
+				}
+				_STACK_UNPROTECT;
+			}
+			
 			tmp.type = SGS_VT_OBJECT;
 			tmp.data.O = obj->data.O->metaobj;
 			return vm_getprop( C, outmaybe, &tmp, &cidx, isprop );
@@ -1658,12 +1673,26 @@ static void vm_getprop_safe( SGS_CTX, sgs_StkIdx out, sgs_Variable* obj, sgs_Var
 
 static SGSRESULT vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* src, int isprop )
 {
-	int ret;
+	int ret = 0;
 	StkIdx origsize = SGS_STACKFRAMESIZE;
 	
 	if( isprop && idx->type != SGS_VT_INT && idx->type != SGS_VT_STRING )
 	{
 		ret = SGS_EINVAL;
+	}
+	else if( obj->type == SGS_VT_OBJECT && obj->data.O->metaobj &&
+		obj->data.O->mm_enable && !obj->data.O->in_setindex )
+	{
+		_STACK_PREPARE;
+		_STACK_PROTECT;
+		sgs_PushObjectPtr( C, obj->data.O );
+		sgs_PushVariable( C, idx );
+		sgs_PushVariable( C, src );
+		obj->data.O->in_setindex = SGS_TRUE;
+		if( !_call_metamethod( C, obj->data.O, "__setindex", sizeof("__setindex")-1, 2, NULL ) )
+			ret = SGS_EINPROC;
+		obj->data.O->in_setindex = SGS_FALSE;
+		_STACK_UNPROTECT;
 	}
 	else if( obj->type == SGS_VT_OBJECT && obj->data.O->iface->setindex )
 	{

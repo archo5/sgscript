@@ -252,6 +252,7 @@ struct sgs_ObjData
 	uint8_t redblue;    /* red or blue? mark & sweep */
 	uint8_t mm_enable;  /* use metamethods? */
 	uint8_t is_iface;   /* whether is also in the interface table */
+	uint8_t in_setindex; /* whether already running custom setindex code */
 	void* data;         /* should have offset=8 with packing alignment>=8 */
 	sgs_ObjInterface* iface;
 	sgs_VarObj* prev;   /* pointer to previous GC object */
