@@ -2444,6 +2444,29 @@ static int sgsstd_metamethods_test( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_mm_getindex_router( SGS_CTX )
+{
+	int ret;
+	sgs_Variable func, movar;
+	SGSFN( "mm_getindex_router" );
+	
+	if( !sgs_StackSize( C ) ) return 0;
+	if( !sgs_Method( C ) || sgs_ItemType( C, 0 ) != SGS_VT_OBJECT ) return 0;
+	if( !( movar.data.O = sgs_ObjGetMetaObj( sgs_GetObjectStruct( C, 0 ) ) ) ) return 0;
+	movar.type = SGS_VT_OBJECT;
+	
+	sgs_PushString( C, "__get_" );
+	sgs_PushItem( C, 1 );
+	if( SGS_FAILED( sgs_StringConcat( C, 2 ) ) ) return 0;
+	if( SGS_FAILED( sgs_GetIndexPIP( C, &movar, -1, &func, SGS_FALSE ) ) ) return 0;
+	
+	sgs_SetStackSize( C, 1 );
+	ret = sgs_ThisCallP( C, &func, 0, 1 );
+	sgs_Release( C, &func );
+	if( SGS_FAILED( ret ) ) return 0;
+	return 1;
+}
+
 
 struct pcall_printinfo
 {
@@ -3516,6 +3539,7 @@ static sgs_RegFuncConst regfuncs[] =
 	STDLIB_FN( va_get_args ), STDLIB_FN( va_get_arg ), STDLIB_FN( va_arg_count ),
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
 	STDLIB_FN( metaobj_set ), STDLIB_FN( metaobj_get ), STDLIB_FN( metamethods_enable ), STDLIB_FN( metamethods_test ),
+	STDLIB_FN( mm_getindex_router ),
 	STDLIB_FN( pcall ), STDLIB_FN( assert ),
 	STDLIB_FN( eval ), STDLIB_FN( eval_file ), STDLIB_FN( compile_sgs ),
 	STDLIB_FN( include_library ), STDLIB_FN( include_file ),

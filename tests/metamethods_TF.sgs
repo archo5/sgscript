@@ -88,3 +88,13 @@ obj.smth = 1;
 testEqual( obj.smth, 1, "metamethod - setindex - result" );
 testEqual( obj._did_set_smth, true, "metamethod - setindex - side effect test" );
 testEqual( @called.setindex, obj, "metamethod - setindex - correctly called" );
+
+
+array.__getindex = function(k){ return "bacon"; };
+testEqual( @array.undef, null, "metamethod - no getindex interference with arrays 1" );
+testEqual( @[][1], null, "metamethod - no getindex interference with arrays 2" );
+
+
+iface.__getindex = mm_getindex_router;
+iface.__get_testVar = function(){ return "success"; };
+testEqual( obj.testVar, "success", "metamethod - getindex router" );
