@@ -96,5 +96,12 @@ testEqual( @[][1], null, "metamethod - no getindex interference with arrays 2" )
 
 
 iface.__getindex = mm_getindex_router;
-iface.__get_testVar = function(){ return "success"; };
+iface.__get_testVar = function(){ called.get_var = this; return "success"; };
 testEqual( obj.testVar, "success", "metamethod - getindex router" );
+testEqual( called.get_var, obj, "metamethod - getindex router - correctly called" );
+
+iface.__setindex = mm_setindex_router;
+iface.__set_testVar = function(v){ called.set_var = this; this.subTestVar = v; };
+obj.testVar = 37;
+testEqual( obj.subTestVar, 37, "metamethod - setindex router" );
+testEqual( called.set_var, obj, "metamethod - setindex router - correctly called" );

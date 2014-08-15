@@ -1052,6 +1052,22 @@ Sub-objects are marked as available in the GCMARK callback with @sgs_GCMark(Arra
 
 List of available metamethods:
 
+=== __getindex
+
+- **When called**: on sub-index/property retrieval
+- **Arguments**: key
+- **Return value**: any
+
+- special value: @mm_getindex_router - routes __getindex to __get_***
+
+=== __setindex
+
+- **When called**: on setting sub-indices/properties
+- **Arguments**: key, value
+- **Return value**: none
+
+- special value: @mm_setindex_router - routes __setindex to __set_***
+
 === __typeof
 
 - **When called**: on type string retrieval (@typeof / @sgs_TypeOf)
@@ -4730,6 +4746,24 @@ This library is loaded on initialization and contains the functions and constant
 
 == metamethods_test( object obj )
 === retrieves metamethod support state
+
+
+# mm_getindex_router [function]
+
+== mm_getindex_router( key )
+=== __getindex to __get_*** router
+
+- when applied to metaobject of a metamethod-enabled object's `__getindex` property, it routes every request to `__get_<key>`
+- see @Metamethods for more info
+
+
+# mm_setindex_router [function]
+
+== mm_setindex_router( key, value )
+=== __setindex to __set_*** router
+
+- when applied to metaobject of a metamethod-enabled object's `__setindex` property, it routes every request to `__set_<key>`
+- see @Metamethods for more info
 
 
 # sys_call [function]

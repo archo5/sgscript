@@ -872,7 +872,11 @@ Sub-objects are marked as available in the GCMARK callback with <a href="#sgs-GC
 </p></div>
 <div class='item'><a name='Metamethods'></a><hr><h2>Metamethods</h2><p>
 List of available metamethods:
-</p><h4>__typeof</h4><ul><li><b>When called</b>: on type string retrieval (<a href="#typeof-function">typeof</a> / <a href="#sgs-TypeOf-function">sgs_TypeOf)</a>
+</p><h4>__getindex</h4><ul><li><b>When called</b>: on sub-index/property retrieval
+</li><li><b>Arguments</b>: key
+</li><li><b>Return value</b>: any</li></ul><ul><li>special value: <a href="#mm-getindex-router-function">mm_getindex_router</a> - routes __getindex to __get_***</li></ul><h4>__setindex</h4><ul><li><b>When called</b>: on setting sub-indices/properties
+</li><li><b>Arguments</b>: key, value
+</li><li><b>Return value</b>: none</li></ul><ul><li>special value: <a href="#mm-setindex-router-function">mm_setindex_router</a> - routes __setindex to __set_***</li></ul><h4>__typeof</h4><ul><li><b>When called</b>: on type string retrieval (<a href="#typeof-function">typeof</a> / <a href="#sgs-TypeOf-function">sgs_TypeOf)</a>
 </li><li><b>Arguments</b>: none
 </li><li><b>Return value</b>: type string</li></ul><h4>__clone</h4><ul><li><b>When called</b>: on cloning operation (<a href="#clone-function">clone</a> / <a href="#sgs-CloneItem-function">sgs_Clone)</a>
 </li><li><b>Arguments</b>: none
@@ -2351,6 +2355,10 @@ srand( ftime() ); // restart the generator depending on the second the code was 
 <div class='item'><a name='metaobj-get-function'></a><hr><h2>metaobj_get [function]</h2><h3>metaobj_get( object obj )</h3><h4>retrieves the meta-object of an object</h4></div>
 <div class='item'><a name='metamethods-enable-function'></a><hr><h2>metamethods_enable [function]</h2><h3>metamethods_enable( object obj, bool enable )</h3><h4>enables or disables metamethod support for an object</h4></div>
 <div class='item'><a name='metamethods-test-function'></a><hr><h2>metamethods_test [function]</h2><h3>metamethods_test( object obj )</h3><h4>retrieves metamethod support state</h4></div>
+<div class='item'><a name='mm-getindex-router-function'></a><hr><h2>mm_getindex_router [function]</h2><h3>mm_getindex_router( key )</h3><h4>__getindex to __get_*** router</h4><ul><li>when applied to metaobject of a metamethod-enabled object&#39;s <code>__getindex</code> property, it routes every request to <code>__get_&lt;key&gt;</code>
+</li><li>see <a href="#Metamethods">Metamethods</a> for more info</li></ul></div>
+<div class='item'><a name='mm-setindex-router-function'></a><hr><h2>mm_setindex_router [function]</h2><h3>mm_setindex_router( key, value )</h3><h4>__setindex to __set_*** router</h4><ul><li>when applied to metaobject of a metamethod-enabled object&#39;s <code>__setindex</code> property, it routes every request to <code>__set_&lt;key&gt;</code>
+</li><li>see <a href="#Metamethods">Metamethods</a> for more info</li></ul></div>
 <div class='item'><a name='sys-call-function'></a><hr><h2>sys_call [function]</h2><h3>sys_call( func, this[, args..] )</h3><h4>calls the specified function with the specified <code>this</code> value and argument list</h4><p>
 <em class='notice-bgr'>if argument count is only known at runtime, see <a href="#sys-apply-function">sys_apply</a></em>
 </p><ul><li>C functions, SGS functions, closure objects and real closures have this function under the &quot;call&quot; property</li></ul></div>
@@ -2651,6 +2659,8 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#metamethods-test-function">metamethods_test [function]</a>
 </li><li><a href="#metaobj-get-function">metaobj_get [function]</a>
 </li><li><a href="#metaobj-set-function">metaobj_set [function]</a>
+</li><li><a href="#mm-getindex-router-function">mm_getindex_router [function]</a>
+</li><li><a href="#mm-setindex-router-function">mm_setindex_router [function]</a>
 </li><li><a href="#multiply-path-ext-lists-function">multiply_path_ext_lists [function]</a>
 </li><li><a href="#parseint-function">parseint [function]</a>
 </li><li><a href="#parsereal-function">parsereal [function]</a>
