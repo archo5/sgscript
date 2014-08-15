@@ -2450,21 +2450,24 @@ static int sgsstd_mm_getindex_router( SGS_CTX )
 	sgs_Variable func, movar;
 	SGSFN( "mm_getindex_router" );
 	
-	if( sgs_StackSize( C ) < 1 ) return SGS_EINPROC;
-	if( !sgs_Method( C ) || sgs_ItemType( C, 0 ) != SGS_VT_OBJECT ) return SGS_EINPROC;
-	if( !( movar.data.O = sgs_ObjGetMetaObj( sgs_GetObjectStruct( C, 0 ) ) ) ) return SGS_EINPROC;
+	if( sgs_StackSize( C ) < 1 ) goto fail;
+	if( !sgs_Method( C ) || sgs_ItemType( C, 0 ) != SGS_VT_OBJECT ) goto fail;
+	if( !( movar.data.O = sgs_ObjGetMetaObj( sgs_GetObjectStruct( C, 0 ) ) ) ) goto fail;
 	movar.type = SGS_VT_OBJECT;
 	
 	sgs_PushString( C, "__get_" );
 	sgs_PushItem( C, 1 );
-	if( SGS_FAILED( sgs_StringConcat( C, 2 ) ) ) return SGS_EINPROC;
-	if( SGS_FAILED( sgs_GetIndexPIP( C, &movar, -1, &func, SGS_FALSE ) ) ) return SGS_EINPROC;
+	if( SGS_FAILED( sgs_StringConcat( C, 2 ) ) ) goto fail;
+	if( SGS_FAILED( sgs_GetIndexPIP( C, &movar, -1, &func, SGS_FALSE ) ) ) goto fail;
 	
 	sgs_SetStackSize( C, 1 );
 	ret = sgs_ThisCallP( C, &func, 0, 1 );
 	sgs_Release( C, &func );
-	if( SGS_FAILED( ret ) ) return SGS_EINPROC;
+	if( SGS_FAILED( ret ) ) goto fail;
 	return 1;
+	
+fail:
+	return 0;
 }
 
 static int sgsstd_mm_setindex_router( SGS_CTX )
@@ -2473,21 +2476,24 @@ static int sgsstd_mm_setindex_router( SGS_CTX )
 	sgs_Variable func, movar;
 	SGSFN( "mm_setindex_router" );
 	
-	if( sgs_StackSize( C ) < 2 ) return SGS_EINPROC;
-	if( !sgs_Method( C ) || sgs_ItemType( C, 0 ) != SGS_VT_OBJECT ) return SGS_EINPROC;
-	if( !( movar.data.O = sgs_ObjGetMetaObj( sgs_GetObjectStruct( C, 0 ) ) ) ) return SGS_EINPROC;
+	if( sgs_StackSize( C ) < 2 ) goto fail;
+	if( !sgs_Method( C ) || sgs_ItemType( C, 0 ) != SGS_VT_OBJECT ) goto fail;
+	if( !( movar.data.O = sgs_ObjGetMetaObj( sgs_GetObjectStruct( C, 0 ) ) ) ) goto fail;
 	movar.type = SGS_VT_OBJECT;
 	
 	sgs_PushString( C, "__set_" );
 	sgs_PushItem( C, 1 );
-	if( SGS_FAILED( sgs_StringConcat( C, 2 ) ) ) return SGS_EINPROC;
-	if( SGS_FAILED( sgs_GetIndexPIP( C, &movar, -1, &func, SGS_FALSE ) ) ) return SGS_EINPROC;
+	if( SGS_FAILED( sgs_StringConcat( C, 2 ) ) ) goto fail;
+	if( SGS_FAILED( sgs_GetIndexPIP( C, &movar, -1, &func, SGS_FALSE ) ) ) goto fail;
 	
 	sgs_SetStackSize( C, 3 );
 	sgs_StoreItem( C, 1 );
 	ret = sgs_ThisCallP( C, &func, 1, 1 );
 	sgs_Release( C, &func );
-	if( SGS_FAILED( ret ) ) return SGS_EINPROC;
+	if( SGS_FAILED( ret ) ) goto fail;
+	return 0;
+	
+fail:
 	return 0;
 }
 

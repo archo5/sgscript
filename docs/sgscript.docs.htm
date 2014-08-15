@@ -1599,6 +1599,8 @@ After a successful call, all arguments and the function will be popped off the s
 <em class='notice-bgr'>Stack is returned to the expected state only if the return value implies success (&gt;= 0) or is equal to SGS_EINPROC. Otherwise, it&#39;s left exactly as it was before the call.</em>
 </p><p>
 <em class='notice-bgr'>The return value SGS_SUCABRT is returned if function call was aborted.</em>
+</p><p>
+<em class='notice-bgr'>To see the actual number of returned values, see <a href="#sgs-Cntl-function">sgs_Cntl</a> / SGS_CNTL_NUMRETVALS.</em>
 </p><h4>error codes</h4><ul><li>SGS_EINPROC: topmost item on stack was not callable
 </li><li>SGS_EINVAL: not enough values in current stack frame (must have at least <code>args + (gotthis?1:0) + (is_sgs_FCallP?0:1)</code>)</li></ul></div>
 <div class='item'><a name='sgs-This-Call-P-function-aliases'></a><hr><h2>sgs_(This)Call(P) [function aliases]</h2><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><h3>SGSRESULT sgs_CallP( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCallP( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h4>call the variable with the arguments on stack, returning the expected number of variables on stack</h4><ul><li>aliases to <a href="#sgs-FCall-P-functions">sgs_FCall(P)</a>, for the first function of each group <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
@@ -1907,7 +1909,8 @@ return NULL;</pre></div>
 </li><li>SGS_CNTL_SERIALMODE: sets serialization mode to <code>val</code>, returns the previous value
 <ul><li>mode 2 is set with &#39;2&#39; - the reference-preserving algorithm
 </li><li>mode 1 is set with any other number, the performance-oriented algorithm
-</li></ul></li></ul><li>everything else does nothing and returns 0</li></ul></div>
+</li></ul><li>SGS_CNTL_NUMRETVALS: returns the real number of returned values from last function call
+</li></ul><li>everything else does nothing and returns 0</li></ul></div>
 <div class='item'><a name='sgs-StackFrameInfo-function'></a><hr><h2>sgs_StackFrameInfo [function]</h2><h3>void sgs_StackFrameInfo( sgs_Context* C, sgs_StackFrame* frame, const char** name, const char** file, int* line )</h3><h4>helps to retrieve file name, function name and line number of the specified stack frame</h4><ul><li>each non-NULL pointer is initialized with valid data; even if it may not be very helpful (for example, all anonymous functions get the same name - &quot;&lt;anonymous function&gt;&quot;)</li></ul></div>
 <div class='item'><a name='sgs-GetFramePtr-function'></a><hr><h2>sgs_GetFramePtr [function]</h2><h3>sgs_StackFrame* sgs_GetFramePtr( sgs_Context* C, int end )</h3><h4>returns a call stack frame pointer</h4><ul><li>if <code>end</code> is not 0, pointer to topmost frame is returned, otherwise a pointer to first frame is returned</li></ul></div>
 <div class='item'><a name='sgs-Errno-function-alias'></a><hr><h2>sgs_Errno [function alias]</h2><h3>int sgs_Errno( sgs_Context* C, int clear )</h3><h4>copies errno to internal errno value if <code>clear</code> is not 0, otherwise internal errno value is set to 0, returns <code>clear</code></h4><ul><li>used with a boolean expression and chaining to set errno if the expression returned false, like this:

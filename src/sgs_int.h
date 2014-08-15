@@ -526,6 +526,7 @@ struct _sgs_Context
 	sgs_StackFrame* sf_last;
 	sgs_StackFrame* sf_cached;
 	int           sf_count;
+	int           num_last_returned;
 	
 	/* > _G (global variable dictionary) */
 	sgs_VarObj*   _G;

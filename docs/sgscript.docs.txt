@@ -2356,6 +2356,8 @@ After a successful call, all arguments and the function will be popped off the s
 
 ! The return value SGS_SUCABRT is returned if function call was aborted.
 
+! To see the actual number of returned values, see @sgs_Cntl / SGS_CNTL_NUMRETVALS.
+
 === error codes
 - SGS_EINPROC: topmost item on stack was not callable
 - SGS_EINVAL: not enough values in current stack frame (must have at least `args + (gotthis?1:0) + (is_sgs_FCallP?0:1)`)
@@ -3543,6 +3545,7 @@ sample implementation (same as in sgscript.h):
 -- SGS_CNTL_SERIALMODE: sets serialization mode to `val`, returns the previous value
 --- mode 2 is set with '2' - the reference-preserving algorithm
 --- mode 1 is set with any other number, the performance-oriented algorithm
+-- SGS_CNTL_NUMRETVALS: returns the real number of returned values from last function call
 - everything else does nothing and returns 0
 
 

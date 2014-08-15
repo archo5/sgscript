@@ -1442,7 +1442,8 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize,
 				_STACK_PROTECT;
 				sgs_PushObjectPtr( C, obj->data.O );
 				sgs_PushVariable( C, idx );
-				if( _call_metamethod( C, obj->data.O, "__getindex", sizeof("__getindex")-1, 1, NULL ) )
+				if( _call_metamethod( C, obj->data.O, "__getindex", sizeof("__getindex")-1, 1, NULL )
+					&& C->num_last_returned > 0 )
 				{
 					_STACK_UNPROTECT_SKIP( 1 );
 					return 1;
@@ -2574,7 +2575,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 			ret = 0;
 		}
 	}
-
+	
 	/* remove all stack items before the returned ones */
 	stk_clean( C, C->stack_base + stkcallbase, C->stack_top - rvc );
 	C->stack_off = C->stack_base + stkoff;
@@ -2590,11 +2591,12 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 		vm_frame_pop( C );
 	}
 	
+	C->num_last_returned = rvc;
 	if( rvc > expect )
 		stk_pop( C, rvc - expect );
 	else
 		stk_push_nulls( C, expect - rvc );
-
+	
 	return ret;
 }
 

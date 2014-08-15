@@ -190,6 +190,7 @@ typedef void (*sgs_HookFunc) (
 #define SGS_CNTL_ERRSUP     10
 #define SGS_CNTL_GET_ERRSUP 11
 #define SGS_CNTL_SERIALMODE 12
+#define SGS_CNTL_NUMRETVALS 13
 
 
 /* Object actions */

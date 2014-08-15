@@ -54,6 +54,7 @@ static void ctx_init( SGS_CTX )
 	C->sf_last = NULL;
 	C->sf_cached = NULL;
 	C->sf_count = 0;
+	C->num_last_returned = 0;
 	
 	C->objs = NULL;
 	C->objcount = 0;
@@ -969,6 +970,7 @@ int32_t sgs_Cntl( SGS_CTX, int what, int32_t val )
 		if( val == 2 ) C->state |= SGS_SERIALIZE_MODE2;
 		else C->state &= (uint32_t) ~SGS_SERIALIZE_MODE2;
 		return x;
+	case SGS_CNTL_NUMRETVALS: return C->num_last_returned;
 	}
 	return 0;
 }
