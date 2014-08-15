@@ -5105,7 +5105,7 @@ This library is loaded on initialization and contains the functions and constant
 
 - this function is equivalent to @sgs_DumpVar in the C API
 
-    sys_error( SGS_INFO, "Extended variable info:\n" $ dumpvar(data) );
+    sys_msg( SGS_INFO, "Extended variable info:\n" $ dumpvar(data) );
 
 
 # dumpvar [function]

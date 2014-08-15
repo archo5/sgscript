@@ -3756,35 +3756,45 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 	sgs_VarObj* data = GLBP;
 	HTHDR;
 	
-	/* `out` is expected to point at an initialized variable */
+	/* `out` is expected to point at an initialized variable, which could be same as `idx` */
 	
 	if( idx->type != SGS_VT_STRING )
-	{
-		sgs_Release( C, out );
 		return SGS_ENOTSUP;
-	}
 	
 	if( strcmp( sgs_str_cstr( idx->data.S ), "_G" ) == 0 )
 	{
 		sgs_Release( C, out );
-		out->type = SGS_VT_OBJECT;
-		out->data.O = GLBP;
-		sgs_Acquire( C, out );
+		sgs_InitObjectPtr( out, data );
 		return SGS_SUCCESS;
 	}
-	else if( ( pair = sgs_vht_get( ht, idx ) ) != NULL )
+	
+	if( data->mm_enable )
+	{
+		int ret;
+		sgs_Variable obj, tmp;
+		obj.type = SGS_VT_OBJECT;
+		obj.data.O = data;
+		ret = sgs_GetIndexPPP( C, &obj, idx, &tmp, 0 );
+		sgs_Release( C, out );
+		if( SGS_SUCCEEDED( ret ) )
+		{
+			*out = tmp;
+			sgs_Acquire( C, out );
+		}
+		return ret;
+	}
+	
+	if( ( pair = sgs_vht_get( ht, idx ) ) != NULL )
 	{
 		sgs_Release( C, out );
 		*out = pair->val;
 		sgs_Acquire( C, out );
 		return SGS_SUCCESS;
 	}
-	else
-	{
-		sgs_Release( C, out );
-		sgs_Msg( C, SGS_WARNING, "variable '%s' was not found", sgs_str_cstr( idx->data.S ) );
-		return SGS_ENOTFND;
-	}
+	
+	sgs_Msg( C, SGS_WARNING, "variable '%s' was not found", sgs_str_cstr( idx->data.S ) );
+	sgs_Release( C, out );
+	return SGS_ENOTFND;
 }
 
 int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
@@ -3801,6 +3811,14 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 		if( SGS_FAILED( ret ) )
 			sgs_Msg( C, SGS_ERROR, "_G only accepts 'dict' values" );
 		return ret;
+	}
+	
+	if( data->mm_enable )
+	{
+		sgs_Variable obj;
+		obj.type = SGS_VT_OBJECT;
+		obj.data.O = data;
+		return sgs_SetIndexPPP( C, &obj, idx, val, 0 );
 	}
 	
 	sgs_vht_set( ht, C, idx, val );

@@ -1690,12 +1690,16 @@ static SGSRESULT vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_
 		sgs_PushVariable( C, src );
 		obj->data.O->in_setindex = SGS_TRUE;
 		if( !_call_metamethod( C, obj->data.O, "__setindex", sizeof("__setindex")-1, 2, NULL ) )
-			ret = SGS_EINPROC;
+		{
+			_STACK_UNPROTECT;
+			goto nextcase;
+		}
 		obj->data.O->in_setindex = SGS_FALSE;
 		_STACK_UNPROTECT;
 	}
 	else if( obj->type == SGS_VT_OBJECT && obj->data.O->iface->setindex )
 	{
+nextcase:;
 		sgs_Variable idxvar = *idx;
 		sgs_Variable srcvar = *src;
 		sgs_VarObj* O = obj->data.O;
