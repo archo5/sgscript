@@ -1,0 +1,10 @@
+
+testEqual( @testfn1(), "aaa", "global function def. pushed to beginning" );
+function testfn1(){ return "aaa"; }
+
+(function()
+{
+	testEqual( @testfn2(), "bbb", "local function def. pushed to beginning" );
+	function testfn2(){ return "bbb"; }
+}
+)();

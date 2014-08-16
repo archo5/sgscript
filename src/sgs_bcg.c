@@ -552,6 +552,37 @@ static int preparse_arglist( SGS_FNTCMP_ARGS )
 	return 1;
 }
 
+static int preparse_funcorder( SGS_FNTCMP_ARGS )
+{
+	sgs_FTNode* sub = node->child, *psub = NULL, *nsub;
+	if( sub )
+	{
+		psub = sub;
+		sub = sub->next; /* skip first item as it cannot be swapped (with itself) */
+	}
+	while( sub )
+	{
+		if( sub->type == SGS_SFT_FUNC /* function */ &&
+			!sub->child->next->child /* no closures */ &&
+			sub->child->next->next->next /* has a name */ )
+		{
+			/* move to front */
+			nsub = sub->next;
+			if( psub )
+				psub->next = nsub;
+			sub->next = node->child;
+			node->child = sub;
+			sub = nsub;
+		}
+		else
+		{
+			psub = sub;
+			sub = sub->next;
+		}
+	}
+	return 1;
+}
+
 
 #define add_const_HDR \
 	sgs_Variable* vbeg = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 ); \
@@ -1841,6 +1872,9 @@ static SGSBOOL compile_func( SGS_FNTCMP_ARGS, rcpos_t* out )
 	SGS_FN_ENTER;
 	if( !preparse_varlists( C, nf, n_body ) ) { goto fail; }
 	args += nf->gotthis;
+	
+	SGS_FN_ENTER;
+	if( !preparse_funcorder( C, nf, n_body ) ) { goto fail; }
 
 	SGS_FN_ENTER;
 	if( !compile_node( C, nf, n_body ) ) { goto fail; }
@@ -2621,6 +2655,8 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree )
 	if( !preparse_clsrlists( C, func, tree ) )
 		goto fail;
 	if( !preparse_varlists( C, func, tree ) )
+		goto fail;
+	if( !preparse_funcorder( C, func, tree ) )
 		goto fail;
 	if( !compile_node( C, func, tree ) )
 		goto fail;
