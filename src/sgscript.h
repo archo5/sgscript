@@ -7,7 +7,6 @@
 #define SGS_VERSION_MINOR 9
 #define SGS_VERSION_INCR  6
 #define SGS_VERSION "0.9.6"
-#define SGS_API_VERSION 13
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
@@ -163,7 +162,6 @@ typedef void (*sgs_HookFunc) (
 
 /* Statistics / debugging */
 #define SGS_STAT_VERSION      0
-#define SGS_STAT_APIVERSION   1
 #define SGS_STAT_OBJCOUNT     2
 #define SGS_STAT_MEMSIZE      3
 #define SGS_STAT_NUMALLOCS    4
@@ -815,6 +813,10 @@ static SGS_INLINE void sgs_StdMsgFunc( void* ctx, SGS_CTX, int type, const char*
 
 
 /* utility macros */
+#define SGS_MODULE_CHECK_VERSION( C ) if( SGS_VERSION_INT != sgs_Stat( C, SGS_STAT_VERSION ) ) \
+	{ sgs_Msg( C, SGS_ERROR, "SGScript version mismatch: module compiled for %06X, loaded in %06X", \
+	(int) SGS_VERSION_INT, (int) sgs_Stat( C, SGS_STAT_VERSION ) ); return SGS_ENOTSUP; }
+
 #define SGS_RETURN_THIS( C ) sgs_Method( C ); sgs_SetStackSize( C, 1 ); return 1;
 
 #define SGS_ARGS_GETINDEXFUNC SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int isprop

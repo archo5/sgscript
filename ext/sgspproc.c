@@ -559,6 +559,7 @@ __declspec(dllexport)
 #endif
 int pproc_module_entry_point( SGS_CTX )
 {
+	SGS_MODULE_CHECK_VERSION( C );
 	sgs_PushCFunction( C, pproc_create_thread );
 	sgs_StoreGlobal( C, "pproc_create_thread" );
 	sgs_PushCFunction( C, pproc_sleep );

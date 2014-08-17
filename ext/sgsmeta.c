@@ -309,6 +309,7 @@ __declspec(dllexport)
 #endif
 int meta_module_entry_point( SGS_CTX )
 {
+	SGS_MODULE_CHECK_VERSION( C );
 	sgs_RegFuncConsts( C, meta_funcs, -1 );
 	
 	return SGS_SUCCESS;

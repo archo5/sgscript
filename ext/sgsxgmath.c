@@ -3138,6 +3138,7 @@ static sgs_RegFuncConst xgm_fconsts[] =
 
 SGS_APIFUNC int xgm_module_entry_point( SGS_CTX )
 {
+	SGS_MODULE_CHECK_VERSION( C );
 	sgs_RegFuncConsts( C, xgm_fconsts, sizeof(xgm_fconsts) / sizeof(xgm_fconsts[0]) );
 	sgs_RegisterType( C, "vec2", xgm_vec2_iface );
 	sgs_RegisterType( C, "vec3", xgm_vec3_iface );

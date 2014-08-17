@@ -3509,7 +3509,6 @@ sample implementation (same as in sgscript.h):
 
 - the following `type` values are supported:
 -- SGS_STAT_VERSION: returns the version number of the VM
--- SGS_STAT_APIVERSION: returns the API version numver of the VM
 -- SGS_STAT_OBJCOUNT: returns the number of objects created in the VM
 -- SGS_STAT_MEMSIZE: returns the number of bytes allocated through this SGScript context
 -- SGS_STAT_NUMALLOCS: returns the number of memory allocations (incremented on each alloc/realloc)
@@ -3523,8 +3522,7 @@ sample implementation (same as in sgscript.h):
 -- SGS_STAT_XDUMP_STACK: verbosely dumps all of the variables in the stack (extended info, may be much longer)
 
 - tips:
--- compare return value of SGS_STAT_VERSION against SGS_VERSION_INT if the code is version-sensitive
--- compare return value of SGS_STATE_APIVERSION against SGS_API_VERSION if dynamic loading is used and multiple versions should be supported
+-- compare return value of SGS_STAT_VERSION against SGS_VERSION_INT if using multiple versions should be supported / prevented
 
 
 # sgs_Cntl [function]

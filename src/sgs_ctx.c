@@ -22,7 +22,6 @@ static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "fu
 static void ctx_init( SGS_CTX )
 {
 	C->version = SGS_VERSION_INT;
-	C->apiversion = SGS_API_VERSION;
 	C->output_fn = sgs_StdOutputFunc;
 	C->output_ctx = stdout;
 	C->erroutput_fn = sgs_StdOutputFunc;
@@ -828,7 +827,6 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 	{
 	/* WP: not important */
 	case SGS_STAT_VERSION: return (ptrdiff_t) C->version;
-	case SGS_STAT_APIVERSION: return (ptrdiff_t) C->apiversion;
 	case SGS_STAT_OBJCOUNT: return (ptrdiff_t) C->objcount;
 	case SGS_STAT_MEMSIZE: return (ptrdiff_t) C->memsize;
 	case SGS_STAT_NUMALLOCS: return (ptrdiff_t) C->numallocs;

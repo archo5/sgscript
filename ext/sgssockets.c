@@ -1222,6 +1222,8 @@ int sockets_module_entry_point( SGS_CTX )
 	WSADATA wsadata;
 #endif
 	
+	SGS_MODULE_CHECK_VERSION( C );
+	
 	sgs_PushInt( C, 0 );
 	sgs_StoreGlobal( C, SCKERRVN );
 	

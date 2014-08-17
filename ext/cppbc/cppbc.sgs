@@ -68,8 +68,38 @@ function string_find_rev_any( str, what, pos )
 }
 
 
-function cppbc_error( error ){ println( "ERROR: " $ error ); app_exit(1); }
-function cppbc_error_ext( error, code, pos ){ cppbc_error( error ); }
+function code_to_linenum( code )
+{
+	return string_count( string_replace( code, ["\r\n","\r"], "\n" ), "\n" );
+}
+function code_to_lines( code )
+{
+	return string_repeat( "\n", code_to_linenum( code ) );
+}
+
+
+global CPPBC_LINENUMBERS = [];
+function cppbc_setline_codepos( code, pos, pushrel )
+{
+	global CPPBC_LINENUMBERS;
+	code = string_part( code, 0, pos );
+	ln = code_to_linenum( code );
+	if( !pushrel )
+		CPPBC_LINENUMBERS.clear();
+	else
+		ln += CPPBC_LINENUMBERS.last + pushrel;
+	CPPBC_LINENUMBERS.push( ln );
+}
+function cppbc_setline_pop(){ CPPBC_LINENUMBERS.pop(); }
+function cppbc_getline()
+{
+	if( !CPPBC_LINENUMBERS ) return "<unknown line>";
+	return CPPBC_LINENUMBERS.last;
+}
+
+
+function cppbc_error( error ){ errprintln( " line ", cppbc_getline(), ": ERROR: ", error ); app_exit(1); }
+function cppbc_error_ext( error, code, pos ){ cppbc_setline_codepos( code, pos ); cppbc_error( error ); }
 
 
 function cppbc_preprocess( code )
@@ -97,6 +127,7 @@ function cppbc_preprocess( code )
 			pos = string_find( code, "*/", to );
 			if( pos === null )
 				cppbc_error( "error in code: unfinished comment detected" );
+			out $= code_to_lines( string_part( code, to, pos - to ) );
 			pos += 2;
 		}
 		else if( which == "//" )
@@ -166,6 +197,7 @@ function cppbc_remove_blocks( code )
 			if( level == 0 )
 			{
 				out $= ";";
+				out $= code_to_lines( string_part( code, begin, from - begin ) );
 				begin = null;
 			}
 			else if( level < 0 )
@@ -341,6 +373,8 @@ function cppbc_parse_vardecl( code, bSkipName )
 	if( lct != ")" )
 	{
 		// basic typedef - identifier at end
+		if( out.size <= 0 )
+			cppbc_error( "type not specified" );
 		if( !bSkipName || out.size != 1 )
 			name = string_trim( out.pop() );
 		type = string_trim( string_implode( out, "" ) );
@@ -574,6 +608,7 @@ function cppbc_examine_object( code, pos )
 {
 	// get class/struct bounds
 	bounds = cppbc_block_bounds( code, pos );
+	cppbc_setline_codepos( code, bounds[0] );
 	
 	// get class/struct name
 	class_pos = bounds[0] + 1;
@@ -590,6 +625,7 @@ function cppbc_examine_object( code, pos )
 	tp.skipcc( "a-z" );
 	tp.skipcc( " \t\v\n\r" );
 	classname = tp.readcc( "a-zA-Z0-9_" );
+	println( "Detected '" $ classname $ "'" );
 	
 	// gather all properties/methods
 	blockcode = string_cut( code, bounds[0] + 1, bounds[1] - 1 );
@@ -599,6 +635,7 @@ function cppbc_examine_object( code, pos )
 	matches = re_match_all( blockcode, "#(SGS_PROPERTY_FUNC|SGS_METHOD|SGS_PROPERTY|SGS_IFUNC)(.*?)[;\\{]#ms", RE_RETURN_BOTH );
 	foreach( match : matches )
 	{
+		cppbc_setline_codepos( blockcode, match[0][1], 1 );
 		if( match[1][0] == "SGS_METHOD" )
 			item = cppbc_examine_method( match[2][0] );
 		else if( match[1][0] == "SGS_PROPERTY" )
@@ -608,6 +645,7 @@ function cppbc_examine_object( code, pos )
 		else if( match[1][0] == "SGS_IFUNC" )
 			item = cppbc_examine_ifunc( match[2][0] );
 		items.push( item );
+		cppbc_setline_pop();
 	}
 	
 	return {
@@ -624,7 +662,6 @@ function cppbc_find_objects( code )
 	foreach( match : matches )
 	{
 		object = cppbc_examine_object( code, match[0][0] );
-		println( "Detected '" $ object.name $ "'" );
 		objects.push( object );
 	}
 	

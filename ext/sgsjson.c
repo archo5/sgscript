@@ -500,6 +500,7 @@ extern "C"
 #endif
 SGS_APIFUNC int json_module_entry_point( SGS_CTX )
 {
+	SGS_MODULE_CHECK_VERSION( C );
 	sgs_PushCFunction( C, json_decode );
 	sgs_StoreGlobal( C, "json_decode" );
 	sgs_PushCFunction( C, json_encode );

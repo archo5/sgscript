@@ -564,7 +564,8 @@ static int preparse_funcorder( SGS_FNTCMP_ARGS )
 	{
 		if( sub->type == SGS_SFT_FUNC /* function */ &&
 			!sub->child->next->child /* no closures */ &&
-			sub->child->next->next->next /* has a name */ )
+			sub->child->next->next->next /* has a name .. */ &&
+			sub->child->next->next->next->type == SGS_SFT_IDENT /* .. that is simple */ )
 		{
 			/* move to front */
 			nsub = sub->next;

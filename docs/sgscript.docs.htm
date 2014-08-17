@@ -1882,7 +1882,6 @@ return NULL;</pre></div>
 <div class='item'><a name='sgs-Abort-function'></a><hr><h2>sgs_Abort [function]</h2><h3>SGSRESULT sgs_Abort( sgs_Context* C )</h3><h4>stops execution of current SGS functions up to the last C function in the stack, excluding the current</h4><h4>error codes</h4><ul><li>SGS_ENOTFND: last or next to last function in the stack was not a SGS function</li></ul></div>
 <div class='item'><a name='sgs-Stat-function'></a><hr><h2>sgs_Stat [function]</h2><h3>ptrdiff_t sgs_Stat( sgs_Context* C, int type )</h3><h4>returns or prints information about state of SGScript VM</h4><ul><li>the following <code>type</code> values are supported:
 <ul><li>SGS_STAT_VERSION: returns the version number of the VM
-</li><li>SGS_STAT_APIVERSION: returns the API version numver of the VM
 </li><li>SGS_STAT_OBJCOUNT: returns the number of objects created in the VM
 </li><li>SGS_STAT_MEMSIZE: returns the number of bytes allocated through this SGScript context
 </li><li>SGS_STAT_NUMALLOCS: returns the number of memory allocations (incremented on each alloc/realloc)
@@ -1894,8 +1893,7 @@ return NULL;</pre></div>
 </li><li>SGS_STAT_DUMP_FRAMES: prints all functions in the call stack
 </li><li>SGS_STAT_DUMP_STATS: dump some info about memory and objects
 </li><li>SGS_STAT_XDUMP_STACK: verbosely dumps all of the variables in the stack (extended info, may be much longer)</li></ul></li></ul><ul><li>tips:
-<ul><li>compare return value of SGS_STAT_VERSION against SGS_VERSION_INT if the code is version-sensitive
-</li><li>compare return value of SGS_STATE_APIVERSION against SGS_API_VERSION if dynamic loading is used and multiple versions should be supported</li></ul></li></ul></div>
+<ul><li>compare return value of SGS_STAT_VERSION against SGS_VERSION_INT if using multiple versions should be supported / prevented</li></ul></li></ul></div>
 <div class='item'><a name='sgs-Cntl-function'></a><hr><h2>sgs_Cntl [function]</h2><h3>int32_t sgs_Cntl( sgs_Context* C, int what, int32_t val )</h3><h4>modifies the state of the VM or returns info about it</h4><ul><li>the following <code>what</code> values are supported:
 <ul><li>SGS_CNTL_STATE: sets the new compilation state from <code>val</code>, returns the previous value
 </li><li>SGS_CNTL_GET_STATE: returns the currently set compilation state
