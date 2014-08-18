@@ -132,7 +132,7 @@ c: $(OUTDIR)/sgsc$(BINEXT)
 
 # test tool aliases
 test: build_test
-	$(OUTDIR)/sgstest
+	$(OUTDIR)/sgstest --dir tests
 apitest: build_apitest
 	$(OUTDIR)/sgsapitest
 

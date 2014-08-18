@@ -35,13 +35,16 @@ int tf_compare( const void* p1, const void* p2 )
 
 int load_testfiles( const char* dir, testfile** files, size_t* count )
 {
-	DIR* d = opendir( dir );
+	DIR* d;
 	struct dirent* e;
 	struct stat sdata;
 	char namebuf[ 260 ];
-
+	testfile* TF;
 	size_t TFM = 32, TFC = 0;
-	testfile* TF = (testfile*) malloc( sizeof( testfile ) * TFM );
+	d = opendir( dir );
+	if( !d )
+		return 0;
+	TF = (testfile*) malloc( sizeof( testfile ) * TFM );
 
 	while( ( e = readdir( d ) ) != NULL )
 	{
@@ -51,6 +54,8 @@ int load_testfiles( const char* dir, testfile** files, size_t* count )
 		if( strncmp( e->d_name, "!_", 2 ) == 0 ) continue;
 		if( strncmp( e->d_name, "s_", 2 ) == 0 ) disp = 1;
 		if( strncmp( e->d_name, "f_", 2 ) == 0 ) disp = -1;
+		if( strstr( e->d_name, ".sgs" ) != e->d_name + strlen( e->d_name ) - 4 )
+			continue;
 
 		strcpy( namebuf, dir );
 		strcat( namebuf, "/" );
@@ -254,7 +259,7 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 	printf( "\n" );
 }
 
-static void exec_tests()
+static void exec_tests( const char* dirname )
 {
 	int ret;
 	size_t count;
@@ -263,7 +268,7 @@ static void exec_tests()
 	fclose( fopen( outfile_errors, "w" ) );
 	printf( "\n" );
 
-	ret = load_testfiles( "tests", &files, &count );
+	ret = load_testfiles( dirname, &files, &count );
 	if( !ret )
 	{
 		printf( "\n\nfailed to load tests! aborting...\n\n" );
@@ -287,19 +292,29 @@ __cdecl
 #endif
 main( int argc, char** argv )
 {
+	int i;
+	char *testname = NULL, *dirname = "tests";
 	setvbuf( stdout, NULL, _IONBF, 0 );
 	printf( "\n//\n/// SGScript test framework\n//\n" );
-
-	if( argc > 1 )
+	
+	for( i = 1; i < argc; ++i )
 	{
-		printf( "\n/// Executing test %s...\n", argv[ 1 ] );
+		if( ( !strcmp( argv[i], "--dir" ) || !strcmp( argv[i], "-d" ) ) && i + 1 < argc )
+			dirname = argv[++i];
+		else if( ( !strcmp( argv[i], "--test" ) || !strcmp( argv[i], "-t" ) ) && i + 1 < argc )
+			testname = argv[++i];
+	}
+
+	if( testname )
+	{
+		printf( "\n/// Executing test %s...\n", testname );
 		fclose( fopen( outfile, "w" ) );
 		fclose( fopen( outfile_errors, "w" ) );
-		exec_test( argv[ 1 ], argv[ 1 ], 0 );
+		exec_test( testname, testname, 0 );
 		return 0;
 	}
 
-	exec_tests();
+	exec_tests( dirname );
 
 	printf( "\n///\n/// Tests failed:  %d  / %d\n///\n", tests_failed, tests_executed );
 	printf( "..note: some tests may fail in different ways,\nmight want to review the logs..\n\n" );
