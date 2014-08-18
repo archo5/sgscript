@@ -14,16 +14,24 @@ if( !@get_make_cmd )
 		return cmd;
 	}
 }
+if( !@get_clean_cmd )
+{
+	function get_clean_cmd( os )
+	{
+		return "clean_obj";
+	}
+}
+if( !@get_buildstrip_cmd )
+{
+	function get_buildstrip_cmd(){}
+}
 if( !@get_version_text )
 {
 	function get_version_text()
 	{
 		mainheader = io_file_read( "src/sgscript.h" );
 		match = re_match( mainheader, "%major[ \t]+([0-9]+).*?minor[ \t]+([0-9]+).*?"$
-			"incr[ \t]+([0-9]+).*?api_version[ \t]+([0-9]+)%msi", RE_RETURN_CAPTURED );
-		versioninfo_plain = string_format( '{1}.{2}.{3}\n{4}', match[1], match[2], match[3], match[4] );
-		versioninfo_json = string_format( '{"version":"{1}.{2}.{3}","api_version":"{4}"}',
-			match[1], match[2], match[3], match[4] );
+			"incr[ \t]+([0-9]+)%msi", RE_RETURN_CAPTURED );
 		return string_format( '{1}.{2}.{3}', match[1], match[2], match[3] );
 	}
 }
@@ -84,6 +92,7 @@ if( OSNAME == "windows" || OSNAME == "linux" || OSNAME == "unix" || OSNAME == "o
 	VARIATIONS.unshift({ "x86" = "target=" $ OSNAME $ "-x86", "x64" = "target=" $ OSNAME $ "-x64" });
 
 // build command config
+RMBIN = if( OSNAME == "windows", "del /F /S /Q", "rm -rf" );
 MAKEBIN = if( OSNAME == "windows", "mingw32-make", "make" );
 MAKECMD = get_make_cmd( OSNAME );
 
@@ -126,6 +135,13 @@ foreach( blfolder, blflags : buildlist )
 	DIR = ROOT $ blfolder;
 	io_dir_create( DIR );
 	os_command( MAKEBIN$" OUTDIR="$DIR$" "$blflags$" "$MAKECMD );
+	rmpaths = get_buildstrip_cmd( DIR, blflags );
+	if( rmpaths !== null )
+	{
+		if( OSNAME == "windows" )
+			rmpaths = string_replace( rmpaths, "/", "\\" );
+		os_command( RMBIN$" "$rmpaths );
+	}
 	
 	// generate archive
 	io_setcwd( cwd $ "/bin" );
@@ -136,4 +152,4 @@ foreach( blfolder, blflags : buildlist )
 //	io_file_write( DIR $ "/version", versioninfo_plain );
 //	io_file_write( DIR $ "/version.json", versioninfo_json );
 }
-os_command( MAKEBIN $ " clean_obj" );
+os_command( MAKEBIN$" "$get_clean_cmd( OSNAME ) );
