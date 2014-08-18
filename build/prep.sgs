@@ -4,6 +4,31 @@
 include "io", "os", "string", "re";
 
 
+if( !@get_make_cmd )
+{
+	function get_make_cmd( os )
+	{
+		cmd = "clean_objbin tools";
+		if( os == "windows" )
+			cmd $= " sgsexe";
+		return cmd;
+	}
+}
+if( !@get_version_text )
+{
+	function get_version_text()
+	{
+		mainheader = io_file_read( "src/sgscript.h" );
+		match = re_match( mainheader, "%major[ \t]+([0-9]+).*?minor[ \t]+([0-9]+).*?"$
+			"incr[ \t]+([0-9]+).*?api_version[ \t]+([0-9]+)%msi", RE_RETURN_CAPTURED );
+		versioninfo_plain = string_format( '{1}.{2}.{3}\n{4}', match[1], match[2], match[3], match[4] );
+		versioninfo_json = string_format( '{"version":"{1}.{2}.{3}","api_version":"{4}"}',
+			match[1], match[2], match[3], match[4] );
+		return string_format( '{1}.{2}.{3}', match[1], match[2], match[3] );
+	}
+}
+
+
 // OS config
 global OSNAMES_TR = { "mac os x" = "osx" };
 global OSNAME = string_tolower( os_gettype() );
@@ -60,9 +85,7 @@ if( OSNAME == "windows" || OSNAME == "linux" || OSNAME == "unix" || OSNAME == "o
 
 // build command config
 MAKEBIN = if( OSNAME == "windows", "mingw32-make", "make" );
-MAKECMD = "clean_objbin tools";
-if( OSNAME == "windows" )
-	MAKECMD $= " sgsexe";
+MAKECMD = get_make_cmd( OSNAME );
 
 // --------------------------------------------
 
@@ -82,13 +105,7 @@ foreach( variation : VARIATIONS )
 	buildlist = nbl;
 }
 
-mainheader = io_file_read( "src/sgscript.h" );
-match = re_match( mainheader, "%major[ \t]+([0-9]+).*?minor[ \t]+([0-9]+).*?"$
-	"incr[ \t]+([0-9]+).*?api_version[ \t]+([0-9]+)%msi", RE_RETURN_CAPTURED );
-versioninfo_plain = string_format( '{1}.{2}.{3}\n{4}', match[1], match[2], match[3], match[4] );
-versioninfo_json = string_format( '{"version":"{1}.{2}.{3}","api_version":"{4}"}',
-	match[1], match[2], match[3], match[4] );
-versiontext = string_format( '{1}.{2}.{3}', match[1], match[2], match[3] );
+versiontext = get_version_text();
 
 cwd = io_getcwd();
 foreach( blfolder, blflags : buildlist )

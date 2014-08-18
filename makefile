@@ -179,18 +179,18 @@ sgsexe: ext/sgsexe.c $(OUTFILE_STATIC)
 ## - binary archive preparation
 .PHONY: binarch
 binarch: vm
-	bin/sgsvm build/prep.sgs
+	sgsvm build/prep.sgs
 
 ## clean build data
 .PHONY: clean_obj
 clean_obj:
-	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*.o)
+	-$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*.o)
 
 .PHONY: clean_objbin
 clean_objbin:
-	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*.o $(OUTDIR)/sgs* $(OUTDIR)/libsgs*)
+	-$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*.o $(OUTDIR)/sgs* $(OUTDIR)/libsgs*)
 
 .PHONY: clean
 clean:
-	$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*.o lib/*.a lib/*.lib $(OUTDIR)/sgs* $(OUTDIR)/libsgs*)
+	-$(fnREMOVE_ALL) $(call fnFIX_PATH,obj/*.o lib/*.a lib/*.lib $(OUTDIR)/sgs* $(OUTDIR)/libsgs*)
 

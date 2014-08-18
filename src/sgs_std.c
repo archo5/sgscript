@@ -2868,7 +2868,10 @@ static int _push_procdir( SGS_CTX )
 		char* mfnend = mfn + strlen( mfn );
 		while( mfnend > mfn && *mfnend != '/' && *mfnend != '\\' )
 			mfnend--;
-		sgs_PushStringBuf( C, mfn, mfnend - mfn );
+		if( ((size_t)( mfnend - mfn )) > 0x7fffffff )
+			return 0;
+		/* WP: added error condition */
+		sgs_PushStringBuf( C, mfn, (sgs_SizeVal)( mfnend - mfn ) );
 		free( mfn );
 		return 1;
 	}
