@@ -23,6 +23,8 @@
 	SGS_OBJECT_LITE \
 	sgs_VarObj* m_sgsObject; \
 	SGS_CTX;
+# define SGS_OBJECT_INHERIT( names... ) SGS_OBJECT_LITE
+# define SGS_NO_EXPORT
 # define SGS_METHOD
 # define SGS_MULTRET int
 # define SGS_PROPERTY

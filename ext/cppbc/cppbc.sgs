@@ -631,6 +631,18 @@ function cppbc_examine_object( code, pos )
 	blockcode = string_cut( code, bounds[0] + 1, bounds[1] - 1 );
 	blockcode = cppbc_remove_blocks( blockcode );
 	
+	no_export = re_match( blockcode, "#SGS_NO_EXPORT#" );
+	inherited = {};
+	inh_matches = re_match_all( blockcode, "#SGS_OBJECT_INHERIT[ \t\v\n\r]*\\(([a-zA-Z0-9_ \t\v\n\r,]*)\\)#ms", RE_RETURN_CAPTURED );
+	foreach( match : inh_matches )
+	{
+		inhlist = match[1];
+		inhlist = string_replace( inhlist, [" ","\t","\v","\n","\r"], "" );
+		foreach( inhitem : string_explode( inhlist, "," ) )
+			inherited[ inhitem ] = true;
+	}
+	inherited = get_keys( inherited );
+	
 	items = [];
 	matches = re_match_all( blockcode, "#(SGS_PROPERTY_FUNC|SGS_METHOD|SGS_PROPERTY|SGS_IFUNC)(.*?)[;\\{]#ms", RE_RETURN_BOTH );
 	foreach( match : matches )
@@ -651,6 +663,8 @@ function cppbc_examine_object( code, pos )
 	return {
 		name = classname,
 		items = items,
+		no_export = no_export,
+		inherited = inherited,
 	};
 }
 
@@ -667,6 +681,31 @@ function cppbc_find_objects( code )
 	
 //	printvar_ext( objects, 10 );
 	return objects;
+}
+
+
+function cppbc_extend_objects( objects )
+{
+	foreach( obj : objects )
+	{
+		nitems = {};
+		foreach( inhname : obj.inherited )
+		{
+			if( inhname == obj.name )
+				cppbc_error( "cannot inherit yourself (" $ inhname $ ")" );
+			inhobj = null;
+			foreach( inhobj : objects )
+				if( inhobj.name == inhname ) break;
+			if( inhobj === null )
+				cppbc_error( "cannot find inherited object (" $ inhname $ ")" );
+			
+			foreach( ni : inhobj.items )
+				nitems[ ni.what $ "/" $ ni.name ] = ni;
+		}
+		foreach( ni : obj.items )
+			nitems[ ni.what $ "/" $ ni.name ] = ni;
+		obj.items = get_values( nitems );
+	}
 }
 
 
@@ -689,6 +728,9 @@ function cppbc_generate_code( objects, includes )
 	////////////////////////
 	foreach( obj : objects )
 	{
+		if( obj.no_export )
+			continue;
+		
 		ifuncs = clone( DEFAULT_OBJ_IFUNCS );
 		
 		// load the ifuncs
@@ -864,6 +906,7 @@ function cppbc_parse_file( code, includes )
 {
 	code = cppbc_preprocess( code );
 	objects = cppbc_find_objects( code );
+	cppbc_extend_objects( objects );
 	gcode = cppbc_generate_code( objects, includes );
 	return gcode;
 }
