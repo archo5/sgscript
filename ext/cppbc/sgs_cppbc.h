@@ -40,7 +40,7 @@
 #define SGS_DEFAULT_LITE_OBJECT_INTERFACE( name ) \
 	template<> inline void sgs_PushVar<name>( SGS_CTX, const name& v ){ sgs_PushLiteClassFrom( C, &v ); } \
 	template<> struct sgs_GetVar<name> { name operator () ( SGS_CTX, sgs_StkIdx item ){ \
-		if( sgs_IsObject( C, item, name::_sgs_interface ) ) return *(name*)sgs_GetObjectData( C, -1 ); return name(); }}; \
+		if( sgs_IsObject( C, item, name::_sgs_interface ) ) return *(name*)sgs_GetObjectData( C, item ); return name(); }}; \
 	template<> struct sgs_GetVarP<name> { name operator () ( SGS_CTX, sgs_Variable* val ){ \
 		if( sgs_IsObjectP( val, name::_sgs_interface ) ) return *(name*)sgs_GetObjectDataP( val ); return name(); }};
 #endif
