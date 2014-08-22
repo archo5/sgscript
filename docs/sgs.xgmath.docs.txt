@@ -9,6 +9,7 @@ The goal of this library is to provide the mathematical objects commonly used in
 - @vec2<vec2 [object]>, @vec3<vec3 [object]>, @vec4<vec4 [object]> (2,3 and 4 dimension vectors)
 - @mat4<mat4 [object]> (4x4 matrix)
 - @aabb2<aabb2 [object]> (2D axis-aligned bounding box)
+- @aabb3<aabb3 [object]> (3D axis-aligned bounding box)
 - @color<color [object]> (red, green, blue, alpha values)
 - @floatarray<floatarray [object]> (array of floating point values)
 
@@ -27,6 +28,7 @@ The library is compiled to a 'sgsxgmath' shared library so it can be included th
 - @vec3<vec3 [object]>
 - @vec4<vec4 [object]>
 - @aabb2<aabb2 [object]>
+- @aabb3<aabb3 [object]>
 - @color<color [object]>
 - @mat4<mat4 [object]>
 - @floatarray<floatarray [object]>
@@ -43,6 +45,9 @@ The library is compiled to a 'sgsxgmath' shared library so it can be included th
 - @aabb2<aabb2 [function]> - create a 2D AABB from 4 real values
 - @aabb2v - create a 2D AABB from 2 2D vectors
 - @aabb2_intersect - intersect two 2D AABB values
+- @aabb3<aabb3 [function]> - create a 3D AABB from 6 real values
+- @aabb3v - create a 3D AABB from 2 3D vectors
+- @aabb3_intersect - intersect two 3D AABB values
 - @color<color [function]>
 - @mat4<mat4 [function]>
 - @floatarray<floatarray [function]> - create floatarray from array/list of int/real values
@@ -254,6 +259,61 @@ In this object, assume 1 = min and 2 = max.
 # aabb2_intersect [function]
 
 == aabb2_intersect( aabb2 bb1, aabb2 bb2 )
+=== check if two AABBs intersect
+
+
+# aabb3 [object]
+
+In this object, assume 1 = min and 2 = max.
+
+- methods
+-- @expand<aabb3.expand> - include other vec3/aabb3 items in current AABB
+- read-only properties
+-- [real] width -- x2 - x1
+-- [real] height -- y2 - y1
+-- [real] depth -- z2 - z1
+-- [vec3] center -- (p1 + p2) / 2
+-- [real] area -- width * height * depth
+-- [bool] valid -- returns if x1 <= x2 and y1 <= y2 and z1 <= z2
+- read/write properties
+-- [real] x1
+-- [real] y1
+-- [real] z1
+-- [real] x2
+-- [real] y2
+-- [real] z2
+-- [vec3] p1
+-- [vec3] p2
+- overloaded operators
+-- comparison between aabb3 values: first by X1, then by Y1, then by Z1, then by X2, then by Y2, then by Z2
+- other features:
+-- cloning support
+-- serialization support
+-- GC-safe
+-- tostring, dump = "aabb3(<x1>;<y1>;<z1> - <x2>;<y2>;<z2>)"
+
+
+# aabb3.expand( ... ) [function]
+
+== aabb3.expand( ... )
+=== include other vec3/aabb3 items in current AABB
+
+
+# aabb3 [function]
+
+== aabb3( real x1, real y1, real x2, real y2 )
+=== create a 2D AABB object from 4 real values
+
+
+# aabb3v [function]
+
+== aabb3v( vec3 p1, vec3 p2 )
+=== create a 2D AABB object from 2 vec3 values
+
+
+# aabb3_intersect [function]
+
+== aabb3_intersect( aabb3 bb1, aabb3 bb2 )
 === check if two AABBs intersect
 
 
@@ -525,6 +585,8 @@ A column-major matrix
 -- @lerp_to<floatarray.lerp_to> - linearly interpolate this source and another to the factor of the third one
 -- @to_*_buffer<floatarray.to_*_buffer> - convert values to byte buffer, optionally scaling them
 - read-only properties
+-- [aabb2] aabb2 - returns 2D bounding box of data, assuming data contains 2D vectors
+-- [aabb3] aabb3 - returns 3D bounding box of data, assuming data contains 3D vectors
 -- [int] size - returns array size - the number of values in this array
 -- [int] size2 - returns array size / 2 - the number of vec2 values in this array
 -- [int] size3 - returns array size / 3 - the number of vec3 values in this array
@@ -786,6 +848,8 @@ A column-major matrix
 === interface for @vec4<vec4 [object]> objects
 == sgs_ObjInterface xgm_aabb2_iface[1]
 === interface for @aabb2<aabb2 [object]> objects
+== sgs_ObjInterface xgm_aabb3_iface[1]
+=== interface for @aabb3<aabb3 [object]> objects
 == sgs_ObjInterface xgm_color_iface[1]
 === interface for @color<color [object]> objects
 == sgs_ObjInterface xgm_mat4_iface[1]
@@ -800,6 +864,7 @@ A column-major matrix
 == void sgs_InitVec3( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z )
 == void sgs_InitVec4( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 == void sgs_InitAABB2( SGS_CTX, sgs_Variable* var, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
+== void sgs_InitAABB3( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f1, const XGM_VT* v3f2 )
 == void sgs_InitColor( SGS_CTX, sgs_Variable* var, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )
 == void sgs_InitMat4( SGS_CTX, sgs_Variable* var, const XGM_VT* v16f, int transpose )
 == void sgs_InitFloatArray( SGS_CTX, sgs_Variable* var, const XGM_VT* vfn, sgs_SizeVal size )
@@ -807,6 +872,7 @@ A column-major matrix
 == void sgs_InitVec3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f )
 == void sgs_InitVec4p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
 == void sgs_InitAABB2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
+== void sgs_InitAABB3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v6f )
 == void sgs_InitColorp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
 == void sgs_InitColorvp( SGS_CTX, sgs_Variable* var, const XGM_VT* vf, int numfloats )
 === initialize a variable of the right type to the specified arguments
@@ -828,6 +894,7 @@ Notes:
 == SGSONE sgs_PushVec3( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z )
 == SGSONE sgs_PushVec4( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 == SGSONE sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
+== SGSONE sgs_PushAABB3( SGS_CTX, const XGM_VT* v3f1, const XGM_VT* v3f2 )
 == SGSONE sgs_PushColor( SGS_CTX, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )
 == SGSONE sgs_PushMat4( SGS_CTX, const XGM_VT* v16f, int transpose )
 == SGSONE sgs_PushFloatArray( SGS_CTX, const XGM_VT* vfn, sgs_SizeVal size )
@@ -835,6 +902,7 @@ Notes:
 == SGSONE sgs_PushVec3p( SGS_CTX, const XGM_VT* v3f )
 == SGSONE sgs_PushVec4p( SGS_CTX, const XGM_VT* v4f )
 == SGSONE sgs_PushAABB2p( SGS_CTX, const XGM_VT* v4f )
+== SGSONE sgs_PushAABB3p( SGS_CTX, const XGM_VT* v6f )
 == SGSONE sgs_PushColorp( SGS_CTX, const XGM_VT* v4f )
 == SGSONE sgs_PushColorvp( SGS_CTX, const XGM_VT* vf, int numfloats )
 === push a new variable on stack of the right type, initialized to the specified arguments
@@ -851,6 +919,7 @@ Notes:
 == SGSBOOL sgs_ParseVec3P( SGS_CTX, sgs_Variable* var, XGM_VT* v3f, int strict )
 == SGSBOOL sgs_ParseVec4P( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict )
 == SGSBOOL sgs_ParseAABB2P( SGS_CTX, sgs_Variable* var, XGM_VT* v4f )
+== SGSBOOL sgs_ParseAABB3P( SGS_CTX, sgs_Variable* var, XGM_VT* v6f )
 == SGSBOOL sgs_ParseColorP( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict )
 == SGSBOOL sgs_ParseMat4P( SGS_CTX, sgs_Variable* var, XGM_VT* v16f )
 == SGSBOOL sgs_ParseFloatArrayP( SGS_CTX, sgs_Variable* var, XGM_VT** vfa, sgs_SizeVal* osz )
@@ -861,6 +930,7 @@ Notes:
 == SGSBOOL sgs_ParseVec3( SGS_CTX, sgs_StkIdx item, XGM_VT* v3f, int strict )
 == SGSBOOL sgs_ParseVec4( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )
 == SGSBOOL sgs_ParseAABB2( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f )
+== SGSBOOL sgs_ParseAABB3( SGS_CTX, sgs_StkIdx item, XGM_VT* v6f )
 == SGSBOOL sgs_ParseColor( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )
 == SGSBOOL sgs_ParseMat4( SGS_CTX, sgs_StkIdx item, XGM_VT* v16f )
 == SGSBOOL sgs_ParseFloatArray( SGS_CTX, sgs_StkIdx item, XGM_VT** vfa, sgs_SizeVal* osz )
@@ -876,6 +946,7 @@ Notes:
 == int sgs_ArgCheck_Vec3( SGS_CTX, int argid, va_list* args, int flags )
 == int sgs_ArgCheck_Vec4( SGS_CTX, int argid, va_list* args, int flags )
 == int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list* args, int flags )
+== int sgs_ArgCheck_AABB3( SGS_CTX, int argid, va_list* args, int flags )
 == int sgs_ArgCheck_Color( SGS_CTX, int argid, va_list* args, int flags )
 == int sgs_ArgCheck_Mat4( SGS_CTX, int argid, va_list* args, int flags )
 == int sgs_ArgCheck_FloatArray( SGS_CTX, int argid, va_list* args, int flags )
@@ -886,6 +957,7 @@ Notes:
 -- Vec3: XGM_VT[3] if output is enabled
 -- Vec4: XGM_VT[4] if output is enabled
 -- AABB2: XGM_VT[4] if output is enabled
+-- AABB3: XGM_VT[6] if output is enabled
 -- Color: XGM_VT[4] if output is enabled
 -- Mat4: XGM_VT[16] if output is enabled
 -- FloatArray: @xgm_vtarray** if output is enabled
@@ -897,11 +969,13 @@ Notes:
 == SGS_RETURN_VEC3( XGM_VT x, XGM_VT y, XGM_VT z )
 == SGS_RETURN_VEC4( XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 == SGS_RETURN_AABB2( XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
+== SGS_RETURN_AABB3( XGM_VT x1, XGM_VT* v3f1, XGM_VT* v3f2 )
 == SGS_RETURN_COLOR( XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )
 == SGS_RETURN_VEC2P( XGM_VT* v2f )
 == SGS_RETURN_VEC3P( XGM_VT* v3f )
 == SGS_RETURN_VEC4P( XGM_VT* v4f )
 == SGS_RETURN_AABB2P( XGM_VT* v4f )
+== SGS_RETURN_AABB3P( XGM_VT* v6f )
 == SGS_RETURN_COLORP( XGM_VT* v4f )
 == SGS_RETURN_MAT4( XGM_VT* v16f )
 === push the specified value and return SGS_SUCCESS
@@ -916,6 +990,7 @@ Notes:
 == SGS_PARSE_VEC3( outptr, strict )
 == SGS_PARSE_VEC4( outptr, strict )
 == SGS_PARSE_AABB2( outptr )
+== SGS_PARSE_AABB3( outptr )
 == SGS_PARSE_COLOR( outptr, strict )
 == SGS_PARSE_MAT4( outptr )
 === parse input variable in a SETINDEX object interface function
@@ -925,6 +1000,7 @@ Notes:
 -- VEC3: XGM_VT[3]
 -- VEC4: XGM_VT[4]
 -- AABB2: XGM_VT[4]
+-- AABB3: XGM_VT[6]
 -- COLOR: XGM_VT[4]
 -- MAT4: XGM_VT[16]
 - assuming SGS_CTX (`sgs_Context* C`)
