@@ -1260,7 +1260,7 @@ static int xgm_col_serialize( SGS_CTX, sgs_VarObj* data )
 	XGM_OHDR;
 	for( i = 0; i < 4; ++i )
 	{
-		sgs_PushReal( C, hdr[0] );
+		sgs_PushReal( C, hdr[i] );
 		if( sgs_Serialize( C ) )
 			return SGS_EINPROC;
 	}
@@ -1989,7 +1989,7 @@ static int xgm_m4_serialize( SGS_CTX, sgs_VarObj* data )
 	XGM_OHDR;
 	for( i = 0; i < 16; ++i )
 	{
-		sgs_PushReal( C, hdr[0] );
+		sgs_PushReal( C, hdr[i] );
 		if( sgs_Serialize( C ) )
 			return SGS_EINPROC;
 	}

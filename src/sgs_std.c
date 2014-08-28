@@ -3026,7 +3026,7 @@ static int sgsstd_include( SGS_CTX )
 		else
 		{
 			sgs_membuf_destroy( &mb, C );
-			return sgs_Msg( C, SGS_WARNING, "failed to load native module '%.*s'", fnsize, fnstr );
+			return sgs_Msg( C, SGS_ERROR, "failed to load native module '%.*s'", fnsize, fnstr );
 		}
 		
 		sgs_membuf_destroy( &mb, C );
