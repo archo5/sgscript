@@ -128,11 +128,10 @@ void sgs_DestroyEngine( SGS_CTX )
 		sgs_VHTVar* pend = p + C->stringtable.size;
 		while( p < pend )
 		{
-			sgs_iStr* st = p->key.data.S;
-			st->refcount--;
-			sgs_BreakIf( st->refcount > 0 );
-			sgs_BreakIf( st->refcount < 0 );
-			sgs_Dealloc( st );
+			sgs_iStr* unfreed_string = p->key.data.S;
+			sgs_BreakIf( unfreed_string->refcount > 0 && "string not freed" );
+			sgs_BreakIf( unfreed_string->refcount < 0 && "memory error" );
+			sgs_Dealloc( unfreed_string );
 			p++;
 		}
 	}
@@ -157,8 +156,10 @@ void sgs_DestroyEngine( SGS_CTX )
 #endif
 
 #ifdef SGS_DEBUG_LEAKS
-	sgs_BreakIf( C->memsize > sizeof( sgs_Context ) );
-	sgs_BreakIf( C->memsize < sizeof( sgs_Context ) );
+	sgs_BreakIf( C->memsize > sizeof( sgs_Context ) &&
+		"not all resources have been freed" );
+	sgs_BreakIf( C->memsize < sizeof( sgs_Context ) &&
+		"some resorces may have been freed more than once" );
 #endif
 	
 	C->msg_fn = NULL;
