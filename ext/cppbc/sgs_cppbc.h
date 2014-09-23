@@ -11,10 +11,15 @@
 #  include <string>
 #endif
 
+#ifdef SGS_CPPBC_WITH_STD_VECTOR
+#  include <vector>
+#endif
+
 
 #ifndef SGS_CPPBC_PROCESS
 # define SGS_OBJECT_LITE \
 	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgs_gcmark( SGS_CTX, sgs_VarObj* obj ); \
 	static int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int type ); \
 	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int isprop ); \
 	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int isprop ); \
@@ -29,6 +34,7 @@
 # define SGS_MULTRET int
 # define SGS_PROPERTY
 # define SGS_PROPERTY_FUNC( funcs )
+# define SGS_GCREF( mbname )
 # define VARNAME
 # define READ
 # define WRITE
@@ -299,8 +305,8 @@ public:
 		return str->size == s.str->size ? 0 : ( str->size < s.str->size ? -1 : 1 );
 	}
 	bool operator < ( const sgsString& s ) const { return compare( s ) < 0; }
-	bool operator == ( const sgsString& s ) const { return compare( s ) == 0; }
-	bool operator != ( const sgsString& s ) const { return compare( s ) != 0; }
+	bool operator == ( const sgsString& s ) const { return same_as( s ); }
+	bool operator != ( const sgsString& s ) const { return !same_as( s ); }
 	bool same_as( const sgsString& s ) const { return str == s.str; } 
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); }
@@ -400,6 +406,17 @@ inline sgsVariable sgsString::get_variable()
 	v.data.S = str;
 	return sgsVariable( C, &v );
 }
+
+
+/* GCMark<T> */
+template< class T > SGSRESULT sgs_GCMarkVar( SGS_CTX, T& var ){}
+template<> inline SGSRESULT sgs_GCMarkVar<sgs_Variable>( SGS_CTX, sgs_Variable& v ){ return sgs_GCMark( C, &v ); }
+template<> inline SGSRESULT sgs_GCMarkVar<sgsVariable>( SGS_CTX, sgsVariable& v ){ return v.gcmark(); }
+template< class T > inline SGSRESULT sgs_GCMarkVar( SGS_CTX, sgsHandle<T>& v ){ return v.gcmark(); }
+#ifdef SGS_CPPBC_WITH_STD_VECTOR
+template< class T > inline SGSRESULT sgs_GCMarkVar( SGS_CTX, std::vector<T>& v ){
+	for( size_t i = 0; i < v.size(); ++i ){ SGSRESULT r = sgs_GCMarkVar( C, v[i] ); if( SGS_FAILED( r ) ) return r; } return SGS_SUCCESS; }
+#endif
 
 
 /* PushVar [stack] */

@@ -568,13 +568,14 @@ function cppbc_examine_property_func( code )
 	
 	return {
 		what = "PROPERTY_FUNC",
-		name = vd.name,
+		name = varname || vd.name,
 		type = vd.type,
 		read = readmethod,
 		write = writemethod,
 		readcb = readcallback,
 		writecb = writecallback,
 		varname = varname,
+		srcname = vd.name,
 	};
 }
 
@@ -601,6 +602,26 @@ function cppbc_examine_ifunc( code )
 		name = name,
 		type = type,
 	};
+}
+
+
+function cppbc_examine_gcref( code )
+{
+	sp = fmt_string_parser( code );
+	
+	sp.skipcc( "( \t\v\r\n" );
+	items = [];
+	while( ( item = sp.readcc( "a-zA-Z0-9_." ) ) !== "" )
+	{
+		items.push( item );
+		sp.skipcc( " \t\v\r\n" );
+	}
+	sp.skipcc( ")" );
+	
+	out = [];
+	foreach( item : items )
+		out.push({ what = "GCREF", name = item });
+	return out;
 }
 
 
@@ -656,7 +677,17 @@ function cppbc_examine_object( code, pos )
 			item = cppbc_examine_property_func( match[2][0] );
 		else if( match[1][0] == "SGS_IFUNC" )
 			item = cppbc_examine_ifunc( match[2][0] );
-		items.push( item );
+		else if( match[1][0] == "SGS_GCREF" )
+			item = cppbc_examine_gcref( match[2][0] );
+		
+		if( typeof(item) == "array" )
+		{
+			foreach( ii : item )
+				items.push( ii );
+		}
+		else
+			items.push( item );
+		
 		cppbc_setline_pop();
 	}
 	
@@ -815,7 +846,7 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 			else if( item.what == "PROPERTY_FUNC" )
 			{
 				if( item.read === true )
-					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.name$" );";
+					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.srcname$" );";
 				else if( item.read )
 					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.read$"() );";
 				if( item.readcb )
@@ -855,7 +886,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			else if( item.what == "PROPERTY_FUNC" )
 			{
 				if( item.write === true )
-					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.name$" = %TYPEFUNC%( C, val%ISOBJ% );";
+					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.srcname$" = %TYPEFUNC%( C, val%ISOBJ% );";
 				else if( item.write )
 					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.write$"( %TYPEFUNC%( C, val%ISOBJ% ) );";
 				if( item.writecb )
