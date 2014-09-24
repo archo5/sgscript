@@ -295,6 +295,8 @@ public:
 	
 	int compare( const sgsString& s ) const
 	{
+		if( same_as( s ) )
+			return 0;
 		int null1 = str == NULL;
 		int null2 = s.str == NULL;
 		if( null1 || null2 )
@@ -409,7 +411,7 @@ inline sgsVariable sgsString::get_variable()
 
 
 /* GCMark<T> */
-template< class T > SGSRESULT sgs_GCMarkVar( SGS_CTX, T& var ){}
+template< class T > SGSRESULT sgs_GCMarkVar( SGS_CTX, T& var ){ return SGS_SUCCESS; }
 template<> inline SGSRESULT sgs_GCMarkVar<sgs_Variable>( SGS_CTX, sgs_Variable& v ){ return sgs_GCMark( C, &v ); }
 template<> inline SGSRESULT sgs_GCMarkVar<sgsVariable>( SGS_CTX, sgsVariable& v ){ return v.gcmark(); }
 template< class T > inline SGSRESULT sgs_GCMarkVar( SGS_CTX, sgsHandle<T>& v ){ return v.gcmark(); }

@@ -10,6 +10,7 @@ global ERR_OOC = "SGS_OBJECT outside class/struct";
 global DEFAULT_OBJ_IFUNCS =
 {
 	"destruct" = "_sgs_destruct",
+	"gcmark" = "_sgs_gcmark",
 	"getindex" = "_sgs_getindex",
 	"setindex" = "_sgs_setindex",
 };
@@ -665,7 +666,7 @@ function cppbc_examine_object( code, pos )
 	inherited = get_keys( inherited );
 	
 	items = [];
-	matches = re_match_all( blockcode, "#(SGS_PROPERTY_FUNC|SGS_METHOD|SGS_PROPERTY|SGS_IFUNC)(.*?)[;\\{]#ms", RE_RETURN_BOTH );
+	matches = re_match_all( blockcode, "#(SGS_PROPERTY_FUNC|SGS_METHOD|SGS_PROPERTY|SGS_IFUNC|SGS_GCREF)(.*?)[;\\{]#ms", RE_RETURN_BOTH );
 	foreach( match : matches )
 	{
 		cppbc_setline_codepos( blockcode, match[0][1], 1 );
@@ -827,6 +828,17 @@ int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
 "
 		, { "%OBJ%" = obj.name } );
 		
+		// - OP_GCMARK
+		out $= "\nint " $ obj.name $ "::_sgs_gcmark( SGS_CTX, sgs_VarObj* obj )\n{";
+		foreach( item : obj.items )
+		{
+			if( item.what != "GCREF" )
+				continue;
+			out $= "\n\tif( SGS_FAILED( sgs_GCMarkVar( C, static_cast<"$
+				obj.name$"*>( obj->data )->"$item.name$" ) ) ) return SGS_EINPROC;";
+		}
+		out $= "\n\treturn SGS_SUCCESS;\n}\n";
+		
 		// - OP_GETINDEX
 		out $=
 "
@@ -908,6 +920,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 	SGS_END_INDEXFUNC;
 }
 ";
+		
 		// interface
 		funcnames = [].resize( OBJ_IFUNC_COUNT );
 		foreach( ifname, ifunc : ifuncs )

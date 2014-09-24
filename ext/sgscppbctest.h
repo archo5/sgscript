@@ -57,6 +57,9 @@ public:
 	SGS_PROPERTY sgsString name;
 	SGS_PROPERTY_FUNC( READ WRITE VARNAME name2 ) SGS_ALIAS( sgsString name );
 	
+	SGS_PROPERTY Handle attached;
+	SGS_GCREF( attached );
+	
 	/* `Handle` must be resolved since it's going to be used out of scope */
 	SGS_METHOD bool sendMoney( Account::Handle to, float amount, sgsString currency )
 	{
