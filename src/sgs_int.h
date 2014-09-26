@@ -578,8 +578,8 @@ static const char* sgs_VarNames[] =
 
 static const char* sgs_OpNames[] =
 {
-	"nop",  "push", "int",
-	"return", "jump", "jump_if_true", "jump_if_false", "call",
+	"nop", "push", "int",
+	"return", "jump", "jump_if_true", "jump_if_false", "jump_if_null", "call",
 	"for_prep", "for_load", "for_jump", "loadconst", "getvar", "setvar",
 	"getprop", "setprop", "getindex", "setindex",
 	"genclsr", "pushclsr", "makeclsr", "getclsr", "setclsr",
