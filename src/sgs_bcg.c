@@ -193,6 +193,8 @@ static void dump_opcode( const sgs_instr_t* ptr, size_t count )
 			printf( ", %d", (int) (int16_t) argE ); break;
 		case SGS_SI_JMPF: printf( "JMP_F " ); dump_rcpos( argC );
 			printf( ", %d", (int) (int16_t) argE ); break;
+		case SGS_SI_JMPN: printf( "JMP_N " ); dump_rcpos( argC );
+			printf( ", %d", (int) (int16_t) argE ); break;
 		case SGS_SI_CALL: printf( "CALL args: %d - %d expect: %d%s",
 			argB & 0xff, argC, argA, ( argB & 0x100 ) ? ", method" : "" );
 			break;
@@ -1358,7 +1360,7 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 		return 1;
 	}
 	/* Boolean ops */
-	else if( SGS_ST_OP_BOOL( *node->token ) )
+	else if( SGS_ST_OP_BOOL( *node->token ) || SGS_ST_OP_FNN( *node->token ) )
 	{
 		int jin;
 		rcpos_t ireg1, ireg2, oreg = 0;
@@ -1374,7 +1376,8 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 		if( !compile_node_r( C, func, node->child, &ireg1 ) ) goto fail;
 		
 		/* write cond. jump */
-		jin = ( *node->token == SGS_ST_OP_BLAND || *node->token == SGS_ST_OP_BLAEQ ) ? SGS_SI_JMPT : SGS_SI_JMPF;
+		jin = ( *node->token == SGS_ST_OP_BLAND || *node->token == SGS_ST_OP_BLAEQ ) ? SGS_SI_JMPT :
+			( ( *node->token == SGS_ST_OP_BLOR || *node->token == SGS_ST_OP_BLOEQ ) ? SGS_SI_JMPF : SGS_SI_JMPN );
 		INSTR_WRITE_PCH();
 		csz = func->code.size;
 		

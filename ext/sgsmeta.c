@@ -15,6 +15,7 @@ int sgs_meta_globals( SGS_CTX )
 	_META_RGS( SI_JUMP );
 	_META_RGS( SI_JMPT );
 	_META_RGS( SI_JMPF );
+	_META_RGS( SI_JMPN );
 	_META_RGS( SI_CALL );
 	
 	_META_RGS( SI_FORPREP );

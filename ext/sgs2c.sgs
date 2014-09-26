@@ -172,6 +172,7 @@ function c_compile_func_inner( fdata, iswhole )
 		if( op.op == SI_JUMP ||
 			op.op == SI_JMPT ||
 			op.op == SI_JMPF ||
+			op.op == SI_JMPN ||
 			op.op == SI_FORJUMP )
 			jumppos[ op_pos + 1 + sgs_e2off( op.e ) ] = true;
 	}
@@ -209,6 +210,11 @@ function c_compile_func_inner( fdata, iswhole )
 		{
 			output $= "\nif( !sgs_GetBoolP( C, " $ sgs_srcptr( op.c )
 				$ " ) ) " $ c_compile_jump( op_pos + 1 + sgs_e2off( op.e ) );
+		}
+		else if( op.op == SI_JMPN )
+		{
+			output $= "\nif( sgs_ItemType( C, " $ sgs_srcptr( op.c )
+				$ " ) == SGS_VT_NULL ) " $ c_compile_jump( op_pos + 1 + sgs_e2off( op.e ) );
 		}
 		else if( op.op == SI_CALL )
 		{

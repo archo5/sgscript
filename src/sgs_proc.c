@@ -2714,6 +2714,14 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, sgs_rcpos_t constcount )
 				pp += off;
 			break;
 		}
+		case SGS_SI_JMPN:
+		{
+			int16_t off = (int16_t) argE;
+			sgs_BreakIf( pp+1 + off > pend || pp+1 + off < SF->code );
+			if( RESVAR( argC )->type == SGS_VT_NULL )
+				pp += off;
+			break;
+		}
 
 		case SGS_SI_CALL:
 		{

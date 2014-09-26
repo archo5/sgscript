@@ -284,6 +284,7 @@ static int part_weight( sgs_FTNode* part, int isfcall, int binary )
 		if( binary )
 		{
 			if( SGS_ST_OP_BOOL( type ) )	return 30;
+			if( type == SGS_ST_OP_NLOR )    return 29;
 			if( type == SGS_ST_OP_RWCMP )   return 28; /* lower split prio .. */
 			if( SGS_ST_OP_COMP( type ) )	return 29; /* .. than other comp ops */
 			if( type == SGS_ST_OP_CAT )		return 27;

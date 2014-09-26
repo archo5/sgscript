@@ -89,39 +89,42 @@ extern "C" {
 #define SGS_ST_OP_RSHEQ 218 /* >>=  */
 #define SGS_ST_OP_BLAEQ 219 /* &&=  */
 #define SGS_ST_OP_BLOEQ 220 /* ||=  */
-#define SGS_ST_OP_CATEQ 221 /* $=   */
-#define SGS_ST_OP_SET   222 /* =    */
-#define SGS_ST_OP_ERSUP 223 /* @    */
-#define SGS_ST_OP_BLAND 224 /* &&   */
-#define SGS_ST_OP_BLOR  225 /* ||   */
-#define SGS_ST_OP_ADD   226 /* +    */
-#define SGS_ST_OP_SUB   227 /* -    */
-#define SGS_ST_OP_MUL   228 /* *    */
-#define SGS_ST_OP_DIV   229 /* /    */
-#define SGS_ST_OP_MOD   230 /* %    */
-#define SGS_ST_OP_AND   231 /* &    */
-#define SGS_ST_OP_OR    232 /* |    */
-#define SGS_ST_OP_XOR   233 /* ^    */
-#define SGS_ST_OP_LSH   234 /* <<   */
-#define SGS_ST_OP_RSH   235 /* >>   */
-#define SGS_ST_OP_MMBR  236 /* .    */
-#define SGS_ST_OP_CAT   237 /* $    */
-#define SGS_ST_OP_NOT   238 /* !    */
-#define SGS_ST_OP_INV   239 /* ~    */
-#define SGS_ST_OP_INC   240 /* ++   */
-#define SGS_ST_OP_DEC   241 /* --   */
+#define SGS_ST_OP_NLOEQ 221 /* ??=  */
+#define SGS_ST_OP_CATEQ 222 /* $=   */
+#define SGS_ST_OP_SET   223 /* =    */
+#define SGS_ST_OP_ERSUP 224 /* @    */
+#define SGS_ST_OP_BLAND 225 /* &&   */
+#define SGS_ST_OP_BLOR  226 /* ||   */
+#define SGS_ST_OP_NLOR  227 /* ??   */
+#define SGS_ST_OP_ADD   228 /* +    */
+#define SGS_ST_OP_SUB   229 /* -    */
+#define SGS_ST_OP_MUL   230 /* *    */
+#define SGS_ST_OP_DIV   231 /* /    */
+#define SGS_ST_OP_MOD   232 /* %    */
+#define SGS_ST_OP_AND   233 /* &    */
+#define SGS_ST_OP_OR    234 /* |    */
+#define SGS_ST_OP_XOR   235 /* ^    */
+#define SGS_ST_OP_LSH   236 /* <<   */
+#define SGS_ST_OP_RSH   237 /* >>   */
+#define SGS_ST_OP_MMBR  238 /* .    */
+#define SGS_ST_OP_CAT   239 /* $    */
+#define SGS_ST_OP_NOT   240 /* !    */
+#define SGS_ST_OP_INV   241 /* ~    */
+#define SGS_ST_OP_INC   242 /* ++   */
+#define SGS_ST_OP_DEC   243 /* --   */
 
-#define SGS_ST_ISOP( chr )      ( (chr) >= 200 && (chr) <= 241 )
+#define SGS_ST_ISOP( chr )      ( (chr) >= 200 && (chr) <= 243 )
 #define SGS_ST_OP_UNARY( chr )  ( (chr) == SGS_ST_OP_ERSUP || (chr) == SGS_ST_OP_ADD || \
 	(chr) == SGS_ST_OP_SUB || ( (chr) >= SGS_ST_OP_NOT && (chr) <= SGS_ST_OP_DEC ) )
-#define SGS_ST_OP_BINARY( chr ) ( (chr) >= 200 && (chr) <= 237 && (chr) != 223 )
-#define SGS_ST_OP_ASSIGN( chr ) ( (chr) >= 209 && (chr) <= 222 )
+#define SGS_ST_OP_BINARY( chr ) ( (chr) >= 200 && (chr) <= 239 && (chr) != 224 )
+#define SGS_ST_OP_ASSIGN( chr ) ( (chr) >= 209 && (chr) <= 223 )
 #define SGS_ST_OP_BINMUL( chr ) ( (chr) == SGS_ST_OP_MUL || (chr) == SGS_ST_OP_DIV || (chr) == SGS_ST_OP_MOD )
 #define SGS_ST_OP_BINADD( chr ) ( (chr) == SGS_ST_OP_ADD || (chr) == SGS_ST_OP_SUB )
 #define SGS_ST_OP_BINOPS( chr ) ( (chr) >= SGS_ST_OP_AND && (chr) <= SGS_ST_OP_RSH )
 #define SGS_ST_OP_COMP( chr )   ( (chr) >= 200 && (chr) <= 208 )
 #define SGS_ST_OP_BOOL( chr )   ( (chr) == SGS_ST_OP_BLAEQ || (chr) == SGS_ST_OP_BLOEQ || \
 	(chr) == SGS_ST_OP_BLAND || (chr) == SGS_ST_OP_BLOR )
+#define SGS_ST_OP_FNN( chr )    ( (chr) == SGS_ST_OP_NLOEQ || (chr) == SGS_ST_OP_NLOR )
 
 #define SGS_ST_ISSPEC( chr )    sgs_isoneof( (chr), "()[]{},;:" )
 
@@ -268,6 +271,7 @@ typedef enum sgs_Instruction_e
 	SGS_SI_JUMP,     /* (E:off)                 add to instruction pointer */
 	SGS_SI_JMPT,     /* (C:src, E:off)          jump (add to instr.ptr.) if true */
 	SGS_SI_JMPF,     /* (C:src, E:off)          jump (add to instr.ptr.) if false */
+	SGS_SI_JMPN,     /* (C:src, E:off)          jump (add to instr.ptr.) if null */
 	SGS_SI_CALL,     /* (A:exp, B:from, C:to)   call a variable */
 
 	SGS_SI_FORPREP,  /* (A:out, B:src)          retrieves the iterator to work the object */

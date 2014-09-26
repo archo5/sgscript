@@ -544,8 +544,10 @@ There are 5 types of action for expressions in SGScript: arithmetic, bitwise, lo
 |  bitwise invert         |`     ~ A      `|     bitwise    |  no    |   1   |
 |  logical AND            |`   A  &&  B   `|     logical    |  no    |   2   |
 |  logical OR             |`   A  ||  B   `|     logical    |  no    |   2   |
+|  first-not-null         |`   A  ??  B   `|     logical    |  no    |   2   |
 |  logical AND-assign     |`   A  &&=  B  `|     logical    |  yes   |   2   |
 |  logical OR-assign      |`   A  ||=  B  `|     logical    |  yes   |   2   |
+|  first-not-null-assign  |`   A  ??=  B  `|     logical    |  yes   |   2   |
 |  logical invert         |`     ! A      `|     logical    |  no    |   1   |
 |  less than              |`   A  <  B    `|   comparison   |  no    |   2   |
 |  less than or equal     |`   A  <=  B   `|   comparison   |  no    |   2   |
