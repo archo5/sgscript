@@ -16,6 +16,8 @@ struct Vec3
 	SGS_PROPERTY float y;
 	SGS_PROPERTY float z;
 	
+	SGS_NODUMP( length ); // TODO FIX
+	
 	SGS_PROPERTY_FUNC( READ _get_length ) SGS_ALIAS( float length );
 	SGS_METHOD float getLength(){ return _get_length(); }
 	SGS_METHOD void setLength( float len )
@@ -59,6 +61,7 @@ public:
 	
 	SGS_PROPERTY Handle attached;
 	SGS_GCREF( attached );
+	SGS_NODUMP( attached );
 	
 	/* `Handle` must be resolved since it's going to be used out of scope */
 	SGS_METHOD bool sendMoney( Account::Handle to, float amount, sgsString currency )

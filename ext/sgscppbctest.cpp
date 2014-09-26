@@ -28,6 +28,10 @@ int main( int argc, char** argv )
 	sgs_PushItem( C, -1 );
 	sgs_GlobalCall( C, "print", 1, 0 );
 	
+	printf( "\n> dump object: " );
+	sgs_PushItem( C, -1 );
+	sgs_GlobalCall( C, "printvar", 1, 0 );
+	
 	printf( "\n> print property 'Vec3.length': " );
 	sgs_PushProperty( C, -1, "length" );
 	sgs_GlobalCall( C, "print", 1, 0 );

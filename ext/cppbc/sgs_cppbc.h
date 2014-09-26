@@ -23,6 +23,7 @@
 	static int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int type ); \
 	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int isprop ); \
 	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int isprop ); \
+	static int _sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
 	static sgs_ObjInterface _sgs_interface[1];
 # define SGS_OBJECT \
 	SGS_OBJECT_LITE \
@@ -35,6 +36,8 @@
 # define SGS_PROPERTY
 # define SGS_PROPERTY_FUNC( funcs )
 # define SGS_GCREF( mbname )
+# define SGS_DUMP( what )
+# define SGS_NODUMP( what )
 # define VARNAME
 # define READ
 # define WRITE
@@ -418,6 +421,78 @@ template< class T > inline SGSRESULT sgs_GCMarkVar( SGS_CTX, sgsHandle<T>& v ){ 
 #ifdef SGS_CPPBC_WITH_STD_VECTOR
 template< class T > inline SGSRESULT sgs_GCMarkVar( SGS_CTX, std::vector<T>& v ){
 	for( size_t i = 0; i < v.size(); ++i ){ SGSRESULT r = sgs_GCMarkVar( C, v[i] ); if( SGS_FAILED( r ) ) return r; } return SGS_SUCCESS; }
+#endif
+
+
+/* Dump<T> */
+template< class T > sgsString sgs_DumpData( SGS_CTX, T& var, int depth ){ return sgsString(); }
+template< class T > sgsString sgs_DumpData( SGS_CTX, T* var, int depth )
+{
+	if( !var )
+		return sgsString( C, "null" );
+	return sgs_DumpData( C, *var, depth );
+}
+template< class T > inline sgsString sgs_DumpDataPushVar( SGS_CTX, T& var, int depth )
+{
+	SGS_SCOPE;
+	sgs_PushVar( C, var );
+	if( SGS_SUCCEEDED( sgs_DumpVar( C, depth ) ) )
+		return sgsString( C, -1 );
+	return sgsString( C, "<error>" );
+}
+template<> inline sgsString sgs_DumpData<sgs_Variable>( SGS_CTX, sgs_Variable& v, int depth )
+{
+	SGS_SCOPE;
+	sgs_PushVariable( C, &v );
+	if( SGS_SUCCEEDED( sgs_DumpVar( C, depth ) ) )
+		return sgsString( C, -1 );
+	return sgsString( C, "<error>" );
+}
+template<> inline sgsString sgs_DumpData<sgsVariable>( SGS_CTX, sgsVariable& v, int depth ){ return sgs_DumpData( C, v.var, depth ); }
+template< class T > inline sgsString sgs_DumpData( SGS_CTX, sgsHandle<T>& v, int depth ){ return sgs_DumpDataPushVar( C, v, depth ); }
+template<> inline sgsString sgs_DumpData<bool>( SGS_CTX, bool& v, int ){ return sgsString( C, v ? "true" : "false" ); }
+#define SGS_DECL_DUMPDATA_INT( type ) template<> inline sgsString sgs_DumpData<type>( SGS_CTX, type& v, int depth ){ return sgs_DumpDataPushVar( C, v, depth ); }
+SGS_DECL_DUMPDATA_INT( signed char );
+SGS_DECL_DUMPDATA_INT( unsigned char );
+SGS_DECL_DUMPDATA_INT( signed short );
+SGS_DECL_DUMPDATA_INT( unsigned short );
+SGS_DECL_DUMPDATA_INT( signed int );
+SGS_DECL_DUMPDATA_INT( unsigned int );
+SGS_DECL_DUMPDATA_INT( signed long );
+SGS_DECL_DUMPDATA_INT( unsigned long );
+SGS_DECL_DUMPDATA_INT( signed long long );
+SGS_DECL_DUMPDATA_INT( unsigned long long );
+SGS_DECL_DUMPDATA_INT( float );
+SGS_DECL_DUMPDATA_INT( double );
+SGS_DECL_DUMPDATA_INT( sgsString );
+#ifdef SGS_CPPBC_WITH_STD_STRING
+SGS_DECL_DUMPDATA_INT( std::string );
+#endif
+#ifdef SGS_CPPBC_WITH_STD_VECTOR
+template< class T > inline sgsString sgs_DumpData( SGS_CTX, std::vector<T>& v, int depth )
+{
+	SGS_SCOPE;
+	char bfr[ 32 ];
+	sprintf( bfr, "array(std) [%d]%s", (int) v.size(), depth ? "\n{" : " ..." );
+	sgs_PushString( C, bfr );
+	if( depth-- > 0 )
+	{
+		for( size_t i = 0; i < v.size(); ++i )
+		{
+			sgsString item = sgs_DumpData( C, v[i], depth );
+			sgs_PushString( C, "\n" );
+			if( item.size() )
+				item.push( C );
+			else
+				sgs_PushString( C, "<unknown>" );
+		}
+		sgs_StringConcat( C, v.size() * 2 );
+		sgs_PadString( C );
+		sgs_PushString( C, "\n}" );
+		sgs_StringConcat( C, 3 );
+	}
+	return sgsString( C, -1 );
+}
 #endif
 
 
