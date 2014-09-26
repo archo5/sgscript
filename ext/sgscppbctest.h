@@ -16,8 +16,6 @@ struct Vec3
 	SGS_PROPERTY float y;
 	SGS_PROPERTY float z;
 	
-	SGS_NODUMP( length ); // TODO FIX
-	
 	SGS_PROPERTY_FUNC( READ _get_length ) SGS_ALIAS( float length );
 	SGS_METHOD float getLength(){ return _get_length(); }
 	SGS_METHOD void setLength( float len )

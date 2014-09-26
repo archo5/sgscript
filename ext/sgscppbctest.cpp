@@ -64,6 +64,14 @@ int main( int argc, char** argv )
 		}
 	}
 	
+	printf( "\n> dump objects:\n" );
+	{
+		SGS_SCOPE;
+		aA.push( C );
+		aB.push( C );
+		sgs_GlobalCall( C, "printvar", 2, 0 );
+	}
+	
 	printf( "\n> perform a transaction:\n" );
 	{
 		sgsScope scope1( C );

@@ -928,7 +928,10 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 		
 		// - OP_DUMP
 		out $= "\nint " $ obj.name $ "::_sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth )\n{";
-		out $= "\n\tif( depth > 0 )\n\t{\n\t\tsgs_PushString( C, \"\\n{\" );";
+		out $= "\n\tchar bfr[ "$ obj.name.length + 32 $" ];";
+		out $= "\n\tsprintf( bfr, \""$obj.name$" (%p) %s\", obj->data, depth > 0 ? \"\\n{\" : \" ...\" );";
+		out $= "\n\tsgs_PushString( C, bfr );";
+		out $= "\n\tif( depth > 0 )\n\t{";
 		// 1. compile a list
 		dumpvars = {};
 		foreach( item : obj.items )
@@ -940,7 +943,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			if( item.what == "PROPERTY_FUNC" && @item.varname && item.read === true ) continue;
 			
 			if( item.what == "PROPERTY_FUNC" && item.read !== true )
-				dumpvars[ item.name ] = item.read;
+				dumpvars[ item.name ] = [ item.read, item.type ];
 			else
 				dumpvars[ item.name ] = true;
 		}
@@ -951,18 +954,20 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			unset( dumpvars, item.name );
 		}
 		// 2. push it
-		foreach( name, func : dumpvars )
+		foreach( name, functype : dumpvars )
 		{
-			src = if( func === true, name, func $ "()" );
-			out $= "\n\t\t{ sgs_PushString( C, \"\\n"$name$" = \" );"$
-				" sgsString ret = sgs_DumpData( C, static_cast<"$
-				obj.name$"*>( obj->data )->"$src$", depth ); if( ret.size() ) "$
+			src = if( functype === true, "static_cast<"$obj.name$"*>( obj->data )->"$name, "tmp" );
+			out $= "\n\t\t{";
+			if( functype !== true )
+				out $= functype[1] $ " tmp = " $ "static_cast<"$obj.name$"*>( obj->data )->"$functype[0]$"();";
+			out $= " sgs_PushString( C, \"\\n"$name$" = \" );"$
+				" sgsString ret = sgs_DumpData( C, "$src$", depth ); if( ret.size() ) "$
 				"ret.push( C ); else sgs_PushString( C, \"<unknown>\" ); }";
 		}
 		out $= "\n\t\tsgs_StringConcat( C, "$dict_size(dumpvars)*2$" );\n\t\tsgs_PadString( C );";
 		out $= "\n\t\tsgs_PushString( C, \"\\n}\" );";
 		out $= "\n\t\tsgs_StringConcat( C, 3 );";
-		out $= "\n\t}\n\telse sgs_PushString( C, \" ...\" );";
+		out $= "\n\t}";
 		out $= "\n\treturn SGS_SUCCESS;\n}\n";
 		
 		// interface
