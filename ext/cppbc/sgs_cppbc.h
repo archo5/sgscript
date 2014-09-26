@@ -425,7 +425,7 @@ template< class T > inline SGSRESULT sgs_GCMarkVar( SGS_CTX, std::vector<T>& v )
 
 
 /* Dump<T> */
-template< class T > sgsString sgs_DumpData( SGS_CTX, T& var, int depth ){ return sgsString(); }
+template< class T > sgsString sgs_DumpData( SGS_CTX, T& var, int depth ){ return sgsString( C, "<unknown>" ); }
 template< class T > sgsString sgs_DumpData( SGS_CTX, T* var, int depth )
 {
 	if( !var )
@@ -439,6 +439,18 @@ template< class T > inline sgsString sgs_DumpDataPushVar( SGS_CTX, T& var, int d
 	if( SGS_SUCCEEDED( sgs_DumpVar( C, depth ) ) )
 		return sgsString( C, -1 );
 	return sgsString( C, "<error>" );
+}
+template< class T > inline sgsString sgs_DumpData( SGS_CTX, sgsMaybe<T>& var, int depth )
+{
+	SGS_SCOPE;
+	if( var.isset )
+	{
+		sgs_PushString( C, "[set] " );
+		sgs_DumpData( C, var.data, depth ).push( C );
+		sgs_StringConcat( C, 2 );
+		return sgsString( C, -1 );
+	}
+	return sgsString( C, "[unset]" );
 }
 template<> inline sgsString sgs_DumpData<sgs_Variable>( SGS_CTX, sgs_Variable& v, int depth )
 {
@@ -479,12 +491,8 @@ template< class T > inline sgsString sgs_DumpData( SGS_CTX, std::vector<T>& v, i
 	{
 		for( size_t i = 0; i < v.size(); ++i )
 		{
-			sgsString item = sgs_DumpData( C, v[i], depth );
 			sgs_PushString( C, "\n" );
-			if( item.size() )
-				item.push( C );
-			else
-				sgs_PushString( C, "<unknown>" );
+			sgs_DumpData( C, v[i], depth ).push( C );
 		}
 		sgs_StringConcat( C, v.size() * 2 );
 		sgs_PadString( C );

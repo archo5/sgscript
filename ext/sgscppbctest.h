@@ -50,6 +50,10 @@ class Account
 {
 public:
 	
+	Account() : maybeIntTest2(42)
+	{
+	}
+	
 	typedef sgsHandle< Account > Handle;
 	
 	SGS_OBJECT;
@@ -60,6 +64,8 @@ public:
 	SGS_PROPERTY Handle attached;
 	SGS_GCREF( attached );
 	SGS_NODUMP( attached );
+	SGS_PROPERTY sgsMaybe<int> maybeIntTest1;
+	SGS_PROPERTY sgsMaybe<int> maybeIntTest2;
 	
 	/* `Handle` must be resolved since it's going to be used out of scope */
 	SGS_METHOD bool sendMoney( Account::Handle to, float amount, sgsString currency )

@@ -934,6 +934,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 		out $= "\n\tif( depth > 0 )\n\t{";
 		// 1. compile a list
 		dumpvars = {};
+		dumpvarorder = [];
 		foreach( item : obj.items )
 		{
 			if( item.what != "DUMP" && item.what != "PROPERTY" && item.what != "PROPERTY_FUNC" )
@@ -946,23 +947,25 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 				dumpvars[ item.name ] = [ item.read, item.type ];
 			else
 				dumpvars[ item.name ] = true;
+			dumpvarorder.push( item.name );
 		}
 		foreach( item : obj.items )
 		{
 			if( item.what != "NODUMP" )
 				continue;
 			unset( dumpvars, item.name );
+			dumpvarorder.remove( item.name );
 		}
 		// 2. push it
-		foreach( name, functype : dumpvars )
+		foreach( name : dumpvarorder )
 		{
+			functype = dumpvars[ name ];
 			src = if( functype === true, "static_cast<"$obj.name$"*>( obj->data )->"$name, "tmp" );
-			out $= "\n\t\t{";
+			out $= "\n\t\t{ ";
 			if( functype !== true )
-				out $= functype[1] $ " tmp = " $ "static_cast<"$obj.name$"*>( obj->data )->"$functype[0]$"();";
-			out $= " sgs_PushString( C, \"\\n"$name$" = \" );"$
-				" sgsString ret = sgs_DumpData( C, "$src$", depth ); if( ret.size() ) "$
-				"ret.push( C ); else sgs_PushString( C, \"<unknown>\" ); }";
+				out $= functype[1] $ " tmp = " $ "static_cast<"$obj.name$"*>( obj->data )->"$functype[0]$"(); ";
+			out $= "sgs_PushString( C, \"\\n"$name$" = \" );"$
+				" sgs_DumpData( C, "$src$", depth ).push( C ); }";
 		}
 		out $= "\n\t\tsgs_StringConcat( C, "$dict_size(dumpvars)*2$" );\n\t\tsgs_PadString( C );";
 		out $= "\n\t\tsgs_PushString( C, \"\\n}\" );";
