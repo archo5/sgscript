@@ -88,6 +88,10 @@ int main( int argc, char** argv )
 		puts( scope1.is_restored() ? "\n! stack restore state UNCHANGED" : "- stack restore state changed" );
 	}
 	
+	// free handles before destroying the engine
+	aA = Account::Handle();
+	aB = Account::Handle();
+	
 	printf( "\n" );
 	sgs_DestroyEngine( C );
 	

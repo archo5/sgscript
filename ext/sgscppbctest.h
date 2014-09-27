@@ -2,6 +2,9 @@
 
 #include <math.h>
 
+#define SGS_CPPBC_WITH_STD_STRING
+#define SGS_CPPBC_WITH_STD_VECTOR
+
 #include "cppbc/sgs_cppbc.h"
 
 struct Vec3
@@ -52,6 +55,8 @@ public:
 	
 	Account() : maybeIntTest2(42), bitfieldTest1(true)
 	{
+		vectorTest2.push_back( 1337 );
+		stdStringTest2 = "test";
 	}
 	
 	typedef sgsHandle< Account > Handle;
@@ -69,6 +74,10 @@ public:
 	SGS_PROPERTY bool bitfieldTest1 : 1;
 	SGS_PROPERTY sgsVariable sgsVarTest1;
 	SGS_PROPERTY Handle handleTest1;
+	std::vector< int > vectorTest1; SGS_DUMP( vectorTest1 );
+	std::vector< int > vectorTest2; SGS_DUMP( vectorTest2 );
+	SGS_PROPERTY std::string stdStringTest1;
+	SGS_PROPERTY std::string stdStringTest2;
 	
 	/* `Handle` must be resolved since it's going to be used out of scope */
 	SGS_METHOD bool sendMoney( Account::Handle to, float amount, sgsString currency )

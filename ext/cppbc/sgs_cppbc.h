@@ -487,9 +487,11 @@ template< class T > inline sgsString sgs_DumpData( SGS_CTX, const std::vector<T>
 {
 	SGS_SCOPE;
 	char bfr[ 32 ];
-	sprintf( bfr, "array(std) [%d]%s", (int) v.size(), depth ? "\n{" : " ..." );
+	bool expand = depth-- > 0;
+	sprintf( bfr, "array(std) [%d]%s", (int) v.size(),
+		expand ? ( v.size() ? "\n{" : " {}" ) : " ..." );
 	sgs_PushString( C, bfr );
-	if( depth-- > 0 )
+	if( expand && v.size() )
 	{
 		for( size_t i = 0; i < v.size(); ++i )
 		{
