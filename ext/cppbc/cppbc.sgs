@@ -944,7 +944,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			if( item.what == "PROPERTY_FUNC" && @item.varname && item.read === true ) continue;
 			
 			if( item.what == "PROPERTY_FUNC" && item.read !== true )
-				dumpvars[ item.name ] = [ item.read, item.type ];
+				dumpvars[ item.name ] = item.read;
 			else
 				dumpvars[ item.name ] = true;
 			dumpvarorder.push( item.name );
@@ -960,12 +960,10 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 		foreach( name : dumpvarorder )
 		{
 			functype = dumpvars[ name ];
-			src = if( functype === true, "static_cast<"$obj.name$"*>( obj->data )->"$name, "tmp" );
+			src = if( functype === true, name, functype $ "()" );
 			out $= "\n\t\t{ ";
-			if( functype !== true )
-				out $= functype[1] $ " tmp = " $ "static_cast<"$obj.name$"*>( obj->data )->"$functype[0]$"(); ";
 			out $= "sgs_PushString( C, \"\\n"$name$" = \" );"$
-				" sgs_DumpData( C, "$src$", depth ).push( C ); }";
+				" sgs_DumpData( C, static_cast<"$obj.name$"*>( obj->data )->"$src$", depth ).push( C ); }";
 		}
 		out $= "\n\t\tsgs_StringConcat( C, "$dict_size(dumpvars)*2$" );\n\t\tsgs_PadString( C );";
 		out $= "\n\t\tsgs_PushString( C, \"\\n}\" );";

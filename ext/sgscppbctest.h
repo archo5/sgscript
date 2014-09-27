@@ -50,7 +50,7 @@ class Account
 {
 public:
 	
-	Account() : maybeIntTest2(42)
+	Account() : maybeIntTest2(42), bitfieldTest1(true)
 	{
 	}
 	
@@ -66,6 +66,9 @@ public:
 	SGS_NODUMP( attached );
 	SGS_PROPERTY sgsMaybe<int> maybeIntTest1;
 	SGS_PROPERTY sgsMaybe<int> maybeIntTest2;
+	SGS_PROPERTY bool bitfieldTest1 : 1;
+	SGS_PROPERTY sgsVariable sgsVarTest1;
+	SGS_PROPERTY Handle handleTest1;
 	
 	/* `Handle` must be resolved since it's going to be used out of scope */
 	SGS_METHOD bool sendMoney( Account::Handle to, float amount, sgsString currency )
