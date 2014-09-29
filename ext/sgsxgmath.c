@@ -3378,6 +3378,9 @@ SGS_APIFUNC int xgm_module_entry_point( SGS_CTX )
 
 
 #ifdef SGS_COMPILE_MODULE
+#ifdef __cplusplus
+extern "C"
+#endif
 SGS_APIFUNC int sgscript_main( SGS_CTX )
 {
 	return xgm_module_entry_point( C );

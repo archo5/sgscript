@@ -2737,7 +2737,7 @@ void sgsBC_Free( SGS_CTX, sgs_CompFunc* func )
 
 /* bytecode serialization */
 
-#define SGSNOMINDEC( cnt ) (D->end - D->buf < (ssize_t)(cnt))
+#define SGSNOMINDEC( cnt ) (D->end - D->buf < (ptrdiff_t)(cnt))
 
 #define esi16( x ) ( (((x)&0xff)<<8) | (((x)>>8)&0xff) )
 
@@ -2996,7 +2996,7 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	SGS_AS_UINT16( ic, D->buf + 2 );
 	
 	/* basic tests to avoid allocating too much memory */
-	if( SGSNOMINDEC( 10 + (ssize_t) ( cc + ic * sizeof(sgs_LineNum) ) ) )
+	if( SGSNOMINDEC( 10 + (ptrdiff_t) ( cc + ic * sizeof(sgs_LineNum) ) ) )
 		goto fail;
 	
 	if( D->convend )

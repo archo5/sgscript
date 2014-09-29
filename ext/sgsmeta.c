@@ -305,6 +305,9 @@ static sgs_RegFuncConst meta_funcs[] =
 #endif
 
 
+#ifdef __cplusplus
+extern "C"
+#endif
 #ifdef WIN32
 __declspec(dllexport)
 #endif

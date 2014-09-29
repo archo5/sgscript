@@ -805,7 +805,7 @@ static int sgsstd_array_iter_gcmark( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-sgs_ObjInterface sgsstd_array_iter_iface[1] =
+SGS_APIFUNC sgs_ObjInterface sgsstd_array_iter_iface[1] =
 {{
 	"array_iterator",
 	sgsstd_array_iter_destruct, sgsstd_array_iter_gcmark,
@@ -898,7 +898,7 @@ static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* data )
 	return 0;
 }
 
-sgs_ObjInterface sgsstd_array_iface[1] =
+SGS_APIFUNC sgs_ObjInterface sgsstd_array_iface[1] =
 {{
 	"array",
 	sgsstd_array_destruct, sgsstd_array_gcmark,
@@ -1145,7 +1145,7 @@ static int sgsstd_dict_iter_gcmark( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-sgs_ObjInterface sgsstd_dict_iter_iface[1] =
+SGS_APIFUNC sgs_ObjInterface sgsstd_dict_iter_iface[1] =
 {{
 	"dict_iterator",
 	sgsstd_dict_iter_destruct, sgsstd_dict_iter_gcmark,
@@ -1211,7 +1211,7 @@ static int sgsstd_dict_serialize( SGS_CTX, sgs_VarObj* data )
 	return sgsstd_vht_serialize( C, data, "dict" );
 }
 
-sgs_ObjInterface sgsstd_dict_iface[1] =
+SGS_APIFUNC sgs_ObjInterface sgsstd_dict_iface[1] =
 {{
 	"dict",
 	sgsstd_dict_destruct, sgsstd_dict_gcmark,
@@ -1345,7 +1345,7 @@ static int sgsstd_map_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sg
 	return SGS_SUCCESS;
 }
 
-sgs_ObjInterface sgsstd_map_iface[1] =
+SGS_APIFUNC sgs_ObjInterface sgsstd_map_iface[1] =
 {{
 	"map",
 	sgsstd_map_destruct, sgsstd_map_gcmark,
@@ -1996,11 +1996,11 @@ static int sgsstd_typeptr( SGS_CTX )
 
 static int sgsstd_typeptr_by_name( SGS_CTX )
 {
-	char* typename;
+	char* typenm;
 	SGSFN( "typeptr_by_name" );
-	if( !sgs_LoadArgs( C, "s", &typename ) )
+	if( !sgs_LoadArgs( C, "s", &typenm ) )
 		return 0;
-	sgs_PushPtr( C, sgs_FindType( C, typename ) );
+	sgs_PushPtr( C, sgs_FindType( C, typenm ) );
 	return 1;
 }
 

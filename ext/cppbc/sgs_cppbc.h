@@ -29,7 +29,11 @@
 	SGS_OBJECT_LITE \
 	sgs_VarObj* m_sgsObject; \
 	SGS_CTX;
-# define SGS_OBJECT_INHERIT( names... ) SGS_OBJECT_LITE
+# ifdef _MSC_VER
+#  define SGS_OBJECT_INHERIT( ... ) SGS_OBJECT_LITE
+# else
+#  define SGS_OBJECT_INHERIT( names... ) SGS_OBJECT_LITE
+# endif
 # define SGS_NO_EXPORT
 # define SGS_METHOD
 # define SGS_MULTRET int
@@ -380,7 +384,7 @@ public:
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); } sgs_PushVariable( c, const_cast<sgs_Variable*>( &var ) ); }
 	SGSRESULT gcmark() { if( !C ) return SGS_SUCCESS; return sgs_GCMark( C, &var ); }
 	bool not_null(){ return var.type != SGS_VT_NULL; }
-	bool is_object( sgs_ObjInterface* iface ){ return sgs_IsObjectP( &var, iface ); }
+	bool is_object( sgs_ObjInterface* iface ){ return !!sgs_IsObjectP( &var, iface ); }
 	template< class T > bool is_handle(){ return sgs_IsObjectP( &var, T::_sgs_interface ); }
 	template< class T > T* get_object_data(){ return (T*) sgs_GetObjectDataP( &var ); }
 	template< class T > sgsHandle<T> get_handle(){ return sgsHandle<T>( &var ); }
@@ -550,7 +554,7 @@ template<> struct sgs_GetVar<bool> { bool operator () ( SGS_CTX, sgs_StkIdx item
 {
 	sgs_Bool v;
 	if( sgs_ParseBool( C, item, &v ) )
-		return v;
+		return !!v;
 	return false;
 }};
 #define SGS_DECL_GETVAR_INT( type ) \
@@ -608,7 +612,7 @@ template<> struct sgs_GetVarP<bool> { bool operator () ( SGS_CTX, sgs_Variable* 
 {
 	sgs_Bool v;
 	if( sgs_ParseBoolP( C, var, &v ) )
-		return v;
+		return !!v;
 	return false;
 }};
 #define SGS_DECL_GETVARP_INT( type ) \

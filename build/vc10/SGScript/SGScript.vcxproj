@@ -60,13 +60,14 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <TargetName>$(ProjectName)</TargetName>
-    <IntDir>$(SolutionDir)..\..\obj\$(Configuration)\</IntDir>
-    <OutDir>$(SolutionDir)..\..\bin\</OutDir>
+    <TargetName>sgscript</TargetName>
+    <IntDir>$(ProjectDir)..\..\..\obj\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\..\bin\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IntDir>$(SolutionDir)..\..\obj\$(Configuration)\</IntDir>
-    <OutDir>$(SolutionDir)..\..\bin\</OutDir>
+    <IntDir>$(ProjectDir)..\..\..\obj\$(Configuration)\</IntDir>
+    <OutDir>$(ProjectDir)..\..\..\bin\</OutDir>
+    <TargetName>sgscript</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

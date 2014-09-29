@@ -1666,7 +1666,10 @@ SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
 	
 */
 
-#ifdef _WIN32
+#ifdef _MSC_VER
+# define ftell( fp ) _ftelli64( fp )
+# define fseek( fp, ofs, orig ) _fseeki64( fp, ofs, orig )
+#elif defined(_WIN32)
 # define ftell( fp ) ftello64( fp )
 # define fseek( fp, ofs, orig ) fseeko64( fp, ofs, orig )
 #else
@@ -4132,8 +4135,6 @@ static int sgsstd_string_utf8_length( SGS_CTX )
 /* pre-positioned iterator flag, iter. doesn't advance once if set */
 #define U8I_PREPOS 0x80000000
 
-static sgs_ObjInterface utf8_iterator_iface[1];
-
 typedef struct _utf8iter
 {
 	sgs_iStr* str;
@@ -4195,7 +4196,7 @@ static int utf8it_convert( SGS_CTX, sgs_VarObj* obj, int type )
 		var.type = SGS_VT_STRING;
 		var.data.S = IT->str;
 		sgs_Acquire( C, &var );
-		it2 = (utf8iter*) sgs_PushObjectIPA( C, sizeof(utf8iter), utf8_iterator_iface );
+		it2 = (utf8iter*) sgs_PushObjectIPA( C, sizeof(utf8iter), obj->iface );
 		memcpy( it2, obj->data, sizeof(*it2) );
 		return SGS_SUCCESS;
 	}

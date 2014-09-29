@@ -554,6 +554,9 @@ static int pproc_sleep( SGS_CTX )
 #endif
 
 
+#ifdef __cplusplus
+extern "C"
+#endif
 #ifdef _WIN32
 __declspec(dllexport)
 #endif

@@ -1212,6 +1212,9 @@ static sgs_RegIntConst i_sock[] =
 #endif
 
 
+#ifdef __cplusplus
+extern "C"
+#endif
 #ifdef _WIN32
 __declspec(dllexport)
 #endif

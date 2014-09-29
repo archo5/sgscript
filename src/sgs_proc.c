@@ -5276,7 +5276,7 @@ SGSRESULT sgs_SerializeObjectInt_V2( SGS_CTX, StkIdx args, const char* func, siz
 		return SGS_EINPROC;
 	pSD = (sgs_serialize2_data*) C->serialize_state;
 	
-	if( args < 0 || args > pSD->argarray.size / 4 )
+	if( args < 0 || (size_t) args > pSD->argarray.size / 4 )
 		return SGS_EINVAL; /* too many arguments specified */
 	/* WP: added error condition */
 	argsize = sizeof(sgs_StkIdx) * (size_t) args;
@@ -5417,7 +5417,7 @@ SGSRESULT sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 					goto fail;
 				SGS_AS_INT32( pos, str );
 				str += 4;
-				if( pos < 0 || pos >= mb.size / sizeof(sgs_Variable) )
+				if( pos < 0 || (size_t) pos >= mb.size / sizeof(sgs_Variable) )
 					goto fail;
 				sgs_PushVariable( C, ((sgs_Variable*) mb.ptr) + pos );
 			}

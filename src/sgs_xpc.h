@@ -42,6 +42,10 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 
+#ifdef SGS_COMPILE_MODULE
+#  define BUILDING_SGS 1
+#endif
+
 #if SGS_DLL && !defined( __GNUC__ )
 #  if BUILDING_SGS
 #    define SGS_APIFUNC __declspec(dllexport)
