@@ -373,6 +373,17 @@ A column-major matrix
 <ul><li>otherwise, signed distance along ray and signed origin distance from plane are returned
 </li><li>if signed distance along ray to plane is larger than 0, plane is in front of ray
 </li><li>if signed distance from origin to plane is larger than 0, ray origin is in front of the plane</li></ul></li></ul></div>
+<div class='item'><a name='ray-sphere-intersect-function'></a><hr><h2>ray_sphere_intersect [function]</h2><h3>ray_sphere_intersect( vec3 ray_pos, vec3 ray_dir, vec3 sphere_pos, real radius )</h3><h4>tests for an intersection between ray and sphere, returning the distance</h4><ul><li>if ray does not intersect sphere, false is returned
+<ul><li>otherwise, signed distance between ray and sphere is returned
+</li><li>if signed distance along ray to sphere is larger than 0, sphere is in front of ray</li></ul></li></ul></div>
+<div class='item'><a name='distance-lines-function'></a><hr><h2>distance_lines [function]</h2><h3>distance_lines( vec3 a1, vec3 a2, vec3 b1, vec3 b2 )</h3><h4>returns distance between two straight lines, defined by two intersection points</h4><p>
+<em class='notice-bgr'>This function may not return the expected result if either of the lines has zero length. In such cases, prefer using <a href="#distance-point-line-function">distance_point_line</a></em>
+</p></div>
+<div class='item'><a name='distance-line-segments-function'></a><hr><h2>distance_line_segments [function]</h2><h3>distance_line_segments( vec3 a1, vec3 a2, vec3 b1, vec3 b2 )</h3><h4>returns distance between two line segments</h4><p>
+<em class='notice-bgr'>This function may not return the expected result if either of the lines has zero length. In such cases, prefer using <a href="#distance-point-line-segment-function">distance_point_line_segment</a></em>
+</p></div>
+<div class='item'><a name='distance-point-line-function'></a><hr><h2>distance_point_line [function]</h2><h3>distance_point_line( vec3 p, vec3 l1, vec3 l2 )</h3><h4>returns distance between point and a straight line, defined by two intersection points</h4></div>
+<div class='item'><a name='distance-point-line-segment-function'></a><hr><h2>distance_point_line_segment [function]</h2><h3>distance_point_line_segment( vec3 p, vec3 l1, vec3 l2 )</h3><h4>returns distance between point and a line segment</h4></div>
 <div class='item'><a name='All-SGScript-objects-A-Z'></a><hr><h2>All SGScript objects (A-Z)</h2><ul><li><a href="#aabb2-object">aabb2 [object]</a>
 </li><li><a href="#aabb3-object">aabb3 [object]</a>
 </li><li><a href="#color-object">color [object]</a>
@@ -390,11 +401,16 @@ A column-major matrix
 </li><li><a href="#aabb3-intersect-function">aabb3_intersect [function]</a>
 </li><li><a href="#aabb3v-function">aabb3v [function]</a>
 </li><li><a href="#color-function">color [function]</a>
+</li><li><a href="#distance-line-segments-function">distance_line_segments [function]</a>
+</li><li><a href="#distance-lines-function">distance_lines [function]</a>
+</li><li><a href="#distance-point-line-function">distance_point_line [function]</a>
+</li><li><a href="#distance-point-line-segment-function">distance_point_line_segment [function]</a>
 </li><li><a href="#floatarray-function">floatarray [function]</a>
 </li><li><a href="#floatarray-buffer-function">floatarray_buffer [function]</a>
 </li><li><a href="#floatarray-from-buffer-function">floatarray_from_*_buffer [function]</a>
 </li><li><a href="#mat4-function">mat4 [function]</a>
 </li><li><a href="#ray-plane-intersect-function">ray_plane_intersect [function]</a>
+</li><li><a href="#ray-sphere-intersect-function">ray_sphere_intersect [function]</a>
 </li><li><a href="#vec2-function">vec2 [function]</a>
 </li><li><a href="#vec2-dot-function">vec2_dot [function]</a>
 </li><li><a href="#vec2array-function">vec2array [function]</a>

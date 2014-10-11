@@ -9,6 +9,10 @@
 #define XGM_OHDR XGM_VT* hdr = (XGM_VT*) data->data;
 #define XGM_FLAHDR xgm_vtarray* flarr = (xgm_vtarray*) data->data;
 
+#define XGM_V3_ADD( o, a, b ) (o)[0] = (a)[0] + (b)[0]; (o)[1] = (a)[1] + (b)[1]; (o)[2] = (a)[2] + (b)[2];
+#define XGM_V3_SUB( o, a, b ) (o)[0] = (a)[0] - (b)[0]; (o)[1] = (a)[1] - (b)[1]; (o)[2] = (a)[2] - (b)[2];
+#define XGM_V3_SCALE( v, f ) (v)[0] *= f; (v)[1] *= f; (v)[2] *= f;
+
 #define XGM_VMUL_INNER2(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1])
 #define XGM_VMUL_INNER3(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
 #define XGM_VMUL_INNER4(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2]+(a)[3]*(b)[3])
@@ -2709,6 +2713,234 @@ static int xgm_ray_plane_intersect( SGS_CTX )
 	}
 }
 
+static int xgm_ray_sphere_intersect( SGS_CTX )
+{
+	/* vec3 ray_pos, vec3 ray_dir, vec3 sphere_pos, float radius;
+		returns <distance to intersection> \ false on no intersection */
+	XGM_VT pos[3], dir[3], sphpos[3], sphrad, r2s[3], a, b;
+	SGSFN( "ray_sphere_intersect" );
+	if( !sgs_LoadArgs( C, "xxxf", sgs_ArgCheck_Vec3, pos, sgs_ArgCheck_Vec3, dir, sgs_ArgCheck_Vec3, sphpos, &sphrad ) )
+		return 0;
+	
+	XGM_V3_SUB( r2s, sphpos, pos );
+	a = XGM_VMUL_INNER3( dir, r2s );
+	if( a < 0 )
+	{
+		SGS_RETURN_BOOL( 0 );
+	}
+	b = XGM_VMUL_INNER3( r2s, r2s ) - a * a;
+	if( b > sphrad * sphrad )
+	{
+		SGS_RETURN_BOOL( 0 );
+	}
+	SGS_RETURN_REAL( a - sqrtf( sphrad * sphrad - b ) );
+}
+
+
+//
+// ADAPTATION BEGIN
+// - http://geomalgorithms.com/a07-_distance.html
+// - http://geomalgorithms.com/a02-_lines.html
+// Copyright 2001 softSurfer, 2012 Dan Sunday
+// This code may be freely used and modified for any purpose
+// providing that this copyright notice is included with it.
+// SoftSurfer makes no warranty for this code, and cannot be held
+// liable for any real or imagined damage resulting from its use.
+// Users of this code must verify correctness for their application.
+
+static int xgm_distance_lines( SGS_CTX )
+{
+	/* vec3 line 1 point 1, l1p2, l2p1, l2p2;
+		returns <distance between two lines> */
+	XGM_VT l1p1[3], l1p2[3], l2p1[3], l2p2[3], u[3], v[3], w[3], dP[3], a, b, c, d, e, D, sc, tc;
+	SGSFN( "distance_lines" );
+	if( !sgs_LoadArgs( C, "xxxx", sgs_ArgCheck_Vec3, l1p1, sgs_ArgCheck_Vec3, l1p2, sgs_ArgCheck_Vec3, l2p1, sgs_ArgCheck_Vec3, l2p2 ) )
+		return 0;
+	
+	XGM_V3_SUB( u, l1p2, l1p1 );
+	XGM_V3_SUB( v, l2p2, l2p1 );
+	XGM_V3_SUB( w, l1p1, l2p1 );
+	
+	a = XGM_VMUL_INNER3( u, u ); // always >= 0
+	b = XGM_VMUL_INNER3( u, v );
+	c = XGM_VMUL_INNER3( v, v ); // always >= 0
+	d = XGM_VMUL_INNER3( u, w );
+	e = XGM_VMUL_INNER3( v, w );
+	D = a*c - b*b; // always >= 0
+	
+	// compute the line parameters of the two closest points
+	if( D < XGM_SMALL_VT ) // the lines are almost parallel
+	{
+		sc = 0.0f;
+		tc = ( b > c ? d / b : e / c ); // use the largest denominator
+	}
+	else
+	{
+		sc = ( b * e - c * d ) / D;
+		tc = ( a * e - b * d ) / D;
+	}
+	
+	// get the difference of the two closest points
+	// dP = w + (sc * u) - (tc * v) // =  L1(sc) - L2(tc)
+	XGM_V3_SCALE( u, sc );
+	XGM_V3_SCALE( v, tc );
+	XGM_V3_ADD( dP, w, u );
+	XGM_V3_SUB( dP, dP, v );
+	
+	SGS_RETURN_REAL( sqrtf( XGM_VMUL_INNER3( dP, dP ) ) ); // return the closest distance
+}
+
+static int xgm_distance_line_segments( SGS_CTX )
+{
+	/* vec3 line 1 point 1, l1p2, l2p1, l2p2;
+		returns <distance between two line segments> */
+	XGM_VT l1p1[3], l1p2[3], l2p1[3], l2p2[3], u[3], v[3], w[3], dP[3], a, b, c, d, e, D, sc, tc, sN, sD, tN, tD;
+	SGSFN( "distance_line_segments" );
+	if( !sgs_LoadArgs( C, "xxxx", sgs_ArgCheck_Vec3, l1p1, sgs_ArgCheck_Vec3, l1p2, sgs_ArgCheck_Vec3, l2p1, sgs_ArgCheck_Vec3, l2p2 ) )
+		return 0;
+	
+	XGM_V3_SUB( u, l1p2, l1p1 );
+	XGM_V3_SUB( v, l2p2, l2p1 );
+	XGM_V3_SUB( w, l1p1, l2p1 );
+	
+	a = XGM_VMUL_INNER3( u, u ); // always >= 0
+	b = XGM_VMUL_INNER3( u, v );
+	c = XGM_VMUL_INNER3( v, v ); // always >= 0
+	d = XGM_VMUL_INNER3( u, w );
+	e = XGM_VMUL_INNER3( v, w );
+	D = a*c - b*b; // always >= 0
+	
+	sD = D; // sc = sN / sD, default sD = D >= 0
+	tD = D; // tc = tN / tD, default tD = D >= 0
+	
+	// compute the line parameters of the two closest points
+	if( D < XGM_SMALL_VT ) // the lines are almost parallel
+	{
+	    sN = 0.0f; // force using point P0 on segment S1
+	    sD = 1.0f; // to prevent possible division by 0.0 later
+	    tN = e;
+	    tD = c;
+	}
+	else // get the closest points on the infinite lines
+	{
+		sN = ( b * e - c * d );
+		tN = ( a * e - b * d );
+		if( sN < 0.0f ) // sc < 0 => the s=0 edge is visible
+		{
+			sN = 0.0f;
+			tN = e;
+			tD = c;
+		}
+		else if( sN > sD ) // sc > 1  => the s=1 edge is visible
+		{
+			sN = sD;
+			tN = e + b;
+			tD = c;
+		}
+	}
+
+	if( tN < 0.0f ) // tc < 0 => the t=0 edge is visible
+	{
+		tN = 0.0f;
+		// recompute sc for this edge
+		if( -d < 0.0f )
+			sN = 0.0f;
+		else if( -d > a )
+			sN = sD;
+		else
+		{
+			sN = -d;
+			sD = a;
+		}
+	}
+	else if( tN > tD ) // tc > 1  => the t=1 edge is visible
+	{
+		tN = tD;
+		// recompute sc for this edge
+		if( -d + b < 0.0f )
+			sN = 0;
+		else if( -d + b > a )
+			sN = sD;
+		else
+		{
+			sN = -d + b;
+			sD = a;
+		}
+	}
+	// finally do the division to get sc and tc
+	sc = fabs( sN ) < XGM_SMALL_VT ? 0.0f : sN / sD;
+	tc = fabs( tN ) < XGM_SMALL_VT ? 0.0f : tN / tD;
+	
+	// get the difference of the two closest points
+	// dP = w + (sc * u) - (tc * v) // =  S1(sc) - S2(tc)
+	XGM_V3_SCALE( u, sc );
+	XGM_V3_SCALE( v, tc );
+	XGM_V3_ADD( dP, w, u );
+	XGM_V3_SUB( dP, dP, v );
+	
+	SGS_RETURN_REAL( sqrtf( XGM_VMUL_INNER3( dP, dP ) ) ); // return the closest distance
+}
+
+static int xgm_distance_point_line( SGS_CTX )
+{
+	/* vec3 point, line point 1, line point 2;
+		returns <distance between point and line> */
+	XGM_VT pt[3], lp1[3], lp2[3], v[3], w[3], c1, c2, b;
+	SGSFN( "distance_point_line" );
+	if( !sgs_LoadArgs( C, "xxx", sgs_ArgCheck_Vec3, pt, sgs_ArgCheck_Vec3, lp1, sgs_ArgCheck_Vec3, lp2 ) )
+		return 0;
+	
+	XGM_V3_SUB( v, lp2, lp1 );
+	XGM_V3_SUB( w, pt, lp1 );
+	
+	c1 = XGM_VMUL_INNER3( w, v );
+	c2 = XGM_VMUL_INNER3( v, v );
+	b = c1 / c2;
+	
+	XGM_V3_SCALE( v, b );
+	XGM_V3_ADD( v, lp1, v );
+	XGM_V3_SUB( v, pt, v );
+	
+	SGS_RETURN_REAL( sqrtf( XGM_VMUL_INNER3( v, v ) ) );
+}
+
+static int xgm_distance_point_line_segment( SGS_CTX )
+{
+	/* vec3 point, line point 1, line point 2;
+		returns <distance between point and line segment> */
+	XGM_VT pt[3], lp1[3], lp2[3], v[3], w[3], c1, c2, b;
+	SGSFN( "distance_point_line_segment" );
+	if( !sgs_LoadArgs( C, "xxx", sgs_ArgCheck_Vec3, pt, sgs_ArgCheck_Vec3, lp1, sgs_ArgCheck_Vec3, lp2 ) )
+		return 0;
+	
+	XGM_V3_SUB( v, lp2, lp1 );
+	XGM_V3_SUB( w, pt, lp1 );
+	
+	c1 = XGM_VMUL_INNER3( w, v );
+	if( c1 <= 0 )
+	{
+		XGM_V3_SUB( v, pt, lp1 );
+		goto end;
+	}
+	c2 = XGM_VMUL_INNER3( v, v );
+	if( c2 <= c1 )
+	{
+		XGM_V3_SUB( v, pt, lp2 );
+		goto end;
+	}
+	b = c1 / c2;
+	
+	XGM_V3_SCALE( v, b );
+	XGM_V3_ADD( v, lp1, v );
+	XGM_V3_SUB( v, pt, v );
+	
+end:
+	SGS_RETURN_REAL( sqrtf( XGM_VMUL_INNER3( v, v ) ) );
+}
+
+// ADAPTATION END
+//
+
 
 
 sgs_ObjInterface xgm_vec2_iface[1] =
@@ -3358,6 +3590,11 @@ static sgs_RegFuncConst xgm_fconsts[] =
 	{ "floatarray_from_float64_buffer", xgm_floatarray_from_float64_buffer },
 	
 	{ "ray_plane_intersect", xgm_ray_plane_intersect },
+	{ "ray_sphere_intersect", xgm_ray_sphere_intersect },
+	{ "distance_lines", xgm_distance_lines },
+	{ "distance_line_segments", xgm_distance_line_segments },
+	{ "distance_point_line", xgm_distance_point_line },
+	{ "distance_point_line_segment", xgm_distance_point_line_segment },
 };
 
 

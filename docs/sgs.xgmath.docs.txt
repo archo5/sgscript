@@ -796,6 +796,44 @@ A column-major matrix
 -- if signed distance from origin to plane is larger than 0, ray origin is in front of the plane
 
 
+# ray_sphere_intersect [function]
+
+== ray_sphere_intersect( vec3 ray_pos, vec3 ray_dir, vec3 sphere_pos, real radius )
+=== tests for an intersection between ray and sphere, returning the distance
+
+- if ray does not intersect sphere, false is returned
+-- otherwise, signed distance between ray and sphere is returned
+-- if signed distance along ray to sphere is larger than 0, sphere is in front of ray
+
+
+# distance_lines [function]
+
+== distance_lines( vec3 a1, vec3 a2, vec3 b1, vec3 b2 )
+=== returns distance between two straight lines, defined by two intersection points
+
+! This function may not return the expected result if either of the lines has zero length. In such cases, prefer using @distance_point_line
+
+
+# distance_line_segments [function]
+
+== distance_line_segments( vec3 a1, vec3 a2, vec3 b1, vec3 b2 )
+=== returns distance between two line segments
+
+! This function may not return the expected result if either of the lines has zero length. In such cases, prefer using @distance_point_line_segment
+
+
+# distance_point_line [function]
+
+== distance_point_line( vec3 p, vec3 l1, vec3 l2 )
+=== returns distance between point and a straight line, defined by two intersection points
+
+
+# distance_point_line_segment [function]
+
+== distance_point_line_segment( vec3 p, vec3 l1, vec3 l2 )
+=== returns distance between point and a line segment
+
+
 # All SGScript objects (A-Z) [info]
 
 ~!~ render = list_pages_asc
