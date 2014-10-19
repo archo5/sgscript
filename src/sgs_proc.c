@@ -4222,7 +4222,7 @@ int sgs_ArgCheck_Object( SGS_CTX, int argid, va_list* args, int flags )
 		out = va_arg( *args, sgs_VarObj** );
 	
 	ity = sgs_ItemType( C, argid );
-	if( ity == SGS_VT_OBJECT || ( !( flags & SGS_LOADARG_STRICT ) && ity != SGS_VT_NULL ) )
+	if( ity == SGS_VT_OBJECT || ( !( flags & SGS_LOADARG_STRICT ) && ity == SGS_VT_NULL ) )
 	{
 		if( out )
 			*out = ity != SGS_VT_NULL ? sgs_GetObjectStruct( C, argid ) : NULL;
@@ -4230,7 +4230,7 @@ int sgs_ArgCheck_Object( SGS_CTX, int argid, va_list* args, int flags )
 	}
 	if( flags & SGS_LOADARG_OPTIONAL )
 		return 1;
-	return sgs_ArgError( C, argid, 0, SGS_VT_OBJECT, 1 );
+	return sgs_ArgError( C, argid, 0, SGS_VT_OBJECT, !!( flags & SGS_LOADARG_STRICT ) );
 }
 
 
