@@ -316,7 +316,9 @@ public:
 	bool operator < ( const sgsString& s ) const { return compare( s ) < 0; }
 	bool operator == ( const sgsString& s ) const { return same_as( s ); }
 	bool operator != ( const sgsString& s ) const { return !same_as( s ); }
-	bool same_as( const sgsString& s ) const { return str == s.str; } 
+	bool same_as( const sgsString& s ) const { return str == s.str; }
+	
+	bool equals( const char* s ){ return strcmp( sgs_str_cstr( str ), s ) == 0; }
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); }
 		sgs_Variable v; v.type = str ? SGS_VT_STRING : SGS_VT_NULL; v.data.S = str; sgs_PushVariable( c, &v ); }
@@ -388,8 +390,52 @@ public:
 	template< class T > bool is_handle(){ return sgs_IsObjectP( &var, T::_sgs_interface ); }
 	template< class T > T* get_object_data(){ return (T*) sgs_GetObjectDataP( &var ); }
 	template< class T > sgsHandle<T> get_handle(){ return sgsHandle<T>( &var ); }
-	bool is_string(){ return var.type == SGS_VT_STRING; }
+	int type_id() const { return var.type; }
+	bool is_string() const { return var.type == SGS_VT_STRING; }
 	sgsString get_string(){ return is_string() ? sgsString( C, var.data.S ) : sgsString(); }
+	
+	/* indexing */
+	sgsVariable getsubitem( sgsVariable key, bool prop, SGSRESULT* outres = NULL )
+	{
+		SGSRESULT res;
+		sgsVariable out;
+		if( not_null() )
+			res = sgs_GetIndexPPP( C, &var, &key.var, &out.var, prop );
+		else
+			res = SGS_EINPROC;
+		if( outres )
+			*outres = res;
+		if( SGS_SUCCEEDED( res ) )
+			return out;
+		return sgsVariable();
+	}
+	sgsVariable getsubitem( const char* key, bool prop, SGSRESULT* outres = NULL )
+	{
+		if( !not_null() )
+		{
+			if( outres )
+				*outres = SGS_EINPROC;
+			return sgsVariable();
+		}
+		return getsubitem( sgsString( C, key ).get_variable(), prop, outres );
+	}
+	sgsVariable getprop( sgsVariable key, SGSRESULT* outres = NULL ){ return getsubitem( key, true, outres ); }
+	sgsVariable getindex( sgsVariable key, SGSRESULT* outres = NULL ){ return getsubitem( key, false, outres ); }
+	sgsVariable getprop( const char* key, SGSRESULT* outres = NULL ){ return getsubitem( key, true, outres ); }
+	sgsVariable getindex( const char* key, SGSRESULT* outres = NULL ){ return getsubitem( key, false, outres ); }
+	sgsVariable operator [] ( sgsVariable key ){ return getsubitem( key, false ); }
+	sgsVariable operator [] ( const char* key ){ return getsubitem( key, false ); }
+	
+	template< class T > T get();
+	template< class T > T getdef( const T& def ){ if( not_null() ) return get<T>(); else return def; }
+	void set_null(){ _release(); sgs_InitNull( &var ); }
+	void set( bool v ){ _release(); sgs_InitBool( &var, v ); }
+	void set( sgs_Int v ){ _release(); sgs_InitInt( &var, v ); }
+	void set( sgs_Real v ){ _release(); sgs_InitReal( &var, v ); }
+	void set( sgsString v ){ _release(); if( v.not_null() ){ var.type = SGS_VT_STRING; var.data.S = v.str; _acquire(); } }
+	void set( sgs_CFunc v ){ _release(); sgs_InitCFunction( &var, v ); }
+	template< class T > void set( sgsHandle< T > v ){ _release(); sgs_InitObjectPtr( C, &var, v.object ); }
+	template< class T > void set( T* v ){ _release(); sgs_InitObjectPtr( C, &var, v->m_sgsObject ); }
 	
 	sgs_Variable var;
 	SGS_CTX;
@@ -656,6 +702,12 @@ struct sgs_GetVarP< sgsHandle<O> > { sgsHandle<O> operator () ( SGS_CTX, sgs_Var
 	return sgsHandle<O>( C, var ); } };
 template<> struct sgs_GetVarP< sgsVariable > { sgsVariable operator () ( SGS_CTX, sgs_Variable* var ) const {
 	return sgsVariable( C, var ); } };
+
+
+template< class T > T sgsVariable::get()
+{
+	return sgs_GetVarP< T >()( C, &var );
+}
 
 
 template< class T > void sgs_PushClass( SGS_CTX, T* inst )
