@@ -12,6 +12,9 @@
 #define XGM_V3_ADD( o, a, b ) (o)[0] = (a)[0] + (b)[0]; (o)[1] = (a)[1] + (b)[1]; (o)[2] = (a)[2] + (b)[2];
 #define XGM_V3_SUB( o, a, b ) (o)[0] = (a)[0] - (b)[0]; (o)[1] = (a)[1] - (b)[1]; (o)[2] = (a)[2] - (b)[2];
 #define XGM_V3_SCALE( v, f ) (v)[0] *= f; (v)[1] *= f; (v)[2] *= f;
+#define XGM_V3_SCALETO( o, a, f ) (o)[0] = (a)[0] * f; (o)[1] = (a)[1] * f; (o)[2] = (a)[2] * f;
+#define XGM_V3_CROSS( o, a, b ) (o)[0] = (a)[1] * (b)[2] - (a)[2] * (b)[1]; \
+		(o)[1] = (a)[2] * (b)[0] - (a)[0] * (b)[2]; (o)[2] = (a)[0] * (b)[1] - (a)[1] * (b)[0];
 
 #define XGM_VMUL_INNER2(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1])
 #define XGM_VMUL_INNER3(a,b) ((a)[0]*(b)[0]+(a)[1]*(b)[1]+(a)[2]*(b)[2])
@@ -283,9 +286,16 @@ static int xgm_v2_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 static int xgm_vec2( SGS_CTX )
 {
 	int argc = sgs_StackSize( C );
+	uint32_t ty0 = sgs_ItemType( C, 0 );
 	XGM_VT v[ 2 ] = { 0, 0 };
 	
 	SGSFN( "vec2" );
+	
+	if( ty0 != SGS_VT_INT && ty0 != SGS_VT_REAL && sgs_ParseVec2( C, 0, v, 0 ) )
+	{
+		sgs_PushVec2p( C, v );
+		return 1;
+	}
 	
 	if( !sgs_LoadArgs( C, "f|f.", v, v + 1 ) )
 		return 0;
@@ -492,9 +502,16 @@ static int xgm_v3_dump( SGS_CTX, sgs_VarObj* data, int unused )
 static int xgm_vec3( SGS_CTX )
 {
 	int argc = sgs_StackSize( C );
+	uint32_t ty0 = sgs_ItemType( C, 0 );
 	XGM_VT v[ 3 ] = { 0, 0, 0 };
 	
 	SGSFN( "vec3" );
+	
+	if( ty0 != SGS_VT_INT && ty0 != SGS_VT_REAL && sgs_ParseVec3( C, 0, v, 0 ) )
+	{
+		sgs_PushVec3p( C, v );
+		return 1;
+	}
 	
 	if( !sgs_LoadArgs( C, "f|ff.", v, v + 1, v + 2 ) )
 		return 0;
@@ -733,9 +750,16 @@ static int xgm_v4_dump( SGS_CTX, sgs_VarObj* data, int unused )
 static int xgm_vec4( SGS_CTX )
 {
 	int argc = sgs_StackSize( C );
+	uint32_t ty0 = sgs_ItemType( C, 0 );
 	XGM_VT v[ 4 ] = { 0, 0, 0, 0 };
 	
 	SGSFN( "vec4" );
+	
+	if( ty0 != SGS_VT_INT && ty0 != SGS_VT_REAL && sgs_ParseVec4( C, 0, v, 0 ) )
+	{
+		sgs_PushVec4p( C, v );
+		return 1;
+	}
 	
 	if( !sgs_LoadArgs( C, "f|fff.", v, v + 1, v + 2, v + 3 ) )
 		return 0;
@@ -748,7 +772,7 @@ static int xgm_vec4( SGS_CTX )
 		v[2] = v[1] = v[0];
 	}
 	
-	sgs_PushVec4( C, v[0], v[1], v[2], v[3] );
+	sgs_PushVec4p( C, v );
 	return 1;
 }
 
@@ -992,8 +1016,8 @@ static int xgm_b3_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 		if( !strcmp( str, "x2" ) ) return sgs_ParseVTP( C, vv, &hdr[3] ) ? SGS_SUCCESS : SGS_EINVAL;
 		if( !strcmp( str, "y2" ) ) return sgs_ParseVTP( C, vv, &hdr[4] ) ? SGS_SUCCESS : SGS_EINVAL;
 		if( !strcmp( str, "z2" ) ) return sgs_ParseVTP( C, vv, &hdr[5] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "p1" ) ) return sgs_ParseVec3P( C, vv, hdr, 1 ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "p2" ) ) return sgs_ParseVec3P( C, vv, hdr + 3, 1 ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "p1" ) ) return sgs_ParseVec3P( C, vv, hdr, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "p2" ) ) return sgs_ParseVec3P( C, vv, hdr + 3, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
 	}
 	return SGS_ENOTFND;
 }
@@ -1292,11 +1316,1160 @@ static int xgm_color( SGS_CTX )
 
 
 
-/*  4 x 4   M A T R I X  */
-
 typedef XGM_VT VEC3[3];
 typedef XGM_VT VEC4[4];
+typedef VEC3 MAT3[3];
 typedef VEC4 MAT4[4];
+typedef VEC4 QUAT;
+
+
+
+/*  Q U A T E R N I O N  */
+
+static void VEC4_Normalize( VEC4 r, VEC4 a )
+{
+	float lensq = XGM_VMUL_INNER4( a, a );
+	if( lensq )
+	{
+		float invlen = 1.0f / sqrtf( lensq );
+		XGM_SET4( r, a[0] * invlen, a[1] * invlen, a[2] * invlen, a[3] * invlen );
+	}
+	else { XGM_SET4( r, 0, 0, 0, 0 ); }
+}
+
+#define QUAT_Identity( q ) (q)[0] = (q)[1] = (q)[2] = 0.0f; (q)[3] = 1.0f
+#define QUAT_Add( r, a, b ) (r)[0] = (a)[0] + (b)[0]; (r)[1] = (a)[1] + (b)[1]; \
+	(r)[2] = (a)[2] + (b)[2]; (r)[3] = (a)[3] + (b)[3]
+#define QUAT_Conj( r, a ) XGM_SET4( r, -(a)[0], -(a)[1], -(a)[2], (a)[3] )
+#define QUAT_Norm VEC4_Normalize
+
+static void QUAT_AxisAngle( QUAT r, float x, float y, float z, float a )
+{
+	float angsin = sinf( a / 2.0f );
+	r[0] = x * angsin;
+	r[1] = y * angsin;
+	r[2] = z * angsin;
+	r[3] = cosf( a / 2.0f );
+	QUAT_Norm( r, r );
+}
+
+static void QUAT_Mul( QUAT r, QUAT p, QUAT q )
+{
+	VEC3 w;
+	XGM_V3_CROSS( r, p, q );
+	XGM_V3_SCALETO( w, p, q[3] );
+	XGM_V3_ADD( r, r, w );
+	XGM_V3_SCALETO( w, q, p[3] );
+	XGM_V3_ADD( r, r, w );
+	r[3] = p[3] * q[3] - XGM_VMUL_INNER3( p, q );
+}
+
+static void QUAT_Transform( VEC3 r, QUAT q, VEC3 v )
+{
+	QUAT q_;
+	QUAT v_ = { v[0], v[1], v[2], 0.0f };
+
+	QUAT_Conj( q_, q );
+	QUAT_Norm( q_, q_ );
+	QUAT_Mul( q_, v_, q_ );
+	QUAT_Mul( q_, q, q_ );
+	memcpy( r, q_, sizeof(VEC3) );
+}
+
+static void MAT3_FromQuat( MAT3 M, QUAT q )
+{
+	float a = q[3];
+	float b = q[0];
+	float c = q[1];
+	float d = q[2];
+	float a2 = a*a;
+	float b2 = b*b;
+	float c2 = c*c;
+	float d2 = d*d;
+	
+	M[0][0] = a2 + b2 - c2 - d2;
+	M[0][1] = 2*(b*c + a*d);
+	M[0][2] = 2*(b*d - a*c);
+	
+	M[1][0] = 2*(b*c - a*d);
+	M[1][1] = a2 - b2 + c2 - d2;
+	M[1][2] = 2*(c*d + a*b);
+	
+	M[2][0] = 2*(b*d + a*c);
+	M[2][1] = 2*(c*d - a*b);
+	M[2][2] = a2 - b2 - c2 + d2;
+}
+
+static void MAT4_FromQuat( MAT4 M, QUAT q )
+{
+	float a = q[3];
+	float b = q[0];
+	float c = q[1];
+	float d = q[2];
+	float a2 = a*a;
+	float b2 = b*b;
+	float c2 = c*c;
+	float d2 = d*d;
+	
+	M[0][0] = a2 + b2 - c2 - d2;
+	M[0][1] = 2*(b*c + a*d);
+	M[0][2] = 2*(b*d - a*c);
+	M[0][3] = 0.0f;
+	
+	M[1][0] = 2*(b*c - a*d);
+	M[1][1] = a2 - b2 + c2 - d2;
+	M[1][2] = 2*(c*d + a*b);
+	M[1][3] = 0.0f;
+	
+	M[2][0] = 2*(b*d + a*c);
+	M[2][1] = 2*(c*d - a*b);
+	M[2][2] = a2 - b2 - c2 + d2;
+	M[2][3] = 0.0f;
+	
+	M[3][0] = M[3][1] = M[3][2] = 0.0f;
+	M[3][3] = 1.0f;
+}
+
+static void QUAT_FromMatrix( QUAT q, float* row0, float* row1, float* row2 )
+{
+	float tr = row0[0] + row1[1] + row2[2];
+	
+	if( tr > 0 )
+	{ 
+		float S = sqrtf( tr + 1.0f ) * 2;
+		q[3] = 0.25f * S;
+		q[0] = (row2[1] - row1[2]) / S;
+		q[1] = (row0[2] - row2[0]) / S; 
+		q[2] = (row1[0] - row0[1]) / S; 
+	}
+	else if( ( row0[0] > row1[1] ) & ( row0[0] > row2[2] ) )
+	{ 
+		float S = sqrtf( 1.0f + row0[0] - row1[1] - row2[2] ) * 2;
+		q[3] = ( row2[1] - row1[2] ) / S;
+		q[0] = 0.25f * S;
+		q[1] = ( row0[1] + row1[0] ) / S; 
+		q[2] = ( row0[2] + row2[0] ) / S; 
+	}
+	else if( row1[1] > row2[2] )
+	{ 
+		float S = sqrtf( 1.0f + row1[1] - row0[0] - row2[2] ) * 2;
+		q[3] = ( row0[2] - row2[0] ) / S;
+		q[0] = ( row0[1] + row1[0] ) / S; 
+		q[1] = 0.25f * S;
+		q[2] = ( row1[2] + row2[1] ) / S; 
+	}
+	else
+	{ 
+		float S = sqrtf( 1.0f + row2[2] - row0[0] - row1[1] ) * 2;
+		q[3] = ( row1[0] - row0[1] ) / S;
+		q[0] = ( row0[2] + row2[0] ) / S;
+		q[1] = ( row1[2] + row2[1] ) / S;
+		q[2] = 0.25f * S;
+	}
+}
+
+#define XGM_QUAT_IHDR( funcname ) QUAT* Q; \
+	if( !SGS_PARSE_METHOD( C, xgm_quat_iface, Q, quat, funcname ) ) return 0;
+
+
+static int xgm_qti_identity( SGS_CTX )
+{
+	XGM_QUAT_IHDR( identity );
+	XGM_SET4( *Q, 0, 0, 0, 1 );
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_qti_multiply( SGS_CTX )
+{
+	QUAT Q2;
+	
+	XGM_QUAT_IHDR( multiply );
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Quat, Q2 ) )
+		return 0;
+	
+	QUAT_Mul( *Q, *Q, Q2 );
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_qti_multiply_left( SGS_CTX )
+{
+	QUAT Q2;
+	
+	XGM_QUAT_IHDR( multiply_left );
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Quat, Q2 ) )
+		return 0;
+	
+	QUAT_Mul( *Q, Q2, *Q );
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_qti_multiply2( SGS_CTX )
+{
+	QUAT Q1, Q2;
+	
+	XGM_QUAT_IHDR( multiply2 );
+	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_Quat, Q1, sgs_ArgCheck_Quat, Q2 ) )
+		return 0;
+	
+	QUAT_Mul( *Q, Q1, Q2 );
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_qti_invert( SGS_CTX )
+{
+	XGM_QUAT_IHDR( invert );
+	QUAT_Conj( *Q, *Q );
+	return 0;
+}
+
+static int xgm_qti_invert_from( SGS_CTX )
+{
+	QUAT Q2;
+	
+	XGM_QUAT_IHDR( invert_from );
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Quat, Q2 ) )
+		return 0;
+	
+	QUAT_Conj( *Q, Q2 );
+	return 0;
+}
+
+
+static int xgm_qti_rotateX( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT angle;
+	QUAT tmp;
+	
+	XGM_QUAT_IHDR( rotateX );
+	if( !sgs_LoadArgs( C, "f|b", &angle, &reset ) )
+		return 0;
+	
+	QUAT_AxisAngle( tmp, 1, 0, 0, angle );
+	if( !reset )
+		QUAT_Mul( *Q, *Q, tmp );
+	else
+		memcpy( *Q, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_qti_rotateY( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT angle;
+	QUAT tmp;
+	
+	XGM_QUAT_IHDR( rotateY );
+	if( !sgs_LoadArgs( C, "f|b", &angle, &reset ) )
+		return 0;
+	
+	QUAT_AxisAngle( tmp, 0, 1, 0, angle );
+	if( !reset )
+		QUAT_Mul( *Q, *Q, tmp );
+	else
+		memcpy( *Q, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_qti_rotateZ( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT angle;
+	QUAT tmp;
+	
+	XGM_QUAT_IHDR( rotateZ );
+	if( !sgs_LoadArgs( C, "f|b", &angle, &reset ) )
+		return 0;
+	
+	QUAT_AxisAngle( tmp, 0, 0, 1, angle );
+	if( !reset )
+		QUAT_Mul( *Q, *Q, tmp );
+	else
+		memcpy( *Q, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_qti_rotate_axis_angle( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT x, y, z, angle;
+	QUAT tmp;
+	
+	XGM_QUAT_IHDR( rotate_axis_angle );
+	if( !sgs_LoadArgs( C, "ffff|b", &x, &y, &z, &angle, &reset ) )
+		return 0;
+	
+	QUAT_AxisAngle( tmp, x, y, z, angle );
+	if( !reset )
+		QUAT_Mul( *Q, *Q, tmp );
+	else
+		memcpy( *Q, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_qti_rotate_axis_angle_v3( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT v3[3], angle;
+	QUAT tmp;
+	
+	XGM_QUAT_IHDR( rotate_axis_angle );
+	if( !sgs_LoadArgs( C, "xf|b", sgs_ArgCheck_Vec3, v3, &angle, &reset ) )
+		return 0;
+	
+	QUAT_AxisAngle( tmp, v3[0], v3[1], v3[2], angle );
+	if( !reset )
+		QUAT_Mul( *Q, *Q, tmp );
+	else
+		memcpy( *Q, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_qti_transform( SGS_CTX )
+{
+	VEC3 v3;
+	XGM_QUAT_IHDR( transform );
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Quat, v3 ) )
+		return 0;
+	
+	QUAT_Transform( v3, v3, *Q );
+	sgs_PushVec3p( C, v3 );
+	return 1;
+}
+
+
+static int xgm_quat_convert( SGS_CTX, sgs_VarObj* data, int type )
+{
+	XGM_OHDR;
+	if( type == SGS_CONVOP_CLONE )
+	{
+		sgs_PushQuatp( C, hdr );
+		return SGS_SUCCESS;
+	}
+	else if( type == SGS_VT_STRING )
+	{
+		char buf[ 256 ];
+		sprintf( buf, "quat(%g;%g;%g|%g)", hdr[0], hdr[1], hdr[2], hdr[3] );
+		sgs_PushString( C, buf );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int xgm_quat_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+{
+	char* str;
+	XGM_OHDR;
+	
+	if( key->type == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetIntP( C, key );
+		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
+			return SGS_ENOTFND;
+		sgs_PushReal( C, hdr[ pos ] );
+		return SGS_SUCCESS;
+	}
+	
+	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	{
+		SGS_CASE( "identity" ) SGS_RETURN_CFUNC( xgm_qti_identity )
+		SGS_CASE( "multiply" ) SGS_RETURN_CFUNC( xgm_qti_multiply )
+		SGS_CASE( "multiply_left" ) SGS_RETURN_CFUNC( xgm_qti_multiply_left )
+		SGS_CASE( "multiply2" ) SGS_RETURN_CFUNC( xgm_qti_multiply2 )
+		SGS_CASE( "invert" ) SGS_RETURN_CFUNC( xgm_qti_invert )
+		SGS_CASE( "invert_from" ) SGS_RETURN_CFUNC( xgm_qti_invert_from )
+		
+		SGS_CASE( "rotateX" ) SGS_RETURN_CFUNC( xgm_qti_rotateX )
+		SGS_CASE( "rotateY" ) SGS_RETURN_CFUNC( xgm_qti_rotateY )
+		SGS_CASE( "rotateZ" ) SGS_RETURN_CFUNC( xgm_qti_rotateZ )
+		SGS_CASE( "rotate_axis_angle" ) SGS_RETURN_CFUNC( xgm_qti_rotate_axis_angle )
+		SGS_CASE( "rotate_axis_angle_v3" ) SGS_RETURN_CFUNC( xgm_qti_rotate_axis_angle_v3 )
+		
+		SGS_CASE( "transform" ) SGS_RETURN_CFUNC( xgm_qti_transform )
+		
+		if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
+		if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
+		if( !strcmp( str, "z" ) ){ sgs_PushReal( C, hdr[ 2 ] ); return SGS_SUCCESS; }
+		if( !strcmp( str, "w" ) ){ sgs_PushReal( C, hdr[ 3 ] ); return SGS_SUCCESS; }
+		if( !strcmp( str, "length" ) )
+		{
+			sgs_PushReal( C, sqrt( XGM_VMUL_INNER4( hdr, hdr ) ) );
+			return SGS_SUCCESS;
+		}
+		if( !strcmp( str, "length_squared" ) )
+		{
+			sgs_PushReal( C, XGM_VMUL_INNER4( hdr, hdr ) );
+			return SGS_SUCCESS;
+		}
+		if( !strcmp( str, "normalized" ) )
+		{
+			XGM_VT lensq = XGM_VMUL_INNER4( hdr, hdr );
+			if( lensq )
+			{
+				lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
+				sgs_PushQuat( C, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq, hdr[3] * lensq );
+			}
+			else
+				sgs_PushQuat( C, 0, 0, 0, 0 );
+			return SGS_SUCCESS;
+		}
+		if( !strcmp( str, "mat3" ) )
+		{
+			MAT3 out;
+			MAT3_FromQuat( out, hdr );
+			sgs_PushMat3( C, *out, 0 );
+		}
+		if( !strcmp( str, "mat4" ) )
+		{
+			MAT4 out;
+			MAT4_FromQuat( out, hdr );
+			sgs_PushMat4( C, *out, 0 );
+		}
+		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 4 ); return SGS_SUCCESS; }
+	}
+	return SGS_ENOTFND;
+}
+
+static int xgm_quat_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
+{
+	sgs_Real val;
+	XGM_OHDR;
+	
+	if( !sgs_ParseRealP( C, vv, &val ) )
+		return SGS_EINVAL;
+	if( key->type == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetIntP( C, key );
+		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
+			return SGS_ENOTFND;
+		hdr[ pos ] = (XGM_VT) val;
+		return SGS_SUCCESS;
+	}
+	else
+	{
+		char* str;
+		if( sgs_ParseStringP( C, key, &str, NULL ) )
+		{
+			if( !strcmp( str, "x" ) ){ hdr[0] = (XGM_VT) val; return SGS_SUCCESS; }
+			if( !strcmp( str, "y" ) ){ hdr[1] = (XGM_VT) val; return SGS_SUCCESS; }
+			if( !strcmp( str, "z" ) ){ hdr[2] = (XGM_VT) val; return SGS_SUCCESS; }
+			if( !strcmp( str, "w" ) ){ hdr[3] = (XGM_VT) val; return SGS_SUCCESS; }
+		}
+	}
+	return SGS_ENOTFND;
+}
+
+static int xgm_quat_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+{
+	if( type == SGS_EOP_ADD ||
+		type == SGS_EOP_SUB ||
+		type == SGS_EOP_MUL ||
+		type == SGS_EOP_DIV ||
+		type == SGS_EOP_MOD )
+	{
+		XGM_VT r[4], v1[4], v2[4];
+		if( !sgs_ParseQuatP( C, A, v1, 0 ) || !sgs_ParseQuatP( C, B, v2, 0 ) )
+			return SGS_EINVAL;
+		
+		if( ( type == SGS_EOP_DIV || type == SGS_EOP_MOD ) &&
+			( v2[0] == 0 || v2[1] == 0 || v2[2] == 0 || v2[3] == 0 ) )
+		{
+			const char* errstr = type == SGS_EOP_DIV ?
+				"quat operator '/' - division by zero" :
+				"quat operator '%' - modulo by zero";
+			sgs_Msg( C, SGS_ERROR, errstr );
+			return SGS_EINPROC;
+		}
+		
+		if( type == SGS_EOP_ADD )
+		{
+			r[0] = v1[0] + v2[0]; r[1] = v1[1] + v2[1];
+			r[2] = v1[2] + v2[2]; r[3] = v1[3] + v2[3];
+		}
+		else if( type == SGS_EOP_SUB )
+		{
+			r[0] = v1[0] - v2[0]; r[1] = v1[1] - v2[1];
+			r[2] = v1[2] - v2[2]; r[3] = v1[3] - v2[3];
+		}
+		else if( type == SGS_EOP_MUL )
+		{
+			r[0] = v1[0] * v2[0]; r[1] = v1[1] * v2[1];
+			r[2] = v1[2] * v2[2]; r[3] = v1[3] * v2[3];
+		}
+		else if( type == SGS_EOP_DIV )
+		{
+			r[0] = v1[0] / v2[0]; r[1] = v1[1] / v2[1];
+			r[2] = v1[2] / v2[2]; r[3] = v1[3] / v2[3];
+		}
+		else
+		{
+			r[0] = (XGM_VT) fmod( v1[0], v2[0] );
+			r[1] = (XGM_VT) fmod( v1[1], v2[1] );
+			r[2] = (XGM_VT) fmod( v1[2], v2[2] );
+			r[3] = (XGM_VT) fmod( v1[3], v2[3] );
+		}
+		
+		sgs_PushQuatp( C, r );
+		return SGS_SUCCESS;
+	}
+	else if( type == SGS_EOP_COMPARE )
+	{
+		XGM_VT *v1, *v2;
+		if( !sgs_IsObjectP( A, xgm_quat_iface ) ||
+			!sgs_IsObjectP( B, xgm_quat_iface ) )
+			return SGS_EINVAL;
+		
+		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
+		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		
+		if( v1[0] != v2[0] ) sgs_PushReal( C, v1[0] - v2[0] );
+		else if( v1[1] != v2[1] ) sgs_PushReal( C, v1[1] - v2[1] );
+		else if( v1[2] != v2[2] ) sgs_PushReal( C, v1[2] - v2[2] );
+		else sgs_PushReal( C, v1[3] - v2[3] );
+		return SGS_SUCCESS;
+	}
+	else if( type == SGS_EOP_NEGATE )
+	{
+		XGM_OHDR;
+		sgs_PushQuat( C, -hdr[0], -hdr[1], -hdr[2], -hdr[3] );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int xgm_quat_serialize( SGS_CTX, sgs_VarObj* data )
+{
+	XGM_OHDR;
+	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	sgs_PushReal( C, hdr[2] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	sgs_PushReal( C, hdr[3] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	return sgs_SerializeObject( C, 4, "quat" );
+}
+
+static int xgm_quat_dump( SGS_CTX, sgs_VarObj* data, int unused )
+{
+	return xgm_quat_convert( C, data, SGS_VT_STRING );
+}
+
+static int xgm_quat( SGS_CTX )
+{
+	XGM_VT v[ 4 ] = { 0, 0, 0, 0 };
+	
+	SGSFN( "quat" );
+	
+	if( sgs_StackSize( C ) == 0 )
+	{
+		sgs_PushQuat( C, 0, 0, 0, 1 );
+		return 1;
+	}
+	
+	if( !sgs_LoadArgs( C, "ffff.", v, v + 1, v + 2, v + 3 ) )
+		return 0;
+	
+	sgs_PushQuat( C, v[0], v[1], v[2], v[3] );
+	return 1;
+}
+
+
+
+/*  3 x 3   M A T R I X  */
+
+#define MAT3_DUMP( M ) \
+	puts( "--- MATRIX DUMP ---" ); \
+	printf( "%g %g %g\n", M[0][0], M[0][1], M[0][2] ); \
+	printf( "%g %g %g\n", M[1][0], M[1][1], M[1][2] ); \
+	printf( "%g %g %g\n", M[2][0], M[2][1], M[2][2] ); \
+	puts( "--- --- END --- ---" );
+
+void MAT3_Transpose( MAT3 mtx )
+{
+	XGM_VT tmp;
+#define _MSWAP( a, b ) { tmp = a; a = b; b = tmp; }
+	_MSWAP( mtx[0][1], mtx[1][0] );
+	_MSWAP( mtx[0][2], mtx[2][0] );
+	_MSWAP( mtx[1][2], mtx[2][1] );
+#undef _MSWAP
+}
+
+void MAT3_Multiply( MAT3 out, MAT3 A, MAT3 B )
+{
+	MAT3 tmp;
+	tmp[0][0] = A[0][0] * B[0][0] + A[0][1] * B[1][0] + A[0][2] * B[2][0];
+	tmp[0][1] = A[0][0] * B[0][1] + A[0][1] * B[1][1] + A[0][2] * B[2][1];
+	tmp[0][2] = A[0][0] * B[0][2] + A[0][1] * B[1][2] + A[0][2] * B[2][2];
+	tmp[1][0] = A[1][0] * B[0][0] + A[1][1] * B[1][0] + A[1][2] * B[2][0];
+	tmp[1][1] = A[1][0] * B[0][1] + A[1][1] * B[1][1] + A[1][2] * B[2][1];
+	tmp[1][2] = A[1][0] * B[0][2] + A[1][1] * B[1][2] + A[1][2] * B[2][2];
+	tmp[2][0] = A[2][0] * B[0][0] + A[2][1] * B[1][0] + A[2][2] * B[2][0];
+	tmp[2][1] = A[2][0] * B[0][1] + A[2][1] * B[1][1] + A[2][2] * B[2][1];
+	tmp[2][2] = A[2][0] * B[0][2] + A[2][1] * B[1][2] + A[2][2] * B[2][2];
+	memcpy( out, tmp, sizeof(tmp) );
+};
+
+int MAT3_Invert( MAT3 out, MAT3 M )
+{
+	MAT3 R;
+#define result(x,y) R[y][x]
+#define A(x,y) M[y][x]
+	XGM_VT det = +A(0,0)*(A(1,1)*A(2,2)-A(2,1)*A(1,2))
+	             -A(0,1)*(A(1,0)*A(2,2)-A(1,2)*A(2,0))
+	             +A(0,2)*(A(1,0)*A(2,1)-A(1,1)*A(2,0));
+	if( det == 0 )
+		return 0;
+	XGM_VT invdet = 1 / det;
+	result(0,0) =  (A(1,1)*A(2,2)-A(2,1)*A(1,2))*invdet;
+	result(1,0) = -(A(0,1)*A(2,2)-A(0,2)*A(2,1))*invdet;
+	result(2,0) =  (A(0,1)*A(1,2)-A(0,2)*A(1,1))*invdet;
+	result(0,1) = -(A(1,0)*A(2,2)-A(1,2)*A(2,0))*invdet;
+	result(1,1) =  (A(0,0)*A(2,2)-A(0,2)*A(2,0))*invdet;
+	result(2,1) = -(A(0,0)*A(1,2)-A(1,0)*A(0,2))*invdet;
+	result(0,2) =  (A(1,0)*A(2,1)-A(2,0)*A(1,1))*invdet;
+	result(1,2) = -(A(0,0)*A(2,1)-A(2,0)*A(0,1))*invdet;
+	result(2,2) =  (A(0,0)*A(1,1)-A(1,0)*A(0,1))*invdet;
+	memcpy( out, R, sizeof(MAT3) );
+	return 1;
+}
+
+void MAT3_Transform( VEC3 out, VEC3 v, MAT3 mtx )
+{
+	VEC3 r_;
+	int i, j;
+	for(j=0; j<3; ++j) {
+		r_[j] = 0.;
+		for(i=0; i<3; ++i) {
+			r_[j] += mtx[i][j] * v[i];
+		}
+	}
+	memcpy(out, r_, sizeof(r_));
+}
+
+void MAT3_RotateDefaultAxis( MAT3 out, int axis0, int axis1, XGM_VT angle )
+{
+	int x, y;
+	XGM_VT s = (XGM_VT) sin( angle );
+	XGM_VT c = (XGM_VT) cos( angle );
+	for( y = 0; y < 3; ++y )
+		for( x = 0; x < 3; ++x )
+			out[x][y] = x == y ? 1.0f : 0.0f;
+	out[ axis0 ][ axis0 ] = c;
+	out[ axis0 ][ axis1 ] = -s;
+	out[ axis1 ][ axis0 ] = s;
+	out[ axis1 ][ axis1 ] = c;
+}
+
+void MAT3_RotateAxisAngle( MAT3 out, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT angle )
+{
+	XGM_VT s = (XGM_VT) sin( angle );
+	XGM_VT c = (XGM_VT) cos( angle );
+	XGM_VT Ic = 1 - c;
+	
+	out[0][0] = x * x * Ic + c;
+	out[0][1] = y * x * Ic - z * s;
+	out[0][2] = z * x * Ic + y * s;
+	out[1][0] = x * y * Ic + z * s;
+	out[1][1] = y * y * Ic + c;
+	out[1][2] = z * y * Ic - x * s;
+	out[2][0] = x * z * Ic - y * s;
+	out[2][1] = y * z * Ic + x * s;
+	out[2][2] = z * z * Ic + c;
+}
+
+void MAT3_Scale( MAT3 out, XGM_VT x, XGM_VT y, XGM_VT z )
+{
+	out[0][1] = out[0][2] = 0.0f;
+	out[1][0] = out[1][2] = 0.0f;
+	out[2][0] = out[2][1] = 0.0f;
+	out[0][0] = x;
+	out[1][1] = y;
+	out[2][2] = z;
+}
+
+
+#define XGM_M3_IHDR( funcname ) MAT3* M; \
+	if( !SGS_PARSE_METHOD( C, xgm_mat3_iface, M, mat3, funcname ) ) return 0;
+
+
+static int xgm_m3i_identity( SGS_CTX )
+{
+	XGM_M3_IHDR( identity );
+	MAT3_Scale( *M, 1, 1, 1 );
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m3i_multiply( SGS_CTX )
+{
+	MAT3 M2;
+	
+	XGM_M3_IHDR( multiply );
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Mat3, M2 ) )
+		return 0;
+	
+	MAT3_Multiply( *M, *M, M2 );
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m3i_multiply_left( SGS_CTX )
+{
+	MAT3 M2;
+	
+	XGM_M3_IHDR( multiply_left );
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Mat3, M2 ) )
+		return 0;
+	
+	MAT3_Multiply( *M, M2, *M );
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m3i_multiply2( SGS_CTX )
+{
+	MAT3 M1, M2;
+	
+	XGM_M3_IHDR( multiply2 );
+	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_Mat3, M1, sgs_ArgCheck_Mat3, M2 ) )
+		return 0;
+	
+	MAT3_Multiply( *M, M1, M2 );
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m3i_transpose( SGS_CTX )
+{
+	XGM_M3_IHDR( transpose );
+	MAT3_Transpose( *M );
+	return 0;
+}
+
+static int xgm_m3i_transpose_from( SGS_CTX )
+{
+	MAT3 M2;
+	
+	XGM_M3_IHDR( transpose_from );
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Mat3, M2 ) )
+		return 0;
+	
+	memcpy( *M, M2, sizeof(M2) );
+	MAT3_Transpose( *M );
+	return 0;
+}
+
+static int xgm_m3i_invert( SGS_CTX )
+{
+	XGM_M3_IHDR( invert );
+	sgs_PushBool( C, MAT3_Invert( *M, *M ) );
+	return 1;
+}
+
+static int xgm_m3i_invert_from( SGS_CTX )
+{
+	MAT3 M2;
+	
+	XGM_M3_IHDR( invert_from );
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Mat3, M2 ) )
+		return 0;
+	
+	sgs_PushBool( C, MAT3_Invert( *M, M2 ) );
+	return 1;
+}
+
+
+static int xgm_m3i_rotateX( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT angle;
+	MAT3 tmp;
+	
+	XGM_M3_IHDR( rotateX );
+	if( !sgs_LoadArgs( C, "f|b", &angle, &reset ) )
+		return 0;
+	
+	MAT3_RotateDefaultAxis( tmp, 1, 2, angle );
+	if( !reset )
+		MAT3_Multiply( *M, *M, tmp );
+	else
+		memcpy( *M, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m3i_rotateY( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT angle;
+	MAT3 tmp;
+	
+	XGM_M3_IHDR( rotateY );
+	if( !sgs_LoadArgs( C, "f|b", &angle, &reset ) )
+		return 0;
+	
+	MAT3_RotateDefaultAxis( tmp, 0, 2, angle );
+	if( !reset )
+		MAT3_Multiply( *M, *M, tmp );
+	else
+		memcpy( *M, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m3i_rotateZ( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT angle;
+	MAT3 tmp;
+	
+	XGM_M3_IHDR( rotateZ );
+	if( !sgs_LoadArgs( C, "f|b", &angle, &reset ) )
+		return 0;
+	
+	MAT3_RotateDefaultAxis( tmp, 0, 1, angle );
+	if( !reset )
+		MAT3_Multiply( *M, *M, tmp );
+	else
+		memcpy( *M, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m3i_rotate_axis_angle( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT x, y, z, angle;
+	MAT3 tmp;
+	
+	XGM_M3_IHDR( rotate_axis_angle );
+	if( !sgs_LoadArgs( C, "ffff|b", &x, &y, &z, &angle, &reset ) )
+		return 0;
+	
+	MAT3_RotateAxisAngle( tmp, x, y, z, angle );
+	if( !reset )
+		MAT3_Multiply( *M, *M, tmp );
+	else
+		memcpy( *M, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m3i_rotate_axis_angle_v3( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT v3[3], angle;
+	MAT3 tmp;
+	
+	XGM_M3_IHDR( rotate_axis_angle_v3 );
+	if( !sgs_LoadArgs( C, "xf|b", sgs_ArgCheck_Vec3, v3, &angle, &reset ) )
+		return 0;
+	
+	MAT3_RotateAxisAngle( tmp, v3[0], v3[1], v3[2], angle );
+	if( !reset )
+		MAT3_Multiply( *M, *M, tmp );
+	else
+		memcpy( *M, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m3i_rotate_quat( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	QUAT q;
+	MAT3 tmp;
+	
+	XGM_M3_IHDR( rotate_quat );
+	if( !sgs_LoadArgs( C, "x|b", sgs_ArgCheck_Quat, q, &reset ) )
+		return 0;
+	
+	MAT3_FromQuat( tmp, q );
+	if( !reset )
+		MAT3_Multiply( *M, *M, tmp );
+	else
+		memcpy( *M, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m3i_scale( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT x, y, z;
+	MAT3 tmp;
+	
+	XGM_M3_IHDR( scale );
+	if( !sgs_LoadArgs( C, "fff|b", &x, &y, &z, &reset ) )
+		return 0;
+	
+	MAT3_Scale( tmp, x, y, z );
+	if( !reset )
+		MAT3_Multiply( *M, *M, tmp );
+	else
+		memcpy( *M, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m3i_scale_v3( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	XGM_VT v3[3];
+	MAT3 tmp;
+	
+	XGM_M3_IHDR( scale_v3 );
+	if( !sgs_LoadArgs( C, "x|b", sgs_ArgCheck_Vec3, v3, &reset ) )
+		return 0;
+	
+	MAT3_Scale( tmp, v3[0], v3[1], v3[2] );
+	if( !reset )
+		MAT3_Multiply( *M, *M, tmp );
+	else
+		memcpy( *M, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+
+static int xgm_m3i_transform( SGS_CTX )
+{
+	VEC3 v3;
+	XGM_M3_IHDR( transform );
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Vec3, v3 ) )
+		return 0;
+	
+	MAT3_Transform( v3, v3, *M );
+	sgs_PushVec3p( C, v3 );
+	return 1;
+}
+
+
+static int xgm_m3_convert( SGS_CTX, sgs_VarObj* data, int type )
+{
+	XGM_OHDR;
+	if( type == SGS_CONVOP_CLONE )
+	{
+		sgs_PushMat3( C, hdr, 0 );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int xgm_m3_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+{
+	char* str;
+	XGM_OHDR;
+	if( key->type == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetIntP( C, key );
+		if( pos < 0 || pos > 8 )
+			return SGS_ENOTFND;
+		sgs_PushReal( C, hdr[ pos ] );
+		return SGS_SUCCESS;
+	}
+	
+	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	{
+		SGS_CASE( "identity" ) SGS_RETURN_CFUNC( xgm_m3i_identity )
+		SGS_CASE( "multiply" ) SGS_RETURN_CFUNC( xgm_m3i_multiply )
+		SGS_CASE( "multiply_left" ) SGS_RETURN_CFUNC( xgm_m3i_multiply_left )
+		SGS_CASE( "multiply2" ) SGS_RETURN_CFUNC( xgm_m3i_multiply2 )
+		SGS_CASE( "transpose" ) SGS_RETURN_CFUNC( xgm_m3i_transpose )
+		SGS_CASE( "transpose_from" ) SGS_RETURN_CFUNC( xgm_m3i_transpose_from )
+		SGS_CASE( "invert" ) SGS_RETURN_CFUNC( xgm_m3i_invert )
+		SGS_CASE( "invert_from" ) SGS_RETURN_CFUNC( xgm_m3i_invert_from )
+		
+		SGS_CASE( "rotateX" ) SGS_RETURN_CFUNC( xgm_m3i_rotateX )
+		SGS_CASE( "rotateY" ) SGS_RETURN_CFUNC( xgm_m3i_rotateY )
+		SGS_CASE( "rotateZ" ) SGS_RETURN_CFUNC( xgm_m3i_rotateZ )
+		SGS_CASE( "rotate_axis_angle" ) SGS_RETURN_CFUNC( xgm_m3i_rotate_axis_angle )
+		SGS_CASE( "rotate_axis_angle_v3" ) SGS_RETURN_CFUNC( xgm_m3i_rotate_axis_angle_v3 )
+		SGS_CASE( "rotate_quat" ) SGS_RETURN_CFUNC( xgm_m3i_rotate_quat )
+		SGS_CASE( "scale" ) SGS_RETURN_CFUNC( xgm_m3i_scale )
+		SGS_CASE( "scale_v3" ) SGS_RETURN_CFUNC( xgm_m3i_scale_v3 )
+		
+		SGS_CASE( "transform" ) SGS_RETURN_CFUNC( xgm_m3i_transform )
+		
+		if( *str == 'm' && str[1] && str[2] && !str[3] )
+		{
+			int nx = str[1] - '0';
+			int ny = str[2] - '0';
+			if( nx >= 0 && nx < 3 && ny >= 0 && ny < 3 )
+			{
+				/* rows = x, columns = y, matrix is column-major */
+				sgs_PushReal( C, hdr[ ny + nx * 3 ] );
+				return SGS_SUCCESS;
+			}
+		}
+		if( !strcmp( str, "quat" ) )
+		{
+			QUAT out;
+			QUAT_FromMatrix( out, hdr, &hdr[3], &hdr[6] );
+			sgs_PushQuatp( C, out );
+			return SGS_SUCCESS;
+		}
+		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 9 ); return SGS_SUCCESS; }
+	}
+	return SGS_ENOTFND;
+}
+
+static int xgm_m3_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
+{
+	char* str;
+	XGM_OHDR;
+	sgs_Real val;
+	if( key->type == SGS_VT_INT )
+	{
+		sgs_Int pos = sgs_GetIntP( C, key );
+		if( pos < 0 || pos > 8 )
+			return SGS_ENOTFND;
+		if( sgs_ParseRealP( C, vv, &val ) )
+		{
+			hdr[ pos ] = (XGM_VT) val;
+			return SGS_SUCCESS;
+		}
+		else
+			return SGS_EINVAL;
+	}
+	
+	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	{
+		if( *str == 'm' && str[1] && str[2] && !str[3] )
+		{
+			int nx = str[1] - '0';
+			int ny = str[2] - '0';
+			if( nx >= 0 && nx < 3 && ny >= 0 && ny < 3 )
+			{
+				if( sgs_ParseRealP( C, vv, &val ) )
+				{
+					/* rows = x, columns = y, matrix is column-major */
+					hdr[ ny + nx * 3 ] = (XGM_VT) val;
+					return SGS_SUCCESS;
+				}
+				else
+					return SGS_EINVAL;
+			}
+		}
+	}
+	return SGS_ENOTFND;
+}
+
+static int xgm_m3_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+{
+	if( type == SGS_EOP_COMPARE )
+	{
+		int i;
+		XGM_VT *v1, *v2;
+		if( !sgs_IsObjectP( A, xgm_mat3_iface ) ||
+			!sgs_IsObjectP( B, xgm_mat3_iface ) )
+			return SGS_EINVAL;
+		
+		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
+		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		
+		for( i = 0; i < 15; ++i )
+		{
+			if( v1[i] != v2[i] )
+			{
+				sgs_PushReal( C, v1[i] - v2[0] );
+				break;
+			}
+		}
+		if( i == 15 )
+			sgs_PushReal( C, 0 );
+		return SGS_SUCCESS;
+	}
+	return SGS_ENOTSUP;
+}
+
+static int xgm_m3_serialize( SGS_CTX, sgs_VarObj* data )
+{
+	int i;
+	XGM_OHDR;
+	for( i = 0; i < 9; ++i )
+	{
+		sgs_PushReal( C, hdr[i] );
+		if( sgs_Serialize( C ) )
+			return SGS_EINPROC;
+	}
+	return sgs_SerializeObject( C, 9, "mat3" );
+}
+
+static int xgm_m3_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
+{
+	char bfr[ 512 ];
+	XGM_OHDR;
+	UNUSED( maxdepth );
+	snprintf( bfr, 512,
+		"\n%10.6g %10.6g %10.6g"
+		"\n%10.6g %10.6g %10.6g"
+		"\n%10.6g %10.6g %10.6g",
+		hdr[0], hdr[3], hdr[6],
+		hdr[1], hdr[4], hdr[7],
+		hdr[2], hdr[5], hdr[8] );
+	bfr[ 511 ] = 0;
+	sgs_PushString( C, "mat3\n(" );
+	sgs_PushString( C, bfr );
+	if( sgs_PadString( C ) ) return SGS_EINPROC;
+	sgs_PushString( C, "\n)" );
+	if( sgs_StringConcat( C, 3 ) ) return SGS_EINPROC;
+	return SGS_SUCCESS;
+}
+
+static int xgm_mat3( SGS_CTX )
+{
+	XGM_VT v[ 9 ];
+	int argc = sgs_StackSize( C );
+	
+	SGSFN( "mat3" );
+	
+	if( !argc )
+	{
+		int i;
+		for( i = 0; i < 9; ++i )
+			v[ i ] = 0;
+		v[0] = v[4] = v[8] = 1;
+		sgs_PushMat3( C, v, 0 );
+		return 1;
+	}
+	else if( argc == 1 && sgs_ParseMat3( C, 0, v ) )
+	{
+		sgs_PushMat3( C, v, 0 );
+		return 1;
+	}
+	else if( argc == 3 )
+	{
+		if( sgs_ParseVec3( C, 0, v, 0 ) &&
+			sgs_ParseVec3( C, 1, v+3, 0 ) &&
+			sgs_ParseVec3( C, 2, v+6, 0 ) )
+		{
+			sgs_PushMat3( C, v, 0 );
+			return 1;
+		}
+	}
+	else if( argc == 9 )
+	{
+		int i;
+		for( i = 0; i < 9; ++i )
+		{
+			sgs_Real val;
+			if( !sgs_ParseReal( C, i, &val ) )
+				break;
+			v[ i ] = (XGM_VT) val;
+		}
+		if( i == 9 )
+		{
+			sgs_PushMat3( C, v, 0 );
+			return 1;
+		}
+	}
+	return sgs_Msg( C, SGS_WARNING, "expected 0 arguments or "
+		"1 mat3 argument or 1 mat4 argument or 3 vec3 arguments or 9 real arguments" );
+}
+
+
+
+/*  4 x 4   M A T R I X  */
 
 #define MAT4_DUMP( M ) \
 	puts( "--- MATRIX DUMP ---" ); \
@@ -1764,11 +2937,30 @@ static int xgm_m4i_rotate_axis_angle_v3( SGS_CTX )
 	XGM_VT v3[3], angle;
 	MAT4 tmp;
 	
-	XGM_M4_IHDR( rotate_axis_angle );
+	XGM_M4_IHDR( rotate_axis_angle_v3 );
 	if( !sgs_LoadArgs( C, "xf|b", sgs_ArgCheck_Vec3, v3, &angle, &reset ) )
 		return 0;
 	
 	MAT4_RotateAxisAngle( tmp, v3[0], v3[1], v3[2], angle );
+	if( !reset )
+		MAT4_Multiply( *M, *M, tmp );
+	else
+		memcpy( *M, tmp, sizeof(tmp) );
+	
+	SGS_RETURN_THIS( C );
+}
+
+static int xgm_m4i_rotate_quat( SGS_CTX )
+{
+	sgs_Bool reset = 0;
+	QUAT q;
+	MAT4 tmp;
+	
+	XGM_M4_IHDR( rotate_quat );
+	if( !sgs_LoadArgs( C, "x|b", sgs_ArgCheck_Quat, q, &reset ) )
+		return 0;
+	
+	MAT4_FromQuat( tmp, q );
 	if( !reset )
 		MAT4_Multiply( *M, *M, tmp );
 	else
@@ -1895,6 +3087,7 @@ static int xgm_m4_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 		SGS_CASE( "rotateZ" ) SGS_RETURN_CFUNC( xgm_m4i_rotateZ )
 		SGS_CASE( "rotate_axis_angle" ) SGS_RETURN_CFUNC( xgm_m4i_rotate_axis_angle )
 		SGS_CASE( "rotate_axis_angle_v3" ) SGS_RETURN_CFUNC( xgm_m4i_rotate_axis_angle_v3 )
+		SGS_CASE( "rotate_quat" ) SGS_RETURN_CFUNC( xgm_m4i_rotate_quat )
 		SGS_CASE( "scale" ) SGS_RETURN_CFUNC( xgm_m4i_scale )
 		SGS_CASE( "scale_v3" ) SGS_RETURN_CFUNC( xgm_m4i_scale_v3 )
 		
@@ -1912,6 +3105,13 @@ static int xgm_m4_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 				sgs_PushReal( C, hdr[ ny + nx * 4 ] );
 				return SGS_SUCCESS;
 			}
+		}
+		if( !strcmp( str, "quat" ) )
+		{
+			QUAT out;
+			QUAT_FromMatrix( out, hdr, &hdr[4], &hdr[8] );
+			sgs_PushQuatp( C, out );
+			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 16 ); return SGS_SUCCESS; }
 	}
@@ -2076,7 +3276,7 @@ static int xgm_mat4( SGS_CTX )
 		}
 	}
 	return sgs_Msg( C, SGS_WARNING, "expected 0 arguments or "
-		"1 mat4 argument or 3-4 vec4 arguments or 16 real arguments" );
+		"1 mat4 argument or 1 mat3 argument or 3-4 vec4 arguments or 16 real arguments" );
 }
 
 
@@ -2571,7 +3771,7 @@ static int xgm_vec3array( SGS_CTX )
 		XGM_VT* fdata = _xgm_pushvxa( C, ssz, 3 );
 		for( i = 0; i < ssz; ++i )
 		{
-			if( !sgs_ParseVec3( C, i, fdata, 1 ) )
+			if( !sgs_ParseVec3( C, i, fdata, 0 ) )
 				return sgs_Msg( C, SGS_WARNING, "failed to parse argument %d as vec3", i + 1 );
 			fdata += 3;
 		}
@@ -2997,6 +4197,24 @@ sgs_ObjInterface xgm_color_iface[1] =
 	NULL, xgm_col_expr
 }};
 
+sgs_ObjInterface xgm_quat_iface[1] =
+{{
+	"quat",
+	NULL, NULL,
+	xgm_quat_getindex, xgm_quat_setindex,
+	xgm_quat_convert, xgm_quat_serialize, xgm_quat_dump, NULL,
+	NULL, xgm_quat_expr
+}};
+
+sgs_ObjInterface xgm_mat3_iface[1] =
+{{
+	"mat3",
+	NULL, NULL,
+	xgm_m3_getindex, xgm_m3_setindex,
+	xgm_m3_convert, xgm_m3_serialize, xgm_m3_dump, NULL,
+	NULL, xgm_m3_expr
+}};
+
 sgs_ObjInterface xgm_mat4_iface[1] =
 {{
 	"mat4",
@@ -3008,7 +4226,7 @@ sgs_ObjInterface xgm_mat4_iface[1] =
 
 sgs_ObjInterface xgm_floatarr_iface[1] =
 {{
-	"vec2array",
+	"floatarray",
 	xgm_fla_destruct, NULL,
 	xgm_fla_getindex, xgm_fla_setindex,
 	xgm_fla_convert, xgm_fla_serialize, xgm_fla_dump, NULL,
@@ -3167,6 +4385,27 @@ SGSONE sgs_PushColor( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 	return 1;
 }
 
+SGSONE sgs_PushQuat( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
+{
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_quat_iface );
+	XGM_SET4( nv, x, y, z, w );
+	return 1;
+}
+
+SGSONE sgs_PushMat3( SGS_CTX, const XGM_VT* v9f, int transpose )
+{
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 9, xgm_mat3_iface );
+	if( transpose )
+	{
+		nv[ 0 ] = v9f[ 0 ]; nv[ 1 ] = v9f[ 3 ]; nv[ 2 ] = v9f[ 6 ];
+		nv[ 3 ] = v9f[ 1 ]; nv[ 4 ] = v9f[ 4 ]; nv[ 5 ] = v9f[ 7 ];
+		nv[ 6 ] = v9f[ 2 ]; nv[ 7 ] = v9f[ 5 ]; nv[ 8 ] = v9f[ 8 ];
+	}
+	else
+		memcpy( nv, v9f, sizeof(XGM_VT) * 9 );
+	return 1;
+}
+
 SGSONE sgs_PushMat4( SGS_CTX, const XGM_VT* v16f, int transpose )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 16, xgm_mat4_iface );
@@ -3246,6 +4485,13 @@ SGSONE sgs_PushColorvp( SGS_CTX, const XGM_VT* vf, int numfloats )
 	return 1;
 }
 
+SGSONE sgs_PushQuatp( SGS_CTX, const XGM_VT* v4f )
+{
+	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_quat_iface );
+	XGM_COPY4( nv, v4f );
+	return 1;
+}
+
 
 SGSBOOL sgs_ParseVec2P( SGS_CTX, sgs_Variable* var, XGM_VT* v2f, int strict )
 {
@@ -3257,7 +4503,10 @@ SGSBOOL sgs_ParseVec2P( SGS_CTX, sgs_Variable* var, XGM_VT* v2f, int strict )
 	if( var->type != SGS_VT_OBJECT )
 		return 0;
 	
-	if( sgs_IsObjectP( var, xgm_vec2_iface ) )
+	if( sgs_IsObjectP( var, xgm_vec2_iface ) ||
+		( !strict && sgs_IsObjectP( var, xgm_vec3_iface ) ) ||
+		( !strict && sgs_IsObjectP( var, xgm_vec4_iface ) ) ||
+		( !strict && sgs_IsObjectP( var, xgm_color_iface ) ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
 		XGM_COPY2( v2f, hdr );
@@ -3276,7 +4525,16 @@ SGSBOOL sgs_ParseVec3P( SGS_CTX, sgs_Variable* var, XGM_VT* v3f, int strict )
 	if( var->type != SGS_VT_OBJECT )
 		return 0;
 	
-	if( sgs_IsObjectP( var, xgm_vec3_iface ) )
+	if( !strict && sgs_IsObjectP( var, xgm_vec2_iface ) )
+	{
+		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
+		XGM_COPY2( v3f, hdr );
+		hdr[2] = 0;
+		return 1;
+	}
+	if( sgs_IsObjectP( var, xgm_vec3_iface ) ||
+		( !strict && sgs_IsObjectP( var, xgm_vec4_iface ) ) ||
+		( !strict && sgs_IsObjectP( var, xgm_color_iface ) ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
 		XGM_COPY3( v3f, hdr );
@@ -3295,6 +4553,21 @@ SGSBOOL sgs_ParseVec4P( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict )
 	if( var->type != SGS_VT_OBJECT )
 		return 0;
 	
+	if( !strict && sgs_IsObjectP( var, xgm_vec2_iface ) )
+	{
+		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
+		XGM_COPY2( v4f, hdr );
+		hdr[2] = 0;
+		hdr[3] = 0;
+		return 1;
+	}
+	if( !strict && sgs_IsObjectP( var, xgm_vec3_iface ) )
+	{
+		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
+		XGM_COPY3( v4f, hdr );
+		hdr[3] = 0;
+		return 1;
+	}
 	if( sgs_IsObjectP( var, xgm_vec4_iface ) ||
 		sgs_IsObjectP( var, xgm_color_iface ) )
 	{
@@ -3332,8 +4605,50 @@ SGSBOOL sgs_ParseColorP( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict )
 	return sgs_ParseVec4P( C, var, v4f, strict );
 }
 
+SGSBOOL sgs_ParseQuatP( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict )
+{
+	if( var->type != SGS_VT_OBJECT )
+		return 0;
+	
+	if( sgs_IsObjectP( var, xgm_quat_iface ) )
+	{
+		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
+		XGM_COPY4( v4f, hdr );
+		return 1;
+	}
+	return 0;
+}
+
+SGSBOOL sgs_ParseMat3P( SGS_CTX, sgs_Variable* var, XGM_VT* v9f )
+{
+	if( sgs_IsObjectP( var, xgm_mat3_iface ) )
+	{
+		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
+		memcpy( v9f, hdr, sizeof(XGM_VT) * 9 );
+		return 1;
+	}
+	if( sgs_IsObjectP( var, xgm_mat4_iface ) )
+	{
+		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
+		v9f[0] = hdr[0]; v9f[1] = hdr[1]; v9f[2] = hdr[2];
+		v9f[3] = hdr[4]; v9f[4] = hdr[5]; v9f[5] = hdr[6];
+		v9f[6] = hdr[8]; v9f[7] = hdr[9]; v9f[8] = hdr[10];
+		return 1;
+	}
+	return 0;
+}
+
 SGSBOOL sgs_ParseMat4P( SGS_CTX, sgs_Variable* var, XGM_VT* v16f )
 {
+	if( sgs_IsObjectP( var, xgm_mat3_iface ) )
+	{
+		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
+		v16f[0] = hdr[0]; v16f[1] = hdr[1]; v16f[2] = hdr[2]; v16f[3] = 0;
+		v16f[4] = hdr[3]; v16f[5] = hdr[4]; v16f[6] = hdr[5]; v16f[7] = 0;
+		v16f[8] = hdr[6]; v16f[9] = hdr[7]; v16f[10] = hdr[8]; v16f[11] = 0;
+		v16f[12] = 0; v16f[13] = 0; v16f[14] = 0; v16f[15] = 1;
+		return 1;
+	}
 	if( sgs_IsObjectP( var, xgm_mat4_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
@@ -3389,6 +4704,18 @@ SGSBOOL sgs_ParseAABB3( SGS_CTX, sgs_StkIdx item, XGM_VT* v6f )
 SGSBOOL sgs_ParseColor( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )
 {
 	return sgs_ParseVec4( C, item, v4f, strict );
+}
+
+SGSBOOL sgs_ParseQuat( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )
+{
+	sgs_Variable tmp;
+	return sgs_PeekStackItem( C, item, &tmp ) && sgs_ParseQuatP( C, &tmp, v4f, strict );
+}
+
+SGSBOOL sgs_ParseMat3( SGS_CTX, sgs_StkIdx item, XGM_VT* v9f )
+{
+	sgs_Variable tmp;
+	return sgs_PeekStackItem( C, item, &tmp ) && sgs_ParseMat3P( C, &tmp, v9f );
 }
 
 SGSBOOL sgs_ParseMat4( SGS_CTX, sgs_StkIdx item, XGM_VT* v16f )
@@ -3514,6 +4841,43 @@ int sgs_ArgCheck_Color( SGS_CTX, int argid, va_list* args, int flags )
 	return sgs_ArgCheck_4F( C, argid, args, flags, "color" );
 }
 
+int sgs_ArgCheck_Quat( SGS_CTX, int argid, va_list* args, int flags )
+{
+	XGM_VT* out = NULL;
+	XGM_VT v[4];
+	if( flags & SGS_LOADARG_WRITE )
+		out = va_arg( *args, XGM_VT* );
+	
+	if( sgs_ParseQuat( C, argid, v, flags & SGS_LOADARG_STRICT ? 1 : 0 ) )
+	{
+		if( out )
+		{
+			XGM_COPY4( out, v );
+		}
+		return 1;
+	}
+	if( flags & SGS_LOADARG_OPTIONAL )
+		return 1;
+	return sgs_ArgErrorExt( C, argid, 0, "quat", flags & SGS_LOADARG_STRICT ? "strict " : "" );
+}
+
+int sgs_ArgCheck_Mat3( SGS_CTX, int argid, va_list* args, int flags )
+{
+	XGM_VT v[9];
+	if( sgs_ParseMat3( C, argid, v ) )
+	{
+		if( flags & SGS_LOADARG_WRITE )
+		{
+			XGM_VT* out = va_arg( *args, XGM_VT* );
+			memcpy( out, v, sizeof(v) );
+		}
+		return 1;
+	}
+	if( flags & SGS_LOADARG_OPTIONAL )
+		return 1;
+	return sgs_ArgErrorExt( C, argid, 0, "mat3", "" );
+}
+
 int sgs_ArgCheck_Mat4( SGS_CTX, int argid, va_list* args, int flags )
 {
 	XGM_VT v[16];
@@ -3571,6 +4935,9 @@ static sgs_RegFuncConst xgm_fconsts[] =
 	
 	{ "color", xgm_color },
 	
+	{ "quat", xgm_quat },
+	
+	{ "mat3", xgm_mat3 },
 	{ "mat4", xgm_mat4 },
 	
 	{ "floatarray_buffer", xgm_floatarray_buffer },
@@ -3608,7 +4975,9 @@ SGS_APIFUNC int xgm_module_entry_point( SGS_CTX )
 	sgs_RegisterType( C, "aabb2", xgm_aabb2_iface );
 	sgs_RegisterType( C, "aabb3", xgm_aabb3_iface );
 	sgs_RegisterType( C, "color", xgm_color_iface );
-	sgs_RegisterType( C, "vec4", xgm_vec4_iface );
+	sgs_RegisterType( C, "quat", xgm_quat_iface );
+	sgs_RegisterType( C, "mat3", xgm_mat3_iface );
+	sgs_RegisterType( C, "mat4", xgm_mat4_iface );
 	sgs_RegisterType( C, "floatarray", xgm_floatarr_iface );
 	return SGS_SUCCESS;
 }
