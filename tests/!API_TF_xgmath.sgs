@@ -3,13 +3,40 @@ global ERRORS;
 global tests_failed, tests_ran;
 
 ERRORS = "";
-include "sgsxgmath";
+include "math", "sgsxgmath";
 
 testEqual( typeof(vec2), "cfunc", "sgsxgmath library is loaded" );
 testEqual( ERRORS, "", "sgsxgmath library loaded without errors" );
 
 //
 function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
+
+// tests whether all subvalues of items have the same type
+function testClose( v1, v2, name )
+{
+	haderror = false;
+	sz1 = v1.size;
+	sz2 = v2.size;
+	if( typeof(v1) != typeof(v2) )
+		testEqual( v1, v2, name );
+	if( sz1 != sz2 )
+	{
+		haderror = true;
+		testEqual( sz1, sz2, "[size] " $ name );
+	}
+	for( i = 0; i < sz1; ++i )
+	{
+		val1 = v1[ i ];
+		val2 = v2[ i ];
+		if( abs( val1 - val2 ) > 0.001 )
+		{
+			haderror = true;
+			testEqual( val1, val2, "[#" $ i $ "] " $ name );
+		}
+	}
+	if( !haderror )
+		testEqual( 1, 1, name );
+}
 
 
 //
@@ -64,6 +91,55 @@ testEqual( vec3(0,0,5).length, 5.0, "vec3 .length" );
 testEqual( vec3(0,5,0).length_squared, 25.0, "vec3 .length_squared" );
 testEqual( vec3(0,0,2).normalized == vec3(0,0,1), true, "vec3 .normalized" );
 testEqual( vec3(0,0,0).size, 3, "vec3 .size" );
+
+
+	section( "vec4" );
+
+v3_a = vec4(3.14159,1/3,2.5,800);
+v3_b = vec4(1,2,3,4);
+
+testEqual( ''$v3_b, "vec4(1;2;3;4)", "vec4 - create/tostring" );
+testEqual( ''$(v3_b+vec4(2,3,4,5)), "vec4(3;5;7;9)", "vec4 - create/ADD/tostring" );
+testEqual( ''$(v3_b-vec4(2,3,4,5)), "vec4(-1;-1;-1;-1)", "vec4 - create/SUB/tostring" );
+testEqual( ''$(v3_b*vec4(2,3,4,5)), "vec4(2;6;12;20)", "vec4 - create/MUL/tostring" );
+testEqual( ''$(vec4(1,4,3,1)/vec4(4,2,1,5)), "vec4(0.25;2;3;0.2)", "vec4 - create/DIV/tostring" );
+testEqual( ''$(vec4(1,4,3,2)%vec4(4,2,2,2)), "vec4(1;0;1;0)", "vec4 - create/MOD/tostring" );
+testEqual( vec4(1.5,3,5,8.33) == vec4(1.5,3,5,8.33), true, "vec4 - compare equal" );
+testEqual( vec4(1.5,3,5,8.33) == vec4(1.5,3,5,8.333), false, "vec4 - compare not equal" );
+testEqual( vec4_dot(v3_b,vec4(2,3,4,5)), 40.0, "vec4_dot" );
+testEqual( v3_a === clone(v3_a), true, "vec4 clone returns equal" );
+testEqual( toptr(v3_a) != toptr(clone(v3_a)), true, "vec4 clone does not return same" );
+testEqual( v3_b.x $ v3_b.y $ v3_b.z $ v3_b.w $ v3_b[0] $ v3_b[1] $ v3_b[2] $ v3_b[3], "12341234", "vec4 .x, .y, .z, .w" );
+testEqual( vec4(0,0,0,5).length, 5.0, "vec4 .length" );
+testEqual( vec4(0,5,0,0).length_squared, 25.0, "vec4 .length_squared" );
+testEqual( vec4(0,0,0,2).normalized == vec4(0,0,0,1), true, "vec4 .normalized" );
+testEqual( vec4(0,0,0,0).size, 4, "vec4 .size" );
+
+
+	section( "quat" );
+
+testClose( quat().rotateZ( deg2rad(90), true ), quat(0,0,0.7071,0.7071), "quat - rotateZ" );
+testClose( quat().rotateZ( deg2rad(90) ), quat(0,0,0.7071,0.7071), "quat - rotateZ (apply via mult)" );
+
+
+	section( "transform equalities" );
+
+testClose( quat().rotate_axis_angle( 1, 0, 0, 1 ), quat().rotateX( 1 ), "quat:r-axis-angle vs quat:r-x" );
+testClose( mat3().rotate_axis_angle( 1, 0, 0, 1 ), mat3().rotateX( 1 ), "mat3:r-axis-angle vs mat3:r-x" );
+testClose( mat4().rotate_axis_angle( 1, 0, 0, 1 ), mat4().rotateX( 1 ), "mat4:r-axis-angle vs mat4:r-x" );
+testClose( quat().rotate_axis_angle( 0, 1, 0, 1 ), quat().rotateY( 1 ), "quat:r-axis-angle vs quat:r-y" );
+testClose( mat3().rotate_axis_angle( 0, 1, 0, 1 ), mat3().rotateY( 1 ), "mat3:r-axis-angle vs mat3:r-y" );
+testClose( mat4().rotate_axis_angle( 0, 1, 0, 1 ), mat4().rotateY( 1 ), "mat4:r-axis-angle vs mat4:r-y" );
+testClose( quat().rotate_axis_angle( 0, 0, 1, 1 ), quat().rotateZ( 1 ), "quat:r-axis-angle vs quat:r-z" );
+testClose( mat3().rotate_axis_angle( 0, 0, 1, 1 ), mat3().rotateZ( 1 ), "mat3:r-axis-angle vs mat3:r-z" );
+testClose( mat4().rotate_axis_angle( 0, 0, 1, 1 ), mat4().rotateZ( 1 ), "mat4:r-axis-angle vs mat4:r-z" );
+testClose( quat().rotateZ( 1 ).multiply( quat().rotateZ( -1 ) ), quat(), "quat:r-z:mul-rev vs quat:identity" );
+testClose( mat3().rotateZ( 1 ).multiply( mat3().rotateZ( -1 ) ), mat3(), "mat3:r-z:mul-rev vs mat3:identity" );
+testClose( mat4().rotateZ( 1 ).multiply( mat4().rotateZ( -1 ) ), mat4(), "mat4:r-z:mul-rev vs mat4:identity" );
+testClose( mat3().rotateZ( 1 ), mat4().rotateZ( 1 ).mat3, "mat3:r-z vs mat4:r-z=>mat3" );
+testClose( mat4().rotateZ( 1 ), mat3().rotateZ( 1 ).mat4, "mat4:r-z vs mat3:r-z=>mat4" );
+testClose( quat().rotateZ( 1 ), mat3().rotateZ( 1 ).quat, "quat:r-z vs mat3:r-z=>quat" );
+testClose( mat3().rotateZ( 1 ), quat().rotateZ( 1 ).mat3, "mat3:r-z vs quat:r-z=>mat3" );
 
 
 //
