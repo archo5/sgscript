@@ -369,8 +369,11 @@ A quaternion
 -- @rotateZ<quat.rotateZ> - set or multiply a Z-axis rotation quaternion
 -- @rotate_axis_angle<quat.rotate_axis_angle> - set or multiply a custom axis rotation quaternion
 -- @rotate_axis_angle_v3<quat.rotate_axis_angle_v3> - set or multiply a custom axis rotation quaternion (vec3 argument)
--- @transform<quat.transform> - transform a 4D vector
+-- @transform<quat.transform> - transform a 3D vector
 - read-only properties
+-- [real] length
+-- [real] length_squared
+-- [quat] normalized - return a quaternion with length = 1 if possible, length = 0 if too short
 -- [int] size - returns 4 - the number of components in this vector
 -- [mat3] mat3 - returns a 3x3 matrix, generated from this quaternion
 -- [mat4] mat4 - returns a 4x4 matrix, generated from this quaternion
@@ -507,7 +510,7 @@ A 3x3 column-major matrix
 -- @rotate_axis_angle_v3<mat3.rotate_axis_angle_v3> - set or multiply a custom axis rotation matrix (vec3 argument)
 -- @scale<mat3.scale> - set or multiply a scale matrix
 -- @scale_v3<mat3.scale_v3> - set or multiply a scale matrix (vec3 argument)
--- @transform<mat3.transform> - transform a 4D vector
+-- @transform<mat3.transform> - transform a 3D vector
 - read-only properties
 -- [int] size - returns 9 - the number of components in this vector
 -- [quat] quat - returns the quaternion version of this matrix

@@ -235,9 +235,12 @@ A quaternion
 </li><li><a href="#quat-rotateZ-method">rotateZ</a> - set or multiply a Z-axis rotation quaternion
 </li><li><a href="#quat-rotate-axis-angle-method">rotate_axis_angle</a> - set or multiply a custom axis rotation quaternion
 </li><li><a href="#quat-rotate-axis-angle-v3-method">rotate_axis_angle_v3</a> - set or multiply a custom axis rotation quaternion (vec3 argument)
-</li><li><a href="#quat-transform-method">transform</a> - transform a 4D vector
+</li><li><a href="#quat-transform-method">transform</a> - transform a 3D vector
 </li></ul><li>read-only properties
-<ul><li>[int] size - returns 4 - the number of components in this vector
+<ul><li>[real] length
+</li><li>[real] length_squared
+</li><li>[quat] normalized - return a quaternion with length = 1 if possible, length = 0 if too short
+</li><li>[int] size - returns 4 - the number of components in this vector
 </li><li>[mat3] mat3 - returns a 3x3 matrix, generated from this quaternion
 </li><li>[mat4] mat4 - returns a 4x4 matrix, generated from this quaternion
 </li></ul><li>read/write properties
@@ -292,7 +295,7 @@ A 3x3 column-major matrix
 </li><li><a href="#mat3-rotate-axis-angle-v3-method">rotate_axis_angle_v3</a> - set or multiply a custom axis rotation matrix (vec3 argument)
 </li><li><a href="#mat3-scale-method">scale</a> - set or multiply a scale matrix
 </li><li><a href="#mat3-scale-v3-method">scale_v3</a> - set or multiply a scale matrix (vec3 argument)
-</li><li><a href="#mat3-transform-method">transform</a> - transform a 4D vector
+</li><li><a href="#mat3-transform-method">transform</a> - transform a 3D vector
 </li></ul><li>read-only properties
 <ul><li>[int] size - returns 9 - the number of components in this vector
 </li><li>[quat] quat - returns the quaternion version of this matrix
