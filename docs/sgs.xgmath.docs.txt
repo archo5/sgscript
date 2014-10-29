@@ -352,9 +352,323 @@ In this object, assume 1 = min and 2 = max.
 - if three arguments are given, they're used for R, G and B; 1 is the value of A
 
 
+
+# quat [object]
+
+A quaternion
+
+- methods
+-- @identity<quat.identity> - set quaternion to identity
+-- @multiply<quat.multiply> - multiply this quaternion with another one
+-- @multiply_left<quat.multiply_left> - left-multiply this quaternion with another one
+-- @multiply2<quat.multiply2> - multiply two matrices into this one
+-- @invert<quat.invert> - invert quaternion
+-- @invert_from<quat.invert_from> - invert another quaternion into this one
+-- @rotateX<quat.rotateX> - set or multiply a X-axis rotation quaternion
+-- @rotateY<quat.rotateY> - set or multiply a Y-axis rotation quaternion
+-- @rotateZ<quat.rotateZ> - set or multiply a Z-axis rotation quaternion
+-- @rotate_axis_angle<quat.rotate_axis_angle> - set or multiply a custom axis rotation quaternion
+-- @rotate_axis_angle_v3<quat.rotate_axis_angle_v3> - set or multiply a custom axis rotation quaternion (vec3 argument)
+-- @transform<quat.transform> - transform a 4D vector
+- read-only properties
+-- [int] size - returns 4 - the number of components in this vector
+-- [mat3] mat3 - returns a 3x3 matrix, generated from this quaternion
+-- [mat4] mat4 - returns a 4x4 matrix, generated from this quaternion
+- read/write properties
+-- [real] m[0-2][0-2]
+- overloaded operators
+-- comparison between subvalues: column-major subvalue order
+- other features:
+-- cloning support
+-- serialization support
+-- GC-safe
+-- indexing support for indices 0 - 8: returns/sets the specified subvalue
+-- tostring = "quat"
+-- dump:
+    quat(<x>;<y>;<z>|<w>)
+
+
+# quat.identity [method]
+
+== quat.identity()
+=== set the quaternion to identity
+
+
+# quat.multiply [method]
+
+== quat.multiply( quat m )
+=== multiply this quaternion and another quaternion, putting the other quaternion on the right side of multiplication
+
+
+# quat.multiply_left [method]
+
+== quat.multiply_left( quat m )
+=== multiply this quaternion and another quaternion, putting the other quaternion on the left side of multiplication
+
+
+# quat.multiply2 [method]
+
+== quat.multiply2( quat m1, quat m2 )
+=== multiply two matrices into this quaternion
+
+
+# quat.invert [method]
+
+== quat.invert()
+=== invert this quaternion into itself
+
+
+# quat.invert_from [method]
+
+== quat.invert_from( quat m )
+=== invert another quaternion into this quaternion
+
+
+# quat.rotateX [method]
+
+== quat.rotateX( real a[, bool reset ])
+=== generate a rotation quaternion (rotation around X axis) and multiply or set it to this quaternion
+
+- if `reset` is true, the generated quaternion is directly set to this quaternion
+-- otherwise, generated quaternion is right-multiplied to this quaternion
+-- if current quaternion is an identity quaternion, `reset` has no effect
+
+
+# quat.rotateY [method]
+
+== quat.rotateY( real a[, bool reset ])
+=== generate a rotation quaternion (rotation around Y axis) and multiply or set it to this quaternion
+
+- if `reset` is true, the generated quaternion is directly set to this quaternion
+-- otherwise, generated quaternion is right-multiplied to this quaternion
+-- if current quaternion is an identity quaternion, `reset` has no effect
+
+
+# quat.rotateZ [method]
+
+== quat.rotateZ( real a[, bool reset ])
+=== generate a rotation quaternion (rotation around Z axis) and multiply or set it to this quaternion
+
+- if `reset` is true, the generated quaternion is directly set to this quaternion
+-- otherwise, generated quaternion is right-multiplied to this quaternion
+-- if current quaternion is an identity quaternion, `reset` has no effect
+
+
+# quat.rotate_axis_angle [method]
+
+== quat.rotate_axis_angle( real x, real y, real z, real a[, bool reset ])
+=== generate a rotation quaternion (rotation around specified axis) and multiply or set it to this quaternion
+
+- if `reset` is true, the generated quaternion is directly set to this quaternion
+-- otherwise, generated quaternion is right-multiplied to this quaternion
+-- if current quaternion is an identity quaternion, `reset` has no effect
+
+
+# quat.rotate_axis_angle_v3 [method]
+
+== quat.rotate_axis_angle( vec3 v, real a[, bool reset ])
+=== generate a rotation quaternion (rotation around specified axis) and multiply or set it to this quaternion
+
+- if `reset` is true, the generated quaternion is directly set to this quaternion
+-- otherwise, generated quaternion is right-multiplied to this quaternion
+-- if current quaternion is an identity quaternion, `reset` has no effect
+
+
+# quat.transform [method]
+
+== quat.transform( vec3 v )
+=== multiply a 3D vector by this quaternion
+
+
+# quat [function]
+
+== quat( real v[4] )
+=== create a quaternion from 4 real values
+
+
+
+# mat3 [object]
+
+A 3x3 column-major matrix
+
+- methods
+-- @identity<mat3.identity> - set matrix to identity
+-- @multiply<mat3.multiply> - multiply this matrix with another one
+-- @multiply_left<mat3.multiply_left> - left-multiply this matrix with another one
+-- @multiply2<mat3.multiply2> - multiply two matrices into this one
+-- @transpose<mat3.transpose> - transpose matrix
+-- @transpose_from<mat3.transpose_from> - transpose another matrix into this one
+-- @invert<mat3.invert> - invert matrix
+-- @invert_from<mat3.invert_from> - invert another matrix into this one
+-- @rotateX<mat3.rotateX> - set or multiply a X-axis rotation matrix
+-- @rotateY<mat3.rotateY> - set or multiply a Y-axis rotation matrix
+-- @rotateZ<mat3.rotateZ> - set or multiply a Z-axis rotation matrix
+-- @rotate_axis_angle<mat3.rotate_axis_angle> - set or multiply a custom axis rotation matrix
+-- @rotate_axis_angle_v3<mat3.rotate_axis_angle_v3> - set or multiply a custom axis rotation matrix (vec3 argument)
+-- @scale<mat3.scale> - set or multiply a scale matrix
+-- @scale_v3<mat3.scale_v3> - set or multiply a scale matrix (vec3 argument)
+-- @transform<mat3.transform> - transform a 4D vector
+- read-only properties
+-- [int] size - returns 9 - the number of components in this vector
+-- [quat] quat - returns the quaternion version of this matrix
+-- [mat4] mat4 - returns a 4x4 version of this matrix, expanded with identity matrix data
+- read/write properties
+-- [real] m[0-2][0-2]
+- overloaded operators
+-- comparison between subvalues: column-major subvalue order
+- other features:
+-- cloning support
+-- serialization support
+-- GC-safe
+-- indexing support for indices 0 - 8: returns/sets the specified subvalue
+-- tostring = "mat3"
+-- dump:
+    mat3
+    (
+    	<m00> <m10> <m20>
+    	<m01> <m11> <m21>
+    	<m02> <m12> <m22>
+    )
+
+
+# mat3.identity [method]
+
+== mat3.identity()
+=== set the matrix to identity
+
+
+# mat3.multiply [method]
+
+== mat3.multiply( mat3 m )
+=== multiply this matrix and another matrix, putting the other matrix on the right side of multiplication
+
+
+# mat3.multiply_left [method]
+
+== mat3.multiply_left( mat3 m )
+=== multiply this matrix and another matrix, putting the other matrix on the left side of multiplication
+
+
+# mat3.multiply2 [method]
+
+== mat3.multiply2( mat3 m1, mat3 m2 )
+=== multiply two matrices into this matrix
+
+
+# mat3.transpose [method]
+
+== mat3.transpose()
+=== transpose this matrix into itself
+
+
+# mat3.transpose_from [method]
+
+== mat3.transpose_from( mat3 m )
+=== transpose another matrix into this matrix
+
+
+# mat3.invert [method]
+
+== mat3.invert()
+=== invert this matrix into itself, return if successful
+
+
+# mat3.invert_from [method]
+
+== mat3.invert_from( mat3 m )
+=== invert another matrix into this matrix
+
+
+# mat3.rotateX [method]
+
+== mat3.rotateX( real a[, bool reset ])
+=== generate a rotation matrix (rotation around X axis) and multiply or set it to this matrix
+
+- if `reset` is true, the generated matrix is directly set to this matrix
+-- otherwise, generated matrix is right-multiplied to this matrix
+-- if current matrix is an identity matrix, `reset` has no effect
+
+
+# mat3.rotateY [method]
+
+== mat3.rotateY( real a[, bool reset ])
+=== generate a rotation matrix (rotation around Y axis) and multiply or set it to this matrix
+
+- if `reset` is true, the generated matrix is directly set to this matrix
+-- otherwise, generated matrix is right-multiplied to this matrix
+-- if current matrix is an identity matrix, `reset` has no effect
+
+
+# mat3.rotateZ [method]
+
+== mat3.rotateZ( real a[, bool reset ])
+=== generate a rotation matrix (rotation around Z axis) and multiply or set it to this matrix
+
+- if `reset` is true, the generated matrix is directly set to this matrix
+-- otherwise, generated matrix is right-multiplied to this matrix
+-- if current matrix is an identity matrix, `reset` has no effect
+
+
+# mat3.rotate_axis_angle [method]
+
+== mat3.rotate_axis_angle( real x, real y, real z, real a[, bool reset ])
+=== generate a rotation matrix (rotation around specified axis) and multiply or set it to this matrix
+
+- if `reset` is true, the generated matrix is directly set to this matrix
+-- otherwise, generated matrix is right-multiplied to this matrix
+-- if current matrix is an identity matrix, `reset` has no effect
+
+
+# mat3.rotate_axis_angle_v3 [method]
+
+== mat3.rotate_axis_angle( vec3 v, real a[, bool reset ])
+=== generate a rotation matrix (rotation around specified axis) and multiply or set it to this matrix
+
+- if `reset` is true, the generated matrix is directly set to this matrix
+-- otherwise, generated matrix is right-multiplied to this matrix
+-- if current matrix is an identity matrix, `reset` has no effect
+
+
+# mat3.scale [method]
+
+== mat3.scale( real x, real y, real z[, bool reset ])
+=== generate a scale matrix and multiply or set it to this matrix
+
+- if `reset` is true, the generated matrix is directly set to this matrix
+-- otherwise, generated matrix is right-multiplied to this matrix
+-- if current matrix is an identity matrix, `reset` has no effect
+
+
+# mat3.scale_v3 [method]
+
+== mat3.scale_v3( vec3 v[, bool reset ])
+=== generate a scale matrix and multiply or set it to this matrix
+
+- if `reset` is true, the generated matrix is directly set to this matrix
+-- otherwise, generated matrix is right-multiplied to this matrix
+-- if current matrix is an identity matrix, `reset` has no effect
+
+
+# mat3.transform [method]
+
+== mat3.transform( vec3 v )
+=== multiply a 3D vector by this matrix
+
+
+# mat3 [function]
+
+== mat3( mat3 m )
+=== copy the matrix
+== mat3( vec3 row1, vec3 row2, vec3 row3 )
+=== create a matrix from 3 rows
+== mat3( real v[9] )
+=== create a matrix from 9 real values
+
+
+
 # mat4 [object]
 
-A column-major matrix
+A 4x4 column-major matrix
 
 - methods
 -- @identity<mat4.identity> - set matrix to identity
@@ -379,6 +693,8 @@ A column-major matrix
 -- @transform_normal<mat4.transform_normal> - transform a 3D normal vector
 - read-only properties
 -- [int] size - returns 16 - the number of components in this vector
+-- [quat] quat - returns the quaternion version of the 3x3 part of this matrix
+-- [mat3] mat3 - returns the 3x3 part of this matrix
 - read/write properties
 -- [real] m[0-3][0-3]
 - overloaded operators

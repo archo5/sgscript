@@ -221,8 +221,131 @@ In this object, assume 1 = min and 2 = max.
 <div class='item'><a name='color-function'></a><hr><h2>color [function]</h2><h3>color( real r[, real g[, real b[, real a ]]])</h3><h4>create a color value from 1 to 4 real values</h4><ul><li>if one argument is given, it is used for all components
 </li><li>if two arguments are given, argument 1 is used for R, G and B, argument 2 is used for A
 </li><li>if three arguments are given, they&#39;re used for R, G and B; 1 is the value of A</li></ul></div>
+<div class='item'><a name='quat-object'></a><hr><h2>quat [object]</h2><p>
+A quaternion
+</p><ul><li>methods
+<ul><li><a href="#quat-identity-method">identity</a> - set quaternion to identity
+</li><li><a href="#quat-multiply-method">multiply</a> - multiply this quaternion with another one
+</li><li><a href="#quat-multiply-left-method">multiply_left</a> - left-multiply this quaternion with another one
+</li><li><a href="#quat-multiply2-method">multiply2</a> - multiply two matrices into this one
+</li><li><a href="#quat-invert-method">invert</a> - invert quaternion
+</li><li><a href="#quat-invert-from-method">invert_from</a> - invert another quaternion into this one
+</li><li><a href="#quat-rotateX-method">rotateX</a> - set or multiply a X-axis rotation quaternion
+</li><li><a href="#quat-rotateY-method">rotateY</a> - set or multiply a Y-axis rotation quaternion
+</li><li><a href="#quat-rotateZ-method">rotateZ</a> - set or multiply a Z-axis rotation quaternion
+</li><li><a href="#quat-rotate-axis-angle-method">rotate_axis_angle</a> - set or multiply a custom axis rotation quaternion
+</li><li><a href="#quat-rotate-axis-angle-v3-method">rotate_axis_angle_v3</a> - set or multiply a custom axis rotation quaternion (vec3 argument)
+</li><li><a href="#quat-transform-method">transform</a> - transform a 4D vector
+</li></ul><li>read-only properties
+<ul><li>[int] size - returns 4 - the number of components in this vector
+</li><li>[mat3] mat3 - returns a 3x3 matrix, generated from this quaternion
+</li><li>[mat4] mat4 - returns a 4x4 matrix, generated from this quaternion
+</li></ul><li>read/write properties
+<ul><li>[real] m[0-2][0-2]
+</li></ul><li>overloaded operators
+<ul><li>comparison between subvalues: column-major subvalue order
+</li></ul><li>other features:
+<ul><li>cloning support
+</li><li>serialization support
+</li><li>GC-safe
+</li><li>indexing support for indices 0 - 8: returns/sets the specified subvalue
+</li><li>tostring = &quot;quat&quot;
+</li><li>dump:</li></ul></li></ul><pre>quat(&lt;x&gt;;&lt;y&gt;;&lt;z&gt;|&lt;w&gt;)</pre></div>
+<div class='item'><a name='quat-identity-method'></a><hr><h2>quat.identity [method]</h2><h3>quat.identity()</h3><h4>set the quaternion to identity</h4></div>
+<div class='item'><a name='quat-multiply-method'></a><hr><h2>quat.multiply [method]</h2><h3>quat.multiply( quat m )</h3><h4>multiply this quaternion and another quaternion, putting the other quaternion on the right side of multiplication</h4></div>
+<div class='item'><a name='quat-multiply-left-method'></a><hr><h2>quat.multiply_left [method]</h2><h3>quat.multiply_left( quat m )</h3><h4>multiply this quaternion and another quaternion, putting the other quaternion on the left side of multiplication</h4></div>
+<div class='item'><a name='quat-multiply2-method'></a><hr><h2>quat.multiply2 [method]</h2><h3>quat.multiply2( quat m1, quat m2 )</h3><h4>multiply two matrices into this quaternion</h4></div>
+<div class='item'><a name='quat-invert-method'></a><hr><h2>quat.invert [method]</h2><h3>quat.invert()</h3><h4>invert this quaternion into itself</h4></div>
+<div class='item'><a name='quat-invert-from-method'></a><hr><h2>quat.invert_from [method]</h2><h3>quat.invert_from( quat m )</h3><h4>invert another quaternion into this quaternion</h4></div>
+<div class='item'><a name='quat-rotateX-method'></a><hr><h2>quat.rotateX [method]</h2><h3>quat.rotateX( real a[, bool reset ])</h3><h4>generate a rotation quaternion (rotation around X axis) and multiply or set it to this quaternion</h4><ul><li>if <code>reset</code> is true, the generated quaternion is directly set to this quaternion
+<ul><li>otherwise, generated quaternion is right-multiplied to this quaternion
+</li><li>if current quaternion is an identity quaternion, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='quat-rotateY-method'></a><hr><h2>quat.rotateY [method]</h2><h3>quat.rotateY( real a[, bool reset ])</h3><h4>generate a rotation quaternion (rotation around Y axis) and multiply or set it to this quaternion</h4><ul><li>if <code>reset</code> is true, the generated quaternion is directly set to this quaternion
+<ul><li>otherwise, generated quaternion is right-multiplied to this quaternion
+</li><li>if current quaternion is an identity quaternion, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='quat-rotateZ-method'></a><hr><h2>quat.rotateZ [method]</h2><h3>quat.rotateZ( real a[, bool reset ])</h3><h4>generate a rotation quaternion (rotation around Z axis) and multiply or set it to this quaternion</h4><ul><li>if <code>reset</code> is true, the generated quaternion is directly set to this quaternion
+<ul><li>otherwise, generated quaternion is right-multiplied to this quaternion
+</li><li>if current quaternion is an identity quaternion, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='quat-rotate-axis-angle-method'></a><hr><h2>quat.rotate_axis_angle [method]</h2><h3>quat.rotate_axis_angle( real x, real y, real z, real a[, bool reset ])</h3><h4>generate a rotation quaternion (rotation around specified axis) and multiply or set it to this quaternion</h4><ul><li>if <code>reset</code> is true, the generated quaternion is directly set to this quaternion
+<ul><li>otherwise, generated quaternion is right-multiplied to this quaternion
+</li><li>if current quaternion is an identity quaternion, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='quat-rotate-axis-angle-v3-method'></a><hr><h2>quat.rotate_axis_angle_v3 [method]</h2><h3>quat.rotate_axis_angle( vec3 v, real a[, bool reset ])</h3><h4>generate a rotation quaternion (rotation around specified axis) and multiply or set it to this quaternion</h4><ul><li>if <code>reset</code> is true, the generated quaternion is directly set to this quaternion
+<ul><li>otherwise, generated quaternion is right-multiplied to this quaternion
+</li><li>if current quaternion is an identity quaternion, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='quat-transform-method'></a><hr><h2>quat.transform [method]</h2><h3>quat.transform( vec3 v )</h3><h4>multiply a 3D vector by this quaternion</h4></div>
+<div class='item'><a name='quat-function'></a><hr><h2>quat [function]</h2><h3>quat( real v[4] )</h3><h4>create a quaternion from 4 real values</h4></div>
+<div class='item'><a name='mat3-object'></a><hr><h2>mat3 [object]</h2><p>
+A 3x3 column-major matrix
+</p><ul><li>methods
+<ul><li><a href="#mat3-identity-method">identity</a> - set matrix to identity
+</li><li><a href="#mat3-multiply-method">multiply</a> - multiply this matrix with another one
+</li><li><a href="#mat3-multiply-left-method">multiply_left</a> - left-multiply this matrix with another one
+</li><li><a href="#mat3-multiply2-method">multiply2</a> - multiply two matrices into this one
+</li><li><a href="#mat3-transpose-method">transpose</a> - transpose matrix
+</li><li><a href="#mat3-transpose-from-method">transpose_from</a> - transpose another matrix into this one
+</li><li><a href="#mat3-invert-method">invert</a> - invert matrix
+</li><li><a href="#mat3-invert-from-method">invert_from</a> - invert another matrix into this one
+</li><li><a href="#mat3-rotateX-method">rotateX</a> - set or multiply a X-axis rotation matrix
+</li><li><a href="#mat3-rotateY-method">rotateY</a> - set or multiply a Y-axis rotation matrix
+</li><li><a href="#mat3-rotateZ-method">rotateZ</a> - set or multiply a Z-axis rotation matrix
+</li><li><a href="#mat3-rotate-axis-angle-method">rotate_axis_angle</a> - set or multiply a custom axis rotation matrix
+</li><li><a href="#mat3-rotate-axis-angle-v3-method">rotate_axis_angle_v3</a> - set or multiply a custom axis rotation matrix (vec3 argument)
+</li><li><a href="#mat3-scale-method">scale</a> - set or multiply a scale matrix
+</li><li><a href="#mat3-scale-v3-method">scale_v3</a> - set or multiply a scale matrix (vec3 argument)
+</li><li><a href="#mat3-transform-method">transform</a> - transform a 4D vector
+</li></ul><li>read-only properties
+<ul><li>[int] size - returns 9 - the number of components in this vector
+</li><li>[quat] quat - returns the quaternion version of this matrix
+</li><li>[mat4] mat4 - returns a 4x4 version of this matrix, expanded with identity matrix data
+</li></ul><li>read/write properties
+<ul><li>[real] m[0-2][0-2]
+</li></ul><li>overloaded operators
+<ul><li>comparison between subvalues: column-major subvalue order
+</li></ul><li>other features:
+<ul><li>cloning support
+</li><li>serialization support
+</li><li>GC-safe
+</li><li>indexing support for indices 0 - 8: returns/sets the specified subvalue
+</li><li>tostring = &quot;mat3&quot;
+</li><li>dump:</li></ul></li></ul><pre>mat3
+(
+	&lt;m00&gt; &lt;m10&gt; &lt;m20&gt;
+	&lt;m01&gt; &lt;m11&gt; &lt;m21&gt;
+	&lt;m02&gt; &lt;m12&gt; &lt;m22&gt;
+)</pre></div>
+<div class='item'><a name='mat3-identity-method'></a><hr><h2>mat3.identity [method]</h2><h3>mat3.identity()</h3><h4>set the matrix to identity</h4></div>
+<div class='item'><a name='mat3-multiply-method'></a><hr><h2>mat3.multiply [method]</h2><h3>mat3.multiply( mat3 m )</h3><h4>multiply this matrix and another matrix, putting the other matrix on the right side of multiplication</h4></div>
+<div class='item'><a name='mat3-multiply-left-method'></a><hr><h2>mat3.multiply_left [method]</h2><h3>mat3.multiply_left( mat3 m )</h3><h4>multiply this matrix and another matrix, putting the other matrix on the left side of multiplication</h4></div>
+<div class='item'><a name='mat3-multiply2-method'></a><hr><h2>mat3.multiply2 [method]</h2><h3>mat3.multiply2( mat3 m1, mat3 m2 )</h3><h4>multiply two matrices into this matrix</h4></div>
+<div class='item'><a name='mat3-transpose-method'></a><hr><h2>mat3.transpose [method]</h2><h3>mat3.transpose()</h3><h4>transpose this matrix into itself</h4></div>
+<div class='item'><a name='mat3-transpose-from-method'></a><hr><h2>mat3.transpose_from [method]</h2><h3>mat3.transpose_from( mat3 m )</h3><h4>transpose another matrix into this matrix</h4></div>
+<div class='item'><a name='mat3-invert-method'></a><hr><h2>mat3.invert [method]</h2><h3>mat3.invert()</h3><h4>invert this matrix into itself, return if successful</h4></div>
+<div class='item'><a name='mat3-invert-from-method'></a><hr><h2>mat3.invert_from [method]</h2><h3>mat3.invert_from( mat3 m )</h3><h4>invert another matrix into this matrix</h4></div>
+<div class='item'><a name='mat3-rotateX-method'></a><hr><h2>mat3.rotateX [method]</h2><h3>mat3.rotateX( real a[, bool reset ])</h3><h4>generate a rotation matrix (rotation around X axis) and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat3-rotateY-method'></a><hr><h2>mat3.rotateY [method]</h2><h3>mat3.rotateY( real a[, bool reset ])</h3><h4>generate a rotation matrix (rotation around Y axis) and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat3-rotateZ-method'></a><hr><h2>mat3.rotateZ [method]</h2><h3>mat3.rotateZ( real a[, bool reset ])</h3><h4>generate a rotation matrix (rotation around Z axis) and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat3-rotate-axis-angle-method'></a><hr><h2>mat3.rotate_axis_angle [method]</h2><h3>mat3.rotate_axis_angle( real x, real y, real z, real a[, bool reset ])</h3><h4>generate a rotation matrix (rotation around specified axis) and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat3-rotate-axis-angle-v3-method'></a><hr><h2>mat3.rotate_axis_angle_v3 [method]</h2><h3>mat3.rotate_axis_angle( vec3 v, real a[, bool reset ])</h3><h4>generate a rotation matrix (rotation around specified axis) and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat3-scale-method'></a><hr><h2>mat3.scale [method]</h2><h3>mat3.scale( real x, real y, real z[, bool reset ])</h3><h4>generate a scale matrix and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat3-scale-v3-method'></a><hr><h2>mat3.scale_v3 [method]</h2><h3>mat3.scale_v3( vec3 v[, bool reset ])</h3><h4>generate a scale matrix and multiply or set it to this matrix</h4><ul><li>if <code>reset</code> is true, the generated matrix is directly set to this matrix
+<ul><li>otherwise, generated matrix is right-multiplied to this matrix
+</li><li>if current matrix is an identity matrix, <code>reset</code> has no effect</li></ul></li></ul></div>
+<div class='item'><a name='mat3-transform-method'></a><hr><h2>mat3.transform [method]</h2><h3>mat3.transform( vec3 v )</h3><h4>multiply a 3D vector by this matrix</h4></div>
+<div class='item'><a name='mat3-function'></a><hr><h2>mat3 [function]</h2><h3>mat3( mat3 m )</h3><h4>copy the matrix</h4><h3>mat3( vec3 row1, vec3 row2, vec3 row3 )</h3><h4>create a matrix from 3 rows</h4><h3>mat3( real v[9] )</h3><h4>create a matrix from 9 real values</h4></div>
 <div class='item'><a name='mat4-object'></a><hr><h2>mat4 [object]</h2><p>
-A column-major matrix
+A 4x4 column-major matrix
 </p><ul><li>methods
 <ul><li><a href="#mat4-identity-method">identity</a> - set matrix to identity
 </li><li><a href="#mat4-multiply-method">multiply</a> - multiply this matrix with another one
@@ -246,6 +369,8 @@ A column-major matrix
 </li><li><a href="#mat4-transform-normal-method">transform_normal</a> - transform a 3D normal vector
 </li></ul><li>read-only properties
 <ul><li>[int] size - returns 16 - the number of components in this vector
+</li><li>[quat] quat - returns the quaternion version of the 3x3 part of this matrix
+</li><li>[mat3] mat3 - returns the 3x3 part of this matrix
 </li></ul><li>read/write properties
 <ul><li>[real] m[0-3][0-3]
 </li></ul><li>overloaded operators
@@ -388,7 +513,9 @@ A column-major matrix
 </li><li><a href="#aabb3-object">aabb3 [object]</a>
 </li><li><a href="#color-object">color [object]</a>
 </li><li><a href="#floatarray-object">floatarray [object]</a>
+</li><li><a href="#mat3-object">mat3 [object]</a>
 </li><li><a href="#mat4-object">mat4 [object]</a>
+</li><li><a href="#quat-object">quat [object]</a>
 </li><li><a href="#vec2-object">vec2 [object]</a>
 </li><li><a href="#vec3-object">vec3 [object]</a>
 </li><li><a href="#vec4-object">vec4 [object]</a></li></ul></div>
@@ -408,7 +535,9 @@ A column-major matrix
 </li><li><a href="#floatarray-function">floatarray [function]</a>
 </li><li><a href="#floatarray-buffer-function">floatarray_buffer [function]</a>
 </li><li><a href="#floatarray-from-buffer-function">floatarray_from_*_buffer [function]</a>
+</li><li><a href="#mat3-function">mat3 [function]</a>
 </li><li><a href="#mat4-function">mat4 [function]</a>
+</li><li><a href="#quat-function">quat [function]</a>
 </li><li><a href="#ray-plane-intersect-function">ray_plane_intersect [function]</a>
 </li><li><a href="#ray-sphere-intersect-function">ray_sphere_intersect [function]</a>
 </li><li><a href="#vec2-function">vec2 [function]</a>

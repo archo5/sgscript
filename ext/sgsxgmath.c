@@ -1776,7 +1776,7 @@ static int xgm_qti_invert( SGS_CTX )
 {
 	XGM_QUAT_IHDR( invert );
 	QUAT_Conj( *Q, *Q );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int xgm_qti_invert_from( SGS_CTX )
@@ -1788,7 +1788,7 @@ static int xgm_qti_invert_from( SGS_CTX )
 		return 0;
 	
 	QUAT_Conj( *Q, Q2 );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 
