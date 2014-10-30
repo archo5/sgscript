@@ -140,6 +140,19 @@ testClose( mat3().rotateZ( 1 ), mat4().rotateZ( 1 ).mat3, "mat3:r-z vs mat4:r-z=
 testClose( mat4().rotateZ( 1 ), mat3().rotateZ( 1 ).mat4, "mat4:r-z vs mat3:r-z=>mat4" );
 testClose( quat().rotateZ( 1 ), mat3().rotateZ( 1 ).quat, "quat:r-z vs mat3:r-z=>quat" );
 testClose( mat3().rotateZ( 1 ), quat().rotateZ( 1 ).mat3, "mat3:r-z vs quat:r-z=>mat3" );
+for( i = 0; i < 4; ++i )
+{
+	a = i * M_PI * 0.5 + 0.1;
+	testClose( mat3().rotateX(a).transform(vec3(0,1,2)),
+		quat().rotateX(a).transform(vec3(0,1,2)),
+		"mat3:r-x:xform vs quat:r-x:xform [angle="$toint(rad2deg(a))$"]");
+	testClose( mat3().rotateY(a).transform(vec3(2,0,1)),
+		quat().rotateY(a).transform(vec3(2,0,1)),
+		"mat3:r-y:xform vs quat:r-y:xform [angle="$toint(rad2deg(a))$"]");
+	testClose( mat3().rotateZ(a).transform(vec3(1,2,0)),
+		quat().rotateZ(a).transform(vec3(1,2,0)),
+		"mat3:r-z:xform vs quat:r-z:xform [angle="$toint(rad2deg(a))$"]");
+}
 
 
 //

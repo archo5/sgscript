@@ -1362,13 +1362,14 @@ static void QUAT_Mul( QUAT r, QUAT q1, QUAT q2 )
 
 static void QUAT_Transform( VEC3 r, QUAT q, VEC3 v )
 {
-	QUAT q_;
+	QUAT q_, qin;
 	QUAT v_ = { v[0], v[1], v[2], 0.0f };
-
-	QUAT_Conj( q_, q );
+	
+	QUAT_Conj( qin, q );
+	QUAT_Conj( q_, qin );
 	QUAT_Norm( q_, q_ );
 	QUAT_Mul( q_, v_, q_ );
-	QUAT_Mul( q_, q, q_ );
+	QUAT_Mul( q_, qin, q_ );
 	memcpy( r, q_, sizeof(VEC3) );
 }
 
@@ -1891,10 +1892,10 @@ static int xgm_qti_transform( SGS_CTX )
 {
 	VEC3 v3;
 	XGM_QUAT_IHDR( transform );
-	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Quat, v3 ) )
+	if( !sgs_LoadArgs( C, "x", sgs_ArgCheck_Vec3, v3 ) )
 		return 0;
 	
-	QUAT_Transform( v3, v3, *Q );
+	QUAT_Transform( v3, *Q, v3 );
 	sgs_PushVec3p( C, v3 );
 	return 1;
 }
