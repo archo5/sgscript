@@ -3434,6 +3434,7 @@ XGM_FLA_UNOPMETHOD( negate, R = -A );
 #define XGM_FLA_BINOPMETHOD( opname, opcode ) \
 static int xgm_fla_##opname( SGS_CTX ) \
 { \
+	sgs_Real rl; \
 	XGM_VT v4f1[ 4 ] = {0}; \
 	XGM_VT* vfa1 = v4f1; \
 	sgs_SizeVal i, sz, unit1 = 1, stride1 = 0; \
@@ -3442,15 +3443,16 @@ static int xgm_fla_##opname( SGS_CTX ) \
 	 \
 	XGM_FLA_IHDR( opname ) \
 	 \
-	if( sgs_ParseVec2( C, 0, vfa1, 0 ) ) unit1 = 2; \
-	else if( sgs_ParseVec3( C, 0, vfa1, 0 ) ) unit1 = 3; \
-	else if( sgs_ParseVec4( C, 0, vfa1, 0 ) ) unit1 = 4; \
+	if( sgs_ParseVec2( C, 0, vfa1, 1 ) ) unit1 = 2; \
+	else if( sgs_ParseVec3( C, 0, vfa1, 1 ) ) unit1 = 3; \
+	else if( sgs_ParseVec4( C, 0, vfa1, 1 ) ) unit1 = 4; \
 	else if( sgs_ParseFloatArray( C, 0, &vfa1, &sz ) ) \
 	{ \
 		if( sz != flarr->size ) \
 			return XGM_WARNING( "array sizes don't match" ); \
 		stride1 = 1; \
 	} \
+	else if( sgs_ParseReal( C, 0, &rl ) ){ vfa1[0] = (XGM_VT) rl; unit1 = 1; } \
 	else return XGM_WARNING( "expected real, vec[2|3|4] or floatarray" ); \
 	 \
 	for( i = 0; i < flarr->size; ++i ) \
@@ -3473,6 +3475,7 @@ XGM_FLA_BINOPMETHOD( pow_assign, R = (XGM_VT) pow( A, B ) );
 #define XGM_FLA_TEROPMETHOD( opname, opcode ) \
 static int xgm_fla_##opname( SGS_CTX ) \
 { \
+	sgs_Real rl; \
 	XGM_VT v4f1[ 4 ] = {0}, v4f2[ 4 ] = {0}; \
 	XGM_VT* vfa1 = v4f1, *vfa2 = v4f2; \
 	sgs_SizeVal i, sz, unit1 = 1, unit2 = 1, stride1 = 0, stride2 = 0; \
@@ -3481,26 +3484,28 @@ static int xgm_fla_##opname( SGS_CTX ) \
 	 \
 	XGM_FLA_IHDR( opname ) \
 	 \
-	if( sgs_ParseVec2( C, 0, vfa1, 0 ) ) unit1 = 2; \
-	else if( sgs_ParseVec3( C, 0, vfa1, 0 ) ) unit1 = 3; \
-	else if( sgs_ParseVec4( C, 0, vfa1, 0 ) ) unit1 = 4; \
+	if( sgs_ParseVec2( C, 0, vfa1, 1 ) ) unit1 = 2; \
+	else if( sgs_ParseVec3( C, 0, vfa1, 1 ) ) unit1 = 3; \
+	else if( sgs_ParseVec4( C, 0, vfa1, 1 ) ) unit1 = 4; \
 	else if( sgs_ParseFloatArray( C, 0, &vfa1, &sz ) ) \
 	{ \
 		if( sz != flarr->size ) \
 			return XGM_WARNING( "array sizes (this : argument 1) don't match" ); \
 		stride1 = 1; \
 	} \
+	else if( sgs_ParseReal( C, 0, &rl ) ){ vfa1[0] = (XGM_VT) rl; unit1 = 1; } \
 	else return XGM_WARNING( "expected real, vec[2|3|4] or floatarray as argument 1" ); \
 	 \
-	if( sgs_ParseVec2( C, 1, vfa2, 0 ) ) unit2 = 2; \
-	else if( sgs_ParseVec3( C, 1, vfa2, 0 ) ) unit2 = 3; \
-	else if( sgs_ParseVec4( C, 1, vfa2, 0 ) ) unit2 = 4; \
+	if( sgs_ParseVec2( C, 1, vfa2, 1 ) ) unit2 = 2; \
+	else if( sgs_ParseVec3( C, 1, vfa2, 1 ) ) unit2 = 3; \
+	else if( sgs_ParseVec4( C, 1, vfa2, 1 ) ) unit2 = 4; \
 	else if( sgs_ParseFloatArray( C, 1, &vfa2, &sz ) ) \
 	{ \
 		if( sz != flarr->size ) \
 			return XGM_WARNING( "array sizes (this : argument 2) don't match" ); \
 		stride2 = 1; \
 	} \
+	else if( sgs_ParseReal( C, 1, &rl ) ){ vfa2[0] = (XGM_VT) rl; unit2 = 1; } \
 	else return XGM_WARNING( "expected real, vec[2|3|4] or floatarray as argument 2" ); \
 	 \
 	for( i = 0; i < flarr->size; ++i ) \
