@@ -379,9 +379,52 @@ public:
 		return *this;
 	}
 	
-	bool operator < ( const sgsVariable& h ) const { return var.type < h.var.type || var.data.I < h.var.data.I; }
-	bool operator == ( const sgsVariable& h ) const { return var.type == h.var.type && var.data.I == h.var.data.I; }
-	bool operator != ( const sgsVariable& h ) const { return var.type != h.var.type || var.data.I != h.var.data.I; }
+	bool operator < ( const sgsVariable& h ) const
+	{
+		if( var.type != h.var.type )
+			return var.type < h.var.type;
+		switch( var.type )
+		{
+		case SGS_VT_BOOL: return var.data.B < h.var.data.B;
+		case SGS_VT_INT: return var.data.I < h.var.data.I;
+		case SGS_VT_REAL: return var.data.R < h.var.data.R;
+		case SGS_VT_STRING: { uint32_t minsize =
+			var.data.S->size < h.var.data.S->size ? var.data.S->size : h.var.data.S->size;
+			int diff = memcmp( sgs_var_cstr( &var ), sgs_var_cstr( &h.var ), minsize );
+			if( diff ) return diff;
+			return var.data.S->size < h.var.data.S->size; }
+		case SGS_VT_FUNC: return var.data.F < h.var.data.F;
+		case SGS_VT_CFUNC: return var.data.C < h.var.data.C;
+		case SGS_VT_OBJECT: return var.data.O < h.var.data.O;
+		case SGS_VT_PTR: return var.data.P < h.var.data.P;
+		}
+		return false;
+	}
+	bool operator == ( const sgsVariable& h ) const
+	{
+		if( var.type != h.var.type )
+			return false;
+		switch( var.type )
+		{
+		case SGS_VT_BOOL: return var.data.B == h.var.data.B;
+		case SGS_VT_INT: return var.data.I == h.var.data.I;
+		case SGS_VT_REAL: return var.data.R == h.var.data.R;
+		case SGS_VT_STRING:
+	#if SGS_STRINGTABLE_MAXLEN >= 0x7fffffff
+			return var.data.S == h.var.data.S;
+	#else
+			if( var.data.S == h.var.data.S ) return true;
+			return var.data.S->size == h.var.data.S->size &&
+				memcmp( sgs_var_cstr( &var ), sgs_var_cstr( &h.var ), var.data.S->size ) == 0;
+	#endif
+		case SGS_VT_FUNC: return var.data.F == h.var.data.F;
+		case SGS_VT_CFUNC: return var.data.C == h.var.data.C;
+		case SGS_VT_OBJECT: return var.data.O == h.var.data.O;
+		case SGS_VT_PTR: return var.data.P == h.var.data.P;
+		}
+		return true;
+	}
+	bool operator != ( const sgsVariable& h ) const { return !( *this == h ); }
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); } sgs_PushVariable( c, const_cast<sgs_Variable*>( &var ) ); }
 	SGSRESULT gcmark() { if( !C ) return SGS_SUCCESS; return sgs_GCMark( C, &var ); }

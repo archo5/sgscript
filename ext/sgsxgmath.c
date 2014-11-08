@@ -4554,7 +4554,7 @@ SGSBOOL sgs_ParseVec3P( SGS_CTX, sgs_Variable* var, XGM_VT* v3f, int strict )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
 		XGM_COPY2( v3f, hdr );
-		hdr[2] = 0;
+		v3f[2] = 0;
 		return 1;
 	}
 	if( sgs_IsObjectP( var, xgm_vec3_iface ) ||
@@ -4582,15 +4582,15 @@ SGSBOOL sgs_ParseVec4P( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
 		XGM_COPY2( v4f, hdr );
-		hdr[2] = 0;
-		hdr[3] = 0;
+		v4f[2] = 0;
+		v4f[3] = 0;
 		return 1;
 	}
 	if( !strict && sgs_IsObjectP( var, xgm_vec3_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( var );
 		XGM_COPY3( v4f, hdr );
-		hdr[3] = 0;
+		v4f[3] = 0;
 		return 1;
 	}
 	if( sgs_IsObjectP( var, xgm_vec4_iface ) ||

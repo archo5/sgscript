@@ -250,7 +250,7 @@ static void var_create_0str( SGS_CTX, sgs_VarPtr out, uint32_t len )
 	out->data.S->refcount = 1;
 	out->data.S->size = len;
 	out->data.S->hash = 0;
-	sgs_var_cstr( out )[ len ] = 0;
+	memset( sgs_var_cstr( out ), 0, len + 1 );
 }
 
 void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len )

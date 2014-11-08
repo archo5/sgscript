@@ -21,6 +21,8 @@ int main( int argc, char** argv )
 	
 	SGS_CTX = sgs_CreateEngine();
 	
+	printf( "\n compare two null variables (use memcheck to verify): %s\n", sgsVariable() == sgsVariable() ? "true" : "false" );
+	
 	printf( "\n> push Vec3(1,2,3)" );
 	pushVec3( C, 1, 2, 3 );
 	
