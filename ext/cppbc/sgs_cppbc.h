@@ -92,6 +92,14 @@ public:
 	void set( const T& val ){ data = val; isset = true; }
 	void unset(){ isset = false; }
 	
+	bool operator == ( const sgsMaybe<T>& o ) const
+	{
+		if( isset != o.isset ) return false;
+		else if( !isset ) return true;
+		else return data == o.data;
+	}
+	bool operator != ( const sgsMaybe<T>& o ) const { return !( *this == o ); }
+	
 	T data;
 	bool isset;
 };
