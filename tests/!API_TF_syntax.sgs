@@ -52,6 +52,25 @@ testEqual( eval( "return str2ias('\\x00000');" ), "[0,0,48]", "hex - 5 chars - v
 testEqual( eval( "return str2ias('\\a\\b\\f\\n\\r\\t\\v\\\\\\'\\\"');" ),
 	"[7,8,12,10,13,9,11,92,39,34]", "escaped characters" );
 
+	section( "object literals" );
+test = eval( "return [" $ string_repeat("0,",15) $ "];" );
+testEqual( typeof(test), "array", "array literal with 15 items" );
+testEqual( test[0], 0, ".. first item" );
+testEqual( test[15-1], 0, ".. last item" );
+test = eval( "return [" $ string_repeat("0,",256) $ "];" );
+testEqual( typeof(test), "array", "array literal with 256 items" );
+testEqual( test[0], 0, ".. first item" );
+testEqual( test[256-1], 0, ".. last item" );
+test = eval( "return [" $ string_repeat("0,",1000) $ "];" );
+testEqual( typeof(test), "array", "array literal with 1000 items" );
+testEqual( test[0], 0, ".. first item" );
+testEqual( test[1000-1], 0, ".. last item" );
+printvar(ERRORS);
+test = eval( "return [" $ string_repeat("0,",50000) $ "];" );
+testEqual( typeof(test), "array", "array literal with 50000 items" );
+testEqual( test[0], 0, ".. first item" );
+testEqual( test[50000-1], 0, ".. last item" );
+
 	section( "keywords" );
 keywords = ["var","global","null","true","false","if","else","do","while",
 	"for","foreach","break","continue","function","use","return","this"];

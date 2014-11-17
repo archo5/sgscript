@@ -330,7 +330,7 @@ typedef enum sgs_Instruction_e
 	SGS_SI_RAWCMP,
 
 	/* specials */
-	SGS_SI_ARRAY,    /* (A:out, B:args) */
+	SGS_SI_ARRAY,    /* (C:out, E:args) */
 	SGS_SI_DICT,     /* -- || -- */
 
 	SGS_SI_COUNT

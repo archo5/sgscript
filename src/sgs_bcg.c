@@ -264,11 +264,11 @@ static void dump_opcode( const sgs_instr_t* ptr, size_t count )
 #undef DOP_B
 
 		case SGS_SI_ARRAY:
-			printf( "ARRAY args:%d output:", argB );
-			dump_rcpos( argA ); break;
+			printf( "ARRAY args:%d output:", argE );
+			dump_rcpos( argC ); break;
 		case SGS_SI_DICT:
-			printf( "DICT args:%d output:", argB );
-			dump_rcpos( argA ); break;
+			printf( "DICT args:%d output:", argE );
+			dump_rcpos( argC ); break;
 
 		default:
 			printf( "<error> \t\t(op=%d A=%d B=%d C=%d E=%d)",
@@ -431,69 +431,71 @@ static int preparse_gvlist( SGS_FNTCMP_ARGS )
 static int preparse_varlists( SGS_FNTCMP_ARGS )
 {
 	int ret = 1;
-	if( node->type == SGS_SFT_VARLIST )
-		ret &= preparse_varlist( C, func, node );
-	else if( node->type == SGS_SFT_GVLIST )
-		ret &= preparse_gvlist( C, func, node );
-	else if( node->type == SGS_SFT_KEYWORD && node->token && sgsT_IsKeyword( node->token, "this" ) )
+	while( node )
 	{
-		func->gotthis = SGS_TRUE;
-		if( preadd_thisvar( &C->fctx->vars, C ) )
-			comp_reg_alloc( C );
-	}
-	else if( node->type == SGS_SFT_OPER )
-	{
-		if( SGS_ST_OP_ASSIGN( *node->token ) && node->child )
+		if( node->type == SGS_SFT_VARLIST )
+			ret &= preparse_varlist( C, func, node );
+		else if( node->type == SGS_SFT_GVLIST )
+			ret &= preparse_gvlist( C, func, node );
+		else if( node->type == SGS_SFT_KEYWORD && node->token && sgsT_IsKeyword( node->token, "this" ) )
 		{
-			if( node->child->type == SGS_SFT_IDENT )
+			func->gotthis = SGS_TRUE;
+			if( preadd_thisvar( &C->fctx->vars, C ) )
+				comp_reg_alloc( C );
+		}
+		else if( node->type == SGS_SFT_OPER )
+		{
+			if( SGS_ST_OP_ASSIGN( *node->token ) && node->child )
 			{
-				/* add_var calls find_var internally but - GVARS vs VARS - note the difference */
-				if( find_varT( &C->fctx->gvars, node->child->token ) == -1 &&
-					find_varT( &C->fctx->clsr, node->child->token ) == -1 &&
+				if( node->child->type == SGS_SFT_IDENT )
+				{
+					/* add_var calls find_var internally but - GVARS vs VARS - note the difference */
+					if( find_varT( &C->fctx->gvars, node->child->token ) == -1 &&
+						find_varT( &C->fctx->clsr, node->child->token ) == -1 &&
+						add_varT( &C->fctx->vars, C, node->child->token ) )
+						comp_reg_alloc( C );
+				}
+				if( node->child->type == SGS_SFT_EXPLIST )
+					ret &= preparse_varlist( C, func, node->child );
+			}
+			ret &= preparse_varlists( C, func, node->child );
+		}
+		else if( node->type == SGS_SFT_FOREACH )
+		{
+			if( find_varT( &C->fctx->gvars, node->token ) >= 0 )
+			{
+				QPRINT( "Variable storage redefined (foreach key variable cannot be global): global -> local" );
+				ret = SGS_FALSE;
+			}
+			else
+			{
+				if( node->child->type != SGS_SFT_NULL && 
 					add_varT( &C->fctx->vars, C, node->child->token ) )
 					comp_reg_alloc( C );
+				if( node->child->next->type != SGS_SFT_NULL && 
+					add_varT( &C->fctx->vars, C, node->child->next->token ) )
+					comp_reg_alloc( C );
 			}
-			if( node->child->type == SGS_SFT_EXPLIST )
-				ret &= preparse_varlist( C, func, node->child );
-		}
-		ret &= preparse_varlists( C, func, node->child );
-	}
-	else if( node->type == SGS_SFT_FOREACH )
-	{
-		if( find_varT( &C->fctx->gvars, node->token ) >= 0 )
-		{
-			QPRINT( "Variable storage redefined (foreach key variable cannot be global): global -> local" );
-			ret = SGS_FALSE;
-		}
-		else
-		{
-			if( node->child->type != SGS_SFT_NULL && 
-				add_varT( &C->fctx->vars, C, node->child->token ) )
-				comp_reg_alloc( C );
-			if( node->child->next->type != SGS_SFT_NULL && 
-				add_varT( &C->fctx->vars, C, node->child->next->token ) )
-				comp_reg_alloc( C );
-		}
 
-		ret &= preparse_varlists( C, func, node->child->next );
-	}
-	else if( node->type == SGS_SFT_FUNC )
-	{
-		sgs_FTNode* N = node->child->next->next->next;
-		if( N && N->type == SGS_SFT_IDENT )
-		{
-			if( find_varT( &C->fctx->gvars, N->token ) == -1 && /* if the variable hasn't been .. */
-				find_varT( &C->fctx->clsr, N->token ) == -1 && /* .. created before */
-				/* if it was successfully added */
-				add_varT( C->fctx->func ? &C->fctx->vars : &C->fctx->gvars, C, N->token ) &&
-				C->fctx->func ) /* and if it was added as a local variable */
-				comp_reg_alloc( C ); /* add a register for it */
+			ret &= preparse_varlists( C, func, node->child->next );
 		}
+		else if( node->type == SGS_SFT_FUNC )
+		{
+			sgs_FTNode* N = node->child->next->next->next;
+			if( N && N->type == SGS_SFT_IDENT )
+			{
+				if( find_varT( &C->fctx->gvars, N->token ) == -1 && /* if the variable hasn't been .. */
+					find_varT( &C->fctx->clsr, N->token ) == -1 && /* .. created before */
+					/* if it was successfully added */
+					add_varT( C->fctx->func ? &C->fctx->vars : &C->fctx->gvars, C, N->token ) &&
+					C->fctx->func ) /* and if it was added as a local variable */
+					comp_reg_alloc( C ); /* add a register for it */
+			}
+		}
+		else if( node->child )
+			ret &= preparse_varlists( C, func, node->child );
+		node = node->next;
 	}
-	else if( node->child )
-		ret &= preparse_varlists( C, func, node->child );
-	if( node->next )
-		ret &= preparse_varlists( C, func, node->next );
 	return ret;
 }
 
@@ -523,12 +525,14 @@ static int preparse_closures( SGS_FNTCMP_ARGS, int decl )
 static int preparse_clsrlists( SGS_FNTCMP_ARGS )
 {
 	int ret = 1;
-	if( node->type == SGS_SFT_FUNC )
-		ret &= preparse_closures( C, func, node->child->next, 0 );
-	else if( node->child )
-		ret &= preparse_clsrlists( C, func, node->child );
-	if( node->next )
-		ret &= preparse_clsrlists( C, func, node->next );
+	while( node )
+	{
+		if( node->type == SGS_SFT_FUNC )
+			ret &= preparse_closures( C, func, node->child->next, 0 );
+		else if( node->child )
+			ret &= preparse_clsrlists( C, func, node->child );
+		node = node->next;
+	}
 	return ret;
 }
 
@@ -1230,7 +1234,6 @@ static SGSBOOL try_optimize_last_instr_out( SGS_FNTCMP_ARGS, size_t ioff, rcpos_
 		case SGS_SI_AND: case SGS_SI_OR: case SGS_SI_XOR: case SGS_SI_LSH: case SGS_SI_RSH:
 		case SGS_SI_SEQ: case SGS_SI_EQ: case SGS_SI_LT: case SGS_SI_LTE:
 		case SGS_SI_SNEQ: case SGS_SI_NEQ: case SGS_SI_GT: case SGS_SI_GTE: case SGS_SI_RAWCMP:
-		case SGS_SI_ARRAY: case SGS_SI_DICT:
 			{
 				char* dummy0 = NULL;
 				unsigned dummy1 = 0;
@@ -1241,6 +1244,19 @@ static SGSBOOL try_optimize_last_instr_out( SGS_FNTCMP_ARGS, size_t ioff, rcpos_
 			memcpy( func->code.ptr + ioff, &I, sizeof(I) );
 			if( out )
 				*out = pos;
+			break;
+		case SGS_SI_ARRAY: case SGS_SI_DICT:
+			{
+				int argE = SGS_INSTR_GET_E( I );
+				char* dummy0 = NULL;
+				unsigned dummy1 = 0;
+				if( find_nth_var( &C->fctx->vars, SGS_INSTR_GET_A( I ), &dummy0, &dummy1 ) )
+					goto cannot;
+				I = SGS_INSTR_MAKE_EX( op, argE, pos );
+				memcpy( func->code.ptr + ioff, &I, sizeof(I) );
+				if( out )
+					*out = pos;
+			}
 			break;
 		default:
 			goto cannot;
@@ -1279,7 +1295,6 @@ static SGSBOOL try_optimize_set_op( SGS_CTX, sgs_CompFunc* func, size_t ioff, rc
 		case SGS_SI_AND: case SGS_SI_OR: case SGS_SI_XOR: case SGS_SI_LSH: case SGS_SI_RSH:
 		case SGS_SI_SEQ: case SGS_SI_EQ: case SGS_SI_LT: case SGS_SI_LTE:
 		case SGS_SI_SNEQ: case SGS_SI_NEQ: case SGS_SI_GT: case SGS_SI_GTE: case SGS_SI_RAWCMP:
-		case SGS_SI_ARRAY: case SGS_SI_DICT:
 			{
 				char* dummy0 = NULL;
 				unsigned dummy1 = 0;
@@ -1288,6 +1303,17 @@ static SGSBOOL try_optimize_set_op( SGS_CTX, sgs_CompFunc* func, size_t ioff, rc
 			}
 			I = SGS_INSTR_MAKE( op, ireg, argB, argC );
 			memcpy( func->code.ptr + ioff, &I, sizeof(I) );
+			break;
+		case SGS_SI_ARRAY: case SGS_SI_DICT:
+			{
+				int argE = SGS_INSTR_GET_E( I );
+				char* dummy0 = NULL;
+				unsigned dummy1 = 0;
+				if( find_nth_var( &C->fctx->vars, SGS_INSTR_GET_C( I ), &dummy0, &dummy1 ) )
+					goto cannot;
+				I = SGS_INSTR_MAKE_EX( op, argE, ireg );
+				memcpy( func->code.ptr + ioff, &I, sizeof(I) );
+			}
 			break;
 		default:
 			goto cannot;
@@ -2047,7 +2073,7 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 				n = n->next;
 			}
 			pos = comp_reg_alloc( C );
-			INSTR_WRITE( SGS_SI_ARRAY, pos, args, 0 );
+			INSTR_WRITE_EX( SGS_SI_ARRAY, args, pos );
 			*out = pos;
 		}
 		break;
@@ -2084,7 +2110,7 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 				n = n->next;
 			}
 			pos = comp_reg_alloc( C );
-			INSTR_WRITE( SGS_SI_DICT, pos, args, 0 );
+			INSTR_WRITE_EX( SGS_SI_DICT, args, pos );
 			*out = pos;
 		}
 		break;

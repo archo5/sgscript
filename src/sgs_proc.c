@@ -2824,8 +2824,8 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, sgs_rcpos_t constcount )
 		case SGS_SI_LTE: { ARGS_3; VCOMPARE( <= ); break; }
 		case SGS_SI_RAWCMP: { ARGS_3; var_setint( C, C->stack_off + a1, vm_compare( C, p2, p3 ) ); break; }
 
-		case SGS_SI_ARRAY: { vm_make_array( C, argB, argA ); break; }
-		case SGS_SI_DICT: { vm_make_dict( C, argB, argA ); break; }
+		case SGS_SI_ARRAY: { vm_make_array( C, argE, argC ); break; }
+		case SGS_SI_DICT: { vm_make_dict( C, argE, argC ); break; }
 #undef VCOMPARE
 #undef STRICTLY_EQUAL
 #undef ARGS_2
