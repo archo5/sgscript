@@ -3788,7 +3788,6 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 		if( SGS_SUCCEEDED( ret ) )
 		{
 			*out = tmp;
-			sgs_Acquire( C, out );
 		}
 		return ret;
 	}
