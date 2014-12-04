@@ -57,7 +57,7 @@ else
 		cARCH=arm
 	endif
 endif
-CC_V := $(shell $(CC) -v 2>&1)
+CC_V := $(shell $(CC) 2>&1)
 ifneq ($(findstring clang,$(CC_V)),)
 	cCOMPILER=clang
 endif
