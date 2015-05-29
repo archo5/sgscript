@@ -34,6 +34,8 @@ static void ctx_init( SGS_CTX )
 	C->last_errno = 0;
 	C->hook_fn = NULL;
 	C->hook_ctx = NULL;
+	C->sfs_fn = sgs_StdScriptFSFunc;
+	C->sfs_ctx = NULL;
 	
 	C->state = 0;
 	C->fctx = NULL;
@@ -391,7 +393,7 @@ void sgs_WriteErrorInfo( SGS_CTX, int flags, sgs_ErrorOutputFunc func, void* ctx
 	if( flags & SGS_ERRORINFO_STACK )
 	{
 		sgs_StackFrame* p = sgs_GetFramePtr( C, SGS_FALSE );
-		UNUSED( ctx );
+		SGS_UNUSED( ctx );
 		while( p != NULL )
 		{
 			const char* file, *name;
@@ -457,6 +459,24 @@ void sgs_SetHookFunc( SGS_CTX, sgs_HookFunc func, void* ctx )
 {
 	C->hook_fn = func;
 	C->hook_ctx = ctx;
+}
+
+
+SGSBOOL sgs_GetScriptFSFunc( SGS_CTX, sgs_ScriptFSFunc* outf, void** outc )
+{
+	if( C->sfs_fn )
+	{
+		*outf = C->sfs_fn;
+		*outc = C->sfs_ctx;
+		return 1;
+	}
+	return 0;
+}
+
+void sgs_SetScriptFSFunc( SGS_CTX, sgs_ScriptFSFunc func, void* ctx )
+{
+	C->sfs_fn = func;
+	C->sfs_ctx = ctx;
 }
 
 
@@ -606,38 +626,32 @@ SGSRESULT sgs_EvalBuffer( SGS_CTX, const char* buf, size_t size, int* rvc )
 SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 {
 	int ret;
-	long len;
 	size_t ulen;
-	FILE* f;
 	char* data;
 	const char* ofn;
 	unsigned char magic[4];
+	sgs_ScriptFSData fsd = {0};
 	DBGINFO( "sgs_EvalFile called!" );
 	
-	f = fopen( file, "rb" );
-	if( !f )
+	fsd.filename = file;
+	ret = C->sfs_fn( C->sfs_ctx, C, SGS_SFS_FILE_OPEN, &fsd );
+	if( SGS_FAILED( ret ) )
 	{
-		sgs_Errno( C, 0 );
-		return SGS_ENOTFND;
+		return ret == SGS_ENOTFND ? ret : SGS_EINPROC;
 	}
-	fseek( f, 0, SEEK_END );
-	len = ftell( f );
-	if( len < 0 )
-	{
-		sgs_Errno( C, 0 );
-		fclose( f );
-		return SGS_EINPROC;
-	}
-	fseek( f, 0, SEEK_SET );
+	ulen = fsd.size;
 	
-	if( len > 4 )
+	if( ulen > 4 )
 	{
-		if( fread( magic, 1, 4, f ) != 4 )
+		fsd.output = magic;
+		fsd.size = 4;
+		ret = C->sfs_fn( C->sfs_ctx, C, SGS_SFS_FILE_READ, &fsd );
+		if( SGS_FAILED( ret ) )
 		{
-			sgs_Errno( C, 0 );
-			fclose( f );
+			C->sfs_fn( C->sfs_ctx, C, SGS_SFS_FILE_CLOSE, &fsd );
 			return SGS_EINPROC;
 		}
+		
 		if( ( magic[0] == 0x7f && magic[1] == 'E' && magic[2] == 'L' && magic[3] == 'F' ) /* ELF binary */
 		 || ( magic[0] == 'M' && magic[1] == 'Z' ) /* DOS binary / DOS stub for PE binary */
 		 || ( magic[0] == 0xCA && magic[1] == 0xFE && magic[2] == 0xBA && magic[3] == 0xBE ) /* Mach-O binary 1 */
@@ -645,25 +659,21 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 		 || ( magic[0] == 0xCF && magic[1] == 0xFA && magic[2] == 0xED && magic[3] == 0xFE ) /* Mach-O binary 3 */
 		 )
 		{
-			sgs_Errno( C, 1 );
-			fclose( f );
+			C->sfs_fn( C->sfs_ctx, C, SGS_SFS_FILE_CLOSE, &fsd );
 			return SGS_EINVAL;
 		}
-		fseek( f, 0, SEEK_SET );
 	}
 	
-	/* WP: len is always in the range of size_t */
-	ulen = (size_t) len;
-	
 	data = sgs_Alloc_n( char, ulen );
-	if( fread( data, 1, ulen, f ) != ulen )
+	fsd.output = data;
+	fsd.size = ulen;
+	ret = C->sfs_fn( C->sfs_ctx, C, SGS_SFS_FILE_READ, &fsd );
+	C->sfs_fn( C->sfs_ctx, C, SGS_SFS_FILE_CLOSE, &fsd );
+	if( SGS_FAILED( ret ) )
 	{
-		sgs_Errno( C, 0 );
-		fclose( f );
 		sgs_Dealloc( data );
 		return SGS_EINPROC;
 	}
-	fclose( f );
 	
 	ofn = C->filename;
 	C->filename = file;
@@ -980,7 +990,7 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 	const char* N = "<non-callable type>";
 	const char* F = "<buffer>";
 
-	UNUSED( C );
+	SGS_UNUSED( C );
 	if( !frame->func )
 	{
 		N = "<main>";

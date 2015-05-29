@@ -28,7 +28,7 @@ static SGS_INLINE int detectline( const char* code, int32_t at )
 static void skipcomment( SGS_CTX, sgs_MemBuf* out, sgs_LineNum* line, const char* code, int32_t* at, int32_t length )
 {
 	int32_t i = *at + 1;
-	UNUSED( out );
+	SGS_UNUSED( out );
 	if( code[ i ] == '/' )
 	{
 		i++;

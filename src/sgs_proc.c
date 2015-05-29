@@ -221,7 +221,7 @@ static void var_destroy_func( SGS_CTX, sgs_iFunc* F )
 
 static void var_acquire( SGS_CTX, sgs_VarPtr p )
 {
-	UNUSED( C );
+	SGS_UNUSED( C );
 	if( IS_REFTYPE( p->type ) )
 		(*p->data.pRC)++;
 }
@@ -2388,7 +2388,7 @@ static void vm_make_array( SGS_CTX, int args, int outpos )
 	sgs_BreakIf( sgs_StackSize( C ) < args );
 	ret = sgsSTD_MakeArray( C, &arr, args );
 	sgs_BreakIf( ret != SGS_SUCCESS );
-	UNUSED( ret );
+	SGS_UNUSED( ret );
 	
 	stk_setvar_leave( C, outpos, &arr );
 }
@@ -2400,7 +2400,7 @@ static void vm_make_dict( SGS_CTX, int args, int outpos )
 	sgs_BreakIf( sgs_StackSize( C ) < args );
 	ret = sgsSTD_MakeDict( C, &arr, args );
 	sgs_BreakIf( ret != SGS_SUCCESS );
-	UNUSED( ret );
+	SGS_UNUSED( ret );
 	
 	stk_setvar_leave( C, outpos, &arr );
 }
@@ -2412,7 +2412,7 @@ static void vm_make_closure( SGS_CTX, int args, sgs_Variable* func, int16_t outp
 	/* WP: range not affected by conversion */
 	ret = sgsSTD_MakeClosure( C, func, (uint32_t) args );
 	sgs_BreakIf( ret != SGS_SUCCESS );
-	UNUSED( ret );
+	SGS_UNUSED( ret );
 	
 	stk_setvar_leave( C, outpos, stk_gettop( C ) );
 	stk_pop1nr( C );
@@ -2625,7 +2625,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, sgs_rcpos_t constcount )
 #else
 #  define RESVAR( v ) ( SGS_CONSTVAR(v) ? ( cptr + SGS_CONSTDEC(v) ) : stk_getlpos( C, (v) ) )
 #endif
-	UNUSED( constcount );
+	SGS_UNUSED( constcount );
 
 #if SGS_DEBUG && SGS_DEBUG_INSTR
 	{
@@ -2654,8 +2654,8 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, sgs_rcpos_t constcount )
 		sgsVM_StackDump( C );
 #  endif
 #endif
-		UNUSED( sgs_ErrNames );
-		UNUSED( sgs_OpNames );
+		SGS_UNUSED( sgs_ErrNames );
+		SGS_UNUSED( sgs_OpNames );
 
 		if( C->hook_fn )
 			C->hook_fn( C->hook_ctx, C, SGS_HOOK_STEP );
@@ -4139,7 +4139,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 				if( !nowrite )
 				{
 					int owr = sgs_PeekStackItem( C, from, va_arg( *args, sgs_Variable* ) );
-					UNUSED( owr );
+					SGS_UNUSED( owr );
 					sgs_BreakIf( !owr );
 				}
 			}
@@ -4382,7 +4382,7 @@ SGSRESULT sgs_MakeClosure( SGS_CTX, sgs_Variable* func, sgs_StkIdx clcount, sgs_
 	/* WP: range not affected by conversion */
 	ret = sgsSTD_MakeClosure( C, func, (uint32_t) clcount );
 	sgs_BreakIf( ret != SGS_SUCCESS );
-	UNUSED( ret );
+	SGS_UNUSED( ret );
 	
 	*out = *stk_gettop( C );
 	stk_pop1nr( C );
@@ -6141,7 +6141,7 @@ SGSBOOL sgs_ForceHideThis( SGS_CTX )
 
 void sgs_Acquire( SGS_CTX, sgs_Variable* var )
 {
-	UNUSED( C );
+	SGS_UNUSED( C );
 	VAR_ACQUIRE( var );
 }
 

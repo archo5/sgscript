@@ -352,7 +352,7 @@ sgs_VHTVar* sgs_vht_set( sgs_VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable*
 	else
 	{
 		sgs_VHTIdx osize = T->size;
-		UNUSED( osize );
+		SGS_UNUSED( osize );
 		
 		/* prefer to rehash if too many removed (num_rem) items are found */
 		if( T->size + T->num_rem + 1.0 >= T->pair_mem * 0.7 )

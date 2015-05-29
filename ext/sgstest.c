@@ -153,11 +153,11 @@ static void prepengine( sgs_Context* C )
 	;
 
 	ret = sgs_ExecString( C, sgs_testapi );
-	UNUSED( ret );
+	SGS_UNUSED( ret );
 	sgs_BreakIf( ret != SGS_SUCCESS );
 
 	ret = sgs_ExecString( C, sgs_testapi2 );
-	UNUSED( ret );
+	SGS_UNUSED( ret );
 	sgs_BreakIf( ret != SGS_SUCCESS );
 
 	sgs_SetMsgFunc( C, TF_printfn, NULL );
@@ -174,7 +174,7 @@ static void* ext_memfunc( void* ud, void* ptr, size_t size )
 	if( size ) numallocs++;
 	else if( !ptr )
 		return NULL;
-	UNUSED( ud );
+	SGS_UNUSED( ud );
 	return realloc( ptr, size );
 }
 

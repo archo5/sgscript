@@ -167,7 +167,7 @@ SGS_DECLARE sgs_ObjInterface ppthread_iface[1];
 		|| sgs_IsObject( C, 0, ppthread_iface_thr ) ) \
 		) STDLIB_WARN( "expected ppthread as 'this'" ) \
 	THR = (ppthread_t*) sgs_GetObjectData( C, 0 ); \
-	UNUSED( THR );
+	SGS_UNUSED( THR );
 
 
 SGS_DECLARE sgs_ObjInterface ppthread_iface_thr[1];

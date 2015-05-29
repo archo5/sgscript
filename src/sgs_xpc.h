@@ -27,7 +27,7 @@ typedef unsigned __int64 uint64_t;
 #  define SGS_VSPRINTF_LEN( str, args ) vsnprintf( NULL, 0, str, args )
 #endif
 
-#define UNUSED( x ) (void)(x)
+#define SGS_UNUSED( x ) (void)(x)
 
 #if defined(__GNUC__) && ( __GNUC__ > 4 || ( __GNUC__ == 4 && __GNUC_MINOR__ >= 7 ) )
 #  define SGS_ASSUME_ALIGNED __builtin_assume_aligned
@@ -46,7 +46,7 @@ typedef unsigned __int64 uint64_t;
 #  define BUILDING_SGS 1
 #endif
 
-#if SGS_DLL && !defined( __GNUC__ )
+#if SGS_DLL && defined( _WIN32 )
 #  if BUILDING_SGS
 #    define SGS_APIFUNC __declspec(dllexport)
 #  else
@@ -68,12 +68,16 @@ typedef unsigned __int64 uint64_t;
 #  include <sys/stat.h>
 
 #  ifdef _WIN32
-#    include <direct.h>
-#    define getcwd _getcwd
-#    define mkdir _mkdir
-#    define rmdir _rmdir
-#    define stat _stat
-#    include "sgs_msvc_dirent.h"
+#    if defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP)
+#      include <windows.h>
+#    else
+#      include <direct.h>
+#      define getcwd _getcwd
+#      define mkdir _mkdir
+#      define rmdir _rmdir
+#      define stat _stat
+#      include "sgs_msvc_dirent.h"
+#    endif
 #  else
 #    include <unistd.h>
 #    include <dirent.h>

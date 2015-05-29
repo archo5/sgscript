@@ -12,7 +12,10 @@ extern "C" {
 #include <math.h>
 #include <stdarg.h>
 
-#include <sgscript.h>
+#ifndef HEADER_SGSCRIPT_H
+# define HEADER_SGSCRIPT_H <sgscript.h>
+#endif
+#include HEADER_SGSCRIPT_H
 
 
 #ifndef XGM_VT

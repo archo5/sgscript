@@ -498,6 +498,10 @@ struct _sgs_Context
 	sgs_HookFunc  hook_fn;
 	void*         hook_ctx;
 	
+	/* script file system */
+	sgs_ScriptFSFunc sfs_fn;
+	void*         sfs_ctx;
+	
 	/* memory */
 	sgs_MemFunc   memfunc;
 	void*         mfuserdata;

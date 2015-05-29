@@ -31,7 +31,9 @@
 
 int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )
 {
-#ifdef WIN32
+#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+	return SGS_XPC_NOTSUP;
+#elif defined(WIN32)
 	HMODULE mod;
 	UINT pe;
 	WCHAR widepath[ SGS_MAX_PATH + 1 ];
@@ -98,7 +100,11 @@ int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )
 
 char* sgsXPC_GetCurrentDirectory()
 {
-#ifdef WIN32
+#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+	errno = ENOTSUP;
+	return NULL;
+
+#elif defined(WIN32)
 	DWORD buf16_size, buf8_size;
 	WCHAR* buf16;
 	char* buf8;
@@ -183,7 +189,11 @@ char* sgsXPC_GetCurrentDirectory()
 
 int sgsXPC_SetCurrentDirectory( char* path )
 {
-#ifdef WIN32
+#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+	errno = ENOTSUP;
+	return -1;
+
+#elif defined(WIN32)
 	size_t path_len;
 	int buf16_size;
 	WCHAR stack_buf16[ SGS_MAX_PATH ];
@@ -229,7 +239,11 @@ int sgsXPC_SetCurrentDirectory( char* path )
 
 char* sgsXPC_GetModuleFileName()
 {
-#ifdef WIN32
+#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+	errno = ENOTSUP;
+	return NULL;
+	
+#elif defined(WIN32)
 	WCHAR buf16[ 32768 ];
 	DWORD buf16_size, buf8_size;
 	char* buf8;

@@ -279,7 +279,7 @@ static int xgm_v2_serialize( SGS_CTX, sgs_VarObj* data )
 
 static int xgm_v2_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 {
-	UNUSED( maxdepth );
+	SGS_UNUSED( maxdepth );
 	return xgm_v2_convert( C, data, SGS_VT_STRING );
 }
 
@@ -884,7 +884,7 @@ static int xgm_b2_serialize( SGS_CTX, sgs_VarObj* data )
 
 static int xgm_b2_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 {
-	UNUSED( maxdepth );
+	SGS_UNUSED( maxdepth );
 	return xgm_b2_convert( C, data, SGS_VT_STRING );
 }
 
@@ -1059,7 +1059,7 @@ static int xgm_b3_serialize( SGS_CTX, sgs_VarObj* data )
 
 static int xgm_b3_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 {
-	UNUSED( maxdepth );
+	SGS_UNUSED( maxdepth );
 	return xgm_b3_convert( C, data, SGS_VT_STRING );
 }
 
@@ -2669,7 +2669,7 @@ static int xgm_m3_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 {
 	char bfr[ 512 ];
 	XGM_OHDR;
-	UNUSED( maxdepth );
+	SGS_UNUSED( maxdepth );
 	snprintf( bfr, 512,
 		"\n%10.6g %10.6g %10.6g"
 		"\n%10.6g %10.6g %10.6g"
@@ -3224,7 +3224,7 @@ static int xgm_m4_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
 {
 	char bfr[ 1024 ];
 	XGM_OHDR;
-	UNUSED( maxdepth );
+	SGS_UNUSED( maxdepth );
 	snprintf( bfr, 1024,
 		"\n%10.6g %10.6g %10.6g %10.6g"
 		"\n%10.6g %10.6g %10.6g %10.6g"
@@ -3416,7 +3416,7 @@ static int xgm_fla_##opname( SGS_CTX ) \
 { \
 	sgs_SizeVal i; \
 	XGM_VT R, A; \
-	UNUSED( A ); \
+	SGS_UNUSED( A ); \
 	 \
 	XGM_FLA_IHDR( opname ) \
 	 \
@@ -3439,7 +3439,7 @@ static int xgm_fla_##opname( SGS_CTX ) \
 	XGM_VT* vfa1 = v4f1; \
 	sgs_SizeVal i, sz, unit1 = 1, stride1 = 0; \
 	XGM_VT R, A, B; \
-	UNUSED( A ); \
+	SGS_UNUSED( A ); \
 	 \
 	XGM_FLA_IHDR( opname ) \
 	 \
@@ -3480,7 +3480,7 @@ static int xgm_fla_##opname( SGS_CTX ) \
 	XGM_VT* vfa1 = v4f1, *vfa2 = v4f2; \
 	sgs_SizeVal i, sz, unit1 = 1, unit2 = 1, stride1 = 0, stride2 = 0; \
 	XGM_VT R, A, B, T; \
-	UNUSED( T ); \
+	SGS_UNUSED( T ); \
 	 \
 	XGM_FLA_IHDR( opname ) \
 	 \

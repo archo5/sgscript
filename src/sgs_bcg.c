@@ -1184,7 +1184,7 @@ static SGSBOOL try_optimize_last_instr_out( SGS_FNTCMP_ARGS, size_t ioff, rcpos_
 	rcpos_t pos = -1;
 	
 	SGS_FN_BEGIN;
-	UNUSED( C );
+	SGS_UNUSED( C );
 	
 	if( ( node->type != SGS_SFT_IDENT && node->type != SGS_SFT_ARGMT ) || *node->token != SGS_ST_IDENT )
 		goto cannot;
@@ -1274,7 +1274,7 @@ cannot:
 static SGSBOOL try_optimize_set_op( SGS_CTX, sgs_CompFunc* func, size_t ioff, rcpos_t ireg )
 {
 	SGS_FN_BEGIN;
-	UNUSED( C );
+	SGS_UNUSED( C );
 	
 	/* moved offset 4 to other side of equation to prevent unsigned underflow */
 	if( ioff + 4 > func->code.size )

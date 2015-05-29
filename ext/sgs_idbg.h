@@ -8,8 +8,14 @@ extern "C" {
 #endif
 
 
-#include <sgscript.h>
-#include <sgs_util.h>
+#ifndef HEADER_SGSCRIPT_H
+# define HEADER_SGSCRIPT_H <sgscript.h>
+#endif
+#include HEADER_SGSCRIPT_H
+#ifndef HEADER_SGS_UTIL_H
+# define HEADER_SGS_UTIL_H <sgs_util.h>
+#endif
+#include HEADER_SGS_UTIL_H
 
 typedef
 struct _sgs_IDbg
