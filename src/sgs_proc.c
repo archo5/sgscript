@@ -402,11 +402,16 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, sgs_instr_t*
 	F->iptr = code;
 	F->lptr = code;
 	F->iend = code + icnt;
+	F->cptr = NULL;
+	F->constcount = 0;
 	if( func && func->type == SGS_VT_FUNC )
 	{
 		sgs_iFunc* fn = func->data.F;
 		F->lptr = F->iptr = F->code = sgs_func_bytecode( fn );
 		F->iend = F->iptr + ( ( fn->size - fn->instr_off ) / sizeof( sgs_instr_t ) );
+		/* WP: const limit */
+		F->constcount = (int32_t) ( fn->instr_off / sizeof( sgs_Variable* ) );
+		F->cptr = sgs_func_consts( fn );
 	}
 	F->lntable = T;
 	F->nfname = NULL;
@@ -2419,7 +2424,7 @@ static void vm_make_closure( SGS_CTX, int args, sgs_Variable* func, int16_t outp
 }
 
 
-static int vm_exec( SGS_CTX, sgs_Variable* consts, sgs_rcpos_t constcount );
+static int vm_exec( SGS_CTX );
 
 
 /*
@@ -2514,9 +2519,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 
 			if( F->gotthis && gotthis ) C->stack_off--;
 			{
-				/* WP: const limit */
-				sgs_rcpos_t constcnt = (sgs_rcpos_t) ( F->instr_off / sizeof( sgs_Variable* ) );
-				rvc = vm_exec( C, sgs_func_consts( F ), constcnt );
+				rvc = vm_exec( C );
 			}
 			if( F->gotthis && gotthis ) C->stack_off++;
 		}
@@ -2612,20 +2615,18 @@ static SGS_INLINE sgs_Variable* const_getvar( sgs_Variable* consts, sgs_rcpos_t 
 /*
 	Main VM execution loop
 */
-static int vm_exec( SGS_CTX, sgs_Variable* consts, sgs_rcpos_t constcount )
+static int vm_exec( SGS_CTX )
 {
 	sgs_StackFrame* SF = C->sf_last;
 	int32_t ret = 0;
-	sgs_Variable* cptr = consts;
 	const sgs_instr_t* pend = SF->iend;
 
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
 	ptrdiff_t stkoff = C->stack_top - C->stack_off;
-#  define RESVAR( v ) ( SGS_CONSTVAR(v) ? const_getvar( cptr, constcount, SGS_CONSTDEC(v) ) : stk_getlpos( C, (v) ) )
+#  define RESVAR( v ) ( SGS_CONSTVAR(v) ? const_getvar( SF->cptr, SF->constcount, SGS_CONSTDEC(v) ) : stk_getlpos( C, (v) ) )
 #else
-#  define RESVAR( v ) ( SGS_CONSTVAR(v) ? ( cptr + SGS_CONSTDEC(v) ) : stk_getlpos( C, (v) ) )
+#  define RESVAR( v ) ( SGS_CONSTVAR(v) ? ( SF->cptr + SGS_CONSTDEC(v) ) : stk_getlpos( C, (v) ) )
 #endif
-	SGS_UNUSED( constcount );
 
 #if SGS_DEBUG && SGS_DEBUG_INSTR
 	{
@@ -2766,7 +2767,7 @@ static int vm_exec( SGS_CTX, sgs_Variable* consts, sgs_rcpos_t constcount )
 #define a1 argA
 #define ARGS_2 const sgs_VarPtr p2 = RESVAR( argB );
 #define ARGS_3 const sgs_VarPtr p2 = RESVAR( argB ), p3 = RESVAR( argC );
-		case SGS_SI_LOADCONST: { stk_setlvar( C, argC, cptr + argE ); break; }
+		case SGS_SI_LOADCONST: { stk_setlvar( C, argC, SF->cptr + argE ); break; }
 		case SGS_SI_GETVAR: { ARGS_2; sgsSTD_GlobalGet( C, p1, p2 ); break; }
 		case SGS_SI_SETVAR: { ARGS_3; sgsSTD_GlobalSet( C, p2, p3 ); break; }
 		case SGS_SI_GETPROP: { ARGS_3; vm_getprop_safe( C, a1, p2, p3, SGS_TRUE ); break; }
@@ -2923,7 +2924,9 @@ int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, size_t codesize, void* data, 
 	if( allowed )
 	{
 		/* WP: const limit */
-		rvc = vm_exec( C, (sgs_Variable*) data, (sgs_rcpos_t) ( datasize / sizeof( sgs_Variable* ) ) );
+		C->sf_last->constcount = (int32_t) ( datasize / sizeof( sgs_Variable* ) );
+		C->sf_last->cptr = (sgs_Variable*) data;
+		rvc = vm_exec( C );
 	}
 	C->stack_off = C->stack_base + stkoff;
 	if( clean )

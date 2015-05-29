@@ -5,8 +5,8 @@
 
 #define SGS_VERSION_MAJOR 0
 #define SGS_VERSION_MINOR 9
-#define SGS_VERSION_INCR  6
-#define SGS_VERSION "0.9.6"
+#define SGS_VERSION_INCR  7
+#define SGS_VERSION "0.9.7"
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
@@ -82,6 +82,7 @@ struct _sgs_StackFrame
 	const uint32_t* iptr;
 	const uint32_t* iend;
 	const uint32_t* lptr;
+	sgs_Variable*   cptr;
 	const char*     nfname;
 	const char*     filename;
 	sgs_StackFrame* prev;
@@ -89,6 +90,7 @@ struct _sgs_StackFrame
 	sgs_StackFrame* cached;
 	sgs_StkIdx argbeg;
 	sgs_StkIdx argend;
+	int32_t constcount;
 	int32_t errsup;
 	uint8_t argcount;
 	uint8_t inexp;
