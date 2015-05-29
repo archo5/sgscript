@@ -225,6 +225,8 @@ sgs_CompFunc;
 
 
 /* - bytecode generator */
+SGS_APIFUNC sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_CompFunc* nf,
+	const char* funcname, size_t fnsize, sgs_LineNum lnum );
 SGS_APIFUNC sgs_CompFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree );
 SGS_APIFUNC void sgsBC_Dump( sgs_CompFunc* func );
 SGS_APIFUNC void sgsBC_DumpEx( const char* constptr, size_t constsize,

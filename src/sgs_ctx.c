@@ -991,33 +991,33 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 	const char* F = "<buffer>";
 
 	SGS_UNUSED( C );
-	if( !frame->func )
+	if( frame->func.type == SGS_VT_NULL )
 	{
 		N = "<main>";
 		L = frame->lntable[ frame->lptr - frame->code ];
 		if( frame->filename )
 			F = frame->filename;
 	}
-	else if( frame->func->type == SGS_VT_FUNC )
+	else if( frame->func.type == SGS_VT_FUNC )
 	{
 		N = "<anonymous function>";
-		if( frame->func->data.F->funcname.size )
-			N = frame->func->data.F->funcname.ptr;
-		L = !frame->func->data.F->lineinfo ? 1 :
-			frame->func->data.F->lineinfo[ frame->lptr - frame->code ];
-		if( frame->func->data.F->filename.size )
-			F = frame->func->data.F->filename.ptr;
+		if( frame->func.data.F->funcname.size )
+			N = frame->func.data.F->funcname.ptr;
+		L = !frame->func.data.F->lineinfo ? 1 :
+			frame->func.data.F->lineinfo[ frame->lptr - frame->code ];
+		if( frame->func.data.F->filename.size )
+			F = frame->func.data.F->filename.ptr;
 		else if( frame->filename )
 			F = frame->filename;
 	}
-	else if( frame->func->type == SGS_VT_CFUNC )
+	else if( frame->func.type == SGS_VT_CFUNC )
 	{
 		N = frame->nfname ? frame->nfname : "[C function]";
 		F = "[C code]";
 	}
-	else if( frame->func->type == SGS_VT_OBJECT )
+	else if( frame->func.type == SGS_VT_OBJECT )
 	{
-		sgs_VarObj* O = frame->func->data.O;
+		sgs_VarObj* O = frame->func.data.O;
 		N = O->iface->name ? O->iface->name : "<object>";
 		F = "[C code]";
 	}

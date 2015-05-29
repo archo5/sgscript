@@ -397,7 +397,13 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, sgs_instr_t*
 			C->sf_cached = F;
 	}
 	C->sf_count++;
-	F->func = func;
+	if( func )
+	{
+		F->func = *func;
+		VAR_ACQUIRE( &F->func );
+	}
+	else
+		sgs_InitNull( &F->func );
 	F->code = code;
 	F->iptr = code;
 	F->lptr = code;
@@ -419,6 +425,7 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, sgs_instr_t*
 	F->next = NULL;
 	F->prev = C->sf_last;
 	F->errsup = 0;
+	F->flags = 0;
 	if( C->sf_last )
 	{
 		F->errsup = C->sf_last->errsup;
@@ -437,6 +444,7 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, sgs_instr_t*
 static void vm_frame_pop( SGS_CTX )
 {
 	sgs_StackFrame* F = C->sf_last;
+	VAR_RELEASE( &F->func );
 	
 	if( C->hook_fn )
 		C->hook_fn( C->hook_ctx, C, SGS_HOOK_EXIT );
@@ -2438,7 +2446,7 @@ static int vm_exec( SGS_CTX );
 	- return value count is checked against the active range at the moment of return
 	- upon return, this function replaces [this][args] with [expect]
 */
-static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Variable* func )
+static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Variable* func, int can_reenter )
 {
 	sgs_Variable V = *func;
 	ptrdiff_t stkcallbase,
@@ -2456,9 +2464,11 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 	
 	if( allowed )
 	{
-		/* WP (x2): stack size limit */
+		/* WP (x4): stack size limit */
 		C->sf_last->argbeg = (StkIdx) stkcallbase;
 		C->sf_last->argend = (StkIdx) ( C->stack_top - C->stack_base );
+		C->sf_last->stkoff = (StkIdx) stkoff;
+		C->sf_last->clsoff = (StkIdx) clsoff;
 		/* WP: argument count limit */
 		C->sf_last->argcount = (uint8_t) args;
 		C->sf_last->inexp = (uint8_t) args;
@@ -2519,6 +2529,12 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 
 			if( F->gotthis && gotthis ) C->stack_off--;
 			{
+				if( can_reenter )
+				{
+					C->sf_last->flags |= SGS_SF_REENTER;
+					return -2;
+				}
+				
 				rvc = vm_exec( C );
 			}
 			if( F->gotthis && gotthis ) C->stack_off++;
@@ -2543,7 +2559,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 						sgs_InsertVariable( C, 0, &V );
 						gotthis = 1;
 					}
-					if( vm_call( C, args, clsr, gotthis, expect, &objfunc ) )
+					if( vm_call( C, args, clsr, gotthis, expect, &objfunc, 0 ) )
 						rvc = expect;
 					else
 						rvc = SGS_EINPROC;
@@ -2603,6 +2619,43 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 	return ret;
 }
 
+static void vm_postcall( SGS_CTX, int rvc )
+{
+	int expect = C->sf_last->expected;
+	int gotthis = C->sf_last->flags & SGS_SF_METHOD ? 1 : 0;
+	sgs_StkIdx stkcallbase = C->sf_last->argbeg;
+	sgs_StkIdx stkoff = C->sf_last->stkoff;
+	sgs_StkIdx clsoff = C->sf_last->clsoff;
+	sgs_StkIdx args_from = C->sf_last->argsfrom;
+	sgs_iFunc* F = C->sf_last->func.data.F; // assuming reentrance only applies to SGS functions
+	
+	if( F->gotthis && gotthis ) C->stack_off++;
+	
+	/* remove all stack items before the returned ones */
+	stk_clean( C, C->stack_base + stkcallbase, C->stack_top - rvc );
+	C->stack_off = C->stack_base + stkoff;
+	
+	/* remove all closures used in the function */
+	clstk_clean( C, C->clstk_off, C->clstk_top );
+	C->clstk_off = C->clstk_base + clsoff;
+	
+	vm_frame_pop( C );
+	
+	C->num_last_returned = rvc;
+	if( rvc > expect )
+		stk_pop( C, rvc - expect );
+	else
+		stk_push_nulls( C, expect - rvc );
+	
+	if( expect )
+	{
+		int i;
+		for( i = expect - 1; i >= 0; --i )
+			stk_setlvar( C, args_from + i, C->stack_top - expect + i );
+		stk_pop( C, expect );
+	}
+}
+
 
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
 static SGS_INLINE sgs_Variable* const_getvar( sgs_Variable* consts, sgs_rcpos_t count, sgs_rcpos_t off )
@@ -2617,17 +2670,16 @@ static SGS_INLINE sgs_Variable* const_getvar( sgs_Variable* consts, sgs_rcpos_t 
 */
 static int vm_exec( SGS_CTX )
 {
-	sgs_StackFrame* SF = C->sf_last;
-	int32_t ret = 0;
-	const sgs_instr_t* pend = SF->iend;
-
+	sgs_StackFrame* SF;
+	int32_t ret;
+	
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
-	ptrdiff_t stkoff = C->stack_top - C->stack_off;
+	ptrdiff_t stkoff;
 #  define RESVAR( v ) ( SGS_CONSTVAR(v) ? const_getvar( SF->cptr, SF->constcount, SGS_CONSTDEC(v) ) : stk_getlpos( C, (v) ) )
 #else
 #  define RESVAR( v ) ( SGS_CONSTVAR(v) ? ( SF->cptr + SGS_CONSTDEC(v) ) : stk_getlpos( C, (v) ) )
 #endif
-
+	
 #if SGS_DEBUG && SGS_DEBUG_INSTR
 	{
 		const char *name, *file;
@@ -2635,16 +2687,25 @@ static int vm_exec( SGS_CTX )
 		printf( ">>>\n\t'%s' in %s\n>>>\n", name, file );
 	}
 #endif
-
-	while( SF->iptr < pend )
-	{
-		const sgs_instr_t I = *SF->iptr;
+	
 #define pp SF->iptr
+#define pend SF->iend
 #define instr SGS_INSTR_GET_OP(I)
 #define argA SGS_INSTR_GET_A(I)
 #define argB SGS_INSTR_GET_B(I)
 #define argC SGS_INSTR_GET_C(I)
 #define argE SGS_INSTR_GET_E(I)
+	
+restart_loop:
+	SF = C->sf_last;
+	ret = 0;
+#if SGS_DEBUG && SGS_DEBUG_VALIDATE
+	stkoff = C->stack_top - C->stack_off;
+#endif
+	
+	while( SF->iptr < pend )
+	{
+		const sgs_instr_t I = *SF->iptr;
 		const sgs_VarPtr p1 = C->stack_off + argA;
 
 #if SGS_DEBUG
@@ -2685,7 +2746,7 @@ static int vm_exec( SGS_CTX )
 		case SGS_SI_RETN:
 		{
 			ret = argA;
-			sgs_BreakIf( ( C->stack_top - C->stack_off ) - stkoff < ret &&
+			sgs_BreakIf( SGS_STACKFRAMESIZE - stkoff < ret &&
 				"internal error: stack was corrupted" );
 			pp = pend;
 			break;
@@ -2737,7 +2798,11 @@ static int vm_exec( SGS_CTX )
 				VAR_ACQUIRE( C->stack_off + i );
 			}
 			
-			vm_call( C, args_to - args_from - gotthis, 0, gotthis, expect, &fnvar );
+			if( vm_call( C, args_to - args_from - gotthis, 0, gotthis, expect, &fnvar, 1 ) == -2 )
+			{
+				C->sf_last->argsfrom = args_from;
+				goto restart_loop;
+			}
 			
 			if( expect )
 			{
@@ -2833,6 +2898,7 @@ static int vm_exec( SGS_CTX )
 #undef ARGS_3
 #undef a1
 #undef RESVAR
+#undef pend
 #undef pp
 
 		default:
@@ -2848,6 +2914,14 @@ static int vm_exec( SGS_CTX )
 	/* TODO restore memcheck */
 	sgsVM_StackDump( C );
 #endif
+	
+	if( SF->flags & SGS_SF_REENTER )
+	{
+		vm_postcall( C, ret );
+		C->sf_last->lptr = ++C->sf_last->iptr;
+		goto restart_loop;
+	}
+	
 	return ret;
 }
 
@@ -2943,7 +3017,7 @@ int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, size_t codesize, void* data, 
 
 int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int expect, int gotthis )
 {
-	return vm_call( C, args, clsr, gotthis, expect, var );
+	return vm_call( C, args, clsr, gotthis, expect, var, 0 );
 }
 
 
@@ -4425,7 +4499,7 @@ SGSRESULT sgs_FCallP( SGS_CTX, sgs_Variable* callable, int args, int expect, int
 	int ret;
 	if( SGS_STACKFRAMESIZE < args + ( gotthis ? 1 : 0 ) )
 		return SGS_EINVAL;
-	ret = vm_call( C, args, 0, gotthis, expect, callable );
+	ret = vm_call( C, args, 0, gotthis, expect, callable, 0 );
 	if( ret == -1 ) return SGS_SUCABRT;
 	return ret ? SGS_SUCCESS : SGS_EINPROC;
 }
@@ -4441,7 +4515,7 @@ SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
 	
 	func = *stk_getpos( C, -1 );
 	stk_pop1nr( C );
-	ret = vm_call( C, args, 0, gotthis, expect, &func );
+	ret = vm_call( C, args, 0, gotthis, expect, &func, 0 );
 	VAR_RELEASE( &func );
 	if( ret == -1 ) return SGS_SUCABRT;
 	return ret ? SGS_SUCCESS : SGS_EINPROC;

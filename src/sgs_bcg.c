@@ -678,11 +678,9 @@ static rcpos_t add_const_s( SGS_CTX, sgs_CompFunc* func, uint32_t len, const cha
 	return (rcpos_t) ( vend - vbeg ); /* WP: const limit */
 }
 
-static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
+sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_CompFunc* nf,
 	const char* funcname, size_t fnsize, sgs_LineNum lnum )
 {
-	sgs_Variable nvar;
-	rcpos_t pos;
 	sgs_iFunc* F = sgs_Alloc_a( sgs_iFunc, nf->consts.size + nf->code.size );
 
 	F->refcount = 1;
@@ -715,6 +713,16 @@ static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
 	sgs_membuf_destroy( &nf->code, C );
 	sgs_membuf_destroy( &nf->lnbuf, C );
 	sgs_Dealloc( nf );
+	
+	return F;
+}
+
+static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
+	const char* funcname, size_t fnsize, sgs_LineNum lnum )
+{
+	sgs_Variable nvar;
+	rcpos_t pos;
+	sgs_iFunc* F = sgsBC_ConvertFunc( C, nf, funcname, fnsize, lnum );
 	
 	/* WP: const limit */
 	pos = (rcpos_t) ( func->consts.size / sizeof( nvar ) );

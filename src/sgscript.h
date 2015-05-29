@@ -70,35 +70,6 @@ typedef int (*sgs_CFunc) ( sgs_Context* );
 #define sgs_Float sgs_Real
 
 
-#define SGS_SF_METHOD  0x01
-#define SGS_SF_HASTHIS 0x02
-#define SGS_SF_ABORTED 0x04
-
-struct _sgs_StackFrame
-{
-	sgs_Variable*   func;
-	uint16_t*       lntable;
-	const uint32_t* code;
-	const uint32_t* iptr;
-	const uint32_t* iend;
-	const uint32_t* lptr;
-	sgs_Variable*   cptr;
-	const char*     nfname;
-	const char*     filename;
-	sgs_StackFrame* prev;
-	sgs_StackFrame* next;
-	sgs_StackFrame* cached;
-	sgs_StkIdx argbeg;
-	sgs_StkIdx argend;
-	int32_t constcount;
-	int32_t errsup;
-	uint8_t argcount;
-	uint8_t inexp;
-	uint8_t expected;
-	uint8_t flags;
-};
-
-
 /* Memory management */
 typedef void* (*sgs_MemFunc)
 (
@@ -311,6 +282,39 @@ struct _sgs_Variable
 {
 	uint32_t    type;
 	sgs_VarData data;
+};
+
+
+#define SGS_SF_METHOD  0x01
+#define SGS_SF_HASTHIS 0x02
+#define SGS_SF_ABORTED 0x04
+#define SGS_SF_REENTER 0x08
+
+struct _sgs_StackFrame
+{
+	sgs_Variable    func;
+	uint16_t*       lntable;
+	const uint32_t* code;
+	const uint32_t* iptr;
+	const uint32_t* iend;
+	const uint32_t* lptr;
+	sgs_Variable*   cptr;
+	const char*     nfname;
+	const char*     filename;
+	sgs_StackFrame* prev;
+	sgs_StackFrame* next;
+	sgs_StackFrame* cached;
+	sgs_StkIdx argbeg;
+	sgs_StkIdx argend;
+	sgs_StkIdx argsfrom;
+	sgs_StkIdx stkoff;
+	sgs_StkIdx clsoff;
+	int32_t constcount;
+	int32_t errsup;
+	uint8_t argcount;
+	uint8_t inexp;
+	uint8_t expected;
+	uint8_t flags;
 };
 
 
