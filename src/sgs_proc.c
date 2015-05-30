@@ -2674,18 +2674,9 @@ static int vm_exec( SGS_CTX )
 	int32_t ret;
 	
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
-	ptrdiff_t stkoff;
 #  define RESVAR( v ) ( SGS_CONSTVAR(v) ? const_getvar( SF->cptr, SF->constcount, SGS_CONSTDEC(v) ) : stk_getlpos( C, (v) ) )
 #else
 #  define RESVAR( v ) ( SGS_CONSTVAR(v) ? ( SF->cptr + SGS_CONSTDEC(v) ) : stk_getlpos( C, (v) ) )
-#endif
-	
-#if SGS_DEBUG && SGS_DEBUG_INSTR
-	{
-		const char *name, *file;
-		sgs_StackFrameInfo( C, SF, &name, &file, NULL );
-		printf( ">>>\n\t'%s' in %s\n>>>\n", name, file );
-	}
 #endif
 	
 #define pp SF->iptr
@@ -2699,8 +2690,13 @@ static int vm_exec( SGS_CTX )
 restart_loop:
 	SF = C->sf_last;
 	ret = 0;
-#if SGS_DEBUG && SGS_DEBUG_VALIDATE
-	stkoff = C->stack_top - C->stack_off;
+	
+#if SGS_DEBUG && SGS_DEBUG_INSTR
+	{
+		const char *name, *file;
+		sgs_StackFrameInfo( C, SF, &name, &file, NULL );
+		printf( ">>>\n\t'%s' in %s @ %p [sz:%d]\n>>>\n", name, file, SF, (int) SGS_STACKFRAMESIZE );
+	}
 #endif
 	
 	while( SF->iptr < pend )
@@ -2710,7 +2706,7 @@ restart_loop:
 
 #if SGS_DEBUG
 #  if SGS_DEBUG_INSTR
-		printf( "*** [at 0x%04X] %s ***\n", pp - SF->code, sgs_OpNames[ instr ] );
+		printf( "*** [at 0x%04X] %s [sz:%d] ***\n", pp - SF->code, sgs_OpNames[ instr ], (int) SGS_STACKFRAMESIZE );
 #  endif
 #  if SGS_DEBUG_STATE
 		sgsVM_StackDump( C );
@@ -2746,8 +2742,6 @@ restart_loop:
 		case SGS_SI_RETN:
 		{
 			ret = argA;
-			sgs_BreakIf( SGS_STACKFRAMESIZE - stkoff < ret &&
-				"internal error: stack was corrupted" );
 			pp = pend;
 			break;
 		}
@@ -2905,7 +2899,6 @@ restart_loop:
 			sgs_Msg( C, SGS_ERROR, "Illegal instruction executed: 0x%08X", I );
 			break;
 		}
-		sgs_BreakIf( SGS_STACKFRAMESIZE < stkoff );
 		
 		SF->lptr = ++SF->iptr;
 	}
