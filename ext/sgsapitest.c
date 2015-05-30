@@ -733,6 +733,44 @@ DEFINE_TEST( native_obj_meta )
 	destroy_context( C );
 }
 
+DEFINE_TEST( fork_state )
+{
+	SGS_CTX, *CFF, *CFP;
+	
+	/* --- basic usage --- */
+	C = get_context();
+	
+	/* fork the state */
+	CFF = sgs_ForkState( C, 1 );
+	CFP = sgs_ForkState( C, 0 );
+	
+	/* check state count */
+	atf_assert( sgs_Stat( C, SGS_STAT_STATECOUNT ) == 3 );
+	atf_assert( sgs_Stat( CFF, SGS_STAT_STATECOUNT ) == 3 );
+	atf_assert( sgs_Stat( CFP, SGS_STAT_STATECOUNT ) == 3 );
+	
+	/* release in the creating order */
+	sgs_FreeState( C );
+	sgs_FreeState( CFF );
+	atf_assert( sgs_Stat( CFP, SGS_STAT_STATECOUNT ) == 1 );
+	sgs_FreeState( CFP );
+	
+	/* --- try running something on both --- */
+	C = get_context();
+	CFF = sgs_ForkState( C, 1 );
+	CFP = sgs_ForkState( C, 0 );
+	const char* str =
+	"global o = { a = [ { b = {}, c = 5 }, { d = { e = {} }, f = [] } ], g = [] };"
+	"o.a[0].parent = o; o.a[1].d.parent = o; o.a[1].d.e.parent = o.a[1].d;"
+	"o.a[1].f.push(o); o.g.push( o.a[1].f ); o.a.push( o.a );";
+	atf_assert( sgs_ExecString( C, str ) == SGS_SUCCESS );
+	atf_assert( sgs_ExecString( CFF, str ) == SGS_SUCCESS );
+	atf_assert( sgs_ExecString( CFP, str ) == SGS_SUCCESS );
+	sgs_FreeState( C );
+	sgs_FreeState( CFF );
+	sgs_FreeState( CFP );
+}
+
 
 test_t all_tests[] =
 {
@@ -753,6 +791,7 @@ test_t all_tests[] =
 	TST( varpaths ),
 	TST( iterators ),
 	TST( native_obj_meta ),
+	TST( fork_state ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }
 

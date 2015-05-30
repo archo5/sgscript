@@ -19,7 +19,32 @@
 static const char* g_varnames[] = { "null", "bool", "int", "real", "string", "func", "cfunc", "obj", "ptr" };
 
 
-#define SGS_CTX_INITIAL_ALLOC (sizeof( sgs_ShCtx ) + sizeof( sgs_Context ))
+static void* int_memory( SGS_SHCTX, void* ptr, size_t size )
+{
+	void* p;
+	if( size )
+	{
+		size += 16;
+		S->memsize += size;
+		S->numallocs++;
+		S->numblocks++;
+	}
+	if( ptr )
+	{
+		ptr = ((char*)ptr) - 16;
+		S->memsize -= *(size_t*)ptr;
+		S->numfrees++;
+		S->numblocks--;
+	}
+	p = S->memfunc( S->mfuserdata, ptr, size );
+	if( p )
+	{
+		memcpy( p, &size, sizeof(size_t) );
+		p = ((char*)p) + 16;
+	}
+	return p;
+}
+
 
 sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 {
@@ -34,7 +59,7 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	
 	S->memfunc = memfunc;
 	S->mfuserdata = mfuserdata;
-	S->memsize = SGS_CTX_INITIAL_ALLOC;
+	S->memsize = sizeof( sgs_ShCtx ) + sizeof( sgs_Context );
 	S->numallocs = 2;
 	S->numblocks = 2;
 	S->numfrees = 0;
@@ -49,7 +74,11 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	// CONTEXT
 	C = (sgs_Context*) memfunc( mfuserdata, NULL, sizeof( sgs_Context ) );
 	
+	S->state_list = C;
+	S->statecount = 1;
 	C->shared = S;
+	C->prev = NULL;
+	C->next = NULL;
 	
 	C->output_fn = sgs_StdOutputFunc;
 	C->output_ctx = stdout;
@@ -103,17 +132,18 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 }
 
 
-void sgs_DestroyEngine( SGS_CTX )
+static void ctx_destroy( SGS_CTX )
 {
-	sgs_ShCtx* S = C->shared;
-	sgs_StackFrame* sf = C->sf_cached, *sfn;
-
+	SGS_SHCTX_USE;
+	
 	/* clear the stack */
 	while( C->stack_base != C->stack_top )
 	{
 		C->stack_top--;
 		sgs_Release( C, C->stack_top );
 	}
+	sgs_Dealloc( C->stack_base );
+	
 	while( C->clstk_base != C->clstk_top )
 	{
 		C->clstk_top--;
@@ -123,22 +153,30 @@ void sgs_DestroyEngine( SGS_CTX )
 			sgs_Dealloc( *C->clstk_top );
 		}
 	}
+	sgs_Dealloc( C->clstk_base );
 	
 	sgsSTD_GlobalFree( C );
 	
-	sgs_GCExecute( C );
-	sgs_BreakIf( S->objs || S->objcount );
-	
-	/* table should be empty here */
-	sgs_vht_free( &S->ifacetable, C );
-	
-	sgs_Dealloc( C->stack_base );
-	
-	sgs_Dealloc( C->clstk_base );
-	
-	sgs_vht_free( &S->typetable, C );
-	
+	/* free the call stack */
 	{
+		sgs_StackFrame* sf = C->sf_cached, *sfn;
+		while( sf )
+		{
+			sfn = sf->cached;
+			sgs_Dealloc( sf );
+			sf = sfn;
+		}
+		C->sf_cached = NULL;
+	}
+	
+	// LAST ONE CLEANS UP
+	if( C->prev == NULL && C->next == NULL )
+	{
+		sgs_GCExecute( C );
+		sgs_BreakIf( S->objs || S->objcount );
+		
+		sgs_vht_free( &S->ifacetable, C ); /* table should be empty here */
+		sgs_vht_free( &S->typetable, C );
 		sgs_VHTVar* p = S->stringtable.vars;
 		sgs_VHTVar* pend = p + S->stringtable.size;
 		while( p < pend )
@@ -149,39 +187,152 @@ void sgs_DestroyEngine( SGS_CTX )
 			sgs_Dealloc( unfreed_string );
 			p++;
 		}
+		sgs_vht_free( &S->stringtable, C );
 	}
-	sgs_vht_free( &S->stringtable, C );
+	// ----
 	
-	/* free the call stack */
-	while( sf )
-	{
-		sfn = sf->cached;
-		sgs_Dealloc( sf );
-		sf = sfn;
-	}
-	C->sf_cached = NULL;
+	if( S->state_list == C ) S->state_list = C->next;
+	if( C->prev ) C->prev->next = C->next;
+	if( C->next ) C->next->prev = C->prev;
+	S->statecount--;
 	
+	// free the context
+	S->memfunc( S->mfuserdata, C, 0 );
+	S->memsize -= sizeof(*C);
+	S->numfrees++;
+	S->numblocks--;
+}
+
+static void shctx_destroy( SGS_SHCTX )
+{
 #if SGS_OBJPOOL_SIZE > 0
 	{
 		int32_t i;
 		for( i = 0; i < S->objpool_size; ++i )
-			sgs_Dealloc( S->objpool_data[ i ].obj );
-		sgs_Dealloc( S->objpool_data );
+			int_memory( S, S->objpool_data[ i ].obj, 0 );
+		int_memory( S, S->objpool_data, 0 );
 	}
 #endif
 
 #ifdef SGS_DEBUG_LEAKS
-	sgs_BreakIf( S->memsize > SGS_CTX_INITIAL_ALLOC &&
+	sgs_BreakIf( S->memsize > sizeof( sgs_ShCtx ) &&
 		"not all resources have been freed" );
-	sgs_BreakIf( S->memsize < SGS_CTX_INITIAL_ALLOC &&
+	sgs_BreakIf( S->memsize < sizeof( sgs_ShCtx ) &&
 		"some resorces may have been freed more than once" );
 #endif
 	
-	C->msg_fn = NULL;
-	C->msg_ctx = NULL;
-	
-	S->memfunc( S->mfuserdata, C, 0 );
 	S->memfunc( S->mfuserdata, S, 0 );
+}
+
+void sgs_DestroyEngine( SGS_CTX )
+{
+	sgs_ShCtx* S = C->shared;
+	
+	while( S->state_list )
+		ctx_destroy( S->state_list );
+	
+	shctx_destroy( S );
+}
+
+
+static void copy_append_frame( SGS_CTX, sgs_StackFrame* sf )
+{
+	sgs_StackFrame* nsf = sgs_Alloc( sgs_StackFrame );
+	memcpy( nsf, sf, sizeof(*nsf) );
+	sgs_Acquire( C, &nsf->func );
+	
+	nsf->next = NULL;
+	nsf->cached = NULL;
+	if( C->sf_last )
+	{
+		nsf->prev = C->sf_last;
+		nsf->prev->next = nsf;
+	}
+}
+
+sgs_Context* sgs_ForkState( SGS_CTX, int copystate )
+{
+	SGS_SHCTX_USE;
+	sgs_Context* NC = (sgs_Context*) S->memfunc( S->mfuserdata, NULL, sizeof(*NC) );
+	S->memsize += sizeof(*NC);
+	S->numallocs++;
+	S->numblocks++;
+	memcpy( NC, C, sizeof(*NC) );
+	
+	// realloc / acquire
+	if( copystate == SGS_FALSE )
+	{
+		NC->stack_mem = 32;
+		NC->clstk_mem = 32;
+	}
+	
+	NC->stack_base = sgs_Alloc_n( sgs_Variable, NC->stack_mem );
+	NC->clstk_base = sgs_Alloc_n( sgs_Closure*, NC->clstk_mem );
+	
+	if( copystate == SGS_FALSE )
+	{
+		NC->stack_top = NC->stack_off = NC->stack_base;
+		NC->clstk_top = NC->clstk_off = NC->clstk_base;
+	}
+	else
+	{
+		// WP: assuming top > base
+		memcpy( NC->stack_base, C->stack_base, sizeof(sgs_Variable) * (size_t)( C->stack_top - C->stack_base ) );
+		NC->stack_off = NC->stack_base + ( C->stack_off - C->stack_base );
+		NC->stack_top = NC->stack_base + ( C->stack_top - C->stack_base );
+		{
+			sgs_Variable* vp = NC->stack_base, *vpend = NC->stack_top;
+			while( vp != vpend )
+				sgs_Acquire( C, vp++ );
+		}
+		
+		// WP: assuming top > base
+		memcpy( NC->clstk_base, C->clstk_base, sizeof(sgs_Closure*) * (size_t)( C->clstk_top - C->clstk_base ) );
+		NC->clstk_off = NC->clstk_base + ( C->clstk_off - C->clstk_base );
+		NC->clstk_top = NC->clstk_base + ( C->clstk_top - C->clstk_base );
+		{
+			sgs_Closure** cp = NC->clstk_base, **cpend = NC->clstk_top;
+			while( cp != cpend )
+				(*cp++)->refcount++;
+		}
+	}
+	
+	// - global var. dict.
+	sgs_ObjAcquire( C, NC->_G );
+	
+	// - call stack
+	NC->sf_first = NULL;
+	NC->sf_last = NULL;
+	NC->sf_cached = NULL;
+	NC->sf_count = 0;
+	if( copystate )
+	{
+		sgs_StackFrame* sf = C->sf_first;
+		while( sf != C->sf_last )
+		{
+			copy_append_frame( NC, sf );
+			sf = sf->next;
+		}
+	}
+	
+	// add state to list
+	NC->prev = NULL;
+	NC->next = S->state_list;
+	if( NC->next )
+		NC->next->prev = NC;
+	S->state_list = NC;
+	S->statecount++;
+	
+	return NC;
+}
+
+void sgs_FreeState( SGS_CTX )
+{
+	SGS_SHCTX_USE;
+	ctx_destroy( C );
+	
+	if( S->state_list == NULL )
+		shctx_destroy( S );
 }
 
 
@@ -497,28 +648,7 @@ void sgs_SetScriptFSFunc( SGS_CTX, sgs_ScriptFSFunc func, void* ctx )
 void* sgs_Memory( SGS_CTX, void* ptr, size_t size )
 {
 	SGS_SHCTX_USE;
-	void* p;
-	if( size )
-	{
-		size += 16;
-		S->memsize += size;
-		S->numallocs++;
-		S->numblocks++;
-	}
-	if( ptr )
-	{
-		ptr = ((char*)ptr) - 16;
-		S->memsize -= *(size_t*)ptr;
-		S->numfrees++;
-		S->numblocks--;
-	}
-	p = S->memfunc( S->mfuserdata, ptr, size );
-	if( p )
-	{
-		memcpy( p, &size, sizeof(size_t) );
-		p = ((char*)p) + 16;
-	}
-	return p;
+	return int_memory( S, ptr, size );
 }
 
 
@@ -855,6 +985,7 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 	{
 	/* WP: not important */
 	case SGS_STAT_VERSION: return (ptrdiff_t) S->version;
+	case SGS_STAT_STATECOUNT: return (ptrdiff_t) S->statecount;
 	case SGS_STAT_OBJCOUNT: return (ptrdiff_t) S->objcount;
 	case SGS_STAT_MEMSIZE: return (ptrdiff_t) S->memsize;
 	case SGS_STAT_NUMALLOCS: return (ptrdiff_t) S->numallocs;

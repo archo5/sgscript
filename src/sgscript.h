@@ -155,6 +155,7 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 
 /* Statistics / debugging */
 #define SGS_STAT_VERSION      0
+#define SGS_STAT_STATECOUNT   1
 #define SGS_STAT_OBJCOUNT     2
 #define SGS_STAT_MEMSIZE      3
 #define SGS_STAT_NUMALLOCS    4
@@ -356,6 +357,9 @@ static SGS_INLINE sgs_Context* sgs_CreateEngine()
 	{ return sgs_CreateEngineExt( sgs_DefaultMemFunc, NULL ); }
 
 SGS_APIFUNC void sgs_DestroyEngine( SGS_CTX );
+
+SGS_APIFUNC sgs_Context* sgs_ForkState( SGS_CTX, int copystate );
+SGS_APIFUNC void sgs_FreeState( SGS_CTX );
 
 
 #define SGS_CODE_ER 0 /* error codes */

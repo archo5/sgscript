@@ -4678,38 +4678,44 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 	}
 }
 
-SGSRESULT sgs_GCExecute( SGS_CTX )
+static SGSRESULT sgsVM_GCExecute( SGS_SHCTX )
 {
 	int ret = SGS_SUCCESS;
 	sgs_VarPtr vbeg, vend;
 	sgs_VarObj* p;
-	SGS_SHCTX_USE;
-
+	
 	S->redblue = !S->redblue;
 	S->gcrun = SGS_TRUE;
-
-	/* -- MARK -- */
-	/* GCLIST / currently executed "main" function */
-	vbeg = C->gclist; vend = vbeg + C->gclist_size;
-	while( vbeg < vend ){
-		ret = vm_gcmark( C, vbeg );
-		if( SGS_FAILED( ret ) )
-			goto end;
-		vbeg++;
+	
+	SGS_CTX = S->state_list;
+	while( C )
+	{
+		/* -- MARK -- */
+		/* GCLIST / currently executed "main" function */
+		vbeg = C->gclist; vend = vbeg + C->gclist_size;
+		while( vbeg < vend ){
+			ret = vm_gcmark( C, vbeg );
+			if( SGS_FAILED( ret ) )
+				goto end;
+			vbeg++;
+		}
+		
+		/* STACK */
+		vbeg = C->stack_base; vend = C->stack_top;
+		while( vbeg < vend ){
+			ret = vm_gcmark( C, vbeg++ );
+			if( SGS_FAILED( ret ) )
+				goto end;
+		}
+		
+		/* GLOBALS */
+		sgsSTD_GlobalGC( C );
+		
+		C = C->next;
 	}
-
-	/* STACK */
-	vbeg = C->stack_base; vend = C->stack_top;
-	while( vbeg < vend ){
-		ret = vm_gcmark( C, vbeg++ );
-		if( SGS_FAILED( ret ) )
-			goto end;
-	}
-
-	/* GLOBALS */
-	sgsSTD_GlobalGC( C );
-
+	
 	/* -- SWEEP -- */
+	C = S->state_list; // any context is good enough here
 	/* destruct objects */
 	p = S->objs;
 	while( p ){
@@ -4719,7 +4725,7 @@ SGSRESULT sgs_GCExecute( SGS_CTX )
 		}
 		p = pn;
 	}
-
+	
 	/* free variables */
 	p = S->objs;
 	while( p ){
@@ -4728,10 +4734,16 @@ SGSRESULT sgs_GCExecute( SGS_CTX )
 			var_free_object( C, p );
 		p = pn;
 	}
-
+	
 end:
 	S->gcrun = SGS_FALSE;
 	return ret;
+}
+
+SGSRESULT sgs_GCExecute( SGS_CTX )
+{
+	SGS_SHCTX_USE;
+	return sgsVM_GCExecute( S );
 }
 
 

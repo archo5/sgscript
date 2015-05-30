@@ -415,6 +415,11 @@ struct _sgs_Closure
 };
 
 
+typedef struct _sgs_ShCtx sgs_ShCtx;
+#define SGS_SHCTX sgs_ShCtx* S
+#define SGS_SHCTX_USE SGS_SHCTX = C->shared
+
+
 /* VM interface */
 void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len );
 void sgsVM_VarDestroyObject( SGS_CTX, sgs_VarObj* O );
@@ -478,12 +483,11 @@ sgs_ObjPoolItem;
 
 typedef sgs_Variable* sgs_VarPtr;
 
-typedef struct _sgs_ShCtx sgs_ShCtx;
-#define SGS_SHCTX sgs_ShCtx* S
-#define SGS_SHCTX_USE SGS_SHCTX = C->shared
 struct _sgs_ShCtx
 {
 	uint32_t      version;
+	sgs_Context*  state_list;
+	int32_t       statecount;
 	
 	/* script file system */
 	sgs_ScriptFSFunc sfs_fn;
@@ -516,6 +520,8 @@ struct _sgs_ShCtx
 struct _sgs_Context
 {
 	sgs_ShCtx*    shared;
+	sgs_Context*  prev;
+	sgs_Context*  next;
 	
 	/* output */
 	sgs_OutputFunc output_fn; /* output function */
