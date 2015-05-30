@@ -2882,6 +2882,7 @@ static int _push_procdir( SGS_CTX )
 static int _find_includable_file( SGS_CTX, sgs_MemBuf* tmp, char* ps,
 	size_t pssize, char* fn, size_t fnsize, char* dn, size_t dnsize, char* pd, size_t pdsize )
 {
+	SGS_SHCTX_USE;
 	if( ( fnsize > 2 && *fn == '.' && ( fn[1] == '/' || fn[1] == '\\' ) ) ||
 #ifdef _WIN32
 		( fnsize > 2 && fn[1] == ':' ) )
@@ -2893,7 +2894,7 @@ static int _find_includable_file( SGS_CTX, sgs_MemBuf* tmp, char* ps,
 		
 		sgs_ScriptFSData fsd = {0};
 		fsd.filename = tmp->ptr;
-		if( SGS_SUCCEEDED( C->sfs_fn( C->sfs_ctx, C, SGS_SFS_FILE_EXISTS, &fsd ) ) )
+		if( SGS_SUCCEEDED( S->sfs_fn( S->sfs_ctx, C, SGS_SFS_FILE_EXISTS, &fsd ) ) )
 			return 1;
 	}
 	else
@@ -2938,7 +2939,7 @@ static int _find_includable_file( SGS_CTX, sgs_MemBuf* tmp, char* ps,
 				{
 					sgs_ScriptFSData fsd = {0};
 					fsd.filename = tmp->ptr;
-					if( SGS_SUCCEEDED( C->sfs_fn( C->sfs_ctx, C, SGS_SFS_FILE_EXISTS, &fsd ) ) )
+					if( SGS_SUCCEEDED( S->sfs_fn( S->sfs_ctx, C, SGS_SFS_FILE_EXISTS, &fsd ) ) )
 						return 1;
 				}
 notthispath:

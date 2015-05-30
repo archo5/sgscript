@@ -478,9 +478,44 @@ sgs_ObjPoolItem;
 
 typedef sgs_Variable* sgs_VarPtr;
 
-struct _sgs_Context
+typedef struct _sgs_ShCtx sgs_ShCtx;
+#define SGS_SHCTX sgs_ShCtx* S
+#define SGS_SHCTX_USE SGS_SHCTX = C->shared
+struct _sgs_ShCtx
 {
 	uint32_t      version;
+	
+	/* script file system */
+	sgs_ScriptFSFunc sfs_fn;
+	void*         sfs_ctx;
+	
+	/* memory */
+	sgs_MemFunc   memfunc;
+	void*         mfuserdata;
+	size_t        memsize;
+	size_t        numallocs;
+	size_t        numfrees;
+	size_t        numblocks;
+	
+	/* > object info */
+	sgs_VarObj*   objs;
+	int32_t       objcount;
+	/* >> object GC */
+	uint8_t       redblue;
+	uint16_t      gcrun;
+	/* >> object pool */
+	sgs_ObjPoolItem* objpool_data;
+	int32_t       objpool_size;
+	
+	/* tables / cache */
+	sgs_VHTable   typetable; /* type interface table */
+	sgs_VHTable   stringtable; /* string constant caching hash table */
+	sgs_VHTable   ifacetable; /* interface generator => object table */
+};
+
+struct _sgs_Context
+{
+	sgs_ShCtx*    shared;
 	
 	/* output */
 	sgs_OutputFunc output_fn; /* output function */
@@ -500,22 +535,12 @@ struct _sgs_Context
 	sgs_HookFunc  hook_fn;
 	void*         hook_ctx;
 	
-	/* script file system */
-	sgs_ScriptFSFunc sfs_fn;
-	void*         sfs_ctx;
-	
-	/* memory */
-	sgs_MemFunc   memfunc;
-	void*         mfuserdata;
-	size_t        memsize;
-	size_t        numallocs;
-	size_t        numfrees;
-	size_t        numblocks;
-	
 	/* compilation */
 	uint32_t      state;
 	sgs_FuncCtx*  fctx;      /* ByteCodeGen */
 	const char*   filename;  /* filename of currently compiled code */
+	sgs_VarPtr    gclist;
+	uint16_t      gclist_size;
 	
 	/* virtual machine */
 	/* > main stack */
@@ -539,23 +564,6 @@ struct _sgs_Context
 	
 	/* > _G (global variable dictionary) */
 	sgs_VarObj*   _G;
-	
-	/* > object info */
-	sgs_VarObj*   objs;
-	int32_t       objcount;
-	/* >> object GC */
-	uint8_t       redblue;
-	sgs_VarPtr    gclist;
-	uint16_t      gclist_size;
-	uint16_t      gcrun;
-	/* >> object pool */
-	sgs_ObjPoolItem* objpool_data;
-	int32_t       objpool_size;
-	
-	/* tables / cache */
-	sgs_VHTable   typetable; /* type interface table */
-	sgs_VHTable   stringtable; /* string constant caching hash table */
-	sgs_VHTable   ifacetable; /* interface generator => object table */
 };
 
 #define SGS_STACKFRAMESIZE ((sgs_StkIdx)(C->stack_top - C->stack_off))

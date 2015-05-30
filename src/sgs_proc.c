@@ -81,13 +81,13 @@ static int _call_metamethod( SGS_CTX, sgs_VarObj* obj, const char* name, size_t 
 - return the index of the first found item with the right size or just after the right size
 - if all sizes are less than specified, return the size of the object pool
 */
-static int32_t objpool_binary_search( SGS_CTX, uint32_t appsize )
+static int32_t objpool_binary_search( SGS_SHCTX, uint32_t appsize )
 {
-	int32_t pmin = 0, pmax = C->objpool_size - 1;
+	int32_t pmin = 0, pmax = S->objpool_size - 1;
 	while( pmin <= pmax )
 	{
 		int32_t pos = ( pmax + pmin ) / 2;
-		uint32_t ssize = C->objpool_data[ pos ].appsize;
+		uint32_t ssize = S->objpool_data[ pos ].appsize;
 		if( ssize == appsize )
 			return pos;
 		else if( ssize < appsize )
@@ -100,17 +100,18 @@ static int32_t objpool_binary_search( SGS_CTX, uint32_t appsize )
 
 static void var_free_object( SGS_CTX, sgs_VarObj* O )
 {
+	SGS_SHCTX_USE;
 	if( O->is_iface )
 	{
-		sgs_VHTVar* p = C->ifacetable.vars;
-		sgs_VHTVar* pend = p + C->ifacetable.size;
+		sgs_VHTVar* p = S->ifacetable.vars;
+		sgs_VHTVar* pend = p + S->ifacetable.size;
 		while( p < pend )
 		{
 			if( p->val.type == SGS_VT_OBJECT && p->val.data.O == O )
 			{
 				sgs_Variable K = p->key;
 				O->refcount = 2;
-				sgs_vht_unset( &C->ifacetable, C, &K );
+				sgs_vht_unset( &S->ifacetable, C, &K );
 				break;
 			}
 			p++;
@@ -118,36 +119,36 @@ static void var_free_object( SGS_CTX, sgs_VarObj* O )
 	}
 	if( O->prev ) O->prev->next = O->next;
 	if( O->next ) O->next->prev = O->prev;
-	if( C->objs == O )
-		C->objs = O->next;
+	if( S->objs == O )
+		S->objs = O->next;
 #if SGS_OBJPOOL_SIZE > 0
 	if( O->appsize <= SGS_OBJPOOL_MAX_APPMEM )
 	{
 		int32_t pos = 0;
-		if( C->objpool_size )
+		if( S->objpool_size )
 		{
-			pos = objpool_binary_search( C, O->appsize );
-			if( C->objpool_size < SGS_OBJPOOL_SIZE && pos < C->objpool_size )
+			pos = objpool_binary_search( S, O->appsize );
+			if( S->objpool_size < SGS_OBJPOOL_SIZE && pos < S->objpool_size )
 			{
-				memmove( C->objpool_data + pos + 1, C->objpool_data + pos,
-					sizeof( sgs_ObjPoolItem ) * (size_t) ( C->objpool_size - pos ) );
+				memmove( S->objpool_data + pos + 1, S->objpool_data + pos,
+					sizeof( sgs_ObjPoolItem ) * (size_t) ( S->objpool_size - pos ) );
 			}
 			if( pos >= SGS_OBJPOOL_SIZE )
 				pos = SGS_OBJPOOL_SIZE - 1;
-			if( C->objpool_size >= SGS_OBJPOOL_SIZE )
-				sgs_Dealloc( C->objpool_data[ pos ].obj );
+			if( S->objpool_size >= SGS_OBJPOOL_SIZE )
+				sgs_Dealloc( S->objpool_data[ pos ].obj );
 		}
-		C->objpool_data[ pos ].obj = O;
-		C->objpool_data[ pos ].appsize = O->appsize;
-		if( C->objpool_size < SGS_OBJPOOL_SIZE )
-			C->objpool_size++;
+		S->objpool_data[ pos ].obj = O;
+		S->objpool_data[ pos ].appsize = O->appsize;
+		if( S->objpool_size < SGS_OBJPOOL_SIZE )
+			S->objpool_size++;
 	}
 	else
 		sgs_Dealloc( O );
 #else
 	sgs_Dealloc( O );
 #endif
-	C->objcount--;
+	S->objcount--;
 }
 
 static void var_destruct_object( SGS_CTX, sgs_VarObj* O )
@@ -174,34 +175,35 @@ void sgsVM_VarDestroyObject( SGS_CTX, sgs_VarObj* O )
 	var_free_object( C, O );
 }
 
-static void var_destroy_string( SGS_CTX, sgs_iStr* S )
+static void var_destroy_string( SGS_CTX, sgs_iStr* str )
 {
 #if SGS_STRINGTABLE_MAXLEN >= 0
-	if( S->size <= SGS_STRINGTABLE_MAXLEN )
+	if( str->size <= SGS_STRINGTABLE_MAXLEN )
 	{
+		SGS_SHCTX_USE;
 		sgs_VHTVar* p;
 		sgs_Variable tmp;
 		tmp.type = SGS_VT_STRING;
-		tmp.data.S = S;
-		p = sgs_vht_get( &C->stringtable, &tmp );
+		tmp.data.S = str;
+		p = sgs_vht_get( &S->stringtable, &tmp );
 		if( p )
 		{
 #  if SGS_DEBUG && SGS_DEBUG_EXTRA
-			if( p->key.data.S != S )
+			if( p->key.data.S != str )
 			{
 				printf( "WATWATWAT: (%d) |my>| [%d,%d] %d,%s |st>| [%d,%d] %d,%s\n",
-					(int) sgs_HashFunc( sgs_str_cstr( S ), S->size ),
-					(int) S->refcount, (int) S->hash, (int) S->size, sgs_str_cstr( S ),
+					(int) sgs_HashFunc( sgs_str_cstr( str ), str->size ),
+					(int) str->refcount, (int) str->hash, (int) str->size, sgs_str_cstr( str ),
 					(int) p->key.data.S->refcount, (int) p->key.data.S->hash, (int) p->key.data.S->size, sgs_str_cstr( p->key.data.S ) );
 			}
 #  endif
-			sgs_BreakIf( p->key.data.S != S );
-			S->refcount = 2; /* the 'less code' way to avoid double free */
-			sgs_vht_unset( &C->stringtable, C, &tmp );
+			sgs_BreakIf( p->key.data.S != str );
+			str->refcount = 2; /* the 'less code' way to avoid double free */
+			sgs_vht_unset( &S->stringtable, C, &tmp );
 		}
 	}
 #endif
-	sgs_Dealloc( S );
+	sgs_Dealloc( str );
 }
 
 static void var_release( SGS_CTX, sgs_VarPtr p );
@@ -257,6 +259,7 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_Siz
 {
 	sgs_Hash hash;
 	uint32_t ulen;
+	SGS_SHCTX_USE;
 	sgs_BreakIf( !str && len );
 	
 	ulen = (uint32_t) len; /* WP: string limit */
@@ -265,7 +268,7 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_Siz
 #if SGS_STRINGTABLE_MAXLEN >= 0
 	if( ulen <= SGS_STRINGTABLE_MAXLEN )
 	{
-		sgs_VHTVar* var = sgs_vht_get_str( &C->stringtable, str, ulen, hash );
+		sgs_VHTVar* var = sgs_vht_get_str( &S->stringtable, str, ulen, hash );
 		if( var )
 		{
 			*out = var->key;
@@ -281,7 +284,7 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_Siz
 	
 	if( (int32_t) ulen <= SGS_STRINGTABLE_MAXLEN )
 	{
-		sgs_vht_set( &C->stringtable, C, out, NULL );
+		sgs_vht_set( &S->stringtable, C, out, NULL );
 		out->data.S->refcount--;
 	}
 }
@@ -300,6 +303,7 @@ static void var_finalize_str( SGS_CTX, sgs_Variable* out )
 	char* str;
 	sgs_Hash hash;
 	uint32_t ulen;
+	SGS_SHCTX_USE;
 	
 	str = sgs_str_cstr( out->data.S );
 	ulen = out->data.S->size;
@@ -308,7 +312,7 @@ static void var_finalize_str( SGS_CTX, sgs_Variable* out )
 #if SGS_STRINGTABLE_MAXLEN >= 0
 	if( ulen <= SGS_STRINGTABLE_MAXLEN )
 	{
-		sgs_VHTVar* var = sgs_vht_get_str( &C->stringtable, str, ulen, hash );
+		sgs_VHTVar* var = sgs_vht_get_str( &S->stringtable, str, ulen, hash );
 		if( var )
 		{
 			sgs_Dealloc( out->data.S ); /* avoid querying the string table here */
@@ -323,26 +327,27 @@ static void var_finalize_str( SGS_CTX, sgs_Variable* out )
 	
 	if( (int32_t) ulen <= SGS_STRINGTABLE_MAXLEN )
 	{
-		sgs_vht_set( &C->stringtable, C, out, NULL );
+		sgs_vht_set( &S->stringtable, C, out, NULL );
 		out->data.S->refcount--;
 	}
 }
 
 static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInterface* iface, uint32_t xbytes )
 {
+	SGS_SHCTX_USE;
 	sgs_VarObj* obj = NULL;
 #if SGS_OBJPOOL_SIZE > 0
 	if( xbytes <= SGS_OBJPOOL_MAX_APPMEM )
 	{
-		int32_t pos = objpool_binary_search( C, xbytes );
-		if( pos < C->objpool_size && C->objpool_data[ pos ].appsize == xbytes )
+		int32_t pos = objpool_binary_search( S, xbytes );
+		if( pos < S->objpool_size && S->objpool_data[ pos ].appsize == xbytes )
 		{
-			obj = C->objpool_data[ pos ].obj;
-			C->objpool_size--;
-			if( pos < C->objpool_size )
+			obj = S->objpool_data[ pos ].obj;
+			S->objpool_size--;
+			if( pos < S->objpool_size )
 			{
-				memmove( C->objpool_data + pos, C->objpool_data + pos + 1,
-					sizeof( sgs_ObjPoolItem ) * (size_t) ( C->objpool_size - pos ) );
+				memmove( S->objpool_data + pos, S->objpool_data + pos + 1,
+					sizeof( sgs_ObjPoolItem ) * (size_t) ( S->objpool_size - pos ) );
 			}
 		}
 	}
@@ -354,8 +359,8 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInter
 	if( xbytes )
 		obj->data = ((char*)obj) + sizeof( sgs_VarObj );
 	obj->iface = iface;
-	obj->redblue = C->redblue;
-	obj->next = C->objs;
+	obj->redblue = S->redblue;
+	obj->next = S->objs;
 	obj->prev = NULL;
 	obj->refcount = 1;
 	if( obj->next ) /* ! */
@@ -364,8 +369,8 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInter
 	obj->mm_enable = SGS_FALSE;
 	obj->in_setindex = SGS_FALSE;
 	obj->is_iface = SGS_FALSE;
-	C->objcount++;
-	C->objs = obj;
+	S->objcount++;
+	S->objs = obj;
 	
 	out->type = SGS_VT_OBJECT;
 	out->data.O = obj;
@@ -1279,8 +1284,9 @@ static SGSRESULT vm_gettype( SGS_CTX, StkIdx item )
 
 static SGSRESULT vm_gcmark( SGS_CTX, sgs_Variable* var )
 {
+	SGS_SHCTX_USE;
 	if( var->type != SGS_VT_OBJECT ||
-		var->data.O->redblue == C->redblue ||
+		var->data.O->redblue == S->redblue ||
 		!var->data.O->iface->gcmark )
 		return SGS_SUCCESS;
 	else
@@ -1288,7 +1294,7 @@ static SGSRESULT vm_gcmark( SGS_CTX, sgs_Variable* var )
 		int ret;
 		sgs_VarObj* O = var->data.O;
 		_STACK_PREPARE;
-		O->redblue = C->redblue;
+		O->redblue = S->redblue;
 		_STACK_PROTECT;
 		ret = O->iface->gcmark( C, O );
 		_STACK_UNPROTECT;
@@ -4677,9 +4683,10 @@ SGSRESULT sgs_GCExecute( SGS_CTX )
 	int ret = SGS_SUCCESS;
 	sgs_VarPtr vbeg, vend;
 	sgs_VarObj* p;
+	SGS_SHCTX_USE;
 
-	C->redblue = !C->redblue;
-	C->gcrun = SGS_TRUE;
+	S->redblue = !S->redblue;
+	S->gcrun = SGS_TRUE;
 
 	/* -- MARK -- */
 	/* GCLIST / currently executed "main" function */
@@ -4704,26 +4711,26 @@ SGSRESULT sgs_GCExecute( SGS_CTX )
 
 	/* -- SWEEP -- */
 	/* destruct objects */
-	p = C->objs;
+	p = S->objs;
 	while( p ){
 		sgs_VarObj* pn = p->next;
-		if( p->redblue != C->redblue ){
+		if( p->redblue != S->redblue ){
 			var_destruct_object( C, p );
 		}
 		p = pn;
 	}
 
 	/* free variables */
-	p = C->objs;
+	p = S->objs;
 	while( p ){
 		sgs_VarObj* pn = p->next;
-		if( p->redblue != C->redblue )
+		if( p->redblue != S->redblue )
 			var_free_object( C, p );
 		p = pn;
 	}
 
 end:
-	C->gcrun = SGS_FALSE;
+	S->gcrun = SGS_FALSE;
 	return ret;
 }
 
@@ -6224,7 +6231,8 @@ void sgs_AcquireArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count )
 
 void sgs_Release( SGS_CTX, sgs_Variable* var )
 {
-	if( var->type == SGS_VT_OBJECT && C->gcrun )
+	SGS_SHCTX_USE;
+	if( var->type == SGS_VT_OBJECT && S->gcrun )
 	{
 		/* if running GC, dereference without destroying */
 		(*var->data.pRC) -= 1;

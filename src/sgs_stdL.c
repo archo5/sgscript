@@ -2989,6 +2989,7 @@ static int _regex_init( SGS_CTX, srx_Context** pR, const char* ptrn, sgs_SizeVal
 	int errnpos[2] = {0,0};
 	char conchar;
 	const char *delpos, *ptrnend = ptrn + ptrnsize;
+	SGS_SHCTX_USE;
 	
 	if( !*ptrn )
 		STDLIB_WARN( "argument 2 (pattern) is empty" )
@@ -2999,7 +3000,7 @@ static int _regex_init( SGS_CTX, srx_Context** pR, const char* ptrn, sgs_SizeVal
 	if( delpos >= ptrnend )
 		STDLIB_WARN( "unmatched pattern/modifier separator defined at character 0" )
 	
-	R = srx_CreateExt( ptrn + 1, (size_t)( delpos - ptrn - 1 ), delpos + 1, errnpos, C->memfunc, C->mfuserdata );
+	R = srx_CreateExt( ptrn + 1, (size_t)( delpos - ptrn - 1 ), delpos + 1, errnpos, S->memfunc, S->mfuserdata );
 	if( !R )
 	{
 		const char* errstr = "unknown error";

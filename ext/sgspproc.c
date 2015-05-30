@@ -198,8 +198,9 @@ static threadret_t ppthread_threadfunc( void* arg )
 
 static ppthread_t* ppthread_create( SGS_CTX, char* code, sgs_SizeVal codesize )
 {
-	sgs_MemFunc mf = C->memfunc;
-	void* mfud = C->mfuserdata;
+	SGS_SHCTX_USE;
+	sgs_MemFunc mf = S->memfunc;
+	void* mfud = S->mfuserdata;
 	
 	ppthread_t* THR = (ppthread_t*) mf( mfud, NULL, sizeof( ppthread_t ) );
 	

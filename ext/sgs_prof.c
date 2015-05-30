@@ -231,8 +231,9 @@ mode3data;
 
 static void mode3hook( void* userdata, SGS_CTX, int evid )
 {
+	SGS_SHCTX_USE;
 	SGS_PROF = (sgs_Prof*) userdata;
-	mode3data CD = { C->numallocs, C->numfrees, C->numblocks, (double) C->memsize };
+	mode3data CD = { S->numallocs, S->numfrees, S->numblocks, (double) S->memsize };
 	if( P->hfn )
 		P->hfn( P->hctx, C, evid );
 

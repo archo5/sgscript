@@ -154,15 +154,17 @@ sgs_ObjInterface sgs_dummy_iface[1] =
 DEFINE_TEST( create_and_destroy )
 {
 	SGS_CTX = get_context();
-	sgs_Writef( C, "New context memory usage: %d B (%.2f kB)\n", (int) C->memsize, (double) C->memsize / 1024.0 );
+	SGS_SHCTX_USE;
+	sgs_Writef( C, "New context memory usage: %d B (%.2f kB)\n", (int) S->memsize, (double) S->memsize / 1024.0 );
 	destroy_context( C );
 }
 
 DEFINE_TEST( array_mem )
 {
 	SGS_CTX = get_context();
+	SGS_SHCTX_USE;
 	sgs_PushArray( C, 0 );
-	sgs_Writef( C, "context[array] memory usage: %d B (%.2f kB)\n", (int) C->memsize, (double) C->memsize / 1024.0 );
+	sgs_Writef( C, "context[array] memory usage: %d B (%.2f kB)\n", (int) S->memsize, (double) S->memsize / 1024.0 );
 	destroy_context( C );
 }
 
