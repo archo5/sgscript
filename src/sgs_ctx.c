@@ -96,8 +96,6 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	C->state = 0;
 	C->fctx = NULL;
 	C->filename = NULL;
-	C->gclist = NULL;
-	C->gclist_size = 0;
 	
 	C->stack_mem = 32;
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
@@ -182,6 +180,14 @@ static void ctx_destroy( SGS_CTX )
 		while( p < pend )
 		{
 			sgs_iStr* unfreed_string = p->key.data.S;
+#if SGS_DEBUG && SGS_DEBUG_VALIDATE
+			if( unfreed_string->refcount > 0 )
+			{
+				fprintf( stderr, "unfreed string: (rc=%d)[%d]\"%.*s\"\n",
+					(int) unfreed_string->refcount, (int) unfreed_string->size,
+					(int) unfreed_string->size, sgs_str_cstr( unfreed_string ) );
+			}
+#endif
 			sgs_BreakIf( unfreed_string->refcount > 0 && "string not freed" );
 			sgs_BreakIf( unfreed_string->refcount < 0 && "memory error" );
 			sgs_Dealloc( unfreed_string );
@@ -765,36 +771,27 @@ error:
 
 static SGSRESULT ctx_execute( SGS_CTX, const char* buf, size_t size, int clean, int* rvc )
 {
-	int returned, rr;
-	ptrdiff_t oo;
+	int rr;
 	sgs_CompFunc* func;
-
-	oo = C->stack_off - C->stack_base;
-
+	sgs_Variable funcvar;
+	
 	if( !( rr = ctx_decode( C, buf, size, &func ) ) &&
 		!ctx_compile( C, buf, size, &func ) )
 		return SGS_ECOMP;
-
+	
 	if( rr < 0 )
 		return SGS_EINVAL;
-
-	DBGINFO( "...executing the generated function" );
-	C->stack_off = C->stack_top;
-	C->gclist = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 );
-	/* WP: const limit */
-	C->gclist_size = (uint16_t) func->consts.size / sizeof( sgs_Variable );
-	returned = sgsVM_ExecFn( C, func->numtmp, func->code.ptr, func->code.size,
-		func->consts.ptr, func->consts.size, clean, (uint16_t*) (void*) SGS_ASSUME_ALIGNED( func->lnbuf.ptr, 4 ) );
-	if( rvc )
-		*rvc = returned;
-	C->gclist = NULL;
-	C->gclist_size = 0;
-	C->stack_off = C->stack_base + oo;
-
+	
+	funcvar.type = SGS_VT_FUNC;
+	funcvar.data.F = sgsBC_ConvertFunc( C, func, "<main>", 6, 0 );
+	/* func was freed here */
 	DBGINFO( "...cleaning up bytecode/constants" );
-	sgsBC_Free( C, func );
-
+	
+	DBGINFO( "...executing the generated function" );
+	sgs_XCallP( C, &funcvar, 0, rvc );
+	
 	DBGINFO( "...finished!" );
+	sgs_Release( C, &funcvar );
 	return SGS_SUCCESS;
 }
 

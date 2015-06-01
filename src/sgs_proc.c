@@ -655,6 +655,15 @@ static void stk_pop2( SGS_CTX )
 	VAR_RELEASE( C->stack_top + 1 );
 }
 
+static void stk_deltasize( SGS_CTX, int diff )
+{
+	if( diff < 0 )
+		stk_pop( C, -diff );
+	else
+		stk_push_nulls( C, diff );
+}
+#define stk_resize_expected( C, expect, rvc ) stk_deltasize( C, expect - rvc )
+
 static void varr_reverse( sgs_Variable* beg, sgs_Variable* end )
 {
 	sgs_Variable tmp;
@@ -1313,7 +1322,7 @@ static SGSRESULT vm_gcmark( SGS_CTX, sgs_Variable* var )
 
 int sgs_specfn_call( SGS_CTX )
 {
-	int ret;
+	int ret, rvc = 0;
 	int method_call = sgs_Method( C );
 	SGSFN( "call" );
 	if( !sgs_IsCallable( C, 0 ) )
@@ -1327,16 +1336,16 @@ int sgs_specfn_call( SGS_CTX )
 	}
 	
 	sgs_PushItem( C, 0 );
-	ret = sgs_ThisCall( C, sgs_StackSize( C ) - 3, C->sf_last->expected );
+	ret = sgs_XThisCall( C, sgs_StackSize( C ) - 3, &rvc );
 	if( SGS_FAILED( ret ) )
 		return sgs_Msg( C, SGS_WARNING, "failed with error %d (%s)", ret,
 			sgs_CodeString( SGS_CODE_ER, ret ) );
-	return C->sf_last->expected;
+	return rvc;
 }
 
 int sgs_specfn_apply( SGS_CTX )
 {
-	int ret;
+	int ret, rvc = 0;
 	int method_call = sgs_Method( C );
 	sgs_SizeVal i, asize;
 	SGSFN( "apply" );
@@ -1355,11 +1364,11 @@ int sgs_specfn_apply( SGS_CTX )
 	for( i = 0; i < asize; ++i )
 		sgs_PushNumIndex( C, 2, i );
 	sgs_PushItem( C, 0 );
-	ret = sgs_ThisCall( C, asize, C->sf_last->expected );
+	ret = sgs_XThisCall( C, asize, &rvc );
 	if( SGS_FAILED( ret ) )
 		return sgs_Msg( C, SGS_WARNING, "failed with error %d (%s)", ret,
 			sgs_CodeString( SGS_CODE_ER, ret ) );
-	return C->sf_last->expected;
+	return rvc;
 }
 
 
@@ -2452,7 +2461,7 @@ static int vm_exec( SGS_CTX );
 	- return value count is checked against the active range at the moment of return
 	- upon return, this function replaces [this][args] with [expect]
 */
-static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Variable* func, int can_reenter )
+static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_Variable* func, int can_reenter )
 {
 	sgs_Variable V = *func;
 	ptrdiff_t stkcallbase,
@@ -2478,8 +2487,6 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 		/* WP: argument count limit */
 		C->sf_last->argcount = (uint8_t) args;
 		C->sf_last->inexp = (uint8_t) args;
-		/* WP: returned value count limit */
-		C->sf_last->expected = (uint8_t) expect;
 		C->sf_last->flags = gotthis ? SGS_SF_METHOD : 0;
 		
 		if( V.type == SGS_VT_CFUNC )
@@ -2569,8 +2576,8 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 						sgs_InsertVariable( C, 0, &V );
 						gotthis = 1;
 					}
-					if( vm_call( C, args, clsr, gotthis, expect, &objfunc, 0 ) )
-						rvc = expect;
+					if( vm_call( C, args, clsr, gotthis, &rvc, &objfunc, 0 ) )
+						;
 					else
 						rvc = SGS_EINPROC;
 					sgs_Release( C, &objfunc );
@@ -2620,24 +2627,23 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 		vm_frame_pop( C );
 	}
 	
+	if( outrvc )
+		*outrvc = rvc;
 	C->num_last_returned = rvc;
-	if( rvc > expect )
-		stk_pop( C, rvc - expect );
-	else
-		stk_push_nulls( C, expect - rvc );
 	
 	return ret;
 }
 
 static void vm_postcall( SGS_CTX, int rvc )
 {
-	int expect = C->sf_last->expected;
-	int gotthis = C->sf_last->flags & SGS_SF_METHOD ? 1 : 0;
-	sgs_StkIdx stkcallbase = C->sf_last->argbeg;
-	sgs_StkIdx stkoff = C->sf_last->stkoff;
-	sgs_StkIdx clsoff = C->sf_last->clsoff;
-	sgs_StkIdx args_from = C->sf_last->argsfrom;
-	sgs_iFunc* F = C->sf_last->func.data.F; // assuming reentrance only applies to SGS functions
+	sgs_StackFrame* sf = C->sf_last;
+	int expect;
+	int gotthis = sf->flags & SGS_SF_METHOD ? 1 : 0;
+	sgs_StkIdx stkcallbase = sf->argbeg;
+	sgs_StkIdx stkoff = sf->stkoff;
+	sgs_StkIdx clsoff = sf->clsoff;
+	sgs_StkIdx args_from = sf->argsfrom;
+	sgs_iFunc* F = sf->func.data.F; // assuming reentrance only applies to SGS functions
 	
 	if( F->gotthis && gotthis ) C->stack_off++;
 	
@@ -2650,19 +2656,22 @@ static void vm_postcall( SGS_CTX, int rvc )
 	C->clstk_off = C->clstk_base + clsoff;
 	
 	vm_frame_pop( C );
-	
 	C->num_last_returned = rvc;
-	if( rvc > expect )
-		stk_pop( C, rvc - expect );
-	else
-		stk_push_nulls( C, expect - rvc );
-	
-	if( expect )
+	if( C->sf_last )
 	{
-		int i;
-		for( i = expect - 1; i >= 0; --i )
-			stk_setlvar( C, args_from + i, C->stack_top - expect + i );
-		stk_pop( C, expect );
+		sf = C->sf_last; /* current function change */
+		
+		sgs_BreakIf( SGS_INSTR_GET_OP( *sf->iptr ) != SGS_SI_CALL );
+		expect = SGS_INSTR_GET_A( *sf->iptr );
+		stk_resize_expected( C, expect, rvc );
+		
+		if( expect )
+		{
+			int i;
+			for( i = expect - 1; i >= 0; --i )
+				stk_setlvar( C, args_from + i, C->stack_top - expect + i );
+			stk_pop( C, expect );
+		}
 	}
 }
 
@@ -2792,7 +2801,7 @@ restart_loop:
 		case SGS_SI_CALL:
 		{
 			sgs_Variable fnvar = *stk_getlpos( C, argC );
-			int i, expect = argA, args_from = argB & 0xff, args_to = argC;
+			int i, rvc, expect = argA, args_from = argB & 0xff, args_to = argC;
 			int gotthis = ( argB & 0x100 ) != 0;
 			
 			stk_makespace( C, args_to - args_from );
@@ -2802,11 +2811,13 @@ restart_loop:
 				VAR_ACQUIRE( C->stack_off + i );
 			}
 			
-			if( vm_call( C, args_to - args_from - gotthis, 0, gotthis, expect, &fnvar, 1 ) == -2 )
+			if( vm_call( C, args_to - args_from - gotthis, 0, gotthis, &rvc, &fnvar, 1 ) == -2 )
 			{
 				C->sf_last->argsfrom = args_from;
 				goto restart_loop;
 			}
+			
+			stk_resize_expected( C, expect, rvc );
 			
 			if( expect )
 			{
@@ -2940,7 +2951,10 @@ restart_loop:
 
 int sgsVM_Exec( SGS_CTX )
 {
-	return vm_exec( C );
+	int rvc;
+	rvc = vm_exec( C );
+	vm_postcall( C, rvc );
+	return rvc;
 }
 
 static size_t funct_size( const sgs_iFunc* f )
@@ -3034,9 +3048,9 @@ int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, size_t codesize, void* data, 
 	return rvc;
 }
 
-int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int expect, int gotthis )
+int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int* outrvc, int gotthis )
 {
-	return vm_call( C, args, clsr, gotthis, expect, var, 0 );
+	return vm_call( C, args, clsr, gotthis, outrvc, var, 0 );
 }
 
 
@@ -4513,17 +4527,17 @@ SGSRESULT sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var )
 
 */
 
-SGSRESULT sgs_FCallP( SGS_CTX, sgs_Variable* callable, int args, int expect, int gotthis )
+SGSRESULT sgs_XFCallP( SGS_CTX, sgs_Variable* callable, int args, int* outrvc, int gotthis )
 {
 	int ret;
 	if( SGS_STACKFRAMESIZE < args + ( gotthis ? 1 : 0 ) )
 		return SGS_EINVAL;
-	ret = vm_call( C, args, 0, gotthis, expect, callable, 0 );
+	ret = vm_call( C, args, 0, gotthis, outrvc, callable, 0 );
 	if( ret == -1 ) return SGS_SUCABRT;
 	return ret ? SGS_SUCCESS : SGS_EINPROC;
 }
 
-SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
+SGSRESULT sgs_XFCall( SGS_CTX, int args, int* outrvc, int gotthis )
 {
 	int ret;
 	sgs_Variable func;
@@ -4534,10 +4548,41 @@ SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
 	
 	func = *stk_getpos( C, -1 );
 	stk_pop1nr( C );
-	ret = vm_call( C, args, 0, gotthis, expect, &func, 0 );
+	ret = vm_call( C, args, 0, gotthis, outrvc, &func, 0 );
 	VAR_RELEASE( &func );
 	if( ret == -1 ) return SGS_SUCABRT;
 	return ret ? SGS_SUCCESS : SGS_EINPROC;
+}
+
+SGSRESULT sgs_FCallP( SGS_CTX, sgs_Variable* callable, int args, int expect, int gotthis )
+{
+	int ret, rvc;
+	if( SGS_STACKFRAMESIZE < args + ( gotthis ? 1 : 0 ) )
+		return SGS_EINVAL;
+	ret = vm_call( C, args, 0, gotthis, &rvc, callable, 0 );
+	if( ret == -1 ) return SGS_SUCABRT;
+	if( ret == 0 ) return SGS_EINPROC;
+	stk_resize_expected( C, expect, rvc );
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
+{
+	int ret, rvc;
+	sgs_Variable func;
+	int stksize = sgs_StackSize( C );
+	gotthis = gotthis ? 1 : 0;
+	if( stksize < args + gotthis + 1 )
+		return SGS_EINVAL;
+	
+	func = *stk_getpos( C, -1 );
+	stk_pop1nr( C );
+	ret = vm_call( C, args, 0, gotthis, &rvc, &func, 0 );
+	VAR_RELEASE( &func );
+	if( ret == -1 ) return SGS_SUCABRT;
+	if( ret == 0 ) return SGS_EINPROC;
+	stk_resize_expected( C, expect, rvc );
+	return SGS_SUCCESS;
 }
 
 SGSRESULT sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect )
@@ -4711,15 +4756,6 @@ static SGSRESULT sgsVM_GCExecute( SGS_SHCTX )
 	while( C )
 	{
 		/* -- MARK -- */
-		/* GCLIST / currently executed "main" function */
-		vbeg = C->gclist; vend = vbeg + C->gclist_size;
-		while( vbeg < vend ){
-			ret = vm_gcmark( C, vbeg );
-			if( SGS_FAILED( ret ) )
-				goto end;
-			vbeg++;
-		}
-		
 		/* STACK */
 		vbeg = C->stack_base; vend = C->stack_top;
 		while( vbeg < vend ){

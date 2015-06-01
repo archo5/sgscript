@@ -1438,14 +1438,15 @@ static int sgsstd_closure_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key
 
 static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* data )
 {
-	int ismethod = sgs_Method( C ), expected = C->sf_last->expected;
+	int rvc = 0, ismethod = sgs_Method( C );
 	uint8_t* cl = (uint8_t*) data->data;
 	int32_t cc = *(int32_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
 	sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(int32_t),sizeof(void*));
 	
 	sgsVM_PushClosures( C, cls, cc );
-	return sgsVM_VarCall( C, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) ), C->sf_last->argcount,
-		cc, C->sf_last->expected, ismethod ) * expected;
+	sgsVM_VarCall( C, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) ),
+		C->sf_last->argcount, cc, &rvc, ismethod );
+	return rvc;
 }
 
 static int sgsstd_closure_gcmark( SGS_CTX, sgs_VarObj* data )

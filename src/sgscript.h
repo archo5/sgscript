@@ -315,7 +315,6 @@ struct _sgs_StackFrame
 	int32_t errsup;
 	uint8_t argcount;
 	uint8_t inexp;
-	uint8_t expected;
 	uint8_t flags;
 };
 
@@ -656,6 +655,12 @@ SGS_APIFUNC SGSRESULT sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var
 /*
 	OPERATIONS
 */
+SGS_APIFUNC SGSRESULT sgs_XFCallP( SGS_CTX, sgs_Variable* callable, int args, int* outrvc, int gotthis );
+#define sgs_XCallP( C, callable, args, outrvc ) sgs_XFCallP( C, callable, args, outrvc, 0 )
+#define sgs_XThisCallP( C, callable, args, outrvc ) sgs_XFCallP( C, callable, args, outrvc, 1 )
+SGS_APIFUNC SGSRESULT sgs_XFCall( SGS_CTX, int args, int* outrvc, int gotthis );
+#define sgs_XCall( C, args, outrvc ) sgs_XFCall( C, args, outrvc, 0 )
+#define sgs_XThisCall( C, args, outrvc ) sgs_XFCall( C, args, outrvc, 1 )
 SGS_APIFUNC SGSRESULT sgs_FCallP( SGS_CTX, sgs_Variable* callable, int args, int expect, int gotthis );
 #define sgs_CallP( C, callable, args, expect ) sgs_FCallP( C, callable, args, expect, 0 )
 #define sgs_ThisCallP( C, callable, args, expect ) sgs_FCallP( C, callable, args, expect, 1 )

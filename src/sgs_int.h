@@ -432,7 +432,7 @@ void sgsVM_StackDump( SGS_CTX );
 
 int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, size_t codesize,
 	void* data, size_t datasize, int clean, uint16_t* T );
-int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int expect, int gotthis );
+int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int* outrvc, int gotthis );
 void sgsVM_PushClosures( SGS_CTX, sgs_Closure** cls, int num );
 
 
@@ -546,8 +546,6 @@ struct _sgs_Context
 	uint32_t      state;
 	sgs_FuncCtx*  fctx;      /* ByteCodeGen */
 	const char*   filename;  /* filename of currently compiled code */
-	sgs_VarPtr    gclist;
-	uint16_t      gclist_size;
 	
 	/* virtual machine */
 	/* > main stack */
