@@ -335,6 +335,46 @@ void sgs_FreeState( SGS_CTX )
 		shctx_destroy( S );
 }
 
+SGSBOOL sgs_PauseState( SGS_CTX )
+{
+	if( C->sf_last == NULL )
+		return SGS_FALSE; /* nothing to pause */
+	if( C->state & SGS_STATE_PAUSED )
+		return SGS_FALSE; /* already paused, but possibly not at the expected location */
+	
+	sgs_StackFrame* sf = C->sf_last;
+	if( sf && !sf->iptr )
+		sf = sf->prev; /* should be able to use this inside a C function */
+	if( !sf || !sf->iptr )
+		return SGS_FALSE; /* not in SGS function */
+	{
+		sgs_StackFrame* tsf = sf->prev;
+		while( tsf && tsf->iptr )
+			tsf = tsf->prev;
+		if( tsf )
+			return SGS_FALSE; /* cannot have any C functions in the middle */
+	}
+	
+	C->state |= SGS_STATE_PAUSED;
+	
+	return SGS_TRUE;
+}
+
+SGSRESULT sgs_ResumeState( SGS_CTX )
+{
+	if( !( C->state & SGS_STATE_PAUSED ) )
+		return SGS_SUCCESS; /* already running */
+	sgs_BreakIf( C->sf_last == NULL );
+	
+	/* TODO validate state corruption */
+	/* TODO pass arguments */
+	C->state &= ~(uint32_t)SGS_STATE_PAUSED;
+	sgsVM_Exec( C );
+	/* TODO handle returned values */
+	
+	return SGS_SUCCESS;
+}
+
 
 const char* sgs_CodeString( int type, int val )
 {

@@ -771,6 +771,30 @@ DEFINE_TEST( fork_state )
 	sgs_FreeState( CFP );
 }
 
+DEFINE_TEST( yield_resume )
+{
+	SGS_CTX = get_context();
+	
+	atf_assert( sgs_ExecString( C, ""
+		"global m0 = println('one') || true;\n"
+		"yield();\n"
+		"global m1 = println('two') || true;\n"
+	"" ) == SGS_SUCCESS );
+	
+	// check if paused
+	atf_assert( sgs_Cntl( C, SGS_CNTL_GET_STATE, 0 ) & SGS_STATE_PAUSED );
+	atf_assert( sgs_GlobalBool( C, "m0" ) == SGS_TRUE );
+	atf_assert( sgs_GlobalBool( C, "m1" ) == SGS_FALSE );
+	
+	// resume
+	atf_assert( sgs_ResumeState( C ) == SGS_SUCCESS );
+	// check if done
+	atf_assert( ( sgs_Cntl( C, SGS_CNTL_GET_STATE, 0 ) & SGS_STATE_PAUSED ) == 0 );
+	atf_assert( sgs_GlobalBool( C, "m1" ) == SGS_TRUE );
+	
+	destroy_context( C );
+}
+
 
 test_t all_tests[] =
 {
@@ -792,6 +816,7 @@ test_t all_tests[] =
 	TST( iterators ),
 	TST( native_obj_meta ),
 	TST( fork_state ),
+	TST( yield_resume ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }
 

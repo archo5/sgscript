@@ -151,6 +151,7 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 #define SGS_HAS_ERRORS          0x00010000
 #define SGS_MUST_STOP          (0x00020000 | SGS_HAS_ERRORS)
 #define SGS_SERIALIZE_MODE2     0x0004
+#define SGS_STATE_PAUSED        0x0008
 
 
 /* Statistics / debugging */
@@ -360,6 +361,8 @@ SGS_APIFUNC void sgs_DestroyEngine( SGS_CTX );
 
 SGS_APIFUNC sgs_Context* sgs_ForkState( SGS_CTX, int copystate );
 SGS_APIFUNC void sgs_FreeState( SGS_CTX );
+SGS_APIFUNC SGSBOOL sgs_PauseState( SGS_CTX );
+SGS_APIFUNC SGSRESULT sgs_ResumeState( SGS_CTX );
 
 
 #define SGS_CODE_ER 0 /* error codes */

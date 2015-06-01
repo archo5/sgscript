@@ -2498,6 +2498,14 @@ fail:
 }
 
 
+static int sgsstd_yield( SGS_CTX )
+{
+	SGSFN( "yield" );
+	if( sgs_PauseState( C ) == SGS_FALSE )
+		STDLIB_WARN( "cannot yield with C functions in stack" );
+	return 0;
+}
+
 struct pcall_printinfo
 {
 	sgs_MsgFunc pfn;
@@ -3574,6 +3582,7 @@ static sgs_RegFuncConst regfuncs[] =
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
 	STDLIB_FN( metaobj_set ), STDLIB_FN( metaobj_get ), STDLIB_FN( metamethods_enable ), STDLIB_FN( metamethods_test ),
 	STDLIB_FN( mm_getindex_router ), STDLIB_FN( mm_setindex_router ),
+	STDLIB_FN( yield ),
 	STDLIB_FN( pcall ), STDLIB_FN( assert ),
 	STDLIB_FN( eval ), STDLIB_FN( eval_file ), STDLIB_FN( compile_sgs ),
 	STDLIB_FN( include_library ), STDLIB_FN( include_file ),

@@ -2542,6 +2542,10 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int expect, sgs_Va
 				}
 				
 				rvc = vm_exec( C );
+				if( C->state & SGS_STATE_PAUSED )
+				{
+					return rvc;
+				}
 			}
 			if( F->gotthis && gotthis ) C->stack_off++;
 		}
@@ -2810,6 +2814,13 @@ restart_loop:
 					stk_setlvar( C, args_from + i, C->stack_top - expect + i );
 				stk_pop( C, expect );
 			}
+			
+			if( C->state & SGS_STATE_PAUSED )
+			{
+				C->sf_last->lptr = ++C->sf_last->iptr;
+				return 0;
+			}
+			
 			break;
 		}
 
@@ -2927,6 +2938,11 @@ restart_loop:
 
 /* INTERNAL INERFACE */
 
+int sgsVM_Exec( SGS_CTX )
+{
+	return vm_exec( C );
+}
+
 static size_t funct_size( const sgs_iFunc* f )
 {
 	size_t sz = f->size + f->funcname.mem + f->filename.mem;
@@ -3000,6 +3016,10 @@ int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, size_t codesize, void* data, 
 		C->sf_last->constcount = (int32_t) ( datasize / sizeof( sgs_Variable* ) );
 		C->sf_last->cptr = (sgs_Variable*) data;
 		rvc = vm_exec( C );
+		if( C->state & SGS_STATE_PAUSED )
+		{
+			return rvc;
+		}
 	}
 	C->stack_off = C->stack_base + stkoff;
 	if( clean )
