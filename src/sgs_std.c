@@ -2499,6 +2499,98 @@ fail:
 }
 
 
+
+typedef struct sgsstd_coro_s
+{
+	sgs_Variable func;
+	sgs_Context* ctx;
+	int state;
+}
+sgsstd_coro_t;
+
+#define COROHDR sgsstd_coro_t* CO = (sgsstd_coro_t*) data->data;
+
+static int sgsstd_coro_destruct( SGS_CTX, sgs_VarObj* data )
+{
+	COROHDR;
+	sgs_Release( C, &CO->func );
+	sgs_FreeState( CO->ctx );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_coro_gcmark( SGS_CTX, sgs_VarObj* data )
+{
+	COROHDR;
+	sgs_GCMark( C, &CO->func );
+	return SGS_SUCCESS;
+}
+
+sgs_ObjInterface sgsstd_coro_iface[1] =
+{{
+	"coroutine",
+	sgsstd_coro_destruct, sgsstd_coro_gcmark,
+	NULL, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL,
+}};
+
+#define CORO_IHDR( name ) \
+	sgsstd_coro_t* CO; \
+	if( !SGS_PARSE_METHOD( C, sgsstd_coro_iface, CO, co, name ) ) return 0; \
+	SGS_UNUSED( CO );
+
+static int sgsstd_co_create( SGS_CTX )
+{
+	sgsstd_coro_t* CO;
+	SGSFN( "co_create" );
+	if( !sgs_LoadArgs( C, "?p." ) )
+		return 0;
+	
+	CO = sgs_PushObjectIPA( C, sizeof(*CO), sgsstd_coro_iface );
+	sgs_GetStackItem( C, 0, &CO->func );
+	CO->ctx = sgs_ForkState( C, 0 );
+	return 1;
+}
+
+static int sgsstd_co_resume( SGS_CTX )
+{
+	sgs_Variable tmp;
+	sgs_StkIdx i, ssz;
+	int rvc = 0;
+	
+	CORO_IHDR( resume );
+	
+	if( CO->func.type == SGS_VT_NULL && CO->ctx->sf_last == NULL )
+	{
+		STDLIB_WARN( "coroutine is finished, cannot resume" );
+	}
+	else if( CO->ctx->sf_last )
+	{
+		if( !sgs_ResumeStateRet( CO->ctx, &rvc ) )
+			STDLIB_WARN( "failed to resume coroutine" );
+	}
+	else if( CO->func.type != SGS_VT_NULL )
+	{
+		ssz = sgs_StackSize( C );
+		for( i = 0; i < ssz; ++i )
+		{
+			sgs_PeekStackItem( C, i, &tmp );
+			sgs_PushVariable( CO->ctx, &tmp );
+		}
+		sgs_XCallP( CO->ctx, &CO->func, ssz, &rvc );
+		sgs_Release( C, &CO->func );
+		sgs_InitNull( &CO->func );
+	}
+	
+	for( i = -rvc; i < 0; ++i )
+	{
+		sgs_PeekStackItem( CO->ctx, i, &tmp );
+		sgs_PushVariable( C, &tmp );
+	}
+	
+	return rvc;
+}
+
 static int sgsstd_yield( SGS_CTX )
 {
 	SGSFN( "yield" );
@@ -2506,6 +2598,8 @@ static int sgsstd_yield( SGS_CTX )
 		STDLIB_WARN( "cannot yield with C functions in stack" );
 	return sgs_StackSize( C );
 }
+
+
 
 struct pcall_printinfo
 {
@@ -3583,7 +3677,7 @@ static sgs_RegFuncConst regfuncs[] =
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
 	STDLIB_FN( metaobj_set ), STDLIB_FN( metaobj_get ), STDLIB_FN( metamethods_enable ), STDLIB_FN( metamethods_test ),
 	STDLIB_FN( mm_getindex_router ), STDLIB_FN( mm_setindex_router ),
-	STDLIB_FN( yield ),
+	STDLIB_FN( co_create ), STDLIB_FN( co_resume ), STDLIB_FN( yield ),
 	STDLIB_FN( pcall ), STDLIB_FN( assert ),
 	STDLIB_FN( eval ), STDLIB_FN( eval_file ), STDLIB_FN( compile_sgs ),
 	STDLIB_FN( include_library ), STDLIB_FN( include_file ),
