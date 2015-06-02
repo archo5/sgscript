@@ -2551,7 +2551,9 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 				rvc = vm_exec( C );
 				if( C->state & SGS_STATE_PAUSED )
 				{
-					return rvc;
+					if( outrvc )
+						*outrvc = rvc;
+					return ret;
 				}
 			}
 			if( F->gotthis && gotthis ) C->stack_off++;
@@ -2801,7 +2803,7 @@ restart_loop:
 		case SGS_SI_CALL:
 		{
 			sgs_Variable fnvar = *stk_getlpos( C, argC );
-			int i, rvc, expect = argA, args_from = argB & 0xff, args_to = argC;
+			int i, rvc = 0, expect = argA, args_from = argB & 0xff, args_to = argC;
 			int gotthis = ( argB & 0x100 ) != 0;
 			
 			stk_makespace( C, args_to - args_from );
@@ -2817,6 +2819,12 @@ restart_loop:
 				goto restart_loop;
 			}
 			
+			if( C->state & SGS_STATE_PAUSED )
+			{
+				C->sf_last->lptr = ++C->sf_last->iptr;
+				return rvc;
+			}
+			
 			stk_resize_expected( C, expect, rvc );
 			
 			if( expect )
@@ -2824,12 +2832,6 @@ restart_loop:
 				for( i = expect - 1; i >= 0; --i )
 					stk_setlvar( C, args_from + i, C->stack_top - expect + i );
 				stk_pop( C, expect );
-			}
-			
-			if( C->state & SGS_STATE_PAUSED )
-			{
-				C->sf_last->lptr = ++C->sf_last->iptr;
-				return 0;
 			}
 			
 			break;
@@ -2953,7 +2955,8 @@ int sgsVM_Exec( SGS_CTX )
 {
 	int rvc;
 	rvc = vm_exec( C );
-	vm_postcall( C, rvc );
+	if( ( C->state & SGS_STATE_PAUSED ) == 0 )
+		vm_postcall( C, rvc );
 	return rvc;
 }
 
@@ -3016,36 +3019,6 @@ void sgsVM_StackDump( SGS_CTX )
 		printf( "  " ); sgsVM_VarDump( var ); printf( "\n" );
 	}
 	printf( "--\n" );
-}
-
-int sgsVM_ExecFn( SGS_CTX, int numtmp, void* code, size_t codesize, void* data, size_t datasize, int clean, uint16_t* T )
-{
-	ptrdiff_t stkoff = C->stack_off - C->stack_base;
-	int rvc = 0, allowed;
-	allowed = vm_frame_push( C, NULL, T, (sgs_instr_t*) code, codesize / sizeof( sgs_instr_t ) );
-	stk_push_nulls( C, numtmp );
-	if( allowed )
-	{
-		/* WP: const limit */
-		C->sf_last->constcount = (int32_t) ( datasize / sizeof( sgs_Variable* ) );
-		C->sf_last->cptr = (sgs_Variable*) data;
-		rvc = vm_exec( C );
-		if( C->state & SGS_STATE_PAUSED )
-		{
-			return rvc;
-		}
-	}
-	C->stack_off = C->stack_base + stkoff;
-	if( clean )
-		stk_pop( C, (StkIdx) ( C->stack_top - C->stack_off ) ); /* WP: stack limit */
-	else
-	{
-		/* keep only returned values */
-		stk_clean( C, C->stack_off, C->stack_top - rvc );
-	}
-	if( allowed )
-		vm_frame_pop( C );
-	return rvc;
 }
 
 int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int* outrvc, int gotthis )
@@ -3158,6 +3131,12 @@ SGSRESULT sgs_InitMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
 SGSONE sgs_PushNull( SGS_CTX )
 {
 	stk_push_null( C );
+	return 1;
+}
+
+SGSONE sgs_PushNulls( SGS_CTX, int count )
+{
+	stk_push_nulls( C, count );
 	return 1;
 }
 
@@ -4367,14 +4346,15 @@ StkIdx sgs_StackSize( SGS_CTX )
 
 SGSRESULT sgs_SetStackSize( SGS_CTX, StkIdx size )
 {
-	StkIdx diff;
-	if( size < 0 )
+	return sgs_SetDeltaSize( C, size - SGS_STACKFRAMESIZE );
+}
+
+SGSRESULT sgs_SetDeltaSize( SGS_CTX, sgs_StkIdx diff )
+{
+	StkIdx tgtsize = SGS_STACKFRAMESIZE + diff;
+	if( tgtsize < 0 )
 		return SGS_EINVAL;
-	diff = SGS_STACKFRAMESIZE - size;
-	if( diff > 0 )
-		stk_pop( C, diff );
-	else
-		stk_push_nulls( C, -diff );
+	stk_deltasize( C, diff );
 	return SGS_SUCCESS;
 }
 

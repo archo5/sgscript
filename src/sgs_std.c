@@ -2504,7 +2504,7 @@ static int sgsstd_yield( SGS_CTX )
 	SGSFN( "yield" );
 	if( sgs_PauseState( C ) == SGS_FALSE )
 		STDLIB_WARN( "cannot yield with C functions in stack" );
-	return 0;
+	return sgs_StackSize( C );
 }
 
 struct pcall_printinfo

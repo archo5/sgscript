@@ -366,19 +366,30 @@ SGSBOOL sgs_PauseState( SGS_CTX )
 	return SGS_TRUE;
 }
 
-SGSRESULT sgs_ResumeState( SGS_CTX )
+SGSBOOL sgs_ResumeStateRet( SGS_CTX, int* outrvc )
 {
+	int rvc = 0;
 	if( !( C->state & SGS_STATE_PAUSED ) )
-		return SGS_SUCCESS; /* already running */
+		return SGS_FALSE; /* already running, may not return the expected data */
 	sgs_BreakIf( C->sf_last == NULL );
 	
 	/* TODO validate state corruption */
 	/* TODO pass arguments */
 	C->state &= ~(uint32_t)SGS_STATE_PAUSED;
-	sgsVM_Exec( C );
-	/* TODO handle returned values */
+	rvc = sgsVM_Exec( C );
+	if( outrvc )
+		*outrvc = rvc;
 	
-	return SGS_SUCCESS;
+	return SGS_TRUE;
+}
+
+SGSBOOL sgs_ResumeStateExp( SGS_CTX, int expect )
+{
+	int rvc = 0;
+	int ret = sgs_ResumeStateRet( C, &rvc );
+	if( ret )
+		sgs_SetDeltaSize( C, expect - rvc );
+	return ret;
 }
 
 
@@ -1165,6 +1176,7 @@ int32_t sgs_Cntl( SGS_CTX, int what, int32_t val )
 		else C->state &= (uint32_t) ~SGS_SERIALIZE_MODE2;
 		return x;
 	case SGS_CNTL_NUMRETVALS: return C->num_last_returned;
+	case SGS_CNTL_GET_PAUSED: return C->state & SGS_STATE_PAUSED ? 1 : 0;
 	}
 	return 0;
 }

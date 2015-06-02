@@ -184,6 +184,7 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 #define SGS_CNTL_GET_ERRSUP 11
 #define SGS_CNTL_SERIALMODE 12
 #define SGS_CNTL_NUMRETVALS 13
+#define SGS_CNTL_GET_PAUSED 14
 
 
 /* Object actions */
@@ -361,7 +362,9 @@ SGS_APIFUNC void sgs_DestroyEngine( SGS_CTX );
 SGS_APIFUNC sgs_Context* sgs_ForkState( SGS_CTX, int copystate );
 SGS_APIFUNC void sgs_FreeState( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_PauseState( SGS_CTX );
-SGS_APIFUNC SGSRESULT sgs_ResumeState( SGS_CTX );
+SGS_APIFUNC SGSBOOL sgs_ResumeStateRet( SGS_CTX, int* outrvc );
+SGS_APIFUNC SGSBOOL sgs_ResumeStateExp( SGS_CTX, int expect );
+#define sgs_ResumeState( C ) sgs_ResumeStateExp( C, 0 )
 
 
 #define SGS_CODE_ER 0 /* error codes */
@@ -516,6 +519,7 @@ SGS_APIFUNC SGSRESULT sgs_InitMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numit
 	STACK & SUB-ITEMS
 */
 SGS_APIFUNC SGSONE sgs_PushNull( SGS_CTX );
+SGS_APIFUNC SGSONE sgs_PushNulls( SGS_CTX, int count );
 SGS_APIFUNC SGSONE sgs_PushBool( SGS_CTX, sgs_Bool value );
 SGS_APIFUNC SGSONE sgs_PushInt( SGS_CTX, sgs_Int value );
 SGS_APIFUNC SGSONE sgs_PushReal( SGS_CTX, sgs_Real value );
@@ -631,6 +635,7 @@ SGS_APIFUNC SGSRESULT sgs_PopSkip( SGS_CTX, sgs_StkIdx count, sgs_StkIdx skip );
 
 SGS_APIFUNC sgs_StkIdx sgs_StackSize( SGS_CTX );
 SGS_APIFUNC SGSRESULT sgs_SetStackSize( SGS_CTX, sgs_StkIdx size );
+SGS_APIFUNC SGSRESULT sgs_SetDeltaSize( SGS_CTX, sgs_StkIdx diff );
 SGS_APIFUNC sgs_StkIdx sgs_AbsIndex( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSBOOL sgs_IsValidIndex( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSBOOL sgs_PeekStackItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out );

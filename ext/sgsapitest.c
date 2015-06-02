@@ -119,9 +119,11 @@ sgs_Context* get_context()
 	
 	outfp = fopen( outfile, "a" );
 	atf_assert_( outfp, "could not create output file", __LINE__ );
+	setvbuf( outfp, NULL, _IONBF, 0 );
 	
 	errfp = fopen( outfile_errors, "a" );
 	atf_assert_( errfp, "could not create error output file", __LINE__ );
+	setvbuf( errfp, NULL, _IONBF, 0 );
 	
 	fprintf( outfp, "//\n/// O U T P U T  o f  %s\n//\n\n", testname );
 	
@@ -787,10 +789,60 @@ DEFINE_TEST( yield_resume )
 	atf_assert( sgs_GlobalBool( C, "m1" ) == SGS_FALSE );
 	
 	// resume
-	atf_assert( sgs_ResumeState( C ) == SGS_SUCCESS );
+	atf_assert( sgs_ResumeState( C ) == SGS_TRUE );
 	// check if done
 	atf_assert( ( sgs_Cntl( C, SGS_CNTL_GET_STATE, 0 ) & SGS_STATE_PAUSED ) == 0 );
 	atf_assert( sgs_GlobalBool( C, "m1" ) == SGS_TRUE );
+	
+	destroy_context( C );
+}
+
+int sm_tick_id = 0;
+int sm_resume_id = 0;
+static int sm_wait( SGS_CTX )
+{
+	SGSFN( "sm_wait" );
+	sm_resume_id = sm_tick_id + (int) sgs_GetInt( C, 0 );
+	fprintf( outfp, "paused on tick %d until %d\n", sm_tick_id, sm_resume_id );
+	atf_assert( sgs_PauseState( C ) );
+	return 1;
+}
+DEFINE_TEST( state_machine_core )
+{
+	SGS_CTX = get_context();
+	
+	sgs_RegFuncConst fns[] = {{ "wait", sm_wait }};
+	atf_assert( sgs_RegFuncConsts( C, fns, 1 ) == SGS_SUCCESS );
+	
+	sm_tick_id = 0;
+	sm_resume_id = 0;
+	int rvc = 0;
+	atf_assert( sgs_EvalString( C, ""
+		"println('a');\n"
+		"wait(15);\n"
+		"println('b');\n"
+		"wait(10);\n"
+		"println('c');\n"
+		"(function test(){\n"
+			"wait(15);\n"
+			"println('d');\n"
+			"wait(10);\n"
+			"println('e');\n"
+		"})();\n"
+	"", &rvc ) == SGS_SUCCESS );
+	atf_assert( rvc == 1 );
+	fprintf( outfp, "[EvalString value-returned %d]\n", (int) sgs_GetInt( C, -1 ) );
+	sgs_Pop( C, 1 );
+	
+	while( sgs_Cntl( C, SGS_CNTL_GET_PAUSED, 0 ) )
+	{
+		while( sm_tick_id < sm_resume_id )
+			sm_tick_id++;
+		fprintf( outfp, "resuming on tick %d\n", sm_tick_id );
+		atf_assert( sgs_ResumeStateExp( C, 1 ) == SGS_TRUE );
+		fprintf( outfp, "[ResumeStateExp value-returned %d]\n", (int) sgs_GetInt( C, -1 ) );
+		sgs_Pop( C, 1 );
+	}
 	
 	destroy_context( C );
 }
@@ -817,6 +869,7 @@ test_t all_tests[] =
 	TST( native_obj_meta ),
 	TST( fork_state ),
 	TST( yield_resume ),
+	TST( state_machine_core ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }
 
