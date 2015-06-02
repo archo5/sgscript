@@ -839,7 +839,7 @@ DEFINE_TEST( state_machine_core )
 		while( sm_tick_id < sm_resume_id )
 			sm_tick_id++;
 		fprintf( outfp, "resuming on tick %d\n", sm_tick_id );
-		atf_assert( sgs_ResumeStateExp( C, 1 ) == SGS_TRUE );
+		atf_assert( sgs_ResumeStateExp( C, 0, 1 ) == SGS_TRUE );
 		fprintf( outfp, "[ResumeStateExp value-returned %d]\n", (int) sgs_GetInt( C, -1 ) );
 		sgs_Pop( C, 1 );
 	}

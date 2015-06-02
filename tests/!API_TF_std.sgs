@@ -177,13 +177,13 @@ co = co_create(function(i)
 {
 	i ??= 0;
 	for( ; i < 3; ++i )
-		yield( i );
+		testEqual( yield( i ), 123, "coroutine - yield return" );
 	return 1337;
 });
 testEqual( ''$co, "coroutine", "coroutine - created" );
 testEqual( co_resume( co, 1 ), 1, "coroutine - resume [1]" );
-testEqual( co_resume( co ), 2, "coroutine - resume [2]" );
-testEqual( co_resume( co ), 1337, "coroutine - return" );
+testEqual( co_resume( co, 123 ), 2, "coroutine - resume [2]" );
+testEqual( co_resume( co, 123 ), 1337, "coroutine - return" );
 ERRORS = ""; testEqual( co_resume( co ), null ); testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
 
 	section( "misc." );

@@ -362,9 +362,9 @@ SGS_APIFUNC void sgs_DestroyEngine( SGS_CTX );
 SGS_APIFUNC sgs_Context* sgs_ForkState( SGS_CTX, int copystate );
 SGS_APIFUNC void sgs_FreeState( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_PauseState( SGS_CTX );
-SGS_APIFUNC SGSBOOL sgs_ResumeStateRet( SGS_CTX, int* outrvc );
-SGS_APIFUNC SGSBOOL sgs_ResumeStateExp( SGS_CTX, int expect );
-#define sgs_ResumeState( C ) sgs_ResumeStateExp( C, 0 )
+SGS_APIFUNC SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc );
+SGS_APIFUNC SGSBOOL sgs_ResumeStateExp( SGS_CTX, int args, int expect );
+#define sgs_ResumeState( C ) sgs_ResumeStateExp( C, 0, 0 )
 
 
 #define SGS_CODE_ER 0 /* error codes */

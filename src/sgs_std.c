@@ -2564,12 +2564,7 @@ static int sgsstd_co_resume( SGS_CTX )
 	{
 		STDLIB_WARN( "coroutine is finished, cannot resume" );
 	}
-	else if( CO->ctx->sf_last )
-	{
-		if( !sgs_ResumeStateRet( CO->ctx, &rvc ) )
-			STDLIB_WARN( "failed to resume coroutine" );
-	}
-	else if( CO->func.type != SGS_VT_NULL )
+	else if( CO->func.type != SGS_VT_NULL || CO->ctx->sf_last )
 	{
 		ssz = sgs_StackSize( C );
 		for( i = 0; i < ssz; ++i )
@@ -2577,9 +2572,18 @@ static int sgsstd_co_resume( SGS_CTX )
 			sgs_PeekStackItem( C, i, &tmp );
 			sgs_PushVariable( CO->ctx, &tmp );
 		}
-		sgs_XCallP( CO->ctx, &CO->func, ssz, &rvc );
-		sgs_Release( C, &CO->func );
-		sgs_InitNull( &CO->func );
+		
+		if( CO->ctx->sf_last )
+		{
+			if( !sgs_ResumeStateRet( CO->ctx, ssz, &rvc ) )
+				STDLIB_WARN( "failed to resume coroutine" );
+		}
+		else if( CO->func.type != SGS_VT_NULL )
+		{
+			sgs_XCallP( CO->ctx, &CO->func, ssz, &rvc );
+			sgs_Release( C, &CO->func );
+			sgs_InitNull( &CO->func );
+		}
 	}
 	
 	for( i = -rvc; i < 0; ++i )

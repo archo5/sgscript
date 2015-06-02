@@ -424,7 +424,6 @@ typedef struct _sgs_ShCtx sgs_ShCtx;
 void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len );
 void sgsVM_VarDestroyObject( SGS_CTX, sgs_VarObj* O );
 
-int sgsVM_Exec( SGS_CTX );
 size_t sgsVM_VarSize( const sgs_Variable* var );
 void sgsVM_VarDump( const sgs_Variable* var );
 

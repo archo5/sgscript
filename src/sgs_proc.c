@@ -2821,7 +2821,6 @@ restart_loop:
 			
 			if( C->state & SGS_STATE_PAUSED )
 			{
-				C->sf_last->lptr = ++C->sf_last->iptr;
 				return rvc;
 			}
 			
@@ -2951,13 +2950,38 @@ restart_loop:
 
 /* INTERNAL INERFACE */
 
-int sgsVM_Exec( SGS_CTX )
+SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 {
-	int rvc;
+	int rvc = 0;
+	if( !( C->state & SGS_STATE_PAUSED ) )
+		return SGS_FALSE; /* already running, may not return the expected data */
+	sgs_BreakIf( C->sf_last == NULL );
+	
+	/* TODO validate state corruption */
+	sgs_BreakIf( SGS_INSTR_GET_OP( *C->sf_last->iptr ) != SGS_SI_CALL );
+	{
+		int i, expect = SGS_INSTR_GET_A( *C->sf_last->iptr );
+		int args_from = SGS_INSTR_GET_B( *C->sf_last->iptr ) & 0xff;
+		stk_resize_expected( C, expect, args );
+		
+		if( expect )
+		{
+			for( i = expect - 1; i >= 0; --i )
+				stk_setlvar( C, args_from + i, C->stack_top - expect + i );
+			stk_pop( C, expect );
+		}
+	}
+	
+	C->sf_last->lptr = ++C->sf_last->iptr;
+	
+	C->state &= ~(uint32_t)SGS_STATE_PAUSED;
 	rvc = vm_exec( C );
 	if( ( C->state & SGS_STATE_PAUSED ) == 0 )
 		vm_postcall( C, rvc );
-	return rvc;
+	if( outrvc )
+		*outrvc = rvc;
+	
+	return SGS_TRUE;
 }
 
 static size_t funct_size( const sgs_iFunc* f )
