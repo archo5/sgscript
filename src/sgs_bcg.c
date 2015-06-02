@@ -681,6 +681,7 @@ static rcpos_t add_const_s( SGS_CTX, sgs_CompFunc* func, uint32_t len, const cha
 sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_CompFunc* nf,
 	const char* funcname, size_t fnsize, sgs_LineNum lnum )
 {
+	sgs_Variable strvar;
 	sgs_iFunc* F = sgs_Alloc_a( sgs_iFunc, nf->consts.size + nf->code.size );
 
 	F->refcount = 1;
@@ -697,14 +698,16 @@ sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_CompFunc* nf,
 		F->lineinfo = sgs_Alloc_n( sgs_LineNum, lnc );
 		memcpy( F->lineinfo, nf->lnbuf.ptr, nf->lnbuf.size );
 	}
-	F->funcname = sgs_membuf_create();
-	if( funcname )
-		sgs_membuf_setstrbuf( &F->funcname, C, funcname, fnsize );
+	/* WP: string limit */
+	sgsVM_VarCreateString( C, &strvar, funcname, (sgs_SizeVal) fnsize );
+	F->sfuncname = strvar.data.S;
 	F->linenum = lnum;
-	
-	F->filename = sgs_membuf_create();
+	/* WP: string limit */
 	if( C->filename )
-		sgs_membuf_setstr( &F->filename, C, C->filename );
+		sgsVM_VarCreateString( C, &strvar, C->filename, (sgs_SizeVal) strlen( C->filename ) );
+	else
+		sgs_InitStringBuf( C, &strvar, "", 0 );
+	F->sfilename = strvar.data.S;
 	
 	memcpy( sgs_func_consts( F ), nf->consts.ptr, nf->consts.size );
 	memcpy( sgs_func_bytecode( F ), nf->code.ptr, nf->code.size );
@@ -2970,7 +2973,7 @@ static const char* bc_read_varlist( decoder_t* D, sgs_Variable* vlist, int cnt )
 */
 static int bc_write_sgsfunc( sgs_iFunc* F, SGS_CTX, sgs_MemBuf* outbuf )
 {
-	size_t size = F->funcname.size;
+	size_t size = F->sfuncname->size;
 	uint16_t cc, ic;
 	uint8_t gntc[4] = { F->gotthis, F->numargs, F->numtmp, F->numclsr };
 	
@@ -2984,7 +2987,7 @@ static int bc_write_sgsfunc( sgs_iFunc* F, SGS_CTX, sgs_MemBuf* outbuf )
 	sgs_membuf_appbuf( outbuf, C, &F->linenum, sizeof( sgs_LineNum ) );
 	sgs_membuf_appbuf( outbuf, C, F->lineinfo, sizeof( uint16_t ) * ic );
 	sgs_membuf_appbuf( outbuf, C, &size, sizeof( size ) );
-	sgs_membuf_appbuf( outbuf, C, F->funcname.ptr, F->funcname.size );
+	sgs_membuf_appbuf( outbuf, C, sgs_str_cstr( F->sfuncname ), F->sfuncname->size );
 
 	if( !bc_write_varlist( sgs_func_consts( F ), C, cc, outbuf ) )
 		return 0;
@@ -2993,32 +2996,11 @@ static int bc_write_sgsfunc( sgs_iFunc* F, SGS_CTX, sgs_MemBuf* outbuf )
 	return 1;
 }
 
-static const char* bc_read_membuf( decoder_t* D, sgs_MemBuf* out )
-{
-	const char* buf = D->buf;
-	uint32_t len;
-	
-	if( SGSNOMINDEC( 4 ) )
-		return "data error";
-	
-	SGS_AS_UINT32( len, buf );
-	if( D->convend )
-		len = (uint32_t) esi32( len );
-	buf += 4;
-	
-	if( SGSNOMINDEC( len ) )
-		return "data error";
-	
-	sgs_membuf_setstrbuf( out, D->C, buf, len );
-	D->buf = buf + len;
-	
-	return NULL;
-}
-
 static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 {
+	sgs_Variable strvar;
 	sgs_iFunc* F = NULL;
-	uint32_t coff, ioff, size;
+	uint32_t coff, ioff, size, fnsize;
 	uint16_t cc, ic;
 	const char* ret = "data error";
 	SGS_CTX = D->C;
@@ -3056,6 +3038,8 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	if( D->convend )
 		F->linenum = (sgs_LineNum) esi16( F->linenum );
 	F->lineinfo = sgs_Alloc_n( sgs_LineNum, ic );
+	F->sfuncname = NULL;
+	F->sfilename = NULL;
 	D->buf += 10;
 	
 	if( SGSNOMINDEC( sizeof( sgs_LineNum ) * ic ) )
@@ -3066,13 +3050,21 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	if( D->convend )
 		esi16_array( (uint16_t*) F->lineinfo, ic );
 	
-	F->funcname = sgs_membuf_create();
-	ret = bc_read_membuf( D, &F->funcname );
-	if( ret )
+	if( SGSNOMINDEC( 4 ) )
 		goto fail;
+	SGS_AS_UINT32( fnsize, D->buf ); D->buf += 4;
+	fnsize = (uint32_t) esi32( fnsize );
+	if( SGSNOMINDEC( fnsize ) )
+		goto fail;
+	/* WP: string limit */
+	memcpy( sgs_InitStringAlloc( C, &strvar, (sgs_SizeVal) fnsize ), D->buf, fnsize );
+	sgs_FinalizeStringAllocP( C, &strvar );
+	F->sfuncname = strvar.data.S;
+	D->buf += fnsize;
 	
-	F->filename = sgs_membuf_create();
-	sgs_membuf_setstrbuf( &F->filename, C, D->filename, D->filename_len );
+	/* WP: string limit */
+	sgs_InitStringBuf( C, &strvar, D->filename, (sgs_SizeVal) D->filename_len );
+	F->sfilename = strvar.data.S;
 	
 	/* the main data */
 	ret = bc_read_varlist( D, sgs_func_consts( F ), cc );
@@ -3095,8 +3087,17 @@ fail:
 	{
 		/* everything is allocated together, between error jumps */
 		sgs_Dealloc( F->lineinfo );
-		sgs_membuf_destroy( &F->funcname, C );
-		sgs_membuf_destroy( &F->filename, C );
+		strvar.type = SGS_VT_STRING;
+		if( F->sfuncname )
+		{
+			strvar.data.S = F->sfuncname;
+			sgs_Release( C, &strvar );
+		}
+		if( F->sfilename )
+		{
+			strvar.data.S = F->sfilename;
+			sgs_Release( C, &strvar );
+		}
 		sgs_Dealloc( F );
 	}
 	return ret;

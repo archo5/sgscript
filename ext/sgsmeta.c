@@ -159,6 +159,7 @@ static int _sgs_meta_dumplnlist( SGS_CTX, sgs_LineNum* data, size_t numinstr )
 
 static int _sgs_meta_dumpfn( SGS_CTX, sgs_iFunc* func )
 {
+	sgs_Variable strvar;
 	int ssz = sgs_StackSize( C );
 	
 	sgs_PushString( C, "consts" );
@@ -188,8 +189,15 @@ static int _sgs_meta_dumpfn( SGS_CTX, sgs_iFunc* func )
 	sgs_PushString( C, "numclsr" );
 	sgs_PushInt( C, func->numclsr );
 	
+	strvar.type = SGS_VT_STRING;
+	
 	sgs_PushString( C, "name" );
-	sgs_PushStringBuf( C, func->funcname.ptr, (sgs_SizeVal) func->funcname.size );
+	strvar.data.S = func->sfuncname;
+	sgs_PushVariable( C, &strvar );
+	
+	sgs_PushString( C, "filename" );
+	strvar.data.S = func->sfilename;
+	sgs_PushVariable( C, &strvar );
 	
 	sgs_PushString( C, "line" );
 	sgs_PushInt( C, func->linenum );

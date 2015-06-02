@@ -392,8 +392,8 @@ struct _sgs_iFunc
 	uint8_t numclsr;
 	sgs_LineNum linenum;
 	sgs_LineNum* lineinfo;
-	sgs_MemBuf funcname;
-	sgs_MemBuf filename;
+	sgs_iStr* sfuncname;
+	sgs_iStr* sfilename;
 };
 
 SGS_CASSERT( sizeof(sgs_Variable) % 4 == 0, variable_object_chaining_issue );

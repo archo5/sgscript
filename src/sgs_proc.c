@@ -216,8 +216,8 @@ static void var_destroy_func( SGS_CTX, sgs_iFunc* F )
 		var++;
 	}
 	sgs_Dealloc( F->lineinfo );
-	sgs_membuf_destroy( &F->funcname, C );
-	sgs_membuf_destroy( &F->filename, C );
+	if( --F->sfuncname->refcount <= 0 ) var_destroy_string( C, F->sfuncname );
+	if( --F->sfilename->refcount <= 0 ) var_destroy_string( C, F->sfilename );
 	sgs_Dealloc( F );
 }
 
@@ -2962,7 +2962,7 @@ int sgsVM_Exec( SGS_CTX )
 
 static size_t funct_size( const sgs_iFunc* f )
 {
-	size_t sz = f->size + f->funcname.mem + f->filename.mem;
+	size_t sz = f->size + sizeof( sgs_iStr ) * 2 + f->sfuncname->size + f->sfilename->size;
 	const sgs_Variable* beg = (const sgs_Variable*) (const void*) sgs_func_c_consts( f );
 	const sgs_Variable* end = (const sgs_Variable*) (const void*) SGS_ASSUME_ALIGNED( sgs_func_c_bytecode( f ), 4 );
 	while( beg < end )
@@ -4647,22 +4647,22 @@ SGSRESULT sgs_DumpVar( SGS_CTX, int maxdepth )
 				sgs_MemBuf mb = sgs_membuf_create();
 				sgs_iFunc* F = var->data.F;
 				
-				const char* str1 = F->funcname.size ? "SGS function '" : "SGS function <anonymous>";
-				const char* str2 = F->funcname.size ? "' defined at " : " defined at ";
+				const char* str1 = F->sfuncname->size ? "SGS function '" : "SGS function <anonymous>";
+				const char* str2 = F->sfuncname->size ? "' defined at " : " defined at ";
 				const char* str3 = "'";
 				
 				sgs_membuf_appbuf( &mb, C, str1, strlen(str1) );
-				if( F->funcname.size )
-					sgs_membuf_appbuf( &mb, C, F->funcname.ptr, F->funcname.size );
-				if( F->filename.size )
+				if( F->sfuncname->size )
+					sgs_membuf_appbuf( &mb, C, sgs_str_cstr( F->sfuncname ), F->sfuncname->size );
+				if( F->sfilename->size )
 				{
 					char lnbuf[ 32 ];
 					sgs_membuf_appbuf( &mb, C, str2, strlen(str2) );
-					sgs_membuf_appbuf( &mb, C, F->filename.ptr, F->filename.size );
+					sgs_membuf_appbuf( &mb, C, sgs_str_cstr( F->sfilename ), F->sfilename->size );
 					sprintf( lnbuf, ":%d", (int) F->linenum );
 					sgs_membuf_appbuf( &mb, C, lnbuf, strlen(lnbuf) );
 				}
-				else if( F->funcname.size )
+				else if( F->sfuncname->size )
 					sgs_membuf_appbuf( &mb, C, str3, strlen(str3) );
 				
 				/* WP: various limits */
@@ -4937,6 +4937,7 @@ static int _serialize_function( SGS_CTX, sgs_iFunc* func, sgs_MemBuf* out )
 
 static int _unserialize_function( SGS_CTX, const char* buf, size_t sz, sgs_iFunc** outfn )
 {
+	sgs_Variable strvar;
 	sgs_iFunc* F;
 	sgs_CompFunc* nf = NULL;
 	if( sgsBC_ValidateHeader( buf, sz ) < SGS_HEADER_SIZE )
@@ -4960,9 +4961,11 @@ static int _unserialize_function( SGS_CTX, const char* buf, size_t sz, sgs_iFunc
 		F->lineinfo = sgs_Alloc_n( sgs_LineNum, lnc );
 		memcpy( F->lineinfo, nf->lnbuf.ptr, nf->lnbuf.size );
 	}
-	F->funcname = sgs_membuf_create();
+	var_create_str( C, &strvar, "", 0 );
+	F->sfuncname = strvar.data.S;
 	F->linenum = 0;
-	F->filename = sgs_membuf_create();
+	VAR_ACQUIRE( &strvar );
+	F->sfilename = strvar.data.S;
 	/* set from current if possible? */
 	
 	memcpy( sgs_func_consts( F ), nf->consts.ptr, nf->consts.size );

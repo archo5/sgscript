@@ -1016,7 +1016,7 @@ static void dumpvar( SGS_CTX, sgs_Variable* var )
 		break;
 	case SGS_VT_FUNC:
 		sgs_Writef( C, " [rc:%d] '%s'[%d]%s tmp=%d clsr=%d", var->data.F->refcount,
-			var->data.F->funcname.ptr ? var->data.F->funcname.ptr : "<anonymous>",
+			var->data.F->sfuncname->size ? sgs_str_cstr( var->data.F->sfuncname ) : "<anonymous>",
 			(int) var->data.F->numargs, var->data.F->gotthis ? " (method)" : "",
 			(int) var->data.F->numtmp, (int) var->data.F->numclsr );
 		break;
@@ -1198,12 +1198,12 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 	else if( frame->func.type == SGS_VT_FUNC )
 	{
 		N = "<anonymous function>";
-		if( frame->func.data.F->funcname.size )
-			N = frame->func.data.F->funcname.ptr;
+		if( frame->func.data.F->sfuncname->size )
+			N = sgs_str_cstr( frame->func.data.F->sfuncname );
 		L = !frame->func.data.F->lineinfo ? 1 :
 			frame->func.data.F->lineinfo[ frame->lptr - frame->code ];
-		if( frame->func.data.F->filename.size )
-			F = frame->func.data.F->filename.ptr;
+		if( frame->func.data.F->sfilename->size )
+			F = sgs_str_cstr( frame->func.data.F->sfilename );
 		else if( frame->filename )
 			F = frame->filename;
 	}
