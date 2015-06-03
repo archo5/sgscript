@@ -416,8 +416,8 @@ SGS_APIFUNC void* sgs_Memory( SGS_CTX, void* ptr, size_t size );
 #define sgs_Dealloc( ptr ) sgs_Free( C, ptr )
 
 
-SGS_APIFUNC SGSRESULT sgs_EvalBuffer( SGS_CTX, const char* buf, size_t size, int* rvc );
-SGS_APIFUNC SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc );
+SGS_APIFUNC SGSRESULT sgs_EvalBuffer( SGS_CTX, const char* buf, size_t size, int* outrvc );
+SGS_APIFUNC SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* outrvc );
 SGS_APIFUNC SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath );
 SGS_APIFUNC SGSRESULT sgs_Compile( SGS_CTX, const char* buf, size_t size, char** outbuf, size_t* outsize );
 
@@ -436,7 +436,7 @@ SGS_APIFUNC sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
 
 #define sgs_ExecBuffer( C, buf, sz ) sgs_EvalBuffer( C, buf, sz, NULL )
 #define sgs_ExecString( C, str ) sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )
-#define sgs_EvalString( C, str, rvc ) sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ), rvc )
+#define sgs_EvalString( C, str, outrvc ) sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ), outrvc )
 #define sgs_ExecFile( C, str ) sgs_EvalFile( C, str, NULL )
 #define sgs_Include( C, str ) sgs_IncludeExt( C, str, NULL )
 #define sgs_WriteStr( C, str ) sgs_Write( C, str, SGS_STRINGLENGTHFUNC( str ) )

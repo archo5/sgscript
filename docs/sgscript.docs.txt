@@ -1,4 +1,4 @@
-SGScript documentation - v0.9.5
+SGScript documentation - v0.9.7
 
 
 # SGScript - description [info]
@@ -51,7 +51,7 @@ The standard library includes:
 
 - array, dict, map
 - math, string, I/O, O/S and formatting functions
-- `eval`, file import, DLL import
+- `eval`, file import, DLL import, coroutines
 
 
 # >>>
@@ -1201,6 +1201,12 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_CreateEngine - create scripting engine context
 - @sgs_CreateEngineExt - create scripting engine context and pass a custom memory function
 - @sgs_DestroyEngine - validate memory statistics and destroy engine context
+- @sgs_ForkState - create a duplicate of the execution state
+- @sgs_FreeState - release an execution state
+- @sgs_PauseState - suspends the execution state
+- @sgs_ResumeStateRet<sgs_ResumeState***> - resumes the execution state, retrieves number of return values
+- @sgs_ResumeStateExp<sgs_ResumeState***> - resumes the execution state, returns the specified number of return values
+- @sgs_ResumeState - resumes the execution state without passing or receiving anything
 - @sgs_DefaultMemFunc - example memory management callback
 - @sgs_Get(Err)OutputFunc - return the current output callback and its user data pointer
 - @sgs_Set(Err)OutputFunc - set the output callback and its user data pointer
@@ -1280,6 +1286,12 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # Execution control [info]
 
+- @sgs_XFCallP<sgs_XFCall(P)> - call variable as function
+- @sgs_XCallP<sgs_X(This)Call(P)> - call variable as function without `this` passed to it
+- @sgs_XThisCallP<sgs_X(This)Call(P)> - call variable as function function with `this` passed to it
+- @sgs_XFCall<sgs_XFCall(P)> - call the topmost stack item as function
+- @sgs_XCall<sgs_X(This)Call(P)> - call the topmost stack item as function without `this` passed to it
+- @sgs_XThisCall<sgs_X(This)Call(P)> - call the topmost stack item as function with `this` passed to it
 - @sgs_FCallP<sgs_FCall(P)> - call variable as function
 - @sgs_CallP<sgs_(This)Call(P)> - call variable as function without `this` passed to it
 - @sgs_ThisCallP<sgs_(This)Call(P)> - call variable as function function with `this` passed to it
@@ -1339,6 +1351,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 # Stack primary interface [info]
 
 - @sgs_PushNull<sgs_Push***> - push a null variable
+- @sgs_PushNulls<sgs_Push***> - push multiple null variables
 - @sgs_PushBool<sgs_Push***> - push a boolean variable
 - @sgs_PushInt<sgs_Push***> - push an integer
 - @sgs_PushReal<sgs_Push***> - push a real value
@@ -1361,6 +1374,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_PopSkip - pop the specified number of items from stack, skipping some topmost items
 - @sgs_StackSize - return the size of the current stack frame
 - @sgs_SetStackSize - resize the current stack frame
+- @sgs_SetDeltaSize - relative-resize the current stack frame
 - @sgs_AbsIndex - convert stack index to positive if possible (if it's <0 or >=StackSize, then it's invalid)
 - @sgs_IsValidIndex - check if specified stack index is valid
 - @sgs_PeekStackItem - retrieve without acquisition the specified variable on stack
@@ -1604,6 +1618,54 @@ Closure stack in the C API is technically very similar to main stack, with one i
 == sgs_DestroyEngine( sgs_Context* C )
 === destroys the passed context and frees all memory associated to it
 
+- all execution state, object and any other engine-allocated pointers will be invalid after this call
+
+
+# sgs_ForkState [function]
+
+== sgs_Context* sgs_ForkState( sgs_Context* C, int copystate )
+=== creates a copy of the execution state
+
+- if `copystate` is nonzero, all stacks (variable, closure, call) are copied as well, creating an exact duplicate
+
+
+# sgs_FreeState [function]
+
+== sgs_FreeState( sgs_Context* C )
+=== destroys the execution state, possibly destroying the VM
+
+- if the freed state is the last one that exists, function behaves exactly as @sgs_DestroyEngine
+
+
+# sgs_PauseState [function]
+
+== SGSBOOL sgs_PauseState( sgs_Context* C )
+=== suspends the execution state, prompting the VM to return control to caller
+
+- a state cannot be suspended if call stack contains C functions or unusual constructs (at the moment some object interface calls may not work either)
+- this function can be used in a C function that was called from a SGS function
+
+
+# sgs_ResumeState*** [functions]
+
+== SGSBOOL sgs_ResumeStateRet( sgs_Context* C, int args, int* outrvc )
+=== resumes the execution state, passing arguments and retrieving the number of returned values
+
+== SGSBOOL sgs_ResumeStateExp( sgs_Context* C, int args, int expect )
+=== resumes the execution state, passing arguments and retrieving the specified number of returned values
+
+- returns true if state was suspended and thus subsequently resumed
+- `args` must be bigger than or equal to the stack size
+- `outrvc` can be NULL
+
+
+# sgs_ResumeState [function alias]
+
+== SGSBOOL sgs_ResumeState( sgs_Context* C )
+=== resumes the execution state
+
+- alias to `sgs_ResumeStateExp( C, 0, 0 )`
+
 
 # sgs_ExecString [function alias]
 
@@ -1821,6 +1883,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 # sgs_Push*** [functions]
 
 == SGSONE sgs_PushNull( sgs_Context* C )
+== SGSONE sgs_PushNulls( sgs_Context* C, int count )
 == SGSONE sgs_PushBool( sgs_Context* C, sgs_Bool value )
 == SGSONE sgs_PushInt( sgs_Context* C, sgs_Int value )
 == SGSONE sgs_PushReal( sgs_Context* C, sgs_Real value )
@@ -2329,6 +2392,31 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 
 
+# sgs_XFCall(P) [functions]
+
+== SGSRESULT sgs_FCall( sgs_Context* C, int args, int* outrvc, int gotthis )
+=== call the topmost variable on stack with the arguments before it, returning variables on stack and their count via the `outrvc` parameter
+
+== SGSRESULT sgs_XFCallP( sgs_Context* C, sgs_Variable* var, int args, int* outrvc, int gotthis )
+=== call the variable with the arguments on stack, returning variables on stack and their count via the `outrvc` parameter
+
+- on success, `outrvc` receives the number of values that were returned by the call
+- refer to @sgs_FCall(P) for additional documentation
+
+
+# sgs_X(This)Call(P) [function aliases]
+
+== SGSRESULT sgs_XCall( sgs_Context* C, int args, int* outrvc )
+== SGSRESULT sgs_XThisCall( sgs_Context* C, int args, int* outrvc )
+=== call the topmost variable on stack with the arguments before it, returning variables on stack and their count via the `outrvc` parameter
+
+== SGSRESULT sgs_XCallP( sgs_Context* C, sgs_Variable* var, int args, int* outrvc )
+== SGSRESULT sgs_XThisCallP( sgs_Context* C, sgs_Variable* var, int args, int* outrvc )
+=== call the variable with the arguments on stack, returning variables on stack and their count via the `outrvc` parameter
+
+- aliases to @sgs_XFCall(P), for the first function of each group `gotthis = 0`, for the second `gotthis = 1`.
+
+
 # sgs_FCall(P) [functions]
 
 == SGSRESULT sgs_FCall( sgs_Context* C, int args, int expect, int gotthis )
@@ -2359,6 +2447,8 @@ After a successful call, all arguments and the function will be popped off the s
 ! The return value SGS_SUCABRT is returned if function call was aborted.
 
 ! To see the actual number of returned values, see @sgs_Cntl / SGS_CNTL_NUMRETVALS.
+
+! To find out if execution state was suspended in this call, see @sgs_Cntl / SGS_CNTL_GET_PAUSED.
 
 === error codes
 - SGS_EINPROC: topmost item on stack was not callable
@@ -3030,6 +3120,16 @@ After a successful call, all arguments and the function will be popped off the s
 - if the current number of items is more than needed, the unnecessary amount of items is popped
 
 
+# sgs_SetDeltaSize [function]
+
+== SGSRESULT sgs_SetDeltaSize( sgs_Context* C, sgs_StkIdx diff )
+=== resizes the current stack frame to the [size+diff] size
+
+- if diff is positive, stack is null-variable-padded at the end
+- if diff is negative, the specified number of items are popped
+- if amount of items to be popped is bigger than size, function fails
+
+
 # sgs_AbsIndex [function]
 
 == sgs_StkIdx sgs_AbsIndex( sgs_Context* C, sgs_StkIdx item )
@@ -3511,6 +3611,7 @@ sample implementation (same as in sgscript.h):
 
 - the following `type` values are supported:
 -- SGS_STAT_VERSION: returns the version number of the VM
+-- SGS_STAT_STATECOUNT: returns the number of execution states created in the VM
 -- SGS_STAT_OBJCOUNT: returns the number of objects created in the VM
 -- SGS_STAT_MEMSIZE: returns the number of bytes allocated through this SGScript context
 -- SGS_STAT_NUMALLOCS: returns the number of memory allocations (incremented on each alloc/realloc)
@@ -3546,6 +3647,7 @@ sample implementation (same as in sgscript.h):
 --- mode 2 is set with '2' - the reference-preserving algorithm
 --- mode 1 is set with any other number, the performance-oriented algorithm
 -- SGS_CNTL_NUMRETVALS: returns the real number of returned values from last function call
+-- SGS_CNTL_GET_PAUSED: returns whether the execution state is suspended
 - everything else does nothing and returns 0
 
 
@@ -4119,6 +4221,11 @@ This library is loaded on initialization and contains the functions and constant
 -- @metaobj_get - retrieves the meta-object of an object
 -- @metamethods_enable - enables or disables metamethod support for an object
 -- @metamethods_test - retrieves metamethod support state
+-- @mm_getindex_router - routes __getindex to __get_***
+-- @mm_setindex_router - routes __setindex to __set_***
+-- @co_create - create a coroutine
+-- @co_resume - start/resume a coroutine
+-- @yield - suspend current state, return to caller
 -- @sys_call - call a function/callable dynamically (function and `this` specified at runtime)
 -- @sys_apply - call a function/callable even more dynamically (argument count also specified at runtime)
 -- @pcall - do a protected call by trapping all internal messages in the specified callback
@@ -4767,6 +4874,32 @@ This library is loaded on initialization and contains the functions and constant
 
 - when applied to metaobject of a metamethod-enabled object's `__setindex` property, it routes every request to `__set_<key>`
 - see @Metamethods for more info
+
+
+# co_create [function]
+
+== co_create( callable )
+=== creates a coroutine with the specified callable
+
+- function returns a coroutine object that can be started/resumed with @co_resume
+
+
+# co_resume [function]
+
+== co_resume( coroutine[, args..] )
+=== starts or resumes the coroutine
+
+- if function is called for the first time, the attached callable is called within the coroutine, passing given arguments to the callable
+- if function is suspended, arguments will be passed as return values from the @yield call that suspended it
+
+
+# yield [function]
+
+== yield([ args.. ])
+=== suspends the current state, returning to caller
+
+- arguments are passed as return values to the caller
+- state cannot be suspended if there are C functions or other unusual constructs in the stack
 
 
 # sys_call [function]

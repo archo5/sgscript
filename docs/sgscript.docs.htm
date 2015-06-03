@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 	<html><head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>SGScript documentation - v0.9.5</title>
+		<title>SGScript documentation - v0.9.7</title>
 		<link rel="stylesheet" type="text/css" href="docs.css">
 		<script type="text/javascript" src="docs.js"></script>
 	</head><body>
-	<h1>SGScript documentation - v0.9.5</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGScript-description'>SGScript - description</a>
+	<h1>SGScript documentation - v0.9.7</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGScript-description'>SGScript - description</a>
 <ul><li><a href='#Why-SGScript'>Why SGScript?</a>
 </li><li><a href='#Code-samples-SGScript'>Code samples - SGScript</a>
 </li><li><a href='#Code-samples-the-C-API'>Code samples - the C API</a>
@@ -137,7 +137,7 @@ The language supports:
 The standard library includes:
 </p><ul><li>array, dict, map
 </li><li>math, string, I/O, O/S and formatting functions
-</li><li><code>eval</code>, file import, DLL import</li></ul></div>
+</li><li><code>eval</code>, file import, DLL import, coroutines</li></ul></div>
 <div class='item'><a name='Why-SGScript'></a><hr><h2>Why SGScript?</h2><h3>Native serialization</h3><p>
 <div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python</span></div>
 <div class='al-con'><span class='inner'><span class='mark'>[-]</span> JavaScript, Lua, Squirrel</span></div>
@@ -933,6 +933,12 @@ Closure stack in the C API is technically very similar to main stack, with one i
 <div class='item'><a name='Context-management'></a><hr><h2>Context management</h2><ul><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngine</a> - create scripting engine context
 </li><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngineExt</a> - create scripting engine context and pass a custom memory function
 </li><li><a href="#sgs-DestroyEngine-function">sgs_DestroyEngine</a> - validate memory statistics and destroy engine context
+</li><li><a href="#sgs-ForkState-function">sgs_ForkState</a> - create a duplicate of the execution state
+</li><li><a href="#sgs-FreeState-function">sgs_FreeState</a> - release an execution state
+</li><li><a href="#sgs-PauseState-function">sgs_PauseState</a> - suspends the execution state
+</li><li><a href="#sgs-ResumeState-functions">sgs_ResumeStateRet</a> - resumes the execution state, retrieves number of return values
+</li><li><a href="#sgs-ResumeState-functions">sgs_ResumeStateExp</a> - resumes the execution state, returns the specified number of return values
+</li><li><a href="#sgs-ResumeState-functions">sgs_ResumeState</a> - resumes the execution state without passing or receiving anything
 </li><li><a href="#sgs-DefaultMemFunc-function">sgs_DefaultMemFunc</a> - example memory management callback
 </li><li><a href="#sgs-Get-Err-OutputFunc-function">sgs_Get(Err)OutputFunc</a> - return the current output callback and its user data pointer
 </li><li><a href="#sgs-Set-Err-OutputFunc-function">sgs_Set(Err)OutputFunc</a> - set the output callback and its user data pointer
@@ -992,7 +998,13 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-CodeString-function">sgs_CodeString</a> - retrieve a name string for the specified constant
 </li><li><a href="#sgs-WriteErrorInfo-function">sgs_WriteErrorInfo</a> - write message info to output callback
 </li><li><a href="#sgs-PushErrorInfo-function">sgs_PushErrorInfo</a> - push message info to stack</li></ul></div>
-<div class='item'><a name='Execution-control'></a><hr><h2>Execution control</h2><ul><li><a href="#sgs-FCall-P-functions">sgs_FCallP</a> - call variable as function
+<div class='item'><a name='Execution-control'></a><hr><h2>Execution control</h2><ul><li><a href="#sgs-XFCall-P-functions">sgs_XFCallP</a> - call variable as function
+</li><li><a href="#sgs-X-This-Call-P-function-aliases">sgs_XCallP</a> - call variable as function without <code>this</code> passed to it
+</li><li><a href="#sgs-X-This-Call-P-function-aliases">sgs_XThisCallP</a> - call variable as function function with <code>this</code> passed to it
+</li><li><a href="#sgs-XFCall-P-functions">sgs_XFCall</a> - call the topmost stack item as function
+</li><li><a href="#sgs-X-This-Call-P-function-aliases">sgs_XCall</a> - call the topmost stack item as function without <code>this</code> passed to it
+</li><li><a href="#sgs-X-This-Call-P-function-aliases">sgs_XThisCall</a> - call the topmost stack item as function with <code>this</code> passed to it
+</li><li><a href="#sgs-FCall-P-functions">sgs_FCallP</a> - call variable as function
 </li><li><a href="#sgs-This-Call-P-function-aliases">sgs_CallP</a> - call variable as function without <code>this</code> passed to it
 </li><li><a href="#sgs-This-Call-P-function-aliases">sgs_ThisCallP</a> - call variable as function function with <code>this</code> passed to it
 </li><li><a href="#sgs-FCall-P-functions">sgs_FCall</a> - call the topmost stack item as function
@@ -1035,6 +1047,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-InitDict-function">sgs_InitDict</a> - initialize variable to a new dict, optionally using the specified number of pushed items on stack
 </li><li><a href="#sgs-InitMap-function">sgs_InitMap</a> - initialize variable to a new map, optionally using the specified number of pushed items on stack</li></ul></div>
 <div class='item'><a name='Stack-primary-interface'></a><hr><h2>Stack primary interface</h2><ul><li><a href="#sgs-Push-functions">sgs_PushNull</a> - push a null variable
+</li><li><a href="#sgs-Push-functions">sgs_PushNulls</a> - push multiple null variables
 </li><li><a href="#sgs-Push-functions">sgs_PushBool</a> - push a boolean variable
 </li><li><a href="#sgs-Push-functions">sgs_PushInt</a> - push an integer
 </li><li><a href="#sgs-Push-functions">sgs_PushReal</a> - push a real value
@@ -1057,6 +1070,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-PopSkip-function">sgs_PopSkip</a> - pop the specified number of items from stack, skipping some topmost items
 </li><li><a href="#sgs-StackSize-function">sgs_StackSize</a> - return the size of the current stack frame
 </li><li><a href="#sgs-SetStackSize-function">sgs_SetStackSize</a> - resize the current stack frame
+</li><li><a href="#sgs-SetDeltaSize-function">sgs_SetDeltaSize</a> - relative-resize the current stack frame
 </li><li><a href="#sgs-AbsIndex-function">sgs_AbsIndex</a> - convert stack index to positive if possible (if it&#39;s &lt;0 or &gt;=StackSize, then it&#39;s invalid)
 </li><li><a href="#sgs-IsValidIndex-function">sgs_IsValidIndex</a> - check if specified stack index is valid
 </li><li><a href="#sgs-PeekStackItem-function">sgs_PeekStackItem</a> - retrieve without acquisition the specified variable on stack
@@ -1275,6 +1289,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-FCall-P-functions">sgs_FCall(P) [functions]</a>
 </li><li><a href="#sgs-FinalizeStringAlloc-P-functions">sgs_FinalizeStringAlloc(P) [functions]</a>
 </li><li><a href="#sgs-FindType-function">sgs_FindType [function]</a>
+</li><li><a href="#sgs-ForkState-function">sgs_ForkState [function]</a>
+</li><li><a href="#sgs-FreeState-function">sgs_FreeState [function]</a>
 </li><li><a href="#sgs-FuncName-function">sgs_FuncName [function]</a>
 </li><li><a href="#sgs-GCExecute-function">sgs_GCExecute [function]</a>
 </li><li><a href="#sgs-GCMark-Array-function">sgs_GCMark(Array) [function]</a>
@@ -1336,6 +1352,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-PadString-function">sgs_PadString [function]</a>
 </li><li><a href="#sgs-Parse-functions">sgs_Parse*** [functions]</a>
 </li><li><a href="#sgs-ParseMethod-function">sgs_ParseMethod [function]</a>
+</li><li><a href="#sgs-PauseState-function">sgs_PauseState [function]</a>
 </li><li><a href="#sgs-PeekStackItem-function">sgs_PeekStackItem [function]</a>
 </li><li><a href="#sgs-Pop-function">sgs_Pop [function]</a>
 </li><li><a href="#sgs-PopSkip-function">sgs_PopSkip [function]</a>
@@ -1357,10 +1374,13 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-Reg-Consts-function">sgs_Reg***Consts [function]</a>
 </li><li><a href="#sgs-RegisterType-function">sgs_RegisterType [function]</a>
 </li><li><a href="#sgs-Release-Array-function">sgs_Release(Array) [function]</a>
+</li><li><a href="#sgs-ResumeState-function-alias">sgs_ResumeState [function alias]</a>
+</li><li><a href="#sgs-ResumeState-functions">sgs_ResumeState*** [functions]</a>
 </li><li><a href="#sgs-Serialize-function">sgs_Serialize [function]</a>
 </li><li><a href="#sgs-SerializeObject-function">sgs_SerializeObject [function]</a>
 </li><li><a href="#sgs-SerializeV-1-2-functions">sgs_SerializeV(1|2) [functions]</a>
 </li><li><a href="#sgs-Set-Err-OutputFunc-function">sgs_Set(Err)OutputFunc [function]</a>
+</li><li><a href="#sgs-SetDeltaSize-function">sgs_SetDeltaSize [function]</a>
 </li><li><a href="#sgs-SetEnv-function">sgs_SetEnv [function]</a>
 </li><li><a href="#sgs-SetErrno-function-alias">sgs_SetErrno [function alias]</a>
 </li><li><a href="#sgs-SetGlobalPP-function">sgs_SetGlobalPP [function]</a>
@@ -1394,10 +1414,20 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-UnregisterType-function">sgs_UnregisterType [function]</a>
 </li><li><a href="#sgs-Unserialize-function">sgs_Unserialize [function]</a>
 </li><li><a href="#sgs-UnserializeV-1-2-functions">sgs_UnserializeV(1|2) [functions]</a>
-</li><li><a href="#sgs-WriteErrorInfo-function">sgs_WriteErrorInfo [function]</a></li></ul></div>
+</li><li><a href="#sgs-WriteErrorInfo-function">sgs_WriteErrorInfo [function]</a>
+</li><li><a href="#sgs-X-This-Call-P-function-aliases">sgs_X(This)Call(P) [function aliases]</a>
+</li><li><a href="#sgs-XFCall-P-functions">sgs_XFCall(P) [functions]</a></li></ul></div>
 <div class='item'><a name='sgs-CreateEngine-function-alias'></a><hr><h2>sgs_CreateEngine [function alias]</h2><h3>sgs_Context* sgs_CreateEngine()</h3><h4>returns a new scripting engine context</h4><ul><li>alias to <code>sgs_CreateEngineExt( sgs_DefaultMemFunc, NULL )</code></li></ul></div>
 <div class='item'><a name='sgs-CreateEngineExt-function'></a><hr><h2>sgs_CreateEngineExt [function]</h2><h3>sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )</h3><h4>returns a new scripting engine context, attached to the specified allocator</h4></div>
-<div class='item'><a name='sgs-DestroyEngine-function'></a><hr><h2>sgs_DestroyEngine [function]</h2><h3>sgs_DestroyEngine( sgs_Context* C )</h3><h4>destroys the passed context and frees all memory associated to it</h4></div>
+<div class='item'><a name='sgs-DestroyEngine-function'></a><hr><h2>sgs_DestroyEngine [function]</h2><h3>sgs_DestroyEngine( sgs_Context* C )</h3><h4>destroys the passed context and frees all memory associated to it</h4><ul><li>all execution state, object and any other engine-allocated pointers will be invalid after this call</li></ul></div>
+<div class='item'><a name='sgs-ForkState-function'></a><hr><h2>sgs_ForkState [function]</h2><h3>sgs_Context* sgs_ForkState( sgs_Context* C, int copystate )</h3><h4>creates a copy of the execution state</h4><ul><li>if <code>copystate</code> is nonzero, all stacks (variable, closure, call) are copied as well, creating an exact duplicate</li></ul></div>
+<div class='item'><a name='sgs-FreeState-function'></a><hr><h2>sgs_FreeState [function]</h2><h3>sgs_FreeState( sgs_Context* C )</h3><h4>destroys the execution state, possibly destroying the VM</h4><ul><li>if the freed state is the last one that exists, function behaves exactly as <a href="#sgs-DestroyEngine-function">sgs_DestroyEngine</a></li></ul></div>
+<div class='item'><a name='sgs-PauseState-function'></a><hr><h2>sgs_PauseState [function]</h2><h3>SGSBOOL sgs_PauseState( sgs_Context* C )</h3><h4>suspends the execution state, prompting the VM to return control to caller</h4><ul><li>a state cannot be suspended if call stack contains C functions or unusual constructs (at the moment some object interface calls may not work either)
+</li><li>this function can be used in a C function that was called from a SGS function</li></ul></div>
+<div class='item'><a name='sgs-ResumeState-functions'></a><hr><h2>sgs_ResumeState*** [functions]</h2><h3>SGSBOOL sgs_ResumeStateRet( sgs_Context* C, int args, int* outrvc )</h3><h4>resumes the execution state, passing arguments and retrieving the number of returned values</h4><h3>SGSBOOL sgs_ResumeStateExp( sgs_Context* C, int args, int expect )</h3><h4>resumes the execution state, passing arguments and retrieving the specified number of returned values</h4><ul><li>returns true if state was suspended and thus subsequently resumed
+</li><li><code>args</code> must be bigger than or equal to the stack size
+</li><li><code>outrvc</code> can be NULL</li></ul></div>
+<div class='item'><a name='sgs-ResumeState-function-alias'></a><hr><h2>sgs_ResumeState [function alias]</h2><h3>SGSBOOL sgs_ResumeState( sgs_Context* C )</h3><h4>resumes the execution state</h4><ul><li>alias to <code>sgs_ResumeStateExp( C, 0, 0 )</code></li></ul></div>
 <div class='item'><a name='sgs-ExecString-function-alias'></a><hr><h2>sgs_ExecString [function alias]</h2><h3>SGSRESULT sgs_ExecString( sgs_Context* C, const char* str )</h3><h4>compiles and executes a string of text</h4><ul><li>leaves the stack the same as it was before the call
 </li><li>alias to <code>sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )</code>
 </li><li>theoretically bytecode is supported but it will most probably be trimmed by the string length function, unless a different string termination mark is used, and a different string length function to detect it is set</li></ul><h4>error codes</h4><ul><li>SGS_ECOMP: compiler error
@@ -1443,7 +1473,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 <div class='item'><a name='sgs-InitArray-function'></a><hr><h2>sgs_InitArray [function]</h2><h3>SGSRESULT sgs_InitArray( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )</h3><h4>creates an array at <code>out</code> from <code>numitems</code> last items on the stack, pops those items</h4><h4>error codes</h4><ul><li>SGS_EINVAL: more items are selected than exist in the current stack frame</li></ul></div>
 <div class='item'><a name='sgs-InitDict-function'></a><hr><h2>sgs_InitDict [function]</h2><h3>SGSRESULT sgs_InitDict( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )</h3><h4>creates a dict at <code>out</code> from <code>numitems</code> last items on the stack, pops those items</h4><ul><li><code>numitems</code> can be even or 0, since all odd arguments are keys and all even arguments are values</li></ul><h4>error codes</h4><ul><li>SGS_EINVAL: more items are selected than exist in the current stack frame or <code>numitems</code> wasn&#39;t even or 0</li></ul></div>
 <div class='item'><a name='sgs-InitMap-function'></a><hr><h2>sgs_InitMap [function]</h2><h3>SGSRESULT sgs_InitMap( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )</h3><h4>creates a map at <code>out</code> from <code>numitems</code> last items on the stack, pops those items</h4><ul><li><code>numitems</code> can be even or 0, since all odd arguments are keys and all even arguments are values</li></ul><h4>error codes</h4><ul><li>SGS_EINVAL: more items are selected than exist in the current stack frame or <code>numitems</code> wasn&#39;t even or 0</li></ul></div>
-<div class='item'><a name='sgs-Push-functions'></a><hr><h2>sgs_Push*** [functions]</h2><h3>SGSONE sgs_PushNull( sgs_Context* C )</h3><h3>SGSONE sgs_PushBool( sgs_Context* C, sgs_Bool value )</h3><h3>SGSONE sgs_PushInt( sgs_Context* C, sgs_Int value )</h3><h3>SGSONE sgs_PushReal( sgs_Context* C, sgs_Real value )</h3><h3>SGSONE sgs_PushStringBuf( sgs_Context* C, const char* str, sgs_SizeVal size )</h3><h3>SGSONE sgs_PushString( sgs_Context* C, const char* str )</h3><h3>SGSONE sgs_PushCFunction( sgs_Context* C, sgs_CFunc func )</h3><h3>SGSONE sgs_PushObject( sgs_Context* C, void* data, sgs_ObjInterface* iface )</h3><h3>void* sgs_PushObjectIPA( sgs_Context* C, sgs_SizeVal added, sgs_ObjInterface* iface )</h3><h3>SGSONE sgs_PushPtr( sgs_Context* C, void* ptr )</h3><h3>SGSONE sgs_PushObjectPtr( sgs_Context* C, sgs_VarObj* obj )</h3><h3>SGSRESULT sgs_PushVariable( sgs_Context* C, sgs_Variable* var )</h3><h4>pushes the data on the stack, as a new entry, appended to the end</h4><ul><li>sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
+<div class='item'><a name='sgs-Push-functions'></a><hr><h2>sgs_Push*** [functions]</h2><h3>SGSONE sgs_PushNull( sgs_Context* C )</h3><h3>SGSONE sgs_PushNulls( sgs_Context* C, int count )</h3><h3>SGSONE sgs_PushBool( sgs_Context* C, sgs_Bool value )</h3><h3>SGSONE sgs_PushInt( sgs_Context* C, sgs_Int value )</h3><h3>SGSONE sgs_PushReal( sgs_Context* C, sgs_Real value )</h3><h3>SGSONE sgs_PushStringBuf( sgs_Context* C, const char* str, sgs_SizeVal size )</h3><h3>SGSONE sgs_PushString( sgs_Context* C, const char* str )</h3><h3>SGSONE sgs_PushCFunction( sgs_Context* C, sgs_CFunc func )</h3><h3>SGSONE sgs_PushObject( sgs_Context* C, void* data, sgs_ObjInterface* iface )</h3><h3>void* sgs_PushObjectIPA( sgs_Context* C, sgs_SizeVal added, sgs_ObjInterface* iface )</h3><h3>SGSONE sgs_PushPtr( sgs_Context* C, void* ptr )</h3><h3>SGSONE sgs_PushObjectPtr( sgs_Context* C, sgs_VarObj* obj )</h3><h3>SGSRESULT sgs_PushVariable( sgs_Context* C, sgs_Variable* var )</h3><h4>pushes the data on the stack, as a new entry, appended to the end</h4><ul><li>sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
 </li><li>sgs_PushStringBuf( C, NULL, size ) would allocate an uninitialized buffer
 <ul><li>it is accessible immediately by <a href="#sgs-GetStringPtr-P-functions">sgs_GetStringPtr( C, -1 )</a> / <a href="#sgs-GetStringSize-P-functions">sgs_GetStringSize( C, -1 )</a>
 </li></ul><li>sgs_PushObjectIPA stands for &quot;push object, allocate memory in-place&quot;
@@ -1586,6 +1616,9 @@ Closure stack in the C API is technically very similar to main stack, with one i
 <div class='item'><a name='sgs-ArgCheck-Object-function'></a><hr><h2>sgs_ArgCheck_Object [function]</h2><h3>int sgs_ArgCheck_Object( sgs_Context* C, int argid, va_list* args, int flags )</h3><h4>argument parsing function for parsing any objects</h4><ul><li>to be used with <a href="#sgs-LoadArgs-function-alias">sgs_LoadArgs</a> and related functions
 </li><li>strictness controls whether <code>null</code> is accepted
 </li><li>returned value: sgs_VarObj* (expects sgs_VarObj** argument for it)</li></ul></div>
+<div class='item'><a name='sgs-XFCall-P-functions'></a><hr><h2>sgs_XFCall(P) [functions]</h2><h3>SGSRESULT sgs_FCall( sgs_Context* C, int args, int* outrvc, int gotthis )</h3><h4>call the topmost variable on stack with the arguments before it, returning variables on stack and their count via the <code>outrvc</code> parameter</h4><h3>SGSRESULT sgs_XFCallP( sgs_Context* C, sgs_Variable* var, int args, int* outrvc, int gotthis )</h3><h4>call the variable with the arguments on stack, returning variables on stack and their count via the <code>outrvc</code> parameter</h4><ul><li>on success, <code>outrvc</code> receives the number of values that were returned by the call
+</li><li>refer to <a href="#sgs-FCall-P-functions">sgs_FCall(P)</a> for additional documentation</li></ul></div>
+<div class='item'><a name='sgs-X-This-Call-P-function-aliases'></a><hr><h2>sgs_X(This)Call(P) [function aliases]</h2><h3>SGSRESULT sgs_XCall( sgs_Context* C, int args, int* outrvc )</h3><h3>SGSRESULT sgs_XThisCall( sgs_Context* C, int args, int* outrvc )</h3><h4>call the topmost variable on stack with the arguments before it, returning variables on stack and their count via the <code>outrvc</code> parameter</h4><h3>SGSRESULT sgs_XCallP( sgs_Context* C, sgs_Variable* var, int args, int* outrvc )</h3><h3>SGSRESULT sgs_XThisCallP( sgs_Context* C, sgs_Variable* var, int args, int* outrvc )</h3><h4>call the variable with the arguments on stack, returning variables on stack and their count via the <code>outrvc</code> parameter</h4><ul><li>aliases to <a href="#sgs-XFCall-P-functions">sgs_XFCall(P)</a>, for the first function of each group <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
 <div class='item'><a name='sgs-FCall-P-functions'></a><hr><h2>sgs_FCall(P) [functions]</h2><h3>SGSRESULT sgs_FCall( sgs_Context* C, int args, int expect, int gotthis )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><h3>SGSRESULT sgs_FCallP( sgs_Context* C, sgs_Variable* var, int args, int expect, int gotthis )</h3><h4>call the variable with the arguments on stack, returning the expected number of variables on stack</h4><ul><li><code>var</code>: the callable variable to call as a function
 </li><li><code>args</code>: the primary variables to be passed to the function, in the same order they are in the stack
 </li><li><code>expect</code>: the number of variables to be left after a successful call
@@ -1603,6 +1636,8 @@ After a successful call, all arguments and the function will be popped off the s
 <em class='notice-bgr'>The return value SGS_SUCABRT is returned if function call was aborted.</em>
 </p><p>
 <em class='notice-bgr'>To see the actual number of returned values, see <a href="#sgs-Cntl-function">sgs_Cntl</a> / SGS_CNTL_NUMRETVALS.</em>
+</p><p>
+<em class='notice-bgr'>To find out if execution state was suspended in this call, see <a href="#sgs-Cntl-function">sgs_Cntl</a> / SGS_CNTL_GET_PAUSED.</em>
 </p><h4>error codes</h4><ul><li>SGS_EINPROC: topmost item on stack was not callable
 </li><li>SGS_EINVAL: not enough values in current stack frame (must have at least <code>args + (gotthis?1:0) + (is_sgs_FCallP?0:1)</code>)</li></ul></div>
 <div class='item'><a name='sgs-This-Call-P-function-aliases'></a><hr><h2>sgs_(This)Call(P) [function aliases]</h2><h3>SGSRESULT sgs_Call( sgs_Context* C, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCall( sgs_Context* C, int args, int expect )</h3><h4>call the topmost variable on stack with the arguments before it, returning the expected number of variables on stack</h4><h3>SGSRESULT sgs_CallP( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h3>SGSRESULT sgs_ThisCallP( sgs_Context* C, sgs_Variable* var, int args, int expect )</h3><h4>call the variable with the arguments on stack, returning the expected number of variables on stack</h4><ul><li>aliases to <a href="#sgs-FCall-P-functions">sgs_FCall(P)</a>, for the first function of each group <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
@@ -1768,6 +1803,9 @@ After a successful call, all arguments and the function will be popped off the s
 <div class='item'><a name='sgs-StackSize-function'></a><hr><h2>sgs_StackSize [function]</h2><h3>sgs_StkIdx sgs_StackSize( sgs_Context* C )</h3><h4>return the size of the current stack frame</h4></div>
 <div class='item'><a name='sgs-SetStackSize-function'></a><hr><h2>sgs_SetStackSize [function]</h2><h3>SGSRESULT sgs_SetStackSize( sgs_Context* C, sgs_StkIdx size )</h3><h4>resizes the current stack frame to fit the specified amount of items</h4><ul><li>if the current number of items is less than needed, stack is null-variable-padded at the end
 </li><li>if the current number of items is more than needed, the unnecessary amount of items is popped</li></ul></div>
+<div class='item'><a name='sgs-SetDeltaSize-function'></a><hr><h2>sgs_SetDeltaSize [function]</h2><h3>SGSRESULT sgs_SetDeltaSize( sgs_Context* C, sgs_StkIdx diff )</h3><h4>resizes the current stack frame to the [size+diff] size</h4><ul><li>if diff is positive, stack is null-variable-padded at the end
+</li><li>if diff is negative, the specified number of items are popped
+</li><li>if amount of items to be popped is bigger than size, function fails</li></ul></div>
 <div class='item'><a name='sgs-AbsIndex-function'></a><hr><h2>sgs_AbsIndex [function]</h2><h3>sgs_StkIdx sgs_AbsIndex( sgs_Context* C, sgs_StkIdx item )</h3><h4>attempt to convert a negative stack index into a positive one</h4><p>
 <em class='notice-bgr'>this function can still return negative values - make sure that valid values are passed to it or check if the returned value is in the range [ 0; stack_frame_size )</em>
 </p></div>
@@ -1884,6 +1922,7 @@ return NULL;</pre></div>
 <div class='item'><a name='sgs-Abort-function'></a><hr><h2>sgs_Abort [function]</h2><h3>SGSRESULT sgs_Abort( sgs_Context* C )</h3><h4>stops execution of current SGS functions up to the last C function in the stack, excluding the current</h4><h4>error codes</h4><ul><li>SGS_ENOTFND: last or next to last function in the stack was not a SGS function</li></ul></div>
 <div class='item'><a name='sgs-Stat-function'></a><hr><h2>sgs_Stat [function]</h2><h3>ptrdiff_t sgs_Stat( sgs_Context* C, int type )</h3><h4>returns or prints information about state of SGScript VM</h4><ul><li>the following <code>type</code> values are supported:
 <ul><li>SGS_STAT_VERSION: returns the version number of the VM
+</li><li>SGS_STAT_STATECOUNT: returns the number of execution states created in the VM
 </li><li>SGS_STAT_OBJCOUNT: returns the number of objects created in the VM
 </li><li>SGS_STAT_MEMSIZE: returns the number of bytes allocated through this SGScript context
 </li><li>SGS_STAT_NUMALLOCS: returns the number of memory allocations (incremented on each alloc/realloc)
@@ -1910,6 +1949,7 @@ return NULL;</pre></div>
 <ul><li>mode 2 is set with &#39;2&#39; - the reference-preserving algorithm
 </li><li>mode 1 is set with any other number, the performance-oriented algorithm
 </li></ul><li>SGS_CNTL_NUMRETVALS: returns the real number of returned values from last function call
+</li><li>SGS_CNTL_GET_PAUSED: returns whether the execution state is suspended
 </li></ul><li>everything else does nothing and returns 0</li></ul></div>
 <div class='item'><a name='sgs-StackFrameInfo-function'></a><hr><h2>sgs_StackFrameInfo [function]</h2><h3>void sgs_StackFrameInfo( sgs_Context* C, sgs_StackFrame* frame, const char** name, const char** file, int* line )</h3><h4>helps to retrieve file name, function name and line number of the specified stack frame</h4><ul><li>each non-NULL pointer is initialized with valid data; even if it may not be very helpful (for example, all anonymous functions get the same name - &quot;&lt;anonymous function&gt;&quot;)</li></ul></div>
 <div class='item'><a name='sgs-GetFramePtr-function'></a><hr><h2>sgs_GetFramePtr [function]</h2><h3>sgs_StackFrame* sgs_GetFramePtr( sgs_Context* C, int end )</h3><h4>returns a call stack frame pointer</h4><ul><li>if <code>end</code> is not 0, pointer to topmost frame is returned, otherwise a pointer to first frame is returned</li></ul></div>
@@ -2169,6 +2209,11 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#metaobj-get-function">metaobj_get</a> - retrieves the meta-object of an object
 </li><li><a href="#metamethods-enable-function">metamethods_enable</a> - enables or disables metamethod support for an object
 </li><li><a href="#metamethods-test-function">metamethods_test</a> - retrieves metamethod support state
+</li><li><a href="#mm-getindex-router-function">mm_getindex_router</a> - routes __getindex to __get_***
+</li><li><a href="#mm-setindex-router-function">mm_setindex_router</a> - routes __setindex to __set_***
+</li><li><a href="#co-create-function">co_create</a> - create a coroutine
+</li><li><a href="#co-resume-function">co_resume</a> - start/resume a coroutine
+</li><li><a href="#yield-function">yield</a> - suspend current state, return to caller
 </li><li><a href="#sys-call-function">sys_call</a> - call a function/callable dynamically (function and <code>this</code> specified at runtime)
 </li><li><a href="#sys-apply-function">sys_apply</a> - call a function/callable even more dynamically (argument count also specified at runtime)
 </li><li><a href="#pcall-function">pcall</a> - do a protected call by trapping all internal messages in the specified callback
@@ -2362,6 +2407,11 @@ srand( ftime() ); // restart the generator depending on the second the code was 
 </li><li>see <a href="#Metamethods">Metamethods</a> for more info</li></ul></div>
 <div class='item'><a name='mm-setindex-router-function'></a><hr><h2>mm_setindex_router [function]</h2><h3>mm_setindex_router( key, value )</h3><h4>__setindex to __set_*** router</h4><ul><li>when applied to metaobject of a metamethod-enabled object&#39;s <code>__setindex</code> property, it routes every request to <code>__set_&lt;key&gt;</code>
 </li><li>see <a href="#Metamethods">Metamethods</a> for more info</li></ul></div>
+<div class='item'><a name='co-create-function'></a><hr><h2>co_create [function]</h2><h3>co_create( callable )</h3><h4>creates a coroutine with the specified callable</h4><ul><li>function returns a coroutine object that can be started/resumed with <a href="#co-resume-function">co_resume</a></li></ul></div>
+<div class='item'><a name='co-resume-function'></a><hr><h2>co_resume [function]</h2><h3>co_resume( coroutine[, args..] )</h3><h4>starts or resumes the coroutine</h4><ul><li>if function is called for the first time, the attached callable is called within the coroutine, passing given arguments to the callable
+</li><li>if function is suspended, arguments will be passed as return values from the <a href="#yield-function">yield</a> call that suspended it</li></ul></div>
+<div class='item'><a name='yield-function'></a><hr><h2>yield [function]</h2><h3>yield([ args.. ])</h3><h4>suspends the current state, returning to caller</h4><ul><li>arguments are passed as return values to the caller
+</li><li>state cannot be suspended if there are C functions or other unusual constructs in the stack</li></ul></div>
 <div class='item'><a name='sys-call-function'></a><hr><h2>sys_call [function]</h2><h3>sys_call( func, this[, args..] )</h3><h4>calls the specified function with the specified <code>this</code> value and argument list</h4><p>
 <em class='notice-bgr'>if argument count is only known at runtime, see <a href="#sys-apply-function">sys_apply</a></em>
 </p><ul><li>C functions, SGS functions, closure objects and real closures have this function under the &quot;call&quot; property</li></ul></div>
@@ -2620,6 +2670,8 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#assert-function">assert [function]</a>
 </li><li><a href="#class-function">class [function]</a>
 </li><li><a href="#clone-function">clone [function]</a>
+</li><li><a href="#co-create-function">co_create [function]</a>
+</li><li><a href="#co-resume-function">co_resume [function]</a>
 </li><li><a href="#compile-sgs-function">compile_sgs [function]</a>
 </li><li><a href="#dict-function">dict [function]</a>
 </li><li><a href="#dict-filter-function">dict_filter [function]</a>
@@ -2702,7 +2754,8 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#unset-function">unset [function]</a>
 </li><li><a href="#va-arg-count-function">va_arg_count [function]</a>
 </li><li><a href="#va-get-arg-function">va_get_arg [function]</a>
-</li><li><a href="#va-get-args-function">va_get_args [function]</a></li></ul></div>
+</li><li><a href="#va-get-args-function">va_get_args [function]</a>
+</li><li><a href="#yield-function">yield [function]</a></li></ul></div>
 <div class='item'><a name='Formatting-library-fmt'></a><hr><h2>Formatting library (&quot;fmt&quot;)</h2><p>
 This library includes functions and objects for parsing binary and text buffers.
 </p><ul><li>binary format -- <a href="#fmt-pack-function">fmt_pack</a>, <a href="#fmt-unpack-function">fmt_unpack</a>, <a href="#fmt-pack-count-function">fmt_pack_count</a>, <a href="#fmt-pack-size-function">fmt_pack_size</a>

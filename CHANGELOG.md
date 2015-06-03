@@ -1,4 +1,23 @@
 
+**0.9.7** (2015/06/03):
+
+- partial Windows Phone 8 support
+- bugfixes: mostly in cppbc
+- virtual file system for script sources
+- *coroutines!*
+- metaobjects and source-configurable metamethods (can link any object to any backing object)
+- object interface cache for simplified metaobject handling
+- fixed string table, now all strings are interned
+- removed source code conflicts for easier integration
+- fast variable debug dumping functions
+- single header implementation generator
+- removed the string32 optimization interface
+- free function presorting (can now use them before definition)
+- cppbc: interface upgrades, auto-dumping/gcref generators
+- first-non-null (??, ??=) operators
+- xgmath upgrades (aabb3, mat4, quaternion, intersection tests)
+- fixed MinGW linking issue
+
 **0.9.5** (2014/05/25, updated 2014/07/11):
 
 - full Mac OS X support
