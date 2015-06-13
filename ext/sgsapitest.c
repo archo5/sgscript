@@ -797,6 +797,17 @@ DEFINE_TEST( yield_resume )
 	destroy_context( C );
 }
 
+DEFINE_TEST( yield_abandon )
+{
+	SGS_CTX = get_context(), *CF;
+	
+	CF = sgs_ForkState( C, 0 );
+	const char* str = "yield();";
+	atf_assert( sgs_ExecString( CF, str ) == SGS_SUCCESS );
+	
+	destroy_context( C );
+}
+
 int sm_tick_id = 0;
 int sm_resume_id = 0;
 static int sm_wait( SGS_CTX )
@@ -869,6 +880,7 @@ test_t all_tests[] =
 	TST( native_obj_meta ),
 	TST( fork_state ),
 	TST( yield_resume ),
+	TST( yield_abandon ),
 	TST( state_machine_core ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }

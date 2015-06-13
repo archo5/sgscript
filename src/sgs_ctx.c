@@ -134,6 +134,12 @@ static void ctx_destroy( SGS_CTX )
 {
 	SGS_SHCTX_USE;
 	
+	if( C->state & SGS_STATE_DESTROYING )
+	{
+		return;
+	}
+	C->state |= SGS_STATE_DESTROYING;
+	
 	/* clear the stack */
 	while( C->stack_base != C->stack_top )
 	{
@@ -160,6 +166,7 @@ static void ctx_destroy( SGS_CTX )
 		sgs_StackFrame* sf = C->sf_cached, *sfn;
 		while( sf )
 		{
+			sgs_Release( C, &sf->func );
 			sfn = sf->cached;
 			sgs_Dealloc( sf );
 			sf = sfn;
