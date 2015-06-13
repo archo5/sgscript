@@ -348,6 +348,8 @@ class sgsVariable
 {
 public:
 	
+	enum EPickAndPop { PickAndPop };
+	
 	sgsVariable() : C(NULL) { var.type = SGS_VT_NULL; };
 	sgsVariable( const sgsVariable& h ) : var(h.var), C(h.C)
 	{
@@ -364,6 +366,13 @@ public:
 		var.type = SGS_VT_NULL;
 		sgs_PeekStackItem( C, item, &var );
 		_acquire();
+	}
+	sgsVariable( sgs_Context* c, EPickAndPop ) : C(c)
+	{
+		var.type = SGS_VT_NULL;
+		sgs_PeekStackItem( C, -1, &var );
+		_acquire();
+		sgs_Pop( C, 1 );
 	}
 	sgsVariable( sgs_Context* c, sgs_Variable* v ) : C(c)
 	{
@@ -516,6 +525,13 @@ public:
 	sgsVariable& set( sgs_CFunc v ){ _release(); sgs_InitCFunction( &var, v ); return *this; }
 	template< class T > sgsVariable& set( sgsHandle< T > v ){ _release(); C = v.object->C; sgs_InitObjectPtr( C, &var, v.object ); return *this; }
 	template< class T > sgsVariable& set( T* v ){ _release(); C = v->C; sgs_InitObjectPtr( C, &var, v->m_sgsObject ); return *this; }
+	bool thiscall( const char* key, int args = 0, int ret = 0 )
+	{
+		sgsVariable func = getprop( key );
+		return C &&
+			sgs_InsertVariable( C, -args - 1, &var ) == SGS_SUCCESS &&
+			SGS_SUCCEEDED( sgs_ThisCallP( C, &func.var, args, ret ) );
+	}
 	
 	sgs_Variable var;
 	SGS_CTX;
