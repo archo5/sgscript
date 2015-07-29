@@ -2639,7 +2639,6 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 static void vm_postcall( SGS_CTX, int rvc )
 {
 	sgs_StackFrame* sf = C->sf_last;
-	int expect;
 	int gotthis = sf->flags & SGS_SF_METHOD ? 1 : 0;
 	sgs_StkIdx stkcallbase = sf->argbeg;
 	sgs_StkIdx stkoff = sf->stkoff;
@@ -2661,10 +2660,11 @@ static void vm_postcall( SGS_CTX, int rvc )
 	C->num_last_returned = rvc;
 	if( C->sf_last )
 	{
+		int expect;
 		sf = C->sf_last; /* current function change */
 		
-		sgs_BreakIf( SGS_INSTR_GET_OP( *sf->iptr ) != SGS_SI_CALL );
-		expect = SGS_INSTR_GET_A( *sf->iptr );
+		sgs_BreakIf( SGS_INSTR_GET_OP( *sf->lptr ) != SGS_SI_CALL );
+		expect = SGS_INSTR_GET_A( *sf->lptr );
 		stk_resize_expected( C, expect, rvc );
 		
 		if( expect )
