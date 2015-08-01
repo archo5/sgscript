@@ -4296,6 +4296,25 @@ void sgs_InitColor( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XG
 	XGM_SET4( nv, x, y, z, w );
 }
 
+void sgs_InitQuat( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
+{
+	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_quat_iface );
+	XGM_SET4( nv, x, y, z, w );
+}
+
+void sgs_InitMat3( SGS_CTX, sgs_Variable* var, const XGM_VT* v9f, int transpose )
+{
+	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 9, xgm_mat3_iface );
+	if( transpose )
+	{
+		nv[ 0 ] = v9f[ 0 ]; nv[ 1 ] = v9f[ 3 ]; nv[ 2 ] = v9f[ 6 ];
+		nv[ 3 ] = v9f[ 1 ]; nv[ 4 ] = v9f[ 4 ]; nv[ 5 ] = v9f[ 7 ];
+		nv[ 6 ] = v9f[ 2 ]; nv[ 7 ] = v9f[ 5 ]; nv[ 8 ] = v9f[ 8 ];
+	}
+	else
+		memcpy( nv, v9f, sizeof(XGM_VT) * 9 );
+}
+
 void sgs_InitMat4( SGS_CTX, sgs_Variable* var, const XGM_VT* v16f, int transpose )
 {
 	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 16, xgm_mat4_iface );
@@ -4364,6 +4383,12 @@ void sgs_InitColorvp( SGS_CTX, sgs_Variable* var, const XGM_VT* vf, int numfloat
 	else if( numfloats == 2 ){ nv[0] = nv[1] = nv[2] = vf[0]; nv[3] = vf[1]; }
 	else if( numfloats == 3 ){ nv[0] = vf[0]; nv[1] = vf[1]; nv[2] = vf[2]; nv[3] = 1; }
 	else { nv[0] = vf[0]; nv[1] = vf[1]; nv[2] = vf[2]; nv[3] = vf[3]; }
+}
+
+void sgs_InitQuatp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
+{
+	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_quat_iface );
+	XGM_COPY4( nv, v4f );
 }
 
 
