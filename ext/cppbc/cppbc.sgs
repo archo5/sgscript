@@ -439,7 +439,7 @@ function cppbc_split_cs( code )
 }
 
 
-function cppbc_examine_method( code )
+function cppbc_examine_method( code, methodname )
 {
 	code = string_trim( code );
 	if( string_find( code, "SGS_ALIAS" ) === 0 )
@@ -469,9 +469,21 @@ function cppbc_examine_method( code )
 	return {
 		what = "METHOD",
 		name = name,
+		varname = methodname || name,
 		type = rvd.type,
 		params = ptypes,
 	};
+}
+
+function cppbc_examine_method_named( code )
+{
+	sp = fmt_string_parser( code );
+	
+	sp.skipcc( "( \t\v\r\n" );
+	name = sp.readcc( "a-zA-Z0-9_." );
+	sp.skipcc( ") \t\v\r\n" );
+	
+	return cppbc_examine_method( sp.read( 65536 ), name );
 }
 
 
@@ -655,6 +667,7 @@ function cppbc_examine_object( code, pos )
 	blockcode = cppbc_remove_blocks( blockcode );
 	
 	no_export = re_match( blockcode, "#SGS_NO_EXPORT#" );
+	no_destruct = re_match( blockcode, "#SGS_NO_DESTRUCT#" );
 	inherited = {};
 	inh_matches = re_match_all( blockcode, "#SGS_OBJECT_INHERIT[ \t\v\n\r]*\\(([a-zA-Z0-9_ \t\v\n\r,]*)\\)#ms", RE_RETURN_CAPTURED );
 	foreach( match : inh_matches )
@@ -667,12 +680,14 @@ function cppbc_examine_object( code, pos )
 	inherited = get_keys( inherited );
 	
 	items = [];
-	matches = re_match_all( blockcode, "#(SGS_PROPERTY_FUNC|SGS_METHOD|SGS_PROPERTY|SGS_IFUNC|SGS_GCREF|SGS_DUMP|SGS_NODUMP)(.*?)[;\\{]#ms", RE_RETURN_BOTH );
+	matches = re_match_all( blockcode, "#(SGS_METHOD_NAMED|SGS_PROPERTY_FUNC|SGS_METHOD|SGS_PROPERTY|SGS_IFUNC|SGS_GCREF|SGS_DUMP|SGS_NODUMP)(.*?)[;\\{]#ms", RE_RETURN_BOTH );
 	foreach( match : matches )
 	{
 		cppbc_setline_codepos( blockcode, match[0][1], 1 );
 		if( match[1][0] == "SGS_METHOD" )
 			item = cppbc_examine_method( match[2][0] );
+		else if( match[1][0] == "SGS_METHOD_NAMED" )
+			item = cppbc_examine_method_named( match[2][0] );
 		else if( match[1][0] == "SGS_PROPERTY" )
 			item = cppbc_examine_property( match[2][0] );
 		else if( match[1][0] == "SGS_PROPERTY_FUNC" )
@@ -701,6 +716,7 @@ function cppbc_examine_object( code, pos )
 		name = classname,
 		items = items,
 		no_export = no_export,
+		no_destruct = no_destruct,
 		inherited = inherited,
 	};
 }
@@ -731,8 +747,14 @@ function cppbc_extend_objects( objects )
 			if( inhname == obj.name )
 				cppbc_error( "cannot inherit yourself (" $ inhname $ ")" );
 			inhobj = null;
-			foreach( inhobj : objects )
-				if( inhobj.name == inhname ) break;
+			foreach( oo : objects )
+			{
+				if( oo.name == inhname )
+				{
+					inhobj = oo;
+					break;
+				}
+			}
 			if( inhobj === null )
 				cppbc_error( "cannot find inherited object (" $ inhname $ ")" );
 			
@@ -749,12 +771,12 @@ function cppbc_extend_objects( objects )
 function cppbc_generate_code( objects, includes )
 {
 	// header
-	out = string_format( "// SGS/CPP-BC
-// warning: do not modify this file, it may be regenerated during any build
-// generated: {1}
-
-"
-	, os_date_string( "%c" ) );
+	out = "// SGS/CPP-BC\n// warning: do not modify this file, it may be regenerated during any build\n";
+	if( PRINT_TIMESTAMP )
+	{
+		out $= string_format( "// generated: {1}\n", os_date_string( "%c" ) );
+	}
+	out $= "\n";
 	
 	// includes
 	foreach( include : includes )
@@ -778,6 +800,9 @@ function cppbc_generate_code( objects, includes )
 			
 			ifuncs[ item.type ] = item.name;
 		}
+		
+		if( obj.no_destruct )
+			ifuncs[ "destruct" ] = null;
 		
 		// method wrappers
 		foreach( item : obj.items )
@@ -996,26 +1021,71 @@ sgs_ObjInterface " $ obj.name $ "::_sgs_interface[1] =
 }
 
 
-function cppbc_parse_file( code, includes )
+function cppbc_parse_file( code, inclcode, includes )
 {
+	println( "In included code:" );
+	inclcode = cppbc_preprocess( inclcode );
+	inclobjects = cppbc_find_objects( inclcode );
+	
+	println( "In processed code:" );
 	code = cppbc_preprocess( code );
 	objects = cppbc_find_objects( code );
+	
+	foreach( io : inclobjects )
+	{
+		io.no_export = true;
+		objects.push( io );
+	}
+	
 	cppbc_extend_objects( objects );
 	gcode = cppbc_generate_code( objects, includes );
 	return gcode;
 }
 
 
-if( argc < 2 )
-	cppbc_error( "Expected at least 1 argument: source file" );
+// ignore argument 0
+argc--;
+argv.shift();
 
-IN = argv[1];
-IN = string_replace( IN, "\\", "/" );
-if( argc >= 3 )
+
+global IN = null;
+global OUT = null;
+global INCLCODE = "";
+global PRINT_TIMESTAMP = false;
+
+for( i = 0; i < argv.size; ++i )
 {
-	OUT = argv[2];
+	if( argv[ i ] == "-add-timestamp" ){ PRINT_TIMESTAMP = false; }
+	else if( argv[ i ] == "-o" )
+	{
+		i++;
+		if( i == argv.size )
+			cppbc_error( "expected output name after -o" );
+		OUT = argv[ i ];
+	}
+	else if( argv[ i ] == "-i" )
+	{
+		i++;
+		if( i == argv.size )
+			cppbc_error( "expected include file name after -i" );
+		nic = io_file_read( argv[ i ] );
+		if( nic === null )
+			cppbc_error( "failed to read include file" );
+		INCLCODE $= nic;
+	}
+	else // input file
+	{
+		if( IN !== null )
+			cppbc_error( "expected only one input file" );
+		IN = argv[ i ];
+	}
 }
-else
+
+if( IN === null )
+	cppbc_error( "expected at least 1 argument: source file" );
+
+IN = string_replace( IN, "\\", "/" );
+if( OUT === null )
 {
 	pathspl = string_explode( IN, "/" );
 	ofsp = string_explode( pathspl.pop(), "." );
@@ -1024,6 +1094,6 @@ else
 	OUT = string_implode( pathspl, "/" );
 }
 
-code = cppbc_parse_file( io_file_read( IN ), [IN] );
+code = cppbc_parse_file( io_file_read( IN ), INCLCODE, [IN] );
 io_file_write( OUT, code );
 
