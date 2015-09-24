@@ -1300,7 +1300,6 @@ SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 			sgs_SetStackSize( C, ssz );
 			return SGS_EINPROC;
 		}
-		sgs_PeekStackItem( C, ssz, &val );
 		sgs_vht_set( &S->ifacetable, C, &key, &val );
 		obj = sgs_GetObjectStruct( C, ssz );
 		obj->is_iface = 1;

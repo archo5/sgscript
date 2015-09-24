@@ -282,7 +282,7 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_Siz
 	memcpy( sgs_str_cstr( out->data.S ), str, ulen );
 	out->data.S->hash = hash;
 	
-	if( (int32_t) ulen <= SGS_STRINGTABLE_MAXLEN )
+	if( ulen <= SGS_STRINGTABLE_MAXLEN )
 	{
 		sgs_vht_set( &S->stringtable, C, out, NULL );
 		out->data.S->refcount--;
@@ -325,7 +325,7 @@ static void var_finalize_str( SGS_CTX, sgs_Variable* out )
 	
 	out->data.S->hash = hash;
 	
-	if( (int32_t) ulen <= SGS_STRINGTABLE_MAXLEN )
+	if( ulen <= SGS_STRINGTABLE_MAXLEN )
 	{
 		sgs_vht_set( &S->stringtable, C, out, NULL );
 		out->data.S->refcount--;
@@ -4442,7 +4442,7 @@ void sgs_Assign( SGS_CTX, sgs_Variable* var_to, sgs_Variable* var_from )
 
 SGSRESULT sgs_ArithOp( SGS_CTX, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op )
 {
-	if( op < 0 || op > SGS_EOP_NEGATE )
+	if( op < 0 || op > SGS_EOP_NEGATE || op == SGS_EOP_COMPARE )
 	{
 		VAR_RELEASE( out );
 		return SGS_ENOTSUP;

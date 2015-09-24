@@ -3149,8 +3149,8 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf )
 		uint8_t gntc[4] = { func->gotthis, func->numargs, func->numtmp, func->numclsr };
 		
 		/* max. count: 65535, max. variable size: 16 bytes */
-		cc = (uint16_t) func->consts.size / sizeof( sgs_Variable );
-		ic = (uint16_t) func->code.size / sizeof( sgs_instr_t );
+		cc = (uint16_t) ( func->consts.size / sizeof( sgs_Variable ) );
+		ic = (uint16_t) ( func->code.size / sizeof( sgs_instr_t ) );
 		
 		sgs_membuf_appbuf( outbuf, C, &cc, sizeof( cc ) );
 		sgs_membuf_appbuf( outbuf, C, &ic, sizeof( ic ) );
