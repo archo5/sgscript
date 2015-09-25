@@ -147,7 +147,15 @@ build_cppbctest: $(OUTDIR)/sgscppbctest$(BINEXT)
 cppbctest: build_cppbctest
 	$(OUTDIR)/sgscppbctest
 $(OUTDIR)/sgscppbctest$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/cppbc/sgs_cppbc.h $(OUTFILE)
-	$(CXX) -o $@ $< $(word 2,$^) $(EXEFLAGS) -I.
+	$(CXX) -o $@ $< $(word 2,$^) $(EXEFLAGS) -I. -std=c++03
+	$(call SGS_INSTALL_TOOL,$@)
+.PHONY: cppbctest11
+.PHONY: build_cppbctest11
+build_cppbctest11: $(OUTDIR)/sgscppbctest11$(BINEXT)
+cppbctest11: build_cppbctest11
+	$(OUTDIR)/sgscppbctest11
+$(OUTDIR)/sgscppbctest11$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/cppbc/sgs_cppbc.h $(OUTFILE)
+	$(CXX) -o $@ $< $(word 2,$^) $(EXEFLAGS) -I. -std=c++11
 	$(call SGS_INSTALL_TOOL,$@)
 obj/cppbc_test.cpp: ext/sgscppbctest.h
 	$(OUTDIR)/sgsvm -p ext/cppbc/cppbc.sgs $< $@

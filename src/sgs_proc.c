@@ -4442,13 +4442,13 @@ void sgs_Assign( SGS_CTX, sgs_Variable* var_to, sgs_Variable* var_from )
 
 SGSRESULT sgs_ArithOp( SGS_CTX, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op )
 {
-	if( op < 0 || op > SGS_EOP_NEGATE || op == SGS_EOP_COMPARE )
+	if( op == SGS_EOP_NEGATE )
+		return vm_op_negate( C, out, A ) ? SGS_SUCCESS : SGS_EINVAL;
+	if( op < SGS_EOP_ADD || op > SGS_EOP_MOD )
 	{
 		VAR_RELEASE( out );
 		return SGS_ENOTSUP;
 	}
-	if( op == SGS_EOP_NEGATE )
-		return vm_op_negate( C, out, A ) ? SGS_SUCCESS : SGS_EINVAL;
 	return vm_arith_op( C, out, A, B, op );
 }
 

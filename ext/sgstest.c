@@ -13,6 +13,20 @@ const char* outfile_errors = "tests-errors.log";
 
 
 
+static int sgrx_snprintf( char* buf, size_t len, const char* fmt, ... )
+{
+	if( len == 0 )
+		return -1;
+	va_list args;
+	va_start( args, fmt );
+	int ret = vsnprintf( buf, len, fmt, args );
+	va_end( args );
+	buf[ len - 1 ] = 0;
+	return ret;
+}
+
+
+
 typedef struct testfile_
 {
 	char* nameonly;
@@ -56,10 +70,8 @@ int load_testfiles( const char* dir, testfile** files, size_t* count )
 		if( strncmp( e->d_name, "f_", 2 ) == 0 ) disp = -1;
 		if( strstr( e->d_name, ".sgs" ) != e->d_name + strlen( e->d_name ) - 4 )
 			continue;
-
-		strcpy( namebuf, dir );
-		strcat( namebuf, "/" );
-		strcat( namebuf, e->d_name );
+		
+		sgrx_snprintf( namebuf, 260, "%s/%s", dir, e->d_name );
 		stat( namebuf, &sdata );
 		if( !( sdata.st_mode & S_IFREG ) )
 			continue;
@@ -69,7 +81,7 @@ int load_testfiles( const char* dir, testfile** files, size_t* count )
 			TFM *= 2;
 			TF = (testfile*) realloc( TF, sizeof( testfile ) * TFM );
 		}
-
+		
 		TF[ TFC ].nameonly = (char*) malloc( strlen( e->d_name ) + 1 );
 		strcpy( TF[ TFC ].nameonly, e->d_name );
 		TF[ TFC ].fullname = (char*) malloc( strlen( namebuf ) + 1 );

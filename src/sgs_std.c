@@ -2569,7 +2569,8 @@ static int sgsstd_co_resume( SGS_CTX )
 		ssz = sgs_StackSize( C );
 		for( i = 0; i < ssz; ++i )
 		{
-			sgs_PeekStackItem( C, i, &tmp );
+			if( !sgs_PeekStackItem( C, i, &tmp ) )
+				STDLIB_WARN( "failed to resume coroutine - internal error in loading data" );
 			sgs_PushVariable( CO->ctx, &tmp );
 		}
 		
@@ -2589,7 +2590,7 @@ static int sgsstd_co_resume( SGS_CTX )
 	for( i = -rvc; i < 0; ++i )
 	{
 		if( !sgs_PeekStackItem( CO->ctx, i, &tmp ) )
-			STDLIB_WARN( "failed to resume coroutine - error in returning data" );
+			STDLIB_WARN( "failed to return from coroutine - internal error in returning data" );
 		sgs_PushVariable( C, &tmp );
 	}
 	

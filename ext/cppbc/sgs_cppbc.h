@@ -27,10 +27,17 @@
 	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int isprop ); \
 	static int _sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
 	static sgs_ObjInterface _sgs_interface[1];
-# define SGS_OBJECT \
+# if __cplusplus >= 201103L
+#  define SGS_OBJECT \
+	SGS_OBJECT_LITE \
+	sgs_VarObj* m_sgsObject = nullptr; \
+	SGS_CTX = nullptr;
+# else
+#  define SGS_OBJECT \
 	SGS_OBJECT_LITE \
 	sgs_VarObj* m_sgsObject; \
 	SGS_CTX;
+# endif
 # ifdef _MSC_VER
 #  define SGS_OBJECT_INHERIT( ... ) SGS_OBJECT_LITE
 # else
@@ -377,6 +384,7 @@ public:
 	}
 	sgsVariable( sgs_Context* c, sgs_Variable* v ) : C(c)
 	{
+		var.type = SGS_VT_NULL;
 		if( v && v->type != SGS_VT_NULL )
 		{
 			var = *v;
