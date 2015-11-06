@@ -19,6 +19,9 @@ int main( int argc, char** argv )
 {
 	printf( "\n//\n/// SGScript / CPPBC test\n//\n" );
 	
+	sgsMaybe<int> mbnt = sgsMaybeNot;
+	SGS_UNUSED( mbnt );
+	
 	SGS_CTX = sgs_CreateEngine();
 	
 	printf( "\n compare two null variables (use memcheck to verify): %s\n", sgsVariable() == sgsVariable() ? "true" : "false" );
@@ -85,9 +88,24 @@ int main( int argc, char** argv )
 		sgs_ThisCall( C, 3, 1 ); // 1 `this`, 3 arguments, 1 function on stack
 		sgs_GlobalCall( C, "print", 1, 0 ); // 1 argument on stack
 		
-		puts( scope1.is_restored() ? "\n- stack restored" : "! stack NOT RESTORED" );
+		puts( scope1.is_restored() ? "- stack restored" : "! stack NOT RESTORED" );
 		sgs_PushNull( C );
-		puts( scope1.is_restored() ? "\n! stack restore state UNCHANGED" : "- stack restore state changed" );
+		puts( scope1.is_restored() ? "! stack restore state UNCHANGED" : "- stack restore state changed" );
+	}
+	
+	printf( "\n> additional tests:\n" );
+	{
+		SGS_SCOPE;
+		sgsVariable vA = aA;
+		puts( vA.getprop( "attachedName" ).not_null() ?
+			"! attachedName returns value WITHOUT attached" : "- attachedName is null" );
+		puts( "..attaching B to A" );
+		vA.setprop( "attached", aB );
+		sgsString name = vA.getprop( "attachedName" ).get<sgsString>();
+		printf( "- attached name: " );
+		puts( name.c_str() ? name.c_str() : "! attachedName DOES NOT RETURN THE NAME" );
+		puts( "..detaching B from A" );
+		vA.setprop( "attached", sgsVariable() );
 	}
 	
 	// free handles before destroying the engine

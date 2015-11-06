@@ -1811,7 +1811,11 @@ static SGSBOOL vm_op_concat_ex( SGS_CTX, StkIdx args )
 	uint32_t totsz = 0, curoff = 0;
 	sgs_Variable N;
 	if( args < 2 )
+	{
+		if( args < 1 )
+			sgs_PushString( C, "" );
 		return 1;
+	}
 	if( SGS_STACKFRAMESIZE < args )
 		return 0;
 	for( i = 1; i <= args; ++i )

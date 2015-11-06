@@ -158,7 +158,7 @@ $(OUTDIR)/sgscppbctest11$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/s
 	$(CXX) -o $@ $< $(word 2,$^) $(EXEFLAGS) -I. -std=c++11
 	$(call SGS_INSTALL_TOOL,$@)
 obj/cppbc_test.cpp: ext/sgscppbctest.h
-	$(OUTDIR)/sgsvm -p ext/cppbc/cppbc.sgs $< $@
+	$(OUTDIR)/sgsvm -p ext/cppbc/cppbc.sgs $< -o $@
 ## - cppbind testing
 .PHONY: cppbindtest
 .PHONY: build_cppbindtest

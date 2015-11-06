@@ -69,6 +69,8 @@ public:
 	SGS_PROPERTY Handle attached;
 	SGS_GCREF( attached );
 	SGS_NODUMP( attached );
+	SGS_PROPERTY_FUNC( READ WRITE VALIDATE attached.not_null()
+		SOURCE attached->name ) SGS_ALIAS( sgsString attachedName );
 	SGS_PROPERTY sgsMaybe<int> maybeIntTest1;
 	SGS_PROPERTY sgsMaybe<int> maybeIntTest2;
 	SGS_PROPERTY bool bitfieldTest1 : 1;

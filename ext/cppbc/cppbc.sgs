@@ -521,61 +521,119 @@ function cppbc_examine_property_func( code )
 	
 	sp = fmt_string_parser( code );
 	
-	sp.skipcc( "( \t\v\r\n" );
+	sp.skipcc( " \t\v\r\n" );
 	items = [];
-	while( ( item = sp.readcc( "a-zA-Z0-9_." ) ) !== "" )
+	item = "";
+	bracestack = 0;
+	if( sp.getchar() != "(" )
 	{
-		items.push( item );
-		sp.skipcc( " \t\v\r\n" );
+		cppbc_error( "PROPERTY_FUNC: '(' expected" );
 	}
-	sp.skipcc( ")" );
+	while( sp.at_end == false )
+	{
+		prevoff = sp.stream_offset;
+		sp.skipcc( " \t\v\r\n" );
+		curoff = sp.stream_offset;
+		ch = sp.getchar();
+		at_end = bracestack == 0 && ch == ")";
+		if( ( curoff > prevoff || at_end ) && item.length )
+		{
+			items.push( item );
+			item = "";
+		}
+		if( at_end )
+			break;
+		if( ch == "(" )
+			bracestack++;
+		else if( ch == ")" )
+			bracestack--;
+		item $= ch;
+	}
+	if( sp.at_end )
+	{
+		cppbc_error( "PROPERTY_FUNC: unexpected end of file before closing brace" );
+	}
 	
-	items.push( "READ" ); // this will not get handled
 	readmethod = null;
 	writemethod = null;
 	readcallback = null;
 	writecallback = null;
 	varname = null;
+	validate = null;
+	source = null;
 	lastitem = "";
-	foreach( item : items )
+	
+	function specitem( item )
 	{
-		isspecitem = item == "READ" || item == "WRITE" || item == "READ_CALLBACK" || item == "WRITE_CALLBACK" || item == "VARNAME";
-		if( lastitem == "READ" )
+		return item == "READ" || item == "WRITE" ||
+			item == "READ_CALLBACK" || item == "WRITE_CALLBACK" ||
+			item == "VARNAME" || item == "VALIDATE" || item == "SOURCE";
+	}
+	
+	for( i = 0; i < items.size; i = iend )
+	{
+		istart = i + 1;
+		for( iend = istart; iend < items.size; ++iend )
+			if( specitem( items[ iend ] ) )
+				break;
+		arg = null;
+		if( iend > istart )
 		{
-			if( isspecitem )
+			arg = string_implode( items.part( istart, iend - istart ), " " );
+		}
+		
+		item = items[ i ];
+		if( item == "READ" )
+		{
+			if( arg )
+				readmethod = arg;
+			else
 				readmethod = true;
-			else
-				readmethod = item;
 		}
-		else if( lastitem == "WRITE" )
+		else if( item == "WRITE" )
 		{
-			if( isspecitem )
+			if( arg )
+				writemethod = arg;
+			else
 				writemethod = true;
-			else
-				writemethod = item;
 		}
-		else if( lastitem == "READ_CALLBACK" )
+		else if( item == "READ_CALLBACK" )
 		{
-			if( isspecitem )
+			if( arg )
+				readcallback = arg;
+			else
 				cppbc_error( "READ_CALLBACK: expected method name" );
-			else
-				readcallback = item;
 		}
-		else if( lastitem == "WRITE_CALLBACK" )
+		else if( item == "WRITE_CALLBACK" )
 		{
-			if( isspecitem )
+			if( arg )
+				writecallback = arg;
+			else
 				cppbc_error( "WRITE_CALLBACK: expected method name" );
-			else
-				writecallback = item;
 		}
-		else if( lastitem == "VARNAME" )
+		else if( item == "VARNAME" )
 		{
-			if( isspecitem )
-				cppbc_error( "VARNAME: expected variable name" );
+			if( arg )
+				varname = arg;
 			else
-				varname = item;
+				cppbc_error( "VARNAME: expected variable name" );
 		}
-		lastitem = item;
+		else if( item == "VALIDATE" )
+		{
+			if( arg )
+				validate = arg;
+			else
+				cppbc_error( "VALIDATE: expected data source" );
+		}
+		else if( item == "SOURCE" )
+		{
+			if( arg )
+				source = arg;
+			else
+				cppbc_error( "SOURCE: expected data source" );
+		}
+		else
+			cppbc_error( "unexpected item: " $ item );
 	}
 	
 	vd = cppbc_parse_vardecl( string_part( code, sp.stream_offset ) );
@@ -589,7 +647,8 @@ function cppbc_examine_property_func( code )
 		readcb = readcallback,
 		writecb = writecallback,
 		varname = varname,
-		srcname = vd.name,
+		srcname = if( source, source, vd.name ),
+		validate = validate,
 	};
 }
 
@@ -843,7 +902,7 @@ static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 	%LINE%
 }
 "
-			, { "%OBJ%" = obj.name, "%NAME%" = item.name, "%LINE%" = line } );
+			, { "%OBJ%" = obj.name, "%NAME%" = item.varname, "%LINE%" = line } );
 		}
 		
 		// interface functions
@@ -879,7 +938,7 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 		{
 			itemline = null;
 			if( item.what == "METHOD" )
-				itemline = "sgs_PushCFunction( C, _sgs_method__%OBJ%__"$item.name$" );";
+				itemline = "sgs_PushCFunction( C, _sgs_method__%OBJ%__"$item.varname$" );";
 			else if( item.what == "PROPERTY" )
 			{
 				if( item.access <= 0 )
@@ -887,10 +946,13 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 			}
 			else if( item.what == "PROPERTY_FUNC" )
 			{
+				itemline = "";
+				if( item.validate !== null )
+					itemline $= "if( !( static_cast<%OBJ%*>( obj->data )->"$item.validate$" ) ){ return SGS_EINPROC; } ";
 				if( item.read === true )
-					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.srcname$" );";
+					itemline $= "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.srcname$" );";
 				else if( item.read )
-					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.read$"() );";
+					itemline $= "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.read$"() );";
 				if( item.readcb )
 					itemline $= "\n\t\t\tstatic_cast<%OBJ%*>( obj->data )->"$item.readcb$"();";
 			}
@@ -927,10 +989,13 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			}
 			else if( item.what == "PROPERTY_FUNC" )
 			{
+				itemline = "";
+				if( item.validate !== null )
+					itemline $= "if( !( static_cast<%OBJ%*>( obj->data )->"$item.validate$" ) ){ return SGS_EINPROC; } ";
 				if( item.write === true )
-					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.srcname$" = %TYPEFUNC%( C, val%ISOBJ% );";
+					itemline $= "static_cast<%OBJ%*>( obj->data )->"$item.srcname$" = %TYPEFUNC%( C, val%ISOBJ% );";
 				else if( item.write )
-					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.write$"( %TYPEFUNC%( C, val%ISOBJ% ) );";
+					itemline $= "static_cast<%OBJ%*>( obj->data )->"$item.write$"( %TYPEFUNC%( C, val%ISOBJ% ) );";
 				if( item.writecb )
 					itemline $= "\n\t\t\tstatic_cast<%OBJ%*>( obj->data )->"$item.writecb$"();";
 			}
@@ -959,6 +1024,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 		out $= "\n\tif( depth > 0 )\n\t{";
 		// 1. compile a list
 		dumpvars = {};
+		dumpvalid = {};
 		dumpvarorder = [];
 		foreach( item : obj.items )
 		{
@@ -969,9 +1035,15 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			if( item.what == "PROPERTY_FUNC" && @item.varname && item.read === true ) continue;
 			
 			if( item.what == "PROPERTY_FUNC" && item.read !== true )
-				dumpvars[ item.name ] = item.read;
+			{
+				dumpvars[ item.name ] = item.read $ "()";
+				dumpvalid[ item.name ] = item.validate;
+			}
 			else
-				dumpvars[ item.name ] = true;
+			{
+				dumpvars[ item.name ] = @item.srcname ?? item.name;
+				dumpvalid[ item.name ] = @item.validate;
+			}
 			dumpvarorder.push( item.name );
 		}
 		foreach( item : obj.items )
@@ -984,11 +1056,16 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 		// 2. push it
 		foreach( name : dumpvarorder )
 		{
-			functype = dumpvars[ name ];
-			src = if( functype === true, name, functype $ "()" );
+			src = dumpvars[ name ];
+			vld = dumpvalid[ name ];
 			out $= "\n\t\t{ ";
-			out $= "sgs_PushString( C, \"\\n"$name$" = \" );"$
-				" sgs_DumpData( C, static_cast<"$obj.name$"*>( obj->data )->"$src$", depth ).push( C ); }";
+			out $= "sgs_PushString( C, \"\\n"$name$" = \" ); ";
+			if( vld !== null )
+			{
+				out $= "if( !( static_cast<"$obj.name$"*>( obj->data )->"$vld$" ) ) sgs_PushString( C, \"<inaccessible>\" ); else ";
+			}
+			out $= "sgs_DumpData( C, static_cast<"$obj.name$"*>( obj->data )->"$src$", depth ).push( C );";
+			out $= " }";
 		}
 		out $= "\n\t\tsgs_StringConcat( C, "$dict_size(dumpvars)*2$" );\n\t\tsgs_PadString( C );";
 		out $= "\n\t\tsgs_PushString( C, \"\\n}\" );";

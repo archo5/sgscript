@@ -53,11 +53,6 @@
 # define SGS_GCREF( mbname )
 # define SGS_DUMP( what )
 # define SGS_NODUMP( what )
-# define VARNAME
-# define READ
-# define WRITE
-# define READ_CALLBACK
-# define WRITE_CALLBACK
 # define SGS_IFUNC( type ) static
 # define SGS_ALIAS( func )
 
@@ -93,11 +88,14 @@ public:
 #define SGS_SCOPE SGS_CSCOPE( C )
 
 
+enum EsgsMaybeNot { sgsMaybeNot };
+
 template< class T >
 class sgsMaybe /* nullable PODs */
 {
 public:
 	sgsMaybe() : isset(false) {};
+	sgsMaybe( EsgsMaybeNot ) : isset(false) {};
 	sgsMaybe( const T& val ) : data(val), isset(true) {}
 	
 	void set( const T& val ){ data = val; isset = true; }
@@ -397,6 +395,17 @@ public:
 		{
 			var.type = SGS_VT_STRING;
 			var.data.S = s.str;
+			_acquire();
+		}
+		else
+			var.type = SGS_VT_NULL;
+	}
+	template< class T > sgsVariable( const sgsHandle<T>& h ) : C(h.C)
+	{
+		if( h.object != NULL )
+		{
+			var.type = SGS_VT_OBJECT;
+			var.data.O = h.object;
 			_acquire();
 		}
 		else

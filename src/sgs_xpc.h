@@ -6,6 +6,7 @@
 #  pragma warning( disable: 4996 )
 #  if _MSC_VER >= 1600
 #    include <stdint.h>
+#    include <inttypes.h>
 #  else
 typedef __int8 int8_t;
 typedef __int16 int16_t;
@@ -15,10 +16,10 @@ typedef unsigned __int8 uint8_t;
 typedef unsigned __int16 uint16_t;
 typedef unsigned __int32 uint32_t;
 typedef unsigned __int64 uint64_t;
+#    define PRId32 "d"
+#    define PRId64 "lld"
 #  endif
 #  define SGS_INLINE
-#  define PRId32 "d"
-#  define PRId64 "lld"
 #  define snprintf _snprintf
 #  define SGS_VSPRINTF_LEN( str, args ) _vscprintf( str, args )
 #else
