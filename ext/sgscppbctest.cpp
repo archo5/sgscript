@@ -94,6 +94,7 @@ int main( int argc, char** argv )
 	}
 	
 	printf( "\n> additional tests:\n" );
+	// validate/source
 	{
 		SGS_SCOPE;
 		sgsVariable vA = aA;
@@ -106,6 +107,19 @@ int main( int argc, char** argv )
 		puts( name.c_str() ? name.c_str() : "! attachedName DOES NOT RETURN THE NAME" );
 		puts( "..detaching B from A" );
 		vA.setprop( "attached", sgsVariable() );
+	}
+	// context-awareness
+	{
+		SGS_SCOPE;
+		aA.push( C );
+		sgs_PushInt( C, 10 );
+		sgs_PushInt( C, 20 );
+		sgs_PushInt( C, 30 );
+		sgs_PushProperty( C, -4, "coroAware" );
+		sgs_ThisCall( C, 3, 1 ); // 1 `this`, 3 arguments, 1 function on stack
+		int val = (int) sgs_GetInt( C, -1 );
+		printf( "generated value: %d (need 62)\n", val );
+		puts( val == 62 ? "- context-aware" : "! CONTEXT PASSING ERROR" );
 	}
 	
 	// free handles before destroying the engine

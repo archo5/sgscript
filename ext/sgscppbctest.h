@@ -97,6 +97,11 @@ public:
 		return true;
 	}
 	
+	// purposefully compacted formatting
+	SGS_METHOD_NAMED( coroAware ) int sgsCoroAware(int a,SGS_CTX,int b,sgs_Context* c,int d){
+		return a + b + ( C == c ) + ( C == this->C ) + d;
+	}
+	
 	SGS_IFUNC( CONVERT ) int _convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
 		Account* A = (Account*) data->data;

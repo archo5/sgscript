@@ -870,6 +870,7 @@ function cppbc_generate_code( objects, includes )
 				continue;
 			
 			line = "";
+			param_id = 0;
 			foreach( i, param : item.params )
 			{
 				if( line != "" )
@@ -882,8 +883,12 @@ function cppbc_generate_code( objects, includes )
 					getvar3rd = "Obj";
 					ptype = string_part( param, 0, -1 );
 				}
+				fixedtype = cppbc_fix_type( ptype );
 				
-				line $= string_format( "sgs_GetVar{3}<{1}>()(C,{2})", cppbc_fix_type( ptype ), i, getvar3rd );
+				if( fixedtype == "sgs_Context" || fixedtype == "SGS_CTX" )
+					line $= "C";
+				else
+					line $= string_format( "sgs_GetVar{3}<{1}>()(C,{2})", fixedtype, param_id++, getvar3rd );
 			}
 			line = string_format( "data->{1}( {2} )", item.name, line );
 			
