@@ -3842,34 +3842,37 @@ int sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 
 
 #define RLBP S->_R
+#define SYMP S->_SYM
 
 int sgsSTD_RegistryInit( SGS_CTX )
 {
 	SGS_SHCTX_USE;
-	sgs_Variable var;
+	sgs_Variable var, sym, symkey;
 	if( SGS_FAILED( sgsSTD_MakeMap( C, &var, 0 ) ) )
 		return SGS_EINPROC;
+	{
+		sgs_InitString( C, &symkey, "$sym" );
+		if( SGS_FAILED( sgsSTD_MakeMap( C, &sym, 0 ) ) )
+			return SGS_EINPROC;
+		if( SGS_FAILED( sgs_SetIndexPPP( C, &var, &symkey, &sym, SGS_TRUE ) ) )
+			return SGS_EINPROC;
+		sgs_Release( C, &symkey );
+		SYMP = sym.data.O;
+	}
 	RLBP = var.data.O;
 	return SGS_SUCCESS;
 }
 
 int sgsSTD_RegistryFree( SGS_CTX )
 {
-	sgs_VHTVar *p, *pend;
 	SGS_SHCTX_USE;
-	sgs_VarObj* data = RLBP;
-	HTHDR;
 	
-	p = ht->vars;
-	pend = p + sgs_vht_size( ht );
-	while( p < pend )
-	{
-		sgs_Release( C, &p->val );
-		p++;
-	}
+	/* symbol table */
+	sgs_ObjRelease( C, SYMP );
+	SYMP = NULL;
 	
+	/* registry */
 	sgs_ObjRelease( C, RLBP );
-	
 	RLBP = NULL;
 	
 	return SGS_SUCCESS;
@@ -3901,20 +3904,7 @@ int sgsSTD_GlobalInit( SGS_CTX )
 
 int sgsSTD_GlobalFree( SGS_CTX )
 {
-	sgs_VHTVar *p, *pend;
-	sgs_VarObj* data = GLBP;
-	HTHDR;
-	
-	p = ht->vars;
-	pend = p + sgs_vht_size( ht );
-	while( p < pend )
-	{
-		sgs_Release( C, &p->val );
-		p++;
-	}
-	
 	sgs_ObjRelease( C, GLBP );
-	
 	GLBP = NULL;
 	
 	return SGS_SUCCESS;

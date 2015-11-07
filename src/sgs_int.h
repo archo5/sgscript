@@ -516,6 +516,7 @@ struct _sgs_ShCtx
 	
 	/* > _R (global registry) */
 	sgs_VarObj*   _R;
+	sgs_VarObj*   _SYM;
 };
 
 struct _sgs_Context

@@ -3717,6 +3717,16 @@ SGSRESULT sgs_StorePropertyP( SGS_CTX, sgs_Variable* var, const char* name )
 	return ret;
 }
 
+void sgs_GetRegistry( SGS_CTX, sgs_Variable* out )
+{
+	sgs_InitObjectPtr( out, C->shared->_R );
+}
+
+void sgs_PushRegistry( SGS_CTX )
+{
+	sgs_PushObjectPtr( C, C->shared->_R );
+}
+
 void sgs_GetEnv( SGS_CTX, sgs_Variable* out )
 {
 	sgs_InitObjectPtr( out, C->_G );
