@@ -54,6 +54,27 @@ for( i = 0; i < convars.size; ++i )
 for( i = 0; i < convars.size; ++i )
 	testEqual( tostring( convars[i] ), stringvars[i], "tostring - variable #"$i );
 
+	section( "globals/registry" );
+ERRORS = "";
+tR = _R;
+_R[ 5 ] = 6;
+testEqual( _R[ 5 ], 6, "_R - readback" );
+testEqual( ERRORS, "", "_R - access" );
+oriG = _G;
+_G = tG = class( {}, oriG ); testEqual( _G, tG, "_G - set to new dict" ); _G = oriG;
+_G = tG = class( map(), oriG ); testEqual( _G, tG, "_G - set to new map" ); _G = oriG;
+_G = serialize; testEqual( _G, oriG, "_G - set to function" );
+testEqual( ERRORS, "[E:_G only accepts 'map'/'dict' values]" );
+ERRORS = "";
+_G[ serialize ] = "serialize";
+testEqual( _G[ serialize ], "serialize", "_G - map name to function" );
+_G[ null ] = 1;
+_G[ true ] = 1;
+_G[ false ] = 1;
+testEqual( ERRORS, "", "_G - trying to map to null/true/false keys" );
+testEqual( _G[ unserialize ], null, "_G - reading unmapped function key" );
+testEqual( ERRORS, "[W:Cannot find readable value by index: \"C function\"]" );
+
 	section( "utility functions" );
 testEqual( serialize(null), "P\x00", "serialize - null" );
 testEqual( unserialize(serialize(null)), null, "[un]-serialize - null" );

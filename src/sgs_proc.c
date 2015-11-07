@@ -3724,7 +3724,8 @@ void sgs_GetEnv( SGS_CTX, sgs_Variable* out )
 
 SGSRESULT sgs_SetEnv( SGS_CTX, sgs_Variable* var )
 {
-	if( var->type != SGS_VT_OBJECT || var->data.O->iface != sgsstd_dict_iface )
+	if( var->type != SGS_VT_OBJECT ||
+		( var->data.O->iface != sgsstd_dict_iface && var->data.O->iface != sgsstd_map_iface ) )
 		return SGS_ENOTSUP;
 	sgs_ObjRelease( C, C->_G );
 	C->_G = var->data.O;
@@ -4774,6 +4775,8 @@ static SGSRESULT sgsVM_GCExecute( SGS_SHCTX )
 		
 		/* GLOBALS */
 		sgsSTD_GlobalGC( C );
+		/* REGISTRY */
+		sgsSTD_RegistryGC( C );
 		
 		C = C->next;
 	}

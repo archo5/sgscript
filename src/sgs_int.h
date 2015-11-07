@@ -513,6 +513,9 @@ struct _sgs_ShCtx
 	sgs_VHTable   typetable; /* type interface table */
 	sgs_VHTable   stringtable; /* string constant caching hash table */
 	sgs_VHTable   ifacetable; /* interface generator => object table */
+	
+	/* > _R (global registry) */
+	sgs_VarObj*   _R;
 };
 
 struct _sgs_Context
@@ -614,6 +617,9 @@ int sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 int sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 int sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc );
+int sgsSTD_RegistryInit( SGS_CTX );
+int sgsSTD_RegistryFree( SGS_CTX );
+int sgsSTD_RegistryGC( SGS_CTX );
 int sgsSTD_GlobalInit( SGS_CTX );
 int sgsSTD_GlobalFree( SGS_CTX );
 int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx );

@@ -124,6 +124,7 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	sgs_vht_init( &S->ifacetable, C, 64, 64 );
 	// ---
 	
+	sgsSTD_RegistryInit( C );
 	sgsSTD_GlobalInit( C );
 	sgsSTD_PostInit( C );
 	return C;
@@ -177,6 +178,8 @@ static void ctx_destroy( SGS_CTX )
 	// LAST ONE CLEANS UP
 	if( C->prev == NULL && C->next == NULL )
 	{
+		sgsSTD_RegistryFree( C );
+		
 		sgs_GCExecute( C );
 		sgs_BreakIf( S->objs || S->objcount );
 		
@@ -226,7 +229,7 @@ static void shctx_destroy( SGS_SHCTX )
 		int_memory( S, S->objpool_data, 0 );
 	}
 #endif
-
+	
 #ifdef SGS_DEBUG_LEAKS
 	sgs_BreakIf( S->memsize > sizeof( sgs_ShCtx ) &&
 		"not all resources have been freed" );

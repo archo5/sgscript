@@ -3841,12 +3841,59 @@ int sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 }
 
 
+#define RLBP S->_R
+
+int sgsSTD_RegistryInit( SGS_CTX )
+{
+	SGS_SHCTX_USE;
+	sgs_Variable var;
+	if( SGS_FAILED( sgsSTD_MakeMap( C, &var, 0 ) ) )
+		return SGS_EINPROC;
+	RLBP = var.data.O;
+	return SGS_SUCCESS;
+}
+
+int sgsSTD_RegistryFree( SGS_CTX )
+{
+	sgs_VHTVar *p, *pend;
+	SGS_SHCTX_USE;
+	sgs_VarObj* data = RLBP;
+	HTHDR;
+	
+	p = ht->vars;
+	pend = p + sgs_vht_size( ht );
+	while( p < pend )
+	{
+		sgs_Release( C, &p->val );
+		p++;
+	}
+	
+	sgs_ObjRelease( C, RLBP );
+	
+	RLBP = NULL;
+	
+	return SGS_SUCCESS;
+}
+
+int sgsSTD_RegistryGC( SGS_CTX )
+{
+	SGS_SHCTX_USE;
+	sgs_VarObj* data = RLBP;
+	if( data )
+	{
+		if( sgs_ObjGCMark( C, data ) < 0 )
+			return SGS_EINPROC;
+	}
+	return SGS_SUCCESS;
+}
+
+
 #define GLBP C->_G
 
 int sgsSTD_GlobalInit( SGS_CTX )
 {
 	sgs_Variable var;
-	if( SGS_FAILED( sgsSTD_MakeDict( C, &var, 0 ) ) )
+	if( SGS_FAILED( sgsSTD_MakeMap( C, &var, 0 ) ) )
 		return SGS_EINPROC;
 	GLBP = var.data.O;
 	return SGS_SUCCESS;
@@ -3891,6 +3938,14 @@ int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 		return SGS_SUCCESS;
 	}
 	
+	if( strcmp( sgs_str_cstr( idx->data.S ), "_R" ) == 0 )
+	{
+		SGS_SHCTX_USE;
+		sgs_Release( C, out );
+		sgs_InitObjectPtr( out, RLBP );
+		return SGS_SUCCESS;
+	}
+	
 	if( data->mm_enable )
 	{
 		int ret;
@@ -3931,8 +3986,14 @@ int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 	{
 		int ret = sgs_SetEnv( C, val );
 		if( SGS_FAILED( ret ) )
-			sgs_Msg( C, SGS_ERROR, "_G only accepts 'dict' values" );
+			sgs_Msg( C, SGS_ERROR, "_G only accepts 'map'/'dict' values" );
 		return ret;
+	}
+	
+	if( strcmp( sgs_str_cstr( idx->data.S ), "_R" ) == 0 )
+	{
+		sgs_Msg( C, SGS_WARNING, "cannot change _R" );
+		return SGS_ENOTSUP;
 	}
 	
 	if( data->mm_enable )
