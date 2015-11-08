@@ -1068,6 +1068,7 @@ static int sgs_socket_select( SGS_CTX )
 {
 	struct timeval tv;
 	sgs_Real timeout = 0;
+	sgs_Variable aR, aW, aE;
 	sgs_SizeVal szR, szW, szE, i;
 	fd_set setR, setW, setE;
 	sgs_VarObj* obj;
@@ -1133,50 +1134,35 @@ static int sgs_socket_select( SGS_CTX )
 	ret = select( (int) maxsock + 1, &setR, &setW, &setE, sgs_StackSize( C ) >= 4 ? &tv : NULL );
 	sockassert( C, ret != -1 );
 	
-	sgs_PushString( C, "erase" );
+	aR = sgs_StackItem( C, 0 );
+	aW = sgs_StackItem( C, 1 );
+	aE = sgs_StackItem( C, 2 );
+	
 	for( i = 0; i < szR; ++i )
 	{
-		sgs_PushNumIndex( C, 0, i );
-		obj = sgs_GetObjectStruct( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setR ) )
 		{
-			sgs_PushItem( C, 0 );
-			sgs_PushInt( C, i );
-			sgs_PushIndexII( C, -2, -4, 1 );
-			sgs_ThisCall( C, 1, 0 );
+			sgs_ArrayErase( C, aR, i, 1 );
 			i--; szR--;
 		}
-		sgs_Pop( C, 1 );
 	}
 	
 	for( i = 0; i < szW; ++i )
 	{
-		sgs_PushNumIndex( C, 1, i );
-		obj = sgs_GetObjectStruct( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setW ) )
 		{
-			sgs_PushItem( C, 1 );
-			sgs_PushInt( C, i );
-			sgs_PushIndexII( C, -2, -4, 1 );
-			sgs_ThisCall( C, 1, 0 );
+			sgs_ArrayErase( C, aW, i, 1 );
 			i--; szW--;
 		}
-		sgs_Pop( C, 1 );
 	}
 	
 	for( i = 0; i < szE; ++i )
 	{
-		sgs_PushNumIndex( C, 2, i );
-		obj = sgs_GetObjectStruct( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setE ) )
 		{
-			sgs_PushItem( C, 2 );
-			sgs_PushInt( C, i );
-			sgs_PushIndexII( C, -2, -4, 1 );
-			sgs_ThisCall( C, 1, 0 );
+			sgs_ArrayErase( C, aE, i, 1 );
 			i--; szE--;
 		}
-		sgs_Pop( C, 1 );
 	}
 	
 	sgs_PushInt( C, ret );

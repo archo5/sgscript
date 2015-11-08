@@ -61,7 +61,7 @@ static int _call_metamethod( SGS_CTX, sgs_VarObj* obj, const char* name, size_t 
 	/* TODO OPTIMIZE NAME */
 	sgs_PushObjectPtr( C, obj->metaobj );
 	sgs_PushStringBuf( C, name, (sgs_SizeVal) namelen );
-	if( SGS_FAILED( sgs_PushIndexII( C, -2, -1, 0 ) ) )
+	if( sgs_PushIndex( C, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), SGS_FALSE ) == SGS_FALSE )
 	{
 		sgs_Pop( C, 2 );
 		return 0;
@@ -1119,36 +1119,6 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 }
 
 
-static void vm_convert_bool( SGS_CTX, sgs_Variable* var )
-{
-	sgs_Bool value;
-	if( var->type == SGS_VT_BOOL )
-		return;
-	value = var_getbool( C, var );
-	VAR_RELEASE( var );
-	var_initbool( var, value );
-}
-
-static void vm_convert_int( SGS_CTX, sgs_Variable* var )
-{
-	sgs_Int value;
-	if( var->type == SGS_VT_INT )
-		return;
-	value = var_getint( C, var );
-	VAR_RELEASE( var );
-	var_initint( var, value );
-}
-
-static void vm_convert_real( SGS_CTX, sgs_Variable* var )
-{
-	sgs_Real value;
-	if( var->type == SGS_VT_REAL )
-		return;
-	value = var_getreal( C, var );
-	VAR_RELEASE( var );
-	var_initreal( var, value );
-}
-
 static void vm_convert_string( SGS_CTX, sgs_Variable* var )
 {
 	sgs_Variable out;
@@ -1157,16 +1127,6 @@ static void vm_convert_string( SGS_CTX, sgs_Variable* var )
 	init_var_string( C, &out, var );
 	VAR_RELEASE( var );
 	*var = out;
-}
-
-static void vm_convert_ptr( SGS_CTX, sgs_Variable* var )
-{
-	void* value;
-	if( var->type == SGS_VT_PTR )
-		return;
-	value = var_getptr( C, var );
-	VAR_RELEASE( var );
-	var_initptr( var, value );
 }
 
 
@@ -1318,20 +1278,13 @@ static SGSRESULT vm_gcmark( SGS_CTX, sgs_Variable* var )
 int sgs_specfn_call( SGS_CTX )
 {
 	int ret, rvc = 0;
-	int method_call = sgs_Method( C );
+	sgs_Variable v_func;
 	SGSFN( "call" );
-	if( !sgs_IsCallable( C, 0 ) )
-		return sgs_Msg( C, SGS_WARNING, "not called on function type" );
-	if( sgs_StackSize( C ) < 2 )
-	{
-		sgs_Msg( C, SGS_WARNING, method_call ?
-			"at least one argument expected (this)" :
-			"at least two arguments expected (function, this)" );
+	/* method, test arg0 = proc, get arg0, test arg1 */
+	if( !sgs_LoadArgs( C, "@?p<v?v", &v_func ) )
 		return 0;
-	}
 	
-	sgs_PushItem( C, 0 );
-	ret = sgs_XThisCall( C, sgs_StackSize( C ) - 3, &rvc );
+	ret = sgs_XThisCallP( C, v_func, sgs_StackSize( C ) - 2, &rvc );
 	if( SGS_FAILED( ret ) )
 		return sgs_Msg( C, SGS_WARNING, "failed with error %d (%s)", ret,
 			sgs_CodeString( SGS_CODE_ER, ret ) );
@@ -1341,25 +1294,17 @@ int sgs_specfn_call( SGS_CTX )
 int sgs_specfn_apply( SGS_CTX )
 {
 	int ret, rvc = 0;
-	int method_call = sgs_Method( C );
 	sgs_SizeVal i, asize;
+	sgs_Variable v_func, v_this, v_args;
 	SGSFN( "apply" );
-	if( !sgs_IsCallable( C, 0 ) )
-		return sgs_Msg( C, SGS_WARNING, "not called on function type" );
-	if( ( asize = sgs_ArraySize( C, 2 ) ) < 0 )
-		return sgs_Msg( C, SGS_WARNING, "argument %d is not an array", method_call ? 2 : 3 );
-	if( sgs_StackSize( C ) < 3 )
-	{
-		return sgs_Msg( C, SGS_WARNING, method_call ?
-			"two argument expected (this, args)" :
-			"three arguments expected (function, this, args)" );
-	}
+	/* method, test arg0 = proc, get arg0, get arg1, get array size @ arg2, get arg2, req. count = 3 */
+	if( !sgs_LoadArgs( C, "@?p<vva<v.", &v_func, &v_this, &asize, &v_args ) )
+		return 0;
 	
-	sgs_PushItem( C, 1 );
+	sgs_PushVariable( C, v_this );
 	for( i = 0; i < asize; ++i )
-		sgs_PushNumIndex( C, 2, i );
-	sgs_PushItem( C, 0 );
-	ret = sgs_XThisCall( C, asize, &rvc );
+		sgs_PushNumIndex( C, v_args, i );
+	ret = sgs_XThisCallP( C, v_func, asize, &rvc );
 	if( SGS_FAILED( ret ) )
 		return sgs_Msg( C, SGS_WARNING, "failed with error %d (%s)", ret,
 			sgs_CodeString( SGS_CODE_ER, ret ) );
@@ -1374,7 +1319,7 @@ static int vm_getidx_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj
 	if( obj->type == SGS_VT_STRING )
 	{
 		size = obj->data.S->size;
-		sgs_PushVariable( C, idx );
+		sgs_PushVariable( C, *idx );
 		res = sgs_ParseInt( C, -1, &pos );
 		stk_pop1( C );
 		if( !res )
@@ -1460,7 +1405,7 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize,
 				_STACK_PREPARE;
 				_STACK_PROTECT;
 				sgs_PushObjectPtr( C, obj->data.O );
-				sgs_PushVariable( C, idx );
+				sgs_PushVariable( C, *idx );
 				if( _call_metamethod( C, obj->data.O, "__getindex", sizeof("__getindex")-1, 1, NULL )
 					&& C->num_last_returned > 0 )
 				{
@@ -1697,8 +1642,8 @@ static SGSRESULT vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_
 		_STACK_PREPARE;
 		_STACK_PROTECT;
 		sgs_PushObjectPtr( C, obj->data.O );
-		sgs_PushVariable( C, idx );
-		sgs_PushVariable( C, src );
+		sgs_PushVariable( C, *idx );
+		sgs_PushVariable( C, *src );
 		obj->data.O->in_setindex = SGS_TRUE;
 		if( !_call_metamethod( C, obj->data.O, "__setindex", sizeof("__setindex")-1, 2, NULL ) )
 		{
@@ -2576,7 +2521,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 			{
 				sgs_Variable objfunc;
 				sgs_PushString( C, "__call" );
-				rvc = sgs_GetIndexPIP( C, &V, -1, &objfunc, 0 );
+				rvc = sgs_GetIndex( C, V, sgs_StackItem( C, -1 ), &objfunc, 0 );
 				stk_pop1( C );
 				if( SGS_SUCCEEDED( rvc ) )
 				{
@@ -2584,7 +2529,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 						sgs_Method( C );
 					else
 					{
-						sgs_InsertVariable( C, 0, &V );
+						sgs_InsertVariable( C, 0, V );
 						gotthis = 1;
 					}
 					if( vm_call( C, args, clsr, gotthis, &rvc, &objfunc, 0 ) )
@@ -3063,6 +3008,12 @@ int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int* outrvc, 
 
 /* ---- The core interface ---- */
 
+static void sgs_StackIdxError( SGS_CTX, sgs_StkIdx item )
+{
+	sgs_Msg( C, SGS_ERROR, "invalid stack index - %d (abs = %d, stack size = %d)",
+		(int) item, (int) stk_absindex( C, item ), (int) SGS_STACKFRAMESIZE );
+}
+
 /*
 	
 	OBJECT CREATION
@@ -3279,63 +3230,41 @@ SGSONE sgs_PushObjectPtr( SGS_CTX, sgs_VarObj* obj )
 }
 
 
-SGSRESULT sgs_PushVariable( SGS_CTX, sgs_Variable* var )
+SGSONE sgs_PushVariable( SGS_CTX, sgs_Variable var )
 {
-	if( var->type >= SGS_VT__COUNT )
-		return SGS_EINVAL;
-	stk_push( C, var );
+	stk_push( C, &var );
 	return SGS_SUCCESS;
 }
 
-SGSRESULT sgs_StoreVariable( SGS_CTX, sgs_Variable* var )
+void sgs_StoreVariable( SGS_CTX, sgs_Variable* out )
 {
-	if( !SGS_STACKFRAMESIZE )
-		return SGS_ENOTFND;
-	*var = *stk_gettop( C );
+	*out = sgs_StackItem( C, -1 );
 	stk_pop1nr( C );
-	return SGS_SUCCESS;
 }
 
-SGSRESULT sgs_PushItem( SGS_CTX, StkIdx item )
+void sgs_SetItem( SGS_CTX, StkIdx item, sgs_Variable val )
 {
-	if( !sgs_IsValidIndex( C, item ) )
-		return SGS_EBOUNDS;
-
+	if( sgs_IsValidIndex( C, item ) == SGS_FALSE )
 	{
-		sgs_Variable copy = *stk_getpos( C, item );
-		stk_push( C, &copy );
-		return SGS_SUCCESS;
+		sgs_StackIdxError( C, item );
+		return;
 	}
+	stk_setvar( C, item, &val );
 }
 
-SGSRESULT sgs_StoreItem( SGS_CTX, StkIdx item )
+void sgs_InsertVariable( SGS_CTX, sgs_StkIdx pos, sgs_Variable val )
 {
-	int ret;
-	StkIdx g;
-	C->stack_top--;
-	ret = sgs_IsValidIndex( C, item );
-	g = stk_absindex( C, item );
-	C->stack_top++;
-	if( !ret )
-		return SGS_EBOUNDS;
-
-	stk_setlvar( C, g, stk_getpos( C, -1 ) );
-	stk_pop1( C );
-	return SGS_SUCCESS;
-}
-
-
-SGSRESULT sgs_InsertVariable( SGS_CTX, int pos, sgs_Variable* var )
-{
-	sgs_Variable* vp;
 	if( pos > sgs_StackSize( C ) || pos < -sgs_StackSize( C ) - 1 )
-		return SGS_EBOUNDS;
-	if( pos < 0 )
-		pos = sgs_StackSize( C ) + pos + 1;
-	vp = stk_insert_pos( C, pos );
-	*vp = *var;
-	VAR_ACQUIRE( var );
-	return SGS_SUCCESS;
+	{
+		sgs_Msg( C, SGS_ERROR, "invalid stack insertion index - %d (stack size = %d)",
+			(int) pos, (int) SGS_STACKFRAMESIZE );
+	}
+	else
+	{
+		sgs_Variable* vp = stk_insert_pos( C, pos );
+		*vp = val;
+		VAR_ACQUIRE( vp );
+	}
 }
 
 
@@ -3379,338 +3308,128 @@ SGSRESULT sgs_FinalizeStringAllocP( SGS_CTX, sgs_Variable* var )
 #define _EL_SETMAX C->minlev = C->apilev;
 #define _EL_RESET C->minlev = oel;
 
-SGSRESULT sgs_GetIndexPPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* out, int isprop )
+SGSBOOL sgs_GetIndex( SGS_CTX, sgs_Variable obj, sgs_Variable idx, sgs_Variable* out, int isprop )
 {
 	int ret;
 	_EL_BACKUP;
 	_EL_SETMAX;
-	ret = vm_getprop( C, out, obj, idx, isprop );
+	ret = vm_getprop( C, out, &obj, &idx, isprop );
 	if( SGS_SUCCEEDED( ret ) )
 		VM_GETPROP_RETPTR( ret, out );
+	else
+		sgs_Release( C, out );
 	_EL_RESET;
-	return SGS_FAILED( ret ) ? ret : SGS_SUCCESS;
+	return SGS_SUCCEEDED( ret );
 }
 
-SGSRESULT sgs_SetIndexPPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val, int isprop )
+SGSBOOL sgs_SetIndex( SGS_CTX, sgs_Variable obj, sgs_Variable idx, sgs_Variable val, int isprop )
 {
 	int ret;
 	_EL_BACKUP;
 	_EL_SETMAX;
-	ret = vm_setprop( C, obj, idx, val, isprop );
+	ret = vm_setprop( C, &obj, &idx, &val, isprop );
 	_EL_RESET;
-	return SGS_FAILED( ret ) ? ret : SGS_SUCCESS;
+	return SGS_SUCCEEDED( ret );
 }
 
-SGSRESULT sgs_PushIndexPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, int isprop )
+SGSBOOL sgs_PushIndex( SGS_CTX, sgs_Variable obj, sgs_Variable idx, int isprop )
 {
 	int ret;
 	sgs_Variable tmp;
 	_EL_BACKUP;
 	_EL_SETMAX;
-	ret = vm_getprop( C, &tmp, obj, idx, isprop );
+	ret = vm_getprop( C, &tmp, &obj, &idx, isprop );
 	if( SGS_SUCCEEDED( ret ) )
 		VM_GETPROP_RETTOP( ret, &tmp );
 	_EL_RESET;
-	return SGS_FAILED( ret ) ? ret : SGS_SUCCESS;
+	return SGS_SUCCEEDED( ret );
 }
 
-SGSRESULT sgs_StoreIndexPP( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, int isprop )
+
+SGSBOOL sgs_PushProperty( SGS_CTX, sgs_Variable obj, const char* name )
 {
 	int ret;
-	sgs_Variable val;
-	if( !sgs_PeekStackItem( C, -1, &val ) )
-		return SGS_EINPROC;
-	ret = sgs_SetIndexPPP( C, obj, idx, &val, isprop );
-	if( SGS_SUCCEEDED( ret ) )
-		stk_pop1( C );
+	sgs_PushString( C, name );
+	ret = sgs_PushIndex( C, obj, sgs_StackItem( C, -1 ), SGS_TRUE );
+	stk_popskip( C, 1, SGS_SUCCEEDED( ret ) ? 1 : 0 );
 	return ret;
 }
 
-
-SGSRESULT sgs_GetIndexIPP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, sgs_Variable* out, int isprop )
+SGSBOOL sgs_SetProperty( SGS_CTX, sgs_Variable obj, const char* name, sgs_Variable val )
 {
-	int res; sgs_Variable vO;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_GetIndexPPP( C, &vO, idx, out, isprop ) ) ) return res;
-	return SGS_SUCCESS;
+	int ret;
+	sgs_PushString( C, name );
+	ret = sgs_SetIndex( C, obj, sgs_StackItem( C, -1 ), sgs_StackItem( C, -2 ), SGS_TRUE );
+	stk_pop( C, SGS_SUCCEEDED( ret ) ? 2 : 1 );
+	return ret;
 }
 
-SGSRESULT sgs_GetIndexPIP( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, sgs_Variable* out, int isprop )
+SGSBOOL sgs_PushNumIndex( SGS_CTX, sgs_Variable obj, sgs_Int idx )
 {
-	int res; sgs_Variable vI;
-	if( ( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_GetIndexPPP( C, obj, &vI, out, isprop ) ) ) return res;
-	return SGS_SUCCESS;
+	sgs_Variable ivar;
+	ivar.type = SGS_VT_INT;
+	ivar.data.I = idx;
+	return sgs_PushIndex( C, obj, ivar, SGS_FALSE );
 }
 
-SGSRESULT sgs_GetIndexIIP( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, sgs_Variable* out, int isprop )
+SGSBOOL sgs_SetNumIndex( SGS_CTX, sgs_Variable obj, sgs_Int idx, sgs_Variable val )
 {
-	int res; sgs_Variable vO, vI;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_GetIndexPPP( C, &vO, &vI, out, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_GetIndexPPI( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_StkIdx out, int isprop )
-{
-	int res; sgs_Variable vV;
-	if( ( res = sgs_GetIndexPPP( C, obj, idx, &vV, isprop ) ) ||
-		( res = sgs_SetStackItem( C, out, &vV ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_GetIndexIPI( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, sgs_StkIdx out, int isprop )
-{
-	int res; sgs_Variable vO, vV;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_GetIndexPPP( C, &vO, idx, &vV, isprop ) ) ||
-		( res = sgs_SetStackItem( C, out, &vV ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_GetIndexPII( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, sgs_StkIdx out, int isprop )
-{
-	int res; sgs_Variable vI, vV;
-	if( ( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_GetIndexPPP( C, obj, &vI, &vV, isprop ) ) ||
-		( res = sgs_SetStackItem( C, out, &vV ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_GetIndexIII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, sgs_StkIdx out, int isprop )
-{
-	int res; sgs_Variable vO, vI, vV;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_GetIndexPPP( C, &vO, &vI, &vV, isprop ) ) ||
-		( res = sgs_SetStackItem( C, out, &vV ) ) ) return res;
-	return SGS_SUCCESS;
+	sgs_Variable ivar;
+	ivar.type = SGS_VT_INT;
+	ivar.data.I = idx;
+	return sgs_SetIndex( C, obj, ivar, val, SGS_FALSE );
 }
 
 
-SGSRESULT sgs_SetIndexIPP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, sgs_Variable* val, int isprop )
-{
-	int res; sgs_Variable vO;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_SetIndexPPP( C, &vO, idx, val, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_SetIndexPIP( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )
-{
-	int res; sgs_Variable vI;
-	if( ( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_SetIndexPPP( C, obj, &vI, val, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_SetIndexIIP( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )
-{
-	int res; sgs_Variable vO, vI;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_SetIndexPPP( C, &vO, &vI, val, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_SetIndexIPI( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, sgs_StkIdx val, int isprop )
-{
-	int res; sgs_Variable vO, vV;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PeekStackItem( C, val, &vV ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_SetIndexPPP( C, &vO, idx, &vV, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_SetIndexPII( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )
-{
-	int res; sgs_Variable vI, vV;
-	if( ( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PeekStackItem( C, val, &vV ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_SetIndexPPP( C, obj, &vI, &vV, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_SetIndexIII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )
-{
-	int res; sgs_Variable vO, vI, vV;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PeekStackItem( C, val, &vV ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_SetIndexPPP( C, &vO, &vI, &vV, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-
-SGSRESULT sgs_PushIndexIP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, int isprop )
-{
-	int res; sgs_Variable vO;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PushIndexPP( C, &vO, idx, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_PushIndexPI( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, int isprop )
-{
-	int res; sgs_Variable vI;
-	if( ( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PushIndexPP( C, obj, &vI, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_PushIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )
-{
-	int res; sgs_Variable vO, vI;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PushIndexPP( C, &vO, &vI, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_StoreIndexIP( SGS_CTX, sgs_StkIdx obj, sgs_Variable* idx, int isprop )
-{
-	int res; sgs_Variable vO;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_StoreIndexPP( C, &vO, idx, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_StoreIndexPI( SGS_CTX, sgs_Variable* obj, sgs_StkIdx idx, int isprop )
-{
-	int res; sgs_Variable vI;
-	if( ( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_StoreIndexPP( C, obj, &vI, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_StoreIndexII( SGS_CTX, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )
-{
-	int res; sgs_Variable vO, vI;
-	if( ( res = sgs_PeekStackItem( C, obj, &vO ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_PeekStackItem( C, idx, &vI ) ? SGS_SUCCESS : SGS_EBOUNDS ) != SGS_SUCCESS ||
-		( res = sgs_StoreIndexPP( C, &vO, &vI, isprop ) ) ) return res;
-	return SGS_SUCCESS;
-}
-
-
-SGSRESULT sgs_GetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* out )
+SGSBOOL sgs_GetGlobal( SGS_CTX, sgs_Variable idx, sgs_Variable* out )
 {
 	int ret;
 	_EL_BACKUP;
 	out->type = SGS_VT_NULL;
 	_EL_SETMAX;
-	ret = sgsSTD_GlobalGet( C, out, idx );
+	ret = sgsSTD_GlobalGet( C, out, &idx );
 	_EL_RESET;
 	return ret;
 }
 
-SGSRESULT sgs_SetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
+SGSBOOL sgs_SetGlobal( SGS_CTX, sgs_Variable idx, sgs_Variable val )
 {
+	int ret;
+	sgs_ObjAcquire( C, C->_G );
 	sgs_Variable vO; vO.type = SGS_VT_OBJECT; vO.data.O = C->_G;
-	return sgs_SetIndexPPP( C, &vO, idx, val, 0 );
-}
-
-
-SGSRESULT sgs_PushProperty( SGS_CTX, sgs_StkIdx obj, const char* name )
-{
-	int ret;
-	if( !sgs_IsValidIndex( C, obj ) )
-		return SGS_EBOUNDS;
-	obj = stk_absindex( C, obj );
-	sgs_PushString( C, name );
-	ret = sgs_PushIndexII( C, obj, -1, SGS_TRUE );
-	stk_popskip( C, 1, SGS_SUCCEEDED( ret ) ? 1 : 0 );
+	ret = sgs_SetIndex( C, vO, idx, val, 0 );
+	sgs_ObjRelease( C, C->_G );
 	return ret;
 }
 
-SGSRESULT sgs_StoreProperty( SGS_CTX, StkIdx obj, const char* name )
+SGSBOOL sgs_PushGlobalByName( SGS_CTX, const char* name )
 {
 	int ret;
-	if( !sgs_IsValidIndex( C, obj ) )
-		return SGS_EBOUNDS;
-	obj = stk_absindex( C, obj );
-	sgs_PushString( C, name );
-	ret = sgs_SetIndexIII( C, obj, -1, -2, SGS_TRUE );
-	stk_pop( C, SGS_SUCCEEDED( ret ) ? 2 : 1 );
-	return ret;
-}
-
-SGSRESULT sgs_PushNumIndex( SGS_CTX, StkIdx obj, sgs_Int idx )
-{
-	sgs_Variable ivar;
-	ivar.type = SGS_VT_INT;
-	ivar.data.I = idx;
-	return sgs_PushIndexIP( C, obj, &ivar, SGS_FALSE );
-}
-
-SGSRESULT sgs_StoreNumIndex( SGS_CTX, StkIdx obj, sgs_Int idx )
-{
-	sgs_Variable ivar;
-	ivar.type = SGS_VT_INT;
-	ivar.data.I = idx;
-	return sgs_StoreIndexIP( C, obj, &ivar, SGS_FALSE );
-}
-
-SGSRESULT sgs_PushGlobal( SGS_CTX, const char* name )
-{
-	int ret;
-	_EL_BACKUP;
-	sgs_Variable str;
-	sgs_VarPtr pos;
-	sgs_PushString( C, name );
-	pos = stk_getpos( C, -1 );
-	str = *pos;
-	sgs_Acquire( C, &str );
-	_EL_SETMAX;
-	ret = sgsSTD_GlobalGet( C, pos, pos );
-	_EL_RESET;
+	sgs_Variable str, val;
+	sgs_InitString( C, &str, name );
+	ret = sgs_GetGlobal( C, str, &val );
+	stk_push_leave( C, &val );
 	sgs_Release( C, &str );
-	if( ret != SGS_SUCCESS )
-		sgs_Pop( C, 1 );
 	return ret;
 }
 
-SGSRESULT sgs_StoreGlobal( SGS_CTX, const char* name )
+void sgs_SetGlobalByName( SGS_CTX, const char* name, sgs_Variable val )
 {
 	int ret;
-	_EL_BACKUP;
-	if( sgs_StackSize( C ) < 1 )
-		return SGS_EINPROC;
-	sgs_PushString( C, name );
-	_EL_SETMAX;
-	ret = sgsSTD_GlobalSet( C, stk_getpos( C, -1 ), stk_getpos( C, -2 ) );
-	_EL_RESET;
-	sgs_Pop( C, SGS_SUCCEEDED( ret ) ? 2 : 1 );
-	return ret;
+	sgs_Variable str;
+	sgs_InitString( C, &str, name );
+	ret = sgs_SetGlobal( C, str, val );
+	sgs_Release( C, &str );
+	sgs_BreakIf( ret == SGS_FALSE );
 }
 
-SGSRESULT sgs_PushPropertyP( SGS_CTX, sgs_Variable* var, const char* name )
-{
-	int ret;
-	sgs_PushString( C, name );
-	ret = sgs_PushIndexPI( C, var, -1, SGS_TRUE );
-	stk_popskip( C, 1, SGS_SUCCEEDED( ret ) ? 1 : 0 );
-	return ret;
-}
 
-SGSRESULT sgs_StorePropertyP( SGS_CTX, sgs_Variable* var, const char* name )
+sgs_Variable sgs_Registry( SGS_CTX )
 {
-	int ret;
-	sgs_PushString( C, name );
-	ret = sgs_SetIndexPII( C, var, -1, -2, SGS_TRUE );
-	stk_pop( C, SGS_SUCCEEDED( ret ) ? 2 : 1 );
-	return ret;
-}
-
-void sgs_GetRegistry( SGS_CTX, sgs_Variable* out )
-{
-	sgs_InitObjectPtr( out, C->shared->_R );
-}
-
-void sgs_PushRegistry( SGS_CTX )
-{
-	sgs_PushObjectPtr( C, C->shared->_R );
+	sgs_Variable out;
+	out.type = SGS_VT_OBJECT;
+	out.data.O = C->shared->_R;
+	return out;
 }
 
 void sgs_GetEnv( SGS_CTX, sgs_Variable* out )
@@ -3756,13 +3475,11 @@ SGSRESULT sgs_StoreEnv( SGS_CTX )
 	n = null-including key (isprop=false) (sizeval, buffer)
 */
 
-static SGSRESULT sgs_PushPathBuf( SGS_CTX, StkIdx item, const char* path, size_t plen, va_list* pargs )
+static SGSRESULT sgs_PushPathBuf( SGS_CTX, sgs_Variable var, const char* path, size_t plen, va_list* pargs )
 {
-#define args *pargs
-	int ret = sgs_PushItem( C, item );
+	int ret = SGS_SUCCESS;
 	size_t i = 0;
-	if( ret != SGS_SUCCESS )
-		return ret;
+	sgs_PushVariable( C, var );
 	while( i < plen )
 	{
 		sgs_Variable key;
@@ -3771,16 +3488,16 @@ static SGSRESULT sgs_PushPathBuf( SGS_CTX, StkIdx item, const char* path, size_t
 		int prop = -1;
 		char a = path[ i++ ];
 		
-		if( a == 'o' ){ prop = 1; S = va_arg( args, int ); }
-		else if( a == 'p' ){ prop = 1; P = va_arg( args, char* );
+		if( a == 'o' ){ prop = 1; S = va_arg( *pargs, int ); }
+		else if( a == 'p' ){ prop = 1; P = va_arg( *pargs, char* );
 			if( !P ) return SGS_EINVAL; }
-		else if( a == 's' ){ prop = 1; S = va_arg( args, int );
-			P = va_arg( args, char* ); if( !P ) return SGS_EINVAL; }
-		else if( a == 'i' ){ prop = 0; S = va_arg( args, int ); }
-		else if( a == 'k' ){ prop = 0; P = va_arg( args, char* );
+		else if( a == 's' ){ prop = 1; S = va_arg( *pargs, int );
+			P = va_arg( *pargs, char* ); if( !P ) return SGS_EINVAL; }
+		else if( a == 'i' ){ prop = 0; S = va_arg( *pargs, int ); }
+		else if( a == 'k' ){ prop = 0; P = va_arg( *pargs, char* );
 			if( !P ) return SGS_EINVAL; }
-		else if( a == 'n' ){ prop = 0; S = va_arg( args, int );
-			P = va_arg( args, char* ); if( !P ) return SGS_EINVAL; }
+		else if( a == 'n' ){ prop = 0; S = va_arg( *pargs, int );
+			P = va_arg( *pargs, char* ); if( !P ) return SGS_EINVAL; }
 		else
 			return SGS_EINVAL;
 		
@@ -3796,24 +3513,22 @@ static SGSRESULT sgs_PushPathBuf( SGS_CTX, StkIdx item, const char* path, size_t
 		else
 			return SGS_EINPROC;
 		
-		ret = sgs_PushIndexIP( C, -1, &key, prop );
+		ret = sgs_PushIndex( C, sgs_StackItem( C, -1 ), key, prop );
 		VAR_RELEASE( &key );
 		if( ret != SGS_SUCCESS )
 			return ret;
 		stk_popskip( C, 1, 1 );
 	}
-#undef args
 	return ret;
 }
 
-SGSRESULT sgs_PushPath( SGS_CTX, StkIdx item, const char* path, ... )
+SGSRESULT sgs_PushPath( SGS_CTX, sgs_Variable var, const char* path, ... )
 {
 	int ret;
 	StkIdx ssz = SGS_STACKFRAMESIZE;
 	va_list args;
 	va_start( args, path );
-	item = stk_absindex( C, item );
-	ret = sgs_PushPathBuf( C, item, path, strlen(path), &args );
+	ret = sgs_PushPathBuf( C, var, path, strlen(path), &args );
 	if( ret == SGS_SUCCESS )
 		stk_popskip( C, SGS_STACKFRAMESIZE - ssz - 1, 1 );
 	else
@@ -3822,20 +3537,16 @@ SGSRESULT sgs_PushPath( SGS_CTX, StkIdx item, const char* path, ... )
 	return ret;
 }
 
-SGSRESULT sgs_StorePath( SGS_CTX, StkIdx item, const char* path, ... )
+SGSRESULT sgs_StorePath( SGS_CTX, sgs_Variable var, sgs_Variable val, const char* path, ... )
 {
 	int ret;
 	size_t len = strlen( path );
-	StkIdx val, ssz = SGS_STACKFRAMESIZE;
+	StkIdx ssz = SGS_STACKFRAMESIZE;
 	va_list args;
-	if( ssz < 1 )
-		return SGS_EINPROC;
 	if( !*path )
-		return sgs_StoreItem( C, item );
+		return SGS_EINVAL;
 	va_start( args, path );
-	item = stk_absindex( C, item );
-	val = stk_absindex( C, -1 );
-	ret = sgs_PushPathBuf( C, item, path, len - 1, &args );
+	ret = sgs_PushPathBuf( C, var, path, len - 1, &args );
 	if( ret == SGS_SUCCESS )
 	{
 		sgs_Variable key;
@@ -3872,7 +3583,7 @@ SGSRESULT sgs_StorePath( SGS_CTX, StkIdx item, const char* path, ... )
 			goto fail;
 		}
 		
-		ret = sgs_SetIndexIPI( C, -1, &key, val, prop );
+		ret = sgs_SetIndex( C, sgs_StackItem( C, -1 ), key, val, prop );
 		VAR_RELEASE( &key );
 		if( ret != SGS_SUCCESS )
 			goto fail;
@@ -4394,6 +4105,18 @@ SGSBOOL sgs_IsValidIndex( SGS_CTX, StkIdx item )
 	return ( item >= 0 && item < SGS_STACKFRAMESIZE );
 }
 
+sgs_Variable sgs_StackItem( SGS_CTX, sgs_StkIdx item )
+{
+	if( sgs_IsValidIndex( C, item ) == 0 )
+	{
+		sgs_Variable out;
+		out.type = SGS_VT_NULL;
+		sgs_StackIdxError( C, item );
+		return out;
+	}
+	return *stk_getpos( C, item );
+}
+
 SGSBOOL sgs_PeekStackItem( SGS_CTX, StkIdx item, sgs_Variable* out )
 {
 	if( !sgs_IsValidIndex( C, item ) )
@@ -4412,16 +4135,6 @@ SGSBOOL sgs_GetStackItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out )
 	*out = *stk_getpos( C, item );
 	VAR_ACQUIRE( out );
 	return SGS_TRUE;
-}
-
-SGSRESULT sgs_SetStackItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* val )
-{
-	if( val->type >= SGS_VT__COUNT )
-		return SGS_EINVAL;
-	if( !sgs_IsValidIndex( C, item ) )
-		return SGS_EBOUNDS;
-	stk_setvar( C, item, val );
-	return SGS_SUCCESS;
 }
 
 uint32_t sgs_ItemType( SGS_CTX, StkIdx item )
@@ -4532,12 +4245,12 @@ SGSRESULT sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var )
 
 */
 
-SGSRESULT sgs_XFCallP( SGS_CTX, sgs_Variable* callable, int args, int* outrvc, int gotthis )
+SGSRESULT sgs_XFCallP( SGS_CTX, sgs_Variable callable, int args, int* outrvc, int gotthis )
 {
 	int ret;
 	if( SGS_STACKFRAMESIZE < args + ( gotthis ? 1 : 0 ) )
 		return SGS_EINVAL;
-	ret = vm_call( C, args, 0, gotthis, outrvc, callable, 0 );
+	ret = vm_call( C, args, 0, gotthis, outrvc, &callable, 0 );
 	if( ret == -1 ) return SGS_SUCABRT;
 	return ret ? SGS_SUCCESS : SGS_EINPROC;
 }
@@ -4593,7 +4306,7 @@ SGSRESULT sgs_FCall( SGS_CTX, int args, int expect, int gotthis )
 SGSRESULT sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect )
 {
 	int ret;
-	ret = sgs_PushGlobal( C, name );
+	ret = sgs_PushGlobalByName( C, name );
 	if( SGS_FAILED( ret ) ) return ret;
 	ret = sgs_Call( C, args, expect );
 	if( ret == SGS_EINVAL )
@@ -4810,30 +4523,7 @@ SGSRESULT sgs_GCExecute( SGS_CTX )
 }
 
 
-const char* sgs_DebugDumpVarExt( SGS_CTX, sgs_StkIdx item, int maxdepth )
-{
-	if( SGS_FAILED( sgs_PushItem( C, item ) ) )
-	{
-		char buf[128];
-		sprintf( buf, "<stack index out of bounds: %d (stack size=%d)>", (int) item, (int) sgs_StackSize( C ) );
-		sgs_PushString( C, buf );
-	}
-	else if( maxdepth < 0 )
-	{
-		return sgs_ToString( C, -1 );
-	}
-	else
-	{
-		if( SGS_FAILED( sgs_DumpVar( C, maxdepth ) ) )
-		{
-			sgs_Pop( C, 1 );
-			sgs_PushString( C, "<failed to dump variable>" );
-		}
-	}
-	return sgs_GetStringPtr( C, -1 );
-}
-
-const char* sgs_DebugDumpVarExtP( SGS_CTX, sgs_Variable* var, int maxdepth )
+const char* sgs_DebugDumpVarExt( SGS_CTX, sgs_Variable var, int maxdepth )
 {
 	sgs_PushVariable( C, var );
 	if( maxdepth < 0 )
@@ -5221,7 +4911,7 @@ SGSRESULT sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 						return SGS_EINPROC;
 					tmp.type = SGS_VT_FUNC;
 					tmp.data.F = fn;
-					sgs_PushVariable( C, &tmp );
+					sgs_PushVariable( C, tmp );
 					str += bcsz;
 				}
 				break;
@@ -5574,7 +5264,7 @@ SGSRESULT sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				str += 4;
 				if( pos < 0 || (size_t) pos >= mb.size / sizeof(sgs_Variable) )
 					goto fail;
-				sgs_PushVariable( C, ((sgs_Variable*) mb.ptr) + pos );
+				sgs_PushVariable( C, ((sgs_Variable*) mb.ptr)[ pos ] );
 			}
 			if( str > strend - fnsz )
 				goto fail;
@@ -5597,7 +5287,7 @@ SGSRESULT sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 	}
 	
 	if( mb.size )
-		sgs_PushVariable( C, (sgs_Variable*)( mb.ptr + mb.size - sizeof(sgs_Variable) ) );
+		sgs_PushVariable( C, *(sgs_Variable*)( mb.ptr + mb.size - sizeof(sgs_Variable) ) );
 	res = mb.size ? SGS_SUCCESS : SGS_EINPROC;
 fail:
 	_STACK_UNPROTECT_SKIP( SGS_SUCCEEDED( res ) );
@@ -5726,30 +5416,6 @@ sgs_Int sgs_GetIntP( SGS_CTX, sgs_Variable* var ){ return var_getint( C, var ); 
 sgs_Real sgs_GetRealP( SGS_CTX, sgs_Variable* var ){ return var_getreal( C, var ); }
 void* sgs_GetPtrP( SGS_CTX, sgs_Variable* var ){ return var_getptr( C, var ); }
 
-sgs_Bool sgs_ToBoolP( SGS_CTX, sgs_Variable* var )
-{
-	vm_convert_bool( C, var );
-	return var->data.B;
-}
-
-sgs_Int sgs_ToIntP( SGS_CTX, sgs_Variable* var )
-{
-	vm_convert_int( C, var );
-	return var->data.I;
-}
-
-sgs_Real sgs_ToRealP( SGS_CTX, sgs_Variable* var )
-{
-	vm_convert_real( C, var );
-	return var->data.R;
-}
-
-void* sgs_ToPtrP( SGS_CTX, sgs_Variable* var )
-{
-	vm_convert_ptr( C, var );
-	return var->data.P;
-}
-
 char* sgs_ToStringBufP( SGS_CTX, sgs_Variable* var, sgs_SizeVal* outsize )
 {
 	vm_convert_string( C, var );
@@ -5763,10 +5429,9 @@ char* sgs_ToStringBufFastP( SGS_CTX, sgs_Variable* var, sgs_SizeVal* outsize )
 {
 	if( var->type == SGS_VT_OBJECT )
 	{
-		sgs_PushVariable( C, var );
+		sgs_PushVariable( C, *var );
 		sgs_TypeOf( C, -1 );
 		sgs_StoreVariable( C, var );
-		stk_pop1( C );
 	}
 	return sgs_ToStringBufP( C, var, outsize );
 }
@@ -5886,14 +5551,6 @@ SGSBOOL sgs_ParsePtrP( SGS_CTX, sgs_Variable* var, void** out )
 	if( out )
 		*out = var->type != SGS_VT_NULL ? var->data.P : NULL;
 	return SGS_TRUE;
-}
-
-SGSMIXED sgs_ArraySizeP( SGS_CTX, sgs_Variable* var )
-{
-	if( var->type != SGS_VT_OBJECT ||
-		var->data.O->iface != SGSIFACE_ARRAY )
-		return SGS_EINVAL;
-	return ((sgsstd_array_header_t*)var->data.O->data)->size;
 }
 
 
@@ -6079,7 +5736,7 @@ SGSMIXED sgs_ArraySize( SGS_CTX, StkIdx item )
 sgs_Bool sgs_GlobalBool( SGS_CTX, const char* name )
 {
 	sgs_Bool v;
-	if( SGS_FAILED( sgs_PushGlobal( C, name ) ) )
+	if( SGS_FAILED( sgs_PushGlobalByName( C, name ) ) )
 		return 0;
 	v = var_getbool( C, stk_gettop( C ) );
 	stk_pop1( C );
@@ -6089,7 +5746,7 @@ sgs_Bool sgs_GlobalBool( SGS_CTX, const char* name )
 sgs_Int sgs_GlobalInt( SGS_CTX, const char* name )
 {
 	sgs_Int v;
-	if( SGS_FAILED( sgs_PushGlobal( C, name ) ) )
+	if( SGS_FAILED( sgs_PushGlobalByName( C, name ) ) )
 		return 0;
 	v = var_getint( C, stk_gettop( C ) );
 	stk_pop1( C );
@@ -6099,7 +5756,7 @@ sgs_Int sgs_GlobalInt( SGS_CTX, const char* name )
 sgs_Real sgs_GlobalReal( SGS_CTX, const char* name )
 {
 	sgs_Real v;
-	if( SGS_FAILED( sgs_PushGlobal( C, name ) ) )
+	if( SGS_FAILED( sgs_PushGlobalByName( C, name ) ) )
 		return 0;
 	v = var_getreal( C, stk_gettop( C ) );
 	stk_pop1( C );
@@ -6109,7 +5766,7 @@ sgs_Real sgs_GlobalReal( SGS_CTX, const char* name )
 char* sgs_GlobalStringBuf( SGS_CTX, const char* name, sgs_SizeVal* outsize )
 {
 	char* buf;
-	if( SGS_FAILED( sgs_PushGlobal( C, name ) ) )
+	if( SGS_FAILED( sgs_PushGlobalByName( C, name ) ) )
 		return NULL;
 	if( !sgs_ParseString( C, -1, &buf, outsize ) )
 	{
@@ -6119,16 +5776,6 @@ char* sgs_GlobalStringBuf( SGS_CTX, const char* name, sgs_SizeVal* outsize )
 	return buf;
 }
 
-
-SGSRESULT sgs_PushIteratorP( SGS_CTX, sgs_Variable* var )
-{
-	int ret;
-	sgs_PushNull( C );
-	ret = vm_forprep( C, stk_absindex( C, -1 ), var );
-	if( SGS_FAILED( ret ) )
-		stk_pop1( C );
-	return ret;
-}
 
 SGSRESULT sgs_GetIteratorP( SGS_CTX, sgs_Variable* var, sgs_Variable* out )
 {
@@ -6203,10 +5850,15 @@ SGSMIXED sgs_IterGetDataP( SGS_CTX, sgs_Variable* var, sgs_Variable* key, sgs_Va
 
 SGSRESULT sgs_PushIterator( SGS_CTX, StkIdx item )
 {
+	int ret;
 	sgs_Variable var;
 	if( !sgs_PeekStackItem( C, item, &var ) )
 		return SGS_EBOUNDS;
-	return sgs_PushIteratorP( C, &var );
+	sgs_PushNull( C );
+	ret = vm_forprep( C, stk_absindex( C, -1 ), &var );
+	if( SGS_FAILED( ret ) )
+		stk_pop1( C );
+	return ret;
 }
 
 SGSRESULT sgs_GetIterator( SGS_CTX, StkIdx item, sgs_Variable* out )

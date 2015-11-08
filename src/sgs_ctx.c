@@ -793,7 +793,7 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, size_t size, int clean, 
 	DBGINFO( "...cleaning up bytecode/constants" );
 	
 	DBGINFO( "...executing the generated function" );
-	sgs_XCallP( C, &funcvar, 0, rvc );
+	sgs_XCallP( C, funcvar, 0, rvc );
 	
 	DBGINFO( "...finished!" );
 	sgs_Release( C, &funcvar );
@@ -1123,7 +1123,7 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 				sgs_Writef( C, "VARIABLE %02d ", (int) i );
 				dumpvar( C, p );
 				sgs_WriteStr( C, "\n" );
-				sgs_PushVariable( C, p );
+				sgs_PushVariable( C, *p );
 				if( SGS_SUCCEEDED( sgs_DumpVar( C, 6 ) ) )
 				{
 					sgs_WriteStr( C, sgs_ToString( C, -1 ) );
@@ -1285,7 +1285,7 @@ SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 	vv = sgs_vht_get( &S->ifacetable, &key );
 	if( vv )
 	{
-		sgs_PushVariable( C, &vv->val );
+		sgs_PushVariable( C, vv->val );
 		return SGS_SUCCESS;
 	}
 	else
@@ -1316,7 +1316,11 @@ SGSRESULT sgs_InitInterface( SGS_CTX, sgs_Variable* var, sgs_CFunc igfn )
 {
 	SGSRESULT res = sgs_PushInterface( C, igfn );
 	if( res == SGS_SUCCESS )
-		sgs_StoreVariable( C, var );
+	{
+		*var = sgs_StackItem( C, -1 );
+		sgs_Acquire( C, var );
+		sgs_Pop( C, 1 );
+	}
 	return res;
 }
 
