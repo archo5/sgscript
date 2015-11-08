@@ -3024,16 +3024,17 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	SGS_AS_UINT16( cc, D->buf );
 	SGS_AS_UINT16( ic, D->buf + 2 );
 	
-	/* basic tests to avoid allocating too much memory */
-	if( SGSNOMINDEC( 10 + (ptrdiff_t) ( cc + ic * sizeof(sgs_LineNum) ) ) )
-		goto fail;
-	
 	if( D->convend )
 	{
 		/* WP: int promotion will not affect the result */
 		cc = (uint16_t) esi16( cc );
 		ic = (uint16_t) esi16( ic );
 	}
+	
+	/* basic tests to avoid allocating too much memory */
+	if( SGSNOMINDEC( 10 + (ptrdiff_t) ( cc + ic * sizeof(sgs_LineNum) ) ) )
+		goto fail;
+	
 	/* WP: const/instruction limits */
 	ioff = (uint32_t) sizeof( sgs_Variable ) * cc;
 	coff = (uint32_t) sizeof( sgs_instr_t ) * ic;
@@ -3055,6 +3056,7 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	F->sfilename = NULL;
 	D->buf += 10;
 	
+	ret = "data error (expected fn. line numbers)";
 	if( SGSNOMINDEC( sizeof( sgs_LineNum ) * ic ) )
 		goto fail;
 	
@@ -3063,10 +3065,12 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	if( D->convend )
 		esi16_array( (uint16_t*) F->lineinfo, ic );
 	
+	ret = "data error (expected fn. name)";
 	if( SGSNOMINDEC( 4 ) )
 		goto fail;
 	SGS_AS_UINT32( fnsize, D->buf ); D->buf += 4;
-	fnsize = (uint32_t) esi32( fnsize );
+	if( D->convend )
+		fnsize = (uint32_t) esi32( fnsize );
 	if( SGSNOMINDEC( fnsize ) )
 		goto fail;
 	/* WP: string limit */

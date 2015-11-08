@@ -119,7 +119,7 @@ json: $(OUTDIR)/sgsjson$(LIBEXT)
 pproc: $(OUTDIR)/sgspproc$(LIBEXT)
 sockets: $(OUTDIR)/sgssockets$(LIBEXT)
 meta: $(OUTDIR)/sgsmeta$(LIBEXT)
-build_test: $(OUTDIR)/sgstest$(BINEXT) json xgmath
+build_test: $(OUTDIR)/sgstest$(BINEXT) json xgmath meta
 build_apitest: $(OUTDIR)/sgsapitest$(BINEXT)
 vm: $(OUTDIR)/sgsvm$(BINEXT)
 c: $(OUTDIR)/sgsc$(BINEXT)
