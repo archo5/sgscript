@@ -90,6 +90,7 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	C->msg_fn = sgs_StdMsgFunc;
 	C->msg_ctx = stderr;
 	C->last_errno = 0;
+	C->object_arg = 0;
 	C->hook_fn = NULL;
 	C->hook_ctx = NULL;
 	

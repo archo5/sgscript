@@ -23,8 +23,8 @@
 # define SGS_OBJECT_LITE \
 	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj ); \
 	static int _sgs_gcmark( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int isprop ); \
-	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int isprop ); \
+	static int _sgs_getindex( SGS_ARGS_GETINDEXFUNC ); \
+	static int _sgs_setindex( SGS_ARGS_SETINDEXFUNC ); \
 	static int _sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
 	static sgs_ObjInterface _sgs_interface[1];
 # if __cplusplus >= 201103L

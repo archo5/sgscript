@@ -1439,10 +1439,6 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* ob
 }
 
 
-extern int sgsstd_array_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* idx, int prop );
-extern int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* idx, int prop );
-
-
 
 /* PREDECL */
 static SGSMIXED vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj, sgs_Variable* idx, int isprop );
@@ -1619,16 +1615,6 @@ static SGSMIXED vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj, 
 			}
 		}
 	}
-	else if( isobj && obj->data.O->iface == sgsstd_array_iface )
-	{
-		sgs_Variable idxvar = *idx;
-		VAR_ACQUIRE( &idxvar );
-		ret = sgsstd_array_getindex( C, obj->data.O, &idxvar, isprop );
-		VAR_RELEASE( &idxvar );
-		if( SGS_SUCCEEDED( ret ) )
-			ret = 1;
-		/* assuming that on success, the stack has one additional value on top */
-	}
 	else if( isobj && obj->data.O->iface == sgsstd_map_iface )
 	{
 		sgs_VHTVar* var;
@@ -1647,17 +1633,18 @@ static SGSMIXED vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj, 
 	else if( isobj && obj->data.O->iface->getindex )
 	{
 		sgs_VarObj* O = obj->data.O;
-		sgs_Variable idxvar = *idx;
 		_STACK_PREPARE;
+		int arg = C->object_arg;
 		
 		if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
 			return SGS_EINPROC;
 		C->sf_count++;
 		
 		_STACK_PROTECT;
-		VAR_ACQUIRE( &idxvar );
-		ret = O->iface->getindex( C, O, &idxvar, isprop );
-		VAR_RELEASE( &idxvar );
+		stk_push( C, idx );
+		C->object_arg = isprop;
+		ret = O->iface->getindex( C, O );
+		C->object_arg = arg;
 		
 		C->sf_count--;
 		if( SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1 )
@@ -3761,15 +3748,15 @@ static SGSRESULT sgs_PushPathBuf( SGS_CTX, StkIdx item, const char* path, size_t
 		int prop = -1;
 		char a = path[ i++ ];
 		
-		if( a == 'o' ){ prop = 1; S = va_arg( args, sgs_SizeVal ); }
+		if( a == 'o' ){ prop = 1; S = va_arg( args, int ); }
 		else if( a == 'p' ){ prop = 1; P = va_arg( args, char* );
 			if( !P ) return SGS_EINVAL; }
-		else if( a == 's' ){ prop = 1; S = va_arg( args, sgs_SizeVal );
+		else if( a == 's' ){ prop = 1; S = va_arg( args, int );
 			P = va_arg( args, char* ); if( !P ) return SGS_EINVAL; }
-		else if( a == 'i' ){ prop = 0; S = va_arg( args, sgs_SizeVal ); }
+		else if( a == 'i' ){ prop = 0; S = va_arg( args, int ); }
 		else if( a == 'k' ){ prop = 0; P = va_arg( args, char* );
 			if( !P ) return SGS_EINVAL; }
-		else if( a == 'n' ){ prop = 0; S = va_arg( args, sgs_SizeVal );
+		else if( a == 'n' ){ prop = 0; S = va_arg( args, int );
 			P = va_arg( args, char* ); if( !P ) return SGS_EINVAL; }
 		else
 			return SGS_EINVAL;
@@ -6281,6 +6268,11 @@ SGSBOOL sgs_ForceHideThis( SGS_CTX )
 	C->stack_off++;
 	C->sf_last->flags = ( C->sf_last->flags | SGS_SF_METHOD ) & (uint8_t) (~SGS_SF_HASTHIS);
 	return SGS_TRUE;
+}
+
+int sgs_ObjectArg( SGS_CTX )
+{
+	return C->object_arg;
 }
 
 

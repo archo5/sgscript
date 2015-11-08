@@ -513,7 +513,21 @@ DEFINE_TEST( varpaths )
 	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	
-	/* properties and indices */
+	/* properties and indices 1 */
+	atf_assert( sgs_PushPath( C, -1, "pi", "a", 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
+	atf_assert( sgs_IsObject( C, -1, sgsstd_dict_iface ) );
+	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 1 );
+	
+	/* properties and indices 2 */
+	atf_assert( sgs_PushPath( C, -1, "o", 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
+	atf_assert( sgs_IsObject( C, -1, sgsstd_array_iface ) );
+	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 1 );
+	
+	/* properties and indices 3 */
 	atf_assert( sgs_PushPath( C, -1, "piso", "a", 1, 1, "d", 0 ) == SGS_SUCCESS );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
 	atf_assert( sgs_IsObject( C, -1, sgsstd_dict_iface ) );

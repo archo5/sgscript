@@ -6,8 +6,8 @@
 
 
 #define XGM_WARNING( err ) sgs_Msg( C, SGS_WARNING, err )
-#define XGM_OHDR XGM_VT* hdr = (XGM_VT*) data->data;
-#define XGM_FLAHDR xgm_vtarray* flarr = (xgm_vtarray*) data->data;
+#define XGM_OHDR XGM_VT* hdr = (XGM_VT*) obj->data;
+#define XGM_FLAHDR xgm_vtarray* flarr = (xgm_vtarray*) obj->data;
 
 #define XGM_V3_ADD( o, a, b ) (o)[0] = (a)[0] + (b)[0]; (o)[1] = (a)[1] + (b)[1]; (o)[2] = (a)[2] + (b)[2];
 #define XGM_V3_SUB( o, a, b ) (o)[0] = (a)[0] - (b)[0]; (o)[1] = (a)[1] - (b)[1]; (o)[2] = (a)[2] - (b)[2];
@@ -91,7 +91,7 @@ static int xgm_v2m_rotate( SGS_CTX )
 	return 1;
 }
 
-static int xgm_v2_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int xgm_v2_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
@@ -109,21 +109,21 @@ static int xgm_v2_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_v2_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int xgm_v2_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	XGM_OHDR;
 	
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos != 0 && pos != 1 )
 			return SGS_ENOTFND;
 		sgs_PushReal( C, hdr[ pos ] );
 		return SGS_SUCCESS;
 	}
 	
-	if( !sgs_ParseStringP( C, key, &str, NULL ) )
+	if( !sgs_ParseString( C, 0, &str, NULL ) )
 		return SGS_EINVAL;
 	if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
 	if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
@@ -208,7 +208,7 @@ static int xgm_v2_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v2_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_v2_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
 {
 	if( type == SGS_EOP_ADD ||
 		type == SGS_EOP_SUB ||
@@ -269,7 +269,7 @@ static int xgm_v2_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 	return SGS_ENOTSUP;
 }
 
-static int xgm_v2_serialize( SGS_CTX, sgs_VarObj* data )
+static int xgm_v2_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
 	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
@@ -277,10 +277,10 @@ static int xgm_v2_serialize( SGS_CTX, sgs_VarObj* data )
 	return sgs_SerializeObject( C, 2, "vec2" );
 }
 
-static int xgm_v2_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
+static int xgm_v2_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	SGS_UNUSED( maxdepth );
-	return xgm_v2_convert( C, data, SGS_VT_STRING );
+	return xgm_v2_convert( C, obj, SGS_VT_STRING );
 }
 
 static int xgm_vec2( SGS_CTX )
@@ -324,7 +324,7 @@ static int xgm_vec2_dot( SGS_CTX )
 
 /*  3 D   V E C T O R  */
 
-static int xgm_v3_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int xgm_v3_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
@@ -342,22 +342,22 @@ static int xgm_v3_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_v3_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int xgm_v3_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	sgs_SizeVal size;
 	XGM_OHDR;
 	
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos != 0 && pos != 1 && pos != 2 )
 			return SGS_ENOTFND;
 		sgs_PushReal( C, hdr[ pos ] );
 		return SGS_SUCCESS;
 	}
 	
-	if( sgs_ParseStringP( C, key, &str, &size ) )
+	if( sgs_ParseString( C, 0, &str, &size ) )
 	{
 		if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
 		if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
@@ -389,7 +389,7 @@ static int xgm_v3_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 	return SGS_ENOTFND;
 }
 
-static int xgm_v3_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_v3_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
 {
 	sgs_Real val;
 	XGM_OHDR;
@@ -418,7 +418,7 @@ static int xgm_v3_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 	return SGS_ENOTFND;
 }
 
-static int xgm_v3_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_v3_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
 {
 	if( type == SGS_EOP_ADD ||
 		type == SGS_EOP_SUB ||
@@ -485,7 +485,7 @@ static int xgm_v3_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 	return SGS_ENOTSUP;
 }
 
-static int xgm_v3_serialize( SGS_CTX, sgs_VarObj* data )
+static int xgm_v3_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
 	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
@@ -494,9 +494,9 @@ static int xgm_v3_serialize( SGS_CTX, sgs_VarObj* data )
 	return sgs_SerializeObject( C, 3, "vec3" );
 }
 
-static int xgm_v3_dump( SGS_CTX, sgs_VarObj* data, int unused )
+static int xgm_v3_dump( SGS_CTX, sgs_VarObj* obj, int unused )
 {
-	return xgm_v3_convert( C, data, SGS_VT_STRING );
+	return xgm_v3_convert( C, obj, SGS_VT_STRING );
 }
 
 static int xgm_vec3( SGS_CTX )
@@ -560,7 +560,7 @@ static int xgm_vec3_cross( SGS_CTX )
 
 /*  4 D   V E C T O R  */
 
-static int xgm_v4_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int xgm_v4_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
@@ -578,21 +578,21 @@ static int xgm_v4_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_v4_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int xgm_v4_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
 	
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
 			return SGS_ENOTFND;
 		sgs_PushReal( C, hdr[ pos ] );
 		return SGS_SUCCESS;
 	}
 	
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
 		if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
@@ -625,7 +625,7 @@ static int xgm_v4_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 	return SGS_ENOTFND;
 }
 
-static int xgm_v4_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_v4_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
 {
 	sgs_Real val;
 	XGM_OHDR;
@@ -654,7 +654,7 @@ static int xgm_v4_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 	return SGS_ENOTFND;
 }
 
-static int xgm_v4_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_v4_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
 {
 	if( type == SGS_EOP_ADD ||
 		type == SGS_EOP_SUB ||
@@ -732,7 +732,7 @@ static int xgm_v4_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 	return SGS_ENOTSUP;
 }
 
-static int xgm_v4_serialize( SGS_CTX, sgs_VarObj* data )
+static int xgm_v4_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
 	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
@@ -742,9 +742,9 @@ static int xgm_v4_serialize( SGS_CTX, sgs_VarObj* data )
 	return sgs_SerializeObject( C, 4, "vec4" );
 }
 
-static int xgm_v4_dump( SGS_CTX, sgs_VarObj* data, int unused )
+static int xgm_v4_dump( SGS_CTX, sgs_VarObj* obj, int unused )
 {
-	return xgm_v4_convert( C, data, SGS_VT_STRING );
+	return xgm_v4_convert( C, obj, SGS_VT_STRING );
 }
 
 static int xgm_vec4( SGS_CTX )
@@ -795,7 +795,7 @@ static int xgm_vec4_dot( SGS_CTX )
 
 static int xgm_aabb2_expand( SGS_CTX );
 
-static int xgm_b2_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int xgm_b2_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
@@ -813,11 +813,11 @@ static int xgm_b2_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_b2_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int xgm_b2_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		SGS_CASE( "x1" )     SGS_RETURN_REAL( hdr[0] );
 		SGS_CASE( "y1" )     SGS_RETURN_REAL( hdr[1] );
@@ -835,7 +835,7 @@ static int xgm_b2_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 	return SGS_ENOTFND;
 }
 
-static int xgm_b2_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_b2_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
 {
 	char* str;
 	XGM_OHDR;
@@ -851,7 +851,7 @@ static int xgm_b2_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 	return SGS_ENOTFND;
 }
 
-static int xgm_b2_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_b2_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
 {
 	if( type == SGS_EOP_COMPARE )
 	{
@@ -872,7 +872,7 @@ static int xgm_b2_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 	return SGS_ENOTSUP;
 }
 
-static int xgm_b2_serialize( SGS_CTX, sgs_VarObj* data )
+static int xgm_b2_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
 	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
@@ -882,10 +882,10 @@ static int xgm_b2_serialize( SGS_CTX, sgs_VarObj* data )
 	return sgs_SerializeObject( C, 4, "aabb2" );
 }
 
-static int xgm_b2_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
+static int xgm_b2_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	SGS_UNUSED( maxdepth );
-	return xgm_b2_convert( C, data, SGS_VT_STRING );
+	return xgm_b2_convert( C, obj, SGS_VT_STRING );
 }
 
 static int xgm_aabb2( SGS_CTX )
@@ -961,7 +961,7 @@ static int xgm_aabb2_expand( SGS_CTX )
 
 static int xgm_aabb3_expand( SGS_CTX );
 
-static int xgm_b3_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int xgm_b3_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
@@ -979,11 +979,11 @@ static int xgm_b3_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_b3_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int xgm_b3_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		SGS_CASE( "x1" )     SGS_RETURN_REAL( hdr[0] );
 		SGS_CASE( "y1" )     SGS_RETURN_REAL( hdr[1] );
@@ -1004,7 +1004,7 @@ static int xgm_b3_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 	return SGS_ENOTFND;
 }
 
-static int xgm_b3_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_b3_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
 {
 	char* str;
 	XGM_OHDR;
@@ -1022,7 +1022,7 @@ static int xgm_b3_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 	return SGS_ENOTFND;
 }
 
-static int xgm_b3_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_b3_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
 {
 	if( type == SGS_EOP_COMPARE )
 	{
@@ -1045,7 +1045,7 @@ static int xgm_b3_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 	return SGS_ENOTSUP;
 }
 
-static int xgm_b3_serialize( SGS_CTX, sgs_VarObj* data )
+static int xgm_b3_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
 	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
@@ -1057,10 +1057,10 @@ static int xgm_b3_serialize( SGS_CTX, sgs_VarObj* data )
 	return sgs_SerializeObject( C, 4, "aabb3" );
 }
 
-static int xgm_b3_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
+static int xgm_b3_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	SGS_UNUSED( maxdepth );
-	return xgm_b3_convert( C, data, SGS_VT_STRING );
+	return xgm_b3_convert( C, obj, SGS_VT_STRING );
 }
 
 static int xgm_aabb3( SGS_CTX )
@@ -1134,7 +1134,7 @@ static int xgm_aabb3_expand( SGS_CTX )
 
 /*  C O L O R  */
 
-static int xgm_col_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int xgm_col_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
@@ -1152,11 +1152,11 @@ static int xgm_col_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_col_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int xgm_col_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
 		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
@@ -1165,7 +1165,7 @@ static int xgm_col_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int p
 		return SGS_SUCCESS;
 	}
 	
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		if( !strcmp( str, "r" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
 		if( !strcmp( str, "g" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
@@ -1176,7 +1176,7 @@ static int xgm_col_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int p
 	return SGS_ENOTFND;
 }
 
-static int xgm_col_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_col_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
 {
 	sgs_Real val;
 	XGM_OHDR;
@@ -1204,7 +1204,7 @@ static int xgm_col_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_V
 	return SGS_ENOTFND;
 }
 
-static int xgm_col_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_col_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
 {
 	if( type == SGS_EOP_ADD ||
 		type == SGS_EOP_SUB ||
@@ -1282,7 +1282,7 @@ static int xgm_col_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variabl
 	return SGS_ENOTSUP;
 }
 
-static int xgm_col_serialize( SGS_CTX, sgs_VarObj* data )
+static int xgm_col_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	int i;
 	XGM_OHDR;
@@ -1295,9 +1295,9 @@ static int xgm_col_serialize( SGS_CTX, sgs_VarObj* data )
 	return sgs_SerializeObject( C, 4, "color" );
 }
 
-static int xgm_col_dump( SGS_CTX, sgs_VarObj* data, int unused )
+static int xgm_col_dump( SGS_CTX, sgs_VarObj* obj, int unused )
 {
-	return xgm_col_convert( C, data, SGS_VT_STRING );
+	return xgm_col_convert( C, obj, SGS_VT_STRING );
 }
 
 static int xgm_color( SGS_CTX )
@@ -1901,7 +1901,7 @@ static int xgm_qti_transform( SGS_CTX )
 }
 
 
-static int xgm_quat_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int xgm_quat_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
@@ -1919,21 +1919,21 @@ static int xgm_quat_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_quat_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int xgm_quat_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
 	
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
 			return SGS_ENOTFND;
 		sgs_PushReal( C, hdr[ pos ] );
 		return SGS_SUCCESS;
 	}
 	
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		SGS_CASE( "identity" ) SGS_RETURN_CFUNC( xgm_qti_identity )
 		SGS_CASE( "multiply" ) SGS_RETURN_CFUNC( xgm_qti_multiply )
@@ -1995,7 +1995,7 @@ static int xgm_quat_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int 
 	return SGS_ENOTFND;
 }
 
-static int xgm_quat_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_quat_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
 {
 	sgs_Real val;
 	XGM_OHDR;
@@ -2024,7 +2024,7 @@ static int xgm_quat_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_
 	return SGS_ENOTFND;
 }
 
-static int xgm_quat_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_quat_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
 {
 	if( type == SGS_EOP_ADD ||
 		type == SGS_EOP_SUB ||
@@ -2102,7 +2102,7 @@ static int xgm_quat_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variab
 	return SGS_ENOTSUP;
 }
 
-static int xgm_quat_serialize( SGS_CTX, sgs_VarObj* data )
+static int xgm_quat_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
 	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
@@ -2112,9 +2112,9 @@ static int xgm_quat_serialize( SGS_CTX, sgs_VarObj* data )
 	return sgs_SerializeObject( C, 4, "quat" );
 }
 
-static int xgm_quat_dump( SGS_CTX, sgs_VarObj* data, int unused )
+static int xgm_quat_dump( SGS_CTX, sgs_VarObj* obj, int unused )
 {
-	return xgm_quat_convert( C, data, SGS_VT_STRING );
+	return xgm_quat_convert( C, obj, SGS_VT_STRING );
 }
 
 static int xgm_quat( SGS_CTX )
@@ -2504,7 +2504,7 @@ static int xgm_m3i_transform( SGS_CTX )
 }
 
 
-static int xgm_m3_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int xgm_m3_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
@@ -2515,20 +2515,20 @@ static int xgm_m3_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_m3_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int xgm_m3_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos < 0 || pos > 8 )
 			return SGS_ENOTFND;
 		sgs_PushReal( C, hdr[ pos ] );
 		return SGS_SUCCESS;
 	}
 	
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		SGS_CASE( "identity" ) SGS_RETURN_CFUNC( xgm_m3i_identity )
 		SGS_CASE( "multiply" ) SGS_RETURN_CFUNC( xgm_m3i_multiply )
@@ -2583,7 +2583,7 @@ static int xgm_m3_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 	return SGS_ENOTFND;
 }
 
-static int xgm_m3_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_m3_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
 {
 	char* str;
 	XGM_OHDR;
@@ -2624,7 +2624,7 @@ static int xgm_m3_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 	return SGS_ENOTFND;
 }
 
-static int xgm_m3_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_m3_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
 {
 	if( type == SGS_EOP_COMPARE )
 	{
@@ -2652,7 +2652,7 @@ static int xgm_m3_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 	return SGS_ENOTSUP;
 }
 
-static int xgm_m3_serialize( SGS_CTX, sgs_VarObj* data )
+static int xgm_m3_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	int i;
 	XGM_OHDR;
@@ -2665,7 +2665,7 @@ static int xgm_m3_serialize( SGS_CTX, sgs_VarObj* data )
 	return sgs_SerializeObject( C, 9, "mat3" );
 }
 
-static int xgm_m3_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
+static int xgm_m3_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	char bfr[ 512 ];
 	XGM_OHDR;
@@ -3056,7 +3056,7 @@ static int xgm_m4i_transform_normal( SGS_CTX )
 }
 
 
-static int xgm_m4_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int xgm_m4_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
@@ -3067,20 +3067,20 @@ static int xgm_m4_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_m4_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int prop )
+static int xgm_m4_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos < 0 || pos > 15 )
 			return SGS_ENOTFND;
 		sgs_PushReal( C, hdr[ pos ] );
 		return SGS_SUCCESS;
 	}
 	
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		SGS_CASE( "identity" ) SGS_RETURN_CFUNC( xgm_m4i_identity )
 		SGS_CASE( "multiply" ) SGS_RETURN_CFUNC( xgm_m4i_multiply )
@@ -3138,7 +3138,7 @@ static int xgm_m4_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 	return SGS_ENOTFND;
 }
 
-static int xgm_m4_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_m4_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
 {
 	char* str;
 	XGM_OHDR;
@@ -3179,7 +3179,7 @@ static int xgm_m4_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Va
 	return SGS_ENOTFND;
 }
 
-static int xgm_m4_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_m4_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
 {
 	if( type == SGS_EOP_COMPARE )
 	{
@@ -3207,7 +3207,7 @@ static int xgm_m4_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 	return SGS_ENOTSUP;
 }
 
-static int xgm_m4_serialize( SGS_CTX, sgs_VarObj* data )
+static int xgm_m4_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	int i;
 	XGM_OHDR;
@@ -3220,7 +3220,7 @@ static int xgm_m4_serialize( SGS_CTX, sgs_VarObj* data )
 	return sgs_SerializeObject( C, 16, "mat4" );
 }
 
-static int xgm_m4_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
+static int xgm_m4_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	char bfr[ 1024 ];
 	XGM_OHDR;
@@ -3303,7 +3303,7 @@ static int xgm_mat4( SGS_CTX )
 
 /*  F L O A T A R R A Y  */
 
-static int xgm_fla_destruct( SGS_CTX, sgs_VarObj* data )
+static int xgm_fla_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_FLAHDR;
 	if( flarr->data )
@@ -3311,7 +3311,7 @@ static int xgm_fla_destruct( SGS_CTX, sgs_VarObj* data )
 	return SGS_SUCCESS;
 }
 
-static int xgm_fla_convert( SGS_CTX, sgs_VarObj* data, int type )
+static int xgm_fla_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	XGM_FLAHDR;
 	if( type == SGS_CONVOP_CLONE )
@@ -3322,7 +3322,7 @@ static int xgm_fla_convert( SGS_CTX, sgs_VarObj* data, int type )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_fla_serialize( SGS_CTX, sgs_VarObj* data )
+static int xgm_fla_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	sgs_SizeVal i;
 	XGM_FLAHDR;
@@ -3335,7 +3335,7 @@ static int xgm_fla_serialize( SGS_CTX, sgs_VarObj* data )
 	return sgs_SerializeObject( C, flarr->size, "floatarray" );
 }
 
-static int xgm_fla_dump( SGS_CTX, sgs_VarObj* data, int maxdepth )
+static int xgm_fla_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	XGM_FLAHDR;
 	sgs_SizeVal i, vc = flarr->size > 64 ? 64 : flarr->size;
@@ -3565,14 +3565,14 @@ XGM_FLA_CONVMETHOD( to_uint64_buffer, uint64_t );
 XGM_FLA_CONVMETHOD( to_float32_buffer, float );
 XGM_FLA_CONVMETHOD( to_float64_buffer, double );
 
-static int xgm_fla_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int isprop )
+static int xgm_fla_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	XGM_FLAHDR;
 	
-	if( isprop )
+	if( sgs_ObjectArg( C ) )
 	{
 		char* str;
-		if( sgs_ParseStringP( C, key, &str, NULL ) )
+		if( sgs_ParseString( C, 0, &str, NULL ) )
 		{
 			if( !strcmp( str, "aabb2" ) ) return xgm_fla_getindex_aabb2( C, flarr );
 			if( !strcmp( str, "aabb3" ) ) return xgm_fla_getindex_aabb3( C, flarr );
@@ -3620,7 +3620,7 @@ static int xgm_fla_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int i
 	}
 	else
 	{
-		sgs_SizeVal pos = (sgs_SizeVal) sgs_GetIntP( C, key );
+		sgs_SizeVal pos = (sgs_SizeVal) sgs_GetInt( C, 0 );
 		if( pos < 0 || pos > flarr->size )
 			return SGS_ENOTFND;
 		sgs_PushReal( C, flarr->data[ pos ] );
@@ -3630,7 +3630,7 @@ static int xgm_fla_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int i
 	return SGS_ENOTFND;
 }
 
-static int xgm_fla_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_Variable* vv, int isprop )
+static int xgm_fla_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int isprop )
 {
 	sgs_Real val;
 	XGM_FLAHDR;

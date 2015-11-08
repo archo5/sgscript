@@ -538,6 +538,7 @@ struct _sgs_Context
 	sgs_MsgFunc   msg_fn;  /* messaging function */
 	void*         msg_ctx; /* messaging context */
 	int           last_errno;
+	int           object_arg;
 	
 	/* hook */
 	sgs_HookFunc  hook_fn;

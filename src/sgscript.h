@@ -228,7 +228,7 @@ typedef struct _sgs_ObjInterface
 	sgs_OC_Self destruct;
 	sgs_OC_Self gcmark;
 	
-	sgs_OC_V1Pr getindex;
+	sgs_OC_Self getindex;
 	sgs_OC_V2Pr setindex;
 	
 	sgs_OC_SlPr convert;
@@ -784,6 +784,7 @@ SGS_APIFUNC SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size );
 SGS_APIFUNC SGSBOOL sgs_Method( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_HideThis( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_ForceHideThis( SGS_CTX );
+SGS_APIFUNC int sgs_ObjectArg( SGS_CTX );
 
 SGS_APIFUNC void sgs_Acquire( SGS_CTX, sgs_Variable* var );
 SGS_APIFUNC void sgs_AcquireArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count );
@@ -902,9 +903,9 @@ static SGS_INLINE SGSRESULT sgs_StdScriptFSFunc( void* ctx, SGS_CTX, int op, sgs
 
 #define SGS_RETURN_THIS( C ) sgs_Method( C ); sgs_SetStackSize( C, 1 ); return 1;
 
-#define SGS_ARGS_GETINDEXFUNC SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int isprop
+#define SGS_ARGS_GETINDEXFUNC SGS_CTX, sgs_VarObj* obj
 #define SGS_ARGS_SETINDEXFUNC SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int isprop
-#define SGS_BEGIN_INDEXFUNC char* str; SGS_UNUSED( isprop ); if( sgs_ParseStringP( C, key, &str, NULL ) ){
+#define SGS_BEGIN_INDEXFUNC char* str; if( sgs_ParseString( C, 0, &str, NULL ) ){
 #define SGS_END_INDEXFUNC } return SGS_ENOTFND;
 #define SGS_CASE( name ) if( !strcmp( str, name ) )
 
