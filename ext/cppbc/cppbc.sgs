@@ -943,7 +943,7 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 		{
 			itemline = null;
 			if( item.what == "METHOD" )
-				itemline = "sgs_PushCFunction( C, _sgs_method__%OBJ%__"$item.varname$" );";
+				itemline = "sgs_PushCFunc( C, _sgs_method__%OBJ%__"$item.varname$" );";
 			else if( item.what == "PROPERTY" )
 			{
 				if( item.access <= 0 )

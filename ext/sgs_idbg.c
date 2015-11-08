@@ -169,9 +169,9 @@ int sgs_InitIDbg( SGS_CTX, SGS_IDBG )
 	D->inside = 0;
 	D->minlev = SGS_WARNING;
 	
-	sgs_PushCFunction( C, idbg_stackitem );
+	sgs_PushCFunc( C, idbg_stackitem );
 	sgs_StoreGlobal( C, "dbg_stackitem" );
-	sgs_PushCFunction( C, idbg_setstackitem );
+	sgs_PushCFunc( C, idbg_setstackitem );
 	sgs_StoreGlobal( C, "dbg_setstackitem" );
 	
 	return SGS_SUCCESS;

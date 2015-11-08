@@ -3108,7 +3108,7 @@ void sgs_InitString( SGS_CTX, sgs_Variable* out, const char* str )
 	var_create_str( C, out, str, (sgs_SizeVal) sz );
 }
 
-void sgs_InitCFunction( sgs_Variable* out, sgs_CFunc func )
+void sgs_InitCFunc( sgs_Variable* out, sgs_CFunc func )
 {
 	out->type = SGS_VT_CFUNC;
 	out->data.C = func;
@@ -3251,7 +3251,7 @@ SGSONE sgs_PushString( SGS_CTX, const char* str )
 	return 1;
 }
 
-SGSONE sgs_PushCFunction( SGS_CTX, sgs_CFunc func )
+SGSONE sgs_PushCFunc( SGS_CTX, sgs_CFunc func )
 {
 	sgs_Variable var;
 	var.type = SGS_VT_CFUNC;

@@ -7,7 +7,7 @@
 
 #include <sgs_int.h>
 
-#define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
+#define IFN( x ) { sgs_PushCFunc( C, x ); return SGS_SUCCESS; }
 #define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
 
 
@@ -178,7 +178,7 @@ static threadret_t ppthread_threadfunc( void* arg )
 	
 	THR->C = sgs_CreateEngineExt( THR->mf, THR->mfud );
 	
-	sgs_PushCFunction( THR->C, pproc_sleep );
+	sgs_PushCFunc( THR->C, pproc_sleep );
 	sgs_StoreGlobal( THR->C, "pproc_sleep" );
 	
 	sgs_CreateObject( THR->C, NULL, THR, ppthread_iface_thr );
@@ -564,9 +564,9 @@ __declspec(dllexport)
 int pproc_module_entry_point( SGS_CTX )
 {
 	SGS_MODULE_CHECK_VERSION( C );
-	sgs_PushCFunction( C, pproc_create_thread );
+	sgs_PushCFunc( C, pproc_create_thread );
 	sgs_StoreGlobal( C, "pproc_create_thread" );
-	sgs_PushCFunction( C, pproc_sleep );
+	sgs_PushCFunc( C, pproc_sleep );
 	sgs_StoreGlobal( C, "pproc_sleep" );
 	return SGS_SUCCESS;
 }

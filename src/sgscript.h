@@ -504,7 +504,7 @@ SGS_APIFUNC void sgs_InitInt( sgs_Variable* out, sgs_Int value );
 SGS_APIFUNC void sgs_InitReal( sgs_Variable* out, sgs_Real value );
 SGS_APIFUNC void sgs_InitStringBuf( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal size );
 SGS_APIFUNC void sgs_InitString( SGS_CTX, sgs_Variable* out, const char* str );
-SGS_APIFUNC void sgs_InitCFunction( sgs_Variable* out, sgs_CFunc func );
+SGS_APIFUNC void sgs_InitCFunc( sgs_Variable* out, sgs_CFunc func );
 SGS_APIFUNC void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj );
 SGS_APIFUNC void sgs_InitPtr( sgs_Variable* out, void* ptr );
 
@@ -525,7 +525,7 @@ SGS_APIFUNC SGSONE sgs_PushInt( SGS_CTX, sgs_Int value );
 SGS_APIFUNC SGSONE sgs_PushReal( SGS_CTX, sgs_Real value );
 SGS_APIFUNC SGSONE sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size );
 SGS_APIFUNC SGSONE sgs_PushString( SGS_CTX, const char* str );
-SGS_APIFUNC SGSONE sgs_PushCFunction( SGS_CTX, sgs_CFunc func );
+SGS_APIFUNC SGSONE sgs_PushCFunc( SGS_CTX, sgs_CFunc func );
 SGS_APIFUNC SGSONE sgs_PushObjectPtr( SGS_CTX, sgs_VarObj* obj );
 SGS_APIFUNC SGSONE sgs_PushPtr( SGS_CTX, void* ptr );
 
@@ -907,23 +907,6 @@ static SGS_INLINE SGSRESULT sgs_StdScriptFSFunc( void* ctx, SGS_CTX, int op, sgs
 #define SGS_BEGIN_INDEXFUNC char* str; if( sgs_ParseString( C, 0, &str, NULL ) ){
 #define SGS_END_INDEXFUNC } return SGS_ENOTFND;
 #define SGS_CASE( name ) if( !strcmp( str, name ) )
-
-#define SGS_RETURN_NULL() return sgs_PushNull( C );
-#define SGS_RETURN_BOOL( value ) return sgs_PushBool( C, value );
-#define SGS_RETURN_INT( value ) return sgs_PushInt( C, value );
-#define SGS_RETURN_REAL( value ) return sgs_PushReal( C, value );
-#define SGS_RETURN_CFUNC( value ) return sgs_PushCFunction( C, value );
-#define SGS_RETURN_OBJECT( value ) return sgs_PushObjectPtr( C, value );
-#define SGS_RETURN_PTR( value ) return sgs_PushPtr( C, value );
-#define SGS_RETURN_VAR( value ) return sgs_PushVariable( C, value );
-
-#define SGS_PARSE_BOOL( out ) { sgs_Bool V; if( sgs_ParseBoolP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
-#define SGS_PARSE_INT( out ) { sgs_Int V; if( sgs_ParseIntP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
-#define SGS_PARSE_REAL( out ) { sgs_Real V; if( sgs_ParseRealP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
-#define SGS_PARSE_OBJECT( iface, out, nonull ) { return sgs_ParseObjectPtrP( C, val, iface, &out, nonull ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_OBJECT_IF( iface, out, nonull, cond ) if( ( !(nonull) && val->type == SGS_VT_NULL ) || ( val->type == SGS_VT_OBJECT && (cond) ) ) \
-	{ return sgs_ParseObjectPtrP( C, val, iface, &out, nonull ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_PTR( out ) { void* V; if( sgs_ParsePtrP( C, val, &V ) ){ out = V; return SGS_SUCCESS; } return SGS_EINVAL; }
 
 
 #ifdef __cplusplus

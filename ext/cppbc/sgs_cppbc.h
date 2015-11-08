@@ -549,7 +549,7 @@ public:
 	sgsVariable& set( sgs_Int v ){ _release(); sgs_InitInt( &var, v ); return *this; }
 	sgsVariable& set( sgs_Real v ){ _release(); sgs_InitReal( &var, v ); return *this; }
 	sgsVariable& set( sgsString v ){ _release(); if( v.not_null() ){ C = v.C; var.type = SGS_VT_STRING; var.data.S = v.str; _acquire(); } return *this; }
-	sgsVariable& set( sgs_CFunc v ){ _release(); sgs_InitCFunction( &var, v ); return *this; }
+	sgsVariable& set( sgs_CFunc v ){ _release(); sgs_InitCFunc( &var, v ); return *this; }
 	template< class T > sgsVariable& set( sgsHandle< T > v ){ _release(); C = v.object->C; sgs_InitObjectPtr( C, &var, v.object ); return *this; }
 	template< class T > sgsVariable& set( T* v ){ _release(); C = v->C; sgs_InitObjectPtr( C, &var, v->m_sgsObject ); return *this; }
 	bool call( int args = 0, int ret = 0 )
@@ -711,7 +711,7 @@ SGS_DECL_PUSHVAR_INT( unsigned long long );
 SGS_DECL_PUSHVAR( float, sgs_PushReal );
 SGS_DECL_PUSHVAR( double, sgs_PushReal );
 template<> inline void sgs_PushVar<sgsString>( SGS_CTX, const sgsString& v ){ v.push( C ); }
-SGS_DECL_PUSHVAR( sgs_CFunc, sgs_PushCFunction );
+SGS_DECL_PUSHVAR( sgs_CFunc, sgs_PushCFunc );
 #ifdef SGS_CPPBC_WITH_STD_STRING
 template<> inline void sgs_PushVar<std::string>( SGS_CTX, const std::string& v ){ sgs_PushStringBuf( C, v.c_str(), (sgs_SizeVal) v.size() ); }
 #endif

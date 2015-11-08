@@ -1281,7 +1281,7 @@ SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 	sgs_Variable key;
 	SGS_SHCTX_USE;
 	
-	sgs_InitCFunction( &key, igfn );
+	sgs_InitCFunc( &key, igfn );
 	vv = sgs_vht_get( &S->ifacetable, &key );
 	if( vv )
 	{

@@ -507,9 +507,9 @@ extern "C"
 SGS_APIFUNC int json_module_entry_point( SGS_CTX )
 {
 	SGS_MODULE_CHECK_VERSION( C );
-	sgs_PushCFunction( C, json_decode );
+	sgs_PushCFunc( C, json_decode );
 	sgs_StoreGlobal( C, "json_decode" );
-	sgs_PushCFunction( C, json_encode );
+	sgs_PushCFunc( C, json_encode );
 	sgs_StoreGlobal( C, "json_encode" );
 	return SGS_SUCCESS;
 }

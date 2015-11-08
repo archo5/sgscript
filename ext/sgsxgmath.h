@@ -105,37 +105,6 @@ SGS_APIFUNC int sgs_ArgCheck_FloatArray( SGS_CTX, int argid, va_list* args, int 
 SGS_APIFUNC int xgm_module_entry_point( SGS_CTX );
 
 
-/* utility macros */
-#define SGS_RETURN_VEC2( x, y ) return sgs_CreateVec2( C, NULL, (XGM_VT)(x), (XGM_VT)(y) )
-#define SGS_RETURN_VEC3( x, y, z ) return sgs_CreateVec3( C, NULL, (XGM_VT)(x), (XGM_VT)(y), (XGM_VT)(z) )
-#define SGS_RETURN_VEC4( x, y, z, w ) return sgs_CreateVec4( C, NULL, (XGM_VT)(x), (XGM_VT)(y), (XGM_VT)(z), (XGM_VT)(w) )
-#define SGS_RETURN_AABB2( x1, y1, x2, y2 ) return sgs_CreateAABB2( C, NULL, (XGM_VT)(x1), (XGM_VT)(y1), (XGM_VT)(x2), (XGM_VT)(y2) )
-#define SGS_RETURN_AABB3( v1, v2 ) return sgs_CreateAABB2( C, NULL, v1, v2 )
-#define SGS_RETURN_COLOR( r, g, b, a ) return sgs_CreateColor( C, NULL, (XGM_VT)(r), (XGM_VT)(g), (XGM_VT)(b), (XGM_VT)(a) )
-#define SGS_RETURN_QUAT( x, y, z, w ) return sgs_CreateQuat( C, NULL, (XGM_VT)(x), (XGM_VT)(y), (XGM_VT)(z), (XGM_VT)(w) )
-#define SGS_RETURN_VEC2P( value ) return sgs_CreateVec2p( C, NULL, value )
-#define SGS_RETURN_VEC3P( value ) return sgs_CreateVec3p( C, NULL, value )
-#define SGS_RETURN_VEC4P( value ) return sgs_CreateVec4p( C, NULL, value )
-#define SGS_RETURN_AABB2P( value ) return sgs_CreateAABB2p( C, NULL, value )
-#define SGS_RETURN_AABB3P( value ) return sgs_CreateAABB3p( C, NULL, value )
-#define SGS_RETURN_COLORP( value ) return sgs_CreateColorp( C, NULL, value )
-#define SGS_RETURN_QUATP( value ) return sgs_CreateQuatp( C, NULL, value )
-#define SGS_RETURN_MAT3( value ) return sgs_CreateMat3( C, NULL, value, 0 )
-#define SGS_RETURN_MAT3_TRANSPOSED( value ) return sgs_CreateMat3( C, NULL, value, 1 )
-#define SGS_RETURN_MAT4( value ) return sgs_CreateMat4( C, NULL, value, 0 )
-#define SGS_RETURN_MAT4_TRANSPOSED( value ) return sgs_CreateMat4( C, NULL, value, 1 )
-
-#define SGS_PARSE_VEC2( outptr, strict ) { return sgs_ParseVec2P( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_VEC3( outptr, strict ) { return sgs_ParseVec3P( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_VEC4( outptr, strict ) { return sgs_ParseVec4P( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_AABB2( outptr ) { return sgs_ParseAABB2P( C, val, outptr ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_AABB3( outptr ) { return sgs_ParseAABB3P( C, val, outptr ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_COLOR( outptr, strict ) { return sgs_ParseColorP( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_QUAT( outptr, strict ) { return sgs_ParseQuatP( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_MAT3( outptr ) { return sgs_ParseMat3P( C, val, outptr ) ? SGS_SUCCESS : SGS_EINVAL; }
-#define SGS_PARSE_MAT4( outptr ) { return sgs_ParseMat4P( C, val, outptr ) ? SGS_SUCCESS : SGS_EINVAL; }
-
-
 #ifdef __cplusplus
 }
 #endif

@@ -1429,12 +1429,12 @@ static int sgsstd_closure_getindex( SGS_ARGS_GETINDEXFUNC )
 	{
 		if( !strcmp( str, "call" ) )
 		{
-			sgs_PushCFunction( C, sgs_specfn_call );
+			sgs_PushCFunc( C, sgs_specfn_call );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "apply" ) )
 		{
-			sgs_PushCFunction( C, sgs_specfn_apply );
+			sgs_PushCFunc( C, sgs_specfn_apply );
 			return SGS_SUCCESS;
 		}
 	}
@@ -3183,7 +3183,7 @@ static int sgsstd_import_cfunc( SGS_CTX )
 		else STDLIB_WARN( "unknown error occured" )
 	}
 	
-	sgs_PushCFunction( C, func );
+	sgs_PushCFunc( C, func );
 	return 1;
 }
 
@@ -4040,7 +4040,7 @@ SGSRESULT sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size )
 	{
 		if( !list->name )
 			break;
-		sgs_PushCFunction( C, list->value );
+		sgs_PushCFunc( C, list->value );
 		ret = sgs_StoreGlobal( C, list->name );
 		if( ret != SGS_SUCCESS ) return ret;
 		list++;
@@ -4089,7 +4089,7 @@ SGSRESULT sgs_StoreFuncConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegFuncConst*
 	{
 		if( !list->name )
 			break;
-		sgs_InitCFunction( &val, list->value );
+		sgs_InitCFunc( &val, list->value );
 		sgs_InitString( C, &key, list->name );
 		ret = sgs_SetIndexPPP( C, &tgt, &key, &val, 1 );
 		sgs_Release( C, &key );
@@ -4148,7 +4148,7 @@ SGSRESULT sgs_StoreFuncConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegFuncCon
 	{
 		if( !list->name )
 			break;
-		sgs_InitCFunction( &val, list->value );
+		sgs_InitCFunc( &val, list->value );
 		sgs_InitString( C, &key, list->name );
 		ret = sgs_SetIndexPPP( C, var, &key, &val, 1 );
 		sgs_Release( C, &key );
@@ -4211,7 +4211,7 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 	
 	sz = sgs_StackSize( C );
 	sgs_PushString( C, name );
-	sgs_InitCFunction( &incfn, sgsstd_include );
+	sgs_InitCFunc( &incfn, sgsstd_include );
 	ret = sgs_CallP( C, &incfn, 1, 1 );
 	if( ret == SGS_SUCCESS )
 		ret = sgs_GetBool( C, -1 );

@@ -186,7 +186,7 @@ DEFINE_TEST( stack_101 )
 	sgs_PushReal( C, 13.37 );
 	sgs_PushStringBuf( C, "what is this", 7 );
 	sgs_PushString( C, "what is this" );
-	sgs_PushCFunction( C, sgs_dummy_func );
+	sgs_PushCFunc( C, sgs_dummy_func );
 	sgs_CreateObject( C, NULL, NULL, sgs_dummy_iface );
 	sgs_PushVariable( C, &sgs_dummy_var );
 	

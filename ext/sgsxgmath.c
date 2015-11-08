@@ -125,8 +125,8 @@ static int xgm_v2_getindex( SGS_ARGS_GETINDEXFUNC )
 	
 	if( !sgs_ParseString( C, 0, &str, NULL ) )
 		return SGS_EINVAL;
-	if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
-	if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
+	if( !strcmp( str, "x" ) ) return sgs_PushReal( C, hdr[ 0 ] );
+	if( !strcmp( str, "y" ) ) return sgs_PushReal( C, hdr[ 1 ] );
 	if( !strcmp( str, "length" ) )
 	{
 		sgs_PushReal( C, sqrt( XGM_VMUL_INNER2( hdr, hdr ) ) );
@@ -149,11 +149,11 @@ static int xgm_v2_getindex( SGS_ARGS_GETINDEXFUNC )
 			sgs_CreateVec2( C, NULL, 0, 0 );
 		return SGS_SUCCESS;
 	}
-	if( !strcmp( str, "angle" ) ){ sgs_PushReal( C, atan2( hdr[1], hdr[0] ) ); return SGS_SUCCESS; }
-	if( !strcmp( str, "perp" ) ){ sgs_CreateVec2( C, NULL, -hdr[1], hdr[0] ); return SGS_SUCCESS; }
-	if( !strcmp( str, "perp2" ) ){ sgs_CreateVec2( C, NULL, hdr[1], -hdr[0] ); return SGS_SUCCESS; }
-	if( !strcmp( str, "rotate" ) ){ sgs_PushCFunction( C, xgm_v2m_rotate ); return SGS_SUCCESS; }
-	if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 2 ); return SGS_SUCCESS; }
+	if( !strcmp( str, "angle" ) ) return sgs_PushReal( C, atan2( hdr[1], hdr[0] ) );
+	if( !strcmp( str, "perp" ) ) return sgs_CreateVec2( C, NULL, -hdr[1], hdr[0] );
+	if( !strcmp( str, "perp2" ) ) return sgs_CreateVec2( C, NULL, hdr[1], -hdr[0] );
+	if( !strcmp( str, "rotate" ) ) return sgs_PushCFunc( C, xgm_v2m_rotate );
+	if( !strcmp( str, "size" ) ) return sgs_PushInt( C, 2 );
 	return SGS_ENOTFND;
 }
 
@@ -822,18 +822,18 @@ static int xgm_b2_getindex( SGS_ARGS_GETINDEXFUNC )
 	XGM_OHDR;
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		SGS_CASE( "x1" )     SGS_RETURN_REAL( hdr[0] );
-		SGS_CASE( "y1" )     SGS_RETURN_REAL( hdr[1] );
-		SGS_CASE( "x2" )     SGS_RETURN_REAL( hdr[2] );
-		SGS_CASE( "y2" )     SGS_RETURN_REAL( hdr[3] );
-		SGS_CASE( "p1" )     SGS_RETURN_VEC2P( hdr );
-		SGS_CASE( "p2" )     SGS_RETURN_VEC2P( hdr + 2 );
-		SGS_CASE( "width" )  SGS_RETURN_REAL( hdr[2] - hdr[0] );
-		SGS_CASE( "height" ) SGS_RETURN_REAL( hdr[3] - hdr[1] );
-		SGS_CASE( "center" ) SGS_RETURN_VEC2( (hdr[0]+hdr[2])*0.5f, (hdr[1]+hdr[3])*0.5f );
-		SGS_CASE( "area" )   SGS_RETURN_REAL( (hdr[2] - hdr[0]) * (hdr[3] - hdr[1]) );
-		SGS_CASE( "valid" )  SGS_RETURN_BOOL( hdr[2] >= hdr[0] && hdr[3] >= hdr[1] );
-		SGS_CASE( "expand" ) SGS_RETURN_CFUNC( xgm_aabb2_expand );
+		SGS_CASE( "x1" )     return sgs_PushReal( C, hdr[0] );
+		SGS_CASE( "y1" )     return sgs_PushReal( C, hdr[1] );
+		SGS_CASE( "x2" )     return sgs_PushReal( C, hdr[2] );
+		SGS_CASE( "y2" )     return sgs_PushReal( C, hdr[3] );
+		SGS_CASE( "p1" )     return sgs_CreateVec2p( C, NULL, hdr );
+		SGS_CASE( "p2" )     return sgs_CreateVec2p( C, NULL, hdr + 2 );
+		SGS_CASE( "width" )  return sgs_PushReal( C, hdr[2] - hdr[0] );
+		SGS_CASE( "height" ) return sgs_PushReal( C, hdr[3] - hdr[1] );
+		SGS_CASE( "center" ) return sgs_CreateVec2( C, NULL, (hdr[0]+hdr[2])*0.5f, (hdr[1]+hdr[3])*0.5f );
+		SGS_CASE( "area" )   return sgs_PushReal( C, (hdr[2] - hdr[0]) * (hdr[3] - hdr[1]) );
+		SGS_CASE( "valid" )  return sgs_PushBool( C, hdr[2] >= hdr[0] && hdr[3] >= hdr[1] );
+		SGS_CASE( "expand" ) return sgs_PushCFunc( C, xgm_aabb2_expand );
 	}
 	return SGS_ENOTFND;
 }
@@ -989,21 +989,21 @@ static int xgm_b3_getindex( SGS_ARGS_GETINDEXFUNC )
 	XGM_OHDR;
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		SGS_CASE( "x1" )     SGS_RETURN_REAL( hdr[0] );
-		SGS_CASE( "y1" )     SGS_RETURN_REAL( hdr[1] );
-		SGS_CASE( "z1" )     SGS_RETURN_REAL( hdr[2] );
-		SGS_CASE( "x2" )     SGS_RETURN_REAL( hdr[3] );
-		SGS_CASE( "y2" )     SGS_RETURN_REAL( hdr[4] );
-		SGS_CASE( "z2" )     SGS_RETURN_REAL( hdr[5] );
-		SGS_CASE( "p1" )     SGS_RETURN_VEC3P( hdr );
-		SGS_CASE( "p2" )     SGS_RETURN_VEC3P( hdr + 3 );
-		SGS_CASE( "width" )  SGS_RETURN_REAL( hdr[3] - hdr[0] );
-		SGS_CASE( "height" ) SGS_RETURN_REAL( hdr[4] - hdr[1] );
-		SGS_CASE( "depth" )  SGS_RETURN_REAL( hdr[5] - hdr[2] );
-		SGS_CASE( "center" ) SGS_RETURN_VEC3( (hdr[0]+hdr[3])*0.5f, (hdr[1]+hdr[4])*0.5f, (hdr[2]+hdr[5])*0.5f );
-		SGS_CASE( "area" )   SGS_RETURN_REAL( (hdr[3] - hdr[0]) * (hdr[4] - hdr[1]) * (hdr[5] - hdr[2]) );
-		SGS_CASE( "valid" )  SGS_RETURN_BOOL( hdr[3] >= hdr[0] && hdr[4] >= hdr[1] && hdr[5] >= hdr[2] );
-		SGS_CASE( "expand" ) SGS_RETURN_CFUNC( xgm_aabb3_expand );
+		SGS_CASE( "x1" )     return sgs_PushReal( C, hdr[0] );
+		SGS_CASE( "y1" )     return sgs_PushReal( C, hdr[1] );
+		SGS_CASE( "z1" )     return sgs_PushReal( C, hdr[2] );
+		SGS_CASE( "x2" )     return sgs_PushReal( C, hdr[3] );
+		SGS_CASE( "y2" )     return sgs_PushReal( C, hdr[4] );
+		SGS_CASE( "z2" )     return sgs_PushReal( C, hdr[5] );
+		SGS_CASE( "p1" )     return sgs_CreateVec3p( C, NULL, hdr );
+		SGS_CASE( "p2" )     return sgs_CreateVec3p( C, NULL, hdr + 3 );
+		SGS_CASE( "width" )  return sgs_PushReal( C, hdr[3] - hdr[0] );
+		SGS_CASE( "height" ) return sgs_PushReal( C, hdr[4] - hdr[1] );
+		SGS_CASE( "depth" )  return sgs_PushReal( C, hdr[5] - hdr[2] );
+		SGS_CASE( "center" ) return sgs_CreateVec3( C, NULL, (hdr[0]+hdr[3])*0.5f, (hdr[1]+hdr[4])*0.5f, (hdr[2]+hdr[5])*0.5f );
+		SGS_CASE( "area" )   return sgs_PushReal( C, (hdr[3] - hdr[0]) * (hdr[4] - hdr[1]) * (hdr[5] - hdr[2]) );
+		SGS_CASE( "valid" )  return sgs_PushBool( C, hdr[3] >= hdr[0] && hdr[4] >= hdr[1] && hdr[5] >= hdr[2] );
+		SGS_CASE( "expand" ) return sgs_PushCFunc( C, xgm_aabb3_expand );
 	}
 	return SGS_ENOTFND;
 }
@@ -1941,20 +1941,20 @@ static int xgm_quat_getindex( SGS_ARGS_GETINDEXFUNC )
 	
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		SGS_CASE( "identity" ) SGS_RETURN_CFUNC( xgm_qti_identity )
-		SGS_CASE( "multiply" ) SGS_RETURN_CFUNC( xgm_qti_multiply )
-		SGS_CASE( "multiply_left" ) SGS_RETURN_CFUNC( xgm_qti_multiply_left )
-		SGS_CASE( "multiply2" ) SGS_RETURN_CFUNC( xgm_qti_multiply2 )
-		SGS_CASE( "invert" ) SGS_RETURN_CFUNC( xgm_qti_invert )
-		SGS_CASE( "invert_from" ) SGS_RETURN_CFUNC( xgm_qti_invert_from )
+		SGS_CASE( "identity" ) return sgs_PushCFunc( C, xgm_qti_identity );
+		SGS_CASE( "multiply" ) return sgs_PushCFunc( C, xgm_qti_multiply );
+		SGS_CASE( "multiply_left" ) return sgs_PushCFunc( C, xgm_qti_multiply_left );
+		SGS_CASE( "multiply2" ) return sgs_PushCFunc( C, xgm_qti_multiply2 );
+		SGS_CASE( "invert" ) return sgs_PushCFunc( C, xgm_qti_invert );
+		SGS_CASE( "invert_from" ) return sgs_PushCFunc( C, xgm_qti_invert_from );
 		
-		SGS_CASE( "rotateX" ) SGS_RETURN_CFUNC( xgm_qti_rotateX )
-		SGS_CASE( "rotateY" ) SGS_RETURN_CFUNC( xgm_qti_rotateY )
-		SGS_CASE( "rotateZ" ) SGS_RETURN_CFUNC( xgm_qti_rotateZ )
-		SGS_CASE( "rotate_axis_angle" ) SGS_RETURN_CFUNC( xgm_qti_rotate_axis_angle )
-		SGS_CASE( "rotate_axis_angle_v3" ) SGS_RETURN_CFUNC( xgm_qti_rotate_axis_angle_v3 )
+		SGS_CASE( "rotateX" ) return sgs_PushCFunc( C, xgm_qti_rotateX );
+		SGS_CASE( "rotateY" ) return sgs_PushCFunc( C, xgm_qti_rotateY );
+		SGS_CASE( "rotateZ" ) return sgs_PushCFunc( C, xgm_qti_rotateZ );
+		SGS_CASE( "rotate_axis_angle" ) return sgs_PushCFunc( C, xgm_qti_rotate_axis_angle );
+		SGS_CASE( "rotate_axis_angle_v3" ) return sgs_PushCFunc( C, xgm_qti_rotate_axis_angle_v3 );
 		
-		SGS_CASE( "transform" ) SGS_RETURN_CFUNC( xgm_qti_transform )
+		SGS_CASE( "transform" ) return sgs_PushCFunc( C, xgm_qti_transform );
 		
 		if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
 		if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
@@ -2537,25 +2537,25 @@ static int xgm_m3_getindex( SGS_ARGS_GETINDEXFUNC )
 	
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		SGS_CASE( "identity" ) SGS_RETURN_CFUNC( xgm_m3i_identity )
-		SGS_CASE( "multiply" ) SGS_RETURN_CFUNC( xgm_m3i_multiply )
-		SGS_CASE( "multiply_left" ) SGS_RETURN_CFUNC( xgm_m3i_multiply_left )
-		SGS_CASE( "multiply2" ) SGS_RETURN_CFUNC( xgm_m3i_multiply2 )
-		SGS_CASE( "transpose" ) SGS_RETURN_CFUNC( xgm_m3i_transpose )
-		SGS_CASE( "transpose_from" ) SGS_RETURN_CFUNC( xgm_m3i_transpose_from )
-		SGS_CASE( "invert" ) SGS_RETURN_CFUNC( xgm_m3i_invert )
-		SGS_CASE( "invert_from" ) SGS_RETURN_CFUNC( xgm_m3i_invert_from )
+		SGS_CASE( "identity" ) return sgs_PushCFunc( C, xgm_m3i_identity );
+		SGS_CASE( "multiply" ) return sgs_PushCFunc( C, xgm_m3i_multiply );
+		SGS_CASE( "multiply_left" ) return sgs_PushCFunc( C, xgm_m3i_multiply_left );
+		SGS_CASE( "multiply2" ) return sgs_PushCFunc( C, xgm_m3i_multiply2 );
+		SGS_CASE( "transpose" ) return sgs_PushCFunc( C, xgm_m3i_transpose );
+		SGS_CASE( "transpose_from" ) return sgs_PushCFunc( C, xgm_m3i_transpose_from );
+		SGS_CASE( "invert" ) return sgs_PushCFunc( C, xgm_m3i_invert );
+		SGS_CASE( "invert_from" ) return sgs_PushCFunc( C, xgm_m3i_invert_from );
 		
-		SGS_CASE( "rotateX" ) SGS_RETURN_CFUNC( xgm_m3i_rotateX )
-		SGS_CASE( "rotateY" ) SGS_RETURN_CFUNC( xgm_m3i_rotateY )
-		SGS_CASE( "rotateZ" ) SGS_RETURN_CFUNC( xgm_m3i_rotateZ )
-		SGS_CASE( "rotate_axis_angle" ) SGS_RETURN_CFUNC( xgm_m3i_rotate_axis_angle )
-		SGS_CASE( "rotate_axis_angle_v3" ) SGS_RETURN_CFUNC( xgm_m3i_rotate_axis_angle_v3 )
-		SGS_CASE( "rotate_quat" ) SGS_RETURN_CFUNC( xgm_m3i_rotate_quat )
-		SGS_CASE( "scale" ) SGS_RETURN_CFUNC( xgm_m3i_scale )
-		SGS_CASE( "scale_v3" ) SGS_RETURN_CFUNC( xgm_m3i_scale_v3 )
+		SGS_CASE( "rotateX" ) return sgs_PushCFunc( C, xgm_m3i_rotateX );
+		SGS_CASE( "rotateY" ) return sgs_PushCFunc( C, xgm_m3i_rotateY );
+		SGS_CASE( "rotateZ" ) return sgs_PushCFunc( C, xgm_m3i_rotateZ );
+		SGS_CASE( "rotate_axis_angle" ) return sgs_PushCFunc( C, xgm_m3i_rotate_axis_angle );
+		SGS_CASE( "rotate_axis_angle_v3" ) return sgs_PushCFunc( C, xgm_m3i_rotate_axis_angle_v3 );
+		SGS_CASE( "rotate_quat" ) return sgs_PushCFunc( C, xgm_m3i_rotate_quat );
+		SGS_CASE( "scale" ) return sgs_PushCFunc( C, xgm_m3i_scale );
+		SGS_CASE( "scale_v3" ) return sgs_PushCFunc( C, xgm_m3i_scale_v3 );
 		
-		SGS_CASE( "transform" ) SGS_RETURN_CFUNC( xgm_m3i_transform )
+		SGS_CASE( "transform" ) return sgs_PushCFunc( C, xgm_m3i_transform );
 		
 		if( *str == 'm' && str[1] && str[2] && !str[3] )
 		{
@@ -3090,29 +3090,29 @@ static int xgm_m4_getindex( SGS_ARGS_GETINDEXFUNC )
 	
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		SGS_CASE( "identity" ) SGS_RETURN_CFUNC( xgm_m4i_identity )
-		SGS_CASE( "multiply" ) SGS_RETURN_CFUNC( xgm_m4i_multiply )
-		SGS_CASE( "multiply_left" ) SGS_RETURN_CFUNC( xgm_m4i_multiply_left )
-		SGS_CASE( "multiply2" ) SGS_RETURN_CFUNC( xgm_m4i_multiply2 )
-		SGS_CASE( "transpose" ) SGS_RETURN_CFUNC( xgm_m4i_transpose )
-		SGS_CASE( "transpose_from" ) SGS_RETURN_CFUNC( xgm_m4i_transpose_from )
-		SGS_CASE( "invert" ) SGS_RETURN_CFUNC( xgm_m4i_invert )
-		SGS_CASE( "invert_from" ) SGS_RETURN_CFUNC( xgm_m4i_invert_from )
+		SGS_CASE( "identity" ) return sgs_PushCFunc( C, xgm_m4i_identity );
+		SGS_CASE( "multiply" ) return sgs_PushCFunc( C, xgm_m4i_multiply );
+		SGS_CASE( "multiply_left" ) return sgs_PushCFunc( C, xgm_m4i_multiply_left );
+		SGS_CASE( "multiply2" ) return sgs_PushCFunc( C, xgm_m4i_multiply2 );
+		SGS_CASE( "transpose" ) return sgs_PushCFunc( C, xgm_m4i_transpose );
+		SGS_CASE( "transpose_from" ) return sgs_PushCFunc( C, xgm_m4i_transpose_from );
+		SGS_CASE( "invert" ) return sgs_PushCFunc( C, xgm_m4i_invert );
+		SGS_CASE( "invert_from" ) return sgs_PushCFunc( C, xgm_m4i_invert_from );
 		
-		SGS_CASE( "translate" ) SGS_RETURN_CFUNC( xgm_m4i_translate )
-		SGS_CASE( "translate_v3" ) SGS_RETURN_CFUNC( xgm_m4i_translate_v3 )
-		SGS_CASE( "rotateX" ) SGS_RETURN_CFUNC( xgm_m4i_rotateX )
-		SGS_CASE( "rotateY" ) SGS_RETURN_CFUNC( xgm_m4i_rotateY )
-		SGS_CASE( "rotateZ" ) SGS_RETURN_CFUNC( xgm_m4i_rotateZ )
-		SGS_CASE( "rotate_axis_angle" ) SGS_RETURN_CFUNC( xgm_m4i_rotate_axis_angle )
-		SGS_CASE( "rotate_axis_angle_v3" ) SGS_RETURN_CFUNC( xgm_m4i_rotate_axis_angle_v3 )
-		SGS_CASE( "rotate_quat" ) SGS_RETURN_CFUNC( xgm_m4i_rotate_quat )
-		SGS_CASE( "scale" ) SGS_RETURN_CFUNC( xgm_m4i_scale )
-		SGS_CASE( "scale_v3" ) SGS_RETURN_CFUNC( xgm_m4i_scale_v3 )
+		SGS_CASE( "translate" ) return sgs_PushCFunc( C, xgm_m4i_translate );
+		SGS_CASE( "translate_v3" ) return sgs_PushCFunc( C, xgm_m4i_translate_v3 );
+		SGS_CASE( "rotateX" ) return sgs_PushCFunc( C, xgm_m4i_rotateX );
+		SGS_CASE( "rotateY" ) return sgs_PushCFunc( C, xgm_m4i_rotateY );
+		SGS_CASE( "rotateZ" ) return sgs_PushCFunc( C, xgm_m4i_rotateZ );
+		SGS_CASE( "rotate_axis_angle" ) return sgs_PushCFunc( C, xgm_m4i_rotate_axis_angle );
+		SGS_CASE( "rotate_axis_angle_v3" ) return sgs_PushCFunc( C, xgm_m4i_rotate_axis_angle_v3 );
+		SGS_CASE( "rotate_quat" ) return sgs_PushCFunc( C, xgm_m4i_rotate_quat );
+		SGS_CASE( "scale" ) return sgs_PushCFunc( C, xgm_m4i_scale );
+		SGS_CASE( "scale_v3" ) return sgs_PushCFunc( C, xgm_m4i_scale_v3 );
 		
-		SGS_CASE( "transform" ) SGS_RETURN_CFUNC( xgm_m4i_transform )
-		SGS_CASE( "transform_pos" ) SGS_RETURN_CFUNC( xgm_m4i_transform_pos )
-		SGS_CASE( "transform_normal" ) SGS_RETURN_CFUNC( xgm_m4i_transform_normal )
+		SGS_CASE( "transform" ) return sgs_PushCFunc( C, xgm_m4i_transform );
+		SGS_CASE( "transform_pos" ) return sgs_PushCFunc( C, xgm_m4i_transform_pos );
+		SGS_CASE( "transform_normal" ) return sgs_PushCFunc( C, xgm_m4i_transform_normal );
 		
 		if( *str == 'm' && str[1] && str[2] && !str[3] )
 		{
@@ -3591,40 +3591,40 @@ static int xgm_fla_getindex( SGS_ARGS_GETINDEXFUNC )
 			if( !strcmp( str, "size4" ) ){ sgs_PushInt( C, flarr->size / 4 ); return SGS_SUCCESS; }
 			if( !strcmp( str, "size16" ) ){ sgs_PushInt( C, flarr->size / 16 ); return SGS_SUCCESS; }
 			
-			SGS_CASE( "clear" ) SGS_RETURN_CFUNC( xgm_fla_clear )
-			SGS_CASE( "set1" ) SGS_RETURN_CFUNC( xgm_fla_set1 )
-			SGS_CASE( "negate" ) SGS_RETURN_CFUNC( xgm_fla_negate )
+			SGS_CASE( "clear" ) return sgs_PushCFunc( C, xgm_fla_clear );
+			SGS_CASE( "set1" ) return sgs_PushCFunc( C, xgm_fla_set1 );
+			SGS_CASE( "negate" ) return sgs_PushCFunc( C, xgm_fla_negate );
 			
-			SGS_CASE( "assign" ) SGS_RETURN_CFUNC( xgm_fla_assign )
-			SGS_CASE( "negate_from" ) SGS_RETURN_CFUNC( xgm_fla_negate_from )
-			SGS_CASE( "add_assign" ) SGS_RETURN_CFUNC( xgm_fla_add_assign )
-			SGS_CASE( "sub_assign" ) SGS_RETURN_CFUNC( xgm_fla_sub_assign )
-			SGS_CASE( "mul_assign" ) SGS_RETURN_CFUNC( xgm_fla_mul_assign )
-			SGS_CASE( "div_assign" ) SGS_RETURN_CFUNC( xgm_fla_div_assign )
-			SGS_CASE( "mod_assign" ) SGS_RETURN_CFUNC( xgm_fla_mod_assign )
-			SGS_CASE( "pow_assign" ) SGS_RETURN_CFUNC( xgm_fla_pow_assign )
+			SGS_CASE( "assign" ) return sgs_PushCFunc( C, xgm_fla_assign );
+			SGS_CASE( "negate_from" ) return sgs_PushCFunc( C, xgm_fla_negate_from );
+			SGS_CASE( "add_assign" ) return sgs_PushCFunc( C, xgm_fla_add_assign );
+			SGS_CASE( "sub_assign" ) return sgs_PushCFunc( C, xgm_fla_sub_assign );
+			SGS_CASE( "mul_assign" ) return sgs_PushCFunc( C, xgm_fla_mul_assign );
+			SGS_CASE( "div_assign" ) return sgs_PushCFunc( C, xgm_fla_div_assign );
+			SGS_CASE( "mod_assign" ) return sgs_PushCFunc( C, xgm_fla_mod_assign );
+			SGS_CASE( "pow_assign" ) return sgs_PushCFunc( C, xgm_fla_pow_assign );
 			
-			SGS_CASE( "add" ) SGS_RETURN_CFUNC( xgm_fla_add )
-			SGS_CASE( "sub" ) SGS_RETURN_CFUNC( xgm_fla_sub )
-			SGS_CASE( "mul" ) SGS_RETURN_CFUNC( xgm_fla_mul )
-			SGS_CASE( "div" ) SGS_RETURN_CFUNC( xgm_fla_div )
-			SGS_CASE( "mod" ) SGS_RETURN_CFUNC( xgm_fla_mod )
-			SGS_CASE( "pow" ) SGS_RETURN_CFUNC( xgm_fla_pow )
-			SGS_CASE( "randbox" ) SGS_RETURN_CFUNC( xgm_fla_randbox )
-			SGS_CASE( "randext" ) SGS_RETURN_CFUNC( xgm_fla_randext )
-			SGS_CASE( "multiply_add_assign" ) SGS_RETURN_CFUNC( xgm_fla_multiply_add_assign )
-			SGS_CASE( "lerp_to" ) SGS_RETURN_CFUNC( xgm_fla_lerp_to )
+			SGS_CASE( "add" ) return sgs_PushCFunc( C, xgm_fla_add );
+			SGS_CASE( "sub" ) return sgs_PushCFunc( C, xgm_fla_sub );
+			SGS_CASE( "mul" ) return sgs_PushCFunc( C, xgm_fla_mul );
+			SGS_CASE( "div" ) return sgs_PushCFunc( C, xgm_fla_div );
+			SGS_CASE( "mod" ) return sgs_PushCFunc( C, xgm_fla_mod );
+			SGS_CASE( "pow" ) return sgs_PushCFunc( C, xgm_fla_pow );
+			SGS_CASE( "randbox" ) return sgs_PushCFunc( C, xgm_fla_randbox );
+			SGS_CASE( "randext" ) return sgs_PushCFunc( C, xgm_fla_randext );
+			SGS_CASE( "multiply_add_assign" ) return sgs_PushCFunc( C, xgm_fla_multiply_add_assign );
+			SGS_CASE( "lerp_to" ) return sgs_PushCFunc( C, xgm_fla_lerp_to );
 			
-			SGS_CASE( "to_int8_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_int8_buffer )
-			SGS_CASE( "to_int16_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_int16_buffer )
-			SGS_CASE( "to_int32_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_int32_buffer )
-			SGS_CASE( "to_int64_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_int64_buffer )
-			SGS_CASE( "to_uint8_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_uint8_buffer )
-			SGS_CASE( "to_uint16_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_uint16_buffer )
-			SGS_CASE( "to_uint32_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_uint32_buffer )
-			SGS_CASE( "to_uint64_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_uint64_buffer )
-			SGS_CASE( "to_float32_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_float32_buffer )
-			SGS_CASE( "to_float64_buffer" ) SGS_RETURN_CFUNC( xgm_fla_to_float64_buffer )
+			SGS_CASE( "to_int8_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_int8_buffer );
+			SGS_CASE( "to_int16_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_int16_buffer );
+			SGS_CASE( "to_int32_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_int32_buffer );
+			SGS_CASE( "to_int64_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_int64_buffer );
+			SGS_CASE( "to_uint8_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_uint8_buffer );
+			SGS_CASE( "to_uint16_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_uint16_buffer );
+			SGS_CASE( "to_uint32_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_uint32_buffer );
+			SGS_CASE( "to_uint64_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_uint64_buffer );
+			SGS_CASE( "to_float32_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_float32_buffer );
+			SGS_CASE( "to_float64_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_float64_buffer );
 		}
 	}
 	else
@@ -3960,14 +3960,14 @@ static int xgm_ray_sphere_intersect( SGS_CTX )
 	a = XGM_VMUL_INNER3( dir, r2s );
 	if( a < 0 )
 	{
-		SGS_RETURN_BOOL( 0 );
+		return sgs_PushBool( C, 0 );
 	}
 	b = XGM_VMUL_INNER3( r2s, r2s ) - a * a;
 	if( b > sphrad * sphrad )
 	{
-		SGS_RETURN_BOOL( 0 );
+		return sgs_PushBool( C, 0 );
 	}
-	SGS_RETURN_REAL( a - sqrtf( sphrad * sphrad - b ) );
+	return sgs_PushReal( C, a - sqrtf( sphrad * sphrad - b ) );
 }
 
 
@@ -4021,7 +4021,7 @@ static int xgm_distance_lines( SGS_CTX )
 	XGM_V3_ADD( dP, w, u );
 	XGM_V3_SUB( dP, dP, v );
 	
-	SGS_RETURN_REAL( sqrtf( XGM_VMUL_INNER3( dP, dP ) ) ); // return the closest distance
+	return sgs_PushReal( C, sqrtf( XGM_VMUL_INNER3( dP, dP ) ) ); // return the closest distance
 }
 
 static int xgm_distance_line_segments( SGS_CTX )
@@ -4112,7 +4112,7 @@ static int xgm_distance_line_segments( SGS_CTX )
 	XGM_V3_ADD( dP, w, u );
 	XGM_V3_SUB( dP, dP, v );
 	
-	SGS_RETURN_REAL( sqrtf( XGM_VMUL_INNER3( dP, dP ) ) ); // return the closest distance
+	return sgs_PushReal( C, sqrtf( XGM_VMUL_INNER3( dP, dP ) ) ); // return the closest distance
 }
 
 static int xgm_distance_point_line( SGS_CTX )
@@ -4135,7 +4135,7 @@ static int xgm_distance_point_line( SGS_CTX )
 	XGM_V3_ADD( v, lp1, v );
 	XGM_V3_SUB( v, pt, v );
 	
-	SGS_RETURN_REAL( sqrtf( XGM_VMUL_INNER3( v, v ) ) );
+	return sgs_PushReal( C, sqrtf( XGM_VMUL_INNER3( v, v ) ) );
 }
 
 static int xgm_distance_point_line_segment( SGS_CTX )
@@ -4169,7 +4169,7 @@ static int xgm_distance_point_line_segment( SGS_CTX )
 	XGM_V3_SUB( v, pt, v );
 	
 end:
-	SGS_RETURN_REAL( sqrtf( XGM_VMUL_INNER3( v, v ) ) );
+	return sgs_PushReal( C, sqrtf( XGM_VMUL_INNER3( v, v ) ) );
 }
 
 // ADAPTATION END

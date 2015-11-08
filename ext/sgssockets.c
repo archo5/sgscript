@@ -47,7 +47,7 @@
 
 #define DF( x ) { #x, x }
 #define STREQ( a, b ) (0==strcmp(a,b))
-#define IFN( x ) { sgs_PushCFunction( C, x ); return SGS_SUCCESS; }
+#define IFN( x ) { sgs_PushCFunc( C, x ); return SGS_SUCCESS; }
 #define STDLIB_WARN( warn ) return sgs_Msg( C, SGS_WARNING, warn );
 #define SOCK_IBUFSZ 1024
 

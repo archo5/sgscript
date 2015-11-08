@@ -1445,20 +1445,20 @@ static int sgsstd_fmtstream_getindex( SGS_ARGS_GETINDEXFUNC )
 	SGSFS_HDR;
 	SGS_BEGIN_INDEXFUNC
 		/* functions */
-		SGS_CASE( "read" )             SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read )
-		SGS_CASE( "getchar" )          SGS_RETURN_CFUNC( sgsstd_fmtstreamI_getchar )
-		SGS_CASE( "readcc" )           SGS_RETURN_CFUNC( sgsstd_fmtstreamI_readcc )
-		SGS_CASE( "skipcc" )           SGS_RETURN_CFUNC( sgsstd_fmtstreamI_skipcc )
-		SGS_CASE( "read_real" )        SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_real )
-		SGS_CASE( "read_int" )         SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_int )
-		SGS_CASE( "read_binary_int" )  SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_binary_int )
-		SGS_CASE( "read_octal_int" )   SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_octal_int )
-		SGS_CASE( "read_decimal_int" ) SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_decimal_int )
-		SGS_CASE( "read_hex_int" )     SGS_RETURN_CFUNC( sgsstd_fmtstreamI_read_hex_int )
-		SGS_CASE( "check" )            SGS_RETURN_CFUNC( sgsstd_fmtstreamI_check )
+		SGS_CASE( "read" )             return sgs_PushCFunc( C, sgsstd_fmtstreamI_read );
+		SGS_CASE( "getchar" )          return sgs_PushCFunc( C, sgsstd_fmtstreamI_getchar );
+		SGS_CASE( "readcc" )           return sgs_PushCFunc( C, sgsstd_fmtstreamI_readcc );
+		SGS_CASE( "skipcc" )           return sgs_PushCFunc( C, sgsstd_fmtstreamI_skipcc );
+		SGS_CASE( "read_real" )        return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_real );
+		SGS_CASE( "read_int" )         return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_int );
+		SGS_CASE( "read_binary_int" )  return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_binary_int );
+		SGS_CASE( "read_octal_int" )   return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_octal_int );
+		SGS_CASE( "read_decimal_int" ) return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_decimal_int );
+		SGS_CASE( "read_hex_int" )     return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_hex_int );
+		SGS_CASE( "check" )            return sgs_PushCFunc( C, sgsstd_fmtstreamI_check );
 		/* properties */
-		SGS_CASE( "at_end" )           SGS_RETURN_BOOL( hdr->state == FMTSTREAM_STATE_END )
-		SGS_CASE( "stream_offset" )    SGS_RETURN_INT( hdr->streamoff + hdr->bufpos )
+		SGS_CASE( "at_end" )           return sgs_PushBool( C, hdr->state == FMTSTREAM_STATE_END );
+		SGS_CASE( "stream_offset" )    return sgs_PushInt( C, hdr->streamoff + hdr->bufpos );
 	SGS_END_INDEXFUNC
 }
 
@@ -1584,7 +1584,7 @@ static int frt_call( SGS_CTX, sgs_VarObj* data )
 		return 0;
 	sgs_PushVariable( C, &frt->F );
 	sgs_PushInt( C, amt );
-	sgs_PushCFunction( C, sgsstd_fileI_read );
+	sgs_PushCFunc( C, sgsstd_fileI_read );
 	if( sgs_ThisCall( C, 1, 1 ) != SGS_SUCCESS )
 		return SGS_EINPROC;
 	return 1;
@@ -2188,19 +2188,19 @@ static int sgsstd_fileI_setbuf( SGS_CTX )
 static int sgsstd_file_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "is_open" ) SGS_RETURN_BOOL( !!IFVAR )
-		SGS_CASE( "offset" )  { return sgsstd_fileP_offset( C, IFVAR ); }
-		SGS_CASE( "size" )    { return sgsstd_fileP_size( C, IFVAR ); }
-		SGS_CASE( "error" )   { return sgsstd_fileP_error( C, IFVAR ); }
-		SGS_CASE( "eof" )     { return sgsstd_fileP_eof( C, IFVAR ); }
+		SGS_CASE( "is_open" ) return sgs_PushBool( C, !!IFVAR );
+		SGS_CASE( "offset" )  return sgsstd_fileP_offset( C, IFVAR );
+		SGS_CASE( "size" )    return sgsstd_fileP_size( C, IFVAR );
+		SGS_CASE( "error" )   return sgsstd_fileP_error( C, IFVAR );
+		SGS_CASE( "eof" )     return sgsstd_fileP_eof( C, IFVAR );
 		
-		SGS_CASE( "open" )    SGS_RETURN_CFUNC( sgsstd_fileI_open )
-		SGS_CASE( "close" )   SGS_RETURN_CFUNC( sgsstd_fileI_close )
-		SGS_CASE( "read" )    SGS_RETURN_CFUNC( sgsstd_fileI_read )
-		SGS_CASE( "write" )   SGS_RETURN_CFUNC( sgsstd_fileI_write )
-		SGS_CASE( "seek" )    SGS_RETURN_CFUNC( sgsstd_fileI_seek )
-		SGS_CASE( "flush" )   SGS_RETURN_CFUNC( sgsstd_fileI_flush )
-		SGS_CASE( "setbuf" )  SGS_RETURN_CFUNC( sgsstd_fileI_setbuf )
+		SGS_CASE( "open" )    return sgs_PushCFunc( C, sgsstd_fileI_open );
+		SGS_CASE( "close" )   return sgs_PushCFunc( C, sgsstd_fileI_close );
+		SGS_CASE( "read" )    return sgs_PushCFunc( C, sgsstd_fileI_read );
+		SGS_CASE( "write" )   return sgs_PushCFunc( C, sgsstd_fileI_write );
+		SGS_CASE( "seek" )    return sgs_PushCFunc( C, sgsstd_fileI_seek );
+		SGS_CASE( "flush" )   return sgs_PushCFunc( C, sgsstd_fileI_flush );
+		SGS_CASE( "setbuf" )  return sgs_PushCFunc( C, sgsstd_fileI_setbuf );
 	SGS_END_INDEXFUNC
 }
 
@@ -4207,9 +4207,9 @@ static int utf8it_getindex( SGS_ARGS_GETINDEXFUNC )
 			sgs_Variable var;
 			var.type = SGS_VT_STRING;
 			var.data.S = IT->str;
-			SGS_RETURN_VAR( &var );
+			return sgs_PushVariable( C, &var );
 		}
-		SGS_CASE( "offset" ) SGS_RETURN_INT( IT->i )
+		SGS_CASE( "offset" ) return sgs_PushInt( C, IT->i );
 	SGS_END_INDEXFUNC;
 }
 
