@@ -208,8 +208,9 @@ static int xgm_v2_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v2_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_v2_expr( SGS_ARGS_OBJFUNC )
 {
+	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_ADD ||
 		type == SGS_EOP_SUB ||
 		type == SGS_EOP_MUL ||
@@ -217,7 +218,7 @@ static int xgm_v2_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable*
 		type == SGS_EOP_MOD )
 	{
 		XGM_VT r[ 2 ], v1[ 2 ], v2[ 2 ];
-		if( !sgs_ParseVec2P( C, A, v1, 0 ) || !sgs_ParseVec2P( C, B, v2, 0 ) )
+		if( !sgs_ParseVec2( C, 0, v1, 0 ) || !sgs_ParseVec2( C, 1, v2, 0 ) )
 			return SGS_EINVAL;
 		
 		if( ( type == SGS_EOP_DIV || type == SGS_EOP_MOD ) &&
@@ -247,12 +248,12 @@ static int xgm_v2_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable*
 	else if( type == SGS_EOP_COMPARE )
 	{
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObjectP( A, xgm_vec2_iface ) ||
-			!sgs_IsObjectP( B, xgm_vec2_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_vec2_iface ) ||
+			!sgs_IsObject( C, 1, xgm_vec2_iface ) )
 			return SGS_EINVAL;
 		
-		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
-		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
+		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
 		if( v1[0] != v2[0] )
 			sgs_PushReal( C, v1[0] - v2[0] );
@@ -418,8 +419,9 @@ static int xgm_v3_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v3_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_v3_expr( SGS_ARGS_OBJFUNC )
 {
+	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_ADD ||
 		type == SGS_EOP_SUB ||
 		type == SGS_EOP_MUL ||
@@ -427,7 +429,7 @@ static int xgm_v3_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable*
 		type == SGS_EOP_MOD )
 	{
 		XGM_VT r[3], v1[3], v2[3];
-		if( !sgs_ParseVec3P( C, A, v1, 0 ) || !sgs_ParseVec3P( C, B, v2, 0 ) )
+		if( !sgs_ParseVec3( C, 0, v1, 0 ) || !sgs_ParseVec3( C, 1, v2, 0 ) )
 			return SGS_EINVAL;
 		
 		if( ( type == SGS_EOP_DIV || type == SGS_EOP_MOD ) &&
@@ -461,12 +463,12 @@ static int xgm_v3_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable*
 	else if( type == SGS_EOP_COMPARE )
 	{
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObjectP( A, xgm_vec3_iface ) ||
-			!sgs_IsObjectP( B, xgm_vec3_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_vec3_iface ) ||
+			!sgs_IsObject( C, 1, xgm_vec3_iface ) )
 			return SGS_EINVAL;
 		
-		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
-		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
+		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
 		if( v1[0] != v2[0] )
 			sgs_PushReal( C, v1[0] - v2[0] );
@@ -654,8 +656,9 @@ static int xgm_v4_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v4_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_v4_expr( SGS_ARGS_OBJFUNC )
 {
+	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_ADD ||
 		type == SGS_EOP_SUB ||
 		type == SGS_EOP_MUL ||
@@ -663,7 +666,7 @@ static int xgm_v4_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable*
 		type == SGS_EOP_MOD )
 	{
 		XGM_VT r[4], v1[4], v2[4];
-		if( !sgs_ParseVec4P( C, A, v1, 0 ) || !sgs_ParseVec4P( C, B, v2, 0 ) )
+		if( !sgs_ParseVec4( C, 0, v1, 0 ) || !sgs_ParseVec4( C, 1, v2, 0 ) )
 			return SGS_EINVAL;
 		
 		if( ( type == SGS_EOP_DIV || type == SGS_EOP_MOD ) &&
@@ -710,12 +713,12 @@ static int xgm_v4_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable*
 	else if( type == SGS_EOP_COMPARE )
 	{
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObjectP( A, xgm_vec4_iface ) ||
-			!sgs_IsObjectP( B, xgm_vec4_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_vec4_iface ) ||
+			!sgs_IsObject( C, 1, xgm_vec4_iface ) )
 			return SGS_EINVAL;
 		
-		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
-		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
+		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
 		if( v1[0] != v2[0] ) sgs_PushReal( C, v1[0] - v2[0] );
 		else if( v1[1] != v2[1] ) sgs_PushReal( C, v1[1] - v2[1] );
@@ -851,17 +854,18 @@ static int xgm_b2_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_b2_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_b2_expr( SGS_ARGS_OBJFUNC )
 {
+	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_COMPARE )
 	{
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObjectP( A, xgm_aabb2_iface ) ||
-			!sgs_IsObjectP( B, xgm_aabb2_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_aabb2_iface ) ||
+			!sgs_IsObject( C, 1, xgm_aabb2_iface ) )
 			return SGS_EINVAL;
 		
-		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
-		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
+		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
 		if( v1[0] != v2[0] ) sgs_PushReal( C, v1[0] - v2[0] );
 		else if( v1[1] != v2[1] ) sgs_PushReal( C, v1[1] - v2[1] );
@@ -1022,17 +1026,18 @@ static int xgm_b3_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_b3_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_b3_expr( SGS_ARGS_OBJFUNC )
 {
+	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_COMPARE )
 	{
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObjectP( A, xgm_aabb3_iface ) ||
-			!sgs_IsObjectP( B, xgm_aabb3_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_aabb3_iface ) ||
+			!sgs_IsObject( C, 1, xgm_aabb3_iface ) )
 			return SGS_EINVAL;
 		
-		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
-		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
+		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
 		if( v1[0] != v2[0] ) sgs_PushReal( C, v1[0] - v2[0] );
 		else if( v1[1] != v2[1] ) sgs_PushReal( C, v1[1] - v2[1] );
@@ -1204,8 +1209,9 @@ static int xgm_col_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_col_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_col_expr( SGS_ARGS_OBJFUNC )
 {
+	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_ADD ||
 		type == SGS_EOP_SUB ||
 		type == SGS_EOP_MUL ||
@@ -1213,7 +1219,7 @@ static int xgm_col_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable
 		type == SGS_EOP_MOD )
 	{
 		XGM_VT r[4], v1[4], v2[4];
-		if( !sgs_ParseColorP( C, A, v1, 0 ) || !sgs_ParseColorP( C, B, v2, 0 ) )
+		if( !sgs_ParseColor( C, 0, v1, 0 ) || !sgs_ParseColor( C, 1, v2, 0 ) )
 			return SGS_EINVAL;
 		
 		if( ( type == SGS_EOP_DIV || type == SGS_EOP_MOD ) &&
@@ -1260,12 +1266,12 @@ static int xgm_col_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable
 	else if( type == SGS_EOP_COMPARE )
 	{
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObjectP( A, xgm_vec4_iface ) ||
-			!sgs_IsObjectP( B, xgm_vec4_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_vec4_iface ) ||
+			!sgs_IsObject( C, 1, xgm_vec4_iface ) )
 			return SGS_EINVAL;
 		
-		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
-		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
+		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
 		if( v1[0] != v2[0] ) sgs_PushReal( C, v1[0] - v2[0] );
 		else if( v1[1] != v2[1] ) sgs_PushReal( C, v1[1] - v2[1] );
@@ -2024,8 +2030,9 @@ static int xgm_quat_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_quat_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_quat_expr( SGS_ARGS_OBJFUNC )
 {
+	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_ADD ||
 		type == SGS_EOP_SUB ||
 		type == SGS_EOP_MUL ||
@@ -2033,7 +2040,7 @@ static int xgm_quat_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variabl
 		type == SGS_EOP_MOD )
 	{
 		XGM_VT r[4], v1[4], v2[4];
-		if( !sgs_ParseQuatP( C, A, v1, 0 ) || !sgs_ParseQuatP( C, B, v2, 0 ) )
+		if( !sgs_ParseQuat( C, 0, v1, 0 ) || !sgs_ParseQuat( C, 1, v2, 0 ) )
 			return SGS_EINVAL;
 		
 		if( ( type == SGS_EOP_DIV || type == SGS_EOP_MOD ) &&
@@ -2080,12 +2087,12 @@ static int xgm_quat_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variabl
 	else if( type == SGS_EOP_COMPARE )
 	{
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObjectP( A, xgm_quat_iface ) ||
-			!sgs_IsObjectP( B, xgm_quat_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_quat_iface ) ||
+			!sgs_IsObject( C, 1, xgm_quat_iface ) )
 			return SGS_EINVAL;
 		
-		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
-		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
+		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
 		if( v1[0] != v2[0] ) sgs_PushReal( C, v1[0] - v2[0] );
 		else if( v1[1] != v2[1] ) sgs_PushReal( C, v1[1] - v2[1] );
@@ -2624,18 +2631,19 @@ static int xgm_m3_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_m3_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_m3_expr( SGS_ARGS_OBJFUNC )
 {
+	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_COMPARE )
 	{
 		int i;
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObjectP( A, xgm_mat3_iface ) ||
-			!sgs_IsObjectP( B, xgm_mat3_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_mat3_iface ) ||
+			!sgs_IsObject( C, 1, xgm_mat3_iface ) )
 			return SGS_EINVAL;
 		
-		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
-		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
+		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
 		for( i = 0; i < 9; ++i )
 		{
@@ -3179,18 +3187,19 @@ static int xgm_m4_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_m4_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int type )
+static int xgm_m4_expr( SGS_ARGS_OBJFUNC )
 {
+	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_COMPARE )
 	{
 		int i;
 		XGM_VT *v1, *v2;
-		if( !sgs_IsObjectP( A, xgm_mat4_iface ) ||
-			!sgs_IsObjectP( B, xgm_mat4_iface ) )
+		if( !sgs_IsObject( C, 0, xgm_mat4_iface ) ||
+			!sgs_IsObject( C, 1, xgm_mat4_iface ) )
 			return SGS_EINVAL;
 		
-		v1 = (XGM_VT*) sgs_GetObjectDataP( A );
-		v2 = (XGM_VT*) sgs_GetObjectDataP( B );
+		v1 = (XGM_VT*) sgs_GetObjectData( C, 0 );
+		v2 = (XGM_VT*) sgs_GetObjectData( C, 1 );
 		
 		for( i = 0; i < 16; ++i )
 		{

@@ -325,17 +325,18 @@ static int sockaddr_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
-static int sockaddr_expr( SGS_CTX, sgs_VarObj* obj, sgs_Variable* A, sgs_Variable* B, int eop )
+static int sockaddr_expr( SGS_ARGS_OBJFUNC )
 {
+	int eop = sgs_ObjectArg( C );
 	if( eop == SGS_EOP_COMPARE )
 	{
 		sgs_Int diff = -1;
 		void *data1, *data2;
-		if( !sgs_IsObjectP( A, sockaddr_iface ) ||
-			!sgs_IsObjectP( B, sockaddr_iface ) )
+		if( !sgs_IsObject( C, 0, sockaddr_iface ) ||
+			!sgs_IsObject( C, 1, sockaddr_iface ) )
 			return SGS_EINVAL;
-		data1 = sgs_GetObjectDataP( A );
-		data2 = sgs_GetObjectDataP( B );
+		data1 = sgs_GetObjectData( C, 0 );
+		data2 = sgs_GetObjectData( C, 1 );
 		if( ((struct sockaddr_storage*)data1)->ss_family != ((struct sockaddr_storage*)data2)->ss_family )
 			diff = ((struct sockaddr_storage*)data1)->ss_family - ((struct sockaddr_storage*)data2)->ss_family;
 		else if( ((struct sockaddr_storage*)data1)->ss_family == AF_INET )

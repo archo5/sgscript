@@ -1862,11 +1862,15 @@ static SGSBOOL vm_op_negate( SGS_CTX, sgs_Variable* out, sgs_Variable* A )
 			}
 			if( O->iface->expr )
 			{
+				int arg = C->object_arg;
 				_STACK_PREPARE;
 				StkIdx ofs;
 				_STACK_PROTECT;
 				ofs = (StkIdx) ( out - C->stack_off );
-				ret = O->iface->expr( C, O, A, NULL, SGS_EOP_NEGATE );
+				stk_push( C, A );
+				C->object_arg = SGS_EOP_NEGATE;
+				ret = O->iface->expr( C, O );
+				C->object_arg = arg;
 				if( SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1 )
 				{
 					C->stack_off[ ofs ] = *stk_gettop( C );
@@ -2023,10 +2027,15 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 		
 		if( a->type == SGS_VT_OBJECT && a->data.O->iface->expr )
 		{
+			int arg = C->object_arg;
 			sgs_VarObj* O = a->data.O;
 			_STACK_PREPARE;
 			_STACK_PROTECT;
-			ret = O->iface->expr( C, O, &lA, &lB, op );
+			stk_push( C, a );
+			stk_push( C, b );
+			C->object_arg = op;
+			ret = O->iface->expr( C, O );
+			C->object_arg = arg;
 			USING_STACK
 			ret = SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1;
 			if( ret )
@@ -2046,10 +2055,15 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 		
 		if( b->type == SGS_VT_OBJECT && b->data.O->iface->expr )
 		{
+			int arg = C->object_arg;
 			sgs_VarObj* O = b->data.O;
 			_STACK_PREPARE;
 			_STACK_PROTECT;
-			ret = O->iface->expr( C, O, &lA, &lB, op );
+			stk_push( C, a );
+			stk_push( C, b );
+			C->object_arg = op;
+			ret = O->iface->expr( C, O );
+			C->object_arg = arg;
 			USING_STACK
 			ret = SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1;
 			if( ret )
@@ -2200,10 +2214,15 @@ static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		
 		if( ta == SGS_VT_OBJECT && a->data.O->iface->expr )
 		{
+			int arg = C->object_arg;
 			sgs_VarObj* O = a->data.O;
 			_STACK_PREPARE;
 			_STACK_PROTECT;
-			ret = O->iface->expr( C, O, &lA, &lB, SGS_EOP_COMPARE );
+			stk_push( C, a );
+			stk_push( C, b );
+			C->object_arg = SGS_EOP_COMPARE;
+			ret = O->iface->expr( C, O );
+			C->object_arg = arg;
 			USING_STACK
 			suc = SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1;
 			if( suc )
@@ -2219,10 +2238,15 @@ static int vm_compare( SGS_CTX, sgs_VarPtr a, sgs_VarPtr b )
 		
 		if( tb == SGS_VT_OBJECT && b->data.O->iface->expr )
 		{
+			int arg = C->object_arg;
 			sgs_VarObj* O = b->data.O;
 			_STACK_PREPARE;
 			_STACK_PROTECT;
-			ret = O->iface->expr( C, O, &lA, &lB, SGS_EOP_COMPARE );
+			stk_push( C, a );
+			stk_push( C, b );
+			C->object_arg = SGS_EOP_COMPARE;
+			ret = O->iface->expr( C, O );
+			C->object_arg = arg;
 			USING_STACK
 			suc = SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1;
 			if( suc )

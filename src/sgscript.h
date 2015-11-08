@@ -214,12 +214,10 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 
 /* - object data */
 typedef struct sgs_ObjData sgs_VarObj;
-typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj*, int /* arg */ );
+typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* );
 
 typedef int (*sgs_OC_Self) ( sgs_Context*, sgs_VarObj* );
 typedef int (*sgs_OC_SlPr) ( sgs_Context*, sgs_VarObj*, int );
-typedef int (*sgs_OC_V1Pr) ( sgs_Context*, sgs_VarObj*, sgs_Variable*, int );
-typedef int (*sgs_OC_V2Pr) ( sgs_Context*, sgs_VarObj*, sgs_Variable*, sgs_Variable*, int );
 
 typedef struct _sgs_ObjInterface
 {
@@ -237,7 +235,7 @@ typedef struct _sgs_ObjInterface
 	sgs_OC_SlPr getnext;
 	
 	sgs_OC_Self call;
-	sgs_OC_V2Pr expr;
+	sgs_OC_Self expr;
 }
 sgs_ObjInterface;
 
@@ -903,6 +901,7 @@ static SGS_INLINE SGSRESULT sgs_StdScriptFSFunc( void* ctx, SGS_CTX, int op, sgs
 
 #define SGS_RETURN_THIS( C ) sgs_Method( C ); sgs_SetStackSize( C, 1 ); return 1;
 
+#define SGS_ARGS_OBJFUNC SGS_CTX, sgs_VarObj* obj
 #define SGS_ARGS_GETINDEXFUNC SGS_CTX, sgs_VarObj* obj
 #define SGS_ARGS_SETINDEXFUNC SGS_CTX, sgs_VarObj* obj
 #define SGS_BEGIN_INDEXFUNC char* str; if( sgs_ParseString( C, 0, &str, NULL ) ){
