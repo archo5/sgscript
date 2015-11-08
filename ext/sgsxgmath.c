@@ -109,7 +109,7 @@ static int xgm_v2_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_v2_getindex( SGS_CTX, sgs_VarObj* obj )
+static int xgm_v2_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
@@ -161,12 +161,12 @@ static int xgm_v2_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	XGM_VT* hdr = (XGM_VT*) obj->data;
 	
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
 		sgs_Real vv;
-		if( !sgs_ParseRealP( C, val, &vv ) )
+		if( !sgs_ParseReal( C, 1, &vv ) )
 			return SGS_EINVAL;
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos != 0 && pos != 1 )
 			return SGS_ENOTFND;
 		hdr[ pos ] = (XGM_VT) vv;
@@ -176,25 +176,25 @@ static int xgm_v2_setindex( SGS_ARGS_SETINDEXFUNC )
 	{
 		sgs_Real vv;
 		char* str;
-		if( !sgs_ParseStringP( C, key, &str, NULL ) )
+		if( !sgs_ParseString( C, 0, &str, NULL ) )
 			return SGS_EINVAL;
 		SGS_CASE( "x" )
 		{
-			if( !sgs_ParseRealP( C, val, &vv ) )
+			if( !sgs_ParseReal( C, 1, &vv ) )
 				return SGS_EINVAL;
 			hdr[0] = (XGM_VT) vv;
 			return SGS_SUCCESS;
 		}
 		SGS_CASE( "y" )
 		{
-			if( !sgs_ParseRealP( C, val, &vv ) )
+			if( !sgs_ParseReal( C, 1, &vv ) )
 				return SGS_EINVAL;
 			hdr[1] = (XGM_VT) vv;
 			return SGS_SUCCESS;
 		}
 		SGS_CASE( "angle" )
 		{
-			if( !sgs_ParseRealP( C, val, &vv ) )
+			if( !sgs_ParseReal( C, 1, &vv ) )
 				return SGS_EINVAL;
 			XGM_VT curang = (XGM_VT) atan2( hdr[1], hdr[0] );
 			XGM_VT c = (XGM_VT) cos( (XGM_VT) vv - curang );
@@ -389,16 +389,16 @@ static int xgm_v3_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v3_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_v3_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	sgs_Real val;
 	XGM_OHDR;
 	
-	if( !sgs_ParseRealP( C, vv, &val ) )
+	if( !sgs_ParseReal( C, 1, &val ) )
 		return SGS_EINVAL;
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos != 0 && pos != 1 && pos != 2 )
 			return SGS_ENOTFND;
 		hdr[ pos ] = (XGM_VT) val;
@@ -408,7 +408,7 @@ static int xgm_v3_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Var
 	{
 		char* str;
 		sgs_SizeVal size;
-		if( sgs_ParseStringP( C, key, &str, &size ) )
+		if( sgs_ParseString( C, 0, &str, &size ) )
 		{
 			if( !strcmp( str, "x" ) ){ hdr[0] = (XGM_VT) val; return SGS_SUCCESS; }
 			if( !strcmp( str, "y" ) ){ hdr[1] = (XGM_VT) val; return SGS_SUCCESS; }
@@ -625,16 +625,16 @@ static int xgm_v4_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v4_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_v4_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	sgs_Real val;
 	XGM_OHDR;
 	
-	if( !sgs_ParseRealP( C, vv, &val ) )
+	if( !sgs_ParseReal( C, 1, &val ) )
 		return SGS_EINVAL;
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
 			return SGS_ENOTFND;
 		hdr[ pos ] = (XGM_VT) val;
@@ -643,7 +643,7 @@ static int xgm_v4_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Var
 	else
 	{
 		char* str;
-		if( sgs_ParseStringP( C, key, &str, NULL ) )
+		if( sgs_ParseString( C, 0, &str, NULL ) )
 		{
 			if( !strcmp( str, "x" ) ){ hdr[0] = (XGM_VT) val; return SGS_SUCCESS; }
 			if( !strcmp( str, "y" ) ){ hdr[1] = (XGM_VT) val; return SGS_SUCCESS; }
@@ -835,18 +835,18 @@ static int xgm_b2_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_b2_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_b2_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		if( !strcmp( str, "x1" ) ) return sgs_ParseVTP( C, vv, &hdr[0] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "y1" ) ) return sgs_ParseVTP( C, vv, &hdr[1] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "x2" ) ) return sgs_ParseVTP( C, vv, &hdr[2] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "y2" ) ) return sgs_ParseVTP( C, vv, &hdr[3] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "p1" ) ) return sgs_ParseVec2P( C, vv, hdr, 1 ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "p2" ) ) return sgs_ParseVec2P( C, vv, hdr + 2, 1 ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "x1" ) ) return sgs_ParseVT( C, 1, &hdr[0] ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "y1" ) ) return sgs_ParseVT( C, 1, &hdr[1] ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "x2" ) ) return sgs_ParseVT( C, 1, &hdr[2] ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "y2" ) ) return sgs_ParseVT( C, 1, &hdr[3] ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "p1" ) ) return sgs_ParseVec2( C, 1, hdr, 1 ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "p2" ) ) return sgs_ParseVec2( C, 1, hdr + 2, 1 ) ? SGS_SUCCESS : SGS_EINVAL;
 	}
 	return SGS_ENOTFND;
 }
@@ -1004,20 +1004,20 @@ static int xgm_b3_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_b3_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_b3_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		if( !strcmp( str, "x1" ) ) return sgs_ParseVTP( C, vv, &hdr[0] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "y1" ) ) return sgs_ParseVTP( C, vv, &hdr[1] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "z1" ) ) return sgs_ParseVTP( C, vv, &hdr[2] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "x2" ) ) return sgs_ParseVTP( C, vv, &hdr[3] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "y2" ) ) return sgs_ParseVTP( C, vv, &hdr[4] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "z2" ) ) return sgs_ParseVTP( C, vv, &hdr[5] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "p1" ) ) return sgs_ParseVec3P( C, vv, hdr, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "p2" ) ) return sgs_ParseVec3P( C, vv, hdr + 3, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "x1" ) ) return sgs_ParseVT( C, 1, &hdr[0] ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "y1" ) ) return sgs_ParseVT( C, 1, &hdr[1] ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "z1" ) ) return sgs_ParseVT( C, 1, &hdr[2] ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "x2" ) ) return sgs_ParseVT( C, 1, &hdr[3] ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "y2" ) ) return sgs_ParseVT( C, 1, &hdr[4] ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "z2" ) ) return sgs_ParseVT( C, 1, &hdr[5] ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "p1" ) ) return sgs_ParseVec3( C, 1, hdr, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		if( !strcmp( str, "p2" ) ) return sgs_ParseVec3( C, 1, hdr + 3, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
 	}
 	return SGS_ENOTFND;
 }
@@ -1176,15 +1176,15 @@ static int xgm_col_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_col_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_col_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	sgs_Real val;
 	XGM_OHDR;
-	if( !sgs_ParseRealP( C, vv, &val ) )
+	if( !sgs_ParseReal( C, 1, &val ) )
 		return SGS_EINVAL;
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
 			return SGS_ENOTFND;
 		hdr[ pos ] = (XGM_VT) val;
@@ -1193,7 +1193,7 @@ static int xgm_col_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Va
 	else
 	{
 		char* str;
-		if( !sgs_ParseStringP( C, key, &str, NULL ) )
+		if( !sgs_ParseString( C, 0, &str, NULL ) )
 		{
 			if( !strcmp( str, "r" ) ){ hdr[0] = (XGM_VT) val; return SGS_SUCCESS; }
 			if( !strcmp( str, "g" ) ){ hdr[1] = (XGM_VT) val; return SGS_SUCCESS; }
@@ -1995,16 +1995,16 @@ static int xgm_quat_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_quat_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_quat_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	sgs_Real val;
 	XGM_OHDR;
 	
-	if( !sgs_ParseRealP( C, vv, &val ) )
+	if( !sgs_ParseReal( C, 1, &val ) )
 		return SGS_EINVAL;
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos != 0 && pos != 1 && pos != 2 && pos != 3 )
 			return SGS_ENOTFND;
 		hdr[ pos ] = (XGM_VT) val;
@@ -2013,7 +2013,7 @@ static int xgm_quat_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_V
 	else
 	{
 		char* str;
-		if( sgs_ParseStringP( C, key, &str, NULL ) )
+		if( sgs_ParseString( C, 0, &str, NULL ) )
 		{
 			if( !strcmp( str, "x" ) ){ hdr[0] = (XGM_VT) val; return SGS_SUCCESS; }
 			if( !strcmp( str, "y" ) ){ hdr[1] = (XGM_VT) val; return SGS_SUCCESS; }
@@ -2583,17 +2583,17 @@ static int xgm_m3_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_m3_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_m3_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
 	sgs_Real val;
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos < 0 || pos > 8 )
 			return SGS_ENOTFND;
-		if( sgs_ParseRealP( C, vv, &val ) )
+		if( sgs_ParseReal( C, 1, &val ) )
 		{
 			hdr[ pos ] = (XGM_VT) val;
 			return SGS_SUCCESS;
@@ -2602,7 +2602,7 @@ static int xgm_m3_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Var
 			return SGS_EINVAL;
 	}
 	
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		if( *str == 'm' && str[1] && str[2] && !str[3] )
 		{
@@ -2610,7 +2610,7 @@ static int xgm_m3_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Var
 			int ny = str[2] - '0';
 			if( nx >= 0 && nx < 3 && ny >= 0 && ny < 3 )
 			{
-				if( sgs_ParseRealP( C, vv, &val ) )
+				if( sgs_ParseReal( C, 1, &val ) )
 				{
 					/* rows = x, columns = y, matrix is column-major */
 					hdr[ ny + nx * 3 ] = (XGM_VT) val;
@@ -3138,17 +3138,17 @@ static int xgm_m4_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_m4_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int prop )
+static int xgm_m4_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
 	sgs_Real val;
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_Int pos = sgs_GetIntP( C, key );
+		sgs_Int pos = sgs_GetInt( C, 0 );
 		if( pos < 0 || pos > 15 )
 			return SGS_ENOTFND;
-		if( sgs_ParseRealP( C, vv, &val ) )
+		if( sgs_ParseReal( C, 1, &val ) )
 		{
 			hdr[ pos ] = (XGM_VT) val;
 			return SGS_SUCCESS;
@@ -3157,7 +3157,7 @@ static int xgm_m4_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Var
 			return SGS_EINVAL;
 	}
 	
-	if( sgs_ParseStringP( C, key, &str, NULL ) )
+	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
 		if( *str == 'm' && str[1] && str[2] && !str[3] )
 		{
@@ -3165,7 +3165,7 @@ static int xgm_m4_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Var
 			int ny = str[2] - '0';
 			if( nx >= 0 && nx < 4 && ny >= 0 && ny < 4 )
 			{
-				if( sgs_ParseRealP( C, vv, &val ) )
+				if( sgs_ParseReal( C, 1, &val ) )
 				{
 					/* rows = x, columns = y, matrix is column-major */
 					hdr[ ny + nx * 4 ] = (XGM_VT) val;
@@ -3630,16 +3630,16 @@ static int xgm_fla_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_fla_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* vv, int isprop )
+static int xgm_fla_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	sgs_Real val;
 	XGM_FLAHDR;
-	if( key->type == SGS_VT_INT )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		sgs_SizeVal pos = (sgs_SizeVal) sgs_GetIntP( C, key );
+		sgs_SizeVal pos = (sgs_SizeVal) sgs_GetInt( C, 0 );
 		if( pos < 0 || pos > flarr->size )
 			return SGS_ENOTFND;
-		if( sgs_ParseRealP( C, vv, &val ) )
+		if( sgs_ParseReal( C, 1, &val ) )
 		{
 			flarr->data[ pos ] = (XGM_VT) val;
 			return SGS_SUCCESS;

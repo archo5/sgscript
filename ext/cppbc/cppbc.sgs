@@ -990,7 +990,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			if( item.what == "PROPERTY" )
 			{
 				if( item.access >= 0 )
-					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.name$" = %TYPEFUNC%( C, val%ISOBJ% );";
+					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.name$" = %TYPEFUNC%( C, 1%ISOBJ% );";
 			}
 			else if( item.what == "PROPERTY_FUNC" )
 			{
@@ -998,9 +998,9 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 				if( item.validate !== null )
 					itemline $= "if( !( static_cast<%OBJ%*>( obj->data )->"$item.validate$" ) ){ return SGS_EINPROC; } ";
 				if( item.write === true )
-					itemline $= "static_cast<%OBJ%*>( obj->data )->"$item.srcname$" = %TYPEFUNC%( C, val%ISOBJ% );";
+					itemline $= "static_cast<%OBJ%*>( obj->data )->"$item.srcname$" = %TYPEFUNC%( C, 1%ISOBJ% );";
 				else if( item.write )
-					itemline $= "static_cast<%OBJ%*>( obj->data )->"$item.write$"( %TYPEFUNC%( C, val%ISOBJ% ) );";
+					itemline $= "static_cast<%OBJ%*>( obj->data )->"$item.write$"( %TYPEFUNC%( C, 1%ISOBJ% ) );";
 				if( item.writecb )
 					itemline $= "\n\t\t\tstatic_cast<%OBJ%*>( obj->data )->"$item.writecb$"();";
 			}
@@ -1011,7 +1011,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 				, {
 					"%OBJ%" = obj.name,
 					"%NAME%" = if( isset( item, "varname" ), item.varname || item.name, item.name ),
-					"%TYPEFUNC%" = if( cppbc_type_is_voidptr( item.type ), "sgs_GetPtrP", "sgs_GetVarP<" $ cppbc_fix_type( item.type ) $ ">()" ),
+					"%TYPEFUNC%" = if( cppbc_type_is_voidptr( item.type ), "sgs_GetPtr", "sgs_GetVar<" $ cppbc_fix_type( item.type ) $ ">()" ),
 					"%ISOBJ%" = if( string_part( item.type, 0, 4 ) != "void" && item.type[ item.type.length - 1 ] == "*", ", true", "" ),
 				});
 			}

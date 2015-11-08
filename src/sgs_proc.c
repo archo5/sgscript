@@ -1711,8 +1711,7 @@ static SGSRESULT vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_
 	else if( obj->type == SGS_VT_OBJECT && obj->data.O->iface->setindex )
 	{
 nextcase:;
-		sgs_Variable idxvar = *idx;
-		sgs_Variable srcvar = *src;
+		int arg = C->object_arg;
 		sgs_VarObj* O = obj->data.O;
 		_STACK_PREPARE;
 		
@@ -1721,11 +1720,11 @@ nextcase:;
 		C->sf_count++;
 		
 		_STACK_PROTECT;
-		VAR_ACQUIRE( &idxvar );
-		VAR_ACQUIRE( &srcvar );
-		ret = O->iface->setindex( C, O, &idxvar, &srcvar, isprop );
-		VAR_RELEASE( &idxvar );
-		VAR_RELEASE( &srcvar );
+		stk_push( C, idx );
+		stk_push( C, src );
+		C->object_arg = isprop;
+		ret = O->iface->setindex( C, O );
+		C->object_arg = arg;
 		
 		C->sf_count--;
 		_STACK_UNPROTECT;

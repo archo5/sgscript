@@ -4220,7 +4220,7 @@ static int utf8it_setindex( SGS_ARGS_SETINDEXFUNC )
 		SGS_CASE( "offset" )
 		{
 			sgs_Int V;
-			if( sgs_ParseIntP( C, val, &V ) )
+			if( sgs_ParseInt( C, 1, &V ) )
 			{
 				IT->i = U8I_PREPOS | (uint32_t) V;
 				return SGS_SUCCESS;

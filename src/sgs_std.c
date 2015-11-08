@@ -711,21 +711,21 @@ int sgsstd_array_getindex( SGS_ARGS_GETINDEXFUNC )
 	}
 }
 
-static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int prop )
+static int sgsstd_array_setindex( SGS_ARGS_SETINDEXFUNC )
 {
-	if( prop )
+	if( C->object_arg )
 		return SGS_ENOTSUP;
 	else
 	{
 		SGSARR_HDR_OI;
 		sgs_Variable* ptr = SGSARR_PTR( hdr );
-		sgs_Int i = sgs_GetIntP( C, key );
+		sgs_Int i = sgs_GetInt( C, 0 );
 		if( i < 0 || i >= hdr->size )
 		{
 			sgs_Msg( C, SGS_WARNING, "array index out of bounds" );
 			return SGS_EBOUNDS;
 		}
-		sgs_Assign( C, ptr + i, val );
+		sgs_StoreVariable( C, ptr + i );
 		return SGS_SUCCESS;
 	}
 }
@@ -1088,12 +1088,15 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 	return SGS_EINVAL;
 }
 
-static int sgsstd_dict_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int prop )
+static int sgsstd_dict_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	HTHDR;
-	if( sgs_ParseStringP( C, key, NULL, NULL ) )
+	if( sgs_ParseString( C, 0, NULL, NULL ) )
 	{
-		sgs_vht_set( ht, C, key, val );
+		sgs_Variable key, val;
+		sgs_PeekStackItem( C, 0, &key );
+		sgs_PeekStackItem( C, 1, &val );
+		sgs_vht_set( ht, C, &key, &val );
 		return SGS_SUCCESS;
 	}
 	return SGS_EINVAL;
@@ -1337,10 +1340,13 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_map_setindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, sgs_Variable* val, int prop )
+static int sgsstd_map_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	HTHDR;
-	sgs_vht_set( ht, C, key, val );
+	sgs_Variable key, val;
+	sgs_PeekStackItem( C, 0, &key );
+	sgs_PeekStackItem( C, 1, &val );
+	sgs_vht_set( ht, C, &key, &val );
 	return SGS_SUCCESS;
 }
 

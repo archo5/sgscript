@@ -122,11 +122,14 @@ int main( int argc, char** argv )
 		puts( val == 62 ? "- context-aware" : "! CONTEXT PASSING ERROR" );
 	}
 	
+	printf( "\n" );
 	// free handles before destroying the engine
+	puts( "destroying object A" );
 	aA = Account::Handle();
+	puts( "destroying object B" );
 	aB = Account::Handle();
 	
-	printf( "\n" );
+	puts( "destroying engine" );
 	sgs_DestroyEngine( C );
 	
 	return 0;
