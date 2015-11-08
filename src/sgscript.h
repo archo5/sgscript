@@ -507,19 +507,20 @@ SGS_APIFUNC void sgs_InitReal( sgs_Variable* out, sgs_Real value );
 SGS_APIFUNC void sgs_InitStringBuf( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal size );
 SGS_APIFUNC void sgs_InitString( SGS_CTX, sgs_Variable* out, const char* str );
 SGS_APIFUNC void sgs_InitCFunction( sgs_Variable* out, sgs_CFunc func );
-SGS_APIFUNC void sgs_InitObject( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInterface* iface );
-SGS_APIFUNC void* sgs_InitObjectIPA( SGS_CTX, sgs_Variable* out, uint32_t added, sgs_ObjInterface* iface );
-SGS_APIFUNC void sgs_InitPtr( sgs_Variable* out, void* ptr );
 SGS_APIFUNC void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj );
+SGS_APIFUNC void sgs_InitPtr( sgs_Variable* out, void* ptr );
 
-SGS_APIFUNC SGSRESULT sgs_InitArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems );
-SGS_APIFUNC SGSRESULT sgs_InitDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems );
-SGS_APIFUNC SGSRESULT sgs_InitMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems );
+/* pushed to stack if out = null */
+SGS_APIFUNC SGSONE sgs_CreateObject( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInterface* iface );
+SGS_APIFUNC void* sgs_CreateObjectIPA( SGS_CTX, sgs_Variable* out, uint32_t added, sgs_ObjInterface* iface );
+SGS_APIFUNC SGSRESULT sgs_CreateArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems );
+SGS_APIFUNC SGSRESULT sgs_CreateDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems );
+SGS_APIFUNC SGSRESULT sgs_CreateMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems );
 
 /*
 	STACK & SUB-ITEMS
 */
-SGS_APIFUNC SGSONE sgs_PushNull( SGS_CTX );
+#define sgs_PushNull( C ) sgs_PushNulls( C, 1 )
 SGS_APIFUNC SGSONE sgs_PushNulls( SGS_CTX, int count );
 SGS_APIFUNC SGSONE sgs_PushBool( SGS_CTX, sgs_Bool value );
 SGS_APIFUNC SGSONE sgs_PushInt( SGS_CTX, sgs_Int value );
@@ -527,14 +528,8 @@ SGS_APIFUNC SGSONE sgs_PushReal( SGS_CTX, sgs_Real value );
 SGS_APIFUNC SGSONE sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size );
 SGS_APIFUNC SGSONE sgs_PushString( SGS_CTX, const char* str );
 SGS_APIFUNC SGSONE sgs_PushCFunction( SGS_CTX, sgs_CFunc func );
-SGS_APIFUNC SGSONE sgs_PushObject( SGS_CTX, void* data, sgs_ObjInterface* iface );
-SGS_APIFUNC void* sgs_PushObjectIPA( SGS_CTX, uint32_t added, sgs_ObjInterface* iface );
-SGS_APIFUNC SGSONE sgs_PushPtr( SGS_CTX, void* ptr );
 SGS_APIFUNC SGSONE sgs_PushObjectPtr( SGS_CTX, sgs_VarObj* obj );
-
-SGS_APIFUNC SGSRESULT sgs_PushArray( SGS_CTX, sgs_SizeVal numitems );
-SGS_APIFUNC SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems );
-SGS_APIFUNC SGSRESULT sgs_PushMap( SGS_CTX, sgs_SizeVal numitems );
+SGS_APIFUNC SGSONE sgs_PushPtr( SGS_CTX, void* ptr );
 
 SGS_APIFUNC SGSRESULT sgs_PushVariable( SGS_CTX, sgs_Variable* var );
 SGS_APIFUNC SGSRESULT sgs_StoreVariable( SGS_CTX, sgs_Variable* var );

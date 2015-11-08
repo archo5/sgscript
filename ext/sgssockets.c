@@ -263,7 +263,7 @@ static int sockaddr_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int 
 			{
 				for( i = 0; i < sz; ++i )
 					sgs_PushInt( C, buf[ i ] );
-				sgs_PushArray( C, sz );
+				sgs_CreateArray( C, NULL, sz );
 			}
 			else { sgs_PushNull( C ); sgs_Msg( C, SGS_WARNING, "addr_bytes supported only for AF_INET[6]" ); }
 			return SGS_SUCCESS;
@@ -385,7 +385,7 @@ static sgs_ObjInterface sockaddr_iface[1] =
 
 static void push_sockaddr( SGS_CTX, struct sockaddr_storage* sa, size_t size )
 {
-	void* ss = sgs_PushObjectIPA( C, sizeof(struct sockaddr_storage), sockaddr_iface );
+	void* ss = sgs_CreateObjectIPA( C, NULL, sizeof(struct sockaddr_storage), sockaddr_iface );
 	memset( ss, 0, sizeof(struct sockaddr_storage) );
 	memcpy( ss, sa, size );
 }
@@ -524,11 +524,11 @@ static int sgs_socket_getaddrinfo( SGS_CTX )
 		sgs_PushString( C, "addr" );
 		push_sockaddr( C, (struct sockaddr_storage*) (void*) pp->ai_addr, pp->ai_addrlen );
 		
-		sgs_PushDict( C, sgs_StackSize( C ) - sz1 );
+		sgs_CreateDict( C, NULL, sgs_StackSize( C ) - sz1 );
 		pp = pp->ai_next;
 	}
 	freeaddrinfo( list );
-	sgs_PushArray( C, sgs_StackSize( C ) - sz0 );
+	sgs_CreateArray( C, NULL, sgs_StackSize( C ) - sz0 );
 	return 1;
 }
 
@@ -614,7 +614,7 @@ static int socketI_accept( SGS_CTX )
 		STDLIB_WARN( "failed to accept connection" )
 	}
 	SOCKCLEARERR;
-	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
+	sgs_CreateObject( C, NULL, (void*) (size_t) S, socket_iface );
 	push_sockaddr( C, &sa, (size_t) sa_size );
 	return 2;
 }
@@ -1017,7 +1017,7 @@ static int sgs_socket( SGS_CTX )
 	}
 	SOCKCLEARERR;
 	
-	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
+	sgs_CreateObject( C, NULL, (void*) (size_t) S, socket_iface );
 	return 1;
 }
 
@@ -1038,7 +1038,7 @@ static int sgs_socket_tcp( SGS_CTX )
 	}
 	SOCKCLEARERR;
 	
-	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
+	sgs_CreateObject( C, NULL, (void*) (size_t) S, socket_iface );
 	return 1;
 }
 
@@ -1059,7 +1059,7 @@ static int sgs_socket_udp( SGS_CTX )
 	}
 	SOCKCLEARERR;
 	
-	sgs_PushObject( C, (void*) (size_t) S, socket_iface );
+	sgs_CreateObject( C, NULL, (void*) (size_t) S, socket_iface );
 	return 1;
 }
 

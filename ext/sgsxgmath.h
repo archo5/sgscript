@@ -45,45 +45,25 @@ extern sgs_ObjInterface xgm_mat3_iface[1];
 extern sgs_ObjInterface xgm_mat4_iface[1];
 extern sgs_ObjInterface xgm_floatarr_iface[1];
 
-SGS_APIFUNC void sgs_InitVec2( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y );
-SGS_APIFUNC void sgs_InitVec3( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z );
-SGS_APIFUNC void sgs_InitVec4( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w );
-SGS_APIFUNC void sgs_InitAABB2( SGS_CTX, sgs_Variable* var, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 );
-SGS_APIFUNC void sgs_InitAABB3( SGS_CTX, sgs_Variable* var, const XGM_VT* v3a, const XGM_VT* v3b );
-SGS_APIFUNC void sgs_InitColor( SGS_CTX, sgs_Variable* var, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a );
-SGS_APIFUNC void sgs_InitQuat( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w );
-SGS_APIFUNC void sgs_InitMat3( SGS_CTX, sgs_Variable* var, const XGM_VT* v9f, int transpose );
-SGS_APIFUNC void sgs_InitMat4( SGS_CTX, sgs_Variable* var, const XGM_VT* v16f, int transpose );
-SGS_APIFUNC void sgs_InitFloatArray( SGS_CTX, sgs_Variable* var, const XGM_VT* vfn, sgs_SizeVal size );
+SGS_APIFUNC SGSONE sgs_CreateVec2( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y );
+SGS_APIFUNC SGSONE sgs_CreateVec3( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z );
+SGS_APIFUNC SGSONE sgs_CreateVec4( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w );
+SGS_APIFUNC SGSONE sgs_CreateAABB2( SGS_CTX, sgs_Variable* var, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 );
+SGS_APIFUNC SGSONE sgs_CreateAABB3( SGS_CTX, sgs_Variable* var, const XGM_VT* v3a, const XGM_VT* v3b );
+SGS_APIFUNC SGSONE sgs_CreateColor( SGS_CTX, sgs_Variable* var, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a );
+SGS_APIFUNC SGSONE sgs_CreateQuat( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w );
+SGS_APIFUNC SGSONE sgs_CreateMat3( SGS_CTX, sgs_Variable* var, const XGM_VT* v9f, int transpose );
+SGS_APIFUNC SGSONE sgs_CreateMat4( SGS_CTX, sgs_Variable* var, const XGM_VT* v16f, int transpose );
+SGS_APIFUNC SGSONE sgs_CreateFloatArray( SGS_CTX, sgs_Variable* var, const XGM_VT* vfn, sgs_SizeVal size );
 
-SGS_APIFUNC void sgs_InitVec2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v2f );
-SGS_APIFUNC void sgs_InitVec3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f );
-SGS_APIFUNC void sgs_InitVec4p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f );
-SGS_APIFUNC void sgs_InitAABB2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f );
-SGS_APIFUNC void sgs_InitAABB3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v6f );
-SGS_APIFUNC void sgs_InitColorp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f );
-SGS_APIFUNC void sgs_InitColorvp( SGS_CTX, sgs_Variable* var, const XGM_VT* vf, int numfloats );
-SGS_APIFUNC void sgs_InitQuatp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f );
-
-SGS_APIFUNC SGSONE sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y );
-SGS_APIFUNC SGSONE sgs_PushVec3( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z );
-SGS_APIFUNC SGSONE sgs_PushVec4( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w );
-SGS_APIFUNC SGSONE sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 );
-SGS_APIFUNC SGSONE sgs_PushAABB3( SGS_CTX, const XGM_VT* v3a, const XGM_VT* v3b );
-SGS_APIFUNC SGSONE sgs_PushColor( SGS_CTX, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a );
-SGS_APIFUNC SGSONE sgs_PushQuat( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w );
-SGS_APIFUNC SGSONE sgs_PushMat3( SGS_CTX, const XGM_VT* v9f, int transpose );
-SGS_APIFUNC SGSONE sgs_PushMat4( SGS_CTX, const XGM_VT* v16f, int transpose );
-SGS_APIFUNC SGSONE sgs_PushFloatArray( SGS_CTX, const XGM_VT* vfn, sgs_SizeVal size );
-
-SGS_APIFUNC SGSONE sgs_PushVec2p( SGS_CTX, const XGM_VT* v2f );
-SGS_APIFUNC SGSONE sgs_PushVec3p( SGS_CTX, const XGM_VT* v3f );
-SGS_APIFUNC SGSONE sgs_PushVec4p( SGS_CTX, const XGM_VT* v4f );
-SGS_APIFUNC SGSONE sgs_PushAABB2p( SGS_CTX, const XGM_VT* v4f );
-SGS_APIFUNC SGSONE sgs_PushAABB3p( SGS_CTX, const XGM_VT* v6f );
-SGS_APIFUNC SGSONE sgs_PushColorp( SGS_CTX, const XGM_VT* v4f );
-SGS_APIFUNC SGSONE sgs_PushColorvp( SGS_CTX, const XGM_VT* vf, int numfloats );
-SGS_APIFUNC SGSONE sgs_PushQuatp( SGS_CTX, const XGM_VT* v4f );
+SGS_APIFUNC SGSONE sgs_CreateVec2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v2f );
+SGS_APIFUNC SGSONE sgs_CreateVec3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f );
+SGS_APIFUNC SGSONE sgs_CreateVec4p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f );
+SGS_APIFUNC SGSONE sgs_CreateAABB2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f );
+SGS_APIFUNC SGSONE sgs_CreateAABB3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v6f );
+SGS_APIFUNC SGSONE sgs_CreateColorp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f );
+SGS_APIFUNC SGSONE sgs_CreateColorvp( SGS_CTX, sgs_Variable* var, const XGM_VT* vf, int numfloats );
+SGS_APIFUNC SGSONE sgs_CreateQuatp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f );
 
 SGS_APIFUNC SGSBOOL sgs_ParseVT( SGS_CTX, sgs_StkIdx item, XGM_VT* out );
 SGS_APIFUNC SGSBOOL sgs_ParseVTP( SGS_CTX, sgs_Variable* var, XGM_VT* out );
@@ -126,24 +106,24 @@ SGS_APIFUNC int xgm_module_entry_point( SGS_CTX );
 
 
 /* utility macros */
-#define SGS_RETURN_VEC2( x, y ) return sgs_PushVec2( C, (XGM_VT)(x), (XGM_VT)(y) )
-#define SGS_RETURN_VEC3( x, y, z ) return sgs_PushVec3( C, (XGM_VT)(x), (XGM_VT)(y), (XGM_VT)(z) )
-#define SGS_RETURN_VEC4( x, y, z, w ) return sgs_PushVec4( C, (XGM_VT)(x), (XGM_VT)(y), (XGM_VT)(z), (XGM_VT)(w) )
-#define SGS_RETURN_AABB2( x1, y1, x2, y2 ) return sgs_PushAABB2( C, (XGM_VT)(x1), (XGM_VT)(y1), (XGM_VT)(x2), (XGM_VT)(y2) )
-#define SGS_RETURN_AABB3( v1, v2 ) return sgs_PushAABB2( C, v1, v2 )
-#define SGS_RETURN_COLOR( r, g, b, a ) return sgs_PushColor( C, (XGM_VT)(r), (XGM_VT)(g), (XGM_VT)(b), (XGM_VT)(a) )
-#define SGS_RETURN_QUAT( x, y, z, w ) return sgs_PushQuat( C, (XGM_VT)(x), (XGM_VT)(y), (XGM_VT)(z), (XGM_VT)(w) )
-#define SGS_RETURN_VEC2P( value ) return sgs_PushVec2p( C, value )
-#define SGS_RETURN_VEC3P( value ) return sgs_PushVec3p( C, value )
-#define SGS_RETURN_VEC4P( value ) return sgs_PushVec4p( C, value )
-#define SGS_RETURN_AABB2P( value ) return sgs_PushAABB2p( C, value )
-#define SGS_RETURN_AABB3P( value ) return sgs_PushAABB3p( C, value )
-#define SGS_RETURN_COLORP( value ) return sgs_PushColorp( C, value )
-#define SGS_RETURN_QUATP( value ) return sgs_PushQuatp( C, value )
-#define SGS_RETURN_MAT3( value ) return sgs_PushMat3( C, value, 0 )
-#define SGS_RETURN_MAT3_TRANSPOSED( value ) return sgs_PushMat3( C, value, 1 )
-#define SGS_RETURN_MAT4( value ) return sgs_PushMat4( C, value, 0 )
-#define SGS_RETURN_MAT4_TRANSPOSED( value ) return sgs_PushMat4( C, value, 1 )
+#define SGS_RETURN_VEC2( x, y ) return sgs_CreateVec2( C, NULL, (XGM_VT)(x), (XGM_VT)(y) )
+#define SGS_RETURN_VEC3( x, y, z ) return sgs_CreateVec3( C, NULL, (XGM_VT)(x), (XGM_VT)(y), (XGM_VT)(z) )
+#define SGS_RETURN_VEC4( x, y, z, w ) return sgs_CreateVec4( C, NULL, (XGM_VT)(x), (XGM_VT)(y), (XGM_VT)(z), (XGM_VT)(w) )
+#define SGS_RETURN_AABB2( x1, y1, x2, y2 ) return sgs_CreateAABB2( C, NULL, (XGM_VT)(x1), (XGM_VT)(y1), (XGM_VT)(x2), (XGM_VT)(y2) )
+#define SGS_RETURN_AABB3( v1, v2 ) return sgs_CreateAABB2( C, NULL, v1, v2 )
+#define SGS_RETURN_COLOR( r, g, b, a ) return sgs_CreateColor( C, NULL, (XGM_VT)(r), (XGM_VT)(g), (XGM_VT)(b), (XGM_VT)(a) )
+#define SGS_RETURN_QUAT( x, y, z, w ) return sgs_CreateQuat( C, NULL, (XGM_VT)(x), (XGM_VT)(y), (XGM_VT)(z), (XGM_VT)(w) )
+#define SGS_RETURN_VEC2P( value ) return sgs_CreateVec2p( C, NULL, value )
+#define SGS_RETURN_VEC3P( value ) return sgs_CreateVec3p( C, NULL, value )
+#define SGS_RETURN_VEC4P( value ) return sgs_CreateVec4p( C, NULL, value )
+#define SGS_RETURN_AABB2P( value ) return sgs_CreateAABB2p( C, NULL, value )
+#define SGS_RETURN_AABB3P( value ) return sgs_CreateAABB3p( C, NULL, value )
+#define SGS_RETURN_COLORP( value ) return sgs_CreateColorp( C, NULL, value )
+#define SGS_RETURN_QUATP( value ) return sgs_CreateQuatp( C, NULL, value )
+#define SGS_RETURN_MAT3( value ) return sgs_CreateMat3( C, NULL, value, 0 )
+#define SGS_RETURN_MAT3_TRANSPOSED( value ) return sgs_CreateMat3( C, NULL, value, 1 )
+#define SGS_RETURN_MAT4( value ) return sgs_CreateMat4( C, NULL, value, 0 )
+#define SGS_RETURN_MAT4_TRANSPOSED( value ) return sgs_CreateMat4( C, NULL, value, 1 )
 
 #define SGS_PARSE_VEC2( outptr, strict ) { return sgs_ParseVec2P( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }
 #define SGS_PARSE_VEC3( outptr, strict ) { return sgs_ParseVec3P( C, val, outptr, strict ) ? SGS_SUCCESS : SGS_EINVAL; }

@@ -114,7 +114,7 @@ int main( int argc, char** argv )
 			
 			for( j = i; j < argc; ++j )
 				sgs_PushString( C, argv[ j ] );
-			sgs_PushArray( C, argc - i );
+			sgs_CreateArray( C, NULL, argc - i );
 			sgs_StoreGlobal( C, "argv" );
 			
 			sgs_PushInt( C, argc - i );

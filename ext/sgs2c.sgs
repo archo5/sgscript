@@ -108,7 +108,7 @@ function c_compile_comparison( R, A, B, sign )
 function c_compile_initop( R, what, count )
 {
 	return "\nsgs_Release( C, T+" $ R $ " );"
-		$ "\nsgs_Init" $ what $ "( C, T+" $ R $ ", " $ count $ " );";
+		$ "\nsgs_Create" $ what $ "( C, T+" $ R $ ", " $ count $ " );";
 }
 
 function c_compile_const_init( fdata )
@@ -472,7 +472,7 @@ function c_compile_init_inner( fdata, funcname )
 		output = "\nsgs_Variable* CN = (sgs_Variable*)\n\t";
 	else
 		output = "\n";
-	output $= "sgs_InitObjectIPA( C, out, sizeof(sgs_Variable) * "
+	output $= "sgs_CreateObjectIPA( C, out, sizeof(sgs_Variable) * "
 		$ fdata.consts.size $ ", T" $ funcname $ " );";
 	output $= c_compile_const_init( fdata );
 	output $= "\nreturn SGS_SUCCESS;";
@@ -525,6 +525,8 @@ function c_compile_func( fdata, name_ovr )
 function generate_c_file( cdata )
 {
 	cdata = meta_unpack( cdata );
+	if( cdata === null )
+		return E( "Failed to parse the compiled script (internal error)" );
 	cdata.rname = "<main>";
 	cdata.name = "sgs";
 	return c_header $ c_compile_func( cdata, "sgscript_main" );

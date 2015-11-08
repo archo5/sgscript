@@ -4,12 +4,12 @@
 
 void pushVec3( SGS_CTX, float x, float y, float z )
 {
-	SGS_PUSHLITECLASS( C, Vec3, (x,y,z) );
+	SGS_CREATELITECLASS( C, NULL, Vec3, (x,y,z) );
 }
 
 Account::Handle pushAccount( SGS_CTX, sgsString name )
 {
-	Account* acc = SGS_PUSHCLASS( C, Account, () );
+	Account* acc = SGS_CREATECLASS( C, NULL, Account, () );
 	if( name.not_null() )
 		acc->name = name;
 	return Account::Handle( acc );

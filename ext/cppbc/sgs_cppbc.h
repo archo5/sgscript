@@ -692,7 +692,7 @@ template< class T > inline sgsString sgs_DumpData( SGS_CTX, const std::vector<T>
 
 /* PushVar [stack] */
 template< class T > void sgs_PushVar( SGS_CTX, const T& );
-template< class T > inline void sgs_PushVar( SGS_CTX, T* v ){ sgs_PushClass( C, v ); }
+template< class T > inline void sgs_PushVar( SGS_CTX, T* v ){ sgs_CreateClass( C, NULL, v ); }
 template< class T > inline void sgs_PushVar( SGS_CTX, sgsMaybe<T> v ){ if( v.isset ) sgs_PushVar( C, v.data ); else sgs_PushNull( C ); }
 template< class T > inline void sgs_PushVar( SGS_CTX, sgsHandle<T> v ){ v.push( C ); }
 template<> inline void sgs_PushVar<sgsVariable>( SGS_CTX, const sgsVariable& v ){ v.push( C ); }
@@ -851,39 +851,45 @@ template< class T > T sgsVariable::get()
 }
 
 
-template< class T > void sgs_PushClass( SGS_CTX, T* inst )
+template< class T > void sgs_CreateClass( SGS_CTX, sgs_Variable* out, T* inst )
 {
-	sgs_PushObject( C, inst, T::_sgs_interface );
+	sgs_CreateObject( C, out, inst, T::_sgs_interface );
 	inst->m_sgsObject = sgs_GetObjectStruct( C, -1 );
 	inst->C = C;
 }
-template< class T > T* sgs_PushClassIPA( SGS_CTX )
+template< class T > T* sgs_CreateClassIPA( SGS_CTX, sgs_Variable* out )
 {
-	T* data = static_cast<T*>( sgs_PushObjectIPA( C, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
+	T* data = static_cast<T*>( sgs_CreateObjectIPA( C, out, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
 	data->m_sgsObject = sgs_GetObjectStruct( C, -1 );
 	data->C = C;
 	return data;
 }
-template< class T> T* sgs_InitPushedClass( T* inst, SGS_CTX )
+template< class T> T* sgs_InitCreatedClass( T* inst, SGS_CTX )
 {
 	inst->C = C;
 	inst->m_sgsObject = sgs_GetObjectStruct( C, -1 );
 	return inst;
 }
-#define SGS_PUSHCLASS( C, name, args ) sgs_InitPushedClass(new (sgs_PushClassIPA< name >( C )) name args, C )
-template< class T > T* sgs_PushClassFrom( SGS_CTX, T* inst )
+#define SGS_CREATECLASS( C, out, name, args ) sgs_InitCreatedClass(new (sgs_CreateClassIPA< name >( C, out )) name args, C )
+template< class T > T* sgs_CreateClassFrom( SGS_CTX, sgs_Variable* out, T* inst )
 {
-	T* data = SGS_PUSHCLASS( C, T, ( *inst ) );
-	return sgs_InitPushedClass( data, C );
+	T* data = SGS_CREATECLASS( C, out, T, ( *inst ) );
+	return sgs_InitCreatedClass( data, C );
 }
 
 
-template< class T > void sgs_PushLiteClass( SGS_CTX, T* inst ){ sgs_PushObject( C, inst, T::_sgs_interface ); }
-template< class T > T* sgs_PushLiteClassIPA( SGS_CTX ){ return static_cast<T*>( sgs_PushObjectIPA( C, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) ); }
-#define SGS_PUSHLITECLASS( C, name, args ) (new (sgs_PushLiteClassIPA< name >( C )) name args )
-template< class T > T* sgs_PushLiteClassFrom( SGS_CTX, const T* inst )
+template< class T > void sgs_CreateLiteClass( SGS_CTX, sgs_Variable* out, T* inst )
 {
-	T* data = SGS_PUSHLITECLASS( C, T, ( *inst ) );
+	sgs_CreateObject( C, out, inst, T::_sgs_interface );
+}
+template< class T > T* sgs_CreateLiteClassIPA( SGS_CTX, sgs_Variable* out )
+{
+	return static_cast<T*>( sgs_CreateObjectIPA( C, out, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
+}
+#define SGS_CREATELITECLASS( C, out, name, args ) (new (sgs_CreateLiteClassIPA< name >( C, out )) name args )
+template< class T > T* sgs_CreateLiteClassFrom( SGS_CTX, sgs_Variable* out, const T* inst )
+{
+	T* data = SGS_CREATELITECLASS( C, out, T, ( *inst ) );
 	return data;
 }
 

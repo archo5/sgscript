@@ -165,7 +165,7 @@ DEFINE_TEST( array_mem )
 {
 	SGS_CTX = get_context();
 	SGS_SHCTX_USE;
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	sgs_Writef( C, "context[array] memory usage: %d B (%.2f kB)\n", (int) S->memsize, (double) S->memsize / 1024.0 );
 	destroy_context( C );
 }
@@ -187,7 +187,7 @@ DEFINE_TEST( stack_101 )
 	sgs_PushStringBuf( C, "what is this", 7 );
 	sgs_PushString( C, "what is this" );
 	sgs_PushCFunction( C, sgs_dummy_func );
-	sgs_PushObject( C, NULL, sgs_dummy_iface );
+	sgs_CreateObject( C, NULL, NULL, sgs_dummy_iface );
 	sgs_PushVariable( C, &sgs_dummy_var );
 	
 	atf_assert( C->stack_base == C->stack_off );
@@ -266,8 +266,8 @@ DEFINE_TEST( stack_arraydict )
 	sgs_PushInt( C, 5 );
 	sgs_PushString( C, "key-two" );
 	
-	atf_assert( sgs_PushArray( C, 5 ) == SGS_EINVAL );
-	atf_assert( sgs_PushArray( C, 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_CreateArray( C, NULL, 5 ) == SGS_EINVAL );
+	atf_assert( sgs_CreateArray( C, NULL, 0 ) == SGS_SUCCESS );
 	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
 	
 	sgs_PushNull( C );
@@ -275,14 +275,14 @@ DEFINE_TEST( stack_arraydict )
 	sgs_PushInt( C, 5 );
 	sgs_PushString( C, "key-two" );
 	
-	atf_assert( sgs_PushArray( C, 4 ) == SGS_SUCCESS );
+	atf_assert( sgs_CreateArray( C, NULL, 4 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 5 );
 	
-	atf_assert( sgs_PushDict( C, 6 ) == SGS_EINVAL );
-	atf_assert( sgs_PushDict( C, 5 ) == SGS_EINVAL );
-	atf_assert( sgs_PushDict( C, 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_CreateDict( C, NULL, 6 ) == SGS_EINVAL );
+	atf_assert( sgs_CreateDict( C, NULL, 5 ) == SGS_EINVAL );
+	atf_assert( sgs_CreateDict( C, NULL, 0 ) == SGS_SUCCESS );
 	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
-	atf_assert( sgs_PushDict( C, 4 ) == SGS_SUCCESS );
+	atf_assert( sgs_CreateDict( C, NULL, 4 ) == SGS_SUCCESS );
 	
 	atf_assert( sgs_StackSize( C ) == 2 );
 	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
@@ -337,7 +337,7 @@ DEFINE_TEST( stack_propindex )
 	
 	sgs_PushString( C, "key-two" );
 	sgs_PushNull( C );
-	atf_assert( sgs_PushDict( C, 4 ) == SGS_SUCCESS );
+	atf_assert( sgs_CreateDict( C, NULL, 4 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	
 	destroy_context( C );
@@ -352,7 +352,7 @@ DEFINE_TEST( stack_negidx )
 {
 	SGS_CTX = get_context();
 	
-	atf_assert( sgs_PushDict( C, 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_CreateDict( C, NULL, 0 ) == SGS_SUCCESS );
 	
 	atf_assert( sgs_StoreIntConsts( C, -1, nidxints, -1 ) == SGS_SUCCESS );
 	atf_assert( sgs_PushProperty( C, -1, "test" ) == SGS_SUCCESS );
@@ -372,8 +372,8 @@ DEFINE_TEST( globals_101 )
 	atf_assert( sgs_PushGlobal( C, "donut_remover" ) == SGS_ENOTFND );
 	atf_assert_( sgs_StackSize( C ) == 1, "wrong stack size after failed PushGlobal", __LINE__ );
 	
-	atf_assert( sgs_PushArray( C, 1 ) == SGS_SUCCESS );
-	atf_assert_( sgs_StackSize( C ) == 1, "wrong stack size after PushArray", __LINE__ );
+	atf_assert( sgs_CreateArray( C, NULL, 1 ) == SGS_SUCCESS );
+	atf_assert_( sgs_StackSize( C ) == 1, "wrong stack size after CreateArray", __LINE__ );
 	atf_assert( sgs_StoreGlobal( C, "yarra" ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
@@ -482,8 +482,8 @@ DEFINE_TEST( debugging )
 	sgs_PushString( C, "wat" );
 	sgs_EvalString( C, "return function(){};", &rvc );
 	atf_assert( sgs_PushGlobal( C, "print" ) == SGS_SUCCESS );
-	sgs_PushArray( C, 0 );
-	sgs_PushDict( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
+	sgs_CreateDict( C, NULL, 0 );
 	
 	atf_assert( sgs_StackSize( C ) == 9 );
 	sgs_Stat( C, SGS_STAT_DUMP_STACK );
@@ -542,7 +542,7 @@ DEFINE_TEST( iterators )
 	sgs_PushString( C, "wat" );
 	
 	atf_assert( sgs_StackSize( C ) == 3 );
-	atf_assert( sgs_PushArray( C, 3 ) == SGS_SUCCESS );
+	atf_assert( sgs_CreateArray( C, NULL, 3 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	
 	/* test iteration */
@@ -603,7 +603,7 @@ DEFINE_TEST( iterators )
 	sgs_PushString( C, "wat" );
 	
 	atf_assert( sgs_StackSize( C ) == 6 );
-	atf_assert( sgs_PushDict( C, 6 ) == SGS_SUCCESS );
+	atf_assert( sgs_CreateDict( C, NULL, 6 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	
 	/* test iteration */
@@ -691,7 +691,7 @@ int nom_ctor( SGS_CTX )
 {
 	SGSFN( "nom::nom" );
 	sgs_PushInterface( C, nom_iface );
-	sgs_PushDict( C, 0 );
+	sgs_CreateDict( C, NULL, 0 );
 	sgs_ObjSetMetaObj( C, sgs_GetObjectStruct( C, -1 ), sgs_GetObjectStruct( C, -2 ) );
 	return 1;
 }
@@ -707,7 +707,7 @@ static sgs_RegFuncConst nom_funcs[] =
 int nom_iface( SGS_CTX )
 {
 	SGSFN( "nom_iface" );
-	atf_assert( sgs_PushDict( C, 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_CreateDict( C, NULL, 0 ) == SGS_SUCCESS );
 	atf_assert( sgs_StoreFuncConsts( C, -1, nom_funcs, -1 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	sgs_ObjSetMetaMethodEnable( sgs_GetObjectStruct( C, -1 ), 1 );

@@ -375,7 +375,7 @@ static int fmt_unpack( SGS_CTX, const char* str,
 	SGS_UNUSED( dataend );
 	if( si >= 0 && !noarray )
 	{
-		if( SGS_FAILED( sgs_PushArray( C, si ) ) )
+		if( SGS_FAILED( sgs_CreateArray( C, NULL, si ) ) )
 			STDLIB_WARN( "failed to create array" )
 		si = 1;
 	}
@@ -1490,7 +1490,7 @@ static int sgsstd_fmt_parser( SGS_CTX )
 	
 	{
 		sgsstd_fmtstream_t* hdr = (sgsstd_fmtstream_t*)
-			sgs_PushObjectIPA( C, sizeof(*hdr), sgsstd_fmtstream_iface );
+			sgs_CreateObjectIPA( C, NULL, sizeof(*hdr), sgsstd_fmtstream_iface );
 		sgs_GetStackItem( C, 0, &hdr->source );
 		hdr->streamoff = 0;
 		hdr->bufsize = (int) bufsize;
@@ -1554,7 +1554,7 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?m|ii", &off, &bufsize ) )
 		return 0;
 	
-	srt = (stringread_t*) sgs_PushObjectIPA( C, sizeof(stringread_t), srt_iface );
+	srt = (stringread_t*) sgs_CreateObjectIPA( C, NULL, sizeof(stringread_t), srt_iface );
 	sgs_GetStackItem( C, 0, &srt->S );
 	sgs_BreakIf( srt->S.type != SGS_VT_STRING );
 	srt->off = (sgs_SizeVal) off;
@@ -1615,7 +1615,7 @@ static int sgsstd_fmt_file_parser( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?o|i", sgsstd_file_iface, &bufsize ) )
 		return 0;
 	
-	frt = (fileread_t*) sgs_PushObjectIPA( C, sizeof(fileread_t), frt_iface );
+	frt = (fileread_t*) sgs_CreateObjectIPA( C, NULL, sizeof(fileread_t), frt_iface );
 	sgs_GetStackItem( C, 0, &frt->F );
 	sgs_BreakIf( frt->F.type != SGS_VT_OBJECT );
 	sgs_StoreItem( C, 0 );
@@ -1829,7 +1829,7 @@ static int sgsstd_io_stat( SGS_CTX )
 			sgs_PushInt( C, FST_UNKNOWN );
 		sgs_PushString( C, "size" );
 		sgs_PushInt( C, data.st_size );
-		return SGS_SUCCEEDED( sgs_PushDict( C, 10 ) );
+		return SGS_SUCCEEDED( sgs_CreateDict( C, NULL, 10 ) );
 	}
 }
 
@@ -2255,7 +2255,7 @@ static int sgsstd_io_file( SGS_CTX )
 	sgs_Errno( C, !!fp );
 	
 pushobj:
-	sgs_PushObject( C, fp, sgsstd_file_iface );
+	sgs_CreateObject( C, NULL, fp, sgsstd_file_iface );
 	return 1;
 }
 
@@ -2353,7 +2353,7 @@ static int sgsstd_io_dir( SGS_CTX )
 	hdr->dir = dp;
 	hdr->name = NULL;
 	
-	sgs_PushObject( C, hdr, sgsstd_dir_iface );
+	sgs_CreateObject( C, NULL, hdr, sgsstd_dir_iface );
 	return 1;
 #endif
 }
@@ -2843,7 +2843,7 @@ static int sgsstd_os_parse_time( SGS_CTX )
 	sgs_PushInt( C, T.tm_min );
 	sgs_PushString( C, "seconds" );
 	sgs_PushInt( C, T.tm_sec );
-	sgs_PushDict( C, sgs_StackSize( C ) - ssz );
+	sgs_CreateDict( C, NULL, sgs_StackSize( C ) - ssz );
 	return 1;
 }
 
@@ -2926,7 +2926,7 @@ static int sgsstd_os_get_locale_format( SGS_CTX )
 	PLI( int_frac_digits );
 #endif
 	
-	sgs_PushDict( C, sgs_StackSize( C ) );
+	sgs_CreateDict( C, NULL, sgs_StackSize( C ) );
 	return 1;
 }
 
@@ -3057,12 +3057,12 @@ static int _regex_match( SGS_CTX, srx_Context* R, char* str, sgs_SizeVal size, s
 							sgs_PushNull( C );
 					}
 					if( ( flags & REGEX_RETURN_BOTH ) > 1 )
-						sgs_PushArray( C, flags & REGEX_RETURN_BOTH );
+						sgs_CreateArray( C, NULL, flags & REGEX_RETURN_BOTH );
 				}
 				else
 					sgs_PushNull( C );
 			}
-			sgs_PushArray( C, numcaps );
+			sgs_CreateArray( C, NULL, numcaps );
 			return -1;
 		}
 	}
@@ -3128,7 +3128,7 @@ static int sgsstd_re_match_all( SGS_CTX )
 		cnt++;
 	}
 	if( flags & REGEX_RETURN_BOTH )
-		sgs_PushArray( C, cnt );
+		sgs_CreateArray( C, NULL, cnt );
 	else
 		sgs_PushInt( C, cnt );
 	
@@ -3921,7 +3921,7 @@ static int sgsstd_string_explode( SGS_CTX )
 		sgs_PushStringBuf( C, pp, (sgs_SizeVal)( a + asize - pp ) );
 	}
 
-	return sgs_PushArray( C, sgs_StackSize( C ) - ssz ) == SGS_SUCCESS;
+	return sgs_CreateArray( C, NULL, sgs_StackSize( C ) - ssz ) == SGS_SUCCESS;
 }
 
 static int sgsstd_string_charcode( SGS_CTX )
@@ -4016,7 +4016,7 @@ static int sgsstd_string_utf8_decode( SGS_CTX )
 		sgs_PushInt( C, outchar );
 		cc++;
 	}
-	return sgs_PushArray( C, cc ) == SGS_SUCCESS;
+	return sgs_CreateArray( C, NULL, cc ) == SGS_SUCCESS;
 }
 
 static int sgsstd_string_utf8_encode( SGS_CTX )
@@ -4240,7 +4240,7 @@ static int utf8it_convert( SGS_CTX, sgs_VarObj* obj, int type )
 		var.type = SGS_VT_STRING;
 		var.data.S = IT->str;
 		sgs_Acquire( C, &var );
-		it2 = (utf8iter*) sgs_PushObjectIPA( C, sizeof(utf8iter), obj->iface );
+		it2 = (utf8iter*) sgs_CreateObjectIPA( C, NULL, sizeof(utf8iter), obj->iface );
 		memcpy( it2, obj->data, sizeof(*it2) );
 		return SGS_SUCCESS;
 	}
@@ -4316,7 +4316,7 @@ static int sgsstd_string_utf8_iterator( SGS_CTX )
 	SGSFN( "string_utf8_iterator" );
 	if( !sgs_LoadArgs( C, "?s|i", &pos ) )
 		return 0;
-	IT = (utf8iter*) sgs_PushObjectIPA( C, sizeof(utf8iter), utf8_iterator_iface );
+	IT = (utf8iter*) sgs_CreateObjectIPA( C, NULL, sizeof(utf8iter), utf8_iterator_iface );
 	sgs_GetStackItem( C, 0, &var );
 	IT->str = var.data.S;
 	IT->i = (uint32_t) pos | U8I_PREPOS;

@@ -565,11 +565,6 @@ static void stk_push_leave( SGS_CTX, sgs_VarPtr var )
 	*C->stack_top++ = *var;
 }
 
-static void stk_push_null( SGS_CTX )
-{
-	stk_makespace( C, 1 );
-	(C->stack_top++)->type = SGS_VT_NULL;
-}
 static void stk_push_nulls( SGS_CTX, StkIdx cnt )
 {
 	sgs_VarPtr tgt;
@@ -1393,7 +1388,7 @@ static int vm_getidx_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj
 			return SGS_EBOUNDS;
 		}
 		pos = ( pos + size ) % size;
-		sgs_InitStringBuf( C, outmaybe, sgs_var_cstr( obj ) + pos, 1 );
+		sgsVM_VarCreateString( C, outmaybe, sgs_var_cstr( obj ) + pos, 1 );
 		return 0;
 	}
 
@@ -3109,15 +3104,11 @@ void sgs_InitCFunction( sgs_Variable* out, sgs_CFunc func )
 	out->data.C = func;
 }
 
-void sgs_InitObject( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInterface* iface )
+void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj )
 {
-	var_create_obj( C, out, data, iface, 0 );
-}
-
-void* sgs_InitObjectIPA( SGS_CTX, sgs_Variable* out, uint32_t added, sgs_ObjInterface* iface )
-{
-	var_create_obj( C, out, NULL, iface, added );
-	return out->data.O->data;
+	out->type = SGS_VT_OBJECT;
+	out->data.O = obj;
+	VAR_ACQUIRE( out );
 }
 
 void sgs_InitPtr( sgs_Variable* out, void* ptr )
@@ -3126,27 +3117,66 @@ void sgs_InitPtr( sgs_Variable* out, void* ptr )
 	out->data.P = ptr;
 }
 
-void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj )
+
+SGSONE sgs_CreateObject( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInterface* iface )
 {
-	out->type = SGS_VT_OBJECT;
-	out->data.O = obj;
-	VAR_ACQUIRE( out );
+	sgs_Variable var;
+	var_create_obj( C, &var, data, iface, 0 );
+	if( out )
+		*out = var;
+	else
+		stk_push_leave( C, &var );
+	return 1;
 }
 
-
-SGSRESULT sgs_InitArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
+void* sgs_CreateObjectIPA( SGS_CTX, sgs_Variable* out, uint32_t added, sgs_ObjInterface* iface )
 {
-	return sgsSTD_MakeArray( C, out, numitems );
+	sgs_Variable var;
+	var_create_obj( C, &var, NULL, iface, added );
+	if( out )
+		*out = var;
+	else
+		stk_push_leave( C, &var );
+	return var.data.O->data;
 }
 
-SGSRESULT sgs_InitDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
+SGSRESULT sgs_CreateArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
 {
-	return sgsSTD_MakeDict( C, out, numitems );
+	int res;
+	sgs_Variable var;
+	if( SGS_FAILED( res = sgsSTD_MakeArray( C, &var, numitems ) ) )
+		return res;
+	if( out )
+		*out = var;
+	else
+		stk_push_leave( C, &var );
+	return SGS_SUCCESS;
 }
 
-SGSRESULT sgs_InitMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
+SGSRESULT sgs_CreateDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
 {
-	return sgsSTD_MakeMap( C, out, numitems );
+	int res;
+	sgs_Variable var;
+	if( SGS_FAILED( res = sgsSTD_MakeDict( C, &var, numitems ) ) )
+		return res;
+	if( out )
+		*out = var;
+	else
+		stk_push_leave( C, &var );
+	return SGS_SUCCESS;
+}
+
+SGSRESULT sgs_CreateMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
+{
+	int res;
+	sgs_Variable var;
+	if( SGS_FAILED( res = sgsSTD_MakeMap( C, &var, numitems ) ) )
+		return res;
+	if( out )
+		*out = var;
+	else
+		stk_push_leave( C, &var );
+	return SGS_SUCCESS;
 }
 
 
@@ -3155,12 +3185,6 @@ SGSRESULT sgs_InitMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
 	STACK & SUB-ITEMS
 
 */
-
-SGSONE sgs_PushNull( SGS_CTX )
-{
-	stk_push_null( C );
-	return 1;
-}
 
 SGSONE sgs_PushNulls( SGS_CTX, int count )
 {
@@ -3208,9 +3232,9 @@ SGSONE sgs_PushString( SGS_CTX, const char* str )
 {
 	size_t sz;
 	sgs_Variable var;
-	sgs_BreakIf( !str && "sgs_InitString: str = NULL" );
+	sgs_BreakIf( !str && "sgs_PushString: str = NULL" );
 	sz = SGS_STRINGLENGTHFUNC(str);
-	sgs_BreakIf( sz > 0x7fffffff && "sgs_InitString: size exceeded" );
+	sgs_BreakIf( sz > 0x7fffffff && "sgs_PushString: size exceeded" );
 	/* WP: error detection */
 	var_create_str( C, &var, str, (sgs_SizeVal) sz );
 	stk_push_leave( C, &var );
@@ -3224,22 +3248,6 @@ SGSONE sgs_PushCFunction( SGS_CTX, sgs_CFunc func )
 	var.data.C = func;
 	stk_push_leave( C, &var );
 	return 1;
-}
-
-SGSONE sgs_PushObject( SGS_CTX, void* data, sgs_ObjInterface* iface )
-{
-	sgs_Variable var;
-	var_create_obj( C, &var, data, iface, 0 );
-	stk_push_leave( C, &var );
-	return 1;
-}
-
-void* sgs_PushObjectIPA( SGS_CTX, uint32_t added, sgs_ObjInterface* iface )
-{
-	sgs_Variable var;
-	var_create_obj( C, &var, NULL, iface, added );
-	stk_push_leave( C, &var );
-	return var.data.O->data;
 }
 
 SGSONE sgs_PushPtr( SGS_CTX, void* ptr )
@@ -3261,37 +3269,6 @@ SGSONE sgs_PushObjectPtr( SGS_CTX, sgs_VarObj* obj )
 }
 
 
-SGSRESULT sgs_PushArray( SGS_CTX, sgs_SizeVal numitems )
-{
-	int res;
-	sgs_Variable var;
-	if( SGS_FAILED( res = sgsSTD_MakeArray( C, &var, numitems ) ) )
-		return res;
-	stk_push_leave( C, &var );
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_PushDict( SGS_CTX, sgs_SizeVal numitems )
-{
-	int res;
-	sgs_Variable var;
-	if( SGS_FAILED( res = sgsSTD_MakeDict( C, &var, numitems ) ) )
-		return res;
-	stk_push_leave( C, &var );
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_PushMap( SGS_CTX, sgs_SizeVal numitems )
-{
-	int res;
-	sgs_Variable var;
-	if( SGS_FAILED( res = sgsSTD_MakeMap( C, &var, numitems ) ) )
-		return res;
-	stk_push_leave( C, &var );
-	return SGS_SUCCESS;
-}
-
-
 SGSRESULT sgs_PushVariable( SGS_CTX, sgs_Variable* var )
 {
 	if( var->type >= SGS_VT__COUNT )
@@ -3305,8 +3282,7 @@ SGSRESULT sgs_StoreVariable( SGS_CTX, sgs_Variable* var )
 	if( !SGS_STACKFRAMESIZE )
 		return SGS_ENOTFND;
 	*var = *stk_gettop( C );
-	VAR_ACQUIRE( var );
-	stk_pop1( C );
+	stk_pop1nr( C );
 	return SGS_SUCCESS;
 }
 

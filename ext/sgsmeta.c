@@ -80,7 +80,7 @@ static int _sgs_meta_dumpconstlist( SGS_CTX, sgs_Variable* var, size_t numvars )
 {
 	sgs_Variable* vend = var + numvars;
 	
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	
 	while( var < vend )
 	{
@@ -105,7 +105,7 @@ static int _sgs_meta_dumpconstlist( SGS_CTX, sgs_Variable* var, size_t numvars )
 			return 0;
 		}
 		
-		sgs_PushDict( C, 4 );
+		sgs_CreateDict( C, NULL, 4 );
 		sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
 		
 		var++;
@@ -118,7 +118,7 @@ static int _sgs_meta_dumpbclist( SGS_CTX, sgs_instr_t* data, size_t numinstr )
 {
 	sgs_instr_t* dend = data + numinstr;
 	
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	
 	while( data < dend )
 	{
@@ -135,7 +135,7 @@ static int _sgs_meta_dumpbclist( SGS_CTX, sgs_instr_t* data, size_t numinstr )
 		sgs_PushString( C, "e" );
 		sgs_PushInt( C, SGS_INSTR_GET_E( i ) );
 		
-		sgs_PushDict( C, 10 );
+		sgs_CreateDict( C, NULL, 10 );
 		sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
 	}
 	
@@ -146,7 +146,7 @@ static int _sgs_meta_dumplnlist( SGS_CTX, sgs_LineNum* data, size_t numinstr )
 {
 	sgs_LineNum* dend = data + numinstr;
 	
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	
 	while( data < dend )
 	{
@@ -202,7 +202,7 @@ static int _sgs_meta_dumpfn( SGS_CTX, sgs_iFunc* func )
 	sgs_PushString( C, "line" );
 	sgs_PushInt( C, func->linenum );
 	
-	sgs_PushDict( C, sgs_StackSize( C ) - ssz );
+	sgs_CreateDict( C, NULL, sgs_StackSize( C ) - ssz );
 	
 	return 1;
 }
@@ -244,7 +244,7 @@ static int _sgs_meta_dumpcomp( SGS_CTX, sgs_CompFunc* func )
 	sgs_PushString( C, "line" );
 	sgs_PushInt( C, 0 );
 	
-	sgs_PushDict( C, sgs_StackSize( C ) - ssz );
+	sgs_CreateDict( C, NULL, sgs_StackSize( C ) - ssz );
 	
 	return 1;
 }

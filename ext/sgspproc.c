@@ -181,7 +181,7 @@ static threadret_t ppthread_threadfunc( void* arg )
 	sgs_PushCFunction( THR->C, pproc_sleep );
 	sgs_StoreGlobal( THR->C, "pproc_sleep" );
 	
-	sgs_PushObject( THR->C, THR, ppthread_iface_thr );
+	sgs_CreateObject( THR->C, NULL, THR, ppthread_iface_thr );
 	sgs_StoreGlobal( THR->C, "_T" );
 	
 	sgs_ExecBuffer( THR->C, THR->code, (size_t) THR->codesize );
@@ -533,7 +533,7 @@ static int pproc_create_thread( SGS_CTX )
 		str = code;
 		size = (sgs_SizeVal) codesize;
 	}
-	sgs_PushObject( C, ppthread_create( C, str, size ), ppthread_iface );
+	sgs_CreateObject( C, NULL, ppthread_create( C, str, size ), ppthread_iface );
 	sgs_Dealloc( str );
 	return 1;
 }

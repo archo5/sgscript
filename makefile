@@ -1,12 +1,6 @@
 # SGScript makefile
 
 
-# Additional compilation info:
-# CC (compiler) can be specified in the `make` command
-# For Android, together with some android-*** target, pass this:
-# CC="<some-prebuilt-gcc/clang> --sysroot=NDK_ROOT\platforms\<platform>\<arch>"
-
-
 include core.mk
 
 

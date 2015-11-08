@@ -87,7 +87,7 @@ static int xgm_v2m_rotate( SGS_CTX )
 	
 	c = (XGM_VT) cos( angle );
 	s = (XGM_VT) sin( angle );
-	sgs_PushVec2( C, data[0] * c - data[1] * s, data[0] * s + data[1] * c );
+	sgs_CreateVec2( C, NULL, data[0] * c - data[1] * s, data[0] * s + data[1] * c );
 	return 1;
 }
 
@@ -96,7 +96,7 @@ static int xgm_v2_convert( SGS_CTX, sgs_VarObj* data, int type )
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
 	{
-		sgs_PushVec2p( C, hdr );
+		sgs_CreateVec2p( C, NULL, hdr );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_VT_STRING )
@@ -143,15 +143,15 @@ static int xgm_v2_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 		if( lensq )
 		{
 			lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
-			sgs_PushVec2( C, hdr[0] * lensq, hdr[1] * lensq );
+			sgs_CreateVec2( C, NULL, hdr[0] * lensq, hdr[1] * lensq );
 		}
 		else
-			sgs_PushVec2( C, 0, 0 );
+			sgs_CreateVec2( C, NULL, 0, 0 );
 		return SGS_SUCCESS;
 	}
 	if( !strcmp( str, "angle" ) ){ sgs_PushReal( C, atan2( hdr[1], hdr[0] ) ); return SGS_SUCCESS; }
-	if( !strcmp( str, "perp" ) ){ sgs_PushVec2( C, -hdr[1], hdr[0] ); return SGS_SUCCESS; }
-	if( !strcmp( str, "perp2" ) ){ sgs_PushVec2( C, hdr[1], -hdr[0] ); return SGS_SUCCESS; }
+	if( !strcmp( str, "perp" ) ){ sgs_CreateVec2( C, NULL, -hdr[1], hdr[0] ); return SGS_SUCCESS; }
+	if( !strcmp( str, "perp2" ) ){ sgs_CreateVec2( C, NULL, hdr[1], -hdr[0] ); return SGS_SUCCESS; }
 	if( !strcmp( str, "rotate" ) ){ sgs_PushCFunction( C, xgm_v2m_rotate ); return SGS_SUCCESS; }
 	if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 2 ); return SGS_SUCCESS; }
 	return SGS_ENOTFND;
@@ -241,7 +241,7 @@ static int xgm_v2_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 		else
 			{ r[0] = (XGM_VT) fmod( v1[0], v2[0] ); r[1] = (XGM_VT) fmod( v1[1], v2[1] ); }
 		
-		sgs_PushVec2p( C, r );
+		sgs_CreateVec2p( C, NULL, r );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_EOP_COMPARE )
@@ -263,7 +263,7 @@ static int xgm_v2_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 	else if( type == SGS_EOP_NEGATE )
 	{
 		XGM_OHDR;
-		sgs_PushVec2( C, -hdr[0], -hdr[1] );
+		sgs_CreateVec2( C, NULL, -hdr[0], -hdr[1] );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -293,7 +293,7 @@ static int xgm_vec2( SGS_CTX )
 	
 	if( ty0 != SGS_VT_INT && ty0 != SGS_VT_REAL && sgs_ParseVec2( C, 0, v, 0 ) )
 	{
-		sgs_PushVec2p( C, v );
+		sgs_CreateVec2p( C, NULL, v );
 		return 1;
 	}
 	
@@ -303,7 +303,7 @@ static int xgm_vec2( SGS_CTX )
 	if( argc == 1 )
 		v[1] = v[0];
 	
-	sgs_PushVec2p( C, v );
+	sgs_CreateVec2p( C, NULL, v );
 	return 1;
 }
 
@@ -329,7 +329,7 @@ static int xgm_v3_convert( SGS_CTX, sgs_VarObj* data, int type )
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
 	{
-		sgs_PushVec3p( C, hdr );
+		sgs_CreateVec3p( C, NULL, hdr );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_VT_STRING )
@@ -378,10 +378,10 @@ static int xgm_v3_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 			if( lensq )
 			{
 				lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
-				sgs_PushVec3( C, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq );
+				sgs_CreateVec3( C, NULL, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq );
 			}
 			else
-				sgs_PushVec3( C, 0, 0, 0 );
+				sgs_CreateVec3( C, NULL, 0, 0, 0 );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 3 ); return SGS_SUCCESS; }
@@ -455,7 +455,7 @@ static int xgm_v3_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 			r[2] = (XGM_VT) fmod( v1[2], v2[2] );
 		}
 		
-		sgs_PushVec3p( C, r );
+		sgs_CreateVec3p( C, NULL, r );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_EOP_COMPARE )
@@ -479,7 +479,7 @@ static int xgm_v3_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 	else if( type == SGS_EOP_NEGATE )
 	{
 		XGM_OHDR;
-		sgs_PushVec3( C, -hdr[0], -hdr[1], -hdr[2] );
+		sgs_CreateVec3( C, NULL, -hdr[0], -hdr[1], -hdr[2] );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -509,7 +509,7 @@ static int xgm_vec3( SGS_CTX )
 	
 	if( ty0 != SGS_VT_INT && ty0 != SGS_VT_REAL && sgs_ParseVec3( C, 0, v, 0 ) )
 	{
-		sgs_PushVec3p( C, v );
+		sgs_CreateVec3p( C, NULL, v );
 		return 1;
 	}
 	
@@ -522,7 +522,7 @@ static int xgm_vec3( SGS_CTX )
 	if( argc == 1 )
 		v[2] = v[1] = v[0];
 	
-	sgs_PushVec3p( C, v );
+	sgs_CreateVec3p( C, NULL, v );
 	return 1;
 }
 
@@ -548,7 +548,7 @@ static int xgm_vec3_cross( SGS_CTX )
 	if( !sgs_LoadArgs( C, "!x!x", sgs_ArgCheck_Vec3, v1, sgs_ArgCheck_Vec3, v2 ) )
 		return 0;
 	
-	sgs_PushVec3( C,
+	sgs_CreateVec3( C, NULL,
 		v1[1] * v2[2] - v1[2] * v2[1],
 		v1[2] * v2[0] - v1[0] * v2[2],
 		v1[0] * v2[1] - v1[1] * v2[0]
@@ -565,7 +565,7 @@ static int xgm_v4_convert( SGS_CTX, sgs_VarObj* data, int type )
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
 	{
-		sgs_PushVec4p( C, hdr );
+		sgs_CreateVec4p( C, NULL, hdr );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_VT_STRING )
@@ -614,10 +614,10 @@ static int xgm_v4_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 			if( lensq )
 			{
 				lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
-				sgs_PushVec4( C, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq, hdr[3] * lensq );
+				sgs_CreateVec4( C, NULL, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq, hdr[3] * lensq );
 			}
 			else
-				sgs_PushVec4( C, 0, 0, 0, 0 );
+				sgs_CreateVec4( C, NULL, 0, 0, 0, 0 );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 4 ); return SGS_SUCCESS; }
@@ -704,7 +704,7 @@ static int xgm_v4_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 			r[3] = (XGM_VT) fmod( v1[3], v2[3] );
 		}
 		
-		sgs_PushVec4p( C, r );
+		sgs_CreateVec4p( C, NULL, r );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_EOP_COMPARE )
@@ -726,7 +726,7 @@ static int xgm_v4_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variable
 	else if( type == SGS_EOP_NEGATE )
 	{
 		XGM_OHDR;
-		sgs_PushVec4( C, -hdr[0], -hdr[1], -hdr[2], -hdr[3] );
+		sgs_CreateVec4( C, NULL, -hdr[0], -hdr[1], -hdr[2], -hdr[3] );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -757,7 +757,7 @@ static int xgm_vec4( SGS_CTX )
 	
 	if( ty0 != SGS_VT_INT && ty0 != SGS_VT_REAL && sgs_ParseVec4( C, 0, v, 0 ) )
 	{
-		sgs_PushVec4p( C, v );
+		sgs_CreateVec4p( C, NULL, v );
 		return 1;
 	}
 	
@@ -772,7 +772,7 @@ static int xgm_vec4( SGS_CTX )
 		v[2] = v[1] = v[0];
 	}
 	
-	sgs_PushVec4p( C, v );
+	sgs_CreateVec4p( C, NULL, v );
 	return 1;
 }
 
@@ -800,7 +800,7 @@ static int xgm_b2_convert( SGS_CTX, sgs_VarObj* data, int type )
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
 	{
-		sgs_PushAABB2( C, hdr[0], hdr[1], hdr[2], hdr[3] );
+		sgs_CreateAABB2( C, NULL, hdr[0], hdr[1], hdr[2], hdr[3] );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_VT_STRING )
@@ -897,7 +897,7 @@ static int xgm_aabb2( SGS_CTX )
 	if( !sgs_LoadArgs( C, "ffff", b, b + 1, b + 2, b + 3 ) )
 		return 0;
 	
-	sgs_PushAABB2p( C, b );
+	sgs_CreateAABB2p( C, NULL, b );
 	return 1;
 }
 
@@ -910,7 +910,7 @@ static int xgm_aabb2v( SGS_CTX )
 	if( !sgs_LoadArgs( C, "!x!x", sgs_ArgCheck_Vec2, b, sgs_ArgCheck_Vec2, b + 2 ) )
 		return 0;
 	
-	sgs_PushAABB2p( C, b );
+	sgs_CreateAABB2p( C, NULL, b );
 	return 1;
 }
 
@@ -966,7 +966,7 @@ static int xgm_b3_convert( SGS_CTX, sgs_VarObj* data, int type )
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
 	{
-		sgs_PushAABB3p( C, hdr );
+		sgs_CreateAABB3p( C, NULL, hdr );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_VT_STRING )
@@ -1072,7 +1072,7 @@ static int xgm_aabb3( SGS_CTX )
 	if( !sgs_LoadArgs( C, "ffffff", b, b + 1, b + 2, b + 3, b + 4, b + 5 ) )
 		return 0;
 	
-	sgs_PushAABB3p( C, b );
+	sgs_CreateAABB3p( C, NULL, b );
 	return 1;
 }
 
@@ -1085,7 +1085,7 @@ static int xgm_aabb3v( SGS_CTX )
 	if( !sgs_LoadArgs( C, "!x!x", sgs_ArgCheck_Vec3, b, sgs_ArgCheck_Vec3, b + 3 ) )
 		return 0;
 	
-	sgs_PushAABB3p( C, b );
+	sgs_CreateAABB3p( C, NULL, b );
 	return 1;
 }
 
@@ -1139,7 +1139,7 @@ static int xgm_col_convert( SGS_CTX, sgs_VarObj* data, int type )
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
 	{
-		sgs_PushColorp( C, hdr );
+		sgs_CreateColorp( C, NULL, hdr );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_VT_STRING )
@@ -1254,7 +1254,7 @@ static int xgm_col_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variabl
 			r[3] = (XGM_VT) fmod( v1[3], v2[3] );
 		}
 		
-		sgs_PushColorp( C, r );
+		sgs_CreateColorp( C, NULL, r );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_EOP_COMPARE )
@@ -1276,7 +1276,7 @@ static int xgm_col_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variabl
 	else if( type == SGS_EOP_NEGATE )
 	{
 		XGM_OHDR;
-		sgs_PushColor( C, -hdr[0], -hdr[1], -hdr[2], -hdr[3] );
+		sgs_CreateColor( C, NULL, -hdr[0], -hdr[1], -hdr[2], -hdr[3] );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -1310,7 +1310,7 @@ static int xgm_color( SGS_CTX )
 	if( !sgs_LoadArgs( C, "f|fff.", v, v + 1, v + 2, v + 3 ) )
 		return 0;
 	
-	sgs_PushColorvp( C, v, argc );
+	sgs_CreateColorvp( C, NULL, v, argc );
 	return 1;
 }
 
@@ -1896,7 +1896,7 @@ static int xgm_qti_transform( SGS_CTX )
 		return 0;
 	
 	QUAT_Transform( v3, *Q, v3 );
-	sgs_PushVec3p( C, v3 );
+	sgs_CreateVec3p( C, NULL, v3 );
 	return 1;
 }
 
@@ -1906,7 +1906,7 @@ static int xgm_quat_convert( SGS_CTX, sgs_VarObj* data, int type )
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
 	{
-		sgs_PushQuatp( C, hdr );
+		sgs_CreateQuatp( C, NULL, hdr );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_VT_STRING )
@@ -1970,24 +1970,24 @@ static int xgm_quat_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int 
 			if( lensq )
 			{
 				lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
-				sgs_PushQuat( C, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq, hdr[3] * lensq );
+				sgs_CreateQuat( C, NULL, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq, hdr[3] * lensq );
 			}
 			else
-				sgs_PushQuat( C, 0, 0, 0, 0 );
+				sgs_CreateQuat( C, NULL, 0, 0, 0, 0 );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "mat3" ) )
 		{
 			MAT3 out;
 			MAT3_FromQuat( out, hdr );
-			sgs_PushMat3( C, *out, 0 );
+			sgs_CreateMat3( C, NULL, *out, 0 );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "mat4" ) )
 		{
 			MAT4 out;
 			MAT4_FromQuat( out, hdr );
-			sgs_PushMat4( C, *out, 0 );
+			sgs_CreateMat4( C, NULL, *out, 0 );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 4 ); return SGS_SUCCESS; }
@@ -2074,7 +2074,7 @@ static int xgm_quat_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variab
 			r[3] = (XGM_VT) fmod( v1[3], v2[3] );
 		}
 		
-		sgs_PushQuatp( C, r );
+		sgs_CreateQuatp( C, NULL, r );
 		return SGS_SUCCESS;
 	}
 	else if( type == SGS_EOP_COMPARE )
@@ -2096,7 +2096,7 @@ static int xgm_quat_expr( SGS_CTX, sgs_VarObj* data, sgs_Variable* A, sgs_Variab
 	else if( type == SGS_EOP_NEGATE )
 	{
 		XGM_OHDR;
-		sgs_PushQuat( C, -hdr[0], -hdr[1], -hdr[2], -hdr[3] );
+		sgs_CreateQuat( C, NULL, -hdr[0], -hdr[1], -hdr[2], -hdr[3] );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -2125,14 +2125,14 @@ static int xgm_quat( SGS_CTX )
 	
 	if( sgs_StackSize( C ) == 0 )
 	{
-		sgs_PushQuat( C, 0, 0, 0, 1 );
+		sgs_CreateQuat( C, NULL, 0, 0, 0, 1 );
 		return 1;
 	}
 	
 	if( !sgs_LoadArgs( C, "ffff.", v, v + 1, v + 2, v + 3 ) )
 		return 0;
 	
-	sgs_PushQuat( C, v[0], v[1], v[2], v[3] );
+	sgs_CreateQuat( C, NULL, v[0], v[1], v[2], v[3] );
 	return 1;
 }
 
@@ -2499,7 +2499,7 @@ static int xgm_m3i_transform( SGS_CTX )
 		return 0;
 	
 	MAT3_Transform( v3, v3, *M );
-	sgs_PushVec3p( C, v3 );
+	sgs_CreateVec3p( C, NULL, v3 );
 	return 1;
 }
 
@@ -2509,7 +2509,7 @@ static int xgm_m3_convert( SGS_CTX, sgs_VarObj* data, int type )
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
 	{
-		sgs_PushMat3( C, hdr, 0 );
+		sgs_CreateMat3( C, NULL, hdr, 0 );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -2565,7 +2565,7 @@ static int xgm_m3_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 		{
 			QUAT out;
 			QUAT_FromMatrix( out, hdr, &hdr[3], &hdr[6] );
-			sgs_PushQuatp( C, out );
+			sgs_CreateQuatp( C, NULL, out );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "mat4" ) )
@@ -2575,7 +2575,7 @@ static int xgm_m3_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 			memcpy( out[0], &hdr[0], sizeof(XGM_VT) * 3 );
 			memcpy( out[1], &hdr[3], sizeof(XGM_VT) * 3 );
 			memcpy( out[2], &hdr[6], sizeof(XGM_VT) * 3 );
-			sgs_PushMat4( C, *out, 0 );
+			sgs_CreateMat4( C, NULL, *out, 0 );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 9 ); return SGS_SUCCESS; }
@@ -2699,12 +2699,12 @@ static int xgm_mat3( SGS_CTX )
 		for( i = 0; i < 9; ++i )
 			v[ i ] = 0;
 		v[0] = v[4] = v[8] = 1;
-		sgs_PushMat3( C, v, 0 );
+		sgs_CreateMat3( C, NULL, v, 0 );
 		return 1;
 	}
 	else if( argc == 1 && sgs_ParseMat3( C, 0, v ) )
 	{
-		sgs_PushMat3( C, v, 0 );
+		sgs_CreateMat3( C, NULL, v, 0 );
 		return 1;
 	}
 	else if( argc == 3 )
@@ -2713,7 +2713,7 @@ static int xgm_mat3( SGS_CTX )
 			sgs_ParseVec3( C, 1, v+3, 0 ) &&
 			sgs_ParseVec3( C, 2, v+6, 0 ) )
 		{
-			sgs_PushMat3( C, v, 0 );
+			sgs_CreateMat3( C, NULL, v, 0 );
 			return 1;
 		}
 	}
@@ -2729,7 +2729,7 @@ static int xgm_mat3( SGS_CTX )
 		}
 		if( i == 9 )
 		{
-			sgs_PushMat3( C, v, 0 );
+			sgs_CreateMat3( C, NULL, v, 0 );
 			return 1;
 		}
 	}
@@ -3027,7 +3027,7 @@ static int xgm_m4i_transform( SGS_CTX )
 		return 0;
 	
 	MAT4_Transform( v4, v4, *M );
-	sgs_PushVec4p( C, v4 );
+	sgs_CreateVec4p( C, NULL, v4 );
 	return 1;
 }
 
@@ -3039,7 +3039,7 @@ static int xgm_m4i_transform_pos( SGS_CTX )
 		return 0;
 	
 	MAT4_TransformPos( v3, v3, *M );
-	sgs_PushVec3p( C, v3 );
+	sgs_CreateVec3p( C, NULL, v3 );
 	return 1;
 }
 
@@ -3051,7 +3051,7 @@ static int xgm_m4i_transform_normal( SGS_CTX )
 		return 0;
 	
 	MAT4_TransformNormal( v3, v3, *M );
-	sgs_PushVec3p( C, v3 );
+	sgs_CreateVec3p( C, NULL, v3 );
 	return 1;
 }
 
@@ -3061,7 +3061,7 @@ static int xgm_m4_convert( SGS_CTX, sgs_VarObj* data, int type )
 	XGM_OHDR;
 	if( type == SGS_CONVOP_CLONE )
 	{
-		sgs_PushMat4( C, hdr, 0 );
+		sgs_CreateMat4( C, NULL, hdr, 0 );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -3121,7 +3121,7 @@ static int xgm_m4_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 		{
 			QUAT out;
 			QUAT_FromMatrix( out, hdr, &hdr[4], &hdr[8] );
-			sgs_PushQuatp( C, out );
+			sgs_CreateQuatp( C, NULL, out );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "mat3" ) )
@@ -3130,7 +3130,7 @@ static int xgm_m4_getindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, int pr
 			memcpy( out[0], &hdr[0], sizeof(XGM_VT) * 3 );
 			memcpy( out[1], &hdr[4], sizeof(XGM_VT) * 3 );
 			memcpy( out[2], &hdr[8], sizeof(XGM_VT) * 3 );
-			sgs_PushMat3( C, *out, 0 );
+			sgs_CreateMat3( C, NULL, *out, 0 );
 			return SGS_SUCCESS;
 		}
 		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 16 ); return SGS_SUCCESS; }
@@ -3256,12 +3256,12 @@ static int xgm_mat4( SGS_CTX )
 		for( i = 0; i < 16; ++i )
 			v[ i ] = 0;
 		v[0] = v[5] = v[10] = v[15] = 1;
-		sgs_PushMat4( C, v, 0 );
+		sgs_CreateMat4( C, NULL, v, 0 );
 		return 1;
 	}
 	else if( argc == 1 && sgs_ParseMat4( C, 0, v ) )
 	{
-		sgs_PushMat4( C, v, 0 );
+		sgs_CreateMat4( C, NULL, v, 0 );
 		return 1;
 	}
 	else if( argc >= 3 && argc <= 4 )
@@ -3275,7 +3275,7 @@ static int xgm_mat4( SGS_CTX )
 				v[12] = v[13] = v[14] = 0;
 				v[15] = 1;
 			}
-			sgs_PushMat4( C, v, 0 );
+			sgs_CreateMat4( C, NULL, v, 0 );
 			return 1;
 		}
 	}
@@ -3291,7 +3291,7 @@ static int xgm_mat4( SGS_CTX )
 		}
 		if( i == 16 )
 		{
-			sgs_PushMat4( C, v, 0 );
+			sgs_CreateMat4( C, NULL, v, 0 );
 			return 1;
 		}
 	}
@@ -3316,7 +3316,7 @@ static int xgm_fla_convert( SGS_CTX, sgs_VarObj* data, int type )
 	XGM_FLAHDR;
 	if( type == SGS_CONVOP_CLONE )
 	{
-		sgs_PushFloatArray( C, flarr->data, flarr->size );
+		sgs_CreateFloatArray( C, NULL, flarr->data, flarr->size );
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
@@ -3379,7 +3379,7 @@ static int xgm_fla_getindex_aabb2( SGS_CTX, xgm_vtarray* flarr )
 			XGM_VT* pp = flarr->data + i;
 			XGM_BB2_EXPAND_V2( bb, pp );
 		}
-		sgs_PushAABB2p( C, bb );
+		sgs_CreateAABB2p( C, NULL, bb );
 		return SGS_SUCCESS;
 	}
 }
@@ -3402,7 +3402,7 @@ static int xgm_fla_getindex_aabb3( SGS_CTX, xgm_vtarray* flarr )
 			XGM_VT* pp = flarr->data + i;
 			XGM_BB3_EXPAND_V3( bb, pp );
 		}
-		sgs_PushAABB3p( C, bb );
+		sgs_CreateAABB3p( C, NULL, bb );
 		return SGS_SUCCESS;
 	}
 }
@@ -3652,7 +3652,7 @@ static int xgm_fla_setindex( SGS_CTX, sgs_VarObj* data, sgs_Variable* key, sgs_V
 
 static XGM_VT* _xgm_pushvxa( SGS_CTX, sgs_SizeVal size, sgs_SizeVal cc )
 {
-	xgm_vtarray* np = (xgm_vtarray*) sgs_PushObjectIPA( C, sizeof(xgm_vtarray), xgm_floatarr_iface );
+	xgm_vtarray* np = (xgm_vtarray*) sgs_CreateObjectIPA( C, NULL, sizeof(xgm_vtarray), xgm_floatarr_iface );
 	np->size = size * cc;
 	np->mem = size * cc;
 	np->data = size ? sgs_Alloc_n( XGM_VT, (size_t)( np->mem * cc ) ) : NULL;
@@ -4259,192 +4259,59 @@ sgs_ObjInterface xgm_floatarr_iface[1] =
 }};
 
 
-void sgs_InitVec2( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y )
+SGSONE sgs_CreateVec2( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 2, xgm_vec2_iface );
-	XGM_SET2( nv, x, y );
-}
-
-void sgs_InitVec3( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 3, xgm_vec3_iface );
-	XGM_SET3( nv, x, y, z );
-}
-
-void sgs_InitVec4( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_vec4_iface );
-	XGM_SET4( nv, x, y, z, w );
-}
-
-void sgs_InitAABB2( SGS_CTX, sgs_Variable* var, XGM_VT x1, XGM_VT y1_shdef, XGM_VT x2, XGM_VT y2 )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
-	XGM_SET4( nv, x1, y1_shdef, x2, y2 ); /* shadowed declaration warning */
-}
-
-void sgs_InitAABB3( SGS_CTX, sgs_Variable* var, const XGM_VT* v3a, const XGM_VT* v3b )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 6, xgm_aabb3_iface );
-	XGM_COPY3( nv, v3a );
-	XGM_COPY3( nv+3, v3b );
-}
-
-void sgs_InitColor( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_color_iface );
-	XGM_SET4( nv, x, y, z, w );
-}
-
-void sgs_InitQuat( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_quat_iface );
-	XGM_SET4( nv, x, y, z, w );
-}
-
-void sgs_InitMat3( SGS_CTX, sgs_Variable* var, const XGM_VT* v9f, int transpose )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 9, xgm_mat3_iface );
-	if( transpose )
-	{
-		nv[ 0 ] = v9f[ 0 ]; nv[ 1 ] = v9f[ 3 ]; nv[ 2 ] = v9f[ 6 ];
-		nv[ 3 ] = v9f[ 1 ]; nv[ 4 ] = v9f[ 4 ]; nv[ 5 ] = v9f[ 7 ];
-		nv[ 6 ] = v9f[ 2 ]; nv[ 7 ] = v9f[ 5 ]; nv[ 8 ] = v9f[ 8 ];
-	}
-	else
-		memcpy( nv, v9f, sizeof(XGM_VT) * 9 );
-}
-
-void sgs_InitMat4( SGS_CTX, sgs_Variable* var, const XGM_VT* v16f, int transpose )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 16, xgm_mat4_iface );
-	if( transpose )
-	{
-		nv[ 0 ] = v16f[ 0 ]; nv[ 1 ] = v16f[ 4 ]; nv[ 2 ] = v16f[ 8 ]; nv[ 3 ] = v16f[ 12 ];
-		nv[ 4 ] = v16f[ 1 ]; nv[ 5 ] = v16f[ 5 ]; nv[ 6 ] = v16f[ 9 ]; nv[ 7 ] = v16f[ 13 ];
-		nv[ 8 ] = v16f[ 2 ]; nv[ 9 ] = v16f[ 6 ]; nv[ 10 ] = v16f[ 10 ]; nv[ 11 ] = v16f[ 14 ];
-		nv[ 12 ] = v16f[ 3 ]; nv[ 13 ] = v16f[ 7 ]; nv[ 14 ] = v16f[ 11 ]; nv[ 15 ] = v16f[ 15 ];
-	}
-	else
-		memcpy( nv, v16f, sizeof(XGM_VT) * 16 );
-}
-
-void sgs_InitFloatArray( SGS_CTX, sgs_Variable* var, const XGM_VT* vfn, sgs_SizeVal size )
-{
-	xgm_vtarray* np = (xgm_vtarray*) sgs_InitObjectIPA( C, var, sizeof(xgm_vtarray), xgm_floatarr_iface );
-	np->size = size;
-	np->mem = size;
-	np->data = size ? sgs_Alloc_n( XGM_VT, (size_t) np->mem ) : NULL;
-	memcpy( np->data, vfn, sizeof( XGM_VT ) * (size_t) np->mem );
-}
-
-
-void sgs_InitVec2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v2f )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 2, xgm_vec2_iface );
-	XGM_COPY2( nv, v2f );
-}
-
-void sgs_InitVec3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 3, xgm_vec3_iface );
-	XGM_COPY3( nv, v3f );
-}
-
-void sgs_InitVec4p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_vec4_iface );
-	XGM_COPY4( nv, v4f );
-}
-
-void sgs_InitAABB2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
-	XGM_COPY4( nv, v4f );
-}
-
-void sgs_InitAABB3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v6f )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 6, xgm_aabb3_iface );
-	XGM_COPY6( nv, v6f );
-}
-
-void sgs_InitColorp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_color_iface );
-	XGM_COPY4( nv, v4f );
-}
-
-void sgs_InitColorvp( SGS_CTX, sgs_Variable* var, const XGM_VT* vf, int numfloats )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_color_iface );
-	if( numfloats == 0 ) nv[0] = nv[1] = nv[2] = nv[3] = 0;
-	else if( numfloats == 1 ) nv[0] = nv[1] = nv[2] = nv[3] = vf[0];
-	else if( numfloats == 2 ){ nv[0] = nv[1] = nv[2] = vf[0]; nv[3] = vf[1]; }
-	else if( numfloats == 3 ){ nv[0] = vf[0]; nv[1] = vf[1]; nv[2] = vf[2]; nv[3] = 1; }
-	else { nv[0] = vf[0]; nv[1] = vf[1]; nv[2] = vf[2]; nv[3] = vf[3]; }
-}
-
-void sgs_InitQuatp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_InitObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_quat_iface );
-	XGM_COPY4( nv, v4f );
-}
-
-
-SGSONE sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y )
-{
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 2, xgm_vec2_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 2, xgm_vec2_iface );
 	XGM_SET2( nv, x, y );
 	return 1;
 }
 
-SGSONE sgs_PushVec3( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z )
+SGSONE sgs_CreateVec3( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 3, xgm_vec3_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 3, xgm_vec3_iface );
 	XGM_SET3( nv, x, y, z );
 	return 1;
 }
 
-SGSONE sgs_PushVec4( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
+SGSONE sgs_CreateVec4( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_vec4_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_vec4_iface );
 	XGM_SET4( nv, x, y, z, w );
 	return 1;
 }
 
-SGSONE sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1_shdef, XGM_VT x2, XGM_VT y2 )
+SGSONE sgs_CreateAABB2( SGS_CTX, sgs_Variable* var, XGM_VT x1, XGM_VT y1_shdef, XGM_VT x2, XGM_VT y2 )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
 	XGM_SET4( nv, x1, y1_shdef, x2, y2 ); /* shadowed declaration warning */
 	return 1;
 }
 
-SGSONE sgs_PushAABB3( SGS_CTX, const XGM_VT* v3a, const XGM_VT* v3b )
+SGSONE sgs_CreateAABB3( SGS_CTX, sgs_Variable* var, const XGM_VT* v3a, const XGM_VT* v3b )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 6, xgm_aabb3_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 6, xgm_aabb3_iface );
 	XGM_COPY3( nv, v3a );
 	XGM_COPY3( nv+3, v3b );
 	return 1;
 }
 
-SGSONE sgs_PushColor( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
+SGSONE sgs_CreateColor( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_color_iface );
 	XGM_SET4( nv, x, y, z, w );
 	return 1;
 }
 
-SGSONE sgs_PushQuat( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
+SGSONE sgs_CreateQuat( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_quat_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_quat_iface );
 	XGM_SET4( nv, x, y, z, w );
 	return 1;
 }
 
-SGSONE sgs_PushMat3( SGS_CTX, const XGM_VT* v9f, int transpose )
+SGSONE sgs_CreateMat3( SGS_CTX, sgs_Variable* var, const XGM_VT* v9f, int transpose )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 9, xgm_mat3_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 9, xgm_mat3_iface );
 	if( transpose )
 	{
 		nv[ 0 ] = v9f[ 0 ]; nv[ 1 ] = v9f[ 3 ]; nv[ 2 ] = v9f[ 6 ];
@@ -4456,9 +4323,9 @@ SGSONE sgs_PushMat3( SGS_CTX, const XGM_VT* v9f, int transpose )
 	return 1;
 }
 
-SGSONE sgs_PushMat4( SGS_CTX, const XGM_VT* v16f, int transpose )
+SGSONE sgs_CreateMat4( SGS_CTX, sgs_Variable* var, const XGM_VT* v16f, int transpose )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 16, xgm_mat4_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 16, xgm_mat4_iface );
 	if( transpose )
 	{
 		nv[ 0 ] = v16f[ 0 ]; nv[ 1 ] = v16f[ 4 ]; nv[ 2 ] = v16f[ 8 ]; nv[ 3 ] = v16f[ 12 ];
@@ -4471,9 +4338,9 @@ SGSONE sgs_PushMat4( SGS_CTX, const XGM_VT* v16f, int transpose )
 	return 1;
 }
 
-SGSONE sgs_PushFloatArray( SGS_CTX, const XGM_VT* vfn, sgs_SizeVal size )
+SGSONE sgs_CreateFloatArray( SGS_CTX, sgs_Variable* var, const XGM_VT* vfn, sgs_SizeVal size )
 {
-	xgm_vtarray* np = (xgm_vtarray*) sgs_PushObjectIPA( C, sizeof(xgm_vtarray), xgm_floatarr_iface );
+	xgm_vtarray* np = (xgm_vtarray*) sgs_CreateObjectIPA( C, var, sizeof(xgm_vtarray), xgm_floatarr_iface );
 	np->size = size;
 	np->mem = size;
 	np->data = size ? sgs_Alloc_n( XGM_VT, (size_t) np->mem ) : NULL;
@@ -4482,51 +4349,51 @@ SGSONE sgs_PushFloatArray( SGS_CTX, const XGM_VT* vfn, sgs_SizeVal size )
 }
 
 
-SGSONE sgs_PushVec2p( SGS_CTX, const XGM_VT* v2f )
+SGSONE sgs_CreateVec2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v2f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 2, xgm_vec2_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 2, xgm_vec2_iface );
 	XGM_COPY2( nv, v2f );
 	return 1;
 }
 
-SGSONE sgs_PushVec3p( SGS_CTX, const XGM_VT* v3f )
+SGSONE sgs_CreateVec3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 3, xgm_vec3_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 3, xgm_vec3_iface );
 	XGM_COPY3( nv, v3f );
 	return 1;
 }
 
-SGSONE sgs_PushVec4p( SGS_CTX, const XGM_VT* v4f )
+SGSONE sgs_CreateVec4p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_vec4_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_vec4_iface );
 	XGM_COPY4( nv, v4f );
 	return 1;
 }
 
-SGSONE sgs_PushAABB2p( SGS_CTX, const XGM_VT* v4f )
+SGSONE sgs_CreateAABB2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_aabb2_iface );
 	XGM_COPY4( nv, v4f );
 	return 1;
 }
 
-SGSONE sgs_PushAABB3p( SGS_CTX, const XGM_VT* v6f )
+SGSONE sgs_CreateAABB3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v6f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 6, xgm_aabb3_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 6, xgm_aabb3_iface );
 	XGM_COPY6( nv, v6f );
 	return 1;
 }
 
-SGSONE sgs_PushColorp( SGS_CTX, const XGM_VT* v4f )
+SGSONE sgs_CreateColorp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_color_iface );
 	XGM_COPY4( nv, v4f );
 	return 1;
 }
 
-SGSONE sgs_PushColorvp( SGS_CTX, const XGM_VT* vf, int numfloats )
+SGSONE sgs_CreateColorvp( SGS_CTX, sgs_Variable* var, const XGM_VT* vf, int numfloats )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_color_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_color_iface );
 	if( numfloats == 0 ) nv[0] = nv[1] = nv[2] = nv[3] = 0;
 	else if( numfloats == 1 ) nv[0] = nv[1] = nv[2] = nv[3] = vf[0];
 	else if( numfloats == 2 ){ nv[0] = nv[1] = nv[2] = vf[0]; nv[3] = vf[1]; }
@@ -4535,9 +4402,9 @@ SGSONE sgs_PushColorvp( SGS_CTX, const XGM_VT* vf, int numfloats )
 	return 1;
 }
 
-SGSONE sgs_PushQuatp( SGS_CTX, const XGM_VT* v4f )
+SGSONE sgs_CreateQuatp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
 {
-	XGM_VT* nv = (XGM_VT*) sgs_PushObjectIPA( C, sizeof(XGM_VT) * 4, xgm_quat_iface );
+	XGM_VT* nv = (XGM_VT*) sgs_CreateObjectIPA( C, var, sizeof(XGM_VT) * 4, xgm_quat_iface );
 	XGM_COPY4( nv, v4f );
 	return 1;
 }

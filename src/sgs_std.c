@@ -223,7 +223,7 @@ static int sgsstd_arrayI_part( SGS_CTX )
 	if( to < from )
 		to = hdr->size;
 	
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	if( from < hdr->size && 0 < to )
 	{
 		from = SGS_MAX( from, 0 );
@@ -556,7 +556,7 @@ static int sgsstd_arrayI_unique( SGS_CTX )
 	if( !sgs_LoadArgs( C, "|b", &strconv ) )
 		return 0;
 	
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	nadata = sgs_GetObjectData( C, -1 );
 	while( off < hdr->size )
 	{
@@ -584,7 +584,7 @@ static int sgsstd_arrayI_random( SGS_CTX )
 	if( num < 0 )
 		STDLIB_WARN( "argument 1 (count) cannot be negative" )
 	
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	nadata = (sgsstd_array_header_t*) sgs_GetObjectData( C, -1 );
 	sgsstd_array_reserve( C, nadata, num );
 	while( num-- )
@@ -644,7 +644,7 @@ static sgs_RegFuncConst array_iface_fconsts[] =
 
 static int sgsstd_array_iface_gen( SGS_CTX )
 {
-	sgs_PushDict( C, 0 );
+	sgs_CreateDict( C, NULL, 0 );
 	sgs_StoreFuncConsts( C, sgs_StackSize( C ) - 1, array_iface_fconsts, SGS_ARRAY_SIZE(array_iface_fconsts) );
 	sgs_ObjSetMetaMethodEnable( sgs_GetObjectStruct( C, -1 ), 1 );
 	return 1;
@@ -820,7 +820,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 	if( type == SGS_CONVOP_TOITER )
 	{
 		sgsstd_array_iter_t* iter = (sgsstd_array_iter_t*)
-			sgs_PushObjectIPA( C, sizeof(*iter), sgsstd_array_iter_iface );
+			sgs_CreateObjectIPA( C, NULL, sizeof(*iter), sgsstd_array_iter_iface );
 		
 		sgs_InitObjectPtr( &iter->ref, data ); /* acquires ref */
 		iter->size = hdr->size;
@@ -853,7 +853,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* data, int type )
 	else if( type == SGS_CONVOP_CLONE )
 	{
 		sgsstd_array_header_t* hdr2 = (sgsstd_array_header_t*)
-			sgs_PushObjectIPA( C, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
+			sgs_CreateObjectIPA( C, NULL, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
 		memcpy( hdr2, hdr, sizeof( sgsstd_array_header_t ) );
 		hdr2->data = sgs_Alloc_n( sgs_Variable, (size_t) hdr->mem );
 		memcpy( hdr2->data, hdr->data, SGSARR_ALLOCSIZE( hdr->mem ) );
@@ -913,7 +913,7 @@ static int sgsstd_array( SGS_CTX )
 	void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( objcnt ) );
 	sgs_Variable *p, *pend;
 	sgsstd_array_header_t* hdr = (sgsstd_array_header_t*)
-		sgs_PushObjectIPA( C, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
+		sgs_CreateObjectIPA( C, NULL, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
 	hdr->size = objcnt;
 	hdr->mem = objcnt;
 	p = hdr->data = (sgs_Variable*) data;
@@ -1023,9 +1023,7 @@ static DictHdr* mkdict( SGS_CTX, sgs_Variable* out )
 	if( !iface )
 		iface = sgsstd_dict_iface;
 	)
-	DictHdr* dh = (DictHdr*) ( out
-		? sgs_InitObjectIPA( C, out, sizeof( DictHdr ), iface )
-		: sgs_PushObjectIPA( C, sizeof( DictHdr ), iface ) );
+	DictHdr* dh = (DictHdr*) sgs_CreateObjectIPA( C, out, sizeof( DictHdr ), iface );
 	sgs_vht_init( &dh->ht, C, 4, 4 );
 	return dh;
 }
@@ -1161,7 +1159,7 @@ static int sgsstd_dict_convert( SGS_CTX, sgs_VarObj* data, int type )
 	if( type == SGS_CONVOP_TOITER )
 	{
 		sgsstd_dict_iter_t* iter = (sgsstd_dict_iter_t*)
-			sgs_PushObjectIPA( C, sizeof(*iter), sgsstd_dict_iter_iface );
+			sgs_CreateObjectIPA( C, NULL, sizeof(*iter), sgsstd_dict_iter_iface );
 		
 		sgs_InitObjectPtr( &iter->ref, data ); /* acquires ref */
 		iter->size = sgs_vht_size( ht );
@@ -1253,9 +1251,7 @@ static int sgsstd_dict( SGS_CTX )
 
 static DictHdr* mkmap( SGS_CTX, sgs_Variable* out )
 {
-	DictHdr* dh = (DictHdr*) ( out
-		? sgs_InitObjectIPA( C, out, sizeof( DictHdr ), SGSIFACE_MAP )
-		: sgs_PushObjectIPA( C, sizeof( DictHdr ), SGSIFACE_MAP ) );
+	DictHdr* dh = (DictHdr*) sgs_CreateObjectIPA( C, out, sizeof( DictHdr ), SGSIFACE_MAP );
 	sgs_vht_init( &dh->ht, C, 4, 4 );
 	return dh;
 }
@@ -1279,7 +1275,7 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* data, int type )
 	if( type == SGS_CONVOP_TOITER )
 	{
 		sgsstd_dict_iter_t* iter = (sgsstd_dict_iter_t*)
-			sgs_PushObjectIPA( C, sizeof(*iter), sgsstd_dict_iter_iface );
+			sgs_CreateObjectIPA( C, NULL, sizeof(*iter), sgsstd_dict_iter_iface );
 		
 		sgs_InitObjectPtr( &iter->ref, data ); /* acquires ref */
 		iter->size = sgs_vht_size( ht );
@@ -1514,7 +1510,7 @@ int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc )
 	/* WP: range not affected by conversion */
 	uint32_t i, clsz = (uint32_t) sizeof(sgs_Closure*) * clc;
 	uint32_t memsz = clsz + (uint32_t) ( sizeof(sgs_Variable) + sizeof(int32_t) );
-	uint8_t* cl = (uint8_t*) sgs_PushObjectIPA( C, memsz, sgsstd_closure_iface );
+	uint8_t* cl = (uint8_t*) sgs_CreateObjectIPA( C, NULL, memsz, sgsstd_closure_iface );
 	
 	memcpy( cl, func, sizeof(sgs_Variable) );
 	sgs_Acquire( C, func );
@@ -1542,7 +1538,7 @@ static int sgsstd_array_filter( SGS_CTX )
 	if( !sgs_LoadArgs( C, "a|p", &asz, &cset ) )
 		return 0;
 	
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	data = sgs_GetObjectData( C, 0 );
 	nadata = (sgsstd_array_header_t*) sgs_GetObjectData( C, -1 );
 	
@@ -1613,7 +1609,7 @@ static int sgsstd_dict_filter( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?t|p", &cset ) )
 		return 0;
 	
-	sgs_PushDict( C, 0 );
+	sgs_CreateDict( C, NULL, 0 );
 	sgs_PushIterator( C, 0 );
 	while( sgs_IterAdvance( C, -1 ) > 0 )
 	{
@@ -1756,7 +1752,7 @@ static int _foreach_lister( SGS_CTX, int vnk )
 	if( sgs_PushIterator( C, 0 ) != SGS_SUCCESS )
 		return sgs_ArgErrorExt( C, 0, 0, "iterable", "" );
 	
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	/* arg1, arg1 iter, output */
 	while( sgs_IterAdvance( C, 1 ) > 0 )
 	{
@@ -1787,7 +1783,7 @@ static int sgsstd_get_concat( SGS_CTX )
 			sgs_StackSize( C ) );
 	}
 	
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	for( i = 0; i < ssz; ++i )
 	{
 		if( sgs_PushIterator( C, i ) != SGS_SUCCESS )
@@ -1837,7 +1833,7 @@ static int sgsstd_get_merged( SGS_CTX )
 			sgs_StackSize( C ) );
 	}
 	
-	sgs_PushDict( C, 0 );
+	sgs_CreateDict( C, NULL, 0 );
 	return sgsstd__get_merged__common( C, ssz );
 }
 
@@ -1852,7 +1848,7 @@ static int sgsstd_get_merged_map( SGS_CTX )
 			sgs_StackSize( C ) );
 	}
 	
-	sgs_PushMap( C, 0 );
+	sgs_CreateMap( C, NULL, 0 );
 	return sgsstd__get_merged__common( C, ssz );
 }
 
@@ -2344,7 +2340,7 @@ static int sgsstd_va_get_args( SGS_CTX )
 		for( i = 0; i < xac; ++i )
 			sgs_PushVariable( C, tpv - i );
 	}
-	sgs_PushArray( C, sf->argcount );
+	sgs_CreateArray( C, NULL, sf->argcount );
 	return 1;
 }
 
@@ -2546,7 +2542,7 @@ static int sgsstd_co_create( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?p." ) )
 		return 0;
 	
-	CO = sgs_PushObjectIPA( C, sizeof(*CO), sgsstd_coro_iface );
+	CO = sgs_CreateObjectIPA( C, NULL, sizeof(*CO), sgsstd_coro_iface );
 	sgs_GetStackItem( C, 0, &CO->func );
 	CO->ctx = sgs_ForkState( C, 0 );
 	return 1;
@@ -2739,7 +2735,7 @@ static void _sgsstd_compile_pfn( void* data, SGS_CTX, int type, const char* msg 
 	sgs_PushInt( C, type );
 	sgs_PushString( C, "msg" );
 	sgs_PushString( C, msg );
-	sgs_PushDict( C, 4 );
+	sgs_CreateDict( C, NULL, 4 );
 	
 	ret = sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
 	SGS_UNUSED( ret );
@@ -2764,7 +2760,7 @@ static int sgsstd_compile_sgs( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m", &buf, &size ) )
 		return 0;
 	
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	sgs_GetStackItem( C, -1, &var );
 	sgs_Pop( C, 1 );
 	
@@ -3256,7 +3252,7 @@ static int sgsstd_multiply_path_ext_lists( SGS_CTX )
 	
 	joinstrlen = strlen( joinstr );
 	
-	sgs_PushArray( C, 0 );
+	sgs_CreateArray( C, NULL, 0 );
 	osfx = suffixes;
 	pp = prefixes;
 	for(;;)
@@ -3331,11 +3327,11 @@ static int sgsstd_sys_backtrace( SGS_CTX )
 			sgs_PushString( C, "file" );
 			sgs_PushString( C, file );
 			
-			sgs_PushDict( C, 6 );
+			sgs_CreateDict( C, NULL, 6 );
 			
 			p = p->next;
 		}
-		sgs_PushArray( C, sgs_StackSize( C ) - sz );
+		sgs_CreateArray( C, NULL, sgs_StackSize( C ) - sz );
 	}
 	return 1;
 }
@@ -3600,7 +3596,7 @@ static int sgsstd_unserialize_core( SGS_CTX, int which )
 		if( sgs_IsObject( C, 1, sgsstd_array_iface ) )
 		{
 			dictpos = sgs_StackSize( C );
-			sgs_PushDict( C, 0 );
+			sgs_CreateDict( C, NULL, 0 );
 			sgs_PushIterator( C, 1 );
 			while( sgs_IterAdvance( C, -1 ) > 0 )
 			{
@@ -3765,6 +3761,7 @@ int sgsSTD_PostInit( SGS_CTX )
 int sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 {
 	sgs_StkIdx i = 0, ssz = sgs_StackSize( C );
+	sgs_BreakIf( out == NULL ); /* CreateObjectIPA modifies the stack otherwise */
 	
 	if( ssz < cnt )
 		return SGS_EINVAL;
@@ -3772,7 +3769,7 @@ int sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 	{
 		sgs_Variable *p, *pend;
 		void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( cnt ) );
-		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_InitObjectIPA( C,
+		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_CreateObjectIPA( C,
 			out, sizeof( sgsstd_array_header_t ), SGSIFACE_ARRAY );
 		
 		hdr->size = cnt;
