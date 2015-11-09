@@ -5,8 +5,7 @@
 
 int sgs_meta_globals( SGS_CTX )
 {
-#define _META_RGS( instr ) sgs_PushInt( C, SGS_##instr ); \
-	sgs_StoreGlobal( C, #instr );
+#define _META_RGS( instr ) sgs_SetGlobalByName( C, #instr, sgs_MakeInt( SGS_##instr ) );
 	
 	_META_RGS( SI_NOP );
 	_META_RGS( SI_PUSH );
@@ -95,7 +94,7 @@ static int _sgs_meta_dumpconstlist( SGS_CTX, sgs_Variable* var, size_t numvars )
 		case SGS_VT_INT:
 		case SGS_VT_REAL:
 		case SGS_VT_STRING:
-			sgs_PushVariable( C, var );
+			sgs_PushVariable( C, *var );
 			break;
 		case SGS_VT_FUNC:
 			if( !_sgs_meta_dumpfn( C, var->data.F ) )
@@ -193,11 +192,11 @@ static int _sgs_meta_dumpfn( SGS_CTX, sgs_iFunc* func )
 	
 	sgs_PushString( C, "name" );
 	strvar.data.S = func->sfuncname;
-	sgs_PushVariable( C, &strvar );
+	sgs_PushVariable( C, strvar );
 	
 	sgs_PushString( C, "filename" );
 	strvar.data.S = func->sfilename;
-	sgs_PushVariable( C, &strvar );
+	sgs_PushVariable( C, strvar );
 	
 	sgs_PushString( C, "line" );
 	sgs_PushInt( C, func->linenum );

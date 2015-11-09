@@ -178,11 +178,11 @@ static threadret_t ppthread_threadfunc( void* arg )
 	
 	THR->C = sgs_CreateEngineExt( THR->mf, THR->mfud );
 	
-	sgs_PushCFunc( THR->C, pproc_sleep );
-	sgs_StoreGlobal( THR->C, "pproc_sleep" );
+	sgs_SetGlobalByName( THR->C, "pproc_sleep", sgs_MakeCFunc( pproc_sleep ) );
 	
 	sgs_CreateObject( THR->C, NULL, THR, ppthread_iface_thr );
-	sgs_StoreGlobal( THR->C, "_T" );
+	sgs_SetGlobalByName( THR->C, "_T", sgs_StackItem( THR->C, -1 ) );
+	sgs_Pop( THR->C, 1 );
 	
 	sgs_ExecBuffer( THR->C, THR->code, (size_t) THR->codesize );
 	
@@ -564,9 +564,11 @@ __declspec(dllexport)
 int pproc_module_entry_point( SGS_CTX )
 {
 	SGS_MODULE_CHECK_VERSION( C );
-	sgs_PushCFunc( C, pproc_create_thread );
-	sgs_StoreGlobal( C, "pproc_create_thread" );
-	sgs_PushCFunc( C, pproc_sleep );
-	sgs_StoreGlobal( C, "pproc_sleep" );
+	sgs_RegFuncConst rfc[] =
+	{
+		{ "pproc_create_thread", pproc_create_thread },
+		{ "pproc_sleep", pproc_sleep },
+	};
+	sgs_RegFuncConsts( C, rfc, SGS_ARRAY_SIZE( rfc ) );
 	return SGS_SUCCESS;
 }

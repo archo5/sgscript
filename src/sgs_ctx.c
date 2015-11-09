@@ -188,6 +188,7 @@ static void ctx_destroy( SGS_CTX )
 		sgs_vht_free( &S->typetable, C );
 		sgs_VHTVar* p = S->stringtable.vars;
 		sgs_VHTVar* pend = p + S->stringtable.size;
+		int numerrs = 0;
 		while( p < pend )
 		{
 			sgs_iStr* unfreed_string = p->key.data.S;
@@ -198,12 +199,18 @@ static void ctx_destroy( SGS_CTX )
 					(int) unfreed_string->refcount, (int) unfreed_string->size,
 					(int) unfreed_string->size, sgs_str_cstr( unfreed_string ) );
 			}
+			else if( unfreed_string->refcount < 0 )
+			{
+				fprintf( stderr, "overfreed string: (rc=%d)[%d]",
+					(int) unfreed_string->refcount, (int) unfreed_string->size );
+			}
 #endif
-			sgs_BreakIf( unfreed_string->refcount > 0 && "string not freed" );
+			numerrs += unfreed_string->refcount != 0;
 			sgs_BreakIf( unfreed_string->refcount < 0 && "memory error" );
 			sgs_Dealloc( unfreed_string );
 			p++;
 		}
+		sgs_BreakIf( numerrs > 0 && "string not freed" );
 		sgs_vht_free( &S->stringtable, C );
 	}
 	// ----
@@ -1223,52 +1230,47 @@ sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end )
 }
 
 
-SGSRESULT sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface )
+SGSBOOL sgs_RegisterType( SGS_CTX, const char* name, sgs_ObjInterface* iface )
 {
 	size_t len;
 	sgs_VHTVar* p;
 	SGS_SHCTX_USE;
 	if( !iface )
-		return SGS_EINVAL;
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_RegisterType: cannot register NULL interface" );
+		return SGS_FALSE;
+	}
 	len = strlen( name );
-	if( len > 0x7fffffff )
-		return SGS_EINVAL;
-	/* WP: error condition */
+	/* WP: unimportant */
 	p = sgs_vht_get_str( &S->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
 	if( p )
-		return SGS_EINPROC;
+		return SGS_FALSE;
 	{
-		sgs_Variable tmp;
-		tmp.type = SGS_VT_PTR;
-		tmp.data.P = iface;
+		sgs_Variable tmp = sgs_MakePtr( iface );
 		sgs_PushStringBuf( C, name, (sgs_SizeVal) len );
 		sgs_vht_set( &S->typetable, C, C->stack_top-1, &tmp );
 		sgs_Pop( C, 1 );
 	}
-	return SGS_SUCCESS;
+	return SGS_TRUE;
 }
 
-SGSRESULT sgs_UnregisterType( SGS_CTX, const char* name )
+SGSBOOL sgs_UnregisterType( SGS_CTX, const char* name )
 {
 	SGS_SHCTX_USE;
 	size_t len = strlen( name );
-	if( len > 0x7fffffff )
-		return SGS_EINVAL;
-	/* WP: error condition */
+	/* WP: unimportant */
 	sgs_VHTVar* p = sgs_vht_get_str( &S->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
 	if( !p )
-		return SGS_ENOTFND;
+		return SGS_FALSE;
 	sgs_vht_unset( &S->typetable, C, &p->key );
-	return SGS_SUCCESS;
+	return SGS_TRUE;
 }
 
 sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name )
 {
 	SGS_SHCTX_USE;
 	size_t len = strlen( name );
-	if( len > 0x7fffffff )
-		return NULL;
-	/* WP: error condition */
+	/* WP: unimportant */
 	sgs_VHTVar* p = sgs_vht_get_str( &S->typetable, name, (uint32_t) len, sgs_HashFunc( name, len ) );
 	if( p )
 		return (sgs_ObjInterface*) p->val.data.P;

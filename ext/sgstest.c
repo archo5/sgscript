@@ -119,20 +119,17 @@ void free_testfiles( testfile* files, size_t count )
 
 static void TF_printfn( void* ctx, SGS_CTX, int type, const char* message )
 {
-	int ret = 0;
-	const char* pfxs[] = { "[I:", "[W:", "[E:" };
+	const char* pfxs[] = { "[I:", "[W:", "[E:", "[A:" };
 	type = type / 100 - 1;
 	if( type < 0 ) type = 0;
-	if( type > 2 ) type = 2;
-	ret |= sgs_PushGlobal( C, "ERRORS" );
-	sgs_BreakIf( ret != SGS_SUCCESS );
+	if( type > 3 ) type = 3;
+	sgs_PushGlobalByName( C, "ERRORS" );
 	sgs_PushString( C, pfxs[ type ] );
 	sgs_PushString( C, message );
 	sgs_PushString( C, "]" );
-	ret |= sgs_StringConcat( C, 4 );
-	sgs_BreakIf( ret != SGS_SUCCESS );
-	ret |= sgs_StoreGlobal( C, "ERRORS" );
-	sgs_BreakIf( ret != SGS_SUCCESS );
+	sgs_StringConcat( C, 4 );
+	sgs_SetGlobalByName( C, "ERRORS", sgs_StackItem( C, -1 ) );
+	sgs_Pop( C, 1 );
 }
 
 static void prepengine( sgs_Context* C )
@@ -245,7 +242,7 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 	tm2 = sgs_GetTime();
 	
 	if( strstr( nameonly, "TF" ) != NULL &&
-		sgs_PushGlobal( C, "tests_failed" ) == SGS_SUCCESS )
+		sgs_PushGlobalByName( C, "tests_failed" ) == SGS_TRUE )
 	{
 		if( sgs_GetInt( C, -1 ) )
 			retval = SGS_EINPROC;

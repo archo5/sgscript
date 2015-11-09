@@ -1652,11 +1652,9 @@ static const sgs_RegFuncConst f_fconsts[] =
 	STDLIB_FN( fmt_charcc ),
 };
 
-SGSRESULT sgs_LoadLib_Fmt( SGS_CTX )
+void sgs_LoadLib_Fmt( SGS_CTX )
 {
-	int ret;
-	ret = sgs_RegFuncConsts( C, f_fconsts, SGS_ARRAY_SIZE( f_fconsts ) );
-	return ret;
+	sgs_RegFuncConsts( C, f_fconsts, SGS_ARRAY_SIZE( f_fconsts ) );
 }
 
 
@@ -2383,13 +2381,10 @@ static const sgs_RegFuncConst i_fconsts[] =
 	STDLIB_FN( io_file ), STDLIB_FN( io_dir ),
 };
 
-SGSRESULT sgs_LoadLib_IO( SGS_CTX )
+void sgs_LoadLib_IO( SGS_CTX )
 {
-	int ret;
-	ret = sgs_RegRealConsts( C, i_rconsts, SGS_ARRAY_SIZE( i_rconsts ) );
-	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegFuncConsts( C, i_fconsts, SGS_ARRAY_SIZE( i_fconsts ) );
-	return ret;
+	sgs_RegRealConsts( C, i_rconsts, SGS_ARRAY_SIZE( i_rconsts ) );
+	sgs_RegFuncConsts( C, i_fconsts, SGS_ARRAY_SIZE( i_fconsts ) );
 }
 
 
@@ -2534,13 +2529,10 @@ static const sgs_RegFuncConst m_fconsts[] =
 	STDLIB_FN( deg2rad ), STDLIB_FN( rad2deg ),
 };
 
-SGSRESULT sgs_LoadLib_Math( SGS_CTX )
+void sgs_LoadLib_Math( SGS_CTX )
 {
-	int ret;
-	ret = sgs_RegRealConsts( C, m_rconsts, SGS_ARRAY_SIZE( m_rconsts ) );
-	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegFuncConsts( C, m_fconsts, SGS_ARRAY_SIZE( m_fconsts ) );
-	return ret;
+	sgs_RegRealConsts( C, m_rconsts, SGS_ARRAY_SIZE( m_rconsts ) );
+	sgs_RegFuncConsts( C, m_fconsts, SGS_ARRAY_SIZE( m_fconsts ) );
 }
 
 
@@ -2960,13 +2952,10 @@ static const sgs_RegFuncConst o_fconsts[] =
 	STDLIB_FN( os_get_locale_format ), STDLIB_FN( os_locale_strcmp ),
 };
 
-SGSRESULT sgs_LoadLib_OS( SGS_CTX )
+void sgs_LoadLib_OS( SGS_CTX )
 {
-	int ret;
-	ret = sgs_RegFuncConsts( C, o_fconsts, SGS_ARRAY_SIZE( o_fconsts ) );
-	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegIntConsts( C, o_iconsts, SGS_ARRAY_SIZE( o_iconsts ) );
-	return ret;
+	sgs_RegFuncConsts( C, o_fconsts, SGS_ARRAY_SIZE( o_fconsts ) );
+	sgs_RegIntConsts( C, o_iconsts, SGS_ARRAY_SIZE( o_iconsts ) );
 }
 
 
@@ -3171,13 +3160,10 @@ static const sgs_RegFuncConst r_fconsts[] =
 	STDLIB_FN( re_replace ),
 };
 
-SGSRESULT sgs_LoadLib_RE( SGS_CTX )
+void sgs_LoadLib_RE( SGS_CTX )
 {
-	int ret;
-	ret = sgs_RegIntConsts( C, r_iconsts, SGS_ARRAY_SIZE( r_iconsts ) );
-	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegFuncConsts( C, r_fconsts, SGS_ARRAY_SIZE( r_fconsts ) );
-	return ret;
+	sgs_RegIntConsts( C, r_iconsts, SGS_ARRAY_SIZE( r_iconsts ) );
+	sgs_RegFuncConsts( C, r_fconsts, SGS_ARRAY_SIZE( r_fconsts ) );
 }
 
 
@@ -4452,13 +4438,10 @@ static const sgs_RegFuncConst s_fconsts[] =
 	STDLIB_FN( string_format ),
 };
 
-SGSRESULT sgs_LoadLib_String( SGS_CTX )
+void sgs_LoadLib_String( SGS_CTX )
 {
-	int ret;
-	ret = sgs_RegIntConsts( C, s_iconsts, SGS_ARRAY_SIZE( s_iconsts ) );
-	if( ret != SGS_SUCCESS ) return ret;
-	ret = sgs_RegFuncConsts( C, s_fconsts, SGS_ARRAY_SIZE( s_fconsts ) );
-	return ret;
+	sgs_RegIntConsts( C, s_iconsts, SGS_ARRAY_SIZE( s_iconsts ) );
+	sgs_RegFuncConsts( C, s_fconsts, SGS_ARRAY_SIZE( s_fconsts ) );
 }
 
 

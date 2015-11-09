@@ -90,8 +90,7 @@
 static int sockassert( SGS_CTX, int test )
 {
 	int err = test ? 0 : sgs_sockerror;
-	sgs_PushInt( C, err );
-	sgs_StoreGlobal( C, SCKERRVN );
+	sgs_SetGlobalByName( C, SCKERRVN, sgs_MakeInt( err ) );
 	return test;
 }
 
@@ -102,7 +101,7 @@ static int socket_error( SGS_CTX )
 	if( !sgs_LoadArgs( C, "|b", &astext ) )
 		return 0;
 	
-	if( sgs_PushGlobal( C, SCKERRVN ) == SGS_SUCCESS )
+	if( sgs_PushGlobalByName( C, SCKERRVN ) == SGS_SUCCESS )
 		e = (int) sgs_GetInt( C, -1 );
 	else if( !astext )
 		sgs_PushInt( C, 0 );
@@ -1087,9 +1086,13 @@ static int sgs_socket_select( SGS_CTX )
 	FD_ZERO( &setW );
 	FD_ZERO( &setE );
 	
+	aR = sgs_StackItem( C, 0 );
+	aW = sgs_StackItem( C, 1 );
+	aE = sgs_StackItem( C, 2 );
+	
 	for( i = 0; i < szR; ++i )
 	{
-		sgs_PushNumIndex( C, 0, i );
+		sgs_PushNumIndex( C, aR, i );
 		if( !sgs_IsObject( C, -1, socket_iface ) )
 			return sgs_Msg( C, SGS_WARNING, "item #%d of 'read' array is not a socket", i + 1 );
 		obj = sgs_GetObjectStruct( C, -1 );
@@ -1103,7 +1106,7 @@ static int sgs_socket_select( SGS_CTX )
 	
 	for( i = 0; i < szW; ++i )
 	{
-		sgs_PushNumIndex( C, 1, i );
+		sgs_PushNumIndex( C, aW, i );
 		if( !sgs_IsObject( C, -1, socket_iface ) )
 			return sgs_Msg( C, SGS_WARNING, "item #%d of 'write' array is not a socket", i + 1 );
 		obj = sgs_GetObjectStruct( C, -1 );
@@ -1117,7 +1120,7 @@ static int sgs_socket_select( SGS_CTX )
 	
 	for( i = 0; i < szE; ++i )
 	{
-		sgs_PushNumIndex( C, 2, i );
+		sgs_PushNumIndex( C, aE, i );
 		if( !sgs_IsObject( C, -1, socket_iface ) )
 			return sgs_Msg( C, SGS_WARNING, "item #%d of 'error' array is not a socket", i + 1 );
 		obj = sgs_GetObjectStruct( C, -1 );
@@ -1133,10 +1136,6 @@ static int sgs_socket_select( SGS_CTX )
 	tv.tv_usec = (int32_t)( ( timeout - (sgs_Real) tv.tv_sec ) * 1000000 );
 	ret = select( (int) maxsock + 1, &setR, &setW, &setE, sgs_StackSize( C ) >= 4 ? &tv : NULL );
 	sockassert( C, ret != -1 );
-	
-	aR = sgs_StackItem( C, 0 );
-	aW = sgs_StackItem( C, 1 );
-	aE = sgs_StackItem( C, 2 );
 	
 	for( i = 0; i < szR; ++i )
 	{
@@ -1220,17 +1219,13 @@ int sockets_module_entry_point( SGS_CTX )
 	
 	SGS_MODULE_CHECK_VERSION( C );
 	
-	sgs_PushInt( C, 0 );
-	sgs_StoreGlobal( C, SCKERRVN );
+	sgs_SetGlobalByName( C, SCKERRVN, sgs_MakeInt( 0 ) );
 	
 	sgs_RegisterType( C, "socket", socket_iface );
 	sgs_RegisterType( C, "socket_address", sockaddr_iface );
 	
-	ret = sgs_RegFuncConsts( C, f_sock, sizeof(f_sock) / sizeof(f_sock[0]) );
-	if( ret != SGS_SUCCESS ) return ret;
-	
-	ret = sgs_RegIntConsts( C, i_sock, sizeof(i_sock) / sizeof(i_sock[0]) );
-	if( ret != SGS_SUCCESS ) return ret;
+	sgs_RegFuncConsts( C, f_sock, SGS_ARRAY_SIZE( f_sock ) );
+	sgs_RegIntConsts( C, i_sock, SGS_ARRAY_SIZE( i_sock ) );
 	
 #ifdef _WIN32
 	ret = WSAStartup( MAKEWORD( 2, 0 ), &wsadata );

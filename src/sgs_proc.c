@@ -68,6 +68,7 @@ static int _call_metamethod( SGS_CTX, sgs_VarObj* obj, const char* name, size_t 
 		return 0;
 	
 	res = sgs_ThisCall( C, v_func, args, 1 );
+	sgs_Release( C, &v_func );
 	if( SGS_CALL_FAILED( res ) )
 		return 0;
 	if( ret )
@@ -2368,7 +2369,7 @@ static void vm_make_array( SGS_CTX, int args, int outpos )
 	sgs_Variable arr;
 	sgs_BreakIf( sgs_StackSize( C ) < args );
 	ret = sgsSTD_MakeArray( C, &arr, args );
-	sgs_BreakIf( ret != SGS_SUCCESS );
+	sgs_BreakIf( ret != SGS_TRUE );
 	SGS_UNUSED( ret );
 	
 	stk_setvar_leave( C, outpos, &arr );
@@ -2380,7 +2381,7 @@ static void vm_make_dict( SGS_CTX, int args, int outpos )
 	sgs_Variable arr;
 	sgs_BreakIf( sgs_StackSize( C ) < args );
 	ret = sgsSTD_MakeDict( C, &arr, args );
-	sgs_BreakIf( ret != SGS_SUCCESS );
+	sgs_BreakIf( ret != SGS_TRUE );
 	SGS_UNUSED( ret );
 	
 	stk_setvar_leave( C, outpos, &arr );
@@ -3065,43 +3066,37 @@ void* sgs_CreateObjectIPA( SGS_CTX, sgs_Variable* out, uint32_t added, sgs_ObjIn
 	return var.data.O->data;
 }
 
-SGSRESULT sgs_CreateArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
+SGSONE sgs_CreateArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
 {
-	int res;
-	sgs_Variable var;
-	if( SGS_FAILED( res = sgsSTD_MakeArray( C, &var, numitems ) ) )
-		return res;
+	sgs_Variable var = sgs_MakeNull();
+	sgsSTD_MakeArray( C, &var, numitems );
 	if( out )
 		*out = var;
 	else
 		stk_push_leave( C, &var );
-	return SGS_SUCCESS;
+	return 1;
 }
 
-SGSRESULT sgs_CreateDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
+SGSONE sgs_CreateDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
 {
-	int res;
-	sgs_Variable var;
-	if( SGS_FAILED( res = sgsSTD_MakeDict( C, &var, numitems ) ) )
-		return res;
+	sgs_Variable var = sgs_MakeNull();
+	sgsSTD_MakeDict( C, &var, numitems );
 	if( out )
 		*out = var;
 	else
 		stk_push_leave( C, &var );
-	return SGS_SUCCESS;
+	return 1;
 }
 
-SGSRESULT sgs_CreateMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
+SGSONE sgs_CreateMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
 {
-	int res;
-	sgs_Variable var;
-	if( SGS_FAILED( res = sgsSTD_MakeMap( C, &var, numitems ) ) )
-		return res;
+	sgs_Variable var = sgs_MakeNull();
+	sgsSTD_MakeMap( C, &var, numitems );
 	if( out )
 		*out = var;
 	else
 		stk_push_leave( C, &var );
-	return SGS_SUCCESS;
+	return 1;
 }
 
 
@@ -3408,13 +3403,17 @@ sgs_Variable sgs_Registry( SGS_CTX, int subtype )
 	{
 	case SGS_REG_ROOT:
 		out.data.O = C->shared->_R;
+		break;
 	case SGS_REG_SYM:
 		out.data.O = C->shared->_SYM;
+		break;
 	case SGS_REG_INC:
 		out.data.O = C->shared->_INC;
+		break;
 	default:
 		out.type = SGS_VT_NULL;
 		sgs_Msg( C, SGS_APIERR, "sgs_Registry: invalid subtype (%d)", subtype );
+		break;
 	}
 	return out;
 }
@@ -3452,7 +3451,81 @@ void sgs_PushEnv( SGS_CTX )
 	n = null-including key (isprop=false) (sizeval, buffer)
 */
 
-static SGSRESULT sgs_PushPathBuf( SGS_CTX, sgs_Variable var, const char* path, size_t plen, va_list* pargs )
+static SGSBOOL sgs_parse_path_key( SGS_CTX, const char* fn, size_t at,
+	va_list* pargs, char a, sgs_Variable* pkey, int* pisprop )
+{
+	sgs_SizeVal S = -1;
+	char* P = NULL;
+	
+	if( a == 'o' )
+	{
+		*pisprop = 1;
+		S = va_arg( *pargs, int );
+	}
+	else if( a == 'p' )
+	{
+		*pisprop = 1;
+		P = va_arg( *pargs, char* );
+		if( !P )
+			goto nullptrerr;
+	}
+	else if( a == 's' )
+	{
+		*pisprop = 1;
+		S = va_arg( *pargs, int );
+		P = va_arg( *pargs, char* );
+		if( !P )
+			goto nullptrerr;
+	}
+	else if( a == 'i' )
+	{
+		*pisprop = 0;
+		S = va_arg( *pargs, int );
+	}
+	else if( a == 'k' )
+	{
+		*pisprop = 0;
+		P = va_arg( *pargs, char* );
+		if( !P )
+			goto nullptrerr;
+	}
+	else if( a == 'n' )
+	{
+		*pisprop = 0;
+		S = va_arg( *pargs, int );
+		P = va_arg( *pargs, char* );
+		if( !P )
+			goto nullptrerr;
+	}
+	else
+	{
+		sgs_Msg( C, SGS_APIERR, "%s: (pos. %d) unrecognized character '%c'", fn, (int) at, a );
+		return SGS_FALSE;
+	}
+	
+	if( P )
+	{
+		if( S >= 0 )
+			sgs_InitStringBuf( C, pkey, P, S );
+		else
+			sgs_InitString( C, pkey, P );
+	}
+	else if( S >= 0 )
+		*pkey = sgs_MakeInt( S );
+	else
+	{
+		sgs_Msg( C, SGS_APIERR, "%s: (pos. %d) internal path parsing error", fn, (int) at );
+		return SGS_FALSE;
+	}
+	return SGS_TRUE;
+	
+nullptrerr:
+	sgs_Msg( C, SGS_APIERR, "%s: (pos. %d) [%c] = null string pointer passed", fn, (int) at, a );
+	return SGS_FALSE;
+}
+
+static SGSBOOL sgs_PushPathBuf( SGS_CTX, const char* fn,
+	sgs_Variable var, const char* path, size_t plen, va_list* pargs )
 {
 	int ret = SGS_SUCCESS;
 	size_t i = 0;
@@ -3460,53 +3533,29 @@ static SGSRESULT sgs_PushPathBuf( SGS_CTX, sgs_Variable var, const char* path, s
 	while( i < plen )
 	{
 		sgs_Variable key;
-		sgs_SizeVal S = -1;
-		char* P = NULL;
 		int prop = -1;
 		char a = path[ i++ ];
 		
-		if( a == 'o' ){ prop = 1; S = va_arg( *pargs, int ); }
-		else if( a == 'p' ){ prop = 1; P = va_arg( *pargs, char* );
-			if( !P ) return SGS_EINVAL; }
-		else if( a == 's' ){ prop = 1; S = va_arg( *pargs, int );
-			P = va_arg( *pargs, char* ); if( !P ) return SGS_EINVAL; }
-		else if( a == 'i' ){ prop = 0; S = va_arg( *pargs, int ); }
-		else if( a == 'k' ){ prop = 0; P = va_arg( *pargs, char* );
-			if( !P ) return SGS_EINVAL; }
-		else if( a == 'n' ){ prop = 0; S = va_arg( *pargs, int );
-			P = va_arg( *pargs, char* ); if( !P ) return SGS_EINVAL; }
-		else
-			return SGS_EINVAL;
-		
-		if( P )
-		{
-			if( S >= 0 )
-				sgs_InitStringBuf( C, &key, P, S );
-			else
-				sgs_InitString( C, &key, P );
-		}
-		else if( S >= 0 )
-			key = sgs_MakeInt( S );
-		else
-			return SGS_EINPROC;
+		if( sgs_parse_path_key( C, fn, i, pargs, a, &key, &prop ) == SGS_FALSE )
+			return SGS_FALSE;
 		
 		ret = sgs_PushIndex( C, sgs_StackItem( C, -1 ), key, prop );
 		VAR_RELEASE( &key );
-		if( ret != SGS_SUCCESS )
+		if( ret == SGS_FALSE )
 			return ret;
 		stk_popskip( C, 1, 1 );
 	}
-	return ret;
+	return SGS_TRUE;
 }
 
-SGSRESULT sgs_PushPath( SGS_CTX, sgs_Variable var, const char* path, ... )
+SGSBOOL sgs_PushPath( SGS_CTX, sgs_Variable var, const char* path, ... )
 {
 	int ret;
 	StkIdx ssz = SGS_STACKFRAMESIZE;
 	va_list args;
 	va_start( args, path );
-	ret = sgs_PushPathBuf( C, var, path, strlen(path), &args );
-	if( ret == SGS_SUCCESS )
+	ret = sgs_PushPathBuf( C, "sgs_PushPath", var, path, strlen(path), &args );
+	if( ret )
 		stk_popskip( C, SGS_STACKFRAMESIZE - ssz - 1, 1 );
 	else
 		stk_pop( C, SGS_STACKFRAMESIZE - ssz );
@@ -3514,55 +3563,31 @@ SGSRESULT sgs_PushPath( SGS_CTX, sgs_Variable var, const char* path, ... )
 	return ret;
 }
 
-SGSRESULT sgs_StorePath( SGS_CTX, sgs_Variable var, sgs_Variable val, const char* path, ... )
+SGSBOOL sgs_StorePath( SGS_CTX, sgs_Variable var, sgs_Variable val, const char* path, ... )
 {
 	int ret;
 	size_t len = strlen( path );
 	StkIdx ssz = SGS_STACKFRAMESIZE;
 	va_list args;
 	if( !*path )
-		return SGS_EINVAL;
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_StorePath: expected non-empty path" );
+		return SGS_FALSE;
+	}
 	va_start( args, path );
-	ret = sgs_PushPathBuf( C, var, path, len - 1, &args );
-	if( ret == SGS_SUCCESS )
+	ret = sgs_PushPathBuf( C, "sgs_StorePath", var, path, len - 1, &args );
+	if( ret )
 	{
 		sgs_Variable key;
-		sgs_SizeVal S = -1;
-		char* P = NULL;
 		int prop = -1;
 		char a = path[ len - 1 ];
-		ret = SGS_EINVAL;
-		if( a == 'o' ){ prop = 1; S = va_arg( args, sgs_SizeVal ); }
-		else if( a == 'p' ){ prop = 1; P = va_arg( args, char* );
-			if( !P ) goto fail; }
-		else if( a == 's' ){ prop = 1; S = va_arg( args, sgs_SizeVal );
-			P = va_arg( args, char* ); if( !P ) goto fail; }
-		else if( a == 'i' ){ prop = 0; S = va_arg( args, sgs_SizeVal ); }
-		else if( a == 'k' ){ prop = 0; P = va_arg( args, char* );
-			if( !P ) goto fail; }
-		else if( a == 'n' ){ prop = 0; S = va_arg( args, sgs_SizeVal );
-			P = va_arg( args, char* ); if( !P ) goto fail; }
-		else
-			goto fail;
 		
-		if( P )
-		{
-			if( S >= 0 )
-				sgs_InitStringBuf( C, &key, P, S );
-			else
-				sgs_InitString( C, &key, P );
-		}
-		else if( S >= 0 )
-			key = sgs_MakeInt( S );
-		else
-		{
-			ret = SGS_EINPROC;
-			goto fail;
-		}
+		if( sgs_parse_path_key( C, "sgs_StorePath", len - 1, &args, a, &key, &prop ) == SGS_FALSE )
+			return SGS_FALSE;
 		
 		ret = sgs_SetIndex( C, sgs_StackItem( C, -1 ), key, val, prop );
 		VAR_RELEASE( &key );
-		if( ret != SGS_SUCCESS )
+		if( ret == SGS_FALSE )
 			goto fail;
 		ssz--;
 	}
@@ -4491,43 +4516,52 @@ const char* sgs_DebugDumpVarExt( SGS_CTX, sgs_Variable var, int maxdepth )
 }
 
 
-SGSRESULT sgs_PadString( SGS_CTX )
+void sgs_PadString( SGS_CTX )
 {
 	const char* padding = "  ";
 	const uint32_t padsize = 2;
 
 	if( sgs_StackSize( C ) < 1 )
-		return SGS_EINPROC;
 	{
-		uint32_t i;
-		char* ostr;
+		sgs_Msg( C, SGS_APIERR, "sgs_PadString: stack is empty" );
+		return;
+	}
+	else
+	{
+		uint32_t i, allocsize;
+		char* ostr, *ostre;
 		const char* cstr;
 		sgs_Variable* var = stk_getpos( C, -1 );
 		if( var->type != SGS_VT_STRING )
-			return SGS_EINVAL;
+		{
+			sgs_Msg( C, SGS_APIERR, "sgs_PadString: need string at top of stack" );
+			return;
+		}
 		cstr = sgs_var_cstr( var );
 		for( i = 0; cstr[ i ]; )
 			if( cstr[ i ] == '\n' ) i++; else cstr++;
-		if( var->data.S->size + i * padsize > 0x7fffffff )
-			return SGS_EINPROC;
+		allocsize = var->data.S->size + i * padsize;
+		if( allocsize > 0x7fffffff )
+			allocsize = 0x7fffffff;
 		
-		/* WP: implemented error condition */
-		sgs_PushStringAlloc( C, (sgs_SizeVal)( var->data.S->size + i * padsize ) );
+		/* WP: unimportant */
+		sgs_PushStringAlloc( C, (sgs_SizeVal) allocsize );
 		cstr = sgs_var_cstr( stk_getpos( C, -2 ) );
 		ostr = sgs_var_cstr( stk_getpos( C, -1 ) );
-		while( *cstr )
+		ostre = ostr + allocsize;
+		while( *cstr && ostr < ostre )
 		{
 			*ostr++ = *cstr;
 			if( *cstr == '\n' )
 			{
 				const char* ppd = padding;
-				while( *ppd )
+				while( *ppd && ostr < ostre )
 					*ostr++ = *ppd++;
 			}
 			cstr++;
 		}
 		sgs_PopSkip( C, 1, 1 );
-		return sgs_FinalizeStringAlloc( C, -1 );
+		sgs_FinalizeStringAlloc( C, -1 );
 	}
 }
 
@@ -4558,9 +4592,13 @@ SGSRESULT sgs_ToPrintSafeString( SGS_CTX )
 	return SGS_SUCCESS;
 }
 
-SGSRESULT sgs_StringConcat( SGS_CTX, StkIdx args )
+void sgs_StringConcat( SGS_CTX, StkIdx args )
 {
-	return vm_op_concat_ex( C, args ) ? SGS_SUCCESS : SGS_EINVAL;
+	if( vm_op_concat_ex( C, args ) == SGS_FALSE )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_StringConcat: not enough items on stack (need: %d, have: %d)",
+			(int) args, (int) SGS_STACKFRAMESIZE );
+	}
 }
 
 SGSRESULT sgs_CloneItem( SGS_CTX, StkIdx item )

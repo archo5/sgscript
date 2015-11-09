@@ -2677,9 +2677,9 @@ static int xgm_m3_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 	bfr[ 511 ] = 0;
 	sgs_PushString( C, "mat3\n(" );
 	sgs_PushString( C, bfr );
-	if( sgs_PadString( C ) ) return SGS_EINPROC;
+	sgs_PadString( C );
 	sgs_PushString( C, "\n)" );
-	if( sgs_StringConcat( C, 3 ) ) return SGS_EINPROC;
+	sgs_StringConcat( C, 3 );
 	return SGS_SUCCESS;
 }
 
@@ -3235,9 +3235,9 @@ static int xgm_m4_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 	bfr[ 1023 ] = 0;
 	sgs_PushString( C, "mat4\n(" );
 	sgs_PushString( C, bfr );
-	if( sgs_PadString( C ) ) return SGS_EINPROC;
+	sgs_PadString( C );
 	sgs_PushString( C, "\n)" );
-	if( sgs_StringConcat( C, 3 ) ) return SGS_EINPROC;
+	sgs_StringConcat( C, 3 );
 	return SGS_SUCCESS;
 }
 
@@ -3352,8 +3352,7 @@ static int xgm_fla_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 	}
 	if( vc > 1 ) /* concatenate all numbers and "..." if it exists" */
 		sgs_StringConcat( C, vc );
-	if( SGS_FAILED( sgs_PadString( C ) ) )
-		return SGS_EINPROC;
+	sgs_PadString( C );
 	sgs_PushString( C, "\n}" );
 	sgs_StringConcat( C, 3 );
 	return SGS_SUCCESS;

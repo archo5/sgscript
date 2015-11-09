@@ -616,17 +616,17 @@ static const char* sgs_OpNames[] =
 
 
 int sgsSTD_PostInit( SGS_CTX );
-int sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
-int sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
-int sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
+SGSBOOL sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
+SGSBOOL sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
+SGSBOOL sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 int sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc );
 int sgsSTD_RegistryInit( SGS_CTX );
 int sgsSTD_RegistryFree( SGS_CTX );
 int sgsSTD_RegistryGC( SGS_CTX );
 int sgsSTD_GlobalInit( SGS_CTX );
 int sgsSTD_GlobalFree( SGS_CTX );
-int sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx );
-int sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val );
+SGSBOOL sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx );
+SGSBOOL sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val );
 int sgsSTD_GlobalGC( SGS_CTX );
 int sgsSTD_GlobalIter( SGS_CTX, sgs_VHTVar** outp, sgs_VHTVar** outpend );
 

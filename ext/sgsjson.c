@@ -328,8 +328,8 @@ endnumparse:
 			}
 			if( STK_TOP == ':' )
 			{
-				sgs_StoreIndexII( C, -3, -2, SGS_FALSE );
-				sgs_Pop( C, 1 );
+				sgs_SetIndex( C, sgs_StackItem( C, -3 ), sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), SGS_FALSE );
+				sgs_Pop( C, 3 );
 				STK_TOP = '{';
 			}
 		}
@@ -367,9 +367,7 @@ static int json_decode( SGS_CTX )
 
 static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 {
-	sgs_Variable var;
-	if( !sgs_PeekStackItem( C, -1, &var ) )
-		sgs_InitNull( &var );
+	sgs_Variable var = sgs_StackItem( C, -1 );
 	switch( var.type )
 	{
 	case SGS_VT_NULL:
@@ -507,10 +505,12 @@ extern "C"
 SGS_APIFUNC int json_module_entry_point( SGS_CTX )
 {
 	SGS_MODULE_CHECK_VERSION( C );
-	sgs_PushCFunc( C, json_decode );
-	sgs_StoreGlobal( C, "json_decode" );
-	sgs_PushCFunc( C, json_encode );
-	sgs_StoreGlobal( C, "json_encode" );
+	sgs_RegFuncConst rfc[] =
+	{
+		{ "json_decode", json_decode },
+		{ "json_encode", json_encode },
+	};
+	sgs_RegFuncConsts( C, rfc, SGS_ARRAY_SIZE( rfc ) );
 	return SGS_SUCCESS;
 }
 
