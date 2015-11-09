@@ -977,7 +977,7 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 	if( fs->bufsize > fs->buffill && needs )
 	{
 		sgs_PushInt( C, fs->bufsize - fs->buffill );
-		ret = sgs_CallP( C, &fs->source, 1, 1 );
+		ret = sgs_Call( C, fs->source, 1, 1 );
 		if( ret != SGS_SUCCESS )
 			return SGS_FALSE;
 		if( sgs_ItemType( C, -1 ) == SGS_VT_NULL )
@@ -1482,8 +1482,7 @@ static int sgsstd_fmt_parser( SGS_CTX )
 	
 	/* test call: reading 0 bytes should return an empty string */
 	sgs_PushInt( C, 0 );
-	sgs_PushItem( C, 0 );
-	if( sgs_Call( C, 1, 1 ) != SGS_SUCCESS )
+	if( sgs_Call( C, sgs_StackItem( C, 0 ), 1, 1 ) != SGS_SUCCESS )
 		STDLIB_WARN( "test call did not succeed; "
 			"is the source function correctly specified?" )
 	sgs_Pop( C, 1 );
@@ -1558,7 +1557,7 @@ static int sgsstd_fmt_string_parser( SGS_CTX )
 	sgs_GetStackItem( C, 0, &srt->S );
 	sgs_BreakIf( srt->S.type != SGS_VT_STRING );
 	srt->off = (sgs_SizeVal) off;
-	sgs_StoreItem( C, 0 );
+	sgs_SetStackItem( C, 0, sgs_StackItem( C, -1 ) );
 	sgs_SetStackSize( C, 1 );
 	sgs_PushInt( C, bufsize );
 	return sgsstd_fmt_parser( C );
@@ -1582,10 +1581,9 @@ static int frt_call( SGS_CTX, sgs_VarObj* data )
 	fp = (FILE*) frt->F.data.O->data;
 	if( !fp || feof( fp ) )
 		return 0;
-	sgs_PushVariable( C, &frt->F );
+	sgs_PushVariable( C, frt->F );
 	sgs_PushInt( C, amt );
-	sgs_PushCFunc( C, sgsstd_fileI_read );
-	if( sgs_ThisCall( C, 1, 1 ) != SGS_SUCCESS )
+	if( sgs_ThisCall( C, sgs_MakeCFunc( sgsstd_fileI_read ), 1, 1 ) != SGS_SUCCESS )
 		return SGS_EINPROC;
 	return 1;
 }
@@ -1618,7 +1616,7 @@ static int sgsstd_fmt_file_parser( SGS_CTX )
 	frt = (fileread_t*) sgs_CreateObjectIPA( C, NULL, sizeof(fileread_t), frt_iface );
 	sgs_GetStackItem( C, 0, &frt->F );
 	sgs_BreakIf( frt->F.type != SGS_VT_OBJECT );
-	sgs_StoreItem( C, 0 );
+	sgs_SetStackItem( C, 0, sgs_StackItem( C, -1 ) );
 	sgs_SetStackSize( C, 1 );
 	sgs_PushInt( C, bufsize );
 	return sgsstd_fmt_parser( C );
@@ -3545,20 +3543,20 @@ static int _stringrep_as
 	char* substr;
 	sgs_SizeVal subsize;
 	int32_t i, arrsize = sgs_ArraySize( C, 1 );
+	sgs_Variable arr = sgs_StackItem( C, 1 );
 	if( arrsize < 0 )
 		goto fail;
 	
 	for( i = 0; i < arrsize; ++i )
 	{
-		if( sgs_PushNumIndex( C, 1, i ) != SGS_SUCCESS )   goto fail;
+		if( sgs_PushNumIndex( C, arr, i ) != SGS_SUCCESS )   goto fail;
 		if( !sgs_ParseString( C, -1, &substr, &subsize ) )
 			goto fail;
 		
 		if( !_stringrep_ss( C, str, size, substr, subsize, rep, repsize ) )
 			goto fail;
 		
-		if( sgs_PopSkip( C, i > 0 ? 2 : 1, 1 ) != SGS_SUCCESS )
-			goto fail;
+		sgs_PopSkip( C, i > 0 ? 2 : 1, 1 );
 		
 		str = sgs_GetStringPtr( C, -1 );
 		size = sgs_GetStringSize( C, -1 );
@@ -3575,24 +3573,25 @@ static int _stringrep_aa( SGS_CTX, char* str, int32_t size )
 	sgs_SizeVal subsize, repsize;
 	int32_t i, arrsize = sgs_ArraySize( C, 1 ),
 		reparrsize = sgs_ArraySize( C, 2 );
+	sgs_Variable arr = sgs_StackItem( C, 1 );
+	sgs_Variable reparr = sgs_StackItem( C, 2 );
 	if( arrsize < 0 || reparrsize < 0 )
 		goto fail;
 	
 	for( i = 0; i < arrsize; ++i )
 	{
-		if( sgs_PushNumIndex( C, 1, i ) != SGS_SUCCESS )   goto fail;
+		if( sgs_PushNumIndex( C, arr, i ) != SGS_SUCCESS )   goto fail;
 		if( !sgs_ParseString( C, -1, &substr, &subsize ) )
 			goto fail;
 		
-		if( sgs_PushNumIndex( C, 2, i % reparrsize ) != SGS_SUCCESS )   goto fail;
+		if( sgs_PushNumIndex( C, reparr, i % reparrsize ) != SGS_SUCCESS )   goto fail;
 		if( !sgs_ParseString( C, -1, &repstr, &repsize ) )
 			goto fail;
 		
 		if( !_stringrep_ss( C, str, size, substr, subsize, repstr, repsize ) )
 			goto fail;
 		
-		if( sgs_PopSkip( C, i > 0 ? 3 : 2, 1 ) != SGS_SUCCESS )
-			goto fail;
+		sgs_PopSkip( C, i > 0 ? 3 : 2, 1 );
 		
 		str = sgs_GetStringPtr( C, -1 );
 		size = sgs_GetStringSize( C, -1 );
@@ -3675,8 +3674,8 @@ static int sgsstd_string_translate( SGS_CTX )
 			!sgs_ParseString( C, -1, &repstr, &repsize ) )
 			STDLIB_WARN( "failed to read data" )
 		_stringrep_ss( C, str, size, substr, subsize, repstr, repsize );
-		sgs_StoreItem( C, 0 );
-		sgs_Pop( C, 2 );
+		sgs_SetStackItem( C, 0, sgs_StackItem( C, -1 ) );
+		sgs_Pop( C, 3 );
 	}
 	
 	sgs_SetStackSize( C, 1 );
@@ -3847,10 +3846,11 @@ static int sgsstd_string_compare( SGS_CTX )
 static int sgsstd_string_implode( SGS_CTX )
 {
 	sgs_SizeVal i, asize;
+	sgs_Variable arr;
 	
 	SGSFN( "string_implode" );
 	
-	if( !sgs_LoadArgs( C, "a?m", &asize ) )
+	if( !sgs_LoadArgs( C, "a<v?m", &asize, &arr ) )
 		return 0;
 	
 	if( !asize )
@@ -3862,7 +3862,7 @@ static int sgsstd_string_implode( SGS_CTX )
 	{
 		if( i )
 			sgs_PushItem( C, 1 );
-		if( sgs_PushNumIndex( C, 0, i ) != SGS_SUCCESS )
+		if( sgs_PushNumIndex( C, arr, i ) != SGS_SUCCESS )
 			STDLIB_WARN( "failed to read from array" )
 	}
 	sgs_StringConcat( C, i * 2 - 1 );
@@ -4032,11 +4032,12 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 	asz = sgs_ArraySize( C, 0 );
 	if( asz >= 0 )
 	{
+		sgs_Variable arr = sgs_StackItem( C, 0 );
 		/* should stick with one allocation for most text data */
 		sgs_membuf_reserve( &buf, C, (size_t) ( asz * 1.3 ) );
 		for( i = 0; i < asz; ++i )
 		{
-			if( SGS_FAILED( sgs_PushNumIndex( C, 0, i ) ) )
+			if( SGS_FAILED( sgs_PushNumIndex( C, arr, i ) ) )
 				goto fail;
 			cp = sgs_GetInt( C, -1 );
 			cnt = sgs_utf8_encode( (uint32_t) cp, tmp );
@@ -4207,7 +4208,7 @@ static int utf8it_getindex( SGS_ARGS_GETINDEXFUNC )
 			sgs_Variable var;
 			var.type = SGS_VT_STRING;
 			var.data.S = IT->str;
-			return sgs_PushVariable( C, &var );
+			return sgs_PushVariable( C, var );
 		}
 		SGS_CASE( "offset" ) return sgs_PushInt( C, IT->i );
 	SGS_END_INDEXFUNC;
@@ -4259,7 +4260,7 @@ static int utf8it_serialize( SGS_CTX, sgs_VarObj* obj )
 	sgs_Variable var;
 	var.type = SGS_VT_STRING;
 	var.data.S = IT->str;
-	sgs_PushVariable( C, &var );
+	sgs_PushVariable( C, var );
 	if( SGS_FAILED( ret = sgs_Serialize( C ) ) )
 		return ret;
 	return sgs_SerializeObject( C, 1, "string_utf8_iterator" );

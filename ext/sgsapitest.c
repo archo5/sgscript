@@ -188,7 +188,7 @@ DEFINE_TEST( stack_101 )
 	sgs_PushString( C, "what is this" );
 	sgs_PushCFunc( C, sgs_dummy_func );
 	sgs_CreateObject( C, NULL, NULL, sgs_dummy_iface );
-	sgs_PushVariable( C, &sgs_dummy_var );
+	sgs_PushVariable( C, sgs_dummy_var );
 	
 	atf_assert( C->stack_base == C->stack_off );
 	atf_assert( sgs_StackSize( C ) == 9 );
@@ -215,11 +215,11 @@ DEFINE_TEST( stack_101 )
 	atf_assert( C->stack_off[7].data.O->data == NULL );
 	atf_assert( C->stack_off[7].data.O->iface == sgs_dummy_iface );
 	
-	atf_assert( sgs_Pop( C, 10 ) == SGS_EINVAL );
+	sgs_Pop( C, 10 );
 	atf_assert( sgs_StackSize( C ) == 9 );
 	atf_assert( C->stack_top == C->stack_off + 9 );
 	
-	atf_assert( sgs_Pop( C, 9 ) == SGS_SUCCESS );
+	sgs_Pop( C, 9 );
 	atf_assert( C->stack_off == C->stack_top );
 	atf_assert( C->stack_base == C->stack_off );
 	atf_assert( sgs_StackSize( C ) == 0 );
@@ -238,12 +238,11 @@ DEFINE_TEST( stack_insert )
 	sgs_PushInt( C, 2 );
 	atf_assert( C->stack_top == C->stack_off + 2 );
 	
-	atf_assert( sgs_InsertVariable( C, 3, &sgs_dummy_var ) == SGS_EBOUNDS );
-	atf_assert( sgs_InsertVariable( C, -4, &sgs_dummy_var ) == SGS_EBOUNDS );
-	atf_assert( sgs_InsertVariable( C, -3, &sgs_dummy_var ) == SGS_SUCCESS );
-	atf_assert( sgs_InsertVariable( C, 3, &sgs_dummy_var ) == SGS_SUCCESS );
-	atf_assert( sgs_InsertVariable( C, 2, &sgs_dummy_var ) == SGS_SUCCESS );
-	atf_assert( sgs_StackSize( C ) == 5 );
+	sgs_InsertVariable( C, 3, sgs_dummy_var ); atf_assert( sgs_StackSize( C ) == 2 );
+	sgs_InsertVariable( C, -4, sgs_dummy_var ); atf_assert( sgs_StackSize( C ) == 2 );
+	sgs_InsertVariable( C, -3, sgs_dummy_var ); atf_assert( sgs_StackSize( C ) == 3 );
+	sgs_InsertVariable( C, 3, sgs_dummy_var ); atf_assert( sgs_StackSize( C ) == 4 );
+	sgs_InsertVariable( C, 2, sgs_dummy_var ); atf_assert( sgs_StackSize( C ) == 5 );
 	
 	atf_assert( C->stack_off[0].type == SGS_VT_NULL );
 	atf_assert( C->stack_off[1].type == SGS_VT_INT );
@@ -251,7 +250,7 @@ DEFINE_TEST( stack_insert )
 	atf_assert( C->stack_off[3].type == SGS_VT_INT );
 	atf_assert( C->stack_off[4].type == SGS_VT_NULL );
 	
-	atf_assert( sgs_Pop( C, 5 ) == SGS_SUCCESS );
+	sgs_Pop( C, 5 );
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
 	destroy_context( C );
@@ -268,7 +267,7 @@ DEFINE_TEST( stack_arraydict )
 	
 	atf_assert( sgs_CreateArray( C, NULL, 5 ) == SGS_EINVAL );
 	atf_assert( sgs_CreateArray( C, NULL, 0 ) == SGS_SUCCESS );
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	sgs_Pop( C, 1 );
 	
 	sgs_PushNull( C );
 	sgs_PushString( C, "key-one" );
@@ -281,11 +280,11 @@ DEFINE_TEST( stack_arraydict )
 	atf_assert( sgs_CreateDict( C, NULL, 6 ) == SGS_EINVAL );
 	atf_assert( sgs_CreateDict( C, NULL, 5 ) == SGS_EINVAL );
 	atf_assert( sgs_CreateDict( C, NULL, 0 ) == SGS_SUCCESS );
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	sgs_Pop( C, 1 );
 	atf_assert( sgs_CreateDict( C, NULL, 4 ) == SGS_SUCCESS );
 	
 	atf_assert( sgs_StackSize( C ) == 2 );
-	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
+	sgs_Pop( C, 2 );
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
 	/* TODO: test "not a string key" in dict creation */
@@ -293,26 +292,22 @@ DEFINE_TEST( stack_arraydict )
 	destroy_context( C );
 }
 
-DEFINE_TEST( stack_pushstore )
+DEFINE_TEST( stack_push )
 {
 	SGS_CTX = get_context();
 	
 	sgs_PushNull( C );
 	sgs_PushInt( C, 5 );
-	atf_assert( sgs_PushItem( C, 2 ) == SGS_EBOUNDS );
-	atf_assert( sgs_PushItem( C, -3 ) == SGS_EBOUNDS );
-	atf_assert( sgs_PushItem( C, -2 ) == SGS_SUCCESS );
-	atf_assert( sgs_PushItem( C, 1 ) == SGS_SUCCESS );
-	atf_assert( sgs_StackSize( C ) == 4 );
-	
-	atf_assert( sgs_StoreItem( C, -5 ) == SGS_EBOUNDS );
-	atf_assert( sgs_StoreItem( C, 4 ) == SGS_EBOUNDS );
-	atf_assert( sgs_StoreItem( C, -3 ) == SGS_SUCCESS );
-	atf_assert( sgs_StoreItem( C, 0 ) == SGS_SUCCESS );
+#if 0 /* TODO TEST ERROR THROWING */
+	sgs_PushItem( C, 2 ); atf_assert( sgs_StackSize( C ) == 2 );
+	sgs_PushItem( C, -3 ); atf_assert( sgs_StackSize( C ) == 2 );
+	sgs_PushItem( C, -2 ); atf_assert( sgs_StackSize( C ) == 3 );
+	sgs_PushItem( C, 1 ); atf_assert( sgs_StackSize( C ) == 4 );
+#endif
 	
 	atf_assert( C->stack_off[1].type == SGS_VT_INT );
 	atf_assert( C->stack_off[1].data.I == 5 );
-	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
+	sgs_Pop( C, 2 );
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
 	destroy_context( C );
@@ -322,18 +317,15 @@ DEFINE_TEST( stack_propindex )
 {
 	SGS_CTX = get_context();
 	
-	atf_assert( sgs_PushProperty( C, -1, "nope" ) == SGS_EBOUNDS );
-	
 	sgs_PushString( C, "key-one" );
-	atf_assert( sgs_PushIndexII( C, 0, 1, 0 ) == SGS_EBOUNDS );
-	atf_assert( sgs_PushIndexII( C, 0, 0, 0 ) == SGS_EINVAL );
+	atf_assert( sgs_PushIndex( C, sgs_StackItem( C, 0 ), sgs_StackItem( C, 0 ), 0 ) == 0 );
 	
 	sgs_PushInt( C, 15 );
-	atf_assert( sgs_PushIndexII( C, -2, -1, 0 ) == SGS_EBOUNDS );
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_PushIndex( C, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), 0 ) == 0 );
+	sgs_Pop( C, 1 );
 	sgs_PushInt( C, 5 );
-	atf_assert( sgs_PushIndexII( C, -2, -1, 0 ) == SGS_SUCCESS );
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_PushIndex( C, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), 0 ) == 1 );
+	sgs_Pop( C, 1 );
 	
 	sgs_PushString( C, "key-two" );
 	sgs_PushNull( C );
@@ -354,10 +346,10 @@ DEFINE_TEST( stack_negidx )
 	
 	atf_assert( sgs_CreateDict( C, NULL, 0 ) == SGS_SUCCESS );
 	
-	atf_assert( sgs_StoreIntConsts( C, -1, nidxints, -1 ) == SGS_SUCCESS );
-	atf_assert( sgs_PushProperty( C, -1, "test" ) == SGS_SUCCESS );
+	atf_assert( sgs_StoreIntConsts( C, sgs_StackItem( C, -1 ), nidxints, -1 ) == SGS_SUCCESS );
+	atf_assert( sgs_PushProperty( C, sgs_StackItem( C, -1 ), "test" ) == SGS_SUCCESS );
 	atf_assert( sgs_GetInt( C, -1 ) == 42 );
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	sgs_Pop( C, 1 );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	
 	destroy_context( C );
@@ -367,15 +359,15 @@ DEFINE_TEST( globals_101 )
 {
 	SGS_CTX = get_context();
 	
-	atf_assert( sgs_PushGlobal( C, "array" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobalByName( C, "array" ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 1 );
-	atf_assert( sgs_PushGlobal( C, "donut_remover" ) == SGS_ENOTFND );
-	atf_assert_( sgs_StackSize( C ) == 1, "wrong stack size after failed PushGlobal", __LINE__ );
+	atf_assert( sgs_PushGlobalByName( C, "donut_remover" ) == SGS_ENOTFND );
+	atf_assert_( sgs_StackSize( C ) == 1, "wrong stack size after failed PushGlobalByName", __LINE__ );
 	
 	atf_assert( sgs_CreateArray( C, NULL, 1 ) == SGS_SUCCESS );
 	atf_assert_( sgs_StackSize( C ) == 1, "wrong stack size after CreateArray", __LINE__ );
-	atf_assert( sgs_StoreGlobal( C, "yarra" ) == SGS_SUCCESS );
-	atf_assert( sgs_StackSize( C ) == 0 );
+	sgs_SetGlobalByName( C, "yarra", sgs_StackItem( C, -1 ) );
+	atf_assert( sgs_StackSize( C ) == 1 );
 	
 	destroy_context( C );
 }
@@ -390,34 +382,34 @@ DEFINE_TEST( libraries )
 	atf_assert( sgs_LoadLib_OS( C ) == SGS_SUCCESS );
 	atf_assert( sgs_LoadLib_String( C ) == SGS_SUCCESS );
 	
-	atf_assert( sgs_PushGlobal( C, "fmt_text" ) == SGS_SUCCESS );
-	atf_assert( sgs_PushGlobal( C, "io_file" ) == SGS_SUCCESS );
-	atf_assert( sgs_PushGlobal( C, "pow" ) == SGS_SUCCESS );
-	atf_assert( sgs_PushGlobal( C, "os_date_string" ) == SGS_SUCCESS );
-	atf_assert( sgs_PushGlobal( C, "string_replace" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobalByName( C, "fmt_text" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobalByName( C, "io_file" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobalByName( C, "pow" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobalByName( C, "os_date_string" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobalByName( C, "string_replace" ) == SGS_SUCCESS );
 	
 	destroy_context( C );
 }
 
 DEFINE_TEST( function_calls )
 {
+	sgs_Variable v_func;
 	SGS_CTX = get_context();
 	
-	atf_assert( sgs_PushGlobal( C, "array" ) == SGS_SUCCESS );
-	atf_assert( sgs_Call( C, 5, 1 ) == SGS_EINVAL );
-	atf_assert( sgs_Call( C, 1, 0 ) == SGS_EINVAL );
-	atf_assert( sgs_Call( C, 0, 0 ) == SGS_SUCCESS );
-	atf_assert( sgs_PushGlobal( C, "array" ) == SGS_SUCCESS );
-	atf_assert( sgs_Call( C, 0, 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_GetGlobalByName( C, "array", &v_func ) );
+	atf_assert( sgs_Call( C, v_func, 5, 1 ) == SGS_EINVAL );
+	atf_assert( sgs_Call( C, v_func, 1, 0 ) == SGS_EINVAL );
+	atf_assert( sgs_Call( C, v_func, 0, 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_Call( C, v_func, 0, 1 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
 	
-	atf_assert( sgs_PushGlobal( C, "array" ) == SGS_SUCCESS );
-	atf_assert( sgs_StackSize( C ) == 2 );
-	atf_assert( sgs_ThisCall( C, 1, 0 ) == SGS_EINVAL );
-	atf_assert( sgs_ThisCall( C, 0, 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_StackSize( C ) == 1 );
+	atf_assert( sgs_ThisCall( C, v_func, 1, 0 ) == SGS_EINVAL );
+	atf_assert( sgs_ThisCall( C, v_func, 0, 0 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
+	sgs_Release( C, &v_func );
 	destroy_context( C );
 }
 
@@ -481,7 +473,7 @@ DEFINE_TEST( debugging )
 	sgs_PushReal( C, 3.14 );
 	sgs_PushString( C, "wat" );
 	sgs_EvalString( C, "return function(){};", &rvc );
-	atf_assert( sgs_PushGlobal( C, "print" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobalByName( C, "print" ) == SGS_SUCCESS );
 	sgs_CreateArray( C, NULL, 0 );
 	sgs_CreateDict( C, NULL, 0 );
 	
@@ -504,43 +496,43 @@ DEFINE_TEST( varpaths )
 	"o.a[1].f.push(o); o.g.push( o.a[1].f ); o.a.push( o.a );";
 	
 	atf_assert( sgs_ExecString( C, str ) == SGS_SUCCESS );
-	atf_assert( sgs_PushGlobal( C, "o" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushGlobalByName( C, "o" ) == SGS_SUCCESS );
 	
 	/* basic property retrieval */
-	atf_assert( sgs_PushPath( C, -1, "p", "g" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushPath( C, sgs_StackItem( C, -1 ), "p", "g" ) == SGS_SUCCESS );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
 	atf_assert( sgs_IsObject( C, -1, sgsstd_array_iface ) );
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	sgs_Pop( C, 1 );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	
 	/* properties and indices 1 */
-	atf_assert( sgs_PushPath( C, -1, "pi", "a", 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_PushPath( C, sgs_StackItem( C, -1 ), "pi", "a", 1 ) == SGS_SUCCESS );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
 	atf_assert( sgs_IsObject( C, -1, sgsstd_dict_iface ) );
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	sgs_Pop( C, 1 );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	
 	/* properties and indices 2 */
-	atf_assert( sgs_PushPath( C, -1, "o", 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_PushPath( C, sgs_StackItem( C, -1 ), "o", 0 ) == SGS_SUCCESS );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
 	atf_assert( sgs_IsObject( C, -1, sgsstd_array_iface ) );
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	sgs_Pop( C, 1 );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	
 	/* properties and indices 3 */
-	atf_assert( sgs_PushPath( C, -1, "piso", "a", 1, 1, "d", 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_PushPath( C, sgs_StackItem( C, -1 ), "piso", "a", 1, 1, "d", 0 ) == SGS_SUCCESS );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
 	atf_assert( sgs_IsObject( C, -1, sgsstd_dict_iface ) );
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	sgs_Pop( C, 1 );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	
 	/* storing data */
 	sgs_PushInt( C, 42 );
-	atf_assert( sgs_StorePath( C, -2, "pippp", "a", 1, "d", "e", "test" ) == SGS_SUCCESS );
-	atf_assert( sgs_PushPath( C, -1, "pippp", "a", 1, "d", "e", "test" ) == SGS_SUCCESS );
+	atf_assert( sgs_StorePath( C, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), "pippp", "a", 1, "d", "e", "test" ) == SGS_SUCCESS );
+	atf_assert( sgs_PushPath( C, sgs_StackItem( C, -1 ), "pippp", "a", 1, "d", "e", "test" ) == SGS_SUCCESS );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_INT );
 	atf_assert( (C->stack_top-1)->data.I == 42 );
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	sgs_Pop( C, 1 );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	
 	destroy_context( C );
@@ -570,7 +562,7 @@ DEFINE_TEST( iterators )
 		if( !ret )
 			break;
 	}
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	sgs_Pop( C, 1 );
 	
 	/* test keys & values */
 	atf_assert( sgs_PushIterator( C, 0 ) == SGS_SUCCESS );
@@ -583,7 +575,7 @@ DEFINE_TEST( iterators )
 	atf_assert( sgs_GetInt( C, -2 ) == 0 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_BOOL );
 	atf_assert( sgs_GetBool( C, -1 ) == 1 );
-	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
+	sgs_Pop( C, 2 );
 	/* - values 2 */
 	atf_assert( sgs_IterAdvance( C, -1 ) == 1 );
 	atf_assert( sgs_IterPushData( C, -1, 1, 1 ) == SGS_SUCCESS );
@@ -591,7 +583,7 @@ DEFINE_TEST( iterators )
 	atf_assert( sgs_GetInt( C, -2 ) == 1 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_INT );
 	atf_assert( sgs_GetInt( C, -1 ) == 42 );
-	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
+	sgs_Pop( C, 2 );
 	/* - values 3 */
 	atf_assert( sgs_IterAdvance( C, -1 ) == 1 );
 	atf_assert( sgs_IterPushData( C, -1, 1, 1 ) == SGS_SUCCESS );
@@ -600,12 +592,12 @@ DEFINE_TEST( iterators )
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_STRING );
 	atf_assert( sgs_GetStringSize( C, -1 ) == 3 );
 	atf_assert( strcmp( sgs_GetStringPtr( C, -1 ), "wat" ) == 0 );
-	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
+	sgs_Pop( C, 2 );
 	/* - end */
 	atf_assert( sgs_IterAdvance( C, -1 ) == 0 );
 	
 	/* clean up */
-	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
+	sgs_Pop( C, 2 );
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
 	/* DICT ITERATOR */
@@ -631,7 +623,7 @@ DEFINE_TEST( iterators )
 		if( !ret )
 			break;
 	}
-	atf_assert( sgs_Pop( C, 1 ) == SGS_SUCCESS );
+	sgs_Pop( C, 1 );
 	
 	/* test keys & values */
 	atf_assert( sgs_PushIterator( C, 0 ) == SGS_SUCCESS );
@@ -645,7 +637,7 @@ DEFINE_TEST( iterators )
 	atf_assert( strcmp( sgs_GetStringPtr( C, -2 ), "1st" ) == 0 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_BOOL );
 	atf_assert( sgs_GetBool( C, -1 ) == 1 );
-	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
+	sgs_Pop( C, 2 );
 	/* - values 2 */
 	atf_assert( sgs_IterAdvance( C, -1 ) == 1 );
 	atf_assert( sgs_IterPushData( C, -1, 1, 1 ) == SGS_SUCCESS );
@@ -654,7 +646,7 @@ DEFINE_TEST( iterators )
 	atf_assert( strcmp( sgs_GetStringPtr( C, -2 ), "2nd" ) == 0 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_INT );
 	atf_assert( sgs_GetInt( C, -1 ) == 42 );
-	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
+	sgs_Pop( C, 2 );
 	/* - values 3 */
 	atf_assert( sgs_IterAdvance( C, -1 ) == 1 );
 	atf_assert( sgs_IterPushData( C, -1, 1, 1 ) == SGS_SUCCESS );
@@ -664,12 +656,12 @@ DEFINE_TEST( iterators )
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_STRING );
 	atf_assert( sgs_GetStringSize( C, -1 ) == 3 );
 	atf_assert( strcmp( sgs_GetStringPtr( C, -1 ), "wat" ) == 0 );
-	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
+	sgs_Pop( C, 2 );
 	/* - end */
 	atf_assert( sgs_IterAdvance( C, -1 ) == 0 );
 	
 	/* clean up */
-	atf_assert( sgs_Pop( C, 2 ) == SGS_SUCCESS );
+	sgs_Pop( C, 2 );
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
 	destroy_context( C );
@@ -682,8 +674,7 @@ int nom_method_A( SGS_CTX )
 	sgs_PushInt( C, 5 );
 	if( sgs_Method( C ) )
 	{
-		sgs_PushItem( C, -1 );
-		sgs_StoreProperty( C, 0, "a" );
+		sgs_SetProperty( C, sgs_StackItem( C, 0 ), "a", sgs_StackItem( C, -1 ) );
 	}
 	return 1;
 }
@@ -694,8 +685,7 @@ int nom_method_B( SGS_CTX )
 	sgs_PushInt( C, 7 );
 	if( sgs_Method( C ) )
 	{
-		sgs_PushItem( C, -1 );
-		sgs_StoreProperty( C, 0, "b" );
+		sgs_SetProperty( C, sgs_StackItem( C, 0 ), "b", sgs_StackItem( C, -1 ) );
 	}
 	return 1;
 }
@@ -722,7 +712,7 @@ int nom_iface( SGS_CTX )
 {
 	SGSFN( "nom_iface" );
 	atf_assert( sgs_CreateDict( C, NULL, 0 ) == SGS_SUCCESS );
-	atf_assert( sgs_StoreFuncConsts( C, -1, nom_funcs, -1 ) == SGS_SUCCESS );
+	atf_assert( sgs_StoreFuncConsts( C, sgs_StackItem( C, -1 ), nom_funcs, -1 ) == SGS_SUCCESS );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	sgs_ObjSetMetaMethodEnable( sgs_GetObjectStruct( C, -1 ), 1 );
 	return 1;
@@ -734,7 +724,7 @@ DEFINE_TEST( native_obj_meta )
 	
 	/* register as ctor/iface */
 	sgs_PushInterface( C, nom_iface );
-	sgs_StoreGlobal( C, "nom" );
+	sgs_SetGlobalByName( C, "nom", sgs_StackItem( C, -1 ) );
 	
 	/* try creating and running the object */
 	atf_assert( sgs_ExecString( C, ""
@@ -880,7 +870,7 @@ test_t all_tests[] =
 	TST( stack_101 ),
 	TST( stack_insert ),
 	TST( stack_arraydict ),
-	TST( stack_pushstore ),
+	TST( stack_push ),
 	TST( stack_propindex ),
 	TST( stack_negidx ),
 	TST( globals_101 ),

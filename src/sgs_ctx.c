@@ -793,7 +793,7 @@ static SGSRESULT ctx_execute( SGS_CTX, const char* buf, size_t size, int clean, 
 	DBGINFO( "...cleaning up bytecode/constants" );
 	
 	DBGINFO( "...executing the generated function" );
-	sgs_XCallP( C, funcvar, 0, rvc );
+	sgs_XCall( C, funcvar, 0, rvc );
 	
 	DBGINFO( "...finished!" );
 	sgs_Release( C, &funcvar );
@@ -1278,10 +1278,9 @@ sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name )
 SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 {
 	sgs_VHTVar* vv;
-	sgs_Variable key;
+	sgs_Variable key = sgs_MakeCFunc( igfn );
 	SGS_SHCTX_USE;
 	
-	sgs_InitCFunc( &key, igfn );
 	vv = sgs_vht_get( &S->ifacetable, &key );
 	if( vv )
 	{
@@ -1296,7 +1295,7 @@ SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 		SGSRESULT res;
 		
 		ssz = sgs_StackSize( C );
-		res = sgs_CallP( C, &key, 0, 1 );
+		res = sgs_Call( C, key, 0, 1 );
 		if( SGS_FAILED( res ) ||
 			sgs_ItemType( C, ssz ) != SGS_VT_OBJECT ||
 			!sgs_PeekStackItem( C, ssz, &val ) )
