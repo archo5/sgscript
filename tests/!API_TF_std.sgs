@@ -45,6 +45,7 @@ stringvars =
 	"", "abc..", "\0\0", "\0wat\0is\0this\0\0", "C function", "function",
 	"[]", "[1,2]", "{}", "[map]{}", "claZZ"
 ];
+ERRORS = "";
 for( i = 0; i < convars.size; ++i )
 	testEqual( tobool( convars[i] ), boolvars[i], "tobool - variable #"$i );
 for( i = 0; i < convars.size; ++i )
@@ -53,13 +54,14 @@ for( i = 0; i < convars.size; ++i )
 	testEqual( toreal( convars[i] ), realvars[i], "toreal - variable #"$i );
 for( i = 0; i < convars.size; ++i )
 	testEqual( tostring( convars[i] ), stringvars[i], "tostring - variable #"$i );
+testEqual( ERRORS, "", "conversions - no errors" );
 
 	section( "globals/registry" );
 ERRORS = "";
 tR = _R;
 _R[ 5 ] = 6;
 testEqual( _R[ 5 ], 6, "_R - readback" );
-testEqual( ERRORS, "", "_R - access" );
+testEqual( ERRORS, "", "_R - access - no errors" );
 oriG = _G;
 _G = tG = class( {}, oriG ); testEqual( _G, tG, "_G - set to new dict" ); _G = oriG;
 _G = tG = class( map(), oriG ); testEqual( _G, tG, "_G - set to new map" ); _G = oriG;
@@ -75,7 +77,8 @@ testEqual( ERRORS, "", "_G - trying to map to null/true/false keys" );
 testEqual( _G[ unserialize ], null, "_G - reading unmapped function key" );
 testEqual( ERRORS, "[W:Cannot find readable value by index: \"C function\"]" );
 
-	section( "utility functions" );
+	section( "serialization functions" );
+ERRORS = "";
 testEqual( serialize(null), "P\x00", "serialize - null" );
 testEqual( unserialize(serialize(null)), null, "[un]-serialize - null" );
 testEqual( serialize(true), "P\x01\x01", "serialize - bool" );
@@ -110,7 +113,9 @@ sstruct_string = "{0=null,a=false,b=true,c=0,d=12124,e=-89235,f=0,g=12.346,"
 	$"h=,i=abc..,j=function,k=array,l=array,m=dict,n=dict,o=map,p=array,q=array}";
 testEqual( typeof(serialize(sstruct)), "string", "serialize - no errors" );
 testEqual( ''$unserialize(serialize(sstruct)), sstruct_string, "(un)serialize - roundtrip" );
+testEqual( ERRORS, "", "serialization - errors" );
 
+ERRORS = "";
 testEqual( serialize2(null), "P\x00", "serialize2 - null" );
 testEqual( unserialize2(serialize2(null)), null, "[un]-serialize2 - null" );
 testEqual( serialize2(true), "P\x01\x01", "serialize2 - bool" );
@@ -132,6 +137,7 @@ testEqual( typeof(unserialize2(serialize2(map("a",1,"b",2)))), "map", "[un]-seri
 testEqual( typeof(serialize2(sstruct)), "string", "serialize2 - no errors" );
 testEqual( ''$unserialize2(serialize2(sstruct)), sstruct_string, "(un)serialize2 - roundtrip" );
 testEqual( serialize(sstruct).length > serialize2(sstruct).length, true, "serialize > serialize2 (output size)" );
+testEqual( ERRORS, "", "serialization - errors" );
 
 	section( "array basic ops" );
 testEqual( clone(arr).insert(0,1,4)$'', '[1,4,9,3,6,2,8]', "insert at beginning" );
@@ -208,6 +214,7 @@ testEqual( co_resume( co, 123 ), 1337, "coroutine - return" );
 ERRORS = ""; testEqual( co_resume( co ), null ); testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
 
 	section( "misc." );
+ERRORS = "";
 testEqual( dict_size({ a = 1, b = 2 }), 2, "dict_size" );
 
 TA = [false,0,1,2,3,[],{},[4]];
@@ -218,6 +225,7 @@ testEqual( ''$array_filter( TA, function(x){return !x;} ), "[false,0,array,dict]
 testEqual( ''$array_process( clone(TA), function(x){return if(x>=1&&x<=3,1,0);} ), "[0,0,1,1,1,0,0,0]", "array_process - 1 to 3" );
 testEqual( ''$array_process( clone(TA), function(x){return toint(x) + 10;} ), "[10,10,11,12,13,10,10,10]", "array_process - add 10" );
 testEqual( ''$array_process( clone(TA), tostring ), "[false,0,1,2,3,[],{},[4]]", "array_process - convert to string" );
+testEqual( ERRORS, "", "dict_size/array_filter/array_process - no errors" );
 
 TD = { a = 3, b = false, c = "4", "5" = 0 };
 testEqual( ''$dict_filter( TD ), "{a=3,c=4}", "dict_filter - basic" );

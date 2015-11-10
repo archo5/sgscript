@@ -234,6 +234,7 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 	}
 
 	fp = fopen( outfile, "a" );
+	setvbuf( fp, NULL, _IONBF, 0 );
 	sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, fp );
 	fprintf( fp, "//\n/// O U T P U T  o f  %s\n//\n\n", nameonly );
 

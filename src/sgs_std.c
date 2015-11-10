@@ -1545,7 +1545,7 @@ static int sgsstd_array_filter( SGS_CTX )
 {
 	SGSBOOL cset = 0, use;
 	sgs_SizeVal asz, off = 0, nasz = 0;
-	sgs_Variable v_func;
+	sgs_Variable v_func = sgs_MakeNull();
 	void *data;
 	sgsstd_array_header_t* nadata;
 	
@@ -1619,7 +1619,7 @@ static int sgsstd_array_process( SGS_CTX )
 static int sgsstd_dict_filter( SGS_CTX )
 {
 	SGSBOOL cset = 0, use;
-	sgs_Variable v_func, v_dest;
+	sgs_Variable v_func = sgs_MakeNull(), v_dest;
 	
 	SGSFN( "dict_filter" );
 	if( !sgs_LoadArgs( C, "?t|p<v", &cset, &v_func ) )

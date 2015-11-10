@@ -303,7 +303,6 @@ static sgs_RegFuncConst meta_funcs[] =
 	{ "meta_globals", sgs_meta_globals },
 	{ "meta_unpack", sgs_meta_unpack },
 	{ "meta_opname", sgs_meta_opname },
-	SGS_RC_END()
 };
 
 
@@ -321,8 +320,7 @@ __declspec(dllexport)
 int meta_module_entry_point( SGS_CTX )
 {
 	SGS_MODULE_CHECK_VERSION( C );
-	sgs_RegFuncConsts( C, meta_funcs, -1 );
-	
+	sgs_RegFuncConsts( C, meta_funcs, SGS_ARRAY_SIZE( meta_funcs ) );
 	return SGS_SUCCESS;
 }
 

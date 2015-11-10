@@ -329,7 +329,7 @@ endnumparse:
 			if( STK_TOP == ':' )
 			{
 				sgs_SetIndex( C, sgs_StackItem( C, -3 ), sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), SGS_FALSE );
-				sgs_Pop( C, 3 );
+				sgs_Pop( C, 2 );
 				STK_TOP = '{';
 			}
 		}

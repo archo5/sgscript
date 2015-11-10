@@ -3314,7 +3314,7 @@ SGSBOOL sgs_PushProperty( SGS_CTX, sgs_Variable obj, const char* name )
 	int ret;
 	sgs_PushString( C, name );
 	ret = sgs_PushIndex( C, obj, sgs_StackItem( C, -1 ), SGS_TRUE );
-	stk_popskip( C, 1, SGS_SUCCEEDED( ret ) ? 1 : 0 );
+	stk_popskip( C, 1, 1 );
 	return ret;
 }
 
@@ -3322,8 +3322,8 @@ SGSBOOL sgs_SetProperty( SGS_CTX, sgs_Variable obj, const char* name, sgs_Variab
 {
 	int ret;
 	sgs_PushString( C, name );
-	ret = sgs_SetIndex( C, obj, sgs_StackItem( C, -1 ), sgs_StackItem( C, -2 ), SGS_TRUE );
-	stk_pop( C, SGS_SUCCEEDED( ret ) ? 2 : 1 );
+	ret = sgs_SetIndex( C, obj, sgs_StackItem( C, -1 ), val, SGS_TRUE );
+	stk_pop( C, 1 );
 	return ret;
 }
 
@@ -3666,7 +3666,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 		case '<': from--;
 			if( from < 0 )
 			{
-				sgs_Msg( C, SGS_WARNING, "cannot move argument pointer before 0" );
+				sgs_Msg( C, SGS_APIERR, "cannot move argument pointer before 0" );
 				return SGS_EINVAL;
 			}
 			break;
@@ -3998,7 +3998,7 @@ SGSMIXED sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 			return SGS_EINVAL;
 			
 		}
-		if( opt && from >= sgs_StackSize( C ) )
+		if( opt && from >= sgs_StackSize( C ) && cmd[1] != '<' )
 			break;
 		cmd++;
 	}
@@ -4281,10 +4281,8 @@ SGSRESULT sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect )
 	sgs_Variable v_func;
 	if( sgs_GetGlobalByName( C, name, &v_func ) == SGS_FALSE )
 		return SGS_ENOTFND;
-	ret = sgs_Call( C, sgs_StackItem( C, -1 ), args, expect );
+	ret = sgs_Call( C, v_func, args, expect );
 	sgs_Release( C, &v_func );
-	if( ret == SGS_EINVAL )
-		sgs_Pop( C, 1 );
 	return ret;
 }
 

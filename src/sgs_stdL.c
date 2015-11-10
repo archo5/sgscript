@@ -3535,7 +3535,7 @@ static int _stringrep_as
 	
 	for( i = 0; i < arrsize; ++i )
 	{
-		if( sgs_PushNumIndex( C, arr, i ) != SGS_SUCCESS )   goto fail;
+		sgs_PushNumIndex( C, arr, i );
 		if( !sgs_ParseString( C, -1, &substr, &subsize ) )
 			goto fail;
 		
@@ -3566,11 +3566,11 @@ static int _stringrep_aa( SGS_CTX, char* str, int32_t size )
 	
 	for( i = 0; i < arrsize; ++i )
 	{
-		if( sgs_PushNumIndex( C, arr, i ) != SGS_SUCCESS )   goto fail;
+		sgs_PushNumIndex( C, arr, i );
 		if( !sgs_ParseString( C, -1, &substr, &subsize ) )
 			goto fail;
 		
-		if( sgs_PushNumIndex( C, reparr, i % reparrsize ) != SGS_SUCCESS )   goto fail;
+		sgs_PushNumIndex( C, reparr, i % reparrsize );
 		if( !sgs_ParseString( C, -1, &repstr, &repsize ) )
 			goto fail;
 		
@@ -3848,8 +3848,7 @@ static int sgsstd_string_implode( SGS_CTX )
 	{
 		if( i )
 			sgs_PushItem( C, 1 );
-		if( sgs_PushNumIndex( C, arr, i ) != SGS_SUCCESS )
-			STDLIB_WARN( "failed to read from array" )
+		sgs_PushNumIndex( C, arr, i );
 	}
 	sgs_StringConcat( C, i * 2 - 1 );
 	return 1;
@@ -3906,8 +3905,8 @@ static int sgsstd_string_explode( SGS_CTX )
 		/* WP: string limit */
 		sgs_PushStringBuf( C, pp, (sgs_SizeVal)( a + asize - pp ) );
 	}
-
-	return sgs_CreateArray( C, NULL, sgs_StackSize( C ) - ssz ) == SGS_SUCCESS;
+	
+	return sgs_CreateArray( C, NULL, sgs_StackSize( C ) - ssz );
 }
 
 static int sgsstd_string_charcode( SGS_CTX )
@@ -4002,7 +4001,7 @@ static int sgsstd_string_utf8_decode( SGS_CTX )
 		sgs_PushInt( C, outchar );
 		cc++;
 	}
-	return sgs_CreateArray( C, NULL, cc ) == SGS_SUCCESS;
+	return sgs_CreateArray( C, NULL, cc );
 }
 
 static int sgsstd_string_utf8_encode( SGS_CTX )
