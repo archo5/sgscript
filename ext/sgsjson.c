@@ -56,8 +56,7 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_
 			STK_PUSH( '{' );
 			if( proto )
 			{
-				sgs_PushItem( C, 1 );
-				sgs_CloneItem( C, -1 );
+				sgs_CloneItem( C, sgs_StackItem( C, 1 ) );
 			}
 			else
 			{
@@ -427,13 +426,13 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 			/* stack: Obj */
 			int isarr = sgs_ArraySize( C, -1 ) >= 0, first = 1;
 			sgs_membuf_appchr( buf, C, isarr ? '[' : '{' );
-			if( sgs_PushIterator( C, -1 ) != SGS_SUCCESS )
+			if( sgs_PushIterator( C, sgs_StackItem( C, -1 ) ) == SGS_FALSE )
 				return 0;
 			/* stack: Obj, Iter */
-			while( sgs_IterAdvance( C, -1 ) > 0 )
+			while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 			{
 				/* stack: Obj, Iter */
-				if( sgs_IterPushData( C, -1, 0, 1 ) != SGS_SUCCESS )
+				if( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 0, 1 ) != SGS_SUCCESS )
 					return 0;
 				/* stack: Obj, Iter[, Key], Value */
 
@@ -442,7 +441,7 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 
 				if( !isarr )
 				{
-					if( sgs_IterPushData( C, -2, 1, 0 ) != SGS_SUCCESS )
+					if( sgs_IterPushData( C, sgs_StackItem( C, -2 ), 1, 0 ) != SGS_SUCCESS )
 						return 0;
 					/* stack: Obj, Iter, Value, Key */
 					sgs_ToString( C, -1 );

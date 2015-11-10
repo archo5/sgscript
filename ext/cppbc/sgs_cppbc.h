@@ -126,7 +126,7 @@ public:
 	}
 	~sgsArrayIterator(){ sgs_ObjRelease( m_owner->C, m_owner->m_sgsObject ); }
 	
-	int gcmark(){ return sgs_ObjGCMark( m_owner->C, m_owner->m_sgsObject ); }
+	void gcmark(){ sgs_ObjGCMark( m_owner->C, m_owner->m_sgsObject ); }
 	int convert( SGS_CTX, sgs_VarObj* obj, int to )
 	{
 		if( to == SGS_CONVOP_TOITER ){ sgs_PushObjectPtr( C, obj ); return SGS_SUCCESS; }
@@ -148,7 +148,7 @@ public:
 	}
 	
 	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj ){ ((sgsArrayIterator*)obj->data)->~sgsArrayIterator(); return SGS_SUCCESS; }
-	static int _sgs_gcmark( SGS_CTX, sgs_VarObj* obj ){ return ((sgsArrayIterator*)obj->data)->gcmark(); }
+	static int _sgs_gcmark( SGS_CTX, sgs_VarObj* obj ){ ((sgsArrayIterator*)obj->data)->gcmark(); return SGS_SUCCESS; }
 	static int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int type ){ return ((sgsArrayIterator*)obj->data)->convert( C, obj, type ); }
 	static int _sgs_getnext( SGS_CTX, sgs_VarObj* obj, int type ){ return ((sgsArrayIterator*)obj->data)->getnext( C, type ); }
 	static sgs_ObjInterface _sgs_interface[1];
@@ -240,10 +240,10 @@ public:
 	bool operator == ( const sgsHandle& h ) const { return object == h.object; }
 	bool operator != ( const sgsHandle& h ) const { return object != h.object; }
 	
-	SGSRESULT gcmark() const { if( !object ){ return SGS_SUCCESS; } return sgs_ObjGCMark( C, object ); }
+	void gcmark() const { if( object ) sgs_ObjGCMark( C, object ); }
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); }
-		sgs_Variable v; v.type = object ? SGS_VT_OBJECT : SGS_VT_NULL; v.data.O = object; sgs_PushVariable( c, &v ); }
+		sgs_Variable v; v.type = object ? SGS_VT_OBJECT : SGS_VT_NULL; v.data.O = object; sgs_PushVariable( c, v ); }
 	bool not_null(){ return !!object; }
 	class sgsVariable get_variable();
 	
@@ -336,7 +336,7 @@ public:
 	bool equals( const char* s ){ return strcmp( sgs_str_cstr( str ), s ) == 0; }
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); }
-		sgs_Variable v; v.type = str ? SGS_VT_STRING : SGS_VT_NULL; v.data.S = str; sgs_PushVariable( c, &v ); }
+		sgs_Variable v; v.type = str ? SGS_VT_STRING : SGS_VT_NULL; v.data.S = str; sgs_PushVariable( c, v ); }
 	bool not_null(){ return !!str; }
 	class sgsVariable get_variable();
 	
@@ -473,8 +473,8 @@ public:
 	}
 	bool operator != ( const sgsVariable& h ) const { return !( *this == h ); }
 	
-	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); } sgs_PushVariable( c, const_cast<sgs_Variable*>( &var ) ); }
-	SGSRESULT gcmark() { if( !C ) return SGS_SUCCESS; return sgs_GCMark( C, &var ); }
+	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); } sgs_PushVariable( c, var ); }
+	void gcmark() { if( C ) sgs_GCMark( C, &var ); }
 	bool not_null(){ return var.type != SGS_VT_NULL; }
 	bool is_object( sgs_ObjInterface* iface ){ return !!sgs_IsObjectP( &var, iface ); }
 	template< class T > bool is_handle(){ return sgs_IsObjectP( &var, T::_sgs_interface ); }
@@ -490,7 +490,7 @@ public:
 		SGSRESULT res;
 		sgsVariable out(C);
 		if( not_null() )
-			res = sgs_GetIndexPPP( C, &var, &key.var, &out.var, prop );
+			res = sgs_GetIndex( C, var, key.var, &out.var, prop );
 		else
 			res = SGS_EINPROC;
 		if( outres )
@@ -520,7 +520,7 @@ public:
 	{
 		SGSRESULT res;
 		if( not_null() )
-			res = sgs_SetIndexPPP( C, &var, &key.var, &val.var, prop );
+			res = sgs_SetIndex( C, var, key.var, val.var, prop );
 		else
 			res = SGS_EINPROC;
 		if( outres )
@@ -554,13 +554,16 @@ public:
 	template< class T > sgsVariable& set( T* v ){ _release(); C = v->C; sgs_InitObjectPtr( C, &var, v->m_sgsObject ); return *this; }
 	bool call( int args = 0, int ret = 0 )
 	{
-		return C && SGS_SUCCEEDED( sgs_CallP( C, &var, args, ret ) );
+		return C && SGS_SUCCEEDED( sgs_Call( C, var, args, ret ) );
 	}
 	bool thiscall( sgsVariable func, int args = 0, int ret = 0 )
 	{
-		return C && func.not_null() &&
-			sgs_InsertVariable( C, -args - 1, &var ) == SGS_SUCCESS &&
-			SGS_SUCCEEDED( sgs_ThisCallP( C, &func.var, args, ret ) );
+		if( C && func.not_null() )
+		{
+			sgs_InsertVariable( C, -args - 1, var );
+			return SGS_SUCCEEDED( sgs_ThisCall( C, func.var, args, ret ) );
+		}
+		return false;
 	}
 	bool thiscall( const char* key, int args = 0, int ret = 0 )
 	{
@@ -594,13 +597,13 @@ inline sgsVariable sgsString::get_variable()
 
 
 /* GCMark<T> */
-template< class T > SGSRESULT sgs_GCMarkVar( SGS_CTX, T& var ){ return SGS_SUCCESS; }
-template<> inline SGSRESULT sgs_GCMarkVar<sgs_Variable>( SGS_CTX, sgs_Variable& v ){ return sgs_GCMark( C, &v ); }
-template<> inline SGSRESULT sgs_GCMarkVar<sgsVariable>( SGS_CTX, sgsVariable& v ){ return v.gcmark(); }
-template< class T > inline SGSRESULT sgs_GCMarkVar( SGS_CTX, sgsHandle<T>& v ){ return v.gcmark(); }
+template< class T > void sgs_GCMarkVar( SGS_CTX, T& var ){}
+template<> inline void sgs_GCMarkVar<sgs_Variable>( SGS_CTX, sgs_Variable& v ){ sgs_GCMark( C, &v ); }
+template<> inline void sgs_GCMarkVar<sgsVariable>( SGS_CTX, sgsVariable& v ){ v.gcmark(); }
+template< class T > inline void sgs_GCMarkVar( SGS_CTX, sgsHandle<T>& v ){ v.gcmark(); }
 #ifdef SGS_CPPBC_WITH_STD_VECTOR
-template< class T > inline SGSRESULT sgs_GCMarkVar( SGS_CTX, std::vector<T>& v ){
-	for( size_t i = 0; i < v.size(); ++i ){ SGSRESULT r = sgs_GCMarkVar( C, v[i] ); if( SGS_FAILED( r ) ) return r; } return SGS_SUCCESS; }
+template< class T > inline void sgs_GCMarkVar( SGS_CTX, std::vector<T>& v ){
+	for( size_t i = 0; i < v.size(); ++i ) sgs_GCMarkVar( C, v[i] ); }
 #endif
 
 
@@ -616,9 +619,8 @@ template< class T > inline sgsString sgs_DumpDataPushVar( SGS_CTX, const T& var,
 {
 	SGS_SCOPE;
 	sgs_PushVar( C, var );
-	if( SGS_SUCCEEDED( sgs_DumpVar( C, depth ) ) )
-		return sgsString( C, -1 );
-	return sgsString( C, "<error>" );
+	sgs_DumpVar( C, sgs_StackItem( C, -1 ), depth );
+	return sgsString( C, -1 );
 }
 template< class T > inline sgsString sgs_DumpData( SGS_CTX, const sgsMaybe<T>& var, int depth )
 {
@@ -635,11 +637,8 @@ template< class T > inline sgsString sgs_DumpData( SGS_CTX, const sgsMaybe<T>& v
 template<> inline sgsString sgs_DumpData<sgs_Variable>( SGS_CTX, const sgs_Variable& v, int depth )
 {
 	SGS_SCOPE;
-	sgs_Variable tmpv = v;
-	sgs_PushVariable( C, &tmpv );
-	if( SGS_SUCCEEDED( sgs_DumpVar( C, depth ) ) )
-		return sgsString( C, -1 );
-	return sgsString( C, "<error>" );
+	sgs_DumpVar( C, v, depth );
+	return sgsString( C, -1 );
 }
 template<> inline sgsString sgs_DumpData<sgsVariable>( SGS_CTX, const sgsVariable& v, int depth ){ return sgs_DumpData( C, v.var, depth ); }
 template< class T > inline sgsString sgs_DumpData( SGS_CTX, const sgsHandle<T>& v, int depth ){ return sgs_DumpDataPushVar( C, v, depth ); }

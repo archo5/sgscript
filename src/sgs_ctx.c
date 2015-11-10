@@ -735,7 +735,7 @@ static int ctx_decode( SGS_CTX, const char* buf, size_t size, sgs_CompFunc** out
 	return 1;
 }
 
-static int ctx_compile( SGS_CTX, const char* buf, size_t size, sgs_CompFunc** out )
+static SGSBOOL ctx_compile( SGS_CTX, const char* buf, size_t size, sgs_CompFunc** out )
 {
 	sgs_CompFunc* func = NULL;
 	sgs_TokenList tlist = NULL;
@@ -948,20 +948,20 @@ SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, size_t size )
 }
 
 
-SGSRESULT sgs_Abort( SGS_CTX )
+SGSBOOL sgs_Abort( SGS_CTX )
 {
 	sgs_StackFrame* sf = C->sf_last;
 	if( sf && !sf->iptr )
 		sf = sf->prev; /* should be able to use this inside a C function */
 	if( !sf || !sf->iptr )
-		return SGS_ENOTFND;
+		return SGS_FALSE;
 	while( sf && sf->iptr )
 	{
 		sf->iptr = sf->iend;
 		sf->flags |= SGS_SF_ABORTED;
 		sf = sf->prev;
 	}
-	return SGS_SUCCESS;
+	return SGS_TRUE;
 }
 
 
@@ -1130,13 +1130,10 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 				sgs_Writef( C, "VARIABLE %02d ", (int) i );
 				dumpvar( C, p );
 				sgs_WriteStr( C, "\n" );
-				sgs_PushVariable( C, *p );
-				if( SGS_SUCCEEDED( sgs_DumpVar( C, 6 ) ) )
-				{
-					sgs_WriteStr( C, sgs_ToString( C, -1 ) );
-					sgs_Pop( C, 1 );
-					sgs_WriteStr( C, "\n" );
-				}
+				sgs_DumpVar( C, *p, 6 );
+				sgs_WriteStr( C, sgs_ToString( C, -1 ) );
+				sgs_Pop( C, 1 );
+				sgs_WriteStr( C, "\n" );
 				i++;
 			}
 			sgs_WriteStr( C, "VARIABLE -- ---- STACK ---- TOP ----\n" );
@@ -1277,7 +1274,7 @@ sgs_ObjInterface* sgs_FindType( SGS_CTX, const char* name )
 	return NULL;
 }
 
-SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
+SGSONE sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 {
 	sgs_VHTVar* vv;
 	sgs_Variable key = sgs_MakeCFunc( igfn );
@@ -1286,8 +1283,7 @@ SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 	vv = sgs_vht_get( &S->ifacetable, &key );
 	if( vv )
 	{
-		sgs_PushVariable( C, vv->val );
-		return SGS_SUCCESS;
+		return sgs_PushVariable( C, vv->val );
 	}
 	else
 	{
@@ -1302,27 +1298,22 @@ SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 			sgs_ItemType( C, ssz ) != SGS_VT_OBJECT ||
 			!sgs_PeekStackItem( C, ssz, &val ) )
 		{
+			sgs_Msg( C, SGS_APIERR, "sgs_PushInterface: failed to create the interface" );
 			sgs_SetStackSize( C, ssz );
-			return SGS_EINPROC;
+			return sgs_PushNull( C );
 		}
 		sgs_vht_set( &S->ifacetable, C, &key, &val );
 		obj = sgs_GetObjectStruct( C, ssz );
 		obj->is_iface = 1;
 		obj->refcount--; /* being in interface table doesn't count */
-		return SGS_SUCCESS;
+		return 1;
 	}
 }
 
-SGSRESULT sgs_InitInterface( SGS_CTX, sgs_Variable* var, sgs_CFunc igfn )
+void sgs_InitInterface( SGS_CTX, sgs_Variable* var, sgs_CFunc igfn )
 {
-	SGSRESULT res = sgs_PushInterface( C, igfn );
-	if( res == SGS_SUCCESS )
-	{
-		*var = sgs_StackItem( C, -1 );
-		sgs_Acquire( C, var );
-		sgs_Pop( C, 1 );
-	}
-	return res;
+	sgs_PushInterface( C, igfn );
+	sgs_StoreVariable( C, var );
 }
 
 

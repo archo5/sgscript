@@ -38,19 +38,19 @@ int main( int argc, char** argv )
 	sgs_GlobalCall( C, "printvar", 1, 0 );
 	
 	printf( "\n> print property 'Vec3.length': " );
-	sgs_PushProperty( C, -1, "length" );
+	sgs_PushProperty( C, sgs_StackItem( C, -1 ), "length" );
 	sgs_GlobalCall( C, "print", 1, 0 );
 	
 	printf( "\n> print result of method 'Vec3.getLength()': " );
 	sgs_PushItem( C, -1 );
-	sgs_PushProperty( C, -1, "getLength" );
+	sgs_PushProperty( C, sgs_StackItem( C, -1 ), "getLength" );
 	sgs_ThisCall( C, 0, 1 );
 	sgs_GlobalCall( C, "print", 1, 0 );
 	
 	printf( "\n> print object after method 'Vec3.setLength(4.5)': " );
 	sgs_PushItem( C, -1 );
 	sgs_PushReal( C, 4.5 );
-	sgs_PushProperty( C, -2, "setLength" );
+	sgs_PushProperty( C, sgs_StackItem( C, -2 ), "setLength" );
 	sgs_ThisCall( C, 1, 0 );
 	sgs_GlobalCall( C, "print", 1, 0 );
 	

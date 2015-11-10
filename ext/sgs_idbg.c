@@ -124,7 +124,7 @@ static int idbg_stackitem( SGS_CTX )
 		return 0;
 	}
 	
-	sgs_PushVariable( C, off >= 0 ? a + off : b + off );
+	sgs_PushVariable( C, ( off >= 0 ? a : b )[ off ] );
 	return 1;
 }
 
@@ -169,10 +169,8 @@ int sgs_InitIDbg( SGS_CTX, SGS_IDBG )
 	D->inside = 0;
 	D->minlev = SGS_WARNING;
 	
-	sgs_PushCFunc( C, idbg_stackitem );
-	sgs_StoreGlobal( C, "dbg_stackitem" );
-	sgs_PushCFunc( C, idbg_setstackitem );
-	sgs_StoreGlobal( C, "dbg_setstackitem" );
+	sgs_SetGlobalByName( C, "dbg_stackitem", sgs_MakeCFunc( idbg_stackitem ) );
+	sgs_SetGlobalByName( C, "dbg_setstackitem", sgs_MakeCFunc( idbg_setstackitem ) );
 	
 	return SGS_SUCCESS;
 }

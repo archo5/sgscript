@@ -115,10 +115,10 @@ int main( int argc, char** argv )
 			for( j = i; j < argc; ++j )
 				sgs_PushString( C, argv[ j ] );
 			sgs_CreateArray( C, NULL, argc - i );
-			sgs_StoreGlobal( C, "argv" );
+			sgs_SetGlobalByName( C, "argv", sgs_StackItem( C, -1 ) );
+			sgs_Pop( C, 1 );
 			
-			sgs_PushInt( C, argc - i );
-			sgs_StoreGlobal( C, "argc" );
+			sgs_SetGlobalByName( C, "argc", sgs_MakeInt( argc - i ) );
 			
 			sgs_dofile( argv[ i ], 1 );
 			sgs_close();

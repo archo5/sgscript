@@ -3681,10 +3681,10 @@ static int xgm_floatarray( SGS_CTX )
 	if( ( asize = sgs_ArraySize( C, 0 ) ) >= 0 )
 	{
 		XGM_VT* fdata = _xgm_pushvxa( C, asize, 1 );
-		sgs_PushIterator( C, 0 );
-		while( sgs_IterAdvance( C, -1 ) > 0 )
+		sgs_PushIterator( C, sgs_StackItem( C, 0 ) );
+		while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 		{
-			sgs_IterPushData( C, -1, 0, 1 );
+			sgs_IterPushData( C, sgs_StackItem( C, -1 ), 0, 1 );
 			if( !sgs_ParseVT( C, -1, fdata ) )
 				return XGM_WARNING( "failed to parse array" );
 			fdata++;
@@ -3718,10 +3718,10 @@ static int xgm_vec2array( SGS_CTX )
 	if( ( asize = sgs_ArraySize( C, 0 ) ) >= 0 )
 	{
 		XGM_VT* fdata = _xgm_pushvxa( C, asize, 2 );
-		sgs_PushIterator( C, 0 );
-		while( sgs_IterAdvance( C, -1 ) > 0 )
+		sgs_PushIterator( C, sgs_StackItem( C, 0 ) );
+		while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 		{
-			sgs_IterPushData( C, -1, 0, 1 );
+			sgs_IterPushData( C, sgs_StackItem( C, -1 ), 0, 1 );
 			if( !sgs_ParseVec2( C, -1, fdata, 0 ) )
 				return XGM_WARNING( "failed to parse array" );
 			fdata += 2;
@@ -3773,10 +3773,10 @@ static int xgm_vec3array( SGS_CTX )
 	if( ( asize = sgs_ArraySize( C, 0 ) ) >= 0 )
 	{
 		XGM_VT* fdata = _xgm_pushvxa( C, asize, 3 );
-		sgs_PushIterator( C, 0 );
-		while( sgs_IterAdvance( C, -1 ) > 0 )
+		sgs_PushIterator( C, sgs_StackItem( C, 0 ) );
+		while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 		{
-			sgs_IterPushData( C, -1, 0, 1 );
+			sgs_IterPushData( C, sgs_StackItem( C, -1 ), 0, 1 );
 			if( !sgs_ParseVec3( C, -1, fdata, 0 ) )
 				return XGM_WARNING( "failed to parse array" );
 			fdata += 3;
@@ -3829,10 +3829,10 @@ static int xgm_vec4array( SGS_CTX )
 	if( ( asize = sgs_ArraySize( C, 0 ) ) >= 0 )
 	{
 		XGM_VT* fdata = _xgm_pushvxa( C, asize, 4 );
-		sgs_PushIterator( C, 0 );
-		while( sgs_IterAdvance( C, -1 ) > 0 )
+		sgs_PushIterator( C, sgs_StackItem( C, 0 ) );
+		while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 		{
-			sgs_IterPushData( C, -1, 0, 1 );
+			sgs_IterPushData( C, sgs_StackItem( C, -1 ), 0, 1 );
 			if( !sgs_ParseVec4( C, -1, fdata, 0 ) )
 				return XGM_WARNING( "failed to parse array" );
 			fdata += 4;

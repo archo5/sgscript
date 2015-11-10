@@ -928,8 +928,8 @@ int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
 		{
 			if( item.what != "GCREF" )
 				continue;
-			out $= "\n\tif( SGS_FAILED( sgs_GCMarkVar( C, static_cast<"$
-				obj.name$"*>( obj->data )->"$item.name$" ) ) ) return SGS_EINPROC;";
+			out $= "\n\tsgs_GCMarkVar( C, static_cast<"$
+				obj.name$"*>( obj->data )->"$item.name$" );";
 		}
 		out $= "\n\treturn SGS_SUCCESS;\n}\n";
 		

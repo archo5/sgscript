@@ -44,8 +44,7 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 		}
 		else
 		{
-			sgs_Variable val;
-			sgs_InitReal( &val, TM - prevTM );
+			sgs_Variable val = sgs_MakeReal( TM - prevTM );
 			sgs_PushStringBuf( C, P->keytmp.ptr, (sgs_SizeVal) P->keytmp.size );
 			sgs_vht_set( &P->timings, C, C->stack_top-1, &val );
 			sgs_Pop( C, 1 );

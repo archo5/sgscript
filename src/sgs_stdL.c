@@ -375,8 +375,7 @@ static int fmt_unpack( SGS_CTX, const char* str,
 	SGS_UNUSED( dataend );
 	if( si >= 0 && !noarray )
 	{
-		if( SGS_FAILED( sgs_CreateArray( C, NULL, si ) ) )
-			STDLIB_WARN( "failed to create array" )
+		sgs_CreateArray( C, NULL, si );
 		si = 1;
 	}
 	return si;
@@ -1825,7 +1824,7 @@ static int sgsstd_io_stat( SGS_CTX )
 			sgs_PushInt( C, FST_UNKNOWN );
 		sgs_PushString( C, "size" );
 		sgs_PushInt( C, data.st_size );
-		return SGS_SUCCEEDED( sgs_CreateDict( C, NULL, 10 ) );
+		return sgs_CreateDict( C, NULL, 10 );
 	}
 }
 
@@ -3647,14 +3646,14 @@ static int sgsstd_string_translate( SGS_CTX )
 	
 	if( !sgs_LoadArgs( C, "?m" ) )
 		return 0;
-	if( sgs_PushIterator( C, 1 ) )
+	if( sgs_PushIterator( C, sgs_StackItem( C, 1 ) ) == SGS_FALSE )
 		return sgs_ArgErrorExt( C, 1, 0, "iterable", "" );
 	
-	while( sgs_IterAdvance( C, -1 ) > 0 )
+	while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 	{
 		char *str, *substr, *repstr;
 		sgs_SizeVal size, subsize, repsize;
-		if( sgs_IterPushData( C, -1, 1, 1 ) ||
+		if( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ) ||
 			!sgs_ParseString( C, 0, &str, &size ) ||
 			!sgs_ParseString( C, -2, &substr, &subsize ) ||
 			!sgs_ParseString( C, -1, &repstr, &repsize ) )
@@ -3958,13 +3957,13 @@ static int sgsstd_string_frombytes( SGS_CTX )
 	
 	sgs_PushStringAlloc( C, size );
 	buf = sgs_GetStringPtr( C, -1 );
-	if( sgs_PushIterator( C, 0 ) < 0 )
+	if( sgs_PushIterator( C, sgs_StackItem( C, 0 ) ) == SGS_FALSE )
 		goto fail;
 	
-	while( sgs_IterAdvance( C, -1 ) > 0 )
+	while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 	{
 		sgs_Int b;
-		if( sgs_IterPushData( C, -1, SGS_FALSE, SGS_TRUE ) < 0 )
+		if( sgs_IterPushData( C, sgs_StackItem( C, -1 ), SGS_FALSE, SGS_TRUE ) < 0 )
 			goto fail;
 		b = sgs_GetInt( C, -1 );
 		if( b < 0 || b > 255 )
@@ -4022,8 +4021,7 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 		sgs_membuf_reserve( &buf, C, (size_t) ( asz * 1.3 ) );
 		for( i = 0; i < asz; ++i )
 		{
-			if( SGS_FAILED( sgs_PushNumIndex( C, arr, i ) ) )
-				goto fail;
+			sgs_PushNumIndex( C, arr, i );
 			cp = sgs_GetInt( C, -1 );
 			cnt = sgs_utf8_encode( (uint32_t) cp, tmp );
 			if( !cnt )
@@ -4065,10 +4063,6 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 	sgs_PushStringBuf( C, buf.ptr, (sgs_SizeVal) buf.size );
 	sgs_membuf_destroy( &buf, C );
 	return 1;
-	
-fail:
-	sgs_membuf_destroy( &buf, C );
-	STDLIB_WARN( "failed to read the array" )
 }
 
 static int sgsstd_string_utf8_offset( SGS_CTX )
