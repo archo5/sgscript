@@ -3653,8 +3653,8 @@ static int sgsstd_string_translate( SGS_CTX )
 	{
 		char *str, *substr, *repstr;
 		sgs_SizeVal size, subsize, repsize;
-		if( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ) ||
-			!sgs_ParseString( C, 0, &str, &size ) ||
+		sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 );
+		if( !sgs_ParseString( C, 0, &str, &size ) ||
 			!sgs_ParseString( C, -2, &substr, &subsize ) ||
 			!sgs_ParseString( C, -1, &repstr, &repsize ) )
 			STDLIB_WARN( "failed to read data" )
@@ -3963,8 +3963,7 @@ static int sgsstd_string_frombytes( SGS_CTX )
 	while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 	{
 		sgs_Int b;
-		if( sgs_IterPushData( C, sgs_StackItem( C, -1 ), SGS_FALSE, SGS_TRUE ) < 0 )
-			goto fail;
+		sgs_IterPushData( C, sgs_StackItem( C, -1 ), SGS_FALSE, SGS_TRUE );
 		b = sgs_GetInt( C, -1 );
 		if( b < 0 || b > 255 )
 			STDLIB_WARN( "invalid byte value" )
@@ -4239,8 +4238,7 @@ static int utf8it_serialize( SGS_CTX, sgs_VarObj* obj )
 	sgs_Variable var;
 	var.type = SGS_VT_STRING;
 	var.data.S = IT->str;
-	sgs_PushVariable( C, var );
-	if( SGS_FAILED( ret = sgs_Serialize( C ) ) )
+	if( SGS_FAILED( ret = sgs_Serialize( C, var ) ) )
 		return ret;
 	return sgs_SerializeObject( C, 1, "string_utf8_iterator" );
 }

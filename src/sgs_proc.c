@@ -1830,18 +1830,18 @@ static SGSBOOL vm_op_negate( SGS_CTX, sgs_Variable* out, sgs_Variable* A )
 				sgs_Msg( C, SGS_ERROR, "Given object does not support negation." );
 				/* guaranteed to be NULL after release */
 			}
+			VAR_RELEASE( &lA );
+			return SGS_SUCCEEDED( ret );
 		}
-		VAR_RELEASE( &lA );
-		return 0;
 	default:
 		sgs_Msg( C, SGS_WARNING, "Negating variable of type %s is not supported.", TYPENAME( lA.type ) );
 		VAR_RELEASE( &lA );
-		return 0;
+		return SGS_FALSE;
 	}
 	
 done:
 	VAR_RELEASE( &lA );
-	return 1;
+	return SGS_TRUE;
 }
 
 static void vm_op_boolinv( SGS_CTX, int16_t out, sgs_Variable *A )
@@ -1856,7 +1856,7 @@ static void vm_op_invert( SGS_CTX, int16_t out, sgs_Variable *A )
 	var_setint( C, C->stack_off + out, val );
 }
 
-static SGSRESULT vm_op_incdec( SGS_CTX, sgs_VarPtr out, sgs_Variable *A, int diff )
+static void vm_op_incdec( SGS_CTX, sgs_VarPtr out, sgs_Variable *A, int diff )
 {
 	switch( A->type )
 	{
@@ -1865,9 +1865,8 @@ static SGSRESULT vm_op_incdec( SGS_CTX, sgs_VarPtr out, sgs_Variable *A, int dif
 	default:
 		var_setnull( C, out );
 		sgs_Msg( C, SGS_ERROR, "Cannot %screment non-numeric variables!", diff > 0 ? "in" : "de" );
-		return SGS_EINVAL;
+		break;
 	}
-	return SGS_SUCCESS;
 }
 
 
@@ -1884,7 +1883,7 @@ static const char* mm_arith_ops[] =
 	"__div",
 	"__mod",
 };
-static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, int op )
+static SGSBOOL vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b, int op )
 {
 	if( a->type == SGS_VT_REAL && b->type == SGS_VT_REAL )
 	{
@@ -1898,7 +1897,7 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 			default: R = 0; break;
 		}
 		var_setreal( C, out, R );
-		return SGS_SUCCESS;
+		return SGS_TRUE;
 	}
 	if( a->type == SGS_VT_INT && b->type == SGS_VT_INT )
 	{
@@ -1908,12 +1907,12 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 			case ARITH_OP_SUB: R = A - B; break;
 			case ARITH_OP_MUL: R = A * B; break;
 			case ARITH_OP_DIV: if( B == 0 ) goto div0err;
-				var_setreal( C, out, ((sgs_Real) A) / ((sgs_Real) B) ); return SGS_SUCCESS; break;
+				var_setreal( C, out, ((sgs_Real) A) / ((sgs_Real) B) ); return SGS_TRUE; break;
 			case ARITH_OP_MOD: if( B == 0 ) goto div0err; R = A % B; break;
 			default: R = 0; break;
 		}
 		var_setint( C, out, R );
-		return SGS_SUCCESS;
+		return SGS_TRUE;
 	}
 	
 	if( a->type == SGS_VT_OBJECT || b->type == SGS_VT_OBJECT )
@@ -1941,7 +1940,7 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 				C->stack_top--; /* skip acquire/release */
 				VAR_RELEASE( &lA );
 				VAR_RELEASE( &lB );
-				return SGS_SUCCESS;
+				return SGS_TRUE;
 			}
 			else
 			{
@@ -1964,7 +1963,7 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 				C->stack_top--; /* skip acquire/release */
 				VAR_RELEASE( &lA );
 				VAR_RELEASE( &lB );
-				return SGS_SUCCESS;
+				return SGS_TRUE;
 			}
 			else
 			{
@@ -1992,7 +1991,7 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 				C->stack_top--; /* skip acquire/release */
 				VAR_RELEASE( &lA );
 				VAR_RELEASE( &lB );
-				return SGS_SUCCESS;
+				return SGS_TRUE;
 			}
 			else
 			{
@@ -2020,7 +2019,7 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 				C->stack_top--; /* skip acquire/release */
 				VAR_RELEASE( &lA );
 				VAR_RELEASE( &lB );
-				return SGS_SUCCESS;
+				return SGS_TRUE;
 			}
 			else
 			{
@@ -2062,22 +2061,22 @@ static SGSRESULT vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr 
 			case ARITH_OP_SUB: R = A - B; break;
 			case ARITH_OP_MUL: R = A * B; break;
 			case ARITH_OP_DIV: if( B == 0 ) goto div0err;
-				var_setreal( C, out, ((sgs_Real) A) / ((sgs_Real) B) ); return SGS_SUCCESS;
+				var_setreal( C, out, ((sgs_Real) A) / ((sgs_Real) B) ); return SGS_TRUE;
 			case ARITH_OP_MOD: if( B == 0 ) goto div0err; R = A % B; break;
 			default: R = 0; break;
 		}
 		var_setint( C, out, R );
 	}
-	return SGS_SUCCESS;
+	return SGS_TRUE;
 	
 div0err:
 	VAR_RELEASE( out );
 	sgs_Msg( C, SGS_ERROR, "Division by 0" );
-	return SGS_EINPROC;
+	return SGS_FALSE;
 fail:
 	VAR_RELEASE( out );
 	sgs_Msg( C, SGS_ERROR, "Specified arithmetic operation is not supported on the given set of arguments" );
-	return SGS_EINVAL;
+	return SGS_FALSE;
 }
 
 
@@ -2301,7 +2300,7 @@ static int vm_forprep( SGS_CTX, StkIdx outiter, sgs_VarPtr obj )
 	return SGS_TRUE;
 }
 
-static SGSMIXED vm_fornext( SGS_CTX, StkIdx outkey, StkIdx outval, sgs_VarPtr iter )
+static SGSBOOL vm_fornext( SGS_CTX, StkIdx outkey, StkIdx outval, sgs_VarPtr iter )
 {
 	StkIdx expargs = 0;
 	int flags = 0, ret = SGS_ENOTSUP;
@@ -2310,16 +2309,20 @@ static SGSMIXED vm_fornext( SGS_CTX, StkIdx outkey, StkIdx outval, sgs_VarPtr it
 	
 	if( iter->type != SGS_VT_OBJECT )
 	{
-		sgs_Msg( C, SGS_ERROR, "Iterator is not an object" );
-		return SGS_EINVAL;
+		sgs_Msg( C, SGS_ERROR, "iterator is not an object" );
+		return SGS_FALSE;
 	}
 	
 	if( O->iface == sgsstd_array_iter_iface )
 	{
+		/* = sgsstd_array_iter_getnext */
 		sgsstd_array_iter_t* it = (sgsstd_array_iter_t*) O->data;
 		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) it->ref.data.O->data;
 		if( it->size != hdr->size )
-			return SGS_EINPROC;
+		{
+			sgs_Msg( C, SGS_ERROR, "array changed size during iteration" );
+			return SGS_FALSE;
+		}
 		else if( outkey < 0 && outval < 0 )
 		{
 			it->off++;
@@ -2331,7 +2334,7 @@ static SGSMIXED vm_fornext( SGS_CTX, StkIdx outkey, StkIdx outval, sgs_VarPtr it
 				var_setint( C, stk_getlpos( C, outkey ), it->off );
 			if( outval >= 0 )
 				stk_setlvar( C, outval, hdr->data + it->off );
-			return SGS_SUCCESS;
+			return SGS_TRUE;
 		}
 	}
 	
@@ -2344,13 +2347,16 @@ static SGSMIXED vm_fornext( SGS_CTX, StkIdx outkey, StkIdx outval, sgs_VarPtr it
 	if( SGS_FAILED( ret ) || SGS_STACKFRAMESIZE < expargs )
 	{
 		_STACK_UNPROTECT;
-		sgs_Msg( C, SGS_ERROR, "Failed to retrieve data from iterator" );
-		return ret;
+		if( flags == 0 )
+			sgs_Msg( C, SGS_ERROR, "failed to advance iterator" );
+		else
+			sgs_Msg( C, SGS_ERROR, "failed to retrieve data from iterator" );
+		return SGS_FALSE;
 	}
 	_STACK_UNPROTECT_SKIP( expargs );
 	
 	if( !flags )
-		return ret;
+		return ret > 0;
 	else
 	{
 		if( outkey >= 0 ) stk_setlvar( C, outkey, stk_getpos( C, -2 + (outval<0) ) );
@@ -2358,7 +2364,7 @@ static SGSMIXED vm_fornext( SGS_CTX, StkIdx outkey, StkIdx outval, sgs_VarPtr it
 		stk_pop( C, expargs );
 	}
 	
-	return SGS_SUCCESS;
+	return SGS_TRUE;
 }
 
 
@@ -4117,10 +4123,8 @@ sgs_Variable sgs_StackItem( SGS_CTX, sgs_StkIdx item )
 {
 	if( sgs_IsValidIndex( C, item ) == 0 )
 	{
-		sgs_Variable out;
-		out.type = SGS_VT_NULL;
 		sgs_StackIdxError( C, item );
-		return out;
+		return sgs_MakeNull();
 	}
 	return *stk_getpos( C, item );
 }
@@ -4162,21 +4166,27 @@ void sgs_Assign( SGS_CTX, sgs_Variable* var_to, sgs_Variable* var_from )
 	VAR_ACQUIRE( var_to );
 }
 
-SGSRESULT sgs_ArithOp( SGS_CTX, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op )
+void sgs_ArithOp( SGS_CTX, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op )
 {
 	if( op == SGS_EOP_NEGATE )
-		return vm_op_negate( C, out, A ) ? SGS_SUCCESS : SGS_EINVAL;
+	{
+		vm_op_negate( C, out, A ); /* throws an error */
+		return;
+	}
 	if( op < SGS_EOP_ADD || op > SGS_EOP_MOD )
 	{
+		sgs_Msg( C, SGS_APIERR, "sgs_ArithOp: invalid operation ID (%d) "
+			"specified (add/sub/mul/div/mod/negate allowed)", op );
 		VAR_RELEASE( out );
-		return SGS_ENOTSUP;
+		*out = sgs_MakeNull();
+		return;
 	}
-	return vm_arith_op( C, out, A, B, op );
+	vm_arith_op( C, out, A, B, op ); /* throws an error */
 }
 
-SGSRESULT sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc )
+void sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc )
 {
-	return vm_op_incdec( C, out, A, inc ? 1 : -1 );
+	vm_op_incdec( C, out, A, inc ? 1 : -1 );
 }
 
 
@@ -4186,61 +4196,72 @@ SGSRESULT sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc )
 	
 */
 
-SGSRESULT sgs_ClPushNulls( SGS_CTX, sgs_StkIdx num )
-{
-	if( num < 0 )
-		return SGS_EINVAL;
-	clstk_push_nulls( C, num );
-	return SGS_SUCCESS;
-}
-
-SGSRESULT sgs_ClPushItem( SGS_CTX, sgs_StkIdx item )
+static void sgs_check_clindex( SGS_CTX, sgs_StkIdx item, const char* fn )
 {
 	if( item < 0 || C->clstk_off + item >= C->clstk_top )
-		return SGS_EBOUNDS;
+	{
+		sgs_Msg( C, SGS_APIERR, "%s: stack index (%d) out of bounds (%d)",
+			fn, (int) item, (int) ( C->clstk_top - C->clstk_off ) );
+		return;
+	}
+}
+
+static void sgs_check_clcount( SGS_CTX, sgs_StkIdx count, const char* fn )
+{
+	if( C->clstk_top - C->clstk_off < count )
+	{
+		sgs_Msg( C, SGS_APIERR, "%s: closure count (%d) exceeds stack size (%d)",
+			fn, (int) count, (int) ( C->clstk_top - C->clstk_off ) );
+		return;
+	}
+}
+
+void sgs_ClPushNulls( SGS_CTX, sgs_StkIdx num )
+{
+	if( num < 0 )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_ClPushNulls: negative count (%d)", (int) num );
+		return;
+	}
+	clstk_push_nulls( C, num );
+}
+
+void sgs_ClPushItem( SGS_CTX, sgs_StkIdx item )
+{
+	sgs_check_clindex( C, item, "sgs_ClPushItem" );
 	clstk_push( C, clstk_get( C, item ) );
-	return SGS_SUCCESS;
 }
 
-SGSRESULT sgs_ClPop( SGS_CTX, sgs_StkIdx num )
+void sgs_ClPop( SGS_CTX, sgs_StkIdx num )
 {
-	if( C->clstk_top + num > C->clstk_top )
-		return SGS_EINPROC;
+	sgs_check_clcount( C, num, "sgs_ClPop" );
 	clstk_pop( C, num );
-	return SGS_SUCCESS;
 }
 
-SGSRESULT sgs_MakeClosure( SGS_CTX, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out )
+void sgs_MakeClosure( SGS_CTX, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out )
 {
-	if( C->clstk_top - C->clstk_off < clcount )
-		return SGS_EINPROC;
+	sgs_check_clcount( C, clcount, "sgs_MakeClosure" );
 	/* WP: range not affected by conversion */
 	sgsSTD_MakeClosure( C, func, (uint32_t) clcount );
-	
 	*out = *stk_gettop( C );
 	stk_pop1nr( C );
 	clstk_pop( C, clcount );
-	return SGS_SUCCESS;
 }
 
-SGSRESULT sgs_ClGetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out )
+void sgs_ClGetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out )
 {
-	if( item < 0 || C->clstk_off + item >= C->clstk_top )
-		return SGS_EBOUNDS;
+	sgs_check_clindex( C, item, "sgs_ClGetItem" );
 	*out = clstk_get( C, item )->var;
 	VAR_ACQUIRE( out );
-	return SGS_SUCCESS;
 }
 
-SGSRESULT sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var )
+void sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var )
 {
-	if( item < 0 || C->clstk_off + item >= C->clstk_top )
-		return SGS_EBOUNDS;
+	sgs_check_clindex( C, item, "sgs_ClSetItem" );
 	sgs_Variable* cv = &clstk_get( C, item )->var;
 	VAR_RELEASE( cv );
 	*cv = *var;
 	VAR_ACQUIRE( var );
-	return SGS_SUCCESS;
 }
 
 
@@ -4667,26 +4688,22 @@ typedef struct sgs_serialize1_data
 }
 sgs_serialize1_data;
 
-SGSRESULT sgs_SerializeInt_V1( SGS_CTX )
+SGSRESULT sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 {
 	int ret = SGS_SUCCESS;
-	sgs_Variable V;
 	void* prev_serialize_state = C->serialize_state;
 	sgs_serialize1_data SD = { 1, sgs_membuf_create() }, *pSD;
 	int ep = !C->serialize_state || *(int*)C->serialize_state != 1;
-
-	if( !sgs_PeekStackItem( C, -1, &V ) )
-		return SGS_EBOUNDS;
-
+	
 	if( ep )
 	{
 		C->serialize_state = &SD;
 	}
 	pSD = (sgs_serialize1_data*) C->serialize_state;
 
-	if( V.type == SGS_VT_OBJECT )
+	if( var.type == SGS_VT_OBJECT )
 	{
-		sgs_VarObj* O = V.data.O;
+		sgs_VarObj* O = var.data.O;
 		_STACK_PREPARE;
 		if( !O->iface->serialize )
 		{
@@ -4700,13 +4717,13 @@ SGSRESULT sgs_SerializeInt_V1( SGS_CTX )
 		if( SGS_FAILED( ret ) )
 			goto fail;
 	}
-	else if( V.type == SGS_VT_CFUNC )
+	else if( var.type == SGS_VT_CFUNC )
 	{
 		sgs_Msg( C, SGS_WARNING, "Cannot serialize C functions" );
 		ret = SGS_EINVAL;
 		goto fail;
 	}
-	else if( V.type == SGS_VT_PTR )
+	else if( var.type == SGS_VT_PTR )
 	{
 		sgs_Msg( C, SGS_WARNING, "Cannot serialize pointers" );
 		ret = SGS_EINVAL;
@@ -4718,24 +4735,24 @@ SGSRESULT sgs_SerializeInt_V1( SGS_CTX )
 		{
 			pb[0] = 'P';
 			/* WP: basetype limited to bits 0-7, sign interpretation does not matter */
-			pb[1] = (char) V.type;
+			pb[1] = (char) var.type;
 		}
 		sgs_membuf_appbuf( &pSD->data, C, pb, 2 );
-		switch( V.type )
+		switch( var.type )
 		{
 		case SGS_VT_NULL: break;
-		/* WP: V.data.B uses only bit 0 */
-		case SGS_VT_BOOL: { char b = (char) V.data.B; sgs_membuf_appbuf( &pSD->data, C, &b, 1 ); } break;
-		case SGS_VT_INT: sgs_membuf_appbuf( &pSD->data, C, &V.data.I, sizeof( sgs_Int ) ); break;
-		case SGS_VT_REAL: sgs_membuf_appbuf( &pSD->data, C, &V.data.R, sizeof( sgs_Real ) ); break;
+		/* WP: var.data.B uses only bit 0 */
+		case SGS_VT_BOOL: { char b = (char) var.data.B; sgs_membuf_appbuf( &pSD->data, C, &b, 1 ); } break;
+		case SGS_VT_INT: sgs_membuf_appbuf( &pSD->data, C, &var.data.I, sizeof( sgs_Int ) ); break;
+		case SGS_VT_REAL: sgs_membuf_appbuf( &pSD->data, C, &var.data.R, sizeof( sgs_Real ) ); break;
 		case SGS_VT_STRING:
-			sgs_membuf_appbuf( &pSD->data, C, &V.data.S->size, 4 );
-			sgs_membuf_appbuf( &pSD->data, C, sgs_var_cstr( &V ), V.data.S->size );
+			sgs_membuf_appbuf( &pSD->data, C, &var.data.S->size, 4 );
+			sgs_membuf_appbuf( &pSD->data, C, sgs_var_cstr( &var ), var.data.S->size );
 			break;
 		case SGS_VT_FUNC:
 			{
 				size_t szbefore = pSD->data.size;
-				if( !_serialize_function( C, V.data.F, &pSD->data ) )
+				if( !_serialize_function( C, var.data.F, &pSD->data ) )
 				{
 					ret = SGS_EINPROC;
 					goto fail;
@@ -4748,7 +4765,7 @@ SGSRESULT sgs_SerializeInt_V1( SGS_CTX )
 			}
 			break;
 		default:
-			sgs_Msg( C, SGS_ERROR, "sgs_Serialize: Unknown memory error" );
+			sgs_Msg( C, SGS_ERROR, "sgs_Serialize: unknown memory error" );
 			ret = SGS_EINPROC;
 			goto fail;
 		}
@@ -4761,12 +4778,11 @@ fail:
 		{
 			if( SD.data.size > 0x7fffffff )
 			{
-				sgs_Msg( C, SGS_WARNING, "Serialized string too long" );
+				sgs_Msg( C, SGS_ERROR, "serialized string too long" );
 				ret = SGS_EINVAL;
 			}
 			else
 			{
-				sgs_Pop( C, 1 );
 				/* WP: added error condition */
 				sgs_PushStringBuf( C, SD.data.ptr, (sgs_SizeVal) SD.data.size );
 			}
@@ -4774,8 +4790,6 @@ fail:
 		sgs_membuf_destroy( &SD.data, C );
 		C->serialize_state = prev_serialize_state;
 	}
-	else
-		sgs_Pop( C, 1 );
 	return ret;
 }
 
@@ -4914,16 +4928,12 @@ typedef struct sgs_serialize2_data
 }
 sgs_serialize2_data;
 
-SGSRESULT sgs_SerializeInt_V2( SGS_CTX )
+SGSRESULT sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 {
 	int ret = SGS_SUCCESS;
-	sgs_Variable V;
 	void* prev_serialize_state = C->serialize_state;
 	sgs_serialize2_data SD, *pSD;
 	int ep = !C->serialize_state || *(int*)C->serialize_state != 2;
-	
-	if( !sgs_PeekStackItem( C, -1, &V ) )
-		return SGS_EBOUNDS;
 	
 	if( ep )
 	{
@@ -4935,9 +4945,9 @@ SGSRESULT sgs_SerializeInt_V2( SGS_CTX )
 	}
 	pSD = (sgs_serialize2_data*) C->serialize_state;
 	
-	if( V.type == SGS_VT_OBJECT )
+	if( var.type == SGS_VT_OBJECT )
 	{
-		sgs_VarObj* O = V.data.O;
+		sgs_VarObj* O = var.data.O;
 		sgs_VarObj* prevObj = pSD->curObj;
 		_STACK_PREPARE;
 		if( !O->iface->serialize )
@@ -4954,13 +4964,13 @@ SGSRESULT sgs_SerializeInt_V2( SGS_CTX )
 		if( SGS_FAILED( ret ) )
 			goto fail;
 	}
-	else if( V.type == SGS_VT_CFUNC )
+	else if( var.type == SGS_VT_CFUNC )
 	{
 		sgs_Msg( C, SGS_WARNING, "Cannot serialize C functions" );
 		ret = SGS_EINVAL;
 		goto fail;
 	}
-	else if( V.type == SGS_VT_PTR )
+	else if( var.type == SGS_VT_PTR )
 	{
 		sgs_Msg( C, SGS_WARNING, "Cannot serialize pointers" );
 		ret = SGS_EINVAL;
@@ -4969,7 +4979,7 @@ SGSRESULT sgs_SerializeInt_V2( SGS_CTX )
 	else
 	{
 		sgs_StkIdx argidx;
-		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &V );
+		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
 		if( vv )
 			argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
 		else
@@ -4978,7 +4988,7 @@ SGSRESULT sgs_SerializeInt_V2( SGS_CTX )
 			argidx = sgs_vht_size( &pSD->servartable );
 			idxvar.type = SGS_VT_INT;
 			idxvar.data.I = argidx;
-			sgs_vht_set( &pSD->servartable, C, &V, &idxvar );
+			sgs_vht_set( &pSD->servartable, C, &var, &idxvar );
 		}
 		sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
 	}
@@ -5039,7 +5049,7 @@ fail:
 							}
 							break;
 						default:
-							sgs_Msg( C, SGS_ERROR, "sgs_Serialize: Unknown memory error" );
+							sgs_Msg( C, SGS_ERROR, "sgs_Serialize: unknown memory error" );
 							ret = SGS_EINPROC;
 							goto fail2;
 						}
@@ -5050,12 +5060,11 @@ fail:
 			
 			if( B.size > 0x7fffffff )
 			{
-				sgs_Msg( C, SGS_WARNING, "Serialized string too long" );
+				sgs_Msg( C, SGS_WARNING, "serialized string too long" );
 				ret = SGS_EINVAL;
 			}
 			else
 			{
-				sgs_Pop( C, 1 );
 				/* WP: added error condition */
 				sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
 			}
@@ -5066,8 +5075,6 @@ fail2:
 		sgs_membuf_destroy( &SD.argarray, C );
 		C->serialize_state = prev_serialize_state;
 	}
-	else
-		sgs_Pop( C, 1 );
 	return ret;
 }
 
@@ -5265,17 +5272,13 @@ fail:
 }
 
 
-SGSRESULT sgs_Serialize( SGS_CTX )
+SGSRESULT sgs_Serialize( SGS_CTX, sgs_Variable var )
 {
 	SGSRESULT res;
-	sgs_StkIdx stksz = sgs_StackSize( C );
-	if( !stksz )
-		return SGS_EBOUNDS;
-	
 	if( C->state & SGS_CNTL_SERIALMODE )
-		res = sgs_SerializeInt_V2( C );
+		res = sgs_SerializeInt_V2( C, var );
 	else
-		res = sgs_SerializeInt_V1( C );
+		res = sgs_SerializeInt_V1( C, var );
 	return res;
 }
 
@@ -5292,14 +5295,18 @@ SGSRESULT sgs_SerializeObject( SGS_CTX, StkIdx args, const char* func )
 	return res;
 }
 
-SGSRESULT sgs_Unserialize( SGS_CTX )
+SGSRESULT sgs_Unserialize( SGS_CTX, sgs_Variable var )
 {
 	SGSRESULT res;
 	char* str, *strend;
 	sgs_SizeVal size;
 	_STACK_PREPARE;
+	sgs_PushVariable( C, var );
 	if( !sgs_ParseString( C, -1, &str, &size ) || !size )
+	{
+		sgs_Pop( C, 1 );
 		return SGS_EINVAL;
+	}
 	
 	strend = str + size;
 	
@@ -5313,42 +5320,42 @@ SGSRESULT sgs_Unserialize( SGS_CTX )
 }
 
 
-SGSRESULT sgs_SerializeV1( SGS_CTX )
+SGSRESULT sgs_SerializeV1( SGS_CTX, sgs_Variable var )
 {
 	int32_t old;
 	SGSRESULT res;
 	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 1 );
-	res = sgs_Serialize( C );
+	res = sgs_Serialize( C, var );
 	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
 	return res;
 }
 
-SGSRESULT sgs_UnserializeV1( SGS_CTX )
+SGSRESULT sgs_UnserializeV1( SGS_CTX, sgs_Variable var )
 {
 	int32_t old;
 	SGSRESULT res;
 	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 1 );
-	res = sgs_Unserialize( C );
+	res = sgs_Unserialize( C, var );
 	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
 	return res;
 }
 
-SGSRESULT sgs_SerializeV2( SGS_CTX )
+SGSRESULT sgs_SerializeV2( SGS_CTX, sgs_Variable var )
 {
 	int32_t old;
 	SGSRESULT res;
 	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 2 );
-	res = sgs_Serialize( C );
+	res = sgs_Serialize( C, var );
 	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
 	return res;
 }
 
-SGSRESULT sgs_UnserializeV2( SGS_CTX )
+SGSRESULT sgs_UnserializeV2( SGS_CTX, sgs_Variable var )
 {
 	int32_t old;
 	SGSRESULT res;
 	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 2 );
-	res = sgs_Unserialize( C );
+	res = sgs_Unserialize( C, var );
 	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
 	return res;
 }
@@ -5754,23 +5761,16 @@ SGSBOOL sgs_GetIterator( SGS_CTX, sgs_Variable var, sgs_Variable* out )
 	return ret;
 }
 
-SGSMIXED sgs_IterAdvance( SGS_CTX, sgs_Variable var )
+SGSBOOL sgs_IterAdvance( SGS_CTX, sgs_Variable var )
 {
-	sgs_SizeVal ret;
-	_EL_BACKUP;
-	_EL_SETMAX;
-	ret = vm_fornext( C, -1, -1, &var );
-	_EL_RESET;
-	return ret;
+	return vm_fornext( C, -1, -1, &var );
 }
 
-SGSMIXED sgs_IterPushData( SGS_CTX, sgs_Variable var, int key, int value )
+void sgs_IterPushData( SGS_CTX, sgs_Variable var, int key, int value )
 {
-	_EL_BACKUP;
-	sgs_SizeVal ret;
 	StkIdx idkey, idval;
 	if( !key && !value )
-		return SGS_SUCCESS;
+		return;
 	if( key )
 	{
 		sgs_PushNull( C );
@@ -5783,33 +5783,18 @@ SGSMIXED sgs_IterPushData( SGS_CTX, sgs_Variable var, int key, int value )
 		idval = stk_absindex( C, -1 );
 	}
 	else idval = -1;
-	_EL_SETMAX;
-	ret = vm_fornext( C, idkey, idval, &var );
-	_EL_RESET;
-	if( SGS_FAILED( ret ) )
-		stk_pop( C, !!key + !!value );
-	return ret;
+	vm_fornext( C, idkey, idval, &var );
 }
 
-SGSMIXED sgs_IterGetData( SGS_CTX, sgs_Variable var, sgs_Variable* key, sgs_Variable* value )
+void sgs_IterGetData( SGS_CTX, sgs_Variable var, sgs_Variable* key, sgs_Variable* value )
 {
-	_EL_BACKUP;
-	sgs_SizeVal ret;
 	if( !key && !value )
-		return SGS_SUCCESS;
+		return;
 	if( key ) sgs_PushNull( C );
 	if( value ) sgs_PushNull( C );
-	_EL_SETMAX;
-	ret = vm_fornext( C, key?stk_absindex(C,value?-2:-1):-1, value?stk_absindex(C,-1):-1, &var );
-	_EL_RESET;
-	if( SGS_SUCCEEDED( ret ) )
-	{
-		if( value ) sgs_StoreVariable( C, value );
-		if( key ) sgs_StoreVariable( C, key );
-	}
-	else
-		stk_pop( C, !!key + !!value );
-	return ret;
+	vm_fornext( C, key ? stk_absindex( C, value ? -2 : -1 ) : -1, value ? stk_absindex( C, -1 ) : -1, &var );
+	if( value ) sgs_StoreVariable( C, value );
+	if( key ) sgs_StoreVariable( C, key );
 }
 
 

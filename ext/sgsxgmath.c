@@ -262,8 +262,8 @@ static int xgm_v2_expr( SGS_ARGS_OBJFUNC )
 static int xgm_v2_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
-	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[0] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[1] ) ) ) return SGS_EINPROC;
 	return sgs_SerializeObject( C, 2, "vec2" );
 }
 
@@ -479,9 +479,9 @@ static int xgm_v3_expr( SGS_ARGS_OBJFUNC )
 static int xgm_v3_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
-	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[2] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[0] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[1] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[2] ) ) ) return SGS_EINPROC;
 	return sgs_SerializeObject( C, 3, "vec3" );
 }
 
@@ -727,10 +727,10 @@ static int xgm_v4_expr( SGS_ARGS_OBJFUNC )
 static int xgm_v4_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
-	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[2] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[3] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[0] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[1] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[2] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[3] ) ) ) return SGS_EINPROC;
 	return sgs_SerializeObject( C, 4, "vec4" );
 }
 
@@ -868,10 +868,10 @@ static int xgm_b2_expr( SGS_ARGS_OBJFUNC )
 static int xgm_b2_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
-	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[2] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[3] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[0] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[1] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[2] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[3] ) ) ) return SGS_EINPROC;
 	return sgs_SerializeObject( C, 4, "aabb2" );
 }
 
@@ -1042,12 +1042,12 @@ static int xgm_b3_expr( SGS_ARGS_OBJFUNC )
 static int xgm_b3_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
-	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[2] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[3] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[4] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[5] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[0] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[1] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[2] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[3] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[4] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[5] ) ) ) return SGS_EINPROC;
 	return sgs_SerializeObject( C, 4, "aabb3" );
 }
 
@@ -1283,8 +1283,7 @@ static int xgm_col_serialize( SGS_CTX, sgs_VarObj* obj )
 	XGM_OHDR;
 	for( i = 0; i < 4; ++i )
 	{
-		sgs_PushReal( C, hdr[i] );
-		if( sgs_Serialize( C ) )
+		if( sgs_Serialize( C, sgs_MakeReal( hdr[i] ) ) )
 			return SGS_EINPROC;
 	}
 	return sgs_SerializeObject( C, 4, "color" );
@@ -2101,10 +2100,10 @@ static int xgm_quat_expr( SGS_ARGS_OBJFUNC )
 static int xgm_quat_serialize( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
-	sgs_PushReal( C, hdr[0] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[1] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[2] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
-	sgs_PushReal( C, hdr[3] ); if( sgs_Serialize( C ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[0] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[1] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[2] ) ) ) return SGS_EINPROC;
+	if( sgs_Serialize( C, sgs_MakeReal( hdr[3] ) ) ) return SGS_EINPROC;
 	return sgs_SerializeObject( C, 4, "quat" );
 }
 
@@ -2655,8 +2654,7 @@ static int xgm_m3_serialize( SGS_CTX, sgs_VarObj* obj )
 	XGM_OHDR;
 	for( i = 0; i < 9; ++i )
 	{
-		sgs_PushReal( C, hdr[i] );
-		if( sgs_Serialize( C ) )
+		if( sgs_Serialize( C, sgs_MakeReal( hdr[i] ) ) )
 			return SGS_EINPROC;
 	}
 	return sgs_SerializeObject( C, 9, "mat3" );
@@ -3211,8 +3209,7 @@ static int xgm_m4_serialize( SGS_CTX, sgs_VarObj* obj )
 	XGM_OHDR;
 	for( i = 0; i < 16; ++i )
 	{
-		sgs_PushReal( C, hdr[i] );
-		if( sgs_Serialize( C ) )
+		if( sgs_Serialize( C, sgs_MakeReal( hdr[i] ) ) )
 			return SGS_EINPROC;
 	}
 	return sgs_SerializeObject( C, 16, "mat4" );
@@ -3326,8 +3323,7 @@ static int xgm_fla_serialize( SGS_CTX, sgs_VarObj* obj )
 	XGM_FLAHDR;
 	for( i = 0; i < flarr->size; ++i )
 	{
-		sgs_PushReal( C, flarr->data[ i ] );
-		if( sgs_Serialize( C ) )
+		if( sgs_Serialize( C, sgs_MakeReal( flarr->data[ i ] ) ) )
 			return SGS_EINPROC;
 	}
 	return sgs_SerializeObject( C, flarr->size, "floatarray" );

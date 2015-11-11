@@ -591,7 +591,7 @@ DEFINE_TEST( iterators )
 	atf_assert( (C->stack_top-1)->data.O->iface == sgsstd_array_iter_iface );
 	/* - values 1 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	atf_assert( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ) == SGS_SUCCESS );
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_INT );
 	atf_assert( sgs_GetInt( C, -2 ) == 0 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_BOOL );
@@ -599,7 +599,7 @@ DEFINE_TEST( iterators )
 	sgs_Pop( C, 2 );
 	/* - values 2 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	atf_assert( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ) == SGS_SUCCESS );
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_INT );
 	atf_assert( sgs_GetInt( C, -2 ) == 1 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_INT );
@@ -607,7 +607,7 @@ DEFINE_TEST( iterators )
 	sgs_Pop( C, 2 );
 	/* - values 3 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	atf_assert( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ) == SGS_SUCCESS );
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_INT );
 	atf_assert( sgs_GetInt( C, -2 ) == 2 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_STRING );
@@ -653,7 +653,7 @@ DEFINE_TEST( iterators )
 	atf_assert( (C->stack_top-1)->data.O->iface == sgsstd_dict_iter_iface );
 	/* - values 1 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	atf_assert( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ) == SGS_SUCCESS );
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_STRING );
 	atf_assert( sgs_GetStringSize( C, -2 ) == 3 );
 	atf_assert( strcmp( sgs_GetStringPtr( C, -2 ), "1st" ) == 0 );
@@ -662,7 +662,7 @@ DEFINE_TEST( iterators )
 	sgs_Pop( C, 2 );
 	/* - values 2 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	atf_assert( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ) == SGS_SUCCESS );
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_STRING );
 	atf_assert( sgs_GetStringSize( C, -2 ) == 3 );
 	atf_assert( strcmp( sgs_GetStringPtr( C, -2 ), "2nd" ) == 0 );
@@ -671,7 +671,7 @@ DEFINE_TEST( iterators )
 	sgs_Pop( C, 2 );
 	/* - values 3 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	atf_assert( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ) == SGS_SUCCESS );
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_STRING );
 	atf_assert( sgs_GetStringSize( C, -2 ) == 3 );
 	atf_assert( strcmp( sgs_GetStringPtr( C, -2 ), "3rd" ) == 0 );

@@ -633,18 +633,18 @@ SGS_APIFUNC SGSBOOL sgs_GetStackItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* ou
 SGS_APIFUNC uint32_t sgs_ItemType( SGS_CTX, sgs_StkIdx item );
 
 SGS_APIFUNC void sgs_Assign( SGS_CTX, sgs_Variable* var_to, sgs_Variable* var_from );
-SGS_APIFUNC SGSRESULT sgs_ArithOp( SGS_CTX, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op );
-SGS_APIFUNC SGSRESULT sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc );
+SGS_APIFUNC void sgs_ArithOp( SGS_CTX, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op );
+SGS_APIFUNC void sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc );
 
 /*
 	CLOSURES
 */
-SGS_APIFUNC SGSRESULT sgs_ClPushNulls( SGS_CTX, sgs_StkIdx num );
-SGS_APIFUNC SGSRESULT sgs_ClPushItem( SGS_CTX, sgs_StkIdx item );
-SGS_APIFUNC SGSRESULT sgs_ClPop( SGS_CTX, sgs_StkIdx num );
-SGS_APIFUNC SGSRESULT sgs_MakeClosure( SGS_CTX, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out );
-SGS_APIFUNC SGSRESULT sgs_ClGetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out );
-SGS_APIFUNC SGSRESULT sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var );
+SGS_APIFUNC void sgs_ClPushNulls( SGS_CTX, sgs_StkIdx num );
+SGS_APIFUNC void sgs_ClPushItem( SGS_CTX, sgs_StkIdx item );
+SGS_APIFUNC void sgs_ClPop( SGS_CTX, sgs_StkIdx num );
+SGS_APIFUNC void sgs_MakeClosure( SGS_CTX, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out );
+SGS_APIFUNC void sgs_ClGetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out );
+SGS_APIFUNC void sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var );
 
 /*
 	OPERATIONS
@@ -670,14 +670,14 @@ SGS_APIFUNC void sgs_StringConcat( SGS_CTX, sgs_StkIdx args );
 SGS_APIFUNC void sgs_CloneItem( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC SGSMIXED sgs_ObjectAction( SGS_CTX, sgs_StkIdx item, int act, int arg );
 
-SGS_APIFUNC SGSRESULT sgs_Serialize( SGS_CTX );
+SGS_APIFUNC SGSRESULT sgs_Serialize( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC SGSRESULT sgs_SerializeObject( SGS_CTX, sgs_StkIdx args, const char* func );
-SGS_APIFUNC SGSRESULT sgs_Unserialize( SGS_CTX );
+SGS_APIFUNC SGSRESULT sgs_Unserialize( SGS_CTX, sgs_Variable var );
 
-SGS_APIFUNC SGSRESULT sgs_SerializeV1( SGS_CTX );
-SGS_APIFUNC SGSRESULT sgs_UnserializeV1( SGS_CTX );
-SGS_APIFUNC SGSRESULT sgs_SerializeV2( SGS_CTX );
-SGS_APIFUNC SGSRESULT sgs_UnserializeV2( SGS_CTX );
+SGS_APIFUNC SGSRESULT sgs_SerializeV1( SGS_CTX, sgs_Variable var );
+SGS_APIFUNC SGSRESULT sgs_UnserializeV1( SGS_CTX, sgs_Variable var );
+SGS_APIFUNC SGSRESULT sgs_SerializeV2( SGS_CTX, sgs_Variable var );
+SGS_APIFUNC SGSRESULT sgs_UnserializeV2( SGS_CTX, sgs_Variable var );
 
 SGS_APIFUNC int sgs_Compare( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 );
 SGS_APIFUNC SGSBOOL sgs_EqualTypes( sgs_Variable* v1, sgs_Variable* v2 );
@@ -738,9 +738,9 @@ SGS_APIFUNC char* sgs_GlobalStringBuf( SGS_CTX, const char* name, sgs_SizeVal* o
 /* iterator interface fns */
 SGS_APIFUNC SGSBOOL sgs_PushIterator( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC SGSBOOL sgs_GetIterator( SGS_CTX, sgs_Variable var, sgs_Variable* out );
-SGS_APIFUNC SGSMIXED sgs_IterAdvance( SGS_CTX, sgs_Variable var );
-SGS_APIFUNC SGSMIXED sgs_IterPushData( SGS_CTX, sgs_Variable var, int key, int value );
-SGS_APIFUNC SGSMIXED sgs_IterGetData( SGS_CTX, sgs_Variable var, sgs_Variable* key, sgs_Variable* value );
+SGS_APIFUNC SGSBOOL sgs_IterAdvance( SGS_CTX, sgs_Variable var );
+SGS_APIFUNC void sgs_IterPushData( SGS_CTX, sgs_Variable var, int key, int value );
+SGS_APIFUNC void sgs_IterGetData( SGS_CTX, sgs_Variable var, sgs_Variable* key, sgs_Variable* value );
 
 SGS_APIFUNC SGSBOOL sgs_IsNumericString( const char* str, sgs_SizeVal size );
 

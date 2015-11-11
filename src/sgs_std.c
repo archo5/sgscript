@@ -782,7 +782,10 @@ static int sgsstd_array_iter_getnext( SGS_CTX, sgs_VarObj* obj, int mask )
 	sgsstd_array_iter_t* iter = (sgsstd_array_iter_t*) obj->data;
 	sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) iter->ref.data.O->data;
 	if( iter->size != hdr->size )
+	{
+		sgs_Msg( C, SGS_ERROR, "array changed size during iteration" );
 		return SGS_EINPROC;
+	}
 	
 	if( !mask )
 	{
@@ -884,8 +887,7 @@ static int sgsstd_array_serialize( SGS_CTX, sgs_VarObj* obj )
 	posend = pos + hdr->size;
 	while( pos < posend )
 	{
-		sgs_PushVariable( C, *pos++ );
-		ret = sgs_Serialize( C );
+		ret = sgs_Serialize( C, *pos++ );
 		if( ret != SGS_SUCCESS )
 			return ret;
 	}
@@ -953,12 +955,10 @@ static int sgsstd_vht_serialize( SGS_CTX, sgs_VarObj* obj, const char* initfn )
 	pend = ht->vars + sgs_vht_size( ht );
 	while( pair < pend )
 	{
-		sgs_PushVariable( C, pair->key );
-		ret = sgs_Serialize( C );
+		ret = sgs_Serialize( C, pair->key );
 		if( ret != SGS_SUCCESS )
 			return ret;
-		sgs_PushVariable( C, pair->val );
-		ret = sgs_Serialize( C );
+		ret = sgs_Serialize( C, pair->val );
 		if( ret != SGS_SUCCESS )
 			return ret;
 		pair++;
@@ -1613,8 +1613,7 @@ static int sgsstd_dict_filter( SGS_CTX )
 	sgs_PushIterator( C, sgs_StackItem( C, 0 ) );
 	while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 	{
-		if( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ) != SGS_SUCCESS )
-			STDLIB_WARN( "failed to read iterator (was dict changed in callback?)" )
+		sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 );
 		if( cset )
 		{
 			sgs_PushItem( C, -1 );
@@ -1647,8 +1646,7 @@ static int sgsstd_dict_process( SGS_CTX )
 	sgs_PushIterator( C, sgs_StackItem( C, 0 ) );
 	while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 	{
-		if( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ) != SGS_SUCCESS )
-			STDLIB_WARN( "failed to read iterator (was dict changed in callback?)" )
+		sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 );
 		sgs_PushItem( C, -2 );
 		if( sgs_Call( C, v_func, 2, 1 ) != SGS_SUCCESS )
 			STDLIB_WARN( "failed to call the processing function" )
@@ -1787,8 +1785,7 @@ static int sgsstd_get_concat( SGS_CTX )
 		while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 		{
 			/* ..., output, arg2 iter */
-			if( SGS_FAILED( sgs_IterPushData( C, sgs_StackItem( C, -1 ), SGS_FALSE, SGS_TRUE ) ) )
-				STDLIB_ERR( "failed to retrieve data from iterator" )
+			sgs_IterPushData( C, sgs_StackItem( C, -1 ), SGS_FALSE, SGS_TRUE );
 			sgs_ObjectAction( C, -3, SGS_ACT_ARRAY_PUSH, 1 );
 		}
 		sgs_Pop( C, 1 );
@@ -1806,10 +1803,8 @@ static int sgsstd__get_merged__common( SGS_CTX, sgs_SizeVal ssz )
 			return sgs_ArgErrorExt( C, i, 0, "iterable", "" );
 		while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 		{
-			int ret;
 			/* ..., output, arg2 iter */
-			ret = sgs_IterPushData( C, sgs_StackItem( C, -1 ), SGS_TRUE, SGS_TRUE );
-			if( ret != SGS_SUCCESS ) STDLIB_ERR( "failed to retrieve data from iterator" )
+			sgs_IterPushData( C, sgs_StackItem( C, -1 ), SGS_TRUE, SGS_TRUE );
 			sgs_SetIndex( C, v_dest, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), SGS_FALSE );
 			sgs_Pop( C, 2 );
 		}
@@ -1872,16 +1867,13 @@ static int sgsstd_iter_advance( SGS_CTX )
 
 static int sgsstd_iter_getdata( SGS_CTX )
 {
-	int ret;
 	sgs_Bool pushkey = 0, pushval = 1;
 	SGSFN( "iter_getdata" );
 	if( !sgs_LoadArgs( C, "?!v|bb", &pushkey, &pushval ) )
 		return 0;
 	if( pushkey + pushval == 0 )
 		STDLIB_WARN( "no data requested from iterator" );
-	ret = sgs_IterPushData( C, sgs_StackItem( C, 0 ), pushkey, pushval );
-	if( SGS_FAILED( ret ) )
-		STDLIB_WARN( "failed to retrieve data from iterator" );
+	sgs_IterPushData( C, sgs_StackItem( C, 0 ), pushkey, pushval );
 	return pushkey + pushval;
 }
 
@@ -3506,11 +3498,12 @@ static int sgsstd_gc_collect( SGS_CTX )
 static int sgsstd_serialize_core( SGS_CTX, int which )
 {
 	int ret;
+	sgs_Variable var;
 	
-	if( !sgs_LoadArgs( C, "?v." ) )
+	if( !sgs_LoadArgs( C, "v.", &var ) )
 		return 0;
 	
-	ret = which ? sgs_SerializeV2( C ) : sgs_SerializeV1( C );
+	ret = which ? sgs_SerializeV2( C, var ) : sgs_SerializeV1( C, var );
 	if( ret == SGS_SUCCESS )
 		return 1;
 	else
@@ -3550,13 +3543,11 @@ static int sgsstd_unserialize_core( SGS_CTX, int which )
 			sgs_PushIterator( C, sgs_StackItem( C, 1 ) );
 			while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 			{
-				if( !sgs_IterPushData( C, sgs_StackItem( C, -1 ), 0, 1 ) )
-				{
-					sgs_ToString( C, -1 );
-					sgs_PushIndex( C, env, sgs_StackItem( C, -1 ), SGS_FALSE );
-					sgs_SetIndex( C, sgs_StackItem( C, dictpos ), sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), 0 );
-					sgs_Pop( C, 2 ); /* pop name and value */
-				}
+				sgs_IterPushData( C, sgs_StackItem( C, -1 ), 0, 1 );
+				sgs_ToString( C, -1 );
+				sgs_PushIndex( C, env, sgs_StackItem( C, -1 ), SGS_FALSE );
+				sgs_SetIndex( C, sgs_StackItem( C, dictpos ), sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), 0 );
+				sgs_Pop( C, 2 ); /* pop name and value */
 			}
 			sgs_Pop( C, 1 ); /* pop iterator */
 		}
@@ -3564,10 +3555,11 @@ static int sgsstd_unserialize_core( SGS_CTX, int which )
 			dictpos = 1;
 		
 		sgs_SetEnv( C, sgs_StackItem( C, dictpos ) );
-		sgs_PushItem( C, 0 ); /* put serialized data at the top */
 	}
 	
-	ret = which ? sgs_UnserializeV2( C ) : sgs_UnserializeV1( C );
+	ret = which
+		? sgs_UnserializeV2( C, sgs_StackItem( C, 0 ) )
+		: sgs_UnserializeV1( C, sgs_StackItem( C, 0 ) );
 	
 	if( ssz >= 2 )
 	{

@@ -432,8 +432,7 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 			while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
 			{
 				/* stack: Obj, Iter */
-				if( sgs_IterPushData( C, sgs_StackItem( C, -1 ), 0, 1 ) != SGS_SUCCESS )
-					return 0;
+				sgs_IterPushData( C, sgs_StackItem( C, -1 ), 0, 1 );
 				/* stack: Obj, Iter[, Key], Value */
 
 				if( first ) first = 0;
@@ -441,8 +440,7 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 
 				if( !isarr )
 				{
-					if( sgs_IterPushData( C, sgs_StackItem( C, -2 ), 1, 0 ) != SGS_SUCCESS )
-						return 0;
+					sgs_IterPushData( C, sgs_StackItem( C, -2 ), 1, 0 );
 					/* stack: Obj, Iter, Value, Key */
 					sgs_ToString( C, -1 );
 					if( !encode_var( C, buf ) )

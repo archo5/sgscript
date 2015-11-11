@@ -232,7 +232,7 @@ testEqual( v, 1076, "string_utf8_iterator - getdata 3 value" );
 //
 testEqual( iter_advance( uit ), false, "string_utf8_iterator - advance 4 (end)" );
 testEqual( iter_getdata( uit ), null, "string_utf8_iterator - getdata 4 (end)" );
-testEqual( ERRORS, "[W:iter_getdata(): failed to retrieve data from iterator][W:iter_getdata(): failed to retrieve data from iterator]", "string_utf8_iterator - errors" );
+testEqual( ERRORS, "[E:iter_getdata(): failed to retrieve data from iterator][E:iter_getdata(): failed to retrieve data from iterator]", "string_utf8_iterator - errors" );
 
 	section( "string_format" );
 testEqual( string_format( 6, "{1:d}", 5 ), "5", "string_format - preallocation" );
