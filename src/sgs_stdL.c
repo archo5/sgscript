@@ -3190,7 +3190,7 @@ static int sgsstd_string_cut( SGS_CTX )
 		return 0;
 	
 	i2 = size - 1;
-	if( sgs_LoadArgsExt( C, 2, "|ii", &i2, &flags ) < 1 )
+	if( !sgs_LoadArgsExt( C, 2, "|ii", &i2, &flags ) )
 		return 0;
 	
 	if( SGS_HAS_FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
@@ -3225,7 +3225,7 @@ static int sgsstd_string_part( SGS_CTX )
 		return 0;
 	
 	i2 = size - i1;
-	if( sgs_LoadArgsExt( C, 2, "|ii", &i2, &flags ) < 1 )
+	if( !sgs_LoadArgsExt( C, 2, "|ii", &i2, &flags ) )
 		return 0;
 	
 	if( SGS_HAS_FLAG( flags, sgsNO_REV_INDEX ) && ( i1 < 0 || i2 < 0 ) )
@@ -3527,8 +3527,8 @@ static int _stringrep_as
 {
 	char* substr;
 	sgs_SizeVal subsize;
-	int32_t i, arrsize = sgs_ArraySize( C, 1 );
 	sgs_Variable arr = sgs_StackItem( C, 1 );
+	int32_t i, arrsize = sgs_ArraySize( C, arr );
 	if( arrsize < 0 )
 		goto fail;
 	
@@ -3556,10 +3556,10 @@ static int _stringrep_aa( SGS_CTX, char* str, int32_t size )
 {
 	char* substr, *repstr;
 	sgs_SizeVal subsize, repsize;
-	int32_t i, arrsize = sgs_ArraySize( C, 1 ),
-		reparrsize = sgs_ArraySize( C, 2 );
 	sgs_Variable arr = sgs_StackItem( C, 1 );
 	sgs_Variable reparr = sgs_StackItem( C, 2 );
+	int32_t i, arrsize = sgs_ArraySize( C, arr ),
+		reparrsize = sgs_ArraySize( C, reparr );
 	if( arrsize < 0 || reparrsize < 0 )
 		goto fail;
 	
@@ -3939,7 +3939,7 @@ static int sgsstd_string_frombytes( SGS_CTX )
 	SGSFN( "string_frombytes" );
 	
 	if( sgs_StackSize( C ) != 1 ||
-		( ( size = sgs_ArraySize( C, 0 ) ) < 0 &&
+		( ( size = sgs_ArraySize( C, sgs_StackItem( C, 0 ) ) ) < 0 &&
 			!( hasone = sgs_ParseInt( C, 0, &onecode ) ) ) )
 		return sgs_ArgErrorExt( C, 0, 0, "array or int", "" );
 	
@@ -4012,7 +4012,7 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 	
 	SGSFN( "string_utf8_encode" );
 	
-	asz = sgs_ArraySize( C, 0 );
+	asz = sgs_ArraySize( C, sgs_StackItem( C, 0 ) );
 	if( asz >= 0 )
 	{
 		sgs_Variable arr = sgs_StackItem( C, 0 );
@@ -4116,7 +4116,7 @@ static int sgsstd_string_utf8_length( SGS_CTX )
 	i2 = size - i1;
 	if( sgs_StackSize( C ) > 2 )
 	{
-		if( sgs_LoadArgsExt( C, 2, "|ll", &i2, &flags ) < 1 )
+		if( !sgs_LoadArgsExt( C, 2, "|ll", &i2, &flags ) )
 			return 0;
 	}
 	
@@ -4233,14 +4233,13 @@ static int utf8it_convert( SGS_CTX, sgs_VarObj* obj, int type )
 
 static int utf8it_serialize( SGS_CTX, sgs_VarObj* obj )
 {
-	int ret;
 	U8I_HDR;
 	sgs_Variable var;
 	var.type = SGS_VT_STRING;
 	var.data.S = IT->str;
-	if( SGS_FAILED( ret = sgs_Serialize( C, var ) ) )
-		return ret;
-	return sgs_SerializeObject( C, 1, "string_utf8_iterator" );
+	sgs_Serialize( C, var );
+	sgs_SerializeObject( C, 1, "string_utf8_iterator" );
+	return SGS_SUCCESS;
 }
 
 static int utf8it_getnext( SGS_CTX, sgs_VarObj* obj, int what )

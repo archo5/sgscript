@@ -880,18 +880,16 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* obj, int type )
 
 static int sgsstd_array_serialize( SGS_CTX, sgs_VarObj* obj )
 {
-	int ret;
 	sgs_Variable* pos, *posend;
 	SGSARR_HDR_OI;
 	pos = SGSARR_PTR( hdr );
 	posend = pos + hdr->size;
 	while( pos < posend )
 	{
-		ret = sgs_Serialize( C, *pos++ );
-		if( ret != SGS_SUCCESS )
-			return ret;
+		sgs_Serialize( C, *pos++ );
 	}
-	return sgs_SerializeObject( C, hdr->size, "array" );
+	sgs_SerializeObject( C, hdr->size, "array" );
+	return SGS_SUCCESS;
 }
 
 static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* obj )
@@ -948,22 +946,18 @@ DictHdr;
 
 static int sgsstd_vht_serialize( SGS_CTX, sgs_VarObj* obj, const char* initfn )
 {
-	int ret;
 	sgs_VHTVar *pair, *pend;
 	HTHDR;
 	pair = ht->vars;
 	pend = ht->vars + sgs_vht_size( ht );
 	while( pair < pend )
 	{
-		ret = sgs_Serialize( C, pair->key );
-		if( ret != SGS_SUCCESS )
-			return ret;
-		ret = sgs_Serialize( C, pair->val );
-		if( ret != SGS_SUCCESS )
-			return ret;
+		sgs_Serialize( C, pair->key );
+		sgs_Serialize( C, pair->val );
 		pair++;
 	}
-	return sgs_SerializeObject( C, sgs_vht_size( ht ) * 2, initfn );
+	sgs_SerializeObject( C, sgs_vht_size( ht ) * 2, initfn );
+	return SGS_SUCCESS;
 }
 
 static int sgsstd_vht_dump( SGS_CTX, sgs_VarObj* obj, int depth, const char* name )
@@ -1751,7 +1745,7 @@ static int _foreach_lister( SGS_CTX, int vnk )
 	while( sgs_IterAdvance( C, sgs_StackItem( C, 1 ) ) > 0 )
 	{
 		sgs_IterPushData( C, sgs_StackItem( C, 1 ), !vnk, vnk );
-		sgs_ObjectAction( C, 2, SGS_ACT_ARRAY_PUSH, 1 );
+		sgs_ArrayPush( C, sgs_StackItem( C, 2 ), 1 );
 	}
 	return 1;
 }
@@ -1786,7 +1780,7 @@ static int sgsstd_get_concat( SGS_CTX )
 		{
 			/* ..., output, arg2 iter */
 			sgs_IterPushData( C, sgs_StackItem( C, -1 ), SGS_FALSE, SGS_TRUE );
-			sgs_ObjectAction( C, -3, SGS_ACT_ARRAY_PUSH, 1 );
+			sgs_ArrayPush( C, sgs_StackItem( C, -3 ), 1 );
 		}
 		sgs_Pop( C, 1 );
 	}
@@ -1953,7 +1947,7 @@ static int sgsstd_typeof( SGS_CTX )
 	SGSFN( "typeof" );
 	if( !sgsstd_expectnum( C, 1 ) )
 		return 0;
-	sgs_TypeOf( C, 0 );
+	sgs_TypeOf( C, sgs_StackItem( C, 0 ) );
 	return 1;
 }
 
@@ -2695,7 +2689,6 @@ static int sgsstd_eval_file( SGS_CTX )
 
 static void _sgsstd_compile_pfn( void* data, SGS_CTX, int type, const char* msg )
 {
-	int ret;
 	sgs_Variable* pvar = (sgs_Variable*) data;
 	
 	sgs_PushVariable( C, *pvar );
@@ -2706,10 +2699,7 @@ static void _sgsstd_compile_pfn( void* data, SGS_CTX, int type, const char* msg 
 	sgs_PushString( C, msg );
 	sgs_CreateDict( C, NULL, 4 );
 	
-	ret = sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
-	SGS_UNUSED( ret );
-	sgs_BreakIf( ret < 0 );
-	
+	sgs_ArrayPush( C, sgs_StackItem( C, -2 ), 1 );
 	sgs_Pop( C, 1 );
 }
 
@@ -3237,7 +3227,7 @@ static int sgsstd_multiply_path_ext_lists( SGS_CTX )
 					memcpy( tmp + pplen, joinstr, joinstrlen );
 					memcpy( tmp + pplen + joinstrlen, suffixes, sslen );
 					sgs_FinalizeStringAlloc( C, -1 );
-					sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
+					sgs_ArrayPush( C, sgs_StackItem( C, -2 ), 1 );
 					if( !*ss )
 						break;
 					suffixes = ++ss;
@@ -3497,17 +3487,16 @@ static int sgsstd_gc_collect( SGS_CTX )
 
 static int sgsstd_serialize_core( SGS_CTX, int which )
 {
-	int ret;
 	sgs_Variable var;
 	
 	if( !sgs_LoadArgs( C, "v.", &var ) )
 		return 0;
 	
-	ret = which ? sgs_SerializeV2( C, var ) : sgs_SerializeV1( C, var );
-	if( ret == SGS_SUCCESS )
-		return 1;
+	if( which )
+		sgs_SerializeV2( C, var );
 	else
-		STDLIB_ERR( "failed to serialize" )
+		sgs_SerializeV1( C, var );
+	return 1;
 }
 
 static int sgsstd_serialize( SGS_CTX ){ SGSFN( "serialize" ); return sgsstd_serialize_core( C, 0 ); }
@@ -3567,14 +3556,7 @@ static int sgsstd_unserialize_core( SGS_CTX, int which )
 		sgs_Release( C, &env );
 	}
 	
-	if( ret == SGS_SUCCESS )
-		return 1;
-	else if( ret == SGS_EINPROC )
-		STDLIB_ERR( "error in data" )
-	else if( ret == SGS_ENOTFND )
-		STDLIB_ERR( "could not find something (like recreation function)" )
-	else
-		STDLIB_ERR( "unknown error" )
+	return ret;
 }
 
 static int sgsstd_unserialize( SGS_CTX ){ SGSFN( "unserialize" ); return sgsstd_unserialize_core( C, 0 ); }
@@ -4044,127 +4026,140 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 	{
 		sgs_PushEnv( C );
 		sgs_PushString( C, "SGS_PATH" );
-		sgs_ObjectAction( C, -2, SGS_ACT_DICT_UNSET, -1 );
+		sgs_Unset( C, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ) );
 	}
 	
 	sgs_SetStackSize( C, sz0 );
 	return ret;
 }
 
-SGSMIXED sgs_ObjectAction( SGS_CTX, int item, int act, int arg )
+
+SGSBOOL sgs_IsArray( SGS_CTX, sgs_Variable var )
 {
-	sgs_SizeVal i, j;
-	switch( act )
+	return sgs_IsObjectP( &var, SGSIFACE_ARRAY );
+}
+
+sgs_SizeVal sgs_ArraySize( SGS_CTX, sgs_Variable var )
+{
+	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
+		return -1; /* no error */
+	return ((sgsstd_array_header_t*)sgs_GetObjectDataP( &var ))->size;
+}
+
+void sgs_ArrayPush( SGS_CTX, sgs_Variable var, sgs_StkIdx count )
+{
+	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
 	{
-	case SGS_ACT_ARRAY_PUSH:
-		i = sgs_ArraySize( C, item );
-		j = sgs_StackSize( C );
-		if( i < 0 || arg > j || arg < 0 )
-			return SGS_EINVAL;
-		if( arg )
-		{
-			sgsstd_array_insert( C, (sgsstd_array_header_t*)
-				sgs_GetObjectData( C, item ), i, j - arg );
-			sgs_Pop( C, arg );
-		}
-		return SGS_SUCCESS;
-		
-	case SGS_ACT_ARRAY_POP:
-	case SGS_ACT_ARRAY_POPRET:
-		i = sgs_ArraySize( C, item );
-		if( i < 0 || arg > i || arg < 0 )
-			return SGS_EINVAL;
-		if( arg )
-		{
-			sgs_Variable arr = sgs_StackItem( C, item );
-			if( act == SGS_ACT_ARRAY_POPRET )
-			{
-				for( j = i - arg; j < i; ++j )
-					sgs_PushNumIndex( C, arr, j );
-			}
-			sgsstd_array_erase( C, (sgsstd_array_header_t*)
-				sgs_GetObjectData( C, item ), i - arg, i - 1 );
-		}
-		return SGS_SUCCESS;
-		
-	case SGS_ACT_ARRAY_FIND:
-		if( sgs_ArraySize( C, item ) < 0 )
-			return SGS_EINVAL;
-		else
-		{
-			sgs_SizeVal off = 0;
-			sgsstd_array_header_t* hdr = (sgsstd_array_header_t*)
-				sgs_GetObjectData( C, item );
-			
-			sgs_Variable comp = sgs_StackItem( C, arg );
-			
-			while( off < hdr->size )
-			{
-				sgs_Variable* p = SGSARR_PTR( hdr ) + off;
-				if( sgs_EqualTypes( p, &comp )
-					&& sgs_Compare( C, p, &comp ) == 0 )
-				{
-					return off;
-				}
-				off++;
-			}
-		}
-		return SGS_ENOTFND;
-		
-	case SGS_ACT_ARRAY_RM_ONE:
-	case SGS_ACT_ARRAY_RM_ALL:
-		if( sgs_ArraySize( C, item ) < 0 )
-			return SGS_EINVAL;
-		else
-		{
-			sgs_SizeVal off = 0, rmvd = 0;
-			sgsstd_array_header_t* hdr = (sgsstd_array_header_t*)
-				sgs_GetObjectData( C, item );
-			
-			sgs_Variable comp = sgs_StackItem( C, arg );
-			
-			while( off < hdr->size )
-			{
-				sgs_Variable* p = SGSARR_PTR( hdr ) + off;
-				if( sgs_EqualTypes( p, &comp )
-					&& sgs_Compare( C, p, &comp ) == 0 )
-				{
-					sgsstd_array_erase( C, hdr, off, off );
-					rmvd++;
-					if( act == SGS_ACT_ARRAY_RM_ONE )
-						break;
-				}
-				off++;
-			}
-			return rmvd;
-		}
-		return 0;
-		
-	case SGS_ACT_DICT_UNSET:
-		if( !sgs_IsObject( C, item, sgsstd_dict_iface ) )
-			return SGS_EINVAL;
-		else
-		{
-			sgs_Variable key = sgs_StackItem( C, arg );
-			sgs_vht_unset(
-				&((DictHdr*)sgs_GetObjectData( C, item ))->ht, C,
-				&key );
-			return SGS_SUCCESS;
-		}
-		
-	case SGS_ACT_MAP_UNSET:
-		if( !sgs_IsObject( C, item, sgsstd_map_iface ) )
-			return SGS_EINVAL;
-		else
-		{
-			sgs_Variable key = sgs_StackItem( C, arg );
-			sgs_vht_unset(
-				&((DictHdr*)sgs_GetObjectData( C, item ))->ht, C,
-				&key );
-			return SGS_SUCCESS;
-		}
-		
+		sgs_Msg( C, SGS_APIERR, "sgs_ArrayPush: variable is not an array" );
+		return;
 	}
-	return SGS_ENOTFND;
+	if( sgs_StackSize( C ) < count )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_ArrayPush: too few items on stack "
+			"(need: %d, got: %d)", (int) count, (int) sgs_StackSize( C ) );
+		return;
+	}
+	if( count )
+	{
+		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_GetObjectDataP( &var );
+		sgsstd_array_insert( C, hdr, hdr->size, sgs_StackSize( C ) - count );
+		sgs_Pop( C, count );
+	}
+}
+
+void sgs_ArrayPop( SGS_CTX, sgs_Variable var, sgs_StkIdx count, SGSBOOL ret )
+{
+	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_ArrayPush: variable is not an array" );
+		return;
+	}
+	if( count )
+	{
+		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_GetObjectDataP( &var );
+		if( hdr->size < count )
+		{
+			sgs_Msg( C, SGS_APIERR, "sgs_ArrayPush: too few items on stack "
+				"(need: %d, got: %d)", (int) count, (int) sgs_StackSize( C ) );
+			return;
+		}
+		if( ret )
+		{
+			sgs_SizeVal i;
+			for( i = hdr->size - count; i < hdr->size; ++i )
+				sgs_PushVariable( C, SGSARR_PTR( hdr )[ i ] );
+		}
+		sgsstd_array_erase( C, hdr, hdr->size - count, hdr->size - 1 );
+	}
+}
+
+sgs_SizeVal sgs_ArrayFind( SGS_CTX, sgs_Variable var, sgs_Variable what )
+{
+	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_ArrayFind: variable is not an array" );
+		return -1;
+	}
+	//
+	{
+		sgs_SizeVal off = 0;
+		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_GetObjectDataP( &var );
+		while( off < hdr->size )
+		{
+			sgs_Variable* p = SGSARR_PTR( hdr ) + off;
+			if( sgs_EqualTypes( p, &what ) &&
+				sgs_Compare( C, p, &what ) == 0 )
+			{
+				return off;
+			}
+			off++;
+		}
+		return -1;
+	}
+}
+
+sgs_SizeVal sgs_ArrayRemove( SGS_CTX, sgs_Variable var, sgs_Variable what, SGSBOOL all )
+{
+	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_ArrayRemove: variable is not an array" );
+		return 0;
+	}
+	//
+	{
+		sgs_SizeVal off = 0, rmvd = 0;
+		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_GetObjectDataP( &var );
+		while( off < hdr->size )
+		{
+			sgs_Variable* p = SGSARR_PTR( hdr ) + off;
+			if( sgs_EqualTypes( p, &what ) &&
+				sgs_Compare( C, p, &what ) == 0 )
+			{
+				sgsstd_array_erase( C, hdr, off, off );
+				rmvd++;
+				if( all == SGS_FALSE )
+					break;
+			}
+			off++;
+		}
+		return rmvd;
+	}
+}
+
+SGSBOOL sgs_Unset( SGS_CTX, sgs_Variable var, sgs_Variable key )
+{
+	if( !sgs_IsObjectP( &var, SGSIFACE_DICT ) &&
+		!sgs_IsObjectP( &var, SGSIFACE_MAP ) )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_Unset: variable is not dict/map" );
+		return SGS_FALSE;
+	}
+	//
+	{
+		sgs_VHTable* T = &((DictHdr*)sgs_GetObjectDataP( &var ))->ht;
+		sgs_SizeVal sz = T->size;
+		sgs_vht_unset( T, C, &key );
+		return T->size < sz;
+	}
 }
 

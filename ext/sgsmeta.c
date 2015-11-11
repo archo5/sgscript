@@ -105,7 +105,7 @@ static int _sgs_meta_dumpconstlist( SGS_CTX, sgs_Variable* var, size_t numvars )
 		}
 		
 		sgs_CreateDict( C, NULL, 4 );
-		sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
+		sgs_ArrayPush( C, sgs_StackItem( C, -2 ), 1 );
 		
 		var++;
 	}
@@ -135,7 +135,7 @@ static int _sgs_meta_dumpbclist( SGS_CTX, sgs_instr_t* data, size_t numinstr )
 		sgs_PushInt( C, SGS_INSTR_GET_E( i ) );
 		
 		sgs_CreateDict( C, NULL, 10 );
-		sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
+		sgs_ArrayPush( C, sgs_StackItem( C, -2 ), 1 );
 	}
 	
 	return 1;
@@ -150,7 +150,7 @@ static int _sgs_meta_dumplnlist( SGS_CTX, sgs_LineNum* data, size_t numinstr )
 	while( data < dend )
 	{
 		sgs_PushInt( C, *data++ );
-		sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
+		sgs_ArrayPush( C, sgs_StackItem( C, -2 ), 1 );
 	}
 	
 	return 1;

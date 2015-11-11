@@ -323,7 +323,7 @@ endnumparse:
 			}
 			if( STK_TOP == '[' )
 			{
-				sgs_ObjectAction( C, -2, SGS_ACT_ARRAY_PUSH, 1 );
+				sgs_ArrayPush( C, sgs_StackItem( C, -2 ), 1 );
 			}
 			if( STK_TOP == ':' )
 			{
@@ -424,7 +424,7 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 	case SGS_VT_OBJECT:
 		{
 			/* stack: Obj */
-			int isarr = sgs_ArraySize( C, -1 ) >= 0, first = 1;
+			int isarr = sgs_ArraySize( C, sgs_StackItem( C, -1 ) ) >= 0, first = 1;
 			sgs_membuf_appchr( buf, C, isarr ? '[' : '{' );
 			if( sgs_PushIterator( C, sgs_StackItem( C, -1 ) ) == SGS_FALSE )
 				return 0;
