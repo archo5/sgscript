@@ -1175,6 +1175,7 @@ int32_t sgs_Cntl( SGS_CTX, int what, int32_t val )
 		return x;
 	case SGS_CNTL_NUMRETVALS: return C->num_last_returned;
 	case SGS_CNTL_GET_PAUSED: return C->state & SGS_STATE_PAUSED ? 1 : 0;
+	case SGS_CNTL_GET_ABORT: return C->state & SGS_STATE_LASTFUNCABORT ? 1 : 0;
 	}
 	return 0;
 }
@@ -1290,11 +1291,11 @@ SGSONE sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 		sgs_VarObj* obj;
 		sgs_Variable val;
 		sgs_StkIdx ssz;
-		SGSRESULT res;
+		SGSBOOL res;
 		
 		ssz = sgs_StackSize( C );
 		res = sgs_Call( C, key, 0, 1 );
-		if( SGS_FAILED( res ) ||
+		if( !res ||
 			sgs_ItemType( C, ssz ) != SGS_VT_OBJECT ||
 			!sgs_PeekStackItem( C, ssz, &val ) )
 		{

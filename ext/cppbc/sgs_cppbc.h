@@ -485,62 +485,54 @@ public:
 	sgsString get_string(){ return is_string() ? sgsString( C, var.data.S ) : sgsString(); }
 	
 	/* indexing */
-	sgsVariable getsubitem( sgsVariable key, bool prop, SGSRESULT* outres = NULL )
+	sgsVariable getsubitem( sgsVariable key, bool prop )
 	{
-		SGSRESULT res;
+		SGSBOOL res;
 		sgsVariable out(C);
 		if( not_null() )
 			res = sgs_GetIndex( C, var, key.var, &out.var, prop );
 		else
-			res = SGS_EINPROC;
-		if( outres )
-			*outres = res;
+			res = 0;
 		if( SGS_SUCCEEDED( res ) )
 			return out;
 		return sgsVariable();
 	}
-	sgsVariable getsubitem( const char* key, bool prop, SGSRESULT* outres = NULL )
+	sgsVariable getsubitem( const char* key, bool prop )
 	{
 		if( !not_null() )
 		{
-			if( outres )
-				*outres = SGS_EINPROC;
 			return sgsVariable();
 		}
-		return getsubitem( sgsString( C, key ).get_variable(), prop, outres );
+		return getsubitem( sgsString( C, key ).get_variable(), prop );
 	}
-	sgsVariable getprop( sgsVariable key, SGSRESULT* outres = NULL ){ return getsubitem( key, true, outres ); }
-	sgsVariable getindex( sgsVariable key, SGSRESULT* outres = NULL ){ return getsubitem( key, false, outres ); }
-	sgsVariable getprop( const char* key, SGSRESULT* outres = NULL ){ return getsubitem( key, true, outres ); }
-	sgsVariable getindex( const char* key, SGSRESULT* outres = NULL ){ return getsubitem( key, false, outres ); }
+	sgsVariable getprop( sgsVariable key ){ return getsubitem( key, true ); }
+	sgsVariable getindex( sgsVariable key ){ return getsubitem( key, false ); }
+	sgsVariable getprop( const char* key ){ return getsubitem( key, true ); }
+	sgsVariable getindex( const char* key ){ return getsubitem( key, false ); }
 	sgsVariable operator [] ( sgsVariable key ){ return getsubitem( key, false ); }
 	sgsVariable operator [] ( const char* key ){ return getsubitem( key, false ); }
 	
-	bool setsubitem( sgsVariable key, sgsVariable val, bool prop, SGSRESULT* outres = NULL )
+	bool setsubitem( sgsVariable key, sgsVariable val, bool prop )
 	{
-		SGSRESULT res;
+		SGSBOOL res;
 		if( not_null() )
 			res = sgs_SetIndex( C, var, key.var, val.var, prop );
 		else
-			res = SGS_EINPROC;
-		if( outres )
-			*outres = res;
-		return SGS_SUCCEEDED( res );
+			res = 0;
+		return res;
 	}
-	bool setsubitem( const char* key, sgsVariable val, bool prop, SGSRESULT* outres = NULL )
+	bool setsubitem( const char* key, sgsVariable val, bool prop )
 	{
 		if( !not_null() )
 		{
-			if( outres )
-				*outres = SGS_EINPROC;
 			return false;
 		}
-		return setsubitem( sgsString( C, key ).get_variable(), val, prop, outres );
+		return setsubitem( sgsString( C, key ).get_variable(), val, prop );
 	}
-	bool setprop( sgsVariable key, sgsVariable val, SGSRESULT* outres = NULL ){ return setsubitem( key, val, true, outres ); }
-	bool setindex( sgsVariable key, sgsVariable val, SGSRESULT* outres = NULL ){ return setsubitem( key, val, false, outres ); }
-	bool setprop( const char* key, sgsVariable val, SGSRESULT* outres = NULL ){ return setsubitem( key, val, true, outres ); }
-	bool setindex( const char* key, sgsVariable val, SGSRESULT* outres = NULL ){ return setsubitem( key, val, false, outres ); }
+	bool setprop( sgsVariable key, sgsVariable val ){ return setsubitem( key, val, true ); }
+	bool setindex( sgsVariable key, sgsVariable val ){ return setsubitem( key, val, false ); }
+	bool setprop( const char* key, sgsVariable val ){ return setsubitem( key, val, true ); }
+	bool setindex( const char* key, sgsVariable val ){ return setsubitem( key, val, false ); }
 	
 	template< class T > T get();
 	template< class T > T getdef( const T& def ){ if( not_null() ) return get<T>(); else return def; }
@@ -554,14 +546,14 @@ public:
 	template< class T > sgsVariable& set( T* v ){ _release(); C = v->C; sgs_InitObjectPtr( C, &var, v->m_sgsObject ); return *this; }
 	bool call( int args = 0, int ret = 0 )
 	{
-		return C && SGS_SUCCEEDED( sgs_Call( C, var, args, ret ) );
+		return C && sgs_Call( C, var, args, ret );
 	}
 	bool thiscall( sgsVariable func, int args = 0, int ret = 0 )
 	{
 		if( C && func.not_null() )
 		{
 			sgs_InsertVariable( C, -args - 1, var );
-			return SGS_SUCCEEDED( sgs_ThisCall( C, func.var, args, ret ) );
+			return sgs_ThisCall( C, func.var, args, ret );
 		}
 		return false;
 	}

@@ -362,7 +362,7 @@ static SGS_INLINE int sgsarrcomp_custom( const void* p1, const void* p2, void* u
 	SGS_CTX = u->C;
 	sgs_PushVariable( C, v1 );
 	sgs_PushVariable( C, v2 );
-	if( sgs_Call( C, u->sortfunc, 2, 1 ) != SGS_SUCCESS )
+	if( !sgs_Call( C, u->sortfunc, 2, 1 ) )
 		return 0;
 	else
 	{
@@ -1543,8 +1543,7 @@ static int sgsstd_array_filter( SGS_CTX )
 			if( cset )
 			{
 				sgs_PushInt( C, off );
-				if( sgs_Call( C, v_func, 2, 1 ) != SGS_SUCCESS )
-					STDLIB_WARN( "failed to call the filter function" )
+				sgs_Call( C, v_func, 2, 1 );
 			}
 			use = sgs_GetBool( C, -1 );
 			sgs_Pop( C, 1 );
@@ -1581,8 +1580,7 @@ static int sgsstd_array_process( SGS_CTX )
 		{
 			sgs_PushVariable( C, SGSARR_PTR( hdr )[ off ] );
 			sgs_PushInt( C, off );
-			if( sgs_Call( C, v_func, 2, 1 ) != SGS_SUCCESS )
-				STDLIB_WARN( "failed to call the processing function" )
+			sgs_Call( C, v_func, 2, 1 );
 			sgs_SetIndex( C, sgs_StackItem( C, 0 ), sgs_MakeInt( off ), sgs_StackItem( C, -1 ), SGS_FALSE );
 			sgs_Pop( C, 1 );
 			off++;
@@ -1612,8 +1610,7 @@ static int sgsstd_dict_filter( SGS_CTX )
 		{
 			sgs_PushItem( C, -1 );
 			sgs_PushItem( C, -3 );
-			if( sgs_Call( C, v_func, 2, 1 ) != SGS_SUCCESS )
-				STDLIB_WARN( "failed to call the filter function" )
+			sgs_Call( C, v_func, 2, 1 );
 		}
 		use = sgs_GetBool( C, -1 );
 		if( cset )
@@ -1642,8 +1639,7 @@ static int sgsstd_dict_process( SGS_CTX )
 	{
 		sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 );
 		sgs_PushItem( C, -2 );
-		if( sgs_Call( C, v_func, 2, 1 ) != SGS_SUCCESS )
-			STDLIB_WARN( "failed to call the processing function" )
+		sgs_Call( C, v_func, 2, 1 );
 		/* src-dict, callable, ... iterator, key, proc.val. */
 		sgs_SetIndex( C, sgs_StackItem( C, 0 ), sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), SGS_FALSE );
 		sgs_Pop( C, 2 );
@@ -2429,7 +2425,7 @@ static int sgsstd_mm_getindex_router( SGS_CTX )
 	sgs_SetStackSize( C, 1 );
 	ret = sgs_ThisCall( C, func, 0, 1 );
 	sgs_Release( C, &func );
-	if( SGS_FAILED( ret ) ) goto fail;
+	if( !ret ) goto fail;
 	return 1;
 	
 fail:
@@ -2456,7 +2452,7 @@ static int sgsstd_mm_setindex_router( SGS_CTX )
 	sgs_PopSkip( C, 1, 1 );
 	ret = sgs_ThisCall( C, func, 1, 0 );
 	sgs_Release( C, &func );
-	if( SGS_FAILED( ret ) ) goto fail;
+	if( !ret ) goto fail;
 	return 0;
 	
 fail:
@@ -2588,14 +2584,14 @@ static void sgsstd_pcall_print( void* data, SGS_CTX, int type, const char* messa
 		sgs_PushInt( C, type );
 		sgs_PushString( C, message );
 		ret = sgs_Call( C, P->handler, 2, 1 );
-		if( SGS_FAILED( ret ) )
+		if( ret == SGS_FALSE )
 		{
 			ret = 0;
-			P->pfn( P->pctx, C, SGS_ERROR, "Error detected while attempting to call error handler" );
+			P->pfn( P->pctx, C, SGS_ERROR, "error detected while attempting to call error handler" );
 		}
 		else
 		{
-			if( ret == SGS_SUCABRT )
+			if( sgs_Cntl( C, SGS_CNTL_GET_ABORT, 0 ) )
 				sgs_Abort( C );
 			ret = (int) sgs_GetInt( C, -1 );
 			sgs_Pop( C, 1 );
@@ -4014,10 +4010,8 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 	sz = sgs_StackSize( C );
 	sgs_PushString( C, name );
 	ret = sgs_Call( C, sgs_MakeCFunc( sgsstd_include ), 1, 1 );
-	if( ret == SGS_SUCCESS )
+	if( ret )
 		ret = sgs_GetBool( C, -1 );
-	else
-		ret = 0;
 	sgs_SetStackSize( C, sz );
 	
 	if( pathrep == 1 )
@@ -4090,6 +4084,26 @@ void sgs_ArrayPop( SGS_CTX, sgs_Variable var, sgs_StkIdx count, SGSBOOL ret )
 				sgs_PushVariable( C, SGSARR_PTR( hdr )[ i ] );
 		}
 		sgsstd_array_erase( C, hdr, hdr->size - count, hdr->size - 1 );
+	}
+}
+
+void sgs_ArrayErase( SGS_CTX, sgs_Variable var, sgs_StkIdx at, sgs_StkIdx count )
+{
+	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_ArrayErase: variable is not an array" );
+		return;
+	}
+	if( count )
+	{
+		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_GetObjectDataP( &var );
+		if( at < 0 || at > hdr->size || at + count > hdr->size )
+		{
+			sgs_Msg( C, SGS_APIERR, "sgs_ArrayErase: invalid range (erasing: %d - %d, size: %d)",
+				(int) at, (int) ( at + count - 1 ), (int) hdr->size );
+			return;
+		}
+		sgsstd_array_erase( C, hdr, at, at + count - 1 );
 	}
 }
 

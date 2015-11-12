@@ -44,14 +44,14 @@ int main( int argc, char** argv )
 	printf( "\n> print result of method 'Vec3.getLength()': " );
 	sgs_PushItem( C, -1 );
 	sgs_PushProperty( C, sgs_StackItem( C, -1 ), "getLength" );
-	sgs_ThisCall( C, 0, 1 );
+	sgs_ThisCall( C, SGS_FSTKTOP, 0, 1 );
 	sgs_GlobalCall( C, "print", 1, 0 );
 	
 	printf( "\n> print object after method 'Vec3.setLength(4.5)': " );
 	sgs_PushItem( C, -1 );
 	sgs_PushReal( C, 4.5 );
 	sgs_PushProperty( C, sgs_StackItem( C, -2 ), "setLength" );
-	sgs_ThisCall( C, 1, 0 );
+	sgs_ThisCall( C, SGS_FSTKTOP, 1, 0 );
 	sgs_GlobalCall( C, "print", 1, 0 );
 	
 	printf( "\n> push accounts A and B: " );
@@ -84,8 +84,8 @@ int main( int argc, char** argv )
 		aA.push( C );
 		sgs_PushReal( C, 3.74 );
 		sgs_PushString( C, "EUR" );
-		sgs_PushProperty( C, -3, "sendMoney" );
-		sgs_ThisCall( C, 3, 1 ); // 1 `this`, 3 arguments, 1 function on stack
+		sgs_PushProperty( C, sgs_StackItem( C, -3 ), "sendMoney" );
+		sgs_ThisCall( C, SGS_FSTKTOP, 3, 1 ); // 1 `this`, 3 arguments, 1 function on stack
 		sgs_GlobalCall( C, "print", 1, 0 ); // 1 argument on stack
 		
 		puts( scope1.is_restored() ? "- stack restored" : "! stack NOT RESTORED" );
@@ -115,8 +115,8 @@ int main( int argc, char** argv )
 		sgs_PushInt( C, 10 );
 		sgs_PushInt( C, 20 );
 		sgs_PushInt( C, 30 );
-		sgs_PushProperty( C, -4, "coroAware" );
-		sgs_ThisCall( C, 3, 1 ); // 1 `this`, 3 arguments, 1 function on stack
+		sgs_PushProperty( C, sgs_StackItem( C, -4 ), "coroAware" );
+		sgs_ThisCall( C, SGS_FSTKTOP, 3, 1 ); // 1 `this`, 3 arguments, 1 function on stack
 		int val = (int) sgs_GetInt( C, -1 );
 		printf( "generated value: %d (need 62)\n", val );
 		puts( val == 62 ? "- context-aware" : "! CONTEXT PASSING ERROR" );

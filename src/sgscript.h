@@ -37,7 +37,6 @@ extern "C" {
 
 /* Output codes */
 #define SGS_SUCCESS  0  /* success (no errors) */
-#define SGS_SUCABRT  1  /* success (aborted) */
 #define SGS_ENOTFND -1  /* item was not found */
 #define SGS_ECOMP   -2  /* compile error */
 #define SGS_ENOTOBJ -3  /* argument was not an object */
@@ -50,8 +49,6 @@ extern "C" {
 /* Code tests */
 #define SGS_FAILED( e ) ((e)<0)
 #define SGS_SUCCEEDED( e ) ((e)>=0)
-#define SGS_CALL_TRIED( e ) ((e)!=SGS_EINVAL)
-#define SGS_CALL_FAILED( e ) ((e)==SGS_EINVAL)
 
 
 /* Accessible / transferable data */
@@ -154,6 +151,7 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 #define SGS_SERIALIZE_MODE2     0x0004
 #define SGS_STATE_PAUSED        0x0008
 #define SGS_STATE_DESTROYING    0x0010
+#define SGS_STATE_LASTFUNCABORT 0x0020
 
 
 /* Statistics / debugging */
@@ -187,6 +185,7 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 #define SGS_CNTL_SERIALMODE 12
 #define SGS_CNTL_NUMRETVALS 13
 #define SGS_CNTL_GET_PAUSED 14
+#define SGS_CNTL_GET_ABORT  15
 
 
 /* Context internals */
@@ -638,13 +637,21 @@ SGS_APIFUNC void sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var );
 /*
 	OPERATIONS
 */
-SGS_APIFUNC SGSRESULT sgs_XFCall( SGS_CTX, sgs_Variable callable, int args, int* outrvc, int gotthis );
+#define SGS_FSTKTOP sgs_FuncStackTopHint() /* for use only with **Call() */
+static SGS_INLINE sgs_Variable sgs_FuncStackTopHint()
+{
+	sgs_Variable sv;
+	sv.type = 255;
+	return sv;
+}
+
+SGS_APIFUNC SGSBOOL sgs_XFCall( SGS_CTX, sgs_Variable callable, int args, int* outrvc, int gotthis );
 #define sgs_XCall( C, callable, args, outrvc ) sgs_XFCall( C, callable, args, outrvc, 0 )
 #define sgs_XThisCall( C, callable, args, outrvc ) sgs_XFCall( C, callable, args, outrvc, 1 )
-SGS_APIFUNC SGSRESULT sgs_FCall( SGS_CTX, sgs_Variable callable, int args, int expect, int gotthis );
+SGS_APIFUNC SGSBOOL sgs_FCall( SGS_CTX, sgs_Variable callable, int args, int expect, int gotthis );
 #define sgs_Call( C, callable, args, expect ) sgs_FCall( C, callable, args, expect, 0 )
 #define sgs_ThisCall( C, callable, args, expect ) sgs_FCall( C, callable, args, expect, 1 )
-SGS_APIFUNC SGSRESULT sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );
+SGS_APIFUNC SGSBOOL sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );
 SGS_APIFUNC void sgs_TypeOf( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth );
 SGS_APIFUNC void sgs_GCExecute( SGS_CTX );
@@ -662,6 +669,7 @@ SGS_APIFUNC SGSBOOL sgs_IsArray( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC sgs_SizeVal sgs_ArraySize( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC void sgs_ArrayPush( SGS_CTX, sgs_Variable var, sgs_StkIdx count );
 SGS_APIFUNC void sgs_ArrayPop( SGS_CTX, sgs_Variable var, sgs_StkIdx count, SGSBOOL ret );
+SGS_APIFUNC void sgs_ArrayErase( SGS_CTX, sgs_Variable var, sgs_StkIdx at, sgs_StkIdx count );
 SGS_APIFUNC sgs_SizeVal sgs_ArrayFind( SGS_CTX, sgs_Variable var, sgs_Variable what );
 SGS_APIFUNC sgs_SizeVal sgs_ArrayRemove( SGS_CTX, sgs_Variable var, sgs_Variable what, SGSBOOL all );
 SGS_APIFUNC SGSBOOL sgs_Unset( SGS_CTX, sgs_Variable var, sgs_Variable key );

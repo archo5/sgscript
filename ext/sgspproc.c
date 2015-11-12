@@ -326,15 +326,8 @@ static int ppthreadI_get( SGS_CTX )
 		else
 		{
 			sgs_PushStringBuf( C, item->data + item->keysize, item->datasize );
-			ret = sgs_Unserialize( C );
-			if( ret == SGS_SUCCESS )
-				ret = 1;
-			else
-			{
-				sgs_Msg( C, SGS_WARNING, "failed to unserialize item (error %s)",
-					sgs_CodeString( SGS_CODE_ER, ret ) );
-				ret = 0;
-			}
+			sgs_Unserialize( C, sgs_StackItem( C, -1 ) );
+			ret = 1;
 		}
 	}
 	sgsmutex_unlock( THR->mutex );
@@ -351,8 +344,8 @@ static int ppthreadI_set( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m?v", &str, &size ) )
 		return 0;
 	
-	sgs_SetStackSize( C, 2 );
-	if( SGS_FAILED( sgs_Serialize( C ) ) || !sgs_ParseString( C, -1, &var, &varsize ) )
+	sgs_Serialize( C, sgs_StackItem( C, 1 ) );
+	if( !sgs_ParseString( C, -1, &var, &varsize ) )
 		STDLIB_WARN( "failed to serialize item (argument 2)" )
 	
 	sgsmutex_lock( THR->mutex );
@@ -373,12 +366,12 @@ static int ppthreadI_set_if( SGS_CTX )
 	if( !sgs_LoadArgs( C, "m?v?v", &str, &size ) )
 		return 0;
 	
-	sgs_PushItem( C, 1 );
-	if( SGS_FAILED( sgs_Serialize( C ) ) || !sgs_ParseString( C, -1, &var, &varsize ) )
+	sgs_Serialize( C, sgs_StackItem( C, 1 ) );
+	if( !sgs_ParseString( C, -1, &var, &varsize ) )
 		STDLIB_WARN( "failed to serialize item (argument 2)" )
 	
-	sgs_PushItem( C, 2 );
-	if( SGS_FAILED( sgs_Serialize( C ) ) || !sgs_ParseString( C, -1, &var2, &var2size ) )
+	sgs_Serialize( C, sgs_StackItem( C, 2 ) );
+	if( !sgs_ParseString( C, -1, &var2, &var2size ) )
 		STDLIB_WARN( "failed to serialize item (argument 3)" )
 	
 	sgsmutex_lock( THR->mutex );

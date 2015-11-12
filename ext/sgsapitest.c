@@ -417,16 +417,16 @@ DEFINE_TEST( function_calls )
 	SGS_CTX = get_context();
 	
 	atf_assert( sgs_GetGlobalByName( C, "array", &v_func ) );
-	atf_assert( sgs_Call( C, v_func, 5, 1 ) == SGS_EINVAL );
-	atf_assert( sgs_Call( C, v_func, 1, 0 ) == SGS_EINVAL );
-	atf_assert( sgs_Call( C, v_func, 0, 0 ) == SGS_SUCCESS );
-	atf_assert( sgs_Call( C, v_func, 0, 1 ) == SGS_SUCCESS );
+	atf_assert( sgs_Call( C, v_func, 5, 1 ) == 0 );
+	atf_assert( sgs_Call( C, v_func, 1, 0 ) == 0 );
+	atf_assert( sgs_Call( C, v_func, 0, 0 ) == 1 );
+	atf_assert( sgs_Call( C, v_func, 0, 1 ) == 1 );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
 	
 	atf_assert( sgs_StackSize( C ) == 1 );
-	atf_assert( sgs_ThisCall( C, v_func, 1, 0 ) == SGS_EINVAL );
-	atf_assert( sgs_ThisCall( C, v_func, 0, 0 ) == SGS_SUCCESS );
+	atf_assert( sgs_ThisCall( C, v_func, 1, 0 ) == 0 );
+	atf_assert( sgs_ThisCall( C, v_func, 0, 0 ) == 1 );
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
 	sgs_Release( C, &v_func );

@@ -959,7 +959,7 @@ SGS_DECLARE sgs_ObjInterface sgsstd_fmtstream_iface[1];
 
 static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 {
-	int ret, needs = fs->buffill == fs->bufsize || fs->buffill == 0;
+	int needs = fs->buffill == fs->bufsize || fs->buffill == 0;
 	char* str;
 	sgs_SizeVal size;
 	if( fs->buffill > fs->bufpos )
@@ -976,8 +976,7 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 	if( fs->bufsize > fs->buffill && needs )
 	{
 		sgs_PushInt( C, fs->bufsize - fs->buffill );
-		ret = sgs_Call( C, fs->source, 1, 1 );
-		if( ret != SGS_SUCCESS )
+		if( !sgs_Call( C, fs->source, 1, 1 ) )
 			return SGS_FALSE;
 		if( sgs_ItemType( C, -1 ) == SGS_VT_NULL )
 		{
@@ -1481,7 +1480,7 @@ static int sgsstd_fmt_parser( SGS_CTX )
 	
 	/* test call: reading 0 bytes should return an empty string */
 	sgs_PushInt( C, 0 );
-	if( sgs_Call( C, sgs_StackItem( C, 0 ), 1, 1 ) != SGS_SUCCESS )
+	if( !sgs_Call( C, sgs_StackItem( C, 0 ), 1, 1 ) )
 		STDLIB_WARN( "test call did not succeed; "
 			"is the source function correctly specified?" )
 	sgs_Pop( C, 1 );
@@ -1582,7 +1581,7 @@ static int frt_call( SGS_CTX, sgs_VarObj* data )
 		return 0;
 	sgs_PushVariable( C, frt->F );
 	sgs_PushInt( C, amt );
-	if( sgs_ThisCall( C, sgs_MakeCFunc( sgsstd_fileI_read ), 1, 1 ) != SGS_SUCCESS )
+	if( sgs_ThisCall( C, sgs_MakeCFunc( sgsstd_fileI_read ), 1, 1 ) == SGS_FALSE )
 		return SGS_EINPROC;
 	return 1;
 }
