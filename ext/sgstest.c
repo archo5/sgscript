@@ -243,7 +243,7 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 	tm2 = sgs_GetTime();
 	
 	if( strstr( nameonly, "TF" ) != NULL &&
-		sgs_PushGlobalByName( C, "tests_failed" ) == SGS_TRUE )
+		sgs_PushGlobalByName( C, "tests_failed" ) )
 	{
 		if( sgs_GetInt( C, -1 ) )
 			retval = SGS_EINPROC;

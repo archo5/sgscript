@@ -31,7 +31,7 @@
 
 int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )
 {
-#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if SGS_WINAPP
 	return SGS_XPC_NOTSUP;
 #elif defined(WIN32)
 	HMODULE mod;
@@ -100,7 +100,7 @@ int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )
 
 char* sgsXPC_GetCurrentDirectory()
 {
-#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if SGS_WINAPP
 	errno = ENOTSUP;
 	return NULL;
 
@@ -189,7 +189,7 @@ char* sgsXPC_GetCurrentDirectory()
 
 int sgsXPC_SetCurrentDirectory( char* path )
 {
-#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if SGS_WINAPP
 	errno = ENOTSUP;
 	return -1;
 
@@ -239,7 +239,7 @@ int sgsXPC_SetCurrentDirectory( char* path )
 
 char* sgsXPC_GetModuleFileName()
 {
-#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if SGS_WINAPP
 	errno = ENOTSUP;
 	return NULL;
 	

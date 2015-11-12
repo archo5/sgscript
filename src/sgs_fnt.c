@@ -136,9 +136,13 @@ static sgs_FTNode* _make_node( SGS_CTX, int type, sgs_TokenList token, sgs_FTNod
 
 void sgsFT_Destroy( SGS_CTX, sgs_FTNode* tree )
 {
-	if( tree->next ) sgsFT_Destroy( C, tree->next );
-	if( tree->child ) sgsFT_Destroy( C, tree->child );
-	sgs_Dealloc( tree );
+	while( tree )
+	{
+		sgs_FTNode* next = tree->next;
+		if( tree->child ) sgsFT_Destroy( C, tree->child );
+		sgs_Dealloc( tree );
+		tree = next;
+	}
 }
 #define SFTC_DESTROY( node ) sgsFT_Destroy( F->C, node )
 

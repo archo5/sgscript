@@ -101,7 +101,7 @@ static int socket_error( SGS_CTX )
 	if( !sgs_LoadArgs( C, "|b", &astext ) )
 		return 0;
 	
-	if( sgs_PushGlobalByName( C, SCKERRVN ) == SGS_SUCCESS )
+	if( sgs_PushGlobalByName( C, SCKERRVN ) )
 		e = (int) sgs_GetInt( C, -1 );
 	else if( !astext )
 		sgs_PushInt( C, 0 );

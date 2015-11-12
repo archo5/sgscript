@@ -4,18 +4,10 @@
 
 #ifdef _MSC_VER
 #  pragma warning( disable: 4996 )
-#  if _MSC_VER >= 1600
-#    include <stdint.h>
+#  include <stdint.h>
+#  if _MSC_VER >= 1700
 #    include <inttypes.h>
 #  else
-typedef __int8 int8_t;
-typedef __int16 int16_t;
-typedef __int32 int32_t;
-typedef __int64 int64_t;
-typedef unsigned __int8 uint8_t;
-typedef unsigned __int16 uint16_t;
-typedef unsigned __int32 uint32_t;
-typedef unsigned __int64 uint64_t;
 #    define PRId32 "d"
 #    define PRId64 "lld"
 #  endif
@@ -63,13 +55,16 @@ typedef unsigned __int64 uint64_t;
 #  define SGS_IF_DLL( dll, nodll ) nodll
 #endif
 
+#if defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP)
+#  define SGS_WINAPP 1
+#endif
 
 #ifdef SGS_USE_FILESYSTEM
 #  include <sys/types.h>
 #  include <sys/stat.h>
 
 #  ifdef _WIN32
-#    if defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP)
+#    if SGS_WINAPP
 #      include <windows.h>
 #    else
 #      include <direct.h>

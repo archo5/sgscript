@@ -2507,7 +2507,7 @@ static int sgsstd_co_create( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?p." ) )
 		return 0;
 	
-	CO = sgs_CreateObjectIPA( C, NULL, sizeof(*CO), sgsstd_coro_iface );
+	CO = (sgsstd_coro_t*) sgs_CreateObjectIPA( C, NULL, sizeof(*CO), sgsstd_coro_iface );
 	sgs_GetStackItem( C, 0, &CO->func );
 	CO->ctx = sgs_ForkState( C, 0 );
 	return 1;
@@ -4001,7 +4001,7 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 	sz0 = sgs_StackSize( C );
 	if( searchpath )
 	{
-		pathrep = sgs_PushGlobalByName( C, "SGS_PATH" ) == SGS_SUCCESS ? 1 : 2;
+		pathrep = sgs_PushGlobalByName( C, "SGS_PATH" ) ? 1 : 2;
 		sgs_PushString( C, searchpath );
 		sgs_SetGlobalByName( C, "SGS_PATH", sgs_StackItem( C, -1 ) );
 		sgs_Pop( C, 1 );

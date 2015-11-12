@@ -1829,7 +1829,7 @@ static int sgsstd_io_stat( SGS_CTX )
 
 static int sgsstd_io_dir_create( SGS_CTX )
 {
-#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if SGS_WINAPP
 	SGSFN( "io_dir_create" );
 	STDLIB_ERR( "API is currently not supported on this platform" );
 #else
@@ -1854,7 +1854,7 @@ static int sgsstd_io_dir_create( SGS_CTX )
 
 static int sgsstd_io_dir_delete( SGS_CTX )
 {
-#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if SGS_WINAPP
 	SGSFN( "io_dir_create" );
 	STDLIB_ERR( "API is currently not supported on this platform" );
 #else
@@ -2256,7 +2256,7 @@ pushobj:
 #undef FVAR
 
 
-#if !(WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP)
+#if !SGS_WINAPP
 
 typedef struct _sgsstd_dir_t
 {
@@ -2326,7 +2326,7 @@ static sgs_ObjInterface sgsstd_dir_iface[1] =
 
 static int sgsstd_io_dir( SGS_CTX )
 {
-#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if SGS_WINAPP
 	STDLIB_ERR( "API is currently unsupported on this platform" )
 #else
 	char* path;
@@ -2549,7 +2549,7 @@ static int sgsstd_os_gettype( SGS_CTX )
 
 static int sgsstd_os_command( SGS_CTX )
 {
-#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if SGS_WINAPP
 	SGSFN( "os_command" );
 	STDLIB_ERR( "API is unsupported on this platform" );
 #else
@@ -2567,7 +2567,7 @@ static int sgsstd_os_command( SGS_CTX )
 
 static int sgsstd_os_getenv( SGS_CTX )
 {
-#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if SGS_WINAPP
 	SGSFN( "os_getenv" );
 	STDLIB_ERR( "API is unsupported on this platform" );
 #else
@@ -2587,7 +2587,7 @@ static int sgsstd_os_getenv( SGS_CTX )
 
 static int sgsstd_os_putenv( SGS_CTX )
 {
-#if WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP
+#if SGS_WINAPP
 	SGSFN( "os_putenv" );
 	STDLIB_ERR( "API is unsupported on this platform" );
 #else
