@@ -756,11 +756,11 @@ static SGSBOOL ctx_compile( SGS_CTX, const char* buf, size_t size, sgs_CompFunc*
 	if( !ftree || C->state & SGS_HAS_ERRORS )
 		goto error;
 #if SGS_DEBUG && SGS_DEBUG_DATA
-	sgsFT_Dump( ftree );
+	sgsFT_Dump( ftree->child );
 #endif
 
 	DBGINFO( "...generating the opcode" );
-	func = sgsBC_Generate( C, ftree );
+	func = sgsBC_Generate( C, ftree->child );
 	if( !func || C->state & SGS_HAS_ERRORS )
 		goto error;
 	DBGINFO( "...cleaning up tokens/function tree" );
