@@ -646,7 +646,8 @@ static sgs_RegFuncConst array_iface_fconsts[] =
 static int sgsstd_array_iface_gen( SGS_CTX )
 {
 	sgs_CreateDict( C, NULL, 0 );
-	sgs_StoreFuncConsts( C, sgs_StackItem( C, -1 ), array_iface_fconsts, SGS_ARRAY_SIZE(array_iface_fconsts) );
+	sgs_StoreFuncConsts( C, sgs_StackItem( C, -1 ), array_iface_fconsts,
+		SGS_ARRAY_SIZE(array_iface_fconsts), "array." );
 	sgs_ObjSetMetaMethodEnable( sgs_GetObjectStruct( C, -1 ), 1 );
 	return 1;
 }
@@ -1871,25 +1872,19 @@ static int sgsstd_iter_getdata( SGS_CTX )
 static int sgsstd_tobool( SGS_CTX )
 {
 	SGSFN( "tobool" );
-	sgs_SetStackSize( C, 1 );
-	sgs_ToBool( C, 0 );
-	return 1;
+	return sgs_PushBool( C, sgs_GetBool( C, 0 ) );
 }
 
 static int sgsstd_toint( SGS_CTX )
 {
 	SGSFN( "toint" );
-	sgs_SetStackSize( C, 1 );
-	sgs_ToInt( C, 0 );
-	return 1;
+	return sgs_PushInt( C, sgs_GetInt( C, 0 ) );
 }
 
 static int sgsstd_toreal( SGS_CTX )
 {
 	SGSFN( "toreal" );
-	sgs_SetStackSize( C, 1 );
-	sgs_ToReal( C, 0 );
-	return 1;
+	return sgs_PushReal( C, sgs_GetReal( C, 0 ) );
 }
 
 static int sgsstd_tostring( SGS_CTX )
@@ -1903,9 +1898,7 @@ static int sgsstd_tostring( SGS_CTX )
 static int sgsstd_toptr( SGS_CTX )
 {
 	SGSFN( "toptr" );
-	sgs_SetStackSize( C, 1 );
-	sgs_ToPtr( C, 0 );
-	return 1;
+	return sgs_PushPtr( C, sgs_GetPtr( C, 0 ) );
 }
 
 
@@ -1913,9 +1906,6 @@ static int sgsstd_parseint( SGS_CTX )
 {
 	sgs_Int i;
 	SGSFN( "parseint" );
-	sgs_SetStackSize( C, 1 );
-	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
-		return 1;
 	if( sgs_ParseInt( C, 0, &i ) )
 		sgs_PushInt( C, i );
 	else
@@ -1927,9 +1917,6 @@ static int sgsstd_parsereal( SGS_CTX )
 {
 	sgs_Real r;
 	SGSFN( "parsereal" );
-	sgs_SetStackSize( C, 1 );
-	if( sgs_ItemType( C, 0 ) == SGS_VT_REAL )
-		return 1;
 	if( sgs_ParseReal( C, 0, &r ) )
 		sgs_PushReal( C, r );
 	else
@@ -3638,6 +3625,7 @@ void sgsSTD_PostInit( SGS_CTX )
 	
 	sgs_PushInterface( C, sgsstd_array_iface_gen );
 	sgs_SetGlobalByName( C, "array", sgs_StackItem( C, -1 ) );
+	sgs_RegSymbol( C, "", "array", sgs_StackItem( C, -1 ) );
 	sgs_Pop( C, 1 );
 	
 	sgs_PushString( C, SGS_INCLUDE_PATH );
@@ -3787,6 +3775,24 @@ void sgsSTD_RegistryGC( SGS_CTX )
 	}
 }
 
+void sgsSTD_RegistryIter( SGS_CTX, int subtype, sgs_VHTVar** outp, sgs_VHTVar** outpend )
+{
+	SGS_SHCTX_USE;
+	sgs_VarObj* obj = NULL;
+	switch( subtype )
+	{
+	case SGS_REG_ROOT: obj = RLBP; break;
+	case SGS_REG_SYM: obj = SYMP; break;
+	case SGS_REG_INC: obj = INCP; break;
+	}
+	sgs_BreakIf( !obj );
+	{
+		HTHDR;
+		*outp = ht->vars;
+		*outpend = ht->vars + sgs_vht_size( ht );
+	}
+}
+
 
 #define GLBP C->_G
 
@@ -3904,8 +3910,7 @@ void sgsSTD_GlobalGC( SGS_CTX )
 void sgsSTD_GlobalIter( SGS_CTX, sgs_VHTVar** outp, sgs_VHTVar** outpend )
 {
 	sgs_VarObj* obj = GLBP;
-	
-	if( obj )
+	sgs_BreakIf( !obj );
 	{
 		HTHDR;
 		*outp = ht->vars;
@@ -3915,14 +3920,41 @@ void sgsSTD_GlobalIter( SGS_CTX, sgs_VHTVar** outp, sgs_VHTVar** outpend )
 
 
 
+void sgs_RegSymbol( SGS_CTX, const char* prefix, const char* name, sgs_Variable var )
+{
+	sgs_Variable str, symtbl = sgs_Registry( C, SGS_REG_SYM );
+	
+	if( prefix == NULL )
+		prefix = "";
+	if( name == NULL )
+		name = "";
+	sgs_BreakIf( *prefix == '\0' && *name == '\0' );
+	
+	if( *prefix )
+		sgs_PushString( C, prefix );
+	if( *name )
+		sgs_PushString( C, name );
+	if( *prefix && *name )
+		sgs_StringConcat( C, 2 );
+	
+	str = sgs_StackItem( C, -1 );
+	sgs_SetIndex( C, symtbl, str, var, SGS_FALSE );
+	sgs_SetIndex( C, symtbl, var, str, SGS_FALSE );
+	sgs_Pop( C, 1 );
+}
 
-void sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size )
+void sgs_RegFuncConstsExt( SGS_CTX, const sgs_RegFuncConst* list, int size, const char* prefix )
 {
 	while( size-- )
 	{
+		sgs_Variable v_func;
 		if( !list->name )
 			break;
-		sgs_SetGlobalByName( C, list->name, sgs_MakeCFunc( list->value ) );
+		v_func = sgs_MakeCFunc( list->value );
+		sgs_SetGlobalByName( C, list->name, v_func );
+		/* put into symbol table */
+		if( prefix )
+			sgs_RegSymbol( C, prefix, list->name, v_func );
 		list++;
 	}
 }
@@ -3950,16 +3982,20 @@ void sgs_RegRealConsts( SGS_CTX, const sgs_RegRealConst* list, int size )
 }
 
 
-void sgs_StoreFuncConsts( SGS_CTX, sgs_Variable var, const sgs_RegFuncConst* list, int size )
+void sgs_StoreFuncConsts( SGS_CTX, sgs_Variable var, const sgs_RegFuncConst* list, int size, const char* prefix )
 {
 	sgs_Variable key;
 	while( size-- )
 	{
+		sgs_Variable v_func;
 		if( !list->name )
 			break;
+		v_func = sgs_MakeCFunc( list->value );
 		sgs_InitString( C, &key, list->name );
-		sgs_SetIndex( C, var, key, sgs_MakeCFunc( list->value ), 1 );
+		sgs_SetIndex( C, var, key, v_func, 1 );
 		sgs_Release( C, &key );
+		if( prefix )
+			sgs_RegSymbol( C, prefix, list->name, v_func );
 		list++;
 	}
 }

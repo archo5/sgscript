@@ -624,6 +624,7 @@ void sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc );
 void sgsSTD_RegistryInit( SGS_CTX );
 void sgsSTD_RegistryFree( SGS_CTX );
 void sgsSTD_RegistryGC( SGS_CTX );
+void sgsSTD_RegistryIter( SGS_CTX, int subtype, sgs_VHTVar** outp, sgs_VHTVar** outpend );
 void sgsSTD_GlobalInit( SGS_CTX );
 void sgsSTD_GlobalFree( SGS_CTX );
 SGSBOOL sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx );

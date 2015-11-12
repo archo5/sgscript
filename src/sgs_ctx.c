@@ -1139,6 +1139,27 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 			sgs_WriteStr( C, "VARIABLE -- ---- STACK ---- TOP ----\n" );
 		}
 		return SGS_SUCCESS;
+	case SGS_STAT_DUMP_SYMBOLS:
+		{
+			sgs_VHTVar *p, *pend;
+			sgsSTD_RegistryIter( C, SGS_REG_SYM, &p, &pend );
+			sgs_WriteStr( C, "\nSYMBOL ---- LIST ---- START ----\n" );
+			while( p < pend )
+			{
+				sgs_iStr* str = p->key.data.S;
+				if( p->key.type == SGS_VT_STRING )
+				{
+					sgs_WriteStr( C, "SYMBOL '" );
+					ctx_print_safe( C, sgs_str_cstr( str ), str->size );
+					sgs_WriteStr( C, "' = " );
+					dumpvar( C, &p->val );
+					sgs_WriteStr( C, "\n" );
+				}
+				p++;
+			}
+			sgs_WriteStr( C, "SYMBOL ---- LIST ---- END ----\n" );
+		}
+		return SGS_SUCCESS;
 	default:
 		return SGS_EINVAL;
 	}

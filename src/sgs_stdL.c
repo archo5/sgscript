@@ -2353,7 +2353,7 @@ static int sgsstd_io_dir( SGS_CTX )
 }
 
 
-static const sgs_RegRealConst i_rconsts[] =
+static const sgs_RegIntConst i_iconsts[] =
 {
 	{ "FILE_READ", FILE_READ },
 	{ "FILE_WRITE", FILE_WRITE },
@@ -2381,7 +2381,7 @@ static const sgs_RegFuncConst i_fconsts[] =
 
 void sgs_LoadLib_IO( SGS_CTX )
 {
-	sgs_RegRealConsts( C, i_rconsts, SGS_ARRAY_SIZE( i_rconsts ) );
+	sgs_RegIntConsts( C, i_iconsts, SGS_ARRAY_SIZE( i_iconsts ) );
 	sgs_RegFuncConsts( C, i_fconsts, SGS_ARRAY_SIZE( i_fconsts ) );
 }
 

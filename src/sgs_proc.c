@@ -1125,53 +1125,14 @@ static void vm_convert_string( SGS_CTX, sgs_Variable* var )
 	*var = out;
 }
 
-
-#define CI stk_getpos( C, item )
-static void vm_convert_stack_bool( SGS_CTX, StkIdx item )
-{
-	if( CI->type != SGS_VT_BOOL )
-	{
-		sgs_Bool v = var_getbool( C, CI );
-		var_setbool( C, CI, v );
-	}
-}
-
-static void vm_convert_stack_int( SGS_CTX, StkIdx item )
-{
-	if( CI->type != SGS_VT_INT )
-	{
-		sgs_Int v = var_getint( C, CI );
-		var_setint( C, CI, v );
-	}
-}
-
-static void vm_convert_stack_real( SGS_CTX, StkIdx item )
-{
-	if( CI->type != SGS_VT_REAL )
-	{
-		sgs_Real v = var_getreal( C, CI );
-		var_setreal( C, CI, v );
-	}
-}
-
 static void vm_convert_stack_string( SGS_CTX, StkIdx item )
 {
 	sgs_Variable out;
-	if( CI->type == SGS_VT_STRING )
+	if( stk_getpos( C, item )->type == SGS_VT_STRING )
 		return;
-	init_var_string( C, &out, CI );
+	init_var_string( C, &out, stk_getpos( C, item ) );
 	stk_setvar_leave( C, item, &out );
 }
-
-static void vm_convert_stack_ptr( SGS_CTX, StkIdx item )
-{
-	if( CI->type != SGS_VT_PTR )
-	{
-		void* v = var_getptr( C, CI );
-		var_setptr( C, CI, v );
-	}
-}
-#undef CI
 
 
 /*
@@ -5567,6 +5528,7 @@ SGSBOOL sgs_ParsePtrP( SGS_CTX, sgs_Variable* var, void** out )
 sgs_Bool sgs_GetBool( SGS_CTX, StkIdx item )
 {
 	sgs_Variable* var;
+	
 	if( !sgs_IsValidIndex( C, item ) )
 		return 0;
 	var = stk_getpos( C, item );
@@ -5600,38 +5562,6 @@ void* sgs_GetPtr( SGS_CTX, StkIdx item )
 	return var_getptr( C, var );
 }
 
-
-sgs_Bool sgs_ToBool( SGS_CTX, StkIdx item )
-{
-	if( !sgs_IsValidIndex( C, item ) )
-		return 0;
-	vm_convert_stack_bool( C, item );
-	return stk_getpos( C, item )->data.B;
-}
-
-sgs_Int sgs_ToInt( SGS_CTX, StkIdx item )
-{
-	if( !sgs_IsValidIndex( C, item ) )
-		return 0;
-	vm_convert_stack_int( C, item );
-	return stk_getpos( C, item )->data.I;
-}
-
-sgs_Real sgs_ToReal( SGS_CTX, StkIdx item )
-{
-	if( !sgs_IsValidIndex( C, item ) )
-		return 0;
-	vm_convert_stack_real( C, item );
-	return stk_getpos( C, item )->data.R;
-}
-
-void* sgs_ToPtr( SGS_CTX, StkIdx item )
-{
-	if( !sgs_IsValidIndex( C, item ) )
-		return 0;
-	vm_convert_stack_ptr( C, item );
-	return stk_getpos( C, item )->data.P;
-}
 
 char* sgs_ToStringBuf( SGS_CTX, StkIdx item, sgs_SizeVal* outsize )
 {

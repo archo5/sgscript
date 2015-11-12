@@ -503,6 +503,7 @@ DEFINE_TEST( debugging )
 	sgs_Stat( C, SGS_STAT_DUMP_GLOBALS );
 	sgs_Stat( C, SGS_STAT_DUMP_OBJECTS );
 	sgs_Stat( C, SGS_STAT_DUMP_FRAMES );
+	sgs_Stat( C, SGS_STAT_DUMP_SYMBOLS );
 	
 	destroy_context( C );
 }
@@ -734,7 +735,7 @@ int nom_iface( SGS_CTX )
 {
 	SGSFN( "nom_iface" );
 	sgs_CreateDict( C, NULL, 0 );
-	sgs_StoreFuncConsts( C, sgs_StackItem( C, -1 ), nom_funcs, -1 );
+	sgs_StoreFuncConsts( C, sgs_StackItem( C, -1 ), nom_funcs, -1, "nom." );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	sgs_ObjSetMetaMethodEnable( sgs_GetObjectStruct( C, -1 ), 1 );
 	return 1;

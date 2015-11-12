@@ -167,6 +167,7 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 #define SGS_STAT_DUMP_OBJECTS 12
 #define SGS_STAT_DUMP_FRAMES  13
 #define SGS_STAT_DUMP_STATS   14
+#define SGS_STAT_DUMP_SYMBOLS 15
 #define SGS_STAT_XDUMP_STACK  20
 
 
@@ -444,14 +445,17 @@ SGS_APIFUNC void sgs_LoadLib_String( SGS_CTX );
 
 #define SGS_RC_END() { NULL, NULL }
 
+SGS_APIFUNC void sgs_RegSymbol( SGS_CTX, const char* prefix, const char* name, sgs_Variable var );
+
 typedef struct _sgs_RegFuncConst
 {
 	const char* name;
 	sgs_CFunc value;
 }
 sgs_RegFuncConst;
-SGS_APIFUNC void sgs_RegFuncConsts( SGS_CTX, const sgs_RegFuncConst* list, int size );
-SGS_APIFUNC void sgs_StoreFuncConsts( SGS_CTX, sgs_Variable var, const sgs_RegFuncConst* list, int size );
+SGS_APIFUNC void sgs_RegFuncConstsExt( SGS_CTX, const sgs_RegFuncConst* list, int size, const char* prefix );
+#define sgs_RegFuncConsts( C, list, size ) sgs_RegFuncConstsExt( C, list, size, "" );
+SGS_APIFUNC void sgs_StoreFuncConsts( SGS_CTX, sgs_Variable var, const sgs_RegFuncConst* list, int size, const char* prefix );
 
 typedef struct _sgs_RegIntConst
 {
@@ -710,10 +714,6 @@ SGS_APIFUNC sgs_Int sgs_GetInt( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_Real sgs_GetReal( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC void* sgs_GetPtr( SGS_CTX, sgs_StkIdx item );
 
-SGS_APIFUNC sgs_Bool sgs_ToBool( SGS_CTX, sgs_StkIdx item );
-SGS_APIFUNC sgs_Int sgs_ToInt( SGS_CTX, sgs_StkIdx item );
-SGS_APIFUNC sgs_Real sgs_ToReal( SGS_CTX, sgs_StkIdx item );
-SGS_APIFUNC void* sgs_ToPtr( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC char* sgs_ToStringBuf( SGS_CTX, sgs_StkIdx item, sgs_SizeVal* outsize );
 #define sgs_ToString( ctx, item ) sgs_ToStringBuf( ctx, item, NULL )
 SGS_APIFUNC char* sgs_ToStringBufFast( SGS_CTX, sgs_StkIdx item, sgs_SizeVal* outsize );
