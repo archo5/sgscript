@@ -446,6 +446,7 @@ SGS_APIFUNC void sgs_LoadLib_String( SGS_CTX );
 #define SGS_RC_END() { NULL, NULL }
 
 SGS_APIFUNC void sgs_RegSymbol( SGS_CTX, const char* prefix, const char* name, sgs_Variable var );
+SGS_APIFUNC SGSBOOL sgs_GetSymbol( SGS_CTX, sgs_Variable var, sgs_Variable* out );
 
 typedef struct _sgs_RegFuncConst
 {

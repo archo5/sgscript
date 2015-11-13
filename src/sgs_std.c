@@ -3943,6 +3943,12 @@ void sgs_RegSymbol( SGS_CTX, const char* prefix, const char* name, sgs_Variable 
 	sgs_Pop( C, 1 );
 }
 
+SGSBOOL sgs_GetSymbol( SGS_CTX, sgs_Variable key, sgs_Variable* out )
+{
+	sgs_Variable symtbl = sgs_Registry( C, SGS_REG_SYM );
+	return sgs_GetIndex( C, symtbl, key, out, SGS_FALSE );
+}
+
 void sgs_RegFuncConstsExt( SGS_CTX, const sgs_RegFuncConst* list, int size, const char* prefix )
 {
 	while( size-- )

@@ -4681,7 +4681,20 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 		C->serialize_state = &SD;
 	}
 	pSD = (sgs_serialize1_data*) C->serialize_state;
-
+	
+	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC || var.type == SGS_VT_FUNC )
+	{
+		sgs_Variable sym;
+		if( sgs_GetSymbol( C, var, &sym ) && sym.type == SGS_VT_STRING )
+		{
+			sgs_SerializeInt_V1( C, sym );
+			sgs_membuf_appchr( &pSD->data, C, 'S' );
+			sgs_Release( C, &sym );
+			goto fail;
+		}
+		sgs_Release( C, &sym );
+	}
+	
 	if( var.type == SGS_VT_OBJECT )
 	{
 		sgs_VarObj* O = var.data.O;
@@ -4809,6 +4822,7 @@ void sgs_SerializeObjectInt_V1( SGS_CTX, StkIdx args, const char* func, size_t f
 #define sgs_unserr_incomp( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: incomplete data" )
 #define sgs_unserr_error( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: error in data" )
 #define sgs_unserr_objcall( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: could not create object from function" )
+#define sgs_unserr_symfail( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: could not map name to symbol" )
 
 SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 {
@@ -4902,6 +4916,17 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 			if( SGS_FAILED( ret ) )
 				return sgs_unserr_objcall( C );
 			str += fnsz;
+		}
+		else if( c == 'S' )
+		{
+			sgs_Variable sym;
+			if( !sgs_GetSymbol( C, sgs_StackItem( C, -1 ), &sym ) )
+			{
+				return sgs_unserr_symfail( C );
+			}
+			sgs_PushVariable( C, sym );
+			sgs_PopSkip( C, 1, 1 );
+			sgs_Release( C, &sym );
 		}
 		else
 		{

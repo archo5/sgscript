@@ -77,7 +77,7 @@ testEqual( ERRORS, "", "_G - trying to map to null/true/false keys" );
 testEqual( _G[ unserialize ], null, "_G - reading unmapped function key" );
 testEqual( ERRORS, "[W:Cannot find readable value by index: \"C function\"]" );
 
-	section( "serialization functions" );
+	section( "serialization - mode 1" );
 ERRORS = "";
 testEqual( serialize(null), "P\x00", "serialize - null" );
 testEqual( unserialize(serialize(null)), null, "[un]-serialize - null" );
@@ -113,8 +113,17 @@ sstruct_string = "{0=null,a=false,b=true,c=0,d=12124,e=-89235,f=0,g=12.346,"
 	$"h=,i=abc..,j=function,k=array,l=array,m=dict,n=dict,o=map,p=array,q=array}";
 testEqual( typeof(serialize(sstruct)), "string", "serialize - no errors" );
 testEqual( ''$unserialize(serialize(sstruct)), sstruct_string, "(un)serialize - roundtrip" );
+ssstr =
+	"P\x04\x01\x00\x00\x00k"$
+	"P\x04\x05\x00\x00\x00pcallS"$
+	"P\x04\x01\x00\x00\x00m"$
+	"P\x04\x05\x00\x00\x00arrayS"$
+	"C\x04\x00\x00\x00\x04dict\x00";
+testEqual( serialize({k=pcall,m=array}), ssstr, "serialize symbols - no errors" );
+testEqual( ''$unserialize(serialize({k=pcall,m=array})), "{k=C function,m=dict}", "(un)serialize symbols - roundtrip" );
 testEqual( ERRORS, "", "serialization - errors" );
 
+	section( "serialization - mode 2" );
 ERRORS = "";
 testEqual( serialize2(null), "P\x00", "serialize2 - null" );
 testEqual( unserialize2(serialize2(null)), null, "[un]-serialize2 - null" );
