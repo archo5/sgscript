@@ -4924,8 +4924,8 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 			{
 				return sgs_unserr_symfail( C );
 			}
+			sgs_Pop( C, 1 );
 			sgs_PushVariable( C, sym );
-			sgs_PopSkip( C, 1, 1 );
 			sgs_Release( C, &sym );
 		}
 		else
@@ -4943,6 +4943,7 @@ typedef struct sgs_serialize2_data
 	sgs_VHTable servartable;
 	sgs_MemBuf argarray;
 	sgs_VarObj* curObj;
+	sgs_MemBuf data;
 }
 sgs_serialize2_data;
 
@@ -4959,9 +4960,48 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		sgs_vht_init( &SD.servartable, C, 64, 64 );
 		SD.argarray = sgs_membuf_create();
 		SD.curObj = NULL;
+		SD.data = sgs_membuf_create();
 		C->serialize_state = &SD;
 	}
 	pSD = (sgs_serialize2_data*) C->serialize_state;
+	
+	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC || var.type == SGS_VT_FUNC )
+	{
+		sgs_Variable sym;
+		if( sgs_GetSymbol( C, var, &sym ) && sym.type == SGS_VT_STRING )
+		{
+			sgs_SerializeInt_V2( C, sym );
+			if( pSD->argarray.size < 4 )
+			{
+				/* error likely to be already printed */
+				ret = SGS_FALSE;
+				goto fail;
+			}
+			sgs_membuf_appchr( &pSD->data, C, 'S' );
+			sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
+			sgs_Release( C, &sym );
+			
+			// create variable resolve
+			{
+				sgs_StkIdx argidx;
+				sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
+				if( vv )
+					argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
+				else
+				{
+					sgs_Variable idxvar;
+					argidx = sgs_vht_size( &pSD->servartable );
+					idxvar.type = SGS_VT_INT;
+					idxvar.data.I = argidx;
+					sgs_vht_set( &pSD->servartable, C, &var, &idxvar );
+				}
+				sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - sizeof(argidx), pSD->argarray.size );
+				sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+			}
+			goto fail;
+		}
+		sgs_Release( C, &sym );
+	}
 	
 	if( var.type == SGS_VT_OBJECT )
 	{
@@ -5003,10 +5043,50 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		else
 		{
 			sgs_Variable idxvar;
+			char pb[2];
+			{
+				pb[0] = 'P';
+				/* WP: basetype limited to bits 0-7, sign interpretation does not matter */
+				pb[1] = (char) var.type;
+			}
+			
 			argidx = sgs_vht_size( &pSD->servartable );
 			idxvar.type = SGS_VT_INT;
 			idxvar.data.I = argidx;
 			sgs_vht_set( &pSD->servartable, C, &var, &idxvar );
+			
+			sgs_membuf_appbuf( &pSD->data, C, pb, 2 );
+			switch( var.type )
+			{
+			case SGS_VT_NULL: break;
+			/* WP: var.data.B uses only bit 0 */
+			case SGS_VT_BOOL: { char b = (char) var.data.B; sgs_membuf_appbuf( &pSD->data, C, &b, 1 ); } break;
+			case SGS_VT_INT: sgs_membuf_appbuf( &pSD->data, C, &var.data.I, sizeof( sgs_Int ) ); break;
+			case SGS_VT_REAL: sgs_membuf_appbuf( &pSD->data, C, &var.data.R, sizeof( sgs_Real ) ); break;
+			case SGS_VT_STRING:
+				sgs_membuf_appbuf( &pSD->data, C, &var.data.S->size, 4 );
+				sgs_membuf_appbuf( &pSD->data, C, sgs_var_cstr( &var ), var.data.S->size );
+				break;
+			case SGS_VT_FUNC:
+				{
+					size_t szbefore = pSD->data.size;
+					if( !_serialize_function( C, var.data.F, &pSD->data ) )
+					{
+						ret = SGS_FALSE;
+						goto fail;
+					}
+					else
+					{
+						uint32_t szdiff = (uint32_t) ( pSD->data.size - szbefore );
+						sgs_membuf_insbuf( &pSD->data, C, szbefore, &szdiff, sizeof(szdiff) );
+					}
+				}
+				break;
+			default:
+				sgs_Msg( C, SGS_ERROR, "sgs_Serialize: unknown memory error" );
+				ret = SGS_FALSE;
+				goto fail;
+			}
 		}
 		sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
 	}
@@ -5016,78 +5096,16 @@ fail:
 	{
 		if( ret )
 		{
-			sgs_MemBuf B = sgs_membuf_create();
-			
-			/* combine all serialization info */
+			if( SD.data.size > 0x7fffffff )
 			{
-				sgs_VHTVar* p = SD.servartable.vars;
-				sgs_VHTVar* pend = p + SD.servartable.size;
-				while( p < pend )
-				{
-					sgs_Variable* pKV = &p->key;
-					if( pKV->type == SGS_VT_OBJECT )
-					{
-						/* object, serialized to block */
-						sgs_membuf_appbuf( &B, C, sgs_var_cstr( &p->val ), p->val.data.S->size );
-					}
-					else
-					{
-						/* other, non-CFunc variables */
-						char pb[2];
-						{
-							pb[0] = 'P';
-							/* WP: basetype limited to bits 0-7, sign interpretation does not matter */
-							pb[1] = (char) pKV->type;
-						}
-						sgs_membuf_appbuf( &B, C, pb, 2 );
-						switch( pKV->type )
-						{
-						case SGS_VT_NULL: break;
-						/* WP: pKV->data.B uses only bit 0 */
-						case SGS_VT_BOOL: { char b = (char) pKV->data.B; sgs_membuf_appbuf( &B, C, &b, 1 ); } break;
-						case SGS_VT_INT: sgs_membuf_appbuf( &B, C, &pKV->data.I, sizeof( sgs_Int ) ); break;
-						case SGS_VT_REAL: sgs_membuf_appbuf( &B, C, &pKV->data.R, sizeof( sgs_Real ) ); break;
-						case SGS_VT_STRING:
-							sgs_membuf_appbuf( &B, C, &pKV->data.S->size, 4 );
-							sgs_membuf_appbuf( &B, C, sgs_var_cstr( pKV ), pKV->data.S->size );
-							break;
-						case SGS_VT_FUNC:
-							{
-								size_t szbefore = B.size;
-								if( !_serialize_function( C, pKV->data.F, &B ) )
-								{
-									ret = SGS_FALSE;
-									goto fail2;
-								}
-								else
-								{
-									uint32_t szdiff = (uint32_t) ( B.size - szbefore );
-									sgs_membuf_insbuf( &B, C, szbefore, &szdiff, sizeof(szdiff) );
-								}
-							}
-							break;
-						default:
-							sgs_Msg( C, SGS_ERROR, "sgs_Serialize: unknown memory error" );
-							ret = SGS_FALSE;
-							goto fail2;
-						}
-					}
-					p++;
-				}
-			}
-			
-			if( B.size > 0x7fffffff )
-			{
-				sgs_Msg( C, SGS_WARNING, "serialized string too long" );
+				sgs_Msg( C, SGS_ERROR, "serialized string too long" );
 				ret = SGS_FALSE;
 			}
 			else
 			{
 				/* WP: added error condition */
-				sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
+				sgs_PushStringBuf( C, SD.data.ptr, (sgs_SizeVal) SD.data.size );
 			}
-fail2:
-			sgs_membuf_destroy( &B, C );
 		}
 		if( ret == SGS_FALSE )
 		{
@@ -5095,6 +5113,7 @@ fail2:
 		}
 		sgs_vht_free( &SD.servartable, C );
 		sgs_membuf_destroy( &SD.argarray, C );
+		sgs_membuf_destroy( &SD.data, C );
 		C->serialize_state = prev_serialize_state;
 	}
 }
@@ -5129,8 +5148,7 @@ void sgs_SerializeObjectInt_V2( SGS_CTX, StkIdx args, const char* func, size_t f
 		argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
 	else
 	{
-		sgs_Variable srlzdata;
-		char* pbuf;
+		sgs_Variable idxvar;
 		char pb[6] = { 'C', 0, 0, 0, 0, 0 };
 		{
 			/* WP: they were pointless */
@@ -5140,19 +5158,17 @@ void sgs_SerializeObjectInt_V2( SGS_CTX, StkIdx args, const char* func, size_t f
 			pb[4] = (char)((args>>24)&0xff);
 		}
 		
-		/* WP: TODO error condition */
-		sgs_InitStringAlloc( C, &srlzdata, (sgs_SizeVal)( 6 + argsize + fnsize + 1 ) );
-		pbuf = sgs_var_cstr( &srlzdata );
 		/* WP: have error condition + sign interpretation doesn't matter */
 		pb[ 5 ] = (char) fnsize;
-		memcpy( pbuf, pb, 6 );
-		memcpy( pbuf + 6, pSD->argarray.ptr + pSD->argarray.size - argsize, argsize );
-		memcpy( pbuf + 6 + argsize, func, fnsize );
-		pbuf[ 6 + argsize + fnsize ] = 0;
+		sgs_membuf_appbuf( &pSD->data, C, pb, 6 );
+		sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - argsize, argsize );
+		sgs_membuf_appbuf( &pSD->data, C, func, fnsize );
+		sgs_membuf_appchr( &pSD->data, C, '\0' );
 		
 		argidx = sgs_vht_size( &pSD->servartable );
-		sgs_vht_set( &pSD->servartable, C, &V, &srlzdata );
-		sgs_Release( C, &srlzdata );
+		idxvar.type = SGS_VT_INT;
+		idxvar.data.I = argidx;
+		sgs_vht_set( &pSD->servartable, C, &V, &idxvar );
 	}
 	sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - argsize, pSD->argarray.size );
 	sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
@@ -5277,6 +5293,18 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			sgs_GetStackItem( C, -1, &var );
 			sgs_SetStackSize( C, subsz );
 			str += fnsz;
+		}
+		else if( c == 'S' )
+		{
+			int32_t pos;
+			if( str >= strend-4 && sgs_unserr_incomp( C ) )
+				goto fail;
+			SGS_AS_INT32( pos, str );
+			str += 4;
+			if( !sgs_GetSymbol( C, ((sgs_Variable*) mb.ptr)[ pos ], &var ) )
+			{
+				return sgs_unserr_symfail( C );
+			}
 		}
 		else
 		{

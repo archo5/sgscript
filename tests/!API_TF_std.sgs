@@ -146,6 +146,14 @@ testEqual( typeof(unserialize2(serialize2(map("a",1,"b",2)))), "map", "[un]-seri
 testEqual( typeof(serialize2(sstruct)), "string", "serialize2 - no errors" );
 testEqual( ''$unserialize2(serialize2(sstruct)), sstruct_string, "(un)serialize2 - roundtrip" );
 testEqual( serialize(sstruct).length > serialize2(sstruct).length, true, "serialize > serialize2 (output size)" );
+ssstr =
+	"P\x04\x01\x00\x00\x00k"$
+	"P\x04\x05\x00\x00\x00pcallS\x01\x00\x00\x00"$
+	"P\x04\x01\x00\x00\x00m"$
+	"P\x04\x05\x00\x00\x00arrayS\x04\x00\x00\x00"$
+	"C\x04\x00\x00\x00\x04\x00\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x05\x00\x00\x00dict\x00";
+testEqual( serialize2({k=pcall,m=array}), ssstr, "serialize symbols - no errors" );
+testEqual( ''$unserialize2(serialize2({k=pcall,m=array})), "{k=C function,m=dict}", "(un)serialize symbols - roundtrip" );
 testEqual( ERRORS, "", "serialization - errors" );
 
 	section( "array basic ops" );
