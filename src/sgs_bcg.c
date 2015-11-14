@@ -269,7 +269,10 @@ static void dump_opcode( const sgs_instr_t* ptr, size_t count )
 		case SGS_SI_DICT:
 			printf( "DICT args:%d output:", argE );
 			dump_rcpos( argC ); break;
-
+		case SGS_SI_RSYM:
+			printf( "RSYM name:" ); dump_rcpos( argB );
+			printf( " value:" ); dump_rcpos( argC ); break;
+			
 		default:
 			printf( "<error> \t\t(op=%d A=%d B=%d C=%d E=%d)",
 				op, argA, argB, argC, argE ); break;
@@ -2636,14 +2639,27 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 	case SGS_SFT_FUNC:
 		SGS_FN_HIT( "FUNC" );
 		{
+			sgs_FTNode* n_name;
 			rcpos_t pos;
 			SGS_FN_ENTER;
 			if( !compile_func( C, func, node, &pos ) ) goto fail;
+			n_name = node->child->next->next->next;
 
-			if( node->child->next->next->next )
+			if( n_name )
 			{
 				SGS_FN_ENTER;
-				if( !compile_node_w( C, func, node->child->next->next->next, pos ) ) goto fail;
+				if( !compile_node_w( C, func, n_name, pos ) ) goto fail;
+				
+				// symbol registration
+				if( C->fctx->func == SGS_FALSE )
+				{
+					rcpos_t r_name;
+					sgs_MemBuf ffn = sgs_membuf_create();
+					rpts( &ffn, C, n_name );
+					r_name = add_const_s( C, func, ffn.size, ffn.ptr );
+					sgs_membuf_destroy( &ffn, C );
+					INSTR_WRITE( SGS_SI_RSYM, 0, BC_CONSTENC( r_name ), pos );
+				}
 			}
 		}
 		break;

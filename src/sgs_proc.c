@@ -2769,6 +2769,8 @@ restart_loop:
 
 		case SGS_SI_ARRAY: { vm_make_array( C, argE, argC ); break; }
 		case SGS_SI_DICT: { vm_make_dict( C, argE, argC ); break; }
+		case SGS_SI_RSYM: { ARGS_3; sgs_Variable symtbl = sgs_Registry( C, SGS_REG_SYM );
+			sgs_SetIndex( C, symtbl, *p2, *p3, SGS_FALSE ); sgs_SetIndex( C, symtbl, *p3, *p2, SGS_FALSE ); break; }
 #undef VCOMPARE
 #undef STRICTLY_EQUAL
 #undef ARGS_2

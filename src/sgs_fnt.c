@@ -792,7 +792,8 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 				SFTC_NEXT;
 				while( !SFTC_IS( '}' ) )
 				{
-					if( !SFTC_IS( SGS_ST_IDENT ) && !SFTC_IS( SGS_ST_STRING ) )
+					int is_ident = SFTC_IS( SGS_ST_IDENT );
+					if( !is_ident && !SFTC_IS( SGS_ST_STRING ) )
 					{
 						SFTC_PRINTERR( "Expected key identifier in dictionary expression" );
 						break;
@@ -809,17 +810,36 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 
 					if( !SFTC_IS( SGS_ST_OP_SET ) )
 					{
-						SFTC_PRINTERR( "Expected '=' in dictionary expression "
-							"/ missing closing bracket before '{'" );
-						break;
+						if( is_ident )
+						{
+							if( SFTC_IS( ',' ) || SFTC_IS( '}' ) )
+							{
+								expr->next = make_node( SGS_SFT_IDENT, expr->token, NULL, NULL );
+								expr = expr->next;
+							}
+							else
+							{
+								SFTC_PRINTERR( "Expected '=', ',' or '}' after dictionary key" );
+								break;
+							}
+						}
+						else
+						{
+							SFTC_PRINTERR( "Expected '=' in dictionary expression "
+								"/ missing closing bracket before '{'" );
+							break;
+						}
 					}
-					SFTC_NEXT;
-
-					expr->next = parse_exp( F, ",}", 2 );
-					if( !expr->next )
-						break;
 					else
-						expr = expr->next;
+					{
+						SFTC_NEXT;
+
+						expr->next = parse_exp( F, ",}", 2 );
+						if( !expr->next )
+							break;
+						else
+							expr = expr->next;
+					}
 
 					if( SFTC_IS( ',' ) )
 						SFTC_NEXT;

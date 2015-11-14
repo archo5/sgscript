@@ -2,8 +2,8 @@
 global ERRORS, tests_failed, tests_ran;
 
 //
-function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
-function mostempty(){}
+section = function section( x ){ print( "\n\t<< ", x, " >>\n" ); };
+mostempty = function(){};
 print( "\n\n-- CORE FUNCTIONS --\n" );
 include "os", "string";
 //
@@ -292,6 +292,20 @@ testEqual( json_decode$'', 'C function', "include_shared - sgscript_main call [2
 testEqual( typeof( import_cfunc( libfile, "sgscript_main" ) ), "cfunc", "import_cfunc - retrieval of entry point" );
 ERRORS = ""; testEqual( import_cfunc( "bin/nosuchfile", "sgscript_main" ), null, "import_cfunc - invalid file name" ); testEqual( ERRORS, "[W:import_cfunc(): file 'bin/nosuchfile' was not found]" );
 ERRORS = ""; testEqual( import_cfunc( libfile, "nosuchfunc" ), null, "import_cfunc - invalid function name" ); testEqual( ERRORS, "[W:import_cfunc(): procedure 'nosuchfunc' was not found]" );
+
+	section( "class" );
+ERRORS = "";
+global printer = {};
+sym_register("printer",printer);
+function printer.create(name){ function wat(){} return class({name,printer},printer); }
+function printer.print(wat){ println("Printer '",this.name,"' says:",wat); }
+printer.create("ONE").print("hello");
+testEqual( sym_get( "printer" ), printer, "symbol for string 'printer'" );
+testEqual( sym_get( "printer.create" ), printer.create, "symbol for string 'printer.create'" );
+testEqual( sym_get( printer ), "printer", "symbol for function 'printer'" );
+testEqual( sym_get( printer.create ), "printer.create", "symbol for function 'printer.create'" );
+testEqual( sym_get( "wat" ), null, "no symbol with name 'wat' for function inside 'printer.create'" );
+testEqual( ERRORS, "[W:sym_get(): symbol not found]", "classes/symbols - errors" );
 
 
 //

@@ -335,6 +335,7 @@ typedef enum sgs_Instruction_e
 	/* specials */
 	SGS_SI_ARRAY,    /* (C:out, E:args) */
 	SGS_SI_DICT,     /* -- || -- */
+	SGS_SI_RSYM,     /* (B:name, C:var)         performs dual registration to symbol table */
 
 	SGS_SI_COUNT
 }
@@ -610,7 +611,7 @@ static const char* sgs_OpNames[] =
 	"inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",
 	"seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte", "rawcmp",
-	"array", "dict"
+	"array", "dict", "rsym",
 };
 
 #endif

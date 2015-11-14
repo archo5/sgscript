@@ -2637,6 +2637,33 @@ static int sgsstd_assert( SGS_CTX )
 	return 0;
 }
 
+static int sgsstd_sym_register( SGS_CTX )
+{
+	char* str = NULL;
+	sgs_Variable var;
+	
+	SGSFN( "sym_register" );
+	if( !sgs_LoadArgs( C, "sv", &str, &var ) )
+		return 0;
+	
+	sgs_RegSymbol( C, "", str, var );
+	return 0;
+}
+
+static int sgsstd_sym_get( SGS_CTX )
+{
+	sgs_Variable var, sym;
+	SGSFN( "sym_get" );
+	if( !sgs_LoadArgs( C, "v", &var ) )
+		return 0;
+	
+	if( !sgs_GetSymbol( C, var, &sym ) )
+		return sgs_Msg( C, SGS_WARNING, "symbol not found" );
+	sgs_PushVariable( C, sym );
+	sgs_Release( C, &sym );
+	return 1;
+}
+
 static int sgsstd_eval( SGS_CTX )
 {
 	char* str;
@@ -3582,6 +3609,7 @@ static sgs_RegFuncConst regfuncs[] =
 	STDLIB_FN( mm_getindex_router ), STDLIB_FN( mm_setindex_router ),
 	STDLIB_FN( co_create ), STDLIB_FN( co_resume ), STDLIB_FN( yield ),
 	STDLIB_FN( pcall ), STDLIB_FN( assert ),
+	STDLIB_FN( sym_register ), STDLIB_FN( sym_get ),
 	STDLIB_FN( eval ), STDLIB_FN( eval_file ), STDLIB_FN( compile_sgs ),
 	STDLIB_FN( include_library ), STDLIB_FN( include_file ),
 	STDLIB_FN( include_shared ), STDLIB_FN( import_cfunc ),
