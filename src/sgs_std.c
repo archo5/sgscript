@@ -1014,7 +1014,7 @@ static int sgsstd_vht_dump( SGS_CTX, sgs_VarObj* obj, int depth, const char* nam
 
 static DictHdr* mkdict( SGS_CTX, sgs_Variable* out )
 {
-	sgs_ObjInterface* iface = SGSIFACE_DICT;
+	sgs_ObjInterface* iface = sgsstd_dict_iface;
 	SGS_IF_DLL( ;,
 	if( !iface )
 		iface = sgsstd_dict_iface;
@@ -1248,7 +1248,7 @@ static int sgsstd_dict( SGS_CTX )
 
 static DictHdr* mkmap( SGS_CTX, sgs_Variable* out )
 {
-	DictHdr* dh = (DictHdr*) sgs_CreateObjectIPA( C, out, sizeof( DictHdr ), SGSIFACE_MAP );
+	DictHdr* dh = (DictHdr*) sgs_CreateObjectIPA( C, out, sizeof( DictHdr ), sgsstd_map_iface );
 	sgs_vht_init( &dh->ht, C, 4, 4 );
 	return dh;
 }
@@ -2014,13 +2014,6 @@ static int sgsstd_is_map( SGS_CTX )
 {
 	SGSFN( "is_map" );
 	sgs_PushBool( C, sgs_IsObject( C, 0, sgsstd_map_iface ) );
-	return 1;
-}
-
-static int sgsstd_is_iterable( SGS_CTX )
-{
-	SGSFN( "is_iterable" );
-	sgs_PushBool( C, sgs_PushIterator( C, sgs_StackItem( C, 0 ) ) );
 	return 1;
 }
 
@@ -3859,7 +3852,7 @@ static sgs_RegFuncConst regfuncs[] =
 	STDLIB_FN( parseint ), STDLIB_FN( parsereal ),
 	STDLIB_FN( typeof ), STDLIB_FN( typeid ), STDLIB_FN( typeptr ), STDLIB_FN( typeptr_by_name ),
 	STDLIB_FN( is_numeric ), STDLIB_FN( is_callable ),
-	STDLIB_FN( is_array ), STDLIB_FN( is_dict ), STDLIB_FN( is_map ), STDLIB_FN( is_iterable ),
+	STDLIB_FN( is_array ), STDLIB_FN( is_dict ), STDLIB_FN( is_map ),
 	/* I/O */
 	STDLIB_FN( print ), STDLIB_FN( println ), STDLIB_FN( printlns ),
 	STDLIB_FN( errprint ), STDLIB_FN( errprintln ), STDLIB_FN( errprintlns ),
@@ -3898,6 +3891,7 @@ static const sgs_RegIntConst regiconsts[] =
 	{ "SGS_INFO", SGS_INFO },
 	{ "SGS_WARNING", SGS_WARNING },
 	{ "SGS_ERROR", SGS_ERROR },
+	{ "SGS_APIERR", SGS_APIERR },
 	
 	{ "VT_NULL", SGS_VT_NULL },
 	{ "VT_BOOL", SGS_VT_BOOL },
@@ -4369,7 +4363,7 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 }
 
 
-SGSBOOL sgs_IsArray( SGS_CTX, sgs_Variable var )
+SGSBOOL sgs_IsArray( sgs_Variable var )
 {
 	return sgs_IsObjectP( &var, sgsstd_array_iface );
 }
@@ -4501,10 +4495,20 @@ sgs_SizeVal sgs_ArrayRemove( SGS_CTX, sgs_Variable var, sgs_Variable what, SGSBO
 	}
 }
 
+SGSBOOL sgs_IsDict( sgs_Variable var )
+{
+	return sgs_IsObjectP( &var, sgsstd_dict_iface );
+}
+
+SGSBOOL sgs_IsMap( sgs_Variable var )
+{
+	return sgs_IsObjectP( &var, sgsstd_map_iface );
+}
+
 SGSBOOL sgs_Unset( SGS_CTX, sgs_Variable var, sgs_Variable key )
 {
-	if( !sgs_IsObjectP( &var, SGSIFACE_DICT ) &&
-		!sgs_IsObjectP( &var, SGSIFACE_MAP ) )
+	if( !sgs_IsObjectP( &var, sgsstd_dict_iface ) &&
+		!sgs_IsObjectP( &var, sgsstd_map_iface ) )
 	{
 		sgs_Msg( C, SGS_APIERR, "sgs_Unset: variable is not dict/map" );
 		return SGS_FALSE;

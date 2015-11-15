@@ -37,6 +37,7 @@ testEqual( !is_dict( _N ) && !is_dict( _B ) && !is_dict( _I ) && !is_dict( _R ) 
 	!is_dict( _F ) && !is_dict( _C ) && !is_dict( _O ) && is_dict( _O2 ) && !is_dict( _O3 ), true, "is_dict" );
 testEqual( !is_map( _N ) && !is_map( _B ) && !is_map( _I ) && !is_map( _R ) && !is_map( _S ) &&
 	!is_map( _F ) && !is_map( _C ) && !is_map( _O ) && !is_map( _O2 ) && is_map( _O3 ), true, "is_map" );
+function is_iterable( x ){ return @get_iterator(x) !== null; }
 testEqual( !is_iterable( _N ) && !is_iterable( _B ) && !is_iterable( _I ) && !is_iterable( _R ) && !is_iterable( _S ) &&
 	!is_iterable( _F ) && !is_iterable( _C ) && is_iterable( _O ) && is_iterable( _O2 ) && is_iterable( _O3 ), true, "is_iterable" );
 

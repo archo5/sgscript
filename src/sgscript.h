@@ -289,14 +289,7 @@ struct _sgs_Variable
 #define SGS_EOP_NEGATE    6
 
 #define SGS_CONVOP_CLONE  0x10000
-#define SGS_CONVOP_TYPEOF 0x20000
 #define SGS_CONVOP_TOITER 0x30000
-
-#define SGS_BOP_AND       0
-#define SGS_BOP_OR        1
-#define SGS_BOP_XOR       2
-#define SGS_BOP_LSH       3
-#define SGS_BOP_RSH       4
 
 
 /* Engine context */
@@ -638,13 +631,15 @@ SGS_APIFUNC void sgs_ToPrintSafeString( SGS_CTX );
 SGS_APIFUNC void sgs_StringConcat( SGS_CTX, sgs_StkIdx args );
 SGS_APIFUNC void sgs_CloneItem( SGS_CTX, sgs_Variable var );
 
-SGS_APIFUNC SGSBOOL sgs_IsArray( SGS_CTX, sgs_Variable var );
+SGS_APIFUNC SGSBOOL sgs_IsArray( sgs_Variable var );
 SGS_APIFUNC sgs_SizeVal sgs_ArraySize( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC void sgs_ArrayPush( SGS_CTX, sgs_Variable var, sgs_StkIdx count );
 SGS_APIFUNC void sgs_ArrayPop( SGS_CTX, sgs_Variable var, sgs_StkIdx count, SGSBOOL ret );
 SGS_APIFUNC void sgs_ArrayErase( SGS_CTX, sgs_Variable var, sgs_StkIdx at, sgs_StkIdx count );
 SGS_APIFUNC sgs_SizeVal sgs_ArrayFind( SGS_CTX, sgs_Variable var, sgs_Variable what );
 SGS_APIFUNC sgs_SizeVal sgs_ArrayRemove( SGS_CTX, sgs_Variable var, sgs_Variable what, SGSBOOL all );
+SGS_APIFUNC SGSBOOL sgs_IsDict( sgs_Variable var );
+SGS_APIFUNC SGSBOOL sgs_IsMap( sgs_Variable var );
 SGS_APIFUNC SGSBOOL sgs_Unset( SGS_CTX, sgs_Variable var, sgs_Variable key );
 
 SGS_APIFUNC void sgs_Serialize( SGS_CTX, sgs_Variable var );

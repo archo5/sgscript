@@ -2187,7 +2187,6 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#is-array-function">is_array</a> - returns if variable is an array
 </li><li><a href="#is-dict-function">is_dict</a> - returns if variable is a dict
 </li><li><a href="#is-map-function">is_map</a> - returns if variable is a map
-</li><li><a href="#is-iterable-function">is_iterable</a> - returns if variable is iterable
 </li></ul><li>input/output
 <ul><li><a href="#print-println-printlns-errprint-errprintln-errprintlns-functions">print, println, printlns, errprint, errprintln, errprintlns</a> - write variables to output callback/stream
 </li><li><a href="#printvar-function">printvar</a> - write variable dumps to output callback/stream
@@ -2218,6 +2217,8 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#sys-apply-function">sys_apply</a> - call a function/callable even more dynamically (argument count also specified at runtime)
 </li><li><a href="#pcall-function">pcall</a> - do a protected call by trapping all internal messages in the specified callback
 </li><li><a href="#assert-function">assert</a> - emit an error if a condition does not evaluate to <code>true</code>
+</li><li><a href="#sym-register-function">sym_register</a> - register persistent object by name (for serialization)
+</li><li><a href="#sym-get-function">sym_get</a> - map name to a registered variable or variable to name using the symbol table
 </li><li><a href="#eval-function">eval</a> - compile and run script code, retrieve return values
 </li><li><a href="#eval-file-function">eval_file</a> - compile and rune script file, retrieve return values
 </li><li><a href="#compile-sgs-function">compile_sgs</a> - compile script code
@@ -2361,9 +2362,6 @@ is_dict( {} ); // returns &#39;true&#39;</pre></div>
 <div class='item'><a name='is-map-function'></a><hr><h2>is_map [function]</h2><h3>is_map( var )</h3><h4>returns if variable is a map</h4><pre>is_map( &quot;map&quot; ); // returns &#39;false&#39;
 is_map( {} ); // returns &#39;false&#39;
 is_map( map() ); // returns &#39;true&#39;</pre></div>
-<div class='item'><a name='is-iterable-function'></a><hr><h2>is_iterable [function]</h2><h3>is_iterable( var )</h3><h4>returns if variable is iterable</h4><pre>is_iterable( print ); // returns &#39;false&#39;
-is_iterable( [] ); // returns &#39;true&#39;
-is_iterable( {} ); // returns &#39;true&#39;</pre></div>
 <div class='item'><a name='print-println-printlns-errprint-errprintln-errprintlns-functions'></a><hr><h2>print, println, printlns, errprint, errprintln, errprintlns [functions]</h2><h3>print( ... ), println( ... ), printlns( ... ),</h3><h3>errprint( ... ), errprintln( ... ), errprintlns( ... ),</h3><h4>passes all arguments, converted to strings, to the (error) output callback</h4><ul><li>(err)print passes arguments without modifications
 </li><li>(err)println passes a newline character after all variables
 </li><li>(err)printlns passes a newline character after each variable</li></ul><pre>print( 5, &quot;x&quot; ); // prints &quot;5x&quot;
@@ -2412,6 +2410,7 @@ srand( ftime() ); // restart the generator depending on the second the code was 
 </li><li>if function is suspended, arguments will be passed as return values from the <a href="#yield-function">yield</a> call that suspended it</li></ul></div>
 <div class='item'><a name='yield-function'></a><hr><h2>yield [function]</h2><h3>yield([ args.. ])</h3><h4>suspends the current state, returning to caller</h4><ul><li>arguments are passed as return values to the caller
 </li><li>state cannot be suspended if there are C functions or other unusual constructs in the stack</li></ul></div>
+<div class='item'><a name='co-unserialize-function'></a><hr><h2>__co_unserialize [function]</h2><h3>__co_unserialize( ... )</h3><h4>coroutine unserialization function</h4><ul><li>it should be added to <a href="#unserialize-function">unserialize</a> custom environment (if one is used) if support for coroutine unserialization is required</li></ul></div>
 <div class='item'><a name='sys-call-function'></a><hr><h2>sys_call [function]</h2><h3>sys_call( func, this[, args..] )</h3><h4>calls the specified function with the specified <code>this</code> value and argument list</h4><p>
 <em class='notice-bgr'>if argument count is only known at runtime, see <a href="#sys-apply-function">sys_apply</a></em>
 </p><ul><li>C functions, SGS functions, closure objects and real closures have this function under the &quot;call&quot; property</li></ul></div>
@@ -2439,6 +2438,10 @@ pcall(function(){ print x; }); // nothing
 pcall(function(){ print x; }, handler ); // renamed warning
 pcall(function(){ print x; }, handler2 ); // changed type to error</pre></div>
 <div class='item'><a name='assert-function'></a><hr><h2>assert [function]</h2><h3>assert( var condition[, string message] )</h3><h4>if condition evaluates to &#39;false&#39;, emits an error &quot;assertion failed&quot; or if message is defined, &quot;assertion failed: &lt;message&gt;&quot;</h4><pre>assert( text, &quot;text was not defined&quot; );</pre></div>
+<div class='item'><a name='sym-register-function'></a><hr><h2>sym_register [function]</h2><h3>sym_register( string name, var )</h3><h4>register a persistent item (symbol) by the specified name</h4><ul><li>symbols are used for serialization to map unserializable and persistent items in both ways, to preserve their linkage in the serialized data</li></ul><pre>myfunc = function(){};
+sym_register( &quot;myfunc&quot;, myfunc );</pre></div>
+<div class='item'><a name='sym-get-function'></a><hr><h2>sym_get [function]</h2><h3>sym_get( var )</h3><h4>map name to a registered variable or variable to name using the symbol table</h4><pre>print sym_get( assert ); // prints &quot;assert&quot;
+print sym_get( &quot;assert&quot; ); // prints &quot;C function&quot;</pre></div>
 <div class='item'><a name='eval-function'></a><hr><h2>eval [function]</h2><h3>eval( string code )</h3><h4>returns the result of evaluating the passed <code>code</code> string as SGScript code</h4><ul><li>this function is equivalent to <a href="#sgs-EvalBuffer-function">sgs_EvalBuffer</a> / <a href="#sgs-EvalString-function-alias">sgs_EvalString</a> in the C API</li></ul><pre>eval(&quot;print 5;&quot;); // prints 5</pre></div>
 <div class='item'><a name='eval-file-function'></a><hr><h2>eval_file [function]</h2><h3>eval_file( string filename )</h3><h4>returns the result of evaluating the file pointed to by <code>filename</code> as SGScript code</h4><ul><li>this function is equivalent to <a href="#sgs-EvalFile-function">sgs_EvalFile</a> in the C API</li></ul><pre>eval_file(&quot;myfile.sgs&quot;); // ???</pre></div>
 <div class='item'><a name='compile-sgs-function'></a><hr><h2>compile_sgs [function]</h2><h3>compile_sgs( string code )</h3><h4>returns the generated bytecode or null + error info</h4><ul><li>this function is equivalent to <a href="#sgs-Compile-function">sgs_Compile</a> in the C API</li></ul><pre>compile_sgs( io_file_read( &quot;myfile.sgs&quot; ) ); // ???</pre></div>
@@ -2531,11 +2534,12 @@ print data; // prints random-looking, yet deterministic garbage
 print unserialize(data); // prints {name=A,info=B}</pre></div>
 <div class='item'><a name='unserialize2-function'></a><hr><h2>unserialize2 [function]</h2><h3>unserialize( string data[, array|dict funcs ])</h3><h4>recreates a variable from the buffer with serialized data or returns null and emits a warning on failure</h4><ul><li>for more info on function behavior, refer to <a href="#unserialize-function">unserialize</a>
 </li><li>for more info on serialization in SGScript, refer to <a href="#Serialization-in-SGScript">Serialization in SGScript</a></li></ul></div>
-<div class='item'><a name='SGS-constants'></a><hr><h2>SGS_*** [constants]</h2><h3>SGS_INFO, SGS_WARNING, SGS_ERROR</h3><h4>defined to the values of the C macros, respectively 100, 200 and 300</h4></div>
+<div class='item'><a name='SGS-constants'></a><hr><h2>SGS_*** [constants]</h2><h3>SGS_INFO, SGS_WARNING, SGS_ERROR, SGS_APIERR</h3><h4>defined to the values of the C macros, respectively 100, 200 and 300</h4></div>
 <div class='item'><a name='VT-constants'></a><hr><h2>VT_*** [constants]</h2><h3>VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR</h3><h4>these constants are defined to the values of the C macros (with the prefix &quot;SGS_VT_&quot; in C) and can be compared with the values returned in <a href="#typeid-function">typeid()</a></h4></div>
 <div class='item'><a name='RAND-MAX-constant'></a><hr><h2>RAND_MAX [constant]</h2><h3>RAND_MAX</h3><h4>the maximum number that can be returned by <a href="#rand-function">rand()</a></h4></div>
 <div class='item'><a name='G-superglobal'></a><hr><h2>_G [superglobal]</h2><h3>A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals and change the global dictionary.</h3><pre>_G[&quot;$diff&quot;] = 5; // no way to access this via usual globals
 _G = {}; // global value dictionary is changed, previous functions are lost unless stored somewhere</pre></div>
+<div class='item'><a name='R-superglobal'></a><hr><h2>_R [superglobal]</h2><h3>A hard-coded global value that points to the registry. Can be used to access the symbol table (_R[&quot;$sym&quot;]) or include list (_R[&quot;$inc&quot;]).</h3><ul><li>it is preferred to use <a href="#sym-get-function">sym_get</a> and <a href="#sym-register-function">sym_register</a> to deal with symbols, this table is mostly available for introspection and workarounds</li></ul></div>
 <div class='item'><a name='array-object'></a><hr><h2>array [object]</h2><ul><li>built-in methods
 <ul><li><a href="#array-push-method">push</a>
 </li><li><a href="#array-pop-method">pop</a>
@@ -2662,6 +2666,7 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 <div class='item'><a name='ALL-SGScript-core-functions-A-Z'></a><hr><h2>ALL SGScript core functions (A-Z)</h2><ul><li><a href="#ERROR-function">ERROR [function]</a>
 </li><li><a href="#INFO-function">INFO [function]</a>
 </li><li><a href="#WARNING-function">WARNING [function]</a>
+</li><li><a href="#co-unserialize-function">__co_unserialize [function]</a>
 </li><li><a href="#app-abort-function">app_abort [function]</a>
 </li><li><a href="#app-exit-function">app_exit [function]</a>
 </li><li><a href="#array-function">array [function]</a>
@@ -2702,7 +2707,6 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#is-array-function">is_array [function]</a>
 </li><li><a href="#is-callable-function">is_callable [function]</a>
 </li><li><a href="#is-dict-function">is_dict [function]</a>
-</li><li><a href="#is-iterable-function">is_iterable [function]</a>
 </li><li><a href="#is-map-function">is_map [function]</a>
 </li><li><a href="#is-numeric-function">is_numeric [function]</a>
 </li><li><a href="#isset-function">isset [function]</a>
@@ -2729,6 +2733,8 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#serialize-function">serialize [function]</a>
 </li><li><a href="#serialize2-function">serialize2 [function]</a>
 </li><li><a href="#srand-function">srand [function]</a>
+</li><li><a href="#sym-get-function">sym_get [function]</a>
+</li><li><a href="#sym-register-function">sym_register [function]</a>
 </li><li><a href="#sys-abort-function">sys_abort [function]</a>
 </li><li><a href="#sys-apply-function">sys_apply [function]</a>
 </li><li><a href="#sys-backtrace-function">sys_backtrace [function]</a>

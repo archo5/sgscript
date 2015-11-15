@@ -4199,7 +4199,6 @@ This library is loaded on initialization and contains the functions and constant
 -- @is_array - returns if variable is an array
 -- @is_dict - returns if variable is a dict
 -- @is_map - returns if variable is a map
--- @is_iterable - returns if variable is iterable
 - input/output
 -- @"print, println, printlns, errprint, errprintln, errprintlns" - write variables to output callback/stream
 -- @printvar - write variable dumps to output callback/stream
@@ -4230,6 +4229,8 @@ This library is loaded on initialization and contains the functions and constant
 -- @sys_apply - call a function/callable even more dynamically (argument count also specified at runtime)
 -- @pcall - do a protected call by trapping all internal messages in the specified callback
 -- @assert - emit an error if a condition does not evaluate to `true`
+-- @sym_register - register persistent object by name (for serialization)
+-- @sym_get - map name to a registered variable or variable to name using the symbol table
 -- @eval - compile and run script code, retrieve return values
 -- @eval_file - compile and rune script file, retrieve return values
 -- @compile_sgs - compile script code
@@ -4702,16 +4703,6 @@ This library is loaded on initialization and contains the functions and constant
     is_map( map() ); // returns 'true'
 
 
-# is_iterable [function]
-
-== is_iterable( var )
-=== returns if variable is iterable
-
-    is_iterable( print ); // returns 'false'
-    is_iterable( [] ); // returns 'true'
-    is_iterable( {} ); // returns 'true'
-
-
 # print, println, printlns, errprint, errprintln, errprintlns [functions]
 
 == print( ... ), println( ... ), printlns( ... ),
@@ -4902,6 +4893,14 @@ This library is loaded on initialization and contains the functions and constant
 - state cannot be suspended if there are C functions or other unusual constructs in the stack
 
 
+# __co_unserialize [function]
+
+== __co_unserialize( ... )
+=== coroutine unserialization function
+
+- it should be added to @unserialize custom environment (if one is used) if support for coroutine unserialization is required
+
+
 # sys_call [function]
 
 == sys_call( func, this[, args..] )
@@ -4957,6 +4956,26 @@ This library is loaded on initialization and contains the functions and constant
 === if condition evaluates to 'false', emits an error "assertion failed" or if message is defined, "assertion failed: <message>"
 
     assert( text, "text was not defined" );
+
+
+# sym_register [function]
+
+== sym_register( string name, var )
+=== register a persistent item (symbol) by the specified name
+
+- symbols are used for serialization to map unserializable and persistent items in both ways, to preserve their linkage in the serialized data
+
+    myfunc = function(){};
+    sym_register( "myfunc", myfunc );
+
+
+# sym_get [function]
+
+== sym_get( var )
+=== map name to a registered variable or variable to name using the symbol table
+
+    print sym_get( assert ); // prints "assert"
+    print sym_get( "assert" ); // prints "C function"
 
 
 # eval [function]
@@ -5310,7 +5329,7 @@ This library is loaded on initialization and contains the functions and constant
 
 # SGS_*** [constants]
 
-== SGS_INFO, SGS_WARNING, SGS_ERROR
+== SGS_INFO, SGS_WARNING, SGS_ERROR, SGS_APIERR
 === defined to the values of the C macros, respectively 100, 200 and 300
 
 
@@ -5332,6 +5351,13 @@ This library is loaded on initialization and contains the functions and constant
 
     _G["$diff"] = 5; // no way to access this via usual globals
     _G = {}; // global value dictionary is changed, previous functions are lost unless stored somewhere
+
+
+# _R [superglobal]
+
+== A hard-coded global value that points to the registry. Can be used to access the symbol table (_R["$sym"]) or include list (_R["$inc"]).
+
+- it is preferred to use @sym_get and @sym_register to deal with symbols, this table is mostly available for introspection and workarounds
 
 
 # array [object]

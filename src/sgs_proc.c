@@ -4268,26 +4268,6 @@ void sgs_TypeOf( SGS_CTX, sgs_Variable var )
 				}
 				_STACK_UNPROTECT;
 			}
-			if( O->iface->convert )
-			{
-				SGSRESULT ret = SGS_EINPROC;
-				_STACK_PROTECT;
-				if( C->sf_count < SGS_MAX_CALL_STACK_SIZE )
-				{
-					C->sf_count++;
-					ret = O->iface->convert( C, O, SGS_CONVOP_TYPEOF );
-					C->sf_count--;
-				}
-				else
-					sgs_Msg( C, SGS_ERROR, SGS_ERRMSG_CALLSTACKLIMIT );
-				
-				if( SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1 && sgs_ItemType( C, 0 ) == SGS_VT_STRING )
-				{
-					_STACK_UNPROTECT_SKIP( 1 );
-					return;
-				}
-				_STACK_UNPROTECT;
-			}
 			ty = O->iface->name ? O->iface->name : "object";
 		}
 		break;

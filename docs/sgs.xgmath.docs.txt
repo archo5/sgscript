@@ -1173,12 +1173,9 @@ A 4x4 column-major matrix
 - XGM_VT - floating point type used throughout the API, alias of `float` by default
 - @xgm_vtarray - @floatarray<floatarray [object]> data
 - @xgm_*_iface - object interfaces
-- @sgs_Init* - xgmath object off-stack initialization functions
-- @sgs_Push* - xgmath object initialization functions that push new instance on stack
+- @sgs_Create* - xgmath object creation functions
 - @sgs_Parse* - xgmath object parsing functions
 - @sgs_ArgCheck_* - xgmath LoadArgs parsing functions
-- @SGS_RETURN_* - xgmath GETINDEX output macros
-- @SGS_PARSE_* - xgmath SETINDEX input macros
 
 
 # >>>
@@ -1215,26 +1212,31 @@ A 4x4 column-major matrix
 === interface for @floatarray<floatarray [object]> objects
 
 
-# sgs_Init* [functions]
+# sgs_Create* [functions]
 
-== void sgs_InitVec2( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y )
-== void sgs_InitVec3( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z )
-== void sgs_InitVec4( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
-== void sgs_InitAABB2( SGS_CTX, sgs_Variable* var, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
-== void sgs_InitAABB3( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f1, const XGM_VT* v3f2 )
-== void sgs_InitColor( SGS_CTX, sgs_Variable* var, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )
-== void sgs_InitMat4( SGS_CTX, sgs_Variable* var, const XGM_VT* v16f, int transpose )
-== void sgs_InitFloatArray( SGS_CTX, sgs_Variable* var, const XGM_VT* vfn, sgs_SizeVal size )
-== void sgs_InitVec2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v2f )
-== void sgs_InitVec3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f )
-== void sgs_InitVec4p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
-== void sgs_InitAABB2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
-== void sgs_InitAABB3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v6f )
-== void sgs_InitColorp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
-== void sgs_InitColorvp( SGS_CTX, sgs_Variable* var, const XGM_VT* vf, int numfloats )
-=== initialize a variable of the right type to the specified arguments
+== SGSONE sgs_CreateVec2( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y )
+== SGSONE sgs_CreateVec3( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z )
+== SGSONE sgs_CreateVec4( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
+== SGSONE sgs_CreateAABB2( SGS_CTX, sgs_Variable* var, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
+== SGSONE sgs_CreateAABB3( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f1, const XGM_VT* v3f2 )
+== SGSONE sgs_CreateColor( SGS_CTX, sgs_Variable* var, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )
+== SGSONE sgs_CreateQuat( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
+== SGSONE sgs_CreateMat3( SGS_CTX, sgs_Variable* var, const XGM_VT* v9f, int transpose )
+== SGSONE sgs_CreateMat4( SGS_CTX, sgs_Variable* var, const XGM_VT* v16f, int transpose )
+== SGSONE sgs_CreateFloatArray( SGS_CTX, sgs_Variable* var, const XGM_VT* vfn, sgs_SizeVal size )
+== SGSONE sgs_CreateVec2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v2f )
+== SGSONE sgs_CreateVec3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v3f )
+== SGSONE sgs_CreateVec4p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
+== SGSONE sgs_CreateAABB2p( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
+== SGSONE sgs_CreateAABB3p( SGS_CTX, sgs_Variable* var, const XGM_VT* v6f )
+== SGSONE sgs_CreateColorp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
+== SGSONE sgs_CreateColorvp( SGS_CTX, sgs_Variable* var, const XGM_VT* vf, int numfloats )
+== SGSONE sgs_CreateQuatp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
+=== push/initialize a variable of the right type to the specified arguments
 
 Notes:
+- if var == NULL, variable is pushed to stack
+- functions here always return 1 (SGSONE), making them suitable for a "return sgs_Create***" construct
 - v*f - array of the specified number of XGM_VT values
 - sgs_InitColorvp accepts 0, 1, 2, 3 or 4 for `numfloats`
 -- if 0: R, G, B, A = 0
@@ -1245,42 +1247,8 @@ Notes:
 - the `p` postfix for functions means that function accepts arrays instead of plain values, if that's what the non -p function takes
 
 
-# sgs_Push* [functions]
-
-== SGSONE sgs_PushVec2( SGS_CTX, XGM_VT x, XGM_VT y )
-== SGSONE sgs_PushVec3( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z )
-== SGSONE sgs_PushVec4( SGS_CTX, XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
-== SGSONE sgs_PushAABB2( SGS_CTX, XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
-== SGSONE sgs_PushAABB3( SGS_CTX, const XGM_VT* v3f1, const XGM_VT* v3f2 )
-== SGSONE sgs_PushColor( SGS_CTX, XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )
-== SGSONE sgs_PushMat4( SGS_CTX, const XGM_VT* v16f, int transpose )
-== SGSONE sgs_PushFloatArray( SGS_CTX, const XGM_VT* vfn, sgs_SizeVal size )
-== SGSONE sgs_PushVec2p( SGS_CTX, const XGM_VT* v2f )
-== SGSONE sgs_PushVec3p( SGS_CTX, const XGM_VT* v3f )
-== SGSONE sgs_PushVec4p( SGS_CTX, const XGM_VT* v4f )
-== SGSONE sgs_PushAABB2p( SGS_CTX, const XGM_VT* v4f )
-== SGSONE sgs_PushAABB3p( SGS_CTX, const XGM_VT* v6f )
-== SGSONE sgs_PushColorp( SGS_CTX, const XGM_VT* v4f )
-== SGSONE sgs_PushColorvp( SGS_CTX, const XGM_VT* vf, int numfloats )
-=== push a new variable on stack of the right type, initialized to the specified arguments
-
-! For notes, refer to @sgs_Init*
-
-- most functions here always return 1 (SGSONE), making them suitable for a "return sgs_Push***" construct
-
 
 # sgs_Parse* [functions]
-
-== SGSBOOL sgs_ParseVTP( SGS_CTX, sgs_Variable* var, XGM_VT* out )
-== SGSBOOL sgs_ParseVec2P( SGS_CTX, sgs_Variable* var, XGM_VT* v2f, int strict )
-== SGSBOOL sgs_ParseVec3P( SGS_CTX, sgs_Variable* var, XGM_VT* v3f, int strict )
-== SGSBOOL sgs_ParseVec4P( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict )
-== SGSBOOL sgs_ParseAABB2P( SGS_CTX, sgs_Variable* var, XGM_VT* v4f )
-== SGSBOOL sgs_ParseAABB3P( SGS_CTX, sgs_Variable* var, XGM_VT* v6f )
-== SGSBOOL sgs_ParseColorP( SGS_CTX, sgs_Variable* var, XGM_VT* v4f, int strict )
-== SGSBOOL sgs_ParseMat4P( SGS_CTX, sgs_Variable* var, XGM_VT* v16f )
-== SGSBOOL sgs_ParseFloatArrayP( SGS_CTX, sgs_Variable* var, XGM_VT** vfa, sgs_SizeVal* osz )
-=== parse the specified variable to retrieve object data
 
 == SGSBOOL sgs_ParseVT( SGS_CTX, sgs_StkIdx item, XGM_VT* out )
 == SGSBOOL sgs_ParseVec2( SGS_CTX, sgs_StkIdx item, XGM_VT* v2f, int strict )
@@ -1289,6 +1257,8 @@ Notes:
 == SGSBOOL sgs_ParseAABB2( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f )
 == SGSBOOL sgs_ParseAABB3( SGS_CTX, sgs_StkIdx item, XGM_VT* v6f )
 == SGSBOOL sgs_ParseColor( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )
+== SGSBOOL sgs_ParseQuat( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )
+== SGSBOOL sgs_ParseMat3( SGS_CTX, sgs_StkIdx item, XGM_VT* v9f )
 == SGSBOOL sgs_ParseMat4( SGS_CTX, sgs_StkIdx item, XGM_VT* v16f )
 == SGSBOOL sgs_ParseFloatArray( SGS_CTX, sgs_StkIdx item, XGM_VT** vfa, sgs_SizeVal* osz )
 === parse the specified stack item to retrieve object data
@@ -1305,63 +1275,23 @@ Notes:
 == int sgs_ArgCheck_AABB2( SGS_CTX, int argid, va_list* args, int flags )
 == int sgs_ArgCheck_AABB3( SGS_CTX, int argid, va_list* args, int flags )
 == int sgs_ArgCheck_Color( SGS_CTX, int argid, va_list* args, int flags )
+== int sgs_ArgCheck_Quat( SGS_CTX, int argid, va_list* args, int flags )
+== int sgs_ArgCheck_Mat3( SGS_CTX, int argid, va_list* args, int flags )
 == int sgs_ArgCheck_Mat4( SGS_CTX, int argid, va_list* args, int flags )
 == int sgs_ArgCheck_FloatArray( SGS_CTX, int argid, va_list* args, int flags )
 === argument parsing functions for sgs_LoadArgs* function family
 
-- variable argument list expectations:
--- Vec2: XGM_VT[2] if output is enabled
--- Vec3: XGM_VT[3] if output is enabled
--- Vec4: XGM_VT[4] if output is enabled
--- AABB2: XGM_VT[4] if output is enabled
--- AABB3: XGM_VT[6] if output is enabled
--- Color: XGM_VT[4] if output is enabled
--- Mat4: XGM_VT[16] if output is enabled
--- FloatArray: @xgm_vtarray** if output is enabled
-
-
-# SGS_RETURN_* [functions]
-
-== SGS_RETURN_VEC2( XGM_VT x, XGM_VT y )
-== SGS_RETURN_VEC3( XGM_VT x, XGM_VT y, XGM_VT z )
-== SGS_RETURN_VEC4( XGM_VT x, XGM_VT y, XGM_VT z, XGM_VT w )
-== SGS_RETURN_AABB2( XGM_VT x1, XGM_VT y1, XGM_VT x2, XGM_VT y2 )
-== SGS_RETURN_AABB3( XGM_VT x1, XGM_VT* v3f1, XGM_VT* v3f2 )
-== SGS_RETURN_COLOR( XGM_VT r, XGM_VT g, XGM_VT b, XGM_VT a )
-== SGS_RETURN_VEC2P( XGM_VT* v2f )
-== SGS_RETURN_VEC3P( XGM_VT* v3f )
-== SGS_RETURN_VEC4P( XGM_VT* v4f )
-== SGS_RETURN_AABB2P( XGM_VT* v4f )
-== SGS_RETURN_AABB3P( XGM_VT* v6f )
-== SGS_RETURN_COLORP( XGM_VT* v4f )
-== SGS_RETURN_MAT4( XGM_VT* v16f )
-=== push the specified value and return SGS_SUCCESS
-
-- these macros are meant to be used in GETINDEX object interface functions
-- assuming SGS_CTX (`sgs_Context* C`)
-
-
-# SGS_PARSE_* [functions]
-
-== SGS_PARSE_VEC2( outptr, strict )
-== SGS_PARSE_VEC3( outptr, strict )
-== SGS_PARSE_VEC4( outptr, strict )
-== SGS_PARSE_AABB2( outptr )
-== SGS_PARSE_AABB3( outptr )
-== SGS_PARSE_COLOR( outptr, strict )
-== SGS_PARSE_MAT4( outptr )
-=== parse input variable in a SETINDEX object interface function
-
-- `outptr` requires the following data:
--- VEC2: XGM_VT[2]
--- VEC3: XGM_VT[3]
--- VEC4: XGM_VT[4]
+- variable argument list expectations if output is enabled:
+-- Vec2: XGM_VT[2]
+-- Vec3: XGM_VT[3]
+-- Vec4: XGM_VT[4]
 -- AABB2: XGM_VT[4]
 -- AABB3: XGM_VT[6]
--- COLOR: XGM_VT[4]
--- MAT4: XGM_VT[16]
-- assuming SGS_CTX (`sgs_Context* C`)
-- assuming `sgs_Variable* val` (from SGS_ARGS_SETINDEXFUNC)
+-- Color: XGM_VT[4]
+-- Quat: XGM_VT[4]
+-- Mat3: XGM_VT[9]
+-- Mat4: XGM_VT[16]
+-- FloatArray: @xgm_vtarray**
 
 
 # All C interfaces (A-Z) [info]
