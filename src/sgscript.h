@@ -600,6 +600,7 @@ SGS_APIFUNC void sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int in
 	CLOSURES
 */
 SGS_APIFUNC void sgs_ClPushNulls( SGS_CTX, sgs_StkIdx num );
+SGS_APIFUNC void sgs_ClPushVariable( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC void sgs_ClPushItem( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC void sgs_ClPop( SGS_CTX, sgs_StkIdx num );
 SGS_APIFUNC void sgs_MakeClosure( SGS_CTX, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out );

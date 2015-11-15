@@ -1490,7 +1490,7 @@ static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjInterface sgsstd_closure_iface[1] =
+SGS_APIFUNC sgs_ObjInterface sgsstd_closure_iface[1] =
 {{
 	"closure",
 	sgsstd_closure_destruct, sgsstd_closure_gcmark,
@@ -2495,6 +2495,21 @@ static int sgsstd_coro_serialize( SGS_CTX, sgs_VarObj* obj )
 		sf = sf->next;
 	}
 	
+	/* variables: coroutine */
+	sgs_Serialize( C, CO->func );
+	/* variables: _G */
+	{
+		sgs_Variable v_obj; v_obj.type = SGS_VT_OBJECT; v_obj.data.O = ctx->_G;
+		sgs_Serialize( C, v_obj );
+	}
+	/* variables: stack */
+	{
+		sgs_Variable* p = ctx->stack_base;
+		while( p != ctx->stack_top )
+			sgs_Serialize( C, *p++ );
+	}
+	
+	_WRITE32( 0x5C057A7E ); /* Serialized COroutine STATE */
 	/* POD: coroutine */
 	_WRITE32( CO->state );
 	/* POD: main context */
@@ -2519,16 +2534,39 @@ static int sgsstd_coro_serialize( SGS_CTX, sgs_VarObj* obj )
 	}
 	_WRITE32( ctx->sf_count );
 	_WRITE32( ctx->num_last_returned );
-	/* POD: closures */
+	/* closures */
 	{
 		sgs_Closure** p = ctx->clstk_base;
 		while( p != ctx->clstk_top )
-			_WRITE32( (*p++)->refcount );
+		{
+			sgs_Closure** refp = ctx->clstk_base;
+			while( refp != p )
+			{
+				if( *refp == *p )
+					break;
+				refp++;
+			}
+			if( refp != p )
+			{
+				// found reference
+				sgs_Serialize( C, sgs_MakeNull() );
+				_WRITE32( refp - ctx->clstk_base );
+			}
+			else
+			{
+				// make new
+				sgs_Serialize( C, (*p)->var );
+				_WRITE32( -1 );
+			}
+			p++;
+		}
 	}
-	/* POD: stack frames */
+	/* stack frames */
 	sf = ctx->sf_first;
 	while( sf )
 	{
+		sgs_Serialize( C, sf->func );
+		
 		/* 'code' will be taken from function */
 		_WRITE32( sf->iptr - sf->code );
 		_WRITE32( sf->iend - sf->code ); /* - for validation */
@@ -2553,33 +2591,6 @@ static int sgsstd_coro_serialize( SGS_CTX, sgs_VarObj* obj )
 	sgs_PushStringBuf( C, buf.ptr, (sgs_SizeVal) buf.size );
 	sgs_membuf_destroy( &buf, C );
 	sgs_Serialize( C, sgs_StackItem( C, -1 ) );
-	
-	/* variables: coroutine */
-	sgs_Serialize( C, CO->func );
-	/* variables: _G */
-	{
-		sgs_Variable v_obj; v_obj.type = SGS_VT_OBJECT; v_obj.data.O = ctx->_G;
-		sgs_Serialize( C, v_obj );
-	}
-	/* variables: stack */
-	{
-		sgs_Variable* p = ctx->stack_base;
-		while( p != ctx->stack_top )
-			sgs_Serialize( C, *p++ );
-	}
-	/* variables: closure stack */
-	{
-		sgs_Closure** p = ctx->clstk_base;
-		while( p != ctx->clstk_top )
-			sgs_Serialize( C, (*p++)->var );
-	}
-	/* variables: stack frame functions */
-	sf = ctx->sf_first;
-	while( sf )
-	{
-		sgs_Serialize( C, sf->func );
-		sf = sf->next;
-	}
 	
 	sgs_SerializeObject( C, 3 /* POD, co-func, _G */
 		+ ( ctx->stack_top - ctx->stack_base ) /* stack */
@@ -2675,8 +2686,9 @@ static int sgsstd___co_unserialize( SGS_CTX )
 	sgs_Context* ctx;
 	
 	SGSFN( "__co_unserialize" );
-	if( ( buf = sgs_ToStringBuf( C, 0, &bufsize ) ) == NULL )
-		STDLIB_ERR( "wrong argument 0" );
+	if( sgs_ItemType( C, -1 ) != SGS_VT_STRING )
+		STDLIB_ERR( "wrong last argument" );
+	buf = sgs_ToStringBuf( C, -1, &bufsize );
 	bufend = buf + bufsize;
 	ctx = sgs_ForkState( C, SGS_FALSE );
 	
@@ -2684,7 +2696,11 @@ static int sgsstd___co_unserialize( SGS_CTX )
 #define _READ8( x ) { if( buf + 1 > bufend ) goto fail; x = (uint8_t) *buf++; }
 	
 	{
-		int32_t i, sfnum, stacklen, stackoff, clstklen, clstkoff;
+		int32_t i, tag, sfnum, stacklen, stackoff, clstklen, clstkoff;
+		
+		_READ32( tag );
+		if( tag != 0x5C057A7E )
+			goto fail;
 		
 		/* POD: coroutine */
 		_READ32( state );
@@ -2705,25 +2721,41 @@ static int sgsstd___co_unserialize( SGS_CTX )
 		_READ32( ctx->num_last_returned );
 		
 		/* variables: _G */
-		ctx->_G = sgs_StackItem( C, 2 ).data.O;
+		ctx->_G = sgs_StackItem( C, 1 ).data.O;
 		sgs_ObjAcquire( ctx, ctx->_G );
 		
 		/* variables: stack */
 		sgs_BreakIf( ctx->stack_top != ctx->stack_base );
 		for( i = 0; i < stacklen; ++i )
-			sgs_PushVariable( ctx, sgs_StackItem( C, 3 + i ) );
+			sgs_PushVariable( ctx, sgs_StackItem( C, 2 + i ) );
+		sgs_BreakIf( ctx->stack_top != ctx->stack_base + stacklen );
+		if( stackoff > stacklen )
+			goto fail;
 		ctx->stack_off = ctx->stack_base + stackoff;
 		
 		/* variables: closure stack */
 		sgs_BreakIf( ctx->clstk_top != ctx->clstk_base );
-		sgs_ClPushNulls( ctx, clstklen );
 		for( i = 0; i < clstklen; ++i )
 		{
 			int32_t clref;
 			/* POD: closures */
 			_READ32( clref );
-			/* TODO */
+			if( clref >= 0 )
+			{
+				if( clref >= i )
+					goto fail;
+				// found reference
+				sgs_ClPushItem( ctx, clref );
+			}
+			else
+			{
+				// make new
+				sgs_ClPushVariable( ctx, sgs_StackItem( C, 2 + stacklen + i ) );
+			}
 		}
+		sgs_BreakIf( ctx->clstk_top != ctx->clstk_base + clstklen );
+		if( clstkoff > clstklen )
+			goto fail;
 		ctx->clstk_off = ctx->clstk_base + clstkoff;
 		
 		/* stack frames */
@@ -2733,7 +2765,7 @@ static int sgsstd___co_unserialize( SGS_CTX )
 			int32_t iptrpos, iendpos, lptrpos, ccount;
 			
 			/* variables: stack frame functions */
-			sgs_Variable v_func = sgs_StackItem( C, 3 + stacklen + clstklen + i );
+			sgs_Variable v_func = sgs_StackItem( C, 2 + stacklen + clstklen + i );
 			if( v_func.type != SGS_VT_FUNC )
 				goto fail;
 			if( !sgsVM_PushStackFrame( ctx, &v_func ) )
@@ -2773,7 +2805,7 @@ static int sgsstd___co_unserialize( SGS_CTX )
 	/* finalize */
 	{
 		sgsstd_coro_t* CO = (sgsstd_coro_t*) sgs_CreateObjectIPA( C, NULL, sizeof(*CO), sgsstd_coro_iface );
-		sgs_GetStackItem( C, 1, &CO->func );
+		sgs_GetStackItem( C, 0, &CO->func );
 		CO->ctx = ctx;
 		CO->state = state;
 		return 1;
@@ -3919,7 +3951,7 @@ SGSBOOL sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 		sgs_Variable *p, *pend;
 		void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( cnt ) );
 		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_CreateObjectIPA( C,
-			out, sizeof( sgsstd_array_header_t ), SGSIFACE_ARRAY );
+			out, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
 		
 		hdr->size = cnt;
 		hdr->mem = cnt;
@@ -4339,19 +4371,19 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 
 SGSBOOL sgs_IsArray( SGS_CTX, sgs_Variable var )
 {
-	return sgs_IsObjectP( &var, SGSIFACE_ARRAY );
+	return sgs_IsObjectP( &var, sgsstd_array_iface );
 }
 
 sgs_SizeVal sgs_ArraySize( SGS_CTX, sgs_Variable var )
 {
-	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
+	if( !sgs_IsObjectP( &var, sgsstd_array_iface ) )
 		return -1; /* no error */
 	return ((sgsstd_array_header_t*)sgs_GetObjectDataP( &var ))->size;
 }
 
 void sgs_ArrayPush( SGS_CTX, sgs_Variable var, sgs_StkIdx count )
 {
-	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
+	if( !sgs_IsObjectP( &var, sgsstd_array_iface ) )
 	{
 		sgs_Msg( C, SGS_APIERR, "sgs_ArrayPush: variable is not an array" );
 		return;
@@ -4372,7 +4404,7 @@ void sgs_ArrayPush( SGS_CTX, sgs_Variable var, sgs_StkIdx count )
 
 void sgs_ArrayPop( SGS_CTX, sgs_Variable var, sgs_StkIdx count, SGSBOOL ret )
 {
-	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
+	if( !sgs_IsObjectP( &var, sgsstd_array_iface ) )
 	{
 		sgs_Msg( C, SGS_APIERR, "sgs_ArrayPush: variable is not an array" );
 		return;
@@ -4398,7 +4430,7 @@ void sgs_ArrayPop( SGS_CTX, sgs_Variable var, sgs_StkIdx count, SGSBOOL ret )
 
 void sgs_ArrayErase( SGS_CTX, sgs_Variable var, sgs_StkIdx at, sgs_StkIdx count )
 {
-	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
+	if( !sgs_IsObjectP( &var, sgsstd_array_iface ) )
 	{
 		sgs_Msg( C, SGS_APIERR, "sgs_ArrayErase: variable is not an array" );
 		return;
@@ -4418,7 +4450,7 @@ void sgs_ArrayErase( SGS_CTX, sgs_Variable var, sgs_StkIdx at, sgs_StkIdx count 
 
 sgs_SizeVal sgs_ArrayFind( SGS_CTX, sgs_Variable var, sgs_Variable what )
 {
-	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
+	if( !sgs_IsObjectP( &var, sgsstd_array_iface ) )
 	{
 		sgs_Msg( C, SGS_APIERR, "sgs_ArrayFind: variable is not an array" );
 		return -1;
@@ -4443,7 +4475,7 @@ sgs_SizeVal sgs_ArrayFind( SGS_CTX, sgs_Variable var, sgs_Variable what )
 
 sgs_SizeVal sgs_ArrayRemove( SGS_CTX, sgs_Variable var, sgs_Variable what, SGSBOOL all )
 {
-	if( !sgs_IsObjectP( &var, SGSIFACE_ARRAY ) )
+	if( !sgs_IsObjectP( &var, sgsstd_array_iface ) )
 	{
 		sgs_Msg( C, SGS_APIERR, "sgs_ArrayRemove: variable is not an array" );
 		return 0;

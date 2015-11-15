@@ -2319,6 +2319,17 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 	gotthis = !!gotthis;
 	stkcallbase = C->stack_top - args - gotthis - C->stack_base;
 	
+	if( V.type == SGS_VT_OBJECT && V.data.O->iface == sgsstd_closure_iface )
+	{
+		uint8_t* cl = (uint8_t*) V.data.O->data;
+		int32_t cc = *(int32_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
+		sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(int32_t),sizeof(void*));
+		
+		sgsVM_PushClosures( C, cls, cc );
+		V = *(sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) );
+		clsr += cc;
+	}
+	
 	sgs_BreakIf( SGS_STACKFRAMESIZE < args + gotthis );
 	allowed = sgsVM_PushStackFrame( C, &V );
 	C->stack_off = C->stack_top - args;
@@ -4122,6 +4133,15 @@ void sgs_ClPushNulls( SGS_CTX, sgs_StkIdx num )
 	clstk_push_nulls( C, num );
 }
 
+void sgs_ClPushVariable( SGS_CTX, sgs_Variable var )
+{
+	sgs_Closure* cc = sgs_Alloc( sgs_Closure );
+	cc->refcount = 0;
+	cc->var = var;
+	VAR_ACQUIRE( &var );
+	clstk_push( C, cc );
+}
+
 void sgs_ClPushItem( SGS_CTX, sgs_StkIdx item )
 {
 	sgs_check_clindex( C, item, "sgs_ClPushItem" );
@@ -4967,40 +4987,38 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 	
 	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC || var.type == SGS_VT_FUNC )
 	{
-		sgs_Variable sym;
-		if( sgs_GetSymbol( C, var, &sym ) && sym.type == SGS_VT_STRING )
+		sgs_StkIdx argidx;
+		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
+		if( vv )
+			argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
+		else
 		{
-			sgs_SerializeInt_V2( C, sym );
-			if( pSD->argarray.size < 4 )
+			sgs_Variable sym;
+			if( sgs_GetSymbol( C, var, &sym ) && sym.type == SGS_VT_STRING )
 			{
-				/* error likely to be already printed */
-				ret = SGS_FALSE;
+				sgs_SerializeInt_V2( C, sym );
+				if( pSD->argarray.size < 4 )
+				{
+					/* error likely to be already printed */
+					ret = SGS_FALSE;
+					goto fail;
+				}
+				sgs_membuf_appchr( &pSD->data, C, 'S' );
+				sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
+				sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - sizeof(argidx), pSD->argarray.size );
+				sgs_Release( C, &sym );
+				
+				// create variable resolve
+				sgs_Variable idxvar;
+				argidx = sgs_vht_size( &pSD->servartable );
+				idxvar.type = SGS_VT_INT;
+				idxvar.data.I = argidx;
+				sgs_vht_set( &pSD->servartable, C, &var, &idxvar );
+				sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
 				goto fail;
 			}
-			sgs_membuf_appchr( &pSD->data, C, 'S' );
-			sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
 			sgs_Release( C, &sym );
-			
-			// create variable resolve
-			{
-				sgs_StkIdx argidx;
-				sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
-				if( vv )
-					argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
-				else
-				{
-					sgs_Variable idxvar;
-					argidx = sgs_vht_size( &pSD->servartable );
-					idxvar.type = SGS_VT_INT;
-					idxvar.data.I = argidx;
-					sgs_vht_set( &pSD->servartable, C, &var, &idxvar );
-				}
-				sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - sizeof(argidx), pSD->argarray.size );
-				sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
-			}
-			goto fail;
 		}
-		sgs_Release( C, &sym );
 	}
 	
 	if( var.type == SGS_VT_OBJECT )

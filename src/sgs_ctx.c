@@ -311,13 +311,36 @@ sgs_Context* sgs_ForkState( SGS_CTX, int copystate )
 		}
 		
 		// WP: assuming top > base
-		memcpy( NC->clstk_base, C->clstk_base, sizeof(sgs_Closure*) * (size_t)( C->clstk_top - C->clstk_base ) );
 		NC->clstk_off = NC->clstk_base + ( C->clstk_off - C->clstk_base );
 		NC->clstk_top = NC->clstk_base + ( C->clstk_top - C->clstk_base );
 		{
-			sgs_Closure** cp = NC->clstk_base, **cpend = NC->clstk_top;
+			// to each stack its own closures
+			sgs_Closure** cp = C->clstk_base, **cpend = C->clstk_top;
 			while( cp != cpend )
-				(*cp++)->refcount++;
+			{
+				sgs_Closure** cpref = C->clstk_base;
+				while( cpref != cp )
+				{
+					if( *cpref == *cp )
+						break;
+					cpref++;
+				}
+				if( cpref != cp )
+				{
+					// found reference
+					NC->clstk_base[ cp - C->clstk_base ] = NC->clstk_base[ cpref - C->clstk_base ];
+					NC->clstk_base[ cp - C->clstk_base ]->refcount++;
+				}
+				else
+				{
+					// make new
+					sgs_Closure* cl = sgs_Alloc( sgs_Closure );
+					cl->refcount = 1;
+					cl->var = (*cp)->var;
+					sgs_Acquire( C, &cl->var );
+				}
+				cp++;
+			}
 		}
 	}
 	
