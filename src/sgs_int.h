@@ -431,6 +431,7 @@ void sgsVM_VarDump( const sgs_Variable* var );
 
 void sgsVM_StackDump( SGS_CTX );
 
+int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func );
 int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int* outrvc, int gotthis );
 void sgsVM_PushClosures( SGS_CTX, sgs_Closure** cls, int num );
 
@@ -482,6 +483,35 @@ struct _sgs_ObjPoolItem
 sgs_ObjPoolItem;
 
 typedef sgs_Variable* sgs_VarPtr;
+
+#define SGS_SF_METHOD  0x01
+#define SGS_SF_HASTHIS 0x02
+#define SGS_SF_ABORTED 0x04
+#define SGS_SF_REENTER 0x08
+
+struct _sgs_StackFrame
+{
+	sgs_Variable    func;
+	const uint32_t* code;
+	const uint32_t* iptr;
+	const uint32_t* iend;
+	const uint32_t* lptr;
+	sgs_Variable*   cptr;
+	const char*     nfname;
+	sgs_StackFrame* prev;
+	sgs_StackFrame* next;
+	sgs_StackFrame* cached;
+	sgs_StkIdx argbeg;
+	sgs_StkIdx argend;
+	sgs_StkIdx argsfrom;
+	sgs_StkIdx stkoff;
+	sgs_StkIdx clsoff;
+	int32_t constcount;
+	int32_t errsup;
+	uint8_t argcount;
+	uint8_t inexp;
+	uint8_t flags;
+};
 
 struct _sgs_ShCtx
 {

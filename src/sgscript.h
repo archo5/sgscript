@@ -3,10 +3,10 @@
 #define SGSCRIPT_H_INCLUDED
 
 
-#define SGS_VERSION_MAJOR 0
-#define SGS_VERSION_MINOR 9
-#define SGS_VERSION_INCR  7
-#define SGS_VERSION "0.9.7"
+#define SGS_VERSION_MAJOR 1
+#define SGS_VERSION_MINOR 0
+#define SGS_VERSION_INCR  1
+#define SGS_VERSION "1.0.1"
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
@@ -39,7 +39,6 @@ extern "C" {
 #define SGS_SUCCESS  0  /* success (no errors) */
 #define SGS_ENOTFND -1  /* item was not found */
 #define SGS_ECOMP   -2  /* compile error */
-#define SGS_ENOTOBJ -3  /* argument was not an object */
 #define SGS_ENOTSUP -4  /* not supported */
 #define SGS_EBOUNDS -5  /* index out of bounds */
 #define SGS_EINVAL  -6  /* invalid value was passed */
@@ -277,38 +276,6 @@ struct _sgs_Variable
 };
 
 
-#define SGS_SF_METHOD  0x01
-#define SGS_SF_HASTHIS 0x02
-#define SGS_SF_ABORTED 0x04
-#define SGS_SF_REENTER 0x08
-
-struct _sgs_StackFrame
-{
-	sgs_Variable    func;
-	uint16_t*       lntable;
-	const uint32_t* code;
-	const uint32_t* iptr;
-	const uint32_t* iend;
-	const uint32_t* lptr;
-	sgs_Variable*   cptr;
-	const char*     nfname;
-	const char*     filename;
-	sgs_StackFrame* prev;
-	sgs_StackFrame* next;
-	sgs_StackFrame* cached;
-	sgs_StkIdx argbeg;
-	sgs_StkIdx argend;
-	sgs_StkIdx argsfrom;
-	sgs_StkIdx stkoff;
-	sgs_StkIdx clsoff;
-	int32_t constcount;
-	int32_t errsup;
-	uint8_t argcount;
-	uint8_t inexp;
-	uint8_t flags;
-};
-
-
 /* parameter flags / special values */
 #define SGS_GETNEXT_KEY   0x01
 #define SGS_GETNEXT_VALUE 0x02
@@ -416,7 +383,7 @@ SGS_APIFUNC ptrdiff_t sgs_Stat( SGS_CTX, int type );
 SGS_APIFUNC int32_t sgs_Cntl( SGS_CTX, int what, int32_t val );
 
 SGS_APIFUNC void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, const char** file, int* line );
-SGS_APIFUNC sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end );
+SGS_APIFUNC sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, sgs_StackFrame* from, int bwd );
 
 
 #ifndef SGS_STRINGLENGTHFUNC

@@ -24,7 +24,7 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 		double prevTM;
 		sgs_VHTVar* pair;
 		
-		sgs_StackFrame* sf = sgs_GetFramePtr( C, 0 );
+		sgs_StackFrame* sf = sgs_GetFramePtr( C, NULL, 0 );
 		sgs_membuf_resize( &P->keytmp, C, 0 );
 		while( sf )
 		{
@@ -135,7 +135,7 @@ static void mode2hook( void* userdata, SGS_CTX, int evid )
 	}
 	if( evid == SGS_HOOK_STEP )
 	{
-		sgs_StackFrame* sf = sgs_GetFramePtr( C, 1 );
+		sgs_StackFrame* sf = sgs_GetFramePtr( C, NULL, 1 );
 		P->instr = SGS_INSTR_GET_OP( *sf->iptr );
 		P->iexcs[ P->instr ]++;
 		P->starttime = TM;
@@ -245,7 +245,7 @@ static void mode3hook( void* userdata, SGS_CTX, int evid )
 		mode3data prevCD, *PD;
 		sgs_VHTVar* pair;
 		
-		sgs_StackFrame* sf = sgs_GetFramePtr( C, 0 );
+		sgs_StackFrame* sf = sgs_GetFramePtr( C, NULL, 0 );
 		sgs_membuf_resize( &P->keytmp, C, 0 );
 		while( sf )
 		{

@@ -2473,12 +2473,131 @@ static int sgsstd_coro_gcmark( SGS_CTX, sgs_VarObj* obj )
 	return SGS_SUCCESS;
 }
 
+static int sgsstd_coro_serialize( SGS_CTX, sgs_VarObj* obj )
+{
+	COROHDR;
+	sgs_MemBuf buf = sgs_membuf_create();
+	sgs_Context* ctx = CO->ctx;
+	sgs_StackFrame* sf;
+	int32_t sfnum = 0;
+#define _WRITE32( x ) { int32_t _tmp = (int32_t)(x); sgs_membuf_appbuf( &buf, C, &_tmp, 4 ); }
+#define _WRITE8( x ) { sgs_membuf_appchr( &buf, C, (char)(x) ); }
+	
+	/* failure condition: cannot serialize self */
+	if( C == ctx )
+		return SGS_EINPROC;
+	/* failure condition: C functions in stack frame */
+	sf = ctx->sf_first;
+	while( sf )
+	{
+		if( sf->iptr == NULL )
+			return SGS_EINPROC;
+		sf = sf->next;
+	}
+	
+	/* POD: coroutine */
+	_WRITE32( CO->state );
+	/* POD: main context */
+	_WRITE32( ctx->minlev );
+	_WRITE32( ctx->apilev );
+	_WRITE32( ctx->last_errno );
+	_WRITE32( ctx->state );
+	_WRITE32( ctx->stack_top - ctx->stack_base );
+	_WRITE32( ctx->stack_off - ctx->stack_base );
+	_WRITE32( ctx->stack_mem );
+	_WRITE32( ctx->clstk_top - ctx->clstk_base );
+	_WRITE32( ctx->clstk_off - ctx->clstk_base );
+	_WRITE32( ctx->clstk_mem );
+	{
+		sf = ctx->sf_first;
+		while( sf )
+		{
+			sfnum++;
+			sf = sf->next;
+		}
+		_WRITE32( sfnum );
+	}
+	_WRITE32( ctx->sf_count );
+	_WRITE32( ctx->num_last_returned );
+	/* POD: closures */
+	{
+		sgs_Closure** p = ctx->clstk_base;
+		while( p != ctx->clstk_top )
+			_WRITE32( (*p++)->refcount );
+	}
+	/* POD: stack frames */
+	sf = ctx->sf_first;
+	while( sf )
+	{
+		/* 'code' will be taken from function */
+		_WRITE32( sf->iptr - sf->code );
+		_WRITE32( sf->iend - sf->code ); /* - for validation */
+		_WRITE32( sf->lptr - sf->code );
+		/* 'cptr' will be taken from function */
+		/* 'nfname' is irrelevant for non-native functions */
+		/* 'prev', 'next', 'cached' are system pointers */
+		_WRITE32( sf->argbeg );
+		_WRITE32( sf->argend );
+		_WRITE32( sf->argsfrom );
+		_WRITE32( sf->stkoff );
+		_WRITE32( sf->clsoff );
+		_WRITE32( sf->constcount ); /* - for validation */
+		_WRITE32( sf->errsup );
+		_WRITE8( sf->argcount );
+		_WRITE8( sf->inexp );
+		_WRITE8( sf->flags );
+		sf = sf->next;
+	}
+	
+	/* WP: string size */
+	sgs_PushStringBuf( C, buf.ptr, (sgs_SizeVal) buf.size );
+	sgs_membuf_destroy( &buf, C );
+	sgs_Serialize( C, sgs_StackItem( C, -1 ) );
+	
+	/* variables: coroutine */
+	sgs_Serialize( C, CO->func );
+	/* variables: _G */
+	{
+		sgs_Variable v_obj; v_obj.type = SGS_VT_OBJECT; v_obj.data.O = ctx->_G;
+		sgs_Serialize( C, v_obj );
+	}
+	/* variables: stack */
+	{
+		sgs_Variable* p = ctx->stack_base;
+		while( p != ctx->stack_top )
+			sgs_Serialize( C, *p++ );
+	}
+	/* variables: closure stack */
+	{
+		sgs_Closure** p = ctx->clstk_base;
+		while( p != ctx->clstk_top )
+			sgs_Serialize( C, (*p++)->var );
+	}
+	/* variables: stack frame functions */
+	sf = ctx->sf_first;
+	while( sf )
+	{
+		sgs_Serialize( C, sf->func );
+		sf = sf->next;
+	}
+	
+	sgs_SerializeObject( C, 3 /* POD, co-func, _G */
+		+ ( ctx->stack_top - ctx->stack_base ) /* stack */
+		+ ( ctx->clstk_top - ctx->clstk_base ) /* closure stack */
+		+ sfnum /* stack frame functions */
+	, "__co_unserialize" );
+	
+#undef _WRITE32
+#undef _WRITE8
+	return SGS_SUCCESS;
+}
+
 sgs_ObjInterface sgsstd_coro_iface[1] =
 {{
 	"coroutine",
 	sgsstd_coro_destruct, sgsstd_coro_gcmark,
 	NULL, NULL,
-	NULL, NULL, NULL, NULL,
+	NULL, sgsstd_coro_serialize, NULL, NULL,
 	NULL, NULL,
 }};
 
@@ -2546,6 +2665,122 @@ static int sgsstd_yield( SGS_CTX )
 	if( sgs_PauseState( C ) == SGS_FALSE )
 		STDLIB_WARN( "cannot yield with C functions in stack" );
 	return sgs_StackSize( C );
+}
+
+static int sgsstd___co_unserialize( SGS_CTX )
+{
+	const char *buf, *bufend;
+	sgs_SizeVal bufsize;
+	int32_t state;
+	sgs_Context* ctx;
+	
+	SGSFN( "__co_unserialize" );
+	if( ( buf = sgs_ToStringBuf( C, 0, &bufsize ) ) == NULL )
+		STDLIB_ERR( "wrong argument 0" );
+	bufend = buf + bufsize;
+	ctx = sgs_ForkState( C, SGS_FALSE );
+	
+#define _READ32( x ) { if( buf + 4 > bufend ) goto fail; memcpy( &x, buf, 4 ); buf += 4; }
+#define _READ8( x ) { if( buf + 1 > bufend ) goto fail; x = (uint8_t) *buf++; }
+	
+	{
+		int32_t i, sfnum, stacklen, stackoff, clstklen, clstkoff;
+		
+		/* POD: coroutine */
+		_READ32( state );
+		
+		/* POD: context */
+		_READ32( ctx->minlev );
+		_READ32( ctx->apilev );
+		_READ32( ctx->last_errno );
+		_READ32( ctx->state );
+		_READ32( stacklen );
+		_READ32( stackoff );
+		_READ32( ctx->stack_mem );
+		_READ32( clstklen );
+		_READ32( clstkoff );
+		_READ32( ctx->clstk_mem );
+		_READ32( sfnum );
+		_READ32( ctx->sf_count );
+		_READ32( ctx->num_last_returned );
+		
+		/* variables: _G */
+		ctx->_G = sgs_StackItem( C, 2 ).data.O;
+		sgs_ObjAcquire( ctx, ctx->_G );
+		
+		/* variables: stack */
+		sgs_BreakIf( ctx->stack_top != ctx->stack_base );
+		for( i = 0; i < stacklen; ++i )
+			sgs_PushVariable( ctx, sgs_StackItem( C, 3 + i ) );
+		ctx->stack_off = ctx->stack_base + stackoff;
+		
+		/* variables: closure stack */
+		sgs_BreakIf( ctx->clstk_top != ctx->clstk_base );
+		sgs_ClPushNulls( ctx, clstklen );
+		for( i = 0; i < clstklen; ++i )
+		{
+			int32_t clref;
+			/* POD: closures */
+			_READ32( clref );
+			/* TODO */
+		}
+		ctx->clstk_off = ctx->clstk_base + clstkoff;
+		
+		/* stack frames */
+		for( i = 0; i < sfnum; ++i )
+		{
+			sgs_StackFrame* sf;
+			int32_t iptrpos, iendpos, lptrpos, ccount;
+			
+			/* variables: stack frame functions */
+			sgs_Variable v_func = sgs_StackItem( C, 3 + stacklen + clstklen + i );
+			if( v_func.type != SGS_VT_FUNC )
+				goto fail;
+			if( !sgsVM_PushStackFrame( ctx, &v_func ) )
+				goto fail;
+			sf = ctx->sf_last;
+			
+			/* POD: stack frames */
+			/* 'code' will be taken from function */
+			_READ32( iptrpos );
+			sf->iptr = sf->code + iptrpos;
+			_READ32( iendpos ); /* - for validation */
+			if( iendpos != sf->iend - sf->code )
+				goto fail;
+			_READ32( lptrpos );
+			sf->lptr = sf->code + lptrpos;
+			/* 'cptr' will be taken from function */
+			/* 'nfname' is irrelevant for non-native functions */
+			/* 'prev', 'next', 'cached' are system pointers */
+			_READ32( sf->argbeg );
+			_READ32( sf->argend );
+			_READ32( sf->argsfrom );
+			_READ32( sf->stkoff );
+			_READ32( sf->clsoff );
+			_READ32( ccount ); /* - for validation */
+			if( ccount != sf->constcount )
+				goto fail;
+			_READ32( sf->errsup );
+			_READ8( sf->argcount );
+			_READ8( sf->inexp );
+			_READ8( sf->flags );
+		}
+	}
+	
+#undef _READ32
+#undef _READ8
+	
+	/* finalize */
+	{
+		sgsstd_coro_t* CO = (sgsstd_coro_t*) sgs_CreateObjectIPA( C, NULL, sizeof(*CO), sgsstd_coro_iface );
+		sgs_GetStackItem( C, 1, &CO->func );
+		CO->ctx = ctx;
+		CO->state = state;
+		return 1;
+	}
+fail:
+	sgs_FreeState( ctx );
+	STDLIB_ERR( "data error" );
 }
 
 
@@ -2890,7 +3125,7 @@ static int _push_curdir( SGS_CTX )
 	const char* file, *fend;
 	sgs_StackFrame* sf;
 	
-	sf = sgs_GetFramePtr( C, 1 )->prev;
+	sf = sgs_GetFramePtr( C, NULL, 1 )->prev;
 	if( !sf )
 		return 0;
 	
@@ -3149,7 +3384,7 @@ static int sgsstd_sys_curfile( SGS_CTX )
 	if( sgs_StackSize( C ) )
 		STDLIB_WARN( "function expects 0 arguments" )
 	
-	sf = sgs_GetFramePtr( C, 1 )->prev;
+	sf = sgs_GetFramePtr( C, NULL, 1 )->prev;
 	if( !sf )
 		return 0;
 	
@@ -3269,7 +3504,7 @@ static int sgsstd_sys_backtrace( SGS_CTX )
 	else
 	{
 		sgs_StkIdx sz = sgs_StackSize( C );
-		sgs_StackFrame* p = sgs_GetFramePtr( C, SGS_FALSE );
+		sgs_StackFrame* p = sgs_GetFramePtr( C, NULL, SGS_FALSE );
 		while( p != NULL )
 		{
 			const char* file, *name;
@@ -3607,7 +3842,7 @@ static sgs_RegFuncConst regfuncs[] =
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
 	STDLIB_FN( metaobj_set ), STDLIB_FN( metaobj_get ), STDLIB_FN( metamethods_enable ), STDLIB_FN( metamethods_test ),
 	STDLIB_FN( mm_getindex_router ), STDLIB_FN( mm_setindex_router ),
-	STDLIB_FN( co_create ), STDLIB_FN( co_resume ), STDLIB_FN( yield ),
+	STDLIB_FN( co_create ), STDLIB_FN( co_resume ), STDLIB_FN( yield ), STDLIB_FN( __co_unserialize ),
 	STDLIB_FN( pcall ), STDLIB_FN( assert ),
 	STDLIB_FN( sym_register ), STDLIB_FN( sym_get ),
 	STDLIB_FN( eval ), STDLIB_FN( eval_file ), STDLIB_FN( compile_sgs ),
@@ -3648,6 +3883,10 @@ static const sgs_RegIntConst regiconsts[] =
 
 void sgsSTD_PostInit( SGS_CTX )
 {
+	sgs_PushEnv( C );
+	sgs_RegSymbol( C, "", "_G", sgs_StackItem( C, -1 ) );
+	sgs_Pop( C, 1 );
+	
 	sgs_RegIntConsts( C, regiconsts, SGS_ARRAY_SIZE( regiconsts ) );
 	sgs_RegFuncConsts( C, regfuncs, SGS_ARRAY_SIZE( regfuncs ) );
 	

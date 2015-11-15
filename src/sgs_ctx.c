@@ -615,7 +615,7 @@ void sgs_WriteErrorInfo( SGS_CTX, int flags, sgs_ErrorOutputFunc func, void* ctx
 {
 	if( flags & SGS_ERRORINFO_STACK )
 	{
-		sgs_StackFrame* p = sgs_GetFramePtr( C, SGS_FALSE );
+		sgs_StackFrame* p = sgs_GetFramePtr( C, NULL, SGS_FALSE );
 		SGS_UNUSED( ctx );
 		while( p != NULL )
 		{
@@ -1091,7 +1091,7 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_FRAMES:
 		{
-			sgs_StackFrame* p = sgs_GetFramePtr( C, SGS_FALSE );
+			sgs_StackFrame* p = sgs_GetFramePtr( C, NULL, SGS_FALSE );
 			sgs_WriteStr( C, "\nFRAME ---- LIST ---- START ----\n" );
 			while( p != NULL )
 			{
@@ -1208,14 +1208,7 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 	const char* F = "<buffer>";
 
 	SGS_UNUSED( C );
-	if( frame->func.type == SGS_VT_NULL )
-	{
-		N = "<main>";
-		L = frame->lntable[ frame->lptr - frame->code ];
-		if( frame->filename )
-			F = frame->filename;
-	}
-	else if( frame->func.type == SGS_VT_FUNC )
+	if( frame->func.type == SGS_VT_FUNC )
 	{
 		N = "<anonymous function>";
 		if( frame->func.data.F->sfuncname->size )
@@ -1224,8 +1217,6 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 			frame->func.data.F->lineinfo[ frame->lptr - frame->code ];
 		if( frame->func.data.F->sfilename->size )
 			F = sgs_str_cstr( frame->func.data.F->sfilename );
-		else if( frame->filename )
-			F = frame->filename;
 	}
 	else if( frame->func.type == SGS_VT_CFUNC )
 	{
@@ -1243,9 +1234,11 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 	if( line ) *line = L;
 }
 
-sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, int end )
+sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, sgs_StackFrame* from, int bwd )
 {
-	return end ? C->sf_last : C->sf_first;
+	if( from )
+		return bwd ? from->prev : from->next;
+	return bwd ? C->sf_last : C->sf_first;
 }
 
 

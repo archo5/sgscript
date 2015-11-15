@@ -377,7 +377,7 @@ static void var_create_obj( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInter
 	Call stack
 */
 
-static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, sgs_instr_t* code, size_t icnt )
+int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 {
 	sgs_StackFrame* F;
 	
@@ -405,10 +405,10 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, sgs_instr_t*
 	}
 	else
 		F->func = sgs_MakeNull();
-	F->code = code;
-	F->iptr = code;
-	F->lptr = code;
-	F->iend = code + icnt;
+	F->code = NULL;
+	F->iptr = NULL;
+	F->lptr = NULL;
+	F->iend = NULL;
 	F->cptr = NULL;
 	F->constcount = 0;
 	if( func && func->type == SGS_VT_FUNC )
@@ -420,9 +420,7 @@ static int vm_frame_push( SGS_CTX, sgs_Variable* func, uint16_t* T, sgs_instr_t*
 		F->constcount = (int32_t) ( fn->instr_off / sizeof( sgs_Variable* ) );
 		F->cptr = sgs_func_consts( fn );
 	}
-	F->lntable = T;
 	F->nfname = NULL;
-	F->filename = C->filename;
 	F->next = NULL;
 	F->prev = C->sf_last;
 	F->errsup = 0;
@@ -2322,7 +2320,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 	stkcallbase = C->stack_top - args - gotthis - C->stack_base;
 	
 	sgs_BreakIf( SGS_STACKFRAMESIZE < args + gotthis );
-	allowed = vm_frame_push( C, &V, NULL, NULL, 0 );
+	allowed = sgsVM_PushStackFrame( C, &V );
 	C->stack_off = C->stack_top - args;
 	C->clstk_off = C->clstk_top - clsr;
 	
