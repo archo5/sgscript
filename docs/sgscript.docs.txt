@@ -892,7 +892,6 @@ This part of the documentation describes the various types and definitions used 
 Return types:
 - SGSRESULT [int]: output code (success = 0, failure: < 0 )
 - SGSBOOL [int]: simplified output code (success = 1, failure = 0)
-- SGSMIXED [int32_t] output code / value (success + value: >= 0, failure: < 0)
 - SGSONE [int]: always returns 1
 - SGSZERO [int]: always returns 0
 
@@ -909,11 +908,18 @@ System types:
 - sgs_Context [struct]: the virtual machine
 - sgs_StackFrame [struct]: the function call info object
 
-Interface types:
+Interface data types:
+- sgs_RegFuncConst [struct { const char*, sgs_CFunc }]: function registration unit
+- sgs_RegIntConst [struct { const char*, sgs_Int }]: integer registration unit
+- sgs_RegRealConst [struct { const char*, sgs_Real }]: real value registration unit
+- sgs_ScriptFSData [struct { void*, const char*, void*, size_t }]: virtual file system request data
+
+Interface function types:
 - sgs_MemFunc [void* ( void* userdata, void* ptr, size_t size )]: memory interface function
 - sgs_OutputFunc [void ( void* userdata, sgs_Context* C, const void* buf, sgs_SizeVal size )]: output function
 - sgs_MsgFunc [void ( void* userdata, sgs_Context* C, int code, const char* text )]: messaging function
 - sgs_HookFunc [void ( void*, sgs_Context*, int )]: debug hook function
+- sgs_ScriptFSFunc [SGSRESULT ( void*, sgs_Context*, int, sgs_ScriptFSData* )]: virtual file system function
 
 
 # Error codes [info]
@@ -925,7 +931,6 @@ These are the default meanings for error codes that are honored throughout the A
 -- SGS_SUCABRT: operation was successful but aborted afterwards (function call-specific)
 -- SGS_ENOTFND: item was not found
 -- SGS_ECOMP: compile error
--- SGS_ENOTOBJ: argument was not an object
 -- SGS_ENOTSUP: operation is not supported
 -- SGS_EINVAL: invalid value was passed
 -- SGS_EINPROC: process was interrupted
@@ -934,6 +939,7 @@ These are the default meanings for error codes that are honored throughout the A
 -- SGS_INFO: information about potential issues and state of the system
 -- SGS_WARNING: non-fatal issues
 -- SGS_ERROR: fatal issues
+-- SGS_APIERR: API usage errors
 -- any other integer may be defined and returned by other interfaces
 
 
@@ -948,13 +954,6 @@ These are the default meanings for error codes that are honored throughout the A
 - SGS_VT_CFUNC: C function
 - SGS_VT_OBJECT: object
 - SGS_VT_PTR: pointer
-
-
-# Constant registration types [info]
-
-- struct sgs_RegFuncConst { char* name; sgs_CFunc value; }
-- struct sgs_RegIntConst { char* name; sgs_Int value; }
-- struct sgs_RegRealConst { char* name; sgs_Real value; }
 
 
 # <<< (Constants and types)
@@ -993,7 +992,7 @@ Similarly to exception handling, @pcall can be used also for gathering messages 
 
 Iterators are objects that enable sequential, ordered traversal of object contents, allowing to read up to 2 variables at each position: the key and the value.
 
-The C API has @"several functions"<Iterators> used to deal with iterators. There are essentially three kinds of functions: initialization ( @"sgs_PushIterator(P)", @"sgs_GetIterator(P)" ), advancing ( @"sgs_IterAdvance(P)" ) and data retrieval ( @"sgs_IterPushData(P)", @"sgs_IterGetData(P)" ).
+The C API has @"several functions"<Iterators> used to deal with iterators. There are essentially three kinds of functions: initialization ( @"sgs_PushIterator", @"sgs_GetIterator" ), advancing ( @"sgs_IterAdvance" ) and data retrieval ( @"sgs_IterPushData", @"sgs_IterGetData" ).
 
 Iterator starts at the pre-first position (-1 in terms of indices), so nothing can be read initially, before the first advance. This allows to implement iterator handling with rather simple code:
 
@@ -1008,12 +1007,12 @@ Iterator starts at the pre-first position (-1 in terms of indices), so nothing c
 A more real example follows:
 
     // assuming iterable object is at the top of the stack
-    sgs_PushIterator( C, -1 );
-    while( sgs_IterAdvance( C, -1 ) > 0 )
+    sgs_PushIterator( C, sgs_StackItem( C, -1 ) );
+    while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
     {
         sgs_StackIdx ssz = sgs_StackSize( C );
         
-        sgs_IterPushData( C, -1, 1, 1 ); // push both key and value
+        sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); // push both key and value
         
         sgs_SetStackSize( C, ssz ); // restore stack to have iterator at -1 again
     }
@@ -1023,14 +1022,14 @@ Another example using pointers:
 
     sgs_Variable iterator, iterable, key, value;
     // .. assuming iterable is initalized here ..
-    sgs_GetIteratorP( C, &iterable, &iterator );
-    while( sgs_IterAdvanceP( C, &iterator ) > 0 )
+    sgs_GetIterator( C, iterable, &iterator );
+    while( sgs_IterAdvance( C, iterator ) > 0 )
     {
-        sgs_IterGetDataP( C, &iterator, NULL, &value );
+        sgs_IterGetData( C, iterator, NULL, &value );
         // .. use value ..
         sgs_Release( C, &value );
         
-        sgs_IterGetDataP( C, &iterator, &key, &value );
+        sgs_IterGetData( C, iterator, &key, &value );
         // .. use key and value ..
         sgs_Release( C, &key );
         sgs_Release( C, &value );
@@ -1212,6 +1211,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_Set(Err)OutputFunc - set the output callback and its user data pointer
 - @sgs_GetMsgFunc - return the current messaging callback and its user data pointer
 - @sgs_SetMsgFunc - set the messaging callback and its user data pointer
+- @sgs_GetScriptFSFunc - return the current virtual file system callback and its user data pointer
+- @sgs_SetScriptFSFunc - set the virtual file system callback and its user data pointer
 - @sgs_Cntl - set and/or retrieve various states in the system
 
 
@@ -1269,6 +1270,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_IncludeExt - include an item from the file system, optionally specifying a search path
 - @sgs_Compile - compile character buffer to bytecode buffer
 - @sgs_DumpCompiled - dump bytecode/constant info from a compiled bytecode buffer
+- @sgs_GetScriptFSFunc - return the current virtual file system callback and its user data pointer
+- @sgs_SetScriptFSFunc - set the virtual file system callback and its user data pointer
 
 
 # Introspection / debugging helpers [info]
@@ -1276,9 +1279,9 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_Stat - retrieve or dump various parts of VM state
 - @sgs_StackFrameInfo - retrieve preprocessed info from stack frame
 - @sgs_GetFramePtr - return a stack frame pointer
-- @sgs_DebugDumpVarExt(P) - push a string containing variable data and return const char* to it
-- @sgs_DebugDumpVar(P) - push a variable dump string and return const char* to it
-- @sgs_DebugPrintVar(P) - push a string, converted from variable and return const char* to it
+- @sgs_DebugDumpVarExt - push a string containing variable data and return const char* to it
+- @sgs_DebugDumpVar - push a variable dump string and return const char* to it
+- @sgs_DebugPrintVar - push a string, converted from variable and return const char* to it
 - @sgs_CodeString - retrieve a name string for the specified constant
 - @sgs_WriteErrorInfo - write message info to output callback
 - @sgs_PushErrorInfo - push message info to stack
@@ -1286,18 +1289,12 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # Execution control [info]
 
-- @sgs_XFCallP<sgs_XFCall(P)> - call variable as function
-- @sgs_XCallP<sgs_X(This)Call(P)> - call variable as function without `this` passed to it
-- @sgs_XThisCallP<sgs_X(This)Call(P)> - call variable as function function with `this` passed to it
-- @sgs_XFCall<sgs_XFCall(P)> - call the topmost stack item as function
-- @sgs_XCall<sgs_X(This)Call(P)> - call the topmost stack item as function without `this` passed to it
-- @sgs_XThisCall<sgs_X(This)Call(P)> - call the topmost stack item as function with `this` passed to it
-- @sgs_FCallP<sgs_FCall(P)> - call variable as function
-- @sgs_CallP<sgs_(This)Call(P)> - call variable as function without `this` passed to it
-- @sgs_ThisCallP<sgs_(This)Call(P)> - call variable as function function with `this` passed to it
-- @sgs_FCall<sgs_FCall(P)> - call the topmost stack item as function
-- @sgs_Call<sgs_(This)Call(P)> - call the topmost stack item as function without `this` passed to it
-- @sgs_ThisCall<sgs_(This)Call(P)> - call the topmost stack item as function with `this` passed to it
+- @sgs_XFCall<sgs_XFCall> - call variable as function
+- @sgs_XCall<sgs_X(This)Call> - call variable as function without `this` passed to it
+- @sgs_XThisCall<sgs_X(This)Call> - call variable as function function with `this` passed to it
+- @sgs_FCall<sgs_FCall> - call variable as function
+- @sgs_Call<sgs_(This)Call> - call variable as function without `this` passed to it
+- @sgs_ThisCall<sgs_(This)Call> - call variable as function function with `this` passed to it
 - @sgs_GlobalCall - call a global function
 - @sgs_Abort - abort the execution of the previous SGS functions up to the last C function before them
 - @sgs_Cntl - set and/or retrieve various states in the system
@@ -1314,9 +1311,9 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_RegFuncConsts<sgs_Reg***Consts> - register a list of global C function constants
 - @sgs_RegIntConsts<sgs_Reg***Consts> - register a list of global integer constants
 - @sgs_RegRealConsts<sgs_Reg***Consts> - register a list of global real value constants
-- @sgs_StoreFuncConsts(P)<sgs_Store***Consts(P)> - store a list of C function constants in the specified variable
-- @sgs_StoreIntConsts(P)<sgs_Store***Consts(P)> - store a list of integer constants in the specified variable
-- @sgs_StoreRealConsts(P)<sgs_Store***Consts(P)> - store a list of real value constants in the specified variable
+- @sgs_StoreFuncConsts<sgs_Store***Consts> - store a list of C function constants in the specified variable
+- @sgs_StoreIntConsts<sgs_Store***Consts> - store a list of integer constants in the specified variable
+- @sgs_StoreRealConsts<sgs_Store***Consts> - store a list of real value constants in the specified variable
 
 
 # Object type storage [info]
@@ -1332,20 +1329,20 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # Variable initialization [info]
 
-- @sgs_InitNull<sgs_Init***> - initialize variable to a null variable
-- @sgs_InitBool<sgs_Init***> - initialize variable to a boolean variable
-- @sgs_InitInt<sgs_Init***> - initialize variable to an integer
-- @sgs_InitReal<sgs_Init***> - initialize variable to a real value
+- @sgs_MakeNull<sgs_Make***> - initialize variable to a null variable
+- @sgs_MakeBool<sgs_Make***> - initialize variable to a boolean variable
+- @sgs_MakeInt<sgs_Make***> - initialize variable to an integer
+- @sgs_MakeReal<sgs_Make***> - initialize variable to a real value
+- @sgs_MakeCFunc<sgs_Make***> - initialize variable to C function
+- @sgs_MakePtr<sgs_Make***> - initialize variable to a pointer variable
 - @sgs_InitStringBuf<sgs_Init***> - initialize variable to a new char buffer
 - @sgs_InitString<sgs_Init***> - initialize variable to a new string
-- @sgs_InitCFunction<sgs_Init***> - initialize variable to C function
-- @sgs_InitObject<sgs_Init***> - initialize variable to a new object
-- @sgs_InitObjectIPA<sgs_Init***> - initialize variable to a new object with additional memory allocated in-place for the internal data pointer
-- @sgs_InitPtr<sgs_Init***> - initialize variable to a pointer variable
 - @sgs_InitObjectPtr<sgs_Init***> - initialize variable to an existing object and acquire it
-- @sgs_InitArray - initialize variable to a new array, optionally using the specified number of pushed items on stack
-- @sgs_InitDict - initialize variable to a new dict, optionally using the specified number of pushed items on stack
-- @sgs_InitMap - initialize variable to a new map, optionally using the specified number of pushed items on stack
+- @sgs_CreateObject<sgs_Create***> - initialize variable to a new object
+- @sgs_CreateObjectIPA<sgs_Create***> - initialize variable to a new object with additional memory allocated in-place for the internal data pointer
+- @sgs_CreateArray<sgs_Create***> - initialize variable to a new array, optionally using the specified number of pushed items on stack
+- @sgs_CreateDict<sgs_Create***> - initialize variable to a new dict, optionally using the specified number of pushed items on stack
+- @sgs_CreateMap<sgs_Create***> - initialize variable to a new map, optionally using the specified number of pushed items on stack
 
 
 # Stack primary interface [info]
@@ -1358,17 +1355,11 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_PushStringBuf<sgs_Push***> - push a new string from char buffer
 - @sgs_PushString<sgs_Push***> - push a new string
 - @sgs_PushCFunction<sgs_Push***> - push a C function
-- @sgs_PushObject<sgs_Push***> - push a new object
-- @sgs_PushObjectIPA<sgs_Push***> - push a new object with additional memory allocated in-place for the internal data pointer
 - @sgs_PushPtr<sgs_Push***> - push a pointer
 - @sgs_PushObjectPtr<sgs_Push***> - push an object pointer
-- @sgs_PushArray - push a new array variable, optionally using the specified number of pushed items on stack
-- @sgs_PushDict - push a new dict variable, optionally using the specified number of pushed items on stack
-- @sgs_PushMap - push a new map variable, optionally using the specified number of pushed items on stack
 - @sgs_PushVariable<sgs_Push***> - push the specified variable
 - @sgs_StoreVariable - retrieve, acquire and pop the topmost variable on stack
 - @sgs_PushItem - retrieve and push the specified variable on stack
-- @sgs_StoreItem - store and pop the topmost variable to the specified position after removal in stack
 - @sgs_InsertVariable - insert a variable on stack in the specified position
 - @sgs_Pop - pop the specified number of items from stack
 - @sgs_PopSkip - pop the specified number of items from stack, skipping some topmost items
@@ -1377,7 +1368,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_SetDeltaSize - relative-resize the current stack frame
 - @sgs_AbsIndex - convert stack index to positive if possible (if it's <0 or >=StackSize, then it's invalid)
 - @sgs_IsValidIndex - check if specified stack index is valid
-- @sgs_PeekStackItem - retrieve without acquisition the specified variable on stack
+- @sgs_StackItem - return without acquisition the specified variable on stack
+- @sgs_PeekStackItem - try to retrieve without acquisition the specified variable on stack
 - @sgs_GetStackItem - retrieve and acquire the specified variable on stack
 - @sgs_SetStackItem - assign variable to the specified variable on stack
 - @sgs_ItemType - return the variable type of the specified variable on stack
@@ -1389,29 +1381,28 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_Method - unhide the first variable on stack if there is a hidden `this` variable
 - @sgs_HideThis<sgs_(Force)HideThis> - hide the first variable on stack if the stack already doesn't contain a hidden `this` variable
 - @sgs_ForceHideThis<sgs_(Force)HideThis> - hide the first variable even if it wasn't previously hidden before unhiding
-- @sgs_StoreFuncConsts(P)<sgs_Store***Consts(P)> - store a list of C function constants in the specified variable
-- @sgs_StoreIntConsts(P)<sgs_Store***Consts(P)> - store a list of integer constants in the specified variable
-- @sgs_StoreRealConsts(P)<sgs_Store***Consts(P)> - store a list of real value constants in the specified variable
+- @sgs_StoreFuncConsts<sgs_Store***Consts> - store a list of C function constants in the specified variable
+- @sgs_StoreIntConsts<sgs_Store***Consts> - store a list of integer constants in the specified variable
+- @sgs_StoreRealConsts<sgs_Store***Consts> - store a list of real value constants in the specified variable
 
 
 # Sub-item usage [info]
 
-- @sgs_GetIndex*** - retrieve a sub-item
-- @sgs_SetIndex*** - set a sub-item
-- @sgs_PushIndex** - retrieve and push a sub-item
-- @sgs_StoreIndex** - store and pop a sub-item
-- @sgs_GetGlobalPP - retrieve a global variable
-- @sgs_SetGlobalPP - set a global variable
-- @sgs_PushProperty(P) - retrieve and push the string property of a variable on stack
-- @sgs_StoreProperty(P) - store and pop the topmost stack item to a string property of a variable on stack
-- @sgs_PushNumIndex - retrieve and push the integer index of a variable on stack
-- @sgs_StoreNumIndex - store and pop the topmost stack item to an integer index of a variable on stack
-- @sgs_PushGlobal - retrieve and push the global variable, specified by a string
-- @sgs_StoreGlobal - store and pop the topmost stack item as a global variable, specified by a string
-- @sgs_GetEnv - retrieve the global environment hash table (dict)
-- @sgs_SetEnv - set the variable as the global environment hash table (dict), if possible
-- @sgs_PushEnv - push the global environment hash table (dict)
-- @sgs_StoreEnv - store and pop the topmost stack item as the global environment hash table (dict), if possible
+- @sgs_GetIndex - retrieve a sub-item
+- @sgs_SetIndex - set a sub-item
+- @sgs_PushIndex - retrieve and push a sub-item
+- @sgs_GetGlobal - retrieve a global variable
+- @sgs_SetGlobal - set a global variable
+- @sgs_PushProperty - retrieve and push the string property of a variable
+- @sgs_SetProperty - set a string property of a variable
+- @sgs_PushNumIndex - retrieve and push the integer index of a variable
+- @sgs_SetNumIndex - set an integer index of a variable
+- @sgs_PushGlobalByName - retrieve and push the global variable, specified by a string
+- @sgs_GetGlobalByName - retrieve the global variable, specified by a string
+- @sgs_SetGlobalByName - set a global variable, specified by a string
+- @sgs_GetEnv - retrieve the global environment table
+- @sgs_SetEnv - set the variable as the global environment table, if possible
+- @sgs_PushEnv - push the global environment table
 - @sgs_PushPath - retrieve and push a variable from a path of sub-items
 - @sgs_StorePath - store and pop the topmost stack item into a path of sub-items
 
@@ -1463,6 +1454,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 # Closure handling [info]
 
 - @sgs_ClPushNulls - push a number of empty closures to the closure stack
+- @sgs_ClPushVariable - push a new closure variable on the closure stack
 - @sgs_ClPushItem - push a variable on stack as a closure to the closure stack
 - @sgs_ClPop - pop a number of closures from the closure stack
 - @sgs_MakeClosure - make a callable closure object from the specified callable and number of closures on stack
@@ -1493,7 +1485,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_ParseStringP<sgs_Parse***> - validate conversion, optionally return string or buffer from variable, if possible
 - @sgs_ParseObjectPtrP<sgs_Parse***> - validate conversion, optionally return object pointer from variable, if possible
 - @sgs_ParsePtrP<sgs_Parse***> - validate conversion, optionally return pointer from variable, if possible
-- @sgs_ArraySizeP<sgs_ArraySize(P)> - retrieve size of array variable, if possible
+- @sgs_ArraySize - retrieve size of array variable, if possible
 - @sgs_GetBool<sgs_Get*> - return the boolean version of the variable on stack
 - @sgs_GetInt<sgs_Get*> - return the integer version of the variable on stack
 - @sgs_GetReal<sgs_Get*> - return the real value version of the variable on stack
@@ -1515,7 +1507,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_ParseString<sgs_Parse***> - validate conversion, optionally return string or buffer from variable on stack, if possible
 - @sgs_ParseObjectPtr<sgs_Parse***> - validate conversion, optionally return object pointer from variable on stack, if possible
 - @sgs_ParsePtr<sgs_Parse***> - validate conversion, optionally return pointer from variable on stack, if possible
-- @sgs_ArraySize<sgs_ArraySize(P)> - retrieve size of array variable on stack, if possible
+- @sgs_ArraySize - retrieve size of array variable on stack, if possible
 - @sgs_GlobalBool<sgs_Global***> - retrieve global by name as bool
 - @sgs_GlobalInt<sgs_Global***> - retrieve global by name as integer
 - @sgs_GlobalReal<sgs_Global***> - retrieve global by name as real
@@ -1545,16 +1537,11 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 - see @"Iterator system" for info on how these functions are to be used
 
-- @sgs_PushIteratorP<sgs_PushIterator(P)> - create and push iterator from variable pointer
-- @sgs_GetIteratorP<sgs_GetIterator(P)> - create iterator from variable pointer
-- @sgs_IterAdvanceP<sgs_IterAdvance(P)> - advance iterator, specified by its variable pointer
-- @sgs_IterPushDataP<sgs_IterPushData(P)> - extract and push data of current iteration of the iterator, specified by its variable pointer
-- @sgs_IterGetDataP<sgs_IterGetData(P)> - extract data of current iteration of the iterator, specified by its variable pointer
-- @sgs_PushIterator<sgs_PushIterator(P)> - create and push iterator from variable on stack
-- @sgs_GetIterator<sgs_GetIterator(P)> - create iterator from variable on stack
-- @sgs_IterAdvance<sgs_IterAdvance(P)> - advance iterator, specified by its stack index
-- @sgs_IterPushData<sgs_IterPushData(P)> - extract and push data of current iteration of the iterator variable on stack
-- @sgs_IterGetData<sgs_IterGetData(P)> - extract data of current iteration of the iterator variable on stack
+- @sgs_PushIterator - create and push iterator from variable
+- @sgs_GetIterator - create iterator from variable
+- @sgs_IterAdvance - advance iterator, specified by its variable
+- @sgs_IterPushData - extract and push data of current iteration of the iterator, specified by its variable
+- @sgs_IterGetData - extract data of current iteration of the iterator, specified by its variable
 
 
 # Variable ownership [info]
@@ -1793,25 +1780,20 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_LoadLib_*** [functions]
 
-== SGSRESULT sgs_LoadLib_Fmt( sgs_Context* C )
-== SGSRESULT sgs_LoadLib_IO( sgs_Context* C )
-== SGSRESULT sgs_LoadLib_Math( sgs_Context* C )
-== SGSRESULT sgs_LoadLib_OS( sgs_Context* C )
-== SGSRESULT sgs_LoadLib_RE( sgs_Context* C )
-== SGSRESULT sgs_LoadLib_String( sgs_Context* C )
+== void sgs_LoadLib_Fmt( sgs_Context* C )
+== void sgs_LoadLib_IO( sgs_Context* C )
+== void sgs_LoadLib_Math( sgs_Context* C )
+== void sgs_LoadLib_OS( sgs_Context* C )
+== void sgs_LoadLib_RE( sgs_Context* C )
+== void sgs_LoadLib_String( sgs_Context* C )
 === loads the library into the specified context
-
-- it is generally unnecessary to check for these error codes
-
-=== error codes
-- SGS_E****: first error encountered (operation stopped somewhere in the middle)
 
 
 # sgs_Reg***Consts [function]
 
-== SGSRESULT sgs_RegFuncConsts( sgs_Context* C, const sgs_RegFuncConst* list, int size )
-== SGSRESULT sgs_RegIntConsts( sgs_Context* C, const sgs_RegIntConst* list, int size )
-== SGSRESULT sgs_RegRealConsts( sgs_Context* C, const sgs_RegRealConst* list, int size )
+== void sgs_RegFuncConsts( sgs_Context* C, const sgs_RegFuncConst* list, int size )
+== void sgs_RegIntConsts( sgs_Context* C, const sgs_RegIntConst* list, int size )
+== void sgs_RegRealConsts( sgs_Context* C, const sgs_RegRealConst* list, int size )
 === loads the specified list of constants in the context
 
 - the end of list can be specified in two ways
@@ -1819,65 +1801,55 @@ Closure stack in the C API is technically very similar to main stack, with one i
 -- set the size to -1 and end the list with `SGS_RC_END()`
 -- using both at the same time should be reserved to special cases only
 
-=== error codes
-- SGS_E****: first error encountered (operation stopped somewhere in the middle)
 
 
 
+
+# sgs_Make*** [functions]
+
+== sgs_Variable sgs_MakeNull()
+== sgs_Variable sgs_MakeBool( sgs_Bool value )
+== sgs_Variable sgs_MakeInt( sgs_Int value )
+== sgs_Variable sgs_MakeReal( sgs_Real value )
+== sgs_Variable sgs_MakeCFunc( sgs_CFunc func )
+== sgs_Variable sgs_MakePtr( void* ptr )
+=== returns a variable instance of the specified type
+
+- since these are basic types, they don't need to be freed
+- sgs_Bool is transformed to 0/1, everything else is unchanged
 
 
 # sgs_Init*** [functions]
 
-== void sgs_InitNull( sgs_Variable* out )
-== void sgs_InitBool( sgs_Variable* out, sgs_Bool value )
-== void sgs_InitInt( sgs_Variable* out, sgs_Int value )
-== void sgs_InitReal( sgs_Variable* out, sgs_Real value )
 == void sgs_InitStringBuf( sgs_Context* C, sgs_Variable* out, const char* str, sgs_SizeVal size )
 == void sgs_InitString( sgs_Context* C, sgs_Variable* out, const char* str )
-== void sgs_InitCFunction( sgs_Variable* out, sgs_CFunc func )
-== void sgs_InitObject( sgs_Context* C, sgs_Variable* out, void* data, sgs_ObjInterface* iface )
-== void* sgs_InitObjectIPA( sgs_Context* C, sgs_Variable* out, sgs_SizeVal added, sgs_ObjInterface* iface )
-== void sgs_InitPtr( sgs_Variable* out, void* ptr )
 == void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj )
+=== initialize a variable to the specified type
 
-- sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
-- sgs_InitStringBuf( C, NULL, size ) would allocate an uninitialized buffer
--- it is accessible immediately by @sgs_GetStringPtrP<sgs_GetStringPtr(P)> / @sgs_GetStringSizeP<sgs_GetStringSize(P)>
-- sgs_InitObjectIPA stands for "initialize object, allocate memory in-place"
+- since these are reference-counted types, they need to be released manually
+- to allocate an uninitialized string buffer, use @sgs_InitStringAlloc
+
+
+# sgs_Create*** [functions]
+
+== SGSONE sgs_CreateObject( sgs_Context* C, sgs_Variable* out, void* data, sgs_ObjInterface* iface )
+== void* sgs_CreateObjectIPA( sgs_Context* C, sgs_Variable* out, sgs_SizeVal added, sgs_ObjInterface* iface )
+=== creates a new object
+
+== SGSONE sgs_CreateArray( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )
+=== creates an array from `numitems` last items on the stack, pops those items
+
+== SGSONE sgs_CreateDict( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )
+=== creates a dict from `numitems` last items on the stack, pops those items
+
+== SGSONE sgs_CreateMap( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )
+=== creates a map from `numitems` last items on the stack, pops those items
+
+- if `out` is unspecified, the new variable is pushed on the stack instead
+- sgs_CreateObjectIPA stands for "initialize object, allocate memory in-place"
 -- it means that the `added` memory space will be appended to the end of object allocation
 -- this allows to allocate all object data for most objects with just one allocation, instead of two
--- the allocated memory will be returned and also available via @sgs_GetObjectDataP<sgs_GetObjectData(P)>
-
-
-# sgs_InitArray [function]
-
-== SGSRESULT sgs_InitArray( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )
-=== creates an array at `out` from `numitems` last items on the stack, pops those items
-
-=== error codes
-- SGS_EINVAL: more items are selected than exist in the current stack frame
-
-
-# sgs_InitDict [function]
-
-== SGSRESULT sgs_InitDict( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )
-=== creates a dict at `out` from `numitems` last items on the stack, pops those items
-
-- `numitems` can be even or 0, since all odd arguments are keys and all even arguments are values
-
-=== error codes
-- SGS_EINVAL: more items are selected than exist in the current stack frame or `numitems` wasn't even or 0
-
-
-# sgs_InitMap [function]
-
-== SGSRESULT sgs_InitMap( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )
-=== creates a map at `out` from `numitems` last items on the stack, pops those items
-
-- `numitems` can be even or 0, since all odd arguments are keys and all even arguments are values
-
-=== error codes
-- SGS_EINVAL: more items are selected than exist in the current stack frame or `numitems` wasn't even or 0
+-- the allocated memory will be returned and also available via @sgs_GetObjectData(P)<sgs_GetObjectData(P)>
 
 
 # sgs_Push*** [functions]
@@ -1894,34 +1866,27 @@ Closure stack in the C API is technically very similar to main stack, with one i
 == void* sgs_PushObjectIPA( sgs_Context* C, sgs_SizeVal added, sgs_ObjInterface* iface )
 == SGSONE sgs_PushPtr( sgs_Context* C, void* ptr )
 == SGSONE sgs_PushObjectPtr( sgs_Context* C, sgs_VarObj* obj )
-== SGSRESULT sgs_PushVariable( sgs_Context* C, sgs_Variable* var )
+== SGSONE sgs_PushVariable( sgs_Context* C, sgs_Variable* var )
 === pushes the data on the stack, as a new entry, appended to the end
 
+! To push objects, use @sgs_Create*** functions.
+
+! To allocate an uninitialized string buffer, use @sgs_PushStringAlloc.
+
 - sgs_Bool is transformed to 0/1 before pushing, everything else is unchanged
-- sgs_PushStringBuf( C, NULL, size ) would allocate an uninitialized buffer
--- it is accessible immediately by @"sgs_GetStringPtr( C, -1 )"<sgs_GetStringPtr(P)> / @"sgs_GetStringSize( C, -1 )"<sgs_GetStringSize(P)>
-- sgs_PushObjectIPA stands for "push object, allocate memory in-place"
--- it means that the `added` memory space will be appended to the end of object allocation
--- this allows to allocate all object data for most objects with just one allocation, instead of two
--- the allocated memory will be returned and also available via @"sgs_GetObjectData( C, -1 )"<sgs_GetObjectData(P)>
 - sgs_PushVariable will increment the reference count of strings, SGS functions and objects
--- it will also return EINVAL if type of variable isn't one of the allowed types
-- these functions do not throw an error when the stack is full since there is no way to handle that
 - most functions here always return 1 (SGSONE), making them suitable for a "return sgs_Push***" construct
 
 
 # sgs_StoreVariable [function]
 
-== SGSRESULT sgs_StoreVariable( sgs_Context* C, sgs_Variable* var )
+== void sgs_StoreVariable( sgs_Context* C, sgs_Variable* var )
 === copy the topmost item of the current stack frame to the specified place, acquire it and pop it
-
-=== error codes
-- SGS_ENOTFND: stack frame is empty
 
 
 # sgs_Pop [function]
 
-== SGSRESULT sgs_Pop( sgs_Context* C, int count )
+== void sgs_Pop( sgs_Context* C, int count )
 === pops `count` variables off the current frame of the stack
 
 === error codes
@@ -1930,7 +1895,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_PopSkip [function]
 
-== SGSRESULT sgs_PopSkip( sgs_Context* C, int count, int skip )
+== void sgs_PopSkip( sgs_Context* C, int count, int skip )
 === pops `count` variables off the current frame of the stack, skipping the last `skip` elements
 
 === error codes
@@ -1939,259 +1904,126 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_InsertVariable [function]
 
-== SGSRESULT sgs_InsertVariable( sgs_Context* C, int pos, sgs_Variable* var )
+== void sgs_InsertVariable( sgs_Context* C, int pos, sgs_Variable var )
 === inserts a variable `var` at a given index `pos` of the current stack frame, increasing its reference count
 
-=== error codes
-- SGS_EBOUNDS: index out of bounds
 
+# sgs_PushItem [function alias]
 
-# sgs_PushArray [function]
-
-== SGSRESULT sgs_PushArray( sgs_Context* C, sgs_SizeVal numitems )
-=== creates an array from `numitems` last items on the stack, pops those items and pushes the array
-
-=== error codes
-- SGS_EINVAL: more items are selected than exist in the current stack frame
-
-
-# sgs_PushDict [function]
-
-== SGSRESULT sgs_PushDict( sgs_Context* C, sgs_SizeVal numitems )
-=== creates a dict from `numitems` last items on the stack, pops those items and pushes the dict
-
-- `numitems` can be even or 0, since all odd arguments are keys and all even arguments are values
-
-=== error codes
-- SGS_EINVAL: more items are selected than exist in the current stack frame or `numitems` wasn't even or 0
-
-
-# sgs_PushMap [function]
-
-== SGSRESULT sgs_PushMap( sgs_Context* C, sgs_SizeVal numitems )
-=== creates a map from `numitems` last items on the stack, pops those items and pushes the map
-
-- `numitems` can be even or 0, since all odd arguments are keys and all even arguments are values
-
-=== error codes
-- SGS_EINVAL: more items are selected than exist in the current stack frame or `numitems` wasn't even or 0
-
-
-# sgs_PushItem [function]
-
-== SGSRESULT sgs_PushItem( sgs_Context* C, sgs_StkIdx item )
+== void sgs_PushItem( sgs_Context* C, sgs_StkIdx item )
 === copy an item from the current stack frame and append it to the end of the stack
 
-=== error codes
-- SGS_EBOUNDS: index out of bounds
+- Alias of `sgs_PushVariable( C, sgs_StackItem( C, item ) )`.
 
 
-# sgs_StoreItem [function]
+# sgs_GetIndex [function]
 
-== SGSRESULT sgs_StoreItem( sgs_Context* C, sgs_StkIdx item )
-=== copy last item in current stack frame to index `item` and pop it
+== SGSBOOL sgs_GetIndex( sgs_Context* C, sgs_Variable obj, sgs_Variable idx, sgs_Variable* out, int isprop )
+=== Retrieve index/property `idx` from the specified variable `obj` to the position `out`, specifying retrieval type via `isprop`, return if successful.
 
-- `item` refers to a position after the pop operation, therefore -1 means one element before the last etc.
-
-=== error codes
-- SGS_EBOUNDS: index out of bounds
+- On failure, out is set to a `null` variable.
 
 
-# sgs_GetIndex*** [functions]
+# sgs_SetIndex [function]
 
-== SGSRESULT sgs_GetIndexPPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* out, int isprop )
-== SGSRESULT sgs_GetIndexIPP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_Variable* out, int isprop )
-== SGSRESULT sgs_GetIndexPIP( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_Variable* out, int isprop )
-== SGSRESULT sgs_GetIndexIIP( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_Variable* out, int isprop )
-== SGSRESULT sgs_GetIndexPPI( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_StkIdx out, int isprop )
-== SGSRESULT sgs_GetIndexIPI( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_StkIdx out, int isprop )
-== SGSRESULT sgs_GetIndexPII( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_StkIdx out, int isprop )
-== SGSRESULT sgs_GetIndexIII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_StkIdx out, int isprop )
-=== retrieve index/property `idx` from the specified variable `obj` to the position `out`, specifying retrieval type via `isprop`
-
-- last 3 letters in function name determines the type for parameters 2, 3 and 4: P for pointers, I for stack indices
-
-=== error codes
-- SGS_EBOUNDS: something was not pointing inside the current stack frame
-- SGS_ENOTFND: index/property was not found
-- other codes may appear if returned by custom objects
+== SGSBOOL sgs_SetIndex( sgs_Context* C, sgs_Variable obj, sgs_Variable idx, sgs_Variable val, int isprop )
+=== Set index/property `idx` in the specified variable `obj` to the value `val`, specifying type via `isprop`, return if successful.
 
 
-# sgs_SetIndex*** [functions]
+# sgs_PushIndex [function]
 
-== SGSRESULT sgs_SetIndexPPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* val, int isprop )
-== SGSRESULT sgs_SetIndexIPP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_Variable* val, int isprop )
-== SGSRESULT sgs_SetIndexPIP( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )
-== SGSRESULT sgs_SetIndexIIP( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_Variable* val, int isprop )
-== SGSRESULT sgs_SetIndexPPI( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, sgs_StkIdx val, int isprop )
-== SGSRESULT sgs_SetIndexIPI( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, sgs_StkIdx val, int isprop )
-== SGSRESULT sgs_SetIndexPII( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )
-== SGSRESULT sgs_SetIndexIII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, sgs_StkIdx val, int isprop )
-=== set index/property `idx` in the specified variable `obj` to the value `val`, specifying type via `isprop`
+== SGSBOOL sgs_PushIndex( sgs_Context* C, sgs_Variable obj, sgs_Variable idx, int isprop )
+=== Retrieve and push index/property `idx` from the specified variable `obj`, specifying retrieval type via `isprop`, return if successful.
 
-- last 3 letters in function name determines the type for parameters 2, 3 and 4: P for pointers, I for stack indices
-
-=== error codes
-- SGS_EBOUNDS: something was not pointing inside the current stack frame
-- SGS_ENOTFND: index/property was not found
-- SGS_EINVAL: specified value could not be used
-- other codes may appear if returned by custom objects
+- On failure, `null` is pushed to stack.
 
 
-# sgs_PushIndex** [functions]
+# sgs_PushProperty [functions]
 
-== SGSRESULT sgs_PushIndexPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, int isprop )
-== SGSRESULT sgs_PushIndexIP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, int isprop )
-== SGSRESULT sgs_PushIndexPI( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, int isprop )
-== SGSRESULT sgs_PushIndexII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )
-=== retrieve and push index/property `idx` from the specified variable `obj`, specifying retrieval type via `isprop`
+== SGSBOOL sgs_PushProperty( sgs_Context* C, sgs_Variable var, const char* name )
+=== Load and push the property of the variable `var` in the current stack frame, return if successful.
 
-- last 2 letters in function name determines the type for parameters 2 and 3: P for pointers, I for stack indices
-
-=== error codes
-- SGS_EBOUNDS: something was not pointing inside the current stack frame
-- SGS_ENOTFND: index/property was not found
-- other codes may appear if returned by custom objects
+- On failure, `null` is pushed to stack.
 
 
-# sgs_StoreIndex** [functions]
+# sgs_SetProperty [functions]
 
-== SGSRESULT sgs_StoreIndexPP( sgs_Context* C, sgs_Variable* obj, sgs_Variable* idx, int isprop )
-== SGSRESULT sgs_StoreIndexIP( sgs_Context* C, sgs_StkIdx obj, sgs_Variable* idx, int isprop )
-== SGSRESULT sgs_StoreIndexPI( sgs_Context* C, sgs_Variable* obj, sgs_StkIdx idx, int isprop )
-== SGSRESULT sgs_StoreIndexII( sgs_Context* C, sgs_StkIdx obj, sgs_StkIdx idx, int isprop )
-=== set index/property `idx` in the specified variable `obj` to the topmost variable in stack, specifying type via `isprop`, then pop the topmost variable in stack if successful
-
-- last 2 letters in function name determines the type for parameters 2 and 3: P for pointers, I for stack indices
-
-=== error codes
-- SGS_EBOUNDS: something was not pointing inside the current stack frame
-- SGS_ENOTFND: index/property was not found
-- SGS_EINVAL: specified value could not be used
-- SGS_EINPROC: current stack frame is empty
-- other codes may appear if returned by custom objects
-
-
-# sgs_GetGlobalPP [function]
-
-== SGSRESULT sgs_GetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* out )
-=== retrieve a global variable by index `idx` to position `out`
-
-=== error codes
-- SGS_ENOTSUP: `idx` was not a string
-- SGS_ENOTFND: index was not found
-
-
-# sgs_SetGlobalPP [function]
-
-== SGSRESULT sgs_SetGlobalPP( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
-=== set a global variable `val` to index `idx`
-
-=== error codes
-- SGS_ENOTSUP: `idx` was not a string / `idx` was _G and `val` was not a dict
-
-
-# sgs_PushProperty(P) [functions]
-
-== SGSRESULT sgs_PushProperty( sgs_Context* C, sgs_StkIdx obj, const char* name )
-=== load and push the property of the item `obj` in the current stack frame
-
-== SGSRESULT sgs_PushPropertyP( sgs_Context* C, sgs_Variable* var, const char* name )
-=== load and push the property of the variable `var` in the current stack frame
-
-=== error codes
-- SGS_EBOUNDS: `obj` was not pointing inside the current stack frame
-- SGS_EINPROC: current stack frame is empty
-- SGS_ENOTFND: property was not found
-- other codes may appear if returned by custom objects
-
-
-# sgs_StoreProperty(P) [functions]
-
-== SGSRESULT sgs_StoreProperty( sgs_Context* C, sgs_StkIdx obj, const char* name )
-=== copy and pop the topmost item of the current stack frame to the property `name` of item `obj`
-
-== SGSRESULT sgs_StorePropertyP( sgs_Context* C, sgs_Variable* var, const char* name )
-=== copy and pop the topmost item of the current stack frame to the property `name` of variable `var`
-
-=== error codes
-- SGS_EBOUNDS: `obj` was not pointing inside the current stack frame
-- SGS_ENOTFND: property was not found
-- other codes may appear if returned by custom objects
+== SGSBOOL sgs_SetProperty( sgs_Context* C, sgs_Variable var, const char* name, sgs_Variable val )
+=== Set the property `name` of variable `var` to `val`, return if successful.
 
 
 # sgs_PushNumIndex [function]
 
-== SGSRESULT sgs_PushNumIndex( sgs_Context* C, sgs_StkIdx obj, sgs_Int idx )
-=== load and push the integer index `idx` of the variable `obj`
+== SGSBOOL sgs_PushNumIndex( sgs_Context* C, sgs_Variable var, sgs_Int idx )
+=== Load and push the integer index `idx` of the variable `obj`, return if successful.
 
-=== error codes:
-- SGS_EBOUNDS: `obj` was not pointing inside the current stack frame / array index out of bounds
-- SGS_ENOTFND: index was not found
-- other codes may appear if returned by custom objects
+- On failure, `null` is pushed to stack.
 
 
-# sgs_StoreNumIndex [function]
+# sgs_SetNumIndex [function]
 
-== SGSRESULT sgs_StoreNumIndex( sgs_Context* C, sgs_StkIdx obj, sgs_Int idx )
-=== copy and pop the topmost item of the current stack to the integer index `idx` of variable `obj`
-
-=== error codes
-- SGS_EBOUNDS: `obj` was not pointing inside the current stack frame / array index out of bounds
-- SGS_ENOTFND: index was not found
-- other codes may appear if returned by custom objects
+== SGSBOOL sgs_SetNumIndex( sgs_Context* C, sgs_Variable var, sgs_Int idx, sgs_Variable val )
+=== Set the index `idx` of variable `var` to `val`, return if successful.
 
 
-# sgs_PushGlobal [function]
+# sgs_GetGlobal [function]
 
-== SGSRESULT sgs_PushGlobal( sgs_Context* C, const char* name )
-=== push the global variable `name` on the stack
+== SGSBOOL sgs_GetGlobal( SGS_CTX, sgs_Variable idx, sgs_Variable* out )
+=== Retrieve a global variable by index `idx` to position `out`.
 
-=== error codes
-- SGS_ENOTFND: variable was not found
+- On failure, out is set to a `null` variable.
 
 
-# sgs_StoreGlobal [function]
+# sgs_SetGlobal [function]
 
-== SGSRESULT sgs_StoreGlobal( sgs_Context* C, const char* name )
-=== copy and pop the topmost stack item to the global variable `name`
+== SGSBOOL sgs_SetGlobal( SGS_CTX, sgs_Variable idx, sgs_Variable val )
+=== Set global variable `idx` to `val`.
 
-- _G is the environment table (a superglobal, list of global variable names and values)
+- When setting `_G` (environment superglobal), `val` must be of `dict`/`map` type or the function will fail.
 
-=== error codes
-- SGS_EINPROC: current stack frame was empty
-- SGS_ENOTSUP: variable was not a dict (_G only accepts dict values)
+
+# sgs_PushGlobalByName [function]
+
+== SGSBOOL sgs_PushGlobalByName( sgs_Context* C, const char* name )
+=== Push the global variable `name` on the stack, return if successful.
+
+- On failure, `null` is pushed to stack.
+
+
+# sgs_GetGlobalByName [function]
+
+== SGSBOOL sgs_GetGlobalByName( sgs_Context* C, const char* name, sgs_Variable* out )
+=== Retrieve the global variable `name`, return if successful.
+
+- On failure, out is set to a `null` variable.
+
+
+# sgs_SetGlobalByName [function]
+
+== SGSBOOL sgs_SetGlobalByName( sgs_Context* C, const char* name, sgs_Variable val )
+=== Set global variable `name` to `val`.
+
+- When setting `_G` (environment superglobal), `val` must be of `dict`/`map` type or the function will fail.
 
 
 # sgs_GetEnv [function]
 
-== void sgs_GetEnv( SGS_CTX, sgs_Variable* out )
-=== retrieve the global environment dict variable (_G)
+== void sgs_GetEnv( sgs_Context* C, sgs_Variable* out )
+=== Retrieve the global environment variable (_G).
 
 
 # sgs_SetEnv [function]
 
-== SGSRESULT sgs_SetEnv( SGS_CTX, sgs_Variable* var )
-=== set a global environment dict variable from the variable `var`
+== void sgs_SetEnv( sgs_Context* C, sgs_Variable* var )
+=== Set a global environment variable from the variable `var`.
 
-=== error codes
-- SGS_ENOTSUP: variable was not a dict (_G only accepts dict values)
+- Only `dict`/`map` types are accepted.
 
 
 # sgs_PushEnv [function]
 
-== void sgs_PushEnv( SGS_CTX )
-=== retrieve and push the global environment dict variable (_G)
-
-
-# sgs_StoreEnv [function]
-
-== SGSRESULT sgs_StoreEnv( SGS_CTX )
-=== set a global environment dict variable from the topmost stack item, then pop it if successful
-
-=== error codes
-- SGS_EINPROC: current stack frame was empty
-- SGS_ENOTSUP: variable was not a dict (_G only accepts dict values)
+== void sgs_PushEnv( sgs_Context* C )
+=== Retrieve and push the global environment variable (_G).
 
 
 # sgs_PushPath [function]
@@ -2238,28 +2070,20 @@ Closure stack in the C API is technically very similar to main stack, with one i
 === error codes
 - SGS_EINVAL: invalid symbol found in path / corresponding variable arguments had an invalid value
 - SGS_EINPROC: current stack frame is empty
-- other errors, as returned by @sgs_PushIndex*** or @sgs_StoreIndex***
+- other errors, as returned by @sgs_PushIndex*** or @sgs_SetIndex
 
 
-# sgs_Store***Consts(P) [functions]
+# sgs_Store***Consts [functions]
 
-== SGSRESULT sgs_StoreFuncConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegFuncConst* list, int size )
-== SGSRESULT sgs_StoreIntConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegIntConst* list, int size )
-== SGSRESULT sgs_StoreRealConsts( SGS_CTX, sgs_StkIdx item, const sgs_RegRealConst* list, int size )
-=== loads the specified list of constants in the specified stack item
-
-== SGSRESULT sgs_StoreFuncConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegFuncConst* list, int size )
-== SGSRESULT sgs_StoreIntConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegIntConst* list, int size )
-== SGSRESULT sgs_StoreRealConstsP( SGS_CTX, sgs_Variable* var, const sgs_RegRealConst* list, int size )
+== void sgs_StoreFuncConsts( sgs_Context* C, sgs_Variable var, const sgs_RegFuncConst* list, int size )
+== void sgs_StoreIntConsts( sgs_Context* C, sgs_Variable var, const sgs_RegIntConst* list, int size )
+== void sgs_StoreRealConsts( sgs_Context* C, sgs_Variable var, const sgs_RegRealConst* list, int size )
 === loads the specified list of constants in the specified variable
 
 - the end of list can be specified in two ways
 -- set the size to `sizeof(list)/sizeof(list[0])`
 -- set the size to -1 and end the list with `SGS_RC_END()`
 -- using both at the same time should be reserved to special cases only
-
-=== error codes
-- SGS_E****: first error encountered (operation stopped somewhere in the middle)
 
 
 # sgs_ArgErrorExt [function]
@@ -2291,19 +2115,17 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_LoadArgsExt(VA) [function]
 
-== SGSMIXED sgs_LoadArgsExt( sgs_Context* C, int from, const char* cmd, ... )
-== SGSMIXED sgs_LoadArgsExtVA( sgs_Context* C, int from, const char* cmd, va_list* args )
-=== parse the stack items and retrieve their data according to `cmd`, starting from item `from`
+== SGSBOOL sgs_LoadArgsExt( sgs_Context* C, int from, const char* cmd, ... )
+== SGSBOOL sgs_LoadArgsExtVA( sgs_Context* C, int from, const char* cmd, va_list* args )
+=== Parse the stack items and retrieve their data according to `cmd`, starting from item `from`.
 
-- for anything function requires, pass the value; for anything it returns - the pointer to the value
-- `cmd` is a string consisting of one-character commands
-- the commands are grouped into two kinds: control commands and parsing commands
-- function returns whether all required arguments have been parsed successfully
--- thus, if function returns < 1, state of outputs is somewhat unknown unless filled with defaults
--- it is guaranteed that all arguments will be parsed from first (specified) forward, not in any other way
-- `null` values in optional arguments are skipped (this may not apply to custom checking functions)
-
-! unlike @sgs_LoadArgs<sgs_LoadArgs [function alias]>, it returns `SGSMIXED` and must be checked differently ("ret.val. > 0", if same output needed)
+- For anything function requires, pass the value; for anything it returns - the pointer to the value.
+- `cmd` is a string consisting of one-character commands.
+- The commands are grouped into two kinds: control commands and parsing commands.
+- Function returns whether all required arguments have been parsed successfully;
+-- thus, if function returns < 1, state of outputs is somewhat unknown unless filled with defaults;
+-- it is guaranteed that all arguments will be parsed from first (specified) forward, not in any other way;
+- `null` values in optional arguments are skipped (this may not apply to custom checking functions).
 
 ==== control commands
 - `?` -- only check, do not write the result and do not require a pointer to write the data to
@@ -2340,19 +2162,14 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - `v` -- check for any (non-null if strict, returns sgs_Variable data)
 - `x` -- call a custom checking function (requires sgs_ArgCheckFunc, everything else depends on function)
 
-=== error codes
-- SGS_EINVAL: error in `cmd` (wrong character/argument pointer moved before 0)
-
 
 # sgs_LoadArgs [function alias]
 
 == SGSBOOL sgs_LoadArgs( sgs_Context* C, const char* cmd, ... )
-=== parse the stack items and retrieve their data according to `cmd`, starting from item 0
+=== Parse the stack items and retrieve their data according to `cmd`, starting from item 0.
 
-! unlike @sgs_LoadArgsExt(VA), it returns `bool` - whether all required arguments have been successfully parsed
-
-- for more info on syntax and usage, refer to @sgs_LoadArgsExt(VA)
-- alias to `sgs_LoadArgsExt( C, 0, cmd, ... )>0`
+- For more info on syntax and usage, refer to @sgs_LoadArgsExt(VA).
+- Alias to `sgs_LoadArgsExt( C, 0, cmd, ... )`.
 
 
 # sgs_ParseMethod [function]
@@ -2473,7 +2290,7 @@ After a successful call, all arguments and the function will be popped off the s
 == SGSRESULT sgs_GlobalCall( sgs_Context* C, const char* name, int args, int expect )
 === call the global variable `name` as a function
 
-- combination of global function retrieval and function call; see @sgs_PushGlobal and @sgs_FCall(P) for more info on behavior
+- combination of global function retrieval and function call; see @sgs_PushGlobalByName and @sgs_FCall(P) for more info on behavior
 
 === error codes
 - SGS_ENOTFND: global variable was not found
@@ -2483,162 +2300,134 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_TypeOf [function]
 
-== SGSRESULT sgs_TypeOf( sgs_Context* C )
-=== return the type name string of topmost variable in current stack frame
+== void sgs_TypeOf( sgs_Context* C, sgs_Variable var )
+=== Return the type name string of the specified variable.
 
-- if the object does not support the specific part of the conversion interface function, a string of format "object (%p)" is returned to ensure expected type name comparison capabilities
-
-=== error codes
-- SGS_EINPROC: current stack frame was empty
+- Object type sources are processed in the following order:
+-- Metamethod `__typeof`;
+-- `sgs_ObjInterface::name`;
+-- If both methods failed, just return 'object'.
 
 
 # sgs_DumpVar [function]
 
-== SGSRESULT sgs_DumpVar( sgs_Context* C, int maxdepth )
-=== convert the topmost variable of current stack frame to a highly informative string that should display the contents of the variable, up to `maxdepth` depth
+== void sgs_DumpVar( sgs_Context* C, sgs_Variable var, int maxdepth )
+=== Convert the variable to a highly informative string that should display its contents, up to `maxdepth` depth.
 
-- if object does not have the DUMP interface function implemented, only its pointer in memory and reference count are displayed
-
-=== error codes
-- SGS_EINPROC: current stack frame was empty
-- SGS_EINVAL: invalid base variable type found in variable (not really expected to happen unless custom variable creation is done)
+- If object does not have the DUMP interface function implemented, only its pointer in memory and reference count are displayed.
 
 
 # sgs_GCExecute [function]
 
-== SGSRESULT sgs_GCExecute( sgs_Context* C )
-=== call the garbage collector on the VM
+== void sgs_GCExecute( sgs_Context* C )
+=== Call the garbage collector on the VM.
 
-- this procedure may take some time if the object graph is big
-- during the procedure, the GCMARK interface functions of objects are invoked for the objects visible from entry points (like stack and global table)
-- aborting the procedure via error codes could lead the system into an unrecoverable state
-
-=== error codes
-- any code can be returned by GCMARK and DESTRUCT functions, doing so would abort the process if the code is not either SGS_SUCCESS or SGS_ENOTFND
+- This procedure may take some time if the object graph is big.
+- During the procedure, the GCMARK interface functions of objects are invoked for the objects visible from entry points (like stack and global tables).
 
 
-# sgs_DebugDumpVarExt(P) [functions]
+# sgs_DebugDumpVarExt [functions]
 
-== const char* sgs_DebugDumpVarExt( sgs_Context* C, sgs_StkIdx item, int maxdepth )
-== const char* sgs_DebugDumpVarExtP( sgs_Context* C, sgs_Variable* var, int maxdepth )
-=== push a string containing variable data and return const char* to it
+== const char* sgs_DebugDumpVarExt( sgs_Context* C, sgs_Variable var, int maxdepth )
+=== Push a string containing variable data and return const char* to it.
 
-- if `maxdepth` is negative, variable is converted to a normal string (sgs_ToString) instead of dump string (sgs_DumpVar)
-- all error cases (index out of bounds, failed to dump) return strings too, so function behavior is consistent regardless of state
+- If `maxdepth` is negative, variable is converted to a normal string (sgs_ToString) instead of dump string (sgs_DumpVar).
 
 
-# sgs_DebugDumpVar(P) [function aliases]
+# sgs_DebugDumpVar [function alias]
 
-== const char* sgs_DebugDumpVar( sgs_Context* C, sgs_StkIdx item )
-== const char* sgs_DebugDumpVarP( sgs_Context* C, sgs_Variable* var )
-=== push a variable dump string and return const char* to it
+== const char* sgs_DebugDumpVar( sgs_Context* C, sgs_Variable* var )
+=== Push a variable dump string and return const char* to it.
 
-- alias to `sgs_DebugDumpVarExt( C, item, 5 )` / `sgs_DebugDumpVarExtP( C, var, 5 )`
-- for more info, see @sgs_DebugDumpVarExt(P)
+- Alias to `sgs_DebugDumpVarExt( C, var, 5 )`.
+- For more info, see @sgs_DebugDumpVarExt.
 
 
-# sgs_DebugPrintVar(P) [function aliases]
+# sgs_DebugPrintVar [function alias]
 
-== const char* sgs_DebugPrintVar( sgs_Context* C, sgs_StkIdx item )
-== const char* sgs_DebugPrintVarP( sgs_Context* C, sgs_Variable* var )
-=== push a string, converted from variable and return const char* to it
+== const char* sgs_DebugPrintVar( sgs_Context* C, sgs_Variable var )
+=== Push a string, converted from variable and return const char* to it.
 
-- alias to `sgs_DebugDumpVarExt( C, item, -1 )` / `sgs_DebugDumpVarExtP( C, var, -1 )`
-- for more info, see @sgs_DebugDumpVarExt(P)
+- Alias to `sgs_DebugDumpVarExt( C, var, -1 )`.
+- For more info, see @sgs_DebugDumpVarExt.
 
 
 # sgs_PadString [function]
 
-== SGSRESULT sgs_PadString( sgs_Context* C )
-=== replace the topmost variable of current stack frame with a string variable where two spaces are appended after every newline
-
-=== error codes
-- SGS_EINPROC: current stack frame is empty or output string size exceeds limit
-- SGS_EINVAL: topmost variable is not a string
+== void sgs_PadString( sgs_Context* C )
+=== Replace the topmost variable of current stack frame with a string variable where two spaces are appended after every newline.
 
 
 # sgs_ToPrintSafeString [function]
 
-== SGSRESULT sgs_ToPrintSafeString( sgs_Context* C )
-=== replace the topmost variable of current stack frame with a string where all non-printable (except space), non-ASCII characters converted to a character hex code
-
-=== error codes
-- SGS_EINPROC: current stack frame is empty or output string size exceeds limit
+== void sgs_ToPrintSafeString( sgs_Context* C )
+=== Replace the topmost variable of current stack frame with a string where all non-printable (except space), non-ASCII characters converted to a character hex code.
 
 
 # sgs_StringConcat [function]
 
-== SGSRESULT sgs_StringConcat( sgs_Context* C, int args )
-=== concatenate the `args` number of topmost string variables in the current stack frame
+== void sgs_StringConcat( sgs_Context* C, int args )
+=== Concatenate the `args` number of topmost string variables in the current stack frame.
 
-=== error codes
-- SGS_EINVAL: not enough (less than `args`) variables were found in the current stack frame
+- If `args` = 0, empty string is pushed.
 
 
 # sgs_ClPushNulls [function]
 
-== SGSRESULT sgs_ClPushNulls( sgs_Context* C, sgs_StkIdx num )
-=== push `num` empty closures to the closure stack
+== void sgs_ClPushNulls( sgs_Context* C, sgs_StkIdx num )
+=== Push `num` empty closures to the closure stack.
 
-=== error codes
-- SGS_EINVAL: `num` was less than 0
+- `num` must be equal to or larger than 0.
+
+
+# sgs_ClPushVariable [function]
+
+== void sgs_ClPushVariable( sgs_Context* C, sgs_Variable var )
+=== Push a new closure variable on the closure stack.
 
 
 # sgs_ClPushItem [function]
 
-== SGSRESULT sgs_ClPushItem( sgs_Context* C, sgs_StkIdx item )
-=== push a variable `item` on stack as a closure to the closure stack
-
-=== error codes
-- SGS_EBOUNDS: index out of bounds
+== void sgs_ClPushItem( sgs_Context* C, sgs_StkIdx item )
+=== Push a variable `item` on stack as a closure to the closure stack.
 
 
 # sgs_ClPop [function]
 
-== SGSRESULT sgs_ClPop( sgs_Context* C, sgs_StkIdx num )
-=== pop `num` closures from the closure stack
+== void sgs_ClPop( sgs_Context* C, sgs_StkIdx num )
+=== Pop `num` closures from the closure stack.
 
-=== error codes
-- SGS_EINPROC: attempted to pop more closures than there are on the stack
+- Function will fail if it is attempted to pop more closures than there are on the stack.
 
 
 # sgs_MakeClosure [function]
 
-== SGSRESULT sgs_MakeClosure( sgs_Context* C, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out )
-=== make a callable closure object from the specified callable `func` and `clcount` closures on stack, return it at position `out`
+== void sgs_MakeClosure( sgs_Context* C, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out )
+=== Make a callable closure object from the specified callable `func` and `clcount` closures on stack, return it at position `out`.
 
-=== error codes
-- SGS_EINPROC: attempted to use more closures than there are on the stack
+- Function will fail if it is attempted to use more closures than there are on the stack.
 
 
 # sgs_ClGetItem [function]
 
-== SGSRESULT sgs_ClGetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )
-=== retrieve the variable from a closure `item` on stack
-
-=== error codes
-- SGS_EBOUNDS: index out of bounds
+== void sgs_ClGetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )
+=== Retrieve the variable from a closure `item` on stack.
 
 
 # sgs_ClSetItem [function]
 
-== SGSRESULT sgs_ClSetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* var )
-=== set the variable `var` to a closure `item` on stack
-
-=== error codes
-- SGS_EBOUNDS: index out of bounds
+== void sgs_ClSetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* var )
+=== Set the variable `var` to a closure `item` on stack.
 
 
 # sgs_CloneItem [function]
 
-== SGSRESULT sgs_CloneItem( sgs_Context* C, sgs_StkIdx item )
-=== push a copy of the specified stack item
+== void sgs_CloneItem( sgs_Context* C, sgs_Variable var )
+=== Push a copy of the specified stack item.
 
 ! Even though operations with functions and strings succeed, functions and strings are not actually cloned since they are immutable.
 
-=== error codes
-- SGS_EBOUNDS: stack item index was out of bounds
-- SGS_ENOTFND: the object does not support cloning
+- Function will fail if any object attempted to be cloned does not support cloning.
 
 
 # sgs_ObjectAction [function]
@@ -2779,7 +2568,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_IncDec [function]
 
-== SGSRESULT sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc )
+== SGSRESULT sgs_IncDec( sgs_Context* C, sgs_Variable* out, sgs_Variable* A, int inc )
 === increment or decrement the specified variable `A` to the output `out`
 
 ! this function prints errors, exactly like VM would (internally there are the same functions)
@@ -2899,7 +2688,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_PushInterface [function]
 
-== SGSRESULT sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
+== SGSRESULT sgs_PushInterface( sgs_Context* C, sgs_CFunc igfn )
 === push a cached/generated object
 
 - if object is not in cache, it is generated from the specified function
@@ -2910,7 +2699,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_InitInterface [function]
 
-== SGSRESULT sgs_InitInterface( SGS_CTX, sgs_Variable* var, sgs_CFunc igfn )
+== SGSRESULT sgs_InitInterface( sgs_Context* C, sgs_Variable* var, sgs_CFunc igfn )
 === initialize a variable to a cached/generated object
 
 - if object is not in cache, it is generated from the specified function
@@ -2994,11 +2783,11 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_Global*** [functions]
 
-== sgs_Bool sgs_GlobalBool( SGS_CTX, const char* name )
-== sgs_Int sgs_GlobalInt( SGS_CTX, const char* name )
-== sgs_Real sgs_GlobalReal( SGS_CTX, const char* name )
-== char* sgs_GlobalStringBuf( SGS_CTX, const char* name, sgs_SizeVal* outsize )
-== char* sgs_GlobalString( SGS_CTX, const char* name )
+== sgs_Bool sgs_GlobalBool( sgs_Context* C, const char* name )
+== sgs_Int sgs_GlobalInt( sgs_Context* C, const char* name )
+== sgs_Real sgs_GlobalReal( sgs_Context* C, const char* name )
+== char* sgs_GlobalStringBuf( sgs_Context* C, const char* name, sgs_SizeVal* outsize )
+== char* sgs_GlobalString( sgs_Context* C, const char* name )
 === retrieve a global variable, converted to the specified type
 
 ! sgs_GlobalString[Buf] **pushes the variable on the stack** to be able to reliably return the string pointer
@@ -3010,59 +2799,36 @@ After a successful call, all arguments and the function will be popped off the s
 
 
 
-# sgs_PushIterator(P) [functions]
+# sgs_PushIterator [functions]
 
-== SGSRESULT sgs_PushIterator( sgs_Context* C, sgs_StkIdx item )
-=== create and push an iterator from the specified item of the current stack frame
+== SGSBOOL sgs_PushIterator( sgs_Context* C, sgs_Variable var )
+=== create and push an iterator from the specified variable, return if successful
 
-== SGSRESULT sgs_PushIteratorP( sgs_Context* C, sgs_Variable* var )
-=== create and push an iterator from the specified variable
-
+- on failure, null is pushed
 - see @"Iterator system" for more info about iterators
 
-=== error codes
-- SGS_EBOUNDS: index out of bounds
-- SGS_ENOTSUP: variable type does not support iterators (only objects support them)
-- SGS_ENOTFND: object type does not support iterators (iterator conversion request failed)
-- any other code can be returned by the object
 
+# sgs_GetIterator [functions]
 
-# sgs_GetIterator(P) [functions]
+== SGSBOOL sgs_GetIterator( sgs_Context* C, sgs_Variable var, sgs_Variable* out )
+=== create an iterator from the specified variable, return if successful
 
-== SGSRESULT sgs_GetIterator( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )
-=== create an iterator from the specified item of the current stack frame
-
-== SGSRESULT sgs_GetIteratorP( sgs_Context* C, sgs_Variable* var, sgs_Variable* out )
-=== create an iterator from the specified variable
-
+- on failure, out receives a null variable
 - see @"Iterator system" for more info about iterators
 
-=== error codes
-- SGS_EBOUNDS: index out of bounds
-- SGS_ENOTSUP: variable type does not support iterators (only objects support them)
-- SGS_ENOTFND: object type does not support iterators (iterator conversion request failed)
-- any other code can be returned by the object
 
+# sgs_IterAdvance [functions]
 
-# sgs_IterAdvance(P) [functions]
+== SGSBOOL sgs_IterAdvance( sgs_Context* C, sgs_Variable var )
+=== advance the iterator to the next position, returning if the current position is still in range
 
-== SGSMIXED sgs_IterAdvance( sgs_Context* C, sgs_StkIdx item )
-== SGSMIXED sgs_IterAdvanceP( sgs_Context* C, sgs_Variable* var )
-=== advance the iterator to the next position, returning if the current position is still in range or an error code on failure
-
-- this is the way it's expected to be usually called: `while( sgs_IterAdvance( C, item ) > 0 ){ ... sgs_IterPushData ... }`
+- this is the way it's expected to be usually called: `while( sgs_IterAdvance( C, var ) ){ ... sgs_IterPushData ... }`
 - see @"Iterator system" for more info about iterators
 
-=== error codes
-- SGS_EBOUNDS: index out of bounds
-- SGS_EINVAL: iterated object changed in a way that iterator does not support (currently a size equality test)
-- SGS_EINPROC: internal failure in the object interface
 
+# sgs_IterPushData [functions]
 
-# sgs_IterPushData(P) [functions]
-
-== SGSRESULT sgs_IterPushData( sgs_Context* C, sgs_StkIdx item, int key, int value )
-== SGSRESULT sgs_IterPushDataP( sgs_Context* C, sgs_Variable* var, int key, int value )
+== void sgs_IterPushData( sgs_Context* C, sgs_Variable var, int key, int value )
 === load and push data associated with the current position
 
 - `key` and `value` are booleans that specify if the respective value should be returned
@@ -3070,36 +2836,21 @@ After a successful call, all arguments and the function will be popped off the s
 - if neither `key` nor `value` are expected, the call succeeds and doesn't push anything
 - see @"Iterator system" for more info about iterators
 
-=== error codes
-- SGS_EBOUNDS: index out of bounds
-- SGS_EINVAL: iterated object changed in a way that iterator does not support
-- SGS_EINPROC: internal failure in the object interface
 
+# sgs_IterGetData [functions]
 
-# sgs_IterGetData(P) [functions]
-
-== SGSRESULT sgs_IterGetData( sgs_Context* C, sgs_StkIdx item, sgs_Variable* key, sgs_Variable* value )
-== SGSRESULT sgs_IterGetDataP( sgs_Context* C, sgs_Variable* var, sgs_Variable* key, sgs_Variable* value )
+== void sgs_IterGetData( sgs_Context* C, sgs_Variable var, sgs_Variable* key, sgs_Variable* value )
 === load data associated with the current position
 
 - `key` and `value` are variables where the data is written if the pointer is not NULL
 - if neither `key` nor `value` are expected, the call succeeds and doesn't retrieve anything
 - see @"Iterator system" for more info about iterators
 
-=== error codes
-- SGS_EBOUNDS: index out of bounds
-- SGS_EINVAL: iterated object changed in a way that iterator does not support
-- SGS_EINPROC: internal failure in the object interface
 
+# sgs_ArraySize [functions]
 
-# sgs_ArraySize(P) [functions]
-
-== SGSMIXED sgs_ArraySize( sgs_Context* C, sgs_StkIdx item )
-== SGSMIXED sgs_ArraySizeP( sgs_Context* C, sgs_Variable* var )
-=== check if the specified stack item or variable is an array and return its size or error code on failure
-
-=== error codes
-- SGS_EINVAL: index out of bounds / variable was not an array
+== sgs_SizeVal sgs_ArraySize( sgs_Context* C, sgs_Variable var )
+=== check if the specified stack item or variable is an array and return its size or -1 if variable is not an array
 
 
 
@@ -3113,7 +2864,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_SetStackSize [function]
 
-== SGSRESULT sgs_SetStackSize( sgs_Context* C, sgs_StkIdx size )
+== void sgs_SetStackSize( sgs_Context* C, sgs_StkIdx size )
 === resizes the current stack frame to fit the specified amount of items
 
 - if the current number of items is less than needed, stack is null-variable-padded at the end
@@ -3122,7 +2873,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_SetDeltaSize [function]
 
-== SGSRESULT sgs_SetDeltaSize( sgs_Context* C, sgs_StkIdx diff )
+== void sgs_SetDeltaSize( sgs_Context* C, sgs_StkIdx diff )
 === resizes the current stack frame to the [size+diff] size
 
 - if diff is positive, stack is null-variable-padded at the end
@@ -3146,14 +2897,28 @@ After a successful call, all arguments and the function will be popped off the s
 - both positive (first = 0) and negative (last = -1) indices are supported
 
 
+# sgs_StackItem [function]
+
+== sgs_Variable sgs_StackItem( sgs_Context* C, sgs_StkIdx item )
+=== returns a non-owned copy of a variable on stack
+
+! Avoid using this function with functions that can alter the stack and remove the source item.
+
+! This function does not acquire the variable and thus can't be used in functions that modify it without previously taking ownership of it, such as @sgs_Assign or @sgs_To***; to acquire variable on retrieval, see @sgs_GetStackItem or @sgs_Acquire.
+
+- This function can be used to pass arguments from stack in most simple operations.
+
+
 # sgs_PeekStackItem [function]
 
 == SGSBOOL sgs_PeekStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )
-=== write the data of the specified stack variable if the index is valid
+=== try to write the data of the specified stack variable if the index is valid
 
-! this function does not acquire the variable and thus CANNOT be used in functions that modify it, such as @sgs_Assign or @sgs_To***; to acquire variable on retrieval, see @sgs_GetStackItem or @sgs_Acquire
+! Avoid using this function with functions that can alter the stack and remove the source item.
 
-- function returns whether the stack index was valid
+! This function does not acquire the variable and thus can't be used in functions that modify it without previously taking ownership of it, such as @sgs_Assign or @sgs_To***; to acquire variable on retrieval, see @sgs_GetStackItem or @sgs_Acquire.
+
+- function returns whether the stack index was valid and the variable was written
 
 
 # sgs_GetStackItem [function]
@@ -3166,12 +2931,8 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_SetStackItem [function]
 
-== SGSRESULT sgs_SetStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* val )
+== void sgs_SetStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable val )
 === copy the specified variable to the specified position in stack
-
-=== error codes
-- SGS_EINVAL: invalid variable type detected (corrupted data)
-- SGS_EBOUNDS: index out of bounds
 
 
 # sgs_ItemType [function]
@@ -3201,8 +2962,8 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_GCMark(Array) [function]
 
-== SGSRESULT sgs_GCMark( sgs_Context* C, sgs_Variable* var )
-== SGSRESULT sgs_GCMarkArray( sgs_Context* C, sgs_Variable* var, sgs_SizeVal count )
+== void sgs_GCMark( sgs_Context* C, sgs_Variable* var )
+== void sgs_GCMarkArray( sgs_Context* C, sgs_Variable* var, sgs_SizeVal count )
 === mark the specified variables as reachable for the garbage collector
 
 - to be called in the GCMARK object callback
@@ -3222,7 +2983,7 @@ After a successful call, all arguments and the function will be popped off the s
 
 # sgs_ObjGCMark [function]
 
-== SGSRESULT sgs_ObjGCMark( sgs_Context* C, sgs_VarObj* obj )
+== void sgs_ObjGCMark( sgs_Context* C, sgs_VarObj* obj )
 === mark the specified object as accessible to avoid its destruction by the @"Garbage collection system"
 
 - to be called in the GCMARK object callback
@@ -3597,11 +3358,10 @@ sample implementation (same as in sgscript.h):
 
 # sgs_Abort [function]
 
-== SGSRESULT sgs_Abort( sgs_Context* C )
-=== stops execution of current SGS functions up to the last C function in the stack, excluding the current
+== SGSBOOL sgs_Abort( sgs_Context* C )
+=== Stops execution of current SGS functions up to the last C function in the stack, excluding the current.
 
-=== error codes
-- SGS_ENOTFND: last or next to last function in the stack was not a SGS function
+- Function fails if there was nothing to abort - last or next to last function in the stack was not a SGS function.
 
 
 # sgs_Stat [function]
@@ -3717,8 +3477,8 @@ Created string is a valid resource in terms of acquisition/release but not hashe
 
 # sgs_FinalizeStringAlloc(P) [functions]
 
-== SGSRESULT sgs_FinalizeStringAlloc( sgs_Context* C, sgs_StkIdx item )
-== SGSRESULT sgs_FinalizeStringAllocP( sgs_Context* C, sgs_Variable* var )
+== void sgs_FinalizeStringAlloc( sgs_Context* C, sgs_StkIdx item )
+== void sgs_FinalizeStringAllocP( sgs_Context* C, sgs_Variable* var )
 === finalize (prepare for usage) an uninitialized string buffer
 
 - preparations include string hashing and internalization (release of owned copy in favor of exact same string in string table)
@@ -3881,12 +3641,11 @@ It is safe to use conversion functions on both variables.
 Depending on the argument, it is called by different sources:
 - type conversion: to*** function families and other conversion triggers (like operators) in SGScript and the Get/To/Parse function families in the C API.
 - SGS_CONVOP_CLONE: called on @clone / @sgs_Clone
-- SGS_CONVOP_TYPEOF: called on @typeof / @sgs_TypeOf
-- SGS_CONVOP_TOITER: called on foreach / @sgs_PushIterator(P) / @sgs_GetIterator(P)
+- SGS_CONVOP_TOITER: called on foreach / @sgs_PushIterator / @sgs_GetIterator
 
 ==== Additional arguments:
 
-- int type -- one of SGS_VT_[BOOL|INT|REAL|STRING|PTR] or SGS_CONVOP_CLONE / SGS_CONVOP_TYPEOF / SGS_CONVOP_TOITER
+- int type -- one of SGS_VT_[BOOL|INT|REAL|STRING|PTR] or SGS_CONVOP_CLONE / SGS_CONVOP_TOITER
 
 ==== Stack frame:
 
@@ -3895,7 +3654,6 @@ Empty at beginning. Expected to have at least one item on stack after a successf
 Depending on the argument, it requires different variable types on stack:
 - type conversions require a value of the right type.
 - SGS_CONVOP_CLONE should return an exact copy of the same object
-- SGS_CONVOP_TYPEOF should return a string containing the type name
 - SGS_CONVOP_TOITER should return an object with a GETNEXT callback
 
 ==== Return values:
@@ -3983,7 +3741,7 @@ Empty.
 ==== When called:
 
 - foreach in SGScript.
-- @sgs_IterAdvance(P) / @sgs_IterPushData(P) / @sgs_IterGetData(P)
+- @sgs_IterAdvance / @sgs_IterPushData / @sgs_IterGetData
 
 ==== Additional arguments:
 

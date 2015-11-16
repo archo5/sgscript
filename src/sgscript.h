@@ -456,7 +456,7 @@ static SGS_INLINE sgs_Variable sgs_MakeNull()
 }
 static SGS_INLINE sgs_Variable sgs_MakeBool( sgs_Bool v )
 {
-	sgs_Variable out; out.type = SGS_VT_BOOL; out.data.B = v; return out;
+	sgs_Variable out; out.type = SGS_VT_BOOL; out.data.B = v ? 1 : 0; return out;
 }
 static SGS_INLINE sgs_Variable sgs_MakeInt( sgs_Int v )
 {
@@ -521,7 +521,7 @@ SGS_APIFUNC SGSBOOL sgs_PushIndex( SGS_CTX, sgs_Variable obj, sgs_Variable idx, 
 SGS_APIFUNC SGSBOOL sgs_PushProperty( SGS_CTX, sgs_Variable obj, const char* name );
 SGS_APIFUNC SGSBOOL sgs_SetProperty( SGS_CTX, sgs_Variable obj, const char* name, sgs_Variable val );
 SGS_APIFUNC SGSBOOL sgs_PushNumIndex( SGS_CTX, sgs_Variable obj, sgs_Int idx );
-SGS_APIFUNC SGSBOOL sgs_StoreNumIndex( SGS_CTX, sgs_Variable obj, sgs_Int idx );
+SGS_APIFUNC SGSBOOL sgs_SetNumIndex( SGS_CTX, sgs_Variable obj, sgs_Int idx, sgs_Variable val );
 
 /* raw & simplified global access */
 SGS_APIFUNC SGSBOOL sgs_GetGlobal( SGS_CTX, sgs_Variable idx, sgs_Variable* out );
