@@ -12,6 +12,11 @@
 #include "sgs_int.h"
 
 
+#define _EL_BACKUP int oapi = ( C->state & SGS_STATE_INSIDE_API ) != 0
+#define _EL_SETAPI(is) C->state = ( C->state & ~(uint32_t)SGS_STATE_INSIDE_API ) | ( is ? SGS_STATE_INSIDE_API : 0 )
+#define _EL_RESET _EL_SETAPI(oapi)
+
+
 #define TYPENAME( type ) sgs_VarNames[ type ]
 
 #define IS_REFTYPE( type ) ( type == SGS_VT_STRING || type == SGS_VT_FUNC || type == SGS_VT_OBJECT )
@@ -56,6 +61,7 @@ static int _call_metamethod( SGS_CTX, sgs_VarObj* obj, const char* name, size_t 
 {
 	int res;
 	sgs_Variable v_func;
+	_EL_BACKUP;
 	if( !obj->metaobj )
 		return 0;
 	
@@ -67,7 +73,9 @@ static int _call_metamethod( SGS_CTX, sgs_VarObj* obj, const char* name, size_t 
 	if( !res )
 		return 0;
 	
+	_EL_SETAPI(0);
 	res = sgs_ThisCall( C, v_func, args, 1 );
+	_EL_RESET;
 	sgs_Release( C, &v_func );
 	return res;
 }
@@ -1469,6 +1477,7 @@ static SGSRESULT vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj,
 	{
 		sgs_VarObj* O = obj->data.O;
 		_STACK_PREPARE;
+		_EL_BACKUP;
 		int arg = C->object_arg;
 		
 		if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
@@ -1476,10 +1485,12 @@ static SGSRESULT vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj,
 		C->sf_count++;
 		
 		_STACK_PROTECT;
+		_EL_SETAPI(0);
 		stk_push( C, idx );
 		C->object_arg = isprop;
 		ret = O->iface->getindex( C, O );
 		C->object_arg = arg;
+		_EL_RESET;
 		
 		C->sf_count--;
 		if( SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1 )
@@ -1549,17 +1560,20 @@ nextcase:;
 		int arg = C->object_arg;
 		sgs_VarObj* O = obj->data.O;
 		_STACK_PREPARE;
+		_EL_BACKUP;
 		
 		if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
 			return SGS_EINPROC;
 		C->sf_count++;
 		
+		_EL_SETAPI(0);
 		_STACK_PROTECT;
 		stk_push( C, idx );
 		stk_push( C, src );
 		C->object_arg = isprop;
 		ret = O->iface->setindex( C, O );
 		C->object_arg = arg;
+		_EL_RESET;
 		
 		C->sf_count--;
 		_STACK_UNPROTECT;
@@ -3172,15 +3186,11 @@ void sgs_FinalizeStringAllocP( SGS_CTX, sgs_Variable* var )
 
 
 
-#define _EL_BACKUP int32_t oel = C->minlev;
-#define _EL_SETMAX C->minlev = C->apilev;
-#define _EL_RESET C->minlev = oel;
-
 SGSBOOL sgs_GetIndex( SGS_CTX, sgs_Variable obj, sgs_Variable idx, sgs_Variable* out, int isprop )
 {
 	int ret;
 	_EL_BACKUP;
-	_EL_SETMAX;
+	_EL_SETAPI(1);
 	ret = vm_getprop( C, out, &obj, &idx, isprop );
 	if( SGS_SUCCEEDED( ret ) )
 		VM_GETPROP_RETPTR( ret, out );
@@ -3194,7 +3204,7 @@ SGSBOOL sgs_SetIndex( SGS_CTX, sgs_Variable obj, sgs_Variable idx, sgs_Variable 
 {
 	int ret;
 	_EL_BACKUP;
-	_EL_SETMAX;
+	_EL_SETAPI(1);
 	ret = vm_setprop( C, &obj, &idx, &val, isprop );
 	_EL_RESET;
 	return SGS_SUCCEEDED( ret );
@@ -3205,7 +3215,7 @@ SGSBOOL sgs_PushIndex( SGS_CTX, sgs_Variable obj, sgs_Variable idx, int isprop )
 	int ret;
 	sgs_Variable tmp;
 	_EL_BACKUP;
-	_EL_SETMAX;
+	_EL_SETAPI(1);
 	ret = vm_getprop( C, &tmp, &obj, &idx, isprop );
 	if( SGS_SUCCEEDED( ret ) )
 		VM_GETPROP_RETTOP( ret, &tmp );
@@ -3256,7 +3266,7 @@ SGSBOOL sgs_GetGlobal( SGS_CTX, sgs_Variable idx, sgs_Variable* out )
 	int ret;
 	_EL_BACKUP;
 	out->type = SGS_VT_NULL;
-	_EL_SETMAX;
+	_EL_SETAPI(1);
 	ret = sgsSTD_GlobalGet( C, out, &idx );
 	_EL_RESET;
 	return ret;
@@ -5660,11 +5670,6 @@ SGSBOOL sgs_IsCallable( SGS_CTX, StkIdx item )
 	if( ty == SGS_VT_OBJECT && sgs_GetObjectIface( C, item )->call )
 		return 1;
 	return 0;
-}
-
-SGSBOOL sgs_IsIterable( SGS_CTX, sgs_StkIdx item )
-{
-	return sgs_ItemType( C, item ) == SGS_VT_OBJECT;// && sgs_GetObjectIface( C, item )->
 }
 
 SGSBOOL sgs_ParseBool( SGS_CTX, StkIdx item, sgs_Bool* out )

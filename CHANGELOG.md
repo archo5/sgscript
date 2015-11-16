@@ -1,4 +1,17 @@
 
+**1.0.1** (2015/11/17):
+
+- major API cleanup - replaced many error codes with internal messaging
+- various bugfixes
+- improved closure support (can now call them directly, aborting passes through and coroutine pausing works)
+- dict literal - mapping shortcut "{ a, b }" = "{ a = a, b = b }"
+- cppbc: interface upgrades - VALIDATE/SOURCE, coroutine-aware methods, method aliases, improved parsing
+- symbol serialization
+- coroutine serialization
+- optimized AST heap usage (more efficient eval/code compilation in general)
+- restored the old getindex/setindex/expr object interface
+- added persistent registry tables (root, symbols, includes)
+
 **0.9.7** (2015/06/03):
 
 - partial Windows Phone 8 support

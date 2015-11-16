@@ -365,12 +365,10 @@ Targets:
 -- build_test: build @"language test application"<docs://sgscript/Language test application (sgstest)>
 -- build_apitest: build @"API test application"<docs://sgscript/API test application (sgsapitest)>
 -- build_cppbctest: build @"C++ binding compiler test application"<docs://sgscript/C++ binding compiler test application (sgscppbctest)>
--- build_cppbindtest: build @"lightweight C++ binding test application"<docs://sgscript/Lightweight C++ binding test application (sgscppbindtest)>
 -- build_mttest: build @"multithreading safety test application"<docs://sgscript/Multithreading safety test application (mttest)>
 -- test: build and run @"language test application"<docs://sgscript/Language test application (sgstest)>
 -- apitest: build and run @"API test application"<docs://sgscript/API test application (sgsapitest)>
 -- cppbctest: build and run @"C++ binding compiler test application"<docs://sgscript/C++ binding compiler test application (sgscppbctest)>
--- cppbindtest: build and run @"lightweight C++ binding test application"<docs://sgscript/Lightweight C++ binding test application (sgscppbindtest)>
 -- mttest: build and run @"multithreading safety test application"<docs://sgscript/Multithreading safety test application (mttest)>
 - other
 -- clean: clean all generated files
@@ -473,10 +471,10 @@ This section describes various use cases and how to apply the SGScript C API to 
     sgs_PushString( C, "some C string" );
     sgs_PushStringBuf( C, "not\0really\0C\0string", 19 );
     sgs_PushPtr( C, C );
-    sgs_PushGlobal( C, "main" ); // assuming this does not fail
-    sgs_Call( C, 6, 1 ); // calls function from global 'main' with 6 arguments and expects 1 value in return
+    sgs_PushGlobalByName( C, "main" ); // assuming this does not fail
+    sgs_Call( C, SGS_FSTKTOP, 6, 1 ); // calls function from global 'main' with 6 arguments and expects 1 value in return
     // again, it's assumed that sgs_Call does not fail
-    // ...but it may, so checking return value with SGS_SUCCEEDED / SGS_FAILED macros is a very good idea
+    // ...but it may, so checking return value is a very good idea
 
 - Function arguments can be passed by pushing data on the stack.
 - There are many kinds of pushing functions, some of these push exact data.
@@ -513,11 +511,11 @@ This section describes various use cases and how to apply the SGScript C API to 
     
     sgs_PushString( C, "some C string" );
     sgs_PushStringBuf( C, "not\0really\0C\0string", 19 );
-    sgs_PushDict( C, 2 ); // pushes a dictionary with one entry, made from 2 topmost stack items
+    sgs_CreateDict( C, NULL, 2 ); // pushes a dictionary with one entry, made from 2 topmost stack items
 
 - Basic objects (array, dict, map) can be easily pushed on the stack too.
-- `sgs_PushArray` takes the specified number of topmost stack items, puts them into the array and removes them from the stack
-- `sgs_PushDict` and `sgs_PushMap` take the specified number of topmost stack items, map values to keys and remove them from the stack
+- `sgs_CreateArray` takes the specified number of topmost stack items, puts them into the array and removes them from the stack
+- `sgs_CreateDict` and `sgs_CreateMap` take the specified number of topmost stack items, map values to keys and remove them from the stack
 -- The number of items must be a multiple of 2. First item of each pair is a key, second - value for that key.
 -- Keys can be repeated, only the last value is used.
 
@@ -547,8 +545,7 @@ This section describes various use cases and how to apply the SGScript C API to 
 -- there are many more options and features for this function, for the whole list, see @"sgs_LoadArgs"<docs://sgscript/sgs_LoadArgsExt(VA) [function]>
 
     // method #1
-    sgs_PushCFunction( C, sample_func );
-    sgs_StoreGlobal( C, "sample_func" );
+    sgs_SetGlobalByName( C, "sample_func", sgs_MakeCFunc( sample_func ) );
     // method #2
     sgs_RegFuncConst funcs[] = { { "sample_func", sample_func } };
     sgs_RegFuncConsts( C, funcs, sizeof(funcs) / sizeof(funcs[0]) );
@@ -567,7 +564,7 @@ This section describes various use cases and how to apply the SGScript C API to 
 
     // push the 'print' function
     // method 1
-    sgs_PushGlobal( C, "print" );
+    sgs_PushGlobalByName( C, "print" );
     // method 2
     sgs_PushEnv( C );
     sgs_PushProperty( C, -1, "print" );
@@ -575,7 +572,7 @@ This section describes various use cases and how to apply the SGScript C API to 
     // method 3
     sgs_PushEnv( C );
     sgs_PushString( C, "print" );
-    sgs_PushIndexII( C, -2, -1, 1 );
+    sgs_PushIndex( C, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), 1 );
 
 - Sub-items are variables that can be found inside other variables via property/index access.
 - The API offers a huge variety of functions that deal with sub-items.
@@ -584,9 +581,9 @@ This section describes various use cases and how to apply the SGScript C API to 
 -- To take more control means also taking responsibility for stack state and error codes.
 --- This is clearly not done in the example but is highly encouraged at all times, as good practice.
 
-    sgs_PushDict( C, 0 );
+    sgs_CreateDict( C, NULL, 0 );
     sgs_PushString( C, "test" );
-    sgs_SetIndexIII( C, -2, -1, -1, 0 );
+    sgs_SetIndex( C, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), sgs_StackItem( C, -1 ), 0 );
     // result: {test=test}
 
 - It is possible to both read and write from/to sub-items.
@@ -594,18 +591,17 @@ This section describes various use cases and how to apply the SGScript C API to 
 -- Get*** functions load the property/index to the specified prepared location.
 -- Set*** functions save the property/index, taking it from the specified location.
 -- Push*** functions load the property/index and push it at the top of the stack.
--- Store*** functions save the property/index, taking it from topmost stack item which is removed from stack afterwards.
 
 ! Prefer index access (isprop=0) to property access since the general convention is that indices provide raw access but property access can be augmented with function calls.
 
 
     sgs_Variable dict, key;
-    sgs_InitDict( C, &dict, 0 );
+    sgs_CreateDict( C, &dict, 0 );
     sgs_InitString( C, &key, "test" );
     sgs_PushInt( C, 5 ):
-    sgs_SetIndexPPI( C, &dict, &key, -1, 0 ); // PPI = pointer, pointer, (stack) index/item
+    sgs_SetIndex( C, dict, key, sgs_StackItem( C, -1 ), 0 );
     // result: {test=5}
-    sgs_PushVariable( C, &dict );
+    sgs_PushVariable( C, dict );
     sgs_Release( C, &dict );
     sgs_Release( C, &key );
 
@@ -623,9 +619,9 @@ This section describes various use cases and how to apply the SGScript C API to 
     sgs_PushInt( C, 3 );
     sgs_PushInt( C, 4 );
     sgs_PushInt( C, 5 );
-    sgs_PushArray( C, 3 );
-    sgs_PushNumIndex( C, -1, 1 ); // pushes [int 4]
-    sgs_PushPath( C, -1, "i", (sgs_SizeVal) 1 ); // pushes [int 4] too
+    sgs_CreateArray( C, NULL, 3 );
+    sgs_PushNumIndex( C, sgs_StackItem( C, -1 ), 1 ); // pushes [int 4]
+    sgs_PushPath( C, sgs_StackItem( C, -1 ), "i", (sgs_SizeVal) 1 ); // pushes [int 4] too
 
 - There are a few other shortcuts like @sgs_PushNumIndex<docs://sgscript/sgs_PushNumIndex [function]> and @sgs_PushPath<docs://sgscript/sgs_PushPath [function]> that are worth considering when dealing with sub-items.
 
@@ -646,8 +642,8 @@ This section describes various use cases and how to apply the SGScript C API to 
 -- This effectively creates a pointer to interface, which is the only way the interface is requested by any API function.
 - Interface must be accessible until there's at least one object using it. It can usually be defined as a global/static variable.
 
-    sgs_PushObject( C, malloc( sizeof( mystruct ) ), object_iface );
-    sgs_PushObjectIPA( C, sizeof( mystruct ), object_iface ); // preferred method
+    sgs_CreateObject( C, NULL, malloc( sizeof( mystruct ) ), object_iface );
+    sgs_CreateObjectIPA( C, NULL, sizeof( mystruct ), object_iface ); // preferred method
 
 - There are two ways to create objects. Pointer to external data / in-place allocation.
 -- First way simply means that a data pointer is set to whatever value you want.
@@ -667,15 +663,15 @@ This section describes various use cases and how to apply the SGScript C API to 
 - All callbacks return `int` and have the same first two arguments (`sgs_Context*` and `sgs_VarObj*`).
 - In all callbacks, negative return values are error codes and non-negative (>= 0) imply success.
 
-    int object_getindex( SGS_CTX, sgs_VarObj* obj, sgs_Variable* key, int is_property )
+    int object_getindex( SGS_CTX, sgs_VarObj* obj )
     {
         char* str;
-        if( sgs_ParseStringP( C, key, &str, NULL ) )
+        if( sgs_ParseString( C, 0, &str, NULL ) )
         {
-            if( strcmp( str, "data_pointer" ) == 0 ){ sgs_PushPtr( C, obj->data ); return SGS_SUCCESS; }
+            if( strcmp( str, "data_pointer" ) == 0 ) return sgs_PushPtr( C, obj->data );
             
-            if( strcmp( str, "do_something" ) == 0 ){ sgs_PushCFunction( C, object_do_something ); return SGS_SUCCESS; }
-            if( strcmp( str, "do_smth_else" ) == 0 ){ sgs_PushCFunction( C, object_do_smth_else ); return SGS_SUCCESS; }
+            if( strcmp( str, "do_something" ) == 0 ) return sgs_PushCFunc( C, object_do_something );
+            if( strcmp( str, "do_smth_else" ) == 0 ) return sgs_PushCFunc( C, object_do_smth_else );
         }
         return SGS_ENOTFND; // return that the specified key was not found in object
     }
@@ -683,18 +679,16 @@ This section describes various use cases and how to apply the SGScript C API to 
     int object_getindex( SGS_ARGS_GETINDEXFUNC )
     {
         SGS_BEGIN_INDEXFUNC
-            SGS_CASE( "data_pointer" ) { sgs_PushPtr( C, obj->data ); return SGS_SUCCESS; }
+            SGS_CASE( "data_pointer" ) return sgs_PushPtr( C, obj->data );
             
-            SGS_CASE( "do_something" ) SGS_RETURN_CFUNC( object_do_something )
-            SGS_CASE( "do_smth_else" ) SGS_RETURN_CFUNC( object_do_smth_else )
+            SGS_CASE( "do_something" ) return sgs_PushCFunc( C, object_do_something );
+            SGS_CASE( "do_smth_else" ) return sgs_PushCFunc( C, object_do_smth_else );
         SGS_END_INDEXFUNC
     }
 
 - This is a very basic index/property reading callback.
 -- On request for key `data_pointer`, it returns pointer to allocated memory.
 -- On requests for the other two keys, it returns the associated methods.
-- `sgs_ParseStringP` is the pointer interface equivalent to `sgs_ParseString`.
-- `key` variable is allocated and freed by caller.
 - Both presented versions are practically interchangeable.
 - This error code (SGS_ENOTFND), coming from this callback, has a specific behavior: it may trigger a 'property/index not found' warning.
 -- It is *NOT* recommended to return SGS_SUCCESS and send the warning manually because return code is passed back to API functions.

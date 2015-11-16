@@ -153,15 +153,6 @@ $(OUTDIR)/sgscppbctest11$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/s
 	$(call SGS_INSTALL_TOOL,$@)
 obj/cppbc_test.cpp: ext/sgscppbctest.h $(OUTDIR)/sgsvm$(BINEXT)
 	$(OUTDIR)/sgsvm -p ext/cppbc/cppbc.sgs $< -o $@
-## - cppbind testing
-.PHONY: cppbindtest
-.PHONY: build_cppbindtest
-build_cppbindtest: $(OUTDIR)/sgscppbindtest$(BINEXT)
-cppbindtest: build_cppbindtest
-	$(OUTDIR)/sgscppbindtest
-$(OUTDIR)/sgscppbindtest$(BINEXT): ext/cpp/cppbind_example.cpp $(OUTFILE)
-	$(CXX) -o $@ $< $(EXEFLAGS)
-	$(call SGS_INSTALL_TOOL,$@)
 ## - multithreaded testing
 .PHONY: mttest
 .PHONY: build_mttest

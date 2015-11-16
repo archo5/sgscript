@@ -143,16 +143,6 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 );
 
 
-/* Virtual machine state */
-#define SGS_STOP_ON_FIRST_ERROR 0x0001
-#define SGS_HAS_ERRORS          0x00010000
-#define SGS_MUST_STOP          (0x00020000 | SGS_HAS_ERRORS)
-#define SGS_SERIALIZE_MODE2     0x0004
-#define SGS_STATE_PAUSED        0x0008
-#define SGS_STATE_DESTROYING    0x0010
-#define SGS_STATE_LASTFUNCABORT 0x0020
-
-
 /* Statistics / debugging */
 #define SGS_STAT_VERSION      0
 #define SGS_STAT_STATECOUNT   1
@@ -670,6 +660,7 @@ SGS_APIFUNC char* sgs_ToStringBufFastP( SGS_CTX, sgs_Variable* var, sgs_SizeVal*
 
 SGS_APIFUNC SGSBOOL sgs_IsObjectP( sgs_Variable* var, sgs_ObjInterface* iface );
 #define sgs_IsTypeP( C, var, name ) sgs_IsObjectP( var, sgs_FindType( C, name ) )
+SGS_APIFUNC SGSBOOL sgs_IsCallableP( sgs_Variable* var );
 SGS_APIFUNC SGSBOOL sgs_ParseStringP( SGS_CTX, sgs_Variable* var, char** out, sgs_SizeVal* size );
 
 /* index versions */
@@ -686,7 +677,6 @@ SGS_APIFUNC char* sgs_ToStringBufFast( SGS_CTX, sgs_StkIdx item, sgs_SizeVal* ou
 SGS_APIFUNC SGSBOOL sgs_IsObject( SGS_CTX, sgs_StkIdx item, sgs_ObjInterface* iface );
 #define sgs_IsType( C, item, name ) sgs_IsObject( C, item, sgs_FindType( C, name ) )
 SGS_APIFUNC SGSBOOL sgs_IsCallable( SGS_CTX, sgs_StkIdx item );
-SGS_APIFUNC SGSBOOL sgs_IsIterable( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSBOOL sgs_ParseBool( SGS_CTX, sgs_StkIdx item, sgs_Bool* out );
 SGS_APIFUNC SGSBOOL sgs_ParseInt( SGS_CTX, sgs_StkIdx item, sgs_Int* out );
 SGS_APIFUNC SGSBOOL sgs_ParseReal( SGS_CTX, sgs_StkIdx item, sgs_Real* out );

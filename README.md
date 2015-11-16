@@ -1,12 +1,11 @@
-# SGScript v0.9.5
+# SGScript v1.0.1
 
 ## Usage
 
 - MinGW users:
     * compile the makefile (add mode=release to get the release build)
     * link with -lsgscript from the bin/ directory (-Lbin)
-- VC10/11 users: project file is in build/vc10/SGScript
-- Code::Blocks users: project file is in build/codeblocks
+- VC10+ users: project file is in build/vc10/SGScript
 - XCode users: project file is in build/xcode
 - include ```src/sgscript.h``` in your project and link with ```libsgscript.a```
 

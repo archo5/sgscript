@@ -552,6 +552,16 @@ struct _sgs_ShCtx
 	sgs_VarObj*   _INC;
 };
 
+/* Virtual machine state */
+#define SGS_STOP_ON_FIRST_ERROR 0x0001
+#define SGS_HAS_ERRORS          0x00010000
+#define SGS_MUST_STOP          (0x00020000 | SGS_HAS_ERRORS)
+#define SGS_SERIALIZE_MODE2     0x0004
+#define SGS_STATE_PAUSED        0x0008
+#define SGS_STATE_DESTROYING    0x0010
+#define SGS_STATE_LASTFUNCABORT 0x0020
+#define SGS_STATE_INSIDE_API    0x0040
+
 struct _sgs_Context
 {
 	sgs_ShCtx*    shared;

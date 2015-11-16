@@ -583,7 +583,7 @@ SGSZERO sgs_Msg( SGS_CTX, int type, const char* what, ... )
 	char* ptr = buf;
 	
 	/* error level filter */
-	if( type < C->minlev ) return 0;
+	if( type < ( C->state & SGS_STATE_INSIDE_API ? C->apilev : C->minlev ) ) return 0;
 	/* error suppression */
 	if( C->sf_last && C->sf_last->errsup > 0 ) return 0;
 	

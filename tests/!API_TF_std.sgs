@@ -331,6 +331,11 @@ testEqual( sym_get( printer.create ), "printer.create", "symbol for function 'pr
 testEqual( sym_get( "wat" ), null, "no symbol with name 'wat' for function inside 'printer.create'" );
 testEqual( ERRORS, "[W:sym_get(): symbol not found]", "classes/symbols - errors" );
 
+	section( "errors" );
+ERRORS = "";
+testEqual( isset( {}, "wat" ), false, "isset - works" );
+testEqual( ERRORS, "", "isset - no error" );
+
 
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );
