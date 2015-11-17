@@ -1355,7 +1355,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_PushReal<sgs_Push***> - push a real value
 - @sgs_PushStringBuf<sgs_Push***> - push a new string from char buffer
 - @sgs_PushString<sgs_Push***> - push a new string
-- @sgs_PushCFunction<sgs_Push***> - push a C function
+- @sgs_PushCFunc<sgs_Push***> - push a C function
 - @sgs_PushPtr<sgs_Push***> - push a pointer
 - @sgs_PushObjectPtr<sgs_Push***> - push an object pointer
 - @sgs_PushVariable<sgs_Push***> - push the specified variable
@@ -1889,7 +1889,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 == SGSONE sgs_PushReal( sgs_Context* C, sgs_Real value )
 == SGSONE sgs_PushStringBuf( sgs_Context* C, const char* str, sgs_SizeVal size )
 == SGSONE sgs_PushString( sgs_Context* C, const char* str )
-== SGSONE sgs_PushCFunction( sgs_Context* C, sgs_CFunc func )
+== SGSONE sgs_PushCFunc( sgs_Context* C, sgs_CFunc func )
 == SGSONE sgs_PushObject( sgs_Context* C, void* data, sgs_ObjInterface* iface )
 == void* sgs_PushObjectIPA( sgs_Context* C, sgs_SizeVal added, sgs_ObjInterface* iface )
 == SGSONE sgs_PushPtr( sgs_Context* C, void* ptr )
@@ -5133,7 +5133,7 @@ This library is loaded on initialization and contains the functions and constant
 # SGS_*** [constants]
 
 == SGS_INFO, SGS_WARNING, SGS_ERROR, SGS_APIERR
-=== defined to the values of the C macros, respectively 100, 200 and 300
+=== defined to the values of the C macros, respectively 100, 200, 300 and 400
 
 
 # VT_*** [constants]
@@ -5145,7 +5145,7 @@ This library is loaded on initialization and contains the functions and constant
 # RAND_MAX [constant]
 
 == RAND_MAX
-=== the maximum number that can be returned by @rand()
+=== The maximum number that can be returned by @rand().
 
 
 # _G [superglobal]
@@ -5160,7 +5160,7 @@ This library is loaded on initialization and contains the functions and constant
 
 == A hard-coded global value that points to the registry. Can be used to access the symbol table (_R["$sym"]) or include list (_R["$inc"]).
 
-- it is preferred to use @sym_get and @sym_register to deal with symbols, this table is mostly available for introspection and workarounds
+- It is preferred to use @sym_get and @sym_register to deal with symbols, this table is mostly available for introspection and workarounds.
 
 
 # array [object]

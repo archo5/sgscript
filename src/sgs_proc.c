@@ -3309,6 +3309,7 @@ void sgs_SetGlobalByName( SGS_CTX, const char* name, sgs_Variable val )
 	ret = sgs_SetGlobal( C, str, val );
 	sgs_Release( C, &str );
 	sgs_BreakIf( ret == SGS_FALSE );
+	SGS_UNUSED( ret );
 }
 
 
@@ -4242,7 +4243,8 @@ SGSBOOL sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect )
 {
 	int ret;
 	sgs_Variable v_func;
-	sgs_GetGlobalByName( C, name, &v_func );
+	if( !sgs_GetGlobalByName( C, name, &v_func ) )
+		return SGS_FALSE;
 	ret = sgs_Call( C, v_func, args, expect );
 	sgs_Release( C, &v_func );
 	return ret;

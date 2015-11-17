@@ -309,10 +309,10 @@ public:
 		return *this;
 	}
 	
-	const char* c_str() const { return str ? sgs_str_cstr( str ) : NULL; }
+	const char* c_str() const { return str ? sgs_str_c_cstr( str ) : NULL; }
 	size_t size() const { return str ? (size_t) str->size : 0; }
 #ifdef SGS_CPPBC_WITH_STD_STRING
-	bool get_string( std::string& out ){ if( str ){ out = std::string( sgs_str_cstr( str ), str->size ); return true; } return false; }
+	bool get_string( std::string& out ){ if( str ){ out = std::string( sgs_str_c_cstr( str ), str->size ); return true; } return false; }
 #endif
 	
 	int compare( const sgsString& s ) const
@@ -323,7 +323,7 @@ public:
 		int null2 = s.str == NULL;
 		if( null1 || null2 )
 			return null2 - null1;
-		int cmp = memcmp( sgs_str_cstr( str ), sgs_str_cstr( s.str ), str->size < s.str->size ? str->size : s.str->size );
+		int cmp = memcmp( sgs_str_c_cstr( str ), sgs_str_c_cstr( s.str ), str->size < s.str->size ? str->size : s.str->size );
 		if( cmp )
 			return cmp;
 		return str->size == s.str->size ? 0 : ( str->size < s.str->size ? -1 : 1 );
@@ -333,7 +333,9 @@ public:
 	bool operator != ( const sgsString& s ) const { return !same_as( s ); }
 	bool same_as( const sgsString& s ) const { return str == s.str; }
 	
-	bool equals( const char* s ){ return strcmp( sgs_str_cstr( str ), s ) == 0; }
+	bool equals( const char* s ) const { return strcmp( sgs_str_c_cstr( str ), s ) == 0; }
+	bool equals( const char* s, size_t sz ) const { return sz == str->size &&
+		memcmp( sgs_str_c_cstr( str ), s, sz ) == 0; }
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); }
 		sgs_Variable v; v.type = str ? SGS_VT_STRING : SGS_VT_NULL; v.data.S = str; sgs_PushVariable( c, v ); }
@@ -475,7 +477,7 @@ public:
 	
 	void push( sgs_Context* c = NULL ) const { if( C ){ c = C; assert( C ); } else { assert( c ); } sgs_PushVariable( c, var ); }
 	void gcmark() { if( C ) sgs_GCMark( C, &var ); }
-	bool not_null(){ return var.type != SGS_VT_NULL; }
+	bool not_null() const { return var.type != SGS_VT_NULL; }
 	bool is_object( sgs_ObjInterface* iface ){ return !!sgs_IsObjectP( &var, iface ); }
 	template< class T > bool is_handle(){ return sgs_IsObjectP( &var, T::_sgs_interface ); }
 	template< class T > T* get_object_data(){ return (T*) sgs_GetObjectDataP( &var ); }
@@ -487,15 +489,10 @@ public:
 	/* indexing */
 	sgsVariable getsubitem( sgsVariable key, bool prop )
 	{
-		SGSBOOL res;
 		sgsVariable out(C);
 		if( not_null() )
-			res = sgs_GetIndex( C, var, key.var, &out.var, prop );
-		else
-			res = 0;
-		if( SGS_SUCCEEDED( res ) )
-			return out;
-		return sgsVariable();
+			sgs_GetIndex( C, var, key.var, &out.var, prop );
+		return out;
 	}
 	sgsVariable getsubitem( const char* key, bool prop )
 	{
@@ -514,12 +511,7 @@ public:
 	
 	bool setsubitem( sgsVariable key, sgsVariable val, bool prop )
 	{
-		SGSBOOL res;
-		if( not_null() )
-			res = sgs_SetIndex( C, var, key.var, val.var, prop );
-		else
-			res = 0;
-		return res;
+		return sgs_SetIndex( C, var, key.var, val.var, prop );
 	}
 	bool setsubitem( const char* key, sgsVariable val, bool prop )
 	{
