@@ -2082,7 +2082,12 @@ Most operations are directed towards the scripting engine, that is - environment
 </li><li>int event - the event that occured, can be one of these values:
 <ul><li>SGS_HOOK_ENTER - function was entered
 </li><li>SGS_HOOK_EXIT - function was exited
-</li><li>SGS_HOOK_STEP - instruction is about to be executed</li></ul></li></ul></li></ul></div>
+</li><li>SGS_HOOK_STEP - instruction is about to be executed
+</li><li>SGS_HOOK_PAUSE - context was paused
+</li><li>SGS_HOOK_CONT - context was resumed
+</li><li>SGS_HOOK_CREAT - context was created (empty, no state copy)
+</li><li>SGS_HOOK_CFORK - context was forked (full state copy)
+</li><li>SGS_HOOK_CFREE - context was freed</li></ul></li></ul></li></ul></div>
 <div class='item'><a name='Commonly-required-advanced-tasks'></a><hr><h2>Commonly required advanced tasks</h2><h4>Method handling</h4><ul><li>the preferred way to handle methods with a specific object type for <code>this</code>:</li></ul><pre>ObjectDataStruct* data;
 if( !SGS_PARSE_METHOD( C, Object_interface_pointer, data, Object_name, Method_name ) )
     return 0;</pre><ul><li>the OLD way, version 1:</li></ul><pre>sgs_FuncName( C, &quot;&lt;object&gt;.&lt;method&gt;&quot; );
@@ -3358,9 +3363,9 @@ This application tests the SGScript engine&#39;s ability to work with more than 
 This is an engine profiler hook extension. It supports three processing modes.
 </p><h4>Modes</h4><ul><li>Function timing profiler: use SGS_PROF_FUNCTIME to initialize
 </li><li>Instruction timing profiler: use SGS_PROF_OPTIME to initialize
-</li><li>Memory usage profiler: use SGS_PROF_MEMUSAGE to initialize</li></ul><h4>Functions</h4><ul><li>SGSBOOL sgs_ProfInit( SGS_CTX, SGS_PROF, int mode ) - initialize the profiler
-</li><li>SGSBOOL sgs_ProfClose( SGS_PROF ) - free the profiler
-</li><li>SGSBOOL sgs_ProfDump( SGS_PROF ) - dump the data</li></ul><h4>Usage example</h4><pre>sgs_Prof profiler; // keep this allocated while it is linked to engine
+</li><li>Memory usage profiler: use SGS_PROF_MEMUSAGE to initialize</li></ul><h4>Functions</h4><ul><li>void sgs_ProfInit( SGS_CTX, sgs_Prof* P, int mode ) - initialize the profiler
+</li><li>void sgs_ProfClose( sgs_Prof* P ) - free the profiler
+</li><li>void sgs_ProfDump( sgs_Prof* P ) - dump the data</li></ul><h4>Usage example</h4><pre>sgs_Prof profiler; // keep this allocated while it is linked to engine
 // initialize and attach the profiler
 sgs_ProfInit( contextPtr, &amp;profiler, [SGS_PROF_FUNCTIME|SGS_PROF_OPTIME|SGS_PROF_MEMUSAGE] );
 // ...do things with the engine...

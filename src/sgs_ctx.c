@@ -142,6 +142,9 @@ static void ctx_destroy( SGS_CTX )
 	}
 	C->state |= SGS_STATE_DESTROYING;
 	
+	if( C->hook_fn )
+		C->hook_fn( C->hook_ctx, C, SGS_HOOK_CFREE );
+	
 	/* clear the stack */
 	while( C->stack_base != C->stack_top )
 	{
@@ -369,6 +372,9 @@ sgs_Context* sgs_ForkState( SGS_CTX, int copystate )
 		NC->next->prev = NC;
 	S->state_list = NC;
 	S->statecount++;
+	
+	if( C->hook_fn )
+		C->hook_fn( C->hook_ctx, C, copystate ? SGS_HOOK_CFORK : SGS_HOOK_CREAT );
 	
 	return NC;
 }

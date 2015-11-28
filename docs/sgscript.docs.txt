@@ -3902,6 +3902,11 @@ Most operations are directed towards the scripting engine, that is - environment
 --- SGS_HOOK_ENTER - function was entered
 --- SGS_HOOK_EXIT - function was exited
 --- SGS_HOOK_STEP - instruction is about to be executed
+--- SGS_HOOK_PAUSE - context was paused
+--- SGS_HOOK_CONT - context was resumed
+--- SGS_HOOK_CREAT - context was created (empty, no state copy)
+--- SGS_HOOK_CFORK - context was forked (full state copy)
+--- SGS_HOOK_CFREE - context was freed
 
 
 # <<<
@@ -7017,9 +7022,9 @@ This is an engine profiler hook extension. It supports three processing modes.
 
 === Functions
 
-- SGSBOOL sgs_ProfInit( SGS_CTX, SGS_PROF, int mode ) - initialize the profiler
-- SGSBOOL sgs_ProfClose( SGS_PROF ) - free the profiler
-- SGSBOOL sgs_ProfDump( SGS_PROF ) - dump the data
+- void sgs_ProfInit( SGS_CTX, sgs_Prof* P, int mode ) - initialize the profiler
+- void sgs_ProfClose( sgs_Prof* P ) - free the profiler
+- void sgs_ProfDump( sgs_Prof* P ) - dump the data
 
 === Usage example
 

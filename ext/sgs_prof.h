@@ -38,15 +38,13 @@ struct _sgs_Prof
 }
 sgs_Prof;
 
-#define SGS_PROF sgs_Prof* P
-
 #define SGS_PROF_FUNCTIME 1
 #define SGS_PROF_OPTIME   2
 #define SGS_PROF_MEMUSAGE 3
 
-SGSBOOL sgs_ProfInit( SGS_CTX, SGS_PROF, int mode );
-SGSBOOL sgs_ProfClose( SGS_PROF );
-SGSBOOL sgs_ProfDump( SGS_PROF );
+void sgs_ProfInit( SGS_CTX, sgs_Prof* P, int mode );
+void sgs_ProfClose( sgs_Prof* P );
+void sgs_ProfDump( sgs_Prof* P );
 
 
 #ifdef __cplusplus

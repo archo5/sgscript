@@ -451,11 +451,11 @@ int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 static void vm_frame_pop( SGS_CTX )
 {
 	sgs_StackFrame* F = C->sf_last;
-	VAR_RELEASE( &F->func );
 	
 	if( C->hook_fn )
 		C->hook_fn( C->hook_ctx, C, SGS_HOOK_EXIT );
 	
+	VAR_RELEASE( &F->func );
 	C->sf_count--;
 	if( F->prev )
 		F->prev->next = NULL;
@@ -2423,6 +2423,9 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 				rvc = vm_exec( C );
 				if( C->state & SGS_STATE_PAUSED )
 				{
+					if( C->hook_fn )
+						C->hook_fn( C->hook_ctx, C, SGS_HOOK_PAUSE );
+					
 					if( outrvc )
 						*outrvc = rvc;
 					return 1;
@@ -2852,8 +2855,11 @@ SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 	}
 	
 	C->sf_last->lptr = ++C->sf_last->iptr;
-	
 	C->state &= ~(uint32_t)SGS_STATE_PAUSED;
+	
+	if( C->hook_fn )
+		C->hook_fn( C->hook_ctx, C, SGS_HOOK_CONT );
+	
 	rvc = vm_exec( C );
 	if( ( C->state & SGS_STATE_PAUSED ) == 0 )
 		vm_postcall( C, rvc );

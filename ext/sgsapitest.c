@@ -2,9 +2,32 @@
 #include <stdio.h>
 #include <time.h>
 
+
+#ifdef _WIN32
+#  define WIN32_LEAN_AND_MEAN
+#  include <windows.h>
+#  define sgsthread_sleep( ms ) Sleep( (DWORD) ms )
+#else
+#  include <unistd.h>
+static void sgsthread_sleep( uint32_t ms )
+{
+	if( ms >= 1000 )
+	{
+		sleep( ms / 1000 );
+		ms %= 1000;
+	}
+	if( ms > 0 )
+	{
+		usleep( ms * 1000 );
+	}
+}
+#endif
+
+
 #define SGS_USE_FILESYSTEM
 
 #include "sgs_int.h"
+#include "sgs_prof.h"
 
 
 const char* outfile = "apitests-output.log";
@@ -110,16 +133,37 @@ void atf_assert_string_( const char* str1, const char* str2, const char* msg, in
 \*************/
 
 
+sgs_MemBuf outbuf;
 FILE* outfp;
 FILE* errfp;
-sgs_Context* get_context()
+static void outfn_buffer( void* ud, SGS_CTX, const void* ptr, size_t size )
+{
+	sgs_MemBuf* mb = (sgs_MemBuf*) ud;
+	sgs_membuf_appbuf( mb, C, ptr, size );
+}
+#define REDIR_NONE 0
+#define REDIR_FILE 1
+#define REDIR_BUF 2
+sgs_Context* get_context_( int redir_out )
 {
 	SGS_CTX = sgs_CreateEngine();
 	atf_assert_( C, "could not create context (out of memory?)", __LINE__ );
 	
-	outfp = fopen( outfile, "a" );
-	atf_assert_( outfp, "could not create output file", __LINE__ );
-	setvbuf( outfp, NULL, _IONBF, 0 );
+	if( redir_out == REDIR_FILE )
+	{
+		outfp = fopen( outfile, "a" );
+		atf_assert_( outfp, "could not create output file", __LINE__ );
+		setvbuf( outfp, NULL, _IONBF, 0 );
+		
+		sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, outfp );
+		atf_assert( C->output_ctx == outfp );
+	}
+	else if( redir_out == REDIR_BUF )
+	{
+		outbuf = sgs_membuf_create();
+		sgs_SetOutputFunc( C, outfn_buffer, &outbuf );
+		atf_assert( C->output_ctx == &outbuf );
+	}
 	
 	errfp = fopen( outfile_errors, "a" );
 	atf_assert_( errfp, "could not create error output file", __LINE__ );
@@ -127,16 +171,18 @@ sgs_Context* get_context()
 	
 	fprintf( outfp, "//\n/// O U T P U T  o f  %s\n//\n\n", testname );
 	
-	sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, outfp );
-	atf_assert( C->output_ctx == outfp );
-	
 	sgs_SetErrOutputFunc( C, SGSOUTPUTFN_DEFAULT, errfp );
 	atf_assert( C->erroutput_ctx == errfp );
 	
 	return C;
 }
+sgs_Context* get_context(){ return get_context_( REDIR_FILE ); }
 void destroy_context( SGS_CTX )
 {
+	if( C->output_fn == outfn_buffer )
+	{
+		sgs_membuf_destroy( &outbuf, C );
+	}
 	sgs_DestroyEngine( C );
 	fclose( outfp );
 	fclose( errfp );
@@ -885,6 +931,62 @@ DEFINE_TEST( state_machine_core )
 	destroy_context( C );
 }
 
+DEFINE_TEST( profiling )
+{
+	sgs_Prof P;
+	SGS_CTX = get_context_( REDIR_BUF );
+	
+	/* basic function time profiling */
+	sgs_ProfInit( C, &P, SGS_PROF_FUNCTIME );
+	atf_assert( sgs_ExecString( C, ""
+		"rand();\n"
+		"rand();\n"
+		"rand();\n"
+		"for( i = 0; i < 100; ++i ){\n"
+			"(function test(){\n"
+				"rand();\n"
+				"rand();\n"
+			"})();\n"
+		"}\n"
+	"" ) == SGS_SUCCESS );
+	/* expecting to see main/test/rand in the dump */
+	sgs_ProfDump( &P );
+	sgs_membuf_appchr( &outbuf, C, '\0' ); /* make buffer into a C-string */
+	/* puts( outbuf.ptr ); //*/
+	atf_assert( strstr( outbuf.ptr, "Time by call stack frame" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main> -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::test -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::test::rand -" ) != NULL );
+	atf_assert( atof( strstr( outbuf.ptr, "<main> - " ) + 9 ) < 0.2f ); /* verify for the next test */
+	sgs_ProfClose( &P );
+	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
+	
+	/* paused function time profiling */
+	sgs_ProfInit( C, &P, SGS_PROF_FUNCTIME );
+	atf_assert( sgs_ExecString( C, ""
+		"rand();\n"
+		"yield();\n"
+		"rand();\n"
+	"" ) == SGS_SUCCESS );
+	sgsthread_sleep( 500 ); /* wait 0.5s */
+	atf_assert( sgs_ResumeStateExp( C, 0, 1 ) == SGS_TRUE );
+	/* expecting to see main/rand in the dump */
+	sgs_ProfDump( &P );
+	sgs_membuf_appchr( &outbuf, C, '\0' ); /* make buffer into a C-string */
+	/* puts( outbuf.ptr ); //*/
+	atf_assert( strstr( outbuf.ptr, "Time by call stack frame" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main> -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::yield -" ) != NULL );
+	/* sleep should not affect the profile */
+	atf_assert( atof( strstr( outbuf.ptr, "<main> - " ) + 9 ) < 0.5f );
+	sgs_ProfClose( &P );
+	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
+	
+	destroy_context( C );
+}
+
 
 test_t all_tests[] =
 {
@@ -910,6 +1012,7 @@ test_t all_tests[] =
 	TST( yield_resume ),
 	TST( yield_abandon ),
 	TST( state_machine_core ),
+	TST( profiling ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }
 

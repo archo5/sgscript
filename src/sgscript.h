@@ -115,6 +115,11 @@ typedef void (*sgs_MsgFunc) (
 #define SGS_HOOK_ENTER 1 /* entered a function */
 #define SGS_HOOK_EXIT  2 /* exited a function */
 #define SGS_HOOK_STEP  3 /* about to execute an instruction */
+#define SGS_HOOK_PAUSE 4 /* paused execution */
+#define SGS_HOOK_CONT  5 /* continuing execution */
+#define SGS_HOOK_CREAT 6 /* context created */
+#define SGS_HOOK_CFORK 7 /* context forked */
+#define SGS_HOOK_CFREE 8 /* context freed */
 typedef void (*sgs_HookFunc) (
 	void* /* userdata */,
 	sgs_Context* /* ctx / SGS_CTX */,
