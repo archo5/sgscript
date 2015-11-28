@@ -3591,14 +3591,21 @@ static int sgsstd_ERROR( SGS_CTX ){ return sgsstd__msgwrapper( C, "ERROR", SGS_E
 
 static int sgsstd_sys_abort( SGS_CTX )
 {
+	SGSFN( "sys_abort" );
 	sgs_Abort( C );
 	return 0;
 }
-static int sgsstd_app_abort( SGS_CTX ){ abort(); return 0; }
+static int sgsstd_app_abort( SGS_CTX )
+{
+	SGSFN( "app_abort" );
+	abort();
+	return 0;
+}
 static int sgsstd_app_exit( SGS_CTX )
 {
 	sgs_Int ret = 0;
 	
+	SGSFN( "app_exit" );
 	if( !sgs_LoadArgs( C, "|i", &ret ) )
 		return 0;
 	

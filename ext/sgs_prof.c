@@ -136,23 +136,32 @@ static void mode2hook( void* userdata, SGS_CTX, int evid )
 		P->instr = SGS_INSTR_GET_OP( *sf->iptr );
 		P->iexcs[ P->instr ]++;
 		P->starttime = TM;
+		P->prev = evid;
 	}
-	else
+	else if( evid == SGS_HOOK_ENTER || evid == SGS_HOOK_CONT )
+	{
+		P->starttime = TM;
+		P->instr = -1;
+		P->prev = evid;
+	}
+	else if( evid == SGS_HOOK_EXIT || evid == SGS_HOOK_PAUSE )
 	{
 		if( P->prev != SGS_HOOK_STEP )
 		{
+			/* native function was called */
 			double dif = TM - P->starttime;
 			P->ictrs[ SGS_SI_COUNT ] += dif >= 0 ? dif : 0;
 		}
 		P->starttime = TM;
+		P->prev = evid;
 	}
-	P->prev = evid;
 }
 
 static void initProfMode2( sgs_Prof* P )
 {
 	int i;
 	P->instr = -1;
+	P->starttime = sgs_GetTime();
 	P->ictrs = (double*) sgs_Malloc( P->C, sizeof( double ) * TOPCNT );
 	P->iexcs = (uint32_t*) sgs_Malloc( P->C, sizeof( uint32_t ) * TOPCNT );
 	for( i = 0; i < TOPCNT; ++i )
@@ -231,11 +240,11 @@ static void mode3hook( void* userdata, SGS_CTX, int evid )
 	if( P->hfn )
 		P->hfn( P->hctx, C, evid );
 	
-	if( evid == SGS_HOOK_ENTER )
+	if( evid == SGS_HOOK_ENTER || evid == SGS_HOOK_CONT )
 	{
 		sgs_membuf_appbuf( &P->timetmp, C, &CD, sizeof(CD) );
 	}
-	else if( evid == SGS_HOOK_EXIT )
+	else if( evid == SGS_HOOK_EXIT || evid == SGS_HOOK_PAUSE )
 	{
 		mode3data prevCD, *PD;
 		sgs_VHTVar* pair;
