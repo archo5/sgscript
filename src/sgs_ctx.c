@@ -98,6 +98,9 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	C->fctx = NULL;
 	C->filename = NULL;
 	
+	C->parent = NULL;
+	C->_T = NULL;
+	
 	C->stack_mem = 32;
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
 	C->stack_off = C->stack_base;
@@ -165,6 +168,7 @@ static void ctx_destroy( SGS_CTX )
 	sgs_Dealloc( C->clstk_base );
 	
 	sgsSTD_GlobalFree( C );
+	sgsSTD_ThreadsFree( C );
 	
 	/* free the call stack */
 	{
@@ -285,6 +289,8 @@ sgs_Context* sgs_ForkState( SGS_CTX, int copystate )
 	S->numallocs++;
 	S->numblocks++;
 	memcpy( NC, C, sizeof(*NC) );
+	NC->parent = NULL; /* not shareable */
+	NC->_T = NULL; /* not shareable */
 	
 	// realloc / acquire
 	if( copystate == SGS_FALSE )

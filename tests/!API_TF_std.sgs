@@ -253,6 +253,7 @@ testEqual( co_resume(co), "end", "[srlz #2] coroutine - resume [3,final]" );
 testEqual( ERRORS, "", "[srlz #2] coroutine - no errors" );
 ERRORS = ""; testEqual( co_resume(co), null, "[srlz #2] coroutine - resume [4,failed]" );
 testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
+co = null; // cleanup
 
 	section( "misc." );
 ERRORS = "";
@@ -335,6 +336,35 @@ testEqual( ERRORS, "[W:sym_get(): symbol not found]", "classes/symbols - errors"
 ERRORS = "";
 testEqual( isset( {}, "wat" ), false, "isset - works" );
 testEqual( ERRORS, "", "isset - no error" );
+
+	section( "threading" );
+global testval0 = 1;
+testEqual( sys_stat(1), 1, "state count = 1" );
+(function(){
+	testEqual( typeof( thread_create( function(){ global testval0 = 2; } ) ), "coroutine", "thread creation success" );
+}()); // force cleanup
+testEqual( sys_stat(1), 1, "state count = 1" );
+testEqual( testval0, 2, "thread function was called" );
+(function(){
+	testEqual( typeof( t = thread_create( function(){ for(;;) yield(); } ) ),
+		"coroutine", "thread with infinite yield loop was partially run" );
+	testEqual( sys_stat(1), 2, "state count = 2" );
+	thread_abort( t );
+	t = null;
+	process_threads();
+}()); // force cleanup
+testEqual( sys_stat(1), 1, "state count after aborting infinite loop = 1" );
+testval0 = 3;
+testEqual( typeof( thread_create( function(){ global testval0 = 4; yield(1); testval0 = 5; yield(1); testval0 = 6; } ) ),
+	"coroutine", "waiting thread creation success" );
+testEqual( testval0, 4, "waiting thread - first segment executed" );
+process_threads( 0.5 ); // total waiting time [real = 0.5, thread = 0.5]
+testEqual( testval0, 4, "waiting thread - not continued" );
+process_threads( 1 ); // total waiting time [real = 1.5, thread = 1]
+testEqual( testval0, 5, "waiting thread - continued, second segment executed" );
+process_threads( 1 ); // total waiting time [real = 2.5, thread = 2]
+testEqual( testval0, 6, "waiting thread - continued, final segment executed" );
+
 
 
 //

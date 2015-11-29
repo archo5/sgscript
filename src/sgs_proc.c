@@ -2838,6 +2838,15 @@ SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 	if( !( C->state & SGS_STATE_PAUSED ) )
 		return SGS_FALSE; /* already running, may not return the expected data */
 	sgs_BreakIf( C->sf_last == NULL );
+	if( C->sf_first->flags & SGS_SF_ABORTED )
+	{
+		while( C->sf_last )
+			vm_frame_pop( C );
+		C->state |= SGS_STATE_LASTFUNCABORT;
+		if( outrvc )
+			*outrvc = 0;
+		return SGS_TRUE;
+	}
 	
 	/* TODO validate state corruption */
 	sgs_BreakIf( SGS_INSTR_GET_OP( *C->sf_last->iptr ) != SGS_SI_CALL );

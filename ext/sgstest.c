@@ -242,6 +242,13 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 	retval = sgs_ExecFile( C, fname );
 	tm2 = sgs_GetTime();
 	
+	if( retval != SGS_SUCCESS && disp > 0 )
+	{
+		sgs_PushGlobalByName( C, "ERRORS" );
+		puts( sgs_DebugPrintVar( C, sgs_StackItem( C, -1 ) ) );
+		sgs_Pop( C, 2 );
+	}
+	
 	if( strstr( nameonly, "TF" ) != NULL &&
 		sgs_PushGlobalByName( C, "tests_failed" ) )
 	{

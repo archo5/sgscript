@@ -593,6 +593,10 @@ struct _sgs_Context
 	const char*   filename;  /* filename of currently compiled code */
 	
 	/* virtual machine */
+	/* > coop micro-threading */
+	sgs_Context*  parent; /* owning (parent) context */
+	sgs_VarObj*   _T; /* subthreads */
+	
 	/* > main stack */
 	sgs_VarPtr    stack_base;
 	uint32_t      stack_mem;
@@ -623,7 +627,7 @@ struct _sgs_Context
 
 static const char* sgs_ErrNames[] =
 {
-	"SUCCESS", "ENOTFND", "ECOMP", "ENOTOBJ",
+	"SUCCESS", "ENOTFND", "ECOMP", "<UNUSED>",
 	"ENOTSUP", "EBOUNDS", "EINVAL", "EINPROC"
 };
 
@@ -662,6 +666,7 @@ SGSBOOL sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 SGSBOOL sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 SGSBOOL sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 void sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc );
+void sgsSTD_ThreadsFree( SGS_CTX );
 void sgsSTD_RegistryInit( SGS_CTX );
 void sgsSTD_RegistryFree( SGS_CTX );
 void sgsSTD_RegistryGC( SGS_CTX );

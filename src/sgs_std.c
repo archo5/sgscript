@@ -2445,7 +2445,6 @@ typedef struct sgsstd_coro_s
 {
 	sgs_Variable func;
 	sgs_Context* ctx;
-	int state;
 }
 sgsstd_coro_t;
 
@@ -2504,7 +2503,6 @@ static int sgsstd_coro_serialize( SGS_CTX, sgs_VarObj* obj )
 	
 	_WRITE32( 0x5C057A7E ); /* Serialized COroutine STATE */
 	/* POD: coroutine */
-	_WRITE32( CO->state );
 	/* POD: main context */
 	_WRITE32( ctx->minlev );
 	_WRITE32( ctx->apilev );
@@ -2610,72 +2608,10 @@ sgs_ObjInterface sgsstd_coro_iface[1] =
 	if( !SGS_PARSE_METHOD( C, sgsstd_coro_iface, CO, co, name ) ) return 0; \
 	SGS_UNUSED( CO );
 
-static int sgsstd_co_create( SGS_CTX )
-{
-	sgsstd_coro_t* CO;
-	SGSFN( "co_create" );
-	if( !sgs_LoadArgs( C, "?p." ) )
-		return 0;
-	
-	CO = (sgsstd_coro_t*) sgs_CreateObjectIPA( C, NULL, sizeof(*CO), sgsstd_coro_iface );
-	sgs_GetStackItem( C, 0, &CO->func );
-	CO->ctx = sgs_ForkState( C, 0 );
-	return 1;
-}
-
-static int sgsstd_co_resume( SGS_CTX )
-{
-	sgs_StkIdx i, ssz;
-	int rvc = 0;
-	
-	CORO_IHDR( resume );
-	
-	if( CO->func.type == SGS_VT_NULL && CO->ctx->sf_last == NULL )
-	{
-		STDLIB_WARN( "coroutine is finished, cannot resume" );
-	}
-	else if( CO->func.type != SGS_VT_NULL || CO->ctx->sf_last )
-	{
-		ssz = sgs_StackSize( C );
-		for( i = 0; i < ssz; ++i )
-		{
-			sgs_PushVariable( CO->ctx, sgs_StackItem( C, i ) );
-		}
-		
-		if( CO->ctx->sf_last )
-		{
-			if( !sgs_ResumeStateRet( CO->ctx, ssz, &rvc ) )
-				STDLIB_WARN( "failed to resume coroutine" );
-		}
-		else if( CO->func.type != SGS_VT_NULL )
-		{
-			sgs_XCall( CO->ctx, CO->func, ssz, &rvc );
-			sgs_Release( C, &CO->func );
-			CO->func = sgs_MakeNull();
-		}
-	}
-	
-	for( i = -rvc; i < 0; ++i )
-	{
-		sgs_PushVariable( C, sgs_StackItem( CO->ctx, i ) );
-	}
-	
-	return rvc;
-}
-
-static int sgsstd_yield( SGS_CTX )
-{
-	SGSFN( "yield" );
-	if( sgs_PauseState( C ) == SGS_FALSE )
-		STDLIB_WARN( "cannot yield with C functions in stack" );
-	return sgs_StackSize( C );
-}
-
 static int sgsstd___co_unserialize( SGS_CTX )
 {
 	const char *buf, *bufend;
 	sgs_SizeVal bufsize;
-	int32_t state;
 	sgs_Context* ctx;
 	
 	SGSFN( "__co_unserialize" );
@@ -2694,9 +2630,6 @@ static int sgsstd___co_unserialize( SGS_CTX )
 		_READ32( tag );
 		if( tag != 0x5C057A7E )
 			goto fail;
-		
-		/* POD: coroutine */
-		_READ32( state );
 		
 		/* POD: context */
 		_READ32( ctx->minlev );
@@ -2800,12 +2733,223 @@ static int sgsstd___co_unserialize( SGS_CTX )
 		sgsstd_coro_t* CO = (sgsstd_coro_t*) sgs_CreateObjectIPA( C, NULL, sizeof(*CO), sgsstd_coro_iface );
 		sgs_GetStackItem( C, 0, &CO->func );
 		CO->ctx = ctx;
-		CO->state = state;
 		return 1;
 	}
 fail:
 	sgs_FreeState( ctx );
 	STDLIB_ERR( "data error" );
+}
+
+static int sgsstd_co_create( SGS_CTX )
+{
+	sgsstd_coro_t* CO;
+	SGSFN( "co_create" );
+	if( !sgs_LoadArgs( C, "?p." ) )
+		return 0;
+	
+	CO = (sgsstd_coro_t*) sgs_CreateObjectIPA( C, NULL, sizeof(*CO), sgsstd_coro_iface );
+	sgs_GetStackItem( C, 0, &CO->func );
+	CO->ctx = sgs_ForkState( C, 0 );
+	return 1;
+}
+
+static int sgsstd_co_resume( SGS_CTX )
+{
+	sgs_StkIdx i, ssz;
+	int rvc = 0;
+	
+	CORO_IHDR( resume );
+	
+	if( CO->func.type == SGS_VT_NULL && CO->ctx->sf_last == NULL )
+	{
+		STDLIB_WARN( "coroutine is finished, cannot resume" );
+	}
+	else if( CO->func.type != SGS_VT_NULL || CO->ctx->sf_last )
+	{
+		ssz = sgs_StackSize( C );
+		for( i = 0; i < ssz; ++i )
+		{
+			sgs_PushVariable( CO->ctx, sgs_StackItem( C, i ) );
+		}
+		
+		if( CO->ctx->sf_last )
+		{
+			if( !sgs_ResumeStateRet( CO->ctx, ssz, &rvc ) )
+				STDLIB_WARN( "failed to resume coroutine" );
+		}
+		else if( CO->func.type != SGS_VT_NULL )
+		{
+			sgs_XCall( CO->ctx, CO->func, ssz, &rvc );
+			sgs_Release( C, &CO->func );
+			CO->func = sgs_MakeNull();
+		}
+	}
+	
+	for( i = -rvc; i < 0; ++i )
+	{
+		sgs_PushVariable( C, sgs_StackItem( CO->ctx, i ) );
+	}
+	
+	return rvc;
+}
+
+sgs_Context* sgs_TopmostContext( SGS_CTX )
+{
+	while( C->parent )
+		C = C->parent;
+	return C;
+}
+
+static void sgs__check_threadtbl( SGS_CTX )
+{
+	sgs_Variable thrtbl;
+	if( C->_T )
+		return;
+	
+	sgsSTD_MakeMap( C, &thrtbl, 0 );
+	C->_T = thrtbl.data.O;
+}
+
+SGSBOOL sgs_CreateSubthread( SGS_CTX, sgs_Variable* out, sgs_Variable func, int gotthis, sgs_StkIdx size )
+{
+	sgs_Real waittime = 0;
+	sgs_StkIdx i;
+	sgsstd_coro_t* CO;
+	sgs_Context* co_ctx;
+	
+	/* call the function */
+	co_ctx = sgs_ForkState( C, 0 );
+	for( i = 0; i < size; ++i )
+	{
+		sgs_PushVariable( co_ctx, sgs_StackItem( C, i - size ) );
+	}
+	if( sgs_FCall( co_ctx, sgs_StackItem( C, 0 ), size, 1, gotthis ) == SGS_FALSE )
+	{
+		sgs_FreeState( co_ctx );
+		return 0;
+	}
+	
+	waittime = sgs_GetReal( co_ctx, -1 );
+	sgs_Pop( co_ctx, 1 );
+	CO = (sgsstd_coro_t*) sgs_CreateObjectIPA( C, out, sizeof(*CO), sgsstd_coro_iface );
+	CO->func = sgs_MakeNull();
+	CO->ctx = co_ctx;
+	
+	/* register thread if not done */
+	if( co_ctx->state & SGS_STATE_PAUSED )
+	{
+		sgs_Variable varT;
+		sgs__check_threadtbl( C );
+		varT.type = SGS_VT_OBJECT;
+		varT.data.O = C->_T;
+		sgs_SetIndex( C, varT, sgs_StackItem( C, -1 ), sgs_MakeReal( waittime ), SGS_FALSE );
+		co_ctx->parent = C;
+	}
+	return 1;
+}
+
+static int sgsstd_thread_create( SGS_CTX )
+{
+	SGSFN( "thread_create" );
+	if( !sgs_LoadArgs( C, "?p" ) )
+		return 0;
+	
+	if( sgs_CreateSubthread( sgs_TopmostContext( C ), NULL,
+		sgs_StackItem( C, 0 ), 1, sgs_StackSize( C ) - 2 ) == SGS_FALSE )
+	{
+		return sgs_Msg( C, SGS_WARNING, "failed to create a thread - could not call function" );
+	}
+	return 1;
+}
+
+static int sgsstd_subthread_create( SGS_CTX )
+{
+	SGSFN( "subthread_create" );
+	if( !sgs_LoadArgs( C, "?p" ) )
+		return 0;
+	
+	if( sgs_CreateSubthread( C, NULL, sgs_StackItem( C, 0 ), 1, sgs_StackSize( C ) - 2 ) == SGS_FALSE )
+	{
+		return sgs_Msg( C, SGS_WARNING, "failed to create a thread - could not call function" );
+	}
+	return 1;
+}
+
+void sgs_ProcessSubthreads( SGS_CTX, sgs_Real dt )
+{
+	if( C->_T )
+	{
+		sgs_VHTIdx i;
+		sgs_VHTable* ht = &((DictHdr*)C->_T->data)->ht;
+		for( i = 0; i < ht->size; ++i )
+		{
+			sgs_VHTVar* v = &ht->vars[ i ];
+			sgs_Context* thctx = ((sgsstd_coro_t*)v->key.data.O->data)->ctx;
+			sgs_ProcessSubthreads( thctx, dt );
+			v->val.data.R -= dt;
+			if( v->val.data.R <= 0 )
+			{
+				sgs_ResumeStateExp( thctx, 0, 1 );
+				v->val.data.R = sgs_GetReal( thctx, -1 );
+				sgs_Pop( thctx, 1 );
+			}
+			if( thctx->sf_last == NULL || ( thctx->sf_first->flags & SGS_SF_ABORTED ) )
+			{
+				thctx->parent = NULL;
+				sgs_vht_unset( ht, C, &v->key );
+				i--; /* unset replaces current element in array with last */
+			}
+		}
+	}
+}
+
+void sgsSTD_ThreadsFree( SGS_CTX )
+{
+	if( C->_T )
+	{
+		sgs_VHTIdx i;
+		sgs_VHTable* ht = &((DictHdr*)C->_T->data)->ht;
+		for( i = 0; i < ht->size; ++i )
+		{
+			sgs_VHTVar* v = &ht->vars[ i ];
+			sgs_Context* thctx = ((sgsstd_coro_t*)v->key.data.O->data)->ctx;
+			thctx->parent = NULL;
+			sgs_vht_unset( ht, C, &v->key );
+			i--; /* unset replaces current element in array with last */
+		}
+		sgs_ObjRelease( C, C->_T );
+		C->_T = NULL;
+	}
+}
+
+static int sgsstd_thread_abort( SGS_CTX )
+{
+	sgsstd_coro_t* CO;
+	SGSFN( "thread_abort" );
+	if( !sgs_LoadArgs( C, "o", sgsstd_coro_iface, &CO ) )
+		return 0;
+	
+	sgs_PushBool( C, sgs_Abort( CO->ctx ) );
+	return 1;
+}
+
+static int sgsstd_process_threads( SGS_CTX )
+{
+	sgs_Real dt = 0;
+	SGSFN( "process_threads" );
+	if( !sgs_LoadArgs( C, "|r", &dt ) )
+		return 0;
+	
+	sgs_ProcessSubthreads( C, dt );
+	return 0;
+}
+
+static int sgsstd_yield( SGS_CTX )
+{
+	SGSFN( "yield" );
+	if( sgs_PauseState( C ) == SGS_FALSE )
+		STDLIB_WARN( "cannot yield with C functions in stack" );
+	return sgs_StackSize( C );
 }
 
 
@@ -3874,7 +4018,10 @@ static sgs_RegFuncConst regfuncs[] =
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
 	STDLIB_FN( metaobj_set ), STDLIB_FN( metaobj_get ), STDLIB_FN( metamethods_enable ), STDLIB_FN( metamethods_test ),
 	STDLIB_FN( mm_getindex_router ), STDLIB_FN( mm_setindex_router ),
-	STDLIB_FN( co_create ), STDLIB_FN( co_resume ), STDLIB_FN( yield ), STDLIB_FN( __co_unserialize ),
+	STDLIB_FN( __co_unserialize ), STDLIB_FN( co_create ), STDLIB_FN( co_resume ),
+	STDLIB_FN( thread_create ), STDLIB_FN( subthread_create ), STDLIB_FN( thread_abort ),
+	STDLIB_FN( process_threads ),
+	STDLIB_FN( yield ),
 	STDLIB_FN( pcall ), STDLIB_FN( assert ),
 	STDLIB_FN( sym_register ), STDLIB_FN( sym_get ),
 	STDLIB_FN( eval ), STDLIB_FN( eval_file ), STDLIB_FN( compile_sgs ),
