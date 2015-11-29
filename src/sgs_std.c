@@ -2819,6 +2819,10 @@ SGSBOOL sgs_CreateSubthread( SGS_CTX, sgs_Variable* out, sgs_Variable func, int 
 	
 	/* call the function */
 	co_ctx = sgs_ForkState( C, 0 );
+	if( gotthis )
+	{
+		sgs_PushVariable( co_ctx, sgs_StackItem( C, -size - 1 ) );
+	}
 	for( i = 0; i < size; ++i )
 	{
 		sgs_PushVariable( co_ctx, sgs_StackItem( C, i - size ) );

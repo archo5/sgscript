@@ -342,9 +342,10 @@ global testval0 = 1;
 testEqual( sys_stat(1), 1, "state count = 1" );
 (function(){
 	testEqual( typeof( thread_create( function(){ global testval0 = 2; } ) ), "coroutine", "thread creation success" );
+	testEqual( testval0, 2, "thread function was called" );
+	testEqual( typeof( thread_create( function(){}, 1, 2 ) ), "coroutine", "thread - argument passing" );
 }()); // force cleanup
 testEqual( sys_stat(1), 1, "state count = 1" );
-testEqual( testval0, 2, "thread function was called" );
 (function(){
 	testEqual( typeof( t = thread_create( function(){ for(;;) yield(); } ) ),
 		"coroutine", "thread with infinite yield loop was partially run" );
