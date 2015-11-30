@@ -19,7 +19,8 @@
 
 #define TYPENAME( type ) sgs_VarNames[ type ]
 
-#define IS_REFTYPE( type ) ( type == SGS_VT_STRING || type == SGS_VT_FUNC || type == SGS_VT_OBJECT )
+#define IS_REFTYPE( type ) ( type == SGS_VT_STRING || type == SGS_VT_FUNC \
+	|| type == SGS_VT_OBJECT || type == SGS_VT_THREAD )
 
 
 #define VAR_ACQUIRE( pvar ) { \
@@ -244,6 +245,7 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 		case SGS_VT_STRING: var_destroy_string( C, p->data.S ); break;
 		case SGS_VT_FUNC: var_destroy_func( C, p->data.F ); break;
 		case SGS_VT_OBJECT: sgsVM_VarDestroyObject( C, p->data.O ); break;
+		case SGS_VT_THREAD: sgs_FreeState( p->data.T ); break;
 		}
 	}
 }
@@ -841,6 +843,7 @@ static sgs_Bool var_getbool( SGS_CTX, const sgs_VarPtr var )
 			return SGS_TRUE;
 		}
 	case SGS_VT_PTR: return var->data.P != NULL;
+	case SGS_VT_THREAD: return var->data.T != NULL;
 	}
 	return SGS_FALSE;
 }
@@ -893,7 +896,8 @@ static sgs_Int var_getint( SGS_CTX, sgs_VarPtr var )
 			}
 		}
 		break;
-	case SGS_VT_PTR: return (sgs_Int) (size_t) var->data.P;
+	case SGS_VT_PTR: return (sgs_Int) (intptr_t) var->data.P;
+	case SGS_VT_THREAD: return (sgs_Int) (intptr_t) var->data.T;
 	}
 	return 0;
 }
@@ -946,7 +950,8 @@ static sgs_Real var_getreal( SGS_CTX, sgs_Variable* var )
 			}
 		}
 		break;
-	case SGS_VT_PTR: return (sgs_Real) (size_t) var->data.P;
+	case SGS_VT_PTR: return (sgs_Real) (intptr_t) var->data.P;
+	case SGS_VT_THREAD: return (sgs_Real) (intptr_t) var->data.T;
 	}
 	return 0;
 }
@@ -1000,6 +1005,7 @@ static void* var_getptr( SGS_CTX, sgs_VarPtr var )
 			return O->data;
 		}
 	case SGS_VT_PTR: return var->data.P;
+	case SGS_VT_THREAD: return var->data.T;
 	}
 	return NULL;
 }
@@ -1036,8 +1042,6 @@ do{ sgs_VarPtr __var = (v); __var->type = SGS_VT_BOOL; __var->data.B = value; }w
 do{ sgs_VarPtr __var = (v); __var->type = SGS_VT_INT; __var->data.I = value; }while(0)
 #define var_initreal( v, value ) \
 do{ sgs_VarPtr __var = (v); __var->type = SGS_VT_REAL; __var->data.R = value; }while(0)
-#define var_initptr( v, value ) \
-do{ sgs_VarPtr __var = (v); __var->type = SGS_VT_PTR; __var->data.P = value; }while(0)
 
 #define var_setnull( C, v ) \
 do{ sgs_VarPtr var = (v); VAR_RELEASE( var ); var->type = SGS_VT_NULL; }while(0)
@@ -1050,9 +1054,6 @@ do{ sgs_VarPtr var = (v); if( var->type != SGS_VT_INT ) \
 #define var_setreal( C, v, value ) \
 do{ sgs_VarPtr var = (v); if( var->type != SGS_VT_REAL ) \
 	{ VAR_RELEASE( var ); var->type = SGS_VT_REAL; } var->data.R = value; }while(0)
-#define var_setptr( C, v, value ) \
-do{ sgs_VarPtr var = (v); if( var->type != SGS_VT_PTR ) \
-	{ VAR_RELEASE( var ); var->type = SGS_VT_PTR; } var->data.P = value; }while(0)
 
 
 static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
@@ -1114,6 +1115,10 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 		break;
 	case SGS_VT_PTR:
 		sprintf( buf, "ptr(%p)", var->data.P );
+		var_create_cstr( C, out, buf );
+		break;
+	case SGS_VT_THREAD:
+		sprintf( buf, "thread(%p)", var->data.T );
 		var_create_cstr( C, out, buf );
 		break;
 	}
@@ -1940,6 +1945,7 @@ static SGSBOOL vm_arith_op( SGS_CTX, sgs_VarPtr out, sgs_VarPtr a, sgs_VarPtr b,
 	/* if either variable is of a basic callable type */
 	if( a->type == SGS_VT_FUNC || a->type == SGS_VT_CFUNC ||
 		b->type == SGS_VT_FUNC || b->type == SGS_VT_CFUNC ||
+		a->type == SGS_VT_THREAD || b->type == SGS_VT_THREAD ||
 		a->type == SGS_VT_PTR  || b->type == SGS_VT_PTR   )
 		goto fail;
 	
@@ -2921,6 +2927,7 @@ void sgsVM_VarDump( const sgs_Variable* var )
 	case SGS_VT_CFUNC: printf( " = %p", (void*)(size_t) var->data.C ); break;
 	case SGS_VT_OBJECT: printf( "TODO [object impl]" ); break;
 	case SGS_VT_PTR: printf( " = %p", var->data.P ); break;
+	case SGS_VT_THREAD: printf( " = %p", var->data.T ); break;
 	}
 }
 
@@ -2980,6 +2987,13 @@ void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj )
 {
 	out->type = SGS_VT_OBJECT;
 	out->data.O = obj;
+	VAR_ACQUIRE( out );
+}
+
+void sgs_InitThreadPtr( sgs_Variable* out, sgs_Context* T )
+{
+	out->type = SGS_VT_THREAD;
+	out->data.T = T;
 	VAR_ACQUIRE( out );
 }
 
@@ -3124,6 +3138,15 @@ SGSONE sgs_PushObjectPtr( SGS_CTX, sgs_VarObj* obj )
 	sgs_Variable var;
 	var.type = SGS_VT_OBJECT;
 	var.data.O = obj;
+	stk_push( C, &var ); /* a new reference must be created */
+	return 1;
+}
+
+SGSONE sgs_PushThreadPtr( SGS_CTX, sgs_Context* T )
+{
+	sgs_Variable var;
+	var.type = SGS_VT_THREAD;
+	var.data.T = T;
 	stk_push( C, &var ); /* a new reference must be created */
 	return 1;
 }
@@ -3541,6 +3564,7 @@ fail:
 		returns a SGSBOOL always, useful only for optional arguments)
 	a,t,h,o - objects (array,dict,map,specific iface)
 	& - pointer (void*)
+	y - thread (sgs_Context*)
 	v - any variable (returns sgs_Variable, checks if valid index or non-null if strict)
 	x - custom check/return function
 	? - check only, no writeback
@@ -3802,6 +3826,28 @@ SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 				if( !nowrite )
 				{
 					*va_arg( *args, SGSBOOL* ) = 1;
+				}
+			}
+			strict = 0; nowrite = 0; from++; break;
+			
+		case 'y':
+			{
+				if( opt && sgs_ItemType( C, from ) == SGS_VT_NULL )
+				{
+					if( !nowrite )
+						*va_arg( *args, sgs_Context** ) = NULL;
+					break;
+				}
+				
+				if( sgs_ItemType( C, from ) != SGS_VT_THREAD )
+				{
+					argerrx( C, from, method, "thread", "" );
+					return opt;
+				}
+				
+				if( !nowrite )
+				{
+					*va_arg( *args, sgs_Context** ) = sgs_StackItem( C, from ).data.T;
 				}
 			}
 			strict = 0; nowrite = 0; from++; break;
@@ -4299,6 +4345,7 @@ void sgs_TypeOf( SGS_CTX, sgs_Variable var )
 		}
 		break;
 	case SGS_VT_PTR:    ty = "pointer"; break;
+	case SGS_VT_THREAD: ty = "thread"; break;
 	}
 	
 	sgs_PushString( C, ty );
@@ -4424,6 +4471,13 @@ void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth )
 			sgs_PushString( C, buf );
 		}
 		break;
+	case SGS_VT_THREAD:
+		{
+			char buf[ 32 ];
+			sprintf( buf, "thread (%p)", var.data.T );
+			sgs_PushString( C, buf );
+		}
+		break;
 	default:
 		{
 			char buf[ 32 ];
@@ -4456,6 +4510,8 @@ static void sgsVM_GCExecute( SGS_SHCTX )
 		sgsSTD_GlobalGC( C );
 		/* REGISTRY */
 		sgsSTD_RegistryGC( C );
+		/* THREADS */
+		sgsSTD_ThreadsGC( C );
 		
 		C = C->next;
 	}
@@ -4689,6 +4745,258 @@ static int _unserialize_function( SGS_CTX, const char* buf, size_t sz, sgs_iFunc
 }
 
 
+static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* outbuf, sgs_MemBuf* argarray )
+{
+	sgs_MemBuf buf = sgs_membuf_create();
+	sgs_StackFrame* sf;
+	int32_t sfnum = 0;
+#define _WRITE32( x ) { int32_t _tmp = (int32_t)(x); sgs_membuf_appbuf( &buf, C, &_tmp, 4 ); }
+#define _WRITE8( x ) { sgs_membuf_appchr( &buf, C, (char)(x) ); }
+	
+	/* failure condition: cannot serialize self */
+	if( C == ctx )
+		return 0;
+	/* failure condition: C functions in stack frame */
+	sf = ctx->sf_first;
+	while( sf )
+	{
+		if( sf->iptr == NULL )
+			return 0;
+		sf = sf->next;
+	}
+	
+	/* variables: _G */
+	{
+		sgs_Variable v_obj; v_obj.type = SGS_VT_OBJECT; v_obj.data.O = ctx->_G;
+		sgs_Serialize( C, v_obj );
+	}
+	/* variables: stack */
+	{
+		sgs_Variable* p = ctx->stack_base;
+		while( p != ctx->stack_top )
+			sgs_Serialize( C, *p++ );
+	}
+	
+	_WRITE32( 0x5C057A7E ); /* Serialized COroutine STATE */
+	/* POD: main context */
+	_WRITE32( ctx->minlev );
+	_WRITE32( ctx->apilev );
+	_WRITE32( ctx->last_errno );
+	_WRITE32( ctx->state );
+	_WRITE32( ctx->stack_top - ctx->stack_base );
+	_WRITE32( ctx->stack_off - ctx->stack_base );
+	_WRITE32( ctx->stack_mem );
+	_WRITE32( ctx->clstk_top - ctx->clstk_base );
+	_WRITE32( ctx->clstk_off - ctx->clstk_base );
+	_WRITE32( ctx->clstk_mem );
+	{
+		sf = ctx->sf_first;
+		while( sf )
+		{
+			sfnum++;
+			sf = sf->next;
+		}
+		_WRITE32( sfnum );
+	}
+	_WRITE32( ctx->sf_count );
+	_WRITE32( ctx->num_last_returned );
+	/* closures */
+	{
+		sgs_Closure** p = ctx->clstk_base;
+		while( p != ctx->clstk_top )
+		{
+			sgs_Closure** refp = ctx->clstk_base;
+			while( refp != p )
+			{
+				if( *refp == *p )
+					break;
+				refp++;
+			}
+			if( refp != p )
+			{
+				// found reference
+				sgs_Serialize( C, sgs_MakeNull() );
+				_WRITE32( refp - ctx->clstk_base );
+			}
+			else
+			{
+				// make new
+				sgs_Serialize( C, (*p)->var );
+				_WRITE32( -1 );
+			}
+			p++;
+		}
+	}
+	/* stack frames */
+	sf = ctx->sf_first;
+	while( sf )
+	{
+		sgs_Serialize( C, sf->func );
+		
+		/* 'code' will be taken from function */
+		_WRITE32( sf->iptr - sf->code );
+		_WRITE32( sf->iend - sf->code ); /* - for validation */
+		_WRITE32( sf->lptr - sf->code );
+		/* 'cptr' will be taken from function */
+		/* 'nfname' is irrelevant for non-native functions */
+		/* 'prev', 'next', 'cached' are system pointers */
+		_WRITE32( sf->argbeg );
+		_WRITE32( sf->argend );
+		_WRITE32( sf->argsfrom );
+		_WRITE32( sf->stkoff );
+		_WRITE32( sf->clsoff );
+		_WRITE32( sf->constcount ); /* - for validation */
+		_WRITE32( sf->errsup );
+		_WRITE8( sf->argcount );
+		_WRITE8( sf->inexp );
+		_WRITE8( sf->flags );
+		sf = sf->next;
+	}
+	
+	sgs_membuf_appchr( outbuf, C, 'T' );
+	if( argarray )
+	{
+		uint32_t argcount = (uint32_t)( 1 /* _G */
+			+ ( ctx->stack_top - ctx->stack_base ) /* stack */
+			+ ( ctx->clstk_top - ctx->clstk_base ) /* closure stack */
+			+ sfnum /* stack frame functions */ );
+		sgs_membuf_appbuf( outbuf, C, &argcount, 4 );
+		sgs_membuf_appbuf( outbuf, C, argarray->ptr + argarray->size - argcount * 4, argcount * 4 );
+		sgs_membuf_erase( argarray, argarray->size - argcount * 4, argarray->size );
+	}
+	
+	/* WP: string size */
+	sgs_membuf_appbuf( outbuf, C, buf.ptr, buf.size );
+	sgs_membuf_destroy( &buf, C );
+	
+#undef _WRITE32
+#undef _WRITE8
+	return 1;
+}
+
+static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char* bufend )
+{
+	char *buf = *pbuf;
+	sgs_Context* ctx = sgs_ForkState( C, SGS_FALSE );
+	
+#define _READ32( x ) { if( buf + 4 > bufend ) goto fail; memcpy( &x, buf, 4 ); buf += 4; }
+#define _READ8( x ) { if( buf + 1 > bufend ) goto fail; x = (uint8_t) *buf++; }
+	
+	{
+		int32_t i, tag, sfnum, stacklen, stackoff, clstklen, clstkoff;
+		
+		_READ32( tag );
+		if( tag != 0x5C057A7E )
+			goto fail;
+		
+		/* POD: context */
+		_READ32( ctx->minlev );
+		_READ32( ctx->apilev );
+		_READ32( ctx->last_errno );
+		_READ32( ctx->state );
+		_READ32( stacklen );
+		_READ32( stackoff );
+		_READ32( ctx->stack_mem );
+		_READ32( clstklen );
+		_READ32( clstkoff );
+		_READ32( ctx->clstk_mem );
+		_READ32( sfnum );
+		_READ32( ctx->sf_count );
+		_READ32( ctx->num_last_returned );
+		
+		/* variables: _G */
+		ctx->_G = sgs_StackItem( C, 0 ).data.O;
+		sgs_ObjAcquire( ctx, ctx->_G );
+		
+		/* variables: stack */
+		sgs_BreakIf( ctx->stack_top != ctx->stack_base );
+		for( i = 0; i < stacklen; ++i )
+			sgs_PushVariable( ctx, sgs_StackItem( C, 1 + i ) );
+		sgs_BreakIf( ctx->stack_top != ctx->stack_base + stacklen );
+		if( stackoff > stacklen )
+			goto fail;
+		ctx->stack_off = ctx->stack_base + stackoff;
+		
+		/* variables: closure stack */
+		sgs_BreakIf( ctx->clstk_top != ctx->clstk_base );
+		for( i = 0; i < clstklen; ++i )
+		{
+			int32_t clref;
+			/* POD: closures */
+			_READ32( clref );
+			if( clref >= 0 )
+			{
+				if( clref >= i )
+					goto fail;
+				// found reference
+				sgs_ClPushItem( ctx, clref );
+			}
+			else
+			{
+				// make new
+				sgs_ClPushVariable( ctx, sgs_StackItem( C, 1 + stacklen + i ) );
+			}
+		}
+		sgs_BreakIf( ctx->clstk_top != ctx->clstk_base + clstklen );
+		if( clstkoff > clstklen )
+			goto fail;
+		ctx->clstk_off = ctx->clstk_base + clstkoff;
+		
+		/* stack frames */
+		for( i = 0; i < sfnum; ++i )
+		{
+			sgs_StackFrame* sf;
+			int32_t iptrpos, iendpos, lptrpos, ccount;
+			
+			/* variables: stack frame functions */
+			sgs_Variable v_func = sgs_StackItem( C, 1 + stacklen + clstklen + i );
+			if( v_func.type != SGS_VT_FUNC )
+				goto fail;
+			if( !sgsVM_PushStackFrame( ctx, &v_func ) )
+				goto fail;
+			sf = ctx->sf_last;
+			
+			/* POD: stack frames */
+			/* 'code' will be taken from function */
+			_READ32( iptrpos );
+			sf->iptr = sf->code + iptrpos;
+			_READ32( iendpos ); /* - for validation */
+			if( iendpos != sf->iend - sf->code )
+				goto fail;
+			_READ32( lptrpos );
+			sf->lptr = sf->code + lptrpos;
+			/* 'cptr' will be taken from function */
+			/* 'nfname' is irrelevant for non-native functions */
+			/* 'prev', 'next', 'cached' are system pointers */
+			_READ32( sf->argbeg );
+			_READ32( sf->argend );
+			_READ32( sf->argsfrom );
+			_READ32( sf->stkoff );
+			_READ32( sf->clsoff );
+			_READ32( ccount ); /* - for validation */
+			if( ccount != sf->constcount )
+				goto fail;
+			_READ32( sf->errsup );
+			_READ8( sf->argcount );
+			_READ8( sf->inexp );
+			_READ8( sf->flags );
+		}
+	}
+	
+#undef _READ32
+#undef _READ8
+	
+	/* finalize */
+	*pbuf = buf;
+	ctx->refcount = 0;
+	*pT = ctx;
+	return 1;
+fail:
+	sgs_FreeState( ctx );
+	return 0;
+}
+
+
 typedef struct sgs_serialize1_data
 {
 	int mode;
@@ -4709,7 +5017,8 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 	}
 	pSD = (sgs_serialize1_data*) C->serialize_state;
 	
-	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC || var.type == SGS_VT_FUNC )
+	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC ||
+		var.type == SGS_VT_FUNC || var.type == SGS_VT_THREAD )
 	{
 		sgs_Variable sym;
 		if( sgs_GetSymbol( C, var, &sym ) && sym.type == SGS_VT_STRING )
@@ -4722,7 +5031,16 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 		sgs_Release( C, &sym );
 	}
 	
-	if( var.type == SGS_VT_OBJECT )
+	if( var.type == SGS_VT_THREAD )
+	{
+		if( !sgs__thread_serialize( C, var.data.T, &pSD->data, NULL ) )
+		{
+			sgs_Msg( C, SGS_ERROR, "failed to serialize thread" );
+			ret = SGS_FALSE;
+			goto fail;
+		}
+	}
+	else if( var.type == SGS_VT_OBJECT )
 	{
 		sgs_VarObj* O = var.data.O;
 		_STACK_PREPARE;
@@ -4944,6 +5262,13 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 				return sgs_unserr_objcall( C );
 			str += fnsz;
 		}
+		else if( c == 'T' )
+		{
+			sgs_Context* T = NULL;
+			if( !sgs__thread_unserialize( C, &T, &str, strend ) )
+				return sgs_unserr_incomp( C );
+			sgs_PushThreadPtr( C, T );
+		}
 		else if( c == 'S' )
 		{
 			sgs_Variable sym;
@@ -4992,7 +5317,8 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 	}
 	pSD = (sgs_serialize2_data*) C->serialize_state;
 	
-	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC || var.type == SGS_VT_FUNC )
+	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC ||
+		var.type == SGS_VT_FUNC || var.type == SGS_VT_THREAD )
 	{
 		sgs_StkIdx argidx;
 		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
@@ -5028,7 +5354,16 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		}
 	}
 	
-	if( var.type == SGS_VT_OBJECT )
+	if( var.type == SGS_VT_THREAD )
+	{
+		if( !sgs__thread_serialize( C, var.data.T, &pSD->data, &pSD->argarray ) )
+		{
+			sgs_Msg( C, SGS_ERROR, "failed to serialize thread" );
+			ret = SGS_FALSE;
+			goto fail;
+		}
+	}
+	else if( var.type == SGS_VT_OBJECT )
 	{
 		sgs_VarObj* O = var.data.O;
 		sgs_VarObj* prevObj = pSD->curObj;
@@ -5318,6 +5653,32 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			sgs_GetStackItem( C, -1, &var );
 			sgs_SetStackSize( C, subsz );
 			str += fnsz;
+		}
+		else if( c == 'T' )
+		{
+			int32_t i, pos, argc;
+			sgs_Context* T = NULL;
+			if( str >= strend-5 && sgs_unserr_incomp( C ) )
+				goto fail;
+			SGS_AS_INT32( argc, str );
+			str += 4;
+			for( i = 0; i < argc; ++i )
+			{
+				if( str >= strend-4 && sgs_unserr_incomp( C ) )
+					goto fail;
+				SGS_AS_INT32( pos, str );
+				str += 4;
+				if( pos < 0 || (size_t) pos >= mb.size / sizeof(sgs_Variable) )
+				{
+					sgs_unserr_error( C );
+					goto fail;
+				}
+				sgs_PushVariable( C, ((sgs_Variable*) mb.ptr)[ pos ] );
+			}
+			if( !sgs__thread_unserialize( C, &T, &str, strend ) )
+				return sgs_unserr_incomp( C );
+			sgs_Pop( C, argc );
+			sgs_InitThreadPtr( &var, T );
 		}
 		else if( c == 'S' )
 		{

@@ -194,7 +194,8 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 #define SGS_VT_CFUNC  6
 #define SGS_VT_OBJECT 7
 #define SGS_VT_PTR    8
-#define SGS_VT__COUNT 9
+#define SGS_VT_THREAD 9
+#define SGS_VT__COUNT 10
 
 /* - object data */
 typedef struct sgs_ObjData sgs_VarObj;
@@ -253,14 +254,15 @@ typedef struct _sgs_iFunc sgs_iFunc;
 typedef union _sgs_VarData
 {
 	sgs_SizeVal* pRC;
-	sgs_Bool    B;
-	sgs_Int     I;
-	sgs_Real    R;
-	sgs_iStr*   S;
-	sgs_iFunc*  F;
-	sgs_CFunc   C;
-	sgs_VarObj* O;
-	void*       P;
+	sgs_Bool     B;
+	sgs_Int      I;
+	sgs_Real     R;
+	sgs_iStr*    S;
+	sgs_iFunc*   F;
+	sgs_CFunc    C;
+	sgs_VarObj*  O;
+	void*        P;
+	sgs_Context* T;
 }
 sgs_VarData;
 
@@ -473,6 +475,7 @@ static SGS_INLINE sgs_Variable sgs_MakePtr( void* v )
 SGS_APIFUNC void sgs_InitStringBuf( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal size );
 SGS_APIFUNC void sgs_InitString( SGS_CTX, sgs_Variable* out, const char* str );
 SGS_APIFUNC void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj );
+SGS_APIFUNC void sgs_InitThreadPtr( sgs_Variable* out, sgs_Context* T );
 
 /* pushed to stack if out = null */
 SGS_APIFUNC SGSONE sgs_CreateObject( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInterface* iface );
@@ -493,6 +496,7 @@ SGS_APIFUNC SGSONE sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size
 SGS_APIFUNC SGSONE sgs_PushString( SGS_CTX, const char* str );
 SGS_APIFUNC SGSONE sgs_PushCFunc( SGS_CTX, sgs_CFunc func );
 SGS_APIFUNC SGSONE sgs_PushObjectPtr( SGS_CTX, sgs_VarObj* obj );
+SGS_APIFUNC SGSONE sgs_PushThreadPtr( SGS_CTX, sgs_Context* T );
 SGS_APIFUNC SGSONE sgs_PushPtr( SGS_CTX, void* ptr );
 
 SGS_APIFUNC SGSONE sgs_PushVariable( SGS_CTX, sgs_Variable var );

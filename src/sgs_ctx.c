@@ -76,6 +76,7 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	
 	S->state_list = C;
 	S->statecount = 1;
+	C->refcount = 0;
 	C->shared = S;
 	C->prev = NULL;
 	C->next = NULL;
@@ -135,10 +136,8 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 }
 
 
-static void ctx_destroy( SGS_CTX )
+static void ctx_safedestroy( SGS_CTX )
 {
-	SGS_SHCTX_USE;
-	
 	if( C->state & SGS_STATE_DESTROYING )
 	{
 		return;
@@ -146,31 +145,49 @@ static void ctx_destroy( SGS_CTX )
 	C->state |= SGS_STATE_DESTROYING;
 	
 	if( C->hook_fn )
+	{
 		C->hook_fn( C->hook_ctx, C, SGS_HOOK_CFREE );
+		C->hook_fn = NULL;
+	}
 	
 	/* clear the stack */
-	while( C->stack_base != C->stack_top )
+	if( C->stack_base )
 	{
-		C->stack_top--;
-		sgs_Release( C, C->stack_top );
-	}
-	sgs_Dealloc( C->stack_base );
-	
-	while( C->clstk_base != C->clstk_top )
-	{
-		C->clstk_top--;
-		if( --(*C->clstk_top)->refcount < 1 )
+		while( C->stack_base != C->stack_top )
 		{
-			sgs_Release( C, &(*C->clstk_top)->var );
-			sgs_Dealloc( *C->clstk_top );
+			C->stack_top--;
+			sgs_Release( C, C->stack_top );
 		}
+		sgs_Dealloc( C->stack_base );
+		C->stack_base = NULL;
+		C->stack_off = NULL;
+		C->stack_top = NULL;
+		C->stack_mem = 0;
 	}
-	sgs_Dealloc( C->clstk_base );
+	
+	if( C->clstk_base )
+	{
+		while( C->clstk_base != C->clstk_top )
+		{
+			C->clstk_top--;
+			if( --(*C->clstk_top)->refcount < 1 )
+			{
+				sgs_Release( C, &(*C->clstk_top)->var );
+				sgs_Dealloc( *C->clstk_top );
+			}
+		}
+		sgs_Dealloc( C->clstk_base );
+		C->clstk_base = NULL;
+		C->clstk_off = NULL;
+		C->clstk_top = NULL;
+		C->clstk_mem = 0;
+	}
 	
 	sgsSTD_GlobalFree( C );
 	sgsSTD_ThreadsFree( C );
 	
 	/* free the call stack */
+	if( C->sf_cached )
 	{
 		sgs_StackFrame* sf = C->sf_cached, *sfn;
 		while( sf )
@@ -180,8 +197,18 @@ static void ctx_destroy( SGS_CTX )
 			sgs_Dealloc( sf );
 			sf = sfn;
 		}
+		C->sf_first = NULL;
+		C->sf_last = NULL;
 		C->sf_cached = NULL;
+		C->sf_count = 0;
 	}
+}
+
+static void ctx_destroy( SGS_CTX )
+{
+	SGS_SHCTX_USE;
+	
+	sgs_BreakIf( C->refcount > 0 );
 	
 	// LAST ONE CLEANS UP
 	if( C->prev == NULL && C->next == NULL )
@@ -260,7 +287,38 @@ void sgs_DestroyEngine( SGS_CTX )
 	sgs_ShCtx* S = C->shared;
 	
 	while( S->state_list )
-		ctx_destroy( S->state_list );
+	{
+		int numfreed = 0;
+		sgs_Context *next, *cur = S->state_list;
+		while( cur != NULL )
+		{
+			next = cur->next;
+			cur->refcount++; /* prevent self-free */
+			ctx_safedestroy( cur );
+			sgs_BreakIf( cur->refcount < 1 );
+			cur->refcount--;
+			if( cur->refcount <= 0 )
+			{
+				ctx_destroy( cur );
+				numfreed++;
+			}
+			cur = next;
+		}
+		
+		sgs_BreakIf( numfreed == 0 );
+		if( numfreed == 0 )
+			break;
+	}
+	
+	while( S->state_list )
+	{
+		sgs_Context* cur = S->state_list;
+		cur->refcount++; /* prevent self-free */
+		ctx_safedestroy( cur );
+		sgs_BreakIf( cur->refcount < 1 );
+		cur->refcount--;
+		ctx_destroy( cur );
+	}
 	
 	shctx_destroy( S );
 }
@@ -289,6 +347,7 @@ sgs_Context* sgs_ForkState( SGS_CTX, int copystate )
 	S->numallocs++;
 	S->numblocks++;
 	memcpy( NC, C, sizeof(*NC) );
+	NC->refcount = 0;
 	NC->parent = NULL; /* not shareable */
 	NC->_T = NULL; /* not shareable */
 	
@@ -388,6 +447,11 @@ sgs_Context* sgs_ForkState( SGS_CTX, int copystate )
 void sgs_FreeState( SGS_CTX )
 {
 	SGS_SHCTX_USE;
+	sgs_BreakIf( C->refcount < 0 );
+	C->refcount++; /* prevent self-free */
+	ctx_safedestroy( C );
+	sgs_BreakIf( C->refcount < 1 );
+	C->refcount--;
 	ctx_destroy( C );
 	
 	if( S->state_list == NULL )

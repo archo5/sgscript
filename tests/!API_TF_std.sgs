@@ -216,44 +216,48 @@ testEqual( [1,2,3,4].random(4).size, 4, "random - 4 of 4" );
 testEqual( [1,2,3,4].random(7).size, 7, "random - 7 of 4" );
 
 	section( "coroutines" );
-ERRORS = ""; testEqual( co_create( "wat" ), null ); testEqual( ERRORS, "[W:co_create(): argument 1 - expected callable, got string]" );
-co = co_create(function(i)
-{
-	i ??= 0;
-	for( ; i < 3; ++i )
-		testEqual( yield( i ), 123, "coroutine - yield return" );
-	return 1337;
-});
-testEqual( ''$co, "coroutine", "coroutine - created" );
-testEqual( co_resume( co, 1 ), 1, "coroutine - resume [1]" );
-testEqual( co_resume( co, 123 ), 2, "coroutine - resume [2]" );
-testEqual( co_resume( co, 123 ), 1337, "coroutine - return" );
-ERRORS = ""; testEqual( co_resume( co ), null ); testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
-
-ERRORS = "";
-testfn_clsr = "[tfn] ";
-anon_clsr = "[cl] ";
 function testfn(x) use(testfn_clsr){ println(testfn_clsr,x); yield(x); }
-co = co_create(function(x) use(anon_clsr){ for(i=0;i<2;++i){ testfn(anon_clsr$i$":"$x); } return "end"; });
-testEqual( ''$co, "coroutine", "[srlz] coroutine - created" );
-testEqual( co_resume(co,"text"), "[cl] 0:text", "[srlz] coroutine - resume [1]" );
-cos = serialize2( co ); testEqual( typeof(cos), "string", "[srlz] coroutine - serialized successfully" );
-println( "size of the serialized coroutine: " $ cos.length );
-co = unserialize2( cos ); testEqual( typeof(co), "coroutine", "[srlz] coroutine - unserialized successfully" );
-testEqual( co_resume(co), "[cl] 1:text", "[srlz] coroutine - resume [2]" );
-testEqual( co_resume(co), "end", "[srlz] coroutine - resume [3,final]" );
-testEqual( ERRORS, "", "[srlz] coroutine - no errors" );
-ERRORS = ""; testEqual( co_resume(co), null, "[srlz] coroutine - resume [4,failed]" );
-testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
-// ...and again!
-ERRORS = "";
-co = unserialize2( cos ); testEqual( typeof(co), "coroutine", "[srlz #2] coroutine - unserialized successfully" );
-testEqual( co_resume(co), "[cl] 1:text", "[srlz #2] coroutine - resume [2]" );
-testEqual( co_resume(co), "end", "[srlz #2] coroutine - resume [3,final]" );
-testEqual( ERRORS, "", "[srlz #2] coroutine - no errors" );
-ERRORS = ""; testEqual( co_resume(co), null, "[srlz #2] coroutine - resume [4,failed]" );
-testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
-co = null; // cleanup
+(function(){
+	global ERRORS;
+	ERRORS = ""; testEqual( co_create( "wat" ), null ); testEqual( ERRORS, "[W:co_create(): argument 1 - expected callable, got string]" );
+	ERRORS = "";
+	co = co_create(function(i)
+	{
+		i ??= 0;
+		for( ; i < 3; ++i )
+			testEqual( yield( i ), 123, "coroutine - yield return" );
+		return 1337;
+	});
+	testEqual( typeof(co), "thread", "coroutine - created" );
+	testEqual( co_resume( co, 1 ), 1, "coroutine - resume [1]" );
+	testEqual( co_resume( co, 123 ), 2, "coroutine - resume [2]" );
+	testEqual( co_resume( co, 123 ), 1337, "coroutine - return" );
+	testEqual( ERRORS, "", "coroutine - no errors" );
+	ERRORS = ""; testEqual( co_resume( co ), null ); testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
+
+	ERRORS = "";
+	testfn_clsr = "[tfn] ";
+	anon_clsr = "[cl] ";
+	co = co_create(function(x) use(anon_clsr){ for(i=0;i<2;++i){ testfn(anon_clsr$i$":"$x); } return "end"; });
+	testEqual( typeof(co), "thread", "[srlz] coroutine - created" );
+	testEqual( co_resume(co,"text"), "[cl] 0:text", "[srlz] coroutine - resume [1]" );
+	cos = serialize2( co ); testEqual( typeof(cos), "string", "[srlz] coroutine - serialized successfully" );
+	println( "size of the serialized coroutine: " $ cos.length );
+	co = unserialize2( cos ); testEqual( typeof(co), "thread", "[srlz] coroutine - unserialized successfully" );
+	testEqual( co_resume(co), "[cl] 1:text", "[srlz] coroutine - resume [2]" );
+	testEqual( co_resume(co), "end", "[srlz] coroutine - resume [3,final]" );
+	testEqual( ERRORS, "", "[srlz] coroutine - no errors" );
+	ERRORS = ""; testEqual( co_resume(co), null, "[srlz] coroutine - resume [4,failed]" );
+	testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
+	// ...and again!
+	ERRORS = "";
+	co = unserialize2( cos ); testEqual( typeof(co), "thread", "[srlz #2] coroutine - unserialized successfully" );
+	testEqual( co_resume(co), "[cl] 1:text", "[srlz #2] coroutine - resume [2]" );
+	testEqual( co_resume(co), "end", "[srlz #2] coroutine - resume [3,final]" );
+	testEqual( ERRORS, "", "[srlz #2] coroutine - no errors" );
+	ERRORS = ""; testEqual( co_resume(co), null, "[srlz #2] coroutine - resume [4,failed]" );
+	testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
+}()); // cleanup
 
 	section( "misc." );
 ERRORS = "";
@@ -341,23 +345,23 @@ testEqual( ERRORS, "", "isset - no error" );
 global testval0 = 1;
 testEqual( sys_stat(1), 1, "state count = 1" );
 (function(){
-	testEqual( typeof( thread_create( function(){ global testval0 = 2; } ) ), "coroutine", "thread creation success" );
+	testEqual( typeof( thread_create( function(){ global testval0 = 2; } ) ), "thread", "thread creation success" );
 	testEqual( testval0, 2, "thread function was called" );
-	testEqual( typeof( thread_create( function(){}, 1, 2 ) ), "coroutine", "thread - argument passing" );
+	testEqual( typeof( thread_create( function(){}, 1, 2 ) ), "thread", "thread - argument passing" );
 }()); // force cleanup
 testEqual( sys_stat(1), 1, "state count = 1" );
 (function(){
 	testEqual( typeof( t = thread_create( function(){ for(;;) yield(); } ) ),
-		"coroutine", "thread with infinite yield loop was partially run" );
+		"thread", "thread with infinite yield loop was partially run" );
 	testEqual( sys_stat(1), 2, "state count = 2" );
-	thread_abort( t );
+	abort( t );
 	t = null;
 	process_threads();
 }()); // force cleanup
 testEqual( sys_stat(1), 1, "state count after aborting infinite loop = 1" );
 testval0 = 3;
 testEqual( typeof( thread_create( function(){ global testval0 = 4; yield(1); testval0 = 5; yield(1); testval0 = 6; } ) ),
-	"coroutine", "waiting thread creation success" );
+	"thread", "waiting thread creation success" );
 testEqual( testval0, 4, "waiting thread - first segment executed" );
 process_threads( 0.5 ); // total waiting time [real = 0.5, thread = 0.5]
 testEqual( testval0, 4, "waiting thread - not continued" );
@@ -366,6 +370,13 @@ testEqual( testval0, 5, "waiting thread - continued, second segment executed" );
 process_threads( 1 ); // total waiting time [real = 2.5, thread = 2]
 testEqual( testval0, 6, "waiting thread - continued, final segment executed" );
 
+// test destruction (sgs_DestroyEngine cleanup correctness)
+global xco = co_create(function(){
+	thread_create(function(){
+		subthread_create(function(){ yield(); });
+		yield();
+	});
+});
 
 
 //

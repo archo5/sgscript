@@ -2441,356 +2441,74 @@ fail:
 
 
 
-typedef struct sgsstd_coro_s
-{
-	sgs_Variable func;
-	sgs_Context* ctx;
-}
-sgsstd_coro_t;
-
-#define COROHDR sgsstd_coro_t* CO = (sgsstd_coro_t*) obj->data;
-
-static int sgsstd_coro_destruct( SGS_CTX, sgs_VarObj* obj )
-{
-	COROHDR;
-	sgs_Release( C, &CO->func );
-	sgs_FreeState( CO->ctx );
-	return SGS_SUCCESS;
-}
-
-static int sgsstd_coro_gcmark( SGS_CTX, sgs_VarObj* obj )
-{
-	COROHDR;
-	sgs_GCMark( C, &CO->func );
-	return SGS_SUCCESS;
-}
-
-static int sgsstd_coro_serialize( SGS_CTX, sgs_VarObj* obj )
-{
-	COROHDR;
-	sgs_MemBuf buf = sgs_membuf_create();
-	sgs_Context* ctx = CO->ctx;
-	sgs_StackFrame* sf;
-	int32_t sfnum = 0;
-#define _WRITE32( x ) { int32_t _tmp = (int32_t)(x); sgs_membuf_appbuf( &buf, C, &_tmp, 4 ); }
-#define _WRITE8( x ) { sgs_membuf_appchr( &buf, C, (char)(x) ); }
-	
-	/* failure condition: cannot serialize self */
-	if( C == ctx )
-		return SGS_EINPROC;
-	/* failure condition: C functions in stack frame */
-	sf = ctx->sf_first;
-	while( sf )
-	{
-		if( sf->iptr == NULL )
-			return SGS_EINPROC;
-		sf = sf->next;
-	}
-	
-	/* variables: coroutine */
-	sgs_Serialize( C, CO->func );
-	/* variables: _G */
-	{
-		sgs_Variable v_obj; v_obj.type = SGS_VT_OBJECT; v_obj.data.O = ctx->_G;
-		sgs_Serialize( C, v_obj );
-	}
-	/* variables: stack */
-	{
-		sgs_Variable* p = ctx->stack_base;
-		while( p != ctx->stack_top )
-			sgs_Serialize( C, *p++ );
-	}
-	
-	_WRITE32( 0x5C057A7E ); /* Serialized COroutine STATE */
-	/* POD: coroutine */
-	/* POD: main context */
-	_WRITE32( ctx->minlev );
-	_WRITE32( ctx->apilev );
-	_WRITE32( ctx->last_errno );
-	_WRITE32( ctx->state );
-	_WRITE32( ctx->stack_top - ctx->stack_base );
-	_WRITE32( ctx->stack_off - ctx->stack_base );
-	_WRITE32( ctx->stack_mem );
-	_WRITE32( ctx->clstk_top - ctx->clstk_base );
-	_WRITE32( ctx->clstk_off - ctx->clstk_base );
-	_WRITE32( ctx->clstk_mem );
-	{
-		sf = ctx->sf_first;
-		while( sf )
-		{
-			sfnum++;
-			sf = sf->next;
-		}
-		_WRITE32( sfnum );
-	}
-	_WRITE32( ctx->sf_count );
-	_WRITE32( ctx->num_last_returned );
-	/* closures */
-	{
-		sgs_Closure** p = ctx->clstk_base;
-		while( p != ctx->clstk_top )
-		{
-			sgs_Closure** refp = ctx->clstk_base;
-			while( refp != p )
-			{
-				if( *refp == *p )
-					break;
-				refp++;
-			}
-			if( refp != p )
-			{
-				// found reference
-				sgs_Serialize( C, sgs_MakeNull() );
-				_WRITE32( refp - ctx->clstk_base );
-			}
-			else
-			{
-				// make new
-				sgs_Serialize( C, (*p)->var );
-				_WRITE32( -1 );
-			}
-			p++;
-		}
-	}
-	/* stack frames */
-	sf = ctx->sf_first;
-	while( sf )
-	{
-		sgs_Serialize( C, sf->func );
-		
-		/* 'code' will be taken from function */
-		_WRITE32( sf->iptr - sf->code );
-		_WRITE32( sf->iend - sf->code ); /* - for validation */
-		_WRITE32( sf->lptr - sf->code );
-		/* 'cptr' will be taken from function */
-		/* 'nfname' is irrelevant for non-native functions */
-		/* 'prev', 'next', 'cached' are system pointers */
-		_WRITE32( sf->argbeg );
-		_WRITE32( sf->argend );
-		_WRITE32( sf->argsfrom );
-		_WRITE32( sf->stkoff );
-		_WRITE32( sf->clsoff );
-		_WRITE32( sf->constcount ); /* - for validation */
-		_WRITE32( sf->errsup );
-		_WRITE8( sf->argcount );
-		_WRITE8( sf->inexp );
-		_WRITE8( sf->flags );
-		sf = sf->next;
-	}
-	
-	/* WP: string size */
-	sgs_PushStringBuf( C, buf.ptr, (sgs_SizeVal) buf.size );
-	sgs_membuf_destroy( &buf, C );
-	sgs_Serialize( C, sgs_StackItem( C, -1 ) );
-	
-	sgs_SerializeObject( C, 3 /* POD, co-func, _G */
-		+ ( ctx->stack_top - ctx->stack_base ) /* stack */
-		+ ( ctx->clstk_top - ctx->clstk_base ) /* closure stack */
-		+ sfnum /* stack frame functions */
-	, "__co_unserialize" );
-	
-#undef _WRITE32
-#undef _WRITE8
-	return SGS_SUCCESS;
-}
-
-sgs_ObjInterface sgsstd_coro_iface[1] =
-{{
-	"coroutine",
-	sgsstd_coro_destruct, sgsstd_coro_gcmark,
-	NULL, NULL,
-	NULL, sgsstd_coro_serialize, NULL, NULL,
-	NULL, NULL,
-}};
-
-#define CORO_IHDR( name ) \
-	sgsstd_coro_t* CO; \
-	if( !SGS_PARSE_METHOD( C, sgsstd_coro_iface, CO, co, name ) ) return 0; \
-	SGS_UNUSED( CO );
-
-static int sgsstd___co_unserialize( SGS_CTX )
-{
-	const char *buf, *bufend;
-	sgs_SizeVal bufsize;
-	sgs_Context* ctx;
-	
-	SGSFN( "__co_unserialize" );
-	if( sgs_ItemType( C, -1 ) != SGS_VT_STRING )
-		STDLIB_ERR( "wrong last argument" );
-	buf = sgs_ToStringBuf( C, -1, &bufsize );
-	bufend = buf + bufsize;
-	ctx = sgs_ForkState( C, SGS_FALSE );
-	
-#define _READ32( x ) { if( buf + 4 > bufend ) goto fail; memcpy( &x, buf, 4 ); buf += 4; }
-#define _READ8( x ) { if( buf + 1 > bufend ) goto fail; x = (uint8_t) *buf++; }
-	
-	{
-		int32_t i, tag, sfnum, stacklen, stackoff, clstklen, clstkoff;
-		
-		_READ32( tag );
-		if( tag != 0x5C057A7E )
-			goto fail;
-		
-		/* POD: context */
-		_READ32( ctx->minlev );
-		_READ32( ctx->apilev );
-		_READ32( ctx->last_errno );
-		_READ32( ctx->state );
-		_READ32( stacklen );
-		_READ32( stackoff );
-		_READ32( ctx->stack_mem );
-		_READ32( clstklen );
-		_READ32( clstkoff );
-		_READ32( ctx->clstk_mem );
-		_READ32( sfnum );
-		_READ32( ctx->sf_count );
-		_READ32( ctx->num_last_returned );
-		
-		/* variables: _G */
-		ctx->_G = sgs_StackItem( C, 1 ).data.O;
-		sgs_ObjAcquire( ctx, ctx->_G );
-		
-		/* variables: stack */
-		sgs_BreakIf( ctx->stack_top != ctx->stack_base );
-		for( i = 0; i < stacklen; ++i )
-			sgs_PushVariable( ctx, sgs_StackItem( C, 2 + i ) );
-		sgs_BreakIf( ctx->stack_top != ctx->stack_base + stacklen );
-		if( stackoff > stacklen )
-			goto fail;
-		ctx->stack_off = ctx->stack_base + stackoff;
-		
-		/* variables: closure stack */
-		sgs_BreakIf( ctx->clstk_top != ctx->clstk_base );
-		for( i = 0; i < clstklen; ++i )
-		{
-			int32_t clref;
-			/* POD: closures */
-			_READ32( clref );
-			if( clref >= 0 )
-			{
-				if( clref >= i )
-					goto fail;
-				// found reference
-				sgs_ClPushItem( ctx, clref );
-			}
-			else
-			{
-				// make new
-				sgs_ClPushVariable( ctx, sgs_StackItem( C, 2 + stacklen + i ) );
-			}
-		}
-		sgs_BreakIf( ctx->clstk_top != ctx->clstk_base + clstklen );
-		if( clstkoff > clstklen )
-			goto fail;
-		ctx->clstk_off = ctx->clstk_base + clstkoff;
-		
-		/* stack frames */
-		for( i = 0; i < sfnum; ++i )
-		{
-			sgs_StackFrame* sf;
-			int32_t iptrpos, iendpos, lptrpos, ccount;
-			
-			/* variables: stack frame functions */
-			sgs_Variable v_func = sgs_StackItem( C, 2 + stacklen + clstklen + i );
-			if( v_func.type != SGS_VT_FUNC )
-				goto fail;
-			if( !sgsVM_PushStackFrame( ctx, &v_func ) )
-				goto fail;
-			sf = ctx->sf_last;
-			
-			/* POD: stack frames */
-			/* 'code' will be taken from function */
-			_READ32( iptrpos );
-			sf->iptr = sf->code + iptrpos;
-			_READ32( iendpos ); /* - for validation */
-			if( iendpos != sf->iend - sf->code )
-				goto fail;
-			_READ32( lptrpos );
-			sf->lptr = sf->code + lptrpos;
-			/* 'cptr' will be taken from function */
-			/* 'nfname' is irrelevant for non-native functions */
-			/* 'prev', 'next', 'cached' are system pointers */
-			_READ32( sf->argbeg );
-			_READ32( sf->argend );
-			_READ32( sf->argsfrom );
-			_READ32( sf->stkoff );
-			_READ32( sf->clsoff );
-			_READ32( ccount ); /* - for validation */
-			if( ccount != sf->constcount )
-				goto fail;
-			_READ32( sf->errsup );
-			_READ8( sf->argcount );
-			_READ8( sf->inexp );
-			_READ8( sf->flags );
-		}
-	}
-	
-#undef _READ32
-#undef _READ8
-	
-	/* finalize */
-	{
-		sgsstd_coro_t* CO = (sgsstd_coro_t*) sgs_CreateObjectIPA( C, NULL, sizeof(*CO), sgsstd_coro_iface );
-		sgs_GetStackItem( C, 0, &CO->func );
-		CO->ctx = ctx;
-		return 1;
-	}
-fail:
-	sgs_FreeState( ctx );
-	STDLIB_ERR( "data error" );
-}
-
 static int sgsstd_co_create( SGS_CTX )
 {
-	sgsstd_coro_t* CO;
+	sgs_Context* T;
 	SGSFN( "co_create" );
 	if( !sgs_LoadArgs( C, "?p." ) )
 		return 0;
 	
-	CO = (sgsstd_coro_t*) sgs_CreateObjectIPA( C, NULL, sizeof(*CO), sgsstd_coro_iface );
-	sgs_GetStackItem( C, 0, &CO->func );
-	CO->ctx = sgs_ForkState( C, 0 );
-	return 1;
+	T = sgs_ForkState( C, 0 );
+	sgs_PushVariable( T, sgs_StackItem( C, 0 ) );
+	T->refcount = 0;
+	T->state |= SGS_STATE_COROSTART;
+	return sgs_PushThreadPtr( C, T );
 }
 
 static int sgsstd_co_resume( SGS_CTX )
 {
+	sgs_Context* T = NULL;
 	sgs_StkIdx i, ssz;
 	int rvc = 0;
 	
-	CORO_IHDR( resume );
+	SGSFN( "co_resume" );
+	if( !sgs_LoadArgs( C, "@y", &T ) )
+		return 0;
+	sgs_ForceHideThis( C );
 	
-	if( CO->func.type == SGS_VT_NULL && CO->ctx->sf_last == NULL )
+	if( ( T->state & SGS_STATE_COROSTART ) == 0 && T->sf_last == NULL )
 	{
 		STDLIB_WARN( "coroutine is finished, cannot resume" );
 	}
-	else if( CO->func.type != SGS_VT_NULL || CO->ctx->sf_last )
+	
+	ssz = sgs_StackSize( C );
+	
+	if( T->sf_last )
 	{
-		ssz = sgs_StackSize( C );
 		for( i = 0; i < ssz; ++i )
-		{
-			sgs_PushVariable( CO->ctx, sgs_StackItem( C, i ) );
-		}
-		
-		if( CO->ctx->sf_last )
-		{
-			if( !sgs_ResumeStateRet( CO->ctx, ssz, &rvc ) )
-				STDLIB_WARN( "failed to resume coroutine" );
-		}
-		else if( CO->func.type != SGS_VT_NULL )
-		{
-			sgs_XCall( CO->ctx, CO->func, ssz, &rvc );
-			sgs_Release( C, &CO->func );
-			CO->func = sgs_MakeNull();
-		}
+			sgs_PushVariable( T, sgs_StackItem( C, i ) );
+		if( !sgs_ResumeStateRet( T, ssz, &rvc ) )
+			STDLIB_WARN( "failed to resume coroutine" );
 	}
+	else if( T->state & SGS_STATE_COROSTART )
+	{
+		sgs_Variable func;
+		T->state &= ~(uint32_t)SGS_STATE_COROSTART;
+		sgs_StoreVariable( T, &func );
+		for( i = 0; i < ssz; ++i )
+			sgs_PushVariable( T, sgs_StackItem( C, i ) );
+		sgs_XCall( T, func, ssz, &rvc );
+		sgs_Release( C, &func );
+	}
+	/* else - already handled */
 	
 	for( i = -rvc; i < 0; ++i )
 	{
-		sgs_PushVariable( C, sgs_StackItem( CO->ctx, i ) );
+		sgs_PushVariable( C, sgs_StackItem( T, i ) );
 	}
 	
 	return rvc;
+}
+
+static int sgsstd_abort( SGS_CTX )
+{
+	sgs_Context* T = NULL;
+	SGSFN( "abort" );
+	if( !sgs_LoadArgs( C, "@|y", &T ) )
+		return 0;
+	
+	sgs_PushBool( C, sgs_Abort( T ? T : C ) );
+	return 1;
 }
 
 sgs_Context* sgs_TopmostContext( SGS_CTX )
@@ -2814,7 +2532,6 @@ SGSBOOL sgs_CreateSubthread( SGS_CTX, sgs_Variable* out, sgs_Variable func, int 
 {
 	sgs_Real waittime = 0;
 	sgs_StkIdx i;
-	sgsstd_coro_t* CO;
 	sgs_Context* co_ctx;
 	
 	/* call the function */
@@ -2835,21 +2552,21 @@ SGSBOOL sgs_CreateSubthread( SGS_CTX, sgs_Variable* out, sgs_Variable func, int 
 	
 	waittime = sgs_GetReal( co_ctx, -1 );
 	sgs_Pop( co_ctx, 1 );
-	CO = (sgsstd_coro_t*) sgs_CreateObjectIPA( C, out, sizeof(*CO), sgsstd_coro_iface );
-	CO->func = sgs_MakeNull();
-	CO->ctx = co_ctx;
 	
 	/* register thread if not done */
 	if( co_ctx->state & SGS_STATE_PAUSED )
 	{
-		sgs_Variable varT;
+		sgs_Variable varT, varSubT;
 		sgs__check_threadtbl( C );
 		varT.type = SGS_VT_OBJECT;
 		varT.data.O = C->_T;
-		sgs_SetIndex( C, varT, sgs_StackItem( C, -1 ), sgs_MakeReal( waittime ), SGS_FALSE );
+		varSubT.type = SGS_VT_THREAD;
+		varSubT.data.T = co_ctx;
+		sgs_SetIndex( C, varT, varSubT, sgs_MakeReal( waittime ), SGS_FALSE );
 		co_ctx->parent = C;
 	}
-	return 1;
+	co_ctx->refcount = 0;
+	return sgs_PushThreadPtr( C, co_ctx );
 }
 
 static int sgsstd_thread_create( SGS_CTX )
@@ -2888,7 +2605,7 @@ void sgs_ProcessSubthreads( SGS_CTX, sgs_Real dt )
 		for( i = 0; i < ht->size; ++i )
 		{
 			sgs_VHTVar* v = &ht->vars[ i ];
-			sgs_Context* thctx = ((sgsstd_coro_t*)v->key.data.O->data)->ctx;
+			sgs_Context* thctx = v->key.data.T;
 			sgs_ProcessSubthreads( thctx, dt );
 			v->val.data.R -= dt;
 			if( v->val.data.R <= 0 )
@@ -2916,25 +2633,32 @@ void sgsSTD_ThreadsFree( SGS_CTX )
 		for( i = 0; i < ht->size; ++i )
 		{
 			sgs_VHTVar* v = &ht->vars[ i ];
-			sgs_Context* thctx = ((sgsstd_coro_t*)v->key.data.O->data)->ctx;
+			sgs_Context* thctx = v->key.data.T;
 			thctx->parent = NULL;
 			sgs_vht_unset( ht, C, &v->key );
 			i--; /* unset replaces current element in array with last */
 		}
+		sgs_BreakIf( C->_T->refcount != 1 );
 		sgs_ObjRelease( C, C->_T );
 		C->_T = NULL;
 	}
+	if( C->parent )
+	{
+		sgs_VHTable* ht = &((DictHdr*)C->parent->_T->data)->ht;
+		sgs_Variable selfkey;
+		selfkey.type = SGS_VT_THREAD;
+		selfkey.data.T = C;
+		sgs_vht_unset( ht, C, &selfkey );
+		C->parent = NULL;
+	}
 }
 
-static int sgsstd_thread_abort( SGS_CTX )
+void sgsSTD_ThreadsGC( SGS_CTX )
 {
-	sgsstd_coro_t* CO;
-	SGSFN( "thread_abort" );
-	if( !sgs_LoadArgs( C, "o", sgsstd_coro_iface, &CO ) )
-		return 0;
-	
-	sgs_PushBool( C, sgs_Abort( CO->ctx ) );
-	return 1;
+	if( C->_T )
+	{
+		sgs_ObjGCMark( C, C->_T );
+	}
 }
 
 static int sgsstd_process_threads( SGS_CTX )
@@ -3737,12 +3461,6 @@ static int sgsstd_INFO( SGS_CTX ){ return sgsstd__msgwrapper( C, "INFO", SGS_INF
 static int sgsstd_WARNING( SGS_CTX ){ return sgsstd__msgwrapper( C, "WARNING", SGS_WARNING ); }
 static int sgsstd_ERROR( SGS_CTX ){ return sgsstd__msgwrapper( C, "ERROR", SGS_ERROR ); }
 
-static int sgsstd_sys_abort( SGS_CTX )
-{
-	SGSFN( "sys_abort" );
-	sgs_Abort( C );
-	return 0;
-}
 static int sgsstd_app_abort( SGS_CTX )
 {
 	SGSFN( "app_abort" );
@@ -4022,8 +3740,8 @@ static sgs_RegFuncConst regfuncs[] =
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
 	STDLIB_FN( metaobj_set ), STDLIB_FN( metaobj_get ), STDLIB_FN( metamethods_enable ), STDLIB_FN( metamethods_test ),
 	STDLIB_FN( mm_getindex_router ), STDLIB_FN( mm_setindex_router ),
-	STDLIB_FN( __co_unserialize ), STDLIB_FN( co_create ), STDLIB_FN( co_resume ),
-	STDLIB_FN( thread_create ), STDLIB_FN( subthread_create ), STDLIB_FN( thread_abort ),
+	STDLIB_FN( co_create ), STDLIB_FN( co_resume ),
+	STDLIB_FN( thread_create ), STDLIB_FN( subthread_create ), STDLIB_FN( abort ),
 	STDLIB_FN( process_threads ),
 	STDLIB_FN( yield ),
 	STDLIB_FN( pcall ), STDLIB_FN( assert ),
@@ -4035,7 +3753,7 @@ static sgs_RegFuncConst regfuncs[] =
 	STDLIB_FN( sys_curfile ), STDLIB_FN( sys_curfiledir ), STDLIB_FN( sys_curprocfile ), STDLIB_FN( sys_curprocdir ),
 	STDLIB_FN( multiply_path_ext_lists ),
 	STDLIB_FN( sys_backtrace ), STDLIB_FN( sys_msg ), STDLIB_FN( INFO ), STDLIB_FN( WARNING ), STDLIB_FN( ERROR ),
-	STDLIB_FN( sys_abort ), STDLIB_FN( app_abort ), STDLIB_FN( app_exit ),
+	STDLIB_FN( app_abort ), STDLIB_FN( app_exit ),
 	STDLIB_FN( sys_replevel ), STDLIB_FN( sys_stat ),
 	STDLIB_FN( errno ), STDLIB_FN( errno_string ), STDLIB_FN( errno_value ),
 	STDLIB_FN( dumpvar ), STDLIB_FN( dumpvar_ext ),

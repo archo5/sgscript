@@ -561,9 +561,11 @@ struct _sgs_ShCtx
 #define SGS_STATE_DESTROYING    0x0010
 #define SGS_STATE_LASTFUNCABORT 0x0020
 #define SGS_STATE_INSIDE_API    0x0040
+#define SGS_STATE_COROSTART     0x0080 /* function is pushed to stack */
 
 struct _sgs_Context
 {
+	int32_t       refcount;
 	sgs_ShCtx*    shared;
 	sgs_Context*  prev;
 	sgs_Context*  next;
@@ -642,6 +644,7 @@ static const char* sgs_VarNames[] =
 	"C function",
 	"object",
 	"ptr",
+	"thread",
 };
 
 static const char* sgs_OpNames[] =
@@ -667,6 +670,7 @@ SGSBOOL sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 SGSBOOL sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 void sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc );
 void sgsSTD_ThreadsFree( SGS_CTX );
+void sgsSTD_ThreadsGC( SGS_CTX );
 void sgsSTD_RegistryInit( SGS_CTX );
 void sgsSTD_RegistryFree( SGS_CTX );
 void sgsSTD_RegistryGC( SGS_CTX );

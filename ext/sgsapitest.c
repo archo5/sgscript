@@ -992,7 +992,7 @@ DEFINE_TEST( profiling )
 	sgs_ProfInit( C, &P, SGS_PROF_FUNCTIME );
 	atf_assert( sgs_ExecString( C, ""
 		"rand();\n"
-		"sys_abort();\n"
+		"abort();\n"
 		"randf();\n"
 	"" ) == SGS_SUCCESS );
 	/* expecting to see main/rand in the dump, but no randf */
@@ -1002,7 +1002,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "Time by call stack frame" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main> -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::sys_abort -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::abort -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) == NULL );
 	sgs_ProfClose( &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
@@ -1086,7 +1086,7 @@ DEFINE_TEST( profiling )
 	sgs_ProfInit( C, &P, SGS_PROF_MEMUSAGE );
 	atf_assert( sgs_ExecString( C, ""
 		"rand();\n"
-		"sys_abort();\n"
+		"abort();\n"
 		"randf();\n"
 	"" ) == SGS_SUCCESS );
 	/* expecting to see main/rand in the dump, but no randf */
@@ -1096,7 +1096,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "Memory usage by call stack frame" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main> -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::sys_abort -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::abort -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) == NULL );
 	sgs_ProfClose( &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
