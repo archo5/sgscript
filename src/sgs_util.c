@@ -140,6 +140,7 @@ sgs_Hash sgs_HashVar( const sgs_Variable* v )
 	case SGS_VT_CFUNC:
 	case SGS_VT_OBJECT:
 	case SGS_VT_PTR:
+	case SGS_VT_THREAD:
 		size = sizeof( void* ); break;
 	default:
 		return 0;
@@ -170,6 +171,7 @@ static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
 	case SGS_VT_CFUNC: return v1->data.C == v2->data.C;
 	case SGS_VT_OBJECT: return v1->data.O == v2->data.O;
 	case SGS_VT_PTR: return v1->data.P == v2->data.P;
+	case SGS_VT_THREAD: return v1->data.T == v2->data.T;
 	}
 	return 1;
 }
@@ -339,12 +341,11 @@ sgs_VHTVar* sgs_vht_set( sgs_VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable*
 	if( i >= 0 )
 	{
 		sgs_VHTVar* p = T->vars + T->pairs[ i ];
+		if( V )
+			sgs_Acquire( C, V );
 		sgs_Release( C, &p->val );
 		if( V )
-		{
-			sgs_Acquire( C, V );
 			p->val = *V;
-		}
 		else
 			p->val.type = SGS_VT_NULL;
 		return p;
