@@ -825,10 +825,10 @@ DEFINE_TEST( fork_state )
 	atf_assert( sgs_Stat( CFP, SGS_STAT_STATECOUNT ) == 3 );
 	
 	/* release in the creating order */
-	sgs_FreeState( C );
-	sgs_FreeState( CFF );
+	sgs_ReleaseState( C );
+	sgs_ReleaseState( CFF );
 	atf_assert( sgs_Stat( CFP, SGS_STAT_STATECOUNT ) == 1 );
-	sgs_FreeState( CFP );
+	sgs_ReleaseState( CFP );
 	
 	/* --- try running something on both --- */
 	C = get_context();
@@ -841,9 +841,9 @@ DEFINE_TEST( fork_state )
 	atf_assert( sgs_ExecString( C, str ) == SGS_SUCCESS );
 	atf_assert( sgs_ExecString( CFF, str ) == SGS_SUCCESS );
 	atf_assert( sgs_ExecString( CFP, str ) == SGS_SUCCESS );
-	sgs_FreeState( C );
-	sgs_FreeState( CFF );
-	sgs_FreeState( CFP );
+	sgs_ReleaseState( C );
+	sgs_ReleaseState( CFF );
+	sgs_ReleaseState( CFP );
 }
 
 DEFINE_TEST( yield_resume )
@@ -877,6 +877,7 @@ DEFINE_TEST( yield_abandon )
 	CF = sgs_ForkState( C, 0 );
 	const char* str = "yield();";
 	atf_assert( sgs_ExecString( CF, str ) == SGS_SUCCESS );
+	sgs_ReleaseState( CF );
 	
 	destroy_context( C );
 }

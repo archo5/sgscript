@@ -245,7 +245,7 @@ static void var_release( SGS_CTX, sgs_VarPtr p )
 		case SGS_VT_STRING: var_destroy_string( C, p->data.S ); break;
 		case SGS_VT_FUNC: var_destroy_func( C, p->data.F ); break;
 		case SGS_VT_OBJECT: sgsVM_VarDestroyObject( C, p->data.O ); break;
-		case SGS_VT_THREAD: sgs_FreeState( p->data.T ); break;
+		case SGS_VT_THREAD: sgsCTX_FreeState( p->data.T ); break;
 		}
 	}
 }
@@ -4518,6 +4518,7 @@ static void sgsVM_GCExecute( SGS_SHCTX )
 	
 	/* -- SWEEP -- */
 	C = S->state_list; // any context is good enough here
+	C->refcount++;
 	/* destruct objects */
 	p = S->objs;
 	while( p ){
@@ -4536,6 +4537,7 @@ static void sgsVM_GCExecute( SGS_SHCTX )
 		p = pn;
 	}
 	
+	C->refcount--;
 	S->gcrun = SGS_FALSE;
 }
 
@@ -4877,7 +4879,7 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char* bufend )
 {
 	char *buf = *pbuf;
-	sgs_Context* ctx = sgs_ForkState( C, SGS_FALSE );
+	sgs_Context* ctx = sgsCTX_ForkState( C, SGS_FALSE );
 	
 #define _READ32( x ) { if( buf + 4 > bufend ) goto fail; memcpy( &x, buf, 4 ); buf += 4; }
 #define _READ8( x ) { if( buf + 1 > bufend ) goto fail; x = (uint8_t) *buf++; }
@@ -4988,11 +4990,11 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 	
 	/* finalize */
 	*pbuf = buf;
-	ctx->refcount = 0;
+	sgs_BreakIf( ctx->refcount != 0 );
 	*pT = ctx;
 	return 1;
 fail:
-	sgs_FreeState( ctx );
+	sgsCTX_FreeState( ctx );
 	return 0;
 }
 

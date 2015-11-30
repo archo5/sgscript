@@ -2448,10 +2448,10 @@ static int sgsstd_co_create( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?p." ) )
 		return 0;
 	
-	T = sgs_ForkState( C, 0 );
+	T = sgsCTX_ForkState( C, 0 );
 	sgs_PushVariable( T, sgs_StackItem( C, 0 ) );
-	T->refcount = 0;
 	T->state |= SGS_STATE_COROSTART;
+	sgs_BreakIf( T->refcount != 0 );
 	return sgs_PushThreadPtr( C, T );
 }
 
@@ -2535,7 +2535,7 @@ SGSBOOL sgs_CreateSubthread( SGS_CTX, sgs_Variable* out, sgs_Variable func, int 
 	sgs_Context* co_ctx;
 	
 	/* call the function */
-	co_ctx = sgs_ForkState( C, 0 );
+	co_ctx = sgsCTX_ForkState( C, 0 );
 	if( gotthis )
 	{
 		sgs_PushVariable( co_ctx, sgs_StackItem( C, -size - 1 ) );
@@ -2546,7 +2546,7 @@ SGSBOOL sgs_CreateSubthread( SGS_CTX, sgs_Variable* out, sgs_Variable func, int 
 	}
 	if( sgs_FCall( co_ctx, sgs_StackItem( C, 0 ), size, 1, gotthis ) == SGS_FALSE )
 	{
-		sgs_FreeState( co_ctx );
+		sgsCTX_FreeState( co_ctx );
 		return 0;
 	}
 	
@@ -2554,6 +2554,7 @@ SGSBOOL sgs_CreateSubthread( SGS_CTX, sgs_Variable* out, sgs_Variable func, int 
 	sgs_Pop( co_ctx, 1 );
 	
 	/* register thread if not done */
+	sgs_BreakIf( co_ctx->refcount != 0 );
 	if( co_ctx->state & SGS_STATE_PAUSED )
 	{
 		sgs_Variable varT, varSubT;
@@ -2565,7 +2566,6 @@ SGSBOOL sgs_CreateSubthread( SGS_CTX, sgs_Variable* out, sgs_Variable func, int 
 		sgs_SetIndex( C, varT, varSubT, sgs_MakeReal( waittime ), SGS_FALSE );
 		co_ctx->parent = C;
 	}
-	co_ctx->refcount = 0;
 	return sgs_PushThreadPtr( C, co_ctx );
 }
 
@@ -2644,12 +2644,17 @@ void sgsSTD_ThreadsFree( SGS_CTX )
 	}
 	if( C->parent )
 	{
+		sgs_Context* PC = C->parent;
 		sgs_VHTable* ht = &((DictHdr*)C->parent->_T->data)->ht;
 		sgs_Variable selfkey;
 		selfkey.type = SGS_VT_THREAD;
 		selfkey.data.T = C;
-		sgs_vht_unset( ht, C, &selfkey );
 		C->parent = NULL;
+		PC->refcount++; /* prevent freeing of parent during the following operation */
+		sgs_vht_unset( ht, PC, &selfkey );
+		PC->refcount--;
+		if( PC->refcount == 0 )
+			sgsCTX_FreeState( PC );
 	}
 }
 
@@ -3922,16 +3927,25 @@ void sgsSTD_RegistryFree( SGS_CTX )
 	SGS_SHCTX_USE;
 	
 	/* include table */
-	sgs_ObjRelease( C, INCP );
-	INCP = NULL;
+	if( INCP )
+	{
+		sgs_ObjRelease( C, INCP );
+		INCP = NULL;
+	}
 	
 	/* symbol table */
-	sgs_ObjRelease( C, SYMP );
-	SYMP = NULL;
+	if( SYMP )
+	{
+		sgs_ObjRelease( C, SYMP );
+		SYMP = NULL;
+	}
 	
 	/* registry */
-	sgs_ObjRelease( C, RLBP );
-	RLBP = NULL;
+	if( RLBP )
+	{
+		sgs_ObjRelease( C, RLBP );
+		RLBP = NULL;
+	}
 }
 
 void sgsSTD_RegistryGC( SGS_CTX )

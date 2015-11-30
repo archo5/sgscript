@@ -1200,7 +1200,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_CreateEngineExt - create scripting engine context and pass a custom memory function
 - @sgs_DestroyEngine - validate memory statistics and destroy engine context
 - @sgs_ForkState - create a duplicate of the execution state
-- @sgs_FreeState - release an execution state
+- @sgs_ReleaseState - release an execution state
 - @sgs_PauseState - suspends the execution state
 - @sgs_ResumeStateRet<sgs_ResumeState***> - resumes the execution state, retrieves number of return values
 - @sgs_ResumeStateExp<sgs_ResumeState***> - resumes the execution state, returns the specified number of return values
@@ -1637,10 +1637,10 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - If `copystate` is nonzero, all stacks (variable, closure, call) are copied as well, creating an exact duplicate.
 
 
-# sgs_FreeState [function]
+# sgs_ReleaseState [function]
 
-== sgs_FreeState( sgs_Context* C )
-=== Destroys the execution state, possibly destroying the VM.
+== sgs_ReleaseState( sgs_Context* C )
+=== Releases the execution state, possibly destroying the VM.
 
 - If the freed state is the last one that exists, function behaves exactly as @sgs_DestroyEngine.
 

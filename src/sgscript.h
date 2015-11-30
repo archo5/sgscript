@@ -306,7 +306,7 @@ static SGS_INLINE sgs_Context* sgs_CreateEngine()
 SGS_APIFUNC void sgs_DestroyEngine( SGS_CTX );
 
 SGS_APIFUNC sgs_Context* sgs_ForkState( SGS_CTX, int copystate );
-SGS_APIFUNC void sgs_FreeState( SGS_CTX );
+SGS_APIFUNC void sgs_ReleaseState( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_PauseState( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc );
 SGS_APIFUNC SGSBOOL sgs_ResumeStateExp( SGS_CTX, int args, int expect );

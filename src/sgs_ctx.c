@@ -76,7 +76,7 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	
 	S->state_list = C;
 	S->statecount = 1;
-	C->refcount = 0;
+	C->refcount = 1;
 	C->shared = S;
 	C->prev = NULL;
 	C->next = NULL;
@@ -285,27 +285,39 @@ static void shctx_destroy( SGS_SHCTX )
 void sgs_DestroyEngine( SGS_CTX )
 {
 	sgs_ShCtx* S = C->shared;
+	C->refcount--;
+	
+	sgsSTD_RegistryFree( C );
 	
 	while( S->state_list )
 	{
 		int numfreed = 0;
-		sgs_Context *next, *cur = S->state_list;
+		sgs_Context* cur = S->state_list;
 		while( cur != NULL )
 		{
-			next = cur->next;
 			cur->refcount++; /* prevent self-free */
 			ctx_safedestroy( cur );
 			sgs_BreakIf( cur->refcount < 1 );
 			cur->refcount--;
+			cur = cur->next;
+		}
+		sgs_GCExecute( S->state_list );
+		cur = S->state_list;
+		while( cur != NULL )
+		{
 			if( cur->refcount <= 0 )
 			{
 				ctx_destroy( cur );
 				numfreed++;
+				break;
 			}
-			cur = next;
+			else
+			{
+				cur = cur->next;
+			}
 		}
 		
-		sgs_BreakIf( numfreed == 0 );
+		sgs_BreakIf( numfreed == 0 && "some user-made states have not been freed" );
 		if( numfreed == 0 )
 			break;
 	}
@@ -339,7 +351,7 @@ static void copy_append_frame( SGS_CTX, sgs_StackFrame* sf )
 	}
 }
 
-sgs_Context* sgs_ForkState( SGS_CTX, int copystate )
+sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 {
 	SGS_SHCTX_USE;
 	sgs_Context* NC = (sgs_Context*) S->memfunc( S->mfuserdata, NULL, sizeof(*NC) );
@@ -444,7 +456,7 @@ sgs_Context* sgs_ForkState( SGS_CTX, int copystate )
 	return NC;
 }
 
-void sgs_FreeState( SGS_CTX )
+void sgsCTX_FreeState( SGS_CTX )
 {
 	SGS_SHCTX_USE;
 	sgs_BreakIf( C->refcount < 0 );
@@ -456,6 +468,20 @@ void sgs_FreeState( SGS_CTX )
 	
 	if( S->state_list == NULL )
 		shctx_destroy( S );
+}
+
+sgs_Context* sgs_ForkState( SGS_CTX, int copystate )
+{
+	sgs_Context* F = sgsCTX_ForkState( C, copystate );
+	F->refcount = 1;
+	return F;
+}
+
+void sgs_ReleaseState( SGS_CTX )
+{
+	C->refcount--;
+	if( C->refcount <= 0 )
+		sgsCTX_FreeState( C );
 }
 
 SGSBOOL sgs_PauseState( SGS_CTX )
@@ -1313,7 +1339,7 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 		if( frame->func.data.F->sfuncname->size )
 			N = sgs_str_cstr( frame->func.data.F->sfuncname );
 		L = !frame->func.data.F->lineinfo ? 1 :
-			frame->func.data.F->lineinfo[ frame->lptr - frame->code ];
+			frame->func.data.F->lineinfo[ SGS_MIN( frame->lptr, frame->iend - 1 ) - frame->code ];
 		if( frame->func.data.F->sfilename->size )
 			F = sgs_str_cstr( frame->func.data.F->sfilename );
 	}

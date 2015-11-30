@@ -664,6 +664,9 @@ static const char* sgs_OpNames[] =
 #endif
 
 
+sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate );
+void sgsCTX_FreeState( SGS_CTX );
+
 void sgsSTD_PostInit( SGS_CTX );
 SGSBOOL sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 SGSBOOL sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
