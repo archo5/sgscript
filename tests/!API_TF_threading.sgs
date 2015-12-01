@@ -123,6 +123,91 @@ TSTCUR = "[subthread] CF-call"; t = subthread tsfOBJ!tstf1( true, 1 ); tstst( 6 
 t = null;
 testEqual( ERRORS, "", "thread syntax - no errors" );
 
+	section( "sync/race" );
+global syarr = [];
+function wait( iters )
+{
+	for( i = 0; i < iters; ++i )
+		yield();
+	syarr.push( iters );
+}
+
+function corotestA1()
+{
+	a = subthread wait( 3 );
+	b = subthread wait( 5 );
+	c = subthread wait( 7 );
+	sync( a, b, c );
+}
+global syarr = [];
+thread corotestA1();
+while( process_threads() );
+testEqual( ''$syarr, "[3,5,7]", "sync A1 - all done" );
+
+function corotestA2()
+{
+	a = subthread wait( 3 );
+	b = subthread wait( 5 );
+	c = subthread wait( 7 );
+	sync( a, sync( b, c ) );
+}
+global syarr = [];
+thread corotestA2();
+while( process_threads() );
+testEqual( ''$syarr, "[3,5,7]", "sync A2 - all done" );
+
+function corotestA3()
+{
+	a = subthread wait( 3 );
+	b = subthread wait( 5 );
+	c = subthread wait( 7 );
+	t = 0.9;
+	sync( a, sync( b, c, 0.4 ), t );
+	syarr.push("done");
+}
+global syarr = [];
+thread corotestA3();
+for( i = 0; i < 9; ++i )
+	process_threads(0.1);
+testEqual( ''$syarr, "[3,5,7]", "sync A3 - almost done" );
+while( process_threads(0.1) );
+testEqual( ''$syarr, "[3,5,7,done]", "sync A3 - all done" );
+
+function corotestB1()
+{
+	a = subthread wait( 3 );
+	b = subthread wait( 5 );
+	c = subthread wait( 7 );
+	race( a, b, c );
+}
+global syarr = [];
+thread corotestB1();
+while( process_threads() );
+testEqual( ''$syarr, "[3]", "race B1 - all done" );
+
+function corotestB2()
+{
+	b = subthread wait( 5 );
+	c = subthread wait( 7 );
+	race( b, c, 0.35 );
+}
+global syarr = [];
+thread corotestB2();
+while( process_threads(0.1) );
+testEqual( ''$syarr, "[]", "race B2 - all done" );
+
+function corotestC1()
+{
+	a = subthread wait( 3 );
+	b = subthread wait( 5 );
+	c = subthread wait( 8 );
+	race( sync( a, b, c ), 6 );
+}
+global syarr = [];
+thread corotestC1();
+while( process_threads(1) );
+testEqual( ''$syarr, "[3,5]", "sync/race C1 - all done" );
+
 
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );

@@ -101,6 +101,7 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	
 	C->parent = NULL;
 	C->_T = NULL;
+	C->wait_timer = 0;
 	
 	C->stack_mem = 32;
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );
@@ -362,6 +363,7 @@ sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 	NC->refcount = 0;
 	NC->parent = NULL; /* not shareable */
 	NC->_T = NULL; /* not shareable */
+	NC->wait_timer = 0;
 	
 	// realloc / acquire
 	if( copystate == SGS_FALSE )

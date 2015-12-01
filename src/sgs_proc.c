@@ -1010,6 +1010,12 @@ static void* var_getptr( SGS_CTX, sgs_VarPtr var )
 	return NULL;
 }
 
+#define var_getfin( C, var ) \
+	( ((var)->type == SGS_VT_THREAD && (var)->data.T->sf_last == NULL ) \
+	||( (var)->type == SGS_VT_BOOL && (var)->data.B != 0 ) \
+	||( (var)->type == SGS_VT_REAL && (var)->data.R <= C->wait_timer ) \
+	||( (var)->type == SGS_VT_INT && (var)->data.I <= C->wait_timer ))
+
 static SGS_INLINE sgs_Int var_getint_simple( sgs_VarPtr var )
 {
 	switch( var->type )
@@ -2642,6 +2648,7 @@ restart_loop:
 			{
 			case SGS_INT_ERRSUP_INC: SF->errsup++; break;
 			case SGS_INT_ERRSUP_DEC: SF->errsup--; break;
+			case SGS_INT_RESET_WAIT_TIMER: C->wait_timer = 0; break;
 			}
 			break;
 		}
@@ -2803,6 +2810,37 @@ restart_loop:
 		case SGS_SI_DICT: { vm_make_dict( C, argE, argC ); break; }
 		case SGS_SI_RSYM: { ARGS_3; sgs_Variable symtbl = sgs_Registry( C, SGS_REG_SYM );
 			sgs_SetIndex( C, symtbl, *p2, *p3, SGS_FALSE ); sgs_SetIndex( C, symtbl, *p3, *p2, SGS_FALSE ); break; }
+			
+		case SGS_SI_COTRT: if( var_getfin( C, RESVAR( argB ) ) ) var_setbool( C, C->stack_off + a1, 1 ); break;
+		case SGS_SI_COTRF: if( !var_getfin( C, RESVAR( argB ) ) ) var_setbool( C, C->stack_off + a1, 0 ); break;
+		case SGS_SI_COABORT:
+			if( var_getbool( C, RESVAR( argC ) ) )
+			{
+				int16_t off = (int16_t) argE;
+				const sgs_instr_t* p = pp + 1 + off, *pstop = pp;
+				sgs_BreakIf( p > pstop || p < SF->code );
+				while( p < pstop )
+				{
+					sgs_instr_t cI = *p;
+					int op = SGS_INSTR_GET_OP( cI );
+					if( op == SGS_SI_COTRT || op == SGS_SI_COTRF )
+					{
+						int cIargB = SGS_INSTR_GET_B( cI );
+						sgs_Variable* var = RESVAR( cIargB );
+						if( var->type == SGS_VT_THREAD )
+							sgs_Abort( var->data.T );
+					}
+					p++;
+				}
+			}
+			break;
+		case SGS_SI_YLDJMP:
+			if( var_getbool( C, RESVAR( argC ) ) == SGS_FALSE )
+			{
+				C->state |= SGS_STATE_PAUSED;
+				return 0;
+			}
+			break;
 #undef VCOMPARE
 #undef STRICTLY_EQUAL
 #undef ARGS_2
@@ -2840,7 +2878,7 @@ restart_loop:
 
 SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 {
-	int rvc = 0;
+	int op, rvc = 0;
 	if( !( C->state & SGS_STATE_PAUSED ) )
 		return SGS_FALSE; /* already running, may not return the expected data */
 	sgs_BreakIf( C->sf_last == NULL );
@@ -2855,7 +2893,9 @@ SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 	}
 	
 	/* TODO validate state corruption */
-	sgs_BreakIf( SGS_INSTR_GET_OP( *C->sf_last->iptr ) != SGS_SI_CALL );
+	op = SGS_INSTR_GET_OP( *C->sf_last->iptr );
+	sgs_BreakIf( op != SGS_SI_CALL && op != SGS_SI_YLDJMP );
+	if( op == SGS_SI_CALL )
 	{
 		int i, expect = SGS_INSTR_GET_A( *C->sf_last->iptr );
 		int args_from = SGS_INSTR_GET_B( *C->sf_last->iptr ) & 0xff;
@@ -2867,6 +2907,13 @@ SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 				stk_setlvar( C, args_from + i, C->stack_top - expect + i );
 			stk_pop( C, expect );
 		}
+	}
+	else if( op == SGS_SI_YLDJMP )
+	{
+		sgs_StackFrame* sf = C->sf_last;
+		int16_t off = (int16_t) SGS_INSTR_GET_E( *sf->iptr );
+		sf->iptr += off;
+		sgs_BreakIf( sf->iptr+1 > sf->iend || sf->iptr+1 < sf->code );
 	}
 	
 	C->sf_last->lptr = ++C->sf_last->iptr;

@@ -311,6 +311,7 @@ SGS_APIFUNC SGSBOOL sgs_PauseState( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc );
 SGS_APIFUNC SGSBOOL sgs_ResumeStateExp( SGS_CTX, int args, int expect );
 #define sgs_ResumeState( C ) sgs_ResumeStateExp( C, 0, 0 )
+SGS_APIFUNC int sgs_ProcessSubthreads( SGS_CTX, sgs_Real dt );
 
 
 #define SGS_CODE_ER 0 /* error codes */

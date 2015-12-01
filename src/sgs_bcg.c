@@ -97,6 +97,7 @@ static sgs_FuncCtx* fctx_create( SGS_CTX )
 	fctx->clsr = sgs_membuf_create();
 	fctx->inclsr = 0;
 	fctx->outclsr = 0;
+	fctx->syncdepth = 0;
 	fctx->loops = 0;
 	fctx->binfo = NULL;
 	sgs_membuf_appbuf( &fctx->gvars, C, "_G=", 3 );
@@ -260,8 +261,6 @@ static void dump_opcode( const sgs_instr_t* ptr, size_t count )
 		DOP_A( GTE );
 		
 		DOP_A( RAWCMP );
-#undef DOP_A
-#undef DOP_B
 
 		case SGS_SI_ARRAY:
 			printf( "ARRAY args:%d output:", argE );
@@ -273,6 +272,13 @@ static void dump_opcode( const sgs_instr_t* ptr, size_t count )
 			printf( "RSYM name:" ); dump_rcpos( argB );
 			printf( " value:" ); dump_rcpos( argC ); break;
 			
+		DOP_B( COTRT );
+		DOP_B( COTRF );
+		case SGS_SI_COABORT: printf( "CO_ABORT %d", (int) (int16_t) argE ); break;
+		case SGS_SI_YLDJMP: printf( "YIELD_JUMP %d", (int) (int16_t) argE ); break;
+			
+#undef DOP_A
+#undef DOP_B
 		default:
 			printf( "<error> \t\t(op=%d A=%d B=%d C=%d E=%d)",
 				op, argA, argB, argC, argE ); break;
@@ -1034,6 +1040,74 @@ static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 		}
 		
 		*out = retpos;
+		return 1;
+	}
+	/* SYNC/RACE (wait until all threads have finished/at least one of threads has finished) */
+	else if( sgsT_IsKeyword( node->child->token, "sync" ) || sgsT_IsKeyword( node->child->token, "race" ) )
+	{
+		int i, argc = 0;
+		size_t csz1;
+		rcpos_t boolpos, srcpos;
+		sgs_FTNode* n = node->child->next->child;
+		int israce = sgsT_IsKeyword( node->child->token, "race" );
+		
+		if( expect > 1 )
+		{
+			QPRINT( "'sync' pseudo-function cannot be used as input for expression writes with multiple outputs" );
+			return 0;
+		}
+		while( n )
+		{
+			argc++;
+			n = n->next;
+		}
+		if( argc < 1 )
+		{
+			QPRINT( "'sync' pseudo-function requires [1;255] arguments" );
+			return 0;
+		}
+		
+		C->fctx->syncdepth++;
+		if( C->fctx->syncdepth == 1 )
+		{
+			INSTR_WRITE( SGS_SI_INT, 0, 0, SGS_INT_RESET_WAIT_TIMER );
+		}
+		
+		csz1 = func->code.size; /* the jump-back spot */
+		
+		boolpos = comp_reg_alloc( C );
+		/* initialize bool to 0 if race and 1 if sync */
+		INSTR_WRITE( SGS_SI_SET, boolpos, BC_CONSTENC( add_const_b( C, func, !israce ) ), 0 );
+		
+		i = 0;
+		n = node->child->next->child;
+		while( n )
+		{
+			if( !compile_node_r( C, func, n, &srcpos ) )
+			{
+				C->fctx->syncdepth--;
+				return 0;
+			}
+			/* set bool to 1 if finished in race or 0 if not finished in sync */
+			INSTR_WRITE( israce ? SGS_SI_COTRT : SGS_SI_COTRF, boolpos, srcpos, 0 );
+			i++;
+			n = n->next;
+		}
+		
+		if( israce )
+		{
+			INSTR_WRITE_EX( SGS_SI_COABORT, ( csz1 - func->code.size ) / SGS_INSTR_SIZE - 1, boolpos );
+		}
+		
+		if( C->fctx->syncdepth == 1 )
+		{
+			INSTR_WRITE_EX( SGS_SI_YLDJMP, ( csz1 - func->code.size ) / SGS_INSTR_SIZE - 1, boolpos );
+		}
+		C->fctx->syncdepth--;
+		
+		if( out )
+			*out = boolpos;
+		comp_reg_unwind( C, boolpos + expect );
 		return 1;
 	}
 	else

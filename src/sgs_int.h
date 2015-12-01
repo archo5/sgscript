@@ -265,6 +265,7 @@ SGS_APIFUNC int sgsBC_ValidateHeader( const char* buf, size_t size );
 
 #define SGS_INT_ERRSUP_INC 1
 #define SGS_INT_ERRSUP_DEC 2
+#define SGS_INT_RESET_WAIT_TIMER 3
 
 typedef enum sgs_Instruction_e
 {
@@ -339,6 +340,10 @@ typedef enum sgs_Instruction_e
 	SGS_SI_ARRAY,    /* (C:out, E:args) */
 	SGS_SI_DICT,     /* -- || -- */
 	SGS_SI_RSYM,     /* (B:name, C:var)         performs dual registration to symbol table */
+	SGS_SI_COTRT,    /* (A:to, B:from)          sets A to true if `from` is finished */
+	SGS_SI_COTRF,    /* (A:to, B:from)          sets A to false if `from` is not finished */
+	SGS_SI_COABORT,  /* (C:arg, E:from)         if arg = true, look for COTR* and abort threads */
+	SGS_SI_YLDJMP,   /* (C:arg, E:off)          if arg = false, yield and jump */
 
 	SGS_SI_COUNT
 }
@@ -471,7 +476,7 @@ struct _sgs_FuncCtx
 	sgs_MemBuf vars;
 	sgs_MemBuf gvars;
 	sgs_MemBuf clsr;
-	int inclsr, outclsr;
+	int inclsr, outclsr, syncdepth;
 	int32_t loops;
 	sgs_BreakInfo* binfo;
 }
@@ -601,6 +606,7 @@ struct _sgs_Context
 	/* > coop micro-threading */
 	sgs_Context*  parent; /* owning (parent) context */
 	sgs_VarObj*   _T; /* subthreads */
+	sgs_Real      wait_timer; /* sync/race */
 	
 	/* > main stack */
 	sgs_VarPtr    stack_base;
@@ -661,7 +667,7 @@ static const char* sgs_OpNames[] =
 	"inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",
 	"seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte", "rawcmp",
-	"array", "dict", "rsym",
+	"array", "dict", "rsym", "cotrt", "cotrf", "coabort", "yldjmp",
 };
 
 #endif

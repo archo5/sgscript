@@ -2502,12 +2502,22 @@ static int sgsstd_co_resume( SGS_CTX )
 
 static int sgsstd_abort( SGS_CTX )
 {
-	sgs_Context* T = NULL;
+	sgs_SizeVal i, ssz, abc = 0;
 	SGSFN( "abort" );
-	if( !sgs_LoadArgs( C, "@|y", &T ) )
-		return 0;
+	sgs_Method( C );
+	ssz = sgs_StackSize( C );
+	if( ssz == 0 )
+		return sgs_PushBool( C, sgs_Abort( C ) );
 	
-	sgs_PushBool( C, sgs_Abort( T ? T : C ) );
+	for( i = 0; i < ssz; ++i )
+	{
+		sgs_Context* T = NULL;
+		if( !sgs_LoadArgsExt( C, i, "y", &T ) )
+			return 0;
+		abc += sgs_Abort( T );
+	}
+	
+	sgs_PushInt( C, abc );
 	return 1;
 }
 
@@ -2596,8 +2606,9 @@ static int sgsstd_subthread_create( SGS_CTX )
 	return 1;
 }
 
-void sgs_ProcessSubthreads( SGS_CTX, sgs_Real dt )
+int sgs_ProcessSubthreads( SGS_CTX, sgs_Real dt )
 {
+	C->wait_timer += dt;
 	if( C->_T )
 	{
 		sgs_VHTIdx i;
@@ -2621,7 +2632,9 @@ void sgs_ProcessSubthreads( SGS_CTX, sgs_Real dt )
 				i--; /* unset replaces current element in array with last */
 			}
 		}
+		return ht->size;
 	}
+	return 0;
 }
 
 void sgsSTD_ThreadsFree( SGS_CTX )
@@ -2673,8 +2686,7 @@ static int sgsstd_process_threads( SGS_CTX )
 	if( !sgs_LoadArgs( C, "|r", &dt ) )
 		return 0;
 	
-	sgs_ProcessSubthreads( C, dt );
-	return 0;
+	return sgs_PushInt( C, sgs_ProcessSubthreads( C, dt ) );
 }
 
 static int sgsstd_yield( SGS_CTX )
