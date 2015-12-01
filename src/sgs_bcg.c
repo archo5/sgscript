@@ -980,8 +980,6 @@ static SGSBOOL compile_regcopy( SGS_FNTCMP_ARGS, size_t from, rcpos_t srcpos, rc
 
 static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 {
-	int i = 0, gotthis = 0;
-	
 	/* IF (ternary-like) */
 	if( sgsT_IsKeyword( node->child->token, "if" ) )
 	{
@@ -1041,12 +1039,15 @@ static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 	else
 	{
 		sgs_FTNode* n;
-		int regc = 0;
-		rcpos_t argpos, funcpos;
+		int i = 0, gotthis = 0, regc = 0, threadmode = 0;
+		rcpos_t argpos, funcpos, fnargpos, objpos, realfnpos;
+		
+		if( node->type == SGS_SFT_THRCALL ) threadmode = 1;
+		if( node->type == SGS_SFT_STHCALL ) threadmode = 2;
 		
 		/* count the required number of registers */
-		if( node->child->type == SGS_SFT_OPER &&
-			( *node->child->token == SGS_ST_OP_MMBR || *node->child->token == SGS_ST_OP_NOT ) )
+		if( threadmode || ( node->child->type == SGS_SFT_OPER && /* thread always has 'this' */
+			( *node->child->token == SGS_ST_OP_MMBR || *node->child->token == SGS_ST_OP_NOT ) ) )
 		{
 			gotthis = 1;
 			regc++;
@@ -1058,10 +1059,24 @@ static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 			n = n->next;
 		}
 		regc++; /* function register */
+		if( threadmode )
+			regc++; /* 'thread_create'/'subthread_create' function register */
 		if( out && regc < expect )
 			regc = expect;
 		argpos = comp_reg_alloc_n( C, regc );
-		funcpos = argpos + regc - 1;
+		realfnpos = argpos + regc - 1;
+		if( threadmode )
+		{
+			funcpos = argpos;
+			objpos = argpos + 1;
+			fnargpos = argpos + 2;
+		}
+		else /* normal function call */
+		{
+			funcpos = realfnpos;
+			fnargpos = argpos + gotthis;
+			objpos = argpos;
+		}
 		
 		/* return register positions for expected data */
 		if( out )
@@ -1071,31 +1086,43 @@ static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 		if( node->child->type == SGS_SFT_OPER &&
 			( *node->child->token == SGS_ST_OP_MMBR || *node->child->token == SGS_ST_OP_NOT ) )
 		{
-			/* object pos. (this) = argpos + 0 */
 			sgs_FTNode* ncc = node->child->child;
 			rcpos_t proppos = -1;
 			SGS_FN_ENTER;
-			if( !compile_node_rrw( C, func, ncc, argpos ) ) return 0;
+			if( !compile_node_rrw( C, func, ncc, objpos ) ) return 0; /* read object */
 			if( *node->child->token == SGS_ST_OP_MMBR )
 			{
 				if( ncc->next->type == SGS_SFT_IDENT )
+				{
+					/* make string property key constant */
 					compile_ident( C, func, ncc->next, &proppos );
+				}
 				else
 				{
 					SGS_FN_ENTER;
+					/* load property key */
 					if( !compile_node_r( C, func, ncc->next, &proppos ) ) return 0;
 				}
-				INSTR_WRITE( SGS_SI_GETPROP, funcpos, argpos, proppos );
+				/* function as property of object */
+				INSTR_WRITE( SGS_SI_GETPROP, funcpos, objpos, proppos );
 			}
 			else
 			{
 				SGS_FN_ENTER;
+				/* function from own variable */
 				if( !compile_node_rrw( C, func, ncc->next, funcpos ) ) return 0;
 			}
 		}
 		else
 		{
+			if( objpos != fnargpos )
+			{
+				/* object does not apply, insert null at position */
+				rcpos_t nullpos = add_const_null( C, func );
+				INSTR_WRITE_EX( SGS_SI_LOADCONST, nullpos, objpos );
+			}
 			SGS_FN_ENTER;
+			/* function from own variable */
 			if( !compile_node_rrw( C, func, node->child, funcpos ) ) return 0;
 		}
 		
@@ -1107,14 +1134,22 @@ static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 			while( n )
 			{
 				SGS_FN_ENTER;
-				if( !compile_node_rrw( C, func, n, argpos + i + gotthis ) ) return 0;
+				if( !compile_node_rrw( C, func, n, fnargpos + i ) ) return 0;
 				i++;
 				n = n->next;
 			}
 		}
 		
+		if( threadmode )
+		{
+			const char* key = threadmode == 1 ? "thread_create" : "subthread_create";
+			rcpos_t strpos = add_const_s( C, func, strlen( key ), key );
+			INSTR_WRITE( SGS_SI_GETVAR, realfnpos, BC_CONSTENC( strpos ), 0 );
+			gotthis = 0;
+		}
+		
 		/* compile call */
-		INSTR_WRITE( SGS_SI_CALL, expect, gotthis ? argpos | 0x100 : argpos, funcpos );
+		INSTR_WRITE( SGS_SI_CALL, expect, gotthis ? argpos | 0x100 : argpos, realfnpos );
 		
 		comp_reg_unwind( C, argpos + expect );
 
@@ -2014,6 +2049,8 @@ static SGSBOOL compile_node_w( SGS_FNTCMP_ARGS, rcpos_t src )
 		break;
 
 	case SGS_SFT_FCALL:
+	case SGS_SFT_THRCALL:
+	case SGS_SFT_STHCALL:
 		SGS_FN_HIT( "W_FCALL" );
 		if( !compile_fcall( C, func, node, NULL, 0 ) ) goto fail;
 		break;
@@ -2136,6 +2173,8 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 		break;
 
 	case SGS_SFT_FCALL:
+	case SGS_SFT_THRCALL:
+	case SGS_SFT_STHCALL:
 		SGS_FN_HIT( "R_FCALL" );
 		if( !compile_fcall( C, func, node, out, 1 ) ) goto fail;
 		break;
@@ -2253,6 +2292,8 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 		break;
 		
 	case SGS_SFT_FCALL:
+	case SGS_SFT_THRCALL:
+	case SGS_SFT_STHCALL:
 		SGS_FN_HIT( "FCALL" );
 		if( !compile_fcall( C, func, node, NULL, 0 ) ) goto fail;
 		break;

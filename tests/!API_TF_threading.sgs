@@ -89,6 +89,40 @@ process_threads();
 testEqual( testval1, 2, "MT - thread 1 was continued" );
 testEqual( testval2, 2, "MT - thread 2 was continued" );
 
+	section( "thread syntax" );
+ERRORS = "";
+global TSTCUR = "";
+global TSTID = 0;
+function tstf0(a,b)
+{
+	global TSTID; TSTID++;
+	testEqual( typeof(this), "null", "thread syntax - " $ TSTCUR $ " - this is null" );
+	testEqual( typeof(a), "bool", "thread syntax - " $ TSTCUR $ " - a is bool" );
+	testEqual( typeof(b), "int", "thread syntax - " $ TSTCUR $ " - b is int" );
+}
+function tstf1(a,b)
+{
+	global TSTID; TSTID++;
+	testEqual( typeof(this), "dict", "thread syntax - " $ TSTCUR $ " - this is dict" );
+	testEqual( typeof(a), "bool", "thread syntax - " $ TSTCUR $ " - a is bool" );
+	testEqual( typeof(b), "int", "thread syntax - " $ TSTCUR $ " - b is int" );
+}
+global t;
+function tstst( exp )
+{
+	testEqual( typeof(t), "thread", TSTCUR $ " - returned thread" );
+	testEqual( TSTID, exp, TSTCUR $ " - test was called" );
+}
+tsfOBJ = { tstf1 };
+TSTCUR = "[thread] basic call"; t = thread tstf0( true, 1 ); tstst( 1 );
+TSTCUR = "[thread] this-call"; t = thread tsfOBJ.tstf1( true, 1 ); tstst( 2 );
+TSTCUR = "[thread] CF-call"; t = thread tsfOBJ!tstf1( true, 1 ); tstst( 3 );
+TSTCUR = "[subthread] basic call"; t = subthread tstf0( true, 1 ); tstst( 4 );
+TSTCUR = "[subthread] this-call"; t = subthread tsfOBJ.tstf1( true, 1 ); tstst( 5 );
+TSTCUR = "[subthread] CF-call"; t = subthread tsfOBJ!tstf1( true, 1 ); tstst( 6 );
+t = null;
+testEqual( ERRORS, "", "thread syntax - no errors" );
+
 
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );

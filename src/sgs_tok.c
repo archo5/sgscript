@@ -150,6 +150,8 @@ static void readident( SGS_CTX, sgs_MemBuf* out, const char* code, int32_t* at, 
 	out->ptr[ pos_rev + 1 ] = (char) sz;
 	if( ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("var") ) ||
 		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("global") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("thread") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("subthread") ) ||
 		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("null") ) ||
 		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("true") ) ||
 		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("false") ) ||

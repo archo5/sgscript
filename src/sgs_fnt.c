@@ -366,6 +366,7 @@ static int level_exp( SFTC, sgs_FTNode** tree )
 {
 	sgs_FTNode* node = *tree, *prev = NULL, *mpp = NULL;
 	int weight = 0, curwt, isfcall, binary, count = 0;
+	int threadmode = 0; /* 0 = none, 1 = thread, 2 = subthread */
 
 	SGS_FN_BEGIN;
 	sgs_BreakIf( !tree );
@@ -375,7 +376,24 @@ static int level_exp( SFTC, sgs_FTNode** tree )
 		SGS_FN_END;
 		return 0;
 	}
-
+	
+	if( sgsT_IsKeyword( node->token, "thread" ) )
+	{
+		threadmode = 1;
+		node = node->next;
+		(*tree)->next = NULL;
+		SFTC_DESTROY( *tree );
+		*tree = node;
+	}
+	if( sgsT_IsKeyword( node->token, "subthread" ) )
+	{
+		threadmode = 2;
+		node = node->next;
+		(*tree)->next = NULL;
+		SFTC_DESTROY( *tree );
+		*tree = node;
+	}
+	
 	/* find the most powerful part (mpp) */
 	while( node )
 	{
@@ -448,8 +466,7 @@ _continue:
 				mpp->child->next = mpp->next;
 				mpp->next = NULL;
 				*tree = mpp;
-				SGS_FN_END;
-				return 1;
+				goto retsuccess;
 			}
 			
 			SGS_FN_ENTER;
@@ -479,13 +496,11 @@ _continue:
 				se2->child = NULL;
 				SFTC_DESTROY( se2 );
 				*tree = make_node( SGS_SFT_INDEX, mpp_token, NULL, se1 );
-				SGS_FN_END;
-				return 1;
+				goto retsuccess;
 			}
 			se1->next = se2;
 			*tree = make_node( SGS_SFT_FCALL, mpp_token, NULL, se1 );
-			SGS_FN_END;
-			return 1;
+			goto retsuccess;
 		}
 		
 		/* binary ops */
@@ -536,7 +551,7 @@ _continue:
 					mpp->next = NULL;
 					*tree = mpp;
 					SGS_FN_END;
-					return 1;
+					goto retsuccess;
 				}
 				
 				SFTC_DESTROY( mpp );
@@ -587,8 +602,7 @@ _continue:
 					}
 				}
 				
-				SGS_FN_END;
-				return 1;
+				goto retsuccess;
 			}
 			/* unary operators
 				must be one of these cases:
@@ -626,16 +640,32 @@ _continue:
 					SGS_FN_END;
 					return 0;
 				}
-				SGS_FN_END;
-				return 1;
+				goto retsuccess;
 			}
 			/* problems */
 			else goto fail;
 		}
 	}
-
+	
 	if( count <= 1 )
 	{
+retsuccess:
+		if( threadmode )
+		{
+			if( (*tree)->type != SGS_SFT_FCALL )
+			{
+				if( threadmode == 1 )
+					SFTC_PRINTERR( "expected function call after 'thread'" );
+				else
+					SFTC_PRINTERR( "expected function call after 'subthread'" );
+				goto fail;
+			}
+			if( threadmode == 1 )
+				(*tree)->type = SGS_SFT_THRCALL;
+			else
+				(*tree)->type = SGS_SFT_STHCALL;
+		}
+		
 		SGS_FN_END;
 		return 1;
 	}
@@ -895,7 +925,7 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 
 	if( !level_exp( F, &node ) )
 		goto fail;
-
+	
 	SGS_FN_END;
 	return node;
 
