@@ -69,6 +69,7 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	S->redblue = 0;
 	S->gcrun = SGS_FALSE;
 	S->objpool_size = 0;
+	S->sf_pool = NULL;
 	
 	///
 	// CONTEXT
@@ -115,7 +116,6 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	
 	C->sf_first = NULL;
 	C->sf_last = NULL;
-	C->sf_cached = NULL;
 	C->sf_count = 0;
 	C->num_last_returned = 0;
 	
@@ -188,19 +188,18 @@ static void ctx_safedestroy( SGS_CTX )
 	sgsSTD_ThreadsFree( C );
 	
 	/* free the call stack */
-	if( C->sf_cached )
+	if( C->sf_first )
 	{
-		sgs_StackFrame* sf = C->sf_cached, *sfn;
+		sgs_StackFrame* sf = C->sf_first, *sfn;
 		while( sf )
 		{
 			sgs_Release( C, &sf->func );
-			sfn = sf->cached;
-			sgs_Dealloc( sf );
+			sfn = sf->next;
+			sgsCTX_FreeFrame( C, sf );
 			sf = sfn;
 		}
 		C->sf_first = NULL;
 		C->sf_last = NULL;
-		C->sf_cached = NULL;
 		C->sf_count = 0;
 	}
 }
@@ -218,6 +217,13 @@ static void ctx_destroy( SGS_CTX )
 		
 		sgs_GCExecute( C );
 		sgs_BreakIf( S->objs || S->objcount );
+		
+		while( S->sf_pool )
+		{
+			sgs_StackFrame* sfn = S->sf_pool->next;
+			sgs_Dealloc( S->sf_pool );
+			S->sf_pool = sfn;
+		}
 		
 		sgs_vht_free( &S->ifacetable, C ); /* table should be empty here */
 		sgs_vht_free( &S->typetable, C );
@@ -337,14 +343,35 @@ void sgs_DestroyEngine( SGS_CTX )
 }
 
 
+sgs_StackFrame* sgsCTX_AllocFrame( SGS_CTX )
+{
+	SGS_SHCTX_USE;
+	
+	if( S->sf_pool )
+	{
+		sgs_StackFrame* ret = S->sf_pool;
+		S->sf_pool = ret->next;
+		return ret;
+	}
+	
+	return sgs_Alloc( sgs_StackFrame );
+}
+
+void sgsCTX_FreeFrame( SGS_CTX, sgs_StackFrame* F )
+{
+	SGS_SHCTX_USE;
+	
+	F->next = S->sf_pool;
+	S->sf_pool = F;
+}
+
 static void copy_append_frame( SGS_CTX, sgs_StackFrame* sf )
 {
-	sgs_StackFrame* nsf = sgs_Alloc( sgs_StackFrame );
+	sgs_StackFrame* nsf = sgsCTX_AllocFrame( C );
 	memcpy( nsf, sf, sizeof(*nsf) );
 	sgs_Acquire( C, &nsf->func );
 	
 	nsf->next = NULL;
-	nsf->cached = NULL;
 	if( C->sf_last )
 	{
 		nsf->prev = C->sf_last;
@@ -432,7 +459,6 @@ sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 	// - call stack
 	NC->sf_first = NULL;
 	NC->sf_last = NULL;
-	NC->sf_cached = NULL;
 	NC->sf_count = 0;
 	if( copystate )
 	{

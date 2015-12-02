@@ -508,7 +508,6 @@ struct _sgs_StackFrame
 	const char*     nfname;
 	sgs_StackFrame* prev;
 	sgs_StackFrame* next;
-	sgs_StackFrame* cached;
 	sgs_StkIdx argbeg;
 	sgs_StkIdx argend;
 	sgs_StkIdx argsfrom;
@@ -548,6 +547,9 @@ struct _sgs_ShCtx
 	/* >> object pool */
 	sgs_ObjPoolItem* objpool_data;
 	int32_t       objpool_size;
+	
+	/* more pools */
+	sgs_StackFrame* sf_pool;
 	
 	/* tables / cache */
 	sgs_VHTable   typetable; /* type interface table */
@@ -623,7 +625,6 @@ struct _sgs_Context
 	/* > stack frame info */
 	sgs_StackFrame* sf_first;
 	sgs_StackFrame* sf_last;
-	sgs_StackFrame* sf_cached;
 	int           sf_count;
 	int           num_last_returned;
 	
@@ -675,6 +676,8 @@ static const char* sgs_OpNames[] =
 
 sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate );
 void sgsCTX_FreeState( SGS_CTX );
+sgs_StackFrame* sgsCTX_AllocFrame( SGS_CTX );
+void sgsCTX_FreeFrame( SGS_CTX, sgs_StackFrame* F );
 
 void sgsSTD_PostInit( SGS_CTX );
 SGSBOOL sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );

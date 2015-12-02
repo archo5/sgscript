@@ -397,16 +397,7 @@ int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 		return 0;
 	}
 	
-	F = C->sf_last ? C->sf_last->cached : C->sf_cached;
-	if( !F )
-	{
-		F = sgs_Alloc( sgs_StackFrame );
-		F->cached = NULL;
-		if( C->sf_last )
-			C->sf_last->cached = F;
-		else
-			C->sf_cached = F;
-	}
+	F = sgsCTX_AllocFrame( C );
 	C->sf_count++;
 	if( func )
 	{
@@ -464,6 +455,7 @@ static void vm_frame_pop( SGS_CTX )
 	C->sf_last = F->prev;
 	if( C->sf_first == F )
 		C->sf_first = NULL;
+	sgsCTX_FreeFrame( C, F );
 }
 
 
