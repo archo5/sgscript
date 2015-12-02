@@ -141,6 +141,7 @@ function corotestA1()
 }
 global syarr = [];
 thread corotestA1();
+gc_collect();
 while( process_threads() );
 testEqual( ''$syarr, "[3,5,7]", "sync A1 - all done" );
 
@@ -167,6 +168,7 @@ function corotestA3()
 }
 global syarr = [];
 thread corotestA3();
+gc_collect();
 for( i = 0; i < 9; ++i )
 	process_threads(0.1);
 testEqual( ''$syarr, "[3,5,7]", "sync A3 - almost done" );
@@ -182,6 +184,7 @@ function corotestB1()
 }
 global syarr = [];
 thread corotestB1();
+gc_collect();
 while( process_threads() );
 testEqual( ''$syarr, "[3]", "race B1 - all done" );
 
@@ -193,6 +196,7 @@ function corotestB2()
 }
 global syarr = [];
 thread corotestB2();
+gc_collect();
 while( process_threads(0.1) );
 testEqual( ''$syarr, "[]", "race B2 - all done" );
 
@@ -205,6 +209,7 @@ function corotestC1()
 }
 global syarr = [];
 thread corotestC1();
+gc_collect();
 while( process_threads(1) );
 testEqual( ''$syarr, "[3,5]", "sync/race C1 - all done" );
 

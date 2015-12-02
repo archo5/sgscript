@@ -59,9 +59,9 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	
 	S->memfunc = memfunc;
 	S->mfuserdata = mfuserdata;
-	S->memsize = sizeof( sgs_ShCtx ) + sizeof( sgs_Context );
-	S->numallocs = 2;
-	S->numblocks = 2;
+	S->memsize = sizeof( sgs_ShCtx );
+	S->numallocs = 1;
+	S->numblocks = 1;
 	S->numfrees = 0;
 	
 	S->objs = NULL;
@@ -69,11 +69,12 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	S->redblue = 0;
 	S->gcrun = SGS_FALSE;
 	S->objpool_size = 0;
+	S->ctx_pool = NULL;
 	S->sf_pool = NULL;
 	
 	///
 	// CONTEXT
-	C = (sgs_Context*) memfunc( mfuserdata, NULL, sizeof( sgs_Context ) );
+	C = (sgs_Context*) int_memory( S, NULL, sizeof( sgs_Context ) );
 	
 	S->state_list = C;
 	S->statecount = 1;
@@ -218,13 +219,6 @@ static void ctx_destroy( SGS_CTX )
 		sgs_GCExecute( C );
 		sgs_BreakIf( S->objs || S->objcount );
 		
-		while( S->sf_pool )
-		{
-			sgs_StackFrame* sfn = S->sf_pool->next;
-			sgs_Dealloc( S->sf_pool );
-			S->sf_pool = sfn;
-		}
-		
 		sgs_vht_free( &S->ifacetable, C ); /* table should be empty here */
 		sgs_vht_free( &S->typetable, C );
 		sgs_VHTVar* p = S->stringtable.vars;
@@ -262,10 +256,15 @@ static void ctx_destroy( SGS_CTX )
 	S->statecount--;
 	
 	// free the context
-	S->memfunc( S->mfuserdata, C, 0 );
-	S->memsize -= sizeof(*C);
-	S->numfrees++;
-	S->numblocks--;
+	if( C->prev == NULL && C->next == NULL )
+	{
+		int_memory( S, C, 0 );
+	}
+	else
+	{
+		C->next = S->ctx_pool;
+		S->ctx_pool = C;
+	}
 }
 
 static void shctx_destroy( SGS_SHCTX )
@@ -278,6 +277,20 @@ static void shctx_destroy( SGS_SHCTX )
 		int_memory( S, S->objpool_data, 0 );
 	}
 #endif
+	
+	while( S->sf_pool )
+	{
+		sgs_StackFrame* sfn = S->sf_pool->next;
+		int_memory( S, S->sf_pool, 0 );
+		S->sf_pool = sfn;
+	}
+	
+	while( S->ctx_pool )
+	{
+		sgs_Context* ctxn = S->ctx_pool->next;
+		int_memory( S, S->ctx_pool, 0 );
+		S->ctx_pool = ctxn;
+	}
 	
 #ifdef SGS_DEBUG_LEAKS
 	sgs_BreakIf( S->memsize > sizeof( sgs_ShCtx ) &&
@@ -379,13 +392,24 @@ static void copy_append_frame( SGS_CTX, sgs_StackFrame* sf )
 	}
 }
 
+static sgs_Context* sgs__alloc_ctx( SGS_CTX )
+{
+	SGS_SHCTX_USE;
+	
+	if( S->ctx_pool )
+	{
+		sgs_Context* ret = S->ctx_pool;
+		S->ctx_pool = ret->next;
+		return ret;
+	}
+	
+	return sgs_Alloc( sgs_Context );
+}
+
 sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 {
 	SGS_SHCTX_USE;
-	sgs_Context* NC = (sgs_Context*) S->memfunc( S->mfuserdata, NULL, sizeof(*NC) );
-	S->memsize += sizeof(*NC);
-	S->numallocs++;
-	S->numblocks++;
+	sgs_Context* NC = sgs__alloc_ctx( C );
 	memcpy( NC, C, sizeof(*NC) );
 	NC->refcount = 0;
 	NC->parent = NULL; /* not shareable */

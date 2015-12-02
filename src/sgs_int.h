@@ -549,6 +549,7 @@ struct _sgs_ShCtx
 	int32_t       objpool_size;
 	
 	/* more pools */
+	sgs_Context* ctx_pool;
 	sgs_StackFrame* sf_pool;
 	
 	/* tables / cache */
