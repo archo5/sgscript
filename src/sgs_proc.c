@@ -5785,8 +5785,8 @@ void sgs_SerializeObject( SGS_CTX, StkIdx args, const char* func )
 SGSBOOL sgs_Unserialize( SGS_CTX, sgs_Variable var )
 {
 	SGSRESULT res;
-	char* str, *strend;
-	sgs_SizeVal size;
+	char* str = NULL, *strend;
+	sgs_SizeVal size = 0;
 	_STACK_PREPARE;
 	sgs_PushVariable( C, var );
 	if( !sgs_ParseString( C, -1, &str, &size ) || !size )

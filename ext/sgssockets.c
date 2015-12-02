@@ -1139,29 +1139,38 @@ static int sgs_socket_select( SGS_CTX )
 	
 	for( i = 0; i < szR; ++i )
 	{
+		sgs_PushNumIndex( C, aR, i );
+		obj = sgs_GetObjectStruct( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setR ) )
 		{
 			sgs_ArrayErase( C, aR, i, 1 );
 			i--; szR--;
 		}
+		sgs_Pop( C, 1 );
 	}
 	
 	for( i = 0; i < szW; ++i )
 	{
+		sgs_PushNumIndex( C, aW, i );
+		obj = sgs_GetObjectStruct( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setW ) )
 		{
 			sgs_ArrayErase( C, aW, i, 1 );
 			i--; szW--;
 		}
+		sgs_Pop( C, 1 );
 	}
 	
 	for( i = 0; i < szE; ++i )
 	{
+		sgs_PushNumIndex( C, aE, i );
+		obj = sgs_GetObjectStruct( C, -1 );
 		if( !FD_ISSET( GET_SCK, &setE ) )
 		{
 			sgs_ArrayErase( C, aE, i, 1 );
 			i--; szE--;
 		}
+		sgs_Pop( C, 1 );
 	}
 	
 	sgs_PushInt( C, ret );
