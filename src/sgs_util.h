@@ -14,8 +14,6 @@ extern "C" {
 
 
 /* useful shortcut definitions */
-#define SGS_TRUE 1
-#define SGS_FALSE 0
 #define SGS_MAX( a, b ) ((a)>(b)?(a):(b))
 #define SGS_MIN( a, b ) ((a)<(b)?(a):(b))
 #define SGS_ARRAY_SIZE( a ) (sizeof(a)/sizeof(a[0]))

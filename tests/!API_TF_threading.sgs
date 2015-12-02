@@ -213,6 +213,35 @@ gc_collect();
 while( process_threads(1) );
 testEqual( ''$syarr, "[3,5]", "sync/race C1 - all done" );
 
+	section( "events" );
+ev = event();
+function corotestD1( ev )
+{
+	global syarr;
+	syarr.push( 3 );
+	sync( ev );
+	syarr.push( 5 );
+}
+global syarr = [];
+thread corotestD1( ev );
+gc_collect();
+for( i = 0; i < 3; ++i ) process_threads();
+testEqual( ''$syarr, "[3]", "event - waiting for signal" );
+ev.signaled = true;
+for( i = 0; i < 3; ++i ) process_threads();
+testEqual( ''$syarr, "[3,5]", "event - signaled, thread finished" );
+
+evpool = {};
+global syarr = [];
+thread corotestD1( pooled_event( evpool, "test1" ) );
+gc_collect();
+for( i = 0; i < 3; ++i ) process_threads();
+testEqual( ''$syarr, "[3]", "event [pooled] - waiting for signal" );
+pooled_event( evpool, "test1" ).signaled = true;
+for( i = 0; i < 3; ++i ) process_threads();
+testEqual( ''$syarr, "[3,5]", "event [pooled] - signaled, thread finished" );
+
+
 
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );

@@ -2441,6 +2441,121 @@ fail:
 
 
 
+static int sgsstd_event_getindex( SGS_ARGS_GETINDEXFUNC )
+{
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "signaled" ) return sgs_PushBool( C, obj->data != NULL );
+	SGS_END_INDEXFUNC;
+}
+
+static int sgsstd_event_setindex( SGS_ARGS_SETINDEXFUNC )
+{
+	SGS_BEGIN_INDEXFUNC
+		SGS_CASE( "signaled" )
+		{
+			sgs_Bool val = SGS_FALSE;
+			if( sgs_ParseBool( C, 1, &val ) == SGS_FALSE )
+				return SGS_EINVAL;
+			obj->data = val ? obj : NULL;
+			return SGS_SUCCESS;
+		}
+	SGS_END_INDEXFUNC;
+}
+
+static int sgsstd_event_convert( SGS_CTX, sgs_VarObj* obj, int type )
+{
+	if( type == SGS_VT_BOOL )
+	{
+		return sgs_PushBool( C, obj->data != NULL );
+	}
+	return SGS_ENOTSUP;
+}
+
+static int sgsstd_event_serialize( SGS_CTX, sgs_VarObj* obj )
+{
+	sgs_PushBool( C, obj->data != NULL );
+	sgs_SerializeObject( C, 1, "event" );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_event_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
+{
+	char bfr[ 32 ];
+	SGS_UNUSED( maxdepth );
+	sprintf( bfr, "event(signaled=%s)", obj->data ? "true" : "false" );
+	return sgs_PushString( C, bfr );
+}
+
+SGS_APIFUNC sgs_ObjInterface sgsstd_event_iface[1] =
+{{
+	"event",
+	NULL, NULL,
+	sgsstd_event_getindex, sgsstd_event_setindex,
+	sgsstd_event_convert, sgsstd_event_serialize, sgsstd_event_dump, NULL,
+	NULL, NULL
+}};
+
+SGSONE sgs_CreateEvent( SGS_CTX, sgs_Variable* out )
+{
+	return sgs_CreateObject( C, out, NULL, sgsstd_event_iface );
+}
+
+SGSBOOL sgs_EventState( SGS_CTX, sgs_Variable evt, int state )
+{
+	SGSBOOL origstate;
+	if( !sgs_IsObjectP( &evt, sgsstd_event_iface ) )
+		return sgs_Msg( C, SGS_APIERR, "sgs_EventState: specified variable is not of 'event' type" );
+	origstate = sgs_GetObjectDataP( &evt ) != NULL;
+	if( state != SGS_QUERY )
+		sgs_SetObjectDataP( &evt, state ? evt.data.O : NULL );
+	return origstate;
+}
+
+static int sgsstd_event( SGS_CTX )
+{
+	sgs_Bool val = SGS_FALSE;
+	SGSFN( "event" );
+	if( !sgs_LoadArgs( C, "|b", &val ) )
+		return 0;
+	sgs_CreateEvent( C, NULL );
+	if( val )
+		sgs_EventState( C, sgs_StackItem( C, -1 ), SGS_TRUE );
+	return 1;
+}
+
+static void sgs__create_pooled_event( SGS_CTX, sgs_Variable* out, sgs_Variable dict, sgs_Variable key, int val )
+{
+	sgs_Variable evar;
+	if( out ? sgs_GetIndex( C, dict, key, out, SGS_FALSE ) : sgs_PushIndex( C, dict, key, SGS_FALSE ) )
+		return;
+	sgs_CreateEvent( C, out );
+	evar = out ? *out : sgs_StackItem( C, -1 );
+	if( val )
+		sgs_EventState( C, evar, SGS_TRUE );
+	sgs_SetIndex( C, dict, key, evar, SGS_FALSE );
+}
+
+SGSONE sgs_CreatePooledEventBuf( SGS_CTX, sgs_Variable* out, sgs_Variable dict, const char* str, sgs_SizeVal size )
+{
+	sgs_Variable key;
+	sgs_InitStringBuf( C, &key, str, size );
+	sgs__create_pooled_event( C, out, dict, key, 0 );
+	sgs_Release( C, &key );
+	return 1;
+}
+
+static int sgsstd_pooled_event( SGS_CTX )
+{
+	sgs_Bool val = SGS_FALSE;
+	SGSFN( "pooled_event" );
+	if( !sgs_LoadArgs( C, "?t?s|b", &val ) )
+		return 0;
+	sgs__create_pooled_event( C, NULL, sgs_StackItem( C, 0 ), sgs_StackItem( C, 1 ), val );
+	return 1;
+}
+
+
+
 static int sgsstd_co_create( SGS_CTX )
 {
 	sgs_Context* T;
@@ -3757,6 +3872,7 @@ static sgs_RegFuncConst regfuncs[] =
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
 	STDLIB_FN( metaobj_set ), STDLIB_FN( metaobj_get ), STDLIB_FN( metamethods_enable ), STDLIB_FN( metamethods_test ),
 	STDLIB_FN( mm_getindex_router ), STDLIB_FN( mm_setindex_router ),
+	STDLIB_FN( event ), STDLIB_FN( pooled_event ),
 	STDLIB_FN( co_create ), STDLIB_FN( co_resume ),
 	STDLIB_FN( thread_create ), STDLIB_FN( subthread_create ), STDLIB_FN( abort ),
 	STDLIB_FN( process_threads ),

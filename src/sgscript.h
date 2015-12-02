@@ -148,6 +148,12 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 );
 
 
+/* for state/query functions */
+#define SGS_TRUE 1
+#define SGS_FALSE 0
+#define SGS_QUERY -1
+
+
 /* Statistics / debugging */
 #define SGS_STAT_VERSION      0
 #define SGS_STAT_STATECOUNT   1
@@ -484,6 +490,9 @@ SGS_APIFUNC void* sgs_CreateObjectIPA( SGS_CTX, sgs_Variable* out, uint32_t adde
 SGS_APIFUNC SGSONE sgs_CreateArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems );
 SGS_APIFUNC SGSONE sgs_CreateDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems );
 SGS_APIFUNC SGSONE sgs_CreateMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems );
+SGS_APIFUNC SGSONE sgs_CreateEvent( SGS_CTX, sgs_Variable* out );
+SGS_APIFUNC SGSONE sgs_CreatePooledEventBuf( SGS_CTX, sgs_Variable* out, sgs_Variable dict, const char* str, sgs_SizeVal size );
+#define sgs_CreatePooledEvent( C, out, dict, str ) sgs_CreatePooledEventBuf( C, out, dict, str, SGS_STRINGLENGTHFUNC( str ) )
 
 /*
 	STACK & SUB-ITEMS
@@ -641,6 +650,7 @@ SGS_APIFUNC sgs_SizeVal sgs_ArrayRemove( SGS_CTX, sgs_Variable var, sgs_Variable
 SGS_APIFUNC SGSBOOL sgs_IsDict( sgs_Variable var );
 SGS_APIFUNC SGSBOOL sgs_IsMap( sgs_Variable var );
 SGS_APIFUNC SGSBOOL sgs_Unset( SGS_CTX, sgs_Variable var, sgs_Variable key );
+SGS_APIFUNC SGSBOOL sgs_EventState( SGS_CTX, sgs_Variable evt, int state );
 
 SGS_APIFUNC void sgs_Serialize( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC void sgs_SerializeObject( SGS_CTX, sgs_StkIdx args, const char* func );
@@ -740,16 +750,16 @@ SGS_APIFUNC sgs_SizeVal sgs_GetStringSizeP( sgs_Variable* var );
 SGS_APIFUNC sgs_VarObj* sgs_GetObjectStructP( sgs_Variable* var );
 SGS_APIFUNC void* sgs_GetObjectDataP( sgs_Variable* var );
 SGS_APIFUNC sgs_ObjInterface* sgs_GetObjectIfaceP( sgs_Variable* var );
-SGS_APIFUNC SGSBOOL sgs_SetObjectDataP( sgs_Variable* var, void* data );
-SGS_APIFUNC SGSBOOL sgs_SetObjectIfaceP( sgs_Variable* var, sgs_ObjInterface* iface );
+SGS_APIFUNC void sgs_SetObjectDataP( sgs_Variable* var, void* data );
+SGS_APIFUNC void sgs_SetObjectIfaceP( sgs_Variable* var, sgs_ObjInterface* iface );
 
 SGS_APIFUNC char* sgs_GetStringPtr( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_SizeVal sgs_GetStringSize( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_VarObj* sgs_GetObjectStruct( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC void* sgs_GetObjectData( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_ObjInterface* sgs_GetObjectIface( SGS_CTX, sgs_StkIdx item );
-SGS_APIFUNC SGSBOOL sgs_SetObjectData( SGS_CTX, sgs_StkIdx item, void* data );
-SGS_APIFUNC SGSBOOL sgs_SetObjectIface( SGS_CTX, sgs_StkIdx item, sgs_ObjInterface* iface );
+SGS_APIFUNC void sgs_SetObjectData( SGS_CTX, sgs_StkIdx item, void* data );
+SGS_APIFUNC void sgs_SetObjectIface( SGS_CTX, sgs_StkIdx item, sgs_ObjInterface* iface );
 
 SGS_APIFUNC int sgs_HasFuncName( SGS_CTX );
 SGS_APIFUNC void sgs_FuncName( SGS_CTX, const char* fnliteral );

@@ -3117,25 +3117,25 @@ After a successful call, all arguments will be popped off the stack and the expe
 
 # sgs_SetObjectData(P) [functions]
 
-== int sgs_SetObjectData( sgs_Context* C, sgs_StkIdx item, void* data )
+== void sgs_SetObjectData( sgs_Context* C, sgs_StkIdx item, void* data )
 === Set the object data pointer of the specified stack item.
 
-== int sgs_SetObjectDataP( sgs_Context* C, sgs_Variable* var, void* data )
+== void sgs_SetObjectDataP( sgs_Context* C, sgs_Variable* var, void* data )
 === Set the object data pointer of the specified variable.
 
-- If item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
+- If item is out of bounds or not an object, pointer will not be set, and ...
 -- in a debug build, one of the BreakIf macros will go off and stop the action.
 
 
 # sgs_SetObjectIface(P) [functions]
 
-== int sgs_SetObjectIface( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )
+== void sgs_SetObjectIface( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )
 === Set the object interface pointer of the specified stack item.
 
-== int sgs_SetObjectIfaceP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface )
+== void sgs_SetObjectIfaceP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface )
 === Set the object interface pointer of the specified variable.
 
-- If item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
+- If item is out of bounds or not an object, pointer will not be set, and ...
 -- in a debug build, one of the BreakIf macros will go off and stop the action.
 
 

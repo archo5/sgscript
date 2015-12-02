@@ -1006,7 +1006,8 @@ static void* var_getptr( SGS_CTX, sgs_VarPtr var )
 	( ((var)->type == SGS_VT_THREAD && (var)->data.T->sf_last == NULL ) \
 	||( (var)->type == SGS_VT_BOOL && (var)->data.B != 0 ) \
 	||( (var)->type == SGS_VT_REAL && (var)->data.R <= C->wait_timer ) \
-	||( (var)->type == SGS_VT_INT && (var)->data.I <= C->wait_timer ))
+	||( (var)->type == SGS_VT_INT && (var)->data.I <= C->wait_timer ) \
+	||( (var)->type == SGS_VT_OBJECT && var_getbool( C, var ) ))
 
 static SGS_INLINE sgs_Int var_getint_simple( sgs_VarPtr var )
 {
@@ -1151,18 +1152,18 @@ static void vm_convert_stack_string( SGS_CTX, StkIdx item )
 static void vm_gcmark( SGS_CTX, sgs_Variable* var )
 {
 	SGS_SHCTX_USE;
-	if( var->type != SGS_VT_OBJECT ||
-		var->data.O->redblue == S->redblue ||
-		!var->data.O->iface->gcmark )
-		return;
-	else
+	if( var->type == SGS_VT_OBJECT &&
+		var->data.O->redblue != S->redblue )
 	{
 		sgs_VarObj* O = var->data.O;
-		_STACK_PREPARE;
 		O->redblue = S->redblue;
-		_STACK_PROTECT;
-		O->iface->gcmark( C, O );
-		_STACK_UNPROTECT;
+		if( var->data.O->iface->gcmark )
+		{
+			_STACK_PREPARE;
+			_STACK_PROTECT;
+			O->iface->gcmark( C, O );
+			_STACK_UNPROTECT;
+		}
 		if( O->metaobj )
 		{
 			sgs_ObjGCMark( C, O->metaobj );
@@ -6438,18 +6439,16 @@ sgs_ObjInterface* sgs_GetObjectIfaceP( sgs_Variable* var )
 	return var->data.O->iface;
 }
 
-SGSBOOL sgs_SetObjectDataP( sgs_Variable* var, void* data )
+void sgs_SetObjectDataP( sgs_Variable* var, void* data )
 {
-	_OBJPREP_P( 0 );
+	_OBJPREP_P( ; );
 	var->data.O->data = data;
-	return 1;
 }
 
-SGSBOOL sgs_SetObjectIfaceP( sgs_Variable* var, sgs_ObjInterface* iface )
+void sgs_SetObjectIfaceP( sgs_Variable* var, sgs_ObjInterface* iface )
 {
-	_OBJPREP_P( 0 );
+	_OBJPREP_P( ; );
 	var->data.O->iface = iface;
-	return 1;
 }
 
 
@@ -6496,18 +6495,16 @@ sgs_ObjInterface* sgs_GetObjectIface( SGS_CTX, StkIdx item )
 	return var->data.O->iface;
 }
 
-SGSBOOL sgs_SetObjectData( SGS_CTX, StkIdx item, void* data )
+void sgs_SetObjectData( SGS_CTX, StkIdx item, void* data )
 {
-	_OBJPREP( 0 );
+	_OBJPREP( ; );
 	var->data.O->data = data;
-	return 1;
 }
 
-SGSBOOL sgs_SetObjectIface( SGS_CTX, StkIdx item, sgs_ObjInterface* iface )
+void sgs_SetObjectIface( SGS_CTX, StkIdx item, sgs_ObjInterface* iface )
 {
-	_OBJPREP( 0 );
+	_OBJPREP( ; );
 	var->data.O->iface = iface;
-	return 1;
 }
 
 #undef DBLCHK
