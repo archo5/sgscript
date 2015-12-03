@@ -2554,6 +2554,51 @@ static int sgsstd_pooled_event( SGS_CTX )
 	return 1;
 }
 
+static void sgs__check_threadendtbl( SGS_CTX )
+{
+	sgs_Variable endtbl;
+	if( C->_E )
+		return;
+	
+	sgsSTD_MakeMap( C, &endtbl, 0 );
+	C->_E = endtbl.data.O;
+}
+
+static int sgsstd_end_on( SGS_CTX )
+{
+	sgs_Bool enable = SGS_TRUE;
+	sgs_Context* which = C;
+	SGSFN( "end_on" );
+	if( sgs_Method( C ) )
+	{
+		if( !sgs_LoadArgs( C, "@y", &which ) )
+			return 0;
+		sgs_HideThis( C );
+	}
+	if( !sgs_LoadArgs( C, "?*|b", &enable ) )
+		return 0;
+	
+	/* if we're trying to disable an end event and ..
+	.. table doesn't exist - it's already disabled */
+	if( enable )
+		sgs__check_threadendtbl( which );
+	if( which->_E )
+	{
+		sgs_Variable key = sgs_StackItem( C, 0 );
+		sgs_VHTable* ht = &((DictHdr*)which->_E->data)->ht;
+		if( enable )
+		{
+			sgs_Variable val = sgs_MakeNull();
+			sgs_vht_set( ht, which, &key, &val );
+		}
+		else
+		{
+			sgs_vht_unset( ht, which, &key );
+		}
+	}
+	return 0;
+}
+
 
 
 static int sgsstd_co_create( SGS_CTX )
@@ -2577,6 +2622,7 @@ static int sgsstd_co_resume( SGS_CTX )
 	int rvc = 0;
 	
 	SGSFN( "co_resume" );
+	sgs_Method( C );
 	if( !sgs_LoadArgs( C, "@y", &T ) )
 		return 0;
 	sgs_ForceHideThis( C );
@@ -2721,6 +2767,22 @@ static int sgsstd_subthread_create( SGS_CTX )
 	return 1;
 }
 
+static int sgs__anyevent( SGS_CTX )
+{
+	if( C->_E )
+	{
+		sgs_VHTIdx i;
+		sgs_VHTable* ht = &((DictHdr*)C->_E->data)->ht;
+		for( i = 0; i < ht->size; ++i )
+		{
+			sgs_VHTVar* v = &ht->vars[ i ];
+			if( sgs_GetBoolP( C, &v->key ) )
+				return 1;
+		}
+	}
+	return 0;
+}
+
 int sgs_ProcessSubthreads( SGS_CTX, sgs_Real dt )
 {
 	C->wait_timer += dt;
@@ -2734,7 +2796,11 @@ int sgs_ProcessSubthreads( SGS_CTX, sgs_Real dt )
 			sgs_Context* thctx = v->key.data.T;
 			sgs_ProcessSubthreads( thctx, dt );
 			v->val.data.R -= dt;
-			if( v->val.data.R <= 0 )
+			if( sgs__anyevent( thctx ) )
+			{
+				sgs_Abort( thctx );
+			}
+			else if( v->val.data.R <= 0 )
 			{
 				sgs_ResumeStateExp( thctx, 0, 1 );
 				v->val.data.R = sgs_GetReal( thctx, -1 );
@@ -2784,6 +2850,11 @@ void sgsSTD_ThreadsFree( SGS_CTX )
 		if( PC->refcount == 0 )
 			sgsCTX_FreeState( PC );
 	}
+	if( C->_E )
+	{
+		sgs_ObjRelease( C, C->_E );
+		C->_E = NULL;
+	}
 }
 
 void sgsSTD_ThreadsGC( SGS_CTX )
@@ -2791,6 +2862,10 @@ void sgsSTD_ThreadsGC( SGS_CTX )
 	if( C->_T )
 	{
 		sgs_ObjGCMark( C, C->_T );
+	}
+	if( C->_E )
+	{
+		sgs_ObjGCMark( C, C->_E );
 	}
 }
 
@@ -3872,7 +3947,7 @@ static sgs_RegFuncConst regfuncs[] =
 	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
 	STDLIB_FN( metaobj_set ), STDLIB_FN( metaobj_get ), STDLIB_FN( metamethods_enable ), STDLIB_FN( metamethods_test ),
 	STDLIB_FN( mm_getindex_router ), STDLIB_FN( mm_setindex_router ),
-	STDLIB_FN( event ), STDLIB_FN( pooled_event ),
+	STDLIB_FN( event ), STDLIB_FN( pooled_event ), STDLIB_FN( end_on ),
 	STDLIB_FN( co_create ), STDLIB_FN( co_resume ),
 	STDLIB_FN( thread_create ), STDLIB_FN( subthread_create ), STDLIB_FN( abort ),
 	STDLIB_FN( process_threads ),

@@ -490,11 +490,16 @@ Special keywords and hardcoded constants:
 !    name    !              type                !              usage               !
 |  this      |  special identifier, read-only   |  method context retrieval        |
 |  _G        |  special identifier, read/write  |  global environment access       |
+|  _R        |  special identifier, read-only   |  global registry access          |
 |  null      |             constant             |  constant                        |
 |  true      |             constant             |  constant                        |
 |  false     |             constant             |  constant                        |
 |  var       |       restricted keyword         |  variable declaration            |
 |  global    |       restricted keyword         |  variable declaration            |
+|  thread    |       restricted keyword         |  thread control                  |
+|  subthread |       restricted keyword         |  thread control                  |
+|  sync      |       restricted keyword         |  thread control                  |
+|  race      |       restricted keyword         |  thread control                  |
 |  function  |       restricted keyword         |  function definition             |
 |  use       |       restricted keyword         |  function definition             |
 |  if        |       restricted keyword         |  "if" statement                  |
@@ -506,6 +511,9 @@ Special keywords and hardcoded constants:
 |  break     |       restricted keyword         |  "break" statement               |
 |  continue  |       restricted keyword         |  "continue" statement            |
 |  return    |       restricted keyword         |  "return" statement              |
+|  print     |        function command          |  "print" function                |
+|  yield     |        function command          |  "yield" function                |
+|  include   |        function command          |  "include" function              |
 ------------------------------------------------------------------------------------
 
 
@@ -575,6 +583,8 @@ There are 5 types of action for expressions in SGScript: arithmetic, bitwise, lo
 |  function definition    |` function A.. `|    special     | maybe  |   0   |
 |  inline if              |`  if(A,B,C)   `|    special     |  no    |  3(2) |
 |  subexpression          |` ( A[, ..] )  `|    special     | maybe  |  any  |
+|  thread-call            |` thread f()   `|    special     | maybe  | <=256 |
+|  subthread-call         |` subthread f()`|    special     | maybe  | <=256 |
 ------------------------------------------------------------------------------
 
 Some notes on the special cases:
@@ -590,6 +600,7 @@ Some notes on the special cases:
 - [error suppression] the `@` operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn't an error
 - [function] the full function definition expression syntax: `function <name> ( <args> ) [ use ( <use-list> ) ]`, followed by either `{ ... }` or `= ... ;`. <name>, <args> and the 'use' block are all optional.
 - [multi-set] operator returns `A`, that is, the object itself
+- [thread] `thread`/`subthread` commands support all kinds of calls (`f()`, `o.f()`, `o!f()`)
 
 ==== compatible function call / inheritance call / global method call (` O!A ([B,..]) `)
 
@@ -2177,10 +2188,12 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - `s` -- check for `string` (returns char*)
 - `m` -- check for `string` (returns char* string and sgs_SizeVal size)
 - `p` -- check for `func/cfunc/object with CALL` (callables) (returns SGSBOOL = 1)
+- `y` -- check for `thread` (returns sgs_Context*)
 - `a` -- check for `array` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `t` -- check for `dict` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `h` -- check for `map` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
-- `o` -- check for `object` (requires void** interface, returns <type>* data - the data pointer)
+- `o` -- check for specific `object` (requires sgs_ObjInterface* interface, returns <type>* data - the data pointer)
+- `*` -- check for any `object` (returns sgs_ObjInterface* interface)
 - `&` -- check for `pointer` (returns void* data - the pointer)
 - `v` -- check for any (non-null if strict, returns sgs_Variable data)
 - `x` -- call a custom checking function (requires sgs_ArgCheckFunc, everything else depends on function)

@@ -241,6 +241,23 @@ pooled_event( evpool, "test1" ).signaled = true;
 for( i = 0; i < 3; ++i ) process_threads();
 testEqual( ''$syarr, "[3,5]", "event [pooled] - signaled, thread finished" );
 
+ev = event();
+function corotestE1( ev )
+{
+	end_on( ev );
+	syarr.push( 3 );
+	yield; yield; yield;
+	syarr.push( 5 );
+}
+global syarr = [];
+thread corotestE1( ev );
+gc_collect();
+process_threads();
+testEqual( ''$syarr, "[3]", "event [end-on] - waiting for signal" );
+ev.signaled = true;
+for( i = 0; i < 5; ++i ) process_threads();
+testEqual( ''$syarr, "[3]", "event [end-on] - signaled, thread aborted" );
+
 
 
 //

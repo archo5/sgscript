@@ -609,6 +609,7 @@ struct _sgs_Context
 	/* > coop micro-threading */
 	sgs_Context*  parent; /* owning (parent) context */
 	sgs_VarObj*   _T; /* subthreads */
+	sgs_VarObj*   _E; /* end events */
 	sgs_Real      wait_timer; /* sync/race */
 	
 	/* > main stack */

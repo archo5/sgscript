@@ -1551,7 +1551,11 @@ SFTRET parse_stmt( SFTC )
 	/* COMMAND HELPERS */
 #define NOT_FCALL ( !sgsT_Next( F->at ) || '(' != *sgsT_Next( F->at ) )
 	/* SIMPLE COMMANDS */
-	else if( SFTC_IS_ID( "print" ) && NOT_FCALL )
+	else if((
+		SFTC_IS_ID( "print" ) ||
+		SFTC_IS_ID( "println" ) ||
+		SFTC_IS_ID( "yield" )
+		) && NOT_FCALL )
 	{
 		node = parse_command( F, 0 );
 		SGS_FN_END;

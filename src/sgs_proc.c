@@ -3602,7 +3602,7 @@ fail:
 	s,m - strings (string,string+size)
 	p - function (callable, actually; p stands for "procedure";
 		returns a SGSBOOL always, useful only for optional arguments)
-	a,t,h,o - objects (array,dict,map,specific iface)
+	a,t,h,o,* - objects (array,dict,map,specific iface,any iface)
 	& - pointer (void*)
 	y - thread (sgs_Context*)
 	v - any variable (returns sgs_Variable, checks if valid index or non-null if strict)
@@ -3892,7 +3892,7 @@ SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 			}
 			strict = 0; nowrite = 0; from++; break;
 			
-		case 'a': case 't': case 'h': case 'o':
+		case 'a': case 't': case 'h': case 'o': case '*':
 			{
 				sgs_ObjInterface* ifc = NULL;
 				const char* ostr = "custom object";
@@ -3901,6 +3901,7 @@ SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 				if( *cmd == 't' ){ ifc = sgsstd_dict_iface; ostr = "dict"; }
 				if( *cmd == 'h' ){ ifc = sgsstd_map_iface; ostr = "map"; }
 				if( *cmd == 'o' ) ifc = va_arg( *args, sgs_ObjInterface* );
+				if( *cmd == '*' ) ostr = "object";
 				
 				if( opt && sgs_ItemType( C, from ) == SGS_VT_NULL )
 				{
@@ -3912,6 +3913,7 @@ SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 						case 't':
 						case 'h': va_arg( *args, sgs_SizeVal* ); break;
 						case 'o': va_arg( *args, void** ); break;
+						case '*': va_arg( *args, sgs_ObjInterface** ); break;
 						}
 					}
 					break;
@@ -3935,6 +3937,7 @@ SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 					case 'h': *va_arg( *args, sgs_SizeVal* ) =
 						sgs_vht_size( ((sgs_VHTable*) O->data) ); break;
 					case 'o': *va_arg( *args, void** ) = O->data; break;
+					case '*': *va_arg( *args, sgs_ObjInterface** ) = O->iface; break;
 					}
 				}
 			}
