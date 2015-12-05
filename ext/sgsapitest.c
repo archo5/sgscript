@@ -1038,8 +1038,12 @@ DEFINE_TEST( profiling )
 	sgs_ProfInit( C, &P, SGS_PROF_FUNCTIME );
 	atf_assert( sgs_ExecString( C, ""
 		"co = co_create(function testfun(){\n"
-		"	for( i = 0; i < 100000; ++i ) _G.tst = 1;\n"
-		"	yield 0.5;\n"
+		"	yield 0.01;\n"
+		"	(function in1(){\n"
+		"		for( i = 0; i < 100000; ++i ) _G.tst = 1;\n"
+		"		yield 0.5;\n"
+		"	})();\n"
+		"	yield 0.01;\n"
 		"});\n"
 		"while( co.can_resume ){\n"
 		"	resumeat = toreal( co_resume( co ) );\n"
@@ -1050,9 +1054,11 @@ DEFINE_TEST( profiling )
 	sgs_ProfDump( C, &P );
 	sgs_membuf_appchr( &outbuf, C, '\0' ); /* make buffer into a C-string */
 	/* puts( outbuf.ptr ); //*/
-	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main>::co_resume - " ) ) < 0.5f );
-	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) >= 0.5f );
-	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) >= 0.5f );
+	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main>::co_resume - " ) ) < 0.52f );
+	atf_assert( atof( STR_AFTER( outbuf.ptr, "testfun - " ) ) < 0.52f );
+	atf_assert( atof( STR_AFTER( outbuf.ptr, "testfun::in1 - " ) ) < 0.52f );
+	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) >= 0.52f );
+	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) >= 0.52f );
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	

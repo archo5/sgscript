@@ -2930,6 +2930,11 @@ SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 	rvc = vm_exec( C );
 	if( ( C->state & SGS_STATE_PAUSED ) == 0 )
 		vm_postcall( C, rvc );
+	else
+	{
+		if( C->hook_fn )
+			C->hook_fn( C->hook_ctx, C, SGS_HOOK_PAUSE );
+	}
 	if( outrvc )
 		*outrvc = rvc;
 	
