@@ -42,9 +42,9 @@ sgs_Prof;
 #define SGS_PROF_OPTIME   2
 #define SGS_PROF_MEMUSAGE 3
 
-void sgs_ProfInit( SGS_CTX, sgs_Prof* P, int mode );
-void sgs_ProfClose( sgs_Prof* P );
-void sgs_ProfDump( sgs_Prof* P );
+SGS_APIFUNC void sgs_ProfInit( SGS_CTX, sgs_Prof* P, int mode );
+SGS_APIFUNC void sgs_ProfClose( sgs_Prof* P );
+SGS_APIFUNC void sgs_ProfDump( sgs_Prof* P );
 
 
 #ifdef __cplusplus

@@ -970,7 +970,13 @@ DEFINE_TEST( profiling )
 	sgs_ProfInit( C, &P, SGS_PROF_FUNCTIME );
 	atf_assert( sgs_ExecString( C, ""
 		"rand();\n"
-		"yield();\n"
+		"(function test1(){\n"
+			"for( i = 0; i < 10000; ++i ) _G.tst = 1;\n"
+			"(function test2(){\n"
+				"yield();\n"
+				"for( i = 0; i < 10000; ++i ) _G.tst = 2;\n"
+			"})();\n"
+		"})();\n"
 		"randf();\n"
 	"" ) == SGS_SUCCESS );
 	sgsthread_sleep( 500 ); /* wait 0.5s */
@@ -982,7 +988,17 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "Time by call stack frame" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main> -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::yield -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::test1 -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::test1::test2 -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::test1::test2::yield -" ) != NULL );
+	atf_assert(
+		atof( strstr( outbuf.ptr, "<main> - " ) + sizeof("<main> - ") - 1 ) >=
+		atof( strstr( outbuf.ptr, "<main>::test1 - " ) + sizeof("<main>::test1 - " ) - 1 )
+	);
+	atf_assert(
+		atof( strstr( outbuf.ptr, "<main>::test1 - " ) + sizeof("<main>::test1 - " ) - 1 ) >=
+		atof( strstr( outbuf.ptr, "<main>::test1::test2 - " ) + sizeof("<main>::test1::test2 - " ) - 1 )
+	);
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) != NULL );
 	/* sleep should not affect the profile */
 	atf_assert( atof( strstr( outbuf.ptr, "<main> - " ) + 9 ) < 0.5f );

@@ -15,16 +15,24 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 	if( P->hfn )
 		P->hfn( P->hctx, C, evid );
 	
-	if( evid == SGS_HOOK_ENTER || evid == SGS_HOOK_CONT )
+	if( evid == SGS_HOOK_ENTER )
 	{
 		sgs_membuf_appbuf( &P->timetmp, C, &TM, sizeof(TM) );
 	}
+	else if( evid == SGS_HOOK_CONT )
+	{
+		sgs_StackFrame* sf = C->sf_first;
+		while( sf )
+		{
+			sgs_membuf_appbuf( &P->timetmp, C, &TM, sizeof(TM) );
+			sf = sf->next;
+		}
+	}
 	else if( evid == SGS_HOOK_EXIT || evid == SGS_HOOK_PAUSE )
 	{
-		double prevTM;
-		sgs_VHTVar* pair;
-		
-		sgs_StackFrame* sf = sgs_GetFramePtr( C, NULL, 0 );
+		/* on pause: commit the whole stack, on exit: last function */
+		unsigned i = 0;
+		sgs_StackFrame* sf = C->sf_first;
 		sgs_membuf_resize( &P->keytmp, C, 0 );
 		while( sf )
 		{
@@ -32,25 +40,35 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 			sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
 			sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
 			sgs_membuf_appchr( &P->keytmp, C, 0 );
+			
+			if( evid == SGS_HOOK_PAUSE || sf->next == NULL )
+			{
+				double prevTM;
+				sgs_VHTVar* pair;
+				SGS_AS_DOUBLE( prevTM, P->timetmp.ptr + i * sizeof(TM) );
+				pair = sgs_vht_get_str( &P->timings, P->keytmp.ptr, (uint32_t) P->keytmp.size,
+					sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
+				if( pair )
+				{
+					pair->val.data.R += TM - prevTM;
+				}
+				else
+				{
+					sgs_Variable key, val = sgs_MakeReal( TM - prevTM );
+					sgs_InitStringBuf( C, &key, P->keytmp.ptr, (sgs_SizeVal) P->keytmp.size );
+					sgs_vht_set( &P->timings, C, &key, &val );
+					sgs_Release( C, &key );
+				}
+			}
+			
 			sf = sf->next;
+			i++;
 		}
 		
-		SGS_AS_DOUBLE( prevTM, P->timetmp.ptr + P->timetmp.size - sizeof(double) );
-		pair = sgs_vht_get_str( &P->timings, P->keytmp.ptr, (uint32_t) P->keytmp.size,
-			sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
-		if( pair )
-		{
-			pair->val.data.R += TM - prevTM;
-		}
+		if( evid == SGS_HOOK_EXIT )
+			sgs_membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(TM) );
 		else
-		{
-			sgs_Variable val = sgs_MakeReal( TM - prevTM );
-			sgs_PushStringBuf( C, P->keytmp.ptr, (sgs_SizeVal) P->keytmp.size );
-			sgs_vht_set( &P->timings, C, C->stack_top-1, &val );
-			sgs_Pop( C, 1 );
-		}
-		
-		sgs_membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(TM) );
+			sgs_membuf_resize( &P->timetmp, C, 0 );
 	}
 }
 

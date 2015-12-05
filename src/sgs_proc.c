@@ -2840,6 +2840,11 @@ restart_loop:
 #undef ARGS_3
 #undef a1
 #undef RESVAR
+#undef argA
+#undef argB
+#undef argC
+#undef argE
+#undef instr
 #undef pend
 #undef pp
 
