@@ -47,8 +47,8 @@ void sgs_close()
 	if( idbg ) sgs_CloseIDbg( C, &D );
 	if( prof )
 	{
-		sgs_ProfDump( &P );
-		sgs_ProfClose( &P );
+		sgs_ProfDump( C, &P );
+		sgs_ProfClose( C, &P );
 	}
 	if( stats )
 		sgs_Stat( C, SGS_STAT_DUMP_STATS );

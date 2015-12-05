@@ -954,7 +954,7 @@ DEFINE_TEST( profiling )
 		"}\n"
 	"" ) == SGS_SUCCESS );
 	/* expecting to see main/test/rand in the dump */
-	sgs_ProfDump( &P );
+	sgs_ProfDump( C, &P );
 	sgs_membuf_appchr( &outbuf, C, '\0' ); /* make buffer into a C-string */
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Time by call stack frame" ) != NULL );
@@ -963,7 +963,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::test -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test::rand -" ) != NULL );
 	atf_assert( atof( strstr( outbuf.ptr, "<main> - " ) + 9 ) < 0.2f ); /* verify for the next test */
-	sgs_ProfClose( &P );
+	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
 	/* paused function */
@@ -982,7 +982,7 @@ DEFINE_TEST( profiling )
 	sgsthread_sleep( 500 ); /* wait 0.5s */
 	atf_assert( sgs_ResumeStateExp( C, 0, 0 ) == SGS_TRUE );
 	/* expecting to see main/rand/randf in the dump */
-	sgs_ProfDump( &P );
+	sgs_ProfDump( C, &P );
 	sgs_membuf_appchr( &outbuf, C, '\0' ); /* make buffer into a C-string */
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Time by call stack frame" ) != NULL );
@@ -1002,7 +1002,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) != NULL );
 	/* sleep should not affect the profile */
 	atf_assert( atof( strstr( outbuf.ptr, "<main> - " ) + 9 ) < 0.5f );
-	sgs_ProfClose( &P );
+	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
 	/* aborted function */
@@ -1013,7 +1013,7 @@ DEFINE_TEST( profiling )
 		"randf();\n"
 	"" ) == SGS_SUCCESS );
 	/* expecting to see main/rand in the dump, but no randf */
-	sgs_ProfDump( &P );
+	sgs_ProfDump( C, &P );
 	sgs_membuf_appchr( &outbuf, C, '\0' ); /* make buffer into a C-string */
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Time by call stack frame" ) != NULL );
@@ -1021,7 +1021,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::abort -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) == NULL );
-	sgs_ProfClose( &P );
+	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
 	/*****************|
@@ -1040,7 +1040,7 @@ DEFINE_TEST( profiling )
 			"})();\n"
 		"}\n"
 	"" ) == SGS_SUCCESS );
-	sgs_ProfDump( &P );
+	sgs_ProfDump( C, &P );
 	sgs_membuf_appchr( &outbuf, C, '\0' ); /* make buffer into a C-string */
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Time by VM instruction" ) != NULL );
@@ -1048,7 +1048,7 @@ DEFINE_TEST( profiling )
 		char* firsttime = strstr( outbuf.ptr, "." ) - 1;
 		atf_assert( *(firsttime-1) == ' ' && atof( firsttime ) < 0.1f ); /* first entry should not exceed 0.1f */
 	}
-	sgs_ProfClose( &P );
+	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
 	/* paused function */
@@ -1060,7 +1060,7 @@ DEFINE_TEST( profiling )
 	"" ) == SGS_SUCCESS );
 	sgsthread_sleep( 500 ); /* wait 0.5s */
 	atf_assert( sgs_ResumeStateExp( C, 0, 0 ) == SGS_TRUE );
-	sgs_ProfDump( &P );
+	sgs_ProfDump( C, &P );
 	sgs_membuf_appchr( &outbuf, C, '\0' ); /* make buffer into a C-string */
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Time by VM instruction" ) != NULL );
@@ -1068,7 +1068,7 @@ DEFINE_TEST( profiling )
 		char* firsttime = strstr( outbuf.ptr, "." ) - 1;
 		atf_assert( *(firsttime-1) == ' ' && atof( firsttime ) < 0.1f ); /* first entry should not exceed 0.1f */
 	}
-	sgs_ProfClose( &P );
+	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
 #if 0
@@ -1089,7 +1089,7 @@ DEFINE_TEST( profiling )
 		"}\n"
 	"" ) == SGS_SUCCESS );
 	/* expecting to see main/test/rand in the dump */
-	sgs_ProfDump( &P );
+	sgs_ProfDump( C, &P );
 	sgs_membuf_appchr( &outbuf, C, '\0' ); /* make buffer into a C-string */
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Memory usage by call stack frame" ) != NULL );
@@ -1097,7 +1097,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test::rand -" ) != NULL );
-	sgs_ProfClose( &P );
+	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
 	/* aborted function */
@@ -1108,7 +1108,7 @@ DEFINE_TEST( profiling )
 		"randf();\n"
 	"" ) == SGS_SUCCESS );
 	/* expecting to see main/rand in the dump, but no randf */
-	sgs_ProfDump( &P );
+	sgs_ProfDump( C, &P );
 	sgs_membuf_appchr( &outbuf, C, '\0' ); /* make buffer into a C-string */
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Memory usage by call stack frame" ) != NULL );
@@ -1116,7 +1116,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::abort -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) == NULL );
-	sgs_ProfClose( &P );
+	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 #endif
 	

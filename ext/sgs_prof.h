@@ -17,34 +17,57 @@ extern "C" {
 #endif
 #include HEADER_SGS_UTIL_H
 
-typedef
-struct _sgs_Prof
+
+typedef struct _sgs_Prof
 {
-	SGS_CTX;
+	int mode;
+	sgs_VHTable ctx2prof;
+	/* mode 1 / 3 */
+	sgs_VHTable timings;
+	/* mode 2 */
+	double* ictrs;
+	uint32_t* iexcs;
+}
+sgs_Prof;
+
+typedef struct _sgs_ProfData
+{
+	sgs_Prof* prof;
 	sgs_HookFunc hfn;
 	void* hctx;
-
-	int mode;
 	/* mode 1 / 3 */
 	sgs_MemBuf keytmp;
 	sgs_MemBuf frametmp;
-	sgs_VHTable timings;
 	/* mode 2 */
 	int prev;
-	double* ictrs;
-	uint32_t* iexcs;
 	int32_t instr;
 	double starttime;
 }
-sgs_Prof;
+sgs_ProfData;
+
 
 #define SGS_PROF_FUNCTIME 1
 #define SGS_PROF_OPTIME   2
 #define SGS_PROF_MEMUSAGE 3
 
+
+/* initialize profiler and attach to context */
 SGS_APIFUNC void sgs_ProfInit( SGS_CTX, sgs_Prof* P, int mode );
-SGS_APIFUNC void sgs_ProfClose( sgs_Prof* P );
-SGS_APIFUNC void sgs_ProfDump( sgs_Prof* P );
+
+/* attach profiler to another context */
+SGS_APIFUNC void sgs_ProfAttach( SGS_CTX, sgs_Prof* P );
+
+/* detach profiler from context */
+SGS_APIFUNC void sgs_ProfDetach( SGS_CTX, sgs_Prof* P );
+
+/* commit unfinished measuring (can be used for stopping in the middle of things) */
+SGS_APIFUNC void sgs_ProfCommit( sgs_Prof* P );
+
+/* close profiler, detaching from all contexts */
+SGS_APIFUNC void sgs_ProfClose( SGS_CTX, sgs_Prof* P );
+
+/* dump profiler measurements */
+SGS_APIFUNC void sgs_ProfDump( SGS_CTX, sgs_Prof* P );
 
 
 #ifdef __cplusplus
