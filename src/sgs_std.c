@@ -2634,12 +2634,19 @@ static int sgsstd_co_resume( SGS_CTX )
 	
 	ssz = sgs_StackSize( C );
 	
+	if( C->hook_fn )
+		C->hook_fn( C->hook_ctx, C, SGS_HOOK_PAUSE );
+	
 	if( T->sf_last )
 	{
 		for( i = 0; i < ssz; ++i )
 			sgs_PushVariable( T, sgs_StackItem( C, i ) );
 		if( !sgs_ResumeStateRet( T, ssz, &rvc ) )
+		{
+			if( C->hook_fn )
+				C->hook_fn( C->hook_ctx, C, SGS_HOOK_CONT );
 			STDLIB_WARN( "failed to resume coroutine" );
+		}
 	}
 	else if( T->state & SGS_STATE_COROSTART )
 	{
@@ -2652,6 +2659,9 @@ static int sgsstd_co_resume( SGS_CTX )
 		sgs_Release( C, &func );
 	}
 	/* else - already handled */
+	
+	if( C->hook_fn )
+		C->hook_fn( C->hook_ctx, C, SGS_HOOK_CONT );
 	
 	for( i = -rvc; i < 0; ++i )
 	{

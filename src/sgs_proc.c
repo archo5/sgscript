@@ -1274,6 +1274,13 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* ob
 				return 0;
 			}
 			break;
+		case SGS_VT_THREAD:
+			if( !strcmp( prop, "can_resume" ) )
+			{
+				outmaybe->type = SGS_VT_BOOL;
+				outmaybe->data.B = ( obj->data.T->state & SGS_STATE_COROSTART ) || obj->data.T->sf_count;
+				return 0;
+			}
 		}
 		
 		sgs_Msg( C, SGS_WARNING, "Property '%s' not found on "

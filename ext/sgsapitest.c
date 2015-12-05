@@ -932,6 +932,16 @@ DEFINE_TEST( state_machine_core )
 	destroy_context( C );
 }
 
+static const char* _str_after( const char* str, const char* substr, size_t subsz )
+{
+	const char* at = strstr( str, substr );
+	if( at )
+		return at + subsz;
+	else
+		return "";
+}
+#define STR_AFTER( str, substr ) _str_after( str, substr, sizeof(substr) - 1 )
+
 DEFINE_TEST( profiling )
 {
 	sgs_Prof P;
@@ -962,7 +972,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test::rand -" ) != NULL );
-	atf_assert( atof( strstr( outbuf.ptr, "<main> - " ) + 9 ) < 0.2f ); /* verify for the next test */
+	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) < 0.2f ); /* verify for the next test */
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
@@ -992,12 +1002,12 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::test1::test2 -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test1::test2::yield -" ) != NULL );
 	atf_assert(
-		atof( strstr( outbuf.ptr, "<main> - " ) + sizeof("<main> - ") - 1 ) >=
-		atof( strstr( outbuf.ptr, "<main>::test1 - " ) + sizeof("<main>::test1 - " ) - 1 )
+		atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) >=
+		atof( STR_AFTER( outbuf.ptr, "<main>::test1 - " ) )
 	);
 	atf_assert(
-		atof( strstr( outbuf.ptr, "<main>::test1 - " ) + sizeof("<main>::test1 - " ) - 1 ) >=
-		atof( strstr( outbuf.ptr, "<main>::test1::test2 - " ) + sizeof("<main>::test1::test2 - " ) - 1 )
+		atof( STR_AFTER( outbuf.ptr, "<main>::test1 - " ) ) >=
+		atof( STR_AFTER( outbuf.ptr, "<main>::test1::test2 - " ) )
 	);
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) != NULL );
 	/* sleep should not affect the profile */
@@ -1021,6 +1031,28 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::abort -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) == NULL );
+	sgs_ProfClose( C, &P );
+	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
+	
+	/* timed coroutine */
+	sgs_ProfInit( C, &P, SGS_PROF_FUNCTIME );
+	atf_assert( sgs_ExecString( C, ""
+		"co = co_create(function testfun(){\n"
+		"	for( i = 0; i < 100000; ++i ) _G.tst = 1;\n"
+		"	yield 0.5;\n"
+		"});\n"
+		"while( co.can_resume ){\n"
+		"	resumeat = toreal( co_resume( co ) );\n"
+		"	resumeat += ftime();\n"
+		"	while( ftime() < resumeat ) ;\n"
+		"}\n"
+	"" ) == SGS_SUCCESS );
+	sgs_ProfDump( C, &P );
+	sgs_membuf_appchr( &outbuf, C, '\0' ); /* make buffer into a C-string */
+	/* puts( outbuf.ptr ); //*/
+	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main>::co_resume - " ) ) < 0.5f );
+	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) >= 0.5f );
+	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) >= 0.5f );
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
