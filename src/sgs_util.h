@@ -31,7 +31,7 @@ typedef int16_t sgs_LineNum;
 
 SGS_APIFUNC void sgs_BreakIfFunc( const char* code, const char* file, int line );
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
-#  define sgs_BreakIf( expr ) { if( expr ){ sgs_BreakIfFunc( #expr, __FILE__, __LINE__ ); } }
+#  define sgs_BreakIf( expr ) { if( expr != 0 ){ sgs_BreakIfFunc( #expr, __FILE__, __LINE__ ); } }
 #else
 #  define sgs_BreakIf( expr )
 #endif
