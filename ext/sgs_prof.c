@@ -8,82 +8,145 @@
 
 
 
+typedef struct _mode1item
+{
+	sgs_StackFrame* frame;
+	double startTime;
+}
+mode1item;
+
 static void mode1hook( void* userdata, SGS_CTX, int evid )
 {
 	sgs_Prof* P = (sgs_Prof*) userdata;
-	double TM = sgs_GetTime();
 	if( P->hfn )
 		P->hfn( P->hctx, C, evid );
 	
-	if( evid == SGS_HOOK_ENTER )
+	if( evid == SGS_HOOK_ENTER || evid == SGS_HOOK_CONT ||
+		evid == SGS_HOOK_EXIT || evid == SGS_HOOK_PAUSE )
 	{
-		sgs_membuf_appbuf( &P->timetmp, C, &TM, sizeof(TM) );
-	}
-	else if( evid == SGS_HOOK_CONT )
-	{
-		sgs_StackFrame* sf = C->sf_first;
-		while( sf )
+		double TM = sgs_GetTime();
+		sgs_StackFrame* target = NULL, *sf, *lastrec = NULL;
+		mode1item* items = (mode1item*) P->frametmp.ptr;
+		size_t i, itemcount = P->frametmp.size / sizeof(mode1item);
+		
+		if( evid == SGS_HOOK_ENTER || evid == SGS_HOOK_CONT )
+			target = C->sf_last;
+		else if( evid == SGS_HOOK_EXIT )
+			target = C->sf_last->prev;
+		/* pause => null */
+		
+		/* ignore the case when target = current */
+		if( itemcount && items[ itemcount - 1 ].frame == target )
+			return;
+		
+		/* find target in stack */
+		for( i = 0; i < itemcount; ++i )
 		{
-			sgs_membuf_appbuf( &P->timetmp, C, &TM, sizeof(TM) );
-			sf = sf->next;
+			if( items[ i ].frame == target )
+				break;
 		}
-	}
-	else if( evid == SGS_HOOK_EXIT || evid == SGS_HOOK_PAUSE )
-	{
-		/* on pause: commit the whole stack, on exit: last function */
-		unsigned i = 0;
-		sgs_StackFrame* sf = C->sf_first;
-		sgs_membuf_resize( &P->keytmp, C, 0 );
-		while( sf )
+		if( i == itemcount )
 		{
-			const char* fname = "<error>";
-			sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
-			sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
-			sgs_membuf_appchr( &P->keytmp, C, 0 );
-			
-			if( evid == SGS_HOOK_PAUSE || sf->next == NULL )
+			/* find last recorded frame in call stack */
+			sf = NULL;
+			if( itemcount )
 			{
-				double prevTM;
-				sgs_VHTVar* pair;
-				SGS_AS_DOUBLE( prevTM, P->timetmp.ptr + i * sizeof(TM) );
-				pair = sgs_vht_get_str( &P->timings, P->keytmp.ptr, (uint32_t) P->keytmp.size,
-					sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
-				if( pair )
+				sf = C->sf_first;
+				while( sf )
 				{
-					pair->val.data.R += TM - prevTM;
+					if( items[ itemcount - 1 ].frame == sf )
+						break;
+					sf = sf->next;
 				}
-				else
+			}
+			lastrec = sf;
+			if( sf == NULL || target == NULL )
+				i = 0; /* frame not found/req., remove everything */
+			/* otherwise, remove nothing, it's an "ENTER" */
+		}
+		else
+			i++; /* remove starting from next frame */
+		
+		/* if there is anything to remove */
+		if( i < itemcount )
+		{
+			size_t bki = i;
+			sf = C->sf_first;
+			/* generate core key (from start to first removed incl.) */
+			sgs_membuf_resize( &P->keytmp, C, 0 );
+			while( sf && sf != items[ i ].frame )
+			{
+				const char* fname = "<error>";
+				sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
+				sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
+				sgs_membuf_appchr( &P->keytmp, C, 0 );
+				sf = sf->next;
+			}
+			
+			/* iterate removable frames (assuming frame pointers are valid) */
+			for( ; i < itemcount; ++i )
+			{
+				const char* fname = "<error>";
+				sgs_StackFrameInfo( C, items[ i ].frame, &fname, NULL, NULL );
+				sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
+				sgs_membuf_appchr( &P->keytmp, C, 0 );
+				
+				/* commit time addition */
 				{
-					sgs_Variable key, val = sgs_MakeReal( TM - prevTM );
-					sgs_InitStringBuf( C, &key, P->keytmp.ptr, (sgs_SizeVal) P->keytmp.size );
-					sgs_vht_set( &P->timings, C, &key, &val );
-					sgs_Release( C, &key );
+					double prevTM = items[ i ].startTime;
+					sgs_VHTVar* pair = sgs_vht_get_str( &P->timings, P->keytmp.ptr,
+						(uint32_t) P->keytmp.size, sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
+					if( pair )
+					{
+						pair->val.data.R += TM - prevTM;
+					}
+					else
+					{
+						sgs_Variable key, val = sgs_MakeReal( TM - prevTM );
+						sgs_InitStringBuf( C, &key, P->keytmp.ptr, (sgs_SizeVal) P->keytmp.size );
+						sgs_vht_set( &P->timings, C, &key, &val );
+						sgs_Release( C, &key );
+					}
 				}
 			}
 			
-			sf = sf->next;
-			i++;
+			/* commit size */
+			sgs_membuf_resize( &P->frametmp, C, bki * sizeof(mode1item) );
+			itemcount = bki;
 		}
 		
-		if( evid == SGS_HOOK_EXIT )
-			sgs_membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(TM) );
-		else
-			sgs_membuf_resize( &P->timetmp, C, 0 );
+		/* add new frame start times */
+		if( lastrec || ( target != NULL && itemcount == 0 ) )
+		{
+			if( lastrec )
+				sf = lastrec->next;
+			else
+				sf = C->sf_first;
+			while( sf )
+			{
+				mode1item NI = { sf, TM };
+				sgs_membuf_appbuf( &P->frametmp, C, &NI, sizeof(NI) );
+				if( sf == target )
+					break;
+				sf = sf->next;
+			}
+		}
+		//printf("evid=%d sizeafter=%d\n",evid, P->frametmp.size);
 	}
 }
 
 static void initProfMode1( sgs_Prof* P )
 {
 	P->keytmp = sgs_membuf_create();
-	P->timetmp = sgs_membuf_create();
+	P->frametmp = sgs_membuf_create();
 	sgs_vht_init( &P->timings, P->C, 128, 128 );
 	sgs_SetHookFunc( P->C, mode1hook, P );
 }
 
 static void freeProfMode1( sgs_Prof* P )
 {
+	sgs_membuf_destroy( &P->frametmp, P->C );
 	sgs_membuf_destroy( &P->keytmp, P->C );
-	sgs_membuf_destroy( &P->timetmp, P->C );
 	sgs_vht_free( &P->timings, P->C );
 }
 
@@ -258,6 +321,7 @@ static void mode3hook( void* userdata, SGS_CTX, int evid )
 	if( P->hfn )
 		P->hfn( P->hctx, C, evid );
 	
+#if 0
 	if( evid == SGS_HOOK_ENTER || evid == SGS_HOOK_CONT )
 	{
 		sgs_membuf_appbuf( &P->timetmp, C, &CD, sizeof(CD) );
@@ -303,6 +367,7 @@ static void mode3hook( void* userdata, SGS_CTX, int evid )
 		
 		sgs_membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(CD) );
 	}
+#endif
 }
 
 static void initProfMode3( sgs_Prof* P )

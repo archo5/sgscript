@@ -551,6 +551,8 @@ struct _sgs_ShCtx
 	/* more pools */
 	sgs_Context* ctx_pool;
 	sgs_StackFrame* sf_pool;
+	int ctx_pool_size;
+	int sf_pool_size;
 	
 	/* tables / cache */
 	sgs_VHTable   typetable; /* type interface table */

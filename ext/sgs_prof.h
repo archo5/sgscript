@@ -27,7 +27,7 @@ struct _sgs_Prof
 	int mode;
 	/* mode 1 / 3 */
 	sgs_MemBuf keytmp;
-	sgs_MemBuf timetmp;
+	sgs_MemBuf frametmp;
 	sgs_VHTable timings;
 	/* mode 2 */
 	int prev;

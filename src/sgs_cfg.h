@@ -90,6 +90,9 @@
 #define SGS_OBJPOOL_SIZE 64
 #define SGS_OBJPOOL_MAX_APPMEM 256
 
+/* stack frame pool settings */
+#define SGS_STACKFRAMEPOOL_SIZE 512
+
 /* inclusion system settings:
 	- name of entry point function to look for
 	- the default include path */

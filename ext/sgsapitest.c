@@ -1071,6 +1071,7 @@ DEFINE_TEST( profiling )
 	sgs_ProfClose( &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
+#if 0
 	/*****************|
 	|   M O D E   3   |  [memory usage per call stack]
 	-----------------*/
@@ -1117,6 +1118,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) == NULL );
 	sgs_ProfClose( &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
+#endif
 	
 	destroy_context( C );
 }

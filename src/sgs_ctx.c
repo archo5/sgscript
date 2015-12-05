@@ -70,7 +70,9 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	S->gcrun = SGS_FALSE;
 	S->objpool_size = 0;
 	S->ctx_pool = NULL;
+	S->ctx_pool_size = 0;
 	S->sf_pool = NULL;
+	S->sf_pool_size = 0;
 	
 	///
 	// CONTEXT
@@ -365,6 +367,7 @@ sgs_StackFrame* sgsCTX_AllocFrame( SGS_CTX )
 	{
 		sgs_StackFrame* ret = S->sf_pool;
 		S->sf_pool = ret->next;
+		S->sf_pool_size--;
 		return ret;
 	}
 	
@@ -375,8 +378,15 @@ void sgsCTX_FreeFrame( SGS_CTX, sgs_StackFrame* F )
 {
 	SGS_SHCTX_USE;
 	
+	if( S->sf_pool_size >= SGS_STACKFRAMEPOOL_SIZE )
+	{
+		sgs_Dealloc( F );
+		return;
+	}
+	
 	F->next = S->sf_pool;
 	S->sf_pool = F;
+	S->sf_pool_size++;
 }
 
 static void copy_append_frame( SGS_CTX, sgs_StackFrame* sf )
@@ -413,6 +423,8 @@ sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 	sgs_Context* NC = sgs__alloc_ctx( C );
 	memcpy( NC, C, sizeof(*NC) );
 	NC->refcount = 0;
+	NC->hook_fn = NULL; /* not shareable */
+	NC->hook_ctx = NULL; /* not shareable */
 	NC->parent = NULL; /* not shareable */
 	NC->_T = NULL; /* not shareable */
 	NC->_E = NULL; /* not shareable */
@@ -505,7 +517,7 @@ sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 	S->statecount++;
 	
 	if( C->hook_fn )
-		C->hook_fn( C->hook_ctx, C, copystate ? SGS_HOOK_CFORK : SGS_HOOK_CREAT );
+		C->hook_fn( C->hook_ctx, NC, copystate ? SGS_HOOK_CFORK : SGS_HOOK_CREAT );
 	
 	return NC;
 }
