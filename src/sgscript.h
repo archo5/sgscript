@@ -317,6 +317,8 @@ SGS_APIFUNC SGSBOOL sgs_PauseState( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc );
 SGS_APIFUNC SGSBOOL sgs_ResumeStateExp( SGS_CTX, int args, int expect );
 #define sgs_ResumeState( C ) sgs_ResumeStateExp( C, 0, 0 )
+SGS_APIFUNC SGSBOOL sgs_CreateSubthread( sgs_Context* T, SGS_CTX,
+	sgs_Variable* out, sgs_Variable func, int gotthis, sgs_StkIdx size );
 SGS_APIFUNC int sgs_ProcessSubthreads( SGS_CTX, sgs_Real dt );
 
 

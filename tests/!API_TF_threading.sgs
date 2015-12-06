@@ -82,12 +82,25 @@ process_threads( 1 ); // total waiting time [real = 2.5, thread = 2]
 testEqual( testval0, 6, "waiting thread - continued, final segment executed" );
 
 	section( "multi-threading" );
+ERRORS = "";
 global testval1 = 1, testval2 = 1;
 thread_create(function(){ yield(); global testval1 = 2; });
 thread_create(function(){ yield(); global testval2 = 2; });
 process_threads();
 testEqual( testval1, 2, "MT - thread 1 was continued" );
 testEqual( testval2, 2, "MT - thread 2 was continued" );
+
+thread_create(function()
+{
+	global testval1 = 3;
+	thread_create(function()
+	{
+		global testval2 = 3;
+	});
+});
+testEqual( testval1, 3, "MT - thread 1 was started" );
+testEqual( testval2, 3, "MT - thread 2 was started" );
+testEqual( ERRORS, "", "MT - no errors" );
 
 	section( "thread syntax" );
 ERRORS = "";

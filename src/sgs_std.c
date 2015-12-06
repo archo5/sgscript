@@ -2709,14 +2709,15 @@ static void sgs__check_threadtbl( SGS_CTX )
 	C->_T = thrtbl.data.O;
 }
 
-SGSBOOL sgs_CreateSubthread( SGS_CTX, sgs_Variable* out, sgs_Variable func, int gotthis, sgs_StkIdx size )
+SGSBOOL sgs_CreateSubthread( sgs_Context* T, SGS_CTX,
+	sgs_Variable* out, sgs_Variable func, int gotthis, sgs_StkIdx size )
 {
 	sgs_Real waittime = 0;
 	sgs_StkIdx i;
 	sgs_Context* co_ctx;
 	
 	/* call the function */
-	co_ctx = sgsCTX_ForkState( C, 0 );
+	co_ctx = sgsCTX_ForkState( T, 0 );
 	if( gotthis )
 	{
 		sgs_PushVariable( co_ctx, sgs_StackItem( C, -size - 1 ) );
@@ -2725,10 +2726,10 @@ SGSBOOL sgs_CreateSubthread( SGS_CTX, sgs_Variable* out, sgs_Variable func, int 
 	{
 		sgs_PushVariable( co_ctx, sgs_StackItem( C, i - size ) );
 	}
-	if( sgs_FCall( co_ctx, sgs_StackItem( C, 0 ), size, 1, gotthis ) == SGS_FALSE )
+	if( sgs_FCall( co_ctx, func, size, 1, gotthis ) == SGS_FALSE )
 	{
 		sgsCTX_FreeState( co_ctx );
-		return 0;
+		return SGS_FALSE;
 	}
 	
 	waittime = sgs_GetReal( co_ctx, -1 );
@@ -2739,15 +2740,21 @@ SGSBOOL sgs_CreateSubthread( SGS_CTX, sgs_Variable* out, sgs_Variable func, int 
 	if( co_ctx->state & SGS_STATE_PAUSED )
 	{
 		sgs_Variable varT, varSubT;
-		sgs__check_threadtbl( C );
+		sgs__check_threadtbl( T );
 		varT.type = SGS_VT_OBJECT;
-		varT.data.O = C->_T;
+		varT.data.O = T->_T;
 		varSubT.type = SGS_VT_THREAD;
 		varSubT.data.T = co_ctx;
 		sgs_SetIndex( C, varT, varSubT, sgs_MakeReal( waittime ), SGS_FALSE );
-		co_ctx->parent = C;
+		co_ctx->parent = T;
 	}
-	return sgs_PushThreadPtr( C, co_ctx );
+	if( out )
+	{
+		sgs_InitThreadPtr( out, co_ctx );
+		return SGS_TRUE;
+	}
+	else
+		return sgs_PushThreadPtr( C, co_ctx );
 }
 
 static int sgsstd_thread_create( SGS_CTX )
@@ -2756,7 +2763,7 @@ static int sgsstd_thread_create( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?p" ) )
 		return 0;
 	
-	if( sgs_CreateSubthread( sgs_TopmostContext( C ), NULL,
+	if( sgs_CreateSubthread( sgs_TopmostContext( C ), C, NULL,
 		sgs_StackItem( C, 0 ), 1, sgs_StackSize( C ) - 2 ) == SGS_FALSE )
 	{
 		return sgs_Msg( C, SGS_WARNING, "failed to create a thread - could not call function" );
@@ -2770,7 +2777,7 @@ static int sgsstd_subthread_create( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?p" ) )
 		return 0;
 	
-	if( sgs_CreateSubthread( C, NULL, sgs_StackItem( C, 0 ), 1, sgs_StackSize( C ) - 2 ) == SGS_FALSE )
+	if( sgs_CreateSubthread( C, C, NULL, sgs_StackItem( C, 0 ), 1, sgs_StackSize( C ) - 2 ) == SGS_FALSE )
 	{
 		return sgs_Msg( C, SGS_WARNING, "failed to create a thread - could not call function" );
 	}
