@@ -5,7 +5,7 @@
 #define SGS_CPPBC_WITH_STD_STRING
 #define SGS_CPPBC_WITH_STD_VECTOR
 
-#include "cppbc/sgs_cppbc.h"
+#include "sgs_cppbc.h"
 
 struct Vec3
 {

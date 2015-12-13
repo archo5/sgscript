@@ -140,7 +140,7 @@ tools: xgmath json pproc sockets meta build_test build_apitest vm c
 build_cppbctest: $(OUTDIR)/sgscppbctest$(BINEXT)
 cppbctest: build_cppbctest
 	$(OUTDIR)/sgscppbctest
-$(OUTDIR)/sgscppbctest$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/cppbc/sgs_cppbc.h $(OUTFILE)
+$(OUTDIR)/sgscppbctest$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/sgs_cppbc.h $(OUTFILE)
 	$(CXX) -o $@ $< $(word 2,$^) $(EXEFLAGS) -I. -std=c++03 -Wno-shadow
 	$(call SGS_INSTALL_TOOL,$@)
 .PHONY: cppbctest11
@@ -148,11 +148,11 @@ $(OUTDIR)/sgscppbctest$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgs
 build_cppbctest11: $(OUTDIR)/sgscppbctest11$(BINEXT)
 cppbctest11: build_cppbctest11
 	$(OUTDIR)/sgscppbctest11
-$(OUTDIR)/sgscppbctest11$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/cppbc/sgs_cppbc.h $(OUTFILE)
+$(OUTDIR)/sgscppbctest11$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/sgs_cppbc.h $(OUTFILE)
 	$(CXX) -o $@ $< $(word 2,$^) $(EXEFLAGS) -I. -std=c++11 -Wno-shadow
 	$(call SGS_INSTALL_TOOL,$@)
 obj/cppbc_test.cpp: ext/sgscppbctest.h $(OUTDIR)/sgsvm$(BINEXT)
-	$(OUTDIR)/sgsvm -p ext/cppbc/cppbc.sgs $< -o $@
+	$(OUTDIR)/sgsvm -p ext/cppbc.sgs $< -o $@
 ## - multithreaded testing
 .PHONY: mttest
 .PHONY: build_mttest
