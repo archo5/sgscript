@@ -48,6 +48,7 @@
 #else
 #define RXLOGINFO( x )
 #endif
+#define RX_LOGLIM( str, strend, off ) (int)((strend)-(str)<(off)?(strend)-(str):(off)), str
 
 
 static int rx_isalpha( RX_Char c )
@@ -122,7 +123,8 @@ static int regex_match_once( match_ctx* ctx )
 	int i;
 	regex_item* item = ctx->item;
 	const RX_Char* str = item->matchend;
-	RXLOGINFO( printf( "type %d char %d action at %p (%.5s)\n", item->type, (int) item->a, str, str ) );
+	RXLOGINFO( printf( "type %d char %d('%c') action at %p (%.*s)\n",
+		item->type, (int) item->a, item->a, str, RX_LOGLIM(str,ctx->stringend,5) ) );
 	switch( item->type )
 	{
 	case RIT_MATCH:
@@ -196,7 +198,7 @@ static int regex_match_once( match_ctx* ctx )
 			{
 				cc.string = ctx->string;
 				cc.stringend = ctx->stringend;
-				cc.item = item->pos;
+				cc.item = item->pos ? item->pos : item->ch;
 				cc.R = ctx->R;
 			}
 			if( regex_test( str, &cc ) )
@@ -204,7 +206,7 @@ static int regex_match_once( match_ctx* ctx )
 				regex_item* p = item->ch;
 				while( p->next )
 					p = p->next;
-				item->pos = p;
+				item->pos = NULL;
 				item->matchend = p->matchend;
 				return 1;
 			}
@@ -216,6 +218,7 @@ static int regex_match_once( match_ctx* ctx )
 
 static int regex_match_many( match_ctx* ctx )
 {
+	/* returns whether matched */
 	regex_item* item = ctx->item;
 	item->matchend = item->matchbeg;
 	if( item->type == RIT_EITHER )
@@ -279,10 +282,18 @@ static void regex_full_reset( regex_item* p )
 	}
 }
 
+static regex_item* regex_lastch( regex_item* item )
+{
+	regex_item* p = item->ch;
+	while( p && p->next )
+		p = p->next;
+	return p;
+}
+
 static int regex_subexp_backtrack( regex_item* item )
 {
 	int chgh = 0;
-	regex_item* p = item->pos;
+	regex_item* p = item->pos ? item->pos : regex_lastch( item );
 	
 	while( p )
 	{
@@ -328,14 +339,10 @@ static int regex_test( const RX_Char* str, match_ctx* ctx )
 			cc.item = p;
 			cc.R = ctx->R;
 		}
-		RXLOGINFO( printf( "match_many: item %p type %d at position %p (%.5s)\n", (void*) p, p->type, p->matchbeg, p->matchbeg ) );
+		RXLOGINFO( printf( "match_many: item %p type %d at position %p (%.*s)\n",
+			(void*) p, p->type, p->matchbeg, RX_LOGLIM(p->matchbeg,ctx->stringend,5) ) );
 		res = regex_match_many( &cc );
-		if( res < 0 )
-		{
-			RXLOGINFO( printf( "test of subexp %p FAILED\n", (void*) ctx->item ) );
-			return -1;
-		}
-		else if( res > 0 )
+		if( res )
 		{
 			p = p->next;
 			if( !p )
@@ -690,7 +697,70 @@ static int regex_real_compile( srx_Context* R, int* cel, const RX_Char** pstr, c
 					item->a = (RX_Char) dig;
 					break;
 				}
-				/* TODO: character classes */
+				else if( *s == 'd' || *s == 'D' )
+				{
+					_RX_ALLOC_NODE( RIT_RANGE );
+					item->range = RX_ALLOC_N( RX_Char, 2 );
+					item->count = 1;
+					item->range[0] = '0';
+					item->range[1] = '9';
+					if( *s == 'D' )
+						item->flags |= RIF_INVERT;
+					s++;
+					break;
+				}
+				else if( *s == 'h' || *s == 'H' )
+				{
+					_RX_ALLOC_NODE( RIT_RANGE );
+					item->range = RX_ALLOC_N( RX_Char, 2 * 2 );
+					item->count = 2;
+					item->range[0] = item->range[1] = '\t';
+					item->range[2] = item->range[3] = ' ';
+					if( *s == 'H' )
+						item->flags |= RIF_INVERT;
+					s++;
+					break;
+				}
+				else if( *s == 'v' || *s == 'V' )
+				{
+					_RX_ALLOC_NODE( RIT_RANGE );
+					item->range = RX_ALLOC_N( RX_Char, 2 );
+					item->count = 1;
+					item->range[0] = 0x0A;
+					item->range[1] = 0x0D;
+					if( *s == 'V' )
+						item->flags |= RIF_INVERT;
+					s++;
+					break;
+				}
+				else if( *s == 's' || *s == 'S' )
+				{
+					_RX_ALLOC_NODE( RIT_RANGE );
+					item->range = RX_ALLOC_N( RX_Char, 2 * 2 );
+					item->count = 2;
+					item->range[0] = 0x09;
+					item->range[1] = 0x0D;
+					item->range[2] = item->range[3] = ' ';
+					if( *s == 'S' )
+						item->flags |= RIF_INVERT;
+					s++;
+					break;
+				}
+				else if( *s == 'w' || *s == 'W' )
+				{
+					_RX_ALLOC_NODE( RIT_RANGE );
+					item->range = RX_ALLOC_N( RX_Char, 2 * 4 );
+					item->count = 4;
+					item->range[0] = 'a'; item->range[1] = 'z';
+					item->range[2] = 'A'; item->range[3] = 'Z';
+					item->range[4] = '0'; item->range[5] = '9';
+					item->range[6] = item->range[7] = '_';
+					if( *s == 'W' )
+						item->flags |= RIF_INVERT;
+					s++;
+					break;
+				}
+				/* TODO: more character classes */
 			}
 			else
 				_RXE( RXEPART );
@@ -752,7 +822,7 @@ srx_Context* srx_CreateExt( const RX_Char* str, size_t strsize, const RX_Char* m
 			case 'i': flags |= RCF_CASELESS; break;
 			case 's': flags |= RCF_DOTALL; break;
 			default:
-				err = ( RXEINMOD & 0xf ) | ( ( mods - modbegin ) << 4 );
+				err = ( RXEINMOD & 0xf ) | ( (int)( mods - modbegin ) << 4 );
 				goto fail;
 			}
 			mods++;
@@ -822,8 +892,8 @@ static void regex_dump_item( regex_item* item, int lev )
 {
 	const char* types[] =
 	{
-		"-", "MATCH", "RANGE", "SPCBEG", "SPCEND", "BKREF", "-", "-", "-", "-",
-		"-", "EITHER", "SUBEXP", "-"
+		"-", "MATCH (1)", "RANGE (2)", "SPCBEG (3)", "SPCEND (4)", "BKREF (5)", "-", "-", "-", "-",
+		"-", "EITHER (11)", "SUBEXP (12)", "-"
 	};
 	
 	int l = lev;

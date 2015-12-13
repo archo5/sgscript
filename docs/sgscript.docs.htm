@@ -440,11 +440,16 @@ Special keywords and hardcoded constants:
 <tr><th>name</th><th>type</th><th>usage</th></tr>
 <tr><td>this</td><td>special identifier, read-only</td><td>method context retrieval</td></tr>
 <tr><td>_G</td><td>special identifier, read/write</td><td>global environment access</td></tr>
+<tr><td>_R</td><td>special identifier, read-only</td><td>global registry access</td></tr>
 <tr><td>null</td><td>constant</td><td>constant</td></tr>
 <tr><td>true</td><td>constant</td><td>constant</td></tr>
 <tr><td>false</td><td>constant</td><td>constant</td></tr>
 <tr><td>var</td><td>restricted keyword</td><td>variable declaration</td></tr>
 <tr><td>global</td><td>restricted keyword</td><td>variable declaration</td></tr>
+<tr><td>thread</td><td>restricted keyword</td><td>thread control</td></tr>
+<tr><td>subthread</td><td>restricted keyword</td><td>thread control</td></tr>
+<tr><td>sync</td><td>restricted keyword</td><td>thread control</td></tr>
+<tr><td>race</td><td>restricted keyword</td><td>thread control</td></tr>
 <tr><td>function</td><td>restricted keyword</td><td>function definition</td></tr>
 <tr><td>use</td><td>restricted keyword</td><td>function definition</td></tr>
 <tr><td>if</td><td>restricted keyword</td><td>&quot;if&quot; statement</td></tr>
@@ -456,6 +461,9 @@ Special keywords and hardcoded constants:
 <tr><td>break</td><td>restricted keyword</td><td>&quot;break&quot; statement</td></tr>
 <tr><td>continue</td><td>restricted keyword</td><td>&quot;continue&quot; statement</td></tr>
 <tr><td>return</td><td>restricted keyword</td><td>&quot;return&quot; statement</td></tr>
+<tr><td>print</td><td>function command</td><td>&quot;print&quot; function</td></tr>
+<tr><td>yield</td><td>function command</td><td>&quot;yield&quot; function</td></tr>
+<tr><td>include</td><td>function command</td><td>&quot;include&quot; function</td></tr>
 </table>
 </p></div>
 <div class='item'><a name='Expressions'></a><hr><h2>Expressions</h2><p>
@@ -523,6 +531,8 @@ There are 5 types of action for expressions in SGScript: arithmetic, bitwise, lo
 <tr><td>function definition</td><td><code> function A.. </code></td><td>special</td><td>maybe</td><td>0</td></tr>
 <tr><td>inline if</td><td><code>  if(A,B,C)   </code></td><td>special</td><td>no</td><td>3(2)</td></tr>
 <tr><td>subexpression</td><td><code> ( A[, ..] )  </code></td><td>special</td><td>maybe</td><td>any</td></tr>
+<tr><td>thread-call</td><td><code> thread f()   </code></td><td>special</td><td>maybe</td><td>&lt;=256</td></tr>
+<tr><td>subthread-call</td><td><code> subthread f()</code></td><td>special</td><td>maybe</td><td>&lt;=256</td></tr>
 </table>
 </p><p>
 Some notes on the special cases:
@@ -536,7 +546,8 @@ Some notes on the special cases:
 </li><li>[subexpression] subexpressions can set data if they are set up like this: &lt;subexpression&gt; = &lt;function-call&gt; - this is the way to read more than one return value from a function
 </li><li>[error suppression] the <code>@</code> operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn&#39;t an error
 </li><li>[function] the full function definition expression syntax: <code>function &lt;name&gt; ( &lt;args&gt; ) [ use ( &lt;use-list&gt; ) ]</code>, followed by either <code>{ ... }</code> or <code>= ... ;</code>. &lt;name&gt;, &lt;args&gt; and the &#39;use&#39; block are all optional.
-</li><li>[multi-set] operator returns <code>A</code>, that is, the object itself</li></ul><h5>compatible function call / inheritance call / global method call (<code> O!A ([B,..]) </code>)</h5><p>
+</li><li>[multi-set] operator returns <code>A</code>, that is, the object itself
+</li><li>[thread] <code>thread</code>/<code>subthread</code> commands support all kinds of calls (<code>f()</code>, <code>o.f()</code>, <code>o!f()</code>)</li></ul><h5>compatible function call / inheritance call / global method call (<code> O!A ([B,..]) </code>)</h5><p>
 CFC is created to encourage users to reduce memory usage without sacrificing clarity of code. It is a short-hand, optimized version of the .call method / sys_call function for callables.
 </p><p>
 Properties:
@@ -933,8 +944,9 @@ Closure stack in the C API is technically very similar to main stack, with one i
 <div class='item'><a name='Context-management'></a><hr><h2>Context management</h2><ul><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngine</a> - create scripting engine context
 </li><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngineExt</a> - create scripting engine context and pass a custom memory function
 </li><li><a href="#sgs-DestroyEngine-function">sgs_DestroyEngine</a> - validate memory statistics and destroy engine context
+</li><li><a href="#sgs-RootContext-function">sgs_RootContext</a> - find the root context
 </li><li><a href="#sgs-ForkState-function">sgs_ForkState</a> - create a duplicate of the execution state
-</li><li><a href="#sgs-FreeState-function">sgs_FreeState</a> - release an execution state
+</li><li><a href="#sgs-ReleaseState-function">sgs_ReleaseState</a> - release an execution state
 </li><li><a href="#sgs-PauseState-function">sgs_PauseState</a> - suspends the execution state
 </li><li><a href="#sgs-ResumeState-functions">sgs_ResumeStateRet</a> - resumes the execution state, retrieves number of return values
 </li><li><a href="#sgs-ResumeState-functions">sgs_ResumeStateExp</a> - resumes the execution state, returns the specified number of return values
@@ -1303,7 +1315,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-FinalizeStringAlloc-P-functions">sgs_FinalizeStringAlloc(P) [functions]</a>
 </li><li><a href="#sgs-FindType-function">sgs_FindType [function]</a>
 </li><li><a href="#sgs-ForkState-function">sgs_ForkState [function]</a>
-</li><li><a href="#sgs-FreeState-function">sgs_FreeState [function]</a>
 </li><li><a href="#sgs-FuncName-function">sgs_FuncName [function]</a>
 </li><li><a href="#sgs-GCExecute-function">sgs_GCExecute [function]</a>
 </li><li><a href="#sgs-GCMark-Array-function">sgs_GCMark(Array) [function]</a>
@@ -1390,8 +1401,10 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-RegisterType-function">sgs_RegisterType [function]</a>
 </li><li><a href="#sgs-Registry-function">sgs_Registry [function]</a>
 </li><li><a href="#sgs-Release-Array-function">sgs_Release(Array) [function]</a>
+</li><li><a href="#sgs-ReleaseState-function">sgs_ReleaseState [function]</a>
 </li><li><a href="#sgs-ResumeState-function-alias">sgs_ResumeState [function alias]</a>
 </li><li><a href="#sgs-ResumeState-functions">sgs_ResumeState*** [functions]</a>
+</li><li><a href="#sgs-RootContext-function">sgs_RootContext [function]</a>
 </li><li><a href="#sgs-Serialize-function">sgs_Serialize [function]</a>
 </li><li><a href="#sgs-SerializeObject-function">sgs_SerializeObject [function]</a>
 </li><li><a href="#sgs-SerializeV-1-2-functions">sgs_SerializeV(1|2) [functions]</a>
@@ -1437,8 +1450,11 @@ Closure stack in the C API is technically very similar to main stack, with one i
 <div class='item'><a name='sgs-CreateEngine-function-alias'></a><hr><h2>sgs_CreateEngine [function alias]</h2><h3>sgs_Context* sgs_CreateEngine()</h3><h4>Returns a new scripting engine context.</h4><ul><li>Alias to <code>sgs_CreateEngineExt( sgs_DefaultMemFunc, NULL )</code>.</li></ul></div>
 <div class='item'><a name='sgs-CreateEngineExt-function'></a><hr><h2>sgs_CreateEngineExt [function]</h2><h3>sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )</h3><h4>Returns a new scripting engine context, attached to the specified allocator.</h4></div>
 <div class='item'><a name='sgs-DestroyEngine-function'></a><hr><h2>sgs_DestroyEngine [function]</h2><h3>sgs_DestroyEngine( sgs_Context* C )</h3><h4>Destroys the passed context and frees all memory associated to it.</h4><ul><li>All execution state, object and any other engine-allocated pointers will be invalid after this call.</li></ul></div>
+<div class='item'><a name='sgs-RootContext-function'></a><hr><h2>sgs_RootContext [function]</h2><h3>sgs_RootContext( sgsContext* C )</h3><h4>Returns the root context of the engine.</h4><ul><li>Root context is the context that was returned from <a href="#sgs-CreateEngineExt-function">sgs_CreateEngine</a> / <a href="#sgs-CreateEngineExt-function">sgs_CreateEngineExt</a>.
+<ul><li>Root context is useful because it can only be destroyed last, so it&#39;s persistent.
+</li></ul><li>If C = NULL, function returns NULL.</li></ul></div>
 <div class='item'><a name='sgs-ForkState-function'></a><hr><h2>sgs_ForkState [function]</h2><h3>sgs_Context* sgs_ForkState( sgs_Context* C, int copystate )</h3><h4>Creates a copy of the execution state.</h4><ul><li>If <code>copystate</code> is nonzero, all stacks (variable, closure, call) are copied as well, creating an exact duplicate.</li></ul></div>
-<div class='item'><a name='sgs-FreeState-function'></a><hr><h2>sgs_FreeState [function]</h2><h3>sgs_FreeState( sgs_Context* C )</h3><h4>Destroys the execution state, possibly destroying the VM.</h4><ul><li>If the freed state is the last one that exists, function behaves exactly as <a href="#sgs-DestroyEngine-function">sgs_DestroyEngine</a>.</li></ul></div>
+<div class='item'><a name='sgs-ReleaseState-function'></a><hr><h2>sgs_ReleaseState [function]</h2><h3>sgs_ReleaseState( sgs_Context* C )</h3><h4>Releases the execution state, possibly destroying the VM.</h4><ul><li>If the freed state is the last one that exists, function behaves exactly as <a href="#sgs-DestroyEngine-function">sgs_DestroyEngine</a>.</li></ul></div>
 <div class='item'><a name='sgs-PauseState-function'></a><hr><h2>sgs_PauseState [function]</h2><h3>SGSBOOL sgs_PauseState( sgs_Context* C )</h3><h4>Suspends the execution state, prompting the VM to return control to caller.</h4><ul><li>A state cannot be suspended if call stack contains C functions or unusual constructs (at the moment some object interface calls may not work either).
 </li><li>This function can be used in a C function that was called from a SGS function.</li></ul></div>
 <div class='item'><a name='sgs-ResumeState-functions'></a><hr><h2>sgs_ResumeState*** [functions]</h2><h3>SGSBOOL sgs_ResumeStateRet( sgs_Context* C, int args, int* outrvc )</h3><h4>Resumes the execution state, passing arguments and retrieving the number of returned values.</h4><h3>SGSBOOL sgs_ResumeStateExp( sgs_Context* C, int args, int expect )</h3><h4>Resumes the execution state, passing arguments and retrieving the specified number of returned values.</h4><ul><li>Returns true if state was suspended and thus subsequently resumed.
@@ -1584,10 +1600,12 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><code>s</code> -- check for <code>string</code> (returns char*)
 </li><li><code>m</code> -- check for <code>string</code> (returns char* string and sgs_SizeVal size)
 </li><li><code>p</code> -- check for <code>func/cfunc/object with CALL</code> (callables) (returns SGSBOOL = 1)
+</li><li><code>y</code> -- check for <code>thread</code> (returns sgs_Context*)
 </li><li><code>a</code> -- check for <code>array</code> (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 </li><li><code>t</code> -- check for <code>dict</code> (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 </li><li><code>h</code> -- check for <code>map</code> (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
-</li><li><code>o</code> -- check for <code>object</code> (requires void** interface, returns &lt;type&gt;* data - the data pointer)
+</li><li><code>o</code> -- check for specific <code>object</code> (requires sgs_ObjInterface* interface, returns &lt;type&gt;* data - the data pointer)
+</li><li><code>*</code> -- check for any <code>object</code> (returns sgs_ObjInterface* interface)
 </li><li><code>&amp;</code> -- check for <code>pointer</code> (returns void* data - the pointer)
 </li><li><code>v</code> -- check for any (non-null if strict, returns sgs_Variable data)
 </li><li><code>x</code> -- call a custom checking function (requires sgs_ArgCheckFunc, everything else depends on function)</li></ul></div>
@@ -1738,7 +1756,7 @@ After a successful call, all arguments will be popped off the stack and the expe
 <div class='item'><a name='sgs-IsArray-function'></a><hr><h2>sgs_IsArray [function]</h2><h3>SGSBOOL sgs_IsArray( sgs_Variable var )</h3><h4>Return if variable is of <code>array</code> type.</h4></div>
 <div class='item'><a name='sgs-IsDict-function'></a><hr><h2>sgs_IsDict [function]</h2><h3>SGSBOOL sgs_IsDict( sgs_Variable var )</h3><h4>Return if variable is of <code>dict</code> type.</h4></div>
 <div class='item'><a name='sgs-IsMap-function'></a><hr><h2>sgs_IsMap [function]</h2><h3>SGSBOOL sgs_IsMap( sgs_Variable var )</h3><h4>Return if variable is of <code>map</code> type.</h4></div>
-<div class='item'><a name='sgs-ArraySize-functions'></a><hr><h2>sgs_ArraySize [functions]</h2><h3>sgs_SizeVal sgs_ArraySize( sgs_Context* C, sgs_Variable var )</h3><h4>Check if the specified stack item or variable is an array and return its size or -1 if variable is not an array.</h4></div>
+<div class='item'><a name='sgs-ArraySize-functions'></a><hr><h2>sgs_ArraySize [functions]</h2><h3>sgs_SizeVal sgs_ArraySize( sgs_Variable var )</h3><h4>Check if the specified stack item or variable is an array and return its size or -1 if variable is not an array.</h4></div>
 <div class='item'><a name='sgs-ArrayPush-function'></a><hr><h2>sgs_ArrayPush [function]</h2><h3>void sgs_ArrayPush( sgs_Context* C, sgs_Variable var, sgs_StkIdx count )</h3><h4>Push the last <code>count</code> variables on stack to the end of the array <code>var</code>, then pop them from the stack.</h4></div>
 <div class='item'><a name='sgs-ArrayPop-function'></a><hr><h2>sgs_ArrayPop [function]</h2><h3>void sgs_ArrayPop( sgs_Context* C, sgs_Variable var, sgs_StkIdx count, SGSBOOL ret )</h3><h4>Pop the last <code>count</code> variables off the end of the array <code>var</code>, optionally return them.</h4><ul><li>If <code>ret</code> != 0, variables are pushed on the stack before removal.</li></ul></div>
 <div class='item'><a name='sgs-ArrayErase-function'></a><hr><h2>sgs_ArrayErase [function]</h2><h3>void sgs_ArrayErase( sgs_Context* C, sgs_Variable var, sgs_StkIdx at, sgs_StkIdx count )</h3><h4>Remove the specified variable range [`at`,`at`+`count`) from array <code>var</code>.</h4></div>
@@ -1797,9 +1815,9 @@ After a successful call, all arguments will be popped off the stack and the expe
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action.</li></ul></li></ul></div>
 <div class='item'><a name='sgs-GetObjectIface-P-functions'></a><hr><h2>sgs_GetObjectIface(P) [functions]</h2><h3>sgs_ObjInterface* sgs_GetObjectIface( sgs_Context* C, sgs_StkIdx item )</h3><h4>Return the object interface pointer of the specified stack item.</h4><h3>sgs_ObjInterface* sgs_GetObjectIfaceP( sgs_Context* C, sgs_Variable* var )</h3><h4>Return the object interface pointer of the specified variable.</h4><ul><li>If item is out of bounds or not an object, NULL will be returned and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action.</li></ul></li></ul></div>
-<div class='item'><a name='sgs-SetObjectData-P-functions'></a><hr><h2>sgs_SetObjectData(P) [functions]</h2><h3>int sgs_SetObjectData( sgs_Context* C, sgs_StkIdx item, void* data )</h3><h4>Set the object data pointer of the specified stack item.</h4><h3>int sgs_SetObjectDataP( sgs_Context* C, sgs_Variable* var, void* data )</h3><h4>Set the object data pointer of the specified variable.</h4><ul><li>If item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
+<div class='item'><a name='sgs-SetObjectData-P-functions'></a><hr><h2>sgs_SetObjectData(P) [functions]</h2><h3>void sgs_SetObjectData( sgs_Context* C, sgs_StkIdx item, void* data )</h3><h4>Set the object data pointer of the specified stack item.</h4><h3>void sgs_SetObjectDataP( sgs_Context* C, sgs_Variable* var, void* data )</h3><h4>Set the object data pointer of the specified variable.</h4><ul><li>If item is out of bounds or not an object, pointer will not be set, and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action.</li></ul></li></ul></div>
-<div class='item'><a name='sgs-SetObjectIface-P-functions'></a><hr><h2>sgs_SetObjectIface(P) [functions]</h2><h3>int sgs_SetObjectIface( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )</h3><h4>Set the object interface pointer of the specified stack item.</h4><h3>int sgs_SetObjectIfaceP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface )</h3><h4>Set the object interface pointer of the specified variable.</h4><ul><li>If item is out of bounds or not an object, pointer will not be set, 0 will be returned and ...
+<div class='item'><a name='sgs-SetObjectIface-P-functions'></a><hr><h2>sgs_SetObjectIface(P) [functions]</h2><h3>void sgs_SetObjectIface( sgs_Context* C, sgs_StkIdx item, sgs_ObjInterface* iface )</h3><h4>Set the object interface pointer of the specified stack item.</h4><h3>void sgs_SetObjectIfaceP( sgs_Context* C, sgs_Variable* var, sgs_ObjInterface* iface )</h3><h4>Set the object interface pointer of the specified variable.</h4><ul><li>If item is out of bounds or not an object, pointer will not be set, and ...
 <ul><li>in a debug build, one of the BreakIf macros will go off and stop the action.</li></ul></li></ul></div>
 <div class='item'><a name='sgs-StdOutputFunc-function'></a><hr><h2>sgs_StdOutputFunc [function]</h2><h3>void sgs_StdOutputFunc( void* userdata, sgs_Context* C, const void* ptr, size_t size )</h3><h4>Standard output function assumes userdata to be FILE* type and writes the passed buffer to it.</h4></div>
 <div class='item'><a name='sgs-Get-Err-OutputFunc-function'></a><hr><h2>sgs_Get(Err)OutputFunc [function]</h2><h3>void sgs_GetOutputFunc( sgs_Context* C, sgs_OutputFunc* outfunc, void** outuserdata )</h3><h3>void sgs_GetErrOutputFunc( sgs_Context* C, sgs_OutputFunc* outfunc, void** outuserdata )</h3><h4>Retrieves the currently set (error) output function.</h4><ul><li>Validity of the returned function pointer is assured as long as engine internals are not touched anywhere.</li></ul></div>
