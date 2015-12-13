@@ -200,9 +200,9 @@ public:
 	}
 	sgsHandle( sgs_Context* c, sgs_StkIdx item ) : object(NULL), C(sgs_RootContext(c))
 	{
-		if( sgs_IsObject( C, item, T::_sgs_interface ) )
+		if( sgs_IsObject( c, item, T::_sgs_interface ) )
 		{
-			object = sgs_GetObjectStruct( C, item );
+			object = sgs_GetObjectStruct( c, item );
 			_acquire();
 		}
 	}
@@ -278,16 +278,16 @@ public:
 	sgsString( sgs_Context* c, sgs_iStr* s ) : str(s), C(sgs_RootContext(c)) { _acquire(); }
 	sgsString( sgs_Context* c, sgs_StkIdx item ) : str(NULL), C(sgs_RootContext(c))
 	{
-		if( sgs_ParseString( C, item, NULL, NULL ) )
+		if( sgs_ParseString( c, item, NULL, NULL ) )
 		{
 			sgs_Variable v;
-			sgs_GetStackItem( C, item, &v );
+			sgs_GetStackItem( c, item, &v );
 			str = v.data.S;
 		}
 	}
 	sgsString( sgs_Context* c, sgs_Variable* var ) : str(NULL), C(sgs_RootContext(c))
 	{
-		if( sgs_ParseStringP( C, var, NULL, NULL ) )
+		if( sgs_ParseStringP( c, var, NULL, NULL ) )
 		{
 			str = var->data.S;
 			_acquire();
@@ -297,13 +297,13 @@ public:
 	{
 		assert( sz <= 0x7fffffff );
 		sgs_Variable v;
-		sgs_InitStringBuf( C, &v, s, (sgs_SizeVal) sz );
+		sgs_InitStringBuf( c, &v, s, (sgs_SizeVal) sz );
 		str = v.data.S;
 	}
 	sgsString( sgs_Context* c, const char* s ) : str(NULL), C(sgs_RootContext(c))
 	{
 		sgs_Variable v;
-		sgs_InitString( C, &v, s );
+		sgs_InitString( c, &v, s );
 		str = v.data.S;
 	}
 	~sgsString(){ _release(); }
@@ -384,15 +384,15 @@ public:
 	sgsVariable( sgs_Context* c, sgs_StkIdx item ) : C(sgs_RootContext(c))
 	{
 		var.type = SGS_VT_NULL;
-		sgs_PeekStackItem( C, item, &var );
+		sgs_PeekStackItem( c, item, &var );
 		_acquire();
 	}
 	sgsVariable( sgs_Context* c, EPickAndPop ) : C(sgs_RootContext(c))
 	{
 		var.type = SGS_VT_NULL;
-		sgs_PeekStackItem( C, -1, &var );
+		sgs_PeekStackItem( c, -1, &var );
 		_acquire();
-		sgs_Pop( C, 1 );
+		sgs_Pop( c, 1 );
 	}
 	sgsVariable( sgs_Context* c, sgs_Variable* v ) : C(sgs_RootContext(c))
 	{
@@ -550,22 +550,22 @@ public:
 	sgsVariable& set( sgs_CFunc v ){ _release(); var = sgs_MakeCFunc( v ); return *this; }
 	template< class T > sgsVariable& set( sgsHandle< T > v ){ _release(); C = v.object->C; sgs_InitObjectPtr( C, &var, v.object ); return *this; }
 	template< class T > sgsVariable& set( T* v ){ _release(); C = v->C; sgs_InitObjectPtr( C, &var, v->m_sgsObject ); return *this; }
-	bool call( int args = 0, int ret = 0 )
+	bool call( sgs_Context* c, int args = 0, int ret = 0 )
 	{
-		return C && sgs_Call( C, var, args, ret );
+		return c && sgs_Call( c, var, args, ret );
 	}
-	bool thiscall( sgsVariable func, int args = 0, int ret = 0 )
+	bool thiscall( sgs_Context* c, sgsVariable func, int args = 0, int ret = 0 )
 	{
-		if( C && func.not_null() )
+		if( c && func.not_null() )
 		{
-			sgs_InsertVariable( C, -args - 1, var );
-			return sgs_ThisCall( C, func.var, args, ret );
+			sgs_InsertVariable( c, -args - 1, var );
+			return sgs_ThisCall( c, func.var, args, ret );
 		}
 		return false;
 	}
-	bool thiscall( const char* key, int args = 0, int ret = 0 )
+	bool thiscall( sgs_Context* c, const char* key, int args = 0, int ret = 0 )
 	{
-		return thiscall( getprop( key ), args, ret );
+		return thiscall( c, getprop( key ), args, ret );
 	}
 	
 	sgs_Variable var;
