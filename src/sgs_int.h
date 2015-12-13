@@ -496,6 +496,7 @@ typedef sgs_Variable* sgs_VarPtr;
 #define SGS_SF_HASTHIS 0x02
 #define SGS_SF_ABORTED 0x04
 #define SGS_SF_REENTER 0x08
+#define SGS_SF_PAUSED  0x10
 
 struct _sgs_StackFrame
 {
@@ -523,6 +524,7 @@ struct _sgs_StackFrame
 struct _sgs_ShCtx
 {
 	uint32_t      version;
+	sgs_Context*  ctx_root;
 	sgs_Context*  state_list;
 	int32_t       statecount;
 	
@@ -566,11 +568,10 @@ struct _sgs_ShCtx
 };
 
 /* Virtual machine state */
-#define SGS_STOP_ON_FIRST_ERROR 0x0001
 #define SGS_HAS_ERRORS          0x00010000
 #define SGS_MUST_STOP          (0x00020000 | SGS_HAS_ERRORS)
+#define SGS_STATE_LASTFUNCPAUSE 0x0002
 #define SGS_SERIALIZE_MODE2     0x0004
-#define SGS_STATE_PAUSED        0x0008
 #define SGS_STATE_DESTROYING    0x0010
 #define SGS_STATE_LASTFUNCABORT 0x0020
 #define SGS_STATE_INSIDE_API    0x0040

@@ -773,6 +773,7 @@ function cppbc_examine_object( code, pos )
 	
 	return {
 		name = classname,
+		is_lite = re_match( blockcode, "#SGS_OBJECT_LITE#" ),
 		items = items,
 		no_export = no_export,
 		no_destruct = no_destruct,
@@ -851,6 +852,11 @@ function cppbc_generate_code( objects, includes )
 		
 		ifuncs = clone( DEFAULT_OBJ_IFUNCS );
 		
+		// context changing
+		dtorchanger = if( obj.is_lite, "", "\n\tstatic_cast<" $ obj.name $ "*>( obj->data )->C = C;" );
+		tmpchanger = if( obj.is_lite, "", "\n\t_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<" $ obj.name $ "*>( obj->data )->C, C );" );
+		mtdchanger = if( obj.is_lite, "", "\n\t_sgsTmpChanger<sgs_Context*> _tmpchg( data->C, C );" );
+		
 		// load the ifuncs
 		foreach( item : obj.items )
 		{
@@ -903,7 +909,8 @@ function cppbc_generate_code( objects, includes )
 "
 static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 {
-	%OBJ%* data; if( !SGS_PARSE_METHOD( C, %OBJ%::_sgs_interface, data, %OBJ%, %NAME% ) ) return 0;
+	%OBJ%* data; if( !SGS_PARSE_METHOD( C, %OBJ%::_sgs_interface, data, %OBJ%, %NAME% ) ) return 0;"
+	$ mtdchanger $ "
 	%LINE%
 }
 "
@@ -915,7 +922,8 @@ static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 		out $= string_translate(
 "
 int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
-{
+{"
+	$ dtorchanger $ "
 	static_cast<%OBJ%*>( obj->data )->~%OBJ%();
 	return SGS_SUCCESS;
 }
@@ -924,6 +932,7 @@ int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
 		
 		// - OP_GCMARK
 		out $= "\nint " $ obj.name $ "::_sgs_gcmark( SGS_CTX, sgs_VarObj* obj )\n{";
+		out $= tmpchanger;
 		foreach( item : obj.items )
 		{
 			if( item.what != "GCREF" )
@@ -937,7 +946,8 @@ int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
 		out $=
 "
 int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
-{
+{"
+	$ tmpchanger $ "
 	SGS_BEGIN_INDEXFUNC";
 		foreach( item : obj.items )
 		{
@@ -982,7 +992,8 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 		out $=
 "
 int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
-{
+{"
+	$ tmpchanger $ "
 	SGS_BEGIN_INDEXFUNC";
 		foreach( item : obj.items )
 		{
@@ -1023,6 +1034,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 		
 		// - OP_DUMP
 		out $= "\nint " $ obj.name $ "::_sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth )\n{";
+		out $= tmpchanger;
 		out $= "\n\tchar bfr[ "$ obj.name.length + 32 $" ];";
 		out $= "\n\tsprintf( bfr, \""$obj.name$" (%p) %s\", obj->data, depth > 0 ? \"\\n{\" : \" ...\" );";
 		out $= "\n\tsgs_PushString( C, bfr );";

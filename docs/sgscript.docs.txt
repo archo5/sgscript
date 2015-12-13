@@ -1210,6 +1210,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_CreateEngine - create scripting engine context
 - @sgs_CreateEngineExt - create scripting engine context and pass a custom memory function
 - @sgs_DestroyEngine - validate memory statistics and destroy engine context
+- @sgs_RootContext - find the root context
 - @sgs_ForkState - create a duplicate of the execution state
 - @sgs_ReleaseState - release an execution state
 - @sgs_PauseState - suspends the execution state
@@ -1638,6 +1639,16 @@ Closure stack in the C API is technically very similar to main stack, with one i
 === Destroys the passed context and frees all memory associated to it.
 
 - All execution state, object and any other engine-allocated pointers will be invalid after this call.
+
+
+# sgs_RootContext [function]
+
+== sgs_RootContext( sgsContext* C )
+=== Returns the root context of the engine.
+
+- Root context is the context that was returned from @sgs_CreateEngine / @sgs_CreateEngineExt.
+-- Root context is useful because it can only be destroyed last, so it's persistent.
+- If C = NULL, function returns NULL.
 
 
 # sgs_ForkState [function]
@@ -2836,7 +2847,7 @@ After a successful call, all arguments will be popped off the stack and the expe
 
 # sgs_ArraySize [functions]
 
-== sgs_SizeVal sgs_ArraySize( sgs_Context* C, sgs_Variable var )
+== sgs_SizeVal sgs_ArraySize( sgs_Variable var )
 === Check if the specified stack item or variable is an array and return its size or -1 if variable is not an array.
 
 

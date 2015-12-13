@@ -2320,6 +2320,7 @@ static void vm_make_closure( SGS_CTX, int args, sgs_Variable* func, int16_t outp
 }
 
 
+#define SGS_EXEC_PAUSED 0x1000
 static int vm_exec( SGS_CTX );
 
 
@@ -2433,11 +2434,9 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 				}
 				
 				rvc = vm_exec( C );
-				if( C->state & SGS_STATE_PAUSED )
+				if( rvc & SGS_EXEC_PAUSED )
 				{
-					if( C->hook_fn )
-						C->hook_fn( C->hook_ctx, C, SGS_HOOK_PAUSE );
-					
+					rvc &= ~SGS_EXEC_PAUSED;
 					if( outrvc )
 						*outrvc = rvc;
 					return 1;
@@ -2712,9 +2711,10 @@ restart_loop:
 				goto restart_loop;
 			}
 			
-			if( C->state & SGS_STATE_PAUSED )
+			if( C->sf_last->flags & SGS_SF_PAUSED )
 			{
-				return rvc;
+				ret = rvc;
+				goto paused;
 			}
 			
 			stk_resize_expected( C, expect, rvc );
@@ -2837,8 +2837,8 @@ restart_loop:
 		case SGS_SI_YLDJMP:
 			if( var_getbool( C, RESVAR( argC ) ) == SGS_FALSE )
 			{
-				C->state |= SGS_STATE_PAUSED;
-				return 0;
+				ret = 0;
+				goto paused;
 			}
 			break;
 #undef VCOMPARE
@@ -2875,7 +2875,15 @@ restart_loop:
 		goto restart_loop;
 	}
 	
+	C->state &= ~(uint32_t)SGS_STATE_LASTFUNCPAUSE;
 	return ret;
+	
+paused:
+	C->sf_last->flags |= SGS_SF_PAUSED;
+	C->state |= SGS_STATE_LASTFUNCPAUSE;
+	if( C->hook_fn )
+		C->hook_fn( C->hook_ctx, C, SGS_HOOK_PAUSE );
+	return ret | SGS_EXEC_PAUSED;
 }
 
 
@@ -2884,9 +2892,8 @@ restart_loop:
 SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 {
 	int op, rvc = 0;
-	if( !( C->state & SGS_STATE_PAUSED ) )
+	if( C->sf_last == NULL || ( C->sf_last->flags & SGS_SF_PAUSED ) == 0 )
 		return SGS_FALSE; /* already running, may not return the expected data */
-	sgs_BreakIf( C->sf_last == NULL );
 	if( C->sf_first->flags & SGS_SF_ABORTED )
 	{
 		while( C->sf_last )
@@ -2922,21 +2929,16 @@ SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 	}
 	
 	C->sf_last->lptr = ++C->sf_last->iptr;
-	C->state &= ~(uint32_t)SGS_STATE_PAUSED;
+	C->sf_last->flags &= (uint8_t)~SGS_SF_PAUSED;
 	
 	if( C->hook_fn )
 		C->hook_fn( C->hook_ctx, C, SGS_HOOK_CONT );
 	
 	rvc = vm_exec( C );
-	if( ( C->state & SGS_STATE_PAUSED ) == 0 )
+	if( ( rvc & SGS_EXEC_PAUSED ) == 0 )
 		vm_postcall( C, rvc );
-	else
-	{
-		if( C->hook_fn )
-			C->hook_fn( C->hook_ctx, C, SGS_HOOK_PAUSE );
-	}
 	if( outrvc )
-		*outrvc = rvc;
+		*outrvc = rvc & ~SGS_EXEC_PAUSED;
 	
 	return SGS_TRUE;
 }

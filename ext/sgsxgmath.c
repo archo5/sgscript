@@ -3680,7 +3680,7 @@ static int xgm_floatarray( SGS_CTX )
 	
 	SGSFN( "floatarray" );
 	/* create floatarray from array */
-	if( ( asize = sgs_ArraySize( C, sgs_StackItem( C, 0 ) ) ) >= 0 )
+	if( ( asize = sgs_ArraySize( sgs_StackItem( C, 0 ) ) ) >= 0 )
 	{
 		XGM_VT* fdata = _xgm_pushvxa( C, asize, 1 );
 		sgs_PushIterator( C, sgs_StackItem( C, 0 ) );
@@ -3717,7 +3717,7 @@ static int xgm_vec2array( SGS_CTX )
 	
 	SGSFN( "vec2array" );
 	/* create vec2array from array */
-	if( ( asize = sgs_ArraySize( C, sgs_StackItem( C, 0 ) ) ) >= 0 )
+	if( ( asize = sgs_ArraySize( sgs_StackItem( C, 0 ) ) ) >= 0 )
 	{
 		XGM_VT* fdata = _xgm_pushvxa( C, asize, 2 );
 		sgs_PushIterator( C, sgs_StackItem( C, 0 ) );
@@ -3772,7 +3772,7 @@ static int xgm_vec3array( SGS_CTX )
 	
 	SGSFN( "vec3array" );
 	/* create vec3array from array */
-	if( ( asize = sgs_ArraySize( C, sgs_StackItem( C, 0 ) ) ) >= 0 )
+	if( ( asize = sgs_ArraySize( sgs_StackItem( C, 0 ) ) ) >= 0 )
 	{
 		XGM_VT* fdata = _xgm_pushvxa( C, asize, 3 );
 		sgs_PushIterator( C, sgs_StackItem( C, 0 ) );
@@ -3828,7 +3828,7 @@ static int xgm_vec4array( SGS_CTX )
 	
 	SGSFN( "vec4array" );
 	/* create vec4array from array */
-	if( ( asize = sgs_ArraySize( C, sgs_StackItem( C, 0 ) ) ) >= 0 )
+	if( ( asize = sgs_ArraySize( sgs_StackItem( C, 0 ) ) ) >= 0 )
 	{
 		XGM_VT* fdata = _xgm_pushvxa( C, asize, 4 );
 		sgs_PushIterator( C, sgs_StackItem( C, 0 ) );

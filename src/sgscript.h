@@ -310,7 +310,7 @@ static SGS_INLINE sgs_Context* sgs_CreateEngine()
 	{ return sgs_CreateEngineExt( sgs_DefaultMemFunc, NULL ); }
 
 SGS_APIFUNC void sgs_DestroyEngine( SGS_CTX );
-
+SGS_APIFUNC sgs_Context* sgs_RootContext( SGS_CTX );
 SGS_APIFUNC sgs_Context* sgs_ForkState( SGS_CTX, int copystate );
 SGS_APIFUNC void sgs_ReleaseState( SGS_CTX );
 SGS_APIFUNC SGSBOOL sgs_PauseState( SGS_CTX );
@@ -643,7 +643,7 @@ SGS_APIFUNC void sgs_StringConcat( SGS_CTX, sgs_StkIdx args );
 SGS_APIFUNC void sgs_CloneItem( SGS_CTX, sgs_Variable var );
 
 SGS_APIFUNC SGSBOOL sgs_IsArray( sgs_Variable var );
-SGS_APIFUNC sgs_SizeVal sgs_ArraySize( SGS_CTX, sgs_Variable var );
+SGS_APIFUNC sgs_SizeVal sgs_ArraySize( sgs_Variable var );
 SGS_APIFUNC void sgs_ArrayPush( SGS_CTX, sgs_Variable var, sgs_StkIdx count );
 SGS_APIFUNC void sgs_ArrayPop( SGS_CTX, sgs_Variable var, sgs_StkIdx count, SGSBOOL ret );
 SGS_APIFUNC void sgs_ArrayErase( SGS_CTX, sgs_Variable var, sgs_StkIdx at, sgs_StkIdx count );

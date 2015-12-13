@@ -78,6 +78,7 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	// CONTEXT
 	C = (sgs_Context*) int_memory( S, NULL, sizeof( sgs_Context ) );
 	
+	S->ctx_root = C;
 	S->state_list = C;
 	S->statecount = 1;
 	C->refcount = 1;
@@ -525,6 +526,11 @@ sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 void sgsCTX_FreeState( SGS_CTX )
 {
 	SGS_SHCTX_USE;
+	if( S->ctx_root == C && S->statecount > 1 )
+	{
+		sgs_BreakIf( "trying to free root context before others" );
+		return;
+	}
 	sgs_BreakIf( C->refcount < 0 );
 	C->refcount++; /* prevent self-free */
 	ctx_safedestroy( C );
@@ -534,6 +540,17 @@ void sgsCTX_FreeState( SGS_CTX )
 	
 	if( S->state_list == NULL )
 		shctx_destroy( S );
+}
+
+sgs_Context* sgs_RootContext( SGS_CTX )
+{
+	if( C == NULL )
+		return NULL;
+	else
+	{
+		SGS_SHCTX_USE;
+		return S->ctx_root;
+	}
 }
 
 sgs_Context* sgs_ForkState( SGS_CTX, int copystate )
@@ -552,12 +569,12 @@ void sgs_ReleaseState( SGS_CTX )
 
 SGSBOOL sgs_PauseState( SGS_CTX )
 {
-	if( C->sf_last == NULL )
+	sgs_StackFrame* sf = C->sf_last;
+	if( sf == NULL )
 		return SGS_FALSE; /* nothing to pause */
-	if( C->state & SGS_STATE_PAUSED )
+	if( sf->flags & SGS_SF_PAUSED )
 		return SGS_FALSE; /* already paused, but possibly not at the expected location */
 	
-	sgs_StackFrame* sf = C->sf_last;
 	if( sf && !sf->iptr )
 		sf = sf->prev; /* should be able to use this inside a C function */
 	if( !sf || !sf->iptr )
@@ -570,7 +587,10 @@ SGSBOOL sgs_PauseState( SGS_CTX )
 			return SGS_FALSE; /* cannot have any C functions in the middle */
 	}
 	
-	C->state |= SGS_STATE_PAUSED;
+	sf = C->sf_last;
+	if( !sf->iptr )
+		sf = sf->prev;
+	sf->flags |= SGS_SF_PAUSED;
 	
 	return SGS_TRUE;
 }
@@ -1386,7 +1406,7 @@ int32_t sgs_Cntl( SGS_CTX, int what, int32_t val )
 		else C->state &= (uint32_t) ~SGS_SERIALIZE_MODE2;
 		return x;
 	case SGS_CNTL_NUMRETVALS: return C->num_last_returned;
-	case SGS_CNTL_GET_PAUSED: return C->state & SGS_STATE_PAUSED ? 1 : 0;
+	case SGS_CNTL_GET_PAUSED: return C->state & SGS_STATE_LASTFUNCPAUSE ? 1 : 0;
 	case SGS_CNTL_GET_ABORT: return C->state & SGS_STATE_LASTFUNCABORT ? 1 : 0;
 	}
 	return 0;

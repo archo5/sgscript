@@ -3527,7 +3527,7 @@ static int _stringrep_as
 	char* substr;
 	sgs_SizeVal subsize;
 	sgs_Variable arr = sgs_StackItem( C, 1 );
-	int32_t i, arrsize = sgs_ArraySize( C, arr );
+	int32_t i, arrsize = sgs_ArraySize( arr );
 	if( arrsize < 0 )
 		goto fail;
 	
@@ -3557,8 +3557,8 @@ static int _stringrep_aa( SGS_CTX, char* str, int32_t size )
 	sgs_SizeVal subsize, repsize;
 	sgs_Variable arr = sgs_StackItem( C, 1 );
 	sgs_Variable reparr = sgs_StackItem( C, 2 );
-	int32_t i, arrsize = sgs_ArraySize( C, arr ),
-		reparrsize = sgs_ArraySize( C, reparr );
+	int32_t i, arrsize = sgs_ArraySize( arr ),
+		reparrsize = sgs_ArraySize( reparr );
 	if( arrsize < 0 || reparrsize < 0 )
 		goto fail;
 	
@@ -3938,7 +3938,7 @@ static int sgsstd_string_frombytes( SGS_CTX )
 	SGSFN( "string_frombytes" );
 	
 	if( sgs_StackSize( C ) != 1 ||
-		( ( size = sgs_ArraySize( C, sgs_StackItem( C, 0 ) ) ) < 0 &&
+		( ( size = sgs_ArraySize( sgs_StackItem( C, 0 ) ) ) < 0 &&
 			!( hasone = sgs_ParseInt( C, 0, &onecode ) ) ) )
 		return sgs_ArgErrorExt( C, 0, 0, "array or int", "" );
 	
@@ -4011,7 +4011,7 @@ static int sgsstd_string_utf8_encode( SGS_CTX )
 	
 	SGSFN( "string_utf8_encode" );
 	
-	asz = sgs_ArraySize( C, sgs_StackItem( C, 0 ) );
+	asz = sgs_ArraySize( sgs_StackItem( C, 0 ) );
 	if( asz >= 0 )
 	{
 		sgs_Variable arr = sgs_StackItem( C, 0 );

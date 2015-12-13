@@ -743,6 +743,7 @@ srx_Context* srx_CreateExt( const RX_Char* str, size_t strsize, const RX_Char* m
 	srx_Context* R = NULL;
 	if( mods )
 	{
+		const RX_Char* modbegin = mods;
 		while( *mods )
 		{
 			switch( *mods )
@@ -751,7 +752,7 @@ srx_Context* srx_CreateExt( const RX_Char* str, size_t strsize, const RX_Char* m
 			case 'i': flags |= RCF_CASELESS; break;
 			case 's': flags |= RCF_DOTALL; break;
 			default:
-				err = RXEINMOD;
+				err = ( RXEINMOD & 0xf ) | ( ( mods - modbegin ) << 4 );
 				goto fail;
 			}
 			mods++;

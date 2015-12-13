@@ -2737,7 +2737,7 @@ SGSBOOL sgs_CreateSubthread( sgs_Context* T, SGS_CTX,
 	
 	/* register thread if not done */
 	sgs_BreakIf( co_ctx->refcount != 0 );
-	if( co_ctx->state & SGS_STATE_PAUSED )
+	if( co_ctx->sf_last && ( co_ctx->sf_last->flags & SGS_SF_PAUSED ) )
 	{
 		sgs_Variable varT, varSubT;
 		sgs__check_threadtbl( T );
@@ -4478,7 +4478,7 @@ SGSBOOL sgs_IsArray( sgs_Variable var )
 	return sgs_IsObjectP( &var, sgsstd_array_iface );
 }
 
-sgs_SizeVal sgs_ArraySize( SGS_CTX, sgs_Variable var )
+sgs_SizeVal sgs_ArraySize( sgs_Variable var )
 {
 	if( !sgs_IsObjectP( &var, sgsstd_array_iface ) )
 		return -1; /* no error */

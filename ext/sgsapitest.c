@@ -818,17 +818,26 @@ DEFINE_TEST( fork_state )
 	/* fork the state */
 	CFF = sgs_ForkState( C, 1 );
 	CFP = sgs_ForkState( C, 0 );
+	atf_assert( CFF != C );
+	atf_assert( CFP != C );
+	
+	/* root context */
+	atf_assert( sgs_RootContext( NULL ) == NULL );
+	atf_assert( sgs_RootContext( C ) == C );
+	atf_assert( sgs_RootContext( CFF ) == C );
+	atf_assert( sgs_RootContext( CFP ) == C );
 	
 	/* check state count */
 	atf_assert( sgs_Stat( C, SGS_STAT_STATECOUNT ) == 3 );
 	atf_assert( sgs_Stat( CFF, SGS_STAT_STATECOUNT ) == 3 );
 	atf_assert( sgs_Stat( CFP, SGS_STAT_STATECOUNT ) == 3 );
 	
-	/* release in the creating order */
-	sgs_ReleaseState( C );
+	/* release in the creating order (except root) */
 	sgs_ReleaseState( CFF );
-	atf_assert( sgs_Stat( CFP, SGS_STAT_STATECOUNT ) == 1 );
+	atf_assert( sgs_Stat( CFP, SGS_STAT_STATECOUNT ) == 2 );
 	sgs_ReleaseState( CFP );
+	atf_assert( sgs_Stat( C, SGS_STAT_STATECOUNT ) == 1 );
+	sgs_ReleaseState( C );
 	
 	/* --- try running something on both --- */
 	C = get_context();
@@ -841,14 +850,16 @@ DEFINE_TEST( fork_state )
 	atf_assert( sgs_ExecString( C, str ) == SGS_SUCCESS );
 	atf_assert( sgs_ExecString( CFF, str ) == SGS_SUCCESS );
 	atf_assert( sgs_ExecString( CFP, str ) == SGS_SUCCESS );
-	sgs_ReleaseState( C );
 	sgs_ReleaseState( CFF );
 	sgs_ReleaseState( CFP );
+	sgs_ReleaseState( C );
 }
 
 DEFINE_TEST( yield_resume )
 {
-	SGS_CTX = get_context();
+	SGS_CTX;
+	
+	C = get_context();
 	
 	atf_assert( sgs_ExecString( C, ""
 		"global m0 = println('one') || true;\n"
@@ -857,14 +868,46 @@ DEFINE_TEST( yield_resume )
 	"" ) == SGS_SUCCESS );
 	
 	// check if paused
-	atf_assert( sgs_Cntl( C, SGS_CNTL_GET_STATE, 0 ) & SGS_STATE_PAUSED );
+	atf_assert( C->sf_last && SGS_HAS_FLAG( C->sf_last->flags, SGS_SF_PAUSED ) );
 	atf_assert( sgs_GlobalBool( C, "m0" ) == SGS_TRUE );
 	atf_assert( sgs_GlobalBool( C, "m1" ) == SGS_FALSE );
 	
 	// resume
 	atf_assert( sgs_ResumeState( C ) == SGS_TRUE );
 	// check if done
-	atf_assert( ( sgs_Cntl( C, SGS_CNTL_GET_STATE, 0 ) & SGS_STATE_PAUSED ) == 0 );
+	atf_assert( C->sf_last == NULL );
+	atf_assert( sgs_GlobalBool( C, "m1" ) == SGS_TRUE );
+	
+	destroy_context( C );
+	
+	// advanced test
+	C = get_context();
+	
+	atf_assert( C->sf_count == 0 );
+	atf_assert( sgs_ExecString( C, ""
+		"function testfn(){ println('test'); return 1; }\n"
+		"global m0 = println('one') || true;\n"
+		"yield();\n"
+		"global m1 = println('two') || true;\n"
+	"" ) == SGS_SUCCESS );
+	
+	// check if paused
+	atf_assert( C->sf_last && SGS_HAS_FLAG( C->sf_last->flags, SGS_SF_PAUSED ) );
+	atf_assert( sgs_GlobalBool( C, "m0" ) == SGS_TRUE );
+	atf_assert( sgs_GlobalBool( C, "m1" ) == SGS_FALSE );
+	
+	// call the test function
+	{
+		int ssz = sgs_StackSize( C ), sfc = C->sf_count;
+		sgs_GlobalCall( C, "testfn", 0, 0 );
+		atf_assert( sfc == C->sf_count );
+		atf_assert( ssz == sgs_StackSize( C ) );
+	}
+	
+	// resume
+	atf_assert( sgs_ResumeState( C ) == SGS_TRUE );
+	// check if done
+	atf_assert( C->sf_last == NULL );
 	atf_assert( sgs_GlobalBool( C, "m1" ) == SGS_TRUE );
 	
 	destroy_context( C );
