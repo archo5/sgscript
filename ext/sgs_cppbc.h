@@ -20,29 +20,41 @@
 
 
 #ifndef SGS_CPPBC_PROCESS
+# if __cplusplus >= 201103L
+#  define SGS_CPPBC_DEFINIT( x ) = x
+# else
+#  define SGS_CPPBC_DEFINIT( x )
+# endif
+struct _sgsInterface
+{
+	_sgsInterface( const sgs_ObjInterface& src, _sgsInterface* pif = NULL )
+	: iface(src), inh_parent(pif), inh_child(NULL), inh_sibling(NULL)
+	{
+		if( pif )
+		{
+			inh_sibling = pif->inh_child;
+			pif->inh_child = this;
+		}
+	}
+	operator sgs_ObjInterface* (){ return &iface; }
+	sgs_ObjInterface* operator -> (){ return &iface; }
+	sgs_ObjInterface iface;
+	_sgsInterface* inh_parent;
+	_sgsInterface* inh_child;
+	_sgsInterface* inh_sibling;
+};
 # define SGS_OBJECT_LITE \
 	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj ); \
 	static int _sgs_gcmark( SGS_CTX, sgs_VarObj* obj ); \
 	static int _sgs_getindex( SGS_ARGS_GETINDEXFUNC ); \
 	static int _sgs_setindex( SGS_ARGS_SETINDEXFUNC ); \
 	static int _sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
-	static sgs_ObjInterface _sgs_interface[1];
-# if __cplusplus >= 201103L
-#  define SGS_OBJECT \
+	static _sgsInterface _sgs_interface;
+# define SGS_OBJECT \
 	SGS_OBJECT_LITE \
-	sgs_VarObj* m_sgsObject = nullptr; \
-	SGS_CTX = nullptr;
-# else
-#  define SGS_OBJECT \
-	SGS_OBJECT_LITE \
-	sgs_VarObj* m_sgsObject; \
-	SGS_CTX;
-# endif
-# ifdef _MSC_VER
-#  define SGS_OBJECT_INHERIT( ... ) SGS_OBJECT_LITE
-# else
-#  define SGS_OBJECT_INHERIT( names... ) SGS_OBJECT_LITE
-# endif
+	sgs_VarObj* m_sgsObject SGS_CPPBC_DEFINIT(nullptr); \
+	SGS_CTX SGS_CPPBC_DEFINIT(nullptr);
+# define SGS_OBJECT_INHERIT( name ) SGS_OBJECT_LITE
 # define SGS_NO_EXPORT
 # define SGS_NO_DESTRUCT
 # define SGS_METHOD
@@ -179,6 +191,24 @@ sgs_ObjInterface sgsArrayIterator<OwningClass>::_sgs_interface[1] =
 };
 
 
+// traverse the hierarchy to find the child class in it
+// can't do it in reverse for now
+// (no way to indicate that sgs_ObjInterface can be downcasted to _sgsInterface)
+inline bool _sgsIsChild( sgs_ObjInterface* child, _sgsInterface* parent )
+{
+	_sgsInterface* p = parent->inh_child;
+	while( p )
+	{
+		if( &p->iface == child )
+			return true;
+		if( _sgsIsChild( child, p ) )
+			return true;
+		p = p->inh_sibling;
+	}
+	return false;
+}
+
+
 template< class T >
 class sgsHandle
 {
@@ -206,9 +236,20 @@ public:
 			_acquire();
 		}
 	}
-	sgsHandle( sgs_Context* c, sgs_Variable* var ) : object(NULL), C(sgs_RootContext(c))
+	sgsHandle( sgs_Context* c, sgs_Variable* var, bool cast = false )
+	: object(NULL), C(sgs_RootContext(c))
 	{
-		if( sgs_IsObjectP( var, T::_sgs_interface ) )
+		if( cast )
+		{
+			if( var->type != SGS_VT_OBJECT )
+				return;
+			if( _sgsIsChild( var->data.O->iface, &T::_sgs_interface ) )
+			{
+				object = var->data.O;
+				_acquire();
+			}
+		}
+		else if( sgs_IsObjectP( var, T::_sgs_interface ) )
 		{
 			object = var->data.O;
 			_acquire();
@@ -495,7 +536,8 @@ public:
 	bool is_object( sgs_ObjInterface* iface ){ return !!sgs_IsObjectP( &var, iface ); }
 	template< class T > bool is_handle(){ return sgs_IsObjectP( &var, T::_sgs_interface ); }
 	template< class T > T* get_object_data(){ return (T*) sgs_GetObjectDataP( &var ); }
-	template< class T > sgsHandle<T> get_handle(){ return sgsHandle<T>( &var ); }
+	template< class T > sgsHandle<T> get_handle(){ return sgsHandle<T>( C, &var ); }
+	template< class T > sgsHandle<T> downcast(){ return sgsHandle<T>( C, &var, true ); }
 	int type_id() const { return var.type; }
 	bool is_string() const { return var.type == SGS_VT_STRING; }
 	sgsString get_string(){ return is_string() ? sgsString( C, var.data.S ) : sgsString(); }

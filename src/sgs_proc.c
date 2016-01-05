@@ -4160,6 +4160,13 @@ SGSBOOL sgs_IsValidIndex( SGS_CTX, StkIdx item )
 	return ( item >= 0 && item < SGS_STACKFRAMESIZE );
 }
 
+sgs_Variable sgs_OptStackItem( SGS_CTX, sgs_StkIdx item )
+{
+	if( sgs_IsValidIndex( C, item ) == 0 )
+		return sgs_MakeNull();
+	return *stk_getpos( C, item );
+}
+
 sgs_Variable sgs_StackItem( SGS_CTX, sgs_StkIdx item )
 {
 	if( sgs_IsValidIndex( C, item ) == 0 )

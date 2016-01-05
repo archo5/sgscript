@@ -1592,16 +1592,18 @@ static int sgsstd_array_process( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_dict_filter( SGS_CTX )
+static int _sgsstd_ht_filter( SGS_CTX, int usemap )
 {
 	SGSBOOL cset = 0, use;
 	sgs_Variable v_func = sgs_MakeNull(), v_dest;
 	
-	SGSFN( "dict_filter" );
-	if( !sgs_LoadArgs( C, "?t|p<v", &cset, &v_func ) )
+	if( !sgs_LoadArgs( C, usemap ? "?h|p<v" : "?t|p<v", &cset, &v_func ) )
 		return 0;
 	
-	sgs_CreateDict( C, NULL, 0 );
+	if( usemap )
+		sgs_CreateMap( C, NULL, 0 );
+	else
+		sgs_CreateDict( C, NULL, 0 );
 	v_dest = sgs_StackItem( C, -1 );
 	sgs_PushIterator( C, sgs_StackItem( C, 0 ) );
 	while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
@@ -1626,6 +1628,18 @@ static int sgsstd_dict_filter( SGS_CTX )
 	}
 	sgs_Pop( C, 1 );
 	return 1;
+}
+
+static int sgsstd_dict_filter( SGS_CTX )
+{
+	SGSFN( "dict_filter" );
+	return _sgsstd_ht_filter( C, 0 );
+}
+
+static int sgsstd_map_filter( SGS_CTX )
+{
+	SGSFN( "map_filter" );
+	return _sgsstd_ht_filter( C, 1 );
 }
 
 static int sgsstd_dict_process( SGS_CTX )
@@ -3940,6 +3954,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* STDLIB_FN( array ), -- object */ STDLIB_FN( dict ), STDLIB_FN( map ), { "class", sgsstd_class },
 	STDLIB_FN( array_filter ), STDLIB_FN( array_process ),
 	STDLIB_FN( dict_filter ), STDLIB_FN( dict_process ),
+	STDLIB_FN( map_filter ),
 	STDLIB_FN( dict_size ), STDLIB_FN( map_size ), STDLIB_FN( isset ), STDLIB_FN( unset ), STDLIB_FN( clone ),
 	STDLIB_FN( get_keys ), STDLIB_FN( get_values ), STDLIB_FN( get_concat ),
 	STDLIB_FN( get_merged ), STDLIB_FN( get_merged_map ),

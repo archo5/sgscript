@@ -4411,7 +4411,7 @@ SGSONE sgs_CreateQuatp( SGS_CTX, sgs_Variable* var, const XGM_VT* v4f )
 
 SGSBOOL sgs_ParseVec2( SGS_CTX, sgs_StkIdx item, XGM_VT* v2f, int strict )
 {
-	sgs_Variable var = sgs_StackItem( C, item );
+	sgs_Variable var = sgs_OptStackItem( C, item );
 	if( !strict && ( var.type == SGS_VT_INT || var.type == SGS_VT_REAL ) )
 	{
 		v2f[0] = v2f[1] = (XGM_VT) sgs_GetRealP( C, &var );
@@ -4432,7 +4432,7 @@ SGSBOOL sgs_ParseVec2( SGS_CTX, sgs_StkIdx item, XGM_VT* v2f, int strict )
 
 SGSBOOL sgs_ParseVec3( SGS_CTX, sgs_StkIdx item, XGM_VT* v3f, int strict )
 {
-	sgs_Variable var = sgs_StackItem( C, item );
+	sgs_Variable var = sgs_OptStackItem( C, item );
 	if( !strict && ( var.type == SGS_VT_INT || var.type == SGS_VT_REAL ) )
 	{
 		v3f[0] = v3f[1] = v3f[2] = (XGM_VT) sgs_GetRealP( C, &var );
@@ -4459,7 +4459,7 @@ SGSBOOL sgs_ParseVec3( SGS_CTX, sgs_StkIdx item, XGM_VT* v3f, int strict )
 
 SGSBOOL sgs_ParseVec4( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )
 {
-	sgs_Variable var = sgs_StackItem( C, item );
+	sgs_Variable var = sgs_OptStackItem( C, item );
 	if( !strict && ( var.type == SGS_VT_INT || var.type == SGS_VT_REAL ) )
 	{
 		v4f[0] = v4f[1] = v4f[2] = v4f[3] = (XGM_VT) sgs_GetRealP( C, &var );
@@ -4493,7 +4493,7 @@ SGSBOOL sgs_ParseVec4( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )
 
 SGSBOOL sgs_ParseAABB2( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f )
 {
-	sgs_Variable var = sgs_StackItem( C, item );
+	sgs_Variable var = sgs_OptStackItem( C, item );
 	if( sgs_IsObjectP( &var, xgm_aabb2_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( &var );
@@ -4505,7 +4505,7 @@ SGSBOOL sgs_ParseAABB2( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f )
 
 SGSBOOL sgs_ParseAABB3( SGS_CTX, sgs_StkIdx item, XGM_VT* v6f )
 {
-	sgs_Variable var = sgs_StackItem( C, item );
+	sgs_Variable var = sgs_OptStackItem( C, item );
 	if( sgs_IsObjectP( &var, xgm_aabb3_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( &var );
@@ -4522,7 +4522,7 @@ SGSBOOL sgs_ParseColor( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )
 
 SGSBOOL sgs_ParseQuat( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )
 {
-	sgs_Variable var = sgs_StackItem( C, item );
+	sgs_Variable var = sgs_OptStackItem( C, item );
 	if( sgs_IsObjectP( &var, xgm_quat_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( &var );
@@ -4534,7 +4534,7 @@ SGSBOOL sgs_ParseQuat( SGS_CTX, sgs_StkIdx item, XGM_VT* v4f, int strict )
 
 SGSBOOL sgs_ParseMat3( SGS_CTX, sgs_StkIdx item, XGM_VT* v9f )
 {
-	sgs_Variable var = sgs_StackItem( C, item );
+	sgs_Variable var = sgs_OptStackItem( C, item );
 	if( sgs_IsObjectP( &var, xgm_mat3_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( &var );
@@ -4554,7 +4554,7 @@ SGSBOOL sgs_ParseMat3( SGS_CTX, sgs_StkIdx item, XGM_VT* v9f )
 
 SGSBOOL sgs_ParseMat4( SGS_CTX, sgs_StkIdx item, XGM_VT* v16f )
 {
-	sgs_Variable var = sgs_StackItem( C, item );
+	sgs_Variable var = sgs_OptStackItem( C, item );
 	if( sgs_IsObjectP( &var, xgm_mat3_iface ) )
 	{
 		XGM_VT* hdr = (XGM_VT*) sgs_GetObjectDataP( &var );
@@ -4575,7 +4575,7 @@ SGSBOOL sgs_ParseMat4( SGS_CTX, sgs_StkIdx item, XGM_VT* v16f )
 
 SGSBOOL sgs_ParseFloatArray( SGS_CTX, sgs_StkIdx item, XGM_VT** v2fa, sgs_SizeVal* osz )
 {
-	sgs_Variable var = sgs_StackItem( C, item );
+	sgs_Variable var = sgs_OptStackItem( C, item );
 	if( sgs_IsObjectP( &var, xgm_floatarr_iface ) )
 	{
 		xgm_vtarray* data = (xgm_vtarray*) sgs_GetObjectDataP( &var );

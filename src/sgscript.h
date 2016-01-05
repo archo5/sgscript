@@ -591,6 +591,7 @@ SGS_APIFUNC void sgs_SetStackSize( SGS_CTX, sgs_StkIdx size );
 SGS_APIFUNC void sgs_SetDeltaSize( SGS_CTX, sgs_StkIdx diff );
 SGS_APIFUNC sgs_StkIdx sgs_AbsIndex( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSBOOL sgs_IsValidIndex( SGS_CTX, sgs_StkIdx item );
+SGS_APIFUNC sgs_Variable sgs_OptStackItem( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_Variable sgs_StackItem( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSBOOL sgs_PeekStackItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out );
 SGS_APIFUNC SGSBOOL sgs_GetStackItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out );

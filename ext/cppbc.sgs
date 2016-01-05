@@ -737,6 +737,8 @@ function cppbc_examine_object( code, pos )
 			inherited[ inhitem ] = true;
 	}
 	inherited = get_keys( inherited );
+	if( inherited.size > 1 )
+		cppbc_error( "multiple inheritance is not supported" );
 	
 	items = [];
 	matches = re_match_all( blockcode, "#(SGS_METHOD_NAMED|SGS_PROPERTY_FUNC|SGS_METHOD|SGS_PROPERTY|SGS_IFUNC|SGS_GCREF|SGS_DUMP|SGS_NODUMP)(.*?)[;\\{]#ms", RE_RETURN_BOTH );
@@ -1049,7 +1051,6 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 				continue;
 			if( item.what == "PROPERTY" && item.access > 0 ) continue;
 			if( item.what == "PROPERTY_FUNC" && !item.read ) continue;
-			if( item.what == "PROPERTY_FUNC" && @item.varname && item.read === true ) continue;
 			
 			if( item.what == "PROPERTY_FUNC" && item.read !== true )
 			{
@@ -1096,17 +1097,22 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			funcnames[ OBJ_IFUNC_POS[ ifname ] ] = ifunc;
 		out $=
 "
-sgs_ObjInterface " $ obj.name $ "::_sgs_interface[1] =
-{{
+static sgs_ObjInterface " $ obj.name $ "__sgs_interface =
+{
 	\"" $ obj.name $ "\",
 	";
 		
 		foreach( ifunc : funcnames )
 			out $= if( ifunc === null, "NULL, ", string_format( "{1}::{2}, ", obj.name, ifunc ) );
 		
+		inhptr = "";
+		if( obj.inherited )
+			inhptr $= ", &" $ obj.inherited[0] $ "::_sgs_interface";
+		
 		out $=
 "
-}};
+};
+_sgsInterface " $ obj.name $ "::_sgs_interface(" $ obj.name $ "__sgs_interface" $ inhptr $ ");
 
 ";
 	}
@@ -1128,8 +1134,8 @@ function cppbc_parse_file( code, inclcode, includes )
 	foreach( io : inclobjects )
 	{
 		io.no_export = true;
-		objects.push( io );
 	}
+	objects = get_concat( inclobjects, objects );
 	
 	cppbc_extend_objects( objects );
 	gcode = cppbc_generate_code( objects, includes );
