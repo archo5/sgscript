@@ -538,7 +538,7 @@ public:
 	template< class T > T* get_object_data(){ return (T*) sgs_GetObjectDataP( &var ); }
 	template< class T > sgsHandle<T> get_handle(){ return sgsHandle<T>( C, &var ); }
 	template< class T > sgsHandle<T> downcast(){ return sgsHandle<T>( C, &var, true ); }
-	int type_id() const { return var.type; }
+	int type_id() const { return (int) var.type; }
 	bool is_string() const { return var.type == SGS_VT_STRING; }
 	sgsString get_string(){ return is_string() ? sgsString( C, var.data.S ) : sgsString(); }
 	
@@ -720,7 +720,7 @@ template< class T > inline sgsString sgs_DumpData( SGS_CTX, const std::vector<T>
 			sgs_PushString( C, "\n" );
 			sgs_DumpData( C, v[i], depth ).push( C );
 		}
-		sgs_StringConcat( C, v.size() * 2 );
+		sgs_StringConcat( C, (sgs_StkIdx) v.size() * 2 );
 		sgs_PadString( C );
 		sgs_PushString( C, "\n}" );
 		sgs_StringConcat( C, 3 );

@@ -90,10 +90,10 @@ public:
 			return false;
 		}
 		printf( "--- sending money ---\nfrom: %.*s\nto: %.*s\namount: %.4f\ncurrency: %.*s\n---\n",
-			name.size(), name.c_str(),
-			to->name.size(), to->name.c_str(),
+			(int) name.size(), name.c_str(),
+			(int) to->name.size(), to->name.c_str(),
 			amount,
-			currency.size(), currency.c_str() );
+			(int) currency.size(), currency.c_str() );
 		return true;
 	}
 	
