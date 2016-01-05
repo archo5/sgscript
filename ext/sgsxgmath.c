@@ -129,7 +129,7 @@ static int xgm_v2_getindex( SGS_ARGS_GETINDEXFUNC )
 	if( !strcmp( str, "normalized" ) )
 	{
 		XGM_VT lensq = XGM_VMUL_INNER2( hdr, hdr );
-		if( lensq )
+		if( lensq != 0.0f )
 		{
 			lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
 			sgs_CreateVec2( C, NULL, hdr[0] * lensq, hdr[1] * lensq );
@@ -366,7 +366,7 @@ static int xgm_v3_getindex( SGS_ARGS_GETINDEXFUNC )
 		if( !strcmp( str, "normalized" ) )
 		{
 			XGM_VT lensq = XGM_VMUL_INNER3( hdr, hdr );
-			if( lensq )
+			if( lensq != 0.0f )
 			{
 				lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
 				sgs_CreateVec3( C, NULL, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq );
@@ -604,7 +604,7 @@ static int xgm_v4_getindex( SGS_ARGS_GETINDEXFUNC )
 		if( !strcmp( str, "normalized" ) )
 		{
 			XGM_VT lensq = XGM_VMUL_INNER4( hdr, hdr );
-			if( lensq )
+			if( lensq != 0.0f )
 			{
 				lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
 				sgs_CreateVec4( C, NULL, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq, hdr[3] * lensq );
@@ -1325,7 +1325,7 @@ typedef VEC4 QUAT;
 static void VEC4_Normalize( VEC4 r, VEC4 a )
 {
 	float lensq = XGM_VMUL_INNER4( a, a );
-	if( lensq )
+	if( lensq != 0.0f )
 	{
 		float invlen = 1.0f / sqrtf( lensq );
 		XGM_SET4( r, a[0] * invlen, a[1] * invlen, a[2] * invlen, a[3] * invlen );
@@ -1966,7 +1966,7 @@ static int xgm_quat_getindex( SGS_ARGS_GETINDEXFUNC )
 		if( !strcmp( str, "normalized" ) )
 		{
 			XGM_VT lensq = XGM_VMUL_INNER4( hdr, hdr );
-			if( lensq )
+			if( lensq != 0.0f )
 			{
 				lensq = (XGM_VT) 1.0 / (XGM_VT) sqrt( lensq );
 				sgs_CreateQuat( C, NULL, hdr[0] * lensq, hdr[1] * lensq, hdr[2] * lensq, hdr[3] * lensq );

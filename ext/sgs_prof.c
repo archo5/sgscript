@@ -26,7 +26,7 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 	{
 		double TM = sgs_GetTime();
 		sgs_StackFrame* target = NULL, *sf, *lastrec = NULL;
-		mode1item* items = (mode1item*) P->frametmp.ptr;
+		mode1item* items = (mode1item*) (void*) SGS_ASSUME_ALIGNED( P->frametmp.ptr, 4 );
 		size_t i, itemcount = P->frametmp.size / sizeof(mode1item);
 		
 		if( evid == SGS_HOOK_ENTER || evid == SGS_HOOK_CONT )

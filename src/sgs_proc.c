@@ -5702,7 +5702,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 					sgs_unserr_error( C );
 					goto fail;
 				}
-				sgs_PushVariable( C, ((sgs_Variable*) mb.ptr)[ pos ] );
+				sgs_PushVariable( C, ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ] );
 			}
 			if( str > strend - fnsz && sgs_unserr_incomp( C ) )
 				goto fail;
@@ -5737,7 +5737,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 					sgs_unserr_error( C );
 					goto fail;
 				}
-				sgs_PushVariable( C, ((sgs_Variable*) mb.ptr)[ pos ] );
+				sgs_PushVariable( C, ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ] );
 			}
 			if( !sgs__thread_unserialize( C, &T, &str, strend ) )
 				return sgs_unserr_incomp( C );
@@ -5751,7 +5751,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				goto fail;
 			SGS_AS_INT32( pos, str );
 			str += 4;
-			if( !sgs_GetSymbol( C, ((sgs_Variable*) mb.ptr)[ pos ], &var ) )
+			if( !sgs_GetSymbol( C, ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ], &var ) )
 			{
 				return sgs_unserr_symfail( C );
 			}
@@ -5765,13 +5765,13 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 	}
 	
 	if( mb.size )
-		sgs_PushVariable( C, *(sgs_Variable*)( mb.ptr + mb.size - sizeof(sgs_Variable) ) );
+		sgs_PushVariable( C, *(sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr + mb.size - sizeof(sgs_Variable), 4 ) );
 	res = mb.size != 0;
 fail:
 	_STACK_UNPROTECT_SKIP( res );
 	{
-		sgs_Variable* ptr = (sgs_Variable*) mb.ptr;
-		sgs_Variable* pend = (sgs_Variable*) ( mb.ptr + mb.size );
+		sgs_Variable* ptr = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 );
+		sgs_Variable* pend = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr + mb.size, 4 );
 		while( ptr < pend )
 		{
 			sgs_Release( C, ptr++ );

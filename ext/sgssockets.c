@@ -1221,8 +1221,8 @@ __declspec(dllexport)
 #endif
 int sockets_module_entry_point( SGS_CTX )
 {
-	int ret;
 #ifdef _WIN32
+	int ret;
 	WSADATA wsadata;
 #endif
 	

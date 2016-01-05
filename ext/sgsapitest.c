@@ -9,7 +9,7 @@
 #  define sgsthread_sleep( ms ) Sleep( (DWORD) ms )
 #else
 #  include <unistd.h>
-static void sgsthread_sleep( uint32_t ms )
+static void sgsthread_sleep( unsigned ms )
 {
 	if( ms >= 1000 )
 	{
