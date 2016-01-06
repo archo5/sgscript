@@ -526,11 +526,6 @@ sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 void sgsCTX_FreeState( SGS_CTX )
 {
 	SGS_SHCTX_USE;
-	if( S->ctx_root == C && S->statecount > 1 )
-	{
-		sgs_BreakIf( "trying to free root context before others" );
-		return;
-	}
 	sgs_BreakIf( C->refcount < 0 );
 	C->refcount++; /* prevent self-free */
 	ctx_safedestroy( C );
@@ -540,6 +535,11 @@ void sgsCTX_FreeState( SGS_CTX )
 	
 	if( S->state_list == NULL )
 		shctx_destroy( S );
+	else if( S->ctx_root == C && S->statecount > 1 )
+	{
+		sgs_BreakIf( "trying to free root context before others" );
+		return;
+	}
 }
 
 sgs_Context* sgs_RootContext( SGS_CTX )

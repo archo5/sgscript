@@ -680,7 +680,9 @@ retsuccess:
 	return 0;
 
 fail:
-	sgs_Msg( F->C, SGS_ERROR, "[line %d] Invalid expression", sgsT_LineNum( mpp->token ) );
+	if( mpp == NULL )
+		mpp = *tree;
+	sgs_Msg( F->C, SGS_ERROR, "[line %d] Invalid expression", mpp ? sgsT_LineNum( mpp->token ) : 0 );
 #if SGS_DEBUG && SGS_DEBUG_DATA
 	sgsFT_Dump( *tree );
 #endif

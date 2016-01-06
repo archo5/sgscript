@@ -923,6 +923,12 @@ DEFINE_TEST( yield_abandon )
 	sgs_ReleaseState( CF );
 	
 	destroy_context( C );
+	
+	C = get_context();
+	atf_assert( sgs_ExecString( C, "thread (function(){yield();})();" ) == SGS_SUCCESS );
+	atf_assert( sgs_Stat( C, SGS_STAT_STATECOUNT ) == 2 );
+	
+	destroy_context( C );
 }
 
 int sm_tick_id = 0;
