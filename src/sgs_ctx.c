@@ -309,6 +309,7 @@ static void shctx_destroy( SGS_SHCTX )
 void sgs_DestroyEngine( SGS_CTX )
 {
 	sgs_ShCtx* S = C->shared;
+	sgs_BreakIf( C != S->ctx_root );
 	C->refcount--;
 	
 	sgsSTD_RegistryFree( C );
@@ -317,6 +318,7 @@ void sgs_DestroyEngine( SGS_CTX )
 	{
 		int numfreed = 0;
 		sgs_Context* cur = S->state_list;
+		C->refcount++; /* prevent freeing of engine context before others */
 		while( cur != NULL )
 		{
 			cur->refcount++; /* prevent self-free */
@@ -326,6 +328,7 @@ void sgs_DestroyEngine( SGS_CTX )
 			cur = cur->next;
 		}
 		sgs_GCExecute( S->state_list );
+		C->refcount--; /* allow freeing the engine context again now */
 		cur = S->state_list;
 		while( cur != NULL )
 		{
@@ -523,6 +526,8 @@ sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 	return NC;
 }
 
+static void _sgs_dumprsrc( SGS_SHCTX );
+
 void sgsCTX_FreeState( SGS_CTX )
 {
 	SGS_SHCTX_USE;
@@ -537,6 +542,7 @@ void sgsCTX_FreeState( SGS_CTX )
 		shctx_destroy( S );
 	else if( S->ctx_root == C && S->statecount > 1 )
 	{
+		_sgs_dumprsrc( S );
 		sgs_BreakIf( "trying to free root context before others" );
 		return;
 	}
@@ -1238,6 +1244,98 @@ static void dumpvar( SGS_CTX, sgs_Variable* var )
 	}
 }
 
+static void _sgs_dumprsrc( SGS_SHCTX )
+{
+	sgs_VHTIdx i;
+	sgs_VarObj* obj;
+	sgs_VHTable* tbl;
+	SGS_CTX = S->state_list;
+	sgs_Writef( C, "SYSTEM: %p\n", S );
+	sgs_Writef( C, "- version: 0x%X\n", (unsigned) S->version );
+	sgs_Writef( C, "- STATE COUNT: %d\n", (int) S->statecount );
+	sgs_Writef( C, "- OBJECT COUNT: %d\n", (int) S->objcount );
+	sgs_Writef( C, "- TYPE COUNT: %d\n", (int) S->typetable.size );
+	sgs_Writef( C, "- STRING COUNT: %d\n", (int) S->stringtable.size );
+	sgs_Writef( C, "- INTERFACE GEN. COUNT: %d\n", (int) S->ifacetable.size );
+	sgs_Writef( C, "- file system (func=%p, userdata=%p)\n", (void*) S->sfs_fn, S->sfs_ctx );
+	sgs_Writef( C, "- memory system (func=%p, userdata=%p)\n", (void*) S->memfunc, S->mfuserdata );
+	sgs_Writef( C, "- memory usage: %d B (%.2f KB / %.2f MB)\n",
+		(int) S->memsize, ((float) S->memsize) / 1024.0f, ((float) S->memsize) / (1024.0f * 1024.0f) );
+	sgs_Writef( C, "- memory blocks (current=%d, added=%d, removed=%d)\n",
+		(int) S->numblocks, (int) S->numallocs, (int) S->numfrees );
+	sgs_Writef( C, "- pools (objects=%d, contexts=%d, stack frames=%d)\n",
+		(int) S->objpool_size, (int) S->ctx_pool_size, (int) S->sf_pool_size );
+	sgs_Writef( C, "- REGISTRY (_R=%p, _SYM=%p, _INC=%p)\n", S->_R, S->_SYM, S->_INC );
+	while( C )
+	{
+		sgs_Writef( C, "CONTEXT: %p (rc=%d)\n", C, (int) C->refcount );
+		sgs_Writef( C, "- links (prev=%p, next=%p, parent=%p)\n", C->prev, C->next, C->parent );
+		sgs_Writef( C, "- state: 0x%X\n", (unsigned) C->state );
+		sgs_Writef( C, "- wait timeout: %g\n", C->wait_timer );
+		sgs_Writef( C, "- STACK (size=%d, off=%d, mem=%d)\n",
+			(int)( C->stack_top - C->stack_base ),
+			(int)( C->stack_off - C->stack_base ),
+			(int) C->stack_mem );
+		sgs_Writef( C, "- CLOSURE STACK (size=%d, off=%d, mem=%d)\n",
+			(int)( C->clstk_top - C->clstk_base ),
+			(int)( C->clstk_off - C->clstk_base ),
+			(int) C->clstk_mem );
+		sgs_Writef( C, "- call stack frame count: %d\n", (int) C->sf_count );
+		if( C->_T )
+		{
+			tbl = (sgs_VHTable*) C->_T->data;
+			sgs_Writef( C, "- SUBTHREADS: (%d)\n", (int) tbl->size );
+			for( i = 0; i < tbl->size; ++i )
+			{
+				sgs_Writef( C, "- - %p (timeout: %g)\n",
+					tbl->vars[ i ].key.data.T, tbl->vars[ i ].val.data.R );
+			}
+		}
+		else sgs_Writef( C, "- SUBTHREADS: 0\n" );
+		if( C->_E )
+		{
+			tbl = (sgs_VHTable*) C->_E->data;
+			sgs_Writef( C, "- END EVENTS: (%d)\n", (int) tbl->size );
+		}
+		else sgs_Writef( C, "- END EVENTS: 0\n" );
+		sgs_Stat( C, SGS_STAT_DUMP_FRAMES );
+		sgs_Stat( C, SGS_STAT_DUMP_STACK );
+		C = C->next;
+	}
+	
+	obj = S->objs;
+	C = S->state_list;
+	sgs_Writef( C, "OBJECTS (%d):\n", (int) S->objcount );
+	while( obj )
+	{
+		sgs_Writef( C, "OBJECT: %p (rc=%d, app=%d)\n",
+			obj, (int) obj->refcount, (int) obj->appsize );
+		sgs_Writef( C, "- misc (mm=%s, iface=%s)\n",
+			obj->mm_enable ? "Y" : "N", obj->is_iface ? "Y" : "N" );
+		sgs_Writef( C, "- interface: %p\n", obj->iface );
+		sgs_Writef( C, "- metaobj: %p\n", obj->metaobj );
+		obj = obj->next;
+	}
+	
+	tbl = &S->stringtable;
+	sgs_Writef( C, "STRINGS (%d):\n", (int) tbl->size );
+	for( i = 0; i < tbl->size; ++i )
+	{
+		uint32_t j = 0;
+		sgs_iStr* str = tbl->vars[ i ].key.data.S;
+		sgs_Writef( C, "- [%u]\"", (unsigned) str->size );
+		for( j = 0; j < str->size; ++j )
+		{
+			char c = sgs_str_cstr( str )[ j ] ;
+			if( isgraph( c ) || c == ' ' )
+				sgs_Writef( C, "%c", c );
+			else
+				sgs_Writef( C, "%02X", (unsigned) c );
+		}
+		sgs_Writef( C, "\"\n" );
+	}
+}
+
 ptrdiff_t sgs_Stat( SGS_CTX, int type )
 {
 	SGS_SHCTX_USE;
@@ -1326,6 +1424,9 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 			sgs_Writef( C, "GC state: %s\n", S->redblue ? "red" : "blue" );
 			sgs_WriteStr( C, "---- ---- ---- -----\n" );
 		}
+		return SGS_SUCCESS;
+	case SGS_STAT_DUMP_RSRC:
+		_sgs_dumprsrc( C->shared );
 		return SGS_SUCCESS;
 	case SGS_STAT_XDUMP_STACK:
 		{

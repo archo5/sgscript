@@ -927,7 +927,15 @@ DEFINE_TEST( yield_abandon )
 	C = get_context();
 	atf_assert( sgs_ExecString( C, "thread (function(){yield();})();" ) == SGS_SUCCESS );
 	atf_assert( sgs_Stat( C, SGS_STAT_STATECOUNT ) == 2 );
+	destroy_context( C );
 	
+	C = get_context();
+	atf_assert( sgs_ExecString( C, ""
+		"thread (function(){"
+		"	subthread (function(){yield();})();"
+		"	yield();})();"
+		"" ) == SGS_SUCCESS );
+	atf_assert( sgs_Stat( C, SGS_STAT_STATECOUNT ) == 3 );
 	destroy_context( C );
 }
 

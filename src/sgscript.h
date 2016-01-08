@@ -168,6 +168,7 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 #define SGS_STAT_DUMP_FRAMES  13
 #define SGS_STAT_DUMP_STATS   14
 #define SGS_STAT_DUMP_SYMBOLS 15
+#define SGS_STAT_DUMP_RSRC    16
 #define SGS_STAT_XDUMP_STACK  20
 
 
