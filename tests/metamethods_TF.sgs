@@ -1,4 +1,6 @@
 
+global ERRORS = "";
+
 global called = {};
 
 obj = {a=1,b=2};
@@ -20,7 +22,7 @@ global iface =
 	__div = function(a,b){ called.div = this; return class({a=a.a/b.a,b=a.b/b.b},iface); },
 	__mod = function(a,b){ called.mod = this; return class({a=a.a%b.a,b=a.b%b.b},iface); },
 	__compare = function(a,b){ called.compare = this; return a.a <=> b.a || a.b <=> b.b; },
-	__call = function(a,b){ called.call = this; return a,b; },
+	__call = function(self,a,b){ called.call = this; called.callself = self; return a,b; },
 	__getindex = function(k){ called.getindex = this; m = metaobj_get(this);
 		if( isset( m, k ) ) return m[ k ];
 		return "[" $ k $ "]"; },
@@ -76,10 +78,12 @@ testEqual( obj==objcp, true, "metamethod - compare - result" );
 testEqual( @called.compare, obj, "metamethod - compare - correctly called" );
 
 testEqual( obj(5), 5, "metamethod - call/1 - result" );
-testEqual( @called.call, obj, "metamethod - call/1 - correctly called" );
+testEqual( @called.call, obj, "metamethod - call/1 - correctly called/1" );
+testEqual( @called.callself, null, "metamethod - call/1 - correctly called/2" );
 
 testEqual( cntnr.me(5), 5, "metamethod - call/2 - result" );
-testEqual( @called.call, cntnr, "metamethod - call/2 - correctly called" );
+testEqual( @called.call, obj, "metamethod - call/2 - correctly called/1" );
+testEqual( @called.callself, cntnr, "metamethod - call/2 - correctly called/2" );
 
 testEqual( obj.undef, "[undef]", "metamethod - getindex - result" );
 testEqual( @called.getindex, obj, "metamethod - getindex - correctly called" );
@@ -105,3 +109,5 @@ iface.__set_testVar = function(v){ called.set_var = this; this.subTestVar = v; }
 obj.testVar = 37;
 testEqual( obj.subTestVar, 37, "metamethod - setindex router" );
 testEqual( called.set_var, obj, "metamethod - setindex router - correctly called" );
+
+testEqual( ERRORS, "", "metamethod - no errors while accessing anything so far" );

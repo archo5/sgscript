@@ -2341,7 +2341,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 	ptrdiff_t stkcallbase,
 		stkoff = C->stack_off - C->stack_base,
 		clsoff = C->clstk_off - C->clstk_base;
-	int rvc = 0, ret = 1, allowed;
+	int rvc = 0, ret = 1, allowed, freefunc = 0;
 	
 	gotthis = !!gotthis;
 	stkcallbase = C->stack_top - args - gotthis - C->stack_base;
@@ -2356,11 +2356,41 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 		V = *(sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) );
 		clsr += cc;
 	}
+	else if( V.type == SGS_VT_OBJECT && V.data.O->mm_enable )
+	{
+		sgs_Variable objfunc;
+		sgs_PushString( C, "__call" );
+		rvc = sgs_GetIndex( C, V, sgs_StackItem( C, -1 ), &objfunc, 0 );
+		stk_pop1( C );
+		if( SGS_SUCCEEDED( rvc ) )
+		{
+			// set up metamethod call instead of object call
+			if( !gotthis )
+			{
+				sgs_InsertVariable( C, -1 - args, sgs_MakeNull() );
+				gotthis = 1;
+			}
+			sgs_InsertVariable( C, -2 - args, V );
+			args++;
+			V = objfunc;
+			freefunc = 1;
+		}
+	}
 	
 	sgs_BreakIf( SGS_STACKFRAMESIZE < args + gotthis );
 	allowed = sgsVM_PushStackFrame( C, &V );
 	C->stack_off = C->stack_top - args;
 	C->clstk_off = C->clstk_top - clsr;
+	
+	if( freefunc )
+	{
+		// already ref'd on call stack
+		if( IS_REFTYPE( V.type ) )
+		{
+			var_release( C, &V ); // deref only, don't want to free
+			sgs_BreakIf( *V.data.pRC <= 0 );
+		}
+	}
 	
 	if( allowed )
 	{
@@ -2449,34 +2479,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 			sgs_VarObj* O = V.data.O;
 			
 			rvc = SGS_ENOTSUP;
-			if( O->mm_enable )
-			{
-				sgs_Variable objfunc;
-				sgs_PushString( C, "__call" );
-				rvc = sgs_GetIndex( C, V, sgs_StackItem( C, -1 ), &objfunc, 0 );
-				stk_pop1( C );
-				if( SGS_SUCCEEDED( rvc ) )
-				{
-					if( gotthis )
-						sgs_Method( C );
-					else
-					{
-						sgs_InsertVariable( C, 0, V );
-						gotthis = 1;
-					}
-					if( vm_call( C, args, clsr, gotthis, &rvc, &objfunc, 0 ) )
-						;
-					else
-						rvc = SGS_EINPROC;
-					sgs_Release( C, &objfunc );
-				}
-				else
-				{
-					rvc = SGS_ENOTSUP;
-				}
-			}
-			
-			if( rvc == SGS_ENOTSUP && O->iface->call )
+			if( O->iface->call )
 				rvc = O->iface->call( C, O );
 			
 			if( rvc > SGS_STACKFRAMESIZE )
