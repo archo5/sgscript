@@ -27,7 +27,13 @@ function testfn(x) use(testfn_clsr){ println(testfn_clsr,x); yield(x); }
 	testEqual( co_resume( co, 123 ), 1337, "coroutine - return" );
 	testEqual( ERRORS, "", "coroutine - no errors" );
 	ERRORS = ""; testEqual( co_resume( co ), null ); testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
-
+	
+	ERRORS = "";
+	global _Tcomp = co_create(function(){ yield(); testEqual( _T, _Tcomp, "_T - correct value" ); });
+	co_resume( _Tcomp );
+	_Tcomp = null;
+	testEqual( ERRORS, "", "_T - no errors" );
+	
 	ERRORS = "";
 	testfn_clsr = "[tfn] ";
 	anon_clsr = "[cl] ";

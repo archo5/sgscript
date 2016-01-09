@@ -4229,6 +4229,7 @@ void sgsSTD_GlobalFree( SGS_CTX )
 
 SGSBOOL sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 {
+	const char* name;
 	sgs_VHTVar* pair;
 	sgs_VarObj* obj = GLBP;
 	HTHDR;
@@ -4238,18 +4239,44 @@ SGSBOOL sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 	if( idx->type != SGS_VT_STRING )
 		return SGS_FALSE;
 	
-	if( strcmp( sgs_str_cstr( idx->data.S ), "_G" ) == 0 )
+	name = sgs_var_cstr( idx );
+	
+	if( strcmp( name, "_G" ) == 0 )
 	{
+		sgs_Variable tmp;
+		sgs_InitObjectPtr( &tmp, obj );
 		sgs_Release( C, out );
-		sgs_InitObjectPtr( out, obj );
+		*out = tmp;
 		return SGS_TRUE;
 	}
 	
-	if( strcmp( sgs_str_cstr( idx->data.S ), "_R" ) == 0 )
+	if( strcmp( name, "_R" ) == 0 )
 	{
 		SGS_SHCTX_USE;
 		sgs_Release( C, out );
 		sgs_InitObjectPtr( out, RLBP );
+		return SGS_TRUE;
+	}
+	
+	if( strcmp( name, "_T" ) == 0 )
+	{
+		sgs_Variable tmp;
+		sgs_InitThreadPtr( &tmp, C );
+		sgs_Release( C, out );
+		*out = tmp;
+		return SGS_TRUE;
+	}
+	
+	if( strcmp( name, "_F" ) == 0 )
+	{
+		sgs_Variable tmp = sgs_MakeNull();
+		if( C->sf_last )
+		{
+			tmp = C->sf_last->func;
+			sgs_Acquire( C, &tmp );
+		}
+		sgs_Release( C, out );
+		*out = tmp;
 		return SGS_TRUE;
 	}
 	
@@ -4280,13 +4307,16 @@ SGSBOOL sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 
 SGSBOOL sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 {
+	const char* name;
 	sgs_VarObj* obj = GLBP;
 	HTHDR;
 	
 	if( idx->type != SGS_VT_STRING )
 		return SGS_FALSE;
 	
-	if( strcmp( sgs_var_cstr( idx ), "_G" ) == 0 )
+	name = sgs_var_cstr( idx );
+	
+	if( strcmp( name, "_G" ) == 0 )
 	{
 		if( val->type != SGS_VT_OBJECT ||
 			( val->data.O->iface != sgsstd_dict_iface && val->data.O->iface != sgsstd_map_iface ) )
@@ -4298,9 +4328,11 @@ SGSBOOL sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 		return SGS_TRUE;
 	}
 	
-	if( strcmp( sgs_str_cstr( idx->data.S ), "_R" ) == 0 )
+	if( strcmp( name, "_R" ) == 0 ||
+		strcmp( name, "_T" ) == 0 ||
+		strcmp( name, "_F" ) == 0 )
 	{
-		sgs_Msg( C, SGS_WARNING, "cannot change _R" );
+		sgs_Msg( C, SGS_WARNING, "cannot change %s", name );
 		return SGS_FALSE;
 	}
 	

@@ -682,12 +682,6 @@ static int sgsstd_fmt_custom_encode( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_fmt_custom_decode( SGS_CTX )
-{
-	SGSFN( "fmt_custom_decode" );
-	return 0;
-}
-
 
 struct fmtspec
 {
@@ -1644,7 +1638,7 @@ static const sgs_RegFuncConst f_fconsts[] =
 	STDLIB_FN( fmt_pack ), STDLIB_FN( fmt_pack_count ),
 	STDLIB_FN( fmt_unpack ), STDLIB_FN( fmt_pack_size ),
 	STDLIB_FN( fmt_base64_encode ), STDLIB_FN( fmt_base64_decode ),
-	STDLIB_FN( fmt_custom_encode ), STDLIB_FN( fmt_custom_decode ),
+	STDLIB_FN( fmt_custom_encode ),
 	STDLIB_FN( fmt_text ), STDLIB_FN( fmt_parser ),
 	STDLIB_FN( fmt_string_parser ), STDLIB_FN( fmt_file_parser ),
 	STDLIB_FN( fmt_charcc ),

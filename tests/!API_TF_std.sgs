@@ -77,6 +77,17 @@ testEqual( ERRORS, "", "_G - trying to map to null/true/false keys" );
 testEqual( _G[ unserialize ], null, "_G - reading unmapped function key" );
 testEqual( ERRORS, "[W:Cannot find readable value by index: \"C function\"]" );
 
+	section( "helper globals" );
+ERRORS = "";
+printvar(_F);
+printvar(_T);
+function test__f()
+{
+	testEqual( _F, test__f, "_F - correct value" );
+}
+test__f();
+testEqual( ERRORS, "", "_F/_T - no access errors" );
+
 	section( "serialization - mode 1" );
 ERRORS = "";
 testEqual( serialize(null), "P\x00", "serialize - null" );
