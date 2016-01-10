@@ -22,9 +22,14 @@ function testfn(x) use(testfn_clsr){ println(testfn_clsr,x); yield(x); }
 		return 1337;
 	});
 	testEqual( typeof(co), "thread", "coroutine - created" );
+	testEqual( co.not_started, true, "coroutine - not started yet" );
+	testEqual( co.running, false, "coroutine - not yet running" );
 	testEqual( co_resume( co, 1 ), 1, "coroutine - resume [1]" );
+	testEqual( co.not_started, false, "coroutine - started" );
+	testEqual( co.running, true, "coroutine - running" );
 	testEqual( co_resume( co, 123 ), 2, "coroutine - resume [2]" );
 	testEqual( co_resume( co, 123 ), 1337, "coroutine - return" );
+	testEqual( co.running, false, "coroutine - not running any more" );
 	testEqual( ERRORS, "", "coroutine - no errors" );
 	ERRORS = ""; testEqual( co_resume( co ), null ); testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
 	
@@ -71,7 +76,9 @@ testEqual( sys_stat(1), 1, "state count = 1" );
 	testEqual( typeof( t = thread_create( function(){ for(;;) yield(); } ) ),
 		"thread", "thread with infinite yield loop was partially run" );
 	testEqual( sys_stat(1), 2, "state count = 2" );
-	abort( t );
+	testEqual( t.was_aborted, false, "thread is not aborted yet" );
+	t.abort();
+	testEqual( t.was_aborted, true, "thread is aborted now" );
 	t = null;
 	process_threads();
 }()); // force cleanup

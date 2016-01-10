@@ -1243,6 +1243,8 @@ static int vm_getidx_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj
 	return SGS_ENOTFND;
 }
 
+int sgsstd_co_resume( SGS_CTX );
+int sgsstd_abort( SGS_CTX );
 static int vm_getprop_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj, sgs_Variable* idx )
 {
 	if( idx->type == SGS_VT_STRING )
@@ -1254,8 +1256,7 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* ob
 		case SGS_VT_STRING:
 			if( !strcmp( prop, "length" ) )
 			{
-				outmaybe->type = SGS_VT_INT;
-				outmaybe->data.I = obj->data.S->size;
+				*outmaybe = sgs_MakeInt( obj->data.S->size );
 				return 0;
 			}
 			break;
@@ -1263,24 +1264,52 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* ob
 		case SGS_VT_CFUNC:
 			if( !strcmp( prop, "call" ) )
 			{
-				outmaybe->type = SGS_VT_CFUNC;
-				outmaybe->data.C = sgs_specfn_call;
+				*outmaybe = sgs_MakeCFunc( sgs_specfn_call );
 				return 0;
 			}
 			if( !strcmp( prop, "apply" ) )
 			{
-				outmaybe->type = SGS_VT_CFUNC;
-				outmaybe->data.C = sgs_specfn_apply;
+				*outmaybe = sgs_MakeCFunc( sgs_specfn_apply );
 				return 0;
 			}
 			break;
 		case SGS_VT_THREAD:
-			if( !strcmp( prop, "can_resume" ) )
+			if( !strcmp( prop, "was_aborted" ) )
 			{
-				outmaybe->type = SGS_VT_BOOL;
-				outmaybe->data.B = ( obj->data.T->state & SGS_STATE_COROSTART ) || obj->data.T->sf_count;
+				int wa = ( obj->data.T->state & SGS_STATE_LASTFUNCABORT ) != 0 ||
+					( obj->data.T->sf_last && ( obj->data.T->sf_last->flags & SGS_SF_ABORTED ) != 0 );
+				*outmaybe = sgs_MakeBool( wa );
 				return 0;
 			}
+			if( !strcmp( prop, "not_started" ) )
+			{
+				*outmaybe = sgs_MakeBool( obj->data.T->state & SGS_STATE_COROSTART );
+				return 0;
+			}
+			if( !strcmp( prop, "running" ) )
+			{
+				*outmaybe = sgs_MakeBool( obj->data.T->sf_count );
+				return 0;
+			}
+			if( !strcmp( prop, "can_resume" ) )
+			{
+				*outmaybe = sgs_MakeBool(
+					( obj->data.T->state & SGS_STATE_COROSTART ) ||
+					obj->data.T->sf_count
+				);
+				return 0;
+			}
+			if( !strcmp( prop, "resume" ) )
+			{
+				*outmaybe = sgs_MakeCFunc( sgsstd_co_resume );
+				return 0;
+			}
+			if( !strcmp( prop, "abort" ) )
+			{
+				*outmaybe = sgs_MakeCFunc( sgsstd_abort );
+				return 0;
+			}
+			break;
 		}
 		
 		sgs_Msg( C, SGS_WARNING, "Property '%s' not found on "

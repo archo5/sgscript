@@ -2629,7 +2629,7 @@ static int sgsstd_co_create( SGS_CTX )
 	return sgs_PushThreadPtr( C, T );
 }
 
-static int sgsstd_co_resume( SGS_CTX )
+int sgsstd_co_resume( SGS_CTX )
 {
 	sgs_Context* T = NULL;
 	sgs_StkIdx i, ssz;
@@ -2685,7 +2685,7 @@ static int sgsstd_co_resume( SGS_CTX )
 	return rvc;
 }
 
-static int sgsstd_abort( SGS_CTX )
+int sgsstd_abort( SGS_CTX )
 {
 	sgs_SizeVal i, ssz, abc = 0;
 	SGSFN( "abort" );
