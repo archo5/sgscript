@@ -532,6 +532,12 @@ struct _sgs_ShCtx
 	sgs_ScriptFSFunc sfs_fn;
 	void*         sfs_ctx;
 	
+	/* output */
+	sgs_OutputFunc output_fn; /* output function */
+	void*         output_ctx; /* output context */
+	sgs_OutputFunc erroutput_fn; /* error output function */
+	void*         erroutput_ctx; /* error output context */
+	
 	/* memory */
 	sgs_MemFunc   memfunc;
 	void*         mfuserdata;
@@ -584,11 +590,6 @@ struct _sgs_Context
 	sgs_Context*  prev;
 	sgs_Context*  next;
 	
-	/* output */
-	sgs_OutputFunc output_fn; /* output function */
-	void*         output_ctx; /* output context */
-	sgs_OutputFunc erroutput_fn; /* error output function */
-	void*         erroutput_ctx; /* error output context */
 	void*         serialize_state; /* current serialization state */
 	
 	/* info output */

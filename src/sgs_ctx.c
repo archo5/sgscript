@@ -57,6 +57,11 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	S->sfs_fn = sgs_StdScriptFSFunc;
 	S->sfs_ctx = NULL;
 	
+	S->output_fn = sgs_StdOutputFunc;
+	S->output_ctx = stdout;
+	S->erroutput_fn = sgs_StdOutputFunc;
+	S->erroutput_ctx = stderr;
+	
 	S->memfunc = memfunc;
 	S->mfuserdata = mfuserdata;
 	S->memsize = sizeof( sgs_ShCtx );
@@ -86,10 +91,6 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	C->prev = NULL;
 	C->next = NULL;
 	
-	C->output_fn = sgs_StdOutputFunc;
-	C->output_ctx = stdout;
-	C->erroutput_fn = sgs_StdOutputFunc;
-	C->erroutput_ctx = stderr;
 	C->serialize_state = NULL;
 	C->minlev = SGS_INFO;
 	C->apilev = SGS_ERROR + 1;
@@ -640,24 +641,27 @@ const char* sgs_CodeString( int type, int val )
 
 void sgs_GetOutputFunc( SGS_CTX, sgs_OutputFunc* outf, void** outc )
 {
-	*outf = C->output_fn;
-	*outc = C->output_ctx;
+	SGS_SHCTX_USE;
+	*outf = S->output_fn;
+	*outc = S->output_ctx;
 }
 
 void sgs_SetOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx )
 {
+	SGS_SHCTX_USE;
 	sgs_BreakIf( func == NULL );
 	if( func == SGSOUTPUTFN_DEFAULT )
 		func = sgs_StdOutputFunc;
 	if( !ctx && func == sgs_StdOutputFunc )
 		ctx = stdout;
-	C->output_fn = func;
-	C->output_ctx = ctx;
+	S->output_fn = func;
+	S->output_ctx = ctx;
 }
 
 void sgs_Write( SGS_CTX, const void* ptr, size_t size )
 {
-	C->output_fn( C->output_ctx, C, ptr, size );
+	SGS_SHCTX_USE;
+	S->output_fn( S->output_ctx, C, ptr, size );
 }
 
 SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... )
@@ -695,24 +699,27 @@ SGSBOOL sgs_Writef( SGS_CTX, const char* what, ... )
 
 void sgs_GetErrOutputFunc( SGS_CTX, sgs_OutputFunc* outf, void** outc )
 {
-	*outf = C->erroutput_fn;
-	*outc = C->erroutput_ctx;
+	SGS_SHCTX_USE;
+	*outf = S->erroutput_fn;
+	*outc = S->erroutput_ctx;
 }
 
 void sgs_SetErrOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx )
 {
+	SGS_SHCTX_USE;
 	sgs_BreakIf( func == NULL );
 	if( func == SGSOUTPUTFN_DEFAULT )
 		func = sgs_StdOutputFunc;
 	if( !ctx && func == sgs_StdOutputFunc )
 		ctx = stderr;
-	C->erroutput_fn = func;
-	C->erroutput_ctx = ctx;
+	S->erroutput_fn = func;
+	S->erroutput_ctx = ctx;
 }
 
 void sgs_ErrWrite( SGS_CTX, const void* ptr, size_t size )
 {
-	C->erroutput_fn( C->erroutput_ctx, C, ptr, size );
+	SGS_SHCTX_USE;
+	S->erroutput_fn( S->erroutput_ctx, C, ptr, size );
 }
 
 SGSBOOL sgs_ErrWritef( SGS_CTX, const char* what, ... )
@@ -866,12 +873,13 @@ static void serialize_output_func( void* ud, SGS_CTX, const void* ptr, size_t da
 
 void sgs_PushErrorInfo( SGS_CTX, int flags, int type, const char* msg )
 {
-	sgs_OutputFunc oldfn = C->output_fn;
-	void* oldctx = C->output_ctx;
+	SGS_SHCTX_USE;
+	sgs_OutputFunc oldfn = S->output_fn;
+	void* oldctx = S->output_ctx;
 	
 	sgs_MemBuf B = sgs_membuf_create();
-	C->output_fn = serialize_output_func;
-	C->output_ctx = &B;
+	S->output_fn = serialize_output_func;
+	S->output_ctx = &B;
 	
 	sgs_WriteErrorInfo( C, flags, (sgs_ErrorOutputFunc) sgs_Writef, C, type, msg );
 	
@@ -879,8 +887,8 @@ void sgs_PushErrorInfo( SGS_CTX, int flags, int type, const char* msg )
 	sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
 	
 	sgs_membuf_destroy( &B, C );
-	C->output_fn = oldfn;
-	C->output_ctx = oldctx;
+	S->output_fn = oldfn;
+	S->output_ctx = oldctx;
 }
 
 

@@ -156,13 +156,13 @@ sgs_Context* get_context_( int redir_out )
 		setvbuf( outfp, NULL, _IONBF, 0 );
 		
 		sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, outfp );
-		atf_assert( C->output_ctx == outfp );
+		atf_assert( C->shared->output_ctx == outfp );
 	}
 	else if( redir_out == REDIR_BUF )
 	{
 		outbuf = sgs_membuf_create();
 		sgs_SetOutputFunc( C, outfn_buffer, &outbuf );
-		atf_assert( C->output_ctx == &outbuf );
+		atf_assert( C->shared->output_ctx == &outbuf );
 	}
 	
 	errfp = fopen( outfile_errors, "a" );
@@ -172,14 +172,14 @@ sgs_Context* get_context_( int redir_out )
 	fprintf( outfp, "//\n/// O U T P U T  o f  %s\n//\n\n", testname );
 	
 	sgs_SetErrOutputFunc( C, SGSOUTPUTFN_DEFAULT, errfp );
-	atf_assert( C->erroutput_ctx == errfp );
+	atf_assert( C->shared->erroutput_ctx == errfp );
 	
 	return C;
 }
 sgs_Context* get_context(){ return get_context_( REDIR_FILE ); }
 void destroy_context( SGS_CTX )
 {
-	if( C->output_fn == outfn_buffer )
+	if( C->shared->output_fn == outfn_buffer )
 	{
 		sgs_membuf_destroy( &outbuf, C );
 	}
