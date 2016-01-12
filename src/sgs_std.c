@@ -4054,7 +4054,11 @@ SGSBOOL sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 	sgs_BreakIf( out == NULL ); /* CreateObjectIPA modifies the stack otherwise */
 	
 	if( ssz < cnt )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_CreateArray: not enough items on stack (need at least %d, got %d)",
+			(int) cnt, (int) ssz );
 		return SGS_FALSE;
+	}
 	else
 	{
 		sgs_Variable *p, *pend;
@@ -4085,9 +4089,20 @@ SGSBOOL sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 	sgs_VHTable* ht;
 	sgs_StkIdx i, ssz = sgs_StackSize( C );
 	
-	if( cnt > ssz || cnt % 2 != 0 )
+	if( cnt % 2 != 0 )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_CreateDict: specified item count not even (multiple of 2 required, got %d)",
+			(int) cnt );
 		return SGS_FALSE;
+	}
+	if( cnt > ssz )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_CreateDict: not enough items on stack (need at least %d, got %d)",
+			(int) cnt, (int) ssz );
+		return SGS_FALSE;
+	}
 	
+	sgs_BreakIf( out == NULL );
 	dh = mkdict( C, out );
 	ht = &dh->ht;
 	
@@ -4096,6 +4111,8 @@ SGSBOOL sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 		if( !sgs_ParseString( C, i - cnt, NULL, NULL ) )
 		{
 			sgs_Release( C, out );
+			sgs_Msg( C, SGS_APIERR, "sgs_CreateDict: could not parse key of entry %d (stack item %d) as string",
+				(int) i / 2, (int) sgs_AbsIndex( C, i - cnt ) );
 			return SGS_FALSE;
 		}
 		
@@ -4112,8 +4129,18 @@ SGSBOOL sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 	sgs_VHTable* ht;
 	sgs_StkIdx i, ssz = sgs_StackSize( C );
 	
-	if( cnt > ssz || cnt % 2 != 0 )
+	if( cnt % 2 != 0 )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_CreateMap: specified item count not even (multiple of 2 required, got %d)",
+			(int) cnt );
 		return SGS_FALSE;
+	}
+	if( cnt > ssz )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_CreateMap: not enough items on stack (need at least %d, got %d)",
+			(int) cnt, (int) ssz );
+		return SGS_FALSE;
+	}
 	
 	dh = mkmap( C, out );
 	ht = &dh->ht;

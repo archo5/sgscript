@@ -331,7 +331,27 @@ DEFINE_TEST( stack_arraydict )
 	sgs_Pop( C, 2 );
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
-	/* TODO: test "not a string key" in dict creation */
+	/* string-convertible keys */
+	sgs_PushInt( C, 1 );
+	sgs_PushInt( C, 2 );
+	atf_assert( sgs_StackSize( C ) == 2 );
+	sgs_CreateDict( C, NULL, 2 );
+	atf_assert( sgs_StackSize( C ) == 1 );
+	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
+	{
+		sgs_VHTable* tbl = (sgs_VHTable*) sgs_GetObjectData( C, 0 );
+		atf_assert( tbl->vars[0].key.type == SGS_VT_STRING );
+	}
+	sgs_Pop( C, 1 );
+	atf_assert( sgs_StackSize( C ) == 0 );
+	
+	/* "not a string key" in dict creation */
+	sgs_PushCFunc( C, sgs_dummy_func );
+	sgs_PushInt( C, 2 );
+	atf_assert( sgs_StackSize( C ) == 2 );
+	sgs_CreateDict( C, NULL, 2 );
+	/* stack size is undefined at this point */
+	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_NULL );
 	
 	destroy_context( C );
 }

@@ -1900,6 +1900,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 -- it means that the `added` memory space will be appended to the end of object allocation;
 -- this allows to allocate all object data for most objects with just one allocation, instead of two;
 -- the allocated memory will be returned and also available via @sgs_GetObjectData(P)<sgs_GetObjectData(P)>.
+- if sgs_CreateDict fails, stack state is undefined since keys are converted to strings in the process
 
 
 # sgs_Push*** [functions]
