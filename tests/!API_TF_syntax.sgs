@@ -77,6 +77,17 @@ keywords = ["var","global","null","true","false","if","else","do","while",
 foreach( kw : keywords )
 	testEqual( eval( "("$kw$")=5;" ), null, "recognized keyword '"$kw$"' as wrong for left side of assignment" );
 
+	section( "operators" );
+ERRORS = "";
+testEqual( eval( "return ! 5;" ), false, "!5 => false" );
+testEqual( eval( "return - + 5;" ), -5, "-+5 => -5" );
+testEqual( eval( "return + - 5;" ), -5, "+-5 => -5" );
+testEqual( eval( "return - - 5;" ), 5, "- -5 => 5" );
+testEqual( eval( "return - - - 5;" ), -5, "- - -5 => -5" );
+testEqual( eval( "return - ! ! 5;" ), -1, "-!!5 => -1" );
+testEqual( eval( "return - - ~ ~ 5;" ), 5, "- -~~5 => 5" );
+testEqual( ERRORS, "", "operators - no errors" );
+
 
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );

@@ -366,7 +366,7 @@ static sgs_LineNum predictlinenum( sgs_FTNode* node ) /* next, child, local */
 static int level_exp( SFTC, sgs_FTNode** tree )
 {
 	sgs_FTNode* node = *tree, *prev = NULL, *mpp = NULL;
-	int weight = 0, curwt, isfcall, binary, count = 0;
+	int weight = 0, isfcall, binary, count = 0;
 	int threadmode = 0; /* 0 = none, 1 = thread, 2 = subthread */
 
 	SGS_FN_BEGIN;
@@ -398,30 +398,31 @@ static int level_exp( SFTC, sgs_FTNode** tree )
 	/* find the most powerful part (mpp) */
 	while( node )
 	{
+		int leftmostsplit, curwt;
+		
 		count++;
-
+		
 		/* only interested in operators and subexpressions */
 		if( node->type != SGS_SFT_OPER && node->type != SGS_SFT_EXPLIST && node->type != SGS_SFT_ARRLIST )
 			goto _continue;
-
+		
 		/* function tree test */
 		isfcall = node->type == SGS_SFT_EXPLIST || node->type == SGS_SFT_ARRLIST;
 		if( isfcall )	isfcall = !!prev;
 		if( isfcall )	isfcall = prev->type != SGS_SFT_OPER || !SGS_ST_OP_BINARY( *prev->token );
-
+		
 		/* op tests */
 		binary = node->type == SGS_SFT_OPER;
 		if( binary )	binary = prev && node->next;
 		if( binary )	binary = prev->type != SGS_SFT_OPER || 
 			*prev->token == SGS_ST_OP_INC || *prev->token == SGS_ST_OP_DEC;
-
-		/* HACK: discard unary operators following unary operators */
-		if( !binary && !isfcall && mpp && mpp->next == node && SGS_ST_OP_UNARY( *mpp->token ) )
-			goto _continue;
-
+		
 		/* weighting */
 		curwt = part_weight( node, isfcall, binary );
-		if( ( curwt == 40 && curwt > weight ) || ( curwt != 40 && curwt >= weight ) )
+		leftmostsplit = 
+			( node->type == SGS_SFT_OPER && SGS_ST_OP_ASSIGN( *node->token ) ) || /* assignment ops */
+			( node->type == SGS_SFT_OPER && !binary ); /* unary ops */
+		if( ( leftmostsplit && curwt > weight ) || ( !leftmostsplit && curwt >= weight ) )
 		{
 			weight = curwt;
 			mpp = node;
@@ -504,7 +505,7 @@ _continue:
 			goto retsuccess;
 		}
 		
-		/* binary ops */
+		/* operators */
 		if( mpp->type == SGS_SFT_OPER )
 		{
 			if( mpp == *tree )
