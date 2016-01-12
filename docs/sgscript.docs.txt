@@ -3997,7 +3997,8 @@ This library is loaded on initialization and contains the functions and constant
 -- @array_filter - returns an array that is filtered with a truth test or the specified function
 -- @array_process - convert all array elements by a function
 -- @dict_filter - returns a dict object that is filtered with a truth test or the specified function
--- @dict_process - convert all dictionary elements by a function
+-- @map_filter - returns a map object that is filtered with a truth test or the specified function
+-- @map_process - convert all dictionary elements by a function
 -- @dict_size - returns the number of items in a dict
 -- @map_size - returns the number of items in a map
 -- @isset - checks if the specified property is available
@@ -4211,10 +4212,20 @@ This library is loaded on initialization and contains the functions and constant
     dict_filter({ a = 0, b = 1 }); // returns {b=1}
 
 
-# dict_process [function]
+# map_filter [function]
 
-== dict_process( dict, callable )
-=== return a dict with the items passed through a callable
+== map_filter( map[, callable] )
+=== return a map with the items that convert to boolean 'true', optionally preprocessed by a callable
+
+- two arguments are passed to the callable: value, key
+
+    map_filter(map{ a = 0, b = 1 }); // returns [map]{b=1}
+
+
+# map_process [function]
+
+== map_process( obj, callable )
+=== pass all items through a callable, return same object
 
 - two arguments are passed to the callable: value, key
 

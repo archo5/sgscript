@@ -33,6 +33,7 @@ static void dumpnode( sgs_FTNode* N )
 	case SGS_SFT_USELIST: printf( "USE_LIST" ); break;
 	case SGS_SFT_EXPLIST: printf( "EXPR_LIST" ); break;
 	case SGS_SFT_ARRLIST: printf( "ARRAY_LIST" ); break;
+	case SGS_SFT_DCTLIST: printf( "DICT_LIST" ); break;
 	case SGS_SFT_MAPLIST: printf( "MAP_LIST" ); break;
 	case SGS_SFT_RETURN: printf( "RETURN" ); break;
 	case SGS_SFT_BLOCK: printf( "BLOCK" ); break;
@@ -458,7 +459,7 @@ _continue:
 				return 0;
 			}
 			
-			if( mpp->type == SGS_SFT_ARRLIST && !mpp->child && mpp->next && mpp->next->type == SGS_SFT_MAPLIST )
+			if( mpp->type == SGS_SFT_ARRLIST && !mpp->child && mpp->next && mpp->next->type == SGS_SFT_DCTLIST )
 			{
 				/* a multiset (index) expression */
 				mpp->type = SGS_SFT_MIDXSET;
@@ -542,7 +543,7 @@ _continue:
 					return 0;
 				}
 				
-				if( mpptoken && *mpptoken == SGS_ST_OP_MMBR && !mpp->child && se2->type == SGS_SFT_MAPLIST )
+				if( mpptoken && *mpptoken == SGS_ST_OP_MMBR && !mpp->child && se2->type == SGS_SFT_DCTLIST )
 				{
 					/* a multiset (property) expression */
 					mpp->type = SGS_SFT_MPROPSET;
@@ -691,6 +692,76 @@ fail:
 }
 
 
+SFTRET parse_dict( SFTC )
+{
+	sgs_TokenList startok = SFTC_AT;
+	sgs_FTNode* expr = NULL, *fexp = NULL;
+	/* dictionary expression */
+	SFTC_NEXT;
+	while( !SFTC_IS( '}' ) )
+	{
+		int is_ident = SFTC_IS( SGS_ST_IDENT );
+		if( !is_ident && !SFTC_IS( SGS_ST_STRING ) )
+		{
+			SFTC_PRINTERR( "Expected key identifier in dictionary expression" );
+			break;
+		}
+		
+		if( !fexp )
+			expr = fexp = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
+		else
+		{
+			expr->next = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
+			expr = expr->next;
+		}
+		SFTC_NEXT;
+		
+		if( !SFTC_IS( SGS_ST_OP_SET ) )
+		{
+			if( is_ident )
+			{
+				if( SFTC_IS( ',' ) || SFTC_IS( '}' ) )
+				{
+					expr->next = make_node( SGS_SFT_IDENT, expr->token, NULL, NULL );
+					expr = expr->next;
+				}
+				else
+				{
+					SFTC_PRINTERR( "Expected '=', ',' or '}' after dictionary key" );
+					break;
+				}
+			}
+			else
+			{
+				SFTC_PRINTERR( "Expected '=' in dictionary expression "
+					"/ missing closing bracket before '{'" );
+				break;
+			}
+		}
+		else
+		{
+			SFTC_NEXT;
+			
+			expr->next = parse_exp( F, ",}", 2 );
+			if( !expr->next )
+				break;
+			else
+				expr = expr->next;
+		}
+		
+		if( SFTC_IS( ',' ) )
+			SFTC_NEXT;
+	}
+	if( !SFTC_IS( '}' ) )
+	{
+		if( fexp )
+			SFTC_DESTROY( fexp );
+		return NULL;
+	}
+	return make_node( SGS_SFT_DCTLIST, startok, NULL, fexp );
+}
+
+
 SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 {
 	sgs_FTNode* node, *cur;
@@ -744,7 +815,19 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 			  || SFTC_IS( SGS_ST_NUMREAL ) )
 			cur = cur->next = make_node( SGS_SFT_CONST, SFTC_AT, NULL, NULL );
 		else if( SFTC_IS( SGS_ST_IDENT ) )
-			cur = cur->next = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
+		{
+			if( SFTC_IS_ID( "map" ) && sgsT_Next( SFTC_AT ) && *sgsT_Next( SFTC_AT ) == '{' )
+			{
+				SFTC_NEXT;
+				cur->next = parse_dict( F );
+				if( !cur->next )
+					goto fail;
+				cur = cur->next;
+				cur->type = SGS_SFT_MAPLIST;
+			}
+			else
+				cur = cur->next = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
+		}
 		else if( SFTC_IS( SGS_ST_KEYWORD ) )
 		{
 			if( SFTC_ISKEY( "function" ) )
@@ -752,7 +835,6 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 				cur->next = parse_function( F, 1 );
 				if( !cur->next )
 					goto fail;
-
 				cur = cur->next;
 				continue;
 			}
@@ -818,75 +900,10 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 			/* dictionary */
 			else if( SFTC_IS( '{' ) )
 			{
-				sgs_TokenList startok = SFTC_AT;
-				sgs_FTNode* expr = NULL, *fexp = NULL;
-				/* dictionary expression */
-				SFTC_NEXT;
-				while( !SFTC_IS( '}' ) )
-				{
-					int is_ident = SFTC_IS( SGS_ST_IDENT );
-					if( !is_ident && !SFTC_IS( SGS_ST_STRING ) )
-					{
-						SFTC_PRINTERR( "Expected key identifier in dictionary expression" );
-						break;
-					}
-
-					if( !fexp )
-						expr = fexp = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
-					else
-					{
-						expr->next = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
-						expr = expr->next;
-					}
-					SFTC_NEXT;
-
-					if( !SFTC_IS( SGS_ST_OP_SET ) )
-					{
-						if( is_ident )
-						{
-							if( SFTC_IS( ',' ) || SFTC_IS( '}' ) )
-							{
-								expr->next = make_node( SGS_SFT_IDENT, expr->token, NULL, NULL );
-								expr = expr->next;
-							}
-							else
-							{
-								SFTC_PRINTERR( "Expected '=', ',' or '}' after dictionary key" );
-								break;
-							}
-						}
-						else
-						{
-							SFTC_PRINTERR( "Expected '=' in dictionary expression "
-								"/ missing closing bracket before '{'" );
-							break;
-						}
-					}
-					else
-					{
-						SFTC_NEXT;
-
-						expr->next = parse_exp( F, ",}", 2 );
-						if( !expr->next )
-							break;
-						else
-							expr = expr->next;
-					}
-
-					if( SFTC_IS( ',' ) )
-						SFTC_NEXT;
-				}
-				if( !SFTC_IS( '}' ) )
-				{
-					if( fexp )
-						SFTC_DESTROY( fexp );
-					SFTC_SETERR;
-				}
-				else
-				{
-					cur->next = make_node( SGS_SFT_MAPLIST, startok, NULL, fexp );
-					cur = cur->next;
-				}
+				cur->next = parse_dict( F );
+				if( !cur->next )
+					goto fail;
+				cur = cur->next;
 			}
 			else
 			{

@@ -2338,6 +2338,18 @@ static void vm_make_dict( SGS_CTX, int args, int outpos )
 	stk_setvar_leave( C, outpos, &arr );
 }
 
+static void vm_make_map( SGS_CTX, int args, int outpos )
+{
+	int ret;
+	sgs_Variable arr;
+	sgs_BreakIf( sgs_StackSize( C ) < args );
+	ret = sgsSTD_MakeMap( C, &arr, args );
+	sgs_BreakIf( ret != SGS_TRUE );
+	SGS_UNUSED( ret );
+	
+	stk_setvar_leave( C, outpos, &arr );
+}
+
 static void vm_make_closure( SGS_CTX, int args, sgs_Variable* func, int16_t outpos )
 {
 	sgs_BreakIf( C->clstk_top - C->clstk_off < args );
@@ -2840,6 +2852,7 @@ restart_loop:
 
 		case SGS_SI_ARRAY: { vm_make_array( C, argE, argC ); break; }
 		case SGS_SI_DICT: { vm_make_dict( C, argE, argC ); break; }
+		case SGS_SI_MAP: { vm_make_map( C, argE, argC ); break; }
 		case SGS_SI_RSYM: { ARGS_3; sgs_Variable symtbl = sgs_Registry( C, SGS_REG_SYM );
 			sgs_SetIndex( C, symtbl, *p2, *p3, SGS_FALSE ); sgs_SetIndex( C, symtbl, *p3, *p2, SGS_FALSE ); break; }
 			

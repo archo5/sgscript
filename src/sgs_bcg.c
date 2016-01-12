@@ -2111,6 +2111,10 @@ static SGSBOOL compile_node_w( SGS_FNTCMP_ARGS, rcpos_t src )
 		SGS_FN_HIT( "W_ARRLIST" );
 		QPRINT( "Cannot write to constants" );
 		goto fail;
+	case SGS_SFT_DCTLIST:
+		SGS_FN_HIT( "W_DCTLIST" );
+		QPRINT( "Cannot write to constants" );
+		goto fail;
 	case SGS_SFT_MAPLIST:
 		SGS_FN_HIT( "W_MAPLIST" );
 		QPRINT( "Cannot write to constants" );
@@ -2202,8 +2206,9 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 			*out = pos;
 		}
 		break;
+	case SGS_SFT_DCTLIST:
 	case SGS_SFT_MAPLIST:
-		SGS_FN_HIT( "R_MAPLIST" );
+		SGS_FN_HIT( "R_(DCT|MAP)LIST" );
 		{
 			rcpos_t pos = 0;
 			int args = 0;
@@ -2235,7 +2240,7 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 				n = n->next;
 			}
 			pos = comp_reg_alloc( C );
-			INSTR_WRITE_EX( SGS_SI_DICT, args, pos );
+			INSTR_WRITE_EX( node->type == SGS_SFT_DCTLIST ? SGS_SI_DICT : SGS_SI_MAP, args, pos );
 			*out = pos;
 		}
 		break;
@@ -2341,6 +2346,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 	case SGS_SFT_KEYWORD:
 	case SGS_SFT_CONST:
 	case SGS_SFT_ARRLIST:
+	case SGS_SFT_DCTLIST:
 	case SGS_SFT_MAPLIST:
 		break;
 

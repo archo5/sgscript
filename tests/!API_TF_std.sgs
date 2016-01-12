@@ -229,6 +229,7 @@ testEqual( [1,2,3,4].random(7).size, 7, "random - 7 of 4" );
 	section( "misc." );
 ERRORS = "";
 testEqual( dict_size({ a = 1, b = 2 }), 2, "dict_size" );
+testEqual( map_size(map{ a = 1, b = 2 }), 2, "map_size" );
 
 TA = [false,0,1,2,3,[],{},[4]];
 testEqual( ''$array_filter( TA ), "[1,2,3,array]", "array_filter - basic" );
@@ -240,16 +241,29 @@ testEqual( ''$array_process( clone(TA), function(x){return toint(x) + 10;} ), "[
 testEqual( ''$array_process( clone(TA), tostring ), "[false,0,1,2,3,[],{},[4]]", "array_process - convert to string" );
 testEqual( ERRORS, "", "dict_size/array_filter/array_process - no errors" );
 
+ERRORS = "";
 TD = { a = 3, b = false, c = "4", "5" = 0 };
 testEqual( ''$dict_filter( TD ), "{a=3,c=4}", "dict_filter - basic" );
 testEqual( ''$dict_filter( TD, function(x){ return x >= 1 && x <= 5; } ), "{a=3,c=4}", "dict_filter - 1 to 5" );
 testEqual( ''$dict_filter( TD, function(x){return !x;} ), "{b=false,5=0}", "dict_filter - inverted" );
 testEqual( ''$dict_filter( TD, function(x,k){ return toint(k); } ), "{5=0}", "dict_filter - key-based" );
 
-testEqual( ''$dict_process( clone(TD), function(x){ return if(x>=1&&x<=5,1,0); } ), "{a=1,b=0,c=1,5=0}", "dict_process - 1 to 5" );
-testEqual( ''$dict_process( clone(TD), function(x){return toint(x) + 10;} ), "{a=13,b=10,c=14,5=10}", "dict_process - add 10" );
-testEqual( ''$dict_process( clone(TD), tostring ), "{a=3,b=false,c=4,5=0}", "dict_process - convert to string" );
-testEqual( ''$dict_process( clone(TD), function(x,k){ return k; } ), "{a=a,b=b,c=c,5=5}", "dict_process - set from key" );
+testEqual( ''$map_process( clone(TD), function(x){ return if(x>=1&&x<=5,1,0); } ), "{a=1,b=0,c=1,5=0}", "map_process - 1 to 5" );
+testEqual( ''$map_process( clone(TD), function(x){return toint(x) + 10;} ), "{a=13,b=10,c=14,5=10}", "map_process - add 10" );
+testEqual( ''$map_process( clone(TD), tostring ), "{a=3,b=false,c=4,5=0}", "map_process - convert to string" );
+testEqual( ''$map_process( clone(TD), function(x,k){ return k; } ), "{a=a,b=b,c=c,5=5}", "map_process - set from key" );
+
+TD = map{ a = 3, b = false, c = "4", "5" = 0 };
+testEqual( ''$map_filter( TD ), "[map]{a=3,c=4}", "map_filter - basic" );
+testEqual( ''$map_filter( TD, function(x){ return x >= 1 && x <= 5; } ), "[map]{a=3,c=4}", "map_filter - 1 to 5" );
+testEqual( ''$map_filter( TD, function(x){return !x;} ), "[map]{b=false,5=0}", "map_filter - inverted" );
+testEqual( ''$map_filter( TD, function(x,k){ return toint(k); } ), "[map]{5=0}", "map_filter - key-based" );
+
+testEqual( ''$map_process( clone(TD), function(x){ return if(x>=1&&x<=5,1,0); } ), "[map]{a=1,b=0,c=1,5=0}", "map_process - 1 to 5" );
+testEqual( ''$map_process( clone(TD), function(x){return toint(x) + 10;} ), "[map]{a=13,b=10,c=14,5=10}", "map_process - add 10" );
+testEqual( ''$map_process( clone(TD), tostring ), "[map]{a=3,b=false,c=4,5=0}", "map_process - convert to string" );
+testEqual( ''$map_process( clone(TD), function(x,k){ return k; } ), "[map]{a=a,b=b,c=c,5=5}", "map_process - set from key" );
+testEqual( ERRORS, "", "[dict/map]_[filter/process] - no errors" );
 
 testEqual( hash_fnv( "something" ), 2118605163, "fnv hash - as int" );
 testEqual( hash_fnv( "something", true ), "7e47596b", "fnv hash - as string" );

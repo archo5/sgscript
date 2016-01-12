@@ -1642,11 +1642,11 @@ static int sgsstd_map_filter( SGS_CTX )
 	return _sgsstd_ht_filter( C, 1 );
 }
 
-static int sgsstd_dict_process( SGS_CTX )
+static int sgsstd_map_process( SGS_CTX )
 {
 	sgs_Variable v_func;
-	SGSFN( "dict_process" );
-	if( !sgs_LoadArgs( C, "?t?p<v", &v_func ) )
+	SGSFN( "map_process" );
+	if( !sgs_LoadArgs( C, "?v?p<v", &v_func ) )
 		return 0;
 	
 	sgs_PushIterator( C, sgs_StackItem( C, 0 ) );
@@ -3953,8 +3953,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* containers */
 	/* STDLIB_FN( array ), -- object */ STDLIB_FN( dict ), STDLIB_FN( map ), { "class", sgsstd_class },
 	STDLIB_FN( array_filter ), STDLIB_FN( array_process ),
-	STDLIB_FN( dict_filter ), STDLIB_FN( dict_process ),
-	STDLIB_FN( map_filter ),
+	STDLIB_FN( dict_filter ), STDLIB_FN( map_filter ), STDLIB_FN( map_process ),
 	STDLIB_FN( dict_size ), STDLIB_FN( map_size ), STDLIB_FN( isset ), STDLIB_FN( unset ), STDLIB_FN( clone ),
 	STDLIB_FN( get_keys ), STDLIB_FN( get_values ), STDLIB_FN( get_concat ),
 	STDLIB_FN( get_merged ), STDLIB_FN( get_merged_map ),
