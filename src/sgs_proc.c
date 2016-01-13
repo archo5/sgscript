@@ -66,7 +66,6 @@ static int _call_metamethod( SGS_CTX, sgs_VarObj* obj, const char* name, size_t 
 	if( !obj->metaobj )
 		return 0;
 	
-	/* TODO OPTIMIZE NAME */
 	sgs_PushObjectPtr( C, obj->metaobj );
 	sgs_PushStringBuf( C, name, (sgs_SizeVal) namelen );
 	res = sgs_GetIndex( C, sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), &v_func, SGS_FALSE );
@@ -3029,9 +3028,9 @@ void sgsVM_VarDump( const sgs_Variable* var )
 		printf( var->data.S->size > 16 ? "...\"" : "\"" ); break;
 	case SGS_VT_FUNC: printf( " [rc:%"PRId32"]", var->data.F->refcount ); break;
 	case SGS_VT_CFUNC: printf( " = %p", (void*)(size_t) var->data.C ); break;
-	case SGS_VT_OBJECT: printf( "TODO [object impl]" ); break;
+	case SGS_VT_OBJECT: printf( " [rc:%"PRId32"] = %p", var->data.O->refcount, var->data.O ); break;
 	case SGS_VT_PTR: printf( " = %p", var->data.P ); break;
-	case SGS_VT_THREAD: printf( " = %p", var->data.T ); break;
+	case SGS_VT_THREAD: printf( " [rc:%"PRId32"] = %p", var->data.T->refcount, var->data.T ); break;
 	}
 }
 

@@ -501,6 +501,7 @@ DEFINE_TEST( function_calls )
 
 DEFINE_TEST( complex_gc )
 {
+	sgs_SizeVal objcount;
 	SGS_CTX = get_context();
 	
 	const char* str =
@@ -508,9 +509,11 @@ DEFINE_TEST( complex_gc )
 	"o.a[0].parent = o; o.a[1].d.parent = o; o.a[1].d.e.parent = o.a[1].d;"
 	"o.a[1].f.push(o); o.g.push( o.a[1].f ); o.a.push( o.a );";
 	
+	objcount = sgs_Stat( C, SGS_STAT_OBJCOUNT );
 	atf_assert( sgs_ExecString( C, str ) == SGS_SUCCESS );
+	atf_assert( sgs_Stat( C, SGS_STAT_OBJCOUNT ) > objcount );
 	sgs_GCExecute( C );
-	/* TODO test object count? */
+	atf_assert( sgs_Stat( C, SGS_STAT_OBJCOUNT ) == objcount );
 	
 	destroy_context( C );
 }
