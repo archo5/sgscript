@@ -592,22 +592,18 @@ public:
 	sgsVariable& set( sgs_CFunc v ){ _release(); var = sgs_MakeCFunc( v ); return *this; }
 	template< class T > sgsVariable& set( sgsHandle< T > v ){ _release(); C = v.object->C; sgs_InitObjectPtr( C, &var, v.object ); return *this; }
 	template< class T > sgsVariable& set( T* v ){ _release(); C = v->C; sgs_InitObjectPtr( C, &var, v->m_sgsObject ); return *this; }
-	bool call( sgs_Context* c, int args = 0, int ret = 0 )
+	void call( sgs_Context* c, int args = 0, int ret = 0 )
 	{
-		return c && sgs_Call( c, var, args, ret );
+		sgs_Call( c, var, args, ret );
 	}
-	bool thiscall( sgs_Context* c, sgsVariable func, int args = 0, int ret = 0 )
+	void thiscall( sgs_Context* c, sgsVariable func, int args = 0, int ret = 0 )
 	{
-		if( c && func.not_null() )
-		{
-			sgs_InsertVariable( c, -args - 1, var );
-			return sgs_ThisCall( c, func.var, args, ret );
-		}
-		return false;
+		sgs_InsertVariable( c, -args - 1, var );
+		sgs_ThisCall( c, func.var, args, ret );
 	}
-	bool thiscall( sgs_Context* c, const char* key, int args = 0, int ret = 0 )
+	void thiscall( sgs_Context* c, const char* key, int args = 0, int ret = 0 )
 	{
-		return thiscall( c, getprop( key ), args, ret );
+		thiscall( c, getprop( key ), args, ret );
 	}
 	
 	sgs_Variable var;

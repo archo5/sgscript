@@ -46,6 +46,7 @@ The language supports:
 - Multi-level break/continue
 - Multiple return values
 - First-class functions and ability to attach variables to functions (creating closures)
+- coroutines (with threading & sync primitives)
 
 The standard library includes:
 
@@ -70,6 +71,12 @@ Without any extra work, most of the data can be converted to a byte buffer so th
 [-] JavaScript, Lua
 
 This is a preferred method to garbage collection since it releases resources as soon as possible, avoiding random stalls throughout the game and thus providing a smooth gameplay experience. There are algorithms that reduce these stalls (incremental/generational garbage collection) but, given enough objects, they will be noticeable again. Source: @"http://sealedabstract.com/rants/why-mobile-web-apps-are-slow/"
+
+== Coroutines
+[+] SGScript, Lua, Squirrel
+[-] Python, JavaScript (only generators are supported)
+
+True cooperative multitasking allows the direction of timed events to be greatly simplified. SGScript goes one step further and also provides helper constructs (thread, subthread, sync, race) to make things as simple as possible for the user.
 
 == Custom native objects with complex links
 [+] SGScript, Python, JavaScript (partial support)
@@ -1381,6 +1388,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_SetDeltaSize - relative-resize the current stack frame
 - @sgs_AbsIndex - convert stack index to positive if possible (if it's <0 or >=StackSize, then it's invalid)
 - @sgs_IsValidIndex - check if specified stack index is valid
+- @sgs_OptStackItem - return without acquisition the specified variable on stack without errors
 - @sgs_StackItem - return without acquisition the specified variable on stack
 - @sgs_PeekStackItem - try to retrieve without acquisition the specified variable on stack
 - @sgs_GetStackItem - retrieve and acquire the specified variable on stack
@@ -2279,7 +2287,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_XFCall [functions]
 
-== SGSBOOL sgs_XFCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc, int gotthis )
+== void sgs_XFCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc, int gotthis )
 === Call the variable with the arguments on stack, returning variables on stack and their count via the `outrvc` parameter.
 
 - On success, `outrvc` receives the number of values that were returned by the call.
@@ -2288,8 +2296,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_X(This)Call [function aliases]
 
-== SGSBOOL sgs_XCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc )
-== SGSBOOL sgs_XThisCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc )
+== void sgs_XCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc )
+== void sgs_XThisCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc )
 === Call the variable with the arguments on stack, returning variables on stack and their count via the `outrvc` parameter.
 
 - Aliases to @sgs_XFCall, for the first function of each group `gotthis = 0`, for the second `gotthis = 1`.
@@ -2297,7 +2305,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_FCall [functions]
 
-== SGSBOOL sgs_FCall( sgs_Context* C, sgs_Variable var, int args, int expect, int gotthis )
+== void sgs_FCall( sgs_Context* C, sgs_Variable var, int args, int expect, int gotthis )
 === Call the variable with the arguments on stack, returning the expected number of variables on stack.
 
 - `var`: the callable variable to call as a function.
@@ -2328,11 +2336,11 @@ After a successful call, all arguments will be popped off the stack and the expe
 
 # sgs_(This)Call [function aliases]
 
-== SGSBOOL sgs_Call( sgs_Context* C, sgs_Variable var, int args, int expect )
-== SGSBOOL sgs_ThisCall( sgs_Context* C, sgs_Variable var, int args, int expect )
+== void sgs_Call( sgs_Context* C, sgs_Variable var, int args, int expect )
+== void sgs_ThisCall( sgs_Context* C, sgs_Variable var, int args, int expect )
 === Call the variable with the arguments on stack, returning the expected number of variables on stack.
 
-- Aliases to @sgs_FCall, for the first function of each group `gotthis = 0`, for the second `gotthis = 1`.
+- Aliases to @sgs_FCall, for the first function `gotthis = 0`, for the second `gotthis = 1`.
 
 
 # sgs_GlobalCall [function]
@@ -2932,6 +2940,15 @@ After a successful call, all arguments will be popped off the stack and the expe
 === Return whether the specified stack index points to an item in the current stack frame.
 
 - Both positive (first = 0) and negative (last = -1) indices are supported.
+
+
+# sgs_OptStackItem [function]
+
+== sgs_Variable sgs_OptStackItem( sgs_Context* C, sgs_StkIdx item )
+=== Returns a non-owned copy of a variable on stack or null if the index is invalid.
+
+- See @sgs_StackItem for details on behavior, only difference is that `null` is returned when an invalid stack index is passed.
+- This function is useful for the implementation of "Parse"/"ArgCheck" functions which are required never to throw errors by convention.
 
 
 # sgs_StackItem [function]

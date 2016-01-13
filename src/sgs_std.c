@@ -362,9 +362,7 @@ static SGS_INLINE int sgsarrcomp_custom( const void* p1, const void* p2, void* u
 	SGS_CTX = u->C;
 	sgs_PushVariable( C, v1 );
 	sgs_PushVariable( C, v2 );
-	if( !sgs_Call( C, u->sortfunc, 2, 1 ) )
-		return 0;
-	else
+	sgs_Call( C, u->sortfunc, 2, 1 );
 	{
 		sgs_Real r = sgs_GetReal( C, -1 );
 		sgs_Pop( C, 1 );
@@ -2402,7 +2400,6 @@ static int sgsstd_metamethods_test( SGS_CTX )
 
 static int sgsstd_mm_getindex_router( SGS_CTX )
 {
-	int ret;
 	sgs_Variable func, movar;
 	SGSFN( "mm_getindex_router" );
 	
@@ -2417,9 +2414,8 @@ static int sgsstd_mm_getindex_router( SGS_CTX )
 	if( sgs_GetIndex( C, movar, sgs_StackItem( C, -1 ), &func, SGS_FALSE ) == SGS_FALSE ) goto fail;
 	
 	sgs_SetStackSize( C, 1 );
-	ret = sgs_ThisCall( C, func, 0, 1 );
+	sgs_ThisCall( C, func, 0, 1 );
 	sgs_Release( C, &func );
-	if( !ret ) goto fail;
 	return 1;
 	
 fail:
@@ -2428,7 +2424,6 @@ fail:
 
 static int sgsstd_mm_setindex_router( SGS_CTX )
 {
-	int ret;
 	sgs_Variable func, movar;
 	SGSFN( "mm_setindex_router" );
 	
@@ -2444,9 +2439,8 @@ static int sgsstd_mm_setindex_router( SGS_CTX )
 	
 	sgs_SetStackSize( C, 3 );
 	sgs_PopSkip( C, 1, 1 );
-	ret = sgs_ThisCall( C, func, 1, 0 );
+	sgs_ThisCall( C, func, 1, 0 );
 	sgs_Release( C, &func );
-	if( !ret ) goto fail;
 	return 0;
 	
 fail:
@@ -2740,11 +2734,7 @@ SGSBOOL sgs_CreateSubthread( sgs_Context* T, SGS_CTX,
 	{
 		sgs_PushVariable( co_ctx, sgs_StackItem( C, i - size ) );
 	}
-	if( sgs_FCall( co_ctx, func, size, 1, gotthis ) == SGS_FALSE )
-	{
-		sgsCTX_FreeState( co_ctx );
-		return SGS_FALSE;
-	}
+	sgs_FCall( co_ctx, func, size, 1, gotthis );
 	
 	waittime = sgs_GetReal( co_ctx, -1 );
 	sgs_Pop( co_ctx, 1 );
@@ -2940,19 +2930,11 @@ static void sgsstd_pcall_print( void* data, SGS_CTX, int type, const char* messa
 	{
 		sgs_PushInt( C, type );
 		sgs_PushString( C, message );
-		ret = sgs_Call( C, P->handler, 2, 1 );
-		if( ret == SGS_FALSE )
-		{
-			ret = 0;
-			P->pfn( P->pctx, C, SGS_ERROR, "error detected while attempting to call error handler" );
-		}
-		else
-		{
-			if( sgs_Cntl( C, SGS_CNTL_GET_ABORT, 0 ) )
-				sgs_Abort( C );
-			ret = (int) sgs_GetInt( C, -1 );
-			sgs_Pop( C, 1 );
-		}
+		sgs_Call( C, P->handler, 2, 1 );
+		if( sgs_Cntl( C, SGS_CNTL_GET_ABORT, 0 ) )
+			sgs_Abort( C );
+		ret = (int) sgs_GetInt( C, -1 );
+		sgs_Pop( C, 1 );
 	}
 	
 	if( ret > 0 )
@@ -4527,9 +4509,8 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 	
 	sz = sgs_StackSize( C );
 	sgs_PushString( C, name );
-	ret = sgs_Call( C, sgs_MakeCFunc( sgsstd_include ), 1, 1 );
-	if( ret )
-		ret = sgs_GetBool( C, -1 );
+	sgs_Call( C, sgs_MakeCFunc( sgsstd_include ), 1, 1 );
+	ret = sgs_GetBool( C, -1 );
 	sgs_SetStackSize( C, sz );
 	
 	if( pathrep == 1 )

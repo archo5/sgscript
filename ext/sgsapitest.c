@@ -133,7 +133,9 @@ void atf_assert_string_( const char* str1, const char* str2, const char* msg, in
 \*************/
 
 
+sgs_Context* currctx;
 sgs_MemBuf outbuf;
+sgs_MemBuf errbuf;
 FILE* outfp;
 FILE* errfp;
 static void outfn_buffer( void* ud, SGS_CTX, const void* ptr, size_t size )
@@ -141,12 +143,27 @@ static void outfn_buffer( void* ud, SGS_CTX, const void* ptr, size_t size )
 	sgs_MemBuf* mb = (sgs_MemBuf*) ud;
 	sgs_membuf_appbuf( mb, C, ptr, size );
 }
+static void msgfn_buffer( void* ud, SGS_CTX, int type, const char* msg )
+{
+	const char* pfxs[] = { "[I:", "[W:", "[E:" };
+	type = type / 100 - 1;
+	if( type < 0 ) type = 0;
+	if( type > 2 ) type = 2;
+	
+	sgs_WriteErrorInfo( C, SGS_ERRORINFO_FULL, (sgs_ErrorOutputFunc) sgs_ErrWritef, C, type, msg );
+	
+	sgs_MemBuf* mb = (sgs_MemBuf*) ud;
+	sgs_membuf_appbuf( mb, C, pfxs[type], strlen(pfxs[type]) );
+	sgs_membuf_appbuf( mb, C, msg, strlen(msg) );
+	sgs_membuf_appbuf( mb, C, "]", 1 );
+}
 #define REDIR_NONE 0
 #define REDIR_FILE 1
 #define REDIR_BUF 2
 sgs_Context* get_context_( int redir_out )
 {
 	SGS_CTX = sgs_CreateEngine();
+	currctx = C;
 	atf_assert_( C, "could not create context (out of memory?)", __LINE__ );
 	
 	if( redir_out == REDIR_FILE )
@@ -174,6 +191,10 @@ sgs_Context* get_context_( int redir_out )
 	sgs_SetErrOutputFunc( C, SGSOUTPUTFN_DEFAULT, errfp );
 	atf_assert( C->shared->erroutput_ctx == errfp );
 	
+	errbuf = sgs_membuf_create();
+	sgs_SetMsgFunc( C, msgfn_buffer, &errbuf );
+	atf_assert( C->msg_ctx == &errbuf );
+	
 	return C;
 }
 sgs_Context* get_context(){ return get_context_( REDIR_FILE ); }
@@ -183,9 +204,28 @@ void destroy_context( SGS_CTX )
 	{
 		sgs_membuf_destroy( &outbuf, C );
 	}
+	sgs_membuf_destroy( &errbuf, C );
+	currctx = NULL;
 	sgs_DestroyEngine( C );
 	fclose( outfp );
 	fclose( errfp );
+}
+
+void atf_clear_errors()
+{
+	sgs_membuf_resize( &errbuf, currctx, 0 );
+}
+#define atf_check_errors( expect ) atf_check_errors_( expect, __LINE__ )
+void atf_check_errors_( const char* expect, int line )
+{
+	size_t len = strlen( expect );
+	if( len != (size_t) errbuf.size || memcmp( errbuf.ptr, expect, len ) != 0 )
+	{
+		printf( "\nERROR MESSAGE MISMATCH\nexpected: %s\ngot: ", expect );
+		fwrite( errbuf.ptr, errbuf.size, 1, stdout );
+		printf( "\n" );
+		atf_abort();
+	}
 }
 
 int sgs_dummy_func( SGS_CTX ){ return 0; }
@@ -284,11 +324,25 @@ DEFINE_TEST( stack_insert )
 	sgs_PushInt( C, 2 );
 	atf_assert( C->stack_top == C->stack_off + 2 );
 	
+	atf_clear_errors();
 	sgs_InsertVariable( C, 3, sgs_dummy_var ); atf_assert( sgs_StackSize( C ) == 2 );
+	atf_check_errors( "[E:sgs_InsertVariable: invalid index - 3 (stack size = 2)]" );
+	
+	atf_clear_errors();
 	sgs_InsertVariable( C, -4, sgs_dummy_var ); atf_assert( sgs_StackSize( C ) == 2 );
+	atf_check_errors( "[E:sgs_InsertVariable: invalid index - -4 (stack size = 2)]" );
+	
+	atf_clear_errors();
 	sgs_InsertVariable( C, -3, sgs_dummy_var ); atf_assert( sgs_StackSize( C ) == 3 );
+	atf_check_errors( "" );
+	
+	atf_clear_errors();
 	sgs_InsertVariable( C, 3, sgs_dummy_var ); atf_assert( sgs_StackSize( C ) == 4 );
+	atf_check_errors( "" );
+	
+	atf_clear_errors();
 	sgs_InsertVariable( C, 2, sgs_dummy_var ); atf_assert( sgs_StackSize( C ) == 5 );
+	atf_check_errors( "" );
 	
 	atf_assert( C->stack_off[0].type == SGS_VT_NULL );
 	atf_assert( C->stack_off[1].type == SGS_VT_INT );
@@ -362,12 +416,26 @@ DEFINE_TEST( stack_push )
 	
 	sgs_PushNull( C );
 	sgs_PushInt( C, 5 );
-#if 0 /* TODO TEST ERROR THROWING */
-	sgs_PushItem( C, 2 ); atf_assert( sgs_StackSize( C ) == 2 );
-	sgs_PushItem( C, -3 ); atf_assert( sgs_StackSize( C ) == 2 );
+	
+	atf_clear_errors();
+	sgs_PushItem( C, 2 ); atf_assert( sgs_StackSize( C ) == 3 );
+	atf_check_errors( "[E:invalid stack index - 2 (abs = 2, stack size = 2)]" );
+	sgs_Pop( C, 1 );
+	
+	atf_clear_errors();
+	sgs_PushItem( C, -3 ); atf_assert( sgs_StackSize( C ) == 3 );
+	atf_check_errors( "[E:invalid stack index - -3 (abs = -1, stack size = 2)]" );
+	sgs_Pop( C, 1 );
+	
+	atf_clear_errors();
 	sgs_PushItem( C, -2 ); atf_assert( sgs_StackSize( C ) == 3 );
-	sgs_PushItem( C, 1 ); atf_assert( sgs_StackSize( C ) == 4 );
-#endif
+	atf_check_errors( "" );
+	sgs_Pop( C, 1 );
+	
+	atf_clear_errors();
+	sgs_PushItem( C, 1 ); atf_assert( sgs_StackSize( C ) == 3 );
+	atf_check_errors( "" );
+	sgs_Pop( C, 1 );
 	
 	atf_assert( C->stack_off[1].type == SGS_VT_INT );
 	atf_assert( C->stack_off[1].data.I == 5 );
@@ -483,16 +551,25 @@ DEFINE_TEST( function_calls )
 	SGS_CTX = get_context();
 	
 	atf_assert( sgs_GetGlobalByName( C, "array", &v_func ) );
-	atf_assert( sgs_Call( C, v_func, 5, 1 ) == 0 );
-	atf_assert( sgs_Call( C, v_func, 1, 0 ) == 0 );
-	atf_assert( sgs_Call( C, v_func, 0, 0 ) == 1 );
-	atf_assert( sgs_Call( C, v_func, 0, 1 ) == 1 );
+	atf_clear_errors();
+	sgs_Call( C, v_func, 5, 1 );
+	sgs_Call( C, v_func, 1, 0 );
+	atf_check_errors( "[E:sgs_FCall: not enough items in stack (need: 5, got: 0)]"
+		"[E:sgs_FCall: not enough items in stack (need: 1, got: 0)]" );
+	atf_clear_errors();
+	sgs_Call( C, v_func, 0, 0 );
+	sgs_Call( C, v_func, 0, 1 );
+	atf_check_errors( "" );
 	atf_assert( sgs_StackSize( C ) == 1 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
 	
 	atf_assert( sgs_StackSize( C ) == 1 );
-	atf_assert( sgs_ThisCall( C, v_func, 1, 0 ) == 0 );
-	atf_assert( sgs_ThisCall( C, v_func, 0, 0 ) == 1 );
+	atf_clear_errors();
+	sgs_ThisCall( C, v_func, 1, 0 );
+	atf_check_errors( "[E:sgs_FCall: not enough items in stack (need: 2, got: 1)]" );
+	atf_clear_errors();
+	sgs_ThisCall( C, v_func, 0, 0 );
+	atf_check_errors( "" );
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
 	sgs_Release( C, &v_func );
@@ -661,7 +738,7 @@ DEFINE_TEST( iterators )
 	atf_assert( (C->stack_top-1)->data.O->iface == sgsstd_array_iter_iface );
 	/* - values 1 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); atf_check_errors( "" );
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_INT );
 	atf_assert( sgs_GetInt( C, -2 ) == 0 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_BOOL );
@@ -669,7 +746,7 @@ DEFINE_TEST( iterators )
 	sgs_Pop( C, 2 );
 	/* - values 2 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); atf_check_errors( "" );
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_INT );
 	atf_assert( sgs_GetInt( C, -2 ) == 1 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_INT );
@@ -677,7 +754,7 @@ DEFINE_TEST( iterators )
 	sgs_Pop( C, 2 );
 	/* - values 3 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); atf_check_errors( "" );
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_INT );
 	atf_assert( sgs_GetInt( C, -2 ) == 2 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_STRING );
@@ -723,7 +800,7 @@ DEFINE_TEST( iterators )
 	atf_assert( (C->stack_top-1)->data.O->iface == sgsstd_dict_iter_iface );
 	/* - values 1 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); atf_check_errors( "" );
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_STRING );
 	atf_assert( sgs_GetStringSize( C, -2 ) == 3 );
 	atf_assert( strcmp( sgs_GetStringPtr( C, -2 ), "1st" ) == 0 );
@@ -732,7 +809,7 @@ DEFINE_TEST( iterators )
 	sgs_Pop( C, 2 );
 	/* - values 2 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); atf_check_errors( "" );
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_STRING );
 	atf_assert( sgs_GetStringSize( C, -2 ) == 3 );
 	atf_assert( strcmp( sgs_GetStringPtr( C, -2 ), "2nd" ) == 0 );
@@ -741,7 +818,7 @@ DEFINE_TEST( iterators )
 	sgs_Pop( C, 2 );
 	/* - values 3 */
 	atf_assert( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) == 1 );
-	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); /* TODO ERROR CHECK */
+	sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 ); atf_check_errors( "" );
 	atf_assert( sgs_ItemType( C, -2 ) == SGS_VT_STRING );
 	atf_assert( sgs_GetStringSize( C, -2 ) == 3 );
 	atf_assert( strcmp( sgs_GetStringPtr( C, -2 ), "3rd" ) == 0 );

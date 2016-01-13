@@ -1625,18 +1625,16 @@ SGSONE sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 		sgs_VarObj* obj;
 		sgs_Variable val;
 		sgs_StkIdx ssz;
-		SGSBOOL res;
 		
 		ssz = sgs_StackSize( C );
-		res = sgs_Call( C, key, 0, 1 );
-		if( !res ||
-			sgs_ItemType( C, ssz ) != SGS_VT_OBJECT ||
-			!sgs_PeekStackItem( C, ssz, &val ) )
+		sgs_Call( C, key, 0, 1 );
+		if( sgs_ItemType( C, ssz ) != SGS_VT_OBJECT )
 		{
 			sgs_Msg( C, SGS_APIERR, "sgs_PushInterface: failed to create the interface" );
 			sgs_SetStackSize( C, ssz );
 			return sgs_PushNull( C );
 		}
+		val = sgs_StackItem( C, ssz );
 		sgs_vht_set( &S->ifacetable, C, &key, &val );
 		obj = sgs_GetObjectStruct( C, ssz );
 		obj->is_iface = 1;

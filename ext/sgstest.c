@@ -119,10 +119,10 @@ void free_testfiles( testfile* files, size_t count )
 
 static void TF_printfn( void* ctx, SGS_CTX, int type, const char* message )
 {
-	const char* pfxs[] = { "[I:", "[W:", "[E:", "[A:" };
+	const char* pfxs[] = { "[I:", "[W:", "[E:" };
 	type = type / 100 - 1;
 	if( type < 0 ) type = 0;
-	if( type > 3 ) type = 3;
+	if( type > 2 ) type = 2;
 	sgs_PushGlobalByName( C, "ERRORS" );
 	sgs_PushString( C, pfxs[ type ] );
 	sgs_PushString( C, message );

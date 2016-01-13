@@ -99,8 +99,8 @@ typedef void (*sgs_OutputFunc) (
 #define SGS_INFO    100  /* information about potential issues and state of the system */
 #define SGS_WARNING 200  /* non-fatal problems */
 #define SGS_ERROR   300  /* fatal problems */
-#define SGS_APIERR  400  /* API usage errors */
-#define SGS_INTERR  500  /* internal/integral/interesting errors */
+#define SGS_APIERR  330  /* API usage errors */
+#define SGS_INTERR  360  /* internal/integral/interesting errors */
 
 typedef void (*sgs_MsgFunc) (
 	void* /* data */,
@@ -624,10 +624,10 @@ static SGS_INLINE sgs_Variable sgs_FuncStackTopHint()
 	return sv;
 }
 
-SGS_APIFUNC SGSBOOL sgs_XFCall( SGS_CTX, sgs_Variable callable, int args, int* outrvc, int gotthis );
+SGS_APIFUNC void sgs_XFCall( SGS_CTX, sgs_Variable callable, int args, int* outrvc, int gotthis );
 #define sgs_XCall( C, callable, args, outrvc ) sgs_XFCall( C, callable, args, outrvc, 0 )
 #define sgs_XThisCall( C, callable, args, outrvc ) sgs_XFCall( C, callable, args, outrvc, 1 )
-SGS_APIFUNC SGSBOOL sgs_FCall( SGS_CTX, sgs_Variable callable, int args, int expect, int gotthis );
+SGS_APIFUNC void sgs_FCall( SGS_CTX, sgs_Variable callable, int args, int expect, int gotthis );
 #define sgs_Call( C, callable, args, expect ) sgs_FCall( C, callable, args, expect, 0 )
 #define sgs_ThisCall( C, callable, args, expect ) sgs_FCall( C, callable, args, expect, 1 )
 SGS_APIFUNC SGSBOOL sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );

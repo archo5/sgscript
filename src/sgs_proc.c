@@ -74,10 +74,10 @@ static int _call_metamethod( SGS_CTX, sgs_VarObj* obj, const char* name, size_t 
 		return 0;
 	
 	_EL_SETAPI(0);
-	res = sgs_ThisCall( C, v_func, args, 1 );
+	sgs_ThisCall( C, v_func, args, 1 );
 	_EL_RESET;
 	sgs_Release( C, &v_func );
-	return res;
+	return SGS_TRUE;
 }
 
 
@@ -420,9 +420,9 @@ int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 		F->constcount = (int32_t) ( fn->instr_off / sizeof( sgs_Variable* ) );
 		F->cptr = sgs_func_consts( fn );
 	}
-	F->nfname = NULL;
 	F->next = NULL;
 	F->prev = C->sf_last;
+	F->nfname = F->prev ? F->prev->nfname : NULL;
 	F->errsup = 0;
 	F->flags = 0;
 	if( C->sf_last )
@@ -1176,7 +1176,7 @@ static void vm_gcmark( SGS_CTX, sgs_Variable* var )
 
 int sgs_specfn_call( SGS_CTX )
 {
-	int ret, rvc = 0;
+	int rvc = 0;
 	sgs_Variable v_func;
 	SGSFN( "call" );
 	sgs_Method( C );
@@ -1184,16 +1184,13 @@ int sgs_specfn_call( SGS_CTX )
 	if( !sgs_LoadArgs( C, "@?p<v?v", &v_func ) )
 		return 0;
 	
-	ret = sgs_XThisCall( C, v_func, sgs_StackSize( C ) - 2, &rvc );
-	if( SGS_FAILED( ret ) )
-		return sgs_Msg( C, SGS_WARNING, "failed with error %d (%s)", ret,
-			sgs_CodeString( SGS_CODE_ER, ret ) );
+	sgs_XThisCall( C, v_func, sgs_StackSize( C ) - 2, &rvc );
 	return rvc;
 }
 
 int sgs_specfn_apply( SGS_CTX )
 {
-	int ret, rvc = 0;
+	int rvc = 0;
 	sgs_SizeVal i, asize;
 	sgs_Variable v_func, v_this, v_args;
 	SGSFN( "apply" );
@@ -1205,10 +1202,7 @@ int sgs_specfn_apply( SGS_CTX )
 	sgs_PushVariable( C, v_this );
 	for( i = 0; i < asize; ++i )
 		sgs_PushNumIndex( C, v_args, i );
-	ret = sgs_XThisCall( C, v_func, asize, &rvc );
-	if( SGS_FAILED( ret ) )
-		return sgs_Msg( C, SGS_WARNING, "failed with error %d (%s)", ret,
-			sgs_CodeString( SGS_CODE_ER, ret ) );
+	sgs_XThisCall( C, v_func, asize, &rvc );
 	return rvc;
 }
 
@@ -2446,7 +2440,12 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 		
 		if( V.type == SGS_VT_CFUNC )
 		{
+			C->sf_last->nfname = NULL;
 			rvc = (*V.data.C)( C );
+			if( C->sf_last->nfname == NULL && C->sf_last->prev )
+			{
+				C->sf_last->nfname = C->sf_last->prev->nfname;
+			}
 			if( rvc > SGS_STACKFRAMESIZE )
 			{
 				sgs_Msg( C, SGS_ERROR, "Function returned more variables than there was on the stack" );
@@ -2558,7 +2557,6 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 		if( ret && C->sf_last->flags & SGS_SF_ABORTED )
 		{
 			C->state |= SGS_STATE_LASTFUNCABORT;
-			ret = 0;
 		}
 		vm_frame_pop( C );
 	}
@@ -4372,9 +4370,11 @@ void sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var )
 
 */
 
-SGSBOOL sgs_XFCall( SGS_CTX, sgs_Variable callable, int args, int* outrvc, int gotthis )
+void sgs_XFCall( SGS_CTX, sgs_Variable callable, int args, int* outrvc, int gotthis )
 {
-	int ret, rel = 0;
+	int rel = 0;
+	if( outrvc )
+		*outrvc = 0;
 	if( callable.type == 255 ) /* SGS_FSTKTOP */
 	{
 		rel = 1;
@@ -4384,17 +4384,16 @@ SGSBOOL sgs_XFCall( SGS_CTX, sgs_Variable callable, int args, int* outrvc, int g
 	{
 		sgs_Msg( C, SGS_APIERR, "sgs_XFCall: not enough items in stack (need: %d, got: %d)",
 			args + ( gotthis ? 1 : 0 ), (int) SGS_STACKFRAMESIZE );
-		return SGS_FALSE;
+		return;
 	}
-	ret = vm_call( C, args, 0, gotthis, outrvc, &callable, 0 );
+	vm_call( C, args, 0, gotthis, outrvc, &callable, 0 );
 	if( rel )
 		sgs_Release( C, &callable );
-	return ret;
 }
 
-SGSBOOL sgs_FCall( SGS_CTX, sgs_Variable callable, int args, int expect, int gotthis )
+void sgs_FCall( SGS_CTX, sgs_Variable callable, int args, int expect, int gotthis )
 {
-	int ret, rel = 0, rvc = 0;
+	int rel = 0, rvc = 0;
 	if( callable.type == 255 ) /* SGS_FSTKTOP */
 	{
 		rel = 1;
@@ -4404,24 +4403,22 @@ SGSBOOL sgs_FCall( SGS_CTX, sgs_Variable callable, int args, int expect, int got
 	{
 		sgs_Msg( C, SGS_APIERR, "sgs_FCall: not enough items in stack (need: %d, got: %d)",
 			args + ( gotthis ? 1 : 0 ), (int) SGS_STACKFRAMESIZE );
-		return SGS_FALSE;
+		return;
 	}
-	ret = vm_call( C, args, 0, gotthis, &rvc, &callable, 0 );
+	vm_call( C, args, 0, gotthis, &rvc, &callable, 0 );
 	stk_resize_expected( C, expect, rvc );
 	if( rel )
 		sgs_Release( C, &callable );
-	return ret;
 }
 
 SGSBOOL sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect )
 {
-	int ret;
 	sgs_Variable v_func;
 	if( !sgs_GetGlobalByName( C, name, &v_func ) )
 		return SGS_FALSE;
-	ret = sgs_Call( C, v_func, args, expect );
+	sgs_Call( C, v_func, args, expect );
 	sgs_Release( C, &v_func );
-	return ret;
+	return SGS_TRUE;
 }
 
 void sgs_TypeOf( SGS_CTX, sgs_Variable var )
