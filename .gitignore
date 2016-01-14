@@ -15,6 +15,7 @@ ipch
 *.user
 !output.dir
 /docs/out/*
+/docs/adv/*
 /docs/*.toc
 .DS_Store
 xcuserdata

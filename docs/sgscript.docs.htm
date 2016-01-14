@@ -132,7 +132,8 @@ The language supports:
 </li><li>9 variable types: null, bool, int, real, string, function, C function, object, pointer
 </li><li>Multi-level break/continue
 </li><li>Multiple return values
-</li><li>First-class functions and ability to attach variables to functions (creating closures)</li></ul><p>
+</li><li>First-class functions and ability to attach variables to functions (creating closures)
+</li><li>coroutines (with threading &amp; sync primitives)</li></ul><p>
 The standard library includes:
 </p><ul><li>array, dict, map
 </li><li>math, string, I/O, O/S and formatting functions
@@ -147,6 +148,11 @@ Without any extra work, most of the data can be converted to a byte buffer so th
 <div class='al-con'><span class='inner'><span class='mark'>[-]</span> JavaScript, Lua</span></div>
 </p><p>
 This is a preferred method to garbage collection since it releases resources as soon as possible, avoiding random stalls throughout the game and thus providing a smooth gameplay experience. There are algorithms that reduce these stalls (incremental/generational garbage collection) but, given enough objects, they will be noticeable again. Source: <a href="http://sealedabstract.com/rants/why-mobile-web-apps-are-slow/" target="_blank">http://sealedabstract.com/rants/why-mobile-web-apps-are-slow/</a>
+</p><h3>Coroutines</h3><p>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Lua, Squirrel</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Python, JavaScript (only generators are supported)</span></div>
+</p><p>
+True cooperative multitasking allows the direction of timed events to be greatly simplified. SGScript goes one step further and also provides helper constructs (thread, subthread, sync, race) to make things as simple as possible for the user.
 </p><h3>Custom native objects with complex links</h3><p>
 <div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python, JavaScript (partial support)</span></div>
 <div class='al-con'><span class='inner'><span class='mark'>[-]</span> Lua, Squirrel</span></div>
@@ -1079,6 +1085,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-SetDeltaSize-function">sgs_SetDeltaSize</a> - relative-resize the current stack frame
 </li><li><a href="#sgs-AbsIndex-function">sgs_AbsIndex</a> - convert stack index to positive if possible (if it&#39;s &lt;0 or &gt;=StackSize, then it&#39;s invalid)
 </li><li><a href="#sgs-IsValidIndex-function">sgs_IsValidIndex</a> - check if specified stack index is valid
+</li><li><a href="#sgs-OptStackItem-function">sgs_OptStackItem</a> - return without acquisition the specified variable on stack without errors
 </li><li><a href="#sgs-StackItem-function">sgs_StackItem</a> - return without acquisition the specified variable on stack
 </li><li><a href="#sgs-PeekStackItem-function">sgs_PeekStackItem</a> - try to retrieve without acquisition the specified variable on stack
 </li><li><a href="#sgs-GetStackItem-function">sgs_GetStackItem</a> - retrieve and acquire the specified variable on stack
@@ -1377,6 +1384,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-ObjSetMetaMethodEnable-function">sgs_ObjSetMetaMethodEnable [function]</a>
 </li><li><a href="#sgs-ObjSetMetaObj-function">sgs_ObjSetMetaObj [function]</a>
 </li><li><a href="#sgs-ObjectArg-function">sgs_ObjectArg [function]</a>
+</li><li><a href="#sgs-OptStackItem-function">sgs_OptStackItem [function]</a>
 </li><li><a href="#sgs-PadString-function">sgs_PadString [function]</a>
 </li><li><a href="#sgs-Parse-functions">sgs_Parse*** [functions]</a>
 </li><li><a href="#sgs-ParseMethod-function">sgs_ParseMethod [function]</a>
@@ -1622,10 +1630,10 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li>Strictness controls whether <code>null</code> is accepted.
 </li><li>Returned value: sgs_VarObj* (expects sgs_VarObj** argument for it).</li></ul></div>
 <div class='item'><a name='sgs-ObjectArg-function'></a><hr><h2>sgs_ObjectArg [function]</h2><h3>int sgs_ObjectArg( sgs_Context* C )</h3><h4>Returns the additional integer argument to an object interface function call.</h4><ul><li>For <code>getindex</code> and <code>setindex</code>: if argument is nonzero, property is requested, zero - index.</li></ul></div>
-<div class='item'><a name='sgs-XFCall-functions'></a><hr><h2>sgs_XFCall [functions]</h2><h3>SGSBOOL sgs_XFCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc, int gotthis )</h3><h4>Call the variable with the arguments on stack, returning variables on stack and their count via the <code>outrvc</code> parameter.</h4><ul><li>On success, <code>outrvc</code> receives the number of values that were returned by the call.
+<div class='item'><a name='sgs-XFCall-functions'></a><hr><h2>sgs_XFCall [functions]</h2><h3>void sgs_XFCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc, int gotthis )</h3><h4>Call the variable with the arguments on stack, returning variables on stack and their count via the <code>outrvc</code> parameter.</h4><ul><li>On success, <code>outrvc</code> receives the number of values that were returned by the call.
 </li><li>Refer to <a href="#sgs-FCall-functions">sgs_FCall</a> for additional documentation.</li></ul></div>
-<div class='item'><a name='sgs-X-This-Call-function-aliases'></a><hr><h2>sgs_X(This)Call [function aliases]</h2><h3>SGSBOOL sgs_XCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc )</h3><h3>SGSBOOL sgs_XThisCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc )</h3><h4>Call the variable with the arguments on stack, returning variables on stack and their count via the <code>outrvc</code> parameter.</h4><ul><li>Aliases to <a href="#sgs-XFCall-functions">sgs_XFCall</a>, for the first function of each group <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
-<div class='item'><a name='sgs-FCall-functions'></a><hr><h2>sgs_FCall [functions]</h2><h3>SGSBOOL sgs_FCall( sgs_Context* C, sgs_Variable var, int args, int expect, int gotthis )</h3><h4>Call the variable with the arguments on stack, returning the expected number of variables on stack.</h4><ul><li><code>var</code>: the callable variable to call as a function.
+<div class='item'><a name='sgs-X-This-Call-function-aliases'></a><hr><h2>sgs_X(This)Call [function aliases]</h2><h3>void sgs_XCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc )</h3><h3>void sgs_XThisCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc )</h3><h4>Call the variable with the arguments on stack, returning variables on stack and their count via the <code>outrvc</code> parameter.</h4><ul><li>Aliases to <a href="#sgs-XFCall-functions">sgs_XFCall</a>, for the first function of each group <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
+<div class='item'><a name='sgs-FCall-functions'></a><hr><h2>sgs_FCall [functions]</h2><h3>void sgs_FCall( sgs_Context* C, sgs_Variable var, int args, int expect, int gotthis )</h3><h4>Call the variable with the arguments on stack, returning the expected number of variables on stack.</h4><ul><li><code>var</code>: the callable variable to call as a function.
 </li><li><code>args</code>: the primary variables to be passed to the function, in the same order they are in the stack.
 </li><li><code>expect</code>: the number of variables to be left after a successful call.
 </li><li><code>gotthis</code>: whether the function is a method and an additional argument needs to be passed as the &#39;this&#39; value before others.</li></ul><p>
@@ -1645,7 +1653,7 @@ After a successful call, all arguments will be popped off the stack and the expe
 </p><p>
 <em class='notice-bgr'>To find out if execution state was suspended in this call, see <a href="#sgs-Cntl-function">sgs_Cntl</a> / SGS_CNTL_GET_PAUSED.</em>
 </p></div>
-<div class='item'><a name='sgs-This-Call-function-aliases'></a><hr><h2>sgs_(This)Call [function aliases]</h2><h3>SGSBOOL sgs_Call( sgs_Context* C, sgs_Variable var, int args, int expect )</h3><h3>SGSBOOL sgs_ThisCall( sgs_Context* C, sgs_Variable var, int args, int expect )</h3><h4>Call the variable with the arguments on stack, returning the expected number of variables on stack.</h4><ul><li>Aliases to <a href="#sgs-FCall-functions">sgs_FCall</a>, for the first function of each group <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
+<div class='item'><a name='sgs-This-Call-function-aliases'></a><hr><h2>sgs_(This)Call [function aliases]</h2><h3>void sgs_Call( sgs_Context* C, sgs_Variable var, int args, int expect )</h3><h3>void sgs_ThisCall( sgs_Context* C, sgs_Variable var, int args, int expect )</h3><h4>Call the variable with the arguments on stack, returning the expected number of variables on stack.</h4><ul><li>Aliases to <a href="#sgs-FCall-functions">sgs_FCall</a>, for the first function <code>gotthis = 0</code>, for the second <code>gotthis = 1</code>.</li></ul></div>
 <div class='item'><a name='sgs-GlobalCall-function'></a><hr><h2>sgs_GlobalCall [function]</h2><h3>SGSBOOL sgs_GlobalCall( sgs_Context* C, const char* name, int args, int expect )</h3><h4>Call the global variable <code>name</code> as a function.</h4><ul><li>Combination of global function retrieval and function call; see <a href="#sgs-PushGlobalByName-function">sgs_PushGlobalByName</a> and <a href="#sgs-FCall-functions">sgs_FCall</a> for more info on behavior.</li></ul></div>
 <div class='item'><a name='sgs-TypeOf-function'></a><hr><h2>sgs_TypeOf [function]</h2><h3>void sgs_TypeOf( sgs_Context* C, sgs_Variable var )</h3><h4>Return the type name string of the specified variable.</h4><ul><li>Object type sources are processed in the following order:
 <ul><li>Metamethod <code>__typeof</code>;
@@ -1773,6 +1781,8 @@ After a successful call, all arguments will be popped off the stack and the expe
 <em class='notice-bgr'>This function can still return negative values - make sure that valid values are passed to it or check if the returned value is in the range [ 0; stack_frame_size ).</em>
 </p></div>
 <div class='item'><a name='sgs-IsValidIndex-function'></a><hr><h2>sgs_IsValidIndex [function]</h2><h3>SGSBOOL sgs_IsValidIndex( sgs_Context* C, sgs_StkIdx item )</h3><h4>Return whether the specified stack index points to an item in the current stack frame.</h4><ul><li>Both positive (first = 0) and negative (last = -1) indices are supported.</li></ul></div>
+<div class='item'><a name='sgs-OptStackItem-function'></a><hr><h2>sgs_OptStackItem [function]</h2><h3>sgs_Variable sgs_OptStackItem( sgs_Context* C, sgs_StkIdx item )</h3><h4>Returns a non-owned copy of a variable on stack or null if the index is invalid.</h4><ul><li>See <a href="#sgs-StackItem-function">sgs_StackItem</a> for details on behavior, only difference is that <code>null</code> is returned when an invalid stack index is passed.
+</li><li>This function is useful for the implementation of &quot;Parse&quot;/&quot;ArgCheck&quot; functions which are required never to throw errors by convention.</li></ul></div>
 <div class='item'><a name='sgs-StackItem-function'></a><hr><h2>sgs_StackItem [function]</h2><h3>sgs_Variable sgs_StackItem( sgs_Context* C, sgs_StkIdx item )</h3><h4>Returns a non-owned copy of a variable on stack.</h4><p>
 <em class='notice-bgr'>Avoid using this function with functions that can alter the stack and remove the source item.</em>
 </p><p>
@@ -2137,7 +2147,8 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#array-filter-function">array_filter</a> - returns an array that is filtered with a truth test or the specified function
 </li><li><a href="#array-process-function">array_process</a> - convert all array elements by a function
 </li><li><a href="#dict-filter-function">dict_filter</a> - returns a dict object that is filtered with a truth test or the specified function
-</li><li><a href="#dict-process-function">dict_process</a> - convert all dictionary elements by a function
+</li><li><a href="#map-filter-function">map_filter</a> - returns a map object that is filtered with a truth test or the specified function
+</li><li><a href="#map-process-function">map_process</a> - convert all dictionary elements by a function
 </li><li><a href="#dict-size-function">dict_size</a> - returns the number of items in a dict
 </li><li><a href="#map-size-function">map_size</a> - returns the number of items in a map
 </li><li><a href="#isset-function">isset</a> - checks if the specified property is available
@@ -2270,7 +2281,8 @@ c.printdata(); // prints 6</pre></div>
 <div class='item'><a name='array-filter-function'></a><hr><h2>array_filter [function]</h2><h3>array_filter( array[, callable] )</h3><h4>return an array with the items that convert to boolean &#39;true&#39;, optionally preprocessed by a callable</h4><ul><li>two arguments are passed to the callable: value, index</li></ul><pre>array_filter([ 0, 1, 2, 3 ]); // returns [1,2,3]</pre></div>
 <div class='item'><a name='array-process-function'></a><hr><h2>array_process [function]</h2><h3>array_process( array, callable )</h3><h4>return an array with the items passed through a callable</h4><ul><li>two arguments are passed to the callable: value, index</li></ul></div>
 <div class='item'><a name='dict-filter-function'></a><hr><h2>dict_filter [function]</h2><h3>dict_filter( dict[, callable] )</h3><h4>return a dict with the items that convert to boolean &#39;true&#39;, optionally preprocessed by a callable</h4><ul><li>two arguments are passed to the callable: value, key</li></ul><pre>dict_filter({ a = 0, b = 1 }); // returns {b=1}</pre></div>
-<div class='item'><a name='dict-process-function'></a><hr><h2>dict_process [function]</h2><h3>dict_process( dict, callable )</h3><h4>return a dict with the items passed through a callable</h4><ul><li>two arguments are passed to the callable: value, key</li></ul></div>
+<div class='item'><a name='map-filter-function'></a><hr><h2>map_filter [function]</h2><h3>map_filter( map[, callable] )</h3><h4>return a map with the items that convert to boolean &#39;true&#39;, optionally preprocessed by a callable</h4><ul><li>two arguments are passed to the callable: value, key</li></ul><pre>map_filter(map{ a = 0, b = 1 }); // returns [map]{b=1}</pre></div>
+<div class='item'><a name='map-process-function'></a><hr><h2>map_process [function]</h2><h3>map_process( obj, callable )</h3><h4>pass all items through a callable, return same object</h4><ul><li>two arguments are passed to the callable: value, key</li></ul></div>
 <div class='item'><a name='dict-size-function'></a><hr><h2>dict_size [function]</h2><h3>dict_size( dict )</h3><h4>return the number of entries in the dict object</h4><pre>x = { a = 5, b = 123 };
 dict_size( x ); // returns 2</pre></div>
 <div class='item'><a name='map-size-function'></a><hr><h2>map_size [function]</h2><h3>map_size( dict )</h3><h4>return the number of entries in the map object</h4><pre>x = map( 5, &quot;a&quot;, 123, &quot;b&quot; );
@@ -2662,7 +2674,6 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#compile-sgs-function">compile_sgs [function]</a>
 </li><li><a href="#dict-function">dict [function]</a>
 </li><li><a href="#dict-filter-function">dict_filter [function]</a>
-</li><li><a href="#dict-process-function">dict_process [function]</a>
 </li><li><a href="#dict-size-function">dict_size [function]</a>
 </li><li><a href="#dumpvar-function">dumpvar [function]</a>
 </li><li><a href="#dumpvar-ext-function">dumpvar_ext [function]</a>
@@ -2695,6 +2706,8 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#iter-advance-function">iter_advance [function]</a>
 </li><li><a href="#iter-getdata-function">iter_getdata [function]</a>
 </li><li><a href="#map-function">map [function]</a>
+</li><li><a href="#map-filter-function">map_filter [function]</a>
+</li><li><a href="#map-process-function">map_process [function]</a>
 </li><li><a href="#map-size-function">map_size [function]</a>
 </li><li><a href="#metamethods-enable-function">metamethods_enable [function]</a>
 </li><li><a href="#metamethods-test-function">metamethods_test [function]</a>

@@ -1,7 +1,0 @@
-
-include "docgen";
-
-global WEB = true;
-println( "--- SGScript documentation generator for the website ---" );
-
-main();
