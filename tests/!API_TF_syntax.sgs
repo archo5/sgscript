@@ -88,6 +88,14 @@ testEqual( eval( "return - ! ! 5;" ), -1, "-!!5 => -1" );
 testEqual( eval( "return - - ~ ~ 5;" ), 5, "- -~~5 => 5" );
 testEqual( ERRORS, "", "operators - no errors" );
 
+	section( "table (dict/map) keys" );
+testEqual( ''$eval( "return {a=1,b=2};" ), "{a=1,b=2}", "basic dict literal" );
+testEqual( ''$eval( "return {'a'=1,\"b\"=2};" ), "{a=1,b=2}", "string keys in dict literal" );
+testEqual( ''$eval( "kn1 = 'a'; kn2 = 'b'; return {[kn1]=1,[kn2]=2};" ), "{a=1,b=2}", "variable keys in dict literal" );
+testEqual( ''$eval( "kn1 = print; return map{[kn1]=1};" ), "[map]{C function=1}", "variable keys in map literal" );
+testEqual( eval( "kn1 = print; return map{[kn1]=1}[print];" ), 1, "retrieval by var.key in map literal" );
+testEqual( ''$eval( "kn1 = print; return {[kn1]=1};" ), "{C function=1}", "variable keys in dict literal (to string)" );
+
 
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );

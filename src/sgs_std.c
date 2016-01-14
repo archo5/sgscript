@@ -4090,14 +4090,7 @@ SGSBOOL sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 	
 	for( i = 0; i < cnt; i += 2 )
 	{
-		if( !sgs_ParseString( C, i - cnt, NULL, NULL ) )
-		{
-			sgs_Release( C, out );
-			sgs_Msg( C, SGS_APIERR, "sgs_CreateDict: could not parse key of entry %d (stack item %d) as string",
-				(int) i / 2, (int) sgs_AbsIndex( C, i - cnt ) );
-			return SGS_FALSE;
-		}
-		
+		sgs_ToString( C, i - cnt );
 		sgs_vht_set( ht, C, (C->stack_top+i-cnt), (C->stack_top+i+1-cnt) );
 	}
 	

@@ -696,26 +696,41 @@ fail:
 SFTRET parse_dict( SFTC )
 {
 	sgs_TokenList startok = SFTC_AT;
-	sgs_FTNode* expr = NULL, *fexp = NULL;
+	sgs_FTNode* expr = NULL, *fexp = NULL, *cur;
 	/* dictionary expression */
 	SFTC_NEXT;
 	while( !SFTC_IS( '}' ) )
 	{
 		int is_ident = SFTC_IS( SGS_ST_IDENT );
-		if( !is_ident && !SFTC_IS( SGS_ST_STRING ) )
+		int is_varkey = SFTC_IS( '[' );
+		if( !is_ident && !is_varkey && !SFTC_IS( SGS_ST_STRING ) )
 		{
-			SFTC_PRINTERR( "Expected key identifier in dictionary expression" );
-			break;
+			SFTC_PRINTERR( "expected key identifier, string or '[' in dictionary expression" );
+			goto fail;
 		}
 		
-		if( !fexp )
-			expr = fexp = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
+		/* make key */
+		if( is_varkey )
+		{
+			SFTC_NEXT;
+			cur = parse_exp( F, "]", 1 );
+			if( !cur )
+				goto fail;
+		}
 		else
 		{
-			expr->next = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
-			expr = expr->next;
+			cur = make_node( SGS_SFT_ARGMT, SFTC_AT, NULL, NULL );
 		}
 		SFTC_NEXT;
+		
+		/* add key to node list */
+		if( !fexp )
+			expr = fexp = cur;
+		else
+		{
+			expr->next = cur;
+			expr = expr->next;
+		}
 		
 		if( !SFTC_IS( SGS_ST_OP_SET ) )
 		{
@@ -729,14 +744,14 @@ SFTRET parse_dict( SFTC )
 				else
 				{
 					SFTC_PRINTERR( "Expected '=', ',' or '}' after dictionary key" );
-					break;
+					goto fail;
 				}
 			}
 			else
 			{
 				SFTC_PRINTERR( "Expected '=' in dictionary expression "
 					"/ missing closing bracket before '{'" );
-				break;
+				goto fail;
 			}
 		}
 		else
@@ -745,7 +760,7 @@ SFTRET parse_dict( SFTC )
 			
 			expr->next = parse_exp( F, ",}", 2 );
 			if( !expr->next )
-				break;
+				goto fail;
 			else
 				expr = expr->next;
 		}
@@ -753,13 +768,12 @@ SFTRET parse_dict( SFTC )
 		if( SFTC_IS( ',' ) )
 			SFTC_NEXT;
 	}
-	if( !SFTC_IS( '}' ) )
-	{
-		if( fexp )
-			SFTC_DESTROY( fexp );
-		return NULL;
-	}
 	return make_node( SGS_SFT_DCTLIST, startok, NULL, fexp );
+	
+fail:
+	if( fexp )
+		SFTC_DESTROY( fexp );
+	return NULL;
 }
 
 

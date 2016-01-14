@@ -2219,7 +2219,13 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 				pos = 0;
 				if( args % 2 == 0 )
 				{
-					if( *n->token == SGS_ST_STRING )
+					if( n->type != SGS_SFT_ARGMT )
+					{
+						SGS_FN_ENTER;
+						if( !compile_node_r( C, func, n, &pos ) )
+							goto fail;
+					}
+					else if( *n->token == SGS_ST_STRING )
 					{
 						uint32_t string_len;
 						SGS_AS_UINT32( string_len, n->token + 1 );
