@@ -1266,7 +1266,6 @@ DEFINE_TEST( profiling )
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
-#if 0
 	/*****************|
 	|   M O D E   3   |  [memory usage per call stack]
 	-----------------*/
@@ -1292,6 +1291,10 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test::rand -" ) != NULL );
+	{
+		char* firsttime = strstr( outbuf.ptr, "." ) - 1;
+		atf_assert( *(firsttime-1) == ' ' && atof( firsttime ) < 0.5f ); /* first entry should not exceed 0.5f */
+	}
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
@@ -1311,9 +1314,12 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::abort -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) == NULL );
+	{
+		char* firsttime = strstr( outbuf.ptr, "." ) - 1;
+		atf_assert( *(firsttime-1) == ' ' && atof( firsttime ) < 0.5f ); /* first entry should not exceed 0.5f */
+	}
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
-#endif
 	
 	destroy_context( C );
 }

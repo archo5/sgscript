@@ -60,9 +60,6 @@ SGS_APIFUNC void sgs_ProfAttach( SGS_CTX, sgs_Prof* P );
 /* detach profiler from context */
 SGS_APIFUNC void sgs_ProfDetach( SGS_CTX, sgs_Prof* P );
 
-/* commit unfinished measuring (can be used for stopping in the middle of things) */
-SGS_APIFUNC void sgs_ProfCommit( sgs_Prof* P );
-
 /* close profiler, detaching from all contexts */
 SGS_APIFUNC void sgs_ProfClose( SGS_CTX, sgs_Prof* P );
 

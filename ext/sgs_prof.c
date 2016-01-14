@@ -131,7 +131,6 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 				sf = sf->next;
 			}
 		}
-		//printf("evid=%d sizeafter=%d\n",evid, P->frametmp.size);
 	}
 	else if( evid == SGS_HOOK_CREAT )
 	{
@@ -332,6 +331,7 @@ static void dumpProfMode2( sgs_Prof* P, SGS_CTX )
 
 typedef struct _mode3item
 {
+	sgs_StackFrame* frame;
 	size_t numallocs;
 	size_t numfrees;
 	size_t numblocks;
@@ -341,59 +341,141 @@ mode3item;
 
 static void mode3hook( void* userdata, SGS_CTX, int evid )
 {
-	SGS_SHCTX_USE;
 	sgs_ProfData* P = (sgs_ProfData*) userdata;
-	mode3item CD = { S->numallocs, S->numfrees, S->numblocks, (double) S->memsize };
 	if( P->hfn )
 		P->hfn( P->hctx, C, evid );
 	
-#if 0
-	if( evid == SGS_HOOK_ENTER || evid == SGS_HOOK_CONT )
+	if( evid == SGS_HOOK_ENTER || evid == SGS_HOOK_CONT ||
+		evid == SGS_HOOK_EXIT || evid == SGS_HOOK_PAUSE )
 	{
-		sgs_membuf_appbuf( &P->timetmp, C, &CD, sizeof(CD) );
-	}
-	else if( evid == SGS_HOOK_EXIT || evid == SGS_HOOK_PAUSE )
-	{
-		mode3item prevCD, *PD;
-		sgs_VHTVar* pair;
+		SGS_SHCTX_USE;
+		mode3item CD = { NULL, S->numallocs, S->numfrees, S->numblocks, (double) S->memsize };
 		
-		sgs_StackFrame* sf = sgs_GetFramePtr( C, NULL, 0 );
-		sgs_membuf_resize( &P->keytmp, C, 0 );
-		while( sf )
+		sgs_StackFrame* target = NULL, *sf, *lastrec = NULL;
+		mode3item* items = (mode3item*) (void*) SGS_ASSUME_ALIGNED( P->frametmp.ptr, 4 );
+		size_t i, itemcount = P->frametmp.size / sizeof(mode3item);
+		
+		if( evid == SGS_HOOK_ENTER || evid == SGS_HOOK_CONT )
+			target = C->sf_last;
+		else if( evid == SGS_HOOK_EXIT )
+			target = C->sf_last->prev;
+		/* pause => null */
+		
+		/* ignore the case when target = current */
+		if( itemcount && items[ itemcount - 1 ].frame == target )
+			return;
+		
+		/* find target in stack */
+		for( i = 0; i < itemcount; ++i )
 		{
-			const char* fname = "<error>";
-			sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
-			sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
-			sgs_membuf_appchr( &P->keytmp, C, 0 );
-			sf = sf->next;
+			if( items[ i ].frame == target )
+				break;
 		}
-		
-		memcpy( &prevCD, P->timetmp.ptr + P->timetmp.size - sizeof(CD), sizeof(CD) );
-		pair = sgs_vht_get_str( &P->timings, P->keytmp.ptr, (uint32_t) P->keytmp.size,
-			sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
-		if( pair )
+		if( i == itemcount )
 		{
-			PD = (mode3item*) pair->val.data.P;
+			/* find last recorded frame in call stack */
+			sf = NULL;
+			if( itemcount )
+			{
+				sf = C->sf_first;
+				while( sf )
+				{
+					if( items[ itemcount - 1 ].frame == sf )
+						break;
+					sf = sf->next;
+				}
+			}
+			lastrec = sf;
+			if( sf == NULL || target == NULL )
+				i = 0; /* frame not found/req., remove everything */
+			/* otherwise, remove nothing, it's an "ENTER" */
 		}
 		else
+			i++; /* remove starting from next frame */
+		
+		/* if there is anything to remove */
+		if( i < itemcount )
 		{
-			sgs_Variable val;
-			val.type = SGS_VT_PTR;
-			val.data.P = PD = (mode3item*) sgs_Malloc( C, sizeof(CD) );
-			memset( PD, 0, sizeof(*PD) );
-			sgs_PushStringBuf( C, P->keytmp.ptr, (sgs_SizeVal) P->keytmp.size );
-			sgs_vht_set( &P->timings, C, C->stack_top-1, &val );
-			sgs_Pop( C, 1 );
+			size_t bki = i;
+			sf = C->sf_first;
+			/* generate core key (from start to first removed incl.) */
+			sgs_membuf_resize( &P->keytmp, C, 0 );
+			while( sf && sf != items[ i ].frame )
+			{
+				const char* fname = "<error>";
+				sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
+				sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
+				sgs_membuf_appchr( &P->keytmp, C, 0 );
+				sf = sf->next;
+			}
+			
+			/* iterate removable frames (assuming frame pointers are valid) */
+			for( ; i < itemcount; ++i )
+			{
+				const char* fname = "<error>";
+				sgs_StackFrameInfo( C, items[ i ].frame, &fname, NULL, NULL );
+				sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
+				sgs_membuf_appchr( &P->keytmp, C, 0 );
+				
+				/* commit memory addition */
+				{
+					mode3item prevCD = items[ i ], *PD;
+					sgs_VHTVar* pair = sgs_vht_get_str( &P->prof->timings, P->keytmp.ptr,
+						(uint32_t) P->keytmp.size, sgs_HashFunc( P->keytmp.ptr, P->keytmp.size ) );
+					if( pair )
+					{
+						PD = (mode3item*) pair->val.data.P;
+					}
+					else
+					{
+						sgs_Variable key, val;
+						val.type = SGS_VT_PTR;
+						val.data.P = PD = sgs_Alloc( mode3item );
+						memset( PD, 0, sizeof(*PD) );
+						sgs_InitStringBuf( C, &key, P->keytmp.ptr, (sgs_SizeVal) P->keytmp.size );
+						sgs_vht_set( &P->prof->timings, C, &key, &val );
+						sgs_Release( C, &key );
+					}
+					
+					PD->numallocs += CD.numallocs - prevCD.numallocs;
+					PD->numfrees += CD.numfrees - prevCD.numfrees;
+					PD->numblocks += CD.numblocks - prevCD.numblocks;
+					PD->szdelta += CD.szdelta - prevCD.szdelta;
+				}
+			}
+			
+			/* commit size */
+			sgs_membuf_resize( &P->frametmp, C, bki * sizeof(mode3item) );
+			itemcount = bki;
 		}
 		
-		PD->numallocs += CD.numallocs - prevCD.numallocs;
-		PD->numfrees += CD.numfrees - prevCD.numfrees;
-		PD->numblocks += CD.numblocks - prevCD.numblocks;
-		PD->szdelta += CD.szdelta - prevCD.szdelta;
-		
-		sgs_membuf_resize( &P->timetmp, C, P->timetmp.size - sizeof(CD) );
+		/* add new frame start times */
+		if( lastrec || ( target != NULL && itemcount == 0 ) )
+		{
+			if( lastrec )
+				sf = lastrec->next;
+			else
+				sf = C->sf_first;
+			while( sf )
+			{
+				mode3item NI = CD;
+				NI.frame = sf;
+				sgs_membuf_appbuf( &P->frametmp, C, &NI, sizeof(NI) );
+				if( sf == target )
+					break;
+				sf = sf->next;
+			}
+		}
 	}
-#endif
+	else if( evid == SGS_HOOK_CREAT )
+	{
+		sgs_ProfAttach( C, P->prof );
+	}
+	else if( evid == SGS_HOOK_CFREE )
+	{
+		sgs_ProfDetach( C, P->prof );
+	}
+	/* CFORK not supported yet */
 }
 
 static void initProfModeData3( sgs_ProfData* P, SGS_CTX )
@@ -540,12 +622,6 @@ void sgs_ProfDetach( SGS_CTX, sgs_Prof* P )
 	
 	sgs_Dealloc( PD );
 	sgs_vht_unset( &P->ctx2prof, C, &key );
-}
-
-void sgs_ProfCommit( sgs_Prof* P )
-{
-	SGS_UNUSED( P );
-	/* TODO */
 }
 
 void sgs_ProfClose( SGS_CTX, sgs_Prof* P )
