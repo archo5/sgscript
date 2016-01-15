@@ -508,24 +508,61 @@ function generate_search_data_web( pages )
 ///
 
 
-function generate_advdoc_page( doc_title )
+function generate_advdoc_page( doc_title, toclist, pagelist, searchdata )
 {
+	newtoc = [];
+	foreach( ti : toclist )
+	{
+		// leave only path(ID) and title
+		newtoc.push([ string_replace( ti[2], "/", ":" ), ti[3] ]);
+	}
+	
 	fullfile = '<!DOCTYPE html>
-	<html><head>
-		<meta charset="UTF-8">
-		<title>' $ htmlencode( doc_title ) $ '</title>
-		<style type="text/css">
-		' $ io_file_read( "docs.css" ) $ '
-		</style>
-		<script type="text/javascript">
-		' $ io_file_read( "advdoc.js" ) $ '
-		</script>
-		<script type="text/javascript">
-		' $ io_file_read( "docs.js" ) $ '
-		</script>
-	</head><body>
-	';
-	fullfile $= '</body></html>';
+<html><head>
+	<meta charset="UTF-8">
+	<title>' $ htmlencode( doc_title ) $ '</title>
+	<script type="text/javascript">
+	window.sgs_toc = ' $ json_encode( newtoc ) $ ';
+	window.sgs_searchindex = ' $ json_encode( searchdata ) $ ';
+	</script>';
+	
+	if( output_devmode )
+	{
+		fullfile $= '
+	<link rel="stylesheet" type="text/css" href="../docs.css">
+	<script type="text/javascript" src="../advdoc.js"></script>
+	<script type="text/javascript" src="../docs.js"></script>';
+	}
+	else
+	{
+		fullfile $= '
+	<style type="text/css">
+	' $ io_file_read( "docs.css" ) $ '
+	</style>
+	<script type="text/javascript">
+	' $ io_file_read( "advdoc.js" ) $ '
+	</script>
+	<script type="text/javascript">
+	' $ io_file_read( "docs.js" ) $ '
+	</script>';
+	}
+	fullfile $= '
+</head><body>
+	<div id="_frame_">This file only works in a JavaScript-enabled HTML5 browser</div>
+	<div id="_data_" style="display:none">
+';
+	foreach( i, ti : newtoc )
+	{
+		page = pagelist[ i ];
+		fullfile $= '
+		<div id="' $ ti[0] $ '">
+			' $ page $ '
+		</div>
+';
+	}
+	fullfile $= '
+	</div>
+</body></html>';
 	return fullfile;
 }
 
@@ -534,17 +571,21 @@ function output_data_web( name, doc_title, tags, pages )
 	mdlh = function( title, link ) use( pages ){ return linkhandler_web( title, link, pages ); };
 	
 	toclist = [];
+	pagelist = [];
 	data = "";
 	foreach( P : pages )
 	{
 		if( !P.path_str )
 			continue;
 		
+		pagehtml = markdown2html( P.body, mdlh );
+		
 		tocitem_from = data.length;
-		data $= markdown2html( P.body, mdlh );
+		data $= pagehtml;
 		tocitem_to = data.length;
 		
 		toclist.push([ tocitem_from, tocitem_to, string_implode( P.path, "/" ), P.title ]);
+		pagelist.push( pagehtml );
 	}
 	
 	searchdata = generate_search_data_web( pages );
@@ -559,7 +600,7 @@ function output_data_web( name, doc_title, tags, pages )
 	
 	if( output_advdoc )
 	{
-		html = generate_advdoc_page( doc_title );
+		html = generate_advdoc_page( doc_title, toclist, pagelist, searchdata );
 		io_file_write( "adv/" $ name $ ".htm", html );
 		println( "- wrote adv. docs data" );
 	}
@@ -586,9 +627,11 @@ function print_help()
 {
 	println( "usage: sgsvm -p docgen.sgs <args>" );
 	println( "arguments:" );
+	println( "\t<file>\tfile to generate docs for" );
 	println( "\t-p\tenable single page HTML generation" );
 	println( "\t-w\tenable website doc. file generation" );
 	println( "\t-a\tenable advanced HTML doc. generation" );
+	println( "\t-d\t(adv.doc.) enable developer mode (don't embed files)" );
 }
 
 
@@ -597,6 +640,7 @@ _G.
 	output_html = false,
 	output_sgsweb = false,
 	output_advdoc = false,
+	output_devmode = false,
 	files = [],
 };
 
@@ -613,6 +657,7 @@ for( i = 1; i < argv.size; ++i )
 	if( arg == "-p" ) _G.output_html = true;
 	else if( arg == "-w" ) _G.output_sgsweb = true;
 	else if( arg == "-a" ) _G.output_advdoc = true;
+	else if( arg == "-d" ) _G.output_devmode = true;
 	else if( arg == "-h" || arg == "--help" )
 	{
 		print_help();
