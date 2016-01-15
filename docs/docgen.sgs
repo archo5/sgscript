@@ -530,6 +530,7 @@ function generate_advdoc_page( doc_title, toclist, pagelist, searchdata )
 	{
 		fullfile $= '
 	<link rel="stylesheet" type="text/css" href="../docs.css">
+	<link rel="stylesheet" type="text/css" href="../advdoc.css">
 	<script type="text/javascript" src="../advdoc.js"></script>
 	<script type="text/javascript" src="../docs.js"></script>';
 	}
@@ -538,6 +539,9 @@ function generate_advdoc_page( doc_title, toclist, pagelist, searchdata )
 		fullfile $= '
 	<style type="text/css">
 	' $ io_file_read( "docs.css" ) $ '
+	</style>
+	<style type="text/css">
+	' $ io_file_read( "advdoc.css" ) $ '
 	</style>
 	<script type="text/javascript">
 	' $ io_file_read( "advdoc.js" ) $ '
