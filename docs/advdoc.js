@@ -97,7 +97,7 @@ function map_toc()
 function doc_create_entry( path )
 {
 	var item = window.path_info[ path ];
-	var entry = element( "entry", { innerText: item.title, id: "entry:" + path, path: path } );
+	var entry = element( "entry", { textContent: item.title, id: "entry:" + path, path: path } );
 	if( item.ch.length )
 	{
 		var entries = [];
@@ -116,7 +116,7 @@ function doc_select_page( path )
 	findID( "entry:" + path ).classList.add( "active" );
 	var title = find( "#view ptitle" );
 	var cont = find( "#view pcont" );
-	empty( title ).innerText = path_info[ path ].title;
+	empty( title ).textContent = path_info[ path ].title;
 	empty( cont ).appendChild( document.getElementById( path ).cloneNode(true) );
 }
 function doc_create_toc()
@@ -134,18 +134,18 @@ function doc_create_toc()
 		element( "header", null,
 		[
 			// LOGO
-			element( "subtitle", { innerText: find("title").innerText } ),
+			element( "subtitle", { textContent: find("title").textContent } ),
 		]),
 		element( "cont", null,
 		[
 			entrylist = element( "entrylist", null, entries ),
 		]),
 	]);
-	bind( entrylist, "click", function()
+	bind( entrylist, "click", function(e)
 	{
-		if( event.target.tagName == "ENTRY" )
+		if( e.target.tagName == "ENTRY" )
 		{
-			doc_select_page( event.target.path );
+			doc_select_page( e.target.path );
 		}
 	});
 	return out;
@@ -158,15 +158,15 @@ function doc_create_view()
 		element( "ptitle" ),
 		cont = element( "pcont", { innerHTML: "<introtext>Click on a topic to view its contents</introtext>" } ),
 	]);
-	bind( cont, "click", function()
+	bind( cont, "click", function(e)
 	{
-		if( event.target.tagName == "A" )
+		if( e.target.tagName == "A" )
 		{
-			var href = event.target.getAttribute( "href" );
+			var href = e.target.getAttribute( "href" );
 			if( path_info[ href ] != null )
 			{
 				doc_select_page( href );
-				event.preventDefault();
+				e.preventDefault();
 			}
 		}
 	});
