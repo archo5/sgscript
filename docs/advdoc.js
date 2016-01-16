@@ -183,8 +183,8 @@ function preproc_links()
 }
 function doc_create_entry( path )
 {
-	var item = window.path_info[ path ];
-	var entry = element( "entry", { textContent: item.title, id: "entry:" + path, path: path } );
+	var item = path_info[ path ];
+	var entry = element( "entry", { textContent: item.title, id: "entry:" + path, path: item.alias } );
 	if( item.ch.length )
 	{
 		var entries = [];
@@ -197,7 +197,6 @@ function doc_create_entry( path )
 function doc_select_page( path )
 {
 	var info = path_info[ path ];
-	goto_anchor( info.alias );
 	path = info.path;
 	foreach_do( findAll( "toc .active" ), function(e){ e.classList.remove( "active" ); } );
 	var tocActiveEntry = findID( "entry:" + path );
@@ -256,7 +255,6 @@ function doc_search( text )
 {
 	text = text.trim();
 	find( "toc search input" ).value = text;
-	goto_anchor( "search:" + text );
 	
 	var breadcrumbs = empty( find( "#view breadcrumbs" ) );
 	breadcrumbs.style.display = "none";
