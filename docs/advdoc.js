@@ -245,9 +245,12 @@ function doc_select_page( path )
 	}
 	
 	// make sure the active TOC item is visible
-	tocActiveEntry.scrollIntoView();
+	if( tocActiveEntry.scrollIntoViewIfNeeded )
+		tocActiveEntry.scrollIntoViewIfNeeded();
+	else
+		tocActiveEntry.scrollIntoView();
 	// make sure top of the page is visible
-	breadcrumbs.scrollIntoView();
+	find("#view").scrollTo( 0, 0 );
 }
 function doc_search( text )
 {
