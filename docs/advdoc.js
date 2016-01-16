@@ -133,7 +133,7 @@ function doc_create_toc()
 	[
 		element( "header", null,
 		[
-			// LOGO
+			find( "logo" ),
 			element( "subtitle", { textContent: find("title").textContent } ),
 		]),
 		element( "cont", null,

@@ -564,6 +564,14 @@ function generate_advdoc_page( doc_title, toclist, pagelist, searchdata )
 		</div>
 ';
 	}
+	if( output_devmode )
+	{
+		fullfile $= '<logo><img src="../logo_bw.svg" /></logo>';
+	}
+	else
+	{
+		fullfile $= '<logo>' $ io_file_read( "logo_bw.svg" ) $ '</logo>';
+	}
 	fullfile $= '
 	</div>
 </body></html>';

@@ -5,6 +5,7 @@ body { padding: 0; height: 100%; }
 docframe { display: flex; flex-direction: row; min-height: 100%; max-height: 100%; }
 toc { display: flex; flex-direction: column; min-height: 100%; box-sizing: border-box; padding: 12px 12px 0 12px;
 		width: 300px; border-right: 2px solid #BBB; position: absolute; top: 0; left: 0; bottom: 0; }
+toc logo { display: block; margin: -12px 0 0 -4px; height: 80px; }
 toc header { margin: 0 0 12px 0; }
 toc header subtitle { display: block; background: #333; padding: 12px; color: #EEE;
 	font-family: Verdana, sans-serif; border-radius: 3px; }
