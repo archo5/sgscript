@@ -250,7 +250,7 @@ function doc_select_page( path )
 	else
 		tocActiveEntry.scrollIntoView();
 	// make sure top of the page is visible
-	find("#view").scrollTo( 0, 0 );
+	find("#view").scrollTop = 0;
 }
 function doc_search( text )
 {
