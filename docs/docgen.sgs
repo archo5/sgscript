@@ -441,8 +441,11 @@ function Indexer.index( page_id, text, factor )
 		else
 			wordpages[ page_id ] += factor;
 		
-		ftw = string_part( word, 0, 2 );
-		mapset_insert( this.firsttwo, ftw, word_id );
+		for( i = 0; i < word.length - 2; ++i )
+		{
+			ftw = string_part( word, i, 2 );
+			mapset_insert( this.firsttwo, ftw, word_id );
+		}
 	}
 }
 function Indexer.getData()
@@ -553,6 +556,7 @@ function generate_advdoc_page( doc_title, toclist, pagelist, searchdata )
 	fullfile $= '
 </head><body>
 	<div id="_frame_">This file only works in a JavaScript-enabled HTML5 browser</div>
+	<script type="text/javascript">find( "#_frame_" ).textContent = "Loading...";</script>
 	<div id="_data_" style="display:none">
 ';
 	foreach( i, ti : newtoc )

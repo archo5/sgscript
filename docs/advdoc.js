@@ -69,6 +69,67 @@ function goto_anchor( a )
 {
 	window.location.href = "#" + a;
 }
+function text2html( text )
+{
+	return text
+		.replace( "&", "&amp;")
+		.replace( "<", "&lt;")
+		.replace( ">", "&gt;")
+		.replace( "\"", "&quot;")
+		.replace( "'", "&#039;");
+}
+function html2text( html, addspaces )
+{
+	if( addspaces )
+	{
+		function repfn( match ){ return match + " "; }
+		html = html.replace( /<\/\s*[a-zA-Z0-9]+\s*>/gi, repfn );
+	}
+	var tmp = document.createElement( "DIV" );
+	tmp.innerHTML = html;
+	return tmp.textContent;
+}
+
+/////
+// SEARCH //
+    ////////
+window.srch_unnecessary_words =
+[
+	"and","or","if","else","for","but","when","is","not","it","this","to","the","in",
+	"thus","be","that","of","does","doesn","t","a","with","its","can","also","the","there",
+	"are","do","while","yes","no","maybe","any","than","then","isn"
+];
+function srch_necessary_word( word )
+{
+	if( word.length <= 2 )
+		return false;
+	return srch_unnecessary_words.indexOf( word ) == -1;
+}
+function srch_split_into_normalized_words( text )
+{
+	var text = text.replace( /[^a-zA-Z0-9_]+/, " " );
+	var words = text.split( " " );
+	var out = [];
+	for( var i = 0; i < words.length; ++i )
+	{
+		var word = words[ i ].toLowerCase();
+		if( word && srch_necessary_word( word ) && out.indexOf( word ) == -1 )
+			out.push( word );
+	}
+	return out;
+}
+function srch_highlight( text, words )
+{
+	function replace( match )
+	{
+		return "<mark>" + match + "</mark>";
+	}
+	for( var i = 0; i < words.length; ++i )
+	{
+		text = text.replace( new RegExp( words[ i ], "gi" ), replace );
+	}
+	return text;
+}
 
 /////
 // DOCS //
@@ -139,11 +200,12 @@ function doc_select_page( path )
 	goto_anchor( info.alias );
 	path = info.path;
 	foreach_do( findAll( "toc .active" ), function(e){ e.classList.remove( "active" ); } );
-	findID( "entry:" + path ).classList.add( "active" );
+	var tocActiveEntry = findID( "entry:" + path );
+	tocActiveEntry.classList.add( "active" );
 	var title = find( "#view ptitle" );
 	var cont = find( "#view pcont" );
 	empty( title ).textContent = path_info[ path ].title;
-	empty( cont ).appendChild( document.getElementById( path ).cloneNode(true) );
+	empty( cont ).appendChild( findID( path ).cloneNode(true) );
 	
 	// related links
 	var rellinks = empty( find( "#view relatedlinks" ) );
@@ -181,6 +243,113 @@ function doc_select_page( path )
 			breadcrumbs.appendChild( element( "span", { "class": "sep", innerHTML: "&#187;" } ) );
 		breadcrumbs.appendChild( bclist[ i ] );
 	}
+	
+	// make sure the active TOC item is visible
+	tocActiveEntry.scrollIntoView();
+	// make sure top of the page is visible
+	breadcrumbs.scrollIntoView();
+}
+function doc_search( text )
+{
+	text = text.trim();
+	find( "toc search input" ).value = text;
+	goto_anchor( "search:" + text );
+	
+	var breadcrumbs = empty( find( "#view breadcrumbs" ) );
+	breadcrumbs.style.display = "none";
+	var rellinks = empty( find( "#view relatedlinks" ) );
+	
+	var title = find( "#view ptitle" );
+	var cont = find( "#view pcont" );
+	empty( title ).textContent = "Search results for \"" + text + "\"";
+	empty( cont );
+	
+	// search data
+	var sd_words = sgs_searchindex.words;
+	var sd_pages = sgs_searchindex.pages;
+	var sd_firsttwo = sgs_searchindex.firsttwo;
+	
+	var words = srch_split_into_normalized_words( text );
+	
+	// narrow down search list by shortcut features, compare words against page words
+	var pages = {};
+	var pwcnt = {};
+	for( var i = 0; i < words.length; ++i )
+	{
+		var word = words[ i ];
+		var first2 = word.substring( 0, 2 );
+		// look up smaller word list by first two letters
+		var widlist = sd_firsttwo[ first2 ];
+		if( widlist != null )
+		{
+			for( var j = 0; j < widlist.length; ++j )
+			{
+				var worditem = sd_words[ widlist[ j ] ];
+				// if neither word contains the other, it's not a match
+				if( worditem[0].indexOf( word ) == -1 && word.indexOf( worditem[0] ) == -1 )
+					continue;
+				var divisor = 1 + Math.abs( word.length - worditem[0].length );
+				for( var pid in worditem[1] )
+				{
+					var pfactor = worditem[1][ pid ] / divisor;
+					if( pages[ pid ] != null )
+					{
+						pages[ pid ] += pfactor;
+						pwcnt[ pid ] += 1;
+					}
+					else
+					{
+						pages[ pid ] = pfactor;
+						pwcnt[ pid ] = 1;
+					}
+				}
+			}
+		}
+	}
+	
+	// filter results that hit all search words
+	var fpages = [];
+	var wordcount = words.length;
+	for( var pid in pwcnt )
+	{
+		// not all words were found
+		if( wordcount != pwcnt[ pid ] )
+			continue;
+		fpages.push([ pid, pages[ pid ] ]);
+	}
+	// sort by similarity, most to least
+	fpages.sort(function(a,b){ return b[1] - a[1]; });
+	
+	for( var i = 0; i < fpages.length; ++i )
+	{
+		var pid = fpages[ i ][0];
+		var pageurl = sd_pages[ pid ];
+		var info = path_info[ pageurl ];
+		
+		var title = info.title;
+		var text = html2text( findID( info.path ).innerHTML, true );
+		if( text.length > 300 )
+		{
+			text = text.substring( 0, 300 ) + "...";
+		}
+		
+		// cleanup
+		text = text.replace( /\s+/g, " " );
+		
+		// to html
+		title = text2html( title );
+		text = text2html( text );
+		
+		// highlight
+		title = srch_highlight( title, words );
+		text = srch_highlight( text, words );
+		
+		cont.appendChild( element( "searchresult", {},
+		[
+			element( "srttl", null, [element( "a", { "class": "title", href: "#" + pageurl, innerHTML: title } )] ),
+			element( "desc", { innerHTML: text } ),
+		]));
+	}
 }
 function doc_create_toc()
 {
@@ -191,13 +360,17 @@ function doc_create_toc()
 		if( !item.parent )
 			entries.push( doc_create_entry( key ) );
 	}
-	var entrylist;
+	var entrylist, searchinput;
 	var out = element( "toc", null,
 	[
 		element( "header", null,
 		[
 			find( "logo" ),
 			element( "subtitle", { textContent: find("title").textContent } ),
+			element( "search", null,
+			[
+				searchinput = element( "input", { type: "text", placeholder: "Search..." } ),
+			]),
 		]),
 		element( "cont", null,
 		[
@@ -208,7 +381,14 @@ function doc_create_toc()
 	{
 		if( e.target.tagName == "ENTRY" )
 		{
-			doc_select_page( e.target.path );
+			goto_anchor( e.target.path );
+		}
+	});
+	bind( searchinput, "keyup", function(e)
+	{
+		if( e.keyCode == 13 )
+		{
+			goto_anchor( "search:" + e.target.value );
 		}
 	});
 	return out;
@@ -228,7 +408,11 @@ function doc_create_view()
 function doc_onhash()
 {
 	var hash = window.location.hash.substring( 1 );
-	if( path_info[ hash ] != null )
+	if( hash.indexOf( "search:" ) == 0 )
+	{
+		doc_search( hash.substring( 7 ) );
+	}
+	else if( path_info[ hash ] != null )
 	{
 		doc_select_page( hash );
 	}
