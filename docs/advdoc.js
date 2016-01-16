@@ -94,6 +94,32 @@ function map_toc()
 	}
 	window.path_info = path_info;
 }
+function preproc_links()
+{
+	var links = findAll( "#_data_ a" );
+	for( var i = 0; i < links.length; ++i )
+	{
+		var link = links[ i ];
+		var href = link.getAttribute( "href" );
+		if( path_info[ href ] != null )
+			link.setAttribute( "href", "#" + href );
+		else if( href.indexOf( "docs://" ) == 0 )
+		{
+			var path = href.substring( 7 );
+			var sat = path.indexOf( "/" );
+			if( sat != -1 )
+			{
+				href = path.substring( 0, sat ) + ".docs.htm#" + path.substring( sat + 1 );
+			}
+			else
+			{
+				href = path + ".docs.htm";
+			}
+			link.setAttribute( "href", href );
+			link.setAttribute( "target", "_blank" );
+		}
+	}
+}
 function doc_create_entry( path )
 {
 	var item = window.path_info[ path ];
@@ -118,6 +144,43 @@ function doc_select_page( path )
 	var cont = find( "#view pcont" );
 	empty( title ).textContent = path_info[ path ].title;
 	empty( cont ).appendChild( document.getElementById( path ).cloneNode(true) );
+	
+	// related links
+	var rellinks = empty( find( "#view relatedlinks" ) );
+	if( info.ch.length )
+	{
+		var entries = [];
+		for( var i = 0; i < info.ch.length; ++i )
+		{
+			var subitem = path_info[ info.ch[ i ] ];
+			entries.push( element( "li", {},
+			[
+				element( "a", { href: "#" + subitem.alias, textContent: subitem.title } )
+			]));
+		}
+		rellinks.appendChild( element( "content", null,
+		[
+			element( "subtitle", { textContent: "In this section..." } ),
+			element( "ul", null, entries ),
+		]));
+	}
+	
+	// breadcrumbs
+	var breadcrumbs = empty( find( "#view breadcrumbs" ) );
+	breadcrumbs.style.display = "";
+	var bclist = [];
+	var cur = info;
+	while( cur )
+	{
+		bclist.unshift( element( "a", { href: "#" + cur.alias, textContent: cur.title } ) );
+		cur = path_info[ cur.parent ];
+	}
+	for( var i = 0; i < bclist.length; ++i )
+	{
+		if( i )
+			breadcrumbs.appendChild( element( "span", { "class": "sep", innerHTML: "&#187;" } ) );
+		breadcrumbs.appendChild( bclist[ i ] );
+	}
 }
 function doc_create_toc()
 {
@@ -155,21 +218,11 @@ function doc_create_view()
 	var cont;
 	var out = element( "view", { id: "view" },
 	[
+		element( "breadcrumbs", { style: "display:none" } ),
 		element( "ptitle" ),
 		cont = element( "pcont", { innerHTML: "<introtext>Click on a topic to view its contents</introtext>" } ),
+		element( "relatedlinks" ),
 	]);
-	bind( cont, "click", function(e)
-	{
-		if( e.target.tagName == "A" )
-		{
-			var href = e.target.getAttribute( "href" );
-			if( path_info[ href ] != null )
-			{
-				doc_select_page( href );
-				e.preventDefault();
-			}
-		}
-	});
 	return out;
 }
 function doc_onhash()
@@ -190,6 +243,7 @@ function doc_onhash()
 bind( window, "load", function()
 {
 	map_toc();
+	preproc_links();
 	var frame = element( "docframe", null,
 	[
 		doc_create_toc(),

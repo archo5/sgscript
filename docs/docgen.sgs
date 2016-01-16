@@ -559,9 +559,9 @@ function generate_advdoc_page( doc_title, toclist, pagelist, searchdata )
 	{
 		page = pagelist[ i ];
 		fullfile $= '
-		<div id="' $ ti[0] $ '">
+		<page id="' $ ti[0] $ '">
 			' $ page $ '
-		</div>
+		</page>
 ';
 	}
 	if( output_devmode )
