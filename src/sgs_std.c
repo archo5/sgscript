@@ -2572,7 +2572,7 @@ static void sgs__check_threadendtbl( SGS_CTX )
 	C->_E = endtbl.data.O;
 }
 
-static int sgsstd_end_on( SGS_CTX )
+int sgsstd_end_on( SGS_CTX )
 {
 	sgs_Bool enable = SGS_TRUE;
 	sgs_Context* which = C;

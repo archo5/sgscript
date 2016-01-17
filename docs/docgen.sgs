@@ -648,6 +648,8 @@ function print_help()
 	println( "\t-w\tenable website doc. file generation" );
 	println( "\t-a\tenable advanced HTML doc. generation" );
 	println( "\t-d\t(adv.doc.) enable developer mode (don't embed files)" );
+	println( "\t-e / --everything\tenable generation of all doc. types" );
+	println( "\t-h / --help\tshow this message" );
 }
 
 
@@ -674,6 +676,12 @@ for( i = 1; i < argv.size; ++i )
 	else if( arg == "-w" ) _G.output_sgsweb = true;
 	else if( arg == "-a" ) _G.output_advdoc = true;
 	else if( arg == "-d" ) _G.output_devmode = true;
+	else if( arg == "-e" || arg == "--everything" )
+	{
+		_G.output_html = true;
+		_G.output_sgsweb = true;
+		_G.output_advdoc = true;
+	}
 	else if( arg == "-h" || arg == "--help" )
 	{
 		print_help();

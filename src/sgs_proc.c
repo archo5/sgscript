@@ -1236,6 +1236,7 @@ static int vm_getidx_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj
 	return SGS_ENOTFND;
 }
 
+int sgsstd_end_on( SGS_CTX );
 int sgsstd_co_resume( SGS_CTX );
 int sgsstd_abort( SGS_CTX );
 static int vm_getprop_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj, sgs_Variable* idx )
@@ -1290,6 +1291,11 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* ob
 					( obj->data.T->state & SGS_STATE_COROSTART ) ||
 					obj->data.T->sf_count
 				);
+				return 0;
+			}
+			if( !strcmp( prop, "end_on" ) )
+			{
+				*outmaybe = sgs_MakeCFunc( sgsstd_end_on );
 				return 0;
 			}
 			if( !strcmp( prop, "resume" ) )

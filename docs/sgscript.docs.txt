@@ -498,6 +498,8 @@ Special keywords and hardcoded constants:
 |  this      |  special identifier, read-only   |  method context retrieval        |
 |  _G        |  special identifier, read/write  |  global environment access       |
 |  _R        |  special identifier, read-only   |  global registry access          |
+|  _F        |  special identifier, read-only   |  current function retrieval      |
+|  _T        |  special identifier, read-only   |  current thread retrieval        |
 |  null      |             constant             |  constant                        |
 |  true      |             constant             |  constant                        |
 |  false     |             constant             |  constant                        |
@@ -729,7 +731,15 @@ There are several built-in accessors for the variable types that are available.
 !    name    !  variable type  !  accessor type  !                     description                     !
 |   length   |      string     |    property     |     returns the length of the string, in bytes      |
 |  char. at  |      string     |     index       |  returns the character from the specified position  |
-|    call    |   any callable  |    property     | function that allows to specify "this" for the call |
+|    call    |  SGS/C function |    property     | function that allows to specify "this" for the call |
+|    apply   |  SGS/C function |    property     | function that allows to specify "this" & arg. array |
+| was_aborted|      thread     |    property     |            returns if thread was aborted            |
+| not_started|      thread     |    property     |       returns if coroutine was not started yet      |
+|   running  |      thread     |    property     |        returns if thread is currently running       |
+| can_resume |      thread     |    property     |  returns if thread is not finished (can be resumed) |
+|   end_on   |      thread     |    property     | function that can specify an event to end the thread|
+|   resume   |      thread     |    property     | function that can resume the thread (see @co_resume)|
+|    abort   |      thread     |    property     |   function that can abort the thread (see @abort)   |
 --------------------------------------------------------------------------------------------------------
 
 
@@ -994,7 +1004,7 @@ All messages can simply be logged. For the most simple approach, the @sgs_StdOut
 
 ==== A limited amount of exception handling
 
-This system can be used to break out of any point in SGS code up until the last C function. For this, @pcall can be used together with a callback that calls @sys_abort when necessary.
+This system can be used to break out of any point in SGS code up until the last C function. For this, @pcall can be used together with a callback that calls @abort when necessary.
 
 ==== Debugging
 
@@ -3957,13 +3967,13 @@ Most operations are directed towards the scripting engine, that is - environment
 
 === Method handling
 
-- the preferred way to handle methods with a specific object type for `this`:
+- The preferred way to handle methods with a specific object type for `this`:
 
     ObjectDataStruct* data;
     if( !SGS_PARSE_METHOD( C, Object_interface_pointer, data, Object_name, Method_name ) )
         return 0;
 
-- the OLD way, version 1:
+- The OLD way, version 1:
 
     sgs_FuncName( C, "<object>.<method>" );
     if( !sgs_Method( C ) || !sgs_IsObject( C, 0, Object_interface_pointer ) )
@@ -3971,7 +3981,7 @@ Most operations are directed towards the scripting engine, that is - environment
     ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
     sgs_HideThis( C );
 
-- the OLD way, version 2: Method + function handling (function that can be called as a method too)
+- The OLD way, version 2: Method + function handling (function that can be called as a method too)
 
     int method_call = sgs_Method( C );
     sgs_FuncName( C, method_call ? "<object>.<method>" : "<object_function>" );
@@ -3980,7 +3990,7 @@ Most operations are directed towards the scripting engine, that is - environment
     ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
     sgs_ForceHideThis( C );
 
-- the reason why the first method is preferred to others is: it's shorter, does pretty much the same thing and resolves to @sgs_ParseMethod, which allows sharing more code and rebuilding the @SGS_PARSE_METHOD macro abstraction, if necessary
+- The reason why the first method is preferred to others is: it's shorter, does pretty much the same thing and resolves to @sgs_ParseMethod, which allows sharing more code and rebuilding the @SGS_PARSE_METHOD macro abstraction, if necessary.
 
 
 # <<<
@@ -4069,9 +4079,15 @@ This library is loaded on initialization and contains the functions and constant
 -- @metamethods_test - retrieves metamethod support state
 -- @mm_getindex_router - routes __getindex to __get_***
 -- @mm_setindex_router - routes __setindex to __set_***
+-- @event - create an event
+-- @pooled_event - create a pooled event (named event, in table)
+-- @end_on - set or unset an event that can stop a thread
 -- @co_create - create a coroutine
 -- @co_resume - start/resume a coroutine
+-- @thread_create - create a managed topmost coroutine (thread)
+-- @subthread_create - create a managed sub-coroutine (subthread)
 -- @yield - suspend current state, return to caller
+-- @abort - stop the execution of the calling SGS function
 -- @sys_call - call a function/callable dynamically (function and `this` specified at runtime)
 -- @sys_apply - call a function/callable even more dynamically (argument count also specified at runtime)
 -- @pcall - do a protected call by trapping all internal messages in the specified callback
@@ -4096,7 +4112,6 @@ This library is loaded on initialization and contains the functions and constant
 -- @INFO - emit an INFO message
 -- @WARNING - emit a WARNING message
 -- @ERROR - emit an ERROR message
--- @sys_abort - stop the execution of the calling SGS function
 -- @app_abort - abort execution of application (exit application immediately with an error)
 -- @app_exit - exit application immediately
 -- @sys_replevel - change the minimum message reporting level
@@ -4724,10 +4739,43 @@ This library is loaded on initialization and contains the functions and constant
 - see @Metamethods for more info
 
 
+# event [function]
+
+== event( bool signaled = false )
+=== Creates an event.
+
+- This object can be used to stop a thread. See @end_on for more info.
+- Event is initialized to the state specified by `signaled`.
+- This object consists of one property - `bool signaled`. It can be modified to change the state of the event.
+
+
+# pooled_event [function]
+
+== pooled_event( object, string name, bool signaled = false )
+=== Create a pooled event (named event, in table)
+
+- This object can be used to stop a thread. See @end_on for more info.
+- If the event is found in the object as a property by the given name, that event is returned instead, without modification.
+-- Otherwise, a new event is created and registered to the specified object as a property with the given name.
+- Event is initialized to the state specified by `signaled`.
+- This object consists of one property - `bool signaled`. It can be modified to change the state of the event.
+
+
+# end_on [function]
+
+== end_on( this thread, object event, bool enable = true )
+=== Set or unset an event object that can stop a thread.
+
+An "event" is any object that implements the "convert to bool" behavior. True means 'signaled', false - inactive.
+When the event is signaled, the thread will be aborted as soon as possible.
+
+- Alternatively accessible via the "end_on" property of any thread.
+
+
 # co_create [function]
 
 == co_create( callable )
-=== creates a coroutine with the specified callable
+=== Creates a coroutine with the specified callable.
 
 - function returns a coroutine object that can be started/resumed with @co_resume
 
@@ -4735,37 +4783,70 @@ This library is loaded on initialization and contains the functions and constant
 # co_resume [function]
 
 == co_resume( coroutine[, args..] )
-=== starts or resumes the coroutine
+=== Starts or resumes the coroutine.
 
 - if function is called for the first time, the attached callable is called within the coroutine, passing given arguments to the callable
 - if function is suspended, arguments will be passed as return values from the @yield call that suspended it
 
 
+# thread_create [function]
+
+== thread_create( fn, this[, args..] )
+=== Starts a managed topmost coroutine (thread).
+
+- This function returns the created thread.
+- The function passed is immediately called once.
+- This thread is owned by the topmost owned thread (engine thread or coroutine created with co_create) - if it's destroyed, this thread will be aborted and destroyed as well.
+
+
+# subthread_create [function]
+
+== subthread_create( fn, this[, args..] )
+=== Starts a managed sub-coroutine (subthread).
+
+- This function returns the created subthread.
+- The function passed is immediately called once.
+- This thread is owned by the current context (thread, subthread, engine thread or coroutine) - if it's destroyed, this thread will be aborted and destroyed as well.
+
+
+# process_threads [function]
+
+== process_threads( dt[, ctx ] )
+=== Advance the managed subthreads once, using the specified delta time.
+
+- If `ctx` is unspecified, it defaults to the current context.
+- This function should only be used on the engine thread and owned coroutines since it recursively advances all subthreads.
+
+
 # yield [function]
 
 == yield([ args.. ])
-=== suspends the current state, returning to caller
+=== Suspends the current state, returning to caller.
 
-- arguments are passed as return values to the caller
-- state cannot be suspended if there are C functions or other unusual constructs in the stack
+- Arguments are passed as return values to the caller.
+- State cannot be suspended if there are C functions or other unusual constructs in the stack.
 
 
-# __co_unserialize [function]
+# abort [function]
 
-== __co_unserialize( ... )
-=== coroutine unserialization function
+== abort([ contexts... ])
+=== Stops execution and returns to C code as soon as possible.
 
-- it should be added to @unserialize custom environment (if one is used) if support for coroutine unserialization is required
+- If no contexts are specified, current context is aborted, otherwise only the specified contexts are aborted.
+- This function is equivalent to using @sgs_Abort in the C API.
+
+    abort();
+    print( 5 ); // this line is not reached
 
 
 # sys_call [function]
 
 == sys_call( func, this[, args..] )
-=== calls the specified function with the specified `this` value and argument list
+=== Calls the specified function with the specified `this` value and argument list.
 
-! if argument count is only known at runtime, see @sys_apply
+! If argument count is only known at runtime, see @sys_apply.
 
-- C functions, SGS functions, closure objects and real closures have this function under the "call" property
+- C functions, SGS functions, closure objects and real closures have this function under the "call" property.
 
 
 # sys_apply [function]
@@ -4773,15 +4854,15 @@ This library is loaded on initialization and contains the functions and constant
 == sys_apply( func, this, args )
 === calls the specified function with the specified `this` value and argument array
 
-! if argument count is known at compile time, prefer @sys_call to this function
+! If argument count is known at compile time, prefer @sys_call to this function.
 
-- C functions, SGS functions, closure objects and real closures have this function under the "apply" property
+- C functions, SGS functions, closure objects and real closures have this function under the "apply" property.
 
 
 # pcall [function]
 
 == pcall( callable func[, callable errh ])
-=== calls the callable `func`, hiding internal errors from the caller or optionally passing them to callable `errh`
+=== Calls the callable `func`, hiding internal errors from the caller or optionally passing them to callable `errh`.
 
 - `errh` error handler is called with two arguments - `int error_type, string message` - and expected to return 0-1 arguments ([int])
 - error handler must return 0/null/nothing if the error has been successfully processed or the new error type otherwise
@@ -5034,17 +5115,6 @@ This library is loaded on initialization and contains the functions and constant
 - works exactly like `sys_msg( SGS_INFO, message )`
 
 
-# sys_abort [function]
-
-== sys_abort()
-=== stops execution and returns to C code as soon as possible
-
-- this function is equivalent to @sgs_Abort in the C API
-
-    sys_abort();
-    print( 5 ); // this line is not reached
-
-
 # app_abort [function]
 
 == app_abort()
@@ -5218,6 +5288,25 @@ This library is loaded on initialization and contains the functions and constant
 == A hard-coded global value that points to the registry. Can be used to access the symbol table (_R["$sym"]) or include list (_R["$inc"]).
 
 - It is preferred to use @sym_get and @sym_register to deal with symbols, this table is mostly available for introspection and workarounds.
+
+
+# _F [superglobal]
+
+== The currently executed function.
+
+- It can be used in a function to call itself recursively, especially when the function is defined in a position where it cannot reference itself without additional effort.
+
+    function f(){ printvar( _F ); }
+    f(); // prints info about function 'f'
+
+
+# _T [superglobal]
+
+== The currently executed thread (context/coroutine).
+
+    function f(){ printvar( _T ); }
+    f(); // prints info about current context
+    thread f(); // prints info about this newly created thread
 
 
 # array [object]

@@ -447,6 +447,8 @@ Special keywords and hardcoded constants:
 <tr><td>this</td><td>special identifier, read-only</td><td>method context retrieval</td></tr>
 <tr><td>_G</td><td>special identifier, read/write</td><td>global environment access</td></tr>
 <tr><td>_R</td><td>special identifier, read-only</td><td>global registry access</td></tr>
+<tr><td>_F</td><td>special identifier, read-only</td><td>current function retrieval</td></tr>
+<tr><td>_T</td><td>special identifier, read-only</td><td>current thread retrieval</td></tr>
 <tr><td>null</td><td>constant</td><td>constant</td></tr>
 <tr><td>true</td><td>constant</td><td>constant</td></tr>
 <tr><td>false</td><td>constant</td><td>constant</td></tr>
@@ -636,7 +638,15 @@ There are several built-in accessors for the variable types that are available.
 <tr><th>name</th><th>variable type</th><th>accessor type</th><th>description</th></tr>
 <tr><td>length</td><td>string</td><td>property</td><td>returns the length of the string, in bytes</td></tr>
 <tr><td>char. at</td><td>string</td><td>index</td><td>returns the character from the specified position</td></tr>
-<tr><td>call</td><td>any callable</td><td>property</td><td>function that allows to specify &quot;this&quot; for the call</td></tr>
+<tr><td>call</td><td>SGS/C function</td><td>property</td><td>function that allows to specify &quot;this&quot; for the call</td></tr>
+<tr><td>apply</td><td>SGS/C function</td><td>property</td><td>function that allows to specify &quot;this&quot; &amp; arg. array</td></tr>
+<tr><td>was_aborted</td><td>thread</td><td>property</td><td>returns if thread was aborted</td></tr>
+<tr><td>not_started</td><td>thread</td><td>property</td><td>returns if coroutine was not started yet</td></tr>
+<tr><td>running</td><td>thread</td><td>property</td><td>returns if thread is currently running</td></tr>
+<tr><td>can_resume</td><td>thread</td><td>property</td><td>returns if thread is not finished (can be resumed)</td></tr>
+<tr><td>end_on</td><td>thread</td><td>property</td><td>function that can specify an event to end the thread</td></tr>
+<tr><td>resume</td><td>thread</td><td>property</td><td>function that can resume the thread (see <a href="#co-resume-function">co_resume)</a></td></tr>
+<tr><td>abort</td><td>thread</td><td>property</td><td>function that can abort the thread (see <a href="#abort-function">abort)</a></td></tr>
 </table>
 </p></div>
 <div class='item'><a name='Common-constructs-in-SGScript'></a><hr><h2>Common constructs in SGScript</h2><p>
@@ -832,7 +842,7 @@ The <a href="#sgs-Msg-function">sgs_Msg</a> function basically generates the ful
 </p><h5>Logging</h5><p>
 All messages can simply be logged. For the most simple approach, the <a href="#sgs-StdOutputFunc-function">sgs_StdOutputFunc</a> callback can be used with any FILE* for the data pointer.
 </p><h5>A limited amount of exception handling</h5><p>
-This system can be used to break out of any point in SGS code up until the last C function. For this, <a href="#pcall-function">pcall</a> can be used together with a callback that calls <a href="#sys-abort-function">sys_abort</a> when necessary.
+This system can be used to break out of any point in SGS code up until the last C function. For this, <a href="#pcall-function">pcall</a> can be used together with a callback that calls <a href="#abort-function">abort</a> when necessary.
 </p><h5>Debugging</h5><p>
 On each warning or error, debugging code can be triggered. It can be an interactive console debugger (as implemented in ext/sgs_idbg), it could also be code that dumps the relevant state and sends it to the developer.
 </p><h5>Hidden data collection</h5><p>
@@ -2116,18 +2126,18 @@ Most operations are directed towards the scripting engine, that is - environment
 </li><li>SGS_HOOK_CREAT - context was created (empty, no state copy)
 </li><li>SGS_HOOK_CFORK - context was forked (full state copy)
 </li><li>SGS_HOOK_CFREE - context was freed</li></ul></li></ul></li></ul></div>
-<div class='item'><a name='Commonly-required-advanced-tasks'></a><hr><h2>Commonly required advanced tasks</h2><h4>Method handling</h4><ul><li>the preferred way to handle methods with a specific object type for <code>this</code>:</li></ul><pre>ObjectDataStruct* data;
+<div class='item'><a name='Commonly-required-advanced-tasks'></a><hr><h2>Commonly required advanced tasks</h2><h4>Method handling</h4><ul><li>The preferred way to handle methods with a specific object type for <code>this</code>:</li></ul><pre>ObjectDataStruct* data;
 if( !SGS_PARSE_METHOD( C, Object_interface_pointer, data, Object_name, Method_name ) )
-    return 0;</pre><ul><li>the OLD way, version 1:</li></ul><pre>sgs_FuncName( C, &quot;&lt;object&gt;.&lt;method&gt;&quot; );
+    return 0;</pre><ul><li>The OLD way, version 1:</li></ul><pre>sgs_FuncName( C, &quot;&lt;object&gt;.&lt;method&gt;&quot; );
 if( !sgs_Method( C ) || !sgs_IsObject( C, 0, Object_interface_pointer ) )
     return sgs_ArgErrorExt( C, 0, 1, &quot;&lt;object&gt;&quot;, &quot;&quot; );
 ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
-sgs_HideThis( C );</pre><ul><li>the OLD way, version 2: Method + function handling (function that can be called as a method too)</li></ul><pre>int method_call = sgs_Method( C );
+sgs_HideThis( C );</pre><ul><li>The OLD way, version 2: Method + function handling (function that can be called as a method too)</li></ul><pre>int method_call = sgs_Method( C );
 sgs_FuncName( C, method_call ? &quot;&lt;object&gt;.&lt;method&gt;&quot; : &quot;&lt;object_function&gt;&quot; );
 if( !sgs_IsObject( C, 0, Object_interface_pointer ) )
     return sgs_ArgErrorExt( C, 0, method_call, &quot;&lt;object&gt;&quot;, &quot;&quot; );
 ObjectDataStruct* data = (ObjectDataStruct*) sgs_GetObjectData( C, 0 );
-sgs_ForceHideThis( C );</pre><ul><li>the reason why the first method is preferred to others is: it&#39;s shorter, does pretty much the same thing and resolves to <a href="#sgs-ParseMethod-function">sgs_ParseMethod</a>, which allows sharing more code and rebuilding the <a href="#SGS-PARSE-METHOD-function-alias">SGS_PARSE_METHOD</a> macro abstraction, if necessary</li></ul></div>
+sgs_ForceHideThis( C );</pre><ul><li>The reason why the first method is preferred to others is: it&#39;s shorter, does pretty much the same thing and resolves to <a href="#sgs-ParseMethod-function">sgs_ParseMethod</a>, which allows sharing more code and rebuilding the <a href="#SGS-PARSE-METHOD-function-alias">SGS_PARSE_METHOD</a> macro abstraction, if necessary.</li></ul></div>
 <div class='item'><a name='Standard-library-reference'></a><hr><h2>Standard library reference</h2></div>
 <div class='item'><a name='Core-library'></a><hr><h2>Core library</h2><p>
 This library is loaded on initialization and contains the functions and constants necessary to do primary actions:
@@ -2202,9 +2212,15 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#metamethods-test-function">metamethods_test</a> - retrieves metamethod support state
 </li><li><a href="#mm-getindex-router-function">mm_getindex_router</a> - routes __getindex to __get_***
 </li><li><a href="#mm-setindex-router-function">mm_setindex_router</a> - routes __setindex to __set_***
+</li><li><a href="#event-function">event</a> - create an event
+</li><li><a href="#pooled-event-function">pooled_event</a> - create a pooled event (named event, in table)
+</li><li><a href="#end-on-function">end_on</a> - set or unset an event that can stop a thread
 </li><li><a href="#co-create-function">co_create</a> - create a coroutine
 </li><li><a href="#co-resume-function">co_resume</a> - start/resume a coroutine
+</li><li><a href="#thread-create-function">thread_create</a> - create a managed topmost coroutine (thread)
+</li><li><a href="#subthread-create-function">subthread_create</a> - create a managed sub-coroutine (subthread)
 </li><li><a href="#yield-function">yield</a> - suspend current state, return to caller
+</li><li><a href="#abort-function">abort</a> - stop the execution of the calling SGS function
 </li><li><a href="#sys-call-function">sys_call</a> - call a function/callable dynamically (function and <code>this</code> specified at runtime)
 </li><li><a href="#sys-apply-function">sys_apply</a> - call a function/callable even more dynamically (argument count also specified at runtime)
 </li><li><a href="#pcall-function">pcall</a> - do a protected call by trapping all internal messages in the specified callback
@@ -2229,7 +2245,6 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#INFO-function">INFO</a> - emit an INFO message
 </li><li><a href="#WARNING-function">WARNING</a> - emit a WARNING message
 </li><li><a href="#ERROR-function">ERROR</a> - emit an ERROR message
-</li><li><a href="#sys-abort-function">sys_abort</a> - stop the execution of the calling SGS function
 </li><li><a href="#app-abort-function">app_abort</a> - abort execution of application (exit application immediately with an error)
 </li><li><a href="#app-exit-function">app_exit</a> - exit application immediately
 </li><li><a href="#sys-replevel-function">sys_replevel</a> - change the minimum message reporting level
@@ -2398,19 +2413,41 @@ srand( ftime() ); // restart the generator depending on the second the code was 
 </li><li>see <a href="#Metamethods">Metamethods</a> for more info</li></ul></div>
 <div class='item'><a name='mm-setindex-router-function'></a><hr><h2>mm_setindex_router [function]</h2><h3>mm_setindex_router( key, value )</h3><h4>__setindex to __set_*** router</h4><ul><li>when applied to metaobject of a metamethod-enabled object&#39;s <code>__setindex</code> property, it routes every request to <code>__set_&lt;key&gt;</code>
 </li><li>see <a href="#Metamethods">Metamethods</a> for more info</li></ul></div>
-<div class='item'><a name='co-create-function'></a><hr><h2>co_create [function]</h2><h3>co_create( callable )</h3><h4>creates a coroutine with the specified callable</h4><ul><li>function returns a coroutine object that can be started/resumed with <a href="#co-resume-function">co_resume</a></li></ul></div>
-<div class='item'><a name='co-resume-function'></a><hr><h2>co_resume [function]</h2><h3>co_resume( coroutine[, args..] )</h3><h4>starts or resumes the coroutine</h4><ul><li>if function is called for the first time, the attached callable is called within the coroutine, passing given arguments to the callable
+<div class='item'><a name='event-function'></a><hr><h2>event [function]</h2><h3>event( bool signaled = false )</h3><h4>Creates an event.</h4><ul><li>This object can be used to stop a thread. See <a href="#end-on-function">end_on</a> for more info.
+</li><li>Event is initialized to the state specified by <code>signaled</code>.
+</li><li>This object consists of one property - <code>bool signaled</code>. It can be modified to change the state of the event.</li></ul></div>
+<div class='item'><a name='pooled-event-function'></a><hr><h2>pooled_event [function]</h2><h3>pooled_event( object, string name, bool signaled = false )</h3><h4>Create a pooled event (named event, in table)</h4><ul><li>This object can be used to stop a thread. See <a href="#end-on-function">end_on</a> for more info.
+</li><li>If the event is found in the object as a property by the given name, that event is returned instead, without modification.
+<ul><li>Otherwise, a new event is created and registered to the specified object as a property with the given name.
+</li></ul><li>Event is initialized to the state specified by <code>signaled</code>.
+</li><li>This object consists of one property - <code>bool signaled</code>. It can be modified to change the state of the event.</li></ul></div>
+<div class='item'><a name='end-on-function'></a><hr><h2>end_on [function]</h2><h3>end_on( this thread, object event, bool enable = true )</h3><h4>Set or unset an event object that can stop a thread.</h4><p>
+An &quot;event&quot; is any object that implements the &quot;convert to bool&quot; behavior. True means &#39;signaled&#39;, false - inactive.
+When the event is signaled, the thread will be aborted as soon as possible.
+</p><ul><li>Alternatively accessible via the &quot;end_on&quot; property of any thread.</li></ul></div>
+<div class='item'><a name='co-create-function'></a><hr><h2>co_create [function]</h2><h3>co_create( callable )</h3><h4>Creates a coroutine with the specified callable.</h4><ul><li>function returns a coroutine object that can be started/resumed with <a href="#co-resume-function">co_resume</a></li></ul></div>
+<div class='item'><a name='co-resume-function'></a><hr><h2>co_resume [function]</h2><h3>co_resume( coroutine[, args..] )</h3><h4>Starts or resumes the coroutine.</h4><ul><li>if function is called for the first time, the attached callable is called within the coroutine, passing given arguments to the callable
 </li><li>if function is suspended, arguments will be passed as return values from the <a href="#yield-function">yield</a> call that suspended it</li></ul></div>
-<div class='item'><a name='yield-function'></a><hr><h2>yield [function]</h2><h3>yield([ args.. ])</h3><h4>suspends the current state, returning to caller</h4><ul><li>arguments are passed as return values to the caller
-</li><li>state cannot be suspended if there are C functions or other unusual constructs in the stack</li></ul></div>
-<div class='item'><a name='co-unserialize-function'></a><hr><h2>__co_unserialize [function]</h2><h3>__co_unserialize( ... )</h3><h4>coroutine unserialization function</h4><ul><li>it should be added to <a href="#unserialize-function">unserialize</a> custom environment (if one is used) if support for coroutine unserialization is required</li></ul></div>
-<div class='item'><a name='sys-call-function'></a><hr><h2>sys_call [function]</h2><h3>sys_call( func, this[, args..] )</h3><h4>calls the specified function with the specified <code>this</code> value and argument list</h4><p>
-<em class='notice-bgr'>if argument count is only known at runtime, see <a href="#sys-apply-function">sys_apply</a></em>
-</p><ul><li>C functions, SGS functions, closure objects and real closures have this function under the &quot;call&quot; property</li></ul></div>
+<div class='item'><a name='thread-create-function'></a><hr><h2>thread_create [function]</h2><h3>thread_create( fn, this[, args..] )</h3><h4>Starts a managed topmost coroutine (thread).</h4><ul><li>This function returns the created thread.
+</li><li>The function passed is immediately called once.
+</li><li>This thread is owned by the topmost owned thread (engine thread or coroutine created with co_create) - if it&#39;s destroyed, this thread will be aborted and destroyed as well.</li></ul></div>
+<div class='item'><a name='subthread-create-function'></a><hr><h2>subthread_create [function]</h2><h3>subthread_create( fn, this[, args..] )</h3><h4>Starts a managed sub-coroutine (subthread).</h4><ul><li>This function returns the created subthread.
+</li><li>The function passed is immediately called once.
+</li><li>This thread is owned by the current context (thread, subthread, engine thread or coroutine) - if it&#39;s destroyed, this thread will be aborted and destroyed as well.</li></ul></div>
+<div class='item'><a name='process-threads-function'></a><hr><h2>process_threads [function]</h2><h3>process_threads( dt[, ctx ] )</h3><h4>Advance the managed subthreads once, using the specified delta time.</h4><ul><li>If <code>ctx</code> is unspecified, it defaults to the current context.
+</li><li>This function should only be used on the engine thread and owned coroutines since it recursively advances all subthreads.</li></ul></div>
+<div class='item'><a name='yield-function'></a><hr><h2>yield [function]</h2><h3>yield([ args.. ])</h3><h4>Suspends the current state, returning to caller.</h4><ul><li>Arguments are passed as return values to the caller.
+</li><li>State cannot be suspended if there are C functions or other unusual constructs in the stack.</li></ul></div>
+<div class='item'><a name='abort-function'></a><hr><h2>abort [function]</h2><h3>abort([ contexts... ])</h3><h4>Stops execution and returns to C code as soon as possible.</h4><ul><li>If no contexts are specified, current context is aborted, otherwise only the specified contexts are aborted.
+</li><li>This function is equivalent to using <a href="#sgs-Abort-function">sgs_Abort</a> in the C API.</li></ul><pre>abort();
+print( 5 ); // this line is not reached</pre></div>
+<div class='item'><a name='sys-call-function'></a><hr><h2>sys_call [function]</h2><h3>sys_call( func, this[, args..] )</h3><h4>Calls the specified function with the specified <code>this</code> value and argument list.</h4><p>
+<em class='notice-bgr'>If argument count is only known at runtime, see <a href="#sys-apply-function">sys_apply</a>.</em>
+</p><ul><li>C functions, SGS functions, closure objects and real closures have this function under the &quot;call&quot; property.</li></ul></div>
 <div class='item'><a name='sys-apply-function'></a><hr><h2>sys_apply [function]</h2><h3>sys_apply( func, this, args )</h3><h4>calls the specified function with the specified <code>this</code> value and argument array</h4><p>
-<em class='notice-bgr'>if argument count is known at compile time, prefer <a href="#sys-call-function">sys_call</a> to this function</em>
-</p><ul><li>C functions, SGS functions, closure objects and real closures have this function under the &quot;apply&quot; property</li></ul></div>
-<div class='item'><a name='pcall-function'></a><hr><h2>pcall [function]</h2><h3>pcall( callable func[, callable errh ])</h3><h4>calls the callable <code>func</code>, hiding internal errors from the caller or optionally passing them to callable <code>errh</code></h4><ul><li><code>errh</code> error handler is called with two arguments - <code>int error_type, string message</code> - and expected to return 0-1 arguments ([int])
+<em class='notice-bgr'>If argument count is known at compile time, prefer <a href="#sys-call-function">sys_call</a> to this function.</em>
+</p><ul><li>C functions, SGS functions, closure objects and real closures have this function under the &quot;apply&quot; property.</li></ul></div>
+<div class='item'><a name='pcall-function'></a><hr><h2>pcall [function]</h2><h3>pcall( callable func[, callable errh ])</h3><h4>Calls the callable <code>func</code>, hiding internal errors from the caller or optionally passing them to callable <code>errh</code>.</h4><ul><li><code>errh</code> error handler is called with two arguments - <code>int error_type, string message</code> - and expected to return 0-1 arguments ([int])
 </li><li>error handler must return 0/null/nothing if the error has been successfully processed or the new error type otherwise
 <ul><li>errors thrown inside the handler will not be caught so any error can be transformed to any other
 </li><li>an empty function behaves the same way as <code>pcall</code> without function</li></ul></li></ul><pre>include &quot;string&quot;;
@@ -2492,8 +2529,6 @@ println( sys_backtrace().last.func ); // print name of current function</pre></d
 <em class='notice-bgr'>By default, SGS_ERROR code (the one this function uses internally) will stop execution and return to C code as soon as possible.</em>
 </p><ul><li>the name of this function is written in all caps to avoid shadowing by a common variable name
 </li><li>works exactly like <code>sys_msg( SGS_INFO, message )</code></li></ul></div>
-<div class='item'><a name='sys-abort-function'></a><hr><h2>sys_abort [function]</h2><h3>sys_abort()</h3><h4>stops execution and returns to C code as soon as possible</h4><ul><li>this function is equivalent to <a href="#sgs-Abort-function">sgs_Abort</a> in the C API</li></ul><pre>sys_abort();
-print( 5 ); // this line is not reached</pre></div>
 <div class='item'><a name='app-abort-function'></a><hr><h2>app_abort [function]</h2><h3>app_abort()</h3><h4>calls the abort() function of the C standard library (crashes the application)</h4></div>
 <div class='item'><a name='app-exit-function'></a><hr><h2>app_exit [function]</h2><h3>app_exit( code = 0 )</h3><h4>calls the exit() function of the C standard library (exits the application)</h4></div>
 <div class='item'><a name='sys-replevel-function'></a><hr><h2>sys_replevel [function]</h2><h3>sys_replevel([ level ])</h3><h4>returns the current reported error level and optionally sets a new one</h4><p>
@@ -2534,6 +2569,11 @@ print unserialize(data); // prints {name=A,info=B}</pre></div>
 <div class='item'><a name='G-superglobal'></a><hr><h2>_G [superglobal]</h2><h3>A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals and change the global dictionary.</h3><pre>_G[&quot;$diff&quot;] = 5; // no way to access this via usual globals
 _G = {}; // global value dictionary is changed, previous functions are lost unless stored somewhere</pre></div>
 <div class='item'><a name='R-superglobal'></a><hr><h2>_R [superglobal]</h2><h3>A hard-coded global value that points to the registry. Can be used to access the symbol table (_R[&quot;$sym&quot;]) or include list (_R[&quot;$inc&quot;]).</h3><ul><li>It is preferred to use <a href="#sym-get-function">sym_get</a> and <a href="#sym-register-function">sym_register</a> to deal with symbols, this table is mostly available for introspection and workarounds.</li></ul></div>
+<div class='item'><a name='F-superglobal'></a><hr><h2>_F [superglobal]</h2><h3>The currently executed function.</h3><ul><li>It can be used in a function to call itself recursively, especially when the function is defined in a position where it cannot reference itself without additional effort.</li></ul><pre>function f(){ printvar( _F ); }
+f(); // prints info about function &#39;f&#39;</pre></div>
+<div class='item'><a name='T-superglobal'></a><hr><h2>_T [superglobal]</h2><h3>The currently executed thread (context/coroutine).</h3><pre>function f(){ printvar( _T ); }
+f(); // prints info about current context
+thread f(); // prints info about this newly created thread</pre></div>
 <div class='item'><a name='array-object'></a><hr><h2>array [object]</h2><ul><li>built-in methods
 <ul><li><a href="#array-push-method">push</a>
 </li><li><a href="#array-pop-method">pop</a>
@@ -2660,7 +2700,7 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 <div class='item'><a name='ALL-SGScript-core-functions-A-Z'></a><hr><h2>ALL SGScript core functions (A-Z)</h2><ul><li><a href="#ERROR-function">ERROR [function]</a>
 </li><li><a href="#INFO-function">INFO [function]</a>
 </li><li><a href="#WARNING-function">WARNING [function]</a>
-</li><li><a href="#co-unserialize-function">__co_unserialize [function]</a>
+</li><li><a href="#abort-function">abort [function]</a>
 </li><li><a href="#app-abort-function">app_abort [function]</a>
 </li><li><a href="#app-exit-function">app_exit [function]</a>
 </li><li><a href="#array-function">array [function]</a>
@@ -2677,11 +2717,13 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#dict-size-function">dict_size [function]</a>
 </li><li><a href="#dumpvar-function">dumpvar [function]</a>
 </li><li><a href="#dumpvar-ext-function">dumpvar_ext [function]</a>
+</li><li><a href="#end-on-function">end_on [function]</a>
 </li><li><a href="#errno-function">errno [function]</a>
 </li><li><a href="#errno-string-function">errno_string [function]</a>
 </li><li><a href="#errno-value-function">errno_value [function]</a>
 </li><li><a href="#eval-function">eval [function]</a>
 </li><li><a href="#eval-file-function">eval_file [function]</a>
+</li><li><a href="#event-function">event [function]</a>
 </li><li><a href="#ftime-function">ftime [function]</a>
 </li><li><a href="#gc-collect-function">gc_collect [function]</a>
 </li><li><a href="#get-concat-function">get_concat [function]</a>
@@ -2719,18 +2761,20 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#parseint-function">parseint [function]</a>
 </li><li><a href="#parsereal-function">parsereal [function]</a>
 </li><li><a href="#pcall-function">pcall [function]</a>
+</li><li><a href="#pooled-event-function">pooled_event [function]</a>
 </li><li><a href="#print-println-printlns-errprint-errprintln-errprintlns-functions">print, println, printlns, errprint, errprintln, errprintlns [functions]</a>
 </li><li><a href="#printvar-function">printvar [function]</a>
 </li><li><a href="#printvar-ext-function">printvar_ext [function]</a>
+</li><li><a href="#process-threads-function">process_threads [function]</a>
 </li><li><a href="#rand-function">rand [function]</a>
 </li><li><a href="#randf-function">randf [function]</a>
 </li><li><a href="#read-stdin-function">read_stdin [function]</a>
 </li><li><a href="#serialize-function">serialize [function]</a>
 </li><li><a href="#serialize2-function">serialize2 [function]</a>
 </li><li><a href="#srand-function">srand [function]</a>
+</li><li><a href="#subthread-create-function">subthread_create [function]</a>
 </li><li><a href="#sym-get-function">sym_get [function]</a>
 </li><li><a href="#sym-register-function">sym_register [function]</a>
-</li><li><a href="#sys-abort-function">sys_abort [function]</a>
 </li><li><a href="#sys-apply-function">sys_apply [function]</a>
 </li><li><a href="#sys-backtrace-function">sys_backtrace [function]</a>
 </li><li><a href="#sys-call-function">sys_call [function]</a>
@@ -2741,6 +2785,7 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#sys-msg-function">sys_msg [function]</a>
 </li><li><a href="#sys-replevel-function">sys_replevel [function]</a>
 </li><li><a href="#sys-stat-function">sys_stat [function]</a>
+</li><li><a href="#thread-create-function">thread_create [function]</a>
 </li><li><a href="#tobool-function">tobool [function]</a>
 </li><li><a href="#toint-function">toint [function]</a>
 </li><li><a href="#toptr-function">toptr [function]</a>
