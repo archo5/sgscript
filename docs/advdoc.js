@@ -80,9 +80,9 @@ function text2html( text )
 }
 function html2text( html, addspaces )
 {
+	function repfn( match ){ return match + " "; }
 	if( addspaces )
 	{
-		function repfn( match ){ return match + " "; }
 		html = html.replace( /<\/\s*[a-zA-Z0-9]+\s*>/gi, repfn );
 	}
 	var tmp = document.createElement( "DIV" );
