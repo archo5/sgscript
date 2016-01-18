@@ -5,54 +5,39 @@ SGScript documentation - v1.0.1
 
 This is a programming language that is made to be fast, accessible and simple.
 
-    include "math";
-    
-    gradient = [ ".", "o", "O", "#", "O", "o", "." ];
-    
-    for( y = -7; y <= 7; ++y )
+    ctrl.DReset();
+    foreach( at, item : speech )
     {
-        for( x = -7; x <= 7; ++x )
-        {
-            dst = sqrt( x * x + y * y ) * 0.9;
-            if( dst > 6 )
-                dst = 6;
-            chr = gradient[ dst ];
-            print chr $ ' ';
-        }
-        println();
+        distfromlast = speech.size - at - 1;
+        a = 0.9 * pow( 0.7, distfromlast );
+        ctrl.DCol( 0.9, a );
+        ctrl.DText( item.text,
+            x + padding, y + padding + lineheight / 2,
+            HALIGN_LEFT, VALIGN_CENTER );
+        y += lineheight;
     }
 
 It is similar to many but the exact combination makes it unique in comparison to others. Thus, it might be best to describe it in comparison to others, especially the ones that heavily influenced the development of SGScript.
 
---------------------------------------------------------------------------------------
-!  language  !            what it DOESN'T have in comparison to SGScript             !
-|     C      |  dynamic typing, built-in serialization                               |
-|    Lua     |  built-in serialization, C-like syntax, proper indexing, arrays, ...  |
-|    PHP     |  consistency, lightweight design, fully dynamic state                 |
-| JavaScript |  environmental awareness, determinism, built-in serialization, ...    |
-|   Python   |  C-like syntax, lightweight design                                    |
---------------------------------------------------------------------------------------
+It adds dynamic typing and built-in serialization to C. Unlike Lua, it has C-like syntax and proper 0-based indexing and advanced object model, and much more versatile error handling. It has the consistency you'd want after working with PHP, and is considerably more lightweight. It untangles some of the mess JavaScript has introduced, and gives coroutines for a considerable boost in power of expression. And, unlike Python, SGScript won't care as much about formatting.
 
-With this in mind, technologies get upgraded occasionally, thus be sure to take this comparison with a grain of salt and recheck it and perhaps even report the factual errors along with the version number that marked the introduction of changes.
-
-Still not convinced? You can find even more reasons at the "@"Why SGScript?"" page.
-
-However, SGScript has all of the things mentioned, and some more, possibly making it one of the most balanced languages ever created.
+You can find more about the differences at the "@"Why SGScript?"" page.
 
 The language supports:
 
 - `if/else`, `while`, `for`, `do/while`, `foreach`
-- 9 variable types: null, bool, int, real, string, function, C function, object, pointer
+- 10 variable types: null, bool, int, real, string, function, C function, object, pointer, thread
 - Multi-level break/continue
 - Multiple return values
 - First-class functions and ability to attach variables to functions (creating closures)
-- coroutines (with threading & sync primitives)
+- Coroutines (with threading & sync primitives)
 
 The standard library includes:
 
 - array, dict, map
 - math, string, I/O, O/S and formatting functions
 - `eval`, file import, DLL import, coroutines
+- coroutines/threads, events, sync/race
 
 
 # >>>
@@ -412,7 +397,7 @@ Even though it is argued that it may help someone understand code better (which 
 
 # Variable types [info]
 
-SGScript has 8 primary variable types:
+SGScript has 10 primary variable types:
 
 - `null`: the 'lack of a better value' type
 - `bool`: boolean, true/false
@@ -423,6 +408,7 @@ SGScript has 8 primary variable types:
 - `C function`: function defined in C code
 - `object`: the extension type and container for complex built-in types
 - `ptr`: the pointer type
+- `thread`: the context/thread/coroutine type
 
 Extended variable types (built on `object`):
 
@@ -431,24 +417,26 @@ Extended variable types (built on `object`):
 - `map`: a map/table structure where variables are mapped to variable keys
 - `class`: object that uses two other objects to build its interface
 - `closure`: a callable object consisting of another callable and several variables
+- `event`: an object that allows to stop a thread
 
 # >>>
 
 
 # Conversion rules [info]
 
--------------------------------------------------------------------------------------------------------------------
-!  from  \  to  !               bool               !         int        !   real   !     string      !     ptr    !
-|    null       |               false              |          0         |    0.0   |     "null"      |     NULL   |
-|    bool       |                -                 |         0/1        |  0.0/1.0 | "false"/"true"  |  NULL/0x1  |
-|    int        |    0 => false, otherwise true    |          -         |     -    |       -         |    cast    |
-|    real       |   0.0 => false, otherwise true   |  round to nearest  |     -    |   sprintf %g    |    cast    |
-|    string     |  empty => false, otherwise true  |         *1         |    *1    |       -         |   char*    |
-|    func       |               true               |          0         |    0.0   |   "function"    |    NULL    |
-|    cfunc      |               true               |          0         |    0.0   |  "C function"   |    NULL    |
-|    object *2  |               true               |          0         |    0.0   |    "object"     |  data ptr. |
-|    ptr        |  NULL => false, otherwise true   |         cast       |   cast   | sprintf ptr(%p) |      -     |
--------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------
+!  from  \  to  !               bool               !         int        !   real   !      string        !     ptr    !
+|    null       |               false              |          0         |    0.0   |      "null"        |     NULL   |
+|    bool       |                -                 |         0/1        |  0.0/1.0 |  "false"/"true"    |  NULL/0x1  |
+|    int        |    0 => false, otherwise true    |          -         |     -    |        -           |    cast    |
+|    real       |   0.0 => false, otherwise true   |  round to nearest  |     -    |    sprintf %g      |    cast    |
+|    string     |  empty => false, otherwise true  |         *1         |    *1    |        -           |   char*    |
+|    func       |               true               |          0         |    0.0   |    "function"      |    NULL    |
+|    cfunc      |               true               |          0         |    0.0   |   "C function"     |    NULL    |
+|    object *2  |               true               |          0         |    0.0   |     "object"       |  data ptr. |
+|    ptr        |  NULL => false, otherwise true   |         cast       |   cast   |  sprintf ptr(%p)   |      -     |
+|    thread     |               true               |         cast       |   cast   | sprintf thread(%p) |    cast    |
+----------------------------------------------------------------------------------------------------------------------
 
 - "-" means the conversion is not necessary, does not affect data or the effect of conversion should be immediately obvious
 - *1) see @"Numeric string parsing rules" for more info
@@ -521,6 +509,7 @@ Special keywords and hardcoded constants:
 |  continue  |       restricted keyword         |  "continue" statement            |
 |  return    |       restricted keyword         |  "return" statement              |
 |  print     |        function command          |  "print" function                |
+|  println   |        function command          |  "println" function              |
 |  yield     |        function command          |  "yield" function                |
 |  include   |        function command          |  "include" function              |
 ------------------------------------------------------------------------------------
@@ -580,6 +569,7 @@ There are 5 types of action for expressions in SGScript: arithmetic, bitwise, lo
 |  declare-global         |`   global A   `|    special     | maybe  |  any  |
 |  array literal          |` [ A, B, .. ] `|    special     |  no    |  any  |
 |  dict. literal          |` {A=1,B=2,..} `|    special     |  no    |  any  |
+|  map literal            |` map{[A]=B}   `|    special     |  no    |  any  |
 |  assign                 |`   A  =  B    `|    special     |  yes   |   1   |
 |  concatenate            |`   A  $  B    `|    special     |  no    |   2   |
 |  concatenate-assign     |`   A  $=  B   `|    special     |  yes   |   2   |
@@ -607,6 +597,7 @@ Some notes on the special cases:
 - [inline if] 3 inputs are required, 2 are actually used (as if `if(A){return B;}else{return C;}` was used)
 - [subexpression] subexpressions can set data if they are set up like this: <subexpression> = <function-call> - this is the way to read more than one return value from a function
 - [error suppression] the `@` operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn't an error
+- [dict./map literal] 3 types of keys are supported: string, identifier (interpreted as string), variable ("[ <expression> ] = <value>")
 - [function] the full function definition expression syntax: `function <name> ( <args> ) [ use ( <use-list> ) ]`, followed by either `{ ... }` or `= ... ;`. <name>, <args> and the 'use' block are all optional.
 - [multi-set] operator returns `A`, that is, the object itself
 - [thread] `thread`/`subthread` commands support all kinds of calls (`f()`, `o.f()`, `o!f()`)
@@ -620,7 +611,7 @@ Properties:
 - uses the same symbol as logical inversion operator
 - usage: simplified & optimized calling of non-integrated compatible functions
 -- instead of `comp_func.call( object, arg1 )` write `object!comp_func( arg1 )`
--- instead of putting functions with data / class interfaces, requiring pointless memory usage, allows to easily keep them separate
+-- instead of putting functions with data / class interfaces, requiring additional memory usage, allows to easily keep them separate
 -- simplify inheritance-like code models to the extent permitted by a dynamic language
 
 Example WITHOUT:
@@ -823,7 +814,7 @@ This section shows some ways of implementing various often-used constructs in SG
     global B = {};
     function B.func()
     {
-        // needless to say, this is not the preferred way to do software design in SGScript
+        // needless to say, this is not the best way to do software design in SGScript
     	this._super._super.func.call( this );
         println( "override" );
     }
@@ -837,22 +828,6 @@ This section shows some ways of implementing various often-used constructs in SG
     function B.create()
     {
         return class( {}, class( B, A ) );
-    }
-
-
-# Game entities [info]
-
-With game entities and objects of similar structure (just about any object) it is easier to simply define it as a key-value data map, without any classes, inheritance or anything of that kind. The nature of a dynamically typed scripting engine implies that almost everything is checked at runtime, making emulation of compiled language constructs pointless.
-
-    entity =
-    {
-        x = 10,
-        y = 20,
-    };
-    
-    function entity.tick( dt )
-    {
-        this.x += dt;
     }
 
 
@@ -1235,6 +1210,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_ResumeStateRet<sgs_ResumeState***> - resumes the execution state, retrieves number of return values
 - @sgs_ResumeStateExp<sgs_ResumeState***> - resumes the execution state, returns the specified number of return values
 - @sgs_ResumeState - resumes the execution state without passing or receiving anything
+- @sgs_EventState - sets the event state
+- @sgs_EndOn - associates or detaches the event from thread end set
 - @sgs_DefaultMemFunc - example memory management callback
 - @sgs_Get(Err)OutputFunc - return the current output callback and its user data pointer
 - @sgs_Set(Err)OutputFunc - set the output callback and its user data pointer
@@ -1369,6 +1346,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_InitStringBuf<sgs_Init***> - initialize variable to a new char buffer
 - @sgs_InitString<sgs_Init***> - initialize variable to a new string
 - @sgs_InitObjectPtr<sgs_Init***> - initialize variable to an existing object and acquire it
+- @sgs_InitThreadPtr<sgs_Init***> - initialize variable to a thread (context/coroutine) and acquire it
 - @sgs_CreateObject<sgs_Create***> - initialize variable to a new object
 - @sgs_CreateObjectIPA<sgs_Create***> - initialize variable to a new object with additional memory allocated in-place for the internal data pointer
 - @sgs_CreateArray<sgs_Create***> - initialize variable to a new array, optionally using the specified number of pushed items on stack
@@ -1719,6 +1697,27 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - Alias to `sgs_ResumeStateExp( C, 0, 0 )`.
 
 
+# sgs_EventState [function]
+
+== SGSBOOL sgs_EventState( sgs_Context* C, sgs_Variable evt, int state )
+=== Sets the event state.
+
+- Function returns the previous state of the event.
+- `evt` must be the event object.
+- `state` can be one of these values: `SGS_TRUE`, `SGS_FALSE` or `SGS_QUERY`.
+-- `SGS_QUERY` doesn't modify the state, only returns it.
+
+
+# sgs_EndOn [function]
+
+== void sgs_EndOn( sgs_Context* C, sgs_Variable ev, int enable )
+=== Associates or detaches the event from thread end set.
+
+- @end_on is the SGScript version of this function.
+- `ev` can be any object, it should be an object with the "convert to bool" behavior implemented, such as the event object.
+-- The thread will interpret `true` as a request to stop.
+
+
 # sgs_ExecString [function alias]
 
 == SGSRESULT sgs_ExecString( sgs_Context* C, const char* str )
@@ -1896,6 +1895,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 == void sgs_InitStringBuf( sgs_Context* C, sgs_Variable* out, const char* str, sgs_SizeVal size )
 == void sgs_InitString( sgs_Context* C, sgs_Variable* out, const char* str )
 == void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj )
+== void sgs_InitThreadPtr( sgs_Variable* out, sgs_Context* T )
 === Initialize a variable to the specified type.
 
 - Since these are reference-counted types, they need to be released manually.
@@ -4783,6 +4783,7 @@ An "event" is any object that implements the "convert to bool" behavior. True me
 When the event is signaled, the thread will be aborted as soon as possible.
 
 - Alternatively accessible via the "end_on" property of any thread.
+- @sgs_EndOn is the C version of this function.
 
 
 # co_create [function]

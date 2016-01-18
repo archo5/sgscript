@@ -2572,6 +2572,27 @@ static void sgs__check_threadendtbl( SGS_CTX )
 	C->_E = endtbl.data.O;
 }
 
+void sgs_EndOn( SGS_CTX, sgs_Variable ev, int enable )
+{
+	/* if we're trying to disable an end event and ..
+	.. table doesn't exist - it's already disabled */
+	if( enable )
+		sgs__check_threadendtbl( C );
+	if( C->_E )
+	{
+		sgs_VHTable* ht = &((DictHdr*)C->_E->data)->ht;
+		if( enable )
+		{
+			sgs_Variable val = sgs_MakeNull();
+			sgs_vht_set( ht, C, &ev, &val );
+		}
+		else
+		{
+			sgs_vht_unset( ht, C, &ev );
+		}
+	}
+}
+
 int sgsstd_end_on( SGS_CTX )
 {
 	sgs_Bool enable = SGS_TRUE;
@@ -2586,24 +2607,7 @@ int sgsstd_end_on( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?*|b", &enable ) )
 		return 0;
 	
-	/* if we're trying to disable an end event and ..
-	.. table doesn't exist - it's already disabled */
-	if( enable )
-		sgs__check_threadendtbl( which );
-	if( which->_E )
-	{
-		sgs_Variable key = sgs_StackItem( C, 0 );
-		sgs_VHTable* ht = &((DictHdr*)which->_E->data)->ht;
-		if( enable )
-		{
-			sgs_Variable val = sgs_MakeNull();
-			sgs_vht_set( ht, which, &key, &val );
-		}
-		else
-		{
-			sgs_vht_unset( ht, which, &key );
-		}
-	}
+	sgs_EndOn( which, sgs_StackItem( C, 0 ), enable );
 	return 0;
 }
 

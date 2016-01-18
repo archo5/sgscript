@@ -21,7 +21,6 @@
 </li></ul><li><a href='#Common-constructs-in-SGScript'>Common constructs in SGScript</a>
 <ul><li><a href='#Basic-classes'>Basic classes</a>
 </li><li><a href='#Inheritance'>Inheritance</a>
-</li><li><a href='#Game-entities'>Game entities</a>
 </li></ul><li><a href='#Numeric-string-parsing-rules'>Numeric string parsing rules</a>
 </li></ul><li><a href='#C-API-reference'>C API reference</a>
 <ul><li><a href='#Constants-and-types'>Constants and types</a>
@@ -94,50 +93,35 @@
 </li></ul></li></ul></div><div>
 <div class='item'><a name='SGScript-description'></a><hr><h2>SGScript - description</h2><p>
 This is a programming language that is made to be fast, accessible and simple.
-</p><pre>include &quot;math&quot;;
-
-gradient = [ &quot;.&quot;, &quot;o&quot;, &quot;O&quot;, &quot;#&quot;, &quot;O&quot;, &quot;o&quot;, &quot;.&quot; ];
-
-for( y = -7; y &lt;= 7; ++y )
+</p><pre>ctrl.DReset();
+foreach( at, item : speech )
 {
-    for( x = -7; x &lt;= 7; ++x )
-    {
-        dst = sqrt( x * x + y * y ) * 0.9;
-        if( dst &gt; 6 )
-            dst = 6;
-        chr = gradient[ dst ];
-        print chr $ &#39; &#39;;
-    }
-    println();
+    distfromlast = speech.size - at - 1;
+    a = 0.9 * pow( 0.7, distfromlast );
+    ctrl.DCol( 0.9, a );
+    ctrl.DText( item.text,
+        x + padding, y + padding + lineheight / 2,
+        HALIGN_LEFT, VALIGN_CENTER );
+    y += lineheight;
 }</pre><p>
 It is similar to many but the exact combination makes it unique in comparison to others. Thus, it might be best to describe it in comparison to others, especially the ones that heavily influenced the development of SGScript.
 </p><p>
-<table>
-<tr><th>language</th><th>what it DOESN&#39;T have in comparison to SGScript</th></tr>
-<tr><td>C</td><td>dynamic typing, built-in serialization</td></tr>
-<tr><td>Lua</td><td>built-in serialization, C-like syntax, proper indexing, arrays, ...</td></tr>
-<tr><td>PHP</td><td>consistency, lightweight design, fully dynamic state</td></tr>
-<tr><td>JavaScript</td><td>environmental awareness, determinism, built-in serialization, ...</td></tr>
-<tr><td>Python</td><td>C-like syntax, lightweight design</td></tr>
-</table>
+It adds dynamic typing and built-in serialization to C. Unlike Lua, it has C-like syntax and proper 0-based indexing and advanced object model, and much more versatile error handling. It has the consistency you&#39;d want after working with PHP, and is considerably more lightweight. It untangles some of the mess JavaScript has introduced, and gives coroutines for a considerable boost in power of expression. And, unlike Python, SGScript won&#39;t care as much about formatting.
 </p><p>
-With this in mind, technologies get upgraded occasionally, thus be sure to take this comparison with a grain of salt and recheck it and perhaps even report the factual errors along with the version number that marked the introduction of changes.
-</p><p>
-Still not convinced? You can find even more reasons at the &quot;<a href="#Why-SGScript">Why SGScript?</a>&quot; page.
-</p><p>
-However, SGScript has all of the things mentioned, and some more, possibly making it one of the most balanced languages ever created.
+You can find more about the differences at the &quot;<a href="#Why-SGScript">Why SGScript?</a>&quot; page.
 </p><p>
 The language supports:
 </p><ul><li><code>if/else</code>, <code>while</code>, <code>for</code>, <code>do/while</code>, <code>foreach</code>
-</li><li>9 variable types: null, bool, int, real, string, function, C function, object, pointer
+</li><li>10 variable types: null, bool, int, real, string, function, C function, object, pointer, thread
 </li><li>Multi-level break/continue
 </li><li>Multiple return values
 </li><li>First-class functions and ability to attach variables to functions (creating closures)
-</li><li>coroutines (with threading &amp; sync primitives)</li></ul><p>
+</li><li>Coroutines (with threading &amp; sync primitives)</li></ul><p>
 The standard library includes:
 </p><ul><li>array, dict, map
 </li><li>math, string, I/O, O/S and formatting functions
-</li><li><code>eval</code>, file import, DLL import, coroutines</li></ul></div>
+</li><li><code>eval</code>, file import, DLL import, coroutines
+</li><li>coroutines/threads, events, sync/race</li></ul></div>
 <div class='item'><a name='Why-SGScript'></a><hr><h2>Why SGScript?</h2><h3>Native serialization</h3><p>
 <div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Python</span></div>
 <div class='al-con'><span class='inner'><span class='mark'>[-]</span> JavaScript, Lua, Squirrel</span></div>
@@ -383,7 +367,7 @@ printf( &quot;returned value: %f\n&quot;, sgs_GetReal( C, -1 ) );
 sgs_SetStackSize( C, 0 );</pre></div>
 <div class='item'><a name='Language-reference'></a><hr><h2>Language reference</h2></div>
 <div class='item'><a name='Variable-types'></a><hr><h2>Variable types</h2><p>
-SGScript has 8 primary variable types:
+SGScript has 10 primary variable types:
 </p><ul><li><code>null</code>: the &#39;lack of a better value&#39; type
 </li><li><code>bool</code>: boolean, true/false
 </li><li><code>int</code>: signed integer
@@ -392,13 +376,15 @@ SGScript has 8 primary variable types:
 </li><li><code>(SGS) function</code>: function that was defined in and compiled from SGScript code
 </li><li><code>C function</code>: function defined in C code
 </li><li><code>object</code>: the extension type and container for complex built-in types
-</li><li><code>ptr</code>: the pointer type</li></ul><p>
+</li><li><code>ptr</code>: the pointer type
+</li><li><code>thread</code>: the context/thread/coroutine type</li></ul><p>
 Extended variable types (built on <code>object</code>):
 </p><ul><li><code>array</code>: a dynamically allocated variable array
 </li><li><code>dict</code>: a map/table structure where variables are mapped to string keys
 </li><li><code>map</code>: a map/table structure where variables are mapped to variable keys
 </li><li><code>class</code>: object that uses two other objects to build its interface
-</li><li><code>closure</code>: a callable object consisting of another callable and several variables</li></ul></div>
+</li><li><code>closure</code>: a callable object consisting of another callable and several variables
+</li><li><code>event</code>: an object that allows to stop a thread</li></ul></div>
 <div class='item'><a name='Conversion-rules'></a><hr><h2>Conversion rules</h2><p>
 <table>
 <tr><th>from  \  to</th><th>bool</th><th>int</th><th>real</th><th>string</th><th>ptr</th></tr>
@@ -411,6 +397,7 @@ Extended variable types (built on <code>object</code>):
 <tr><td>cfunc</td><td>true</td><td>0</td><td>0.0</td><td>&quot;C function&quot;</td><td>NULL</td></tr>
 <tr><td>object *2</td><td>true</td><td>0</td><td>0.0</td><td>&quot;object&quot;</td><td>data ptr.</td></tr>
 <tr><td>ptr</td><td>NULL =&gt; false, otherwise true</td><td>cast</td><td>cast</td><td>sprintf ptr(%p)</td><td>-</td></tr>
+<tr><td>thread</td><td>true</td><td>cast</td><td>cast</td><td>sprintf thread(%p)</td><td>cast</td></tr>
 </table>
 </p><ul><li>&quot;-&quot; means the conversion is not necessary, does not affect data or the effect of conversion should be immediately obvious
 </li><li>*1) see <a href="#Numeric-string-parsing-rules">Numeric string parsing rules</a> for more info
@@ -470,6 +457,7 @@ Special keywords and hardcoded constants:
 <tr><td>continue</td><td>restricted keyword</td><td>&quot;continue&quot; statement</td></tr>
 <tr><td>return</td><td>restricted keyword</td><td>&quot;return&quot; statement</td></tr>
 <tr><td>print</td><td>function command</td><td>&quot;print&quot; function</td></tr>
+<tr><td>println</td><td>function command</td><td>&quot;println&quot; function</td></tr>
 <tr><td>yield</td><td>function command</td><td>&quot;yield&quot; function</td></tr>
 <tr><td>include</td><td>function command</td><td>&quot;include&quot; function</td></tr>
 </table>
@@ -527,6 +515,7 @@ There are 5 types of action for expressions in SGScript: arithmetic, bitwise, lo
 <tr><td>declare-global</td><td><code>   global A   </code></td><td>special</td><td>maybe</td><td>any</td></tr>
 <tr><td>array literal</td><td><code> [ A, B, .. ] </code></td><td>special</td><td>no</td><td>any</td></tr>
 <tr><td>dict. literal</td><td><code> {A=1,B=2,..} </code></td><td>special</td><td>no</td><td>any</td></tr>
+<tr><td>map literal</td><td><code> map{[A]=B}   </code></td><td>special</td><td>no</td><td>any</td></tr>
 <tr><td>assign</td><td><code>   A  =  B    </code></td><td>special</td><td>yes</td><td>1</td></tr>
 <tr><td>concatenate</td><td><code>   A  $  B    </code></td><td>special</td><td>no</td><td>2</td></tr>
 <tr><td>concatenate-assign</td><td><code>   A  $=  B   </code></td><td>special</td><td>yes</td><td>2</td></tr>
@@ -553,6 +542,7 @@ Some notes on the special cases:
 </li><li>[inline if] 3 inputs are required, 2 are actually used (as if <code>if(A){return B;}else{return C;}</code> was used)
 </li><li>[subexpression] subexpressions can set data if they are set up like this: &lt;subexpression&gt; = &lt;function-call&gt; - this is the way to read more than one return value from a function
 </li><li>[error suppression] the <code>@</code> operator disables warnings, errors and any other messages for as long as the subexpression is executed, this is mostly useful for things like reading a property or calling a function that may not exist, in cases where that isn&#39;t an error
+</li><li>[dict./map literal] 3 types of keys are supported: string, identifier (interpreted as string), variable (&quot;[ &lt;expression&gt; ] = &lt;value&gt;&quot;)
 </li><li>[function] the full function definition expression syntax: <code>function &lt;name&gt; ( &lt;args&gt; ) [ use ( &lt;use-list&gt; ) ]</code>, followed by either <code>{ ... }</code> or <code>= ... ;</code>. &lt;name&gt;, &lt;args&gt; and the &#39;use&#39; block are all optional.
 </li><li>[multi-set] operator returns <code>A</code>, that is, the object itself
 </li><li>[thread] <code>thread</code>/<code>subthread</code> commands support all kinds of calls (<code>f()</code>, <code>o.f()</code>, <code>o!f()</code>)</li></ul><h5>compatible function call / inheritance call / global method call (<code> O!A ([B,..]) </code>)</h5><p>
@@ -562,7 +552,7 @@ Properties:
 </p><ul><li>uses the same symbol as logical inversion operator
 </li><li>usage: simplified &amp; optimized calling of non-integrated compatible functions
 <ul><li>instead of <code>comp_func.call( object, arg1 )</code> write <code>object!comp_func( arg1 )</code>
-</li><li>instead of putting functions with data / class interfaces, requiring pointless memory usage, allows to easily keep them separate
+</li><li>instead of putting functions with data / class interfaces, requiring additional memory usage, allows to easily keep them separate
 </li><li>simplify inheritance-like code models to the extent permitted by a dynamic language</li></ul></li></ul><p>
 Example WITHOUT:
 </p><pre>function create_object()
@@ -716,7 +706,7 @@ function A.create()
 global B = {};
 function B.func()
 {
-    // needless to say, this is not the preferred way to do software design in SGScript
+    // needless to say, this is not the best way to do software design in SGScript
 	this._super._super.func.call( this );
     println( &quot;override&quot; );
 }
@@ -730,18 +720,6 @@ function B.func()
 function B.create()
 {
     return class( {}, class( B, A ) );
-}</pre></div>
-<div class='item'><a name='Game-entities'></a><hr><h2>Game entities</h2><p>
-With game entities and objects of similar structure (just about any object) it is easier to simply define it as a key-value data map, without any classes, inheritance or anything of that kind. The nature of a dynamically typed scripting engine implies that almost everything is checked at runtime, making emulation of compiled language constructs pointless.
-</p><pre>entity =
-{
-    x = 10,
-    y = 20,
-};
-
-function entity.tick( dt )
-{
-    this.x += dt;
 }</pre></div>
 <div class='item'><a name='Numeric-string-parsing-rules'></a><hr><h2>Numeric string parsing rules</h2><p>
 &quot;&gt;&gt;&gt;&quot; means &quot;until any other symbol has been found&quot; (the text is too dense for exact repetition)
@@ -822,6 +800,7 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li>SGS_WARNING: non-fatal issues
 </li><li>SGS_ERROR: fatal issues
 </li><li>SGS_APIERR: API usage errors
+</li><li>SGS_INTERR: internal errors
 </li><li>any other integer may be defined and returned by other interfaces</li></ul></li></ul></div>
 <div class='item'><a name='Variable-type-codes'></a><hr><h2>Variable type codes</h2><ul><li>SGS_VT_NULL: null
 </li><li>SGS_VT_BOOL: boolean
@@ -967,6 +946,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-ResumeState-functions">sgs_ResumeStateRet</a> - resumes the execution state, retrieves number of return values
 </li><li><a href="#sgs-ResumeState-functions">sgs_ResumeStateExp</a> - resumes the execution state, returns the specified number of return values
 </li><li><a href="#sgs-ResumeState-functions">sgs_ResumeState</a> - resumes the execution state without passing or receiving anything
+</li><li><a href="#sgs-EventState-function">sgs_EventState</a> - sets the event state
+</li><li><a href="#sgs-EndOn-function">sgs_EndOn</a> - associates or detaches the event from thread end set
 </li><li><a href="#sgs-DefaultMemFunc-function">sgs_DefaultMemFunc</a> - example memory management callback
 </li><li><a href="#sgs-Get-Err-OutputFunc-function">sgs_Get(Err)OutputFunc</a> - return the current output callback and its user data pointer
 </li><li><a href="#sgs-Set-Err-OutputFunc-function">sgs_Set(Err)OutputFunc</a> - set the output callback and its user data pointer
@@ -1069,6 +1050,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-Init-functions">sgs_InitStringBuf</a> - initialize variable to a new char buffer
 </li><li><a href="#sgs-Init-functions">sgs_InitString</a> - initialize variable to a new string
 </li><li><a href="#sgs-Init-functions">sgs_InitObjectPtr</a> - initialize variable to an existing object and acquire it
+</li><li><a href="#sgs-Init-functions">sgs_InitThreadPtr</a> - initialize variable to a thread (context/coroutine) and acquire it
 </li><li><a href="#sgs-Create-functions">sgs_CreateObject</a> - initialize variable to a new object
 </li><li><a href="#sgs-Create-functions">sgs_CreateObjectIPA</a> - initialize variable to a new object with additional memory allocated in-place for the internal data pointer
 </li><li><a href="#sgs-Create-functions">sgs_CreateArray</a> - initialize variable to a new array, optionally using the specified number of pushed items on stack
@@ -1323,11 +1305,13 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-DestroyEngine-function">sgs_DestroyEngine [function]</a>
 </li><li><a href="#sgs-DumpCompiled-function">sgs_DumpCompiled [function]</a>
 </li><li><a href="#sgs-DumpVar-function">sgs_DumpVar [function]</a>
+</li><li><a href="#sgs-EndOn-function">sgs_EndOn [function]</a>
 </li><li><a href="#sgs-EqualTypes-function">sgs_EqualTypes [function]</a>
 </li><li><a href="#sgs-Errno-function-alias">sgs_Errno [function alias]</a>
 </li><li><a href="#sgs-EvalBuffer-function">sgs_EvalBuffer [function]</a>
 </li><li><a href="#sgs-EvalFile-function">sgs_EvalFile [function]</a>
 </li><li><a href="#sgs-EvalString-function-alias">sgs_EvalString [function alias]</a>
+</li><li><a href="#sgs-EventState-function">sgs_EventState [function]</a>
 </li><li><a href="#sgs-ExecBuffer-function-alias">sgs_ExecBuffer [function alias]</a>
 </li><li><a href="#sgs-ExecFile-function-alias">sgs_ExecFile [function alias]</a>
 </li><li><a href="#sgs-ExecString-function-alias">sgs_ExecString [function alias]</a>
@@ -1482,6 +1466,13 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><code>args</code> must be bigger than or equal to the stack size.
 </li><li><code>outrvc</code> can be NULL.</li></ul></div>
 <div class='item'><a name='sgs-ResumeState-function-alias'></a><hr><h2>sgs_ResumeState [function alias]</h2><h3>SGSBOOL sgs_ResumeState( sgs_Context* C )</h3><h4>Resumes the execution state.</h4><ul><li>Alias to <code>sgs_ResumeStateExp( C, 0, 0 )</code>.</li></ul></div>
+<div class='item'><a name='sgs-EventState-function'></a><hr><h2>sgs_EventState [function]</h2><h3>SGSBOOL sgs_EventState( sgs_Context* C, sgs_Variable evt, int state )</h3><h4>Sets the event state.</h4><ul><li>Function returns the previous state of the event.
+</li><li><code>evt</code> must be the event object.
+</li><li><code>state</code> can be one of these values: <code>SGS_TRUE</code>, <code>SGS_FALSE</code> or <code>SGS_QUERY</code>.
+<ul><li><code>SGS_QUERY</code> doesn&#39;t modify the state, only returns it.</li></ul></li></ul></div>
+<div class='item'><a name='sgs-EndOn-function'></a><hr><h2>sgs_EndOn [function]</h2><h3>void sgs_EndOn( sgs_Context* C, sgs_Variable ev, int enable )</h3><h4>Associates or detaches the event from thread end set.</h4><ul><li><a href="#end-on-function">end_on</a> is the SGScript version of this function.
+</li><li><code>ev</code> can be any object, it should be an object with the &quot;convert to bool&quot; behavior implemented, such as the event object.
+<ul><li>The thread will interpret <code>true</code> as a request to stop.</li></ul></li></ul></div>
 <div class='item'><a name='sgs-ExecString-function-alias'></a><hr><h2>sgs_ExecString [function alias]</h2><h3>SGSRESULT sgs_ExecString( sgs_Context* C, const char* str )</h3><h4>Compiles and executes a string of text.</h4><ul><li>Leaves the stack the same as it was before the call.
 </li><li>Alias to <code>sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )</code>.
 </li><li>Theoretically bytecode is supported but it will most probably be trimmed by the string length function, unless a different string termination mark is used, and a different string length function to detect it is set.</li></ul><h4>Error codes:</h4><ul><li>SGS_ECOMP: compiler error
@@ -1524,9 +1515,9 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li>using both at the same time should be reserved to special cases only.</li></ul></li></ul></div>
 <div class='item'><a name='sgs-Make-functions'></a><hr><h2>sgs_Make*** [functions]</h2><h3>sgs_Variable sgs_MakeNull()</h3><h3>sgs_Variable sgs_MakeBool( sgs_Bool value )</h3><h3>sgs_Variable sgs_MakeInt( sgs_Int value )</h3><h3>sgs_Variable sgs_MakeReal( sgs_Real value )</h3><h3>sgs_Variable sgs_MakeCFunc( sgs_CFunc func )</h3><h3>sgs_Variable sgs_MakePtr( void* ptr )</h3><h4>Returns a variable instance of the specified type.</h4><ul><li>Since these are basic types, they don&#39;t need to be freed.
 </li><li>sgs_Bool is transformed to 0/1, everything else is unchanged.</li></ul></div>
-<div class='item'><a name='sgs-Init-functions'></a><hr><h2>sgs_Init*** [functions]</h2><h3>void sgs_InitStringBuf( sgs_Context* C, sgs_Variable* out, const char* str, sgs_SizeVal size )</h3><h3>void sgs_InitString( sgs_Context* C, sgs_Variable* out, const char* str )</h3><h3>void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj )</h3><h4>Initialize a variable to the specified type.</h4><ul><li>Since these are reference-counted types, they need to be released manually.
+<div class='item'><a name='sgs-Init-functions'></a><hr><h2>sgs_Init*** [functions]</h2><h3>void sgs_InitStringBuf( sgs_Context* C, sgs_Variable* out, const char* str, sgs_SizeVal size )</h3><h3>void sgs_InitString( sgs_Context* C, sgs_Variable* out, const char* str )</h3><h3>void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj )</h3><h3>void sgs_InitThreadPtr( sgs_Variable* out, sgs_Context* T )</h3><h4>Initialize a variable to the specified type.</h4><ul><li>Since these are reference-counted types, they need to be released manually.
 </li><li>To allocate an uninitialized string buffer, use <a href="#sgs-InitStringAlloc-function">sgs_InitStringAlloc</a>.</li></ul></div>
-<div class='item'><a name='sgs-Create-functions'></a><hr><h2>sgs_Create*** [functions]</h2><h3>SGSONE sgs_CreateObject( sgs_Context* C, sgs_Variable* out, void* data, sgs_ObjInterface* iface )</h3><h3>void* sgs_CreateObjectIPA( sgs_Context* C, sgs_Variable* out, sgs_SizeVal added, sgs_ObjInterface* iface )</h3><h4>Creates a new object.</h4><h3>SGSONE sgs_CreateArray( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )</h3><h4>Creates an array from <code>numitems</code> last items on the stack, pops those items.</h4><h3>SGSONE sgs_CreateDict( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )</h3><h4>Creates a dict from <code>numitems</code> last items on the stack, pops those items.</h4><h3>SGSONE sgs_CreateMap( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )</h3><h4>Creates a map from <code>numitems</code> last items on the stack, pops those items.</h4><h3>SGSONE sgs_CreateEvent( SGS_CTX, sgs_Variable* out )</h3><h4>Initialize variable to a new event.</h4><h3>SGSONE sgs_CreatePooledEventBuf( SGS_CTX, sgs_Variable* out, sgs_Variable dict, const char* str, sgs_SizeVal size )</h3><h4>Initialize variable to a new or existing pooled event (by name in buffer).</h4><h3>SGSONE sgs_CreatePooledEvent( SGS_CTX, sgs_Variable* out, sgs_Variable dict, const char* str )</h3><h4>Initialize variable to a new or existing pooled event (by C-string name).</h4><ul><li>If <code>out</code> is unspecified, the new variable is pushed on the stack instead.
+<div class='item'><a name='sgs-Create-functions'></a><hr><h2>sgs_Create*** [functions]</h2><h3>SGSONE sgs_CreateObject( sgs_Context* C, sgs_Variable* out, void* data, sgs_ObjInterface* iface )</h3><h3>void* sgs_CreateObjectIPA( sgs_Context* C, sgs_Variable* out, sgs_SizeVal added, sgs_ObjInterface* iface )</h3><h4>Creates a new object.</h4><h3>SGSONE sgs_CreateArray( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )</h3><h4>Creates an array from <code>numitems</code> last items on the stack, pops those items.</h4><h3>SGSONE sgs_CreateDict( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )</h3><h4>Creates a dict from <code>numitems</code> last items on the stack, pops those items.</h4><h3>SGSONE sgs_CreateMap( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )</h3><h4>Creates a map from <code>numitems</code> last items on the stack, pops those items.</h4><h3>SGSONE sgs_CreateEvent( sgs_Context* C, sgs_Variable* out )</h3><h4>Initialize variable to a new event.</h4><h3>SGSONE sgs_CreatePooledEventBuf( sgs_Context* C, sgs_Variable* out, sgs_Variable dict, const char* str, sgs_SizeVal size )</h3><h4>Initialize variable to a new or existing pooled event (by name in buffer).</h4><h3>SGSONE sgs_CreatePooledEvent( sgs_Context* C, sgs_Variable* out, sgs_Variable dict, const char* str )</h3><h4>Initialize variable to a new or existing pooled event (by C-string name).</h4><ul><li>If <code>out</code> is unspecified, the new variable is pushed on the stack instead.
 </li><li>sgs_CreateObjectIPA stands for &quot;initialize object, allocate memory in-place&quot;:
 <ul><li>it means that the <code>added</code> memory space will be appended to the end of object allocation;
 </li><li>this allows to allocate all object data for most objects with just one allocation, instead of two;
@@ -2427,7 +2418,8 @@ srand( ftime() ); // restart the generator depending on the second the code was 
 <div class='item'><a name='end-on-function'></a><hr><h2>end_on [function]</h2><h3>end_on( this thread, object event, bool enable = true )</h3><h4>Set or unset an event object that can stop a thread.</h4><p>
 An &quot;event&quot; is any object that implements the &quot;convert to bool&quot; behavior. True means &#39;signaled&#39;, false - inactive.
 When the event is signaled, the thread will be aborted as soon as possible.
-</p><ul><li>Alternatively accessible via the &quot;end_on&quot; property of any thread.</li></ul></div>
+</p><ul><li>Alternatively accessible via the &quot;end_on&quot; property of any thread.
+</li><li><a href="#sgs-EndOn-function">sgs_EndOn</a> is the C version of this function.</li></ul></div>
 <div class='item'><a name='co-create-function'></a><hr><h2>co_create [function]</h2><h3>co_create( callable )</h3><h4>Creates a coroutine with the specified callable.</h4><ul><li>function returns a coroutine object that can be started/resumed with <a href="#co-resume-function">co_resume</a></li></ul></div>
 <div class='item'><a name='co-resume-function'></a><hr><h2>co_resume [function]</h2><h3>co_resume( coroutine[, args..] )</h3><h4>Starts or resumes the coroutine.</h4><ul><li>if function is called for the first time, the attached callable is called within the coroutine, passing given arguments to the callable
 </li><li>if function is suspended, arguments will be passed as return values from the <a href="#yield-function">yield</a> call that suspended it</li></ul></div>
@@ -2566,7 +2558,7 @@ print data; // prints random-looking, yet deterministic garbage
 print unserialize(data); // prints {name=A,info=B}</pre></div>
 <div class='item'><a name='unserialize2-function'></a><hr><h2>unserialize2 [function]</h2><h3>unserialize( string data[, array|dict funcs ])</h3><h4>recreates a variable from the buffer with serialized data or returns null and emits a warning on failure</h4><ul><li>for more info on function behavior, refer to <a href="#unserialize-function">unserialize</a>
 </li><li>for more info on serialization in SGScript, refer to <a href="#Serialization-in-SGScript">Serialization in SGScript</a></li></ul></div>
-<div class='item'><a name='SGS-constants'></a><hr><h2>SGS_*** [constants]</h2><h3>SGS_INFO, SGS_WARNING, SGS_ERROR, SGS_APIERR</h3><h4>defined to the values of the C macros, respectively 100, 200, 300 and 400</h4></div>
+<div class='item'><a name='SGS-constants'></a><hr><h2>SGS_*** [constants]</h2><h3>SGS_INFO, SGS_WARNING, SGS_ERROR, SGS_APIERR</h3><h4>defined to the values of the C macros, respectively 100, 200, 300 and 330</h4></div>
 <div class='item'><a name='VT-constants'></a><hr><h2>VT_*** [constants]</h2><h3>VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR</h3><h4>these constants are defined to the values of the C macros (with the prefix &quot;SGS_VT_&quot; in C) and can be compared with the values returned in <a href="#typeid-function">typeid()</a></h4></div>
 <div class='item'><a name='RAND-MAX-constant'></a><hr><h2>RAND_MAX [constant]</h2><h3>RAND_MAX</h3><h4>The maximum number that can be returned by <a href="#rand-function">rand()</a>.</h4></div>
 <div class='item'><a name='G-superglobal'></a><hr><h2>_G [superglobal]</h2><h3>A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals and change the global dictionary.</h3><pre>_G[&quot;$diff&quot;] = 5; // no way to access this via usual globals
