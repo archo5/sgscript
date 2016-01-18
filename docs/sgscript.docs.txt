@@ -967,6 +967,7 @@ These are the default meanings for error codes that are honored throughout the A
 -- SGS_WARNING: non-fatal issues
 -- SGS_ERROR: fatal issues
 -- SGS_APIERR: API usage errors
+-- SGS_INTERR: internal errors
 -- any other integer may be defined and returned by other interfaces
 
 
@@ -1373,6 +1374,9 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_CreateArray<sgs_Create***> - initialize variable to a new array, optionally using the specified number of pushed items on stack
 - @sgs_CreateDict<sgs_Create***> - initialize variable to a new dict, optionally using the specified number of pushed items on stack
 - @sgs_CreateMap<sgs_Create***> - initialize variable to a new map, optionally using the specified number of pushed items on stack
+- @sgs_CreateEvent<sgs_Create***> - initialize variable to a new event
+- @sgs_CreatePooledEventBuf<sgs_Create***> - initialize variable to a new or existing pooled event (by name in buffer)
+- @sgs_CreatePooledEvent<sgs_Create***> - initialize variable to a new or existing pooled event (by C-string name)
 
 
 # Stack primary interface [info]
@@ -1912,6 +1916,15 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 == SGSONE sgs_CreateMap( sgs_Context* C, sgs_Variable* out, sgs_SizeVal numitems )
 === Creates a map from `numitems` last items on the stack, pops those items.
+
+== SGSONE sgs_CreateEvent( sgs_Context* C, sgs_Variable* out )
+=== Initialize variable to a new event.
+
+== SGSONE sgs_CreatePooledEventBuf( sgs_Context* C, sgs_Variable* out, sgs_Variable dict, const char* str, sgs_SizeVal size )
+=== Initialize variable to a new or existing pooled event (by name in buffer).
+
+== SGSONE sgs_CreatePooledEvent( sgs_Context* C, sgs_Variable* out, sgs_Variable dict, const char* str )
+=== Initialize variable to a new or existing pooled event (by C-string name).
 
 - If `out` is unspecified, the new variable is pushed on the stack instead.
 - sgs_CreateObjectIPA stands for "initialize object, allocate memory in-place":
@@ -5260,7 +5273,7 @@ When the event is signaled, the thread will be aborted as soon as possible.
 # SGS_*** [constants]
 
 == SGS_INFO, SGS_WARNING, SGS_ERROR, SGS_APIERR
-=== defined to the values of the C macros, respectively 100, 200, 300 and 400
+=== defined to the values of the C macros, respectively 100, 200, 300 and 330
 
 
 # VT_*** [constants]

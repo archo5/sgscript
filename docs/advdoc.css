@@ -32,6 +32,9 @@ view searchresult { display: block; margin: 24px 0; }
 view searchresult srttl { display: block; margin: 8px 0; }
 view searchresult .title { font-size: 18px; }
 view searchresult desc { display: block; }
+view dbglog { display: block; }
+view dbglog:nth-child(odd) { background: #EED; }
+view dbglog:nth-child(even) { background: #DEE; }
 breadcrumbs { display: block; padding: 8px; margin: 0 0 16px 0; font-size: 14px; opacity: 0.7;
 	border: 1px solid #EEE; outline: 1px solid #AAA; background: #DDD; }
 breadcrumbs:hover { opacity: 1; }

@@ -251,10 +251,21 @@ function doc_select_page( path )
 	// make sure top of the page is visible
 	find("#view").scrollTop = 0;
 }
+function _dbg( cont, text )
+{
+	cont.appendChild( element( "dbglog", { textContent: text } ) );
+}
 function doc_search( text )
 {
 	text = text.trim();
 	find( "toc search input" ).value = text;
+	
+	var debug = false;
+	if( text.indexOf( "/d:" ) == 0 )
+	{
+		debug = true;
+		text = text.substring( 3 );
+	}
 	
 	var breadcrumbs = empty( find( "#view breadcrumbs" ) );
 	breadcrumbs.style.display = "none";
@@ -271,6 +282,10 @@ function doc_search( text )
 	var sd_firsttwo = sgs_searchindex.firsttwo;
 	
 	var words = srch_split_into_normalized_words( text );
+	if( debug )
+	{
+		_dbg( cont, "Words: " + words.join( ", " ) );
+	}
 	
 	// narrow down search list by shortcut features, compare words against page words
 	var pages = {};
@@ -281,17 +296,38 @@ function doc_search( text )
 		var first2 = word.substring( 0, 2 );
 		// look up smaller word list by first two letters
 		var widlist = sd_firsttwo[ first2 ];
+		if( debug )
+		{
+			_dbg( cont, "Testing word: '" + word + "', First two letters: '" + first2 + "'" );
+		}
 		if( widlist != null )
 		{
+			if( debug )
+			{
+				_dbg( cont, "Matching word count: " + widlist.length );
+				_dbg( cont, "Found words IDs: " + widlist.join( ", " ) );
+			}
 			for( var j = 0; j < widlist.length; ++j )
 			{
 				var worditem = sd_words[ widlist[ j ] ];
 				// if neither word contains the other, it's not a match
 				if( worditem[0].indexOf( word ) == -1 && word.indexOf( worditem[0] ) == -1 )
+				{
+					if( debug )
+					{
+						_dbg( cont, "NOT match with word '" + worditem[0] + "'" );
+					}
 					continue;
+				}
 				var divisor = 1 + Math.abs( word.length - worditem[0].length );
+				if( debug )
+				{
+					_dbg( cont, "MATCH with word '" + worditem[0] + "', divisor: " + divisor );
+				}
+				var numpages = 0;
 				for( var pid in worditem[1] )
 				{
+					numpages++;
 					var pfactor = worditem[1][ pid ] / divisor;
 					if( pages[ pid ] != null )
 					{
@@ -304,6 +340,10 @@ function doc_search( text )
 						pwcnt[ pid ] = 1;
 					}
 				}
+				if( debug )
+				{
+					_dbg( cont, "Pages added: " + numpages );
+				}
 			}
 		}
 	}
@@ -314,8 +354,15 @@ function doc_search( text )
 	for( var pid in pwcnt )
 	{
 		// not all words were found
-		if( wordcount != pwcnt[ pid ] )
+		if( wordcount > pwcnt[ pid ] )
+		{
+			if( debug )
+			{
+				_dbg( cont, "Dropped page " + pid + " because of insufficient word count (need: "
+					+ wordcount + ", got: " + pwcnt[ pid ] + ")" );
+			}
 			continue;
+		}
 		fpages.push([ pid, pages[ pid ] ]);
 	}
 	// sort by similarity, most to least

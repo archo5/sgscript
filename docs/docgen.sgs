@@ -500,9 +500,16 @@ function generate_search_data_web( pages )
 		page_id = indexer.addPage( P.path_str );
 		
 		pp_title = string_trim( re_replace( P.title, "#^(.*)\\[.*?\\]$#", "$1" ) );
+		matches = re_match_all( P.body, "#^==+ (.+)$#mi", RE_RETURN_CAPTURED );
+		pp_imptext = "";
+		foreach( match : matches )
+		{
+			pp_imptext $= " " $ match[1];
+		}
 		pp_text = html_to_text( P.body );
 		
 		indexer.index( page_id, pp_title, 1.3 );
+		indexer.index( page_id, pp_imptext, 1.2 );
 		indexer.index( page_id, pp_text, 1.0 );
 	}
 	
