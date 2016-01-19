@@ -1217,7 +1217,7 @@ static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 		if( threadmode )
 		{
 			const char* key = threadmode == 1 ? "thread_create" : "subthread_create";
-			rcpos_t strpos = add_const_s( C, func, strlen( key ), key );
+			rcpos_t strpos = add_const_s( C, func, (uint32_t) strlen( key ), key );
 			INSTR_WRITE( SGS_SI_GETVAR, realfnpos, BC_CONSTENC( strpos ), 0 );
 			gotthis = 0;
 		}
@@ -2783,7 +2783,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 					rcpos_t r_name;
 					sgs_MemBuf ffn = sgs_membuf_create();
 					rpts( &ffn, C, n_name );
-					r_name = add_const_s( C, func, ffn.size, ffn.ptr );
+					r_name = add_const_s( C, func, (uint32_t) ffn.size, ffn.ptr );
 					sgs_membuf_destroy( &ffn, C );
 					INSTR_WRITE( SGS_SI_RSYM, 0, BC_CONSTENC( r_name ), pos );
 				}
@@ -3129,7 +3129,7 @@ static const char* bc_read_varlist( decoder_t* D, sgs_Variable* vlist, int cnt )
 */
 static int bc_write_sgsfunc( sgs_iFunc* F, SGS_CTX, sgs_MemBuf* outbuf )
 {
-	size_t size = F->sfuncname->size;
+	uint32_t size = F->sfuncname->size;
 	uint16_t cc, ic;
 	uint8_t gntc[4] = { F->gotthis, F->numargs, F->numtmp, F->numclsr };
 	

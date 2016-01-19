@@ -591,7 +591,7 @@ DEFINE_TEST( complex_gc )
 	"o.a[0].parent = o; o.a[1].d.parent = o; o.a[1].d.e.parent = o.a[1].d;"
 	"o.a[1].f.push(o); o.g.push( o.a[1].f ); o.a.push( o.a );";
 	
-	objcount = sgs_Stat( C, SGS_STAT_OBJCOUNT );
+	objcount = (sgs_SizeVal) sgs_Stat( C, SGS_STAT_OBJCOUNT );
 	atf_assert( sgs_ExecString( C, str ) == SGS_SUCCESS );
 	atf_assert( sgs_Stat( C, SGS_STAT_OBJCOUNT ) > objcount );
 	sgs_GCExecute( C );
@@ -1298,7 +1298,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::test::rand -" ) != NULL );
 	{
 		char* firsttime = strstr( outbuf.ptr, "." ) - 1;
-		atf_assert( *(firsttime-1) == ' ' && atof( firsttime ) < 0.5f ); /* first entry should not exceed 0.5f */
+		atf_assert( *(firsttime-1) == ' ' && atof( firsttime ) < 0.51f ); /* first entry should not exceed 0.51 (64-bit) */
 	}
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */

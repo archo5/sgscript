@@ -32,9 +32,9 @@ int main( int argc, char* argv[] )
 	BYTE buf[ 4096 ], *path, *data;
 	DWORD read, written, scriptsize = 0;
 	HANDLE fh;
-
+	
 	path = buf;
-
+	
 	/* open EXE file */
 	read = GetModuleFileName( NULL, (CHAR*) buf, sizeof( buf ) );
 	if( read >= sizeof( buf ) )
@@ -49,7 +49,7 @@ int main( int argc, char* argv[] )
 		return E_FAIL;
 	SetFilePointer( fh, -4, NULL, FILE_END );
 	ReadFile( fh, &scriptsize, sizeof( scriptsize ), &read, NULL );
-
+	
 	/* read the following data */
 	if( scriptsize == 0 )
 	{
@@ -93,7 +93,7 @@ int main( int argc, char* argv[] )
 			return E_ABORT;
 		}
 	}
-
+	
 	data = malloc( scriptsize );
 	SetFilePointer( fh, -4-(LONG)scriptsize, NULL, FILE_END );
 	ReadFile( fh, data, scriptsize, &read, NULL );
@@ -101,22 +101,22 @@ int main( int argc, char* argv[] )
 	
 	{
 		SGS_CTX = sgs_CreateEngine();
-
+		
 		for( i = 0; i < argc; ++i )
 			sgs_PushString( C, argv[ i ] );
-
+		
 		sgs_CreateArray( C, NULL, argc );
-		sgs_StoreGlobal( C, "argv" );
-
-		sgs_PushInt( C, argc );
-		sgs_StoreGlobal( C, "argc" );
-
+		sgs_SetGlobalByName( C, "argv", sgs_StackItem( C, -1 ) );
+		sgs_Pop( C, 1 );
+		
+		sgs_SetGlobalByName( C, "argc", sgs_MakeInt( argc ) );
+		
 		sgs_ExecBuffer( C, (char*) data, scriptsize );
-
+		
 		sgs_DestroyEngine( C );
 	}
-
+	
 	free( data );
-
+	
 	return 0;
 }
