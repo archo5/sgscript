@@ -24,8 +24,6 @@ extern "C" {
 #define __SGS_GLUE(a,b) a ## b
 #define SGS_CASSERT(expr, msg) typedef char SGS_GLUE (compiler_verify_, msg) [(expr) ? (+1) : (-1)]
 
-#define sgs_isoneof( chr, str ) (!!strchr( str, chr ))
-
 
 typedef int16_t sgs_LineNum;
 
@@ -37,19 +35,22 @@ SGS_APIFUNC void sgs_BreakIfFunc( const char* code, const char* file, int line )
 #endif
 
 
-/* conversions */
-static SGS_INLINE int sgs_hexchar( char c )
-	{ return ( (c) >= '0' && (c) <= '9' ) ||
-	( (c) >= 'a' && (c) <= 'f' ) || ( (c) >= 'A' && (c) <= 'F' ); }
-static SGS_INLINE int sgs_gethex( char c )
-	{ return ( (c) >= '0' && (c) <= '9' ) ? ( (c) - '0' ) :
-	( ( (c) >= 'a' && (c) <= 'f' ) ? ( (c) - 'a' + 10 ) : ( (c) - 'A' + 10 ) ); }
-static SGS_INLINE int sgs_decchar( char c ){ return c >= '0' && c <= '9'; }
-static SGS_INLINE int sgs_getdec( char c ){ return c - '0'; }
-static SGS_INLINE int sgs_octchar( char c ){ return c >= '0' && c <= '7'; }
-static SGS_INLINE int sgs_getoct( char c ){ return c - '0'; }
-static SGS_INLINE int sgs_binchar( char c ){ return c == '0' || c == '1'; }
-static SGS_INLINE int sgs_getbin( char c ){ return c - '0'; }
+/* text/character ops */
+int sgs_isoneof( int chr, const char* str );
+SGS_APIFUNC int sgs_hexchar( int c );
+SGS_APIFUNC int sgs_gethex( int c );
+int sgs_tolower( int c );
+#define sgs_decchar( c ) ((c) >= '0' && (c) <= '9')
+#define sgs_getdec( c ) ((c) - '0')
+#define sgs_octchar( c ) ((c) >= '0' && (c) <= '7')
+#define sgs_getoct( c ) ((c) - '0')
+#define sgs_binchar( c ) ((c) == '0' || (c) == '1')
+#define sgs_getbin( c ) ((c) - '0')
+#define sgs_isalpha( c ) (((c) >= 'a' && (c) <= 'z') || ((c) >= 'A' && (c) <= 'Z' ))
+#define sgs_isalnum( c ) (((c) >= 'a' && (c) <= 'z') || \
+	((c) >= 'A' && (c) <= 'Z') || ((c) >= '0' && (c) <= '9'))
+#define sgs_isdigit( c ) ((c) >= '0' && (c) <= '9')
+#define sgs_isgraph( c ) ((c) >= 0x21 && (c) <= 0x7E)
 
 
 #define SGS_AS_( tgt, ptr, wat ) do{ memcpy( &(tgt), (ptr), sizeof(wat) ); }while(0)

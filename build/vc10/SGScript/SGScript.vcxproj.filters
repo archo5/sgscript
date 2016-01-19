@@ -13,10 +13,8 @@
     <ClCompile Include="..\..\..\src\sgs_regex.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\src\sgs_cfg.h" />
     <ClInclude Include="..\..\..\src\sgs_proc.h" />
     <ClInclude Include="..\..\..\src\sgs_util.h" />
-    <ClInclude Include="..\..\..\src\sgs_xpc.h" />
     <ClInclude Include="..\..\..\src\sgscript.h" />
     <ClInclude Include="..\..\..\src\sgs_int.h" />
     <ClInclude Include="..\..\..\src\sgs_regex.h" />

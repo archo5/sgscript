@@ -61,7 +61,7 @@ endif
 .PHONY: make
 make: $(OUTFILE)
 
-DEPS = $(patsubst %,src/%.h,sgs_cfg sgs_int sgs_regex sgs_util sgs_xpc sgscript)
+DEPS = $(patsubst %,src/%.h,sgs_int sgs_regex sgs_util sgscript)
 OBJ = $(patsubst %,obj/sgs_%.o,bcg ctx fnt proc regex std stdL tok util xpc)
 
 lib/libsgscript.a: $(OBJ)
@@ -162,7 +162,7 @@ sgsexe: ext/sgsexe.c $(OUTFILE_STATIC)
 	cmd /c move /Y $(OUTDIR)\sgsexe.tmp $(OUTDIR)\sgsexe.exe
 ## - binary archive preparation
 .PHONY: binarch
-binarch: vm
+binarch: clean vm
 	sgsvm build/prep.sgs
 ## - documentation preparation
 .PHONY: docs

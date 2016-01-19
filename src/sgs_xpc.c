@@ -26,7 +26,7 @@
 #  endif
 #endif
 
-#include "sgs_xpc.h"
+#include "sgscript.h"
 
 
 int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )

@@ -24,12 +24,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\sgscript.h" />
-    <ClInclude Include="..\..\..\src\sgs_cfg.h" />
     <ClInclude Include="..\..\..\src\sgs_int.h" />
     <ClInclude Include="..\..\..\src\sgs_proc.h" />
     <ClInclude Include="..\..\..\src\sgs_regex.h" />
     <ClInclude Include="..\..\..\src\sgs_util.h" />
-    <ClInclude Include="..\..\..\src\sgs_xpc.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A9CCE7BB-A9AF-4AC9-9BE2-966BEE47DFFD}</ProjectGuid>

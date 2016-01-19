@@ -28,12 +28,41 @@ void sgs_BreakIfFunc( const char* code, const char* file, int line )
 }
 
 
+int sgs_isoneof( int chr, const char* str )
+{
+	while( *str )
+	{
+		if( *str == chr )
+			return 1;
+		str++;
+	}
+	return 0;
+}
+
+int sgs_hexchar( int c )
+{
+	return ( (c) >= '0' && (c) <= '9' ) ||
+	( (c) >= 'a' && (c) <= 'f' ) || ( (c) >= 'A' && (c) <= 'F' );
+}
+
+int sgs_gethex( int c )
+{
+	return ( (c) >= '0' && (c) <= '9' ) ? ( (c) - '0' ) :
+	( ( (c) >= 'a' && (c) <= 'f' ) ? ( (c) - 'a' + 10 ) : ( (c) - 'A' + 10 ) );
+}
+
+int sgs_tolower( int c )
+{
+	return c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c;
+}
+
+
 void sgs_print_safe( FILE* fp, const char* buf, size_t size )
 {
 	size_t i;
 	for( i = 0; i < size; ++i )
 	{
-		if( isgraph( buf[ i ] ) || buf[ i ] == ' ' )
+		if( sgs_isgraph( buf[ i ] ) || buf[ i ] == ' ' )
 			fputc( buf[ i ], fp );
 		else
 			fprintf( fp, "\\x%02X", (int) (unsigned char) buf[ i ] );

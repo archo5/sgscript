@@ -1196,7 +1196,7 @@ static void ctx_print_safe( SGS_CTX, const char* str, size_t size )
 	const char* strend = str + size;
 	while( str < strend )
 	{
-		if( *str == ' ' || isgraph( *str ) )
+		if( *str == ' ' || sgs_isgraph( *str ) )
 			sgs_Write( C, str, 1 );
 		else
 		{
@@ -1335,7 +1335,7 @@ static void _sgs_dumprsrc( SGS_SHCTX )
 		for( j = 0; j < str->size; ++j )
 		{
 			char c = sgs_str_cstr( str )[ j ] ;
-			if( isgraph( c ) || c == ' ' )
+			if( sgs_isgraph( c ) || c == ' ' )
 				sgs_Writef( C, "%c", c );
 			else
 				sgs_Writef( C, "%02X", (unsigned) c );

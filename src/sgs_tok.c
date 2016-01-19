@@ -1,22 +1,19 @@
 
-#include <ctype.h>
-#include <stdarg.h>
 #include <math.h>
 
-#include "sgs_cfg.h"
 #include "sgs_int.h"
 
 
 int sgsT_IsKeyword( sgs_TokenList tok, const char* text )
 {
 	return *tok == SGS_ST_KEYWORD && tok[ 1 ] == strlen( text ) &&
-		strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
+		memcmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
 }
 
 int sgsT_IsIdent( sgs_TokenList tok, const char* text )
 {
 	return *tok == SGS_ST_IDENT && tok[ 1 ] == strlen( text ) &&
-		strncmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
+		memcmp( (const char*) tok + 2, text, tok[ 1 ] ) == 0;
 }
 
 
@@ -134,7 +131,7 @@ static void readident( SGS_CTX, sgs_MemBuf* out, const char* code, int32_t* at, 
 	int32_t pos_rev = (int32_t) out->size;
 	sgs_membuf_appchr( out, C, SGS_ST_IDENT );
 	sgs_membuf_appchr( out, C, 0 );
-	while( i < length && ( isalnum( code[ i ] ) || code[ i ] == '_' ) )
+	while( i < length && ( sgs_isalnum( code[ i ] ) || code[ i ] == '_' ) )
 	{
 		sz++;
 		if( sz < 256 )
@@ -343,10 +340,10 @@ sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
 		else if( sgs_isoneof( fc, "()[]{},;:" ) ) sgs_membuf_appchr( &s, C, fc );
 		
 		/* identifier */
-		else if( fc == '_' || isalpha( fc ) )     readident( C, &s, code, &i, ilen );
+		else if( fc == '_' || sgs_isalpha( fc ) ) readident( C, &s, code, &i, ilen );
 		
 		/* number */
-		else if( isdigit( fc ) )
+		else if( sgs_isdigit( fc ) )
 		{
 			sgs_Int vi = 0;
 			sgs_Real vr = 0;
@@ -504,7 +501,7 @@ static void tp_token( SGS_CTX, sgs_MemBuf* out, sgs_TokenList t )
 			sgs_TokenList buf = t + 5;
 			for( i = 0; i < size; ++i )
 			{
-				if( isgraph( buf[ i ] ) || buf[ i ] == ' ' )
+				if( sgs_isgraph( buf[ i ] ) || buf[ i ] == ' ' )
 					sgs_membuf_appchr( out, C, (char) buf[ i ] );
 				else
 				{

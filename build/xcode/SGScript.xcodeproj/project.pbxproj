@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		30EC898917E2507F00056110 /* sgs_bcg.c in Sources */ = {isa = PBXBuildFile; fileRef = 30EC897917E2507F00056110 /* sgs_bcg.c */; };
-		30EC898A17E2507F00056110 /* sgs_cfg.h in Headers */ = {isa = PBXBuildFile; fileRef = 30EC897A17E2507F00056110 /* sgs_cfg.h */; };
 		30EC898B17E2507F00056110 /* sgs_ctx.c in Sources */ = {isa = PBXBuildFile; fileRef = 30EC897B17E2507F00056110 /* sgs_ctx.c */; };
 		30EC898C17E2507F00056110 /* sgs_fnt.c in Sources */ = {isa = PBXBuildFile; fileRef = 30EC897C17E2507F00056110 /* sgs_fnt.c */; };
 		30EC898D17E2507F00056110 /* sgs_int.h in Headers */ = {isa = PBXBuildFile; fileRef = 30EC897D17E2507F00056110 /* sgs_int.h */; };
@@ -21,14 +20,12 @@
 		30EC899417E2507F00056110 /* sgs_util.c in Sources */ = {isa = PBXBuildFile; fileRef = 30EC898417E2507F00056110 /* sgs_util.c */; };
 		30EC899517E2507F00056110 /* sgs_util.h in Headers */ = {isa = PBXBuildFile; fileRef = 30EC898517E2507F00056110 /* sgs_util.h */; };
 		30EC899617E2507F00056110 /* sgs_xpc.c in Sources */ = {isa = PBXBuildFile; fileRef = 30EC898617E2507F00056110 /* sgs_xpc.c */; };
-		30EC899717E2507F00056110 /* sgs_xpc.h in Headers */ = {isa = PBXBuildFile; fileRef = 30EC898717E2507F00056110 /* sgs_xpc.h */; };
 		30EC899817E2507F00056110 /* sgscript.h in Headers */ = {isa = PBXBuildFile; fileRef = 30EC898817E2507F00056110 /* sgscript.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		30EC894E17E2502400056110 /* libSGScript.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSGScript.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		30EC897917E2507F00056110 /* sgs_bcg.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sgs_bcg.c; path = ../../src/sgs_bcg.c; sourceTree = "<group>"; };
-		30EC897A17E2507F00056110 /* sgs_cfg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sgs_cfg.h; path = ../../src/sgs_cfg.h; sourceTree = "<group>"; };
 		30EC897B17E2507F00056110 /* sgs_ctx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sgs_ctx.c; path = ../../src/sgs_ctx.c; sourceTree = "<group>"; };
 		30EC897C17E2507F00056110 /* sgs_fnt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sgs_fnt.c; path = ../../src/sgs_fnt.c; sourceTree = "<group>"; };
 		30EC897D17E2507F00056110 /* sgs_int.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sgs_int.h; path = ../../src/sgs_int.h; sourceTree = "<group>"; };
@@ -41,7 +38,6 @@
 		30EC898417E2507F00056110 /* sgs_util.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sgs_util.c; path = ../../src/sgs_util.c; sourceTree = "<group>"; };
 		30EC898517E2507F00056110 /* sgs_util.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sgs_util.h; path = ../../src/sgs_util.h; sourceTree = "<group>"; };
 		30EC898617E2507F00056110 /* sgs_xpc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sgs_xpc.c; path = ../../src/sgs_xpc.c; sourceTree = "<group>"; };
-		30EC898717E2507F00056110 /* sgs_xpc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sgs_xpc.h; path = ../../src/sgs_xpc.h; sourceTree = "<group>"; };
 		30EC898817E2507F00056110 /* sgscript.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sgscript.h; path = ../../src/sgscript.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -76,7 +72,6 @@
 			isa = PBXGroup;
 			children = (
 				30EC897917E2507F00056110 /* sgs_bcg.c */,
-				30EC897A17E2507F00056110 /* sgs_cfg.h */,
 				30EC897B17E2507F00056110 /* sgs_ctx.c */,
 				30EC897C17E2507F00056110 /* sgs_fnt.c */,
 				30EC897D17E2507F00056110 /* sgs_int.h */,
@@ -89,7 +84,6 @@
 				30EC898417E2507F00056110 /* sgs_util.c */,
 				30EC898517E2507F00056110 /* sgs_util.h */,
 				30EC898617E2507F00056110 /* sgs_xpc.c */,
-				30EC898717E2507F00056110 /* sgs_xpc.h */,
 				30EC898817E2507F00056110 /* sgscript.h */,
 			);
 			name = src;
@@ -103,10 +97,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				30EC899017E2507F00056110 /* sgs_regex.h in Headers */,
-				30EC899717E2507F00056110 /* sgs_xpc.h in Headers */,
 				30EC898D17E2507F00056110 /* sgs_int.h in Headers */,
 				30EC899517E2507F00056110 /* sgs_util.h in Headers */,
-				30EC898A17E2507F00056110 /* sgs_cfg.h in Headers */,
 				30EC899817E2507F00056110 /* sgscript.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

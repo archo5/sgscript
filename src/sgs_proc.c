@@ -8,7 +8,6 @@
 
 #define StkIdx sgs_StkIdx
 
-#include "sgs_xpc.h"
 #include "sgs_int.h"
 
 
@@ -4497,7 +4496,7 @@ void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth )
 			bptr += strlen( buf );
 			while( source < srcend && bptr < bend )
 			{
-				if( *source == ' ' || isgraph( (int)*source ) )
+				if( *source == ' ' || sgs_isgraph( (int)*source ) )
 					*bptr++ = *source++;
 				else
 				{
@@ -4745,7 +4744,7 @@ void sgs_ToPrintSafeString( SGS_CTX )
 	sgs_MemBuf mb = sgs_membuf_create();
 	for( i = 0; i < size; ++i )
 	{
-		if( isgraph( (int)buf[ i ] ) || buf[ i ] == ' ' )
+		if( sgs_isgraph( (int)buf[ i ] ) || buf[ i ] == ' ' )
 			sgs_membuf_appchr( &mb, C, buf[ i ] );
 		else
 		{

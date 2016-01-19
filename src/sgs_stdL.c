@@ -1413,7 +1413,7 @@ static int sgsstd_fmtstreamI_check( SGS_CTX )
 			break;
 		}
 		chr2 = chkstr[ numchk ];
-		if( chr == chr2 || ( ci && tolower( (int)chr ) == tolower( (int)chr2 ) ) )
+		if( chr == chr2 || ( ci && sgs_tolower( (int)chr ) == sgs_tolower( (int)chr2 ) ) )
 		{
 			hdr->bufpos++;
 			numchk++;
@@ -2869,13 +2869,13 @@ static int sgsstd_os_set_locale( SGS_CTX )
 
 static int sgsstd_os_get_locale_format( SGS_CTX )
 {
-#ifndef SGS_INVALID_LCONV
+#ifndef __ANDROID__
 	struct lconv* lc = localeconv();
 #endif
 	
 	sgs_SetStackSize( C, 0 );
 	
-#ifndef SGS_INVALID_LCONV
+#ifndef __ANDROID__
 #define PLK( name ) sgs_PushString( C, #name );
 #define PLS( name ) PLK( name ); sgs_PushString( C, lc->name );
 #define PLI( name ) PLK( name ); sgs_PushInt( C, lc->name );
@@ -3342,7 +3342,7 @@ static int sgsstd_string_count( SGS_CTX )
 	while( str <= strend )
 	{
 		/* WP: string limit */
-		if( strncmp( str, sub, (size_t) subsize ) == 0 )
+		if( memcmp( str, sub, (size_t) subsize ) == 0 )
 		{
 			ret++;
 			str += overlap ? 1 : subsize;
@@ -3375,7 +3375,7 @@ static int sgsstd_string_find( SGS_CTX )
 	while( str <= strend )
 	{
 		/* WP: string limit */
-		if( strncmp( str, sub, (size_t) subsize ) == 0 )
+		if( memcmp( str, sub, (size_t) subsize ) == 0 )
 		{
 			sgs_PushInt( C, str - ostr );
 			return 1;
@@ -3406,7 +3406,7 @@ static int sgsstd_string_find_rev( SGS_CTX )
 	while( str >= ostr )
 	{
 		/* WP: string limit */
-		if( strncmp( str, sub, (size_t) subsize ) == 0 )
+		if( memcmp( str, sub, (size_t) subsize ) == 0 )
 		{
 			sgs_PushInt( C, str - ostr );
 			return 1;
@@ -3445,7 +3445,7 @@ static int _stringrep_ss
 	while( ptr <= strend )
 	{
 		/* WP: string limit */
-		if( strncmp( ptr, sub, (size_t) subsize ) == 0 )
+		if( memcmp( ptr, sub, (size_t) subsize ) == 0 )
 		{
 			if( matchcount == matchcap )
 			{

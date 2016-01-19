@@ -92,6 +92,7 @@ if( OSNAME == "windows" || OSNAME == "linux" || OSNAME == "unix" || OSNAME == "o
 	VARIATIONS.unshift({ "x86" = "target=" $ OSNAME $ "-x86", "x64" = "target=" $ OSNAME $ "-x64" });
 
 // build command config
+CPBIN = if( OSNAME == "windows", "copy /b", "cp" );
 RMBIN = if( OSNAME == "windows", "del /F /S /Q", "rm -rf" );
 MAKEBIN = if( OSNAME == "windows", "mingw32-make", "make" );
 MAKECMD = get_make_cmd( OSNAME );
@@ -135,6 +136,7 @@ foreach( blfolder, blflags : buildlist )
 	DIR = ROOT $ blfolder;
 	io_dir_create( DIR );
 	os_command( MAKEBIN$" OUTDIR="$DIR$" "$blflags$" "$MAKECMD );
+	os_command( CPBIN $ " src" $ DS $ "sgscript.h " $ DIR $ DS $ "sgscript.h" );
 	rmpaths = get_buildstrip_cmd( DIR, blflags );
 	if( rmpaths !== null )
 	{

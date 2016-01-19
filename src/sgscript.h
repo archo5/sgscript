@@ -23,10 +23,270 @@ extern "C" {
 #include <stdarg.h>
 #include <stdio.h>
 
-#include "sgs_cfg.h"
-#include "sgs_xpc.h"
+
+/******
+* CONFIGURATION *
+     ==========*/
+
+/* global debug switch */
+#ifndef SGS_DEBUG
+#  ifdef _DEBUG
+#    define SGS_DEBUG 1
+#  else
+#    define SGS_DEBUG 0
+#  endif
+#endif
+
+/* compile without standard libraries */
+#ifndef SGS_NO_STDLIB
+#  define SGS_NO_STDLIB 0
+#endif
+
+/* stage output dumps */
+#ifndef SGS_DEBUG_DATA
+#  define SGS_DEBUG_DATA 0
+#endif
+
+/* function entry/exit tagging */
+#ifndef SGS_DEBUG_FLOW
+#  define SGS_DEBUG_FLOW 0
+#endif
+
+/* instruction logging */
+#ifndef SGS_DEBUG_INSTR
+#  define SGS_DEBUG_INSTR 0
+#endif
+
+/* stack dump before execution of each instruction */
+#ifndef SGS_DEBUG_STATE
+#  define SGS_DEBUG_STATE 0
+#endif
+
+/* break-if */
+#ifndef SGS_DEBUG_VALIDATE
+#  define SGS_DEBUG_VALIDATE 1
+#endif
+
+/* extensive buffer overflow tests */
+#ifndef SGS_DEBUG_EXTRA
+#  define SGS_DEBUG_EXTRA 0
+#endif
+
+/* checks for having more memory allocated with..
+	..the context memory functions than freed
+	very fast, runs only in sgs_DestroyEngine */
+#ifndef SGS_DEBUG_LEAKS
+#  define SGS_DEBUG_LEAKS 1
+#endif
 
 
+/* profiling */
+#ifndef SGS_DUMP_BYTECODE
+#  define SGS_DUMP_BYTECODE 0
+#endif
+
+
+/* SGScript error messages */
+#define SGS_ERRMSG_CALLSTACKLIMIT "max. call stack size reached"
+
+
+/* bytes reserved initially for token storage
+	used to prevent multiple reallocations in the beginning */
+#define SGS_TOKENLIST_PREALLOC 1024
+
+/* maximum length for a string to be included in the string table */
+#define SGS_STRINGTABLE_MAXLEN 0x7fffffff
+
+/* max. length of the call stack */
+#define SGS_MAX_CALL_STACK_SIZE 256
+
+/* the size of the stack buffer for temporary vsprintf'ed text
+	if predicted text length is longer than that, the memory
+	is allocated using the context allocator */
+#define SGS_OUTPUT_STACKBUF_SIZE 128
+
+/* postfix for function names in C functions
+	EXTRABYTES should be set to the length of EXTRASTRING */
+#define SGS_MSG_EXTRASTRING "(): "
+#define SGS_MSG_EXTRABYTES 4
+
+/* object pool settings
+	- size of object pool (max. number of items)
+	- max. appended memory size for pool usage */
+#define SGS_OBJPOOL_SIZE 64
+#define SGS_OBJPOOL_MAX_APPMEM 256
+
+/* stack frame pool settings */
+#define SGS_STACKFRAMEPOOL_SIZE 512
+
+/* inclusion system settings:
+	- name of entry point function to look for
+	- the default include path */
+#define SGS_LIB_ENTRY_POINT "sgscript_main"
+#define SGS_INCLUDE_PATH "|/?;|/?" SGS_MODULE_EXT ";|/?.sgc;|/?.sgs;?;?" SGS_MODULE_EXT ";?.sgc;?.sgs;@/?;@/?" SGS_MODULE_EXT ";@/?.sgc;@/?.sgs"
+
+
+/*****
+* X-PLATFORM *
+    ========*/
+
+#ifdef _MSC_VER
+#  pragma warning( disable: 4996 )
+#  include <stdint.h>
+#  if _MSC_VER >= 1700
+#    include <inttypes.h>
+#  else
+#    define PRId32 "d"
+#    define PRId64 "lld"
+#  endif
+#  define SGS_INLINE
+#  define snprintf _snprintf
+#  define SGS_VSPRINTF_LEN( str, args ) _vscprintf( str, args )
+#else
+#  include <inttypes.h>
+#  define SGS_INLINE inline
+#  define SGS_VSPRINTF_LEN( str, args ) vsnprintf( NULL, 0, str, args )
+#endif
+
+#define SGS_UNUSED( x ) (void)(x)
+
+#if defined(__GNUC__) && ( __GNUC__ > 4 || ( __GNUC__ == 4 && __GNUC_MINOR__ >= 7 ) )
+#  define SGS_ASSUME_ALIGNED __builtin_assume_aligned
+#else
+#  define SGS_ASSUME_ALIGNED( x, a ) (x)
+#endif
+
+#ifdef __cplusplus
+#define SGS_DECLARE extern
+#else
+#define SGS_DECLARE static
+#endif
+
+
+#ifdef SGS_COMPILE_MODULE
+#  define BUILDING_SGS 1
+#endif
+
+#if SGS_DLL && defined( _WIN32 )
+#  if BUILDING_SGS
+#    define SGS_APIFUNC __declspec(dllexport)
+#  else
+#    define SGS_APIFUNC __declspec(dllimport)
+#  endif
+#else
+#  define SGS_APIFUNC
+#endif
+
+#if SGS_DLL
+#  define SGS_IF_DLL( dll, nodll ) dll
+#else
+#  define SGS_IF_DLL( dll, nodll ) nodll
+#endif
+
+#if defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP)
+#  define SGS_WINAPP 1
+#endif
+
+#ifdef SGS_USE_FILESYSTEM
+#  include <sys/types.h>
+#  include <sys/stat.h>
+
+#  ifdef _WIN32
+#    if SGS_WINAPP
+#      include <windows.h>
+#    else
+#      include <direct.h>
+#      define getcwd _getcwd
+#      define mkdir _mkdir
+#      define rmdir _rmdir
+#      define stat _stat
+#      include "sgs_msvc_dirent.h"
+#    endif
+#  else
+#    include <unistd.h>
+#    include <dirent.h>
+#  endif
+#endif
+
+#ifdef _WIN32
+#  define SGS_MODULE_EXT ".dll"
+#else
+#  define SGS_MODULE_EXT ".so"
+#endif
+
+/* basic platform info */
+#if _WIN32 || __WIN32__ || __WINDOWS__
+#  define SGS_OS_TYPE "Windows"
+#elif __APPLE__
+#  define SGS_OS_TYPE "Mac OS X"
+#elif __ANDROID__
+#  define SGS_OS_TYPE "Android"
+#elif __linux || __linux__
+#  define SGS_OS_TYPE "Linux"
+#elif __unix || __unix__
+#  define SGS_OS_TYPE "Unix"
+#elif __posix
+#  define SGS_OS_TYPE "POSIX"
+#else
+#  define SGS_OS_TYPE "Unknown"
+#endif
+
+/* simplified architecture info */
+#if defined __arm__ || defined __thumb__ || defined _M_ARM || defined _M_ARMT
+#  define SGS_ARCH_ARM 1
+#endif
+#if defined i386 || defined __i386 || defined __i386 || defined _M_IX86 || defined _X86_ || defined __X86__
+#  define SGS_ARCH_X86 1
+#endif
+#if defined __amd64__ || defined __amd64 || defined __x86_64__ || defined __x86_64 || defined _M_X64 || defined _M_AMD64
+#  define SGS_ARCH_AMD64 1
+#endif
+#if defined __ia64__ || defined _IA64 || defined __IA64__ || defined _M_IA64
+#  define SGS_ARCH_IA64 1
+#endif
+#if defined __powerpc || defined __powerpc__ || defined __powerpc64__ || \
+	defined __ppc__ || defined __ppc64 || defined _M_PPC || defined _XENON
+#  define SGS_ARCH_PPC 1
+#endif
+
+
+/* http://stackoverflow.com/a/2103095/1648140 */
+
+enum
+{
+    O32_LITTLE_ENDIAN = 0x03020100ul,
+    O32_BIG_ENDIAN = 0x00010203ul
+};
+
+static const union { unsigned char bytes[4]; uint32_t value; } o32_host_order =
+    { { 0, 1, 2, 3 } };
+
+#define O32_HOST_ORDER (o32_host_order.value)
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#define SGS_XPC_NOFILE -1
+#define SGS_XPC_NOPROC -2
+#define SGS_XPC_NOTSUP -3
+#define SGS_XPC_NOTLIB -4
+#define SGS_XPC_LDFAIL -5
+int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out );
+
+char* sgsXPC_GetCurrentDirectory();
+int sgsXPC_SetCurrentDirectory( char* path );
+char* sgsXPC_GetModuleFileName();
+
+#ifdef __cplusplus
+}
+#endif
+
+
+/***
+* SYSTEM *
+  ======*/
 
 /* API self-doc helpers */
 #define SGSZERO   int     /* always 0 */
