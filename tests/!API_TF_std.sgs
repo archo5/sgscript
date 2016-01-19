@@ -56,6 +56,21 @@ for( i = 0; i < convars.size; ++i )
 	testEqual( tostring( convars[i] ), stringvars[i], "tostring - variable #"$i );
 testEqual( ERRORS, "", "conversions - no errors" );
 
+	section( "includes" );
+ERRORS = "";
+include "s_for.sgs";
+testEqual( ERRORS, "", "include - basic file load, no errors" );
+include "sgsjson";
+testEqual( ERRORS, "", "include - basic dyn.lib. load, no errors" );
+ERRORS = "";
+include "filedoesnotexist.sgs";
+testEqual( ERRORS, "[W:include(): could not find 'filedoesnotexist.sgs' with include path "$
+	"'|/?;|/?.dll;|/?.sgc;|/?.sgs;?;?.dll;?.sgc;?.sgs;@/?;@/?.dll;@/?.sgc;@/?.sgs']",
+	"include - errors when file doesn't exist" );
+ERRORS = "";
+include "f_cutwhile.sgs";
+testEqual( ERRORS, "[E:tests/f_cutwhile.sgs - include(): [line 3] Unexpected token '}' found!]", "include - errors when there's a syntax error" );
+
 	section( "globals/registry" );
 ERRORS = "";
 tR = _R;

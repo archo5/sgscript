@@ -1080,7 +1080,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 		 )
 		{
 			S->sfs_fn( S->sfs_ctx, C, SGS_SFS_FILE_CLOSE, &fsd );
-			return SGS_EINVAL;
+			return SGS_ENOTSUP;
 		}
 	}
 	

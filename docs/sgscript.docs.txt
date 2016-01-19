@@ -1781,6 +1781,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 === Error codes:
 - SGS_ECOMP: compiler error
 - SGS_EINVAL: passed data was not recognized
+- SGS_ENOTSUP: attempted to load a binary (no additional error is printed)
 
 
 # sgs_EvalFile [function]
@@ -1793,6 +1794,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 === Error codes:
 - SGS_ECOMP: compiler error
 - SGS_EINVAL: passed data was not recognized
+- SGS_ENOTSUP: attempted to load a binary (no additional error is printed)
 
 
 # sgs_Include [function alias]

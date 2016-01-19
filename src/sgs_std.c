@@ -3438,6 +3438,14 @@ static int sgsstd_include( SGS_CTX )
 			sgs_membuf_destroy( &mb, C );
 			goto success;
 		}
+		else if( ret == SGS_ECOMP || ret == SGS_EINVAL )
+		{
+			/* compilation / parsing error, already printed */
+			sgs_membuf_destroy( &mb, C );
+			sgs_PushBool( C, 0 );
+			return 1;
+		}
+		/* SGS_ENOTSUP - binary detected */
 		
 		ret = sgsXPC_GetProcAddress( mb.ptr, SGS_LIB_ENTRY_POINT, (void**) &func );
 		if( SGS_SUCCEEDED( ret ) )
