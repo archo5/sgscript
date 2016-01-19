@@ -7,7 +7,6 @@
 #include <math.h>
 #include <time.h>
 #include <errno.h>
-#include <ctype.h>
 #include <float.h>
 #include <locale.h>
 

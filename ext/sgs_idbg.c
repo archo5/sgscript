@@ -1,7 +1,5 @@
 
 
-#include <ctype.h>
-
 #include <sgs_int.h>
 
 #include "sgs_idbg.h"

@@ -1,6 +1,4 @@
 
-#include <stdarg.h>
-#include <ctype.h>
 #include <errno.h>
 
 #define SGS_INTERNAL_STRINGTABLES

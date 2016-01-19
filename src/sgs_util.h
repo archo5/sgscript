@@ -2,10 +2,6 @@
 #ifndef SGS_UTIL_H_INCLUDED
 #define SGS_UTIL_H_INCLUDED
 
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

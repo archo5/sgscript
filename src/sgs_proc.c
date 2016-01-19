@@ -1,8 +1,6 @@
 
 
 #include <math.h>
-#include <stdarg.h>
-#include <ctype.h>
 
 #define SGS_INTERNAL_STRINGTABLES
 

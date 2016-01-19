@@ -1,12 +1,11 @@
 
 
 #include <time.h>
-#include <signal.h>
-#include <ctype.h>
 #include <math.h>
-#include <assert.h>
+#if !defined( _MSC_VER ) && !defined( __GNUC__ )
+#  include <assert.h>
+#endif
 #include <limits.h>
-#include <stddef.h>
 
 #include "sgs_int.h"
 
