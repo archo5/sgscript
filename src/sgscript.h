@@ -5,8 +5,8 @@
 
 #define SGS_VERSION_MAJOR 1
 #define SGS_VERSION_MINOR 0
-#define SGS_VERSION_INCR  1
-#define SGS_VERSION "1.0.1"
+#define SGS_VERSION_INCR  4
+#define SGS_VERSION "1.0.4"
 
 #define SGS_VERSION_OFFSET 8
 #define SGS_VERSION_INT ( ( ( ( SGS_VERSION_MAJOR << SGS_VERSION_OFFSET ) | \
@@ -855,7 +855,6 @@ SGS_APIFUNC sgs_StkIdx sgs_AbsIndex( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSBOOL sgs_IsValidIndex( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_Variable sgs_OptStackItem( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC sgs_Variable sgs_StackItem( SGS_CTX, sgs_StkIdx item );
-SGS_APIFUNC SGSBOOL sgs_PeekStackItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out );
 SGS_APIFUNC SGSBOOL sgs_GetStackItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* out );
 SGS_APIFUNC uint32_t sgs_ItemType( SGS_CTX, sgs_StkIdx item );
 

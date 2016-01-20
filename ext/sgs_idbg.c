@@ -36,7 +36,7 @@ static void idbg_readStdin( SGS_IDBG )
 	sgs_membuf_appchr( &D->input, D->C, 0 );
 	
 	/* parse first word */
-	while( i < wsz && i < D->input.size && isalpha( D->input.ptr[ i ] ) )
+	while( i < wsz && i < D->input.size && sgs_isalpha( D->input.ptr[ i ] ) )
 	{
 		D->iword[ i ] = D->input.ptr[ i ];
 		i++;

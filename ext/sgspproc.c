@@ -512,9 +512,8 @@ static int pproc_create_thread( SGS_CTX )
 	
 	if( type == SGS_VT_FUNC )
 	{
-		sgs_Variable var;
-		if( !sgs_PeekStackItem( C, 0, &var ) ||
-			!pproc_serialize_function( C, var.data.F, &str, &size ) )
+		sgs_Variable var = sgs_StackItem( C, 0 );
+		if( !pproc_serialize_function( C, var.data.F, &str, &size ) )
 			STDLIB_WARN( "failed to serialize function" )
 	}
 	else

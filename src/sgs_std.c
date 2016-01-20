@@ -1066,8 +1066,7 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 	
 	if( sgs_ParseString( C, 0, NULL, NULL ) )
 	{
-		sgs_Variable key;
-		sgs_PeekStackItem( C, 0, &key );
+		sgs_Variable key = sgs_StackItem( C, 0 );
 		pair = sgs_vht_get( ht, &key );
 		if( !pair )
 			return SGS_ENOTFND;
@@ -1083,9 +1082,7 @@ static int sgsstd_dict_setindex( SGS_ARGS_SETINDEXFUNC )
 	HTHDR;
 	if( sgs_ParseString( C, 0, NULL, NULL ) )
 	{
-		sgs_Variable key, val;
-		sgs_PeekStackItem( C, 0, &key );
-		sgs_PeekStackItem( C, 1, &val );
+		sgs_Variable key = sgs_StackItem( C, 0 ), val = sgs_StackItem( C, 1 );
 		sgs_vht_set( ht, C, &key, &val );
 		return SGS_SUCCESS;
 	}
@@ -1229,12 +1226,8 @@ static int sgsstd_dict( SGS_CTX )
 	
 	for( i = 0; i < objcnt; i += 2 )
 	{
-		sgs_Variable val;
-		if( !sgs_ParseString( C, i, NULL, NULL ) )
-			return sgs_FuncArgError( C, i, SGS_VT_STRING, 0 );
-		
-		if( !sgs_PeekStackItem( C, i + 1, &val ) )
-			STDLIB_ERR( "Internal error, stack state changed while building dict" )
+		sgs_Variable val = sgs_StackItem( C, i + 1 );
+		sgs_ToString( C, i );
 		sgs_vht_set( ht, C, (C->stack_off+i), &val );
 	}
 	
@@ -1323,7 +1316,7 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	sgs_VHTVar* pair = NULL;
 	HTHDR;
 	
-	sgs_PeekStackItem( C, 0, &key );
+	key = sgs_StackItem( C, 0 );
 	pair = sgs_vht_get( ht, &key );
 	if( !pair )
 		return SGS_ENOTFND;
@@ -1335,9 +1328,7 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* obj, int type )
 static int sgsstd_map_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	HTHDR;
-	sgs_Variable key, val;
-	sgs_PeekStackItem( C, 0, &key );
-	sgs_PeekStackItem( C, 1, &val );
+	sgs_Variable key = sgs_StackItem( C, 0 ), val = sgs_StackItem( C, 1 );
 	sgs_vht_set( ht, C, &key, &val );
 	return SGS_SUCCESS;
 }

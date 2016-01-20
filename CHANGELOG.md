@@ -1,4 +1,24 @@
 
+**1.0.4** (2016/01/20):
+
+- some API cleanup (removed error codes and failure cases)
+- various bugfixes
+- fixed profiling (coroutine-awareness)
+- **added thread syntax and API (thread, subthread, sync, race, end_on)**
+- improved __call metamethod behavior
+- implemented thread pooling, improved stack frame pooling
+- added map literal
+- added variable keys to map/dict literals - "{ [a + b] = 5 }"
+- implemented tests for various features (improved future stability)
+- simplified SGS-CPPBC coroutine interaction
+- compacted the code structure (less files and folders)
+- **restored OS X support**
+- fixed unary operator parsing issues
+- added pseudo-globals _F (current function) and _T (current thread)
+- optimized memory usage
+- **implemented advanced HTML5 single-file documentation**
+- created a vector graphics logo
+
 **1.0.1** (2015/11/17):
 
 - major API cleanup - replaced many error codes with internal messaging

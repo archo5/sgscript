@@ -1,11 +1,11 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 	<html><head>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-		<title>SGScript documentation - v1.0.1</title>
+		<title>SGScript documentation - v1.0.4</title>
 		<link rel="stylesheet" type="text/css" href="docs.css">
 		<script type="text/javascript" src="docs.js"></script>
 	</head><body>
-	<h1>SGScript documentation - v1.0.1</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGScript-description'>SGScript - description</a>
+	<h1>SGScript documentation - v1.0.4</h1><div><h2>Table of Contents</h2><ul><li><a href='#SGScript-description'>SGScript - description</a>
 <ul><li><a href='#Why-SGScript'>Why SGScript?</a>
 </li><li><a href='#Code-samples-SGScript'>Code samples - SGScript</a>
 </li><li><a href='#Code-samples-the-C-API'>Code samples - the C API</a>
@@ -1082,7 +1082,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-IsValidIndex-function">sgs_IsValidIndex</a> - check if specified stack index is valid
 </li><li><a href="#sgs-OptStackItem-function">sgs_OptStackItem</a> - return without acquisition the specified variable on stack without errors
 </li><li><a href="#sgs-StackItem-function">sgs_StackItem</a> - return without acquisition the specified variable on stack
-</li><li><a href="#sgs-PeekStackItem-function">sgs_PeekStackItem</a> - try to retrieve without acquisition the specified variable on stack
 </li><li><a href="#sgs-GetStackItem-function">sgs_GetStackItem</a> - retrieve and acquire the specified variable on stack
 </li><li><a href="#sgs-SetStackItem-function">sgs_SetStackItem</a> - assign variable to the specified variable on stack
 </li><li><a href="#sgs-ItemType-function">sgs_ItemType</a> - return the variable type of the specified variable on stack
@@ -1386,7 +1385,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-Parse-functions">sgs_Parse*** [functions]</a>
 </li><li><a href="#sgs-ParseMethod-function">sgs_ParseMethod [function]</a>
 </li><li><a href="#sgs-PauseState-function">sgs_PauseState [function]</a>
-</li><li><a href="#sgs-PeekStackItem-function">sgs_PeekStackItem [function]</a>
 </li><li><a href="#sgs-Pop-function">sgs_Pop [function]</a>
 </li><li><a href="#sgs-PopSkip-function">sgs_PopSkip [function]</a>
 </li><li><a href="#sgs-Push-functions">sgs_Push*** [functions]</a>
@@ -1794,11 +1792,6 @@ After a successful call, all arguments will be popped off the stack and the expe
 </p><p>
 <em class='notice-bgr'>This function does not acquire the variable and thus can&#39;t be used in functions that modify it without previously taking ownership of it, such as <a href="#sgs-Assign-function">sgs_Assign</a> or <a href="#sgs-To-functions">sgs_To***;</a> to acquire variable on retrieval, see <a href="#sgs-GetStackItem-function">sgs_GetStackItem</a> or <a href="#sgs-Acquire-Array-function">sgs_Acquire</a>.</em>
 </p><ul><li>This function can be used to pass arguments from stack in most simple operations.</li></ul></div>
-<div class='item'><a name='sgs-PeekStackItem-function'></a><hr><h2>sgs_PeekStackItem [function]</h2><h3>SGSBOOL sgs_PeekStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>Try to write the data of the specified stack variable if the index is valid.</h4><p>
-<em class='notice-bgr'>Avoid using this function with functions that can alter the stack and remove the source item.</em>
-</p><p>
-<em class='notice-bgr'>This function does not acquire the variable and thus can&#39;t be used in functions that modify it without previously taking ownership of it, such as <a href="#sgs-Assign-function">sgs_Assign</a> or <a href="#sgs-To-functions">sgs_To***;</a> to acquire variable on retrieval, see <a href="#sgs-GetStackItem-function">sgs_GetStackItem</a> or <a href="#sgs-Acquire-Array-function">sgs_Acquire</a>.</em>
-</p><ul><li>Function returns whether the stack index was valid and the variable was written.</li></ul></div>
 <div class='item'><a name='sgs-GetStackItem-function'></a><hr><h2>sgs_GetStackItem [function]</h2><h3>SGSBOOL sgs_GetStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>Write the data of the specified stack variable and increments its reference count if the index is valid.</h4><ul><li>Function returns whether the stack index was valid.</li></ul></div>
 <div class='item'><a name='sgs-SetStackItem-function'></a><hr><h2>sgs_SetStackItem [function]</h2><h3>void sgs_SetStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable val )</h3><h4>Copy the specified variable to the specified position in stack.</h4></div>
 <div class='item'><a name='sgs-ItemType-function'></a><hr><h2>sgs_ItemType [function]</h2><h3>uint32_t sgs_ItemType( sgs_Context* C, sgs_StkIdx item )</h3><h4>Return the type ID of the specified stack item.</h4><ul><li>Return value will be equal to one of the SGS_VT_* macro.

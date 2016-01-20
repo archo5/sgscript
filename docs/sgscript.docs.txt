@@ -1,4 +1,4 @@
-SGScript documentation - v1.0.1
+SGScript documentation - v1.0.4
 
 
 # SGScript - description [info]
@@ -1382,7 +1382,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_IsValidIndex - check if specified stack index is valid
 - @sgs_OptStackItem - return without acquisition the specified variable on stack without errors
 - @sgs_StackItem - return without acquisition the specified variable on stack
-- @sgs_PeekStackItem - try to retrieve without acquisition the specified variable on stack
 - @sgs_GetStackItem - retrieve and acquire the specified variable on stack
 - @sgs_SetStackItem - assign variable to the specified variable on stack
 - @sgs_ItemType - return the variable type of the specified variable on stack
@@ -2985,18 +2984,6 @@ After a successful call, all arguments will be popped off the stack and the expe
 ! This function does not acquire the variable and thus can't be used in functions that modify it without previously taking ownership of it, such as @sgs_Assign or @sgs_To***; to acquire variable on retrieval, see @sgs_GetStackItem or @sgs_Acquire.
 
 - This function can be used to pass arguments from stack in most simple operations.
-
-
-# sgs_PeekStackItem [function]
-
-== SGSBOOL sgs_PeekStackItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )
-=== Try to write the data of the specified stack variable if the index is valid.
-
-! Avoid using this function with functions that can alter the stack and remove the source item.
-
-! This function does not acquire the variable and thus can't be used in functions that modify it without previously taking ownership of it, such as @sgs_Assign or @sgs_To***; to acquire variable on retrieval, see @sgs_GetStackItem or @sgs_Acquire.
-
-- Function returns whether the stack index was valid and the variable was written.
 
 
 # sgs_GetStackItem [function]

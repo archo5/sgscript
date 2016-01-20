@@ -424,14 +424,12 @@ public:
 	sgsVariable( sgs_Context* c ) : C(sgs_RootContext(c)) { var.type = SGS_VT_NULL; }
 	sgsVariable( sgs_Context* c, sgs_StkIdx item ) : C(sgs_RootContext(c))
 	{
-		var.type = SGS_VT_NULL;
-		sgs_PeekStackItem( c, item, &var );
+		var = sgs_StackItem( c, item );
 		_acquire();
 	}
 	sgsVariable( sgs_Context* c, EPickAndPop ) : C(sgs_RootContext(c))
 	{
-		var.type = SGS_VT_NULL;
-		sgs_PeekStackItem( c, -1, &var );
+		var = sgs_StackItem( c, -1 );
 		_acquire();
 		sgs_Pop( c, 1 );
 	}
