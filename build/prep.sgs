@@ -147,7 +147,7 @@ foreach( blfolder, blflags : buildlist )
 	
 	// generate archive
 	io_setcwd( cwd $ "/bin" );
-	os_make_archive( blfolder $ "_" $ versiontext, blfolder );
+	os_make_archive( "sgscript_" $ versiontext $ "_" $ blfolder, blfolder );
 	io_setcwd( cwd );
 	
 	// write version info

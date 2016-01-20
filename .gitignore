@@ -19,3 +19,4 @@ ipch
 /docs/*.toc
 .DS_Store
 xcuserdata
+/ext/sgscript.js
