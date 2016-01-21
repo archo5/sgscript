@@ -168,6 +168,11 @@ binarch: clean vm
 .PHONY: docs
 docs: vm json
 	cd docs && $(call fnFIX_PATH,../$(OUTDIR)/sgsvm) -p docgen -e
+## - single header versions
+.PHONY: shv
+shv: vm
+	$(OUTDIR)/sgsvm -p build/hgen -o $(OUTDIR)/sgscript-impl.h
+	$(OUTDIR)/sgsvm -p build/hgen -m -o $(OUTDIR)/sgscript-no-stdlib-impl.h
 
 ## clean build data
 .PHONY: clean_obj
