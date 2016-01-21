@@ -810,7 +810,8 @@ These are the default meanings for error codes that are honored throughout the A
 </li><li>SGS_VT_FUNC: SGS function
 </li><li>SGS_VT_CFUNC: C function
 </li><li>SGS_VT_OBJECT: object
-</li><li>SGS_VT_PTR: pointer</li></ul></div>
+</li><li>SGS_VT_PTR: pointer
+</li><li>SGS_VT_THREAD: thread/coroutine/context</li></ul></div>
 <div class='item'><a name='Concepts-systems'></a><hr><h2>Concepts &amp; systems</h2></div>
 <div class='item'><a name='Messaging-system'></a><hr><h2>Messaging system</h2><p>
 Messages are combinations of importance code and a null-terminated string that holds the message itself. The messaging system&#39;s purpose generally is to notify about problems and allow handling them to some extent.
@@ -2337,7 +2338,7 @@ parsereal( &quot;0xff&quot; ); // returns 255.0
 parsereal( parsereal ); // returns null</pre></div>
 <div class='item'><a name='typeof-function'></a><hr><h2>typeof [function]</h2><h3>typeof( var )</h3><h4>returns the type name of variable <code>var</code>, as string</h4><ul><li>this function is equivalent to <a href="#sgs-TypeOf-function">sgs_TypeOf</a> in the C API</li></ul><pre>typeof( 5 ); // returns &quot;real&quot;
 typeof( [] ); // returns &quot;array&quot;</pre></div>
-<div class='item'><a name='typeid-function'></a><hr><h2>typeid [function]</h2><h3>typeid( var )</h3><h4>returns the first 4 bits of the variable <code>var</code> type flags, as <code>int</code></h4><ul><li>returns one of the values mapped to VT_NULL/VT_BOOL/VT_INT/VT_REAL/VT_STRING/VT_FUNC/VT_CFUNC/VT_OBJECT/VT_PTR
+<div class='item'><a name='typeid-function'></a><hr><h2>typeid [function]</h2><h3>typeid( var )</h3><h4>returns the first 4 bits of the variable <code>var</code> type flags, as <code>int</code></h4><ul><li>returns one of the values mapped to VT_NULL/VT_BOOL/VT_INT/VT_REAL/VT_STRING/VT_FUNC/VT_CFUNC/VT_OBJECT/VT_PTR/VT_THREAD
 </li><li>this function is equivalent to <a href="#sgs-ItemType-function">sgs_ItemType</a> in the C API</li></ul><pre>typeid( 5 ) == VT_INT; // returns &#39;true&#39;
 typeid( [] ); // returns 7 / VT_OBJECT</pre></div>
 <div class='item'><a name='typeptr-function'></a><hr><h2>typeptr [function]</h2><h3>typeptr( var )</h3><h4>returns type interface pointer from object variables or null pointer from other variables</h4><pre>typeptr( 5 ); // returns ptr(0)
@@ -2554,7 +2555,7 @@ print unserialize(data); // prints {name=A,info=B}</pre></div>
 <div class='item'><a name='unserialize2-function'></a><hr><h2>unserialize2 [function]</h2><h3>unserialize( string data[, array|dict funcs ])</h3><h4>recreates a variable from the buffer with serialized data or returns null and emits a warning on failure</h4><ul><li>for more info on function behavior, refer to <a href="#unserialize-function">unserialize</a>
 </li><li>for more info on serialization in SGScript, refer to <a href="#Serialization-in-SGScript">Serialization in SGScript</a></li></ul></div>
 <div class='item'><a name='SGS-constants'></a><hr><h2>SGS_*** [constants]</h2><h3>SGS_INFO, SGS_WARNING, SGS_ERROR, SGS_APIERR</h3><h4>defined to the values of the C macros, respectively 100, 200, 300 and 330</h4></div>
-<div class='item'><a name='VT-constants'></a><hr><h2>VT_*** [constants]</h2><h3>VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR</h3><h4>these constants are defined to the values of the C macros (with the prefix &quot;SGS_VT_&quot; in C) and can be compared with the values returned in <a href="#typeid-function">typeid()</a></h4></div>
+<div class='item'><a name='VT-constants'></a><hr><h2>VT_*** [constants]</h2><h3>VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR, VT_THREAD</h3><h4>these constants are defined to the values of the C macros (with the prefix &quot;SGS_VT_&quot; in C) and can be compared with the values returned in <a href="#typeid-function">typeid()</a></h4></div>
 <div class='item'><a name='RAND-MAX-constant'></a><hr><h2>RAND_MAX [constant]</h2><h3>RAND_MAX</h3><h4>The maximum number that can be returned by <a href="#rand-function">rand()</a>.</h4></div>
 <div class='item'><a name='G-superglobal'></a><hr><h2>_G [superglobal]</h2><h3>A hard-coded global value that points to the global dictionary. Can be used to access non-identifier globals and change the global dictionary.</h3><pre>_G[&quot;$diff&quot;] = 5; // no way to access this via usual globals
 _G = {}; // global value dictionary is changed, previous functions are lost unless stored somewhere</pre></div>

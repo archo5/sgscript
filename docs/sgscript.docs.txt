@@ -957,6 +957,7 @@ These are the default meanings for error codes that are honored throughout the A
 - SGS_VT_CFUNC: C function
 - SGS_VT_OBJECT: object
 - SGS_VT_PTR: pointer
+- SGS_VT_THREAD: thread/coroutine/context
 
 
 # <<< (Constants and types)
@@ -4496,7 +4497,7 @@ This library is loaded on initialization and contains the functions and constant
 == typeid( var )
 === returns the first 4 bits of the variable `var` type flags, as `int`
 
-- returns one of the values mapped to VT_NULL/VT_BOOL/VT_INT/VT_REAL/VT_STRING/VT_FUNC/VT_CFUNC/VT_OBJECT/VT_PTR
+- returns one of the values mapped to VT_NULL/VT_BOOL/VT_INT/VT_REAL/VT_STRING/VT_FUNC/VT_CFUNC/VT_OBJECT/VT_PTR/VT_THREAD
 - this function is equivalent to @sgs_ItemType in the C API
 
     typeid( 5 ) == VT_INT; // returns 'true'
@@ -5268,7 +5269,7 @@ When the event is signaled, the thread will be aborted as soon as possible.
 
 # VT_*** [constants]
 
-== VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR
+== VT_NULL, VT_BOOL, VT_INT, VT_REAL, VT_STRING, VT_FUNC, VT_CFUNC, VT_OBJECT, VT_PTR, VT_THREAD
 === these constants are defined to the values of the C macros (with the prefix "SGS_VT_" in C) and can be compared with the values returned in @typeid()
 
 

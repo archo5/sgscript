@@ -167,7 +167,7 @@ binarch: clean vm
 ## - documentation preparation
 .PHONY: docs
 docs: vm json
-	cd docs && ../$(OUTDIR)/sgsvm -p docgen -e
+	cd docs && $(call fnFIX_PATH,../$(OUTDIR)/sgsvm) -p docgen -e
 
 ## clean build data
 .PHONY: clean_obj

@@ -4002,6 +4002,7 @@ static const sgs_RegIntConst regiconsts[] =
 	{ "VT_CFUNC", SGS_VT_CFUNC },
 	{ "VT_OBJECT", SGS_VT_OBJECT },
 	{ "VT_PTR", SGS_VT_PTR },
+	{ "VT_THREAD", SGS_VT_THREAD },
 	
 	{ "RAND_MAX", RAND_MAX },
 };
