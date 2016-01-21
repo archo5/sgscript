@@ -166,6 +166,7 @@ sgs_Context* get_context_( int redir_out )
 	currctx = C;
 	atf_assert_( C, "could not create context (out of memory?)", __LINE__ );
 	
+	outfp = NULL;
 	if( redir_out == REDIR_FILE )
 	{
 		outfp = fopen( outfile, "a" );
@@ -174,6 +175,8 @@ sgs_Context* get_context_( int redir_out )
 		
 		sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, outfp );
 		atf_assert( C->shared->output_ctx == outfp );
+		
+		fprintf( outfp, "//\n/// O U T P U T  o f  %s\n//\n\n", testname );
 	}
 	else if( redir_out == REDIR_BUF )
 	{
@@ -185,8 +188,6 @@ sgs_Context* get_context_( int redir_out )
 	errfp = fopen( outfile_errors, "a" );
 	atf_assert_( errfp, "could not create error output file", __LINE__ );
 	setvbuf( errfp, NULL, _IONBF, 0 );
-	
-	fprintf( outfp, "//\n/// O U T P U T  o f  %s\n//\n\n", testname );
 	
 	sgs_SetErrOutputFunc( C, SGSOUTPUTFN_DEFAULT, errfp );
 	atf_assert( C->shared->erroutput_ctx == errfp );
@@ -207,7 +208,11 @@ void destroy_context( SGS_CTX )
 	sgs_membuf_destroy( &errbuf, C );
 	currctx = NULL;
 	sgs_DestroyEngine( C );
-	fclose( outfp );
+	if( outfp )
+	{
+		fclose( outfp );
+		outfp = NULL;
+	}
 	fclose( errfp );
 }
 
@@ -1202,7 +1207,7 @@ DEFINE_TEST( profiling )
 		"co = co_create(function testfun(){\n"
 		"	yield 0.01;\n"
 		"	(function in1(){\n"
-		"		for( i = 0; i < 100000; ++i ) _G.tst = 1;\n"
+		"		for( i = 0; i < 1000; ++i ) _G.tst = 1;\n"
 		"		yield 0.5;\n"
 		"	})();\n"
 		"	yield 0.01;\n"

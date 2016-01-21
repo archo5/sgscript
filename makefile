@@ -163,11 +163,11 @@ sgsexe: ext/sgsexe.c $(OUTFILE_STATIC)
 ## - binary archive preparation
 .PHONY: binarch
 binarch: clean vm
-	sgsvm build/prep.sgs
+	$(OUTDIR)/sgsvm build/prep.sgs
 ## - documentation preparation
 .PHONY: docs
 docs: vm json
-	cd docs && sgsvm -p docgen -e
+	cd docs && ../$(OUTDIR)/sgsvm -p docgen -e
 
 ## clean build data
 .PHONY: clean_obj

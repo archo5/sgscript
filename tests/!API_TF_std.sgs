@@ -65,8 +65,7 @@ testEqual( ERRORS, "", "include - basic dyn.lib. load, no errors" );
 ERRORS = "";
 include "filedoesnotexist.sgs";
 testEqual( ERRORS, "[W:include(): could not find 'filedoesnotexist.sgs' with include path "$
-	"'|/?;|/?.dll;|/?.sgc;|/?.sgs;?;?.dll;?.sgc;?.sgs;@/?;@/?.dll;@/?.sgc;@/?.sgs']",
-	"include - errors when file doesn't exist" );
+	"'" $ SGS_PATH $ "']", "include - errors when file doesn't exist" );
 ERRORS = "";
 include "f_cutwhile.sgs";
 testEqual( ERRORS, "[E:tests/f_cutwhile.sgs - include(): [line 3] Unexpected token '}' found!]", "include - errors when there's a syntax error" );
