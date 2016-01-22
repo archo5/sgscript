@@ -44,6 +44,12 @@ char* runsgs( const char* script )
 	outbuf_at = outbuf;
 	sgs_SetOutputFunc( C, output_to_buffer, NULL );
 	sgs_SetErrOutputFunc( C, output_to_buffer, NULL );
+	sgs_LoadLib_Fmt( C );
+	/* no need for I/O - can't use it from the browser */
+	sgs_LoadLib_Math( C );
+	sgs_LoadLib_OS( C );
+	sgs_LoadLib_RE( C );
+	sgs_LoadLib_String( C );
 	xgm_module_entry_point( C );
 	sgs_ExecString( C, script );
 	sgs_DestroyEngine( C );
