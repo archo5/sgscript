@@ -459,6 +459,10 @@ function cppbc_examine_method( code, methodname )
 	rvd = cppbc_parse_vardecl( string_part( code, 0, ispmatch[0][1] ), true );
 	
 	ptypes = [];
+	
+	// remove "const"
+	code = re_replace( code, "#\\)[^\\)]*$#", ")" );
+	
 	params = cppbc_split_cs( string_cut( code, ispmatch[0][2], -2 ) );
 	foreach( param : params )
 	{

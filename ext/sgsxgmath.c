@@ -304,7 +304,7 @@ static int xgm_vec2_dot( SGS_CTX )
 	
 	SGSFN( "vec2_dot" );
 	
-	if( !sgs_LoadArgs( C, "!x!x", sgs_ArgCheck_Vec2, v1, sgs_ArgCheck_Vec2, v2 ) )
+	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_Vec2, v1, sgs_ArgCheck_Vec2, v2 ) )
 		return 0;
 	
 	sgs_PushReal( C, XGM_VMUL_INNER2( v1, v2 ) );
@@ -525,7 +525,7 @@ static int xgm_vec3_dot( SGS_CTX )
 	
 	SGSFN( "vec3_dot" );
 	
-	if( !sgs_LoadArgs( C, "!x!x", sgs_ArgCheck_Vec3, v1, sgs_ArgCheck_Vec3, v2 ) )
+	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_Vec3, v1, sgs_ArgCheck_Vec3, v2 ) )
 		return 0;
 	
 	sgs_PushReal( C, XGM_VMUL_INNER3( v1, v2 ) );
@@ -538,7 +538,7 @@ static int xgm_vec3_cross( SGS_CTX )
 	
 	SGSFN( "vec3_cross" );
 	
-	if( !sgs_LoadArgs( C, "!x!x", sgs_ArgCheck_Vec3, v1, sgs_ArgCheck_Vec3, v2 ) )
+	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_Vec3, v1, sgs_ArgCheck_Vec3, v2 ) )
 		return 0;
 	
 	sgs_CreateVec3( C, NULL,
@@ -777,7 +777,7 @@ static int xgm_vec4_dot( SGS_CTX )
 	
 	SGSFN( "vec4_dot" );
 	
-	if( !sgs_LoadArgs( C, "!x!x", sgs_ArgCheck_Vec4, v1, sgs_ArgCheck_Vec4, v2 ) )
+	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_Vec4, v1, sgs_ArgCheck_Vec4, v2 ) )
 		return 0;
 	
 	sgs_PushReal( C, XGM_VMUL_INNER4( v1, v2 ) );
@@ -825,6 +825,8 @@ static int xgm_b2_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "center" ) return sgs_CreateVec2( C, NULL, (hdr[0]+hdr[2])*0.5f, (hdr[1]+hdr[3])*0.5f );
 		SGS_CASE( "area" )   return sgs_PushReal( C, (hdr[2] - hdr[0]) * (hdr[3] - hdr[1]) );
 		SGS_CASE( "valid" )  return sgs_PushBool( C, hdr[2] >= hdr[0] && hdr[3] >= hdr[1] );
+		SGS_CASE( "pos" )    return sgs_CreateVec2p( C, NULL, hdr );
+		SGS_CASE( "size" )   return sgs_CreateVec2( C, NULL, hdr[2] - hdr[0], hdr[3] - hdr[1] );
 		SGS_CASE( "expand" ) return sgs_PushCFunc( C, xgm_aabb2_expand );
 	}
 	return SGS_ENOTFND;
@@ -836,12 +838,36 @@ static int xgm_b2_setindex( SGS_ARGS_SETINDEXFUNC )
 	XGM_OHDR;
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		if( !strcmp( str, "x1" ) ) return sgs_ParseVT( C, 1, &hdr[0] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "y1" ) ) return sgs_ParseVT( C, 1, &hdr[1] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "x2" ) ) return sgs_ParseVT( C, 1, &hdr[2] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "y2" ) ) return sgs_ParseVT( C, 1, &hdr[3] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "p1" ) ) return sgs_ParseVec2( C, 1, hdr, 1 ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "p2" ) ) return sgs_ParseVec2( C, 1, hdr + 2, 1 ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "x1" ) return sgs_ParseVT( C, 1, &hdr[0] ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "y1" ) return sgs_ParseVT( C, 1, &hdr[1] ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "x2" ) return sgs_ParseVT( C, 1, &hdr[2] ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "y2" ) return sgs_ParseVT( C, 1, &hdr[3] ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "p1" ) return sgs_ParseVec2( C, 1, hdr, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "p2" ) return sgs_ParseVec2( C, 1, hdr + 2, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+		SGS_CASE( "pos" )
+		{
+			XGM_VT pos[2];
+			if( sgs_ParseVec2( C, 1, pos, 0 ) )
+			{
+				hdr[2] += pos[0] - hdr[0];
+				hdr[3] += pos[1] - hdr[1];
+				hdr[0] = pos[0];
+				hdr[1] = pos[1];
+				return SGS_SUCCESS;
+			}
+			return SGS_EINVAL;
+		}
+		SGS_CASE( "size" )
+		{
+			XGM_VT size[2];
+			if( sgs_ParseVec2( C, 1, size, 0 ) )
+			{
+				hdr[2] = hdr[0] + size[0];
+				hdr[3] = hdr[1] + size[1];
+				return SGS_SUCCESS;
+			}
+			return SGS_EINVAL;
+		}
 	}
 	return SGS_ENOTFND;
 }
@@ -904,7 +930,7 @@ static int xgm_aabb2v( SGS_CTX )
 	
 	SGSFN( "aabb2v" );
 	
-	if( !sgs_LoadArgs( C, "!x!x", sgs_ArgCheck_Vec2, b, sgs_ArgCheck_Vec2, b + 2 ) )
+	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_Vec2, b, sgs_ArgCheck_Vec2, b + 2 ) )
 		return 0;
 	
 	sgs_CreateAABB2p( C, NULL, b );
@@ -948,6 +974,103 @@ static int xgm_aabb2_expand( SGS_CTX )
 		}
 		else
 			return sgs_ArgErrorExt( C, i, 0, "aabb2 or vec2", "" );
+	}
+	return 0;
+}
+
+static int xgm_aabb2_limit( SGS_CTX )
+{
+	XGM_VT bb[4], pt[2];
+	
+	SGSFN( "aabb2_limit" );
+	
+	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_AABB2, bb, sgs_ArgCheck_Vec2, pt ) )
+		return 0;
+	
+	if( pt[0] < bb[0] )
+		pt[0] = bb[0];
+	else if( pt[0] > bb[2] )
+		pt[0] = bb[2];
+	if( pt[1] < bb[1] )
+		pt[1] = bb[1];
+	else if( pt[1] > bb[3] )
+		pt[1] = bb[3];
+	
+	return sgs_CreateVec2p( C, NULL, pt );
+}
+
+static int xgm_aabb2_collide( SGS_CTX )
+{
+	XGM_VT b1[4], b2[4];
+	
+	SGSFN( "aabb2_collide" );
+	
+	if( !sgs_LoadArgs( C, "xx", sgs_ArgCheck_AABB2, b1, sgs_ArgCheck_AABB2, b2 ) )
+		return 0;
+	
+	if( b1[0] < b2[2] && b2[0] < b1[2] && b1[1] < b2[3] && b2[1] < b1[3] )
+	{
+		XGM_VT diff_x1 = b2[2] - b1[0];
+		XGM_VT diff_x2 = b1[2] - b2[0];
+		XGM_VT diff_y1 = b2[3] - b1[1];
+		XGM_VT diff_y2 = b1[3] - b2[1];
+		if( diff_x1 < diff_x2 && diff_x1 < diff_y1 && diff_x1 < diff_y2 )
+			return sgs_CreateVec2( C, NULL, diff_x1, 0 );
+		if( diff_x2 < diff_y1 && diff_x2 < diff_y2 )
+			return sgs_CreateVec2( C, NULL, -diff_x2, 0 );
+		if( diff_y1 < diff_y2 )
+			return sgs_CreateVec2( C, NULL, 0, diff_y1 );
+		return sgs_CreateVec2( C, NULL, 0, -diff_y2 );
+	}
+	return 0;
+}
+
+static int xgm_aabb2_circle_collide( SGS_CTX )
+{
+	XGM_VT bb[4], pt[2];
+	float radius = 0;
+	
+	SGSFN( "aabb2_circle_collide" );
+	
+	if( !sgs_LoadArgs( C, "xxf", sgs_ArgCheck_AABB2, bb, sgs_ArgCheck_Vec2, pt, &radius ) )
+		return 0;
+	
+	if( pt[0] >= bb[0] && pt[0] <= bb[2] && pt[1] >= bb[1] && pt[1] <= bb[3] )
+	{
+		XGM_VT diff_x1 = pt[0] - bb[0];
+		XGM_VT diff_x2 = -( pt[0] - bb[2] );
+		XGM_VT diff_y1 = pt[1] - bb[1];
+		XGM_VT diff_y2 = -( pt[1] - bb[3] );
+		if( diff_x1 < diff_x2 && diff_x1 < diff_y1 && diff_x1 < diff_y2 )
+			return sgs_CreateVec2( C, NULL, diff_x1 + radius, 0 );
+		if( diff_x2 < diff_y1 && diff_x2 < diff_y2 )
+			return sgs_CreateVec2( C, NULL, -diff_x2 - radius, 0 );
+		if( diff_y1 < diff_y2 )
+			return sgs_CreateVec2( C, NULL, 0, diff_y1 + radius );
+		return sgs_CreateVec2( C, NULL, 0, -diff_y2 - radius );
+	}
+	else
+	{
+		XGM_VT diff_x, diff_y, lensq;
+		XGM_VT clp_x = pt[0], clp_y = pt[1];
+		if( clp_x < bb[0] )
+			clp_x = bb[0];
+		else if( clp_x > bb[2] )
+			clp_x = bb[2];
+		if( clp_y < bb[1] )
+			clp_y = bb[1];
+		else if( clp_y > bb[3] )
+			clp_y = bb[3];
+		
+		diff_x = clp_x - pt[0];
+		diff_y = clp_y - pt[1];
+		lensq = diff_x * diff_x + diff_y * diff_y;
+		if( lensq < radius * radius )
+		{
+			XGM_VT len = sqrtf( lensq );
+			XGM_VT factor = ( len - radius ) / len;
+			return sgs_CreateVec2( C, NULL, -diff_x * factor, -diff_y * factor );
+		}
 	}
 	return 0;
 }
@@ -4784,6 +4907,10 @@ static sgs_RegFuncConst xgm_fconsts[] =
 	{ "aabb2", xgm_aabb2 },
 	{ "aabb2v", xgm_aabb2v },
 	{ "aabb2_intersect", xgm_aabb2_intersect },
+	{ "aabb2_expand", xgm_aabb2_expand },
+	{ "aabb2_limit", xgm_aabb2_limit },
+	{ "aabb2_collide", xgm_aabb2_collide },
+	{ "aabb2_circle_collide", xgm_aabb2_circle_collide },
 	
 	{ "aabb3", xgm_aabb3 },
 	{ "aabb3v", xgm_aabb3v },

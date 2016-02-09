@@ -13,14 +13,14 @@ struct Vec3
 	
 	Vec3( float _x, float _y, float _z ) : x(_x), y(_y), z(_z){}
 	
-	float _get_length(){ return (float) sqrtf(x*x+y*y+z*z); }
+	float _get_length() const { return (float) sqrtf(x*x+y*y+z*z); }
 	
 	SGS_PROPERTY float x;
 	SGS_PROPERTY float y;
 	SGS_PROPERTY float z;
 	
 	SGS_PROPERTY_FUNC( READ _get_length ) SGS_ALIAS( float length );
-	SGS_METHOD float getLength(){ return _get_length(); }
+	SGS_METHOD float getLength() const { return _get_length(); }
 	SGS_METHOD void setLength( float len )
 	{
 		if( x == 0 && y == 0 && z == 0 )
