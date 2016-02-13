@@ -1579,7 +1579,11 @@ static SGSRESULT vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_
 			goto nextcase;
 		}
 		obj->data.O->in_setindex = SGS_FALSE;
-		_STACK_UNPROTECT;
+		_STACK_UNPROTECT_SKIP( 1 );
+		ret = sgs_GetBool( C, -1 );
+		stk_pop1( C );
+		if( !ret ) /* was not handled by metamethod */
+			goto nextcase;
 	}
 	else if( obj->type == SGS_VT_OBJECT && obj->data.O->iface->setindex )
 	{

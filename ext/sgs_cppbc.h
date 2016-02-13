@@ -27,8 +27,8 @@
 # endif
 struct _sgsInterface
 {
-	_sgsInterface( const sgs_ObjInterface& src, _sgsInterface* pif = NULL )
-	: iface(src), inh_parent(pif), inh_child(NULL), inh_sibling(NULL)
+	_sgsInterface( const sgs_ObjInterface& src, sgs_CFunc ifn, _sgsInterface* pif = NULL )
+	: iface(src), iface_func(ifn), inh_parent(pif), inh_child(NULL), inh_sibling(NULL)
 	{
 		if( pif )
 		{
@@ -36,9 +36,21 @@ struct _sgsInterface
 			pif->inh_child = this;
 		}
 	}
+	void init( SGS_CTX, sgs_Variable* out ) const
+	{
+		if( iface_func )
+		{
+			sgs_PushInterface( C, iface_func );
+			sgs_ObjSetMetaObj( C,
+				out ? sgs_GetObjectStructP( out ) : sgs_GetObjectStruct( C, -2 ),
+				sgs_GetObjectStruct( C, -1 ) );
+			sgs_Pop( C, 1 );
+		}
+	}
 	operator sgs_ObjInterface* (){ return &iface; }
 	sgs_ObjInterface* operator -> (){ return &iface; }
 	sgs_ObjInterface iface;
+	sgs_CFunc iface_func;
 	_sgsInterface* inh_parent;
 	_sgsInterface* inh_child;
 	_sgsInterface* inh_sibling;
@@ -57,6 +69,8 @@ struct _sgsInterface
 # define SGS_OBJECT_INHERIT( name ) SGS_OBJECT_LITE
 # define SGS_NO_EXPORT
 # define SGS_NO_DESTRUCT
+# define SGS_OLD_IFACE
+# define SGS_NEW_IFACE
 # define SGS_METHOD
 # define SGS_METHOD_NAMED( name )
 # define SGS_MULTRET int
@@ -65,6 +79,7 @@ struct _sgsInterface
 # define SGS_GCREF( mbname )
 # define SGS_DUMP( what )
 # define SGS_NODUMP( what )
+# define SGS_BACKING_STORE( what )
 # define SGS_IFUNC( type ) static
 # define SGS_ALIAS( func )
 
@@ -830,12 +845,14 @@ template< class T > void sgs_CreateClass( SGS_CTX, sgs_Variable* out, T* inst )
 	sgs_CreateObject( C, out, inst, T::_sgs_interface );
 	inst->m_sgsObject = out ? sgs_GetObjectStructP( out ) : sgs_GetObjectStruct( C, -1 );
 	inst->C = sgs_RootContext( C );
+	T::_sgs_interface.init( C, out );
 }
 template< class T > T* sgs_CreateClassIPA( SGS_CTX, sgs_Variable* out )
 {
 	T* data = static_cast<T*>( sgs_CreateObjectIPA( C, out, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
 	data->m_sgsObject = out ? sgs_GetObjectStructP( out ) : sgs_GetObjectStruct( C, -1 );
 	data->C = sgs_RootContext( C );
+	T::_sgs_interface.init( C, out );
 	return data;
 }
 template< class T> T* sgs_InitCreatedClass( SGS_CTX, sgs_Variable* out, T* inst )
@@ -857,10 +874,13 @@ template< class T > T* sgs_CreateClassFrom( SGS_CTX, sgs_Variable* out, T* inst 
 template< class T > void sgs_CreateLiteClass( SGS_CTX, sgs_Variable* out, T* inst )
 {
 	sgs_CreateObject( C, out, inst, T::_sgs_interface );
+	T::_sgs_interface.init( C, out );
 }
 template< class T > T* sgs_CreateLiteClassIPA( SGS_CTX, sgs_Variable* out )
 {
-	return static_cast<T*>( sgs_CreateObjectIPA( C, out, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
+	T* ret = static_cast<T*>( sgs_CreateObjectIPA( C, out, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
+	T::_sgs_interface.init( C, out );
+	return ret;
 }
 #define SGS_CREATELITECLASS( C, out, name, args ) (new (sgs_CreateLiteClassIPA< name >( C, out )) name args )
 template< class T > T* sgs_CreateLiteClassFrom( SGS_CTX, sgs_Variable* out, const T* inst )

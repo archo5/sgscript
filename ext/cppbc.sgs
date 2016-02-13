@@ -701,6 +701,26 @@ function cppbc_examine_namelist( code, type )
 	return out;
 }
 
+function cppbc_examine_backingstore( code )
+{
+	code = string_trim( code );
+	code = string_cut( code, 1, -2 );
+	code = string_trim( code );
+	read = true;
+	write = true;
+	if( re_match( code, "#^READ#" ) )
+	{
+		code = string_part( code, 4 );
+		write = false;
+	}
+	else if( re_match( code, "#^WRITE#" ) )
+	{
+		code = string_part( code, 5 );
+		read = false;
+	}
+	return { code, read, write };
+}
+
 
 function cppbc_examine_object( code, pos )
 {
@@ -729,8 +749,7 @@ function cppbc_examine_object( code, pos )
 	blockcode = string_cut( code, bounds[0] + 1, bounds[1] - 1 );
 	blockcode = cppbc_remove_blocks( blockcode );
 	
-	no_export = re_match( blockcode, "#SGS_NO_EXPORT#" );
-	no_destruct = re_match( blockcode, "#SGS_NO_DESTRUCT#" );
+	bstores = [];
 	inherited = {};
 	inh_matches = re_match_all( blockcode, "#SGS_OBJECT_INHERIT[ \t\v\n\r]*\\(([a-zA-Z0-9_ \t\v\n\r,]*)\\)#ms", RE_RETURN_CAPTURED );
 	foreach( match : inh_matches )
@@ -745,7 +764,11 @@ function cppbc_examine_object( code, pos )
 		cppbc_error( "multiple inheritance is not supported" );
 	
 	items = [];
-	matches = re_match_all( blockcode, "#(SGS_METHOD_NAMED|SGS_PROPERTY_FUNC|SGS_METHOD|SGS_PROPERTY|SGS_IFUNC|SGS_GCREF|SGS_DUMP|SGS_NODUMP)(.*?)[;\\{]#ms", RE_RETURN_BOTH );
+	matches = re_match_all( blockcode, "#("
+		$"SGS_METHOD_NAMED|SGS_PROPERTY_FUNC|SGS_METHOD|"
+		$"SGS_PROPERTY|SGS_IFUNC|SGS_GCREF|"
+		$"SGS_DUMP|SGS_NODUMP|SGS_BACKING_STORE)"
+		$"(.*?)[;\\{]#ms", RE_RETURN_BOTH );
 	foreach( match : matches )
 	{
 		cppbc_setline_codepos( blockcode, match[0][1], 1 );
@@ -765,6 +788,8 @@ function cppbc_examine_object( code, pos )
 			item = cppbc_examine_namelist( match[2][0], "DUMP" );
 		else if( match[1][0] == "SGS_NODUMP" )
 			item = cppbc_examine_namelist( match[2][0], "NODUMP" );
+		else if( match[1][0] == "SGS_BACKING_STORE" )
+			bstores.push( cppbc_examine_backingstore( match[2][0] ) );
 		
 		if( typeof(item) == "array" )
 		{
@@ -777,13 +802,18 @@ function cppbc_examine_object( code, pos )
 		cppbc_setline_pop();
 	}
 	
-	return {
+	return
+	{
 		name = classname,
 		is_lite = re_match( blockcode, "#SGS_OBJECT_LITE#" ),
-		items = items,
-		no_export = no_export,
-		no_destruct = no_destruct,
-		inherited = inherited,
+		new_iface = ( NEW_IFACE
+			+ re_match( blockcode, "#SGS_NEW_IFACE#" )
+			- re_match( blockcode, "#SGS_OLD_IFACE#" ) ) > 0,
+		items,
+		no_export = re_match( blockcode, "#SGS_NO_EXPORT#" ),
+		no_destruct = re_match( blockcode, "#SGS_NO_DESTRUCT#" ),
+		inherited,
+		bstores,
 	};
 }
 
@@ -826,6 +856,8 @@ function cppbc_extend_objects( objects )
 			
 			foreach( ni : inhobj.items )
 				nitems[ ni.what $ "/" $ ni.name ] = ni;
+			if( obj.bstores.size == 0 )
+				obj.bstores = inhobj.bstores;
 		}
 		foreach( ni : obj.items )
 			nitems[ ni.what $ "/" $ ni.name ] = ni;
@@ -958,7 +990,7 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 		foreach( item : obj.items )
 		{
 			itemline = null;
-			if( item.what == "METHOD" )
+			if( item.what == "METHOD" && obj.new_iface == false )
 				itemline = "sgs_PushCFunc( C, _sgs_method__%OBJ%__"$item.varname$" );";
 			else if( item.what == "PROPERTY" )
 			{
@@ -988,6 +1020,14 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 					"%TYPEFUNC%" = if( cppbc_type_is_voidptr( item.type ), "sgs_PushPtr", "sgs_PushVar" ),
 				} );
 			}
+		}
+		foreach( item : obj.bstores )
+		{
+			if( !item.read )
+				continue;
+			out $= "
+		if( sgs_PushIndex( C, static_cast<" $ obj.name $ "*>( obj->data )->" $ item.code
+			$ ", sgs_StackItem( C, 0 ), sgs_ObjectArg( C ) ) ) return SGS_SUCCESS;";
 		}
 		out $= "
 	SGS_END_INDEXFUNC;
@@ -1032,6 +1072,14 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 					"%ISOBJ%" = if( string_part( item.type, 0, 4 ) != "void" && item.type[ item.type.length - 1 ] == "*", ", true", "" ),
 				});
 			}
+		}
+		foreach( item : obj.bstores )
+		{
+			if( !item.write )
+				continue;
+			out $= "
+		if( sgs_SetIndex( C, static_cast<" $ obj.name $ "*>( obj->data )->" $ item.code
+			$ ", sgs_StackItem( C, 0 ), sgs_StackItem( C, 1 ), sgs_ObjectArg( C ) ) ) return SGS_SUCCESS;";
 		}
 		out $= "
 	SGS_END_INDEXFUNC;
@@ -1095,6 +1143,39 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 		out $= "\n\t}";
 		out $= "\n\treturn SGS_SUCCESS;\n}\n";
 		
+		// new interface
+		ifn = "NULL";
+		if( obj.new_iface )
+		{
+			ifn = obj.name $ "__sgs_ifn";
+			out $=
+"
+static sgs_RegFuncConst " $ obj.name $ "__sgs_funcs[] =
+{";
+			foreach( item : obj.items )
+			{
+				if( item.what != "METHOD" )
+					continue;
+				
+				out $= "\n\t{ \"" $ item.varname $ "\", "
+					$ "_sgs_method__" $ obj.name $ "__" $ item.varname $ " },";
+			}
+			out $=
+"
+	{ NULL, NULL },
+};
+
+static int " $ obj.name $ "__sgs_ifn( SGS_CTX )
+{
+	sgs_CreateDict( C, NULL, 0 );
+	sgs_StoreFuncConsts( C, sgs_StackItem( C, -1 ),
+		" $ obj.name $ "__sgs_funcs,
+		-1, \"" $ obj.name $ ".\" );
+	return 1;
+}
+";
+		}
+		
 		// interface
 		funcnames = [].resize( OBJ_IFUNC_COUNT );
 		foreach( ifname, ifunc : ifuncs )
@@ -1116,7 +1197,7 @@ static sgs_ObjInterface " $ obj.name $ "__sgs_interface =
 		out $=
 "
 };
-_sgsInterface " $ obj.name $ "::_sgs_interface(" $ obj.name $ "__sgs_interface" $ inhptr $ ");
+_sgsInterface " $ obj.name $ "::_sgs_interface(" $ obj.name $ "__sgs_interface, " $ ifn $ inhptr $ ");
 
 ";
 	}
@@ -1156,10 +1237,12 @@ global IN = null;
 global OUT = null;
 global INCLCODE = "";
 global PRINT_TIMESTAMP = false;
+global NEW_IFACE = true;
 
 for( i = 0; i < argv.size; ++i )
 {
 	if( argv[ i ] == "-add-timestamp" ){ PRINT_TIMESTAMP = false; }
+	else if( argv[ i ] == "-def-old-iface" ){ NEW_IFACE = false; }
 	else if( argv[ i ] == "-o" )
 	{
 		i++;
