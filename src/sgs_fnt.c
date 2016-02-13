@@ -300,7 +300,7 @@ static int part_weight( sgs_FTNode* part, int isfcall, int binary )
 		return 40;
 
 	if( isfcall )
-		return 7;
+		return 9;
 
 	if( part->type == SGS_SFT_OPER )
 	{
@@ -315,8 +315,8 @@ static int part_weight( sgs_FTNode* part, int isfcall, int binary )
 			if( SGS_ST_OP_BINOPS( type ) )	return 26;
 			if( SGS_ST_OP_BINADD( type ) )	return 25;
 			if( SGS_ST_OP_BINMUL( type ) )	return 24;
+			if( type == SGS_ST_OP_NOT )     return 8;
 			if( type == SGS_ST_OP_MMBR )	return 7;
-			if( type == SGS_ST_OP_NOT )     return 7;
 			return 11;
 		}
 
@@ -406,15 +406,16 @@ static int level_exp( SFTC, sgs_FTNode** tree )
 		if( node->type != SGS_SFT_OPER && node->type != SGS_SFT_EXPLIST && node->type != SGS_SFT_ARRLIST )
 			goto _continue;
 		
-		/* function tree test */
+		/* "fcall" = [..]/(..) at the end, preceded by a data source */
 		isfcall = node->type == SGS_SFT_EXPLIST || node->type == SGS_SFT_ARRLIST;
-		if( isfcall )	isfcall = !!prev;
-		if( isfcall )	isfcall = prev->type != SGS_SFT_OPER || !SGS_ST_OP_BINARY( *prev->token );
+		if( isfcall ) isfcall = !!prev;
+		if( isfcall ) isfcall = !node->next;
+		if( isfcall ) isfcall = prev->type != SGS_SFT_OPER || !SGS_ST_OP_BINARY( *prev->token );
 		
 		/* op tests */
 		binary = node->type == SGS_SFT_OPER;
-		if( binary )	binary = prev && node->next;
-		if( binary )	binary = prev->type != SGS_SFT_OPER || 
+		if( binary ) binary = prev && node->next;
+		if( binary ) binary = prev->type != SGS_SFT_OPER || 
 			*prev->token == SGS_ST_OP_INC || *prev->token == SGS_ST_OP_DEC;
 		
 		/* weighting */
