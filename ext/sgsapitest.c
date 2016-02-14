@@ -216,6 +216,31 @@ void destroy_context( SGS_CTX )
 	fclose( errfp );
 }
 
+typedef struct _AST
+{
+	sgs_TokenList tokens;
+	sgs_FTNode* tree;
+	sgs_FTNode* mem;
+}
+AST;
+void ast_create( SGS_CTX, const char* code, AST* ast )
+{
+	ast->tokens = sgsT_Gen( C, code, SGS_STRINGLENGTHFUNC( code ) );
+	atf_assert( ast->tokens );
+	ast->mem = sgsFT_Compile( C, ast->tokens );
+	atf_assert( ast->mem );
+	ast->tree = ast->mem->child;
+	atf_assert( ast->tree );
+}
+void ast_destroy( SGS_CTX, AST* ast )
+{
+	ast->tree = NULL;
+	sgsFT_Destroy( C, ast->mem );
+	ast->mem = NULL;
+	sgsT_Free( C, ast->tokens );
+	ast->tokens = NULL;
+}
+
 void atf_clear_errors()
 {
 	sgs_membuf_resize( &errbuf, currctx, 0 );
@@ -583,6 +608,106 @@ DEFINE_TEST( function_calls )
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
 	sgs_Release( C, &v_func );
+	destroy_context( C );
+}
+
+DEFINE_TEST( ast_constructs )
+{
+	sgs_FTNode* stack[ 32 ];
+	int at = -1;
+#define NODE( id ) { atf_assert( stack[ at ]->type == SGS_SFT_##id ); }
+#define TOKEN( id ) { atf_assert( *stack[ at ]->token == SGS_ST_##id ); }
+#define BEGIN_TEST( code ) { ast_create( C, code, &ast ); at = 0; stack[ 0 ] = ast.tree; }
+#define END_TEST { ast_destroy( C, &ast ); }
+#define INSIDE { stack[ at + 1 ] = stack[ at ]->child; at++; }
+#define END { at--; }
+#define NEXT { stack[ at ] = stack[ at ]->next; }
+	
+	AST ast;
+	SGS_CTX = get_context();
+	
+	BEGIN_TEST( "1;" )
+		NODE( BLOCK ) INSIDE
+			NODE( EXPLIST ) INSIDE
+				NODE( CONST ) TOKEN( NUMINT )
+			END
+		END
+	END_TEST
+	
+	BEGIN_TEST( "null, false, true, 512, 3.14, 'test', function(){};" )
+		NODE( BLOCK ) INSIDE
+			NODE( EXPLIST ) INSIDE
+				NODE( KEYWORD ) TOKEN( KEYWORD )
+				NEXT NODE( KEYWORD ) TOKEN( KEYWORD )
+				NEXT NODE( KEYWORD ) TOKEN( KEYWORD )
+				NEXT NODE( CONST ) TOKEN( NUMINT )
+				NEXT NODE( CONST ) TOKEN( NUMREAL )
+				NEXT NODE( CONST ) TOKEN( STRING )
+				NEXT NODE( FUNC )
+			END
+		END
+	END_TEST
+	
+	BEGIN_TEST( "a=1;" )
+		NODE( BLOCK ) INSIDE
+			NODE( EXPLIST ) INSIDE
+				NODE( OPER ) TOKEN( OP_SET ) INSIDE
+					NODE( IDENT ) TOKEN( IDENT )
+					NEXT NODE( CONST ) TOKEN( NUMINT )
+				END
+			END
+		END
+	END_TEST
+	
+	BEGIN_TEST( "a();" ) INSIDE INSIDE
+		NODE( FCALL ) INSIDE
+			NODE( IDENT ) TOKEN( IDENT )
+			NEXT NODE( EXPLIST )
+		END
+	END END END_TEST
+	
+	BEGIN_TEST( "a.b();" ) INSIDE INSIDE
+		NODE( FCALL ) INSIDE
+			NODE( OPER ) TOKEN( OP_MMBR ) INSIDE
+				NODE( IDENT ) TOKEN( IDENT )
+				NEXT NODE( IDENT ) TOKEN( IDENT )
+			END
+			NEXT NODE( EXPLIST )
+		END
+	END END END_TEST
+	
+	BEGIN_TEST( "a!b();" ) INSIDE INSIDE
+		NODE( FCALL ) INSIDE
+			NODE( OPER ) TOKEN( OP_NOT ) INSIDE
+				NODE( IDENT ) TOKEN( IDENT )
+				NEXT NODE( IDENT ) TOKEN( IDENT )
+			END
+			NEXT NODE( EXPLIST )
+		END
+	END END END_TEST
+	
+	BEGIN_TEST( "a.b.c!d.e.f();" ) INSIDE INSIDE
+		NODE( FCALL ) INSIDE
+			NODE( OPER ) TOKEN( OP_NOT ) INSIDE
+				NODE( OPER ) TOKEN( OP_MMBR ) INSIDE
+					NODE( OPER ) TOKEN( OP_MMBR ) INSIDE
+						NODE( IDENT ) TOKEN( IDENT )
+						NEXT NODE( IDENT ) TOKEN( IDENT )
+					END
+					NEXT NODE( IDENT ) TOKEN( IDENT )
+				END
+				NEXT NODE( OPER ) TOKEN( OP_MMBR ) INSIDE
+					NODE( OPER ) TOKEN( OP_MMBR ) INSIDE
+						NODE( IDENT ) TOKEN( IDENT )
+						NEXT NODE( IDENT ) TOKEN( IDENT )
+					END
+					NEXT NODE( IDENT ) TOKEN( IDENT )
+				END
+			END
+			NEXT NODE( EXPLIST )
+		END
+	END END END_TEST
+	
 	destroy_context( C );
 }
 
@@ -1349,6 +1474,7 @@ test_t all_tests[] =
 	TST( globals_101 ),
 	TST( libraries ),
 	TST( function_calls ),
+	TST( ast_constructs ),
 	TST( complex_gc ),
 	TST( commands ),
 	TST( debugging ),
