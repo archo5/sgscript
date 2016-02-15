@@ -972,6 +972,45 @@ DEFINE_TEST( iterators )
 }
 
 
+DEFINE_TEST( sgson_tools )
+{
+	SGS_CTX = get_context();
+	
+	{
+		int rvc = 0;
+		atf_assert( sgs_EvalString( C, "return [{ a = 1.23, b = [ true, 'xyz' ] }];", &rvc ) == SGS_SUCCESS );
+		atf_assert( sgs_StackSize( C ) == 1 );
+	}
+	sgs_SerializeSGSONFmt( C, sgs_StackItem( C, -1 ), "\t" ); atf_check_errors( "" );
+	atf_assert( sgs_StackSize( C ) == 2 );
+	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_STRING );
+	/* puts( sgs_GetStringPtr( C, -1 ) ); //*/
+	sgs_UnserializeSGSONExt( C, sgs_GetStringPtr( C, -1 ), (size_t) sgs_GetStringSize( C, -1 ), sgs_MakeNull() );
+	atf_check_errors( "" );
+	atf_assert( sgs_StackSize( C ) == 3 );
+	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
+	sgs_Pop( C, 3 );
+	
+	/* try to trigger errors on serialization */
+	atf_clear_errors();
+	sgs_SerializeSGSONFmt( C, sgs_MakeCFunc( sgs_dummy_func ), NULL );
+	atf_assert( sgs_StackSize( C ) == 1 ); /* must still have a return value */
+	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_NULL ); /* ... which is null */
+	atf_check_errors( "[W:cannot encode functions, pointers or threads]" );
+	sgs_Pop( C, 1 );
+	
+	/* try to trigger errors on unserialization */
+	atf_clear_errors();
+	sgs_UnserializeSGSON( C, "{{{{{" );
+	atf_assert( sgs_StackSize( C ) == 1 ); /* must still have a return value */
+	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_NULL ); /* ... which is null */
+	atf_check_errors( "[E:failed to parse SGSON (position 1, {{{{...]" );
+	sgs_Pop( C, 1 );
+	
+	destroy_context( C );
+}
+
+
 int nom_method_A( SGS_CTX )
 {
 	SGSFN( "nom::method_A" );
@@ -1480,6 +1519,7 @@ test_t all_tests[] =
 	TST( debugging ),
 	TST( varpaths ),
 	TST( iterators ),
+	TST( sgson_tools ),
 	TST( native_obj_meta ),
 	TST( fork_state ),
 	TST( yield_resume ),

@@ -702,7 +702,8 @@ SFTRET parse_dict( SFTC )
 	SFTC_NEXT;
 	while( !SFTC_IS( '}' ) )
 	{
-		int is_ident = SFTC_IS( SGS_ST_IDENT );
+		/* in a dict literal, with the exception of values, keywords = identifers */
+		int is_ident = SFTC_IS( SGS_ST_IDENT ) || SFTC_IS( SGS_ST_KEYWORD );
 		int is_varkey = SFTC_IS( '[' );
 		if( !is_ident && !is_varkey && !SFTC_IS( SGS_ST_STRING ) )
 		{

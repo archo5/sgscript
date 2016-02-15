@@ -925,6 +925,11 @@ SGS_APIFUNC SGSBOOL sgs_UnserializeV1( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC void sgs_SerializeV2( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC SGSBOOL sgs_UnserializeV2( SGS_CTX, sgs_Variable var );
 
+SGS_APIFUNC void sgs_SerializeSGSONFmt( SGS_CTX, sgs_Variable var, const char* tab );
+#define sgs_SerializeSGSON( C, var ) sgs_SerializeSGSONFmt( C, var, NULL )
+SGS_APIFUNC void sgs_UnserializeSGSONExt( SGS_CTX, const char* str, size_t size, sgs_Variable tmpl );
+#define sgs_UnserializeSGSON( C, str ) sgs_UnserializeSGSONExt( C, str, SGS_STRINGLENGTHFUNC( str ), sgs_MakeNull() )
+
 SGS_APIFUNC int sgs_Compare( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 );
 SGS_APIFUNC SGSBOOL sgs_EqualTypes( sgs_Variable* v1, sgs_Variable* v2 );
 

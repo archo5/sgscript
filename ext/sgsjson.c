@@ -117,10 +117,10 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_
 							uint8_t tmpbuf[ 2 ];
 							uint16_t uchar;
 							pos++;
-							if( sgs_hexchar( *pos ) ) pos++; else return pos;
-							if( sgs_hexchar( *pos ) ) pos++; else return pos;
-							if( sgs_hexchar( *pos ) ) pos++; else return pos;
-							if( sgs_hexchar( *pos ) ) pos++; else return pos;
+							if( sgs_hexchar( *pos ) ) pos++; else goto strfail;
+							if( sgs_hexchar( *pos ) ) pos++; else goto strfail;
+							if( sgs_hexchar( *pos ) ) pos++; else goto strfail;
+							if( sgs_hexchar( *pos ) ) pos++; else goto strfail;
 							pos--;
 							hex[ 0 ] = (uint8_t) ( sgs_gethex( *(pos-3) ) );
 							hex[ 1 ] = (uint8_t) ( sgs_gethex( *(pos-2) ) );
@@ -161,22 +161,21 @@ static const char* json_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_
 						break;
 					default:
 #ifdef STRICT_JSON
+						sgs_membuf_destroy( &str, C );
 						return pos;
 #else
 						sgs_membuf_appbuf( &str, C, pos - 1, 2 ); break;
 #endif
+					strfail:
+						sgs_membuf_destroy( &str, C );
+						return pos;
 					}
 				}
 				else
 					sgs_membuf_appchr( &str, C, *pos );
 				pos++;
 			}
-			if( pos >= end )
-			{
-				sgs_membuf_destroy( &str, C );
-				return beg;
-			}
-			if( str.size > 0x7fffffff )
+			if( pos >= end || str.size > 0x7fffffff )
 			{
 				sgs_membuf_destroy( &str, C );
 				return beg;
@@ -419,7 +418,9 @@ static int encode_var( SGS_CTX, sgs_MemBuf* buf )
 		}
 	case SGS_VT_FUNC:
 	case SGS_VT_CFUNC:
-		sgs_Msg( C, SGS_WARNING, "json_encode: cannot encode functions" );
+	case SGS_VT_PTR:
+	case SGS_VT_THREAD:
+		sgs_Msg( C, SGS_WARNING, "cannot encode functions, pointers or threads" );
 		return 0;
 	case SGS_VT_OBJECT:
 		{

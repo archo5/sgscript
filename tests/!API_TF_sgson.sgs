@@ -1,0 +1,174 @@
+
+include "string";
+
+global ERRORS = "";
+
+function tostr( x )
+{
+	if( typeof( x ) == "array" )
+	{
+		out = "";
+		foreach( v : x )
+		{
+			if( out != "" ) out $= ",";
+			out $= tostr( v );
+		}
+		return "[" $ out $ "]";
+	}
+	else if( typeof( x ) == "dict" )
+	{
+		out = "";
+		foreach( k, v : x )
+		{
+			if( out != "" ) out $= ",";
+			out $= k $ "=" $ tostr( v );
+		}
+		return "{" $ out $ "}";
+	}
+	else
+		return tostring(x);
+}
+
+
+tests =
+{
+	"" = "null",
+	"[" = "null",
+	"][" = "null",
+	"[]" = "[]",
+	"null" = "null",
+	"[null]" = "[null]",
+	"[[null]" = "null",
+	"[[null]]" = "[[null]]",
+	"[null null]" = "null",
+	"[null,null]" = "[null,null]",
+	"[null,null,]" = "[null,null]",
+	"[null,,null]" = "null",
+	"[,null,null]" = "null",
+	"[[],[]]" = "[[],[]]",
+	'"wat"' = "wat",
+	'["huh","wat"]' = "[huh,wat]",
+	"{}" = "{}",
+	"ident" = "null",
+	"{a=b}" = "null",
+	'{"key"}' = "null",
+	'{"key"=true}' = "{key=true}",
+	'{"a"=false,"b"=true}' = "{a=false,b=true}",
+	'{a=false,"b"=true,}' = "{a=false,b=true}",
+	'{var=5}' = "{var=5}", // eval/keyword test
+	'{"a"=false,,"b"=true}' = "null",
+	'{,"a"=false,"b"=true}' = "null",
+	'["a"}' = "null",
+	'{"a"]' = "null",
+	'{"a"=["b"]}' = "{a=[b]}",
+	'[{"a"="b"}]' = "[{a=b}]",
+	'"\\n\\t\\r\\x7f"' = "\n\t\r\x7f",
+	'"\\x"' = "null",
+	'"\\xxx"' = "null",
+	'"\\u123"' = "null",
+	'{\n\t"a"= true\n}' = "{a=true}",
+	'[true][false]' = "null",
+	"{true=false}" = "null",
+	"5" = "5",
+	"45" = "45",
+	"12.345" = "12.345",
+	"0.234" = "0.234",
+	"00" = "0",
+	"01.23" = "1.23",
+	"1.23e+5" = "123000",
+	"1.23e-2" = "0.0123",
+	'"\\x65"' = "e",
+};
+
+foreach( test, expect : tests )
+{
+	ERRORS = "";
+	out = sgson_decode( test );
+	altout = eval( "return " $ test $ ";" );
+	str = tostr( out );
+	altstr = tostr( altout );
+	testEqual( str, expect, "decode success - " $ test );
+	if( expect != "null" || test == "null" )
+	{
+		// eval may work where SGSON doesn't, we don't care about those cases
+		testEqual( altstr, expect, "eval decode success - " $ test );
+		testEqual( ERRORS, "", "expecting no errors - " $ test );
+		back = sgson_encode( out );
+		testEqual( ERRORS, "", "reencode - expecting no errors - " $ test );
+	}
+}
+
+
+println( "--- encoding ---" );
+
+enctests =
+{
+	"null" = null,
+	"[]" = [],
+	"{}" = {},
+	'{a="b"}' = { a = "b" },
+	'{a=[]}' = { a = [] },
+	'{"a/b"=[]}' = { "a/b" = [] },
+	'{"a b"=1}' = { "a b" = 1 },
+	'{"0a"=1}' = { "0a" = 1 },
+	"\"\\n\\r\\t\\x19\\x7F\"" = "\n\r\t\x19\x7F",
+};
+
+ERRORS = "";
+foreach( expect, test : enctests )
+{
+	out = sgson_encode( test );
+	testEqual( out, expect );
+	back = sgson_decode( out );
+	testEqual( tostr( back ), tostr( test ), "redecode - " $ expect );
+}
+testEqual( ERRORS, "", "encoding - no errors" );
+
+
+println( "--- formatting ---" );
+
+fmttests =
+{
+"null" = null,
+"[]" = [],
+'{
+	a = "b"
+}'
+= { a = "b" },
+'{
+	a = []
+}'
+= { a = [] },
+'{
+	a = [
+		"b",
+		"c"
+	]
+}'
+= { a = [ "b", "c" ] },
+'{
+	entities = [
+		{
+			x = 5,
+			y = 6,
+			visible = true
+		},
+		{
+			x = 7,
+			y = 8.9,
+			visible = false
+		}
+	]
+}'
+= { entities = [ { x = 5, y = 6, visible = true }, { x = 7, y = 8.9, visible = false } ] }
+};
+
+foreach( expect, test : fmttests )
+{
+	expect = string_replace( expect, ["\r\n", "\r"], "\n" );
+	out = sgson_encode( test, "\t" );
+	testEqual( out, expect );
+	back = sgson_decode( out );
+	testEqual( tostr( back ), tostr( test ), "^^^ redecode" );
+}
+
