@@ -1263,6 +1263,16 @@ for( i = 0; i < argv.size; ++i )
 			cppbc_error( "expected include file name override after -iname" );
 		INCRENAME = argv[ i ];
 	}
+	else if( argv[ i ] == "-cmake0" )
+	{
+		i += 2;
+		if( i >= argv.size )
+			cppbc_error( "expected <output_name> <input_name> after -cmake0" );
+		out = argv[ i - 1 ];
+		in = argv[ i ];
+		io_file_write( out, "#include \"" $ in $ "\"\n" );
+		return;
+	}
 	else // input file
 	{
 		if( IN !== null )

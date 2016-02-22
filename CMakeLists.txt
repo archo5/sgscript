@@ -46,9 +46,12 @@ add_library( sgscript SHARED ${SGSCRIPT_FILES} )
 
 # SGSVM
 add_executable( sgsvm ext/sgsvm.c ext/sgs_prof.c ext/sgs_idbg.c )
+target_include_directories( sgsvm PRIVATE src )
 target_link_libraries( sgsvm sgscript )
 
 # SGS/CPP-BC test
-cppbc_header( obj/cppbc_test.cpp ext/sgscppbctest.h ../ext/sgscppbctest.h )
 add_executable( sgscppbctest ext/sgscppbctest.cpp obj/cppbc_test.cpp )
+add_dependencies( sgscppbctest sgsvm )
+target_include_directories( sgscppbctest PRIVATE src )
+cppbc_header( sgscppbctest obj/cppbc_test.cpp ext/sgscppbctest.h ../ext/sgscppbctest.h )
 target_link_libraries( sgscppbctest sgscript )
