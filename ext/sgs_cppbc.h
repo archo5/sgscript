@@ -457,6 +457,15 @@ public:
 			_acquire();
 		}
 	}
+	sgsVariable( sgs_Context* c, sgs_VarObj* o ) : C(sgs_RootContext(c))
+	{
+		var.type = SGS_VT_NULL;
+		if( o )
+		{
+			sgs_InitObjectPtr( &var, o );
+			// acquired by ^this
+		}
+	}
 	sgsVariable( const sgsString& s ) : C(sgs_RootContext(s.get_ctx()))
 	{
 		if( s.str != NULL )
@@ -548,12 +557,23 @@ public:
 	bool not_null() const { return var.type != SGS_VT_NULL; }
 	bool is_object( sgs_ObjInterface* iface ){ return !!sgs_IsObjectP( &var, iface ); }
 	template< class T > bool is_handle(){ return sgs_IsObjectP( &var, T::_sgs_interface ); }
+	sgs_VarObj* get_object_struct() const { return var.type == SGS_VT_OBJECT ? var.data.O : NULL; }
 	template< class T > T* get_object_data(){ return (T*) sgs_GetObjectDataP( &var ); }
 	template< class T > sgsHandle<T> get_handle(){ return sgsHandle<T>( C, &var ); }
 	template< class T > sgsHandle<T> downcast(){ return sgsHandle<T>( C, &var, true ); }
 	int type_id() const { return (int) var.type; }
 	bool is_string() const { return var.type == SGS_VT_STRING; }
 	sgsString get_string(){ return is_string() ? sgsString( C, var.data.S ) : sgsString(); }
+	void set_meta_obj( sgsVariable metaobj )
+	{
+		sgs_ObjSetMetaObj( C, get_object_struct(), metaobj.get_object_struct() );
+	}
+	sgsVariable get_meta_obj()
+	{
+		return sgsVariable( C, sgs_ObjGetMetaObj( get_object_struct() ) );
+	}
+	bool get_metamethods_enabled(){ return sgs_ObjGetMetaMethodEnable( get_object_struct() ); }
+	void enable_metamethods( bool e ){ sgs_ObjSetMetaMethodEnable( get_object_struct(), e ); }
 	
 	/* indexing */
 	sgsVariable getsubitem( sgsVariable key, bool prop )
@@ -598,9 +618,9 @@ public:
 	template< class T > T get();
 	template< class T > T getdef( const T& def ){ if( not_null() ) return get<T>(); else return def; }
 	sgsVariable& set_null(){ _release(); var = sgs_MakeNull(); return *this; }
-	sgsVariable& set( bool v ){ _release(); var = sgs_MakeBool( v ); return *this; }
-	sgsVariable& set( sgs_Int v ){ _release(); var = sgs_MakeInt( v ); return *this; }
-	sgsVariable& set( sgs_Real v ){ _release(); var = sgs_MakeReal( v ); return *this; }
+	sgsVariable& set_bool( bool v ){ _release(); var = sgs_MakeBool( v ); return *this; }
+	sgsVariable& set_int( sgs_Int v ){ _release(); var = sgs_MakeInt( v ); return *this; }
+	sgsVariable& set_real( sgs_Real v ){ _release(); var = sgs_MakeReal( v ); return *this; }
 	sgsVariable& set( sgsString v ){ _release(); if( v.not_null() ){ C = v.get_ctx(); var.type = SGS_VT_STRING; var.data.S = v.str; _acquire(); } return *this; }
 	sgsVariable& set( sgs_CFunc v ){ _release(); var = sgs_MakeCFunc( v ); return *this; }
 	template< class T > sgsVariable& set( sgsHandle< T > v ){ _release(); C = v.object->C; sgs_InitObjectPtr( C, &var, v.object ); return *this; }
@@ -837,6 +857,15 @@ template< class T > T sgsVariable::get()
 	SGS_SCOPE;
 	push( C );
 	return sgs_GetVar< T >()( C, -1 );
+}
+
+
+template< class T > sgsVariable sgs_GetClassInterface( SGS_CTX )
+{
+	sgsVariable out( C );
+	if( T::_sgs_interface.iface_func )
+		sgs_InitInterface( C, &out.var, T::_sgs_interface.iface_func );
+	return out;
 }
 
 
