@@ -33,26 +33,6 @@ global OBJ_IFUNC_POS =
 global OBJ_IFUNC_COUNT = 10;
 
 
-function string_find_any( str, what, pos )
-{
-	if( pos === null )
-		pos = 0;
-	
-	max = str.length;
-	citem = null;
-	foreach( item : what )
-	{
-		npos = string_find( str, item, pos );
-		if( npos !== null && npos < max )
-		{
-			citem = item;
-			max = npos;
-		}
-	}
-	
-	return if( max < str.length, max, null ), citem;
-}
-
 function string_find_rev_any( str, what, pos )
 {
 	if( pos === null )
@@ -67,6 +47,13 @@ function string_find_rev_any( str, what, pos )
 	}
 	
 	return if( min <= pos, min, null );
+}
+
+function regex_find_any( str, what, pos )
+{
+	out = re_match( str, what, RE_RETURN_BOTH, pos ?? 0 );
+	if( out !== false )
+		return out[0][1], out[0][0];
 }
 
 
@@ -114,7 +101,7 @@ function cppbc_preprocess( code )
 	
 	for(;;)
 	{
-		(to,which) = string_find_any( code, ["/*","//","'","\""], pos );
+		(to,which) = regex_find_any( code, """#/\*|//|'|"#""", pos );
 		if( to === null )
 		{
 			out $= string_part( code, pos );
@@ -135,7 +122,7 @@ function cppbc_preprocess( code )
 		else if( which == "//" )
 		{
 			out $= " ";
-			npos = string_find_any( code, ["\r\n","\r","\n"], to );
+			npos = regex_find_any( code, "#\r\n|\r|\n#", to );
 			if( npos === null )
 				break;
 			pos = npos;
@@ -1236,8 +1223,17 @@ argv.shift();
 global IN = null;
 global OUT = null;
 global INCLCODE = "";
+global INCRENAME = null;
 global PRINT_TIMESTAMP = false;
 global NEW_IFACE = true;
+
+function readfile( f )
+{
+	outf = @io_file_read( f );
+	if( outf === null )
+		ERROR( "failed to read '" $ f $ "'" );
+	return outf;
+}
 
 for( i = 0; i < argv.size; ++i )
 {
@@ -1255,10 +1251,17 @@ for( i = 0; i < argv.size; ++i )
 		i++;
 		if( i == argv.size )
 			cppbc_error( "expected include file name after -i" );
-		nic = io_file_read( argv[ i ] );
+		nic = readfile( argv[ i ] );
 		if( nic === null )
 			cppbc_error( "failed to read include file" );
 		INCLCODE $= nic;
+	}
+	else if( argv[ i ] == "-iname" )
+	{
+		i++;
+		if( i == argv.size )
+			cppbc_error( "expected include file name override after -iname" );
+		INCRENAME = argv[ i ];
 	}
 	else // input file
 	{
@@ -1281,6 +1284,6 @@ if( OUT === null )
 	OUT = string_implode( pathspl, "/" );
 }
 
-code = cppbc_parse_file( io_file_read( IN ), INCLCODE, [IN] );
+code = cppbc_parse_file( readfile( IN ), INCLCODE, [INCRENAME ?? IN] );
 io_file_write( OUT, code );
 

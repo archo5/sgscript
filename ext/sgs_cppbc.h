@@ -55,6 +55,10 @@ struct _sgsInterface
 	_sgsInterface* inh_child;
 	_sgsInterface* inh_sibling;
 };
+#ifdef SGS_CPPBC_PP
+# define SGS_CPPBC_IGNORE(x)
+#else
+# define SGS_CPPBC_IGNORE(x) x
 # define SGS_OBJECT_LITE \
 	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj ); \
 	static int _sgs_gcmark( SGS_CTX, sgs_VarObj* obj ); \
@@ -82,6 +86,7 @@ struct _sgsInterface
 # define SGS_BACKING_STORE( what )
 # define SGS_IFUNC( type ) static
 # define SGS_ALIAS( func )
+#endif
 
 #define SGS_DEFAULT_LITE_OBJECT_INTERFACE( name ) \
 	template<> inline void sgs_PushVar<name>( SGS_CTX, const name& v ){ sgs_CreateLiteClassFrom( C, NULL, &v ); } \
