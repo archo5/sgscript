@@ -77,6 +77,8 @@ struct _sgsInterface
 # define SGS_NEW_IFACE
 # define SGS_METHOD
 # define SGS_METHOD_NAMED( name )
+# define SGS_STATICMETHOD static
+# define SGS_STATICMETHOD_NAMED( name ) static
 # define SGS_MULTRET int
 # define SGS_PROPERTY
 # define SGS_PROPERTY_FUNC( funcs )
@@ -86,6 +88,8 @@ struct _sgsInterface
 # define SGS_BACKING_STORE( what )
 # define SGS_IFUNC( type ) static
 # define SGS_ALIAS( func )
+# define SGS_CPPBC_INHERIT_BEGIN
+# define SGS_CPPBC_INHERIT_END
 #endif
 
 #define SGS_DEFAULT_LITE_OBJECT_INTERFACE( name ) \
@@ -240,40 +244,22 @@ public:
 		if( object )
 			_acquire();
 	}
-	sgsHandle( sgs_Context* c, sgs_VarObj* obj ) : object(NULL), C(sgs_RootContext(c))
-	{
-		if( obj && obj->iface == T::_sgs_interface )
-		{
-			object = obj;
-			_acquire();
-		}
-	}
-	sgsHandle( sgs_Context* c, sgs_StkIdx item ) : object(NULL), C(sgs_RootContext(c))
-	{
-		if( sgs_IsObject( c, item, T::_sgs_interface ) )
-		{
-			object = sgs_GetObjectStruct( c, item );
-			_acquire();
-		}
-	}
-	sgsHandle( sgs_Context* c, sgs_Variable* var, bool cast = false )
+	sgsHandle( sgs_Context* c, sgs_VarObj* obj, bool cast = true )
 	: object(NULL), C(sgs_RootContext(c))
 	{
-		if( cast )
-		{
-			if( var->type != SGS_VT_OBJECT )
-				return;
-			if( _sgsIsChild( var->data.O->iface, &T::_sgs_interface ) )
-			{
-				object = var->data.O;
-				_acquire();
-			}
-		}
-		else if( sgs_IsObjectP( var, T::_sgs_interface ) )
-		{
-			object = var->data.O;
-			_acquire();
-		}
+		_init( obj, cast );
+	}
+	sgsHandle( sgs_Context* c, sgs_StkIdx item, bool cast = true )
+	: object(NULL), C(sgs_RootContext(c))
+	{
+		if( sgs_ItemType( c, item ) == SGS_VT_OBJECT )
+			_init( sgs_GetObjectStruct( c, item ), cast );
+	}
+	sgsHandle( sgs_Context* c, sgs_Variable* var, bool cast = true )
+	: object(NULL), C(sgs_RootContext(c))
+	{
+		if( var->type == SGS_VT_OBJECT )
+			_init( var->data.O, cast );
 	}
 	explicit sgsHandle( T* obj ) : object(NULL), C(NULL)
 	{
@@ -286,12 +272,24 @@ public:
 	}
 	~sgsHandle(){ _release(); }
 	
+	void _init( sgs_VarObj* obj, bool cast )
+	{
+		if( !obj )
+			return;
+		if( obj->iface == T::_sgs_interface ||
+			( cast && _sgsIsChild( obj->iface, &T::_sgs_interface ) ) )
+		{
+			object = obj;
+			_acquire();
+		}
+	}
+	
 	const sgsHandle& operator = ( const sgsHandle& h )
 	{
 		if( object != h.object )
 		{
 			_release();
-			if( h.object && h.object->iface == T::_sgs_interface )
+			if( h.object )
 			{
 				object = h.object;
 				C = h.C;

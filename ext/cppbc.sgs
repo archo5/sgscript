@@ -426,7 +426,7 @@ function cppbc_split_cs( code )
 }
 
 
-function cppbc_examine_method( code, methodname )
+function cppbc_examine_method( code, is_static, methodname )
 {
 	code = string_trim( code );
 	if( string_find( code, "SGS_ALIAS" ) === 0 )
@@ -459,14 +459,15 @@ function cppbc_examine_method( code, methodname )
 	
 	return {
 		what = "METHOD",
-		name = name,
+		name,
+		is_static,
 		varname = methodname || name,
 		type = rvd.type,
 		params = ptypes,
 	};
 }
 
-function cppbc_examine_method_named( code )
+function cppbc_examine_method_named( code, is_static )
 {
 	sp = fmt_string_parser( code );
 	
@@ -474,7 +475,7 @@ function cppbc_examine_method_named( code )
 	name = sp.readcc( "a-zA-Z0-9_." );
 	sp.skipcc( ") \t\v\r\n" );
 	
-	return cppbc_examine_method( sp.read( 65536 ), name );
+	return cppbc_examine_method( sp.read( 65536 ), is_static, name );
 }
 
 
@@ -752,17 +753,23 @@ function cppbc_examine_object( code, pos )
 	
 	items = [];
 	matches = re_match_all( blockcode, "#("
-		$"SGS_METHOD_NAMED|SGS_PROPERTY_FUNC|SGS_METHOD|"
-		$"SGS_PROPERTY|SGS_IFUNC|SGS_GCREF|"
+		$"SGS_METHOD_NAMED|SGS_METHOD|"
+		$"SGS_STATICMETHOD_NAMED|SGS_STATICMETHOD|"
+		$"SGS_PROPERTY_FUNC|SGS_PROPERTY|"
+		$"SGS_IFUNC|SGS_GCREF|"
 		$"SGS_DUMP|SGS_NODUMP|SGS_BACKING_STORE)"
 		$"(.*?)[;\\{]#ms", RE_RETURN_BOTH );
 	foreach( match : matches )
 	{
 		cppbc_setline_codepos( blockcode, match[0][1], 1 );
 		if( match[1][0] == "SGS_METHOD" )
-			item = cppbc_examine_method( match[2][0] );
+			item = cppbc_examine_method( match[2][0], false );
+		else if( match[1][0] == "SGS_STATICMETHOD" )
+			item = cppbc_examine_method( match[2][0], true );
 		else if( match[1][0] == "SGS_METHOD_NAMED" )
-			item = cppbc_examine_method_named( match[2][0] );
+			item = cppbc_examine_method_named( match[2][0], false );
+		else if( match[1][0] == "SGS_STATICMETHOD_NAMED" )
+			item = cppbc_examine_method_named( match[2][0], true );
 		else if( match[1][0] == "SGS_PROPERTY" )
 			item = cppbc_examine_property( match[2][0] );
 		else if( match[1][0] == "SGS_PROPERTY_FUNC" )
@@ -807,12 +814,41 @@ function cppbc_examine_object( code, pos )
 
 function cppbc_find_objects( code )
 {
+	inh_starts = [];
+	inh_ends = [];
+	matches = re_match_all( code, "#SGS_CPPBC_INHERIT_BEGIN#", RE_RETURN_OFFSETS );
+	foreach( match : matches )
+		inh_starts.push( match[0][0] );
+	matches = re_match_all( code, "#SGS_CPPBC_INHERIT_END#", RE_RETURN_OFFSETS );
+	foreach( match : matches )
+		inh_ends.push( match[0][0] );
+	
 	matches = re_match_all( code, "#SGS_OBJECT#", RE_RETURN_OFFSETS );
 	objects = [];
 	foreach( match : matches )
 	{
-		object = cppbc_examine_object( code, match[0][0] );
+		pos = match[0][0];
+		object = cppbc_examine_object( code, pos );
 		objects.push( object );
+		
+		// check if object is inherited (cannot export those)
+		inhnum = 0;
+		foreach( at : inh_starts )
+		{
+			if( at > pos )
+				break;
+			else
+				inhnum++;
+		}
+		foreach( at : inh_ends )
+		{
+			if( at > pos )
+				break;
+			else
+				inhnum--;
+		}
+		if( inhnum > 0 )
+			object.no_export = true;
 	}
 	
 //	printvar_ext( objects, 10 );
@@ -921,7 +957,9 @@ function cppbc_generate_code( objects, includes )
 				else
 					line $= string_format( "sgs_GetVar{3}<{1}>()(C,{2})", fixedtype, param_id++, getvar3rd );
 			}
-			line = string_format( "data->{1}( {2} )", item.name, line );
+			
+			call_fmt = if( item.is_static, "{3}::{1}( {2} )", "data->{1}( {2} )" );
+			line = string_format( call_fmt, item.name, line, obj.name );
 			
 			if( item.type == "SGS_MULTRET" )
 				line = "return " $ line $ ";";
@@ -930,7 +968,21 @@ function cppbc_generate_code( objects, includes )
 			else
 				line $= "; return 0;";
 			
-			out $= string_translate(
+			if( item.is_static )
+			{
+				out $= string_translate(
+"
+static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
+{
+	SGSFN( \"%OBJ%.%NAME%\" );
+	%LINE%
+}
+"
+				, { "%OBJ%" = obj.name, "%NAME%" = item.varname, "%LINE%" = line } );
+			}
+			else
+			{
+				out $= string_translate(
 "
 static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 {
@@ -939,7 +991,8 @@ static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 	%LINE%
 }
 "
-			, { "%OBJ%" = obj.name, "%NAME%" = item.varname, "%LINE%" = line } );
+				, { "%OBJ%" = obj.name, "%NAME%" = item.varname, "%LINE%" = line } );
+			}
 		}
 		
 		// interface functions
