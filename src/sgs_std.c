@@ -2282,11 +2282,9 @@ static int sgsstd_va_get_args( SGS_CTX )
 	/* extra arguments */
 	if( sf->argcount > sf->inexp )
 	{
-		sgs_Variable* tpv;
 		xac = (uint8_t)( sf->argcount - sf->inexp );
-		tpv = C->stack_base + sf->argbeg + xac - 1;
 		for( i = 0; i < xac; ++i )
-			sgs_PushVariable( C, *(tpv - i) );
+			sgs_PushVariable( C, *(C->stack_base + sf->argbeg + xac - 1 - i) );
 	}
 	sgs_CreateArray( C, NULL, sf->argcount );
 	return 1;
