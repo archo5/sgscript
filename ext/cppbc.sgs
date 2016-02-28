@@ -762,6 +762,7 @@ function cppbc_examine_object( code, pos )
 	foreach( match : matches )
 	{
 		cppbc_setline_codepos( blockcode, match[0][1], 1 );
+		item = null;
 		if( match[1][0] == "SGS_METHOD" )
 			item = cppbc_examine_method( match[2][0], false );
 		else if( match[1][0] == "SGS_STATICMETHOD" )
@@ -790,7 +791,7 @@ function cppbc_examine_object( code, pos )
 			foreach( ii : item )
 				items.push( ii );
 		}
-		else
+		else if( item !== null )
 			items.push( item );
 		
 		cppbc_setline_pop();
