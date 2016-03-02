@@ -160,7 +160,7 @@ sgs_Hash sgs_HashVar( const sgs_Variable* v )
 	/* special */
 	case SGS_VT_NULL: return 0;
 	case SGS_VT_BOOL: return ( v->data.B != 0 );
-	case SGS_VT_STRING: return sgs_HashFunc( sgs_var_cstr( v ), v->data.S->size );
+	case SGS_VT_STRING: return v->data.S->hash;
 	/* data */
 	case SGS_VT_INT: size = sizeof( sgs_Int ); break;
 	case SGS_VT_REAL: size = sizeof( sgs_Real ); break;
