@@ -44,13 +44,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(ProjectDir)..\..\..\bin\</OutDir>
-    <IntDir>$(ProjectDir)..\..\..\obj\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)..\..\..\obj\sgstest-$(Configuration)\</IntDir>
     <TargetName>sgstest</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(ProjectDir)..\..\..\bin\</OutDir>
-    <IntDir>$(ProjectDir)..\..\..\obj\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)..\..\..\obj\sgstest-$(Configuration)\</IntDir>
     <TargetName>sgstest</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

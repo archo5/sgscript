@@ -59,11 +59,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>sgscript</TargetName>
-    <IntDir>$(ProjectDir)..\..\..\obj\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)..\..\..\obj\sgscript-$(Configuration)\</IntDir>
     <OutDir>$(ProjectDir)..\..\..\bin\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IntDir>$(ProjectDir)..\..\..\obj\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)..\..\..\obj\sgscript-$(Configuration)\</IntDir>
     <OutDir>$(ProjectDir)..\..\..\bin\</OutDir>
     <TargetName>sgscript</TargetName>
   </PropertyGroup>

@@ -12,6 +12,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\ext\sgsapitest.c" />
+    <ClCompile Include="..\..\..\ext\sgs_prof.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\ext\sgs_prof.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7BA2461B-5FD7-48CA-8502-24BDF2C33381}</ProjectGuid>
@@ -44,13 +48,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(ProjectDir)..\..\..\bin\</OutDir>
-    <IntDir>$(ProjectDir)..\..\..\obj\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)..\..\..\obj\sgsapitest-$(Configuration)\</IntDir>
     <TargetName>sgsapitest</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(ProjectDir)..\..\..\bin\</OutDir>
-    <IntDir>$(ProjectDir)..\..\..\obj\$(Configuration)\</IntDir>
+    <IntDir>$(ProjectDir)..\..\..\obj\sgsapitest-$(Configuration)\</IntDir>
     <TargetName>sgsapitest</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

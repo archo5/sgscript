@@ -52,19 +52,19 @@ sgs_ProfData;
 
 
 /* initialize profiler and attach to context */
-SGS_APIFUNC void sgs_ProfInit( SGS_CTX, sgs_Prof* P, int mode );
+void sgs_ProfInit( SGS_CTX, sgs_Prof* P, int mode );
 
 /* attach profiler to another context */
-SGS_APIFUNC void sgs_ProfAttach( SGS_CTX, sgs_Prof* P );
+void sgs_ProfAttach( SGS_CTX, sgs_Prof* P );
 
 /* detach profiler from context */
-SGS_APIFUNC void sgs_ProfDetach( SGS_CTX, sgs_Prof* P );
+void sgs_ProfDetach( SGS_CTX, sgs_Prof* P );
 
 /* close profiler, detaching from all contexts */
-SGS_APIFUNC void sgs_ProfClose( SGS_CTX, sgs_Prof* P );
+void sgs_ProfClose( SGS_CTX, sgs_Prof* P );
 
 /* dump profiler measurements */
-SGS_APIFUNC void sgs_ProfDump( SGS_CTX, sgs_Prof* P );
+void sgs_ProfDump( SGS_CTX, sgs_Prof* P );
 
 
 #ifdef __cplusplus
