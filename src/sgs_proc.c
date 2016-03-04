@@ -2382,12 +2382,12 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 {
 	sgs_Variable V = *func;
 	ptrdiff_t stkcallbase,
-		stkoff = C->stack_off - C->stack_base,
-		clsoff = C->clstk_off - C->clstk_base;
+		stkoff = SGS_STACK_PRESERVE( C, C->stack_off ),
+		clsoff = SGS_CLSTK_PRESERVE( C, C->clstk_off );
 	int rvc = 0, ret = 1, allowed, freefunc = 0;
 	
 	gotthis = !!gotthis;
-	stkcallbase = C->stack_top - args - gotthis - C->stack_base;
+	stkcallbase = ( C->stack_top - C->stack_base ) - args - gotthis;
 	
 	if( V.type == SGS_VT_OBJECT && V.data.O->iface == sgsstd_closure_iface )
 	{
@@ -2553,11 +2553,11 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 	
 	/* remove all stack items before the returned ones */
 	stk_clean( C, C->stack_base + stkcallbase, C->stack_top - rvc );
-	C->stack_off = C->stack_base + stkoff;
+	C->stack_off = SGS_STACK_RESTORE( C, stkoff );
 	
 	/* remove all closures used in the function */
 	clstk_clean( C, C->clstk_off, C->clstk_top );
-	C->clstk_off = C->clstk_base + clsoff;
+	C->clstk_off = SGS_CLSTK_RESTORE( C, clsoff );
 	
 	/* WP: unnecesary */
 	C->state &= ~(uint32_t)SGS_STATE_LASTFUNCABORT;
@@ -2591,11 +2591,11 @@ static void vm_postcall( SGS_CTX, int rvc )
 	
 	/* remove all stack items before the returned ones */
 	stk_clean( C, C->stack_base + stkcallbase, C->stack_top - rvc );
-	C->stack_off = C->stack_base + stkoff;
+	C->stack_off = SGS_STACK_RESTORE( C, stkoff );
 	
 	/* remove all closures used in the function */
 	clstk_clean( C, C->clstk_off, C->clstk_top );
-	C->clstk_off = C->clstk_base + clsoff;
+	C->clstk_off = SGS_CLSTK_RESTORE( C, clsoff );
 	
 	vm_frame_pop( C );
 	C->num_last_returned = rvc;
