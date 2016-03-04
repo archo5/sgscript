@@ -16,8 +16,12 @@
 
 #define TYPENAME( type ) sgs_VarNames[ type ]
 
+#if 1
+#define IS_REFTYPE( type ) ((1<<(type))&0x2b0)
+#else
 #define IS_REFTYPE( type ) ( type == SGS_VT_STRING || type == SGS_VT_FUNC \
 	|| type == SGS_VT_OBJECT || type == SGS_VT_THREAD )
+#endif
 
 
 #define VAR_ACQUIRE( pvar ) { \
