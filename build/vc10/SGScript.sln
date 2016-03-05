@@ -45,6 +45,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sgsapitest (API Test Tool)"
 		{A9CCE7BB-A9AF-4AC9-9BE2-966BEE47DFFD} = {A9CCE7BB-A9AF-4AC9-9BE2-966BEE47DFFD}
 	EndProjectSection
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sgsc (Virtual Machine)", "sgsc\sgsc.vcxproj", "{4D2C90B7-1EB6-422B-BE5A-957FF202DDBE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -87,6 +89,10 @@ Global
 		{7BA2461B-5FD7-48CA-8502-24BDF2C33381}.Debug|Win32.Build.0 = Debug|Win32
 		{7BA2461B-5FD7-48CA-8502-24BDF2C33381}.Release|Win32.ActiveCfg = Release|Win32
 		{7BA2461B-5FD7-48CA-8502-24BDF2C33381}.Release|Win32.Build.0 = Release|Win32
+		{4D2C90B7-1EB6-422B-BE5A-957FF202DDBE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4D2C90B7-1EB6-422B-BE5A-957FF202DDBE}.Debug|Win32.Build.0 = Debug|Win32
+		{4D2C90B7-1EB6-422B-BE5A-957FF202DDBE}.Release|Win32.ActiveCfg = Release|Win32
+		{4D2C90B7-1EB6-422B-BE5A-957FF202DDBE}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
