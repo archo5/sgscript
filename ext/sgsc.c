@@ -33,7 +33,7 @@ int loadfile( const char* file, char** out, size_t* outsize )
 {
 	char* data;
 	size_t len;
-	ssize_t ftrv;
+	long ftrv;
 	FILE* f;
 
 	f = fopen( file, "rb" );
@@ -49,7 +49,7 @@ int loadfile( const char* file, char** out, size_t* outsize )
 	len = (size_t) ftrv;
 	fseek( f, 0, SEEK_SET );
 
-	data = malloc( len );
+	data = (char*) malloc( len );
 	if( fread( data, 1, len, f ) != len )
 	{
 		fclose( f );
