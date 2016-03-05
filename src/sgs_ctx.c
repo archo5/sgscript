@@ -199,7 +199,7 @@ static void ctx_safedestroy( SGS_CTX )
 		{
 			sgs_Release( C, &sf->func );
 			sfn = sf->next;
-			sgsCTX_FreeFrame( C, sf );
+			sgsCTX_FreeFrame( sf );
 			sf = sfn;
 		}
 		C->sf_first = NULL;
@@ -375,21 +375,6 @@ sgs_StackFrame* sgsCTX_AllocFrame( SGS_CTX )
 	}
 	
 	return sgs_Alloc( sgs_StackFrame );
-}
-
-void sgsCTX_FreeFrame( SGS_CTX, sgs_StackFrame* F )
-{
-	SGS_SHCTX_USE;
-	
-	if( S->sf_pool_size >= SGS_STACKFRAMEPOOL_SIZE )
-	{
-		sgs_Dealloc( F );
-		return;
-	}
-	
-	F->next = S->sf_pool;
-	S->sf_pool = F;
-	S->sf_pool_size++;
 }
 
 static void copy_append_frame( SGS_CTX, sgs_StackFrame* sf )

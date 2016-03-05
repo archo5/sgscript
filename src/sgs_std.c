@@ -4756,7 +4756,7 @@ SGSBOOL sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 		{
 			sgs_Variable tmp;
 			sgs_InitObjectPtr( &tmp, obj );
-			sgs_Release( C, out );
+			VAR_RELEASE( out );
 			*out = tmp;
 			return SGS_TRUE;
 		}
@@ -4764,7 +4764,7 @@ SGSBOOL sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 		if( name[1] == 'R' )
 		{
 			SGS_SHCTX_USE;
-			sgs_Release( C, out );
+			VAR_RELEASE( out );
 			sgs_InitObjectPtr( out, RLBP );
 			return SGS_TRUE;
 		}
@@ -4773,7 +4773,7 @@ SGSBOOL sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 		{
 			sgs_Variable tmp;
 			sgs_InitThreadPtr( &tmp, C );
-			sgs_Release( C, out );
+			VAR_RELEASE( out );
 			*out = tmp;
 			return SGS_TRUE;
 		}
@@ -4784,9 +4784,9 @@ SGSBOOL sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 			if( C->sf_last )
 			{
 				tmp = C->sf_last->func;
-				sgs_Acquire( C, &tmp );
+				VAR_ACQUIRE( &tmp );
 			}
-			sgs_Release( C, out );
+			VAR_RELEASE( out );
 			*out = tmp;
 			return SGS_TRUE;
 		}
@@ -4799,21 +4799,21 @@ SGSBOOL sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 		obv.type = SGS_VT_OBJECT;
 		obv.data.O = obj;
 		ret = sgs_GetIndex( C, obv, *idx, &tmp, 0 );
-		sgs_Release( C, out );
+		VAR_RELEASE( out );
 		*out = tmp;
 		return ret;
 	}
 	
 	if( ( pair = sgs_vht_get( ht, idx ) ) != NULL )
 	{
-		sgs_Release( C, out );
+		VAR_RELEASE( out );
 		*out = pair->val;
-		sgs_Acquire( C, out );
+		VAR_ACQUIRE( out );
 		return SGS_TRUE;
 	}
 	
 	sgs_Msg( C, SGS_WARNING, "variable '%s' was not found", sgs_str_cstr( idx->data.S ) );
-	sgs_Release( C, out );
+	VAR_RELEASE( out );
 	return SGS_FALSE;
 }
 

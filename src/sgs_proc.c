@@ -16,20 +16,6 @@
 
 #define TYPENAME( type ) sgs_VarNames[ type ]
 
-#if 1
-#define IS_REFTYPE( type ) ((1<<(type))&0x2b0)
-#else
-#define IS_REFTYPE( type ) ( type == SGS_VT_STRING || type == SGS_VT_FUNC \
-	|| type == SGS_VT_OBJECT || type == SGS_VT_THREAD )
-#endif
-
-
-#define VAR_ACQUIRE( pvar ) { \
-	if( IS_REFTYPE( (pvar)->type ) ) (*(pvar)->data.pRC)++; }
-#define VAR_RELEASE( pvar ) { \
-	if( IS_REFTYPE( (pvar)->type ) ) var_release( C, pvar ); \
-	(pvar)->type = SGS_VT_NULL; }
-
 
 #define STK_UNITSIZE sizeof( sgs_Variable )
 
@@ -211,7 +197,6 @@ static void var_destroy_string( SGS_CTX, sgs_iStr* str )
 	sgs_Dealloc( str );
 }
 
-static void var_release( SGS_CTX, sgs_VarPtr p );
 static void var_destroy_func( SGS_CTX, sgs_iFunc* F )
 {
 	sgs_VarPtr var = (sgs_VarPtr) sgs_func_consts( F ), vend = (sgs_VarPtr) (void*) SGS_ASSUME_ALIGNED( sgs_func_bytecode( F ), 16 );
@@ -226,20 +211,14 @@ static void var_destroy_func( SGS_CTX, sgs_iFunc* F )
 	sgs_Dealloc( F );
 }
 
-static void var_release( SGS_CTX, sgs_VarPtr p )
+void sgsVM_DestroyVar( SGS_CTX, sgs_Variable* p )
 {
-	uint32_t type = p->type;
-	(*p->data.pRC) -= 1;
-	
-	if( (*p->data.pRC) <= 0 )
+	switch( p->type )
 	{
-		switch( type )
-		{
-		case SGS_VT_STRING: var_destroy_string( C, p->data.S ); break;
-		case SGS_VT_FUNC: var_destroy_func( C, p->data.F ); break;
-		case SGS_VT_OBJECT: sgsVM_VarDestroyObject( C, p->data.O ); break;
-		case SGS_VT_THREAD: sgsCTX_FreeState( p->data.T ); break;
-		}
+	case SGS_VT_STRING: var_destroy_string( C, p->data.S ); break;
+	case SGS_VT_FUNC: var_destroy_func( C, p->data.F ); break;
+	case SGS_VT_OBJECT: sgsVM_VarDestroyObject( C, p->data.O ); break;
+	case SGS_VT_THREAD: sgsCTX_FreeState( p->data.T ); break;
 	}
 }
 
@@ -448,7 +427,7 @@ static void vm_frame_pop( SGS_CTX )
 	C->sf_last = F->prev;
 	if( C->sf_first == F )
 		C->sf_first = NULL;
-	sgsCTX_FreeFrame( C, F );
+	sgsCTX_FreeFrame( F );
 }
 
 
@@ -2430,7 +2409,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 		// already ref'd on call stack
 		if( IS_REFTYPE( V.type ) )
 		{
-			var_release( C, &V ); // deref only, don't want to free
+			--*V.data.pRC; // deref only, don't want to free
 			sgs_BreakIf( *V.data.pRC <= 0 );
 		}
 	}
@@ -2580,14 +2559,11 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 static void vm_postcall( SGS_CTX, int rvc )
 {
 	sgs_StackFrame* sf = C->sf_last;
-	int gotthis = sf->flags & SGS_SF_METHOD ? 1 : 0;
 	sgs_StkIdx stkcallbase = sf->argbeg;
 	sgs_StkIdx stkoff = sf->stkoff;
 	sgs_StkIdx clsoff = sf->clsoff;
 	sgs_StkIdx args_from = sf->argsfrom;
 	sgs_iFunc* F = sf->func.data.F; // assuming reentrance only applies to SGS functions
-	
-	if( F->gotthis && gotthis ) C->stack_off++;
 	
 	/* remove all stack items before the returned ones */
 	stk_clean( C, C->stack_base + stkcallbase, C->stack_top - rvc );
@@ -2850,14 +2826,38 @@ restart_loop:
 #define STRICTLY_EQUAL( val ) if( p2.type != p3.type || ( p2.type == SGS_VT_OBJECT && \
 								p2.data.O->iface != p3.data.O->iface ) ) { GETOP; var_setbool( C, &p1, val ); WRITEGET; break; }
 #define VCOMPARE( op ) { int cr = vm_compare( C, &p2, &p3 ) op 0; GETOP; var_setbool( C, &p1, cr ); WRITEGET; }
-		case SGS_SI_SEQ: { ARGS_3; STRICTLY_EQUAL( SGS_FALSE ); VCOMPARE( == ); break; }
-		case SGS_SI_SNEQ: { ARGS_3; STRICTLY_EQUAL( SGS_TRUE ); VCOMPARE( != ); break; }
-		case SGS_SI_EQ: { ARGS_3; VCOMPARE( == ); break; }
-		case SGS_SI_NEQ: { ARGS_3; VCOMPARE( != ); break; }
-		case SGS_SI_LT: { ARGS_3; VCOMPARE( < ); break; }
-		case SGS_SI_GTE: { ARGS_3; VCOMPARE( >= ); break; }
-		case SGS_SI_GT: { ARGS_3; VCOMPARE( > ); break; }
-		case SGS_SI_LTE: { ARGS_3; VCOMPARE( <= ); break; }
+		case SGS_SI_SEQ: { ARGS_3; STRICTLY_EQUAL( SGS_FALSE );
+			if( p2.type == SGS_VT_INT && p3.type == SGS_VT_INT ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.I == p3.data.I ); break; }
+			if( p2.type == SGS_VT_REAL && p3.type == SGS_VT_REAL ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.R == p3.data.R ); break; }
+			VCOMPARE( == ); break; }
+		case SGS_SI_SNEQ: { ARGS_3; STRICTLY_EQUAL( SGS_TRUE );
+			if( p2.type == SGS_VT_INT && p3.type == SGS_VT_INT ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.I != p3.data.I ); break; }
+			if( p2.type == SGS_VT_REAL && p3.type == SGS_VT_REAL ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.R != p3.data.R ); break; }
+			VCOMPARE( != ); break; }
+		case SGS_SI_EQ: { ARGS_3;
+			if( p2.type == SGS_VT_INT && p3.type == SGS_VT_INT ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.I == p3.data.I ); break; }
+			if( p2.type == SGS_VT_REAL && p3.type == SGS_VT_REAL ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.R == p3.data.R ); break; }
+			VCOMPARE( == ); break; }
+		case SGS_SI_NEQ: { ARGS_3;
+			if( p2.type == SGS_VT_INT && p3.type == SGS_VT_INT ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.I != p3.data.I ); break; }
+			if( p2.type == SGS_VT_REAL && p3.type == SGS_VT_REAL ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.R != p3.data.R ); break; }
+			VCOMPARE( != ); break; }
+		case SGS_SI_LT: { ARGS_3;
+			if( p2.type == SGS_VT_INT && p3.type == SGS_VT_INT ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.I < p3.data.I ); break; }
+			if( p2.type == SGS_VT_REAL && p3.type == SGS_VT_REAL ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.R < p3.data.R ); break; }
+			VCOMPARE( < ); break; }
+		case SGS_SI_GTE: { ARGS_3;
+			if( p2.type == SGS_VT_INT && p3.type == SGS_VT_INT ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.I >= p3.data.I ); break; }
+			if( p2.type == SGS_VT_REAL && p3.type == SGS_VT_REAL ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.R >= p3.data.R ); break; }
+			VCOMPARE( >= ); break; }
+		case SGS_SI_GT: { ARGS_3;
+			if( p2.type == SGS_VT_INT && p3.type == SGS_VT_INT ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.I > p3.data.I ); break; }
+			if( p2.type == SGS_VT_REAL && p3.type == SGS_VT_REAL ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.R > p3.data.R ); break; }
+			VCOMPARE( > ); break; }
+		case SGS_SI_LTE: { ARGS_3;
+			if( p2.type == SGS_VT_INT && p3.type == SGS_VT_INT ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.I <= p3.data.I ); break; }
+			if( p2.type == SGS_VT_REAL && p3.type == SGS_VT_REAL ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.R <= p3.data.R ); break; }
+			VCOMPARE( <= ); break; }
 		case SGS_SI_RAWCMP: { ARGS_3; GETOP; var_setint( C, &p1, vm_compare( C, &p2, &p3 ) ); WRITEGET; break; }
 
 		case SGS_SI_ARRAY: { vm_make_array( C, argE, argC ); break; }

@@ -435,6 +435,22 @@ typedef struct _sgs_ShCtx sgs_ShCtx;
 /* VM interface */
 void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len );
 void sgsVM_VarDestroyObject( SGS_CTX, sgs_VarObj* O );
+void sgsVM_DestroyVar( SGS_CTX, sgs_Variable* p );
+
+#if 1
+#define IS_REFTYPE( type ) ((1<<(type))&0x2b0)
+#else
+#define IS_REFTYPE( type ) ( type == SGS_VT_STRING || type == SGS_VT_FUNC \
+	|| type == SGS_VT_OBJECT || type == SGS_VT_THREAD )
+#endif
+#define VAR_ACQUIRE( pvar ) { \
+	if( IS_REFTYPE( (pvar)->type ) ) ++*(pvar)->data.pRC; }
+#define VAR_RELEASE( pvar ) { \
+	if( IS_REFTYPE( (pvar)->type ) ){ \
+		--*(pvar)->data.pRC; \
+		if( (*(pvar)->data.pRC) <= 0 ){ sgsVM_DestroyVar( C, pvar ); } \
+	} \
+	(pvar)->type = SGS_VT_NULL; }
 
 size_t sgsVM_VarSize( const sgs_Variable* var );
 void sgsVM_VarDump( const sgs_Variable* var );
@@ -689,7 +705,17 @@ static const char* sgs_OpNames[] =
 sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate );
 void sgsCTX_FreeState( SGS_CTX );
 sgs_StackFrame* sgsCTX_AllocFrame( SGS_CTX );
-void sgsCTX_FreeFrame( SGS_CTX, sgs_StackFrame* F );
+
+#define sgsCTX_FreeFrame( F ) { \
+	SGS_SHCTX_USE; \
+	if( S->sf_pool_size >= SGS_STACKFRAMEPOOL_SIZE ){ \
+		sgs_Dealloc( F ); \
+		return; \
+	} \
+	F->next = S->sf_pool; \
+	S->sf_pool = F; \
+	S->sf_pool_size++; \
+}
 
 void sgsSTD_PostInit( SGS_CTX );
 SGSBOOL sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
