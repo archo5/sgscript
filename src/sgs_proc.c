@@ -2563,7 +2563,6 @@ static void vm_postcall( SGS_CTX, int rvc )
 	sgs_StkIdx stkoff = sf->stkoff;
 	sgs_StkIdx clsoff = sf->clsoff;
 	sgs_StkIdx args_from = sf->argsfrom;
-	sgs_iFunc* F = sf->func.data.F; // assuming reentrance only applies to SGS functions
 	
 	/* remove all stack items before the returned ones */
 	stk_clean( C, C->stack_base + stkcallbase, C->stack_top - rvc );
