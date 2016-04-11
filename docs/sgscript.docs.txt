@@ -5615,6 +5615,7 @@ This library includes functions and objects for parsing binary and text buffers.
 
 - binary format -- @fmt_pack, @fmt_unpack, @fmt_pack_count, @fmt_pack_size
 - base64 format -- @fmt_base64_encode, @fmt_base64_decode
+- custom format -- @fmt_custom_encode
 - text format -- @fmt_parser, @fmt_text, @fmt_charcc
 
 === Functions:
@@ -5625,6 +5626,7 @@ This library includes functions and objects for parsing binary and text buffers.
 - @fmt_pack_size - returns the number of bytes found in a packing format string
 - @fmt_base64_encode - encodes a byte buffer in base64 character buffer (A-Za-z0-9+/)
 - @fmt_base64_decode - decodes a base64 character buffer (A-Za-z0-9+/) to a byte buffer
+- @fmt_custom_encode - encodes a custom format (selected character codes to numeric version)
 - @fmt_text - formats specified variables according to the format string
 - @fmt_parser - creates a text parser object with the specified stream reading function
 - @fmt_string_parser - creates a text parser object that reads from the specified string
@@ -5720,6 +5722,34 @@ This library includes functions and objects for parsing binary and text buffers.
 - decoding is done using the table mentioned in @fmt_base64_encode()
 
     fmt_base64_decode( fmt_base64_encode( "hello world" ) ) == "hello world" // returns true
+
+
+# fmt_custom_encode [function]
+
+== fmt_custom_encode( string text, string class, string prefix, int format, int mindigits = 0, string postfix = "" )
+=== encodes a custom format (selected character codes to numeric version)
+
+Every character (byte) from `text` that matches `class` is converted to the following format:
+- `prefix`
+- number according to `format`, at least `mindigits` long
+- `postfix`
+
+`format` must be one of:
+- `FMT_NUMBER_BINARY` - binary (base 2) number
+- `FMT_NUMBER_OCTAL` - octal (base 8) number
+- `FMT_NUMBER_DECIMAL` - decimal (base 10) number
+- `FMT_NUMBER_HEX`, `FMT_NUMBER_HEX_LC` - lowercase hexadecimal (base 16) number
+- `FMT_NUMBER_HEX_UC` - uppercase hexadecimal (base 16) number
+
+Use case example - encode a string for C/C++ source code output:
+
+    // character class:
+    // - '^' - invert class (exclude the following characters/ranges)
+    // - <space>, '!' - characters to exclude (first printable characters, before quote)
+    // - '#-~' - character range to exclude (other printable characters, after quote)
+    // the extra set of quotes around hex code prevent hyperactive parsers from thinking ..
+    // .. that the following characters might be a part of the hex code
+    fmt_custom_encode( 'some text', "^ !#-~", '""\\x', FMT_NUMBER_HEX, 2, '""' )
 
 
 # fmt_text [function]

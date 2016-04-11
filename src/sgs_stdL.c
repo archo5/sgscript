@@ -630,21 +630,21 @@ static int sgsstd_fmt_custom_encode( SGS_CTX )
 			switch( numtype )
 			{
 			case FMT_NUMBER_BINARY:
-				while( chr && ndigs-- > 0 )
+				while( ndigs-- > 0 || chr )
 				{
 					*--p = (char)( ( chr & 1 ) + '0' );
 					chr >>= 1;
 				}
 				break;
 			case FMT_NUMBER_OCTAL:
-				while( chr && ndigs-- > 0 )
+				while( ndigs-- > 0 || chr )
 				{
 					*--p = (char)( ( chr & 0x7 ) + '0' );
 					chr >>= 3;
 				}
 				break;
 			case FMT_NUMBER_DECIMAL:
-				while( chr && ndigs-- > 0 )
+				while( ndigs-- > 0 || chr )
 				{
 					*--p = (char)( ( chr % 10 ) + '0' );
 					chr /= 10;
@@ -652,13 +652,13 @@ static int sgsstd_fmt_custom_encode( SGS_CTX )
 				break;
 			case FMT_NUMBER_HEX:
 			case FMT_NUMBER_HEX_LC:
-				while( chr && ndigs-- > 0 )
+				while( ndigs-- > 0 || chr )
 				{
 					*--p = lchex[ chr & 0xf ];
 					chr >>= 4;
 				}
 			case FMT_NUMBER_HEX_UC:
-				while( chr && ndigs-- > 0 )
+				while( ndigs-- > 0 || chr )
 				{
 					*--p = uchex[ chr & 0xf ];
 					chr >>= 4;
@@ -1623,6 +1623,16 @@ static int sgsstd_fmt_charcc( SGS_CTX )
 }
 
 
+static const sgs_RegIntConst f_iconsts[] =
+{
+	{ "FMT_NUMBER_BINARY", FMT_NUMBER_BINARY },
+	{ "FMT_NUMBER_OCTAL", FMT_NUMBER_OCTAL },
+	{ "FMT_NUMBER_DECIMAL", FMT_NUMBER_DECIMAL },
+	{ "FMT_NUMBER_HEX", FMT_NUMBER_HEX },
+	{ "FMT_NUMBER_HEX_UC", FMT_NUMBER_HEX_UC },
+	{ "FMT_NUMBER_HEX_LC", FMT_NUMBER_HEX_LC },
+};
+
 static const sgs_RegFuncConst f_fconsts[] =
 {
 	STDLIB_FN( fmt_pack ), STDLIB_FN( fmt_pack_count ),
@@ -1636,6 +1646,7 @@ static const sgs_RegFuncConst f_fconsts[] =
 
 void sgs_LoadLib_Fmt( SGS_CTX )
 {
+	sgs_RegIntConsts( C, f_iconsts, SGS_ARRAY_SIZE( f_iconsts ) );
 	sgs_RegFuncConsts( C, f_fconsts, SGS_ARRAY_SIZE( f_fconsts ) );
 }
 

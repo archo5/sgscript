@@ -20,6 +20,13 @@ testEqual( fmt_base64_decode( fmt_base64_encode( "the red fo" ) ), "the red fo",
 testEqual( fmt_base64_decode( fmt_base64_encode( "the red fox" ) ), "the red fox", "base64 roundtrip - 11 chars" );
 testEqual( fmt_base64_decode( fmt_base64_encode( "the red foxx" ) ), "the red foxx", "base64 roundtrip - 12 chars" );
 
+	section( "fmt_custom_encode" );
+ERRORS = "";
+testEqual( fmt_custom_encode( "abcdef", "abc", ":", FMT_NUMBER_HEX ), ":61:62:63def", "custom enc - basic test" );
+// escape all unprintable characters and quote (") as ""\xHH""
+testEqual( fmt_custom_encode( 'a"b c\nd', "^ !#-~", '""\\x', FMT_NUMBER_HEX, 2, '""' ), """a""\x22""b c""\x0a""d""", "custom enc - C encoding" );
+testEqual( ERRORS, "", "- no errors" );
+
 	section( "fmt_file_parser" );
 f = io_file( "tests/!API_TF_fmt.sgs", FILE_READ );
 testEqual( typeof(f), "file", "file was loaded?" );
