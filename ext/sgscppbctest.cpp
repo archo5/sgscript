@@ -15,6 +15,21 @@ Account::Handle pushAccount( SGS_CTX, sgsString name )
 	return Account::Handle( acc );
 }
 
+int featureTests( SGS_CTX )
+{
+	puts( "> feature tests..." );
+	sgsString a, b, c( C, "test" );
+	if( a != b ) return 1;
+	if( !a.equals( "" ) ) return 2;
+	if( a.equals( "c" ) ) return 3;
+	if( !a.same_as( b ) ) return 4;
+	if( a.same_as( c ) ) return 5;
+	if( a.not_null() ) return 6;
+	if( !c.not_null() ) return 7;
+	puts( "- done!" );
+	return 0;
+}
+
 int main( int argc, char** argv )
 {
 	printf( "\n//\n/// SGScript / CPPBC test\n//\n" );
@@ -23,6 +38,10 @@ int main( int argc, char** argv )
 	SGS_UNUSED( mbnt );
 	
 	SGS_CTX = sgs_CreateEngine();
+	
+	int ret = featureTests( C );
+	if( ret )
+		return ret;
 	
 	printf( "\n compare two null variables (use memcheck to verify): %s\n", sgsVariable() == sgsVariable() ? "true" : "false" );
 	

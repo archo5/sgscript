@@ -406,9 +406,10 @@ public:
 	bool operator != ( const sgsString& s ) const { return !same_as( s ); }
 	bool same_as( const sgsString& s ) const { return str == s.str; }
 	
-	bool equals( const char* s ) const { return strcmp( sgs_str_c_cstr( str ), s ) == 0; }
-	bool equals( const char* s, size_t sz ) const { return sz == str->size &&
-		memcmp( sgs_str_c_cstr( str ), s, sz ) == 0; }
+	bool equals( const char* s ) const { if( !str && !*s ) return true;
+		return str && strcmp( sgs_str_c_cstr( str ), s ) == 0; }
+	bool equals( const char* s, size_t sz ) const { if( !str && !sz ) return true;
+		return str && sz == str->size && memcmp( sgs_str_c_cstr( str ), s, sz ) == 0; }
 	
 	void push( sgs_Context* c ) const { assert( c ); sgs_Variable v;
 		v.type = str ? SGS_VT_STRING : SGS_VT_NULL; v.data.S = str; sgs_PushVariable( c, v ); }
