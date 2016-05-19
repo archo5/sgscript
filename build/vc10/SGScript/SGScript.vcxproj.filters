@@ -11,6 +11,7 @@
     <ClCompile Include="..\..\..\src\sgs_stdL.c" />
     <ClCompile Include="..\..\..\src\sgs_xpc.c" />
     <ClCompile Include="..\..\..\src\sgs_regex.c" />
+    <ClCompile Include="..\..\..\src\sgs_srlz.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\sgs_proc.h" />

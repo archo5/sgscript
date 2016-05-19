@@ -62,7 +62,7 @@ endif
 make: $(OUTFILE)
 
 DEPS = $(patsubst %,src/%.h,sgs_int sgs_regex sgs_util sgscript)
-OBJ = $(patsubst %,obj/sgs_%.o,bcg ctx fnt proc regex std stdL tok util xpc)
+OBJ = $(patsubst %,obj/sgs_%.o,bcg ctx fnt proc regex srlz std stdL tok util xpc)
 
 lib/libsgscript.a: $(OBJ)
 	ar rcs $@ $(OBJ)

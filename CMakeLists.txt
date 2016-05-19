@@ -36,6 +36,7 @@ set( SGSCRIPT_FILES
 	src/sgs_fnt.c
 	src/sgs_proc.c
 	src/sgs_regex.c
+	src/sgs_srlz.c
 	src/sgs_std.c
 	src/sgs_stdL.c
 	src/sgs_tok.c
