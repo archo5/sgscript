@@ -45,6 +45,7 @@ FILES =
 	"sgs_fnt.c",
 	"sgs_proc.c",
 	"sgs_regex.c",
+	"sgs_srlz.c",
 	"sgs_std.c",
 	"sgs_util.c",
 	"sgs_tok.c",

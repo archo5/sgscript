@@ -3854,82 +3854,35 @@ static int sgsstd_gc_collect( SGS_CTX )
 }
 
 
-static int sgsstd_serialize_core( SGS_CTX, int which )
+static int sgsstd_serialize( SGS_CTX )
 {
-	sgs_Variable var;
+	sgs_Int which = 2;
 	
-	if( !sgs_LoadArgs( C, "v.", &var ) )
+	SGSFN( "serialize" );
+	if( !sgs_LoadArgs( C, "?v|i", &which ) )
 		return 0;
 	
-	if( which )
-		sgs_SerializeV2( C, var );
-	else
-		sgs_SerializeV1( C, var );
+	if( which != 1 && which != 2 )
+		return sgs_Msg( C, SGS_ERROR, "bad serialization mode" );
+	
+	sgs_SerializeExt( C, sgs_StackItem( C, 0 ), (int) which );
 	return 1;
 }
 
-static int sgsstd_serialize( SGS_CTX ){ SGSFN( "serialize" ); return sgsstd_serialize_core( C, 0 ); }
-static int sgsstd_serialize2( SGS_CTX ){ SGSFN( "serialize2" ); return sgsstd_serialize_core( C, 1 ); }
 
-
-static int check_arrayordict_fn( SGS_CTX, int argid, va_list args, int flags )
+static int sgsstd_unserialize( SGS_CTX )
 {
-	uint32_t ty = sgs_ItemType( C, argid );
-	if( ty != SGS_VT_OBJECT || (
-		!sgs_IsObject( C, argid, sgsstd_array_iface ) &&
-		!sgs_IsObject( C, argid, sgsstd_dict_iface ) ) )
-		return sgs_ArgErrorExt( C, argid, 0, "array or dict", "" );
-	return 1;
-}
-
-static int sgsstd_unserialize_core( SGS_CTX, int which )
-{
-	int ret;
-	sgs_StkIdx ssz = sgs_StackSize( C ), dictpos;
-	sgs_Variable env;
+	sgs_Int which = 2;
 	
-	if( !sgs_LoadArgs( C, "?s|x", check_arrayordict_fn ) )
+	SGSFN( "unserialize" );
+	if( !sgs_LoadArgs( C, "?s|i", &which ) )
 		return 0;
 	
-	if( ssz >= 2 )
-	{
-		sgs_GetEnv( C, &env );
-		if( sgs_IsObject( C, 1, sgsstd_array_iface ) )
-		{
-			dictpos = sgs_StackSize( C );
-			sgs_CreateDict( C, NULL, 0 );
-			sgs_PushIterator( C, sgs_StackItem( C, 1 ) );
-			while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
-			{
-				sgs_IterPushData( C, sgs_StackItem( C, -1 ), 0, 1 );
-				sgs_ToString( C, -1 );
-				sgs_PushIndex( C, env, sgs_StackItem( C, -1 ), SGS_FALSE );
-				sgs_SetIndex( C, sgs_StackItem( C, dictpos ), sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), 0 );
-				sgs_Pop( C, 2 ); /* pop name and value */
-			}
-			sgs_Pop( C, 1 ); /* pop iterator */
-		}
-		else
-			dictpos = 1;
-		
-		sgs_SetEnv( C, sgs_StackItem( C, dictpos ) );
-	}
+	if( which != 1 && which != 2 )
+		return sgs_Msg( C, SGS_ERROR, "bad serialization mode" );
 	
-	ret = which
-		? sgs_UnserializeV2( C, sgs_StackItem( C, 0 ) )
-		: sgs_UnserializeV1( C, sgs_StackItem( C, 0 ) );
-	
-	if( ssz >= 2 )
-	{
-		sgs_SetEnv( C, env );
-		sgs_Release( C, &env );
-	}
-	
-	return ret;
+	return sgs_UnserializeExt( C, sgs_StackItem( C, 0 ), (int) which );
 }
-
-static int sgsstd_unserialize( SGS_CTX ){ SGSFN( "unserialize" ); return sgsstd_unserialize_core( C, 0 ); }
-static int sgsstd_unserialize2( SGS_CTX ){ SGSFN( "unserialize2" ); return sgsstd_unserialize_core( C, 1 ); }
 
 
 static int sgsstd_sgson_encode( SGS_CTX )
@@ -4034,7 +3987,6 @@ static sgs_RegFuncConst regfuncs[] =
 	STDLIB_FN( dumpvar ), STDLIB_FN( dumpvar_ext ),
 	STDLIB_FN( gc_collect ),
 	STDLIB_FN( serialize ), STDLIB_FN( unserialize ),
-	STDLIB_FN( serialize2 ), STDLIB_FN( unserialize2 ),
 	STDLIB_FN( sgson_encode ), STDLIB_FN( sgson_decode ),
 };
 

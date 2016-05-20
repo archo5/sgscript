@@ -45,9 +45,10 @@ function testfn(x) use(testfn_clsr){ println(testfn_clsr,x); yield(x); }
 	co = co_create(function(x) use(anon_clsr){ for(i=0;i<2;++i){ testfn(anon_clsr$i$":"$x); } return "end"; });
 	testEqual( typeof(co), "thread", "[srlz] coroutine - created" );
 	testEqual( co_resume(co,"text"), "[cl] 0:text", "[srlz] coroutine - resume [1]" );
-	cos = serialize2( co ); testEqual( typeof(cos), "string", "[srlz] coroutine - serialized successfully" );
+	// serialize -- assuming default mode = 2, which supports threads
+	cos = serialize( co ); testEqual( typeof(cos), "string", "[srlz] coroutine - serialized successfully" );
 	println( "size of the serialized coroutine: " $ cos.length );
-	co = unserialize2( cos ); testEqual( typeof(co), "thread", "[srlz] coroutine - unserialized successfully" );
+	co = unserialize( cos ); testEqual( typeof(co), "thread", "[srlz] coroutine - unserialized successfully" );
 	testEqual( co_resume(co), "[cl] 1:text", "[srlz] coroutine - resume [2]" );
 	testEqual( co_resume(co), "end", "[srlz] coroutine - resume [3,final]" );
 	testEqual( ERRORS, "", "[srlz] coroutine - no errors" );
@@ -55,7 +56,7 @@ function testfn(x) use(testfn_clsr){ println(testfn_clsr,x); yield(x); }
 	testEqual( ERRORS, "[W:co_resume(): coroutine is finished, cannot resume]" );
 	// ...and again!
 	ERRORS = "";
-	co = unserialize2( cos ); testEqual( typeof(co), "thread", "[srlz #2] coroutine - unserialized successfully" );
+	co = unserialize( cos ); testEqual( typeof(co), "thread", "[srlz #2] coroutine - unserialized successfully" );
 	testEqual( co_resume(co), "[cl] 1:text", "[srlz #2] coroutine - resume [2]" );
 	testEqual( co_resume(co), "end", "[srlz #2] coroutine - resume [3,final]" );
 	testEqual( ERRORS, "", "[srlz #2] coroutine - no errors" );

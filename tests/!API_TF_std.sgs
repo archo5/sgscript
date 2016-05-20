@@ -103,24 +103,26 @@ test__f();
 testEqual( ERRORS, "", "_F/_T - no access errors" );
 
 	section( "serialization - mode 1" );
+function serialize1( x ){ return serialize( x, 1 ); }
+function unserialize1( x ){ return unserialize( x, 1 ); }
 ERRORS = "";
-testEqual( serialize(null), "P\x00", "serialize - null" );
-testEqual( unserialize(serialize(null)), null, "[un]-serialize - null" );
-testEqual( serialize(true), "P\x01\x01", "serialize - bool" );
-testEqual( unserialize(serialize(true)), true, "[un]-serialize - bool" );
-testEqual( unserialize(serialize(-14328)), -14328, "[un]-serialize - int" );
-testEqual( unserialize(serialize(-143.28)), -143.28, "[un]-serialize - real" );
-testEqual( unserialize(serialize("test")), "test", "[un]-serialize - string" );
-testEqual( string_part(serialize(mostempty),0,2), "P\x05", "serialize - function - first bytes" );
-testEqual( typeof(unserialize(serialize(mostempty))), "func", "[un]-serialize - function (no errors)" );
-testEqual( string_part(serialize(section),0,2), "P\x05", "serialize - function 2 - first bytes" );
-testEqual( typeof(unserialize(serialize(section))), "func", "[un]-serialize - function 2 (no errors)" );
-testEqual( typeof(unserialize(serialize([]))), "array", "[un]-serialize - empty array (no errors)" );
-testEqual( typeof(unserialize(serialize({}))), "dict", "[un]-serialize - empty dict (no errors)" );
-testEqual( typeof(unserialize(serialize(map()))), "map", "[un]-serialize - empty map (no errors)" );
-testEqual( typeof(unserialize(serialize([1,true]))), "array", "[un]-serialize - used array (no errors)" );
-testEqual( typeof(unserialize(serialize({a=1,b=2}))), "dict", "[un]-serialize - used dict (no errors)" );
-testEqual( typeof(unserialize(serialize(map("a",1,"b",2)))), "map", "[un]-serialize - used map (no errors)" );
+testEqual( serialize1(null), "P\x00", "serialize - null" );
+testEqual( unserialize1(serialize1(null)), null, "[un]-serialize - null" );
+testEqual( serialize1(true), "P\x01\x01", "serialize - bool" );
+testEqual( unserialize1(serialize1(true)), true, "[un]-serialize - bool" );
+testEqual( unserialize1(serialize1(-14328)), -14328, "[un]-serialize - int" );
+testEqual( unserialize1(serialize1(-143.28)), -143.28, "[un]-serialize - real" );
+testEqual( unserialize1(serialize1("test")), "test", "[un]-serialize - string" );
+testEqual( string_part(serialize1(mostempty),0,2), "P\x05", "serialize - function - first bytes" );
+testEqual( typeof(unserialize1(serialize1(mostempty))), "func", "[un]-serialize - function (no errors)" );
+testEqual( string_part(serialize1(section),0,2), "P\x05", "serialize - function 2 - first bytes" );
+testEqual( typeof(unserialize1(serialize1(section))), "func", "[un]-serialize - function 2 (no errors)" );
+testEqual( typeof(unserialize1(serialize1([]))), "array", "[un]-serialize - empty array (no errors)" );
+testEqual( typeof(unserialize1(serialize1({}))), "dict", "[un]-serialize - empty dict (no errors)" );
+testEqual( typeof(unserialize1(serialize1(map()))), "map", "[un]-serialize - empty map (no errors)" );
+testEqual( typeof(unserialize1(serialize1([1,true]))), "array", "[un]-serialize - used array (no errors)" );
+testEqual( typeof(unserialize1(serialize1({a=1,b=2}))), "dict", "[un]-serialize - used dict (no errors)" );
+testEqual( typeof(unserialize1(serialize1(map("a",1,"b",2)))), "map", "[un]-serialize - used map (no errors)" );
 usedarray = [1,2,3,4,1,2,3,4];
 sstruct = {
 	"0" = null,
@@ -136,19 +138,21 @@ sstruct = {
 };
 sstruct_string = "{0=null,a=false,b=true,c=0,d=12124,e=-89235,f=0,g=12.346,"
 	$"h=,i=abc..,j=function,k=array,l=array,m=dict,n=dict,o=map,p=array,q=array}";
-testEqual( typeof(serialize(sstruct)), "string", "serialize - no errors" );
-testEqual( ''$unserialize(serialize(sstruct)), sstruct_string, "(un)serialize - roundtrip" );
+testEqual( typeof(serialize1(sstruct)), "string", "serialize - no errors" );
+testEqual( ''$unserialize1(serialize1(sstruct)), sstruct_string, "(un)serialize - roundtrip" );
 ssstr =
 	"P\x04\x01\x00\x00\x00k"$
 	"P\x04\x05\x00\x00\x00pcallS"$
 	"P\x04\x01\x00\x00\x00m"$
 	"P\x04\x05\x00\x00\x00arrayS"$
 	"C\x04\x00\x00\x00\x04dict\x00";
-testEqual( serialize({k=pcall,m=array}), ssstr, "serialize symbols - no errors" );
-testEqual( ''$unserialize(serialize({k=pcall,m=array})), "{k=C function,m=dict}", "(un)serialize symbols - roundtrip" );
+testEqual( serialize1({k=pcall,m=array}), ssstr, "serialize symbols - no errors" );
+testEqual( ''$unserialize1(serialize1({k=pcall,m=array})), "{k=C function,m=dict}", "(un)serialize symbols - roundtrip" );
 testEqual( ERRORS, "", "serialization - errors" );
 
 	section( "serialization - mode 2" );
+function serialize2( x ){ return serialize( x, 2 ); }
+function unserialize2( x ){ return unserialize( x, 2 ); }
 ERRORS = "";
 testEqual( serialize2(null), "P\x00", "serialize2 - null" );
 testEqual( unserialize2(serialize2(null)), null, "[un]-serialize2 - null" );
@@ -170,7 +174,7 @@ testEqual( typeof(unserialize2(serialize2({a=1,b=2}))), "dict", "[un]-serialize2
 testEqual( typeof(unserialize2(serialize2(map("a",1,"b",2)))), "map", "[un]-serialize2 - used map (no errors)" );
 testEqual( typeof(serialize2(sstruct)), "string", "serialize2 - no errors" );
 testEqual( ''$unserialize2(serialize2(sstruct)), sstruct_string, "(un)serialize2 - roundtrip" );
-testEqual( serialize(sstruct).length > serialize2(sstruct).length, true, "serialize > serialize2 (output size)" );
+testEqual( serialize1(sstruct).length > serialize2(sstruct).length, true, "serialize > serialize2 (output size)" );
 ssstr =
 	"P\x04\x01\x00\x00\x00k"$
 	"P\x04\x05\x00\x00\x00pcallS\x01\x00\x00\x00"$

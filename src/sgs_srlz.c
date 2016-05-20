@@ -363,7 +363,7 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC ||
 		var.type == SGS_VT_FUNC || var.type == SGS_VT_THREAD )
 	{
-		sgs_Variable sym;
+		sgs_Variable sym = sgs_MakeNull();
 		if( sgs_GetSymbol( C, var, &sym ) && sym.type == SGS_VT_STRING )
 		{
 			sgs_SerializeInt_V1( C, sym );
@@ -666,10 +666,14 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		sgs_StkIdx argidx;
 		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
 		if( vv )
+		{
 			argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
+			sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+			goto fail;
+		}
 		else
 		{
-			sgs_Variable sym;
+			sgs_Variable sym = sgs_MakeNull();
 			if( sgs_GetSymbol( C, var, &sym ) && sym.type == SGS_VT_STRING )
 			{
 				sgs_SerializeInt_V2( C, sym );
@@ -1064,31 +1068,219 @@ fail:
 }
 
 
-void sgs_Serialize( SGS_CTX, sgs_Variable var )
+/* Serialization mode 3 - text
+	- [...] - array
+	- {...} - dict
+	- map{...} - map
+	- <ident>(...) - custom object
+*/
+typedef struct s3callinfo
 {
-	if( C->state & SGS_CNTL_SERIALMODE )
-		sgs_SerializeInt_V2( C, var );
-	else
-		sgs_SerializeInt_V1( C, var );
+	sgs_Variable func_name; /* string */
+	int32_t arg_offset;
+	int32_t arg_count;
+}
+s3callinfo;
+
+typedef struct sgs_serialize3_data
+{
+	int mode;
+	/* serialized variable set, also maps objects to call info, offset at value.data.I */
+	sgs_VHTable servartable;
+	/* s3callinfo[], contains function call info */
+	sgs_MemBuf callinfo;
+	/* int32_t[], contains function call arguments, first after offset: int count */
+	sgs_MemBuf callargs;
+	/* sgs_Variable[], contains arguments for sgs_SerializeObject */
+	sgs_MemBuf argarray;
+	/* the current serialized object */
+	sgs_VarObj* curObj;
+}
+sgs_serialize3_data;
+
+static void sgs_SerializeInt_V3( SGS_CTX, sgs_Variable var )
+{
+	int ret = SGS_TRUE;
+	void* prev_serialize_state = C->serialize_state;
+	sgs_serialize3_data SD, *pSD;
+	int ep = !C->serialize_state || *(int*)C->serialize_state != 3;
+	
+	if( ep )
+	{
+		SD.mode = 3;
+		sgs_vht_init( &SD.servartable, C, 64, 64 );
+		SD.callinfo = sgs_membuf_create();
+		SD.callargs = sgs_membuf_create();
+		SD.argarray = sgs_membuf_create();
+		SD.curObj = NULL;
+		C->serialize_state = &SD;
+	}
+	pSD = (sgs_serialize3_data*) C->serialize_state;
+	
+	/* SYMBOLS */
+	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC ||
+		var.type == SGS_VT_FUNC || var.type == SGS_VT_THREAD || var.type == SGS_VT_PTR )
+	{
+		int32_t argidx;
+		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
+		if( vv )
+		{
+			argidx = (int32_t) ( vv - pSD->servartable.vars );
+			sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+			goto fail;
+		}
+		else
+		{
+			sgs_Variable sym = sgs_MakeNull();
+			if( sgs_GetSymbol( C, var, &sym ) && sym.type == SGS_VT_STRING )
+			{
+				int32_t call_info_offset = (int32_t) ( pSD->callinfo.size / 4 );
+				int32_t call_args_offset = (int32_t) ( pSD->callargs.size / 4 );
+				s3callinfo ci = { sym, call_args_offset, 1 };
+				
+				sgs_SerializeInt_V3( C, sym ); /* this is expected to succeed (type=string) */
+				
+				/* append sym_get call argument */
+				sgs_membuf_appbuf( &pSD->callargs, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
+				/* pop argument */
+				sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - sizeof(argidx), pSD->argarray.size );
+				/* append sym_get call info */
+				sgs_membuf_appbuf( &pSD->callinfo, C, &ci, sizeof(ci) );
+				
+				/* create variable resolve */
+				sgs_Variable idxvar;
+				argidx = sgs_vht_size( &pSD->servartable );
+				idxvar.type = SGS_VT_INT;
+				idxvar.data.I = call_info_offset;
+				sgs_vht_set( &pSD->servartable, C, &var, &idxvar );
+				
+				/* push new argument */
+				sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+				goto fail;
+			}
+			sgs_Release( C, &sym );
+		}
+	}
+	
+	/* SPECIAL TYPES */
+	if( var.type == SGS_VT_THREAD )
+	{
+		sgs_Msg( C, SGS_WARNING, "Serialization mode 3 (text)"
+			" does not support thread serialization" );
+		var = sgs_MakeNull();
+	}
+	else if( var.type == SGS_VT_FUNC || var.type == SGS_VT_CFUNC )
+	{
+		sgs_Msg( C, SGS_WARNING, "Serialization mode 3 (text)"
+			" does not support function serialization" );
+		var = sgs_MakeNull();
+	}
+	else if( var.type == SGS_VT_PTR )
+	{
+		sgs_Msg( C, SGS_WARNING, "Serialization mode 3 (text)"
+			" does not support pointer serialization" );
+		var = sgs_MakeNull();
+	}
+	
+	/* OBJECTS */
+	if( var.type == SGS_VT_OBJECT )
+	{
+		sgs_VarObj* O = var.data.O;
+		sgs_VarObj* prevObj = pSD->curObj;
+		_STACK_PREPARE;
+		if( !O->iface->serialize )
+		{
+			sgs_Msg( C, SGS_WARNING, "Cannot serialize object of type '%s'", O->iface->name );
+			var = sgs_MakeNull();
+		}
+		else
+		{
+			pSD->curObj = O;
+			_STACK_PROTECT;
+			ret = SGS_SUCCEEDED( O->iface->serialize( C, O ) );
+			_STACK_UNPROTECT;
+			pSD->curObj = prevObj;
+			if( ret == SGS_FALSE )
+			{
+				sgs_Msg( C, SGS_ERROR, "Failed to serialize object of type '%s'", O->iface->name );
+				goto fail;
+			}
+		}
+	}
+	else /* null, bool, int, real, string */
+	{
+		int32_t argidx;
+		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
+		if( vv )
+			argidx = (int32_t) ( vv - pSD->servartable.vars );
+		else
+		{
+			sgs_Variable val = sgs_MakeNull();
+			argidx = sgs_vht_size( &pSD->servartable );
+			sgs_vht_set( &pSD->servartable, C, &var, &val );
+		}
+		sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+	}
+	
+fail:
+	if( ep )
+	{
+		/* serialize the variable tree */
+		sgs_PushNull( C );
+		
+		/* free the serialization state */
+		sgs_vht_free( &SD.servartable, C );
+		sgs_membuf_destroy( &SD.argarray, C );
+		sgs_membuf_destroy( &SD.callinfo, C );
+		sgs_membuf_destroy( &SD.callargs, C );
+		C->serialize_state = prev_serialize_state;
+	}
 }
 
-void sgs_SerializeObject( SGS_CTX, sgs_StkIdx args, const char* func )
+
+void sgs_SerializeExt( SGS_CTX, sgs_Variable var, int mode )
+{
+	if( mode == SGS_SERIALIZE_DEFAULT )
+		mode = C->serialize_state ? *(int*) C->serialize_state : 2;
+	
+	if( mode == 3 )
+		sgs_SerializeInt_V3( C, var );
+	else if( mode == 2 )
+		sgs_SerializeInt_V2( C, var );
+	else if( mode == 1 )
+		sgs_SerializeInt_V1( C, var );
+	else
+	{
+		sgs_PushNull( C );
+		sgs_Msg( C, SGS_APIERR, "sgs_SerializeExt: bad mode (%d)", mode );
+	}
+}
+
+void sgs_SerializeObjectExt( SGS_CTX, sgs_StkIdx args, const char* func, int mode )
 {
 	size_t fnsize = strlen( func );
 	if( fnsize >= 255 )
 	{
-		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObject: function name length exceeds 255" );
+		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObject(Ext): function name length exceeds 255" );
 		return;
 	}
-	if( C->state & SGS_CNTL_SERIALMODE )
+	
+	if( mode == SGS_SERIALIZE_DEFAULT )
+		mode = C->serialize_state ? *(int*) C->serialize_state : 2;
+	
+	if( mode == 2 )
 		sgs_SerializeObjectInt_V2( C, args, func, fnsize );
-	else
+	else if( mode == 1 )
 		sgs_SerializeObjectInt_V1( C, args, func, fnsize );
+	else
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObjectExt: bad mode (%d)", mode );
+	}
 }
 
-SGSBOOL sgs_Unserialize( SGS_CTX, sgs_Variable var )
+SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode )
 {
-	SGSRESULT res;
+	SGSRESULT res = 0;
 	char* str = NULL, *strend;
 	sgs_SizeVal size = 0;
 	_STACK_PREPARE;
@@ -1102,50 +1294,20 @@ SGSBOOL sgs_Unserialize( SGS_CTX, sgs_Variable var )
 	
 	strend = str + size;
 	
+	if( mode == SGS_SERIALIZE_DEFAULT )
+		mode = C->serialize_state ? *(int*) C->serialize_state : 2;
+	
 	_STACK_PROTECT;
-	if( C->state & SGS_CNTL_SERIALMODE )
+	if( mode == 2 )
 		res = sgs_UnserializeInt_V2( C, str, strend );
-	else
+	else if( mode == 1 )
 		res = sgs_UnserializeInt_V1( C, str, strend );
+	else
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_UnserializeExt: bad mode (%d)", mode );
+	}
 	_STACK_UNPROTECT_SKIP( res );
 	return res;
-}
-
-
-void sgs_SerializeV1( SGS_CTX, sgs_Variable var )
-{
-	int32_t old;
-	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 1 );
-	sgs_Serialize( C, var );
-	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
-}
-
-SGSBOOL sgs_UnserializeV1( SGS_CTX, sgs_Variable var )
-{
-	SGSBOOL ret;
-	int32_t old;
-	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 1 );
-	ret = sgs_Unserialize( C, var );
-	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
-	return ret;
-}
-
-void sgs_SerializeV2( SGS_CTX, sgs_Variable var )
-{
-	int32_t old;
-	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 2 );
-	sgs_Serialize( C, var );
-	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
-}
-
-SGSBOOL sgs_UnserializeV2( SGS_CTX, sgs_Variable var )
-{
-	SGSBOOL ret;
-	int32_t old;
-	old = sgs_Cntl( C, SGS_CNTL_SERIALMODE, 2 );
-	ret = sgs_Unserialize( C, var );
-	sgs_Cntl( C, SGS_CNTL_SERIALMODE, old );
-	return ret;
 }
 
 
