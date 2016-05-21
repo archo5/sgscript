@@ -483,7 +483,7 @@ fail:
 
 void sgs_SerializeObjectInt_V1( SGS_CTX, sgs_StkIdx args, const char* func, size_t fnsize )
 {
-	sgs_serialize1_data* pSD;
+	sgs_serialize1_data* pSD = (sgs_serialize1_data*) C->serialize_state;
 	char pb[7] = { 'C', 0, 0, 0, 0, 0, 0 };
 	{
 		/* WP: they were pointless */
@@ -491,17 +491,10 @@ void sgs_SerializeObjectInt_V1( SGS_CTX, sgs_StkIdx args, const char* func, size
 		pb[2] = (char)((args>>8)&0xff);
 		pb[3] = (char)((args>>16)&0xff);
 		pb[4] = (char)((args>>24)&0xff);
+		/* WP: have error condition + sign interpretation doesn't matter */
+		pb[5] = (char) fnsize;
 	}
 	
-	if( !C->serialize_state || *(int*)C->serialize_state != 1 )
-	{
-		sgs_Msg( C, SGS_INTERR, "sgs_SerializeObjectInt_V1; serialization mode changed during serialization" );
-		return;
-	}
-	pSD = (sgs_serialize1_data*) C->serialize_state;
-	
-	/* WP: have error condition + sign interpretation doesn't matter */
-	pb[ 5 ] = (char) fnsize;
 	sgs_membuf_appbuf( &pSD->data, C, pb, 6 );
 	sgs_membuf_appbuf( &pSD->data, C, func, fnsize );
 	sgs_membuf_appbuf( &pSD->data, C, pb + 6, 1 );
@@ -831,19 +824,13 @@ void sgs_SerializeObjectInt_V2( SGS_CTX, sgs_StkIdx args, const char* func, size
 	sgs_VHTVar* vv;
 	sgs_Variable V;
 	sgs_StkIdx argidx;
-	sgs_serialize2_data* pSD;
-	if( !C->serialize_state || *(int*)C->serialize_state != 2 )
-	{
-		sgs_Msg( C, SGS_INTERR, "sgs_SerializeObjectInt_V2: serialization mode changed during serialization" );
-		return;
-	}
-	pSD = (sgs_serialize2_data*) C->serialize_state;
+	sgs_serialize2_data* pSD = (sgs_serialize2_data*) C->serialize_state;
 	
 	if( args < 0 || (size_t) args > pSD->argarray.size / sizeof(sgs_StkIdx) )
 	{
-		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObjectInt_V2: specified "
+		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObject: specified "
 			"more arguments than there are serialized items" );
-		return; /* too many arguments specified */
+		return;
 	}
 	/* WP: added error condition */
 	argsize = sizeof(sgs_StkIdx) * (size_t) args;
@@ -1098,7 +1085,7 @@ typedef struct sgs_serialize3_data
 }
 sgs_serialize3_data;
 
-static void sgs_SerializeInt_V3( SGS_CTX, sgs_Variable var )
+static void sgs_SerializeInt_V3( SGS_CTX, sgs_Variable var, const char* tab, sgs_SizeVal tablen )
 {
 	int ret = SGS_TRUE;
 	void* prev_serialize_state = C->serialize_state;
@@ -1136,9 +1123,11 @@ static void sgs_SerializeInt_V3( SGS_CTX, sgs_Variable var )
 			{
 				int32_t call_info_offset = (int32_t) ( pSD->callinfo.size / 4 );
 				int32_t call_args_offset = (int32_t) ( pSD->callargs.size / 4 );
-				s3callinfo ci = { sym, call_args_offset, 1 };
+				s3callinfo ci = { sgs_MakeNull(), call_args_offset, 1 };
+				sgs_InitString( C, &ci.func_name, "sym_get" );
 				
-				sgs_SerializeInt_V3( C, sym ); /* this is expected to succeed (type=string) */
+				/* this is expected to succeed (type=string) */
+				sgs_SerializeInt_V3( C, sym, tab, tablen );
 				
 				/* append sym_get call argument */
 				sgs_membuf_appbuf( &pSD->callargs, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
@@ -1231,10 +1220,66 @@ fail:
 		/* free the serialization state */
 		sgs_vht_free( &SD.servartable, C );
 		sgs_membuf_destroy( &SD.argarray, C );
+		{
+			s3callinfo* ci = (s3callinfo*) SD.callinfo.ptr;
+			s3callinfo* ciend = (s3callinfo*) ( SD.callinfo.ptr + SD.callinfo.size );
+			while( ci < ciend )
+			{
+				sgs_Release( C, &ci->func_name );
+				ci++;
+			}
+		}
 		sgs_membuf_destroy( &SD.callinfo, C );
 		sgs_membuf_destroy( &SD.callargs, C );
 		C->serialize_state = prev_serialize_state;
 	}
+}
+
+void sgs_SerializeObjectInt_V3( SGS_CTX, sgs_StkIdx args, const char* func, size_t fnsize )
+{
+	size_t argsize;
+	sgs_VHTVar* vv;
+	sgs_Variable V;
+	int32_t argidx;
+	sgs_serialize3_data* pSD = (sgs_serialize3_data*) C->serialize_state;
+	
+	if( args < 0 || (size_t) args > pSD->argarray.size / sizeof(int32_t) )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObject: specified "
+			"more arguments than there are serialized items" );
+		return;
+	}
+	/* WP: added error condition */
+	argsize = sizeof(int32_t) * (size_t) args;
+	
+	V.type = SGS_VT_OBJECT;
+	V.data.O = pSD->curObj;
+	vv = sgs_vht_get( &pSD->servartable, &V );
+	if( vv )
+		argidx = (int32_t) ( vv - pSD->servartable.vars );
+	else
+	{
+		int32_t call_info_offset = (int32_t) ( pSD->callinfo.size / 4 );
+		int32_t call_args_offset = (int32_t) ( pSD->callargs.size / 4 );
+		s3callinfo ci = { sgs_MakeNull(), call_args_offset, args };
+		sgs_InitStringBuf( C, &ci.func_name, func, (sgs_SizeVal) fnsize );
+		
+		/* append call arguments */
+		sgs_membuf_appbuf( &pSD->callargs, C, pSD->argarray.ptr + pSD->argarray.size - argsize, argsize );
+		/* pop arguments */
+		sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - argsize, pSD->argarray.size );
+		/* append call info */
+		sgs_membuf_appbuf( &pSD->callinfo, C, &ci, sizeof(ci) );
+		
+		/* create variable resolve */
+		sgs_Variable idxvar;
+		argidx = sgs_vht_size( &pSD->servartable );
+		idxvar.type = SGS_VT_INT;
+		idxvar.data.I = call_info_offset;
+		sgs_vht_set( &pSD->servartable, C, &V, &idxvar );
+	}
+	sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - argsize, pSD->argarray.size );
+	sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
 }
 
 
@@ -1244,7 +1289,7 @@ void sgs_SerializeExt( SGS_CTX, sgs_Variable var, int mode )
 		mode = C->serialize_state ? *(int*) C->serialize_state : 2;
 	
 	if( mode == 3 )
-		sgs_SerializeInt_V3( C, var );
+		sgs_SerializeInt_V3( C, var, NULL, 0 );
 	else if( mode == 2 )
 		sgs_SerializeInt_V2( C, var );
 	else if( mode == 1 )
@@ -1256,19 +1301,25 @@ void sgs_SerializeExt( SGS_CTX, sgs_Variable var, int mode )
 	}
 }
 
-void sgs_SerializeObjectExt( SGS_CTX, sgs_StkIdx args, const char* func, int mode )
+void sgs_SerializeObject( SGS_CTX, sgs_StkIdx args, const char* func )
 {
+	int mode;
 	size_t fnsize = strlen( func );
-	if( fnsize >= 255 )
+	if( !C->serialize_state )
 	{
-		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObject(Ext): function name length exceeds 255" );
+		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObject: called outside the serialization process" );
 		return;
 	}
+	if( fnsize >= 255 )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObject: function name length exceeds 255" );
+		return;
+	}
+	mode = *(int*) C->serialize_state;
 	
-	if( mode == SGS_SERIALIZE_DEFAULT )
-		mode = C->serialize_state ? *(int*) C->serialize_state : 2;
-	
-	if( mode == 2 )
+	if( mode == 3 )
+		sgs_SerializeObjectInt_V3( C, args, func, fnsize );
+	else if( mode == 2 )
 		sgs_SerializeObjectInt_V2( C, args, func, fnsize );
 	else if( mode == 1 )
 		sgs_SerializeObjectInt_V1( C, args, func, fnsize );

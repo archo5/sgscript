@@ -917,10 +917,9 @@ SGS_APIFUNC SGSBOOL sgs_Unset( SGS_CTX, sgs_Variable var, sgs_Variable key );
 SGS_APIFUNC SGSBOOL sgs_EventState( SGS_CTX, sgs_Variable evt, int state );
 
 SGS_APIFUNC void sgs_SerializeExt( SGS_CTX, sgs_Variable var, int mode );
-SGS_APIFUNC void sgs_SerializeObjectExt( SGS_CTX, sgs_StkIdx args, const char* func, int mode );
+SGS_APIFUNC void sgs_SerializeObject( SGS_CTX, sgs_StkIdx args, const char* func );
 SGS_APIFUNC SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode );
 #define sgs_Serialize( C, var ) sgs_SerializeExt( C, var, SGS_SERIALIZE_DEFAULT )
-#define sgs_SerializeObject( C, args, func ) sgs_SerializeObjectExt( C, args, func, SGS_SERIALIZE_DEFAULT )
 #define sgs_Unserialize( C, var ) sgs_UnserializeExt( C, var, SGS_SERIALIZE_DEFAULT )
 
 SGS_APIFUNC void sgs_SerializeSGSONFmt( SGS_CTX, sgs_Variable var, const char* tab );
