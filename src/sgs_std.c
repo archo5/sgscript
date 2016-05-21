@@ -3887,8 +3887,6 @@ static int sgsstd_unserialize( SGS_CTX )
 
 static int sgsstd_sgson_encode( SGS_CTX )
 {
-	sgs_MemBuf buf = sgs_membuf_create();
-	int ret;
 	const char* tab = NULL;
 	sgs_SizeVal tablen = 0;
 	
@@ -3896,17 +3894,8 @@ static int sgsstd_sgson_encode( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?v|m", &tab, &tablen ) )
 		return 0;
 	
-	sgs_PushVariable( C, sgs_StackItem( C, 0 ) );
-	ret = sgson_encode_var( C, &buf, 0, tab, tablen );
-	if( buf.size > 0x7fffffff )
-	{
-		ret = 0;
-		sgs_Msg( C, SGS_WARNING, "generated more string data than allowed to store" );
-	}
-	if( ret )
-		sgs_PushStringBuf( C, buf.ptr, (sgs_SizeVal) buf.size );
-	sgs_membuf_destroy( &buf, C );
-	return ret;
+	sgs_SerializeInt_V3( C, sgs_StackItem( C, 0 ), tab, tablen );
+	return 1;
 }
 
 static int sgsstd_sgson_decode( SGS_CTX )

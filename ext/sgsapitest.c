@@ -995,8 +995,9 @@ DEFINE_TEST( sgson_tools )
 	atf_clear_errors();
 	sgs_SerializeSGSONFmt( C, sgs_MakeCFunc( sgs_dummy_func ), NULL );
 	atf_assert( sgs_StackSize( C ) == 1 ); /* must still have a return value */
-	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_NULL ); /* ... which is null */
-	atf_check_errors( "[W:cannot encode functions, pointers or threads]" );
+	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_STRING ); /* ... which is the string 'null' */
+	atf_assert( !strcmp( sgs_GetStringPtr( C, -1 ), "null" ) );
+	atf_check_errors( "[W:serialization mode 3 (SGSON text) does not support function serialization]" );
 	sgs_Pop( C, 1 );
 	
 	/* try to trigger errors on unserialization */

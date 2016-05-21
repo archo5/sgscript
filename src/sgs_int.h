@@ -474,7 +474,7 @@ int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int* outrvc, 
 void sgsVM_PushClosures( SGS_CTX, sgs_Closure** cls, int num );
 
 
-int sgson_encode_var( SGS_CTX, sgs_MemBuf* buf, int depth, const char* tab, sgs_SizeVal tablen );
+void sgs_SerializeInt_V3( SGS_CTX, sgs_Variable var, const char* tab, sgs_SizeVal tablen );
 const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVal size, sgs_Variable proto );
 
 
