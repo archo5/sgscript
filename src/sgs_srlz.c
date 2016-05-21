@@ -1088,9 +1088,9 @@ typedef struct sgs_serialize3_data
 sgs_serialize3_data;
 
 #define sgson_tab( buf, C, depth, tab, tablen ) if( tab ){ \
-	int i = depth; \
+	int _i = depth; \
 	sgs_membuf_appchr( buf, C, '\n' ); \
-	while( i-- > 0 ) sgs_membuf_appbuf( buf, C, tab, (size_t) tablen ); }
+	while( _i-- > 0 ) sgs_membuf_appbuf( buf, C, tab, (size_t) tablen ); }
 
 #define sgs_tohex( c ) ("0123456789ABCDEF"[ (c) & 0x0f ])
 
@@ -1175,38 +1175,70 @@ static int sgson_encode_var( SGS_CTX, sgs_serialize3_data* data,
 	case SGS_VT_CFUNC:
 	case SGS_VT_PTR:
 	case SGS_VT_THREAD:
-		sgs_Msg( C, SGS_WARNING, "cannot encode functions, pointers or threads" );
-		return 0;
 	case SGS_VT_OBJECT:
+		/* if one of these exists, it has call info */
 		{
-			/* stack: Obj */
-			sgs_SizeVal arrsize = sgs_ArraySize( sgs_StackItem( C, -1 ) );
-			int isarr = arrsize >= 0, first = 1;
-			sgs_membuf_appchr( buf, C, isarr ? '[' : '{' );
-			if( sgs_PushIterator( C, sgs_StackItem( C, -1 ) ) == SGS_FALSE )
-				return 0;
-			/* stack: Obj, Iter */
-			depth++;
-			while( sgs_IterAdvance( C, sgs_StackItem( C, -1 ) ) > 0 )
+			int32_t call_info_index, *args, i;
+			s3callinfo* ci;
+			const char* fn_name;
+			size_t fn_size;
+			
+			sgs_VHTVar* vv = sgs_vht_get( &data->servartable, &var );
+			sgs_BreakIf( vv == NULL );
+			
+			if( vv->val.type != SGS_VT_INT )
 			{
-				/* stack: Obj, Iter */
-				sgs_IterPushData( C, sgs_StackItem( C, -1 ), 0, 1 );
-				/* stack: Obj, Iter, Value */
-				
-				if( first ) first = 0;
-				else sgs_membuf_appchr( buf, C, ',' );
-				
-				sgson_tab( buf, C, depth, tab, tablen );
-				if( !isarr )
+				/* error probably already printed */
+				sgs_membuf_appbuf( buf, C, "null", 4 );
+				return 1;
+			}
+			
+			call_info_index = (int32_t) vv->val.data.I;
+			ci = &((s3callinfo*) data->callinfo.ptr)[ call_info_index ];
+			args = &((int32_t*) data->callargs.ptr)[ ci->arg_offset ];
+			fn_name = sgs_var_cstr( &ci->func_name );
+			fn_size = (size_t) ci->func_name.data.S->size;
+			
+			if( fn_size == 5 && !strcmp( fn_name, "array" ) )
+			{
+				sgs_membuf_appchr( buf, C, '[' );
+				depth++;
+				for( i = 0; i < ci->arg_count; ++i )
 				{
-					sgs_IterPushData( C, sgs_StackItem( C, -2 ), 1, 0 );
-					/* stack: Obj, Iter, Value, Key */
-					sgs_ToString( C, -1 );
+					if( i )
+						sgs_membuf_appchr( buf, C, ',' );
+					sgson_tab( buf, C, depth, tab, tablen );
+					
+					sgs_PushVariable( C, data->servartable.vars[ args[ i ] ].key );
+					if( !sgson_encode_var( C, data, depth, tab, tablen ) )
+						return 0;
+					sgs_Pop( C, 1 );
+				}
+				depth--;
+				if( ci->arg_count )
+					sgson_tab( buf, C, depth, tab, tablen );
+				sgs_membuf_appchr( buf, C, ']' );
+			}
+			else if( ( fn_size == 4 && !strcmp( fn_name, "dict" ) )
+				|| ( fn_size == 3 && !strcmp( fn_name, "map" ) ) )
+			{
+				if( fn_size == 3 ) /* if map */
+					sgs_membuf_appbuf( buf, C, fn_name, fn_size );
+				sgs_membuf_appchr( buf, C, '{' );
+				depth++;
+				for( i = 0; i < ci->arg_count; i += 2 )
+				{
+					if( i )
+						sgs_membuf_appchr( buf, C, ',' );
+					sgson_tab( buf, C, depth, tab, tablen );
+					
+					/* key */
 					{
+						sgs_Variable key = data->servartable.vars[ args[ i ] ].key;
 						int wrotekey = 0;
 						/* small identifier optimization */
-						char* str = sgs_GetStringPtr( C, -1 );
-						char* end = str + sgs_GetStringSize( C, -1 );
+						char* str = sgs_GetStringPtrP( &key );
+						char* end = str + sgs_GetStringSizeP( &key );
 						if( end - str <= 32 && end - str > 0 && ( *str == '_' || sgs_isalpha( *str ) ) )
 						{
 							char* cc = str + 1;
@@ -1223,29 +1255,49 @@ static int sgson_encode_var( SGS_CTX, sgs_serialize3_data* data,
 								wrotekey = 1;
 							}
 						}
-						if( !wrotekey && !sgson_encode_var( C, data, depth, tab, tablen ) )
-							return 0;
+						
+						if( wrotekey == 0 )
+						{
+							sgs_PushVariable( C, key );
+							if( !sgson_encode_var( C, data, depth, tab, tablen ) )
+								return 0;
+							sgs_Pop( C, 1 );
+						}
 					}
+					
+					/* = */
 					if( tab )
 						sgs_membuf_appbuf( buf, C, " = ", 3 );
 					else
 						sgs_membuf_appchr( buf, C, '=' );
 					
+					/* value */
+					sgs_PushVariable( C, data->servartable.vars[ args[ i + 1 ] ].key );
+					if( !sgson_encode_var( C, data, depth, tab, tablen ) )
+						return 0;
 					sgs_Pop( C, 1 );
 				}
-				/* stack: Obj, Iter, Value */
-				if( !sgson_encode_var( C, data, depth, tab, tablen ) )
-					return 0;
-				/* stack: -- (?) */
-				sgs_Pop( C, 1 );
-				/* stack: Obj, Iter */
+				depth--;
+				if( ci->arg_count )
+					sgson_tab( buf, C, depth, tab, tablen );
+				sgs_membuf_appchr( buf, C, '}' );
 			}
-			sgs_Pop( C, 1 );
-			/* stack: Obj */
-			depth--;
-			if( arrsize != 0 )
-				sgson_tab( buf, C, depth, tab, tablen );
-			sgs_membuf_appchr( buf, C, isarr ? ']' : '}' );
+			else /* function call */
+			{
+				sgs_membuf_appbuf( buf, C, fn_name, fn_size );
+				sgs_membuf_appchr( buf, C, '(' );
+				for( i = 0; i < ci->arg_count; ++i )
+				{
+					if( i )
+						sgs_membuf_appbuf( buf, C, ", ", 2 );
+					
+					sgs_PushVariable( C, data->servartable.vars[ args[ i ] ].key );
+					if( !sgson_encode_var( C, data, depth, tab, tablen ) )
+						return 0;
+					sgs_Pop( C, 1 );
+				}
+				sgs_membuf_appchr( buf, C, ')' );
+			}
 			return 1;
 		}
 	}
@@ -1289,13 +1341,14 @@ void sgs_SerializeInt_V3( SGS_CTX, sgs_Variable var, const char* tab, sgs_SizeVa
 			sgs_Variable sym = sgs_MakeNull();
 			if( sgs_GetSymbol( C, var, &sym ) && sym.type == SGS_VT_STRING )
 			{
-				int32_t call_info_offset = (int32_t) ( pSD->callinfo.size / 4 );
+				int32_t call_info_offset = (int32_t) ( pSD->callinfo.size / sizeof(s3callinfo) );
 				int32_t call_args_offset = (int32_t) ( pSD->callargs.size / 4 );
 				s3callinfo ci = { sgs_MakeNull(), call_args_offset, 1 };
 				sgs_InitString( C, &ci.func_name, "sym_get" );
 				
 				/* this is expected to succeed (type=string) */
 				sgs_SerializeInt_V3( C, sym, tab, tablen );
+				sgs_Release( C, &sym );
 				
 				/* append sym_get call argument */
 				sgs_membuf_appbuf( &pSD->callargs, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
@@ -1426,23 +1479,25 @@ void sgs_SerializeObjectInt_V3( SGS_CTX, sgs_StkIdx args, const char* func, size
 	int32_t argidx;
 	sgs_serialize3_data* pSD = (sgs_serialize3_data*) C->serialize_state;
 	
+	V.type = SGS_VT_OBJECT;
+	V.data.O = pSD->curObj;
 	if( args < 0 || (size_t) args > pSD->argarray.size / sizeof(int32_t) )
 	{
+		sgs_Variable idxvar = sgs_MakeNull();
 		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObject: specified "
 			"more arguments than there are serialized items" );
+		sgs_vht_set( &pSD->servartable, C, &V, &idxvar );
 		return;
 	}
 	/* WP: added error condition */
 	argsize = sizeof(int32_t) * (size_t) args;
 	
-	V.type = SGS_VT_OBJECT;
-	V.data.O = pSD->curObj;
 	vv = sgs_vht_get( &pSD->servartable, &V );
 	if( vv )
 		argidx = (int32_t) ( vv - pSD->servartable.vars );
 	else
 	{
-		int32_t call_info_offset = (int32_t) ( pSD->callinfo.size / 4 );
+		int32_t call_info_offset = (int32_t) ( pSD->callinfo.size / sizeof(s3callinfo) );
 		int32_t call_args_offset = (int32_t) ( pSD->callargs.size / 4 );
 		s3callinfo ci = { sgs_MakeNull(), call_args_offset, args };
 		sgs_InitStringBuf( C, &ci.func_name, func, (sgs_SizeVal) fnsize );

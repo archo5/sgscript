@@ -2470,7 +2470,7 @@ static int sgsstd_event_convert( SGS_CTX, sgs_VarObj* obj, int type )
 
 static int sgsstd_event_serialize( SGS_CTX, sgs_VarObj* obj )
 {
-	sgs_PushBool( C, obj->data != NULL );
+	sgs_Serialize( C, sgs_MakeBool( obj->data != NULL ) );
 	sgs_SerializeObject( C, 1, "event" );
 	return SGS_SUCCESS;
 }

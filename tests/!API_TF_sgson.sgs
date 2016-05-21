@@ -112,6 +112,8 @@ enctests =
 	'{"a b"=1}' = { "a b" = 1 },
 	'{"0a"=1}' = { "0a" = 1 },
 	"\"\\n\\r\\t\\x19\\x7F\"" = "\n\r\t\x19\x7F",
+	'sym_get("gc_collect")' = gc_collect,
+	'event(true)' = event(true),
 };
 
 ERRORS = "";
