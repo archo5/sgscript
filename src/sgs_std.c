@@ -3879,7 +3879,7 @@ static int sgsstd_unserialize( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?s|i", &which ) )
 		return 0;
 	
-	if( which != 1 && which != 2 )
+	if( which != 1 && which != 2 && which != 3 )
 		return sgs_Msg( C, SGS_ERROR, "bad serialization mode" );
 	
 	return sgs_UnserializeExt( C, sgs_StackItem( C, 0 ), (int) which );

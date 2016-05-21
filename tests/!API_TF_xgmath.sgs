@@ -157,6 +157,11 @@ for( i = 0; i < 4; ++i )
 
 	section( "serialization" );
 
+srlz = serialize( vec2(1,2), 3 );
+testEqual( srlz, "vec2(1, 2)", "serialization - mode 3 - basic" );
+unsz = unserialize( srlz, 3 );
+testEqual( unsz$'', "vec2(1;2)", "unserialization - mode 3 - basic" );
+
 data =
 [
 	vec2(1.23, 4.567),

@@ -1567,6 +1567,17 @@ void sgs_SerializeObject( SGS_CTX, sgs_StkIdx args, const char* func )
 	}
 }
 
+
+static int sgs_UnserializeInt_V3( SGS_CTX, char* str, char* strend )
+{
+	int res;
+	sgs_MemBuf stack = sgs_membuf_create();
+	sgs_membuf_appchr( &stack, C, 0 );
+	res = !sgson_parse( C, &stack, str, strend - str, sgs_MakeNull() );
+	sgs_membuf_destroy( &stack, C );
+	return res;
+}
+
 SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode )
 {
 	SGSRESULT res = 0;
@@ -1588,7 +1599,9 @@ SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode )
 		mode = C->serialize_state ? *(int*) C->serialize_state : 2;
 	
 	_STACK_PROTECT;
-	if( mode == 2 )
+	if( mode == 3 )
+		res = sgs_UnserializeInt_V3( C, str, strend );
+	else if( mode == 2 )
 		res = sgs_UnserializeInt_V2( C, str, strend );
 	else if( mode == 1 )
 		res = sgs_UnserializeInt_V1( C, str, strend );
@@ -1870,9 +1883,12 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 
 		if( push )
 		{
-			if( SGSON_STK_TOP == '[' || SGSON_STK_TOP == '=' )
+			if( SGSON_STK_TOP == '[' || SGSON_STK_TOP == '=' || SGSON_STK_TOP == '(' )
 			{
 				int revchr = SGSON_STK_TOP == '[' ? ']' : '}';
+				if( SGSON_STK_TOP == '(' )
+					revchr = ')';
+				
 				pos++;
 				sgson_skipws( &pos, end );
 				if( pos >= end )
