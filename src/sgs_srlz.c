@@ -1579,6 +1579,7 @@ SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode )
 		sgs_Msg( C, SGS_APIERR, "sgs_Unserialize: variable does not resolve to a non-empty string" );
 		sgs_Pop( C, 1 );
 		sgs_PushNull( C );
+		return 0;
 	}
 	
 	strend = str + size;
@@ -1680,6 +1681,31 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 			SGSON_STK_POP;
 			push = 1;
 		}
+		else if( *pos == ')' )
+		{
+			sgs_Variable func;
+			
+			if( SGSON_STK_TOP != '(' )
+				return pos;
+			SGSON_STK_POP;
+			push = 1;
+			
+			/* search for marker */
+			sgs_SizeVal i = sgs_StackSize( C ) - 1;
+			while( i >= 0 && sgs_StackItem( C, i ).type != 255 )
+				i--;
+			sgs_BreakIf( i < 0 );
+			
+			/* find the function */
+			sgs_GetGlobal( C, sgs_StackItem( C, i + 1 ), &func );
+			
+			/* call the function */
+			sgs_Call( C, func, sgs_StackSize( C ) - ( i + 2 ), 1 );
+			
+			/* clean up */
+			sgs_Release( C, &func );
+			sgs_PopSkip( C, 2, 1 );
+		}
 		else if( *pos == '"' || *pos == '\'' )
 		{
 			char sc = *pos;
@@ -1772,7 +1798,7 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 		else if( *pos == '_' || sgs_isalpha( *pos ) )
 		{
 			if( end - pos >= 4 &&
-				( pos[4] == '\0' || sgs_isoneof( pos[4], "}]=, \n\r\t" ) ) &&
+				( pos[4] == '\0' || sgs_isoneof( pos[4], ")}]=, \n\r\t" ) ) &&
 				memcmp( pos, "null", 4 ) == 0 )
 			{
 				sgs_PushNull( C );
@@ -1780,7 +1806,7 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 				push = 1;
 			}
 			else if( end - pos >= 4 &&
-				( pos[4] == '\0' || sgs_isoneof( pos[4], "}]=, \n\r\t" ) ) &&
+				( pos[4] == '\0' || sgs_isoneof( pos[4], ")}]=, \n\r\t" ) ) &&
 				memcmp( pos, "true", 4 ) == 0 )
 			{
 				sgs_PushBool( C, SGS_TRUE );
@@ -1788,14 +1814,14 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 				push = 1;
 			}
 			else if( end - pos >= 5 &&
-				( pos[5] == '\0' || sgs_isoneof( pos[5], "}]=, \n\r\t" ) ) &&
+				( pos[5] == '\0' || sgs_isoneof( pos[5], ")}]=, \n\r\t" ) ) &&
 				memcmp( pos, "false", 5 ) == 0 )
 			{
 				sgs_PushBool( C, SGS_FALSE );
 				pos += 5 - 1;
 				push = 1;
 			}
-			else if( SGSON_STK_TOP == '{' ) /* can use identifiers only as keys */
+			else if( SGSON_STK_TOP == '{' ) /* identifiers as keys */
 			{
 				const char* idend = pos;
 				while( sgs_isid( *idend ) )
@@ -1820,8 +1846,24 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 					pos--;
 				}
 			}
-			else
-				return pos;
+			else /* identifiers as function names */
+			{
+				const char* idstart = pos;
+				const char* idend = pos;
+				while( sgs_isid( *idend ) )
+					idend++;
+				if( idend - idstart > 255 )
+					return pos; /* func. name size exceeds 255 chars */
+				
+				pos = idend;
+				sgson_skipws( &pos, end );
+				if( end - pos < 2 || pos[0] != '(' )
+					return pos; /* no opening parenthesis / < 2 syms */
+				
+				SGSON_STK_PUSH( '(' );
+				sgs_PushVariable( C, SGS_FSTKTOP ); /* marker for beginning of function */
+				sgs_PushStringBuf( C, idstart, (sgs_SizeVal)( idend - idstart ) );
+			}
 		}
 		else
 			return pos;

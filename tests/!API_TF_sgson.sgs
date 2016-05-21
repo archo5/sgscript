@@ -114,6 +114,9 @@ enctests =
 	"\"\\n\\r\\t\\x19\\x7F\"" = "\n\r\t\x19\x7F",
 	'sym_get("gc_collect")' = gc_collect,
 	'event(true)' = event(true),
+	'[event(true)]' = [event(true)],
+	'[event(true),event(false)]' = [event(true),event(false)],
+	'{a=event(true)}' = {a=event(true)},
 };
 
 ERRORS = "";

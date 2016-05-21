@@ -1175,7 +1175,7 @@ static int xgm_b3_serialize( SGS_CTX, sgs_VarObj* obj )
 	sgs_Serialize( C, sgs_MakeReal( hdr[3] ) );
 	sgs_Serialize( C, sgs_MakeReal( hdr[4] ) );
 	sgs_Serialize( C, sgs_MakeReal( hdr[5] ) );
-	sgs_SerializeObject( C, 4, "aabb3" );
+	sgs_SerializeObject( C, 6, "aabb3" );
 	return SGS_SUCCESS;
 }
 
@@ -3462,7 +3462,7 @@ static int xgm_fla_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	XGM_FLAHDR;
 	sgs_SizeVal i, vc = flarr->size > 64 ? 64 : flarr->size;
-	sgs_PushString( C, "\n{" );
+	sgs_PushString( C, "floatarray\n{" );
 	for( i = 0; i < vc; ++i )
 	{
 		char bfr[ 128 ];

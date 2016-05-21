@@ -910,7 +910,8 @@ SGS_APIFUNC sgs_ObjInterface sgsstd_array_iface[1] =
 
 static int sgsstd_array( SGS_CTX )
 {
-	int i = 0, objcnt = sgs_StackSize( C );
+	/* first argument of __call metamethod = self */
+	int i = 1, objcnt = sgs_StackSize( C ) - 1;
 	void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( objcnt ) );
 	sgs_Variable *p, *pend;
 	sgsstd_array_header_t* hdr = (sgsstd_array_header_t*)
@@ -3862,7 +3863,7 @@ static int sgsstd_serialize( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?v|i", &which ) )
 		return 0;
 	
-	if( which != 1 && which != 2 )
+	if( which != 1 && which != 2 && which != 3 )
 		return sgs_Msg( C, SGS_ERROR, "bad serialization mode" );
 	
 	sgs_SerializeExt( C, sgs_StackItem( C, 0 ), (int) which );

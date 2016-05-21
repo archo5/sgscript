@@ -155,6 +155,36 @@ for( i = 0; i < 4; ++i )
 }
 
 
+	section( "serialization" );
+
+data =
+[
+	vec2(1.23, 4.567),
+	vec3(1.23, 4.567, 8.9012),
+	vec4(1.23, 4.567, 8.9012, 3.45678),
+	quat(0.2, 0.3, 0.4, 0.5),
+	aabb2(100, 200, 300, 400),
+	aabb3(100, 200, 300, 400, 500, 600),
+	color(0.3, 0.5, 0.4, 0.88),
+	mat3(1,2,3,4,5,6,7,8,9),
+	mat4(1,2,3,4,3,4,5,6,5,6,7,8,7,8,9,0),
+	floatarray(1,2,3),
+];
+modes = [1,2,3];
+foreach( mode : modes )
+{
+	ERRORS = "";
+	srlz = serialize( data, mode );
+	testEqual( ERRORS, "", "serialization - mode " $ mode $ " - no errors" );
+	
+	ERRORS = "";
+	unsrlz = unserialize( srlz, mode );
+	testEqual( ERRORS, "", "unserialization - mode " $ mode $ " - no errors" );
+	
+	testEqual( dumpvar( unsrlz ), dumpvar( data ), "data match" );
+}
+
+
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );
 //
