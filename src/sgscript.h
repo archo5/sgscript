@@ -738,6 +738,10 @@ static SGS_INLINE sgs_Variable sgs_MakeCFunc( sgs_CFunc v )
 {
 	sgs_Variable out; out.type = SGS_VT_CFUNC; out.data.C = v; return out;
 }
+static SGS_INLINE sgs_Variable sgs_MakeObjPtrNoRef( sgs_VarObj* o )
+{
+	sgs_Variable out; out.type = SGS_VT_OBJECT; out.data.O = o; return out;
+}
 static SGS_INLINE sgs_Variable sgs_MakePtr( void* v )
 {
 	sgs_Variable out; out.type = SGS_VT_PTR; out.data.P = v; return out;

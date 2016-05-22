@@ -43,7 +43,8 @@ Don't forget to include a test sample, as small as possible!
 
 ## Future plans
 
-- many additions have been implemented so there's nothing for now...
+- full state serialization
+- class syntax
 - got a suggestion? write some sample code (in the form of a test) and send it here
 
 ## Credits

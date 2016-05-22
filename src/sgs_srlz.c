@@ -705,9 +705,25 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 	}
 	else if( var.type == SGS_VT_OBJECT )
 	{
-		sgs_VarObj* O = var.data.O;
+		int32_t mo_arg = 0;
+		sgs_VarObj* O = var.data.O, *MO = sgs_ObjGetMetaObj( var.data.O );
 		sgs_VarObj* prevObj = pSD->curObj;
 		_STACK_PREPARE;
+		
+		if( MO )
+		{
+			size_t origsize = pSD->argarray.size;
+			(void) origsize;
+			
+			sgs_SerializeInt_V2( C, sgs_MakeObjPtrNoRef( MO ) );
+			/* save position of target object */
+			SGS_AS_INT32( mo_arg, pSD->argarray.ptr + pSD->argarray.size - 4 );
+			/* remove the meta-object from arguments */
+			sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4, pSD->argarray.size );
+			/* check if argument array size was not changed */
+			sgs_BreakIf( origsize != pSD->argarray.size );
+		}
+		
 		if( !O->iface->serialize )
 		{
 			sgs_Msg( C, SGS_WARNING, "Cannot serialize object of type '%s'", O->iface->name );
@@ -721,6 +737,15 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		pSD->curObj = prevObj;
 		if( ret == SGS_FALSE )
 			goto fail;
+		
+		sgs_membuf_appchr( &pSD->data, C, sgs_ObjGetMetaMethodEnable( O ) ? '1' : '0' );
+		if( MO )
+		{
+			/* assume object is last, specify only meta-object */
+			sgs_membuf_appchr( &pSD->data, C, '3' );
+			sgs_membuf_appbuf( &pSD->data, C, &mo_arg, 4 );
+		}
+		else sgs_membuf_appchr( &pSD->data, C, '2' );
 	}
 	else if( var.type == SGS_VT_CFUNC )
 	{
@@ -881,20 +906,20 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 		char c = *str++;
 		if( c == 'P' )
 		{
-			if( str >= strend && sgs_unserr_incomp( C ) )
+			if( str >= strend && !sgs_unserr_incomp( C ) )
 				goto fail;
 			c = *str++;
 			switch( c )
 			{
 			case SGS_VT_NULL: var.type = SGS_VT_NULL; break;
 			case SGS_VT_BOOL:
-				if( str >= strend && sgs_unserr_incomp( C ) )
+				if( str >= strend && !sgs_unserr_incomp( C ) )
 					goto fail;
 				var.type = SGS_VT_BOOL;
 				var.data.B = *str++ != 0;
 				break;
 			case SGS_VT_INT:
-				if( str >= strend-7 && sgs_unserr_incomp( C ) )
+				if( str >= strend-7 && !sgs_unserr_incomp( C ) )
 					goto fail;
 				else
 				{
@@ -906,7 +931,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				str += 8;
 				break;
 			case SGS_VT_REAL:
-				if( str >= strend-7 && sgs_unserr_incomp( C ) )
+				if( str >= strend-7 && !sgs_unserr_incomp( C ) )
 					goto fail;
 				else
 				{
@@ -920,11 +945,11 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			case SGS_VT_STRING:
 				{
 					sgs_SizeVal strsz;
-					if( str >= strend-3 && sgs_unserr_incomp( C ) )
+					if( str >= strend-3 && !sgs_unserr_incomp( C ) )
 						goto fail;
 					SGS_AS_INT32( strsz, str );
 					str += 4;
-					if( str > strend - strsz && sgs_unserr_incomp( C ) )
+					if( str > strend - strsz && !sgs_unserr_incomp( C ) )
 						goto fail;
 					sgs_InitStringBuf( C, &var, str, strsz );
 					str += strsz;
@@ -934,11 +959,11 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				{
 					sgs_SizeVal bcsz;
 					sgs_iFunc* fn;
-					if( str >= strend-3 && sgs_unserr_incomp( C ) )
+					if( str >= strend-3 && !sgs_unserr_incomp( C ) )
 						goto fail;
 					SGS_AS_INT32( bcsz, str );
 					str += 4;
-					if( str > strend - bcsz && sgs_unserr_incomp( C ) )
+					if( str > strend - bcsz && !sgs_unserr_incomp( C ) )
 						goto fail;
 					/* WP: conversion does not affect values */
 					if( !_unserialize_function( C, str, (size_t) bcsz, &fn ) )
@@ -959,14 +984,14 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			sgs_StkIdx subsz;
 			int32_t i, pos, argc;
 			int fnsz, ret;
-			if( str >= strend-5 && sgs_unserr_incomp( C ) )
+			if( str > strend-5 && !sgs_unserr_incomp( C ) )
 				goto fail;
 			SGS_AS_INT32( argc, str );
 			str += 4;
 			fnsz = *str++ + 1;
 			for( i = 0; i < argc; ++i )
 			{
-				if( str >= strend-4 && sgs_unserr_incomp( C ) )
+				if( str > strend-4 && !sgs_unserr_incomp( C ) )
 					goto fail;
 				SGS_AS_INT32( pos, str );
 				str += 4;
@@ -977,7 +1002,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				}
 				sgs_PushVariable( C, ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ] );
 			}
-			if( str > strend - fnsz && sgs_unserr_incomp( C ) )
+			if( str > strend - fnsz && !sgs_unserr_incomp( C ) )
 				goto fail;
 			subsz = sgs_StackSize( C ) - argc;
 			ret = SGS_SUCCEEDED( sgs_GlobalCall( C, str, argc, 1 ) );
@@ -995,13 +1020,13 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 		{
 			int32_t i, pos, argc;
 			sgs_Context* T = NULL;
-			if( str >= strend-5 && sgs_unserr_incomp( C ) )
+			if( str > strend-5 && !sgs_unserr_incomp( C ) )
 				goto fail;
 			SGS_AS_INT32( argc, str );
 			str += 4;
 			for( i = 0; i < argc; ++i )
 			{
-				if( str >= strend-4 && sgs_unserr_incomp( C ) )
+				if( str > strend-4 && !sgs_unserr_incomp( C ) )
 					goto fail;
 				SGS_AS_INT32( pos, str );
 				str += 4;
@@ -1012,22 +1037,64 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				}
 				sgs_PushVariable( C, ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ] );
 			}
-			if( !sgs__thread_unserialize( C, &T, &str, strend ) )
-				return sgs_unserr_incomp( C );
+			if( !sgs__thread_unserialize( C, &T, &str, strend ) && !sgs_unserr_incomp( C ) )
+				goto fail;
 			sgs_Pop( C, argc );
 			sgs_InitThreadPtr( &var, T );
 		}
 		else if( c == 'S' )
 		{
 			int32_t pos;
-			if( str >= strend-4 && sgs_unserr_incomp( C ) )
+			if( str > strend-4 && !sgs_unserr_incomp( C ) )
 				goto fail;
 			SGS_AS_INT32( pos, str );
 			str += 4;
+			if( pos < 0 || pos >= (int32_t) ( mb.size / sizeof( sgs_Variable ) ) )
+			{
+				sgs_unserr_error( C );
+				goto fail;
+			}
 			if( !sgs_GetSymbol( C, ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ], &var ) )
 			{
-				return sgs_unserr_symfail( C );
+				sgs_unserr_symfail( C );
+				goto fail;
 			}
+		}
+		else if( c == '0' || c == '1' || c == '2' || c == '3' )
+		{
+			sgs_VarObj* O;
+			sgs_Variable* pov = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[
+				mb.size / sizeof( sgs_Variable ) - 1 ];
+			if( pov->type != SGS_VT_OBJECT && !sgs_unserr_error( C ) )
+				goto fail;
+			O = pov->data.O;
+			
+			if( c == '0' || c == '1' )
+				sgs_ObjSetMetaMethodEnable( O, c == '1' );
+			else if( c == '2' )
+				sgs_ObjSetMetaObj( C, O, NULL );
+			else /* if( c == '3' ) */
+			{
+				sgs_Variable* mov;
+				/* add meta-object */
+				int32_t pos;
+				if( str > strend-4 && !sgs_unserr_incomp( C ) )
+					goto fail;
+				SGS_AS_INT32( pos, str );
+				str += 4;
+				if( pos < 0 || pos >= (int32_t) ( mb.size / sizeof( sgs_Variable ) ) )
+				{
+					sgs_unserr_error( C );
+					goto fail;
+				}
+				mov = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ];
+				if( ( mov->type != SGS_VT_OBJECT || pov == mov ) && !sgs_unserr_error( C ) )
+					goto fail;
+				if( mov->data.O == O && !sgs_unserr_error( C ) )
+					goto fail;
+				sgs_ObjSetMetaObj( C, O, mov->data.O );
+			}
+			continue;
 		}
 		else
 		{

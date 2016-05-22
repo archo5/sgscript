@@ -2342,11 +2342,18 @@ static int sgsstd_va_arg_count( SGS_CTX )
 
 static int sgsstd_metaobj_set( SGS_CTX )
 {
-	sgs_VarObj *obj1, *obj2;
+	sgs_VarObj *obj, *metaobj;
 	SGSFN( "metaobj_set" );
-	if( !sgs_LoadArgs( C, "!xx", sgs_ArgCheck_Object, &obj1, sgs_ArgCheck_Object, &obj2 ) )
+	if( !sgs_LoadArgs( C, "!xx", sgs_ArgCheck_Object, &obj, sgs_ArgCheck_Object, &metaobj ) )
 		return 0;
-	sgs_ObjSetMetaObj( C, obj1, obj2 );
+	sgs_VarObj* chk = metaobj;
+	while( chk )
+	{
+		if( chk == obj )
+			STDLIB_WARN( "loop detected" );
+		chk = chk->metaobj;
+	}
+	sgs_ObjSetMetaObj( C, obj, metaobj );
 	sgs_SetStackSize( C, 1 );
 	return 1;
 }

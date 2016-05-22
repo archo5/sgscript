@@ -123,7 +123,7 @@ testEqual( typeof(unserialize1(serialize1(map()))), "map", "[un]-serialize - emp
 testEqual( typeof(unserialize1(serialize1([1,true]))), "array", "[un]-serialize - used array (no errors)" );
 testEqual( typeof(unserialize1(serialize1({a=1,b=2}))), "dict", "[un]-serialize - used dict (no errors)" );
 testEqual( typeof(unserialize1(serialize1(map("a",1,"b",2)))), "map", "[un]-serialize - used map (no errors)" );
-usedarray = [1,2,3,4,1,2,3,4];
+usedarray = [1,2,3,4,1,2,3,4,1,2,3,4];
 sstruct = {
 	"0" = null,
 	a = false, b = true,
@@ -133,7 +133,7 @@ sstruct = {
 	j = section,
 	k = [], l = [1,2,3],
 	m = { a = 1, b = 2 }, n = {},
-	o = map( 1, 2, 3, 4 ),
+	o = map{ [1] = 2, [3] = 4 },
 	p = usedarray, q = usedarray,
 };
 sstruct_string = "{0=null,a=false,b=true,c=0,d=12124,e=-89235,f=0,g=12.346,"
@@ -168,10 +168,10 @@ testEqual( typeof(unserialize2(serialize2(section))), "func", "[un]-serialize2 -
 testEqual( typeof(serialize2([])), "string", "serialize2 - empty array (no errors)" );
 testEqual( typeof(unserialize2(serialize2([]))), "array", "[un]-serialize2 - empty array (no errors)" );
 testEqual( typeof(unserialize2(serialize2({}))), "dict", "[un]-serialize2 - empty dict (no errors)" );
-testEqual( typeof(unserialize2(serialize2(map()))), "map", "[un]-serialize2 - empty map (no errors)" );
+testEqual( typeof(unserialize2(serialize2(map{}))), "map", "[un]-serialize2 - empty map (no errors)" );
 testEqual( typeof(unserialize2(serialize2([1,true]))), "array", "[un]-serialize2 - used array (no errors)" );
 testEqual( typeof(unserialize2(serialize2({a=1,b=2}))), "dict", "[un]-serialize2 - used dict (no errors)" );
-testEqual( typeof(unserialize2(serialize2(map("a",1,"b",2)))), "map", "[un]-serialize2 - used map (no errors)" );
+testEqual( typeof(unserialize2(serialize2(map{a=1,b=2}))), "map", "[un]-serialize2 - used map (no errors)" );
 testEqual( typeof(serialize2(sstruct)), "string", "serialize2 - no errors" );
 testEqual( ''$unserialize2(serialize2(sstruct)), sstruct_string, "(un)serialize2 - roundtrip" );
 testEqual( serialize1(sstruct).length > serialize2(sstruct).length, true, "serialize > serialize2 (output size)" );
@@ -180,9 +180,13 @@ ssstr =
 	"P\x04\x05\x00\x00\x00pcallS\x01\x00\x00\x00"$
 	"P\x04\x01\x00\x00\x00m"$
 	"P\x04\x05\x00\x00\x00arrayS\x04\x00\x00\x00"$
-	"C\x04\x00\x00\x00\x04\x00\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x05\x00\x00\x00dict\x00";
+	"C\x04\x00\x00\x00\x04\x00\x00\x00\x00\x02\x00\x00\x00\x03\x00\x00\x00\x05\x00\x00\x00dict\x0002";
 testEqual( serialize2({k=pcall,m=array}), ssstr, "serialize symbols - no errors" );
 testEqual( ''$unserialize2(serialize2({k=pcall,m=array})), "{k=C function,m=dict}", "(un)serialize symbols - roundtrip" );
+selfref = { a = 1 };
+selfref.self = selfref;
+// TODO
+// testEqual( typeof(serialize2(selfref)), "string", "serialize2 - self-referencing object - no errors" );
 testEqual( ERRORS, "", "serialization - errors" );
 
 	section( "array basic ops" );

@@ -47,8 +47,8 @@ testEqual( eval( "return str2ias('\\7777');" ), "[31,255,55]", "oct - 3 chars - 
 testEqual( eval( "return str2ias('\\x0');" ), "[120,48]", "hex - 1 char - valid, broken hex (0)" );
 testEqual( eval( "return str2ias('\\x00');" ), "[0]", "hex - 2 chars - valid (00)" );
 testEqual( eval( "return str2ias('\\x000');" ), "[0,48]", "hex - 3 chars - valid, broken hex (000)" );
-testEqual( eval( "return str2ias('\\x0000');" ), "[0,0]", "hex - 4 chars - valid (0000)" );
-testEqual( eval( "return str2ias('\\x00000');" ), "[0,0,48]", "hex - 5 chars - valid, broken hex (00000)" );
+testEqual( eval( "return str2ias('\\x0000');" ), "[0,48,48]", "hex - 4 chars - valid, broken hex (0000)" );
+testEqual( eval( "return str2ias('\\x00000');" ), "[0,48,48,48]", "hex - 5 chars - valid, broken hex (00000)" );
 testEqual( eval( "return str2ias('\\a\\b\\f\\n\\r\\t\\v\\\\\\'\\\"');" ),
 	"[7,8,12,10,13,9,11,92,39,34]", "escaped characters" );
 

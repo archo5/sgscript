@@ -94,12 +94,6 @@ static int32_t string_inplace_fix( char* str, int32_t len )
 					{
 						*opos = (char)( ( sgs_gethex( ipos[1] ) << 4 ) | sgs_gethex( ipos[2] ) );
 						ipos += 2;
-						if( ipos + 2 < iend && sgs_hexchar( ipos[1] ) && sgs_hexchar( ipos[2] ) )
-						{
-							opos++;
-							*opos = (char)( ( sgs_gethex( ipos[1] ) << 4 ) | sgs_gethex( ipos[2] ) );
-							ipos += 2;
-						}
 						break;
 					}
 				/* ', ", \ too: */

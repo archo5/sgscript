@@ -5266,11 +5266,11 @@ void sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj )
 
 void sgs_ObjAssign( SGS_CTX, sgs_VarObj** dest, sgs_VarObj* src )
 {
+	if( src )
+		sgs_ObjAcquire( C, src );
 	if( *dest )
 		sgs_ObjRelease( C, *dest );
 	*dest = src;
-	if( src )
-		sgs_ObjAcquire( C, src );
 }
 
 void sgs_ObjCallDtor( SGS_CTX, sgs_VarObj* obj )
@@ -5280,11 +5280,18 @@ void sgs_ObjCallDtor( SGS_CTX, sgs_VarObj* obj )
 
 void sgs_ObjSetMetaObj( SGS_CTX, sgs_VarObj* obj, sgs_VarObj* metaobj )
 {
+	sgs_VarObj* chk = metaobj;
+	while( chk )
+	{
+		sgs_BreakIf( chk == obj && "sgs_ObjSetMetaObj: loop detected" );
+		chk = chk->metaobj;
+	}
+	
+	if( metaobj )
+		sgs_ObjAcquire( C, metaobj );
 	if( obj->metaobj )
 		sgs_ObjRelease( C, obj->metaobj );
 	obj->metaobj = metaobj;
-	if( metaobj )
-		sgs_ObjAcquire( C, metaobj );
 }
 
 sgs_VarObj* sgs_ObjGetMetaObj( sgs_VarObj* obj )
