@@ -922,8 +922,7 @@ SGS_APIFUNC SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode );
 #define sgs_Serialize( C, var ) sgs_SerializeExt( C, var, SGS_SERIALIZE_DEFAULT )
 #define sgs_Unserialize( C, var ) sgs_UnserializeExt( C, var, SGS_SERIALIZE_DEFAULT )
 
-SGS_APIFUNC void sgs_SerializeSGSONFmt( SGS_CTX, sgs_Variable var, const char* tab );
-#define sgs_SerializeSGSON( C, var ) sgs_SerializeSGSONFmt( C, var, NULL )
+SGS_APIFUNC void sgs_SerializeSGSON( SGS_CTX, sgs_Variable var, const char* tab );
 SGS_APIFUNC void sgs_UnserializeSGSONExt( SGS_CTX, const char* str, size_t size );
 #define sgs_UnserializeSGSON( C, str ) sgs_UnserializeSGSONExt( C, str, SGS_STRINGLENGTHFUNC( str ) )
 

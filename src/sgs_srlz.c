@@ -1386,19 +1386,22 @@ void sgs_SerializeInt_V3( SGS_CTX, sgs_Variable var, const char* tab, sgs_SizeVa
 	{
 		sgs_Msg( C, SGS_WARNING, "serialization mode 3 (SGSON text)"
 			" does not support thread serialization" );
-		var = sgs_MakeNull();
+		ret = 0;
+		goto fail;
 	}
 	else if( var.type == SGS_VT_FUNC || var.type == SGS_VT_CFUNC )
 	{
 		sgs_Msg( C, SGS_WARNING, "serialization mode 3 (SGSON text)"
 			" does not support function serialization" );
-		var = sgs_MakeNull();
+		ret = 0;
+		goto fail;
 	}
 	else if( var.type == SGS_VT_PTR )
 	{
 		sgs_Msg( C, SGS_WARNING, "serialization mode 3 (SGSON text)"
 			" does not support pointer serialization" );
-		var = sgs_MakeNull();
+		ret = 0;
+		goto fail;
 	}
 	
 	/* OBJECTS */
@@ -1626,7 +1629,7 @@ SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode )
 
 /* SGS object notation [SGSON] */
 
-void sgs_SerializeSGSONFmt( SGS_CTX, sgs_Variable var, const char* tab )
+void sgs_SerializeSGSON( SGS_CTX, sgs_Variable var, const char* tab )
 {
 	sgs_SizeVal tablen = tab ? (sgs_SizeVal) SGS_STRINGLENGTHFUNC( tab ) : 0;
 	sgs_SerializeInt_V3( C, var, tab, tablen );

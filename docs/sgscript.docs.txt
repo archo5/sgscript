@@ -1453,11 +1453,11 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_CloneItem - clone the topmost stack item if it's mutable
 - @sgs_RegSymbol - register a persistent item (symbol) by the specified prefix/name
 - @sgs_GetSymbol - map name to a registered variable or variable to name using the symbol table
-- @sgs_Serialize - serialize the topmost variable on stack by converting it recursively to an instruction stream
-- @sgs_SerializeV(1|2) - perform serialization with a specific method
-- @sgs_SerializeObject - emit a call to the specified function to the serialized stream
-- @sgs_Unserialize - unserialize the topmost variable on stack by running its serialized instruction stream
-- @sgs_UnserializeV(1|2) - perform unserialization with a specific method
+- @sgs_Serialize(Ext) - serialize the given variable by converting it recursively to a byte stream
+- @sgs_Unserialize(Ext) - unserialize the given variable from a byte stream
+- @sgs_SerializeObject - specify the unserialization function and argument count to use for the object
+- @sgs_SerializeSGSON - serialize the given variable into a text format
+- @sgs_UnserializeSGSON(Ext) - unserialize the given variable from a byte stream
 
 
 # String helpers [info]
@@ -2525,57 +2525,63 @@ After a successful call, all arguments will be popped off the stack and the expe
 - This function is equivalent to @sym_get in the SGScript API.
 
 
-# sgs_Serialize [function]
+# sgs_Serialize(Ext) [functions]
 
-== void sgs_Serialize( sgs_Context* C )
-=== Serialize the topmost variable of the current stack frame (convert to a binary recreation instruction stream).
+== void sgs_Serialize( sgs_Context* C, sgs_Variable var )
+=== Serialize the given variable (convert to a byte stream).
 
+== void sgs_SerializeExt( sgs_Context* C, sgs_Variable var, int mode )
+=== Same as above, also allows to specify serialization mode.
+
+- `sgs_Serialize` is alias of `sgs_SerializeExt( C, var, SGS_SERIALIZE_DEFAULT )`
+- Function pushes a string variable on stack if serialization was at least minimally successful, otherwise `null` is pushed.
+- Default serialization mode is 2 or the current mode inside object serialization callback.
 - The following variable types can be serialized:
+-- symbols (variables that can be found in the symbol table);
 -- null, bool, int, real, string, func (SGS function);
 -- objects with the SERIALIZE interface function defined.
 
-- Serialized data has the following format (mode 1):
--- a list of 'P' or 'C' commands;
--- 'P' (push) command: byte - variable type; variable data;
---- variable data: nothing for null, byte for bool, int64 for int, double for real, int32 + char[] for string;
--- 'C' (call) command: int32 - number of arguments; byte - function name size; char[] - function name;
--- 'S' (symbol) command transforms last pushed item through symbol table.
 
+# sgs_Unserialize(Ext) [functions]
 
-# sgs_SerializeV(1|2) [functions]
+== SGSBOOL sgs_Unserialize( sgs_Context* C, sgs_Variable var )
+=== Unserialize the given variable (decode the byte stream).
 
-== void sgs_SerializeV1( sgs_Context* C )
-== void sgs_SerializeV2( sgs_Context* C )
-=== Serialize the topmost variable of the current stack frame with a specific method.
+== SGSBOOL sgs_UnserializeExt( sgs_Context* C, sgs_Variable var, int mode )
+=== Same as above, also allows to specify serialization mode.
 
-! For more info, see @sgs_Serialize
+! Be mindful of the data sources you use - calls to any global function can be placed in the byte stream.
 
-- Specifies the method to use while serializing the variable and resets it after serialization.
+- `sgs_Unserialize` is alias of `sgs_UnserializeExt( C, var, SGS_SERIALIZE_DEFAULT )`
+- To make sure only the right functions can be called, the global environment can be replaced with @sgs_SetEnv.
 
 
 # sgs_SerializeObject [function]
 
-== void sgs_SerializeObject( sgs_Context* C, int args, const char* func )
-=== Write the serialized code for an object's unserializing function.
+== void sgs_SerializeObject( sgs_Context* C, sgs_StkIdx args, const char* func )
+=== Specify the unserialization function and argument count to use for the object.
 
 
-# sgs_Unserialize [function]
+# sgs_SerializeSGSON [function]
 
-== void sgs_Unserialize( sgs_Context* C )
-=== Unserialize the topmost string variable of the current stack frame (run the binary recreation instruction stream).
+== void sgs_SerializeSGSON( sgs_Context* C, sgs_Variable var, const char* tab )
+=== Serialize the given variable into a text format.
 
-! Be mindful of the data sources you use - calls to any global function can be placed in the instruction stream.
+- This is similar to `sgs_SerializeExt` with mode = 3, only difference being the `tab` argument.
+- `tab` allows to specify the string used for tabs
+-- if `tab` is `NULL`, the text output is tightly packed, without any extra spaces
 
 
-# sgs_UnserializeV(1|2) [functions]
+# sgs_UnserializeSGSON(Ext) [functions]
 
-== SGSBOOL sgs_UnserializeV1( sgs_Context* C, sgs_Variable var )
-== SGSBOOL sgs_UnserializeV2( sgs_Context* C, sgs_Variable var )
-=== Unserialize the topmost string variable of the current stack frame.
+== void sgs_UnserializeSGSON( SGS_CTX, const char* str )
+=== Unserialize the given variable from a byte stream.
 
-! For more info, see @sgs_Unserialize
+== void sgs_UnserializeSGSONExt( SGS_CTX, const char* str, size_t size )
+=== Allows to pass a string buffer to the parsing function.
 
-- Specifies the method to use while unserializing the variable and resets it after unserialization.
+- `sgs_UnserializeSGSON` is alias to `sgs_UnserializeSGSONExt( C, str, SGS_STRINGLENGTHFUNC( str ) )`
+- This is the same as creating a string variable and calling `sgs_UnserializeExt( C, <var>, 3 )`
 
 
 # sgs_Assign [function]
@@ -3497,9 +3503,6 @@ Sample implementation (same as in sgscript.h):
 -- SGS_CNTL_GET_ERRNO: returns the currently set internal errno;
 -- SGS_CNTL_ERRSUP: sets error suppression lock count to `val`, returns the previous value;
 -- SGS_CNTL_GET_ERRSUP: returns the currently set error suppression lock count for the last stack frame;
--- SGS_CNTL_SERIALMODE: sets serialization mode to `val`, returns the previous value;
---- mode 2 is set with '2' - the reference-preserving algorithm;
---- mode 1 is set with any other number, the performance-oriented algorithm;
 -- SGS_CNTL_NUMRETVALS: returns the real number of returned values from last function call;
 -- SGS_CNTL_GET_PAUSED: returns whether the execution state is suspended;
 -- SGS_CNTL_GET_ABORT: returns whether last function call was aborted;
@@ -3765,8 +3768,8 @@ Depending on the argument, it requires different variable types on stack:
 
 ==== When called:
 
-- @serialize, @serialize2 in SGScript.
-- @sgs_Serialize, @sgs_SerializeV(1|2) in the C API.
+- @serialize in SGScript.
+- @sgs_Serialize(Ext) in the C API.
 
 ==== Additional arguments:
 
@@ -5206,7 +5209,7 @@ When the event is signaled, the thread will be aborted as soon as possible.
 # gc_collect [function]
 
 == gc_collect()
-=== runs the garbage collector on the virtual machine, waiting until it has finished
+=== Runs the garbage collector on the virtual machine, waiting until it has finished
 
 - returns the reduction in objects or false on failure
 
@@ -5218,8 +5221,8 @@ When the event is signaled, the thread will be aborted as soon as possible.
 
 # serialize [function]
 
-== serialize( var )
-=== converts the variable to a byte buffer (string), containing the serialized data that can be recreated with @unserialize() or returns null and emits a warning on failure
+== serialize( var, int mode = 2 )
+=== Converts the variable to a byte buffer (string), containing the serialized data that can be recreated with @unserialize() or returns null and emits a warning on failure
 
 - C functions and objects without OP_SERIALIZE implemented cannot be serialized
 
@@ -5228,37 +5231,32 @@ When the event is signaled, the thread will be aborted as soon as possible.
     print unserialize(data); // prints {name=A,info=B}
 
 
-# serialize2 [function]
-
-== serialize2( var )
-=== converts the variable to a byte buffer (string), containing the serialized data that can be recreated with @unserialize2() or returns null and emits a warning on failure
-
-- for more info on function behavior, refer to @serialize
-
-
 # unserialize [function]
 
-== unserialize( string data[, array|dict funcs ])
-=== recreates a variable from the buffer with serialized data or returns null and emits a warning on failure
+== unserialize( string data, int mode = 2 )
+=== Recreates a variable from the buffer with serialized data or returns null and emits a warning on failure
 
 - this function will internally call global object creation functions specified in the data, so they must be defined and the state could change in the process
-- the list of allowed functions can be optionally specified in the second parameter
--- if array is passed, all functions with the specified names are loaded from global environment
--- if dict is passed, it is expected to be a map to be set as the temporary global environment
-- for more info on serialization in SGScript, refer to @"Serialization in SGScript"
+- for more info, refer to @"Serialization in SGScript"
 
     data = serialize({ name = "A", info = "B" });
     print data; // prints random-looking, yet deterministic garbage
     print unserialize(data); // prints {name=A,info=B}
 
 
-# unserialize2 [function]
+# sgson_encode [function]
 
-== unserialize( string data[, array|dict funcs ])
-=== recreates a variable from the buffer with serialized data or returns null and emits a warning on failure
+== sgson_encode( var[, string tab ])
+=== Encodes the given variable in the SGSON format.
 
-- for more info on function behavior, refer to @unserialize
-- for more info on serialization in SGScript, refer to @"Serialization in SGScript"
+- `tab` allows to specify the string used for tabs
+-- if `tab` is `null`, the text output is tightly packed, without any extra spaces
+
+
+# sgson_decode [function]
+
+== sgson_decode( string data )
+=== Decodes the SGSON text into a variable
 
 
 # SGS_*** [constants]
@@ -7240,11 +7238,11 @@ This is an engine debugging hook extension. It provides the opportunity to inter
 
 # Serialization in SGScript [info]
 
-In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the "@serialize" function and deserialization is done with "@unserialize". The C API has similar functions: @sgs_Serialize / @sgs_SerializeV(1|2) / @sgs_SerializeObject and @sgs_Unserialize, respectively.
+In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the "@serialize" function and deserialization is done with "@unserialize". The C API has similar functions: @sgs_Serialize(Ext) / @sgs_SerializeObject and @sgs_Unserialize, respectively.
 
 ! check the "Possible gotchas" part of this page if it is intended to trust the end user with access to serialized data
 
-=== The format
+=== The format (modes 1 and 2)
 
 - a list of operations
 - each operation consists of a 'type' byte and additional data
@@ -7253,31 +7251,44 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 --- MODE 1: number of arguments (4 bytes), function name length (1 byte) and the null-terminated function name itself (<length>+1 bytes)
 --- MODE 2: number of arguments (4 bytes), function name length (1 byte), argument indices (4 bytes for each, count as previously specified) and the null-terminated function name itself (<length>+1 bytes)
 
+=== The format (mode 3)
+
+- SGScript Object Notation (SGSON) - a minimal version of the script syntax for defining data
+- Supported features:
+-- keywords: `null`, `false`, `true`
+-- integers and real values
+-- strings (`"..."` or `'...'`)
+-- containers:
+--- array: `[...]`
+--- dict: `{ a = 1, b = "x" }`
+--- map: `map{ [false] = 5, [{}] = "test" }`
+-- function calls: `<identifier>(<arg1>, <arg2>, ... <argN>)`
+
 === Serialization
 
-- "@serialize" or "@serialize2" is called
-- "@sgs_Serialize" or "@sgs_SerializeV(1|2)" is called internally
+- "@serialize" is called
+- "@sgs_Serialize(Ext)" is called internally
 - type of variable is determined and the data is written
--- C functions cannot be serialized (obviously) and whenever encountered, will abort the action
+-- C functions cannot be serialized and whenever encountered, will abort the action
 -- objects will have SERIALIZE operation called
 --- if operation is not defined, everything will stop
---- if object is an array, all variables in it will be serialized using @sgs_Serialize and @sgs_SerializeObject will generate a call to 'array'
---- if object is a 'dict' or a 'map', all keys and values in it will be serialized using @sgs_Serialize and @sgs_SerializeObject will generate a call to 'dict'
+--- if object is an array, all variables in it will be serialized using @sgs_Serialize(Ext) and @sgs_SerializeObject will generate a call to 'array'
+--- if object is a 'dict' or a 'map', all keys and values in it will be serialized using @sgs_Serialize and @sgs_SerializeObject will generate a call to 'dict'/'map'
 
 === Deserialization
 
 - "@unserialize" is called
--- the global environment could be changed
-- "@sgs_Unserialize" is called internally
-- "push" and "call" operations are executed, thus regenerating the data
+- "@sgs_Unserialize(Ext)" is called internally
+- "push", "call", "symbol" operations are executed, thus regenerating the data
 -- "push" operation pushes a variable on the stack
 -- "call" operation calls the specified function
+-- "symbol" operation resolves the given string to a variable from the symbol table
 
 === Possible gotchas
 
-- unserialization is not by default safe in the sense that any function can be executed with a carefully crafted byte buffer; this can be prevented by specifying the second parameter to the "unserialize" function. the behavior can be reproduced with the C API but it will take a bit more effort or calling the "unserialize" function from it
-- if environment overrides are used on deserialization, remember to add "array", "dict" and "map" to the list if you use them, they are not added automatically
-- serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to serialize an array of unique items and a structure of indices to those items
+- unserialization is not by default safe in the sense that any function can be executed with a carefully crafted byte buffer; this can be prevented by temporarily replacing the global environment (_G)
+- if environment overrides are used on deserialization, remember to add "array", "dict" and "map" to the list if you use them, they are not always supported automatically
+- mode 1/3 serialization will not preserve any variable reuse relationships so after deserialization the structure could use more memory than before; if more efficient behavior is desired, it is suggested to use mode 2 (default) instead
 
 
 # Secure sandbox environment [info]

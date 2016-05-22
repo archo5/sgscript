@@ -981,7 +981,7 @@ DEFINE_TEST( sgson_tools )
 		atf_assert( sgs_EvalString( C, "return [{ a = 1.23, b = [ true, 'xyz' ] }];", &rvc ) == SGS_SUCCESS );
 		atf_assert( sgs_StackSize( C ) == 1 );
 	}
-	sgs_SerializeSGSONFmt( C, sgs_StackItem( C, -1 ), "\t" ); atf_check_errors( "" );
+	sgs_SerializeSGSON( C, sgs_StackItem( C, -1 ), "\t" ); atf_check_errors( "" );
 	atf_assert( sgs_StackSize( C ) == 2 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_STRING );
 	/* puts( sgs_GetStringPtr( C, -1 ) ); //*/
@@ -993,10 +993,9 @@ DEFINE_TEST( sgson_tools )
 	
 	/* try to trigger errors on serialization */
 	atf_clear_errors();
-	sgs_SerializeSGSONFmt( C, sgs_MakeCFunc( sgs_dummy_func ), NULL );
+	sgs_SerializeSGSON( C, sgs_MakeCFunc( sgs_dummy_func ), NULL );
 	atf_assert( sgs_StackSize( C ) == 1 ); /* must still have a return value */
-	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_STRING ); /* ... which is the string 'null' */
-	atf_assert( !strcmp( sgs_GetStringPtr( C, -1 ), "null" ) );
+	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_NULL ); /* ... which is null */
 	atf_check_errors( "[W:serialization mode 3 (SGSON text) does not support function serialization]" );
 	sgs_Pop( C, 1 );
 	
