@@ -1237,31 +1237,40 @@ static int sgson_encode_var( SGS_CTX, sgs_serialize3_data* data,
 						sgs_Variable key = data->servartable.vars[ args[ i ] ].key;
 						int wrotekey = 0;
 						/* small identifier optimization */
-						char* str = sgs_GetStringPtrP( &key );
-						char* end = str + sgs_GetStringSizeP( &key );
-						if( end - str <= 32 && end - str > 0 && ( *str == '_' || sgs_isalpha( *str ) ) )
+						if( key.type == SGS_VT_STRING )
 						{
-							char* cc = str + 1;
-							while( cc < end )
+							char* str = sgs_GetStringPtrP( &key );
+							char* end = str + sgs_GetStringSizeP( &key );
+							if( end - str <= 32 && end - str > 0 && ( *str == '_' || sgs_isalpha( *str ) ) )
 							{
-								if( !sgs_isalnum( *cc ) && *cc != '_' )
-									break;
-								cc++;
-							}
-							if( cc == end )
-							{
-								/* only small identifiers */
-								sgs_membuf_appbuf( buf, C, str, (size_t)( end - str ) );
-								wrotekey = 1;
+								char* cc = str + 1;
+								while( cc < end )
+								{
+									if( !sgs_isalnum( *cc ) && *cc != '_' )
+										break;
+									cc++;
+								}
+								if( cc == end )
+								{
+									/* only small identifiers */
+									sgs_membuf_appbuf( buf, C, str, (size_t)( end - str ) );
+									wrotekey = 1;
+								}
 							}
 						}
 						
 						if( wrotekey == 0 )
 						{
+							if( key.type != SGS_VT_STRING )
+								sgs_membuf_appchr( buf, C, '[' );
+							
 							sgs_PushVariable( C, key );
 							if( !sgson_encode_var( C, data, depth, tab, tablen ) )
 								return 0;
 							sgs_Pop( C, 1 );
+							
+							if( key.type != SGS_VT_STRING )
+								sgs_membuf_appchr( buf, C, ']' );
 						}
 					}
 					
@@ -1573,7 +1582,7 @@ static int sgs_UnserializeInt_V3( SGS_CTX, char* str, char* strend )
 	int res;
 	sgs_MemBuf stack = sgs_membuf_create();
 	sgs_membuf_appchr( &stack, C, 0 );
-	res = !sgson_parse( C, &stack, str, strend - str, sgs_MakeNull() );
+	res = !sgson_parse( C, &stack, str, strend - str );
 	sgs_membuf_destroy( &stack, C );
 	return res;
 }
@@ -1641,7 +1650,7 @@ static void sgson_skipws( const char** p, const char* end )
 #define SGSON_STK_POP sgs_membuf_resize( stack, C, stack->size - 1 )
 #define SGSON_STK_PUSH( what ) sgs_membuf_appchr( stack, C, what )
 
-const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVal size, sgs_Variable proto )
+const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVal size )
 {
 	int stk = sgs_StackSize( C );
 	const char* pos = buf, *end = buf + size;
@@ -1656,6 +1665,7 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 			*pos != '"' &&
 			*pos != '\'' &&
 			*pos != '_' &&
+			*pos != '[' &&
 			!sgs_isalpha( *pos ) &&
 			*pos != '}' )
 			return pos;
@@ -1666,33 +1676,45 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 		if( *pos == '{' )
 		{
 			SGSON_STK_PUSH( '{' );
-			if( proto.type != SGS_VT_NULL )
-			{
-				sgs_CloneItem( C, proto );
-			}
-			else
-			{
-				sgs_CreateDict( C, NULL, 0 );
-			}
+			sgs_CreateDict( C, NULL, 0 );
 		}
 		else if( *pos == '}' )
 		{
-			if( SGSON_STK_TOP != '{' && SGSON_STK_TOP != ':' )
+			if( SGSON_STK_TOP != '{' )
 				return pos;
 			SGSON_STK_POP;
 			push = 1;
 		}
 		else if( *pos == '[' )
 		{
-			SGSON_STK_PUSH( '[' );
-			sgs_CreateArray( C, NULL, 0 );
+			if( SGSON_STK_TOP == '{' )
+			{
+				/* non-string key marker (for maps) */
+				SGSON_STK_TOP = 'M';
+			}
+			else
+			{
+				SGSON_STK_PUSH( '[' );
+				sgs_CreateArray( C, NULL, 0 );
+			}
 		}
 		else if( *pos == ']' )
 		{
-			if( SGSON_STK_TOP != '[' )
-				return pos;
-			SGSON_STK_POP;
-			push = 1;
+			if( SGSON_STK_TOP == 'M' )
+			{
+				SGSON_STK_TOP = '=';
+				pos++;
+				sgson_skipws( &pos, end );
+				if( *pos != '=' )
+					return pos;
+			}
+			else
+			{
+				if( SGSON_STK_TOP != '[' )
+					return pos;
+				SGSON_STK_POP;
+				push = 1;
+			}
 		}
 		else if( *pos == ')' )
 		{
@@ -1814,6 +1836,8 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 				( pos[4] == '\0' || sgs_isoneof( pos[4], ")}]=, \n\r\t" ) ) &&
 				memcmp( pos, "null", 4 ) == 0 )
 			{
+				if( SGSON_STK_TOP == '{' )
+					return pos; /* no keywords as keys outside [..] */
 				sgs_PushNull( C );
 				pos += 4 - 1;
 				push = 1;
@@ -1822,6 +1846,8 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 				( pos[4] == '\0' || sgs_isoneof( pos[4], ")}]=, \n\r\t" ) ) &&
 				memcmp( pos, "true", 4 ) == 0 )
 			{
+				if( SGSON_STK_TOP == '{' )
+					return pos; /* no keywords as keys outside [..] */
 				sgs_PushBool( C, SGS_TRUE );
 				pos += 4 - 1;
 				push = 1;
@@ -1830,6 +1856,8 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 				( pos[5] == '\0' || sgs_isoneof( pos[5], ")}]=, \n\r\t" ) ) &&
 				memcmp( pos, "false", 5 ) == 0 )
 			{
+				if( SGSON_STK_TOP == '{' )
+					return pos; /* no keywords as keys outside [..] */
 				sgs_PushBool( C, SGS_FALSE );
 				pos += 5 - 1;
 				push = 1;
@@ -1846,18 +1874,10 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 				
 				sgs_PushStringBuf( C, pos, (sgs_SizeVal)( idend - pos ) );
 				pos = idend;
-				if( SGSON_STK_TOP == '{' )
-				{
-					SGSON_STK_TOP = '=';
-					sgson_skipws( &pos, end );
-					if( *pos != '=' )
-						return pos;
-				}
-				else
-				{
-					push = 1;
-					pos--;
-				}
+				SGSON_STK_TOP = '=';
+				sgson_skipws( &pos, end );
+				if( *pos != '=' )
+					return pos;
 			}
 			else /* identifiers as function names */
 			{
@@ -1870,12 +1890,20 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 				
 				pos = idend;
 				sgson_skipws( &pos, end );
-				if( end - pos < 2 || pos[0] != '(' )
-					return pos; /* no opening parenthesis / < 2 syms */
+				if( pos[0] != '(' && pos[0] != '{' )
+					return pos; /* no opening char. */
 				
-				SGSON_STK_PUSH( '(' );
-				sgs_PushVariable( C, SGS_FSTKTOP ); /* marker for beginning of function */
-				sgs_PushStringBuf( C, idstart, (sgs_SizeVal)( idend - idstart ) );
+				if( pos[0] == '(' )
+				{
+					SGSON_STK_PUSH( '(' );
+					sgs_PushVariable( C, SGS_FSTKTOP ); /* marker for beginning of function */
+					sgs_PushStringBuf( C, idstart, (sgs_SizeVal)( idend - idstart ) );
+				}
+				else /* map{..} */
+				{
+					SGSON_STK_PUSH( '{' );
+					sgs_CreateMap( C, NULL, 0 );
+				}
 			}
 		}
 		else
@@ -1914,19 +1942,13 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 	return sgs_StackSize( C ) > stk && stack->size == 1 ? NULL : buf;
 }
 
-void sgs_UnserializeSGSONExt( SGS_CTX, const char* str, size_t size, sgs_Variable tmpl )
+void sgs_UnserializeSGSONExt( SGS_CTX, const char* str, size_t size )
 {
 	const char* ret = NULL;
 	sgs_MemBuf stack = sgs_membuf_create();
 	sgs_SizeVal stksize = sgs_StackSize( C );
-	if( tmpl.type != SGS_VT_NULL && tmpl.type != SGS_VT_OBJECT )
-	{
-		sgs_PushNull( C );
-		sgs_Msg( C, SGS_ERROR, "cannot use non-object template" );
-		return;
-	}
 	sgs_membuf_appchr( &stack, C, 0 );
-	ret = sgson_parse( C, &stack, str, (sgs_SizeVal) size, tmpl );
+	ret = sgson_parse( C, &stack, str, (sgs_SizeVal) size );
 	sgs_membuf_destroy( &stack, C );
 	if( ret )
 	{

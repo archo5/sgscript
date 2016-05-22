@@ -985,7 +985,7 @@ DEFINE_TEST( sgson_tools )
 	atf_assert( sgs_StackSize( C ) == 2 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_STRING );
 	/* puts( sgs_GetStringPtr( C, -1 ) ); //*/
-	sgs_UnserializeSGSONExt( C, sgs_GetStringPtr( C, -1 ), (size_t) sgs_GetStringSize( C, -1 ), sgs_MakeNull() );
+	sgs_UnserializeSGSONExt( C, sgs_GetStringPtr( C, -1 ), (size_t) sgs_GetStringSize( C, -1 ) );
 	atf_check_errors( "" );
 	atf_assert( sgs_StackSize( C ) == 3 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );

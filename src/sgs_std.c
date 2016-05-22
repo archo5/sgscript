@@ -3905,14 +3905,14 @@ static int sgsstd_sgson_decode( SGS_CTX )
 	sgs_SizeVal size;
 	
 	SGSFN( "sgson_decode" );
-	if( !sgs_LoadArgs( C, "m|?o", &str, &size, NULL ) )
+	if( !sgs_LoadArgs( C, "m", &str, &size ) )
 		return 0;
 	
 	{
 		const char* ret = NULL;
 		sgs_MemBuf stack = sgs_membuf_create();
 		sgs_membuf_appchr( &stack, C, 0 );
-		ret = sgson_parse( C, &stack, str, size, sgs_OptStackItem( C, 1 ) );
+		ret = sgson_parse( C, &stack, str, size );
 		sgs_membuf_destroy( &stack, C );
 		if( ret )
 		{

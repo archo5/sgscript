@@ -475,7 +475,7 @@ void sgsVM_PushClosures( SGS_CTX, sgs_Closure** cls, int num );
 
 
 void sgs_SerializeInt_V3( SGS_CTX, sgs_Variable var, const char* tab, sgs_SizeVal tablen );
-const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVal size, sgs_Variable proto );
+const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVal size );
 
 
 sgs_Variable* sgsVM_VarMake_Dict();
