@@ -883,11 +883,26 @@ static int sgsstd_array_serialize( SGS_CTX, sgs_VarObj* obj )
 	SGSARR_HDR_OI;
 	pos = SGSARR_PTR( hdr );
 	posend = pos + hdr->size;
-	while( pos < posend )
+	if( C->object_arg == 2 )
 	{
-		sgs_Serialize( C, *pos++ );
+		int32_t i = 0;
+		sgs_Serialize( C, sgs_MakeInt( hdr->size ) );
+		sgs_SerializeObject( C, 1, "array_sized" );
+		while( pos < posend )
+		{
+			sgs_Serialize( C, sgs_MakeInt( i++ ) );
+			sgs_Serialize( C, *pos++ );
+			sgs_SerializeObjIndex( C, SGS_FALSE );
+		}
 	}
-	sgs_SerializeObject( C, hdr->size, "array" );
+	else
+	{
+		while( pos < posend )
+		{
+			sgs_Serialize( C, *pos++ );
+		}
+		sgs_SerializeObject( C, hdr->size, "array" );
+	}
 	return SGS_SUCCESS;
 }
 
@@ -914,7 +929,10 @@ static int sgsstd_array( SGS_CTX )
 	int i = 1, objcnt = sgs_StackSize( C ) - 1;
 	void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( objcnt ) );
 	sgs_Variable *p, *pend;
-	sgsstd_array_header_t* hdr = (sgsstd_array_header_t*)
+	sgsstd_array_header_t* hdr;
+	
+	SGSFN( "array" );
+	hdr = (sgsstd_array_header_t*)
 		sgs_CreateObjectIPA( C, NULL, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
 	hdr->size = objcnt;
 	hdr->mem = objcnt;
@@ -922,6 +940,34 @@ static int sgsstd_array( SGS_CTX )
 	pend = p + objcnt;
 	while( p < pend )
 		sgs_GetStackItem( C, i++, p++ );
+	
+	sgs_PushInterface( C, sgsstd_array_iface_gen );
+	sgs_ObjSetMetaObj( C, sgs_GetObjectStruct( C, -2 ), sgs_GetObjectStruct( C, -1 ) );
+	sgs_Pop( C, 1 );
+	
+	return 1;
+}
+
+static int sgsstd_array_sized( SGS_CTX )
+{
+	sgs_SizeVal size = 0;
+	sgs_Variable *p, *pend;
+	sgsstd_array_header_t* hdr;
+	void* data;
+	
+	SGSFN( "array_sized" );
+	if( !sgs_LoadArgs( C, "l", &size ) )
+		return 0;
+	
+	data = sgs_Malloc( C, SGSARR_ALLOCSIZE( size ) );
+	hdr = (sgsstd_array_header_t*)
+		sgs_CreateObjectIPA( C, NULL, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
+	hdr->size = size;
+	hdr->mem = size;
+	p = hdr->data = (sgs_Variable*) data;
+	pend = p + size;
+	while( p < pend )
+		(p++)->type = SGS_VT_NULL;
 	
 	sgs_PushInterface( C, sgsstd_array_iface_gen );
 	sgs_ObjSetMetaObj( C, sgs_GetObjectStruct( C, -2 ), sgs_GetObjectStruct( C, -1 ) );
@@ -950,13 +996,27 @@ static int sgsstd_vht_serialize( SGS_CTX, sgs_VarObj* obj, const char* initfn )
 	HTHDR;
 	pair = ht->vars;
 	pend = ht->vars + sgs_vht_size( ht );
-	while( pair < pend )
+	if( C->object_arg == 2 )
 	{
-		sgs_Serialize( C, pair->key );
-		sgs_Serialize( C, pair->val );
-		pair++;
+		sgs_SerializeObject( C, 0, initfn );
+		while( pair < pend )
+		{
+			sgs_Serialize( C, pair->key );
+			sgs_Serialize( C, pair->val );
+			sgs_SerializeObjIndex( C, SGS_FALSE );
+			pair++;
+		}
 	}
-	sgs_SerializeObject( C, sgs_vht_size( ht ) * 2, initfn );
+	else
+	{
+		while( pair < pend )
+		{
+			sgs_Serialize( C, pair->key );
+			sgs_Serialize( C, pair->val );
+			pair++;
+		}
+		sgs_SerializeObject( C, sgs_vht_size( ht ) * 2, initfn );
+	}
 	return SGS_SUCCESS;
 }
 
@@ -3937,7 +3997,8 @@ static int sgsstd_sgson_decode( SGS_CTX )
 static sgs_RegFuncConst regfuncs[] =
 {
 	/* containers */
-	/* STDLIB_FN( array ), -- object */ STDLIB_FN( dict ), STDLIB_FN( map ), { "class", sgsstd_class },
+	/* STDLIB_FN( array ), -- object */ STDLIB_FN( array_sized ), STDLIB_FN( dict ),
+	STDLIB_FN( map ), { "class", sgsstd_class },
 	STDLIB_FN( array_filter ), STDLIB_FN( array_process ),
 	STDLIB_FN( dict_filter ), STDLIB_FN( map_filter ), STDLIB_FN( map_process ),
 	STDLIB_FN( dict_size ), STDLIB_FN( map_size ), STDLIB_FN( isset ), STDLIB_FN( unset ), STDLIB_FN( clone ),

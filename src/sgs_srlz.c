@@ -385,6 +385,7 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 	}
 	else if( var.type == SGS_VT_OBJECT )
 	{
+		int parg = C->object_arg;
 		sgs_VarObj* O = var.data.O;
 		_STACK_PREPARE;
 		if( !O->iface->serialize )
@@ -394,7 +395,9 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 			goto fail;
 		}
 		_STACK_PROTECT;
+		C->object_arg = 1;
 		ret = SGS_SUCCEEDED( O->iface->serialize( C, O ) );
+		C->object_arg = parg;
 		_STACK_UNPROTECT;
 		if( ret == SGS_FALSE )
 			goto fail;
@@ -500,10 +503,10 @@ void sgs_SerializeObjectInt_V1( SGS_CTX, sgs_StkIdx args, const char* func, size
 	sgs_membuf_appbuf( &pSD->data, C, pb + 6, 1 );
 }
 
-#define sgs_unserr_incomp( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: incomplete data" )
-#define sgs_unserr_error( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: error in data" )
-#define sgs_unserr_objcall( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: could not create object from function" )
-#define sgs_unserr_symfail( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: could not map name to symbol" )
+#define sgs_unserr_incomp( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: incomplete data [L%d]", __LINE__ )
+#define sgs_unserr_error( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: error in data [L%d]", __LINE__ )
+#define sgs_unserr_objcall( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: could not create object from function [L%d]", __LINE__ )
+#define sgs_unserr_symfail( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: could not map name to symbol [L%d]", __LINE__ )
 
 SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 {
@@ -632,6 +635,7 @@ typedef struct sgs_serialize2_data
 	sgs_MemBuf argarray;
 	sgs_VarObj* curObj;
 	sgs_MemBuf data;
+	int32_t metaObjArg;
 }
 sgs_serialize2_data;
 
@@ -696,16 +700,36 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 	
 	if( var.type == SGS_VT_THREAD )
 	{
-		if( !sgs__thread_serialize( C, var.data.T, &pSD->data, &pSD->argarray ) )
+		sgs_StkIdx argidx;
+		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
+		if( vv )
 		{
-			sgs_Msg( C, SGS_ERROR, "failed to serialize thread" );
-			ret = SGS_FALSE;
+			argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
+			sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
 			goto fail;
+		}
+		else
+		{
+			if( !sgs__thread_serialize( C, var.data.T, &pSD->data, &pSD->argarray ) )
+			{
+				sgs_Msg( C, SGS_ERROR, "failed to serialize thread" );
+				ret = SGS_FALSE;
+				goto fail;
+			}
+			
+			/* create variable resolve */
+			sgs_Variable idxvar;
+			argidx = sgs_vht_size( &pSD->servartable );
+			idxvar.type = SGS_VT_INT;
+			idxvar.data.I = argidx;
+			sgs_vht_set( &pSD->servartable, C, &var, &idxvar );
+			sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
 		}
 	}
 	else if( var.type == SGS_VT_OBJECT )
 	{
-		int32_t mo_arg = 0;
+		int parg = C->object_arg;
+		int32_t mo_arg = -1, prev_mo_arg = pSD->metaObjArg;
 		sgs_VarObj* O = var.data.O, *MO = sgs_ObjGetMetaObj( var.data.O );
 		sgs_VarObj* prevObj = pSD->curObj;
 		_STACK_PREPARE;
@@ -732,20 +756,15 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		}
 		pSD->curObj = O;
 		_STACK_PROTECT;
+		C->object_arg = 2;
+		pSD->metaObjArg = mo_arg;
 		ret = SGS_SUCCEEDED( O->iface->serialize( C, O ) );
+		pSD->metaObjArg = prev_mo_arg;
+		C->object_arg = parg;
 		_STACK_UNPROTECT;
 		pSD->curObj = prevObj;
 		if( ret == SGS_FALSE )
 			goto fail;
-		
-		sgs_membuf_appchr( &pSD->data, C, sgs_ObjGetMetaMethodEnable( O ) ? '1' : '0' );
-		if( MO )
-		{
-			/* assume object is last, specify only meta-object */
-			sgs_membuf_appchr( &pSD->data, C, '3' );
-			sgs_membuf_appbuf( &pSD->data, C, &mo_arg, 4 );
-		}
-		else sgs_membuf_appchr( &pSD->data, C, '2' );
 	}
 	else if( var.type == SGS_VT_CFUNC )
 	{
@@ -819,6 +838,13 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 fail:
 	if( ep )
 	{
+		if( SD.argarray.size == 0 )
+			ret = 0;
+		else
+		{
+			sgs_membuf_appchr( &SD.data, C, 'R' );
+			sgs_membuf_appbuf( &SD.data, C, SD.argarray.ptr + SD.argarray.size - 4, 4 );
+		}
 		if( ret )
 		{
 			if( SD.data.size > 0x7fffffff )
@@ -868,18 +894,20 @@ void sgs_SerializeObjectInt_V2( SGS_CTX, sgs_StkIdx args, const char* func, size
 	else
 	{
 		sgs_Variable idxvar;
-		char pb[6] = { 'C', 0, 0, 0, 0, 0 };
+		char pb[11] = { 'O', 0 };
 		{
 			/* WP: they were pointless */
 			pb[1] = (char)((args)&0xff);
 			pb[2] = (char)((args>>8)&0xff);
 			pb[3] = (char)((args>>16)&0xff);
 			pb[4] = (char)((args>>24)&0xff);
+			/* WP: have error condition + sign interpretation doesn't matter */
+			pb[5] = (char) fnsize;
+			pb[6] = (char) sgs_ObjGetMetaMethodEnable( pSD->curObj );
+			memcpy( &pb[7], &pSD->metaObjArg, 4 );
 		}
 		
-		/* WP: have error condition + sign interpretation doesn't matter */
-		pb[ 5 ] = (char) fnsize;
-		sgs_membuf_appbuf( &pSD->data, C, pb, 6 );
+		sgs_membuf_appbuf( &pSD->data, C, pb, 11 );
 		sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - argsize, argsize );
 		sgs_membuf_appbuf( &pSD->data, C, func, fnsize );
 		sgs_membuf_appchr( &pSD->data, C, '\0' );
@@ -893,10 +921,27 @@ void sgs_SerializeObjectInt_V2( SGS_CTX, sgs_StkIdx args, const char* func, size
 	sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
 }
 
+static void sgs_SerializeObjIndexInt_V2( SGS_CTX, int isprop )
+{
+	sgs_serialize2_data* pSD = (sgs_serialize2_data*) C->serialize_state;
+	
+	if( 3 > pSD->argarray.size / sizeof(sgs_StkIdx) )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObjIndex: less than 3 serialized items found" );
+		return;
+	}
+	/* expecting 3 arguments: object, key, value */
+	sgs_membuf_appchr( &pSD->data, C, isprop ? '.' : '[' );
+	sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4 * 3, 4 * 3 );
+	/* remove only 2 of them */
+	sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4 * 2, pSD->argarray.size );
+}
+
 SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 {
+	int32_t retpos = -1;
 	sgs_Variable var;
-	SGSBOOL res = SGS_TRUE;
+	SGSBOOL res = SGS_FALSE;
 	sgs_MemBuf mb = sgs_membuf_create();
 	_STACK_PREPARE;
 	
@@ -979,16 +1024,19 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				goto fail;
 			}
 		}
-		else if( c == 'C' )
+		else if( c == 'O' )
 		{
 			sgs_StkIdx subsz;
-			int32_t i, pos, argc;
-			int fnsz, ret;
+			int32_t i, pos, argc, mo_arg;
+			int fnsz, mm_enable, ret;
 			if( str > strend-5 && !sgs_unserr_incomp( C ) )
 				goto fail;
 			SGS_AS_INT32( argc, str );
 			str += 4;
 			fnsz = *str++ + 1;
+			mm_enable = *str++ != 0;
+			SGS_AS_INT32( mo_arg, str );
+			str += 4;
 			for( i = 0; i < argc; ++i )
 			{
 				if( str > strend-4 && !sgs_unserr_incomp( C ) )
@@ -1006,13 +1054,31 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				goto fail;
 			subsz = sgs_StackSize( C ) - argc;
 			ret = SGS_SUCCEEDED( sgs_GlobalCall( C, str, argc, 1 ) );
-			if( ret == SGS_FALSE || sgs_StackSize( C ) - subsz < 1 )
+			if( ret == SGS_FALSE || sgs_StackSize( C ) - subsz < 1 || sgs_ItemType( C, -1 ) != SGS_VT_OBJECT )
 			{
 				sgs_unserr_objcall( C );
-				res = ret;
 				goto fail;
 			}
 			sgs_GetStackItem( C, -1, &var );
+			sgs_ObjSetMetaMethodEnable( var.data.O, mm_enable );
+			if( mo_arg < 0 )
+				sgs_ObjSetMetaObj( C, var.data.O, NULL );
+			else /* if( c == '3' ) */
+			{
+				sgs_Variable* mov;
+				/* add meta-object */
+				if( mo_arg < 0 || mo_arg >= (int32_t) ( mb.size / sizeof( sgs_Variable ) ) )
+				{
+					sgs_unserr_error( C );
+					goto fail;
+				}
+				mov = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ mo_arg ];
+				if( mov->type != SGS_VT_OBJECT && !sgs_unserr_error( C ) )
+					goto fail;
+				if( mov->data.O == var.data.O && !sgs_unserr_error( C ) )
+					goto fail;
+				sgs_ObjSetMetaObj( C, var.data.O, mov->data.O );
+			}
 			sgs_SetStackSize( C, subsz );
 			str += fnsz;
 		}
@@ -1060,39 +1126,36 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				goto fail;
 			}
 		}
-		else if( c == '0' || c == '1' || c == '2' || c == '3' )
+		else if( c == '.' || c == '[' )
 		{
-			sgs_VarObj* O;
-			sgs_Variable* pov = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[
-				mb.size / sizeof( sgs_Variable ) - 1 ];
-			if( pov->type != SGS_VT_OBJECT && !sgs_unserr_error( C ) )
+			int32_t pobj, pkey, pval, pend = (int32_t) ( mb.size / sizeof( sgs_Variable ) );
+			sgs_Variable* varlist = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 );
+			if( str > strend-12 && !sgs_unserr_incomp( C ) )
 				goto fail;
-			O = pov->data.O;
-			
-			if( c == '0' || c == '1' )
-				sgs_ObjSetMetaMethodEnable( O, c == '1' );
-			else if( c == '2' )
-				sgs_ObjSetMetaObj( C, O, NULL );
-			else /* if( c == '3' ) */
+			SGS_AS_INT32( pobj, str );
+			SGS_AS_INT32( pkey, str + 4 );
+			SGS_AS_INT32( pval, str + 8 );
+			str += 12;
+			if( pobj < 0 || pobj >= pend ||
+				pkey < 0 || pkey >= pend ||
+				pval < 0 || pval >= pend )
 			{
-				sgs_Variable* mov;
-				/* add meta-object */
-				int32_t pos;
-				if( str > strend-4 && !sgs_unserr_incomp( C ) )
-					goto fail;
-				SGS_AS_INT32( pos, str );
-				str += 4;
-				if( pos < 0 || pos >= (int32_t) ( mb.size / sizeof( sgs_Variable ) ) )
-				{
-					sgs_unserr_error( C );
-					goto fail;
-				}
-				mov = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ];
-				if( ( mov->type != SGS_VT_OBJECT || pov == mov ) && !sgs_unserr_error( C ) )
-					goto fail;
-				if( mov->data.O == O && !sgs_unserr_error( C ) )
-					goto fail;
-				sgs_ObjSetMetaObj( C, O, mov->data.O );
+				sgs_unserr_error( C );
+				goto fail;
+			}
+			sgs_SetIndex( C, varlist[ pobj ], varlist[ pkey ], varlist[ pval ], c == '.' );
+			continue;
+		}
+		else if( c == 'R' )
+		{
+			if( str > strend-4 && !sgs_unserr_incomp( C ) )
+				goto fail;
+			SGS_AS_INT32( retpos, str );
+			str += 4;
+			if( retpos < 0 || retpos >= (int32_t) ( mb.size / sizeof( sgs_Variable ) ) )
+			{
+				sgs_unserr_error( C );
+				goto fail;
 			}
 			continue;
 		}
@@ -1105,7 +1168,12 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 	}
 	
 	if( mb.size )
-		sgs_PushVariable( C, *(sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr + mb.size - sizeof(sgs_Variable), 4 ) );
+	{
+		if( retpos >= 0 )
+			sgs_PushVariable( C, ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ retpos ] );
+		else
+			sgs_PushVariable( C, *(sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr + mb.size - sizeof(sgs_Variable), 4 ) );
+	}
 	res = mb.size != 0;
 fail:
 	_STACK_UNPROTECT_SKIP( res );
@@ -1484,9 +1552,12 @@ void sgs_SerializeInt_V3( SGS_CTX, sgs_Variable var, const char* tab, sgs_SizeVa
 		}
 		else
 		{
+			int parg = C->object_arg;
 			pSD->curObj = O;
 			_STACK_PROTECT;
+			C->object_arg = 3;
 			ret = SGS_SUCCEEDED( O->iface->serialize( C, O ) );
+			C->object_arg = parg;
 			_STACK_UNPROTECT;
 			pSD->curObj = prevObj;
 			if( ret == SGS_FALSE )
@@ -1550,7 +1621,7 @@ fail:
 	}
 }
 
-void sgs_SerializeObjectInt_V3( SGS_CTX, sgs_StkIdx args, const char* func, size_t fnsize )
+static void sgs_SerializeObjectInt_V3( SGS_CTX, sgs_StkIdx args, const char* func, size_t fnsize )
 {
 	size_t argsize;
 	sgs_VHTVar* vv;
@@ -1597,6 +1668,16 @@ void sgs_SerializeObjectInt_V3( SGS_CTX, sgs_StkIdx args, const char* func, size
 	sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - argsize, pSD->argarray.size );
 	/* append object as new argument */
 	sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+}
+
+static int sgs_UnserializeInt_V3( SGS_CTX, char* str, char* strend )
+{
+	int res;
+	sgs_MemBuf stack = sgs_membuf_create();
+	sgs_membuf_appchr( &stack, C, 0 );
+	res = !sgson_parse( C, &stack, str, strend - str );
+	sgs_membuf_destroy( &stack, C );
+	return res;
 }
 
 
@@ -1646,16 +1727,26 @@ void sgs_SerializeObject( SGS_CTX, sgs_StkIdx args, const char* func )
 	}
 }
 
-
-static int sgs_UnserializeInt_V3( SGS_CTX, char* str, char* strend )
+void sgs_SerializeObjIndex( SGS_CTX, int isprop )
 {
-	int res;
-	sgs_MemBuf stack = sgs_membuf_create();
-	sgs_membuf_appchr( &stack, C, 0 );
-	res = !sgson_parse( C, &stack, str, strend - str );
-	sgs_membuf_destroy( &stack, C );
-	return res;
+	int mode;
+	if( !C->serialize_state )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObject: called outside the serialization process" );
+		return;
+	}
+	mode = *(int*) C->serialize_state;
+	
+	if( mode == 3 )
+		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObjIndex: mode 3 is not supported" );
+	else if( mode == 2 )
+		sgs_SerializeObjIndexInt_V2( C, isprop );
+	else
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObjectExt: bad mode (%d)", mode );
+	}
 }
+
 
 SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode )
 {

@@ -922,6 +922,7 @@ SGS_APIFUNC SGSBOOL sgs_EventState( SGS_CTX, sgs_Variable evt, int state );
 
 SGS_APIFUNC void sgs_SerializeExt( SGS_CTX, sgs_Variable var, int mode );
 SGS_APIFUNC void sgs_SerializeObject( SGS_CTX, sgs_StkIdx args, const char* func );
+SGS_APIFUNC void sgs_SerializeObjIndex( SGS_CTX, int isprop );
 SGS_APIFUNC SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode );
 #define sgs_Serialize( C, var ) sgs_SerializeExt( C, var, SGS_SERIALIZE_DEFAULT )
 #define sgs_Unserialize( C, var ) sgs_UnserializeExt( C, var, SGS_SERIALIZE_DEFAULT )
