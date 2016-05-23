@@ -1144,6 +1144,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-Serialize-Ext-functions">sgs_Serialize(Ext)</a> - serialize the given variable by converting it recursively to a byte stream
 </li><li><a href="#sgs-Unserialize-Ext-functions">sgs_Unserialize(Ext)</a> - unserialize the given variable from a byte stream
 </li><li><a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> - specify the unserialization function and argument count to use for the object
+</li><li><a href="#sgs-SerializeObjIndex-function">sgs_SerializeObjIndex</a> - serialize an object&#39;s property/index
 </li><li><a href="#sgs-SerializeSGSON-function">sgs_SerializeSGSON</a> - serialize the given variable into a text format
 </li><li><a href="#sgs-UnserializeSGSON-Ext-functions">sgs_UnserializeSGSON(Ext)</a> - unserialize the given variable from a byte stream</li></ul></div>
 <div class='item'><a name='String-helpers'></a><hr><h2>String helpers</h2><ul><li><a href="#sgs-PadString-function">sgs_PadString</a> - return a string with two spaces appended to all newline characters
@@ -1410,6 +1411,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-ResumeState-functions">sgs_ResumeState*** [functions]</a>
 </li><li><a href="#sgs-RootContext-function">sgs_RootContext [function]</a>
 </li><li><a href="#sgs-Serialize-Ext-functions">sgs_Serialize(Ext) [functions]</a>
+</li><li><a href="#sgs-SerializeObjIndex-function">sgs_SerializeObjIndex [function]</a>
 </li><li><a href="#sgs-SerializeObject-function">sgs_SerializeObject [function]</a>
 </li><li><a href="#sgs-SerializeSGSON-function">sgs_SerializeSGSON [function]</a>
 </li><li><a href="#sgs-Set-Err-OutputFunc-function">sgs_Set(Err)OutputFunc [function]</a>
@@ -1701,6 +1703,11 @@ After a successful call, all arguments will be popped off the stack and the expe
 </p><ul><li><code>sgs_Unserialize</code> is alias of <code>sgs_UnserializeExt( C, var, SGS_SERIALIZE_DEFAULT )</code>
 </li><li>To make sure only the right functions can be called, the global environment can be replaced with <a href="#sgs-SetEnv-function">sgs_SetEnv</a>.</li></ul></div>
 <div class='item'><a name='sgs-SerializeObject-function'></a><hr><h2>sgs_SerializeObject [function]</h2><h3>void sgs_SerializeObject( sgs_Context* C, sgs_StkIdx args, const char* func )</h3><h4>Specify the unserialization function and argument count to use for the object.</h4></div>
+<div class='item'><a name='sgs-SerializeObjIndex-function'></a><hr><h2>sgs_SerializeObjIndex [function]</h2><h3>void sgs_SerializeObjIndex( sgs_Context* C, sgs_Variable key, sgs_Variable val, int isprop )</h3><h4>Serialize an object&#39;s property/index.</h4><ul><li>This function is used to serialize structures that may contain references to other variables...
+<ul><li>...which leave them open to producing a self-referential construct that normal tree serialization cannot handle.
+</li></ul><li>Only supported by serialization modes 1 and 2 (binary).
+<ul><li>Mode 1 support does not actually allow serializing self-referential structures.
+</li></ul><li>For usage examples, see source code in <code>sgs_std.c</code>.</li></ul></div>
 <div class='item'><a name='sgs-SerializeSGSON-function'></a><hr><h2>sgs_SerializeSGSON [function]</h2><h3>void sgs_SerializeSGSON( sgs_Context* C, sgs_Variable var, const char* tab )</h3><h4>Serialize the given variable into a text format.</h4><ul><li>This is similar to <code>sgs_SerializeExt</code> with mode = 3, only difference being the <code>tab</code> argument.
 </li><li><code>tab</code> allows to specify the string used for tabs
 <ul><li>if <code>tab</code> is <code>NULL</code>, the text output is tightly packed, without any extra spaces</li></ul></li></ul></div>

@@ -484,7 +484,7 @@ fail:
 	}
 }
 
-void sgs_SerializeObjectInt_V1( SGS_CTX, sgs_StkIdx args, const char* func, size_t fnsize )
+static void sgs_SerializeObjectInt_V1( SGS_CTX, sgs_StkIdx args, const char* func, size_t fnsize )
 {
 	sgs_serialize1_data* pSD = (sgs_serialize1_data*) C->serialize_state;
 	char pb[7] = { 'C', 0, 0, 0, 0, 0, 0 };
@@ -501,6 +501,12 @@ void sgs_SerializeObjectInt_V1( SGS_CTX, sgs_StkIdx args, const char* func, size
 	sgs_membuf_appbuf( &pSD->data, C, pb, 6 );
 	sgs_membuf_appbuf( &pSD->data, C, func, fnsize );
 	sgs_membuf_appbuf( &pSD->data, C, pb + 6, 1 );
+}
+
+static void sgs_SerializeObjIndexInt_V1( SGS_CTX, int isprop )
+{
+	sgs_serialize1_data* pSD = (sgs_serialize1_data*) C->serialize_state;
+	sgs_membuf_appchr( &pSD->data, C, isprop ? '.' : '[' );
 }
 
 #define sgs_unserr_incomp( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: incomplete data [L%d]", __LINE__ )
@@ -618,6 +624,12 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 			sgs_Pop( C, 1 );
 			sgs_PushVariable( C, sym );
 			sgs_Release( C, &sym );
+		}
+		else if( c == '.' || c == '[' )
+		{
+			sgs_SetIndex( C, sgs_StackItem( C, -3 ), sgs_StackItem( C, -2 ),
+				sgs_StackItem( C, -1 ), c == '.' );
+			sgs_Pop( C, 2 );
 		}
 		else
 		{
@@ -1727,7 +1739,7 @@ void sgs_SerializeObject( SGS_CTX, sgs_StkIdx args, const char* func )
 	}
 }
 
-void sgs_SerializeObjIndex( SGS_CTX, int isprop )
+void sgs_SerializeObjIndex( SGS_CTX, sgs_Variable key, sgs_Variable val, int isprop )
 {
 	int mode;
 	if( !C->serialize_state )
@@ -1737,10 +1749,18 @@ void sgs_SerializeObjIndex( SGS_CTX, int isprop )
 	}
 	mode = *(int*) C->serialize_state;
 	
+	if( mode == 1 || mode == 2 )
+	{
+		sgs_Serialize( C, key );
+		sgs_Serialize( C, val );
+	}
+	
 	if( mode == 3 )
 		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObjIndex: mode 3 is not supported" );
 	else if( mode == 2 )
 		sgs_SerializeObjIndexInt_V2( C, isprop );
+	else if( mode == 1 )
+		sgs_SerializeObjIndexInt_V1( C, isprop );
 	else
 	{
 		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObjectExt: bad mode (%d)", mode );

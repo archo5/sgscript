@@ -890,9 +890,7 @@ static int sgsstd_array_serialize( SGS_CTX, sgs_VarObj* obj )
 		sgs_SerializeObject( C, 1, "array_sized" );
 		while( pos < posend )
 		{
-			sgs_Serialize( C, sgs_MakeInt( i++ ) );
-			sgs_Serialize( C, *pos++ );
-			sgs_SerializeObjIndex( C, SGS_FALSE );
+			sgs_SerializeObjIndex( C, sgs_MakeInt( i++ ), *pos++, SGS_FALSE );
 		}
 	}
 	else
@@ -1001,9 +999,7 @@ static int sgsstd_vht_serialize( SGS_CTX, sgs_VarObj* obj, const char* initfn )
 		sgs_SerializeObject( C, 0, initfn );
 		while( pair < pend )
 		{
-			sgs_Serialize( C, pair->key );
-			sgs_Serialize( C, pair->val );
-			sgs_SerializeObjIndex( C, SGS_FALSE );
+			sgs_SerializeObjIndex( C, pair->key, pair->val, SGS_FALSE );
 			pair++;
 		}
 	}

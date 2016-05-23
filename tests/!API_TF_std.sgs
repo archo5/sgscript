@@ -141,12 +141,22 @@ sstruct_string = "{0=null,a=false,b=true,c=0,d=12124,e=-89235,f=0,g=12.346,"
 testEqual( typeof(serialize1(sstruct)), "string", "serialize - no errors" );
 testEqual( ''$unserialize1(serialize1(sstruct)), sstruct_string, "(un)serialize - roundtrip" );
 ssstr =
-	"P\x04\x01\x00\x00\x00k"$
-	"P\x04\x05\x00\x00\x00pcallS"$
-	"P\x04\x01\x00\x00\x00m"$
-	"P\x04\x05\x00\x00\x00arrayS"$
-	"C\x04\x00\x00\x00\x04dict\x00";
-testEqual( serialize1({k=pcall,m=array}), ssstr, "serialize symbols - no errors" );
+	"P\4\1\0\0\0k"$
+	"P\4\5\0\0\0pcallS"$
+	"P\4\1\0\0\0m"$
+	"P\4\5\0\0\0arrayS"$
+	"C\4\0\0\0\4dict\0";
+ssstr2 = // version 2
+	"C\0\0\0\0\4dict\0" $
+	"P\4\1\0\0\0k"$
+	"P\4\5\0\0\0pcallS["$
+	"P\4\1\0\0\0m"$
+	"P\4\5\0\0\0arrayS[";
+result = serialize1({k=pcall,m=array});
+// both options are valid, 2nd is expected to be used only in testing
+if( result === ssstr2 )
+	testEqual( result, ssstr2, "serialize symbols - RESET ARRAY/DICT SERIALIZATION CODE" );
+testEqual( result, ssstr, "serialize symbols - no errors" );
 testEqual( ''$unserialize1(serialize1({k=pcall,m=array})), "{k=C function,m=dict}", "(un)serialize symbols - roundtrip" );
 testEqual( ERRORS, "", "serialization - errors" );
 
@@ -190,10 +200,19 @@ testEqual( serialize2({k=pcall,m=array}), ssstr, "serialize symbols - no errors"
 testEqual( ''$unserialize2(serialize2({k=pcall,m=array})), "{k=C function,m=dict}", "(un)serialize symbols - roundtrip" );
 selfref = [ 1 ]; selfref.push( selfref );
 testEqual( typeof(serialize2(selfref)), "string", "serialize2 - self-referencing array - no errors" );
+usr = unserialize2(serialize2(selfref));
+testEqual( typeof(usr), "array", "[un]-serialize2 - self-referencing array - no errors" );
+testEqual( usr[1], usr, "[un]-serialize2 - self-referencing array - reference maintained" );
 selfref = { a = 1 }; selfref.self = selfref;
 testEqual( typeof(serialize2(selfref)), "string", "serialize2 - self-referencing dict - no errors" );
+usr = unserialize2(serialize2(selfref));
+testEqual( typeof(usr), "dict", "[un]-serialize2 - self-referencing dict - no errors" );
+testEqual( usr.self, usr, "[un]-serialize2 - self-referencing dict - reference maintained" );
 selfref = map{ a = 1 }; selfref.self = selfref;
 testEqual( typeof(serialize2(selfref)), "string", "serialize2 - self-referencing map - no errors" );
+usr = unserialize2(serialize2(selfref));
+testEqual( typeof(usr), "map", "[un]-serialize2 - self-referencing map - no errors" );
+testEqual( usr.self, usr, "[un]-serialize2 - self-referencing map - reference maintained" );
 testEqual( ERRORS, "", "serialization - errors" );
 
 	section( "array basic ops" );

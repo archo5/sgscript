@@ -1456,6 +1456,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_Serialize(Ext) - serialize the given variable by converting it recursively to a byte stream
 - @sgs_Unserialize(Ext) - unserialize the given variable from a byte stream
 - @sgs_SerializeObject - specify the unserialization function and argument count to use for the object
+- @sgs_SerializeObjIndex - serialize an object's property/index
 - @sgs_SerializeSGSON - serialize the given variable into a text format
 - @sgs_UnserializeSGSON(Ext) - unserialize the given variable from a byte stream
 
@@ -2560,6 +2561,18 @@ After a successful call, all arguments will be popped off the stack and the expe
 
 == void sgs_SerializeObject( sgs_Context* C, sgs_StkIdx args, const char* func )
 === Specify the unserialization function and argument count to use for the object.
+
+
+# sgs_SerializeObjIndex [function]
+
+== void sgs_SerializeObjIndex( sgs_Context* C, sgs_Variable key, sgs_Variable val, int isprop )
+=== Serialize an object's property/index.
+
+- This function is used to serialize structures that may contain references to other variables...
+-- ...which leave them open to producing a self-referential construct that normal tree serialization cannot handle.
+- Only supported by serialization modes 1 and 2 (binary).
+-- Mode 1 support does not actually allow serializing self-referential structures.
+- For usage examples, see source code in `sgs_std.c`.
 
 
 # sgs_SerializeSGSON [function]
