@@ -312,7 +312,11 @@ static int find_var( sgs_MemBuf* S, char* str, unsigned len )
 		{
 			difs += abs( *cstr - *ptr );
 			ptr += *ptr != '=';
-			cstr += ( left -= 1 ) > 0;
+			if( left > 0 )
+			{
+				left--;
+				cstr++;
+			}
 		}
 	}
 	return -1;
