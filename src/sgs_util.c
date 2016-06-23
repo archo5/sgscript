@@ -178,7 +178,7 @@ sgs_Hash sgs_HashVar( const sgs_Variable* v )
 
 
 // http://stackoverflow.com/a/5694432 implementation 5
-static int is_prime( size_t x )
+static int sgs_is_prime( size_t x )
 {
 	size_t i, o = 4;
 	for( i = 5; 1; i += o )
@@ -192,7 +192,7 @@ static int is_prime( size_t x )
 	}
 	return 1;
 }
-static size_t next_prime( size_t x )
+static size_t sgs_next_prime( size_t x )
 {
 	switch( x )
 	{
@@ -207,7 +207,7 @@ static size_t next_prime( size_t x )
 	size_t i = x - 6 * k;
 	size_t o = i < 2 ? 1 : 5;
 	x = 6 * k + o;
-	for( i = ( 3 + o ) / 2; !is_prime( x ); x += i )
+	for( i = ( 3 + o ) / 2; !sgs_is_prime( x ); x += i )
 		i ^= 6;
 	return x;
 }
@@ -244,6 +244,8 @@ static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
 #define SGSCFG_VHT_PROBE_DIST 2
 #define SGSCFG_VHT_ENABLE_ROBIN_HOOD_HASHING 1
 
+#define SGS_VHT_PROBE_ADV( i, size ) i += SGSCFG_VHT_PROBE_DIST; if( i >= (size) ) i -= (size);
+/****  ^ slightly faster on x86 than:  i = ( i + SGSCFG_VHT_PROBE_DIST ) % size;  ****/
 #define SGS_VHT_PAIR_MEM_( T ) ((unsigned)(T)->pair_mem)
 #define SGS_VHT_PROBE_LEN_( T, pos_idx, pos_hash ) (((SGS_VHT_PAIR_MEM_(T) + (unsigned)(pos_idx) - (pos_hash) % SGS_VHT_PAIR_MEM_(T)) % SGS_VHT_PAIR_MEM_(T))/SGSCFG_VHT_PROBE_DIST)
 
@@ -375,7 +377,7 @@ static void sgs_vht_rehash( sgs_VHTable* T, SGS_CTX, sgs_VHTIdx size )
 	
 	if( size < 4 )
 		size = 4;
-	size = (sgs_VHTIdx) next_prime( (size_t) size );
+	size = (sgs_VHTIdx) sgs_next_prime( (size_t) size );
 	if( size == T->pair_mem )
 		return;
 	
@@ -402,7 +404,7 @@ static void sgs_vht_rehash( sgs_VHTable* T, SGS_CTX, sgs_VHTIdx size )
 					np[ i ] = idx;
 					break;
 				}
-				i = ( i + SGSCFG_VHT_PROBE_DIST ) % size;
+				SGS_VHT_PROBE_ADV( i, size );
 			}
 			while( i != sp );
 		}
@@ -449,7 +451,7 @@ sgs_VHTIdx sgs_vht_pair_id( sgs_VHTable* T, sgs_Variable* K, sgs_Hash hash )
 			break;
 		if( idx != SGS_VHTIDX_REMOVED && equal_variables( K, &T->vars[ idx ].key ) )
 			return i;
-		i = ( i + SGSCFG_VHT_PROBE_DIST ) % T->pair_mem;
+		SGS_VHT_PROBE_ADV( i, T->pair_mem );
 	}
 	while( i != sp );
 	return -1;
@@ -483,7 +485,7 @@ sgs_VHTVar* sgs_vht_get_str( sgs_VHTable* T, const char* str, uint32_t size, sgs
 					return T->vars + idx;
 			}
 		}
-		i = ( i + SGSCFG_VHT_PROBE_DIST ) % T->pair_mem;
+		SGS_VHT_PROBE_ADV( i, T->pair_mem );
 	}
 	while( i != sp );
 	return NULL;
@@ -562,7 +564,7 @@ sgs_VHTVar* sgs_vht_set( sgs_VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable*
 				}
 			}
 #endif
-			i = ( i + SGSCFG_VHT_PROBE_DIST ) % T->pair_mem;
+			SGS_VHT_PROBE_ADV( i, T->pair_mem );
 			curdist++;
 		}
 		while( i != sp );
