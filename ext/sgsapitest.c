@@ -44,19 +44,20 @@ typedef struct _test_t { testfunc fn; const char* nm; } test_t;
 
 extern test_t all_tests[];
 const char* testname;
+static int verbose = 0;
+static int run_all = 1;
 
 
 int all_tests_count();
-void exec_tests()
+void exec_tests( const char* onlythis )
 {
 	int i, count = all_tests_count();
-	fclose( fopen( outfile, "w" ) );
-	fclose( fopen( outfile_errors, "w" ) );
-	
 	for( i = 0; i < count; ++i )
 	{
+		if( onlythis && strcmp( all_tests[ i ].nm, onlythis ) )
+			continue;
 		testname = all_tests[ i ].nm;
-		printf( "- [%02d] %-20s ...", i+1, all_tests[ i ].nm );
+		printf( "- [%02d] %-20s ...", i+1, testname );
 		all_tests[ i ].fn();
 		printf( " OK\n" );
 	}
@@ -68,10 +69,30 @@ __cdecl
 #endif
 main( int argc, char** argv )
 {
+	int i;
 	printf( "\n//\n/// SGScript [API] test framework\n//\n" );
-
-	exec_tests();
-
+	
+	fclose( fopen( outfile, "w" ) );
+	fclose( fopen( outfile_errors, "w" ) );
+	
+	for( i = 1; i < argc; ++i )
+	{
+		if( !strcmp( argv[ i ], "-v" ) )
+			verbose++;
+		if( !strcmp( argv[ i ], "-t" ) )
+		{
+			i++;
+			if( i >= argc ){ fprintf( stderr, "error: argument -t missing value\n" ); exit( 1 ); }
+			run_all = 0;
+			exec_tests( argv[ i ] );
+		}
+	}
+	
+	if( run_all )
+	{
+		exec_tests( NULL );
+	}
+	
 	return 0;
 }
 
@@ -79,23 +100,29 @@ main( int argc, char** argv )
 /* API */
 
 void atf_abort(){ abort(); }
-void atf_error( const char* msg, int line )
+void atf_error( int chk, const char* msg, int line )
 {
-	printf( "\nERROR at line %d\n%s\n", line, msg );
-	atf_abort();
+	if( !chk )
+	{
+		printf( "\nERROR at line %d\ntest failed: %s\n", line, msg );
+		atf_abort();
+	}
+	else if( verbose >= 2 )
+	{
+		printf( "\n[%d] %s\n", line, msg );
+	}
 }
-void atf_warning( const char* msg, int line )
+void atf_warning( int chk, const char* msg, int line )
 {
-	printf( "\nWARNING at line %d\n%s\n", line, msg );
+	if( !chk )
+		printf( "\nWARNING at line %d\ntest failed: %s\n", line, msg );
 }
 
-#define atf_defmsg( chk ) "test failed: \"" #chk "\""
+#define atf_assert_( chk, msg, line ) atf_error( (chk) != 0, msg, line )
+#define atf_assert( chk ) atf_assert_( chk, #chk, __LINE__ )
 
-#define atf_assert_( chk, msg, line ) do{ if( !(chk) ) atf_error( msg, line ); }while(0)
-#define atf_assert( chk ) atf_assert_( chk, atf_defmsg( chk ), __LINE__ )
-
-#define atf_check_( chk, msg, line ) do{ if( !(chk) ) atf_warning( msg, line ); }while(0)
-#define atf_check( chk ) atf_check_( chk, atf_defmsg( chk ), __LINE__ )
+#define atf_check_( chk, msg, line ) atf_warning( (chk) != 0, msg, line )
+#define atf_check( chk ) atf_check_( chk, #chk, __LINE__ )
 
 void atf_assert_string_( const char* str1, const char* str2, const char* msg, int line )
 {
@@ -123,7 +150,7 @@ void atf_assert_string_( const char* str1, const char* str2, const char* msg, in
 	while( *s1 && *s2 );
 }
 #define atf_assert_string( str1, str2 ) \
-	atf_assert_string_( str1, str2, atf_defmsg( str1 == str2 ), __LINE__ )
+	atf_assert_string_( str1, str2, "test failed: str1 == str2", __LINE__ )
 
 
 /*************\
@@ -1498,6 +1525,46 @@ DEFINE_TEST( profiling )
 	destroy_context( C );
 }
 
+DEFINE_TEST( hash_table )
+{
+	sgs_VHTStats
+		global_table_stats = { verbose >= 1, 1 },
+		symbol_table_stats = { verbose >= 1, 1 },
+		random_table_stats = { verbose >= 1 };
+	SGS_CTX = get_context();
+	
+	if( verbose >= 1 ) printf( "\n--- global table ---\n" );
+	sgs_vht_analyze( (sgs_VHTable*) C->_G->data, &global_table_stats );
+	atf_assert( global_table_stats.removed == 0 ); /* must not have any initial removals in table */
+	atf_assert( global_table_stats.collisions * 2 < global_table_stats.used ); /* less than 50% collisions out of all used items */
+	atf_assert( global_table_stats.collisions * 4 < global_table_stats.buckets ); /* less than 25% collisions out of all buckets */
+	atf_assert( global_table_stats.worst_probe_length <= 6 ); /* small worst probe length */
+	atf_assert( global_table_stats.avg_probe_length < 1.5f ); /* small average probe length */
+	
+	if( verbose >= 1 ) printf( "\n--- symbol table ---\n" );
+	sgs_vht_analyze( (sgs_VHTable*) C->shared->_SYM->data, &symbol_table_stats );
+	atf_assert( symbol_table_stats.removed == 0 ); /* must not have any initial removals in table */
+	atf_assert( symbol_table_stats.collisions * 2 < symbol_table_stats.used ); /* less than 50% collisions out of all used items */
+	atf_assert( symbol_table_stats.collisions * 4 < symbol_table_stats.buckets ); /* less than 25% collisions out of all buckets */
+	atf_assert( symbol_table_stats.worst_probe_length <= 10 ); /* small worst probe length */
+	atf_assert( symbol_table_stats.avg_probe_length < 1.55f ); /* small average probe length */
+	
+	if( verbose >= 1 ) printf( "\n--- random table (100000 base64'd numbers) ---\n" );
+	const char* str = "include 'fmt';"
+	"nums = []; for( i = 0; i < 100000; ++i ) nums.push(i);"
+	"nums.shuffle();"
+	"_R.tbl = tbl = {}; foreach(i:nums) tbl[fmt_base64_encode(i)] = true;";
+	atf_assert( sgs_ExecString( C, str ) == SGS_SUCCESS );
+	atf_assert( sgs_PushProperty( C, sgs_Registry( C, SGS_REG_ROOT ), "tbl" ) == SGS_TRUE );
+	sgs_vht_analyze( (sgs_VHTable*) sgs_GetObjectData( C, -1 ), &random_table_stats );
+	atf_assert( random_table_stats.collisions * 2 < random_table_stats.used ); /* less than 50% collisions out of all used items */
+	atf_assert( random_table_stats.collisions * 3 < random_table_stats.buckets ); /* less than 33.(3)% collisions out of all buckets */
+	atf_assert( random_table_stats.worst_probe_length <= 32 ); /* small worst probe length */
+	atf_assert( random_table_stats.avg_probe_length < 2.0f ); /* small average probe length */
+	
+	destroy_context( C );
+}
+
 
 test_t all_tests[] =
 {
@@ -1526,6 +1593,7 @@ test_t all_tests[] =
 	TST( yield_abandon ),
 	TST( state_machine_core ),
 	TST( profiling ),
+	TST( hash_table ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }
 

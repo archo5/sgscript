@@ -177,6 +177,42 @@ sgs_Hash sgs_HashVar( const sgs_Variable* v )
 }
 
 
+// http://stackoverflow.com/a/5694432 implementation 5
+static int is_prime( size_t x )
+{
+	size_t i, o = 4;
+	for( i = 5; 1; i += o )
+	{
+		size_t q = x / i;
+		if (q < i)
+			return 1;
+		if (x == q * i)
+			return 0;
+		o ^= 6;
+	}
+	return 1;
+}
+static size_t next_prime( size_t x )
+{
+	switch( x )
+	{
+	case 0:
+	case 1:
+	case 2: return 2;
+	case 3: return 3;
+	case 4:
+	case 5: return 5;
+	}
+	size_t k = x / 6;
+	size_t i = x - 6 * k;
+	size_t o = i < 2 ? 1 : 5;
+	x = 6 * k + o;
+	for( i = ( 3 + o ) / 2; !is_prime( x ); x += i )
+		i ^= 6;
+	return x;
+}
+
+
 
 static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
 {
@@ -204,6 +240,12 @@ static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
 	return 1;
 }
 
+
+#define SGSCFG_VHT_PROBE_DIST 2
+#define SGSCFG_VHT_ENABLE_ROBIN_HOOD_HASHING 1
+
+#define SGS_VHT_PAIR_MEM_( T ) ((unsigned)(T)->pair_mem)
+#define SGS_VHT_PROBE_LEN_( T, pos_idx, pos_hash ) (((SGS_VHT_PAIR_MEM_(T) + (unsigned)(pos_idx) - (pos_hash) % SGS_VHT_PAIR_MEM_(T)) % SGS_VHT_PAIR_MEM_(T))/SGSCFG_VHT_PROBE_DIST)
 
 void sgs_vht_init( sgs_VHTable* T, SGS_CTX, sgs_VHTIdx initial_pair_mem, sgs_VHTIdx initial_var_mem )
 {
@@ -235,16 +277,107 @@ void sgs_vht_free( sgs_VHTable* T, SGS_CTX )
 	sgs_Dealloc( T->vars );
 }
 
+void sgs_vht_analyze( sgs_VHTable* T, sgs_VHTStats* io )
+{
+	unsigned numcols = 0, numused = 0, numempty = 0, numrem = 0, distsum = 0, worstdist = 0;
+	
+	sgs_VHTIdx* p = T->pairs;
+	sgs_VHTIdx* pend = p + T->pair_mem;
+	
+	if( io->print )
+	{
+		printf( "Hash table %p [size=%d, pair_mem=%d var_mem=%d] ---\n", T,
+			T->size, T->pair_mem, T->var_mem );
+	}
+	
+	while( p < pend )
+	{
+		if( *p == SGS_VHTIDX_EMPTY )
+			numempty++;
+		else if( *p == SGS_VHTIDX_REMOVED )
+			numrem++;
+		else
+		{
+			sgs_VHTVar* v = T->vars + *p;
+			unsigned dist = SGS_VHT_PROBE_LEN_( T, p - T->pairs, v->hash );
+			
+			numused++;
+			distsum += dist + 1;
+			if( worstdist < dist + 1 )
+				worstdist = dist + 1;
+			
+			if( v->hash % (unsigned) T->pair_mem != ( p - T->pairs ) )
+			{
+				numcols++;
+				if( io->print && io->print_cols )
+				{
+					printf( "collision: hash=0x%08X mod=%u loc=%u dist=%u\n",
+						v->hash, v->hash % (unsigned) T->pair_mem, (unsigned) ( p - T->pairs ), dist );
+				}
+			}
+		}
+		++p;
+	}
+	
+	if( io->print )
+	{
+		if( io->print_ubmp )
+		{
+			printf( "--- usage bitmap ---\n" );
+			p = T->pairs;
+			while( p < pend )
+			{
+				if( *p == SGS_VHTIDX_EMPTY )
+					printf( " " );
+				else if( *p == SGS_VHTIDX_REMOVED )
+					printf( "r" );
+				else
+				{
+					unsigned dist = SGS_VHT_PROBE_LEN_( T, p - T->pairs, T->vars[ *p ].hash );
+					if( dist < 10 )
+						printf( "%u", dist );
+					else
+						printf( "#" );
+				}
+				++p;
+			}
+			printf( "\n" );
+		}
+		
+		printf( "--- summary ---\n" );
+		printf( "# used: %u\n", numused );
+		printf( "# empty: %u\n", numempty );
+		printf( "# removed: %u\n", numrem );
+		printf( "# collisions: %u\n", numcols );
+		printf( "> average probe length: %.2f\n", (float) distsum / (float) numused );
+		printf( "> worst probe length: %u\n", worstdist );
+		{
+			float fbkts = (float) T->pair_mem, fins = (float) numused, fcols = (float) numcols;
+			printf( "%% collisions: %.2f%% (expected=%.2f%%)\n", fcols / fbkts * 100, (fins - fbkts * (1 - powf((fbkts-1)/fbkts, fins))) / fbkts * 100);
+		}
+		printf( "---\n" );
+	}
+	
+	io->buckets = (unsigned) T->pair_mem;
+	io->used = numused;
+	io->empty = numempty;
+	io->removed = numrem;
+	io->collisions = numcols;
+	io->worst_probe_length = worstdist;
+	io->avg_probe_length = (float) distsum / (float) numused;
+}
+
 static void sgs_vht_rehash( sgs_VHTable* T, SGS_CTX, sgs_VHTIdx size )
 {
 	sgs_Hash h;
 	sgs_VHTIdx i, si, sp, idx, *np;
 	sgs_BreakIf( size < T->size );
 	
-	if( size == T->pair_mem )
-		return;
 	if( size < 4 )
 		size = 4;
+	size = (sgs_VHTIdx) next_prime( (size_t) size );
+	if( size == T->pair_mem )
+		return;
 	
 	np = sgs_Alloc_n( sgs_VHTIdx, (size_t) size );
 	memset( np, SGS_VHTIDX_EMPTY, sizeof(sgs_VHTIdx) * (size_t) size );
@@ -269,9 +402,7 @@ static void sgs_vht_rehash( sgs_VHTable* T, SGS_CTX, sgs_VHTIdx size )
 					np[ i ] = idx;
 					break;
 				}
-				i++;
-				if( i >= size )
-					i = 0;
+				i = ( i + SGSCFG_VHT_PROBE_DIST ) % size;
 			}
 			while( i != sp );
 		}
@@ -318,9 +449,7 @@ sgs_VHTIdx sgs_vht_pair_id( sgs_VHTable* T, sgs_Variable* K, sgs_Hash hash )
 			break;
 		if( idx != SGS_VHTIDX_REMOVED && equal_variables( K, &T->vars[ idx ].key ) )
 			return i;
-		i++;
-		if( i >= T->pair_mem )
-			i = 0;
+		i = ( i + SGSCFG_VHT_PROBE_DIST ) % T->pair_mem;
 	}
 	while( i != sp );
 	return -1;
@@ -354,9 +483,7 @@ sgs_VHTVar* sgs_vht_get_str( sgs_VHTable* T, const char* str, uint32_t size, sgs
 					return T->vars + idx;
 			}
 		}
-		i++;
-		if( i >= T->pair_mem )
-			i = 0;
+		i = ( i + SGSCFG_VHT_PROBE_DIST ) % T->pair_mem;
 	}
 	while( i != sp );
 	return NULL;
@@ -380,7 +507,10 @@ sgs_VHTVar* sgs_vht_set( sgs_VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable*
 	}
 	else
 	{
-		sgs_VHTIdx osize = T->size;
+		unsigned curdist = 0; /* current probe length for item to be inserted */
+		sgs_VHTIdx
+			osize = T->size, /* original hash table item count */
+			ipos = T->size; /* currently inserted item index */
 		SGS_UNUSED( osize );
 		
 		/* prefer to rehash if too many removed (num_rem) items are found */
@@ -411,13 +541,29 @@ sgs_VHTVar* sgs_vht_set( sgs_VHTable* T, SGS_CTX, sgs_Variable* K, sgs_Variable*
 			{
 				if( idx == SGS_VHTIDX_REMOVED )
 					T->num_rem--;
-				T->pairs[ i ] = T->size;
+				T->pairs[ i ] = ipos;
 				T->size++;
 				break;
 			}
-			i++;
-			if( i >= T->pair_mem )
-				i = 0;
+#if SGSCFG_VHT_ENABLE_ROBIN_HOOD_HASHING
+			else
+			{
+				/* occupied, try Robin Hood Hashing */
+				
+				/* probe length for existing item */
+				unsigned exdist = SGS_VHT_PROBE_LEN_( T, i, T->vars[ idx ].hash );
+				
+				if( exdist < curdist )
+				{
+					/* success, swap current / new items */
+					T->pairs[ i ] = ipos;
+					ipos = idx;
+					curdist = exdist;
+				}
+			}
+#endif
+			i = ( i + SGSCFG_VHT_PROBE_DIST ) % T->pair_mem;
+			curdist++;
 		}
 		while( i != sp );
 		

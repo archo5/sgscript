@@ -148,8 +148,26 @@ struct _sgs_VHTable
 }
 sgs_VHTable;
 
+typedef struct sgs_VHTStats
+{
+	/* in */
+	int print;
+	int print_ubmp; /* usage bitmap */
+	int print_cols;
+	/* out */
+	unsigned buckets;
+	unsigned used;
+	unsigned empty;
+	unsigned removed;
+	unsigned collisions;
+	unsigned worst_probe_length;
+	float avg_probe_length;
+}
+sgs_VHTStats;
+
 SGS_APIFUNC void sgs_vht_init( sgs_VHTable* T, SGS_CTX, int32_t initial_pair_mem, int32_t initial_var_mem );
 SGS_APIFUNC void sgs_vht_free( sgs_VHTable* T, SGS_CTX );
+SGS_APIFUNC void sgs_vht_analyze( sgs_VHTable* T, sgs_VHTStats* io );
 SGS_APIFUNC sgs_VHTIdx sgs_vht_pair_id( sgs_VHTable* T, sgs_Variable* K, sgs_Hash hash );
 SGS_APIFUNC sgs_VHTVar* sgs_vht_get( sgs_VHTable* T, sgs_Variable* K );
 SGS_APIFUNC sgs_VHTVar* sgs_vht_get_str( sgs_VHTable* T, const char* str, uint32_t size, sgs_Hash hash );
