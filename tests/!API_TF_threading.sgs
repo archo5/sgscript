@@ -150,6 +150,12 @@ TSTCUR = "[subthread] CF-call"; t = subthread tsfOBJ!tstf1( true, 1 ); tstst( 6 
 t = null;
 testEqual( ERRORS, "", "thread syntax - no errors" );
 
+	section( "timing" );
+function chkwait( yt ){ testEqual( yield(), yt, "thread yield time is accurate" ); }
+t = thread chkwait( 1.345 );
+process_threads( 1.345 );
+t = null;
+
 	section( "sync/race" );
 global syarr = [];
 function wait( iters )

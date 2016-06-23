@@ -107,6 +107,7 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	C->_T = NULL;
 	C->_E = NULL;
 	C->wait_timer = 0;
+	C->tm_accum = 0;
 	
 	C->stack_mem = 32;
 	C->stack_base = sgs_Alloc_n( sgs_Variable, C->stack_mem );

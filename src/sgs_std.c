@@ -2874,13 +2874,16 @@ int sgs_ProcessSubthreads( SGS_CTX, sgs_Real dt )
 			sgs_Context* thctx = v->key.data.T;
 			sgs_ProcessSubthreads( thctx, dt );
 			v->val.data.R -= dt;
+			thctx->tm_accum += dt;
 			if( sgs__anyevent( thctx ) )
 			{
 				sgs_Abort( thctx );
 			}
 			else if( v->val.data.R <= 0 )
 			{
-				sgs_ResumeStateExp( thctx, 0, 1 );
+				sgs_PushReal( thctx, thctx->tm_accum );
+				thctx->tm_accum = 0;
+				sgs_ResumeStateExp( thctx, 1, 1 );
 				v->val.data.R = sgs_GetReal( thctx, -1 );
 				sgs_Pop( thctx, 1 );
 			}

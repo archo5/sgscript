@@ -648,6 +648,7 @@ struct _sgs_Context
 	sgs_VarObj*   _T; /* subthreads */
 	sgs_VarObj*   _E; /* end events */
 	sgs_Real      wait_timer; /* sync/race */
+	sgs_Real      tm_accum; /* delta time accumulator for yield return */
 	
 	/* > main stack */
 	sgs_VarPtr    stack_base;
