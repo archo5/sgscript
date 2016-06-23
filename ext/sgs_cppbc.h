@@ -433,6 +433,7 @@ class sgsVariable
 public:
 	
 	enum EPickAndPop { PickAndPop };
+	enum EMayNotExist { MayNotExist };
 	
 	sgsVariable() : C(NULL) { var.type = SGS_VT_NULL; };
 	sgsVariable( const sgsVariable& h ) : var(h.var), C(h.C)
@@ -444,6 +445,11 @@ public:
 	sgsVariable( sgs_Context* c, sgs_StkIdx item ) : C(sgs_RootContext(c))
 	{
 		var = sgs_StackItem( c, item );
+		_acquire();
+	}
+	sgsVariable( sgs_Context* c, sgs_StkIdx item, EMayNotExist ) : C(sgs_RootContext(c))
+	{
+		var = sgs_OptStackItem( c, item );
 		_acquire();
 	}
 	sgsVariable( sgs_Context* c, EPickAndPop ) : C(sgs_RootContext(c))
@@ -853,7 +859,7 @@ template< class O >
 struct sgs_GetVar< sgsHandle<O> > { sgsHandle<O> operator () ( SGS_CTX, sgs_StkIdx item ) const {
 	return sgsHandle<O>( C, item ); } };
 template<> struct sgs_GetVar< sgsVariable > { sgsVariable operator () ( SGS_CTX, sgs_StkIdx item ) const {
-	return sgsVariable( C, item ); } };
+	return sgsVariable( C, item, sgsVariable::MayNotExist ); } };
 
 
 template< class T > T sgsVariable::get()
