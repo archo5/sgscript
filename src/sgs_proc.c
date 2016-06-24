@@ -2450,6 +2450,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 		if( V.type == SGS_VT_CFUNC )
 		{
 			C->sf_last->nfname = NULL;
+			SGS_PERFEVENT( ps_precall_end( (unsigned) -1, 1, FUNCTYPE_CFN ) );
 			rvc = (*V.data.C)( C );
 			if( C->sf_last->nfname == NULL && C->sf_last->prev )
 			{
@@ -2505,6 +2506,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 
 			if( F->gotthis && gotthis ) C->stack_off--;
 			{
+				SGS_PERFEVENT( ps_precall_end( F->numargs, F->gotthis, FUNCTYPE_SGS ) );
 				if( can_reenter )
 				{
 					C->sf_last->flags |= SGS_SF_REENTER;
@@ -2527,6 +2529,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 			sgs_VarObj* O = V.data.O;
 			
 			rvc = SGS_ENOTSUP;
+			SGS_PERFEVENT( ps_precall_end( (unsigned) -1, 1, FUNCTYPE_OBJ ) );
 			if( O->iface->call )
 				rvc = O->iface->call( C, O );
 			
@@ -2741,6 +2744,9 @@ restart_loop:
 		}
 
 		case SGS_SI_CALL:
+		SGS_PERFEVENT( ps_precall_begin(
+			argC - (argB & 0xff) - (( argB & 0x100 ) != 0),
+			( argB & 0x100 ) != 0, CALLSRC_SCRIPT ) );
 		{
 			sgs_Variable fnvar = *stk_getlpos( C, argC );
 			int i, rvc = 0, expect = argA, args_from = argB & 0xff, args_to = argC;
@@ -3082,6 +3088,7 @@ void sgsVM_StackDump( SGS_CTX )
 
 int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int* outrvc, int gotthis )
 {
+	SGS_PERFEVENT( ps_precall_begin( args, gotthis, CALLSRC_NATIVE ) );
 	return vm_call( C, args, clsr, gotthis, outrvc, var, 0 );
 }
 
@@ -4417,6 +4424,7 @@ void sgs_XFCall( SGS_CTX, sgs_Variable callable, int args, int* outrvc, int gott
 			args + ( gotthis ? 1 : 0 ), (int) SGS_STACKFRAMESIZE );
 		return;
 	}
+	SGS_PERFEVENT( ps_precall_begin( args, gotthis, CALLSRC_NATIVE ) );
 	vm_call( C, args, 0, gotthis, outrvc, &callable, 0 );
 	if( rel )
 		sgs_Release( C, &callable );
@@ -4436,6 +4444,7 @@ void sgs_FCall( SGS_CTX, sgs_Variable callable, int args, int expect, int gotthi
 			args + ( gotthis ? 1 : 0 ), (int) SGS_STACKFRAMESIZE );
 		return;
 	}
+	SGS_PERFEVENT( ps_precall_begin( args, gotthis, CALLSRC_NATIVE ) );
 	vm_call( C, args, 0, gotthis, &rvc, &callable, 0 );
 	stk_resize_expected( C, expect, rvc );
 	if( rel )

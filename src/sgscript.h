@@ -85,6 +85,10 @@ extern "C" {
 #  define SGS_DUMP_BYTECODE 0
 #endif
 
+#ifndef SGS_PERFEVENT
+#  define SGS_PERFEVENT( x )
+#endif
+
 
 /* SGScript error messages */
 #define SGS_ERRMSG_CALLSTACKLIMIT "max. call stack size reached"

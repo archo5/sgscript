@@ -94,17 +94,9 @@ $(OUTDIR)/sgsc$(BINEXT): ext/sgsc.c $(OUTFILE)
 	$(CC) -o $@ $< $(EXEFLAGS)
 
 ## library/tool aliases
-.PHONY: xgmath
-.PHONY: json
-.PHONY: pproc
-.PHONY: sockets
-.PHONY: meta
-.PHONY: build_test
-.PHONY: build_apitest
-.PHONY: vm
-.PHONY: c
-.PHONY: test
-.PHONY: apitest
+.PHONY: xgmath json pproc sockets meta
+.PHONY: build_test build_apitest
+.PHONY: vm c test apitest
 xgmath: $(OUTDIR)/sgsxgmath$(LIBEXT)
 json: $(OUTDIR)/sgsjson$(LIBEXT)
 pproc: $(OUTDIR)/sgspproc$(LIBEXT)
@@ -112,6 +104,7 @@ sockets: $(OUTDIR)/sgssockets$(LIBEXT)
 meta: $(OUTDIR)/sgsmeta$(LIBEXT)
 build_test: $(OUTDIR)/sgstest$(BINEXT) json xgmath meta
 build_apitest: $(OUTDIR)/sgsapitest$(BINEXT)
+build_ubench: $(OUTDIR)/sgsubench$(BINEXT)
 vm: $(OUTDIR)/sgsvm$(BINEXT)
 c: $(OUTDIR)/sgsc$(BINEXT)
 
@@ -126,33 +119,35 @@ tools: xgmath json pproc sockets meta build_test build_apitest vm c
 
 ## other stuff
 ## - cppbc testing
-.PHONY: cppbctest
-.PHONY: build_cppbctest
+.PHONY: cppbctest build_cppbctest cppbctest11 build_cppbctest11
 build_cppbctest: $(OUTDIR)/sgscppbctest$(BINEXT)
-cppbctest: build_cppbctest
+build_cppbctest11: $(OUTDIR)/sgscppbctest11$(BINEXT)
+cppbctest: $(OUTDIR)/sgscppbctest$(BINEXT)
 	$(OUTDIR)/sgscppbctest
+cppbctest11: $(OUTDIR)/sgscppbctest11$(BINEXT)
+	$(OUTDIR)/sgscppbctest11
 $(OUTDIR)/sgscppbctest$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/sgs_cppbc.h $(OUTFILE)
 	$(CXX) -o $@ $< $(word 2,$^) $(EXEFLAGS) -I. -std=c++03 -Wno-shadow
 	$(call SGS_INSTALL_TOOL,$@)
-.PHONY: cppbctest11
-.PHONY: build_cppbctest11
-build_cppbctest11: $(OUTDIR)/sgscppbctest11$(BINEXT)
-cppbctest11: build_cppbctest11
-	$(OUTDIR)/sgscppbctest11
 $(OUTDIR)/sgscppbctest11$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/sgs_cppbc.h $(OUTFILE)
 	$(CXX) -o $@ $< $(word 2,$^) $(EXEFLAGS) -I. -std=c++11 -Wno-shadow
 	$(call SGS_INSTALL_TOOL,$@)
 obj/cppbc_test.cpp: ext/sgscppbctest.h $(OUTDIR)/sgsvm$(BINEXT)
 	$(OUTDIR)/sgsvm -p ext/cppbc.sgs $< -o $@
 ## - multithreaded testing
-.PHONY: mttest
-.PHONY: build_mttest
+.PHONY: mttest build_mttest
 build_mttest: $(OUTDIR)/sgstest_mt$(BINEXT)
-mttest: build_mttest
+mttest: $(OUTDIR)/sgstest_mt$(BINEXT)
 	$(OUTDIR)/sgstest_mt
 $(OUTDIR)/sgstest_mt$(BINEXT): examples/sgstest_mt.c $(OUTFILE)
 	$(CC) -o $@ $^ $(EXEFLAGS) $(THREADLIBS)
 	$(call SGS_INSTALL_TOOL,$@)
+## - instrumented profiling
+.PHONY: ubench build_ubench
+ubench: $(OUTDIR)/sgsubench$(BINEXT)
+	$(OUTDIR)/sgsubench
+$(OUTDIR)/sgsubench$(BINEXT): ext/sgsubench.c
+	$(CC) -o $@ $^ $(EXEFLAGS) $(COMFLAGS)
 ## - sgs2exe tool
 .PHONY: sgsexe
 sgsexe: ext/sgsexe.c $(OUTFILE_STATIC)
