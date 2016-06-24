@@ -189,6 +189,11 @@ SGS_APIFUNC void sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend );
 #define SGS_SFT_BREAK   27
 #define SGS_SFT_CONT    28
 #define SGS_SFT_FUNC    30
+#define SGS_SFT_CLASS   31
+#define SGS_SFT_CLSINH  32
+#define SGS_SFT_CLSINC  33
+#define SGS_SFT_CLSGLOB 34
+#define SGS_SFT_CLSPFX  35
 /* threading addons */
 #define SGS_SFT_THRCALL 40 /* thread */
 #define SGS_SFT_STHCALL 41 /* subthread */
@@ -342,6 +347,7 @@ typedef enum sgs_Instruction_e
 	SGS_SI_ARRAY,    /* (C:out, E:args) */
 	SGS_SI_DICT,     /* -- || -- */
 	SGS_SI_MAP,      /* -- || -- */
+	SGS_SI_CLASS,    /* (A:out, B:name, C:inhname) */
 	SGS_SI_RSYM,     /* (B:name, C:var)         performs dual registration to symbol table */
 	SGS_SI_COTRT,    /* (A:to, B:from)          sets A to true if `from` is finished */
 	SGS_SI_COTRF,    /* (A:to, B:from)          sets A to false if `from` is not finished */
@@ -712,7 +718,7 @@ static const char* sgs_OpNames[] =
 	"inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",
 	"seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte", "rawcmp",
-	"array", "dict", "map", "rsym", "cotrt", "cotrf", "coabort", "yldjmp",
+	"array", "dict", "map", "class", "rsym", "cotrt", "cotrf", "coabort", "yldjmp",
 };
 
 #endif

@@ -1,0 +1,48 @@
+
+global ERRORS, tests_failed, tests_ran;
+
+//
+function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
+print( "\n\n-- CLASS --\n" );
+
+	section( "class core" );
+ERRORS = "";
+class a {}
+testEqual( typeof(a), "dict", "class 'a' is defined" );
+testEqual( _G.a, a, "... as a global" );
+testEqual( sym_get("a"), a, "... as a symbol" );
+testEqual( a.__name, "a", "... and has '__name' = 'a'" );
+class b : a {}
+testEqual( typeof(b), "dict", "class 'b' is defined" );
+testEqual( a.__name, "a", "'__name' = 'b'" );
+testEqual( metaobj_get(b), a, "metaobj of 'b' is 'a'" );
+testEqual( ERRORS, "", "class core - no errors" );
+
+	section( "class variables" );
+ERRORS = "";
+class c { global quel = 123; }
+testEqual( typeof(c), "dict", "class 'c' is defined" );
+testEqual( c.quel, 123, "c.quel = 123" );
+quel = "notglobal";
+testEqual( @_G.quel, null, "accidentally did not make 'quel' global" );
+class d { global fun = function(){ _G.yo = 2; return 1; }; }
+testEqual( d.fun(), 1, "successfully called d.fun (class global) [1]" );
+testEqual( _G.yo, 2, "successfully called d.fun (class global) [2]" );
+testEqual( ERRORS, "", "class variables - no errors" );
+
+	section( "class functions" );
+ERRORS = "";
+class e { global q = 5; function funct( a ){ return this.q + a; } }
+printvar(e);
+testEqual( typeof(e), "dict", "class 'e' is defined" );
+testEqual( e.q, 5, "e.q = 5" );
+testEqual( typeof(e.funct), "func", "function 'e.funct' is defined" );
+testEqual( typeof(sym_get("e.funct")), "func", "symbol 'e.funct' is defined" );
+testEqual( sym_get("e.funct"), e.funct, "symbol 'e.funct' is equal to function 'e.funct'" );
+funct = "notglobal";
+testEqual( @_G.funct, null, "accidentally did not make 'funct' global" );
+testEqual( e.funct( 101 ), 106, "e.funct(101) = 106 / class function successfully called" );
+inst_e = class( {}, e );
+testEqual( inst_e.funct( 102 ), 107, "inst_e(102) = 107 / class method successfully called from instance" );
+testEqual( ERRORS, "", "class functions - no errors" );
+

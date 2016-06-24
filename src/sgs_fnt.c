@@ -59,6 +59,10 @@ static void dumpnode( sgs_FTNode* N )
 		}
 		break;
 	case SGS_SFT_FUNC: printf( "FUNC" ); break;
+	case SGS_SFT_CLASS: printf( "CLASS" ); break;
+	case SGS_SFT_CLSINH: printf( "CLASS_INHERIT" ); break;
+	case SGS_SFT_CLSINC: printf( "CLASS_INCLUDE" ); break;
+	case SGS_SFT_CLSGLOB: printf( "CLASS_GLOBALS" ); break;
 	default:
 		if( N->token ) sgsT_DumpToken( N->token );
 		if( N->type == SGS_SFT_OPER_P ) printf( " [post]" );
@@ -173,7 +177,7 @@ void sgsFT_Destroy( SGS_CTX, sgs_FTNode* tree )
 SFTRET parse_exp( SFTC, char* endtoklist, int etlsize );
 SFTRET parse_stmt( SFTC );
 SFTRET parse_stmtlist( SFTC, char end );
-SFTRET parse_function( SFTC, int inexp );
+SFTRET parse_function( SFTC, int inexp, sgs_TokenList namepfx );
 
 
 
@@ -849,7 +853,7 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 		{
 			if( SFTC_ISKEY( "function" ) )
 			{
-				cur->next = parse_function( F, 1 );
+				cur->next = parse_function( F, 1, NULL );
 				if( !cur->next )
 					goto fail;
 				cur = cur->next;
@@ -1294,7 +1298,7 @@ fail:
 	return NULL;
 }
 
-SFTRET parse_function( SFTC, int inexp )
+SFTRET parse_function( SFTC, int inexp, sgs_TokenList namepfx )
 {
 	int hasname = 0;
 	sgs_FTNode *node, *nname = NULL, *nargs = NULL, *nbody = NULL, *nclos = NULL;
@@ -1303,7 +1307,7 @@ SFTRET parse_function( SFTC, int inexp )
 	SGS_FN_BEGIN;
 	
 	SFTC_NEXT;
-	if( !inexp )
+	if( !inexp && !namepfx )
 	{
 		if( !SFTC_IS( SGS_ST_IDENT ) )
 		{
@@ -1317,7 +1321,11 @@ SFTRET parse_function( SFTC, int inexp )
 		hasname = 1;
 		nname = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
 		SFTC_NEXT;
-		if( SFTC_IS( SGS_ST_OP_MMBR ) )
+		if( namepfx )
+		{
+			nname = make_node( SGS_SFT_CLSPFX, namepfx, NULL, nname );
+		}
+		else if( SFTC_IS( SGS_ST_OP_MMBR ) )
 		{
 			nname = make_node( SGS_SFT_OPER, SFTC_AT, NULL, nname );
 			SFTC_NEXT;
@@ -1400,6 +1408,80 @@ fail:
 	if( nargs ) SFTC_DESTROY( nargs );
 	if( nclos ) SFTC_DESTROY( nclos );
 	if( nbody ) SFTC_DESTROY( nbody );
+	SFTC_SETERR;
+	SGS_FN_END;
+	return NULL;
+}
+
+SFTRET parse_class( SFTC )
+{
+	sgs_FTNode *node, **nit;
+		
+	node = make_node( SGS_SFT_CLASS, SFTC_AT, NULL, NULL );
+	nit = &node->child;
+	
+	if( !SFTC_IS( SGS_ST_IDENT ) || SFTC_IS_ID( "class" ) )
+	{
+		SFTC_PRINTERR( "Expected identifier after 'class'" );
+		goto fail;
+	}
+	*nit = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
+	nit = &(*nit)->next;
+	SFTC_NEXT;
+	
+	if( SFTC_IS( ':' ) )
+	{
+		SFTC_NEXT;
+		if( !SFTC_IS( SGS_ST_IDENT ) )
+		{
+			SFTC_PRINTERR( "Expected identifier after ':' in class" );
+			goto fail;
+		}
+		*nit = make_node( SGS_SFT_CLSINH, SFTC_AT, NULL, NULL );
+		nit = &(*nit)->next;
+		SFTC_NEXT;
+	}
+	if( !SFTC_IS( '{' ) )
+	{
+		SFTC_PRINTERR( "Expected '{' after (inherited) class name" );
+		goto fail;
+	}
+	SFTC_NEXT;
+	
+	while( !SFTC_IS( '}' ) )
+	{
+		sgs_FTNode* nn;
+		if( SFTC_ISKEY( "global" ) )
+		{
+			SFTC_NEXT;
+			nn = parse_arglist( F, ';' );
+			if( !nn )
+				goto fail;
+			nn->type = SGS_SFT_CLSGLOB;
+			*nit = nn;
+			nit = &(*nit)->next;
+			SFTC_NEXT;
+		}
+		else if( SFTC_ISKEY( "function" ) )
+		{
+			nn = parse_function( F, 0, node->child->token );
+			if( !nn )
+				goto fail;
+			*nit = nn;
+			nit = &(*nit)->next;
+		}
+		else
+		{
+			SFTC_PRINTERR( "Unexpected token in class" );
+			goto fail;
+		}
+	}
+	
+	SGS_FN_END;
+	return node;
+	
+fail:
+	if( node ) SFTC_DESTROY( node );
 	SFTC_SETERR;
 	SGS_FN_END;
 	return NULL;
@@ -1552,7 +1634,7 @@ SFTRET parse_stmt( SFTC )
 		return node;
 	}
 	/* FUNCTION */
-	else if( SFTC_ISKEY( "function" ) ) { node = parse_function( F, 0 ); SGS_FN_END; return node; }
+	else if( SFTC_ISKEY( "function" ) ) { node = parse_function( F, 0, NULL ); SGS_FN_END; return node; }
 	/* RETURN */
 	else if( SFTC_ISKEY( "return" ) )
 	{
@@ -1586,6 +1668,17 @@ SFTRET parse_stmt( SFTC )
 	}
 	/* COMMAND HELPERS */
 #define NOT_FCALL ( !sgsT_Next( F->at ) || '(' != *sgsT_Next( F->at ) )
+	/* CLASS */
+	else if( SFTC_IS_ID( "class" ) && NOT_FCALL )
+	{
+		SFTC_NEXT;
+		node = parse_class( F );
+		if( !node )
+			goto fail;
+		SFTC_NEXT;
+		SGS_FN_END;
+		return node;
+	}
 	/* SIMPLE COMMANDS */
 	else if((
 		SFTC_IS_ID( "print" ) ||

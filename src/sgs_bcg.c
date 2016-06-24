@@ -268,6 +268,12 @@ static void dump_opcode( const sgs_instr_t* ptr, size_t count )
 		case SGS_SI_DICT:
 			printf( "DICT args:%d output:", argE );
 			dump_rcpos( argC ); break;
+		case SGS_SI_CLASS:
+			printf( "CLASS output:%d", argA );
+			printf( ", name:" ); dump_rcpos( argB );
+			printf( ", inhname:%s", argC == argA ? "<none>" : "" );
+			if( argC != argA ) dump_rcpos( argC );
+			break;
 		case SGS_SI_RSYM:
 			printf( "RSYM name:" ); dump_rcpos( argB );
 			printf( " value:" ); dump_rcpos( argC ); break;
@@ -417,23 +423,30 @@ cont:
 	return ret;
 }
 
+static int register_gv( SGS_FNTCMP_ARGS )
+{
+	if( find_varT( &C->fctx->clsr, node->token ) >= 0 )
+	{
+		QPRINT( "Variable storage redefined: closure -> global" );
+		return SGS_FALSE;
+	}
+	if( find_varT( &C->fctx->vars, node->token ) >= 0 )
+	{
+		QPRINT( "Variable storage redefined: local -> global" );
+		return SGS_FALSE;
+	}
+	add_varT( &C->fctx->gvars, C, node->token );
+	return SGS_TRUE;
+}
+
 static int preparse_gvlist( SGS_FNTCMP_ARGS )
 {
 	int ret = SGS_TRUE;
 	node = node->child;
 	while( node )
 	{
-		if( find_varT( &C->fctx->clsr, node->token ) >= 0 )
-		{
-			QPRINT( "Variable storage redefined: closure -> global" );
+		if( !register_gv( C, func, node ) )
 			return SGS_FALSE;
-		}
-		if( find_varT( &C->fctx->vars, node->token ) >= 0 )
-		{
-			QPRINT( "Variable storage redefined: local -> global" );
-			return SGS_FALSE;
-		}
-		add_varT( &C->fctx->gvars, C, node->token );
 		if( node->child )
 			ret &= preparse_varlists( C, func, node );
 		node = node->next;
@@ -450,6 +463,17 @@ static int preparse_varlists( SGS_FNTCMP_ARGS )
 			ret &= preparse_varlist( C, func, node );
 		else if( node->type == SGS_SFT_GVLIST )
 			ret &= preparse_gvlist( C, func, node );
+		else if( node->type == SGS_SFT_CLASS )
+		{
+			sgs_FTNode* ch = node->child;
+			ret &= register_gv( C, func, ch );
+			ch = ch->next;
+			while( ch )
+			{
+				ret &= preparse_varlists( C, func, ch );
+				ch = ch->next;
+			}
+		}
 		else if( node->type == SGS_SFT_KEYWORD && node->token && sgsT_IsKeyword( node->token, "this" ) )
 		{
 			func->gotthis = SGS_TRUE;
@@ -1268,6 +1292,19 @@ static SGSBOOL compile_index_w( SGS_FNTCMP_ARGS, rcpos_t src )
 	return 1;
 }
 
+static SGSBOOL compile_clspfx_w( SGS_FNTCMP_ARGS, rcpos_t src )
+{
+	rcpos_t var, name;
+	rcpos_t regpos = C->fctx->regs;
+	SGS_FN_ENTER;
+	if( !compile_node_r( C, func, node, &var ) ) return 0;
+	SGS_FN_ENTER;
+	compile_ident( C, func, node->child, &name );
+	INSTR_WRITE( SGS_SI_SETINDEX, var, name, src );
+	comp_reg_unwind( C, regpos );
+	return 1;
+}
+
 static SGSBOOL compile_midxset( SGS_FNTCMP_ARGS, rcpos_t* out, int isprop )
 {
 	sgs_FTNode* mapi;
@@ -1941,6 +1978,11 @@ static void rpts( sgs_MemBuf* out, SGS_CTX, sgs_FTNode* root )
 	case SGS_SFT_IDENT:
 		sgs_membuf_appbuf( out, C, root->token + 2, root->token[1] );
 		break;
+	case SGS_SFT_CLSPFX:
+		sgs_membuf_appbuf( out, C, root->token + 2, root->token[1] );
+		sgs_membuf_appchr( out, C, '.' );
+		rpts( out, C, root->child );
+		break;
 	case SGS_SFT_OPER:
 		switch( *root->token )
 		{
@@ -2156,6 +2198,11 @@ static SGSBOOL compile_node_w( SGS_FNTCMP_ARGS, rcpos_t src )
 		SGS_FN_HIT( "W_EXPLIST" );
 		QPRINT( "Expression writes only allowed with function call reads" );
 		goto fail;
+		
+	case SGS_SFT_CLSPFX:
+		SGS_FN_HIT( "W_CLSPFX" );
+		if( !compile_clspfx_w( C, func, node, src ) ) goto fail;
+		break;
 
 	default:
 		sgs_Msg( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/w error]" );
@@ -2165,6 +2212,7 @@ static SGSBOOL compile_node_w( SGS_FNTCMP_ARGS, rcpos_t src )
 	return 1;
 
 fail:
+	C->state |= SGS_HAS_ERRORS;
 	SGS_FN_END;
 	return 0;
 }
@@ -2175,6 +2223,7 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 	{
 	case SGS_SFT_IDENT:
 	case SGS_SFT_KEYWORD:
+	case SGS_SFT_CLSPFX:
 		SGS_FN_HIT( "R_IDENT" );
 		if( !compile_ident_r( C, func, node, out ) ) goto fail;
 		break;
@@ -2782,7 +2831,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				if( !compile_node_w( C, func, n_name, pos ) ) goto fail;
 				
 				// symbol registration
-				if( C->fctx->func == SGS_FALSE )
+				if( C->fctx->func == SGS_FALSE || n_name->type == SGS_SFT_CLSPFX )
 				{
 					rcpos_t r_name;
 					sgs_MemBuf ffn = sgs_membuf_create();
@@ -2792,6 +2841,66 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 					INSTR_WRITE( SGS_SI_RSYM, 0, BC_CONSTENC( r_name ), pos );
 				}
 			}
+		}
+		break;
+		
+	case SGS_SFT_CLASS:
+		SGS_FN_HIT( "CLASS" );
+		{
+			sgs_FTNode* name = node->child;
+			sgs_FTNode* it = name->next;
+			rcpos_t regstate = C->fctx->regs;
+			
+			/* create class */
+			rcpos_t clsvar, r_name, r_inhname, vname, vsrc;
+			clsvar = comp_reg_alloc( C );
+			compile_ident( C, func, name, &r_name );
+			r_inhname = clsvar; /* r_inhname is 'empty' if it equals clsvar (class cannot inherit itself) */
+			if( it && it->type == SGS_SFT_CLSINH )
+			{
+				compile_ident( C, func, it, &r_inhname );
+				it = it->next;
+			}
+			INSTR_WRITE( SGS_SI_CLASS, clsvar, r_name, r_inhname );
+			compile_ident_w( C, func, name, clsvar );
+			
+			while( it )
+			{
+				if( it->type == SGS_SFT_CLSGLOB )
+				{
+					/* class globals -- convert to 'setindex' */
+					sgs_FTNode* vn = it->child;
+					while( vn )
+					{
+						compile_ident( C, func, vn, &vname );
+						if( vn->child )
+						{
+							SGS_FN_ENTER;
+							if( !compile_node_r( C, func, vn->child, &vsrc ) )
+								goto fail;
+						}
+						else
+						{
+							vsrc = add_const_null( C, func );
+						}
+						INSTR_WRITE( SGS_SI_SETINDEX, clsvar, vname, vsrc );
+						
+						vn = vn->next;
+					}
+				}
+				else if( it->type == SGS_SFT_FUNC )
+				{
+					compile_node( C, func, it );
+				}
+				else
+				{
+					sgs_Msg( C, SGS_ERROR, "Unexpected class subtree node [internal BcG error]" );
+					goto fail;
+				}
+				it = it->next;
+			}
+			
+			comp_reg_unwind( C, regstate );
 		}
 		break;
 

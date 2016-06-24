@@ -795,7 +795,6 @@ dirent_mbstowcs_s(
         wcstr[ n++ ] = 0;
     if( pReturnValue )
         *pReturnValue = n;
-    printf("%s - %d\n", mbstr, (int)n);
     return n == 0;
 }
 

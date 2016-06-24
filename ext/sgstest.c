@@ -321,6 +321,11 @@ main( int argc, char** argv )
 		else if( ( !strcmp( argv[i], "--test" ) || !strcmp( argv[i], "-t" ) ) && i + 1 < argc )
 			testname = argv[++i];
 	}
+	printf("- test directory: %s\n", dirname );
+	if( testname )
+	{
+		printf( "- one test: %s\n", testname );
+	}
 
 	if( testname )
 	{
