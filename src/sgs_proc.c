@@ -2498,11 +2498,10 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 				int all = args + gotthis;
 				stk_transpose( C, first, all );
 				C->stack_off += all - first;
+				stk_push_nulls( C, F->numtmp );
 			}
 			else
-				stk_push_nulls( C, expargs - stkargs );
-			
-			stk_push_nulls( C, F->numtmp );
+				stk_push_nulls( C, F->numtmp + expargs - stkargs );
 
 			if( F->gotthis && gotthis ) C->stack_off--;
 			{
