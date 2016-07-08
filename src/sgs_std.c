@@ -2716,7 +2716,7 @@ int sgsstd_co_resume( SGS_CTX )
 	else if( T->state & SGS_STATE_COROSTART )
 	{
 		sgs_Variable func;
-		T->state &= ~(uint32_t)SGS_STATE_COROSTART;
+		T->state &= ~SGS_STATE_COROSTART;
 		sgs_StoreVariable( T, &func );
 		for( i = 0; i < ssz; ++i )
 			sgs_PushVariable( T, sgs_StackItem( C, i ) );

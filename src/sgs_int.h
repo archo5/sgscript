@@ -615,11 +615,11 @@ struct _sgs_ShCtx
 /* Virtual machine state */
 #define SGS_HAS_ERRORS          0x00010000
 #define SGS_MUST_STOP          (0x00020000 | SGS_HAS_ERRORS)
-#define SGS_STATE_LASTFUNCPAUSE 0x0002
-#define SGS_STATE_DESTROYING    0x0010
-#define SGS_STATE_LASTFUNCABORT 0x0020
-#define SGS_STATE_INSIDE_API    0x0040
-#define SGS_STATE_COROSTART     0x0080 /* function is pushed to stack */
+#define SGS_STATE_LASTFUNCPAUSE 0x0002U
+#define SGS_STATE_DESTROYING    0x0010U
+#define SGS_STATE_LASTFUNCABORT 0x0020U
+#define SGS_STATE_INSIDE_API    0x0040U
+#define SGS_STATE_COROSTART     0x0080U /* function is pushed to stack */
 
 struct _sgs_Context
 {

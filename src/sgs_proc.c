@@ -10,7 +10,7 @@
 
 
 #define _EL_BACKUP int oapi = ( C->state & SGS_STATE_INSIDE_API ) != 0
-#define _EL_SETAPI(is) C->state = ( C->state & ~(uint32_t)SGS_STATE_INSIDE_API ) | ( is ? SGS_STATE_INSIDE_API : 0 )
+#define _EL_SETAPI(is) C->state = ( C->state & ~SGS_STATE_INSIDE_API ) | ( is ? SGS_STATE_INSIDE_API : 0 )
 #define _EL_RESET _EL_SETAPI(oapi)
 
 
@@ -2562,7 +2562,7 @@ static int vm_call( SGS_CTX, int args, int clsr, int gotthis, int* outrvc, sgs_V
 	C->clstk_off = SGS_CLSTK_RESTORE( C, clsoff );
 	
 	/* WP: unnecesary */
-	C->state &= ~(uint32_t)SGS_STATE_LASTFUNCABORT;
+	C->state &= ~SGS_STATE_LASTFUNCABORT;
 	if( allowed )
 	{
 		if( ret && C->sf_last->flags & SGS_SF_ABORTED )
@@ -2704,8 +2704,18 @@ restart_loop:
 
 		case SGS_SI_RETN:
 		{
-			ret = argA;
-			goto done;
+			int rvc = argA;
+#if SGS_DEBUG && SGS_DEBUG_STATE
+			/* TODO restore memcheck */
+			sgsVM_StackDump( C );
+#endif
+			if( SF->flags & SGS_SF_REENTER )
+			{
+				vm_postcall( C, rvc );
+				goto restart_loop;
+			}
+			C->state &= ~SGS_STATE_LASTFUNCPAUSE;
+			return rvc;
 		}
 
 		case SGS_SI_JUMP:
@@ -2939,21 +2949,6 @@ restart_loop:
 			break;
 		}
 	}
-done:
-
-#if SGS_DEBUG && SGS_DEBUG_STATE
-	/* TODO restore memcheck */
-	sgsVM_StackDump( C );
-#endif
-	
-	if( SF->flags & SGS_SF_REENTER )
-	{
-		vm_postcall( C, ret );
-		goto restart_loop;
-	}
-	
-	C->state &= ~(uint32_t)SGS_STATE_LASTFUNCPAUSE;
-	return ret;
 	
 paused:
 	C->sf_last->flags |= SGS_SF_PAUSED;
