@@ -179,7 +179,6 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 		/* 'code' will be taken from function */
 		_WRITE32( sf->iptr - sf->code );
 		_WRITE32( sf->iend - sf->code ); /* - for validation */
-		_WRITE32( sf->lptr - sf->code );
 		/* 'cptr' will be taken from function */
 		/* 'nfname' is irrelevant for non-native functions */
 		/* 'prev', 'next', 'cached' are system pointers */
@@ -289,7 +288,7 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 		for( i = 0; i < sfnum; ++i )
 		{
 			sgs_StackFrame* sf;
-			int32_t iptrpos, iendpos, lptrpos, ccount;
+			int32_t iptrpos, iendpos, ccount;
 			
 			/* variables: stack frame functions */
 			sgs_Variable v_func = sgs_StackItem( C, 1 + stacklen + clstklen + i );
@@ -306,8 +305,6 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 			_READ32( iendpos ); /* - for validation */
 			if( iendpos != sf->iend - sf->code )
 				goto fail;
-			_READ32( lptrpos );
-			sf->lptr = sf->code + lptrpos;
 			/* 'cptr' will be taken from function */
 			/* 'nfname' is irrelevant for non-native functions */
 			/* 'prev', 'next', 'cached' are system pointers */

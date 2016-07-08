@@ -544,7 +544,6 @@ struct _sgs_StackFrame
 	const uint32_t* code;
 	const uint32_t* iptr;
 	const uint32_t* iend;
-	const uint32_t* lptr;
 	sgs_Variable*   cptr;
 	const char*     nfname;
 	sgs_StackFrame* prev;

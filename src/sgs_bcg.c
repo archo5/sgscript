@@ -2030,7 +2030,15 @@ static void prefix_bytecode( SGS_CTX, sgs_CompFunc* func, int args )
 
 	sgs_membuf_appbuf( &ncode, C, func->code.ptr, func->code.size );
 	sgs_membuf_appbuf( &nlnbuf, C, func->lnbuf.ptr, func->lnbuf.size );
-
+	
+	/* append one extra return instruction to avoid VM bounds check */
+	{
+		sgs_instr_t I = SGS_INSTR_MAKE( SGS_SI_RETN, 0, 0, 0 );
+		uint16_t ln = 0;
+		sgs_membuf_appbuf( &ncode, C, &I, sizeof( I ) );
+		sgs_membuf_appbuf( &nlnbuf, C, &ln, sizeof( ln ) );
+	}
+	
 	sgs_membuf_destroy( &func->code, C );
 	sgs_membuf_destroy( &func->lnbuf, C );
 	

@@ -1166,7 +1166,7 @@ SGSBOOL sgs_Abort( SGS_CTX )
 		return SGS_FALSE;
 	while( sf && sf->iptr )
 	{
-		sf->iptr = sf->iend;
+		sf->iptr = sf->iend - 1; /* the last RETN instruction */
 		sf->flags |= SGS_SF_ABORTED;
 		sf = sf->prev;
 	}
@@ -1513,7 +1513,7 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 		if( frame->func.data.F->sfuncname->size )
 			N = sgs_str_cstr( frame->func.data.F->sfuncname );
 		L = !frame->func.data.F->lineinfo ? 1 :
-			frame->func.data.F->lineinfo[ SGS_MIN( frame->lptr, frame->iend - 1 ) - frame->code ];
+			frame->func.data.F->lineinfo[ SGS_MAX( frame->iptr - 1 - frame->code, 0 ) ];
 		if( frame->func.data.F->sfilename->size )
 			F = sgs_str_cstr( frame->func.data.F->sfilename );
 	}

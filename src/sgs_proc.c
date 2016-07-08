@@ -367,14 +367,13 @@ int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 		F->func = sgs_MakeNull();
 	F->code = NULL;
 	F->iptr = NULL;
-	F->lptr = NULL;
 	F->iend = NULL;
 	F->cptr = NULL;
 	F->constcount = 0;
 	if( func && func->type == SGS_VT_FUNC )
 	{
 		sgs_iFunc* fn = func->data.F;
-		F->lptr = F->iptr = F->code = sgs_func_bytecode( fn );
+		F->iptr = F->code = sgs_func_bytecode( fn );
 		F->iend = F->iptr + ( ( fn->size - fn->instr_off ) / sizeof( sgs_instr_t ) );
 		/* WP: const limit */
 		F->constcount = (int32_t) ( fn->instr_off / sizeof( sgs_Variable* ) );
@@ -2331,6 +2330,7 @@ static void vm_make_class( SGS_CTX, int outpos, sgs_Variable* name, sgs_Variable
 	sgs_PushString( C, "__name" );
 	stk_push( C, name );
 	ret = sgsSTD_MakeDict( C, &cls, 2 );
+	SGS_UNUSED( ret );
 	sgs_BreakIf( ret != SGS_TRUE );
 	sgs_RegSymbol( C, NULL, sgs_var_cstr( name ), cls );
 	
@@ -2602,8 +2602,8 @@ static void vm_postcall( SGS_CTX, int rvc )
 		int expect;
 		sf = C->sf_last; /* current function change */
 		
-		sgs_BreakIf( SGS_INSTR_GET_OP( *sf->lptr ) != SGS_SI_CALL );
-		expect = SGS_INSTR_GET_A( *sf->lptr );
+		sgs_BreakIf( SGS_INSTR_GET_OP( *(sf->iptr-1) ) != SGS_SI_CALL );
+		expect = SGS_INSTR_GET_A( *(sf->iptr-1) );
 		stk_resize_expected( C, expect, rvc );
 		
 		if( expect )
@@ -2659,14 +2659,17 @@ restart_loop:
 	}
 #endif
 	
-	while( SF->iptr < pend )
+	for(;;)
 	{
-		const sgs_instr_t I = *SF->iptr;
-
+		if( C->hook_fn )
+			C->hook_fn( C->hook_ctx, C, SGS_HOOK_STEP );
+		
+		const sgs_instr_t I = *SF->iptr++;
+		
 #if SGS_DEBUG
 #  if SGS_DEBUG_INSTR
 		printf( "*** [at 0x%04X] %s A=%d B=%d C=%d E=%d [sz:%d] ***\n",
-			pp - SF->code, sgs_OpNames[ instr ],
+			pp - 1 - SF->code, sgs_OpNames[ instr ],
 			(int)(argA), (int)(argB), (int)(argC), (int)(argE),
 			(int) SGS_STACKFRAMESIZE );
 #  endif
@@ -2676,10 +2679,7 @@ restart_loop:
 #endif
 		SGS_UNUSED( sgs_ErrNames );
 		SGS_UNUSED( sgs_OpNames );
-
-		if( C->hook_fn )
-			C->hook_fn( C->hook_ctx, C, SGS_HOOK_STEP );
-
+		
 		switch( instr )
 		{
 		case SGS_SI_NOP: break;
@@ -2705,8 +2705,7 @@ restart_loop:
 		case SGS_SI_RETN:
 		{
 			ret = argA;
-			pp = pend;
-			break;
+			goto done;
 		}
 
 		case SGS_SI_JUMP:
@@ -2939,9 +2938,8 @@ restart_loop:
 			sgs_Msg( C, SGS_ERROR, "Illegal instruction executed: 0x%08X", I );
 			break;
 		}
-		
-		SF->lptr = ++SF->iptr;
 	}
+done:
 
 #if SGS_DEBUG && SGS_DEBUG_STATE
 	/* TODO restore memcheck */
@@ -2951,7 +2949,6 @@ restart_loop:
 	if( SF->flags & SGS_SF_REENTER )
 	{
 		vm_postcall( C, ret );
-		C->sf_last->lptr = ++C->sf_last->iptr;
 		goto restart_loop;
 	}
 	
@@ -2971,6 +2968,7 @@ paused:
 
 SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 {
+	sgs_instr_t I;
 	int op, rvc = 0;
 	if( C->sf_last == NULL || ( C->sf_last->flags & SGS_SF_PAUSED ) == 0 )
 		return SGS_FALSE; /* already running, may not return the expected data */
@@ -2985,12 +2983,13 @@ SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 	}
 	
 	/* TODO validate state corruption */
-	op = SGS_INSTR_GET_OP( *C->sf_last->iptr );
+	I = *(C->sf_last->iptr-1);
+	op = SGS_INSTR_GET_OP( I );
 	sgs_BreakIf( op != SGS_SI_CALL && op != SGS_SI_YLDJMP );
 	if( op == SGS_SI_CALL )
 	{
-		int i, expect = SGS_INSTR_GET_A( *C->sf_last->iptr );
-		int args_from = SGS_INSTR_GET_B( *C->sf_last->iptr ) & 0xff;
+		int i, expect = SGS_INSTR_GET_A( I );
+		int args_from = SGS_INSTR_GET_B( I ) & 0xff;
 		stk_resize_expected( C, expect, args );
 		
 		if( expect )
@@ -3003,12 +3002,11 @@ SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 	else if( op == SGS_SI_YLDJMP )
 	{
 		sgs_StackFrame* sf = C->sf_last;
-		int16_t off = (int16_t) SGS_INSTR_GET_E( *sf->iptr );
+		int16_t off = (int16_t) SGS_INSTR_GET_E( I );
 		sf->iptr += off;
 		sgs_BreakIf( sf->iptr+1 > sf->iend || sf->iptr+1 < sf->code );
 	}
 	
-	C->sf_last->lptr = ++C->sf_last->iptr;
 	C->sf_last->flags &= (uint8_t)~SGS_SF_PAUSED;
 	
 	if( C->hook_fn )
