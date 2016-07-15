@@ -462,29 +462,8 @@ static int pproc_serialize_function( SGS_CTX,
 {
 	int ret;
 	sgs_MemBuf B = sgs_membuf_create();
-	sgs_CompFunc F;
-	{
-		F.consts = sgs_membuf_create();
-		F.code = sgs_membuf_create();
-		F.lnbuf = sgs_membuf_create();
-		F.gotthis = func->gotthis;
-		F.numargs = func->numargs;
-		F.numtmp = func->numtmp;
-		F.numclsr = func->numclsr;
-	}
 	
-	sgs_membuf_appbuf( &F.consts, C, ((char*)(func+1)), func->instr_off );
-	sgs_membuf_appbuf( &F.code, C, ((char*)(func+1)) +
-		func->instr_off, func->size - func->instr_off );
-	sgs_membuf_appbuf( &F.lnbuf, C, func->lineinfo,
-		( func->size - func->instr_off ) / 2 );
-	
-	ret = sgsBC_Func2Buf( C, &F, &B );
-	
-	sgs_membuf_destroy( &F.consts, C );
-	sgs_membuf_destroy( &F.code, C );
-	sgs_membuf_destroy( &F.lnbuf, C );
-	
+	ret = sgsBC_Func2Buf( C, func, &B );
 	if( ret )
 	{
 		*out = B.ptr;

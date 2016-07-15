@@ -44,7 +44,7 @@ static SGS_INLINE void comp_reg_unwind( SGS_CTX, rcpos_t pos )
 }
 
 
-sgs_CompFunc* sgsBC_MakeCompFunc( SGS_CTX )
+static sgs_CompFunc* sgsBC_MakeCompFunc( SGS_CTX )
 {
 	sgs_CompFunc* func = sgs_Alloc( sgs_CompFunc );
 	func->consts = sgs_membuf_create();
@@ -55,6 +55,23 @@ sgs_CompFunc* sgsBC_MakeCompFunc( SGS_CTX )
 	func->numtmp = 0;
 	func->numclsr = 0;
 	return func;
+}
+
+static void sgsBC_Free( SGS_CTX, sgs_CompFunc* func )
+{
+	sgs_Variable* vbeg = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 );
+	sgs_Variable* vend = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr + func->consts.size, 4 );
+	sgs_Variable* var = vbeg;
+	while( var < vend )
+	{
+		sgs_Release( C, var );
+		var++;
+	}
+
+	sgs_membuf_destroy( &func->code, C );
+	sgs_membuf_destroy( &func->consts, C );
+	sgs_membuf_destroy( &func->lnbuf, C );
+	sgs_Dealloc( func );
 }
 
 
@@ -2951,7 +2968,7 @@ fail:
 }
 
 
-sgs_CompFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree )
+sgs_iFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree )
 {
 	sgs_CompFunc* func = sgsBC_MakeCompFunc( C );
 	sgs_FuncCtx* fctx = fctx_create( C );
@@ -2979,9 +2996,10 @@ sgs_CompFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree )
 	C->fctx = NULL;
 #if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	fctx_dump( fctx );
+	sgsBC_Dump( func );
 #endif
 	fctx_destroy( C, fctx );
-	return func;
+	return sgsBC_ConvertFunc( C, func, "<main>", 6, 0 );
 
 fail:
 	sgsBC_Free( C, func );
@@ -3015,23 +3033,6 @@ void sgsBC_DumpEx( const char* constptr, size_t constsize,
 	printf( "> code:\n" );
 	dump_opcode( (const sgs_instr_t*) (const void*) SGS_ASSUME_ALIGNED( codeptr, 4 ), codesize / sizeof( sgs_instr_t ) );
 	printf( "}\n" );
-}
-
-void sgsBC_Free( SGS_CTX, sgs_CompFunc* func )
-{
-	sgs_Variable* vbeg = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 );
-	sgs_Variable* vend = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr + func->consts.size, 4 );
-	sgs_Variable* var = vbeg;
-	while( var < vend )
-	{
-		sgs_Release( C, var );
-		var++;
-	}
-
-	sgs_membuf_destroy( &func->code, C );
-	sgs_membuf_destroy( &func->consts, C );
-	sgs_membuf_destroy( &func->lnbuf, C );
-	sgs_Dealloc( func );
 }
 
 

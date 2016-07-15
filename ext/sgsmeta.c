@@ -206,55 +206,13 @@ static int _sgs_meta_dumpfn( SGS_CTX, sgs_iFunc* func )
 	return 1;
 }
 
-static int _sgs_meta_dumpcomp( SGS_CTX, sgs_CompFunc* func )
-{
-	int ssz = sgs_StackSize( C );
-	
-	sgs_PushString( C, "consts" );
-	if( !_sgs_meta_dumpconstlist( C, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 ),
-			func->consts.size / sizeof(sgs_Variable) ) )
-		return 0;
-	
-	sgs_PushString( C, "code" );
-	if( !_sgs_meta_dumpbclist( C, (sgs_instr_t*) (void*) SGS_ASSUME_ALIGNED( func->code.ptr, 4 ),
-			func->code.size / sizeof(sgs_instr_t) ) )
-		return 0;
-	
-	sgs_PushString( C, "lines" );
-	if( !_sgs_meta_dumplnlist( C, (sgs_LineNum*) (void*) SGS_ASSUME_ALIGNED( func->lnbuf.ptr, 4 ),
-			func->lnbuf.size / sizeof(sgs_LineNum) ) )
-		return 0;
-	
-	sgs_PushString( C, "gotthis" );
-	sgs_PushBool( C, func->gotthis );
-	
-	sgs_PushString( C, "numargs" );
-	sgs_PushInt( C, func->numargs );
-	
-	sgs_PushString( C, "numtmp" );
-	sgs_PushInt( C, func->numtmp );
-	
-	sgs_PushString( C, "numclsr" );
-	sgs_PushInt( C, func->numclsr );
-	
-	sgs_PushString( C, "name" );
-	sgs_PushString( C, "<main>" );
-	
-	sgs_PushString( C, "line" );
-	sgs_PushInt( C, 0 );
-	
-	sgs_CreateDict( C, NULL, sgs_StackSize( C ) - ssz );
-	
-	return 1;
-}
-
 int sgs_meta_unpack( SGS_CTX )
 {
 	int ret;
 	char* buf;
 	const char* bfret;
 	sgs_SizeVal size;
-	sgs_CompFunc* func;
+	sgs_Variable funcvar;
 	
 	SGSFN( "meta_unpack" );
 	
@@ -266,12 +224,12 @@ int sgs_meta_unpack( SGS_CTX )
 		return sgs_Msg( C, SGS_WARNING, "compiled code header error "
 			"detected at position %d", ret );
 	
-	bfret = sgsBC_Buf2Func( C, "", buf, (size_t) size, &func );
+	bfret = sgsBC_Buf2Func( C, "", buf, (size_t) size, &funcvar );
 	if( bfret )
 		return sgs_Msg( C, SGS_WARNING, bfret );
 	
-	ret = _sgs_meta_dumpcomp( C, func );
-	sgsBC_Free( C, func );
+	ret = _sgs_meta_dumpfn( C, funcvar.data.F );
+	sgs_Release( C, &funcvar );
 	
 	if( !ret )
 		return sgs_Msg( C, SGS_WARNING, "internal error while converting data" );

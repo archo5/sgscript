@@ -235,24 +235,19 @@ sgs_CompFunc;
 
 
 /* - bytecode generator */
-SGS_APIFUNC sgs_CompFunc* sgsBC_MakeCompFunc( SGS_CTX );
-SGS_APIFUNC sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_CompFunc* nf,
-	const char* funcname, size_t fnsize, sgs_LineNum lnum );
-SGS_APIFUNC sgs_CompFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree );
-SGS_APIFUNC void sgsBC_Dump( sgs_CompFunc* func );
+SGS_APIFUNC sgs_iFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree );
 SGS_APIFUNC void sgsBC_DumpEx( const char* constptr, size_t constsize,
 	const char* codeptr, size_t codesize );
-SGS_APIFUNC void sgsBC_Free( SGS_CTX, sgs_CompFunc* func );
 
 
 /*
 	Serialized bytecode
 */
-SGS_APIFUNC int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf );
+SGS_APIFUNC int sgsBC_Func2Buf( SGS_CTX, sgs_iFunc* func, sgs_MemBuf* outbuf );
 
 /* assumes headers have already been validated (except size) but are still in the buffer */
 SGS_APIFUNC const char* sgsBC_Buf2Func( SGS_CTX, const char* fn,
-	const char* buf, size_t size, sgs_CompFunc** outfunc );
+	const char* buf, size_t size, sgs_Variable* outfunc );
 
 /* validates header size and bytes one by one (except last flag byte)
 -- will return header_size on success and failed byte position on failure */
@@ -419,11 +414,16 @@ SGS_CASSERT( sizeof(sgs_Variable) % 4 == 0, variable_object_chaining_issue );
 SGS_CASSERT( sizeof(sgs_iFunc) % 4 == 0, ifunc_object_chaining_issue );
 SGS_CASSERT( sizeof(sgs_iStr) % 4 == 0, istr_object_storage_compat_issue );
 
+#define sgs_func_size( pfn ) (pfn)->size
+#define sgs_func_instr_off( pfn ) (pfn)->instr_off
+#define sgs_func_instr_count( pfn ) ((sgs_func_size(pfn) - sgs_func_instr_off(pfn)) / sizeof(sgs_instr_t))
+#define sgs_func_const_count( pfn ) (sgs_func_instr_off(pfn) / sizeof(sgs_Variable))
 #define sgs_func_consts( pfn )   ((sgs_Variable*)SGS_ASSUME_ALIGNED(((sgs_iFunc*)(pfn))+1,16))
-#define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(sgs_func_consts(pfn)+pfn->instr_off/sizeof(sgs_Variable)))
+#define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(sgs_func_consts(pfn)+sgs_func_instr_off(pfn)/sizeof(sgs_Variable)))
+#define sgs_func_lineinfo( pfn ) ((pfn)->lineinfo)
 #define sgs_func_c_consts( pfn )   ((const sgs_Variable*)SGS_ASSUME_ALIGNED(((const sgs_iFunc*)(pfn))+1,16))
 #define sgs_func_c_bytecode( pfn ) \
-	((const sgs_instr_t*)(sgs_func_c_consts(pfn)+pfn->instr_off/sizeof(sgs_Variable)))
+	((const sgs_instr_t*)(sgs_func_c_consts(pfn) + sgs_func_instr_off(pfn) / sizeof(sgs_Variable)))
 
 
 typedef struct _sgs_Closure sgs_Closure;
@@ -496,8 +496,8 @@ int sgs_specfn_apply( SGS_CTX );
 	Context handling
 */
 
-typedef struct _sgs_BreakInfo sgs_BreakInfo;
-struct _sgs_BreakInfo
+typedef struct sgs_BreakInfo sgs_BreakInfo;
+struct sgs_BreakInfo
 {
 	sgs_BreakInfo* next;
 	uint32_t jdoff;  /* jump data offset */
@@ -509,7 +509,7 @@ struct _sgs_BreakInfo
 typedef int32_t sgs_rcpos_t;
 
 typedef
-struct _sgs_FuncCtx
+struct sgs_FuncCtx
 {
 	int32_t func;
 	sgs_rcpos_t regs, lastreg;
@@ -523,7 +523,7 @@ struct _sgs_FuncCtx
 sgs_FuncCtx;
 
 typedef
-struct _sgs_ObjPoolItem
+struct sgs_ObjPoolItem
 {
 	sgs_VarObj* obj;
 	uint32_t appsize;

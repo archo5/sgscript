@@ -5,27 +5,7 @@
 
 static int _serialize_function( SGS_CTX, sgs_iFunc* func, sgs_MemBuf* out )
 {
-	sgs_CompFunc F;
-	{
-		F.consts = sgs_membuf_create();
-		F.code = sgs_membuf_create();
-		F.lnbuf = sgs_membuf_create();
-		F.gotthis = func->gotthis;
-		F.numargs = func->numargs;
-		F.numtmp = func->numtmp;
-		F.numclsr = func->numclsr;
-	}
-	
-	F.consts.ptr = ((char*)(func+1));
-	F.consts.size = F.consts.mem = func->instr_off;
-	
-	F.code.ptr = ((char*)(func+1)) + func->instr_off;
-	F.code.size = F.code.mem = func->size - func->instr_off;
-	
-	F.lnbuf.ptr = (char*) func->lineinfo;
-	F.lnbuf.size = ( func->size - func->instr_off ) / 2;
-	
-	if( sgsBC_Func2Buf( C, &F, out ) == SGS_FALSE )
+	if( sgsBC_Func2Buf( C, func, out ) == SGS_FALSE )
 	{
 		sgs_Msg( C, SGS_INTERR, "failed to serialize function: error in data" );
 		return 0;
@@ -33,57 +13,17 @@ static int _serialize_function( SGS_CTX, sgs_iFunc* func, sgs_MemBuf* out )
 	return 1;
 }
 
-static int _unserialize_function( SGS_CTX, const char* buf, size_t sz, sgs_iFunc** outfn )
+static int _unserialize_function( SGS_CTX, const char* buf, size_t sz, sgs_Variable* outfn )
 {
-	sgs_Variable strvar;
-	sgs_iFunc* F;
-	sgs_CompFunc* nf = NULL;
 	const char* err;
 	if( sgsBC_ValidateHeader( buf, sz ) < SGS_HEADER_SIZE )
 	{
 		sgs_Msg( C, SGS_WARNING, "failed to unserialize function: incomplete data" );
 		return 0;
 	}
-	err = sgsBC_Buf2Func( C, "<anonymous>", buf, sz, &nf );
+	err = sgsBC_Buf2Func( C, "<anonymous>", buf, sz, outfn );
 	if( err )
-	{
-		sgs_Msg( C, SGS_WARNING, "failed to unserialize function: %s", err );
-		return 0;
-	}
-	
-	F = sgs_Alloc_a( sgs_iFunc, nf->consts.size + nf->code.size );
-
-	F->refcount = 0;
-	/* WP: const/instruction limits */
-	F->size = (uint32_t) ( nf->consts.size + nf->code.size );
-	F->instr_off = (uint32_t) nf->consts.size;
-	F->gotthis = nf->gotthis;
-	F->numargs = nf->numargs;
-	F->numtmp = nf->numtmp;
-	F->numclsr = nf->numclsr;
-
-	{
-		size_t lnc = nf->lnbuf.size / sizeof( sgs_LineNum );
-		F->lineinfo = sgs_Alloc_n( sgs_LineNum, lnc );
-		memcpy( F->lineinfo, nf->lnbuf.ptr, nf->lnbuf.size );
-	}
-	sgs_InitStringBuf( C, &strvar, "", 0 );
-	F->sfuncname = strvar.data.S;
-	F->linenum = 0;
-	VAR_ACQUIRE( &strvar );
-	F->sfilename = strvar.data.S;
-	/* set from current if possible? */
-	
-	memcpy( sgs_func_consts( F ), nf->consts.ptr, nf->consts.size );
-	memcpy( sgs_func_bytecode( F ), nf->code.ptr, nf->code.size );
-
-	sgs_membuf_destroy( &nf->consts, C );
-	sgs_membuf_destroy( &nf->code, C );
-	sgs_membuf_destroy( &nf->lnbuf, C );
-	sgs_Dealloc( nf );
-	
-	*outfn = F;
-	
+		return sgs_Msg( C, SGS_WARNING, "failed to unserialize function: %s", err );
 	return 1;
 }
 
@@ -568,7 +508,6 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 				{
 					sgs_Variable tmp;
 					sgs_SizeVal bcsz;
-					sgs_iFunc* fn;
 					if( str >= strend-3 )
 						return sgs_unserr_incomp( C );
 					SGS_AS_INT32( bcsz, str );
@@ -576,11 +515,10 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 					if( str > strend - bcsz )
 						return sgs_unserr_incomp( C );
 					/* WP: conversion does not affect values */
-					if( !_unserialize_function( C, str, (size_t) bcsz, &fn ) )
+					if( !_unserialize_function( C, str, (size_t) bcsz, &tmp ) )
 						return SGS_FALSE; /* error already printed */
-					tmp.type = SGS_VT_FUNC;
-					tmp.data.F = fn;
 					sgs_PushVariable( C, tmp );
+					sgs_Release( C, &tmp );
 					str += bcsz;
 				}
 				break;
@@ -1012,7 +950,6 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			case SGS_VT_FUNC:
 				{
 					sgs_SizeVal bcsz;
-					sgs_iFunc* fn;
 					if( str >= strend-3 && !sgs_unserr_incomp( C ) )
 						goto fail;
 					SGS_AS_INT32( bcsz, str );
@@ -1020,11 +957,8 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 					if( str > strend - bcsz && !sgs_unserr_incomp( C ) )
 						goto fail;
 					/* WP: conversion does not affect values */
-					if( !_unserialize_function( C, str, (size_t) bcsz, &fn ) )
+					if( !_unserialize_function( C, str, (size_t) bcsz, &var ) )
 						goto fail; /* error already printed */
-					var.type = SGS_VT_FUNC;
-					var.data.F = fn;
-					fn->refcount++;
 					str += bcsz;
 				}
 				break;
@@ -2293,8 +2227,6 @@ static const char* bc_read_var( decoder_t* D, sgs_Variable* var )
 		
 	case SGS_VT_FUNC:
 		ret = bc_read_sgsfunc( D, var );
-		if( ret == NULL )
-			var->type = SGS_VT_FUNC;
 		break;
 		
 	default:
@@ -2357,14 +2289,14 @@ static int bc_write_sgsfunc( sgs_iFunc* F, SGS_CTX, sgs_MemBuf* outbuf )
 	uint8_t gntc[4] = { F->gotthis, F->numargs, F->numtmp, F->numclsr };
 	
 	/* WP: const/instruction limits */
-	cc = (uint16_t)( F->instr_off / sizeof( sgs_Variable ) );
-	ic = (uint16_t)( ( F->size - F->instr_off ) / sizeof( sgs_instr_t ) );
+	cc = (uint16_t) sgs_func_const_count( F );
+	ic = (uint16_t) sgs_func_instr_count( F );
 
 	sgs_membuf_appbuf( outbuf, C, &cc, sizeof( cc ) );
 	sgs_membuf_appbuf( outbuf, C, &ic, sizeof( ic ) );
 	sgs_membuf_appbuf( outbuf, C, gntc, 4 );
 	sgs_membuf_appbuf( outbuf, C, &F->linenum, sizeof( sgs_LineNum ) );
-	sgs_membuf_appbuf( outbuf, C, F->lineinfo, sizeof( uint16_t ) * ic );
+	sgs_membuf_appbuf( outbuf, C, sgs_func_lineinfo( F ), sizeof( sgs_LineNum ) * ic );
 	sgs_membuf_appbuf( outbuf, C, &size, sizeof( size ) );
 	sgs_membuf_appbuf( outbuf, C, sgs_str_cstr( F->sfuncname ), F->sfuncname->size );
 
@@ -2463,6 +2395,7 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	D->buf += coff;
 
 	var->data.F = F;
+	var->type = SGS_VT_FUNC;
 	return NULL;
 
 fail:
@@ -2498,18 +2431,9 @@ fail:
 	byte flags
 	u32 filesize
 	-- header end --
-	i16 constcount
-	i16 instrcount
-	byte gotthis
-	byte numargs
-	byte numtmp
-	byte numclsr
-	-- -- -- -- -- 8 bytes in the previous section
-	varlist consts
-	i32[instrcount] instrs
-	linenum[instrcount] lines
+	function main
 */
-int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf )
+int sgsBC_Func2Buf( SGS_CTX, sgs_iFunc* func, sgs_MemBuf* outbuf )
 {
 	size_t origobsize = outbuf->size;
 	char header_bytes[ 14 ] =
@@ -2528,35 +2452,17 @@ int sgsBC_Func2Buf( SGS_CTX, sgs_CompFunc* func, sgs_MemBuf* outbuf )
 	sgs_membuf_appbuf( outbuf, C, header_bytes, 14 );
 	
 	{
-		uint16_t cc, ic;
-		uint8_t gntc[4] = { func->gotthis, func->numargs, func->numtmp, func->numclsr };
-		
-		/* max. count: 65535, max. variable size: 16 bytes */
-		cc = (uint16_t) ( func->consts.size / sizeof( sgs_Variable ) );
-		ic = (uint16_t) ( func->code.size / sizeof( sgs_instr_t ) );
-		
-		sgs_membuf_appbuf( outbuf, C, &cc, sizeof( cc ) );
-		sgs_membuf_appbuf( outbuf, C, &ic, sizeof( ic ) );
-		sgs_membuf_appbuf( outbuf, C, gntc, 4 );
-		
-		if( !bc_write_varlist( (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 ), C,
-			cc, outbuf ) )
+		uint32_t sz;
+		int ret = bc_write_sgsfunc( func, C, outbuf );
+		if( !ret )
 			return 0;
-		
-		sgs_membuf_appbuf( outbuf, C, func->code.ptr, sizeof( sgs_instr_t ) * ic );
-		sgs_membuf_appbuf( outbuf, C, func->lnbuf.ptr, sizeof( sgs_LineNum ) * ic );
-		
-		{
-			/* WP: bytecode size limit */
-			uint32_t outbufsize = (uint32_t) ( outbuf->size - origobsize );
-			memcpy( outbuf->ptr + origobsize + 10, &outbufsize, sizeof(uint32_t) );
-		}
-		
+		sz = (uint32_t)( outbuf->size - origobsize );
+		memcpy( outbuf->ptr + origobsize + 10, &sz, sizeof(sz) );
 		return 1;
 	}
 }
 
-const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, size_t size, sgs_CompFunc** outfunc )
+const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, size_t size, sgs_Variable* outfunc )
 {
 	char flags;
 	uint32_t sz;
@@ -2584,68 +2490,9 @@ const char* sgsBC_Buf2Func( SGS_CTX, const char* fn, const char* buf, size_t siz
 		sz = esi32( sz );
 	if( (size_t) sz != size )
 		return "data error (fn. data size mismatch)";
-	{
-		const char* ret = "data error";
-		uint16_t cc, ic, cci;
-		sgs_CompFunc* func = sgsBC_MakeCompFunc( C );
-		SGS_AS_UINT16( cc, buf + 14 );
-		SGS_AS_UINT16( ic, buf + 16 );
-		SGS_AS_UINT8( func->gotthis, buf + 18 );
-		SGS_AS_UINT8( func->numargs, buf + 19 );
-		SGS_AS_UINT8( func->numtmp, buf + 20 );
-		SGS_AS_UINT8( func->numclsr, buf + 21 );
-		D->buf = buf + 22;
-		
-		if( D->convend )
-		{
-			/* WP: int promotion will not affect the result */
-			cc = (uint16_t) esi16( cc );
-			ic = (uint16_t) esi16( ic );
-		}
-		
-		if( SGSNOMINDEC( cc + ic * sizeof( sgs_LineNum ) ) )
-		{
-			sgsBC_Free( C, func );
-			return "data error (expected fn. data)";
-		}
-		
-		sgs_membuf_resize( &func->consts, C, sizeof( sgs_Variable ) * cc );
-		sgs_membuf_resize( &func->code, C, sizeof( sgs_instr_t ) * ic );
-		sgs_membuf_resize( &func->lnbuf, C, sizeof( sgs_LineNum ) * ic );
-		for( cci = 0; cci < cc; ++cci )
-		{
-			((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 ))[ cci ].type = SGS_VT_NULL;
-		}
-		
-		ret = bc_read_varlist( D, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 ), cc );
-		if( ret )
-		{
-			sgsBC_Free( C, func );
-			return ret;
-		}
-		
-		ret = "data error (expected fn. instructions)";
-		if( SGSNOMINDEC( sizeof( sgs_instr_t ) * ic ) )
-			goto free_fail;
-		
-		memcpy( func->code.ptr, D->buf, sizeof( sgs_instr_t ) * ic );
-		if( D->convend )
-			esi32_array( (sgs_instr_t*) (void*) SGS_ASSUME_ALIGNED( func->code.ptr, 4 ), ic );
-		D->buf += sizeof( sgs_instr_t ) * ic;
-		
-		ret = "data error (expected fn. line numbers)";
-		if( SGSNOMINDEC( sizeof( sgs_LineNum ) * ic ) )
-			goto free_fail;
-		
-		memcpy( func->lnbuf.ptr, D->buf, sizeof( sgs_LineNum ) * ic );
-
-		*outfunc = func;
-		return NULL;
-		
-free_fail:
-		sgsBC_Free( C, func );
-		return ret;
-	}
+	
+	D->buf = buf + 14;
+	return bc_read_sgsfunc( D, outfunc );
 }
 
 int sgsBC_ValidateHeader( const char* buf, size_t size )
