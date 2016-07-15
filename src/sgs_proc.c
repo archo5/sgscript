@@ -2618,7 +2618,7 @@ static void vm_postcall( SGS_CTX, int rvc )
 
 
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
-static SGS_INLINE sgs_Variable* const_getvar( sgs_Variable* consts, sgs_rcpos_t count, sgs_rcpos_t off )
+static SGS_INLINE sgs_Variable* const_getvar( sgs_Variable* consts, int count, int off )
 {
 	sgs_BreakIf( off >= count );
 	return consts + off;
@@ -2800,7 +2800,7 @@ restart_loop:
 			break;
 		case SGS_SI_FORJUMP:
 		{
-			sgs_rcpos_t off = argE;
+			int off = argE;
 			sgs_BreakIf( pp+1 > pend || pp+1 < SF->code );
 			if( vm_fornext( C, -1, -1, RESVAR( argC ) ) < 1 )
 				pp += off;

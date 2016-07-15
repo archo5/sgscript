@@ -199,8 +199,8 @@ SGS_APIFUNC void sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend );
 #define SGS_SFT_STHCALL 41 /* subthread */
 #define SGS_SFT_HEAPBIT 255
 
-typedef struct _sgs_FTNode sgs_FTNode;
-struct _sgs_FTNode
+typedef struct sgs_FTNode sgs_FTNode;
+struct sgs_FTNode
 {
 	sgs_TokenList token;
 	sgs_FTNode*   next;
@@ -213,25 +213,6 @@ SGS_APIFUNC void sgsFT_Destroy( SGS_CTX, sgs_FTNode* tree );
 SGS_APIFUNC sgs_FTNode* sgsFT_Compile( SGS_CTX, sgs_TokenList tlist );
 SGS_APIFUNC void sgsFT_Dump( sgs_FTNode* tree );
 
-
-
-/*
-	Intermediate function
-	- keeps the function data between compiler stages
-*/
-
-typedef
-struct _sgs_CompFunc
-{
-	sgs_MemBuf consts;
-	sgs_MemBuf code;
-	sgs_MemBuf lnbuf;
-	uint8_t gotthis; /* bool */
-	uint8_t numargs; /* guaranteed to be <= 255 by a test in `preparse_arglist` */
-	uint8_t numtmp; /* reg. count (0-255, incl. numargs) - numargs (0-255) */
-	uint8_t numclsr;
-}
-sgs_CompFunc;
 
 
 /* - bytecode generator */
@@ -269,7 +250,7 @@ SGS_APIFUNC int sgsBC_ValidateHeader( const char* buf, size_t size );
 #define SGS_INT_ERRSUP_DEC 2
 #define SGS_INT_RESET_WAIT_TIMER 3
 
-typedef enum sgs_Instruction_e
+typedef enum sgs_Instruction
 {
 	SGS_SI_NOP = 0,
 
@@ -395,7 +376,7 @@ typedef uint32_t sgs_instr_t;
 #define SGS_INSTR_RECOMB_E( a, b ) ( ( ( b ) << 8 ) | ( a ) )
 
 
-struct _sgs_iFunc
+struct sgs_iFunc
 {
 	int32_t refcount;
 	uint32_t size;
@@ -426,17 +407,12 @@ SGS_CASSERT( sizeof(sgs_iStr) % 4 == 0, istr_object_storage_compat_issue );
 	((const sgs_instr_t*)(sgs_func_c_consts(pfn) + sgs_func_instr_off(pfn) / sizeof(sgs_Variable)))
 
 
-typedef struct _sgs_Closure sgs_Closure;
-struct _sgs_Closure
+typedef struct sgs_Closure sgs_Closure;
+struct sgs_Closure
 {
 	int32_t refcount;
 	sgs_Variable var;
 };
-
-
-typedef struct _sgs_ShCtx sgs_ShCtx;
-#define SGS_SHCTX sgs_ShCtx* S
-#define SGS_SHCTX_USE SGS_SHCTX = C->shared
 
 
 /* VM interface */
@@ -496,34 +472,10 @@ int sgs_specfn_apply( SGS_CTX );
 	Context handling
 */
 
-typedef struct sgs_BreakInfo sgs_BreakInfo;
-struct sgs_BreakInfo
-{
-	sgs_BreakInfo* next;
-	uint32_t jdoff;  /* jump data offset */
-	uint16_t numlp;  /* which loop */
-	uint8_t  iscont; /* is a "continue"? */
-};
-
 /* register / constant position */
-typedef int32_t sgs_rcpos_t;
+typedef struct sgs_FuncCtx sgs_FuncCtx;
 
-typedef
-struct sgs_FuncCtx
-{
-	int32_t func;
-	sgs_rcpos_t regs, lastreg;
-	sgs_MemBuf vars;
-	sgs_MemBuf gvars;
-	sgs_MemBuf clsr;
-	int inclsr, outclsr, syncdepth;
-	int32_t loops;
-	sgs_BreakInfo* binfo;
-}
-sgs_FuncCtx;
-
-typedef
-struct sgs_ObjPoolItem
+typedef struct sgs_ObjPoolItem
 {
 	sgs_VarObj* obj;
 	uint32_t appsize;
@@ -538,7 +490,7 @@ typedef sgs_Variable* sgs_VarPtr;
 #define SGS_SF_REENTER 0x08
 #define SGS_SF_PAUSED  0x10
 
-struct _sgs_StackFrame
+struct sgs_StackFrame
 {
 	sgs_Variable    func;
 	const uint32_t* code;
@@ -560,7 +512,10 @@ struct _sgs_StackFrame
 	uint8_t flags;
 };
 
-struct _sgs_ShCtx
+typedef struct sgs_ShCtx sgs_ShCtx;
+#define SGS_SHCTX sgs_ShCtx* S
+#define SGS_SHCTX_USE SGS_SHCTX = C->shared
+struct sgs_ShCtx
 {
 	uint32_t      version;
 	sgs_Context*  ctx_root;
@@ -621,7 +576,7 @@ struct _sgs_ShCtx
 #define SGS_STATE_INSIDE_API    0x0040U
 #define SGS_STATE_COROSTART     0x0080U /* function is pushed to stack */
 
-struct _sgs_Context
+struct sgs_Context
 {
 	int32_t       refcount;
 	sgs_ShCtx*    shared;

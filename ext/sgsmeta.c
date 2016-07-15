@@ -3,72 +3,76 @@
 #include <sgs_int.h>
 
 
+static sgs_RegIntConst int_consts[] =
+{
+#define _META_RGS( instr ) { "SI_" #instr, SGS_SI_##instr },
+	_META_RGS( NOP )
+	_META_RGS( PUSH )
+	_META_RGS( INT )
+	_META_RGS( RETN )
+	_META_RGS( JUMP )
+	_META_RGS( JMPT )
+	_META_RGS( JMPF )
+	_META_RGS( JMPN )
+	_META_RGS( CALL )
+	_META_RGS( FORPREP )
+	_META_RGS( FORLOAD )
+	_META_RGS( FORJUMP )
+	_META_RGS( LOADCONST )
+	_META_RGS( GETVAR )
+	_META_RGS( SETVAR )
+	_META_RGS( GETPROP )
+	_META_RGS( SETPROP )
+	_META_RGS( GETINDEX )
+	_META_RGS( SETINDEX )
+	_META_RGS( GENCLSR )
+	_META_RGS( PUSHCLSR )
+	_META_RGS( MAKECLSR )
+	_META_RGS( GETCLSR )
+	_META_RGS( SETCLSR )
+	_META_RGS( SET )
+	_META_RGS( MCONCAT )
+	_META_RGS( CONCAT )
+	_META_RGS( NEGATE )
+	_META_RGS( BOOL_INV )
+	_META_RGS( INVERT )
+	_META_RGS( INC )
+	_META_RGS( DEC )
+	_META_RGS( ADD )
+	_META_RGS( SUB )
+	_META_RGS( MUL )
+	_META_RGS( DIV )
+	_META_RGS( MOD )
+	_META_RGS( AND )
+	_META_RGS( OR )
+	_META_RGS( XOR )
+	_META_RGS( LSH )
+	_META_RGS( RSH )
+	_META_RGS( SEQ )
+	_META_RGS( SNEQ )
+	_META_RGS( EQ )
+	_META_RGS( NEQ )
+	_META_RGS( LT )
+	_META_RGS( GTE )
+	_META_RGS( GT )
+	_META_RGS( LTE )
+	_META_RGS( RAWCMP )
+	_META_RGS( ARRAY )
+	_META_RGS( DICT )
+	_META_RGS( MAP )
+	_META_RGS( CLASS )
+	_META_RGS( RSYM )
+	_META_RGS( COTRT )
+	_META_RGS( COTRF )
+	_META_RGS( COABORT )
+	_META_RGS( YLDJMP )
+#undef _META_RGS
+	{ NULL, 0 }
+};
+
 int sgs_meta_globals( SGS_CTX )
 {
-#define _META_RGS( instr ) sgs_SetGlobalByName( C, #instr, sgs_MakeInt( SGS_##instr ) );
-	
-	_META_RGS( SI_NOP );
-	_META_RGS( SI_PUSH );
-	
-	_META_RGS( SI_RETN );
-	_META_RGS( SI_JUMP );
-	_META_RGS( SI_JMPT );
-	_META_RGS( SI_JMPF );
-	_META_RGS( SI_JMPN );
-	_META_RGS( SI_CALL );
-	
-	_META_RGS( SI_FORPREP );
-	_META_RGS( SI_FORLOAD );
-	_META_RGS( SI_FORJUMP );
-	
-	_META_RGS( SI_LOADCONST );
-	_META_RGS( SI_GETVAR );
-	_META_RGS( SI_SETVAR );
-	_META_RGS( SI_GETPROP );
-	_META_RGS( SI_SETPROP );
-	_META_RGS( SI_GETINDEX );
-	_META_RGS( SI_SETINDEX );
-	
-	_META_RGS( SI_GENCLSR );
-	_META_RGS( SI_PUSHCLSR );
-	_META_RGS( SI_MAKECLSR );
-	_META_RGS( SI_GETCLSR );
-	_META_RGS( SI_SETCLSR );
-	
-	_META_RGS( SI_SET );
-	_META_RGS( SI_MCONCAT );
-	_META_RGS( SI_CONCAT );
-	_META_RGS( SI_NEGATE );
-	_META_RGS( SI_BOOL_INV );
-	_META_RGS( SI_INVERT );
-	
-	_META_RGS( SI_INC );
-	_META_RGS( SI_DEC );
-	_META_RGS( SI_ADD );
-	_META_RGS( SI_SUB );
-	_META_RGS( SI_MUL );
-	_META_RGS( SI_DIV );
-	_META_RGS( SI_MOD );
-	
-	_META_RGS( SI_AND );
-	_META_RGS( SI_OR );
-	_META_RGS( SI_XOR );
-	_META_RGS( SI_LSH );
-	_META_RGS( SI_RSH );
-	
-	_META_RGS( SI_SEQ );
-	_META_RGS( SI_SNEQ );
-	_META_RGS( SI_EQ );
-	_META_RGS( SI_NEQ );
-	_META_RGS( SI_LT );
-	_META_RGS( SI_GTE );
-	_META_RGS( SI_GT );
-	_META_RGS( SI_LTE );
-	_META_RGS( SI_RAWCMP );
-	
-	_META_RGS( SI_ARRAY );
-	_META_RGS( SI_DICT );
-#undef _META_RGS
+	sgs_RegIntConsts( C, int_consts, -1 );
 	return 0;
 }
 
@@ -163,17 +167,17 @@ static int _sgs_meta_dumpfn( SGS_CTX, sgs_iFunc* func )
 	
 	sgs_PushString( C, "consts" );
 	if( !_sgs_meta_dumpconstlist( C, sgs_func_consts( func ),
-			(size_t) func->instr_off / sizeof(sgs_Variable) ) )
+			(size_t) sgs_func_const_count( func ) ) )
 		return 0;
 	
 	sgs_PushString( C, "code" );
 	if( !_sgs_meta_dumpbclist( C, sgs_func_bytecode( func ),
-			(size_t) ( func->size - func->instr_off ) / sizeof(sgs_instr_t) ) )
+			(size_t) sgs_func_instr_count( func ) ) )
 		return 0;
 	
 	sgs_PushString( C, "lines" );
 	if( !_sgs_meta_dumplnlist( C, func->lineinfo,
-			(size_t) ( func->size - func->instr_off ) / sizeof(sgs_instr_t) ) )
+			(size_t) sgs_func_instr_count( func ) ) )
 		return 0;
 	
 	sgs_PushString( C, "gotthis" );

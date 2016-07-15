@@ -320,9 +320,9 @@ typedef int64_t sgs_Int;
 typedef double  sgs_Real;
 typedef int32_t sgs_SizeVal;
 typedef int32_t sgs_StkIdx;
-typedef struct _sgs_Context sgs_Context;
-typedef struct _sgs_Variable sgs_Variable;
-typedef struct _sgs_StackFrame sgs_StackFrame;
+typedef struct  sgs_Context sgs_Context;
+typedef struct  sgs_Variable sgs_Variable;
+typedef struct  sgs_StackFrame sgs_StackFrame;
 typedef int (*sgs_CFunc) ( sgs_Context* );
 
 #define sgs_Integer sgs_Int
@@ -392,7 +392,7 @@ typedef void (*sgs_HookFunc) (
 
 
 /* Script file system */
-typedef struct _sgs_ScriptFSData
+typedef struct sgs_ScriptFSData
 {
 	void* userhandle;
 	const char* filename;
@@ -475,7 +475,7 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* );
 typedef int (*sgs_OC_Self) ( sgs_Context*, sgs_VarObj* );
 typedef int (*sgs_OC_SlPr) ( sgs_Context*, sgs_VarObj*, int );
 
-typedef struct _sgs_ObjInterface
+typedef struct sgs_ObjInterface
 {
 	const char* name;
 	
@@ -510,8 +510,8 @@ struct sgs_ObjData
 	sgs_VarObj* metaobj; /* pointer to meta-object */
 };
 
-typedef struct _sgs_iStr sgs_iStr;
-struct _sgs_iStr
+typedef struct sgs_iStr sgs_iStr;
+struct sgs_iStr
 {
 	sgs_SizeVal refcount;
 	uint32_t size;
@@ -521,8 +521,8 @@ struct _sgs_iStr
 #define sgs_str_c_cstr( pstr ) (((const char*)(pstr))+sizeof(sgs_iStr))
 #define sgs_var_cstr( var ) sgs_str_cstr( (var)->data.S )
 
-typedef struct _sgs_iFunc sgs_iFunc;
-typedef union _sgs_VarData
+typedef struct sgs_iFunc sgs_iFunc;
+typedef union sgs_VarData
 {
 	sgs_SizeVal* pRC;
 	sgs_Bool     B;
@@ -537,7 +537,7 @@ typedef union _sgs_VarData
 }
 sgs_VarData;
 
-struct _sgs_Variable
+struct sgs_Variable
 {
 	uint32_t    type;
 	sgs_VarData data;
@@ -680,7 +680,7 @@ SGS_APIFUNC void sgs_LoadLib_String( SGS_CTX );
 SGS_APIFUNC void sgs_RegSymbol( SGS_CTX, const char* prefix, const char* name, sgs_Variable var );
 SGS_APIFUNC SGSBOOL sgs_GetSymbol( SGS_CTX, sgs_Variable var, sgs_Variable* out );
 
-typedef struct _sgs_RegFuncConst
+typedef struct sgs_RegFuncConst
 {
 	const char* name;
 	sgs_CFunc value;
@@ -690,7 +690,7 @@ SGS_APIFUNC void sgs_RegFuncConstsExt( SGS_CTX, const sgs_RegFuncConst* list, in
 #define sgs_RegFuncConsts( C, list, size ) sgs_RegFuncConstsExt( C, list, size, "" );
 SGS_APIFUNC void sgs_StoreFuncConsts( SGS_CTX, sgs_Variable var, const sgs_RegFuncConst* list, int size, const char* prefix );
 
-typedef struct _sgs_RegIntConst
+typedef struct sgs_RegIntConst
 {
 	const char* name;
 	sgs_Int value;
@@ -699,7 +699,7 @@ sgs_RegIntConst;
 SGS_APIFUNC void sgs_RegIntConsts( SGS_CTX, const sgs_RegIntConst* list, int size );
 SGS_APIFUNC void sgs_StoreIntConsts( SGS_CTX, sgs_Variable var, const sgs_RegIntConst* list, int size );
 
-typedef struct _sgs_RegRealConst
+typedef struct sgs_RegRealConst
 {
 	const char* name;
 	sgs_Real value;

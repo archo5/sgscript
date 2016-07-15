@@ -2,7 +2,43 @@
 
 #include "sgs_int.h"
 
+
+typedef int32_t sgs_rcpos_t;
 #define rcpos_t sgs_rcpos_t
+
+typedef struct sgs_BreakInfo sgs_BreakInfo;
+struct sgs_BreakInfo
+{
+	sgs_BreakInfo* next;
+	uint32_t jdoff;  /* jump data offset */
+	uint16_t numlp;  /* which loop */
+	uint8_t  iscont; /* is a "continue"? */
+};
+
+typedef struct sgs_CompFunc
+{
+	sgs_MemBuf consts;
+	sgs_MemBuf code;
+	sgs_MemBuf lnbuf;
+	uint8_t gotthis; /* bool */
+	uint8_t numargs; /* guaranteed to be <= 255 by a test in `preparse_arglist` */
+	uint8_t numtmp; /* reg. count (0-255, incl. numargs) - numargs (0-255) */
+	uint8_t numclsr;
+}
+sgs_CompFunc;
+
+struct sgs_FuncCtx
+{
+	int32_t func;
+	sgs_rcpos_t regs, lastreg;
+	sgs_MemBuf vars;
+	sgs_MemBuf gvars;
+	sgs_MemBuf clsr;
+	int inclsr, outclsr, syncdepth;
+	int32_t loops;
+	sgs_BreakInfo* binfo;
+	sgs_CompFunc cfunc;
+};
 
 
 #define over_limit( x, lim ) ((x)>(lim)||(x)<(-lim))
@@ -41,37 +77,6 @@ static SGS_INLINE void comp_reg_unwind( SGS_CTX, rcpos_t pos )
 	if( C->fctx->regs > C->fctx->lastreg )
 		C->fctx->lastreg = C->fctx->regs;
 	C->fctx->regs = pos;
-}
-
-
-static sgs_CompFunc* sgsBC_MakeCompFunc( SGS_CTX )
-{
-	sgs_CompFunc* func = sgs_Alloc( sgs_CompFunc );
-	func->consts = sgs_membuf_create();
-	func->code = sgs_membuf_create();
-	func->lnbuf = sgs_membuf_create();
-	func->gotthis = SGS_FALSE;
-	func->numargs = 0;
-	func->numtmp = 0;
-	func->numclsr = 0;
-	return func;
-}
-
-static void sgsBC_Free( SGS_CTX, sgs_CompFunc* func )
-{
-	sgs_Variable* vbeg = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 );
-	sgs_Variable* vend = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr + func->consts.size, 4 );
-	sgs_Variable* var = vbeg;
-	while( var < vend )
-	{
-		sgs_Release( C, var );
-		var++;
-	}
-
-	sgs_membuf_destroy( &func->code, C );
-	sgs_membuf_destroy( &func->consts, C );
-	sgs_membuf_destroy( &func->lnbuf, C );
-	sgs_Dealloc( func );
 }
 
 
@@ -118,11 +123,34 @@ static sgs_FuncCtx* fctx_create( SGS_CTX )
 	fctx->loops = 0;
 	fctx->binfo = NULL;
 	sgs_membuf_appbuf( &fctx->gvars, C, "_G=", 3 );
+	
+	fctx->cfunc.consts = sgs_membuf_create();
+	fctx->cfunc.code = sgs_membuf_create();
+	fctx->cfunc.lnbuf = sgs_membuf_create();
+	fctx->cfunc.gotthis = SGS_FALSE;
+	fctx->cfunc.numargs = 0;
+	fctx->cfunc.numtmp = 0;
+	fctx->cfunc.numclsr = 0;
+	
 	return fctx;
 }
 
 static void fctx_destroy( SGS_CTX, sgs_FuncCtx* fctx )
 {
+	sgs_CompFunc* func = &fctx->cfunc;
+	sgs_Variable* vbeg = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 );
+	sgs_Variable* vend = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr + func->consts.size, 4 );
+	sgs_Variable* var = vbeg;
+	while( var < vend )
+	{
+		sgs_Release( C, var );
+		var++;
+	}
+
+	sgs_membuf_destroy( &func->code, C );
+	sgs_membuf_destroy( &func->consts, C );
+	sgs_membuf_destroy( &func->lnbuf, C );
+	
 	while( fctx->binfo )
 		fctx_binfo_rem( C, fctx, NULL );
 	sgs_membuf_destroy( &fctx->vars, C );
@@ -760,16 +788,14 @@ sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_CompFunc* nf,
 	if( C->filename )
 		sgsVM_VarCreateString( C, &strvar, C->filename, (sgs_SizeVal) strlen( C->filename ) );
 	else
-		sgs_InitStringBuf( C, &strvar, "", 0 );
+		sgsVM_VarCreateString( C, &strvar, "", 0 );
 	F->sfilename = strvar.data.S;
 	
 	memcpy( sgs_func_consts( F ), nf->consts.ptr, nf->consts.size );
 	memcpy( sgs_func_bytecode( F ), nf->code.ptr, nf->code.size );
-
-	sgs_membuf_destroy( &nf->consts, C );
-	sgs_membuf_destroy( &nf->code, C );
-	sgs_membuf_destroy( &nf->lnbuf, C );
-	sgs_Dealloc( nf );
+	
+	/* transfer ownership by making it look like constants don't exist here anymore */
+	nf->consts.size = 0;
 	
 	return F;
 }
@@ -2066,11 +2092,50 @@ static void prefix_bytecode( SGS_CTX, sgs_CompFunc* func, int args )
 }
 
 
+static int compile_fn_base( SGS_FNTCMP_ARGS, int args )
+{
+	SGS_FN_ENTER;
+	if( !preparse_clsrlists( C, func, node ) ) return 0;
+	
+	SGS_FN_ENTER;
+	if( !preparse_varlists( C, func, node ) ) return 0;
+	args += func->gotthis;
+	
+	SGS_FN_ENTER;
+	if( !preparse_funcorder( C, func, node ) ) return 0;
+	
+	SGS_FN_ENTER;
+	if( !compile_node( C, func, node ) ) return 0;
+	
+	comp_reg_unwind( C, 0 );
+	
+	if( C->fctx->lastreg > 0xff )
+	{
+		QPRINT( "Max. register count exceeded" );
+		return 0;
+	}
+	if( C->fctx->inclsr > 0xff )
+	{
+		QPRINT( "Max. closure count exceeded" );
+		return 0;
+	}
+	
+	prefix_bytecode( C, func, args );
+	/* WP: closure limit */
+	func->numclsr = (uint8_t) C->fctx->inclsr;
+	
+#if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
+	fctx_dump( fctx );
+	sgsBC_Dump( func );
+#endif
+	
+	return 1;
+}
+
 static SGSBOOL compile_func( SGS_FNTCMP_ARGS, rcpos_t* out )
 {
 	sgs_FuncCtx* fctx = fctx_create( C ), *bkfctx = C->fctx;
-	sgs_CompFunc* nf = sgsBC_MakeCompFunc( C );
-	int args = 0, clsrcnt = 0;
+	sgs_CompFunc* nf = &fctx->cfunc;
 
 	sgs_FTNode* n_arglist = node->child;
 	sgs_FTNode* n_uselist = n_arglist->next;
@@ -2088,42 +2153,9 @@ static SGSBOOL compile_func( SGS_FNTCMP_ARGS, rcpos_t* out )
 
 	SGS_FN_ENTER;
 	if( !preparse_arglist( C, nf, n_arglist ) ) { goto fail; }
-	args = fctx->regs;
-
-	SGS_FN_ENTER;
-	if( !preparse_clsrlists( C, nf, n_body ) ) { goto fail; }
-
-	SGS_FN_ENTER;
-	if( !preparse_varlists( C, nf, n_body ) ) { goto fail; }
-	args += nf->gotthis;
 	
-	SGS_FN_ENTER;
-	if( !preparse_funcorder( C, nf, n_body ) ) { goto fail; }
-
-	SGS_FN_ENTER;
-	if( !compile_node( C, nf, n_body ) ) { goto fail; }
-
-	comp_reg_unwind( C, 0 );
-
-	if( C->fctx->lastreg > 0xff )
-	{
-		QPRINT( "Max. register count exceeded" );
-		goto fail;
-	}
-	if( C->fctx->inclsr > 0xff )
-	{
-		QPRINT( "Max. closure count exceeded" );
-		goto fail;
-	}
+	if( !compile_fn_base( C, nf, n_body, fctx->regs ) ) goto fail;
 	
-	prefix_bytecode( C, nf, args );
-	/* WP: closure limit */
-	nf->numclsr = (uint8_t) ( clsrcnt = C->fctx->inclsr );
-
-#if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
-	fctx_dump( fctx );
-	sgsBC_Dump( nf );
-#endif
 	C->fctx = bkfctx;
 
 	{
@@ -2133,17 +2165,17 @@ static SGSBOOL compile_func( SGS_FNTCMP_ARGS, rcpos_t* out )
 		*out = BC_CONSTENC( add_const_f( C, func, nf, ffn.ptr, ffn.size, sgsT_LineNum( node->token ) ) );
 		sgs_membuf_destroy( &ffn, C );
 		
-		if( clsrcnt > 0 )
+		if( fctx->inclsr > 0 )
 		{
 			int i;
 			rcpos_t ro = comp_reg_alloc( C );
 			sgs_FTNode* uli = n_uselist->child;
-			for( i = 0; i < clsrcnt; ++i )
+			for( i = 0; i < fctx->inclsr; ++i )
 			{
 				INSTR_WRITE( SGS_SI_PUSHCLSR, find_varT( &bkfctx->clsr, uli->token ), 0, 0 );
 				uli = uli->next;
 			}
-			INSTR_WRITE( SGS_SI_MAKECLSR, ro, *out, clsrcnt );
+			INSTR_WRITE( SGS_SI_MAKECLSR, ro, *out, fctx->inclsr );
 			*out = ro;
 		}
 	}
@@ -2151,7 +2183,6 @@ static SGSBOOL compile_func( SGS_FNTCMP_ARGS, rcpos_t* out )
 	return 1;
 
 fail:
-	sgsBC_Free( C, nf );
 	C->fctx = bkfctx;
 	fctx_destroy( C, fctx );
 	C->state |= SGS_HAS_ERRORS;
@@ -2970,39 +3001,21 @@ fail:
 
 sgs_iFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree )
 {
-	sgs_CompFunc* func = sgsBC_MakeCompFunc( C );
 	sgs_FuncCtx* fctx = fctx_create( C );
 	fctx->func = SGS_FALSE;
 	C->fctx = fctx;
-	if( !preparse_clsrlists( C, func, tree ) )
+	
+	if( !compile_fn_base( C, &fctx->cfunc, tree, 0 ) )
 		goto fail;
-	if( !preparse_varlists( C, func, tree ) )
-		goto fail;
-	if( !preparse_funcorder( C, func, tree ) )
-		goto fail;
-	if( !compile_node( C, func, tree ) )
-		goto fail;
-	comp_reg_unwind( C, 0 );
-
-	if( C->fctx->lastreg > 0xff )
+	
+	C->fctx = NULL;
 	{
-		sgs_Msg( C, SGS_ERROR, "[line %d] Maximum register count exceeded",
-			sgsT_LineNum( tree->token ) );
-		goto fail;
+		sgs_iFunc* outfn = sgsBC_ConvertFunc( C, &fctx->cfunc, "<main>", 6, 0 );
+		fctx_destroy( C, fctx );
+		return outfn;
 	}
 
-	prefix_bytecode( C, func, 0 );
-
-	C->fctx = NULL;
-#if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
-	fctx_dump( fctx );
-	sgsBC_Dump( func );
-#endif
-	fctx_destroy( C, fctx );
-	return sgsBC_ConvertFunc( C, func, "<main>", 6, 0 );
-
 fail:
-	sgsBC_Free( C, func );
 	C->fctx = NULL;
 	fctx_destroy( C, fctx );
 	C->state |= SGS_HAS_ERRORS;
