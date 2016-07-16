@@ -321,8 +321,8 @@ typedef enum sgs_Instruction
 
 	/* specials */
 	SGS_SI_ARRAY,    /* (C:out, E:args) */
-	SGS_SI_DICT,     /* -- || -- */
-	SGS_SI_MAP,      /* -- || -- */
+	SGS_SI_DICT,     /* (C:out) */
+	SGS_SI_MAP,      /* (C:out) */
 	SGS_SI_CLASS,    /* (A:out, B:name, C:inhname) */
 	SGS_SI_RSYM,     /* (B:name, C:var)         performs dual registration to symbol table */
 	SGS_SI_COTRT,    /* (A:to, B:from)          sets A to true if `from` is finished */

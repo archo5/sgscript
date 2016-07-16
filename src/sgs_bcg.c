@@ -438,6 +438,8 @@ static void add_instr( SGS_FNTCMP_ARGS, sgs_instr_t I )
 #define INSTR_WRITE_PCH() INSTR_WRITE( 63, 0, 0, 0 )
 
 #define QPRINT( str ) sgs_Msg( C, SGS_ERROR, "[line %d] " str, sgsT_LineNum( node->token ) )
+#define QINTERR( id ) sgs_Msg( C, SGS_INTERR, "[line %d] error SGSINT%d [%s:%d,v" SGS_VERSION "]", \
+	sgsT_LineNum( node->token ), id, __FILE__, __LINE__ )
 
 
 
@@ -815,8 +817,6 @@ static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
 	return pos;
 }
 
-#define INTERNAL_ERROR( loff ) sgs_Msg( C, SGS_ERROR, "INTERNAL ERROR occured in file %s [%d]", __FILE__, __LINE__ - (loff) )
-
 static int op_pick_opcode( int oper, int binary )
 {
 	if( !binary )
@@ -1042,7 +1042,7 @@ static SGSBOOL compile_const( SGS_FNTCMP_ARGS, rcpos_t* opos )
 	}
 	else
 	{
-		QPRINT( "INTERNAL ERROR: constant doesn't have a token of type int/real/string attached" );
+		QINTERR( 1011 );
 		return 0;
 	}
 	return 1;
@@ -1361,9 +1361,7 @@ static SGSBOOL compile_midxset( SGS_FNTCMP_ARGS, rcpos_t* out, int isprop )
 	{
 		if( *mapi->token == SGS_ST_STRING )
 		{
-			uint32_t string_len;
-			SGS_AS_UINT32( string_len, mapi->token + 1 );
-			name = BC_CONSTENC( add_const_s( C, func, string_len, (const char*) mapi->token + 5 ) );
+			compile_const( C, func, mapi, &name );
 		}
 		else
 		{
@@ -1452,7 +1450,7 @@ static SGSBOOL try_optimize_last_instr_out( SGS_FNTCMP_ARGS, size_t ioff, rcpos_
 			if( out )
 				*out = pos;
 			break;
-		case SGS_SI_ARRAY: case SGS_SI_DICT:
+		case SGS_SI_ARRAY: case SGS_SI_DICT: case SGS_SI_MAP:
 			{
 				int argE = SGS_INSTR_GET_E( I );
 				char* dummy0 = NULL;
@@ -1511,7 +1509,7 @@ static SGSBOOL try_optimize_set_op( SGS_CTX, sgs_CompFunc* func, size_t ioff, rc
 			I = SGS_INSTR_MAKE( op, ireg, argB, argC );
 			memcpy( func->code.ptr + ioff, &I, sizeof(I) );
 			break;
-		case SGS_SI_ARRAY: case SGS_SI_DICT:
+		case SGS_SI_ARRAY: case SGS_SI_DICT: case SGS_SI_MAP:
 			{
 				int argE = SGS_INSTR_GET_E( I );
 				char* dummy0 = NULL;
@@ -1822,7 +1820,7 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 			
 			if( !node->child || !node->child->next )
 			{
-				QPRINT( "Internal error (binary operator doesn't have 2 operands)" );
+				QINTERR( 1012 );
 				goto fail;
 			}
 			
@@ -2261,7 +2259,7 @@ static SGSBOOL compile_node_w( SGS_FNTCMP_ARGS, rcpos_t src )
 		break;
 
 	default:
-		sgs_Msg( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/w error]" );
+		QINTERR( 1003 );
 		goto fail;
 	}
 	SGS_FN_END;
@@ -2319,43 +2317,43 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 	case SGS_SFT_MAPLIST:
 		SGS_FN_HIT( "R_(DCT|MAP)LIST" );
 		{
-			rcpos_t pos = 0;
 			int args = 0;
 			sgs_FTNode* n = node->child;
+			rcpos_t pos = comp_reg_alloc( C ), kpos, vpos, bkup;
+			bkup = C->fctx->regs;
+			INSTR_WRITE_EX( node->type == SGS_SFT_DCTLIST ? SGS_SI_DICT : SGS_SI_MAP, 0, pos );
 			while( n )
 			{
-				rcpos_t bkup = C->fctx->regs;
-				pos = 0;
 				if( args % 2 == 0 )
 				{
+					kpos = 0;
 					if( n->type != SGS_SFT_ARGMT )
 					{
 						SGS_FN_ENTER;
-						if( !compile_node_r( C, func, n, &pos ) )
+						if( !compile_node_r( C, func, n, &kpos ) )
 							goto fail;
 					}
 					else if( *n->token == SGS_ST_STRING )
-					{
-						uint32_t string_len;
-						SGS_AS_UINT32( string_len, n->token + 1 );
-						pos = BC_CONSTENC( add_const_s( C, func, string_len, (const char*) n->token + 5 ) );
-					}
+						compile_const( C, func, n, &kpos );
 					else
-						compile_ident( C, func, n, &pos );
+						compile_ident( C, func, n, &kpos );
 				}
 				else
 				{
+					vpos = 0;
 					SGS_FN_ENTER;
-					if( !compile_node_r( C, func, n, &pos ) )
+					if( !compile_node_r( C, func, n, &vpos ) )
 						goto fail;
 				}
-				INSTR_WRITE( SGS_SI_PUSH, 0, pos, 0 );
-				comp_reg_unwind( C, bkup );
+				if( args % 2 == 1 )
+				{
+					INSTR_WRITE( SGS_SI_SETINDEX, pos, kpos, vpos );
+					comp_reg_unwind( C, bkup );
+				}
 				args++;
 				n = n->next;
 			}
-			pos = comp_reg_alloc( C );
-			INSTR_WRITE_EX( node->type == SGS_SFT_DCTLIST ? SGS_SI_DICT : SGS_SI_MAP, args, pos );
+			sgs_BreakIf( args % 2 != 0 );
 			*out = pos;
 		}
 		break;
@@ -2408,7 +2406,7 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 		break;
 
 	default:
-		sgs_Msg( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r error]" );
+		QINTERR( 1002 );
 		goto fail;
 	}
 	SGS_FN_END;
@@ -2427,7 +2425,7 @@ static SGSBOOL compile_for_explist( SGS_FNTCMP_ARGS, rcpos_t* out )
 
 	if( node->type != SGS_SFT_EXPLIST )
 	{
-		sgs_Msg( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG/r[fe] error]" );
+		QINTERR( 1004 );
 		goto fail;
 	}
 
@@ -2950,7 +2948,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				}
 				else
 				{
-					sgs_Msg( C, SGS_ERROR, "Unexpected class subtree node [internal BcG error]" );
+					QINTERR( 1005 );
 					goto fail;
 				}
 				it = it->next;
@@ -2986,7 +2984,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 		break;
 
 	default:
-		sgs_Msg( C, SGS_ERROR, "Unexpected tree node [uncaught/internal BcG error]" );
+		QINTERR( 1001 );
 		goto fail;
 	}
 

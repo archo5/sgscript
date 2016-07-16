@@ -109,7 +109,7 @@ testEqual( ''$eval( "return {'a'=1,\"b\"=2};" ), "{a=1,b=2}", "string keys in di
 testEqual( ''$eval( "kn1 = 'a'; kn2 = 'b'; return {[kn1]=1,[kn2]=2};" ), "{a=1,b=2}", "variable keys in dict literal" );
 testEqual( ''$eval( "kn1 = print; return map{[kn1]=1};" ), "[map]{C function=1}", "variable keys in map literal" );
 testEqual( eval( "kn1 = print; return map{[kn1]=1}[print];" ), 1, "retrieval by var.key in map literal" );
-testEqual( ''$eval( "kn1 = print; return {[kn1]=1};" ), "{C function=1}", "variable keys in dict literal (to string)" );
+testEqual( ''$eval( "kn1 = {}; return {[kn1]=1};" ), "{{}=1}", "variable keys in dict literal (to string)" );
 
 
 //

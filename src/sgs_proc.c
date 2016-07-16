@@ -2296,30 +2296,6 @@ static void vm_make_array( SGS_CTX, int args, int outpos )
 	stk_setvar_leave( C, outpos, &arr );
 }
 
-static void vm_make_dict( SGS_CTX, int args, int outpos )
-{
-	int ret;
-	sgs_Variable arr;
-	sgs_BreakIf( sgs_StackSize( C ) < args );
-	ret = sgsSTD_MakeDict( C, &arr, args );
-	sgs_BreakIf( ret != SGS_TRUE );
-	SGS_UNUSED( ret );
-	
-	stk_setvar_leave( C, outpos, &arr );
-}
-
-static void vm_make_map( SGS_CTX, int args, int outpos )
-{
-	int ret;
-	sgs_Variable arr;
-	sgs_BreakIf( sgs_StackSize( C ) < args );
-	ret = sgsSTD_MakeMap( C, &arr, args );
-	sgs_BreakIf( ret != SGS_TRUE );
-	SGS_UNUSED( ret );
-	
-	stk_setvar_leave( C, outpos, &arr );
-}
-
 static void vm_make_class( SGS_CTX, int outpos, sgs_Variable* name, sgs_Variable* inhname )
 {
 	int ret;
@@ -2895,8 +2871,8 @@ restart_loop:
 		case SGS_SI_RAWCMP: { ARGS_3; GETOP; var_setint( C, &p1, vm_compare( C, &p2, &p3 ) ); WRITEGET; break; }
 
 		case SGS_SI_ARRAY: { vm_make_array( C, argE, argC ); break; }
-		case SGS_SI_DICT: { vm_make_dict( C, argE, argC ); break; }
-		case SGS_SI_MAP: { vm_make_map( C, argE, argC ); break; }
+		case SGS_SI_DICT: { sgs_Variable* out = stk_getlpos( C, argC ); VAR_RELEASE( out ); sgsSTD_MakeDict( C, out, 0 ); break; }
+		case SGS_SI_MAP: { sgs_Variable* out = stk_getlpos( C, argC ); VAR_RELEASE( out ); sgsSTD_MakeMap( C, out, 0 ); break; }
 		case SGS_SI_CLASS: { vm_make_class( C, argA, RESVAR( argB ), argC != argA ? RESVAR( argC ) : NULL ); break; }
 		case SGS_SI_RSYM: { ARGS_3; sgs_Variable symtbl = sgs_Registry( C, SGS_REG_SYM );
 			sgs_SetIndex( C, symtbl, p2, p3, SGS_FALSE ); sgs_SetIndex( C, symtbl, p3, p2, SGS_FALSE ); break; }
