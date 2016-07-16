@@ -9,6 +9,7 @@ static sgs_RegIntConst int_consts[] =
 	_META_RGS( NOP )
 	_META_RGS( PUSH )
 	_META_RGS( INT )
+	_META_RGS( RET1 )
 	_META_RGS( RETN )
 	_META_RGS( JUMP )
 	_META_RGS( JMPT )
