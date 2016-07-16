@@ -77,7 +77,7 @@ static void sgsstd_array_insert( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVa
 	hdr->size = nsz;
 }
 
-static void sgsstd_array_insert_p( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal pos, sgs_Variable* var )
+void sgsstd_array_insert_p( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal pos, sgs_Variable* var )
 {
 	sgs_SizeVal nsz = hdr->size + 1;
 	sgs_Variable* ptr = SGSARR_PTR( hdr );
@@ -4108,19 +4108,32 @@ SGSBOOL sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 	}
 	else
 	{
+		int reserve = cnt < 0;
 		sgs_Variable *p, *pend;
-		void* data = sgs_Malloc( C, SGSARR_ALLOCSIZE( cnt ) );
+		void* data;
+		if( reserve )
+			cnt = -cnt;
+		data = sgs_Malloc( C, SGSARR_ALLOCSIZE( cnt ) );
 		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) sgs_CreateObjectIPA( C,
 			out, sizeof( sgsstd_array_header_t ), sgsstd_array_iface );
 		
-		hdr->size = cnt;
 		hdr->mem = cnt;
 		p = hdr->data = (sgs_Variable*) data;
-		pend = p + cnt;
-		while( p < pend )
-			sgs_GetStackItem( C, i++ - cnt, p++ );
-		
-		sgs_Pop( C, cnt );
+		if( reserve )
+		{
+			hdr->size = 0;
+			pend = p + cnt;
+			while( p < pend )
+				(p++)->type = SGS_VT_NULL;
+		}
+		else
+		{
+			hdr->size = cnt;
+			pend = p + cnt;
+			while( p < pend )
+				sgs_GetStackItem( C, i++ - cnt, p++ );
+			sgs_Pop( C, cnt );
+		}
 		
 		sgs_PushInterface( C, sgsstd_array_iface_gen );
 		sgs_ObjSetMetaObj( C, sgs_GetObjectStructP( out ), sgs_GetObjectStruct( C, -1 ) );

@@ -257,6 +257,7 @@ typedef enum sgs_Instruction
 	SGS_SI_PUSH,     /* (B:src)                 push register/constant */
 	SGS_SI_INT,      /* (C:type)                invoke a system state change */
 
+	SGS_SI_RET1,     /* (C:src)                 return one value (see next op) */
 	SGS_SI_RETN,     /* (A:N)                   exit current frame of execution, preserve N output arguments */
 	SGS_SI_JUMP,     /* (E:off)                 add to instruction pointer */
 	SGS_SI_JMPT,     /* (C:src, E:off)          jump (add to instr.ptr.) if true */
@@ -275,6 +276,7 @@ typedef enum sgs_Instruction
 	SGS_SI_SETPROP,  /* (A:var, B:name, C:src)  <var> <prop> <value> => set a <prop> of <var> to <value> */
 	SGS_SI_GETINDEX, /* -- || -- */
 	SGS_SI_SETINDEX, /* -- || -- */
+	SGS_SI_ARRPUSH,  /* (A:var, C:src)          push <src> into <var> */
 
 	/* closures */
 	SGS_SI_GENCLSR,  /* (A:N)                   generates closure variables for the stack frame */
@@ -664,9 +666,9 @@ static const char* sgs_VarNames[] =
 static const char* sgs_OpNames[] =
 {
 	"nop", "push", "int",
-	"return", "jump", "jump_if_true", "jump_if_false", "jump_if_null", "call",
+	"ret1", "return", "jump", "jump_if_true", "jump_if_false", "jump_if_null", "call",
 	"for_prep", "for_load", "for_jump", "loadconst", "getvar", "setvar",
-	"getprop", "setprop", "getindex", "setindex",
+	"getprop", "setprop", "getindex", "setindex", "arrpush",
 	"genclsr", "pushclsr", "makeclsr", "getclsr", "setclsr",
 	"set", "mconcat", "concat", "negate", "bool_inv", "invert",
 	"inc", "dec", "add", "sub", "mul", "div", "mod",
@@ -737,6 +739,8 @@ extern SGS_APIFUNC sgs_ObjInterface sgsstd_dict_iface[1];
 extern SGS_APIFUNC sgs_ObjInterface sgsstd_dict_iter_iface[1];
 extern SGS_APIFUNC sgs_ObjInterface sgsstd_map_iface[1];
 extern SGS_APIFUNC sgs_ObjInterface sgsstd_closure_iface[1];
+
+void sgsstd_array_insert_p( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal pos, sgs_Variable* var );
 
 
 

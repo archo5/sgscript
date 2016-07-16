@@ -233,6 +233,7 @@ static void dump_opcode( const sgs_instr_t* ptr, size_t count )
 		case SGS_SI_PUSH: printf( "PUSH " ); dump_rcpos( argB ); break;
 		case SGS_SI_INT: printf( "INT %d", argC ); break;
 
+		case SGS_SI_RET1: printf( "RET_1 <= " ); dump_rcpos( argC ); break;
 		case SGS_SI_RETN: printf( "RETURN %d", argA ); break;
 		case SGS_SI_JUMP: printf( "JUMP %d", (int) (int16_t) argE ); break;
 		case SGS_SI_JMPT: printf( "JMP_T " ); dump_rcpos( argC );
@@ -262,6 +263,8 @@ static void dump_opcode( const sgs_instr_t* ptr, size_t count )
 		DOP_A( SETPROP );
 		DOP_A( GETINDEX );
 		DOP_A( SETINDEX );
+		case SGS_SI_ARRPUSH: printf( "ARR_PUSH R%d <= ", argA );
+			dump_rcpos( argC ); break;
 
 		case SGS_SI_GENCLSR: printf( "GEN_CLSR %d", argA ); break;
 		case SGS_SI_PUSHCLSR: printf( "PUSH_CLSR %d", argA ); break;
@@ -311,7 +314,7 @@ static void dump_opcode( const sgs_instr_t* ptr, size_t count )
 			printf( "ARRAY args:%d output:", argE );
 			dump_rcpos( argC ); break;
 		case SGS_SI_DICT:
-			printf( "DICT args:%d output:", argE );
+			printf( "DICT output:" );
 			dump_rcpos( argC ); break;
 		case SGS_SI_CLASS:
 			printf( "CLASS output:%d", argA );
@@ -1554,6 +1557,35 @@ static SGSBOOL compile_node_rrw( SGS_FNTCMP_ARGS, rcpos_t dst )
 	return 1;
 }
 
+static int compile_mconcat( SGS_FNTCMP_ARGS, rcpos_t* arg )
+{
+	int numch = 0;
+	sgs_FTNode* cur = node->child;
+	rcpos_t ireg, oreg = comp_reg_alloc( C );
+	if( C->state & SGS_MUST_STOP )
+		return 0;
+	
+	/* get source data registers */
+	while( cur )
+	{
+		int32_t bkup = C->fctx->regs;
+		
+		SGS_FN_ENTER;
+		if( !compile_node_r( C, func, cur, &ireg ) )
+			return 0;
+		INSTR_WRITE( SGS_SI_PUSH, 0, ireg, 0 );
+		numch++;
+		cur = cur->next;
+		
+		comp_reg_unwind( C, bkup );
+	}
+	
+	INSTR_WRITE( SGS_SI_MCONCAT, oreg, numch, 0 );
+	
+	if( arg )
+		*arg = oreg;
+	return 1;
+}
 
 static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect )
 {
@@ -1780,28 +1812,10 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 		else if( *node->token == SGS_ST_OP_CATEQ && node->child &&
 			node->child->next && node->child->next->next )
 		{
-			int numch = 0;
-			sgs_FTNode* cur = node->child;
-			rcpos_t ireg, oreg = comp_reg_alloc( C );
-			if( C->state & SGS_MUST_STOP )
+			rcpos_t oreg;
+			SGS_FN_ENTER;
+			if( !compile_mconcat( C, func, node, &oreg ) )
 				goto fail;
-			
-			/* get source data registers */
-			while( cur )
-			{
-				int32_t bkup = C->fctx->regs;
-				
-				SGS_FN_ENTER;
-				if( !compile_node_r( C, func, cur, &ireg ) ) goto fail;
-				INSTR_WRITE( SGS_SI_PUSH, 0, ireg, 0 );
-				numch++;
-				cur = cur->next;
-				
-				comp_reg_unwind( C, bkup );
-			}
-			
-			INSTR_WRITE( SGS_SI_MCONCAT, oreg, numch, 0 );
-			
 			if( arg )
 				*arg = oreg;
 			
@@ -1913,32 +1927,9 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 		else if( *node->token == SGS_ST_OP_CAT && node->child &&
 			node->child->next && node->child->next->next )
 		{
-			int numch = 0;
-			sgs_FTNode* cur = node->child;
-			rcpos_t ireg;
-			oreg = comp_reg_alloc( C );
-			if( C->state & SGS_MUST_STOP )
+			SGS_FN_ENTER;
+			if( !compile_mconcat( C, func, node, arg ) )
 				goto fail;
-			
-			/* get source data registers */
-			while( cur )
-			{
-				int32_t bkup = C->fctx->regs;
-				
-				SGS_FN_ENTER;
-				if( !compile_node_r( C, func, cur, &ireg ) ) goto fail;
-				INSTR_WRITE( SGS_SI_PUSH, 0, ireg, 0 );
-				numch++;
-				cur = cur->next;
-				
-				comp_reg_unwind( C, bkup );
-			}
-			
-			if( arg )
-				*arg = oreg;
-			
-			/* compile op */
-			INSTR_WRITE( SGS_SI_MCONCAT, oreg, numch, 0 );
 		}
 		else
 		{
@@ -2294,22 +2285,27 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 		SGS_FN_HIT( "R_ARRLIST" );
 		{
 			rcpos_t pos = 0;
-			int args = 0;
+			int args = 0, off = 0;
 			sgs_FTNode* n = node->child;
 			while( n )
 			{
-				int32_t bkup = C->fctx->regs;
-				pos = 0;
-				SGS_FN_ENTER;
-				if( !compile_node_r( C, func, n, &pos ) )
-					goto fail;
-				INSTR_WRITE( SGS_SI_PUSH, 0, pos, 0 );
-				comp_reg_unwind( C, bkup );
 				args++;
 				n = n->next;
 			}
 			pos = comp_reg_alloc( C );
 			INSTR_WRITE_EX( SGS_SI_ARRAY, args, pos );
+			n = node->child;
+			while( n )
+			{
+				rcpos_t bkup = C->fctx->regs, vpos = 0;
+				SGS_FN_ENTER;
+				if( !compile_node_r( C, func, n, &vpos ) )
+					goto fail;
+				INSTR_WRITE( SGS_SI_ARRPUSH, pos, 0, vpos );
+				comp_reg_unwind( C, bkup );
+				off++;
+				n = n->next;
+			}
 			*out = pos;
 		}
 		break;
@@ -2509,18 +2505,29 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 		SGS_FN_HIT( "RETURN" );
 		{
 			rcpos_t regstate = C->fctx->regs;
-			int num = 0;
 			sgs_FTNode* n = node->child;
-			while( n )
+			if( n && n->next == NULL )
 			{
+				/* one value */
 				rcpos_t arg = 0;
 				SGS_FN_ENTER;
 				if( !compile_node_r( C, func, n, &arg ) ) goto fail;
-				INSTR_WRITE( SGS_SI_PUSH, 0, arg, 0 );
-				n = n->next;
-				num++;
+				INSTR_WRITE( SGS_SI_RET1, 0, 0, arg );
 			}
-			INSTR_WRITE( SGS_SI_RETN, num, 0, 0 );
+			else
+			{
+				int num = 0;
+				while( n )
+				{
+					rcpos_t arg = 0;
+					SGS_FN_ENTER;
+					if( !compile_node_r( C, func, n, &arg ) ) goto fail;
+					INSTR_WRITE( SGS_SI_PUSH, 0, arg, 0 );
+					n = n->next;
+					num++;
+				}
+				INSTR_WRITE( SGS_SI_RETN, num, 0, 0 );
+			}
 			comp_reg_unwind( C, regstate );
 		}
 		break;

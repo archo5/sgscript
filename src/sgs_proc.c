@@ -2284,18 +2284,6 @@ static SGSBOOL vm_fornext( SGS_CTX, StkIdx outkey, StkIdx outval, sgs_VarPtr ite
 }
 
 
-static void vm_make_array( SGS_CTX, int args, int outpos )
-{
-	int ret;
-	sgs_Variable arr;
-	sgs_BreakIf( sgs_StackSize( C ) < args );
-	ret = sgsSTD_MakeArray( C, &arr, args );
-	sgs_BreakIf( ret != SGS_TRUE );
-	SGS_UNUSED( ret );
-	
-	stk_setvar_leave( C, outpos, &arr );
-}
-
 static void vm_make_class( SGS_CTX, int outpos, sgs_Variable* name, sgs_Variable* inhname )
 {
 	int ret;
@@ -2678,6 +2666,22 @@ restart_loop:
 			break;
 		}
 
+		case SGS_SI_RET1:
+		{
+			sgs_Variable var = *RESVAR( argC );
+			stk_push( C, &var );
+#if SGS_DEBUG && SGS_DEBUG_STATE
+			/* TODO restore memcheck */
+			sgsVM_StackDump( C );
+#endif
+			if( SF->flags & SGS_SF_REENTER )
+			{
+				vm_postcall( C, 1 );
+				goto restart_loop;
+			}
+			C->state &= ~SGS_STATE_LASTFUNCPAUSE;
+			return 1;
+		}
 		case SGS_SI_RETN:
 		{
 			int rvc = argA;
@@ -2795,6 +2799,9 @@ restart_loop:
 		case SGS_SI_SETPROP: { ARGS_3; SETOP; vm_setprop( C, &p1, &p2, &p3, SGS_TRUE ); break; }
 		case SGS_SI_GETINDEX: { ARGS_3; GETOP; vm_getprop_safe( C, &p1, &p2, &p3, SGS_FALSE ); WRITEGET; break; }
 		case SGS_SI_SETINDEX: { ARGS_3; SETOP; vm_setprop( C, &p1, &p2, &p3, SGS_FALSE ); break; }
+		case SGS_SI_ARRPUSH: {
+			sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) stk_getlpos( C, argA )->data.O->data;
+			sgsstd_array_insert_p( C, hdr, hdr->size, RESVAR( argC ) ); break; }
 		
 		case SGS_SI_GENCLSR: clstk_push_nulls( C, argA ); break;
 		case SGS_SI_PUSHCLSR: clstk_push( C, clstk_get( C, argA ) ); break;
@@ -2869,8 +2876,8 @@ restart_loop:
 			if( p2.type == SGS_VT_REAL && p3.type == SGS_VT_REAL ){ var_setbool( C, stk_getlpos( C, argA ), p2.data.R <= p3.data.R ); break; }
 			VCOMPARE( <= ); break; }
 		case SGS_SI_RAWCMP: { ARGS_3; GETOP; var_setint( C, &p1, vm_compare( C, &p2, &p3 ) ); WRITEGET; break; }
-
-		case SGS_SI_ARRAY: { vm_make_array( C, argE, argC ); break; }
+			
+		case SGS_SI_ARRAY: { sgs_Variable* out = stk_getlpos( C, argC ); VAR_RELEASE( out ); sgsSTD_MakeArray( C, out, -argE ); break; }
 		case SGS_SI_DICT: { sgs_Variable* out = stk_getlpos( C, argC ); VAR_RELEASE( out ); sgsSTD_MakeDict( C, out, 0 ); break; }
 		case SGS_SI_MAP: { sgs_Variable* out = stk_getlpos( C, argC ); VAR_RELEASE( out ); sgsSTD_MakeMap( C, out, 0 ); break; }
 		case SGS_SI_CLASS: { vm_make_class( C, argA, RESVAR( argB ), argC != argA ? RESVAR( argC ) : NULL ); break; }
