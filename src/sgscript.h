@@ -849,9 +849,9 @@ SGS_APIFUNC SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_li
 SGS_APIFUNC SGSBOOL sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... );
 SGS_APIFUNC SGSBOOL sgs_LoadArgs( SGS_CTX, const char* cmd, ... );
 SGS_APIFUNC SGSBOOL sgs_ParseMethod( SGS_CTX, sgs_ObjInterface* iface, void** ptrout,
-	const char* method_name, const char* func_name );
+	const char* name );
 #define SGS_PARSE_METHOD( C, iface, ptr, objname, methodname ) \
-	sgs_ParseMethod( C, iface, (void**) &ptr, #objname "." #methodname, #objname "_" #methodname )
+	sgs_ParseMethod( C, iface, (void**) &ptr, #objname "." #methodname )
 
 SGS_APIFUNC int sgs_ArgCheck_Object( SGS_CTX, int argid, va_list* args, int flags );
 

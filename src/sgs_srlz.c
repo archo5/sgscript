@@ -520,8 +520,7 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 					/* WP: conversion does not affect values */
 					if( !_unserialize_function( C, str, (size_t) bcsz, &tmp ) )
 						return SGS_FALSE; /* error already printed */
-					sgs_PushVariable( C, tmp );
-					sgs_Release( C, &tmp );
+					fstk_push_leave( C, &tmp );
 					str += bcsz;
 				}
 				break;
@@ -560,8 +559,7 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 				return sgs_unserr_symfail( C );
 			}
 			sgs_Pop( C, 1 );
-			sgs_PushVariable( C, sym );
-			sgs_Release( C, &sym );
+			fstk_push_leave( C, &sym );
 		}
 		else if( c == '.' || c == '[' )
 		{

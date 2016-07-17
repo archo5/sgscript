@@ -459,26 +459,72 @@ void sgsVM_PopSkip( SGS_CTX, sgs_StkIdx num, sgs_StkIdx skip );
 	*(dstp) = *(srcp); \
 	VAR_ACQUIRE( dstp ); \
 	VAR_RELEASE( &old ); }
+#define p_obj( p ) ((p)->data.O)
+#define p_objdata( p ) (p_obj( p )->data)
+#define p_str( p ) ((p)->data.S)
+#define p_cstr( p ) sgs_str_cstr( p_str( p ) )
+#define p_strsz( p ) ((sgs_SizeVal)p_str( p )->size)
+#define p_initnull( p ) {(p)->type = SGS_VT_NULL;}
 
 #define stk_poff( C, off ) ((C)->stack_off + (off))
 #define stk_ptop( C, off ) ((C)->stack_top + (off))
 #define stk_gettop( C ) stk_ptop( C, -1 )
 #define stk_size( C ) ((C)->stack_top - (C)->stack_off)
 #define stk_absindex( C, off ) ((off) >= 0 ? (off) : (off) + stk_size(C))
+
+void stk_makespace( SGS_CTX, sgs_StkIdx num );
+
 #define stk_setlvar( C, off, srcp ){ \
 	sgs_Variable* dstp = stk_poff( C, off ); \
 	p_setvar( dstp, srcp ); }
 #define stk_setlvar_leave( C, off, srcp ){ \
 	sgs_Variable* dstp = stk_poff( C, off ); \
 	p_setvar_leave( dstp, srcp ); }
-#define stk_push( C, vp ){ \
-	stk_makespace( (C), 1 ); \
+#define stk_upush( C, vp ){ \
 	*(C)->stack_top = *(vp); \
 	VAR_ACQUIRE( (C)->stack_top ); \
 	(C)->stack_top++; }
+#define stk_upush_leave( C, vp ) \
+	*(C)->stack_top++ = *(vp)
+#define stk_push( C, vp ){ \
+	stk_makespace( C, 1 ); \
+	stk_upush( C, vp ); }
 #define stk_push_leave( C, vp ){ \
-	stk_makespace( (C), 1 ); \
-	*(C)->stack_top++ = *(vp); }
+	stk_makespace( C, 1 ); \
+	stk_upush_leave( C, vp ); }
+#define stk_push_null( C ){ \
+	stk_makespace( C, 1 ); \
+	((C)->stack_top++)->type = SGS_VT_NULL; }
+#define stk_push2( C, vp1, vp2 ){ \
+	stk_makespace( C, 2 ); \
+	C->stack_top[ 0 ] = *(vp1); \
+	C->stack_top[ 1 ] = *(vp2); \
+	VAR_ACQUIRE( &C->stack_top[ 0 ] ); \
+	VAR_ACQUIRE( &C->stack_top[ 1 ] ); \
+	C->stack_top += 2; }
+#define stk_push3( C, vp1, vp2, vp3 ){ \
+	stk_makespace( C, 3 ); \
+	C->stack_top[ 0 ] = *(vp1); \
+	C->stack_top[ 1 ] = *(vp2); \
+	C->stack_top[ 2 ] = *(vp3); \
+	VAR_ACQUIRE( &C->stack_top[ 0 ] ); \
+	VAR_ACQUIRE( &C->stack_top[ 1 ] ); \
+	VAR_ACQUIRE( &C->stack_top[ 2 ] ); \
+	C->stack_top += 3; }
+#define stk_mpush( C, vp, cnt ){ \
+	stk_makespace( C, cnt ); \
+	fstk_umpush( C, vp, cnt ); }
+#define stk_pop1( C ){ \
+	sgs_BreakIf( C->stack_top == C->stack_off ); \
+	C->stack_top--; \
+	VAR_RELEASE( C->stack_top ); }
+
+void fstk_push( SGS_CTX, sgs_Variable* vp );
+void fstk_push_leave( SGS_CTX, sgs_Variable* vp );
+void fstk_push2( SGS_CTX, sgs_Variable* vp1, sgs_Variable* vp2 );
+void fstk_push_null( SGS_CTX );
+void fstk_umpush( SGS_CTX, sgs_Variable* vp, sgs_SizeVal cnt );
+void fstk_pop1( SGS_CTX );
 
 size_t sgsVM_VarSize( const sgs_Variable* var );
 void sgsVM_VarDump( const sgs_Variable* var );

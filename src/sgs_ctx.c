@@ -934,8 +934,7 @@ static SGSRESULT ctx_push_function( SGS_CTX, const char* buf, size_t size )
 			sgs_Msg( C, SGS_ERROR, "Failed to read bytecode file (%s)", ret );
 			return SGS_EINVAL;
 		}
-		sgs_PushVariable( C, funcvar );
-		sgs_Release( C, &funcvar );
+		fstk_push_leave( C, &funcvar );
 		return SGS_SUCCESS;
 	}
 	else
@@ -972,8 +971,7 @@ static SGSRESULT ctx_push_function( SGS_CTX, const char* buf, size_t size )
 			sgs_Variable funcvar;
 			funcvar.type = SGS_VT_FUNC;
 			funcvar.data.F = func;
-			sgs_PushVariable( C, funcvar );
-			sgs_Release( C, &funcvar );
+			fstk_push_leave( C, &funcvar );
 		}
 		return SGS_SUCCESS;
 		
