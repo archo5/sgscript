@@ -11,10 +11,7 @@ global iface =
 	__typeof = function(){ called.typeof = this; return "typeIFACE"; },
 	__clone = function(){ called.clone = this; return "cloneTest"; },
 	__tobool = function(){ called.tobool = this; return true; },
-	__toint = function(){ called.toint = this; return 8765; },
-	__toreal = function(){ called.toreal = this; return 3.14159; },
 	__tostring = function(){ called.tostring = this; return "IFACE"; },
-	__toptr = function(){ called.toptr = this; return toptr(12345); },
 	__negate = function(){ called.negate = this; return -123456; },
 	__add = function(a,b){ called.add = this; return class({a=a.a+b.a,b=a.b+b.b},iface); },
 	__sub = function(a,b){ called.sub = this; return class({a=a.a-b.a,b=a.b-b.b},iface); },
@@ -44,17 +41,8 @@ testEqual( @called.clone, obj, "metamethod - clone - correctly called" );
 testEqual( tobool(obj), true, "metamethod - tobool - result" );
 testEqual( @called.tobool, obj, "metamethod - tobool - correctly called" );
 
-testEqual( toint(obj), 8765, "metamethod - toint - result" );
-testEqual( @called.toint, obj, "metamethod - toint - correctly called" );
-
-testEqual( toreal(obj), 3.14159, "metamethod - toreal - result" );
-testEqual( @called.toreal, obj, "metamethod - toreal - correctly called" );
-
 testEqual( tostring(obj), "IFACE", "metamethod - tostring - result" );
 testEqual( @called.tostring, obj, "metamethod - tostring - correctly called" );
-
-testEqual( toptr(obj), toptr(12345), "metamethod - toptr - result" );
-testEqual( @called.toptr, obj, "metamethod - toptr - correctly called" );
 
 testEqual( -obj, -123456, "metamethod - negate - result" );
 testEqual( @called.negate, obj, "metamethod - negate - correctly called" );

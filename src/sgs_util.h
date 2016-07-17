@@ -186,10 +186,6 @@ SGS_APIFUNC sgs_Int sgs_util_atoi( const char* str, size_t len );
 SGS_APIFUNC sgs_Real sgs_util_atof( const char* str, size_t len );
 
 
-/* crc32 */
-SGS_APIFUNC uint32_t sgs_crc32( const void* buf, size_t len, uint32_t in_crc );
-
-
 SGS_APIFUNC void sgs_quicksort( void *array, size_t length, size_t size,
 	int(*compare)(const void *, const void *, void*), void* userdata);
 

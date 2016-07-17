@@ -465,6 +465,9 @@ void sgsVM_PopSkip( SGS_CTX, sgs_StkIdx num, sgs_StkIdx skip );
 #define p_cstr( p ) sgs_str_cstr( p_str( p ) )
 #define p_strsz( p ) ((sgs_SizeVal)p_str( p )->size)
 #define p_initnull( p ) {(p)->type = SGS_VT_NULL;}
+#define p_initvar( dstp, srcp ){ \
+	*(dstp) = *(srcp); \
+	VAR_ACQUIRE( dstp ); }
 
 #define stk_poff( C, off ) ((C)->stack_off + (off))
 #define stk_ptop( C, off ) ((C)->stack_top + (off))
@@ -819,6 +822,7 @@ extern SGS_APIFUNC sgs_ObjInterface sgsstd_dict_iface[1];
 extern SGS_APIFUNC sgs_ObjInterface sgsstd_dict_iter_iface[1];
 extern SGS_APIFUNC sgs_ObjInterface sgsstd_map_iface[1];
 extern SGS_APIFUNC sgs_ObjInterface sgsstd_closure_iface[1];
+extern SGS_APIFUNC sgs_ObjInterface sgsstd_event_iface[1];
 
 void sgsstd_array_insert_p( SGS_CTX, sgsstd_array_header_t* hdr, sgs_SizeVal pos, sgs_Variable* var );
 

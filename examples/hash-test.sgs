@@ -36,5 +36,4 @@ function test_hashfunc( name, strings )
 
 
 test_hashfunc( "hash_fnv", STRINGS );
-test_hashfunc( "hash_crc32", STRINGS );
 

@@ -1120,15 +1120,6 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 	sgs_VHTVar* pair = NULL;
 	HTHDR;
 	
-	if( C->object_arg && sgs_ItemType( C, 0 ) == SGS_VT_INT )
-	{
-		int32_t off = (int32_t) sgs_GetInt( C, 0 );
-		if( off < 0 || off > sgs_vht_size( ht ) )
-			return SGS_EBOUNDS;
-		fstk_push( C, &ht->vars[ off ].val );
-		return SGS_SUCCESS;
-	}
-	
 	if( sgs_ParseString( C, 0, NULL, NULL ) )
 	{
 		pair = sgs_vht_get( ht, stk_poff( C, 0 ) );
@@ -2291,27 +2282,6 @@ static int sgsstd_hash_fnv( SGS_CTX )
 		hv ^= buf[ i ];
 		hv *= 16777619u;
 	}
-	if( as_hexstr )
-	{
-		char hexstr[ 9 ] = {0};
-		sprintf( hexstr, "%08x", hv );
-		sgs_PushStringBuf( C, hexstr, 8 );
-	}
-	else
-		sgs_PushInt( C, hv );
-	return 1;
-}
-
-static int sgsstd_hash_crc32( SGS_CTX )
-{
-	uint8_t* buf;
-	sgs_SizeVal bufsize;
-	uint32_t hv;
-	sgs_Bool as_hexstr = 0;
-	SGSFN( "hash_crc32" );
-	if( !sgs_LoadArgs( C, "m|b", &buf, &bufsize, &as_hexstr ) )
-		return 0;
-	hv = sgs_crc32( buf, (size_t) bufsize, 0 );
 	if( as_hexstr )
 	{
 		char hexstr[ 9 ] = {0};
@@ -4005,7 +3975,7 @@ static sgs_RegFuncConst regfuncs[] =
 	/* OS */
 	STDLIB_FN( ftime ),
 	/* utils */
-	STDLIB_FN( rand ), STDLIB_FN( randf ), STDLIB_FN( srand ), STDLIB_FN( hash_fnv ), STDLIB_FN( hash_crc32 ),
+	STDLIB_FN( rand ), STDLIB_FN( randf ), STDLIB_FN( srand ), STDLIB_FN( hash_fnv ),
 	/* internal utils */
 	STDLIB_FN( va_get_args ), STDLIB_FN( va_get_arg ), STDLIB_FN( va_arg_count ),
 	{ "sys_apply", sgs_specfn_apply },

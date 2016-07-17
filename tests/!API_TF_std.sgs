@@ -316,9 +316,6 @@ testEqual( ERRORS, "", "[dict/map]_[filter/process] - no errors" );
 testEqual( hash_fnv( "something" ), 2118605163, "fnv hash - as int" );
 testEqual( hash_fnv( "something", true ), "7e47596b", "fnv hash - as string" );
 testEqual( hash_fnv( "something" ) == hash_fnv( "somethjng" ), false, "fnv hash - collisions" );
-testEqual( hash_crc32( "something" ), 165294587, "crc32 hash - as int" );
-testEqual( hash_crc32( "something", true ), "09da31fb", "crc32 hash - as string" );
-testEqual( hash_crc32( "something" ) == hash_crc32( "somethjng" ), false, "crc32 hash - collisions" );
 
 testEqual( tostring(multiply_path_ext_lists( "A;B", "/", "C;D" )), "[A/C,A/D,B/C,B/D]", "multiply_path_ext_lists - basic multiplication" );
 testEqual( tostring(multiply_path_ext_lists( ";;", "/", ";;" )), "[/,/,/,/,/,/,/,/,/]", "multiply_path_ext_lists - empty multiplication" );
