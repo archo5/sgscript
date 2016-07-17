@@ -84,6 +84,11 @@ foreach( test, expect : tests )
 	out = json_decode( test );
 	str = tostr( out );
 	testEqual( str, expect );
+	if( str !== expect )
+	{
+		println( out );
+		printvar( out );
+	}
 }
 
 

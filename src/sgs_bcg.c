@@ -1188,7 +1188,7 @@ static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 	{
 		sgs_FTNode* n;
 		int i = 0, gotthis = 0, regc = 0, threadmode = 0;
-		rcpos_t argpos, funcpos, fnargpos, objpos, realfnpos;
+		rcpos_t argpos, funcpos, fnargpos, objpos, argend;
 		
 		if( node->type == SGS_SFT_THRCALL ) threadmode = 1;
 		if( node->type == SGS_SFT_STHCALL ) threadmode = 2;
@@ -1209,22 +1209,20 @@ static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 		regc++; /* function register */
 		if( threadmode )
 			regc++; /* 'thread_create'/'subthread_create' function register */
-		if( out && regc < expect )
-			regc = expect;
-		argpos = comp_reg_alloc_n( C, regc );
-		realfnpos = argpos + regc - 1;
+		argpos = comp_reg_alloc_n( C, regc > expect ? regc : expect );
+		funcpos = argpos;
 		if( threadmode )
 		{
-			funcpos = argpos;
-			objpos = argpos + 1;
-			fnargpos = argpos + 2;
+			const char* key = threadmode == 1 ? "thread_create" : "subthread_create";
+			rcpos_t strpos = add_const_s( C, func, (uint32_t) strlen( key ), key );
+			INSTR_WRITE( SGS_SI_GETVAR, argpos, BC_CONSTENC( strpos ), 0 );
+			gotthis = 0;
+			funcpos++;
 		}
-		else /* normal function call */
-		{
-			funcpos = realfnpos;
-			fnargpos = argpos + gotthis;
-			objpos = argpos;
-		}
+		
+		argend = argpos + regc - 1;
+		objpos = funcpos + 1;
+		fnargpos = funcpos + ( gotthis || threadmode ? 2 : 1 );
 		
 		/* return register positions for expected data */
 		if( out )
@@ -1288,16 +1286,8 @@ static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 			}
 		}
 		
-		if( threadmode )
-		{
-			const char* key = threadmode == 1 ? "thread_create" : "subthread_create";
-			rcpos_t strpos = add_const_s( C, func, (uint32_t) strlen( key ), key );
-			INSTR_WRITE( SGS_SI_GETVAR, realfnpos, BC_CONSTENC( strpos ), 0 );
-			gotthis = 0;
-		}
-		
 		/* compile call */
-		INSTR_WRITE( SGS_SI_CALL, expect, gotthis ? argpos | 0x100 : argpos, realfnpos );
+		INSTR_WRITE( SGS_SI_CALL, expect, gotthis ? argpos | 0x100 : argpos, argend );
 		
 		comp_reg_unwind( C, argpos + expect );
 

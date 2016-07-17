@@ -278,7 +278,7 @@ void atf_check_errors_( const char* expect, int line )
 	size_t len = strlen( expect );
 	if( len != (size_t) errbuf.size || memcmp( errbuf.ptr, expect, len ) != 0 )
 	{
-		printf( "\nERROR MESSAGE MISMATCH\nexpected: %s\ngot: ", expect );
+		printf( "\nERROR MESSAGE MISMATCH (line %d)\nexpected: %s\ngot: ", line, expect );
 		fwrite( errbuf.ptr, errbuf.size, 1, stdout );
 		printf( "\n" );
 		atf_abort();
@@ -609,32 +609,31 @@ DEFINE_TEST( libraries )
 
 DEFINE_TEST( function_calls )
 {
-	sgs_Variable v_func;
 	SGS_CTX = get_context();
 	
-	atf_assert( sgs_GetGlobalByName( C, "array", &v_func ) );
+	atf_assert( sgs_PushGlobalByName( C, "array" ) );
 	atf_clear_errors();
-	sgs_Call( C, v_func, 5, 1 );
-	sgs_Call( C, v_func, 1, 0 );
-	atf_check_errors( "[E:sgs_FCall: not enough items in stack (need: 5, got: 0)]"
-		"[E:sgs_FCall: not enough items in stack (need: 1, got: 0)]" );
+	sgs_Call( C, 5, 1 ); atf_assert( sgs_StackSize( C ) == 2 ); sgs_Pop( C, 1 );
+	sgs_Call( C, 1, 0 );
+	atf_check_errors( "[E:sgs_XFCall: not enough items in stack (need: 6, got: 1)]"
+		"[E:sgs_XFCall: not enough items in stack (need: 2, got: 1)]" );
 	atf_clear_errors();
-	sgs_Call( C, v_func, 0, 0 );
-	sgs_Call( C, v_func, 0, 1 );
+	sgs_Call( C, 0, 0 );
+	atf_assert( sgs_PushGlobalByName( C, "array" ) ); /* needed for future tests */
+	atf_assert( sgs_PushGlobalByName( C, "array" ) );
+	sgs_Call( C, 0, 1 );
 	atf_check_errors( "" );
-	atf_assert( sgs_StackSize( C ) == 1 );
+	atf_assert( sgs_StackSize( C ) == 2 );
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_OBJECT );
 	
-	atf_assert( sgs_StackSize( C ) == 1 );
 	atf_clear_errors();
-	sgs_ThisCall( C, v_func, 1, 0 );
-	atf_check_errors( "[E:sgs_FCall: not enough items in stack (need: 2, got: 1)]" );
+	sgs_ThisCall( C, 1, 0 );
+	atf_check_errors( "[E:sgs_XFCall: not enough items in stack (need: 3, got: 2)]" );
 	atf_clear_errors();
-	sgs_ThisCall( C, v_func, 0, 0 );
+	sgs_ThisCall( C, 0, 0 );
 	atf_check_errors( "" );
 	atf_assert( sgs_StackSize( C ) == 0 );
 	
-	sgs_Release( C, &v_func );
 	destroy_context( C );
 }
 
@@ -793,7 +792,6 @@ DEFINE_TEST( commands )
 
 DEFINE_TEST( debugging )
 {
-	int rvc;
 	SGS_CTX = get_context();
 	
 	sgs_PushNull( C );
@@ -801,7 +799,7 @@ DEFINE_TEST( debugging )
 	sgs_PushInt( C, 1337 );
 	sgs_PushReal( C, 3.14 );
 	sgs_PushString( C, "wat" );
-	sgs_EvalString( C, "return function(){};", &rvc );
+	sgs_EvalString( C, "return function(){};" );
 	atf_assert( sgs_PushGlobalByName( C, "print" ) );
 	sgs_CreateArray( C, NULL, 0 );
 	sgs_CreateDict( C, NULL, 0 );
@@ -1004,8 +1002,7 @@ DEFINE_TEST( sgson_tools )
 	SGS_CTX = get_context();
 	
 	{
-		int rvc = 0;
-		atf_assert( sgs_EvalString( C, "return [{ a = 1.23, b = [ true, 'xyz' ] }];", &rvc ) == SGS_SUCCESS );
+		atf_assert( sgs_EvalString( C, "return [{ a = 1.23, b = [ true, 'xyz' ] }];" ) == 1 );
 		atf_assert( sgs_StackSize( C ) == 1 );
 	}
 	sgs_SerializeSGSON( C, sgs_StackItem( C, -1 ), "\t" ); atf_check_errors( "" );
@@ -1227,6 +1224,7 @@ DEFINE_TEST( yield_abandon )
 	
 	C = get_context();
 	atf_assert( sgs_ExecString( C, "thread (function(){yield();})();" ) == SGS_SUCCESS );
+	atf_check_errors( "" );
 	atf_assert( sgs_Stat( C, SGS_STAT_STATECOUNT ) == 2 );
 	destroy_context( C );
 	
@@ -1259,7 +1257,6 @@ DEFINE_TEST( state_machine_core )
 	
 	sm_tick_id = 0;
 	sm_resume_id = 0;
-	int rvc = 0;
 	atf_assert( sgs_EvalString( C, ""
 		"println('a');\n"
 		"wait(15);\n"
@@ -1272,8 +1269,7 @@ DEFINE_TEST( state_machine_core )
 			"wait(10);\n"
 			"println('e');\n"
 		"})();\n"
-	"", &rvc ) == SGS_SUCCESS );
-	atf_assert( rvc == 1 );
+	"" ) == 1 );
 	fprintf( outfp, "[EvalString value-returned %d]\n", (int) sgs_GetInt( C, -1 ) );
 	sgs_Pop( C, 1 );
 	
@@ -1331,6 +1327,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::test -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test::rand -" ) != NULL );
 	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) < 0.2f ); /* verify for the next test */
+	atf_assert( strstr( outbuf.ptr, "<non-callable type>" ) == NULL );
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
@@ -1370,6 +1367,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) != NULL );
 	/* sleep should not affect the profile */
 	atf_assert( atof( strstr( outbuf.ptr, "<main> - " ) + 9 ) < 0.5f );
+	atf_assert( strstr( outbuf.ptr, "<non-callable type>" ) == NULL );
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
@@ -1389,6 +1387,7 @@ DEFINE_TEST( profiling )
 	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::abort -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) == NULL );
+	atf_assert( strstr( outbuf.ptr, "<non-callable type>" ) == NULL );
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	
@@ -1417,6 +1416,7 @@ DEFINE_TEST( profiling )
 	atf_assert( atof( STR_AFTER( outbuf.ptr, "testfun::in1 - " ) ) < 0.52f );
 	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) >= 0.52f );
 	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) >= 0.52f );
+	atf_assert( strstr( outbuf.ptr, "<non-callable type>" ) == NULL );
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
 	

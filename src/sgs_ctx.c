@@ -198,7 +198,7 @@ static void ctx_safedestroy( SGS_CTX )
 		sgs_StackFrame* sf = C->sf_first, *sfn;
 		while( sf )
 		{
-			sgs_Release( C, &sf->func );
+			/* sf->func is on stack */
 			sfn = sf->next;
 			sgsCTX_FreeFrame( sf );
 			sf = sfn;
@@ -382,7 +382,7 @@ static void copy_append_frame( SGS_CTX, sgs_StackFrame* sf )
 {
 	sgs_StackFrame* nsf = sgsCTX_AllocFrame( C );
 	memcpy( nsf, sf, sizeof(*nsf) );
-	sgs_Acquire( C, &nsf->func );
+	sgs_Acquire( C, nsf->func );
 	
 	nsf->next = NULL;
 	if( C->sf_last )
@@ -829,7 +829,7 @@ void sgs_WriteErrorInfo( SGS_CTX, int flags, sgs_ErrorOutputFunc func, void* ctx
 		{
 			const char* file, *name;
 			int ln;
-			if( !p->next && !p->code )
+			if( !p->next && !p->iptr )
 				break;
 			sgs_StackFrameInfo( C, p, &name, &file, &ln );
 			if( ln )
@@ -984,16 +984,15 @@ error:
 	}
 }
 
-SGSRESULT sgs_EvalBuffer( SGS_CTX, const char* buf, size_t size, int* rvc )
+SGSRESULT sgs_EvalBuffer( SGS_CTX, const char* buf, size_t size )
 {
 	int rr = ctx_push_function( C, buf, size );
 	if( SGS_FAILED( rr ) )
 		return rr;
-	sgs_XCall( C, SGS_FSTKTOP, 0, rvc );
-	return SGS_SUCCESS;
+	return sgs_XCall( C, 0 );
 }
 
-SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
+SGSRESULT sgs_EvalFile( SGS_CTX, const char* file )
 {
 	int ret;
 	size_t ulen;
@@ -1048,7 +1047,7 @@ SGSRESULT sgs_EvalFile( SGS_CTX, const char* file, int* rvc )
 	
 	ofn = C->filename;
 	C->filename = file;
-	ret = sgs_EvalBuffer( C, data, ulen, rvc );
+	ret = sgs_EvalBuffer( C, data, ulen );
 	C->filename = ofn;
 	
 	sgs_Dealloc( data );
@@ -1106,7 +1105,7 @@ SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, size_t size )
 	if( SGS_FAILED( rr ) )
 		return rr;
 	
-	_fndump( (C->stack_top-1)->data.F );
+	_fndump( stk_gettop( C )->data.F );
 	sgs_Pop( C, 1 );
 	return SGS_SUCCESS;
 }
@@ -1121,7 +1120,9 @@ SGSBOOL sgs_Abort( SGS_CTX )
 		return SGS_FALSE;
 	while( sf && sf->iptr )
 	{
-		sf->iptr = sf->iend - 1; /* the last RETN instruction */
+		sgs_iFunc* F = sf->func->data.F;
+		sf->iptr = sgs_func_bytecode( F ) +
+			( sgs_func_instr_count( F ) - 1 ); /* the last RETN instruction */
 		sf->flags |= SGS_SF_ABORTED;
 		sf = sf->prev;
 	}
@@ -1458,30 +1459,48 @@ int32_t sgs_Cntl( SGS_CTX, int what, int32_t val )
 void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, const char** file, int* line )
 {
 	int L = 0;
-	const char* N = "<non-callable type>";
-	const char* F = "<buffer>";
-
+	const char* N = NULL;
+	const char* F = NULL;
+	sgs_Variable* func = frame->func;
+	
 	SGS_UNUSED( C );
-	if( frame->func.type == SGS_VT_FUNC )
+	
+	switch( func->type )
 	{
+	case SGS_VT_FUNC: {
+		sgs_iFunc* iF = frame->func->data.F;
 		N = "<anonymous function>";
-		if( frame->func.data.F->sfuncname->size )
-			N = sgs_str_cstr( frame->func.data.F->sfuncname );
-		L = !frame->func.data.F->lineinfo ? 1 :
-			frame->func.data.F->lineinfo[ SGS_MAX( frame->iptr - 1 - frame->code, 0 ) ];
-		if( frame->func.data.F->sfilename->size )
-			F = sgs_str_cstr( frame->func.data.F->sfilename );
-	}
-	else if( frame->func.type == SGS_VT_CFUNC )
-	{
+		if( iF->sfuncname->size )
+			N = sgs_str_cstr( iF->sfuncname );
+		L = !iF->lineinfo ? 1 :
+			iF->lineinfo[ SGS_MAX( frame->iptr - 1 - sgs_func_bytecode( iF ), 0 ) ];
+		if( iF->sfilename->size )
+			F = sgs_str_cstr( iF->sfilename );
+		else
+			F = "<buffer>";
+	} break;
+	case SGS_VT_CFUNC: {
 		N = frame->nfname ? frame->nfname : "[C function]";
 		F = "[C code]";
-	}
-	else if( frame->func.type == SGS_VT_OBJECT )
-	{
-		sgs_VarObj* O = frame->func.data.O;
+	} break;
+	case SGS_VT_OBJECT: {
+		sgs_VarObj* O = frame->func->data.O;
 		N = O->iface->name ? O->iface->name : "<object>";
 		F = "[C code]";
+	} break;
+#if SGS_DEBUG
+	case SGS_VT_NULL: N = "<non-callable type>(NULL)"; F = "<?>"; break;
+	case SGS_VT_BOOL: N = "<non-callable type>(BOOL)"; F = "<?>"; break;
+	case SGS_VT_INT: N = "<non-callable type>(INT)"; F = "<?>"; break;
+	case SGS_VT_REAL: N = "<non-callable type>(REAL)"; F = "<?>"; break;
+	case SGS_VT_STRING: N = "<non-callable type>(STRING)"; F = "<?>"; break;
+	case SGS_VT_PTR: N = "<non-callable type>(PTR)"; F = "<?>"; break;
+	case SGS_VT_THREAD: N = "<non-callable type>(THREAD)"; F = "<?>"; break;
+#endif
+	default: {
+		N = "<non-callable type>";
+		F = "<buffer>";
+	} break;
 	}
 	if( name ) *name = N;
 	if( file ) *file = F;
@@ -1561,7 +1580,8 @@ SGSONE sgs_PushInterface( SGS_CTX, sgs_CFunc igfn )
 		sgs_StkIdx ssz;
 		
 		ssz = sgs_StackSize( C );
-		sgs_Call( C, key, 0, 1 );
+		sgs_PushVariable( C, key );
+		sgs_Call( C, 0, 1 );
 		if( sgs_ItemType( C, ssz ) != SGS_VT_OBJECT )
 		{
 			sgs_Msg( C, SGS_APIERR, "sgs_PushInterface: failed to create the interface" );

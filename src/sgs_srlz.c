@@ -32,7 +32,6 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 {
 	sgs_MemBuf buf = sgs_membuf_create();
 	sgs_StackFrame* sf;
-	int32_t sfnum = 0;
 #define _WRITE32( x ) { int32_t _tmp = (int32_t)(x); sgs_membuf_appbuf( &buf, C, &_tmp, 4 ); }
 #define _WRITE8( x ) { sgs_membuf_appchr( &buf, C, (char)(x) ); }
 	
@@ -72,15 +71,6 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 	_WRITE32( ctx->clstk_top - ctx->clstk_base );
 	_WRITE32( ctx->clstk_off - ctx->clstk_base );
 	_WRITE32( ctx->clstk_mem );
-	{
-		sf = ctx->sf_first;
-		while( sf )
-		{
-			sfnum++;
-			sf = sf->next;
-		}
-		_WRITE32( sfnum );
-	}
 	_WRITE32( ctx->sf_count );
 	_WRITE32( ctx->num_last_returned );
 	/* closures */
@@ -114,11 +104,17 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 	sf = ctx->sf_first;
 	while( sf )
 	{
-		sgs_Serialize( C, sf->func );
-		
 		/* 'code' will be taken from function */
-		_WRITE32( sf->iptr - sf->code );
-		_WRITE32( sf->iend - sf->code ); /* - for validation */
+		if( sf->func->type == SGS_VT_FUNC )
+		{
+			sgs_iFunc* F = sf->func->data.F;
+			_WRITE32( sf->func - ctx->stack_base );
+			_WRITE32( sf->iptr - sgs_func_bytecode( F ) );
+			_WRITE32( sgs_func_instr_count( F ) ); /* - for validation */
+			_WRITE32( sgs_func_const_count( F ) ); /* - for validation */
+		}
+		else
+			goto fail;
 		/* 'cptr' will be taken from function */
 		/* 'nfname' is irrelevant for non-native functions */
 		/* 'prev', 'next', 'cached' are system pointers */
@@ -127,7 +123,6 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 		_WRITE32( sf->argsfrom );
 		_WRITE32( sf->stkoff );
 		_WRITE32( sf->clsoff );
-		_WRITE32( sf->constcount ); /* - for validation */
 		_WRITE32( sf->errsup );
 		_WRITE8( sf->argcount );
 		_WRITE8( sf->inexp );
@@ -140,8 +135,7 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 	{
 		uint32_t argcount = (uint32_t)( 1 /* _G */
 			+ ( ctx->stack_top - ctx->stack_base ) /* stack */
-			+ ( ctx->clstk_top - ctx->clstk_base ) /* closure stack */
-			+ sfnum /* stack frame functions */ );
+			+ ( ctx->clstk_top - ctx->clstk_base ) /* closure stack */ );
 		sgs_membuf_appbuf( outbuf, C, &argcount, 4 );
 		sgs_membuf_appbuf( outbuf, C, argarray->ptr + argarray->size - argcount * 4, argcount * 4 );
 		sgs_membuf_erase( argarray, argarray->size - argcount * 4, argarray->size );
@@ -154,6 +148,9 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 #undef _WRITE32
 #undef _WRITE8
 	return 1;
+fail:
+	sgs_membuf_destroy( &buf, C );
+	return 0;
 }
 
 static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char* bufend )
@@ -165,7 +162,7 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 #define _READ8( x ) { if( buf + 1 > bufend ) goto fail; x = (uint8_t) *buf++; }
 	
 	{
-		int32_t i, tag, sfnum, stacklen, stackoff, clstklen, clstkoff;
+		int32_t i, tag, stacklen, stackoff, clstklen, clstkoff, sfnum;
 		
 		_READ32( tag );
 		if( tag != 0x5C057A7E )
@@ -183,7 +180,6 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 		_READ32( clstkoff );
 		_READ32( ctx->clstk_mem );
 		_READ32( sfnum );
-		_READ32( ctx->sf_count );
 		_READ32( ctx->num_last_returned );
 		
 		/* variables: _G */
@@ -228,23 +224,33 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 		for( i = 0; i < sfnum; ++i )
 		{
 			sgs_StackFrame* sf;
-			int32_t iptrpos, iendpos, ccount;
+			int32_t funcoff, iptrpos, iendpos, ccount;
 			
-			/* variables: stack frame functions */
-			sgs_Variable v_func = sgs_StackItem( C, 1 + stacklen + clstklen + i );
-			if( v_func.type != SGS_VT_FUNC )
+			/* POD: stack frames */
+			_READ32( funcoff );
+			if( funcoff < 0 || funcoff >= stacklen )
 				goto fail;
-			if( !sgsVM_PushStackFrame( ctx, &v_func ) )
+			
+			if( !sgsVM_PushStackFrame( ctx, ctx->stack_base + funcoff ) )
 				goto fail;
 			sf = ctx->sf_last;
 			
-			/* POD: stack frames */
 			/* 'code' will be taken from function */
-			_READ32( iptrpos );
-			sf->iptr = sf->code + iptrpos;
-			_READ32( iendpos ); /* - for validation */
-			if( iendpos != sf->iend - sf->code )
+			if( sf->func->type == SGS_VT_FUNC )
+			{
+				sgs_iFunc* F = sf->func->data.F;
+				_READ32( iptrpos );
+				_READ32( iendpos ); /* - for validation */
+				if( iendpos != sgs_func_instr_count( F ) )
+					goto fail;
+				sf->iptr = sgs_func_bytecode( F ) + iptrpos;
+				_READ32( ccount ); /* - for validation */
+				if( ccount != sgs_func_const_count( F ) )
+					goto fail;
+			}
+			else
 				goto fail;
+			
 			/* 'cptr' will be taken from function */
 			/* 'nfname' is irrelevant for non-native functions */
 			/* 'prev', 'next', 'cached' are system pointers */
@@ -253,9 +259,6 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 			_READ32( sf->argsfrom );
 			_READ32( sf->stkoff );
 			_READ32( sf->clsoff );
-			_READ32( ccount ); /* - for validation */
-			if( ccount != sf->constcount )
-				goto fail;
 			_READ32( sf->errsup );
 			_READ8( sf->argcount );
 			_READ8( sf->inexp );
@@ -1831,7 +1834,6 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 		else if( *pos == ')' )
 		{
 			sgs_Variable func;
-			
 			if( SGSON_STK_TOP != '(' )
 				return pos;
 			SGSON_STK_POP;
@@ -1843,15 +1845,16 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 				i--;
 			sgs_BreakIf( i < 0 );
 			
-			/* find the function */
+			/* replace function name with global function */
 			sgs_GetGlobal( C, sgs_StackItem( C, i + 1 ), &func );
+			sgs_SetStackItem( C, i + 1, func );
+			VAR_RELEASE( &func );
 			
 			/* call the function */
-			sgs_Call( C, func, sgs_StackSize( C ) - ( i + 2 ), 1 );
+			sgs_Call( C, sgs_StackSize( C ) - ( i + 2 ), 1 );
 			
-			/* clean up */
-			sgs_Release( C, &func );
-			sgs_PopSkip( C, 2, 1 );
+			/* clean up - pop marker, skip returned value */
+			sgs_PopSkip( C, 1, 1 );
 		}
 		else if( *pos == '"' || *pos == '\'' )
 		{
@@ -2007,8 +2010,9 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 				
 				if( pos[0] == '(' )
 				{
+					sgs_Variable marker = { 255 };
 					SGSON_STK_PUSH( '(' );
-					sgs_PushVariable( C, SGS_FSTKTOP ); /* marker for beginning of function */
+					sgs_PushVariable( C, marker ); /* marker for beginning of function */
 					sgs_PushStringBuf( C, idstart, (sgs_SizeVal)( idend - idstart ) );
 				}
 				else /* map{..} */

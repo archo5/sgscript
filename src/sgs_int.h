@@ -448,13 +448,44 @@ void sgsVM_PopSkip( SGS_CTX, sgs_StkIdx num, sgs_StkIdx skip );
 	sgsVM_PopSkip( C, SGS_STACKFRAMESIZE - __n, __n ); \
 	C->stack_off = C->stack_base + _stksz; }while(0)
 
+#define p_setvar_leave( dstp, srcp ){ \
+	VAR_RELEASE( dstp ); \
+	*(dstp) = *(srcp); }
+#define p_setvar( dstp, srcp ){ \
+	p_setvar_leave( dstp, srcp ); \
+	VAR_ACQUIRE( dstp ); }
+#define p_setvar_race( dstp, srcp ){ \
+	sgs_Variable old = *(dstp); \
+	*(dstp) = *(srcp); \
+	VAR_ACQUIRE( dstp ); \
+	VAR_RELEASE( &old ); }
+
+#define stk_poff( C, off ) ((C)->stack_off + (off))
+#define stk_ptop( C, off ) ((C)->stack_top + (off))
+#define stk_gettop( C ) stk_ptop( C, -1 )
+#define stk_size( C ) ((C)->stack_top - (C)->stack_off)
+#define stk_absindex( C, off ) ((off) >= 0 ? (off) : (off) + stk_size(C))
+#define stk_setlvar( C, off, srcp ){ \
+	sgs_Variable* dstp = stk_poff( C, off ); \
+	p_setvar( dstp, srcp ); }
+#define stk_setlvar_leave( C, off, srcp ){ \
+	sgs_Variable* dstp = stk_poff( C, off ); \
+	p_setvar_leave( dstp, srcp ); }
+#define stk_push( C, vp ){ \
+	stk_makespace( (C), 1 ); \
+	*(C)->stack_top = *(vp); \
+	VAR_ACQUIRE( (C)->stack_top ); \
+	(C)->stack_top++; }
+#define stk_push_leave( C, vp ){ \
+	stk_makespace( (C), 1 ); \
+	*(C)->stack_top++ = *(vp); }
+
 size_t sgsVM_VarSize( const sgs_Variable* var );
 void sgsVM_VarDump( const sgs_Variable* var );
 
 void sgsVM_StackDump( SGS_CTX );
 
 int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func );
-int sgsVM_VarCall( SGS_CTX, sgs_Variable* var, int args, int clsr, int* outrvc, int gotthis );
 void sgsVM_PushClosures( SGS_CTX, sgs_Closure** cls, int num );
 
 
@@ -466,7 +497,6 @@ sgs_Variable* sgsVM_VarMake_Dict();
 
 int sgsVM_RegStdLibs( SGS_CTX );
 
-int sgs_specfn_call( SGS_CTX );
 int sgs_specfn_apply( SGS_CTX );
 
 
@@ -494,10 +524,12 @@ typedef sgs_Variable* sgs_VarPtr;
 
 struct sgs_StackFrame
 {
-	sgs_Variable    func;
-	const uint32_t* code;
+	sgs_Variable*   func;
 	const uint32_t* iptr;
+#if SGS_DEBUG && SGS_DEBUG_VALIDATE
+	const uint32_t* code;
 	const uint32_t* iend;
+#endif
 	sgs_Variable*   cptr;
 	const char*     nfname;
 	sgs_StackFrame* prev;
@@ -507,7 +539,9 @@ struct sgs_StackFrame
 	sgs_StkIdx argsfrom;
 	sgs_StkIdx stkoff;
 	sgs_StkIdx clsoff;
+#if SGS_DEBUG && SGS_DEBUG_VALIDATE
 	int32_t constcount;
+#endif
 	int32_t errsup;
 	uint8_t argcount;
 	uint8_t inexp;

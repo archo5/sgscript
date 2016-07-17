@@ -637,12 +637,14 @@ public:
 	template< class T > sgsVariable& set( T* v ){ _release(); C = v->C; sgs_InitObjectPtr( C, &var, v->m_sgsObject ); return *this; }
 	void call( sgs_Context* c, int args = 0, int ret = 0 )
 	{
-		sgs_Call( c, var, args, ret );
+		sgs_InsertVariable( C, -args - 1, var );
+		sgs_Call( c, args, ret );
 	}
 	void thiscall( sgs_Context* c, sgsVariable func, int args = 0, int ret = 0 )
 	{
+		sgs_InsertVariable( c, -args - 1, func.var );
 		sgs_InsertVariable( c, -args - 1, var );
-		sgs_ThisCall( c, func.var, args, ret );
+		sgs_ThisCall( c, args, ret );
 	}
 	void thiscall( sgs_Context* c, const char* key, int args = 0, int ret = 0 )
 	{

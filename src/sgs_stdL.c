@@ -968,8 +968,9 @@ static int fs_refill( SGS_CTX, sgsstd_fmtstream_t* fs )
 	
 	if( fs->bufsize > fs->buffill && needs )
 	{
+		sgs_PushVariable( C, fs->source );
 		sgs_PushInt( C, fs->bufsize - fs->buffill );
-		sgs_Call( C, fs->source, 1, 1 );
+		sgs_Call( C, 1, 1 );
 		if( sgs_ItemType( C, -1 ) == SGS_VT_NULL )
 		{
 			sgs_Pop( C, 1 );
@@ -1564,9 +1565,10 @@ static int frt_call( SGS_CTX, sgs_VarObj* data )
 	fp = (FILE*) frt->F.data.O->data;
 	if( !fp || feof( fp ) )
 		return 0;
+	sgs_PushCFunc( C, sgsstd_fileI_read );
 	sgs_PushVariable( C, frt->F );
 	sgs_PushInt( C, amt );
-	sgs_ThisCall( C, sgs_MakeCFunc( sgsstd_fileI_read ), 1, 1 );
+	sgs_ThisCall( C, 1, 1 );
 	return 1;
 }
 

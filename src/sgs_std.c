@@ -360,9 +360,10 @@ static SGS_INLINE int sgsarrcomp_custom( const void* p1, const void* p2, void* u
 	sgs_Variable v1 = *(const sgs_Variable*) p1;
 	sgs_Variable v2 = *(const sgs_Variable*) p2;
 	SGS_CTX = u->C;
+	sgs_PushVariable( C, u->sortfunc );
 	sgs_PushVariable( C, v1 );
 	sgs_PushVariable( C, v2 );
-	sgs_Call( C, u->sortfunc, 2, 1 );
+	sgs_Call( C, 2, 1 );
 	{
 		sgs_Real r = sgs_GetReal( C, -1 );
 		sgs_Pop( C, 1 );
@@ -1467,11 +1468,6 @@ static int sgsstd_closure_getindex( SGS_ARGS_GETINDEXFUNC )
 	char* str;
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		if( !strcmp( str, "call" ) )
-		{
-			sgs_PushCFunc( C, sgs_specfn_call );
-			return SGS_SUCCESS;
-		}
 		if( !strcmp( str, "apply" ) )
 		{
 			sgs_PushCFunc( C, sgs_specfn_apply );
@@ -1483,15 +1479,8 @@ static int sgsstd_closure_getindex( SGS_ARGS_GETINDEXFUNC )
 
 static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* obj )
 {
-	int rvc = 0, ismethod = sgs_Method( C );
-	uint8_t* cl = (uint8_t*) obj->data;
-	int32_t cc = *(int32_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
-	sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(int32_t),sizeof(void*));
-	
-	sgsVM_PushClosures( C, cls, cc );
-	sgsVM_VarCall( C, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) ),
-		C->sf_last->argcount, cc, &rvc, ismethod );
-	return rvc;
+	sgs_BreakIf( "implemented elsewhere" );
+	return 0;
 }
 
 static int sgsstd_closure_gcmark( SGS_CTX, sgs_VarObj* obj )
@@ -1586,11 +1575,15 @@ static int sgsstd_array_filter( SGS_CTX )
 		
 		while( off < asz )
 		{
+			if( cset )
+			{
+				sgs_PushVariable( C, v_func );
+			}
 			sgs_PushVariable( C, SGSARR_PTR( hdr )[ off ] );
 			if( cset )
 			{
 				sgs_PushInt( C, off );
-				sgs_Call( C, v_func, 2, 1 );
+				sgs_Call( C, 2, 1 );
 			}
 			use = sgs_GetBool( C, -1 );
 			sgs_Pop( C, 1 );
@@ -1625,9 +1618,10 @@ static int sgsstd_array_process( SGS_CTX )
 		
 		while( off < asz )
 		{
+			sgs_PushVariable( C, v_func );
 			sgs_PushVariable( C, SGSARR_PTR( hdr )[ off ] );
 			sgs_PushInt( C, off );
-			sgs_Call( C, v_func, 2, 1 );
+			sgs_Call( C, 2, 1 );
 			sgs_SetIndex( C, sgs_StackItem( C, 0 ), sgs_MakeInt( off ), sgs_StackItem( C, -1 ), SGS_FALSE );
 			sgs_Pop( C, 1 );
 			off++;
@@ -1657,9 +1651,10 @@ static int _sgsstd_ht_filter( SGS_CTX, int usemap )
 		sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 );
 		if( cset )
 		{
-			sgs_PushItem( C, -1 );
-			sgs_PushItem( C, -3 );
-			sgs_Call( C, v_func, 2, 1 );
+			sgs_PushVariable( C, v_func );
+			sgs_PushItem( C, -2 );
+			sgs_PushItem( C, -4 );
+			sgs_Call( C, 2, 1 );
 		}
 		use = sgs_GetBool( C, -1 );
 		if( cset )
@@ -1700,7 +1695,8 @@ static int sgsstd_map_process( SGS_CTX )
 	{
 		sgs_IterPushData( C, sgs_StackItem( C, -1 ), 1, 1 );
 		sgs_PushItem( C, -2 );
-		sgs_Call( C, v_func, 2, 1 );
+		sgs_InsertVariable( C, -3, v_func );
+		sgs_Call( C, 2, 1 );
 		/* src-dict, callable, ... iterator, key, proc.val. */
 		sgs_SetIndex( C, sgs_StackItem( C, 0 ), sgs_StackItem( C, -2 ), sgs_StackItem( C, -1 ), SGS_FALSE );
 		sgs_Pop( C, 2 );
@@ -2467,8 +2463,9 @@ static int sgsstd_mm_getindex_router( SGS_CTX )
 	if( sgs_GetIndex( C, movar, sgs_StackItem( C, -1 ), &func, SGS_FALSE ) == SGS_FALSE ) goto fail;
 	
 	sgs_SetStackSize( C, 1 ); /* this */
-	sgs_ThisCall( C, func, 0, 1 );
+	sgs_InsertVariable( C, 0, func );
 	sgs_Release( C, &func );
+	sgs_ThisCall( C, 0, 1 );
 	return 1;
 	
 fail:
@@ -2492,8 +2489,9 @@ static int sgsstd_mm_setindex_router( SGS_CTX )
 	
 	sgs_SetStackSize( C, 3 ); /* this, arg:key[0], arg:value[1] */
 	sgs_PopSkip( C, 1, 1 ); /* this, arg:value[1] */
-	sgs_ThisCall( C, func, 1, 0 );
+	sgs_InsertVariable( C, 0, func );
 	sgs_Release( C, &func );
+	sgs_ThisCall( C, 1, 0 );
 	return sgs_GetBool( C, -1 );
 	
 fail:
@@ -2715,13 +2713,10 @@ int sgsstd_co_resume( SGS_CTX )
 	}
 	else if( T->state & SGS_STATE_COROSTART )
 	{
-		sgs_Variable func;
 		T->state &= ~SGS_STATE_COROSTART;
-		sgs_StoreVariable( T, &func );
 		for( i = 0; i < ssz; ++i )
 			sgs_PushVariable( T, sgs_StackItem( C, i ) );
-		sgs_XCall( T, func, ssz, &rvc );
-		sgs_Release( C, &func );
+		rvc = sgs_XCall( T, ssz );
 	}
 	/* else - already handled */
 	
@@ -2774,24 +2769,20 @@ static void sgs__check_threadtbl( SGS_CTX )
 	C->_T = thrtbl.data.O;
 }
 
-SGSBOOL sgs_CreateSubthread( sgs_Context* T, SGS_CTX,
-	sgs_Variable* out, sgs_Variable func, int gotthis, sgs_StkIdx size )
+void sgs_CreateSubthread( sgs_Context* T, SGS_CTX,
+	sgs_Variable* out, sgs_StkIdx args, int gotthis )
 {
 	sgs_Real waittime = 0;
-	sgs_StkIdx i;
+	sgs_StkIdx i, num = args + !!gotthis + 1;
 	sgs_Context* co_ctx;
 	
 	/* call the function */
 	co_ctx = sgsCTX_ForkState( T, 0 );
-	if( gotthis )
+	for( i = 0; i < num; ++i )
 	{
-		sgs_PushVariable( co_ctx, sgs_StackItem( C, -size - 1 ) );
+		sgs_PushVariable( co_ctx, sgs_StackItem( C, i - num ) );
 	}
-	for( i = 0; i < size; ++i )
-	{
-		sgs_PushVariable( co_ctx, sgs_StackItem( C, i - size ) );
-	}
-	sgs_FCall( co_ctx, func, size, 1, gotthis );
+	sgs_FCall( co_ctx, args, 1, gotthis );
 	
 	waittime = sgs_GetReal( co_ctx, -1 );
 	sgs_Pop( co_ctx, 1 );
@@ -2810,12 +2801,9 @@ SGSBOOL sgs_CreateSubthread( sgs_Context* T, SGS_CTX,
 		co_ctx->parent = T;
 	}
 	if( out )
-	{
 		sgs_InitThreadPtr( out, co_ctx );
-		return SGS_TRUE;
-	}
 	else
-		return sgs_PushThreadPtr( C, co_ctx );
+		sgs_PushThreadPtr( C, co_ctx );
 }
 
 static int sgsstd_thread_create( SGS_CTX )
@@ -2824,11 +2812,7 @@ static int sgsstd_thread_create( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?p" ) )
 		return 0;
 	
-	if( sgs_CreateSubthread( sgs_TopmostContext( C ), C, NULL,
-		sgs_StackItem( C, 0 ), 1, sgs_StackSize( C ) - 2 ) == SGS_FALSE )
-	{
-		return sgs_Msg( C, SGS_WARNING, "failed to create a thread - could not call function" );
-	}
+	sgs_CreateSubthread( sgs_TopmostContext( C ), C, NULL, sgs_StackSize( C ) - 2, 1 );
 	return 1;
 }
 
@@ -2838,10 +2822,7 @@ static int sgsstd_subthread_create( SGS_CTX )
 	if( !sgs_LoadArgs( C, "?p" ) )
 		return 0;
 	
-	if( sgs_CreateSubthread( C, C, NULL, sgs_StackItem( C, 0 ), 1, sgs_StackSize( C ) - 2 ) == SGS_FALSE )
-	{
-		return sgs_Msg( C, SGS_WARNING, "failed to create a thread - could not call function" );
-	}
+	sgs_CreateSubthread( C, C, NULL, sgs_StackSize( C ) - 2, 1 );
 	return 1;
 }
 
@@ -2988,9 +2969,10 @@ static void sgsstd_pcall_print( void* data, SGS_CTX, int type, const char* messa
 		ret = type; /* don't handle errors thrown inside handlers */
 	else if( P->handler.type != SGS_VT_NULL )
 	{
+		sgs_PushVariable( C, P->handler );
 		sgs_PushInt( C, type );
 		sgs_PushString( C, message );
-		sgs_Call( C, P->handler, 2, 1 );
+		sgs_Call( C, 2, 1 );
 		if( sgs_Cntl( C, SGS_CNTL_GET_ABORT, 0 ) )
 			sgs_Abort( C );
 		ret = (int) sgs_GetInt( C, -1 );
@@ -3023,7 +3005,8 @@ static int sgsstd_pcall( SGS_CTX )
 	C->msg_fn = sgsstd_pcall_print;
 	C->msg_ctx = &P;
 	
-	sgs_Call( C, sgs_StackItem( C, 0 ), 0, 0 );
+	sgs_PushItem( C, 0 );
+	sgs_Call( C, 0, 0 );
 	
 	C->msg_fn = P.pfn;
 	C->msg_ctx = P.pctx;
@@ -3078,9 +3061,9 @@ static int sgsstd_sym_get( SGS_CTX )
 
 static int sgsstd_eval( SGS_CTX )
 {
+	int rvc;
 	char* str;
 	sgs_SizeVal size;
-	int rvc = 0;
 	
 	SGSFN( "eval" );
 	
@@ -3088,13 +3071,13 @@ static int sgsstd_eval( SGS_CTX )
 		return 0;
 	
 	/* WP: string limit */
-	sgs_EvalBuffer( C, str, (size_t) size, &rvc );
-	return rvc;
+	rvc = sgs_EvalBuffer( C, str, (size_t) size );
+	return SGS_MAX( rvc, 0 );
 }
 
 static int sgsstd_eval_file( SGS_CTX )
 {
-	int ret, retcnt = 0;
+	int rvc;
 	char* str;
 	
 	SGSFN( "eval_file" );
@@ -3102,10 +3085,10 @@ static int sgsstd_eval_file( SGS_CTX )
 	if( !sgs_LoadArgs( C, "s", &str ) )
 		return 0;
 	
-	ret = sgs_EvalFile( C, str, &retcnt );
-	if( ret == SGS_ENOTFND )
+	rvc = sgs_EvalFile( C, str );
+	if( rvc == SGS_ENOTFND )
 		STDLIB_WARN( "file not found" )
-	return retcnt;
+	return SGS_MAX( rvc, 0 );
 }
 
 
@@ -3699,7 +3682,7 @@ static int sgsstd_sys_backtrace( SGS_CTX )
 		{
 			const char* file, *name;
 			int ln;
-			if( !p->next && !p->code )
+			if( !p->next && !p->iptr )
 				break;
 			sgs_StackFrameInfo( C, p, &name, &file, &ln );
 			
@@ -4021,7 +4004,7 @@ static sgs_RegFuncConst regfuncs[] =
 	STDLIB_FN( rand ), STDLIB_FN( randf ), STDLIB_FN( srand ), STDLIB_FN( hash_fnv ), STDLIB_FN( hash_crc32 ),
 	/* internal utils */
 	STDLIB_FN( va_get_args ), STDLIB_FN( va_get_arg ), STDLIB_FN( va_arg_count ),
-	{ "sys_call", sgs_specfn_call }, { "sys_apply", sgs_specfn_apply },
+	{ "sys_apply", sgs_specfn_apply },
 	STDLIB_FN( metaobj_set ), STDLIB_FN( metaobj_get ), STDLIB_FN( metamethods_enable ), STDLIB_FN( metamethods_test ),
 	STDLIB_FN( mm_getindex_router ), STDLIB_FN( mm_setindex_router ),
 	STDLIB_FN( event ), STDLIB_FN( pooled_event ), STDLIB_FN( end_on ),
@@ -4350,14 +4333,14 @@ SGSBOOL sgsSTD_GlobalGet( SGS_CTX, sgs_Variable* out, sgs_Variable* idx )
 		
 		if( name[1] == 'F' )
 		{
-			sgs_Variable tmp = sgs_MakeNull();
 			if( C->sf_last )
 			{
-				tmp = C->sf_last->func;
-				VAR_ACQUIRE( &tmp );
+				p_setvar( out, C->sf_last->func );
 			}
-			VAR_RELEASE( out );
-			*out = tmp;
+			else
+			{
+				VAR_RELEASE( out );
+			}
 			return SGS_TRUE;
 		}
 	}
@@ -4585,8 +4568,9 @@ SGSBOOL sgs_IncludeExt( SGS_CTX, const char* name, const char* searchpath )
 	}
 	
 	sz = sgs_StackSize( C );
+	sgs_PushCFunc( C, sgsstd_include );
 	sgs_PushString( C, name );
-	sgs_Call( C, sgs_MakeCFunc( sgsstd_include ), 1, 1 );
+	sgs_Call( C, 1, 1 );
 	ret = sgs_GetBool( C, -1 );
 	sgs_SetStackSize( C, sz );
 	

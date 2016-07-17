@@ -79,18 +79,17 @@ static void idbgPrintFunc( void* data, SGS_CTX, int type, const char* message )
 			sgs_ExecBuffer( C, D->input.ptr + 5, D->input.size - 5 );
 		if( STREQ( D->iword, "eval" ) )
 		{
-			int rvc = 0;
-			sgs_EvalBuffer( C, D->input.ptr + 5, D->input.size - 5, &rvc );
+			int rvc = sgs_EvalBuffer( C, D->input.ptr + 5, D->input.size - 5 );
 			sgs_GlobalCall( C, "printvar", rvc, 0 );
 		}
 		if( STREQ( D->iword, "print" ) )
 		{
-			int rvc = 0;
+			int rvc;
 			sgs_MemBuf prepstr = sgs_membuf_create();
 			sgs_membuf_appbuf( &prepstr, C, "return (", 8 );
 			sgs_membuf_appbuf( &prepstr, C, D->input.ptr + 5, D->input.size - 5 );
 			sgs_membuf_appbuf( &prepstr, C, ");", 2 );
-			sgs_EvalBuffer( C, prepstr.ptr, prepstr.size, &rvc );
+			rvc = sgs_EvalBuffer( C, prepstr.ptr, prepstr.size );
 			sgs_membuf_destroy( &prepstr, C );
 			sgs_GlobalCall( C, "printvar", rvc, 0 );
 		}

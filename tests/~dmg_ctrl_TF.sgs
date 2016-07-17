@@ -9,12 +9,8 @@ print( "\n\n-- DAMAGE RESILIENCE TESTING --\n" );
 
 	section( "non-callables" );
 ERRORS = "";
-call = section.call;
 apply = section.apply;
-testEqual( ERRORS, "", "call/apply retrieval - no errors" );
-
-null!call();
-testEqual( ERRORS, "[W:call(): 'this' - expected callable, got null]", "using 'call' with 'null' - errors" );
+testEqual( ERRORS, "", "'apply' retrieval - no errors" );
 
 ERRORS = "";
 null!apply();
