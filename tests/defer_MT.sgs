@@ -1,0 +1,118 @@
+
+// `check if it works`
+rec_out ``
+exec `defer print("Hello world!");`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `inside block`
+rec_out ``
+exec `{
+	defer print(" world!");
+	print("Hello");
+}`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `order of multiple deferred blocks`
+rec_out ``
+exec `{
+	defer print("!");
+	defer print("world");
+	print("Hello ");
+}`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `if without brackets`
+rec_out ``
+exec `
+	if( 1 ) defer print("world!");
+	print("Hello ");
+`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `while without brackets`
+rec_out ``
+exec `
+	bits = ["Hello", " ", "world", "!"];
+	i = 0;
+	while( i < 4 ) defer print(bits[i++]);
+`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `do/while without brackets`
+rec_out ``
+exec `
+	bits = ["Hello", " ", "world", "!"];
+	i = 0;
+	do defer print(bits[i++]); while( i < 4 );
+`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `for without brackets`
+rec_out ``
+exec `
+	bits = ["Hello", " ", "world", "!"];
+	for( i = 0; i < 4; ++i ) defer print(bits[i]);
+`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `foreach without brackets`
+rec_out ``
+exec `
+	foreach( i : ["Hello", " ", "world", "!"] ) defer print(i);
+`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `do not reach defer limit (256)`
+rec_out ``
+exec `
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+`
+result `SUCCESS`
+check_out ``
+
+// `reach defer limit (1 over 256)`
+rec_out ``
+exec `
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+	defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer; defer;
+defer;
+`
+result `ECOMP`
+check_out ``

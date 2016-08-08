@@ -47,6 +47,15 @@ int tf_compare( const void* p1, const void* p2 )
 	return strcmp( f1->nameonly, f2->nameonly );
 }
 
+int calc_disp( const char* nameonly )
+{
+	int disp = 0;
+	if( strncmp( nameonly, "s_", 2 ) == 0 ) disp = 1;
+	if( strncmp( nameonly, "f_", 2 ) == 0 ) disp = -1;
+	if( strstr( nameonly, "MT" ) != NULL ) disp = 1;
+	return disp;
+}
+
 int load_testfiles( const char* dir, testfile** files, size_t* count )
 {
 	DIR* d;
@@ -62,12 +71,10 @@ int load_testfiles( const char* dir, testfile** files, size_t* count )
 
 	while( ( e = readdir( d ) ) != NULL )
 	{
-		int disp = 0;
+		int disp = calc_disp( e->d_name );
 		if( strcmp( e->d_name, "." ) == 0 || strcmp( e->d_name, ".." ) == 0 )
 			continue;
 		if( strncmp( e->d_name, "!_", 2 ) == 0 ) continue;
-		if( strncmp( e->d_name, "s_", 2 ) == 0 ) disp = 1;
-		if( strncmp( e->d_name, "f_", 2 ) == 0 ) disp = -1;
 		if( strstr( e->d_name, ".sgs" ) != e->d_name + strlen( e->d_name ) - 4 )
 			continue;
 		
@@ -212,13 +219,22 @@ static void checkdestroy_context( sgs_Context* C )
 	}
 }
 
-static void exec_test( const char* fname, const char* nameonly, int disp )
+static void output_to_buffer( void* userdata, SGS_CTX, const void* ptr, size_t size )
+{
+	sgs_MemBuf* mb = (sgs_MemBuf*) userdata;
+	sgs_membuf_appbuf( mb, C, ptr, size );
+}
+
+static void exec_test( const char* fname, const char* nameonly )
 {
 	FILE* fp, *fpe;
-	int retval;
+	int retval, disp, is_MT, is_TF;
 	sgs_Context* C;
 	double tm1, tm2;
-
+	
+	disp = calc_disp( nameonly );
+	is_MT = strstr( nameonly, "MT" ) != NULL;
+	is_TF = strstr( nameonly, "TF" ) != NULL;
 	fpe = fopen( outfile_errors, "a" );
 	numallocs = 0;
 	C = sgs_CreateEngineExt( ext_memfunc, NULL );
@@ -227,34 +243,179 @@ static void exec_test( const char* fname, const char* nameonly, int disp )
 
 	fprintf( fpe, "\n>>> test: %s\n", nameonly );
 	printf( "> running %20s [%s]\t", nameonly, disp == 0 ? " " : ( disp >= 0 ? "+" : "-" ) );
-
-	if( strstr( nameonly, "TF" ) != NULL )
-	{
-		prepengine( C );
-	}
-
+	
 	fp = fopen( outfile, "a" );
 	setvbuf( fp, NULL, _IONBF, 0 );
 	sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, fp );
 	fprintf( fp, "//\n/// O U T P U T  o f  %s\n//\n\n", nameonly );
-
-	tm1 = sgs_GetTime();
-	retval = sgs_ExecFile( C, fname );
-	tm2 = sgs_GetTime();
 	
-	if( retval != SGS_SUCCESS && disp > 0 && strstr( nameonly, "TF" ) != NULL )
+	if( is_TF )
 	{
-		sgs_PushGlobalByName( C, "ERRORS" );
-		puts( sgs_DebugPrintVar( C, sgs_StackItem( C, -1 ) ) );
-		sgs_Pop( C, 2 );
+		prepengine( C );
 	}
 	
-	if( strstr( nameonly, "TF" ) != NULL &&
-		sgs_PushGlobalByName( C, "tests_failed" ) )
+	tm1 = sgs_GetTime();
+	if( is_MT )
 	{
-		if( sgs_GetInt( C, -1 ) )
-			retval = SGS_EINPROC;
-		sgs_Pop( C, 1 );
+		sgs_MemBuf outbuf = sgs_membuf_create();
+		SGSRESULT lastexec = -1000;
+		retval = SGS_SUCCESS;
+		char* data, *data_alloc;
+		/* read the file */
+		{
+			size_t numread, readsize;
+			FILE* tfh = fopen( fname, "r" );
+			if( !tfh )
+			{
+				fprintf( stderr, "failed to open test file: '%s' - %s\n", fname, strerror( errno ) );
+				exit( 1 );
+			}
+			fseek( tfh, 0, SEEK_END );
+			readsize = (size_t) ftell( tfh );
+			data_alloc = data = malloc( readsize + 1 );
+			fseek( tfh, 0, SEEK_SET );
+			numread = fread( data, 1, readsize, tfh );
+			if( numread != readsize && ferror( tfh ) )
+			{
+				fprintf( stderr, "failed to read from test file: '%s' - %s\n", fname, strerror( errno ) );
+				exit( 1 );
+			}
+			fclose( tfh );
+			data[ numread ] = 0;
+		}
+		/* parse contents
+			syntax: <ident [a-zA-Z0-9_]> <string `...`> ...
+			every item is a command, some commands are tests, failures will impact the return value
+		*/
+		while( *data )
+		{
+			int esc = 0;
+			char *ident_start, *ident_end, *value_start, *value_end, *decoded_value;
+			
+			/* skip spaces */
+			while( *data == ' ' || *data == '\t' || *data == '\r' || *data == '\n' ) data++;
+			
+			/* parse identifier */
+			ident_start = data;
+			while( *data == '_' || *data == '/' || sgs_isalnum( *data ) ) data++;
+			ident_end = data;
+			if( ident_start == ident_end )
+			{
+				fprintf( stderr, "%s - expected identifier at '%16s...'\n", fname, data );
+				retval = SGS_EINPROC;
+				break;
+			}
+			
+			/* skip spaces */
+			while( *data == ' ' || *data == '\t' || *data == '\r' || *data == '\n' ) data++;
+			
+			/* parse value */
+			if( *data != '`' )
+			{
+				fprintf( stderr, "%s - expected start of value (`) at '%16s...'\n", fname, data );
+				retval = SGS_EINPROC;
+				break;
+			}
+			value_start = ++data;
+			while( *data )
+			{
+				if( *data == '`' && !esc )
+					break;
+				if( *data == '\\' && !esc )
+					esc = 1;
+				else esc = 0;
+				data++;
+			}
+			if( *data != '`' )
+			{
+				fprintf( stderr, "%s - expected end of value (`) at '%16s...'\n", fname, data );
+				retval = SGS_EINPROC;
+				break;
+			}
+			value_end = data++;
+			
+			/* skip spaces */
+			while( *data == ' ' || *data == '\t' || *data == '\r' || *data == '\n' ) data++;
+			
+			/* DECODE VALUE */
+			decoded_value = malloc( (size_t)( value_end - value_start + 1 ) );
+			{
+				char* op = decoded_value;
+				char* ip = value_start;
+				while( ip < value_end )
+				{
+					if( *ip == '\\' )
+						*op = *++ip;
+					else
+						*op = *ip;
+					op++;
+					ip++;
+				}
+				*op = 0;
+			}
+			
+			/* PROCESS ACTION */
+			*ident_end = 0;
+			
+			if( *ident_start == '/' )
+				/* do nothing */;
+			else if( strcmp( ident_start, "exec" ) == 0 )
+			{
+				lastexec = sgs_ExecString( C, decoded_value );
+			}
+			else if( strcmp( ident_start, "result" ) == 0 )
+			{
+				const char* les = sgs_CodeString( SGS_CODE_ER, lastexec );
+				if( strcmp( decoded_value, les ) != 0 )
+				{
+					printf( "ERROR in 'result': expected %s, got %s\n", decoded_value, les );
+					retval = SGS_EINPROC;
+				}
+			}
+			else if( strcmp( ident_start, "rec_out" ) == 0 )
+			{
+				sgs_membuf_resize( &outbuf, C, 0 );
+				sgs_membuf_appbuf( &outbuf, C, decoded_value, strlen( decoded_value ) );
+				sgs_SetOutputFunc( C, output_to_buffer, &outbuf );
+			}
+			else if( strcmp( ident_start, "check_out" ) == 0 )
+			{
+				if( outbuf.size != strlen( decoded_value ) ||
+					memcmp( outbuf.ptr, decoded_value, outbuf.size ) != 0 )
+				{
+					printf( "ERROR in 'check_out': expected '%s', got '%.*s'\n",
+						decoded_value, (int) outbuf.size, outbuf.ptr );
+					retval = SGS_EINPROC;
+				}
+			}
+			
+			free( decoded_value );
+		}
+		
+		free( data_alloc );
+		sgs_membuf_destroy( &outbuf, C );
+	}
+	else
+	{
+		retval = sgs_ExecFile( C, fname );
+	}
+	tm2 = sgs_GetTime();
+	
+	if( is_TF )
+	{
+		if( retval != SGS_SUCCESS && disp > 0 )
+		{
+			sgs_PushGlobalByName( C, "ERRORS" );
+			puts( sgs_DebugPrintVar( C, sgs_StackItem( C, -1 ) ) );
+			sgs_Pop( C, 2 );
+		}
+		
+		if( sgs_PushGlobalByName( C, "tests_failed" ) )
+		{
+			if( sgs_GetInt( C, -1 ) )
+				retval = SGS_EINPROC;
+			sgs_Pop( C, 1 );
+		}
 	}
 
 	fprintf( fp, "\n\n" );
@@ -296,7 +457,7 @@ static void exec_tests( const char* dirname )
 	fend = files + count;
 	while( f < fend )
 	{
-		exec_test( f->fullname, f->nameonly, f->sucfail );
+		exec_test( f->fullname, f->nameonly );
 		f++;
 	}
 
@@ -332,7 +493,7 @@ main( int argc, char** argv )
 		printf( "\n/// Executing test %s...\n", testname );
 		fclose( fopen( outfile, "w" ) );
 		fclose( fopen( outfile_errors, "w" ) );
-		exec_test( testname, testname, 0 );
+		exec_test( testname, testname );
 		return 0;
 	}
 

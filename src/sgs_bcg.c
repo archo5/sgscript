@@ -15,6 +15,17 @@ struct sgs_BreakInfo
 	uint8_t  iscont; /* is a "continue"? */
 };
 
+#ifndef SGS_MAX_DEFERRED_BLOCKS
+#  define SGS_MAX_DEFERRED_BLOCKS 256
+#endif
+
+typedef struct sgs_BlockInfo sgs_BlockInfo;
+struct sgs_BlockInfo
+{
+	sgs_BlockInfo* parent;
+	size_t defer_start;
+};
+
 typedef struct sgs_CompFunc
 {
 	sgs_MemBuf consts;
@@ -37,6 +48,9 @@ struct sgs_FuncCtx
 	int inclsr, outclsr, syncdepth;
 	int32_t loops;
 	sgs_BreakInfo* binfo;
+	sgs_BlockInfo* blocks;
+	sgs_FTNode* defers[ SGS_MAX_DEFERRED_BLOCKS ];
+	size_t num_defers;
 	sgs_CompFunc cfunc;
 };
 
@@ -108,6 +122,34 @@ static void fctx_binfo_rem( SGS_CTX, sgs_FuncCtx* fctx, sgs_BreakInfo* prev )
 	}
 }
 
+static void fctx_block_push( sgs_FuncCtx* fctx, sgs_BlockInfo* bdata )
+{
+	bdata->defer_start = fctx->num_defers;
+	bdata->parent = fctx->blocks;
+	fctx->blocks = bdata;
+}
+
+static void fctx_block_pop( sgs_FuncCtx* fctx, sgs_BlockInfo* bdata )
+{
+	SGS_UNUSED( bdata );
+	sgs_BreakIf( bdata != fctx->blocks );
+	fctx->num_defers = bdata->defer_start;
+	fctx->blocks = bdata->parent;
+}
+
+static void fctx_defer_add( SGS_CTX, sgs_FTNode* stmt )
+{
+	sgs_FuncCtx* fctx = C->fctx;
+	if( fctx->num_defers >= SGS_MAX_DEFERRED_BLOCKS )
+	{
+		C->state |= SGS_HAS_ERRORS | SGS_MUST_STOP;
+		sgs_Msg( C, SGS_ERROR, "exceeded deferred block limit" );
+	}
+	else
+		fctx->defers[ fctx->num_defers++ ] = stmt;
+}
+
+
 static sgs_FuncCtx* fctx_create( SGS_CTX )
 {
 	sgs_FuncCtx* fctx = sgs_Alloc( sgs_FuncCtx );
@@ -122,6 +164,8 @@ static sgs_FuncCtx* fctx_create( SGS_CTX )
 	fctx->syncdepth = 0;
 	fctx->loops = 0;
 	fctx->binfo = NULL;
+	fctx->blocks = NULL;
+	fctx->num_defers = 0;
 	sgs_membuf_appbuf( &fctx->gvars, C, "_G=", 3 );
 	
 	fctx->cfunc.consts = sgs_membuf_create();
@@ -866,6 +910,20 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out );
 static SGSBOOL compile_node_w( SGS_FNTCMP_ARGS, rcpos_t src );
 static SGSBOOL compile_node_rrw( SGS_FNTCMP_ARGS, rcpos_t dst );
 static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect );
+
+
+static void compile_defers( SGS_CTX, sgs_CompFunc* func, sgs_BlockInfo* until )
+{
+	size_t end = until ? until->defer_start : 0;
+	for( size_t i = C->fctx->num_defers; i > end; )
+	{
+		--i;
+		compile_node( C, func, C->fctx->defers[ i ] );
+	}
+}
+
+#define BLOCK_BEGIN { sgs_BlockInfo binfo; fctx_block_push( C->fctx, &binfo );
+#define BLOCK_END compile_defers( C, func, &binfo ); fctx_block_pop( C->fctx, &binfo ); }
 
 
 
@@ -2073,6 +2131,8 @@ static void prefix_bytecode( SGS_CTX, sgs_CompFunc* func, int args )
 
 static int compile_fn_base( SGS_FNTCMP_ARGS, int args )
 {
+	BLOCK_BEGIN;
+	
 	SGS_FN_ENTER;
 	if( !preparse_clsrlists( C, func, node ) ) return 0;
 	
@@ -2098,6 +2158,8 @@ static int compile_fn_base( SGS_FNTCMP_ARGS, int args )
 		QPRINT( "Max. closure count exceeded" );
 		return 0;
 	}
+	
+	BLOCK_END;
 	
 	prefix_bytecode( C, func, args );
 	/* WP: closure limit */
@@ -2525,6 +2587,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 	case SGS_SFT_BLOCK:
 		SGS_FN_HIT( "BLOCK" );
 		node = node->child;
+		BLOCK_BEGIN;
 		while( node )
 		{
 			rcpos_t regstate = C->fctx->regs;
@@ -2533,6 +2596,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 			node = node->next;
 			comp_reg_unwind( C, regstate );
 		}
+		BLOCK_END;
 		break;
 
 	case SGS_SFT_IFELSE:
@@ -2622,10 +2686,12 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				size_t jp1, jp2 = 0;
 				jp1 = func->code.size;
 
+				BLOCK_BEGIN;
 				regstate = C->fctx->regs;
 				SGS_FN_ENTER;
 				if( !compile_node( C, func, node->child->next ) ) goto fail; /* while */
 				comp_reg_unwind( C, regstate );
+				BLOCK_END;
 
 				if( !compile_breaks( C, func, node, 1 ) )
 					goto fail;
@@ -2661,9 +2727,11 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 			C->fctx->loops++;
 			codesize = func->code.size;
 			{
+				BLOCK_BEGIN;
 				SGS_FN_ENTER;
 				if( !compile_node( C, func, node->child->next ) ) goto fail; /* while */
 				comp_reg_unwind( C, regstate );
+				BLOCK_END;
 
 				if( !compile_breaks( C, func, node, 1 ) )
 					goto fail;
@@ -2708,9 +2776,11 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				size_t jp1, jp2 = 0;
 				jp1 = func->code.size;
 
+				BLOCK_BEGIN;
 				SGS_FN_ENTER;
 				if( !compile_node( C, func, node->child->next->next->next ) ) goto fail; /* block */
 				comp_reg_unwind( C, regstate );
+				BLOCK_END;
 
 				if( !compile_breaks( C, func, node, 1 ) )
 					goto fail;
@@ -2777,9 +2847,11 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				/* write to value variable */
 				if( node->child->next->type != SGS_SFT_NULL && !compile_ident_w( C, func, node->child->next, val ) ) goto fail;
 				
+				BLOCK_BEGIN;
 				SGS_FN_ENTER;
 				if( !compile_node( C, func, node->child->next->next->next ) ) goto fail; /* block */
 				comp_reg_unwind( C, regstate );
+				BLOCK_END;
 				
 				if( !compile_breaks( C, func, node, 1 ) )
 					goto fail;
@@ -2866,7 +2938,12 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 			INSTR_WRITE_PCH();
 		}
 		break;
-
+	
+	case SGS_SFT_DEFER:
+		SGS_FN_HIT( "DEFER" );
+		fctx_defer_add( C, node->child );
+		break;
+	
 	case SGS_SFT_FUNC:
 		SGS_FN_HIT( "FUNC" );
 		{
@@ -3000,7 +3077,7 @@ sgs_iFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree )
 	fctx->func = SGS_FALSE;
 	C->fctx = fctx;
 	
-	if( !compile_fn_base( C, &fctx->cfunc, tree, 0 ) )
+	if( !compile_fn_base( C, &fctx->cfunc, tree, 0 ) || ( C->state & SGS_HAS_ERRORS ) )
 		goto fail;
 	
 	C->fctx = NULL;

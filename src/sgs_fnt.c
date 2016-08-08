@@ -58,6 +58,7 @@ static void dumpnode( sgs_FTNode* N )
 			printf( " %" PRId64, val );
 		}
 		break;
+	case SGS_SFT_DEFER: printf( "DEFER" ); break;
 	case SGS_SFT_FUNC: printf( "FUNC" ); break;
 	case SGS_SFT_CLASS: printf( "CLASS" ); break;
 	case SGS_SFT_CLSINH: printf( "CLASS_INHERIT" ); break;
@@ -1663,6 +1664,18 @@ SFTRET parse_stmt( SFTC )
 		}
 
 		SFTC_NEXT;
+		SGS_FN_END;
+		return node;
+	}
+	/* DEFERRED BLOCKS (scope destruction) */
+	else if( SFTC_ISKEY( "defer" ) )
+	{
+		sgs_TokenList orig = SFTC_AT;
+		SFTC_NEXT;
+		node = parse_stmt( F );
+		if( !node )
+			goto fail;
+		node = make_node( SGS_SFT_DEFER, orig, NULL, node );
 		SGS_FN_END;
 		return node;
 	}
