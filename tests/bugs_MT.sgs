@@ -1,0 +1,377 @@
+
+// `bug 00001`
+reboot ``
+exec `options[0].name;`
+result `SUCCESS`
+
+// `bug 00002`
+reboot ``
+exec `options[0];`
+result `SUCCESS`
+
+// `bug 00003`
+reboot ``
+rec_err ``
+exec `global x = ;`
+result `ECOMP`
+check_err `[E:[line 1] Expected initializing expression]`
+
+// `bug 00004 (assignment inside expressions)`
+reboot ``
+rec ``
+exec `var tmp0;
+printvar( tmp0 = 5 );
+global sys_args = ['sgs-sdl','-foo','bar baz','-lol','rofl'], sys_parsedargs = {};
+var tmp = '';
+for( var a, i = 1; i < sys_args.size; ++i )
+	tmp $= ( a = sys_args[ i ] );
+printvar( tmp );
+`
+result `SUCCESS`
+check_err ``
+check_out `int (5)
+string [19] "-foobar baz-lolrofl"
+`
+
+// `bug 00005 (nonexistent variable accessed after global function call)`
+reboot ``
+rec ``
+exec `print( "x" );
+var x = plint;
+printvar( x );
+`
+result `SUCCESS`
+check_err `[W:variable 'plint' was not found]`
+check_out `xnull
+`
+
+// `bug 00006a`
+reboot ``
+rec_err ``
+exec `amazing  // 1
+amazing;       // 2
+`
+result `ECOMP`
+check_err `[E:[line 2] Missing operators or separators]`
+
+// `bug 00006b`
+reboot ``
+rec_err ``
+exec `(   // 1
+function  // 2
+(         // 3
+)         // 4
+{         // 5
+}         // 6
+onenter   // 7
+)         // 8
+;         // 9
+`
+result `ECOMP`
+check_err `[E:[line 7] Missing operators or separators]`
+
+// `bug 00006c`
+reboot ``
+rec_err ``
+exec `x   // 1
+=         // 2
+function  // 3
+(         // 4
+)         // 5
+{         // 6
+}         // 7
+onenter   // 8
+;         // 9
+`
+result `ECOMP`
+check_err `[E:[line 8] Missing operators or separators]`
+
+// `bug 00007`
+reboot ``
+exec `;
+for(;;) break;
+`
+result `SUCCESS`
+
+// `bug 00009`
+reboot ``
+rec_out ``
+exec `
+global x = 0;
+function a()
+{
+	function b()
+	{
+		global x = 1;
+	}
+	print( x );
+	b();
+}
+a();
+if( x === 1 ) print "OK";
+`
+result `SUCCESS`
+check_out `0OK`
+
+// `bug 00010`
+reboot ``
+exec `.--43.289E+1;`
+result `ECOMP`
+
+// `bug 00011`
+reboot ``
+exec `a [ ] ;`
+result `ECOMP`
+
+// `bug 00012`
+reboot ``
+rec_out ``
+exec `out = {};
+out[ "" ] = {};
+printvar( out );
+`
+result `SUCCESS`
+check_out `dict (1)
+{
+   = dict (0)
+  {
+  }
+}
+`
+
+// `bug 00013 (pre/post-decrement)`
+reboot ``
+rec ``
+exec `x = 5;
+y = x--;
+printvar( x );
+printvar( y );
+
+z = 9;
+w = --z;
+printvar( z );
+printvar( w );
+`
+result `SUCCESS`
+check_err ``
+check_out `int (4)
+int (5)
+int (8)
+int (8)
+`
+
+// `bug 00014`
+reboot ``
+exec `( ) ( ) ;`
+result `ECOMP`
+
+// `bug 00015`
+reboot ``
+exec `
+foreach( a : [] )
+{
+	if( !false )
+		continue;
+	foreach( b : [] ){}
+}
+`
+result `SUCCESS`
+
+// `bug 00016`
+reboot ``
+exec `a = [];
+a.resize( 323 );
+`
+result `SUCCESS`
+
+// `bug 00017 (incorrect "gotthis" retrieval / argument counting error)`
+reboot ``
+rec ``
+exec `function vec3( x, y, z ){ return {x=x,y=y,z=z}; }
+
+vec3_rotate_z = function(){
+	println(this);
+function vec3_rotate_z( v, angle )
+{
+	c = angle; s = 1 - angle;
+	printlns( "---", v.x, v.y, "--" );
+	println( v.x * c - v.y * s );
+	println( v.x * s + v.y * c );
+	r = vec3( v.x * c - v.y * s, v.x * s + v.y * c, v.z );
+	printlns( "--", r );
+	return r;
+}
+return vec3_rotate_z;}();
+
+v = {x=0,y=1,z=0};
+v2 = vec3_rotate_z( v, 0.1 );
+
+printvar( v2.x );
+`
+result `SUCCESS`
+check_err ``
+check_out `null
+---
+0
+1
+--
+-0.9
+0.1
+--
+{x=-0.9,y=0.1,z=0}
+real (-0.9)
+`
+
+// `bug 00018`
+reboot ``
+rec ``
+exec `
+(function()
+{
+	x = ["wat"];
+	printvar( tostring(x) );
+	a = function() use(x) {};
+})();
+`
+result `SUCCESS`
+check_err ``
+check_out `string [5] "[wat]"
+`
+
+// `bug 00019`
+reboot ``
+rec ``
+exec `
+global success = false;
+pcall(function(){
+	BTN = {};
+	BTN.callback = function( event ) use( BTN )
+	{
+		if( event.type == 2 )
+		{
+			x = this.callback({ type = 1 });
+			global success = true;
+			return x;
+		}
+		return 5;
+	};
+
+	BTN.callback({ type = 2 });
+},function(x){return x;});
+
+printvar( success );
+`
+result `SUCCESS`
+check_err ``
+check_out `bool (true)
+`
+
+// `bug 00020`
+reboot ``
+exec `isset( {}, 97 );`
+result `SUCCESS`
+
+// `bug 00021`
+reboot ``
+rec_out ``
+exec `
+function fnA(){ return 1; }
+function fnB(){ return 2; }
+
+orig_fnA = fnA;
+function fnA() use( orig_fnA ){ return orig_fnA(); }
+
+orig_fnB = fnB;
+function fnB() use( orig_fnB ){ return orig_fnB(); }
+
+printvar( fnB() );
+`
+result `SUCCESS`
+check_out `int (2)
+`
+
+// `bug 00022`
+reboot ``
+exec `global Q = 0;
+function test()
+{
+	global Q;
+	while( Q < 5 )
+		Q++;
+}
+test();
+`
+result `SUCCESS`
+
+// `bug 00023 (no errors on closure call(this))`
+reboot ``
+rec_err ``
+exec `
+a = 5;
+function fn1( x ) use( a )
+{
+	printlns( this, x, a );
+}
+fn1.apply( true, [] );
+`
+result `SUCCESS`
+check_err ``
+
+// `bug 00024`
+reboot ``
+rec ``
+exec `
+function multret(){ return 1,2; }
+(a,b) = multret();
+printvar(a,b);
+`
+result `SUCCESS`
+check_err ``
+check_out `int (1)
+int (2)
+`
+
+// `bug 00025 (reading undefined variables)`
+reboot ``
+rec ``
+exec `include "string";
+print();
+x = tostring(undef);
+printvar(x);
+`
+result `SUCCESS`
+check_err `[W:variable 'undef' was not found]`
+check_out `string [4] "null"
+`
+
+// `bug 00026 (unary + NOP bug)`
+reboot ``
+rec ``
+exec `a = 1;
+printvar( +a, a );
+`
+result `SUCCESS`
+check_err ``
+check_out `int (1)
+int (1)
+`
+
+// `bug 00027`
+reboot ``
+exec `function tst(){ return "abc"; }
+global _G = class( {}, _G );
+x = tst;
+`
+result `SUCCESS`
+
+// `bug 00028`
+reboot ``
+exec `x = {};
+co = co_create(function(x)
+{
+	yield();
+});
+x.co = co;
+co_resume( co, x );
+`
+result `SUCCESS`

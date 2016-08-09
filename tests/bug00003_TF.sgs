@@ -1,3 +1,0 @@
-global ERRORS = "";
-eval( "global x = ;" );
-testEqual( ERRORS, "[E:eval(): [line 1] Expected initializing expression]" );

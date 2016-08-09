@@ -225,6 +225,15 @@ static void output_to_buffer( void* userdata, SGS_CTX, const void* ptr, size_t s
 	sgs_membuf_appbuf( mb, C, ptr, size );
 }
 
+static void rec_printfn( void* ctx, SGS_CTX, int type, const char* message )
+{
+	const char pfxs[] = { 'I', 'W', 'E' };
+	type = type / 100 - 1;
+	if( type < 0 ) type = 0;
+	if( type > 2 ) type = 2;
+	sgs_ErrWritef( C, "[%c:%s]", pfxs[ type ], message );
+}
+
 static void exec_test( const char* fname, const char* nameonly )
 {
 	FILE* fp, *fpe;
@@ -257,7 +266,7 @@ static void exec_test( const char* fname, const char* nameonly )
 	tm1 = sgs_GetTime();
 	if( is_MT )
 	{
-		sgs_MemBuf outbuf = sgs_membuf_create();
+		sgs_MemBuf outbuf = sgs_membuf_create(), errbuf = sgs_membuf_create();
 		SGSRESULT lastexec = -1000;
 		retval = SGS_SUCCESS;
 		char* data, *data_alloc, testname[ 64 ] = "<unknown>";
@@ -361,6 +370,7 @@ static void exec_test( const char* fname, const char* nameonly )
 			{
 				strncpy( testname, decoded_value, 64 );
 				testname[ 63 ] = 0;
+				printf( "." );
 			}
 			else if( strcmp( ident_start, "exec" ) == 0 )
 			{
@@ -392,9 +402,40 @@ static void exec_test( const char* fname, const char* nameonly )
 					retval = SGS_EINPROC;
 				}
 			}
+			else if( strcmp( ident_start, "rec_err" ) == 0 )
+			{
+				sgs_membuf_resize( &errbuf, C, 0 );
+				sgs_membuf_appbuf( &errbuf, C, decoded_value, strlen( decoded_value ) );
+				sgs_SetErrOutputFunc( C, output_to_buffer, &errbuf );
+				sgs_SetMsgFunc( C, rec_printfn, NULL );
+			}
+			else if( strcmp( ident_start, "check_err" ) == 0 )
+			{
+				if( errbuf.size != strlen( decoded_value ) ||
+					memcmp( errbuf.ptr, decoded_value, errbuf.size ) != 0 )
+				{
+					printf( "[%s] ERROR in 'check_err': expected '%s', got '%.*s'\n",
+						testname, decoded_value, (int) errbuf.size, errbuf.ptr );
+					retval = SGS_EINPROC;
+				}
+			}
+			else if( strcmp( ident_start, "rec" ) == 0 )
+			{
+				sgs_membuf_resize( &outbuf, C, 0 );
+				sgs_membuf_appbuf( &outbuf, C, decoded_value, strlen( decoded_value ) );
+				sgs_SetOutputFunc( C, output_to_buffer, &outbuf );
+				sgs_membuf_resize( &errbuf, C, 0 );
+				sgs_membuf_appbuf( &errbuf, C, decoded_value, strlen( decoded_value ) );
+				sgs_SetErrOutputFunc( C, output_to_buffer, &errbuf );
+				sgs_SetMsgFunc( C, rec_printfn, NULL );
+			}
 			else if( strcmp( ident_start, "reboot" ) == 0 )
 			{
-				/* outbuf does not need to be recreated as MemBuf only uses the allocators from context */
+				sgs_membuf_destroy( &outbuf, C );
+				sgs_membuf_destroy( &errbuf, C );
+				outbuf = sgs_membuf_create();
+				errbuf = sgs_membuf_create();
+				
 				checkdestroy_context( C );
 				C = sgs_CreateEngineExt( ext_memfunc, NULL );
 				sgs_SetErrOutputFunc( C, SGSOUTPUTFN_DEFAULT, fpe );
@@ -407,6 +448,7 @@ static void exec_test( const char* fname, const char* nameonly )
 		
 		free( data_alloc );
 		sgs_membuf_destroy( &outbuf, C );
+		sgs_membuf_destroy( &errbuf, C );
 	}
 	else
 	{

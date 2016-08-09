@@ -1,3 +1,0 @@
-print( "x" );
-var x = plint;
-testEqual( x, null, "nonexistent variable accessed after global function call" );

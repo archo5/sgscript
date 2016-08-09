@@ -1,5 +1,0 @@
-function multret(){ return 1,2; }
-(a,b) = multret();
-println(a,b);
-testEqual( a, 1 );
-testEqual( b, 2 );

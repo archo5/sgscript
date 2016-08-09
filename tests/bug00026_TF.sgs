@@ -1,2 +1,0 @@
-a = 1;
-testEqual( +a, a, "unary + NOP bug" );
