@@ -1,0 +1,95 @@
+
+// `closure`
+rec_out ``
+exec `
+str1 = "banana";
+dafuq = function( pre ) use( str1 ){ println( pre, str1 ); };
+dafuq( "this is " );
+
+str2 = "apple";
+dafuq2 = function() use( str2 ){ println( this.text, str2 ); };
+obj = { text = "that is ", func = dafuq2 };
+obj.func();
+`
+result `SUCCESS`
+check_out `this is banana
+that is apple
+`
+
+// `closure 2`
+rec_out ``
+exec `
+x = 5;
+
+y = function( a ) use( x )
+{
+	x += a;
+};
+
+y( 4 );
+print( x );
+`
+result `SUCCESS`
+check_out `9`
+
+// `closure - pass through`
+rec_out ``
+exec `
+x = 5;
+fn = function( a ) use( x )
+{
+	fn2 = function( a ) use(x)
+	{
+		x *= a;
+	};
+	fn2( a );
+	x += a;
+};
+fn( 4 );
+print(x);
+`
+result `SUCCESS`
+check_out `24`
+
+// `closure - reference self (function)`
+rec_out ``
+exec `
+function fn( a ) use(fn)
+{
+	if( a >= 10 )
+		return a + 1;
+	else
+		return fn( a + 2 );
+}
+print( fn(0) );
+`
+result `SUCCESS`
+check_out `11`
+
+// `closure - reference global (and fail)`
+rec_out ``
+exec `
+global x = 5;
+fn = function( a ) use( x )
+{
+	x += a;
+};
+fn( 4 );
+print(x);
+`
+result `ECOMP`
+check_out ``
+
+// `closure + thiscall`
+rec_out ``
+exec `
+a = 5;
+function fn1( x ) use( a )
+{
+	print( this, "|", x, "|", a, "|" );
+}
+true!fn1( "arg1" );
+fn1.apply( false, [ "arg2" ]);
+`
+result `SUCCESS`
+check_out `true|arg1|5|false|arg2|5|`

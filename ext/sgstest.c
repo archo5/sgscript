@@ -260,7 +260,7 @@ static void exec_test( const char* fname, const char* nameonly )
 		sgs_MemBuf outbuf = sgs_membuf_create();
 		SGSRESULT lastexec = -1000;
 		retval = SGS_SUCCESS;
-		char* data, *data_alloc, testname[ 64 ];
+		char* data, *data_alloc, testname[ 64 ] = "<unknown>";
 		/* read the file */
 		{
 			size_t numread, readsize;
