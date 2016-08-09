@@ -1,0 +1,268 @@
+
+// `thread syntax with anon func`
+rec_out ``
+exec `thread (function(){yield();})();`
+result `SUCCESS`
+check_out ``
+
+// `bad thread syntax`
+rec_out ``
+exec `thread (function(){yield();}());`
+result `ECOMP`
+check_out ``
+
+// `more thread syntax`
+rec_out ``
+exec `
+function f(){}
+global o = { f };
+thread f(1);
+a = thread o.f(2);
+thread o!f(3);
+subthread f(1);
+subthread o.f(2);
+b = subthread o!f(3);
+`
+result `SUCCESS`
+check_out ``
+
+// `test destruction (sgs_DestroyEngine cleanup correctness)`
+rec_out ``
+exec `
+global xco = co_create(function(){
+	thread_create(function(){
+		subthread_create(function(){ yield(); });
+		yield();
+	});
+});
+`
+result `SUCCESS`
+check_out ``
+reboot ``
+
+// `more test destruction (sgs_DestroyEngine cleanup correctness)`
+rec_out ``
+exec `
+global xco = co_create(function(){
+	thread_create(function(){
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		yield();
+	});
+	thread_create(function(){
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		yield();
+	});
+	thread_create(function(){
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		yield();
+	});
+});
+global yco = co_create(function(){
+	thread_create(function(){
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		yield();
+	});
+	thread_create(function(){
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		yield();
+	});
+	thread_create(function(){
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		yield();
+	});
+});
+global zco = co_create(function(){
+	thread_create(function(){
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		yield();
+	});
+	thread_create(function(){
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		yield();
+	});
+	thread_create(function(){
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		subthread_create(function(){ yield(); });
+		yield();
+	});
+});
+`
+result `SUCCESS`
+check_out ``
+reboot ``
+
+
+// `thread sync/race - prep`
+exec `
+function wait( iters )
+{
+	for( i = 0; i < iters; ++i )
+		yield();
+	println( "waited " $ iters $ " iterations" );
+}
+`
+
+// `thread sync - basic, 3 subthreads`
+rec_out ``
+exec `
+function corotest1()
+{
+	println( "starting threads" );
+	a = subthread wait( 3 );
+	b = subthread wait( 5 );
+	c = subthread wait( 7 );
+	println( "syncing" );
+	sync( a, b, c );
+	println( "done" );
+}
+thread corotest1();
+while( process_threads() );
+`
+result `SUCCESS`
+check_out `starting threads
+syncing
+waited 3 iterations
+waited 5 iterations
+waited 7 iterations
+done
+`
+
+// `thread sync - nested [a,[b,c]]`
+rec_out ``
+exec `
+function corotest2()
+{
+	println( "starting threads" );
+	a = subthread wait( 3 );
+	b = subthread wait( 5 );
+	c = subthread wait( 7 );
+	println( "syncing" );
+	sync( a, sync( b, c ) );
+	println( "done" );
+}
+thread corotest2();
+while( process_threads() );
+`
+result `SUCCESS`
+check_out `starting threads
+syncing
+waited 3 iterations
+waited 5 iterations
+waited 7 iterations
+done
+`
+
+// `thread sync - nested with time values`
+rec_out ``
+exec `
+function corotest3()
+{
+	println( "starting threads" );
+	a = subthread wait( 3 );
+	b = subthread wait( 5 );
+	c = subthread wait( 7 );
+	println( "syncing -- this should not be done yet..." );
+	t = 0.9;
+	sync( a, sync( b, c, 0.4 ), t );
+	println( "done" );
+}
+thread corotest3();
+for( i = 0; i < 9; ++i )
+	process_threads(0.1);
+println( "-- now it should be done:" );
+while( process_threads(0.1) );
+`
+result `SUCCESS`
+check_out `starting threads
+syncing -- this should not be done yet...
+waited 3 iterations
+waited 5 iterations
+waited 7 iterations
+-- now it should be done:
+done
+`
+
+// `thread race - basic, 3 subthreads`
+rec_out ``
+exec `
+function corotestB1()
+{
+	println( "starting threads" );
+	a = subthread wait( 3 );
+	b = subthread wait( 5 );
+	c = subthread wait( 7 );
+	println( "racing" );
+	race( a, b, c );
+	println( "done" );
+}
+thread corotestB1();
+while( process_threads() );
+`
+result `SUCCESS`
+check_out `starting threads
+racing
+waited 3 iterations
+done
+`
+
+// `thread race - 2 subthreads + time value`
+rec_out ``
+exec `
+function corotestB2()
+{
+	println( "starting threads" );
+	b = subthread wait( 5 );
+	c = subthread wait( 7 );
+	println( "racing" );
+	race( b, c, 0.4 );
+	println( "done" );
+}
+thread corotestB2();
+while( process_threads(0.1) );
+`
+result `SUCCESS`
+check_out `starting threads
+racing
+done
+`
+
+// `thread sync/race - nested/mixed`
+rec_out ``
+exec `
+function corotestC1()
+{
+	println( "starting threads" );
+	a = subthread wait( 3 );
+	b = subthread wait( 5 );
+	c = subthread wait( 8 );
+	println( "syncing/racing" );
+	race( sync( a, b, c ), 6 );
+	println( "done" );
+}
+thread corotestC1();
+while( process_threads(1) );
+`
+result `SUCCESS`
+check_out `starting threads
+syncing/racing
+waited 3 iterations
+waited 5 iterations
+done
+`

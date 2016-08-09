@@ -392,6 +392,15 @@ static void exec_test( const char* fname, const char* nameonly )
 					retval = SGS_EINPROC;
 				}
 			}
+			else if( strcmp( ident_start, "reboot" ) == 0 )
+			{
+				/* outbuf does not need to be recreated as MemBuf only uses the allocators from context */
+				checkdestroy_context( C );
+				C = sgs_CreateEngineExt( ext_memfunc, NULL );
+				sgs_SetErrOutputFunc( C, SGSOUTPUTFN_DEFAULT, fpe );
+				sgs_SetMsgFunc( C, SGSMSGFN_DEFAULT_NOABORT, NULL );
+				sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, fp );
+			}
 			
 			free( decoded_value );
 		}
