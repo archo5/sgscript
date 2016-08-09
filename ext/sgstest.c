@@ -260,7 +260,7 @@ static void exec_test( const char* fname, const char* nameonly )
 		sgs_MemBuf outbuf = sgs_membuf_create();
 		SGSRESULT lastexec = -1000;
 		retval = SGS_SUCCESS;
-		char* data, *data_alloc;
+		char* data, *data_alloc, testname[ 64 ];
 		/* read the file */
 		{
 			size_t numread, readsize;
@@ -357,8 +357,11 @@ static void exec_test( const char* fname, const char* nameonly )
 			/* PROCESS ACTION */
 			*ident_end = 0;
 			
-			if( *ident_start == '/' )
-				/* do nothing */;
+			if( ident_start[0] == '/' && ident_start[1] == '/' )
+			{
+				strncpy( testname, decoded_value, 64 );
+				testname[ 63 ] = 0;
+			}
 			else if( strcmp( ident_start, "exec" ) == 0 )
 			{
 				lastexec = sgs_ExecString( C, decoded_value );
@@ -368,7 +371,8 @@ static void exec_test( const char* fname, const char* nameonly )
 				const char* les = sgs_CodeString( SGS_CODE_ER, lastexec );
 				if( strcmp( decoded_value, les ) != 0 )
 				{
-					printf( "ERROR in 'result': expected %s, got %s\n", decoded_value, les );
+					printf( "[%s] ERROR in 'result': expected %s, got %s\n",
+						testname, decoded_value, les );
 					retval = SGS_EINPROC;
 				}
 			}
@@ -383,8 +387,8 @@ static void exec_test( const char* fname, const char* nameonly )
 				if( outbuf.size != strlen( decoded_value ) ||
 					memcmp( outbuf.ptr, decoded_value, outbuf.size ) != 0 )
 				{
-					printf( "ERROR in 'check_out': expected '%s', got '%.*s'\n",
-						decoded_value, (int) outbuf.size, outbuf.ptr );
+					printf( "[%s] ERROR in 'check_out': expected '%s', got '%.*s'\n",
+						testname, decoded_value, (int) outbuf.size, outbuf.ptr );
 					retval = SGS_EINPROC;
 				}
 			}

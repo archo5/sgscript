@@ -70,6 +70,54 @@ exec `
 result `SUCCESS`
 check_out `Hello world!`
 
+// `foreach with continue`
+rec_out ``
+exec `
+	foreach( i : ["Hello", " ", "world", "!"] ){ defer print(i); continue; }
+`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `foreach with 'continue 2' in another loop`
+rec_out ``
+exec `
+	defer print("!");
+	foreach( i : ["Hello", " ", "world"] ){ defer print(i); while(1) continue 2; }
+`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `while with break`
+rec_out ``
+exec `
+	print "Hello";
+	defer print("!");
+	while( 1 ){ defer print(" world"); break; }
+`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `while with 'break 2' in another loop`
+rec_out ``
+exec `
+	print "Hello";
+	defer print("!");
+	while( 1 ){ defer print(" world"); while( 1 ) break 2; }
+`
+result `SUCCESS`
+check_out `Hello world!`
+
+// `return`
+rec_out ``
+exec `
+	defer print(" world!");
+	print("Hello");
+	return;
+	defer print(" cruel");
+`
+result `SUCCESS`
+check_out `Hello world!`
+
 // `do not reach defer limit (256)`
 rec_out ``
 exec `

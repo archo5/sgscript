@@ -26,6 +26,13 @@ struct sgs_BlockInfo
 	size_t defer_start;
 };
 
+typedef struct sgs_LoopInfo sgs_LoopInfo;
+struct sgs_LoopInfo
+{
+	sgs_LoopInfo* parent;
+	sgs_BlockInfo* block;
+};
+
 typedef struct sgs_CompFunc
 {
 	sgs_MemBuf consts;
@@ -49,6 +56,7 @@ struct sgs_FuncCtx
 	int32_t loops;
 	sgs_BreakInfo* binfo;
 	sgs_BlockInfo* blocks;
+	sgs_LoopInfo* loopinfo;
 	sgs_FTNode* defers[ SGS_MAX_DEFERRED_BLOCKS ];
 	size_t num_defers;
 	sgs_CompFunc cfunc;
@@ -122,19 +130,29 @@ static void fctx_binfo_rem( SGS_CTX, sgs_FuncCtx* fctx, sgs_BreakInfo* prev )
 	}
 }
 
-static void fctx_block_push( sgs_FuncCtx* fctx, sgs_BlockInfo* bdata )
+static void fctx_block_push( sgs_FuncCtx* fctx, sgs_BlockInfo* bdata, sgs_LoopInfo* ldata )
 {
 	bdata->defer_start = fctx->num_defers;
 	bdata->parent = fctx->blocks;
 	fctx->blocks = bdata;
+	if( ldata )
+	{
+		ldata->block = bdata;
+		ldata->parent = fctx->loopinfo;
+		fctx->loopinfo = ldata;
+	}
 }
 
-static void fctx_block_pop( sgs_FuncCtx* fctx, sgs_BlockInfo* bdata )
+static void fctx_block_pop( sgs_FuncCtx* fctx, sgs_BlockInfo* bdata, sgs_LoopInfo* ldata )
 {
-	SGS_UNUSED( bdata );
 	sgs_BreakIf( bdata != fctx->blocks );
 	fctx->num_defers = bdata->defer_start;
 	fctx->blocks = bdata->parent;
+	if( ldata )
+	{
+		sgs_BreakIf( ldata != fctx->loopinfo );
+		fctx->loopinfo = ldata->parent;
+	}
 }
 
 static void fctx_defer_add( SGS_CTX, sgs_FTNode* stmt )
@@ -165,6 +183,7 @@ static sgs_FuncCtx* fctx_create( SGS_CTX )
 	fctx->loops = 0;
 	fctx->binfo = NULL;
 	fctx->blocks = NULL;
+	fctx->loopinfo = NULL;
 	fctx->num_defers = 0;
 	sgs_membuf_appbuf( &fctx->gvars, C, "_G=", 3 );
 	
@@ -922,8 +941,10 @@ static void compile_defers( SGS_CTX, sgs_CompFunc* func, sgs_BlockInfo* until )
 	}
 }
 
-#define BLOCK_BEGIN { sgs_BlockInfo binfo; fctx_block_push( C->fctx, &binfo );
-#define BLOCK_END compile_defers( C, func, &binfo ); fctx_block_pop( C->fctx, &binfo ); }
+#define BLOCK_BEGIN { sgs_BlockInfo binfo; fctx_block_push( C->fctx, &binfo, NULL );
+#define BLOCK_END compile_defers( C, func, &binfo ); fctx_block_pop( C->fctx, &binfo, NULL ); }
+#define LOOP_BEGIN { sgs_BlockInfo binfo; sgs_LoopInfo linfo; fctx_block_push( C->fctx, &binfo, &linfo );
+#define LOOP_END compile_defers( C, func, &binfo ); fctx_block_pop( C->fctx, &binfo, &linfo ); }
 
 
 
@@ -2555,6 +2576,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 
 	case SGS_SFT_RETURN:
 		SGS_FN_HIT( "RETURN" );
+		compile_defers( C, func, 0 );
 		{
 			rcpos_t regstate = C->fctx->regs;
 			sgs_FTNode* n = node->child;
@@ -2686,12 +2708,12 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				size_t jp1, jp2 = 0;
 				jp1 = func->code.size;
 
-				BLOCK_BEGIN;
+				LOOP_BEGIN;
 				regstate = C->fctx->regs;
 				SGS_FN_ENTER;
 				if( !compile_node( C, func, node->child->next ) ) goto fail; /* while */
 				comp_reg_unwind( C, regstate );
-				BLOCK_END;
+				LOOP_END;
 
 				if( !compile_breaks( C, func, node, 1 ) )
 					goto fail;
@@ -2727,11 +2749,11 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 			C->fctx->loops++;
 			codesize = func->code.size;
 			{
-				BLOCK_BEGIN;
+				LOOP_BEGIN;
 				SGS_FN_ENTER;
 				if( !compile_node( C, func, node->child->next ) ) goto fail; /* while */
 				comp_reg_unwind( C, regstate );
-				BLOCK_END;
+				LOOP_END;
 
 				if( !compile_breaks( C, func, node, 1 ) )
 					goto fail;
@@ -2776,11 +2798,11 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				size_t jp1, jp2 = 0;
 				jp1 = func->code.size;
 
-				BLOCK_BEGIN;
+				LOOP_BEGIN;
 				SGS_FN_ENTER;
 				if( !compile_node( C, func, node->child->next->next->next ) ) goto fail; /* block */
 				comp_reg_unwind( C, regstate );
-				BLOCK_END;
+				LOOP_END;
 
 				if( !compile_breaks( C, func, node, 1 ) )
 					goto fail;
@@ -2847,11 +2869,11 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				/* write to value variable */
 				if( node->child->next->type != SGS_SFT_NULL && !compile_ident_w( C, func, node->child->next, val ) ) goto fail;
 				
-				BLOCK_BEGIN;
+				LOOP_BEGIN;
 				SGS_FN_ENTER;
 				if( !compile_node( C, func, node->child->next->next->next ) ) goto fail; /* block */
 				comp_reg_unwind( C, regstate );
-				BLOCK_END;
+				LOOP_END;
 				
 				if( !compile_breaks( C, func, node, 1 ) )
 					goto fail;
@@ -2903,6 +2925,13 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 					QPRINT( "Attempted to break while not in a loop" );
 				goto fail;
 			}
+			sgs_LoopInfo* loop = C->fctx->loopinfo;
+			{
+				int lev = blev;
+				while( --lev > 0 )
+					loop = loop->parent;
+			}
+			compile_defers( C, func, loop->block );
 			/* WP: instruction limit, max loop depth */
 			fctx_binfo_add( C, C->fctx, (uint32_t) func->code.size, (uint16_t)( C->fctx->loops + 1 - blev ), SGS_FALSE );
 			INSTR_WRITE_PCH();
@@ -2933,6 +2962,13 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 					QPRINT( "Attempted to continue while not in a loop" );
 				goto fail;
 			}
+			sgs_LoopInfo* loop = C->fctx->loopinfo;
+			{
+				int lev = blev;
+				while( --lev > 0 )
+					loop = loop->parent;
+			}
+			compile_defers( C, func, loop->block );
 			/* WP: instruction limit, max loop depth */
 			fctx_binfo_add( C, C->fctx, (uint32_t) func->code.size, (uint16_t)( C->fctx->loops + 1 - blev ), SGS_TRUE );
 			INSTR_WRITE_PCH();
