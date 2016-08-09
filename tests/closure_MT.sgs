@@ -93,3 +93,29 @@ fn1.apply( false, [ "arg2" ]);
 `
 result `SUCCESS`
 check_out `true|arg1|5|false|arg2|5|`
+
+// `extended closure test`
+rec_out ``
+exec `
+q = function(b,x)
+{
+	y = true;
+	return function() use( x, y )
+	{
+		return x;
+	};
+};
+fn = q(true,5);
+printvar( fn );
+println( fn() );
+gc_collect();
+`
+result `SUCCESS`
+check_out `closure
+{
+  func: SGS function <anonymous>
+  #0 (rc=1): int (5)
+  #1 (rc=1): bool (true)
+}
+5
+`

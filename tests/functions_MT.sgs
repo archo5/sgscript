@@ -1,0 +1,250 @@
+
+// `alt function syntax`
+rec_out ``
+exec `
+global sqr;
+sqr = function( x )
+{
+	return x*x;
+};
+print( "sqr(5) = ", sqr(5) );
+`
+result `SUCCESS`
+check_out `sqr(5) = 25`
+
+// `function inside expression 1`
+rec_out ``
+exec `print( "function: ", function(){} );`
+result `SUCCESS`
+check_out `function: function`
+
+// `function inside expression 2`
+rec_out ``
+exec `
+println( "cube(5) = ", function(x){ return x*x*x; }(5) );
+println( "cube(5) = ", (function(x){ return x*x*x; })(5) );
+`
+result `SUCCESS`
+check_out `cube(5) = 125
+cube(5) = 125
+`
+
+// `expecting return values that won't come`
+rec_out ``
+exec `print( print( faux, print( "pas" ) ) );`
+result `SUCCESS`
+check_out `pasnullnullnull`
+
+// `check for function argument overwrites`
+rec_out ``
+exec `
+function test( arg ){ x = "FAILURE"; println( arg ); }
+test( "SUCCESS" );
+function test2( arg ){ var x = "FAILURE"; println( arg ); }
+test2( "SUCCESS" );
+`
+result `SUCCESS`
+check_out `SUCCESS
+SUCCESS
+`
+
+// `'this' in function`
+exec `function a(){ print( this ); }`
+result `SUCCESS`
+
+// `method call`
+rec_out ``
+exec `
+obj = 
+{
+	method = function( what ){ println( "'obj.method' says: ", this, what ); },
+	usual = function( what ){ println( "'obj.usual' says: ", what ); },
+};
+obj.method( " <= method output" );
+obj.usual( "same old function output" );
+obj["usual"]( " <= called via 'getindex'" );
+`
+result `SUCCESS`
+check_out `'obj.method' says: {method=function,usual=function} <= method output
+'obj.usual' says: same old function output
+'obj.usual' says:  <= called via 'getindex'
+`
+
+// `compatible function call 1`
+exec `this!Class.func();`
+result `SUCCESS`
+
+// `compatible function call 2`
+rec_out ``
+exec `
+function test(){ print(this); }
+obj = "wat";
+obj!test();
+`
+result `SUCCESS`
+check_out `wat`
+
+// `function arguments`
+rec_out ``
+exec `
+function twoargs(x,y){print(x,y);}
+function twoargs_m(x,y){print(this,"|",x,y);}
+obj = { func = twoargs, method = twoargs_m };
+
+print( "calling 2 arg func with 3 args: " );	twoargs( "1", "2", "3" );	print( "\n" );
+print( "calling 2 arg func with 1 arg: " );		twoargs( "1" );				print( "\n" );
+
+print( "calling 2 arg obj func with 3 args: " );	obj.func( "1", "2", "3" );	print( "\n" );
+print( "calling 2 arg obj func with 1 arg: " );		obj.func( "1" );			print( "\n" );
+
+print( "calling 2 arg method with 3 args: " );	obj.method( "1", "2", "3" );	print( "\n" );
+print( "calling 2 arg method with 1 arg: " );	obj.method( "1" );				print( "\n" );
+
+m = obj["method"];
+print( "calling 2 arg method v2 with 3 args: " );	"1"!m( "2", "3" );	print( "\n" );
+print( "calling 2 arg method v2 with 1 arg: " );	"1"!m();				print( "\n" );
+print( "calling 2 arg method v2 with 4 args: " );	"1"!m( "2", "3", "4" );	print( "\n" );
+print( "calling 2 arg method v2 with 2 args: " );	"1"!m( "2" );				print( "\n" );
+`
+result `SUCCESS`
+check_out `calling 2 arg func with 3 args: 12
+calling 2 arg func with 1 arg: 1null
+calling 2 arg obj func with 3 args: 12
+calling 2 arg obj func with 1 arg: 1null
+calling 2 arg method with 3 args: {func=function,method=function}|12
+calling 2 arg method with 1 arg: {func=function,method=function}|1null
+calling 2 arg method v2 with 3 args: 1|23
+calling 2 arg method v2 with 1 arg: 1|nullnull
+calling 2 arg method v2 with 4 args: 1|23
+calling 2 arg method v2 with 2 args: 1|2null
+`
+
+// `bad function syntax 1`
+rec_out ``
+exec `
+print(
+	"NOT function: ",
+	function( x )
+	{
+		return x;
+);
+`
+result `ECOMP`
+check_out ``
+
+// `bad function syntax 2`
+rec_out ``
+exec `
+print(
+	"NOT function: ",
+	function( x
+	{ return x; }
+));
+`
+result `ECOMP`
+check_out ``
+
+// `bad function syntax 3`
+rec_out ``
+exec `
+print(
+	"NOT function: ",
+	functino( x )
+	{ return x; }
+);
+`
+result `ECOMP`
+check_out ``
+
+// `multiple return values`
+rec_out ``
+exec `
+function x(){ return 1, 2, 3, 4; }
+
+(a,b,c) = x();
+(a,b,c,d) = x();
+(a,b,c,d,e) = x();
+
+print( a,b,c,d,e );
+`
+result `SUCCESS`
+check_out `1234null`
+
+// `recursion`
+rec_out ``
+exec `
+function test( x )
+{
+	if( x > 0 )
+		test( x - 1 );
+	while( x > 0 )
+	{
+		print( "#" );
+		x -= 1;
+	}
+	print( "\n" );
+}
+test( 10 );
+`
+result `SUCCESS`
+check_out `
+#
+##
+###
+####
+#####
+######
+#######
+########
+#########
+##########
+`
+
+// `slightly shorter function syntax`
+rec_out ``
+exec `
+function sqr( x ) = x * x;
+println( sqr( 5 ) );
+println( function(x) = x * x; (6) );
+println( function sqr(x) = x * x; (7) );
+`
+result `SUCCESS`
+check_out `25
+36
+49
+`
+
+// `variable arguments`
+rec_out ``
+exec `
+function m(){ printlns( "M0----", va_arg_count(), va_get_args() ); }
+function m2(a,b){ printlns( "M2----", va_arg_count(), va_get_args() ); }
+
+m();
+m( "a", 5 );
+m( {}, [], map(), "!" );
+
+m2();
+m2( "a", 5 );
+m2( {}, [], map(), "!" );
+`
+result `SUCCESS`
+check_out `M0----
+0
+[]
+M0----
+2
+[a,5]
+M0----
+4
+[dict,array,map,!]
+M2----
+0
+[]
+M2----
+2
+[a,5]
+M2----
+4
+[dict,array,map,!]
+`

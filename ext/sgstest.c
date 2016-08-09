@@ -344,7 +344,7 @@ static void exec_test( const char* fname, const char* nameonly )
 				char* ip = value_start;
 				while( ip < value_end )
 				{
-					if( *ip == '\\' )
+					if( *ip == '\\' && ( ip[1] == '\\' || ip[1] == '`' ) )
 						*op = *++ip;
 					else
 						*op = *ip;

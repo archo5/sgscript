@@ -1,3 +1,0 @@
-function test(){ println(this); }
-obj = "wat";
-obj!test();
