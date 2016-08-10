@@ -1,5 +1,0 @@
-
-global ERRORS = "";
-
-testEqual( """""", '', "unescaped strings" );
-testEqual( '''line\n\nend''', "line\\n\\nend", "unescaped strings 2" );

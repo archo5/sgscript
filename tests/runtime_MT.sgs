@@ -68,6 +68,28 @@ check_out `==
 [true,false,false,false,true,false,false,true,false,true]
 `
 
+// `null comparisons`
+rec ``
+exec `
+println( null < 5 );
+println( null > -5 );
+println( null < -5 );
+println( null > 5 );
+println( null == "wat" );
+println( null < "wat" );
+println( null > "wat" );
+`
+result `SUCCESS`
+check_err ``
+check_out `true
+true
+false
+false
+false
+true
+false
+`
+
 // `typeof`
 rec ``
 exec `function func(){}

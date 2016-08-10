@@ -1,5 +1,0 @@
-class one {}
-class two : one {}
-class three { global a; }
-class four : three { global b = 2, c = 1; }
-class five { function fun( ny ){ return ny; } }

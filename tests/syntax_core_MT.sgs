@@ -204,6 +204,31 @@ result `SUCCESS`
 check_err `[W:Invalid value type used for index write][W:Invalid value type used for index write]`
 check_out ``
 
+// `string concatenation priority`
+rec ``
+exec `println( 3 $ 4 + 5 );
+println( 'X' $ false || true );`
+result `SUCCESS`
+check_err ``
+check_out `39
+Xfalse
+`
+
+// `string indexing`
+rec ``
+exec `
+//     012345678901
+//    -210987654321
+str = "what is this";
+println( str[0]$str[3]$str[11]$str[-5]$str[-1]$str[-12] );
+println( str[-13]$str[12]$str[str] );
+`
+result `SUCCESS`
+check_out `wts sw
+nullnullnull
+`
+check_err `[W:String index out of bounds][W:String index out of bounds][W:Expected integer as string index]`
+
 // `variable declarations`
 rec ``
 exec `global a = 1, b = 2;
@@ -404,6 +429,36 @@ printlns( @undef, @d.c, @d["e"] );
 result `SUCCESS`
 check_err ``
 check_out `null
+null
+null
+`
+
+// `function reordering`
+rec ``
+exec `
+println( testfn1() ); // global function def. pushed to beginning
+function testfn1(){ return "aaa"; }
+
+(function()
+{
+	println( testfn2() ); // local function def. pushed to beginning
+	function testfn2(){ return "bbb"; }
+}
+)();
+
+println( @testfn3 ); // global function def. NOT pushed to beginning
+{function testfn3(){ return "ccc"; }}
+
+(function()
+{
+	println( @testfn4 ); // local function def. NOT pushed to beginning
+	{function testfn4(){ return "ddd"; }}
+}
+)();
+`
+check_err ``
+check_out `aaa
+bbb
 null
 null
 `

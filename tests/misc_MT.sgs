@@ -1,0 +1,121 @@
+
+// `radial text gradient rendering`
+exec `include_library( "math" );
+
+function lookup( dst )
+{
+	if( dst < 1 ) return ".";
+	else if( dst < 2 ) return "o";
+	else if( dst < 3 ) return "O";
+	else if( dst < 4 ) return "#";
+	else if( dst < 5 ) return "O";
+	else if( dst < 6 ) return "o";
+	else return ".";
+}
+
+for( var y = -7; y <= 7; ++y )
+{
+	for( var x = -7; x <= 7; ++x )
+	{
+		var dst = sqrt( x * x + y * y );
+		print( lookup( dst * 0.9 ) $ ' ' );
+	}
+	print( "\n" );
+}`
+result `SUCCESS`
+
+// `various syntax constructs`
+exec `include_library( "math" );
+
+function test( x )
+{
+	var y;
+	y = x;
+	while( x )
+	{
+		print( '#' );
+		x -= 1;
+	}
+	print( ' cos x = ', cos( y ), '\n' );
+}
+var x, y;
+x = 10;
+while( x )
+{
+	test( x );
+	y += x -= 1;
+	print( 'x = ', x, ', y = ', y, '\n' );
+}`
+result `SUCCESS`
+
+// `dictionary stress test`
+rec ``
+exec `var obj = {};
+println( "filling up..." );
+for( var i = 0; i < 500; ++i )
+	obj[ i ] = ftime();
+for( var i = 0; i < 500; ++i )
+	dummy = obj[ i ];
+println( dict_size( obj ) );
+for( var i = 0; i < 500; ++i )
+	unset( obj, i );
+println( obj, " unloaded!" );`
+result `SUCCESS`
+check_err ``
+check_out `filling up...
+500
+{} unloaded!
+`
+
+// `error stack frame (check log, TODO test it)`
+exec `
+include_library( "string" );
+
+function
+blah
+(
+)
+{
+print
+(
+string_cut
+(
+null
+,
+0
+)
+)
+;
+}
+
+function
+foo
+(
+)
+{
+blah
+(
+)
+;
+}
+
+
+foo
+(
+)
+;
+`
+result `SUCCESS`
+
+// `error stack frame 2`
+exec `
+include_library( "string" );
+
+var iface =
+{
+	__add = function( a, b ){ string_cut( null, 0 ); }
+};
+var whoa = class( {}, iface );
+print( whoa + whoa );
+`
+result `SUCCESS`

@@ -1,0 +1,115 @@
+
+// `old style class 1`
+rec ``
+exec `
+var myInfoIface = 
+{
+	greetMe = function(){ print( "Hello, " $ this._name $ "!\n" ); },
+	setMyName = function( name ){ this._name = name; },
+};
+myInfo = class( {}, myInfoIface );
+print( "Created a ", myInfo, " object with this interface: ", metaobj_get( myInfo ), "\n" );
+myInfo.setMyName( "SGScript" );
+myInfo.greetMe();
+`
+result `SUCCESS`
+check_err ``
+check_out `Created a {} object with this interface: {greetMe=function,setMyName=function}
+Hello, SGScript!
+`
+
+// `old style class inheritance`
+rec ``
+exec `
+var printerIface = 
+{
+	print_stdout = function( text ){ print( text ); },
+};
+var postfixPrinterIface = 
+{
+	print = function( text ){ this.print_stdout( text $ this.postfix ); },
+	postfix = '[postfix]',
+};
+var questionPrinter = class( { postfix = '?' }, class( postfixPrinterIface, printerIface ) );
+questionPrinter.print( "wat" );
+`
+result `SUCCESS`
+check_err ``
+check_out `wat?`
+
+// `sgs-only vec2 class example`
+rec ``
+exec `
+global vec2_iface = 
+{
+	__add = function( a, b ){ return vec2( a.x + b.x, a.y + b.y ); },
+	__sub = function( a, b ){ return vec2( a.x - b.x, a.y - b.y ); },
+	__mul = function( a, b ){ return vec2( a.x * b.x, a.y * b.y ); },
+	__div = function( a, b ){ return vec2( a.x / b.x, a.y / b.y ); },
+	__mod = function( a, b ){ return vec2( a.x % b.x, a.y % b.y ); },
+	__negate = function(){ return vec2( -this.x, -this.y ); },
+	__compare = function( a, b ){ var out = a.x - b.x; if( out ) return a.y - b.y; else return out; },
+	__call = function( self, something ){ println( "THIS IS VEC2[", this.x, ",", this.y, "]... in other news: ", something, "!" ); }, 
+	__tostr = function(){ return "vec2(" $ this.x $ "," $ this.y $ ")"; },
+	__typeof = function(){ return "vec2"; },
+};
+function vec2( x, y )
+{
+	return class( { x = x, y = y }, vec2_iface );
+}
+
+A = vec2( 1.0, 2.0 );
+println( "A: ", A );
+B = vec2( 3.0, 3.0 );
+println( "B: ", B );
+println( "A + B: ", A + B );
+println( "A - B: ", A - B );
+println( "A * B: ", A * B );
+println( "A / B: ", A / B );
+println( "B % A: ", B % A );
+println( "-A: ", -A );
+println( "A == B: ", A == B );
+println( "A < B: ", A < B );
+println( "A == A: ", A == A );
+println( "A < A: ", A < A );
+A( "bacon" );
+println( typeof( A ) );
+`
+result `SUCCESS`
+check_err ``
+check_out `A: {x=1,y=2}
+B: {x=3,y=3}
+A + B: {x=4,y=5}
+A - B: {x=-2,y=-1}
+A * B: {x=3,y=6}
+A / B: {x=0.333333,y=0.666667}
+B % A: {x=0,y=1}
+-A: {x=-1,y=-2}
+A == B: false
+A < B: true
+A == A: true
+A < A: false
+THIS IS VEC2[1,2]... in other news: bacon!
+vec2
+`
+
+// `new style classes`
+rec ``
+exec `class one {}`
+result `SUCCESS`
+exec `class two : one {}`
+result `SUCCESS`
+exec `class three { global a; }`
+result `SUCCESS`
+exec `class four : three { global b = 2, c = 1; }`
+result `SUCCESS`
+exec `class five { function fun( ny ){ return ny; } }
+printvar(five);`
+result `SUCCESS`
+check_out `dict (2)
+{
+  __name = string [4] "five"
+  fun = SGS function 'five.fun'
+}
+`
+check_err ``
