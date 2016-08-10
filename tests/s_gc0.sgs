@@ -1,6 +1,0 @@
-global vnull = null;
-var vbool = false;
-vint = 1337;
-var vreal = 3.14;
-vstring = "wat";
-print( gc_collect() );

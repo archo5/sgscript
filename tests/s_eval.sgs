@@ -1,3 +1,0 @@
-var random = eval( "return function(){ print( 'monkey' ); };" );
-eval( "print( 'random: ' );" );
-random();

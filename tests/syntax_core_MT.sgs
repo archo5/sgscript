@@ -269,6 +269,10 @@ result `ECOMP`
 exec `y = 3 -> 4;`
 result `ECOMP`
 
+// `chain of unary operators`
+exec `hfc = !!1;`
+result `SUCCESS`
+
 // `self-modifying unary operators`
 rec ``
 exec `var a, b, c, d;
@@ -288,13 +292,133 @@ rec ``
 exec `println( "one" <=> "two" );
 println( "three" <=> "four" );
 println( "five" <=> "five" );
+println( 5 <=> 7 );
+println( 5.1 <=> 6.9 );
+// precedence
+printvar( 6.9 <=> 5.1 == 1 );
+printvar( 1 == 6.9 <=> 5.1 );
 `
 result `SUCCESS`
 check_out `-1
 1
 0
+-1
+-1
+bool (true)
+bool (true)
 `
 check_err ``
+
+// `bad operators 3`
+rec_err ``
+exec `x = 5 ! 6;`
+result `ECOMP`
+check_err `[E:[line 1] Invalid expression]`
+rec_err ``
+exec `x = 5 ~ 6;`
+result `ECOMP`
+check_err `[E:[line 1] Invalid expression]`
+rec_err ``
+exec `x = * 6;`
+result `ECOMP`
+check_err `[E:[line 1] Invalid expression]`
+rec_err ``
+exec `x = 6 *;`
+result `ECOMP`
+check_err `[E:[line 1] Invalid expression]`
+rec_err ``
+exec `x = 5 + * 6;`
+result `ECOMP`
+check_err `[E:[line 1] Invalid expression]`
+
+// `multi-index set`
+rec ``
+exec `a = { b = { c = {} } };
+a.b.c[]{
+	prop1 = 1,
+	prop2 = 2
+};
+printvar(a);`
+result `SUCCESS`
+check_err ``
+check_out `dict (1)
+{
+  b = dict (1)
+  {
+    c = dict (2)
+    {
+      prop1 = int (1)
+      prop2 = int (2)
+    }
+  }
+}
+`
+
+// `multi-property set`
+rec ``
+exec `a = { b = { c = {} } };
+a.b.c.{
+	prop1 = 1,
+	prop2 = 2
+};
+printvar(a);`
+result `SUCCESS`
+check_err ``
+check_out `dict (1)
+{
+  b = dict (1)
+  {
+    c = dict (2)
+    {
+      prop1 = int (1)
+      prop2 = int (2)
+    }
+  }
+}
+`
+
+// `null-coalescing operator`
+rec ``
+exec `printvar( 1 ?? 2 );
+printvar( null ?? 2 );
+printvar( 1 ?? null );
+printvar( null ?? null );
+printvar( null ?? null ?? 1 ?? null ?? 2 ?? null ?? null );
+`
+result `SUCCESS`
+check_err ``
+check_out `int (1)
+int (2)
+int (1)
+null
+int (1)
+`
+
+// `error suppression`
+rec ``
+exec `d = { a = 1, b = 2 };
+printlns( @undef, @d.c, @d["e"] );
+@undef( d );
+@"wat".length = 3;
+@_G = 4;`
+result `SUCCESS`
+check_err ``
+check_out `null
+null
+null
+`
+
+// `BAD multiple return values`
+rec_err ``
+exec `(a,b,c) = 5;`
+result `ECOMP`
+check_err `[E:[line 1] Expression writes only allowed with function call reads]`
+
+// `BAD MRV from if expression`
+rec_err ``
+exec `(a,b,c) = if(1,2,3);`
+result `ECOMP`
+check_err `[E:[line 1] 'if' pseudo-function cannot be used as input for expression writes with multiple outputs]`
 
 // `if expression`
 rec ``
@@ -481,3 +605,29 @@ exec `function a( x, this ){ print( this, x ); }`
 result `ECOMP`
 check_err `[E:[line 1] Argument name cannot be a reserved keyword]`
 check_out ``
+
+// `various syntax tests`
+rec ``
+exec `include_library( "math" );
+
+function test( x )
+{
+	var y;
+	y = x;
+	while( x )
+	{
+		print( '#' );
+		x -= 1;
+	}
+	print( ' cos x = ', cos( y ), '\n' );
+}
+var x, y;
+x = 10;
+while( x )
+{
+	test( x );
+	y += x -= 1;
+	print( 'x = ', x, ', y = ', y, '\n' );
+}`
+result `SUCCESS`
+check_err ``

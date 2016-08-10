@@ -414,7 +414,7 @@ static int level_exp( SFTC, sgs_FTNode** tree )
 		/* "fcall" = [..]/(..) at the end, preceded by a data source */
 		isfcall = node->type == SGS_SFT_EXPLIST || node->type == SGS_SFT_ARRLIST;
 		if( isfcall ) isfcall = !!prev;
-		if( isfcall ) isfcall = !node->next;
+		if( isfcall ) isfcall = !node->next || ( node->type == SGS_SFT_ARRLIST && node->next->type == SGS_SFT_DCTLIST );
 		if( isfcall ) isfcall = prev->type != SGS_SFT_OPER || !SGS_ST_OP_BINARY( *prev->token );
 		
 		/* op tests */

@@ -1,0 +1,172 @@
+
+// `div/mod by 0`
+rec ``
+exec `print( 1 / 0 );
+print( 2.0 / 0.0 );
+print( 3 % 0 );
+print( 4.0 % 0.0 );`
+result `SUCCESS`
+check_out `nullnullnullnull`
+check_err `[E:Division by 0][E:Division by 0][E:Division by 0][E:Division by 0]`
+
+// `manual garbage collection - no garbage`
+rec ``
+exec `global vnull = null;
+var vbool = false;
+vint = 1337;
+var vreal = 3.14;
+vstring = "wat";
+print( gc_collect() );`
+result `SUCCESS`
+check_out `0`
+check_err ``
+
+// `manual garbage collection - two arrays/circular ref.`
+rec ``
+exec `x = array( 5 );
+y = array( 6, x );
+x.push( y );
+print( gc_collect() );
+x = null;
+y = null;
+print( gc_collect() );`
+result `SUCCESS`
+check_out `02`
+check_err ``
+
+// `equality tables`
+rec ``
+exec `B = true;
+I = 1;
+R = 1.0;
+S = "1";
+C = print;
+F = function(){};
+O = [1];
+println( "==" );
+println([ B==B, B==I, B==R, B==S, B==C, B==F, B==O ]);
+println([ I==I, I==R, I==S, I==C, I==F, I==O ]);
+println([ R==R, R==S, R==C, R==F, R==O ]);
+println([ S==S, S==C, S==F, S==O, C==C, C==F, C==O, F==F, F==O, O==O ]);
+println( "===" );
+println([ B===B, B===I, B===R, B===S, B===C, B===F, B===O ]);
+println([ I===I, I===R, I===S, I===C, I===F, I===O ]);
+println([ R===R, R===S, R===C, R===F, R===O ]);
+println([ S===S, S===C, S===F, S===O, C===C, C===F, C===O, F===F, F===O, O===O ]);
+`
+result `SUCCESS`
+check_err ``
+check_out `==
+[true,true,true,false,false,false,false]
+[true,true,true,false,false,false]
+[true,true,false,false,false]
+[true,false,false,false,true,false,false,true,false,true]
+===
+[true,false,false,false,false,false,false]
+[true,false,false,false,false,false]
+[true,false,false,false,false]
+[true,false,false,false,true,false,false,true,false,true]
+`
+
+// `typeof`
+rec ``
+exec `function func(){}
+println( typeof( true ) );
+println( typeof( 1337 ) );
+println( typeof( 3.14 ) );
+println( typeof( "o!" ) );
+println( typeof( func ) );
+println( typeof( typeof ) );
+println( typeof( array() ) );
+`
+result `SUCCESS`
+check_err ``
+check_out `bool
+int
+real
+string
+func
+cfunc
+array
+`
+
+// `function from eval`
+rec ``
+exec `var random = eval( "return function(){ print( 'monkey' ); };" );
+eval( "print( 'random: ' );" );
+random();`
+result `SUCCESS`
+check_out `random: monkey`
+check_err ``
+
+// `recursion limit 1`
+rec_err ``
+exec `function ohh(){ var a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z; ohh(); }
+ohh();`
+result `SUCCESS`
+check_err `[E:max. call stack size reached]`
+
+// `recursion limit 2 (eval)`
+rec_err ``
+exec `function ohh(){ var a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z; eval('ohh();'); }
+ohh();`
+result `SUCCESS`
+check_err `[E:eval(): max. call stack size reached]`
+
+// `array features`
+rec ``
+exec `var data = array( "sgscript", 5.001 );
+println( data[0], data[1] );
+data[1] = "5";
+data.push( "creator" );
+data.unshift( "the", "amazing" );
+println( "pop() returns \"", data.pop(), "\"" );
+println( "shift() returns \"", data.shift(), "\"" );
+println( "Array (", data.size, "): ", data );
+data.clear();
+println( "after clear, size = ", data.size, ", capacity = ", data.capacity );
+`
+result `SUCCESS`
+check_err ``
+check_out `sgscript5.001
+pop() returns "creator"
+shift() returns "the"
+Array (3): [amazing,sgscript,5]
+after clear, size = 0, capacity = 8
+`
+
+// `dict features`
+rec ``
+exec `var x = {}; println( x );
+var y = { sth = 'text', cnt = 5 }; println( y );
+var z = 
+{
+	arr = [ 5, 4.0, 3, "2", 1 ],
+	dct = { that = "wow" },
+	raid = 
+	[
+		{ all = "good" }
+	]
+};
+println( z );
+unset( z, "dct" );
+println( z );
+println( "'isset' proximity tests (arr,farr,arrr): |", isset( z, "arr" ), "|", isset( z, "farr" ), "|", isset( z, "arrr" ), "|" );
+z[ "foo" ] = "blah"; println( "setindex/getindex test // z['foo']: ", z[ "foo" ] );
+z.prop = x; println( "setprop/getprop test // z.prop: ", z.prop );
+println( "nonexistant property/index test: |", z["undef"], "|", z.undef, "|" );
+unset( z, "undef" );
+var w = { "spe" = "cial", }; println( w );
+`
+result `SUCCESS`
+check_err `[W:Cannot find readable value by index: "undef"][W:Readable property not found: "undef"]`
+check_out `{}
+{sth=text,cnt=5}
+{arr=array,dct=dict,raid=array}
+{arr=array,raid=array}
+'isset' proximity tests (arr,farr,arrr): |true|false|false|
+setindex/getindex test // z['foo']: blah
+setprop/getprop test // z.prop: {}
+nonexistant property/index test: |null|null|
+{spe=cial}
+`

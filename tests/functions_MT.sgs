@@ -84,6 +84,22 @@ obj!test();
 result `SUCCESS`
 check_out `wat`
 
+// `compatible function call 3`
+rec ``
+exec `
+function Obj_Test( arg )
+{
+	printvar( this, arg );
+}
+obj = "wat";
+obj!Obj_Test( "dat" );
+`
+result `SUCCESS`
+check_err ``
+check_out `string [3] "wat"
+string [3] "dat"
+`
+
 // `function arguments`
 rec_out ``
 exec `
