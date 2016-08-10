@@ -1,3 +1,0 @@
-println( "one" <=> "two" );
-println( "three" <=> "four" );
-println( "five" <=> "five" );

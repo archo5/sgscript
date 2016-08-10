@@ -1,4 +1,0 @@
-// wat
-function x(/* arg1 
-	*/y){}
-print( x );/*

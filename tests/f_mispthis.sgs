@@ -1,1 +1,0 @@
-function a( x, this ){ print( this, x ); }

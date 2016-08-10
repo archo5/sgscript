@@ -204,14 +204,16 @@ check_out `
 rec_out ``
 exec `
 function sqr( x ) = x * x;
-println( sqr( 5 ) );
-println( function(x) = x * x; (6) );
-println( function sqr(x) = x * x; (7) );
+printvar( sqr( 5 ) );
+printvar( function(x) = x * x; (6) );
+printvar( function sqr(x) = x * x; (7) );
+printvar( function selfname() = sys_backtrace().last.func;() );
 `
 result `SUCCESS`
-check_out `25
-36
-49
+check_out `int (25)
+int (36)
+int (49)
+string [8] "selfname"
 `
 
 // `variable arguments`

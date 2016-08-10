@@ -1,3 +1,0 @@
-for( var i = 0; i < 5; ++i )
-	break 2;
-print( i );
