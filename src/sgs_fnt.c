@@ -64,6 +64,9 @@ static void dumpnode( sgs_FTNode* N )
 	case SGS_SFT_CLSINH: printf( "CLASS_INHERIT" ); break;
 	case SGS_SFT_CLSINC: printf( "CLASS_INCLUDE" ); break;
 	case SGS_SFT_CLSGLOB: printf( "CLASS_GLOBALS" ); break;
+	case SGS_SFT_NEWCALL: printf( "NEW" ); break;
+	case SGS_SFT_THRCALL: printf( "THREAD" ); break;
+	case SGS_SFT_STHCALL: printf( "SUBTHREAD" ); break;
 	default:
 		if( N->token ) sgsT_DumpToken( N->token );
 		if( N->type == SGS_SFT_OPER_P ) printf( " [post]" );
@@ -368,11 +371,15 @@ static sgs_LineNum predictlinenum( sgs_FTNode* node ) /* next, child, local */
 }
 
 
+#define PFXFUNC_NONE 0
+#define PFXFUNC_THREAD 1
+#define PFXFUNC_SUBTHREAD 2
+#define PFXFUNC_NEW 3
 static int level_exp( SFTC, sgs_FTNode** tree )
 {
 	sgs_FTNode* node = *tree, *prev = NULL, *mpp = NULL;
 	int weight = 0, isfcall, binary, count = 0;
-	int threadmode = 0; /* 0 = none, 1 = thread, 2 = subthread */
+	int pfxfuncmode = PFXFUNC_NONE;
 
 	SGS_FN_BEGIN;
 	sgs_BreakIf( !tree );
@@ -385,7 +392,7 @@ static int level_exp( SFTC, sgs_FTNode** tree )
 	
 	if( sgsT_IsKeyword( node->token, "thread" ) )
 	{
-		threadmode = 1;
+		pfxfuncmode = PFXFUNC_THREAD;
 		node = node->next;
 		(*tree)->next = NULL;
 		SFTC_DESTROY( *tree );
@@ -393,7 +400,15 @@ static int level_exp( SFTC, sgs_FTNode** tree )
 	}
 	if( sgsT_IsKeyword( node->token, "subthread" ) )
 	{
-		threadmode = 2;
+		pfxfuncmode = PFXFUNC_SUBTHREAD;
+		node = node->next;
+		(*tree)->next = NULL;
+		SFTC_DESTROY( *tree );
+		*tree = node;
+	}
+	if( sgsT_IsKeyword( node->token, "new" ) )
+	{
+		pfxfuncmode = PFXFUNC_NEW;
 		node = node->next;
 		(*tree)->next = NULL;
 		SFTC_DESTROY( *tree );
@@ -658,20 +673,35 @@ _continue:
 	if( count <= 1 )
 	{
 retsuccess:
-		if( threadmode )
+		switch( pfxfuncmode )
 		{
+		case PFXFUNC_THREAD:
 			if( (*tree)->type != SGS_SFT_FCALL )
 			{
-				if( threadmode == 1 )
-					SFTC_PRINTERR( "expected function call after 'thread'" );
-				else
-					SFTC_PRINTERR( "expected function call after 'subthread'" );
-				goto fail;
+				SFTC_PRINTERR( "expected function call after 'thread'" );
+				goto fail_no_err;
 			}
-			if( threadmode == 1 )
-				(*tree)->type = SGS_SFT_THRCALL;
-			else
-				(*tree)->type = SGS_SFT_STHCALL;
+			(*tree)->type = SGS_SFT_THRCALL;
+			break;
+		case PFXFUNC_SUBTHREAD:
+			if( (*tree)->type != SGS_SFT_FCALL )
+			{
+				SFTC_PRINTERR( "expected function call after 'subthread'" );
+				goto fail_no_err;
+			}
+			(*tree)->type = SGS_SFT_STHCALL;
+			break;
+		case PFXFUNC_NEW:
+			if( (*tree)->type != SGS_SFT_FCALL ||
+				(*tree)->child->type == SGS_SFT_OPER )
+			{
+				SFTC_PRINTERR( "expected plain function call after 'new'" );
+				goto fail_no_err;
+			}
+			(*tree)->type = SGS_SFT_NEWCALL;
+			break;
+		default:
+			break;
 		}
 		
 		SGS_FN_END;
@@ -691,6 +721,7 @@ fail:
 	if( mpp == NULL )
 		mpp = *tree;
 	sgs_Msg( F->C, SGS_ERROR, "[line %d] Invalid expression", mpp ? sgsT_LineNum( mpp->token ) : 0 );
+fail_no_err:
 #if SGS_DEBUG && SGS_DEBUG_DATA
 	sgsFT_Dump( *tree );
 #endif

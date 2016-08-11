@@ -113,3 +113,55 @@ check_out `dict (2)
 }
 `
 check_err ``
+
+// `basic class creation with 'new'`
+rec ``
+exec `inst = new one();
+printvar( inst, metaobj_get( inst ) );`
+result `SUCCESS`
+check_err ``
+check_out `dict (0)
+{
+}
+dict (1)
+{
+  __name = string [3] "one"
+}
+`
+
+// `calling the constructor`
+rec ``
+exec `class six
+{
+	function __construct( a, b ){ this.q = 1; printlns( this, a, b ); }
+}
+new six( 1, 2.3 );
+`
+result `SUCCESS`
+check_err ``
+check_out `{q=1}
+1
+2.3
+`
+
+// `calling a separate construction function with 'new'`
+rec ``
+exec `function ctor( a, b ){ this.p = 2; printlns( this, a, b ); }
+new ctor( 4, 5.6 );
+`
+result `SUCCESS`
+check_err ``
+check_out `{p=2}
+4
+5.6
+`
+
+// `bad new calls`
+rec_err ``
+exec `new a.b(1);`
+result `ECOMP`
+check_err `[E:[line 1] expected plain function call after 'new']`
+rec_err ``
+exec `new a!b(1);`
+result `ECOMP`
+check_err `[E:[line 1] expected plain function call after 'new']`

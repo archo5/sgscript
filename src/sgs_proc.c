@@ -2092,6 +2092,51 @@ static void vm_make_class( SGS_CTX, int outpos, sgs_Variable* name, sgs_Variable
 	stk_setvar_leave( C, outpos, &cls );
 }
 
+static void vm_ctor( SGS_CTX, sgs_Variable* inst, sgs_Variable* ctorfunc, int argstart, int argend )
+{
+	int i;
+	if( ctorfunc )
+		fstk_push( C, ctorfunc );
+	fstk_push( C, inst );
+	stk_makespace( C, argend - argstart );
+	for( i = argstart; i < argend; ++i )
+	{
+		sgs_Variable* ptr = stk_poff( C, i );
+		VAR_ACQUIRE( ptr );
+		*C->stack_top++ = *ptr;
+	}
+	sgs_ThisCall( C, argend - argstart, 0 );
+}
+
+static void vm_make_new( SGS_CTX, int outcls, int lastarg )
+{
+	sgs_Variable inst, clscopy = *stk_poff( C, outcls );
+	if( clscopy.type == SGS_VT_FUNC || clscopy.type == SGS_VT_CFUNC )
+	{
+		sgsSTD_MakeDict( C, &inst, 0 );
+		vm_ctor( C, &inst, &clscopy, outcls + 1, lastarg + 1 );
+		stk_setvar_leave( C, outcls, &inst );
+	}
+	else if( clscopy.type == SGS_VT_OBJECT )
+	{
+		sgsSTD_MakeDict( C, &inst, 0 );
+		sgs_ObjSetMetaObj( C, inst.data.O, clscopy.data.O );
+		sgs_ObjSetMetaMethodEnable( inst.data.O, 1 );
+		/* call the constructor */
+		if( sgs_PushProperty( C, clscopy, "__construct" ) )
+		{
+			vm_ctor( C, &inst, NULL, outcls + 1, lastarg + 1 );
+		}
+		else sgs_Pop( C, 1 );
+		
+		stk_setvar_leave( C, outcls, &inst );
+	}
+	else
+	{
+		sgs_Msg( C, SGS_ERROR, "new: expected object" );
+	}
+}
+
 static void vm_make_closure( SGS_CTX, int args, sgs_Variable* func, int16_t outpos )
 {
 	sgs_BreakIf( C->clstk_top - C->clstk_off < args );
@@ -2653,6 +2698,7 @@ restart_loop:
 		case SGS_SI_DICT: { GETOP; sgsSTD_MakeDict( C, &p1, 0 ); WRITEGETC; break; }
 		case SGS_SI_MAP: { GETOP; sgsSTD_MakeMap( C, &p1, 0 ); WRITEGETC; break; }
 		case SGS_SI_CLASS: { vm_make_class( C, argA, RESVAR( argB ), argC != argA ? RESVAR( argC ) : NULL ); break; }
+		case SGS_SI_NEW: { vm_make_new( C, argB, argC ); break; }
 		case SGS_SI_RSYM: { ARGS_3; sgs_Variable symtbl = sgs_Registry( C, SGS_REG_SYM );
 			sgs_SetIndex( C, symtbl, p2, p3, SGS_FALSE ); sgs_SetIndex( C, symtbl, p3, p2, SGS_FALSE ); break; }
 			

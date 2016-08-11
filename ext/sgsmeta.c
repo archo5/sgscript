@@ -63,6 +63,7 @@ static sgs_RegIntConst int_consts[] =
 	_META_RGS( DICT )
 	_META_RGS( MAP )
 	_META_RGS( CLASS )
+	_META_RGS( NEW )
 	_META_RGS( RSYM )
 	_META_RGS( COTRT )
 	_META_RGS( COTRF )

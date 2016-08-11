@@ -195,6 +195,7 @@ SGS_APIFUNC void sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend );
 #define SGS_SFT_CLSINC  33
 #define SGS_SFT_CLSGLOB 34
 #define SGS_SFT_CLSPFX  35
+#define SGS_SFT_NEWCALL 36 /* new */
 /* threading addons */
 #define SGS_SFT_THRCALL 40 /* thread */
 #define SGS_SFT_STHCALL 41 /* subthread */
@@ -327,6 +328,7 @@ typedef enum sgs_Instruction
 	SGS_SI_DICT,     /* (C:out) */
 	SGS_SI_MAP,      /* (C:out) */
 	SGS_SI_CLASS,    /* (A:out, B:name, C:inhname) */
+	SGS_SI_NEW,      /* (B:out/class, C:lastarg) */
 	SGS_SI_RSYM,     /* (B:name, C:var)         performs dual registration to symbol table */
 	SGS_SI_COTRT,    /* (A:to, B:from)          sets A to true if `from` is finished */
 	SGS_SI_COTRF,    /* (A:to, B:from)          sets A to false if `from` is not finished */
@@ -758,7 +760,7 @@ static const char* sgs_OpNames[] =
 	"inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",
 	"seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte", "rawcmp",
-	"array", "dict", "map", "class", "rsym", "cotrt", "cotrf", "coabort", "yldjmp",
+	"array", "dict", "map", "class", "new", "rsym", "cotrt", "cotrf", "coabort", "yldjmp",
 };
 
 #endif
