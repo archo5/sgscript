@@ -33,6 +33,8 @@ static void sgsthread_sleep( unsigned ms )
 const char* outfile = "apitests-output.log";
 const char* outfile_errors = "apitests-errors.log";
 
+#include "sgsapitest_core.h"
+
 
 
 #define DEFINE_TEST( name ) static void at_##name()
@@ -43,8 +45,6 @@ typedef struct _test_t { testfunc fn; const char* nm; } test_t;
 
 
 extern test_t all_tests[];
-const char* testname;
-static int verbose = 0;
 static int run_all = 1;
 
 
@@ -97,153 +97,7 @@ main( int argc, char** argv )
 }
 
 
-/* API */
-
-void atf_abort(){ abort(); }
-void atf_error( int chk, const char* msg, int line )
-{
-	if( !chk )
-	{
-		printf( "\nERROR at line %d\ntest failed: %s\n", line, msg );
-		atf_abort();
-	}
-	else if( verbose >= 2 )
-	{
-		printf( "\n[%d] %s\n", line, msg );
-	}
-}
-void atf_warning( int chk, const char* msg, int line )
-{
-	if( !chk )
-		printf( "\nWARNING at line %d\ntest failed: %s\n", line, msg );
-}
-
-#define atf_assert_( chk, msg, line ) atf_error( (chk) != 0, msg, line )
-#define atf_assert( chk ) atf_assert_( chk, #chk, __LINE__ )
-
-#define atf_check_( chk, msg, line ) atf_warning( (chk) != 0, msg, line )
-#define atf_check( chk ) atf_check_( chk, #chk, __LINE__ )
-
-void atf_assert_string_( const char* str1, const char* str2, const char* msg, int line )
-{
-	const char* s1 = str1, *s2 = str2;
-	if( str1 == NULL || str2 == NULL )
-	{
-		printf( "\nERROR at line %d\n%s (at least one of the strings is NULL)\n", line, msg );
-		atf_abort();
-	}
-	
-	do
-	{
-		if( *s1 != *s2 )
-		{
-			const char* spaces = "           ";
-			printf( "\nERROR at line %d\n%s (mismatch at pos. %d)\n", line, msg, (int)(size_t)( s1-str1+1 ) );
-			printf( "...%-20s...\n", s1 - 10 > str1 ? s1 : str1 );
-			printf( "...%-20s...\n", s2 - 10 > str2 ? s2 : str2 );
-			printf( "   %.*s^\n", (int)(size_t)( s1 - str1 > 10 ? 10 : s1 - str1 ), spaces );
-			atf_abort();
-		}
-		s1++;
-		s2++;
-	}
-	while( *s1 && *s2 );
-}
-#define atf_assert_string( str1, str2 ) \
-	atf_assert_string_( str1, str2, "test failed: str1 == str2", __LINE__ )
-
-
-/*************\
-*             *
-*  T E S T S  *
-*             *
-\*************/
-
-
-sgs_Context* currctx;
-sgs_MemBuf outbuf;
-sgs_MemBuf errbuf;
-FILE* outfp;
-FILE* errfp;
-static void outfn_buffer( void* ud, SGS_CTX, const void* ptr, size_t size )
-{
-	sgs_MemBuf* mb = (sgs_MemBuf*) ud;
-	sgs_membuf_appbuf( mb, C, ptr, size );
-}
-static void msgfn_buffer( void* ud, SGS_CTX, int type, const char* msg )
-{
-	const char* pfxs[] = { "[I:", "[W:", "[E:" };
-	type = type / 100 - 1;
-	if( type < 0 ) type = 0;
-	if( type > 2 ) type = 2;
-	
-	sgs_WriteErrorInfo( C, SGS_ERRORINFO_FULL, (sgs_ErrorOutputFunc) sgs_ErrWritef, C, type, msg );
-	
-	sgs_MemBuf* mb = (sgs_MemBuf*) ud;
-	sgs_membuf_appbuf( mb, C, pfxs[type], strlen(pfxs[type]) );
-	sgs_membuf_appbuf( mb, C, msg, strlen(msg) );
-	sgs_membuf_appbuf( mb, C, "]", 1 );
-}
-#define REDIR_NONE 0
-#define REDIR_FILE 1
-#define REDIR_BUF 2
-sgs_Context* get_context_( int redir_out )
-{
-	SGS_CTX = sgs_CreateEngine();
-	currctx = C;
-	atf_assert_( C, "could not create context (out of memory?)", __LINE__ );
-	
-	outfp = NULL;
-	if( redir_out == REDIR_FILE )
-	{
-		outfp = fopen( outfile, "a" );
-		atf_assert_( outfp, "could not create output file", __LINE__ );
-		setvbuf( outfp, NULL, _IONBF, 0 );
-		
-		sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, outfp );
-		atf_assert( C->shared->output_ctx == outfp );
-		
-		fprintf( outfp, "//\n/// O U T P U T  o f  %s\n//\n\n", testname );
-	}
-	else if( redir_out == REDIR_BUF )
-	{
-		outbuf = sgs_membuf_create();
-		sgs_SetOutputFunc( C, outfn_buffer, &outbuf );
-		atf_assert( C->shared->output_ctx == &outbuf );
-	}
-	
-	errfp = fopen( outfile_errors, "a" );
-	atf_assert_( errfp, "could not create error output file", __LINE__ );
-	setvbuf( errfp, NULL, _IONBF, 0 );
-	
-	sgs_SetErrOutputFunc( C, SGSOUTPUTFN_DEFAULT, errfp );
-	atf_assert( C->shared->erroutput_ctx == errfp );
-	
-	errbuf = sgs_membuf_create();
-	sgs_SetMsgFunc( C, msgfn_buffer, &errbuf );
-	atf_assert( C->msg_ctx == &errbuf );
-	
-	return C;
-}
-sgs_Context* get_context(){ return get_context_( REDIR_FILE ); }
-void destroy_context( SGS_CTX )
-{
-	if( C->shared->output_fn == outfn_buffer )
-	{
-		sgs_membuf_destroy( &outbuf, C );
-	}
-	sgs_membuf_destroy( &errbuf, C );
-	currctx = NULL;
-	sgs_DestroyEngine( C );
-	if( outfp )
-	{
-		fclose( outfp );
-		outfp = NULL;
-	}
-	fclose( errfp );
-}
-
-typedef struct _AST
+typedef struct AST
 {
 	sgs_TokenList tokens;
 	sgs_FTNode* tree;
@@ -266,23 +120,6 @@ void ast_destroy( SGS_CTX, AST* ast )
 	ast->mem = NULL;
 	sgsT_Free( C, ast->tokens );
 	ast->tokens = NULL;
-}
-
-void atf_clear_errors()
-{
-	sgs_membuf_resize( &errbuf, currctx, 0 );
-}
-#define atf_check_errors( expect ) atf_check_errors_( expect, __LINE__ )
-void atf_check_errors_( const char* expect, int line )
-{
-	size_t len = strlen( expect );
-	if( len != (size_t) errbuf.size || memcmp( errbuf.ptr, expect, len ) != 0 )
-	{
-		printf( "\nERROR MESSAGE MISMATCH (line %d)\nexpected: %s\ngot: ", line, expect );
-		fwrite( errbuf.ptr, errbuf.size, 1, stdout );
-		printf( "\n" );
-		atf_abort();
-	}
 }
 
 int sgs_dummy_func( SGS_CTX ){ return 0; }

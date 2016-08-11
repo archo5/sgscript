@@ -86,8 +86,8 @@ $(OUTDIR)/sgsmeta$(LIBEXT): ext/sgsmeta.c $(OUTFILE)
 ## the tools
 $(OUTDIR)/sgstest$(BINEXT): ext/sgstest.c $(OUTFILE)
 	$(CC) -o $@ $< $(EXEFLAGS)
-$(OUTDIR)/sgsapitest$(BINEXT): ext/sgsapitest.c ext/sgs_prof.c $(OUTFILE)
-	$(CC) -o $@ $(subst $(OUTFILE),,$^) $(EXEFLAGS)
+$(OUTDIR)/sgsapitest$(BINEXT): ext/sgsapitest.c ext/sgs_prof.c ext/sgsapitest_core.h $(OUTFILE)
+	$(CC) -o $@ ext/sgsapitest.c ext/sgs_prof.c $(EXEFLAGS)
 $(OUTDIR)/sgsvm$(BINEXT): ext/sgsvm.c ext/sgs_idbg.c ext/sgs_prof.c $(OUTFILE)
 	$(CC) -o $@ $(subst $(OUTFILE),,$^) $(EXEFLAGS)
 $(OUTDIR)/sgsc$(BINEXT): ext/sgsc.c $(OUTFILE)
@@ -126,10 +126,10 @@ cppbctest: $(OUTDIR)/sgscppbctest$(BINEXT)
 	$(OUTDIR)/sgscppbctest
 cppbctest11: $(OUTDIR)/sgscppbctest11$(BINEXT)
 	$(OUTDIR)/sgscppbctest11
-$(OUTDIR)/sgscppbctest$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/sgs_cppbc.h $(OUTFILE)
+$(OUTDIR)/sgscppbctest$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/sgsapitest_core.h ext/sgs_cppbc.h $(OUTFILE)
 	$(CXX) -o $@ $< $(word 2,$^) $(EXEFLAGS) -I. -std=c++03 -Wno-shadow
 	$(call SGS_INSTALL_TOOL,$@)
-$(OUTDIR)/sgscppbctest11$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/sgs_cppbc.h $(OUTFILE)
+$(OUTDIR)/sgscppbctest11$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/sgscppbctest.h ext/sgsapitest_core.h ext/sgs_cppbc.h $(OUTFILE)
 	$(CXX) -o $@ $< $(word 2,$^) $(EXEFLAGS) -I. -std=c++11 -Wno-shadow
 	$(call SGS_INSTALL_TOOL,$@)
 obj/cppbc_test.cpp: ext/sgscppbctest.h $(OUTDIR)/sgsvm$(BINEXT)

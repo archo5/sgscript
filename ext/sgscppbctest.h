@@ -1,6 +1,10 @@
 
 
 #include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+
 
 #define SGS_CPPBC_WITH_STD_STRING
 #define SGS_CPPBC_WITH_STD_VECTOR
