@@ -121,12 +121,7 @@ static void test_object_account()
 		// perform a transaction
 		{
 			sgsScope scope1( C );
-			sgs_PushProperty( C, aB.get_variable().var, "sendMoney" );
-			aB.push( C );
-			aA.push( C );
-			sgs_PushReal( C, 3.74 );
-			sgs_PushString( C, "EUR" );
-			sgs_ThisCall( C, 3, 1 ); // 1 `this`, 3 arguments, 1 function on stack
+			aB.get_variable().tthiscall<sgsCall_KeepOnStack>( C, "sendMoney", aA, 3.74, "EUR" );
 			sgs_GlobalCall( C, "print", 1, 0 ); // 1 argument on stack
 			
 			atf_assert( scope1.is_restored() );
@@ -150,13 +145,7 @@ static void test_object_account()
 		// context-awareness
 		{
 			SGS_SCOPE;
-			sgs_PushProperty( C, aA.get_variable().var, "coroAware" );
-			aA.push( C );
-			sgs_PushInt( C, 10 );
-			sgs_PushInt( C, 20 );
-			sgs_PushInt( C, 30 );
-			sgs_ThisCall( C, 3, 1 ); // 1 `this`, 3 arguments, 1 function on stack
-			int val = (int) sgs_GetInt( C, -1 );
+			int val = aA.get_variable().tthiscall<int>( C, "coroAware", 10, 20, 30 );
 			atf_assert( val == 62 );
 		}
 		
