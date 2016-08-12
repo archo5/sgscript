@@ -298,6 +298,20 @@ public:
 		}
 		return *this;
 	}
+	const sgsHandle& operator = ( T* obj )
+	{
+		if( object != obj->m_sgsObject )
+		{
+			_release();
+			if( obj->m_sgsObject )
+			{
+				object = obj->m_sgsObject;
+				C = obj->C;
+				_acquire();
+			}
+		}
+		return *this;
+	}
 	
 	operator T*(){ return object ? static_cast<T*>( object->data ) : NULL; }
 	operator const T*() const { return object ? static_cast<T*>( object->data ) : NULL; }

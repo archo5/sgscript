@@ -121,3 +121,25 @@ public:
 	}
 };
 
+
+struct XRef
+{
+	typedef sgsHandle< XRef > Handle;
+	SGS_OBJECT;
+	SGS_PROPERTY Handle other;
+	SGS_PROPERTY Handle other2;
+	
+	~XRef()
+	{
+		printf( "XRef(obj=%p, rc=%d) dtor\n", m_sgsObject, int(m_sgsObject->refcount) );
+		if( other.object )
+		{
+			printf( "- has other(obj=%p, rc=%d)\n", other.object, int(other.object->refcount) );
+		}
+		if( other2.object )
+		{
+			printf( "- has other2(obj=%p, rc=%d)\n", other2.object, int(other2.object->refcount) );
+		}
+	}
+};
+

@@ -167,6 +167,62 @@ static void test_object_account()
 	destroy_context( C );
 }
 
+static void test_object_xref()
+{
+	printf("> ");
+	puts( testname = "object test - xref" );
+	SGS_CTX = get_context();
+	puts( "- 2 xref'd objects" );
+	{
+		atf_assert( sgs_StackSize( C ) == 0 );
+		XRef* ra = SGS_CREATECLASS( C, NULL, XRef, () );
+		XRef* rb = SGS_CREATECLASS( C, NULL, XRef, () );
+		rb->other = ra;
+		ra->other = rb;
+		atf_assert( sgs_StackSize( C ) == 2 );
+		atf_assert( sgs_GetObjectStruct( C, 0 )->refcount == 2 );
+		atf_assert( sgs_GetObjectStruct( C, 1 )->refcount == 2 );
+		sgs_Pop( C, 2 );
+		atf_assert( sgs_StackSize( C ) == 0 );
+		sgs_GCExecute( C );
+	}
+	puts( "- 3 xref'd [2x] objects" );
+	{
+		atf_assert( sgs_StackSize( C ) == 0 );
+		XRef* ra = SGS_CREATECLASS( C, NULL, XRef, () );
+		XRef* rb = SGS_CREATECLASS( C, NULL, XRef, () );
+		XRef* rc = SGS_CREATECLASS( C, NULL, XRef, () );
+		ra->other = rb; ra->other2 = rc;
+		rb->other = rc; rb->other2 = ra;
+		rc->other = ra; rc->other2 = rb;
+		atf_assert( sgs_StackSize( C ) == 3 );
+		atf_assert( sgs_GetObjectStruct( C, 0 )->refcount == 3 );
+		atf_assert( sgs_GetObjectStruct( C, 1 )->refcount == 3 );
+		atf_assert( sgs_GetObjectStruct( C, 2 )->refcount == 3 );
+		sgs_Pop( C, 3 );
+		atf_assert( sgs_StackSize( C ) == 0 );
+		sgs_GCExecute( C );
+	}
+	puts( "- 3 xref'd [1x] objects" );
+	{
+		atf_assert( sgs_StackSize( C ) == 0 );
+		XRef* ra = SGS_CREATECLASS( C, NULL, XRef, () );
+		XRef* rb = SGS_CREATECLASS( C, NULL, XRef, () );
+		XRef* rc = SGS_CREATECLASS( C, NULL, XRef, () );
+		ra->other = rb;
+		rb->other = rc;
+		rc->other = ra;
+		atf_assert( sgs_StackSize( C ) == 3 );
+		atf_assert( sgs_GetObjectStruct( C, 0 )->refcount == 2 );
+		atf_assert( sgs_GetObjectStruct( C, 1 )->refcount == 2 );
+		atf_assert( sgs_GetObjectStruct( C, 2 )->refcount == 2 );
+		sgs_Pop( C, 3 );
+		atf_assert( sgs_StackSize( C ) == 0 );
+		sgs_GCExecute( C );
+	}
+	destroy_context( C );
+}
+
 int main( int argc, char** argv )
 {
 	printf( "\n//\n/// SGScript / CPPBC test\n//\n" );
@@ -177,6 +233,9 @@ int main( int argc, char** argv )
 	test_core_features();
 	test_object_vec3();
 	test_object_account();
+	test_object_xref();
+	
+	puts( "SUCCESS!" );
 	
 	return 0;
 }
