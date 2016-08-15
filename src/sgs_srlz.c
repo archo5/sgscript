@@ -68,38 +68,8 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 	_WRITE32( ctx->stack_top - ctx->stack_base );
 	_WRITE32( ctx->stack_off - ctx->stack_base );
 	_WRITE32( ctx->stack_mem );
-	_WRITE32( ctx->clstk_top - ctx->clstk_base );
-	_WRITE32( ctx->clstk_off - ctx->clstk_base );
-	_WRITE32( ctx->clstk_mem );
 	_WRITE32( ctx->sf_count );
 	_WRITE32( ctx->num_last_returned );
-	/* closures */
-	{
-		sgs_Closure** p = ctx->clstk_base;
-		while( p != ctx->clstk_top )
-		{
-			sgs_Closure** refp = ctx->clstk_base;
-			while( refp != p )
-			{
-				if( *refp == *p )
-					break;
-				refp++;
-			}
-			if( refp != p )
-			{
-				// found reference
-				sgs_Serialize( C, sgs_MakeNull() );
-				_WRITE32( refp - ctx->clstk_base );
-			}
-			else
-			{
-				// make new
-				sgs_Serialize( C, (*p)->var );
-				_WRITE32( -1 );
-			}
-			p++;
-		}
-	}
 	/* stack frames */
 	sf = ctx->sf_first;
 	while( sf )
@@ -122,7 +92,6 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 		_WRITE32( sf->argend );
 		_WRITE32( sf->argsfrom );
 		_WRITE32( sf->stkoff );
-		_WRITE32( sf->clsoff );
 		_WRITE32( sf->errsup );
 		_WRITE8( sf->argcount );
 		_WRITE8( sf->inexp );
@@ -134,8 +103,7 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 	if( argarray )
 	{
 		uint32_t argcount = (uint32_t)( 1 /* _G */
-			+ ( ctx->stack_top - ctx->stack_base ) /* stack */
-			+ ( ctx->clstk_top - ctx->clstk_base ) /* closure stack */ );
+			+ ( ctx->stack_top - ctx->stack_base ) /* stack */ );
 		sgs_membuf_appbuf( outbuf, C, &argcount, 4 );
 		sgs_membuf_appbuf( outbuf, C, argarray->ptr + argarray->size - argcount * 4, argcount * 4 );
 		sgs_membuf_erase( argarray, argarray->size - argcount * 4, argarray->size );
@@ -162,7 +130,7 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 #define _READ8( x ) { if( buf + 1 > bufend ) goto fail; x = (uint8_t) *buf++; }
 	
 	{
-		int32_t i, tag, stacklen, stackoff, clstklen, clstkoff, sfnum;
+		int32_t i, tag, stacklen, stackoff, sfnum;
 		
 		_READ32( tag );
 		if( tag != 0x5C057A7E )
@@ -176,9 +144,6 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 		_READ32( stacklen );
 		_READ32( stackoff );
 		_READ32( ctx->stack_mem );
-		_READ32( clstklen );
-		_READ32( clstkoff );
-		_READ32( ctx->clstk_mem );
 		_READ32( sfnum );
 		_READ32( ctx->num_last_returned );
 		
@@ -194,31 +159,6 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 		if( stackoff > stacklen )
 			goto fail;
 		ctx->stack_off = ctx->stack_base + stackoff;
-		
-		/* variables: closure stack */
-		sgs_BreakIf( ctx->clstk_top != ctx->clstk_base );
-		for( i = 0; i < clstklen; ++i )
-		{
-			int32_t clref;
-			/* POD: closures */
-			_READ32( clref );
-			if( clref >= 0 )
-			{
-				if( clref >= i )
-					goto fail;
-				// found reference
-				sgs_ClPushItem( ctx, clref );
-			}
-			else
-			{
-				// make new
-				sgs_ClPushVariable( ctx, sgs_StackItem( C, 1 + stacklen + i ) );
-			}
-		}
-		sgs_BreakIf( ctx->clstk_top != ctx->clstk_base + clstklen );
-		if( clstkoff > clstklen )
-			goto fail;
-		ctx->clstk_off = ctx->clstk_base + clstkoff;
 		
 		/* stack frames */
 		for( i = 0; i < sfnum; ++i )
@@ -258,7 +198,6 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 			_READ32( sf->argend );
 			_READ32( sf->argsfrom );
 			_READ32( sf->stkoff );
-			_READ32( sf->clsoff );
 			_READ32( sf->errsup );
 			_READ8( sf->argcount );
 			_READ8( sf->inexp );

@@ -114,11 +114,6 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	C->stack_off = C->stack_base;
 	C->stack_top = C->stack_base;
 	
-	C->clstk_mem = 32;
-	C->clstk_base = sgs_Alloc_n( sgs_Closure*, C->clstk_mem );
-	C->clstk_off = C->clstk_base;
-	C->clstk_top = C->clstk_base;
-	
 	C->sf_first = NULL;
 	C->sf_last = NULL;
 	C->sf_count = 0;
@@ -169,24 +164,6 @@ static void ctx_safedestroy( SGS_CTX )
 		C->stack_off = NULL;
 		C->stack_top = NULL;
 		C->stack_mem = 0;
-	}
-	
-	if( C->clstk_base )
-	{
-		while( C->clstk_base != C->clstk_top )
-		{
-			C->clstk_top--;
-			if( --(*C->clstk_top)->refcount < 1 )
-			{
-				sgs_Release( C, &(*C->clstk_top)->var );
-				sgs_Dealloc( *C->clstk_top );
-			}
-		}
-		sgs_Dealloc( C->clstk_base );
-		C->clstk_base = NULL;
-		C->clstk_off = NULL;
-		C->clstk_top = NULL;
-		C->clstk_mem = 0;
 	}
 	
 	sgsSTD_GlobalFree( C );
@@ -423,16 +400,13 @@ sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 	if( copystate == SGS_FALSE )
 	{
 		NC->stack_mem = 32;
-		NC->clstk_mem = 32;
 	}
 	
 	NC->stack_base = sgs_Alloc_n( sgs_Variable, NC->stack_mem );
-	NC->clstk_base = sgs_Alloc_n( sgs_Closure*, NC->clstk_mem );
 	
 	if( copystate == SGS_FALSE )
 	{
 		NC->stack_top = NC->stack_off = NC->stack_base;
-		NC->clstk_top = NC->clstk_off = NC->clstk_base;
 	}
 	else
 	{
@@ -444,39 +418,6 @@ sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 			sgs_Variable* vp = NC->stack_base, *vpend = NC->stack_top;
 			while( vp != vpend )
 				sgs_Acquire( C, vp++ );
-		}
-		
-		// WP: assuming top > base
-		NC->clstk_off = NC->clstk_base + ( C->clstk_off - C->clstk_base );
-		NC->clstk_top = NC->clstk_base + ( C->clstk_top - C->clstk_base );
-		{
-			// to each stack its own closures
-			sgs_Closure** cp = C->clstk_base, **cpend = C->clstk_top;
-			while( cp != cpend )
-			{
-				sgs_Closure** cpref = C->clstk_base;
-				while( cpref != cp )
-				{
-					if( *cpref == *cp )
-						break;
-					cpref++;
-				}
-				if( cpref != cp )
-				{
-					// found reference
-					NC->clstk_base[ cp - C->clstk_base ] = NC->clstk_base[ cpref - C->clstk_base ];
-					NC->clstk_base[ cp - C->clstk_base ]->refcount++;
-				}
-				else
-				{
-					// make new
-					sgs_Closure* cl = sgs_Alloc( sgs_Closure );
-					cl->refcount = 1;
-					cl->var = (*cp)->var;
-					sgs_Acquire( C, &cl->var );
-				}
-				cp++;
-			}
 		}
 	}
 	
@@ -1222,10 +1163,6 @@ static void _sgs_dumprsrc( SGS_SHCTX )
 			(int)( C->stack_top - C->stack_base ),
 			(int)( C->stack_off - C->stack_base ),
 			(int) C->stack_mem );
-		sgs_Writef( C, "- CLOSURE STACK (size=%d, off=%d, mem=%d)\n",
-			(int)( C->clstk_top - C->clstk_base ),
-			(int)( C->clstk_off - C->clstk_base ),
-			(int) C->clstk_mem );
 		sgs_Writef( C, "- call stack frame count: %d\n", (int) C->sf_count );
 		if( C->_T )
 		{

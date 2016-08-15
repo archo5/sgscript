@@ -281,8 +281,7 @@ typedef enum sgs_Instruction
 	SGS_SI_ARRPUSH,  /* (A:var, C:src)          push <src> into <var> */
 
 	/* closures */
-	SGS_SI_GENCLSR,  /* (A:N)                   generates closure variables for the stack frame */
-	SGS_SI_PUSHCLSR, /* (A:src)                 pick closure variable for closure creation */
+	SGS_SI_CLSRINFO, /* (metadata)              indices of closure variables to import */
 	SGS_SI_MAKECLSR, /* (A:out, B:from, C:N)    creates a closure object containing closure vars */
 	SGS_SI_GETCLSR,  /* (A:out, B:which)        loads data from the specified closure */
 	SGS_SI_SETCLSR,  /* (B:which, C:src)        stores data to the specified closure */
@@ -583,6 +582,8 @@ struct sgs_StackFrame
 	const uint32_t* iend;
 #endif
 	sgs_Variable*   cptr;
+	sgs_Closure**   clsrlist;
+	sgs_VarObj*     clsrref;
 	const char*     nfname;
 	sgs_StackFrame* prev;
 	sgs_StackFrame* next;
@@ -590,7 +591,6 @@ struct sgs_StackFrame
 	sgs_StkIdx argend;
 	sgs_StkIdx argsfrom;
 	sgs_StkIdx stkoff;
-	sgs_StkIdx clsoff;
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
 	int32_t constcount;
 #endif
@@ -598,6 +598,9 @@ struct sgs_StackFrame
 	uint8_t argcount;
 	uint8_t inexp;
 	uint8_t flags;
+#if SGS_DEBUG && SGS_DEBUG_VALIDATE
+	uint8_t clsrcount;
+#endif
 };
 
 typedef struct sgs_ShCtx sgs_ShCtx;
@@ -704,12 +707,6 @@ struct sgs_Context
 	sgs_VarPtr    stack_off;
 	sgs_VarPtr    stack_top;
 	
-	/* > closure pointer stack */
-	sgs_Closure** clstk_base;
-	sgs_Closure** clstk_off;
-	sgs_Closure** clstk_top;
-	uint32_t      clstk_mem;
-	
 	/* > stack frame info */
 	sgs_StackFrame* sf_first;
 	sgs_StackFrame* sf_last;
@@ -755,7 +752,7 @@ static const char* sgs_OpNames[] =
 	"ret1", "return", "jump", "jump_if_true", "jump_if_false", "jump_if_null", "call",
 	"for_prep", "for_load", "for_jump", "loadconst", "getvar", "setvar",
 	"getprop", "setprop", "getindex", "setindex", "arrpush",
-	"genclsr", "pushclsr", "makeclsr", "getclsr", "setclsr",
+	"clsrinfo", "makeclsr", "getclsr", "setclsr",
 	"set", "mconcat", "concat", "negate", "bool_inv", "invert",
 	"inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",
@@ -785,7 +782,7 @@ void sgsSTD_PostInit( SGS_CTX );
 SGSBOOL sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 SGSBOOL sgsSTD_MakeDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
 SGSBOOL sgsSTD_MakeMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt );
-void sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc );
+sgs_Closure** sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* out, sgs_Variable* func, size_t clc );
 void sgsSTD_ThreadsFree( SGS_CTX );
 void sgsSTD_ThreadsGC( SGS_CTX );
 void sgsSTD_RegistryInit( SGS_CTX );

@@ -329,8 +329,7 @@ static void dump_opcode( const sgs_instr_t* ptr, size_t count )
 		case SGS_SI_ARRPUSH: printf( "ARR_PUSH R%d <= ", argA );
 			dump_rcpos( argC ); break;
 
-		case SGS_SI_GENCLSR: printf( "GEN_CLSR %d", argA ); break;
-		case SGS_SI_PUSHCLSR: printf( "PUSH_CLSR %d", argA ); break;
+		case SGS_SI_CLSRINFO: printf( "CLSR_INFO %d %d %d", argA, argB, argC ); break;
 		case SGS_SI_MAKECLSR: printf( "MAKE_CLSR " ); dump_rcpos( argA );
 			printf( " <= " ); dump_rcpos( argB );
 			printf( " [%d]", argC ); break;
@@ -1519,6 +1518,7 @@ static SGSBOOL try_optimize_last_instr_out( SGS_FNTCMP_ARGS, size_t ioff, rcpos_
 		switch( op )
 		{
 		case SGS_SI_GETVAR: case SGS_SI_GETPROP: case SGS_SI_GETINDEX:
+		case SGS_SI_MAKECLSR: case SGS_SI_GETCLSR:
 		case SGS_SI_SET: case SGS_SI_CONCAT:
 		case SGS_SI_NEGATE: case SGS_SI_BOOL_INV: case SGS_SI_INVERT:
 		case SGS_SI_ADD: case SGS_SI_SUB: case SGS_SI_MUL: case SGS_SI_DIV: case SGS_SI_MOD:
@@ -1580,6 +1580,7 @@ static SGSBOOL try_optimize_set_op( SGS_CTX, sgs_CompFunc* func, size_t ioff, rc
 		switch( op )
 		{
 		case SGS_SI_GETVAR: case SGS_SI_GETPROP: case SGS_SI_GETINDEX:
+		case SGS_SI_MAKECLSR: case SGS_SI_GETCLSR:
 		case SGS_SI_SET: case SGS_SI_CONCAT:
 		case SGS_SI_NEGATE: case SGS_SI_BOOL_INV: case SGS_SI_INVERT:
 		case SGS_SI_ADD: case SGS_SI_SUB: case SGS_SI_MUL: case SGS_SI_DIV: case SGS_SI_MOD:
@@ -2120,10 +2121,8 @@ static void prefix_bytecode( SGS_CTX, sgs_CompFunc* func, int args )
 	if( C->fctx->outclsr > C->fctx->inclsr )
 	{
 		int i;
-		sgs_instr_t I = SGS_INSTR_MAKE( SGS_SI_GENCLSR, C->fctx->outclsr - C->fctx->inclsr, 0, 0 );
+		sgs_instr_t I;
 		uint16_t ln = 0;
-		sgs_membuf_appbuf( &ncode, C, &I, sizeof( I ) );
-		sgs_membuf_appbuf( &nlnbuf, C, &ln, sizeof( ln ) );
 
 		for( i = 0; i < args; ++i )
 		{
@@ -2188,7 +2187,7 @@ static int compile_fn_base( SGS_FNTCMP_ARGS, int args )
 		QPRINT( "Max. register count exceeded" );
 		return 0;
 	}
-	if( C->fctx->inclsr > 0xff )
+	if( C->fctx->outclsr > 0xff )
 	{
 		QPRINT( "Max. closure count exceeded" );
 		return 0;
@@ -2198,10 +2197,10 @@ static int compile_fn_base( SGS_FNTCMP_ARGS, int args )
 	
 	prefix_bytecode( C, func, args );
 	/* WP: closure limit */
-	func->numclsr = (uint8_t) C->fctx->inclsr;
+	func->numclsr = (uint8_t) C->fctx->outclsr;
 	
 #if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
-	fctx_dump( fctx );
+	fctx_dump( C->fctx );
 	sgsBC_Dump( func );
 #endif
 	
@@ -2241,17 +2240,32 @@ static SGSBOOL compile_func( SGS_FNTCMP_ARGS, rcpos_t* out )
 		*out = BC_CONSTENC( add_const_f( C, func, nf, ffn.ptr, ffn.size, sgsT_LineNum( node->token ) ) );
 		sgs_membuf_destroy( &ffn, C );
 		
-		if( fctx->inclsr > 0 )
+		if( fctx->outclsr > 0 )
 		{
 			int i;
 			rcpos_t ro = comp_reg_alloc( C );
-			sgs_FTNode* uli = n_uselist->child;
-			for( i = 0; i < fctx->inclsr; ++i )
-			{
-				INSTR_WRITE( SGS_SI_PUSHCLSR, find_varT( &bkfctx->clsr, uli->token ), 0, 0 );
-				uli = uli->next;
-			}
 			INSTR_WRITE( SGS_SI_MAKECLSR, ro, *out, fctx->inclsr );
+			if( fctx->inclsr )
+			{
+				sgs_FTNode* uli = n_uselist->child;
+				for( i = 0; i < fctx->inclsr; i += 3 )
+				{
+					int a, b = 0, c = 0;
+					a = find_varT( &bkfctx->clsr, uli->token );
+					uli = uli->next;
+					if( uli )
+					{
+						b = find_varT( &bkfctx->clsr, uli->token );
+						uli = uli->next;
+						if( uli )
+						{
+							c = find_varT( &bkfctx->clsr, uli->token );
+							uli = uli->next;
+						}
+					}
+					INSTR_WRITE( SGS_SI_CLSRINFO, a, b, c );
+				}
+			}
 			*out = ro;
 		}
 	}
@@ -3149,6 +3163,8 @@ fail:
 
 void sgsBC_Dump( sgs_CompFunc* func )
 {
+	printf( "function (this=%s args=%d tmp=%d clsr=%d)\n",
+		func->gotthis ? "Y" : "n", func->numargs, func->numtmp, func->numclsr );
 	sgsBC_DumpEx( func->consts.ptr, func->consts.size, func->code.ptr, func->code.size );
 }
 

@@ -109,9 +109,20 @@ fn = q(true,5);
 printvar( fn );
 println( fn() );
 gc_collect();
+q(true,6);
+printvar( fn );
+println( fn() );
+gc_collect();
 `
 result `SUCCESS`
 check_out `closure
+{
+  func: SGS function <anonymous>
+  #0 (rc=1): int (5)
+  #1 (rc=1): bool (true)
+}
+5
+closure
 {
   func: SGS function <anonymous>
   #0 (rc=1): int (5)

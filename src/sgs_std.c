@@ -1530,21 +1530,19 @@ SGS_APIFUNC sgs_ObjInterface sgsstd_closure_iface[1] =
 	sgsstd_closure_call, NULL
 }};
 
-void sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* func, uint32_t clc )
+sgs_Closure** sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* out, sgs_Variable* func, size_t clc )
 {
 	/* WP: range not affected by conversion */
-	uint32_t i, clsz = (uint32_t) sizeof(sgs_Closure*) * clc;
-	uint32_t memsz = clsz + (uint32_t) ( sizeof(sgs_Variable) + sizeof(int32_t) );
-	uint8_t* cl = (uint8_t*) sgs_CreateObjectIPA( C, NULL, memsz, sgsstd_closure_iface );
+	uint32_t clsz = (uint32_t) sizeof(sgs_Closure*) * clc;
+	uint32_t memsz = clsz + (uint32_t) ( sizeof(sgs_Variable) + sizeof(clc) );
+	uint8_t* cl = (uint8_t*) sgs_CreateObjectIPA( C, out, memsz, sgsstd_closure_iface );
 	
 	memcpy( cl, func, sizeof(sgs_Variable) );
 	sgs_Acquire( C, func );
 	
 	memcpy( cl + sizeof(sgs_Variable), &clc, sizeof(clc) );
 	
-	memcpy( cl + sizeof(sgs_Variable) + sizeof(clc), C->clstk_top - clc, clsz );
-	for( i = 0; i < clc; ++i )
-		(*(C->clstk_top - clc + i))->refcount++;
+	return (sgs_Closure**) ( cl + sizeof(sgs_Variable) + sizeof(clc) );
 }
 
 
