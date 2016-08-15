@@ -335,10 +335,9 @@ int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 	if( func->type == SGS_VT_OBJECT && func->data.O->iface == sgsstd_closure_iface )
 	{
 		uint8_t* cl = (uint8_t*) func->data.O->data;
-		size_t cc = *(size_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
 		F->clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(size_t),sizeof(void*));
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
-		F->clsrcount = (uint8_t) cc;
+		F->clsrcount = (uint8_t) *(size_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
 #endif
 		F->clsrref = func->data.O;
 		VAR_ACQUIRE( func );
