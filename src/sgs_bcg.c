@@ -42,6 +42,7 @@ typedef struct sgs_CompFunc
 	uint8_t numargs; /* guaranteed to be <= 255 by a test in `preparse_arglist` */
 	uint8_t numtmp; /* reg. count (0-255, incl. numargs) - numargs (0-255) */
 	uint8_t numclsr;
+	uint8_t inclsr;
 }
 sgs_CompFunc;
 
@@ -194,6 +195,7 @@ static sgs_FuncCtx* fctx_create( SGS_CTX )
 	fctx->cfunc.numargs = 0;
 	fctx->cfunc.numtmp = 0;
 	fctx->cfunc.numclsr = 0;
+	fctx->cfunc.inclsr = 0;
 	
 	return fctx;
 }
@@ -845,6 +847,7 @@ sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_CompFunc* nf,
 	F->numargs = nf->numargs;
 	F->numtmp = nf->numtmp;
 	F->numclsr = nf->numclsr;
+	F->inclsr = nf->inclsr;
 
 	{
 		size_t lnc = nf->lnbuf.size / sizeof( sgs_LineNum );
@@ -2198,6 +2201,7 @@ static int compile_fn_base( SGS_FNTCMP_ARGS, int args )
 	prefix_bytecode( C, func, args );
 	/* WP: closure limit */
 	func->numclsr = (uint8_t) C->fctx->outclsr;
+	func->inclsr = (uint8_t) C->fctx->inclsr;
 	
 #if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 	fctx_dump( C->fctx );
@@ -3163,8 +3167,8 @@ fail:
 
 void sgsBC_Dump( sgs_CompFunc* func )
 {
-	printf( "function (this=%s args=%d tmp=%d clsr=%d)\n",
-		func->gotthis ? "Y" : "n", func->numargs, func->numtmp, func->numclsr );
+	printf( "function (this=%s args=%d tmp=%d clsr=%d inclsr=%d)\n",
+		func->gotthis ? "Y" : "n", func->numargs, func->numtmp, func->numclsr, func->inclsr );
 	sgsBC_DumpEx( func->consts.ptr, func->consts.size, func->code.ptr, func->code.size );
 }
 

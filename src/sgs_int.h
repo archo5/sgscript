@@ -389,6 +389,7 @@ struct sgs_iFunc
 	uint8_t numargs;
 	uint8_t numtmp;
 	uint8_t numclsr;
+	uint8_t inclsr;
 	sgs_LineNum linenum;
 	sgs_LineNum* lineinfo;
 	sgs_iStr* sfuncname;

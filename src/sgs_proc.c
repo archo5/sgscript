@@ -342,6 +342,24 @@ int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 		F->clsrref = func->data.O;
 		VAR_ACQUIRE( func );
 		p_setvar_race( func, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) ) );
+		
+		if( func->type == SGS_VT_FUNC )
+		{
+			int i;
+			sgs_iFunc* fn = func->data.F;
+			for( i = fn->inclsr; i < fn->numclsr; ++i )
+			{
+				if( --F->clsrlist[ i ]->refcount <= 0 )
+				{
+					VAR_RELEASE( &F->clsrlist[ i ]->var );
+					sgs_Dealloc( F->clsrlist[ i ] );
+				}
+				sgs_Closure* nc = sgs_Alloc( sgs_Closure );
+				nc->refcount = 1;
+				nc->var.type = SGS_VT_NULL;
+				F->clsrlist[ i ] = nc;
+			}
+		}
 	}
 	else
 	{

@@ -194,6 +194,9 @@ static int _sgs_meta_dumpfn( SGS_CTX, sgs_iFunc* func )
 	sgs_PushString( C, "numclsr" );
 	sgs_PushInt( C, func->numclsr );
 	
+	sgs_PushString( C, "inclsr" );
+	sgs_PushInt( C, func->inclsr );
+	
 	strvar.type = SGS_VT_STRING;
 	
 	sgs_PushString( C, "name" );

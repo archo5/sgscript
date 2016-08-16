@@ -55,8 +55,28 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 	/* variables: stack */
 	{
 		sgs_Variable* p = ctx->stack_base;
+		sf = ctx->sf_first;
 		while( p != ctx->stack_top )
-			sgs_Serialize( C, *p++ );
+		{
+			/* if stack position equals frame function position and ..
+			.. frame has a closure ref., serialize closure instead of its func. */
+			int hasclsr = 0;
+			if( sf && sf->func == p )
+			{
+				if( sf->clsrref )
+				{
+					sgs_Variable vobj;
+					vobj.type = SGS_VT_OBJECT;
+					vobj.data.O = sf->clsrref;
+					sgs_Serialize( C, vobj );
+					hasclsr = 1;
+				}
+				/* next frames won't appear on stack before this position */
+				sf = sf->next;
+			}
+			if( !hasclsr )
+				sgs_Serialize( C, *p++ );
+		}
 	}
 	
 	_WRITE32( 0x5C057A7E ); /* Serialized COroutine STATE */
@@ -2216,6 +2236,7 @@ static const char* bc_read_varlist( decoder_t* D, sgs_Variable* vlist, int cnt )
 	byte numargs
 	byte numtmp
 	byte numclsr
+	byte inclsr
 	i16 linenum
 	i16[instrcount] lineinfo
 	i32 funcname_size
@@ -2227,7 +2248,7 @@ static int bc_write_sgsfunc( sgs_iFunc* F, SGS_CTX, sgs_MemBuf* outbuf )
 {
 	uint32_t size = F->sfuncname->size;
 	uint16_t cc, ic;
-	uint8_t gntc[4] = { F->gotthis, F->numargs, F->numtmp, F->numclsr };
+	uint8_t gntc[5] = { F->gotthis, F->numargs, F->numtmp, F->numclsr, F->inclsr };
 	
 	/* WP: const/instruction limits */
 	cc = (uint16_t) sgs_func_const_count( F );
@@ -2235,7 +2256,7 @@ static int bc_write_sgsfunc( sgs_iFunc* F, SGS_CTX, sgs_MemBuf* outbuf )
 
 	sgs_membuf_appbuf( outbuf, C, &cc, sizeof( cc ) );
 	sgs_membuf_appbuf( outbuf, C, &ic, sizeof( ic ) );
-	sgs_membuf_appbuf( outbuf, C, gntc, 4 );
+	sgs_membuf_appbuf( outbuf, C, gntc, 5 );
 	sgs_membuf_appbuf( outbuf, C, &F->linenum, sizeof( sgs_LineNum ) );
 	sgs_membuf_appbuf( outbuf, C, sgs_func_lineinfo( F ), sizeof( sgs_LineNum ) * ic );
 	sgs_membuf_appbuf( outbuf, C, &size, sizeof( size ) );
@@ -2287,13 +2308,14 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	SGS_AS_UINT8( F->numargs, D->buf + 5 );
 	SGS_AS_UINT8( F->numtmp, D->buf + 6 );
 	SGS_AS_UINT8( F->numclsr, D->buf + 7 );
-	SGS_AS_INT16( F->linenum, D->buf + 8 );
+	SGS_AS_UINT8( F->inclsr, D->buf + 8 );
+	SGS_AS_INT16( F->linenum, D->buf + 9 );
 	if( D->convend )
 		F->linenum = (sgs_LineNum) esi16( F->linenum );
 	F->lineinfo = sgs_Alloc_n( sgs_LineNum, ic );
 	F->sfuncname = NULL;
 	F->sfilename = NULL;
-	D->buf += 10;
+	D->buf += 11;
 	
 	ret = "data error (expected fn. line numbers)";
 	if( SGSNOMINDEC( sizeof( sgs_LineNum ) * ic ) )

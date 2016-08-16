@@ -118,8 +118,8 @@ result `SUCCESS`
 check_out `closure
 {
   func: SGS function <anonymous>
-  #0 (rc=1): int (5)
-  #1 (rc=1): bool (true)
+  #0 (rc=2): int (5)
+  #1 (rc=2): bool (true)
 }
 5
 closure
@@ -130,3 +130,20 @@ closure
 }
 5
 `
+
+// `serialization test`
+rec ``
+exec `
+q = function(b,x)
+{
+	y = true;
+	return function() use( x, y )
+	{
+		return x;
+	};
+};
+global sq = serialize(q);
+global sqi = serialize(q());`
+result `SUCCESS`
+check_out ``
+check_err ``
