@@ -143,7 +143,25 @@ q = function(b,x)
 	};
 };
 global sq = serialize(q);
-global sqi = serialize(q());`
+global sqi = serialize(q(true,5));`
 result `SUCCESS`
 check_out ``
 check_err ``
+
+// `unserialization test`
+rec ``
+exec `
+usq = unserialize(sq);
+usqi = unserialize(sqi);
+printvar(usqi());
+printvar(usq(true,7));`
+result `SUCCESS`
+check_err ``
+check_out `int (5)
+closure
+{
+  func: SGS function <anonymous> defined at <anonymous>:5
+  #0 (rc=2): int (7)
+  #1 (rc=2): bool (true)
+}
+`

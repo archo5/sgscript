@@ -2,6 +2,13 @@
 
 #include "sgs_int.h"
 
+#define SGS_DEBUG_SERIALIZE 0
+#if SGS_DEBUG_SERIALIZE
+#  define SRLZ_DEBUG( x ) x
+#else
+#  define SRLZ_DEBUG( x )
+#endif
+
 
 static int _serialize_function( SGS_CTX, sgs_iFunc* func, sgs_MemBuf* out )
 {
@@ -129,7 +136,7 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 		sgs_membuf_erase( argarray, argarray->size - argcount * 4, argarray->size );
 	}
 	
-	/* WP: string size */
+	SRLZ_DEBUG( printf( "SRLZ emit thread\n" ) );
 	sgs_membuf_appbuf( outbuf, C, buf.ptr, buf.size );
 	sgs_membuf_destroy( &buf, C );
 	
@@ -546,6 +553,8 @@ typedef struct sgs_serialize2_data
 }
 sgs_serialize2_data;
 
+#define SGS_VTSPC_CLOSURE 0xf0
+
 void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 {
 	int ret = SGS_TRUE;
@@ -555,6 +564,8 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 	
 	if( ep )
 	{
+		SRLZ_DEBUG( printf( "SRLZ == mode 2 START ==\n") );
+		
 		SD.mode = 2;
 		sgs_vht_init( &SD.servartable, C, 64, 64 );
 		SD.argarray = sgs_membuf_create();
@@ -564,6 +575,10 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 	}
 	pSD = (sgs_serialize2_data*) C->serialize_state;
 	
+	SRLZ_DEBUG( printf( "SRLZ var type=%d\n", (int) var.type ) );
+	SRLZ_DEBUG( if( var.type == SGS_VT_OBJECT ){
+		printf( "- object type: %s\n", var.data.O->iface->name ); } );
+	
 	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC ||
 		var.type == SGS_VT_FUNC || var.type == SGS_VT_THREAD )
 	{
@@ -571,6 +586,8 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
 		if( vv )
 		{
+			SRLZ_DEBUG( printf( "SRLZ repeated symbol\n" ) );
+			
 			argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
 			sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
 			goto fail;
@@ -580,6 +597,8 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 			sgs_Variable sym = sgs_MakeNull();
 			if( sgs_GetSymbol( C, var, &sym ) && sym.type == SGS_VT_STRING )
 			{
+				SRLZ_DEBUG( printf( "SRLZ new symbol\n" ) );
+				
 				sgs_SerializeInt_V2( C, sym );
 				if( pSD->argarray.size < 4 )
 				{
@@ -587,6 +606,9 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 					ret = SGS_FALSE;
 					goto fail;
 				}
+				
+				SRLZ_DEBUG( printf( "SRLZ emit symbol\n" ) );
+				
 				sgs_membuf_appchr( &pSD->data, C, 'S' );
 				sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
 				sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - sizeof(argidx), pSD->argarray.size );
@@ -605,18 +627,63 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		}
 	}
 	
-	if( var.type == SGS_VT_THREAD )
+	if( var.type == SGS_VTSPC_CLOSURE )
 	{
 		sgs_StkIdx argidx;
 		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
 		if( vv )
 		{
+			SRLZ_DEBUG( printf( "SRLZ repeated closure\n" ) );
+			
 			argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
 			sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
 			goto fail;
 		}
 		else
 		{
+			SRLZ_DEBUG( printf( "SRLZ new closure\n" ) );
+			
+			sgs_Closure* cl = (sgs_Closure*) var.data.P;
+			sgs_SerializeInt_V2( C, cl->var );
+			if( pSD->argarray.size < 4 )
+			{
+				/* error likely to be already printed */
+				ret = SGS_FALSE;
+				goto fail;
+			}
+			
+			SRLZ_DEBUG( printf( "SRLZ emit closure\n" ) );
+			
+			sgs_membuf_appchr( &pSD->data, C, 'C' );
+			sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
+			sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - sizeof(argidx), pSD->argarray.size );
+			
+			// create variable resolve
+			sgs_Variable idxvar;
+			argidx = sgs_vht_size( &pSD->servartable );
+			idxvar.type = SGS_VT_INT;
+			idxvar.data.I = argidx;
+			sgs_vht_set( &pSD->servartable, C, &var, &idxvar );
+			sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+			goto fail;
+		}
+	}
+	if( var.type == SGS_VT_THREAD )
+	{
+		sgs_StkIdx argidx;
+		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
+		if( vv )
+		{
+			SRLZ_DEBUG( printf( "SRLZ repeated thread\n" ) );
+			
+			argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
+			sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+			goto fail;
+		}
+		else
+		{
+			SRLZ_DEBUG( printf( "SRLZ new thread\n" ) );
+			
 			if( !sgs__thread_serialize( C, var.data.T, &pSD->data, &pSD->argarray ) )
 			{
 				sgs_Msg( C, SGS_ERROR, "failed to serialize thread" );
@@ -641,46 +708,119 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		sgs_VarObj* prevObj = pSD->curObj;
 		_STACK_PREPARE;
 		
-		if( MO )
+		if( O->iface == sgsstd_closure_iface )
 		{
-			size_t origsize = pSD->argarray.size;
-			(void) origsize;
+			/* serialize closure (data=sgs_Variable func,size_t n,sgs_Closure*[n]) */
+			sgs_StkIdx argidx;
+			sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
+			if( vv )
+			{
+				SRLZ_DEBUG( printf( "SRLZ repeated closure\n" ) );
+				
+				argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
+			}
+			else
+			{
+				char* ptr;
+				size_t i, count;
+				sgs_Closure** clsrlist;
+				
+				SRLZ_DEBUG( printf( "SRLZ new obj/closure\n" ) );
+				
+				ptr = (char*) O->data;
+				count = *(size_t*) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable), sizeof(size_t) );
+				clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable) + sizeof(size_t), sizeof(void*) );
+				
+				SRLZ_DEBUG( printf( "SRLZ obj/closure > func\n" ) );
+				sgs_SerializeInt_V2( C, *(sgs_Variable*) O->data );
+				for( i = 0; i < count; ++i )
+				{
+					SRLZ_DEBUG( printf( "SRLZ obj/closure > closure %d\n", (int) i ) );
+					sgs_Variable tmp;
+					tmp.type = SGS_VTSPC_CLOSURE;
+					tmp.data.P = clsrlist[ i ];
+					sgs_SerializeInt_V2( C, tmp );
+				}
+				
+				/* write closure */
+				{
+					int32_t args = (int32_t) count + 1;
+					size_t argsize = (size_t) args * sizeof(int32_t);
+					sgs_Variable idxvar;
+					char pb[5] = { 'Q', 0 };
+					{
+						/* WP: they were pointless */
+						pb[1] = (char)((args)&0xff);
+						pb[2] = (char)((args>>8)&0xff);
+						pb[3] = (char)((args>>16)&0xff);
+						pb[4] = (char)((args>>24)&0xff);
+					}
+					
+					SRLZ_DEBUG( printf( "SRLZ emit obj/closure\n" ) );
+					
+					sgs_membuf_appbuf( &pSD->data, C, pb, 5 );
+					sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - argsize, argsize );
+					
+					argidx = sgs_vht_size( &pSD->servartable );
+					idxvar.type = SGS_VT_INT;
+					idxvar.data.I = argidx;
+					sgs_vht_set( &pSD->servartable, C, &var, &idxvar );
+					sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - argsize, pSD->argarray.size );
+				}
+				sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+			}
+		}
+		else
+		{
+			SRLZ_DEBUG( printf( "SRLZ new object (%p/%p/%s)\n", O->data, O->iface, O->iface->name ) );
 			
-			sgs_SerializeInt_V2( C, sgs_MakeObjPtrNoRef( MO ) );
-			/* save position of target object */
-			SGS_AS_INT32( mo_arg, pSD->argarray.ptr + pSD->argarray.size - 4 );
-			/* remove the meta-object from arguments */
-			sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4, pSD->argarray.size );
-			/* check if argument array size was not changed */
-			sgs_BreakIf( origsize != pSD->argarray.size );
+			if( MO )
+			{
+				size_t origsize = pSD->argarray.size;
+				(void) origsize;
+				
+				SRLZ_DEBUG( printf( "SRLZ obj metaobj\n" ) );
+				
+				sgs_SerializeInt_V2( C, sgs_MakeObjPtrNoRef( MO ) );
+				/* save position of target object */
+				SGS_AS_INT32( mo_arg, pSD->argarray.ptr + pSD->argarray.size - 4 );
+				/* remove the meta-object from arguments */
+				sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4, pSD->argarray.size );
+				/* check if argument array size was not changed */
+				sgs_BreakIf( origsize != pSD->argarray.size );
+			}
+			
+			if( !O->iface->serialize )
+			{
+				SRLZ_DEBUG( printf( "- no callback\n" ) );
+				
+				sgs_Msg( C, SGS_WARNING, "Cannot serialize object of type '%s'", O->iface->name );
+				ret = SGS_FALSE;
+				goto fail;
+			}
+			pSD->curObj = O;
+			_STACK_PROTECT;
+			C->object_arg = 2;
+			pSD->metaObjArg = mo_arg;
+			ret = SGS_SUCCEEDED( O->iface->serialize( C, O ) );
+			pSD->metaObjArg = prev_mo_arg;
+			C->object_arg = parg;
+			_STACK_UNPROTECT;
+			pSD->curObj = prevObj;
+			if( ret == SGS_FALSE )
+				goto fail;
 		}
-		
-		if( !O->iface->serialize )
-		{
-			sgs_Msg( C, SGS_WARNING, "Cannot serialize object of type '%s'", O->iface->name );
-			ret = SGS_FALSE;
-			goto fail;
-		}
-		pSD->curObj = O;
-		_STACK_PROTECT;
-		C->object_arg = 2;
-		pSD->metaObjArg = mo_arg;
-		ret = SGS_SUCCEEDED( O->iface->serialize( C, O ) );
-		pSD->metaObjArg = prev_mo_arg;
-		C->object_arg = parg;
-		_STACK_UNPROTECT;
-		pSD->curObj = prevObj;
-		if( ret == SGS_FALSE )
-			goto fail;
 	}
 	else if( var.type == SGS_VT_CFUNC )
 	{
+		SRLZ_DEBUG( printf( "SRLZ cfunc BAD\n" ) );
 		sgs_Msg( C, SGS_WARNING, "Cannot serialize C functions" );
 		ret = SGS_FALSE;
 		goto fail;
 	}
 	else if( var.type == SGS_VT_PTR )
 	{
+		SRLZ_DEBUG( printf( "SRLZ ptr BAD\n" ) );
 		sgs_Msg( C, SGS_WARNING, "Cannot serialize pointers" );
 		ret = SGS_FALSE;
 		goto fail;
@@ -690,7 +830,10 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		sgs_StkIdx argidx;
 		sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &var );
 		if( vv )
+		{
+			SRLZ_DEBUG( printf( "SRLZ repeated basic type (%d)\n", (int) var.type ) );
 			argidx = (sgs_StkIdx) ( vv - pSD->servartable.vars );
+		}
 		else
 		{
 			sgs_Variable idxvar;
@@ -700,6 +843,8 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 				/* WP: basetype limited to bits 0-7, sign interpretation does not matter */
 				pb[1] = (char) var.type;
 			}
+			
+			SRLZ_DEBUG( printf( "SRLZ new basic type (%d)\n", (int) var.type ) );
 			
 			argidx = sgs_vht_size( &pSD->servartable );
 			idxvar.type = SGS_VT_INT;
@@ -745,10 +890,14 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 fail:
 	if( ep )
 	{
+		SRLZ_DEBUG( printf( "SRLZ -- mode 2 AT END --\n" ) );
+		
 		if( SD.argarray.size == 0 )
 			ret = 0;
 		else
 		{
+			SRLZ_DEBUG( printf( "SRLZ emit return\n" ) );
+			
 			sgs_membuf_appchr( &SD.data, C, 'R' );
 			sgs_membuf_appbuf( &SD.data, C, SD.argarray.ptr + SD.argarray.size - 4, 4 );
 		}
@@ -984,6 +1133,69 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			}
 			sgs_SetStackSize( C, subsz );
 			str += fnsz;
+		}
+		else if( c == 'C' )
+		{
+			/* single closure (sgs_Closure* in P) */
+			sgs_Closure* clsr;
+			int32_t pos;
+			if( str > strend-4 && !sgs_unserr_incomp( C ) )
+				goto fail;
+			SGS_AS_INT32( pos, str );
+			str += 4;
+			clsr = sgs_Alloc( sgs_Closure );
+			clsr->refcount = 0;
+			clsr->var = ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ];
+			sgs_Acquire( C, &clsr->var );
+			var.type = SGS_VTSPC_CLOSURE;
+			var.data.P = clsr;
+		}
+		else if( c == 'Q' )
+		{
+			/* closure object */
+			int32_t i, pos, argc;
+			sgs_Variable funcvar;
+			sgs_Closure* clsrlist[ 256 ];
+			if( str > strend-4 && !sgs_unserr_incomp( C ) )
+				goto fail;
+			SGS_AS_INT32( argc, str );
+			str += 4;
+			for( i = 0; i < argc; ++i )
+			{
+				sgs_Variable* vp;
+				if( str > strend-4 && !sgs_unserr_incomp( C ) )
+					goto fail;
+				SGS_AS_INT32( pos, str );
+				str += 4;
+				if( pos < 0 || (size_t) pos >= mb.size / sizeof(sgs_Variable) )
+				{
+					sgs_unserr_error( C );
+					goto fail;
+				}
+				
+				vp = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ];
+				if( i == 0 )
+					funcvar = *vp;
+				else
+				{
+					if( vp->type != SGS_VTSPC_CLOSURE )
+					{
+						sgs_unserr_error( C );
+						goto fail;
+					}
+					clsrlist[ i - 1 ] = vp->data.P;
+				}
+			}
+			
+			/* create the closure object */
+			{
+				sgs_Closure** outclsrlist = sgsSTD_MakeClosure( C, &var, &funcvar, (size_t) argc - 1 );
+				for( i = 0; i < argc - 1; ++i )
+				{
+					outclsrlist[ i ] = clsrlist[ i ];
+					clsrlist[ i ]->refcount++;
+				}
+			}
 		}
 		else if( c == 'T' )
 		{

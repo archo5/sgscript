@@ -220,6 +220,7 @@ static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
 		return 0;
 	switch( v1->type )
 	{
+	case SGS_VT_NULL: return 1;
 	case SGS_VT_BOOL: return v1->data.B == v2->data.B;
 	case SGS_VT_INT: return v1->data.I == v2->data.I;
 	case SGS_VT_REAL: return v1->data.R == v2->data.R;
@@ -237,7 +238,7 @@ static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
 	case SGS_VT_PTR: return v1->data.P == v2->data.P;
 	case SGS_VT_THREAD: return v1->data.T == v2->data.T;
 	}
-	return 1;
+	return v1->data.P == v2->data.P;
 }
 
 
