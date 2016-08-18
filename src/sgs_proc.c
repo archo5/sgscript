@@ -2148,6 +2148,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 		/* WP (x4): stack size limit */
 		C->sf_last->argbeg = (StkIdx) stkcallbase;
 		C->sf_last->argend = (StkIdx) ( C->stack_top - C->stack_base );
+		C->sf_last->argsfrom = (StkIdx) stkcallbase - 1;
 		C->sf_last->stkoff = (StkIdx) stkoff;
 		/* WP: argument count limit */
 		C->sf_last->argcount = (uint8_t) args;
@@ -4311,6 +4312,16 @@ static void sgsVM_GCExecute( SGS_SHCTX )
 		vbeg = C->stack_base; vend = C->stack_top;
 		while( vbeg < vend )
 			vm_gcmark( C, vbeg++ );
+		/* FRAMES */
+		{
+			sgs_StackFrame* sf = C->sf_first;
+			while( sf )
+			{
+				if( sf->clsrref )
+					sgs_ObjGCMark( C, sf->clsrref );
+				sf = sf->next;
+			}
+		}
 		
 		/* GLOBALS */
 		sgsSTD_GlobalGC( C );

@@ -31,7 +31,7 @@ static void skipcomment( SGS_CTX, sgs_MemBuf* out, sgs_LineNum* line, const char
 		i++;
 		while( i < length && code[ i ] != '\n' && code[ i ] != '\r' )
 			i++;
-		if( code[ i ] == '\r' && code[ i + 1 ] == '\n' )
+		if( i + 1 < length && code[ i ] == '\r' && code[ i + 1 ] == '\n' )
 			i++;
 		(*line)++;
 		*at = i;

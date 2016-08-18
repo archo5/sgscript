@@ -1376,7 +1376,7 @@ DEFINE_TEST( hash_table )
 	atf_assert( symbol_table_stats.removed == 0 ); /* must not have any initial removals in table */
 	atf_assert( symbol_table_stats.collisions * 2 < symbol_table_stats.used ); /* less than 50% collisions out of all used items */
 	atf_assert( symbol_table_stats.collisions * 4 < symbol_table_stats.buckets ); /* less than 25% collisions out of all buckets */
-	atf_assert( symbol_table_stats.worst_probe_length <= 12 ); /* small worst probe length */
+	atf_assert( symbol_table_stats.worst_probe_length <= 16 ); /* small worst probe length */
 	atf_assert( symbol_table_stats.avg_probe_length < 1.8f ); /* small average probe length */
 	
 	if( verbose >= 1 ) printf( "\n--- random table (100000 base64'd numbers) ---\n" );

@@ -41,6 +41,10 @@ result `SUCCESS`
 check_err ``
 check_out `function`
 
+// `line comment ends with EOF`
+exec `a = 5;
+// this test is for memory checkers`
+
 // `comment that doesn't end`
 rec ``
 exec `a; /* `

@@ -53,6 +53,7 @@ int calc_disp( const char* nameonly )
 	if( strncmp( nameonly, "s_", 2 ) == 0 ) disp = 1;
 	if( strncmp( nameonly, "f_", 2 ) == 0 ) disp = -1;
 	if( strstr( nameonly, "MT" ) != NULL ) disp = 1;
+	if( strstr( nameonly, "TF" ) != NULL ) disp = 1;
 	return disp;
 }
 
@@ -374,7 +375,14 @@ static void exec_test( const char* fname, const char* nameonly )
 			}
 			else if( strcmp( ident_start, "exec" ) == 0 )
 			{
-				lastexec = sgs_ExecString( C, decoded_value );
+				/* to detect buffer overruns in compilation ..
+				.. using memory checking tools, allocate a new buffer ..
+				.. with the exact size of the data */
+				size_t len = strlen( decoded_value );
+				char* bc = malloc( len );
+				memcpy( bc, decoded_value, len );
+				lastexec = sgs_ExecBuffer( C, bc, len );
+				free( bc );
 			}
 			else if( strcmp( ident_start, "result" ) == 0 )
 			{
