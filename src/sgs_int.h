@@ -697,7 +697,9 @@ struct sgs_Context
 	/* virtual machine */
 	/* > coop micro-threading */
 	sgs_Context*  parent; /* owning (parent) context */
-	sgs_VarObj*   _T; /* subthreads */
+	sgs_Context*  subthreads; /* owned contexts */
+	sgs_Context*  st_next; /* next owned context of parent */
+	sgs_Real      st_timeout;
 	sgs_VarObj*   _E; /* end events */
 	sgs_Real      wait_timer; /* sync/race */
 	sgs_Real      tm_accum; /* delta time accumulator for yield return */

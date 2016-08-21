@@ -2734,17 +2734,7 @@ sgs_Context* sgs_TopmostContext( SGS_CTX )
 	return C;
 }
 
-static void sgs__check_threadtbl( SGS_CTX )
-{
-	sgs_Variable thrtbl;
-	if( C->_T )
-		return;
-	
-	sgsSTD_MakeMap( C, &thrtbl, 0 );
-	C->_T = thrtbl.data.O;
-}
-
-void sgs_CreateSubthread( sgs_Context* T, SGS_CTX,
+void sgs_CreateSubthread( sgs_Context* parent_thread, SGS_CTX,
 	sgs_Variable* out, sgs_StkIdx args, int gotthis )
 {
 	sgs_Real waittime = 0;
@@ -2752,7 +2742,7 @@ void sgs_CreateSubthread( sgs_Context* T, SGS_CTX,
 	sgs_Context* co_ctx;
 	
 	/* call the function */
-	co_ctx = sgsCTX_ForkState( T, 0 );
+	co_ctx = sgsCTX_ForkState( parent_thread, 0 );
 	stk_mpush( co_ctx, stk_ptop( C, -num ), num );
 	sgs_FCall( co_ctx, args, 1, gotthis );
 	
@@ -2760,17 +2750,14 @@ void sgs_CreateSubthread( sgs_Context* T, SGS_CTX,
 	sgs_Pop( co_ctx, 1 );
 	
 	/* register thread if not done */
-	sgs_BreakIf( co_ctx->refcount != 0 );
 	if( co_ctx->sf_last && ( co_ctx->sf_last->flags & SGS_SF_PAUSED ) )
 	{
-		sgs_Variable varT, varSubT;
-		sgs__check_threadtbl( T );
-		varT.type = SGS_VT_OBJECT;
-		varT.data.O = T->_T;
-		varSubT.type = SGS_VT_THREAD;
-		varSubT.data.T = co_ctx;
-		sgs_SetIndex( C, varT, varSubT, sgs_MakeReal( waittime ), SGS_FALSE );
-		co_ctx->parent = T;
+		co_ctx->parent = parent_thread;
+		co_ctx->st_next = parent_thread->subthreads;
+		co_ctx->st_timeout = waittime;
+		parent_thread->subthreads = co_ctx;
+		
+		co_ctx->refcount++; /* acquire */
 	}
 	if( out )
 		sgs_InitThreadPtr( out, co_ctx );
@@ -2814,74 +2801,74 @@ static int sgs__anyevent( SGS_CTX )
 	return 0;
 }
 
+#define THREAD_RELEASE( T ) if(--(T)->refcount <= 0){ sgsCTX_FreeState( T ); }
+
 int sgs_ProcessSubthreads( SGS_CTX, sgs_Real dt )
 {
+	int numleft = 0;
+	sgs_Context** pst;
+	
 	C->wait_timer += dt;
-	if( C->_T )
+	for( pst = &C->subthreads; *pst != NULL; )
 	{
-		sgs_VHTIdx i;
-		sgs_VHTable* ht = &((DictHdr*)C->_T->data)->ht;
-		for( i = 0; i < ht->size; ++i )
+		sgs_Context* thctx = *pst;
+		
+		sgs_ProcessSubthreads( thctx, dt );
+		thctx->st_timeout -= dt;
+		thctx->tm_accum += dt;
+		
+		if( sgs__anyevent( thctx ) )
 		{
-			sgs_VHTVar* v = &ht->vars[ i ];
-			sgs_Context* thctx = v->key.data.T;
-			sgs_ProcessSubthreads( thctx, dt );
-			v->val.data.R -= dt;
-			thctx->tm_accum += dt;
-			if( sgs__anyevent( thctx ) )
-			{
-				sgs_Abort( thctx );
-			}
-			else if( v->val.data.R <= 0 )
-			{
-				sgs_PushReal( thctx, thctx->tm_accum );
-				thctx->tm_accum = 0;
-				sgs_ResumeStateExp( thctx, 1, 1 );
-				v->val.data.R = sgs_GetReal( thctx, -1 );
-				sgs_Pop( thctx, 1 );
-			}
-			if( thctx->sf_last == NULL || ( thctx->sf_first->flags & SGS_SF_ABORTED ) )
-			{
-				thctx->parent = NULL;
-				sgs_vht_unset( ht, C, &v->key );
-				i--; /* unset replaces current element in array with last */
-			}
+			sgs_Abort( thctx );
 		}
-		return ht->size;
+		else if( thctx->st_timeout <= 0 )
+		{
+			sgs_PushReal( thctx, thctx->tm_accum );
+			thctx->tm_accum = 0;
+			sgs_ResumeStateExp( thctx, 1, 1 );
+			thctx->st_timeout = sgs_GetReal( thctx, -1 );
+			fstk_pop1( thctx );
+		}
+		
+		if( thctx->sf_last == NULL || ( thctx->sf_first->flags & SGS_SF_ABORTED ) )
+		{
+			*pst = thctx->st_next;
+			thctx->parent = NULL;
+			thctx->st_next = NULL;
+			THREAD_RELEASE( thctx );
+		}
+		else
+		{
+			pst = &(*pst)->st_next;
+			numleft++;
+		}
 	}
-	return 0;
+	return numleft;
 }
 
 void sgsSTD_ThreadsFree( SGS_CTX )
 {
-	if( C->_T )
+	sgs_Context* thctx = C->subthreads, *next;
+	C->subthreads = NULL;
+	for( ; thctx != NULL; thctx = next )
 	{
-		sgs_VHTIdx i;
-		sgs_VHTable* ht = &((DictHdr*)C->_T->data)->ht;
-		for( i = 0; i < ht->size; ++i )
-		{
-			sgs_VHTVar* v = &ht->vars[ i ];
-			sgs_Context* thctx = v->key.data.T;
-			thctx->parent = NULL;
-			sgs_vht_unset( ht, C, &v->key );
-			i--; /* unset replaces current element in array with last */
-		}
-		sgs_BreakIf( C->_T->refcount != 1 );
-		sgs_ObjRelease( C, C->_T );
-		C->_T = NULL;
+		next = thctx->st_next;
+		thctx->parent = NULL; /* don't want next 'if' to be triggered for 'thctx' */
+		THREAD_RELEASE( thctx );
 	}
 	if( C->parent )
 	{
-		sgs_Context* PC = C->parent;
-		sgs_VHTable* ht = &((DictHdr*)C->parent->_T->data)->ht;
-		sgs_Variable selfkey;
-		selfkey.type = SGS_VT_THREAD;
-		selfkey.data.T = C;
-		C->parent = NULL;
-		PC->refcount++; /* prevent freeing of parent during the following operation */
-		sgs_vht_unset( ht, PC, &selfkey );
-		PC->refcount--;
-		if( PC->refcount == 0 )
+		sgs_Context* PC = C->parent, **pst;
+		for( pst = &PC->subthreads; *pst != NULL; pst = &(*pst)->st_next )
+		{
+			if( *pst == C )
+			{
+				*pst = C->st_next;
+				break;
+			}
+		}
+		C->refcount--;
+		if( PC->refcount <= 0 )
 			sgsCTX_FreeState( PC );
 	}
 	if( C->_E )
@@ -2893,10 +2880,6 @@ void sgsSTD_ThreadsFree( SGS_CTX )
 
 void sgsSTD_ThreadsGC( SGS_CTX )
 {
-	if( C->_T )
-	{
-		sgs_ObjGCMark( C, C->_T );
-	}
 	if( C->_E )
 	{
 		sgs_ObjGCMark( C, C->_E );

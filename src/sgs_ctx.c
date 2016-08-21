@@ -104,7 +104,9 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	C->filename = NULL;
 	
 	C->parent = NULL;
-	C->_T = NULL;
+	C->subthreads = NULL;
+	C->st_next = NULL;
+	C->st_timeout = 0;
 	C->_E = NULL;
 	C->wait_timer = 0;
 	C->tm_accum = 0;
@@ -304,7 +306,7 @@ void sgs_DestroyEngine( SGS_CTX )
 			cur->refcount--;
 			cur = cur->next;
 		}
-		sgs_GCExecute( S->state_list );
+		sgs_GCExecute( C );
 		C->refcount--; /* allow freeing the engine context again now */
 		cur = S->state_list;
 		while( cur != NULL )
@@ -392,7 +394,9 @@ sgs_Context* sgsCTX_ForkState( SGS_CTX, int copystate )
 	NC->hook_fn = NULL; /* not shareable */
 	NC->hook_ctx = NULL; /* not shareable */
 	NC->parent = NULL; /* not shareable */
-	NC->_T = NULL; /* not shareable */
+	NC->subthreads = NULL; /* not shareable */
+	NC->st_next = NULL; /* not shareable */
+	NC->st_timeout = 0; /* not shareable */
 	NC->_E = NULL; /* not shareable */
 	NC->wait_timer = 0;
 	
@@ -1165,14 +1169,16 @@ static void _sgs_dumprsrc( SGS_SHCTX )
 			(int)( C->stack_off - C->stack_base ),
 			(int) C->stack_mem );
 		sgs_Writef( C, "- call stack frame count: %d\n", (int) C->sf_count );
-		if( C->_T )
+		if( C->subthreads )
 		{
-			tbl = (sgs_VHTable*) C->_T->data;
-			sgs_Writef( C, "- SUBTHREADS: (%d)\n", (int) tbl->size );
-			for( i = 0; i < tbl->size; ++i )
+			int count = 0;
+			sgs_Context* st;
+			for( st = C->subthreads; st != NULL; st = st->st_next )
+				count++;
+			sgs_Writef( C, "- SUBTHREADS: (%d)\n", count );
+			for( st = C->subthreads; st != NULL; st = st->st_next )
 			{
-				sgs_Writef( C, "- - %p (timeout: %g)\n",
-					tbl->vars[ i ].key.data.T, tbl->vars[ i ].val.data.R );
+				sgs_Writef( C, "- - %p (timeout: %g)\n", st, st->st_timeout );
 			}
 		}
 		else sgs_Writef( C, "- SUBTHREADS: 0\n" );
