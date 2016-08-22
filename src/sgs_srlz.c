@@ -2202,11 +2202,12 @@ const char* sgson_parse( SGS_CTX, sgs_MemBuf* stack, const char* buf, sgs_SizeVa
 					sgs_PushVariable( C, marker ); /* marker for beginning of function */
 					sgs_PushStringBuf( C, idstart, (sgs_SizeVal)( idend - idstart ) );
 				}
-				else /* map{..} */
+				else if( idend - idstart == 3 && memcmp( idstart, "map", 3 ) == 0 )
 				{
 					SGSON_STK_PUSH( '{' );
 					sgs_CreateMap( C, NULL, 0 );
 				}
+				else return pos;
 			}
 		}
 		else

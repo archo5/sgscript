@@ -28,7 +28,7 @@ testEqual( fmt_custom_encode( 'a"b c\nd', "^ !#-~", '""\\x', FMT_NUMBER_HEX, 2, 
 testEqual( ERRORS, "", "- no errors" );
 
 	section( "fmt_file_parser" );
-f = io_file( "tests/!API_TF_fmt.sgs", FILE_READ );
+f = io_file( "tests/730-fmt_TF.sgs", FILE_READ );
 testEqual( typeof(f), "file", "file was loaded?" );
 fp = fmt_file_parser( f );
 testEqual( typeof(fp), "fmtstream", "file-reading input stream was created?" );

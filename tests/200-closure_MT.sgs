@@ -1,6 +1,6 @@
 
 // `closure`
-rec_out ``
+rec ``
 exec `
 str1 = "banana";
 dafuq = function( pre ) use( str1 ){ println( pre, str1 ); };
@@ -12,12 +12,13 @@ obj = { text = "that is ", func = dafuq2 };
 obj.func();
 `
 result `SUCCESS`
+check_err ``
 check_out `this is banana
 that is apple
 `
 
 // `closure 2`
-rec_out ``
+rec ``
 exec `
 x = 5;
 
@@ -30,10 +31,11 @@ y( 4 );
 print( x );
 `
 result `SUCCESS`
+check_err ``
 check_out `9`
 
 // `closure - pass through`
-rec_out ``
+rec ``
 exec `
 x = 5;
 fn = function( a ) use( x )
@@ -49,10 +51,11 @@ fn( 4 );
 print(x);
 `
 result `SUCCESS`
+check_err ``
 check_out `24`
 
 // `closure - reference self (function)`
-rec_out ``
+rec ``
 exec `
 function fn( a ) use(fn)
 {
@@ -64,10 +67,11 @@ function fn( a ) use(fn)
 print( fn(0) );
 `
 result `SUCCESS`
+check_err ``
 check_out `11`
 
 // `closure - reference global (and fail)`
-rec_out ``
+rec ``
 exec `
 global x = 5;
 fn = function( a ) use( x )
@@ -78,10 +82,11 @@ fn( 4 );
 print(x);
 `
 result `ECOMP`
+check_err `[E:[line 2] Variable storage redefined: closure -> global]`
 check_out ``
 
 // `closure + thiscall`
-rec_out ``
+rec ``
 exec `
 a = 5;
 function fn1( x ) use( a )
@@ -92,10 +97,11 @@ true!fn1( "arg1" );
 fn1.apply( false, [ "arg2" ]);
 `
 result `SUCCESS`
+check_err ``
 check_out `true|arg1|5|false|arg2|5|`
 
 // `extended closure test`
-rec_out ``
+rec ``
 exec `
 q = function(b,x)
 {
@@ -115,6 +121,7 @@ println( fn() );
 gc_collect();
 `
 result `SUCCESS`
+check_err ``
 check_out `closure
 {
   func: SGS function <anonymous>
@@ -163,5 +170,54 @@ closure
   func: SGS function <anonymous> defined at <anonymous>:5
   #0 (rc=2): int (7)
   #1 (rc=2): bool (true)
+}
+`
+
+// `self-ref. closure serialize`
+rec ``
+exec `
+function fn( a ) use(fn)
+{
+	if( a >= 10 )
+		return a + 1;
+	else
+		return fn( a + 2 );
+}
+println( fn(0) );
+printvar_ext(fn,2);
+global sqsr = serialize(fn);
+`
+result `SUCCESS`
+check_err ``
+check_out `11
+closure
+{
+  func: SGS function 'fn'
+  #0 (rc=2): closure
+  {
+    func: ...
+    #0 (rc=2): ...
+  }
+}
+`
+
+// `self-ref. closure unserialize`
+rec ``
+exec `
+usqsr = unserialize(sqsr);
+println( usqsr(0) );
+printvar_ext(usqsr,2);
+`
+result `SUCCESS`
+check_err ``
+check_out `11
+closure
+{
+  func: SGS function 'fn'
+  #0 (rc=1): closure
+  {
+    func: ...
+    #0 (rc=1): ...
+  }
 }
 `
