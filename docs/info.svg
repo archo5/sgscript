@@ -14,7 +14,7 @@
    inkscape:version="0.91 r13725"
    version="1.1"
    id="svg2"
-   height="1215.0188"
+   height="1358.0188"
    width="2282.8806">
   <sodipodi:namedview
      inkscape:snap-bbox="true"
@@ -32,9 +32,9 @@
      showgrid="false"
      inkscape:current-layer="layer1"
      inkscape:document-units="px"
-     inkscape:cy="271.13835"
-     inkscape:cx="2106.0446"
-     inkscape:zoom="2.8284271"
+     inkscape:cy="331.78895"
+     inkscape:cx="942.30225"
+     inkscape:zoom="1"
      inkscape:pageshadow="2"
      inkscape:pageopacity="0.0"
      borderopacity="1.0"
@@ -54,8 +54,8 @@
        enabled="true"
        snapvisiblegridlinesonly="false"
        dotted="true"
-       originx="1.0000004"
-       originy="416.64826" />
+       originx="1.0000006"
+       originy="559.64826" />
   </sodipodi:namedview>
   <defs
      id="defs4">
@@ -102,6 +102,19 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(73.906101,-585.49658)">
+    <path
+       sodipodi:nodetypes="cc"
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 497.5939,1822.2507 119.43503,0"
+       id="path13443"
+       inkscape:connector-curvature="0" />
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect13417"
+       width="537"
+       height="538.64819"
+       x="482.5939"
+       y="1372.3672" />
     <rect
        style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="rect3556"
@@ -1586,7 +1599,7 @@
            id="tspan4522" /></tspan><tspan
          sodipodi:role="line"
          x="919.09387"
-         y="-1.#QNAN"
+         y="0"
          id="tspan4524"><tspan
            x="919.09387"
            y="1316.0814"
@@ -2655,7 +2668,7 @@
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="93.55484"
-         y="1.#INF"
+         y="0"
          id="tspan4588"><tspan
            x="-28.906101"
            y="1425.8672"
@@ -2693,7 +2706,7 @@
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="63.437649"
-         y="0"
+         y="1.#INF"
          id="tspan4605"><tspan
            x="-28.906101"
            y="1455.8672"
@@ -2780,7 +2793,7 @@
    style="font-weight:bold">destroy(thread)</tspan> = release(? * (stack size + 1[_G])) + destroy subthreads</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none"
        x="-28.906101"
        y="1650.8673"
        id="text4643"
@@ -2791,7 +2804,7 @@
          id="tspan4645"><tspan
            x="-28.906101"
            y="1545.8672"
-           style="fill:#ff0000;"
+           style="fill:#ff0000"
            id="tspan4647"
            dx="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0">    + detach from parent thread, if any</tspan></tspan></text>
     <text
@@ -2819,7 +2832,7 @@
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="25.398586"
-         y="0"
+         y="1.#INF"
          id="tspan4657"><tspan
            x="-28.906101"
            y="1575.8672"
@@ -2875,7 +2888,7 @@
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="25.492336"
-         y="1.#INF"
+         y="0"
          id="tspan4679"><tspan
            x="-28.906101"
            y="1620.8673"
@@ -2911,7 +2924,7 @@
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="25.492336"
-         y="0"
+         y="1.#INF"
          id="tspan4693"><tspan
            x="-28.906101"
            y="1650.8673"
@@ -2923,7 +2936,7 @@
            id="tspan4697"> = reference type test &amp; jump + if is reference type: increment *pRC</tspan></tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#00d400;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#00d400;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        x="-29.082878"
        y="1664.6874"
        id="text6840"
@@ -2932,20 +2945,20 @@
          x="-29.082878"
          y="1664.6874"
          id="tspan6842"><tspan
-           style="fill:#00d400;"
+           style="fill:#00d400"
            x="-29.082878"
            y="1664.6874"
            id="tspan6844"><tspan
    id="tspan9843"
-   style="font-weight:bold;fill:#00d400;">copy(var.data)</tspan> = copy(16 bytes) = at least mov * 8 (to register and back)</tspan><tspan
-           style="fill:#00d400;"
+   style="font-weight:bold;fill:#00d400">copy(var.data)</tspan> = copy(16 bytes) = at least mov * 6 (# used dwords to register and back)</tspan><tspan
+           style="fill:#00d400"
            dx="0"
            x="351.4718"
            y="1664.6874"
            id="tspan6846" /></tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#00d400;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#00d400;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        x="-29.082878"
        y="1679.6874"
        id="text9089"
@@ -2954,13 +2967,13 @@
          x="-29.082878"
          y="1679.6874"
          id="tspan6848"><tspan
-           style="fill:#00d400;"
+           style="fill:#00d400"
            x="-29.082878"
            y="1679.6874"
            id="tspan6850"><tspan
    id="tspan9845"
-   style="font-weight:bold;fill:#00d400;">move(var)</tspan> = copy(var.data)</tspan><tspan
-           style="fill:#00d400;"
+   style="font-weight:bold;fill:#00d400">move(var)</tspan> = copy(var.data)</tspan><tspan
+           style="fill:#00d400"
            dx="0"
            x="115.12807"
            y="1679.6874"
@@ -3301,33 +3314,33 @@
          x="1574.5939"
          y="1308.7335"
          id="tspan12221">- <tspan
-   style="fill:#447821;font-weight:bold"
+   style="font-weight:bold;fill:#447821"
    id="tspan12948">COTRT</tspan>: if event(argB) signaled, set bool(argA) to true</tspan><tspan
          sodipodi:role="line"
          x="1574.5939"
          y="1323.7335"
          id="tspan12227">- <tspan
-   style="fill:#d4aa00;font-weight:bold"
+   style="font-weight:bold;fill:#d4aa00"
    id="tspan12950">COTRF</tspan>: if event(argB) not signaled, set bool(argA) to false</tspan><tspan
          sodipodi:role="line"
          x="1574.5939"
          y="1338.7335"
          id="tspan12233">- <tspan
-   style="fill:#214478;font-weight:bold"
+   style="font-weight:bold;fill:#214478"
    id="tspan12946">YLDJMP</tspan>: if bool(argC) is false, yield (wait for thread to be resumed)</tspan><tspan
          sodipodi:role="line"
          x="1574.5939"
          y="1353.7335"
          id="tspan12231">- <tspan
-   style="fill:#a02c2c;font-weight:bold"
+   style="font-weight:bold;fill:#a02c2c"
    id="tspan12942">COABORT</tspan>: if bool(argC) is true, abort all threads in this sync/race group</tspan><tspan
          sodipodi:role="line"
          x="1574.5939"
          y="1368.7335"
          id="tspan12590">--- argE = offset to start, search for <tspan
-   style="fill:#447821;font-weight:bold"
+   style="font-weight:bold;fill:#447821"
    id="tspan12956">COTRT</tspan>/<tspan
-   style="fill:#d4aa00;font-weight:bold"
+   style="font-weight:bold;fill:#d4aa00"
    id="tspan12958">COTRF</tspan> until current op</tspan><tspan
          sodipodi:role="line"
          x="1574.5939"
@@ -3337,7 +3350,7 @@
          x="1574.5939"
          y="1398.7335"
          id="tspan12598">- <tspan
-   style="fill:#8800aa;font-weight:bold"
+   style="font-weight:bold;fill:#8800aa"
    id="tspan12952">INT[RESET_WAIT_TIMER]</tspan>: resets the time accumulator used to</tspan><tspan
          sodipodi:role="line"
          x="1574.5939"
@@ -3426,36 +3439,40 @@
        style="opacity:1;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="rect12402"
        width="75.660423"
-       height="67.528694"
+       height="80.528694"
        x="1668.7585"
-       y="1183.5647" />
+       y="1170.5647" />
     <text
        sodipodi:linespacing="125%"
        id="text12304"
-       y="1199.2335"
+       y="1185.2335"
        x="1673.0939"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        xml:space="preserve"><tspan
          id="tspan12306"
-         y="1199.2335"
+         y="1185.2335"
          x="1673.0939"
          sodipodi:role="line"><tspan
            id="tspan12308"
-           y="1199.2335"
+           y="1185.2335"
            x="1673.0939"
            dx="0 0 0 0 0 0 0 0 0 0 0 0 0">race(A,B,C):</tspan></tspan><tspan
          id="tspan12318"
-         y="1214.2335"
+         y="1200.2335"
          x="1673.0939"
-         sodipodi:role="line">wait until one</tspan><tspan
-         y="1229.2335"
-         x="1673.0939"
-         sodipodi:role="line"
-         id="tspan12326">of A, B or C</tspan><tspan
-         y="1244.2335"
+         sodipodi:role="line">wait until at</tspan><tspan
+         y="1215.2335"
          x="1673.0939"
          sodipodi:role="line"
-         id="tspan12328">has finished</tspan></text>
+         id="tspan12326">least one of</tspan><tspan
+         y="1230.2335"
+         x="1673.0939"
+         sodipodi:role="line"
+         id="tspan12328">A, B or C</tspan><tspan
+         y="1245.2335"
+         x="1673.0939"
+         sodipodi:role="line"
+         id="tspan13130">has finished</tspan></text>
     <rect
        style="opacity:1;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="rect12404"
@@ -4062,11 +4079,11 @@
          x="1909.0939"
          sodipodi:role="line"
          id="tspan12800"
-         style="fill:#447821;font-weight:bold"><tspan
+         style="font-weight:bold;fill:#447821"><tspan
            id="tspan12728"
            y="1514.7335"
            x="1909.0939"
-           style="fill:#447821;font-weight:bold">COTRT</tspan></tspan><tspan
+           style="font-weight:bold;fill:#447821">COTRT</tspan></tspan><tspan
          y="1529.7335"
          x="1909.0939"
          sodipodi:role="line"
@@ -4142,11 +4159,11 @@
          x="1908.2755"
          sodipodi:role="line"
          id="tspan12800-8"
-         style="fill:#d4aa00;font-weight:bold"><tspan
+         style="font-weight:bold;fill:#d4aa00"><tspan
            id="tspan12728-29"
            y="1469.1238"
            x="1908.2755"
-           style="fill:#d4aa00;font-weight:bold">COTRF</tspan></tspan><tspan
+           style="font-weight:bold;fill:#d4aa00">COTRF</tspan></tspan><tspan
          y="1484.1238"
          x="1908.2755"
          sodipodi:role="line"
@@ -4321,5 +4338,339 @@
        d="m 2106.4577,1539.2394 0,18.3848"
        id="path13034"
        inkscape:connector-curvature="0" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.00000095px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="498.0939"
+       y="1427.7335"
+       id="text13140"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1427.7335"
+         id="tspan13200">MODE 1</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1442.7335"
+         id="tspan13392">(+): simple, fast, low memory usage</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1457.7335"
+         id="tspan13394">(-): reencodes repeated objects, no closure support</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1472.7335"
+         id="tspan13226">working set: stack</tspan><tspan
+         sodipodi:role="line"
+         id="tspan13186"
+         x="498.0939"
+         y="1487.7335">encoding: command list</tspan><tspan
+         sodipodi:role="line"
+         id="tspan13190"
+         x="498.0939"
+         y="1502.7335">&gt; symbol (tag=S, types: object, func, cfunc, thread)</tspan><tspan
+         sodipodi:role="line"
+         id="tspan13192"
+         x="498.0939"
+         y="1517.7335">output: serialize(string), &quot;S&quot;</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1532.7335"
+         id="tspan13204">condition: variable is registered in symbol table</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1547.7335"
+         id="tspan13424">&gt; basic type (tag=P, types: null, bool, int, real, string, func)</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1562.7335"
+         id="tspan13426">output: type id, &lt;type data&gt;</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1577.7335"
+         id="tspan13216">&gt; cfunc, ptr</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1592.7335"
+         id="tspan13218">output: error</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1607.7335"
+         id="tspan13433">&gt; object (tag=C)</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1622.7335"
+         id="tspan13435">output: serialize(args), &quot;C&quot;, arg. count, creation function</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1637.7335"
+         id="tspan13206">&gt; thread (tag=T)</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1652.7335"
+         id="tspan13222">output: serialize(_G, stack), &quot;T&quot;, &lt;thread data&gt;</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1667.7335"
+         id="tspan13437">&gt; properties (tag=&quot;.&quot;) &amp; indices (tag=&quot;[&quot;)</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1682.7335"
+         id="tspan13439">output: tag</tspan><tspan
+         sodipodi:role="line"
+         x="498.0939"
+         y="1697.7335"
+         id="tspan13441">expectations: obj=stack[-3], key=stack[-2], value=stack[-1]</tspan></text>
+    <rect
+       style="opacity:1;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect13228"
+       width="106.5"
+       height="178.56192"
+       x="497.5939"
+       y="1717.0006" />
+    <path
+       sodipodi:nodetypes="cc"
+       inkscape:connector-curvature="0"
+       id="path13445"
+       d="m 497.5939,1846.4691 119.43503,0"
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="505.5939"
+       y="1762.2189"
+       id="text13238"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="505.5939"
+         y="1762.2189"
+         id="tspan13240"><tspan
+           x="505.5939"
+           y="1762.2189"
+           id="tspan13242">P string(&quot;abort&quot;)</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="505.72183"
+       y="1787.609"
+       id="text13238-7"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="505.72183"
+         y="1787.609"
+         id="tspan13240-9">S<tspan
+   x="505.72183"
+   y="1787.609"
+   id="tspan13242-5" /></tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="506.22183"
+       y="1734.609"
+       id="text13238-8"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="506.22183"
+         y="1734.609"
+         id="tspan13240-0"><tspan
+           x="506.22183"
+           y="1734.609"
+           id="tspan13242-0">P string(&quot;func&quot;)</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="505.06357"
+       y="1813.0881"
+       id="text13289"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="505.06357"
+         y="1813.0881"
+         id="tspan13291"><tspan
+           x="505.06357"
+           y="1813.0881"
+           id="tspan13293">C 2 &quot;dict&quot;</tspan></tspan></text>
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 497.5939,1744.5007 119.43503,0"
+       id="path13283"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       inkscape:connector-curvature="0"
+       id="path13285"
+       d="m 497.5939,1772.0007 119.43503,0"
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 497.5939,1796.2191 119.43503,0"
+       id="path13287"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 603.53773,1717.0126 14.49569,0"
+       id="path13295"
+       inkscape:connector-curvature="0" />
+    <path
+       inkscape:connector-curvature="0"
+       id="path13297"
+       d="m 601.78773,1895.6215 14.49569,0"
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="622.20422"
+       y="1719.5397"
+       id="text13238-7-8"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="622.20422"
+         y="1719.5397"
+         id="tspan13240-9-6">stack=(size=0)[]</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="621.81238"
+       y="1747.6893"
+       id="text13238-7-8-6"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="621.81238"
+         y="1747.6893"
+         id="tspan13240-9-6-6">stack=(size=1)[&quot;func&quot;]</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="621.40582"
+       y="1774.2791"
+       id="text13238-7-8-6-7"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="621.40582"
+         y="1774.2791"
+         id="tspan13240-9-6-6-4">stack=(size=2)[&quot;func&quot;, &quot;abort&quot;]</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="621.7616"
+       y="1799.0278"
+       id="text13238-7-8-6-7-6"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="621.7616"
+         y="1799.0278"
+         id="tspan13240-9-6-6-4-4">stack=(size=2)[&quot;func&quot;, C function &lt;abort&gt;]</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="621.57355"
+       y="1824.4836"
+       id="text13238-7-8-6-7-6-9"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="621.57355"
+         y="1824.4836"
+         id="tspan13240-9-6-6-4-4-3">stack=(size=1)[dict(&quot;func&quot; = C function &lt;abort&gt;)]</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text5016-6"
+       y="1400.9818"
+       x="496.35962"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       xml:space="preserve"><tspan
+         id="tspan5018-0"
+         y="1400.9818"
+         x="496.35962"
+         sodipodi:role="line"><tspan
+           id="tspan5020-3"
+           style="font-size:24px"
+           y="1400.9818"
+           x="496.35962">Serialization</tspan></tspan></text>
+    <path
+       sodipodi:nodetypes="cc"
+       inkscape:connector-curvature="0"
+       id="path13447"
+       d="m 497.5939,1821.4691 119.43503,0"
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    <text
+       sodipodi:linespacing="125%"
+       id="text13449"
+       y="1837.859"
+       x="505.22183"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         id="tspan13451"
+         y="1837.859"
+         x="505.22183"
+         sodipodi:role="line"><tspan
+           id="tspan13453"
+           y="1837.859"
+           x="505.22183">P string(&quot;other&quot;)</tspan></tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text13449-5"
+       y="1862.1238"
+       x="504.97183"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         id="tspan13451-7"
+         y="1862.1238"
+         x="504.97183"
+         sodipodi:role="line"><tspan
+           id="tspan13453-6"
+           y="1862.1238"
+           x="504.97183">P int(5)</tspan></tspan></text>
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 497.5939,1871.2191 119.43503,0"
+       id="path13476"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="504.38297"
+       y="1886.8103"
+       id="text13238-7-86"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="504.38297"
+         y="1886.8103"
+         id="tspan13240-9-0">[</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text13501"
+       y="1849.4836"
+       x="621.57355"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         id="tspan13503"
+         y="1849.4836"
+         x="621.57355"
+         sodipodi:role="line">stack=(size=2)[dict(&quot;func&quot; = C function &lt;abort&gt;), &quot;other&quot;]</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="621.57355"
+       y="1873.7336"
+       id="text13505"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="621.57355"
+         y="1873.7336"
+         id="tspan13507">stack=(size=3)[dict(&quot;func&quot; = C function &lt;abort&gt;), &quot;other&quot;, 5]</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text13509"
+       y="1897.9836"
+       x="621.57355"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         id="tspan13511"
+         y="1897.9836"
+         x="621.57355"
+         sodipodi:role="line">stack=(size=1)[dict(&quot;func&quot; = C function &lt;abort&gt;, &quot;other&quot; = 5)]</tspan></text>
   </g>
 </svg>
