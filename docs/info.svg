@@ -32,9 +32,9 @@
      showgrid="false"
      inkscape:current-layer="layer1"
      inkscape:document-units="px"
-     inkscape:cy="417.63528"
-     inkscape:cx="776.25004"
-     inkscape:zoom="0.70710678"
+     inkscape:cy="333.04556"
+     inkscape:cx="1297.893"
+     inkscape:zoom="1"
      inkscape:pageshadow="2"
      inkscape:pageopacity="0.0"
      borderopacity="1.0"
@@ -94,7 +94,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -5159,5 +5159,204 @@
        id="path13806"
        inkscape:connector-curvature="0"
        sodipodi:nodetypes="cc" />
+    <path
+       sodipodi:nodetypes="cc"
+       inkscape:connector-curvature="0"
+       id="path4431"
+       d="m 1065.9345,2076.2284 0,-665.8421"
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.00000095px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="1100.8843"
+       y="1431.6226"
+       id="text4433"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1431.6226"
+         id="tspan4435">MODE 3 (SGScript Object Notation)</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1446.6226"
+         id="tspan4437">(+): text, user-friendly</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1461.6226"
+         id="tspan4439">(-): slower to decode, reencodes repeated objects, no thread/closure support</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1476.6226"
+         id="tspan4441">encoding working set: call info table</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1491.6226"
+         id="tspan4489">decoding working set: brace stack</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1506.6226"
+         id="tspan4779">encoding: text/SGSON (based on JSON, with extensions)</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1521.6226"
+         id="tspan4781">&gt; null/true/false: special values</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1536.6226"
+         id="tspan4783">&gt; integers (decimal/binary (0b*)/octal (0o*)/hex (0x*))</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1551.6226"
+         id="tspan4785">&gt; real values (decimal, supports exponent syntax)</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1566.6226"
+         id="tspan4787">&gt; strings (with escape sequences)</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1581.6226"
+         id="tspan4789">&gt; arrays: [...]</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1596.6226"
+         id="tspan4791">&gt; dictionaries: { a = b, ... }</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1611.6226"
+         id="tspan4793">&gt; maps: map{ 5 = b, ... }</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1626.6226"
+         id="tspan4795">&gt; functions: func(5, &quot;a&quot;) -- to allow creating custom objects and...</tspan><tspan
+         sodipodi:role="line"
+         x="1100.8843"
+         y="1641.6226"
+         id="tspan4797">&gt; symbols (encoded as functions): sym_get(&quot;exit&quot;)</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text13661-8"
+       y="1866.0049"
+       x="1089.8527"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         id="tspan13663-5"
+         y="1866.0049"
+         x="1089.8527"
+         sodipodi:role="line">{</tspan><tspan
+         y="1881.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4817">  func</tspan><tspan
+         y="1896.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4819">    =</tspan><tspan
+         y="1911.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4821">      sym_get</tspan><tspan
+         y="1926.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4823">      (</tspan><tspan
+         y="1941.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4957" /><tspan
+         y="1956.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4825">        &quot;abort&quot;</tspan><tspan
+         y="1971.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4827">      )</tspan><tspan
+         y="1986.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4967" /><tspan
+         y="2001.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4829">    ,</tspan><tspan
+         y="2016.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4831">  other</tspan><tspan
+         y="2031.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4833">    =</tspan><tspan
+         y="2046.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4835">      5</tspan><tspan
+         y="2061.0049"
+         x="1089.8527"
+         sodipodi:role="line"
+         id="tspan4837">}</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="1162.6847"
+       y="1866.0049"
+       id="text4839"
+       sodipodi:linespacing="125%"><tspan
+         id="tspan4863"
+         sodipodi:role="line"
+         x="1162.6847"
+         y="1866.0049">- begin dict, expect key (stack=[dict()])</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="1881.0049"
+         id="tspan4945">- push key string (stack=[dict(), &quot;func&quot;])</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="1896.0049"
+         id="tspan4947">- set to expect value</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="1911.0049"
+         id="tspan4949">- read identifier as function name</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="1926.0049"
+         id="tspan4951">- push marker for start of function and name string</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="1941.0049"
+         id="tspan4955">  (stack=[dict(), &quot;func&quot;, FB, &quot;sym_get&quot;])</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="1956.0049"
+         id="tspan4953">- push string (stack=[dict(), &quot;func&quot;, FB, &quot;sym_get&quot;, &quot;abort&quot;])</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="1971.0049"
+         id="tspan4961">- find &amp; call function, replace with value</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="1986.0049"
+         id="tspan4965">  (stack=[dict(), &quot;func&quot;, &lt;abort&gt;])</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="2001.0049"
+         id="tspan4969">- commit value, expect next key (stack=[dict(&quot;func&quot;=&lt;abort&gt;)])</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="2016.0049"
+         id="tspan4971">- push key string (stack=[dict(&quot;func&quot;=&lt;abort&gt;), &quot;other&quot;])</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="2031.0049"
+         id="tspan4973">- set to expect value</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="2046.0049"
+         id="tspan4975">- push integer (stack=[dict(&quot;func&quot;=&lt;abort&gt;), &quot;other&quot;, 5])</tspan><tspan
+         sodipodi:role="line"
+         x="1162.6847"
+         y="2061.0049"
+         id="tspan4977">- commit value, end dict (stack=[dict(&quot;func&quot;=&lt;abort&gt;, &quot;other&quot;=5)])</tspan></text>
   </g>
 </svg>
