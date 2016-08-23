@@ -282,7 +282,7 @@ static void exec_test( const char* fname, const char* nameonly )
 			}
 			fseek( tfh, 0, SEEK_END );
 			readsize = (size_t) ftell( tfh );
-			data_alloc = data = malloc( readsize + 1 );
+			data_alloc = data = (char*) malloc( readsize + 1 );
 			fseek( tfh, 0, SEEK_SET );
 			numread = fread( data, 1, readsize, tfh );
 			if( numread != readsize && ferror( tfh ) )
@@ -348,7 +348,7 @@ static void exec_test( const char* fname, const char* nameonly )
 			while( *data == ' ' || *data == '\t' || *data == '\r' || *data == '\n' ) data++;
 			
 			/* DECODE VALUE */
-			decoded_value = malloc( (size_t)( value_end - value_start + 1 ) );
+			decoded_value = (char*) malloc( (size_t)( value_end - value_start + 1 ) );
 			{
 				char* op = decoded_value;
 				char* ip = value_start;
@@ -379,7 +379,7 @@ static void exec_test( const char* fname, const char* nameonly )
 				.. using memory checking tools, allocate a new buffer ..
 				.. with the exact size of the data */
 				size_t len = strlen( decoded_value );
-				char* bc = malloc( len );
+				char* bc = (char*) malloc( len );
 				memcpy( bc, decoded_value, len );
 				lastexec = sgs_ExecBuffer( C, bc, len );
 				free( bc );

@@ -475,8 +475,8 @@ void sgsVM_PopSkip( SGS_CTX, sgs_StkIdx num, sgs_StkIdx skip );
 #define stk_poff( C, off ) ((C)->stack_off + (off))
 #define stk_ptop( C, off ) ((C)->stack_top + (off))
 #define stk_gettop( C ) stk_ptop( C, -1 )
-#define stk_size( C ) ((C)->stack_top - (C)->stack_off)
-#define stk_absindex( C, off ) ((off) >= 0 ? (off) : (off) + stk_size(C))
+#define stk_size( C ) ((sgs_StkIdx)((C)->stack_top - (C)->stack_off))
+#define stk_absindex( C, off ) ((sgs_StkIdx)((off) >= 0 ? (off) : (off) + stk_size(C)))
 
 void stk_makespace( SGS_CTX, sgs_StkIdx num );
 

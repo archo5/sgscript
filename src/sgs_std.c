@@ -1533,7 +1533,7 @@ SGS_APIFUNC sgs_ObjInterface sgsstd_closure_iface[1] =
 sgs_Closure** sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* out, sgs_Variable* func, size_t clc )
 {
 	/* WP: range not affected by conversion */
-	uint32_t clsz = (uint32_t) sizeof(sgs_Closure*) * clc;
+	uint32_t clsz = (uint32_t) ( sizeof(sgs_Closure*) * clc );
 	uint32_t memsz = clsz + (uint32_t) ( sizeof(sgs_Variable) + sizeof(clc) );
 	uint8_t* cl = (uint8_t*) sgs_CreateObjectIPA( C, out, memsz, sgsstd_closure_iface );
 	

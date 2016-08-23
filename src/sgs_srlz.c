@@ -1863,7 +1863,7 @@ static int sgs_UnserializeInt_V3( SGS_CTX, char* str, char* strend )
 	int res;
 	sgs_MemBuf stack = sgs_membuf_create();
 	sgs_membuf_appchr( &stack, C, 0 );
-	res = !sgson_parse( C, &stack, str, strend - str );
+	res = !sgson_parse( C, &stack, str, (sgs_SizeVal) ( strend - str ) );
 	sgs_membuf_destroy( &stack, C );
 	return res;
 }

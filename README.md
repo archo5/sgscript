@@ -44,7 +44,6 @@ Don't forget to include a test sample, as small as possible!
 ## Future plans
 
 - full state serialization
-- class syntax [WIP 2016-06-24]
 - got a suggestion? write some sample code (in the form of a test) and send it here
 
 ## Credits
