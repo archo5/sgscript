@@ -573,6 +573,8 @@ There are 5 types of action for expressions in SGScript: arithmetic, bitwise, lo
 |  assign                 |`   A  =  B    `|    special     |  yes   |   1   |
 |  concatenate            |`   A  $  B    `|    special     |  no    |   2   |
 |  concatenate-assign     |`   A  $=  B   `|    special     |  yes   |   2   |
+|  concatenate            |`   A  ..  B   `|    special     |  no    |   2   |
+|  concatenate-assign     |`   A  ..=  B  `|    special     |  yes   |   2   |
 |  property               |`   A  .  B    `|    special     | maybe  |   2   |
 |  index                  |`   A [ B ]    `|    special     | maybe  |   2   |
 |  multi-index-assign     |` A[]<dict.lit>`|    special     |  yes   |  any  |

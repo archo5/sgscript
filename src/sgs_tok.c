@@ -229,15 +229,15 @@ static void readstring( SGS_CTX, sgs_MemBuf* out, sgs_LineNum* line, const char*
 }
 
 static const char* sgs_opchars = "=<>+-*/%?!~&|^.$@";
-static const char* sgs_operators = "<=>;===;!==;==;!=;<=;>=;+=;-=;*=;/=;%=;&=;|=;^=;<<=;>>=;$=;"
-	"<<;>>;&&=;||=;?""?=;&&;||;?""?;<;>;=;++;--;+;-;*;/;%;&;|;^;.;$;!;~;@"; /* trigraphs detected */
+static const char* sgs_operators = "<=>;===;!==;==;!=;<=;>=;+=;-=;*=;/=;%=;&=;|=;^=;<<=;>>=;$=;..=;"
+	"<<;>>;&&=;||=;?""?=;&&;||;?""?;..;<;>;=;++;--;+;-;*;/;%;&;|;^;.;$;!;~;@"; /* trigraphs detected */
 static const sgs_TokenType sgs_optable[] =
 {
 	SGS_ST_OP_RWCMP, SGS_ST_OP_SEQ, SGS_ST_OP_SNEQ, SGS_ST_OP_EQ, SGS_ST_OP_NEQ, SGS_ST_OP_LEQ, SGS_ST_OP_GEQ,
 	SGS_ST_OP_ADDEQ, SGS_ST_OP_SUBEQ, SGS_ST_OP_MULEQ, SGS_ST_OP_DIVEQ, SGS_ST_OP_MODEQ,
-	SGS_ST_OP_ANDEQ, SGS_ST_OP_OREQ, SGS_ST_OP_XOREQ, SGS_ST_OP_LSHEQ, SGS_ST_OP_RSHEQ, SGS_ST_OP_CATEQ,
+	SGS_ST_OP_ANDEQ, SGS_ST_OP_OREQ, SGS_ST_OP_XOREQ, SGS_ST_OP_LSHEQ, SGS_ST_OP_RSHEQ, SGS_ST_OP_CATEQ, SGS_ST_OP_CATEQ,
 	SGS_ST_OP_LSH, SGS_ST_OP_RSH, SGS_ST_OP_BLAEQ, SGS_ST_OP_BLOEQ, SGS_ST_OP_NLOEQ, SGS_ST_OP_BLAND,
-	SGS_ST_OP_BLOR, SGS_ST_OP_NLOR, SGS_ST_OP_LESS, SGS_ST_OP_GRTR, SGS_ST_OP_SET, SGS_ST_OP_INC, SGS_ST_OP_DEC,
+	SGS_ST_OP_BLOR, SGS_ST_OP_NLOR, SGS_ST_OP_CAT, SGS_ST_OP_LESS, SGS_ST_OP_GRTR, SGS_ST_OP_SET, SGS_ST_OP_INC, SGS_ST_OP_DEC,
 	SGS_ST_OP_ADD, SGS_ST_OP_SUB, SGS_ST_OP_MUL, SGS_ST_OP_DIV, SGS_ST_OP_MOD, SGS_ST_OP_AND,
 	SGS_ST_OP_OR, SGS_ST_OP_XOR, SGS_ST_OP_MMBR, SGS_ST_OP_CAT, SGS_ST_OP_NOT, SGS_ST_OP_INV, SGS_ST_OP_ERSUP
 };

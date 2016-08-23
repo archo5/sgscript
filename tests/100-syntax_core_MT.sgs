@@ -218,6 +218,16 @@ check_out `39
 Xfalse
 `
 
+// `alternative concatenation operator`
+rec ``
+exec `println( 3 .. 4 + 5 );
+println( 'X' .. false || true );`
+result `SUCCESS`
+check_err ``
+check_out `39
+Xfalse
+`
+
 // `string indexing`
 rec ``
 exec `
