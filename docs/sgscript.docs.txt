@@ -207,7 +207,7 @@ With the overwhelming majority of code being written in C-like languages (@"http
 [+] SGScript, JavaScript, Squirrel, Python
 [-] Lua
 
-Even though it is argued that it may help someone understand code better (which is actually hard to prove), I have a few arguments to make against it:
+Even though it is argued that 1-based indexing may help someone understand code better (which is actually hard to prove), I have a few arguments to make against it:
 
 - Array index is generally the distance (or as programmers would rather say, offset) from first element. 1 - 1 = 0. Not a distance from 0th element that doesn't even exist. Not the first element itself because elements have no keys in arrays.
 - Programming languages don't exist in a vacuum. Almost every other programming language treats indices as distances (offsets). Going against the grain makes it hard to interpret both languages at once for comparison or interface design. Whoever has to write that binding, has to keep in mind this difference for every array access made in the binding area. This is brain power not spent well.
@@ -252,7 +252,7 @@ Even though it is argued that it may help someone understand code better (which 
     a--;
     a = if( b > 5, 10, 20 ); // short for if( b > 5 ){ a = 10; } else { a = 20; }
 
-=== Flow control
+=== Control flow
 
     if( a > b )
     {
@@ -287,7 +287,7 @@ Even though it is argued that it may help someone understand code better (which 
     for(;;) // this is not going to stop...
         print "x";
 
-=== More flow control
+=== More control flow
 
     x = 5;
     for(;;)
@@ -493,10 +493,13 @@ Special keywords and hardcoded constants:
 |  false     |             constant             |  constant                        |
 |  var       |       restricted keyword         |  variable declaration            |
 |  global    |       restricted keyword         |  variable declaration            |
+|  class     |       special identifier         |  class declaration               |
+|  new       |       restricted keyword         |  class instantiation             |
 |  thread    |       restricted keyword         |  thread control                  |
 |  subthread |       restricted keyword         |  thread control                  |
 |  sync      |       restricted keyword         |  thread control                  |
 |  race      |       restricted keyword         |  thread control                  |
+|  defer     |       restricted keyword         |  destruction statement helper    |
 |  function  |       restricted keyword         |  function definition             |
 |  use       |       restricted keyword         |  function definition             |
 |  if        |       restricted keyword         |  "if" statement                  |
@@ -586,6 +589,7 @@ There are 5 types of action for expressions in SGScript: arithmetic, bitwise, lo
 |  subexpression          |` ( A[, ..] )  `|    special     | maybe  |  any  |
 |  thread-call            |` thread f()   `|    special     | maybe  | <=256 |
 |  subthread-call         |` subthread f()`|    special     | maybe  | <=256 |
+|  new-call               |`   new f()    `|    special     | maybe  | <=256 |
 ------------------------------------------------------------------------------
 
 Some notes on the special cases:
@@ -603,16 +607,17 @@ Some notes on the special cases:
 - [function] the full function definition expression syntax: `function <name> ( <args> ) [ use ( <use-list> ) ]`, followed by either `{ ... }` or `= ... ;`. <name>, <args> and the 'use' block are all optional.
 - [multi-set] operator returns `A`, that is, the object itself
 - [thread] `thread`/`subthread` commands support all kinds of calls (`f()`, `o.f()`, `o!f()`)
+- [new] `new` supports only the basic calls (`f()`, `o.f()`), and `this` is not passed (as it would refer to the newly created instance)
 
 ==== compatible function call / inheritance call / global method call (` O!A ([B,..]) `)
 
-CFC is created to encourage users to reduce memory usage without sacrificing clarity of code. It is a short-hand, optimized version of the .call method / sys_call function for callables.
+CFC is created to encourage users to reduce memory usage without sacrificing clarity of code. Object and its processing function can reside in different locations (like class instance / inherited class) and still be easily accessible.
 
 Properties:
 
 - uses the same symbol as logical inversion operator
 - usage: simplified & optimized calling of non-integrated compatible functions
--- instead of `comp_func.call( object, arg1 )` write `object!comp_func( arg1 )`
+-- instead of `comp_func.call( object, arg1 )` (removed since 1.4) write `object!comp_func( arg1 )`
 -- instead of putting functions with data / class interfaces, requiring additional memory usage, allows to easily keep them separate
 -- simplify inheritance-like code models to the extent permitted by a dynamic language
 
@@ -665,7 +670,7 @@ Examples:
     a = 5;
     a = 1, b = 2;
 
-=== Flow control statements
+=== Control flow statements
 
 These statements decide which code gets executed when. They include loops (while, for, foreach, do/while), the if/else construct, break/continue/return.
 
@@ -679,6 +684,7 @@ Formats:
 - break: `break <N>;`
 - continue: `continue <N>;`
 - return: `return <expression-list>;`
+- defer: `defer <statement>`
 
 Examples:
 
@@ -691,15 +697,31 @@ Examples:
     
     while( b > 0 ) b--;
 
+`defer` is a special case since it moves the given statement to the end of the block (however that is reached). This can be useful for resource acquisitions:
+
+    rsrc = acquire_resource();
+    defer release_resource( rsrc );
+    
+    if( work_with( rsrc ) )
+        return; // release_resource is called here
+    
+    more_work_with( rsrc );
+    // .. and here
+
 === Declaration statements
 
-Statements that begin with "var", "global" or "function" declare and set variables.
+Statements that begin with "var", "global", "function" or "class" declare and set variables.
 
 Examples:
 
     var x = 5, y = 6, z;
     global World = null;
     function fn(){ INFO( "'fn' was called" ); }
+    class C
+    {
+        var s = 1;
+        function f(){ INFO( "'C.f' was called" ); }
+    }
 
 === Function call statements
 
@@ -724,7 +746,6 @@ There are several built-in accessors for the variable types that are available.
 !    name    !  variable type  !  accessor type  !                     description                     !
 |   length   |      string     |    property     |     returns the length of the string, in bytes      |
 |  char. at  |      string     |     index       |  returns the character from the specified position  |
-|    call    |  SGS/C function |    property     | function that allows to specify "this" for the call |
 |    apply   |  SGS/C function |    property     | function that allows to specify "this" & arg. array |
 | was_aborted|      thread     |    property     |            returns if thread was aborted            |
 | not_started|      thread     |    property     |       returns if coroutine was not started yet      |
@@ -736,101 +757,81 @@ There are several built-in accessors for the variable types that are available.
 --------------------------------------------------------------------------------------------------------
 
 
-# <<<
+# Classes [info]
 
+== Basic class
 
-# Common constructs in SGScript [info]
-
-This section shows some ways of implementing various often-used constructs in SGScript. Some of them (specifically the constructs coming from compiled languages) do not map directly to any set of native features and are considered solutions of lower quality.
-
-# >>>
-
-
-# Basic classes [info]
-
-    global SampleClass = {}; // create a placeholder type dictionary
-    
-    function SampleClass.SampleMethod( a, b ) // this is the name that will show up in debug output
+    class SampleClass // create a class
     {
-        return a + b + this.c; // usage of "this" turns the function into a method
+        // static member variable (can be read from both class definition and instance)
+        global StaticVariable = 5;
+        
+        // the default construction function
+        function __construct( x )
+        {
+            // instance member variable (can be read only from class instance, not definition)
+            this.c = x;
+        }
+        
+        // static construction function
+        function Create( x )
+        {
+            return new SampleClass( x );
+        }
+        
+        function SampleMethod( a, b ) // "SampleClass.SampleMethod" is the name that will show up in debug output
+        {
+            return a + b + this.c; // usage of "this" turns the function into a method
+        }
+        
+        function SampleFunction( a, b )
+        {
+            return a + b;
+        }
     }
     
-    function SampleClass.SampleFunction( a, b )
-    {
-        return a + b;
-    }
+    // instances of class
+    inst1 = new SampleClass( 123 );
+    inst2 = SampleClass.Create( 456 );
     
-    // Function will show up as "<anonymous>" in debug output, so avoid this kind of function declaration if possible
-    SampleClass.SampleAnonymous = function( a, b )
-    {
-        return a + b + this.c;
-    }; // <-- the semicolon is required for this notation
-    
-    // Giving functions a specific name:
-    function MyCustomFunction( a, b )
-    {
-        return a + b + this.c; // note that it is still possible to use "this"
-    }
-    SampleClass.Sample = MyCustomFunction;
-    
-    SampleClass.StaticVariable = 5;
-    
-    // class instantiation without custom data
-    myclass = class( {}, SampleClass );
-    
-    // class instantiation with custom data
-    CustomData = { c = 5, d = 6 };
-    mydataclass = class( CustomData, SampleClass );
-    
-    // static construction function
-    function SampleClass.Create( x )
-    {
-        data = { c = x };
-        return class( data, SampleClass );
-    }
-    
-    // make class interface into a construction function
-    function SampleClass.__call( x )
-    {
-        return SampleClass.Create( x );
-    }
-    metamethods_enable( SampleClass, true );
-    
-    // many more special methods are available for 'class' objects
+    // inspect instance 1, instance 2 and the underlying interface of instance 1
+    printvar( inst1, inst2, metaobj_get( inst1 ) );
 
-
-# Inheritance [info]
+== Inheritance
 
     // class A - base class
-    global A = {};
-    function A.func()
+    class A
     {
-        println( "base" );
-    }
-    function A.create()
-    {
-        return class( {}, A );
+        function func()
+        {
+            println( "base" );
+        }
     }
     
     // class B - inherits from A
-    global B = {};
-    function B.func()
+    class B : A
     {
-        // needless to say, this is not the best way to do software design in SGScript
-    	this._super._super.func.call( this );
-        println( "override" );
+        function func()
+        {
+            this!A.func();
+            println( "override" );
+        }
     }
-    A.func_A = A.func; // make a duplicate entry that will not be overridden
-    // it is usually preferred to make the duplicates near the original entries where they're expected to be overridden
-    function B.func()
-    {
-        B.func_A(); // call that entry instead of the original, obstructed entry 
-        println( "override" );
-    }
-    function B.create()
-    {
-        return class( {}, class( B, A ) );
-    }
+    
+    instA = new A();
+    instB = new B();
+    
+    instA.func(); // prints "base"
+    instB.func(); // prints "base", then "override"
+
+Overloadable operators/interfaces (@Metamethods):
+
+- basic math: +, - (both unary and binary), *, /, %
+- comparison
+- conversions to `bool` and `string`
+- typeof string retrieval
+- cloning
+- function call
 
 
 # <<<
@@ -1093,29 +1094,11 @@ List of available metamethods:
 - **Arguments**: none
 - **Return value**: bool
 
-=== __toint
-
-- **When called**: on integer value retrieval
-- **Arguments**: none
-- **Return value**: integer
-
-=== __toreal
-
-- **When called**: on real value retrieval
-- **Arguments**: none
-- **Return value**: real
-
 === __tostring
 
 - **When called**: on string value retrieval
 - **Arguments**: none
 - **Return value**: string
-
-=== __toptr
-
-- **When called**: on pointer value retrieval
-- **Arguments**: none
-- **Return value**: pointer
 
 === __negate
 
@@ -1166,22 +1149,6 @@ List of available metamethods:
 - **Return value**: any
 
 
-# Classes [info]
-
-Classes are objects that enable operator/interface overloading and two-layer index retrieval.
-
-Overloadable operators/interfaces (@Metamethods):
-
-- basic math: +, - (both unary and binary), *, /, %
-- comparison
-- conversions to bool, int, real, string
-- typeof string retrieval
-- cloning
-- function call
-
-Two-layer index retrieval is simply trying to read the index from a different object (meta-object) if the first object fails to come up with something. In other languages, metatable and prototype is the name of a table that is the second source. This allows to avoid storing functions and other data that is equal to all instances of some object type.
-
-
 # Closures [info]
 
 Closures are a combination of one callable and some variables. They are meant to simplify interfaces and code around places where it was important for functions to have access to call-invariant (same on every call) data.
@@ -1213,6 +1180,8 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_ResumeStateRet<sgs_ResumeState***> - resumes the execution state, retrieves number of return values
 - @sgs_ResumeStateExp<sgs_ResumeState***> - resumes the execution state, returns the specified number of return values
 - @sgs_ResumeState - resumes the execution state without passing or receiving anything
+- @sgs_CreateSubthread - creates a thread (managed coroutine) with a starting function
+- @sgs_ProcessSubthreads - processes all subthread belonging to this state
 - @sgs_EventState - sets the event state
 - @sgs_EndOn - associates or detaches the event from thread end set
 - @sgs_DefaultMemFunc - example memory management callback
@@ -1272,10 +1241,10 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 - @sgs_ExecBuffer - execute a character buffer
 - @sgs_EvalBuffer - execute a character buffer, keep returned variables on stack
-- @sgs_ExecFile - execute a file
-- @sgs_EvalFile - execute a file, keep returned variables on stack
 - @sgs_ExecString - execute a null-terminated string
 - @sgs_EvalString - execute a null-terminated string, keep returned variables on stack
+- @sgs_ExecFile - execute a file
+- @sgs_EvalFile - execute a file, keep returned variables on stack
 - @sgs_Include - include an item from the file system
 - @sgs_IncludeExt - include an item from the file system, optionally specifying a search path
 - @sgs_Compile - compile character buffer to bytecode buffer
@@ -1381,6 +1350,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_StackSize - return the size of the current stack frame
 - @sgs_SetStackSize - resize the current stack frame
 - @sgs_SetDeltaSize - relative-resize the current stack frame
+- @sgs_AdjustStack - change stack size to from returned argument count to expected
 - @sgs_AbsIndex - convert stack index to positive if possible (if it's <0 or >=StackSize, then it's invalid)
 - @sgs_IsValidIndex - check if specified stack index is valid
 - @sgs_OptStackItem - return without acquisition the specified variable on stack without errors
@@ -1700,6 +1670,26 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - Alias to `sgs_ResumeStateExp( C, 0, 0 )`.
 
 
+# sgs_CreateSubthread [function]
+
+== void sgs_CreateSubthread( sgs_Context* T, sgs_Context* C, sgs_Variable* out, sgs_StkIdx args, int gotthis )
+=== Creates a thread (managed coroutine) with a starting function.
+
+- `T` is the parent thread (use @sgs_RootContext for a global thread and same as `C` for a local thread).
+- `C` contains the function and arguments.
+- If `out` is `NULL`, new thread is pushed to `C`'s stack, otherwise it is assigned to that variable.
+- `args` and `gotthis` specify how to interpret the values pushed on stack (function expects `args + (gotthis?1:0) + 1` values).
+- Thread is started before returning from this function.
+
+
+# sgs_ProcessSubthreads [function]
+
+== int sgs_ProcessSubthreads( sgs_Context* C, sgs_Real dt )
+=== Advances all subthreads belonging to this state, using the given delta time.
+
+- Every subthread is resumed, waiting timers are advanced.
+
+
 # sgs_EventState [function]
 
 == SGSBOOL sgs_EventState( sgs_Context* C, sgs_Variable evt, int state )
@@ -1741,7 +1731,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 === Compiles and executes a buffer of text or bytecode.
 
 - Leaves the stack the same as it was before the call.
-- Alias to `sgs_EvalBuffer( C, buf, size, NULL )`.
+- Alias to `sgs_AdjustStack( C, 0, sgs_EvalBuffer( C, buf, sz ) )`.
 
 === Error codes:
 - SGS_ECOMP: compiler error
@@ -1750,11 +1740,11 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_EvalString [function alias]
 
-== SGSRESULT sgs_EvalString( sgs_Context* C, const char* str, int* rvc )
-=== Compiles and executes a string of text, optionally leaving the return values on stack and returning the number of values via `rvc`.
+== SGSRESULT sgs_EvalString( sgs_Context* C, const char* str )
+=== Compiles and executes a string of text, leaving the return values on stack and returning their count.
 
-- If `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call.
-- Alias to sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ), rvc ).
+- To ignore return values, use @sgs_ExecString.
+- Alias to `sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )`.
 
 === Error codes:
 - SGS_ECOMP: compiler error
@@ -1763,10 +1753,10 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_EvalBuffer [function]
 
-== SGSRESULT sgs_EvalBuffer( sgs_Context* C, const char* buf, sgs_SizeVal size, int* rvc )
-=== Compiles and executes a buffer of text or bytecode, optionally leaving the return values on stack and returning the number of values via `rvc`.
+== SGSRESULT sgs_EvalBuffer( sgs_Context* C, const char* buf, sgs_SizeVal size )
+=== Compiles and executes a buffer of text or bytecode, leaving the return values on stack and returning their count.
 
-- If `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call.
+- To ignore return values, use @sgs_ExecBuffer.
 
 === Error codes:
 - SGS_ECOMP: compiler error
@@ -1779,7 +1769,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 === Compiles and executes a file containing script text or bytecode.
 
 - Leaves the stack the same as it was before the call.
-- Alias to `sgs_EvalFile( C, filename, NULL )`.
+- Alias to `sgs_AdjustStack( C, 0, sgs_EvalFile( C, filename ) )`.
 
 === Error codes:
 - SGS_ECOMP: compiler error
@@ -1789,10 +1779,10 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_EvalFile [function]
 
-== SGSRESULT sgs_EvalFile( sgs_Context* C, const char* filename, int* rvc )
-=== Compiles and executes a file containing script text or bytecode, optionally leaving the return values on stack and returning the number of values via `rvc`.
+== SGSRESULT sgs_EvalFile( sgs_Context* C, const char* filename )
+=== Compiles and executes a file containing script text or bytecode, leaving the return values on stack and returning their count.
 
-- If `rvc` is not set (NULL), return values are removed - the stack is the same as it was before the call.
+- To ignore return values, use @sgs_ExecFile.
 
 === Error codes:
 - SGS_ECOMP: compiler error
@@ -2048,7 +2038,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_GetGlobal [function]
 
-== SGSBOOL sgs_GetGlobal( SGS_CTX, sgs_Variable idx, sgs_Variable* out )
+== SGSBOOL sgs_GetGlobal( sgs_Context* C, sgs_Variable idx, sgs_Variable* out )
 === Retrieve a global variable by index `idx` to position `out`.
 
 - On failure, out is set to a `null` variable.
@@ -2056,7 +2046,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_SetGlobal [function]
 
-== SGSBOOL sgs_SetGlobal( SGS_CTX, sgs_Variable idx, sgs_Variable val )
+== SGSBOOL sgs_SetGlobal( sgs_Context* C, sgs_Variable idx, sgs_Variable val )
 === Set global variable `idx` to `val`.
 
 - When setting `_G` (environment superglobal), `val` must be of `dict`/`map` type or the function will fail.
@@ -2229,6 +2219,7 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - `l` -- check for `int` (returns int32_t or uint32_t, depending on sign settings, may check ranges)
 - `q` -- check for `int` (returns int64_t or uint64_t, depending on sign settings, may check ranges)
 - `i` -- check for `int` (returns sgs_Int, may check ranges)
+- `I` -- check for `int` (returns int or unsigned int, depending on sign settings, may check ranges)
 - `f` -- check for `real` (returns float)
 - `d` -- check for `real` (returns double)
 - `r` -- check for `real` (returns sgs_Real)
@@ -2257,11 +2248,11 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_ParseMethod [function]
 
-== SGSBOOL sgs_ParseMethod( sgs_Context* C, sgs_ObjInterface* iface, void** ptrout, const char* method_name, const char* func_name );
+== SGSBOOL sgs_ParseMethod( sgs_Context* C, sgs_ObjInterface* iface, void** ptrout, const char* name );
 === Implements method parsing.
 
 - If object of the right type is first in the stack, its data pointer is received.
-- Function also registers its name to "objname.methodname".
+- Function also registers its name to `name`.
 
 
 # SGS_PARSE_METHOD [function alias]
@@ -2314,35 +2305,35 @@ Closure stack in the C API is technically very similar to main stack, with one i
 
 # sgs_XFCall [functions]
 
-== void sgs_XFCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc, int gotthis )
-=== Call the variable with the arguments on stack, returning variables on stack and their count via the `outrvc` parameter.
+== int sgs_XFCall( sgs_Context* C, int args, int gotthis )
+=== Call the function with the arguments on stack, returning variables on stack and their count.
 
-- On success, `outrvc` receives the number of values that were returned by the call.
 - Refer to @sgs_FCall for additional documentation.
 
 
 # sgs_X(This)Call [function aliases]
 
-== void sgs_XCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc )
-== void sgs_XThisCall( sgs_Context* C, sgs_Variable var, int args, int* outrvc )
-=== Call the variable with the arguments on stack, returning variables on stack and their count via the `outrvc` parameter.
+== int sgs_XCall( sgs_Context* C, int args )
+== int sgs_XThisCall( sgs_Context* C, int args )
+=== Call the function with the arguments on stack, returning variables on stack and their count.
 
-- Aliases to @sgs_XFCall, for the first function of each group `gotthis = 0`, for the second `gotthis = 1`.
+- Aliases to @sgs_XFCall, for the first function `gotthis = 0`, for the second `gotthis = 1`.
 
 
 # sgs_FCall [functions]
 
-== void sgs_FCall( sgs_Context* C, sgs_Variable var, int args, int expect, int gotthis )
-=== Call the variable with the arguments on stack, returning the expected number of variables on stack.
+== int sgs_FCall( sgs_Context* C, int args, int expect, int gotthis )
+=== Call the function with the arguments on stack, returning the expected number of variables on stack.
 
-- `var`: the callable variable to call as a function.
 - `args`: the primary variables to be passed to the function, in the same order they are in the stack.
 - `expect`: the number of variables to be left after a successful call.
 - `gotthis`: whether the function is a method and an additional argument needs to be passed as the 'this' value before others.
+- Return value of function is the original number of returned values on stack from this call.
 
-After a successful call, all arguments will be popped off the stack and the expected number of variables will appear in their place. If the underlying callable does not return enough arguments, 'null' variables will be pushed instead. If the number of returned values is bigger than expected, only the first expected return values will stay on the stack.
+After a successful call, all arguments will be popped off the stack and the expected number of variables will appear in their place. If the underlying callable does not return enough values, 'null' variables will be pushed instead. If the number of returned values is bigger than expected, only the first expected return values will stay on the stack.
 
 - Expected stack structure:
+-- [function]
 -- (if gotthis != 0) [this]
 -- [argument] x `args`
 
@@ -2350,22 +2341,17 @@ After a successful call, all arguments will be popped off the stack and the expe
 -- SGS function
 -- C function
 -- object with CALL interface function defined
--- `SGS_FSTKTOP` - if this is specified, function is taken from the top of the stack, before arguments.
-
-! Stack is returned to the expected state only if the return value implies success (>= 0) or is equal to SGS_EINPROC. Otherwise, it's left exactly as it was before the call.
 
 ! To check if function call was aborted, see @sgs_Cntl / SGS_CNTL_GET_ABORT.
-
-! To see the actual number of returned values, see @sgs_Cntl / SGS_CNTL_NUMRETVALS.
 
 ! To find out if execution state was suspended in this call, see @sgs_Cntl / SGS_CNTL_GET_PAUSED.
 
 
 # sgs_(This)Call [function aliases]
 
-== void sgs_Call( sgs_Context* C, sgs_Variable var, int args, int expect )
-== void sgs_ThisCall( sgs_Context* C, sgs_Variable var, int args, int expect )
-=== Call the variable with the arguments on stack, returning the expected number of variables on stack.
+== void sgs_Call( sgs_Context* C, int args, int expect )
+== void sgs_ThisCall( sgs_Context* C, int args, int expect )
+=== Call the function with the arguments on stack, returning the expected number of variables on stack.
 
 - Aliases to @sgs_FCall, for the first function `gotthis = 0`, for the second `gotthis = 1`.
 
@@ -2589,10 +2575,10 @@ After a successful call, all arguments will be popped off the stack and the expe
 
 # sgs_UnserializeSGSON(Ext) [functions]
 
-== void sgs_UnserializeSGSON( SGS_CTX, const char* str )
+== void sgs_UnserializeSGSON( sgs_Context* C, const char* str )
 === Unserialize the given variable from a byte stream.
 
-== void sgs_UnserializeSGSONExt( SGS_CTX, const char* str, size_t size )
+== void sgs_UnserializeSGSONExt( sgs_Context* C, const char* str, size_t size )
 === Allows to pass a string buffer to the parsing function.
 
 - `sgs_UnserializeSGSON` is alias to `sgs_UnserializeSGSONExt( C, str, SGS_STRINGLENGTHFUNC( str ) )`
@@ -2969,6 +2955,14 @@ After a successful call, all arguments will be popped off the stack and the expe
 - If diff is positive, stack is null-variable-padded at the end.
 - If diff is negative, the specified number of items are popped.
 - If amount of items to be popped is bigger than size, function fails.
+
+
+# sgs_AdjustStack [function]
+
+== SGSRESULT sgs_AdjustStack( sgs_Context* C, int expected, int ret )
+=== Resizes the current stack frame by `expected` - `ret`, returns `ret`
+
+Used with sgs_Eval** functions to create their sgs_Exec** counterparts.
 
 
 # sgs_AbsIndex [function]
@@ -3759,7 +3753,7 @@ Depending on the argument, it is called by different sources:
 
 ==== Additional arguments:
 
-- int type -- one of SGS_VT_[BOOL|INT|REAL|STRING|PTR] or SGS_CONVOP_CLONE / SGS_CONVOP_TOITER
+- int type -- one of SGS_VT_[BOOL|STRING] or SGS_CONVOP_CLONE / SGS_CONVOP_TOITER
 
 ==== Stack frame:
 
@@ -4109,7 +4103,6 @@ This library is loaded on initialization and contains the functions and constant
 -- @subthread_create - create a managed sub-coroutine (subthread)
 -- @yield - suspend current state, return to caller
 -- @abort - stop the execution of the calling SGS function
--- @sys_call - call a function/callable dynamically (function and `this` specified at runtime)
 -- @sys_apply - call a function/callable even more dynamically (argument count also specified at runtime)
 -- @pcall - do a protected call by trapping all internal messages in the specified callback
 -- @assert - emit an error if a condition does not evaluate to `true`
@@ -4199,6 +4192,12 @@ This library is loaded on initialization and contains the functions and constant
     {
         return string_implode( this, separator );
     }
+
+
+# array_sized [function]
+
+== array_sized( size )
+=== returns an @array<array [object]>, containing `size` null values
 
 
 # dict [function]
@@ -4861,22 +4860,12 @@ When the event is signaled, the thread will be aborted as soon as possible.
     print( 5 ); // this line is not reached
 
 
-# sys_call [function]
-
-== sys_call( func, this[, args..] )
-=== Calls the specified function with the specified `this` value and argument list.
-
-! If argument count is only known at runtime, see @sys_apply.
-
-- C functions, SGS functions, closure objects and real closures have this function under the "call" property.
-
-
 # sys_apply [function]
 
 == sys_apply( func, this, args )
 === calls the specified function with the specified `this` value and argument array
 
-! If argument count is known at compile time, prefer @sys_call to this function.
+! If argument count is known at compile time, prefer using the compatible function call syntax (`thisvar!func( arg1, ... )`) to this function.
 
 - C functions, SGS functions, closure objects and real closures have this function under the "apply" property.
 
@@ -7210,7 +7199,7 @@ This is an engine profiler hook extension. It supports three processing modes.
 
 === Functions
 
-- void sgs_ProfInit( SGS_CTX, sgs_Prof* P, int mode ) - initialize the profiler
+- void sgs_ProfInit( sgs_Context* C, sgs_Prof* P, int mode ) - initialize the profiler
 - void sgs_ProfClose( sgs_Prof* P ) - free the profiler
 - void sgs_ProfDump( sgs_Prof* P ) - dump the data
 
@@ -7231,8 +7220,8 @@ This is an engine debugging hook extension. It provides the opportunity to inter
 
 === Functions
 
-- int sgs_InitIDbg( SGS_CTX, SGS_IDBG ) - initialize the debugger
-- int sgs_CloseIDbg( SGS_CTX, SGS_IDBG ) - free the debugger
+- int sgs_InitIDbg( sgs_Context* C, SGS_IDBG ) - initialize the debugger
+- int sgs_CloseIDbg( sgs_Context* C, SGS_IDBG ) - free the debugger
 
 === Usage example
 

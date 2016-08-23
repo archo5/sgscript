@@ -657,8 +657,8 @@ SGS_APIFUNC sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, sgs_StackFrame* from, int 
 #endif
 #define SGS_STRLITBUF( lit ) lit, sizeof(lit) - 1
 
-#define sgs_ExecBuffer( C, buf, sz ) sgs_EvalBuffer( C, buf, sz )
-#define sgs_ExecString( C, str ) sgs_AdjustStack( C, 0, sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) ) )
+#define sgs_ExecBuffer( C, buf, sz ) sgs_AdjustStack( C, 0, sgs_EvalBuffer( C, buf, sz ) )
+#define sgs_ExecString( C, str ) sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )
 #define sgs_EvalString( C, str ) sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )
 #define sgs_ExecFile( C, str ) sgs_AdjustStack( C, 0, sgs_EvalFile( C, str ) )
 #define sgs_Include( C, str ) sgs_IncludeExt( C, str, NULL )
@@ -889,7 +889,7 @@ SGS_APIFUNC void sgs_ClSetItem( SGS_CTX, sgs_StkIdx item, sgs_Variable* var );
 SGS_APIFUNC int sgs_XFCall( SGS_CTX, int args, int gotthis );
 #define sgs_XCall( C, args ) sgs_XFCall( C, args, 0 )
 #define sgs_XThisCall( C, args ) sgs_XFCall( C, args, 1 )
-#define sgs_FCall( C, args, expect, gotthis ) sgs_SetDeltaSize( C, (expect) - sgs_XFCall( C, args, gotthis ) )
+#define sgs_FCall( C, args, expect, gotthis ) sgs_AdjustStack( C, expect, sgs_XFCall( C, args, gotthis ) )
 #define sgs_Call( C, args, expect ) sgs_FCall( C, args, expect, 0 )
 #define sgs_ThisCall( C, args, expect ) sgs_FCall( C, args, expect, 1 )
 SGS_APIFUNC SGSBOOL sgs_GlobalCall( SGS_CTX, const char* name, int args, int expect );

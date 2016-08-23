@@ -1,4 +1,21 @@
 
+**1.4.0** (2016/xx/xx):
+
+- **added class syntax**
+- **added 'defer' keyword** (moves statement to end of block, 2+ statements are executed in opposite order)
+- improved closure system (less cost for regular calls)
+- **SGSON serialization (JSON-like, with function syntax)**
+- call overhead optimization
+- hash table performance stabilization
+- alternative concatenation operator - ".."
+- new test subsystems, consolidated tests into fewer files
+- SGS-CPPBC: improved and added API functions, added backing store, added support for class inheritance
+- xgmath: added 4 functions for AABB2 object (expand, limit, collide, circle_collide)
+- simplified function call API
+- refactored internals for reduced code size
+- various bugfixes
+- optimized memory usage
+
 **1.0.4** (2016/01/20):
 
 - some API cleanup (removed error codes and failure cases)

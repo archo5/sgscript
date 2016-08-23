@@ -1,4 +1,4 @@
-# SGScript v1.0.4
+# SGScript v1.4.0
 
 ## Usage
 

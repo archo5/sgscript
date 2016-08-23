@@ -3450,7 +3450,7 @@ fail:
 	argument unpacking:
 	n - null (not sure why but I had a free letter here)
 	b - boolean
-	c,w,l,q,i - integers (int8,int16,int32,int64 x2)
+	c,w,l,q,i,I - integers (int8,int16,int32,int64 x2,int)
 	f,d,r - floats (reals) (float32,float64 x2)
 	s,m - strings (string,string+size)
 	p - function (callable, actually; p stands for "procedure";
@@ -3569,7 +3569,7 @@ SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 			}
 			strict = 0; nowrite = 0; from++; break;
 		
-		case 'c': case 'w': case 'l': case 'q': case 'i':
+		case 'c': case 'w': case 'l': case 'q': case 'i': case 'I':
 			{
 				sgs_Int i, imin = INT64_MIN, imax = INT64_MAX;
 				
@@ -3584,6 +3584,7 @@ SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 						case 'l': va_arg( *args, uint32_t* ); break;
 						case 'q': va_arg( *args, uint64_t* ); break;
 						case 'i': va_arg( *args, sgs_Int* ); break;
+						case 'I': va_arg( *args, int* ); break;
 						}
 					}
 					break;
@@ -3597,6 +3598,8 @@ SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 					else if( *cmd == 'w' && !isig ){ imin = 0; imax = UINT16_MAX; }
 					else if( *cmd == 'l' && isig ){ imin = INT32_MIN; imax = INT32_MAX; }
 					else if( *cmd == 'l' && !isig ){ imin = 0; imax = UINT32_MAX; }
+					else if( *cmd == 'I' && isig ){ imin = INT_MIN; imax = INT_MAX; }
+					else if( *cmd == 'I' && !isig ){ imin = 0; imax = UINT_MAX; }
 				}
 				
 				if( !sgs_ParseInt( C, from, &i ) ||
@@ -3627,6 +3630,7 @@ SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 					case 'l': *va_arg( *args, uint32_t* ) = (uint32_t) i; break;
 					case 'q': *va_arg( *args, uint64_t* ) = (uint64_t) i; break;
 					case 'i': *va_arg( *args, sgs_Int* ) = i; break;
+					case 'I': *va_arg( *args, int* ) = (int) i; break;
 					}
 				}
 			}

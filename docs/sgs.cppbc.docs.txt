@@ -187,7 +187,7 @@ Syntax: `SGS_METHOD <type> <name>(<arguments>)`
 Alt. syntax (bind without declaration): `SGS_METHOD SGS_ALIAS( <type> <name>(<arguments>) );`
 
 - SGS_MULTRET can be used as <type> to allow the return value specify the number of return values pushed (like a usual SGScript C function)
-- SGS_CTX / `sgs_Context*` arguments are used for coroutine-awareness and are not counted in the SGScript argument list
+- SGS_CTX / `sgs_Context*` arguments are not counted in the SGScript argument list
 
 == SGS_METHOD_NAMED
 
@@ -196,6 +196,25 @@ Marks the renamed methods that should be made available to the scripting engine.
 Syntax: `SGS_METHOD_NAMED( <sgsname> ) <type> <realname>(<arguments>)`
 
 See SGS_METHOD for more info.
+
+== SGS_STATICMETHOD
+
+Marks the static methods that should be made available to the scripting engine.
+
+Syntax: `SGS_STATICMETHOD <type> <name>(<arguments>)`
+
+Alt. syntax (bind without declaration): `SGS_STATICMETHOD SGS_ALIAS( <type> <name>(<arguments>) );`
+
+- SGS_MULTRET can be used as <type> to allow the return value specify the number of return values pushed (like a usual SGScript C function)
+- SGS_CTX / `sgs_Context*` arguments can be used to get the context (the `C` member variable is unavailable) and are not counted in the SGScript argument list
+
+== SGS_STATICMETHOD_NAMED
+
+Marks the renamed methods that should be made available to the scripting engine.
+
+Syntax: `SGS_STATICMETHOD_NAMED( <sgsname> ) <type> <realname>(<arguments>)`
+
+See SGS_STATICMETHOD for more info.
 
 == SGS_PROPERTY
 
@@ -262,6 +281,15 @@ Syntax: `SGS_NODUMP( <var1> <var2> ... )`
 
 All readable properties are dumped by default, this is used to disable that for certain variables.
 
+== SGS_BACKING_STORE
+
+Marks a variable to be used as backing store (read from and write to it if a property/index-related action doesn't match any of this object's properties).
+
+Syntax `SGS_BACKING_STORE( (READ|WRITE) <var> )`
+
+* `var` should be sgsVariable.
+* It is not automatically initialized - to enable the system, it should be initialized to an object with free write capabilities (like `dict`/`map`)
+
 
 # Data type handling [info]
 
@@ -293,7 +321,11 @@ All readable properties are dumped by default, this is used to disable that for 
 - @sgs_Create(Lite)ClassIPA - allocate new class instance, push it on stack
 - @sgs_Create(Lite)ClassFrom - push a copy of class instance on stack
 - @sgs_InitCreatedClass - initialize internal class pointers
-- @sgs_Create(Lite)Class - push a new instance of class, using the specified arguments for constructor
+- @SGS_CREATE(LITE)CLASS - push a new instance of class, using the specified arguments for constructor
+- @sgs_GetClassInterface - get or create the class interface object
+- @sgsEnv - retrieve the global environment
+- @sgsRegistry - retrieve the registry
+- @sgsSymbols - retrieve the symbols section of registry
 
 
 # >>>
@@ -468,6 +500,7 @@ This is the class used for handling all SGScript variables.
 - `sgsVariable( const sgsVariable& h )` - initializes variable from another variable
 - `sgsVariable( sgs_Context* c )` - initialize a NULL variable and associate context
 - `sgsVariable( sgs_Context* c, sgs_StkIdx item )` - initialize a variable from current stack frame
+- `sgsVariable( sgs_Context* c, sgs_StkIdx item, EMayNotExist )` - initialize a variable from current stack frame (index may not be valid, in which case the variable is initialized to NULL)
 - `sgsVariable( sgs_Context* c, EPickAndPop )` - initialize a variable from the topmost stack item, pop it afterwards
 - `sgsVariable( sgs_Context* c, sgs_Variable* v )` - initialize a variable from data pointer
 - `sgsVariable( const sgsString& s )` - initialize a variable from the specified string handle
@@ -480,11 +513,17 @@ This is the class used for handling all SGScript variables.
 - `bool not_null() const` - return if variable is not NULL
 - `bool is_object( sgs_ObjInterface* iface )` - check if variable is an object with the specified interface
 - `template< class T > bool is_handle()` - check if variable is an instance of the specified SGS_OBJECT class
+- `sgs_VarObj* get_object_struct() const` - get the internal object structure
 - `template< class T > T* get_object_data()` - get object pointer from variable (WARNING: this method does not do any safety checks)
 - `template< class T > sgsHandle<T> get_handle()` - get the class handle
+- `template< class T > sgsHandle<T> downcast()` - get the class handle (allow casting to inherited types)
 - `int type_id() const` - get the type ID (one of SGS_VT_*** constants)
 - `bool is_string() const` - return if this variable is a string
 - `sgsString get_string()` - get the string handle
+- `void set_meta_obj( sgsVariable metaobj )` - set the metaobject for this object
+- `sgsVariable get_meta_obj()` - get the metaobject of this object
+- `bool get_metamethods_enabled()` - check if metamethods are enabled for this object
+- `void enable_metamethods( bool e )` - set if metamethods are enabled for this object
 - `sgsVariable getsubitem( sgsVariable key, bool prop )` - retrieve an index/property value
 - `sgsVariable getsubitem( const char* key, bool prop )` - retrieve an index/property value (string key)
 - `sgsVariable getprop( sgsVariable key )` - retrieve a property value
@@ -500,16 +539,19 @@ This is the class used for handling all SGScript variables.
 - `template< class T > T get()` - retrieve a C++ value from the variable
 - `template< class T > T getdef( const T& def )` - retrieve a C++ value from the variable, using `def` for `null`
 - `sgsVariable& set_null()` - set variable to `null`
-- `sgsVariable& set( bool v )` - set variable to the specified boolean value
-- `sgsVariable& set( sgs_Int v )` - set variable to the specified integer value
-- `sgsVariable& set( sgs_Real v )` - set variable to the specified real number value
+- `sgsVariable& set_bool( bool v )` - set variable to the specified boolean value
+- `sgsVariable& set_int( sgs_Int v )` - set variable to the specified integer value
+- `sgsVariable& set_real( sgs_Real v )` - set variable to the specified real number value
 - `sgsVariable& set( sgsString v )` - set variable to the specified string value
 - `sgsVariable& set( sgs_CFunc v )` - set variable to the specified C function value
 - `template< class T > sgsVariable& set( sgsHandle< T > v )` - set variable to the specified class handle
 - `template< class T > sgsVariable& set( T* v )` - set variable to the specified C++/SGScript class
-- `bool call( int args = 0, int ret = 0 )` - call variable as function using arguments from stack
-- `bool thiscall( sgsVariable func, int args = 0, int ret = 0 )` - use variable as `this` in a method call to `func`
-- `bool thiscall( const char* key, int args = 0, int ret = 0 )` - use variable as `this` in a method call to its function
+- `bool call( sgs_Context* c, int args = 0, int ret = 0 )` - call variable as function using arguments from stack
+- `bool thiscall( sgs_Context* c, sgsVariable func, int args = 0, int ret = 0 )` - use variable as `this` in a method call to `func`
+- `bool thiscall( sgs_Context* c, const char* key, int args = 0, int ret = 0 )` - use variable as `this` in a method call to its function
+- `RT tcall( sgs_Context* c, ... )` - call the variable with specified arguments on the given context
+- `RT tthiscall( sgs_Context* c, sgsVariable func, ... )` - use variable as `this` in a method call to `func`
+- `RT tthiscall( sgs_Context* c, const char* key, ... )` - use variable as `this` in a method call to its function
 - `void _acquire()` - increment reference count on variable
 - `void _release()` - decrement reference count on variable, remove it from the class
 
@@ -570,6 +612,36 @@ This is the class used for handling all SGScript variables.
 Usage example:
 
     SGS_CREATECLASS( C, NULL, myClass, ( param1, 5.0f ) );
+
+
+# sgs_GetClassInterface [function]
+
+== template< class T > sgsVariable sgs_GetClassInterface( SGS_CTX )
+=== Get or create the class interface object.
+
+
+# sgsEnv [function]
+
+== sgsVariable sgsEnv( SGS_CTX )
+=== Retrieve the global environment.
+
+Wrapper of `sgs_GetEnv` C API function.
+
+
+# sgsRegistry [function]
+
+== sgsVariable sgsRegistry( SGS_CTX )
+=== Retrieve the registry.
+
+Wrapper of `sgs_Registry` C API function with argument `SGS_REG_ROOT`.
+
+
+# sgsSymbols [function]
+
+== sgsVariable sgsSymbols( SGS_CTX )
+=== Retrieve the symbols section of registry.
+
+Wrapper of `sgs_Registry` C API function with argument `SGS_REG_SYM`.
 
 
 # <<<
