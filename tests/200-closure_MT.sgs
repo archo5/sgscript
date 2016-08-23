@@ -176,13 +176,14 @@ closure
 // `self-ref. closure serialize`
 rec ``
 exec `
-function fn( a ) use(fn)
+// do not define as 'function fn' statement, that creates a symbol
+fn = function( a ) use(fn)
 {
 	if( a >= 10 )
 		return a + 1;
 	else
 		return fn( a + 2 );
-}
+};
 println( fn(0) );
 printvar_ext(fn,2);
 global sqsr = serialize(fn);
@@ -192,7 +193,7 @@ check_err ``
 check_out `11
 closure
 {
-  func: SGS function 'fn'
+  func: SGS function <anonymous>
   #0 (rc=2): closure
   {
     func: ...
@@ -213,7 +214,7 @@ check_err ``
 check_out `11
 closure
 {
-  func: SGS function 'fn'
+  func: SGS function <anonymous> defined at <anonymous>:3
   #0 (rc=1): closure
   {
     func: ...

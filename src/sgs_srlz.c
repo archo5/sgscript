@@ -295,15 +295,15 @@ fail:
 typedef struct sgs_serialize1_data
 {
 	int mode;
+	int ret;
 	sgs_MemBuf data;
 }
 sgs_serialize1_data;
 
 void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 {
-	int ret = SGS_TRUE;
 	void* prev_serialize_state = C->serialize_state;
-	sgs_serialize1_data SD = { 1, sgs_membuf_create() }, *pSD;
+	sgs_serialize1_data SD = { 1, 1, sgs_membuf_create() }, *pSD;
 	int ep = !C->serialize_state || *(int*)C->serialize_state != 1;
 	
 	if( ep )
@@ -321,21 +321,12 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 			sgs_SerializeInt_V1( C, sym );
 			sgs_membuf_appchr( &pSD->data, C, 'S' );
 			sgs_Release( C, &sym );
-			goto fail;
+			goto end;
 		}
 		sgs_Release( C, &sym );
 	}
 	
-	if( var.type == SGS_VT_THREAD )
-	{
-		if( !sgs__thread_serialize( C, var.data.T, &pSD->data, NULL ) )
-		{
-			sgs_Msg( C, SGS_ERROR, "failed to serialize thread" );
-			ret = SGS_FALSE;
-			goto fail;
-		}
-	}
-	else if( var.type == SGS_VT_OBJECT )
+	if( var.type == SGS_VT_OBJECT )
 	{
 		int parg = C->object_arg;
 		sgs_VarObj* O = var.data.O;
@@ -343,28 +334,33 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 		if( !O->iface->serialize )
 		{
 			sgs_Msg( C, SGS_ERROR, "cannot serialize object of type '%s'", O->iface->name );
-			ret = SGS_FALSE;
-			goto fail;
+			pSD->ret = SGS_FALSE;
+			goto end;
 		}
 		_STACK_PROTECT;
 		C->object_arg = 1;
-		ret = SGS_SUCCEEDED( O->iface->serialize( C, O ) );
+		pSD->ret = SGS_SUCCEEDED( O->iface->serialize( C, O ) );
 		C->object_arg = parg;
 		_STACK_UNPROTECT;
-		if( ret == SGS_FALSE )
-			goto fail;
+		goto end;
 	}
 	else if( var.type == SGS_VT_CFUNC )
 	{
-		sgs_Msg( C, SGS_ERROR, "cannot serialize C functions" );
-		ret = SGS_FALSE;
-		goto fail;
+		sgs_Msg( C, SGS_ERROR, "serialization mode 1 does not support C function serialization" );
+		pSD->ret = SGS_FALSE;
+		goto end;
 	}
 	else if( var.type == SGS_VT_PTR )
 	{
-		sgs_Msg( C, SGS_ERROR, "cannot serialize pointers" );
-		ret = SGS_FALSE;
-		goto fail;
+		sgs_Msg( C, SGS_ERROR, "serialization mode 1 does not support pointer serialization" );
+		pSD->ret = SGS_FALSE;
+		goto end;
+	}
+	else if( var.type == SGS_VT_THREAD )
+	{
+		sgs_Msg( C, SGS_ERROR, "serialization mode 1 does not support thread serialization" );
+		pSD->ret = SGS_FALSE;
+		goto end;
 	}
 	else
 	{
@@ -394,8 +390,8 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 					sgs_Msg( C, SGS_INTERR, "sgs_Serialize: failed to serialize function "
 						"(ptr = %p, name = %s, file = %s)", var.data.F,
 						sgs_str_cstr( var.data.F->sfuncname ), sgs_str_cstr( var.data.F->sfilename ) );
-					ret = SGS_FALSE;
-					goto fail;
+					pSD->ret = SGS_FALSE;
+					goto end;
 				}
 				else
 				{
@@ -406,15 +402,15 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 			break;
 		default:
 			sgs_Msg( C, SGS_INTERR, "sgs_Serialize: unknown memory error" );
-			ret = SGS_FALSE;
-			goto fail;
+			pSD->ret = SGS_FALSE;
+			goto end;
 		}
 	}
 
-fail:
+end:
 	if( ep )
 	{
-		if( ret )
+		if( SD.ret )
 		{
 			if( SD.data.size > 0x7fffffff )
 			{
@@ -591,6 +587,7 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 typedef struct sgs_serialize2_data
 {
 	int mode;
+	int ret;
 	sgs_VHTable servartable;
 	sgs_MemBuf argarray;
 	sgs_VarObj* curObj;
@@ -613,7 +610,6 @@ static void srlz_mode2_addvar( SGS_CTX, sgs_serialize2_data* pSD, sgs_Variable* 
 
 void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 {
-	int ret = SGS_TRUE;
 	void* prev_serialize_state = C->serialize_state;
 	sgs_serialize2_data SD, *pSD;
 	int ep = !C->serialize_state || *(int*)C->serialize_state != 2;
@@ -623,6 +619,7 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		SRLZ_DEBUG( printf( "SRLZ == mode 2 START ==\n") );
 		
 		SD.mode = 2;
+		SD.ret = 1;
 		sgs_vht_init( &SD.servartable, C, 64, 64 );
 		SD.argarray = sgs_membuf_create();
 		SD.curObj = NULL;
@@ -661,7 +658,7 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 			if( pSD->argarray.size < 4 )
 			{
 				/* error likely to be already printed */
-				ret = SGS_FALSE;
+				pSD->ret = SGS_FALSE;
 				goto end;
 			}
 			
@@ -687,7 +684,7 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		if( pSD->argarray.size < 4 )
 		{
 			/* error likely to be already printed */
-			ret = SGS_FALSE;
+			pSD->ret = SGS_FALSE;
 			goto end;
 		}
 		
@@ -704,7 +701,7 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		if( !sgs__thread_serialize( C, var.data.T, &pSD->data, &pSD->argarray ) )
 		{
 			sgs_Msg( C, SGS_ERROR, "failed to serialize thread" );
-			ret = SGS_FALSE;
+			pSD->ret = SGS_FALSE;
 			goto end;
 		}
 	}
@@ -729,21 +726,9 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 			count = *(size_t*) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable), sizeof(size_t) );
 			clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable) + sizeof(size_t), sizeof(void*) );
 			
-			SRLZ_DEBUG( printf( "SRLZ obj/closure > func\n" ) );
-			sgs_SerializeInt_V2( C, *(sgs_Variable*) O->data );
-			for( i = 0; i < count; ++i )
-			{
-				SRLZ_DEBUG( printf( "SRLZ obj/closure > closure %d\n", (int) i ) );
-				sgs_Variable tmp;
-				tmp.type = SGS_VTSPC_CLOSURE;
-				tmp.data.P = clsrlist[ i ];
-				sgs_SerializeInt_V2( C, tmp );
-			}
-			
 			/* write closure */
 			{
-				int32_t args = (int32_t) count + 1;
-				size_t argsize = (size_t) args * sizeof(int32_t);
+				int32_t args = (int32_t) count;
 				char pb[5] = { 'Q', 0 };
 				{
 					/* WP: they were pointless */
@@ -753,12 +738,40 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 					pb[4] = (char)((args>>24)&0xff);
 				}
 				
-				SRLZ_DEBUG( printf( "SRLZ emit obj/closure\n" ) );
+				SRLZ_DEBUG( printf( "SRLZ emit obj/closure (%d args)\n", (int) args ) );
 				
 				sgs_membuf_appbuf( &pSD->data, C, pb, 5 );
-				sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - argsize, argsize );
-				sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - argsize, pSD->argarray.size );
 			}
+			srlz_mode2_addvar( C, pSD, &var );
+			
+			SRLZ_DEBUG( printf( "SRLZ obj/closure > func\n" ) );
+			sgs_SerializeInt_V2( C, *(sgs_Variable*) O->data );
+			
+			SRLZ_DEBUG( printf( "SRLZ emit obj/closure [f]unc\n" ) );
+			sgs_membuf_appchr( &pSD->data, C, 'f' );
+			sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 8, 8 );
+			sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4, pSD->argarray.size );
+			
+			for( i = 0; i < count; ++i )
+			{
+				uint32_t idx = (uint32_t) i;
+				sgs_Variable tmp;
+				
+				SRLZ_DEBUG( printf( "SRLZ obj/closure > closure %d\n", (int) i ) );
+				
+				tmp.type = SGS_VTSPC_CLOSURE;
+				tmp.data.P = clsrlist[ i ];
+				sgs_SerializeInt_V2( C, tmp );
+				
+				SRLZ_DEBUG( printf( "SRLZ emit obj/closure [<] argument variable\n" ) );
+				
+				sgs_membuf_appchr( &pSD->data, C, '<' );
+				sgs_membuf_appbuf( &pSD->data, C, &idx, sizeof(idx) );
+				sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 8, 8 );
+				sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4, pSD->argarray.size );
+			}
+			
+			goto end;
 		}
 		else
 		{
@@ -785,14 +798,14 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 				SRLZ_DEBUG( printf( "- no callback\n" ) );
 				
 				sgs_Msg( C, SGS_WARNING, "Cannot serialize object of type '%s'", O->iface->name );
-				ret = SGS_FALSE;
+				pSD->ret = SGS_FALSE;
 				goto end;
 			}
 			pSD->curObj = O;
 			_STACK_PROTECT;
 			C->object_arg = 2;
 			pSD->metaObjArg = mo_arg;
-			ret = SGS_SUCCEEDED( O->iface->serialize( C, O ) );
+			pSD->ret = SGS_SUCCEEDED( O->iface->serialize( C, O ) );
 			pSD->metaObjArg = prev_mo_arg;
 			C->object_arg = parg;
 			_STACK_UNPROTECT;
@@ -805,14 +818,14 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 	{
 		SRLZ_DEBUG( printf( "SRLZ cfunc BAD\n" ) );
 		sgs_Msg( C, SGS_WARNING, "Cannot serialize C functions" );
-		ret = SGS_FALSE;
+		pSD->ret = SGS_FALSE;
 		goto end;
 	}
 	else if( var.type == SGS_VT_PTR )
 	{
 		SRLZ_DEBUG( printf( "SRLZ ptr BAD\n" ) );
 		sgs_Msg( C, SGS_WARNING, "Cannot serialize pointers" );
-		ret = SGS_FALSE;
+		pSD->ret = SGS_FALSE;
 		goto end;
 	}
 	else
@@ -843,7 +856,7 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 				size_t szbefore = pSD->data.size;
 				if( !_serialize_function( C, var.data.F, &pSD->data ) )
 				{
-					ret = SGS_FALSE;
+					pSD->ret = SGS_FALSE;
 					goto end;
 				}
 				else
@@ -855,7 +868,7 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 			break;
 		default:
 			sgs_Msg( C, SGS_ERROR, "sgs_Serialize: unknown memory error" );
-			ret = SGS_FALSE;
+			pSD->ret = SGS_FALSE;
 			goto end;
 		}
 	}
@@ -868,7 +881,7 @@ end:
 		SRLZ_DEBUG( printf( "SRLZ -- mode 2 AT END --\n" ) );
 		
 		if( SD.argarray.size == 0 )
-			ret = 0;
+			SD.ret = 0;
 		else
 		{
 			SRLZ_DEBUG( printf( "SRLZ emit return\n" ) );
@@ -876,12 +889,12 @@ end:
 			sgs_membuf_appchr( &SD.data, C, 'R' );
 			sgs_membuf_appbuf( &SD.data, C, SD.argarray.ptr + SD.argarray.size - 4, 4 );
 		}
-		if( ret )
+		if( SD.ret )
 		{
 			if( SD.data.size > 0x7fffffff )
 			{
 				sgs_Msg( C, SGS_ERROR, "serialized string too long" );
-				ret = SGS_FALSE;
+				SD.ret = SGS_FALSE;
 			}
 			else
 			{
@@ -889,7 +902,7 @@ end:
 				sgs_PushStringBuf( C, SD.data.ptr, (sgs_SizeVal) SD.data.size );
 			}
 		}
-		if( ret == SGS_FALSE )
+		if( SD.ret == SGS_FALSE )
 		{
 			sgs_PushNull( C );
 		}
@@ -1140,56 +1153,98 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 		else if( c == 'Q' )
 		{
 			/* closure object */
-			int32_t i, pos, argc;
+			int32_t argc;
 			sgs_Variable funcvar;
-			sgs_Closure* clsrlist[ 256 ];
 			
 			SRLZ_DEBUG( printf( "USRZ found [Q] (closure object)\n" ) );
 			
 			if( str > strend-4 && !sgs_unserr_incomp( C ) )
 				goto fail;
 			SGS_AS_INT32( argc, str );
-			SRLZ_DEBUG( printf( "- %d args\n", argc ) );
 			str += 4;
-			for( i = 0; i < argc; ++i )
+			
+			SRLZ_DEBUG( printf( "- %d args\n", argc ) );
+			
+			/* create the closure object */
+			funcvar.type = SGS_VT_NULL;
+			sgsSTD_MakeClosure( C, &var, &funcvar, (size_t) argc );
+		}
+		else if( c == 'f' )
+		{
+			sgs_Variable *cvp, *fvp;
+			int32_t pos, func;
+			
+			SRLZ_DEBUG( printf( "USRZ found [f] (closure function)\n" ) );
+			
+			if( str > strend-8 && !sgs_unserr_incomp( C ) )
+				goto fail;
+			SGS_AS_INT32( pos, str ); str += 4;
+			SGS_AS_INT32( func, str ); str += 4;
+			
+			SRLZ_DEBUG( printf( "- closure=%d func=%d\n", pos, func ) );
+			
+			if( pos < 0 || (size_t) pos >= mb.size / sizeof(sgs_Variable) ||
+				func < 0 || (size_t) func >= mb.size / sizeof(sgs_Variable) )
 			{
-				sgs_Variable* vp;
-				if( str > strend-4 && !sgs_unserr_incomp( C ) )
-					goto fail;
-				SGS_AS_INT32( pos, str );
-				
-				SRLZ_DEBUG( printf( "- arg %d = %d\n", (int) i, (int) pos ) );
-				
-				str += 4;
-				if( pos < 0 || (size_t) pos >= mb.size / sizeof(sgs_Variable) )
+				sgs_unserr_error( C );
+				goto fail;
+			}
+			
+			cvp = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ];
+			fvp = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ func ];
+			if( cvp->type != SGS_VT_OBJECT || cvp->data.O->iface != sgsstd_closure_iface )
+			{
+				sgs_unserr_error( C );
+				goto fail;
+			}
+			*(sgs_Variable*)cvp->data.O->data = *fvp;
+			VAR_ACQUIRE( fvp );
+			continue;
+		}
+		else if( c == '<' )
+		{
+			sgs_Variable *cvp, *avp;
+			int32_t which, cvpos, avpos;
+			
+			SRLZ_DEBUG( printf( "USRZ found [<] (closure variable)\n" ) );
+			
+			if( str > strend-12 && !sgs_unserr_incomp( C ) )
+				goto fail;
+			SGS_AS_INT32( which, str ); str += 4;
+			SGS_AS_INT32( cvpos, str ); str += 4;
+			SGS_AS_INT32( avpos, str ); str += 4;
+			
+			SRLZ_DEBUG( printf( "- closure=%d arg=%d avpos=%d\n", cvpos, which, avpos ) );
+			
+			if( cvpos < 0 || (size_t) cvpos >= mb.size / sizeof(sgs_Variable) ||
+				avpos < 0 || (size_t) avpos >= mb.size / sizeof(sgs_Variable) )
+			{
+				sgs_unserr_error( C );
+				goto fail;
+			}
+			
+			cvp = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ cvpos ];
+			avp = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ avpos ];
+			if( cvp->type != SGS_VT_OBJECT || cvp->data.O->iface != sgsstd_closure_iface ||
+				avp->type != SGS_VTSPC_CLOSURE )
+			{
+				sgs_unserr_error( C );
+				goto fail;
+			}
+			
+			{
+				char* ptr = (char*) cvp->data.O->data;
+				size_t count = *(size_t*) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable), sizeof(size_t) );
+				sgs_Closure** clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable) + sizeof(size_t), sizeof(void*) );
+				if( which < 0 || (size_t) which >= count )
 				{
 					sgs_unserr_error( C );
 					goto fail;
 				}
-				
-				vp = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ];
-				if( i == 0 )
-					funcvar = *vp;
-				else
-				{
-					if( vp->type != SGS_VTSPC_CLOSURE )
-					{
-						sgs_unserr_error( C );
-						goto fail;
-					}
-					clsrlist[ i - 1 ] = vp->data.P;
-				}
+				clsrlist[ which ] = (sgs_Closure*) avp->data.P;
+				clsrlist[ which ]->refcount++;
 			}
-			
-			/* create the closure object */
-			{
-				sgs_Closure** outclsrlist = sgsSTD_MakeClosure( C, &var, &funcvar, (size_t) argc - 1 );
-				for( i = 0; i < argc - 1; ++i )
-				{
-					outclsrlist[ i ] = clsrlist[ i ];
-					clsrlist[ i ]->refcount++;
-				}
-			}
+			continue;
 		}
 		else if( c == 'T' )
 		{
