@@ -774,11 +774,11 @@ sgs_StackFrame* sgsCTX_AllocFrame( SGS_CTX );
 	SGS_SHCTX_USE; \
 	if( S->sf_pool_size >= SGS_STACKFRAMEPOOL_SIZE ){ \
 		sgs_Dealloc( F ); \
-		return; \
+	} else { \
+		F->next = S->sf_pool; \
+		S->sf_pool = F; \
+		S->sf_pool_size++; \
 	} \
-	F->next = S->sf_pool; \
-	S->sf_pool = F; \
-	S->sf_pool_size++; \
 }
 
 void sgsSTD_PostInit( SGS_CTX );
