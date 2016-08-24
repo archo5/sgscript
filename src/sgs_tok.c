@@ -22,10 +22,9 @@ static SGS_INLINE int detectline( const char* code, int32_t at )
 	return code[ at ] == '\r' || ( code[ at ] == '\n' && ( at == 0 || code[ at - 1 ] != '\r' ) );
 }
 
-static void skipcomment( SGS_CTX, sgs_MemBuf* out, sgs_LineNum* line, const char* code, int32_t* at, int32_t length )
+static void skipcomment( SGS_CTX, sgs_LineNum* line, const char* code, int32_t* at, int32_t length )
 {
 	int32_t i = *at + 1;
-	SGS_UNUSED( out );
 	if( code[ i ] == '/' )
 	{
 		i++;
@@ -330,7 +329,7 @@ sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
 		
 		/* comment */
 		if( fc == '/' && ( code[ i + 1 ] == '/'
-					|| code[ i + 1 ] == '*' ) )   skipcomment( C, &s, &line, code, &i, ilen );
+					|| code[ i + 1 ] == '*' ) )   skipcomment( C, &line, code, &i, ilen );
 		
 		/* special symbol */
 		else if( sgs_isoneof( fc, "()[]{},;:" ) ) sgs_membuf_appchr( &s, C, fc );

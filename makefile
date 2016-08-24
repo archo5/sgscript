@@ -18,11 +18,11 @@ else
 	OUTFILE=$(OUTFILE_DYNAMIC)
 	OUTFLAGS=$(OUTFLAGS_DYNAMIC)
 endif
-CFLAGS=-fwrapv -Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align \
-	$(call fnIF_RELEASE,-O3,-D_DEBUG -g) $(call fnIF_COMPILER,gcc,-static-libgcc,) \
+CFLAGS=-Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align \
+	$(call fnIF_RELEASE,-O2,-D_DEBUG -g) $(call fnIF_COMPILER,gcc,-static-libgcc,) \
 	$(call fnIF_ARCH,x86,-m32,$(call fnIF_ARCH,x64,-m64,)) -Isrc \
 	$(call fnIF_OS,windows,,-fPIC -D_FILE_OFFSET_BITS=64) \
-	$(call fnIF_OS,android,-DSGS_PF_ANDROID,)
+	$(call fnIF_OS,android,-DSGS_PF_ANDROID,) $(XCFLAGS)
 COMFLAGS=$(CFLAGS)
 BINFLAGS=$(CFLAGS) $(OUTFLAGS) -lm \
 	$(call fnIF_OS,android,-ldl -Wl$(comma)-rpath$(comma)'$$ORIGIN' -Wl$(comma)-z$(comma)origin,) \

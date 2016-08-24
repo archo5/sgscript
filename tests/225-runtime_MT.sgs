@@ -157,6 +157,15 @@ Array (3): [amazing,sgscript,5]
 after clear, size = 0, capacity = 8
 `
 
+// `self-referential array`
+rec ``
+exec `selfref = [];
+selfref.push( selfref );
+print( selfref );`
+result `SUCCESS`
+check_err ``
+check_out `[array]`
+
 // `dict features`
 rec ``
 exec `var x = {}; println( x );

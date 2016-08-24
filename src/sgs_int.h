@@ -440,15 +440,17 @@ void sgsVM_DestroyVar( SGS_CTX, sgs_Variable* p );
 	} \
 	(pvar)->type = SGS_VT_NULL; }
 
-void sgsVM_PopSkip( SGS_CTX, sgs_StkIdx num, sgs_StkIdx skip );
+#define ptr_add( a, b ) (((char*)(a)) + (b))
+#define ptr_sub( a, b ) ((char*)(a) - (char*)(b))
+#define ptr_dec( o, x ) *(char**)&(o) -= (x)
 
 #define _STACK_PREPARE ptrdiff_t _stksz = 0;
 #define _STACK_PROTECT _stksz = C->stack_off - C->stack_base; C->stack_off = C->stack_top;
 #define _STACK_PROTECT_SKIP( n ) do{ _stksz = C->stack_off - C->stack_base; \
 	C->stack_off = C->stack_top - (n); }while(0)
-#define _STACK_UNPROTECT sgsVM_PopSkip( C, SGS_STACKFRAMESIZE, 0 ); C->stack_off = C->stack_base + _stksz;
+#define _STACK_UNPROTECT fstk_pop( C, SGS_STACKFRAMESIZE ); C->stack_off = C->stack_base + _stksz;
 #define _STACK_UNPROTECT_SKIP( n ) do{ sgs_StkIdx __n = (n); \
-	sgsVM_PopSkip( C, SGS_STACKFRAMESIZE - __n, __n ); \
+	fstk_clean( C, C->stack_off, stk_ptop( C, -__n ) ); \
 	C->stack_off = C->stack_base + _stksz; }while(0)
 
 #define p_setvar_leave( dstp, srcp ){ \
@@ -478,7 +480,21 @@ void sgsVM_PopSkip( SGS_CTX, sgs_StkIdx num, sgs_StkIdx skip );
 #define stk_size( C ) ((sgs_StkIdx)((C)->stack_top - (C)->stack_off))
 #define stk_absindex( C, off ) ((sgs_StkIdx)((off) >= 0 ? (off) : (off) + stk_size(C)))
 
-void stk_makespace( SGS_CTX, sgs_StkIdx num );
+#define DEBUG_STACK 0
+void fstk_resize( SGS_CTX, size_t nsz );
+#if DEBUG_STACK
+#  define stk_makespace( C, num ){ \
+	size_t _reqsz = (size_t) ( ( C->stack_top - C->stack_base ) + (num) ); \
+	sgs_BreakIf( (num) < 0 ); \
+	sgs_BreakIf( _reqsz < (num) ); /* overflow test */ \
+	fstk_resize( C, _reqsz ); }
+#else
+#  define stk_makespace( C, num ){ \
+	size_t _reqsz = (size_t) ( ( C->stack_top - C->stack_base ) + (num) ); \
+	sgs_BreakIf( (num) < 0 ); \
+	sgs_BreakIf( _reqsz < (num) ); /* overflow test */ \
+	if( _reqsz > (C)->stack_mem ) fstk_resize( (C), _reqsz ); }
+#endif
 
 #define stk_setlvar( C, off, srcp ){ \
 	sgs_Variable* dstp = stk_poff( C, off ); \
@@ -520,16 +536,27 @@ void stk_makespace( SGS_CTX, sgs_StkIdx num );
 #define stk_mpush( C, vp, cnt ){ \
 	stk_makespace( C, cnt ); \
 	fstk_umpush( C, vp, cnt ); }
+#define stk_popskip( C, num, skip ){ \
+	if( (num) > 0 ){ \
+		sgs_Variable* off = C->stack_top - skip; \
+		sgs_Variable* ptr = off - num; \
+		fstk_clean( C, ptr, off ); \
+	} }
 #define stk_pop1( C ){ \
 	sgs_BreakIf( C->stack_top == C->stack_off ); \
 	C->stack_top--; \
 	VAR_RELEASE( C->stack_top ); }
+#define stk_pop1nr( C ){ \
+	sgs_BreakIf( C->stack_top == C->stack_off ); \
+	C->stack_top--; }
 
 void fstk_push( SGS_CTX, sgs_Variable* vp );
 void fstk_push_leave( SGS_CTX, sgs_Variable* vp );
 void fstk_push2( SGS_CTX, sgs_Variable* vp1, sgs_Variable* vp2 );
 void fstk_push_null( SGS_CTX );
 void fstk_umpush( SGS_CTX, sgs_Variable* vp, sgs_SizeVal cnt );
+void fstk_clean( SGS_CTX, sgs_Variable* from, sgs_Variable* to );
+void fstk_pop( SGS_CTX, sgs_StkIdx num );
 void fstk_pop1( SGS_CTX );
 
 size_t sgsVM_VarSize( const sgs_Variable* var );
@@ -565,8 +592,6 @@ typedef struct sgs_ObjPoolItem
 	uint32_t appsize;
 }
 sgs_ObjPoolItem;
-
-typedef sgs_Variable* sgs_VarPtr;
 
 #define SGS_SF_METHOD  0x01
 #define SGS_SF_HASTHIS 0x02
@@ -705,10 +730,10 @@ struct sgs_Context
 	sgs_Real      tm_accum; /* delta time accumulator for yield return */
 	
 	/* > main stack */
-	sgs_VarPtr    stack_base;
+	sgs_Variable* stack_base;
 	uint32_t      stack_mem;
-	sgs_VarPtr    stack_off;
-	sgs_VarPtr    stack_top;
+	sgs_Variable* stack_off;
+	sgs_Variable* stack_top;
 	
 	/* > stack frame info */
 	sgs_StackFrame* sf_first;
