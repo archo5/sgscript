@@ -542,6 +542,12 @@ void fstk_resize( SGS_CTX, size_t nsz );
 		sgs_Variable* ptr = off - num; \
 		fstk_clean( C, ptr, off ); \
 	} }
+#define stk_popto( C, to ){ \
+	sgs_Variable* top = C->stack_top; \
+	while( top > to ){ \
+		top--; \
+		VAR_RELEASE( top ); } \
+	C->stack_top = to; }
 #define stk_pop1( C ){ \
 	sgs_BreakIf( C->stack_top == C->stack_off ); \
 	C->stack_top--; \

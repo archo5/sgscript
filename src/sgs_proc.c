@@ -573,16 +573,9 @@ void fstk_clean( SGS_CTX, sgs_Variable* from, sgs_Variable* to )
 
 void fstk_pop( SGS_CTX, sgs_StkIdx num )
 {
-	sgs_Variable *top, *to;
+	sgs_Variable* to = C->stack_top - num;
 	sgs_BreakIf( num < 0 || num > SGS_STACKFRAMESIZE );
-	top = C->stack_top;
-	to = top - num;
-	while( top > to )
-	{
-		--top;
-		VAR_RELEASE( top );
-	}
-	C->stack_top = to;
+	stk_popto( C, to );
 }
 
 static void stk_pop2( SGS_CTX )
@@ -2395,19 +2388,50 @@ restart_loop:
 
 		case SGS_SI_RET1:
 		{
-			sgs_Variable var = *RESVAR( argC );
-			stk_push( C, &var );
 #if SGS_DEBUG && SGS_DEBUG_STATE
 			/* TODO restore memcheck */
 			sgsVM_StackDump( C );
 #endif
 			if( SF->flags & SGS_SF_REENTER )
 			{
-				vm_postcall( C, 1 );
+				/* move argument, if expected, to prev_stack_frame->func
+				(=location of the expected argument list)
+				.. then pop stack frame */
+				sgs_instr_t PCI;
+				int i, expect;
+				sgs_StackFrame* psf = SF->prev;
+				sgs_Variable* pvar = RESVAR( argC );
+				
+				PCI = *(psf->iptr-1);
+				sgs_BreakIf( SGS_INSTR_GET_OP( PCI ) != SGS_SI_CALL );
+				expect = SGS_INSTR_GET_A( PCI );
+				
+				/* remove all stack items before the returned ones */
+				C->stack_off = SGS_STACK_RESTORE( C, SF->stkoff ); /* ---- STACK CHANGE ---- */
+				if( expect )
+				{
+					int argstart = SGS_INSTR_GET_B( PCI ) & 0xff;
+					sgs_Variable* pdst = stk_poff( C, argstart );
+					p_setvar( pdst, pvar );
+					for( i = 1; i < expect; ++i )
+					{
+						VAR_RELEASE( &pdst[ i ] );
+					}
+				}
+				stk_popto( C, SF->func );
+				C->num_last_returned = 1;
+				
+				vm_frame_pop( C );
+				
 				goto restart_loop;
 			}
-			C->state &= ~SGS_STATE_LASTFUNCPAUSE;
-			return 1;
+			else
+			{
+				sgs_Variable var = *RESVAR( argC );
+				stk_push( C, &var );
+				C->state &= ~SGS_STATE_LASTFUNCPAUSE;
+				return 1;
+			}
 		}
 		case SGS_SI_RETN:
 		{
