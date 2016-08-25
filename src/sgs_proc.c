@@ -445,7 +445,6 @@ static void vm_frame_pop( SGS_CTX )
 static SGS_INLINE sgs_Variable* stk_getpos( SGS_CTX, StkIdx stkid )
 {
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE && SGS_DEBUG_EXTRA
-	DBG_STACK_CHECK
 	if( stkid < 0 ) sgs_BreakIf( -stkid > C->stack_top - C->stack_off )
 	else            sgs_BreakIf( stkid >= C->stack_top - C->stack_off )
 #endif
@@ -2116,25 +2115,24 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 	
 	if( allowed )
 	{
+		sgs_StackFrame* sf = C->sf_last;
 		/* WP (x4): stack size limit */
-		C->sf_last->argbeg = (StkIdx) stkcallbase;
-		C->sf_last->argend = (StkIdx) ( C->stack_top - C->stack_base );
-		C->sf_last->argsfrom = (StkIdx) stkcallbase - 1;
-		C->sf_last->stkoff = (StkIdx) stkoff;
+		sf->argbeg = (StkIdx) stkcallbase;
+		sf->stkoff = (StkIdx) stkoff;
 		/* WP: argument count limit */
-		C->sf_last->argcount = (uint8_t) args;
-		C->sf_last->inexp = (uint8_t) args;
-		C->sf_last->flags = gotthis ? SGS_SF_METHOD : 0;
+		sf->argcount = (uint8_t) args;
+		sf->inexp = (uint8_t) args;
+		sf->flags = gotthis ? SGS_SF_METHOD : 0;
 		
 		switch( pfunc->type )
 		{
 		case SGS_VT_CFUNC: {
-			C->sf_last->nfname = NULL;
+			sf->nfname = NULL;
 			SGS_PERFEVENT( ps_precall_end( (unsigned) -1, 1, FUNCTYPE_CFN ) );
 			rvc = (*pfunc->data.C)( C );
-			if( C->sf_last->nfname == NULL && C->sf_last->prev )
+			if( sf->nfname == NULL && sf->prev )
 			{
-				C->sf_last->nfname = C->sf_last->prev->nfname;
+				sf->nfname = sf->prev->nfname;
 			}
 			if( rvc > SGS_STACKFRAMESIZE )
 			{
@@ -2151,26 +2149,28 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 		} break;
 		case SGS_VT_FUNC: {
 			sgs_iFunc* F = pfunc->data.F;
-			int stkargs = args + ( F->gotthis && gotthis );
-			int expargs = F->numargs + F->gotthis;
+			int argend, stkargs, expargs = F->numargs + F->gotthis;
 			
-			C->sf_last->inexp = F->numargs;
+			sf->inexp = F->numargs;
 			
 			/* if <this> was expected but wasn't properly passed, insert a NULL in its place */
 			if( F->gotthis && !gotthis )
 			{
 				stk_insert_null( C, 0 );
 				C->stack_off++;
-				C->sf_last->argend++;
 				gotthis = SGS_TRUE;
-				stkargs = args + ( F->gotthis && gotthis );
 			}
 			/* if <this> wasn't expected but was passed, ignore it */
 			
 			/* add flag to specify presence of "this" */
 			if( F->gotthis )
-				C->sf_last->flags |= SGS_SF_HASTHIS;
+				sf->flags |= SGS_SF_HASTHIS;
+			
+			argend = C->stack_top - C->stack_base;
+			SGS_UNUSED( argend );
+			
 			/* fix argument stack */
+			stkargs = args + ( F->gotthis && gotthis );
 			if( stkargs > expargs )
 			{
 				int first = F->numargs + gotthis;
@@ -2184,10 +2184,19 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 
 			if( F->gotthis && gotthis ) C->stack_off--;
 			{
+#if SGS_DEBUG && SGS_DEBUG_VALIDATE && SGS_DEBUG_EXTRA
+				/*
+				printf("fcall begin=%d end=%d count=%d(%d) inthis=%s expthis=%s\n",
+					stkcallbase, sf->argend, sf->argcount, args,
+					SGS_HAS_FLAG( sf->flags, SGS_SF_METHOD ) ? "Y" : "N",
+					SGS_HAS_FLAG( sf->flags, SGS_SF_HASTHIS ) ? "Y" : "N" );
+				*/
+				sgs_BreakIf( SGS_SF_ARG_COUNT(sf) != argend - stkcallbase );
+#endif
 				SGS_PERFEVENT( ps_precall_end( F->numargs, F->gotthis, FUNCTYPE_SGS ) );
 				if( can_reenter )
 				{
-					C->sf_last->flags |= SGS_SF_REENTER;
+					sf->flags |= SGS_SF_REENTER;
 					return -2;
 				}
 				
@@ -2231,7 +2240,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 		}
 		
 		C->state &= ~SGS_STATE_LASTFUNCABORT;
-		if( ret && C->sf_last->flags & SGS_SF_ABORTED )
+		if( ret && sf->flags & SGS_SF_ABORTED )
 		{
 			C->state |= SGS_STATE_LASTFUNCABORT;
 		}
@@ -2258,7 +2267,6 @@ static void vm_postcall( SGS_CTX, int rvc )
 	sgs_StackFrame* sf = C->sf_last;
 	sgs_StkIdx stkcallbase = sf->argbeg;
 	sgs_StkIdx stkoff = sf->stkoff;
-	sgs_StkIdx args_from = sf->argsfrom;
 	
 	vm_frame_pop( C );
 	
@@ -2269,11 +2277,14 @@ static void vm_postcall( SGS_CTX, int rvc )
 	C->num_last_returned = rvc;
 	if( C->sf_last )
 	{
-		int expect;
+		sgs_instr_t I;
+		int expect, args_from;
 		sf = C->sf_last; /* current function change */
 		
-		sgs_BreakIf( SGS_INSTR_GET_OP( *(sf->iptr-1) ) != SGS_SI_CALL );
-		expect = SGS_INSTR_GET_A( *(sf->iptr-1) );
+		I = *(sf->iptr-1);
+		sgs_BreakIf( SGS_INSTR_GET_OP( I ) != SGS_SI_CALL );
+		expect = SGS_INSTR_GET_A( I );
+		args_from = SGS_INSTR_GET_B( I ) & 0xff;
 		stk_resize_expected( C, expect, rvc );
 		
 		if( expect )
@@ -2465,7 +2476,6 @@ restart_loop:
 			
 			if( vm_call( C, args_to - args_from - gotthis, gotthis, &rvc, 1 ) == -2 )
 			{
-				C->sf_last->argsfrom = args_from;
 				goto restart_loop;
 			}
 			
@@ -4061,6 +4071,11 @@ void sgs_IncDec( SGS_CTX, sgs_Variable* out, sgs_Variable* A, int inc )
 int sgs_XFCall( SGS_CTX, int args, int gotthis )
 {
 	int rvc = 0;
+	if( args < 0 )
+	{
+		sgs_Msg( C, SGS_APIERR, "sgs_XFCall: negative argument count (%d)", args );
+		return 0;
+	}
 	if( SGS_STACKFRAMESIZE < args + ( gotthis ? 2 : 1 ) )
 	{
 		sgs_Msg( C, SGS_APIERR, "sgs_XFCall: not enough items in stack (need: %d, got: %d)",

@@ -129,8 +129,6 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 		/* 'nfname' is irrelevant for non-native functions */
 		/* 'prev', 'next', 'cached' are system pointers */
 		_WRITE32( sf->argbeg );
-		_WRITE32( sf->argend );
-		_WRITE32( sf->argsfrom );
 		_WRITE32( sf->stkoff );
 		_WRITE32( sf->errsup );
 		_WRITE8( sf->argcount );
@@ -266,8 +264,6 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 			/* 'nfname' is irrelevant for non-native functions */
 			/* 'prev', 'next', 'cached' are system pointers */
 			_READ32( sf->argbeg );
-			_READ32( sf->argend );
-			_READ32( sf->argsfrom );
 			_READ32( sf->stkoff );
 			_READ32( sf->errsup );
 			_READ8( sf->argcount );

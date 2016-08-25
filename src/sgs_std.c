@@ -2306,7 +2306,7 @@ static int sgsstd_va_get_args( SGS_CTX )
 	
 	/* accepted arguments */
 	pcnt = SGS_MIN( sf->argcount, sf->inexp );
-	stk_mpush( C, &C->stack_base[ sf->argend - pcnt ], pcnt );
+	stk_mpush( C, &C->stack_base[ sf->argbeg + SGS_SF_ARG_COUNT( sf ) - pcnt ], pcnt );
 	/* extra arguments */
 	if( sf->argcount > sf->inexp )
 	{
@@ -2342,7 +2342,7 @@ static int sgsstd_va_get_arg( SGS_CTX )
 	pcnt = SGS_MIN( sf->argcount, sf->inexp );
 	if( i < pcnt )
 	{
-		sgs_Variable tmp = C->stack_base[ sf->argend - pcnt + i ];
+		sgs_Variable tmp = C->stack_base[ sf->argbeg + SGS_SF_ARG_COUNT( sf ) - pcnt + i ];
 		fstk_push( C, &tmp );
 	}
 	else
@@ -2768,7 +2768,7 @@ void sgs_CreateSubthread( sgs_Context* parent_thread, SGS_CTX,
 static int sgsstd_thread_create( SGS_CTX )
 {
 	SGSFN( "thread_create" );
-	if( !sgs_LoadArgs( C, "?p" ) )
+	if( !sgs_LoadArgs( C, "?p?v" ) )
 		return 0;
 	
 	sgs_CreateSubthread( sgs_TopmostContext( C ), C, NULL, stk_size( C ) - 2, 1 );
@@ -2778,7 +2778,7 @@ static int sgsstd_thread_create( SGS_CTX )
 static int sgsstd_subthread_create( SGS_CTX )
 {
 	SGSFN( "subthread_create" );
-	if( !sgs_LoadArgs( C, "?p" ) )
+	if( !sgs_LoadArgs( C, "?p?v" ) )
 		return 0;
 	
 	sgs_CreateSubthread( C, C, NULL, stk_size( C ) - 2, 1 );

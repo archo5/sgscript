@@ -77,13 +77,13 @@ function testfn(x) use(testfn_clsr){ println(testfn_clsr,x); yield(x); }
 global testval0 = 1;
 testEqual( sys_stat(1), 1, "state count = 1" );
 (function(){
-	testEqual( typeof( thread_create( function(){ global testval0 = 2; } ) ), "thread", "thread creation success" );
+	testEqual( typeof( thread_create( function(){ global testval0 = 2; }, null ) ), "thread", "thread creation success" );
 	testEqual( testval0, 2, "thread function was called" );
 	testEqual( typeof( thread_create( function(){}, 1, 2 ) ), "thread", "thread - argument passing" );
 }()); // force cleanup
 testEqual( sys_stat(1), 1, "state count = 1" );
 (function(){
-	testEqual( typeof( t = thread_create( function(){ for(;;) yield(); } ) ),
+	testEqual( typeof( t = thread_create( function(){ for(;;) yield(); }, null ) ),
 		"thread", "thread with infinite yield loop was partially run" );
 	testEqual( sys_stat(1), 2, "state count = 2" );
 	testEqual( t.was_aborted, false, "thread is not aborted yet" );
@@ -94,7 +94,7 @@ testEqual( sys_stat(1), 1, "state count = 1" );
 }()); // force cleanup
 testEqual( sys_stat(1), 1, "state count after aborting infinite loop = 1" );
 testval0 = 3;
-testEqual( typeof( thread_create( function(){ global testval0 = 4; yield(1); testval0 = 5; yield(1); testval0 = 6; } ) ),
+testEqual( typeof( thread_create( function(){ global testval0 = 4; yield(1); testval0 = 5; yield(1); testval0 = 6; }, null ) ),
 	"thread", "waiting thread creation success" );
 testEqual( testval0, 4, "waiting thread - first segment executed" );
 process_threads( 0.5 ); // total waiting time [real = 0.5, thread = 0.5]
@@ -107,8 +107,8 @@ testEqual( testval0, 6, "waiting thread - continued, final segment executed" );
 	section( "multi-threading" );
 ERRORS = "";
 global testval1 = 1, testval2 = 1;
-thread_create(function(){ yield(); global testval1 = 2; });
-thread_create(function(){ yield(); global testval2 = 2; });
+thread_create(function(){ yield(); global testval1 = 2; }, null);
+thread_create(function(){ yield(); global testval2 = 2; }, null);
 process_threads();
 testEqual( testval1, 2, "MT - thread 1 was continued" );
 testEqual( testval2, 2, "MT - thread 2 was continued" );
@@ -119,8 +119,10 @@ thread_create(function()
 	thread_create(function()
 	{
 		global testval2 = 3;
-	});
-});
+	},
+	null);
+},
+null);
 testEqual( testval1, 3, "MT - thread 1 was started" );
 testEqual( testval2, 3, "MT - thread 2 was started" );
 testEqual( ERRORS, "", "MT - no errors" );

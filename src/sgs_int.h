@@ -614,8 +614,6 @@ struct sgs_StackFrame
 	sgs_StackFrame* prev;
 	sgs_StackFrame* next;
 	sgs_StkIdx argbeg;
-	sgs_StkIdx argend;
-	sgs_StkIdx argsfrom;
 	sgs_StkIdx stkoff;
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
 	int32_t constcount;
@@ -628,6 +626,8 @@ struct sgs_StackFrame
 	uint8_t clsrcount;
 #endif
 };
+#define SGS_SF_ARG_COUNT( sf ) \
+	((sf)->argcount + !!SGS_HAS_ANY_FLAG( (sf)->flags, SGS_SF_METHOD|SGS_SF_HASTHIS ))
 
 typedef struct sgs_ShCtx sgs_ShCtx;
 #define SGS_SHCTX sgs_ShCtx* S
