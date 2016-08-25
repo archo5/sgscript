@@ -133,7 +133,7 @@ rec_err ``
 exec `function ohh(){ var a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z; eval('ohh();'); }
 ohh();`
 result `SUCCESS`
-check_err `[E:eval(): max. call stack size reached]`
+check_err `[E:max. call stack size reached]`
 
 // `array features`
 rec ``

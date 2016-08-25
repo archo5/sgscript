@@ -2296,7 +2296,7 @@ static int sgsstd_hash_fnv( SGS_CTX )
 
 static int sgsstd_va_get_args( SGS_CTX )
 {
-	uint8_t i, xac, pcnt;
+	uint8_t i, xac, pcnt, inexp;
 	sgs_StackFrame* sf;
 	SGSFN( "va_get_args" );
 	if( !C->sf_last || !C->sf_last->prev )
@@ -2305,12 +2305,13 @@ static int sgsstd_va_get_args( SGS_CTX )
 	/* WP: argument count limit */
 	
 	/* accepted arguments */
-	pcnt = SGS_MIN( sf->argcount, sf->inexp );
+	inexp = SGS_SF_ARGC_EXPECTED( sf );
+	pcnt = SGS_MIN( sf->argcount, inexp );
 	stk_mpush( C, &C->stack_base[ sf->argbeg + SGS_SF_ARG_COUNT( sf ) - pcnt ], pcnt );
 	/* extra arguments */
-	if( sf->argcount > sf->inexp )
+	if( sf->argcount > inexp )
 	{
-		xac = (uint8_t)( sf->argcount - sf->inexp );
+		xac = (uint8_t)( sf->argcount - inexp );
 		for( i = 0; i < xac; ++i )
 		{
 			sgs_Variable tmp = C->stack_base[ sf->argbeg + xac - 1 - i ];
@@ -2324,7 +2325,7 @@ static int sgsstd_va_get_args( SGS_CTX )
 static int sgsstd_va_get_arg( SGS_CTX )
 {
 	sgs_Int argnum;
-	uint8_t i, xac, pcnt;
+	uint8_t i, xac, pcnt, inexp;
 	sgs_StackFrame* sf;
 	SGSFN( "va_get_arg" );
 	if( !C->sf_last || !C->sf_last->prev )
@@ -2339,7 +2340,8 @@ static int sgsstd_va_get_arg( SGS_CTX )
 	i = (uint8_t) argnum;
 	
 	/* accepted arguments */
-	pcnt = SGS_MIN( sf->argcount, sf->inexp );
+	inexp = SGS_SF_ARGC_EXPECTED( sf );
+	pcnt = SGS_MIN( sf->argcount, inexp );
 	if( i < pcnt )
 	{
 		sgs_Variable tmp = C->stack_base[ sf->argbeg + SGS_SF_ARG_COUNT( sf ) - pcnt + i ];
@@ -2347,11 +2349,11 @@ static int sgsstd_va_get_arg( SGS_CTX )
 	}
 	else
 	/* extra arguments */
-	if( sf->argcount > sf->inexp )
+	if( sf->argcount > inexp )
 	{
 		sgs_Variable tpv;
 		i = (uint8_t)( i - pcnt );
-		xac = (uint8_t)( sf->argcount - sf->inexp );
+		xac = (uint8_t)( sf->argcount - inexp );
 		tpv = C->stack_base[ sf->argbeg + xac - 1 - i ];
 		fstk_push( C, &tpv );
 	}

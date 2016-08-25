@@ -626,14 +626,15 @@ struct sgs_StackFrame
 #endif
 	int32_t errsup;
 	uint8_t argcount;
-	uint8_t inexp;
 	uint8_t flags;
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
 	uint8_t clsrcount;
 #endif
 };
 #define SGS_SF_ARG_COUNT( sf ) \
-	((sf)->argcount + !!SGS_HAS_ANY_FLAG( (sf)->flags, SGS_SF_METHOD|SGS_SF_HASTHIS ))
+	((sf)->argcount + !!SGS_HAS_ANY_FLAG( (sf)->flags, SGS_SF_METHOD ))
+#define SGS_SF_ARGC_EXPECTED( sf ) \
+	((sf)->func->type == SGS_VT_FUNC ? (sf)->func->data.F->numargs : 0)
 
 typedef struct sgs_ShCtx sgs_ShCtx;
 #define SGS_SHCTX sgs_ShCtx* S

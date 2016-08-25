@@ -132,7 +132,6 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 		_WRITE32( sf->stkoff );
 		_WRITE32( sf->errsup );
 		_WRITE8( sf->argcount );
-		_WRITE8( sf->inexp );
 		_WRITE8( sf->flags );
 		sf = sf->next;
 	}
@@ -267,7 +266,6 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 			_READ32( sf->stkoff );
 			_READ32( sf->errsup );
 			_READ8( sf->argcount );
-			_READ8( sf->inexp );
 			_READ8( sf->flags );
 		}
 	}

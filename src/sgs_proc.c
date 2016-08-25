@@ -341,7 +341,7 @@ int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 		F->clsrcount = (uint8_t) *(size_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
 #endif
 		F->clsrref = func->data.O;
-		VAR_ACQUIRE( func );
+		F->clsrref->refcount++; /* acquire closure */
 		p_setvar_race( func, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) ) );
 		
 		if( func->type == SGS_VT_FUNC )
@@ -398,15 +398,14 @@ int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 	F->prev = C->sf_last;
 	F->errsup = 0;
 	F->flags = 0;
+	F->nfname = NULL;
 	if( C->sf_last )
 	{
-		F->nfname = F->prev->nfname;
 		F->errsup = C->sf_last->errsup;
 		C->sf_last->next = F;
 	}
 	else
 	{
-		F->nfname = NULL;
 		C->sf_first = F;
 	}
 	C->sf_last = F;
@@ -545,9 +544,18 @@ static sgs_Variable* stk_insert_pos( SGS_CTX, StkIdx off )
 	return op;
 }
 
-static void stk_insert_null( SGS_CTX, StkIdx off )
+static sgs_Variable* stk_insert_posn( SGS_CTX, StkIdx off )
 {
-	stk_insert_pos( C, off )->type = SGS_VT_NULL;
+	sgs_Variable *op, *p;
+	stk_makespace( C, 1 );
+	op = C->stack_top - off, p = C->stack_top;
+	while( p != op )
+	{
+		*p = *(p-1);
+		p--;
+	}
+	C->stack_top++;
+	return op;
 }
 
 void fstk_clean( SGS_CTX, sgs_Variable* from, sgs_Variable* to )
@@ -2104,7 +2112,6 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 	
 	sgs_BreakIf( SGS_STACKFRAMESIZE < args + gotthis );
 	allowed = sgsVM_PushStackFrame( C, pfunc );
-	C->stack_off = C->stack_top - args;
 	
 	if( allowed )
 	{
@@ -2114,19 +2121,14 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 		sf->stkoff = (StkIdx) stkoff;
 		/* WP: argument count limit */
 		sf->argcount = (uint8_t) args;
-		sf->inexp = (uint8_t) args;
 		sf->flags = gotthis ? SGS_SF_METHOD : 0;
 		
 		switch( pfunc->type )
 		{
 		case SGS_VT_CFUNC: {
-			sf->nfname = NULL;
+			C->stack_off = C->stack_top - args;
 			SGS_PERFEVENT( ps_precall_end( (unsigned) -1, 1, FUNCTYPE_CFN ) );
 			rvc = (*pfunc->data.C)( C );
-			if( sf->nfname == NULL && sf->prev )
-			{
-				sf->nfname = sf->prev->nfname;
-			}
 			if( rvc > SGS_STACKFRAMESIZE )
 			{
 				sgs_Msg( C, SGS_ERROR, "Function returned more variables than there was on the stack" );
@@ -2144,26 +2146,21 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 			sgs_iFunc* F = pfunc->data.F;
 			int argend, stkargs, expargs = F->numargs + F->gotthis;
 			
-			sf->inexp = F->numargs;
-			
 			/* if <this> was expected but wasn't properly passed, insert a NULL in its place */
 			if( F->gotthis && !gotthis )
 			{
-				stk_insert_null( C, 0 );
-				C->stack_off++;
+				stk_insert_posn( C, args )->type = SGS_VT_NULL;
+				sf->flags |= SGS_SF_METHOD;
 				gotthis = SGS_TRUE;
 			}
+			C->stack_off = C->stack_top - args - F->gotthis;
 			/* if <this> wasn't expected but was passed, ignore it */
-			
-			/* add flag to specify presence of "this" */
-			if( F->gotthis )
-				sf->flags |= SGS_SF_HASTHIS;
 			
 			argend = C->stack_top - C->stack_base;
 			SGS_UNUSED( argend );
 			
 			/* fix argument stack */
-			stkargs = args + ( F->gotthis && gotthis );
+			stkargs = args + F->gotthis;
 			if( stkargs > expargs )
 			{
 				int first = F->numargs + gotthis;
@@ -2174,8 +2171,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 			}
 			else
 				stk_push_nulls( C, F->numtmp + expargs - stkargs );
-
-			if( F->gotthis && gotthis ) C->stack_off--;
+			
 			{
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE && SGS_DEBUG_EXTRA
 				/*
@@ -2202,11 +2198,11 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 					return 1;
 				}
 			}
-			if( F->gotthis && gotthis ) C->stack_off++;
 		} break;
 		case SGS_VT_OBJECT: {
 			sgs_VarObj* O = pfunc->data.O;
 			
+			C->stack_off = C->stack_top - args;
 			rvc = SGS_ENOTSUP;
 			SGS_PERFEVENT( ps_precall_end( (unsigned) -1, 1, FUNCTYPE_OBJ ) );
 			if( O->iface->call )
@@ -2226,6 +2222,9 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 			}
 		} break;
 		default: {
+			/* try to find some name to add to the error */
+			if( sf->nfname == NULL && sf->prev )
+				sf->nfname = sf->prev->nfname;
 			sgs_Msg( C, SGS_ERROR, "Variable of type '%s' "
 				"cannot be called", TYPENAME( pfunc->type ) );
 			ret = 0;
