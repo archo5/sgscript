@@ -1280,12 +1280,16 @@ static SGSRESULT vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_
 		sgs_PushObjectPtr( C, obj->data.O );
 		fstk_push2( C, idx, src );
 		obj->data.O->in_setindex = SGS_TRUE; /* prevent recursion */
-		sgs_XThisCall( C, 2 );
+		sgs_ThisCall( C, 2, 1 );
 		obj->data.O->in_setindex = SGS_FALSE;
+		ret = sgs_GetBool( C, -1 );
 		stk_downsize( C, ssz );
+		if( !ret ) /* was not handled by metamethod */
+			goto nextcase;
 	}
 	else if( obj->type == SGS_VT_OBJECT && obj->data.O->iface->setindex )
 	{
+nextcase:;
 		int arg = C->object_arg;
 		sgs_VarObj* O = obj->data.O;
 		_STACK_PREPARE;

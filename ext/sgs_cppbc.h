@@ -658,7 +658,7 @@ public:
 	template< class T > sgsVariable& set( T* v ){ _release(); C = v->C; sgs_InitObjectPtr( C, &var, v->m_sgsObject ); return *this; }
 	void call( sgs_Context* c, int args = 0, int ret = 0 )
 	{
-		sgs_InsertVariable( C, -args - 1, var );
+		sgs_InsertVariable( c, -args - 1, var );
 		sgs_Call( c, args, ret );
 	}
 	void thiscall( sgs_Context* c, sgsVariable func, int args = 0, int ret = 0 )
@@ -676,52 +676,52 @@ public:
 	template< class RT >
 	RT tcall( sgs_Context* c ){ return tcallu<RT>( c, 0 ); }
 	template< class RT, class A0 >
-	RT tcall( sgs_Context* c, A0 const& a0 ){ sgs_PushVar( C, a0 ); return tcallu<RT>( c, 1 ); }
+	RT tcall( sgs_Context* c, A0 const& a0 ){ sgs_PushVar( c, a0 ); return tcallu<RT>( c, 1 ); }
 	template< class RT, class A0, class A1 >
-	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1 ){ sgs_PushVar( C, a0 ); sgs_PushVar( C, a1 ); return tcallu<RT>( c, 2 ); }
+	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1 ){ sgs_PushVar( c, a0 ); sgs_PushVar( c, a1 ); return tcallu<RT>( c, 2 ); }
 	template< class RT, class A0, class A1, class A2 >
-	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2 ){ sgs_PushVar( C, a0 ); sgs_PushVar( C, a1 ); sgs_PushVar( C, a2 ); return tcallu<RT>( c, 3 ); }
+	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2 ){ sgs_PushVar( c, a0 ); sgs_PushVar( c, a1 ); sgs_PushVar( c, a2 ); return tcallu<RT>( c, 3 ); }
 	template< class RT, class A0, class A1, class A2, class A3 >
-	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3 ){ sgs_PushVar( C, a0 ); sgs_PushVar( C, a1 ); sgs_PushVar( C, a2 );
-		sgs_PushVar( C, a3 ); return tcallu<RT>( c, 4 ); }
+	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3 ){ sgs_PushVar( c, a0 ); sgs_PushVar( c, a1 ); sgs_PushVar( c, a2 );
+		sgs_PushVar( c, a3 ); return tcallu<RT>( c, 4 ); }
 	template< class RT, class A0, class A1, class A2, class A3, class A4 >
-	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4 ){ sgs_PushVar( C, a0 ); sgs_PushVar( C, a1 ); sgs_PushVar( C, a2 );
-		sgs_PushVar( C, a3 ); sgs_PushVar( C, a4 ); return tcallu<RT>( c, 5 ); }
+	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4 ){ sgs_PushVar( c, a0 ); sgs_PushVar( c, a1 ); sgs_PushVar( c, a2 );
+		sgs_PushVar( c, a3 ); sgs_PushVar( c, a4 ); return tcallu<RT>( c, 5 ); }
 	template< class RT, class A0, class A1, class A2, class A3, class A4, class A5 >
-	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5 ){ sgs_PushVar( C, a0 ); sgs_PushVar( C, a1 );
-		sgs_PushVar( C, a2 ); sgs_PushVar( C, a3 ); sgs_PushVar( C, a4 ); sgs_PushVar( C, a5 ); return tcallu<RT>( c, 6 ); }
+	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5 ){ sgs_PushVar( c, a0 ); sgs_PushVar( c, a1 );
+		sgs_PushVar( c, a2 ); sgs_PushVar( c, a3 ); sgs_PushVar( c, a4 ); sgs_PushVar( c, a5 ); return tcallu<RT>( c, 6 ); }
 	template< class RT, class A0, class A1, class A2, class A3, class A4, class A5, class A6 >
-	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5, A6 const& a6 ){ sgs_PushVar( C, a0 );
-		sgs_PushVar( C, a1 ); sgs_PushVar( C, a2 ); sgs_PushVar( C, a3 ); sgs_PushVar( C, a4 ); sgs_PushVar( C, a5 ); sgs_PushVar( C, a6 ); return tcallu<RT>( c, 7 ); }
+	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5, A6 const& a6 ){ sgs_PushVar( c, a0 );
+		sgs_PushVar( c, a1 ); sgs_PushVar( c, a2 ); sgs_PushVar( c, a3 ); sgs_PushVar( c, a4 ); sgs_PushVar( c, a5 ); sgs_PushVar( c, a6 ); return tcallu<RT>( c, 7 ); }
 	template< class RT, class A0, class A1, class A2, class A3, class A4, class A5, class A6, class A7 >
-	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5, A6 const& a6, A7 const& a7 ){ sgs_PushVar( C, a0 );
-		sgs_PushVar( C, a1 ); sgs_PushVar( C, a2 ); sgs_PushVar( C, a3 ); sgs_PushVar( C, a4 ); sgs_PushVar( C, a5 ); sgs_PushVar( C, a6 ); sgs_PushVar( C, a7 ); return tcallu<RT>( c, 8 ); }
+	RT tcall( sgs_Context* c, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5, A6 const& a6, A7 const& a7 ){ sgs_PushVar( c, a0 );
+		sgs_PushVar( c, a1 ); sgs_PushVar( c, a2 ); sgs_PushVar( c, a3 ); sgs_PushVar( c, a4 ); sgs_PushVar( c, a5 ); sgs_PushVar( c, a6 ); sgs_PushVar( c, a7 ); return tcallu<RT>( c, 8 ); }
 	
 	template< class RT > RT tthiscallu( sgs_Context* c, sgsVariable func, int args );
 	template< class RT > RT tthiscallu( sgs_Context* c, const char* key, int args ){ return tthiscallu<RT>( c, getprop( key ), args ); }
 	template< class RT, class FT >
 	RT tthiscall( sgs_Context* c, const FT& fn ){ return tthiscallu<RT>( c, fn, 0 ); }
 	template< class RT, class FT, class A0 >
-	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0 ){ sgs_PushVar( C, a0 ); return tthiscallu<RT>( c, fn, 1 ); }
+	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0 ){ sgs_PushVar( c, a0 ); return tthiscallu<RT>( c, fn, 1 ); }
 	template< class RT, class FT, class A0, class A1 >
-	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1 ){ sgs_PushVar( C, a0 ); sgs_PushVar( C, a1 ); return tthiscallu<RT>( c, fn, 2 ); }
+	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1 ){ sgs_PushVar( c, a0 ); sgs_PushVar( c, a1 ); return tthiscallu<RT>( c, fn, 2 ); }
 	template< class RT, class FT, class A0, class A1, class A2 >
-	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2 ){ sgs_PushVar( C, a0 ); sgs_PushVar( C, a1 ); sgs_PushVar( C, a2 ); return tthiscallu<RT>( c, fn, 3 ); }
+	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2 ){ sgs_PushVar( c, a0 ); sgs_PushVar( c, a1 ); sgs_PushVar( c, a2 ); return tthiscallu<RT>( c, fn, 3 ); }
 	template< class RT, class FT, class A0, class A1, class A2, class A3 >
-	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3 ){ sgs_PushVar( C, a0 ); sgs_PushVar( C, a1 ); sgs_PushVar( C, a2 );
-		sgs_PushVar( C, a3 ); return tthiscallu<RT>( c, fn, 4 ); }
+	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3 ){ sgs_PushVar( c, a0 ); sgs_PushVar( c, a1 ); sgs_PushVar( c, a2 );
+		sgs_PushVar( c, a3 ); return tthiscallu<RT>( c, fn, 4 ); }
 	template< class RT, class FT, class A0, class A1, class A2, class A3, class A4 >
-	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4 ){ sgs_PushVar( C, a0 ); sgs_PushVar( C, a1 ); sgs_PushVar( C, a2 );
-		sgs_PushVar( C, a3 ); sgs_PushVar( C, a4 ); return tthiscallu<RT>( c, fn, 5 ); }
+	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4 ){ sgs_PushVar( c, a0 ); sgs_PushVar( c, a1 ); sgs_PushVar( c, a2 );
+		sgs_PushVar( c, a3 ); sgs_PushVar( c, a4 ); return tthiscallu<RT>( c, fn, 5 ); }
 	template< class RT, class FT, class A0, class A1, class A2, class A3, class A4, class A5 >
-	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5 ){ sgs_PushVar( C, a0 ); sgs_PushVar( C, a1 );
-		sgs_PushVar( C, a2 ); sgs_PushVar( C, a3 ); sgs_PushVar( C, a4 ); sgs_PushVar( C, a5 ); return tthiscallu<RT>( c, fn, 6 ); }
+	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5 ){ sgs_PushVar( c, a0 ); sgs_PushVar( c, a1 );
+		sgs_PushVar( c, a2 ); sgs_PushVar( c, a3 ); sgs_PushVar( c, a4 ); sgs_PushVar( c, a5 ); return tthiscallu<RT>( c, fn, 6 ); }
 	template< class RT, class FT, class A0, class A1, class A2, class A3, class A4, class A5, class A6 >
-	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5, A6 const& a6 ){ sgs_PushVar( C, a0 );
-		sgs_PushVar( C, a1 ); sgs_PushVar( C, a2 ); sgs_PushVar( C, a3 ); sgs_PushVar( C, a4 ); sgs_PushVar( C, a5 ); sgs_PushVar( C, a6 ); return tthiscallu<RT>( c, fn, 7 ); }
+	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5, A6 const& a6 ){ sgs_PushVar( c, a0 );
+		sgs_PushVar( c, a1 ); sgs_PushVar( c, a2 ); sgs_PushVar( c, a3 ); sgs_PushVar( c, a4 ); sgs_PushVar( c, a5 ); sgs_PushVar( c, a6 ); return tthiscallu<RT>( c, fn, 7 ); }
 	template< class RT, class FT, class A0, class A1, class A2, class A3, class A4, class A5, class A6, class A7 >
-	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5, A6 const& a6, A7 const& a7 ){ sgs_PushVar( C, a0 );
-		sgs_PushVar( C, a1 ); sgs_PushVar( C, a2 ); sgs_PushVar( C, a3 ); sgs_PushVar( C, a4 ); sgs_PushVar( C, a5 ); sgs_PushVar( C, a6 ); sgs_PushVar( C, a7 ); return tthiscallu<RT>( c, fn, 8 ); }
+	RT tthiscall( sgs_Context* c, const FT& fn, A0 const& a0, A1 const& a1, A2 const& a2, A3 const& a3, A4 const& a4, A5 const& a5, A6 const& a6, A7 const& a7 ){ sgs_PushVar( c, a0 );
+		sgs_PushVar( c, a1 ); sgs_PushVar( c, a2 ); sgs_PushVar( c, a3 ); sgs_PushVar( c, a4 ); sgs_PushVar( c, a5 ); sgs_PushVar( c, a6 ); sgs_PushVar( c, a7 ); return tthiscallu<RT>( c, fn, 8 ); }
 	
 	sgs_Variable var;
 	

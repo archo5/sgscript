@@ -34,16 +34,16 @@ typedef struct _xgm_vtarray
 xgm_vtarray;
 
 
-extern sgs_ObjInterface xgm_vec2_iface[1];
-extern sgs_ObjInterface xgm_vec3_iface[1];
-extern sgs_ObjInterface xgm_vec4_iface[1];
-extern sgs_ObjInterface xgm_aabb2_iface[1];
-extern sgs_ObjInterface xgm_aabb3_iface[1];
-extern sgs_ObjInterface xgm_color_iface[1];
-extern sgs_ObjInterface xgm_quat_iface[1];
-extern sgs_ObjInterface xgm_mat3_iface[1];
-extern sgs_ObjInterface xgm_mat4_iface[1];
-extern sgs_ObjInterface xgm_floatarr_iface[1];
+SGS_APIFUNC extern sgs_ObjInterface xgm_vec2_iface[1];
+SGS_APIFUNC extern sgs_ObjInterface xgm_vec3_iface[1];
+SGS_APIFUNC extern sgs_ObjInterface xgm_vec4_iface[1];
+SGS_APIFUNC extern sgs_ObjInterface xgm_aabb2_iface[1];
+SGS_APIFUNC extern sgs_ObjInterface xgm_aabb3_iface[1];
+SGS_APIFUNC extern sgs_ObjInterface xgm_color_iface[1];
+SGS_APIFUNC extern sgs_ObjInterface xgm_quat_iface[1];
+SGS_APIFUNC extern sgs_ObjInterface xgm_mat3_iface[1];
+SGS_APIFUNC extern sgs_ObjInterface xgm_mat4_iface[1];
+SGS_APIFUNC extern sgs_ObjInterface xgm_floatarr_iface[1];
 
 SGS_APIFUNC SGSONE sgs_CreateVec2( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y );
 SGS_APIFUNC SGSONE sgs_CreateVec3( SGS_CTX, sgs_Variable* var, XGM_VT x, XGM_VT y, XGM_VT z );
