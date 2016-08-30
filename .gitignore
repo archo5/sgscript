@@ -21,3 +21,7 @@ ipch
 xcuserdata
 /ext/sgscript.js
 /libs/
+/examples/AndroidSampleProject/obj/
+/examples/AndroidSampleProject/libs/
+/examples/AndroidSampleProject/gen/
+/examples/AndroidSampleProject/bin/
