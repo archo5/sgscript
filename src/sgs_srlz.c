@@ -709,16 +709,16 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		
 		if( O->iface == sgsstd_closure_iface )
 		{
-			/* serialize closure (data=sgs_Variable func,size_t n,sgs_Closure*[n]) */
+			/* serialize closure (data=sgs_Variable func,sgs_clsrcount_t n,sgs_Closure*[n]) */
 			char* ptr;
-			size_t i, count;
+			sgs_clsrcount_t i, count;
 			sgs_Closure** clsrlist;
 			
 			SRLZ_DEBUG( printf( "SRLZ new obj/closure\n" ) );
 			
 			ptr = (char*) O->data;
-			count = *(size_t*) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable), sizeof(size_t) );
-			clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable) + sizeof(size_t), sizeof(void*) );
+			count = *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable), sizeof(sgs_clsrcount_t) );
+			clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable) + sizeof(sgs_clsrcount_t), sizeof(void*) );
 			
 			/* write closure */
 			{
@@ -1228,9 +1228,9 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			
 			{
 				char* ptr = (char*) cvp->data.O->data;
-				size_t count = *(size_t*) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable), sizeof(size_t) );
-				sgs_Closure** clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable) + sizeof(size_t), sizeof(void*) );
-				if( which < 0 || (size_t) which >= count )
+				sgs_clsrcount_t count = *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable), sizeof(sgs_clsrcount_t) );
+				sgs_Closure** clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable) + sizeof(sgs_clsrcount_t), sizeof(void*) );
+				if( which < 0 || (sgs_clsrcount_t) which >= count )
 				{
 					sgs_unserr_error( C );
 					goto fail;

@@ -412,6 +412,7 @@ SGS_CASSERT( sizeof(sgs_iStr) % 4 == 0, istr_object_storage_compat_issue );
 	((const sgs_instr_t*)(sgs_func_c_consts(pfn) + sgs_func_instr_off(pfn) / sizeof(sgs_Variable)))
 
 
+typedef size_t sgs_clsrcount_t;
 typedef struct sgs_Closure sgs_Closure;
 struct sgs_Closure
 {
@@ -755,8 +756,6 @@ struct sgs_Context
 #define SGS_STACKFRAMESIZE ((sgs_StkIdx)(C->stack_top - C->stack_off))
 #define SGS_STACK_PRESERVE( C, ptr ) ((char*)(ptr) - (char*)C->stack_base)
 #define SGS_STACK_RESTORE( C, off ) (sgs_Variable*)((char*)C->stack_base + (off))
-#define SGS_CLSTK_PRESERVE( C, ptr ) ((char*)(ptr) - (char*)C->clstk_base)
-#define SGS_CLSTK_RESTORE( C, off ) (sgs_Closure**)((char*)C->clstk_base + (off))
 
 
 #ifdef SGS_INTERNAL_STRINGTABLES

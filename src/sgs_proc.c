@@ -336,9 +336,9 @@ int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 	if( func->type == SGS_VT_OBJECT && func->data.O->iface == sgsstd_closure_iface )
 	{
 		uint8_t* cl = (uint8_t*) func->data.O->data;
-		F->clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(size_t),sizeof(void*));
+		F->clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(sgs_clsrcount_t),sizeof(void*));
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
-		F->clsrcount = (uint8_t) *(size_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
+		F->clsrcount = (uint8_t) *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
 #endif
 		F->clsrref = func->data.O;
 		F->clsrref->refcount++; /* acquire closure */
@@ -2160,7 +2160,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 			C->stack_off = C->stack_top - args - F->gotthis;
 			/* if <this> wasn't expected but was passed, ignore it */
 			
-			argend = C->stack_top - C->stack_base;
+			argend = (int) ( C->stack_top - C->stack_base );
 			SGS_UNUSED( argend );
 			
 			/* fix argument stack */

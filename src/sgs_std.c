@@ -1442,8 +1442,8 @@ static int sgsstd_class( SGS_CTX )
 static int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	uint8_t* cl = (uint8_t*) obj->data;
-	int32_t i, cc = *(int32_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
-	sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(int32_t),sizeof(void*));
+	sgs_clsrcount_t i, cc = *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
+	sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(sgs_clsrcount_t),sizeof(void*));
 	
 	sgs_Release( C, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) ) );
 	
@@ -1482,8 +1482,8 @@ static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* obj )
 static int sgsstd_closure_gcmark( SGS_CTX, sgs_VarObj* obj )
 {
 	uint8_t* cl = (uint8_t*) obj->data;
-	int32_t i, cc = *(int32_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
-	sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(int32_t),sizeof(void*));
+	sgs_clsrcount_t i, cc = *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
+	sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(sgs_clsrcount_t),sizeof(void*));
 	
 	sgs_GCMark( C, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) ) );
 	
@@ -1498,8 +1498,9 @@ static int sgsstd_closure_gcmark( SGS_CTX, sgs_VarObj* obj )
 static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 {
 	uint8_t* cl = (uint8_t*) obj->data;
-	int32_t i, ssz, cc = *(int32_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
-	sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(int32_t),sizeof(void*));
+	sgs_StkIdx ssz;
+	sgs_clsrcount_t i, cc = *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
+	sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(sgs_clsrcount_t),sizeof(void*));
 	
 	sgs_PushString( C, "closure\n{" );
 	
@@ -1509,7 +1510,7 @@ static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 	for( i = 0; i < cc; ++i )
 	{
 		char intro[ 64 ];
-		sprintf( intro, "\n#%"PRId32" (rc=%"PRId32"): ", i, cls[ i ]->refcount );
+		sprintf( intro, "\n#%d (rc=%"PRId32"): ", (int) i, cls[ i ]->refcount );
 		sgs_PushString( C, intro );
 		sgs_DumpVar( C, cls[ i ]->var, depth );
 	}
@@ -1530,7 +1531,7 @@ SGS_APIFUNC sgs_ObjInterface sgsstd_closure_iface[1] =
 	sgsstd_closure_call, NULL
 }};
 
-sgs_Closure** sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* out, sgs_Variable* func, size_t clc )
+sgs_Closure** sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* out, sgs_Variable* func, sgs_clsrcount_t clc )
 {
 	/* WP: range not affected by conversion */
 	uint32_t clsz = (uint32_t) ( sizeof(sgs_Closure*) * clc );
