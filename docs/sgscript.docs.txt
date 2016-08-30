@@ -4115,6 +4115,7 @@ This library is loaded on initialization and contains the functions and constant
 -- @include_file - load a script file
 -- @include_shared - load a dynamically linked library / shared object (.DLL/.SO)
 -- @import_cfunc - load a C function from .DLL/.SO
+-- @find_include_file - find the include file according to SGS_PATH
 -- @include - load many types of files
 -- @sys_curfile - returns the origin file of the calling function
 -- @sys_curfiledir - returns the directory of the origin file of the calling function
@@ -4998,6 +4999,18 @@ When the event is signaled, the thread will be aborted as soon as possible.
 - if `override` is specified, file will be reloaded even if it was already loaded before
 
     include_shared( "sgsjson.dll" ); // load the JSON library DLL on Windows
+
+
+# find_include_file [function]
+
+== find_include_file( string file )
+=== Find the include file according to SGS_PATH.
+
+- File is searched according to the semicolon-separated pattern list specified in the global variable `SGS_PATH`.
+-- `|` - replaced with calling file's directory.
+-- `@` - replaced with process directory.
+-- `?` - replaced with `file`.
+- A path to file is only returned if the file exists.
 
 
 # include [function]

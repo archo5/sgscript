@@ -3372,6 +3372,49 @@ notthispath:
 	return 0;
 }
 
+static int sgsstd_find_include_file( SGS_CTX )
+{
+	int ret;
+	char* fnstr, *dnstr = NULL, *pdstr = NULL, *ps = NULL;
+	sgs_SizeVal fnsize, dnsize = 0, pdsize = 0, pssize = 0;
+	sgs_MemBuf mb = sgs_membuf_create();
+	
+	SGSFN( "find_include_file" );
+	
+	if( !sgs_LoadArgs( C, "m", &fnstr, &fnsize ) )
+		return 0;
+	
+	ret = sgs_PushGlobalByName( C, "SGS_PATH" );
+	if( ret != SGS_SUCCESS ||
+		( ps = sgs_ToStringBuf( C, -1, &pssize ) ) == NULL )
+	{
+		ps = SGS_INCLUDE_PATH;
+		pssize = (sgs_SizeVal) strlen( ps );
+	}
+	
+	if( _push_curdir( C ) )
+	{
+		dnstr = p_cstr( stk_gettop( C ) );
+		dnsize = p_strsz( stk_gettop( C ) );
+	}
+	if( _push_procdir( C ) )
+	{
+		pdstr = p_cstr( stk_gettop( C ) );
+		pdsize = p_strsz( stk_gettop( C ) );
+	}
+	/* WP: string limit */
+	ret = _find_includable_file( C, &mb, ps, (size_t) pssize, fnstr, (size_t) fnsize, dnstr, (size_t) dnsize, pdstr, (size_t) pdsize );
+	if( ret == 0 || mb.size == 0 )
+	{
+		sgs_membuf_destroy( &mb, C );
+		return 0;
+	}
+	
+	sgs_PushStringBuf( C, mb.ptr, (sgs_SizeVal) mb.size );
+	sgs_membuf_destroy( &mb, C );
+	return 1;
+}
+
 static int sgsstd_include( SGS_CTX )
 {
 	char* fnstr, *dnstr = NULL, *pdstr = NULL;
@@ -3461,7 +3504,9 @@ static int sgsstd_include( SGS_CTX )
 		else
 		{
 			sgs_membuf_destroy( &mb, C );
-			return sgs_Msg( C, SGS_ERROR, "failed to load native module '%.*s'", fnsize, fnstr );
+			return sgs_Msg( C, SGS_ERROR, "failed to load native module '%.*s'%s", fnsize, fnstr,
+				ret == SGS_XPC_NOPROC ? " (library was loaded but '" SGS_LIB_ENTRY_POINT
+					"' function was not found)" : "" );
 		}
 		
 		sgs_membuf_destroy( &mb, C );
@@ -3569,7 +3614,7 @@ static int sgsstd_sys_curprocdir( SGS_CTX )
 
 static int sgsstd_multiply_path_ext_lists( SGS_CTX )
 {
-	char *pp, *ss, *prefixes, *osfx, *suffixes = "?;?" SGS_MODULE_EXT ";?.sgc;?.sgs", *joinstr = "/";
+	char *pp, *ss, *prefixes, *osfx, *suffixes = SGS_INCLUDE_FILEPATHS( "" ), *joinstr = "/";
 	size_t joinstrlen;
 	SGSFN( "multiply_path_ext_lists" );
 	
@@ -3974,6 +4019,7 @@ static sgs_RegFuncConst regfuncs[] =
 	STDLIB_FN( eval ), STDLIB_FN( eval_file ), STDLIB_FN( compile_sgs ),
 	STDLIB_FN( include_library ), STDLIB_FN( include_file ),
 	STDLIB_FN( include_shared ), STDLIB_FN( import_cfunc ),
+	STDLIB_FN( find_include_file ),
 	STDLIB_FN( include ),
 	STDLIB_FN( sys_curfile ), STDLIB_FN( sys_curfiledir ), STDLIB_FN( sys_curprocfile ), STDLIB_FN( sys_curprocdir ),
 	STDLIB_FN( multiply_path_ext_lists ),

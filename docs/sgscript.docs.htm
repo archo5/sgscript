@@ -2220,6 +2220,7 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#include-file-function">include_file</a> - load a script file
 </li><li><a href="#include-shared-function">include_shared</a> - load a dynamically linked library / shared object (.DLL/.SO)
 </li><li><a href="#import-cfunc-function">import_cfunc</a> - load a C function from .DLL/.SO
+</li><li><a href="#find-include-file-function">find_include_file</a> - find the include file according to SGS_PATH
 </li><li><a href="#include-function">include</a> - load many types of files
 </li><li><a href="#sys-curfile-function">sys_curfile</a> - returns the origin file of the calling function
 </li><li><a href="#sys-curfiledir-function">sys_curfiledir</a> - returns the directory of the origin file of the calling function
@@ -2474,6 +2475,11 @@ include_file( &quot;something.sgs&quot;, true ); // loads it again</pre></div>
 <div class='item'><a name='include-shared-function'></a><hr><h2>include_shared [function]</h2><h3>include_shared( string file[, bool override ] )</h3><h4>runs the shared library pointed to by <code>file</code>, returns success, as <code>bool</code>, emits a warning on failure</h4><ul><li><code>file</code> must be available according to the platform-specific rules of dynamic libraries (shared objects)
 </li><li>the library must contain a &#39;sgscript_main&#39; function that will be called on initialization
 </li><li>if <code>override</code> is specified, file will be reloaded even if it was already loaded before</li></ul><pre>include_shared( &quot;sgsjson.dll&quot; ); // load the JSON library DLL on Windows</pre></div>
+<div class='item'><a name='find-include-file-function'></a><hr><h2>find_include_file [function]</h2><h3>find_include_file( string file )</h3><h4>Find the include file according to SGS_PATH.</h4><ul><li>File is searched according to the semicolon-separated pattern list specified in the global variable <code>SGS_PATH</code>.
+<ul><li><code>|</code> - replaced with calling file&#39;s directory.
+</li><li><code>@</code> - replaced with process directory.
+</li><li><code>?</code> - replaced with <code>file</code>.
+</li></ul><li>A path to file is only returned if the file exists.</li></ul></div>
 <div class='item'><a name='include-function'></a><hr><h2>include [function]</h2><h3>include( string file[, bool override ] )</h3><h4>tries to load a library or a file according to the include path</h4><ul><li>the order of actions:
 <ul><li>first, a library load is attempted
 </li><li>on failure, a file is looked for by every entry of the sys_include_path variable (? - the file replacement symbol, | - file directory replacement symbol, ; - separator)
@@ -2707,6 +2713,7 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#eval-function">eval [function]</a>
 </li><li><a href="#eval-file-function">eval_file [function]</a>
 </li><li><a href="#event-function">event [function]</a>
+</li><li><a href="#find-include-file-function">find_include_file [function]</a>
 </li><li><a href="#ftime-function">ftime [function]</a>
 </li><li><a href="#gc-collect-function">gc_collect [function]</a>
 </li><li><a href="#get-concat-function">get_concat [function]</a>

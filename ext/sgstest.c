@@ -1,4 +1,5 @@
 
+#include <errno.h>
 #include <stdio.h>
 #include <time.h>
 
@@ -33,7 +34,6 @@ typedef struct testfile_
 	char* fullname;
 	int sucfail;
 	int loadtf;
-	int sortkey;
 }
 testfile;
 
@@ -42,8 +42,6 @@ int tf_compare( const void* p1, const void* p2 )
 {
 	const testfile* f1 = (const testfile*) p1;
 	const testfile* f2 = (const testfile*) p2;
-	if( f1->sortkey != f2->sortkey )
-		return f1->sortkey - f2->sortkey;
 	return strcmp( f1->nameonly, f2->nameonly );
 }
 
@@ -98,7 +96,6 @@ int load_testfiles( const char* dir, testfile** files, size_t* count )
 		TF[ TFC ].loadtf = strstr( e->d_name, "TF" ) != NULL;
 		if( TF[ TFC ].loadtf )
 			TF[ TFC ].sucfail = 1;
-		TF[ TFC ].sortkey = ( disp != 1 ) * 2 + ( disp != -1 ) * 1 + TF[ TFC ].loadtf * 4;
 		TFC++;
 	}
 	closedir( d );
@@ -233,6 +230,34 @@ static void rec_printfn( void* ctx, SGS_CTX, int type, const char* message )
 	if( type < 0 ) type = 0;
 	if( type > 2 ) type = 2;
 	sgs_ErrWritef( C, "[%c:%s]", pfxs[ type ], message );
+}
+
+/* check if equal, ignoring newline differences */
+static int memstreq_nnl( const char* mem, size_t memsz, const char* str )
+{
+	const char* memend = mem + memsz;
+	while( mem < memend && *str )
+	{
+		char c1 = *mem++;
+		char c2 = *str++;
+		
+		if( c1 == '\r' )
+		{
+			c1 = '\n';
+			if( mem < memend && *mem == '\n' )
+				mem++;
+		}
+		if( c2 == '\r' )
+		{
+			c2 = '\n';
+			if( *str == '\n' )
+				str++;
+		}
+		
+		if( c1 != c2 )
+			return 0;
+	}
+	return mem >= memend && *str == '\0';
 }
 
 static void exec_test( const char* fname, const char* nameonly )
@@ -402,8 +427,7 @@ static void exec_test( const char* fname, const char* nameonly )
 			}
 			else if( strcmp( ident_start, "check_out" ) == 0 )
 			{
-				if( outbuf.size != strlen( decoded_value ) ||
-					memcmp( outbuf.ptr, decoded_value, outbuf.size ) != 0 )
+				if( !memstreq_nnl( outbuf.ptr, outbuf.size, decoded_value ) )
 				{
 					printf( "[%s] ERROR in 'check_out': expected '%s', got '%.*s'\n",
 						testname, decoded_value, (int) outbuf.size, outbuf.ptr );
@@ -419,8 +443,7 @@ static void exec_test( const char* fname, const char* nameonly )
 			}
 			else if( strcmp( ident_start, "check_err" ) == 0 )
 			{
-				if( errbuf.size != strlen( decoded_value ) ||
-					memcmp( errbuf.ptr, decoded_value, errbuf.size ) != 0 )
+				if( !memstreq_nnl( errbuf.ptr, errbuf.size, decoded_value ) )
 				{
 					printf( "[%s] ERROR in 'check_err': expected '%s', got '%.*s'\n",
 						testname, decoded_value, (int) errbuf.size, errbuf.ptr );

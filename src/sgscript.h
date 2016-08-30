@@ -127,7 +127,16 @@ extern "C" {
 	- name of entry point function to look for
 	- the default include path */
 #define SGS_LIB_ENTRY_POINT "sgscript_main"
-#define SGS_INCLUDE_PATH "|/?;|/?" SGS_MODULE_EXT ";|/?.sgc;|/?.sgs;?;?" SGS_MODULE_EXT ";?.sgc;?.sgs;@/?;@/?" SGS_MODULE_EXT ";@/?.sgc;@/?.sgs"
+#define SGS_INCLUDE_FILEPATHS( PFX ) \
+	PFX "?;" /*exact name */ \
+	PFX "?" SGS_MODULE_EXT ";" /* library without prefix */ \
+	PFX "lib?" SGS_MODULE_EXT ";" /* library with prefix */ \
+	PFX "?.sgc;" /* compiled SGScript code */ \
+	PFX "?.sgs" /* SGScript source code */
+#define SGS_INCLUDE_PATH \
+	SGS_INCLUDE_FILEPATHS( "|/" ) ";" /* in calling file's directory */ \
+	SGS_INCLUDE_FILEPATHS( "" ) ";" /* in current directory */ \
+	SGS_INCLUDE_FILEPATHS( "@/" ) /* in process directory */
 
 
 /*****

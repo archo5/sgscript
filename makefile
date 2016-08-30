@@ -133,7 +133,7 @@ $(OUTDIR)/sgscppbctest11$(BINEXT): ext/sgscppbctest.cpp obj/cppbc_test.cpp ext/s
 	$(CXX) -o $@ $< $(word 2,$^) $(EXEFLAGS) -I. -std=c++11 -Wno-shadow
 	$(call SGS_INSTALL_TOOL,$@)
 obj/cppbc_test.cpp: ext/sgscppbctest.h $(OUTDIR)/sgsvm$(BINEXT)
-	$(OUTDIR)/sgsvm -p ext/cppbc.sgs $< -o $@
+	$(OUTDIR)/sgsvm -p ext/cppbc.sgs $< -o $@ -iname ../ext/sgscppbctest.h
 ## - multithreaded testing
 .PHONY: mttest build_mttest
 build_mttest: $(OUTDIR)/sgstest_mt$(BINEXT)

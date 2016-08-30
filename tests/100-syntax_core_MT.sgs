@@ -96,12 +96,11 @@ check_out ``
 // `unescaped string literals`
 rec ``
 exec `printvar( """""" );
-printvar( '''line\n
-\nend''' );`
+printvar( '''line\\\x12\nend''' );`
 result `SUCCESS`
 check_err ``
 check_out `string [0] ""
-string [12] "line\n\x0A\nend"
+string [14] "line\\\x12\nend"
 `
 
 // `BAD unescaped string literals`

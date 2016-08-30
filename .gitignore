@@ -3,7 +3,7 @@
 /bin/*
 /obj/*
 /lib/*
-/tests/data/*
+/tests/data/
 *.idb
 *.pdb
 *.log
@@ -14,9 +14,10 @@
 ipch
 *.user
 !output.dir
-/docs/out/*
-/docs/adv/*
+/docs/out/
+/docs/adv/
 /docs/*.toc
 .DS_Store
 xcuserdata
 /ext/sgscript.js
+/libs/

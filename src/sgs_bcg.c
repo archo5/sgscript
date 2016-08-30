@@ -939,8 +939,8 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 
 static void compile_defers( SGS_CTX, sgs_CompFunc* func, sgs_BlockInfo* until )
 {
-	size_t end = until ? until->defer_start : 0;
-	for( size_t i = C->fctx->num_defers; i > end; )
+	size_t i, end = until ? until->defer_start : 0;
+	for( i = C->fctx->num_defers; i > end; )
 	{
 		--i;
 		compile_node( C, func, C->fctx->defers[ i ] );

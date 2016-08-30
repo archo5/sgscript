@@ -1,0 +1,112 @@
+
+include "io", "os", "string";
+
+if( os_gettype() == "Windows" )
+{
+	global DS = "\\";
+}
+else
+{
+	global DS = "/";
+}
+
+
+ANDROID_SDK = os_getenv( "ANDROID_SDK" );
+if( ANDROID_SDK === null )
+{
+	errprintln( "environment variable ANDROID_SDK is not set" );
+	app_exit( 1 );
+}
+
+ANDROID_NDK = os_getenv( "ANDROID_NDK" );
+if( ANDROID_NDK === null )
+{
+	errprintln( "environment variable ANDROID_NDK is not set" );
+	app_exit( 1 );
+}
+
+ADB = ANDROID_SDK .. DS .. "platform-tools" .. DS .. "adb ";
+
+
+if( io_dir_exists( "jni" ) == false )
+{
+	errprintln( "run this script from root cwd" );
+	app_exit( 1 );
+}
+
+if( os_getenv( "APP_ABI" ) === null )
+	os_putenv( "APP_ABI=armeabi" );
+ABI = os_getenv( "APP_ABI" );
+
+println( "> ABI: " .. ABI );
+println( "> Building Android version with tests" );
+os_command( ANDROID_NDK .. DS .. "ndk-build TEST=1 APP_ABI=" .. ABI );
+
+
+core_files =
+[
+	"libsgscript.so",
+	"libsgsjson.so",
+	"libsgsmeta.so",
+	"libsgspproc.so",
+	"libsgsxgmath.so",
+	"sgsapitest",
+	"sgstest",
+	"sgscppbctest",
+	"sgscppbctest11",
+];
+
+
+println( "> Cleanup" );
+foreach( f : core_files )
+{
+	os_command( ADB .. "shell rm /data/local/tmp/" .. f );
+}
+os_command( ADB .. "shell rm -r /data/local/tmp/tests" );
+
+println( "> Uploading test files" );
+foreach( f : core_files )
+{
+	os_command( ADB .. "push " .. "libs" .. DS .. ABI .. DS .. f .. " /data/local/tmp" );
+}
+foreach( f : io_dir( "tests" ) )
+{
+	if( string_find( f, ".sgs", f.length - 4 ) === null )
+		continue;
+	os_command( ADB .. "push tests" .. DS .. f .. " /data/local/tmp/tests/" .. f );
+}
+
+println( "> chmod the root script (make executable)" );
+os_command( ADB .. "shell chmod 755 /data/local/tmp/test_runner.sh" );
+
+println( "> Running tests" );
+os_command( ADB .. "shell \""
+	.. "cd /data/local/tmp && "
+	.. "chmod 755 sgsapitest && "
+	.. "chmod 755 sgstest && "
+	.. "chmod 755 sgscppbctest && "
+	.. "chmod 755 sgscppbctest11 && "
+	.. "mkdir tests/data && "
+	.. "export LD_LIBRARY_PATH=. && "
+	.. "echo '' > sgstests.log && "
+	.. "./sgsapitest >> sgstests.log && "
+	.. "./sgstest >> sgstests.log && "
+	.. "./sgscppbctest >> sgstests.log && "
+	.. "./sgscppbctest11 >> sgstests.log\"" );
+
+println( "> Download the result logs" );
+os_command( ADB .. "pull /data/local/tmp/sgstests.log" );
+
+log = io_file_read( "sgstests.log" );
+println( log );
+
+s_api = string_find( log, "[sgsapitest] all tests were successful" ) !== null;
+s_main = string_find( log, "/// Tests failed:  0  / 28" ) !== null;
+s_cppbc = string_find( log, "[cppbc] SUCCESS!" ) !== null;
+s_cppbc11 = string_find( log, "[cppbc11] SUCCESS!" ) !== null;
+println( "===================" );
+println( "API      TESTS: " .. if( s_api, "[+]", "[ERROR]" ) );
+println( "MAIN     TESTS: " .. if( s_main, "[+]", "[ERROR]" ) );
+println( "C++BC    TESTS: " .. if( s_cppbc, "[+]", "[ERROR]" ) );
+println( "C++BC 11 TESTS: " .. if( s_cppbc11, "[+]", "[ERROR]" ) );
+println( "===================" );

@@ -224,7 +224,11 @@ int main( int argc, char** argv )
 	test_object_account();
 	test_object_xref();
 	
-	puts( "SUCCESS!" );
+	puts( "[cppbc"
+#if __cplusplus >= 201103L
+		"11"
+#endif
+		"] SUCCESS!" );
 	
 	return 0;
 }

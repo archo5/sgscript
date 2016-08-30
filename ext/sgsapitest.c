@@ -93,6 +93,7 @@ main( int argc, char** argv )
 		exec_tests( NULL );
 	}
 	
+	puts( "\n[sgsapitest] all tests were successful\n" );
 	return 0;
 }
 
