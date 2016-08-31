@@ -89,7 +89,7 @@ SGS_APIFUNC int sgs_ArgCheck_Mat4( SGS_CTX, int argid, va_list* args, int flags 
 SGS_APIFUNC int sgs_ArgCheck_FloatArray( SGS_CTX, int argid, va_list* args, int flags );
 
 
-SGS_APIFUNC int xgm_module_entry_point( SGS_CTX );
+SGS_APIFUNC int sgs_xgm_module_entry_point( SGS_CTX );
 
 
 #ifdef __cplusplus
