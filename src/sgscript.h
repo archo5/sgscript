@@ -170,9 +170,11 @@ extern "C" {
 #endif
 
 #ifdef __cplusplus
-#define SGS_DECLARE extern
+#  define SGS_DECLARE extern
+#  define SGS_CLINK extern "C"
 #else
-#define SGS_DECLARE static
+#  define SGS_DECLARE static
+#  define SGS_CLINK
 #endif
 
 
@@ -180,20 +182,36 @@ extern "C" {
 #  define BUILDING_SGS 1
 #endif
 
-#if SGS_DLL && defined( _WIN32 )
-#  if BUILDING_SGS
-#    define SGS_APIFUNC __declspec(dllexport)
-#  else
-#    define SGS_APIFUNC __declspec(dllimport)
-#  endif
+#if defined( _WIN32 ) || defined( __CYGWIN__ )
+#  define SGS_DLL_IMPORT __declspec(dllimport)
+#  define SGS_DLL_EXPORT __declspec(dllexport)
 #else
-#  define SGS_APIFUNC
+#  if __GNUC__ >= 4
+#    define SGS_DLL_IMPORT __attribute__((visibility("default")))
+#    define SGS_DLL_EXPORT __attribute__((visibility("default")))
+#  else
+#    define SGS_DLL_IMPORT
+#    define SGS_DLL_EXPORT
+#  endif
 #endif
 
 #if SGS_DLL
+#  if BUILDING_SGS
+#    define SGS_APIFUNC SGS_DLL_EXPORT
+#  else
+#    define SGS_APIFUNC SGS_DLL_IMPORT
+#  endif
 #  define SGS_IF_DLL( dll, nodll ) dll
 #else
+#  define SGS_APIFUNC
 #  define SGS_IF_DLL( dll, nodll ) nodll
+#endif
+
+#ifdef SGS_COMPILE_MODULE
+#  define SGS_MODULE_ENTRY_POINT( fname ) \
+	SGS_CLINK SGS_APIFUNC int sgscript_main( SGS_CTX ){ return fname( C ); }
+#else
+#  define SGS_MODULE_ENTRY_POINT( fname )
 #endif
 
 #if defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_PC_APP || WINAPI_FAMILY == WINAPI_FAMILY_PHONE_APP)

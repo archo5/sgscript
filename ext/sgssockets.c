@@ -1178,7 +1178,7 @@ static int sgs_socket_select( SGS_CTX )
 }
 
 
-static sgs_RegFuncConst f_sock[] =
+static const sgs_RegFuncConst f_sock[] =
 {
 	{ "socket_error", socket_error },
 	{ "socket_geterrnobyname", socket_geterrnobyname },
@@ -1192,7 +1192,7 @@ static sgs_RegFuncConst f_sock[] =
 	{ "socket_select", sgs_socket_select },
 };
 
-static sgs_RegIntConst i_sock[] =
+static const sgs_RegIntConst i_sock[] =
 {
 	DF( PF_INET ), DF( PF_INET6 ), DF( PF_UNIX ), DF( PF_IPX ),
 	DF( AF_INET ), DF( AF_INET6 ), DF( AF_UNIX ), DF( AF_IPX ),
@@ -1208,18 +1208,7 @@ static sgs_RegIntConst i_sock[] =
 };
 
 
-#ifdef SGS_COMPILE_MODULE
-#  define sockets_module_entry_point sgscript_main
-#endif
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-int sockets_module_entry_point( SGS_CTX )
+SGS_CLINK SGS_APIFUNC int sgs_sockets_module_entry_point( SGS_CTX )
 {
 #ifdef _WIN32
 	int ret;
@@ -1244,6 +1233,7 @@ int sockets_module_entry_point( SGS_CTX )
 	
 	return SGS_SUCCESS;
 }
+SGS_MODULE_ENTRY_POINT( sgs_sockets_module_entry_point )
 
 /*
 	in case someone wants to compile it like a header file...

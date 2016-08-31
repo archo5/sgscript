@@ -64,30 +64,24 @@ endif
 ifneq ($(findstring gcc,$(CC_V)),)
 	cCOMPILER=gcc
 endif
-cOS_ARCH=$(cOS)-$(cARCH)
 
 
-ifeq ($(target),)
-	target=$(cOS_ARCH)
+ifeq ($(os),)
+	os=$(cOS)
 endif
-target_os=$(word 1,$(subst -, ,$(target)))
-target_arch=$(word 2,$(subst -, ,$(target)))
-ifeq ($(target_os),)
-$(error Target OS not specified (windows/linux/osx))
-endif
-ifeq ($(target_arch),)
-$(error Target CPU type not specified (x86/x64/arm/..))
+ifeq ($(arch),)
+	arch=$(cARCH)
 endif
 cIF_RELEASE=$(findstring release,$(mode))
 fnIF_RELEASE=$(if $(cIF_RELEASE),$1,$2)
-fnIF_OS=$(if $(findstring $1,$(target_os)),$2,$3)
-fnIF_ARCH=$(if $(findstring $1,$(target_arch)),$2,$3)
+fnIF_OS=$(if $(findstring $1,$(os)),$2,$3)
+fnIF_ARCH=$(if $(findstring $1,$(arch)),$2,$3)
 fnIF_OS_ARCH=$(if $(findstring $1,$(target)),$2,$3)
 fnIF_COMPILER=$(if $(findstring $1,$(cCOMPILER)),$2,$3)
 
 
 # PLATFORM SPECIFICS
-ifeq ($(target_os),windows)
+ifeq ($(os),windows)
 	BINEXT=.exe
 	LIBPFX=
 	LIBEXT=.dll

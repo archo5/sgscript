@@ -15,7 +15,7 @@
    version="1.1"
    id="svg2"
    height="1523.4818"
-   width="2282.1396">
+   width="2908.1396">
   <sodipodi:namedview
      inkscape:snap-bbox="true"
      inkscape:snap-nodes="true"
@@ -32,8 +32,8 @@
      showgrid="false"
      inkscape:current-layer="layer1"
      inkscape:document-units="px"
-     inkscape:cy="333.04556"
-     inkscape:cx="1297.893"
+     inkscape:cy="1184.074"
+     inkscape:cx="2354.6361"
      inkscape:zoom="1"
      inkscape:pageshadow="2"
      inkscape:pageopacity="0.0"
@@ -55,7 +55,7 @@
        enabled="true"
        snapvisiblegridlinesonly="false"
        dotted="true"
-       originx="0.25901473"
+       originx="0.25901509"
        originy="725.11127" />
   </sodipodi:namedview>
   <defs
@@ -94,7 +94,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -824,7 +824,7 @@
            id="tspan3750" /></tspan><tspan
          sodipodi:role="line"
          x="215.63847"
-         y="0"
+         y="3.2077195e+022"
          id="tspan3752"><tspan
            x="215.63847"
            y="720.16022"
@@ -1427,7 +1427,7 @@
            id="tspan3818" /></tspan><tspan
          sodipodi:role="line"
          x="365.6875"
-         y="0"
+         y="1290.4025"
          id="tspan3820"><tspan
            x="365.6875"
            y="1274.3948"
@@ -2443,7 +2443,7 @@
            id="tspan4966">threshold and do the comparison </tspan></tspan><tspan
          sodipodi:role="line"
          x="1969.0939"
-         y="0"
+         y="1.#INF"
          id="tspan4968"><tspan
            x="1969.0939"
            y="775.58142"
@@ -2669,7 +2669,7 @@
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="1807.3121"
-         y="0"
+         y="1.#INF"
          id="tspan4588"><tspan
            x="1684.8512"
            y="1727.8881"
@@ -2688,7 +2688,7 @@
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="1762.0309"
-         y="0"
+         y="1.#INF"
          id="tspan4597"><tspan
            x="1684.8512"
            y="1742.8881"
@@ -2707,7 +2707,7 @@
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="1777.1949"
-         y="1.#INF"
+         y="0"
          id="tspan4605"><tspan
            x="1684.8512"
            y="1757.8881"
@@ -2833,7 +2833,7 @@
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="1739.1559"
-         y="1.#INF"
+         y="0"
          id="tspan4657"><tspan
            x="1684.8512"
            y="1877.8881"
@@ -2889,7 +2889,7 @@
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="1739.2496"
-         y="0"
+         y="1.#INF"
          id="tspan4679"><tspan
            x="1684.8512"
            y="1922.8882"
@@ -2925,7 +2925,7 @@
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          x="1739.2496"
-         y="1.#INF"
+         y="0"
          id="tspan4693"><tspan
            x="1684.8512"
            y="1952.8882"
@@ -5358,5 +5358,136 @@
          x="1162.6847"
          y="2061.0049"
          id="tspan4977">- commit value, end dict (stack=[dict(&quot;func&quot;=&lt;abort&gt;, &quot;other&quot;=5)])</tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect4478"
+       width="604.8905"
+       height="281.34918"
+       x="2197.584"
+       y="617.99658" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none"
+       x="2206.2739"
+       y="646.50067"
+       id="text4480"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="2206.2739"
+         y="646.50067"
+         id="tspan4483"><tspan
+           x="2206.2739"
+           y="646.50067"
+           style="font-size:24px"
+           id="tspan4485">Library &amp; module linkage</tspan></tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.00000095px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="2208.835"
+       y="668.19641"
+       id="text4501"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4525"
+         x="2208.835"
+         y="668.19641">Cases to consider (from both SGS and user application building perspectives):</tspan><tspan
+         sodipodi:role="line"
+         id="tspan4529"
+         x="2208.835"
+         y="683.19641">1) application includes SGScript and module DLLs</tspan><tspan
+         sodipodi:role="line"
+         id="tspan4531"
+         x="2208.835"
+         y="698.19641">2) application statically links SGScript and modules (no further exports)</tspan><tspan
+         sodipodi:role="line"
+         x="2208.835"
+         y="713.19641"
+         id="tspan4565">3) application DLL statically links SGScript and modules while exporting their API</tspan></text>
+    <rect
+       y="726.86719"
+       x="2207.594"
+       height="62"
+       width="287"
+       id="rect4533"
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.00000095px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="2214.835"
+       y="746.19641"
+       id="text4547"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4559"
+         x="2214.835"
+         y="746.19641">[1] application includes SGScript and module DLLs:</tspan><tspan
+         sodipodi:role="line"
+         id="tspan4561"
+         x="2214.835"
+         y="761.19641">- SGScript and modules are built with DLLEXPORT</tspan><tspan
+         sodipodi:role="line"
+         id="tspan4563"
+         x="2214.835"
+         y="776.19641">- user code needs DLLIMPORT in included files</tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect4567"
+       width="287"
+       height="62"
+       x="2505.594"
+       y="726.86719" />
+    <text
+       sodipodi:linespacing="125%"
+       id="text4569"
+       y="746.19641"
+       x="2512.835"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.00000095px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         y="746.19641"
+         x="2512.835"
+         id="tspan4575"
+         sodipodi:role="line">[2] application statically links SGScript and modules</tspan><tspan
+         y="761.19641"
+         x="2512.835"
+         sodipodi:role="line"
+         id="tspan4582">- SGScript and modules are built without attributes</tspan><tspan
+         y="776.19641"
+         x="2512.835"
+         sodipodi:role="line"
+         id="tspan4584">- user code needs no attributes in included files</tspan></text>
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:1;stroke-linecap:square;stroke-linejoin:bevel;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect4586"
+       width="584"
+       height="88"
+       x="2207.594"
+       y="799.86719" />
+    <text
+       sodipodi:linespacing="125%"
+       id="text4588"
+       y="819.19641"
+       x="2214.835"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:12.00000095px;line-height:125%;font-family:'Microsoft Sans Serif';-inkscape-font-specification:'Microsoft Sans Serif, Normal';text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       xml:space="preserve"><tspan
+         y="819.19641"
+         x="2214.835"
+         id="tspan4596"
+         sodipodi:role="line">[3] application DLL statically links SGScript and modules while exporting their API</tspan><tspan
+         y="834.19641"
+         x="2214.835"
+         sodipodi:role="line"
+         id="tspan4603">- SGScript and modules are built with DLLEXPORT</tspan><tspan
+         y="849.19641"
+         x="2214.835"
+         sodipodi:role="line"
+         id="tspan4606">- app DLL code is fine with DLLEXPORT or no attributes</tspan><tspan
+         y="864.19641"
+         x="2214.835"
+         sodipodi:role="line"
+         id="tspan4608">- other app code needs DLLIMPORT</tspan><tspan
+         y="879.19641"
+         x="2214.835"
+         sodipodi:role="line"
+         id="tspan4610">&gt; basically act as if SGScript DLL had user code added to it (same build flags)</tspan></text>
   </g>
 </svg>

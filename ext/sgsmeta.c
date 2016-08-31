@@ -3,7 +3,7 @@
 #include <sgs_int.h>
 
 
-static sgs_RegIntConst int_consts[] =
+static const sgs_RegIntConst int_consts[] =
 {
 #define _META_RGS( instr ) { "SI_" #instr, SGS_SI_##instr },
 	_META_RGS( NOP )
@@ -72,7 +72,7 @@ static sgs_RegIntConst int_consts[] =
 	{ NULL, 0 }
 };
 
-int sgs_meta_globals( SGS_CTX )
+static int sgs_meta_globals( SGS_CTX )
 {
 	sgs_RegIntConsts( C, int_consts, -1 );
 	return 0;
@@ -215,7 +215,7 @@ static int _sgs_meta_dumpfn( SGS_CTX, sgs_iFunc* func )
 	return 1;
 }
 
-int sgs_meta_unpack( SGS_CTX )
+static int sgs_meta_unpack( SGS_CTX )
 {
 	int ret;
 	char* buf;
@@ -247,7 +247,7 @@ int sgs_meta_unpack( SGS_CTX )
 }
 
 
-int sgs_meta_opname( SGS_CTX )
+static int sgs_meta_opname( SGS_CTX )
 {
 	const char* str;
 	sgs_Int op;
@@ -265,7 +265,7 @@ int sgs_meta_opname( SGS_CTX )
 }
 
 
-static sgs_RegFuncConst meta_funcs[] =
+static const sgs_RegFuncConst meta_funcs[] =
 {
 	{ "meta_globals", sgs_meta_globals },
 	{ "meta_unpack", sgs_meta_unpack },
@@ -273,21 +273,11 @@ static sgs_RegFuncConst meta_funcs[] =
 };
 
 
-#ifdef SGS_COMPILE_MODULE
-#  define meta_module_entry_point sgscript_main
-#endif
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-#ifdef WIN32
-__declspec(dllexport)
-#endif
-int meta_module_entry_point( SGS_CTX )
+SGS_CLINK SGS_APIFUNC int sgs_meta_module_entry_point( SGS_CTX )
 {
 	SGS_MODULE_CHECK_VERSION( C );
 	sgs_RegFuncConsts( C, meta_funcs, SGS_ARRAY_SIZE( meta_funcs ) );
 	return SGS_SUCCESS;
 }
+SGS_MODULE_ENTRY_POINT( sgs_meta_module_entry_point )
 

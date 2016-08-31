@@ -521,21 +521,10 @@ static int pproc_sleep( SGS_CTX )
 }
 
 
-#ifdef SGS_COMPILE_MODULE
-#  define pproc_module_entry_point sgscript_main
-#endif
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-#ifdef _WIN32
-__declspec(dllexport)
-#endif
-int pproc_module_entry_point( SGS_CTX )
+SGS_CLINK SGS_APIFUNC int sgs_pproc_module_entry_point( SGS_CTX )
 {
 	SGS_MODULE_CHECK_VERSION( C );
-	sgs_RegFuncConst rfc[] =
+	static const sgs_RegFuncConst rfc[] =
 	{
 		{ "pproc_create_thread", pproc_create_thread },
 		{ "pproc_sleep", pproc_sleep },
@@ -543,3 +532,5 @@ int pproc_module_entry_point( SGS_CTX )
 	sgs_RegFuncConsts( C, rfc, SGS_ARRAY_SIZE( rfc ) );
 	return SGS_SUCCESS;
 }
+SGS_MODULE_ENTRY_POINT( sgs_pproc_module_entry_point )
+

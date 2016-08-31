@@ -492,18 +492,10 @@ static int json_encode( SGS_CTX )
 }
 
 
-#ifdef SGS_COMPILE_MODULE
-#  define json_module_entry_point sgscript_main
-#endif
-
-
-#ifdef __cplusplus
-extern "C"
-#endif
-SGS_APIFUNC int json_module_entry_point( SGS_CTX )
+SGS_CLINK SGS_APIFUNC int sgs_json_module_entry_point( SGS_CTX )
 {
 	SGS_MODULE_CHECK_VERSION( C );
-	sgs_RegFuncConst rfc[] =
+	static const sgs_RegFuncConst rfc[] =
 	{
 		{ "json_decode", json_decode },
 		{ "json_encode", json_encode },
@@ -511,4 +503,5 @@ SGS_APIFUNC int json_module_entry_point( SGS_CTX )
 	sgs_RegFuncConsts( C, rfc, SGS_ARRAY_SIZE( rfc ) );
 	return SGS_SUCCESS;
 }
+SGS_MODULE_ENTRY_POINT( sgs_json_module_entry_point )
 
