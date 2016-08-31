@@ -84,7 +84,7 @@ int sgsXPC_GetProcAddress( const char* file, const char* proc, void** out )
 		file = abspath;
 	}
 	
-	lib = dlopen( file, RTLD_NOW );
+	lib = dlopen( file, RTLD_NOW | RTLD_GLOBAL );
 	if( !lib )
 		return SGS_XPC_NOFILE;
 	
