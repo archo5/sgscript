@@ -13,7 +13,7 @@ public class Main extends Activity
     {
         super.onCreate(savedInstanceState);
         TextView label = new TextView(this);
-        label.setText(initAndDumpGlobals());
+        label.setText(initAndDumpGlobals(getPackageName()));
         label.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT));
@@ -21,7 +21,7 @@ public class Main extends Activity
         setContentView(label);
     }
     
-    public static native String initAndDumpGlobals();
+    public static native String initAndDumpGlobals( String packageName );
     static
     {
     	System.loadLibrary("sgscript");
