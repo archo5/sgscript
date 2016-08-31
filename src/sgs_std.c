@@ -3438,7 +3438,7 @@ static int sgsstd_include( SGS_CTX )
 		sgs_MemBuf mb = sgs_membuf_create();
 		
 		ret = sgs_PushGlobalByName( C, "SGS_PATH" );
-		if( ret != SGS_SUCCESS ||
+		if( ret == SGS_FALSE ||
 			( ps = sgs_ToStringBuf( C, -1, &pssize ) ) == NULL )
 		{
 			ps = SGS_INCLUDE_PATH;

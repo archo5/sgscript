@@ -63,6 +63,7 @@ testEqual( ERRORS, "", "include - basic file load, no errors" );
 include "sgsjson";
 testEqual( ERRORS, "", "include - basic dyn.lib. load, no errors" );
 ERRORS = "";
+_G.SGS_PATH ..= ";__CHECK__"; // check that this path is actually used in the error message (not the default)
 include "filedoesnotexist.sgs";
 testEqual( ERRORS, "[W:include(): could not find 'filedoesnotexist.sgs' with include path "$
 	"'" $ SGS_PATH $ "']", "include - errors when file doesn't exist" );
