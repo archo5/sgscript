@@ -89,12 +89,6 @@ else
 // build variation config
 modes = [ "debug", "release" ];
 arches = [ "x86", "x64" ];
-VARIATIONS =
-[
-	{ debug = "mode=debug", release = "mode=release" },
-];
-if( OSNAME == "windows" || OSNAME == "linux" || OSNAME == "unix" || OSNAME == "osx" )
-	VARIATIONS.unshift({ "x86" = "target=" .. OSNAME .. "-x86", "x64" = "target=" .. OSNAME .. "-x64" });
 
 // build command config
 CPBIN = if( OSNAME == "windows", "copy /b", "cp" );
@@ -112,7 +106,6 @@ foreach( arch : arches )
 foreach( mode : modes )
 {
 	folder = "sgscript-" .. versiontext .. "-" .. OSNAME .. "-" .. arch .. "-" .. mode;
-	printvar(mode);
 	buildlist[ folder ] = "mode=" .. mode .. " arch=" .. arch;
 }
 
