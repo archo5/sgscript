@@ -6,6 +6,9 @@
 #  include <assert.h>
 #endif
 #include <limits.h>
+#if __APPLE__
+#  include <sys/time.h>
+#endif
 
 #include "sgs_int.h"
 
@@ -613,10 +616,14 @@ void sgs_vht_unset( sgs_VHTable* T, SGS_CTX, sgs_Variable* K )
 
 double sgs_GetTime()
 {
-#ifdef __linux
+#if __linux
 	struct timespec ts;
 	clock_gettime( CLOCK_MONOTONIC, &ts );
 	return (double) ts.tv_sec + 0.000000001 * (double) ts.tv_nsec;
+#elif __APPLE__
+	struct timeval tv;
+	gettimeofday( &tv, NULL );
+	return (double) tv.tv_sec + 0.000001 * (double) tv.tv_usec;
 #else
 	clock_t clk = clock();
 	return (double)( clk ) / (double)( CLOCKS_PER_SEC );
