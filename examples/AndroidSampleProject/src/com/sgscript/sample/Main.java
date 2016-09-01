@@ -24,7 +24,10 @@ public class Main extends Activity
     public static native String initAndDumpGlobals( String packageName );
     static
     {
-    	System.loadLibrary("sgscript");
+        // all libraries used statically should be referenced here
+        // plugins can be loaded by adding additional paths
+        System.loadLibrary("sgscript");
+    	System.loadLibrary("sgsxgmath");
     	System.loadLibrary("sgs_sample");
     }
 }
