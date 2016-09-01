@@ -1442,10 +1442,10 @@ static int sgsstd_class( SGS_CTX )
 static int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* obj )
 {
 	uint8_t* cl = (uint8_t*) obj->data;
-	sgs_clsrcount_t i, cc = *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
-	sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(sgs_clsrcount_t),sizeof(void*));
+	sgs_clsrcount_t i, cc = *SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable), sgs_clsrcount_t );
+	sgs_Closure** cls = SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable) + sizeof(sgs_clsrcount_t), sgs_Closure* );
 	
-	sgs_Release( C, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) ) );
+	sgs_Release( C, SGS_ASSUME_ALIGNED( cl, sgs_Variable ) );
 	
 	for( i = 0; i < cc; ++i )
 	{
@@ -1482,10 +1482,10 @@ static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* obj )
 static int sgsstd_closure_gcmark( SGS_CTX, sgs_VarObj* obj )
 {
 	uint8_t* cl = (uint8_t*) obj->data;
-	sgs_clsrcount_t i, cc = *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
-	sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(sgs_clsrcount_t),sizeof(void*));
+	sgs_clsrcount_t i, cc = *SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable), sgs_clsrcount_t );
+	sgs_Closure** cls = SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable) + sizeof(sgs_clsrcount_t), sgs_Closure* );
 	
-	sgs_GCMark( C, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) ) );
+	sgs_GCMark( C, SGS_ASSUME_ALIGNED( cl, sgs_Variable ) );
 	
 	for( i = 0; i < cc; ++i )
 	{
@@ -1499,14 +1499,14 @@ static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 {
 	uint8_t* cl = (uint8_t*) obj->data;
 	sgs_StkIdx ssz;
-	sgs_clsrcount_t i, cc = *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
-	sgs_Closure** cls = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(sgs_clsrcount_t),sizeof(void*));
+	sgs_clsrcount_t i, cc = *SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable), sgs_clsrcount_t );
+	sgs_Closure** cls = SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable) + sizeof(sgs_clsrcount_t), sgs_Closure* );
 	
 	sgs_PushString( C, "closure\n{" );
 	
 	ssz = stk_size( C );
 	sgs_PushString( C, "\nfunc: " );
-	sgs_DumpVar( C, *(sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) ), depth ); /* function */
+	sgs_DumpVar( C, *SGS_ASSUME_ALIGNED( cl, sgs_Variable ), depth ); /* function */
 	for( i = 0; i < cc; ++i )
 	{
 		char intro[ 64 ];
@@ -1543,7 +1543,7 @@ sgs_Closure** sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* out, sgs_Variable* func
 	
 	memcpy( cl + sizeof(sgs_Variable), &clc, sizeof(clc) );
 	
-	return (sgs_Closure**) ( cl + sizeof(sgs_Variable) + sizeof(clc) );
+	return SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable) + sizeof(clc), sgs_Closure* );
 }
 
 

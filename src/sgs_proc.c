@@ -161,7 +161,7 @@ static void var_destroy_string( SGS_CTX, sgs_iStr* str )
 static void var_destroy_func( SGS_CTX, sgs_iFunc* F )
 {
 	sgs_Variable *var = (sgs_Variable*) sgs_func_consts( F ),
-		*vend = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( sgs_func_bytecode( F ), 16 );
+		*vend = SGS_ASSUME_ALIGNED( sgs_func_bytecode( F ), sgs_Variable );
 	while( var < vend )
 	{
 		VAR_RELEASE( var );
@@ -337,13 +337,13 @@ int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 	if( func->type == SGS_VT_OBJECT && func->data.O->iface == sgsstd_closure_iface )
 	{
 		uint8_t* cl = (uint8_t*) func->data.O->data;
-		F->clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable)+sizeof(sgs_clsrcount_t),sizeof(void*));
+		F->clsrlist = SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable) + sizeof(sgs_clsrcount_t), sgs_Closure* );
 #if SGS_DEBUG && SGS_DEBUG_VALIDATE
-		F->clsrcount = (uint8_t) *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED(cl+sizeof(sgs_Variable),sizeof(void*));
+		F->clsrcount = (uint8_t) *SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable), sgs_clsrcount_t );
 #endif
 		F->clsrref = func->data.O;
 		F->clsrref->refcount++; /* acquire closure */
-		p_setvar_race( func, (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( cl, sizeof(void*) ) );
+		p_setvar_race( func, SGS_ASSUME_ALIGNED( cl, sgs_Variable ) );
 		
 		if( func->type == SGS_VT_FUNC )
 		{
@@ -502,8 +502,8 @@ void fstk_resize( SGS_CTX, size_t nsz )
 	
 	stk_rebase_pointers( C, C->stack_base, prevbase );
 	C->stack_mem = (uint32_t) nsz;
-	C->stack_off = (sgs_Variable*) ptr_add( C->stack_base, stkoff );
-	C->stack_top = (sgs_Variable*) ptr_add( C->stack_base, stkend );
+	C->stack_off = SGS_ASSUME_ALIGNED( ptr_add( C->stack_base, stkoff ), sgs_Variable );
+	C->stack_top = SGS_ASSUME_ALIGNED( ptr_add( C->stack_base, stkend ), sgs_Variable );
 }
 
 void fstk_push( SGS_CTX, sgs_Variable* vp ){ stk_push( C, vp ); }
@@ -2791,8 +2791,8 @@ SGSBOOL sgs_ResumeStateRet( SGS_CTX, int args, int* outrvc )
 static size_t funct_size( const sgs_iFunc* f )
 {
 	size_t sz = f->size + sizeof( sgs_iStr ) * 2 + f->sfuncname->size + f->sfilename->size;
-	const sgs_Variable* beg = (const sgs_Variable*) (const void*) sgs_func_c_consts( f );
-	const sgs_Variable* end = (const sgs_Variable*) (const void*) SGS_ASSUME_ALIGNED( sgs_func_c_bytecode( f ), 4 );
+	const sgs_Variable* beg = SGS_ASSUME_ALIGNED_CONST( sgs_func_c_consts( f ), sgs_Variable );
+	const sgs_Variable* end = SGS_ASSUME_ALIGNED_CONST( sgs_func_c_bytecode( f ), sgs_Variable );
 	while( beg < end )
 		sz += sgsVM_VarSize( beg++ );
 	return sz;

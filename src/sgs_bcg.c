@@ -203,8 +203,8 @@ static sgs_FuncCtx* fctx_create( SGS_CTX )
 static void fctx_destroy( SGS_CTX, sgs_FuncCtx* fctx )
 {
 	sgs_CompFunc* func = &fctx->cfunc;
-	sgs_Variable* vbeg = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 );
-	sgs_Variable* vend = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr + func->consts.size, 4 );
+	sgs_Variable* vbeg = SGS_ASSUME_ALIGNED( func->consts.ptr, sgs_Variable );
+	sgs_Variable* vend = SGS_ASSUME_ALIGNED( func->consts.ptr + func->consts.size, sgs_Variable );
 	sgs_Variable* var = vbeg;
 	while( var < vend )
 	{
@@ -747,8 +747,8 @@ static int preparse_funcorder( SGS_FNTCMP_ARGS )
 
 
 #define add_const_HDR \
-	sgs_Variable* vbeg = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr, 4 ); \
-	sgs_Variable* vend = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( func->consts.ptr + func->consts.size, 4 ); \
+	sgs_Variable* vbeg = SGS_ASSUME_ALIGNED( func->consts.ptr, sgs_Variable ); \
+	sgs_Variable* vend = SGS_ASSUME_ALIGNED( func->consts.ptr + func->consts.size, sgs_Variable ); \
 	sgs_Variable* var = vbeg; \
 	sgs_Variable nvar;
 
@@ -3175,8 +3175,8 @@ void sgsBC_Dump( sgs_CompFunc* func )
 void sgsBC_DumpEx( const char* constptr, size_t constsize,
 	const char* codeptr, size_t codesize )
 {
-	const sgs_Variable* vbeg = (const sgs_Variable*) (const void*) SGS_ASSUME_ALIGNED( constptr, 4 );
-	const sgs_Variable* vend = (const sgs_Variable*) (const void*) SGS_ASSUME_ALIGNED( constptr + constsize, 4 );
+	const sgs_Variable* vbeg = SGS_ASSUME_ALIGNED_CONST( constptr, sgs_Variable );
+	const sgs_Variable* vend = SGS_ASSUME_ALIGNED_CONST( constptr + constsize, sgs_Variable );
 	const sgs_Variable* var = vbeg;
 
 	printf( "{\n" );
@@ -3189,7 +3189,7 @@ void sgsBC_DumpEx( const char* constptr, size_t constsize,
 		var++;
 	}
 	printf( "> code:\n" );
-	dump_opcode( (const sgs_instr_t*) (const void*) SGS_ASSUME_ALIGNED( codeptr, 4 ), codesize / sizeof( sgs_instr_t ) );
+	dump_opcode( SGS_ASSUME_ALIGNED_CONST( codeptr, sgs_instr_t ), codesize / sizeof( sgs_instr_t ) );
 	printf( "}\n" );
 }
 

@@ -404,10 +404,10 @@ SGS_CASSERT( sizeof(sgs_iStr) % 4 == 0, istr_object_storage_compat_issue );
 #define sgs_func_instr_off( pfn ) (pfn)->instr_off
 #define sgs_func_instr_count( pfn ) ((sgs_func_size(pfn) - sgs_func_instr_off(pfn)) / sizeof(sgs_instr_t))
 #define sgs_func_const_count( pfn ) (sgs_func_instr_off(pfn) / sizeof(sgs_Variable))
-#define sgs_func_consts( pfn )   ((sgs_Variable*)SGS_ASSUME_ALIGNED(((sgs_iFunc*)(pfn))+1,16))
+#define sgs_func_consts( pfn )   (SGS_ASSUME_ALIGNED(((sgs_iFunc*)(pfn))+1,sgs_Variable))
 #define sgs_func_bytecode( pfn ) ((sgs_instr_t*)(sgs_func_consts(pfn)+sgs_func_instr_off(pfn)/sizeof(sgs_Variable)))
 #define sgs_func_lineinfo( pfn ) ((pfn)->lineinfo)
-#define sgs_func_c_consts( pfn )   ((const sgs_Variable*)SGS_ASSUME_ALIGNED(((const sgs_iFunc*)(pfn))+1,16))
+#define sgs_func_c_consts( pfn )   (SGS_ASSUME_ALIGNED_CONST(((const sgs_iFunc*)(pfn))+1,sgs_Variable))
 #define sgs_func_c_bytecode( pfn ) \
 	((const sgs_instr_t*)(sgs_func_c_consts(pfn) + sgs_func_instr_off(pfn) / sizeof(sgs_Variable)))
 
@@ -755,7 +755,7 @@ struct sgs_Context
 
 #define SGS_STACKFRAMESIZE ((sgs_StkIdx)(C->stack_top - C->stack_off))
 #define SGS_STACK_PRESERVE( C, ptr ) ((char*)(ptr) - (char*)C->stack_base)
-#define SGS_STACK_RESTORE( C, off ) (sgs_Variable*)((char*)C->stack_base + (off))
+#define SGS_STACK_RESTORE( C, off ) SGS_ASSUME_ALIGNED((char*)C->stack_base + (off),sgs_Variable)
 
 
 #ifdef SGS_INTERNAL_STRINGTABLES

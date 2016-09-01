@@ -46,14 +46,14 @@ else
 	ifeq ($(UNAME_S),Darwin)
 		cOS=osx
 	endif
-	UNAME_P := $(shell uname -p)
-	ifneq ($(filter %86,$(UNAME_P)),)
+	UNAME_M := $(shell uname -m)
+	ifneq ($(filter %86,$(UNAME_M)),)
 		cARCH=x86
 	endif
-	ifeq ($(UNAME_P),x86_64)
+	ifeq ($(UNAME_M),x86_64)
 		cARCH=x64
 	endif
-	ifneq ($(filter arm%,$(UNAME_P)),)
+	ifneq ($(filter arm%,$(UNAME_M)),)
 		cARCH=arm
 	endif
 endif

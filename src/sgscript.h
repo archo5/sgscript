@@ -163,11 +163,12 @@ extern "C" {
 
 #define SGS_UNUSED( x ) (void)(x)
 
-#if defined(__GNUC__) && ( __GNUC__ > 4 || ( __GNUC__ == 4 && __GNUC_MINOR__ >= 7 ) )
-#  define SGS_ASSUME_ALIGNED __builtin_assume_aligned
-#else
-#  define SGS_ASSUME_ALIGNED( x, a ) (x)
-#endif
+/* ideally it would be possible to specify how the pointer got its alignment ..
+.. or for the compiler to detect that; now it just throws pointless warnings...
+On top of that, OSX Clang seems to align sgs_Variable to 4 bytes even though ..
+.. the structure contains a union that contains pointers and a double. */
+#define SGS_ASSUME_ALIGNED( x, t ) ((t*)(void*)(x))
+#define SGS_ASSUME_ALIGNED_CONST( x, t ) ((const t*)(const void*)(x))
 
 #ifdef __cplusplus
 #  define SGS_DECLARE extern

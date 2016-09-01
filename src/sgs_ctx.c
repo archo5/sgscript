@@ -1022,8 +1022,8 @@ static void _fndump( sgs_iFunc* F );
 static void _recfndump( const char* constptr, size_t constsize,
 	const char* codeptr, size_t codesize, int gt, int args, int tmp, int clsr, int inclsr )
 {
-	const sgs_Variable* var = (const sgs_Variable*) (const void*) SGS_ASSUME_ALIGNED( constptr, 4 );
-	const sgs_Variable* vend = (const sgs_Variable*) (const void*) SGS_ASSUME_ALIGNED( constptr + constsize, 4 );
+	const sgs_Variable* var = SGS_ASSUME_ALIGNED_CONST( constptr, sgs_Variable );
+	const sgs_Variable* vend = SGS_ASSUME_ALIGNED_CONST( constptr + constsize, sgs_Variable );
 	while( var < vend )
 	{
 		if( var->type == SGS_VT_FUNC )

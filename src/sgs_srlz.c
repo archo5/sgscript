@@ -717,8 +717,8 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 			SRLZ_DEBUG( printf( "SRLZ new obj/closure\n" ) );
 			
 			ptr = (char*) O->data;
-			count = *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable), sizeof(sgs_clsrcount_t) );
-			clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable) + sizeof(sgs_clsrcount_t), sizeof(void*) );
+			count = *SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable), sgs_clsrcount_t );
+			clsrlist = SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable) + sizeof(sgs_clsrcount_t), sgs_Closure* );
 			
 			/* write closure */
 			{
@@ -1085,7 +1085,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 					sgs_unserr_error( C );
 					goto fail;
 				}
-				sgs_PushVariable( C, ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ] );
+				sgs_PushVariable( C, (SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ pos ] );
 			}
 			if( str > strend - fnsz && !sgs_unserr_incomp( C ) )
 				goto fail;
@@ -1112,7 +1112,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 					sgs_unserr_error( C );
 					goto fail;
 				}
-				mov = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ mo_arg ];
+				mov = &(SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ mo_arg ];
 				if( mov->type != SGS_VT_OBJECT && !sgs_unserr_error( C ) )
 					goto fail;
 				if( mov->data.O == var.data.O && !sgs_unserr_error( C ) )
@@ -1139,7 +1139,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			str += 4;
 			clsr = sgs_Alloc( sgs_Closure );
 			clsr->refcount = 0;
-			clsr->var = ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ];
+			clsr->var = (SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ pos ];
 			sgs_Acquire( C, &clsr->var );
 			var.type = SGS_VTSPC_CLOSURE;
 			var.data.P = clsr;
@@ -1184,8 +1184,8 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				goto fail;
 			}
 			
-			cvp = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ];
-			fvp = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ func ];
+			cvp = &(SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ pos ];
+			fvp = &(SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ func ];
 			if( cvp->type != SGS_VT_OBJECT || cvp->data.O->iface != sgsstd_closure_iface )
 			{
 				sgs_unserr_error( C );
@@ -1217,8 +1217,8 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				goto fail;
 			}
 			
-			cvp = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ cvpos ];
-			avp = &((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ avpos ];
+			cvp = &(SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ cvpos ];
+			avp = &(SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ avpos ];
 			if( cvp->type != SGS_VT_OBJECT || cvp->data.O->iface != sgsstd_closure_iface ||
 				avp->type != SGS_VTSPC_CLOSURE )
 			{
@@ -1228,8 +1228,8 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			
 			{
 				char* ptr = (char*) cvp->data.O->data;
-				sgs_clsrcount_t count = *(sgs_clsrcount_t*) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable), sizeof(sgs_clsrcount_t) );
-				sgs_Closure** clsrlist = (sgs_Closure**) (void*) SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable) + sizeof(sgs_clsrcount_t), sizeof(void*) );
+				sgs_clsrcount_t count = *SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable), sgs_clsrcount_t );
+				sgs_Closure** clsrlist = SGS_ASSUME_ALIGNED( ptr + sizeof(sgs_Variable) + sizeof(sgs_clsrcount_t), sgs_Closure* );
 				if( which < 0 || (sgs_clsrcount_t) which >= count )
 				{
 					sgs_unserr_error( C );
@@ -1266,7 +1266,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 					sgs_unserr_error( C );
 					goto fail;
 				}
-				sgs_PushVariable( C, ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ] );
+				sgs_PushVariable( C, (SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ pos ] );
 			}
 			if( !sgs__thread_unserialize( C, &T, &str, strend ) && !sgs_unserr_incomp( C ) )
 				goto fail;
@@ -1291,7 +1291,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				sgs_unserr_error( C );
 				goto fail;
 			}
-			if( !sgs_GetSymbol( C, ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ pos ], &var ) )
+			if( !sgs_GetSymbol( C, (SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ pos ], &var ) )
 			{
 				sgs_unserr_symfail( C );
 				goto fail;
@@ -1300,7 +1300,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 		else if( c == '.' || c == '[' )
 		{
 			int32_t pobj, pkey, pval, pend = (int32_t) ( mb.size / sizeof( sgs_Variable ) );
-			sgs_Variable* varlist = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 );
+			sgs_Variable* varlist = SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable );
 			
 			SRLZ_DEBUG( printf( "USRZ found [%c] (post-%s)\n", c, c == '.' ? "properties" : "indices" ) );
 			
@@ -1352,16 +1352,16 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 	if( mb.size )
 	{
 		if( retpos >= 0 )
-			sgs_PushVariable( C, ((sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 ))[ retpos ] );
+			sgs_PushVariable( C, (SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ retpos ] );
 		else
-			sgs_PushVariable( C, *(sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr + mb.size - sizeof(sgs_Variable), 4 ) );
+			sgs_PushVariable( C, *SGS_ASSUME_ALIGNED( mb.ptr + mb.size - sizeof(sgs_Variable), sgs_Variable ) );
 	}
 	res = mb.size != 0;
 fail:
 	_STACK_UNPROTECT_SKIP( res );
 	{
-		sgs_Variable* ptr = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr, 4 );
-		sgs_Variable* pend = (sgs_Variable*) (void*) SGS_ASSUME_ALIGNED( mb.ptr + mb.size, 4 );
+		sgs_Variable* ptr = SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable );
+		sgs_Variable* pend = SGS_ASSUME_ALIGNED( mb.ptr + mb.size, sgs_Variable );
 		while( ptr < pend )
 		{
 			sgs_Release( C, ptr++ );
@@ -1511,8 +1511,8 @@ static int sgson_encode_var( SGS_CTX, sgs_serialize3_data* data,
 			}
 			
 			call_info_index = (int32_t) vv->val.data.I;
-			ci = &((s3callinfo*) data->callinfo.ptr)[ call_info_index ];
-			args = &((int32_t*) data->callargs.ptr)[ ci->arg_offset ];
+			ci = &(SGS_ASSUME_ALIGNED( data->callinfo.ptr, s3callinfo ))[ call_info_index ];
+			args = &(SGS_ASSUME_ALIGNED( data->callargs.ptr, int32_t ))[ ci->arg_offset ];
 			fn_name = sgs_var_cstr( &ci->func_name );
 			fn_size = (size_t) ci->func_name.data.S->size;
 			
@@ -1788,8 +1788,8 @@ fail:
 		sgs_vht_free( &SD.servartable, C );
 		sgs_membuf_destroy( &SD.argarray, C );
 		{
-			s3callinfo* ci = (s3callinfo*) SD.callinfo.ptr;
-			s3callinfo* ciend = (s3callinfo*) ( SD.callinfo.ptr + SD.callinfo.size );
+			s3callinfo* ci = SGS_ASSUME_ALIGNED( SD.callinfo.ptr, s3callinfo );
+			s3callinfo* ciend = SGS_ASSUME_ALIGNED( SD.callinfo.ptr + SD.callinfo.size, s3callinfo );
 			while( ci < ciend )
 			{
 				sgs_Release( C, &ci->func_name );
