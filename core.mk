@@ -37,7 +37,7 @@ ifeq ($(OS),Windows_NT)
 	endif
 else
 	fnREMOVE_ALL = rm -rf
-	fnCOPY_FILE = cp
+	fnCOPY_FILE = cp -f
 	fnFIX_PATH = $1
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
