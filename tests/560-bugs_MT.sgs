@@ -375,3 +375,60 @@ x.co = co;
 co_resume( co, x );
 `
 result `SUCCESS`
+
+// `bug 00029 - the 115 line compile issue`
+rec ``
+exec `mode0 = [ "debug", "release" ];
+// originally found in build/prep.sgs, ident("mode") on line 115 passed to find_var
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+foreach( mode : mode0 )
+{
+	printvar(mode); // 48 = ASCII '0', token ident(mode) is encoded as "mode"<uint16LE line number>
+}`
+result `SUCCESS`
+check_err ``
+check_out `string [5] "debug"
+string [7] "release"
+`

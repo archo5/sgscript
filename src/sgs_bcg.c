@@ -410,36 +410,32 @@ static void dump_opcode( const sgs_instr_t* ptr, size_t count )
 }
 
 
-static int find_var( sgs_MemBuf* S, char* str, unsigned len )
+static int find_var( sgs_MemBuf* S, const char* str, unsigned len )
 {
-	char* ptr = S->ptr;
-	char* pend = ptr + S->size;
-	const char* cstr = str;
-	int difs = 0, at = 0;
-	unsigned left = len;
-
+	int at = 0;
+	const char* ptr = S->ptr;
+	const char* pend = ptr + S->size;
+	const char* estr = str + len;
+	
 	while( ptr < pend )
 	{
-		if( *ptr == '=' )
+		/* compare ptr .. '=' with str .. str + len */
+		const char* cstr = str;
+		while( ptr < pend && *ptr != '=' && cstr < estr )
 		{
-			if( difs == 0 && !left )
-				return at;
-			difs = 0;
-			cstr = str;
-			left = len;
+			if( *ptr != *cstr )
+				break;
 			ptr++;
-			at++;
+			cstr++;
 		}
-		else
-		{
-			difs += abs( *cstr - *ptr );
-			ptr += *ptr != '=';
-			if( left > 0 )
-			{
-				left--;
-				cstr++;
-			}
-		}
+		if( ptr < pend && *ptr == '=' && cstr == estr )
+			return at;
+		
+		/* advance to next variable */
+		at++;
+		while( ptr < pend && *ptr != '=' )
+			ptr++;
+		ptr++; /* skip '=' */
 	}
 	return -1;
 }
