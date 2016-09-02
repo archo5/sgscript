@@ -3,11 +3,12 @@
 ## Usage
 
 - MinGW/GNU Make/GCC/Clang users:
-    * compile the makefile (add mode=release to get the release build)
-    * link with -lsgscript from the bin/ directory (-Lbin)
+    * compile the makefile (add ```mode=release``` to get the release build)
+    * include ```src/sgscript.h``` and link with -lsgscript from the bin/ directory (-Lbin)
+    * to get a static library, use ```static=1``` and link to ```lib/libsgscript.a``` (-Llib -lsgscript)
 - VC10+ users: project file is in build/vc10/SGScript
 - XCode users: project file is in build/xcode
-- include ```src/sgscript.h``` in your project and link with ```libsgscript.a```
+- Android NDK users: include jni/Android.mk into your makefile
 
 ## Sample Code and Documentation
 
@@ -46,8 +47,12 @@ Don't forget to include a test sample, as small as possible!
 - full state serialization
 - got a suggestion? write some sample code (in the form of a test) and send it here
 
+## Community
+
+- [SGScript on Discord](https://discord.gg/QysXUNq)
+
 ## Credits
 
 - developer: Arvīds Kokins (snake5)
-    * I can be reached at snake5creator [at] GMail
+    * I can be reached at https://twitter.com/snake5creator and snake5creator [at] GMail
 
