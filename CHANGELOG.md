@@ -1,5 +1,5 @@
 
-**1.4.0** (2016/xx/xx):
+**1.4.0** (2016/09/02):
 
 - **added class syntax**
 - **added 'defer' keyword** (moves statement to end of block, 2+ statements are executed in opposite order)
