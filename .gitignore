@@ -25,3 +25,5 @@ xcuserdata
 /examples/AndroidSampleProject/libs/
 /examples/AndroidSampleProject/gen/
 /examples/AndroidSampleProject/bin/
+/dotnet/*/obj/
+/dotnet/*/bin/
