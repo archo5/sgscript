@@ -14,6 +14,7 @@
 #include "../src/sgs_regex.c"
 #include "../src/sgs_std.c"
 #include "../src/sgs_stdL.c"
+#include "../src/sgs_srlz.c"
 #include "../src/sgs_xpc.c"
 
 #define HEADER_SGSCRIPT_H "../src/sgscript.h"
@@ -50,7 +51,7 @@ char* runsgs( const char* script )
 	sgs_LoadLib_OS( C );
 	sgs_LoadLib_RE( C );
 	sgs_LoadLib_String( C );
-	xgm_module_entry_point( C );
+	sgs_xgm_module_entry_point( C );
 	sgs_ExecString( C, script );
 	sgs_DestroyEngine( C );
 	*outbuf_at = 0;
