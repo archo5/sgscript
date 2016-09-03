@@ -74,6 +74,13 @@ namespace SGScript
 		public IntPtr Stat( Stat type ){ return NI.Stat( ctx, type ); }
 		public Int32 Cntl( Cntl what, Int32 val ){ return NI.Cntl( ctx, what, val ); }
 
+		public void LoadLib_Fmt(){ NI.LoadLib_Fmt( ctx ); }
+		public void LoadLib_IO(){ NI.LoadLib_IO( ctx ); }
+		public void LoadLib_Math(){ NI.LoadLib_Math( ctx ); }
+		public void LoadLib_OS(){ NI.LoadLib_OS( ctx ); }
+		public void LoadLib_RE(){ NI.LoadLib_RE( ctx ); }
+		public void LoadLib_String(){ NI.LoadLib_String( ctx ); }
+
 		public void SetPrintFunc( IPrinter pr )
 		{
 			NI.SetPrintFunc( ctx, new NI.PrintFunc( IPrinter._PrintFunc ), pr );
@@ -94,6 +101,25 @@ namespace SGScript
 				ctx = IntPtr.Zero;
 			}
 		}
+		
+		void _IndexCheck( int item, string funcname )
+		{
+			int size = StackSize();
+			if( item >= size || item < -size )
+				throw new SGSException( NI.EBOUNDS, string.Format( "{0}({1}) failed with stack size = {2}", funcname, item, size ) );
+		}
+		void _SizeCheck( int numitems, string funcname )
+		{
+			int size = StackSize();
+			if( numitems > size )
+				throw new SGSException( NI.EBOUNDS, string.Format( "{0}({1}) failed with stack size = {2} - not enough items exist in the stack", funcname, numitems, size ) );
+		}
+		void _SizePairCheck( int numitems, string funcname )
+		{
+			_SizeCheck( numitems, funcname );
+			if( numitems % 2 != 0 )
+				throw new SGSException( NI.EINVAL, string.Format( "{0}({1}) failed - item count cannot be an odd number", funcname, numitems ) );
+		}
 
 		public Variable NullVar(){ return new Variable( this, NI.MakeNull() ); }
 		public Variable Var( bool v ){ return new Variable( this, NI.MakeBool( v ) ); }
@@ -106,7 +132,13 @@ namespace SGScript
 		public Variable Var( double v ){ return new Variable( this, NI.MakeReal( v ) ); }
 		public Variable Var( IntPtr v ){ return new Variable( this, NI.MakePtr( v ) ); }
 		public Variable Var( NI.Variable v ){ return new Variable( this, v ); }
-		public Variable ArrayVar( Int32 numitems ){ NI.Variable arr; NI.CreateArray( ctx, numitems, out arr ); return new Variable( this, arr ); }
+
+		public Variable ArrayVar( int numitems ){ _SizeCheck( numitems, "ArrayVar" ); NI.Variable arr; NI.CreateArray( ctx, numitems, out arr ); return new Variable( this, arr ); }
+		public Variable DictVar( int numitems ){ _SizePairCheck( numitems, "DictVar" ); NI.Variable arr; NI.CreateDict( ctx, numitems, out arr ); return new Variable( this, arr ); }
+		public Variable MapVar( int numitems ){ _SizePairCheck( numitems, "MapVar" ); NI.Variable arr; NI.CreateMap( ctx, numitems, out arr ); return new Variable( this, arr ); }
+		public void PushArray( int numitems ){ _SizeCheck( numitems, "PushArray" ); NI.CreateArray( ctx, numitems ); }
+		public void PushDict( int numitems ){ _SizePairCheck( numitems, "PushDict" ); NI.CreateDict( ctx, numitems ); }
+		public void PushMap( int numitems ){ _SizePairCheck( numitems, "PushMap" ); NI.CreateMap( ctx, numitems ); }
 
 		public void PushNull(){ NI.PushNull( ctx ); }
 		public void Push( bool b ){ NI.PushBool( ctx, b ? 1 : 0 ); }
@@ -120,8 +152,16 @@ namespace SGScript
 		public void Push( string str ){ if( str == null ) PushNull(); else NI.PushStringBuf( ctx, str, str.Length ); }
 		public void Push( Context c ){ NI.PushThreadPtr( ctx, c.ctx ); }
 		public void Push( IntPtr p ){ NI.PushPtr( ctx, p ); }
+
 		public void Push( Variable v ){ NI.PushVariable( ctx, v.var ); }
-		public void PushArray( Int32 numitems ){ NI.CreateArray( ctx, numitems ); }
+		public void PushItem( int item ){ _IndexCheck( item, "PushItem" ); NI.PushItem( ctx, item ); }
+		public void InsertVar( int pos, Variable v )
+		{
+			int size = StackSize();
+			if( pos > size || pos < -size - 1 )
+				throw new SGSException( NI.EBOUNDS, string.Format( "InsertVar({0}) failed with stack size = {1}", pos, StackSize() ) );
+			NI.InsertVariable( ctx, pos, v.var );
+		}
 
 		public void Pop( int count )
 		{
@@ -139,8 +179,25 @@ namespace SGScript
 		public Variable OptStackItem( int item ){ return new Variable( this, NI.OptStackItem( ctx, item ) ); }
 		public Variable StackItem( int item ){ return new Variable( this, NI.StackItem( ctx, item ) ); }
 		public VarType ItemType( Int32 item ){ return NI.ItemType( ctx, item ); }
+
+		public int XFCall( int args = 0, bool gotthis = false ){ _SizeCheck( args + ( gotthis ? 2 : 1 ), "[X]FCall" ); return NI.XFCall( ctx, args, gotthis ? 1 : 0 ); }
+		public int FCall( int args = 0, int expect = 0, bool gotthis = false ){ return NI.AdjustStack( ctx, expect, XFCall( args, gotthis ) ); }
+		public void GCExecute(){ NI.GCExecute( ctx ); }
+		
+		public Variable GetIndex( Variable obj, Variable idx, bool isprop = false )
+		{
+			NI.Variable var;
+			if( !NI.GetIndex( ctx, obj.var, idx.var, out var, isprop ) )
+				return null;
+			return Var( var );
+		}
+		public bool SetIndex( Variable obj, Variable idx, Variable val, bool isprop = false ){ return NI.SetIndex( ctx, obj.var, idx.var, val.var, isprop ? 1 : 0 ) != 0; }
+		public bool PushIndex( Variable obj, Variable idx, bool isprop = false ){ return NI.PushIndex( ctx, obj.var, idx.var, isprop ? 1 : 0 ) != 0; }
+
+		public bool PushProperty( Variable obj, string prop ){ return NI.PushProperty( ctx, obj.var, prop ) != 0; }
 		
 		public bool SetGlobal( Variable key, Variable value ){ return NI.SetGlobal( ctx, key.var, value.var ) != 0; }
+		public bool PushGlobal( string key ){ return NI.PushGlobalByName( ctx, key ) != 0; }
 		public void SetGlobal( string key, Variable value ){ NI.SetGlobalByName( ctx, key, value.var ); }
 	}
 

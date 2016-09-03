@@ -1,8 +1,52 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace SGScript
 {
+	public class UTF8Marshaler : ICustomMarshaler
+	{
+		static UTF8Marshaler inst = null;
+
+		public static ICustomMarshaler GetInstance( string name )
+		{
+			if( inst == null )
+				inst = new UTF8Marshaler();
+			return inst;
+		}
+
+		public void CleanUpManagedData( object obj )
+		{
+		}
+		public void CleanUpNativeData( IntPtr mem )
+		{
+			Marshal.FreeHGlobal( mem );
+		}
+		public int GetNativeDataSize()
+		{
+			return -1;
+		}
+		public IntPtr MarshalManagedToNative( object obj )
+		{
+			if( obj == null )
+				return IntPtr.Zero;
+			byte[] bytes = Encoding.UTF8.GetBytes( (string) obj );
+			IntPtr mem = Marshal.AllocHGlobal( bytes.Length + 1 );
+			Marshal.Copy( bytes, 0, mem, bytes.Length );
+			Marshal.WriteByte( mem, bytes.Length, 0 );
+			return mem;
+		}
+		public object MarshalNativeToManaged( IntPtr mem )
+		{
+			int size = 0;
+			while( Marshal.ReadByte( mem, size ) != 0 )
+				size++;
+			byte[] bytes = new byte[ size ];
+			Marshal.Copy( mem, bytes, 0, size );
+			return Encoding.UTF8.GetString( bytes );
+		}
+	}
+
 	public class SGSException : Exception
 	{
 		public static string MakeExceptionMessage( int code, string additionalInfo )
@@ -198,7 +242,7 @@ namespace SGScript
 		public delegate IntPtr MemFunc( IUserData ud, IntPtr ptr, IntPtr size );
 
 		[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-		public delegate void PrintFunc( IUserData ud, IntPtr ctx, int type, [MarshalAs( UnmanagedType.LPStr )] string message );
+		public delegate void PrintFunc( IUserData ud, IntPtr ctx, int type, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string message );
 
 
 		public static IntPtr DefaultMemFunc( IUserData ud, IntPtr ptr, IntPtr size )
@@ -232,7 +276,7 @@ namespace SGScript
 		
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_CodeString", CallingConvention = CallingConvention.Cdecl )]
-		[return: MarshalAs( UnmanagedType.LPStr )]
+		[return: MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )]
 		public static extern string CodeString( int type, int val );
 
 
@@ -241,16 +285,18 @@ namespace SGScript
 
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_EvalBuffer", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi )]
-		public static extern int EvalBuffer( IntPtr ctx, [MarshalAs( UnmanagedType.LPStr )] string buf, Int32 bufsz );
+		public static extern int EvalBuffer( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string buf, Int32 bufsz );
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_EvalFile", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi )]
-		public static extern int EvalFile( IntPtr ctx, [MarshalAs( UnmanagedType.LPStr )] string buf );
+		public static extern int EvalFile( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string buf );
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_AdjustStack", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int AdjustStack( IntPtr ctx, int expected, int ret );
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_IncludeExt", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi )]
-		public static extern int Include( IntPtr ctx, [MarshalAs( UnmanagedType.LPStr )] string name, [MarshalAs( UnmanagedType.LPStr )] string searchpath = null );
+		public static extern int Include( IntPtr ctx,
+			[MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string name,
+			[MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string searchpath = null );
 		
 		public static int Eval( IntPtr ctx, string str ) { return EvalBuffer( ctx, str, str.Length ); }
 		public static int Exec( IntPtr ctx, string str ) { return AdjustStack( ctx, 0, Eval( ctx, str ) ); }
@@ -267,18 +313,53 @@ namespace SGScript
 		public static extern Int32 Cntl( IntPtr ctx, Cntl what, Int32 val );
 
 
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_LoadLib_Fmt", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void LoadLib_Fmt( IntPtr ctx );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_LoadLib_IO", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void LoadLib_IO( IntPtr ctx );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_LoadLib_Math", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void LoadLib_Math( IntPtr ctx );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_LoadLib_OS", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void LoadLib_OS( IntPtr ctx );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_LoadLib_RE", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void LoadLib_RE( IntPtr ctx );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_LoadLib_String", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void LoadLib_String( IntPtr ctx );
+
+
 		public static Variable MakeNull(){ Variable var = new Variable(); var.type = VarType.Null; return var; }
 		public static Variable MakeBool( bool v ){ Variable var = new Variable(); var.type = VarType.Bool; var.data.B = v ? 1 : 0; return var; }
 		public static Variable MakeInt( Int64 v ){ Variable var = new Variable(); var.type = VarType.Int; var.data.I = v; return var; }
 		public static Variable MakeReal( double v ){ Variable var = new Variable(); var.type = VarType.Real; var.data.R = v; return var; }
+		public static Variable MakeCFunc( IntPtr v ){ Variable var = new Variable(); var.type = VarType.CFunc; var.data.C = v; return var; }
+		public static Variable MakeObjPtrNoRef( IntPtr v ){ Variable var = new Variable(); var.type = VarType.Object; var.data.O = v; return var; }
 		public static Variable MakePtr( IntPtr v ){ Variable var = new Variable(); var.type = VarType.Ptr; var.data.P = v; return var; }
 
-		
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_InitStringBuf", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern void _InitStringBuf( IntPtr ctx, Variable* outvar, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string buf, Int32 bufsz );
+		public static unsafe void InitStringBuf( IntPtr ctx, out Variable outvar, string buf ){ Variable item; _InitStringBuf( ctx, &item, buf, buf.Length ); outvar = item; }
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_InitString", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern void _InitNullTerminatedString( IntPtr ctx, Variable* outvar, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string str );
+		public static unsafe void InitNullTerminatedString( IntPtr ctx, out Variable outvar, string str ){ Variable item; _InitNullTerminatedString( ctx, &item, str ); outvar = item; }
+
+
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateArray", CallingConvention = CallingConvention.Cdecl )]
 		public static unsafe extern int _CreateArray( IntPtr ctx, Variable* outvar, Int32 numitems );
 		public static unsafe void CreateArray( IntPtr ctx, Int32 numitems ){ _CreateArray( ctx, null, numitems ); }
 		public static unsafe void CreateArray( IntPtr ctx, Int32 numitems, out Variable outvar ){ Variable v; _CreateArray( ctx, &v, numitems ); outvar = v; }
-		
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateDict", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern int _CreateMap( IntPtr ctx, Variable* outvar, Int32 numitems );
+		public static unsafe void CreateMap( IntPtr ctx, Int32 numitems ){ _CreateMap( ctx, null, numitems ); }
+		public static unsafe void CreateMap( IntPtr ctx, Int32 numitems, out Variable outvar ){ Variable v; _CreateMap( ctx, &v, numitems ); outvar = v; }
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateMap", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern int _CreateDict( IntPtr ctx, Variable* outvar, Int32 numitems );
+		public static unsafe void CreateDict( IntPtr ctx, Int32 numitems ){ _CreateDict( ctx, null, numitems ); }
+		public static unsafe void CreateDict( IntPtr ctx, Int32 numitems, out Variable outvar ){ Variable v; _CreateDict( ctx, &v, numitems ); outvar = v; }
+
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushNulls", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int PushNulls( IntPtr ctx, int count );
@@ -286,43 +367,67 @@ namespace SGScript
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushBool", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int PushBool( IntPtr ctx, Int32 v );
-		
+
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushInt", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int PushInt( IntPtr ctx, Int64 v );
-		
+
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushReal", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int PushReal( IntPtr ctx, double v );
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushStringBuf", CallingConvention = CallingConvention.Cdecl )]
-		public static extern int PushStringBuf( IntPtr ctx, [MarshalAs( UnmanagedType.LPStr )] string buf, Int32 bufsz );
+		public static extern int PushStringBuf( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string buf, Int32 bufsz );
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushString", CallingConvention = CallingConvention.Cdecl )]
-		public static extern int PushNullTerminatedString( IntPtr ctx, [MarshalAs( UnmanagedType.LPStr )] string str );
+		public static extern int PushNullTerminatedString( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string str );
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushThreadPtr", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int PushThreadPtr( IntPtr ctx, IntPtr v );
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushPtr", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int PushPtr( IntPtr ctx, IntPtr v );
-		
+
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushVariable", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int PushVariable( IntPtr ctx, Variable v );
 		
-		
+		public static int PushItem( IntPtr ctx, Int32 item ){ return PushVariable( ctx, StackItem( ctx, item ) ); }
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_InsertVariable", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void InsertVariable( IntPtr ctx, Int32 pos, Variable v );
+
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetIndex", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern int _GetIndex( IntPtr ctx, Variable obj, Variable idx, Variable* outvar, int isprop );
+		public static unsafe bool GetIndex( IntPtr ctx, Variable obj, Variable idx, out Variable outvar, bool isprop )
+		{ Variable v; bool ret =_GetIndex( ctx, obj, idx, &v, isprop ? 1 : 0 ) != 0; outvar = v; return ret; }
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetIndex", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int SetIndex( IntPtr ctx, Variable obj, Variable idx, Variable val, int isprop );
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushIndex", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int PushIndex( IntPtr ctx, Variable obj, Variable idx, int isprop );
+
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushProperty", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int PushProperty( IntPtr ctx, Variable obj, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string prop );
+
+
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetGlobal", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int SetGlobal( IntPtr ctx, Variable key, Variable value );
-		
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushGlobalByName", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int PushGlobalByName( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string key );
+
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetGlobalByName", CallingConvention = CallingConvention.Cdecl )]
-		public static extern void SetGlobalByName( IntPtr ctx, [MarshalAs( UnmanagedType.LPStr )] string key, Variable value );
-		
+		public static extern void SetGlobalByName( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string key, Variable value );
+
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_Pop", CallingConvention = CallingConvention.Cdecl )]
 		public static extern void Pop( IntPtr ctx, Int32 count );
-		
+
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PopSkip", CallingConvention = CallingConvention.Cdecl )]
 		public static extern void PopSkip( IntPtr ctx, Int32 count, Int32 skip );
-		
+
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_StackSize", CallingConvention = CallingConvention.Cdecl )]
 		public static extern Int32 StackSize( IntPtr ctx );
@@ -349,7 +454,14 @@ namespace SGScript
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_ItemType", CallingConvention = CallingConvention.Cdecl )]
 		public static extern VarType ItemType( IntPtr ctx, Int32 item );
-		
+
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_XFCall", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int XFCall( IntPtr ctx, int args, int gotthis );
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GCExecute", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void GCExecute( IntPtr ctx );
+
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_Acquire", CallingConvention = CallingConvention.Cdecl )]
 		public static unsafe extern void _Acquire( IntPtr ctx, Variable* item );
@@ -362,6 +474,51 @@ namespace SGScript
 			Variable v = item;
 			_Release( ctx, &v );
 			item = v;
+		}
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GCMark", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern void _GCMark( IntPtr ctx, Variable* item );
+		public static unsafe void GCMark( IntPtr ctx, Variable item ){ _GCMark( ctx, &item ); }
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ObjAcquire", CallingConvention = CallingConvention.Cdecl )]
+		public static extern Variable ObjAcquire( IntPtr ctx, IntPtr obj );
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ObjRelease", CallingConvention = CallingConvention.Cdecl )]
+		public static extern Variable ObjRelease( IntPtr ctx, IntPtr obj );
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ObjGCMark", CallingConvention = CallingConvention.Cdecl )]
+		public static extern Variable ObjGCMark( IntPtr ctx, IntPtr obj );
+
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetBoolP", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern int _GetBoolP( IntPtr ctx, Variable* item );
+		public static unsafe bool GetBoolP( IntPtr ctx, Variable item ){ return _GetBoolP( ctx, &item ) != 0; }
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetIntP", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern Int64 _GetIntP( IntPtr ctx, Variable* item );
+		public static unsafe Int64 GetIntP( IntPtr ctx, Variable item ){ return _GetIntP( ctx, &item ); }
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetRealP", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern double _GetRealP( IntPtr ctx, Variable* item );
+		public static unsafe double GetRealP( IntPtr ctx, Variable item ){ return _GetRealP( ctx, &item ); }
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetPtrP", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern IntPtr _GetPtrP( IntPtr ctx, Variable* item );
+		public static unsafe IntPtr GetPtrP( IntPtr ctx, Variable item ){ return _GetPtrP( ctx, &item ); }
+		
+		public static string GetString( Variable var )
+		{
+			if( var.type == VarType.Null )
+				return null;
+			else if( var.type == VarType.String )
+			{
+				IntPtr s = var.data.S;
+				Int32 size = Marshal.ReadInt32( s, 4 );
+				byte[] bytes = new byte[ size ];
+				Marshal.Copy( (IntPtr) ( s.ToInt64() + 12 ), bytes, 0, size );
+				return Encoding.UTF8.GetString( bytes );
+			}
+			else throw new SGSException( EINVAL );
 		}
 	}
 }

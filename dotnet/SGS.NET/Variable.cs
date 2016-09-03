@@ -44,6 +44,7 @@ namespace SGScript
 			Marshal.Copy( nameBytes, 0, nameOffset, nameBytes.Length );
 			Marshal.WriteByte( nameOffset, nameBytes.Length, 0 );
 
+			_sgsInterfaces.Add( type, iface );
 			return iface;
 		}
 		/// END OF INTERFACE SYSTEM ///
@@ -114,5 +115,12 @@ namespace SGScript
 
 		public void Acquire(){ NI.Acquire( ctx.ctx, var ); }
 		public void Release(){ NI.Release( ctx.ctx, ref var ); }
+
+		public VarType type { get { return var.type; } }
+		public bool GetBool(){ return NI.GetBoolP( ctx.ctx, var ); }
+		public Int64 GetInt(){ return NI.GetIntP( ctx.ctx, var ); }
+		public double GetReal(){ return NI.GetRealP( ctx.ctx, var ); }
+		public string GetString(){ return NI.GetString( var ); }
+		public string str { get { return GetString(); } }
 	}
 }
