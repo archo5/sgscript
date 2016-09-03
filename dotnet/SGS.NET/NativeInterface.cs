@@ -19,7 +19,7 @@ namespace SGScript
 			resultCode = code;
 		}
 
-		int resultCode;
+		public int resultCode;
 	}
 
 	public enum VarType : uint
@@ -131,6 +131,47 @@ namespace SGScript
 		}
 
 
+		[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
+		public delegate int OC_Self( IntPtr ctx, IUserData obj );
+		
+		[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
+		public delegate int OC_SlPr( IntPtr ctx, IUserData obj, int param );
+
+		public struct ObjInterface
+		{
+			public IntPtr name;
+
+			public OC_Self destruct;
+			public OC_Self gcmark;
+
+			public OC_Self getindex;
+			public OC_Self setindex;
+
+			public OC_SlPr convert;
+			public OC_Self serialize;
+			public OC_SlPr dump;
+			public OC_SlPr getnext;
+
+			public OC_Self call;
+			public OC_Self expr;
+		};
+		public static int ObjInterfaceSize { get { return Marshal.SizeOf( typeof( ObjInterface ) ); } }
+
+		public struct VarObj
+		{
+			public Int32 refcount;
+			public UInt32 appsize;
+			public byte redblue;
+			public byte mm_enable;
+			public byte is_iface;
+			public byte in_setindex;
+			public IntPtr data;
+			public IntPtr iface;
+			public IntPtr prev;
+			public IntPtr next;
+			public IntPtr metaobj;
+		};
+
 		[StructLayout(LayoutKind.Explicit, Size=8)]
 		public struct VarData
 		{
@@ -230,6 +271,7 @@ namespace SGScript
 		public static Variable MakeBool( bool v ){ Variable var = new Variable(); var.type = VarType.Bool; var.data.B = v ? 1 : 0; return var; }
 		public static Variable MakeInt( Int64 v ){ Variable var = new Variable(); var.type = VarType.Int; var.data.I = v; return var; }
 		public static Variable MakeReal( double v ){ Variable var = new Variable(); var.type = VarType.Real; var.data.R = v; return var; }
+		public static Variable MakePtr( IntPtr v ){ Variable var = new Variable(); var.type = VarType.Ptr; var.data.P = v; return var; }
 
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateArray", CallingConvention = CallingConvention.Cdecl )]
@@ -238,23 +280,34 @@ namespace SGScript
 		public static unsafe void CreateArray( IntPtr ctx, Int32 numitems, out Variable outvar ){ Variable v; _CreateArray( ctx, &v, numitems ); outvar = v; }
 		
 
-		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushNull", CallingConvention = CallingConvention.Cdecl )]
-		public static extern void PushNull( IntPtr ctx );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushNulls", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int PushNulls( IntPtr ctx, int count );
+		public static int PushNull( IntPtr ctx ){ return PushNulls( ctx, 1 ); }
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushBool", CallingConvention = CallingConvention.Cdecl )]
-		public static extern void PushBool( IntPtr ctx, Int32 v );
+		public static extern int PushBool( IntPtr ctx, Int32 v );
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushInt", CallingConvention = CallingConvention.Cdecl )]
-		public static extern void PushInt( IntPtr ctx, Int64 v );
+		public static extern int PushInt( IntPtr ctx, Int64 v );
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushReal", CallingConvention = CallingConvention.Cdecl )]
-		public static extern void PushReal( IntPtr ctx, double v );
+		public static extern int PushReal( IntPtr ctx, double v );
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushStringBuf", CallingConvention = CallingConvention.Cdecl )]
-		public static extern void PushStringBuf( IntPtr ctx, [MarshalAs( UnmanagedType.LPStr )] string buf, Int32 bufsz );
+		public static extern int PushStringBuf( IntPtr ctx, [MarshalAs( UnmanagedType.LPStr )] string buf, Int32 bufsz );
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushString", CallingConvention = CallingConvention.Cdecl )]
-		public static extern void PushNullTerminatedString( IntPtr ctx, [MarshalAs( UnmanagedType.LPStr )] string str );
+		public static extern int PushNullTerminatedString( IntPtr ctx, [MarshalAs( UnmanagedType.LPStr )] string str );
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushThreadPtr", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int PushThreadPtr( IntPtr ctx, IntPtr v );
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushPtr", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int PushPtr( IntPtr ctx, IntPtr v );
+		
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushVariable", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int PushVariable( IntPtr ctx, Variable v );
 		
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetGlobal", CallingConvention = CallingConvention.Cdecl )]
@@ -295,7 +348,7 @@ namespace SGScript
 		// TODO GetStackItem
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_ItemType", CallingConvention = CallingConvention.Cdecl )]
-		public static extern UInt32 ItemType( IntPtr ctx, Int32 item );
+		public static extern VarType ItemType( IntPtr ctx, Int32 item );
 		
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_Acquire", CallingConvention = CallingConvention.Cdecl )]

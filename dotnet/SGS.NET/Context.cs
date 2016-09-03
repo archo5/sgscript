@@ -104,6 +104,8 @@ namespace SGScript
 		public Variable Var( UInt32 v ){ return new Variable( this, NI.MakeInt( v ) ); }
 		public Variable Var( UInt64 v ){ return new Variable( this, NI.MakeInt( (Int64) v ) ); }
 		public Variable Var( double v ){ return new Variable( this, NI.MakeReal( v ) ); }
+		public Variable Var( IntPtr v ){ return new Variable( this, NI.MakePtr( v ) ); }
+		public Variable Var( NI.Variable v ){ return new Variable( this, v ); }
 		public Variable ArrayVar( Int32 numitems ){ NI.Variable arr; NI.CreateArray( ctx, numitems, out arr ); return new Variable( this, arr ); }
 
 		public void PushNull(){ NI.PushNull( ctx ); }
@@ -114,10 +116,19 @@ namespace SGScript
 		public void Push( UInt16 i ){ NI.PushInt( ctx, i ); }
 		public void Push( UInt32 i ){ NI.PushInt( ctx, i ); }
 		public void Push( UInt64 i ){ NI.PushInt( ctx, (Int64) i ); }
+		public void Push( double v ){ NI.PushReal( ctx, v ); }
 		public void Push( string str ){ if( str == null ) PushNull(); else NI.PushStringBuf( ctx, str, str.Length ); }
+		public void Push( Context c ){ NI.PushThreadPtr( ctx, c.ctx ); }
+		public void Push( IntPtr p ){ NI.PushPtr( ctx, p ); }
+		public void Push( Variable v ){ NI.PushVariable( ctx, v.var ); }
 		public void PushArray( Int32 numitems ){ NI.CreateArray( ctx, numitems ); }
 
-		public void Pop( int count ){ NI.Pop( ctx, count ); }
+		public void Pop( int count )
+		{
+			if( count < 0 || count > StackSize() )
+				throw new SGSException( NI.EBOUNDS, string.Format( "Pop({0}) failed with stack size = {1}", count, StackSize() ) );
+			NI.Pop( ctx, count );
+		}
 		public void PopSkip( int count, int skip ){ NI.PopSkip( ctx, count, skip ); }
 
 		public int StackSize(){ return NI.StackSize( ctx ); }
@@ -127,6 +138,7 @@ namespace SGScript
 		public bool IsValidIndex( int item ){ return NI.IsValidIndex( ctx, item ) != 0; }
 		public Variable OptStackItem( int item ){ return new Variable( this, NI.OptStackItem( ctx, item ) ); }
 		public Variable StackItem( int item ){ return new Variable( this, NI.StackItem( ctx, item ) ); }
+		public VarType ItemType( Int32 item ){ return NI.ItemType( ctx, item ); }
 		
 		public bool SetGlobal( Variable key, Variable value ){ return NI.SetGlobal( ctx, key.var, value.var ) != 0; }
 		public void SetGlobal( string key, Variable value ){ NI.SetGlobalByName( ctx, key, value.var ); }

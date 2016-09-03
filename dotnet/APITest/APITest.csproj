@@ -5,11 +5,11 @@
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProductVersion>8.0.30703</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{8C4EB7ED-8B2E-4285-89AC-D447B7663FBD}</ProjectGuid>
+    <ProjectGuid>{ABEE3A42-7E53-408C-8BFE-97075CF5CE1E}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>VM</RootNamespace>
-    <AssemblyName>sgsvmn</AssemblyName>
+    <RootNamespace>APITest</RootNamespace>
+    <AssemblyName>APITest</AssemblyName>
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <TargetFrameworkProfile>
     </TargetFrameworkProfile>
@@ -38,7 +38,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="VM.cs" />
+    <Compile Include="APITest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
