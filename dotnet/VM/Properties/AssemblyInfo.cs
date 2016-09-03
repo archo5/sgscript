@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("VM")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("SGSVM.NET")]
+[assembly: AssemblyDescription("SGScript.NET VM")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("VM")]
-[assembly: AssemblyCopyright("Copyright ©  2016")]
+[assembly: AssemblyCompany("SGScript")]
+[assembly: AssemblyProduct("SGSVM.NET")]
+[assembly: AssemblyCopyright("Copyright © Arvīds Kokins 2016")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

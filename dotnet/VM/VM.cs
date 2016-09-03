@@ -30,12 +30,18 @@ class VM
 	static void PrintVersion()
 	{
 		if( printVersion )
-			Console.WriteLine( "SGSVM.NET [SGScript v{0}]\n", NI.Version );
+			Console.WriteLine( "SGSVM.NET [SGScript v{0}]", NI.Version );
 	}
 
 	static void Init()
 	{
 		engine = new Engine();
+	}
+	static void Free()
+	{
+		if( printStats )
+			engine.Stat( Stat.DumpStats );
+		engine.Release();
 	}
 
 	static void PrintErr( string err )
@@ -45,14 +51,14 @@ class VM
 	
 	static int Main(string[] args)
 	{
-		if( args.Length < 2 )
+		if( args.Length < 1 )
 		{
 			PrintErr( "need to specify at least one file" );
 			PrintHelp();
 			return 1;
 		}
 		
-		for( int i = 1; i < args.Length; ++i )
+		for( int i = 0; i < args.Length; ++i )
 		{
 			if( args[ i ] == "--separate" || args[ i ] == "-s" ){ separate = true; args[ i ] = null; }
 			// else if( args[ i ] == "--debug" || args[ i ] == "-d" ){ idbg = 1; args[ i ] = null; }
@@ -76,11 +82,11 @@ class VM
 
 				for( int j = i; j < args.Length; ++j )
 					engine.Push( args[ j ] );
-				sgs_CreateArray( C, NULL, args.Length - i );
-				sgs_SetGlobalByName( C, "argv", sgs_StackItem( C, -1 ) );
+				engine.PushArray( args.Length - i );
+				engine.SetGlobal( "argv", engine.StackItem( -1 ) );
 				engine.Pop( 1 );
 
-				sgs_SetGlobalByName( C, "argc", sgs_MakeInt( argc - i ) );
+				engine.SetGlobal( "argc", engine.Var( args.Length - i ) );
 
 				try
 				{
@@ -90,14 +96,14 @@ class VM
 				{
 					PrintErr( string.Format( "failed to run \"{0}\": {1}", args[ i ], ex.Message ) );
 				}
-				engine.Destroy();
+				Free();
 				return 0;
 			}
 		}
 
 		PrintVersion();
 		Init();
-		for( int i = 1; i < args.Length; ++i )
+		for( int i = 0; i < args.Length; ++i )
 		{
 			if( args[ i ] != null )
 			{
@@ -111,13 +117,13 @@ class VM
 				}
 				if( separate )
 				{
-					engine.Destroy();
+					Free();
 					Init();
 				}
 			}
 		}
-
-		engine.Destroy();
+		
+		Free();
 		return 0;
 	}
 }
