@@ -118,6 +118,14 @@ namespace SGScript
 		GetAbort   = 15,
 	}
 
+	public enum ConvOp
+	{
+		ToBool = (int) VarType.Bool,
+		ToString = (int) VarType.String,
+		Clone = 0x10000,
+		ToIter = 0x30000,
+	}
+
 	// native interface
 	public class NI
 	{
@@ -482,6 +490,16 @@ namespace SGScript
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_GCExecute", CallingConvention = CallingConvention.Cdecl )]
 		public static extern void GCExecute( IntPtr ctx );
+
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_Method", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int Method( IntPtr ctx );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_HideThis", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int HideThis( IntPtr ctx );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ForceHideThis", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int ForceHideThis( IntPtr ctx );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ObjectArg", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int ObjectArg( IntPtr ctx );
 
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_Acquire", CallingConvention = CallingConvention.Cdecl )]

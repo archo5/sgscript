@@ -37,9 +37,9 @@ namespace SGScript
 		public abstract void PrintMessage( Context ctx, int type, string message );
 	}
 
-	public interface IPushable
+	public interface IGetVariable
 	{
-		void PushToContext( Context ctx );
+		Variable GetVariable( Context ctx );
 	}
 
 	public class Context : IDisposable
@@ -137,7 +137,50 @@ namespace SGScript
 		public Variable Var( double v ){ return new Variable( this, NI.MakeReal( v ) ); }
 		public Variable Var( IntPtr v ){ return new Variable( this, NI.MakePtr( v ) ); }
 		public Variable Var( NI.Variable v ){ return new Variable( this, v ); }
-		public Variable Var( string v ){ NI.Variable var; NI.InitStringBuf( ctx, out var, v ); return new Variable( this, var ); }
+		public Variable Var( string v ){ if( v == null ) return NullVar(); NI.Variable var; NI.InitStringBuf( ctx, out var, v ); return new Variable( this, var ); }
+		public Variable Var( IObject v )
+		{
+			NI.Variable var = NI.MakeNull();
+			if( v != null && v._sgsObject != IntPtr.Zero )
+			{
+				var.type = VarType.Object;
+				var.data.T = v._sgsObject;
+			}
+			return new Variable( this, var );
+		}
+		public Variable Var( Context v )
+		{
+			NI.Variable var = NI.MakeNull();
+			if( v != null )
+			{
+				var.type = VarType.Thread;
+				var.data.T = v.ctx;
+			}
+			return new Variable( this, var );
+		}
+		public Variable Var( IGetVariable v ){ return v.GetVariable( this ); }
+		public Variable ObjVar( object o )
+		{
+			if( o == null )        return NullVar();
+			else if( o is bool )   return Var( (bool) o );
+			else if( o is Byte )   return Var( (Byte) o );
+			else if( o is SByte )  return Var( (SByte) o );
+			else if( o is Int16 )  return Var( (Int16) o );
+			else if( o is UInt16 ) return Var( (UInt16) o );
+			else if( o is Int32 )  return Var( (Int32) o );
+			else if( o is UInt32 ) return Var( (UInt32) o );
+			else if( o is Int64 )  return Var( (Int64) o );
+			else if( o is float )  return Var( (float) o );
+			else if( o is double ) return Var( (double) o );
+			else if( o is string ) return Var( (string) o );
+			else if( o is IntPtr ) return Var( (IntPtr) o );
+			else if( o is IObject ) return Var( (IObject) o );
+			else if( o is Context ) return Var( (Context) o );
+			else if( o is IGetVariable ) return Var( (IGetVariable) o );
+			else if( o is Variable ) return (Variable) o;
+			else
+				throw new SGSException( NI.ENOTSUP, string.Format( "Unsupported value was passed to ObjVar (type={0})", o.GetType().FullName ) );
+		}
 
 		public Variable ArrayVar( int numitems ){ _SizeCheck( numitems, "ArrayVar" ); NI.Variable arr; NI.CreateArray( ctx, numitems, out arr ); return new Variable( this, arr ); }
 		public Variable DictVar( int numitems ){ _SizePairCheck( numitems, "DictVar" ); NI.Variable arr; NI.CreateDict( ctx, numitems, out arr ); return new Variable( this, arr ); }
@@ -176,7 +219,7 @@ namespace SGScript
 		public void Push( string str ){ if( str == null ) PushNull(); else NI.PushStringBuf( ctx, str, str.Length ); }
 		public void Push( IObject o ){ if( o == null ) PushNull(); else NI.PushObjectPtr( ctx, o._sgsObject ); }
 		public void Push( Context c ){ if( c == null ) PushNull(); else NI.PushThreadPtr( ctx, c.ctx ); }
-		public void Push( IPushable p ){ if( p == null ) PushNull(); else p.PushToContext( this ); }
+		public void Push( IGetVariable p ){ if( p == null ) PushNull(); else Push( p.GetVariable( this ) ); }
 		public void PushObj( object o )
 		{
 			if( o == null )        PushNull();
@@ -194,7 +237,7 @@ namespace SGScript
 			else if( o is IntPtr ) Push( (IntPtr) o );
 			else if( o is IObject ) Push( (IObject) o );
 			else if( o is Context ) Push( (Context) o );
-			else if( o is IPushable ) Push( (IPushable) o );
+			else if( o is IGetVariable ) Push( (IGetVariable) o );
 			else if( o is Variable ) Push( (Variable) o );
 			else
 				throw new SGSException( NI.ENOTSUP, string.Format( "Unsupported value was passed to PushObj (type={0})", o.GetType().FullName ) );

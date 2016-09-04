@@ -1,14 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Reflection;
 
 namespace SGScript
 {
+	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
+	public class HideProperty : System.Attribute
+	{
+		public bool CanRead = false;
+		public bool CanWrite = false;
+	}
+
 	public abstract class IObject : NI.IUserData
 	{
+		public class SGSPropInfo
+		{
+			public bool canRead = true;
+			public bool canWrite = true;
+			public MemberInfo info; // PropertyInfo or FieldInfo
+		}
+		public class SGSClassInfo
+		{
+			public IntPtr iface;
+			public Dictionary<Variable, SGSPropInfo> props;
+		}
+
 		public static IntPtr _sgsNullObjectInterface;
 		public static Dictionary<IObject, bool> _sgsOwnedObjects = new Dictionary<IObject,bool>();
-		public static Dictionary<Type, IntPtr> _sgsInterfaces = new Dictionary<Type,IntPtr>();
+		public static Dictionary<Type, SGSClassInfo> _sgsClassInfo = new Dictionary<Type,SGSClassInfo>();
 		static int _offsetOfData = Marshal.OffsetOf( typeof(NI.VarObj), "data" ).ToInt32();
 
 		static IObject()
@@ -31,26 +51,73 @@ namespace SGScript
 
 			return iface;
 		}
+
+		static SGSPropInfo _GetPropFieldInfo( MemberInfo minfo )
+		{
+			SGSPropInfo info = new SGSPropInfo(){ info = minfo };
+			foreach( object attr in minfo.GetCustomAttributes( false ) )
+			{
+				if( attr is HideProperty )
+				{
+					info.canRead = (attr as HideProperty).CanRead;
+					info.canWrite = (attr as HideProperty).CanWrite;
+					if( info.canRead == false && info.canWrite == false )
+						return null; // no need to register the property, it is marked as inaccessible
+				}
+			}
+			return info;
+		}
+		static Dictionary<Variable, SGSPropInfo> _ReadClassProps( Context ctx, Type type )
+		{
+			Dictionary<Variable, SGSPropInfo> outprops = new Dictionary<Variable, SGSPropInfo>();
+
+			FieldInfo[] fields = type.GetFields( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance );
+			foreach( FieldInfo field in fields )
+			{
+				SGSPropInfo info = _GetPropFieldInfo( field );
+				if( info != null )
+					outprops.Add( ctx.Var( field.Name ), info );
+			}
+
+			PropertyInfo[] properties = type.GetProperties( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance );
+			foreach( PropertyInfo prop in properties )
+			{
+				SGSPropInfo info = _GetPropFieldInfo( prop );
+				if( info != null )
+					outprops.Add( ctx.Var( prop.Name ), info );
+			}
+
+			return outprops;
+		}
 		
 		// returns the cached interface for any supporting (IObject-based) class
-		public static IntPtr GetClassInterface( Type type )
+		public static SGSClassInfo GetClassInfo( Context ctx, Type type )
 		{
-			IntPtr iface;
-			if( _sgsInterfaces.TryGetValue( type, out iface ) )
-				return iface;
+			SGSClassInfo cinfo;
+			if( _sgsClassInfo.TryGetValue( type, out cinfo ) )
+				return cinfo;
 
 			NI.ObjInterface oi = new NI.ObjInterface()
 			{
 				destruct = new NI.OC_Self( _sgsDestruct ),
 				gcmark = new NI.OC_Self( _sgsGCMark ),
 
+				getindex = new NI.OC_Self( _sgsGetIndex ),
+				setindex = new NI.OC_Self( _sgsSetIndex ),
+
+				convert = new NI.OC_SlPr( _sgsConvert ),
+				serialize = new NI.OC_Self( _sgsSerialize ),
 				dump = new NI.OC_SlPr( _sgsDump ),
 				// TODO
 			};
 
-			iface = AllocInterface( oi, type.Name );
-			_sgsInterfaces.Add( type, iface );
-			return iface;
+			cinfo = new SGSClassInfo()
+			{
+				iface = AllocInterface( oi, type.Name ),
+				props = _ReadClassProps( ctx, type ),
+			};
+			_sgsClassInfo.Add( type, cinfo );
+			return cinfo;
 		}
 
 
@@ -67,7 +134,7 @@ namespace SGScript
 		// returns the cached interface for the current class
 		public IntPtr GetClassInterface()
 		{
-			return GetClassInterface( this.GetType() );
+			return GetClassInfo( _sgsEngine, GetType() ).iface;
 		}
 		public void AllocClassObject()
 		{
@@ -96,42 +163,7 @@ namespace SGScript
 			Marshal.WriteIntPtr( _sgsObject, Marshal.OffsetOf( typeof(NI.VarObj), "iface" ).ToInt32(), _sgsNullObjectInterface );
 			FreeClassObject();
 		}
-
-		// callback wrappers
-		public static IObject _IP2Obj( IntPtr varobj, bool freehandle = false )
-		{
-			IntPtr handleP = Marshal.ReadIntPtr( varobj, _offsetOfData );
-			GCHandle h = GCHandle.FromIntPtr( handleP );
-			IObject obj = (IObject) h.Target;
-			if( freehandle )
-				h.Free();
-			return obj;
-		}
-		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj )
-		{
-			IObject obj = _IP2Obj( varobj, true );
-			obj._intOnDestroy();
-			return NI.SUCCESS;
-		}
-		public static int _sgsGCMark( IntPtr ctx, IntPtr varobj )
-		{
-			IObject obj = _IP2Obj( varobj );
-			obj.OnGCMark();
-			return NI.SUCCESS;
-		}
-		public static int _sgsDump( IntPtr ctx, IntPtr varobj, int maxdepth )
-		{
-			IObject obj = _IP2Obj( varobj );
-			return obj.OnDump( new Context( ctx ), maxdepth ) ? NI.SUCCESS : NI.EINPROC;
-		}
-
-		// core feature layer
-		public virtual void _intOnDestroy()
-		{
-			RetakeOwnership();
-			OnDestroy();
-		}
-
+		
 		// Let SGScript keep the object even if there are no references to it from C# code
 		public void DelegateOwnership()
 		{
@@ -143,10 +175,104 @@ namespace SGScript
 			_sgsOwnedObjects.Remove( this );
 		}
 
+		// callback implementation helpers
+		public Variable sgsGetPropertyByName( Variable str )
+		{
+			SGSClassInfo cinfo = GetClassInfo( _sgsEngine, GetType() );
+			SGSPropInfo propinfo;
+			if( !cinfo.props.TryGetValue( str, out propinfo ) )
+				return null;
+			if( !propinfo.canRead )
+				return null;
+			object obj;
+			if( propinfo.info is FieldInfo )
+				obj = (propinfo.info as FieldInfo).GetValue( this );
+			else // PropertyInfo
+				obj = (propinfo.info as PropertyInfo).GetValue( this, null );
+			return _sgsEngine.ObjVar( obj );
+		}
+
+		// callback wrappers
+		public static IObject _IP2Obj( IntPtr varobj, bool freehandle = false )
+		{
+			IntPtr handleP = Marshal.ReadIntPtr( varobj, _offsetOfData );
+			GCHandle h = GCHandle.FromIntPtr( handleP );
+			IObject obj = (IObject) h.Target;
+			if( freehandle )
+				h.Free();
+			return obj;
+		}
+		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj ){ IObject obj = _IP2Obj( varobj, true ); return obj._intOnDestroy(); }
+		public static int _sgsGCMark( IntPtr ctx, IntPtr varobj ){ IObject obj = _IP2Obj( varobj ); return obj._intOnGCMark(); }
+		public static int _sgsGetIndex( IntPtr ctx, IntPtr varobj ){ IObject obj = _IP2Obj( varobj ); return obj._intOnGetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
+		public static int _sgsSetIndex( IntPtr ctx, IntPtr varobj ){ IObject obj = _IP2Obj( varobj ); return obj._intOnSetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
+		public static int _sgsConvert( IntPtr ctx, IntPtr varobj, int type ){ IObject obj = _IP2Obj( varobj ); return obj._intOnConvert( new Context( ctx ), type ); }
+		public static int _sgsSerialize( IntPtr ctx, IntPtr varobj ){ IObject obj = _IP2Obj( varobj ); return obj._intOnSerialize( new Context( ctx ) ); }
+		public static int _sgsDump( IntPtr ctx, IntPtr varobj, int maxdepth ){ IObject obj = _IP2Obj( varobj ); return obj._intOnDump( new Context( ctx ), maxdepth ); }
+
+		// core feature layer (don't override these unless there is some overhead to cut)
+		public virtual int _intOnDestroy()
+		{
+			RetakeOwnership();
+			OnDestroy();
+			return NI.SUCCESS;
+		}
+		public virtual int _intOnGCMark()
+		{
+			OnGCMark();
+			return NI.SUCCESS;
+		}
+		public virtual int _intOnGetIndex( Context ctx, bool isprop )
+		{
+			Variable v = OnGetIndex( ctx, ctx.StackItem( 0 ), isprop );
+			if( v != null )
+			{
+				ctx.Push( v );
+				return NI.SUCCESS;
+			}
+			return NI.ENOTFND;
+		}
+		public virtual int _intOnSetIndex( Context ctx, bool isprop )
+		{
+			return OnSetIndex( ctx, ctx.StackItem( 0 ), ctx.StackItem( 1 ), isprop ) ? NI.SUCCESS : NI.ENOTFND;
+		}
+		public virtual int _intOnConvert( Context ctx, int type )
+		{
+			switch( (ConvOp) type )
+			{
+				case ConvOp.ToBool: ctx.Push( ConvertToBool() ); return NI.SUCCESS;
+				case ConvOp.ToString: ctx.Push( ConvertToString() ); return NI.SUCCESS;
+				case ConvOp.Clone: Variable clone = OnClone( ctx ); if( clone != null ) ctx.Push( clone ); return clone != null ? NI.SUCCESS : NI.ENOTSUP;
+				case ConvOp.ToIter: Variable iter = OnGetIterator( ctx ); if( iter != null ) ctx.Push( iter ); return iter != null ? NI.SUCCESS : NI.ENOTSUP;
+			}
+			return NI.ENOTSUP;
+		}
+		public virtual int _intOnSerialize( Context ctx )
+		{
+			return OnSerialize( ctx ) ? NI.SUCCESS : NI.ENOTSUP;
+		}
+		public virtual int _intOnDump( Context ctx, int maxdepth )
+		{
+			string dump = OnDump( ctx, maxdepth );
+			if( dump != null )
+			{
+				ctx.Push( dump );
+				return NI.SUCCESS;
+			}
+			return NI.ENOTSUP;
+		}
+
 		// user override callbacks
 		public virtual void OnDestroy(){}
 		public virtual void OnGCMark(){}
-		public virtual bool OnDump( Context ctx, int maxdepth ){ return false; }
+		public virtual Variable OnGetIndex( Context ctx, Variable key, bool isprop ){ return sgsGetPropertyByName( key ); }
+		public virtual bool OnSetIndex( Context ctx, Variable key, Variable val, bool isprop ){ return false; }
+		public virtual bool ConvertToBool(){ return true; }
+		public virtual string ConvertToString(){ return ToString(); }
+		public virtual Variable OnClone( Context ctx ){ return null; }
+		public virtual Variable OnGetIterator( Context ctx ){ return null; }
+		public virtual bool OnSerialize( Context ctx ){ return false; }
+		public virtual string OnDump( Context ctx, int maxdepth ){ return null; }
 	}
 
 
@@ -184,12 +310,39 @@ namespace SGScript
 		public string GetString(){ return NI.GetString( var ); }
 		public string str { get { return GetString(); } }
 
+		public Variable GetSubItem( Variable key, bool isprop ){ return ctx.GetIndex( this, key, isprop ); }
+		public Variable GetSubItem( string key, bool isprop ){ return ctx.GetIndex( this, ctx.Var( key ), isprop ); }
+		public bool SetSubItem( Variable key, Variable val, bool isprop ){ return ctx.SetIndex( this, key, val, isprop ); }
+		public bool SetSubItem( string key, Variable val, bool isprop ){ return ctx.SetIndex( this, ctx.Var( key ), val, isprop ); }
+		public Variable GetIndex( Variable key ){ return ctx.GetIndex( this, key, false ); }
+		public Variable GetIndex( string key ){ return ctx.GetIndex( this, ctx.Var( key ), false ); }
+		public Variable GetIndex( Int64 key ){ return ctx.GetIndex( this, ctx.Var( key ), false ); }
+		public bool SetIndex( Variable key, Variable val ){ return ctx.SetIndex( this, key, val, false ); }
+		public bool SetIndex( string key, Variable val ){ return ctx.SetIndex( this, ctx.Var( key ), val, false ); }
+		public bool SetIndex( Int64 key, Variable val ){ return ctx.SetIndex( this, ctx.Var( key ), val, false ); }
+		public Variable GetProp( Variable key ){ return ctx.GetIndex( this, key, true ); }
+		public Variable GetProp( string key ){ return ctx.GetIndex( this, ctx.Var( key ), true ); }
+		public bool SetProp( Variable key, Variable val ){ return ctx.SetIndex( this, key, val, true ); }
+		public bool SetProp( string key, Variable val ){ return ctx.SetIndex( this, ctx.Var( key ), val, true ); }
+
+		public override string ToString()
+		{
+			switch( type )
+			{
+				case VarType.Null: return string.Format( "SGScript.Variable(null)", var.type );
+				case VarType.Bool: return string.Format( "SGScript.Variable(bool [{0}])", var.data.B != 0 ? true : false );
+				case VarType.Int: return string.Format( "SGScript.Variable(int [{0}])", var.data.I );
+				case VarType.Real: return string.Format( "SGScript.Variable(real [{0}])", var.data.R );
+				case VarType.String: string s = GetString(); return string.Format( "SGScript.Variable(string [{0}] \"{1}\")", s.Length, s );
+				default: return string.Format( "SGScript.Variable(typeid={0})", (int) var.type );
+			}
+		}
 		public override bool Equals( object obj )
 		{
 			if( obj == null )
 				return false;
 			Variable v = (Variable) obj;
-			if( v == null )
+			if( (object) v == null )
 				return false;
 
 			if( type != v.type )
@@ -228,7 +381,14 @@ namespace SGScript
 			}
 			return code;
 		}
-		public static bool operator == ( Variable a, Variable b ){ return a.Equals( b ); }
-		public static bool operator != ( Variable a, Variable b ){ return !a.Equals( b ); }
+		public static bool operator == ( Variable a, Variable b )
+		{
+			if( ReferenceEquals( a, b ) )
+				return true;
+			if( ( (object) a == null ) || ( (object) b == null ) )
+				return false;
+			return a.Equals( b );
+		}
+		public static bool operator != ( Variable a, Variable b ){ return !( a == b ); }
 	}
 }

@@ -55,6 +55,14 @@ namespace APITest
 				Error( string.Format( "\"{0}\" does not equal \"{1}\"", a, b ), new StackTrace(true) );
 			}
 		}
+		static void AssertVar( Variable a, Variable b )
+		{
+			NoteTest();
+			if( a != b )
+			{
+				Error( string.Format( "\"{0}\" does not equal \"{1}\"", a, b ), new StackTrace(true) );
+			}
+		}
 		static void AssertN<T>( T a, T b )
 		{
 			NoteTest();
@@ -151,18 +159,18 @@ namespace APITest
 			Assert( e.ItemType( -1 ), VarType.Null );
 			e.Pop( 3 );
 		}
-		public struct CustomStruct : IPushable
+		public struct CustomStruct : IGetVariable
 		{
 			public float c;
 			public int d;
 
-			public void PushToContext( Context ctx )
+			public Variable GetVariable( Context ctx )
 			{
 				ctx.Push( "c" );
 				ctx.Push( c );
 				ctx.Push( "d" );
 				ctx.Push( d );
-				ctx.PushDict( 4 );
+				return ctx.DictVar( 4 );
 			}
 		};
 		static void StackMoreTypes()
@@ -660,10 +668,35 @@ namespace APITest
 		{
 			public FullObject1( Context c ) : base( c ){}
 
-			public override bool OnDump( Context ctx, int maxdepth )
+			public int prop1 = 5;
+			protected int prop2 = 6;
+			private int prop3 = 7;
+			[HideProperty()]
+			public int invprop1 = 123;
+			[HideProperty(CanRead=true)]
+			public int invprop2 = 234;
+			[HideProperty(CanWrite=true)]
+			public int invprop3 = 345;
+
+			public override void OnDestroy()
 			{
-				ctx.Push( "[this is a FULL OBJECT]" );
-				return true;
+				Console.WriteLine( "[FullObject1] OnDestroy()" );
+			}
+			public override void OnGCMark()
+			{
+				Console.WriteLine( "[FullObject1] OnGCMark()" );
+			}
+			public override bool ConvertToBool()
+			{
+				return false;
+			}
+			public override string ConvertToString()
+			{
+				return "[Full_Object_1]";
+			}
+			public override string OnDump( Context ctx, int maxdepth )
+			{
+				return "[this is a FULL OBJECT]";
 			}
 		}
 		static void CSharpObjects()
@@ -691,7 +724,16 @@ namespace APITest
 
 			// test metamethods
 			IObject obj1 = new FullObject1( engine );
+			Variable obj1var = engine.Var( obj1 );
+			Assert( engine.Call<bool>( "tobool", obj1 ), false ); // test "convert"(tobool)/ConvertToBool
+			Assert( engine.Call<string>( "tostring", obj1 ), "[Full_Object_1]" ); // test "convert"(tostring)/ConvertToString
 			Assert( engine.Call<string>( "dumpvar", obj1 ), "[this is a FULL OBJECT]\n" ); // test "dump"/OnDump
+			AssertVar( obj1var.GetProp( "prop1" ), engine.Var( 5 ) ); // test "getindex"(isprop=true)
+			AssertVar( obj1var.GetProp( "prop2" ), engine.Var( 6 ) );
+			AssertVar( obj1var.GetProp( "prop3" ), engine.Var( 7 ) );
+			AssertVar( obj1var.GetProp( "invprop1" ), null ); // - HideProperty()
+			AssertVar( obj1var.GetProp( "invprop2" ), engine.Var( 234 ) ); // - HideProperty()
+			AssertVar( obj1var.GetProp( "invprop3" ), null ); // - HideProperty()
 			
 			engine.Release();
 		}
