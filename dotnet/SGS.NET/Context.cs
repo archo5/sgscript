@@ -37,6 +37,11 @@ namespace SGScript
 		public abstract void PrintMessage( Context ctx, int type, string message );
 	}
 
+	public interface IPushable
+	{
+		void PushToContext( Context ctx );
+	}
+
 	public class Context : IDisposable
 	{
 		public IntPtr ctx = IntPtr.Zero;
@@ -132,6 +137,7 @@ namespace SGScript
 		public Variable Var( double v ){ return new Variable( this, NI.MakeReal( v ) ); }
 		public Variable Var( IntPtr v ){ return new Variable( this, NI.MakePtr( v ) ); }
 		public Variable Var( NI.Variable v ){ return new Variable( this, v ); }
+		public Variable Var( string v ){ NI.Variable var; NI.InitStringBuf( ctx, out var, v ); return new Variable( this, var ); }
 
 		public Variable ArrayVar( int numitems ){ _SizeCheck( numitems, "ArrayVar" ); NI.Variable arr; NI.CreateArray( ctx, numitems, out arr ); return new Variable( this, arr ); }
 		public Variable DictVar( int numitems ){ _SizePairCheck( numitems, "DictVar" ); NI.Variable arr; NI.CreateDict( ctx, numitems, out arr ); return new Variable( this, arr ); }
@@ -142,16 +148,76 @@ namespace SGScript
 
 		public void PushNull(){ NI.PushNull( ctx ); }
 		public void Push( bool b ){ NI.PushBool( ctx, b ? 1 : 0 ); }
+		public void Push( Byte i ){ NI.PushInt( ctx, i ); }
+		public void Push( SByte i ){ NI.PushInt( ctx, i ); }
 		public void Push( Int16 i ){ NI.PushInt( ctx, i ); }
 		public void Push( Int32 i ){ NI.PushInt( ctx, i ); }
 		public void Push( Int64 i ){ NI.PushInt( ctx, i ); }
 		public void Push( UInt16 i ){ NI.PushInt( ctx, i ); }
 		public void Push( UInt32 i ){ NI.PushInt( ctx, i ); }
+		// manual casting would have been preferred but UInt64 resolves to double
+		// (note the potential misinterpretation of data above Int64.MaxValue due to signedness cast)
 		public void Push( UInt64 i ){ NI.PushInt( ctx, (Int64) i ); }
 		public void Push( double v ){ NI.PushReal( ctx, v ); }
-		public void Push( string str ){ if( str == null ) PushNull(); else NI.PushStringBuf( ctx, str, str.Length ); }
-		public void Push( Context c ){ NI.PushThreadPtr( ctx, c.ctx ); }
 		public void Push( IntPtr p ){ NI.PushPtr( ctx, p ); }
+		public void Push( bool? b ){ if( b.HasValue == false ) PushNull(); else NI.PushBool( ctx, b.Value ? 1 : 0 ); }
+		public void Push( Byte? i ){ if( i.HasValue == false ) PushNull(); else NI.PushInt( ctx, i.Value ); }
+		public void Push( SByte? i ){ if( i.HasValue == false ) PushNull(); else NI.PushInt( ctx, i.Value ); }
+		public void Push( Int16? i ){ if( i.HasValue == false ) PushNull(); else NI.PushInt( ctx, i.Value ); }
+		public void Push( Int32? i ){ if( i.HasValue == false ) PushNull(); else NI.PushInt( ctx, i.Value ); }
+		public void Push( Int64? i ){ if( i.HasValue == false ) PushNull(); else NI.PushInt( ctx, i.Value ); }
+		public void Push( UInt16? i ){ if( i.HasValue == false ) PushNull(); else NI.PushInt( ctx, i.Value ); }
+		public void Push( UInt32? i ){ if( i.HasValue == false ) PushNull(); else NI.PushInt( ctx, i.Value ); }
+		// manual casting would have been preferred but UInt64 resolves to double
+		// (note the potential misinterpretation of data above Int64.MaxValue due to signedness cast)
+		public void Push( UInt64? i ){ if( i.HasValue == false ) PushNull(); else NI.PushInt( ctx, (Int64) i.Value ); }
+		public void Push( double? v ){ if( v.HasValue == false ) PushNull(); else NI.PushReal( ctx, v.Value ); }
+		public void Push( IntPtr? p ){ if( p.HasValue == false ) PushNull(); else NI.PushPtr( ctx, p.Value ); }
+		public void Push( string str ){ if( str == null ) PushNull(); else NI.PushStringBuf( ctx, str, str.Length ); }
+		public void Push( IObject o ){ if( o == null ) PushNull(); else NI.PushObjectPtr( ctx, o._sgsObject ); }
+		public void Push( Context c ){ if( c == null ) PushNull(); else NI.PushThreadPtr( ctx, c.ctx ); }
+		public void Push( IPushable p ){ if( p == null ) PushNull(); else p.PushToContext( this ); }
+		public void PushObj( object o )
+		{
+			if( o == null )        PushNull();
+			else if( o is bool )   Push( (bool) o );
+			else if( o is Byte )   Push( (Byte) o );
+			else if( o is SByte )  Push( (SByte) o );
+			else if( o is Int16 )  Push( (Int16) o );
+			else if( o is UInt16 ) Push( (UInt16) o );
+			else if( o is Int32 )  Push( (Int32) o );
+			else if( o is UInt32 ) Push( (UInt32) o );
+			else if( o is Int64 )  Push( (Int64) o );
+			else if( o is float )  Push( (float) o );
+			else if( o is double ) Push( (double) o );
+			else if( o is string ) Push( (string) o );
+			else if( o is IntPtr ) Push( (IntPtr) o );
+			else if( o is IObject ) Push( (IObject) o );
+			else if( o is Context ) Push( (Context) o );
+			else if( o is IPushable ) Push( (IPushable) o );
+			else if( o is Variable ) Push( (Variable) o );
+			else
+				throw new SGSException( NI.ENOTSUP, string.Format( "Unsupported value was passed to PushObj (type={0})", o.GetType().FullName ) );
+		}
+		public object ParseObj( int item )
+		{
+			_IndexCheck( item, "ParseObj" );
+			Variable v = StackItem( item );
+			switch( v.type )
+			{
+				case VarType.Null: return null;
+				case VarType.Bool: return v.GetBool();
+				case VarType.Int: return v.GetInt();
+				case VarType.Real: return v.GetReal();
+				case VarType.String: return v.GetString();
+				case VarType.Func:
+				case VarType.CFunc: return v;
+				case VarType.Object: return v; // TODO IObject CHECK
+				case VarType.Ptr: return v.var.data.P;
+				case VarType.Thread: return new Context( v.var.data.T );
+				default: throw new SGSException( NI.EINVAL, string.Format( "Bad type ID detected while parsing item {0}", item ) );
+			}
+		}
 
 		public void Push( Variable v ){ NI.PushVariable( ctx, v.var ); }
 		public void PushItem( int item ){ _IndexCheck( item, "PushItem" ); NI.PushItem( ctx, item ); }
@@ -182,6 +248,66 @@ namespace SGScript
 
 		public int XFCall( int args = 0, bool gotthis = false ){ _SizeCheck( args + ( gotthis ? 2 : 1 ), "[X]FCall" ); return NI.XFCall( ctx, args, gotthis ? 1 : 0 ); }
 		public int FCall( int args = 0, int expect = 0, bool gotthis = false ){ return NI.AdjustStack( ctx, expect, XFCall( args, gotthis ) ); }
+
+		public object[] RetrieveReturnValues( int count )
+		{
+			if( count < 0 || count > StackSize() )
+				throw new SGSException( NI.EBOUNDS, string.Format( "RetrieveReturnValues({0}) failed with stack size = {1}", count, StackSize() ) );
+			object[] retvals = new object[ count ];
+			for( int i = 0; i < count; ++i )
+			{
+				retvals[ i ] = ParseObj( i - count );
+			}
+			Pop( count );
+			return retvals;
+		}
+		public object RetrieveOneReturnValue( int count )
+		{
+			if( count == 0 )
+				return null;
+			if( count < 0 || count > StackSize() )
+				throw new SGSException( NI.EBOUNDS, string.Format( "RetrieveOneReturnValue({0}) failed with stack size = {1}", count, StackSize() ) );
+			object retval = ParseObj( -count );
+			Pop( count );
+			return retval;
+		}
+
+		// various simple call functions
+		// - X[This]Call: arguments are left on stack, count is returned
+		public int XThisCall( string func, object thisvar, params object[] args ){ return XThisCall( GetGlobal( func ), thisvar, args ); }
+		public int XThisCall( Variable func, object thisvar, params object[] args )
+		{
+			Push( func );
+			if( thisvar != null )
+				PushObj( thisvar );
+			foreach( object arg in args )
+				PushObj( arg );
+			return XFCall( args.Length, thisvar != null );
+		}
+		public int XCall( string func, params object[] args ){ return XCall( GetGlobal( func ), args ); }
+		public int XCall( Variable func, params object[] args )
+		{
+			Push( func );
+			foreach( object arg in args )
+				PushObj( arg );
+			return XFCall( args.Length );
+		}
+		// - A[This]Call: all arguments are returned
+		public object[] AThisCall( string func, object thisvar, params object[] args ){ return RetrieveReturnValues( XThisCall( func, thisvar, args ) ); }
+		public object[] AThisCall( Variable func, object thisvar, params object[] args ){ return RetrieveReturnValues( XThisCall( func, thisvar, args ) ); }
+		public object[] ACall( string func, params object[] args ){ return RetrieveReturnValues( XCall( func, args ) ); }
+		public object[] ACall( Variable func, params object[] args ){ return RetrieveReturnValues( XCall( func, args ) ); }
+		// - O[This]Call: first argument (object) or null is returned
+		public object OThisCall( string func, object thisvar, params object[] args ){ return RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
+		public object OThisCall( Variable func, object thisvar, params object[] args ){ return RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
+		public object OCall( string func, params object[] args ){ return RetrieveOneReturnValue( XCall( func, args ) ); }
+		public object OCall( Variable func, params object[] args ){ return RetrieveOneReturnValue( XCall( func, args ) ); }
+		// - [This]Call: first argument (converted to specified type) or null is returned
+		public T ThisCall<T>( string func, object thisvar, params object[] args ){ return (T) RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
+		public T ThisCall<T>( Variable func, object thisvar, params object[] args ){ return (T) RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
+		public T Call<T>( string func, params object[] args ){ return (T) RetrieveOneReturnValue( XCall( func, args ) ); }
+		public T Call<T>( Variable func, params object[] args ){ return (T) RetrieveOneReturnValue( XCall( func, args ) ); }
+
 		public void GCExecute(){ NI.GCExecute( ctx ); }
 		
 		public Variable GetIndex( Variable obj, Variable idx, bool isprop = false )
@@ -196,6 +322,20 @@ namespace SGScript
 
 		public bool PushProperty( Variable obj, string prop ){ return NI.PushProperty( ctx, obj.var, prop ) != 0; }
 		
+		public Variable GetGlobal( string key )
+		{
+			NI.Variable var;
+			if( !NI.GetGlobalByName( ctx, key, out var ) )
+				return null;
+			return Var( var );
+		}
+		public Variable GetGlobal( Variable key )
+		{
+			NI.Variable var;
+			if( !NI.GetGlobal( ctx, key.var, out var ) )
+				return null;
+			return Var( var );
+		}
 		public bool SetGlobal( Variable key, Variable value ){ return NI.SetGlobal( ctx, key.var, value.var ) != 0; }
 		public bool PushGlobal( string key ){ return NI.PushGlobalByName( ctx, key ) != 0; }
 		public void SetGlobal( string key, Variable value ){ NI.SetGlobalByName( ctx, key, value.var ); }

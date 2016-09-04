@@ -379,6 +379,9 @@ namespace SGScript
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushString", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int PushNullTerminatedString( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string str );
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushObjectPtr", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int PushObjectPtr( IntPtr ctx, IntPtr v );
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushThreadPtr", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int PushThreadPtr( IntPtr ctx, IntPtr v );
@@ -411,12 +414,20 @@ namespace SGScript
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushProperty", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int PushProperty( IntPtr ctx, Variable obj, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string prop );
 
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetGlobal", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern int _GetGlobal( IntPtr ctx, Variable key, Variable* outvar );
+		public static unsafe bool GetGlobal( IntPtr ctx, Variable key, out Variable outvar ){ Variable v; bool ret = _GetGlobal( ctx, key, &v ) != 0; outvar = v; return ret; }
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetGlobal", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int SetGlobal( IntPtr ctx, Variable key, Variable value );
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushGlobalByName", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int PushGlobalByName( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string key );
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetGlobalByName", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern int _GetGlobalByName( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string key, Variable* outvar );
+		public static unsafe bool GetGlobalByName( IntPtr ctx, string key, out Variable outvar ){ Variable v; bool ret = _GetGlobalByName( ctx, key, &v ) != 0; outvar = v; return ret; }
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetGlobalByName", CallingConvention = CallingConvention.Cdecl )]
 		public static extern void SetGlobalByName( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string key, Variable value );

@@ -5,7 +5,7 @@ using SGScript;
 
 namespace APITest
 {
-	class APITest
+	public class APITest
 	{
 		static int failCount = 0;
 		static int testCount = 0;
@@ -16,6 +16,7 @@ namespace APITest
 			CreateAndDestroy();
 			ArrayMem();
 			Stack101();
+			StackMoreTypes();
 			StackInsert();
 			StackArrayDict();
 			StackPush();
@@ -25,14 +26,21 @@ namespace APITest
 			Globals101();
 			Libraries();
 			FunctionCalls();
+			SimpleFunctionCalls();
 			ComplexGC();
+			CoreFeatures();
 
-			Console.WriteLine( "\n--- Testing finished! ---" );
+			Console.WriteLine( "\n\n--- Testing finished! ---" );
 			Console.WriteLine( failCount > 0 ?
 				string.Format( "\n  ERROR: {0} tests failed!\n", failCount ) :
 				string.Format( "\n  SUCCESS! All tests passed! ({0})\n", testCount ) );
 		}
 
+		static void NoteTest()
+		{
+			testCount++;
+			Console.Write( "." );
+		}
 		static void Error( string err, StackTrace st )
 		{
 			failCount++;
@@ -40,23 +48,23 @@ namespace APITest
 		}
 		static void Assert<T>( T a, T b )
 		{
-			testCount++;
+			NoteTest();
 			if( !EqualityComparer<T>.Default.Equals( a, b ) )
 			{
-				Error( string.Format( "{0} does not equal {1}", a, b ), new StackTrace(true) );
+				Error( string.Format( "\"{0}\" does not equal \"{1}\"", a, b ), new StackTrace(true) );
 			}
 		}
 		static void AssertN<T>( T a, T b )
 		{
-			testCount++;
+			NoteTest();
 			if( EqualityComparer<T>.Default.Equals( a, b ) )
 			{
-				Error( string.Format( "{0} equals {1}", a, b ), new StackTrace(true) );
+				Error( string.Format( "\"{0}\" equals \"{1}\"", a, b ), new StackTrace(true) );
 			}
 		}
 		static void AssertC( bool cond, string test )
 		{
-			testCount++;
+			NoteTest();
 			if( !cond )
 			{
 				Error( string.Format( "Assertion failed: \"{0}\"", test ), new StackTrace(true) );
@@ -64,19 +72,21 @@ namespace APITest
 		}
 		static void ExpectUnreached()
 		{
-			testCount++;
+			NoteTest();
 			Error( "Exception was not thrown", new StackTrace(true) );
 		}
 
 		// TESTS
 		static void CreateAndDestroy()
 		{
+			Console.Write( "\nCreate and destroy " );
 			Engine engine = new Engine();
 			engine.Release();
 		}
 
 		static void ArrayMem()
 		{
+			Console.Write( "\nBasic array test " );
 			Engine engine = new Engine();
 			engine.PushArray( 0 );
 			engine.Release();
@@ -84,7 +94,9 @@ namespace APITest
 
 		static void Stack101()
 		{
+			Console.Write( "\nStack - 101 " );
 			Engine engine = new Engine();
+
 			Variable sgs_dummy_var = engine.NullVar();
 			engine.PushNull();
 			engine.Push( true );
@@ -115,18 +127,192 @@ namespace APITest
 			Assert( engine.StackItem( 7 ).var.data.T, engine.ctx );
 			try
 			{
-				testCount++;
+				NoteTest();
 				engine.Pop( 10 );
 				ExpectUnreached();
 			}
 			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
 			engine.Pop( 9 );
 			Assert( engine.StackSize(), 0 );
+
+			engine.Release();
+		}
+
+		static void SMT_CheckObj<T>( Engine e, T val, VarType type ) where T : struct
+		{
+			T? v = val;
+			T? n = null;
+			e.PushObj( val );
+			e.PushObj( v );
+			e.PushObj( n );
+			Assert( e.ItemType( -3 ), type );
+			Assert( e.ItemType( -2 ), type );
+			Assert( e.ItemType( -1 ), VarType.Null );
+			e.Pop( 3 );
+		}
+		public struct CustomStruct : IPushable
+		{
+			public float c;
+			public int d;
+
+			public void PushToContext( Context ctx )
+			{
+				ctx.Push( "c" );
+				ctx.Push( c );
+				ctx.Push( "d" );
+				ctx.Push( d );
+				ctx.PushDict( 4 );
+			}
+		};
+		static void StackMoreTypes()
+		{
+			Console.Write( "\nStack - more types " );
+			Engine engine = new Engine();
+
+			bool? v00 = false;
+			bool? n00 = null;
+			engine.Push(v00.Value);
+			engine.Push(v00);
+			engine.Push(n00);
+			Assert( engine.ItemType( -3 ), VarType.Bool );
+			Assert( engine.ItemType( -2 ), VarType.Bool );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			SMT_CheckObj( engine, v00.Value, VarType.Bool );
+			
+			byte? v01 = 5;
+			byte? n01 = null;
+			engine.Push(v01.Value);
+			engine.Push(v01);
+			engine.Push(n01);
+			Assert( engine.ItemType( -3 ), VarType.Int );
+			Assert( engine.ItemType( -2 ), VarType.Int );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			SMT_CheckObj( engine, v01.Value, VarType.Int );
+			
+			sbyte? v02 = 5;
+			sbyte? n02 = null;
+			engine.Push(v02.Value);
+			engine.Push(v02);
+			engine.Push(n02);
+			Assert( engine.ItemType( -3 ), VarType.Int );
+			Assert( engine.ItemType( -2 ), VarType.Int );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			SMT_CheckObj( engine, v02.Value, VarType.Int );
+			
+			short? v03 = 5;
+			short? n03 = null;
+			engine.Push(v03.Value);
+			engine.Push(v03);
+			engine.Push(n03);
+			Assert( engine.ItemType( -3 ), VarType.Int );
+			Assert( engine.ItemType( -2 ), VarType.Int );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			SMT_CheckObj( engine, v03.Value, VarType.Int );
+			
+			ushort? v04 = 5;
+			ushort? n04 = null;
+			engine.Push(v04.Value);
+			engine.Push(v04);
+			engine.Push(n04);
+			Assert( engine.ItemType( -3 ), VarType.Int );
+			Assert( engine.ItemType( -2 ), VarType.Int );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			SMT_CheckObj( engine, v04.Value, VarType.Int );
+			
+			int? v05 = 5;
+			int? n05 = null;
+			engine.Push(v05.Value);
+			engine.Push(v05);
+			engine.Push(n05);
+			Assert( engine.ItemType( -3 ), VarType.Int );
+			Assert( engine.ItemType( -2 ), VarType.Int );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			SMT_CheckObj( engine, v05.Value, VarType.Int );
+			
+			uint? v06 = 5;
+			uint? n06 = null;
+			engine.Push(v06.Value);
+			engine.Push(v06);
+			engine.Push(n06);
+			Assert( engine.ItemType( -3 ), VarType.Int );
+			Assert( engine.ItemType( -2 ), VarType.Int );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			SMT_CheckObj( engine, v06.Value, VarType.Int );
+			
+			long? v07 = 5;
+			long? n07 = null;
+			engine.Push(v07.Value);
+			engine.Push(v07);
+			engine.Push(n07);
+			Assert( engine.ItemType( -3 ), VarType.Int );
+			Assert( engine.ItemType( -2 ), VarType.Int );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			SMT_CheckObj( engine, v07.Value, VarType.Int );
+			
+			ulong? v08 = 5;
+			ulong? n08 = null;
+			engine.Push(v08.Value);
+			engine.Push(v08);
+			engine.Push(n08);
+			Assert( engine.ItemType( -3 ), VarType.Int );
+			Assert( engine.ItemType( -2 ), VarType.Int );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			try
+			{
+				NoteTest();
+				SMT_CheckObj( engine, v08.Value, VarType.Int );
+				ExpectUnreached();
+			}
+			catch( SGSException e ){ Assert( e.resultCode, NI.ENOTSUP ); }
+			
+			float? v09 = 5;
+			float? n09 = null;
+			engine.Push(v09.Value);
+			engine.Push(v09);
+			engine.Push(n09);
+			Assert( engine.ItemType( -3 ), VarType.Real );
+			Assert( engine.ItemType( -2 ), VarType.Real );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			SMT_CheckObj( engine, v09.Value, VarType.Real );
+			
+			double? v10 = 5;
+			double? n10 = null;
+			engine.Push(v10.Value);
+			engine.Push(v10);
+			engine.Push(n10);
+			Assert( engine.ItemType( -3 ), VarType.Real );
+			Assert( engine.ItemType( -2 ), VarType.Real );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			SMT_CheckObj( engine, v10.Value, VarType.Real );
+
+			CustomStruct? v11 = new CustomStruct(){ c = 12.3f, d = 123 };
+			CustomStruct? n11 = null;
+			engine.Push( v11.Value );
+			engine.Push( v11 );
+			engine.Push( n11 );
+			Assert( engine.ItemType( -3 ), VarType.Object );
+			Assert( engine.ItemType( -2 ), VarType.Object );
+			Assert( engine.ItemType( -1 ), VarType.Null );
+			engine.Pop( 3 );
+			SMT_CheckObj( engine, v11.Value, VarType.Object );
+			
 			engine.Release();
 		}
 
 		static void StackInsert()
 		{
+			Console.Write( "\nStack - insert " );
 			Engine engine = new Engine();
 			Variable sgs_dummy_var = engine.NullVar();
 			engine.Push( 1 );
@@ -135,7 +321,7 @@ namespace APITest
 
 			try
 			{
-				testCount++;
+				NoteTest();
 				engine.InsertVar( 3, sgs_dummy_var );
 				ExpectUnreached();
 			}
@@ -143,7 +329,7 @@ namespace APITest
 			
 			try
 			{
-				testCount++;
+				NoteTest();
 				engine.InsertVar( -4, sgs_dummy_var );
 				ExpectUnreached();
 			}
@@ -167,6 +353,7 @@ namespace APITest
 
 		static void StackArrayDict()
 		{
+			Console.Write( "\nStack - array/dict " );
 			Engine engine = new Engine();
 
 			engine.PushNull();
@@ -176,7 +363,7 @@ namespace APITest
 
 			try
 			{
-				testCount++;
+				NoteTest();
 				engine.PushArray( 5 );
 				ExpectUnreached();
 			}
@@ -194,14 +381,14 @@ namespace APITest
 
 			try
 			{
-				testCount++;
+				NoteTest();
 				engine.PushDict( 6 );
 				ExpectUnreached();
 			}
 			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
 			try
 			{
-				testCount++;
+				NoteTest();
 				engine.PushDict( 5 );
 				ExpectUnreached();
 			}
@@ -219,6 +406,7 @@ namespace APITest
 
 		static void StackPush()
 		{
+			Console.Write( "\nStack - push item " );
 			Engine engine = new Engine();
 
 			engine.PushNull();
@@ -226,7 +414,7 @@ namespace APITest
 
 			try
 			{
-				testCount++;
+				NoteTest();
 				engine.PushItem( 2 );
 				ExpectUnreached();
 			}
@@ -235,7 +423,7 @@ namespace APITest
 			
 			try
 			{
-				testCount++;
+				NoteTest();
 				engine.PushItem( -3 );
 				ExpectUnreached();
 			}
@@ -259,6 +447,7 @@ namespace APITest
 
 		static void StackPropIndex()
 		{
+			Console.Write( "\nStack - properties/indices " );
 			Engine engine = new Engine();
 
 			engine.Push( "key-one" );
@@ -284,6 +473,7 @@ namespace APITest
 
 		static void StackNegIdx()
 		{
+			Console.Write( "\nStack - negative indices " );
 			Engine engine = new Engine();
 
 			engine.Push( "test" );
@@ -300,6 +490,7 @@ namespace APITest
 
 		static void Indexing()
 		{
+			Console.Write( "\nIndexing " );
 			Engine engine = new Engine();
 
 			engine.PushDict( 0 );
@@ -318,6 +509,7 @@ namespace APITest
 
 		static void Globals101()
 		{
+			Console.Write( "\nGlobals - 101 " );
 			Engine engine = new Engine();
 
 			Assert( engine.PushGlobal( "array" ), true );
@@ -336,6 +528,7 @@ namespace APITest
 
 		static void Libraries()
 		{
+			Console.Write( "\nLibraries " );
 			Engine engine = new Engine();
 
 			engine.LoadLib_Fmt();
@@ -357,12 +550,13 @@ namespace APITest
 
 		static void FunctionCalls()
 		{
+			Console.Write( "\nFunction calls " );
 			Engine engine = new Engine();
 
 			Assert( engine.PushGlobal( "array" ), true );
 			try
 			{
-				testCount++;
+				NoteTest();
 				engine.FCall( 5, 1, false );
 				ExpectUnreached();
 			}
@@ -370,7 +564,7 @@ namespace APITest
 			Assert( engine.StackSize(), 1 );
 			try
 			{
-				testCount++;
+				NoteTest();
 				engine.FCall( 1, 0, false );
 				ExpectUnreached();
 			}
@@ -385,7 +579,7 @@ namespace APITest
 
 			try
 			{
-				testCount++;
+				NoteTest();
 				engine.FCall( 1, 0, true );
 				ExpectUnreached();
 			}
@@ -396,8 +590,35 @@ namespace APITest
 			engine.Release();
 		}
 
+		static void SimpleFunctionCalls()
+		{
+			Console.Write( "\nSimple function calls " );
+			Engine engine = new Engine();
+
+			Assert( engine.XCall( "dumpvar", true, 5, "test" ), 1 );
+			Assert( engine.StackItem( -1 ).GetString(), "bool (true)\nint (5)\nstring [4] \"test\"\n" );
+			engine.Pop( 1 );
+			
+			Assert( engine.Exec( "function this2string(){ return tostring(this); }" ), 0 );
+			Assert( engine.XThisCall( "this2string", engine.GetGlobal( "dumpvar" ) ), 1 );
+			Assert( engine.StackItem( -1 ).GetString(), "C function" );
+			engine.Pop( 1 );
+			
+			Assert( engine.ACall( "dumpvar", "roundtrip" )[0], "string [9] \"roundtrip\"\n" );
+			Assert( engine.AThisCall( "this2string", "roundtrip" )[0], "roundtrip" );
+			
+			Assert( engine.OCall( "dumpvar", "roundtrip" ), "string [9] \"roundtrip\"\n" );
+			Assert( engine.OThisCall( "this2string", "roundtrip" ), "roundtrip" );
+			
+			Assert( engine.Call<string>( "dumpvar", "roundtrip" ), "string [9] \"roundtrip\"\n" );
+			Assert( engine.ThisCall<string>( "this2string", "roundtrip" ), "roundtrip" );
+			
+			engine.Release();
+		}
+
 		static void ComplexGC()
 		{
+			Console.Write( "\nComplex GC " );
 			Engine engine = new Engine();
 
 			string str =
@@ -412,6 +633,22 @@ namespace APITest
 			Assert( engine.Stat( Stat.ObjCount ).ToInt32(), objcount );
 			
 			engine.Release();
+		}
+
+		static void CoreFeatures()
+		{
+			Console.Write( "\nCore feature tests " );
+			Engine engine = new Engine();
+
+			Variable va = engine.NullVar(), vb = engine.NullVar(), vc = engine.Var( "test" );
+			Assert( va == vb, true );
+			Assert( va != vb, false );
+			Assert( va == vc, false );
+			Assert( va != vc, true );
+			Assert( va.isNull, true );
+			Assert( va.notNull, false );
+			Assert( vc.isNull, false );
+			Assert( vc.notNull, true );
 		}
 	}
 }
