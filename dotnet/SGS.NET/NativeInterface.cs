@@ -176,10 +176,10 @@ namespace SGScript
 
 
 		[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-		public delegate int OC_Self( IntPtr ctx, IUserData obj );
+		public delegate int OC_Self( IntPtr ctx, IntPtr obj );
 		
 		[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-		public delegate int OC_SlPr( IntPtr ctx, IUserData obj, int param );
+		public delegate int OC_SlPr( IntPtr ctx, IntPtr obj, int param );
 
 		public struct ObjInterface
 		{
@@ -344,6 +344,16 @@ namespace SGScript
 		public static unsafe extern void _InitNullTerminatedString( IntPtr ctx, Variable* outvar, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string str );
 		public static unsafe void InitNullTerminatedString( IntPtr ctx, out Variable outvar, string str ){ Variable item; _InitNullTerminatedString( ctx, &item, str ); outvar = item; }
 
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateObject", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern int _CreateObject( IntPtr ctx, Variable* outvar, IntPtr data, IntPtr iface );
+		public static unsafe void CreateObject( IntPtr ctx, IntPtr data, IntPtr iface ){ _CreateObject( ctx, null, data, iface ); }
+		public static unsafe void CreateObject( IntPtr ctx, IntPtr data, IntPtr iface, out Variable outvar ){ Variable v; _CreateObject( ctx, &v, data, iface ); outvar = v; }
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateObjectIPA", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern IntPtr _CreateObjectIPA( IntPtr ctx, Variable* outvar, UInt32 mem, IntPtr iface );
+		public static unsafe IntPtr CreateObjectIPA( IntPtr ctx, UInt32 mem, IntPtr iface ){ return _CreateObjectIPA( ctx, null, mem, iface ); }
+		public static unsafe IntPtr CreateObjectIPA( IntPtr ctx, UInt32 mem, IntPtr iface, out Variable outvar ){ Variable v; IntPtr p = _CreateObjectIPA( ctx, &v, mem, iface ); outvar = v; return p; }
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateArray", CallingConvention = CallingConvention.Cdecl )]
 		public static unsafe extern int _CreateArray( IntPtr ctx, Variable* outvar, Int32 numitems );
@@ -492,13 +502,13 @@ namespace SGScript
 		public static unsafe void GCMark( IntPtr ctx, Variable item ){ _GCMark( ctx, &item ); }
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_ObjAcquire", CallingConvention = CallingConvention.Cdecl )]
-		public static extern Variable ObjAcquire( IntPtr ctx, IntPtr obj );
+		public static extern void ObjAcquire( IntPtr ctx, IntPtr obj );
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_ObjRelease", CallingConvention = CallingConvention.Cdecl )]
-		public static extern Variable ObjRelease( IntPtr ctx, IntPtr obj );
+		public static extern void ObjRelease( IntPtr ctx, IntPtr obj );
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_ObjGCMark", CallingConvention = CallingConvention.Cdecl )]
-		public static extern Variable ObjGCMark( IntPtr ctx, IntPtr obj );
+		public static extern void ObjGCMark( IntPtr ctx, IntPtr obj );
 
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetBoolP", CallingConvention = CallingConvention.Cdecl )]

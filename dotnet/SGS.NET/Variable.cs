@@ -6,23 +6,32 @@ namespace SGScript
 {
 	public abstract class IObject : NI.IUserData
 	{
-		public static Dictionary<IObject, bool> _sgsOwnedObjects;
-		public static Dictionary<Type, IntPtr> _sgsInterfaces;
-		public IntPtr _sgsObject;
-		public Engine _sgsEngine;
+		public static IntPtr _sgsNullObjectInterface;
+		public static Dictionary<IObject, bool> _sgsOwnedObjects = new Dictionary<IObject,bool>();
+		public static Dictionary<Type, IntPtr> _sgsInterfaces = new Dictionary<Type,IntPtr>();
+		static int _offsetOfData = Marshal.OffsetOf( typeof(NI.VarObj), "data" ).ToInt32();
 
-		public IObject( Context c )
+		static IObject()
 		{
-			_sgsEngine = c.GetEngine();
-			IntPtr iface = GetClassInterface();
+			_sgsNullObjectInterface = AllocInterface( new NI.ObjInterface(), "<nullObject>" );
 		}
 
-		/// INTERFACE SYSTEM ///
-		// returns the cached interface for the current class
-		public IntPtr GetClassInterface()
+		public static IntPtr AllocInterface( NI.ObjInterface iftemplate, string name )
 		{
-			return GetClassInterface( this.GetType() );
+			byte[] nameBytes = System.Text.Encoding.UTF8.GetBytes( name );
+
+			IntPtr iface = Marshal.AllocHGlobal( NI.ObjInterfaceSize + nameBytes.Length + 1 );
+
+			IntPtr nameOffset = (IntPtr) ( iface.ToInt64() + NI.ObjInterfaceSize );
+			iftemplate.name = nameOffset;
+
+			Marshal.StructureToPtr( iftemplate, iface, false );
+			Marshal.Copy( nameBytes, 0, nameOffset, nameBytes.Length );
+			Marshal.WriteByte( nameOffset, nameBytes.Length, 0 );
+
+			return iface;
 		}
+		
 		// returns the cached interface for any supporting (IObject-based) class
 		public static IntPtr GetClassInterface( Type type )
 		{
@@ -30,35 +39,90 @@ namespace SGScript
 			if( _sgsInterfaces.TryGetValue( type, out iface ) )
 				return iface;
 
-			byte[] nameBytes = System.Text.Encoding.UTF8.GetBytes( type.Name );
-			iface = Marshal.AllocHGlobal( NI.ObjInterfaceSize + nameBytes.Length + 1 );
-			IntPtr nameOffset = (IntPtr) ( iface.ToInt64() + NI.ObjInterfaceSize );
 			NI.ObjInterface oi = new NI.ObjInterface()
 			{
-				name = nameOffset,
 				destruct = new NI.OC_Self( _sgsDestruct ),
 				gcmark = new NI.OC_Self( _sgsGCMark ),
+
+				dump = new NI.OC_SlPr( _sgsDump ),
 				// TODO
 			};
-			Marshal.StructureToPtr( oi, iface, false );
-			Marshal.Copy( nameBytes, 0, nameOffset, nameBytes.Length );
-			Marshal.WriteByte( nameOffset, nameBytes.Length, 0 );
 
+			iface = AllocInterface( oi, type.Name );
 			_sgsInterfaces.Add( type, iface );
 			return iface;
 		}
-		/// END OF INTERFACE SYSTEM ///
+
+
+		public IntPtr _sgsObject = IntPtr.Zero;
+		public Engine _sgsEngine;
+
+		public IObject( Context c, bool skipInit = false )
+		{
+			_sgsEngine = c.GetEngine();
+			if( !skipInit )
+				AllocClassObject();
+		}
+
+		// returns the cached interface for the current class
+		public IntPtr GetClassInterface()
+		{
+			return GetClassInterface( this.GetType() );
+		}
+		public void AllocClassObject()
+		{
+			if( _sgsObject != IntPtr.Zero )
+				throw new SGSException( NI.EINPROC, "AllocClassObject - object is already allocated" );
+			IntPtr iface = GetClassInterface();
+			GCHandle h = GCHandle.Alloc( this );
+			NI.Variable var;
+			NI.CreateObject( _sgsEngine.ctx, GCHandle.ToIntPtr( h ), iface, out var );
+			_sgsObject = var.data.O;
+		}
+		public void FreeClassObject()
+		{
+			if( _sgsObject == IntPtr.Zero )
+				throw new SGSException( NI.EINPROC, "FreeClassObject - object is not allocated" );
+			IntPtr handleP = Marshal.ReadIntPtr( _sgsObject, _offsetOfData );
+			GCHandle h = GCHandle.FromIntPtr( handleP );
+			NI.ObjRelease( _sgsEngine.ctx, _sgsObject );
+			_sgsObject = IntPtr.Zero;
+			h.Free();
+		}
+		public void DisownClassObject()
+		{
+			if( _sgsObject == IntPtr.Zero )
+				throw new SGSException( NI.EINPROC, "FreeClassObject - object is not allocated" );
+			Marshal.WriteIntPtr( _sgsObject, Marshal.OffsetOf( typeof(NI.VarObj), "iface" ).ToInt32(), _sgsNullObjectInterface );
+			FreeClassObject();
+		}
 
 		// callback wrappers
-		public static int _sgsDestruct( IntPtr ctx, NI.IUserData obj )
+		public static IObject _IP2Obj( IntPtr varobj, bool freehandle = false )
 		{
-			((IObject) obj)._intOnDestroy();
+			IntPtr handleP = Marshal.ReadIntPtr( varobj, _offsetOfData );
+			GCHandle h = GCHandle.FromIntPtr( handleP );
+			IObject obj = (IObject) h.Target;
+			if( freehandle )
+				h.Free();
+			return obj;
+		}
+		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj )
+		{
+			IObject obj = _IP2Obj( varobj, true );
+			obj._intOnDestroy();
 			return NI.SUCCESS;
 		}
-		public static int _sgsGCMark( IntPtr ctx, NI.IUserData obj )
+		public static int _sgsGCMark( IntPtr ctx, IntPtr varobj )
 		{
-			((IObject) obj).OnGCMark();
+			IObject obj = _IP2Obj( varobj );
+			obj.OnGCMark();
 			return NI.SUCCESS;
+		}
+		public static int _sgsDump( IntPtr ctx, IntPtr varobj, int maxdepth )
+		{
+			IObject obj = _IP2Obj( varobj );
+			return obj.OnDump( new Context( ctx ), maxdepth ) ? NI.SUCCESS : NI.EINPROC;
 		}
 
 		// core feature layer
@@ -82,12 +146,7 @@ namespace SGScript
 		// user override callbacks
 		public virtual void OnDestroy(){}
 		public virtual void OnGCMark(){}
-	}
-
-	// the interface to set when destroying C# object
-	public class NullObject : IObject
-	{
-		public NullObject( Context c ) : base( c ){}
+		public virtual bool OnDump( Context ctx, int maxdepth ){ return false; }
 	}
 
 

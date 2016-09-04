@@ -29,6 +29,7 @@ namespace APITest
 			SimpleFunctionCalls();
 			ComplexGC();
 			CoreFeatures();
+			CSharpObjects();
 
 			Console.WriteLine( "\n\n--- Testing finished! ---" );
 			Console.WriteLine( failCount > 0 ?
@@ -649,6 +650,50 @@ namespace APITest
 			Assert( va.notNull, false );
 			Assert( vc.isNull, false );
 			Assert( vc.notNull, true );
+		}
+		
+		public class EmptyObject : IObject
+		{
+			public EmptyObject( Context c ) : base( c ){}
+		}
+		public class FullObject1 : IObject
+		{
+			public FullObject1( Context c ) : base( c ){}
+
+			public override bool OnDump( Context ctx, int maxdepth )
+			{
+				ctx.Push( "[this is a FULL OBJECT]" );
+				return true;
+			}
+		}
+		static void CSharpObjects()
+		{
+			Console.Write( "\nC# object exposure " );
+			Engine engine = new Engine();
+
+			// test the empty interface
+			{
+				NI.CreateObject( engine.ctx, IntPtr.Zero, IObject.AllocInterface( new NI.ObjInterface(), "empty" ) );
+				engine.Stat( Stat.XDumpStack );
+				engine.Pop( 1 );
+			}
+
+			// init & disown object
+			IObject obj = new EmptyObject( engine );
+			engine.Push( obj );
+			AssertN( obj._sgsObject, IntPtr.Zero );
+			engine.Stat( Stat.XDumpStack ); // should have refcount = 2 (one for IObject and one for stack)
+			Assert( engine.Call<string>( "typeof", engine.StackItem( 0 ) ), "EmptyObject" );
+			obj.DisownClassObject(); // free IObject reference
+			engine.Stat( Stat.XDumpStack ); // should have refcount = 1 (stack) and name = <nullObject>
+			Assert( engine.Call<string>( "typeof", engine.StackItem( 0 ) ), "<nullObject>" );
+			engine.Pop( 1 );
+
+			// test metamethods
+			IObject obj1 = new FullObject1( engine );
+			Assert( engine.Call<string>( "dumpvar", obj1 ), "[this is a FULL OBJECT]\n" ); // test "dump"/OnDump
+			
+			engine.Release();
 		}
 	}
 }
