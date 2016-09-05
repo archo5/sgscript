@@ -138,7 +138,7 @@ namespace SGScript
 		public Variable Var( IntPtr v ){ return new Variable( this, NI.MakePtr( v ) ); }
 		public Variable Var( NI.Variable v ){ return new Variable( this, v ); }
 		public Variable Var( string v ){ if( v == null ) return NullVar(); NI.Variable var; NI.InitStringBuf( ctx, out var, v ); return new Variable( this, var ); }
-		public Variable Var( IObject v )
+		public Variable Var( IObjectBase v )
 		{
 			NI.Variable var = NI.MakeNull();
 			if( v != null && v._sgsObject != IntPtr.Zero )
@@ -273,6 +273,7 @@ namespace SGScript
 		public void ParseVar( out float f, Variable v ){ f = (float) v.GetReal(); }
 		public void ParseVar( out double f, Variable v ){ f = v.GetReal(); }
 		public void ParseVar( out string s, Variable v ){ s = v.ConvertToString(); }
+		public void ParseVar( out IObjectBase o, Variable v ){ o = v.GetIObjectBase(); }
 
 		public void Push( Variable v ){ NI.PushVariable( ctx, v.var ); }
 		public void PushItem( int item ){ _IndexCheck( item, "PushItem" ); NI.PushItem( ctx, item ); }
@@ -362,6 +363,11 @@ namespace SGScript
 		public T ThisCall<T>( Variable func, object thisvar, params object[] args ){ return (T) RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
 		public T Call<T>( string func, params object[] args ){ return (T) RetrieveOneReturnValue( XCall( func, args ) ); }
 		public T Call<T>( Variable func, params object[] args ){ return (T) RetrieveOneReturnValue( XCall( func, args ) ); }
+
+		public bool Method(){ return NI.Method( ctx ) != 0; }
+		public bool HideThis(){ return NI.HideThis( ctx ) != 0; }
+		public bool ForceHideThis(){ return NI.ForceHideThis( ctx ) != 0; }
+		public int ObjectArg(){ return NI.ObjectArg( ctx ); }
 
 		public void GCExecute(){ NI.GCExecute( ctx ); }
 		

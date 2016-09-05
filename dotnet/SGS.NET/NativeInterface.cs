@@ -222,6 +222,8 @@ namespace SGScript
 			public IntPtr prev;
 			public IntPtr next;
 			public IntPtr metaobj;
+			
+			public static int offsetOfData = Marshal.OffsetOf( typeof(NI.VarObj), "data" ).ToInt32();
 		};
 
 		[StructLayout(LayoutKind.Explicit, Size=8)]

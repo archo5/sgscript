@@ -12,7 +12,8 @@ namespace SGScript
 		public bool CanWrite = false;
 	}
 
-	public abstract class IObject : NI.IUserData
+	// SGScript object implementation core
+	public abstract class IObjectBase : NI.IUserData
 	{
 		public class SGSPropInfo
 		{
@@ -28,15 +29,9 @@ namespace SGScript
 			public Dictionary<Variable, SGSPropInfo> props;
 		}
 
-		public static IntPtr _sgsNullObjectInterface;
-		public static Dictionary<IObject, bool> _sgsOwnedObjects = new Dictionary<IObject,bool>();
+		public static IntPtr _sgsNullObjectInterface = AllocInterface( new NI.ObjInterface(), "<nullObject>" );
+		public static Dictionary<IObjectBase, bool> _sgsOwnedObjects = new Dictionary<IObjectBase,bool>();
 		public static Dictionary<Type, SGSClassInfo> _sgsClassInfo = new Dictionary<Type,SGSClassInfo>();
-		static int _offsetOfData = Marshal.OffsetOf( typeof(NI.VarObj), "data" ).ToInt32();
-
-		static IObject()
-		{
-			_sgsNullObjectInterface = AllocInterface( new NI.ObjInterface(), "<nullObject>" );
-		}
 
 		public static IntPtr AllocInterface( NI.ObjInterface iftemplate, string name )
 		{
@@ -54,6 +49,31 @@ namespace SGScript
 			return iface;
 		}
 
+		public static MethodInfo FindParserForType( Type type, bool exception = false )
+		{
+			foreach( MethodInfo method in typeof(Context).GetMethods() )
+			{
+				if( method.Name != "ParseVar" )
+					continue;
+				ParameterInfo[] prms = method.GetParameters();
+
+				// expected signature: public void ParseVar( out T value, Variable var );
+				if( prms.Length != 2 || prms[0].IsOut == false || prms[0].ParameterType.IsByRef == false || prms[1].ParameterType != typeof(Variable) )
+					continue; // unrecognized signature
+
+				// ParameterType is T&
+				Type paramType = prms[0].ParameterType.GetElementType();
+				if( paramType != type && !type.IsSubclassOf( paramType ) )
+					continue; // type does not match
+			//	Console.WriteLine(type +" > " + paramType);
+
+				// a good conversion method has been found
+				return method;
+			}
+			if( exception )
+				throw new SGSException( NI.ENOTFND, string.Format( "Could not find a Context.ParseVar method for type={0}", type ) );
+			return null;
+		}
 		static SGSPropInfo _GetPropFieldInfo( MemberInfo minfo, Type type )
 		{
 			SGSPropInfo info = new SGSPropInfo(){ info = minfo, propType = type };
@@ -68,26 +88,7 @@ namespace SGScript
 				}
 			}
 
-			// look up conversion methods
-			foreach( MethodInfo method in typeof(Context).GetMethods() )
-			{
-				if( method.Name != "ParseVar" )
-					continue;
-				ParameterInfo[] prms = method.GetParameters();
-
-				// expected signature: public void ParseVar( out T value, Variable var );
-				if( prms.Length != 2 || prms[0].IsOut == false || prms[0].ParameterType.IsByRef == false || prms[1].ParameterType != typeof(Variable) )
-					continue; // unrecognized signature
-
-				// ParameterType is T&
-			//	Console.WriteLine(method.Name +" " + prms[0].ParameterType.GetElementType());
-				if( prms[0].ParameterType.GetElementType() != info.propType )
-					continue; // type does not match
-
-				// a good conversion method has been found
-				info.parseVarMethod = method;
-				break;
-			}
+			info.parseVarMethod = FindParserForType( type );
 
 			return info;
 		}
@@ -132,7 +133,10 @@ namespace SGScript
 				convert = new NI.OC_SlPr( _sgsConvert ),
 				serialize = new NI.OC_Self( _sgsSerialize ),
 				dump = new NI.OC_SlPr( _sgsDump ),
-				// TODO
+				// TODO getnext
+
+				call = new NI.OC_Self( _sgsCall ),
+				// TODO expr
 			};
 
 			cinfo = new SGSClassInfo()
@@ -148,11 +152,21 @@ namespace SGScript
 		public IntPtr _sgsObject = IntPtr.Zero;
 		public Engine _sgsEngine;
 
-		public IObject( Context c, bool skipInit = false )
+		public IObjectBase( Context c, bool skipInit = false )
 		{
 			_sgsEngine = c.GetEngine();
 			if( !skipInit )
 				AllocClassObject();
+		}
+
+		public static IObjectBase GetFromVarObj( IntPtr varobj )
+		{
+			return GetFromObjData( Marshal.ReadIntPtr( varobj, NI.VarObj.offsetOfData ) );
+		}
+		public static IObjectBase GetFromObjData( IntPtr objdata )
+		{
+			GCHandle h = GCHandle.FromIntPtr( objdata );
+			return (IObjectBase) h.Target;
 		}
 
 		// returns the cached interface for the current class
@@ -174,7 +188,7 @@ namespace SGScript
 		{
 			if( _sgsObject == IntPtr.Zero )
 				throw new SGSException( NI.EINPROC, "FreeClassObject - object is not allocated" );
-			IntPtr handleP = Marshal.ReadIntPtr( _sgsObject, _offsetOfData );
+			IntPtr handleP = Marshal.ReadIntPtr( _sgsObject, NI.VarObj.offsetOfData );
 			GCHandle h = GCHandle.FromIntPtr( handleP );
 			NI.ObjRelease( _sgsEngine.ctx, _sgsObject );
 			_sgsObject = IntPtr.Zero;
@@ -245,22 +259,23 @@ namespace SGScript
 		}
 
 		// callback wrappers
-		public static IObject _IP2Obj( IntPtr varobj, bool freehandle = false )
+		public static IObjectBase _IP2Obj( IntPtr varobj, bool freehandle = false )
 		{
-			IntPtr handleP = Marshal.ReadIntPtr( varobj, _offsetOfData );
+			IntPtr handleP = Marshal.ReadIntPtr( varobj, NI.VarObj.offsetOfData );
 			GCHandle h = GCHandle.FromIntPtr( handleP );
-			IObject obj = (IObject) h.Target;
+			IObjectBase obj = (IObjectBase) h.Target;
 			if( freehandle )
 				h.Free();
 			return obj;
 		}
-		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj ){ IObject obj = _IP2Obj( varobj, true ); return obj._intOnDestroy(); }
-		public static int _sgsGCMark( IntPtr ctx, IntPtr varobj ){ IObject obj = _IP2Obj( varobj ); return obj._intOnGCMark(); }
-		public static int _sgsGetIndex( IntPtr ctx, IntPtr varobj ){ IObject obj = _IP2Obj( varobj ); return obj._intOnGetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
-		public static int _sgsSetIndex( IntPtr ctx, IntPtr varobj ){ IObject obj = _IP2Obj( varobj ); return obj._intOnSetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
-		public static int _sgsConvert( IntPtr ctx, IntPtr varobj, int type ){ IObject obj = _IP2Obj( varobj ); return obj._intOnConvert( new Context( ctx ), type ); }
-		public static int _sgsSerialize( IntPtr ctx, IntPtr varobj ){ IObject obj = _IP2Obj( varobj ); return obj._intOnSerialize( new Context( ctx ) ); }
-		public static int _sgsDump( IntPtr ctx, IntPtr varobj, int maxdepth ){ IObject obj = _IP2Obj( varobj ); return obj._intOnDump( new Context( ctx ), maxdepth ); }
+		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj, true ); return obj._intOnDestroy(); }
+		public static int _sgsGCMark( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnGCMark(); }
+		public static int _sgsGetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnGetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
+		public static int _sgsSetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnSetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
+		public static int _sgsConvert( IntPtr ctx, IntPtr varobj, int type ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnConvert( new Context( ctx ), type ); }
+		public static int _sgsSerialize( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnSerialize( new Context( ctx ) ); }
+		public static int _sgsDump( IntPtr ctx, IntPtr varobj, int maxdepth ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnDump( new Context( ctx ), maxdepth ); }
+		public static int _sgsCall( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj.OnCall( new Context( ctx ) ); }
 
 		// core feature layer (don't override these unless there is some overhead to cut)
 		public virtual int _intOnDestroy()
@@ -325,9 +340,84 @@ namespace SGScript
 		public virtual Variable OnGetIterator( Context ctx ){ return null; }
 		public virtual bool OnSerialize( Context ctx ){ return false; }
 		public virtual string OnDump( Context ctx, int maxdepth ){ return null; }
+		public virtual int OnCall( Context ctx ){ return NI.ENOTSUP; }
+	}
+
+	// Base class for custom SGScript objects
+	public abstract class IObject : IObjectBase
+	{
+		public IObject( Context c, bool skipInit = false ) : base( c, skipInit ){}
+	}
+
+	// .NET Method wrapper
+	public class DNMethod : IObjectBase
+	{
+		public MethodInfo thisMethodInfo;
+
+		public MethodInfo parseVarThis = null;
+		public MethodInfo[] parseVarArgs;
+		object[] callArgs;
+		
+		static object[] parseVarParams = new object[2];
+
+		public DNMethod( Context c, MethodInfo mi ) : base( c )
+		{
+			thisMethodInfo = mi;
+
+			if( thisMethodInfo.IsStatic == false )
+			{
+				parseVarThis = FindParserForType( thisMethodInfo.DeclaringType, true );
+			}
+
+			ParameterInfo[] prms = thisMethodInfo.GetParameters();
+			callArgs = new object[ prms.Length ];
+			parseVarArgs = new MethodInfo[ prms.Length ];
+
+			for( int i = 0; i < prms.Length; ++i )
+			{
+				ParameterInfo param = prms[ i ];
+				parseVarArgs[ i ] = FindParserForType( param.ParameterType, true );
+			}
+		}
+
+		public override int OnCall( Context ctx )
+		{
+			bool gotthis = ctx.Method();
+			if( !gotthis && !thisMethodInfo.IsStatic )
+			{
+				// if 'this' was not passed but the method is not static, error
+				return -1; // TODO sgs_Msg
+			}
+
+			object thisvar = null;
+			if( gotthis )
+			{
+				parseVarParams[ 0 ] = null;
+				parseVarParams[ 1 ] = ctx.StackItem( 0 );
+				parseVarThis.Invoke( ctx, parseVarParams );
+				thisvar = parseVarParams[ 0 ];
+			}
+			int outArg = 0;
+			int inArg = gotthis ? 1 : 0;
+			foreach( MethodInfo pva in parseVarArgs )
+			{
+				parseVarParams[ 0 ] = null;
+				parseVarParams[ 1 ] = ctx.StackItem( inArg );
+				pva.Invoke( ctx, parseVarParams );
+				callArgs[ outArg ] = parseVarParams[ 0 ];
+ 
+				inArg++;
+				outArg++;
+			}
+
+			ctx.PushObj( thisMethodInfo.Invoke( thisvar, callArgs ) );
+
+			return 1;
+		}
 	}
 
 
+	// SGScript variable handle
 	public class Variable : IDisposable
 	{
 		public NI.Variable var;
@@ -369,6 +459,13 @@ namespace SGScript
 		}
 		public string GetString(){ return NI.GetString( var ); }
 		public string str { get { return GetString(); } }
+		public IObjectBase GetIObjectBase()
+		{
+			if( var.type == VarType.Object )
+				return IObjectBase.GetFromVarObj( var.data.O );
+			else
+				return null;
+		}
 
 		public Variable GetSubItem( Variable key, bool isprop ){ return ctx.GetIndex( this, key, isprop ); }
 		public Variable GetSubItem( string key, bool isprop ){ return ctx.GetIndex( this, ctx.Var( key ), isprop ); }

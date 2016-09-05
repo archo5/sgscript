@@ -670,6 +670,10 @@ namespace APITest
 
 			public string _useProp3(){ return prop3; }
 
+			public static string pfxstr = "PFX:";
+			public static string StaticTestMethod( string arg1 ){ return pfxstr + arg1; }
+			public string TestMethod( string arg1 ){ return prop3 + "|" + arg1; }
+
 			public int prop1 = 5;
 			protected float prop2 = 6.0f;
 			private string prop3 = "7";
@@ -743,6 +747,18 @@ namespace APITest
 			AssertVar( obj1var.GetProp( "invprop1" ), null ); // - HideProperty()
 			AssertVar( obj1var.GetProp( "invprop2" ), engine.Var( 234 ) ); // - HideProperty()
 			AssertVar( obj1var.GetProp( "invprop3" ), null ); // - HideProperty()
+
+			// test method wrapper
+			DNMethod dnm1 = new DNMethod( engine, typeof(FullObject1).GetMethod("TestMethod") );
+			Variable dnm1var = engine.Var( dnm1 );
+			Assert( engine.ThisCall<string>( dnm1var, obj1var, "test" ), "17|test" );
+			dnm1.DisownClassObject();
+
+			// test static method wrapper
+			DNMethod dnm2 = new DNMethod( engine, typeof(FullObject1).GetMethod("StaticTestMethod") );
+			Variable dnm2var = engine.Var( dnm2 );
+			Assert( engine.Call<string>( dnm2var, "sTest" ), "PFX:sTest" );
+			dnm2.DisownClassObject();
 			
 			engine.Release();
 		}
