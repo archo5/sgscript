@@ -545,6 +545,26 @@ namespace SGScript
 		public static unsafe extern IntPtr _GetPtrP( IntPtr ctx, Variable* item );
 		public static unsafe IntPtr GetPtrP( IntPtr ctx, Variable item ){ return _GetPtrP( ctx, &item ); }
 		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ToStringBufP", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern IntPtr _ToStringBufP( IntPtr ctx, Variable* item, Int32* outsize );
+		public static unsafe IntPtr ToStringBufP( IntPtr ctx, ref Variable item )
+		{
+			Int32 sz = 0;
+			Variable v = item;
+			IntPtr p = _ToStringBufP( ctx, &v, &sz );
+			item = v;
+			return p;
+		}
+		public static unsafe IntPtr ToStringBufP( IntPtr ctx, ref Variable item, out Int32 size )
+		{
+			Int32 sz = 0;
+			Variable v = item;
+			IntPtr p = _ToStringBufP( ctx, &v, &sz );
+			item = v;
+			size = sz;
+			return p;
+		}
+		
 		public static string GetString( Variable var )
 		{
 			if( var.type == VarType.Null )
@@ -557,7 +577,7 @@ namespace SGScript
 				Marshal.Copy( (IntPtr) ( s.ToInt64() + 12 ), bytes, 0, size );
 				return Encoding.UTF8.GetString( bytes );
 			}
-			else throw new SGSException( EINVAL );
+			else throw new SGSException( EINVAL, string.Format( "GetString expected 'string' or 'null' type, got '{0}'", var.type ) );
 		}
 	}
 }

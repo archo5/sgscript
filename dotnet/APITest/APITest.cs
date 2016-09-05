@@ -668,9 +668,11 @@ namespace APITest
 		{
 			public FullObject1( Context c ) : base( c ){}
 
+			public string _useProp3(){ return prop3; }
+
 			public int prop1 = 5;
-			protected int prop2 = 6;
-			private int prop3 = 7;
+			protected float prop2 = 6.0f;
+			private string prop3 = "7";
 			[HideProperty()]
 			public int invprop1 = 123;
 			[HideProperty(CanRead=true)]
@@ -716,7 +718,9 @@ namespace APITest
 			engine.Push( obj );
 			AssertN( obj._sgsObject, IntPtr.Zero );
 			engine.Stat( Stat.XDumpStack ); // should have refcount = 2 (one for IObject and one for stack)
-			Assert( engine.Call<string>( "typeof", engine.StackItem( 0 ) ), "EmptyObject" );
+			Variable si0 = engine.StackItem( 0 );
+			Assert( engine.Call<string>( "typeof", si0 ), "EmptyObject" );
+			si0.Release(); // for accurate refcount (otherwise this reference is retained for an unknown amount of time)
 			obj.DisownClassObject(); // free IObject reference
 			engine.Stat( Stat.XDumpStack ); // should have refcount = 1 (stack) and name = <nullObject>
 			Assert( engine.Call<string>( "typeof", engine.StackItem( 0 ) ), "<nullObject>" );
@@ -728,9 +732,14 @@ namespace APITest
 			Assert( engine.Call<bool>( "tobool", obj1 ), false ); // test "convert"(tobool)/ConvertToBool
 			Assert( engine.Call<string>( "tostring", obj1 ), "[Full_Object_1]" ); // test "convert"(tostring)/ConvertToString
 			Assert( engine.Call<string>( "dumpvar", obj1 ), "[this is a FULL OBJECT]\n" ); // test "dump"/OnDump
-			AssertVar( obj1var.GetProp( "prop1" ), engine.Var( 5 ) ); // test "getindex"(isprop=true)
-			AssertVar( obj1var.GetProp( "prop2" ), engine.Var( 6 ) );
-			AssertVar( obj1var.GetProp( "prop3" ), engine.Var( 7 ) );
+
+			Assert( obj1var.SetProp( "prop1", engine.Var( 15 ) ), true ); // test "setindex"(isprop=true)
+			Assert( obj1var.SetProp( "prop2", engine.Var( 16 ) ), true );
+			Assert( obj1var.SetProp( "prop3", engine.Var( 17 ) ), true );
+
+			AssertVar( obj1var.GetProp( "prop1" ), engine.Var( 15 ) ); // test "getindex"(isprop=true)
+			AssertVar( obj1var.GetProp( "prop2" ), engine.Var( 16.0f ) );
+			AssertVar( obj1var.GetProp( "prop3" ), engine.Var( "17" ) );
 			AssertVar( obj1var.GetProp( "invprop1" ), null ); // - HideProperty()
 			AssertVar( obj1var.GetProp( "invprop2" ), engine.Var( 234 ) ); // - HideProperty()
 			AssertVar( obj1var.GetProp( "invprop3" ), null ); // - HideProperty()

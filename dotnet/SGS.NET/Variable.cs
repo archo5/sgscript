@@ -18,7 +18,9 @@ namespace SGScript
 		{
 			public bool canRead = true;
 			public bool canWrite = true;
+			public Type propType;
 			public MemberInfo info; // PropertyInfo or FieldInfo
+			public MethodInfo parseVarMethod;
 		}
 		public class SGSClassInfo
 		{
@@ -52,9 +54,9 @@ namespace SGScript
 			return iface;
 		}
 
-		static SGSPropInfo _GetPropFieldInfo( MemberInfo minfo )
+		static SGSPropInfo _GetPropFieldInfo( MemberInfo minfo, Type type )
 		{
-			SGSPropInfo info = new SGSPropInfo(){ info = minfo };
+			SGSPropInfo info = new SGSPropInfo(){ info = minfo, propType = type };
 			foreach( object attr in minfo.GetCustomAttributes( false ) )
 			{
 				if( attr is HideProperty )
@@ -65,6 +67,28 @@ namespace SGScript
 						return null; // no need to register the property, it is marked as inaccessible
 				}
 			}
+
+			// look up conversion methods
+			foreach( MethodInfo method in typeof(Context).GetMethods() )
+			{
+				if( method.Name != "ParseVar" )
+					continue;
+				ParameterInfo[] prms = method.GetParameters();
+
+				// expected signature: public void ParseVar( out T value, Variable var );
+				if( prms.Length != 2 || prms[0].IsOut == false || prms[0].ParameterType.IsByRef == false || prms[1].ParameterType != typeof(Variable) )
+					continue; // unrecognized signature
+
+				// ParameterType is T&
+			//	Console.WriteLine(method.Name +" " + prms[0].ParameterType.GetElementType());
+				if( prms[0].ParameterType.GetElementType() != info.propType )
+					continue; // type does not match
+
+				// a good conversion method has been found
+				info.parseVarMethod = method;
+				break;
+			}
+
 			return info;
 		}
 		static Dictionary<Variable, SGSPropInfo> _ReadClassProps( Context ctx, Type type )
@@ -74,7 +98,7 @@ namespace SGScript
 			FieldInfo[] fields = type.GetFields( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance );
 			foreach( FieldInfo field in fields )
 			{
-				SGSPropInfo info = _GetPropFieldInfo( field );
+				SGSPropInfo info = _GetPropFieldInfo( field, field.FieldType );
 				if( info != null )
 					outprops.Add( ctx.Var( field.Name ), info );
 			}
@@ -82,7 +106,7 @@ namespace SGScript
 			PropertyInfo[] properties = type.GetProperties( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance );
 			foreach( PropertyInfo prop in properties )
 			{
-				SGSPropInfo info = _GetPropFieldInfo( prop );
+				SGSPropInfo info = _GetPropFieldInfo( prop, prop.PropertyType );
 				if( info != null )
 					outprops.Add( ctx.Var( prop.Name ), info );
 			}
@@ -176,20 +200,48 @@ namespace SGScript
 		}
 
 		// callback implementation helpers
-		public Variable sgsGetPropertyByName( Variable str )
+		public Variable sgsGetPropertyByName( Variable key )
 		{
 			SGSClassInfo cinfo = GetClassInfo( _sgsEngine, GetType() );
 			SGSPropInfo propinfo;
-			if( !cinfo.props.TryGetValue( str, out propinfo ) )
+			if( !cinfo.props.TryGetValue( key, out propinfo ) )
 				return null;
 			if( !propinfo.canRead )
 				return null;
+
 			object obj;
 			if( propinfo.info is FieldInfo )
 				obj = (propinfo.info as FieldInfo).GetValue( this );
 			else // PropertyInfo
 				obj = (propinfo.info as PropertyInfo).GetValue( this, null );
 			return _sgsEngine.ObjVar( obj );
+		}
+		public bool sgsSetPropertyByName( Variable key, Context ctx, int valueOnStack )
+		{
+			SGSClassInfo cinfo = GetClassInfo( _sgsEngine, GetType() );
+			SGSPropInfo propinfo;
+			if( !cinfo.props.TryGetValue( key, out propinfo ) )
+				return false;
+			if( !propinfo.canWrite )
+				return false;
+			if( propinfo.parseVarMethod == null )
+				throw new SGSException( NI.ENOTFND, string.Format(
+					"Property cannot be set - no Context.ParseVar method exists that supports this type ({0})", propinfo.propType ) );
+
+			object[] args = new object[]{ null, ctx.StackItem( valueOnStack ) };
+			propinfo.parseVarMethod.Invoke( ctx, args );
+			if( propinfo.info is FieldInfo )
+				(propinfo.info as FieldInfo).SetValue( this, args[0] );
+			else // PropertyInfo
+				(propinfo.info as PropertyInfo).SetValue( this, args[0], null );
+			return true;
+		}
+		public bool sgsSetPropertyByName( Variable key, Variable val )
+		{
+			_sgsEngine.Push( val );
+			bool ret = sgsSetPropertyByName( key, _sgsEngine, _sgsEngine.StackSize() - 1 );
+			_sgsEngine.Pop( 1 );
+			return ret;
 		}
 
 		// callback wrappers
@@ -266,7 +318,7 @@ namespace SGScript
 		public virtual void OnDestroy(){}
 		public virtual void OnGCMark(){}
 		public virtual Variable OnGetIndex( Context ctx, Variable key, bool isprop ){ return sgsGetPropertyByName( key ); }
-		public virtual bool OnSetIndex( Context ctx, Variable key, Variable val, bool isprop ){ return false; }
+		public virtual bool OnSetIndex( Context ctx, Variable key, Variable val, bool isprop ){ return sgsSetPropertyByName( key, ctx, 1 ); }
 		public virtual bool ConvertToBool(){ return true; }
 		public virtual string ConvertToString(){ return ToString(); }
 		public virtual Variable OnClone( Context ctx ){ return null; }
@@ -307,6 +359,14 @@ namespace SGScript
 		public bool GetBool(){ return NI.GetBoolP( ctx.ctx, var ); }
 		public Int64 GetInt(){ return NI.GetIntP( ctx.ctx, var ); }
 		public double GetReal(){ return NI.GetRealP( ctx.ctx, var ); }
+		public string ConvertToString()
+		{
+			Variable v2 = new Variable( ctx, var );
+			NI.ToStringBufP( ctx.ctx, ref v2.var );
+			string s = v2.GetString();
+			v2.Release();
+			return s;
+		}
 		public string GetString(){ return NI.GetString( var ); }
 		public string str { get { return GetString(); } }
 

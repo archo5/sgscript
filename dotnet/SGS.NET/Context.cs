@@ -191,11 +191,11 @@ namespace SGScript
 
 		public void PushNull(){ NI.PushNull( ctx ); }
 		public void Push( bool b ){ NI.PushBool( ctx, b ? 1 : 0 ); }
-		public void Push( Byte i ){ NI.PushInt( ctx, i ); }
 		public void Push( SByte i ){ NI.PushInt( ctx, i ); }
 		public void Push( Int16 i ){ NI.PushInt( ctx, i ); }
 		public void Push( Int32 i ){ NI.PushInt( ctx, i ); }
 		public void Push( Int64 i ){ NI.PushInt( ctx, i ); }
+		public void Push( Byte i ){ NI.PushInt( ctx, i ); }
 		public void Push( UInt16 i ){ NI.PushInt( ctx, i ); }
 		public void Push( UInt32 i ){ NI.PushInt( ctx, i ); }
 		// manual casting would have been preferred but UInt64 resolves to double
@@ -261,6 +261,18 @@ namespace SGScript
 				default: throw new SGSException( NI.EINVAL, string.Format( "Bad type ID detected while parsing item {0}", item ) );
 			}
 		}
+		public void ParseVar( out bool b, Variable v ){ b = v.GetBool(); }
+		public void ParseVar( out SByte i, Variable v ){ i = (SByte) v.GetInt(); }
+		public void ParseVar( out Int16 i, Variable v ){ i = (Int16) v.GetInt(); }
+		public void ParseVar( out Int32 i, Variable v ){ i = (Int32) v.GetInt(); }
+		public void ParseVar( out Int64 i, Variable v ){ i = v.GetInt(); }
+		public void ParseVar( out Byte i, Variable v ){ i = (Byte) v.GetInt(); }
+		public void ParseVar( out UInt16 i, Variable v ){ i = (UInt16) v.GetInt(); }
+		public void ParseVar( out UInt32 i, Variable v ){ i = (UInt32) v.GetInt(); }
+		public void ParseVar( out UInt64 i, Variable v ){ i = (UInt64) v.GetInt(); }
+		public void ParseVar( out float f, Variable v ){ f = (float) v.GetReal(); }
+		public void ParseVar( out double f, Variable v ){ f = v.GetReal(); }
+		public void ParseVar( out string s, Variable v ){ s = v.ConvertToString(); }
 
 		public void Push( Variable v ){ NI.PushVariable( ctx, v.var ); }
 		public void PushItem( int item ){ _IndexCheck( item, "PushItem" ); NI.PushItem( ctx, item ); }
