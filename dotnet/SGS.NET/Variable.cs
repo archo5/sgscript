@@ -5,6 +5,11 @@ using System.Reflection;
 
 namespace SGScript
 {
+	[AttributeUsage(AttributeTargets.Method)]
+	public class HideMethod : System.Attribute
+	{
+	}
+
 	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
 	public class HideProperty : System.Attribute
 	{
@@ -49,7 +54,7 @@ namespace SGScript
 			return iface;
 		}
 
-		public static MethodInfo FindParserForType( Type type, bool exception = false )
+		public static MethodInfo FindParserForType( Type type, string typeType = null, string methodName = null )
 		{
 			foreach( MethodInfo method in typeof(Context).GetMethods() )
 			{
@@ -70,8 +75,8 @@ namespace SGScript
 				// a good conversion method has been found
 				return method;
 			}
-			if( exception )
-				throw new SGSException( NI.ENOTFND, string.Format( "Could not find a Context.ParseVar method for type={0}", type ) );
+			if( typeType != null && methodName != null )
+				throw new SGSException( NI.ENOTFND, string.Format( "Could not find a Context.ParseVar method for '{2}' {1} type={0}", type, typeType, methodName ) );
 			return null;
 		}
 		static SGSPropInfo _GetPropFieldInfo( MemberInfo minfo, Type type )
@@ -146,6 +151,26 @@ namespace SGScript
 			};
 			_sgsClassInfo.Add( type, cinfo );
 			return cinfo;
+		}
+
+		public static Variable CreateStaticDict( Context ctx, Type type )
+		{
+			int items = 0;
+
+			MethodInfo[] methods = type.GetMethods( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly );
+			foreach( MethodInfo mi in methods )
+			{
+				if( mi.GetCustomAttributes( typeof(HideMethod), true ).Length != 0 )
+					continue;
+
+				DNMethod dnm = new DNMethod( ctx, mi );
+
+				ctx.Push( mi.Name );
+				ctx.Push( dnm );
+				items += 2;
+			}
+
+			return ctx.DictVar( items );
 		}
 
 
@@ -330,16 +355,27 @@ namespace SGScript
 		}
 
 		// user override callbacks
+		[HideMethod]
 		public virtual void OnDestroy(){}
+		[HideMethod]
 		public virtual void OnGCMark(){}
+		[HideMethod]
 		public virtual Variable OnGetIndex( Context ctx, Variable key, bool isprop ){ return sgsGetPropertyByName( key ); }
+		[HideMethod]
 		public virtual bool OnSetIndex( Context ctx, Variable key, Variable val, bool isprop ){ return sgsSetPropertyByName( key, ctx, 1 ); }
+		[HideMethod]
 		public virtual bool ConvertToBool(){ return true; }
+		[HideMethod]
 		public virtual string ConvertToString(){ return ToString(); }
+		[HideMethod]
 		public virtual Variable OnClone( Context ctx ){ return null; }
+		[HideMethod]
 		public virtual Variable OnGetIterator( Context ctx ){ return null; }
+		[HideMethod]
 		public virtual bool OnSerialize( Context ctx ){ return false; }
+		[HideMethod]
 		public virtual string OnDump( Context ctx, int maxdepth ){ return null; }
+		[HideMethod]
 		public virtual int OnCall( Context ctx ){ return NI.ENOTSUP; }
 	}
 
@@ -366,7 +402,7 @@ namespace SGScript
 
 			if( thisMethodInfo.IsStatic == false )
 			{
-				parseVarThis = FindParserForType( thisMethodInfo.DeclaringType, true );
+				parseVarThis = FindParserForType( thisMethodInfo.DeclaringType, "object", thisMethodInfo.ToString() );
 			}
 
 			ParameterInfo[] prms = thisMethodInfo.GetParameters();
@@ -376,7 +412,7 @@ namespace SGScript
 			for( int i = 0; i < prms.Length; ++i )
 			{
 				ParameterInfo param = prms[ i ];
-				parseVarArgs[ i ] = FindParserForType( param.ParameterType, true );
+				parseVarArgs[ i ] = FindParserForType( param.ParameterType, "argument " + i, thisMethodInfo.ToString() );
 			}
 		}
 

@@ -371,14 +371,14 @@ namespace SGScript
 		public static unsafe void CreateArray( IntPtr ctx, Int32 numitems, out Variable outvar ){ Variable v; _CreateArray( ctx, &v, numitems ); outvar = v; }
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateDict", CallingConvention = CallingConvention.Cdecl )]
-		public static unsafe extern int _CreateMap( IntPtr ctx, Variable* outvar, Int32 numitems );
-		public static unsafe void CreateMap( IntPtr ctx, Int32 numitems ){ _CreateMap( ctx, null, numitems ); }
-		public static unsafe void CreateMap( IntPtr ctx, Int32 numitems, out Variable outvar ){ Variable v; _CreateMap( ctx, &v, numitems ); outvar = v; }
-
-		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateMap", CallingConvention = CallingConvention.Cdecl )]
 		public static unsafe extern int _CreateDict( IntPtr ctx, Variable* outvar, Int32 numitems );
 		public static unsafe void CreateDict( IntPtr ctx, Int32 numitems ){ _CreateDict( ctx, null, numitems ); }
 		public static unsafe void CreateDict( IntPtr ctx, Int32 numitems, out Variable outvar ){ Variable v; _CreateDict( ctx, &v, numitems ); outvar = v; }
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateMap", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern int _CreateMap( IntPtr ctx, Variable* outvar, Int32 numitems );
+		public static unsafe void CreateMap( IntPtr ctx, Int32 numitems ){ _CreateMap( ctx, null, numitems ); }
+		public static unsafe void CreateMap( IntPtr ctx, Int32 numitems, out Variable outvar ){ Variable v; _CreateMap( ctx, &v, numitems ); outvar = v; }
 
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushNulls", CallingConvention = CallingConvention.Cdecl )]

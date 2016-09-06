@@ -759,6 +759,10 @@ namespace APITest
 			Variable dnm2var = engine.Var( dnm2 );
 			Assert( engine.Call<string>( dnm2var, "sTest" ), "PFX:sTest" );
 			dnm2.DisownClassObject();
+
+			// test static data dictionary
+			Assert( engine.Call<string>( "tostring", IObjectBase.CreateStaticDict( engine, typeof(FullObject1) ) ),
+				"{_useProp3=DNMethod,StaticTestMethod=DNMethod,TestMethod=DNMethod}" );
 			
 			engine.Release();
 		}

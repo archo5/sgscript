@@ -217,7 +217,7 @@ namespace SGScript
 		public void Push( double? v ){ if( v.HasValue == false ) PushNull(); else NI.PushReal( ctx, v.Value ); }
 		public void Push( IntPtr? p ){ if( p.HasValue == false ) PushNull(); else NI.PushPtr( ctx, p.Value ); }
 		public void Push( string str ){ if( str == null ) PushNull(); else NI.PushStringBuf( ctx, str, str.Length ); }
-		public void Push( IObject o ){ if( o == null ) PushNull(); else NI.PushObjectPtr( ctx, o._sgsObject ); }
+		public void Push( IObjectBase o ){ if( o == null ) PushNull(); else NI.PushObjectPtr( ctx, o._sgsObject ); }
 		public void Push( Context c ){ if( c == null ) PushNull(); else NI.PushThreadPtr( ctx, c.ctx ); }
 		public void Push( IGetVariable p ){ if( p == null ) PushNull(); else Push( p.GetVariable( this ) ); }
 		public void PushObj( object o )
@@ -274,6 +274,8 @@ namespace SGScript
 		public void ParseVar( out double f, Variable v ){ f = v.GetReal(); }
 		public void ParseVar( out string s, Variable v ){ s = v.ConvertToString(); }
 		public void ParseVar( out IObjectBase o, Variable v ){ o = v.GetIObjectBase(); }
+		public void ParseVar( out Context c, Variable v ){ c = v.type == VarType.Thread ? new Context( v.var.data.T ) : null; }
+		public void ParseVar( out Variable o, Variable v ){ o = v; }
 
 		public void Push( Variable v ){ NI.PushVariable( ctx, v.var ); }
 		public void PushItem( int item ){ _IndexCheck( item, "PushItem" ); NI.PushItem( ctx, item ); }
