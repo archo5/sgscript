@@ -1213,6 +1213,19 @@ static SGSRESULT vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj,
 			return 0;
 		}
 	}
+	else if( isobj && obj->data.O->iface == sgsstd_array_iface && !isprop )
+	{
+		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) obj->data.O->data;
+		sgs_Variable* ptr = hdr->data;
+		sgs_Int i = var_getint( idx );
+		if( i < 0 || i >= hdr->size )
+		{
+			sgs_Msg( C, SGS_WARNING, "array index out of bounds" );
+			return VM_GETPROP_ERR( SGS_EBOUNDS );
+		}
+		p_initvar( outmaybe, &ptr[ i ] );
+		return 0;
+	}
 	else if( isobj && obj->data.O->iface->getindex )
 	{
 		sgs_VarObj* O = obj->data.O;
