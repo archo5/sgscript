@@ -4340,6 +4340,15 @@ static void sgsVM_GCExecute( SGS_SHCTX )
 	S->gcrun = SGS_TRUE;
 	
 	SGS_CTX = S->state_list;
+	/* shared state */
+	/* - interfaces */
+	if( S->array_iface )
+	{
+		obj_gcmark( S, S->array_iface );
+	}
+	/* - registry */
+	sgsSTD_RegistryGC( S );
+	
 	while( C )
 	{
 		/* -- MARK -- */
@@ -4363,8 +4372,6 @@ static void sgsVM_GCExecute( SGS_SHCTX )
 		
 		/* GLOBALS */
 		sgsSTD_GlobalGC( C );
-		/* REGISTRY */
-		sgsSTD_RegistryGC( C );
 		/* THREADS */
 		sgsSTD_ThreadsGC( C );
 		

@@ -77,6 +77,11 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	S->sf_pool = NULL;
 	S->sf_pool_size = 0;
 	
+	S->array_iface = NULL;
+	S->_R = NULL;
+	S->_SYM = NULL;
+	S->_INC = NULL;
+	
 	///
 	// CONTEXT
 	C = (sgs_Context*) int_memory( S, NULL, sizeof( sgs_Context ) );
@@ -198,6 +203,8 @@ static void ctx_destroy( SGS_CTX )
 	if( C->prev == NULL && C->next == NULL )
 	{
 		sgsSTD_RegistryFree( C );
+		sgs_ObjRelease( C, S->array_iface );
+		S->array_iface = NULL;
 		
 		sgs_GCExecute( C );
 		sgs_BreakIf( S->objs || S->objcount );

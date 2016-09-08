@@ -686,6 +686,9 @@ struct sgs_ShCtx
 	sgs_VHTable   stringtable; /* string constant caching hash table */
 	sgs_VHTable   ifacetable; /* interface generator => object table */
 	
+	/* cached interface objects */
+	sgs_VarObj*   array_iface;
+	
 	/* > _R (global registry) */
 	sgs_VarObj*   _R;
 	sgs_VarObj*   _SYM;
@@ -821,7 +824,7 @@ void sgsSTD_ThreadsFree( SGS_CTX );
 void sgsSTD_ThreadsGC( SGS_CTX );
 void sgsSTD_RegistryInit( SGS_CTX );
 void sgsSTD_RegistryFree( SGS_CTX );
-void sgsSTD_RegistryGC( SGS_CTX );
+void sgsSTD_RegistryGC( SGS_SHCTX );
 void sgsSTD_RegistryIter( SGS_CTX, int subtype, sgs_VHTVar** outp, sgs_VHTVar** outpend );
 void sgsSTD_GlobalInit( SGS_CTX );
 void sgsSTD_GlobalFree( SGS_CTX );

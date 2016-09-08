@@ -872,9 +872,7 @@ static int sgsstd_array_convert( SGS_CTX, sgs_VarObj* obj, int type )
 			}
 		}
 		
-		sgs_PushInterface( C, sgsstd_array_iface_gen );
-		sgs_ObjSetMetaObj( C, sgs_GetObjectStruct( C, -2 ), p_obj( stk_gettop( C ) ) );
-		fstk_pop1( C );
+		sgs_ObjSetMetaObj( C, p_obj( stk_ptop( C, -1 ) ), C->shared->array_iface );
 		
 		return SGS_SUCCESS;
 	}
@@ -947,9 +945,7 @@ static int sgsstd_array( SGS_CTX )
 	while( p < pend )
 		sgs_GetStackItem( C, i++, p++ );
 	
-	sgs_PushInterface( C, sgsstd_array_iface_gen );
-	sgs_ObjSetMetaObj( C, p_obj( stk_ptop( C, -2 ) ), p_obj( stk_ptop( C, -1 ) ) );
-	fstk_pop1( C );
+	sgs_ObjSetMetaObj( C, p_obj( stk_ptop( C, -1 ) ), C->shared->array_iface );
 	
 	return 1;
 }
@@ -975,9 +971,7 @@ static int sgsstd_array_sized( SGS_CTX )
 	while( p < pend )
 		(p++)->type = SGS_VT_NULL;
 	
-	sgs_PushInterface( C, sgsstd_array_iface_gen );
-	sgs_ObjSetMetaObj( C, p_obj( stk_ptop( C, -2 ) ), p_obj( stk_ptop( C, -1 ) ) );
-	fstk_pop1( C );
+	sgs_ObjSetMetaObj( C, p_obj( stk_ptop( C, -1 ) ), C->shared->array_iface );
 	
 	return 1;
 }
@@ -4066,6 +4060,8 @@ void sgsSTD_PostInit( SGS_CTX )
 	sgs_RegFuncConsts( C, regfuncs, SGS_ARRAY_SIZE( regfuncs ) );
 	
 	sgs_PushInterface( C, sgsstd_array_iface_gen );
+	C->shared->array_iface = stk_gettop( C )->data.O;
+	sgs_ObjAcquire( C, C->shared->array_iface );
 	sgs_SetGlobalByName( C, "array", *stk_gettop( C ) );
 	sgs_RegSymbol( C, "", "array", *stk_gettop( C ) );
 	fstk_pop1( C );
@@ -4122,9 +4118,7 @@ SGSBOOL sgsSTD_MakeArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal cnt )
 			sgs_Pop( C, cnt );
 		}
 		
-		sgs_PushInterface( C, sgsstd_array_iface_gen );
-		sgs_ObjSetMetaObj( C, p_obj( out ), p_obj( stk_gettop( C ) ) );
-		fstk_pop1( C );
+		sgs_ObjSetMetaObj( C, p_obj( out ), C->shared->array_iface );
 		
 		return SGS_TRUE;
 	}
@@ -4249,13 +4243,19 @@ void sgsSTD_RegistryFree( SGS_CTX )
 	}
 }
 
-void sgsSTD_RegistryGC( SGS_CTX )
+void sgsSTD_RegistryGC( SGS_SHCTX )
 {
-	SGS_SHCTX_USE;
-	sgs_VarObj* obj = RLBP;
-	if( obj )
+	if( RLBP )
 	{
-		sgs_ObjGCMark( C, obj );
+		sgs_ObjGCMark( S->ctx_root, RLBP );
+	}
+	if( INCP )
+	{
+		sgs_ObjGCMark( S->ctx_root, INCP );
+	}
+	if( SYMP )
+	{
+		sgs_ObjGCMark( S->ctx_root, SYMP );
 	}
 }
 
