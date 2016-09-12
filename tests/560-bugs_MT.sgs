@@ -432,3 +432,17 @@ check_err ``
 check_out `string [5] "debug"
 string [7] "release"
 `
+
+// `bug 00030 - abort postcall`
+rec ``
+exec `function f()
+{
+	ERROR("nooo");
+	x = 1;
+}
+function d(){ f(); x = 1; }
+return d();
+`
+result `SUCCESS`
+check_err `[E:nooo]`
+check_out ``

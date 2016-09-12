@@ -1274,6 +1274,8 @@ static int xgm_col_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
+#define COL_F2B( f, o ) (((uint32_t)(f >= 1 ? 255 : (f <= 0 ? 0 : f * 255)))<<o)
+
 static int xgm_col_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
@@ -1293,6 +1295,8 @@ static int xgm_col_getindex( SGS_ARGS_GETINDEXFUNC )
 		if( !strcmp( str, "g" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
 		if( !strcmp( str, "b" ) ){ sgs_PushReal( C, hdr[ 2 ] ); return SGS_SUCCESS; }
 		if( !strcmp( str, "a" ) ){ sgs_PushReal( C, hdr[ 3 ] ); return SGS_SUCCESS; }
+		if( !strcmp( str, "rgba_u32" ) ){ sgs_PushInt( C, COL_F2B( hdr[0], 0 ) | COL_F2B( hdr[1], 8 ) | COL_F2B( hdr[2], 16 ) | COL_F2B( hdr[3], 24 ) ); return SGS_SUCCESS; }
+		if( !strcmp( str, "bgra_u32" ) ){ sgs_PushInt( C, COL_F2B( hdr[2], 0 ) | COL_F2B( hdr[1], 8 ) | COL_F2B( hdr[0], 16 ) | COL_F2B( hdr[3], 24 ) ); return SGS_SUCCESS; }
 		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 4 ); return SGS_SUCCESS; }
 	}
 	return SGS_ENOTFND;

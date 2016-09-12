@@ -2291,18 +2291,30 @@ static void vm_postcall( SGS_CTX, int rvc )
 		int expect, args_from;
 		sf = C->sf_last; /* current function change */
 		
-		I = *(sf->iptr-1);
-		sgs_BreakIf( SGS_INSTR_GET_OP( I ) != SGS_SI_CALL );
-		expect = SGS_INSTR_GET_A( I );
-		args_from = SGS_INSTR_GET_B( I ) & 0xff;
-		stk_resize_expected( C, expect, rvc );
-		
-		if( expect )
+		if( *sf->iptr == SGS_SI_RETN )
 		{
-			int i;
-			for( i = expect - 1; i >= 0; --i )
-				stk_setlvar( C, args_from + i, C->stack_top - expect + i );
-			fstk_pop( C, expect );
+			/* next instr = return 0, this can mean one of two things:
+			- call is the last instruction in the function
+			- sgs_Abort was called
+			... in both cases we do not care about the return or expected values
+			*/
+			fstk_pop( C, rvc );
+		}
+		else
+		{
+			I = *(sf->iptr-1);
+			sgs_BreakIf( SGS_INSTR_GET_OP( I ) != SGS_SI_CALL );
+			expect = SGS_INSTR_GET_A( I );
+			args_from = SGS_INSTR_GET_B( I ) & 0xff;
+			stk_resize_expected( C, expect, rvc );
+			
+			if( expect )
+			{
+				int i;
+				for( i = expect - 1; i >= 0; --i )
+					stk_setlvar( C, args_from + i, C->stack_top - expect + i );
+				fstk_pop( C, expect );
+			}
 		}
 	}
 }
