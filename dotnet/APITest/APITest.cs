@@ -760,9 +760,13 @@ namespace APITest
 			Assert( engine.Call<string>( dnm2var, "sTest" ), "PFX:sTest" );
 			dnm2.DisownClassObject();
 
-			// test static data dictionary
+			// test static method dictionary
 			Assert( engine.Call<string>( "tostring", IObjectBase.CreateStaticDict( engine, typeof(FullObject1) ) ),
 				"{_useProp3=DNMethod,StaticTestMethod=DNMethod,TestMethod=DNMethod}" );
+
+			// test static (meta-)object
+			Variable movar = engine._GetMetaObject( typeof(FullObject1) ).GetVariable();
+			Assert( movar.GetProp( "_useProp3" ).ConvertToString(), "SGScript.DNMethod" );
 			
 			engine.Release();
 		}

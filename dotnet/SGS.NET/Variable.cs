@@ -17,8 +17,29 @@ namespace SGScript
 		public bool CanWrite = false;
 	}
 
+	public abstract class ISGSBase : IDisposable
+	{
+		public Engine _sgsEngine;
+		public enum PartiallyConstructed { Value };
+
+		public ISGSBase( Context c ) : this( c.GetEngine() ){}
+		public ISGSBase( Engine e )
+		{
+			_sgsEngine = e;
+			e._RegisterObj( this );
+		}
+		public ISGSBase( PartiallyConstructed pc ){}
+		~ISGSBase(){ Dispose(); }
+		public abstract void Release();
+		public void Dispose()
+		{
+			_sgsEngine._UnregisterObj( this );
+			Release();
+		}
+	}
+
 	// SGScript object implementation core
-	public abstract class IObjectBase : NI.IUserData
+	public abstract class IObjectBase : ISGSBase
 	{
 		public class SGSPropInfo
 		{
@@ -37,6 +58,8 @@ namespace SGScript
 		public static IntPtr _sgsNullObjectInterface = AllocInterface( new NI.ObjInterface(), "<nullObject>" );
 		public static Dictionary<IObjectBase, bool> _sgsOwnedObjects = new Dictionary<IObjectBase,bool>();
 		public static Dictionary<Type, SGSClassInfo> _sgsClassInfo = new Dictionary<Type,SGSClassInfo>();
+		public static Dictionary<Type, SGSClassInfo> _sgsStaticClassInfo = new Dictionary<Type,SGSClassInfo>();
+
 
 		public static IntPtr AllocInterface( NI.ObjInterface iftemplate, string name )
 		{
@@ -97,11 +120,12 @@ namespace SGScript
 
 			return info;
 		}
-		static Dictionary<Variable, SGSPropInfo> _ReadClassProps( Context ctx, Type type )
+		static Dictionary<Variable, SGSPropInfo> _ReadClassProps( Context ctx, Type type, bool needStatic )
 		{
 			Dictionary<Variable, SGSPropInfo> outprops = new Dictionary<Variable, SGSPropInfo>();
 
-			FieldInfo[] fields = type.GetFields( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance );
+			BindingFlags placementFlag = needStatic ? BindingFlags.Static : BindingFlags.Instance;
+			FieldInfo[] fields = type.GetFields( BindingFlags.Public | BindingFlags.NonPublic | placementFlag );
 			foreach( FieldInfo field in fields )
 			{
 				SGSPropInfo info = _GetPropFieldInfo( field, field.FieldType );
@@ -109,7 +133,7 @@ namespace SGScript
 					outprops.Add( ctx.Var( field.Name ), info );
 			}
 
-			PropertyInfo[] properties = type.GetProperties( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance );
+			PropertyInfo[] properties = type.GetProperties( BindingFlags.Public | BindingFlags.NonPublic | placementFlag );
 			foreach( PropertyInfo prop in properties )
 			{
 				SGSPropInfo info = _GetPropFieldInfo( prop, prop.PropertyType );
@@ -147,12 +171,33 @@ namespace SGScript
 			cinfo = new SGSClassInfo()
 			{
 				iface = AllocInterface( oi, type.Name ),
-				props = _ReadClassProps( ctx, type ),
+				props = _ReadClassProps( ctx, type, false ),
 			};
 			_sgsClassInfo.Add( type, cinfo );
 			return cinfo;
 		}
 
+		public static SGSClassInfo GetStaticClassInfo( Context ctx, Type type )
+		{
+			SGSClassInfo cinfo;
+			if( _sgsStaticClassInfo.TryGetValue( type, out cinfo ) )
+				return cinfo;
+
+			NI.ObjInterface oi = new NI.ObjInterface()
+			{
+				getindex = new NI.OC_Self( _sgsGetIndex ),
+				setindex = new NI.OC_Self( _sgsSetIndex ),
+			};
+
+			cinfo = new SGSClassInfo()
+			{
+				iface = AllocInterface( oi, type.Name + "[static]" ),
+				props = _ReadClassProps( ctx, type, true ),
+			};
+			_sgsStaticClassInfo.Add( type, cinfo );
+			return cinfo;
+		}
+		
 		public static Variable CreateStaticDict( Context ctx, Type type )
 		{
 			int items = 0;
@@ -175,13 +220,24 @@ namespace SGScript
 
 
 		public IntPtr _sgsObject = IntPtr.Zero;
-		public Engine _sgsEngine;
+		public Variable backingStore = null;
 
-		public IObjectBase( Context c, bool skipInit = false )
+		public IObjectBase( Context c, bool skipInit = false ) : base( c )
 		{
-			_sgsEngine = c.GetEngine();
 			if( !skipInit )
 				AllocClassObject();
+		}
+		public override void Release()
+		{
+			if( _sgsObject != IntPtr.Zero )
+			{
+				FreeClassObject();
+				_sgsObject = IntPtr.Zero;
+			}
+		}
+		public Variable GetVariable()
+		{
+			return _sgsEngine.Var( this );
 		}
 
 		public static IObjectBase GetFromVarObj( IntPtr varobj )
@@ -195,7 +251,7 @@ namespace SGScript
 		}
 
 		// returns the cached interface for the current class
-		public IntPtr GetClassInterface()
+		public virtual IntPtr GetClassInterface()
 		{
 			return GetClassInfo( _sgsEngine, GetType() ).iface;
 		}
@@ -239,12 +295,20 @@ namespace SGScript
 		}
 
 		// callback implementation helpers
-		public Variable sgsGetPropertyByName( Variable key )
+		public Variable sgsGetPropertyByName( Variable key, bool isprop )
 		{
 			SGSClassInfo cinfo = GetClassInfo( _sgsEngine, GetType() );
 			SGSPropInfo propinfo;
 			if( !cinfo.props.TryGetValue( key, out propinfo ) )
+			{
+				if( backingStore != null )
+				{
+					Variable var = backingStore.GetSubItem( key, isprop );
+					if( var.notNull )
+						return var;
+				}
 				return null;
+			}
 			if( !propinfo.canRead )
 				return null;
 
@@ -293,7 +357,7 @@ namespace SGScript
 				h.Free();
 			return obj;
 		}
-		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj, true ); return obj._intOnDestroy(); }
+		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj, true ); if( obj != null ) return obj._intOnDestroy(); else return NI.SUCCESS; }
 		public static int _sgsGCMark( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnGCMark(); }
 		public static int _sgsGetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnGetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
 		public static int _sgsSetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnSetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
@@ -360,7 +424,7 @@ namespace SGScript
 		[HideMethod]
 		public virtual void OnGCMark(){}
 		[HideMethod]
-		public virtual Variable OnGetIndex( Context ctx, Variable key, bool isprop ){ return sgsGetPropertyByName( key ); }
+		public virtual Variable OnGetIndex( Context ctx, Variable key, bool isprop ){ return sgsGetPropertyByName( key, isprop ); }
 		[HideMethod]
 		public virtual bool OnSetIndex( Context ctx, Variable key, Variable val, bool isprop ){ return sgsSetPropertyByName( key, ctx, 1 ); }
 		[HideMethod]
@@ -383,6 +447,26 @@ namespace SGScript
 	public abstract class IObject : IObjectBase
 	{
 		public IObject( Context c, bool skipInit = false ) : base( c, skipInit ){}
+	}
+
+	// .NET Object interface wrapper
+	public class DNMetaObject : IObjectBase
+	{
+		public SGSClassInfo staticInfo;
+		public Type targetType;
+
+		public DNMetaObject( Context c, Type t ) : base( c, true )
+		{
+			targetType = t;
+			staticInfo = GetStaticClassInfo( c, t );
+			backingStore = CreateStaticDict( c, t );
+			AllocClassObject();
+		}
+
+		public override IntPtr GetClassInterface()
+		{
+			return GetStaticClassInfo( _sgsEngine, targetType ).iface;
+		}
 	}
 
 	// .NET Method wrapper
@@ -454,30 +538,27 @@ namespace SGScript
 
 
 	// SGScript variable handle
-	public class Variable : IDisposable
+	public class Variable : ISGSBase
 	{
 		public NI.Variable var;
-		public Engine ctx;
+		public Engine ctx { get { return _sgsEngine; } }
 		
-		public Variable( Context c )
+		public Variable( Context c ) : base( c )
 		{
-			ctx = c.GetEngine();
 			var = NI.MakeNull();
 		}
-		public Variable( Context c, NI.Variable v )
+		public Variable( Context c, NI.Variable v ) : base( c )
 		{
 			var = v;
-			ctx = c.GetEngine();
 			Acquire();
-		}
-		
-		public virtual void Dispose()
-		{
-			Release();
 		}
 
 		public void Acquire(){ NI.Acquire( ctx.ctx, var ); }
-		public void Release(){ NI.Release( ctx.ctx, ref var ); }
+		public override void Release()
+		{
+			if( ctx.ctx != IntPtr.Zero && var.type != VarType.Null )
+				NI.Release( ctx.ctx, ref var );
+		}
 
 		public VarType type { get { return var.type; } }
 		public bool isNull { get { return var.type == VarType.Null; } }

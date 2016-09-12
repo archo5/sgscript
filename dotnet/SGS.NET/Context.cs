@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Reflection;
 
 namespace SGScript
 {
@@ -42,25 +44,25 @@ namespace SGScript
 		Variable GetVariable( Context ctx );
 	}
 
-	public class Context : IDisposable
+	public class Context : ISGSBase
 	{
 		public IntPtr ctx = IntPtr.Zero;
 		
-		public Context()
-		{
-		}
-		public Context( IntPtr c )
+		public Context( IntPtr c ) : base( PartiallyConstructed.Value )
 		{
 			ctx = c;
 			Acquire();
-		}
-
-		public virtual void Dispose()
-		{
-			Release();
+			if( this is Engine )
+				_sgsEngine = (Engine) this;
+			else
+			{
+				_sgsEngine = GetEngine();
+				_sgsEngine._RegisterObj( this );
+			}
 		}
 
 		// = root context
+		public bool IsEngine(){ return NI.RootContext( ctx ) == ctx; }
 		public Engine GetEngine(){ return new Engine( NI.RootContext( ctx ) ); }
 
 		public int TryExec( string str ){ return NI.Exec( ctx, str ); }
@@ -98,7 +100,7 @@ namespace SGScript
 			var.data.T = ctx;
 			NI.Acquire( ctx, var );
 		}
-		public void Release()
+		public override void Release()
 		{
 			if( ctx != IntPtr.Zero )
 			{
@@ -406,14 +408,45 @@ namespace SGScript
 
 	public class Engine : Context
 	{
-		public Engine()
+		struct Nothing {};
+		Dictionary<WeakReference, Nothing> _objRefs = new Dictionary<WeakReference, Nothing>();
+		public Dictionary<Type, DNMetaObject> _metaObjects = new Dictionary<Type,DNMetaObject>();
+
+		public Engine() : base( NI.CreateEngine() )
 		{
-			ctx = NI.CreateEngine();
 		}
-		public Engine( IMemory mem )
+		public Engine( IMemory mem ) : base( NI.CreateEngineExt( new NI.MemFunc( IMemory._MemFunc ), mem ) )
 		{
-			ctx = NI.CreateEngineExt( new NI.MemFunc( IMemory._MemFunc ), mem );
 		}
 		public Engine( IntPtr ctx ) : base( ctx ){}
+		public override void Release()
+		{
+			foreach( KeyValuePair<WeakReference, Nothing> kvp in _objRefs )
+			{
+				IDisposable d = ((IDisposable) kvp.Key.Target);
+				if( d != null )
+					d.Dispose();
+			}
+			base.Release();
+		}
+
+		public DNMetaObject _GetMetaObject( Type t )
+		{
+			DNMetaObject dnmo;
+			if( _metaObjects.TryGetValue( t, out dnmo ) )
+				return dnmo;
+
+			dnmo = new DNMetaObject( this, t );
+			_metaObjects.Add( t, dnmo );
+			return dnmo;
+		}
+		public void _RegisterObj( ISGSBase obj )
+		{
+			_objRefs.Add( new WeakReference( obj ), new Nothing() );
+		}
+		public void _UnregisterObj( ISGSBase obj )
+		{
+			_objRefs.Remove( new WeakReference( obj ) );
+		}
 	}
 }
