@@ -609,18 +609,18 @@ namespace APITest
 			engine.Pop( 1 );
 			
 			Assert( engine.Exec( "function this2string(){ return tostring(this); }" ), 0 );
-			Assert( engine.XThisCall( "this2string", engine.GetGlobal( "dumpvar" ) ), 1 );
+			Assert( engine.XThisCall( engine.GetGlobal( "this2string" ), engine.GetGlobal( "dumpvar" ) ), 1 );
 			Assert( engine.StackItem( -1 ).GetString(), "C function" );
 			engine.Pop( 1 );
 			
 			Assert( engine.ACall( "dumpvar", "roundtrip" )[0], "string [9] \"roundtrip\"\n" );
-			Assert( engine.AThisCall( "this2string", "roundtrip" )[0], "roundtrip" );
+			Assert( engine.AThisCall( engine.GetGlobal( "this2string" ), "roundtrip" )[0], "roundtrip" );
 			
 			Assert( engine.OCall( "dumpvar", "roundtrip" ), "string [9] \"roundtrip\"\n" );
-			Assert( engine.OThisCall( "this2string", "roundtrip" ), "roundtrip" );
+			Assert( engine.OThisCall( engine.GetGlobal( "this2string" ), "roundtrip" ), "roundtrip" );
 			
 			Assert( engine.Call<string>( "dumpvar", "roundtrip" ), "string [9] \"roundtrip\"\n" );
-			Assert( engine.ThisCall<string>( "this2string", "roundtrip" ), "roundtrip" );
+			Assert( engine.ThisCall<string>( engine.GetGlobal( "this2string" ), "roundtrip" ), "roundtrip" );
 			
 			engine.Release();
 		}
@@ -766,7 +766,24 @@ namespace APITest
 
 			// test static (meta-)object
 			Variable movar = engine._GetMetaObject( typeof(FullObject1) ).GetVariable();
+			AssertVar( movar, obj1var.GetMetaObj() );
 			Assert( movar.GetProp( "_useProp3" ).ConvertToString(), "SGScript.DNMethod" );
+			Assert( movar.GetProp( "pfxstr" ).GetString(), "PFX:" );
+
+			// test instance meta object lookup
+			Assert( obj1var.GetProp( "_useProp3" ).ConvertToString(), "SGScript.DNMethod" );
+			Assert( obj1var.GetProp( "pfxstr" ).GetString(), "PFX:" );
+			Assert( obj1var.GetMetaObj().SetProp( "pfxstr", engine.Var( "[PFX]:" ) ), true );
+			Assert( obj1var.GetMetaObj().GetProp( "pfxstr" ).GetString(), "[PFX]:" );
+			Assert( obj1var.GetProp( "pfxstr" ).GetString(), "[PFX]:" );
+
+			// register type
+			engine.SetGlobal( "FullObject1", engine._GetMetaObject( typeof(FullObject1) ).GetVariable() );
+
+			// test extension method
+			Assert( engine.Exec( "function FullObject1.customMethod( txt ){ return this.pfxstr .. txt; }" ), NI.SUCCESS );
+			AssertN( obj1var.GetMetaObj().GetProp( "customMethod" ), null );
+			Assert( engine.ThisCall<string>( "customMethod", obj1var, "cmTest" ), "[PFX]:cmTest" );
 			
 			engine.Release();
 		}

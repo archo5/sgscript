@@ -251,9 +251,18 @@ namespace SGScript
 		}
 
 		// returns the cached interface for the current class
-		public virtual IntPtr GetClassInterface()
+		public virtual SGSClassInfo GetClassInfo()
 		{
-			return GetClassInfo( _sgsEngine, GetType() ).iface;
+			return GetClassInfo( _sgsEngine, GetType() );
+		}
+		public IntPtr GetClassInterface()
+		{
+			return GetClassInfo().iface;
+		}
+		public virtual void _InitMetaObject()
+		{
+			DNMetaObject dnmo = _sgsEngine._GetMetaObject( GetType() );
+			NI.ObjSetMetaObj( _sgsEngine.ctx, _sgsObject, dnmo._sgsObject );
 		}
 		public void AllocClassObject()
 		{
@@ -264,6 +273,8 @@ namespace SGScript
 			NI.Variable var;
 			NI.CreateObject( _sgsEngine.ctx, GCHandle.ToIntPtr( h ), iface, out var );
 			_sgsObject = var.data.O;
+
+			_InitMetaObject();
 		}
 		public void FreeClassObject()
 		{
@@ -297,20 +308,14 @@ namespace SGScript
 		// callback implementation helpers
 		public Variable sgsGetPropertyByName( Variable key, bool isprop )
 		{
-			SGSClassInfo cinfo = GetClassInfo( _sgsEngine, GetType() );
+			SGSClassInfo cinfo = GetClassInfo();
 			SGSPropInfo propinfo;
-			if( !cinfo.props.TryGetValue( key, out propinfo ) )
+			if( !cinfo.props.TryGetValue( key, out propinfo ) || !propinfo.canRead )
 			{
 				if( backingStore != null )
-				{
-					Variable var = backingStore.GetSubItem( key, isprop );
-					if( var.notNull )
-						return var;
-				}
+					return backingStore.GetSubItem( key, isprop );
 				return null;
 			}
-			if( !propinfo.canRead )
-				return null;
 
 			object obj;
 			if( propinfo.info is FieldInfo )
@@ -319,14 +324,16 @@ namespace SGScript
 				obj = (propinfo.info as PropertyInfo).GetValue( this, null );
 			return _sgsEngine.ObjVar( obj );
 		}
-		public bool sgsSetPropertyByName( Variable key, Context ctx, int valueOnStack )
+		public bool sgsSetPropertyByName( Variable key, Context ctx, bool isprop, int valueOnStack )
 		{
-			SGSClassInfo cinfo = GetClassInfo( _sgsEngine, GetType() );
+			SGSClassInfo cinfo = GetClassInfo();
 			SGSPropInfo propinfo;
-			if( !cinfo.props.TryGetValue( key, out propinfo ) )
+			if( !cinfo.props.TryGetValue( key, out propinfo ) || !propinfo.canWrite )
+			{
+				if( backingStore != null )
+					return backingStore.SetSubItem( key, ctx.StackItem( valueOnStack ), isprop );
 				return false;
-			if( !propinfo.canWrite )
-				return false;
+			}
 			if( propinfo.parseVarMethod == null )
 				throw new SGSException( NI.ENOTFND, string.Format(
 					"Property cannot be set - no Context.ParseVar method exists that supports this type ({0})", propinfo.propType ) );
@@ -339,10 +346,10 @@ namespace SGScript
 				(propinfo.info as PropertyInfo).SetValue( this, args[0], null );
 			return true;
 		}
-		public bool sgsSetPropertyByName( Variable key, Variable val )
+		public bool sgsSetPropertyByName( Variable key, Variable val, bool isprop )
 		{
 			_sgsEngine.Push( val );
-			bool ret = sgsSetPropertyByName( key, _sgsEngine, _sgsEngine.StackSize() - 1 );
+			bool ret = sgsSetPropertyByName( key, _sgsEngine, isprop, _sgsEngine.StackSize() - 1 );
 			_sgsEngine.Pop( 1 );
 			return ret;
 		}
@@ -426,7 +433,7 @@ namespace SGScript
 		[HideMethod]
 		public virtual Variable OnGetIndex( Context ctx, Variable key, bool isprop ){ return sgsGetPropertyByName( key, isprop ); }
 		[HideMethod]
-		public virtual bool OnSetIndex( Context ctx, Variable key, Variable val, bool isprop ){ return sgsSetPropertyByName( key, ctx, 1 ); }
+		public virtual bool OnSetIndex( Context ctx, Variable key, Variable val, bool isprop ){ return sgsSetPropertyByName( key, ctx, isprop, 1 ); }
 		[HideMethod]
 		public virtual bool ConvertToBool(){ return true; }
 		[HideMethod]
@@ -462,11 +469,12 @@ namespace SGScript
 			backingStore = CreateStaticDict( c, t );
 			AllocClassObject();
 		}
-
-		public override IntPtr GetClassInterface()
+		
+		public override SGSClassInfo GetClassInfo()
 		{
-			return GetStaticClassInfo( _sgsEngine, targetType ).iface;
+			return GetStaticClassInfo( _sgsEngine, targetType );
 		}
+		public override void _InitMetaObject(){} // no meta object for meta objects
 	}
 
 	// .NET Method wrapper
@@ -499,6 +507,8 @@ namespace SGScript
 				parseVarArgs[ i ] = FindParserForType( param.ParameterType, "argument " + i, thisMethodInfo.ToString() );
 			}
 		}
+		
+		public override void _InitMetaObject(){} // no meta object for functions
 
 		public override int OnCall( Context ctx )
 		{
@@ -506,7 +516,7 @@ namespace SGScript
 			if( !gotthis && !thisMethodInfo.IsStatic )
 			{
 				// if 'this' was not passed but the method is not static, error
-				return -1; // TODO sgs_Msg
+				return NI.EINVAL; // TODO sgs_Msg?
 			}
 
 			object thisvar = null;
@@ -583,6 +593,13 @@ namespace SGScript
 			else
 				return null;
 		}
+		public Variable GetMetaObj()
+		{
+			if( var.type == VarType.Object )
+				return _sgsEngine.SGSObjectVar( NI.ObjGetMetaObj( var.data.O ) );
+			else
+				return _sgsEngine.NullVar();
+		}
 
 		public Variable GetSubItem( Variable key, bool isprop ){ return ctx.GetIndex( this, key, isprop ); }
 		public Variable GetSubItem( string key, bool isprop ){ return ctx.GetIndex( this, ctx.Var( key ), isprop ); }
@@ -608,7 +625,7 @@ namespace SGScript
 				case VarType.Int: return string.Format( "SGScript.Variable(int [{0}])", var.data.I );
 				case VarType.Real: return string.Format( "SGScript.Variable(real [{0}])", var.data.R );
 				case VarType.String: string s = GetString(); return string.Format( "SGScript.Variable(string [{0}] \"{1}\")", s.Length, s );
-				default: return string.Format( "SGScript.Variable(typeid={0})", (int) var.type );
+				default: return string.Format( "SGScript.Variable(typeid={0} ptr={1})", (int) var.type, var.data.P );
 			}
 		}
 		public override bool Equals( object obj )

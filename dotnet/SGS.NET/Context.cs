@@ -63,7 +63,7 @@ namespace SGScript
 
 		// = root context
 		public bool IsEngine(){ return NI.RootContext( ctx ) == ctx; }
-		public Engine GetEngine(){ return new Engine( NI.RootContext( ctx ) ); }
+		public Engine GetEngine(){ return Engine.GetFromCtx( NI.RootContext( ctx ) ); }
 
 		public int TryExec( string str ){ return NI.Exec( ctx, str ); }
 		public int TryEval( string str ){ return NI.Eval( ctx, str ); }
@@ -157,6 +157,16 @@ namespace SGScript
 			{
 				var.type = VarType.Thread;
 				var.data.T = v.ctx;
+			}
+			return new Variable( this, var );
+		}
+		public Variable SGSObjectVar( IntPtr v )
+		{
+			NI.Variable var = NI.MakeNull();
+			if( v != IntPtr.Zero )
+			{
+				var.type = VarType.Object;
+				var.data.O = v;
 			}
 			return new Variable( this, var );
 		}
@@ -257,7 +267,11 @@ namespace SGScript
 				case VarType.String: return v.GetString();
 				case VarType.Func:
 				case VarType.CFunc: return v;
-				case VarType.Object: return v; // TODO IObject CHECK
+				case VarType.Object:
+					IObjectBase iob = IObjectBase.GetFromVarObj( v.var.data.O );
+					if( iob != null )
+						return iob;
+					return v;
 				case VarType.Ptr: return v.var.data.P;
 				case VarType.Thread: return new Context( v.var.data.T );
 				default: throw new SGSException( NI.EINVAL, string.Format( "Bad type ID detected while parsing item {0}", item ) );
@@ -334,7 +348,7 @@ namespace SGScript
 
 		// various simple call functions
 		// - X[This]Call: arguments are left on stack, count is returned
-		public int XThisCall( string func, object thisvar, params object[] args ){ return XThisCall( GetGlobal( func ), thisvar, args ); }
+		public int XThisCall( string func, Variable thisvar, params object[] args ){ return XThisCall( thisvar.GetProp( func ), thisvar, args ); }
 		public int XThisCall( Variable func, object thisvar, params object[] args )
 		{
 			Push( func );
@@ -353,17 +367,17 @@ namespace SGScript
 			return XFCall( args.Length );
 		}
 		// - A[This]Call: all arguments are returned
-		public object[] AThisCall( string func, object thisvar, params object[] args ){ return RetrieveReturnValues( XThisCall( func, thisvar, args ) ); }
+		public object[] AThisCall( string func, Variable thisvar, params object[] args ){ return RetrieveReturnValues( XThisCall( func, thisvar, args ) ); }
 		public object[] AThisCall( Variable func, object thisvar, params object[] args ){ return RetrieveReturnValues( XThisCall( func, thisvar, args ) ); }
 		public object[] ACall( string func, params object[] args ){ return RetrieveReturnValues( XCall( func, args ) ); }
 		public object[] ACall( Variable func, params object[] args ){ return RetrieveReturnValues( XCall( func, args ) ); }
 		// - O[This]Call: first argument (object) or null is returned
-		public object OThisCall( string func, object thisvar, params object[] args ){ return RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
+		public object OThisCall( string func, Variable thisvar, params object[] args ){ return RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
 		public object OThisCall( Variable func, object thisvar, params object[] args ){ return RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
 		public object OCall( string func, params object[] args ){ return RetrieveOneReturnValue( XCall( func, args ) ); }
 		public object OCall( Variable func, params object[] args ){ return RetrieveOneReturnValue( XCall( func, args ) ); }
 		// - [This]Call: first argument (converted to specified type) or null is returned
-		public T ThisCall<T>( string func, object thisvar, params object[] args ){ return (T) RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
+		public T ThisCall<T>( string func, Variable thisvar, params object[] args ){ return (T) RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
 		public T ThisCall<T>( Variable func, object thisvar, params object[] args ){ return (T) RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
 		public T Call<T>( string func, params object[] args ){ return (T) RetrieveOneReturnValue( XCall( func, args ) ); }
 		public T Call<T>( Variable func, params object[] args ){ return (T) RetrieveOneReturnValue( XCall( func, args ) ); }
@@ -410,15 +424,22 @@ namespace SGScript
 	{
 		struct Nothing {};
 		Dictionary<WeakReference, Nothing> _objRefs = new Dictionary<WeakReference, Nothing>();
-		public Dictionary<Type, DNMetaObject> _metaObjects = new Dictionary<Type,DNMetaObject>();
+		public Dictionary<Type, DNMetaObject> _metaObjects = new Dictionary<Type, DNMetaObject>();
+		public static Dictionary<IntPtr, Engine> _engines = new Dictionary<IntPtr, Engine>();
 
-		public Engine() : base( NI.CreateEngine() )
+		public static Engine GetFromCtx( IntPtr ctx )
 		{
+			Engine engine = null;
+			_engines.TryGetValue( ctx, out engine );
+			return engine;
 		}
-		public Engine( IMemory mem ) : base( NI.CreateEngineExt( new NI.MemFunc( IMemory._MemFunc ), mem ) )
+
+		Engine( IntPtr c ) : base( c )
 		{
+			_engines.Add( c, this );
 		}
-		public Engine( IntPtr ctx ) : base( ctx ){}
+		public Engine() : this( NI.CreateEngine() ){}
+		public Engine( IMemory mem ) : this( NI.CreateEngineExt( new NI.MemFunc( IMemory._MemFunc ), mem ) ){}
 		public override void Release()
 		{
 			foreach( KeyValuePair<WeakReference, Nothing> kvp in _objRefs )
@@ -427,6 +448,7 @@ namespace SGScript
 				if( d != null )
 					d.Dispose();
 			}
+			_engines.Remove( ctx );
 			base.Release();
 		}
 

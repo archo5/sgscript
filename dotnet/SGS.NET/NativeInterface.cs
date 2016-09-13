@@ -481,8 +481,6 @@ namespace SGScript
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_StackItem", CallingConvention = CallingConvention.Cdecl )]
 		public static extern Variable StackItem( IntPtr ctx, Int32 item );
 
-		// TODO GetStackItem
-
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_ItemType", CallingConvention = CallingConvention.Cdecl )]
 		public static extern VarType ItemType( IntPtr ctx, Int32 item );
 
@@ -529,6 +527,12 @@ namespace SGScript
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_ObjGCMark", CallingConvention = CallingConvention.Cdecl )]
 		public static extern void ObjGCMark( IntPtr ctx, IntPtr obj );
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ObjSetMetaObj", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void ObjSetMetaObj( IntPtr ctx, IntPtr obj, IntPtr metaobj );
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ObjGetMetaObj", CallingConvention = CallingConvention.Cdecl )]
+		public static extern IntPtr ObjGetMetaObj( IntPtr obj );
 
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetBoolP", CallingConvention = CallingConvention.Cdecl )]
