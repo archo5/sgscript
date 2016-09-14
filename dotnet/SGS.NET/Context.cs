@@ -136,6 +136,12 @@ namespace SGScript
 			if( numitems % 2 != 0 )
 				throw new SGSException( NI.EINVAL, string.Format( "{0}({1}) failed - item count cannot be an odd number", funcname, numitems ) );
 		}
+		void _AnyCheck( string funcname )
+		{
+			int size = StackSize();
+			if( size == 0 )
+				throw new SGSException( NI.EBOUNDS, string.Format( "{0} failed with stack size = 0 - expected at least one variable on stack", funcname ) );
+		}
 
 		public Variable NullVar(){ return new Variable( this, NI.MakeNull() ); }
 		public Variable Var( bool v ){ return new Variable( this, NI.MakeBool( v ) ); }
@@ -149,6 +155,7 @@ namespace SGScript
 		public Variable Var( IntPtr v ){ return new Variable( this, NI.MakePtr( v ) ); }
 		public Variable Var( NI.Variable v, bool acquire = true ){ return new Variable( this, v, acquire ); }
 		public Variable Var( string v ){ if( v == null ) return NullVar(); NI.Variable var; NI.InitStringBuf( ctx, out var, v ); return new Variable( this, var, false ); }
+		public Variable Var( byte[] v ){ if( v == null ) return NullVar(); NI.Variable var; NI.InitStringBufB( ctx, out var, v ); return new Variable( this, var, false ); }
 		public Variable Var( IObjectBase v )
 		{
 			NI.Variable var = NI.MakeNull();
@@ -194,6 +201,7 @@ namespace SGScript
 			else if( o is float )  return Var( (float) o );
 			else if( o is double ) return Var( (double) o );
 			else if( o is string ) return Var( (string) o );
+			else if( o is byte[] ) return Var( (byte[]) o );
 			else if( o is IntPtr ) return Var( (IntPtr) o );
 			else if( o is IObject ) return Var( (IObject) o );
 			else if( o is Context ) return Var( (Context) o );
@@ -238,6 +246,7 @@ namespace SGScript
 		public void Push( double? v ){ if( v.HasValue == false ) PushNull(); else NI.PushReal( ctx, v.Value ); }
 		public void Push( IntPtr? p ){ if( p.HasValue == false ) PushNull(); else NI.PushPtr( ctx, p.Value ); }
 		public void Push( string str ){ if( str == null ) PushNull(); else NI.PushStringBuf( ctx, str, str.Length ); }
+		public void Push( byte[] buf ){ if( buf == null ) PushNull(); else NI.PushStringBufB( ctx, buf, buf.Length ); }
 		public void Push( IObjectBase o ){ if( o == null ) PushNull(); else NI.PushObjectPtr( ctx, o._sgsObject ); }
 		public void Push( Context c ){ if( c == null ) PushNull(); else NI.PushThreadPtr( ctx, c.ctx ); }
 		public void Push( IGetVariable p ){ if( p == null ) PushNull(); else Push( p.GetVariable( this ) ); }
@@ -328,6 +337,13 @@ namespace SGScript
 		public Variable OptStackItem( int item ){ return new Variable( this, NI.OptStackItem( ctx, item ) ); }
 		public Variable StackItem( int item ){ return new Variable( this, NI.StackItem( ctx, item ) ); }
 		public VarType ItemType( Int32 item ){ return NI.ItemType( ctx, item ); }
+		public Variable TakeTopmostVar()
+		{
+			_AnyCheck( "TakeTopmostVar" );
+			Variable topmost = StackItem( -1 );
+			Pop( 1 );
+			return topmost;
+		}
 
 		public int XFCall( int args = 0, bool gotthis = false ){ _SizeCheck( args + ( gotthis ? 2 : 1 ), "[X]FCall" ); return NI.XFCall( ctx, args, gotthis ? 1 : 0 ); }
 		public int FCall( int args = 0, int expect = 0, bool gotthis = false ){ return NI.AdjustStack( ctx, expect, XFCall( args, gotthis ) ); }
@@ -391,13 +407,13 @@ namespace SGScript
 		public T Call<T>( string func, params object[] args ){ return (T) RetrieveOneReturnValue( XCall( func, args ) ); }
 		public T Call<T>( Variable func, params object[] args ){ return (T) RetrieveOneReturnValue( XCall( func, args ) ); }
 
+		// C call utility wrappers
 		public bool Method(){ return NI.Method( ctx ) != 0; }
 		public bool HideThis(){ return NI.HideThis( ctx ) != 0; }
 		public bool ForceHideThis(){ return NI.ForceHideThis( ctx ) != 0; }
 		public int ObjectArg(){ return NI.ObjectArg( ctx ); }
 
-		public void GCExecute(){ NI.GCExecute( ctx ); }
-		
+		// indexing
 		public Variable GetIndex( Variable obj, Variable idx, bool isprop = false )
 		{
 			NI.Variable var;
@@ -427,6 +443,53 @@ namespace SGScript
 		public bool SetGlobal( Variable key, Variable value ){ return NI.SetGlobal( ctx, key.var, value.var ) != 0; }
 		public bool PushGlobal( string key ){ return NI.PushGlobalByName( ctx, key ) != 0; }
 		public void SetGlobal( string key, Variable value ){ NI.SetGlobalByName( ctx, key, value.var ); }
+
+		// serialization interfaces
+		public void SerializePush( Variable v, int mode = 0 )
+		{
+			if( mode < 0 || mode > 3 )
+				throw new SGSException( NI.EINVAL, string.Format( "Invalid serialization mode ({0})", mode ) );
+			NI.SerializeExt( ctx, v.var, mode );
+		}
+		public byte[] Serialize( Variable v, int mode = 0 ){ SerializePush( v, mode ); return TakeTopmostVar().GetByteArray(); }
+		public void UnserializePushV( Variable v, int mode = 0 )
+		{
+			if( mode < 0 || mode > 3 )
+				throw new SGSException( NI.EINVAL, string.Format( "Invalid serialization mode ({0})", mode ) );
+			if( NI.UnserializeExt( ctx, v.var, mode ) == 0 )
+				throw new SGSException( NI.EINPROC, "Failed to unserialize data" );
+		}
+		public void UnserializePush( byte[] data, int mode = 0 )
+		{
+			UnserializePushV( Var( data ), mode );
+		}
+		public Variable Unserialize( byte[] data, int mode = 0 ){ UnserializePush( data, mode ); return TakeTopmostVar(); }
+
+		// utility function wrappers
+		public void GCExecute(){ NI.GCExecute( ctx ); }
+		// - typeof string
+		public void TypeOfPush( Variable v ){ NI.TypeOf( ctx, v.var ); }
+		public Variable TypeOfV( Variable v ){ TypeOfPush( v ); return TakeTopmostVar(); }
+		public string TypeOf( Variable v ){ TypeOfPush( v ); return TakeTopmostVar().GetString(); }
+		// - dumpvar string
+		public void DumpVarPush( Variable v, int maxdepth = 5 ){ NI.DumpVar( ctx, v.var ); }
+		public Variable DumpVarV( Variable v, int maxdepth = 5 ){ DumpVarPush( v, maxdepth ); return TakeTopmostVar(); }
+		public string DumpVar( Variable v, int maxdepth = 5 ){ DumpVarPush( v, maxdepth ); return TakeTopmostVar().GetString(); }
+		// - pad string
+		public void PadStringOnStack(){ NI.PadString( ctx ); }
+		public Variable PadString( Variable v ){ Push( v ); PadStringOnStack(); return TakeTopmostVar(); }
+		public string PadString( string s ){ Push( s ); PadStringOnStack(); return TakeTopmostVar().GetString(); }
+		// - safe-for-printing string
+		public void ToPrintSafeStringOnStack(){ NI.ToPrintSafeString( ctx ); }
+		public Variable ToPrintSafeString( Variable v ){ Push( v ); ToPrintSafeStringOnStack(); return TakeTopmostVar(); }
+		public string ToPrintSafeString( string s ){ Push( s ); ToPrintSafeStringOnStack(); return TakeTopmostVar().GetString(); }
+		// - string concatenation
+		public void StringConcatOnStack( int count ){ NI.StringConcat( ctx, count ); }
+		public Variable StringConcatV( params object[] args ){ foreach( object arg in args ){ PushObj( arg ); } StringConcatOnStack( args.Length ); return TakeTopmostVar(); }
+		public string StringConcat( params object[] args ){ return StringConcatV( args ).GetString(); }
+		// - cloning
+		public void CloneItemAndPushOnStack( Variable v ){ NI.CloneItem( ctx, v.var ); }
+		public Variable CloneItem( Variable v ){ CloneItemAndPushOnStack( v ); return TakeTopmostVar(); }
 	}
 
 	public class Engine : Context

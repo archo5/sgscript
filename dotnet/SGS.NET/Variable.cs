@@ -591,6 +591,7 @@ namespace SGScript
 			return s;
 		}
 		public string GetString(){ return NI.GetString( var ); }
+		public byte[] GetByteArray(){ return NI.GetByteArray( var ); }
 		public string str { get { return GetString(); } }
 		public IObjectBase GetIObjectBase()
 		{
@@ -606,6 +607,41 @@ namespace SGScript
 			else
 				return _sgsEngine.NullVar();
 		}
+
+		public Variable GetIterator()
+		{
+			NI.Variable iter;
+			if( !NI.GetIterator( _sgsEngine.ctx, var, out iter ) )
+				throw new SGSException( NI.ENOTSUP, "Object does not support iterators" );
+			return _sgsEngine.Var( iter, false );
+		}
+		public bool IterAdvance()
+		{
+			return NI.IterAdvance( _sgsEngine.ctx, var ) != 0;
+		}
+		public Variable IterGetKey()
+		{
+			NI.Variable outvar;
+			NI.IterGetKey( _sgsEngine.ctx, var, out outvar );
+			return _sgsEngine.Var( outvar, false );
+		}
+		public Variable IterGetValue()
+		{
+			NI.Variable outvar;
+			NI.IterGetValue( _sgsEngine.ctx, var, out outvar );
+			return _sgsEngine.Var( outvar, false );
+		}
+		public void IterGetKeyValue( out Variable key, out Variable val )
+		{
+			NI.Variable outkey, outval;
+			NI.IterGetData( _sgsEngine.ctx, var, out outkey, out outval );
+			key = _sgsEngine.Var( outkey, false );
+			val = _sgsEngine.Var( outval, false );
+		}
+
+		public string TypeOf(){ return _sgsEngine.TypeOf( this ); }
+		public Variable Clone(){ return _sgsEngine.CloneItem( this ); }
+		public string Dump( int maxdepth = 5 ){ return _sgsEngine.DumpVar( this ); }
 
 		public Variable GetSubItem( Variable key, bool isprop ){ return ctx.GetIndex( this, key, isprop ); }
 		public Variable GetSubItem( string key, bool isprop ){ return ctx.GetIndex( this, ctx.Var( key ), isprop ); }

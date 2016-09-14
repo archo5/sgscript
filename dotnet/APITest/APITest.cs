@@ -13,6 +13,7 @@ namespace APITest
 		{
 			Console.WriteLine( "SGS.NET API tests" );
 
+			CoreFeatures();
 			CreateAndDestroy();
 			ArrayMem();
 			Stack101();
@@ -31,8 +32,7 @@ namespace APITest
 			Iterators();
 			ForkState();
 			YieldResume();
-
-			CoreFeatures();
+			MiscAPIs();
 			CSharpObjects();
 
 			Console.WriteLine( "\n\n--- Testing finished! ---" );
@@ -75,6 +75,14 @@ namespace APITest
 				Error( string.Format( "\"{0}\" equals \"{1}\"", a, b ), new StackTrace(true) );
 			}
 		}
+		static void AssertVarN( Variable a, Variable b )
+		{
+			NoteTest();
+			if( a == b )
+			{
+				Error( string.Format( "\"{0}\" equals \"{1}\"", a, b ), new StackTrace(true) );
+			}
+		}
 		static void AssertC( bool cond, string test )
 		{
 			NoteTest();
@@ -90,6 +98,24 @@ namespace APITest
 		}
 
 		// TESTS
+		static void CoreFeatures()
+		{
+			Console.Write( "\nCore feature tests " );
+			Engine engine = new Engine();
+
+			Variable va = engine.NullVar(), vb = engine.NullVar(), vc = engine.Var( "test" );
+			Assert( va == vb, true );
+			Assert( va != vb, false );
+			Assert( va == vc, false );
+			Assert( va != vc, true );
+			Assert( va.isNull, true );
+			Assert( va.notNull, false );
+			Assert( vc.isNull, false );
+			Assert( vc.notNull, true );
+			
+			engine.Release();
+		}
+		
 		static void CreateAndDestroy()
 		{
 			Console.Write( "\nCreate and destroy " );
@@ -651,6 +677,42 @@ namespace APITest
 		static void Iterators()
 		{
 			Console.Write( "\nIterators " );
+			Engine engine = new Engine();
+
+			// test data
+			engine.Push( true );
+			engine.Push( 42 );
+			engine.Push( "wat" );
+			Variable arr = engine.ArrayVar( 3 );
+
+			Variable iter = arr.GetIterator();
+			// key/value at 0
+			Assert( iter.IterAdvance(), true );
+			AssertVar( iter.IterGetKey(), engine.Var( 0 ) );
+			AssertVar( iter.IterGetValue(), engine.Var( true ) );
+			// key/value at 1
+			Assert( iter.IterAdvance(), true );
+			Variable ik, iv;
+			iter.IterGetKeyValue( out ik, out iv );
+			AssertVar( ik, engine.Var( 1 ) );
+			AssertVar( iv, engine.Var( 42 ) );
+			// key/value at 2
+			Assert( iter.IterAdvance(), true );
+			AssertVar( iter.IterGetKey(), engine.Var( 2 ) );
+			AssertVar( iter.IterGetValue(), engine.Var( "wat" ) );
+			// end
+			Assert( iter.IterAdvance(), false );
+			Assert( iter.IterAdvance(), false );
+
+			try
+			{
+				NoteTest();
+				engine.Var( 5 ).GetIterator();
+				ExpectUnreached();
+			}
+			catch( SGSException e ){ Assert( e.resultCode, NI.ENOTSUP ); }
+			
+			engine.Release();
 		}
 
 		static void ForkState()
@@ -714,24 +776,36 @@ namespace APITest
 			engine.Release();
 		}
 
-		static void CoreFeatures()
+		static void MiscAPIs()
 		{
-			Console.Write( "\nCore feature tests " );
+			Console.Write( "\nMiscellaneous " );
 			Engine engine = new Engine();
+			
+			Variable fivevar = engine.Var( 5 );
+			Variable ovar = engine.ArrayVar( 0 );
+			Assert( fivevar.TypeOf(), "int" );
+			Assert( ovar.TypeOf(), "array" );
 
-			Variable va = engine.NullVar(), vb = engine.NullVar(), vc = engine.Var( "test" );
-			Assert( va == vb, true );
-			Assert( va != vb, false );
-			Assert( va == vc, false );
-			Assert( va != vc, true );
-			Assert( va.isNull, true );
-			Assert( va.notNull, false );
-			Assert( vc.isNull, false );
-			Assert( vc.notNull, true );
+			Assert( fivevar.Dump(), "int (5)" );
+			Assert( ovar.Dump(), "array (0)\n[\n]" );
+
+			Assert( engine.PadString( "A\nB" ), "A\n  B" );
+			Assert( engine.ToPrintSafeString( "A\nB" ), "A\\x0AB" );
+			Assert( engine.StringConcat( "a", fivevar, ovar ), "a5[]" );
+
+			Variable clovar = ovar.Clone();
+			AssertN( clovar, null );
+			AssertVarN( clovar, ovar );
+			
+			Variable odata = engine.Var( 5 );
+			byte[] sdata = engine.Serialize( odata );
+			AssertN( sdata, null );
+			Variable udata = engine.Unserialize( sdata );
+			AssertVar( udata, odata );
 			
 			engine.Release();
 		}
-		
+
 		public class EmptyObject : IObject
 		{
 			public EmptyObject( Context c ) : base( c ){}
