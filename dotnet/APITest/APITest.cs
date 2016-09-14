@@ -28,6 +28,10 @@ namespace APITest
 			FunctionCalls();
 			SimpleFunctionCalls();
 			ComplexGC();
+			Iterators();
+			ForkState();
+			YieldResume();
+
 			CoreFeatures();
 			CSharpObjects();
 
@@ -644,6 +648,72 @@ namespace APITest
 			engine.Release();
 		}
 
+		static void Iterators()
+		{
+			Console.Write( "\nIterators " );
+		}
+
+		static void ForkState()
+		{
+			Console.Write( "\nFork state " );
+			Engine engine = new Engine();
+			
+			// fork the state
+			Context f = engine.Fork( true );
+			Context p = engine.Fork( false );
+			AssertN( engine.ctx, f.ctx );
+			AssertN( engine.ctx, p.ctx );
+
+			// check state count
+			Assert( (int) engine.Stat( Stat.StateCount ), 3 );
+			Assert( (int) f.Stat( Stat.StateCount ), 3 );
+			Assert( (int) p.Stat( Stat.StateCount ), 3 );
+
+			f.Release();
+			Assert( (int) p.Stat( Stat.StateCount ), 2 );
+			p.Release();
+			Assert( (int) engine.Stat( Stat.StateCount ), 1 );
+			engine.Release();
+
+			// try running something on both
+			engine = new Engine();
+			f = engine.Fork( true );
+			p = engine.Fork( false );
+			string str =
+			"global o = { a = [ { b = {}, c = 5 }, { d = { e = {} }, f = [] } ], g = [] };" +
+			"o.a[0].parent = o; o.a[1].d.parent = o; o.a[1].d.e.parent = o.a[1].d;" +
+			"o.a[1].f.push(o); o.g.push( o.a[1].f ); o.a.push( o.a );";
+			engine.Exec( str );
+			f.Exec( str );
+			p.Exec( str );
+
+			f.Release();
+			p.Release();
+			engine.Release();
+		}
+
+		static void YieldResume()
+		{
+			Console.Write( "\nYield / resume " );
+			Engine engine = new Engine();
+
+			engine.Exec(
+				"global m0 = true;\n" +
+				"yield();\n" +
+				"global m1 = true;\n" );
+
+			// check if paused
+			Assert( engine.GetGlobal( "m0" ).GetBool(), true );
+			Assert( engine.GetGlobal( "m1" ), null );
+
+			// resume
+			Assert( engine.Resume(), true );
+			// check if done
+			Assert( engine.GetGlobal( "m1" ).GetBool(), true );
+			
+			engine.Release();
+		}
+
 		static void CoreFeatures()
 		{
 			Console.Write( "\nCore feature tests " );
@@ -658,6 +728,8 @@ namespace APITest
 			Assert( va.notNull, false );
 			Assert( vc.isNull, false );
 			Assert( vc.notNull, true );
+			
+			engine.Release();
 		}
 		
 		public class EmptyObject : IObject

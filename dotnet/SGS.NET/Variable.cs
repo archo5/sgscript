@@ -20,15 +20,20 @@ namespace SGScript
 	public abstract class ISGSBase : IDisposable
 	{
 		public Engine _sgsEngine;
+		public WeakReference _sgsWeakRef;
 		public enum PartiallyConstructed { Value };
 
 		public ISGSBase( Context c ) : this( c.GetEngine() ){}
 		public ISGSBase( Engine e )
 		{
 			_sgsEngine = e;
+			_sgsWeakRef = new WeakReference( this );
 			e._RegisterObj( this );
 		}
-		public ISGSBase( PartiallyConstructed pc ){}
+		public ISGSBase( PartiallyConstructed pc )
+		{
+			_sgsWeakRef = new WeakReference( this );
+		}
 		~ISGSBase(){ Dispose(); }
 		public abstract void Release();
 		public void Dispose()
@@ -557,10 +562,11 @@ namespace SGScript
 		{
 			var = NI.MakeNull();
 		}
-		public Variable( Context c, NI.Variable v ) : base( c )
+		public Variable( Context c, NI.Variable v, bool acquire = true ) : base( c )
 		{
 			var = v;
-			Acquire();
+			if( acquire )
+				Acquire();
 		}
 
 		public void Acquire(){ NI.Acquire( ctx.ctx, var ); }

@@ -48,10 +48,11 @@ namespace SGScript
 	{
 		public IntPtr ctx = IntPtr.Zero;
 		
-		public Context( IntPtr c ) : base( PartiallyConstructed.Value )
+		public Context( IntPtr c, bool acquire = true ) : base( PartiallyConstructed.Value )
 		{
 			ctx = c;
-			Acquire();
+			if( acquire )
+				Acquire();
 			if( this is Engine )
 				_sgsEngine = (Engine) this;
 			else
@@ -108,6 +109,14 @@ namespace SGScript
 				ctx = IntPtr.Zero;
 			}
 		}
+		public Context Fork( bool copy = false )
+		{
+			return new Context( NI.ForkState( ctx, copy ? 1 : 0 ), false );
+		}
+		public bool Resume()
+		{
+			return NI.ResumeState( ctx ) != 0;
+		}
 		
 		void _IndexCheck( int item, string funcname )
 		{
@@ -138,8 +147,8 @@ namespace SGScript
 		public Variable Var( UInt64 v ){ return new Variable( this, NI.MakeInt( (Int64) v ) ); }
 		public Variable Var( double v ){ return new Variable( this, NI.MakeReal( v ) ); }
 		public Variable Var( IntPtr v ){ return new Variable( this, NI.MakePtr( v ) ); }
-		public Variable Var( NI.Variable v ){ return new Variable( this, v ); }
-		public Variable Var( string v ){ if( v == null ) return NullVar(); NI.Variable var; NI.InitStringBuf( ctx, out var, v ); return new Variable( this, var ); }
+		public Variable Var( NI.Variable v, bool acquire = true ){ return new Variable( this, v, acquire ); }
+		public Variable Var( string v ){ if( v == null ) return NullVar(); NI.Variable var; NI.InitStringBuf( ctx, out var, v ); return new Variable( this, var, false ); }
 		public Variable Var( IObjectBase v )
 		{
 			NI.Variable var = NI.MakeNull();
@@ -394,7 +403,7 @@ namespace SGScript
 			NI.Variable var;
 			if( !NI.GetIndex( ctx, obj.var, idx.var, out var, isprop ) )
 				return null;
-			return Var( var );
+			return Var( var, false );
 		}
 		public bool SetIndex( Variable obj, Variable idx, Variable val, bool isprop = false ){ return NI.SetIndex( ctx, obj.var, idx.var, val.var, isprop ? 1 : 0 ) != 0; }
 		public bool PushIndex( Variable obj, Variable idx, bool isprop = false ){ return NI.PushIndex( ctx, obj.var, idx.var, isprop ? 1 : 0 ) != 0; }
@@ -406,14 +415,14 @@ namespace SGScript
 			NI.Variable var;
 			if( !NI.GetGlobalByName( ctx, key, out var ) )
 				return null;
-			return Var( var );
+			return Var( var, false );
 		}
 		public Variable GetGlobal( Variable key )
 		{
 			NI.Variable var;
 			if( !NI.GetGlobal( ctx, key.var, out var ) )
 				return null;
-			return Var( var );
+			return Var( var, false );
 		}
 		public bool SetGlobal( Variable key, Variable value ){ return NI.SetGlobal( ctx, key.var, value.var ) != 0; }
 		public bool PushGlobal( string key ){ return NI.PushGlobalByName( ctx, key ) != 0; }
@@ -423,28 +432,30 @@ namespace SGScript
 	public class Engine : Context
 	{
 		struct Nothing {};
-		Dictionary<WeakReference, Nothing> _objRefs = new Dictionary<WeakReference, Nothing>();
+		Dictionary<WeakReference, Nothing> _objRefs = new Dictionary<WeakReference, Nothing>(); // Key.Target = ISGSBase
 		public Dictionary<Type, DNMetaObject> _metaObjects = new Dictionary<Type, DNMetaObject>();
-		public static Dictionary<IntPtr, Engine> _engines = new Dictionary<IntPtr, Engine>();
+		public static Dictionary<IntPtr, WeakReference> _engines = new Dictionary<IntPtr, WeakReference>(); // Value.Target = Engine
 
 		public static Engine GetFromCtx( IntPtr ctx )
 		{
-			Engine engine = null;
+			WeakReference engine = null;
 			_engines.TryGetValue( ctx, out engine );
-			return engine;
+			return engine != null ? (Engine) engine.Target : null;
 		}
 
-		Engine( IntPtr c ) : base( c )
+		Engine( IntPtr c ) : base( c, false )
 		{
-			_engines.Add( c, this );
+			_engines.Add( c, _sgsWeakRef );
 		}
 		public Engine() : this( NI.CreateEngine() ){}
 		public Engine( IMemory mem ) : this( NI.CreateEngineExt( new NI.MemFunc( IMemory._MemFunc ), mem ) ){}
 		public override void Release()
 		{
-			foreach( KeyValuePair<WeakReference, Nothing> kvp in _objRefs )
+			WeakReference[] objrefs = new WeakReference[ _objRefs.Count ];
+			_objRefs.Keys.CopyTo( objrefs, 0 );
+			foreach( WeakReference wr in objrefs )
 			{
-				IDisposable d = ((IDisposable) kvp.Key.Target);
+				IDisposable d = ((IDisposable) wr.Target);
 				if( d != null )
 					d.Dispose();
 			}
@@ -464,11 +475,11 @@ namespace SGScript
 		}
 		public void _RegisterObj( ISGSBase obj )
 		{
-			_objRefs.Add( new WeakReference( obj ), new Nothing() );
+			_objRefs.Add( obj._sgsWeakRef, new Nothing() );
 		}
 		public void _UnregisterObj( ISGSBase obj )
 		{
-			_objRefs.Remove( new WeakReference( obj ) );
+			_objRefs.Remove( obj._sgsWeakRef );
 		}
 	}
 }

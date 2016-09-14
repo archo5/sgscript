@@ -284,6 +284,23 @@ namespace SGScript
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_ReleaseState", CallingConvention = CallingConvention.Cdecl )]
 		public static extern void ReleaseState( IntPtr ctx );
 		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_PauseState", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int PauseState( IntPtr ctx );
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ResumeStateRet", CallingConvention = CallingConvention.Cdecl )]
+		public static unsafe extern int _ResumeStateRet( IntPtr ctx, int args, int* outrvc );
+		public static unsafe int ResumeStateRet( IntPtr ctx, int args, out int outrvc )
+		{
+			int rvc;
+			int ret = _ResumeStateRet( ctx, args, &rvc );
+			outrvc = rvc;
+			return ret;
+		}
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ResumeStateExp", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int ResumeStateExp( IntPtr ctx, int args, int expect );
+		public static int ResumeState( IntPtr ctx ){ return ResumeStateExp( ctx, 0, 0 ); }
+		
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_CodeString", CallingConvention = CallingConvention.Cdecl )]
 		[return: MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )]
