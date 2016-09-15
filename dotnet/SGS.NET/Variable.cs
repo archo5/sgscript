@@ -6,9 +6,7 @@ using System.Reflection;
 namespace SGScript
 {
 	[AttributeUsage(AttributeTargets.Method)]
-	public class HideMethod : System.Attribute
-	{
-	}
+	public class HideMethod : System.Attribute {}
 
 	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field)]
 	public class HideProperty : System.Attribute
@@ -16,6 +14,9 @@ namespace SGScript
 		public bool CanRead = false;
 		public bool CanWrite = false;
 	}
+	
+	[AttributeUsage(AttributeTargets.Parameter)]
+	public class CallingThread : System.Attribute {}
 
 	public abstract class ISGSBase : IDisposable
 	{
@@ -487,6 +488,7 @@ namespace SGScript
 	{
 		public MethodInfo thisMethodInfo;
 
+		public string name;
 		public MethodInfo parseVarThis = null;
 		public MethodInfo[] parseVarArgs;
 		object[] callArgs;
@@ -496,6 +498,7 @@ namespace SGScript
 		public DNMethod( Context c, MethodInfo mi ) : base( c )
 		{
 			thisMethodInfo = mi;
+			name = thisMethodInfo.DeclaringType.FullName + "." + thisMethodInfo.Name;
 
 			if( thisMethodInfo.IsStatic == false )
 			{
@@ -509,7 +512,23 @@ namespace SGScript
 			for( int i = 0; i < prms.Length; ++i )
 			{
 				ParameterInfo param = prms[ i ];
-				parseVarArgs[ i ] = FindParserForType( param.ParameterType, "argument " + i, thisMethodInfo.ToString() );
+				bool isCallingThread = false;
+				foreach( object attr in param.GetCustomAttributes( true ) )
+				{
+					if( attr is CallingThread )
+					{
+						isCallingThread = true;
+						break;
+					}
+				}
+				if( isCallingThread )
+				{
+					parseVarArgs[ i ] = typeof(Context).GetMethod( "_ParseVar_CallingThread" );
+				}
+				else
+				{
+					parseVarArgs[ i ] = FindParserForType( param.ParameterType, "argument " + i, thisMethodInfo.ToString() );
+				}
 			}
 		}
 		
@@ -517,6 +536,7 @@ namespace SGScript
 
 		public override int OnCall( Context ctx )
 		{
+			NI.FuncName( ctx.ctx, name );
 			bool gotthis = ctx.Method();
 			if( !gotthis && !thisMethodInfo.IsStatic )
 			{
@@ -536,12 +556,17 @@ namespace SGScript
 			int inArg = gotthis ? 1 : 0;
 			foreach( MethodInfo pva in parseVarArgs )
 			{
-				parseVarParams[ 0 ] = null;
-				parseVarParams[ 1 ] = ctx.StackItem( inArg );
-				pva.Invoke( ctx, parseVarParams );
-				callArgs[ outArg ] = parseVarParams[ 0 ];
- 
-				inArg++;
+				if( pva.Name == "_ParseVar_CallingThread" )
+				{
+					callArgs[ outArg ] = ctx;
+				}
+				else
+				{
+					parseVarParams[ 0 ] = null;
+					parseVarParams[ 1 ] = ctx.StackItem( inArg++ );
+					pva.Invoke( ctx, parseVarParams );
+					callArgs[ outArg ] = parseVarParams[ 0 ];
+				}
 				outArg++;
 			}
 
@@ -549,6 +574,8 @@ namespace SGScript
 
 			return 1;
 		}
+
+		public override string ToString(){ return "SGScript.DNMethod(" + name + ")"; }
 	}
 
 

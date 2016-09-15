@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace SGScript
 {
-	public abstract class IMemory : NI.IUserData
+	public struct Nothing {};
+
+	public abstract class IMemory
 	{
-		public static IntPtr _MemFunc( NI.IUserData ud, IntPtr ptr, IntPtr size )
+		public static IntPtr _MemFunc( IntPtr ud, IntPtr ptr, IntPtr size )
 		{
-			return ((IMemory) ud).MemoryAllocFree( ptr, size );
+			return (GCHandle.FromIntPtr( ud ).Target as IMemory).MemoryAllocFree( ptr, size );
 		}
 
 		public abstract IntPtr MemoryAllocFree( IntPtr ptr, IntPtr size );
@@ -29,14 +32,14 @@ namespace SGScript
 		}
 	}
 
-	public abstract class IPrinter : NI.IUserData
+	public abstract class IMessenger
 	{
-		public static void _PrintFunc( NI.IUserData ud, IntPtr ctx, int type, string message )
+		public static void _MsgFunc( IntPtr ud, IntPtr ctx, int type, string message )
 		{
-			((IPrinter) ud).PrintMessage( new Context( ctx ), type, message );
+			(GCHandle.FromIntPtr( ud ).Target as IMessenger).Message( new Context( ctx ), type, message );
 		}
 
-		public abstract void PrintMessage( Context ctx, int type, string message );
+		public abstract void Message( Context ctx, int type, string message );
 	}
 
 	public interface IGetVariable
@@ -89,10 +92,15 @@ namespace SGScript
 		public void LoadLib_RE(){ NI.LoadLib_RE( ctx ); }
 		public void LoadLib_String(){ NI.LoadLib_String( ctx ); }
 
-		public void SetPrintFunc( IPrinter pr )
+		GCHandle hMsgFunc;
+		public void SetMsgFunc( IMessenger pr )
 		{
-			NI.SetPrintFunc( ctx, new NI.PrintFunc( IPrinter._PrintFunc ), pr );
+			if( hMsgFunc.IsAllocated )
+				hMsgFunc.Free();
+			hMsgFunc = GCHandle.Alloc( pr );
+			NI.SetMsgFunc( ctx, new NI.MsgFunc( IMessenger._MsgFunc ), GCHandle.ToIntPtr( hMsgFunc ) );
 		}
+		public void Msg( int type, string message ){ NI.Msg( ctx, type, message ); }
 
 		public void Acquire()
 		{
@@ -107,6 +115,8 @@ namespace SGScript
 			{
 				NI.ReleaseState( ctx );
 				ctx = IntPtr.Zero;
+				if( hMsgFunc.IsAllocated )
+					hMsgFunc.Free();
 			}
 		}
 		public Context Fork( bool copy = false )
@@ -310,6 +320,7 @@ namespace SGScript
 		public void ParseVar( out IObjectBase o, Variable v ){ o = v.GetIObjectBase(); }
 		public void ParseVar( out Context c, Variable v ){ c = v.type == VarType.Thread ? new Context( v.var.data.T ) : null; }
 		public void ParseVar( out Variable o, Variable v ){ o = v; }
+		public void _ParseVar_CallingThread( out Context c, Variable v ){ c = this; }
 
 		public void Push( Variable v ){ NI.PushVariable( ctx, v.var ); }
 		public void PushItem( int item ){ _IndexCheck( item, "PushItem" ); NI.PushItem( ctx, item ); }
@@ -381,6 +392,15 @@ namespace SGScript
 			Pop( count );
 			return retval;
 		}
+		public T RetrieveOneReturnValueT<T>( int count )
+		{
+			if( typeof(T) == typeof(Nothing) )
+			{
+				Pop( count );
+				return (T) (object) new Nothing();
+			}
+			return (T) RetrieveOneReturnValue( count );
+		}
 
 		// various simple call functions
 		// - X[This]Call: arguments are left on stack, count is returned
@@ -413,10 +433,10 @@ namespace SGScript
 		public object OCall( string func, params object[] args ){ return RetrieveOneReturnValue( XCall( func, args ) ); }
 		public object OCall( Variable func, params object[] args ){ return RetrieveOneReturnValue( XCall( func, args ) ); }
 		// - [This]Call: first argument (converted to specified type) or null is returned
-		public T ThisCall<T>( string func, Variable thisvar, params object[] args ){ return (T) RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
-		public T ThisCall<T>( Variable func, object thisvar, params object[] args ){ return (T) RetrieveOneReturnValue( XThisCall( func, thisvar, args ) ); }
-		public T Call<T>( string func, params object[] args ){ return (T) RetrieveOneReturnValue( XCall( func, args ) ); }
-		public T Call<T>( Variable func, params object[] args ){ return (T) RetrieveOneReturnValue( XCall( func, args ) ); }
+		public T ThisCall<T>( string func, Variable thisvar, params object[] args ){ return RetrieveOneReturnValueT<T>( XThisCall( func, thisvar, args ) ); }
+		public T ThisCall<T>( Variable func, object thisvar, params object[] args ){ return RetrieveOneReturnValueT<T>( XThisCall( func, thisvar, args ) ); }
+		public T Call<T>( string func, params object[] args ){ return RetrieveOneReturnValueT<T>( XCall( func, args ) ); }
+		public T Call<T>( Variable func, params object[] args ){ return RetrieveOneReturnValueT<T>( XCall( func, args ) ); }
 
 		// C call utility wrappers
 		public bool Method(){ return NI.Method( ctx ) != 0; }
@@ -512,7 +532,6 @@ namespace SGScript
 
 	public class Engine : Context
 	{
-		struct Nothing {};
 		Dictionary<WeakReference, Nothing> _objRefs = new Dictionary<WeakReference, Nothing>(); // Key.Target = ISGSBase
 		public Dictionary<Type, DNMetaObject> _metaObjects = new Dictionary<Type, DNMetaObject>();
 		public static Dictionary<IntPtr, WeakReference> _engines = new Dictionary<IntPtr, WeakReference>(); // Value.Target = Engine
@@ -529,7 +548,12 @@ namespace SGScript
 			_engines.Add( c, _sgsWeakRef );
 		}
 		public Engine() : this( NI.CreateEngine() ){}
-		public Engine( IMemory mem ) : this( NI.CreateEngineExt( new NI.MemFunc( IMemory._MemFunc ), mem ) ){}
+		GCHandle hMem;
+		public Engine( IMemory mem ) : base( IntPtr.Zero, false )
+		{
+			hMem = GCHandle.Alloc( mem );
+			ctx = NI.CreateEngineExt( new NI.MemFunc( IMemory._MemFunc ), GCHandle.ToIntPtr( hMem ) );
+		}
 		public override void Release()
 		{
 			WeakReference[] objrefs = new WeakReference[ _objRefs.Count ];
@@ -542,6 +566,8 @@ namespace SGScript
 			}
 			_engines.Remove( ctx );
 			base.Release();
+			if( hMem.IsAllocated )
+				hMem.Free();
 		}
 
 		public DNMetaObject _GetMetaObject( Type t )

@@ -833,6 +833,8 @@ namespace APITest
 			mvar.SetProp( fivevar, dvar );
 			Assert( mvar.Unset( fivevar ), true );
 			Assert( mvar.Unset( fivevar ), false );
+
+			engine.Msg( MsgLevel.INFO, "This is a test message." );
 			
 			engine.Release();
 		}
@@ -850,6 +852,12 @@ namespace APITest
 			public static string pfxstr = "PFX:";
 			public static string StaticTestMethod( string arg1 ){ return pfxstr + arg1; }
 			public string TestMethod( string arg1 ){ return prop3 + "|" + arg1; }
+			public void TestMsgMethod( int a, [CallingThread] Context ctx, int b )
+			{
+				Assert( a, 121 );
+				Assert( b, 754 );
+				ctx.Msg( MsgLevel.INFO, string.Format( "[test message: a = {0}, b = {1}]", a, b ) );
+			}
 
 			public int prop1 = 5;
 			protected float prop2 = 6.0f;
@@ -939,16 +947,16 @@ namespace APITest
 
 			// test static method dictionary
 			Assert( engine.Call<string>( "tostring", IObjectBase.CreateStaticDict( engine, typeof(FullObject1) ) ),
-				"{_useProp3=DNMethod,StaticTestMethod=DNMethod,TestMethod=DNMethod}" );
+				"{_useProp3=DNMethod,StaticTestMethod=DNMethod,TestMethod=DNMethod,TestMsgMethod=DNMethod}" );
 
 			// test static (meta-)object
 			Variable movar = engine._GetMetaObject( typeof(FullObject1) ).GetVariable();
 			AssertVar( movar, obj1var.GetMetaObj() );
-			Assert( movar.GetProp( "_useProp3" ).ConvertToString(), "SGScript.DNMethod" );
+			Assert( movar.GetProp( "_useProp3" ).ConvertToString(), "SGScript.DNMethod(APITest.APITest+FullObject1._useProp3)" );
 			Assert( movar.GetProp( "pfxstr" ).GetString(), "PFX:" );
 
 			// test instance meta object lookup
-			Assert( obj1var.GetProp( "_useProp3" ).ConvertToString(), "SGScript.DNMethod" );
+			Assert( obj1var.GetProp( "_useProp3" ).ConvertToString(), "SGScript.DNMethod(APITest.APITest+FullObject1._useProp3)" );
 			Assert( obj1var.GetProp( "pfxstr" ).GetString(), "PFX:" );
 			Assert( obj1var.GetMetaObj().SetProp( "pfxstr", engine.Var( "[PFX]:" ) ), true );
 			Assert( obj1var.GetMetaObj().GetProp( "pfxstr" ).GetString(), "[PFX]:" );
@@ -961,6 +969,9 @@ namespace APITest
 			Assert( engine.Exec( "function FullObject1.customMethod( txt ){ return this.pfxstr .. txt; }" ), NI.SUCCESS );
 			AssertN( obj1var.GetMetaObj().GetProp( "customMethod" ), null );
 			Assert( engine.ThisCall<string>( "customMethod", obj1var, "cmTest" ), "[PFX]:cmTest" );
+
+			// test method messaging
+			engine.ThisCall<Nothing>( "TestMsgMethod", obj1var, 121, 754 );
 			
 			engine.Release();
 		}
