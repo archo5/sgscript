@@ -126,6 +126,13 @@ namespace SGScript
 		ToIter = 0x30000,
 	}
 
+	public enum EventStateType : int
+	{
+		Reset = 0,
+		Signaled = 1,
+		Query = -1,
+	}
+
 	// native interface
 	public class NI
 	{
@@ -531,6 +538,38 @@ namespace SGScript
 		public static extern void SerializeExt( IntPtr ctx, Variable var, int mode );
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_UnserializeExt", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int UnserializeExt( IntPtr ctx, Variable var, int mode );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_SerializeSGSON", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void SerializeSGSON( IntPtr ctx, Variable var, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string tab );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_UnserializeSGSONExt", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void UnserializeSGSONExt( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string buf, Int32 bufsz );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_SerializeObject", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void SerializeObject( IntPtr ctx, Int32 args, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string funcname );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_SerializeObjIndex", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void SerializeObjIndex( IntPtr ctx, Variable key, Variable val, int isprop );
+
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_IsArray", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int IsArray( Variable var );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_IsDict", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int IsDict( Variable var );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_IsMap", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int IsMap( Variable var );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ArraySize", CallingConvention = CallingConvention.Cdecl )]
+		public static extern Int32 ArraySize( Variable var );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ArrayPush", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void ArrayPush( IntPtr ctx, Variable var, Int32 count );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ArrayPop", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void ArrayPop( IntPtr ctx, Variable var, Int32 count, int ret );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ArrayErase", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void ArrayErase( IntPtr ctx, Variable var, Int32 at, Int32 count );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ArrayFind", CallingConvention = CallingConvention.Cdecl )]
+		public static extern Int32 ArrayFind( IntPtr ctx, Variable var, Variable what );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ArrayRemove", CallingConvention = CallingConvention.Cdecl )]
+		public static extern Int32 ArrayRemove( IntPtr ctx, Variable var, Variable what, int all );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_Unset", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int Unset( IntPtr ctx, Variable var, Variable what );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_EventState", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int EventState( IntPtr ctx, Variable var, EventStateType state );
 		
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetIterator", CallingConvention = CallingConvention.Cdecl )]

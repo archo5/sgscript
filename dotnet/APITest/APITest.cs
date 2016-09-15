@@ -802,6 +802,37 @@ namespace APITest
 			AssertN( sdata, null );
 			Variable udata = engine.Unserialize( sdata );
 			AssertVar( udata, odata );
+
+			string ssdata = engine.SerializeSGSON( odata );
+			AssertN( ssdata, null );
+			udata = engine.UnserializeSGSON( ssdata );
+			AssertVar( udata, odata );
+
+			Variable dvar = engine.DictVar( 0 );
+			Variable mvar = engine.MapVar( 0 );
+			Assert( fivevar.IsArray(), false );
+			Assert( ovar.IsArray(), true );
+			Assert( dvar.IsArray(), false );
+			Assert( mvar.IsArray(), false );
+			Assert( fivevar.IsDict(), false );
+			Assert( ovar.IsDict(), false );
+			Assert( dvar.IsDict(), true );
+			Assert( mvar.IsDict(), false );
+			Assert( fivevar.IsMap(), false );
+			Assert( ovar.IsMap(), false );
+			Assert( dvar.IsMap(), false );
+			Assert( mvar.IsMap(), true );
+			Assert( ovar.ArraySize(), 0 );
+			Assert( dvar.ArraySize(), -1 );
+			ovar.ArrayPush( 5, "test" );
+			Assert( ovar.ArraySize(), 2 );
+			Assert( ovar.ArrayFind( fivevar ), 0 );
+			Assert( ovar.ArrayFind( dvar ), -1 );
+			ovar.ArrayRemove( fivevar, false );
+			Assert( ovar.ArrayFind( fivevar ), -1 );
+			mvar.SetProp( fivevar, dvar );
+			Assert( mvar.Unset( fivevar ), true );
+			Assert( mvar.Unset( fivevar ), false );
 			
 			engine.Release();
 		}

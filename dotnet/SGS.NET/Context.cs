@@ -337,6 +337,17 @@ namespace SGScript
 		public Variable OptStackItem( int item ){ return new Variable( this, NI.OptStackItem( ctx, item ) ); }
 		public Variable StackItem( int item ){ return new Variable( this, NI.StackItem( ctx, item ) ); }
 		public VarType ItemType( Int32 item ){ return NI.ItemType( ctx, item ); }
+		public Variable[] TakeTopmostVars( Int32 count )
+		{
+			_SizeCheck( count, "TakeTopmostVars" );
+			Variable[] vars = new Variable[ count ];
+			for( Int32 i = 0; i < count; ++i )
+			{
+				vars[ i ] = StackItem( i - count );
+			}
+			Pop( count );
+			return vars;
+		}
 		public Variable TakeTopmostVar()
 		{
 			_AnyCheck( "TakeTopmostVar" );
@@ -464,6 +475,13 @@ namespace SGScript
 			UnserializePushV( Var( data ), mode );
 		}
 		public Variable Unserialize( byte[] data, int mode = 0 ){ UnserializePush( data, mode ); return TakeTopmostVar(); }
+		public void SerializeSGSONPush( Variable v, string tab = null ){ NI.SerializeSGSON( ctx, v.var, tab ); }
+		public string SerializeSGSON( Variable v, string tab = null ){ NI.SerializeSGSON( ctx, v.var, tab ); return TakeTopmostVar().GetString(); }
+		public void UnserializeSGSONPush( string text ){ NI.UnserializeSGSONExt( ctx, text, text.Length ); }
+		public Variable UnserializeSGSON( string text ){ NI.UnserializeSGSONExt( ctx, text, text.Length ); return TakeTopmostVar(); }
+		// - for implementing object serialization
+		public void SerializeObject( Int32 args, string funcname ){ NI.SerializeObject( ctx, args, funcname ); }
+		public void SerializeObjIndex( Variable key, Variable val, bool isprop ){ NI.SerializeObjIndex( ctx, key.var, val.var, isprop ? 1 : 0 ); }
 
 		// utility function wrappers
 		public void GCExecute(){ NI.GCExecute( ctx ); }

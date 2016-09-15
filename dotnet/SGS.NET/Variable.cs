@@ -643,6 +643,27 @@ namespace SGScript
 		public Variable Clone(){ return _sgsEngine.CloneItem( this ); }
 		public string Dump( int maxdepth = 5 ){ return _sgsEngine.DumpVar( this ); }
 
+		public bool IsArray(){ return NI.IsArray( var ) != 0; }
+		public bool IsDict(){ return NI.IsDict( var ) != 0; }
+		public bool IsMap(){ return NI.IsMap( var ) != 0; }
+		public Int32 ArraySize(){ return NI.ArraySize( var ); }
+		public void ArrayPushFromStack( Context ctx, Int32 count ){ NI.ArrayPush( ctx.ctx, var, count ); }
+		public void ArrayPush( params object[] args ){ foreach( object arg in args ) _sgsEngine.PushObj( arg ); ArrayPushFromStack( _sgsEngine, args.Length ); }
+		public void ArrayPop( Int32 count ){ NI.ArrayPop( _sgsEngine.ctx, var, count, 0 ); }
+		public void ArrayPopToStack( Context ctx, Int32 count ){ NI.ArrayPop( ctx.ctx, var, count, 1 ); }
+		public Variable[] ArrayPopRetrieve( Int32 count )
+		{
+			Int32 arrsize = ArraySize();
+			if( arrsize < count )
+				throw new SGSException( NI.EINPROC, string.Format( "Not enough items in array {0}, expected at least {1}", arrsize, count ) );
+			ArrayPopToStack( _sgsEngine, count );
+			return _sgsEngine.TakeTopmostVars( count );
+		}
+		public Int32 ArrayFind( Variable val ){ return NI.ArrayFind( _sgsEngine.ctx, var, val.var ); }
+		public Int32 ArrayRemove( Variable val, bool all ){ return NI.ArrayRemove( _sgsEngine.ctx, var, val.var, all ? 1 : 0 ); }
+		public bool Unset( Variable key ){ return NI.Unset( _sgsEngine.ctx, var, key.var ) != 0; }
+		public bool EventState( EventStateType est ){ return NI.EventState( _sgsEngine.ctx, var, est ) != 0; }
+
 		public Variable GetSubItem( Variable key, bool isprop ){ return ctx.GetIndex( this, key, isprop ); }
 		public Variable GetSubItem( string key, bool isprop ){ return ctx.GetIndex( this, ctx.Var( key ), isprop ); }
 		public bool SetSubItem( Variable key, Variable val, bool isprop ){ return ctx.SetIndex( this, key, val, isprop ); }
