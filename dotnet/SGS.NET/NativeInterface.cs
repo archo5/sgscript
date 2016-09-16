@@ -1,9 +1,74 @@
 ﻿using System;
+#if DEBUG
+using System.Diagnostics;
+#endif
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 
 namespace SGScript
 {
+	// handle debug helper
+	public class HDH
+	{
+#if DEBUG
+		public static Dictionary<IntPtr, StackTrace> handles = new Dictionary<IntPtr, StackTrace>();
+#endif
+		public static IntPtr Alloc( object tgt )
+		{
+			IntPtr p = GCHandle.ToIntPtr( GCHandle.Alloc( tgt ) );
+#if DEBUG
+			if( handles.ContainsKey( p ) && handles[ p ] != null )
+				handles.Remove( p ); // previous handle was successfully freed
+			handles.Add( p, null );
+#endif
+			return p;
+		}
+		public static void Free( IntPtr p )
+		{
+#if DEBUG
+			if( handles.ContainsKey( p ) == false )
+			{
+				throw new SGSException( NI.EINPROC, "HDH [Free]: handle " + p + " was never allocated!" );
+			}
+			if( handles[ p ] != null )
+			{
+				Console.WriteLine(handles[ p ]);
+				SGSException x = new SGSException( NI.EINPROC, "HDH [GetObj]: handle " + p + " was already freed!" );
+				x.Data.Add( "Stack trace", handles[ p ] );
+				throw x;
+			}
+			handles[ p ] = new StackTrace();
+#endif
+			GCHandle.FromIntPtr( p ).Free();
+		}
+		public static object GetObj( IntPtr p, bool free = false )
+		{
+#if DEBUG
+			if( handles.ContainsKey( p ) == false )
+			{
+				throw new SGSException( NI.EINPROC, "HDH [GetObj]: handle " + p + " was never allocated!" );
+			}
+			if( handles[ p ] != null )
+			{
+				Console.WriteLine(handles[ p ]);
+				SGSException x = new SGSException( NI.EINPROC, "HDH [GetObj]: handle " + p + " was freed!" );
+				x.Data.Add( "Stack trace", handles[ p ] );
+				throw x;
+			}
+#endif
+			return GCHandle.FromIntPtr( p ).Target;
+		}
+		public static void FreeIfAlloc( ref IntPtr p )
+		{
+			if( p != IntPtr.Zero )
+			{
+				Free( p );
+				p = IntPtr.Zero;
+			}
+		}
+	}
+
 	public class UTF8Marshaler : ICustomMarshaler
 	{
 		static UTF8Marshaler inst = null;
@@ -275,9 +340,10 @@ namespace SGScript
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateEngineExt", CallingConvention = CallingConvention.Cdecl )]
 		public static extern IntPtr CreateEngineExt( MemFunc mf, IntPtr mfuserdata );
 
-		public static IntPtr CreateEngine()
+		public static IntPtr CreateEngine( out MemFunc memfuncref )
 		{
-			return CreateEngineExt( new MemFunc( DefaultMemFunc ), IntPtr.Zero );
+			memfuncref = new MemFunc( DefaultMemFunc );
+			return CreateEngineExt( memfuncref, IntPtr.Zero );
 		}
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_DestroyEngine", CallingConvention = CallingConvention.Cdecl )]
@@ -466,7 +532,7 @@ namespace SGScript
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetIndex", CallingConvention = CallingConvention.Cdecl )]
 		public static unsafe extern int _GetIndex( IntPtr ctx, Variable obj, Variable idx, Variable* outvar, int isprop );
 		public static unsafe bool GetIndex( IntPtr ctx, Variable obj, Variable idx, out Variable outvar, bool isprop )
-		{ Variable v; bool ret =_GetIndex( ctx, obj, idx, &v, isprop ? 1 : 0 ) != 0; outvar = v; return ret; }
+		{ Variable v; bool ret = _GetIndex( ctx, obj, idx, &v, isprop ? 1 : 0 ) != 0; outvar = v; return ret; }
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetIndex", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int SetIndex( IntPtr ctx, Variable obj, Variable idx, Variable val, int isprop );

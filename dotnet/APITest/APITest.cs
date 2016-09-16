@@ -1,20 +1,52 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Threading;
 using SGScript;
 
 namespace APITest
 {
 	public class APITest
 	{
+		static bool keepCollecting = true;
+		static void GCNagThread()
+		{
+			while( keepCollecting )
+			{
+				GC.Collect();
+			}
+		}
+
 		static int failCount = 0;
 		static int testCount = 0;
 		static void Main(string[] args)
 		{
 			Console.WriteLine( "SGS.NET API tests" );
 
-			CoreFeatures();
+			Thread t = new Thread( new ThreadStart( GCNagThread ) );
+			t.Start();
+
+			int count = 0;
+			for(;;)
+			{
+				count++;
+				Console.WriteLine( "\n\nTEST #" + count + " ---" );
+				RunAllTests();
+			}
+
+			keepCollecting = false;
+			t.Join();
+
+			Console.WriteLine( "\n\n--- Testing finished! ---" );
+			Console.WriteLine( failCount > 0 ?
+				string.Format( "\n  ERROR: {0} tests failed!\n", failCount ) :
+				string.Format( "\n  SUCCESS! All tests passed! ({0})\n", testCount ) );
+		}
+
+		static void RunAllTests()
+		{
 			CreateAndDestroy();
+			CoreFeatures();
 			ArrayMem();
 			Stack101();
 			StackMoreTypes();
@@ -34,11 +66,6 @@ namespace APITest
 			YieldResume();
 			MiscAPIs();
 			CSharpObjects();
-
-			Console.WriteLine( "\n\n--- Testing finished! ---" );
-			Console.WriteLine( failCount > 0 ?
-				string.Format( "\n  ERROR: {0} tests failed!\n", failCount ) :
-				string.Format( "\n  SUCCESS! All tests passed! ({0})\n", testCount ) );
 		}
 
 		static void NoteTest()
@@ -97,11 +124,33 @@ namespace APITest
 			Error( "Exception was not thrown", new StackTrace(true) );
 		}
 
+		// core functions
+		static Engine CreateEngine()
+		{
+			return new Engine();
+		}
+		static void DestroyEngine( Engine engine )
+		{
+			engine.Release();
+			engine = null;
+			GC.Collect();
+			GC.WaitForFullGCComplete();
+
+			Assert( Engine._engines.Count, 0 );
+		}
+
 		// TESTS
+		static void CreateAndDestroy()
+		{
+			Console.Write( "\nCreate and destroy " );
+			Engine engine = CreateEngine();
+			DestroyEngine( engine );
+		}
+
 		static void CoreFeatures()
 		{
 			Console.Write( "\nCore feature tests " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			Variable va = engine.NullVar(), vb = engine.NullVar(), vc = engine.Var( "test" );
 			Assert( va == vb, true );
@@ -113,28 +162,21 @@ namespace APITest
 			Assert( vc.isNull, false );
 			Assert( vc.notNull, true );
 			
-			engine.Release();
+			DestroyEngine( engine );
 		}
 		
-		static void CreateAndDestroy()
-		{
-			Console.Write( "\nCreate and destroy " );
-			Engine engine = new Engine();
-			engine.Release();
-		}
-
 		static void ArrayMem()
 		{
 			Console.Write( "\nBasic array test " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 			engine.PushArray( 0 );
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void Stack101()
 		{
 			Console.Write( "\nStack - 101 " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			Variable sgs_dummy_var = engine.NullVar();
 			engine.PushNull();
@@ -174,7 +216,7 @@ namespace APITest
 			engine.Pop( 9 );
 			Assert( engine.StackSize(), 0 );
 
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void SMT_CheckObj<T>( Engine e, T val, VarType type ) where T : struct
@@ -206,7 +248,7 @@ namespace APITest
 		static void StackMoreTypes()
 		{
 			Console.Write( "\nStack - more types " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			bool? v00 = false;
 			bool? n00 = null;
@@ -346,13 +388,13 @@ namespace APITest
 			engine.Pop( 3 );
 			SMT_CheckObj( engine, v11.Value, VarType.Object );
 			
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void StackInsert()
 		{
 			Console.Write( "\nStack - insert " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 			Variable sgs_dummy_var = engine.NullVar();
 			engine.Push( 1 );
 			engine.Push( 2 );
@@ -387,13 +429,13 @@ namespace APITest
 			engine.Pop( 5 );
 			Assert( engine.StackSize(), 0 );
 
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void StackArrayDict()
 		{
 			Console.Write( "\nStack - array/dict " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			engine.PushNull();
 			engine.Push( "key-one" );
@@ -440,13 +482,13 @@ namespace APITest
 			engine.Pop( 2 );
 			Assert( engine.StackSize(), 0 );
 
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void StackPush()
 		{
 			Console.Write( "\nStack - push item " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			engine.PushNull();
 			engine.Push( 5 );
@@ -481,13 +523,13 @@ namespace APITest
 			engine.Pop( 2 );
 			Assert( engine.StackSize(), 0 );
 			
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void StackPropIndex()
 		{
 			Console.Write( "\nStack - properties/indices " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			engine.Push( "key-one" );
 			Assert( engine.PushIndex( engine.StackItem( 0 ), engine.StackItem( 0 ), false ), false );
@@ -507,13 +549,13 @@ namespace APITest
 			Assert( engine.ItemType( -1 ), VarType.Object );
 			Assert( engine.StackSize(), 1 );
 
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void StackNegIdx()
 		{
 			Console.Write( "\nStack - negative indices " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			engine.Push( "test" );
 			engine.Push( 42 );
@@ -524,13 +566,13 @@ namespace APITest
 			engine.Pop( 1 );
 			Assert( engine.StackSize(), 1 );
 			
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void Indexing()
 		{
 			Console.Write( "\nIndexing " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			engine.PushDict( 0 );
 			Assert( engine.StackSize(), 1 );
@@ -543,13 +585,13 @@ namespace APITest
 			AssertN( var, null );
 			Assert( var.type, VarType.String );
 			
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void Globals101()
 		{
 			Console.Write( "\nGlobals - 101 " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			Assert( engine.PushGlobal( "array" ), true );
 			Assert( engine.StackSize(), 1 );
@@ -562,13 +604,13 @@ namespace APITest
 			engine.SetGlobal( "yarra", engine.StackItem( -1 ) );
 			Assert( engine.StackSize(), 2 );
 
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void Libraries()
 		{
 			Console.Write( "\nLibraries " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			engine.LoadLib_Fmt();
 			engine.LoadLib_IO();
@@ -584,13 +626,13 @@ namespace APITest
 			Assert( engine.PushGlobal( "re_replace" ), true );
 			Assert( engine.PushGlobal( "string_replace" ), true );
 
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void FunctionCalls()
 		{
 			Console.Write( "\nFunction calls " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			Assert( engine.PushGlobal( "array" ), true );
 			try
@@ -626,13 +668,13 @@ namespace APITest
 			engine.FCall( 0, 0, true );
 			Assert( engine.StackSize(), 0 );
 			
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void SimpleFunctionCalls()
 		{
 			Console.Write( "\nSimple function calls " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			Assert( engine.XCall( "dumpvar", true, 5, "test" ), 1 );
 			Assert( engine.StackItem( -1 ).GetString(), "bool (true)\nint (5)\nstring [4] \"test\"\n" );
@@ -652,13 +694,13 @@ namespace APITest
 			Assert( engine.Call<string>( "dumpvar", "roundtrip" ), "string [9] \"roundtrip\"\n" );
 			Assert( engine.ThisCall<string>( engine.GetGlobal( "this2string" ), "roundtrip" ), "roundtrip" );
 			
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void ComplexGC()
 		{
 			Console.Write( "\nComplex GC " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			string str =
 			"o = { a = [ { b = {}, c = 5 }, { d = { e = {} }, f = [] } ], g = [] };" +
@@ -671,13 +713,13 @@ namespace APITest
 			engine.GCExecute();
 			Assert( engine.Stat( Stat.ObjCount ).ToInt32(), objcount );
 			
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void Iterators()
 		{
 			Console.Write( "\nIterators " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			// test data
 			engine.Push( true );
@@ -712,13 +754,13 @@ namespace APITest
 			}
 			catch( SGSException e ){ Assert( e.resultCode, NI.ENOTSUP ); }
 			
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void ForkState()
 		{
 			Console.Write( "\nFork state " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 			
 			// fork the state
 			Context f = engine.Fork( true );
@@ -735,10 +777,10 @@ namespace APITest
 			Assert( (int) p.Stat( Stat.StateCount ), 2 );
 			p.Release();
 			Assert( (int) engine.Stat( Stat.StateCount ), 1 );
-			engine.Release();
+			DestroyEngine( engine );
 
 			// try running something on both
-			engine = new Engine();
+			engine = CreateEngine();
 			f = engine.Fork( true );
 			p = engine.Fork( false );
 			string str =
@@ -751,13 +793,13 @@ namespace APITest
 
 			f.Release();
 			p.Release();
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void YieldResume()
 		{
 			Console.Write( "\nYield / resume " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			engine.Exec(
 				"global m0 = true;\n" +
@@ -773,13 +815,13 @@ namespace APITest
 			// check if done
 			Assert( engine.GetGlobal( "m1" ).GetBool(), true );
 			
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		static void MiscAPIs()
 		{
 			Console.Write( "\nMiscellaneous " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 			
 			Variable fivevar = engine.Var( 5 );
 			Variable ovar = engine.ArrayVar( 0 );
@@ -836,7 +878,7 @@ namespace APITest
 
 			engine.Msg( MsgLevel.INFO, "This is a test message." );
 			
-			engine.Release();
+			DestroyEngine( engine );
 		}
 
 		public class EmptyObject : IObject
@@ -893,7 +935,7 @@ namespace APITest
 		static void CSharpObjects()
 		{
 			Console.Write( "\nC# object exposure " );
-			Engine engine = new Engine();
+			Engine engine = CreateEngine();
 
 			// test the empty interface
 			{
@@ -973,7 +1015,8 @@ namespace APITest
 			// test method messaging
 			engine.ThisCall<Nothing>( "TestMsgMethod", obj1var, 121, 754 );
 			
-			engine.Release();
+			DestroyEngine( engine );
+			FullObject1.pfxstr = "PFX:"; // restore
 		}
 	}
 }

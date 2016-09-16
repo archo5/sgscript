@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -92,13 +93,12 @@ namespace SGScript
 		public void LoadLib_RE(){ NI.LoadLib_RE( ctx ); }
 		public void LoadLib_String(){ NI.LoadLib_String( ctx ); }
 
-		GCHandle hMsgFunc;
+		IntPtr hMsgFunc = IntPtr.Zero;
 		public void SetMsgFunc( IMessenger pr )
 		{
-			if( hMsgFunc.IsAllocated )
-				hMsgFunc.Free();
-			hMsgFunc = GCHandle.Alloc( pr );
-			NI.SetMsgFunc( ctx, new NI.MsgFunc( IMessenger._MsgFunc ), GCHandle.ToIntPtr( hMsgFunc ) );
+			HDH.FreeIfAlloc( ref hMsgFunc );
+			hMsgFunc = HDH.Alloc( pr );
+			NI.SetMsgFunc( ctx, new NI.MsgFunc( IMessenger._MsgFunc ), hMsgFunc );
 		}
 		public void Msg( int type, string message ){ NI.Msg( ctx, type, message ); }
 
@@ -115,8 +115,7 @@ namespace SGScript
 			{
 				NI.ReleaseState( ctx );
 				ctx = IntPtr.Zero;
-				if( hMsgFunc.IsAllocated )
-					hMsgFunc.Free();
+				HDH.FreeIfAlloc( ref hMsgFunc );
 			}
 		}
 		public Context Fork( bool copy = false )
@@ -532,8 +531,15 @@ namespace SGScript
 
 	public class Engine : Context
 	{
-		Dictionary<WeakReference, Nothing> _objRefs = new Dictionary<WeakReference, Nothing>(); // Key.Target = ISGSBase
+		public struct WeakRefWrap
+		{
+			public WeakReference wr;
+		}
+
+		Hashtable _objRefs = new Hashtable(); // Key.Target = ISGSBase
 		public Dictionary<Type, DNMetaObject> _metaObjects = new Dictionary<Type, DNMetaObject>();
+		public Dictionary<Type, SGSClassInfo> _sgsClassInfo = new Dictionary<Type,SGSClassInfo>();
+		public Dictionary<Type, SGSClassInfo> _sgsStaticClassInfo = new Dictionary<Type,SGSClassInfo>();
 		public static Dictionary<IntPtr, WeakReference> _engines = new Dictionary<IntPtr, WeakReference>(); // Value.Target = Engine
 
 		public static Engine GetFromCtx( IntPtr ctx )
@@ -543,31 +549,37 @@ namespace SGScript
 			return engine != null ? (Engine) engine.Target : null;
 		}
 
-		Engine( IntPtr c ) : base( c, false )
+		NI.MemFunc d_memfunc;
+		IntPtr hMem = IntPtr.Zero;
+		public Engine() : base( IntPtr.Zero, false )
 		{
-			_engines.Add( c, _sgsWeakRef );
+			ctx = NI.CreateEngine( out d_memfunc );
+			_engines.Add( ctx, _sgsWeakRef );
 		}
-		public Engine() : this( NI.CreateEngine() ){}
-		GCHandle hMem;
 		public Engine( IMemory mem ) : base( IntPtr.Zero, false )
 		{
-			hMem = GCHandle.Alloc( mem );
-			ctx = NI.CreateEngineExt( new NI.MemFunc( IMemory._MemFunc ), GCHandle.ToIntPtr( hMem ) );
+			hMem = HDH.Alloc( mem );
+			d_memfunc = new NI.MemFunc( IMemory._MemFunc );
+			ctx = NI.CreateEngineExt( d_memfunc, hMem );
+			_engines.Add( ctx, _sgsWeakRef );
 		}
 		public override void Release()
 		{
-			WeakReference[] objrefs = new WeakReference[ _objRefs.Count ];
+			object[] objrefs = new object[ _objRefs.Count ];
 			_objRefs.Keys.CopyTo( objrefs, 0 );
-			foreach( WeakReference wr in objrefs )
+			foreach( object obj in objrefs )
 			{
-				IDisposable d = ((IDisposable) wr.Target);
-				if( d != null )
-					d.Dispose();
+				WeakReference wr = (WeakReference) obj;
+				if( wr != null )
+				{
+					IDisposable d = ((IDisposable) wr.Target);
+					if( d != null )
+						d.Dispose();
+				}
 			}
 			_engines.Remove( ctx );
 			base.Release();
-			if( hMem.IsAllocated )
-				hMem.Free();
+			HDH.FreeIfAlloc( ref hMem );
 		}
 
 		public DNMetaObject _GetMetaObject( Type t )
@@ -582,7 +594,7 @@ namespace SGScript
 		}
 		public void _RegisterObj( ISGSBase obj )
 		{
-			_objRefs.Add( obj._sgsWeakRef, new Nothing() );
+			_objRefs.Add( obj._sgsWeakRef, null );
 		}
 		public void _UnregisterObj( ISGSBase obj )
 		{

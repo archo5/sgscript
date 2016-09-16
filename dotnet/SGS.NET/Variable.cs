@@ -43,28 +43,35 @@ namespace SGScript
 			Release();
 		}
 	}
+	
+	public class SGSPropInfo
+	{
+		public bool canRead = true;
+		public bool canWrite = true;
+		public Type propType;
+		public MemberInfo info; // PropertyInfo or FieldInfo
+		public MethodInfo parseVarMethod;
+	}
+	public class SGSClassInfo
+	{
+		public IntPtr iface;
+		public Dictionary<Variable, SGSPropInfo> props;
+		// delegate references
+		public NI.OC_Self d_destruct;
+		public NI.OC_Self d_gcmark;
+		public NI.OC_Self d_getindex;
+		public NI.OC_Self d_setindex;
+		public NI.OC_SlPr d_convert;
+		public NI.OC_Self d_serialize;
+		public NI.OC_SlPr d_dump;
+		public NI.OC_Self d_call;
+	}
 
 	// SGScript object implementation core
 	public abstract class IObjectBase : ISGSBase
 	{
-		public class SGSPropInfo
-		{
-			public bool canRead = true;
-			public bool canWrite = true;
-			public Type propType;
-			public MemberInfo info; // PropertyInfo or FieldInfo
-			public MethodInfo parseVarMethod;
-		}
-		public class SGSClassInfo
-		{
-			public IntPtr iface;
-			public Dictionary<Variable, SGSPropInfo> props;
-		}
-
 		public static IntPtr _sgsNullObjectInterface = AllocInterface( new NI.ObjInterface(), "<nullObject>" );
 		public static Dictionary<IObjectBase, bool> _sgsOwnedObjects = new Dictionary<IObjectBase,bool>();
-		public static Dictionary<Type, SGSClassInfo> _sgsClassInfo = new Dictionary<Type,SGSClassInfo>();
-		public static Dictionary<Type, SGSClassInfo> _sgsStaticClassInfo = new Dictionary<Type,SGSClassInfo>();
 
 
 		public static IntPtr AllocInterface( NI.ObjInterface iftemplate, string name )
@@ -154,23 +161,25 @@ namespace SGScript
 		public static SGSClassInfo GetClassInfo( Context ctx, Type type )
 		{
 			SGSClassInfo cinfo;
-			if( _sgsClassInfo.TryGetValue( type, out cinfo ) )
+			if( ctx.GetEngine()._sgsClassInfo.TryGetValue( type, out cinfo ) )
 				return cinfo;
 
+			NI.OC_Self d_destruct, d_gcmark, d_getindex, d_setindex, d_serialize, d_call;
+			NI.OC_SlPr d_convert, d_dump;
 			NI.ObjInterface oi = new NI.ObjInterface()
 			{
-				destruct = new NI.OC_Self( _sgsDestruct ),
-				gcmark = new NI.OC_Self( _sgsGCMark ),
+				destruct = d_destruct = new NI.OC_Self( _sgsDestruct ),
+				gcmark = d_gcmark = new NI.OC_Self( _sgsGCMark ),
 
-				getindex = new NI.OC_Self( _sgsGetIndex ),
-				setindex = new NI.OC_Self( _sgsSetIndex ),
+				getindex = d_getindex = new NI.OC_Self( _sgsGetIndex ),
+				setindex = d_setindex = new NI.OC_Self( _sgsSetIndex ),
 
-				convert = new NI.OC_SlPr( _sgsConvert ),
-				serialize = new NI.OC_Self( _sgsSerialize ),
-				dump = new NI.OC_SlPr( _sgsDump ),
+				convert = d_convert = new NI.OC_SlPr( _sgsConvert ),
+				serialize = d_serialize = new NI.OC_Self( _sgsSerialize ),
+				dump = d_dump = new NI.OC_SlPr( _sgsDump ),
 				// TODO getnext
 
-				call = new NI.OC_Self( _sgsCall ),
+				call = d_call = new NI.OC_Self( _sgsCall ),
 				// TODO expr
 			};
 
@@ -178,29 +187,40 @@ namespace SGScript
 			{
 				iface = AllocInterface( oi, type.Name ),
 				props = _ReadClassProps( ctx, type, false ),
+				d_destruct = d_destruct,
+				d_gcmark = d_gcmark,
+				d_getindex = d_getindex,
+				d_setindex = d_setindex,
+				d_convert = d_convert,
+				d_serialize = d_serialize,
+				d_dump = d_dump,
+				d_call = d_call,
 			};
-			_sgsClassInfo.Add( type, cinfo );
+			ctx.GetEngine()._sgsClassInfo.Add( type, cinfo );
 			return cinfo;
 		}
 
 		public static SGSClassInfo GetStaticClassInfo( Context ctx, Type type )
 		{
 			SGSClassInfo cinfo;
-			if( _sgsStaticClassInfo.TryGetValue( type, out cinfo ) )
+			if( ctx.GetEngine()._sgsStaticClassInfo.TryGetValue( type, out cinfo ) )
 				return cinfo;
-
+			
+			NI.OC_Self d_getindex, d_setindex;
 			NI.ObjInterface oi = new NI.ObjInterface()
 			{
-				getindex = new NI.OC_Self( _sgsGetIndex ),
-				setindex = new NI.OC_Self( _sgsSetIndex ),
+				getindex = d_getindex = new NI.OC_Self( _sgsGetIndex ),
+				setindex = d_setindex = new NI.OC_Self( _sgsSetIndex ),
 			};
 
 			cinfo = new SGSClassInfo()
 			{
 				iface = AllocInterface( oi, type.Name + "[static]" ),
 				props = _ReadClassProps( ctx, type, true ),
+				d_getindex = d_getindex,
+				d_setindex = d_setindex,
 			};
-			_sgsStaticClassInfo.Add( type, cinfo );
+			ctx.GetEngine()._sgsStaticClassInfo.Add( type, cinfo );
 			return cinfo;
 		}
 		
@@ -275,22 +295,21 @@ namespace SGScript
 			if( _sgsObject != IntPtr.Zero )
 				throw new SGSException( NI.EINPROC, "AllocClassObject - object is already allocated" );
 			IntPtr iface = GetClassInterface();
-			GCHandle h = GCHandle.Alloc( this );
 			NI.Variable var;
-			NI.CreateObject( _sgsEngine.ctx, GCHandle.ToIntPtr( h ), iface, out var );
+			NI.CreateObject( _sgsEngine.ctx, HDH.Alloc( this ), iface, out var );
 			_sgsObject = var.data.O;
 
 			_InitMetaObject();
 		}
 		public void FreeClassObject()
 		{
+			Console.WriteLine("[freed "+ToString()+"]");
 			if( _sgsObject == IntPtr.Zero )
 				throw new SGSException( NI.EINPROC, "FreeClassObject - object is not allocated" );
 			IntPtr handleP = Marshal.ReadIntPtr( _sgsObject, NI.VarObj.offsetOfData );
-			GCHandle h = GCHandle.FromIntPtr( handleP );
 			NI.ObjRelease( _sgsEngine.ctx, _sgsObject );
 			_sgsObject = IntPtr.Zero;
-			h.Free();
+		//	HDH.Free( handleP );
 		}
 		public void DisownClassObject()
 		{
@@ -364,10 +383,9 @@ namespace SGScript
 		public static IObjectBase _IP2Obj( IntPtr varobj, bool freehandle = false )
 		{
 			IntPtr handleP = Marshal.ReadIntPtr( varobj, NI.VarObj.offsetOfData );
-			GCHandle h = GCHandle.FromIntPtr( handleP );
-			IObjectBase obj = (IObjectBase) h.Target;
+			IObjectBase obj = (IObjectBase) HDH.GetObj( handleP );
 			if( freehandle )
-				h.Free();
+				HDH.Free( handleP );
 			return obj;
 		}
 		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj, true ); if( obj != null ) return obj._intOnDestroy(); else return NI.SUCCESS; }
@@ -551,6 +569,10 @@ namespace SGScript
 				parseVarParams[ 1 ] = ctx.StackItem( 0 );
 				parseVarThis.Invoke( ctx, parseVarParams );
 				thisvar = parseVarParams[ 0 ];
+				if( thisvar is DNMethod )
+				{
+					throw new Exception( "#BUG1 [thisvar is DNMethod]: <<" + (parseVarThis as MethodBase).ToString() + ">>]" );
+				}
 			}
 			int outArg = 0;
 			int inArg = gotthis ? 1 : 0;
@@ -571,6 +593,12 @@ namespace SGScript
 			}
 
 			ctx.PushObj( thisMethodInfo.Invoke( thisvar, callArgs ) );
+
+			// pooled resource cleanup
+			parseVarParams[0] = null;
+			parseVarParams[1] = null;
+			for( int i = 0; i < parseVarArgs.Length; ++i )
+				callArgs[ i ] = null;
 
 			return 1;
 		}
