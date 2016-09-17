@@ -13,6 +13,7 @@ namespace APITest
 		{
 			while( keepCollecting )
 			{
+				Thread.Sleep( 20 );
 				GC.Collect();
 			}
 		}
@@ -133,8 +134,8 @@ namespace APITest
 		{
 			engine.Release();
 			engine = null;
-			GC.Collect();
-			GC.WaitForFullGCComplete();
+
+			MDL.CheckStateAndClear();
 
 			Assert( Engine._engines.Count, 0 );
 		}

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace SGScript
@@ -27,8 +28,88 @@ namespace SGScript
 		public override IntPtr MemoryAllocFree( IntPtr ptr, IntPtr size )
 		{
 			if( ptr != IntPtr.Zero && size != IntPtr.Zero ) return Realloc( ptr, size );
-			else if( size != IntPtr.Zero ) return Alloc( size );
+			if( size != IntPtr.Zero ) return Alloc( size );
 			if( ptr != IntPtr.Zero ) Free( ptr );
+			return IntPtr.Zero;
+		}
+	}
+
+	public class MemoryDefault : IMemory
+	{
+		public override IntPtr MemoryAllocFree( IntPtr ptr, IntPtr size )
+		{
+			if( ptr != IntPtr.Zero && size != IntPtr.Zero ) return MDL.Realloc( ptr, size );
+			if( size != IntPtr.Zero ) return MDL.Alloc( size );
+			if( ptr != IntPtr.Zero ) MDL.Free( ptr );
+			return IntPtr.Zero;
+		}
+	}
+
+	public class DbgMemoryHook : IMemory
+	{
+		public IMemory original;
+		public static Dictionary<IntPtr, StackTrace> handles = new Dictionary<IntPtr, StackTrace>();
+
+		public DbgMemoryHook( IMemory o ){ original = o; }
+		public void CheckMemoryState()
+		{
+			foreach( KeyValuePair<IntPtr, StackTrace> handle in handles )
+			{
+				if( handle.Value == null )
+				{
+					throw new SGSException( NI.EINPROC, "DbgMemoryHook [CheckMemoryState]: handle " + handle.Key + " was not freed!" );
+				}
+			}
+		}
+
+		void DbgOnAlloc( IntPtr ptr )
+		{
+			if( handles.ContainsKey( ptr ) )
+			{
+				if( handles[ptr] != null )
+					handles[ptr] = null; // previous handle was successfully freed
+				else
+					throw new SGSException( NI.EINPROC, "DbgMemoryHook [Alloc]: handle " + ptr + " was already allocated!" );
+			}
+			else
+				handles.Add( ptr, null );
+		}
+		void DbgOnFree( IntPtr ptr )
+		{
+			if( handles.ContainsKey( ptr ) == false )
+			{
+				throw new SGSException( NI.EINPROC, "DbgMemoryHook [Free]: handle " + ptr + " was never allocated!" );
+			}
+			if( handles[ptr] != null )
+			{
+				Console.WriteLine( handles[ptr] );
+				SGSException x = new SGSException( NI.EINPROC, "DbgMemoryHook [Free]: handle " + ptr + " was already freed!" );
+				x.Data.Add( "Stack trace", handles[ptr] );
+				throw x;
+			}
+			handles[ptr] = new StackTrace();
+		}
+
+		public override IntPtr MemoryAllocFree( IntPtr ptr, IntPtr size )
+		{
+			if( ptr != IntPtr.Zero && size != IntPtr.Zero )
+			{
+				DbgOnFree( ptr );
+				ptr = original.MemoryAllocFree( ptr, size );
+				DbgOnAlloc( ptr );
+				return ptr;
+			}
+			if( size != IntPtr.Zero )
+			{
+				ptr = original.MemoryAllocFree( ptr, size );
+				DbgOnAlloc( ptr );
+				return ptr;
+			}
+			if( ptr != IntPtr.Zero )
+			{
+				DbgOnFree( ptr );
+				original.MemoryAllocFree( ptr, size );
+			}
 			return IntPtr.Zero;
 		}
 	}
@@ -96,8 +177,8 @@ namespace SGScript
 		IntPtr hMsgFunc = IntPtr.Zero;
 		public void SetMsgFunc( IMessenger pr )
 		{
-			HDH.FreeIfAlloc( ref hMsgFunc );
-			hMsgFunc = HDH.Alloc( pr );
+			HDL.FreeIfAlloc( ref hMsgFunc );
+			hMsgFunc = HDL.Alloc( pr );
 			NI.SetMsgFunc( ctx, new NI.MsgFunc( IMessenger._MsgFunc ), hMsgFunc );
 		}
 		public void Msg( int type, string message ){ NI.Msg( ctx, type, message ); }
@@ -115,7 +196,7 @@ namespace SGScript
 			{
 				NI.ReleaseState( ctx );
 				ctx = IntPtr.Zero;
-				HDH.FreeIfAlloc( ref hMsgFunc );
+				HDL.FreeIfAlloc( ref hMsgFunc );
 			}
 		}
 		public Context Fork( bool copy = false )
@@ -536,7 +617,7 @@ namespace SGScript
 			public WeakReference wr;
 		}
 
-		Hashtable _objRefs = new Hashtable(); // Key.Target = ISGSBase
+		Dictionary<WeakReference, Nothing> _objRefs = new Dictionary<WeakReference, Nothing>(); // Key.Target = ISGSBase
 		public Dictionary<Type, DNMetaObject> _metaObjects = new Dictionary<Type, DNMetaObject>();
 		public Dictionary<Type, SGSClassInfo> _sgsClassInfo = new Dictionary<Type,SGSClassInfo>();
 		public Dictionary<Type, SGSClassInfo> _sgsStaticClassInfo = new Dictionary<Type,SGSClassInfo>();
@@ -558,28 +639,42 @@ namespace SGScript
 		}
 		public Engine( IMemory mem ) : base( IntPtr.Zero, false )
 		{
-			hMem = HDH.Alloc( mem );
+			hMem = HDL.Alloc( mem );
 			d_memfunc = new NI.MemFunc( IMemory._MemFunc );
 			ctx = NI.CreateEngineExt( d_memfunc, hMem );
 			_engines.Add( ctx, _sgsWeakRef );
 		}
 		public override void Release()
 		{
-			object[] objrefs = new object[ _objRefs.Count ];
-			_objRefs.Keys.CopyTo( objrefs, 0 );
-			foreach( object obj in objrefs )
+			if( ctx != IntPtr.Zero )
 			{
-				WeakReference wr = (WeakReference) obj;
-				if( wr != null )
+				WeakReference[] objrefs;
+				for( int i = 0; i < 10 && _objRefs.Count != 0; ++i )
 				{
-					IDisposable d = ((IDisposable) wr.Target);
-					if( d != null )
-						d.Dispose();
+					lock( _objRefs )
+					{
+						objrefs = new WeakReference[_objRefs.Count];
+						_objRefs.Keys.CopyTo( objrefs, 0 );
+					}
+					foreach( WeakReference wr in objrefs )
+					{
+						if( wr != null )
+						{
+							IDisposable d = ((IDisposable) wr.Target);
+							if( d != null )
+								d.Dispose();
+						}
+					}
+					GC.Collect();
+					GC.WaitForPendingFinalizers();
 				}
+				if( _objRefs.Count != 0 )
+					throw new SGSException( NI.EINPROC, "Failed to clean up handles" );
+				_engines.Remove( ctx );
+				NI.DestroyEngine( ctx );
+				ctx = IntPtr.Zero;
+				HDL.FreeIfAlloc( ref hMem );
 			}
-			_engines.Remove( ctx );
-			base.Release();
-			HDH.FreeIfAlloc( ref hMem );
 		}
 
 		public DNMetaObject _GetMetaObject( Type t )
@@ -594,11 +689,17 @@ namespace SGScript
 		}
 		public void _RegisterObj( ISGSBase obj )
 		{
-			_objRefs.Add( obj._sgsWeakRef, null );
+			lock( _objRefs )
+			{
+				_objRefs.Add( obj._sgsWeakRef, new Nothing() );
+			}
 		}
 		public void _UnregisterObj( ISGSBase obj )
 		{
-			_objRefs.Remove( obj._sgsWeakRef );
+			lock( _objRefs )
+			{
+				_objRefs.Remove( obj._sgsWeakRef );
+			}
 		}
 	}
 }

@@ -78,7 +78,7 @@ namespace SGScript
 		{
 			byte[] nameBytes = System.Text.Encoding.UTF8.GetBytes( name );
 
-			IntPtr iface = Marshal.AllocHGlobal( NI.ObjInterfaceSize + nameBytes.Length + 1 );
+			IntPtr iface = MDL.Alloc( NI.ObjInterfaceSize + nameBytes.Length + 1 );
 
 			IntPtr nameOffset = (IntPtr) ( iface.ToInt64() + NI.ObjInterfaceSize );
 			iftemplate.name = nameOffset;
@@ -296,7 +296,7 @@ namespace SGScript
 				throw new SGSException( NI.EINPROC, "AllocClassObject - object is already allocated" );
 			IntPtr iface = GetClassInterface();
 			NI.Variable var;
-			NI.CreateObject( _sgsEngine.ctx, HDH.Alloc( this ), iface, out var );
+			NI.CreateObject( _sgsEngine.ctx, HDL.Alloc( this ), iface, out var );
 			_sgsObject = var.data.O;
 
 			_InitMetaObject();
@@ -309,7 +309,6 @@ namespace SGScript
 			IntPtr handleP = Marshal.ReadIntPtr( _sgsObject, NI.VarObj.offsetOfData );
 			NI.ObjRelease( _sgsEngine.ctx, _sgsObject );
 			_sgsObject = IntPtr.Zero;
-		//	HDH.Free( handleP );
 		}
 		public void DisownClassObject()
 		{
@@ -383,9 +382,9 @@ namespace SGScript
 		public static IObjectBase _IP2Obj( IntPtr varobj, bool freehandle = false )
 		{
 			IntPtr handleP = Marshal.ReadIntPtr( varobj, NI.VarObj.offsetOfData );
-			IObjectBase obj = (IObjectBase) HDH.GetObj( handleP );
+			IObjectBase obj = (IObjectBase) HDL.GetObj( handleP );
 			if( freehandle )
-				HDH.Free( handleP );
+				HDL.Free( handleP );
 			return obj;
 		}
 		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj, true ); if( obj != null ) return obj._intOnDestroy(); else return NI.SUCCESS; }

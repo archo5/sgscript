@@ -1,23 +1,167 @@
 ﻿using System;
-#if DEBUG
 using System.Diagnostics;
-#endif
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
+using System.Reflection;
 
 namespace SGScript
 {
-	// handle debug helper
-	public class HDH
+	// memory debug layer
+	public class MDL
 	{
-#if DEBUG
+#if SGS_DEBUG_MEMORY
+		public struct AllocInfo
+		{
+			public IntPtr size;
+			public StackTrace lastUse;
+
+			public bool allocated { get { return size != (IntPtr) (-1); } }
+		}
+		public static Dictionary<IntPtr, AllocInfo> handles = new Dictionary<IntPtr, AllocInfo>();
+		public static object lockable = new object();
+
+		public static void CheckStateAndClear()
+		{
+			lock( lockable )
+			{
+				MethodBase allocInterfaceMethodInfo = typeof(IObjectBase).GetMethod( "AllocInterface" );
+				foreach( KeyValuePair<IntPtr, AllocInfo> handle in handles )
+				{
+					if( handle.Value.allocated )
+					{
+						bool isCached = false;
+						for( int i = 0; i < handle.Value.lastUse.FrameCount; ++i )
+						{
+							StackFrame sf = handle.Value.lastUse.GetFrame( i );
+							if( sf.GetMethod() == allocInterfaceMethodInfo )
+							{
+								isCached = true;
+								break;
+							}
+						}
+						if( isCached == false )
+						{
+							Console.WriteLine( handle.Key + " LEAKED; Allocated at: " + handle.Value.lastUse );
+						}
+
+						CheckGuardBytes( handle.Key, handle.Value );
+					}
+				}
+				handles = new Dictionary<IntPtr, AllocInfo>();
+			}
+		}
+
+		public static void CheckGuardBytes( IntPtr ptr, AllocInfo info )
+		{
+			for( int i = 0; i < 4; ++i )
+			{
+				if( Marshal.ReadInt32( ptr, i * 4 ) != 0x5facade7 )
+				{
+					Console.WriteLine( info.lastUse );
+					throw new SGSException( NI.EINPROC, "MDL [Free]: memory of handle " + ptr + " was modified (at beginning)!" );
+				}
+				if( Marshal.ReadInt32( ptr, info.size.ToInt32() + 16 + i * 4 ) != 0x5facade7 )
+				{
+					Console.WriteLine( info.lastUse );
+					throw new SGSException( NI.EINPROC, "MDL [Free]: memory of handle " + ptr + " was modified (at end)!" );
+				}
+			}
+		}
+		public static void DbgOnAlloc( IntPtr ptr, IntPtr size )
+		{
+			Monitor.Enter( lockable );
+			if( handles.ContainsKey( ptr ) )
+			{
+				if( handles[ptr].allocated == false )
+				{
+					// previous handle was successfully freed
+					handles[ptr] = new AllocInfo(){ size = size, lastUse = new StackTrace() };
+				}
+				else
+				{
+					Console.WriteLine( handles[ptr].lastUse );
+					Monitor.Exit( lockable );
+					throw new SGSException( NI.EINPROC, "MDL [Alloc]: handle " + ptr + " was already allocated!" );
+				}
+			}
+			else
+				handles.Add( ptr, new AllocInfo(){ size = size, lastUse = new StackTrace() } );
+			Monitor.Exit( lockable );
+			
+			for( int i = 0; i < 4; ++i )
+			{
+				Marshal.WriteInt32( ptr, i * 4, 0x5facade7 );
+				Marshal.WriteInt32( ptr, size.ToInt32() + 16 + i * 4, 0x5facade7 );
+			}
+		}
+		public static void DbgOnFree( IntPtr ptr )
+		{
+			Monitor.Enter( lockable );
+			if( handles.ContainsKey( ptr ) == false )
+			{
+				Monitor.Exit( lockable );
+				throw new SGSException( NI.EINPROC, "MDL [Free]: handle " + ptr + " was never allocated!" );
+			}
+			AllocInfo oldinfo = handles[ptr];
+			if( oldinfo.allocated == false )
+			{
+				Console.WriteLine( oldinfo.lastUse );
+				Monitor.Exit( lockable );
+				throw new SGSException( NI.EINPROC, "MDL [Free]: handle " + ptr + " was already freed!" );
+			}
+			handles[ptr] = new AllocInfo(){ size = (IntPtr) (-1), lastUse = new StackTrace() };
+			Monitor.Exit( lockable );
+
+			CheckGuardBytes( ptr, oldinfo );
+		}
+#else
+		public static void CheckStateAndClear(){}
+#endif
+		public static IntPtr Alloc( IntPtr size )
+		{
+#if SGS_DEBUG_MEMORY
+			IntPtr ptr = Marshal.AllocHGlobal( size.ToInt32() + 32 );
+			DbgOnAlloc( ptr, size );
+			return (IntPtr)( ptr.ToInt64() + 16 );
+#else
+			return Marshal.AllocHGlobal( size );
+#endif
+		}
+		public static void Free( IntPtr ptr )
+		{
+#if SGS_DEBUG_MEMORY
+			ptr = (IntPtr)( ptr.ToInt64() - 16 );
+			DbgOnFree( ptr );
+#endif
+			Marshal.FreeHGlobal( ptr );
+		}
+		public static IntPtr Realloc( IntPtr ptr, IntPtr size )
+		{
+#if SGS_DEBUG_MEMORY
+			ptr = (IntPtr)( ptr.ToInt64() - 16 );
+			DbgOnFree( ptr );
+			ptr = Marshal.ReAllocHGlobal( ptr, (IntPtr)( size.ToInt32() + 32 ) );
+			DbgOnAlloc( ptr, size );
+			return (IntPtr)( ptr.ToInt64() + 16 );
+#else
+			return Marshal.ReAllocHGlobal( ptr, size );
+#endif
+		}
+		public static IntPtr Alloc( int size ){ return Alloc( (IntPtr) size ); }
+	}
+
+	// handle debug layer
+	public class HDL
+	{
+#if SGS_DEBUG_GCHANDLES
 		public static Dictionary<IntPtr, StackTrace> handles = new Dictionary<IntPtr, StackTrace>();
 #endif
 		public static IntPtr Alloc( object tgt )
 		{
 			IntPtr p = GCHandle.ToIntPtr( GCHandle.Alloc( tgt ) );
-#if DEBUG
+#if SGS_DEBUG_GCHANDLES
 			if( handles.ContainsKey( p ) && handles[ p ] != null )
 				handles.Remove( p ); // previous handle was successfully freed
 			handles.Add( p, null );
@@ -26,15 +170,15 @@ namespace SGScript
 		}
 		public static void Free( IntPtr p )
 		{
-#if DEBUG
+#if SGS_DEBUG_GCHANDLES
 			if( handles.ContainsKey( p ) == false )
 			{
-				throw new SGSException( NI.EINPROC, "HDH [Free]: handle " + p + " was never allocated!" );
+				throw new SGSException( NI.EINPROC, "HDL [Free]: handle " + p + " was never allocated!" );
 			}
 			if( handles[ p ] != null )
 			{
 				Console.WriteLine(handles[ p ]);
-				SGSException x = new SGSException( NI.EINPROC, "HDH [GetObj]: handle " + p + " was already freed!" );
+				SGSException x = new SGSException( NI.EINPROC, "HDL [Free]: handle " + p + " was already freed!" );
 				x.Data.Add( "Stack trace", handles[ p ] );
 				throw x;
 			}
@@ -44,15 +188,15 @@ namespace SGScript
 		}
 		public static object GetObj( IntPtr p, bool free = false )
 		{
-#if DEBUG
+#if SGS_DEBUG_GCHANDLES
 			if( handles.ContainsKey( p ) == false )
 			{
-				throw new SGSException( NI.EINPROC, "HDH [GetObj]: handle " + p + " was never allocated!" );
+				throw new SGSException( NI.EINPROC, "HDL [GetObj]: handle " + p + " was never allocated!" );
 			}
 			if( handles[ p ] != null )
 			{
 				Console.WriteLine(handles[ p ]);
-				SGSException x = new SGSException( NI.EINPROC, "HDH [GetObj]: handle " + p + " was freed!" );
+				SGSException x = new SGSException( NI.EINPROC, "HDL [GetObj]: handle " + p + " was freed!" );
 				x.Data.Add( "Stack trace", handles[ p ] );
 				throw x;
 			}
@@ -85,7 +229,7 @@ namespace SGScript
 		}
 		public void CleanUpNativeData( IntPtr mem )
 		{
-			Marshal.FreeHGlobal( mem );
+			MDL.Free( mem );
 		}
 		public int GetNativeDataSize()
 		{
@@ -96,7 +240,7 @@ namespace SGScript
 			if( obj == null )
 				return IntPtr.Zero;
 			byte[] bytes = Encoding.UTF8.GetBytes( (string) obj );
-			IntPtr mem = Marshal.AllocHGlobal( bytes.Length + 1 );
+			IntPtr mem = MDL.Alloc( bytes.Length + 1 );
 			Marshal.Copy( bytes, 0, mem, bytes.Length );
 			Marshal.WriteByte( mem, bytes.Length, 0 );
 			return mem;
@@ -330,9 +474,9 @@ namespace SGScript
 
 		public static IntPtr DefaultMemFunc( IntPtr ud, IntPtr ptr, IntPtr size )
 		{
-			if( ptr != IntPtr.Zero && size != IntPtr.Zero ) return Marshal.ReAllocHGlobal( ptr, size );
-			else if( size != IntPtr.Zero ) return Marshal.AllocHGlobal( size );
-			if( ptr != IntPtr.Zero ) Marshal.FreeHGlobal( ptr );
+			if( ptr != IntPtr.Zero && size != IntPtr.Zero ) return MDL.Realloc( ptr, size );
+			else if( size != IntPtr.Zero ) return MDL.Alloc( size );
+			if( ptr != IntPtr.Zero ) MDL.Free( ptr );
 			return IntPtr.Zero;
 		}
 
