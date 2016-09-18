@@ -27,20 +27,28 @@ namespace SGScript
 		public ISGSBase( Context c ) : this( c.GetEngine() ){}
 		public ISGSBase( Engine e )
 		{
+			e.ProcessVarRemoveQueue();
 			_sgsEngine = e;
-			_sgsWeakRef = new WeakReference( this );
+			_sgsWeakRef = new WeakReference( this, true );
 			e._RegisterObj( this );
 		}
 		public ISGSBase( PartiallyConstructed pc )
 		{
-			_sgsWeakRef = new WeakReference( this );
+			_sgsWeakRef = new WeakReference( this, true );
 		}
 		~ISGSBase(){ Dispose(); }
 		public abstract void Release();
 		public void Dispose()
 		{
-			_sgsEngine._UnregisterObj( this );
-			Release();
+			lock( _sgsEngine._objRefs )
+			{
+				if( _sgsWeakRef != null )
+				{
+					_sgsEngine._UnregisterObj( this );
+					Release();
+					_sgsWeakRef = null;
+				}
+			}
 		}
 	}
 	
@@ -71,7 +79,6 @@ namespace SGScript
 	public abstract class IObjectBase : ISGSBase
 	{
 		public static IntPtr _sgsNullObjectInterface = AllocInterface( new NI.ObjInterface(), "<nullObject>" );
-		public static Dictionary<IObjectBase, bool> _sgsOwnedObjects = new Dictionary<IObjectBase,bool>();
 
 
 		public static IntPtr AllocInterface( NI.ObjInterface iftemplate, string name )
@@ -206,10 +213,11 @@ namespace SGScript
 			if( ctx.GetEngine()._sgsStaticClassInfo.TryGetValue( type, out cinfo ) )
 				return cinfo;
 			
-			NI.OC_Self d_getindex, d_setindex;
+			NI.OC_Self d_destruct, d_getindex, d_setindex;
 			NI.ObjInterface oi = new NI.ObjInterface()
-			{
-				getindex = d_getindex = new NI.OC_Self( _sgsGetIndex ),
+            {
+                destruct = d_destruct = new NI.OC_Self( _sgsDestruct ),
+                getindex = d_getindex = new NI.OC_Self( _sgsGetIndex ),
 				setindex = d_setindex = new NI.OC_Self( _sgsSetIndex ),
 			};
 
@@ -217,6 +225,7 @@ namespace SGScript
 			{
 				iface = AllocInterface( oi, type.Name + "[static]" ),
 				props = _ReadClassProps( ctx, type, true ),
+                d_destruct = d_destruct,
 				d_getindex = d_getindex,
 				d_setindex = d_setindex,
 			};
@@ -303,10 +312,9 @@ namespace SGScript
 		}
 		public void FreeClassObject()
 		{
-			Console.WriteLine("[freed "+ToString()+"]");
+		//	Console.WriteLine("[freed "+ToString()+"]");
 			if( _sgsObject == IntPtr.Zero )
 				throw new SGSException( NI.EINPROC, "FreeClassObject - object is not allocated" );
-			IntPtr handleP = Marshal.ReadIntPtr( _sgsObject, NI.VarObj.offsetOfData );
 			NI.ObjRelease( _sgsEngine.ctx, _sgsObject );
 			_sgsObject = IntPtr.Zero;
 		}
@@ -314,21 +322,12 @@ namespace SGScript
 		{
 			if( _sgsObject == IntPtr.Zero )
 				throw new SGSException( NI.EINPROC, "FreeClassObject - object is not allocated" );
-			Marshal.WriteIntPtr( _sgsObject, Marshal.OffsetOf( typeof(NI.VarObj), "iface" ).ToInt32(), _sgsNullObjectInterface );
+			Marshal.WriteIntPtr( _sgsObject, NI.VarObj.offsetOfIface, _sgsNullObjectInterface );
+            HDL.Free( Marshal.ReadIntPtr( _sgsObject, NI.VarObj.offsetOfData ) );
+            Marshal.WriteIntPtr( _sgsObject, NI.VarObj.offsetOfData, IntPtr.Zero );
 			FreeClassObject();
 		}
 		
-		// Let SGScript keep the object even if there are no references to it from C# code
-		public void DelegateOwnership()
-		{
-			_sgsOwnedObjects.Add( this, true );
-		}
-		// Remove the object
-		public void RetakeOwnership()
-		{
-			_sgsOwnedObjects.Remove( this );
-		}
-
 		// callback implementation helpers
 		public Variable sgsGetPropertyByName( Variable key, bool isprop )
 		{
@@ -399,7 +398,6 @@ namespace SGScript
 		// core feature layer (don't override these unless there is some overhead to cut)
 		public virtual int _intOnDestroy()
 		{
-			RetakeOwnership();
 			OnDestroy();
 			return NI.SUCCESS;
 		}
@@ -498,6 +496,8 @@ namespace SGScript
 			return GetStaticClassInfo( _sgsEngine, targetType );
 		}
 		public override void _InitMetaObject(){} // no meta object for meta objects
+
+		public override string ToString(){ return "SGScript.DNMetaObject(" + targetType.Name + ")"; }
 	}
 
 	// .NET Method wrapper
@@ -626,8 +626,7 @@ namespace SGScript
 		public void Acquire(){ NI.Acquire( ctx.ctx, var ); }
 		public override void Release()
 		{
-			if( ctx.ctx != IntPtr.Zero && var.type != VarType.Null )
-				NI.Release( ctx.ctx, ref var );
+			_sgsEngine._ReleaseVar( ref var );
 		}
 
 		public VarType type { get { return var.type; } }

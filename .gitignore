@@ -27,3 +27,4 @@ xcuserdata
 /examples/AndroidSampleProject/bin/
 /dotnet/*/obj/
 /dotnet/*/bin/
+*.VC.*

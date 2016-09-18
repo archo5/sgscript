@@ -373,7 +373,7 @@ int sgsVM_PushStackFrame( SGS_CTX, sgs_Variable* func )
 	}
 	
 	F->func = func;
-	if( func && func->type == SGS_VT_FUNC )
+	if( func->type == SGS_VT_FUNC )
 	{
 		sgs_iFunc* fn = func->data.F;
 		F->iptr = sgs_func_bytecode( fn );
@@ -3469,8 +3469,8 @@ SGSBOOL sgs_StorePath( SGS_CTX, sgs_Variable var, sgs_Variable val, const char* 
 		int prop = -1;
 		char a = path[ len - 1 ];
 		
-		if( sgs_parse_path_key( C, "sgs_StorePath", len - 1, &args, a, &key, &prop ) == SGS_FALSE )
-			return SGS_FALSE;
+		if( ( ret = sgs_parse_path_key( C, "sgs_StorePath", len - 1, &args, a, &key, &prop ) ) == SGS_FALSE )
+			goto fail;
 		
 		ret = sgs_SetIndex( C, *stk_gettop( C ), key, val, prop );
 		VAR_RELEASE( &key );
@@ -4296,7 +4296,7 @@ void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth )
 		break;
 	case SGS_VT_OBJECT:
 		{
-			char buf[ 32 ];
+			char buf[ 256 ];
 			int q = 0;
 			_STACK_PREPARE;
 			sgs_VarObj* obj = var.data.O;
@@ -4310,8 +4310,9 @@ void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth )
 			
 			if( !q )
 			{
-				sprintf( buf, "object (%p) [%"PRId32"] %s", (void*) obj, obj->refcount,
+				snprintf( buf, 255, "object (%p) [%"PRId32"] %s", (void*) obj, obj->refcount,
 					obj->iface->name ? obj->iface->name : "<unnamed>" );
+				buf[ 255 ] = 0;
 				sgs_PushString( C, buf );
 			}
 			else
@@ -4898,7 +4899,7 @@ void sgs_IterGetData( SGS_CTX, sgs_Variable var, sgs_Variable* key, sgs_Variable
 		return;
 	if( key ) fstk_push_null( C );
 	if( value ) fstk_push_null( C );
-	vm_fornext( C, key ? stk_absindex( C, value ? -2 : -1 ) : -1, value ? stk_absindex( C, -1 ) : -1, &var );
+	vm_fornext( C, key ? stk_topindex( C, value ? -2 : -1 ) : -1, value ? stk_topindex( C, -1 ) : -1, &var );
 	if( value ) sgs_StoreVariable( C, value );
 	if( key ) sgs_StoreVariable( C, key );
 }

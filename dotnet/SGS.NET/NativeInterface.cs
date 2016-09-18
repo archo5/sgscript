@@ -158,6 +158,23 @@ namespace SGScript
 #if SGS_DEBUG_GCHANDLES
 		public static Dictionary<IntPtr, StackTrace> handles = new Dictionary<IntPtr, StackTrace>();
 #endif
+        public static void CheckStateAndClear()
+        {
+#if SGS_DEBUG_GCHANDLES
+            List<string> alloced = new List<string>();
+            foreach( KeyValuePair<IntPtr, StackTrace> kvp in handles )
+            {
+                if( kvp.Value == null )
+                {
+                    string name = GetObj( kvp.Key ).ToString();
+                    Console.WriteLine( "Still allocated: " + name );
+                    alloced.Add( name );
+                }
+            }
+            if( alloced.Count != 0 )
+                throw new Exception( string.Format( "HDL [CheckStateAndClear] Found {0} unfreed handles", alloced.Count ) );
+#endif
+        }
 		public static IntPtr Alloc( object tgt )
 		{
 			IntPtr p = GCHandle.ToIntPtr( GCHandle.Alloc( tgt ) );
@@ -443,7 +460,8 @@ namespace SGScript
 			public IntPtr metaobj;
 			
 			public static int offsetOfData = Marshal.OffsetOf( typeof(NI.VarObj), "data" ).ToInt32();
-		};
+            public static int offsetOfIface = Marshal.OffsetOf( typeof(NI.VarObj), "iface" ).ToInt32();
+        };
 
 		[StructLayout(LayoutKind.Explicit, Size=8)]
 		public struct VarData

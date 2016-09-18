@@ -18,6 +18,9 @@ namespace APITest
 			}
 		}
 
+		[System.Runtime.InteropServices.DllImport( "user32.dll" )]
+		public static extern short GetAsyncKeyState( int vKey );
+
 		static int failCount = 0;
 		static int testCount = 0;
 		static void Main(string[] args)
@@ -33,6 +36,14 @@ namespace APITest
 				count++;
 				Console.WriteLine( "\n\nTEST #" + count + " ---" );
 				RunAllTests();
+				if( ( GetAsyncKeyState( 0x11 ) & 0x8000 ) != 0 && // VK_CONTROL
+					( GetAsyncKeyState( 0x10 ) & 0x8000 ) != 0 && // VK_SHIFT
+					( GetAsyncKeyState( 0x12 ) & 0x8000 ) != 0 && // VK_MENU (Alt)
+					( GetAsyncKeyState( 0x74 ) & 0x8000 ) != 0 ) // VK_F5
+				{
+					Console.WriteLine( "Test stopped" );
+					break;
+				}
 			}
 
 			keepCollecting = false;
@@ -136,8 +147,9 @@ namespace APITest
 			engine = null;
 
 			MDL.CheckStateAndClear();
+            HDL.CheckStateAndClear();
 
-			Assert( Engine._engines.Count, 0 );
+            Assert( Engine._engines.Count, 0 );
 		}
 
 		// TESTS
@@ -940,7 +952,7 @@ namespace APITest
 
 			// test the empty interface
 			{
-				NI.CreateObject( engine.ctx, IntPtr.Zero, IObject.AllocInterface( new NI.ObjInterface(), "empty" ) );
+				NI.CreateObject( engine.ctx, IntPtr.Zero, IObjectBase._sgsNullObjectInterface );
 				engine.Stat( Stat.XDumpStack );
 				engine.Pop( 1 );
 			}

@@ -355,7 +355,7 @@ void sgs_vht_analyze( sgs_VHTable* T, sgs_VHTStats* io )
 		printf( "# empty: %u\n", numempty );
 		printf( "# removed: %u\n", numrem );
 		printf( "# collisions: %u\n", numcols );
-		printf( "> average probe length: %.2f\n", (float) distsum / (float) numused );
+		printf( "> average probe length: %.2f\n", numused != 0 ? (float) distsum / (float) numused : 0.0f );
 		printf( "> worst probe length: %u\n", worstdist );
 		{
 			float fbkts = (float) T->pair_mem, fins = (float) numused, fcols = (float) numcols;
@@ -370,7 +370,7 @@ void sgs_vht_analyze( sgs_VHTable* T, sgs_VHTStats* io )
 	io->removed = numrem;
 	io->collisions = numcols;
 	io->worst_probe_length = worstdist;
-	io->avg_probe_length = (float) distsum / (float) numused;
+	io->avg_probe_length = numused != 0 ? (float) distsum / (float) numused : 0.0f;
 }
 
 static void sgs_vht_rehash( sgs_VHTable* T, SGS_CTX, sgs_VHTIdx size )

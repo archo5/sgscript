@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace SGScript
 {
@@ -143,6 +144,7 @@ namespace SGScript
 			else
 			{
 				_sgsEngine = GetEngine();
+				_sgsEngine.ProcessVarRemoveQueue();
 				_sgsEngine._RegisterObj( this );
 			}
 		}
@@ -194,8 +196,7 @@ namespace SGScript
 		{
 			if( ctx != IntPtr.Zero )
 			{
-				NI.ReleaseState( ctx );
-				ctx = IntPtr.Zero;
+				_sgsEngine._ReleaseCtx( ref ctx );
 				HDL.FreeIfAlloc( ref hMsgFunc );
 			}
 		}
@@ -617,11 +618,13 @@ namespace SGScript
 			public WeakReference wr;
 		}
 
-		Dictionary<WeakReference, Nothing> _objRefs = new Dictionary<WeakReference, Nothing>(); // Key.Target = ISGSBase
+		public Dictionary<WeakReference, Nothing> _objRefs = new Dictionary<WeakReference, Nothing>(); // Key.Target = ISGSBase
 		public Dictionary<Type, DNMetaObject> _metaObjects = new Dictionary<Type, DNMetaObject>();
-		public Dictionary<Type, SGSClassInfo> _sgsClassInfo = new Dictionary<Type,SGSClassInfo>();
-		public Dictionary<Type, SGSClassInfo> _sgsStaticClassInfo = new Dictionary<Type,SGSClassInfo>();
-		public static Dictionary<IntPtr, WeakReference> _engines = new Dictionary<IntPtr, WeakReference>(); // Value.Target = Engine
+		public Dictionary<Type, SGSClassInfo> _sgsClassInfo = new Dictionary<Type,SGSClassInfo>(); // < contains native memory, must be freed
+		public Dictionary<Type, SGSClassInfo> _sgsStaticClassInfo = new Dictionary<Type,SGSClassInfo>(); // < contains native memory, must be freed
+        public static Dictionary<IntPtr, WeakReference> _engines = new Dictionary<IntPtr, WeakReference>(); // Value.Target = Engine
+		public Thread owningThread;
+		public Queue<NI.Variable> _varReleaseQueue = new Queue<NI.Variable>();
 
 		public static Engine GetFromCtx( IntPtr ctx )
 		{
@@ -634,11 +637,13 @@ namespace SGScript
 		IntPtr hMem = IntPtr.Zero;
 		public Engine() : base( IntPtr.Zero, false )
 		{
+			owningThread = Thread.CurrentThread;
 			ctx = NI.CreateEngine( out d_memfunc );
 			_engines.Add( ctx, _sgsWeakRef );
 		}
 		public Engine( IMemory mem ) : base( IntPtr.Zero, false )
 		{
+			owningThread = Thread.CurrentThread;
 			hMem = HDL.Alloc( mem );
 			d_memfunc = new NI.MemFunc( IMemory._MemFunc );
 			ctx = NI.CreateEngineExt( d_memfunc, hMem );
@@ -648,32 +653,96 @@ namespace SGScript
 		{
 			if( ctx != IntPtr.Zero )
 			{
-				WeakReference[] objrefs;
-				for( int i = 0; i < 10 && _objRefs.Count != 0; ++i )
+                lock( _objRefs )
+                {
+                    lock( _varReleaseQueue )
+                    {
+                        WeakReference[] objrefs;
+                        objrefs = new WeakReference[_objRefs.Count];
+                        _objRefs.Keys.CopyTo( objrefs, 0 );
+                        foreach( WeakReference wr in objrefs )
+                        {
+                            IDisposable d = ((IDisposable) wr.Target);
+                            d.Dispose();
+                        }
+
+                        ProcessVarRemoveQueue();
+
+                        if( _objRefs.Count != 0 )
+                            throw new Exception( "[SGSINT] _objRefs.Count != 0 but is " + _objRefs.Count );
+                        if( _varReleaseQueue.Count != 0 )
+                            throw new Exception( "[SGSINT] _varReleaseQueue.Count != 0 but is " + _varReleaseQueue.Count );
+                        
+						_engines.Remove( ctx );
+                        NI.DestroyEngine( ctx );
+                        ctx = IntPtr.Zero;
+
+                        // release interfaces
+                        foreach( SGSClassInfo ci in _sgsClassInfo.Values )
+                            MDL.Free( ci.iface );
+                        foreach( SGSClassInfo ci in _sgsStaticClassInfo.Values )
+                            MDL.Free( ci.iface );
+
+                        HDL.FreeIfAlloc( ref hMem );
+                    }
+                }
+			}
+		}
+
+		public void _ReleaseVar( ref NI.Variable v )
+		{
+			if( v.type == VarType.String || v.type == VarType.Func || v.type == VarType.Object || v.type == VarType.Thread )
+			{
+				if( ctx == IntPtr.Zero )
 				{
-					lock( _objRefs )
-					{
-						objrefs = new WeakReference[_objRefs.Count];
-						_objRefs.Keys.CopyTo( objrefs, 0 );
-					}
-					foreach( WeakReference wr in objrefs )
-					{
-						if( wr != null )
-						{
-							IDisposable d = ((IDisposable) wr.Target);
-							if( d != null )
-								d.Dispose();
-						}
-					}
-					GC.Collect();
-					GC.WaitForPendingFinalizers();
+					throw new Exception( "[SGSINT] Tried to release variable after engine has been freed!" );
 				}
-				if( _objRefs.Count != 0 )
-					throw new SGSException( NI.EINPROC, "Failed to clean up handles" );
-				_engines.Remove( ctx );
-				NI.DestroyEngine( ctx );
-				ctx = IntPtr.Zero;
-				HDL.FreeIfAlloc( ref hMem );
+				if( Thread.CurrentThread == owningThread )
+				{
+					NI.Release( ctx, ref v );
+				}
+				else
+				{
+					lock( _varReleaseQueue )
+					{
+						_varReleaseQueue.Enqueue( v );
+					}
+				}
+			}
+			v = new NI.Variable(){ type = VarType.Null };
+		}
+		public void _ReleaseCtx( ref IntPtr c )
+		{
+			if( c == IntPtr.Zero )
+				return;
+			NI.Variable v = new NI.Variable(){ type = VarType.Thread };
+			v.data.T = c;
+			_ReleaseVar( ref v );
+			c = IntPtr.Zero;
+		}
+		public void _ReleaseObj( ref IntPtr o )
+		{
+			if( o == IntPtr.Zero )
+				return;
+			NI.Variable v = new NI.Variable(){ type = VarType.Object };
+			v.data.O = o;
+			_ReleaseVar( ref v );
+			o = IntPtr.Zero;
+		}
+		public void ProcessVarRemoveQueue()
+		{
+			if( Thread.CurrentThread != owningThread )
+				throw new SGSException( NI.ENOTSUP, "ProcessVarRemoveQueue can be called only on the owning thread" );
+			for (;;)
+			{
+				NI.Variable var;
+				lock( _varReleaseQueue )
+				{
+					if( _varReleaseQueue.Count == 0 )
+						break;
+					var = _varReleaseQueue.Dequeue();
+				}
+				NI.Release( ctx, ref var );
 			}
 		}
 
@@ -696,9 +765,12 @@ namespace SGScript
 		}
 		public void _UnregisterObj( ISGSBase obj )
 		{
+			if( obj is Engine )
+				return;
 			lock( _objRefs )
 			{
-				_objRefs.Remove( obj._sgsWeakRef );
+				if( !_objRefs.Remove( obj._sgsWeakRef ) )
+					throw new SGSException( NI.EINPROC, "Failed to unregister SGS object" );
 			}
 		}
 	}
