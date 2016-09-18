@@ -38,6 +38,8 @@ More sample code can be found in documentation: http://www.sgscript.org/docs/sgs
 
 ## Bugs
 
+- Development branch status: [![Build Status](https://travis-ci.org/snake5/sgscript.svg?branch=apidev)](https://travis-ci.org/snake5/sgscript)
+
 If you think you've found a bug, please create a new issue on GitHub.
 
 Don't forget to include a test sample, as small as possible!

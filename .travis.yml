@@ -1,7 +1,9 @@
 language: cpp
 compiler:
-  - clang
-  - gcc
+	- clang
+	- gcc
 script:
-- make arch=x86 clean tools test apitest cppbctest
-- make arch=x64 clean tools test apitest cppbctest
+	- make clean tools build_cppbctest
+	- bin/sgstest | tee ci_test.log && grep "/// Tests failed:  0  /" ci_test.log
+	- bin/sgsapitest | tee ci_apitest.log && grep "\[sgsapitest\] all tests were successful" ci_apitest.log
+	- bin/sgscppbctest | tee ci_cppbctest.log && grep "\[cppbc\] SUCCESS!" ci_cppbctest.log
