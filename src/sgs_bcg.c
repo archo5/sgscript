@@ -259,14 +259,14 @@ static void dump_rcpos( int arg )
 }
 static void dump_opcode_a( const char* name, sgs_instr_t I )
 {
-	printf( "%s R%"PRId32" <= ", name, SGS_INSTR_GET_A( I ) );
+	printf( "%s R%" PRId32" <= ", name, SGS_INSTR_GET_A( I ) );
 	dump_rcpos( SGS_INSTR_GET_B( I ) );
 	printf( ", " );
 	dump_rcpos( SGS_INSTR_GET_C( I ) );
 }
 static void dump_opcode_b( const char* name, sgs_instr_t I )
 {
-	printf( "%s R%"PRId32" <= ", name, SGS_INSTR_GET_A( I ) );
+	printf( "%s R%" PRId32" <= ", name, SGS_INSTR_GET_A( I ) );
 	dump_rcpos( SGS_INSTR_GET_B( I ) );
 }
 static void dump_opcode_b1( const char* name, sgs_instr_t I )

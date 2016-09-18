@@ -2849,14 +2849,14 @@ void sgsVM_VarDump( const sgs_Variable* var )
 	case SGS_VT_BOOL: printf( " = %s", var->data.B ? "True" : "False" ); break;
 	case SGS_VT_INT: printf( " = %" PRId64, var->data.I ); break;
 	case SGS_VT_REAL: printf( " = %f", var->data.R ); break;
-	case SGS_VT_STRING: printf( " [rc:%"PRId32"] = \"", var->data.S->refcount );
+	case SGS_VT_STRING: printf( " [rc:%" PRId32"] = \"", var->data.S->refcount );
 		sgs_print_safe( stdout, sgs_var_cstr( var ), SGS_MIN( var->data.S->size, 16 ) );
 		printf( var->data.S->size > 16 ? "...\"" : "\"" ); break;
-	case SGS_VT_FUNC: printf( " [rc:%"PRId32"]", var->data.F->refcount ); break;
+	case SGS_VT_FUNC: printf( " [rc:%" PRId32"]", var->data.F->refcount ); break;
 	case SGS_VT_CFUNC: printf( " = %p", (void*)(size_t) var->data.C ); break;
-	case SGS_VT_OBJECT: printf( " [rc:%"PRId32"] = %p", var->data.O->refcount, var->data.O ); break;
+	case SGS_VT_OBJECT: printf( " [rc:%" PRId32"] = %p", var->data.O->refcount, var->data.O ); break;
 	case SGS_VT_PTR: printf( " = %p", var->data.P ); break;
-	case SGS_VT_THREAD: printf( " [rc:%"PRId32"] = %p", var->data.T->refcount, var->data.T ); break;
+	case SGS_VT_THREAD: printf( " [rc:%" PRId32"] = %p", var->data.T->refcount, var->data.T ); break;
 	}
 }
 
@@ -4231,7 +4231,7 @@ void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth )
 			char* source = sgs_var_cstr( &var );
 			uint32_t len = var.data.S->size;
 			char* srcend = source + len;
-			sprintf( buf, "string [%"PRId32"] \"", len );
+			sprintf( buf, "string [%" PRId32"] \"", len );
 			bptr += strlen( buf );
 			while( source < srcend && bptr < bend )
 			{
@@ -4310,7 +4310,7 @@ void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth )
 			
 			if( !q )
 			{
-				snprintf( buf, 255, "object (%p) [%"PRId32"] %s", (void*) obj, obj->refcount,
+				snprintf( buf, 255, "object (%p) [%" PRId32"] %s", (void*) obj, obj->refcount,
 					obj->iface->name ? obj->iface->name : "<unnamed>" );
 				buf[ 255 ] = 0;
 				sgs_PushString( C, buf );

@@ -823,7 +823,7 @@ static int commit_fmtspec( SGS_CTX, sgs_MemBuf* B, struct fmtspec* F, int* psi )
 			if( F->prec < 0 )
 				F->prec = 6;
 			
-			sprintf( tmpl, "%%.%"PRId32"%c", F->prec, F->type );
+			sprintf( tmpl, "%%.%" PRId32"%c", F->prec, F->type );
 			snprintf( data, FLT_MAXSIZE, tmpl, R );
 			data[ FLT_MAXSIZE ] = 0;
 			size = (int) strlen( data );
