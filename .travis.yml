@@ -3,7 +3,7 @@ compiler:
   - clang
   - gcc
 script:
-  - make clean tools build_cppbctest
-  - bin/sgstest | tee ci_test.log && grep "/// Tests failed:  0  /" ci_test.log
-  - bin/sgsapitest | tee ci_apitest.log && grep "\[sgsapitest\] all tests were successful" ci_apitest.log
-  - bin/sgscppbctest | tee ci_cppbctest.log && grep "\[cppbc\] SUCCESS!" ci_cppbctest.log
+  - 'make clean tools build_cppbctest'
+  - 'bin/sgstest | tee ci_test.log && grep "/// Tests failed:  0  /" ci_test.log'
+  - 'bin/sgsapitest | tee ci_apitest.log && grep "\[sgsapitest\] all tests were successful" ci_apitest.log'
+  - 'bin/sgscppbctest | tee ci_cppbctest.log && grep "\[cppbc\] SUCCESS!" ci_cppbctest.log'
