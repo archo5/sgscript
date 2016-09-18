@@ -38,7 +38,9 @@ More sample code can be found in documentation: http://www.sgscript.org/docs/sgs
 
 ## Bugs
 
-- Development branch status: [![Build Status](https://travis-ci.org/snake5/sgscript.svg?branch=apidev)](https://travis-ci.org/snake5/sgscript)
+- Development branch status:
+ [![Travis CI Build Status](https://travis-ci.org/snake5/sgscript.svg?branch=apidev)](https://travis-ci.org/snake5/sgscript)
+ [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/snake5/sgscript?svg=true&branch=apidev)](https://ci.appveyor.com/project/snake5/sgscript)
 
 If you think you've found a bug, please create a new issue on GitHub.
 
