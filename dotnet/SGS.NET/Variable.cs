@@ -119,7 +119,7 @@ namespace SGScript
 				return method;
 			}
 			if( typeType != null && methodName != null )
-				throw new SGSException( NI.ENOTFND, string.Format( "Could not find a Context.ParseVar method for '{2}' {1} type={0}", type, typeType, methodName ) );
+				throw new SGSException( RC.ENOTFND, string.Format( "Could not find a Context.ParseVar method for '{2}' {1} type={0}", type, typeType, methodName ) );
 			return null;
 		}
 		static SGSPropInfo _GetPropFieldInfo( MemberInfo minfo, Type type )
@@ -301,7 +301,7 @@ namespace SGScript
 		public void AllocClassObject()
 		{
 			if( _sgsObject != IntPtr.Zero )
-				throw new SGSException( NI.EINPROC, "AllocClassObject - object is already allocated" );
+				throw new SGSException( RC.EINPROC, "AllocClassObject - object is already allocated" );
 			IntPtr iface = GetClassInterface();
 			NI.Variable var;
 			NI.CreateObject( _sgsEngine.ctx, HDL.Alloc( this ), iface, out var );
@@ -313,14 +313,14 @@ namespace SGScript
 		{
 		//	Console.WriteLine("[freed "+ToString()+"]");
 			if( _sgsObject == IntPtr.Zero )
-				throw new SGSException( NI.EINPROC, "FreeClassObject - object is not allocated" );
+				throw new SGSException( RC.EINPROC, "FreeClassObject - object is not allocated" );
 			NI.ObjRelease( _sgsEngine.ctx, _sgsObject );
 			_sgsObject = IntPtr.Zero;
 		}
 		public void DisownClassObject()
 		{
 			if( _sgsObject == IntPtr.Zero )
-				throw new SGSException( NI.EINPROC, "FreeClassObject - object is not allocated" );
+				throw new SGSException( RC.EINPROC, "FreeClassObject - object is not allocated" );
 			Marshal.WriteIntPtr( _sgsObject, NI.VarObj.offsetOfIface, _sgsNullObjectInterface );
             HDL.Free( Marshal.ReadIntPtr( _sgsObject, NI.VarObj.offsetOfData ) );
             Marshal.WriteIntPtr( _sgsObject, NI.VarObj.offsetOfData, IntPtr.Zero );
@@ -357,7 +357,7 @@ namespace SGScript
 				return false;
 			}
 			if( propinfo.parseVarMethod == null )
-				throw new SGSException( NI.ENOTFND, string.Format(
+				throw new SGSException( RC.ENOTFND, string.Format(
 					"Property cannot be set - no Context.ParseVar method exists that supports this type ({0})", propinfo.propType ) );
 
 			object[] args = new object[]{ null, ctx.StackItem( valueOnStack ) };
@@ -385,7 +385,7 @@ namespace SGScript
 				HDL.Free( handleP );
 			return obj;
 		}
-		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj, true ); if( obj != null ) return obj._intOnDestroy(); else return NI.SUCCESS; }
+		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj, true ); if( obj != null ) return obj._intOnDestroy(); else return RC.SUCCESS; }
 		public static int _sgsGCMark( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnGCMark(); }
 		public static int _sgsGetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnGetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
 		public static int _sgsSetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnSetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
@@ -400,12 +400,12 @@ namespace SGScript
 		public virtual int _intOnDestroy()
 		{
 			OnDestroy();
-			return NI.SUCCESS;
+			return RC.SUCCESS;
 		}
 		public virtual int _intOnGCMark()
 		{
 			OnGCMark();
-			return NI.SUCCESS;
+			return RC.SUCCESS;
 		}
 		public virtual int _intOnGetIndex( Context ctx, bool isprop )
 		{
@@ -413,28 +413,28 @@ namespace SGScript
 			if( v != null )
 			{
 				ctx.Push( v );
-				return NI.SUCCESS;
+				return RC.SUCCESS;
 			}
-			return NI.ENOTFND;
+			return RC.ENOTFND;
 		}
 		public virtual int _intOnSetIndex( Context ctx, bool isprop )
 		{
-			return OnSetIndex( ctx, ctx.StackItem( 0 ), ctx.StackItem( 1 ), isprop ) ? NI.SUCCESS : NI.ENOTFND;
+			return OnSetIndex( ctx, ctx.StackItem( 0 ), ctx.StackItem( 1 ), isprop ) ? RC.SUCCESS : RC.ENOTFND;
 		}
 		public virtual int _intOnConvert( Context ctx, ConvOp type )
 		{
 			switch( type )
 			{
-				case ConvOp.ToBool: ctx.Push( ConvertToBool() ); return NI.SUCCESS;
-				case ConvOp.ToString: ctx.Push( ConvertToString() ); return NI.SUCCESS;
-				case ConvOp.Clone: Variable clone = OnClone( ctx ); if( clone != null ) ctx.Push( clone ); return clone != null ? NI.SUCCESS : NI.ENOTSUP;
-				case ConvOp.ToIter: Variable iter = OnGetIterator( ctx ); if( iter != null ) ctx.Push( iter ); return iter != null ? NI.SUCCESS : NI.ENOTSUP;
+				case ConvOp.ToBool: ctx.Push( ConvertToBool() ); return RC.SUCCESS;
+				case ConvOp.ToString: ctx.Push( ConvertToString() ); return RC.SUCCESS;
+				case ConvOp.Clone: Variable clone = OnClone( ctx ); if( clone != null ) ctx.Push( clone ); return clone != null ? RC.SUCCESS : RC.ENOTSUP;
+				case ConvOp.ToIter: Variable iter = OnGetIterator( ctx ); if( iter != null ) ctx.Push( iter ); return iter != null ? RC.SUCCESS : RC.ENOTSUP;
 			}
-			return NI.ENOTSUP;
+			return RC.ENOTSUP;
 		}
 		public virtual int _intOnSerialize( Context ctx )
 		{
-			return OnSerialize( ctx ) ? NI.SUCCESS : NI.ENOTSUP;
+			return OnSerialize( ctx ) ? RC.SUCCESS : RC.ENOTSUP;
 		}
 		public virtual int _intOnDump( Context ctx, int maxdepth )
 		{
@@ -442,16 +442,16 @@ namespace SGScript
 			if( dump != null )
 			{
 				ctx.Push( dump );
-				return NI.SUCCESS;
+				return RC.SUCCESS;
 			}
-			return NI.ENOTSUP;
+			return RC.ENOTSUP;
 		}
 		public virtual int _intGetNext( Context ctx, int type )
 		{
 			if( type == GetNextType.Advance )
-				return OnIterAdvance( ctx ) ? NI.SUCCESS : NI.EINPROC;
+				return OnIterAdvance( ctx ) ? RC.SUCCESS : RC.EINPROC;
 			else
-				return OnIterGetValues( ctx, type ) ? NI.SUCCESS : NI.EINPROC;
+				return OnIterGetValues( ctx, type ) ? RC.SUCCESS : RC.EINPROC;
 		}
 		public virtual int _intOnExpr( Context ctx, ExprOp op )
 		{
@@ -487,7 +487,7 @@ namespace SGScript
 		[HideMethod] public virtual string OnDump( Context ctx, int maxdepth ){ return null; }
 		[HideMethod] public virtual bool OnIterAdvance( Context ctx ){ return false; }
 		[HideMethod] public virtual bool OnIterGetValues( Context ctx, int type ){ return false; }
-		[HideMethod] public virtual int OnCall( Context ctx ){ return NI.ENOTSUP; }
+		[HideMethod] public virtual int OnCall( Context ctx ){ return RC.ENOTSUP; }
 		[HideMethod] public virtual Variable OnAdd( Variable a, Variable b ){ return null; }
 		[HideMethod] public virtual Variable OnSub( Variable a, Variable b ){ return null; }
 		[HideMethod] public virtual Variable OnMul( Variable a, Variable b ){ return null; }
@@ -585,7 +585,7 @@ namespace SGScript
 			{
 				// if 'this' was not passed but the method is not static, error
 				ctx.Msg( MsgLevel.ERROR, "Expected 'this' for non-static method" );
-				return NI.EINVAL;
+				return RC.EINVAL;
 			}
 
 			object thisvar = null;
@@ -668,7 +668,7 @@ namespace SGScript
 		}
 		public string GetString(){ return NI.GetString( var ); }
 		public byte[] GetByteArray(){ return NI.GetByteArray( var ); }
-		public Context GetThread(){ if( var.type != VarType.Thread ) throw new SGSException( NI.EINVAL, "Variable is not a thread" ); return new Context( var.data.T ); }
+		public Context GetThread(){ if( var.type != VarType.Thread ) throw new SGSException( RC.EINVAL, "Variable is not a thread" ); return new Context( var.data.T ); }
 		public string str { get { return GetString(); } }
 		public IObjectBase GetIObjectBase()
 		{
@@ -689,7 +689,7 @@ namespace SGScript
 		{
 			NI.Variable iter;
 			if( NI.GetIterator( _sgsEngine.ctx, var, out iter ) == 0 )
-				throw new SGSException( NI.ENOTSUP, "Object does not support iterators" );
+				throw new SGSException( RC.ENOTSUP, "Object does not support iterators" );
 			return _sgsEngine.Var( iter, false );
 		}
 		public bool IterAdvance()
@@ -732,7 +732,7 @@ namespace SGScript
 		{
 			Int32 arrsize = ArraySize();
 			if( arrsize < count )
-				throw new SGSException( NI.EINPROC, string.Format( "Not enough items in array {0}, expected at least {1}", arrsize, count ) );
+				throw new SGSException( RC.EINPROC, string.Format( "Not enough items in array {0}, expected at least {1}", arrsize, count ) );
 			ArrayPopToStack( _sgsEngine, count );
 			return _sgsEngine.TakeTopmostVars( count );
 		}
@@ -808,7 +808,7 @@ namespace SGScript
 				case VarType.Object:
 				case VarType.Ptr:
 				case VarType.Thread: code ^= var.data.P.GetHashCode(); break;
-				default: throw new SGSException( NI.EINVAL, string.Format( "invalid variable type ({0})", type ) );
+				default: throw new SGSException( RC.EINVAL, string.Format( "invalid variable type ({0})", type ) );
 			}
 			return code;
 		}

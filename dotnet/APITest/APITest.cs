@@ -226,7 +226,7 @@ namespace APITest
 				engine.Pop( 10 );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.EBOUNDS ); }
 			engine.Pop( 9 );
 			Assert( engine.StackSize(), 0 );
 
@@ -367,7 +367,7 @@ namespace APITest
 				SMT_CheckObj( engine, v08.Value, VarType.Int );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.ENOTSUP ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.ENOTSUP ); }
 			
 			float? v09 = 5;
 			float? n09 = null;
@@ -420,7 +420,7 @@ namespace APITest
 				engine.InsertVar( 3, sgs_dummy_var );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.EBOUNDS ); }
 			
 			try
 			{
@@ -428,7 +428,7 @@ namespace APITest
 				engine.InsertVar( -4, sgs_dummy_var );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.EBOUNDS ); }
 
 			engine.InsertVar( -3, sgs_dummy_var );
 			engine.InsertVar( 3, sgs_dummy_var );
@@ -462,7 +462,7 @@ namespace APITest
 				engine.PushArray( 5 );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.EBOUNDS ); }
 			engine.PushArray( 0 );
 			engine.Pop( 1 );
 
@@ -480,14 +480,14 @@ namespace APITest
 				engine.PushDict( 6 );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.EBOUNDS ); }
 			try
 			{
 				NoteTest();
 				engine.PushDict( 5 );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.EINVAL ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.EINVAL ); }
 			engine.PushDict( 0 );
 			engine.Pop( 1 );
 			engine.PushDict( 4 );
@@ -513,7 +513,7 @@ namespace APITest
 				engine.PushItem( 2 );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.EBOUNDS ); }
 			Assert( engine.StackSize(), 2 );
 			
 			try
@@ -522,7 +522,7 @@ namespace APITest
 				engine.PushItem( -3 );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.EBOUNDS ); }
 			Assert( engine.StackSize(), 2 );
 
 			engine.PushItem( -2 );
@@ -655,7 +655,7 @@ namespace APITest
 				engine.FCall( 5, 1, false );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.EBOUNDS ); }
 			Assert( engine.StackSize(), 1 );
 			try
 			{
@@ -663,7 +663,7 @@ namespace APITest
 				engine.FCall( 1, 0, false );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.EBOUNDS ); }
 			engine.FCall( 0, 0, false );
 
 			Assert( engine.PushGlobal( "array" ), true ); // needed for future tests
@@ -678,7 +678,7 @@ namespace APITest
 				engine.FCall( 1, 0, true );
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.EBOUNDS ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.EBOUNDS ); }
 			engine.FCall( 0, 0, true );
 			Assert( engine.StackSize(), 0 );
 			
@@ -766,7 +766,7 @@ namespace APITest
 				engine.Var( 5 ).GetIterator();
 				ExpectUnreached();
 			}
-			catch( SGSException e ){ Assert( e.resultCode, NI.ENOTSUP ); }
+			catch( SGSException e ){ Assert( e.resultCode, RC.ENOTSUP ); }
 			
 			DestroyEngine( engine );
 		}
@@ -1022,7 +1022,7 @@ namespace APITest
 			engine.SetGlobal( "FullObject1", engine._GetMetaObject( typeof(FullObject1) ).GetVariable() );
 
 			// test extension method
-			Assert( engine.Exec( "function FullObject1.customMethod( txt ){ return this.pfxstr .. txt; }" ), NI.SUCCESS );
+			engine.Exec( "function FullObject1.customMethod( txt ){ return this.pfxstr .. txt; }" );
 			AssertN( obj1var.GetMetaObj().GetProp( "customMethod" ), null );
 			Assert( engine.ThisCall<string>( "customMethod", obj1var, "cmTest" ), "[PFX]:cmTest" );
 

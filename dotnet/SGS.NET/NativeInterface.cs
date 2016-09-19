@@ -60,12 +60,12 @@ namespace SGScript
 				if( Marshal.ReadInt32( ptr, i * 4 ) != 0x5facade7 )
 				{
 					Console.WriteLine( info.lastUse );
-					throw new SGSException( NI.EINPROC, "MDL [Free]: memory of handle " + ptr + " was modified (at beginning)!" );
+					throw new Exception( "MDL [Free]: memory of handle " + ptr + " was modified (at beginning)!" );
 				}
 				if( Marshal.ReadInt32( ptr, info.size.ToInt32() + 16 + i * 4 ) != 0x5facade7 )
 				{
 					Console.WriteLine( info.lastUse );
-					throw new SGSException( NI.EINPROC, "MDL [Free]: memory of handle " + ptr + " was modified (at end)!" );
+					throw new Exception( "MDL [Free]: memory of handle " + ptr + " was modified (at end)!" );
 				}
 			}
 		}
@@ -83,7 +83,7 @@ namespace SGScript
 				{
 					Console.WriteLine( handles[ptr].lastUse );
 					Monitor.Exit( lockable );
-					throw new SGSException( NI.EINPROC, "MDL [Alloc]: handle " + ptr + " was already allocated!" );
+					throw new Exception( "MDL [Alloc]: handle " + ptr + " was already allocated!" );
 				}
 			}
 			else
@@ -102,14 +102,14 @@ namespace SGScript
 			if( handles.ContainsKey( ptr ) == false )
 			{
 				Monitor.Exit( lockable );
-				throw new SGSException( NI.EINPROC, "MDL [Free]: handle " + ptr + " was never allocated!" );
+				throw new Exception( "MDL [Free]: handle " + ptr + " was never allocated!" );
 			}
 			AllocInfo oldinfo = handles[ptr];
 			if( oldinfo.allocated == false )
 			{
 				Console.WriteLine( oldinfo.lastUse );
 				Monitor.Exit( lockable );
-				throw new SGSException( NI.EINPROC, "MDL [Free]: handle " + ptr + " was already freed!" );
+				throw new Exception( "MDL [Free]: handle " + ptr + " was already freed!" );
 			}
 			handles[ptr] = new AllocInfo(){ size = (IntPtr) (-1), lastUse = new StackTrace() };
 			Monitor.Exit( lockable );
@@ -190,14 +190,12 @@ namespace SGScript
 #if SGS_DEBUG_GCHANDLES
 			if( handles.ContainsKey( p ) == false )
 			{
-				throw new SGSException( NI.EINPROC, "HDL [Free]: handle " + p + " was never allocated!" );
+				throw new Exception( "HDL [Free]: handle " + p + " was never allocated!" );
 			}
 			if( handles[ p ] != null )
 			{
 				Console.WriteLine(handles[ p ]);
-				SGSException x = new SGSException( NI.EINPROC, "HDL [Free]: handle " + p + " was already freed!" );
-				x.Data.Add( "Stack trace", handles[ p ] );
-				throw x;
+				throw new Exception( "HDL [Free]: handle " + p + " was already freed!" );
 			}
 			handles[ p ] = new StackTrace();
 #endif
@@ -208,14 +206,12 @@ namespace SGScript
 #if SGS_DEBUG_GCHANDLES
 			if( handles.ContainsKey( p ) == false )
 			{
-				throw new SGSException( NI.EINPROC, "HDL [GetObj]: handle " + p + " was never allocated!" );
+				throw new Exception( "HDL [GetObj]: handle " + p + " was never allocated!" );
 			}
 			if( handles[ p ] != null )
 			{
 				Console.WriteLine(handles[ p ]);
-				SGSException x = new SGSException( NI.EINPROC, "HDL [GetObj]: handle " + p + " was freed!" );
-				x.Data.Add( "Stack trace", handles[ p ] );
-				throw x;
+				throw new Exception( "HDL [GetObj]: handle " + p + " was freed!" );
 			}
 #endif
 			return GCHandle.FromIntPtr( p ).Target;
@@ -401,7 +397,7 @@ namespace SGScript
 	public class RC : ResultCode {} // short name
 
 	// native interface
-	public class NI : ResultCode
+	public class NI
 	{
 		// CodeString codes
 		public const int CODE_ER = 0; /* error codes */
@@ -424,12 +420,12 @@ namespace SGScript
 			}
 			switch( result )
 			{
-				case ENOTFND: return "[ENOTFND] Item was not found";
-				case ECOMP:   return "[ECOMP] Compiler error";
-				case ENOTSUP: return "[ENOTSUP] Operation not supported";
-				case EBOUNDS: return "[EBOUNDS] Index out of bounds";
-				case EINVAL:  return "[EINVAL] Invalid value";
-				case EINPROC: return "[EINPROC] Procedure failed";
+				case RC.ENOTFND: return "[ENOTFND] Item was not found";
+				case RC.ECOMP:   return "[ECOMP] Compiler error";
+				case RC.ENOTSUP: return "[ENOTSUP] Operation not supported";
+				case RC.EBOUNDS: return "[EBOUNDS] Index out of bounds";
+				case RC.EINVAL:  return "[EINVAL] Invalid value";
+				case RC.EINPROC: return "[EINPROC] Procedure failed";
 				default: return string.Format( "Unknown result ({0})", result );
 			}
 		}
@@ -953,7 +949,7 @@ namespace SGScript
 				Marshal.Copy( (IntPtr) ( s.ToInt64() + 12 ), bytes, 0, size );
 				return Encoding.UTF8.GetString( bytes );
 			}
-			else throw new SGSException( EINVAL, string.Format( "GetString expected 'string' or 'null' type, got '{0}'", var.type ) );
+			else throw new SGSException( RC.EINVAL, string.Format( "GetString expected 'string' or 'null' type, got '{0}'", var.type ) );
 		}
 		public static byte[] GetByteArray( Variable var )
 		{
@@ -967,7 +963,7 @@ namespace SGScript
 				Marshal.Copy( (IntPtr) ( s.ToInt64() + 12 ), bytes, 0, size );
 				return bytes;
 			}
-			else throw new SGSException( EINVAL, string.Format( "GetString expected 'string' or 'null' type, got '{0}'", var.type ) );
+			else throw new SGSException( RC.EINVAL, string.Format( "GetString expected 'string' or 'null' type, got '{0}'", var.type ) );
 		}
 	}
 }

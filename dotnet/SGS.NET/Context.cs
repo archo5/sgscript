@@ -59,7 +59,7 @@ namespace SGScript
 			{
 				if( handle.Value == null )
 				{
-					throw new SGSException( NI.EINPROC, "DbgMemoryHook [CheckMemoryState]: handle " + handle.Key + " was not freed!" );
+					throw new SGSException( RC.EINPROC, "DbgMemoryHook [CheckMemoryState]: handle " + handle.Key + " was not freed!" );
 				}
 			}
 		}
@@ -71,7 +71,7 @@ namespace SGScript
 				if( handles[ptr] != null )
 					handles[ptr] = null; // previous handle was successfully freed
 				else
-					throw new SGSException( NI.EINPROC, "DbgMemoryHook [Alloc]: handle " + ptr + " was already allocated!" );
+					throw new SGSException( RC.EINPROC, "DbgMemoryHook [Alloc]: handle " + ptr + " was already allocated!" );
 			}
 			else
 				handles.Add( ptr, null );
@@ -80,12 +80,12 @@ namespace SGScript
 		{
 			if( handles.ContainsKey( ptr ) == false )
 			{
-				throw new SGSException( NI.EINPROC, "DbgMemoryHook [Free]: handle " + ptr + " was never allocated!" );
+				throw new SGSException( RC.EINPROC, "DbgMemoryHook [Free]: handle " + ptr + " was never allocated!" );
 			}
 			if( handles[ptr] != null )
 			{
 				Console.WriteLine( handles[ptr] );
-				SGSException x = new SGSException( NI.EINPROC, "DbgMemoryHook [Free]: handle " + ptr + " was already freed!" );
+				SGSException x = new SGSException( RC.EINPROC, "DbgMemoryHook [Free]: handle " + ptr + " was already freed!" );
 				x.Data.Add( "Stack trace", handles[ptr] );
 				throw x;
 			}
@@ -196,7 +196,7 @@ namespace SGScript
 		public int Eval( string str ){ return NI.ResultToException( TryEval( str ) ); }
 		public int ExecFile( string str ){ return NI.ResultToException( TryExecFile( str ) ); }
 		public int EvalFile( string str ){ return NI.ResultToException( TryEvalFile( str ) ); }
-		public void Include( string name, string searchPath = null ){ if( !TryInclude( name, searchPath ) ) NI.ResultToException( NI.EINPROC ); }
+		public void Include( string name, string searchPath = null ){ if( !TryInclude( name, searchPath ) ) NI.ResultToException( RC.EINPROC ); }
 
 		public bool Abort(){ return NI.Abort( ctx ) != 0; }
 		public IntPtr Stat( Stat type ){ return NI.Stat( ctx, type ); }
@@ -302,13 +302,13 @@ namespace SGScript
 		public void ResumeExt( int args = 0, int expect = 0 )
 		{
 			if( NI.ResumeStateExp( ctx, args, expect ) == 0 )
-				throw new SGSException( NI.EINPROC, "Failed to resume coroutine" );
+				throw new SGSException( RC.EINPROC, "Failed to resume coroutine" );
 		}
 		public int ResumeExtV( int args = 0 )
 		{
 			int outrvc;
 			if( NI.ResumeStateRet( ctx, args, out outrvc ) == 0 )
-				throw new SGSException( NI.EINPROC, "Failed to resume coroutine" );
+				throw new SGSException( RC.EINPROC, "Failed to resume coroutine" );
 			return outrvc;
 		}
 		public void Resume( params object[] args )
@@ -354,25 +354,25 @@ namespace SGScript
 		{
 			int size = StackSize();
 			if( item >= size || item < -size )
-				throw new SGSException( NI.EBOUNDS, string.Format( "{0}({1}) failed with stack size = {2}", funcname, item, size ) );
+				throw new SGSException( RC.EBOUNDS, string.Format( "{0}({1}) failed with stack size = {2}", funcname, item, size ) );
 		}
 		void _SizeCheck( int numitems, string funcname )
 		{
 			int size = StackSize();
 			if( numitems > size )
-				throw new SGSException( NI.EBOUNDS, string.Format( "{0}({1}) failed with stack size = {2} - not enough items exist in the stack", funcname, numitems, size ) );
+				throw new SGSException( RC.EBOUNDS, string.Format( "{0}({1}) failed with stack size = {2} - not enough items exist in the stack", funcname, numitems, size ) );
 		}
 		void _SizePairCheck( int numitems, string funcname )
 		{
 			_SizeCheck( numitems, funcname );
 			if( numitems % 2 != 0 )
-				throw new SGSException( NI.EINVAL, string.Format( "{0}({1}) failed - item count cannot be an odd number", funcname, numitems ) );
+				throw new SGSException( RC.EINVAL, string.Format( "{0}({1}) failed - item count cannot be an odd number", funcname, numitems ) );
 		}
 		void _AnyCheck( string funcname )
 		{
 			int size = StackSize();
 			if( size == 0 )
-				throw new SGSException( NI.EBOUNDS, string.Format( "{0} failed with stack size = 0 - expected at least one variable on stack", funcname ) );
+				throw new SGSException( RC.EBOUNDS, string.Format( "{0} failed with stack size = 0 - expected at least one variable on stack", funcname ) );
 		}
 
 		public Variable NullVar(){ return new Variable( this, NI.MakeNull() ); }
@@ -440,7 +440,7 @@ namespace SGScript
 			else if( o is IGetVariable ) return Var( (IGetVariable) o );
 			else if( o is Variable ) return (Variable) o;
 			else
-				throw new SGSException( NI.ENOTSUP, string.Format( "Unsupported value was passed to ObjVar (type={0})", o.GetType().FullName ) );
+				throw new SGSException( RC.ENOTSUP, string.Format( "Unsupported value was passed to ObjVar (type={0})", o.GetType().FullName ) );
 		}
 
 		public Variable ArrayVar( int numitems ){ _SizeCheck( numitems, "ArrayVar" ); NI.Variable arr; NI.CreateArray( ctx, numitems, out arr ); return new Variable( this, arr ); }
@@ -502,7 +502,7 @@ namespace SGScript
 			else if( o is IGetVariable ) Push( (IGetVariable) o );
 			else if( o is Variable ) Push( (Variable) o );
 			else
-				throw new SGSException( NI.ENOTSUP, string.Format( "Unsupported value was passed to PushObj (type={0})", o.GetType().FullName ) );
+				throw new SGSException( RC.ENOTSUP, string.Format( "Unsupported value was passed to PushObj (type={0})", o.GetType().FullName ) );
 		}
 		public object ParseObj( int item )
 		{
@@ -524,7 +524,7 @@ namespace SGScript
 					return v;
 				case VarType.Ptr: return v.var.data.P;
 				case VarType.Thread: return new Context( v.var.data.T );
-				default: throw new SGSException( NI.EINVAL, string.Format( "Bad type ID detected while parsing item {0}", item ) );
+				default: throw new SGSException( RC.EINVAL, string.Format( "Bad type ID detected while parsing item {0}", item ) );
 			}
 		}
 		public void ParseVar( out bool b, Variable v ){ b = v.GetBool(); }
@@ -550,14 +550,14 @@ namespace SGScript
 		{
 			int size = StackSize();
 			if( pos > size || pos < -size - 1 )
-				throw new SGSException( NI.EBOUNDS, string.Format( "InsertVar({0}) failed with stack size = {1}", pos, StackSize() ) );
+				throw new SGSException( RC.EBOUNDS, string.Format( "InsertVar({0}) failed with stack size = {1}", pos, StackSize() ) );
 			NI.InsertVariable( ctx, pos, v.var );
 		}
 
 		public void Pop( int count )
 		{
 			if( count < 0 || count > StackSize() )
-				throw new SGSException( NI.EBOUNDS, string.Format( "Pop({0}) failed with stack size = {1}", count, StackSize() ) );
+				throw new SGSException( RC.EBOUNDS, string.Format( "Pop({0}) failed with stack size = {1}", count, StackSize() ) );
 			NI.Pop( ctx, count );
 		}
 		public void PopSkip( int count, int skip ){ NI.PopSkip( ctx, count, skip ); }
@@ -595,7 +595,7 @@ namespace SGScript
 		public object[] RetrieveReturnValues( int count )
 		{
 			if( count < 0 || count > StackSize() )
-				throw new SGSException( NI.EBOUNDS, string.Format( "RetrieveReturnValues({0}) failed with stack size = {1}", count, StackSize() ) );
+				throw new SGSException( RC.EBOUNDS, string.Format( "RetrieveReturnValues({0}) failed with stack size = {1}", count, StackSize() ) );
 			object[] retvals = new object[ count ];
 			for( int i = 0; i < count; ++i )
 			{
@@ -609,7 +609,7 @@ namespace SGScript
 			if( count == 0 )
 				return null;
 			if( count < 0 || count > StackSize() )
-				throw new SGSException( NI.EBOUNDS, string.Format( "RetrieveOneReturnValue({0}) failed with stack size = {1}", count, StackSize() ) );
+				throw new SGSException( RC.EBOUNDS, string.Format( "RetrieveOneReturnValue({0}) failed with stack size = {1}", count, StackSize() ) );
 			object retval = ParseObj( -count );
 			Pop( count );
 			return retval;
@@ -701,16 +701,16 @@ namespace SGScript
 		public void SerializePush( Variable v, int mode = 0 )
 		{
 			if( mode < 0 || mode > 3 )
-				throw new SGSException( NI.EINVAL, string.Format( "Invalid serialization mode ({0})", mode ) );
+				throw new SGSException( RC.EINVAL, string.Format( "Invalid serialization mode ({0})", mode ) );
 			NI.SerializeExt( ctx, v.var, mode );
 		}
 		public byte[] Serialize( Variable v, int mode = 0 ){ SerializePush( v, mode ); return TakeTopmostVar().GetByteArray(); }
 		public void UnserializePushV( Variable v, int mode = 0 )
 		{
 			if( mode < 0 || mode > 3 )
-				throw new SGSException( NI.EINVAL, string.Format( "Invalid serialization mode ({0})", mode ) );
+				throw new SGSException( RC.EINVAL, string.Format( "Invalid serialization mode ({0})", mode ) );
 			if( NI.UnserializeExt( ctx, v.var, mode ) == 0 )
-				throw new SGSException( NI.EINPROC, "Failed to unserialize data" );
+				throw new SGSException( RC.EINPROC, "Failed to unserialize data" );
 		}
 		public void UnserializePush( byte[] data, int mode = 0 )
 		{
@@ -873,7 +873,7 @@ namespace SGScript
 		public void ProcessVarRemoveQueue()
 		{
 			if( Thread.CurrentThread != owningThread )
-				throw new SGSException( NI.ENOTSUP, "ProcessVarRemoveQueue can be called only on the owning thread" );
+				throw new SGSException( RC.ENOTSUP, "ProcessVarRemoveQueue can be called only on the owning thread" );
 			for (;;)
 			{
 				NI.Variable var;
@@ -911,7 +911,7 @@ namespace SGScript
 			lock( _objRefs )
 			{
 				if( !_objRefs.Remove( obj._sgsWeakRef ) )
-					throw new SGSException( NI.EINPROC, "Failed to unregister SGS object" );
+					throw new SGSException( RC.EINPROC, "Failed to unregister SGS object" );
 			}
 		}
 	}
