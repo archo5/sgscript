@@ -171,8 +171,8 @@ namespace SGScript
 			if( ctx.GetEngine()._sgsClassInfo.TryGetValue( type, out cinfo ) )
 				return cinfo;
 
-			NI.OC_Self d_destruct, d_gcmark, d_getindex, d_setindex, d_serialize, d_call;
-			NI.OC_SlPr d_convert, d_dump;
+			NI.OC_Self d_destruct, d_gcmark, d_getindex, d_setindex, d_serialize, d_call, d_expr;
+			NI.OC_SlPr d_convert, d_dump, d_getnext;
 			NI.ObjInterface oi = new NI.ObjInterface()
 			{
 				destruct = d_destruct = new NI.OC_Self( _sgsDestruct ),
@@ -184,10 +184,10 @@ namespace SGScript
 				convert = d_convert = new NI.OC_SlPr( _sgsConvert ),
 				serialize = d_serialize = new NI.OC_Self( _sgsSerialize ),
 				dump = d_dump = new NI.OC_SlPr( _sgsDump ),
-				// TODO getnext
+				getnext = d_getnext = new NI.OC_SlPr( _sgsGetNext ),
 
 				call = d_call = new NI.OC_Self( _sgsCall ),
-				// TODO expr
+				expr = d_expr = new NI.OC_Self( _sgsExpr ),
 			};
 
 			cinfo = new SGSClassInfo()
@@ -281,8 +281,7 @@ namespace SGScript
 		}
 		public static IObjectBase GetFromObjData( IntPtr objdata )
 		{
-			GCHandle h = GCHandle.FromIntPtr( objdata );
-			return (IObjectBase) h.Target;
+			return (IObjectBase) HDL.GetObj( objdata );
 		}
 
 		// returns the cached interface for the current class
@@ -390,10 +389,12 @@ namespace SGScript
 		public static int _sgsGCMark( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnGCMark(); }
 		public static int _sgsGetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnGetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
 		public static int _sgsSetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnSetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
-		public static int _sgsConvert( IntPtr ctx, IntPtr varobj, int type ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnConvert( new Context( ctx ), type ); }
+		public static int _sgsConvert( IntPtr ctx, IntPtr varobj, int type ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnConvert( new Context( ctx ), (ConvOp) type ); }
 		public static int _sgsSerialize( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnSerialize( new Context( ctx ) ); }
 		public static int _sgsDump( IntPtr ctx, IntPtr varobj, int maxdepth ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnDump( new Context( ctx ), maxdepth ); }
+		public static int _sgsGetNext( IntPtr ctx, IntPtr varobj, int type ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intGetNext( new Context( ctx ), type ); }
 		public static int _sgsCall( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj.OnCall( new Context( ctx ) ); }
+		public static int _sgsExpr( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnExpr( new Context( ctx ), (ExprOp) NI.ObjectArg( ctx ) ); }
 
 		// core feature layer (don't override these unless there is some overhead to cut)
 		public virtual int _intOnDestroy()
@@ -420,9 +421,9 @@ namespace SGScript
 		{
 			return OnSetIndex( ctx, ctx.StackItem( 0 ), ctx.StackItem( 1 ), isprop ) ? NI.SUCCESS : NI.ENOTFND;
 		}
-		public virtual int _intOnConvert( Context ctx, int type )
+		public virtual int _intOnConvert( Context ctx, ConvOp type )
 		{
-			switch( (ConvOp) type )
+			switch( type )
 			{
 				case ConvOp.ToBool: ctx.Push( ConvertToBool() ); return NI.SUCCESS;
 				case ConvOp.ToString: ctx.Push( ConvertToString() ); return NI.SUCCESS;
@@ -445,30 +446,55 @@ namespace SGScript
 			}
 			return NI.ENOTSUP;
 		}
+		public virtual int _intGetNext( Context ctx, int type )
+		{
+			if( type == GetNextType.Advance )
+				return OnIterAdvance( ctx ) ? NI.SUCCESS : NI.EINPROC;
+			else
+				return OnIterGetValues( ctx, type ) ? NI.SUCCESS : NI.EINPROC;
+		}
+		public virtual int _intOnExpr( Context ctx, ExprOp op )
+		{
+			Variable rv = null;
+			switch( op )
+			{
+				case ExprOp.Add: rv = OnAdd( ctx.StackItem( 0 ), ctx.StackItem( 1 ) ); break;
+				case ExprOp.Sub: rv = OnSub( ctx.StackItem( 0 ), ctx.StackItem( 1 ) ); break;
+				case ExprOp.Mul: rv = OnMul( ctx.StackItem( 0 ), ctx.StackItem( 1 ) ); break;
+				case ExprOp.Div: rv = OnDiv( ctx.StackItem( 0 ), ctx.StackItem( 1 ) ); break;
+				case ExprOp.Mod: rv = OnMod( ctx.StackItem( 0 ), ctx.StackItem( 1 ) ); break;
+				case ExprOp.Compare: rv = OnCompare( ctx.StackItem( 0 ), ctx.StackItem( 1 ) ); break;
+				case ExprOp.Negate: rv = OnNegate(); break;
+			}
+			if( rv != null )
+			{
+				ctx.Push( rv );
+				return RC.SUCCESS;
+			}
+			return RC.ENOTSUP;
+		}
 
 		// user override callbacks
-		[HideMethod]
-		public virtual void OnDestroy(){}
-		[HideMethod]
-		public virtual void OnGCMark(){}
-		[HideMethod]
-		public virtual Variable OnGetIndex( Context ctx, Variable key, bool isprop ){ return sgsGetPropertyByName( key, isprop ); }
-		[HideMethod]
-		public virtual bool OnSetIndex( Context ctx, Variable key, Variable val, bool isprop ){ return sgsSetPropertyByName( key, ctx, isprop, 1 ); }
-		[HideMethod]
-		public virtual bool ConvertToBool(){ return true; }
-		[HideMethod]
-		public virtual string ConvertToString(){ return ToString(); }
-		[HideMethod]
-		public virtual Variable OnClone( Context ctx ){ return null; }
-		[HideMethod]
-		public virtual Variable OnGetIterator( Context ctx ){ return null; }
-		[HideMethod]
-		public virtual bool OnSerialize( Context ctx ){ return false; }
-		[HideMethod]
-		public virtual string OnDump( Context ctx, int maxdepth ){ return null; }
-		[HideMethod]
-		public virtual int OnCall( Context ctx ){ return NI.ENOTSUP; }
+		[HideMethod] public virtual void OnDestroy(){}
+		[HideMethod] public virtual void OnGCMark(){}
+		[HideMethod] public virtual Variable OnGetIndex( Context ctx, Variable key, bool isprop ){ return sgsGetPropertyByName( key, isprop ); }
+		[HideMethod] public virtual bool OnSetIndex( Context ctx, Variable key, Variable val, bool isprop ){ return sgsSetPropertyByName( key, ctx, isprop, 1 ); }
+		[HideMethod] public virtual bool ConvertToBool(){ return true; }
+		[HideMethod] public virtual string ConvertToString(){ return ToString(); }
+		[HideMethod] public virtual Variable OnClone( Context ctx ){ return null; }
+		[HideMethod] public virtual Variable OnGetIterator( Context ctx ){ return null; }
+		[HideMethod] public virtual bool OnSerialize( Context ctx ){ return false; }
+		[HideMethod] public virtual string OnDump( Context ctx, int maxdepth ){ return null; }
+		[HideMethod] public virtual bool OnIterAdvance( Context ctx ){ return false; }
+		[HideMethod] public virtual bool OnIterGetValues( Context ctx, int type ){ return false; }
+		[HideMethod] public virtual int OnCall( Context ctx ){ return NI.ENOTSUP; }
+		[HideMethod] public virtual Variable OnAdd( Variable a, Variable b ){ return null; }
+		[HideMethod] public virtual Variable OnSub( Variable a, Variable b ){ return null; }
+		[HideMethod] public virtual Variable OnMul( Variable a, Variable b ){ return null; }
+		[HideMethod] public virtual Variable OnDiv( Variable a, Variable b ){ return null; }
+		[HideMethod] public virtual Variable OnMod( Variable a, Variable b ){ return null; }
+		[HideMethod] public virtual Variable OnCompare( Variable a, Variable b ){ return null; }
+		[HideMethod] public virtual Variable OnNegate(){ return null; }
 	}
 
 	// Base class for custom SGScript objects
@@ -558,7 +584,8 @@ namespace SGScript
 			if( !gotthis && !thisMethodInfo.IsStatic )
 			{
 				// if 'this' was not passed but the method is not static, error
-				return NI.EINVAL; // TODO sgs_Msg?
+				ctx.Msg( MsgLevel.ERROR, "Expected 'this' for non-static method" );
+				return NI.EINVAL;
 			}
 
 			object thisvar = null;
@@ -568,10 +595,6 @@ namespace SGScript
 				parseVarParams[ 1 ] = ctx.StackItem( 0 );
 				parseVarThis.Invoke( ctx, parseVarParams );
 				thisvar = parseVarParams[ 0 ];
-				if( thisvar is DNMethod )
-				{
-					throw new Exception( "#BUG1 [thisvar is DNMethod]: <<" + (parseVarThis as MethodBase).ToString() + ">>]" );
-				}
 			}
 			int outArg = 0;
 			int inArg = gotthis ? 1 : 0;

@@ -344,6 +344,24 @@ namespace SGScript
 		GetAbort   = 15,
 	}
 
+	public class GetNextType
+	{
+		public const int Advance   = 0;
+		public const int KeyFlag   = 1;
+		public const int ValueFlag = 2;
+	}
+
+	public enum ExprOp : int
+	{
+		Add     = 0,
+		Sub     = 1,
+		Mul     = 2,
+		Div     = 3,
+		Mod     = 4,
+		Compare = 5,
+		Negate  = 6,
+	}
+
 	public enum ConvOp
 	{
 		ToBool = (int) VarType.Bool,
@@ -369,8 +387,7 @@ namespace SGScript
 		public const int INTERR  = 360;
 	};
 
-	// native interface
-	public class NI
+	public class ResultCode
 	{
 		// result codes
 		public const int SUCCESS  = 0;
@@ -380,7 +397,12 @@ namespace SGScript
 		public const int EBOUNDS = -5;
 		public const int EINVAL  = -6;
 		public const int EINPROC = -7;
+	}
+	public class RC : ResultCode {} // short name
 
+	// native interface
+	public class NI : ResultCode
+	{
 		// CodeString codes
 		public const int CODE_ER = 0; /* error codes */
 		public const int CODE_VT = 1; /* variable type */
@@ -485,6 +507,9 @@ namespace SGScript
 
 		[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
 		public delegate IntPtr MemFunc( IntPtr ud, IntPtr ptr, IntPtr size );
+		
+		[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
+		public delegate void OutputFunc( IntPtr ud, IntPtr ctx, IntPtr data, IntPtr size );
 
 		[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
 		public delegate void MsgFunc( IntPtr ud, IntPtr ctx, int type, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string message );
@@ -542,8 +567,26 @@ namespace SGScript
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_CodeString", CallingConvention = CallingConvention.Cdecl )]
 		[return: MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )]
 		public static extern string CodeString( int type, int val );
-		
 
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetOutputFunc", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void GetOutputFunc( IntPtr ctx, out IntPtr pfn, out IntPtr writer );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetOutputFunc", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void SetOutputFunc( IntPtr ctx, OutputFunc pfn, IntPtr writer );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetOutputFunc", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void SetOutputFunc( IntPtr ctx, IntPtr pfn, IntPtr writer );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_Write", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void Write( IntPtr ctx, [In] byte[] data, IntPtr size );
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetErrOutputFunc", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void GetErrOutputFunc( IntPtr ctx, out IntPtr pfn, out IntPtr writer );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetErrOutputFunc", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void SetErrOutputFunc( IntPtr ctx, OutputFunc pfn, IntPtr writer );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetErrOutputFunc", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void SetErrOutputFunc( IntPtr ctx, IntPtr pfn, IntPtr writer );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_ErrWrite", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void ErrWrite( IntPtr ctx, [In] byte[] data, IntPtr size );
+		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetMsgFunc", CallingConvention = CallingConvention.Cdecl )]
 		public static extern void GetMsgFunc( IntPtr ctx, out IntPtr pfn, out IntPtr messenger );
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetMsgFunc", CallingConvention = CallingConvention.Cdecl )]
@@ -554,6 +597,7 @@ namespace SGScript
 		public static extern int _MsgSpc0( IntPtr ctx, int type, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string printspec /* = "%s" */
 			, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string text );
 		public static int Msg( IntPtr ctx, int type, string text ){ _MsgSpc0( ctx, type, "%s", text ); return 0; }
+
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_EvalBuffer", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi )]
 		public static extern int EvalBuffer( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string buf, Int32 bufsz );

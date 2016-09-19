@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Text;
 
 namespace SGScript
 {
@@ -14,7 +15,7 @@ namespace SGScript
 	{
 		public static IntPtr _MemFunc( IntPtr ud, IntPtr ptr, IntPtr size )
 		{
-			return (GCHandle.FromIntPtr( ud ).Target as IMemory).MemoryAllocFree( ptr, size );
+			return (HDL.GetObj( ud ) as IMemory).MemoryAllocFree( ptr, size );
 		}
 
 		public abstract IntPtr MemoryAllocFree( IntPtr ptr, IntPtr size );
@@ -119,16 +120,48 @@ namespace SGScript
 	{
 		public static void _MsgFunc( IntPtr ud, IntPtr ctx, int type, string message )
 		{
-			(GCHandle.FromIntPtr( ud ).Target as IMessenger).Message( new Context( ctx ), type, message );
+			(HDL.GetObj( ud ) as IMessenger).Message( new Context( ctx ), type, message );
 		}
 
 		public abstract void Message( Context ctx, int type, string message );
+	}
+
+	public abstract class IOutputWriter
+	{
+		public static void _OutFunc( IntPtr ud, IntPtr ctx, IntPtr data, IntPtr size )
+		{
+			byte[] buf = new byte[ size.ToInt32() ];
+			Marshal.Copy( data, buf, 0, size.ToInt32() );
+			(HDL.GetObj( ud ) as IOutputWriter).Write( new Context( ctx ), Encoding.UTF8.GetString( buf ) );
+		}
+
+		public abstract void Write( Context ctx, string text );
+	}
+
+	public class IStdOutWriter : IOutputWriter
+	{
+		public override void Write( Context ctx, string text ){ Console.Write( text ); }
+	}
+	public class IStdErrWriter : IOutputWriter
+	{
+		public override void Write( Context ctx, string text ){ Console.Error.Write( text ); }
 	}
 
 	public interface IGetVariable
 	{
 		Variable GetVariable( Context ctx );
 	}
+
+	public struct OutputFuncData
+	{
+		public IntPtr func;
+		public IntPtr userdata;
+	};
+	public struct MsgFuncData
+	{
+		public IntPtr func;
+		public IntPtr userdata;
+	};
 
 	public class Context : ISGSBase
 	{
@@ -176,13 +209,75 @@ namespace SGScript
 		public void LoadLib_RE(){ NI.LoadLib_RE( ctx ); }
 		public void LoadLib_String(){ NI.LoadLib_String( ctx ); }
 
-		IntPtr hMsgFunc = IntPtr.Zero;
-		public void SetMsgFunc( IMessenger pr )
+		IntPtr hOutFunc = IntPtr.Zero;
+		NI.OutputFunc d_outfunc;
+		public OutputFuncData GetOutputFunc()
 		{
+			OutputFuncData ofd;
+			NI.GetOutputFunc( ctx, out ofd.func, out ofd.userdata );
+			return ofd;
+		}
+		public IOutputWriter GetOutputWriter(){ return (IOutputWriter) HDL.GetObj( GetOutputFunc().userdata ); }
+		public OutputFuncData SetOutputFunc( IOutputWriter pr )
+		{
+			OutputFuncData prev = GetOutputFunc();
+			HDL.FreeIfAlloc( ref hOutFunc );
+			hOutFunc = HDL.Alloc( pr );
+			d_outfunc = new NI.OutputFunc( IOutputWriter._OutFunc );
+			NI.SetOutputFunc( ctx, d_outfunc, hOutFunc );
+			return prev;
+		}
+		public void SetOutputFunc( OutputFuncData ofd ){ NI.SetOutputFunc( ctx, ofd.func, ofd.userdata ); }
+		public void Write( string message )
+		{
+			byte[] buf = Encoding.UTF8.GetBytes( message );
+			NI.Write( ctx, buf, (IntPtr) buf.Length );
+		}
+		
+		IntPtr hErrOutFunc = IntPtr.Zero;
+		NI.OutputFunc d_erroutfunc;
+		public OutputFuncData GetErrOutputFunc()
+		{
+			OutputFuncData ofd;
+			NI.GetErrOutputFunc( ctx, out ofd.func, out ofd.userdata );
+			return ofd;
+		}
+		public IOutputWriter GetErrOutputWriter(){ return (IOutputWriter) HDL.GetObj( GetErrOutputFunc().userdata ); }
+		public OutputFuncData SetErrOutputFunc( IOutputWriter pr )
+		{
+			OutputFuncData prev = GetErrOutputFunc();
+			HDL.FreeIfAlloc( ref hErrOutFunc );
+			hErrOutFunc = HDL.Alloc( pr );
+			d_erroutfunc = new NI.OutputFunc( IOutputWriter._OutFunc );
+			NI.SetErrOutputFunc( ctx, d_erroutfunc, hErrOutFunc );
+			return prev;
+		}
+		public void SetErrOutputFunc( OutputFuncData ofd ){ NI.SetErrOutputFunc( ctx, ofd.func, ofd.userdata ); }
+		public void ErrWrite( string message )
+		{
+			byte[] buf = Encoding.UTF8.GetBytes( message );
+			NI.ErrWrite( ctx, buf, (IntPtr) buf.Length );
+		}
+
+		IntPtr hMsgFunc = IntPtr.Zero;
+		NI.MsgFunc d_msgfunc;
+		public MsgFuncData GetMsgFunc()
+		{
+			MsgFuncData mfd;
+			NI.GetMsgFunc( ctx, out mfd.func, out mfd.userdata );
+			return mfd;
+		}
+		public IMessenger GetMessenger(){ return (IMessenger) HDL.GetObj( GetMsgFunc().userdata ); }
+		public MsgFuncData SetMsgFunc( IMessenger pr )
+		{
+			MsgFuncData prev = GetMsgFunc();
 			HDL.FreeIfAlloc( ref hMsgFunc );
 			hMsgFunc = HDL.Alloc( pr );
-			NI.SetMsgFunc( ctx, new NI.MsgFunc( IMessenger._MsgFunc ), hMsgFunc );
+			d_msgfunc = new NI.MsgFunc( IMessenger._MsgFunc );
+			NI.SetMsgFunc( ctx, d_msgfunc, hMsgFunc );
+			return prev;
 		}
+		public void SetMsgFunc( MsgFuncData mfd ){ NI.SetMsgFunc( ctx, mfd.func, mfd.userdata ); }
 		public void Msg( int type, string message ){ NI.Msg( ctx, type, message ); }
 
 		public void Acquire()
@@ -631,7 +726,7 @@ namespace SGScript
 		public void SerializeObjIndex( Variable key, Variable val, bool isprop ){ NI.SerializeObjIndex( ctx, key.var, val.var, isprop ? 1 : 0 ); }
 
 		// utility function wrappers
-		public void GCExecute(){ NI.GCExecute( ctx ); }
+		public void GCExecute(){ NI.GCExecute( ctx ); } // TODO implement backend
 		// - typeof string
 		public void TypeOfPush( Variable v ){ NI.TypeOf( ctx, v.var ); }
 		public Variable TypeOfV( Variable v ){ TypeOfPush( v ); return TakeTopmostVar(); }
