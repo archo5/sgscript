@@ -396,6 +396,13 @@ namespace SGScript
 	}
 	public class RC : ResultCode {} // short name
 
+	public enum RegistryNode : int
+	{
+		Root = 0,
+		Symbols = 1,
+		Includes = 2,
+	}
+
 	// native interface
 	public class NI
 	{
@@ -756,6 +763,17 @@ namespace SGScript
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetGlobalByName", CallingConvention = CallingConvention.Cdecl )]
 		public static extern void SetGlobalByName( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string key, Variable value );
+		
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_Registry", CallingConvention = CallingConvention.Cdecl )]
+		public static extern Variable Registry( IntPtr ctx, RegistryNode subtype );
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetEnv", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void GetEnv( IntPtr ctx, out Variable env );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetEnv", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void SetEnv( IntPtr ctx, Variable env );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushEnv", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void PushEnv( IntPtr ctx );
 
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_Pop", CallingConvention = CallingConvention.Cdecl )]

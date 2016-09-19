@@ -79,6 +79,7 @@ namespace APITest
 			YieldResume();
 			MiscAPIs();
 			CSharpObjects();
+			XRefObjects();
 		}
 
 		static void NoteTest()
@@ -1031,6 +1032,40 @@ namespace APITest
 			
 			DestroyEngine( engine );
 			FullObject1.pfxstr = "PFX:"; // restore
+		}
+
+		public class XRef : IObject
+		{
+			public XRef a;
+			public XRef b;
+
+			public XRef( Context c ) : base( c ){}
+		}
+		static void XRefObjects()
+		{
+			Console.Write( "\nXRef objects " );
+			Engine engine = CreateEngine();
+
+			XRef v1 = new XRef( engine );
+			XRef v2 = new XRef( engine );
+			XRef v3 = new XRef( engine );
+
+			v1.a = v2;
+			v1.b = v3;
+			v2.a = v1;
+			v2.b = v3;
+			v3.a = v1;
+			v3.b = v2;
+
+			engine.GCExecute();
+			v1 = null;
+			v2 = null;
+			v3 = null;
+			GC.Collect();
+			GC.WaitForPendingFinalizers();
+			engine.GCExecute();
+			
+			DestroyEngine( engine );
 		}
 	}
 }

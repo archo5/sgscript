@@ -18,7 +18,7 @@ namespace SGScript
 	[AttributeUsage(AttributeTargets.Parameter)]
 	public class CallingThread : System.Attribute {}
 
-	public abstract class ISGSBase : IDisposable
+	public abstract class ISGSBase : IDisposable, IGCMarkable
 	{
 		public Engine _sgsEngine;
 		public WeakReference _sgsWeakRef;
@@ -38,6 +38,7 @@ namespace SGScript
 		}
 		~ISGSBase(){ Dispose(); }
 		public abstract void Release();
+		public virtual void GCMark(){}
 		public void Dispose()
 		{
 			lock( _sgsEngine._objRefs )
@@ -270,6 +271,11 @@ namespace SGScript
 				_sgsObject = IntPtr.Zero;
 			}
 		}
+		public override void GCMark()
+		{
+			if( _sgsObject != IntPtr.Zero )
+				NI.ObjGCMark( _sgsEngine.ctx, _sgsObject );
+		}
 		public Variable GetVariable()
 		{
 			return _sgsEngine.Var( this );
@@ -476,7 +482,7 @@ namespace SGScript
 
 		// user override callbacks
 		[HideMethod] public virtual void OnDestroy(){}
-		[HideMethod] public virtual void OnGCMark(){}
+		[HideMethod] public virtual void OnGCMark(){} // only needed for unmanaged IntPtr-type object handles
 		[HideMethod] public virtual Variable OnGetIndex( Context ctx, Variable key, bool isprop ){ return sgsGetPropertyByName( key, isprop ); }
 		[HideMethod] public virtual bool OnSetIndex( Context ctx, Variable key, Variable val, bool isprop ){ return sgsSetPropertyByName( key, ctx, isprop, 1 ); }
 		[HideMethod] public virtual bool ConvertToBool(){ return true; }
@@ -501,6 +507,15 @@ namespace SGScript
 	public abstract class IObject : IObjectBase
 	{
 		public IObject( Context c, bool skipInit = false ) : base( c, skipInit ){}
+	}
+	
+	public class DNGarbageCollector : IObjectBase
+	{
+		public DNGarbageCollector( Context c ) : base( c ){}
+		public override void OnGCMark()
+		{
+			_sgsEngine._MarkAllObjects();
+		}
 	}
 
 	// .NET Object interface wrapper
@@ -650,6 +665,10 @@ namespace SGScript
 		public override void Release()
 		{
 			_sgsEngine._ReleaseVar( ref var );
+		}
+		public override void GCMark()
+		{
+			NI.GCMark( _sgsEngine.ctx, ref var );
 		}
 
 		public VarType type { get { return var.type; } }

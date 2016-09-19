@@ -152,6 +152,11 @@ namespace SGScript
 		Variable GetVariable( Context ctx );
 	}
 
+	public interface IGCMarkable
+	{
+		void GCMark();
+	}
+
 	public struct OutputFuncData
 	{
 		public IntPtr func;
@@ -295,6 +300,8 @@ namespace SGScript
 				HDL.FreeIfAlloc( ref hMsgFunc );
 			}
 		}
+		// Contexts do not need GCMark
+
 		public Context Fork( bool copy = false )
 		{
 			return new Context( NI.ForkState( ctx, copy ? 1 : 0 ), false );
@@ -697,6 +704,15 @@ namespace SGScript
 		public bool PushGlobal( string key ){ return NI.PushGlobalByName( ctx, key ) != 0; }
 		public void SetGlobal( string key, Variable value ){ NI.SetGlobalByName( ctx, key, value.var ); }
 
+		// access
+		public Variable Registry( RegistryNode node = RegistryNode.Root )
+		{
+			return new Variable( this, NI.Registry( ctx, node ) );
+		}
+		public Variable Env(){ NI.Variable env; NI.GetEnv( ctx, out env ); return new Variable( this, env ); }
+		public void PushEnv(){ NI.PushEnv( ctx ); }
+		public void SetEnv( Variable env ){ NI.SetEnv( ctx, env.var ); }
+
 		// serialization interfaces
 		public void SerializePush( Variable v, int mode = 0 )
 		{
@@ -778,17 +794,22 @@ namespace SGScript
 		IntPtr hMem = IntPtr.Zero;
 		public Engine() : base( IntPtr.Zero, false )
 		{
-			owningThread = Thread.CurrentThread;
 			ctx = NI.CreateEngine( out d_memfunc );
-			_engines.Add( ctx, _sgsWeakRef );
+			_CommonInit();
 		}
 		public Engine( IMemory mem ) : base( IntPtr.Zero, false )
 		{
-			owningThread = Thread.CurrentThread;
 			hMem = HDL.Alloc( mem );
 			d_memfunc = new NI.MemFunc( IMemory._MemFunc );
 			ctx = NI.CreateEngineExt( d_memfunc, hMem );
+			_CommonInit();
+		}
+		void _CommonInit()
+		{
+			owningThread = Thread.CurrentThread;
 			_engines.Add( ctx, _sgsWeakRef );
+			// create a garbage collector that will take care of all the externally referenced variables
+			Registry().SetProp( "_NGC", new DNGarbageCollector( this ).GetVariable() );
 		}
 		public override void Release()
 		{
@@ -884,6 +905,21 @@ namespace SGScript
 					var = _varReleaseQueue.Dequeue();
 				}
 				NI.Release( ctx, ref var );
+			}
+		}
+		public void _MarkAllObjects()
+		{
+            lock( _objRefs )
+            {
+                WeakReference[] objrefs;
+                objrefs = new WeakReference[_objRefs.Count];
+                _objRefs.Keys.CopyTo( objrefs, 0 );
+                foreach( WeakReference wr in objrefs )
+                {
+                    IGCMarkable d = ((IGCMarkable) wr.Target);
+					if( d != null )
+	                    d.GCMark();
+                }
 			}
 		}
 
