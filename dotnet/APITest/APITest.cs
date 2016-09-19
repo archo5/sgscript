@@ -28,6 +28,7 @@ namespace APITest
 			Console.WriteLine( "SGS.NET API tests" );
 
 			Thread t = new Thread( new ThreadStart( GCNagThread ) );
+			t.Name = "GC nagging thread";
 			t.Start();
 
 			int count = 0;
@@ -824,7 +825,7 @@ namespace APITest
 			Assert( engine.GetGlobal( "m1" ), null );
 
 			// resume
-			Assert( engine.Resume(), true );
+			engine.Resume();
 			// check if done
 			Assert( engine.GetGlobal( "m1" ).GetBool(), true );
 			

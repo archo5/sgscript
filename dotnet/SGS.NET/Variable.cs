@@ -623,7 +623,7 @@ namespace SGScript
 				Acquire();
 		}
 
-		public void Acquire(){ NI.Acquire( ctx.ctx, var ); }
+		public void Acquire(){ NI.Acquire( ctx.ctx, ref var ); }
 		public override void Release()
 		{
 			_sgsEngine._ReleaseVar( ref var );
@@ -632,9 +632,9 @@ namespace SGScript
 		public VarType type { get { return var.type; } }
 		public bool isNull { get { return var.type == VarType.Null; } }
 		public bool notNull { get { return var.type != VarType.Null; } }
-		public bool GetBool(){ return NI.GetBoolP( ctx.ctx, var ); }
-		public Int64 GetInt(){ return NI.GetIntP( ctx.ctx, var ); }
-		public double GetReal(){ return NI.GetRealP( ctx.ctx, var ); }
+		public bool GetBool(){ return NI.GetBoolP( ctx.ctx, ref var ) != 0; }
+		public Int64 GetInt(){ return NI.GetIntP( ctx.ctx, ref var ); }
+		public double GetReal(){ return NI.GetRealP( ctx.ctx, ref var ); }
 		public string ConvertToString()
 		{
 			Variable v2 = new Variable( ctx, var );
@@ -645,6 +645,7 @@ namespace SGScript
 		}
 		public string GetString(){ return NI.GetString( var ); }
 		public byte[] GetByteArray(){ return NI.GetByteArray( var ); }
+		public Context GetThread(){ if( var.type != VarType.Thread ) throw new SGSException( NI.EINVAL, "Variable is not a thread" ); return new Context( var.data.T ); }
 		public string str { get { return GetString(); } }
 		public IObjectBase GetIObjectBase()
 		{
@@ -664,7 +665,7 @@ namespace SGScript
 		public Variable GetIterator()
 		{
 			NI.Variable iter;
-			if( !NI.GetIterator( _sgsEngine.ctx, var, out iter ) )
+			if( NI.GetIterator( _sgsEngine.ctx, var, out iter ) == 0 )
 				throw new SGSException( NI.ENOTSUP, "Object does not support iterators" );
 			return _sgsEngine.Var( iter, false );
 		}

@@ -190,7 +190,7 @@ namespace SGScript
 			NI.Variable var = new NI.Variable();
 			var.type = VarType.Thread;
 			var.data.T = ctx;
-			NI.Acquire( ctx, var );
+			NI.Acquire( ctx, ref var );
 		}
 		public override void Release()
 		{
@@ -204,9 +204,55 @@ namespace SGScript
 		{
 			return new Context( NI.ForkState( ctx, copy ? 1 : 0 ), false );
 		}
-		public bool Resume()
+		public void ResumeExt( int args = 0, int expect = 0 )
 		{
-			return NI.ResumeState( ctx ) != 0;
+			if( NI.ResumeStateExp( ctx, args, expect ) == 0 )
+				throw new SGSException( NI.EINPROC, "Failed to resume coroutine" );
+		}
+		public int ResumeExtV( int args = 0 )
+		{
+			int outrvc;
+			if( NI.ResumeStateRet( ctx, args, out outrvc ) == 0 )
+				throw new SGSException( NI.EINPROC, "Failed to resume coroutine" );
+			return outrvc;
+		}
+		public void Resume( params object[] args )
+		{
+			foreach( object arg in args )
+				PushObj( args );
+			ResumeExt( args.Length );
+		}
+		public object OResume( params object[] args )
+		{
+			foreach( object arg in args )
+				PushObj( args );
+			return RetrieveOneReturnValue( ResumeExtV( args.Length ) );
+		}
+		public T Resume<T>( params object[] args )
+		{
+			foreach( object arg in args )
+				PushObj( args );
+			return RetrieveOneReturnValueT<T>( ResumeExtV( args.Length ) );
+		}
+		public Variable CreateSubthreadExt( int args = 0, bool gotthis = false, Context argstack = null )
+		{
+			NI.Variable var;
+			NI.CreateSubthread( ctx, argstack == null ? ctx : argstack.ctx, out var, args, gotthis ? 1 : 0 );
+			return new Variable( this, var, false );
+		}
+		public Variable CreateSubthreadT( object thisvar, params object[] args )
+		{
+			if( thisvar != null )
+				PushObj( thisvar );
+			foreach( object arg in args )
+				PushObj( args );
+			return CreateSubthreadExt( args.Length, thisvar != null );
+		}
+		public Variable CreateSubthread( params object[] args ){ return CreateSubthreadT( null, args ); }
+		public int ProcessSubthreads( double dt ){ return NI.ProcessSubthreads( ctx, dt ); }
+		public void EndOn( Variable var, bool enable = true )
+		{
+			NI.EndOn( ctx, var.var, enable ? 1 : 0 );
 		}
 		
 		void _IndexCheck( int item, string funcname )
@@ -246,7 +292,7 @@ namespace SGScript
 		public Variable Var( IntPtr v ){ return new Variable( this, NI.MakePtr( v ) ); }
 		public Variable Var( NI.Variable v, bool acquire = true ){ return new Variable( this, v, acquire ); }
 		public Variable Var( string v ){ if( v == null ) return NullVar(); NI.Variable var; NI.InitStringBuf( ctx, out var, v ); return new Variable( this, var, false ); }
-		public Variable Var( byte[] v ){ if( v == null ) return NullVar(); NI.Variable var; NI.InitStringBufB( ctx, out var, v ); return new Variable( this, var, false ); }
+		public Variable Var( byte[] v ){ if( v == null ) return NullVar(); NI.Variable var; NI.InitStringBufB( ctx, out var, v, v.Length ); return new Variable( this, var, false ); }
 		public Variable Var( IObjectBase v )
 		{
 			NI.Variable var = NI.MakeNull();
@@ -336,7 +382,7 @@ namespace SGScript
 		public void Push( UInt64? i ){ if( i.HasValue == false ) PushNull(); else NI.PushInt( ctx, (Int64) i.Value ); }
 		public void Push( double? v ){ if( v.HasValue == false ) PushNull(); else NI.PushReal( ctx, v.Value ); }
 		public void Push( IntPtr? p ){ if( p.HasValue == false ) PushNull(); else NI.PushPtr( ctx, p.Value ); }
-		public void Push( string str ){ if( str == null ) PushNull(); else NI.PushStringBuf( ctx, str, str.Length ); }
+		public void Push( string str ){ if( str == null ) PushNull(); else NI.PushStringBuf( ctx, str ); }
 		public void Push( byte[] buf ){ if( buf == null ) PushNull(); else NI.PushStringBufB( ctx, buf, buf.Length ); }
 		public void Push( IObjectBase o ){ if( o == null ) PushNull(); else NI.PushObjectPtr( ctx, o._sgsObject ); }
 		public void Push( Context c ){ if( c == null ) PushNull(); else NI.PushThreadPtr( ctx, c.ctx ); }
@@ -529,7 +575,7 @@ namespace SGScript
 		public Variable GetIndex( Variable obj, Variable idx, bool isprop = false )
 		{
 			NI.Variable var;
-			if( !NI.GetIndex( ctx, obj.var, idx.var, out var, isprop ) )
+			if( NI.GetIndex( ctx, obj.var, idx.var, out var, isprop ? 1 : 0 ) == 0 )
 				return null;
 			return Var( var, false );
 		}
@@ -541,14 +587,14 @@ namespace SGScript
 		public Variable GetGlobal( string key )
 		{
 			NI.Variable var;
-			if( !NI.GetGlobalByName( ctx, key, out var ) )
+			if( NI.GetGlobalByName( ctx, key, out var ) == 0 )
 				return null;
 			return Var( var, false );
 		}
 		public Variable GetGlobal( Variable key )
 		{
 			NI.Variable var;
-			if( !NI.GetGlobal( ctx, key.var, out var ) )
+			if( NI.GetGlobal( ctx, key.var, out var ) == 0 )
 				return null;
 			return Var( var, false );
 		}
