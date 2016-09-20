@@ -1378,7 +1378,7 @@ DEFINE_TEST( hash_table )
 	atf_assert( symbol_table_stats.collisions * 2 < symbol_table_stats.used ); /* less than 50% collisions out of all used items */
 	atf_assert( symbol_table_stats.collisions * 4 < symbol_table_stats.buckets ); /* less than 25% collisions out of all buckets */
 	atf_assert( symbol_table_stats.worst_probe_length <= 32 ); /* small worst probe length */
-	atf_assert( symbol_table_stats.avg_probe_length < 2.0f ); /* small average probe length */
+	atf_assert( symbol_table_stats.avg_probe_length < 2.2f ); /* small average probe length */
 	
 	if( verbose >= 1 ) printf( "\n--- random table (100000 base64'd numbers) ---\n" );
 	const char* str = "include 'fmt';"
