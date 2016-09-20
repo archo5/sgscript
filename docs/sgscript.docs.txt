@@ -58,8 +58,8 @@ Without any extra work, most of the data can be converted to a byte buffer so th
 This is a preferred method to garbage collection since it releases resources as soon as possible, avoiding random stalls throughout the game and thus providing a smooth gameplay experience. There are algorithms that reduce these stalls (incremental/generational garbage collection) but, given enough objects, they will be noticeable again. Source: @"http://sealedabstract.com/rants/why-mobile-web-apps-are-slow/"
 
 == Coroutines
-[+] SGScript, Lua, Squirrel
-[-] Python, JavaScript (only generators are supported)
+[+] SGScript, Lua, Squirrel, Python
+[-] JavaScript (only generators are supported)
 
 True cooperative multitasking allows the direction of timed events to be greatly simplified. SGScript goes one step further and also provides helper constructs (thread, subthread, sync, race) to make things as simple as possible for the user.
 
@@ -1156,9 +1156,6 @@ Closures are a combination of one callable and some variables. They are meant to
 Closures can be created from both SGScript and the C API, though both options have their limitations.
 
 - In SGScript, closures can be created by letting functions "use" a variable, e.g. by writing `function func( args ) use( closures ){ ..body.. }`
-- In the C API, closures can be created with @sgs_MakeClosure, though this requires knowledge about the receiving function's ability to use them. This means that even though there are no variable type limits, it is more practical to create closures from native functions (both plain and object interface functions) with the C API. Though **prefer objects for callables if function-data bindings are necessary at the native code level**.
-
-Closure stack in the C API is technically very similar to main stack, with one important difference - functions do not accept negative indices.
 
 
 # <<< (Concepts & systems)
@@ -1452,17 +1449,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 - @sgs_ArrayFind - return the first position of item `what` in array `var` or -1 if item was not found
 - @sgs_ArrayRemove - remove first/all occurrence(s) of `what` in array `var`
 - @sgs_Unset - unset the specified index of the given `dict`/`map` variable, return if successful
-
-
-# Closure handling [info]
-
-- @sgs_ClPushNulls - push a number of empty closures to the closure stack
-- @sgs_ClPushVariable - push a new closure variable on the closure stack
-- @sgs_ClPushItem - push a variable on stack as a closure to the closure stack
-- @sgs_ClPop - pop a number of closures from the closure stack
-- @sgs_MakeClosure - make a callable closure object from the specified callable and number of closures on stack
-- @sgs_ClGetItem - retrieve the variable from a closure on stack
-- @sgs_ClSetItem - set the variable to a closure on stack
 
 
 # Data retrieval & conversion [info]
@@ -2436,54 +2422,6 @@ After a successful call, all arguments will be popped off the stack and the expe
 === Concatenate the `args` number of topmost string variables in the current stack frame.
 
 - If `args` = 0, empty string is pushed.
-
-
-# sgs_ClPushNulls [function]
-
-== void sgs_ClPushNulls( sgs_Context* C, sgs_StkIdx num )
-=== Push `num` empty closures to the closure stack.
-
-- `num` must be equal to or larger than 0.
-
-
-# sgs_ClPushVariable [function]
-
-== void sgs_ClPushVariable( sgs_Context* C, sgs_Variable var )
-=== Push a new closure variable on the closure stack.
-
-
-# sgs_ClPushItem [function]
-
-== void sgs_ClPushItem( sgs_Context* C, sgs_StkIdx item )
-=== Push a variable `item` on stack as a closure to the closure stack.
-
-
-# sgs_ClPop [function]
-
-== void sgs_ClPop( sgs_Context* C, sgs_StkIdx num )
-=== Pop `num` closures from the closure stack.
-
-- Function will fail if it is attempted to pop more closures than there are on the stack.
-
-
-# sgs_MakeClosure [function]
-
-== void sgs_MakeClosure( sgs_Context* C, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out )
-=== Make a callable closure object from the specified callable `func` and `clcount` closures on stack, return it at position `out`.
-
-- Function will fail if it is attempted to use more closures than there are on the stack.
-
-
-# sgs_ClGetItem [function]
-
-== void sgs_ClGetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )
-=== Retrieve the variable from a closure `item` on stack.
-
-
-# sgs_ClSetItem [function]
-
-== void sgs_ClSetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* var )
-=== Set the variable `var` to a closure `item` on stack.
 
 
 # sgs_CloneItem [function]
@@ -4868,7 +4806,7 @@ When the event is signaled, the thread will be aborted as soon as possible.
 
 ! If argument count is known at compile time, prefer using the compatible function call syntax (`thisvar!func( arg1, ... )`) to this function.
 
-- C functions, SGS functions, closure objects and real closures have this function under the "apply" property.
+- C functions, SGS functions and closure objects have this function under the "apply" property.
 
 
 # pcall [function]
@@ -7325,55 +7263,11 @@ To ensure safety of the underlying environment, there are functions that need to
 - @"OS library":
 -- @os_command - can run any terminal command
 
-== Information control (access to data about the system
+== Information control (access to data about the system)
 
 - @"Most functions in OS library"<OS library> - access to environment variables, system date/time info / process locale info.
 - core functions:
 -- @printvar, @printvar_ext, @dumpvar, @dumpvar_ext, @sys_stat, @toptr - access to memory layout of engine objects
-
-== Sandbox example
-
-    restrict = function( name )
-    {
-        println( "==\n= The use of '" $ name $ "' is restricted!\n==" );
-    };
-    closure = function( clbl, data )
-    {
-        return function() use( clbl, data )
-        {
-            args = va_get_args();
-            args.unshift( data );
-            sys_apply( clbl, this, args );
-        };
-    };
-    safe_include_lib = function( data, libname )
-    {
-        libname = tostring( libname );
-        if( ["string","math","re","fmt","os"].find( libname ) === null )
-        {
-            println( "info: cannot include files and system access libraries here" );
-            return;
-        }
-        data( libname );
-        if( libname == "os" )
-        {
-            unset( _G, "os_command" );
-            unset( _G, "os_getenv" );
-            unset( _G, "os_putenv" );
-        }
-    };
-    safe_include = function( libname )
-    {
-        return include_library( libname );
-    };
-    global include_library = closure( safe_include_lib, include_library );
-    global include = safe_include;
-    global include_shared = closure( restrict, "include_shared" );
-    global import_cfunc = closure( restrict, "import_cfunc" );
-    global include_file = closure( restrict, "include_file" );
-    global eval_file = closure( restrict, "eval_file" );
-    
-    include "string", "math", "re", "fmt", "os";
 
 
 # <<<

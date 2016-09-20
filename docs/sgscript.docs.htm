@@ -47,7 +47,6 @@
 </li><li><a href='#Virtual-machine-operations'>Virtual machine operations</a>
 </li><li><a href='#String-helpers'>String helpers</a>
 </li><li><a href='#Container-helpers'>Container helpers</a>
-</li><li><a href='#Closure-handling'>Closure handling</a>
 </li><li><a href='#Data-retrieval-conversion'>Data retrieval &amp; conversion</a>
 </li><li><a href='#Iterators'>Iterators</a>
 </li><li><a href='#Variable-ownership'>Variable ownership</a>
@@ -130,8 +129,8 @@ Without any extra work, most of the data can be converted to a byte buffer so th
 </p><p>
 This is a preferred method to garbage collection since it releases resources as soon as possible, avoiding random stalls throughout the game and thus providing a smooth gameplay experience. There are algorithms that reduce these stalls (incremental/generational garbage collection) but, given enough objects, they will be noticeable again. Source: <a href="http://sealedabstract.com/rants/why-mobile-web-apps-are-slow/" target="_blank">http://sealedabstract.com/rants/why-mobile-web-apps-are-slow/</a>
 </p><h3>Coroutines</h3><p>
-<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Lua, Squirrel</span></div>
-<div class='al-con'><span class='inner'><span class='mark'>[-]</span> Python, JavaScript (only generators are supported)</span></div>
+<div class='al-pro'><span class='inner'><span class='mark'>[+]</span> SGScript, Lua, Squirrel, Python</span></div>
+<div class='al-con'><span class='inner'><span class='mark'>[-]</span> JavaScript (only generators are supported)</span></div>
 </p><p>
 True cooperative multitasking allows the direction of timed events to be greatly simplified. SGScript goes one step further and also provides helper constructs (thread, subthread, sync, race) to make things as simple as possible for the user.
 </p><h3>Custom native objects with complex links</h3><p>
@@ -915,10 +914,7 @@ List of available metamethods:
 Closures are a combination of one callable and some variables. They are meant to simplify interfaces and code around places where it was important for functions to have access to call-invariant (same on every call) data.
 </p><p>
 Closures can be created from both SGScript and the C API, though both options have their limitations.
-</p><ul><li>In SGScript, closures can be created by letting functions &quot;use&quot; a variable, e.g. by writing <code>function func( args ) use( closures ){ ..body.. }</code>
-</li><li>In the C API, closures can be created with <a href="#sgs-MakeClosure-function">sgs_MakeClosure</a>, though this requires knowledge about the receiving function&#39;s ability to use them. This means that even though there are no variable type limits, it is more practical to create closures from native functions (both plain and object interface functions) with the C API. Though <b>prefer objects for callables if function-data bindings are necessary at the native code level</b>.</li></ul><p>
-Closure stack in the C API is technically very similar to main stack, with one important difference - functions do not accept negative indices.
-</p></div>
+</p><ul><li>In SGScript, closures can be created by letting functions &quot;use&quot; a variable, e.g. by writing <code>function func( args ) use( closures ){ ..body.. }</code></li></ul></div>
 <div class='item'><a name='Functions'></a><hr><h2>Functions</h2></div>
 <div class='item'><a name='Context-management'></a><hr><h2>Context management</h2><ul><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngine</a> - create scripting engine context
 </li><li><a href="#sgs-CreateEngineExt-function">sgs_CreateEngineExt</a> - create scripting engine context and pass a custom memory function
@@ -1146,13 +1142,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-ArrayFind-function">sgs_ArrayFind</a> - return the first position of item <code>what</code> in array <code>var</code> or -1 if item was not found
 </li><li><a href="#sgs-ArrayRemove-function">sgs_ArrayRemove</a> - remove first/all occurrence(s) of <code>what</code> in array <code>var</code>
 </li><li><a href="#sgs-Unset-function">sgs_Unset</a> - unset the specified index of the given <code>dict</code>/<code>map</code> variable, return if successful</li></ul></div>
-<div class='item'><a name='Closure-handling'></a><hr><h2>Closure handling</h2><ul><li><a href="#sgs-ClPushNulls-function">sgs_ClPushNulls</a> - push a number of empty closures to the closure stack
-</li><li><a href="#sgs-ClPushVariable-function">sgs_ClPushVariable</a> - push a new closure variable on the closure stack
-</li><li><a href="#sgs-ClPushItem-function">sgs_ClPushItem</a> - push a variable on stack as a closure to the closure stack
-</li><li><a href="#sgs-ClPop-function">sgs_ClPop</a> - pop a number of closures from the closure stack
-</li><li><a href="#sgs-MakeClosure-function">sgs_MakeClosure</a> - make a callable closure object from the specified callable and number of closures on stack
-</li><li><a href="#sgs-ClGetItem-function">sgs_ClGetItem</a> - retrieve the variable from a closure on stack
-</li><li><a href="#sgs-ClSetItem-function">sgs_ClSetItem</a> - set the variable to a closure on stack</li></ul></div>
 <div class='item'><a name='Data-retrieval-conversion'></a><hr><h2>Data retrieval &amp; conversion</h2><ul><li><a href="#sgs-Get-functions">sgs_GetBoolP</a> - return the boolean version of the variable
 </li><li><a href="#sgs-Get-functions">sgs_GetIntP</a> - return the integer version of the variable
 </li><li><a href="#sgs-Get-functions">sgs_GetRealP</a> - return the real value version of the variable
@@ -1272,12 +1261,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-ArrayRemove-function">sgs_ArrayRemove [function]</a>
 </li><li><a href="#sgs-ArraySize-functions">sgs_ArraySize [functions]</a>
 </li><li><a href="#sgs-Assign-function">sgs_Assign [function]</a>
-</li><li><a href="#sgs-ClGetItem-function">sgs_ClGetItem [function]</a>
-</li><li><a href="#sgs-ClPop-function">sgs_ClPop [function]</a>
-</li><li><a href="#sgs-ClPushItem-function">sgs_ClPushItem [function]</a>
-</li><li><a href="#sgs-ClPushNulls-function">sgs_ClPushNulls [function]</a>
-</li><li><a href="#sgs-ClPushVariable-function">sgs_ClPushVariable [function]</a>
-</li><li><a href="#sgs-ClSetItem-function">sgs_ClSetItem [function]</a>
 </li><li><a href="#sgs-CloneItem-function">sgs_CloneItem [function]</a>
 </li><li><a href="#sgs-Cntl-function">sgs_Cntl [function]</a>
 </li><li><a href="#sgs-CodeString-function">sgs_CodeString [function]</a>
@@ -1356,7 +1339,6 @@ Closure stack in the C API is technically very similar to main stack, with one i
 </li><li><a href="#sgs-LoadArgsExt-VA-function">sgs_LoadArgsExt(VA) [function]</a>
 </li><li><a href="#sgs-LoadLib-functions">sgs_LoadLib_*** [functions]</a>
 </li><li><a href="#sgs-Make-functions">sgs_Make*** [functions]</a>
-</li><li><a href="#sgs-MakeClosure-function">sgs_MakeClosure [function]</a>
 </li><li><a href="#sgs-Memory-function">sgs_Memory [function]</a>
 </li><li><a href="#sgs-Method-function">sgs_Method [function]</a>
 </li><li><a href="#sgs-Msg-function">sgs_Msg [function]</a>
@@ -1668,13 +1650,6 @@ After a successful call, all arguments will be popped off the stack and the expe
 <div class='item'><a name='sgs-PadString-function'></a><hr><h2>sgs_PadString [function]</h2><h3>void sgs_PadString( sgs_Context* C )</h3><h4>Replace the topmost variable of current stack frame with a string variable where two spaces are appended after every newline.</h4></div>
 <div class='item'><a name='sgs-ToPrintSafeString-function'></a><hr><h2>sgs_ToPrintSafeString [function]</h2><h3>void sgs_ToPrintSafeString( sgs_Context* C )</h3><h4>Replace the topmost variable of current stack frame with a string where all non-printable (except space), non-ASCII characters converted to a character hex code.</h4></div>
 <div class='item'><a name='sgs-StringConcat-function'></a><hr><h2>sgs_StringConcat [function]</h2><h3>void sgs_StringConcat( sgs_Context* C, int args )</h3><h4>Concatenate the <code>args</code> number of topmost string variables in the current stack frame.</h4><ul><li>If <code>args</code> = 0, empty string is pushed.</li></ul></div>
-<div class='item'><a name='sgs-ClPushNulls-function'></a><hr><h2>sgs_ClPushNulls [function]</h2><h3>void sgs_ClPushNulls( sgs_Context* C, sgs_StkIdx num )</h3><h4>Push <code>num</code> empty closures to the closure stack.</h4><ul><li><code>num</code> must be equal to or larger than 0.</li></ul></div>
-<div class='item'><a name='sgs-ClPushVariable-function'></a><hr><h2>sgs_ClPushVariable [function]</h2><h3>void sgs_ClPushVariable( sgs_Context* C, sgs_Variable var )</h3><h4>Push a new closure variable on the closure stack.</h4></div>
-<div class='item'><a name='sgs-ClPushItem-function'></a><hr><h2>sgs_ClPushItem [function]</h2><h3>void sgs_ClPushItem( sgs_Context* C, sgs_StkIdx item )</h3><h4>Push a variable <code>item</code> on stack as a closure to the closure stack.</h4></div>
-<div class='item'><a name='sgs-ClPop-function'></a><hr><h2>sgs_ClPop [function]</h2><h3>void sgs_ClPop( sgs_Context* C, sgs_StkIdx num )</h3><h4>Pop <code>num</code> closures from the closure stack.</h4><ul><li>Function will fail if it is attempted to pop more closures than there are on the stack.</li></ul></div>
-<div class='item'><a name='sgs-MakeClosure-function'></a><hr><h2>sgs_MakeClosure [function]</h2><h3>void sgs_MakeClosure( sgs_Context* C, sgs_Variable* func, sgs_StkIdx clcount, sgs_Variable* out )</h3><h4>Make a callable closure object from the specified callable <code>func</code> and <code>clcount</code> closures on stack, return it at position <code>out</code>.</h4><ul><li>Function will fail if it is attempted to use more closures than there are on the stack.</li></ul></div>
-<div class='item'><a name='sgs-ClGetItem-function'></a><hr><h2>sgs_ClGetItem [function]</h2><h3>void sgs_ClGetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* out )</h3><h4>Retrieve the variable from a closure <code>item</code> on stack.</h4></div>
-<div class='item'><a name='sgs-ClSetItem-function'></a><hr><h2>sgs_ClSetItem [function]</h2><h3>void sgs_ClSetItem( sgs_Context* C, sgs_StkIdx item, sgs_Variable* var )</h3><h4>Set the variable <code>var</code> to a closure <code>item</code> on stack.</h4></div>
 <div class='item'><a name='sgs-CloneItem-function'></a><hr><h2>sgs_CloneItem [function]</h2><h3>void sgs_CloneItem( sgs_Context* C, sgs_Variable var )</h3><h4>Push a copy of the specified stack item.</h4><p>
 <em class='notice-bgr'>Even though operations with functions and strings succeed, functions and strings are not actually cloned since they are immutable.</em>
 </p><ul><li>Function will fail if any object attempted to be cloned does not support cloning.</li></ul></div>
@@ -2432,7 +2407,7 @@ When the event is signaled, the thread will be aborted as soon as possible.
 print( 5 ); // this line is not reached</pre></div>
 <div class='item'><a name='sys-apply-function'></a><hr><h2>sys_apply [function]</h2><h3>sys_apply( func, this, args )</h3><h4>calls the specified function with the specified <code>this</code> value and argument array</h4><p>
 <em class='notice-bgr'>If argument count is known at compile time, prefer using the compatible function call syntax (<code>thisvar!func( arg1, ... )</code>) to this function.</em>
-</p><ul><li>C functions, SGS functions, closure objects and real closures have this function under the &quot;apply&quot; property.</li></ul></div>
+</p><ul><li>C functions, SGS functions and closure objects have this function under the &quot;apply&quot; property.</li></ul></div>
 <div class='item'><a name='pcall-function'></a><hr><h2>pcall [function]</h2><h3>pcall( callable func[, callable errh ])</h3><h4>Calls the callable <code>func</code>, hiding internal errors from the caller or optionally passing them to callable <code>errh</code>.</h4><ul><li><code>errh</code> error handler is called with two arguments - <code>int error_type, string message</code> - and expected to return 0-1 arguments ([int])
 </li><li>error handler must return 0/null/nothing if the error has been successfully processed or the new error type otherwise
 <ul><li>errors thrown inside the handler will not be caught so any error can be transformed to any other
@@ -3513,49 +3488,9 @@ To ensure safety of the underlying environment, there are functions that need to
 </li><li><a href="#eval-file-function">eval_file</a> - access to file system, can run script files
 </li></ul><li><a href="#I-O-library-io">All functions in I/O library</a> - access to file system
 </li><li><a href="#OS-library-os">OS library</a>:
-<ul><li><a href="#os-command-function">os_command</a> - can run any terminal command</li></ul></li></ul><h3>Information control (access to data about the system</h3><ul><li><a href="#OS-library-os">Most functions in OS library</a> - access to environment variables, system date/time info / process locale info.
+<ul><li><a href="#os-command-function">os_command</a> - can run any terminal command</li></ul></li></ul><h3>Information control (access to data about the system)</h3><ul><li><a href="#OS-library-os">Most functions in OS library</a> - access to environment variables, system date/time info / process locale info.
 </li><li>core functions:
-<ul><li><a href="#printvar-function">printvar</a>, <a href="#printvar-ext-function">printvar_ext</a>, <a href="#dumpvar-function">dumpvar</a>, <a href="#dumpvar-ext-function">dumpvar_ext</a>, <a href="#sys-stat-function">sys_stat</a>, <a href="#toptr-function">toptr</a> - access to memory layout of engine objects</li></ul></li></ul><h3>Sandbox example</h3><pre>restrict = function( name )
-{
-    println( &quot;==\n= The use of &#39;&quot; $ name $ &quot;&#39; is restricted!\n==&quot; );
-};
-closure = function( clbl, data )
-{
-    return function() use( clbl, data )
-    {
-        args = va_get_args();
-        args.unshift( data );
-        sys_apply( clbl, this, args );
-    };
-};
-safe_include_lib = function( data, libname )
-{
-    libname = tostring( libname );
-    if( [&quot;string&quot;,&quot;math&quot;,&quot;re&quot;,&quot;fmt&quot;,&quot;os&quot;].find( libname ) === null )
-    {
-        println( &quot;info: cannot include files and system access libraries here&quot; );
-        return;
-    }
-    data( libname );
-    if( libname == &quot;os&quot; )
-    {
-        unset( _G, &quot;os_command&quot; );
-        unset( _G, &quot;os_getenv&quot; );
-        unset( _G, &quot;os_putenv&quot; );
-    }
-};
-safe_include = function( libname )
-{
-    return include_library( libname );
-};
-global include_library = closure( safe_include_lib, include_library );
-global include = safe_include;
-global include_shared = closure( restrict, &quot;include_shared&quot; );
-global import_cfunc = closure( restrict, &quot;import_cfunc&quot; );
-global include_file = closure( restrict, &quot;include_file&quot; );
-global eval_file = closure( restrict, &quot;eval_file&quot; );
-
-include &quot;string&quot;, &quot;math&quot;, &quot;re&quot;, &quot;fmt&quot;, &quot;os&quot;;</pre></div>
+<ul><li><a href="#printvar-function">printvar</a>, <a href="#printvar-ext-function">printvar_ext</a>, <a href="#dumpvar-function">dumpvar</a>, <a href="#dumpvar-ext-function">dumpvar_ext</a>, <a href="#sys-stat-function">sys_stat</a>, <a href="#toptr-function">toptr</a> - access to memory layout of engine objects</li></ul></li></ul></div>
 </div>
 	</body></html>
 	
