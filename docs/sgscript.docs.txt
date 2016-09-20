@@ -1,4 +1,4 @@
-SGScript documentation - v1.4.0
+SGScript documentation - v1.4.1
 
 
 # SGScript - description [info]

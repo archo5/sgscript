@@ -1,4 +1,4 @@
-# SGScript v1.4.0
+# SGScript v1.4.1
 
 ## Usage
 
@@ -35,6 +35,10 @@ More sample code can be found in documentation: http://www.sgscript.org/docs/sgs
     * API testing framework is in ext/sgsapitest.c => bin/sgsapitest ("make apitest" to run)
     * C++/BC testing framework is in ext/sgscppbctest.cpp/h => bin/sgscppbctest ("make cppbctest" or "make cppbctest11" to run)
 - Object-oriented constructs (dict, class, closure, "compatible call", overloadable operators)
+
+## Bindings
+
+- .NET 2.0+ bindings are at ```dotnet/SGS.NET``` (currently only tested on Windows - standalone VM and Unity)
 
 ## Bugs
 

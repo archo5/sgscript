@@ -412,10 +412,10 @@ namespace SGScript
 		public const int CODE_OP = 2; /* VM instruction */
 
 		// version info
-		public const string Version = "1.4.0";
+		public const string Version = "1.4.1";
 		public const int VersionMajor = 1;
 		public const int VersionMinor = 4;
-		public const int VersionIncr = 0;
+		public const int VersionIncr = 1;
 
 
 		// helper functions

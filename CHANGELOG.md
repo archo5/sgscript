@@ -1,4 +1,12 @@
 
+**1.4.1** (2016/09/20):
+
+- **SGS.NET v1.0 released**
+- VS2015 support & solution file
+- array optimizations
+- some bugfixes
+- header cleanup
+
 **1.4.0** (2016/09/02):
 
 - **added class syntax**
