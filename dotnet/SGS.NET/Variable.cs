@@ -393,14 +393,14 @@ namespace SGScript
 		}
 		public static int _sgsDestruct( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj, true ); if( obj != null ) return obj._intOnDestroy(); else return RC.SUCCESS; }
 		public static int _sgsGCMark( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnGCMark(); }
-		public static int _sgsGetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnGetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
-		public static int _sgsSetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnSetIndex( new Context( ctx ), NI.ObjectArg( ctx ) != 0 ); }
-		public static int _sgsConvert( IntPtr ctx, IntPtr varobj, int type ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnConvert( new Context( ctx ), (ConvOp) type ); }
-		public static int _sgsSerialize( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnSerialize( new Context( ctx ) ); }
-		public static int _sgsDump( IntPtr ctx, IntPtr varobj, int maxdepth ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnDump( new Context( ctx ), maxdepth ); }
-		public static int _sgsGetNext( IntPtr ctx, IntPtr varobj, int type ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intGetNext( new Context( ctx ), type ); }
-		public static int _sgsCall( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj.OnCall( new Context( ctx ) ); }
-		public static int _sgsExpr( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnExpr( new Context( ctx ), (ExprOp) NI.ObjectArg( ctx ) ); }
+		public static int _sgsGetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnGetIndex( Engine.GetCtx( ctx ), NI.ObjectArg( ctx ) != 0 ); }
+		public static int _sgsSetIndex( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnSetIndex( Engine.GetCtx( ctx ), NI.ObjectArg( ctx ) != 0 ); }
+		public static int _sgsConvert( IntPtr ctx, IntPtr varobj, int type ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnConvert( Engine.GetCtx( ctx ), (ConvOp) type ); }
+		public static int _sgsSerialize( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnSerialize( Engine.GetCtx( ctx ) ); }
+		public static int _sgsDump( IntPtr ctx, IntPtr varobj, int maxdepth ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnDump( Engine.GetCtx( ctx ), maxdepth ); }
+		public static int _sgsGetNext( IntPtr ctx, IntPtr varobj, int type ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intGetNext( Engine.GetCtx( ctx ), type ); }
+		public static int _sgsCall( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj.OnCall( Engine.GetCtx( ctx ) ); }
+		public static int _sgsExpr( IntPtr ctx, IntPtr varobj ){ IObjectBase obj = _IP2Obj( varobj ); return obj._intOnExpr( Engine.GetCtx( ctx ), (ExprOp) NI.ObjectArg( ctx ) ); }
 
 		// core feature layer (don't override these unless there is some overhead to cut)
 		public virtual int _intOnDestroy()
@@ -687,7 +687,7 @@ namespace SGScript
 		}
 		public string GetString(){ return NI.GetString( var ); }
 		public byte[] GetByteArray(){ return NI.GetByteArray( var ); }
-		public Context GetThread(){ if( var.type != VarType.Thread ) throw new SGSException( RC.EINVAL, "Variable is not a thread" ); return new Context( var.data.T ); }
+		public Context GetThread(){ if( var.type != VarType.Thread ) throw new SGSException( RC.EINVAL, "Variable is not a thread" ); return Engine.GetCtx( var.data.T ); }
 		public string str { get { return GetString(); } }
 		public IObjectBase GetIObjectBase()
 		{

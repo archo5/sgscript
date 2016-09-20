@@ -120,7 +120,7 @@ namespace SGScript
 	{
 		public static void _MsgFunc( IntPtr ud, IntPtr ctx, int type, string message )
 		{
-			(HDL.GetObj( ud ) as IMessenger).Message( new Context( ctx ), type, message );
+			(HDL.GetObj( ud ) as IMessenger).Message( Engine.GetCtx( ctx ), type, message );
 		}
 
 		public abstract void Message( Context ctx, int type, string message );
@@ -132,7 +132,7 @@ namespace SGScript
 		{
 			byte[] buf = new byte[ size.ToInt32() ];
 			Marshal.Copy( data, buf, 0, size.ToInt32() );
-			(HDL.GetObj( ud ) as IOutputWriter).Write( new Context( ctx ), Encoding.UTF8.GetString( buf ) );
+			(HDL.GetObj( ud ) as IOutputWriter).Write( Engine.GetCtx( ctx ), Encoding.UTF8.GetString( buf ) );
 		}
 
 		public abstract void Write( Context ctx, string text );
@@ -214,6 +214,7 @@ namespace SGScript
 		public void LoadLib_RE(){ NI.LoadLib_RE( ctx ); }
 		public void LoadLib_String(){ NI.LoadLib_String( ctx ); }
 
+		// output/error callbacks - currently only supported if same for the whole engine
 		IntPtr hOutFunc = IntPtr.Zero;
 		NI.OutputFunc d_outfunc;
 		public OutputFuncData GetOutputFunc()
@@ -284,6 +285,7 @@ namespace SGScript
 		}
 		public void SetMsgFunc( MsgFuncData mfd ){ NI.SetMsgFunc( ctx, mfd.func, mfd.userdata ); }
 		public void Msg( int type, string message ){ NI.Msg( ctx, type, message ); }
+		// ----------
 
 		public void Acquire()
 		{
@@ -304,7 +306,10 @@ namespace SGScript
 
 		public Context Fork( bool copy = false )
 		{
-			return new Context( NI.ForkState( ctx, copy ? 1 : 0 ), false );
+			IntPtr nctx = NI.ForkState( ctx, copy ? 1 : 0 ); // rc = 1
+			Context rv = Engine.GetCtx( nctx ); // rc = 2
+			_sgsEngine._ReleaseCtx( ref nctx ); // rc = 1
+			return rv;
 		}
 		public void ResumeExt( int args = 0, int expect = 0 )
 		{
@@ -351,7 +356,7 @@ namespace SGScript
 			return CreateSubthreadExt( args.Length, thisvar != null );
 		}
 		public Variable CreateSubthread( params object[] args ){ return CreateSubthreadT( null, args ); }
-		public int ProcessSubthreads( double dt ){ return NI.ProcessSubthreads( ctx, dt ); }
+		public int ProcessSubthreads( double dt ){ int rv = NI.ProcessSubthreads( ctx, dt ); GetEngine()._CleanContexts(); return rv; }
 		public void EndOn( Variable var, bool enable = true )
 		{
 			NI.EndOn( ctx, var.var, enable ? 1 : 0 );
@@ -530,7 +535,7 @@ namespace SGScript
 						return iob;
 					return v;
 				case VarType.Ptr: return v.var.data.P;
-				case VarType.Thread: return new Context( v.var.data.T );
+				case VarType.Thread: return Engine.GetCtx( v.var.data.T );
 				default: throw new SGSException( RC.EINVAL, string.Format( "Bad type ID detected while parsing item {0}", item ) );
 			}
 		}
@@ -547,7 +552,7 @@ namespace SGScript
 		public void ParseVar( out double f, Variable v ){ f = v.GetReal(); }
 		public void ParseVar( out string s, Variable v ){ s = v.ConvertToString(); }
 		public void ParseVar( out IObjectBase o, Variable v ){ o = v.GetIObjectBase(); }
-		public void ParseVar( out Context c, Variable v ){ c = v.type == VarType.Thread ? new Context( v.var.data.T ) : null; }
+		public void ParseVar( out Context c, Variable v ){ c = v.type == VarType.Thread ? Engine.GetCtx( v.var.data.T ) : null; }
 		public void ParseVar( out Variable o, Variable v ){ o = v; }
 		public void _ParseVar_CallingThread( out Context c, Variable v ){ c = this; }
 
@@ -779,6 +784,7 @@ namespace SGScript
 		public Dictionary<Type, DNMetaObject> _metaObjects = new Dictionary<Type, DNMetaObject>();
 		public Dictionary<Type, SGSClassInfo> _sgsClassInfo = new Dictionary<Type,SGSClassInfo>(); // < contains native memory, must be freed
 		public Dictionary<Type, SGSClassInfo> _sgsStaticClassInfo = new Dictionary<Type,SGSClassInfo>(); // < contains native memory, must be freed
+		public Dictionary<IntPtr, Context> _sgsContexts = new Dictionary<IntPtr, Context>(); // < need to be cleaned regularly 
         public static Dictionary<IntPtr, WeakReference> _engines = new Dictionary<IntPtr, WeakReference>(); // Value.Target = Engine
 		public Thread owningThread;
 		public Queue<NI.Variable> _varReleaseQueue = new Queue<NI.Variable>();
@@ -788,6 +794,33 @@ namespace SGScript
 			WeakReference engine = null;
 			_engines.TryGetValue( ctx, out engine );
 			return engine != null ? (Engine) engine.Target : null;
+		}
+		public static Context GetCtx( IntPtr ctx )
+		{
+			return GetFromCtx( NI.RootContext( ctx ) )._RetrieveCtx( ctx );
+		}
+		// do not call if Engine.ctx != RootContext( ctx )
+		public Context _RetrieveCtx( IntPtr ctx )
+		{
+			Context ctxobj;
+			if( _sgsContexts.TryGetValue( ctx, out ctxobj ) )
+				return ctxobj;
+			ctxobj = new Context( ctx );
+			_sgsContexts.Add( ctx, ctxobj );
+			return ctxobj;
+		}
+		public void _CleanContexts()
+		{
+			IntPtr[] ctxlist = new IntPtr[ _sgsContexts.Count ];
+			_sgsContexts.Keys.CopyTo( ctxlist, 0 );
+			foreach( IntPtr ctx in ctxlist )
+			{
+				// read refcount
+				if( Marshal.ReadInt32( ctx ) != 1 )
+					continue;
+
+				_sgsContexts.Remove( ctx );
+			}
 		}
 
 		NI.MemFunc d_memfunc;
@@ -895,6 +928,7 @@ namespace SGScript
 		{
 			if( Thread.CurrentThread != owningThread )
 				throw new SGSException( RC.ENOTSUP, "ProcessVarRemoveQueue can be called only on the owning thread" );
+			_CleanContexts();
 			for (;;)
 			{
 				NI.Variable var;
