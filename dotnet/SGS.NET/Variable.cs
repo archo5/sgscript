@@ -119,9 +119,13 @@ namespace SGScript
 				// a good conversion method has been found
 				return method;
 			}
+#if FINDPARSER_V1
 			if( typeType != null && methodName != null )
 				throw new SGSException( RC.ENOTFND, string.Format( "Could not find a Context.ParseVar method for '{2}' {1} type={0}", type, typeType, methodName ) );
 			return null;
+#else
+			return typeof(Context).GetMethod( "_ParseVar_Generic" );
+#endif
 		}
 		static SGSPropInfo _GetPropFieldInfo( MemberInfo minfo, Type type )
 		{
@@ -509,9 +513,10 @@ namespace SGScript
 		public IObject( Context c, bool skipInit = false ) : base( c, skipInit ){}
 	}
 	
-	public class DNGarbageCollector : IObjectBase
+	// .NET object usage marker object for SGScript GC (for internal use only)
+	public class _DNGarbageCollector : IObjectBase
 	{
-		public DNGarbageCollector( Context c ) : base( c ){}
+		public _DNGarbageCollector( Context c ) : base( c ){}
 		public override void OnGCMark()
 		{
 			_sgsEngine._MarkAllObjects();
@@ -643,6 +648,22 @@ namespace SGScript
 		public override string ToString(){ return "SGScript.DNMethod(" + name + ")"; }
 	}
 
+	// .NET Generic object handle
+	public class DNHandle : IObjectBase
+	{
+		public object objectRef;
+		public DNHandle( Context c, object o ) : base( c, true )
+		{
+			objectRef = o;
+			AllocClassObject();
+		}
+		public override void _InitMetaObject()
+		{
+			DNMetaObject dnmo = _sgsEngine._GetMetaObject( objectRef.GetType() );
+			NI.ObjSetMetaObj( _sgsEngine.ctx, _sgsObject, dnmo._sgsObject );
+		}
+	}
+
 
 	// SGScript variable handle
 	public class Variable : ISGSBase
@@ -689,6 +710,7 @@ namespace SGScript
 		public byte[] GetByteArray(){ return NI.GetByteArray( var ); }
 		public Context GetThread(){ if( var.type != VarType.Thread ) throw new SGSException( RC.EINVAL, "Variable is not a thread" ); return Engine.GetCtx( var.data.T ); }
 		public string str { get { return GetString(); } }
+		public string typename { get { return _sgsEngine.TypeOf( this ); } }
 		public IObjectBase GetIObjectBase()
 		{
 			if( var.type == VarType.Object )

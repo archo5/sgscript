@@ -80,6 +80,7 @@ namespace APITest
 			MiscAPIs();
 			CSharpObjects();
 			XRefObjects();
+			AdvancedBinding();
 		}
 
 		static void NoteTest()
@@ -1064,6 +1065,27 @@ namespace APITest
 			GC.Collect();
 			GC.WaitForPendingFinalizers();
 			engine.GCExecute();
+			
+			DestroyEngine( engine );
+		}
+
+		public class NonCustom
+		{
+			static void Action(){}
+			string ReturnStr(){ return string.Format( "[ToString={0}]", ToString() ); }
+		}
+		static void AdvancedBinding()
+		{
+			Console.Write( "\nAdvanced bindings " );
+			Engine engine = CreateEngine();
+			
+			// meta-object of a random class
+			Variable movar = engine._GetMetaObject( typeof(NonCustom) ).GetVariable();
+			Assert( movar.GetProp( "Action" ).ConvertToString(), "SGScript.DNMethod(APITest.APITest+NonCustom.Action)" );
+
+			// generic handle & method call
+			DNHandle dnh = new DNHandle( engine, new NonCustom() );
+			Assert( engine.ThisCall<string>( "ReturnStr", dnh.GetVariable() ), "[ToString=APITest.APITest+NonCustom]" );
 			
 			DestroyEngine( engine );
 		}

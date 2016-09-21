@@ -494,6 +494,7 @@ namespace SGScript
 		public void Push( IObjectBase o ){ if( o == null ) PushNull(); else NI.PushObjectPtr( ctx, o._sgsObject ); }
 		public void Push( Context c ){ if( c == null ) PushNull(); else NI.PushThreadPtr( ctx, c.ctx ); }
 		public void Push( IGetVariable p ){ if( p == null ) PushNull(); else Push( p.GetVariable( this ) ); }
+		public void Push( Variable v ){ if( v == null ) PushNull(); else NI.PushVariable( ctx, v.var ); }
 		public void PushObj( object o )
 		{
 			if( o == null )        PushNull();
@@ -554,9 +555,9 @@ namespace SGScript
 		public void ParseVar( out IObjectBase o, Variable v ){ o = v.GetIObjectBase(); }
 		public void ParseVar( out Context c, Variable v ){ c = v.type == VarType.Thread ? Engine.GetCtx( v.var.data.T ) : null; }
 		public void ParseVar( out Variable o, Variable v ){ o = v; }
+		public void _ParseVar_Generic( out object o, Variable v ){ o = (v.GetIObjectBase() as DNHandle).objectRef; }
 		public void _ParseVar_CallingThread( out Context c, Variable v ){ c = this; }
 
-		public void Push( Variable v ){ NI.PushVariable( ctx, v.var ); }
 		public void PushItem( int item ){ _IndexCheck( item, "PushItem" ); NI.PushItem( ctx, item ); }
 		public void InsertVar( int pos, Variable v )
 		{
@@ -641,6 +642,8 @@ namespace SGScript
 		public int XThisCall( string func, Variable thisvar, params object[] args ){ return XThisCall( thisvar.GetProp( func ), thisvar, args ); }
 		public int XThisCall( Variable func, object thisvar, params object[] args )
 		{
+			if( func == null )
+				throw new SGSException( RC.EINVAL, "Function cannot be null" );
 			Push( func );
 			if( thisvar != null )
 				PushObj( thisvar );
@@ -842,7 +845,7 @@ namespace SGScript
 			owningThread = Thread.CurrentThread;
 			_engines.Add( ctx, _sgsWeakRef );
 			// create a garbage collector that will take care of all the externally referenced variables
-			Registry().SetProp( "_NGC", new DNGarbageCollector( this ).GetVariable() );
+			Registry().SetProp( "_NGC", new _DNGarbageCollector( this ).GetVariable() );
 		}
 		public override void Release()
 		{
