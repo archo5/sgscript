@@ -421,7 +421,7 @@ sgs_TokenList sgsT_Next( sgs_TokenList tok )
 
 sgs_LineNum sgsT_LineNum( sgs_TokenList tok )
 {
-	if( !*tok )
+	if( !tok || !*tok )
 		return -1;
 	tok = sgsT_Next( tok );
 	{

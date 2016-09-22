@@ -118,6 +118,21 @@ exec `
 result `SUCCESS`
 check_out `Hello world!`
 
+// `defer vs return value`
+rec ``
+exec `
+function f()
+{
+	print( "a" );
+	defer print( "d" );
+	print( "b" );
+	return print( "c" );
+}
+f();`
+result `SUCCESS`
+check_err ``
+check_out `abcd`
+
 // `do not reach defer limit (256)`
 rec_out ``
 exec `

@@ -97,6 +97,7 @@ static SGS_INLINE rcpos_t comp_reg_alloc_n( SGS_CTX, int n )
 
 static SGS_INLINE void comp_reg_unwind( SGS_CTX, rcpos_t pos )
 {
+	sgs_BreakIf( pos > C->fctx->regs );
 	if( C->fctx->regs > C->fctx->lastreg )
 		C->fctx->lastreg = C->fctx->regs;
 	C->fctx->regs = pos;
@@ -2607,7 +2608,6 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 
 	case SGS_SFT_RETURN:
 		SGS_FN_HIT( "RETURN" );
-		compile_defers( C, func, 0 );
 		{
 			rcpos_t regstate = C->fctx->regs;
 			sgs_FTNode* n = node->child;
@@ -2617,6 +2617,9 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				rcpos_t arg = 0;
 				SGS_FN_ENTER;
 				if( !compile_node_r( C, func, n, &arg ) ) goto fail;
+				/* could run out of registers if related expressions are too complicated:
+					TODO unwinding from returned registers / better allocation algorithm */
+				compile_defers( C, func, 0 );
 				INSTR_WRITE( SGS_SI_RET1, 0, 0, arg );
 			}
 			else
@@ -2628,9 +2631,11 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 					SGS_FN_ENTER;
 					if( !compile_node_r( C, func, n, &arg ) ) goto fail;
 					INSTR_WRITE( SGS_SI_PUSH, 0, arg, 0 );
+					comp_reg_unwind( C, regstate );
 					n = n->next;
 					num++;
 				}
+				compile_defers( C, func, 0 );
 				INSTR_WRITE( SGS_SI_RETN, num, 0, 0 );
 			}
 			comp_reg_unwind( C, regstate );
