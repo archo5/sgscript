@@ -1396,6 +1396,61 @@ DEFINE_TEST( hash_table )
 	destroy_context( C );
 }
 
+static SGSBOOL tokeneditfunc0( void* userdata, sgs_Context* ctx, unsigned char** pptokens )
+{
+	/* no-op */
+	return SGS_TRUE;
+}
+
+static SGSBOOL tokeneditfunc1( void* userdata, sgs_Context* ctx, unsigned char** pptokens )
+{
+	/* in-place edit - swap [/] with (/) */
+	sgs_TokenList t = *pptokens;
+	while( *t != SGS_ST_NULL )
+	{
+		switch( *t )
+		{
+		case SGS_ST_RBRKL: *t = SGS_ST_SBRKL; break;
+		case SGS_ST_SBRKL: *t = SGS_ST_RBRKL; break;
+		case SGS_ST_RBRKR: *t = SGS_ST_SBRKR; break;
+		case SGS_ST_SBRKR: *t = SGS_ST_RBRKR; break;
+		}
+		t = sgsT_Next( t );
+	}
+	return SGS_TRUE;
+}
+
+DEFINE_TEST( modify_tokens )
+{
+	SGS_CTX = get_context_( REDIR_BUF );
+	
+	atf_clear_output();
+	{
+		sgs_ParserConfig pcfg = { NULL, NULL, 1 };
+		sgs_SetParserConfig( C, &pcfg );
+	}
+	sgs_ExecString( C, "$a = 1; print($a);" );
+	atf_check_output( "1" );
+	
+	atf_clear_output();
+	{
+		sgs_ParserConfig pcfg = { tokeneditfunc0, NULL, 0 };
+		sgs_SetParserConfig( C, &pcfg );
+	}
+	sgs_ExecString( C, "print(2);" );
+	atf_check_output( "2" );
+	
+	atf_clear_output();
+	{
+		sgs_ParserConfig pcfg = { tokeneditfunc1, NULL, 0 };
+		sgs_SetParserConfig( C, &pcfg );
+	}
+	sgs_ExecString( C, "print[3];" );
+	atf_check_output( "3" );
+	
+	destroy_context( C );
+}
+
 
 test_t all_tests[] =
 {
@@ -1425,6 +1480,7 @@ test_t all_tests[] =
 	TST( state_machine_core ),
 	TST( profiling ),
 	TST( hash_table ),
+	TST( modify_tokens ),
 };
 int all_tests_count(){ return sizeof(all_tests)/sizeof(test_t); }
 

@@ -61,6 +61,7 @@ extern "C" {
 #define SGS_ST_ARGSEP   ','
 #define SGS_ST_STSEP    ';'
 #define SGS_ST_PICKSEP  ':'
+#define SGS_ST_HASH     '#'
 /*     other            id    additional data */
 #define SGS_ST_IDENT    'N' /* 1 byte (string size), N bytes (string), not null-terminated */
 #define SGS_ST_KEYWORD  'K' /* same as IDENT */
@@ -658,6 +659,8 @@ struct sgs_ShCtx
 	sgs_OutputFunc erroutput_fn; /* error output function */
 	void*         erroutput_ctx; /* error output context */
 	
+	sgs_ParserConfig parser_cfg;
+	
 	/* memory */
 	sgs_MemFunc   memfunc;
 	void*         mfuserdata;
@@ -704,6 +707,9 @@ struct sgs_ShCtx
 #define SGS_STATE_LASTFUNCABORT 0x0020U
 #define SGS_STATE_INSIDE_API    0x0040U
 #define SGS_STATE_COROSTART     0x0080U /* function is pushed to stack */
+
+#define SGS_STATE__INITIAL     (0)
+#define SGS_STATE__PARSERMASK  (SGS_MUST_STOP)
 
 struct sgs_Context
 {

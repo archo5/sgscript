@@ -117,14 +117,14 @@ static int ident_equal( const char* ptr, int size, const char* what, int wlen )
 {
 	return size == wlen && memcmp( ptr, what, (size_t) size ) == 0;
 }
-static void readident( SGS_CTX, sgs_MemBuf* out, const char* code, int32_t* at, int32_t length )
+static void readident( SGS_CTX, sgs_MemBuf* out, const char* code, int32_t* at, int32_t length, char xsym )
 {
 	int32_t sz = 0;
 	int32_t i = *at;
 	int32_t pos_rev = (int32_t) out->size;
 	sgs_membuf_appchr( out, C, SGS_ST_IDENT );
 	sgs_membuf_appchr( out, C, 0 );
-	while( i < length && ( sgs_isalnum( code[ i ] ) || code[ i ] == '_' ) )
+	while( i < length && ( sgs_isalnum( code[ i ] ) || code[ i ] == '_' || code[ i ] == xsym ) )
 	{
 		sz++;
 		if( sz < 256 )
@@ -312,6 +312,7 @@ sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
 {
 	int32_t i, ilen = (int32_t) length; /* WP: code limit */
 	sgs_LineNum line = 1;
+	sgs_ParserConfig pcfg = C->shared->parser_cfg;
 	sgs_MemBuf s = sgs_membuf_create();
 	sgs_membuf_reserve( &s, C, SGS_TOKENLIST_PREALLOC );
 	
@@ -332,10 +333,11 @@ sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
 					|| code[ i + 1 ] == '*' ) )   skipcomment( C, &line, code, &i, ilen );
 		
 		/* special symbol */
-		else if( sgs_isoneof( fc, "()[]{},;:" ) ) sgs_membuf_appchr( &s, C, fc );
+		else if( sgs_isoneof( fc, "()[]{},;:#" ) ) sgs_membuf_appchr( &s, C, fc );
 		
 		/* identifier */
-		else if( fc == '_' || sgs_isalpha( fc ) ) readident( C, &s, code, &i, ilen );
+		else if( fc == '_' || sgs_isalpha( fc ) || ( fc == '$' && pcfg.ident_dollar_sign ) )
+			readident( C, &s, code, &i, ilen, pcfg.ident_dollar_sign ? '$' : '_' );
 		
 		/* number */
 		else if( sgs_isdigit( fc ) )

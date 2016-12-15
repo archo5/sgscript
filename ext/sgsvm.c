@@ -3,7 +3,7 @@
 #include <assert.h>
 
 #include "sgscript.h"
-#include "sgs_idbg.h"
+#include "sgs_dbgserver.h"
 #include "sgs_prof.h"
 
 
@@ -30,7 +30,7 @@ void readme()
 
 int sep = 0, v = 0;
 sgs_Context* C;
-sgs_IDbg D;
+sgs_DebugServer* D;
 sgs_Prof P;
 int idbg = 0;
 int prof = 0;
@@ -39,12 +39,12 @@ int stats = 0;
 void sgs_init()
 {
 	C = sgs_CreateEngine();
-	if( idbg ) sgs_InitIDbg( C, &D );
+	if( idbg ) D = sgs_CreateDebugServer( C, 0 );
 	if( prof ) sgs_ProfInit( C, &P, prof );
 }
 void sgs_close()
 {
-	if( idbg ) sgs_CloseIDbg( C, &D );
+	if( idbg ) sgs_CloseDebugServer( D );
 	if( prof )
 	{
 		sgs_ProfDump( C, &P );

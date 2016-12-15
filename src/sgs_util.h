@@ -32,10 +32,10 @@ SGS_APIFUNC void sgs_BreakIfFunc( const char* code, const char* file, int line )
 
 
 /* text/character ops */
-int sgs_isoneof( int chr, const char* str );
+SGS_APIFUNC int sgs_isoneof( int chr, const char* str );
 SGS_APIFUNC int sgs_hexchar( int c );
 SGS_APIFUNC int sgs_gethex( int c );
-int sgs_tolower( int c );
+SGS_APIFUNC int sgs_tolower( int c );
 #define sgs_decchar( c ) ((c) >= '0' && (c) <= '9')
 #define sgs_getdec( c ) ((c) - '0')
 #define sgs_octchar( c ) ((c) >= '0' && (c) <= '7')

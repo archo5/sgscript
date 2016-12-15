@@ -440,6 +440,21 @@ typedef SGSRESULT (*sgs_ScriptFSFunc) (
 );
 
 
+/* syntax modification */
+typedef SGSBOOL (*sgs_TokenEditFunc) (
+	void* /* userdata */,
+	sgs_Context* /* ctx / SGS_CTX */,
+	unsigned char** /* pptokens */
+);
+typedef struct sgs_ParserConfig
+{
+	sgs_TokenEditFunc token_editor;
+	void* token_editor_userdata;
+	uint32_t ident_dollar_sign : 1;
+}
+sgs_ParserConfig;
+
+
 /* for state/query functions */
 #define SGS_TRUE 1
 #define SGS_FALSE 0
@@ -634,6 +649,9 @@ SGS_APIFUNC void sgs_SetErrOutputFunc( SGS_CTX, sgs_OutputFunc func, void* ctx )
 SGS_APIFUNC void sgs_ErrWrite( SGS_CTX, const void* ptr, size_t size );
 SGS_APIFUNC SGSBOOL sgs_ErrWritef( SGS_CTX, const char* what, ... );
 
+SGS_APIFUNC void sgs_GetParserConfig( SGS_CTX, sgs_ParserConfig* out );
+SGS_APIFUNC void sgs_SetParserConfig( SGS_CTX, sgs_ParserConfig* cfg );
+
 #define SGSMSGFN_DEFAULT ((sgs_MsgFunc)-1)
 #define SGSMSGFN_DEFAULT_NOABORT ((sgs_MsgFunc)-2)
 SGS_APIFUNC void sgs_GetMsgFunc( SGS_CTX, sgs_MsgFunc* outf, void** outc );
@@ -648,10 +666,10 @@ SGS_APIFUNC void sgs_WriteErrorInfo( SGS_CTX, int flags,
 	sgs_ErrorOutputFunc func, void* ctx, int type, const char* msg );
 SGS_APIFUNC void sgs_PushErrorInfo( SGS_CTX, int flags, int type, const char* msg );
 
-SGS_APIFUNC SGSBOOL sgs_GetHookFunc( SGS_CTX, sgs_HookFunc* outf, void** outc );
+SGS_APIFUNC void sgs_GetHookFunc( SGS_CTX, sgs_HookFunc* outf, void** outc );
 SGS_APIFUNC void sgs_SetHookFunc( SGS_CTX, sgs_HookFunc func, void* ctx );
 
-SGS_APIFUNC SGSBOOL sgs_GetScriptFSFunc( SGS_CTX, sgs_ScriptFSFunc* outf, void** outc );
+SGS_APIFUNC void sgs_GetScriptFSFunc( SGS_CTX, sgs_ScriptFSFunc* outf, void** outc );
 SGS_APIFUNC void sgs_SetScriptFSFunc( SGS_CTX, sgs_ScriptFSFunc func, void* ctx );
 
 SGS_APIFUNC void* sgs_Memory( SGS_CTX, void* ptr, size_t size );
@@ -665,6 +683,7 @@ SGS_APIFUNC void* sgs_Memory( SGS_CTX, void* ptr, size_t size );
 #define sgs_Dealloc( ptr ) sgs_Free( C, ptr )
 
 
+SGS_APIFUNC SGSRESULT sgs_PushSGSFunctionBuf( SGS_CTX, const char* buf, size_t size );
 SGS_APIFUNC SGSRESULT sgs_EvalBuffer( SGS_CTX, const char* buf, size_t size );
 SGS_APIFUNC SGSRESULT sgs_EvalFile( SGS_CTX, const char* file );
 SGS_APIFUNC SGSRESULT sgs_AdjustStack( SGS_CTX, int expected, int ret );
@@ -685,6 +704,7 @@ SGS_APIFUNC sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, sgs_StackFrame* from, int 
 #endif
 #define SGS_STRLITBUF( lit ) lit, sizeof(lit) - 1
 
+#define sgs_PushSGSFunction( C, str ) sgs_PushSGSFunctionBuf( C, str, SGS_STRINGLENGTHFUNC( str ) )
 #define sgs_ExecBuffer( C, buf, sz ) sgs_AdjustStack( C, 0, sgs_EvalBuffer( C, buf, sz ) )
 #define sgs_ExecString( C, str ) sgs_ExecBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )
 #define sgs_EvalString( C, str ) sgs_EvalBuffer( C, str, SGS_STRINGLENGTHFUNC( str ) )
