@@ -1039,8 +1039,8 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, size_t size, char** outbuf, siz
 }
 
 
-static void _fndump( sgs_iFunc* F );
-static void _recfndump( const char* constptr, size_t constsize,
+static void _fndump( SGS_CTX, sgs_iFunc* F );
+static void _recfndump( SGS_CTX, const char* constptr, size_t constsize,
 	const char* codeptr, size_t codesize, int gt, int args, int tmp, int clsr, int inclsr )
 {
 	const sgs_Variable* var = SGS_ASSUME_ALIGNED_CONST( constptr, sgs_Variable );
@@ -1048,17 +1048,17 @@ static void _recfndump( const char* constptr, size_t constsize,
 	while( var < vend )
 	{
 		if( var->type == SGS_VT_FUNC )
-			_fndump( var->data.F );
+			_fndump( C, var->data.F );
 		var++;
 	}
-	printf( "\nFUNC: type=%s args=%d tmp=%d closures=%d in.clsr=%d\n",
+	sgs_ErrWritef( C, "\nFUNC: type=%s args=%d tmp=%d closures=%d in.clsr=%d\n",
 		gt ? "method" : "function", args, tmp, clsr, inclsr );
-	sgsBC_DumpEx( constptr, constsize, codeptr, codesize );
+	sgsBC_DumpEx( C, constptr, constsize, codeptr, codesize );
 }
 
-static void _fndump( sgs_iFunc* F )
+static void _fndump( SGS_CTX, sgs_iFunc* F )
 {
-	_recfndump( (const char*) sgs_func_consts( F ), sgs_func_instr_off( F ),
+	_recfndump( C, (const char*) sgs_func_consts( F ), sgs_func_instr_off( F ),
 		(const char*) sgs_func_bytecode( F ),
 		sgs_func_size( F ) - sgs_func_instr_off( F ),
 		F->gotthis, F->numargs, F->numtmp, F->numclsr, F->inclsr );
@@ -1070,7 +1070,7 @@ SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, size_t size )
 	if( SGS_FAILED( rr ) )
 		return rr;
 	
-	_fndump( stk_gettop( C )->data.F );
+	_fndump( C, stk_gettop( C )->data.F );
 	sgs_Pop( C, 1 );
 	return SGS_SUCCESS;
 }

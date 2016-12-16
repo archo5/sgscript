@@ -242,6 +242,31 @@ static int dbgsrv_findCmd( sgs_DebugServer* D, const char** pcmd, const char** c
 	return match;
 }
 
+static void dbgsrv_printCurOp( sgs_DebugServer* D, dbgStateInfo* dsi )
+{
+	sgs_StackFrame* sf = sgs_GetFramePtr( dsi->C, NULL, SGS_TRUE );
+	if( sf )
+	{
+		if( sf->iptr )
+		{
+			sgs_ErrWritef( D->C, "Current instruction:\n[%08X] ", *sf->iptr );
+			sgsBC_DumpOpcode( D->C, sf->iptr, 1, SGS_FALSE );
+		}
+		else if( sf->prev && sf->prev->iptr )
+		{
+			const sgs_instr_t* ip = sf->prev->iptr;
+			if( ( sf->prev->flags & SGS_SF_ABORTED ) == 0 )
+				ip--;
+			sgs_ErrWritef( D->C, "Current instruction (parent frame):\n[%08X] ", *ip );
+			sgsBC_DumpOpcode( D->C, ip, 1, SGS_FALSE );
+		}
+		else
+			sgs_ErrWritef( D->C, "Not running SGScript code.\n" );
+	}
+	else
+		sgs_ErrWritef( D->C, "Not running code.\n" );
+}
+
 static void dbgsrv_execCmd( sgs_DebugServer* D, int cmd, const char* params, dbgStateInfo* dsi )
 {
 	D->inside = 1; /* some of these commands may produce messages */
@@ -316,26 +341,7 @@ found_cfg_opt:;
 		}
 		break;
 	case DSC_instruction:
-		{
-			sgs_StackFrame* sf = sgs_GetFramePtr( dsi->C, NULL, SGS_TRUE );
-			if( sf )
-			{
-				if( sf->iptr )
-				{
-					sgs_ErrWritef( D->C, "Current instruction: %08X\n", *sf->iptr );
-					/* TODO disasm */
-				}
-				else if( sf->prev && sf->prev->iptr )
-				{
-					sgs_ErrWritef( D->C, "Current instruction (parent frame): %08X\n", *sf->prev->iptr );
-					/* TODO disasm */
-				}
-				else
-					sgs_ErrWritef( D->C, "Not running SGScript code.\n" );
-			}
-			else
-				sgs_ErrWritef( D->C, "Not running code.\n" );
-		}
+		dbgsrv_printCurOp( D, dsi );
 		break;
 	case DSC_where:
 		sgs_WriteErrorInfo( dsi->C, SGS_ERRORINFO_STACK,
@@ -476,7 +482,8 @@ static void dbgsrv_printFunc( void* data, SGS_CTX, int type, const char* message
 {
 	sgs_DebugServer* D = (sgs_DebugServer*) data;
 	
-	D->pfn( D->pctx, C, type, message );
+	/* D->pfn( D->pctx, C, type, message ); */
+	sgs_WriteErrorInfo( C, SGS_ERRORINFO_FULL, (sgs_ErrorOutputFunc) sgs_ErrWritef, C, type, message );
 	if( D->inside || type < D->brklev )
 		return;
 	
@@ -521,6 +528,7 @@ static void dbgsrv_hookFunc( void* data, SGS_CTX, int event_id )
 			{
 				dbgStateInfo dsi = { C, 1, 0, "Reached next instruction" };
 				D->brkflags &= ~(uint32_t)DBGSRV_BREAK_NEXT_STEP;
+				dbgsrv_printCurOp( D, &dsi );
 				dbgsrv_interact( D, &dsi );
 			}
 		}
