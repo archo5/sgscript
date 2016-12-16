@@ -184,11 +184,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\ext\sgsvm.c" />
-    <ClCompile Include="..\..\..\ext\sgs_idbg.c" />
+    <ClCompile Include="..\..\..\ext\sgs_dbgserver.c" />
     <ClCompile Include="..\..\..\ext\sgs_prof.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\ext\sgs_idbg.h" />
+    <ClInclude Include="..\..\..\ext\sgs_dbgserver.h" />
     <ClInclude Include="..\..\..\ext\sgs_prof.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
