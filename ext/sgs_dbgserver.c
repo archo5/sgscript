@@ -22,9 +22,14 @@
 #define DBGSRV_BREAK_FUNCTION_EXIT  0x0020
 #define DBGSRV_BREAK_FUNCTION_STEP  0x0040
 #define DBGSRV_BREAK_MESSAGE        0x0080
-#define DBGSRV_BREAK_NEXT_ENTER     0x0100
-#define DBGSRV_BREAK_NEXT_EXIT      0x0200
-#define DBGSRV_BREAK_NEXT_STEP      0x0400
+#define DBGSRV_BREAK_NEXT_T_CREATE  0x0100
+#define DBGSRV_BREAK_NEXT_T_DESTROY 0x0200
+#define DBGSRV_BREAK_NEXT_T_PAUSE   0x0400
+#define DBGSRV_BREAK_NEXT_T_RESUME  0x0800
+#define DBGSRV_BREAK_NEXT_F_ENTER   0x1000
+#define DBGSRV_BREAK_NEXT_F_EXIT    0x2000
+#define DBGSRV_BREAK_NEXT_F_STEP    0x4000
+#define DBGSRV_BREAK_NEXT_MESSAGE   0x8000
 
 
 struct sgs_DebugServer
@@ -80,6 +85,7 @@ dbgStateInfo;
 	def( quit ) \
 	def( abort ) \
 	def( breakpoint ) \
+	def( ebreak ) \
 	def( setcfg ) \
 	def( instruction ) \
 	def( where ) \
@@ -107,6 +113,8 @@ DBGSRV_COMMANDS( CID_LIST_ITEM )
 		for( ; bp != bpend; ++bp )
 #define DBGSRV_ITERATE_END }
 
+/*
+	unused
 static int dbgsrv_stricmpl( const char* str1, const char* str2low )
 {
 	while( *str1 && *str2low )
@@ -125,30 +133,7 @@ static int dbgsrv_getBool( const char* str )
 	if( dbgsrv_stricmpl( str, "false" ) == 0 || dbgsrv_stricmpl( str, "off" ) == 0 ) return 0;
 	return atoi( str ) != 0;
 }
-
-static const char* dbgBreakFlagNames[] =
-{
-	"break_on_thread_create=",
-	"break_on_thread_destroy=",
-	"break_on_thread_pause=",
-	"break_on_thread_resume=",
-	"break_on_function_enter=",
-	"break_on_function_exit=",
-	"break_on_function_step=",
-	"break_on_message=",
-};
-static const unsigned dbgBreakFlagMasks[] =
-{
-	DBGSRV_BREAK_THREAD_CREATE,
-	DBGSRV_BREAK_THREAD_DESTROY,
-	DBGSRV_BREAK_THREAD_PAUSE,
-	DBGSRV_BREAK_THREAD_RESUME,
-	DBGSRV_BREAK_FUNCTION_ENTER,
-	DBGSRV_BREAK_FUNCTION_EXIT,
-	DBGSRV_BREAK_FUNCTION_STEP,
-	DBGSRV_BREAK_MESSAGE,
-};
-#define DBGSRV_BREAK_FLAG_COUNT 8
+*/
 
 static void dbgsrv_runCode( sgs_DebugServer* D, dbgStateInfo* dsi, const char* code )
 {
@@ -198,6 +183,7 @@ static int dbgsrv_findCmd( sgs_DebugServer* D, const char** pcmd, const char** c
 	
 	off = 0;
 	endcount = cmd_name_count;
+	while( *cmd == ' ' ) cmd++;
 	/* iterate all commands, advance pointers if found a character match */
 	while( sgs_isalpha( cmd[ off ] ) )
 	{
@@ -240,6 +226,38 @@ static int dbgsrv_findCmd( sgs_DebugServer* D, const char** pcmd, const char** c
 		return -1;
 	}
 	return match;
+}
+
+static void dbgsrv_cfgBreak( sgs_DebugServer* D, const char** pcmd, int flagid )
+{
+	static const char* prefixes[] =
+	{
+		"ebreak thread create",
+		"ebreak thread destroy",
+		"ebreak thread pause",
+		"ebreak thread resume",
+		"ebreak function enter",
+		"ebreak function exit",
+		"ebreak function step",
+		"ebreak message",
+	};
+	static const char* opts[] = { "off", "next", "always", "both" };
+	unsigned baseflag = 1U << flagid;
+	unsigned nextflag = baseflag << 8;
+	unsigned mask = baseflag | nextflag;
+	int which;
+	const char* tmp[4];
+	
+	D->brkflags &= ~mask;
+	switch( which = dbgsrv_findCmd( D, pcmd, opts, tmp, 4, prefixes[ flagid ] ) )
+	{
+	case 0: break;
+	case 1: D->brkflags |= nextflag; break;
+	case 2: D->brkflags |= baseflag; break;
+	case 3: D->brkflags |= mask; break;
+	}
+	if( which >= 0 )
+		sgs_ErrWritef( D->C, "break on event '%s' = %s\n", prefixes[ flagid ] + 7, opts[ which ] );
 }
 
 static void dbgsrv_printCurOp( sgs_DebugServer* D, dbgStateInfo* dsi )
@@ -327,7 +345,7 @@ static void dbgsrv_execCmd( sgs_DebugServer* D, int cmd, const char* params, dbg
 		break;
 	case DSC_istep:
 		sgs_ErrWritef( D->C, "Stepping to next instruction...\n" );
-		D->brkflags |= DBGSRV_BREAK_NEXT_STEP;
+		D->brkflags |= DBGSRV_BREAK_NEXT_F_STEP;
 		dsi->paused = 0;
 		break;
 	case DSC_quit: {
@@ -342,6 +360,35 @@ static void dbgsrv_execCmd( sgs_DebugServer* D, int cmd, const char* params, dbg
 	case DSC_breakpoint:
 		/* TODO */
 		break;
+	case DSC_ebreak: {
+			static const char* brkevcat[] = { "thread", "function", "message" };
+			static const char* brkevthrtype[] = { "create", "destroy", "pause", "resume" };
+			static const char* brkevfunctype[] = { "enter", "exit", "step" };
+			const char* tmp[4];
+			switch( dbgsrv_findCmd( D, &params, brkevcat, tmp, 3, "ebreak" ) )
+			{
+			case 0: /* thread */
+				switch( dbgsrv_findCmd( D, &params, brkevthrtype, tmp, 4, "ebreak thread" ) )
+				{
+				case 0: dbgsrv_cfgBreak( D, &params, 0 ); break;
+				case 1: dbgsrv_cfgBreak( D, &params, 1 ); break;
+				case 2: dbgsrv_cfgBreak( D, &params, 2 ); break;
+				case 3: dbgsrv_cfgBreak( D, &params, 3 ); break;
+				}
+				break;
+			case 1: /* function */
+				switch( dbgsrv_findCmd( D, &params, brkevfunctype, tmp, 3, "ebreak function" ) )
+				{
+				case 0: dbgsrv_cfgBreak( D, &params, 4 ); break;
+				case 1: dbgsrv_cfgBreak( D, &params, 5 ); break;
+				case 2: dbgsrv_cfgBreak( D, &params, 6 ); break;
+				}
+				break;
+			case 2: /* message */
+				dbgsrv_cfgBreak( D, &params, 7 ); break;
+				break;
+			}
+		} break;
 	case DSC_setcfg:
 		while( *params == ' ' ) params++;
 		if( strncmp( params, "dump_max_depth=", 15 ) == 0 )
@@ -366,26 +413,7 @@ static void dbgsrv_execCmd( sgs_DebugServer* D, int cmd, const char* params, dbg
 		}
 		else
 		{
-			int i;
-			
-			/* enable/disable break flags */
-			for( i = 0; i < DBGSRV_BREAK_FLAG_COUNT; ++i )
-			{
-				size_t len = strlen( dbgBreakFlagNames[ i ] );
-				if( strncmp( params, dbgBreakFlagNames[ i ], len ) == 0 )
-				{
-					int on = dbgsrv_getBool( params + len );
-					if( on )
-						D->brkflags |= dbgBreakFlagMasks[ i ];
-					else
-						D->brkflags &= ~dbgBreakFlagMasks[ i ];
-					sgs_ErrWritef( D->C, "%s%s\n", dbgBreakFlagNames[ i ], on ? "on" : "off" );
-					goto found_cfg_opt;
-				}
-			}
-			
 			sgs_ErrWritef( D->C, "Unknown configuration option.\n" );
-found_cfg_opt:;
 		}
 		break;
 	case DSC_instruction:
@@ -560,28 +588,28 @@ static void dbgsrv_hookFunc( void* data, SGS_CTX, int event_id )
 	{
 		if( event_id == SGS_HOOK_ENTER )
 		{
-			if( D->brkflags & (DBGSRV_BREAK_FUNCTION_ENTER|DBGSRV_BREAK_NEXT_ENTER) )
+			if( D->brkflags & (DBGSRV_BREAK_FUNCTION_ENTER|DBGSRV_BREAK_NEXT_F_ENTER) )
 			{
 				dbgStateInfo dsi = { C, 1, 0, "Entered function" };
-				D->brkflags &= ~(uint32_t)DBGSRV_BREAK_NEXT_ENTER;
+				D->brkflags &= ~(uint32_t)DBGSRV_BREAK_NEXT_F_ENTER;
 				dbgsrv_interact( D, &dsi );
 			}
 		}
 		else if( event_id == SGS_HOOK_EXIT )
 		{
-			if( D->brkflags & (DBGSRV_BREAK_FUNCTION_EXIT|DBGSRV_BREAK_NEXT_EXIT) )
+			if( D->brkflags & (DBGSRV_BREAK_FUNCTION_EXIT|DBGSRV_BREAK_NEXT_F_EXIT) )
 			{
 				dbgStateInfo dsi = { C, 1, 0, "Exited function" };
-				D->brkflags &= ~(uint32_t)DBGSRV_BREAK_NEXT_EXIT;
+				D->brkflags &= ~(uint32_t)DBGSRV_BREAK_NEXT_F_EXIT;
 				dbgsrv_interact( D, &dsi );
 			}
 		}
 		else if( event_id == SGS_HOOK_STEP )
 		{
-			if( D->brkflags & (DBGSRV_BREAK_FUNCTION_STEP|DBGSRV_BREAK_NEXT_STEP) )
+			if( D->brkflags & (DBGSRV_BREAK_FUNCTION_STEP|DBGSRV_BREAK_NEXT_F_STEP) )
 			{
 				dbgStateInfo dsi = { C, 1, 0, "Reached next instruction" };
-				D->brkflags &= ~(uint32_t)DBGSRV_BREAK_NEXT_STEP;
+				D->brkflags &= ~(uint32_t)DBGSRV_BREAK_NEXT_F_STEP;
 				dbgsrv_printCurOp( D, &dsi );
 				dbgsrv_interact( D, &dsi );
 			}
@@ -620,7 +648,7 @@ sgs_DebugServer* sgs_CreateDebugServer( SGS_CTX, int port )
 
 void sgs_CloseDebugServer( sgs_DebugServer* D )
 {
-	if( D->brkflags & (DBGSRV_BREAK_NEXT_ENTER|DBGSRV_BREAK_NEXT_EXIT|DBGSRV_BREAK_NEXT_STEP) )
+	if( D->brkflags & (DBGSRV_BREAK_NEXT_F_ENTER|DBGSRV_BREAK_NEXT_F_EXIT|DBGSRV_BREAK_NEXT_F_STEP) )
 	{
 		sgs_ErrWritef( D->C, "Scripting engine was stopped before next breakpoint could be reached.\n" );
 	}
