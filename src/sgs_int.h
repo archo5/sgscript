@@ -221,9 +221,10 @@ SGS_APIFUNC void sgsFT_Dump( SGS_CTX, sgs_FTNode* tree );
 /* - bytecode generator */
 typedef uint32_t sgs_instr_t;
 SGS_APIFUNC sgs_iFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree );
-SGS_APIFUNC void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count, const sgs_instr_t* numstart );
+SGS_APIFUNC void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
+	const sgs_instr_t* numstart, const sgs_LineNum* lines );
 SGS_APIFUNC void sgsBC_DumpEx( SGS_CTX, const char* constptr, size_t constsize,
-	const char* codeptr, size_t codesize );
+	const char* codeptr, size_t codesize, const sgs_LineNum* lines );
 
 
 /*

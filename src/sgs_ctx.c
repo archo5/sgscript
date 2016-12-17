@@ -919,7 +919,7 @@ SGSRESULT sgs_PushSGSFunctionBuf( SGS_CTX, const char* buf, size_t size )
 		if( !tlist || C->state & SGS_HAS_ERRORS )
 			goto error;
 #if SGS_DEBUG && SGS_DEBUG_DATA
-		sgsT_DumpList( tlist, NULL );
+		sgsT_DumpList( C, tlist, NULL );
 #endif
 		
 		if( C->shared->parser_cfg.token_editor )
@@ -935,7 +935,7 @@ SGSRESULT sgs_PushSGSFunctionBuf( SGS_CTX, const char* buf, size_t size )
 		if( !ftree || C->state & SGS_HAS_ERRORS )
 			goto error;
 #if SGS_DEBUG && SGS_DEBUG_DATA
-		sgsFT_Dump( ftree->child );
+		sgsFT_Dump( C, ftree->child );
 #endif
 		
 		func = sgsBC_Generate( C, ftree->child );
@@ -1079,7 +1079,8 @@ void sgsVM_DumpFunction( SGS_CTX, sgs_iFunc* F, int recursive )
 	sgs_ErrWritef( C, "- line: %d\n", F->linenum );
 	
 	sgsBC_DumpEx( C, (const char*) sgs_func_consts( F ), sgs_func_instr_off( F ),
-		(const char*) sgs_func_bytecode( F ), sgs_func_size( F ) - sgs_func_instr_off( F ) );
+		(const char*) sgs_func_bytecode( F ), sgs_func_size( F ) - sgs_func_instr_off( F ),
+		sgs_func_lineinfo( F ) );
 }
 
 SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, size_t size )

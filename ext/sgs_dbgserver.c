@@ -30,7 +30,15 @@
 #define DBGSRV_BREAK_NEXT_F_EXIT    0x2000
 #define DBGSRV_BREAK_NEXT_F_STEP    0x4000
 #define DBGSRV_BREAK_NEXT_MESSAGE   0x8000
+#define DBGSRV_BREAK_NEXT_ANY       0xff00
 
+
+typedef struct dbgPosInfo
+{
+	sgs_iFunc* func;
+	int line;
+}
+dbgPosInfo;
 
 struct sgs_DebugServer
 {
@@ -59,6 +67,7 @@ struct sgs_DebugServer
 	sgs_MemBuf breakpoints; /* array of dbgBreakpointInfo */
 	unsigned brkflags;
 	int brklev;
+	dbgPosInfo linebreak_prev;
 };
 
 typedef struct dbgBreakpointInfo
@@ -81,6 +90,7 @@ dbgStateInfo;
 #define DBGSRV_MAX_CMD_NAME_LENGTH
 #define DBGSRV_COMMANDS( def ) \
 	def( continue ) \
+	def( step ) \
 	def( istep ) \
 	def( quit ) \
 	def( abort ) \
@@ -134,6 +144,23 @@ static int dbgsrv_getBool( const char* str )
 	return atoi( str ) != 0;
 }
 */
+
+static dbgPosInfo dbgsrv_currentPos( SGS_CTX )
+{
+	sgs_StackFrame* sf = sgs_GetFramePtr( C, NULL, SGS_TRUE );
+	if( sf && sf->iptr )
+	{
+		sgs_iFunc* F = sf->func->data.F;
+		dbgPosInfo out = { F, sgs_func_lineinfo( F )[ sf->iptr - sgs_func_bytecode( F ) ] };
+		return out;
+	}
+	else
+	{
+		/* use a non-NULL pointer to trigger line break even if there is no line info here */
+		dbgPosInfo out = { (sgs_iFunc*) 1, 0 };
+		return out;
+	}
+}
 
 static void dbgsrv_runCode( sgs_DebugServer* D, dbgStateInfo* dsi, const char* code )
 {
@@ -268,7 +295,8 @@ static void dbgsrv_printCurOp( sgs_DebugServer* D, dbgStateInfo* dsi )
 		if( sf->iptr )
 		{
 			sgs_ErrWritef( D->C, "Current instruction:\n[%08X] ", *sf->iptr );
-			sgsBC_DumpOpcode( D->C, sf->iptr, 1, sgs_func_bytecode( sf->func->data.F ) );
+			sgsBC_DumpOpcode( D->C, sf->iptr, 1, sgs_func_bytecode( sf->func->data.F ),
+				sgs_func_lineinfo( sf->func->data.F ) );
 		}
 		else if( sf->prev && sf->prev->iptr )
 		{
@@ -276,7 +304,8 @@ static void dbgsrv_printCurOp( sgs_DebugServer* D, dbgStateInfo* dsi )
 			if( ( sf->prev->flags & SGS_SF_ABORTED ) == 0 )
 				ip--;
 			sgs_ErrWritef( D->C, "Current instruction (parent frame):\n[%08X] ", *ip );
-			sgsBC_DumpOpcode( D->C, ip, 1, sgs_func_bytecode( sf->prev->func->data.F ) );
+			sgsBC_DumpOpcode( D->C, ip, 1, sgs_func_bytecode( sf->prev->func->data.F ),
+				sgs_func_lineinfo( sf->prev->func->data.F ) );
 		}
 		else
 			sgs_ErrWritef( D->C, "Not running SGScript code.\n" );
@@ -341,6 +370,11 @@ static void dbgsrv_execCmd( sgs_DebugServer* D, int cmd, const char* params, dbg
 	{
 	case DSC_continue:
 		sgs_ErrWritef( D->C, "Continuing...\n" );
+		dsi->paused = 0;
+		break;
+	case DSC_step:
+		sgs_ErrWritef( D->C, "Stepping to next line...\n" );
+		D->linebreak_prev = dbgsrv_currentPos( dsi->C );
 		dsi->paused = 0;
 		break;
 	case DSC_istep:
@@ -613,6 +647,17 @@ static void dbgsrv_hookFunc( void* data, SGS_CTX, int event_id )
 				dbgsrv_printCurOp( D, &dsi );
 				dbgsrv_interact( D, &dsi );
 			}
+			else if( D->linebreak_prev.func )
+			{
+				dbgPosInfo cp = dbgsrv_currentPos( C );
+				if( D->linebreak_prev.func != cp.func || D->linebreak_prev.line != cp.line )
+				{
+					dbgStateInfo dsi = { C, 1, 0, "Reached next line" };
+					D->linebreak_prev.func = NULL;
+					dbgsrv_printCurOp( D, &dsi ); /* TODO print source line */
+					dbgsrv_interact( D, &dsi );
+				}
+			}
 		}
 	}
 }
@@ -642,13 +687,15 @@ sgs_DebugServer* sgs_CreateDebugServer( SGS_CTX, int port )
 	D->breakpoints = sgs_membuf_create();
 	D->brkflags = DBGSRV_BREAK_MESSAGE;
 	D->brklev = SGS_WARNING;
+	D->linebreak_prev.func = NULL;
+	D->linebreak_prev.line = 0;
 	
 	return D;
 }
 
 void sgs_CloseDebugServer( sgs_DebugServer* D )
 {
-	if( D->brkflags & (DBGSRV_BREAK_NEXT_F_ENTER|DBGSRV_BREAK_NEXT_F_EXIT|DBGSRV_BREAK_NEXT_F_STEP) )
+	if( ( D->brkflags & DBGSRV_BREAK_NEXT_ANY ) || D->linebreak_prev.func )
 	{
 		sgs_ErrWritef( D->C, "Scripting engine was stopped before next breakpoint could be reached.\n" );
 	}

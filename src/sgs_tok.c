@@ -704,6 +704,7 @@ void sgsT_DumpToken( SGS_CTX, sgs_TokenList tok )
 		sgs_ErrWritef( C, "<invalid>" );
 		break;
 	}
+	sgs_ErrWritef( C, "@%d", sgsT_LineNum( tok ) );
 }
 void sgsT_DumpList( SGS_CTX, sgs_TokenList tlist, sgs_TokenList tend )
 {

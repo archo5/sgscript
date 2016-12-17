@@ -278,19 +278,28 @@ static void dump_opcode_b1( SGS_CTX, const char* name, sgs_instr_t I )
 	dump_rcpos( C, SGS_INSTR_GET_C( I ) );
 }
 
-void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count, const sgs_instr_t* numstart )
+void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
+	const sgs_instr_t* numstart, const sgs_LineNum* lines )
 {
 	const sgs_instr_t* pend = ptr + count;
-	while( ptr < pend )
+	for( ; ptr < pend; ptr++ )
 	{
-		sgs_instr_t I = *ptr++;
+		sgs_instr_t I = *ptr;
 		int op = SGS_INSTR_GET_OP( I ), argA = SGS_INSTR_GET_A( I ),
 			argB = SGS_INSTR_GET_B( I ), argC = SGS_INSTR_GET_C( I ),
 			argE = SGS_INSTR_GET_E( I );
 
 		if( numstart )
 		{
-			sgs_ErrWritef( C, "    %04d |  ", (int)( ptr - numstart - 1 ) );
+			sgs_ErrWritef( C, "    %04d ", (int)( ptr - numstart ) );
+		}
+		if( lines )
+		{
+			sgs_ErrWritef( C, "[line %d] ", lines[ ptr - numstart ] );
+		}
+		else
+		{
+			sgs_ErrWritef( C, "| " );
 		}
 
 		switch( op )
@@ -406,7 +415,7 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count, const sgs_
 #undef DOP_A
 #undef DOP_B
 		default:
-			sgs_ErrWritef( C, "<error> \t\t(op=%d A=%d B=%d C=%d E=%d)",
+			sgs_ErrWritef( C, "<error> (op=%d A=%d B=%d C=%d E=%d)",
 				op, argA, argB, argC, argE ); break;
 		}
 		sgs_ErrWritef( C, "\n" );
@@ -838,6 +847,8 @@ sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_CompFunc* nf,
 {
 	sgs_Variable strvar;
 	sgs_iFunc* F = sgs_Alloc_a( sgs_iFunc, nf->consts.size + nf->code.size );
+	
+	sgs_BreakIf( nf->code.size / sizeof(sgs_instr_t) != nf->lnbuf.size / sizeof(sgs_LineNum) );
 
 	F->refcount = 1;
 	/* WP: const/instruction limits */
@@ -2213,7 +2224,8 @@ static int compile_fn_base( SGS_FNTCMP_ARGS, int args )
 	fctx_dump( C, C->fctx );
 	sgs_ErrWritef( C, "function (this=%s args=%d tmp=%d clsr=%d inclsr=%d)\n",
 		func->gotthis ? "Y" : "n", func->numargs, func->numtmp, func->numclsr, func->inclsr );
-	sgsBC_DumpEx( C, func->consts.ptr, func->consts.size, func->code.ptr, func->code.size );
+	sgsBC_DumpEx( C, func->consts.ptr, func->consts.size, func->code.ptr, func->code.size,
+		(sgs_LineNum*) func->lnbuf.ptr );
 #endif
 	
 	return 1;
@@ -3178,7 +3190,7 @@ fail:
 }
 
 void sgsBC_DumpEx( SGS_CTX, const char* constptr, size_t constsize,
-	const char* codeptr, size_t codesize )
+	const char* codeptr, size_t codesize, const sgs_LineNum* lines )
 {
 	const sgs_Variable* vbeg = SGS_ASSUME_ALIGNED_CONST( constptr, sgs_Variable );
 	const sgs_Variable* vend = SGS_ASSUME_ALIGNED_CONST( constptr + constsize, sgs_Variable );
@@ -3195,7 +3207,7 @@ void sgsBC_DumpEx( SGS_CTX, const char* constptr, size_t constsize,
 	}
 	sgs_ErrWritef( C, "> code:\n" );
 	sgsBC_DumpOpcode( C, SGS_ASSUME_ALIGNED_CONST( codeptr, sgs_instr_t ),
-		codesize / sizeof( sgs_instr_t ), SGS_ASSUME_ALIGNED_CONST( codeptr, sgs_instr_t ) );
+		codesize / sizeof( sgs_instr_t ), SGS_ASSUME_ALIGNED_CONST( codeptr, sgs_instr_t ), lines );
 	sgs_ErrWritef( C, "}\n" );
 }
 

@@ -712,7 +712,7 @@ retsuccess:
 	sgs_Msg( F->C, SGS_ERROR, "[line %d] Missing operators or separators", predictlinenum( *tree ) );
 	F->C->state |= SGS_HAS_ERRORS;
 #if SGS_DEBUG && SGS_DEBUG_DATA
-	sgsFT_Dump( *tree );
+	sgsFT_Dump( F->C, *tree );
 #endif
 	SGS_FN_END;
 	return 0;
@@ -723,7 +723,7 @@ fail:
 	sgs_Msg( F->C, SGS_ERROR, "[line %d] Invalid expression", mpp ? sgsT_LineNum( mpp->token ) : 0 );
 fail_no_err:
 #if SGS_DEBUG && SGS_DEBUG_DATA
-	sgsFT_Dump( *tree );
+	sgsFT_Dump( F->C, *tree );
 #endif
 	SGS_FN_END;
 	return 0;
