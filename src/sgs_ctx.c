@@ -816,6 +816,18 @@ void sgs_WriteErrorInfo( SGS_CTX, int flags, sgs_ErrorOutputFunc func, void* ctx
 	}
 }
 
+void sgs_WriteSafe( sgs_ErrorOutputFunc func, void* ctx, const char* buf, size_t size )
+{
+	size_t i;
+	for( i = 0; i < size; ++i )
+	{
+		if( sgs_isgraph( buf[ i ] ) || buf[ i ] == ' ' )
+			func( ctx, "%c", buf[ i ] );
+		else
+			func( ctx, "\\x%02X", (unsigned char) buf[ i ] );
+	}
+}
+
 static void serialize_output_func( void* ud, SGS_CTX, const void* ptr, size_t datasize )
 {
 	sgs_MemBuf* B = (sgs_MemBuf*) ud;
@@ -1039,29 +1051,35 @@ SGSRESULT sgs_Compile( SGS_CTX, const char* buf, size_t size, char** outbuf, siz
 }
 
 
-static void _fndump( SGS_CTX, sgs_iFunc* F );
-static void _recfndump( SGS_CTX, const char* constptr, size_t constsize,
-	const char* codeptr, size_t codesize, int gt, int args, int tmp, int clsr, int inclsr )
+void sgsVM_DumpFunction( SGS_CTX, sgs_iFunc* F, int recursive )
 {
-	const sgs_Variable* var = SGS_ASSUME_ALIGNED_CONST( constptr, sgs_Variable );
-	const sgs_Variable* vend = SGS_ASSUME_ALIGNED_CONST( constptr + constsize, sgs_Variable );
-	while( var < vend )
+	if( recursive )
 	{
-		if( var->type == SGS_VT_FUNC )
-			_fndump( C, var->data.F );
-		var++;
+		const sgs_Variable* var = sgs_func_consts( F );
+		const sgs_Variable* vend = var + sgs_func_const_count( F );
+		while( var < vend )
+		{
+			if( var->type == SGS_VT_FUNC )
+				sgsVM_DumpFunction( C, var->data.F, SGS_TRUE );
+			var++;
+		}
 	}
-	sgs_ErrWritef( C, "\nFUNC: type=%s args=%d tmp=%d closures=%d in.clsr=%d\n",
-		gt ? "method" : "function", args, tmp, clsr, inclsr );
-	sgsBC_DumpEx( C, constptr, constsize, codeptr, codesize );
-}
-
-static void _fndump( SGS_CTX, sgs_iFunc* F )
-{
-	_recfndump( C, (const char*) sgs_func_consts( F ), sgs_func_instr_off( F ),
-		(const char*) sgs_func_bytecode( F ),
-		sgs_func_size( F ) - sgs_func_instr_off( F ),
-		F->gotthis, F->numargs, F->numtmp, F->numclsr, F->inclsr );
+	
+	sgs_ErrWritef( C, "Function: type=%s args=%d tmp=%d closures=%d in.clsr=%d\n",
+		F->gotthis ? "method" : "function", F->numargs, F->numtmp, F->numclsr, F->inclsr );
+	
+	sgs_ErrWritef( C, "- name: \"" );
+	sgs_WriteSafe( (sgs_ErrorOutputFunc) sgs_ErrWritef, C, sgs_str_cstr( F->sfuncname ), F->sfuncname->size );
+	sgs_ErrWritef( C, "\"\n" );
+	
+	sgs_ErrWritef( C, "- file: \"" );
+	sgs_WriteSafe( (sgs_ErrorOutputFunc) sgs_ErrWritef, C, sgs_str_cstr( F->sfilename ), F->sfilename->size );
+	sgs_ErrWritef( C, "\"\n" );
+	
+	sgs_ErrWritef( C, "- line: %d\n", F->linenum );
+	
+	sgsBC_DumpEx( C, (const char*) sgs_func_consts( F ), sgs_func_instr_off( F ),
+		(const char*) sgs_func_bytecode( F ), sgs_func_size( F ) - sgs_func_instr_off( F ) );
 }
 
 SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, size_t size )
@@ -1070,7 +1088,7 @@ SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, size_t size )
 	if( SGS_FAILED( rr ) )
 		return rr;
 	
-	_fndump( C, stk_gettop( C )->data.F );
+	sgsVM_DumpFunction( C, stk_gettop( C )->data.F, 1 );
 	sgs_Pop( C, 1 );
 	return SGS_SUCCESS;
 }

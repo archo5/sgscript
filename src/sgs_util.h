@@ -82,8 +82,6 @@ SGS_APIFUNC int sgs_tolower( int c );
 #  define SGS_FN_END
 #endif
 
-SGS_APIFUNC void sgs_print_safe( FILE* fp, const char* buf, size_t size );
-
 
 /* string buffer */
 typedef

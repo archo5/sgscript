@@ -278,10 +278,9 @@ static void dump_opcode_b1( SGS_CTX, const char* name, sgs_instr_t I )
 	dump_rcpos( C, SGS_INSTR_GET_C( I ) );
 }
 
-void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count, int numbered )
+void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count, const sgs_instr_t* numstart )
 {
 	const sgs_instr_t* pend = ptr + count;
-	const sgs_instr_t* pbeg = ptr;
 	while( ptr < pend )
 	{
 		sgs_instr_t I = *ptr++;
@@ -289,9 +288,9 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count, int number
 			argB = SGS_INSTR_GET_B( I ), argC = SGS_INSTR_GET_C( I ),
 			argE = SGS_INSTR_GET_E( I );
 
-		if( numbered )
+		if( numstart )
 		{
-			sgs_ErrWritef( C, "\t%04d |  ", (int)( ptr - pbeg - 1 ) );
+			sgs_ErrWritef( C, "    %04d |  ", (int)( ptr - numstart - 1 ) );
 		}
 
 		switch( op )
@@ -1022,6 +1021,12 @@ static SGSBOOL compile_ident_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 		}
 		QPRINT( "Cannot read from specified keyword" );
 		return 0;
+	}
+	if( sgsT_IsIdent( node->token, "__LINE__" ) )
+	{
+		pos = add_const_i( C, func, sgsT_LineNum( node->token ) );
+		*out = BC_CONSTENC( pos );
+		return 1;
 	}
 
 	/* closures */
@@ -3184,13 +3189,13 @@ void sgsBC_DumpEx( SGS_CTX, const char* constptr, size_t constsize,
 	while( var < vend )
 	{
 		sgs_ErrWritef( C, "%4d = ", (int) ( var - vbeg ) );
-		sgsVM_VarDump( var );
+		sgsVM_VarDump( C, var );
 		sgs_ErrWritef( C, "\n" );
 		var++;
 	}
 	sgs_ErrWritef( C, "> code:\n" );
 	sgsBC_DumpOpcode( C, SGS_ASSUME_ALIGNED_CONST( codeptr, sgs_instr_t ),
-		codesize / sizeof( sgs_instr_t ), SGS_TRUE );
+		codesize / sizeof( sgs_instr_t ), SGS_ASSUME_ALIGNED_CONST( codeptr, sgs_instr_t ) );
 	sgs_ErrWritef( C, "}\n" );
 }
 

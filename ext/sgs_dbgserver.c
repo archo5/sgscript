@@ -250,7 +250,7 @@ static void dbgsrv_printCurOp( sgs_DebugServer* D, dbgStateInfo* dsi )
 		if( sf->iptr )
 		{
 			sgs_ErrWritef( D->C, "Current instruction:\n[%08X] ", *sf->iptr );
-			sgsBC_DumpOpcode( D->C, sf->iptr, 1, SGS_FALSE );
+			sgsBC_DumpOpcode( D->C, sf->iptr, 1, sgs_func_bytecode( sf->func->data.F ) );
 		}
 		else if( sf->prev && sf->prev->iptr )
 		{
@@ -258,13 +258,60 @@ static void dbgsrv_printCurOp( sgs_DebugServer* D, dbgStateInfo* dsi )
 			if( ( sf->prev->flags & SGS_SF_ABORTED ) == 0 )
 				ip--;
 			sgs_ErrWritef( D->C, "Current instruction (parent frame):\n[%08X] ", *ip );
-			sgsBC_DumpOpcode( D->C, ip, 1, SGS_FALSE );
+			sgsBC_DumpOpcode( D->C, ip, 1, sgs_func_bytecode( sf->prev->func->data.F ) );
 		}
 		else
 			sgs_ErrWritef( D->C, "Not running SGScript code.\n" );
 	}
 	else
 		sgs_ErrWritef( D->C, "Not running code.\n" );
+}
+
+static void dbgsrv_dumpRegisters( sgs_DebugServer* D, SGS_CTX, sgs_StackFrame* F, int ext )
+{
+	sgs_SizeVal i, first, end;
+	if( F->next )
+	{
+		first = F->next->stkoff / (sgs_SizeVal) sizeof( sgs_Variable );
+		end = F->next->next
+			? F->next->next->stkoff / (sgs_SizeVal) sizeof( sgs_Variable )
+			: C->stack_top - C->stack_base;
+	}
+	else
+	{
+		first = C->stack_off - C->stack_base;
+		end = C->stack_top - C->stack_base;
+	}
+	sgs_ErrWritef( D->C, "Registers (%s function) [%d]:\n",
+		F->iptr ? "SGScript" : "C", (int) ( end - first ) );
+	if( first >= end )
+	{
+		sgs_ErrWritef( D->C, "-- none --\n" );
+	}
+	for( i = first; i < end; ++i )
+	{
+		sgs_ErrWritef( D->C, "#%03d: ", ( i - first ) );
+		if( ext )
+		{
+		}
+		else
+		{
+			sgsVM_VarDump( D->C, &C->stack_base[ i ] );
+			sgs_ErrWritef( D->C, "\n" );
+		}
+	}
+}
+
+static void dbgsrv_dumpBytecode( sgs_DebugServer* D, sgs_StackFrame* F )
+{
+	if( F->iptr )
+	{
+		sgsVM_DumpFunction( D->C, F->func->data.F, 0 );
+	}
+	else
+	{
+		sgs_ErrWritef( D->C, "No bytecode for C function.\n" );
+	}
 }
 
 static void dbgsrv_execCmd( sgs_DebugServer* D, int cmd, const char* params, dbgStateInfo* dsi )
@@ -283,10 +330,11 @@ static void dbgsrv_execCmd( sgs_DebugServer* D, int cmd, const char* params, dbg
 		D->brkflags |= DBGSRV_BREAK_NEXT_STEP;
 		dsi->paused = 0;
 		break;
-	case DSC_quit:
-		sgs_ErrWritef( D->C, "Calling exit(0)...\n" );
-		exit( 0 );
-		break;
+	case DSC_quit: {
+			int code = atoi( params );
+			sgs_ErrWritef( D->C, "Calling exit(%d)...\n", code );
+			exit( code );
+		} break;
 	case DSC_abort:
 		sgs_ErrWritef( D->C, "Aborting the thread...\n" );
 		sgs_Abort( dsi->C );
@@ -356,7 +404,7 @@ found_cfg_opt:;
 		{
 			static const char* subcmds[] = {
 				"stack", "globals", "objects", "frames",
-				"breakpoints",
+				"breakpoints", "registers", "bytecode",
 			};
 #define DSC_DUMP_SUBCMD_COUNT (sizeof(subcmds) / sizeof(subcmds[0]))
 			const char* ppos[ DSC_DUMP_SUBCMD_COUNT ];
@@ -382,6 +430,12 @@ found_cfg_opt:;
 					}
 					DBGSRV_ITERATE_END;
 				}
+				break;
+			case 5:
+				dbgsrv_dumpRegisters( D, dsi->C, sgs_GetFramePtr( dsi->C, NULL, SGS_TRUE ), 0 );
+				break;
+			case 6:
+				dbgsrv_dumpBytecode( D, sgs_GetFramePtr( dsi->C, NULL, SGS_TRUE ) );
 				break;
 			}
 		}
@@ -580,7 +634,14 @@ void sgs_CloseDebugServer( sgs_DebugServer* D )
 void sgs_DebugServerCmd( sgs_DebugServer* D, const char* cmd )
 {
 	dbgStateInfo dsi = { D->C, 0, 0, "No error." };
-	sgs_membuf_setstr( &D->input, D->C, cmd );
-	dbgsrv_execInputStr( D, &dsi );
+	if( cmd == NULL )
+	{
+		dbgsrv_interact( D, &dsi );
+	}
+	else
+	{
+		sgs_membuf_setstr( &D->input, D->C, cmd );
+		dbgsrv_execInputStr( D, &dsi );
+	}
 }
 

@@ -2839,24 +2839,25 @@ size_t sgsVM_VarSize( const sgs_Variable* var )
 	return out;
 }
 
-void sgsVM_VarDump( const sgs_Variable* var )
+void sgsVM_VarDump( SGS_CTX, const sgs_Variable* var )
 {
 	/* WP: variable size limit */
-	printf( "%s (size:%d)", TYPENAME( var->type ), (uint32_t) sgsVM_VarSize( var ) );
+	sgs_ErrWritef( C, "%s (size:%d)", TYPENAME( var->type ), (uint32_t) sgsVM_VarSize( var ) );
 	switch( var->type )
 	{
 	case SGS_VT_NULL: break;
-	case SGS_VT_BOOL: printf( " = %s", var->data.B ? "True" : "False" ); break;
-	case SGS_VT_INT: printf( " = %" PRId64, var->data.I ); break;
-	case SGS_VT_REAL: printf( " = %f", var->data.R ); break;
-	case SGS_VT_STRING: printf( " [rc:%" PRId32"] = \"", var->data.S->refcount );
-		sgs_print_safe( stdout, sgs_var_cstr( var ), SGS_MIN( var->data.S->size, 16 ) );
-		printf( var->data.S->size > 16 ? "...\"" : "\"" ); break;
-	case SGS_VT_FUNC: printf( " [rc:%" PRId32"]", var->data.F->refcount ); break;
-	case SGS_VT_CFUNC: printf( " = %p", (void*)(size_t) var->data.C ); break;
-	case SGS_VT_OBJECT: printf( " [rc:%" PRId32"] = %p", var->data.O->refcount, var->data.O ); break;
-	case SGS_VT_PTR: printf( " = %p", var->data.P ); break;
-	case SGS_VT_THREAD: printf( " [rc:%" PRId32"] = %p", var->data.T->refcount, var->data.T ); break;
+	case SGS_VT_BOOL: sgs_ErrWritef( C, " = %s", var->data.B ? "True" : "False" ); break;
+	case SGS_VT_INT: sgs_ErrWritef( C, " = %" PRId64, var->data.I ); break;
+	case SGS_VT_REAL: sgs_ErrWritef( C, " = %f", var->data.R ); break;
+	case SGS_VT_STRING: sgs_ErrWritef( C, " [rc:%" PRId32"] = \"", var->data.S->refcount );
+		sgs_WriteSafe( (sgs_ErrorOutputFunc) sgs_ErrWritef, C,
+			sgs_var_cstr( var ), SGS_MIN( var->data.S->size, 16 ) );
+		sgs_ErrWritef( C, var->data.S->size > 16 ? "...\"" : "\"" ); break;
+	case SGS_VT_FUNC: sgs_ErrWritef( C, " [rc:%" PRId32"]", var->data.F->refcount ); break;
+	case SGS_VT_CFUNC: sgs_ErrWritef( C, " = %p", (void*)(size_t) var->data.C ); break;
+	case SGS_VT_OBJECT: sgs_ErrWritef( C, " [rc:%" PRId32"] = %p", var->data.O->refcount, var->data.O ); break;
+	case SGS_VT_PTR: sgs_ErrWritef( C, " = %p", var->data.P ); break;
+	case SGS_VT_THREAD: sgs_ErrWritef( C, " [rc:%" PRId32"] = %p", var->data.T->refcount, var->data.T ); break;
 	}
 }
 
@@ -2864,15 +2865,15 @@ void sgsVM_StackDump( SGS_CTX )
 {
 	ptrdiff_t i, stksz = C->stack_top - C->stack_base;
 	/* WP: stack limit */
-	printf( "STACK (size=%d, bytes=%d/%d)--\n", (int) stksz, (int)( stksz * (ptrdiff_t) STK_UNITSIZE ), (int)( C->stack_mem * STK_UNITSIZE ) );
+	sgs_ErrWritef( C, "STACK (size=%d, bytes=%d/%d)--\n", (int) stksz, (int)( stksz * (ptrdiff_t) STK_UNITSIZE ), (int)( C->stack_mem * STK_UNITSIZE ) );
 	for( i = 0; i < stksz; ++i )
 	{
 		sgs_Variable* var = C->stack_base + i;
 		if( var == C->stack_off )
-			printf( "-- offset --\n" );
-		printf( "  " ); sgsVM_VarDump( var ); printf( "\n" );
+			sgs_ErrWritef( C, "-- offset --\n" );
+		sgs_ErrWritef( C, "  " ); sgsVM_VarDump( C, var ); sgs_ErrWritef( C, "\n" );
 	}
-	printf( "--\n" );
+	sgs_ErrWritef( C, "--\n" );
 }
 
 

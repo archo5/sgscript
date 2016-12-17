@@ -59,19 +59,6 @@ int sgs_tolower( int c )
 }
 
 
-void sgs_print_safe( FILE* fp, const char* buf, size_t size )
-{
-	size_t i;
-	for( i = 0; i < size; ++i )
-	{
-		if( sgs_isgraph( buf[ i ] ) || buf[ i ] == ' ' )
-			fputc( buf[ i ], fp );
-		else
-			fprintf( fp, "\\x%02X", (int) (unsigned char) buf[ i ] );
-	}
-}
-
-
 sgs_MemBuf sgs_membuf_create( void )
 {
 	sgs_MemBuf sb = { NULL, 0, 0 };

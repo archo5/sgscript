@@ -665,6 +665,7 @@ typedef int (*sgs_ErrorOutputFunc) ( void*, const char*, ... );
 SGS_APIFUNC void sgs_WriteErrorInfo( SGS_CTX, int flags,
 	sgs_ErrorOutputFunc func, void* ctx, int type, const char* msg );
 SGS_APIFUNC void sgs_PushErrorInfo( SGS_CTX, int flags, int type, const char* msg );
+SGS_APIFUNC void sgs_WriteSafe( sgs_ErrorOutputFunc func, void* ctx, const char* buf, size_t size );
 
 SGS_APIFUNC void sgs_GetHookFunc( SGS_CTX, sgs_HookFunc* outf, void** outc );
 SGS_APIFUNC void sgs_SetHookFunc( SGS_CTX, sgs_HookFunc func, void* ctx );

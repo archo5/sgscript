@@ -127,7 +127,7 @@ extern "C" {
 	(chr) == SGS_ST_OP_BLAND || (chr) == SGS_ST_OP_BLOR )
 #define SGS_ST_OP_FNN( chr )    ( (chr) == SGS_ST_OP_NLOEQ || (chr) == SGS_ST_OP_NLOR )
 
-#define SGS_ST_ISSPEC( chr )    sgs_isoneof( (chr), "()[]{},;:" )
+#define SGS_ST_ISSPEC( chr )    sgs_isoneof( (chr), "()[]{},;:#" )
 
 #define SGS_ST_READINT( tgt, pos )   SGS_AS_INT32( tgt, pos )
 #define SGS_ST_READLN( tgt, pos )    SGS_AS_( tgt, pos, sgs_LineNum )
@@ -149,8 +149,8 @@ SGS_APIFUNC size_t sgsT_ListMemSize( sgs_TokenList tlist );
 
 SGS_APIFUNC void sgsT_TokenString( SGS_CTX, sgs_MemBuf* out, sgs_TokenList tlist, sgs_TokenList tend, int xs );
 
-SGS_APIFUNC void sgsT_DumpToken( sgs_TokenList tok );
-SGS_APIFUNC void sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend );
+SGS_APIFUNC void sgsT_DumpToken( SGS_CTX, sgs_TokenList tok );
+SGS_APIFUNC void sgsT_DumpList( SGS_CTX, sgs_TokenList tlist, sgs_TokenList tend );
 
 
 /*
@@ -214,14 +214,14 @@ struct sgs_FTNode
 SGS_APIFUNC void sgsFT_Destroy( SGS_CTX, sgs_FTNode* tree );
 
 SGS_APIFUNC sgs_FTNode* sgsFT_Compile( SGS_CTX, sgs_TokenList tlist );
-SGS_APIFUNC void sgsFT_Dump( sgs_FTNode* tree );
+SGS_APIFUNC void sgsFT_Dump( SGS_CTX, sgs_FTNode* tree );
 
 
 
 /* - bytecode generator */
 typedef uint32_t sgs_instr_t;
 SGS_APIFUNC sgs_iFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree );
-SGS_APIFUNC void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count, int numbered );
+SGS_APIFUNC void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count, const sgs_instr_t* numstart );
 SGS_APIFUNC void sgsBC_DumpEx( SGS_CTX, const char* constptr, size_t constsize,
 	const char* codeptr, size_t codesize );
 
@@ -569,7 +569,8 @@ void fstk_pop( SGS_CTX, sgs_StkIdx num );
 void fstk_pop1( SGS_CTX );
 
 size_t sgsVM_VarSize( const sgs_Variable* var );
-void sgsVM_VarDump( const sgs_Variable* var );
+SGS_APIFUNC void sgsVM_VarDump( SGS_CTX, const sgs_Variable* var );
+SGS_APIFUNC void sgsVM_DumpFunction( SGS_CTX, sgs_iFunc* F, int recursive );
 
 void sgsVM_StackDump( SGS_CTX );
 

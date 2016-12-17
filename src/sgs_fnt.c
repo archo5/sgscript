@@ -18,89 +18,89 @@ static int isoneofN( char ch, const char* what, int size )
 /* debugging */
 
 
-static void dumpnode( sgs_FTNode* N )
+static void dumpnode( SGS_CTX, sgs_FTNode* N )
 {
 	switch( N->type )
 	{
-	case SGS_SFT_FCALL: printf( "FCALL" ); break;
-	case SGS_SFT_INDEX: printf( "INDEX" ); break;
-	case SGS_SFT_MIDXSET: printf( "MULTI_INDEX_SET" ); break;
-	case SGS_SFT_MPROPSET: printf( "MULTI_PROPERTY_SET" ); break;
-	case SGS_SFT_ARGMT: printf( "ARG " ); sgsT_DumpToken( N->token ); break;
-	case SGS_SFT_ARGLIST: printf( "ARG_LIST" ); break;
-	case SGS_SFT_VARLIST: printf( "VAR_LIST" ); break;
-	case SGS_SFT_GVLIST: printf( "GLOBAL_VAR_LIST" ); break;
-	case SGS_SFT_USELIST: printf( "USE_LIST" ); break;
-	case SGS_SFT_EXPLIST: printf( "EXPR_LIST" ); break;
-	case SGS_SFT_ARRLIST: printf( "ARRAY_LIST" ); break;
-	case SGS_SFT_DCTLIST: printf( "DICT_LIST" ); break;
-	case SGS_SFT_MAPLIST: printf( "MAP_LIST" ); break;
-	case SGS_SFT_RETURN: printf( "RETURN" ); break;
-	case SGS_SFT_BLOCK: printf( "BLOCK" ); break;
-	case SGS_SFT_IFELSE: printf( "IF/ELSE" ); break;
-	case SGS_SFT_WHILE: printf( "WHILE" ); break;
-	case SGS_SFT_DOWHILE: printf( "DO/WHILE" ); break;
-	case SGS_SFT_FOR: printf( "FOR" ); break;
-	case SGS_SFT_FOREACH: printf( "FOR_EACH" ); break;
-	case SGS_SFT_BREAK: printf( "BREAK" );
+	case SGS_SFT_FCALL: sgs_ErrWritef( C, "FCALL" ); break;
+	case SGS_SFT_INDEX: sgs_ErrWritef( C, "INDEX" ); break;
+	case SGS_SFT_MIDXSET: sgs_ErrWritef( C, "MULTI_INDEX_SET" ); break;
+	case SGS_SFT_MPROPSET: sgs_ErrWritef( C, "MULTI_PROPERTY_SET" ); break;
+	case SGS_SFT_ARGMT: sgs_ErrWritef( C, "ARG " ); sgsT_DumpToken( C, N->token ); break;
+	case SGS_SFT_ARGLIST: sgs_ErrWritef( C, "ARG_LIST" ); break;
+	case SGS_SFT_VARLIST: sgs_ErrWritef( C, "VAR_LIST" ); break;
+	case SGS_SFT_GVLIST: sgs_ErrWritef( C, "GLOBAL_VAR_LIST" ); break;
+	case SGS_SFT_USELIST: sgs_ErrWritef( C, "USE_LIST" ); break;
+	case SGS_SFT_EXPLIST: sgs_ErrWritef( C, "EXPR_LIST" ); break;
+	case SGS_SFT_ARRLIST: sgs_ErrWritef( C, "ARRAY_LIST" ); break;
+	case SGS_SFT_DCTLIST: sgs_ErrWritef( C, "DICT_LIST" ); break;
+	case SGS_SFT_MAPLIST: sgs_ErrWritef( C, "MAP_LIST" ); break;
+	case SGS_SFT_RETURN: sgs_ErrWritef( C, "RETURN" ); break;
+	case SGS_SFT_BLOCK: sgs_ErrWritef( C, "BLOCK" ); break;
+	case SGS_SFT_IFELSE: sgs_ErrWritef( C, "IF/ELSE" ); break;
+	case SGS_SFT_WHILE: sgs_ErrWritef( C, "WHILE" ); break;
+	case SGS_SFT_DOWHILE: sgs_ErrWritef( C, "DO/WHILE" ); break;
+	case SGS_SFT_FOR: sgs_ErrWritef( C, "FOR" ); break;
+	case SGS_SFT_FOREACH: sgs_ErrWritef( C, "FOR_EACH" ); break;
+	case SGS_SFT_BREAK: sgs_ErrWritef( C, "BREAK" );
 		if( *sgsT_Next( N->token ) == SGS_ST_NUMINT )
 		{
 			sgs_Int val;
 			SGS_AS_INTEGER( val, sgsT_Next( N->token ) + 1 );
-			printf( " %" PRId64, val );
+			sgs_ErrWritef( C, " %" PRId64, val );
 		}
 		break;
-	case SGS_SFT_CONT: printf( "CONTINUE" );
+	case SGS_SFT_CONT: sgs_ErrWritef( C, "CONTINUE" );
 		if( *sgsT_Next( N->token ) == SGS_ST_NUMINT )
 		{
 			sgs_Int val;
 			SGS_AS_INTEGER( val, sgsT_Next( N->token ) + 1 );
-			printf( " %" PRId64, val );
+			sgs_ErrWritef( C, " %" PRId64, val );
 		}
 		break;
-	case SGS_SFT_DEFER: printf( "DEFER" ); break;
-	case SGS_SFT_FUNC: printf( "FUNC" ); break;
-	case SGS_SFT_CLASS: printf( "CLASS" ); break;
-	case SGS_SFT_CLSINH: printf( "CLASS_INHERIT" ); break;
-	case SGS_SFT_CLSINC: printf( "CLASS_INCLUDE" ); break;
-	case SGS_SFT_CLSGLOB: printf( "CLASS_GLOBALS" ); break;
-	case SGS_SFT_NEWCALL: printf( "NEW" ); break;
-	case SGS_SFT_THRCALL: printf( "THREAD" ); break;
-	case SGS_SFT_STHCALL: printf( "SUBTHREAD" ); break;
+	case SGS_SFT_DEFER: sgs_ErrWritef( C, "DEFER" ); break;
+	case SGS_SFT_FUNC: sgs_ErrWritef( C, "FUNC" ); break;
+	case SGS_SFT_CLASS: sgs_ErrWritef( C, "CLASS" ); break;
+	case SGS_SFT_CLSINH: sgs_ErrWritef( C, "CLASS_INHERIT" ); break;
+	case SGS_SFT_CLSINC: sgs_ErrWritef( C, "CLASS_INCLUDE" ); break;
+	case SGS_SFT_CLSGLOB: sgs_ErrWritef( C, "CLASS_GLOBALS" ); break;
+	case SGS_SFT_NEWCALL: sgs_ErrWritef( C, "NEW" ); break;
+	case SGS_SFT_THRCALL: sgs_ErrWritef( C, "THREAD" ); break;
+	case SGS_SFT_STHCALL: sgs_ErrWritef( C, "SUBTHREAD" ); break;
 	default:
-		if( N->token ) sgsT_DumpToken( N->token );
-		if( N->type == SGS_SFT_OPER_P ) printf( " [post]" );
+		if( N->token ) sgsT_DumpToken( C, N->token );
+		if( N->type == SGS_SFT_OPER_P ) sgs_ErrWritef( C, " [post]" );
 		break;
 	}
 }
 
-static void ft_dump( sgs_FTNode* node, int level )
+static void ft_dump( SGS_CTX, sgs_FTNode* node, int level )
 {
 	int i;
 	sgs_FTNode* N = node;
 	if( !node ) return;
 
-	for( i = 0; i < level; ++i ) printf( "  " );
-	dumpnode( N );
-	printf( "\n" );
+	for( i = 0; i < level; ++i ) sgs_ErrWritef( C, "  " );
+	dumpnode( C, N );
+	sgs_ErrWritef( C, "\n" );
 
 	if( node->child )
 	{
-		for( i = 0; i < level; ++i ) printf( "  " );
-		printf( "{\n" );
+		for( i = 0; i < level; ++i ) sgs_ErrWritef( C, "  " );
+		sgs_ErrWritef( C, "{\n" );
 
-		ft_dump( node->child, level + 1 );
+		ft_dump( C, node->child, level + 1 );
 
-		for( i = 0; i < level; ++i ) printf( "  " );
-		printf( "}\n" );
+		for( i = 0; i < level; ++i ) sgs_ErrWritef( C, "  " );
+		sgs_ErrWritef( C, "}\n" );
 	}
 
-	ft_dump( node->next, level );
+	ft_dump( C, node->next, level );
 }
 
-void sgsFT_Dump( sgs_FTNode* tree )
+void sgsFT_Dump( SGS_CTX, sgs_FTNode* tree )
 {
-	ft_dump( tree, 0 );
+	ft_dump( C, tree, 0 );
 }
 
 

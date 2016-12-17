@@ -608,7 +608,7 @@ void sgsT_TokenString( SGS_CTX, sgs_MemBuf* out, sgs_TokenList tlist, sgs_TokenL
 }
 
 
-void sgsT_DumpToken( sgs_TokenList tok )
+void sgsT_DumpToken( SGS_CTX, sgs_TokenList tok )
 {
 	switch( *tok )
 	{
@@ -621,42 +621,42 @@ void sgsT_DumpToken( sgs_TokenList tok )
 	case SGS_ST_ARGSEP:
 	case SGS_ST_STSEP:
 	case SGS_ST_PICKSEP:
-		printf( "%c", *tok );
+		sgs_ErrWritef( C, "%c", *tok );
 		break;
 	case SGS_ST_IDENT:
-		fwrite( "id(", 1, 3, stdout );
-		fwrite( tok + 2, 1, tok[ 1 ], stdout );
-		fwrite( ")", 1, 1, stdout );
+		sgs_ErrWritef( C, "id(" );
+		sgs_WriteSafe( (sgs_ErrorOutputFunc) sgs_ErrWritef, C, (const char*) tok + 2, tok[ 1 ] );
+		sgs_ErrWritef( C, ")" );
 		break;
 	case SGS_ST_KEYWORD:
-		fwrite( "[", 1, 1, stdout );
-		fwrite( tok + 2, 1, tok[ 1 ], stdout );
-		fwrite( "]", 1, 1, stdout );
+		sgs_ErrWritef( C, "[" );
+		sgs_WriteSafe( (sgs_ErrorOutputFunc) sgs_ErrWritef, C, (const char*) tok + 2, tok[ 1 ] );
+		sgs_ErrWritef( C, "]" );
 		break;
 	case SGS_ST_NUMREAL:
 		{
 			sgs_Real val;
 			SGS_AS_REAL( val, tok + 1 );
-			printf( "real(%f)", val );
+			sgs_ErrWritef( C, "real(%f)", val );
 		}
 		break;
 	case SGS_ST_NUMINT:
 		{
 			sgs_Int val;
 			SGS_AS_INTEGER( val, tok + 1 );
-			printf( "int(%" PRId64 ")", val );
+			sgs_ErrWritef( C, "int(%" PRId64 ")", val );
 		}
 		break;
 	case SGS_ST_STRING:
 		{
 			int32_t len;
 			SGS_ST_READINT( len, tok + 1 );
-			fwrite( "str(", 1, 4, stdout );
-			sgs_print_safe( stdout, (const char*) tok + 5, (size_t) len );
-			fwrite( ")", 1, 1, stdout );
+			sgs_ErrWritef( C, "str(" );
+			sgs_WriteSafe( (sgs_ErrorOutputFunc) sgs_ErrWritef, C, (const char*) tok + 5, (size_t) len );
+			sgs_ErrWritef( C, ")" );
 		}
 		break;
-#define OPR( op ) printf( "%s", op );
+#define OPR( op ) sgs_ErrWritef( C, "%s", op );
 	case SGS_ST_OP_RWCMP: OPR( "<=>" ); break;
 	case SGS_ST_OP_SEQ: OPR( "===" ); break;
 	case SGS_ST_OP_SNEQ: OPR( "!==" ); break;
@@ -701,18 +701,18 @@ void sgsT_DumpToken( sgs_TokenList tok )
 	case SGS_ST_OP_DEC: OPR( "--" ); break;
 #undef OPR
 	default:
-		fwrite( "<invalid>", 1, 9, stdout );
+		sgs_ErrWritef( C, "<invalid>" );
 		break;
 	}
 }
-void sgsT_DumpList( sgs_TokenList tlist, sgs_TokenList tend )
+void sgsT_DumpList( SGS_CTX, sgs_TokenList tlist, sgs_TokenList tend )
 {
-	printf( "\n" );
+	sgs_ErrWritef( C, "\n" );
 	while( tlist != tend && *tlist != 0 )
 	{
-		printf( "   " );
-		sgsT_DumpToken( tlist );
+		sgs_ErrWritef( C, "   " );
+		sgsT_DumpToken( C, tlist );
 		tlist = sgsT_Next( tlist );
 	}
-	printf( "\n\n" );
+	sgs_ErrWritef( C, "\n\n" );
 }

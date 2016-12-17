@@ -13,19 +13,20 @@
 void readme()
 {
 	puts( "syntax:" );
-	puts( "\tsgsvm [files|options]" );
-	puts( "\tsgsvm [options] -p <file>[, <arguments>]" );
+	puts( "  sgsvm [files|options]" );
+	puts( "  sgsvm [options] -p <file>[, <arguments>]" );
 	puts( "" );
 	puts( "options:" );
-	puts( "\t-h, --help: print this text" );
-	puts( "\t-v, --version: print version info" );
-	puts( "\t-s, --separate: restart the engine between scripts" );
-	puts( "\t-d, --debug: enable interactive debugging on errors" );
-	puts( "\t-p, --program: translate the following arguments into a SGS program call" );
-	puts( "\t--stats: print VM stats after running the scripts" );
-	puts( "\t--profile: enable profiling by collecting call stack timings" );
-	puts( "\t--profile-ops: enable low-level VM instruction profiling" );
-	puts( "\t--profile-mem: enable memory usage profiling" );
+	puts( "  -h, --help: print this text" );
+	puts( "  -v, --version: print version info" );
+	puts( "  -s, --separate: restart the engine between scripts" );
+	puts( "  -d, --debug: enable interactive debugging on errors" );
+	puts( "  -dsp, --debug-start-paused: start from debugger before running any code" );
+	puts( "  -p, --program: translate the following arguments into a SGS program call" );
+	puts( "  --stats: print VM stats after running the scripts" );
+	puts( "  --profile: enable profiling by collecting call stack timings" );
+	puts( "  --profile-ops: enable low-level VM instruction profiling" );
+	puts( "  --profile-mem: enable memory usage profiling" );
 }
 
 int sep = 0, v = 0;
@@ -33,13 +34,19 @@ sgs_Context* C;
 sgs_DebugServer* D;
 sgs_Prof P;
 int idbg = 0;
+int idbg_break_on_start = 0;
 int prof = 0;
 int stats = 0;
 
 void sgs_init()
 {
 	C = sgs_CreateEngine();
-	if( idbg ) D = sgs_CreateDebugServer( C, 0 );
+	if( idbg )
+	{
+		D = sgs_CreateDebugServer( C, 0 );
+		if( idbg_break_on_start )
+			sgs_DebugServerCmd( D, NULL );
+	}
 	if( prof ) sgs_ProfInit( C, &P, prof );
 }
 void sgs_close()
@@ -88,6 +95,8 @@ int main( int argc, char** argv )
 			strcmp( argv[ i ], "-s" ) == 0 ){ sep = 1; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--debug" ) == 0 ||
 			strcmp( argv[ i ], "-d" ) == 0 ){ idbg = 1; argv[ i ] = 0; }
+		else if( strcmp( argv[ i ], "--debug-start-paused" ) == 0 ||
+			strcmp( argv[ i ], "-dsp" ) == 0 ){ idbg = 1; idbg_break_on_start = 1; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--profile" ) == 0 )
 			{ prof = 1; argv[ i ] = 0; }
 		else if( strcmp( argv[ i ], "--profile-ops" ) == 0 )
