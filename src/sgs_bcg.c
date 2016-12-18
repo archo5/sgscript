@@ -842,9 +842,49 @@ static rcpos_t add_const_s( SGS_CTX, sgs_CompFunc* func, uint32_t len, const cha
 	return (rcpos_t) ( vend - vbeg ); /* WP: const limit */
 }
 
-sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_CompFunc* nf,
+static uint16_t varinfo_add( sgs_MemBuf* out, SGS_CTX, sgs_MemBuf* vars, int base, uint32_t icount )
+{
+	char *start, *it, *itend;
+	uint16_t count = 0;
+	static const uint32_t zero32 = 0;
+	
+	start = vars->ptr;
+	it = vars->ptr;
+	itend = it + vars->size;
+	for( ; it != itend; ++it )
+	{
+		if( *it == '=' )
+		{
+			/* ignore _G since it's always available */
+			if( it - start != 2 || start[0] != '_' || start[1] != 'G' )
+			{
+				uint8_t len = it - start;
+				count++;
+				/* encoding:
+					local = 1-based positive
+					global = 0
+					closure = -1-based negative
+				*/
+				int16_t off = base ? base * count : 0;
+				
+				sgs_membuf_appbuf( out, C, &zero32, sizeof(zero32) );
+				sgs_membuf_appbuf( out, C, &icount, sizeof(icount) );
+				sgs_membuf_appbuf( out, C, &off, sizeof(off) );
+				sgs_membuf_appbuf( out, C, &len, sizeof(len) );
+				sgs_membuf_appbuf( out, C, start, len );
+			}
+			start = it + 1;
+		}
+	}
+	
+	return count;
+}
+
+sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_FuncCtx* nfctx,
 	const char* funcname, size_t fnsize, sgs_LineNum lnum )
 {
+	sgs_CompFunc* nf = &nfctx->cfunc;
+	
 	sgs_Variable strvar;
 	sgs_iFunc* F = sgs_Alloc_a( sgs_iFunc, nf->consts.size + nf->code.size );
 
@@ -888,15 +928,28 @@ sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_CompFunc* nf,
 	/* transfer ownership by making it look like constants don't exist here anymore */
 	nf->consts.size = 0;
 	
+	/* produce variable info */
+	{
+		uint16_t varcount = 0;
+		uint32_t icount = sgs_func_instr_count( F );
+		sgs_MemBuf varinfo = sgs_membuf_create();
+		sgs_membuf_appbuf( &varinfo, C, &varcount, sizeof(varcount) );
+		varcount += varinfo_add( &varinfo, C, &nfctx->vars, 1, icount );
+		varcount += varinfo_add( &varinfo, C, &nfctx->gvars, 0, icount );
+		varcount += varinfo_add( &varinfo, C, &nfctx->clsr, -1, icount );
+		memcpy( varinfo.ptr, &varcount, sizeof(varcount) );
+		F->dbg_varinfo = varinfo.ptr;
+	}
+	
 	return F;
 }
 
-static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_CompFunc* nf,
+static rcpos_t add_const_f( SGS_CTX, sgs_CompFunc* func, sgs_FuncCtx* nfctx,
 	const char* funcname, size_t fnsize, sgs_LineNum lnum )
 {
 	sgs_Variable nvar;
 	rcpos_t pos;
-	sgs_iFunc* F = sgsBC_ConvertFunc( C, nf, funcname, fnsize, lnum );
+	sgs_iFunc* F = sgsBC_ConvertFunc( C, nfctx, funcname, fnsize, lnum );
 	
 	/* WP: const limit */
 	pos = (rcpos_t) ( func->consts.size / sizeof( nvar ) );
@@ -2268,7 +2321,7 @@ static SGSBOOL compile_func( SGS_FNTCMP_ARGS, rcpos_t* out )
 		sgs_MemBuf ffn = sgs_membuf_create();
 		if( n_name )
 			rpts( &ffn, C, n_name );
-		*out = BC_CONSTENC( add_const_f( C, func, nf, ffn.ptr, ffn.size, sgsT_LineNum( node->token ) ) );
+		*out = BC_CONSTENC( add_const_f( C, func, fctx, ffn.ptr, ffn.size, sgsT_LineNum( node->token ) ) );
 		sgs_membuf_destroy( &ffn, C );
 		
 		if( fctx->outclsr > 0 )
@@ -3184,7 +3237,7 @@ sgs_iFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree )
 	
 	C->fctx = NULL;
 	{
-		sgs_iFunc* outfn = sgsBC_ConvertFunc( C, &fctx->cfunc, "<main>", 6, 0 );
+		sgs_iFunc* outfn = sgsBC_ConvertFunc( C, fctx, "<main>", 6, 0 );
 		fctx_destroy( C, fctx );
 		return outfn;
 	}

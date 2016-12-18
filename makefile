@@ -18,7 +18,7 @@ else
 	OUTFILE=$(OUTFILE_DYNAMIC)
 	OUTFLAGS=$(OUTFLAGS_DYNAMIC)
 endif
-CFLAGS=-Wall -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align \
+CFLAGS=-Wall -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align \
 	$(call fnIF_RELEASE,-O2,-D_DEBUG -g) $(call fnIF_COMPILER,gcc,-static-libgcc,) \
 	$(call fnIF_ARCH,x86,-m32,$(call fnIF_ARCH,x64,-m64,)) -Isrc \
 	$(call fnIF_OS,windows,,-fPIC -D_FILE_OFFSET_BITS=64) \

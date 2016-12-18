@@ -168,6 +168,7 @@ static void var_destroy_func( SGS_CTX, sgs_iFunc* F )
 		var++;
 	}
 	sgs_Dealloc( F->lineinfo );
+	if( F->dbg_varinfo ) sgs_Dealloc( F->dbg_varinfo );
 	if( --F->sfuncname->refcount <= 0 ) var_destroy_string( C, F->sfuncname );
 	if( --F->sfilename->refcount <= 0 ) var_destroy_string( C, F->sfilename );
 	sgs_Dealloc( F );

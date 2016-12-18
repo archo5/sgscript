@@ -396,6 +396,8 @@ struct sgs_iFunc
 	sgs_LineNum* lineinfo;
 	sgs_iStr* sfuncname;
 	sgs_iStr* sfilename;
+	/* uint16 count, [uint32 from, uint32 to, int16 pos, uint8 length, char[] name] x count */
+	char* dbg_varinfo;
 };
 
 SGS_CASSERT( sizeof(sgs_Variable) % 4 == 0, variable_object_chaining_issue );
