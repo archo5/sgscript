@@ -314,44 +314,168 @@ static void dbgsrv_printCurOp( sgs_DebugServer* D, dbgStateInfo* dsi )
 		sgs_ErrWritef( D->C, "Not running code.\n" );
 }
 
-static void dbgsrv_dumpRegisters( sgs_DebugServer* D, SGS_CTX, sgs_StackFrame* F, int ext )
+static void dbgsrv_stackRange( SGS_CTX, sgs_StackFrame* F, sgs_SizeVal* outfirst, sgs_SizeVal* outend )
 {
-	sgs_SizeVal i, first, end;
-	if( F->next )
+	if( F && F->next )
 	{
-		first = F->next->stkoff / (sgs_SizeVal) sizeof( sgs_Variable );
-		end = F->next->next
+		*outfirst = F->next->stkoff / (sgs_SizeVal) sizeof( sgs_Variable );
+		*outend = F->next->next
 			? F->next->next->stkoff / (sgs_SizeVal) sizeof( sgs_Variable )
 			: (sgs_SizeVal)( C->stack_top - C->stack_base );
 	}
 	else
 	{
-		first = (sgs_SizeVal)( C->stack_off - C->stack_base );
-		end = (sgs_SizeVal)( C->stack_top - C->stack_base );
+		*outfirst = (sgs_SizeVal)( C->stack_off - C->stack_base );
+		*outend = (sgs_SizeVal)( C->stack_top - C->stack_base );
 	}
-	sgs_ErrWritef( D->C, "Registers (%s function) [%d]:\n",
-		F->iptr ? "SGScript" : "C", (int) ( end - first ) );
-	if( first >= end )
+}
+
+static void dbgsrv_dumpVar( sgs_DebugServer* D, sgs_Variable* var, int ext )
+{
+	if( ext )
 	{
-		sgs_ErrWritef( D->C, "-- none --\n" );
 	}
+	else
+	{
+		sgsVM_VarDump( D->C, var );
+		sgs_ErrWritef( D->C, "\n" );
+	}
+}
+
+static void dbgsrv_dumpRegisters( sgs_DebugServer* D, SGS_CTX, sgs_StackFrame* F, int ext )
+{
+	sgs_SizeVal i, first, end;
+	dbgsrv_stackRange( C, F, &first, &end );
+	sgs_ErrWritef( D->C, "Registers (%s function) [%d]:%s",
+		F ? ( F->iptr ? "SGScript" : "C" ) : "not in a", (int) ( end - first ),
+		first >= end ? " none\n" : "\n" );
 	for( i = first; i < end; ++i )
 	{
-		sgs_ErrWritef( D->C, "#%03d: ", ( i - first ) );
-		if( ext )
+		sgs_ErrWritef( D->C, " #%03d: ", ( i - first ) );
+		dbgsrv_dumpVar( D, &C->stack_base[ i ], ext );
+	}
+	if( F && F->clsrref )
+	{
+		uint8_t* cl = (uint8_t*) F->clsrref->data;
+		uint8_t ci, clsrcount = (uint8_t) *SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable), sgs_clsrcount_t );
+		sgs_ErrWritef( D->C, "Closures:%s", clsrcount ? "\n" : " none\n" );
+		for( ci = 0; ci < clsrcount; ++ci )
 		{
+			sgs_ErrWritef( D->C, " #%03d: ", ci );
+			dbgsrv_dumpVar( D, &F->clsrlist[ ci ]->var, ext );
 		}
-		else
+	}
+	else sgs_ErrWritef( D->C, "Closures: none\n" );
+}
+
+static void dbgsrv_dumpVariables( sgs_DebugServer* D, SGS_CTX, sgs_StackFrame* F, int ext, int all )
+{
+	if( F == NULL )
+	{
+		sgs_ErrWritef( D->C, "Not in a function (no variables), dumping registers instead...\n" );
+		dbgsrv_dumpRegisters( D, C, F, ext );
+	}
+	else if( F->iptr == NULL )
+	{
+		sgs_ErrWritef( D->C, "This is a C function (no variables), dumping registers instead...\n" );
+		dbgsrv_dumpRegisters( D, C, F, ext );
+	}
+	else if( F->func->data.F->dbg_varinfo == NULL )
+	{
+		sgs_ErrWritef( D->C, "Function has no debug info (no variables), dumping registers instead...\n" );
+		dbgsrv_dumpRegisters( D, C, F, ext );
+	}
+	else
+	{
+		char* varinfo;
+		uint8_t* cl;
+		uint8_t clsrcount;
+		uint16_t dvid, dbgvarcount;
+		uint32_t curinstrid;
+		sgs_SizeVal first, end;
+		dbgsrv_stackRange( C, F, &first, &end );
+		if( F->clsrref )
 		{
-			sgsVM_VarDump( D->C, &C->stack_base[ i ] );
-			sgs_ErrWritef( D->C, "\n" );
+			cl = (uint8_t*) F->clsrref->data;
+			clsrcount = (uint8_t) *SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable), sgs_clsrcount_t );
+		}
+		curinstrid = F->iptr - sgs_func_bytecode( F->func->data.F );
+		
+		varinfo = F->func->data.F->dbg_varinfo;
+		memcpy( &dbgvarcount, varinfo, sizeof(dbgvarcount) );
+		varinfo += sizeof(dbgvarcount);
+		for( dvid = 0; dvid < dbgvarcount; ++dvid )
+		{
+			uint32_t from, to;
+			int16_t pos;
+			uint8_t len;
+			
+			memcpy( &from, varinfo, sizeof(from) );
+			varinfo += sizeof(from);
+			memcpy( &to, varinfo, sizeof(to) );
+			varinfo += sizeof(to);
+			memcpy( &pos, varinfo, sizeof(pos) );
+			varinfo += sizeof(pos);
+			memcpy( &len, varinfo, sizeof(len) );
+			varinfo += sizeof(len);
+			if( all || ( from <= curinstrid && curinstrid < to ) )
+			{
+				if( !all )
+				{
+					sgs_ErrWritef( D->C, from <= curinstrid && curinstrid < to ? ">" : " " );
+				}
+				
+				if( pos == 0 ) sgs_ErrWritef( D->C, "[G] " );
+				else if( pos < 0 ) sgs_ErrWritef( D->C, "[C%d] ", -1 - pos );
+				else sgs_ErrWritef( D->C, "[L%d] ", pos - 1 );
+				
+				sgs_ErrWrite( D->C, varinfo, len );
+				sgs_ErrWritef( D->C, ": " );
+				
+				if( pos == 0 )
+				{
+					sgs_Variable idx, val;
+					sgs_InitStringBuf( C, &idx, varinfo, len );
+					if( sgs_GetGlobal( C, idx, &val ) )
+					{
+						dbgsrv_dumpVar( D, &val, ext );
+					}
+					sgs_Release( C, &idx );
+					sgs_Release( C, &val );
+				}
+				else if( pos < 0 )
+				{
+					pos = -1 - pos;
+					if( pos >= clsrcount )
+					{
+						sgs_ErrWritef( D->C, "<ERROR:out of range>\n" );
+					}
+					else
+					{
+						dbgsrv_dumpVar( D, &F->clsrlist[ pos ]->var, ext );
+					}
+				}
+				else
+				{
+					pos -= 1;
+					if( pos >= end - first )
+					{
+						sgs_ErrWritef( D->C, "<ERROR:out of range>\n" );
+					}
+					else
+					{
+						dbgsrv_dumpVar( D, &C->stack_base[ first + pos ], ext );
+					}
+				}
+			}
+			varinfo += len;
 		}
 	}
 }
 
 static void dbgsrv_dumpBytecode( sgs_DebugServer* D, sgs_StackFrame* F )
 {
-	if( F->iptr )
+	if( F && F->iptr )
 	{
 		sgsVM_DumpFunction( D->C, F->func->data.F, 0 );
 	}
@@ -467,6 +591,7 @@ static void dbgsrv_execCmd( sgs_DebugServer* D, int cmd, const char* params, dbg
 			static const char* subcmds[] = {
 				"stack", "globals", "objects", "frames",
 				"breakpoints", "registers", "bytecode",
+				"variables", "cvars",
 			};
 #define DSC_DUMP_SUBCMD_COUNT (sizeof(subcmds) / sizeof(subcmds[0]))
 			const char* ppos[ DSC_DUMP_SUBCMD_COUNT ];
@@ -498,6 +623,12 @@ static void dbgsrv_execCmd( sgs_DebugServer* D, int cmd, const char* params, dbg
 				break;
 			case 6:
 				dbgsrv_dumpBytecode( D, sgs_GetFramePtr( dsi->C, NULL, SGS_TRUE ) );
+				break;
+			case 7:
+				dbgsrv_dumpVariables( D, dsi->C, sgs_GetFramePtr( dsi->C, NULL, SGS_TRUE ), 0, 1 );
+				break;
+			case 8:
+				dbgsrv_dumpVariables( D, dsi->C, sgs_GetFramePtr( dsi->C, NULL, SGS_TRUE ), 0, 0 );
 				break;
 			}
 		}
@@ -578,7 +709,7 @@ static void dbgsrv_interact( sgs_DebugServer* D, dbgStateInfo* dsi )
 	SGS_CTX = dsi->C;
 	if( D->firstuse )
 	{
-		sgs_ErrWritef( C, "----- Interactive SGScript Debug Inspector -----\n" );
+		sgs_ErrWritef( D->C, "----- Interactive SGScript Debug Inspector -----\n" );
 		D->firstuse = 0;
 	}
 	D->stkoff = C->stack_off - C->stack_base;

@@ -2843,7 +2843,12 @@ size_t sgsVM_VarSize( const sgs_Variable* var )
 void sgsVM_VarDump( SGS_CTX, const sgs_Variable* var )
 {
 	/* WP: variable size limit */
-	sgs_ErrWritef( C, "%s (size:%d)", TYPENAME( var->type ), (uint32_t) sgsVM_VarSize( var ) );
+	if( var->type == SGS_VT_STRING ||
+		var->type == SGS_VT_FUNC || var->type == SGS_VT_CFUNC ||
+		var->type == SGS_VT_OBJECT || var->type == SGS_VT_THREAD )
+		sgs_ErrWritef( C, "%s (size:%d)", TYPENAME( var->type ), (uint32_t) sgsVM_VarSize( var ) );
+	else
+		sgs_ErrWritef( C, "%s", TYPENAME( var->type ) );
 	switch( var->type )
 	{
 	case SGS_VT_NULL: break;

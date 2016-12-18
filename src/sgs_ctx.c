@@ -1152,7 +1152,12 @@ static void dumpvar( SGS_CTX, sgs_Variable* var )
 		return;
 	}
 	/* WP: var->type base type info uses bits 1-8 */
-	sgs_Writef( C, "%s (size:%d)", g_varnames[ var->type ], sgsVM_VarSize( var ) );
+	if( var->type == SGS_VT_STRING ||
+		var->type == SGS_VT_FUNC || var->type == SGS_VT_CFUNC ||
+		var->type == SGS_VT_OBJECT || var->type == SGS_VT_THREAD )
+		sgs_Writef( C, "%s (size:%d)", g_varnames[ var->type ], sgsVM_VarSize( var ) );
+	else
+		sgs_Writef( C, "%s", g_varnames[ var->type ] );
 	switch( var->type )
 	{
 	case SGS_VT_NULL: break;
