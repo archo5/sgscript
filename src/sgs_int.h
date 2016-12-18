@@ -396,7 +396,7 @@ struct sgs_iFunc
 	sgs_LineNum* lineinfo;
 	sgs_iStr* sfuncname;
 	sgs_iStr* sfilename;
-	/* uint16 count, [uint32 from, uint32 to, int16 pos, uint8 length, char[] name] x count */
+	/* uint32 size, [uint32 from, uint32 to, int16 pos, uint8 length, char[] name] x count */
 	char* dbg_varinfo;
 };
 

@@ -387,11 +387,10 @@ static void dbgsrv_dumpVariables( sgs_DebugServer* D, SGS_CTX, sgs_StackFrame* F
 	}
 	else
 	{
-		char* varinfo;
+		char *varinfo, *varinfoend;
 		uint8_t* cl;
 		uint8_t clsrcount;
-		uint16_t dvid, dbgvarcount;
-		uint32_t curinstrid;
+		uint32_t curinstrid, dbgvarsize;
 		sgs_SizeVal first, end;
 		dbgsrv_stackRange( C, F, &first, &end );
 		if( F->clsrref )
@@ -402,9 +401,10 @@ static void dbgsrv_dumpVariables( sgs_DebugServer* D, SGS_CTX, sgs_StackFrame* F
 		curinstrid = F->iptr - sgs_func_bytecode( F->func->data.F );
 		
 		varinfo = F->func->data.F->dbg_varinfo;
-		memcpy( &dbgvarcount, varinfo, sizeof(dbgvarcount) );
-		varinfo += sizeof(dbgvarcount);
-		for( dvid = 0; dvid < dbgvarcount; ++dvid )
+		memcpy( &dbgvarsize, varinfo, sizeof(dbgvarsize) );
+		varinfoend = varinfo + dbgvarsize;
+		varinfo += sizeof(dbgvarsize);
+		while( varinfo < varinfoend )
 		{
 			uint32_t from, to;
 			int16_t pos;

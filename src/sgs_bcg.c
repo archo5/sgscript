@@ -842,10 +842,10 @@ static rcpos_t add_const_s( SGS_CTX, sgs_CompFunc* func, uint32_t len, const cha
 	return (rcpos_t) ( vend - vbeg ); /* WP: const limit */
 }
 
-static uint16_t varinfo_add( sgs_MemBuf* out, SGS_CTX, sgs_MemBuf* vars, int base, uint32_t icount )
+static void varinfo_add( sgs_MemBuf* out, SGS_CTX, sgs_MemBuf* vars, int base, uint32_t icount )
 {
 	char *start, *it, *itend;
-	uint16_t count = 0;
+	int i = 0;
 	static const uint32_t zero32 = 0;
 	
 	start = vars->ptr;
@@ -859,13 +859,13 @@ static uint16_t varinfo_add( sgs_MemBuf* out, SGS_CTX, sgs_MemBuf* vars, int bas
 			if( it - start != 2 || start[0] != '_' || start[1] != 'G' )
 			{
 				uint8_t len = it - start;
-				count++;
+				i++;
 				/* encoding:
 					local = 1-based positive
 					global = 0
 					closure = -1-based negative
 				*/
-				int16_t off = base ? base * count : 0;
+				int16_t off = base ? base * i : 0;
 				
 				sgs_membuf_appbuf( out, C, &zero32, sizeof(zero32) );
 				sgs_membuf_appbuf( out, C, &icount, sizeof(icount) );
@@ -876,8 +876,6 @@ static uint16_t varinfo_add( sgs_MemBuf* out, SGS_CTX, sgs_MemBuf* vars, int bas
 			start = it + 1;
 		}
 	}
-	
-	return count;
 }
 
 sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_FuncCtx* nfctx,
@@ -930,14 +928,14 @@ sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_FuncCtx* nfctx,
 	
 	/* produce variable info */
 	{
-		uint16_t varcount = 0;
-		uint32_t icount = sgs_func_instr_count( F );
+		uint32_t varinfosize = 0, icount = sgs_func_instr_count( F );
 		sgs_MemBuf varinfo = sgs_membuf_create();
-		sgs_membuf_appbuf( &varinfo, C, &varcount, sizeof(varcount) );
-		varcount += varinfo_add( &varinfo, C, &nfctx->vars, 1, icount );
-		varcount += varinfo_add( &varinfo, C, &nfctx->gvars, 0, icount );
-		varcount += varinfo_add( &varinfo, C, &nfctx->clsr, -1, icount );
-		memcpy( varinfo.ptr, &varcount, sizeof(varcount) );
+		sgs_membuf_appbuf( &varinfo, C, &varinfosize, sizeof(varinfosize) );
+		varinfo_add( &varinfo, C, &nfctx->vars, 1, icount );
+		varinfo_add( &varinfo, C, &nfctx->gvars, 0, icount );
+		varinfo_add( &varinfo, C, &nfctx->clsr, -1, icount );
+		varinfosize = varinfo.size;
+		memcpy( varinfo.ptr, &varinfosize, sizeof(varinfosize) );
 		F->dbg_varinfo = varinfo.ptr;
 	}
 	

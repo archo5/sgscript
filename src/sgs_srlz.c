@@ -2323,6 +2323,10 @@ void sgs_UnserializeSGSONExt( SGS_CTX, const char* str, size_t size )
 	(((x)&0xff)<<24) | (((x)&0xff00)<<8) |\
 	(((x)>>8)&0xff00) | (((x)>>24)&0xff) )
 
+#define bswap( a, b ) { uint8_t tmp_ = (a); (a) = (b); (b) = tmp_; }
+#define bflip16( x ) bswap( (x)[0], (x)[1] );
+#define bflip32( x ) bswap( (x)[0], (x)[3] ); bswap( (x)[1], (x)[2] );
+
 typedef struct decoder_s
 {
 	SGS_CTX;
@@ -2526,7 +2530,7 @@ static const char* bc_read_varlist( decoder_t* D, sgs_Variable* vlist, int cnt )
 */
 static int bc_write_sgsfunc( sgs_iFunc* F, SGS_CTX, sgs_MemBuf* outbuf )
 {
-	uint32_t size = F->sfuncname->size;
+	uint32_t varinfosize = 0, size = F->sfuncname->size;
 	uint16_t cc, ic;
 	uint8_t gntc[5] = { F->gotthis, F->numargs, F->numtmp, F->numclsr, F->inclsr };
 	
@@ -2546,6 +2550,16 @@ static int bc_write_sgsfunc( sgs_iFunc* F, SGS_CTX, sgs_MemBuf* outbuf )
 		return 0;
 
 	sgs_membuf_appbuf( outbuf, C, sgs_func_bytecode( F ), sizeof( sgs_instr_t ) * ic );
+	
+	if( F->dbg_varinfo )
+	{
+		memcpy( &varinfosize, F->dbg_varinfo, sizeof(varinfosize) );
+		sgs_membuf_appbuf( outbuf, C, F->dbg_varinfo, varinfosize );
+	}
+	else
+	{
+		sgs_membuf_appbuf( outbuf, C, &varinfosize, sizeof(varinfosize) );
+	}
 	return 1;
 }
 
@@ -2553,7 +2567,7 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 {
 	sgs_Variable strvar;
 	sgs_iFunc* F = NULL;
-	uint32_t coff, ioff, size, fnsize;
+	uint32_t coff, ioff, size, fnsize, varinfosize;
 	uint16_t cc, ic;
 	const char* ret = "data error (expected fn. data)";
 	SGS_CTX = D->C;
@@ -2595,6 +2609,7 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	F->lineinfo = sgs_Alloc_n( sgs_LineNum, ic );
 	F->sfuncname = NULL;
 	F->sfilename = NULL;
+	F->dbg_varinfo = NULL;
 	D->buf += 11;
 	
 	ret = "data error (expected fn. line numbers)";
@@ -2636,6 +2651,35 @@ static const char* bc_read_sgsfunc( decoder_t* D, sgs_Variable* var )
 	if( D->convend )
 		esi32_array( sgs_func_bytecode( F ), coff / sizeof( sgs_instr_t ) );
 	D->buf += coff;
+	
+	ret = "data error (expected fn. debug variable info)";
+	if( SGSNOMINDEC( 4 ) )
+		goto fail;
+	SGS_AS_UINT32( varinfosize, D->buf );
+	if( D->convend )
+		varinfosize = esi32( varinfosize );
+	if( SGSNOMINDEC( varinfosize ) )
+		goto fail;
+	if( varinfosize != 0 )
+	{
+		F->dbg_varinfo = sgs_Alloc_a( char, varinfosize );
+		memcpy( F->dbg_varinfo, D->buf, varinfosize );
+		D->buf += varinfosize;
+		if( D->convend )
+		{
+			char *v, *vend;
+			v = F->dbg_varinfo + 4;
+			vend = F->dbg_varinfo + varinfosize;
+			while( v < vend )
+			{
+				bflip32( v ); v += 4;
+				bflip32( v ); v += 4;
+				bflip16( v ); v += 2;
+				v += v[0] + 1;
+			}
+		}
+	}
+	else D->buf += 4;
 
 	var->data.F = F;
 	var->type = SGS_VT_FUNC;
