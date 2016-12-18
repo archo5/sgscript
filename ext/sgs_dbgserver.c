@@ -118,7 +118,7 @@ DBGSRV_COMMANDS( CID_LIST_ITEM )
 };
 
 #define DBGSRV_ITERATE_BREAKPOINTS( D, bp ) \
-	{ dbgBreakpointInfo* bp = (dbgBreakpointInfo*) D->breakpoints.ptr; \
+	{ dbgBreakpointInfo* bp = SGS_ASSUME_ALIGNED( D->breakpoints.ptr, dbgBreakpointInfo ); \
 		dbgBreakpointInfo* bpend = bp + D->breakpoints.size / sizeof(dbgBreakpointInfo); \
 		for( ; bp != bpend; ++bp )
 #define DBGSRV_ITERATE_END }
@@ -322,12 +322,12 @@ static void dbgsrv_dumpRegisters( sgs_DebugServer* D, SGS_CTX, sgs_StackFrame* F
 		first = F->next->stkoff / (sgs_SizeVal) sizeof( sgs_Variable );
 		end = F->next->next
 			? F->next->next->stkoff / (sgs_SizeVal) sizeof( sgs_Variable )
-			: C->stack_top - C->stack_base;
+			: (sgs_SizeVal)( C->stack_top - C->stack_base );
 	}
 	else
 	{
-		first = C->stack_off - C->stack_base;
-		end = C->stack_top - C->stack_base;
+		first = (sgs_SizeVal)( C->stack_off - C->stack_base );
+		end = (sgs_SizeVal)( C->stack_top - C->stack_base );
 	}
 	sgs_ErrWritef( D->C, "Registers (%s function) [%d]:\n",
 		F->iptr ? "SGScript" : "C", (int) ( end - first ) );
@@ -543,7 +543,7 @@ static void dbgsrv_execInputStr( sgs_DebugServer* D, dbgStateInfo* dsi )
 			match = dbgsrv_findCmd( D, &cmd, dbgsrv_command_names,
 				parse_positions, DBGSRV_COMMAND_COUNT, NULL );
 			
-			if( match != -1 );
+			if( match != -1 )
 			{
 				dbgsrv_execCmd( D, match, cmd, dsi );
 			}

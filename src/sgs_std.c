@@ -2300,7 +2300,7 @@ static int sgsstd_va_get_args( SGS_CTX )
 	/* WP: argument count limit */
 	
 	/* accepted arguments */
-	inexp = SGS_SF_ARGC_EXPECTED( sf );
+	inexp = (uint8_t) SGS_SF_ARGC_EXPECTED( sf );
 	pcnt = SGS_MIN( sf->argcount, inexp );
 	stk_mpush( C, &C->stack_base[ sf->argbeg + SGS_SF_ARG_COUNT( sf ) - pcnt ], pcnt );
 	/* extra arguments */
@@ -2335,7 +2335,7 @@ static int sgsstd_va_get_arg( SGS_CTX )
 	i = (uint8_t) argnum;
 	
 	/* accepted arguments */
-	inexp = SGS_SF_ARGC_EXPECTED( sf );
+	inexp = (uint8_t) SGS_SF_ARGC_EXPECTED( sf );
 	pcnt = SGS_MIN( sf->argcount, inexp );
 	if( i < pcnt )
 	{

@@ -847,7 +847,13 @@ sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_CompFunc* nf,
 {
 	sgs_Variable strvar;
 	sgs_iFunc* F = sgs_Alloc_a( sgs_iFunc, nf->consts.size + nf->code.size );
-	
+
+#if 0	
+	sgs_SetErrOutputFunc( C, sgs_StdOutputFunc, stderr );
+	sgsBC_DumpOpcode( C, (sgs_instr_t*) nf->code.ptr, nf->code.size / sizeof(sgs_instr_t),
+		(sgs_instr_t*) nf->code.ptr, (sgs_LineNum*) nf->lnbuf.ptr );
+	printf("%d != %d\n", nf->code.size / sizeof(sgs_instr_t), nf->lnbuf.size / sizeof(sgs_LineNum) );
+#endif
 	sgs_BreakIf( nf->code.size / sizeof(sgs_instr_t) != nf->lnbuf.size / sizeof(sgs_LineNum) );
 
 	F->refcount = 1;
@@ -1723,6 +1729,7 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 		{
 			/* otherwise, remove the already written IN ERRSUP_INC */
 			func->code.size -= 4;
+			func->lnbuf.size -= 2;
 		}
 		return 1;
 	}
