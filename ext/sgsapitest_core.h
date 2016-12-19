@@ -136,7 +136,7 @@ sgs_Context* get_context_( int redir_out )
 	return C;
 }
 sgs_Context* get_context(){ return get_context_( REDIR_FILE ); }
-void destroy_context( SGS_CTX )
+void pre_destroy_context( SGS_CTX )
 {
 	if( C->shared->output_fn == outfn_buffer )
 	{
@@ -144,13 +144,21 @@ void destroy_context( SGS_CTX )
 	}
 	sgs_membuf_destroy( &errbuf, C );
 	currctx = NULL;
-	sgs_DestroyEngine( C );
+	
+	sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, stdout );
+	sgs_SetErrOutputFunc( C, SGSOUTPUTFN_DEFAULT, stderr );
+	
 	if( outfp )
 	{
 		fclose( outfp );
 		outfp = NULL;
 	}
 	fclose( errfp );
+}
+void destroy_context( SGS_CTX )
+{
+	pre_destroy_context( C );
+	sgs_DestroyEngine( C );
 }
 
 void atf_clear_output()

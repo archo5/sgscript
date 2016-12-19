@@ -651,17 +651,7 @@ static int sgsstd_array_getprop( SGS_CTX, void* data )
 	SGSARR_HDR;
 	if( sgs_ParseString( C, 0, &name, NULL ) )
 	{
-		if( 0 == strcmp( name, "size" ) )
-		{
-			sgs_PushInt( C, hdr->size );
-			return SGS_SUCCESS;
-		}
-		else if( 0 == strcmp( name, "capacity" ) )
-		{
-			sgs_PushInt( C, hdr->mem );
-			return SGS_SUCCESS;
-		}
-		else if( 0 == strcmp( name, "first" ) )
+		if( 0 == strcmp( name, "first" ) )
 		{
 			if( hdr->size )
 			{
@@ -918,13 +908,20 @@ static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* obj )
 	return 0;
 }
 
+static sgs_ObjProp sgsstd_array_props[] =
+{
+	SGS_OBJPROP_OFFSET( "size", offsetof( sgsstd_array_header_t, size ), SGS_OBJPROPTYPE_I32, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_OFFSET( "capacity", offsetof( sgsstd_array_header_t, mem ), SGS_OBJPROPTYPE_I32, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_END(),
+};
 SGS_APIFUNC sgs_ObjInterface sgsstd_array_iface[1] =
 {{
 	"array",
 	sgsstd_array_destruct, sgsstd_array_gcmark,
 	sgsstd_array_getindex, sgsstd_array_setindex,
 	sgsstd_array_convert, sgsstd_array_serialize, sgsstd_array_dump, NULL,
-	NULL, NULL
+	NULL, NULL,
+	sgsstd_array_props
 }};
 
 static int sgsstd_array( SGS_CTX )
@@ -1453,20 +1450,6 @@ static int sgsstd_closure_destruct( SGS_CTX, sgs_VarObj* obj )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_closure_getindex( SGS_ARGS_GETINDEXFUNC )
-{
-	char* str;
-	if( sgs_ParseString( C, 0, &str, NULL ) )
-	{
-		if( !strcmp( str, "apply" ) )
-		{
-			sgs_PushCFunc( C, sgs_specfn_apply );
-			return SGS_SUCCESS;
-		}
-	}
-	return SGS_ENOTFND;
-}
-
 static int sgsstd_closure_call( SGS_CTX, sgs_VarObj* obj )
 {
 	sgs_BreakIf( "implemented elsewhere" );
@@ -1516,13 +1499,19 @@ static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 	return SGS_SUCCESS;
 }
 
+static sgs_ObjProp sgsstd_closure_props[] =
+{
+	SGS_OBJPROP_CFUNC( "apply", sgs_specfn_apply ),
+	SGS_OBJPROP_END(),
+};
 SGS_APIFUNC sgs_ObjInterface sgsstd_closure_iface[1] =
 {{
 	"closure",
 	sgsstd_closure_destruct, sgsstd_closure_gcmark,
-	sgsstd_closure_getindex, NULL,
+	NULL, NULL,
 	NULL, NULL, sgsstd_closure_dump, NULL,
-	sgsstd_closure_call, NULL
+	sgsstd_closure_call, NULL,
+	sgsstd_closure_props
 }};
 
 sgs_Closure** sgsSTD_MakeClosure( SGS_CTX, sgs_Variable* out, sgs_Variable* func, sgs_clsrcount_t clc )
@@ -2476,13 +2465,6 @@ fail:
 
 
 
-static int sgsstd_event_getindex( SGS_ARGS_GETINDEXFUNC )
-{
-	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "signaled" ) return sgs_PushBool( C, obj->data != NULL );
-	SGS_END_INDEXFUNC;
-}
-
 static int sgsstd_event_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	SGS_BEGIN_INDEXFUNC
@@ -2521,13 +2503,19 @@ static int sgsstd_event_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 	return sgs_PushString( C, bfr );
 }
 
+static sgs_ObjProp sgsstd_event_props[] =
+{
+	SGS_OBJPROP_OFFSET( "signaled", 0, SGS_OBJPROPTYPE_OBJBOOL, 0 ),
+	SGS_OBJPROP_END(),
+};
 SGS_APIFUNC sgs_ObjInterface sgsstd_event_iface[1] =
 {{
 	"event",
 	NULL, NULL,
-	sgsstd_event_getindex, sgsstd_event_setindex,
+	NULL, sgsstd_event_setindex,
 	sgsstd_event_convert, sgsstd_event_serialize, sgsstd_event_dump, NULL,
-	NULL, NULL
+	NULL, NULL,
+	sgsstd_event_props,
 }};
 
 SGSONE sgs_CreateEvent( SGS_CTX, sgs_Variable* out )

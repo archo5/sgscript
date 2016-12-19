@@ -966,6 +966,7 @@ DEFINE_TEST( fork_state )
 	atf_assert( sgs_Stat( CFP, SGS_STAT_STATECOUNT ) == 2 );
 	sgs_ReleaseState( CFP );
 	atf_assert( sgs_Stat( C, SGS_STAT_STATECOUNT ) == 1 );
+	pre_destroy_context( C );
 	sgs_ReleaseState( C );
 	
 	/* --- try running something on both --- */
@@ -981,6 +982,7 @@ DEFINE_TEST( fork_state )
 	atf_assert( sgs_ExecString( CFP, str ) == SGS_SUCCESS );
 	sgs_ReleaseState( CFF );
 	sgs_ReleaseState( CFP );
+	pre_destroy_context( C );
 	sgs_ReleaseState( C );
 }
 

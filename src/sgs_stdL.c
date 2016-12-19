@@ -1435,31 +1435,34 @@ static int sgsstd_fmtstream_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	SGSFS_HDR;
 	SGS_BEGIN_INDEXFUNC
-		/* functions */
-		SGS_CASE( "read" )             return sgs_PushCFunc( C, sgsstd_fmtstreamI_read );
-		SGS_CASE( "getchar" )          return sgs_PushCFunc( C, sgsstd_fmtstreamI_getchar );
-		SGS_CASE( "readcc" )           return sgs_PushCFunc( C, sgsstd_fmtstreamI_readcc );
-		SGS_CASE( "skipcc" )           return sgs_PushCFunc( C, sgsstd_fmtstreamI_skipcc );
-		SGS_CASE( "read_real" )        return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_real );
-		SGS_CASE( "read_int" )         return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_int );
-		SGS_CASE( "read_binary_int" )  return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_binary_int );
-		SGS_CASE( "read_octal_int" )   return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_octal_int );
-		SGS_CASE( "read_decimal_int" ) return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_decimal_int );
-		SGS_CASE( "read_hex_int" )     return sgs_PushCFunc( C, sgsstd_fmtstreamI_read_hex_int );
-		SGS_CASE( "check" )            return sgs_PushCFunc( C, sgsstd_fmtstreamI_check );
-		/* properties */
 		SGS_CASE( "at_end" )           return sgs_PushBool( C, hdr->state == FMTSTREAM_STATE_END );
 		SGS_CASE( "stream_offset" )    return sgs_PushInt( C, hdr->streamoff + hdr->bufpos );
 	SGS_END_INDEXFUNC
 }
 
+static sgs_ObjProp sgsstd_fmtstream_props[] =
+{
+	SGS_OBJPROP_CFUNC( "read", sgsstd_fmtstreamI_read ),
+	SGS_OBJPROP_CFUNC( "getchar", sgsstd_fmtstreamI_getchar ),
+	SGS_OBJPROP_CFUNC( "readcc", sgsstd_fmtstreamI_readcc ),
+	SGS_OBJPROP_CFUNC( "skipcc", sgsstd_fmtstreamI_skipcc ),
+	SGS_OBJPROP_CFUNC( "read_real", sgsstd_fmtstreamI_read_real ),
+	SGS_OBJPROP_CFUNC( "read_int", sgsstd_fmtstreamI_read_int ),
+	SGS_OBJPROP_CFUNC( "read_binary_int", sgsstd_fmtstreamI_read_binary_int ),
+	SGS_OBJPROP_CFUNC( "read_octal_int", sgsstd_fmtstreamI_read_octal_int ),
+	SGS_OBJPROP_CFUNC( "read_decimal_int", sgsstd_fmtstreamI_read_decimal_int ),
+	SGS_OBJPROP_CFUNC( "read_hex_int", sgsstd_fmtstreamI_read_hex_int ),
+	SGS_OBJPROP_CFUNC( "check", sgsstd_fmtstreamI_check ),
+	SGS_OBJPROP_END(),
+};
 static sgs_ObjInterface sgsstd_fmtstream_iface[1] =
 {{
 	"fmtstream",
 	sgsstd_fmtstream_destroy, NULL,
 	sgsstd_fmtstream_getindex, NULL,
 	NULL, NULL, NULL, NULL,
-	NULL, NULL
+	NULL, NULL,
+	sgsstd_fmtstream_props,
 }};
 
 static int sgsstd_fmt_parser( SGS_CTX )
@@ -2189,14 +2192,6 @@ static int sgsstd_file_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "size" )    return sgsstd_fileP_size( C, IFVAR );
 		SGS_CASE( "error" )   return sgsstd_fileP_error( C, IFVAR );
 		SGS_CASE( "eof" )     return sgsstd_fileP_eof( C, IFVAR );
-		
-		SGS_CASE( "open" )    return sgs_PushCFunc( C, sgsstd_fileI_open );
-		SGS_CASE( "close" )   return sgs_PushCFunc( C, sgsstd_fileI_close );
-		SGS_CASE( "read" )    return sgs_PushCFunc( C, sgsstd_fileI_read );
-		SGS_CASE( "write" )   return sgs_PushCFunc( C, sgsstd_fileI_write );
-		SGS_CASE( "seek" )    return sgs_PushCFunc( C, sgsstd_fileI_seek );
-		SGS_CASE( "flush" )   return sgs_PushCFunc( C, sgsstd_fileI_flush );
-		SGS_CASE( "setbuf" )  return sgs_PushCFunc( C, sgsstd_fileI_setbuf );
 	SGS_END_INDEXFUNC
 }
 
@@ -2220,13 +2215,25 @@ static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* obj, int type )
 }
 
 
+static sgs_ObjProp sgsstd_file_props[] =
+{
+	SGS_OBJPROP_CFUNC( "open", sgsstd_fileI_open ),
+	SGS_OBJPROP_CFUNC( "close", sgsstd_fileI_close ),
+	SGS_OBJPROP_CFUNC( "read", sgsstd_fileI_read ),
+	SGS_OBJPROP_CFUNC( "write", sgsstd_fileI_write ),
+	SGS_OBJPROP_CFUNC( "seek", sgsstd_fileI_seek ),
+	SGS_OBJPROP_CFUNC( "flush", sgsstd_fileI_flush ),
+	SGS_OBJPROP_CFUNC( "setbuf", sgsstd_fileI_setbuf ),
+	SGS_OBJPROP_END(),
+};
 static sgs_ObjInterface sgsstd_file_iface[1] =
 {{
 	"file",
 	sgsstd_file_destruct, NULL,
 	sgsstd_file_getindex, NULL,
 	sgsstd_file_convert, NULL, NULL, NULL,
-	NULL, NULL
+	NULL, NULL,
+	sgsstd_file_props,
 }};
 
 static int sgsstd_io_file( SGS_CTX )
@@ -4178,21 +4185,6 @@ static int utf8it_destruct( SGS_CTX, sgs_VarObj* obj )
 	return SGS_SUCCESS;
 }
 
-static int utf8it_getindex( SGS_ARGS_GETINDEXFUNC )
-{
-	U8I_HDR;
-	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "string" )
-		{
-			sgs_Variable var;
-			var.type = SGS_VT_STRING;
-			var.data.S = IT->str;
-			return sgs_PushVariable( C, var );
-		}
-		SGS_CASE( "offset" ) return sgs_PushInt( C, IT->i );
-	SGS_END_INDEXFUNC;
-}
-
 static int utf8it_setindex( SGS_ARGS_SETINDEXFUNC )
 {
 	U8I_HDR;
@@ -4277,13 +4269,20 @@ static int utf8it_getnext( SGS_CTX, sgs_VarObj* obj, int what )
 	}
 }
 
+static sgs_ObjProp utf8_iterator_props[] =
+{
+	SGS_OBJPROP_OFFSET( "string", offsetof( utf8iter, str ), SGS_OBJPROPTYPE_VARSTR, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_OFFSET( "offset", offsetof( utf8iter, i ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_END(),
+};
 static sgs_ObjInterface utf8_iterator_iface[1] =
 {{
 	"utf8_iterator",
 	utf8it_destruct, NULL,
-	utf8it_getindex, utf8it_setindex,
+	NULL, utf8it_setindex,
 	utf8it_convert, utf8it_serialize, NULL, utf8it_getnext,
 	NULL, NULL,
+	utf8_iterator_props,
 }};
 
 static int sgsstd_string_utf8_iterator( SGS_CTX )

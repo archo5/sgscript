@@ -518,6 +518,63 @@ typedef int (*sgs_ObjCallback) ( sgs_Context*, sgs_VarObj* );
 typedef int (*sgs_OC_Self) ( sgs_Context*, sgs_VarObj* );
 typedef int (*sgs_OC_SlPr) ( sgs_Context*, sgs_VarObj*, int );
 
+#define SGS_OBJPROPTYPE_U8BOOL   0
+#define SGS_OBJPROPTYPE_U32BOOL  1
+#define SGS_OBJPROPTYPE_ICHAR    2
+#define SGS_OBJPROPTYPE_UCHAR    3
+#define SGS_OBJPROPTYPE_I8       4
+#define SGS_OBJPROPTYPE_U8       5
+#define SGS_OBJPROPTYPE_ISHORT   6
+#define SGS_OBJPROPTYPE_USHORT   7
+#define SGS_OBJPROPTYPE_I16      8
+#define SGS_OBJPROPTYPE_U16      9
+#define SGS_OBJPROPTYPE_IINT    10
+#define SGS_OBJPROPTYPE_UINT    11
+#define SGS_OBJPROPTYPE_ILONG   12
+#define SGS_OBJPROPTYPE_ULONG   13
+#define SGS_OBJPROPTYPE_I32     14
+#define SGS_OBJPROPTYPE_U32     15
+#define SGS_OBJPROPTYPE_I2LONG  16
+#define SGS_OBJPROPTYPE_I64     17
+/* U64/U2LONG cannot be represented by the language types */
+/* for most purposes, interpreting memory as signed int should work */
+#define SGS_OBJPROPTYPE_FLOAT   18
+#define SGS_OBJPROPTYPE_DOUBLE  19
+/* (20-31) reserved for platform-specific basic types */
+#define SGS_OBJPROPTYPE_VOIDP   32 /* void* */
+#define SGS_OBJPROPTYPE_VAR     33 /* sgs_Variable */
+#define SGS_OBJPROPTYPE_VAROBJ  34 /* sgs_VarObj* */
+#define SGS_OBJPROPTYPE_VARSTR  35 /* sgs_iStr* */
+#define SGS_OBJPROPTYPE_THREAD  36 /* sgs_Context* */
+#define SGS_OBJPROPTYPE_OBJBOOL 37 /* special case: obj->data { true = obj, false = NULL } */
+#define SGS_OBJPROPTYPE_CBFUNC 254 /* sgs_CFunc from 'offset_or_cb' */
+#define SGS_OBJPROPTYPE_CUSTOM 255 /* callback */
+
+#define SGS_OBJPROP_NOREAD   0x01
+#define SGS_OBJPROP_NOWRITE  0x02
+#define SGS_OBJPROP_HIDE     0x04 /* don't show in lists/dumps */
+#define SGS_OBJPROP_STRICT   0x08 /* don't accept null for writes */
+#define SGS_OBJPROP_NOGCMARK 0x10
+
+typedef struct sgs_ObjProp
+{
+	const char* name;
+	uint8_t     nmlength;
+	uint8_t     type;
+	uint8_t     flags;
+	void*       offset_or_cb; /* cb=sgs_OC_SlPr */
+}
+sgs_ObjProp;
+
+#define SGS_OBJPROP_OFFSET( name, offset, type, flags ) \
+	{ (name), sizeof(name)-1, (type), (flags), (void*) (offset) }
+#define SGS_OBJPROP_CALLBACK( name, cb, flags ) \
+	{ (name), sizeof(name)-1, SGS_OBJPROPTYPE_CUSTOM, (flags), (void*) (cb) }
+#define SGS_OBJPROP_CFUNC( name, func ) \
+	{ (name), sizeof(name)-1, SGS_OBJPROPTYPE_CBFUNC, \
+		(SGS_OBJPROP_NOWRITE|SGS_OBJPROP_HIDE), (void*) (func) }
+#define SGS_OBJPROP_END() { NULL, 0, 0, 0, NULL }
+
 typedef struct sgs_ObjInterface
 {
 	const char* name;
@@ -535,6 +592,8 @@ typedef struct sgs_ObjInterface
 	
 	sgs_OC_Self call;
 	sgs_OC_Self expr;
+	
+	sgs_ObjProp* proplist;
 }
 sgs_ObjInterface;
 

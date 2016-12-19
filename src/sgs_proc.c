@@ -916,6 +916,178 @@ static void obj_gcmark_do( SGS_SHCTX, sgs_VarObj* O )
 	Object property / array accessor handling
 */
 
+SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable* outvar )
+{
+	sgs_ObjProp* prop = O->iface->proplist;
+	char* data = (char*) O->data;
+	const char* str;
+	sgs_SizeVal slen;
+	
+	if( prop == NULL || idx->type != SGS_VT_STRING )
+		return SGS_ENOTFND;
+	str = sgs_var_cstr( idx );
+	slen = idx->data.S->size;
+	if( slen > 255 )
+		return SGS_ENOTFND;
+	
+	while( prop->name )
+	{
+		char* mem = data + (uint32_t)prop->offset_or_cb;
+		if( prop->nmlength != slen || memcmp( prop->name, str, slen ) != 0 )
+		{
+			prop++;
+			continue;
+		}
+		
+		switch( prop->type )
+		{
+		case SGS_OBJPROPTYPE_U8BOOL:
+			outvar->type = SGS_VT_BOOL;
+			outvar->data.B = *(uint8_t*)mem != 0;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_U32BOOL:
+			outvar->type = SGS_VT_BOOL;
+			outvar->data.B = *(uint32_t*)mem != 0;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_ICHAR:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(signed char*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_UCHAR:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(unsigned char*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_I8:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(int8_t*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_U8:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(uint8_t*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_ISHORT:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(signed short*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_USHORT:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(unsigned short*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_I16:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(int16_t*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_U16:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(uint16_t*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_IINT:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(signed int*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_UINT:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(unsigned int*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_ILONG:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(signed long*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_ULONG:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(unsigned long*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_I32:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(int32_t*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_U32:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(uint32_t*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_I2LONG:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(signed long long*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_I64:
+			outvar->type = SGS_VT_INT;
+			outvar->data.I = *(int64_t*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_FLOAT:
+			outvar->type = SGS_VT_REAL;
+			outvar->data.R = *(float*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_DOUBLE:
+			outvar->type = SGS_VT_REAL;
+			outvar->data.R = *(double*)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_VOIDP:
+			outvar->type = SGS_VT_PTR;
+			outvar->data.P = *(void**)mem;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_VAR:
+			*outvar = *(sgs_Variable*)mem;
+			VAR_ACQUIRE( outvar );
+			return 0;
+			
+		case SGS_OBJPROPTYPE_VAROBJ:
+			outvar->type = SGS_VT_OBJECT;
+			outvar->data.O = *(sgs_VarObj**)mem;
+			outvar->data.O->refcount++;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_VARSTR:
+			outvar->type = SGS_VT_STRING;
+			outvar->data.S = *(sgs_iStr**)mem;
+			outvar->data.S->refcount++;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_THREAD:
+			outvar->type = SGS_VT_THREAD;
+			outvar->data.T = *(sgs_Context**)mem;
+			outvar->data.T->refcount++;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_OBJBOOL:
+			outvar->type = SGS_VT_BOOL;
+			outvar->data.B = O->data != NULL;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_CBFUNC:
+			outvar->type = SGS_VT_CFUNC;
+			outvar->data.C = (sgs_CFunc) prop->offset_or_cb;
+			return 0;
+			
+		case SGS_OBJPROPTYPE_CUSTOM:
+			/* TODO */
+			break;
+		}
+		return SGS_ENOTSUP;
+	}
+	return SGS_ENOTFND;
+}
+
 int sgs_specfn_apply( SGS_CTX )
 {
 	sgs_SizeVal i, asize;
@@ -1165,15 +1337,50 @@ static SGSRESULT vm_runerr_setprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 
 static SGSRESULT vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj, sgs_Variable* idx, int isprop )
 {
-	int ret = SGS_ENOTSUP, isobj = obj->type == SGS_VT_OBJECT;
+	int ret = SGS_ENOTSUP;
 	StkIdx origsize = SGS_STACKFRAMESIZE;
 	
-	if( isobj && obj->data.O->iface == sgsstd_dict_iface )
+	if( obj->type == SGS_VT_OBJECT )
 	{
-		sgs_VHTable* ht = (sgs_VHTable*) obj->data.O->data;
-		if( idx->type == SGS_VT_STRING )
+		sgs_VarObj* O = obj->data.O;
+		if( O->iface == sgsstd_dict_iface )
 		{
-			sgs_VHTVar* var = sgs_vht_get( ht, idx );
+			sgs_VHTable* ht = (sgs_VHTable*) O->data;
+			if( idx->type == SGS_VT_STRING )
+			{
+				sgs_VHTVar* var = sgs_vht_get( ht, idx );
+				if( !var )
+					return VM_GETPROP_ERR( SGS_ENOTFND );
+				else
+				{
+					p_initvar( outmaybe, &var->val );
+					return 0;
+				}
+			}
+			else
+			{
+				fstk_push( C, idx );
+				sgs_ToString( C, -1 );
+				{
+					sgs_VHTVar* var = sgs_vht_get( ht, stk_gettop( C ) );
+					if( !var )
+						return VM_GETPROP_ERR( SGS_ENOTFND );
+					else
+					{
+						p_initvar( outmaybe, &var->val );
+						fstk_pop1( C );
+						return 0;
+					}
+				}
+			}
+		}
+		else if( O->iface == sgsstd_map_iface )
+		{
+			sgs_VHTVar* var;
+			sgs_VHTable* ht = (sgs_VHTable*) O->data;
+			/* sgs_vht_get does not modify search key */
+			var = sgs_vht_get( ht, idx );
+			
 			if( !var )
 				return VM_GETPROP_ERR( SGS_ENOTFND );
 			else
@@ -1182,81 +1389,53 @@ static SGSRESULT vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj,
 				return 0;
 			}
 		}
-		else
+		else if( O->iface == sgsstd_array_iface && !isprop )
 		{
-			fstk_push( C, idx );
-			sgs_ToString( C, -1 );
+			sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) O->data;
+			sgs_Variable* ptr = hdr->data;
+			sgs_Int i = var_getint( idx );
+			if( i < 0 || i >= hdr->size )
 			{
-				sgs_VHTVar* var = sgs_vht_get( ht, stk_gettop( C ) );
-				if( !var )
-					return VM_GETPROP_ERR( SGS_ENOTFND );
-				else
-				{
-					p_initvar( outmaybe, &var->val );
-					fstk_pop1( C );
-					return 0;
-				}
+				sgs_Msg( C, SGS_WARNING, "array index out of bounds" );
+				return VM_GETPROP_ERR( SGS_EBOUNDS );
 			}
-		}
-	}
-	else if( isobj && obj->data.O->iface == sgsstd_map_iface )
-	{
-		sgs_VHTVar* var;
-		sgs_VHTable* ht = (sgs_VHTable*) obj->data.O->data;
-		/* sgs_vht_get does not modify search key */
-		var = sgs_vht_get( ht, idx );
-		
-		if( !var )
-			return VM_GETPROP_ERR( SGS_ENOTFND );
-		else
-		{
-			p_initvar( outmaybe, &var->val );
+			p_initvar( outmaybe, &ptr[ i ] );
 			return 0;
 		}
-	}
-	else if( isobj && obj->data.O->iface == sgsstd_array_iface && !isprop )
-	{
-		sgsstd_array_header_t* hdr = (sgsstd_array_header_t*) obj->data.O->data;
-		sgs_Variable* ptr = hdr->data;
-		sgs_Int i = var_getint( idx );
-		if( i < 0 || i >= hdr->size )
+		else if( O->iface->getindex )
 		{
-			sgs_Msg( C, SGS_WARNING, "array index out of bounds" );
-			return VM_GETPROP_ERR( SGS_EBOUNDS );
+			_STACK_PREPARE;
+			_EL_BACKUP;
+			int arg = C->object_arg;
+			
+			if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
+				return SGS_EINPROC;
+			C->sf_count++;
+			
+			_STACK_PROTECT;
+			_EL_SETAPI(0);
+			fstk_push( C, idx );
+			C->object_arg = isprop;
+			ret = O->iface->getindex( C, O );
+			C->object_arg = arg;
+			_EL_RESET;
+			
+			C->sf_count--;
+			if( SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1 )
+			{
+				_STACK_UNPROTECT_SKIP( 1 );
+				ret = 1;
+			}
+			else
+			{
+				_STACK_UNPROTECT;
+				if( sgs_ReadProp( C, O, idx, outmaybe ) == SGS_SUCCESS )
+					return 0;
+				ret = SGS_ENOTFND;
+			}
 		}
-		p_initvar( outmaybe, &ptr[ i ] );
-		return 0;
-	}
-	else if( isobj && obj->data.O->iface->getindex )
-	{
-		sgs_VarObj* O = obj->data.O;
-		_STACK_PREPARE;
-		_EL_BACKUP;
-		int arg = C->object_arg;
-		
-		if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
-			return SGS_EINPROC;
-		C->sf_count++;
-		
-		_STACK_PROTECT;
-		_EL_SETAPI(0);
-		fstk_push( C, idx );
-		C->object_arg = isprop;
-		ret = O->iface->getindex( C, O );
-		C->object_arg = arg;
-		_EL_RESET;
-		
-		C->sf_count--;
-		if( SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1 )
-		{
-			_STACK_UNPROTECT_SKIP( 1 );
-			ret = 1;
-		}
-		else
-		{
-			_STACK_UNPROTECT;
-			ret = SGS_ENOTFND;
-		}
+		else if( sgs_ReadProp( C, O, idx, outmaybe ) == SGS_SUCCESS )
+			return 0;
 	}
 	else
 	{

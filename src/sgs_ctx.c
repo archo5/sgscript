@@ -286,10 +286,12 @@ static void shctx_destroy( SGS_SHCTX )
 	}
 	
 #ifdef SGS_DEBUG_LEAKS
-	sgs_BreakIf( S->memsize > sizeof( sgs_ShCtx ) &&
-		"not all resources have been freed" );
-	sgs_BreakIf( S->memsize < sizeof( sgs_ShCtx ) &&
-		"some resorces may have been freed more than once" );
+	if( S->memsize > sizeof( sgs_ShCtx ) )
+		fprintf( stderr, "SGScript ERROR: not all resources have been freed (%d bytes)\n",
+			(int)( S->memsize - sizeof( sgs_ShCtx ) ) );
+	else if( S->memsize < sizeof( sgs_ShCtx ) )
+		fprintf( stderr, "SGScript ERROR: some resorces may have been freed more than once (%d bytes)\n",
+			(int)( sizeof( sgs_ShCtx ) - S->memsize ) );
 #endif
 	
 	S->memfunc( S->mfuserdata, S, 0 );
