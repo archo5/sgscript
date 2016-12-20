@@ -645,47 +645,67 @@ static int sgsstd_array_iface_gen( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_array_getprop( SGS_CTX, void* data )
+static int sgsstd_array_prop_first( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
 {
-	char* name;
-	SGSARR_HDR;
-	if( sgs_ParseString( C, 0, &name, NULL ) )
+	SGSARR_HDR_OI;
+	switch( type )
 	{
-		if( 0 == strcmp( name, "first" ) )
+	case SGS_OBJPROPCB_READ:
+		if( hdr->size )
 		{
-			if( hdr->size )
-			{
-				fstk_push( C, &SGSARR_PTR( hdr )[ 0 ] );
-			}
-			else
-			{
-				fstk_push_null( C );
-				sgs_Msg( C, SGS_WARNING, "array is empty, cannot get first item" );
-			}
-			return SGS_SUCCESS;
+			sgs_Assign( C, inoutvar, &SGSARR_PTR( hdr )[ 0 ] );
 		}
-		else if( 0 == strcmp( name, "last" ) )
+		else
 		{
-			if( hdr->size )
-			{
-				fstk_push( C, &SGSARR_PTR( hdr )[ hdr->size - 1 ] );
-			}
-			else
-			{
-				fstk_push_null( C );
-				sgs_Msg( C, SGS_WARNING, "array is empty, cannot get last item" );
-			}
-			return SGS_SUCCESS;
+			sgs_Msg( C, SGS_WARNING, "array is empty, cannot get first item" );
 		}
+		break;
+	case SGS_OBJPROPCB_WRITE:
+		if( hdr->size )
+		{
+			sgs_Assign( C, &SGSARR_PTR( hdr )[ 0 ], inoutvar );
+		}
+		else
+		{
+			sgs_Msg( C, SGS_WARNING, "array is empty, cannot set first item" );
+		}
+		break;
 	}
-	return SGS_ENOTFND;
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_array_prop_last( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+{
+	SGSARR_HDR_OI;
+	switch( type )
+	{
+	case SGS_OBJPROPCB_READ:
+		if( hdr->size )
+		{
+			sgs_Assign( C, inoutvar, &SGSARR_PTR( hdr )[ hdr->size - 1 ] );
+		}
+		else
+		{
+			sgs_Msg( C, SGS_WARNING, "array is empty, cannot get last item" );
+		}
+		break;
+	case SGS_OBJPROPCB_WRITE:
+		if( hdr->size )
+		{
+			sgs_Assign( C, &SGSARR_PTR( hdr )[ hdr->size - 1 ], inoutvar );
+		}
+		else
+		{
+			sgs_Msg( C, SGS_WARNING, "array is empty, cannot set last item" );
+		}
+		break;
+	}
+	return SGS_SUCCESS;
 }
 
 int sgsstd_array_getindex( SGS_ARGS_GETINDEXFUNC )
 {
-	if( C->object_arg )
-		return sgsstd_array_getprop( C, obj->data );
-	else
+	if( C->object_arg == 0 )
 	{
 		SGSARR_HDR_OI;
 		sgs_Variable* ptr = SGSARR_PTR( hdr );
@@ -698,6 +718,7 @@ int sgsstd_array_getindex( SGS_ARGS_GETINDEXFUNC )
 		fstk_push( C, &ptr[ i ] );
 		return SGS_SUCCESS;
 	}
+	return SGS_ENOTFND;
 }
 
 static int sgsstd_array_setindex( SGS_ARGS_SETINDEXFUNC )
@@ -912,6 +933,8 @@ static sgs_ObjProp sgsstd_array_props[] =
 {
 	SGS_OBJPROP_OFFSET( "size", offsetof( sgsstd_array_header_t, size ), SGS_OBJPROPTYPE_I32, SGS_OBJPROP_NOWRITE ),
 	SGS_OBJPROP_OFFSET( "capacity", offsetof( sgsstd_array_header_t, mem ), SGS_OBJPROPTYPE_I32, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_CALLBACK( "first", sgsstd_array_prop_first, SGS_OBJPROP_NOGCMARK ),
+	SGS_OBJPROP_CALLBACK( "last", sgsstd_array_prop_last, SGS_OBJPROP_NOGCMARK ),
 	SGS_OBJPROP_END(),
 };
 SGS_APIFUNC sgs_ObjInterface sgsstd_array_iface[1] =

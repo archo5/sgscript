@@ -927,8 +927,6 @@ SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable*
 		return SGS_ENOTFND;
 	str = sgs_var_cstr( idx );
 	slen = idx->data.S->size;
-	if( slen > 255 )
-		return SGS_ENOTFND;
 	
 	while( prop->name )
 	{
@@ -1079,9 +1077,11 @@ SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable*
 			outvar->data.C = (sgs_CFunc) prop->offset_or_cb;
 			return 0;
 			
-		case SGS_OBJPROPTYPE_CUSTOM:
-			/* TODO */
-			break;
+		case SGS_OBJPROPTYPE_CUSTOM: {
+				sgs_OC_Prop cb = (sgs_OC_Prop) prop->offset_or_cb;
+				outvar->type = SGS_VT_NULL;
+				return SGS_FAILED( cb( C, O, outvar, SGS_OBJPROPCB_READ ) ) ? SGS_EINPROC : SGS_SUCCESS;
+			}
 		}
 		return SGS_ENOTSUP;
 	}

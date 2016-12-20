@@ -556,13 +556,18 @@ typedef int (*sgs_OC_SlPr) ( sgs_Context*, sgs_VarObj*, int );
 #define SGS_OBJPROP_STRICT   0x08 /* don't accept null for writes */
 #define SGS_OBJPROP_NOGCMARK 0x10
 
+#define SGS_OBJPROPCB_READ  0
+#define SGS_OBJPROPCB_WRITE 1
+
+typedef int (*sgs_OC_Prop) ( sgs_Context*, sgs_VarObj*, sgs_Variable*, int );
+
 typedef struct sgs_ObjProp
 {
 	const char* name;
 	uint8_t     nmlength;
 	uint8_t     type;
 	uint8_t     flags;
-	void*       offset_or_cb; /* cb=sgs_OC_SlPr */
+	void*       offset_or_cb; /* cb=sgs_OC_Prop */
 }
 sgs_ObjProp;
 

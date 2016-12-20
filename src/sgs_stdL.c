@@ -1431,17 +1431,24 @@ static int sgsstd_fmtstreamI_check( SGS_CTX )
 
 
 
-static int sgsstd_fmtstream_getindex( SGS_ARGS_GETINDEXFUNC )
+static int sgsstd_fmtstream_prop_at_end( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
 {
 	SGSFS_HDR;
-	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "at_end" )           return sgs_PushBool( C, hdr->state == FMTSTREAM_STATE_END );
-		SGS_CASE( "stream_offset" )    return sgs_PushInt( C, hdr->streamoff + hdr->bufpos );
-	SGS_END_INDEXFUNC
+	*inoutvar = sgs_MakeBool( hdr->state == FMTSTREAM_STATE_END );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_fmtstream_prop_stream_offset( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+{
+	SGSFS_HDR;
+	*inoutvar = sgs_MakeInt( hdr->streamoff + hdr->bufpos );
+	return SGS_SUCCESS;
 }
 
 static sgs_ObjProp sgsstd_fmtstream_props[] =
 {
+	SGS_OBJPROP_CALLBACK( "at_end", sgsstd_fmtstream_prop_at_end, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_CALLBACK( "stream_offset", sgsstd_fmtstream_prop_stream_offset, SGS_OBJPROP_NOWRITE ),
 	SGS_OBJPROP_CFUNC( "read", sgsstd_fmtstreamI_read ),
 	SGS_OBJPROP_CFUNC( "getchar", sgsstd_fmtstreamI_getchar ),
 	SGS_OBJPROP_CFUNC( "readcc", sgsstd_fmtstreamI_readcc ),
@@ -1459,7 +1466,7 @@ static sgs_ObjInterface sgsstd_fmtstream_iface[1] =
 {{
 	"fmtstream",
 	sgsstd_fmtstream_destroy, NULL,
-	sgsstd_fmtstream_getindex, NULL,
+	NULL, NULL,
 	NULL, NULL, NULL, NULL,
 	NULL, NULL,
 	sgsstd_fmtstream_props,
@@ -1979,67 +1986,6 @@ static int sgsstd_io_file_read( SGS_CTX )
 	SGS_UNUSED( data );
 
 
-static int sgsstd_fileP_offset( SGS_CTX, FILE* fp )
-{
-	int64_t pos;
-	if( !fp )
-		STDLIB_WARN( "file.offset - file is not opened" )
-	
-	pos = ftell( fp );
-	sgs_Errno( C, pos >= 0 );
-	sgs_PushInt( C, pos );
-	return SGS_SUCCESS;
-}
-
-static int sgsstd_fileP_size( SGS_CTX, FILE* fp )
-{
-	if( !fp )
-		STDLIB_WARN( "file.size - file is not opened" )
-	
-	{
-		int64_t size;
-		fpos_t pos;
-		if( fgetpos( fp, &pos ) < 0 )
-		{
-			sgs_Errno( C, 0 );
-			return SGS_EINPROC;
-		}
-		fseek( fp, 0, SEEK_END );
-		if( ( size = ftell( fp ) ) < 0 )
-		{
-			sgs_Errno( C, 0 );
-			return SGS_EINPROC;
-		}
-		sgs_PushInt( C, size );
-		if( fsetpos( fp, &pos ) != 0 )
-		{
-			sgs_Errno( C, 0 );
-			return SGS_EINPROC;
-		}
-		sgs_Errno( C, 1 );
-		return SGS_SUCCESS;
-	}
-}
-
-static int sgsstd_fileP_error( SGS_CTX, FILE* fp )
-{
-	if( !fp )
-		STDLIB_WARN( "file.error - file is not opened" )
-	
-	sgs_PushBool( C, ferror( fp ) );
-	return SGS_SUCCESS;
-}
-
-static int sgsstd_fileP_eof( SGS_CTX, FILE* fp )
-{
-	if( !fp )
-		STDLIB_WARN( "file.eof - file is not opened" )
-	
-	sgs_PushBool( C, feof( fp ) );
-	return SGS_SUCCESS;
-}
-
-
 static const char* g_io_fileflagmodes[] = { NULL, "rb", "wb", "wb+" };
 
 static int sgsstd_fileI_open( SGS_CTX )
@@ -2184,15 +2130,74 @@ static int sgsstd_fileI_setbuf( SGS_CTX )
 }
 
 
-static int sgsstd_file_getindex( SGS_ARGS_GETINDEXFUNC )
+static int sgsstd_file_prop_is_open( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
 {
-	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "is_open" ) return sgs_PushBool( C, !!IFVAR );
-		SGS_CASE( "offset" )  return sgsstd_fileP_offset( C, IFVAR );
-		SGS_CASE( "size" )    return sgsstd_fileP_size( C, IFVAR );
-		SGS_CASE( "error" )   return sgsstd_fileP_error( C, IFVAR );
-		SGS_CASE( "eof" )     return sgsstd_fileP_eof( C, IFVAR );
-	SGS_END_INDEXFUNC
+	*inoutvar = sgs_MakeBool( !!IFVAR );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_file_prop_offset( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+{
+	int64_t pos;
+	FILE* fp = IFVAR;
+	if( !fp )
+		STDLIB_WARN( "file.offset - file is not opened" )
+	
+	pos = ftell( fp );
+	sgs_Errno( C, pos >= 0 );
+	*inoutvar = sgs_MakeInt( pos );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_file_prop_size( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+{
+	FILE* fp = IFVAR;
+	if( !fp )
+		STDLIB_WARN( "file.size - file is not opened" )
+	
+	{
+		int64_t size;
+		fpos_t pos;
+		if( fgetpos( fp, &pos ) < 0 )
+		{
+			sgs_Errno( C, 0 );
+			return SGS_EINPROC;
+		}
+		fseek( fp, 0, SEEK_END );
+		if( ( size = ftell( fp ) ) < 0 )
+		{
+			sgs_Errno( C, 0 );
+			return SGS_EINPROC;
+		}
+		*inoutvar = sgs_MakeInt( size );
+		if( fsetpos( fp, &pos ) != 0 )
+		{
+			sgs_Errno( C, 0 );
+			return SGS_EINPROC;
+		}
+		sgs_Errno( C, 1 );
+		return SGS_SUCCESS;
+	}
+}
+
+static int sgsstd_file_prop_error( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+{
+	FILE* fp = IFVAR;
+	if( !fp )
+		STDLIB_WARN( "file.error - file is not opened" )
+	
+	*inoutvar = sgs_MakeBool( ferror( fp ) );
+	return SGS_SUCCESS;
+}
+
+static int sgsstd_file_prop_eof( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+{
+	FILE* fp = IFVAR;
+	if( !fp )
+		STDLIB_WARN( "file.eof - file is not opened" )
+	
+	*inoutvar = sgs_MakeBool( feof( fp ) );
+	return SGS_SUCCESS;
 }
 
 static int sgsstd_file_destruct( SGS_CTX, sgs_VarObj* obj )
@@ -2217,6 +2222,11 @@ static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* obj, int type )
 
 static sgs_ObjProp sgsstd_file_props[] =
 {
+	SGS_OBJPROP_CALLBACK( "is_open", sgsstd_file_prop_is_open, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_CALLBACK( "offset", sgsstd_file_prop_offset, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_CALLBACK( "size", sgsstd_file_prop_size, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_CALLBACK( "error", sgsstd_file_prop_error, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_CALLBACK( "eof", sgsstd_file_prop_eof, SGS_OBJPROP_NOWRITE ),
 	SGS_OBJPROP_CFUNC( "open", sgsstd_fileI_open ),
 	SGS_OBJPROP_CFUNC( "close", sgsstd_fileI_close ),
 	SGS_OBJPROP_CFUNC( "read", sgsstd_fileI_read ),
@@ -2230,7 +2240,7 @@ static sgs_ObjInterface sgsstd_file_iface[1] =
 {{
 	"file",
 	sgsstd_file_destruct, NULL,
-	sgsstd_file_getindex, NULL,
+	NULL, NULL,
 	sgsstd_file_convert, NULL, NULL, NULL,
 	NULL, NULL,
 	sgsstd_file_props,
