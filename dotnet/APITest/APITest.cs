@@ -1005,7 +1005,10 @@ namespace APITest
 
 			// test static method dictionary
 			Assert( engine.Call<string>( "tostring", IObjectBase.CreateStaticDict( engine, typeof(FullObject1) ) ),
-				"{_useProp3=DNMethod,StaticTestMethod=DNMethod,TestMethod=DNMethod,TestMsgMethod=DNMethod}" );
+				"{_useProp3=DNMethod,_useProp3()=DNMethod"+
+				",StaticTestMethod=DNMethod,StaticTestMethod(String)=DNMethod"+
+				",TestMethod=DNMethod,TestMethod(String)=DNMethod"+
+				",TestMsgMethod=DNMethod,TestMsgMethod(Int32,SGScript.Context,Int32)=DNMethod}" );
 
 			// test static (meta-)object
 			Variable movar = engine._GetMetaObject( typeof(FullObject1) ).GetVariable();
@@ -1073,6 +1076,8 @@ namespace APITest
 		{
 			static void Action(){}
 			string ReturnStr(){ return string.Format( "[ToString={0}]", ToString() ); }
+			string Overloads( int a ){ return string.Format( "[a={0}]", a ); }
+			string Overloads( int a, int b ){ return string.Format( "[a={0},b={1}]", a, b ); }
 		}
 		static void AdvancedBinding()
 		{
@@ -1083,9 +1088,21 @@ namespace APITest
 			Variable movar = engine._GetMetaObject( typeof(NonCustom) ).GetVariable();
 			Assert( movar.GetProp( "Action" ).ConvertToString(), "SGScript.DNMethod(APITest.APITest+NonCustom.Action)" );
 
+			// overload retrieval
+			Assert( movar.GetProp( "Overloads(Int32)" ).ConvertToString(), "SGScript.DNMethod(APITest.APITest+NonCustom.Overloads)" );
+			Assert( movar.GetProp( "Overloads(Int32,Int32)" ).ConvertToString(), "SGScript.DNMethod(APITest.APITest+NonCustom.Overloads)" );
+
 			// generic handle & method call
 			DNHandle dnh = new DNHandle( engine, new NonCustom() );
 			Assert( engine.ThisCall<string>( "ReturnStr", dnh.GetVariable() ), "[ToString=APITest.APITest+NonCustom]" );
+
+			// overload call
+			Assert( engine.ThisCall<string>( "Overloads(Int32)", dnh.GetVariable(), 314 ), "[a=314]" );
+			Assert( engine.ThisCall<string>( "Overloads(Int32,Int32)", dnh.GetVariable(), 123, 456 ), "[a=123,b=456]" );
+
+			// overload call in scripts
+			Assert( engine.Exec( "function callOverload2(){ return this.\"Overloads(Int32,Int32)\"(987,654); }" ), 0 );
+			Assert( engine.ThisCall<string>( engine.GetGlobal( "callOverload2" ), dnh.GetVariable() ), "[a=987,b=654]" );
 			
 			DestroyEngine( engine );
 		}

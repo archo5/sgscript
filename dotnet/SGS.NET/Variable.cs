@@ -253,6 +253,27 @@ namespace SGScript
 				ctx.Push( mi.Name );
 				ctx.Push( dnm );
 				items += 2;
+
+				System.Text.StringBuilder sb = new System.Text.StringBuilder( mi.Name, 256 );
+				sb.Append( "(" );
+				foreach( ParameterInfo pi in mi.GetParameters() )
+				{
+					if( pi != mi.GetParameters()[0] )
+						sb.Append( "," );
+					if( pi.ParameterType.Namespace == "System" )
+					{
+						sb.Append( pi.ParameterType.Name );
+					}
+					else
+					{
+						sb.Append( pi.ParameterType.FullName );
+					}
+				}
+				sb.Append( ")" );
+				
+				ctx.Push( sb.ToString() );
+				ctx.Push( dnm );
+				items += 2;
 			}
 
 			return ctx.DictVar( items );
