@@ -213,6 +213,85 @@ namespace SGScript
 		public void LoadLib_OS(){ NI.LoadLib_OS( ctx ); }
 		public void LoadLib_RE(){ NI.LoadLib_RE( ctx ); }
 		public void LoadLib_String(){ NI.LoadLib_String( ctx ); }
+		
+		public void BindClass( Type type ){ BindClass( type, type.FullName ); }
+		public void BindClass( Type type, string fullname )
+		{
+			Variable target = Env();
+			string[] parts = fullname.Split('.');
+			for( int i = 0; i < parts.Length - 1; ++i )
+			{
+				Variable level = target.GetProp( parts[ i ] );
+				if( level == null || level.typename != "dict" )
+				{
+					level = DictVar(0);
+					target.SetProp( parts[ i ], level );
+				}
+				target = level;
+			}
+			
+			string endpart = parts[ parts.Length - 1 ];
+			target.SetProp( endpart, GetEngine()._GetMetaObject( type ).GetVariable() );
+		}
+		public void _BindNamespaces( Assembly asm, string nmspace, bool onlyDirect, bool prependNamespace, string customNamespace, Dictionary<Type, bool> addedtypes )
+		{
+			nmspace += ".";
+			
+			Type[] types = asm.GetTypes();
+			for( int i = 0; i < types.Length; ++i )
+			{
+				Type t = types[ i ];
+				if( t.FullName.StartsWith( nmspace ) == false )
+				{
+					continue;
+				}
+				if( onlyDirect && t.FullName.IndexOf( '.', nmspace.Length ) != -1 )
+				{
+					continue;
+				}
+				if( addedtypes.ContainsKey( t ) == false )
+				{
+					addedtypes.Add( t, true );
+					BindClass( t, customNamespace + ( prependNamespace ? t.FullName : t.Name ) );
+				}
+			}
+		}
+		public void _BindNamespaces( Assembly asm, string nmspace, bool onlyDirect, bool prependNamespace, string customNamespace,
+			Dictionary<Type, bool> addedtypes, Dictionary<Assembly, bool> parsedasms )
+		{
+			if( parsedasms.ContainsKey( asm ) == false )
+			{
+				parsedasms.Add( asm, true );
+				_BindNamespaces( asm, nmspace, onlyDirect, prependNamespace, customNamespace, addedtypes );
+				
+				foreach( AssemblyName subasmname in asm.GetReferencedAssemblies() )
+				{
+					Assembly subasm = Assembly.Load( subasmname );
+					_BindNamespaces( asm, nmspace, onlyDirect, prependNamespace, customNamespace, addedtypes, parsedasms );
+				}
+			}
+		}
+		public void BindNamespaces( Assembly asm, string nmspace, bool onlyDirect = false, bool prependNamespace = true, string customNamespace = "" )
+		{ _BindNamespaces( asm, nmspace, onlyDirect, prependNamespace, customNamespace, new Dictionary<Type, bool>() ); }
+		public void BindNamespaces( Assembly asm, bool subassemblies, string nmspace, bool onlyDirect = false, bool prependNamespace = true, string customNamespace = "" )
+		{
+			if( subassemblies )
+			{
+				Dictionary<Type, bool> addedtypes = new Dictionary<Type, bool>();
+				Dictionary<Assembly, bool> parsedasms = new Dictionary<Assembly, bool>();
+				_BindNamespaces( asm, nmspace, onlyDirect, prependNamespace, customNamespace, addedtypes, parsedasms );
+			}
+			else
+				BindNamespaces( asm, nmspace, onlyDirect, prependNamespace, customNamespace );
+		}
+		public void BindNamespaces( string nmspace, bool onlyDirect = false, bool prependNamespace = true, string customNamespace = "" )
+		{
+			Assembly[] asms = AppDomain.CurrentDomain.GetAssemblies();
+			for( int i = 0; i < asms.Length; ++i )
+			{
+				BindNamespaces( asms[ i ], nmspace, onlyDirect, prependNamespace, customNamespace );
+			}
+		}
 
 		// output/error callbacks - currently only supported if same for the whole engine
 		IntPtr hOutFunc = IntPtr.Zero;
@@ -555,7 +634,11 @@ namespace SGScript
 		public void ParseVar( out IObjectBase o, Variable v ){ o = v.GetIObjectBase(); }
 		public void ParseVar( out Context c, Variable v ){ c = v.type == VarType.Thread ? Engine.GetCtx( v.var.data.T ) : null; }
 		public void ParseVar( out Variable o, Variable v ){ o = v; }
-		public void _ParseVar_Generic( out object o, Variable v ){ o = (v.GetIObjectBase() as DNHandle).objectRef; }
+		public void _ParseVar_Generic( out object o, Variable v )
+		{
+			DNHandle h = v.GetIObjectBase() as DNHandle;
+			o = h != null ? h.objectRef : null;
+		}
 		public void _ParseVar_CallingThread( out Context c, Variable v ){ c = this; }
 
 		public void PushItem( int item ){ _IndexCheck( item, "PushItem" ); NI.PushItem( ctx, item ); }

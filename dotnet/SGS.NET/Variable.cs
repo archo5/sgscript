@@ -630,7 +630,7 @@ namespace SGScript
 			}
 
 			object thisvar = null;
-			if( gotthis )
+			if( gotthis && thisMethodInfo.IsStatic == false )
 			{
 				parseVarParams[ 0 ] = null;
 				parseVarParams[ 1 ] = ctx.StackItem( 0 );

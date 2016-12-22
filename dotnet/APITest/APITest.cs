@@ -1103,6 +1103,11 @@ namespace APITest
 			// overload call in scripts
 			Assert( engine.Exec( "function callOverload2(){ return this.\"Overloads(Int32,Int32)\"(987,654); }" ), 0 );
 			Assert( engine.ThisCall<string>( engine.GetGlobal( "callOverload2" ), dnh.GetVariable() ), "[a=987,b=654]" );
+
+			// load the Console class
+			engine.BindClass( typeof(System.Console) );
+			Assert( engine.Exec( "printvar(System.Console);" ), 0 );
+			Assert( engine.Exec( "System.Console.'WriteLine(String)'('[!test!]');" ), 0 );
 			
 			DestroyEngine( engine );
 		}
