@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 using SGScript;
 
@@ -25,14 +26,36 @@ namespace APITest
 		static int testCount = 0;
 		static void Main(string[] args)
 		{
+			bool gctest = false;
+
+			for( int i = 0; i < args.Length; ++i )
+			{
+				if( args[ i ] == "-gctest" )
+					gctest = true;
+				else if( args[ i ] == "-dump_ovrnum" )
+				{
+					DumpOverloadNumbers( null );
+					return;
+				}
+				else if( args[ i ].StartsWith( "-dump_ovrnum=" ) )
+				{
+					DumpOverloadNumbers( args[ i ].Substring( "-dump_ovrnum=".Length ) );
+					return;
+				}
+			}
+
 			Console.WriteLine( "SGS.NET API tests" );
 
-			Thread t = new Thread( new ThreadStart( GCNagThread ) );
-			t.Name = "GC nagging thread";
-			t.Start();
+			Thread t = null;
+			if( gctest )
+			{
+				t = new Thread( new ThreadStart( GCNagThread ) );
+				t.Name = "GC nagging thread";
+				t.Start();
+			}
 
 			int count = 0;
-			for(;;)
+			do
 			{
 				count++;
 				Console.WriteLine( "\n\nTEST #" + count + " ---" );
@@ -46,14 +69,49 @@ namespace APITest
 					break;
 				}
 			}
+			while( gctest );
 
-			keepCollecting = false;
-			t.Join();
+			if( gctest )
+			{
+				keepCollecting = false;
+				t.Join();
+			}
 
 			Console.WriteLine( "\n\n--- Testing finished! ---" );
 			Console.WriteLine( failCount > 0 ?
 				string.Format( "\n  ERROR: {0} tests failed!\n", failCount ) :
 				string.Format( "\n  SUCCESS! All tests passed! ({0})\n", testCount ) );
+		}
+
+		static void DumpOverloadNumbers( string typePrefix, Assembly asm )
+		{
+			foreach( var type in asm.GetTypes() )
+			{
+				if( typePrefix != null && type.FullName.StartsWith( typePrefix ) == false )
+					continue;
+				foreach( var mi in type.GetMethods() )
+				{
+					try
+					{
+						type.GetMethod( mi.Name );
+					}
+					catch( AmbiguousMatchException )
+					{
+						// ... type.GetMethod will throw AmbiguousMatchException
+						// which will mean that this function is overloaded
+						Console.WriteLine( string.Format( "[{0}] {1}: {2}",
+							type.ToString(), mi.ToString(), IObjectBase.CalcOverloadPriority( mi ) ) );
+					}
+				}
+			}
+		}
+		static void DumpOverloadNumbers( string typePrefix )
+		{
+			Assembly[] asms = AppDomain.CurrentDomain.GetAssemblies();
+			for( int i = 0; i < asms.Length; ++i )
+			{
+				DumpOverloadNumbers( typePrefix, asms[ i ] );
+			}
 		}
 
 		static void RunAllTests()
@@ -1005,10 +1063,10 @@ namespace APITest
 
 			// test static method dictionary
 			Assert( engine.Call<string>( "tostring", IObjectBase.CreateStaticDict( engine, typeof(FullObject1) ) ),
-				"{_useProp3=DNMethod,_useProp3()=DNMethod"+
-				",StaticTestMethod=DNMethod,StaticTestMethod(String)=DNMethod"+
-				",TestMethod=DNMethod,TestMethod(String)=DNMethod"+
-				",TestMsgMethod=DNMethod,TestMsgMethod(Int32,SGScript.Context,Int32)=DNMethod}" );
+				"{_useProp3()=DNMethod,StaticTestMethod(String)=DNMethod,TestMethod(String)=DNMethod"+
+				",TestMsgMethod(Int32,SGScript.Context,Int32)=DNMethod"+
+				",_useProp3=DNMethod,StaticTestMethod=DNMethod,TestMethod=DNMethod"+
+				",TestMsgMethod=DNMethod}" );
 
 			// test static (meta-)object
 			Variable movar = engine._GetMetaObject( typeof(FullObject1) ).GetVariable();
@@ -1107,7 +1165,10 @@ namespace APITest
 			// load the Console class
 			engine.BindClass( typeof(System.Console) );
 			Assert( engine.Exec( "printvar(System.Console);" ), 0 );
-			Assert( engine.Exec( "System.Console.'WriteLine(String)'('[!test!]');" ), 0 );
+			Assert( engine.Exec( "System.Console.'WriteLine(String)'('[!test_so!]');" ), 0 );
+			// - check if default overloads of 'Write' and 'WriteLine' are good
+			Assert( engine.Exec( "System.Console.Write('[!test_doW!]');" ), 0 );
+			Assert( engine.Exec( "System.Console.WriteLine('[!test_doWL!]');" ), 0 );
 			
 			DestroyEngine( engine );
 		}

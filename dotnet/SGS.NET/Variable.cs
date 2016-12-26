@@ -238,11 +238,88 @@ namespace SGScript
 			return cinfo;
 		}
 		
+		public static string[] _ovrEasyTypes = new string[]
+		{
+			"System.String",
+		};
+		public static string[] _ovrBasicTypes = new string[]
+		{
+			"System.SByte",
+			"System.Int16",
+			"System.Int32",
+			"System.Int64",
+			"System.Byte",
+			"System.UInt16",
+			"System.UInt32",
+			"System.UInt64",
+			"System.Float",
+			"System.Double",
+			"System.Char",
+		};
+		public static int _ovrEasyPrio = 1;
+		public static int _ovrBasicPrio = 10;
+		public static int _ovrOtherPrio = 100;
+		public static int _ovrEmptyPrio = 100000;
+		
+		// smaller is better
+		public static int CalcOverloadPriority( MethodInfo mi )
+		{
+			// prefer functions with at least one parameter to parameterless ones
+			int prio = mi.GetParameters().Length == 0 ? _ovrEmptyPrio : 1;
+
+			foreach( ParameterInfo pi in mi.GetParameters() )
+			{
+				// easy types - they accept almost anything and almost always make sense to use
+				if( Array.IndexOf( _ovrEasyTypes, pi.ParameterType.FullName ) >= 0 )
+					prio += _ovrEasyPrio;
+				// basic types - easily convertible but not as useful
+				else if( Array.IndexOf( _ovrBasicTypes, pi.ParameterType.FullName ) >= 0 )
+					prio += _ovrBasicPrio;
+				// other types - need hard-to-obtain values to function properly
+				else
+					prio += _ovrOtherPrio;
+			}
+			return prio;
+		}
+		
+		public static string[] _monBasicNamespaces = new string[]
+		{
+			"System",
+		};
+		public static string GetMethodOverloadName( MethodInfo mi )
+		{
+			System.Text.StringBuilder sb = new System.Text.StringBuilder( mi.Name, 256 );
+			sb.Append( "(" );
+			foreach( ParameterInfo pi in mi.GetParameters() )
+			{
+				if( pi != mi.GetParameters()[0] )
+					sb.Append( "," );
+				if( Array.IndexOf( _monBasicNamespaces, pi.ParameterType.Namespace ) >= 0 )
+				{
+					sb.Append( pi.ParameterType.Name );
+				}
+				else
+				{
+					sb.Append( pi.ParameterType.FullName );
+				}
+			}
+			sb.Append( ")" );
+			return sb.ToString();
+		}
+		struct CSD_Overload
+		{
+			public DNMethod method;
+			public int priority;
+		};
+
 		public static Variable CreateStaticDict( Context ctx, Type type )
 		{
 			int items = 0;
 
 			MethodInfo[] methods = type.GetMethods( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly );
+			Dictionary<string, CSD_Overload> overloads = new Dictionary<string, CSD_Overload>();
+
+			// map every function to its decorated name
 			foreach( MethodInfo mi in methods )
 			{
 				if( mi.GetCustomAttributes( typeof(HideMethod), true ).Length != 0 )
@@ -250,29 +327,21 @@ namespace SGScript
 
 				DNMethod dnm = new DNMethod( ctx, mi );
 
-				ctx.Push( mi.Name );
+				ctx.Push( GetMethodOverloadName( mi ) );
 				ctx.Push( dnm );
 				items += 2;
 
-				System.Text.StringBuilder sb = new System.Text.StringBuilder( mi.Name, 256 );
-				sb.Append( "(" );
-				foreach( ParameterInfo pi in mi.GetParameters() )
-				{
-					if( pi != mi.GetParameters()[0] )
-						sb.Append( "," );
-					if( pi.ParameterType.Namespace == "System" )
-					{
-						sb.Append( pi.ParameterType.Name );
-					}
-					else
-					{
-						sb.Append( pi.ParameterType.FullName );
-					}
-				}
-				sb.Append( ")" );
-				
-				ctx.Push( sb.ToString() );
-				ctx.Push( dnm );
+				int priority = CalcOverloadPriority( mi );
+				CSD_Overload curovr;
+				if( overloads.TryGetValue( mi.Name, out curovr ) == false || curovr.priority > priority )
+					overloads[ mi.Name ] = new CSD_Overload(){ method = dnm, priority = priority };
+			}
+
+			// map best overloads to plain name
+			foreach( KeyValuePair<string, CSD_Overload> kvp in overloads )
+			{
+				ctx.Push( kvp.Key );
+				ctx.Push( kvp.Value.method );
 				items += 2;
 			}
 
