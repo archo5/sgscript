@@ -552,33 +552,32 @@ typedef int (*sgs_OC_SlPr) ( sgs_Context*, sgs_VarObj*, int );
 
 #define SGS_OBJPROP_NOREAD   0x01
 #define SGS_OBJPROP_NOWRITE  0x02
-#define SGS_OBJPROP_HIDE     0x04 /* don't show in lists/dumps */
-#define SGS_OBJPROP_STRICT   0x08 /* don't accept null for writes */
+#define SGS_OBJPROP_NOLIST   0x04 /* don't show in lists */
+#define SGS_OBJPROP_NODUMP   0x08 /* don't show in dumps */
 #define SGS_OBJPROP_NOGCMARK 0x10
+#define SGS_OBJPROP_STRICT   0x20 /* don't accept null for writes */
 
-#define SGS_OBJPROPCB_READ  0
-#define SGS_OBJPROPCB_WRITE 1
-
-typedef int (*sgs_OC_Prop) ( sgs_Context*, sgs_VarObj*, sgs_Variable*, int );
+typedef int (*sgs_OC_Prop) ( sgs_Context*, sgs_VarObj*, sgs_Variable* );
 
 typedef struct sgs_ObjProp
 {
 	const char* name;
 	uint8_t     nmlength;
 	uint8_t     type;
-	uint8_t     flags;
-	void*       offset_or_cb; /* cb=sgs_OC_Prop */
+	uint16_t    flags;
+	void*       offset_or_getcb; /* sgs_OC_Prop / sgs_CFunc */
+	void*       setcb; /* sgs_OC_Prop */
 }
 sgs_ObjProp;
 
 #define SGS_OBJPROP_OFFSET( name, offset, type, flags ) \
-	{ (name), sizeof(name)-1, (type), (flags), (void*) (offset) }
-#define SGS_OBJPROP_CALLBACK( name, cb, flags ) \
-	{ (name), sizeof(name)-1, SGS_OBJPROPTYPE_CUSTOM, (flags), (void*) (cb) }
+	{ (name), sizeof(name)-1, (type), (flags), (void*) (offset), NULL }
+#define SGS_OBJPROP_CALLBACK( name, getcb, setcb, flags ) \
+	{ (name), sizeof(name)-1, SGS_OBJPROPTYPE_CUSTOM, (flags), (void*)(getcb), (void*)(setcb) }
 #define SGS_OBJPROP_CFUNC( name, func ) \
 	{ (name), sizeof(name)-1, SGS_OBJPROPTYPE_CBFUNC, \
-		(SGS_OBJPROP_NOWRITE|SGS_OBJPROP_HIDE), (void*) (func) }
-#define SGS_OBJPROP_END() { NULL, 0, 0, 0, NULL }
+		(SGS_OBJPROP_NOLIST|SGS_OBJPROP_NODUMP), (void*)(func), NULL }
+#define SGS_OBJPROP_END() { NULL, 0, 0, 0, NULL, NULL }
 
 typedef struct sgs_ObjInterface
 {

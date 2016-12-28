@@ -1431,24 +1431,24 @@ static int sgsstd_fmtstreamI_check( SGS_CTX )
 
 
 
-static int sgsstd_fmtstream_prop_at_end( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+static int sgsstd_fmtstream_prop_at_end_read( SGS_CTX, sgs_VarObj* obj, sgs_Variable* outvar )
 {
 	SGSFS_HDR;
-	*inoutvar = sgs_MakeBool( hdr->state == FMTSTREAM_STATE_END );
+	*outvar = sgs_MakeBool( hdr->state == FMTSTREAM_STATE_END );
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_fmtstream_prop_stream_offset( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+static int sgsstd_fmtstream_prop_stream_offset_read( SGS_CTX, sgs_VarObj* obj, sgs_Variable* outvar )
 {
 	SGSFS_HDR;
-	*inoutvar = sgs_MakeInt( hdr->streamoff + hdr->bufpos );
+	*outvar = sgs_MakeInt( hdr->streamoff + hdr->bufpos );
 	return SGS_SUCCESS;
 }
 
 static sgs_ObjProp sgsstd_fmtstream_props[] =
 {
-	SGS_OBJPROP_CALLBACK( "at_end", sgsstd_fmtstream_prop_at_end, SGS_OBJPROP_NOWRITE ),
-	SGS_OBJPROP_CALLBACK( "stream_offset", sgsstd_fmtstream_prop_stream_offset, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_CALLBACK( "at_end", sgsstd_fmtstream_prop_at_end_read, NULL, 0 ),
+	SGS_OBJPROP_CALLBACK( "stream_offset", sgsstd_fmtstream_prop_stream_offset_read, NULL, 0 ),
 	SGS_OBJPROP_CFUNC( "read", sgsstd_fmtstreamI_read ),
 	SGS_OBJPROP_CFUNC( "getchar", sgsstd_fmtstreamI_getchar ),
 	SGS_OBJPROP_CFUNC( "readcc", sgsstd_fmtstreamI_readcc ),
@@ -2130,13 +2130,13 @@ static int sgsstd_fileI_setbuf( SGS_CTX )
 }
 
 
-static int sgsstd_file_prop_is_open( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+static int sgsstd_file_prop_is_open_read( SGS_CTX, sgs_VarObj* obj, sgs_Variable* outvar )
 {
-	*inoutvar = sgs_MakeBool( !!IFVAR );
+	*outvar = sgs_MakeBool( !!IFVAR );
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_file_prop_offset( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+static int sgsstd_file_prop_offset_read( SGS_CTX, sgs_VarObj* obj, sgs_Variable* outvar )
 {
 	int64_t pos;
 	FILE* fp = IFVAR;
@@ -2145,11 +2145,11 @@ static int sgsstd_file_prop_offset( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inou
 	
 	pos = ftell( fp );
 	sgs_Errno( C, pos >= 0 );
-	*inoutvar = sgs_MakeInt( pos );
+	*outvar = sgs_MakeInt( pos );
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_file_prop_size( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+static int sgsstd_file_prop_size_read( SGS_CTX, sgs_VarObj* obj, sgs_Variable* outvar )
 {
 	FILE* fp = IFVAR;
 	if( !fp )
@@ -2169,7 +2169,7 @@ static int sgsstd_file_prop_size( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutv
 			sgs_Errno( C, 0 );
 			return SGS_EINPROC;
 		}
-		*inoutvar = sgs_MakeInt( size );
+		*outvar = sgs_MakeInt( size );
 		if( fsetpos( fp, &pos ) != 0 )
 		{
 			sgs_Errno( C, 0 );
@@ -2180,23 +2180,23 @@ static int sgsstd_file_prop_size( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutv
 	}
 }
 
-static int sgsstd_file_prop_error( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+static int sgsstd_file_prop_error_read( SGS_CTX, sgs_VarObj* obj, sgs_Variable* outvar )
 {
 	FILE* fp = IFVAR;
 	if( !fp )
 		STDLIB_WARN( "file.error - file is not opened" )
 	
-	*inoutvar = sgs_MakeBool( ferror( fp ) );
+	*outvar = sgs_MakeBool( ferror( fp ) );
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_file_prop_eof( SGS_CTX, sgs_VarObj* obj, sgs_Variable* inoutvar, int type )
+static int sgsstd_file_prop_eof_read( SGS_CTX, sgs_VarObj* obj, sgs_Variable* outvar )
 {
 	FILE* fp = IFVAR;
 	if( !fp )
 		STDLIB_WARN( "file.eof - file is not opened" )
 	
-	*inoutvar = sgs_MakeBool( feof( fp ) );
+	*outvar = sgs_MakeBool( feof( fp ) );
 	return SGS_SUCCESS;
 }
 
@@ -2222,11 +2222,11 @@ static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* obj, int type )
 
 static sgs_ObjProp sgsstd_file_props[] =
 {
-	SGS_OBJPROP_CALLBACK( "is_open", sgsstd_file_prop_is_open, SGS_OBJPROP_NOWRITE ),
-	SGS_OBJPROP_CALLBACK( "offset", sgsstd_file_prop_offset, SGS_OBJPROP_NOWRITE ),
-	SGS_OBJPROP_CALLBACK( "size", sgsstd_file_prop_size, SGS_OBJPROP_NOWRITE ),
-	SGS_OBJPROP_CALLBACK( "error", sgsstd_file_prop_error, SGS_OBJPROP_NOWRITE ),
-	SGS_OBJPROP_CALLBACK( "eof", sgsstd_file_prop_eof, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_CALLBACK( "is_open", sgsstd_file_prop_is_open_read, NULL, 0 ),
+	SGS_OBJPROP_CALLBACK( "offset", sgsstd_file_prop_offset_read, NULL, 0 ),
+	SGS_OBJPROP_CALLBACK( "size", sgsstd_file_prop_size_read, NULL, 0 ),
+	SGS_OBJPROP_CALLBACK( "error", sgsstd_file_prop_error_read, NULL, 0 ),
+	SGS_OBJPROP_CALLBACK( "eof", sgsstd_file_prop_eof_read, NULL, 0 ),
 	SGS_OBJPROP_CFUNC( "open", sgsstd_fileI_open ),
 	SGS_OBJPROP_CFUNC( "close", sgsstd_fileI_close ),
 	SGS_OBJPROP_CFUNC( "read", sgsstd_fileI_read ),

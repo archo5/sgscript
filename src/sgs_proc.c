@@ -916,176 +916,359 @@ static void obj_gcmark_do( SGS_SHCTX, sgs_VarObj* O )
 	Object property / array accessor handling
 */
 
-SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable* outvar )
+sgs_ObjProp* sgs_FindProp( sgs_VarObj* O, sgs_Variable* idx )
 {
 	sgs_ObjProp* prop = O->iface->proplist;
-	char* data = (char*) O->data;
 	const char* str;
 	sgs_SizeVal slen;
 	
 	if( prop == NULL || idx->type != SGS_VT_STRING )
-		return SGS_ENOTFND;
+		return NULL;
 	str = sgs_var_cstr( idx );
 	slen = idx->data.S->size;
 	
 	while( prop->name )
 	{
-		char* mem = data + (uint32_t)prop->offset_or_cb;
 		if( prop->nmlength != slen || memcmp( prop->name, str, slen ) != 0 )
 		{
 			prop++;
 			continue;
 		}
-		
-		switch( prop->type )
-		{
-		case SGS_OBJPROPTYPE_U8BOOL:
-			outvar->type = SGS_VT_BOOL;
-			outvar->data.B = *(uint8_t*)mem != 0;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_U32BOOL:
-			outvar->type = SGS_VT_BOOL;
-			outvar->data.B = *(uint32_t*)mem != 0;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_ICHAR:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(signed char*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_UCHAR:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(unsigned char*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_I8:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(int8_t*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_U8:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(uint8_t*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_ISHORT:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(signed short*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_USHORT:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(unsigned short*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_I16:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(int16_t*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_U16:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(uint16_t*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_IINT:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(signed int*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_UINT:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(unsigned int*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_ILONG:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(signed long*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_ULONG:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(unsigned long*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_I32:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(int32_t*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_U32:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(uint32_t*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_I2LONG:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(signed long long*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_I64:
-			outvar->type = SGS_VT_INT;
-			outvar->data.I = *(int64_t*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_FLOAT:
-			outvar->type = SGS_VT_REAL;
-			outvar->data.R = *(float*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_DOUBLE:
-			outvar->type = SGS_VT_REAL;
-			outvar->data.R = *(double*)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_VOIDP:
-			outvar->type = SGS_VT_PTR;
-			outvar->data.P = *(void**)mem;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_VAR:
-			*outvar = *(sgs_Variable*)mem;
-			VAR_ACQUIRE( outvar );
-			return 0;
-			
-		case SGS_OBJPROPTYPE_VAROBJ:
-			outvar->type = SGS_VT_OBJECT;
-			outvar->data.O = *(sgs_VarObj**)mem;
-			outvar->data.O->refcount++;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_VARSTR:
-			outvar->type = SGS_VT_STRING;
-			outvar->data.S = *(sgs_iStr**)mem;
-			outvar->data.S->refcount++;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_THREAD:
-			outvar->type = SGS_VT_THREAD;
-			outvar->data.T = *(sgs_Context**)mem;
-			outvar->data.T->refcount++;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_OBJBOOL:
-			outvar->type = SGS_VT_BOOL;
-			outvar->data.B = O->data != NULL;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_CBFUNC:
-			outvar->type = SGS_VT_CFUNC;
-			outvar->data.C = (sgs_CFunc) prop->offset_or_cb;
-			return 0;
-			
-		case SGS_OBJPROPTYPE_CUSTOM: {
-				sgs_OC_Prop cb = (sgs_OC_Prop) prop->offset_or_cb;
-				outvar->type = SGS_VT_NULL;
-				return SGS_FAILED( cb( C, O, outvar, SGS_OBJPROPCB_READ ) ) ? SGS_EINPROC : SGS_SUCCESS;
-			}
-		}
-		return SGS_ENOTSUP;
+		return prop;
 	}
-	return SGS_ENOTFND;
+	return NULL;
+}
+
+SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable* outvar )
+{
+	char* mem;
+	sgs_ObjProp* prop = sgs_FindProp( O, idx );
+	if( !prop || ( prop->flags & SGS_OBJPROP_NOREAD ) )
+		return SGS_ENOTFND;
+	
+	mem = ((char*) O->data) + (uint32_t)prop->offset_or_getcb;
+	switch( prop->type )
+	{
+	case SGS_OBJPROPTYPE_U8BOOL:
+		outvar->type = SGS_VT_BOOL;
+		outvar->data.B = *(uint8_t*)mem != 0;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_U32BOOL:
+		outvar->type = SGS_VT_BOOL;
+		outvar->data.B = *(uint32_t*)mem != 0;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_ICHAR:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(signed char*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_UCHAR:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(unsigned char*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_I8:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(int8_t*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_U8:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(uint8_t*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_ISHORT:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(signed short*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_USHORT:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(unsigned short*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_I16:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(int16_t*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_U16:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(uint16_t*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_IINT:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(signed int*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_UINT:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(unsigned int*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_ILONG:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(signed long*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_ULONG:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(unsigned long*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_I32:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(int32_t*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_U32:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(uint32_t*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_I2LONG:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(signed long long*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_I64:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(int64_t*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_FLOAT:
+		outvar->type = SGS_VT_REAL;
+		outvar->data.R = *(float*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_DOUBLE:
+		outvar->type = SGS_VT_REAL;
+		outvar->data.R = *(double*)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_VOIDP:
+		outvar->type = SGS_VT_PTR;
+		outvar->data.P = *(void**)mem;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_VAR:
+		*outvar = *(sgs_Variable*)mem;
+		VAR_ACQUIRE( outvar );
+		return 0;
+		
+	case SGS_OBJPROPTYPE_VAROBJ:
+		outvar->type = SGS_VT_OBJECT;
+		outvar->data.O = *(sgs_VarObj**)mem;
+		outvar->data.O->refcount++;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_VARSTR:
+		outvar->type = SGS_VT_STRING;
+		outvar->data.S = *(sgs_iStr**)mem;
+		outvar->data.S->refcount++;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_THREAD:
+		outvar->type = SGS_VT_THREAD;
+		outvar->data.T = *(sgs_Context**)mem;
+		outvar->data.T->refcount++;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_OBJBOOL:
+		outvar->type = SGS_VT_BOOL;
+		outvar->data.B = O->data != NULL;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_CBFUNC:
+		outvar->type = SGS_VT_CFUNC;
+		outvar->data.C = (sgs_CFunc) prop->offset_or_getcb;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_CUSTOM:
+		if( prop->offset_or_getcb )
+		{
+			sgs_OC_Prop cb = (sgs_OC_Prop) prop->offset_or_getcb;
+			outvar->type = SGS_VT_NULL;
+			return SGS_FAILED( cb( C, O, outvar ) ) ? SGS_EINPROC : SGS_SUCCESS;
+		}
+		break;
+	}
+	return SGS_ENOTSUP;
+}
+
+SGSBOOL sgs_ParseBoolP( SGS_CTX, sgs_Variable* var, sgs_Bool* out );
+SGSBOOL sgs_ParseIntP( SGS_CTX, sgs_Variable* var, sgs_Int* out );
+SGSBOOL sgs_ParseRealP( SGS_CTX, sgs_Variable* var, sgs_Real* out );
+SGSBOOL sgs_ParsePtrP( SGS_CTX, sgs_Variable* var, void** out );
+
+SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable* val )
+{
+	char* mem;
+	sgs_ObjProp* prop = sgs_FindProp( O, idx );
+	if( !prop || ( prop->flags & SGS_OBJPROP_NOWRITE ) )
+		return SGS_ENOTFND;
+	
+	mem = ((char*) O->data) + (uint32_t)prop->offset_or_getcb;
+	switch( prop->type )
+	{
+	case SGS_OBJPROPTYPE_U8BOOL:
+	case SGS_OBJPROPTYPE_U32BOOL:
+	case SGS_OBJPROPTYPE_OBJBOOL: {
+		sgs_Bool v;
+		if( sgs_ParseBoolP( C, val, &v ) )
+		{
+			switch( prop->type )
+			{
+			case SGS_OBJPROPTYPE_U8BOOL:  *(uint8_t*)mem = v;     break;
+			case SGS_OBJPROPTYPE_U32BOOL: *(uint32_t*)mem = v;    break;
+			case SGS_OBJPROPTYPE_OBJBOOL: O->data = v ? O : NULL; break;
+			}
+			if( prop->type == SGS_OBJPROPTYPE_U8BOOL )
+				*(uint8_t*)mem = v;
+			else
+				*(uint32_t*)mem = v;
+			return 0;
+		}
+		return SGS_EINVAL; }
+		
+	case SGS_OBJPROPTYPE_ICHAR:
+	case SGS_OBJPROPTYPE_UCHAR:
+	case SGS_OBJPROPTYPE_I8:
+	case SGS_OBJPROPTYPE_U8:
+	case SGS_OBJPROPTYPE_ISHORT:
+	case SGS_OBJPROPTYPE_USHORT:
+	case SGS_OBJPROPTYPE_I16:
+	case SGS_OBJPROPTYPE_U16:
+	case SGS_OBJPROPTYPE_IINT:
+	case SGS_OBJPROPTYPE_UINT:
+	case SGS_OBJPROPTYPE_ILONG:
+	case SGS_OBJPROPTYPE_ULONG:
+	case SGS_OBJPROPTYPE_I32:
+	case SGS_OBJPROPTYPE_U32:
+	case SGS_OBJPROPTYPE_I2LONG:
+	case SGS_OBJPROPTYPE_I64: {
+		sgs_Int v;
+		if( sgs_ParseIntP( C, val, &v ) )
+		{
+			switch( prop->type )
+			{
+			case SGS_OBJPROPTYPE_ICHAR:  *(signed char*)mem = v;      break;
+			case SGS_OBJPROPTYPE_UCHAR:  *(unsigned char*)mem = v;    break;
+			case SGS_OBJPROPTYPE_I8:     *(int8_t*)mem = v;           break;
+			case SGS_OBJPROPTYPE_U8:     *(uint8_t*)mem = v;          break;
+			case SGS_OBJPROPTYPE_ISHORT: *(signed short*)mem = v;     break;
+			case SGS_OBJPROPTYPE_USHORT: *(unsigned short*)mem = v;   break;
+			case SGS_OBJPROPTYPE_I16:    *(int16_t*)mem = v;          break;
+			case SGS_OBJPROPTYPE_U16:    *(uint16_t*)mem = v;         break;
+			case SGS_OBJPROPTYPE_IINT:   *(signed int*)mem = v;       break;
+			case SGS_OBJPROPTYPE_UINT:   *(unsigned int*)mem = v;     break;
+			case SGS_OBJPROPTYPE_ILONG:  *(signed long*)mem = v;      break;
+			case SGS_OBJPROPTYPE_ULONG:  *(unsigned long*)mem = v;    break;
+			case SGS_OBJPROPTYPE_I32:    *(int32_t*)mem = v;          break;
+			case SGS_OBJPROPTYPE_U32:    *(uint32_t*)mem = v;         break;
+			case SGS_OBJPROPTYPE_I2LONG: *(signed long long*)mem = v; break;
+			case SGS_OBJPROPTYPE_I64:    *(int64_t*)mem = v;          break;
+			}
+			return 0;
+		}
+		return SGS_EINVAL; }
+		
+	case SGS_OBJPROPTYPE_FLOAT:
+	case SGS_OBJPROPTYPE_DOUBLE: {
+		sgs_Real v;
+		if( sgs_ParseRealP( C, val, &v ) )
+		{
+			if( prop->type == SGS_OBJPROPTYPE_FLOAT )
+				*(float*)mem = v;
+			else
+				*(double*)mem = v;
+			return 0;
+		}
+		return SGS_EINVAL; }
+		
+	case SGS_OBJPROPTYPE_VOIDP: {
+		void* v;
+		if( sgs_ParsePtrP( C, val, &v ) )
+		{
+			*(void**)mem = v;
+			return 0;
+		}
+		return SGS_EINVAL; }
+		
+	case SGS_OBJPROPTYPE_VAR:
+		VAR_RELEASE( (sgs_Variable*)mem );
+		*(sgs_Variable*)mem = *val;
+		VAR_ACQUIRE( val );
+		return 0;
+		
+	case SGS_OBJPROPTYPE_VAROBJ:
+		if( val->type == SGS_VT_NULL && !( prop->flags & SGS_OBJPROP_STRICT ) )
+		{
+			if( *(sgs_VarObj**)mem )
+				sgs_ObjRelease( C, *(sgs_VarObj**)mem );
+			*(sgs_VarObj**)mem = NULL;
+			return 0;
+		}
+		else if( val->type == SGS_VT_OBJECT )
+		{
+			if( *(sgs_VarObj**)mem )
+				sgs_ObjRelease( C, *(sgs_VarObj**)mem );
+			*(sgs_VarObj**)mem = val->data.O;
+			val->data.O->refcount++;
+			return 0;
+		}
+		return SGS_EINVAL;
+		
+	case SGS_OBJPROPTYPE_VARSTR:
+		if( val->type == SGS_VT_NULL && !( prop->flags & SGS_OBJPROP_STRICT ) )
+		{
+			if( *(sgs_iStr**)mem && --(*(sgs_iStr**)mem)->refcount <= 0 )
+				var_destroy_string( C, *(sgs_iStr**)mem );
+			*(sgs_iStr**)mem = NULL;
+			return 0;
+		}
+		else if( val->type == SGS_VT_STRING )
+		{
+			if( *(sgs_iStr**)mem && --(*(sgs_iStr**)mem)->refcount <= 0 )
+				var_destroy_string( C, *(sgs_iStr**)mem );
+			*(sgs_iStr**)mem = val->data.S;
+			val->data.S->refcount++;
+			return 0;
+		}
+		return SGS_EINVAL;
+		
+	case SGS_OBJPROPTYPE_THREAD:
+		if( val->type == SGS_VT_NULL && !( prop->flags & SGS_OBJPROP_STRICT ) )
+		{
+			if( *(sgs_Context**)mem && --(*(sgs_Context**)mem)->refcount <= 0 )
+				sgsCTX_FreeState( *(sgs_Context**)mem );
+			*(sgs_Context**)mem = NULL;
+			return 0;
+		}
+		else if( val->type == SGS_VT_THREAD )
+		{
+			if( *(sgs_Context**)mem && --(*(sgs_Context**)mem)->refcount <= 0 )
+				sgsCTX_FreeState( *(sgs_Context**)mem );
+			*(sgs_Context**)mem = val->data.T;
+			val->data.S->refcount++;
+			return 0;
+		}
+		return SGS_EINVAL;
+		
+	case SGS_OBJPROPTYPE_CBFUNC:
+		return SGS_ENOTSUP; /* cannot edit interface data */
+		
+	case SGS_OBJPROPTYPE_CUSTOM:
+		if( prop->setcb )
+		{
+			sgs_OC_Prop cb = (sgs_OC_Prop) prop->setcb;
+			return SGS_FAILED( cb( C, O, val ) ) ? SGS_EINPROC : SGS_SUCCESS;
+		}
+	}
+	return SGS_ENOTSUP;
 }
 
 int sgs_specfn_apply( SGS_CTX )
@@ -1459,53 +1642,56 @@ static void vm_getprop_safe( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_
 
 static SGSRESULT vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* src, int isprop )
 {
-	int ret = 0;
+	int ret = SGS_ENOTSUP;
 	StkIdx origsize = SGS_STACKFRAMESIZE;
 	
 	if( isprop && idx->type != SGS_VT_INT && idx->type != SGS_VT_STRING )
 	{
 		ret = SGS_EINVAL;
 	}
-	else if( obj->type == SGS_VT_OBJECT && obj->data.O->metaobj &&
-		obj->data.O->mm_enable && !obj->data.O->in_setindex &&
-		_push_metamethod( C, obj->data.O, "__setindex" ) )
+	else if( obj->type == SGS_VT_OBJECT )
 	{
-		sgs_SizeVal ssz = SGS_STACKFRAMESIZE - 1;
-		sgs_PushObjectPtr( C, obj->data.O );
-		fstk_push2( C, idx, src );
-		obj->data.O->in_setindex = SGS_TRUE; /* prevent recursion */
-		sgs_ThisCall( C, 2, 1 );
-		obj->data.O->in_setindex = SGS_FALSE;
-		ret = sgs_GetBool( C, -1 );
-		stk_downsize( C, ssz );
-		if( !ret ) /* was not handled by metamethod */
-			goto nextcase;
-	}
-	else if( obj->type == SGS_VT_OBJECT && obj->data.O->iface->setindex )
-	{
-nextcase:;
-		int arg = C->object_arg;
 		sgs_VarObj* O = obj->data.O;
-		_STACK_PREPARE;
-		_EL_BACKUP;
-		
-		if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
-			return SGS_EINPROC;
-		C->sf_count++;
-		
-		_EL_SETAPI(0);
-		_STACK_PROTECT;
-		fstk_push2( C, idx, src );
-		C->object_arg = isprop;
-		ret = O->iface->setindex( C, O );
-		C->object_arg = arg;
-		_EL_RESET;
-		
-		C->sf_count--;
-		_STACK_UNPROTECT;
+		if( O->metaobj && O->mm_enable && !O->in_setindex &&
+			_push_metamethod( C, O, "__setindex" ) )
+		{
+			sgs_SizeVal ssz = SGS_STACKFRAMESIZE - 1;
+			sgs_PushObjectPtr( C, O );
+			fstk_push2( C, idx, src );
+			O->in_setindex = SGS_TRUE; /* prevent recursion */
+			sgs_ThisCall( C, 2, 1 );
+			O->in_setindex = SGS_FALSE;
+			ret = sgs_GetBool( C, -1 );
+			stk_downsize( C, ssz );
+			if( !ret ) /* was not handled by metamethod */
+				goto nextcase;
+		}
+		else if( O->iface->setindex )
+		{
+nextcase:;
+			int arg = C->object_arg;
+			_STACK_PREPARE;
+			_EL_BACKUP;
+			
+			if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
+				return SGS_EINPROC;
+			C->sf_count++;
+			
+			_EL_SETAPI(0);
+			_STACK_PROTECT;
+			fstk_push2( C, idx, src );
+			C->object_arg = isprop;
+			ret = O->iface->setindex( C, O );
+			C->object_arg = arg;
+			_EL_RESET;
+			
+			C->sf_count--;
+			_STACK_UNPROTECT;
+		}
+		if( ret == SGS_ENOTFND && sgs_WriteProp( C, O, idx, src ) )
+		{
+		}
 	}
-	else
-		ret = SGS_ENOTSUP;
 	
 	if( SGS_FAILED( ret ) )
 		return VM_SETPROP_ERR( ret );
