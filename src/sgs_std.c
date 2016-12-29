@@ -645,12 +645,12 @@ static int sgsstd_array_iface_gen( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_array_prop_first_read( SGS_CTX, sgs_VarObj* obj, sgs_Variable* outvar )
+static int sgsstd_array_prop_first_read( SGS_CTX, sgs_VarObj* obj )
 {
 	SGSARR_HDR_OI;
 	if( hdr->size )
 	{
-		sgs_Assign( C, outvar, &SGSARR_PTR( hdr )[ 0 ] );
+		sgs_PushVariable( C, SGSARR_PTR( hdr )[ 0 ] );
 	}
 	else
 	{
@@ -673,12 +673,12 @@ static int sgsstd_array_prop_first_write( SGS_CTX, sgs_VarObj* obj, sgs_Variable
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_array_prop_last_read( SGS_CTX, sgs_VarObj* obj, sgs_Variable* outvar )
+static int sgsstd_array_prop_last_read( SGS_CTX, sgs_VarObj* obj )
 {
 	SGSARR_HDR_OI;
 	if( hdr->size )
 	{
-		sgs_Assign( C, outvar, &SGSARR_PTR( hdr )[ hdr->size - 1 ] );
+		sgs_PushVariable( C, SGSARR_PTR( hdr )[ hdr->size - 1 ] );
 	}
 	else
 	{
@@ -2486,20 +2486,6 @@ fail:
 
 
 
-static int sgsstd_event_setindex( SGS_ARGS_SETINDEXFUNC )
-{
-	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "signaled" )
-		{
-			sgs_Bool val = SGS_FALSE;
-			if( sgs_ParseBool( C, 1, &val ) == SGS_FALSE )
-				return SGS_EINVAL;
-			obj->data = val ? obj : NULL;
-			return SGS_SUCCESS;
-		}
-	SGS_END_INDEXFUNC;
-}
-
 static int sgsstd_event_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	if( type == SGS_VT_BOOL )
@@ -2533,7 +2519,7 @@ SGS_APIFUNC sgs_ObjInterface sgsstd_event_iface[1] =
 {{
 	"event",
 	NULL, NULL,
-	NULL, sgsstd_event_setindex,
+	NULL, NULL,
 	sgsstd_event_convert, sgsstd_event_serialize, sgsstd_event_dump, NULL,
 	NULL, NULL,
 	sgsstd_event_props,

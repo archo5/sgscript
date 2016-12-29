@@ -1090,9 +1090,29 @@ SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable*
 	case SGS_OBJPROPTYPE_CUSTOM:
 		if( prop->offset_or_getcb )
 		{
-			sgs_OC_Prop cb = (sgs_OC_Prop) prop->offset_or_getcb;
+			int ret;
+			sgs_OC_Prop0 cb = (sgs_OC_Prop0) prop->offset_or_getcb;
+			_STACK_PREPARE;
+			_EL_BACKUP;
+			
+			_STACK_PROTECT;
+			_EL_SETAPI(0);
+			ret = SGS_FAILED( cb( C, O ) ) ? SGS_EINPROC : SGS_SUCCESS;
+			_EL_RESET;
+			
+			if( SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1 )
+			{
+				_STACK_UNPROTECT_SKIP( 1 );
+				ret = 1;
+			}
+			else
+			{
+				_STACK_UNPROTECT;
+				ret = SGS_ENOTFND;
+			}
+			
 			outvar->type = SGS_VT_NULL;
-			return SGS_FAILED( cb( C, O, outvar ) ) ? SGS_EINPROC : SGS_SUCCESS;
+			return ret;
 		}
 		break;
 	}
@@ -1126,10 +1146,6 @@ SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable
 			case SGS_OBJPROPTYPE_U32BOOL: *(uint32_t*)mem = v;    break;
 			case SGS_OBJPROPTYPE_OBJBOOL: O->data = v ? O : NULL; break;
 			}
-			if( prop->type == SGS_OBJPROPTYPE_U8BOOL )
-				*(uint8_t*)mem = v;
-			else
-				*(uint32_t*)mem = v;
 			return 0;
 		}
 		return SGS_EINVAL; }
@@ -1612,8 +1628,8 @@ static SGSRESULT vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj,
 			else
 			{
 				_STACK_UNPROTECT;
-				if( sgs_ReadProp( C, O, idx, outmaybe ) == SGS_SUCCESS )
-					return 0;
+				if( SGS_SUCCEEDED( ret = sgs_ReadProp( C, O, idx, outmaybe ) ) )
+					return ret;
 				ret = SGS_ENOTFND;
 			}
 		}
@@ -1652,6 +1668,7 @@ static SGSRESULT vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_
 	else if( obj->type == SGS_VT_OBJECT )
 	{
 		sgs_VarObj* O = obj->data.O;
+		ret = SGS_ENOTFND;
 		if( O->metaobj && O->mm_enable && !O->in_setindex &&
 			_push_metamethod( C, O, "__setindex" ) )
 		{
@@ -1688,8 +1705,9 @@ nextcase:;
 			C->sf_count--;
 			_STACK_UNPROTECT;
 		}
-		if( ret == SGS_ENOTFND && sgs_WriteProp( C, O, idx, src ) )
+		if( ret == SGS_ENOTFND )
 		{
+			ret = sgs_WriteProp( C, O, idx, src );
 		}
 	}
 	
