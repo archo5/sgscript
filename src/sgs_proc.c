@@ -1091,16 +1091,22 @@ SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable*
 		if( prop->offset_or_getcb )
 		{
 			int ret;
-			sgs_OC_Prop0 cb = (sgs_OC_Prop0) prop->offset_or_getcb;
+			sgs_OC_Prop cb = (sgs_OC_Prop) prop->offset_or_getcb;
 			_STACK_PREPARE;
 			_EL_BACKUP;
 			
+			if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
+				return SGS_EINPROC;
+			C->sf_count++;
+			
 			_STACK_PROTECT;
 			_EL_SETAPI(0);
-			ret = SGS_FAILED( cb( C, O ) ) ? SGS_EINPROC : SGS_SUCCESS;
+			ret = SGS_FAILED( cb( C, O ) ) ? SGS_EINPROC : 1;
 			_EL_RESET;
 			
-			if( SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1 )
+			C->sf_count--;
+			
+			if( ret == 1 && SGS_STACKFRAMESIZE >= 1 )
 			{
 				_STACK_UNPROTECT_SKIP( 1 );
 				ret = 1;
@@ -1108,7 +1114,6 @@ SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable*
 			else
 			{
 				_STACK_UNPROTECT;
-				ret = SGS_ENOTFND;
 			}
 			
 			outvar->type = SGS_VT_NULL;
@@ -1280,8 +1285,25 @@ SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable
 	case SGS_OBJPROPTYPE_CUSTOM:
 		if( prop->setcb )
 		{
+			int ret;
 			sgs_OC_Prop cb = (sgs_OC_Prop) prop->setcb;
-			return SGS_FAILED( cb( C, O, val ) ) ? SGS_EINPROC : SGS_SUCCESS;
+			_STACK_PREPARE;
+			_EL_BACKUP;
+			
+			if( C->sf_count >= SGS_MAX_CALL_STACK_SIZE )
+				return SGS_EINPROC;
+			C->sf_count++;
+			
+			_STACK_PROTECT;
+			stk_push( C, val );
+			_EL_SETAPI(0);
+			ret = SGS_FAILED( cb( C, O ) ) ? SGS_EINPROC : SGS_SUCCESS;
+			_EL_RESET;
+			_STACK_UNPROTECT;
+			
+			C->sf_count--;
+			
+			return ret;
 		}
 	}
 	return SGS_ENOTSUP;
@@ -1708,7 +1730,7 @@ nextcase:;
 			C->sf_count--;
 			_STACK_UNPROTECT;
 		}
-		if( ret == SGS_ENOTFND )
+		if( SGS_FAILED( ret ) && isprop )
 		{
 			ret = sgs_WriteProp( C, O, idx, src );
 		}

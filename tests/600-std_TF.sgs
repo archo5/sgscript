@@ -217,6 +217,16 @@ testEqual( usr.self, usr, "[un]-serialize2 - self-referencing map - reference ma
 testEqual( ERRORS, "", "serialization - errors" );
 
 	section( "array basic ops" );
+
+ERRORS = "";
+testEqual( arr.first, 9, "read first value" );
+testEqual( arr.last, 8, "read last value" );
+cfl = clone(arr);
+cfl.first = "test";
+cfl.last = true;
+testEqual( cfl.first, "test", "read first value after write" );
+testEqual( cfl.last, true, "read last value after write" );
+testEqual( ERRORS, "", "array first/last element access - no errors" );
 testEqual( clone(arr).insert(0,1,4)$'', '[1,4,9,3,6,2,8]', "insert at beginning" );
 testEqual( clone(arr).insert(-1,1,4)$'', '[9,3,6,2,8,1,4]', "insert at end" );
 testEqual( clone(arr).insert(3,1,4)$'', '[9,3,6,1,4,2,8]', "insert at middle" );

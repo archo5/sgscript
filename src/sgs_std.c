@@ -659,12 +659,12 @@ static int sgsstd_array_prop_first_read( SGS_CTX, sgs_VarObj* obj )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_array_prop_first_write( SGS_CTX, sgs_VarObj* obj, sgs_Variable* invar )
+static int sgsstd_array_prop_first_write( SGS_CTX, sgs_VarObj* obj )
 {
 	SGSARR_HDR_OI;
 	if( hdr->size )
 	{
-		sgs_Assign( C, &SGSARR_PTR( hdr )[ 0 ], invar );
+		sgs_GetStackItem( C, 0, &SGSARR_PTR( hdr )[ 0 ] );
 	}
 	else
 	{
@@ -687,12 +687,12 @@ static int sgsstd_array_prop_last_read( SGS_CTX, sgs_VarObj* obj )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_array_prop_last_write( SGS_CTX, sgs_VarObj* obj, sgs_Variable* invar )
+static int sgsstd_array_prop_last_write( SGS_CTX, sgs_VarObj* obj )
 {
 	SGSARR_HDR_OI;
 	if( hdr->size )
 	{
-		sgs_Assign( C, &SGSARR_PTR( hdr )[ hdr->size - 1 ], invar );
+		sgs_GetStackItem( C, 0, &SGSARR_PTR( hdr )[ hdr->size - 1 ] );
 	}
 	else
 	{
