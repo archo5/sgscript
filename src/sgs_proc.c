@@ -941,12 +941,12 @@ sgs_ObjProp* sgs_FindProp( sgs_VarObj* O, sgs_Variable* idx )
 
 SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable* outvar )
 {
-	char* mem;
+	void* mem;
 	sgs_ObjProp* prop = sgs_FindProp( O, idx );
 	if( !prop || ( prop->flags & SGS_OBJPROP_NOREAD ) )
 		return SGS_ENOTFND;
 	
-	mem = ((char*) O->data) + (uint32_t)prop->offset_or_getcb;
+	mem = (void*)( ((char*) O->data) + (uint32_t)prop->offset_or_getcb );
 	switch( prop->type )
 	{
 	case SGS_OBJPROPTYPE_U8BOOL:
@@ -1126,12 +1126,12 @@ SGSBOOL sgs_ParsePtrP( SGS_CTX, sgs_Variable* var, void** out );
 
 SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable* val )
 {
-	char* mem;
+	void* mem;
 	sgs_ObjProp* prop = sgs_FindProp( O, idx );
 	if( !prop || ( prop->flags & SGS_OBJPROP_NOWRITE ) )
 		return SGS_ENOTFND;
 	
-	mem = ((char*) O->data) + (uint32_t)prop->offset_or_getcb;
+	mem = (void*)( ((char*) O->data) + (uint32_t)prop->offset_or_getcb );
 	switch( prop->type )
 	{
 	case SGS_OBJPROPTYPE_U8BOOL:
@@ -1630,11 +1630,14 @@ static SGSRESULT vm_getprop( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj,
 				_STACK_UNPROTECT;
 				if( SGS_SUCCEEDED( ret = sgs_ReadProp( C, O, idx, outmaybe ) ) )
 					return ret;
-				ret = SGS_ENOTFND;
+				else
+					ret = SGS_ENOTFND;
 			}
 		}
-		else if( sgs_ReadProp( C, O, idx, outmaybe ) == SGS_SUCCESS )
-			return 0;
+		else if( SGS_SUCCEEDED( ret = sgs_ReadProp( C, O, idx, outmaybe ) ) )
+			return ret;
+		else
+			ret = SGS_ENOTFND;
 	}
 	else
 	{

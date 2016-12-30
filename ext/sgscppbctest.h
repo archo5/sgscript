@@ -44,7 +44,7 @@ struct Vec3
 		if( type == SGS_VT_STRING )
 		{
 			char bfr[ 128 ] = {0};
-			snprintf( bfr, 127, "Vec3(%g;%g;%g)", V->x, V->y, V->z );
+			sprintf( bfr, "Vec3(%g;%g;%g)", V->x, V->y, V->z );
 			sgs_PushString( C, bfr );
 			return SGS_SUCCESS;
 		}
