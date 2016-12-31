@@ -866,6 +866,7 @@ static SGS_INLINE sgs_Variable sgs_MakePtr( void* v )
 }
 
 SGS_APIFUNC void sgs_InitStringBuf( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal size );
+#define sgs_InitStringLit( C, out, strlit ) (sgs_InitStringBuf( (C), (out), SGS_STRLITBUF(strlit) ))
 SGS_APIFUNC void sgs_InitString( SGS_CTX, sgs_Variable* out, const char* str );
 SGS_APIFUNC void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj );
 SGS_APIFUNC void sgs_InitThreadPtr( sgs_Variable* out, sgs_Context* T );
@@ -1103,11 +1104,8 @@ SGS_APIFUNC SGSBOOL sgs_ForceHideThis( SGS_CTX );
 SGS_APIFUNC int sgs_ObjectArg( SGS_CTX );
 
 SGS_APIFUNC void sgs_Acquire( SGS_CTX, sgs_Variable* var );
-SGS_APIFUNC void sgs_AcquireArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count );
 SGS_APIFUNC void sgs_Release( SGS_CTX, sgs_Variable* var );
-SGS_APIFUNC void sgs_ReleaseArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count );
 SGS_APIFUNC void sgs_GCMark( SGS_CTX, sgs_Variable* var );
-SGS_APIFUNC void sgs_GCMarkArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count );
 SGS_APIFUNC void sgs_ObjAcquire( SGS_CTX, sgs_VarObj* obj );
 SGS_APIFUNC void sgs_ObjRelease( SGS_CTX, sgs_VarObj* obj );
 SGS_APIFUNC void sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj );

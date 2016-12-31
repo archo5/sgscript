@@ -230,15 +230,6 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_Siz
 	}
 }
 
-static void var_create_str( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len )
-{
-	sgsVM_VarCreateString( C, out, str, len );
-}
-static void var_create_cstr( SGS_CTX, sgs_Variable* out, const char* str )
-{
-	sgsVM_VarCreateString( C, out, str, (sgs_SizeVal) SGS_STRINGLENGTHFUNC(str) );
-}
-
 static void var_finalize_str( SGS_CTX, sgs_Variable* out )
 {
 	char* str;
@@ -800,15 +791,15 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 	char buf[ 32 ];
 	switch( var->type )
 	{
-	case SGS_VT_NULL: var_create_str( C, out, SGS_STRLITBUF( "null" ) ); break;
+	case SGS_VT_NULL: sgs_InitStringLit( C, out, "null" ); break;
 	case SGS_VT_BOOL:
-		if( var->data.B ) var_create_str( C, out, SGS_STRLITBUF( "true" ) );
-		else var_create_str( C, out, SGS_STRLITBUF( "false" ) );
+		if( var->data.B ) sgs_InitStringLit( C, out, "true" );
+		else sgs_InitStringLit( C, out, "false" );
 		break;
-	case SGS_VT_INT: sprintf( buf, "%" PRId64, var->data.I ); var_create_cstr( C, out, buf ); break;
-	case SGS_VT_REAL: sprintf( buf, "%g", var->data.R ); var_create_cstr( C, out, buf ); break;
-	case SGS_VT_FUNC: var_create_str( C, out, SGS_STRLITBUF( "function" ) ); break;
-	case SGS_VT_CFUNC: var_create_str( C, out, SGS_STRLITBUF( "C function" ) ); break;
+	case SGS_VT_INT: sprintf( buf, "%" PRId64, var->data.I ); sgs_InitString( C, out, buf ); break;
+	case SGS_VT_REAL: sprintf( buf, "%g", var->data.R ); sgs_InitString( C, out, buf ); break;
+	case SGS_VT_FUNC: sgs_InitStringLit( C, out, "function" ); break;
+	case SGS_VT_CFUNC: sgs_InitStringLit( C, out, "C function" ); break;
 	case SGS_VT_OBJECT:
 		{
 			sgs_VarObj* O = var->data.O;
@@ -820,8 +811,7 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 				sgs_PushObjectPtr( C, O );
 				if( sgs_XThisCall( C, 0 ) > 0 && stk_gettop( C )->type == SGS_VT_STRING )
 				{
-					*out = *stk_gettop( C );
-					out->data.S->refcount++; /* cancel release from stack to transfer successfully */
+					SGS_STACK_TOP_TO_NONSTACK( out );
 					stk_downsize( C, ssz );
 					break;
 				}
@@ -829,38 +819,40 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 			}
 			if( O->iface->convert )
 			{
-				SGSRESULT ret = SGS_EINPROC;
-				_STACK_PROTECT;
 				if( C->sf_count < SGS_MAX_CALL_STACK_SIZE )
 				{
+					SGSRESULT ret = SGS_EINPROC;
+					_STACK_PROTECT;
+					
 					C->sf_count++;
 					ret = O->iface->convert( C, O, SGS_VT_STRING );
 					C->sf_count--;
+					
+					if( SGS_SUCCEEDED( ret ) &&
+						SGS_STACKFRAMESIZE >= 1 &&
+						stk_gettop( C )->type == SGS_VT_STRING )
+					{
+						SGS_STACK_TOP_TO_NONSTACK( out );
+						_STACK_UNPROTECT;
+						break;
+					}
+					_STACK_UNPROTECT;
 				}
 				else
 					sgs_Msg( C, SGS_ERROR, SGS_ERRMSG_CALLSTACKLIMIT );
-				
-				if( SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1 && stk_gettop( C )->type == SGS_VT_STRING )
-				{
-					*out = *stk_gettop( C );
-					out->data.S->refcount++; /* cancel release from stack to transfer successfully */
-					_STACK_UNPROTECT;
-					break;
-				}
-				_STACK_UNPROTECT;
 			}
-			var_create_cstr( C, out, O->iface->name );
+			sgs_InitString( C, out, O->iface->name );
 		}
 		break;
 	case SGS_VT_PTR:
 		sprintf( buf, "ptr(%p)", var->data.P );
-		var_create_cstr( C, out, buf );
+		sgs_InitString( C, out, buf );
 		break;
 	case SGS_VT_THREAD:
 		sprintf( buf, "thread(%p)", var->data.T );
-		var_create_cstr( C, out, buf );
+		sgs_InitString( C, out, buf );
 		break;
-	default: var_create_str( C, out, SGS_STRLITBUF( "<bad typeid>" ) ); break;
+	default: sgs_InitStringLit( C, out, "<bad typeid>" ); break;
 	}
 	sgs_BreakIf( out->type != SGS_VT_STRING );
 }
@@ -1740,51 +1732,6 @@ nextcase:;
 /*
 	OPs
 */
-
-static SGSBOOL vm_clone( SGS_CTX, sgs_Variable* var )
-{
-	/*
-		strings are supposed to be immutable
-		(even though C functions can accidentally
-		or otherwise modify them with relative ease)
-	*/
-	if( var->type == SGS_VT_OBJECT )
-	{
-		int ret = SGS_ENOTFND;
-		sgs_VarObj* O = var->data.O;
-		if( O->mm_enable && _push_metamethod( C, O, "__clone" ) )
-		{
-			sgs_SizeVal ssz = SGS_STACKFRAMESIZE - 1;
-			sgs_PushObjectPtr( C, O );
-			if( sgs_XThisCall( C, 0 ) > 0 )
-			{
-				stk_downsize_keep( C, ssz, 1 );
-				return SGS_TRUE;
-			}
-			stk_downsize( C, ssz );
-		}
-		if( O->iface->convert )
-		{
-			_STACK_PREPARE;
-			_STACK_PROTECT;
-			ret = O->iface->convert( C, O, SGS_CONVOP_CLONE );
-			_STACK_UNPROTECT_SKIP( SGS_FAILED( ret ) ? 0 : 1 );
-		}
-		if( SGS_FAILED( ret ) )
-		{
-			sgs_Msg( C, SGS_ERROR, "failed to clone variable" );
-			return SGS_FALSE;
-		}
-	}
-	else
-	{
-		/* even though functions are immutable, they're also impossible to modify,
-			thus there is little need for showing an error when trying to convert one,
-			especially if it's a part of some object to be cloned */
-		fstk_push( C, var );
-	}
-	return SGS_TRUE;
-}
 
 static SGSBOOL vm_op_concat_ex( SGS_CTX, StkIdx args )
 {
@@ -3258,7 +3205,7 @@ static void sgs_StackIdxError( SGS_CTX, sgs_StkIdx item )
 void sgs_InitStringBuf( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal size )
 {
 	sgs_BreakIf( !str && size && "sgs_InitStringBuf: str = NULL" );
-	var_create_str( C, out, str, size );
+	sgsVM_VarCreateString( C, out, str, size );
 }
 
 void sgs_InitString( SGS_CTX, sgs_Variable* out, const char* str )
@@ -3268,7 +3215,7 @@ void sgs_InitString( SGS_CTX, sgs_Variable* out, const char* str )
 	sz = SGS_STRINGLENGTHFUNC(str);
 	sgs_BreakIf( sz > 0x7fffffff && "sgs_InitString: size exceeded" );
 	/* WP: error detection */
-	var_create_str( C, out, str, (sgs_SizeVal) sz );
+	sgsVM_VarCreateString( C, out, str, (sgs_SizeVal) sz );
 }
 
 void sgs_InitObjectPtr( sgs_Variable* out, sgs_VarObj* obj )
@@ -3286,14 +3233,19 @@ void sgs_InitThreadPtr( sgs_Variable* out, sgs_Context* T )
 }
 
 
+static void copy_or_push( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
+{
+	if( out )
+		*out = *var;
+	else
+		fstk_push_leave( C, var );
+}
+
 SGSONE sgs_CreateObject( SGS_CTX, sgs_Variable* out, void* data, sgs_ObjInterface* iface )
 {
 	sgs_Variable var;
 	var_create_obj( C, &var, data, iface, 0 );
-	if( out )
-		*out = var;
-	else
-		stk_push_leave( C, &var );
+	copy_or_push( C, out, &var );
 	return 1;
 }
 
@@ -3301,10 +3253,7 @@ void* sgs_CreateObjectIPA( SGS_CTX, sgs_Variable* out, uint32_t added, sgs_ObjIn
 {
 	sgs_Variable var;
 	var_create_obj( C, &var, NULL, iface, added );
-	if( out )
-		*out = var;
-	else
-		stk_push_leave( C, &var );
+	copy_or_push( C, out, &var );
 	return var.data.O->data;
 }
 
@@ -3313,10 +3262,7 @@ SGSONE sgs_CreateArray( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
 	sgs_Variable var;
 	var.type = SGS_VT_NULL;
 	sgsSTD_MakeArray( C, &var, numitems );
-	if( out )
-		*out = var;
-	else
-		stk_push_leave( C, &var );
+	copy_or_push( C, out, &var );
 	return 1;
 }
 
@@ -3325,10 +3271,7 @@ SGSONE sgs_CreateDict( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
 	sgs_Variable var;
 	var.type = SGS_VT_NULL;
 	sgsSTD_MakeDict( C, &var, numitems );
-	if( out )
-		*out = var;
-	else
-		stk_push_leave( C, &var );
+	copy_or_push( C, out, &var );
 	return 1;
 }
 
@@ -3337,10 +3280,7 @@ SGSONE sgs_CreateMap( SGS_CTX, sgs_Variable* out, sgs_SizeVal numitems )
 	sgs_Variable var;
 	var.type = SGS_VT_NULL;
 	sgsSTD_MakeMap( C, &var, numitems );
-	if( out )
-		*out = var;
-	else
-		stk_push_leave( C, &var );
+	copy_or_push( C, out, &var );
 	return 1;
 }
 
@@ -3362,7 +3302,7 @@ SGSONE sgs_PushBool( SGS_CTX, sgs_Bool value )
 	sgs_Variable var;
 	var.type = SGS_VT_BOOL;
 	var.data.B = value ? 1 : 0;
-	stk_push_leave( C, &var );
+	fstk_push_leave( C, &var );
 	return 1;
 }
 
@@ -3371,7 +3311,7 @@ SGSONE sgs_PushInt( SGS_CTX, sgs_Int value )
 	sgs_Variable var;
 	var.type = SGS_VT_INT;
 	var.data.I = value;
-	stk_push_leave( C, &var );
+	fstk_push_leave( C, &var );
 	return 1;
 }
 
@@ -3380,7 +3320,7 @@ SGSONE sgs_PushReal( SGS_CTX, sgs_Real value )
 	sgs_Variable var;
 	var.type = SGS_VT_REAL;
 	var.data.R = value;
-	stk_push_leave( C, &var );
+	fstk_push_leave( C, &var );
 	return 1;
 }
 
@@ -3388,8 +3328,8 @@ SGSONE sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size )
 {
 	sgs_Variable var;
 	sgs_BreakIf( !str && size && "sgs_PushStringBuf: str = NULL" );
-	var_create_str( C, &var, str, size );
-	stk_push_leave( C, &var );
+	sgsVM_VarCreateString( C, &var, str, size );
+	fstk_push_leave( C, &var );
 	return 1;
 }
 
@@ -3401,8 +3341,8 @@ SGSONE sgs_PushString( SGS_CTX, const char* str )
 	sz = SGS_STRINGLENGTHFUNC(str);
 	sgs_BreakIf( sz > 0x7fffffff && "sgs_PushString: size exceeded" );
 	/* WP: error detection */
-	var_create_str( C, &var, str, (sgs_SizeVal) sz );
-	stk_push_leave( C, &var );
+	sgsVM_VarCreateString( C, &var, str, (sgs_SizeVal) sz );
+	fstk_push_leave( C, &var );
 	return 1;
 }
 
@@ -3411,7 +3351,7 @@ SGSONE sgs_PushCFunc( SGS_CTX, sgs_CFunc func )
 	sgs_Variable var;
 	var.type = SGS_VT_CFUNC;
 	var.data.C = func;
-	stk_push_leave( C, &var );
+	fstk_push_leave( C, &var );
 	return 1;
 }
 
@@ -3420,7 +3360,7 @@ SGSONE sgs_PushPtr( SGS_CTX, void* ptr )
 	sgs_Variable var;
 	var.type = SGS_VT_PTR;
 	var.data.P = ptr;
-	stk_push_leave( C, &var );
+	fstk_push_leave( C, &var );
 	return 1;
 }
 
@@ -3488,7 +3428,7 @@ char* sgs_PushStringAlloc( SGS_CTX, sgs_SizeVal size )
 {
 	sgs_Variable var;
 	var_create_0str( C, &var, (uint32_t) size );
-	stk_push_leave( C, &var );
+	fstk_push_leave( C, &var );
 	return sgs_var_cstr( &var );
 }
 
@@ -3616,7 +3556,7 @@ SGSBOOL sgs_PushGlobalByName( SGS_CTX, const char* name )
 	int ret;
 	sgs_Variable val;
 	ret = sgs_GetGlobalByName( C, name, &val );
-	stk_push_leave( C, &val );
+	fstk_push_leave( C, &val );
 	return ret;
 }
 
@@ -4936,8 +4876,47 @@ void sgs_StringConcat( SGS_CTX, StkIdx args )
 
 void sgs_CloneItem( SGS_CTX, sgs_Variable var )
 {
-	if( vm_clone( C, &var ) == SGS_FALSE )
-		fstk_push_null( C );
+	/*
+		strings are supposed to be immutable
+		(even though C functions can accidentally
+		or otherwise modify them with relative ease)
+	*/
+	if( var.type == SGS_VT_OBJECT )
+	{
+		int ret = SGS_ENOTFND;
+		sgs_VarObj* O = var.data.O;
+		if( O->mm_enable && _push_metamethod( C, O, "__clone" ) )
+		{
+			sgs_SizeVal ssz = SGS_STACKFRAMESIZE - 1;
+			sgs_PushObjectPtr( C, O );
+			if( sgs_XThisCall( C, 0 ) > 0 )
+			{
+				stk_downsize_keep( C, ssz, 1 );
+				return;
+			}
+			stk_downsize( C, ssz );
+		}
+		if( O->iface->convert )
+		{
+			_STACK_PREPARE;
+			_STACK_PROTECT;
+			ret = O->iface->convert( C, O, SGS_CONVOP_CLONE );
+			_STACK_UNPROTECT_SKIP( SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1 ? 1 : 0 );
+		}
+		if( SGS_FAILED( ret ) )
+		{
+			sgs_Msg( C, SGS_ERROR, "failed to clone variable" );
+			fstk_push_null( C );
+			return;
+		}
+	}
+	else
+	{
+		/* even though functions are immutable, they're also impossible to modify,
+			thus there is little need for showing an error when trying to convert one,
+			especially if it's a part of some object to be cloned */
+		fstk_push( C, &var );
+	}
 }
 
 int sgs_Compare( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 )
@@ -5199,7 +5178,7 @@ SGSBOOL sgs_ParseString( SGS_CTX, StkIdx item, char** out, sgs_SizeVal* size )
 	if( !sgs_IsValidIndex( C, item ) )
 		return SGS_FALSE;
 	ty = sgs_ItemType( C, item );
-	if( ty == SGS_VT_NULL || ty == SGS_VT_FUNC || ty == SGS_VT_CFUNC )
+	if( SGS_IS_SYSTEM_TYPE( ty ) )
 		return SGS_FALSE;
 	str = sgs_ToStringBuf( C, item, size );
 	if( out )
@@ -5371,40 +5350,15 @@ void sgs_Acquire( SGS_CTX, sgs_Variable* var )
 	VAR_ACQUIRE( var );
 }
 
-void sgs_AcquireArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count )
-{
-	sgs_Variable* vend = var + count;
-	while( var < vend )
-		sgs_Acquire( C, var++ );
-}
-
 void sgs_Release( SGS_CTX, sgs_Variable* var )
 {
 	VAR_RELEASE( var );
-}
-
-void sgs_ReleaseArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count )
-{
-	sgs_Variable* vend = var + count;
-	while( var < vend )
-		sgs_Release( C, var++ );
 }
 
 void sgs_GCMark( SGS_CTX, sgs_Variable* var )
 {
 	SGS_SHCTX_USE;
 	vm_gcmark( S, var );
-}
-
-void sgs_GCMarkArray( SGS_CTX, sgs_Variable* var, sgs_SizeVal count )
-{
-	SGS_SHCTX_USE;
-	sgs_Variable* vend = var + count;
-	while( var < vend )
-	{
-		vm_gcmark( S, var );
-		var++;
-	}
 }
 
 void sgs_ObjAcquire( SGS_CTX, sgs_VarObj* obj )

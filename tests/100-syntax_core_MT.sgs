@@ -204,7 +204,7 @@ b = map
 };
 `
 result `SUCCESS`
-check_err `[W:Invalid value type used for index write][W:Invalid value type used for index write]`
+check_err `[W:Invalid value type used for index write][W:Invalid value type used for index write][W:Invalid value type used for index write]`
 check_out ``
 
 // `string concatenation priority`
