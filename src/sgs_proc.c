@@ -776,10 +776,7 @@ static void* var_getptr( sgs_Variable* var )
 	||( (var)->type == SGS_VT_INT && (var)->data.I <= C->wait_timer ) \
 	||( (var)->type == SGS_VT_OBJECT && var_getbool( C, var ) ))
 
-#define var_initnull( v ) \
-do{ sgs_Variable* __var = (v); __var->type = SGS_VT_NULL; }while(0)
-#define var_initbool( v, value ) \
-do{ sgs_Variable* __var = (v); __var->type = SGS_VT_BOOL; __var->data.B = value; }while(0)
+#define var_initnull( v ) (v)->type = SGS_VT_NULL
 #define var_initint( v, value ) \
 do{ sgs_Variable* __var = (v); __var->type = SGS_VT_INT; __var->data.I = value; }while(0)
 #define var_initreal( v, value ) \
@@ -1505,15 +1502,14 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize,
 }
 #define VM_GETPROP_ERR( type ) vm_runerr_getprop( C, type, origsize, outmaybe, obj, idx, isprop )
 
-static SGSRESULT vm_runerr_setprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sgs_Variable* idx, int isprop )
+static SGSRESULT vm_runerr_setprop( SGS_CTX, SGSRESULT type, sgs_Variable* idx, int isprop )
 {
 	if( type == SGS_ENOTFND )
 	{
-		char* p;
 		const char* err = isprop ? "Writable property not found" : "Cannot find writable value by index";
 		fstk_push( C, idx );
-		p = sgs_ToString( C, -1 );
-		sgs_Msg( C, SGS_WARNING, "%s: \"%s\"", err, p );
+		sgs_Msg( C, SGS_WARNING, "%s: \"%s\"", err, sgs_ToString( C, -1 ) );
+		fstk_pop1( C );
 	}
 	else if( type == SGS_EBOUNDS )
 	{
@@ -1540,10 +1536,9 @@ static SGSRESULT vm_runerr_setprop( SGS_CTX, SGSRESULT type, StkIdx origsize, sg
 		sgs_Msg( C, SGS_WARNING, "Unknown error on %s write", isprop ? "property" : "index" );
 	}
 	
-	fstk_pop( C, SGS_STACKFRAMESIZE - origsize );
 	return type;
 }
-#define VM_SETPROP_ERR( type ) vm_runerr_setprop( C, type, origsize, idx, isprop )
+#define VM_SETPROP_ERR( type ) vm_runerr_setprop( C, type, idx, isprop )
 
 
 /* VM_GETPROP
@@ -1684,7 +1679,6 @@ static void vm_getprop_safe( SGS_CTX, sgs_Variable* out, sgs_Variable* obj, sgs_
 static SGSRESULT vm_setprop( SGS_CTX, sgs_Variable* obj, sgs_Variable* idx, sgs_Variable* src, int isprop )
 {
 	int ret = SGS_ENOTSUP;
-	StkIdx origsize = SGS_STACKFRAMESIZE;
 	
 	if( isprop && idx->type != SGS_VT_INT && idx->type != SGS_VT_STRING )
 	{
@@ -1739,7 +1733,6 @@ nextcase:;
 	if( SGS_FAILED( ret ) )
 		return VM_SETPROP_ERR( ret );
 	
-	fstk_pop( C, SGS_STACKFRAMESIZE - origsize );
 	return ret;
 }
 
@@ -1935,6 +1928,57 @@ static const char* mm_arith_ops[] =
 	"__div",
 	"__mod",
 };
+
+static SGSBOOL vm_arith_op_obj_meta( SGS_CTX, sgs_Variable* out,
+	sgs_Variable* a, sgs_Variable* b, sgs_Variable* mmo, int op )
+{
+	int ret = 0;
+	if( mmo->type == SGS_VT_OBJECT && mmo->data.O->mm_enable &&
+		_push_metamethod_buf( C, mmo->data.O, mm_arith_ops[ op ], 5 ) )
+	{
+		sgs_SizeVal ssz = SGS_STACKFRAMESIZE - 1;
+		stk_makespace( C, 3 );
+		*C->stack_top++ = *mmo;
+		*C->stack_top++ = *a;
+		*C->stack_top++ = *b;
+		(*mmo->data.pRC) += 1;
+		(*a->data.pRC) += 1;
+		(*b->data.pRC) += 1;
+		ret = sgs_XThisCall( C, 2 ) > 0;
+		if( ret )
+		{
+			SGS_STACK_TOP_TO_NONSTACK( out );
+		}
+		stk_downsize( C, ssz );
+	}
+	return ret;
+}
+
+static SGSBOOL vm_arith_op_obj_iface( SGS_CTX, sgs_Variable* out,
+	sgs_Variable* a, sgs_Variable* b, sgs_Variable* mmo, int op )
+{
+	int ret = 0;
+	if( mmo->type == SGS_VT_OBJECT && mmo->data.O->iface->expr )
+	{
+		int prev_arg = C->object_arg;
+		sgs_VarObj* O = mmo->data.O;
+		_STACK_PREPARE;
+		_STACK_PROTECT;
+		fstk_push2( C, a, b );
+		C->object_arg = op;
+		
+		ret = SGS_SUCCEEDED( O->iface->expr( C, O ) ) && SGS_STACKFRAMESIZE >= 1;
+		
+		C->object_arg = prev_arg;
+		if( ret )
+		{
+			SGS_STACK_TOP_TO_NONSTACK( out );
+		}
+		_STACK_UNPROTECT;
+	}
+	return ret;
+}
+
 static SGSBOOL vm_arith_op( SGS_CTX, sgs_Variable* out, sgs_Variable* a, sgs_Variable* b, int op )
 {
 	if( a->type == SGS_VT_REAL && b->type == SGS_VT_REAL )
@@ -1973,102 +2017,17 @@ static SGSBOOL vm_arith_op( SGS_CTX, sgs_Variable* out, sgs_Variable* a, sgs_Var
 		sgs_Variable lA = *a, lB = *b;
 		VAR_ACQUIRE( &lA );
 		VAR_ACQUIRE( &lB );
-		/* WP: stack limit */
 		
-		if( a->type == SGS_VT_OBJECT && a->data.O->mm_enable &&
-			_push_metamethod_buf( C, a->data.O, mm_arith_ops[ op ], 5 ) )
-		{
-			sgs_SizeVal ssz = SGS_STACKFRAMESIZE - 1;
-			stk_makespace( C, 3 );
-			*C->stack_top++ = *a;
-			*C->stack_top++ = *a;
-			*C->stack_top++ = *b;
-			(*a->data.pRC) += 2;
-			(*b->data.pRC) += 1;
-			if( sgs_XThisCall( C, 2 ) > 0 )
-			{
-				SGS_STACK_TOP_TO_NONSTACK( out );
-				stk_downsize( C, ssz );
-				VAR_RELEASE( &lA );
-				VAR_RELEASE( &lB );
-				return 1;
-			}
-			stk_downsize( C, ssz );
-		}
-		
-		if( b->type == SGS_VT_OBJECT && b->data.O->mm_enable &&
-			_push_metamethod_buf( C, b->data.O, mm_arith_ops[ op ], 5 ) )
-		{
-			sgs_SizeVal ssz = SGS_STACKFRAMESIZE - 1;
-			stk_makespace( C, 3 );
-			*C->stack_top++ = *b;
-			*C->stack_top++ = *a;
-			*C->stack_top++ = *b;
-			(*a->data.pRC) += 1;
-			(*b->data.pRC) += 2;
-			if( sgs_XThisCall( C, 2 ) > 0 )
-			{
-				SGS_STACK_TOP_TO_NONSTACK( out );
-				stk_downsize( C, ssz );
-				VAR_RELEASE( &lA );
-				VAR_RELEASE( &lB );
-				return 1;
-			}
-			stk_downsize( C, ssz );
-		}
-		
-		if( a->type == SGS_VT_OBJECT && a->data.O->iface->expr )
-		{
-			int arg = C->object_arg;
-			sgs_VarObj* O = a->data.O;
-			_STACK_PREPARE;
-			_STACK_PROTECT;
-			fstk_push2( C, a, b );
-			C->object_arg = op;
-			ret = O->iface->expr( C, O );
-			C->object_arg = arg;
-			ret = SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1;
-			if( ret )
-			{
-				SGS_STACK_TOP_TO_NONSTACK( out );
-				_STACK_UNPROTECT;
-				VAR_RELEASE( &lA );
-				VAR_RELEASE( &lB );
-				return SGS_TRUE;
-			}
-			else
-			{
-				_STACK_UNPROTECT;
-			}
-		}
-		
-		if( b->type == SGS_VT_OBJECT && b->data.O->iface->expr )
-		{
-			int arg = C->object_arg;
-			sgs_VarObj* O = b->data.O;
-			_STACK_PREPARE;
-			_STACK_PROTECT;
-			fstk_push2( C, a, b );
-			C->object_arg = op;
-			ret = O->iface->expr( C, O );
-			C->object_arg = arg;
-			ret = SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1;
-			if( ret )
-			{
-				SGS_STACK_TOP_TO_NONSTACK( out );
-				_STACK_UNPROTECT;
-				VAR_RELEASE( &lA );
-				VAR_RELEASE( &lB );
-				return SGS_TRUE;
-			}
-			else
-			{
-				_STACK_UNPROTECT;
-			}
-		}
+		ret = vm_arith_op_obj_meta( C, out, a, b, a, op ) ||
+			vm_arith_op_obj_meta( C, out, a, b, b, op ) ||
+			vm_arith_op_obj_iface( C, out, a, b, a, op ) ||
+			vm_arith_op_obj_iface( C, out, a, b, b, op );
 		
 		VAR_RELEASE( &lA );
 		VAR_RELEASE( &lB );
+		
+		if( ret )
+			return 1;
 		goto fail;
 	}
 	

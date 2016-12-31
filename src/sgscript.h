@@ -766,7 +766,7 @@ SGS_APIFUNC sgs_StackFrame* sgs_GetFramePtr( SGS_CTX, sgs_StackFrame* from, int 
 #ifndef SGS_STRINGLENGTHFUNC
 #define SGS_STRINGLENGTHFUNC strlen
 #endif
-#define SGS_STRLITBUF( lit ) lit, sizeof(lit) - 1
+#define SGS_STRLITBUF( lit ) (lit), sizeof(lit) - 1
 
 #define sgs_PushSGSFunction( C, str ) sgs_PushSGSFunctionBuf( C, str, SGS_STRINGLENGTHFUNC( str ) )
 #define sgs_ExecBuffer( C, buf, sz ) sgs_AdjustStack( C, 0, sgs_EvalBuffer( C, buf, sz ) )
@@ -889,7 +889,7 @@ SGS_APIFUNC SGSONE sgs_PushBool( SGS_CTX, sgs_Bool value );
 SGS_APIFUNC SGSONE sgs_PushInt( SGS_CTX, sgs_Int value );
 SGS_APIFUNC SGSONE sgs_PushReal( SGS_CTX, sgs_Real value );
 SGS_APIFUNC SGSONE sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size );
-#define sgs_PushStringLit( C, strlit ) (sgs_PushStringBuf( (C), (strlit), sizeof(strlit)-1 ))
+#define sgs_PushStringLit( C, strlit ) (sgs_PushStringBuf( (C), SGS_STRLITBUF(strlit) ))
 SGS_APIFUNC SGSONE sgs_PushString( SGS_CTX, const char* str );
 SGS_APIFUNC SGSONE sgs_PushCFunc( SGS_CTX, sgs_CFunc func );
 SGS_APIFUNC SGSONE sgs_PushObjectPtr( SGS_CTX, sgs_VarObj* obj );
