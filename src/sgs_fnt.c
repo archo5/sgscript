@@ -1191,48 +1191,108 @@ fail:
 
 SFTRET parse_for( SFTC )
 {
-	sgs_FTNode *node, *ninit = NULL, *nexp = NULL, *nincr = NULL, *nwhile = NULL;
 	sgs_TokenList begin = SFTC_AT;
 
 	SGS_FN_BEGIN;
 
 	SFTC_NEXT;
-	if( !SFTC_IS( '(' ) )
+	
+	if( SFTC_IS( '(' ) )
 	{
-		SFTC_PRINTERR( "Expected '(' after 'for'" );
-		goto fail;
+		sgs_FTNode *node, *ninit = NULL, *nexp = NULL, *nincr = NULL, *nwhile = NULL;
+		
+		SFTC_NEXT;
+
+		ninit = parse_explist( F, ';' );
+		if( !ninit ) goto fail;
+		SFTC_NEXT;
+
+		nexp = parse_explist( F, ';' );
+		if( !nexp ) goto fail;
+		SFTC_NEXT;
+
+		nincr = parse_explist( F, ')' );
+		if( !nincr ) goto fail;
+		SFTC_NEXT;
+
+		nwhile = parse_stmt( F );
+		if( !nwhile ) goto fail;
+
+		ninit->next = nexp;
+		nexp->next = nincr;
+		nincr->next = nwhile;
+		node = make_node( SGS_SFT_FOR, begin, NULL, ninit );
+
+		SGS_FN_END;
+		return node;
+		
+	fail:
+		if( ninit ) SFTC_DESTROY( ninit );
+		if( nexp ) SFTC_DESTROY( nexp );
+		if( nincr ) SFTC_DESTROY( nincr );
+		if( nwhile ) SFTC_DESTROY( nwhile );
 	}
+	else if( SFTC_IS( SGS_ST_IDENT ) )
+	{
+		int realnum = 0;
+		sgs_FTNode *node, *nname = NULL, *nrange = NULL, *nwhile = NULL;
+		
+		nname = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
+		
+		SFTC_NEXT;
+		
+		if( !SFTC_IS( ':' ) )
+		{
+			SFTC_PRINTERR( "Expected ':' after identifier in 'numeric for'" );
+			goto fail_numfor;
+		}
+		SFTC_NEXT;
+		if( SFTC_IS( '.' ) )
+		{
+			realnum = 1;
+			SFTC_NEXT;
+		}
+		
+		if( !SFTC_IS( '(' ) )
+		{
+			SFTC_PRINTERR( "Expected '(' after ':'/':.' in 'numeric for'" );
+			goto fail_numfor;
+		}
+		SFTC_NEXT;
+		
+		nrange = parse_explist( F, ')' );
+		if( !nrange ) goto fail_numfor;
+		SFTC_NEXT;
+		
+		if( nrange->child == NULL ||
+			( nrange->child->next &&
+			nrange->child->next->next &&
+			nrange->child->next->next->next ) )
+		{
+			SFTC_PRINTERR( "Expected 1-3 values in 'numeric for'" );
+			goto fail_numfor;
+		}
 
-	SFTC_NEXT;
+		nwhile = parse_stmt( F );
+		if( !nwhile ) goto fail_numfor;
+		
+		nname->next = nrange;
+		nrange->next = nwhile;
+		node = make_node( realnum ? SGS_SFT_FORNUMR : SGS_SFT_FORNUMI, begin, NULL, nname );
 
-	ninit = parse_explist( F, ';' );
-	if( !ninit ) goto fail;
-	SFTC_NEXT;
-
-	nexp = parse_explist( F, ';' );
-	if( !nexp ) goto fail;
-	SFTC_NEXT;
-
-	nincr = parse_explist( F, ')' );
-	if( !nincr ) goto fail;
-	SFTC_NEXT;
-
-	nwhile = parse_stmt( F );
-	if( !nwhile ) goto fail;
-
-	ninit->next = nexp;
-	nexp->next = nincr;
-	nincr->next = nwhile;
-	node = make_node( SGS_SFT_FOR, begin, NULL, ninit );
-
-	SGS_FN_END;
-	return node;
-
-fail:
-	if( ninit ) SFTC_DESTROY( ninit );
-	if( nexp ) SFTC_DESTROY( nexp );
-	if( nincr ) SFTC_DESTROY( nincr );
-	if( nwhile ) SFTC_DESTROY( nwhile );
+		SGS_FN_END;
+		return node;
+		
+	fail_numfor:
+		if( nname ) SFTC_DESTROY( nname );
+		if( nrange ) SFTC_DESTROY( nrange );
+		if( nwhile ) SFTC_DESTROY( nwhile );
+	}
+	else
+	{
+		SFTC_PRINTERR( "Expected '(' or identifier after 'for'" );
+	}
+	
 	SFTC_SETERR;
 	SGS_FN_END;
 	return NULL;
@@ -1590,22 +1650,16 @@ SFTRET parse_stmt( SFTC )
 		goto fail;
 	}
 
-	/* IF / ELSE */
 	if( SFTC_ISKEY( "if" ) ) { node = parse_if( F ); SGS_FN_END; return node; }
 	else if( SFTC_ISKEY( "else" ) )
 	{
 		SFTC_PRINTERR( "Found 'else' without matching 'if'" );
 		goto fail;
 	}
-	/* WHILE */
 	else if( SFTC_ISKEY( "while" ) ) { node = parse_while( F ); SGS_FN_END; return node; }
-	/* DO / WHILE */
 	else if( SFTC_ISKEY( "do" ) ) { node = parse_dowhile( F ); SGS_FN_END; return node; }
-	/* FOR */
 	else if( SFTC_ISKEY( "for" ) ) { node = parse_for( F ); SGS_FN_END; return node; }
-	/* FOREACH */
 	else if( SFTC_ISKEY( "foreach" ) ) { node = parse_foreach( F ); SGS_FN_END; return node; }
-	/* BREAK */
 	else if( SFTC_ISKEY( "break" ) )
 	{
 		sgs_TokenList orig = SFTC_AT;
@@ -1635,7 +1689,6 @@ SFTRET parse_stmt( SFTC )
 		SGS_FN_END;
 		return node;
 	}
-	/* CONTINUE */
 	else if( SFTC_ISKEY( "continue" ) )
 	{
 		sgs_TokenList orig = SFTC_AT;
@@ -1665,9 +1718,7 @@ SFTRET parse_stmt( SFTC )
 		SGS_FN_END;
 		return node;
 	}
-	/* FUNCTION */
 	else if( SFTC_ISKEY( "function" ) ) { node = parse_function( F, 0, NULL ); SGS_FN_END; return node; }
-	/* RETURN */
 	else if( SFTC_ISKEY( "return" ) )
 	{
 		SFTC_NEXT;
@@ -1681,7 +1732,6 @@ SFTRET parse_stmt( SFTC )
 		SGS_FN_END;
 		return node;
 	}
-	/* VAR / GLOBAL - reuse code in parse_exp */
 	else if( SFTC_ISKEY( "var" ) || SFTC_ISKEY( "global" ) )
 	{
 		node = parse_exp( F, ";", 1 );
@@ -1698,7 +1748,6 @@ SFTRET parse_stmt( SFTC )
 		SGS_FN_END;
 		return node;
 	}
-	/* DEFERRED BLOCKS (scope destruction) */
 	else if( SFTC_ISKEY( "defer" ) )
 	{
 		sgs_TokenList orig = SFTC_AT;
@@ -1710,9 +1759,7 @@ SFTRET parse_stmt( SFTC )
 		SGS_FN_END;
 		return node;
 	}
-	/* COMMAND HELPERS */
 #define NOT_FCALL ( !sgsT_Next( F->at ) || '(' != *sgsT_Next( F->at ) )
-	/* CLASS */
 	else if( SFTC_IS_ID( "class" ) && NOT_FCALL )
 	{
 		SFTC_NEXT;

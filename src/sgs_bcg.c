@@ -46,6 +46,13 @@ typedef struct sgs_CompFunc
 }
 sgs_CompFunc;
 
+typedef struct sgs_FCVar
+{
+	const char* name;
+	size_t nmlength;
+}
+sgs_FCVar;
+
 struct sgs_FuncCtx
 {
 	int32_t func;
@@ -170,6 +177,49 @@ static void fctx_defer_add( SGS_CTX, sgs_FTNode* stmt )
 }
 
 
+static int find_var( sgs_MemBuf* S, const char* str, unsigned len )
+{
+	sgs_FCVar *vp,
+		*vstart = (sgs_FCVar*) S->ptr,
+		*vend = (sgs_FCVar*)( S->ptr + S->size );
+	vp = vstart;
+	while( vp != vend )
+	{
+		if( vp->nmlength == len && !memcmp( vp->name, str, len ) )
+			return vp - vstart;
+		vp++;
+	}
+	return -1;
+}
+
+static sgs_FCVar* find_nth_var( sgs_MemBuf* S, int which )
+{
+	sgs_FCVar
+		*vstart = (sgs_FCVar*) S->ptr,
+		*vend = (sgs_FCVar*)( S->ptr + S->size );
+	if( which < 0 || which >= ( vend - vstart ) )
+		return NULL;
+	return vstart + which;
+}
+
+static int add_var( sgs_MemBuf* S, SGS_CTX, const char* str, unsigned len )
+{
+	int pos = find_var( S, str, len );
+	if( pos < 0 )
+	{
+		sgs_FCVar nv = { str, len };
+		sgs_membuf_appbuf( S, C, &nv, sizeof(nv) );
+		return SGS_TRUE;
+	}
+	return SGS_FALSE;
+}
+
+#define find_varT( S, tok ) \
+	find_var( S, (char*) (tok) + 2, tok[1] )
+#define add_varT( S, C, tok ) \
+	add_var( S, C, (char*) (tok) + 2, tok[1] )
+
+
 static sgs_FuncCtx* fctx_create( SGS_CTX )
 {
 	sgs_FuncCtx* fctx = sgs_Alloc( sgs_FuncCtx );
@@ -187,7 +237,8 @@ static sgs_FuncCtx* fctx_create( SGS_CTX )
 	fctx->blocks = NULL;
 	fctx->loopinfo = NULL;
 	fctx->num_defers = 0;
-	sgs_membuf_appbuf( &fctx->gvars, C, "_G=", 3 );
+	
+	add_var( &fctx->gvars, C, SGS_STRLITBUF( "_G" ) );
 	
 	fctx->cfunc.consts = sgs_membuf_create();
 	fctx->cfunc.code = sgs_membuf_create();
@@ -228,17 +279,16 @@ static void fctx_destroy( SGS_CTX, sgs_FuncCtx* fctx )
 #if SGS_DUMP_BYTECODE || ( SGS_DEBUG && SGS_DEBUG_DATA )
 static void fctx_dumpvarlist( SGS_CTX, sgs_MemBuf* mb )
 {
-	char* p = mb->ptr, *pend = mb->ptr + mb->size;
-	while( p < pend )
+	sgs_FCVar *vp,
+		*vstart = (sgs_FCVar*) S->ptr,
+		*vend = (sgs_FCVar*)( S->ptr + S->size );
+	vp = vstart;
+	while( vp != vend )
 	{
-		if( *p == '=' )
-		{
-			if( p < pend - 1 )
-				sgs_ErrWritef( C, ", " );
-		}
-		else
-			sgs_ErrWritef( C, "%c", *p );
-		p++;
+		if( vp != vstart )
+			sgs_ErrWrite( C, SGS_STRLITBUF( ", " ) );
+		sgs_ErrWrite( C, vp->name, vp->nmlength );
+		vp++;
 	}
 }
 static void fctx_dump( SGS_CTX, sgs_FuncCtx* fctx )
@@ -423,80 +473,13 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
 }
 
 
-static int find_var( sgs_MemBuf* S, const char* str, unsigned len )
-{
-	int at = 0;
-	const char* ptr = S->ptr;
-	const char* pend = ptr + S->size;
-	const char* estr = str + len;
-	
-	while( ptr < pend )
-	{
-		/* compare ptr .. '=' with str .. str + len */
-		const char* cstr = str;
-		while( ptr < pend && *ptr != '=' && cstr < estr )
-		{
-			if( *ptr != *cstr )
-				break;
-			ptr++;
-			cstr++;
-		}
-		if( ptr < pend && *ptr == '=' && cstr == estr )
-			return at;
-		
-		/* advance to next variable */
-		at++;
-		while( ptr < pend && *ptr != '=' )
-			ptr++;
-		ptr++; /* skip '=' */
-	}
-	return -1;
-}
-
-static int find_nth_var( sgs_MemBuf* S, int which, char** outstr, unsigned* outlen )
-{
-	char* ptr = S->ptr;
-	char* pend = ptr + S->size;
-	while( which > 0 )
-	{
-		while( ptr < pend && *ptr != '=' )
-			ptr++;
-		ptr++;
-		which--;
-	}
-	if( ptr >= pend )
-		return 0;
-	*outstr = ptr;
-	while( ptr < pend && *ptr != '=' )
-		ptr++;
-	/* WP: ptr always bigger or equal to *outstr, difference cannot exceed 255 */
-	*outlen = (unsigned) ( ptr - *outstr );
-	return 1;
-}
-
-static int add_var( sgs_MemBuf* S, SGS_CTX, char* str, unsigned len )
-{
-	int pos = find_var( S, str, len );
-	if( pos < 0 )
-	{
-		sgs_membuf_appbuf( S, C, str, len );
-		sgs_membuf_appchr( S, C, '=' );
-		return SGS_TRUE;
-	}
-	return SGS_FALSE;
-}
-
-#define find_varT( S, tok ) \
-	find_var( S, (char*) (tok) + 2, tok[1] )
-#define add_varT( S, C, tok ) \
-	add_var( S, C, (char*) (tok) + 2, tok[1] )
-
 static int preadd_thisvar( sgs_MemBuf* S, SGS_CTX )
 {
 	int pos = find_var( S, "this", 4 );
 	if( pos < 0 )
 	{
-		sgs_membuf_insbuf( S, C, 0, "this=", 5 );
+		sgs_FCVar nv = { SGS_STRLITBUF( "this" ) };
+		sgs_membuf_insbuf( S, C, 0, &nv, sizeof(nv) );
 		return SGS_TRUE;
 	}
 	return SGS_FALSE;
@@ -624,6 +607,21 @@ static int preparse_varlists( SGS_FNTCMP_ARGS )
 			}
 			ret &= preparse_varlists( C, func, node->child );
 		}
+		else if( node->type == SGS_SFT_FORNUMI || node->type == SGS_SFT_FORNUMR )
+		{
+			if( find_varT( &C->fctx->gvars, node->token ) >= 0 )
+			{
+				QPRINT( "Variable storage redefined (numeric for index variable cannot be global): global -> local" );
+				ret = SGS_FALSE;
+			}
+			else
+			{
+				if( add_varT( &C->fctx->vars, C, node->child->token ) )
+					comp_reg_alloc( C );
+			}
+			
+			ret &= preparse_varlists( C, func, node->child->next );
+		}
 		else if( node->type == SGS_SFT_FOREACH )
 		{
 			if( find_varT( &C->fctx->gvars, node->token ) >= 0 )
@@ -710,7 +708,7 @@ static int preparse_arglist( SGS_FNTCMP_ARGS )
 			QPRINT( "Argument count exceeded (max. 255 arguments)" );
 			return 0;
 		}
-		if( !add_var( &C->fctx->vars, C, (char*) node->token + 2, node->token[ 1 ] ) )
+		if( !add_varT( &C->fctx->vars, C, node->token ) )
 		{
 			QPRINT( "Cannot redeclare arguments with the same name" );
 			return 0;
@@ -1098,7 +1096,7 @@ static SGSBOOL compile_ident_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 	}
 
 	/* closures */
-	if( ( pos = find_var( &C->fctx->clsr, (char*) node->token + 2, node->token[1] ) ) >= 0 )
+	if( ( pos = find_varT( &C->fctx->clsr, node->token ) ) >= 0 )
 	{
 		*out = comp_reg_alloc( C );
 		INSTR_WRITE( SGS_SI_GETCLSR, *out, pos, 0 );
@@ -1107,19 +1105,19 @@ static SGSBOOL compile_ident_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 
 	if( C->fctx->func )
 	{
-		rcpos_t gpos = find_var( &C->fctx->gvars, (char*) node->token + 2, node->token[ 1 ] );
+		rcpos_t gpos = find_varT( &C->fctx->gvars, node->token );
 		if( gpos >= 0 )
 			pos = -1;
 		else
 		{
-			pos = find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
+			pos = find_varT( &C->fctx->vars, node->token );
 			if( pos < 0 )
 				pos = -1; /* read from globals by default */
 		}
 	}
 	else
 	{
-		pos = find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
+		pos = find_varT( &C->fctx->vars, node->token );
 	}
 
 	if( pos >= 0 )
@@ -1144,7 +1142,7 @@ static SGSBOOL compile_ident_w( SGS_FNTCMP_ARGS, rcpos_t src )
 		return 0;
 	}
 
-	if( ( pos = find_var( &C->fctx->clsr, (char*) node->token + 2, node->token[1] ) ) >= 0 )
+	if( ( pos = find_varT( &C->fctx->clsr, node->token ) ) >= 0 )
 	{
 		INSTR_WRITE( SGS_SI_SETCLSR, 0, pos, src );
 		return 1;
@@ -1152,18 +1150,18 @@ static SGSBOOL compile_ident_w( SGS_FNTCMP_ARGS, rcpos_t src )
 
 	if( C->fctx->func )
 	{
-		rcpos_t gpos = find_var( &C->fctx->gvars, (char*) node->token + 2, node->token[ 1 ] );
+		rcpos_t gpos = find_varT( &C->fctx->gvars, node->token );
 		if( gpos >= 0 )
 			pos = -1;
 		else
 		{
-			add_var( &C->fctx->vars, C, (char*) node->token + 2, node->token[ 1 ] );
-			pos = find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
+			add_varT( &C->fctx->vars, C, node->token );
+			pos = find_varT( &C->fctx->vars, node->token );
 		}
 	}
 	else
 	{
-		pos = find_var( &C->fctx->vars, (char*) node->token + 2, node->token[ 1 ] );
+		pos = find_varT( &C->fctx->vars, node->token );
 	}
 
 	if( pos >= 0 )
@@ -1603,9 +1601,7 @@ static SGSBOOL try_optimize_last_instr_out( SGS_FNTCMP_ARGS, size_t ioff, rcpos_
 		case SGS_SI_SEQ: case SGS_SI_EQ: case SGS_SI_LT: case SGS_SI_LTE:
 		case SGS_SI_SNEQ: case SGS_SI_NEQ: case SGS_SI_GT: case SGS_SI_GTE: case SGS_SI_RAWCMP:
 			{
-				char* dummy0 = NULL;
-				unsigned dummy1 = 0;
-				if( find_nth_var( &C->fctx->vars, SGS_INSTR_GET_A( I ), &dummy0, &dummy1 ) )
+				if( find_nth_var( &C->fctx->vars, SGS_INSTR_GET_A( I ) ) )
 					goto cannot;
 			}
 			I = SGS_INSTR_MAKE( op, pos, argB, argC );
@@ -1616,9 +1612,7 @@ static SGSBOOL try_optimize_last_instr_out( SGS_FNTCMP_ARGS, size_t ioff, rcpos_
 		case SGS_SI_ARRAY: case SGS_SI_DICT: case SGS_SI_MAP:
 			{
 				int argE = SGS_INSTR_GET_E( I );
-				char* dummy0 = NULL;
-				unsigned dummy1 = 0;
-				if( find_nth_var( &C->fctx->vars, SGS_INSTR_GET_A( I ), &dummy0, &dummy1 ) )
+				if( find_nth_var( &C->fctx->vars, SGS_INSTR_GET_A( I ) ) )
 					goto cannot;
 				I = SGS_INSTR_MAKE_EX( op, argE, pos );
 				memcpy( func->code.ptr + ioff, &I, sizeof(I) );
@@ -1665,9 +1659,7 @@ static SGSBOOL try_optimize_set_op( SGS_CTX, sgs_CompFunc* func, size_t ioff, rc
 		case SGS_SI_SEQ: case SGS_SI_EQ: case SGS_SI_LT: case SGS_SI_LTE:
 		case SGS_SI_SNEQ: case SGS_SI_NEQ: case SGS_SI_GT: case SGS_SI_GTE: case SGS_SI_RAWCMP:
 			{
-				char* dummy0 = NULL;
-				unsigned dummy1 = 0;
-				if( find_nth_var( &C->fctx->vars, SGS_INSTR_GET_A( I ), &dummy0, &dummy1 ) )
+				if( find_nth_var( &C->fctx->vars, SGS_INSTR_GET_A( I ) ) )
 					goto cannot;
 			}
 			I = SGS_INSTR_MAKE( op, ireg, argB, argC );
@@ -1676,9 +1668,7 @@ static SGSBOOL try_optimize_set_op( SGS_CTX, sgs_CompFunc* func, size_t ioff, rc
 		case SGS_SI_ARRAY: case SGS_SI_DICT: case SGS_SI_MAP:
 			{
 				int argE = SGS_INSTR_GET_E( I );
-				char* dummy0 = NULL;
-				unsigned dummy1 = 0;
-				if( find_nth_var( &C->fctx->vars, SGS_INSTR_GET_C( I ), &dummy0, &dummy1 ) )
+				if( find_nth_var( &C->fctx->vars, SGS_INSTR_GET_C( I ) ) )
 					goto cannot;
 				I = SGS_INSTR_MAKE_EX( op, argE, ireg );
 				memcpy( func->code.ptr + ioff, &I, sizeof(I) );
@@ -2204,14 +2194,13 @@ static void prefix_bytecode( SGS_CTX, sgs_CompFunc* func, int args )
 
 		for( i = 0; i < args; ++i )
 		{
-			char* varstr = NULL;
-			unsigned varstrlen;
-			int result, which;
-			result = find_nth_var( &C->fctx->vars, i, &varstr, &varstrlen );
+			sgs_FCVar* result;
+			int which;
+			result = find_nth_var( &C->fctx->vars, i );
 			sgs_BreakIf( !result );
 			if( !result )
 				continue;
-			which = find_var( &C->fctx->clsr, varstr, varstrlen );
+			which = find_var( &C->fctx->clsr, result->name, result->nmlength );
 			if( which < 0 )
 				continue;
 			I = SGS_INSTR_MAKE( SGS_SI_SETCLSR, 0, which, i );
@@ -2948,6 +2937,54 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 			C->fctx->loops--;
 		}
 		break;
+		
+#if NOT_DONE_YET
+	case SGS_SFT_FORNUMI:
+	case SGS_SFT_FORNUMR:
+		SGS_FN_HIT( "NUMERIC_FOR" );
+		{
+			rcpos_t regstate = C->fctx->regs;
+			rcpos_t arg = find_varT( &C->fctx->vars, C, node->child->token );
+			C->fctx->loops++;
+			
+			/* for initialization */
+			INSTR_WRITE_PCH();
+			
+			{
+				ptrdiff_t off;
+				size_t jp1, jp2 = 0;
+				jp1 = func->code.size;
+				
+				LOOP_BEGIN;
+				SGS_FN_ENTER;
+				if( !compile_node( C, func, node->child->next->next ) ) goto fail; /* block */
+				comp_reg_unwind( C, regstate );
+				LOOP_END;
+				
+				if( !compile_breaks( C, func, node, 1 ) )
+					goto fail;
+				
+				jp2 = func->code.size;
+				/* WP: jump limit */
+				off = (ptrdiff_t) ( jp1 - jp2 ) / SGS_INSTR_SIZE - 1;
+				if( over_limit( off, 32767 ) )
+				{
+					QPRINT( "Max. jump limit exceeded (32767 instructions) @ for; reduce size of loop" );
+					goto fail;
+				}
+				INSTR_WRITE_EX( SGS_SI_NFORJUMP, off, LOOP_VAR_POS );
+				{
+					sgs_instr_t instr;
+					instr = SGS_INSTR_MAKE_EX( SGS_SI_NFORPREP, ( jp2 - jp1 ) / SGS_INSTR_SIZE + 1, LOOP_VAR_POS );
+					memcpy( func->code.ptr + jp1 - 4, &instr, sizeof(instr) );
+				}
+			}
+			if( !compile_breaks( C, func, node, 0 ) )
+				goto fail;
+			C->fctx->loops--;
+		}
+		break;
+#endif
 		
 	case SGS_SFT_FOREACH:
 		SGS_FN_HIT( "FOREACH" );
