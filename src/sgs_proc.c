@@ -1979,6 +1979,14 @@ static SGSBOOL vm_arith_op_obj_iface( SGS_CTX, sgs_Variable* out,
 	return ret;
 }
 
+static SGSBOOL vm_is_nonarith_type( uint32_t t )
+{
+	return t == SGS_VT_FUNC
+		|| t == SGS_VT_CFUNC
+		|| t == SGS_VT_PTR
+		|| t == SGS_VT_THREAD;
+}
+
 static SGSBOOL vm_arith_op( SGS_CTX, sgs_Variable* out, sgs_Variable* a, sgs_Variable* b, int op )
 {
 	if( a->type == SGS_VT_REAL && b->type == SGS_VT_REAL )
@@ -2031,11 +2039,9 @@ static SGSBOOL vm_arith_op( SGS_CTX, sgs_Variable* out, sgs_Variable* a, sgs_Var
 		goto fail;
 	}
 	
-	/* if either variable is of a basic callable type */
-	if( a->type == SGS_VT_FUNC || a->type == SGS_VT_CFUNC ||
-		b->type == SGS_VT_FUNC || b->type == SGS_VT_CFUNC ||
-		a->type == SGS_VT_THREAD || b->type == SGS_VT_THREAD ||
-		a->type == SGS_VT_PTR  || b->type == SGS_VT_PTR   )
+	/* if either variable cannot participate in arithmetic ops */
+	if( vm_is_nonarith_type( a->type ) ||
+		vm_is_nonarith_type( b->type ) )
 		goto fail;
 	
 	/* if either are REAL or STRING */
@@ -2094,6 +2100,56 @@ VAR_IOP( lsh, << )
 VAR_IOP( rsh, >> )
 
 
+static SGSBOOL vm_compare_obj_meta( SGS_CTX, sgs_Real* out,
+	sgs_Variable* a, sgs_Variable* b, sgs_Variable* mmo )
+{
+	int ret = 0;
+	if( mmo->type == SGS_VT_OBJECT && mmo->data.O->mm_enable &&
+		_push_metamethod( C, mmo->data.O, "__compare" ) )
+	{
+		sgs_SizeVal ssz = SGS_STACKFRAMESIZE - 1;
+		stk_makespace( C, 3 );
+		*C->stack_top++ = *mmo;
+		*C->stack_top++ = *a;
+		*C->stack_top++ = *b;
+		(*mmo->data.pRC) += 1;
+		(*a->data.pRC) += 1;
+		(*b->data.pRC) += 1;
+		ret = sgs_XThisCall( C, 2 ) > 0;
+		if( ret )
+		{
+			*out = var_getreal( stk_gettop( C ) );
+		}
+		stk_downsize( C, ssz );
+	}
+	return ret;
+}
+
+static SGSBOOL vm_compare_obj_iface( SGS_CTX, sgs_Real* out,
+	sgs_Variable* a, sgs_Variable* b, sgs_Variable* mmo )
+{
+	int ret = 0;
+	if( mmo->type == SGS_VT_OBJECT && mmo->data.O->iface->expr )
+	{
+		int prev_arg = C->object_arg;
+		sgs_VarObj* O = mmo->data.O;
+		_STACK_PREPARE;
+		_STACK_PROTECT;
+		fstk_push2( C, a, b );
+		C->object_arg = SGS_EOP_COMPARE;
+		
+		ret = SGS_SUCCEEDED( O->iface->expr( C, O ) ) && SGS_STACKFRAMESIZE >= 1;
+		
+		C->object_arg = prev_arg;
+		if( ret )
+		{
+			*out = var_getreal( stk_gettop( C ) );
+		}
+		_STACK_UNPROTECT;
+	}
+	return ret;
+}
+
 /* returns 0 if equal, >0 if A is bigger, <0 if B is bigger */
 #define _SGS_SIGNDIFF( a, b ) ((a)==(b)?0:((a)<(b)?-1:1))
 static int vm_compare( SGS_CTX, sgs_Variable* a, sgs_Variable* b )
@@ -2108,117 +2164,35 @@ static int vm_compare( SGS_CTX, sgs_Variable* a, sgs_Variable* b )
 	/* either is OBJECT */
 	if( ta == SGS_VT_OBJECT || tb == SGS_VT_OBJECT )
 	{
-		int ret = SGS_ENOTSUP, suc;
-		sgs_Real out = _SGS_SIGNDIFF( ta, tb );
+		int ret;
+		sgs_Real out = 0;
 		sgs_Variable lA = *a, lB = *b;
 		VAR_ACQUIRE( &lA );
 		VAR_ACQUIRE( &lB );
 		
-		if( ta == SGS_VT_OBJECT && a->data.O->mm_enable &&
-			_push_metamethod( C, a->data.O, "__compare" ) )
-		{
-			sgs_SizeVal ssz = SGS_STACKFRAMESIZE - 1;
-			stk_makespace( C, 3 );
-			*C->stack_top++ = *a;
-			*C->stack_top++ = *a;
-			*C->stack_top++ = *b;
-			(*a->data.pRC) += 2;
-			(*b->data.pRC) += 1;
-			if( sgs_XThisCall( C, 2 ) > 0 )
-			{
-				out = var_getreal( stk_gettop( C ) );
-				stk_downsize( C, ssz );
-				VAR_RELEASE( &lA );
-				VAR_RELEASE( &lB );
-				return _SGS_SIGNDIFF( out, 0 );
-			}
-			stk_downsize( C, ssz );
-		}
-		
-		if( tb == SGS_VT_OBJECT && b->data.O->mm_enable &&
-			_push_metamethod( C, b->data.O, "__compare" ) )
-		{
-			sgs_SizeVal ssz = SGS_STACKFRAMESIZE - 1;
-			stk_makespace( C, 3 );
-			*C->stack_top++ = *b;
-			*C->stack_top++ = *a;
-			*C->stack_top++ = *b;
-			(*a->data.pRC) += 1;
-			(*b->data.pRC) += 2;
-			if( sgs_XThisCall( C, 2 ) > 0 )
-			{
-				out = var_getreal( stk_gettop( C ) );
-				stk_downsize( C, ssz );
-				VAR_RELEASE( &lA );
-				VAR_RELEASE( &lB );
-				return _SGS_SIGNDIFF( out, 0 );
-			}
-			stk_downsize( C, ssz );
-		}
-		
-		if( ta == SGS_VT_OBJECT && a->data.O->iface->expr )
-		{
-			int arg = C->object_arg;
-			sgs_VarObj* O = a->data.O;
-			_STACK_PREPARE;
-			_STACK_PROTECT;
-			fstk_push2( C, a, b );
-			C->object_arg = SGS_EOP_COMPARE;
-			ret = O->iface->expr( C, O );
-			C->object_arg = arg;
-			suc = SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1;
-			if( suc )
-				out = var_getreal( stk_gettop( C ) );
-			_STACK_UNPROTECT;
-			if( suc )
-			{
-				VAR_RELEASE( &lA );
-				VAR_RELEASE( &lB );
-				return _SGS_SIGNDIFF( out, 0 );
-			}
-		}
-		
-		if( tb == SGS_VT_OBJECT && b->data.O->iface->expr )
-		{
-			int arg = C->object_arg;
-			sgs_VarObj* O = b->data.O;
-			_STACK_PREPARE;
-			_STACK_PROTECT;
-			fstk_push2( C, a, b );
-			C->object_arg = SGS_EOP_COMPARE;
-			ret = O->iface->expr( C, O );
-			C->object_arg = arg;
-			suc = SGS_SUCCEEDED( ret ) && SGS_STACKFRAMESIZE >= 1;
-			if( suc )
-				out = var_getreal( stk_gettop( C ) );
-			_STACK_UNPROTECT;
-			if( suc )
-			{
-				VAR_RELEASE( &lA );
-				VAR_RELEASE( &lB );
-				return _SGS_SIGNDIFF( out, 0 );
-			}
-		}
+		ret = vm_compare_obj_meta( C, &out, a, b, a ) ||
+			vm_compare_obj_meta( C, &out, a, b, b ) ||
+			vm_compare_obj_iface( C, &out, a, b, a ) ||
+			vm_compare_obj_iface( C, &out, a, b, b );
 		
 		VAR_RELEASE( &lA );
 		VAR_RELEASE( &lB );
+		
+		if( ret )
+			return _SGS_SIGNDIFF( out, 0 );
+		
 		/* fallback: check for equality */
-		if( ta == tb )
-			return _SGS_SIGNDIFF( a->data.O, b->data.O );
-		else
-			return _SGS_SIGNDIFF( ta, tb );
+		goto compare_nonarith;
 	}
 	
-	/* both are FUNC/CFUNC */
-	if( ( ta == SGS_VT_FUNC || ta == SGS_VT_CFUNC ) &&
-		( tb == SGS_VT_FUNC || tb == SGS_VT_CFUNC ) )
+	/* either variable cannot participate in arithmetic ops */
+	if( vm_is_nonarith_type( ta ) ||
+		vm_is_nonarith_type( tb ) )
 	{
+compare_nonarith:
 		if( ta != tb )
 			return _SGS_SIGNDIFF( ta, tb );
-		if( ta == SGS_VT_FUNC )
-			return _SGS_SIGNDIFF( a->data.F, b->data.F );
-		else
-			return _SGS_SIGNDIFF( (void*)a->data.C, (void*)b->data.C );
+		return _SGS_SIGNDIFF( a->data.P, b->data.P );
 	}
 	
 	/* either is STRING */
@@ -2361,6 +2335,9 @@ static SGSBOOL vm_fornext( SGS_CTX, StkIdx outkey, StkIdx outval, sgs_Variable* 
 }
 
 
+int sgsstd_mm_getindex_router( SGS_CTX );
+int sgsstd_mm_setindex_router( SGS_CTX );
+
 static void vm_make_class( SGS_CTX, int outpos, sgs_Variable* name, sgs_Variable* inhname )
 {
 	int ret;
@@ -2370,9 +2347,22 @@ static void vm_make_class( SGS_CTX, int outpos, sgs_Variable* name, sgs_Variable
 	
 	sgs_PushStringLit( C, "__name" );
 	fstk_push( C, name );
-	ret = sgsSTD_MakeDict( C, &cls, 2 );
+	
+	sgs_PushStringLit( C, "__inherit" );
+	if( inhname )
+		fstk_push( C, inhname );
+	else
+		fstk_push_null( C );
+	
+	sgs_PushStringLit( C, "__getindex" );
+	sgs_PushCFunc( C, sgsstd_mm_getindex_router );
+	sgs_PushStringLit( C, "__setindex" );
+	sgs_PushCFunc( C, sgsstd_mm_setindex_router );
+	
+	ret = sgsSTD_MakeDict( C, &cls, 8 );
 	SGS_UNUSED( ret );
 	sgs_BreakIf( ret != SGS_TRUE );
+	
 	sgs_RegSymbol( C, NULL, sgs_var_cstr( name ), cls );
 	
 	if( inhname )

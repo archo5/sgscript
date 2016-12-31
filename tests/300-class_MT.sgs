@@ -104,11 +104,14 @@ result `SUCCESS`
 exec `class four : three { global b = 2, c = 1; }`
 result `SUCCESS`
 exec `class five { function fun( ny ){ return ny; } }
+unset( five, "__getindex" ); // dump prints pointers which cannot be compared
+unset( five, "__setindex" );
 printvar(five);`
 result `SUCCESS`
-check_out `dict (2)
+check_out `dict (3)
 {
   __name = string [4] "five"
+  __inherit = null
   fun = SGS function 'five.fun'
 }
 `
@@ -117,15 +120,18 @@ check_err ``
 // `basic class creation with 'new'`
 rec ``
 exec `inst = new one();
+unset( one, "__getindex" );
+unset( one, "__setindex" );
 printvar( inst, metaobj_get( inst ) );`
 result `SUCCESS`
 check_err ``
 check_out `dict (0)
 {
 }
-dict (1)
+dict (2)
 {
   __name = string [3] "one"
+  __inherit = null
 }
 `
 

@@ -689,7 +689,7 @@ function test( x )
 	}
 	print( ' cos x = ', cos( y ), '\n' );
 }
-var x, y;
+var x, y = 0;
 x = 10;
 while( x )
 {

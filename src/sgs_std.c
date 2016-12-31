@@ -2442,7 +2442,7 @@ static int sgsstd_metamethods_test( SGS_CTX )
 	return 1;
 }
 
-static int sgsstd_mm_getindex_router( SGS_CTX )
+int sgsstd_mm_getindex_router( SGS_CTX )
 {
 	sgs_Variable func, movar;
 	SGSFN( "mm_getindex_router" );
@@ -2467,7 +2467,7 @@ fail:
 	return 0;
 }
 
-static int sgsstd_mm_setindex_router( SGS_CTX )
+int sgsstd_mm_setindex_router( SGS_CTX )
 {
 	sgs_Variable func, movar;
 	SGSFN( "mm_setindex_router" );
