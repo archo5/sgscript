@@ -1815,20 +1815,20 @@ static int sgsstd_io_stat( SGS_CTX )
 			return 0;
 		
 		/* --- */
-		sgs_PushString( C, "atime" );
+		sgs_PushStringLit( C, "atime" );
 		sgs_PushInt( C, data.st_atime );
-		sgs_PushString( C, "ctime" );
+		sgs_PushStringLit( C, "ctime" );
 		sgs_PushInt( C, data.st_ctime );
-		sgs_PushString( C, "mtime" );
+		sgs_PushStringLit( C, "mtime" );
 		sgs_PushInt( C, data.st_mtime );
-		sgs_PushString( C, "type" );
+		sgs_PushStringLit( C, "type" );
 		if( data.st_mode & S_IFDIR )
 			sgs_PushInt( C, FST_DIR );
 		else if( data.st_mode & S_IFREG )
 			sgs_PushInt( C, FST_FILE );
 		else
 			sgs_PushInt( C, FST_UNKNOWN );
-		sgs_PushString( C, "size" );
+		sgs_PushStringLit( C, "size" );
 		sgs_PushInt( C, data.st_size );
 		return sgs_CreateDict( C, NULL, 10 );
 	}
@@ -2834,21 +2834,21 @@ static int sgsstd_os_parse_time( SGS_CTX )
 		time( &ttv );
 	T = *localtime( &ttv );
 	
-	sgs_PushString( C, "year" );
+	sgs_PushStringLit( C, "year" );
 	sgs_PushInt( C, T.tm_year + 1900 );
-	sgs_PushString( C, "month" );
+	sgs_PushStringLit( C, "month" );
 	sgs_PushInt( C, T.tm_mon + 1 );
-	sgs_PushString( C, "day" );
+	sgs_PushStringLit( C, "day" );
 	sgs_PushInt( C, T.tm_mday );
-	sgs_PushString( C, "weekday" );
+	sgs_PushStringLit( C, "weekday" );
 	sgs_PushInt( C, T.tm_wday ? T.tm_wday : 7 );
-	sgs_PushString( C, "yearday" );
+	sgs_PushStringLit( C, "yearday" );
 	sgs_PushInt( C, T.tm_yday + 1 );
-	sgs_PushString( C, "hours" );
+	sgs_PushStringLit( C, "hours" );
 	sgs_PushInt( C, T.tm_hour );
-	sgs_PushString( C, "minutes" );
+	sgs_PushStringLit( C, "minutes" );
 	sgs_PushInt( C, T.tm_min );
-	sgs_PushString( C, "seconds" );
+	sgs_PushStringLit( C, "seconds" );
 	sgs_PushInt( C, T.tm_sec );
 	sgs_CreateDict( C, NULL, sgs_StackSize( C ) - ssz );
 	return 1;
@@ -3858,7 +3858,7 @@ static int sgsstd_string_implode( SGS_CTX )
 	
 	if( !asize )
 	{
-		sgs_PushString( C, "" );
+		sgs_PushStringLit( C, "" );
 		return 1;
 	}
 	for( i = 0; i < asize; ++i )

@@ -53,6 +53,18 @@ testEqual( typeptr( _O ), typeptr_by_name( "array" ), "typeptr/_by_name - array"
 testEqual( typeptr( _O2 ), typeptr_by_name( "dict" ), "typeptr/_by_name - dict" );
 testEqual( typeptr( _O3 ), typeptr_by_name( "map" ), "typeptr/_by_name - map" );
 
+	section( "get_props" );
+testEqual( tostring(get_props(_N)), "[]", "get_props - null" );
+testEqual( tostring(get_props(_B)), "[]", "get_props - bool" );
+testEqual( tostring(get_props(_I)), "[]", "get_props - int" );
+testEqual( tostring(get_props(_R)), "[]", "get_props - real" );
+testEqual( tostring(get_props(_S)), "[length]", "get_props - string" );
+testEqual( tostring(get_props(_F)), "[]", "get_props - SGS function" );
+testEqual( tostring(get_props(_C)), "[]", "get_props - C function" );
+testEqual( tostring(get_props(_O)), "[size,capacity,first,last]", "get_props - object (array)" );
+testEqual( tostring(get_props(_O2)), "[]", "get_props - object 2 (dict)" );
+testEqual( tostring(get_props(_O3)), "[]", "get_props - object 3 (map)" );
+
 
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );

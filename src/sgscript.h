@@ -889,6 +889,7 @@ SGS_APIFUNC SGSONE sgs_PushBool( SGS_CTX, sgs_Bool value );
 SGS_APIFUNC SGSONE sgs_PushInt( SGS_CTX, sgs_Int value );
 SGS_APIFUNC SGSONE sgs_PushReal( SGS_CTX, sgs_Real value );
 SGS_APIFUNC SGSONE sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size );
+#define sgs_PushStringLit( C, strlit ) (sgs_PushStringBuf( (C), (strlit), sizeof(strlit)-1 ))
 SGS_APIFUNC SGSONE sgs_PushString( SGS_CTX, const char* str );
 SGS_APIFUNC SGSONE sgs_PushCFunc( SGS_CTX, sgs_CFunc func );
 SGS_APIFUNC SGSONE sgs_PushObjectPtr( SGS_CTX, sgs_VarObj* obj );
@@ -924,6 +925,9 @@ SGS_APIFUNC SGSBOOL sgs_SetGlobal( SGS_CTX, sgs_Variable idx, sgs_Variable val )
 SGS_APIFUNC SGSBOOL sgs_PushGlobalByName( SGS_CTX, const char* name );
 SGS_APIFUNC SGSBOOL sgs_GetGlobalByName( SGS_CTX, const char* name, sgs_Variable* out );
 SGS_APIFUNC void sgs_SetGlobalByName( SGS_CTX, const char* name, sgs_Variable val );
+
+/* property list enumeration */
+SGS_APIFUNC SGSONE sgs_CreatePropList( SGS_CTX, sgs_Variable* out, sgs_Variable obj );
 
 #define SGS_REG_ROOT 0
 #define SGS_REG_SYM 1
@@ -1082,8 +1086,8 @@ SGS_APIFUNC char* sgs_GlobalStringBuf( SGS_CTX, const char* name, sgs_SizeVal* o
 #define sgs_GlobalString( C, name ) sgs_GlobalStringBuf( C, name, NULL )
 
 /* iterator interface fns */
-SGS_APIFUNC SGSBOOL sgs_PushIterator( SGS_CTX, sgs_Variable var );
-SGS_APIFUNC SGSBOOL sgs_GetIterator( SGS_CTX, sgs_Variable var, sgs_Variable* out );
+#define sgs_PushIterator( C, var ) sgs_CreateIterator( (C), NULL, (var) )
+SGS_APIFUNC SGSBOOL sgs_CreateIterator( SGS_CTX, sgs_Variable* out, sgs_Variable var );
 SGS_APIFUNC SGSBOOL sgs_IterAdvance( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC void sgs_IterPushData( SGS_CTX, sgs_Variable var, int key, int value );
 SGS_APIFUNC void sgs_IterGetData( SGS_CTX, sgs_Variable var, sgs_Variable* key, sgs_Variable* value );

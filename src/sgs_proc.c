@@ -1801,7 +1801,7 @@ static SGSBOOL vm_op_concat_ex( SGS_CTX, StkIdx args )
 	if( args < 2 )
 	{
 		if( args < 1 )
-			sgs_PushString( C, "" );
+			sgs_PushStringLit( C, "" );
 		return 1;
 	}
 	if( SGS_STACKFRAMESIZE < args )
@@ -2409,7 +2409,7 @@ static void vm_make_class( SGS_CTX, int outpos, sgs_Variable* name, sgs_Variable
 	
 	sgs_BreakIf( name->type != SGS_VT_STRING );
 	
-	sgs_PushString( C, "__name" );
+	sgs_PushStringLit( C, "__name" );
 	fstk_push( C, name );
 	ret = sgsSTD_MakeDict( C, &cls, 2 );
 	SGS_UNUSED( ret );
@@ -2519,7 +2519,7 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 	if( pfunc->type == SGS_VT_OBJECT && pfunc->data.O->mm_enable )
 	{
 		sgs_Variable objfunc, fncopy = *pfunc;
-		sgs_PushString( C, "__call" );
+		sgs_PushStringLit( C, "__call" );
 		rvc = sgs_GetIndex( C, fncopy, *stk_gettop( C ), &objfunc, 0 );
 		fstk_pop1( C );
 		if( SGS_SUCCEEDED( rvc ) )
@@ -3693,6 +3693,50 @@ void sgs_SetGlobalByName( SGS_CTX, const char* name, sgs_Variable val )
 }
 
 
+SGSONE sgs_CreatePropList( SGS_CTX, sgs_Variable* out, sgs_Variable obj )
+{
+	switch( obj.type )
+	{
+	case SGS_VT_STRING:
+		sgs_PushStringLit( C, "length" );
+		sgs_CreateArray( C, out, 1 );
+		return 1;
+		
+	case SGS_VT_THREAD:
+		sgs_PushStringLit( C, "was_aborted" );
+		sgs_PushStringLit( C, "not_started" );
+		sgs_PushStringLit( C, "running" );
+		sgs_PushStringLit( C, "can_resume" );
+		sgs_CreateArray( C, out, 4 );
+		return 1;
+		
+	case SGS_VT_OBJECT:
+		{
+			int count = 0;
+			sgs_ObjProp* prop = obj.data.O->iface->proplist;
+			if( prop )
+			{
+				while( prop->name )
+				{
+					if( ( prop->flags & SGS_OBJPROP_NOLIST ) == 0 )
+					{
+						sgs_PushStringBuf( C, prop->name, prop->nmlength );
+						count++;
+					}
+					prop++;
+				}
+			}
+			sgs_CreateArray( C, out, count );
+		}
+		return 1;
+		
+	default:
+		sgs_CreateArray( C, out, 0 );
+		return 1;
+	}
+}
+
+
 sgs_Variable sgs_Registry( SGS_CTX, int subtype )
 {
 	sgs_Variable out;
@@ -4624,13 +4668,13 @@ void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth )
 {
 	if( maxdepth <= 0 )
 	{
-		sgs_PushString( C, "..." );
+		sgs_PushStringLit( C, "..." );
 		return;
 	}
 	
 	switch( var.type )
 	{
-	case SGS_VT_NULL: sgs_PushString( C, "null" ); break;
+	case SGS_VT_NULL: sgs_PushStringLit( C, "null" ); break;
 	case SGS_VT_BOOL: sgs_PushString( C, var.data.B ? "bool (true)" : "bool (false)" ); break;
 	case SGS_VT_INT: { char buf[ 32 ];
 		sprintf( buf, "int (%" PRId64 ")", var.data.I );
@@ -5268,18 +5312,13 @@ char* sgs_GlobalStringBuf( SGS_CTX, const char* name, sgs_SizeVal* outsize )
 }
 
 
-SGSBOOL sgs_PushIterator( SGS_CTX, sgs_Variable var )
-{
-	fstk_push_null( C );
-	return vm_forprep( C, stk_absindex( C, -1 ), &var );
-}
-
-SGSBOOL sgs_GetIterator( SGS_CTX, sgs_Variable var, sgs_Variable* out )
+SGSBOOL sgs_CreateIterator( SGS_CTX, sgs_Variable* out, sgs_Variable var )
 {
 	int ret;
 	fstk_push_null( C );
 	ret = vm_forprep( C, stk_absindex( C, -1 ), &var );
-	sgs_StoreVariable( C, out );
+	if( out )
+		sgs_StoreVariable( C, out );
 	return ret;
 }
 
