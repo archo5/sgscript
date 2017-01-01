@@ -47,11 +47,6 @@ extern "C" {
 #  define SGS_DEBUG_DATA 0
 #endif
 
-/* function entry/exit tagging */
-#ifndef SGS_DEBUG_FLOW
-#  define SGS_DEBUG_FLOW 0
-#endif
-
 /* instruction logging */
 #ifndef SGS_DEBUG_INSTR
 #  define SGS_DEBUG_INSTR 0

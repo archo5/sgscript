@@ -473,6 +473,12 @@ static void exec_test( const char* fname, const char* nameonly )
 				sgs_SetMsgFunc( C, SGSMSGFN_DEFAULT_NOABORT, NULL );
 				sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, fp );
 			}
+			else if( strcmp( ident_start, "beep" ) == 0 )
+			{
+				/* debug helper */
+				static int which = 0;
+				printf( "[BEEP %d]", ++which );
+			}
 			
 			free( decoded_value );
 		}

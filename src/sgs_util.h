@@ -65,24 +65,6 @@ SGS_APIFUNC int sgs_tolower( int c );
 #define SGS_AS_REAL( tgt, ptr ) SGS_AS_( tgt, ptr, sgs_Real )
 
 
-/* flow/data debugging */
-#if SGS_DEBUG && SGS_DEBUG_FLOW
-#  define SGS_FN_HIT( what ) \
-	printf( "Hit \"%s\" line %d in function \"%s\"\n", what, __LINE__, __FUNCTION__ );
-#  define SGS_FN_ENTER \
-	printf( "Entering a function from \"%s\" at line %d\n", __FUNCTION__, __LINE__ );
-#  define SGS_FN_BEGIN \
-	printf( "Inside \"%s\"\n", __FUNCTION__ );
-#  define SGS_FN_END \
-	printf( "Out of \"%s\" at line %d\n", __FUNCTION__, __LINE__ );
-#else
-#  define SGS_FN_HIT( what )
-#  define SGS_FN_ENTER
-#  define SGS_FN_BEGIN
-#  define SGS_FN_END
-#endif
-
-
 /* string buffer */
 typedef
 struct _sgs_MemBuf
