@@ -1764,16 +1764,6 @@ static SGSBOOL vm_op_concat_ex( SGS_CTX, StkIdx args )
 	return 1;
 }
 
-static void vm_op_concat( SGS_CTX, StkIdx out, sgs_Variable* A, sgs_Variable* B )
-{
-	sgs_Variable lA = *A, lB = *B;
-	int ssz = SGS_STACKFRAMESIZE;
-	fstk_push2( C, &lA, &lB );
-	vm_op_concat_ex( C, 2 );
-	stk_setlvar( C, out, stk_gettop( C ) );
-	fstk_pop( C, SGS_STACKFRAMESIZE - ssz );
-}
-
 static SGSBOOL vm_op_negate( SGS_CTX, sgs_Variable* out, sgs_Variable* A )
 {
 	sgs_Variable lA = *A;
@@ -2870,7 +2860,58 @@ restart_loop:
 				pp += off;
 			break;
 		}
-
+		
+		case SGS_SI_NFORPREP:
+		{
+			int16_t off = argE;
+			sgs_Variable* vars = stk_poff( C, argC & 0xff );
+			if( argC & 0x100 )
+			{
+				sgs_Real tmp;
+				tmp = var_getreal( &vars[1] );
+				var_setreal( C, &vars[1], tmp );
+				tmp = var_getreal( &vars[2] );
+				var_setreal( C, &vars[2], tmp );
+				tmp = var_getreal( &vars[3] );
+				var_setreal( C, &vars[3], tmp );
+				if( ( vars[2].data.R <= vars[1].data.R ) ^ ( vars[3].data.R < 0 ) )
+					pp += off;
+			}
+			else
+			{
+				sgs_Int tmp;
+				tmp = var_getint( &vars[1] );
+				var_setint( C, &vars[1], tmp );
+				tmp = var_getint( &vars[2] );
+				var_setint( C, &vars[2], tmp );
+				tmp = var_getint( &vars[3] );
+				var_setint( C, &vars[3], tmp );
+				if( ( vars[2].data.I <= vars[1].data.I ) ^ ( vars[3].data.I < 0 ) )
+					pp += off;
+			}
+			p_setvar( &vars[0], &vars[1] );
+			break;
+		}
+		case SGS_SI_NFORJUMP:
+		{
+			int16_t off = argE;
+			sgs_Variable* vars = stk_poff( C, argC & 0xff );
+			if( argC & 0x100 )
+			{
+				vars[1].data.R += vars[3].data.R;
+				if( ( vars[2].data.R > vars[1].data.R ) ^ ( vars[3].data.R < 0 ) )
+					pp += off;
+			}
+			else
+			{
+				vars[1].data.I += vars[3].data.I;
+				if( ( vars[2].data.I > vars[1].data.I ) ^ ( vars[3].data.I < 0 ) )
+					pp += off;
+			}
+			p_setvar( &vars[0], &vars[1] );
+			break;
+		}
+		
 #define ARGS_2 sgs_Variable p2 = *RESVAR( argB );
 #define ARGS_3 sgs_Variable p2 = *RESVAR( argB ), p3 = *RESVAR( argC );
 #define SETOP sgs_Variable p1 = *stk_poff( C, argA );
@@ -2930,7 +2971,6 @@ restart_loop:
 
 		case SGS_SI_SET: { stk_setlvar( C, argA, RESVAR( argB ) ); break; }
 		case SGS_SI_MCONCAT: { vm_op_concat_ex( C, argB ); stk_setlvar_leave( C, argA, stk_gettop( C ) ); stk_pop1nr( C ); break; }
-		case SGS_SI_CONCAT: { ARGS_3; vm_op_concat( C, argA, &p2, &p3 ); break; }
 		case SGS_SI_NEGATE: { ARGS_2; GETOP; vm_op_negate( C, &p1, &p2 ); WRITEGET; break; }
 		case SGS_SI_BOOL_INV: { ARGS_2; vm_op_boolinv( C, (int16_t) argA, &p2 ); break; }
 		case SGS_SI_INVERT: { ARGS_2; vm_op_invert( C, (int16_t) argA, &p2 ); break; }

@@ -276,6 +276,8 @@ typedef enum sgs_Instruction
 	SGS_SI_FORPREP,  /* (A:out, B:src)          retrieves the iterator to work the object */
 	SGS_SI_FORLOAD,  /* (A:iter, B:oky, C:ovl)  retrieves current key & value from iterator */
 	SGS_SI_FORJUMP,  /* (C:iter, E:off)         advances and jumps if next key exists */
+	SGS_SI_NFORPREP, /* (C:firstreg, E:off)    sets up a numeric for loop */
+	SGS_SI_NFORJUMP, /* -- || --               advances a numeric for loop */
 
 	SGS_SI_LOADCONST,/* (C:out, E:off)          load a constant to a register */
 	SGS_SI_GETVAR,   /* (A:out, B:name)         <varname> => <value> */
@@ -299,7 +301,6 @@ typedef enum sgs_Instruction
 	*/
 	SGS_SI_SET,      /* B */
 	SGS_SI_MCONCAT,  /* (A:out, B:N) */
-	SGS_SI_CONCAT,   /* A */
 	SGS_SI_NEGATE,   /* B */
 	SGS_SI_BOOL_INV,
 	SGS_SI_INVERT,
@@ -343,6 +344,8 @@ typedef enum sgs_Instruction
 	SGS_SI_COUNT
 }
 sgs_Instruction;
+
+SGS_CASSERT( SGS_SI_COUNT <= 64, too_many_instructions );
 
 
 /*
@@ -800,15 +803,18 @@ static const char* sgs_OpNames[] =
 {
 	"nop", "push", "int",
 	"ret1", "return", "jump", "jump_if_true", "jump_if_false", "jump_if_null", "call",
-	"for_prep", "for_load", "for_jump", "loadconst", "getvar", "setvar",
+	"for_prep", "for_load", "for_jump",
+	"num_for_prep", "num_for_jump",
+	"loadconst", "getvar", "setvar",
 	"getprop", "setprop", "getindex", "setindex", "arrpush",
 	"clsrinfo", "makeclsr", "getclsr", "setclsr",
-	"set", "mconcat", "concat", "negate", "bool_inv", "invert",
+	"set", "mconcat", "negate", "bool_inv", "invert",
 	"inc", "dec", "add", "sub", "mul", "div", "mod",
 	"and", "or", "xor", "lsh", "rsh",
 	"seq", "sneq", "eq", "neq", "lt", "gte", "gt", "lte", "rawcmp",
 	"array", "dict", "map", "class", "new", "rsym", "cotrt", "cotrf", "coabort", "yldjmp",
 };
+SGS_CASSERT( SGS_ARRAY_SIZE( sgs_OpNames ) == SGS_SI_COUNT, good_instr_name_count );
 
 #endif
 

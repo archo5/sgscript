@@ -398,6 +398,11 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
 			break;
 		case SGS_SI_FORJUMP: sgs_ErrWritef( C, "FOR_JUMP " ); dump_rcpos( C, argC );
 			sgs_ErrWritef( C, ", %d", (int) (int16_t) argE ); break;
+			
+		case SGS_SI_NFORPREP: sgs_ErrWritef( C, "NUM_FOR_PREP (%s) ", argC & 0x100 ? "real" : "int" );
+			dump_rcpos( C, argC & 0xff ); sgs_ErrWritef( C, ", %d", (int) (int16_t) argE ); break;
+		case SGS_SI_NFORJUMP: sgs_ErrWritef( C, "NUM_FOR_JUMP (%s) ", argC & 0x100 ? "real" : "int" );
+			dump_rcpos( C, argC & 0xff ); sgs_ErrWritef( C, ", %d", (int) (int16_t) argE ); break;
 
 		case SGS_SI_LOADCONST: sgs_ErrWritef( C, "LOADCONST " ); dump_rcpos( C, argC );
 			sgs_ErrWritef( C, " <= C%d", argE ); break;
@@ -423,7 +428,6 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
 		DOP_B( SET );
 		case SGS_SI_MCONCAT: sgs_ErrWritef( C, "MCONCAT " ); dump_rcpos( C, argA );
 			sgs_ErrWritef( C, " [%d]", argB ); break;
-		DOP_A( CONCAT );
 		DOP_B( NEGATE );
 		DOP_B( BOOL_INV );
 		DOP_B( INVERT );
@@ -996,7 +1000,8 @@ static int op_pick_opcode( int oper, int binary )
 	case SGS_ST_OP_LSH: case SGS_ST_OP_LSHEQ: return SGS_SI_LSH;
 	case SGS_ST_OP_RSH: case SGS_ST_OP_RSHEQ: return SGS_SI_RSH;
 
-	case SGS_ST_OP_CAT: case SGS_ST_OP_CATEQ: return SGS_SI_CONCAT;
+	/* handled by a special case */
+	case SGS_ST_OP_CAT: case SGS_ST_OP_CATEQ: return SGS_SI_NOP;
 
 	case SGS_ST_OP_SEQ: return SGS_SI_SEQ;
 	case SGS_ST_OP_SNEQ: return SGS_SI_SNEQ;
@@ -1621,8 +1626,7 @@ static int compile_mconcat( SGS_FNTCMP_ARGS, rcpos_t* arg )
 	
 	INSTR_WRITE( SGS_SI_MCONCAT, oreg, numch, 0 );
 	
-	if( arg )
-		*arg = oreg;
+	*arg = oreg;
 	return 1;
 }
 
@@ -1639,11 +1643,11 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 		
 		if( out && expect )
 		{
-			if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
+			if( !compile_node_r( C, func, node->child, arg ) ) return 0;
 		}
 		else
 		{
-			if( !compile_node( C, func, node->child ) ) goto fail;
+			if( !compile_node( C, func, node->child ) ) return 0;
 		}
 		
 		if( func->code.size > csz )
@@ -1653,14 +1657,15 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 		}
 		else
 		{
-			/* otherwise, remove the already written IN ERRSUP_INC */
+			/* otherwise, remove the already written INT ERRSUP_INC */
 			func->code.size -= 4;
 			func->lnbuf.size -= 2;
 		}
 		return 1;
 	}
+	
 	/* Boolean ops */
-	else if( SGS_ST_OP_BOOL( *node->token ) || SGS_ST_OP_FNN( *node->token ) )
+	if( SGS_ST_OP_BOOL( *node->token ) || SGS_ST_OP_FNN( *node->token ) )
 	{
 		int jin;
 		rcpos_t ireg1 = SGS_RCPOS_UNSPEC, ireg2 = SGS_RCPOS_UNSPEC, oreg = 0;
@@ -1725,15 +1730,12 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 		}
 		
 		/* re-read from assignments */
-		if( arg )
+		if( assign )
 		{
-			if( assign )
-			{
-				if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
-			}
-			else
-				*arg = oreg;
+			if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
 		}
+		else
+			*arg = oreg;
 	}
 	else
 	/* Increment / decrement */
@@ -1753,21 +1755,10 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 			INSTR_WRITE( SGS_SI_SET, oreg, ireg, 0 );
 		}
 		
-		/* check for errors if this operator generates output */
-		if( expect )
-		{
-			if( expect != 1 )
-			{
-				QPRINT( "Too many expected outputs for operator" );
-				goto fail;
-			}
-		}
-		
 		/* write bytecode */
 		INSTR_WRITE( *node->token == SGS_ST_OP_INC ? SGS_SI_INC : SGS_SI_DEC, ireg, ireg, 0 );
 		
-		if( arg )
-			*arg = oreg;
+		*arg = oreg;
 		
 		/* compile writeback */
 		if( !compile_node_w( C, func, node->child, ireg ) ) goto fail;
@@ -1814,22 +1805,17 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 			else
 			{
 				if( !compile_node_rw( C, func, node->child->next, node->child ) ) goto fail;
-				
-				if( arg )
-				{
-					if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
-				}
+				if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
 			}
 		}
-		/* 3+ operands (MCONCAT only) */
+		/* 2+ operands (MCONCAT only) */
 		else if( *node->token == SGS_ST_OP_CATEQ && node->child &&
-			node->child->next && node->child->next->next )
+			node->child->next )
 		{
 			rcpos_t oreg;
 			if( !compile_mconcat( C, func, node, &oreg ) )
 				goto fail;
-			if( arg )
-				*arg = oreg;
+			*arg = oreg;
 			
 			/* compile write */
 			if( !compile_node_w( C, func, node->child, oreg ) ) goto fail;
@@ -1857,23 +1843,13 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 			INSTR_WRITE( op, oreg, ireg1, ireg2 );
 			
 			if( !compile_node_w( C, func, node->child, oreg ) ) goto fail;
-			
-			if( arg )
-			{
-				if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
-			}
+			if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
 		}
 	}
 	/* Any other */
 	else
 	{
 		rcpos_t ireg1 = SGS_RCPOS_UNSPEC, ireg2 = SGS_RCPOS_UNSPEC, oreg;
-		
-		if( expect > 1 )
-		{
-			QPRINT( "Too many expected outputs for operator" );
-			goto fail;
-		}
 		
 		if( /* no operands, unary used as binary, binary used as unary */
 			( !node->child ) ||
@@ -1893,8 +1869,7 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 				oreg = comp_reg_alloc( C );
 				if( C->state & SGS_MUST_STOP )
 					goto fail;
-				if( arg )
-					*arg = oreg;
+				*arg = oreg;
 			}
 			else
 				oreg = *arg;
@@ -1922,9 +1897,9 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 				INSTR_WRITE( SGS_SI_SETPROP, ireg1, ireg2, oreg );
 			}
 		}
-		/* 3+ operands (MCONCAT only) */
+		/* 2+ operands (MCONCAT only) */
 		else if( *node->token == SGS_ST_OP_CAT && node->child &&
-			node->child->next && node->child->next->next )
+			node->child->next )
 		{
 			if( !compile_mconcat( C, func, node, arg ) )
 				goto fail;
@@ -1944,8 +1919,7 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 				if( !compile_node_r( C, func, node->child->next, &ireg2 ) ) goto fail;
 			}
 			
-			if( arg )
-				*arg = oreg;
+			*arg = oreg;
 			
 			/* compile op */
 			op = op_pick_opcode( *node->token, !!node->child->next );
@@ -1977,7 +1951,7 @@ static SGSBOOL compile_breaks( SGS_FNTCMP_ARGS, uint8_t iscont )
 			ptrdiff_t off = (ptrdiff_t) ( func->code.size - binfo->jdoff ) / SGS_INSTR_SIZE - 1;
 			if( over_limit( off, 32767 ) )
 			{
-				QPRINT( "Max. jump limit exceeded (32767 instructions) @ break/continue; reduce size of loops" );
+				QPRINT( "Max. jump limit exceeded @ break/continue; reduce size of loops" );
 				return 0;
 			}
 			sgs_instr_t instr = SGS_INSTR_MAKE_EX( SGS_SI_JUMP, off, 0 );
@@ -2543,7 +2517,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 						ptrdiff_t jmp_off = (ptrdiff_t) ( jp2 - jp1 ) / SGS_INSTR_SIZE;
 						if( over_limit( jmp_off, 32767 ) )
 						{
-							QPRINT( "Max. jump limit exceeded (32767 instructions) @ if/else; reduce size of construct" );
+							QPRINT( "Max. jump limit exceeded @ if/else; reduce size of construct" );
 							goto fail;
 						}
 						instr = SGS_INSTR_MAKE_EX( SGS_SI_JMPF, jmp_off, arg );
@@ -2560,7 +2534,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 						ptrdiff_t jmp_off = (ptrdiff_t) ( jp3 - jp2 ) / SGS_INSTR_SIZE;
 						if( over_limit( jmp_off, 32767 ) )
 						{
-							QPRINT( "Max. jump limit exceeded (32767 instructions) @ if/else; reduce size of construct" );
+							QPRINT( "Max. jump limit exceeded @ if/else; reduce size of construct" );
 							goto fail;
 						}
 						instr = SGS_INSTR_MAKE_EX( SGS_SI_JUMP, jmp_off, 0 );
@@ -2575,7 +2549,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 					ptrdiff_t jmp_off = (ptrdiff_t) ( func->code.size - jp1 ) / SGS_INSTR_SIZE;
 					if( over_limit( jmp_off, 32767 ) )
 					{
-						QPRINT( "Max. jump limit exceeded (32767 instructions) @ if/else; reduce size of construct" );
+						QPRINT( "Max. jump limit exceeded @ if/else; reduce size of construct" );
 						goto fail;
 					}
 					instr = SGS_INSTR_MAKE_EX( SGS_SI_JMPF, jmp_off, arg );
@@ -2616,7 +2590,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				off = (ptrdiff_t) ( codesize - jp2 ) / SGS_INSTR_SIZE - 1;
 				if( over_limit( off, 32767 ) )
 				{
-					QPRINT( "Max. jump limit exceeded (32767 instructions) @ while; reduce size of loop" );
+					QPRINT( "Max. jump limit exceeded @ while; reduce size of loop" );
 					goto fail;
 				}
 				INSTR_WRITE_EX( SGS_SI_JUMP, off, 0 );
@@ -2656,7 +2630,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 			off = (ptrdiff_t) ( codesize - func->code.size ) / SGS_INSTR_SIZE - 1;
 			if( over_limit( off, 32767 ) )
 			{
-				QPRINT( "Max. jump limit exceeded (32767 instructions) @ do/while; reduce size of loop" );
+				QPRINT( "Max. jump limit exceeded @ do/while; reduce size of loop" );
 				goto fail;
 			}
 			INSTR_WRITE_EX( SGS_SI_JMPT, off, arg );
@@ -2705,7 +2679,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				off = (ptrdiff_t) ( codesize - jp2 ) / SGS_INSTR_SIZE - 1;
 				if( over_limit( off, 32767 ) )
 				{
-					QPRINT( "Max. jump limit exceeded (32767 instructions) @ for; reduce size of loop" );
+					QPRINT( "Max. jump limit exceeded @ for; reduce size of loop" );
 					goto fail;
 				}
 				INSTR_WRITE_EX( SGS_SI_JUMP, off, 0 );
@@ -2722,13 +2696,45 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 		}
 		break;
 		
-#if NOT_DONE_YET
 	case SGS_SFT_FORNUMI:
 	case SGS_SFT_FORNUMR:
 		{
+			sgs_FTNode* numexprs = node->child->next->child;
 			rcpos_t regstate = C->fctx->regs;
-			rcpos_t arg = find_varT( &C->fctx->vars, C, node->child->token );
+			rcpos_t constpos, arg = find_varT( &C->fctx->vars, node->child->token );
 			C->fctx->loops++;
+			
+			if( numexprs->next )
+			{
+				compile_node_rrw( C, func, numexprs, arg + 1 );
+				compile_node_rrw( C, func, numexprs->next, arg + 2 );
+				if( numexprs->next->next )
+				{
+					/* start, end, incr */
+					compile_node_rrw( C, func, numexprs->next->next, arg + 3 );
+				}
+				else
+				{
+					/* start, end, [1] */
+					goto fornum_add_default_incr;
+				}
+			}
+			else
+			{
+				/* [0], end, [1] */
+				constpos = node->type == SGS_SFT_FORNUMI
+					? add_const_i( C, func, 0 )
+					: add_const_r( C, func, 0 );
+				INSTR_WRITE( SGS_SI_SET, arg + 1, BC_CONSTENC( constpos ), 0 );
+				
+				compile_node_rrw( C, func, numexprs, arg + 2 );
+				
+fornum_add_default_incr:
+				constpos = node->type == SGS_SFT_FORNUMI
+					? add_const_i( C, func, 1 )
+					: add_const_r( C, func, 1 );
+				INSTR_WRITE( SGS_SI_SET, arg + 3, BC_CONSTENC( constpos ), 0 );
+			}
 			
 			/* for initialization */
 			INSTR_WRITE_PCH();
@@ -2737,6 +2743,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				ptrdiff_t off;
 				size_t jp1, jp2 = 0;
 				jp1 = func->code.size;
+				int xarg = arg | ( node->type == SGS_SFT_FORNUMR ? 0x100 : 0 );
 				
 				LOOP_BEGIN;
 				if( !compile_node( C, func, node->child->next->next ) ) goto fail; /* block */
@@ -2749,15 +2756,15 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				jp2 = func->code.size;
 				/* WP: jump limit */
 				off = (ptrdiff_t) ( jp1 - jp2 ) / SGS_INSTR_SIZE - 1;
-				if( over_limit( off, 32767 ) )
+				if( over_limit( off + 2, 32767 ) )
 				{
-					QPRINT( "Max. jump limit exceeded (32767 instructions) @ for; reduce size of loop" );
+					QPRINT( "Max. jump limit exceeded @ numeric for; reduce size of loop" );
 					goto fail;
 				}
-				INSTR_WRITE_EX( SGS_SI_NFORJUMP, off, LOOP_VAR_POS );
+				INSTR_WRITE_EX( SGS_SI_NFORJUMP, off, xarg );
 				{
 					sgs_instr_t instr;
-					instr = SGS_INSTR_MAKE_EX( SGS_SI_NFORPREP, ( jp2 - jp1 ) / SGS_INSTR_SIZE + 1, LOOP_VAR_POS );
+					instr = SGS_INSTR_MAKE_EX( SGS_SI_NFORPREP, ( jp2 - jp1 ) / SGS_INSTR_SIZE + 1, xarg );
 					memcpy( func->code.ptr + jp1 - 4, &instr, sizeof(instr) );
 				}
 			}
@@ -2766,7 +2773,6 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 			C->fctx->loops--;
 		}
 		break;
-#endif
 		
 	case SGS_SFT_FOREACH:
 		{
@@ -2816,7 +2822,7 @@ static SGSBOOL compile_node( SGS_FNTCMP_ARGS )
 				off = (ptrdiff_t) ( codesize - jp2 ) / SGS_INSTR_SIZE - 1;
 				if( over_limit( off, 32767 ) )
 				{
-					QPRINT( "Max. jump limit exceeded (32767 instructions) @ foreach; reduce size of loop" );
+					QPRINT( "Max. jump limit exceeded @ foreach; reduce size of loop" );
 					goto fail;
 				}
 				INSTR_WRITE_EX( SGS_SI_JUMP, off, 0 );

@@ -19,6 +19,8 @@ static const sgs_RegIntConst int_consts[] =
 	_META_RGS( FORPREP )
 	_META_RGS( FORLOAD )
 	_META_RGS( FORJUMP )
+	_META_RGS( NFORPREP )
+	_META_RGS( NFORJUMP )
 	_META_RGS( LOADCONST )
 	_META_RGS( GETVAR )
 	_META_RGS( SETVAR )
@@ -33,7 +35,6 @@ static const sgs_RegIntConst int_consts[] =
 	_META_RGS( SETCLSR )
 	_META_RGS( SET )
 	_META_RGS( MCONCAT )
-	_META_RGS( CONCAT )
 	_META_RGS( NEGATE )
 	_META_RGS( BOOL_INV )
 	_META_RGS( INVERT )
@@ -71,6 +72,8 @@ static const sgs_RegIntConst int_consts[] =
 #undef _META_RGS
 	{ NULL, 0 }
 };
+
+SGS_CASSERT( SGS_ARRAY_SIZE(int_consts) == SGS_SI_COUNT + 1, metalib_instr_count_match );
 
 static int sgs_meta_globals( SGS_CTX )
 {

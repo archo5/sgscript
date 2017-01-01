@@ -1192,7 +1192,7 @@ SFTRET parse_for( SFTC )
 			goto fail_numfor;
 		}
 		SFTC_NEXT;
-		if( SFTC_IS( '.' ) )
+		if( SFTC_IS( SGS_ST_OP_MMBR ) )
 		{
 			realnum = 1;
 			SFTC_NEXT;
