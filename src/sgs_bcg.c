@@ -811,7 +811,7 @@ static rcpos_t add_const_b( SGS_CTX, sgs_CompFunc* func, sgs_Bool bval )
 	return (rcpos_t) ( vend - vbeg ); /* WP: const limit */
 }
 
-static rcpos_t add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Int ival )
+static rcpos_t add_const_ip( SGS_CTX, sgs_CompFunc* func, sgs_Int ival, int ptr )
 {
 	add_const_HDR;
 	while( var < vend )
@@ -820,12 +820,22 @@ static rcpos_t add_const_i( SGS_CTX, sgs_CompFunc* func, sgs_Int ival )
 			return (rcpos_t) ( var - vbeg ); /* WP: const limit */
 		var++;
 	}
-
-	nvar.type = SGS_VT_INT;
-	nvar.data.I = ival;
+	
+	if( ptr )
+	{
+		nvar.type = SGS_VT_PTR;
+		nvar.data.P = (void*)(intptr_t) ival;
+	}
+	else
+	{
+		nvar.type = SGS_VT_INT;
+		nvar.data.I = ival;
+	}
 	sgs_membuf_appbuf( &func->consts, C, &nvar, sizeof( nvar ) );
 	return (rcpos_t) ( vend - vbeg ); /* WP: const limit */
 }
+#define add_const_i( C, func, ival ) add_const_ip( C, func, ival, 0 )
+#define add_const_p( C, func, ival ) add_const_ip( C, func, ival, 1 )
 
 static rcpos_t add_const_r( SGS_CTX, sgs_CompFunc* func, sgs_Real rval )
 {
@@ -1215,6 +1225,12 @@ static SGSBOOL compile_const( SGS_FNTCMP_ARGS, rcpos_t* opos )
 		sgs_Real val;
 		SGS_AS_REAL( val, node->token + 1 );
 		*opos = BC_CONSTENC( add_const_r( C, func, val ) );
+	}
+	else if( *node->token == SGS_ST_NUMPTR )
+	{
+		sgs_Int val;
+		SGS_AS_INTEGER( val, node->token + 1 );
+		*opos = BC_CONSTENC( add_const_p( C, func, val ) );
 	}
 	else if( *node->token == SGS_ST_STRING )
 	{

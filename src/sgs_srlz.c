@@ -2415,6 +2415,8 @@ static int bc_write_var( sgs_Variable* var, SGS_CTX, sgs_MemBuf* outbuf )
 	/* WP: var->data.B can only store 0/1 */
 	case SGS_VT_BOOL: sgs_membuf_appchr( outbuf, C, (char) var->data.B ); break;
 	case SGS_VT_INT: sgs_membuf_appbuf( outbuf, C, &var->data.I, sizeof( sgs_Int ) ); break;
+	case SGS_VT_PTR: { sgs_Int val = (intptr_t) var->data.P;
+		sgs_membuf_appbuf( outbuf, C, &val, sizeof( val ) ); break; }
 	case SGS_VT_REAL: sgs_membuf_appbuf( outbuf, C, &var->data.R, sizeof( sgs_Real ) ); break;
 	case SGS_VT_STRING: bc_write_sgsstring( var->data.S, C, outbuf ); break;
 	case SGS_VT_FUNC: if( !bc_write_sgsfunc( var->data.F, C, outbuf ) ) return 0; break;
@@ -2452,6 +2454,16 @@ static const char* bc_read_var( decoder_t* D, sgs_Variable* var )
 		
 		var->type = vt;
 		SGS_AS_INTEGER( var->data.I, D->buf );
+		D->buf += sizeof( sgs_Int );
+		break;
+		
+	case SGS_VT_PTR:
+		if( SGSNOMINDEC( sizeof( sgs_Int ) ) )
+			return "data error (expected value)";
+		
+		var->type = vt;
+		SGS_AS_INTEGER( var->data.I, D->buf );
+		var->data.P = (void*)(intptr_t) var->data.I;
 		D->buf += sizeof( sgs_Int );
 		break;
 		

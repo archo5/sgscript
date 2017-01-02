@@ -70,6 +70,18 @@ bool (true)
 bool (false)
 `
 
+// `number suffixes`
+rec ``
+exec `printvar( 123, 234f, 345., typeof(456p), toint(567p) );`
+result `SUCCESS`
+check_err ``
+check_out `int (123)
+real (234)
+real (345)
+string [7] "pointer"
+int (567)
+`
+
 // `BAD special constants 1`
 rec ``
 exec `function null(){}`

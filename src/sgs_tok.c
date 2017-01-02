@@ -351,17 +351,39 @@ sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
 				C->state |= SGS_HAS_ERRORS;
 				sgs_Msg( C, SGS_ERROR, "[line %d] failed to parse numeric constant", line );
 			}
-			else if( res == 1 )
+			else
 			{
-				sgs_membuf_appchr( &s, C, SGS_ST_NUMINT );
-				sgs_membuf_appbuf( &s, C, &vi, sizeof( vi ) );
+				if( pos < code + length && ( *pos == 'f' || *pos == '.' ) )
+				{
+					pos++;
+					if( res == 1 )
+					{
+						res = 2;
+						vr = vi;
+					}
+				}
+				else if( pos < code + length && res == 1 && *pos == 'p' )
+				{
+					pos++;
+					res = 3;
+				}
+				if( res == 1 )
+				{
+					sgs_membuf_appchr( &s, C, SGS_ST_NUMINT );
+					sgs_membuf_appbuf( &s, C, &vi, sizeof( vi ) );
+				}
+				else if( res == 2 )
+				{
+					sgs_membuf_appchr( &s, C, SGS_ST_NUMREAL );
+					sgs_membuf_appbuf( &s, C, &vr, sizeof( vr ) );
+				}
+				/* not an original return value */
+				else if( res == 3 )
+				{
+					sgs_membuf_appchr( &s, C, SGS_ST_NUMPTR );
+					sgs_membuf_appbuf( &s, C, &vi, sizeof( vi ) );
+				}
 			}
-			else if( res == 2 )
-			{
-				sgs_membuf_appchr( &s, C, SGS_ST_NUMREAL );
-				sgs_membuf_appbuf( &s, C, &vr, sizeof( vr ) );
-			}
-			else{ sgs_BreakIf( "Invalid return value from util_strtonum." ); }
 			/* WP: code limit */
 			i = (int32_t) ( pos - code );
 			i--;
@@ -409,6 +431,7 @@ sgs_TokenList sgsT_Next( sgs_TokenList tok )
 		return tok + tok[ 1 ] + 2 + sizeof( sgs_LineNum );
 	case SGS_ST_NUMREAL:
 	case SGS_ST_NUMINT:
+	case SGS_ST_NUMPTR:
 		return tok + 9 + sizeof( sgs_LineNum );
 	case SGS_ST_STRING:
 		{
@@ -491,6 +514,15 @@ static void tp_token( SGS_CTX, sgs_MemBuf* out, sgs_TokenList t )
 			sgs_membuf_appbuf( out, C, tmp, strlen( tmp ) );
 		}
 		break;
+	case SGS_ST_NUMPTR:
+		{
+			sgs_Int val;
+			char tmp[ 24 ];
+			SGS_AS_INTEGER( val, t+1 );
+			sprintf( tmp, "%" PRIx64 "p", val );
+			sgs_membuf_appbuf( out, C, tmp, strlen( tmp ) );
+		}
+		break;
 	case SGS_ST_STRING:
 		{
 			int32_t i, size;
@@ -565,7 +597,7 @@ static int tp_tt2i( sgs_TokenType t )
 	/* 0 ident | 1 const | 2 punct | 3 op */
 	if( SGS_ST_ISOP( t ) ) return 3;
 	if( t == SGS_ST_IDENT || t == SGS_ST_KEYWORD ) return 0;
-	if( t == SGS_ST_NUMREAL || t == SGS_ST_NUMINT || t == SGS_ST_STRING ) return 1;
+	if( t == SGS_ST_NUMREAL || t == SGS_ST_NUMINT || t == SGS_ST_NUMPTR || t == SGS_ST_STRING ) return 1;
 	return 2;
 }
 
@@ -645,6 +677,13 @@ void sgsT_DumpToken( SGS_CTX, sgs_TokenList tok )
 			sgs_Int val;
 			SGS_AS_INTEGER( val, tok + 1 );
 			sgs_ErrWritef( C, "int(%" PRId64 ")", val );
+		}
+		break;
+	case SGS_ST_NUMPTR:
+		{
+			sgs_Int val;
+			SGS_AS_INTEGER( val, tok + 1 );
+			sgs_ErrWritef( C, "ptr(%" PRIx64 ")", val );
 		}
 		break;
 	case SGS_ST_STRING:

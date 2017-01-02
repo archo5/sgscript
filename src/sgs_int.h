@@ -67,6 +67,7 @@ extern "C" {
 #define SGS_ST_KEYWORD  'K' /* same as IDENT */
 #define SGS_ST_NUMREAL  'R' /* 8 bytes (double) */
 #define SGS_ST_NUMINT   'I' /* 8 bytes (int64) */
+#define SGS_ST_NUMPTR   'P' /* 8 bytes (int64) */
 #define SGS_ST_STRING   'S' /* 4 bytes (string size), N bytes (string), not null-terminated */
 /*     operators        id    type  */
 #define SGS_ST_OP_SEQ   200 /* ===  */
