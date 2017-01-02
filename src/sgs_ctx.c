@@ -1082,7 +1082,7 @@ void sgsVM_DumpFunction( SGS_CTX, sgs_iFunc* F, int recursive )
 	
 	sgsBC_DumpEx( C, (const char*) sgs_func_consts( F ), sgs_func_instr_off( F ),
 		(const char*) sgs_func_bytecode( F ), sgs_func_size( F ) - sgs_func_instr_off( F ),
-		sgs_func_lineinfo( F ) );
+		sgs_func_lineinfo( F ), F->dbg_varinfo );
 }
 
 SGSRESULT sgs_DumpCompiled( SGS_CTX, const char* buf, size_t size )

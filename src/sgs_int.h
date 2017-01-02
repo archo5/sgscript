@@ -227,7 +227,7 @@ SGS_APIFUNC sgs_iFunc* sgsBC_Generate( SGS_CTX, sgs_FTNode* tree );
 SGS_APIFUNC void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
 	const sgs_instr_t* numstart, const sgs_LineNum* lines );
 SGS_APIFUNC void sgsBC_DumpEx( SGS_CTX, const char* constptr, size_t constsize,
-	const char* codeptr, size_t codesize, const sgs_LineNum* lines );
+	const char* codeptr, size_t codesize, const sgs_LineNum* lines, const char* varinfo );
 
 
 /*

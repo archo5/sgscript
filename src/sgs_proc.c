@@ -2874,7 +2874,7 @@ restart_loop:
 				var_setreal( C, &vars[2], tmp );
 				tmp = var_getreal( &vars[3] );
 				var_setreal( C, &vars[3], tmp );
-				if( ( vars[2].data.R <= vars[1].data.R ) ^ ( vars[3].data.R < 0 ) )
+				if( vars[3].data.R >= 0 ? vars[2].data.R <= vars[1].data.R : vars[2].data.R >= vars[1].data.R )
 					pp += off;
 			}
 			else
@@ -2886,7 +2886,7 @@ restart_loop:
 				var_setint( C, &vars[2], tmp );
 				tmp = var_getint( &vars[3] );
 				var_setint( C, &vars[3], tmp );
-				if( ( vars[2].data.I <= vars[1].data.I ) ^ ( vars[3].data.I < 0 ) )
+				if( vars[3].data.I >= 0 ? vars[2].data.I <= vars[1].data.I : vars[2].data.I >= vars[1].data.I )
 					pp += off;
 			}
 			p_setvar( &vars[0], &vars[1] );
@@ -2899,13 +2899,13 @@ restart_loop:
 			if( argC & 0x100 )
 			{
 				vars[1].data.R += vars[3].data.R;
-				if( ( vars[2].data.R > vars[1].data.R ) ^ ( vars[3].data.R < 0 ) )
+				if( vars[3].data.R >= 0 ? vars[2].data.R > vars[1].data.R : vars[2].data.R < vars[1].data.R )
 					pp += off;
 			}
 			else
 			{
 				vars[1].data.I += vars[3].data.I;
-				if( ( vars[2].data.I > vars[1].data.I ) ^ ( vars[3].data.I < 0 ) )
+				if( vars[3].data.I >= 0 ? vars[2].data.I > vars[1].data.I : vars[2].data.I < vars[1].data.I )
 					pp += off;
 			}
 			p_setvar( &vars[0], &vars[1] );

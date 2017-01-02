@@ -46,10 +46,12 @@ typedef struct sgs_CompFunc
 }
 sgs_CompFunc;
 
+#define SGS_FCV_MODE_NUMFOR 1
 typedef struct sgs_FCVar
 {
 	const char* name;
-	size_t nmlength;
+	uint16_t nmlength;
+	uint8_t mode;
 }
 sgs_FCVar;
 
@@ -90,7 +92,8 @@ static SGS_INLINE rcpos_t comp_reg_alloc( SGS_CTX )
 static SGS_INLINE rcpos_t comp_reg_alloc_n( SGS_CTX, int n )
 {
 	rcpos_t out;
-	sgs_BreakIf( n < 1 );
+	if( n < 1 )
+		return -1;
 	out = comp_reg_alloc( C );
 	n--;
 	while( n --> 0 )
@@ -215,11 +218,32 @@ static int add_var( sgs_MemBuf* S, SGS_CTX, const char* str, unsigned len )
 	int pos = find_var( S, str, len );
 	if( pos < 0 )
 	{
-		sgs_FCVar nv = { str, len };
+		sgs_FCVar nv = { str, len, 0 };
 		sgs_membuf_appbuf( S, C, &nv, sizeof(nv) );
 		return SGS_TRUE;
 	}
 	return SGS_FALSE;
+}
+
+static void expand_varlist( sgs_MemBuf* S, SGS_CTX )
+{
+	size_t i, count = S->size / sizeof( sgs_FCVar );
+	for( i = 0; i < count; ++i )
+	{
+		sgs_FCVar* vstart = (sgs_FCVar*) S->ptr;
+		if( vstart[ i ].mode == SGS_FCV_MODE_NUMFOR )
+		{
+			static const sgs_FCVar nvs[] =
+			{
+				{ SGS_STRLITBUF( "(num.for init)" ), 0 },
+				{ SGS_STRLITBUF( "(num.for end)" ), 0 },
+				{ SGS_STRLITBUF( "(num.for step)" ), 0 },
+			};
+			sgs_membuf_insbuf( S, C, ( i + 1 ) * sizeof( sgs_FCVar ), &nvs, sizeof(nvs) );
+			count = S->size / sizeof( sgs_FCVar );
+			i += 3;
+		}
+	}
 }
 
 #define find_varT( S, tok ) \
@@ -494,19 +518,6 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
 }
 
 
-static int preadd_thisvar( sgs_MemBuf* S, SGS_CTX )
-{
-	int pos = find_var( S, "this", 4 );
-	if( pos < 0 )
-	{
-		sgs_FCVar nv = { SGS_STRLITBUF( "this" ) };
-		sgs_membuf_insbuf( S, C, 0, &nv, sizeof(nv) );
-		return SGS_TRUE;
-	}
-	return SGS_FALSE;
-}
-
-
 /* simplifies writing code */
 #define SGS_FNTCMP_ARGS SGS_CTX, sgs_CompFunc* func, sgs_FTNode* node
 static void add_instr( SGS_FNTCMP_ARGS, sgs_instr_t I )
@@ -544,8 +555,7 @@ static int preparse_varlist( SGS_FNTCMP_ARGS )
 			QPRINT( "Variable storage redefined: global -> local" );
 			return SGS_FALSE;
 		}
-		if( add_varT( &C->fctx->vars, C, node->token ) )
-			comp_reg_alloc( C );
+		add_varT( &C->fctx->vars, C, node->token );
 		if( node->child )
 			ret &= preparse_varlists( C, func, node );
 cont:
@@ -607,9 +617,13 @@ static int preparse_varlists( SGS_FNTCMP_ARGS )
 		}
 		else if( node->type == SGS_SFT_KEYWORD && node->token && sgsT_IsKeyword( node->token, "this" ) )
 		{
+			int pos = find_var( &C->fctx->vars, "this", 4 );
+			if( pos < 0 )
+			{
+				sgs_FCVar nv = { SGS_STRLITBUF( "this" ), 0 };
+				sgs_membuf_insbuf( &C->fctx->vars, C, 0, &nv, sizeof(nv) );
+			}
 			func->gotthis = SGS_TRUE;
-			if( preadd_thisvar( &C->fctx->vars, C ) )
-				comp_reg_alloc( C );
 		}
 		else if( node->type == SGS_SFT_OPER )
 		{
@@ -619,9 +633,8 @@ static int preparse_varlists( SGS_FNTCMP_ARGS )
 				{
 					/* add_var calls find_var internally but - GVARS vs VARS - note the difference */
 					if( find_varT( &C->fctx->gvars, node->child->token ) == -1 &&
-						find_varT( &C->fctx->clsr, node->child->token ) == -1 &&
-						add_varT( &C->fctx->vars, C, node->child->token ) )
-						comp_reg_alloc( C );
+						find_varT( &C->fctx->clsr, node->child->token ) == -1 )
+						add_varT( &C->fctx->vars, C, node->child->token );
 				}
 				if( node->child->type == SGS_SFT_EXPLIST )
 					ret &= preparse_varlist( C, func, node->child );
@@ -637,8 +650,8 @@ static int preparse_varlists( SGS_FNTCMP_ARGS )
 			}
 			else
 			{
-				if( add_varT( &C->fctx->vars, C, node->child->token ) )
-					comp_reg_alloc( C );
+				add_varT( &C->fctx->vars, C, node->child->token );
+				find_nth_var( &C->fctx->vars, find_varT( &C->fctx->vars, node->child->token ) )->mode = SGS_FCV_MODE_NUMFOR;
 			}
 			
 			ret &= preparse_varlists( C, func, node->child->next );
@@ -652,12 +665,10 @@ static int preparse_varlists( SGS_FNTCMP_ARGS )
 			}
 			else
 			{
-				if( node->child->type != SGS_SFT_NULL && 
-					add_varT( &C->fctx->vars, C, node->child->token ) )
-					comp_reg_alloc( C );
-				if( node->child->next->type != SGS_SFT_NULL && 
-					add_varT( &C->fctx->vars, C, node->child->next->token ) )
-					comp_reg_alloc( C );
+				if( node->child->type != SGS_SFT_NULL )
+					add_varT( &C->fctx->vars, C, node->child->token );
+				if( node->child->next->type != SGS_SFT_NULL )
+					add_varT( &C->fctx->vars, C, node->child->next->token );
 			}
 
 			ret &= preparse_varlists( C, func, node->child->next );
@@ -668,11 +679,8 @@ static int preparse_varlists( SGS_FNTCMP_ARGS )
 			if( N && N->type == SGS_SFT_IDENT )
 			{
 				if( find_varT( &C->fctx->gvars, N->token ) == -1 && /* if the variable hasn't been .. */
-					find_varT( &C->fctx->clsr, N->token ) == -1 && /* .. created before */
-					/* if it was successfully added */
-					add_varT( C->fctx->func ? &C->fctx->vars : &C->fctx->gvars, C, N->token ) &&
-					C->fctx->func ) /* and if it was added as a local variable */
-					comp_reg_alloc( C ); /* add a register for it */
+					find_varT( &C->fctx->clsr, N->token ) == -1 ) /* .. created before */
+					add_varT( C->fctx->func ? &C->fctx->vars : &C->fctx->gvars, C, N->token );
 			}
 		}
 		else if( node->child )
@@ -734,7 +742,6 @@ static int preparse_arglist( SGS_FNTCMP_ARGS )
 			QPRINT( "Cannot redeclare arguments with the same name" );
 			return 0;
 		}
-		comp_reg_alloc( C );
 		func->numargs++;
 		node = node->next;
 	}
@@ -873,36 +880,29 @@ static rcpos_t add_const_s( SGS_CTX, sgs_CompFunc* func, uint32_t len, const cha
 
 static void varinfo_add( sgs_MemBuf* out, SGS_CTX, sgs_MemBuf* vars, int base, uint32_t icount )
 {
-	char *start, *it, *itend;
-	int i = 0;
 	static const uint32_t zero32 = 0;
 	
-	start = vars->ptr;
-	it = vars->ptr;
-	itend = it + vars->size;
-	for( ; it != itend; ++it )
+	sgs_FCVar *vp,
+		*vstart = (sgs_FCVar*) vars->ptr,
+		*vend = (sgs_FCVar*)( vars->ptr + vars->size );
+	for( vp = vstart; vp != vend; ++vp )
 	{
-		if( *it == '=' )
+		/* ignore _G since it's always available */
+		if( vp->nmlength != 2 || vp->name[0] != '_' || vp->name[1] != 'G' )
 		{
-			/* ignore _G since it's always available */
-			if( it - start != 2 || start[0] != '_' || start[1] != 'G' )
-			{
-				uint8_t len = it - start;
-				i++;
-				/* encoding:
-					local = 1-based positive
-					global = 0
-					closure = -1-based negative
-				*/
-				int16_t off = base ? base * i : 0;
-				
-				sgs_membuf_appbuf( out, C, &zero32, sizeof(zero32) );
-				sgs_membuf_appbuf( out, C, &icount, sizeof(icount) );
-				sgs_membuf_appbuf( out, C, &off, sizeof(off) );
-				sgs_membuf_appbuf( out, C, &len, sizeof(len) );
-				sgs_membuf_appbuf( out, C, start, len );
-			}
-			start = it + 1;
+			uint8_t len = vp->nmlength;
+			/* encoding:
+				local = 1-based positive
+				global = 0
+				closure = -1-based negative
+			*/
+			int16_t off = base ? base * ( vp - vstart + 1 ) : 0;
+			
+			sgs_membuf_appbuf( out, C, &zero32, sizeof(zero32) );
+			sgs_membuf_appbuf( out, C, &icount, sizeof(icount) );
+			sgs_membuf_appbuf( out, C, &off, sizeof(off) );
+			sgs_membuf_appbuf( out, C, &len, sizeof(len) );
+			sgs_membuf_appbuf( out, C, vp->name, len );
 		}
 	}
 }
@@ -2068,6 +2068,8 @@ static int compile_fn_base( SGS_FNTCMP_ARGS, int args )
 	
 	if( !preparse_clsrlists( C, func, node ) ) return 0;
 	if( !preparse_varlists( C, func, node ) ) return 0;
+	expand_varlist( &C->fctx->vars, C );
+	comp_reg_alloc_n( C, C->fctx->vars.size / sizeof( sgs_FCVar ) );
 	args += func->gotthis;
 	
 	if( !preparse_funcorder( C, func, node ) ) return 0;
@@ -2130,7 +2132,7 @@ static SGSBOOL compile_func( SGS_FNTCMP_ARGS, rcpos_t* out )
 
 	if( !preparse_closures( C, nf, n_uselist, 1 ) ||
 		!preparse_arglist( C, nf, n_arglist ) ||
-		!compile_fn_base( C, nf, n_body, fctx->regs ) ) goto fail;
+		!compile_fn_base( C, nf, n_body, nf->numargs ) ) goto fail;
 	
 	C->fctx = bkfctx;
 
@@ -3071,8 +3073,42 @@ fail:
 	return NULL;
 }
 
+static void dump_varinfo( SGS_CTX, const char* varinfo )
+{
+	const char* varinfoend;
+	uint32_t dbgvarsize;
+	
+	memcpy( &dbgvarsize, varinfo, sizeof(dbgvarsize) );
+	varinfoend = varinfo + dbgvarsize;
+	varinfo += sizeof(dbgvarsize);
+	while( varinfo < varinfoend )
+	{
+		uint32_t from, to;
+		int16_t pos;
+		uint8_t len;
+		
+		memcpy( &from, varinfo, sizeof(from) );
+		varinfo += sizeof(from);
+		memcpy( &to, varinfo, sizeof(to) );
+		varinfo += sizeof(to);
+		memcpy( &pos, varinfo, sizeof(pos) );
+		varinfo += sizeof(pos);
+		memcpy( &len, varinfo, sizeof(len) );
+		varinfo += sizeof(len);
+		
+		if( pos == 0 ) sgs_ErrWritef( C, "[global] " );
+		else if( pos < 0 ) sgs_ErrWritef( C, "[closure %d] ", -1 - pos );
+		else sgs_ErrWritef( C, "[local %d] ", pos - 1 );
+		
+		sgs_ErrWrite( C, varinfo, len );
+		sgs_ErrWritef( C, " (%d-%d)\n", (int) from, (int) to );
+		
+		varinfo += len;
+	}
+}
+
 void sgsBC_DumpEx( SGS_CTX, const char* constptr, size_t constsize,
-	const char* codeptr, size_t codesize, const sgs_LineNum* lines )
+	const char* codeptr, size_t codesize, const sgs_LineNum* lines, const char* varinfo )
 {
 	const sgs_Variable* vbeg = SGS_ASSUME_ALIGNED_CONST( constptr, sgs_Variable );
 	const sgs_Variable* vend = SGS_ASSUME_ALIGNED_CONST( constptr + constsize, sgs_Variable );
@@ -3090,6 +3126,11 @@ void sgsBC_DumpEx( SGS_CTX, const char* constptr, size_t constsize,
 	sgs_ErrWritef( C, "> code:\n" );
 	sgsBC_DumpOpcode( C, SGS_ASSUME_ALIGNED_CONST( codeptr, sgs_instr_t ),
 		codesize / sizeof( sgs_instr_t ), SGS_ASSUME_ALIGNED_CONST( codeptr, sgs_instr_t ), lines );
+	if( varinfo )
+	{
+		sgs_ErrWritef( C, "> variables:\n" );
+		dump_varinfo( C, varinfo );
+	}
 	sgs_ErrWritef( C, "}\n" );
 }
 

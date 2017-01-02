@@ -606,6 +606,55 @@ result `SUCCESS`
 check_err ``
 check_out `007`
 
+// `numeric for`
+rec ``
+exec `for i : (3) print( i );`
+result `SUCCESS`
+check_err ``
+check_out `012`
+
+rec ``
+exec `for i : (2,4) print( i );`
+result `SUCCESS`
+check_err ``
+check_out `23`
+
+rec ``
+exec `for i : (3,6,1) print( i );`
+result `SUCCESS`
+check_err ``
+check_out `345`
+
+rec ``
+exec `for i : (6,3,-1) print( i );`
+result `SUCCESS`
+check_err ``
+check_out `654`
+
+rec ``
+exec `for i : (2,1,1) print( i );`
+result `SUCCESS`
+check_err ``
+check_out ``
+
+rec ``
+exec `for i : (1,2,-1) print( i );`
+result `SUCCESS`
+check_err ``
+check_out ``
+
+rec ``
+exec `for i :. (0,1,0.3) print( i, "," );`
+result `SUCCESS`
+check_err ``
+check_out `0,0.3,0.6,0.9,`
+
+rec ``
+exec `for i :. (1,0,-0.3) print( i, "," );`
+result `SUCCESS`
+check_err ``
+check_out `1,0.7,0.4,0.1,`
+
 // `do .. while with multi-level break`
 rec ``
 exec `var i = 5;
