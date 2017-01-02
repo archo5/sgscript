@@ -171,3 +171,23 @@ rec_err ``
 exec `new a!b(1);`
 result `ECOMP`
 check_err `[E:[line 1] expected plain function call after 'new']`
+
+// `derived class registration to inherited class`
+rec ``
+exec `class base
+{
+	function __inherited( name )
+	{
+		println( "registered: ", name );
+		printvar( metaobj_get( sym_get( name ) ) === this );
+	}
+}
+class ext : base {}
+class ext2 : ext {}`
+result `SUCCESS`
+check_err ``
+check_out `registered: ext
+bool (true)
+registered: ext2
+bool (true)
+`

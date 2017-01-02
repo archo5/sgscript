@@ -2309,6 +2309,13 @@ static void vm_make_class( SGS_CTX, int outpos, sgs_Variable* name, sgs_Variable
 		{
 			sgs_ObjSetMetaObj( C, cls.data.O, inhcls.data.O );
 			sgs_ObjSetMetaMethodEnable( cls.data.O, 1 );
+			
+			if( sgs_PushProperty( C, inhcls, "__inherited" ) )
+			{
+				fstk_push2( C, &inhcls, name );
+				sgs_ThisCall( C, 1, 0 );
+			}
+			else sgs_Pop( C, 1 );
 		}
 		else
 		{
