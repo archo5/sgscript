@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -147,6 +148,127 @@ namespace SGScript
 		public override void Write( Context ctx, string text ){ Console.Error.Write( text ); }
 	}
 
+	public abstract class IScriptFileSystem
+	{
+		public enum Result
+		{
+			OK,
+			NotFound,
+			ReadError,
+		}
+
+		public static int _ScriptFSFunc( IntPtr ud, IntPtr ctx, ScriptFSCommand op, ref NI.ScriptFSData data )
+		{
+			object handle;
+			Context mctx = Engine.GetCtx( ctx );
+			IScriptFileSystem sfs = HDL.GetObj( ud ) as IScriptFileSystem;
+			switch( op )
+			{
+				case ScriptFSCommand.FileExists:
+					return sfs.FileExists( mctx, data.filename ) ? RC.SUCCESS : RC.ENOTFND;
+				case ScriptFSCommand.FileOpen:
+					switch( sfs.OpenFile( mctx, data.filename, out handle ) )
+					{
+						case Result.OK:
+							data.userhandle = HDL.Alloc( handle );
+							return RC.SUCCESS;
+						case Result.NotFound:
+							return RC.ENOTFND;
+						default:
+							return RC.EINPROC;
+					}
+				case ScriptFSCommand.FileRead:
+					handle = HDL.GetObj( data.userhandle );
+					byte[] filedata;
+					switch( sfs.ReadFile( mctx, data.filename, handle, data.size.ToInt64(), out filedata ) )
+					{
+						case Result.OK:
+							Marshal.Copy( filedata, 0, data.output, data.size.ToInt32() );
+							return RC.SUCCESS;
+						default:
+							return RC.EINPROC;
+					}
+				case ScriptFSCommand.FileClose:
+					handle = HDL.GetObj( data.userhandle, true );
+					sfs.CloseFile( mctx, data.filename, handle );
+					return RC.SUCCESS;
+				default:
+					return RC.ENOTSUP;
+			}
+		}
+
+		public virtual bool FileExists( Context ctx, string name ){ return FileExists( name ); }
+		public virtual Result OpenFile( Context ctx, string name, out object handle ){ return OpenFile( name, out handle ); }
+		public virtual Result ReadFile( Context ctx, string name, object handle, long size, out byte[] data )
+		{ return ReadFile( name, handle, size, out data ); }
+		public virtual void CloseFile( Context ctx, string name, object handle ){ CloseFile( name, handle ); }
+
+		public virtual bool FileExists( string name ){ return false; }
+		public virtual Result OpenFile( string name, out object handle ){ handle = null; return Result.NotFound; }
+		public virtual Result ReadFile( string name, object handle, long size, out byte[] data ){ data = null; return Result.ReadError; }
+		public virtual void CloseFile( string name, object handle ){}
+	}
+
+	public class IStdScriptFileSystem : IScriptFileSystem
+	{
+		public string basePath = null;
+
+		string GetFullPath( string name )
+		{
+			if( Path.IsPathRooted( name ) )
+				return name;
+			return Path.Combine( basePath, name );
+		}
+
+		public override bool FileExists( string name )
+		{
+			return File.Exists( GetFullPath( name ) );
+		}
+		public override Result OpenFile( string name, out object handle )
+		{
+			handle = null;
+			try
+			{
+				handle = File.Open( name, FileMode.Open );
+				return Result.OK;
+			}
+			catch( Exception ex )
+			{
+				if( ex is FileNotFoundException ||
+					ex is DirectoryNotFoundException )
+				{
+					return Result.NotFound;
+				}
+				if( ex is PathTooLongException ||
+					ex is IOException ||
+					ex is UnauthorizedAccessException )
+				{
+					return Result.ReadError;
+				}
+				throw;
+			}
+		}
+		public override Result ReadFile( string name, object handle, long size, out byte[] data )
+		{
+			data = null;
+			FileStream fs = handle as FileStream;
+			try
+			{
+				data = new byte[ size ];
+				fs.Read( data, 0, (int) size );
+				return Result.OK;
+			}
+			catch( IOException )
+			{
+				return Result.ReadError;
+			}
+		}
+		public override void CloseFile( string name, object handle )
+		{
+			(handle as FileStream).Close();
+		}
+	}
+
 	public interface IGetVariable
 	{
 		Variable GetVariable( Context ctx );
@@ -163,6 +285,11 @@ namespace SGScript
 		public IntPtr userdata;
 	};
 	public struct MsgFuncData
+	{
+		public IntPtr func;
+		public IntPtr userdata;
+	};
+	public struct ScriptFSFuncData
 	{
 		public IntPtr func;
 		public IntPtr userdata;
@@ -1070,5 +1197,26 @@ namespace SGScript
 					throw new SGSException( RC.EINPROC, "Failed to unregister SGS object" );
 			}
 		}
+
+		// virtual file system interface
+		IntPtr hScriptFSFunc = IntPtr.Zero;
+		NI.ScriptFSFunc d_scriptfsfunc;
+		public ScriptFSFuncData GetScriptFSFunc()
+		{
+			ScriptFSFuncData sfsfd;
+			NI.GetScriptFSFunc( ctx, out sfsfd.func, out sfsfd.userdata );
+			return sfsfd;
+		}
+		public IScriptFileSystem GetScriptFileSystem(){ return (IScriptFileSystem) HDL.GetObj( GetScriptFSFunc().userdata ); }
+		public ScriptFSFuncData SetOutputFunc( IScriptFileSystem pr )
+		{
+			ScriptFSFuncData prev = GetScriptFSFunc();
+			HDL.FreeIfAlloc( ref hScriptFSFunc );
+			hScriptFSFunc = HDL.Alloc( pr );
+			d_scriptfsfunc = new NI.ScriptFSFunc( IScriptFileSystem._ScriptFSFunc );
+			NI.SetScriptFSFunc( ctx, d_scriptfsfunc, hScriptFSFunc );
+			return prev;
+		}
+		public void SetScriptFSFunc( ScriptFSFuncData ofd ){ NI.SetScriptFSFunc( ctx, ofd.func, ofd.userdata ); }
 	}
 }

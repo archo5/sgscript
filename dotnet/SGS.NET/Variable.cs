@@ -819,7 +819,7 @@ namespace SGScript
 		public Variable GetIterator()
 		{
 			NI.Variable iter;
-			if( NI.GetIterator( _sgsEngine.ctx, var, out iter ) == 0 )
+			if( NI.CreateIterator( _sgsEngine.ctx, out iter, var ) == 0 )
 				throw new SGSException( RC.ENOTSUP, "Object does not support iterators" );
 			return _sgsEngine.Var( iter, false );
 		}

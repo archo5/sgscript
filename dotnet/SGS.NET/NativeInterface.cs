@@ -403,6 +403,14 @@ namespace SGScript
 		Includes = 2,
 	}
 
+	public enum ScriptFSCommand : int
+	{
+		FileExists = 1,
+		FileOpen = 2,
+		FileRead = 3,
+		FileClose = 4,
+	}
+
 	// native interface
 	public class NI
 	{
@@ -509,6 +517,15 @@ namespace SGScript
 			public VarData data;
 		};
 
+		public struct ScriptFSData
+		{
+			public IntPtr userhandle;
+			[MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )]
+			public string filename;
+			public IntPtr output;
+			public IntPtr size;
+		}
+
 
 		[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
 		public delegate IntPtr MemFunc( IntPtr ud, IntPtr ptr, IntPtr size );
@@ -518,6 +535,9 @@ namespace SGScript
 
 		[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
 		public delegate void MsgFunc( IntPtr ud, IntPtr ctx, int type, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string message );
+		
+		[UnmanagedFunctionPointer( CallingConvention.Cdecl )]
+		public delegate int ScriptFSFunc( IntPtr ud, IntPtr ctx, ScriptFSCommand op, ref ScriptFSData data );
 
 
 		public static IntPtr DefaultMemFunc( IntPtr ud, IntPtr ptr, IntPtr size )
@@ -603,17 +623,25 @@ namespace SGScript
 			, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string text );
 		public static int Msg( IntPtr ctx, int type, string text ){ _MsgSpc0( ctx, type, "%s", text ); return 0; }
 
+		
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetScriptFSFunc", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void GetScriptFSFunc( IntPtr ctx, out IntPtr pfn, out IntPtr sfs );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetScriptFSFunc", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void SetScriptFSFunc( IntPtr ctx, ScriptFSFunc pfn, IntPtr sfs );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_SetScriptFSFunc", CallingConvention = CallingConvention.Cdecl )]
+		public static extern void SetScriptFSFunc( IntPtr ctx, IntPtr pfn, IntPtr sfs );
 
-		[DllImport( "sgscript.dll", EntryPoint = "sgs_EvalBuffer", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi )]
+
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_EvalBuffer", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int EvalBuffer( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string buf, Int32 bufsz );
 		
-		[DllImport( "sgscript.dll", EntryPoint = "sgs_EvalFile", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi )]
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_EvalFile", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int EvalFile( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string buf );
 		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_AdjustStack", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int AdjustStack( IntPtr ctx, int expected, int ret );
 		
-		[DllImport( "sgscript.dll", EntryPoint = "sgs_IncludeExt", CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi )]
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_IncludeExt", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int Include( IntPtr ctx,
 			[MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string name,
 			[MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string searchpath = null );
@@ -868,8 +896,8 @@ namespace SGScript
 		public static extern int EventState( IntPtr ctx, Variable var, EventStateType state );
 		
 
-		[DllImport( "sgscript.dll", EntryPoint = "sgs_GetIterator", CallingConvention = CallingConvention.Cdecl )]
-		public static extern int GetIterator( IntPtr ctx, Variable var, out Variable outvar );
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_CreateIterator", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int CreateIterator( IntPtr ctx, out Variable outvar, Variable var );
 
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_IterAdvance", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int IterAdvance( IntPtr ctx, Variable item );
