@@ -129,6 +129,7 @@ namespace APITest
 			Indexing();
 			Globals101();
 			Libraries();
+			FileSystem();
 			FunctionCalls();
 			SimpleFunctionCalls();
 			ComplexGC();
@@ -700,6 +701,54 @@ namespace APITest
 			Assert( engine.PushGlobal( "re_replace" ), true );
 			Assert( engine.PushGlobal( "string_replace" ), true );
 
+			DestroyEngine( engine );
+		}
+
+		class FakeFileSystem : IScriptFileSystem
+		{
+			Dictionary<string, string> myfiles = new Dictionary<string, string>()
+			{
+				// paths are generated according to the SGS_PATH global variable
+				{ "sgsnet_test1.sgs", "global ffs = true;" },
+			};
+			public override bool FileExists( string name )
+			{
+				return myfiles.ContainsKey( name );
+			}
+			public override Result OpenFile( string name, out object handle, out long size )
+			{
+				string code;
+				if( !myfiles.TryGetValue( name, out code ) )
+				{
+					handle = null;
+					size = 0;
+					return Result.NotFound;
+				}
+				else
+				{
+					handle = code;
+					size = System.Text.Encoding.UTF8.GetByteCount( code );
+					return Result.OK;
+				}
+			}
+			public override Result ReadFile( string name, object handle, long size, out byte[] data )
+			{
+				data = System.Text.Encoding.UTF8.GetBytes( handle as string );
+				return Result.OK;
+			}
+		}
+		static void FileSystem()
+		{
+			Console.Write( "\nFile system " );
+			Engine engine = CreateEngine();
+			
+			Assert( engine.TryInclude( "sgsnet_test1" ), false );
+			AssertVar( engine.GetGlobal( "ffs" ), null );
+
+			engine.SetScriptFSFunc( new FakeFileSystem() );
+			Assert( engine.TryInclude( "sgsnet_test1" ), true );
+			AssertVar( engine.GetGlobal( "ffs" ), engine.Var( true ) );
+			
 			DestroyEngine( engine );
 		}
 

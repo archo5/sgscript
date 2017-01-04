@@ -230,7 +230,7 @@ namespace SGScript
 	{
 		static UTF8Marshaler inst = null;
 
-		public static ICustomMarshaler GetInstance( string name )
+		public static ICustomMarshaler GetInstance( string name = "" )
 		{
 			if( inst == null )
 				inst = new UTF8Marshaler();
@@ -520,8 +520,7 @@ namespace SGScript
 		public struct ScriptFSData
 		{
 			public IntPtr userhandle;
-			[MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )]
-			public string filename;
+			public IntPtr filename;
 			public IntPtr output;
 			public IntPtr size;
 		}
@@ -632,6 +631,9 @@ namespace SGScript
 		public static extern void SetScriptFSFunc( IntPtr ctx, IntPtr pfn, IntPtr sfs );
 
 
+		[DllImport( "sgscript.dll", EntryPoint = "sgs_PushSGSFunctionBuf", CallingConvention = CallingConvention.Cdecl )]
+		public static extern int PushSGSFunctionBuf( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string buf, Int32 bufsz );
+		
 		[DllImport( "sgscript.dll", EntryPoint = "sgs_EvalBuffer", CallingConvention = CallingConvention.Cdecl )]
 		public static extern int EvalBuffer( IntPtr ctx, [MarshalAs( UnmanagedType.CustomMarshaler, MarshalTypeRef = typeof(UTF8Marshaler) )] string buf, Int32 bufsz );
 		

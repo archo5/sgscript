@@ -148,6 +148,7 @@ namespace SGScript
 		public override void Write( Context ctx, string text ){ Console.Error.Write( text ); }
 	}
 
+	// Use this class to implement an interface that include() can use to look for and read code
 	public abstract class IScriptFileSystem
 	{
 		public enum Result
@@ -160,16 +161,19 @@ namespace SGScript
 		public static int _ScriptFSFunc( IntPtr ud, IntPtr ctx, ScriptFSCommand op, ref NI.ScriptFSData data )
 		{
 			object handle;
+			string filename = UTF8Marshaler.GetInstance().MarshalNativeToManaged( data.filename ) as string;
 			Context mctx = Engine.GetCtx( ctx );
 			IScriptFileSystem sfs = HDL.GetObj( ud ) as IScriptFileSystem;
 			switch( op )
 			{
 				case ScriptFSCommand.FileExists:
-					return sfs.FileExists( mctx, data.filename ) ? RC.SUCCESS : RC.ENOTFND;
+					return sfs.FileExists( mctx, filename ) ? RC.SUCCESS : RC.ENOTFND;
 				case ScriptFSCommand.FileOpen:
-					switch( sfs.OpenFile( mctx, data.filename, out handle ) )
+					long fileSize;
+					switch( sfs.OpenFile( mctx, filename, out handle, out fileSize ) )
 					{
 						case Result.OK:
+							data.size = (IntPtr) fileSize;
 							data.userhandle = HDL.Alloc( handle );
 							return RC.SUCCESS;
 						case Result.NotFound:
@@ -180,7 +184,7 @@ namespace SGScript
 				case ScriptFSCommand.FileRead:
 					handle = HDL.GetObj( data.userhandle );
 					byte[] filedata;
-					switch( sfs.ReadFile( mctx, data.filename, handle, data.size.ToInt64(), out filedata ) )
+					switch( sfs.ReadFile( mctx, filename, handle, data.size.ToInt64(), out filedata ) )
 					{
 						case Result.OK:
 							Marshal.Copy( filedata, 0, data.output, data.size.ToInt32() );
@@ -190,7 +194,7 @@ namespace SGScript
 					}
 				case ScriptFSCommand.FileClose:
 					handle = HDL.GetObj( data.userhandle, true );
-					sfs.CloseFile( mctx, data.filename, handle );
+					sfs.CloseFile( mctx, filename, handle );
 					return RC.SUCCESS;
 				default:
 					return RC.ENOTSUP;
@@ -198,14 +202,17 @@ namespace SGScript
 		}
 
 		public virtual bool FileExists( Context ctx, string name ){ return FileExists( name ); }
-		public virtual Result OpenFile( Context ctx, string name, out object handle ){ return OpenFile( name, out handle ); }
+		public virtual Result OpenFile( Context ctx, string name, out object handle, out long size )
+		{ return OpenFile( name, out handle, out size ); }
 		public virtual Result ReadFile( Context ctx, string name, object handle, long size, out byte[] data )
 		{ return ReadFile( name, handle, size, out data ); }
 		public virtual void CloseFile( Context ctx, string name, object handle ){ CloseFile( name, handle ); }
 
 		public virtual bool FileExists( string name ){ return false; }
-		public virtual Result OpenFile( string name, out object handle ){ handle = null; return Result.NotFound; }
-		public virtual Result ReadFile( string name, object handle, long size, out byte[] data ){ data = null; return Result.ReadError; }
+		public virtual Result OpenFile( string name, out object handle, out long size )
+		{ handle = null; size = 0; return Result.NotFound; }
+		public virtual Result ReadFile( string name, object handle, long size, out byte[] data )
+		{ data = null; return Result.ReadError; }
 		public virtual void CloseFile( string name, object handle ){}
 	}
 
@@ -224,12 +231,15 @@ namespace SGScript
 		{
 			return File.Exists( GetFullPath( name ) );
 		}
-		public override Result OpenFile( string name, out object handle )
+		public override Result OpenFile( string name, out object handle, out long size )
 		{
 			handle = null;
+			size = 0;
 			try
 			{
-				handle = File.Open( name, FileMode.Open );
+				FileStream fs = File.Open( name, FileMode.Open );
+				handle = fs;
+				size = fs.Length;
 				return Result.OK;
 			}
 			catch( Exception ex )
@@ -317,13 +327,15 @@ namespace SGScript
 		// = root context
 		public bool IsEngine(){ return NI.RootContext( ctx ) == ctx; }
 		public Engine GetEngine(){ return Engine.GetFromCtx( NI.RootContext( ctx ) ); }
-
+		
+		public int TryPushSGSFunction( string code ){ return NI.PushSGSFunctionBuf( ctx, code, code.Length ); }
 		public int TryExec( string str ){ return NI.Exec( ctx, str ); }
 		public int TryEval( string str ){ return NI.Eval( ctx, str ); }
 		public int TryExecFile( string name ){ return NI.ExecFile( ctx, name ); }
 		public int TryEvalFile( string name ){ return NI.EvalFile( ctx, name ); }
 		public bool TryInclude( string name, string searchPath = null ){ return NI.Include( ctx, name, searchPath ) != 0; }
 
+		public int PushSGSFunction( string code ){ return NI.ResultToException( TryPushSGSFunction( code ) ); }
 		public int Exec( string str ){ return NI.ResultToException( TryExec( str ) ); }
 		public int Eval( string str ){ return NI.ResultToException( TryEval( str ) ); }
 		public int ExecFile( string str ){ return NI.ResultToException( TryExecFile( str ) ); }
@@ -1208,7 +1220,7 @@ namespace SGScript
 			return sfsfd;
 		}
 		public IScriptFileSystem GetScriptFileSystem(){ return (IScriptFileSystem) HDL.GetObj( GetScriptFSFunc().userdata ); }
-		public ScriptFSFuncData SetOutputFunc( IScriptFileSystem pr )
+		public ScriptFSFuncData SetScriptFSFunc( IScriptFileSystem pr )
 		{
 			ScriptFSFuncData prev = GetScriptFSFunc();
 			HDL.FreeIfAlloc( ref hScriptFSFunc );
