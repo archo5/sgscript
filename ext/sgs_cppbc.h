@@ -396,7 +396,7 @@ public:
 		return *this;
 	}
 	
-	const char* c_str() const { return str ? sgs_str_c_cstr( str ) : NULL; }
+	const char* c_str() const { return str ? sgs_str_c_cstr( str ) : ""; }
 	size_t size() const { return str ? (size_t) str->size : 0; }
 #ifdef SGS_CPPBC_WITH_STD_STRING
 	bool get_string( std::string& out ){ if( str ){ out = std::string( sgs_str_c_cstr( str ), str->size ); return true; } return false; }

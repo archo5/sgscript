@@ -2920,7 +2920,7 @@ static int xgm_m4i_transpose( SGS_CTX )
 {
 	XGM_M4_IHDR( transpose );
 	MAT4_Transpose( *M );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int xgm_m4i_transpose_from( SGS_CTX )
@@ -2933,7 +2933,7 @@ static int xgm_m4i_transpose_from( SGS_CTX )
 	
 	memcpy( *M, M2, sizeof(M2) );
 	MAT4_Transpose( *M );
-	return 0;
+	SGS_RETURN_THIS( C );
 }
 
 static int xgm_m4i_invert( SGS_CTX )
@@ -4236,9 +4236,10 @@ static int xgm_distance_point_line( SGS_CTX )
 {
 	/* vec3 point, line point 1, line point 2;
 		returns <distance between point and line> */
+	sgs_Bool rvec = 0;
 	XGM_VT pt[3], lp1[3], lp2[3], v[3], w[3], c1, c2, b;
 	SGSFN( "distance_point_line" );
-	if( !sgs_LoadArgs( C, "xxx", sgs_ArgCheck_Vec3, pt, sgs_ArgCheck_Vec3, lp1, sgs_ArgCheck_Vec3, lp2 ) )
+	if( !sgs_LoadArgs( C, "xxx|b", sgs_ArgCheck_Vec3, pt, sgs_ArgCheck_Vec3, lp1, sgs_ArgCheck_Vec3, lp2, &rvec ) )
 		return 0;
 	
 	XGM_V3_SUB( v, lp2, lp1 );
@@ -4252,16 +4253,20 @@ static int xgm_distance_point_line( SGS_CTX )
 	XGM_V3_ADD( v, lp1, v );
 	XGM_V3_SUB( v, pt, v );
 	
-	return sgs_PushReal( C, sqrtf( XGM_VMUL_INNER3( v, v ) ) );
+	if( rvec )
+		return sgs_CreateVec3p( C, NULL, v );
+	else
+		return sgs_PushReal( C, sqrtf( XGM_VMUL_INNER3( v, v ) ) );
 }
 
 static int xgm_distance_point_line_segment( SGS_CTX )
 {
 	/* vec3 point, line point 1, line point 2;
 		returns <distance between point and line segment> */
+	sgs_Bool rvec = 0;
 	XGM_VT pt[3], lp1[3], lp2[3], v[3], w[3], c1, c2, b;
 	SGSFN( "distance_point_line_segment" );
-	if( !sgs_LoadArgs( C, "xxx", sgs_ArgCheck_Vec3, pt, sgs_ArgCheck_Vec3, lp1, sgs_ArgCheck_Vec3, lp2 ) )
+	if( !sgs_LoadArgs( C, "xxx|b", sgs_ArgCheck_Vec3, pt, sgs_ArgCheck_Vec3, lp1, sgs_ArgCheck_Vec3, lp2, &rvec ) )
 		return 0;
 	
 	XGM_V3_SUB( v, lp2, lp1 );
@@ -4286,7 +4291,10 @@ static int xgm_distance_point_line_segment( SGS_CTX )
 	XGM_V3_SUB( v, pt, v );
 	
 end:
-	return sgs_PushReal( C, sqrtf( XGM_VMUL_INNER3( v, v ) ) );
+	if( rvec )
+		return sgs_CreateVec3p( C, NULL, v );
+	else
+		return sgs_PushReal( C, sqrtf( XGM_VMUL_INNER3( v, v ) ) );
 }
 
 // ADAPTATION END
