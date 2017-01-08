@@ -455,3 +455,18 @@ print(a);
 result `SUCCESS`
 check_err ``
 check_out `{x=1}`
+
+// `bug 00031a - mpropset register misuse`
+rec ``
+exec `global qfv = {}, store = map{};
+class q { function f(){ return qfv; } }
+
+store[qfv] = q.f().
+{
+	x = 1
+};
+print(store[qfv]);
+`
+result `SUCCESS`
+check_err ``
+check_out `{x=1}`

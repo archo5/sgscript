@@ -564,7 +564,7 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
 		case ODT_ARRAY: sgs_ErrWritef( C, "args:%d output:", argE ); dump_rcpos( C, argC ); break;
 		case ODT_DICTMAP: sgs_ErrWritef( C, "output:" ); dump_rcpos( C, argC ); break;
 		case ODT_CLASS:
-			sgs_ErrWritef( C, "output:%d", argA );
+			sgs_ErrWritef( C, "output:R%d", argA );
 			sgs_ErrWritef( C, ", name:" ); dump_rcpos( C, argB );
 			sgs_ErrWritef( C, ", inhname:%s", argC == argA ? "<none>" : "" );
 			if( argC != argA ) dump_rcpos( C, argC );
@@ -1617,12 +1617,9 @@ static SGSBOOL compile_midxset( SGS_FNTCMP_ARGS, rcpos_t* out, int isprop )
 {
 	sgs_FTNode* mapi;
 	
-	comp_reg_ensure( C, out );
+	if( !compile_node_r( C, func, node->child, out ) ) return 0;
 	{
-		rcpos_t regpos = C->fctx->regs, regpos2;
-		if( !compile_node_r( C, func, node->child, out ) ) return 0;
-		
-		regpos2 = C->fctx->regs;
+		rcpos_t regpos = C->fctx->regs;
 		mapi = node->child->next->child;
 		while( mapi )
 		{
@@ -1645,9 +1642,8 @@ static SGSBOOL compile_midxset( SGS_FNTCMP_ARGS, rcpos_t* out, int isprop )
 			mapi = mapi->next;
 			
 			INSTR_WRITE( isprop ? SGS_SI_SETPROP : SGS_SI_SETINDEX, *out, name, src );
-			comp_reg_unwind( C, regpos2 );
+			comp_reg_unwind( C, regpos );
 		}
-		comp_reg_unwind( C, regpos );
 	}
 	return 1;
 }
