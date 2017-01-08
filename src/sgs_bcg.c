@@ -340,28 +340,143 @@ static void dump_rcpos( SGS_CTX, int arg )
 	arg = SGS_CONSTDEC( arg );
 	sgs_ErrWritef( C, "%c%d", rc, arg );
 }
-static void dump_opcode_a( SGS_CTX, const char* name, sgs_instr_t I )
+
+static void dump_const( SGS_CTX, char which, int arg, const sgs_Variable* consts )
 {
-	sgs_ErrWritef( C, "%s R%" PRId32" <= ", name, SGS_INSTR_GET_A( I ) );
-	dump_rcpos( C, SGS_INSTR_GET_B( I ) );
-	sgs_ErrWritef( C, ", " );
-	dump_rcpos( C, SGS_INSTR_GET_C( I ) );
-}
-static void dump_opcode_b( SGS_CTX, const char* name, sgs_instr_t I )
-{
-	sgs_ErrWritef( C, "%s R%" PRId32" <= ", name, SGS_INSTR_GET_A( I ) );
-	dump_rcpos( C, SGS_INSTR_GET_B( I ) );
-}
-static void dump_opcode_b1( SGS_CTX, const char* name, sgs_instr_t I )
-{
-	sgs_ErrWritef( C, "%s ", name );
-	dump_rcpos( C, SGS_INSTR_GET_B( I ) );
-	sgs_ErrWritef( C, " <= " );
-	dump_rcpos( C, SGS_INSTR_GET_C( I ) );
+	if( SGS_CONSTVAR( arg ) == 0 )
+		return;
+	arg = SGS_CONSTDEC( arg );
+	sgs_ErrWritef( C, " ; %c(C%d){", which, arg );
+	sgsVM_VarDump( C, &consts[ arg ] );
+	sgs_ErrWritef( C, "}" );
 }
 
+enum sgs_OpDumpType
+{
+	ODT_NOP = 0,
+	ODT_PUSH,
+	ODT_INT,
+	ODT_RET1,
+	
+	ODT_RETN,
+	ODT_JMP,
+	ODT_CONDJMP,
+	ODT_CALL,
+	
+	ODT_UNOP,
+	ODT_BINOP,
+	ODT_MCONCAT,
+	ODT_FORLOAD,
+	
+	ODT_NFOR,
+	ODT_LOADCONST,
+	ODT_SETVAR,
+	ODT_ARRPUSH,
+	
+	ODT_NUMBERS,
+	ODT_MAKECLSR,
+	ODT_GETCLSR,
+	ODT_SETCLSR,
+	
+	ODT_ARRAY,
+	ODT_DICTMAP,
+	ODT_CLASS,
+	ODT_RSYM,
+	
+	ODT__COUNT,
+};
+#define SHIFT2BITS( b, c, sh ) (((b)|((c)<<1))<<sh)
+static const uint8_t sgs_OpReferConsts[] =
+{
+	/* push=B */ SHIFT2BITS( 1, 0, 2 ) | /* ret1=C */ SHIFT2BITS( 0, 1, 6 ),
+	/* condjmp=C */ SHIFT2BITS( 0, 1, 4 ),
+	/* unop=B */ SHIFT2BITS( 1, 0, 0 ) | /* binop=B,C */ SHIFT2BITS( 1, 1, 2 ),
+	/* setvar=B,C */ SHIFT2BITS( 1, 1, 4 ) | /* arrpush=C */ SHIFT2BITS( 0, 1, 6 ),
+	/* makeclsr=B */ SHIFT2BITS( 1, 0, 2 ) | /* setclsr=C */ SHIFT2BITS( 0, 1, 6 ),
+	/* class=B,C */ SHIFT2BITS( 1, 1, 4 ) | /* rsym=B,C */ SHIFT2BITS( 1, 1, 6 ),
+};
+#undef SHIFT2BITS
+SGS_CASSERT( SGS_ARRAY_SIZE( sgs_OpReferConsts ) * 4 >= ODT__COUNT, good_odt_rc_count );
+static const uint8_t sgs_OpDumpType[] =
+{
+	/* NOP  */ ODT_NOP,
+	
+	/* PUSH */ ODT_PUSH,
+	/* INT  */ ODT_INT,
+	
+	/* RET1 */ ODT_RET1,
+	/* RETN */ ODT_RETN,
+	/* JUMP */ ODT_JMP,
+	/* JMPT */ ODT_CONDJMP,
+	/* JMPF */ ODT_CONDJMP,
+	/* JMPN */ ODT_CONDJMP,
+	/* CALL */ ODT_CALL,
+	
+	/* FORPREP  */ ODT_UNOP,
+	/* FORLOAD  */ ODT_FORLOAD,
+	/* FORJUMP  */ ODT_CONDJMP,
+	/* NFORPREP */ ODT_NFOR,
+	/* NFORJUMP */ ODT_NFOR,
+	
+	/* LOADCONST */ ODT_LOADCONST,
+	/* GETVAR    */ ODT_UNOP,
+	/* SETVAR    */ ODT_SETVAR,
+	/* GETPROP   */ ODT_BINOP,
+	/* SETPROP   */ ODT_BINOP,
+	/* GETINDEX  */ ODT_BINOP,
+	/* SETINDEX  */ ODT_BINOP,
+	/* ARRPUSH   */ ODT_ARRPUSH,
+	
+	/* CLSRINFO */ ODT_NUMBERS,
+	/* MAKECLSR */ ODT_MAKECLSR,
+	/* GETCLSR  */ ODT_GETCLSR,
+	/* SETCLSR  */ ODT_SETCLSR,
+	
+	/* SET      */ ODT_UNOP,
+	/* MCONCAT  */ ODT_MCONCAT,
+	/* NEGATE   */ ODT_UNOP,
+	/* BOOL_INV */ ODT_UNOP,
+	/* INVERT   */ ODT_UNOP,
+	
+	/* INC */ ODT_UNOP,
+	/* DEC */ ODT_UNOP,
+	/* ADD */ ODT_BINOP,
+	/* SUB */ ODT_BINOP,
+	/* MUL */ ODT_BINOP,
+	/* DIV */ ODT_BINOP,
+	/* MOD */ ODT_BINOP,
+	
+	/* AND */ ODT_BINOP,
+	/* OR  */ ODT_BINOP,
+	/* XOR */ ODT_BINOP,
+	/* LSH */ ODT_BINOP,
+	/* RSH */ ODT_BINOP,
+	
+	/* SEQ    */ ODT_BINOP,
+	/* SNEQ   */ ODT_BINOP,
+	/* EQ     */ ODT_BINOP,
+	/* NEQ    */ ODT_BINOP,
+	/* LT     */ ODT_BINOP,
+	/* GTE    */ ODT_BINOP,
+	/* GT     */ ODT_BINOP,
+	/* LTE    */ ODT_BINOP,
+	/* RAWCMP */ ODT_BINOP,
+	
+	/* ARRAY   */ ODT_ARRAY,
+	/* DICT    */ ODT_DICTMAP,
+	/* MAP     */ ODT_DICTMAP,
+	/* CLASS   */ ODT_CLASS,
+	/* NEW     */ ODT_UNOP,
+	/* RSYM    */ ODT_RSYM,
+	/* COTRT   */ ODT_UNOP,
+	/* COTRF   */ ODT_UNOP,
+	/* COABORT */ ODT_CONDJMP,
+	/* YLDJMP  */ ODT_CONDJMP,
+};
+SGS_CASSERT( SGS_ARRAY_SIZE( sgs_OpDumpType ) == SGS_SI_COUNT, good_instr_odt_count );
+
 void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
-	const sgs_instr_t* numstart, const sgs_LineNum* lines )
+	const sgs_instr_t* numstart, const sgs_Variable* consts, const sgs_LineNum* lines )
 {
 	const sgs_instr_t* pend = ptr + count;
 	for( ; ptr < pend; ptr++ )
@@ -369,8 +484,8 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
 		sgs_instr_t I = *ptr;
 		int op = SGS_INSTR_GET_OP( I ), argA = SGS_INSTR_GET_A( I ),
 			argB = SGS_INSTR_GET_B( I ), argC = SGS_INSTR_GET_C( I ),
-			argE = SGS_INSTR_GET_E( I );
-
+			argE = SGS_INSTR_GET_E( I ), odt;
+		
 		if( numstart )
 		{
 			sgs_ErrWritef( C, "    %04d ", (int)( ptr - numstart ) );
@@ -383,32 +498,44 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
 		{
 			sgs_ErrWritef( C, "| " );
 		}
-
-		switch( op )
+		
+		if( op >= SGS_SI_COUNT )
 		{
-#define DOP_A( wat ) case SGS_SI_##wat: dump_opcode_a( C, #wat, I ); break;
-#define DOP_B( wat ) case SGS_SI_##wat: dump_opcode_b( C, #wat, I ); break;
-		case SGS_SI_NOP: sgs_ErrWritef( C, "NOP   " ); break;
-
-		case SGS_SI_PUSH: sgs_ErrWritef( C, "PUSH " ); dump_rcpos( C, argB ); break;
-		case SGS_SI_INT: sgs_ErrWritef( C, "INT %d", argC ); break;
-
-		case SGS_SI_RET1: sgs_ErrWritef( C, "RET_1 <= " ); dump_rcpos( C, argC ); break;
-		case SGS_SI_RETN: sgs_ErrWritef( C, "RETURN %d", argA ); break;
-		case SGS_SI_JUMP: sgs_ErrWritef( C, "JUMP %d", (int) (int16_t) argE ); break;
-		case SGS_SI_JMPT: sgs_ErrWritef( C, "JMP_T " ); dump_rcpos( C, argC );
+			sgs_ErrWritef( C, "<error> (op=%d A=%d B=%d C=%d E=%d)\n",
+				op, argA, argB, argC, argE );
+			continue;
+		}
+		
+		sgs_ErrWritef( C, "%s ", sgs_CodeString( SGS_CODE_OP, op ) );
+		
+		odt = sgs_OpDumpType[ op ];
+		switch( odt )
+		{
+		case ODT_NOP: break;
+		case ODT_PUSH: dump_rcpos( C, argB ); break;
+		case ODT_INT: sgs_ErrWritef( C, "%d", argC ); break;
+		case ODT_RET1: dump_rcpos( C, argC ); break;
+		case ODT_RETN: sgs_ErrWritef( C, "%d", argA ); break;
+		case ODT_JMP: sgs_ErrWritef( C, "%d", (int) (int16_t) argE ); break;
+		case ODT_CONDJMP: dump_rcpos( C, argC );
 			sgs_ErrWritef( C, ", %d", (int) (int16_t) argE ); break;
-		case SGS_SI_JMPF: sgs_ErrWritef( C, "JMP_F " ); dump_rcpos( C, argC );
-			sgs_ErrWritef( C, ", %d", (int) (int16_t) argE ); break;
-		case SGS_SI_JMPN: sgs_ErrWritef( C, "JMP_N " ); dump_rcpos( C, argC );
-			sgs_ErrWritef( C, ", %d", (int) (int16_t) argE ); break;
-		case SGS_SI_CALL: sgs_ErrWritef( C, "CALL args: %d - %d expect: %d%s",
+		case ODT_CALL: sgs_ErrWritef( C, "args: %d - %d expect: %d%s",
 			argB & 0xff, argC, argA, ( argB & 0x100 ) ? ", method" : "" );
 			break;
-
-		case SGS_SI_FORPREP: sgs_ErrWritef( C, "FOR_PREP " ); dump_rcpos( C, argA );
-			sgs_ErrWritef( C, " <= " ); dump_rcpos( C, argB ); break;
-		case SGS_SI_FORLOAD: sgs_ErrWritef( C, "FOR_LOAD " ); dump_rcpos( C, argA );
+		case ODT_UNOP:
+			sgs_ErrWritef( C, "R%" PRId32" <= ", argA );
+			dump_rcpos( C, argB );
+			break;
+		case ODT_BINOP:
+			sgs_ErrWritef( C, "R%" PRId32" <= ", argA );
+			dump_rcpos( C, argB );
+			sgs_ErrWritef( C, ", " );
+			dump_rcpos( C, argC );
+			break;
+		case ODT_MCONCAT: dump_rcpos( C, argA ); sgs_ErrWritef( C, " [%d]", argB ); break;
+		case ODT_FORLOAD:
+			sgs_ErrWritef( C, "FOR_LOAD " );
+			dump_rcpos( C, argA );
 			sgs_ErrWritef( C, " => " );
 			if( argB < 0x100 )
 				dump_rcpos( C, argB );
@@ -420,102 +547,42 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
 			else
 				sgs_ErrWritef( C, "<off>" );
 			break;
-		case SGS_SI_FORJUMP: sgs_ErrWritef( C, "FOR_JUMP " ); dump_rcpos( C, argC );
-			sgs_ErrWritef( C, ", %d", (int) (int16_t) argE ); break;
-			
-		case SGS_SI_NFORPREP: sgs_ErrWritef( C, "NUM_FOR_PREP (%s) ", argC & 0x100 ? "real" : "int" );
+		case ODT_NFOR: sgs_ErrWritef( C, "(%s) ", argC & 0x100 ? "real" : "int" );
 			dump_rcpos( C, argC & 0xff ); sgs_ErrWritef( C, ", %d", (int) (int16_t) argE ); break;
-		case SGS_SI_NFORJUMP: sgs_ErrWritef( C, "NUM_FOR_JUMP (%s) ", argC & 0x100 ? "real" : "int" );
-			dump_rcpos( C, argC & 0xff ); sgs_ErrWritef( C, ", %d", (int) (int16_t) argE ); break;
-
-		case SGS_SI_LOADCONST: sgs_ErrWritef( C, "LOADCONST " ); dump_rcpos( C, argC );
-			sgs_ErrWritef( C, " <= C%d", argE ); break;
-
-		DOP_B( GETVAR );
-		case SGS_SI_SETVAR: dump_opcode_b1( C, "SETVAR", I ); break;
-		DOP_A( GETPROP );
-		DOP_A( SETPROP );
-		DOP_A( GETINDEX );
-		DOP_A( SETINDEX );
-		case SGS_SI_ARRPUSH: sgs_ErrWritef( C, "ARR_PUSH R%d <= ", argA );
-			dump_rcpos( C, argC ); break;
-
-		case SGS_SI_CLSRINFO: sgs_ErrWritef( C, "CLSR_INFO %d %d %d", argA, argB, argC ); break;
-		case SGS_SI_MAKECLSR: sgs_ErrWritef( C, "MAKE_CLSR " ); dump_rcpos( C, argA );
+		case ODT_LOADCONST: dump_rcpos( C, argC );
+			sgs_ErrWritef( C, " <= C%d: ", argE );
+			sgsVM_VarDump( C, &consts[ argE ] ); break;
+		case ODT_SETVAR: dump_rcpos( C, argB );
+			sgs_ErrWritef( C, " <= " ); dump_rcpos( C, argC ); break;
+		case ODT_ARRPUSH: sgs_ErrWritef( C, "R%d <= ", argA ); dump_rcpos( C, argC ); break;
+		case ODT_NUMBERS: sgs_ErrWritef( C, "%d %d %d", argA, argB, argC ); break;
+		case ODT_MAKECLSR: dump_rcpos( C, argA );
 			sgs_ErrWritef( C, " <= " ); dump_rcpos( C, argB );
 			sgs_ErrWritef( C, " [%d]", argC ); break;
-		case SGS_SI_GETCLSR: sgs_ErrWritef( C, "GET_CLSR " ); dump_rcpos( C, argA );
-			sgs_ErrWritef( C, " <= CL%d", argB ); break;
-		case SGS_SI_SETCLSR: sgs_ErrWritef( C, "SET_CLSR CL%d <= ", argB );
-			dump_rcpos( C, argC ); break;
-
-		DOP_B( SET );
-		case SGS_SI_MCONCAT: sgs_ErrWritef( C, "MCONCAT " ); dump_rcpos( C, argA );
-			sgs_ErrWritef( C, " [%d]", argB ); break;
-		DOP_B( NEGATE );
-		DOP_B( BOOL_INV );
-		DOP_B( INVERT );
-
-		DOP_B( INC );
-		DOP_B( DEC );
-		DOP_A( ADD );
-		DOP_A( SUB );
-		DOP_A( MUL );
-		DOP_A( DIV );
-		DOP_A( MOD );
-
-		DOP_A( AND );
-		DOP_A( OR );
-		DOP_A( XOR );
-		DOP_A( LSH );
-		DOP_A( RSH );
-
-		DOP_A( SEQ );
-		DOP_A( EQ );
-		DOP_A( LT );
-		DOP_A( LTE );
-
-		DOP_A( SNEQ );
-		DOP_A( NEQ );
-		DOP_A( GT );
-		DOP_A( GTE );
-		
-		DOP_A( RAWCMP );
-
-		case SGS_SI_ARRAY:
-			sgs_ErrWritef( C, "ARRAY args:%d output:", argE );
-			dump_rcpos( C, argC ); break;
-		case SGS_SI_DICT:
-			sgs_ErrWritef( C, "DICT output:" );
-			dump_rcpos( C, argC ); break;
-		case SGS_SI_MAP:
-			sgs_ErrWritef( C, "MAP output:" );
-			dump_rcpos( C, argC ); break;
-		case SGS_SI_CLASS:
-			sgs_ErrWritef( C, "CLASS output:%d", argA );
+		case ODT_GETCLSR: dump_rcpos( C, argA ); sgs_ErrWritef( C, " <= CL%d", argB ); break;
+		case ODT_SETCLSR: sgs_ErrWritef( C, "CL%d <= ", argB ); dump_rcpos( C, argC ); break;
+		case ODT_ARRAY: sgs_ErrWritef( C, "args:%d output:", argE ); dump_rcpos( C, argC ); break;
+		case ODT_DICTMAP: sgs_ErrWritef( C, "output:" ); dump_rcpos( C, argC ); break;
+		case ODT_CLASS:
+			sgs_ErrWritef( C, "output:%d", argA );
 			sgs_ErrWritef( C, ", name:" ); dump_rcpos( C, argB );
 			sgs_ErrWritef( C, ", inhname:%s", argC == argA ? "<none>" : "" );
 			if( argC != argA ) dump_rcpos( C, argC );
 			break;
-		case SGS_SI_NEW:
-			sgs_ErrWritef( C, "NEW output:%d", argA );
-			sgs_ErrWritef( C, ", class:" ); dump_rcpos( C, argB );
-			break;
-		case SGS_SI_RSYM:
-			sgs_ErrWritef( C, "RSYM name:" ); dump_rcpos( C, argB );
+		case ODT_RSYM:
+			sgs_ErrWritef( C, "name:" ); dump_rcpos( C, argB );
 			sgs_ErrWritef( C, " value:" ); dump_rcpos( C, argC ); break;
-			
-		DOP_B( COTRT );
-		DOP_B( COTRF );
-		case SGS_SI_COABORT: sgs_ErrWritef( C, "CO_ABORT %d", (int) (int16_t) argE ); break;
-		case SGS_SI_YLDJMP: sgs_ErrWritef( C, "YIELD_JUMP %d", (int) (int16_t) argE ); break;
-			
-#undef DOP_A
-#undef DOP_B
-		default:
-			sgs_ErrWritef( C, "<error> (op=%d A=%d B=%d C=%d E=%d)",
-				op, argA, argB, argC, argE ); break;
 		}
+		
+		/* dump relevant constants */
+		{
+			uint8_t bits = ( sgs_OpReferConsts[ odt / 4 ] >> ( odt % 4 * 2 ) ) & 0x3;
+			if( bits & 1 )
+				dump_const( C, 'B', argB, consts );
+			if( bits & 2 )
+				dump_const( C, 'C', argC, consts );
+		}
+		
 		sgs_ErrWritef( C, "\n" );
 	}
 }
@@ -918,10 +985,10 @@ sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_FuncCtx* nfctx,
 	sgs_Variable strvar;
 	sgs_iFunc* F = sgs_Alloc_a( sgs_iFunc, nf->consts.size + nf->code.size );
 
-#if 0	
+#if 0
 	sgs_SetErrOutputFunc( C, sgs_StdOutputFunc, stderr );
 	sgsBC_DumpOpcode( C, (sgs_instr_t*) nf->code.ptr, nf->code.size / sizeof(sgs_instr_t),
-		(sgs_instr_t*) nf->code.ptr, (sgs_LineNum*) nf->lnbuf.ptr );
+		(sgs_instr_t*) nf->code.ptr, (sgs_Variable*) nf->consts.ptr, (sgs_LineNum*) nf->lnbuf.ptr );
 	printf("%d != %d\n", nf->code.size / sizeof(sgs_instr_t), nf->lnbuf.size / sizeof(sgs_LineNum) );
 #endif
 	sgs_BreakIf( nf->code.size / sizeof(sgs_instr_t) != nf->lnbuf.size / sizeof(sgs_LineNum) );
@@ -3129,7 +3196,7 @@ void sgsBC_DumpEx( SGS_CTX, const char* constptr, size_t constsize,
 	}
 	sgs_ErrWritef( C, "> code:\n" );
 	sgsBC_DumpOpcode( C, SGS_ASSUME_ALIGNED_CONST( codeptr, sgs_instr_t ),
-		codesize / sizeof( sgs_instr_t ), SGS_ASSUME_ALIGNED_CONST( codeptr, sgs_instr_t ), lines );
+		codesize / sizeof( sgs_instr_t ), SGS_ASSUME_ALIGNED_CONST( codeptr, sgs_instr_t ), vbeg, lines );
 	if( varinfo )
 	{
 		sgs_ErrWritef( C, "> variables:\n" );

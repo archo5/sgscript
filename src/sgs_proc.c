@@ -3194,19 +3194,15 @@ size_t sgsVM_VarSize( const sgs_Variable* var )
 void sgsVM_VarDump( SGS_CTX, const sgs_Variable* var )
 {
 	/* WP: variable size limit */
-	if( var->type == SGS_VT_STRING ||
-		var->type == SGS_VT_FUNC || var->type == SGS_VT_CFUNC ||
-		var->type == SGS_VT_OBJECT || var->type == SGS_VT_THREAD )
-		sgs_ErrWritef( C, "%s (size:%d)", TYPENAME( var->type ), (uint32_t) sgsVM_VarSize( var ) );
-	else
-		sgs_ErrWritef( C, "%s", TYPENAME( var->type ) );
+	sgs_ErrWritef( C, "%s", TYPENAME( var->type ) );
 	switch( var->type )
 	{
 	case SGS_VT_NULL: break;
 	case SGS_VT_BOOL: sgs_ErrWritef( C, " = %s", var->data.B ? "True" : "False" ); break;
 	case SGS_VT_INT: sgs_ErrWritef( C, " = %" PRId64, var->data.I ); break;
 	case SGS_VT_REAL: sgs_ErrWritef( C, " = %f", var->data.R ); break;
-	case SGS_VT_STRING: sgs_ErrWritef( C, " [rc:%" PRId32"] = \"", var->data.S->refcount );
+	case SGS_VT_STRING: sgs_ErrWritef( C, " [rc:%" PRId32"] = [%" PRId32 "]\"",
+		var->data.S->refcount, var->data.S->size );
 		sgs_WriteSafe( (sgs_ErrorOutputFunc) sgs_ErrWritef, C,
 			sgs_var_cstr( var ), SGS_MIN( var->data.S->size, 16 ) );
 		sgs_ErrWritef( C, var->data.S->size > 16 ? "...\"" : "\"" ); break;

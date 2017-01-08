@@ -292,20 +292,23 @@ static void dbgsrv_printCurOp( sgs_DebugServer* D, dbgStateInfo* dsi )
 	sgs_StackFrame* sf = sgs_GetFramePtr( dsi->C, NULL, SGS_TRUE );
 	if( sf )
 	{
+		sgs_iFunc* F;
 		if( sf->iptr )
 		{
+			F = sf->func->data.F;
 			sgs_ErrWritef( D->C, "Current instruction:\n[%08X] ", *sf->iptr );
-			sgsBC_DumpOpcode( D->C, sf->iptr, 1, sgs_func_bytecode( sf->func->data.F ),
-				sgs_func_lineinfo( sf->func->data.F ) );
+			sgsBC_DumpOpcode( D->C, sf->iptr, 1, sgs_func_bytecode( F ),
+				sgs_func_consts( F ), sgs_func_lineinfo( F ) );
 		}
 		else if( sf->prev && sf->prev->iptr )
 		{
 			const sgs_instr_t* ip = sf->prev->iptr;
 			if( ( sf->prev->flags & SGS_SF_ABORTED ) == 0 )
 				ip--;
+			F = sf->prev->func->data.F;
 			sgs_ErrWritef( D->C, "Current instruction (parent frame):\n[%08X] ", *ip );
-			sgsBC_DumpOpcode( D->C, ip, 1, sgs_func_bytecode( sf->prev->func->data.F ),
-				sgs_func_lineinfo( sf->prev->func->data.F ) );
+			sgsBC_DumpOpcode( D->C, ip, 1, sgs_func_bytecode( F ),
+				sgs_func_consts( F ), sgs_func_lineinfo( F ) );
 		}
 		else
 			sgs_ErrWritef( D->C, "Not running SGScript code.\n" );
