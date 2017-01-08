@@ -488,6 +488,9 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
 		case SGS_SI_DICT:
 			sgs_ErrWritef( C, "DICT output:" );
 			dump_rcpos( C, argC ); break;
+		case SGS_SI_MAP:
+			sgs_ErrWritef( C, "MAP output:" );
+			dump_rcpos( C, argC ); break;
 		case SGS_SI_CLASS:
 			sgs_ErrWritef( C, "CLASS output:%d", argA );
 			sgs_ErrWritef( C, ", name:" ); dump_rcpos( C, argB );
@@ -1546,12 +1549,11 @@ static SGSBOOL compile_clspfx_w( SGS_FNTCMP_ARGS, rcpos_t src )
 static SGSBOOL compile_midxset( SGS_FNTCMP_ARGS, rcpos_t* out, int isprop )
 {
 	sgs_FTNode* mapi;
-	rcpos_t regpos = C->fctx->regs, regpos2;
 	
 	comp_reg_ensure( C, out );
 	{
-		rcpos_t var = SGS_RCPOS_UNSPEC;
-		if( !compile_node_r( C, func, node->child, &var ) ) return 0;
+		rcpos_t regpos = C->fctx->regs, regpos2;
+		if( !compile_node_r( C, func, node->child, out ) ) return 0;
 		
 		regpos2 = C->fctx->regs;
 		mapi = node->child->next->child;
@@ -1562,16 +1564,20 @@ static SGSBOOL compile_midxset( SGS_FNTCMP_ARGS, rcpos_t* out, int isprop )
 			{
 				compile_const( C, func, mapi, &name );
 			}
-			else
+			else if( *mapi->token == SGS_ST_IDENT )
 			{
 				compile_ident( C, func, mapi, &name );
+			}
+			else
+			{
+				if( !compile_node_r( C, func, mapi, &name ) ) return 0;
 			}
 			mapi = mapi->next;
 			
 			if( !compile_node_r( C, func, mapi, &src ) ) return 0;
 			mapi = mapi->next;
 			
-			INSTR_WRITE( isprop ? SGS_SI_SETPROP : SGS_SI_SETINDEX, var, name, src );
+			INSTR_WRITE( isprop ? SGS_SI_SETPROP : SGS_SI_SETINDEX, *out, name, src );
 			comp_reg_unwind( C, regpos2 );
 		}
 		comp_reg_unwind( C, regpos );
@@ -2270,7 +2276,6 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 		
 	case SGS_SFT_ARRLIST:
 		{
-			rcpos_t pos = 0;
 			int args = 0, off = 0;
 			sgs_FTNode* n = node->child;
 			while( n )
@@ -2278,20 +2283,19 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 				args++;
 				n = n->next;
 			}
-			pos = comp_reg_alloc( C );
-			INSTR_WRITE_EX( SGS_SI_ARRAY, args, pos );
+			comp_reg_ensure( C, out );
+			INSTR_WRITE_EX( SGS_SI_ARRAY, args, *out );
 			n = node->child;
 			while( n )
 			{
 				rcpos_t bkup = C->fctx->regs, vpos = SGS_RCPOS_UNSPEC;
 				if( !compile_node_r( C, func, n, &vpos ) )
 					goto fail;
-				INSTR_WRITE( SGS_SI_ARRPUSH, pos, 0, vpos );
+				INSTR_WRITE( SGS_SI_ARRPUSH, *out, 0, vpos );
 				comp_reg_unwind( C, bkup );
 				off++;
 				n = n->next;
 			}
-			*out = pos;
 		}
 		break;
 	case SGS_SFT_DCTLIST:
@@ -2299,9 +2303,10 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 		{
 			int args = 0;
 			sgs_FTNode* n = node->child;
-			rcpos_t pos = comp_reg_alloc( C ), kpos, vpos, bkup;
+			rcpos_t kpos, vpos, bkup;
+			comp_reg_ensure( C, out );
 			bkup = C->fctx->regs;
-			INSTR_WRITE_EX( node->type == SGS_SFT_DCTLIST ? SGS_SI_DICT : SGS_SI_MAP, 0, pos );
+			INSTR_WRITE_EX( node->type == SGS_SFT_DCTLIST ? SGS_SI_DICT : SGS_SI_MAP, 0, *out );
 			while( n )
 			{
 				if( args % 2 == 0 )
@@ -2325,14 +2330,13 @@ static SGSBOOL compile_node_r( SGS_FNTCMP_ARGS, rcpos_t* out )
 				}
 				if( args % 2 == 1 )
 				{
-					INSTR_WRITE( SGS_SI_SETINDEX, pos, kpos, vpos );
+					INSTR_WRITE( SGS_SI_SETINDEX, *out, kpos, vpos );
 					comp_reg_unwind( C, bkup );
 				}
 				args++;
 				n = n->next;
 			}
 			sgs_BreakIf( args % 2 != 0 );
-			*out = pos;
 		}
 		break;
 		

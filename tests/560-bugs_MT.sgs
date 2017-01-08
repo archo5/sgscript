@@ -446,3 +446,12 @@ return d();
 result `SUCCESS`
 check_err `[E:nooo]`
 check_out ``
+
+// `bug 00031 - wrong return value from mpropset`
+rec ``
+exec `a = {}.{ x = 1 };
+print(a);
+`
+result `SUCCESS`
+check_err ``
+check_out `{x=1}`
