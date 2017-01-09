@@ -797,7 +797,7 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 		else sgs_InitStringLit( C, out, "false" );
 		break;
 	case SGS_VT_INT: sprintf( buf, "%" PRId64, var->data.I ); sgs_InitString( C, out, buf ); break;
-	case SGS_VT_REAL: sprintf( buf, "%g", var->data.R ); sgs_InitString( C, out, buf ); break;
+	case SGS_VT_REAL: snprintf( buf, 31, "%g", var->data.R ); sgs_InitString( C, out, buf ); break;
 	case SGS_VT_FUNC: sgs_InitStringLit( C, out, "function" ); break;
 	case SGS_VT_CFUNC: sgs_InitStringLit( C, out, "C function" ); break;
 	case SGS_VT_OBJECT:
@@ -4612,7 +4612,7 @@ void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth )
 		sprintf( buf, "int (%" PRId64 ")", var.data.I );
 		sgs_PushString( C, buf ); } break;
 	case SGS_VT_REAL: { char buf[ 32 ];
-		sprintf( buf, "real (%g)", var.data.R );
+		snprintf( buf, 31, "real (%g)", var.data.R );
 		sgs_PushString( C, buf ); } break;
 	case SGS_VT_STRING:
 		{

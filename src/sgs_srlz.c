@@ -1436,7 +1436,7 @@ static int sgson_encode_var( SGS_CTX, sgs_serialize3_data* data,
 	case SGS_VT_REAL:
 		{
 			char tmp[ 64 ];
-			sprintf( tmp, "%g", var.data.R );
+			snprintf( tmp, 63, "%g", var.data.R );
 			sgs_membuf_appbuf( buf, C, tmp, strlen( tmp ) );
 			return 1;
 		}

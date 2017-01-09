@@ -148,12 +148,15 @@ extern "C" {
 #    define PRId64 "lld"
 #  endif
 #  define SGS_INLINE
-#  define snprintf _snprintf
 #  define SGS_VSPRINTF_LEN( str, args ) _vscprintf( str, args )
 #else
 #  include <inttypes.h>
 #  define SGS_INLINE inline
 #  define SGS_VSPRINTF_LEN( str, args ) vsnprintf( NULL, 0, str, args )
+#endif
+#ifdef _WIN32
+#  define snprintf _snprintf
+#  define vsnprintf _vsnprintf
 #endif
 
 #define SGS_UNUSED( x ) (void)(x)

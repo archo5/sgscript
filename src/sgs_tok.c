@@ -499,9 +499,9 @@ static void tp_token( SGS_CTX, sgs_MemBuf* out, sgs_TokenList t )
 	case SGS_ST_NUMREAL:
 		{
 			sgs_Real val;
-			char tmp[ 1024 ];
+			char tmp[ 64 ];
 			SGS_AS_REAL( val, t+1 );
-			sprintf( tmp, "%g", val );
+			snprintf( tmp, 63, "%g", val );
 			sgs_membuf_appbuf( out, C, tmp, strlen( tmp ) );
 		}
 		break;

@@ -91,7 +91,7 @@ static int xgm_v2_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	else if( type == SGS_VT_STRING )
 	{
 		char buf[ 128 ];
-		sprintf( buf, "vec2(%g;%g)", hdr[0], hdr[1] );
+		snprintf( buf, 128, "vec2(%g;%g)", hdr[0], hdr[1] );
 		sgs_PushString( C, buf );
 		return SGS_SUCCESS;
 	}
@@ -326,7 +326,7 @@ static int xgm_v3_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	else if( type == SGS_VT_STRING )
 	{
 		char buf[ 192 ];
-		sprintf( buf, "vec3(%g;%g;%g)", hdr[0], hdr[1], hdr[2] );
+		snprintf( buf, 192, "vec3(%g;%g;%g)", hdr[0], hdr[1], hdr[2] );
 		sgs_PushString( C, buf );
 		return SGS_SUCCESS;
 	}
@@ -564,7 +564,7 @@ static int xgm_v4_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	else if( type == SGS_VT_STRING )
 	{
 		char buf[ 256 ];
-		sprintf( buf, "vec4(%g;%g;%g;%g)", hdr[0], hdr[1], hdr[2], hdr[3] );
+		snprintf( buf, 256, "vec4(%g;%g;%g;%g)", hdr[0], hdr[1], hdr[2], hdr[3] );
 		sgs_PushString( C, buf );
 		return SGS_SUCCESS;
 	}
@@ -801,7 +801,7 @@ static int xgm_b2_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	else if( type == SGS_VT_STRING )
 	{
 		char buf[ 256 ];
-		sprintf( buf, "aabb2(%g;%g - %g;%g)", hdr[0], hdr[1], hdr[2], hdr[3] );
+		snprintf( buf, 256, "aabb2(%g;%g - %g;%g)", hdr[0], hdr[1], hdr[2], hdr[3] );
 		sgs_PushString( C, buf );
 		return SGS_SUCCESS;
 	}
@@ -1267,7 +1267,7 @@ static int xgm_col_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	else if( type == SGS_VT_STRING )
 	{
 		char buf[ 256 ];
-		sprintf( buf, "color(%g;%g;%g;%g)", hdr[0], hdr[1], hdr[2], hdr[3] );
+		snprintf( buf, 256, "color(%g;%g;%g;%g)", hdr[0], hdr[1], hdr[2], hdr[3] );
 		sgs_PushString( C, buf );
 		return SGS_SUCCESS;
 	}
@@ -2038,7 +2038,7 @@ static int xgm_quat_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	else if( type == SGS_VT_STRING )
 	{
 		char buf[ 256 ];
-		sprintf( buf, "quat(%g;%g;%g|%g)", hdr[0], hdr[1], hdr[2], hdr[3] );
+		snprintf( buf, 256, "quat(%g;%g;%g|%g)", hdr[0], hdr[1], hdr[2], hdr[3] );
 		sgs_PushString( C, buf );
 		return SGS_SUCCESS;
 	}
