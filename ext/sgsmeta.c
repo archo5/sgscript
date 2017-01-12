@@ -255,6 +255,7 @@ static int sgs_meta_opname( SGS_CTX )
 	const char* str;
 	sgs_Int op;
 	
+	SGSFN( "meta_opname" );
 	if( !sgs_LoadArgs( C, "i", &op ) )
 		return 0;
 	
@@ -268,11 +269,163 @@ static int sgs_meta_opname( SGS_CTX )
 }
 
 
+static const char* meta_operator_names[] =
+{
+	"===",
+	"!==",
+	"==",
+	"!=",
+	"<=",
+	">=",
+	"<",
+	">",
+	"<=>",
+	"+=",
+	"-=",
+	"*=",
+	"/=",
+	"%=",
+	"&=",
+	"|=",
+	"^=",
+	"<<=",
+	">>=",
+	"&&=",
+	"||=",
+	"\?\?=",
+	"$=",
+	"=",
+	"@",
+	"&&",
+	"||",
+	"??",
+	"+",
+	"-",
+	"*",
+	"/",
+	"%",
+	"&",
+	"|",
+	"^",
+	"<<",
+	">>",
+	".",
+	"$",
+	"!",
+	"~",
+	"++",
+	"--",
+	"?",
+};
+
+static int sgs_meta_tokens_parse( SGS_CTX )
+{
+	const char* str = NULL;
+	sgs_SizeVal sz = 0;
+	sgs_TokenList t, tl;
+	int count = 0;
+	
+	SGSFN( "meta_tokens_parse" );
+	if( !sgs_LoadArgs( C, "m", &str, &sz ) )
+		return 0;
+	
+	t = tl = sgsT_Gen( C, str, sz );
+	while( *t != 0 )
+	{
+		sgs_SizeVal ssz = sgs_StackSize( C );
+		
+		sgs_PushStringLit( C, "type" );
+		if( SGS_ST_ISOP( *t ) )
+		{
+			sgs_PushString( C, meta_operator_names[ *t - 200 ] );
+		}
+		else
+		{
+			switch( *t )
+			{
+			case SGS_ST_RBRKL:
+			case SGS_ST_RBRKR:
+			case SGS_ST_SBRKL:
+			case SGS_ST_SBRKR:
+			case SGS_ST_CBRKL:
+			case SGS_ST_CBRKR:
+			case SGS_ST_ARGSEP:
+			case SGS_ST_STSEP:
+			case SGS_ST_PICKSEP:
+			case SGS_ST_HASH:
+			case SGS_ST_BACKSLASH: sgs_PushStringBuf( C, (char*) t, 1 ); break;
+			case SGS_ST_IDENT: sgs_PushStringLit( C, "ident" ); break;
+			case SGS_ST_KEYWORD: sgs_PushStringLit( C, "keyword" ); break;
+			case SGS_ST_NUMREAL: sgs_PushStringLit( C, "real" ); break;
+			case SGS_ST_NUMINT: sgs_PushStringLit( C, "int" ); break;
+			case SGS_ST_NUMPTR: sgs_PushStringLit( C, "ptr" ); break;
+			case SGS_ST_STRING: sgs_PushStringLit( C, "string" ); break;
+			default: sgs_PushStringLit( C, "<unknown>" ); break;
+			}
+		}
+		
+		switch( *t )
+		{
+		case SGS_ST_IDENT:
+		case SGS_ST_KEYWORD:
+			sgs_PushStringLit( C, "value" );
+			sgs_PushStringBuf( C, (char*) t + 2, t[1] );
+			break;
+		case SGS_ST_NUMREAL:
+			sgs_PushStringLit( C, "value" );
+			{
+				sgs_Real val;
+				SGS_AS_REAL( val, t+1 );
+				sgs_PushReal( C, val );
+			}
+			break;
+		case SGS_ST_NUMINT:
+			sgs_PushStringLit( C, "value" );
+			{
+				sgs_Int val;
+				SGS_AS_INTEGER( val, t+1 );
+				sgs_PushInt( C, val );
+			}
+			break;
+		case SGS_ST_NUMPTR:
+			sgs_PushStringLit( C, "value" );
+			{
+				sgs_Int val;
+				SGS_AS_INTEGER( val, t+1 );
+				sgs_PushPtr( C, (void*) (intptr_t) val );
+			}
+			break;
+		case SGS_ST_STRING:
+			sgs_PushStringLit( C, "value" );
+			{
+				int32_t size;
+				SGS_ST_READINT( size, t + 1 );
+				sgs_PushStringBuf( C, (char*) t + 5, size );
+			}
+			break;
+		}
+		
+		sgs_PushStringLit( C, "line" );
+		sgs_PushInt( C, sgsT_LineNum( t ) );
+		
+		sgs_CreateDict( C, NULL, sgs_StackSize( C ) - ssz );
+		count++;
+		
+		t = sgsT_Next( t );
+	}
+	
+	sgs_CreateArray( C, NULL, count );
+	sgsT_Free( C, tl );
+	return 1;
+}
+
+
 static const sgs_RegFuncConst meta_funcs[] =
 {
 	{ "meta_globals", sgs_meta_globals },
 	{ "meta_unpack", sgs_meta_unpack },
 	{ "meta_opname", sgs_meta_opname },
+	{ "meta_tokens_parse", sgs_meta_tokens_parse },
 };
 
 

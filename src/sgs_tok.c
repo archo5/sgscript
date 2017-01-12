@@ -110,9 +110,6 @@ static int32_t string_inplace_fix( char* str, int32_t len )
 }
 
 
-#define STRLIT_LEN(lit) (sizeof(lit)-1)
-#define STRLIT_BUF(lit) lit, STRLIT_LEN(lit)
-
 static int ident_equal( const char* ptr, int size, const char* what, int wlen )
 {
 	return size == wlen && memcmp( ptr, what, (size_t) size ) == 0;
@@ -138,29 +135,29 @@ static void readident( SGS_CTX, sgs_MemBuf* out, const char* code, int32_t* at, 
 	}
 	if( sz >= 255 ) sz = 255;
 	out->ptr[ pos_rev + 1 ] = (char) sz;
-	if( ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("var") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("global") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("thread") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("subthread") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("sync") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("race") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("null") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("true") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("false") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("if") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("else") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("do") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("while") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("for") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("foreach") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("break") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("continue") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("function") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("use") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("return") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("this") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("new") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, STRLIT_BUF("defer") ) )
+	if( ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("var") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("global") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("thread") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("subthread") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("sync") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("race") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("null") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("true") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("false") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("if") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("else") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("do") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("while") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("for") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("foreach") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("break") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("continue") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("function") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("use") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("return") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("this") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("new") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("defer") ) )
 	{
 		out->ptr[ pos_rev ] = SGS_ST_KEYWORD;
 	}
@@ -229,7 +226,7 @@ static void readstring( SGS_CTX, sgs_MemBuf* out, sgs_LineNum* line, const char*
 
 static const char* sgs_opchars = "=<>+-*/%?!~&|^.$@";
 static const char* sgs_operators = "<=>;===;!==;==;!=;<=;>=;+=;-=;*=;/=;%=;&=;|=;^=;<<=;>>=;$=;..=;"
-	"<<;>>;&&=;||=;?""?=;&&;||;?""?;..;<;>;=;++;--;+;-;*;/;%;&;|;^;.;$;!;~;@"; /* trigraphs detected */
+	"<<;>>;&&=;||=;?""?=;&&;||;?""?;..;<;>;=;++;--;+;-;*;/;%;&;|;^;.;$;!;~;@;?"; /* trigraphs detected */
 static const sgs_TokenType sgs_optable[] =
 {
 	SGS_ST_OP_RWCMP, SGS_ST_OP_SEQ, SGS_ST_OP_SNEQ, SGS_ST_OP_EQ, SGS_ST_OP_NEQ, SGS_ST_OP_LEQ, SGS_ST_OP_GEQ,
@@ -238,7 +235,7 @@ static const sgs_TokenType sgs_optable[] =
 	SGS_ST_OP_LSH, SGS_ST_OP_RSH, SGS_ST_OP_BLAEQ, SGS_ST_OP_BLOEQ, SGS_ST_OP_NLOEQ, SGS_ST_OP_BLAND,
 	SGS_ST_OP_BLOR, SGS_ST_OP_NLOR, SGS_ST_OP_CAT, SGS_ST_OP_LESS, SGS_ST_OP_GRTR, SGS_ST_OP_SET, SGS_ST_OP_INC, SGS_ST_OP_DEC,
 	SGS_ST_OP_ADD, SGS_ST_OP_SUB, SGS_ST_OP_MUL, SGS_ST_OP_DIV, SGS_ST_OP_MOD, SGS_ST_OP_AND,
-	SGS_ST_OP_OR, SGS_ST_OP_XOR, SGS_ST_OP_MMBR, SGS_ST_OP_CAT, SGS_ST_OP_NOT, SGS_ST_OP_INV, SGS_ST_OP_ERSUP
+	SGS_ST_OP_OR, SGS_ST_OP_XOR, SGS_ST_OP_MMBR, SGS_ST_OP_CAT, SGS_ST_OP_NOT, SGS_ST_OP_INV, SGS_ST_OP_ERSUP, SGS_ST_OP_QMARK
 };
 static const char sgs_opsep = ';';
 
@@ -333,7 +330,7 @@ sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
 					|| code[ i + 1 ] == '*' ) )   skipcomment( C, &line, code, &i, ilen );
 		
 		/* special symbol */
-		else if( sgs_isoneof( fc, "()[]{},;:#" ) ) sgs_membuf_appchr( &s, C, fc );
+		else if( sgs_isoneof( fc, "()[]{},;:#\\" ) ) sgs_membuf_appchr( &s, C, fc );
 		
 		/* identifier */
 		else if( fc == '_' || sgs_isalpha( fc ) || ( fc == '$' && pcfg.ident_dollar_sign ) )
@@ -490,6 +487,8 @@ static void tp_token( SGS_CTX, sgs_MemBuf* out, sgs_TokenList t )
 	case SGS_ST_ARGSEP:
 	case SGS_ST_STSEP:
 	case SGS_ST_PICKSEP:
+	case SGS_ST_HASH:
+	case SGS_ST_BACKSLASH:
 		sgs_membuf_appchr( out, C, (char) *t );
 		break;
 	case SGS_ST_IDENT:
@@ -543,7 +542,7 @@ static void tp_token( SGS_CTX, sgs_MemBuf* out, sgs_TokenList t )
 			}
 		}
 		break;
-#define OPR( op ) sgs_membuf_appbuf( out, C, STRLIT_BUF(op) )
+#define OPR( op ) sgs_membuf_appbuf( out, C, SGS_STRLITBUF(op) )
 	case SGS_ST_OP_RWCMP: OPR( "<=>" ); break;
 	case SGS_ST_OP_SEQ: OPR( "===" ); break;
 	case SGS_ST_OP_SNEQ: OPR( "!==" ); break;
@@ -585,6 +584,7 @@ static void tp_token( SGS_CTX, sgs_MemBuf* out, sgs_TokenList t )
 	case SGS_ST_OP_INV: OPR( "~" ); break;
 	case SGS_ST_OP_INC: OPR( "++" ); break;
 	case SGS_ST_OP_DEC: OPR( "--" ); break;
+	case SGS_ST_OP_QMARK: OPR( "?" ); break;
 #undef OPR
 	default:
 		sgs_membuf_appbuf( out, C, "<error>", 7 );
@@ -653,6 +653,8 @@ void sgsT_DumpToken( SGS_CTX, sgs_TokenList tok )
 	case SGS_ST_ARGSEP:
 	case SGS_ST_STSEP:
 	case SGS_ST_PICKSEP:
+	case SGS_ST_HASH:
+	case SGS_ST_BACKSLASH:
 		sgs_ErrWritef( C, "%c", *tok );
 		break;
 	case SGS_ST_IDENT:

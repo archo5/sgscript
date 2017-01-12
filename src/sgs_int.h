@@ -62,6 +62,7 @@ extern "C" {
 #define SGS_ST_STSEP    ';'
 #define SGS_ST_PICKSEP  ':'
 #define SGS_ST_HASH     '#'
+#define SGS_ST_BACKSLASH '\\'
 /*     other            id    additional data */
 #define SGS_ST_IDENT    'N' /* 1 byte (string size), N bytes (string), not null-terminated */
 #define SGS_ST_KEYWORD  'K' /* same as IDENT */
@@ -114,8 +115,9 @@ extern "C" {
 #define SGS_ST_OP_INV   241 /* ~    */
 #define SGS_ST_OP_INC   242 /* ++   */
 #define SGS_ST_OP_DEC   243 /* --   */
+#define SGS_ST_OP_QMARK 244 /* ?    */
 
-#define SGS_ST_ISOP( chr )      ( (chr) >= 200 && (chr) <= 243 )
+#define SGS_ST_ISOP( chr )      ( (chr) >= 200 && (chr) <= 244 )
 #define SGS_ST_OP_UNARY( chr )  ( (chr) == SGS_ST_OP_ERSUP || (chr) == SGS_ST_OP_ADD || \
 	(chr) == SGS_ST_OP_SUB || ( (chr) >= SGS_ST_OP_NOT && (chr) <= SGS_ST_OP_DEC ) )
 #define SGS_ST_OP_BINARY( chr ) ( (chr) >= 200 && (chr) <= 239 && (chr) != 224 )
@@ -128,7 +130,7 @@ extern "C" {
 	(chr) == SGS_ST_OP_BLAND || (chr) == SGS_ST_OP_BLOR )
 #define SGS_ST_OP_FNN( chr )    ( (chr) == SGS_ST_OP_NLOEQ || (chr) == SGS_ST_OP_NLOR )
 
-#define SGS_ST_ISSPEC( chr )    sgs_isoneof( (chr), "()[]{},;:#" )
+#define SGS_ST_ISSPEC( chr )    sgs_isoneof( (chr), "()[]{},;:#\\" )
 
 #define SGS_ST_READINT( tgt, pos )   SGS_AS_INT32( tgt, pos )
 #define SGS_ST_READLN( tgt, pos )    SGS_AS_( tgt, pos, sgs_LineNum )

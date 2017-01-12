@@ -3,7 +3,7 @@ global ERRORS, CURFN;
 global tests_failed, tests_ran;
 
 ERRORS = "";
-include "math", "sgsmeta";
+include "io", "math", "sgsmeta";
 
 testEqual( typeof(meta_unpack), "cfunc", "meta library is loaded" );
 testEqual( ERRORS, "", "meta library loaded without errors" );
@@ -69,4 +69,11 @@ subfn = testFindFunction( code, "f1" );
 testFunction( subfn, "f1", 1, false, 0 );
 subfn = testFindFunction( subfn, "f2" );
 testFunction( subfn, "f2", 2, false, 0 );
+
+
+	section( "meta_tokens_parse" );
+
+ERRORS = "";
+tokens = meta_tokens_parse( io_file_read( "src/sgscript.h" ) );
+testEqual( ERRORS, "", "parse C header - no errors" );
 
