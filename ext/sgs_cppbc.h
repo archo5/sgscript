@@ -908,8 +908,12 @@ template<> struct sgs_GetVar<float> { float operator () ( SGS_CTX, sgs_StkIdx it
 template<> struct sgs_GetVar<double> { double operator () ( SGS_CTX, sgs_StkIdx item ){
 	sgs_Real v; if( sgs_ParseReal( C, item, &v ) ) return (double) v; return 0; }};
 template<> struct sgs_GetVar<void*> { void* operator () ( SGS_CTX, sgs_StkIdx item ){
-	void* v; if( sgs_ParsePtr( C, item, &v ) ) return (void*) v; return 0; }};
+	void* v; if( sgs_ParsePtr( C, item, &v ) ) return v; return 0; }};
+template<> struct sgs_GetVar<const void*> { const void* operator () ( SGS_CTX, sgs_StkIdx item ){
+	void* v; if( sgs_ParsePtr( C, item, &v ) ) return v; return 0; }};
 template<> struct sgs_GetVar<char*> { char* operator () ( SGS_CTX, sgs_StkIdx item ){
+	char* str = NULL; sgs_ParseString( C, item, &str, NULL ); return str; }};
+template<> struct sgs_GetVar<const char*> { const char* operator () ( SGS_CTX, sgs_StkIdx item ){
 	char* str = NULL; sgs_ParseString( C, item, &str, NULL ); return str; }};
 template<> struct sgs_GetVar<sgsString> { sgsString operator () ( SGS_CTX, sgs_StkIdx item ){ return sgsString( C, item ); }};
 #ifdef SGS_CPPBC_WITH_STD_STRING
