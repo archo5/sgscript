@@ -470,3 +470,13 @@ print(store[qfv]);
 result `SUCCESS`
 check_err ``
 check_out `{x=1}`
+
+// `bug 00032 - bad stack usage in ReadProp/custom on read failure (success+empty stack)`
+rec ``
+exec `arr = [];
+for( i = 0; i < 100; ++i )
+	@arr.last;
+print "done";`
+result `SUCCESS`
+check_err ``
+check_out `done`

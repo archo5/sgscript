@@ -534,7 +534,6 @@ void sgsBC_DumpOpcode( SGS_CTX, const sgs_instr_t* ptr, size_t count,
 			break;
 		case ODT_MCONCAT: dump_rcpos( C, argA ); sgs_ErrWritef( C, " [%d]", argB ); break;
 		case ODT_FORLOAD:
-			sgs_ErrWritef( C, "FOR_LOAD " );
 			dump_rcpos( C, argA );
 			sgs_ErrWritef( C, " => " );
 			if( argB < 0x100 )
@@ -1890,7 +1889,7 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 			else
 			{
 				if( !compile_node_rw( C, func, node->child->next, node->child ) ) goto fail;
-				if( !compile_node_r( C, func, node->child, arg ) ) goto fail;
+				if( expect && !compile_node_r( C, func, node->child, arg ) ) goto fail;
 			}
 		}
 		/* 2+ operands (MCONCAT only) */

@@ -1098,11 +1098,11 @@ SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable*
 			if( ret == 1 && SGS_STACKFRAMESIZE >= 1 )
 			{
 				_STACK_UNPROTECT_SKIP( 1 );
-				ret = 1;
 			}
 			else
 			{
 				_STACK_UNPROTECT;
+				ret = 0;
 			}
 			
 			outvar->type = SGS_VT_NULL;
@@ -2861,8 +2861,8 @@ restart_loop:
 			break;
 		case SGS_SI_FORJUMP:
 		{
-			int off = argE;
-			sgs_BreakIf( pp+1 > pend || pp+1 < SF->code );
+			int16_t off = argE;
+			sgs_BreakIf( pp+1 + off > pend || pp+1 + off < SF->code );
 			if( vm_fornext( C, -1, -1, RESVAR( argC ) ) < 1 )
 				pp += off;
 			break;
@@ -2872,6 +2872,7 @@ restart_loop:
 		{
 			int16_t off = argE;
 			sgs_Variable* vars = stk_poff( C, argC & 0xff );
+			sgs_BreakIf( pp+1 + off > pend || pp+1 + off < SF->code );
 			if( argC & 0x100 )
 			{
 				sgs_Real tmp;
@@ -2903,6 +2904,7 @@ restart_loop:
 		{
 			int16_t off = argE;
 			sgs_Variable* vars = stk_poff( C, argC & 0xff );
+			sgs_BreakIf( pp+1 + off > pend || pp+1 + off < SF->code );
 			if( argC & 0x100 )
 			{
 				vars[1].data.R += vars[3].data.R;
