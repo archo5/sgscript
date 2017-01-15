@@ -186,6 +186,15 @@ print( a,b,c,d,e );
 result `SUCCESS`
 check_out `1234null`
 
+// `MRV read in expression`
+rec ``
+exec `function x(){ return 1, 2; }
+print( (a,b) = x() );
+if( (a,b) = x() ) print( "A" ); else print( "B" );`
+result `SUCCESS`
+check_err ``
+check_out `1A`
+
 // `recursion`
 rec_out ``
 exec `

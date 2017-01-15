@@ -1883,6 +1883,12 @@ static SGSBOOL compile_oper( SGS_FNTCMP_ARGS, rcpos_t* arg, int out, int expect 
 					
 					comp_reg_unwind( C, bkup );
 					
+					if( i == 0 && expect )
+					{
+						comp_reg_ensure( C, arg );
+						INSTR_WRITE( SGS_SI_SET, *arg, freg, 0 );
+					}
+					
 					n = n->next;
 				}
 			}
