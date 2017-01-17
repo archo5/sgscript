@@ -480,3 +480,13 @@ print "done";`
 result `SUCCESS`
 check_err ``
 check_out `done`
+
+// `bug 00033 - class global initializer uses previous constant as output register`
+rec ``
+exec `class t {
+	global a = null;
+	global b = [];
+}`
+result `SUCCESS`
+check_err ``
+check_out ``

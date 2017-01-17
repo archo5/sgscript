@@ -109,6 +109,7 @@ static SGS_INLINE rcpos_t comp_reg_alloc_n( SGS_CTX, int n )
 #define SGS_RCPOS_UNSPEC 65791 /* 65536 + 255 */
 static SGS_INLINE void comp_reg_ensure( SGS_CTX, rcpos_t* ppos )
 {
+	sgs_BreakIf( SGS_CONSTVAR( *ppos ) ); /* constants cannot be output registers */
 	if( *ppos == SGS_RCPOS_UNSPEC )
 		*ppos = comp_reg_alloc( C );
 }
@@ -3038,7 +3039,7 @@ fornum_add_default_incr:
 			rcpos_t regstate = C->fctx->regs;
 			
 			/* create class */
-			rcpos_t clsvar, r_name, r_inhname, vname, vsrc = SGS_RCPOS_UNSPEC;
+			rcpos_t clsvar, r_name, r_inhname;
 			clsvar = comp_reg_alloc( C );
 			compile_ident( C, func, name, &r_name );
 			r_inhname = clsvar; /* r_inhname is 'empty' if it equals clsvar (class cannot inherit itself) */
@@ -3058,6 +3059,7 @@ fornum_add_default_incr:
 					sgs_FTNode* vn = it->child;
 					while( vn )
 					{
+						rcpos_t vname, vsrc = SGS_RCPOS_UNSPEC;
 						compile_ident( C, func, vn, &vname );
 						if( vn->child )
 						{
