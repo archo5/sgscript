@@ -2455,17 +2455,22 @@ static int sgsstd_metamethods_test( SGS_CTX )
 
 int sgsstd_mm_getindex_router( SGS_CTX )
 {
-	sgs_Variable func, movar;
+	char bfr[ 270 ];
+	sgs_Variable func, movar, propfname;
 	SGSFN( "mm_getindex_router" );
 	
 	if( stk_size( C ) != 1 ) goto fail;
-	if( !sgs_Method( C ) || sgs_ItemType( C, 0 ) != SGS_VT_OBJECT ) goto fail;
+	if( !sgs_Method( C ) ) goto fail;
+	if( sgs_ItemType( C, 0 ) != SGS_VT_OBJECT ) goto fail;
+	if( sgs_ItemType( C, 1 ) != SGS_VT_STRING ) goto fail;
+	if( sgs_GetStringSize( C, 1 ) >= 256 ) goto fail;
 	if( !( movar.data.O = sgs_ObjGetMetaObj( sgs_GetObjectStruct( C, 0 ) ) ) ) goto fail;
 	movar.type = SGS_VT_OBJECT;
 	
-	sgs_PushStringLit( C, "__get_" );
-	sgs_PushItem( C, 1 );
-	sgs_StringConcat( C, 2 );
+	memcpy( bfr, "__get_", 6 );
+	memcpy( bfr + 6, sgs_GetStringPtr( C, 1 ), sgs_GetStringSize( C, 1 ) );
+	if( !sgsVM_VarGetString( C, &propfname, bfr, sgs_GetStringSize( C, 1 ) + 6 ) ) goto fail;
+	fstk_push_leave( C, &propfname );
 	if( sgs_GetIndex( C, movar, *stk_gettop( C ), &func, SGS_FALSE ) == SGS_FALSE ) goto fail;
 	
 	sgs_SetStackSize( C, 1 ); /* this */
@@ -2480,17 +2485,22 @@ fail:
 
 int sgsstd_mm_setindex_router( SGS_CTX )
 {
-	sgs_Variable func, movar;
+	char bfr[ 270 ];
+	sgs_Variable func, movar, propfname;
 	SGSFN( "mm_setindex_router" );
 	
 	if( stk_size( C ) != 2 ) goto fail;
-	if( !sgs_Method( C ) || sgs_ItemType( C, 0 ) != SGS_VT_OBJECT ) goto fail;
+	if( !sgs_Method( C ) ) goto fail;
+	if( sgs_ItemType( C, 0 ) != SGS_VT_OBJECT ) goto fail;
+	if( sgs_ItemType( C, 1 ) != SGS_VT_STRING ) goto fail;
+	if( sgs_GetStringSize( C, 1 ) >= 256 ) goto fail;
 	if( !( movar.data.O = sgs_ObjGetMetaObj( sgs_GetObjectStruct( C, 0 ) ) ) ) goto fail;
 	movar.type = SGS_VT_OBJECT;
 	
-	sgs_PushStringLit( C, "__set_" );
-	sgs_PushItem( C, 1 );
-	sgs_StringConcat( C, 2 );
+	memcpy( bfr, "__set_", 6 );
+	memcpy( bfr + 6, sgs_GetStringPtr( C, 1 ), sgs_GetStringSize( C, 1 ) );
+	if( !sgsVM_VarGetString( C, &propfname, bfr, sgs_GetStringSize( C, 1 ) + 6 ) ) goto fail;
+	fstk_push_leave( C, &propfname );
 	if( sgs_GetIndex( C, movar, *stk_gettop( C ), &func, SGS_FALSE ) == SGS_FALSE ) goto fail;
 	
 	sgs_SetStackSize( C, 3 ); /* this, arg:key[0], arg:value[1] */

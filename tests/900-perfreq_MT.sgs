@@ -1,0 +1,102 @@
+
+// `no allocs for basic operations`
+rec ``
+exec `allocs1 = sys_stat(4);
+a = 2+4*3/8-1%9;
+print(sys_stat(4) - allocs1);
+`
+result `SUCCESS`
+check_err ``
+check_out `0`
+
+// `no allocs for plain function call`
+rec ``
+exec `function f(){}
+f(); // prealloc stack frame
+allocs1 = sys_stat(4);
+f();
+print(sys_stat(4) - allocs1);
+`
+result `SUCCESS`
+check_err ``
+check_out `0`
+
+// `no allocs for member call`
+rec ``
+exec `o = {};
+function o.f(){}
+o.f(); // prealloc stack frame
+allocs1 = sys_stat(4);
+o.f();
+print(sys_stat(4) - allocs1);
+`
+result `SUCCESS`
+check_err ``
+check_out `0`
+
+// `one alloc for one string-string concat`
+rec ``
+exec `allocs1 = sys_stat(4);
+a = "71890237012" $ SGS_PATH;
+print(sys_stat(4) - allocs1);
+`
+result `SUCCESS`
+check_err ``
+check_out `1`
+
+// `one alloc for string conversion`
+rec ``
+exec `allocs1 = sys_stat(4);
+tostring(5);
+print(sys_stat(4) - allocs1);
+`
+result `SUCCESS`
+check_err ``
+check_out `1`
+
+// `< 10 allocs for class definition`
+rec ``
+exec `global NEWCLASS = null; // ignore global table resize
+sym_register( "NEWCLASS", [] ); // ignore symbol table resize
+allocs1 = sys_stat(4);
+class NEWCLASS {}
+print(sys_stat(4) - allocs1 < 10);
+`
+result `SUCCESS`
+check_err ``
+check_out `true`
+
+// `no allocs for class method call`
+rec ``
+exec `class NEWCLASS2
+{
+	function method(){}
+}
+nci2 = new NEWCLASS2();
+nci2.method(); // prealloc stack frame
+allocs1 = sys_stat(4);
+nci2.method();
+print(sys_stat(4) - allocs1);
+`
+result `SUCCESS`
+check_err ``
+check_out `0`
+
+// `no allocs for index metamethod routers`
+rec ``
+exec `class NEWCLASS3
+{
+	function __get_item(){ global A = 1; }
+	function __set_item(v){ global B = v; }
+}
+nci3 = new NEWCLASS3();
+a = nci3.item;
+nci3.item = 2;
+allocs1 = sys_stat(4);
+a = nci3.item;
+nci3.item = 2;
+print(sys_stat(4) - allocs1,"/",A,"/",B);
+`
+result `SUCCESS`
+check_err ``
+check_out `0/1/2`

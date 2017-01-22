@@ -230,6 +230,29 @@ void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_Siz
 	}
 }
 
+int sgsVM_VarGetString( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len )
+{
+	uint32_t ulen = (uint32_t) len; /* WP: string limit */
+	if( ulen <= SGS_STRINGTABLE_MAXLEN )
+	{
+		SGS_SHCTX_USE;
+		sgs_Hash hash = sgs_HashFunc( str, ulen );
+		sgs_VHTVar* var = sgs_vht_get_str( &S->stringtable, str, ulen, hash );
+		if( var )
+		{
+			*out = var->key;
+			out->data.S->refcount++;
+			return 1;
+		}
+		return 0;
+	}
+	else
+	{
+		sgsVM_VarCreateString( C, out, str, len );
+		return 1;
+	}
+}
+
 static void var_finalize_str( SGS_CTX, sgs_Variable* out )
 {
 	char* str;

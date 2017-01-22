@@ -435,6 +435,7 @@ struct sgs_Closure
 
 /* VM interface */
 void sgsVM_VarCreateString( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len );
+int sgsVM_VarGetString( SGS_CTX, sgs_Variable* out, const char* str, sgs_SizeVal len );
 void sgsVM_VarDestroyObject( SGS_CTX, sgs_VarObj* O );
 void sgsVM_DestroyVar( SGS_CTX, sgs_Variable* p );
 
