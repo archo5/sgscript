@@ -15,36 +15,36 @@ function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
 function testClose( v1, v2, name )
 {
 	haderror = false;
-	if( typeof(v1) != typeof(v2) )
+	sz1 = @v1.size;
+	sz2 = @v2.size;
+	if( sz1 === null && sz2 === null )
+	{
+		if( abs( v1 - v2 ) > 0.001 )
+		{
+			haderror = true;
+			testEqual( v1, v2, name );
+		}
+	}
+	else if( typeof(v1) != typeof(v2) )
+	{
 		testEqual( v1, v2, name );
+		return;
+	}
 	else
 	{
-		sz1 = @v1.size;
-		sz2 = @v2.size;
-		if( sz1 === null && sz2 === null )
+		if( sz1 != sz2 )
 		{
+			haderror = true;
+			testEqual( sz1, sz2, "[size] " $ name );
+		}
+		for( i = 0; i < sz1; ++i )
+		{
+			val1 = v1[ i ];
+			val2 = v2[ i ];
 			if( abs( val1 - val2 ) > 0.001 )
 			{
 				haderror = true;
-				testEqual( val1, val2, name );
-			}
-		}
-		else
-		{
-			if( sz1 != sz2 )
-			{
-				haderror = true;
-				testEqual( sz1, sz2, "[size] " $ name );
-			}
-			for( i = 0; i < sz1; ++i )
-			{
-				val1 = v1[ i ];
-				val2 = v2[ i ];
-				if( abs( val1 - val2 ) > 0.001 )
-				{
-					haderror = true;
-					testEqual( val1, val2, "[#" $ i $ "] " $ name );
-				}
+				testEqual( val1, val2, "[#" $ i $ "] " $ name );
 			}
 		}
 	}
@@ -239,6 +239,30 @@ foreach( mode : modes )
 	testEqual( ERRORS, "", "unserialization - mode " $ mode $ " - no errors" );
 	
 	testEqual( dumpvar( unsrlz ), dumpvar( data ), "data match" );
+}
+
+
+	section( "utility functions - ray_aabb2_intersect" );
+
+t_bb2_1 = aabb2(1,2,4,5);
+t_rp1 = vec2(0,3);
+t_rp2 = vec2(2,4);
+rbbi_tests =
+[
+	[ t_rp1, vec2(0,1), t_bb2_1, false, null, null ],
+	[ t_rp1, vec2(0,-1), t_bb2_1, false, null, null ],
+	[ t_rp1, vec2(-1,0), t_bb2_1, false, -4, -1 ],
+	[ t_rp1, vec2(1,0), t_bb2_1, true, 1, 4 ],
+	[ t_rp2, vec2(0,1), t_bb2_1, true, -2, 1 ],
+	[ t_rp2, vec2(1,0), t_bb2_1, true, -1, 2 ],
+];
+
+foreach( test : rbbi_tests )
+{
+	(h,h0,h1) = ray_aabb2_intersect( test[0], test[1], test[2] );
+	testEqual( h, test[3], test .. " - result" );
+	testClose( h0, test[4], test .. " - entry" );
+	testClose( h1, test[5], test .. " - exit" );
 }
 
 

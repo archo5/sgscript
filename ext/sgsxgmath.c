@@ -1,6 +1,7 @@
 
 
 #include <stdio.h>
+#include <float.h>
 
 #include "sgsxgmath.h"
 
@@ -4020,6 +4021,64 @@ XGM_FLA_BUFCREATEFUNC( floatarray_from_float64_buffer, double );
 
 /* UTILITY FUNCTIONS */
 
+static int xgm_ray_aabb2_intersect( SGS_CTX )
+{
+	XGM_VT pos[2], dir[2], aabb[4], tmin, tmax, tymin, tymax, tmp;
+	SGSFN( "ray_aabb2_intersect" );
+	if( !sgs_LoadArgs( C, "xxx", sgs_ArgCheck_Vec2, pos, sgs_ArgCheck_Vec2, dir, sgs_ArgCheck_AABB2, aabb ) )
+		return 0;
+	
+	if( dir[0] )
+	{
+		tmin = ( aabb[0] - pos[0] ) / dir[0];
+		tmax = ( aabb[2] - pos[0] ) / dir[0];
+		
+		if( tmin > tmax )
+		{
+			tmp = tmin;
+			tmin = tmax;
+			tmax = tmp;
+		}
+	}
+	else
+	{
+		tmin = aabb[0] > pos[0] ? FLT_MAX : -FLT_MAX;
+		tmax = aabb[2] > pos[0] ? FLT_MAX : -FLT_MAX;
+	}
+	
+	if( dir[1] )
+	{
+		tymin = ( aabb[1] - pos[1] ) / dir[1];
+		tymax = ( aabb[3] - pos[1] ) / dir[1];
+		
+		if( tymin > tymax )
+		{
+			tmp = tymin;
+			tymin = tymax;
+			tymax = tmp;
+		}
+	}
+	else
+	{
+		tymin = aabb[1] > pos[1] ? FLT_MAX : -FLT_MAX;
+		tymax = aabb[3] > pos[1] ? FLT_MAX : -FLT_MAX;
+	}
+	
+	if( ( tmin > tymax ) || ( tymin > tmax ) )
+		return sgs_PushBool( C, 0 );
+	
+	if( tymin > tmin )
+		tmin = tymin;
+	
+	if( tymax < tmax )
+		tmax = tymax;
+	
+	sgs_PushBool( C, tmax >= 0 );
+	sgs_PushReal( C, tmin );
+	sgs_PushReal( C, tmax );
+	return 3;
+}
+
 static int xgm_ray_plane_intersect( SGS_CTX )
 {
 	/* vec3 ray_pos, vec3 ray_dir, vec4 plane;
@@ -4943,6 +5002,7 @@ static sgs_RegFuncConst xgm_fconsts[] =
 	{ "floatarray_from_float32_buffer", xgm_floatarray_from_float32_buffer },
 	{ "floatarray_from_float64_buffer", xgm_floatarray_from_float64_buffer },
 	
+	{ "ray_aabb2_intersect", xgm_ray_aabb2_intersect },
 	{ "ray_plane_intersect", xgm_ray_plane_intersect },
 	{ "ray_sphere_intersect", xgm_ray_sphere_intersect },
 	{ "distance_lines", xgm_distance_lines },
