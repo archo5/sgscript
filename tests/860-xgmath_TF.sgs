@@ -15,23 +15,37 @@ function section( x ){ print( "\n\t<< ", x, " >>\n" ); }
 function testClose( v1, v2, name )
 {
 	haderror = false;
-	sz1 = v1.size;
-	sz2 = v2.size;
 	if( typeof(v1) != typeof(v2) )
 		testEqual( v1, v2, name );
-	if( sz1 != sz2 )
+	else
 	{
-		haderror = true;
-		testEqual( sz1, sz2, "[size] " $ name );
-	}
-	for( i = 0; i < sz1; ++i )
-	{
-		val1 = v1[ i ];
-		val2 = v2[ i ];
-		if( abs( val1 - val2 ) > 0.001 )
+		sz1 = @v1.size;
+		sz2 = @v2.size;
+		if( sz1 === null && sz2 === null )
 		{
-			haderror = true;
-			testEqual( val1, val2, "[#" $ i $ "] " $ name );
+			if( abs( val1 - val2 ) > 0.001 )
+			{
+				haderror = true;
+				testEqual( val1, val2, name );
+			}
+		}
+		else
+		{
+			if( sz1 != sz2 )
+			{
+				haderror = true;
+				testEqual( sz1, sz2, "[size] " $ name );
+			}
+			for( i = 0; i < sz1; ++i )
+			{
+				val1 = v1[ i ];
+				val2 = v2[ i ];
+				if( abs( val1 - val2 ) > 0.001 )
+				{
+					haderror = true;
+					testEqual( val1, val2, "[#" $ i $ "] " $ name );
+				}
+			}
 		}
 	}
 	if( !haderror )
@@ -46,6 +60,7 @@ print( "\n\n-- XGMATH --\n" );
 
 	section( "vec2" );
 
+ERRORS = "";
 v2_a = vec2(3.14159,1/3);
 v2_b = vec2(1,2);
 
@@ -68,10 +83,12 @@ testEqual( vec2(1,0).angle, 0.0, "vec2 .angle" );
 testEqual( v2_b.perp, vec2(-2,1), "vec2 .perp" );
 testEqual( v2_b.perp2, vec2(2,-1), "vec2 .perp2" );
 testEqual( vec2(0,0).size, 2, "vec2 .size" );
+testEqual( ERRORS, "", "vec2 - no errors" );
 
 
 	section( "vec3" );
 
+ERRORS = "";
 v3_a = vec3(3.14159,1/3,2.5);
 v3_b = vec3(1,2,3);
 
@@ -91,29 +108,64 @@ testEqual( vec3(0,0,5).length, 5.0, "vec3 .length" );
 testEqual( vec3(0,5,0).length_squared, 25.0, "vec3 .length_squared" );
 testEqual( vec3(0,0,2).normalized == vec3(0,0,1), true, "vec3 .normalized" );
 testEqual( vec3(0,0,0).size, 3, "vec3 .size" );
+testEqual( ERRORS, "", "vec3 - no errors" );
 
 
 	section( "vec4" );
 
-v3_a = vec4(3.14159,1/3,2.5,800);
-v3_b = vec4(1,2,3,4);
+ERRORS = "";
+v4_a = vec4(3.14159,1/3,2.5,800);
+v4_b = vec4(1,2,3,4);
 
-testEqual( ''$v3_b, "vec4(1;2;3;4)", "vec4 - create/tostring" );
-testEqual( ''$(v3_b+vec4(2,3,4,5)), "vec4(3;5;7;9)", "vec4 - create/ADD/tostring" );
-testEqual( ''$(v3_b-vec4(2,3,4,5)), "vec4(-1;-1;-1;-1)", "vec4 - create/SUB/tostring" );
-testEqual( ''$(v3_b*vec4(2,3,4,5)), "vec4(2;6;12;20)", "vec4 - create/MUL/tostring" );
+testEqual( ''$v4_b, "vec4(1;2;3;4)", "vec4 - create/tostring" );
+testEqual( ''$(v4_b+vec4(2,3,4,5)), "vec4(3;5;7;9)", "vec4 - create/ADD/tostring" );
+testEqual( ''$(v4_b-vec4(2,3,4,5)), "vec4(-1;-1;-1;-1)", "vec4 - create/SUB/tostring" );
+testEqual( ''$(v4_b*vec4(2,3,4,5)), "vec4(2;6;12;20)", "vec4 - create/MUL/tostring" );
 testEqual( ''$(vec4(1,4,3,1)/vec4(4,2,1,5)), "vec4(0.25;2;3;0.2)", "vec4 - create/DIV/tostring" );
 testEqual( ''$(vec4(1,4,3,2)%vec4(4,2,2,2)), "vec4(1;0;1;0)", "vec4 - create/MOD/tostring" );
 testEqual( vec4(1.5,3,5,8.33) == vec4(1.5,3,5,8.33), true, "vec4 - compare equal" );
 testEqual( vec4(1.5,3,5,8.33) == vec4(1.5,3,5,8.333), false, "vec4 - compare not equal" );
-testEqual( vec4_dot(v3_b,vec4(2,3,4,5)), 40.0, "vec4_dot" );
-testEqual( v3_a === clone(v3_a), true, "vec4 clone returns equal" );
-testEqual( toptr(v3_a) != toptr(clone(v3_a)), true, "vec4 clone does not return same" );
-testEqual( v3_b.x $ v3_b.y $ v3_b.z $ v3_b.w $ v3_b[0] $ v3_b[1] $ v3_b[2] $ v3_b[3], "12341234", "vec4 .x, .y, .z, .w" );
+testEqual( vec4_dot(v4_b,vec4(2,3,4,5)), 40.0, "vec4_dot" );
+testEqual( v4_a === clone(v4_a), true, "vec4 clone returns equal" );
+testEqual( toptr(v4_a) != toptr(clone(v4_a)), true, "vec4 clone does not return same" );
+testEqual( v4_b.x $ v4_b.y $ v4_b.z $ v4_b.w $ v4_b[0] $ v4_b[1] $ v4_b[2] $ v4_b[3], "12341234", "vec4 .x, .y, .z, .w" );
 testEqual( vec4(0,0,0,5).length, 5.0, "vec4 .length" );
 testEqual( vec4(0,5,0,0).length_squared, 25.0, "vec4 .length_squared" );
 testEqual( vec4(0,0,0,2).normalized == vec4(0,0,0,1), true, "vec4 .normalized" );
 testEqual( vec4(0,0,0,0).size, 4, "vec4 .size" );
+testEqual( ERRORS, "", "vec4 - no errors" );
+
+
+	section( "aabb2" );
+
+ERRORS = "";
+bb2_a = aabb2(1,2,3,4);
+bb2_av = aabb2v(vec2(1,2),vec2(3,4));
+bb2_b = aabb2(1,2,3,5);
+
+testEqual( tostring(bb2_a), "aabb2(1;2 - 3;4)", "aabb2 - create/tostring" );
+testClose( bb2_a, bb2_av, "aabb2 - different ctors, same result" );
+testEqual( bb2_a.size, 4, "aabb2 .size" );
+testClose( [bb2_a.x1], [1.0], "aabb2 .x1" );
+testClose( [bb2_a.y1], [2.0], "aabb2 .y1" );
+testClose( [bb2_a.x2], [3.0], "aabb2 .x2" );
+testClose( [bb2_a.y2], [4.0], "aabb2 .y2" );
+testClose( bb2_a.p1, vec2(1,2), "aabb2 .p1" );
+testClose( bb2_a.p2, vec2(3,4), "aabb2 .p2" );
+testClose( bb2_a == bb2_av, true, "aabb2 - compare equal" );
+testClose( bb2_a == bb2_b, false, "aabb2 - compare not equal" );
+testClose( bb2_b.width, 2.0, "aabb2 .width" );
+testClose( bb2_b.height, 3.0, "aabb2 .height" );
+testClose( bb2_b.area, 6.0, "aabb2 .area" );
+testClose( bb2_b.area_v, vec2(2,3), "aabb2 .area_v" );
+testClose( bb2_a.center, vec2(2,3), "aabb2 .center" );
+testEqual( bb2_b.valid, true, "aabb2 .height" );
+bb2_ax = clone(bb2_a);
+testClose( bb2_ax.p1 = vec2(0,1), vec2(0,1), "aabb2 - set .p1" );
+testClose( bb2_ax.p2 = vec2(4,5), vec2(4,5), "aabb2 - set .p1" );
+bb2_ax.expand( vec2(7,-2) );
+testClose( bb2_ax, aabb2(0,-2,7,5), "aabb2 - expand (method)" );
+testEqual( ERRORS, "", "aabb2 - no errors" );
 
 
 	section( "quat" );

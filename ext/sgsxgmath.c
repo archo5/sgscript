@@ -56,6 +56,19 @@ SGSBOOL sgs_ParseVT( SGS_CTX, sgs_StkIdx item, XGM_VT* out )
 }
 
 
+static int xgm_any_serialize( SGS_CTX, sgs_VarObj* obj )
+{
+	int i = 0, count = obj->appsize / sizeof( XGM_VT );
+	XGM_OHDR;
+	for( ; i < count; ++i )
+	{
+		sgs_Serialize( C, sgs_MakeReal( hdr[ i ] ) );
+	}
+	sgs_SerializeObject( C, count, obj->iface->name );
+	return SGS_SUCCESS;
+}
+
+
 /*  2 D   V E C T O R  */
 
 #define VEC2_IFN( fn ) \
@@ -98,6 +111,15 @@ static int xgm_v2_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
+static const sgs_ObjProp xgm_v2_props[] =
+{
+	SGS_OBJPROP_OFFSET( "x", sizeof(XGM_VT) * 0, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "y", sizeof(XGM_VT) * 1, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "size", 2, SGS_OBJPROPTYPE_ICONST, 0 ),
+	SGS_OBJPROP_CFUNC( "rotate", xgm_v2m_rotate ),
+	SGS_OBJPROP_END(),
+};
+
 static int xgm_v2_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
@@ -114,8 +136,6 @@ static int xgm_v2_getindex( SGS_ARGS_GETINDEXFUNC )
 	
 	if( !sgs_ParseString( C, 0, &str, NULL ) )
 		return SGS_EINVAL;
-	if( !strcmp( str, "x" ) ) return sgs_PushReal( C, hdr[ 0 ] );
-	if( !strcmp( str, "y" ) ) return sgs_PushReal( C, hdr[ 1 ] );
 	if( !strcmp( str, "length" ) )
 	{
 		sgs_PushReal( C, sqrt( XGM_VMUL_INNER2( hdr, hdr ) ) );
@@ -141,8 +161,6 @@ static int xgm_v2_getindex( SGS_ARGS_GETINDEXFUNC )
 	if( !strcmp( str, "angle" ) ) return sgs_PushReal( C, atan2( hdr[1], hdr[0] ) );
 	if( !strcmp( str, "perp" ) ) return sgs_CreateVec2( C, NULL, -hdr[1], hdr[0] );
 	if( !strcmp( str, "perp2" ) ) return sgs_CreateVec2( C, NULL, hdr[1], -hdr[0] );
-	if( !strcmp( str, "rotate" ) ) return sgs_PushCFunc( C, xgm_v2m_rotate );
-	if( !strcmp( str, "size" ) ) return sgs_PushInt( C, 2 );
 	return SGS_ENOTFND;
 }
 
@@ -167,20 +185,6 @@ static int xgm_v2_setindex( SGS_ARGS_SETINDEXFUNC )
 		char* str;
 		if( !sgs_ParseString( C, 0, &str, NULL ) )
 			return SGS_EINVAL;
-		SGS_CASE( "x" )
-		{
-			if( !sgs_ParseReal( C, 1, &vv ) )
-				return SGS_EINVAL;
-			hdr[0] = (XGM_VT) vv;
-			return SGS_SUCCESS;
-		}
-		SGS_CASE( "y" )
-		{
-			if( !sgs_ParseReal( C, 1, &vv ) )
-				return SGS_EINVAL;
-			hdr[1] = (XGM_VT) vv;
-			return SGS_SUCCESS;
-		}
 		SGS_CASE( "angle" )
 		{
 			if( !sgs_ParseReal( C, 1, &vv ) )
@@ -259,15 +263,6 @@ static int xgm_v2_expr( SGS_ARGS_OBJFUNC )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_v2_serialize( SGS_CTX, sgs_VarObj* obj )
-{
-	XGM_OHDR;
-	sgs_Serialize( C, sgs_MakeReal( hdr[0] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[1] ) );
-	sgs_SerializeObject( C, 2, "vec2" );
-	return SGS_SUCCESS;
-}
-
 static int xgm_v2_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 {
 	SGS_UNUSED( maxdepth );
@@ -333,6 +328,15 @@ static int xgm_v3_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
+static const sgs_ObjProp xgm_v3_props[] =
+{
+	SGS_OBJPROP_OFFSET( "x", sizeof(XGM_VT) * 0, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "y", sizeof(XGM_VT) * 1, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "z", sizeof(XGM_VT) * 2, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "size", 3, SGS_OBJPROPTYPE_ICONST, 0 ),
+	SGS_OBJPROP_END(),
+};
+
 static int xgm_v3_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
@@ -350,9 +354,6 @@ static int xgm_v3_getindex( SGS_ARGS_GETINDEXFUNC )
 	
 	if( sgs_ParseString( C, 0, &str, &size ) )
 	{
-		if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
-		if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
-		if( !strcmp( str, "z" ) ){ sgs_PushReal( C, hdr[ 2 ] ); return SGS_SUCCESS; }
 		if( !strcmp( str, "length" ) )
 		{
 			sgs_PushReal( C, sqrt( XGM_VMUL_INNER3( hdr, hdr ) ) );
@@ -375,7 +376,6 @@ static int xgm_v3_getindex( SGS_ARGS_GETINDEXFUNC )
 				sgs_CreateVec3( C, NULL, 0, 0, 0 );
 			return SGS_SUCCESS;
 		}
-		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 3 ); return SGS_SUCCESS; }
 	}
 	return SGS_ENOTFND;
 }
@@ -394,17 +394,6 @@ static int xgm_v3_setindex( SGS_ARGS_SETINDEXFUNC )
 			return SGS_ENOTFND;
 		hdr[ pos ] = (XGM_VT) val;
 		return SGS_SUCCESS;
-	}
-	else
-	{
-		char* str;
-		sgs_SizeVal size;
-		if( sgs_ParseString( C, 0, &str, &size ) )
-		{
-			if( !strcmp( str, "x" ) ){ hdr[0] = (XGM_VT) val; return SGS_SUCCESS; }
-			if( !strcmp( str, "y" ) ){ hdr[1] = (XGM_VT) val; return SGS_SUCCESS; }
-			if( !strcmp( str, "z" ) ){ hdr[2] = (XGM_VT) val; return SGS_SUCCESS; }
-		}
 	}
 	return SGS_ENOTFND;
 }
@@ -475,16 +464,6 @@ static int xgm_v3_expr( SGS_ARGS_OBJFUNC )
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
-}
-
-static int xgm_v3_serialize( SGS_CTX, sgs_VarObj* obj )
-{
-	XGM_OHDR;
-	sgs_Serialize( C, sgs_MakeReal( hdr[0] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[1] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[2] ) );
-	sgs_SerializeObject( C, 3, "vec3" );
-	return SGS_SUCCESS;
 }
 
 static int xgm_v3_dump( SGS_CTX, sgs_VarObj* obj, int unused )
@@ -571,6 +550,16 @@ static int xgm_v4_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
+static const sgs_ObjProp xgm_v4_props[] =
+{
+	SGS_OBJPROP_OFFSET( "x", sizeof(XGM_VT) * 0, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "y", sizeof(XGM_VT) * 1, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "z", sizeof(XGM_VT) * 2, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "w", sizeof(XGM_VT) * 3, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "size", 4, SGS_OBJPROPTYPE_ICONST, 0 ),
+	SGS_OBJPROP_END(),
+};
+
 static int xgm_v4_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
@@ -587,10 +576,6 @@ static int xgm_v4_getindex( SGS_ARGS_GETINDEXFUNC )
 	
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
-		if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
-		if( !strcmp( str, "z" ) ){ sgs_PushReal( C, hdr[ 2 ] ); return SGS_SUCCESS; }
-		if( !strcmp( str, "w" ) ){ sgs_PushReal( C, hdr[ 3 ] ); return SGS_SUCCESS; }
 		if( !strcmp( str, "length" ) )
 		{
 			sgs_PushReal( C, sqrt( XGM_VMUL_INNER4( hdr, hdr ) ) );
@@ -613,7 +598,6 @@ static int xgm_v4_getindex( SGS_ARGS_GETINDEXFUNC )
 				sgs_CreateVec4( C, NULL, 0, 0, 0, 0 );
 			return SGS_SUCCESS;
 		}
-		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 4 ); return SGS_SUCCESS; }
 	}
 	return SGS_ENOTFND;
 }
@@ -632,17 +616,6 @@ static int xgm_v4_setindex( SGS_ARGS_SETINDEXFUNC )
 			return SGS_ENOTFND;
 		hdr[ pos ] = (XGM_VT) val;
 		return SGS_SUCCESS;
-	}
-	else
-	{
-		char* str;
-		if( sgs_ParseString( C, 0, &str, NULL ) )
-		{
-			if( !strcmp( str, "x" ) ){ hdr[0] = (XGM_VT) val; return SGS_SUCCESS; }
-			if( !strcmp( str, "y" ) ){ hdr[1] = (XGM_VT) val; return SGS_SUCCESS; }
-			if( !strcmp( str, "z" ) ){ hdr[2] = (XGM_VT) val; return SGS_SUCCESS; }
-			if( !strcmp( str, "w" ) ){ hdr[3] = (XGM_VT) val; return SGS_SUCCESS; }
-		}
 	}
 	return SGS_ENOTFND;
 }
@@ -726,17 +699,6 @@ static int xgm_v4_expr( SGS_ARGS_OBJFUNC )
 	return SGS_ENOTSUP;
 }
 
-static int xgm_v4_serialize( SGS_CTX, sgs_VarObj* obj )
-{
-	XGM_OHDR;
-	sgs_Serialize( C, sgs_MakeReal( hdr[0] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[1] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[2] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[3] ) );
-	sgs_SerializeObject( C, 4, "vec4" );
-	return SGS_SUCCESS;
-}
-
 static int xgm_v4_dump( SGS_CTX, sgs_VarObj* obj, int unused )
 {
 	return xgm_v4_convert( C, obj, SGS_VT_STRING );
@@ -808,62 +770,152 @@ static int xgm_b2_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
+static int xgm_b2_prop_read_p1( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	return sgs_CreateVec2p( C, NULL, hdr );
+}
+static int xgm_b2_prop_write_p1( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	return sgs_ParseVec2( C, 0, hdr, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+}
+static int xgm_b2_prop_write_pos( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	XGM_VT pos[2];
+	if( sgs_ParseVec2( C, 0, pos, 0 ) )
+	{
+		hdr[2] += pos[0] - hdr[0];
+		hdr[3] += pos[1] - hdr[1];
+		hdr[0] = pos[0];
+		hdr[1] = pos[1];
+		return SGS_SUCCESS;
+	}
+	return SGS_EINVAL;
+}
+
+static int xgm_b2_prop_read_p2( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	return sgs_CreateVec2p( C, NULL, hdr + 2 );
+}
+static int xgm_b2_prop_write_p2( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	return sgs_ParseVec2( C, 0, hdr + 2, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
+}
+
+static int xgm_b2_prop_read_width( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	return sgs_PushReal( C, hdr[2] - hdr[0] );
+}
+static int xgm_b2_prop_write_width( SGS_CTX, sgs_VarObj* obj )
+{
+	sgs_Real diff;
+	XGM_OHDR;
+	if( !sgs_ParseReal( C, 0, &diff ) )
+		return SGS_EINVAL;
+	hdr[2] = hdr[0] + diff;
+	return SGS_SUCCESS;
+}
+
+static int xgm_b2_prop_read_height( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	return sgs_PushReal( C, hdr[3] - hdr[1] );
+}
+static int xgm_b2_prop_write_height( SGS_CTX, sgs_VarObj* obj )
+{
+	sgs_Real diff;
+	XGM_OHDR;
+	if( !sgs_ParseReal( C, 0, &diff ) )
+		return SGS_EINVAL;
+	hdr[3] = hdr[1] + diff;
+	return SGS_SUCCESS;
+}
+
+static int xgm_b2_prop_read_area( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	return sgs_PushReal( C, (hdr[2] - hdr[0]) * (hdr[3] - hdr[1]) );
+}
+
+static int xgm_b2_prop_read_valid( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	return sgs_PushBool( C, hdr[2] >= hdr[0] && hdr[3] >= hdr[1] );
+}
+
+static int xgm_b2_prop_read_area_v( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	return sgs_CreateVec2( C, NULL, hdr[2] - hdr[0], hdr[3] - hdr[1] );
+}
+static int xgm_b2_prop_write_area_v( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	XGM_VT size[2];
+	if( sgs_ParseVec2( C, 1, size, 0 ) )
+	{
+		hdr[2] = hdr[0] + size[0];
+		hdr[3] = hdr[1] + size[1];
+		return SGS_SUCCESS;
+	}
+	return SGS_EINVAL;
+}
+
+static int xgm_b2_prop_read_center( SGS_CTX, sgs_VarObj* obj )
+{
+	XGM_OHDR;
+	return sgs_CreateVec2( C, NULL, (hdr[0]+hdr[2])*0.5f, (hdr[1]+hdr[3])*0.5f );
+}
+
+static const sgs_ObjProp xgm_b2_props[] =
+{
+	SGS_OBJPROP_OFFSET( "x1", sizeof(XGM_VT) * 0, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "y1", sizeof(XGM_VT) * 1, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "x2", sizeof(XGM_VT) * 2, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "y2", sizeof(XGM_VT) * 3, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "size", 4, SGS_OBJPROPTYPE_ICONST, 0 ),
+	SGS_OBJPROP_CALLBACK( "p1", xgm_b2_prop_read_p1, xgm_b2_prop_write_p1, 0 ),
+	SGS_OBJPROP_CALLBACK( "p2", xgm_b2_prop_read_p2, xgm_b2_prop_write_p2, 0 ),
+	SGS_OBJPROP_CALLBACK( "width", xgm_b2_prop_read_width, xgm_b2_prop_write_width, 0 ),
+	SGS_OBJPROP_CALLBACK( "height", xgm_b2_prop_read_height, xgm_b2_prop_write_height, 0 ),
+	SGS_OBJPROP_CALLBACK( "area", xgm_b2_prop_read_area, NULL, 0 ),
+	SGS_OBJPROP_CALLBACK( "valid", xgm_b2_prop_read_valid, NULL, 0 ),
+	SGS_OBJPROP_CALLBACK( "pos", xgm_b2_prop_read_p1, xgm_b2_prop_write_pos, 0 ),
+	SGS_OBJPROP_CALLBACK( "area_v", xgm_b2_prop_read_area_v, xgm_b2_prop_write_area_v, 0 ),
+	SGS_OBJPROP_CALLBACK( "center", xgm_b2_prop_read_center, NULL, 0 ),
+	SGS_OBJPROP_CFUNC( "expand", xgm_aabb2_expand ),
+	SGS_OBJPROP_END()
+};
+
 static int xgm_b2_getindex( SGS_ARGS_GETINDEXFUNC )
 {
-	char* str;
 	XGM_OHDR;
-	if( sgs_ParseString( C, 0, &str, NULL ) )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		SGS_CASE( "x1" )     return sgs_PushReal( C, hdr[0] );
-		SGS_CASE( "y1" )     return sgs_PushReal( C, hdr[1] );
-		SGS_CASE( "x2" )     return sgs_PushReal( C, hdr[2] );
-		SGS_CASE( "y2" )     return sgs_PushReal( C, hdr[3] );
-		SGS_CASE( "p1" )     return sgs_CreateVec2p( C, NULL, hdr );
-		SGS_CASE( "p2" )     return sgs_CreateVec2p( C, NULL, hdr + 2 );
-		SGS_CASE( "width" )  return sgs_PushReal( C, hdr[2] - hdr[0] );
-		SGS_CASE( "height" ) return sgs_PushReal( C, hdr[3] - hdr[1] );
-		SGS_CASE( "center" ) return sgs_CreateVec2( C, NULL, (hdr[0]+hdr[2])*0.5f, (hdr[1]+hdr[3])*0.5f );
-		SGS_CASE( "area" )   return sgs_PushReal( C, (hdr[2] - hdr[0]) * (hdr[3] - hdr[1]) );
-		SGS_CASE( "valid" )  return sgs_PushBool( C, hdr[2] >= hdr[0] && hdr[3] >= hdr[1] );
-		SGS_CASE( "pos" )    return sgs_CreateVec2p( C, NULL, hdr );
-		SGS_CASE( "size" )   return sgs_CreateVec2( C, NULL, hdr[2] - hdr[0], hdr[3] - hdr[1] );
-		SGS_CASE( "expand" ) return sgs_PushCFunc( C, xgm_aabb2_expand );
+		sgs_Int idx = sgs_GetInt( C, 0 );
+		if( idx >= 0 && idx < 4 )
+			return sgs_PushReal( C, hdr[ idx ] );
 	}
 	return SGS_ENOTFND;
 }
 
 static int xgm_b2_setindex( SGS_ARGS_SETINDEXFUNC )
 {
-	char* str;
 	XGM_OHDR;
-	if( sgs_ParseString( C, 0, &str, NULL ) )
+	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
 	{
-		SGS_CASE( "x1" ) return sgs_ParseVT( C, 1, &hdr[0] ) ? SGS_SUCCESS : SGS_EINVAL;
-		SGS_CASE( "y1" ) return sgs_ParseVT( C, 1, &hdr[1] ) ? SGS_SUCCESS : SGS_EINVAL;
-		SGS_CASE( "x2" ) return sgs_ParseVT( C, 1, &hdr[2] ) ? SGS_SUCCESS : SGS_EINVAL;
-		SGS_CASE( "y2" ) return sgs_ParseVT( C, 1, &hdr[3] ) ? SGS_SUCCESS : SGS_EINVAL;
-		SGS_CASE( "p1" ) return sgs_ParseVec2( C, 1, hdr, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
-		SGS_CASE( "p2" ) return sgs_ParseVec2( C, 1, hdr + 2, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
-		SGS_CASE( "pos" )
+		sgs_Real val;
+		sgs_Int idx = sgs_GetInt( C, 0 );
+		if( idx >= 0 && idx < 4 )
 		{
-			XGM_VT pos[2];
-			if( sgs_ParseVec2( C, 1, pos, 0 ) )
+			if( sgs_ParseReal( C, 1, &val ) )
 			{
-				hdr[2] += pos[0] - hdr[0];
-				hdr[3] += pos[1] - hdr[1];
-				hdr[0] = pos[0];
-				hdr[1] = pos[1];
-				return SGS_SUCCESS;
-			}
-			return SGS_EINVAL;
-		}
-		SGS_CASE( "size" )
-		{
-			XGM_VT size[2];
-			if( sgs_ParseVec2( C, 1, size, 0 ) )
-			{
-				hdr[2] = hdr[0] + size[0];
-				hdr[3] = hdr[1] + size[1];
+				hdr[ idx ] = val;
 				return SGS_SUCCESS;
 			}
 			return SGS_EINVAL;
@@ -892,17 +944,6 @@ static int xgm_b2_expr( SGS_ARGS_OBJFUNC )
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
-}
-
-static int xgm_b2_serialize( SGS_CTX, sgs_VarObj* obj )
-{
-	XGM_OHDR;
-	sgs_Serialize( C, sgs_MakeReal( hdr[0] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[1] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[2] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[3] ) );
-	sgs_SerializeObject( C, 4, "aabb2" );
-	return SGS_SUCCESS;
 }
 
 static int xgm_b2_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
@@ -954,8 +995,8 @@ static int xgm_aabb2_expand( SGS_CTX )
 {
 	XGM_VT* bb, tmp[4];
 	
-	int i, ssz = sgs_StackSize( C );
 	int method_call = sgs_Method( C );
+	int i, ssz = sgs_StackSize( C );
 	SGSFN( method_call ? "aabb2.expand" : "aabb2_expand" );
 	if( !sgs_IsObject( C, 0, xgm_aabb2_iface ) )
 		return sgs_ArgErrorExt( C, 0, method_call, "aabb2", "" );
@@ -1099,18 +1140,25 @@ static int xgm_b3_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
+static const sgs_ObjProp xgm_b3_props[] =
+{
+	SGS_OBJPROP_OFFSET( "x1", sizeof(XGM_VT) * 0, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "y1", sizeof(XGM_VT) * 1, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "z1", sizeof(XGM_VT) * 2, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "x2", sizeof(XGM_VT) * 3, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "y2", sizeof(XGM_VT) * 4, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "z2", sizeof(XGM_VT) * 5, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "size", 6, SGS_OBJPROPTYPE_ICONST, 0 ),
+	SGS_OBJPROP_CFUNC( "expand", xgm_aabb3_expand ),
+	SGS_OBJPROP_END(),
+};
+
 static int xgm_b3_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
 	XGM_OHDR;
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		SGS_CASE( "x1" )     return sgs_PushReal( C, hdr[0] );
-		SGS_CASE( "y1" )     return sgs_PushReal( C, hdr[1] );
-		SGS_CASE( "z1" )     return sgs_PushReal( C, hdr[2] );
-		SGS_CASE( "x2" )     return sgs_PushReal( C, hdr[3] );
-		SGS_CASE( "y2" )     return sgs_PushReal( C, hdr[4] );
-		SGS_CASE( "z2" )     return sgs_PushReal( C, hdr[5] );
 		SGS_CASE( "p1" )     return sgs_CreateVec3p( C, NULL, hdr );
 		SGS_CASE( "p2" )     return sgs_CreateVec3p( C, NULL, hdr + 3 );
 		SGS_CASE( "width" )  return sgs_PushReal( C, hdr[3] - hdr[0] );
@@ -1119,7 +1167,6 @@ static int xgm_b3_getindex( SGS_ARGS_GETINDEXFUNC )
 		SGS_CASE( "center" ) return sgs_CreateVec3( C, NULL, (hdr[0]+hdr[3])*0.5f, (hdr[1]+hdr[4])*0.5f, (hdr[2]+hdr[5])*0.5f );
 		SGS_CASE( "area" )   return sgs_PushReal( C, (hdr[3] - hdr[0]) * (hdr[4] - hdr[1]) * (hdr[5] - hdr[2]) );
 		SGS_CASE( "valid" )  return sgs_PushBool( C, hdr[3] >= hdr[0] && hdr[4] >= hdr[1] && hdr[5] >= hdr[2] );
-		SGS_CASE( "expand" ) return sgs_PushCFunc( C, xgm_aabb3_expand );
 	}
 	return SGS_ENOTFND;
 }
@@ -1130,12 +1177,6 @@ static int xgm_b3_setindex( SGS_ARGS_SETINDEXFUNC )
 	XGM_OHDR;
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		if( !strcmp( str, "x1" ) ) return sgs_ParseVT( C, 1, &hdr[0] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "y1" ) ) return sgs_ParseVT( C, 1, &hdr[1] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "z1" ) ) return sgs_ParseVT( C, 1, &hdr[2] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "x2" ) ) return sgs_ParseVT( C, 1, &hdr[3] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "y2" ) ) return sgs_ParseVT( C, 1, &hdr[4] ) ? SGS_SUCCESS : SGS_EINVAL;
-		if( !strcmp( str, "z2" ) ) return sgs_ParseVT( C, 1, &hdr[5] ) ? SGS_SUCCESS : SGS_EINVAL;
 		if( !strcmp( str, "p1" ) ) return sgs_ParseVec3( C, 1, hdr, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
 		if( !strcmp( str, "p2" ) ) return sgs_ParseVec3( C, 1, hdr + 3, 0 ) ? SGS_SUCCESS : SGS_EINVAL;
 	}
@@ -1164,19 +1205,6 @@ static int xgm_b3_expr( SGS_ARGS_OBJFUNC )
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
-}
-
-static int xgm_b3_serialize( SGS_CTX, sgs_VarObj* obj )
-{
-	XGM_OHDR;
-	sgs_Serialize( C, sgs_MakeReal( hdr[0] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[1] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[2] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[3] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[4] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[5] ) );
-	sgs_SerializeObject( C, 6, "aabb3" );
-	return SGS_SUCCESS;
 }
 
 static int xgm_b3_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
@@ -1228,8 +1256,8 @@ static int xgm_aabb3_expand( SGS_CTX )
 {
 	XGM_VT* bb, tmp[6];
 	
-	int i, ssz = sgs_StackSize( C );
 	int method_call = sgs_Method( C );
+	int i, ssz = sgs_StackSize( C );
 	SGSFN( method_call ? "aabb3.expand" : "aabb3_expand" );
 	if( !sgs_IsObject( C, 0, xgm_aabb3_iface ) )
 		return sgs_ArgErrorExt( C, 0, method_call, "aabb3", "" );
@@ -1276,6 +1304,16 @@ static int xgm_col_convert( SGS_CTX, sgs_VarObj* obj, int type )
 
 #define COL_F2B( f, o ) (((uint32_t)(f >= 1 ? 255 : (f <= 0 ? 0 : f * 255)))<<o)
 
+static const sgs_ObjProp xgm_col_props[] =
+{
+	SGS_OBJPROP_OFFSET( "r", sizeof(XGM_VT) * 0, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "g", sizeof(XGM_VT) * 1, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "b", sizeof(XGM_VT) * 2, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "a", sizeof(XGM_VT) * 3, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "size", 4, SGS_OBJPROPTYPE_ICONST, 0 ),
+	SGS_OBJPROP_END(),
+};
+
 static int xgm_col_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
@@ -1291,13 +1329,8 @@ static int xgm_col_getindex( SGS_ARGS_GETINDEXFUNC )
 	
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		if( !strcmp( str, "r" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
-		if( !strcmp( str, "g" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
-		if( !strcmp( str, "b" ) ){ sgs_PushReal( C, hdr[ 2 ] ); return SGS_SUCCESS; }
-		if( !strcmp( str, "a" ) ){ sgs_PushReal( C, hdr[ 3 ] ); return SGS_SUCCESS; }
 		if( !strcmp( str, "rgba_u32" ) ){ sgs_PushInt( C, COL_F2B( hdr[0], 0 ) | COL_F2B( hdr[1], 8 ) | COL_F2B( hdr[2], 16 ) | COL_F2B( hdr[3], 24 ) ); return SGS_SUCCESS; }
 		if( !strcmp( str, "bgra_u32" ) ){ sgs_PushInt( C, COL_F2B( hdr[2], 0 ) | COL_F2B( hdr[1], 8 ) | COL_F2B( hdr[0], 16 ) | COL_F2B( hdr[3], 24 ) ); return SGS_SUCCESS; }
-		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 4 ); return SGS_SUCCESS; }
 	}
 	return SGS_ENOTFND;
 }
@@ -1315,17 +1348,6 @@ static int xgm_col_setindex( SGS_ARGS_SETINDEXFUNC )
 			return SGS_ENOTFND;
 		hdr[ pos ] = (XGM_VT) val;
 		return SGS_SUCCESS;
-	}
-	else
-	{
-		char* str;
-		if( !sgs_ParseString( C, 0, &str, NULL ) )
-		{
-			if( !strcmp( str, "r" ) ){ hdr[0] = (XGM_VT) val; return SGS_SUCCESS; }
-			if( !strcmp( str, "g" ) ){ hdr[1] = (XGM_VT) val; return SGS_SUCCESS; }
-			if( !strcmp( str, "b" ) ){ hdr[2] = (XGM_VT) val; return SGS_SUCCESS; }
-			if( !strcmp( str, "a" ) ){ hdr[3] = (XGM_VT) val; return SGS_SUCCESS; }
-		}
 	}
 	return SGS_ENOTFND;
 }
@@ -1407,18 +1429,6 @@ static int xgm_col_expr( SGS_ARGS_OBJFUNC )
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
-}
-
-static int xgm_col_serialize( SGS_CTX, sgs_VarObj* obj )
-{
-	int i;
-	XGM_OHDR;
-	for( i = 0; i < 4; ++i )
-	{
-		sgs_Serialize( C, sgs_MakeReal( hdr[i] ) );
-	}
-	sgs_SerializeObject( C, 4, "color" );
-	return SGS_SUCCESS;
 }
 
 static int xgm_col_dump( SGS_CTX, sgs_VarObj* obj, int unused )
@@ -2045,6 +2055,32 @@ static int xgm_quat_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
+static const sgs_ObjProp xgm_quat_props[] =
+{
+	SGS_OBJPROP_OFFSET( "x", sizeof(XGM_VT) * 0, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "y", sizeof(XGM_VT) * 1, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "z", sizeof(XGM_VT) * 2, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "w", sizeof(XGM_VT) * 3, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "size", 4, SGS_OBJPROPTYPE_ICONST, 0 ),
+	
+	SGS_OBJPROP_CFUNC( "identity", xgm_qti_identity ),
+	SGS_OBJPROP_CFUNC( "multiply", xgm_qti_multiply ),
+	SGS_OBJPROP_CFUNC( "multiply_left", xgm_qti_multiply_left ),
+	SGS_OBJPROP_CFUNC( "multiply2", xgm_qti_multiply2 ),
+	SGS_OBJPROP_CFUNC( "invert", xgm_qti_invert ),
+	SGS_OBJPROP_CFUNC( "invert_from", xgm_qti_invert_from ),
+	
+	SGS_OBJPROP_CFUNC( "rotateX", xgm_qti_rotateX ),
+	SGS_OBJPROP_CFUNC( "rotateY", xgm_qti_rotateY ),
+	SGS_OBJPROP_CFUNC( "rotateZ", xgm_qti_rotateZ ),
+	SGS_OBJPROP_CFUNC( "rotate_axis_angle", xgm_qti_rotate_axis_angle ),
+	SGS_OBJPROP_CFUNC( "rotate_axis_angle_v3", xgm_qti_rotate_axis_angle_v3 ),
+	
+	SGS_OBJPROP_CFUNC( "transform", xgm_qti_transform ),
+	
+	SGS_OBJPROP_END(),
+};
+
 static int xgm_quat_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
@@ -2061,25 +2097,6 @@ static int xgm_quat_getindex( SGS_ARGS_GETINDEXFUNC )
 	
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		SGS_CASE( "identity" ) return sgs_PushCFunc( C, xgm_qti_identity );
-		SGS_CASE( "multiply" ) return sgs_PushCFunc( C, xgm_qti_multiply );
-		SGS_CASE( "multiply_left" ) return sgs_PushCFunc( C, xgm_qti_multiply_left );
-		SGS_CASE( "multiply2" ) return sgs_PushCFunc( C, xgm_qti_multiply2 );
-		SGS_CASE( "invert" ) return sgs_PushCFunc( C, xgm_qti_invert );
-		SGS_CASE( "invert_from" ) return sgs_PushCFunc( C, xgm_qti_invert_from );
-		
-		SGS_CASE( "rotateX" ) return sgs_PushCFunc( C, xgm_qti_rotateX );
-		SGS_CASE( "rotateY" ) return sgs_PushCFunc( C, xgm_qti_rotateY );
-		SGS_CASE( "rotateZ" ) return sgs_PushCFunc( C, xgm_qti_rotateZ );
-		SGS_CASE( "rotate_axis_angle" ) return sgs_PushCFunc( C, xgm_qti_rotate_axis_angle );
-		SGS_CASE( "rotate_axis_angle_v3" ) return sgs_PushCFunc( C, xgm_qti_rotate_axis_angle_v3 );
-		
-		SGS_CASE( "transform" ) return sgs_PushCFunc( C, xgm_qti_transform );
-		
-		if( !strcmp( str, "x" ) ){ sgs_PushReal( C, hdr[ 0 ] ); return SGS_SUCCESS; }
-		if( !strcmp( str, "y" ) ){ sgs_PushReal( C, hdr[ 1 ] ); return SGS_SUCCESS; }
-		if( !strcmp( str, "z" ) ){ sgs_PushReal( C, hdr[ 2 ] ); return SGS_SUCCESS; }
-		if( !strcmp( str, "w" ) ){ sgs_PushReal( C, hdr[ 3 ] ); return SGS_SUCCESS; }
 		if( !strcmp( str, "length" ) )
 		{
 			sgs_PushReal( C, sqrt( XGM_VMUL_INNER4( hdr, hdr ) ) );
@@ -2116,7 +2133,6 @@ static int xgm_quat_getindex( SGS_ARGS_GETINDEXFUNC )
 			sgs_CreateMat4( C, NULL, *out, 0 );
 			return SGS_SUCCESS;
 		}
-		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 4 ); return SGS_SUCCESS; }
 	}
 	return SGS_ENOTFND;
 }
@@ -2135,17 +2151,6 @@ static int xgm_quat_setindex( SGS_ARGS_SETINDEXFUNC )
 			return SGS_ENOTFND;
 		hdr[ pos ] = (XGM_VT) val;
 		return SGS_SUCCESS;
-	}
-	else
-	{
-		char* str;
-		if( sgs_ParseString( C, 0, &str, NULL ) )
-		{
-			if( !strcmp( str, "x" ) ){ hdr[0] = (XGM_VT) val; return SGS_SUCCESS; }
-			if( !strcmp( str, "y" ) ){ hdr[1] = (XGM_VT) val; return SGS_SUCCESS; }
-			if( !strcmp( str, "z" ) ){ hdr[2] = (XGM_VT) val; return SGS_SUCCESS; }
-			if( !strcmp( str, "w" ) ){ hdr[3] = (XGM_VT) val; return SGS_SUCCESS; }
-		}
 	}
 	return SGS_ENOTFND;
 }
@@ -2227,17 +2232,6 @@ static int xgm_quat_expr( SGS_ARGS_OBJFUNC )
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
-}
-
-static int xgm_quat_serialize( SGS_CTX, sgs_VarObj* obj )
-{
-	XGM_OHDR;
-	sgs_Serialize( C, sgs_MakeReal( hdr[0] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[1] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[2] ) );
-	sgs_Serialize( C, sgs_MakeReal( hdr[3] ) );
-	sgs_SerializeObject( C, 4, "quat" );
-	return SGS_SUCCESS;
 }
 
 static int xgm_quat_dump( SGS_CTX, sgs_VarObj* obj, int unused )
@@ -2643,6 +2637,43 @@ static int xgm_m3_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
+static const sgs_ObjProp xgm_m3_props[] =
+{
+	SGS_OBJPROP_OFFSET( "m00", sizeof(XGM_VT) * 0, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "m01", sizeof(XGM_VT) * 1, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "m02", sizeof(XGM_VT) * 2, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "m10", sizeof(XGM_VT) * 3, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "m11", sizeof(XGM_VT) * 4, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "m12", sizeof(XGM_VT) * 5, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "m20", sizeof(XGM_VT) * 6, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "m21", sizeof(XGM_VT) * 7, XGM_PROPTYPE, 0 ),
+	SGS_OBJPROP_OFFSET( "m22", sizeof(XGM_VT) * 8, XGM_PROPTYPE, 0 ),
+	
+	SGS_OBJPROP_CFUNC( "identity", xgm_m3i_identity ),
+	SGS_OBJPROP_CFUNC( "multiply", xgm_m3i_multiply ),
+	SGS_OBJPROP_CFUNC( "multiply_left", xgm_m3i_multiply_left ),
+	SGS_OBJPROP_CFUNC( "multiply2", xgm_m3i_multiply2 ),
+	SGS_OBJPROP_CFUNC( "transpose", xgm_m3i_transpose ),
+	SGS_OBJPROP_CFUNC( "transpose_from", xgm_m3i_transpose_from ),
+	SGS_OBJPROP_CFUNC( "invert", xgm_m3i_invert ),
+	SGS_OBJPROP_CFUNC( "invert_from", xgm_m3i_invert_from ),
+	
+	SGS_OBJPROP_CFUNC( "rotateX", xgm_m3i_rotateX ),
+	SGS_OBJPROP_CFUNC( "rotateY", xgm_m3i_rotateY ),
+	SGS_OBJPROP_CFUNC( "rotateZ", xgm_m3i_rotateZ ),
+	SGS_OBJPROP_CFUNC( "rotate_axis_angle", xgm_m3i_rotate_axis_angle ),
+	SGS_OBJPROP_CFUNC( "rotate_axis_angle_v3", xgm_m3i_rotate_axis_angle_v3 ),
+	SGS_OBJPROP_CFUNC( "rotate_quat", xgm_m3i_rotate_quat ),
+	SGS_OBJPROP_CFUNC( "scale", xgm_m3i_scale ),
+	SGS_OBJPROP_CFUNC( "scale_v3", xgm_m3i_scale_v3 ),
+	
+	SGS_OBJPROP_CFUNC( "transform", xgm_m3i_transform ),
+	
+	SGS_OBJPROP_OFFSET( "size", 9, SGS_OBJPROPTYPE_ICONST, 0 ),
+	
+	SGS_OBJPROP_END(),
+};
+
 static int xgm_m3_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
@@ -2658,37 +2689,6 @@ static int xgm_m3_getindex( SGS_ARGS_GETINDEXFUNC )
 	
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		SGS_CASE( "identity" ) return sgs_PushCFunc( C, xgm_m3i_identity );
-		SGS_CASE( "multiply" ) return sgs_PushCFunc( C, xgm_m3i_multiply );
-		SGS_CASE( "multiply_left" ) return sgs_PushCFunc( C, xgm_m3i_multiply_left );
-		SGS_CASE( "multiply2" ) return sgs_PushCFunc( C, xgm_m3i_multiply2 );
-		SGS_CASE( "transpose" ) return sgs_PushCFunc( C, xgm_m3i_transpose );
-		SGS_CASE( "transpose_from" ) return sgs_PushCFunc( C, xgm_m3i_transpose_from );
-		SGS_CASE( "invert" ) return sgs_PushCFunc( C, xgm_m3i_invert );
-		SGS_CASE( "invert_from" ) return sgs_PushCFunc( C, xgm_m3i_invert_from );
-		
-		SGS_CASE( "rotateX" ) return sgs_PushCFunc( C, xgm_m3i_rotateX );
-		SGS_CASE( "rotateY" ) return sgs_PushCFunc( C, xgm_m3i_rotateY );
-		SGS_CASE( "rotateZ" ) return sgs_PushCFunc( C, xgm_m3i_rotateZ );
-		SGS_CASE( "rotate_axis_angle" ) return sgs_PushCFunc( C, xgm_m3i_rotate_axis_angle );
-		SGS_CASE( "rotate_axis_angle_v3" ) return sgs_PushCFunc( C, xgm_m3i_rotate_axis_angle_v3 );
-		SGS_CASE( "rotate_quat" ) return sgs_PushCFunc( C, xgm_m3i_rotate_quat );
-		SGS_CASE( "scale" ) return sgs_PushCFunc( C, xgm_m3i_scale );
-		SGS_CASE( "scale_v3" ) return sgs_PushCFunc( C, xgm_m3i_scale_v3 );
-		
-		SGS_CASE( "transform" ) return sgs_PushCFunc( C, xgm_m3i_transform );
-		
-		if( *str == 'm' && str[1] && str[2] && !str[3] )
-		{
-			int nx = str[1] - '0';
-			int ny = str[2] - '0';
-			if( nx >= 0 && nx < 3 && ny >= 0 && ny < 3 )
-			{
-				/* rows = x, columns = y, matrix is column-major */
-				sgs_PushReal( C, hdr[ ny + nx * 3 ] );
-				return SGS_SUCCESS;
-			}
-		}
 		if( !strcmp( str, "quat" ) )
 		{
 			QUAT out;
@@ -2706,7 +2706,6 @@ static int xgm_m3_getindex( SGS_ARGS_GETINDEXFUNC )
 			sgs_CreateMat4( C, NULL, *out, 0 );
 			return SGS_SUCCESS;
 		}
-		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 9 ); return SGS_SUCCESS; }
 	}
 	return SGS_ENOTFND;
 }
@@ -2779,18 +2778,6 @@ static int xgm_m3_expr( SGS_ARGS_OBJFUNC )
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
-}
-
-static int xgm_m3_serialize( SGS_CTX, sgs_VarObj* obj )
-{
-	int i;
-	XGM_OHDR;
-	for( i = 0; i < 9; ++i )
-	{
-		sgs_Serialize( C, sgs_MakeReal( hdr[i] ) );
-	}
-	sgs_SerializeObject( C, 9, "mat3" );
-	return SGS_SUCCESS;
 }
 
 static int xgm_m3_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
@@ -3195,6 +3182,37 @@ static int xgm_m4_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
+static const sgs_ObjProp xgm_m4_props[] =
+{
+	SGS_OBJPROP_CFUNC( "identity", xgm_m4i_identity ),
+	SGS_OBJPROP_CFUNC( "multiply", xgm_m4i_multiply ),
+	SGS_OBJPROP_CFUNC( "multiply_left", xgm_m4i_multiply_left ),
+	SGS_OBJPROP_CFUNC( "multiply2", xgm_m4i_multiply2 ),
+	SGS_OBJPROP_CFUNC( "transpose", xgm_m4i_transpose ),
+	SGS_OBJPROP_CFUNC( "transpose_from", xgm_m4i_transpose_from ),
+	SGS_OBJPROP_CFUNC( "invert", xgm_m4i_invert ),
+	SGS_OBJPROP_CFUNC( "invert_from", xgm_m4i_invert_from ),
+	
+	SGS_OBJPROP_CFUNC( "translate", xgm_m4i_translate ),
+	SGS_OBJPROP_CFUNC( "translate_v3", xgm_m4i_translate_v3 ),
+	SGS_OBJPROP_CFUNC( "rotateX", xgm_m4i_rotateX ),
+	SGS_OBJPROP_CFUNC( "rotateY", xgm_m4i_rotateY ),
+	SGS_OBJPROP_CFUNC( "rotateZ", xgm_m4i_rotateZ ),
+	SGS_OBJPROP_CFUNC( "rotate_axis_angle", xgm_m4i_rotate_axis_angle ),
+	SGS_OBJPROP_CFUNC( "rotate_axis_angle_v3", xgm_m4i_rotate_axis_angle_v3 ),
+	SGS_OBJPROP_CFUNC( "rotate_quat", xgm_m4i_rotate_quat ),
+	SGS_OBJPROP_CFUNC( "scale", xgm_m4i_scale ),
+	SGS_OBJPROP_CFUNC( "scale_v3", xgm_m4i_scale_v3 ),
+	
+	SGS_OBJPROP_CFUNC( "transform", xgm_m4i_transform ),
+	SGS_OBJPROP_CFUNC( "transform_pos", xgm_m4i_transform_pos ),
+	SGS_OBJPROP_CFUNC( "transform_normal", xgm_m4i_transform_normal ),
+	
+	SGS_OBJPROP_OFFSET( "size", 16, SGS_OBJPROPTYPE_ICONST, 0 ),
+	
+	SGS_OBJPROP_END(),
+};
+
 static int xgm_m4_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	char* str;
@@ -3210,30 +3228,6 @@ static int xgm_m4_getindex( SGS_ARGS_GETINDEXFUNC )
 	
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		SGS_CASE( "identity" ) return sgs_PushCFunc( C, xgm_m4i_identity );
-		SGS_CASE( "multiply" ) return sgs_PushCFunc( C, xgm_m4i_multiply );
-		SGS_CASE( "multiply_left" ) return sgs_PushCFunc( C, xgm_m4i_multiply_left );
-		SGS_CASE( "multiply2" ) return sgs_PushCFunc( C, xgm_m4i_multiply2 );
-		SGS_CASE( "transpose" ) return sgs_PushCFunc( C, xgm_m4i_transpose );
-		SGS_CASE( "transpose_from" ) return sgs_PushCFunc( C, xgm_m4i_transpose_from );
-		SGS_CASE( "invert" ) return sgs_PushCFunc( C, xgm_m4i_invert );
-		SGS_CASE( "invert_from" ) return sgs_PushCFunc( C, xgm_m4i_invert_from );
-		
-		SGS_CASE( "translate" ) return sgs_PushCFunc( C, xgm_m4i_translate );
-		SGS_CASE( "translate_v3" ) return sgs_PushCFunc( C, xgm_m4i_translate_v3 );
-		SGS_CASE( "rotateX" ) return sgs_PushCFunc( C, xgm_m4i_rotateX );
-		SGS_CASE( "rotateY" ) return sgs_PushCFunc( C, xgm_m4i_rotateY );
-		SGS_CASE( "rotateZ" ) return sgs_PushCFunc( C, xgm_m4i_rotateZ );
-		SGS_CASE( "rotate_axis_angle" ) return sgs_PushCFunc( C, xgm_m4i_rotate_axis_angle );
-		SGS_CASE( "rotate_axis_angle_v3" ) return sgs_PushCFunc( C, xgm_m4i_rotate_axis_angle_v3 );
-		SGS_CASE( "rotate_quat" ) return sgs_PushCFunc( C, xgm_m4i_rotate_quat );
-		SGS_CASE( "scale" ) return sgs_PushCFunc( C, xgm_m4i_scale );
-		SGS_CASE( "scale_v3" ) return sgs_PushCFunc( C, xgm_m4i_scale_v3 );
-		
-		SGS_CASE( "transform" ) return sgs_PushCFunc( C, xgm_m4i_transform );
-		SGS_CASE( "transform_pos" ) return sgs_PushCFunc( C, xgm_m4i_transform_pos );
-		SGS_CASE( "transform_normal" ) return sgs_PushCFunc( C, xgm_m4i_transform_normal );
-		
 		if( *str == 'm' && str[1] && str[2] && !str[3] )
 		{
 			int nx = str[1] - '0';
@@ -3261,7 +3255,6 @@ static int xgm_m4_getindex( SGS_ARGS_GETINDEXFUNC )
 			sgs_CreateMat3( C, NULL, *out, 0 );
 			return SGS_SUCCESS;
 		}
-		if( !strcmp( str, "size" ) ){ sgs_PushInt( C, 16 ); return SGS_SUCCESS; }
 	}
 	return SGS_ENOTFND;
 }
@@ -3334,18 +3327,6 @@ static int xgm_m4_expr( SGS_ARGS_OBJFUNC )
 		return SGS_SUCCESS;
 	}
 	return SGS_ENOTSUP;
-}
-
-static int xgm_m4_serialize( SGS_CTX, sgs_VarObj* obj )
-{
-	int i;
-	XGM_OHDR;
-	for( i = 0; i < 16; ++i )
-	{
-		sgs_Serialize( C, sgs_MakeReal( hdr[i] ) );
-	}
-	sgs_SerializeObject( C, 16, "mat4" );
-	return SGS_SUCCESS;
 }
 
 static int xgm_m4_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
@@ -3691,6 +3672,43 @@ XGM_FLA_CONVMETHOD( to_uint64_buffer, uint64_t );
 XGM_FLA_CONVMETHOD( to_float32_buffer, float );
 XGM_FLA_CONVMETHOD( to_float64_buffer, double );
 
+static const sgs_ObjProp xgm_fla_props[] =
+{
+	SGS_OBJPROP_OFFSET( "size", offsetof( xgm_vtarray, size ), SGS_OBJPROPTYPE_SIZEVAL, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_CFUNC( "clear", xgm_fla_clear ),
+	SGS_OBJPROP_CFUNC( "set1", xgm_fla_set1 ),
+	SGS_OBJPROP_CFUNC( "negate", xgm_fla_negate ),
+	SGS_OBJPROP_CFUNC( "assign", xgm_fla_assign ),
+	SGS_OBJPROP_CFUNC( "negate_from", xgm_fla_negate_from ),
+	SGS_OBJPROP_CFUNC( "add_assign", xgm_fla_add_assign ),
+	SGS_OBJPROP_CFUNC( "sub_assign", xgm_fla_sub_assign ),
+	SGS_OBJPROP_CFUNC( "mul_assign", xgm_fla_mul_assign ),
+	SGS_OBJPROP_CFUNC( "div_assign", xgm_fla_div_assign ),
+	SGS_OBJPROP_CFUNC( "mod_assign", xgm_fla_mod_assign ),
+	SGS_OBJPROP_CFUNC( "pow_assign", xgm_fla_pow_assign ),
+	SGS_OBJPROP_CFUNC( "add", xgm_fla_add ),
+	SGS_OBJPROP_CFUNC( "sub", xgm_fla_sub ),
+	SGS_OBJPROP_CFUNC( "mul", xgm_fla_mul ),
+	SGS_OBJPROP_CFUNC( "div", xgm_fla_div ),
+	SGS_OBJPROP_CFUNC( "mod", xgm_fla_mod ),
+	SGS_OBJPROP_CFUNC( "pow", xgm_fla_pow ),
+	SGS_OBJPROP_CFUNC( "randbox", xgm_fla_randbox ),
+	SGS_OBJPROP_CFUNC( "randext", xgm_fla_randext ),
+	SGS_OBJPROP_CFUNC( "multiply_add_assign", xgm_fla_multiply_add_assign ),
+	SGS_OBJPROP_CFUNC( "lerp_to", xgm_fla_lerp_to ),
+	SGS_OBJPROP_CFUNC( "to_int8_buffer", xgm_fla_to_int8_buffer ),
+	SGS_OBJPROP_CFUNC( "to_int16_buffer", xgm_fla_to_int16_buffer ),
+	SGS_OBJPROP_CFUNC( "to_int32_buffer", xgm_fla_to_int32_buffer ),
+	SGS_OBJPROP_CFUNC( "to_int64_buffer", xgm_fla_to_int64_buffer ),
+	SGS_OBJPROP_CFUNC( "to_uint8_buffer", xgm_fla_to_uint8_buffer ),
+	SGS_OBJPROP_CFUNC( "to_uint16_buffer", xgm_fla_to_uint16_buffer ),
+	SGS_OBJPROP_CFUNC( "to_uint32_buffer", xgm_fla_to_uint32_buffer ),
+	SGS_OBJPROP_CFUNC( "to_uint64_buffer", xgm_fla_to_uint64_buffer ),
+	SGS_OBJPROP_CFUNC( "to_float32_buffer", xgm_fla_to_float32_buffer ),
+	SGS_OBJPROP_CFUNC( "to_float64_buffer", xgm_fla_to_float64_buffer ),
+	SGS_OBJPROP_END(),
+};
+
 static int xgm_fla_getindex( SGS_ARGS_GETINDEXFUNC )
 {
 	XGM_FLAHDR;
@@ -3702,46 +3720,10 @@ static int xgm_fla_getindex( SGS_ARGS_GETINDEXFUNC )
 		{
 			if( !strcmp( str, "aabb2" ) ) return xgm_fla_getindex_aabb2( C, flarr );
 			if( !strcmp( str, "aabb3" ) ) return xgm_fla_getindex_aabb3( C, flarr );
-			if( !strcmp( str, "size" ) ){ sgs_PushInt( C, flarr->size ); return SGS_SUCCESS; }
 			if( !strcmp( str, "size2" ) ){ sgs_PushInt( C, flarr->size / 2 ); return SGS_SUCCESS; }
 			if( !strcmp( str, "size3" ) ){ sgs_PushInt( C, flarr->size / 3 ); return SGS_SUCCESS; }
 			if( !strcmp( str, "size4" ) ){ sgs_PushInt( C, flarr->size / 4 ); return SGS_SUCCESS; }
 			if( !strcmp( str, "size16" ) ){ sgs_PushInt( C, flarr->size / 16 ); return SGS_SUCCESS; }
-			
-			SGS_CASE( "clear" ) return sgs_PushCFunc( C, xgm_fla_clear );
-			SGS_CASE( "set1" ) return sgs_PushCFunc( C, xgm_fla_set1 );
-			SGS_CASE( "negate" ) return sgs_PushCFunc( C, xgm_fla_negate );
-			
-			SGS_CASE( "assign" ) return sgs_PushCFunc( C, xgm_fla_assign );
-			SGS_CASE( "negate_from" ) return sgs_PushCFunc( C, xgm_fla_negate_from );
-			SGS_CASE( "add_assign" ) return sgs_PushCFunc( C, xgm_fla_add_assign );
-			SGS_CASE( "sub_assign" ) return sgs_PushCFunc( C, xgm_fla_sub_assign );
-			SGS_CASE( "mul_assign" ) return sgs_PushCFunc( C, xgm_fla_mul_assign );
-			SGS_CASE( "div_assign" ) return sgs_PushCFunc( C, xgm_fla_div_assign );
-			SGS_CASE( "mod_assign" ) return sgs_PushCFunc( C, xgm_fla_mod_assign );
-			SGS_CASE( "pow_assign" ) return sgs_PushCFunc( C, xgm_fla_pow_assign );
-			
-			SGS_CASE( "add" ) return sgs_PushCFunc( C, xgm_fla_add );
-			SGS_CASE( "sub" ) return sgs_PushCFunc( C, xgm_fla_sub );
-			SGS_CASE( "mul" ) return sgs_PushCFunc( C, xgm_fla_mul );
-			SGS_CASE( "div" ) return sgs_PushCFunc( C, xgm_fla_div );
-			SGS_CASE( "mod" ) return sgs_PushCFunc( C, xgm_fla_mod );
-			SGS_CASE( "pow" ) return sgs_PushCFunc( C, xgm_fla_pow );
-			SGS_CASE( "randbox" ) return sgs_PushCFunc( C, xgm_fla_randbox );
-			SGS_CASE( "randext" ) return sgs_PushCFunc( C, xgm_fla_randext );
-			SGS_CASE( "multiply_add_assign" ) return sgs_PushCFunc( C, xgm_fla_multiply_add_assign );
-			SGS_CASE( "lerp_to" ) return sgs_PushCFunc( C, xgm_fla_lerp_to );
-			
-			SGS_CASE( "to_int8_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_int8_buffer );
-			SGS_CASE( "to_int16_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_int16_buffer );
-			SGS_CASE( "to_int32_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_int32_buffer );
-			SGS_CASE( "to_int64_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_int64_buffer );
-			SGS_CASE( "to_uint8_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_uint8_buffer );
-			SGS_CASE( "to_uint16_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_uint16_buffer );
-			SGS_CASE( "to_uint32_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_uint32_buffer );
-			SGS_CASE( "to_uint64_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_uint64_buffer );
-			SGS_CASE( "to_float32_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_float32_buffer );
-			SGS_CASE( "to_float64_buffer" ) return sgs_PushCFunc( C, xgm_fla_to_float64_buffer );
 		}
 	}
 	else
@@ -4307,8 +4289,9 @@ sgs_ObjInterface xgm_vec2_iface[1] =
 	"vec2",
 	NULL, NULL,
 	xgm_v2_getindex, xgm_v2_setindex,
-	xgm_v2_convert, xgm_v2_serialize, xgm_v2_dump, NULL,
-	NULL, xgm_v2_expr
+	xgm_v2_convert, xgm_any_serialize, xgm_v2_dump, NULL,
+	NULL, xgm_v2_expr,
+	xgm_v2_props
 }};
 
 sgs_ObjInterface xgm_vec3_iface[1] =
@@ -4316,8 +4299,9 @@ sgs_ObjInterface xgm_vec3_iface[1] =
 	"vec3",
 	NULL, NULL,
 	xgm_v3_getindex, xgm_v3_setindex,
-	xgm_v3_convert, xgm_v3_serialize, xgm_v3_dump, NULL,
-	NULL, xgm_v3_expr
+	xgm_v3_convert, xgm_any_serialize, xgm_v3_dump, NULL,
+	NULL, xgm_v3_expr,
+	xgm_v3_props
 }};
 
 sgs_ObjInterface xgm_vec4_iface[1] =
@@ -4325,8 +4309,9 @@ sgs_ObjInterface xgm_vec4_iface[1] =
 	"vec4",
 	NULL, NULL,
 	xgm_v4_getindex, xgm_v4_setindex,
-	xgm_v4_convert, xgm_v4_serialize, xgm_v4_dump, NULL,
-	NULL, xgm_v4_expr
+	xgm_v4_convert, xgm_any_serialize, xgm_v4_dump, NULL,
+	NULL, xgm_v4_expr,
+	xgm_v4_props
 }};
 
 sgs_ObjInterface xgm_aabb2_iface[1] =
@@ -4334,8 +4319,9 @@ sgs_ObjInterface xgm_aabb2_iface[1] =
 	"aabb2",
 	NULL, NULL,
 	xgm_b2_getindex, xgm_b2_setindex,
-	xgm_b2_convert, xgm_b2_serialize, xgm_b2_dump, NULL,
-	NULL, xgm_b2_expr
+	xgm_b2_convert, xgm_any_serialize, xgm_b2_dump, NULL,
+	NULL, xgm_b2_expr,
+	xgm_b2_props
 }};
 
 sgs_ObjInterface xgm_aabb3_iface[1] =
@@ -4343,8 +4329,9 @@ sgs_ObjInterface xgm_aabb3_iface[1] =
 	"aabb3",
 	NULL, NULL,
 	xgm_b3_getindex, xgm_b3_setindex,
-	xgm_b3_convert, xgm_b3_serialize, xgm_b3_dump, NULL,
-	NULL, xgm_b3_expr
+	xgm_b3_convert, xgm_any_serialize, xgm_b3_dump, NULL,
+	NULL, xgm_b3_expr,
+	xgm_b3_props
 }};
 
 sgs_ObjInterface xgm_color_iface[1] =
@@ -4352,8 +4339,9 @@ sgs_ObjInterface xgm_color_iface[1] =
 	"color",
 	NULL, NULL,
 	xgm_col_getindex, xgm_col_setindex,
-	xgm_col_convert, xgm_col_serialize, xgm_col_dump, NULL,
-	NULL, xgm_col_expr
+	xgm_col_convert, xgm_any_serialize, xgm_col_dump, NULL,
+	NULL, xgm_col_expr,
+	xgm_col_props
 }};
 
 sgs_ObjInterface xgm_quat_iface[1] =
@@ -4361,8 +4349,9 @@ sgs_ObjInterface xgm_quat_iface[1] =
 	"quat",
 	NULL, NULL,
 	xgm_quat_getindex, xgm_quat_setindex,
-	xgm_quat_convert, xgm_quat_serialize, xgm_quat_dump, NULL,
-	NULL, xgm_quat_expr
+	xgm_quat_convert, xgm_any_serialize, xgm_quat_dump, NULL,
+	NULL, xgm_quat_expr,
+	xgm_quat_props
 }};
 
 sgs_ObjInterface xgm_mat3_iface[1] =
@@ -4370,8 +4359,9 @@ sgs_ObjInterface xgm_mat3_iface[1] =
 	"mat3",
 	NULL, NULL,
 	xgm_m3_getindex, xgm_m3_setindex,
-	xgm_m3_convert, xgm_m3_serialize, xgm_m3_dump, NULL,
-	NULL, xgm_m3_expr
+	xgm_m3_convert, xgm_any_serialize, xgm_m3_dump, NULL,
+	NULL, xgm_m3_expr,
+	xgm_m3_props
 }};
 
 sgs_ObjInterface xgm_mat4_iface[1] =
@@ -4379,8 +4369,9 @@ sgs_ObjInterface xgm_mat4_iface[1] =
 	"mat4",
 	NULL, NULL,
 	xgm_m4_getindex, xgm_m4_setindex,
-	xgm_m4_convert, xgm_m4_serialize, xgm_m4_dump, NULL,
-	NULL, xgm_m4_expr
+	xgm_m4_convert, xgm_any_serialize, xgm_m4_dump, NULL,
+	NULL, xgm_m4_expr,
+	xgm_m4_props
 }};
 
 sgs_ObjInterface xgm_floatarr_iface[1] =
@@ -4389,7 +4380,8 @@ sgs_ObjInterface xgm_floatarr_iface[1] =
 	xgm_fla_destruct, NULL,
 	xgm_fla_getindex, xgm_fla_setindex,
 	xgm_fla_convert, xgm_fla_serialize, xgm_fla_dump, NULL,
-	NULL, NULL
+	NULL, NULL,
+	xgm_fla_props
 }};
 
 

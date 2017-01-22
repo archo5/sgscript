@@ -538,13 +538,16 @@ typedef int (*sgs_OC_SlPr) ( sgs_Context*, sgs_VarObj*, int );
 /* for most purposes, interpreting memory as signed int should work */
 #define SGS_OBJPROPTYPE_FLOAT   18
 #define SGS_OBJPROPTYPE_DOUBLE  19
-/* (20-31) reserved for platform-specific basic types */
+/* special engine-defined integers */
+#define SGS_OBJPROPTYPE_SIZEVAL 20
+/* (21-31) reserved for platform-specific basic types */
 #define SGS_OBJPROPTYPE_VOIDP   32 /* void* */
 #define SGS_OBJPROPTYPE_VAR     33 /* sgs_Variable */
 #define SGS_OBJPROPTYPE_VAROBJ  34 /* sgs_VarObj* */
 #define SGS_OBJPROPTYPE_VARSTR  35 /* sgs_iStr* */
 #define SGS_OBJPROPTYPE_THREAD  36 /* sgs_Context* */
 #define SGS_OBJPROPTYPE_OBJBOOL 37 /* special case: obj->data { true = obj, false = NULL } */
+#define SGS_OBJPROPTYPE_ICONST 253 /* integer constant from 'offset_or_cb' */
 #define SGS_OBJPROPTYPE_CBFUNC 254 /* sgs_CFunc from 'offset_or_cb' */
 #define SGS_OBJPROPTYPE_CUSTOM 255 /* callback */
 
@@ -595,7 +598,7 @@ typedef struct sgs_ObjInterface
 	sgs_OC_Self call;
 	sgs_OC_Self expr;
 	
-	sgs_ObjProp* proplist;
+	const sgs_ObjProp* proplist;
 }
 sgs_ObjInterface;
 

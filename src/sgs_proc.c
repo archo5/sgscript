@@ -905,9 +905,9 @@ static void obj_gcmark_do( SGS_SHCTX, sgs_VarObj* O )
 	Object property / array accessor handling
 */
 
-sgs_ObjProp* sgs_FindProp( sgs_VarObj* O, sgs_Variable* idx )
+static const sgs_ObjProp* sgs_FindProp( sgs_VarObj* O, sgs_Variable* idx )
 {
-	sgs_ObjProp* prop = O->iface->proplist;
+	const sgs_ObjProp* prop = O->iface->proplist;
 	const char* str;
 	sgs_SizeVal slen;
 	
@@ -928,10 +928,10 @@ sgs_ObjProp* sgs_FindProp( sgs_VarObj* O, sgs_Variable* idx )
 	return NULL;
 }
 
-SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable* outvar )
+static SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable* outvar )
 {
 	void* mem;
-	sgs_ObjProp* prop = sgs_FindProp( O, idx );
+	const sgs_ObjProp* prop = sgs_FindProp( O, idx );
 	if( !prop || ( prop->flags & SGS_OBJPROP_NOREAD ) )
 		return SGS_ENOTFND;
 	
@@ -1028,6 +1028,11 @@ SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable*
 		outvar->data.I = *(int64_t*)mem;
 		return 0;
 		
+	case SGS_OBJPROPTYPE_SIZEVAL:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = *(sgs_SizeVal*)mem;
+		return 0;
+		
 	case SGS_OBJPROPTYPE_FLOAT:
 		outvar->type = SGS_VT_REAL;
 		outvar->data.R = *(float*)mem;
@@ -1069,6 +1074,11 @@ SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable*
 	case SGS_OBJPROPTYPE_OBJBOOL:
 		outvar->type = SGS_VT_BOOL;
 		outvar->data.B = O->data != NULL;
+		return 0;
+		
+	case SGS_OBJPROPTYPE_ICONST:
+		outvar->type = SGS_VT_INT;
+		outvar->data.I = (sgs_Int)(intptr_t) prop->offset_or_getcb;
 		return 0;
 		
 	case SGS_OBJPROPTYPE_CBFUNC:
@@ -1118,10 +1128,10 @@ SGSBOOL sgs_ParseIntP( SGS_CTX, sgs_Variable* var, sgs_Int* out );
 SGSBOOL sgs_ParseRealP( SGS_CTX, sgs_Variable* var, sgs_Real* out );
 SGSBOOL sgs_ParsePtrP( SGS_CTX, sgs_Variable* var, void** out );
 
-SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable* val )
+static SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable* val )
 {
 	void* mem;
-	sgs_ObjProp* prop = sgs_FindProp( O, idx );
+	const sgs_ObjProp* prop = sgs_FindProp( O, idx );
 	if( !prop || ( prop->flags & SGS_OBJPROP_NOWRITE ) )
 		return SGS_ENOTFND;
 	
@@ -1159,7 +1169,8 @@ SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable
 	case SGS_OBJPROPTYPE_I32:
 	case SGS_OBJPROPTYPE_U32:
 	case SGS_OBJPROPTYPE_I2LONG:
-	case SGS_OBJPROPTYPE_I64: {
+	case SGS_OBJPROPTYPE_I64:
+	case SGS_OBJPROPTYPE_SIZEVAL: {
 		sgs_Int v;
 		if( sgs_ParseIntP( C, val, &v ) )
 		{
@@ -1181,6 +1192,7 @@ SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable
 			case SGS_OBJPROPTYPE_U32:    *(uint32_t*)mem = v;         break;
 			case SGS_OBJPROPTYPE_I2LONG: *(signed long long*)mem = v; break;
 			case SGS_OBJPROPTYPE_I64:    *(int64_t*)mem = v;          break;
+			case SGS_OBJPROPTYPE_SIZEVAL:*(sgs_SizeVal*)mem = v;      break;
 			}
 			return 0;
 		}
@@ -1268,8 +1280,10 @@ SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Variable
 		}
 		return SGS_EINVAL;
 		
+		/* cannot edit constants */
+	case SGS_OBJPROPTYPE_ICONST:
 	case SGS_OBJPROPTYPE_CBFUNC:
-		return SGS_ENOTSUP; /* cannot edit interface data */
+		return SGS_ENOTSUP;
 		
 	case SGS_OBJPROPTYPE_CUSTOM:
 		if( prop->setcb )
@@ -3647,7 +3661,7 @@ SGSONE sgs_CreatePropList( SGS_CTX, sgs_Variable* out, sgs_Variable obj )
 	case SGS_VT_OBJECT:
 		{
 			int count = 0;
-			sgs_ObjProp* prop = obj.data.O->iface->proplist;
+			const sgs_ObjProp* prop = obj.data.O->iface->proplist;
 			if( prop )
 			{
 				while( prop->name )

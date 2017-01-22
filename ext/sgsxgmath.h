@@ -21,6 +21,9 @@ extern "C" {
 #ifndef XGM_VT
 #define XGM_VT float
 #endif
+#ifndef XGM_PROPTYPE
+#define XGM_PROPTYPE SGS_OBJPROPTYPE_FLOAT
+#endif
 
 #define XGM_SMALL_VT 0.0001f
 

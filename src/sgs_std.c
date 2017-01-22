@@ -938,10 +938,10 @@ static int sgsstd_array_destruct( SGS_CTX, sgs_VarObj* obj )
 	return 0;
 }
 
-static sgs_ObjProp sgsstd_array_props[] =
+static const sgs_ObjProp sgsstd_array_props[] =
 {
-	SGS_OBJPROP_OFFSET( "size", offsetof( sgsstd_array_header_t, size ), SGS_OBJPROPTYPE_I32, SGS_OBJPROP_NOWRITE ),
-	SGS_OBJPROP_OFFSET( "capacity", offsetof( sgsstd_array_header_t, mem ), SGS_OBJPROPTYPE_I32, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_OFFSET( "size", offsetof( sgsstd_array_header_t, size ), SGS_OBJPROPTYPE_SIZEVAL, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_OFFSET( "capacity", offsetof( sgsstd_array_header_t, mem ), SGS_OBJPROPTYPE_SIZEVAL, SGS_OBJPROP_NOWRITE ),
 	SGS_OBJPROP_CALLBACK( "first", sgsstd_array_prop_first_read, sgsstd_array_prop_first_write, SGS_OBJPROP_NOGCMARK ),
 	SGS_OBJPROP_CALLBACK( "last", sgsstd_array_prop_last_read, sgsstd_array_prop_last_write, SGS_OBJPROP_NOGCMARK ),
 	SGS_OBJPROP_END(),
@@ -1531,7 +1531,7 @@ static int sgsstd_closure_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjProp sgsstd_closure_props[] =
+static const sgs_ObjProp sgsstd_closure_props[] =
 {
 	SGS_OBJPROP_CFUNC( "apply", sgs_specfn_apply ),
 	SGS_OBJPROP_END(),
@@ -2530,7 +2530,7 @@ static int sgsstd_event_dump( SGS_CTX, sgs_VarObj* obj, int maxdepth )
 	return sgs_PushString( C, bfr );
 }
 
-static sgs_ObjProp sgsstd_event_props[] =
+static const sgs_ObjProp sgsstd_event_props[] =
 {
 	SGS_OBJPROP_OFFSET( "signaled", 0, SGS_OBJPROPTYPE_OBJBOOL, 0 ),
 	SGS_OBJPROP_END(),

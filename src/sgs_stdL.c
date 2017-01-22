@@ -1445,7 +1445,7 @@ static int sgsstd_fmtstream_prop_stream_offset_read( SGS_CTX, sgs_VarObj* obj )
 	return SGS_SUCCESS;
 }
 
-static sgs_ObjProp sgsstd_fmtstream_props[] =
+static const sgs_ObjProp sgsstd_fmtstream_props[] =
 {
 	SGS_OBJPROP_CALLBACK( "at_end", sgsstd_fmtstream_prop_at_end_read, NULL, 0 ),
 	SGS_OBJPROP_CALLBACK( "stream_offset", sgsstd_fmtstream_prop_stream_offset_read, NULL, 0 ),
@@ -2220,7 +2220,7 @@ static int sgsstd_file_convert( SGS_CTX, sgs_VarObj* obj, int type )
 }
 
 
-static sgs_ObjProp sgsstd_file_props[] =
+static const sgs_ObjProp sgsstd_file_props[] =
 {
 	SGS_OBJPROP_CALLBACK( "is_open", sgsstd_file_prop_is_open_read, NULL, 0 ),
 	SGS_OBJPROP_CALLBACK( "offset", sgsstd_file_prop_offset_read, NULL, 0 ),
@@ -4279,7 +4279,7 @@ static int utf8it_getnext( SGS_CTX, sgs_VarObj* obj, int what )
 	}
 }
 
-static sgs_ObjProp utf8_iterator_props[] =
+static const sgs_ObjProp utf8_iterator_props[] =
 {
 	SGS_OBJPROP_OFFSET( "string", offsetof( utf8iter, str ), SGS_OBJPROPTYPE_VARSTR, SGS_OBJPROP_NOWRITE ),
 	SGS_OBJPROP_OFFSET( "offset", offsetof( utf8iter, i ), SGS_OBJPROPTYPE_U32, 0 ),
