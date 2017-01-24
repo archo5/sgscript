@@ -260,9 +260,32 @@ rbbi_tests =
 foreach( test : rbbi_tests )
 {
 	(h,h0,h1) = ray_aabb2_intersect( test[0], test[1], test[2] );
-	testEqual( h, test[3], test .. " - result" );
-	testClose( h0, test[4], test .. " - entry" );
-	testClose( h1, test[5], test .. " - exit" );
+	testEqual( h, test[3], sgson_encode( test ) .. " - result" );
+	testClose( h0, test[4], sgson_encode( test ) .. " - entry" );
+	testClose( h1, test[5], sgson_encode( test ) .. " - exit" );
+}
+
+
+	section( "utility functions - ray_line2_intersect" );
+
+t_lp1 = vec2(-1,-1);
+t_lp2 = vec2(6,3);
+rl2i_tests =
+[
+	[ t_rp2, vec2(1,0), t_lp1, t_lp2, false, null, null ],
+	[ t_rp1, vec2(1,1), t_lp1, t_lp2, false, null, null ],
+	[ t_rp2, vec2(0,-1), t_rp1, t_lp2, true, 1, 0.333333 ],
+	[ t_rp2, vec2(0,1), t_rp1, t_lp2, false, -1, 0.333333 ],
+	[ t_rp1, vec2(0,-1), t_lp1, t_lp2, true, 3.42857, 0.142857 ],
+	[ t_lp1, t_lp2 - t_lp1, t_lp1, t_lp2, false, null, null ],
+];
+
+foreach( test : rl2i_tests )
+{
+	(h,h0,h1) = ray_line2_intersect( test[0], test[1], test[2], test[3] );
+	testEqual( h, test[4], sgson_encode( test ) .. " - result" );
+	testClose( h0, test[5], sgson_encode( test ) .. " - factor 1" );
+	testClose( h1, test[6], sgson_encode( test ) .. " - factor 2" );
 }
 
 

@@ -736,10 +736,8 @@ SGSZERO sgs_Msg( SGS_CTX, int type, const char* what, ... )
 	va_list args;
 	char* ptr = buf;
 	
-	/* error level filter */
-	if( type < ( C->state & SGS_STATE_INSIDE_API ? C->apilev : C->minlev ) ) return 0;
-	/* error suppression */
-	if( C->sf_last && C->sf_last->errsup > 0 ) return 0;
+	if( !sgs_IsMsgVisible( C, type ) )
+		return 0;
 	
 	va_start( args, what );
 	cnt = SGS_VSPRINTF_LEN( what, args );
@@ -785,6 +783,17 @@ SGSZERO sgs_Msg( SGS_CTX, int type, const char* what, ... )
 	sgs_membuf_destroy( &info, C );
 	
 	return 0;
+}
+
+SGSBOOL sgs_IsMsgVisible( SGS_CTX, int type )
+{
+	/* error level filter */
+	if( type < ( C->state & SGS_STATE_INSIDE_API ? C->apilev : C->minlev ) )
+		return 0;
+	/* error suppression */
+	if( C->sf_last && C->sf_last->errsup > 0 )
+		return 0;
+	return 1;
 }
 
 

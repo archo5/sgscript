@@ -721,6 +721,7 @@ SGS_APIFUNC void sgs_SetParserConfig( SGS_CTX, sgs_ParserConfig* cfg );
 SGS_APIFUNC void sgs_GetMsgFunc( SGS_CTX, sgs_MsgFunc* outf, void** outc );
 SGS_APIFUNC void sgs_SetMsgFunc( SGS_CTX, sgs_MsgFunc func, void* ctx );
 SGS_APIFUNC SGSZERO sgs_Msg( SGS_CTX, int type, const char* what, ... );
+SGS_APIFUNC SGSBOOL sgs_IsMsgVisible( SGS_CTX, int type );
 
 typedef int (*sgs_ErrorOutputFunc) ( void*, const char*, ... );
 #define SGS_ERRORINFO_STACK 0x01

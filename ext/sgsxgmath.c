@@ -4079,6 +4079,46 @@ static int xgm_ray_aabb2_intersect( SGS_CTX )
 	return 3;
 }
 
+static int xgm_ray_line2_intersect( SGS_CTX )
+{
+	XGM_VT rpos[2], rdir[2], lp1[2], lp2[2], ro_sub_p1[2], p2_sub_p1[2], rperp[2], dot, t1, t2;
+	SGSFN( "ray_line2_intersect" );
+	if( !sgs_LoadArgs( C, "xxxx",
+		sgs_ArgCheck_Vec2, rpos, sgs_ArgCheck_Vec2, rdir,
+		sgs_ArgCheck_Vec2, lp1, sgs_ArgCheck_Vec2, lp2 ) )
+		return 0;
+	
+	ro_sub_p1[0] = rpos[0] - lp1[0];
+	ro_sub_p1[1] = rpos[1] - lp1[1];
+	
+	p2_sub_p1[0] = lp2[0] - lp1[0];
+	p2_sub_p1[1] = lp2[1] - lp1[1];
+	
+	rperp[0] = -rdir[1];
+	rperp[1] = rdir[0];
+	
+	dot = XGM_VMUL_INNER2( p2_sub_p1, rperp );
+	if( fabs( dot ) < XGM_SMALL_VT )
+	{
+		sgs_PushBool( C, 0 );
+		return 1;
+	}
+	
+	t1 = ( p2_sub_p1[0] * ro_sub_p1[1] - p2_sub_p1[1] * ro_sub_p1[0] ) / dot;
+	t2 = XGM_VMUL_INNER2( ro_sub_p1, rperp ) / dot;
+	
+	if( t2 < 0 || t2 > 1 )
+	{
+		sgs_PushBool( C, 0 );
+		return 1;
+	}
+	
+	sgs_PushBool( C, t1 >= 0 );
+	sgs_PushReal( C, t1 );
+	sgs_PushReal( C, t2 );
+	return 3;
+}
+
 static int xgm_ray_plane_intersect( SGS_CTX )
 {
 	/* vec3 ray_pos, vec3 ray_dir, vec4 plane;
@@ -5003,6 +5043,7 @@ static sgs_RegFuncConst xgm_fconsts[] =
 	{ "floatarray_from_float64_buffer", xgm_floatarray_from_float64_buffer },
 	
 	{ "ray_aabb2_intersect", xgm_ray_aabb2_intersect },
+	{ "ray_line2_intersect", xgm_ray_line2_intersect },
 	{ "ray_plane_intersect", xgm_ray_plane_intersect },
 	{ "ray_sphere_intersect", xgm_ray_sphere_intersect },
 	{ "distance_lines", xgm_distance_lines },

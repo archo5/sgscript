@@ -1471,7 +1471,6 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize,
 	if( type == SGS_ENOTFND )
 	{
 		char* p;
-		const char* err;
 		sgs_VarObj* O = obj->data.O;
 		sgs_Variable cidx = *idx;
 		
@@ -1496,10 +1495,13 @@ static SGSRESULT vm_runerr_getprop( SGS_CTX, SGSRESULT type, StkIdx origsize,
 			return vm_getprop( C, outmaybe, &tmp, &cidx, isprop );
 		}
 		
-		err = isprop ? "Readable property not found" : "Cannot find readable value by index";
-		fstk_push( C, &cidx );
-		p = sgs_ToString( C, -1 );
-		sgs_Msg( C, SGS_WARNING, "%s: \"%s\"", err, p );
+		if( sgs_IsMsgVisible( C, SGS_WARNING ) )
+		{
+			const char* err = isprop ? "Readable property not found" : "Cannot find readable value by index";
+			fstk_push( C, &cidx );
+			p = sgs_ToString( C, -1 );
+			sgs_Msg( C, SGS_WARNING, "%s: \"%s\"", err, p );
+		}
 	}
 	else if( type == SGS_EBOUNDS )
 	{

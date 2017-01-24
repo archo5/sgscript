@@ -54,6 +54,24 @@ result `SUCCESS`
 check_err ``
 check_out `1`
 
+// `no allocs for isset`
+rec ``
+exec `t = map{};
+isset( _G, "a" ); // prealloc stack frame
+allocs1 = sys_stat(4);
+v1 = isset( t, "a" ); // string key
+v2 = isset( t, 5 ); // integer key
+println(sys_stat(4) - allocs1);
+println(v1);
+println(v2);
+`
+result `SUCCESS`
+check_err ``
+check_out `0
+false
+false
+`
+
 // `< 10 allocs for class definition`
 rec ``
 exec `global NEWCLASS = null; // ignore global table resize
