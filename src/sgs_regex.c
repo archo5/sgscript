@@ -1,1039 +1,1267 @@
 
-#include <ctype.h>
+
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
-
-#define MAX(a,b) ((a)>(b)?(a):(b))
-
+#include <assert.h>
 
 #define RX_NEED_DEFAULT_MEMFUNC
+#define _srx_Context rxExecute
 #include "sgs_regex.h"
 
 
+#define RX_LOG( x ) /*x*/
+
+
 #define RX_MAX_CAPTURES 10
-
-
-#define RX_MALLOC( bytes ) R->memfn( R->memctx, NULL, bytes )
-#define RX_ALLOC_N( what, N ) (what*) R->memfn( R->memctx, NULL, sizeof( what ) * ((size_t)(N)) )
-#define RX_ALLOC( what ) RX_ALLOC_N( what, 1 )
-#define RX_FREE( ptr ) R->memfn( R->memctx, ptr, 0 )
-
-#define RX_IS_ALPHA( x ) rx_isalpha( x )
-#define RX_EQUALIZE( x ) rx_tolower( x )
-
-
-#define RIT_MATCH  1 /* matching */
-#define RIT_RANGE  2
-#define RIT_SPCBEG 3
-#define RIT_SPCEND 4
-#define RIT_BKREF  5
-#define RIT_EITHER 11 /* control */
-#define RIT_SUBEXP 12
-
-#define RIF_LAZY   0x01
-#define RIF_INVERT 0x02
+#define RX_MAX_SUBEXPRS 255
+#define RX_MAX_REPEATS 0xffffffff
+#define RX_NULL_OFFSET 0xffffffff
+#define RX_NULL_INSTROFF 0x0fffffff
 
 #define RCF_MULTILINE 0x01 /* ^/$ matches beginning/end of line too */
 #define RCF_CASELESS  0x02 /* pre-equalized case for match/range */
 #define RCF_DOTALL    0x04 /* "." is compiled as "[^]" instead of "[^\r\n]" */
 
-#ifndef RXLOG
-#define RXLOG 0
-#endif
 
-#if RXLOG
-#define RXLOGINFO( x ) x
-#else
-#define RXLOGINFO( x )
-#endif
-#define RX_LOGLIM( str, strend, off ) (int)((strend)-(str)<(off)?(strend)-(str):(off)), str
+#define RX_OP_MATCH_DONE        0 /* end of regexp */
+#define RX_OP_MATCH_CHARSET     1 /* [...] / character ranges */
+#define RX_OP_MATCH_CHARSET_INV 2 /* [^...] / inverse character ranges */
+#define RX_OP_MATCH_STRING      3 /* plain sequence of non-special characters */
+#define RX_OP_MATCH_BACKREF     4 /* previously found capture group */
+#define RX_OP_MATCH_SLSTART     5 /* string / line start */
+#define RX_OP_MATCH_SLEND       6 /* string / line end */
+#define RX_OP_REPEAT_GREEDY     7 /* try repeated match before proceeding */
+#define RX_OP_REPEAT_LAZY       8 /* try proceeding before repeated match */
+#define RX_OP_JUMP              9 /* jump to the specified instruction */
+#define RX_OP_BACKTRK_JUMP     10 /* jump if backtracked */
+#define RX_OP_CAPTURE_START    11 /* save starting position of capture range */
+#define RX_OP_CAPTURE_END      12 /* save ending position of capture range */
 
 
-static int rx_isalpha( RX_Char c )
+typedef struct rxInstr
 {
-	return ( c >= 'a' && c <= 'z' )
-	    || ( c >= 'A' && c <= 'Z' );
+	uint32_t op : 4;     /* opcode */
+	uint32_t start : 28; /* pointer to starting instruction in range */
+	uint32_t from;       /* beginning of character data / min. repeat count / capture ID */
+	uint32_t len;        /* length of character data / max. repeat count */
 }
+rxInstr;
 
-static RX_Char rx_tolower( RX_Char c )
+#define RX_STATE_BACKTRACKED 0x1
+typedef struct rxState
+{
+	uint32_t off : 28;  /* offset in string */
+	uint32_t flags : 4;
+	uint32_t instr;     /* instruction */
+	uint32_t numiters;  /* current iteration count / previous capture value */
+}
+rxState;
+
+typedef struct rxSubexpr
+{
+	uint32_t start;
+	uint32_t section_start;
+	uint32_t repeat_start;
+	uint8_t  capture_slot;
+}
+rxSubexp;
+
+typedef struct rxCompiler
+{
+	srx_MemFunc memfn;
+	void*      memctx;
+	
+	rxInstr*   instrs;
+	size_t     instrs_count;
+	size_t     instrs_mem;
+	
+	rxChar*    chars;
+	size_t     chars_count;
+	size_t     chars_mem;
+	
+	uint8_t    flags;
+	uint8_t    capture_count;
+	int        errcode;
+	int        errpos;
+	
+	rxSubexp   subexprs[ RX_MAX_SUBEXPRS ];
+	int        subexprs_count;
+}
+rxCompiler;
+
+#define RX_LAST_INSTR( c ) ((c)->instrs[ (c)->instrs_count - 1 ])
+#define RX_LAST_CHAR( c ) ((c)->chars[ (c)->chars_count - 1 ])
+#define RX_LAST_SUBEXPR( c ) ((c)->subexprs[ (c)->subexprs_count - 1 ])
+
+struct rxExecute
+{
+	srx_MemFunc memfn;
+	void*      memctx;
+	
+	/* compiled program */
+	rxInstr*   instrs; /* instruction data (opcodes and fixed-length arguments) */
+	rxChar*    chars;  /* character data (ranges and plain sequences for opcodes) */
+	uint8_t    flags;
+	uint8_t    capture_count;
+	
+	/* runtime data */
+	rxState*   states;
+	size_t     states_count;
+	size_t     states_mem;
+	uint32_t*  iternum;
+	size_t     iternum_count;
+	size_t     iternum_mem;
+	const rxChar* str;
+	uint32_t   captures[ RX_MAX_CAPTURES ][2];
+};
+typedef struct rxExecute rxExecute;
+
+#define RX_NUM_ITERS( e ) ((e)->iternum[ (e)->iternum_count - 1 ])
+#define RX_LAST_STATE( e ) ((e)->states[ (e)->states_count - 1 ])
+
+
+#define RX_STRLITBUF( x ) (x), (sizeof(x)-1)
+#define rxIsDigit( v ) ((v) >= '0' && (v) <= '9')
+
+static rxChar rxToLower( rxChar c )
 {
 	if( c >= 'A' && c <= 'Z' )
-		return (RX_Char)( c - 'A' + 'a' );
+		return (rxChar)( c - 'A' + 'a' );
+	return c;
+}
+static rxChar rxSwapCase( rxChar c )
+{
+	if( c >= 'A' && c <= 'Z' )
+		return (rxChar)( c - 'A' + 'a' );
+	else if( c >= 'a' && c <= 'z' )
+		return (rxChar)( c - 'a' + 'A' );
 	return c;
 }
 
-
-typedef struct _regex_item regex_item;
-struct _regex_item
+static int rxMemCaseEq( const rxChar* a, const rxChar* b, size_t sz )
 {
-	/* structure */
-	regex_item* prev;
-	regex_item* next;
-	regex_item* ch, *ch2;
-	regex_item* pos;
-	
-	RX_Char* range;
-	int count;
-	
-	int type, flags;
-	RX_Char a;
-	int min, max;
-	
-	/* match state */
-	const RX_Char *matchbeg, *matchend;
-	int counter;
-};
-
-struct _srx_Context
-{
-	/* structure */
-	regex_item*    root;
-	int            flags;
-	
-	/* memory */
-	srx_MemFunc    memfn;
-	void*          memctx;
-	
-	/* captures */
-	regex_item*    caps[ RX_MAX_CAPTURES ];
-	int            numcaps;
-	
-	/* temporary data */
-	const RX_Char* string;
-	const RX_Char* stringend;
-};
-
-typedef struct _match_ctx
-{
-	const RX_Char* string;
-	const RX_Char* stringend;
-	regex_item*    item;
-	srx_Context*   R;
-}
-match_ctx;
-
-
-static int regex_test( const RX_Char* str, match_ctx* ctx );
-
-
-static int regex_match_once( match_ctx* ctx )
-{
-	int i;
-	regex_item* item = ctx->item;
-	const RX_Char* str = item->matchend;
-	RXLOGINFO( printf( "type %d char %d('%c') action at %p (%.*s)\n",
-		item->type, (int) item->a, item->a, str, RX_LOGLIM(str,ctx->stringend,5) ) );
-	switch( item->type )
+	size_t i;
+	for( i = 0; i < sz; ++i )
 	{
-	case RIT_MATCH:
-		if( str >= ctx->stringend )
-			break;
+		if( rxToLower( a[ i ] ) != rxToLower( b[ i ] ) )
+			return 0;
+	}
+	return 1;
+}
+
+static int rxMatchCharset( const rxChar* ch, const rxChar* charset, size_t cslen, int ignore_case )
+{
+	const rxChar* cc = charset;
+	const rxChar* charset_end = charset + cslen;
+	if( ignore_case )
+	{
+		while( cc != charset_end )
 		{
-			RX_Char ch = *str;
-			if( ctx->R->flags & RCF_CASELESS )
-				ch = RX_EQUALIZE( *str );
-			if( ch == item->a )
-			{
-				item->matchend++;
+			rxChar occ = rxSwapCase( *ch );
+			if( *ch >= cc[0] && *ch <= cc[1] )
 				return 1;
-			}
-		}
-		break;
-	case RIT_RANGE:
-		if( str >= ctx->stringend )
-			break;
-		{
-			RX_Char ch = *str;
-			int inv = ( item->flags & RIF_INVERT ) != 0, inrange = 0;
-			if( ctx->R->flags & RCF_CASELESS )
-				ch = RX_EQUALIZE( *str );
-			for( i = 0; i < item->count*2; i += 2 )
-			{
-				if( ch >= item->range[i] && ch <= item->range[i+1] )
-				{
-					inrange = 1;
-					break;
-				}
-			}
-			if( inrange ^ inv )
-			{
-				item->matchend++;
+			if( occ >= cc[0] && occ <= cc[1] )
 				return 1;
-			}
+			cc += 2;
 		}
-		break;
-	case RIT_SPCBEG:
-		if( ctx->R->flags & RCF_MULTILINE && item->matchend < ctx->stringend && ( *item->matchend == '\n' || *item->matchend == '\r' ) )
+	}
+	else
+	{
+		while( cc != charset_end )
 		{
-			if( *item->matchend == '\r' && item->matchend[1] == '\n' )
-				item->matchend++;
-			item->matchend++;
-			item->matchbeg = item->matchend;
-			return 1;
-		}
-		return ctx->string == item->matchend;
-	case RIT_SPCEND:
-		if( ctx->R->flags & RCF_MULTILINE && item->matchend < ctx->stringend && ( *item->matchend == '\n' || *item->matchend == '\r' ) )
-		{
-			return 1;
-		}
-		return str >= ctx->stringend;
-	case RIT_BKREF:
-		{
-			regex_item* cap = ctx->R->caps[ (int) item->a ];
-			ptrdiff_t len = cap->matchend - cap->matchbeg;
-			ptrdiff_t len2 = ctx->stringend - str;
-			if( len2 >= len && memcmp( cap->matchbeg, str, (size_t) len ) == 0 )
-			{
-				item->matchend += len;
+			if( *ch >= cc[0] && *ch <= cc[1] )
 				return 1;
-			}
+			cc += 2;
 		}
-		break;
-	case RIT_SUBEXP:
-		{
-			match_ctx cc;
-			{
-				cc.string = ctx->string;
-				cc.stringend = ctx->stringend;
-				cc.item = item->pos ? item->pos : item->ch;
-				cc.R = ctx->R;
-			}
-			if( regex_test( str, &cc ) )
-			{
-				regex_item* p = item->ch;
-				while( p->next )
-					p = p->next;
-				item->pos = NULL;
-				item->matchend = p->matchend;
-				return 1;
-			}
-		}
-		break;
 	}
 	return 0;
 }
 
-static int regex_match_many( match_ctx* ctx )
-{
-	/* returns whether matched */
-	regex_item* item = ctx->item;
-	item->matchend = item->matchbeg;
-	if( item->type == RIT_EITHER )
-	{
-		regex_item* chi = item->counter ? item->ch2 : item->ch;
-		match_ctx cc;
-		{
-			cc.string = ctx->string;
-			cc.stringend = ctx->stringend;
-			cc.item = chi;
-			cc.R = ctx->R;
-		}
-		if( regex_test( item->matchbeg, &cc ) )
-		{
-			regex_item* p = chi;
-			while( p->next )
-				p = p->next;
-			item->matchend = p->matchend;
-			return 1;
-		}
-		return 0;
-	}
-	else
-	{
-		int i;
-		for( i = 0; i < item->counter; ++i )
-		{
-			if( item->matchend >= ctx->stringend && item->type != RIT_SPCEND && item->type != RIT_EITHER && item->type != RIT_SUBEXP )
-			{
-				item->counter = item->flags & RIF_LAZY ? item->max : i;
-				RXLOGINFO( printf( "stopped while matching, counter = %d, %d between %d and %d?\n", item->counter, i, item->min, item->max ) );
-				return i >= item->min && i <= item->max;
-			}
-			if( !regex_match_once( ctx ) )
-			{
-				item->counter = item->flags & RIF_LAZY ? item->max : i;
-				RXLOGINFO( printf( "did not match, counter reset to %d\n", item->counter ) );
-				return i >= item->min && i <= item->max;
-			}
-			RXLOGINFO( else printf( "matched\n" ) );
-		}
-		return 1;
-	}
-}
 
-static void regex_full_reset( regex_item* p );
-static void regex_reset_one( regex_item* p )
+void rxDumpToFile( rxInstr* instrs, rxChar* chars, FILE* fp )
 {
-	if( p->ch ) regex_full_reset( p->ch );
-	if( p->ch2 ) regex_full_reset( p->ch2 );
-	p->pos = p->ch;
-	p->matchbeg = p->matchend = NULL;
-	p->counter = p->flags & RIF_LAZY ? p->min : p->max;
-}
-static void regex_full_reset( regex_item* p )
-{
-	while( p )
-	{
-		regex_reset_one( p );
-		p = p->next;
-	}
-}
-
-static regex_item* regex_lastch( regex_item* item )
-{
-	regex_item* p = item->ch;
-	while( p && p->next )
-		p = p->next;
-	return p;
-}
-
-static int regex_subexp_backtrack( regex_item* item )
-{
-	int chgh = 0;
-	regex_item* p = item->pos ? item->pos : regex_lastch( item );
-	
-	while( p )
-	{
-		RXLOGINFO( printf( "backtracker at type %d char %d\n", p->type, (int) p->a ) );
-		if( chgh && p->type == RIT_SUBEXP && regex_subexp_backtrack( p ) )
-			break;
-		else if( p->flags & RIF_LAZY )
-		{
-			p->counter++;
-			if( p->counter <= p->max )
-				break;
-		}
-		else
-		{
-			p->counter--;
-			if( p->counter >= p->min )
-				break;
-		}
-		RXLOGINFO( printf( "subexp backtrack - reset current, move back\n" ) );
-		regex_reset_one( p );
-		p = p->prev;
-		chgh = 1;
-	}
-	
-	RXLOGINFO( printf( "subexp backtrack - %s\n", p ? "success" : "failure" ) );
-	RXLOGINFO( if( p ) printf( "subexp-backtracked to type %d ctr=%d min=%d max=%d\n", p->type, p->counter, p->min, p->max ) );
-	
-	return !!p;
-}
-
-static int regex_test( const RX_Char* str, match_ctx* ctx )
-{
-	regex_item* p = ctx->item;
-	p->matchbeg = str;
-	
+	size_t i;
+	rxInstr* ip = instrs;
+	fprintf( fp, "instructions\n{\n" );
 	for(;;)
 	{
-		int res;
-		match_ctx cc;
+		fprintf( fp, "  [%03u] ", (unsigned) ( ip - instrs ) );
+		switch( ip->op )
 		{
-			cc.string = ctx->string;
-			cc.stringend = ctx->stringend;
-			cc.item = p;
-			cc.R = ctx->R;
-		}
-		RXLOGINFO( printf( "match_many: item %p type %d at position %p (%.*s)\n",
-			(void*) p, p->type, p->matchbeg, RX_LOGLIM(p->matchbeg,ctx->stringend,5) ) );
-		res = regex_match_many( &cc );
-		if( res )
-		{
-			p = p->next;
-			if( !p )
-			{
-				RXLOGINFO( printf( "test of subexp %p SUCCEEDED\n", (void*) ctx->item ) );
-				return 1;
-			}
-			RXLOGINFO( printf( "moving on to type %d action\n", p->type ) );
-			p->matchbeg = p->prev->matchend;
-		}
-		else
-		{
-			int chgh = 0;
-			while( p )
-			{
-				if( chgh && p->type == RIT_SUBEXP && regex_subexp_backtrack( p ) )
-					break;
-				else if( p->flags & RIF_LAZY )
-				{
-					p->counter++;
-					if( p->counter <= p->max )
-						break;
-				}
-				else
-				{
-					p->counter--;
-					if( p->counter >= p->min )
-						break;
-				}
-				RXLOGINFO( printf( "backtrack, reset current\n" ) );
-				regex_reset_one( p );
-				p = p->prev;
-				chgh = 1;
-			}
-			if( !p )
-			{
-				RXLOGINFO( printf( "test of subexp %p BT-ENDED\n", (void*) ctx->item ) );
-				return 0;
-			}
-		}
-	}
-}
-
-static int regex_test_start( const RX_Char* str, match_ctx* ctx )
-{
-	regex_item* p = ctx->item;
-	RXLOGINFO( printf( "test start - counter reset\n" ) );
-	regex_reset_one( p );
-	return regex_test( str, ctx );
-}
-
-
-/*
-	mapping:
-	- [^a-zA-Z] ... RIT_RANGE, optional RIF_INVERT
-	- "." ... empty RIT_RANGE + RIF_INVERT
-	- "\s" and others ... predefined RIT_RANGE with optional RIF_INVERT
-	- "|" ... RIT_EITHER
-	- "(..)" ... RIT_SUBEXP
-	- "?" ... range = [0,1]
-	- "*" ... range = [0,INT_MAX]
-	- "+" ... range = [1,INT_MAX]
-	- "{1,5}" ... range = [1,5] (other ranges mapped similarly)
-	- "^" ... RIT_SPCBEG
-	- "$" ... RIT_SPCEND
-	- "\1" ... RIT_BKREF
-*/
-
-static void regex_free_item( srx_Context* R, regex_item* item );
-static void regex_dealloc_item( srx_Context* R, regex_item* item )
-{
-	if( item->range )
-		RX_FREE( item->range );
-	if( item->ch ) regex_free_item( R, item->ch );
-	if( item->ch2 ) regex_free_item( R, item->ch2 );
-	RX_FREE( item );
-}
-
-static void regex_free_item( srx_Context* R, regex_item* item )
-{
-	regex_item *p, *c;
-	if( !item )
-		return;
-	p = item->prev;
-	while( p )
-	{
-		c = p;
-		p = p->prev;
-		regex_dealloc_item( R, c );
-	}
-	p = item->next;
-	while( p )
-	{
-		c = p;
-		p = p->next;
-		regex_dealloc_item( R, c );
-	}
-	regex_dealloc_item( R, item );
-}
-
-static void regex_level( regex_item** pitem )
-{
-	/* TODO: balanced/non-(pseudo-)binary leveling */
-	regex_item* item = *pitem;
-	while( item )
-	{
-		if( item->type == RIT_EITHER )
-		{
-			regex_item* next = item->next;
-			regex_level( &next );
-			
-			if( item->prev )
-			{
-				item->prev->next = NULL;
-				item->prev = NULL;
-			}
-			if( item->next )
-			{
-				item->next->prev = NULL;
-				item->next = NULL;
-			}
-			
-			item->ch = *pitem;
-			item->ch2 = next;
-			
-			*pitem = item;
-			return;
-		}
-		item = item->next;
-	}
-}
-
-static int regex_real_compile( srx_Context* R, int* cel, const RX_Char** pstr, const RX_Char* pend, int sub, regex_item** out )
-{
-#define _RX_ALLOC_NODE( ty ) \
-	item = RX_ALLOC( regex_item ); \
-	memset( item, 0, sizeof(*item) ); \
-	if( citem ) \
-	{ \
-		citem->next = item; \
-		item->prev = citem; \
-	} \
-	item->type = ty; \
-	item->min = 1; \
-	item->max = 1;
-
-#define _RXE( err ) for(;;){ error = err; goto fail; }
-	
-	const RX_Char* s = *pstr;
-	regex_item* item = NULL, *citem = NULL;
-	int error = 0;
-	while( s < pend )
-	{
-		if( sub && *s == ')' )
+		case RX_OP_MATCH_DONE:
+			fprintf( fp, "MATCH_DONE\n" );
 			break;
+			
+		case RX_OP_MATCH_CHARSET:
+		case RX_OP_MATCH_CHARSET_INV:
+			fprintf( fp, "%s (ranges[%u]=",
+				ip->op == RX_OP_MATCH_CHARSET ? "MATCH_CHARSET" : "MATCH_CHARSET_INV",
+				(unsigned) ip->len );
+			for( i = ip->from; i < ip->from + ip->len; ++i )
+			{
+				rxChar ch = chars[ i ];
+				if( ( i - ip->from ) % 2 == 1 )
+					fprintf( fp, "-" );
+				if( ch < 32 || ch > 126 )
+					fprintf( fp, "[%u]", (unsigned) (rxUChar) ch );
+				else
+					fprintf( fp, "%c", ch );
+			}
+			fprintf( fp, ")\n" );
+			break;
+			
+		case RX_OP_MATCH_STRING:
+			fprintf( fp, "MATCH_STRING (str[%u]=", (unsigned) ip->len );
+			for( i = ip->from; i < ip->from + ip->len; ++i )
+			{
+				rxChar ch = chars[ i ];
+				if( ch < 32 || ch > 126 )
+					fprintf( fp, "[%u]", (unsigned) (rxUChar) ch );
+				else
+					fprintf( fp, "%c", ch );
+			}
+			fprintf( fp, ")\n" );
+			break;
+			
+		case RX_OP_MATCH_BACKREF:
+			fprintf( fp, "MATCH_BACKREF (slot=%d)\n", (int) ip->from );
+			break;
+			
+		case RX_OP_MATCH_SLSTART:
+			fprintf( fp, "MATCH_SLSTART\n" );
+			break;
+			
+		case RX_OP_MATCH_SLEND:
+			fprintf( fp, "MATCH_SLEND\n" );
+			break;
+			
+		case RX_OP_REPEAT_GREEDY:
+			fprintf( fp, "REPEAT_GREEDY (%u-%u, jump=%u)\n", (unsigned) ip->from, (unsigned) ip->len, (unsigned) ip->start );
+			break;
+			
+		case RX_OP_REPEAT_LAZY:
+			fprintf( fp, "REPEAT_LAZY (%u-%u, jump=%u)\n", (unsigned) ip->from, (unsigned) ip->len, (unsigned) ip->start );
+			break;
+			
+		case RX_OP_JUMP:
+			fprintf( fp, "JUMP (to=%u)\n", (unsigned) ip->start );
+			break;
+			
+		case RX_OP_BACKTRK_JUMP:
+			fprintf( fp, "BACKTRK_JUMP (to=%u)\n", (unsigned) ip->start );
+			break;
+			
+		case RX_OP_CAPTURE_START:
+			fprintf( fp, "CAPTURE_START (slot=%d)\n", (int) ip->from );
+			break;
+			
+		case RX_OP_CAPTURE_END:
+			fprintf( fp, "CAPTURE_END (slot=%d)\n", (int) ip->from );
+			break;
+			
+		}
+		if( ip->op == RX_OP_MATCH_DONE )
+			break;
+		ip++;
+	}
+	fprintf( fp, "}\n" );
+}
+
+
+static void rxInitCompiler( rxCompiler* c, srx_MemFunc memfn, void* memctx )
+{
+	c->memfn = memfn;
+	c->memctx = memctx;
+	
+	c->instrs = NULL;
+	c->instrs_count = 0;
+	c->instrs_mem = 0;
+	
+	c->chars = NULL;
+	c->chars_count = 0;
+	c->chars_mem = 0;
+	
+	c->flags = 0;
+	c->capture_count = 0;
+	c->errcode = RXSUCCESS;
+	c->errpos = 0;
+	
+	c->subexprs_count = 1;
+	c->subexprs[ 0 ].start = 1;
+	c->subexprs[ 0 ].section_start = 1;
+	c->subexprs[ 0 ].repeat_start = 1;
+	c->subexprs[ 0 ].capture_slot = 0;
+}
+
+static void rxFreeCompiler( rxCompiler* c )
+{
+	if( c->instrs )
+	{
+		c->memfn( c->memctx, c->instrs, 0 );
+		c->instrs = NULL;
+	}
+	if( c->chars )
+	{
+		c->memfn( c->memctx, c->chars, 0 );
+		c->chars = NULL;
+	}
+}
+
+static void rxFixLastInstr( rxCompiler* c )
+{
+	if( c->instrs_count >= 2 &&
+		RX_LAST_INSTR( c ).op == RX_OP_MATCH_STRING &&
+		c->instrs[ c->instrs_count - 2 ].op == RX_OP_MATCH_STRING )
+	{
+		/* already have 2 string values, about to change repeat target */
+		c->instrs[ c->instrs_count - 2 ].len++;
+		c->instrs_count--;
+	}
+}
+
+static void rxInstrReserveSpace( rxCompiler* c )
+{
+	if( c->instrs_count == c->instrs_mem )
+	{
+		size_t ncnt = c->instrs_mem * 2 + 16;
+		rxInstr* ni = (rxInstr*) c->memfn( c->memctx, c->instrs, sizeof(*ni) * ncnt );
+		c->instrs = ni;
+		c->instrs_mem = ncnt;
+	}
+}
+
+#define RX_INSTR_REFS_OTHER( op ) ((op) == RX_OP_REPEAT_GREEDY || (op) == RX_OP_REPEAT_LAZY || (op) == RX_OP_JUMP || (op) == RX_OP_BACKTRK_JUMP)
+
+static void rxInsertInstr( rxCompiler* c, uint32_t pos, uint32_t op, uint32_t start, uint32_t from, uint32_t len )
+{
+	size_t i;
+	rxInstr I;
+	{
+		I.op = op & 0xf;
+		I.start = start & 0x0fffffff;
+		I.from = from;
+		I.len = len;
+	}
+	
+	rxInstrReserveSpace( c );
+	assert( pos < c->instrs_count ); /* cannot insert at end, PUSH op needs additional work */
+	
+	memmove( c->instrs + pos + 1, c->instrs + pos, sizeof(*c->instrs) * ( c->instrs_count - pos ) );
+	c->instrs_count++;
+	
+	for( i = 0; i < c->instrs_count; ++i )
+	{
+		/* any refs to instructions after the split should be fixed */
+		if( c->instrs[ i ].start > pos &&
+			c->instrs[ i ].start != RX_NULL_INSTROFF &&
+			RX_INSTR_REFS_OTHER( c->instrs[ i ].op ) )
+			c->instrs[ i ].start++;
+	}
+	c->instrs[ pos ] = I; /* assume 'start' is pre-adjusted */
+}
+
+static void rxPushInstr( rxCompiler* c, uint32_t op, uint32_t start, uint32_t from, uint32_t len )
+{
+	rxInstr I;
+	{
+		I.op = op & 0xf;
+		I.start = start & 0x0fffffff;
+		I.from = from;
+		I.len = len;
+	}
+	
+	rxFixLastInstr( c );
+	rxInstrReserveSpace( c );
+	c->instrs[ c->instrs_count++ ] = I;
+}
+
+static void rxReserveChars( rxCompiler* c, size_t num )
+{
+	if( c->chars_count + num > c->chars_mem )
+	{
+		size_t ncnt = c->chars_mem * 2 + num;
+		rxChar* nc = (rxChar*) c->memfn( c->memctx, c->chars, sizeof(*nc) * ncnt );
+		c->chars = nc;
+		c->chars_mem = ncnt;
+	}
+}
+
+static void rxPushChars( rxCompiler* c, const rxChar* str, size_t len )
+{
+	rxReserveChars( c, len );
+	memcpy( c->chars + c->chars_count, str, sizeof(*str) * len );
+	c->chars_count += len;
+}
+
+static void rxPushChar( rxCompiler* c, rxChar ch )
+{
+	rxReserveChars( c, 1 );
+	c->chars[ c->chars_count++ ] = ch;
+}
+
+static uint32_t rxPushCharClassData( rxCompiler* c, rxChar cch )
+{
+	uint32_t cc = c->chars_count;
+	switch( cch )
+	{
+	case 'd':
+		rxPushChars( c, RX_STRLITBUF( "09" ) );
+		break;
+	case 'h':
+		rxPushChars( c, RX_STRLITBUF( "\t\t  " ) );
+		break;
+	case 'v':
+		rxPushChars( c, RX_STRLITBUF( "\x0A\x0D" ) );
+		break;
+	case 's':
+		rxPushChars( c, RX_STRLITBUF( "\x09\x0D  " ) );
+		break;
+	case 'w':
+		rxPushChars( c, RX_STRLITBUF( "azAZ09__" ) );
+		break;
+	}
+	return c->chars_count - cc;
+}
+
+static void rxCompile( rxCompiler* c, const rxChar* str, size_t strsize )
+{
+	int empty = 1;
+	const rxChar* s = str;
+	const rxChar* strend = str + strsize;
+	
+#define RX_SAFE_INCR( s ) if( ++(s) == strend ){ c->errpos = (s) - str; goto reached_end_too_soon; }
+	
+	RX_LOG(printf("COMPILE START (first capture)\n"));
+	
+	rxPushInstr( c, RX_OP_CAPTURE_START, 0, 0, 0 );
+	c->capture_count++;
+	
+	while( s != strend )
+	{
 		switch( *s )
 		{
 		case '[':
 			{
-				const RX_Char* sc;
-				int inv = 0, cnt = 0;
-				RX_Char* ri;
-				s++;
+				const rxChar* sc;
+				uint32_t op = RX_OP_MATCH_CHARSET;
+				uint32_t start = c->chars_count;
+				
+				RX_LOG(printf("CHAR '['\n"));
+				
+				RX_SAFE_INCR( s );
 				if( *s == '^' )
 				{
-					inv = 1;
-					s++;
+					op = RX_OP_MATCH_CHARSET_INV;
+					RX_SAFE_INCR( s );
 				}
 				sc = s;
-				if( *sc == ']' )
-				{
-					sc++;
-					cnt++;
-				}
-				while( *sc && *sc != ']' )
-				{
-					if( *sc == '-' && sc > s && sc[1] != 0 && sc[1] != ']' )
-						sc++;
-					else
-						cnt++;
-					sc++;
-				}
-				if( !*sc )
-					_RXE( RXEPART );
-				_RX_ALLOC_NODE( RIT_RANGE );
-				if( inv )
-					item->flags |= RIF_INVERT;
-				item->range = ri = RX_ALLOC_N( RX_Char, cnt * 2 );
-				item->count = cnt;
-				sc = s;
-				if( *sc == ']' )
-				{
-					sc++;
-					ri[0] = ri[1] = *sc;
-					ri += 2;
-				}
-				while( *sc && *sc != ']' )
-				{
-					if( *sc == '-' && sc > s && sc[1] != 0 && sc[1] != ']' )
-					{
-						if( ri > item->range )
-							*(ri-1) = sc[1];
-						sc++;
-					}
-					else
-					{
-						ri[0] = ri[1] = *sc;
-						ri += 2;
-					}
-					sc++;
-				}
-				s = sc;
+				
 				if( *s == ']' )
-					s++;
-				if( R->flags & RCF_CASELESS )
 				{
-					int i;
-					ri = item->range;
-					for( i = 0; i < cnt * 2; i += 2 )
+					RX_SAFE_INCR( s );
+					rxPushChar( c, *s );
+					rxPushChar( c, *s );
+				}
+				while( s != strend && *s != ']' )
+				{
+					if( *s == '-' && s > sc && s + 1 != strend && s[1] != ']' )
 					{
-						RX_Char A = ri[ i ], B = ri[ i + 1 ];
-						if( RX_IS_ALPHA( A ) && RX_IS_ALPHA( B ) )
+						if( c->chars_count - start )
 						{
-							ri[ i ] = RX_EQUALIZE( A );
-							ri[ i + 1 ] = RX_EQUALIZE( B );
+							if( (unsigned) s[1] < (unsigned) RX_LAST_CHAR( c ) )
+							{
+								c->errcode = RXERANGE;
+								c->errpos = s - str;
+								return;
+							}
+							RX_LAST_CHAR( c ) = s[1];
+						}
+						RX_SAFE_INCR( s );
+					}
+					else if( *s == '\\' )
+					{
+						uint32_t count;
+						RX_SAFE_INCR( s );
+						count = rxPushCharClassData( c, *s );
+						if( count == 0 )
+						{
+							rxChar chars[ 2 ];
+							chars[ 0 ] = *s;
+							chars[ 1 ] = *s;
+							rxPushChars( c, chars, 2 );
 						}
 					}
-				}
-			}
-			break;
-		case ']':
-			_RXE( RXEUNEXP );
-		case '(':
-			{
-				int r, cap = R->numcaps < RX_MAX_CAPTURES ? 1 : -1;
-				_RX_ALLOC_NODE( RIT_SUBEXP );
-				if( cap >= 0 )
-				{
-					cap = R->numcaps++;
-					R->caps[ cap ] = item;
-				}
-				s++;
-				r = regex_real_compile( R, cel, &s, pend, 1, &item->ch );
-				if( r )
-					_RXE( r );
-				item->pos = item->ch;
-				if( *s != ')' )
-					_RXE( RXEUNEXP );
-				if( cap >= 0 )
-					cel[ cap ] = 1;
-				s++;
-			}
-			break;
-		case ')':
-			_RXE( RXEUNEXP );
-		case '{':
-		case '?':
-		case '*':
-		case '+':
-			if( s > *pstr && ( *(s-1) == '}' || *(s-1) == '?' || *(s-1) == '*' || *(s-1) == '+' ) )
-			{
-				if( *s == '?' )
-					item->flags |= RIF_LAZY;
-				else
-					_RXE( RXEUNEXP );
-			}
-			else if( item && ( item->type == RIT_MATCH || item->type == RIT_RANGE || item->type == RIT_BKREF || item->type == RIT_SUBEXP ) )
-			{
-				int min = 1, max = 1;
-				if( *s == '{' )
-				{
-					int ctr;
-					s++;
-					if( !isdigit( *s ) )
-						_RXE( RXEUNEXP );
-					min = 0;
-					ctr = 8;
-					while( isdigit( *s ) && ctr > 0 )
+					else
 					{
-						min = min * 10 + *s++ - '0';
-						ctr--;
+						rxChar chars[ 2 ];
+						chars[ 0 ] = *s;
+						chars[ 1 ] = *s;
+						rxPushChars( c, chars, 2 );
 					}
-					if( isdigit( *s ) && ctr == 0 )
-						_RXE( RXELIMIT );
+					RX_SAFE_INCR( s );
+				}
+				if( *s == ']' )
+					s++; /* incr may be unsafe as ending here is valid */
+				
+				rxPushInstr( c, op, 0, start, c->chars_count - start );
+				RX_LAST_SUBEXPR( c ).repeat_start = c->instrs_count - 1;
+			}
+			break;
+			
+			/* already handled by starting characters as these do not support nesting */
+		case ']':
+		case '}':
+			RX_LOG(printf("CHAR ']' or '}' (UNEXPECTED)\n"));
+			c->errcode = RXEUNEXP;
+			c->errpos = s - str;
+			return;
+			
+		case '^':
+			RX_LOG(printf("[^] START (LINE/STRING)\n"));
+			
+			rxPushInstr( c, RX_OP_MATCH_SLSTART, 0, 0, 0 );
+			RX_LAST_SUBEXPR( c ).repeat_start = c->instrs_count;
+			empty = 0;
+			s++;
+			break;
+			
+		case '$':
+			RX_LOG(printf("[$] END (LINE/STRING)\n"));
+			
+			rxPushInstr( c, RX_OP_MATCH_SLEND, 0, 0, 0 );
+			RX_LAST_SUBEXPR( c ).repeat_start = c->instrs_count;
+			empty = 0;
+			s++;
+			break;
+			
+		case '(':
+			RX_LOG(printf("[(] CAPTURE_START\n"));
+			
+			if( c->subexprs_count >= RX_MAX_SUBEXPRS )
+				goto over_limit;
+			
+			RX_LAST_SUBEXPR( c ).repeat_start = c->instrs_count;
+			c->subexprs[ c->subexprs_count ].capture_slot = 0;
+			if( c->capture_count < RX_MAX_CAPTURES )
+			{
+				rxPushInstr( c, RX_OP_CAPTURE_START, 0, c->capture_count, 0 );
+				c->subexprs[ c->subexprs_count ].capture_slot = c->capture_count;
+				c->capture_count++;
+			}
+			c->subexprs[ c->subexprs_count ].start = c->instrs_count;
+			c->subexprs[ c->subexprs_count ].section_start = c->instrs_count;
+			c->subexprs[ c->subexprs_count ].repeat_start = c->instrs_count;
+			
+			c->subexprs_count++;
+			s++;
+			break;
+			
+		case ')':
+			RX_LOG(printf("[)] CAPTURE_END\n"));
+			
+			if( c->subexprs_count < 2 ||
+				RX_LAST_SUBEXPR( c ).section_start == c->instrs_count )
+				goto unexpected_token;
+			
+			/* fix OR jumps */
+			{
+				size_t i;
+				for( i = RX_LAST_SUBEXPR( c ).start; i < c->instrs_count; ++i )
+				{
+					if( c->instrs[ i ].op == RX_OP_JUMP &&
+						c->instrs[ i ].start == RX_NULL_INSTROFF )
+						c->instrs[ i ].start = c->instrs_count & 0x0fffffff;
+				}
+			}
+			
+			c->subexprs_count--;
+			if( c->subexprs[ c->subexprs_count ].capture_slot )
+				rxPushInstr( c, RX_OP_CAPTURE_END, 0, c->subexprs[ c->subexprs_count ].capture_slot, 0 );
+			s++;
+			break;
+			
+		case '|':
+			RX_LOG(printf("[|] OR\n"));
+			
+			if( RX_LAST_SUBEXPR( c ).section_start == c->instrs_count )
+				goto unexpected_token;
+			
+			rxPushInstr( c, RX_OP_JUMP, RX_NULL_INSTROFF, 0, 0 );
+			rxInsertInstr( c, RX_LAST_SUBEXPR( c ).section_start, RX_OP_BACKTRK_JUMP, c->instrs_count + 1, 0, 0 );
+			RX_LAST_SUBEXPR( c ).section_start = c->instrs_count;
+			RX_LAST_SUBEXPR( c ).repeat_start = c->instrs_count;
+			s++;
+			break;
+			
+		case '?':
+			RX_LOG(printf("[?] 0-1 REPEAT / LAZIFIER\n"));
+			if( c->instrs_count && RX_LAST_INSTR( c ).op == RX_OP_REPEAT_GREEDY )
+			{
+				RX_LAST_INSTR( c ).op = RX_OP_REPEAT_LAZY;
+				s++;
+				break;
+			}
+			/* pass thru */
+		
+		case '+':
+		case '*':
+		case '{':
+			RX_LOG(printf("[*+{?] REPEATS\n"));
+			
+			/* already has a repeat as last op */
+			if( c->instrs_count &&
+				( RX_LAST_INSTR( c ).op == RX_OP_REPEAT_LAZY || RX_LAST_INSTR( c ).op == RX_OP_REPEAT_GREEDY ) )
+			{
+				goto unexpected_token;
+			}
+			
+			if( c->instrs_count == RX_LAST_SUBEXPR( c ).repeat_start )
+			{
+				goto unexpected_token;
+			}
+			
+			/* state validated, add repeats */
+			{
+				uint32_t min = 0, max = RX_MAX_REPEATS;
+				if( *s == '*' ){}
+				else if( *s == '+' ){ min = 1; }
+				else if( *s == '?' ){ max = 1; }
+				else if( *s == '{' )
+				{
+					RX_SAFE_INCR( s );
+					if( !rxIsDigit( *s ) )
+						goto unexpected_token;
+					min = 0;
+					while( rxIsDigit( *s ) )
+					{
+						uint32_t nmin = min * 10 + (uint32_t)( *s - '0' );
+						if( nmin < min )
+							goto over_limit;
+						min = nmin;
+						RX_SAFE_INCR( s );
+					}
 					if( *s == ',' )
 					{
-						if( !isdigit(s[1]) )
-							_RXE( RXEUNEXP );
-						s++;
-						max = 0;
-						ctr = 8;
-						while( isdigit( *s ) && ctr > 0 )
+						RX_SAFE_INCR( s );
+						if( *s == '}' )
+							max = RX_MAX_REPEATS;
+						else
 						{
-							max = max * 10 + *s++ - '0';
-							ctr--;
+							if( !rxIsDigit( *s ) )
+								goto unexpected_token;
+							max = 0;
+							while( rxIsDigit( *s ) )
+							{
+								uint32_t nmax = max * 10 + (uint32_t)( *s - '0' );
+								if( nmax < max )
+									goto over_limit;
+								max = nmax;
+								RX_SAFE_INCR( s );
+							}
+							if( min > max )
+							{
+								c->errcode = RXERANGE;
+								c->errpos = s - str;
+								return;
+							}
 						}
-						if( isdigit( *s ) && ctr == 0 )
-							_RXE( RXELIMIT );
-						if( min > max )
-							_RXE( RXERANGE );
 					}
 					else
 						max = min;
 					if( *s != '}' )
-						_RXE( RXEUNEXP );
+						goto unexpected_token;
 				}
-				else if( *s == '?' ){ min = 0; max = 1; }
-				else if( *s == '*' ){ min = 0; max = INT_MAX - 1; }
-				else if( *s == '+' ){ min = 1; max = INT_MAX - 1; }
-				item->min = min;
-				item->max = max;
+				
+				rxInsertInstr( c, RX_LAST_SUBEXPR( c ).repeat_start, RX_OP_JUMP, c->instrs_count + 1, 0, 0 );
+				rxPushInstr( c, RX_OP_REPEAT_GREEDY, RX_LAST_SUBEXPR( c ).repeat_start + 1, min, max );
 			}
+			RX_LAST_SUBEXPR( c ).repeat_start = c->instrs_count;
+			s++;
+			break;
+			
+		case '.':
+			RX_LOG(printf("DOT\n"));
+			if( c->flags & RCF_DOTALL )
+				rxPushInstr( c, RX_OP_MATCH_CHARSET_INV, 0, c->chars_count, 0 );
 			else
-				_RXE( RXEUNEXP );
-			s++;
-			break;
-		case '}':
-			_RXE( RXEUNEXP );
-		case '|':
-			if( !citem )
-				_RXE( RXEUNEXP );
-			_RX_ALLOC_NODE( RIT_EITHER );
-			item->min = 0;
-			item->max = 1;
-			item->flags |= RIF_LAZY;
-			s++;
-			break;
-		case '^':
-			_RX_ALLOC_NODE( RIT_SPCBEG );
-			s++;
-			break;
-		case '$':
-			_RX_ALLOC_NODE( RIT_SPCEND );
-			s++;
-			break;
-		case '\\':
-			if( s[1] )
 			{
-				s++;
-				if( *s == '.' )
-				{
-					_RX_ALLOC_NODE( RIT_MATCH );
-					item->a = *s++;
-					break;
-				}
-				else if( isdigit( *s ) )
-				{
-					int dig = *s++ - '0';
-					if( dig == 0 || dig >= RX_MAX_CAPTURES || !cel[ dig ] )
-						_RXE( RXENOREF );
-					_RX_ALLOC_NODE( RIT_BKREF );
-					item->a = (RX_Char) dig;
-					break;
-				}
-				else if( *s == 'd' || *s == 'D' )
-				{
-					_RX_ALLOC_NODE( RIT_RANGE );
-					item->range = RX_ALLOC_N( RX_Char, 2 );
-					item->count = 1;
-					item->range[0] = '0';
-					item->range[1] = '9';
-					if( *s == 'D' )
-						item->flags |= RIF_INVERT;
-					s++;
-					break;
-				}
-				else if( *s == 'h' || *s == 'H' )
-				{
-					_RX_ALLOC_NODE( RIT_RANGE );
-					item->range = RX_ALLOC_N( RX_Char, 2 * 2 );
-					item->count = 2;
-					item->range[0] = item->range[1] = '\t';
-					item->range[2] = item->range[3] = ' ';
-					if( *s == 'H' )
-						item->flags |= RIF_INVERT;
-					s++;
-					break;
-				}
-				else if( *s == 'v' || *s == 'V' )
-				{
-					_RX_ALLOC_NODE( RIT_RANGE );
-					item->range = RX_ALLOC_N( RX_Char, 2 );
-					item->count = 1;
-					item->range[0] = 0x0A;
-					item->range[1] = 0x0D;
-					if( *s == 'V' )
-						item->flags |= RIF_INVERT;
-					s++;
-					break;
-				}
-				else if( *s == 's' || *s == 'S' )
-				{
-					_RX_ALLOC_NODE( RIT_RANGE );
-					item->range = RX_ALLOC_N( RX_Char, 2 * 2 );
-					item->count = 2;
-					item->range[0] = 0x09;
-					item->range[1] = 0x0D;
-					item->range[2] = item->range[3] = ' ';
-					if( *s == 'S' )
-						item->flags |= RIF_INVERT;
-					s++;
-					break;
-				}
-				else if( *s == 'w' || *s == 'W' )
-				{
-					_RX_ALLOC_NODE( RIT_RANGE );
-					item->range = RX_ALLOC_N( RX_Char, 2 * 4 );
-					item->count = 4;
-					item->range[0] = 'a'; item->range[1] = 'z';
-					item->range[2] = 'A'; item->range[3] = 'Z';
-					item->range[4] = '0'; item->range[5] = '9';
-					item->range[6] = item->range[7] = '_';
-					if( *s == 'W' )
-						item->flags |= RIF_INVERT;
-					s++;
-					break;
-				}
-				/* TODO: more character classes */
+				rxPushInstr( c, RX_OP_MATCH_CHARSET_INV, 0, c->chars_count, 4 );
+				rxPushChars( c, RX_STRLITBUF( "\n\n\r\r" ) );
 			}
-			else
-				_RXE( RXEPART );
-		default:
+			RX_LAST_SUBEXPR( c ).repeat_start = c->instrs_count - 1;
+			s++;
+			break;
+			
+		case '\\':
+			RX_LOG(printf("BACKSLASH\n"));
+			RX_SAFE_INCR( s );
 			if( *s == '.' )
 			{
-				_RX_ALLOC_NODE( RIT_RANGE );
-				if( !( R->flags & RCF_DOTALL ) )
+				rxPushInstr( c, RX_OP_MATCH_STRING, 0, c->chars_count, 1 );
+				rxPushChar( c, *s++ );
+				RX_LAST_SUBEXPR( c ).repeat_start = c->instrs_count - 1;
+				break;
+			}
+			else if( rxIsDigit( *s ) )
+			{
+				uint32_t dig = (uint32_t)( *s++ - '0' );
+				if( dig == 0 || dig >= c->capture_count )
 				{
-					item->range = RX_ALLOC_N( RX_Char, 2 * 2 );
-					item->range[0] = item->range[1] = '\n';
-					item->range[2] = item->range[3] = '\r';
-					item->count = 2;
+					c->errcode = RXENOREF;
+					c->errpos = s - str;
+					return;
 				}
-				item->flags |= RIF_INVERT;
+				rxPushInstr( c, RX_OP_MATCH_BACKREF, 0, dig, 0 );
+				RX_LAST_SUBEXPR( c ).repeat_start = c->instrs_count - 1;
+				break;
 			}
 			else
 			{
-				_RX_ALLOC_NODE( RIT_MATCH );
-				item->a = *s;
-				if( R->flags & RCF_CASELESS && RX_IS_ALPHA( item->a ) )
-					item->a = RX_EQUALIZE( item->a );
+				uint32_t count = rxPushCharClassData( c, rxToLower( *s ) );
+				if( count )
+				{
+					rxPushInstr( c, *s >= 'a' && *s <= 'z' ? RX_OP_MATCH_CHARSET : RX_OP_MATCH_CHARSET_INV, 0, c->chars_count - count, count );
+					RX_LAST_SUBEXPR( c ).repeat_start = c->instrs_count - 1;
+					s++;
+					break;
+				}
 			}
-			s++;
+			/* fallback to character output */
+			
+		default:
+			RX_LOG(printf("CHAR '%c' (string fallback)\n", *s));
+			
+			rxPushInstr( c, RX_OP_MATCH_STRING, 0, c->chars_count, 1 );
+			rxPushChar( c, *s++ );
+			RX_LAST_SUBEXPR( c ).repeat_start = c->instrs_count - 1;
 			break;
 		}
-		citem = item;
+		
+		if( empty &&
+			c->instrs_count &&
+			RX_LAST_INSTR( c ).op != RX_OP_CAPTURE_END &&
+			RX_LAST_SUBEXPR( c ).repeat_start < c->instrs_count )
+			empty = 0;
 	}
-	if( !item )
-		_RXE( RXEEMPTY );
-	if( item->type == RIT_EITHER )
-		_RXE( RXEPART );
-	*pstr = s;
-	while( item->prev )
-		item = item->prev;
-	regex_level( &item );
-	*out = item;
-	return RXSUCCESS;
-fail:
-	regex_free_item( R, item );
-	return (int)( ( error & 0xf ) | ( ( s - R->string ) << 4 ) );
+	
+	if( empty )
+	{
+		RX_LOG(printf("EXPR IS EFFECTIVELY EMPTY\n"));
+		c->errcode = RXEEMPTY;
+		c->errpos = 0;
+		return;
+	}
+	
+	if( RX_LAST_SUBEXPR( c ).section_start == c->instrs_count )
+	{
+		c->errcode = RXEPART;
+		c->errpos = s - str;
+		return;
+	}
+	
+	/* fix OR jumps */
+	{
+		size_t i;
+		for( i = RX_LAST_SUBEXPR( c ).start; i < c->instrs_count; ++i )
+		{
+			if( c->instrs[ i ].op == RX_OP_JUMP &&
+				c->instrs[ i ].start == RX_NULL_INSTROFF )
+				c->instrs[ i ].start = c->instrs_count & 0x0fffffff;
+		}
+	}
+	
+	RX_LOG(printf("COMPILE END (last capture)\n"));
+	
+	rxPushInstr( c, RX_OP_CAPTURE_END, 0, 0, 0 );
+	rxPushInstr( c, RX_OP_MATCH_DONE, 0, 0, 0 );
+	return;
+	
+reached_end_too_soon:
+	c->errcode = RXEPART;
+	return;
+unexpected_token:
+	c->errcode = RXEUNEXP;
+	c->errpos = s - str;
+	return;
+over_limit:
+	c->errcode = RXELIMIT;
+	c->errpos = s - str;
+	return;
 }
 
-/*
-	#### srx_CreateExt ####
-*/
-srx_Context* srx_CreateExt( const RX_Char* str, size_t strsize, const RX_Char* mods, int* errnpos, srx_MemFunc memfn, void* memctx )
+
+static void rxResetCaptures( rxExecute* e )
 {
-	int flags = 0, err, cel[ RX_MAX_CAPTURES ];
+	int i;
+	for( i = 0; i < RX_MAX_CAPTURES; ++i )
+	{
+		e->captures[ i ][0] = RX_NULL_OFFSET;
+		e->captures[ i ][1] = RX_NULL_OFFSET;
+	}
+}
+
+static void rxInitExecute( rxExecute* e, srx_MemFunc memfn, void* memctx, rxInstr* instrs, rxChar* chars )
+{
+	e->memfn = memfn;
+	e->memctx = memctx;
+	
+	e->instrs = instrs;
+	e->chars = chars;
+	e->flags = 0;
+	e->capture_count = 0;
+	
+	e->states = NULL;
+	e->states_count = 0;
+	e->states_mem = 0;
+	e->iternum = NULL;
+	e->iternum_count = 0;
+	e->iternum_mem = 0;
+	
+	rxResetCaptures( e );
+}
+
+static void rxFreeExecute( rxExecute* e )
+{
+	if( e->instrs )
+	{
+		e->memfn( e->memctx, e->instrs, 0 );
+		e->instrs = NULL;
+	}
+	if( e->chars )
+	{
+		e->memfn( e->memctx, e->chars, 0 );
+		e->chars = NULL;
+	}
+	if( e->states )
+	{
+		e->memfn( e->memctx, e->states, 0 );
+		e->states = NULL;
+	}
+	if( e->iternum )
+	{
+		e->memfn( e->memctx, e->iternum, 0 );
+		e->iternum = NULL;
+	}
+}
+
+static void rxPushState( rxExecute* e, uint32_t off, uint32_t instr )
+{
+	rxState* out;
+	
+	if( e->states_count == e->states_mem )
+	{
+		size_t ncnt = e->states_mem * 2 + 16;
+		rxState* ns = (rxState*) e->memfn( e->memctx, e->states, sizeof(*ns) * ncnt );
+		e->states = ns;
+		e->states_mem = ncnt;
+	}
+	
+	out = &e->states[ e->states_count++ ];
+	out->off = off & 0x0fffffff;
+	out->flags = 0;
+	out->instr = instr;
+	out->numiters = 0; /* iteration count is only set from stack */
+}
+
+static void rxPushIterCnt( rxExecute* e, uint32_t it )
+{
+	if( e->iternum_count == e->iternum_mem )
+	{
+		size_t ncnt = e->iternum_mem * 2 + 16;
+		uint32_t* ni = (uint32_t*) e->memfn( e->memctx, e->iternum, sizeof(*ni) * ncnt );
+		e->iternum = ni;
+		e->iternum_mem = ncnt;
+	}
+	
+	e->iternum[ e->iternum_count++ ] = it;
+}
+
+#ifdef NDEBUG
+#  define RX_POP_STATE( e ) ((e)->states_count--)
+#  define RX_POP_ITER_CNT( e ) ((e)->iternum_count--)
+#else
+#  define RX_POP_STATE( e ) assert((e)->states_count-- < 0xffffffff)
+#  define RX_POP_ITER_CNT( e ) assert((e)->iternum_count-- < 0xffffffff)
+#endif
+
+static int rxExecDo( rxExecute* e, const rxChar* str, const rxChar* soff, size_t str_size )
+{
+	const rxInstr* instrs = e->instrs;
+	const rxChar* chars = e->chars;
+	
+	rxPushState( e, (uint32_t)( soff - str ), 0 );
+	
+	while( e->states_count )
+	{
+		int match;
+		rxState* s = &RX_LAST_STATE( e );
+		const rxInstr* op = &instrs[ s->instr ];
+		
+		RX_LOG(printf("[%d]", s->instr));
+		switch( op->op )
+		{
+		case RX_OP_MATCH_DONE:
+			RX_LOG(printf("MATCH_DONE\n"));
+			e->states_count = 0;
+			return 1;
+			
+		case RX_OP_MATCH_CHARSET:
+		case RX_OP_MATCH_CHARSET_INV:
+			RX_LOG(printf("MATCH_CHARSET%s at=%d size=%d: ",op->op == RX_OP_MATCH_CHARSET_INV ? "_INV" : "",s->off,op->len));
+			match = str_size >= (size_t) ( s->off + 1 );
+			if( match )
+			{
+				match = rxMatchCharset( &str[ s->off ], &chars[ op->from ], op->len, ( e->flags & RCF_CASELESS ) != 0 );
+				if( op->op == RX_OP_MATCH_CHARSET_INV )
+					match = !match;
+			}
+			RX_LOG(printf("%s\n", match ? "MATCHED" : "FAILED"));
+			
+			if( match )
+			{
+				/* replace current single path state with next */
+				s->off++;
+				s->instr++;
+				continue;
+			}
+			else goto did_not_match;
+			
+		case RX_OP_MATCH_STRING:
+			RX_LOG(printf("MATCH_STRING at=%d size=%d: ",s->off,op->len));
+			match = str_size >= s->off + op->len;
+			if( match )
+			{
+				if( e->flags & RCF_CASELESS )
+					match = rxMemCaseEq( &str[ s->off ], &chars[ op->from ], op->len );
+				else
+					match = memcmp( &str[ s->off ], &chars[ op->from ], op->len ) == 0;
+			}
+			RX_LOG(printf("%s\n", match ? "MATCHED" : "FAILED"));
+			
+			if( match )
+			{
+				/* replace current single path state with next */
+				s->off = ( s->off + op->len ) & 0x0fffffff;
+				s->instr++;
+				continue;
+			}
+			else goto did_not_match;
+			
+		case RX_OP_MATCH_BACKREF:
+			RX_LOG(printf("MATCH_BACKREF at=%d slot=%d: ",s->off,op->from));
+			match = e->captures[ op->from ][0] != RX_NULL_OFFSET
+				&& e->captures[ op->from ][1] != RX_NULL_OFFSET;
+			{
+				size_t len = e->captures[ op->from ][1] - e->captures[ op->from ][0];
+				if( match )
+				{
+					match = str_size >= s->off + len;
+					if( match )
+					{
+						if( e->flags & RCF_CASELESS )
+							match = rxMemCaseEq( &str[ s->off ], &str[ e->captures[ op->from ][0] ], len );
+						else
+							match = memcmp( &str[ s->off ], &str[ e->captures[ op->from ][0] ], len ) == 0;
+					}
+				}
+				RX_LOG(printf("%s\n", match ? "MATCHED" : "FAILED"));
+			
+				if( match )
+				{
+					/* replace current single path state with next */
+					s->off = ( s->off + len ) & 0x0fffffff;
+					s->instr++;
+					continue;
+				}
+				else goto did_not_match;
+			}
+			
+		case RX_OP_MATCH_SLSTART:
+			RX_LOG(printf("MATCH_SLSTART at=%d: ",s->off));
+			match = s->off == 0;
+			if( e->flags & RCF_MULTILINE && s->off < str_size && ( str[ s->off ] == '\n' || str[ s->off ] == '\r' ) )
+			{
+				if( ((size_t)( s->off + 1 )) < str_size && str[ s->off ] == '\r' && str[ s->off + 1 ] == '\n' )
+					s->off++;
+				s->off++;
+				match = 1;
+			}
+			RX_LOG(printf("%s\n", match ? "MATCHED" : "FAILED"));
+			
+			if( match )
+			{
+				s->instr++;
+				continue;
+			}
+			else goto did_not_match;
+			
+		case RX_OP_MATCH_SLEND:
+			RX_LOG(printf("MATCH_SLEND at=%d: ",s->off));
+			match = s->off == str_size;
+			if( e->flags & RCF_MULTILINE && s->off < str_size && ( str[ s->off ] == '\n' || str[ s->off ] == '\r' ) )
+			{
+				match = 1;
+			}
+			RX_LOG(printf("%s\n", match ? "MATCHED" : "FAILED"));
+			
+			if( match )
+			{
+				s->instr++;
+				continue;
+			}
+			else goto did_not_match;
+			
+		case RX_OP_REPEAT_GREEDY:
+			RX_LOG(printf("REPEAT_GREEDY flags=%d numiters=%d itercount=%d iterssz=%d\n", s->flags, s->numiters, e->iternum_count ? (int) RX_NUM_ITERS(e) : -1, e->iternum_count ));
+			if( s->flags & RX_STATE_BACKTRACKED )
+			{
+				/* backtracking because next match failed, try advancing */
+				if( e->iternum_count && s->numiters + 1 == RX_NUM_ITERS( e ) )
+				{
+					RX_POP_ITER_CNT( e );
+				}
+				if( s->numiters < op->from )
+					goto did_not_match;
+				
+				rxPushState( e, s->off, s->instr + 1 ); /* invalidates 's' */
+			}
+			else
+			{
+				/* try to match one more */
+				s->numiters = RX_NUM_ITERS( e )++;
+				if( s->numiters == op->len )
+					s->flags = RX_STATE_BACKTRACKED;
+				else
+					rxPushState( e, s->off, op->start ); /* invalidates 's' */
+			}
+			continue;
+			
+		case RX_OP_REPEAT_LAZY:
+			RX_LOG(printf("REPEAT_LAZY flags=%d numiters=%d itercount=%d iterssz=%d\n", s->flags, s->numiters, e->iternum_count ? (int) RX_NUM_ITERS(e) : -1, e->iternum_count ));
+			if( s->flags & RX_STATE_BACKTRACKED )
+			{
+				/* backtracking because next match failed, try matching one more of previous */
+				if( s->numiters == op->len )
+					goto did_not_match;
+				
+				rxPushState( e, s->off, op->start ); /* invalidates 's' */
+				rxPushIterCnt( e, s->numiters + 1 );
+			}
+			else
+			{
+				/* try to advance first */
+				s->numiters = RX_NUM_ITERS( e );
+				RX_POP_ITER_CNT( e );
+				if( s->numiters < op->from )
+					s->flags = RX_STATE_BACKTRACKED;
+				else
+					rxPushState( e, s->off, s->instr + 1 ); /* invalidates 's' */
+			}
+			continue;
+			
+		case RX_OP_JUMP:
+			RX_LOG(printf("JUMP to=%d\n", op->start));
+			rxPushIterCnt( e, 0 );
+			s->instr = op->start;
+			continue;
+			
+		case RX_OP_BACKTRK_JUMP:
+			RX_LOG(printf("BACKTRK_JUMP to=%d\n", op->start));
+			if( s->flags & RX_STATE_BACKTRACKED )
+			{
+				rxPushState( e, s->off, op->start ); /* invalidates 's' */
+			}
+			else
+			{
+				rxPushState( e, s->off, s->instr + 1 ); /* invalidates 's' */
+			}
+			continue;
+			
+		case RX_OP_CAPTURE_START:
+			RX_LOG(printf("CAPTURE_START to=%d off=%d\n", op->from, s->off));
+			s->flags |= RX_STATE_BACKTRACKED; /* no branching */
+			RX_LAST_STATE( e ).numiters = e->captures[ op->from ][0];
+			e->captures[ op->from ][0] = s->off;
+			rxPushState( e, s->off, s->instr + 1 );
+			continue;
+			
+		case RX_OP_CAPTURE_END:
+			RX_LOG(printf("CAPTURE_END to=%d off=%d\n", op->from, s->off));
+			s->flags |= RX_STATE_BACKTRACKED; /* no branching */
+			RX_LAST_STATE( e ).numiters = e->captures[ op->from ][1];
+			e->captures[ op->from ][1] = s->off;
+			rxPushState( e, s->off, s->instr + 1 );
+			continue;
+		}
+		
+did_not_match:
+		/* backtrack until last untraversed branching op, fail if none found */
+		RX_POP_STATE( e );
+		while( e->states_count && e->states[ e->states_count - 1 ].flags & RX_STATE_BACKTRACKED )
+		{
+			RX_POP_STATE( e );
+			
+			s = &e->states[ e->states_count ];
+			op = &instrs[ s->instr ];
+			
+			if( op->op == RX_OP_REPEAT_LAZY && e->iternum_count && s->numiters == RX_NUM_ITERS( e ) - 1 )
+			{
+				RX_POP_ITER_CNT( e );
+			}
+			if( op->op == RX_OP_CAPTURE_START )
+			{
+				e->captures[ op->from ][0] = s->numiters;
+			}
+			if( op->op == RX_OP_CAPTURE_END )
+			{
+				e->captures[ op->from ][1] = s->numiters;
+			}
+		}
+		if( e->states_count == 0 )
+		{
+			/* backtracked to the beginning, no matches found */
+			break;
+		}
+		e->states[ e->states_count - 1 ].flags |= RX_STATE_BACKTRACKED;
+	}
+	
+	assert( e->states_count == 0 );
+	return 0;
+}
+
+
+srx_Context* srx_CreateExt( const rxChar* str, size_t strsize, const rxChar* mods, int* errnpos, srx_MemFunc memfn, void* memctx )
+{
+	rxCompiler c;
 	srx_Context* R = NULL;
+	
+	if( !memfn )
+		memfn = srx_DefaultMemFunc;
+	
+	rxInitCompiler( &c, memfn, memctx );
+	
 	if( mods )
 	{
-		const RX_Char* modbegin = mods;
+		const rxChar* modbegin = mods;
 		while( *mods )
 		{
 			switch( *mods )
 			{
-			case 'm': flags |= RCF_MULTILINE; break;
-			case 'i': flags |= RCF_CASELESS; break;
-			case 's': flags |= RCF_DOTALL; break;
+			case 'm': c.flags |= RCF_MULTILINE; break;
+			case 'i': c.flags |= RCF_CASELESS; break;
+			case 's': c.flags |= RCF_DOTALL; break;
 			default:
-				err = ( RXEINMOD & 0xf ) | ( (int)( mods - modbegin ) << 4 );
+				c.errcode = RXEINMOD;
+				c.errpos = mods - modbegin;
 				goto fail;
 			}
 			mods++;
 		}
 	}
 	
-	if( !memfn )
-		memfn = srx_DefaultMemFunc;
+	rxCompile( &c, str, strsize );
+	if( c.errcode != RXSUCCESS )
+		goto fail;
 	
-	R = (srx_Context*) memfn( memctx, NULL, sizeof(srx_Context) );
-	memset( R, 0, sizeof(*R) );
-	memset( cel, 0, sizeof(cel) );
-	R->memfn = memfn;
-	R->memctx = memctx;
-	R->string = str;
-	R->stringend = str + strsize;
-	R->flags = flags;
-	R->numcaps = 1;
+	/* create context */
+	R = (rxExecute*) memfn( memctx, NULL, sizeof(rxExecute) );
+	rxInitExecute( R, memfn, memctx, c.instrs, c.chars );
+	R->flags = c.flags;
+	R->capture_count = c.capture_count;
+	/* transfer ownership of program data */
+	c.instrs = NULL;
+	c.chars = NULL;
 	
-	err = regex_real_compile( R, cel, &str, str + strsize, 0, &R->root );
+	RX_LOG(srx_DumpToStdout( R ));
 	
-	if( err )
-	{
-		memfn( memctx, R, 0 );
-		R = NULL;
-	}
-	else
-	{
-		regex_item* item = RX_ALLOC( regex_item );
-		memset( item, 0, sizeof(*item) );
-		item->type = RIT_SUBEXP;
-		item->min = 1;
-		item->max = 1;
-		item->pos = item->ch = R->root;
-		R->caps[ 0 ] = R->root = item;
-	}
 fail:
 	if( errnpos )
 	{
-		unsigned uerr = (unsigned) err;
-		errnpos[0] = (int)( uerr ? ( uerr & 0xf ) | 0xfffffff0 : 0 );
-		errnpos[1] = (int)( ( uerr & 0xfffffff0 ) >> 4 );
+		errnpos[0] = c.errcode;
+		errnpos[1] = c.errpos;
 	}
-	RXLOGINFO( if( R ) srx_DumpToStdout(R) );
+	rxFreeCompiler( &c );
 	return R;
 }
 
-/*
-	#### srx_Destroy ####
-*/
-int srx_Destroy( srx_Context* R )
+void srx_Destroy( srx_Context* R )
 {
-	if( R )
-	{
-		srx_MemFunc memfn = R->memfn;
-		void* memctx = R->memctx;
-		if( R->root )
-			regex_free_item( R, R->root );
-		memfn( memctx, R, 0 );
-	}
-	return !!R;
+	srx_MemFunc memfn = R->memfn;
+	void* memctx = R->memctx;
+	rxFreeExecute( R );
+	memfn( memctx, R, 0 );
 }
 
-
-static void regex_dump_list( regex_item* items, int lev );
-static void regex_dump_item( regex_item* item, int lev )
+void srx_DumpToFile( srx_Context* R, FILE* fp )
 {
-	const char* types[] =
-	{
-		"-", "MATCH (1)", "RANGE (2)", "SPCBEG (3)", "SPCEND (4)", "BKREF (5)", "-", "-", "-", "-",
-		"-", "EITHER (11)", "SUBEXP (12)", "-"
-	};
-	
-	int l = lev;
-	while( l --> 0 )
-		printf( "- " );
-	printf( "%s", types[ item->type ] );
-	if( item->flags & RIF_INVERT ) printf( " INV" );
-	if( item->flags & RIF_LAZY ) printf( " LAZY" );
-	switch( item->type )
-	{
-	case RIT_MATCH: printf( " char %d", (int) item->a ); break;
-	case RIT_RANGE:
-		for( l = 0; l < item->count; ++l )
-		{
-			if( l > 0 )
-				printf( "," );
-			printf( " %d - %d", (int) item->range[l*2], (int) item->range[l*2+1] );
-		}
-		break;
-	case RIT_BKREF: printf( " #%d", (int) item->a ); break;
-	}
-	printf( " (%d to %d) (0x%p => 0x%p)\n", item->min, item->max, item->matchbeg, item->matchend );
-	
-	if( item->ch )
-	{
-		regex_dump_list( item->ch, lev + 1 );
-		if( item->ch2 )
-		{
-			int l2 = lev;
-			while( l2 --> 0 )
-				printf( "- " );
-			printf( "--|\n" );
-			regex_dump_list( item->ch2, lev + 1 );
-		}
-	}
-}
-static void regex_dump_list( regex_item* items, int lev )
-{
-	while( items )
-	{
-		regex_dump_item( items, lev );
-		items = items->next;
-	}
+	rxDumpToFile( R->instrs, R->chars, fp );
 }
 
-/*
-	#### srx_DumpToStdout ####
-*/
-void srx_DumpToStdout( srx_Context* R )
+int srx_MatchExt( srx_Context* R, const rxChar* str, size_t size, size_t offset )
 {
-	regex_dump_list( R->root, 0 );
-}
-
-/*
-	#### srx_Match ####
-*/
-int srx_MatchExt( srx_Context* R, const RX_Char* str, size_t size, size_t offset )
-{
-	int ret;
-	const RX_Char* strend = str + size;
-	match_ctx ctx;
-	{
-		ctx.string = str;
-		ctx.stringend = strend;
-		ctx.item = R->root;
-		ctx.R = R;
-	}
-	R->string = str;
+	const rxChar* strstart = str;
+	const rxChar* strend = str + size;
 	if( offset > size )
 		return 0;
+	R->str = strstart;
 	str += offset;
+	rxResetCaptures( R );
 	while( str < strend )
 	{
-		ret = regex_test_start( str, &ctx );
-		if( ret < 0 )
-			return 0;
-		if( ret > 0 )
+		if( rxExecDo( R, strstart, str, size ) )
+		{
+			assert( R->captures[ 0 ][0] != RX_NULL_OFFSET );
+			assert( R->captures[ 0 ][1] != RX_NULL_OFFSET );
 			return 1;
+		}
 		str++;
 	}
 	return 0;
 }
 
-/*
-	#### srx_GetCaptureCount ####
-*/
 int srx_GetCaptureCount( srx_Context* R )
 {
-	return R->numcaps;
+	return R->capture_count;
 }
 
-/*
-	#### srx_GetCaptured ####
-*/
 int srx_GetCaptured( srx_Context* R, int which, size_t* pbeg, size_t* pend )
 {
-	const RX_Char* a, *b;
-	if( srx_GetCapturedPtrs( R, which, &a, &b ) )
+	if( which < 0 || which >= R->capture_count )
+		return 0;
+	if( R->captures[ which ][0] == RX_NULL_OFFSET ||
+		R->captures[ which ][1] == RX_NULL_OFFSET )
+		return 0;
+	if( pbeg ) *pbeg = R->captures[ which ][0];
+	if( pend ) *pend = R->captures[ which ][1];
+	return 1;
+}
+
+int srx_GetCapturedPtrs( srx_Context* R, int which, const rxChar** pbeg, const rxChar** pend )
+{
+	size_t a, b;
+	if( srx_GetCaptured( R, which, &a, &b ) )
 	{
-		if( pbeg ) *pbeg = (size_t)( a - R->string );
-		if( pend ) *pend = (size_t)( b - R->string );
+		if( pbeg ) *pbeg = R->str + a;
+		if( pend ) *pend = R->str + b;
 		return 1;
 	}
 	return 0;
 }
 
-/*
-	#### srx_GetCapturedPtrs ####
-*/
-int srx_GetCapturedPtrs( srx_Context* R, int which, const RX_Char** pbeg, const RX_Char** pend )
-{
-	if( which < 0 || which >= R->numcaps )
-		return 0;
-	if( R->caps[ which ] == NULL )
-		return 0;
-	if( pbeg ) *pbeg = R->caps[ which ]->matchbeg;
-	if( pend ) *pend = R->caps[ which ]->matchend;
-	return 1;
-}
 
-/*
-	#### srx_ReplaceExt ####
-*/
-RX_Char* srx_ReplaceExt( srx_Context* R, const RX_Char* str, size_t strsize, const RX_Char* rep, size_t repsize, size_t* outsize )
+rxChar* srx_ReplaceExt( srx_Context* R, const rxChar* str, size_t strsize, const rxChar* rep, size_t repsize, size_t* outsize )
 {
-	RX_Char* out = "";
-	const RX_Char *from = str, *fromend = str + strsize, *repend = rep + repsize;
+	rxChar* out = "";
+	const rxChar *from = str, *fromend = str + strsize, *repend = rep + repsize;
 	size_t size = 0, mem = 0;
 	
 #define SR_CHKSZ( szext ) \
 	if( (ptrdiff_t)( mem - size ) < (ptrdiff_t)(szext) ) \
 	{ \
-		size_t nsz = MAX( mem * 2, size + (size_t)(szext) ); \
-		RX_Char* nmem = RX_ALLOC_N( RX_Char, nsz + 1 ); \
-		if( mem ) \
-		{ \
-			memcpy( nmem, out, size + 1 ); /* copy with \0 */ \
-			RX_FREE( out ); \
-		} \
-		out = nmem; \
+		size_t nsz = mem * 2 + (size_t)(szext); \
+		out = (rxChar*) R->memfn( R->memctx, mem ? out : NULL, sizeof(rxChar) * nsz ); \
 		mem = nsz; \
 	}
 #define SR_ADDBUF( from, to ) \
@@ -1043,7 +1271,7 @@ RX_Char* srx_ReplaceExt( srx_Context* R, const RX_Char* str, size_t strsize, con
 	
 	while( from < fromend )
 	{
-		const RX_Char* ofp = NULL, *ep = NULL, *rp;
+		const rxChar* ofp = NULL, *ep = NULL, *rp;
 		if( !srx_MatchExt( R, from, (size_t)( fromend - from ), 0 ) )
 			break;
 		srx_GetCapturedPtrs( R, 0, &ofp, &ep );
@@ -1052,13 +1280,13 @@ RX_Char* srx_ReplaceExt( srx_Context* R, const RX_Char* str, size_t strsize, con
 		rp = rep;
 		while( rp < repend )
 		{
-			RX_Char rc = *rp;
+			rxChar rc = *rp;
 			if( ( rc == '\\' || rc == '$' ) && rp + 1 < repend )
 			{
-				if( isdigit( rp[1] ) )
+				if( rxIsDigit( rp[1] ) )
 				{
 					int dig = rp[1] - '0';
-					const RX_Char *brp, *erp;
+					const rxChar *brp, *erp;
 					if( srx_GetCapturedPtrs( R, dig, &brp, &erp ) )
 					{
 						SR_ADDBUF( brp, erp );
@@ -1091,11 +1319,9 @@ RX_Char* srx_ReplaceExt( srx_Context* R, const RX_Char* str, size_t strsize, con
 	return out;
 }
 
-/*
-	#### srx_FreeReplaced ####
-*/
-void srx_FreeReplaced( srx_Context* R, RX_Char* repstr )
+void srx_FreeReplaced( srx_Context* R, rxChar* repstr )
 {
-	RX_FREE( repstr );
+	R->memfn( R->memctx, repstr, 0 );
 }
+
 

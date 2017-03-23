@@ -1,6 +1,8 @@
 
 
-#pragma once
+#ifndef SG_REGEX_H_
+#define SG_REGEX_H_
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,28 +45,33 @@ static void* srx_DefaultMemFunc( void* userdata, void* ptr, size_t size )
 }
 #endif
 
-typedef char RX_Char;
 
+typedef char rxChar;
+typedef unsigned char rxUChar;
 typedef struct _srx_Context srx_Context;
 
 
-srx_Context* srx_CreateExt( const RX_Char* str, size_t strsize, const RX_Char* mods, int* errnpos, srx_MemFunc memfn, void* memctx );
-#define srx_Create( str, mods ) srx_CreateExt( str, RX_STRLENGTHFUNC(str), mods, NULL, srx_DefaultMemFunc, NULL )
-int srx_Destroy( srx_Context* R );
-void srx_DumpToStdout( srx_Context* R );
+srx_Context* srx_CreateExt( const rxChar* str, size_t strsize, const rxChar* mods, int* errnpos, srx_MemFunc memfn, void* memctx );
+#define srx_Create( str, mods ) srx_CreateExt( str, RX_STRLENGTHFUNC(str), mods, NULL, NULL, NULL )
+void srx_Destroy( srx_Context* R );
+void srx_DumpToFile( srx_Context* R, FILE* fp );
+#define srx_DumpToStdout( R ) srx_DumpToFile( R, stdout )
 
-int srx_MatchExt( srx_Context* R, const RX_Char* str, size_t size, size_t offset );
+int srx_MatchExt( srx_Context* R, const rxChar* str, size_t size, size_t offset );
 #define srx_Match( R, str, off ) srx_MatchExt( R, str, RX_STRLENGTHFUNC(str), off )
 int srx_GetCaptureCount( srx_Context* R );
 int srx_GetCaptured( srx_Context* R, int which, size_t* pbeg, size_t* pend );
-int srx_GetCapturedPtrs( srx_Context* R, int which, const RX_Char** pbeg, const RX_Char** pend );
+int srx_GetCapturedPtrs( srx_Context* R, int which, const rxChar** pbeg, const rxChar** pend );
 
-RX_Char* srx_ReplaceExt( srx_Context* R, const RX_Char* str, size_t strsize, const RX_Char* rep, size_t repsize, size_t* outsize );
+rxChar* srx_ReplaceExt( srx_Context* R, const rxChar* str, size_t strsize, const rxChar* rep, size_t repsize, size_t* outsize );
 #define srx_Replace( R, str, rep ) srx_ReplaceExt( R, str, RX_STRLENGTHFUNC(str), rep, RX_STRLENGTHFUNC(rep), NULL )
-void srx_FreeReplaced( srx_Context* R, RX_Char* repstr );
+void srx_FreeReplaced( srx_Context* R, rxChar* repstr );
 
 
 #ifdef __cplusplus
 }
 #endif
+
+
+#endif /* SG_REGEX_H_ */
 
