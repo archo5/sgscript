@@ -565,6 +565,8 @@ static void rxCompile( rxCompiler* c, const rxChar* str, size_t strsize )
 				RX_LAST_SUBEXPR( c ).section_start == c->instrs_count )
 				goto unexpected_token;
 			
+			/* remove useless MATCH_STRING before looking for ending position */
+			rxFixLastInstr( c );
 			/* fix OR jumps */
 			{
 				size_t i;
