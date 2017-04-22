@@ -1420,6 +1420,7 @@ static SGSBOOL compile_fcall( SGS_FNTCMP_ARGS, rcpos_t* out, int expect )
 		n = node->child->next->child;
 		while( n )
 		{
+			srcpos = SGS_RCPOS_UNSPEC;
 			if( !compile_node_r( C, func, n, &srcpos ) )
 			{
 				C->fctx->syncdepth--;
