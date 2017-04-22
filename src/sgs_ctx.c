@@ -1347,7 +1347,7 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 	case SGS_STAT_DUMP_FRAMES:
 		{
 			sgs_StackFrame* p = sgs_GetFramePtr( C, NULL, SGS_FALSE );
-			sgs_WriteStr( C, "\nFRAME ---- LIST ---- START ----\n" );
+			sgs_Writef( C, "\nFRAME ---- LIST ---- START (thread=%p) ----\n", C );
 			while( p != NULL )
 			{
 				const char* file, *name;
@@ -1373,6 +1373,40 @@ ptrdiff_t sgs_Stat( SGS_CTX, int type )
 		return SGS_SUCCESS;
 	case SGS_STAT_DUMP_RSRC:
 		_sgs_dumprsrc( C->shared );
+		return SGS_SUCCESS;
+	case SGS_STAT_EDUMP_FRAMES:
+		{
+			sgs_StackFrame* p = sgs_GetFramePtr( C, NULL, SGS_FALSE );
+			sgs_Writef( C, "\nFRAME [EXT] ---- LIST ---- START (thread=%p) ----\n", C );
+			while( p != NULL )
+			{
+				const char* file, *name;
+				int ln;
+				sgs_StackFrameInfo( C, p, &name, &file, &ln );
+				sgs_Writef( C, "FRAME \"%s\" in %s, line %d\n", name, file, ln );
+				if( p->clsrref )
+				{
+					uint8_t i, cnt = (uint8_t) *SGS_ASSUME_ALIGNED( ((char*)p->clsrlist) - sizeof(sgs_clsrcount_t), sgs_clsrcount_t );
+					for( i = 0; i < cnt; ++i )
+					{
+						if( p->clsrlist[ i ] )
+						{
+							sgs_Writef( C, "- closure %u [rc=%d, ptr=%p]: ", i,
+								(int) p->clsrlist[ i ]->refcount,
+								p->clsrlist[ i ] );
+							dumpvar( C, &p->clsrlist[ i ]->var );
+							sgs_Writef( C, "\n" );
+						}
+						else
+						{
+							sgs_Writef( C, "- closure %u: NULL\n", i );
+						}
+					}
+				}
+				p = p->next;
+			}
+			sgs_WriteStr( C, "FRAME ---- LIST ---- END ----\n" );
+		}
 		return SGS_SUCCESS;
 	case SGS_STAT_XDUMP_STACK:
 		{

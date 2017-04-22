@@ -2219,7 +2219,7 @@ static SGSBOOL compile_func( SGS_FNTCMP_ARGS, rcpos_t* out )
 		*out = BC_CONSTENC( add_const_f( C, func, fctx, ffn.ptr, ffn.size, sgsT_LineNum( node->token ) ) );
 		sgs_membuf_destroy( &ffn, C );
 		
-		if( fctx->outclsr > 0 )
+		if( fctx->inclsr > 0 )
 		{
 			int i;
 			rcpos_t ro = comp_reg_alloc( C );

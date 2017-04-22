@@ -2441,11 +2441,30 @@ static int vm_exec( SGS_CTX );
 */
 static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter )
 {
-	sgs_Variable* pfunc = C->stack_top - args - gotthis - 1;
-	ptrdiff_t stkcallbase, stkoff = SGS_STACK_PRESERVE( C, C->stack_off );
+	sgs_Variable* pfunc;
+	ptrdiff_t stkcallbase, stkoff;
 	int rvc = 0, ret = 1, allowed;
 	
-	gotthis = !!gotthis;
+	/* fix up closure */
+	{
+		sgs_Variable out, *vp = stk_ptop( C, - args - ( gotthis ? 2 : 1 ) );
+		if( vp->type == SGS_VT_FUNC && vp->data.F->numclsr != 0 )
+		{
+			int i;
+			sgs_Closure** clsrlist = sgsSTD_MakeClosure( C, &out, vp, vp->data.F->numclsr );
+			for( i = 0; i < vp->data.F->numclsr; ++i )
+			{
+				sgs_Closure* nc = sgs_Alloc( sgs_Closure );
+				nc->refcount = 1;
+				nc->var.type = SGS_VT_NULL;
+				*clsrlist++ = nc;
+			}
+			p_setvar_leave( vp, &out );
+		}
+	}
+	
+	pfunc = C->stack_top - args - gotthis - 1;
+	stkoff = SGS_STACK_PRESERVE( C, C->stack_off );
 	stkcallbase = ( C->stack_top - C->stack_base ) - args - gotthis;
 	
 	if( pfunc->type == SGS_VT_OBJECT && pfunc->data.O->mm_enable )
@@ -4567,25 +4586,8 @@ int sgs_XFCall( SGS_CTX, int args, int gotthis )
 			args + ( gotthis ? 2 : 1 ), (int) SGS_STACKFRAMESIZE );
 		return 0;
 	}
-	/* fix up closure */
-	{
-		sgs_Variable out, *vp = stk_ptop( C, - args - ( gotthis ? 2 : 1 ) );
-		if( vp->type == SGS_VT_FUNC && vp->data.F->numclsr != 0 )
-		{
-			int i;
-			sgs_Closure** clsrlist = sgsSTD_MakeClosure( C, &out, vp, vp->data.F->numclsr );
-			for( i = 0; i < vp->data.F->numclsr; ++i )
-			{
-				sgs_Closure* nc = sgs_Alloc( sgs_Closure );
-				nc->refcount = 1;
-				nc->var.type = SGS_VT_NULL;
-				*clsrlist++ = nc;
-			}
-			p_setvar_leave( vp, &out );
-		}
-	}
 	SGS_PERFEVENT( ps_precall_begin( args, gotthis, CALLSRC_NATIVE ) );
-	vm_call( C, args, gotthis, &rvc, 0 );
+	vm_call( C, args, !!gotthis, &rvc, 0 );
 	return rvc;
 }
 

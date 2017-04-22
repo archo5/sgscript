@@ -475,6 +475,7 @@ sgs_ParserConfig;
 #define SGS_STAT_DUMP_STATS   14
 #define SGS_STAT_DUMP_SYMBOLS 15
 #define SGS_STAT_DUMP_RSRC    16
+#define SGS_STAT_EDUMP_FRAMES 17
 #define SGS_STAT_XDUMP_STACK  20
 
 

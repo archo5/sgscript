@@ -266,3 +266,32 @@ waited 3 iterations
 waited 5 iterations
 done
 `
+
+// `thread/closure mix - check for conflicts`
+rec ``
+exec `
+function coroclosuretest1(w)
+{
+	a = if( w, "[a]", null );
+	if( !a )
+	{
+		q = function() use(a){};
+	}
+	println( a );
+	yield;
+	println( a );
+}
+c0 = co_create( coroclosuretest1 );
+c1 = co_create( coroclosuretest1 );
+c0.resume( true );
+c1.resume( false );
+c0.resume();
+c1.resume();
+`
+result `SUCCESS`
+check_err ``
+check_out `[a]
+null
+[a]
+null
+`

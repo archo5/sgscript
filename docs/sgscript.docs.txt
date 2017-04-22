@@ -3429,6 +3429,8 @@ Sample implementation (same as in sgscript.h):
 -- SGS_STAT_DUMP_FRAMES: prints all functions in the call stack;
 -- SGS_STAT_DUMP_STATS: dump some info about memory and objects;
 -- SGS_STAT_DUMP_SYMBOLS: dump the list of registered symbols;
+-- SGS_STAT_DUMP_RSRC: dump the outline of all resources in the entire engine;
+-- SGS_STAT_EDUMP_FRAMES: prints all functions in the call stack (extended info);
 -- SGS_STAT_XDUMP_STACK: verbosely dumps all of the variables in the stack (extended info, may be much longer).
 
 - Tips:

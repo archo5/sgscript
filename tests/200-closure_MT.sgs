@@ -125,8 +125,8 @@ check_err ``
 check_out `closure
 {
   func: SGS function <anonymous>
-  #0 (rc=2): int (5)
-  #1 (rc=2): bool (true)
+  #0 (rc=1): int (5)
+  #1 (rc=1): bool (true)
 }
 5
 closure
@@ -168,8 +168,8 @@ check_out `int (5)
 closure
 {
   func: SGS function <anonymous> defined at <anonymous>:5
-  #0 (rc=2): int (7)
-  #1 (rc=2): bool (true)
+  #0 (rc=1): int (7)
+  #1 (rc=1): bool (true)
 }
 `
 
