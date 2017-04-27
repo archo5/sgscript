@@ -1197,26 +1197,28 @@ static SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_V
 		sgs_Int v;
 		if( sgs_ParseIntP( C, val, &v ) )
 		{
+#define DCW( to, from, ty ) *(ty*)(to) = (ty)(from)
 			switch( prop->type )
 			{
-			case SGS_OBJPROPTYPE_ICHAR:  *(signed char*)mem = v;      break;
-			case SGS_OBJPROPTYPE_UCHAR:  *(unsigned char*)mem = v;    break;
-			case SGS_OBJPROPTYPE_I8:     *(int8_t*)mem = v;           break;
-			case SGS_OBJPROPTYPE_U8:     *(uint8_t*)mem = v;          break;
-			case SGS_OBJPROPTYPE_ISHORT: *(signed short*)mem = v;     break;
-			case SGS_OBJPROPTYPE_USHORT: *(unsigned short*)mem = v;   break;
-			case SGS_OBJPROPTYPE_I16:    *(int16_t*)mem = v;          break;
-			case SGS_OBJPROPTYPE_U16:    *(uint16_t*)mem = v;         break;
-			case SGS_OBJPROPTYPE_IINT:   *(signed int*)mem = v;       break;
-			case SGS_OBJPROPTYPE_UINT:   *(unsigned int*)mem = v;     break;
-			case SGS_OBJPROPTYPE_ILONG:  *(signed long*)mem = v;      break;
-			case SGS_OBJPROPTYPE_ULONG:  *(unsigned long*)mem = v;    break;
-			case SGS_OBJPROPTYPE_I32:    *(int32_t*)mem = v;          break;
-			case SGS_OBJPROPTYPE_U32:    *(uint32_t*)mem = v;         break;
-			case SGS_OBJPROPTYPE_I2LONG: *(signed long long*)mem = v; break;
-			case SGS_OBJPROPTYPE_I64:    *(int64_t*)mem = v;          break;
-			case SGS_OBJPROPTYPE_SIZEVAL:*(sgs_SizeVal*)mem = v;      break;
+			case SGS_OBJPROPTYPE_ICHAR:  DCW( mem, v, signed char );      break;
+			case SGS_OBJPROPTYPE_UCHAR:  DCW( mem, v, unsigned char );    break;
+			case SGS_OBJPROPTYPE_I8:     DCW( mem, v, int8_t );           break;
+			case SGS_OBJPROPTYPE_U8:     DCW( mem, v, uint8_t );          break;
+			case SGS_OBJPROPTYPE_ISHORT: DCW( mem, v, signed short );     break;
+			case SGS_OBJPROPTYPE_USHORT: DCW( mem, v, unsigned short );   break;
+			case SGS_OBJPROPTYPE_I16:    DCW( mem, v, int16_t );          break;
+			case SGS_OBJPROPTYPE_U16:    DCW( mem, v, uint16_t );         break;
+			case SGS_OBJPROPTYPE_IINT:   DCW( mem, v, signed int );       break;
+			case SGS_OBJPROPTYPE_UINT:   DCW( mem, v, unsigned int );     break;
+			case SGS_OBJPROPTYPE_ILONG:  DCW( mem, v, signed long );      break;
+			case SGS_OBJPROPTYPE_ULONG:  DCW( mem, v, unsigned long );    break;
+			case SGS_OBJPROPTYPE_I32:    DCW( mem, v, int32_t );          break;
+			case SGS_OBJPROPTYPE_U32:    DCW( mem, v, uint32_t );         break;
+			case SGS_OBJPROPTYPE_I2LONG: DCW( mem, v, signed long long ); break;
+			case SGS_OBJPROPTYPE_I64:    DCW( mem, v, int64_t );          break;
+			case SGS_OBJPROPTYPE_SIZEVAL:DCW( mem, v, sgs_SizeVal );      break;
 			}
+#undef DCW
 			return 0;
 		}
 		return SGS_EINVAL; }
@@ -1227,7 +1229,7 @@ static SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_V
 		if( sgs_ParseRealP( C, val, &v ) )
 		{
 			if( prop->type == SGS_OBJPROPTYPE_FLOAT )
-				*(float*)mem = v;
+				*(float*)mem = (float) v;
 			else
 				*(double*)mem = v;
 			return 0;

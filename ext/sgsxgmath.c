@@ -818,7 +818,7 @@ static int xgm_b2_prop_write_width( SGS_CTX, sgs_VarObj* obj )
 	XGM_OHDR;
 	if( !sgs_ParseReal( C, 0, &diff ) )
 		return SGS_EINVAL;
-	hdr[2] = hdr[0] + diff;
+	hdr[2] = hdr[0] + (XGM_VT) diff;
 	return SGS_SUCCESS;
 }
 
@@ -833,7 +833,7 @@ static int xgm_b2_prop_write_height( SGS_CTX, sgs_VarObj* obj )
 	XGM_OHDR;
 	if( !sgs_ParseReal( C, 0, &diff ) )
 		return SGS_EINVAL;
-	hdr[3] = hdr[1] + diff;
+	hdr[3] = hdr[1] + (XGM_VT) diff;
 	return SGS_SUCCESS;
 }
 
@@ -916,7 +916,7 @@ static int xgm_b2_setindex( SGS_ARGS_SETINDEXFUNC )
 		{
 			if( sgs_ParseReal( C, 1, &val ) )
 			{
-				hdr[ idx ] = val;
+				hdr[ idx ] = (XGM_VT) val;
 				return SGS_SUCCESS;
 			}
 			return SGS_EINVAL;

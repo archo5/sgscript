@@ -22,6 +22,24 @@ macro( cppbc_header TARGET CPPFILE HFILE INCNAME )
 	foreach( F ${LIST} )
 		list( APPEND CFLAGS "${CPPBC_INC_PFX}${F}" )
 	endforeach( F )
+	
+	get_target_property( LIST ${TARGET} COMPILE_FLAGS )
+	if( LIST )
+		string( REPLACE " " ";" LIST ${LIST} )
+		foreach( F ${LIST} )
+			if( ${F} MATCHES "^[/-][DI]" )
+				list( APPEND CFLAGS ${F} )
+			endif()
+		endforeach()
+	endif()
+	
+	get_target_property( LIST ${TARGET} COMPILE_DEFINITIONS )
+	if( LIST )
+		foreach( F ${LIST} )
+			list( APPEND CFLAGS "-D${F}" )
+		endforeach()
+	endif()
+	
 	add_custom_command(
 		OUTPUT "${CMAKE_SOURCE_DIR}/${CPPFILE}"
 		DEPENDS "${CMAKE_SOURCE_DIR}/${HFILE}"

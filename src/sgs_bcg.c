@@ -960,7 +960,7 @@ static void varinfo_add( sgs_MemBuf* out, SGS_CTX, sgs_MemBuf* vars, int base, u
 		/* ignore _G since it's always available */
 		if( vp->nmlength != 2 || vp->name[0] != '_' || vp->name[1] != 'G' )
 		{
-			uint8_t len = vp->nmlength;
+			uint8_t len = (uint8_t) vp->nmlength;
 			/* encoding:
 				local = 1-based positive
 				global = 0

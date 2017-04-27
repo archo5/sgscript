@@ -490,3 +490,7 @@ exec `class t {
 result `SUCCESS`
 check_err ``
 check_out ``
+
+// `bug xxxxx - out of bounds memory read triggers (for checkers only)`
+exec `/`
+result `ECOMP`

@@ -146,6 +146,7 @@ extern "C" {
 #  else
 #    define PRId32 "d"
 #    define PRId64 "lld"
+#    define PRIx64 "llx"
 #  endif
 #  define SGS_INLINE
 #  define SGS_VSPRINTF_LEN( str, args ) _vscprintf( str, args )

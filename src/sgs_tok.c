@@ -326,8 +326,10 @@ sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
 			continue;
 		
 		/* comment */
-		if( fc == '/' && ( code[ i + 1 ] == '/'
-					|| code[ i + 1 ] == '*' ) )   skipcomment( C, &line, code, &i, ilen );
+		if( fc == '/' &&
+			i + 1 < ilen &&
+			( code[ i + 1 ] == '/' ||
+				code[ i + 1 ] == '*' ) )   skipcomment( C, &line, code, &i, ilen );
 		
 		/* special symbol */
 		else if( sgs_isoneof( fc, "()[]{},;:#\\" ) ) sgs_membuf_appchr( &s, C, fc );
@@ -356,7 +358,7 @@ sgs_TokenList sgsT_Gen( SGS_CTX, const char* code, size_t length )
 					if( res == 1 )
 					{
 						res = 2;
-						vr = vi;
+						vr = (sgs_Real) vi;
 					}
 				}
 				else if( pos < code + length && res == 1 && *pos == 'p' )
