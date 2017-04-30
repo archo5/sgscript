@@ -3652,7 +3652,7 @@ SGSBOOL sgs_SetGlobal( SGS_CTX, sgs_Variable idx, sgs_Variable val )
 	sgs_ObjAcquire( C, C->_G );
 	sgs_Variable vO; vO.type = SGS_VT_OBJECT; vO.data.O = C->_G;
 	ret = sgs_SetIndex( C, vO, idx, val, 0 );
-	sgs_ObjRelease( C, C->_G );
+	sgs_Release( C, &vO );
 	return ret;
 }
 

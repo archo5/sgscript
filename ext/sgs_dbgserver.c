@@ -62,6 +62,11 @@ struct sgs_DebugServer
 	
 	/* introspection */
 	int maxdepth;
+	sgs_VarObj* obj_dbg;
+	sgs_VarObj* obj_vars;
+	sgs_VarObj* obj_rvars;
+	sgs_StackFrame* cur_frame;
+	sgs_Context* cur_thread;
 	
 	/* breakpoints */
 	sgs_MemBuf breakpoints; /* array of dbgBreakpointInfo */
@@ -103,6 +108,7 @@ dbgStateInfo;
 	def( dump ) \
 	def( exec ) \
 	def( print ) \
+	def( setvar ) \
 	def( include )
 #define CID_LIST_ITEM( cmd ) DSC_ ## cmd,
 #define STR_LIST_ITEM( cmd ) #cmd,
@@ -183,7 +189,18 @@ static void dbgsrv_runCode( sgs_DebugServer* D, dbgStateInfo* dsi, const char* c
 		/* error already printed here */
 		return;
 	}
-	rvc = sgs_XCall( C, 0 );
+	
+	/* run the code */
+	{
+		sgs_VarObj* G = C->_G;
+		C->_G = D->obj_rvars;
+		sgs_ObjSetMetaObj( C, D->obj_rvars, G );
+		
+		rvc = sgs_XCall( C, 0 );
+		
+		C->_G = G;
+		sgs_ObjSetMetaObj( C, D->obj_rvars, NULL );
+	}
 	
 	for( i = 0; i < rvc; ++i )
 	{
@@ -642,9 +659,21 @@ static void dbgsrv_execCmd( sgs_DebugServer* D, int cmd, const char* params, dbg
 	case DSC_print:
 		{
 			sgs_MemBuf prepstr = sgs_membuf_create();
-			sgs_membuf_appbuf( &prepstr, D->C, "return (", 8 );
+			sgs_membuf_appbuf( &prepstr, D->C, SGS_STRLITBUF( "return (" ) );
 			sgs_membuf_appbuf( &prepstr, D->C, params, strlen( params ) );
-			sgs_membuf_appbuf( &prepstr, D->C, ");", 3 ); /* include \0 */
+			sgs_membuf_appbuf( &prepstr, D->C, SGS_STRLITBUF( ");" ) + 1 ); /* include \0 */
+			
+			dbgsrv_runCode( D, dsi, prepstr.ptr );
+			
+			sgs_membuf_destroy( &prepstr, D->C );
+		}
+		break;
+	case DSC_setvar:
+		{
+			sgs_MemBuf prepstr = sgs_membuf_create();
+			sgs_membuf_appbuf( &prepstr, D->C, SGS_STRLITBUF( "_R.$dbg.vars." ) );
+			sgs_membuf_appbuf( &prepstr, D->C, params, strlen( params ) );
+			sgs_membuf_appbuf( &prepstr, D->C, SGS_STRLITBUF( ";" ) + 1 ); /* include \0 */
 			
 			dbgsrv_runCode( D, dsi, prepstr.ptr );
 			
@@ -715,6 +744,8 @@ static void dbgsrv_interact( sgs_DebugServer* D, dbgStateInfo* dsi )
 		sgs_ErrWritef( D->C, "----- Interactive SGScript Debug Inspector -----\n" );
 		D->firstuse = 0;
 	}
+	D->cur_thread = C;
+	D->cur_frame = C->sf_last;
 	D->stkoff = C->stack_off - C->stack_base;
 	D->stksize = C->stack_top - C->stack_base;
 	dsi->paused = 1;
@@ -750,6 +781,29 @@ static void dbgsrv_hookFunc( void* data, SGS_CTX, int event_id )
 	
 	if( D->hfn )
 		D->hfn( D->hctx, C, event_id );
+	
+	/* invalidate selection */
+	if( D->cur_frame )
+	{
+		if( event_id == SGS_HOOK_EXIT )
+		{
+			if( D->cur_frame == C->sf_last )
+				D->cur_frame = D->cur_frame->prev;
+		}
+	}
+	if( D->cur_thread )
+	{
+		if( event_id == SGS_HOOK_CFREE )
+		{
+			if( D->cur_thread == C )
+			{
+				if( C->parent )
+					D->cur_thread = C->parent;
+				else
+					D->cur_thread = sgs_RootContext( C );
+			}
+		}
+	}
 	
 	/* break on events */
 	if( D->inside == 0 )
@@ -797,8 +851,167 @@ static void dbgsrv_hookFunc( void* data, SGS_CTX, int event_id )
 }
 
 
+static sgs_ObjProp dbgsrv_oi_props[] =
+{
+	SGS_OBJPROP_OFFSET( "vars", offsetof( sgs_DebugServer, obj_vars ), SGS_OBJPROPTYPE_VAROBJ, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_OFFSET( "rvars", offsetof( sgs_DebugServer, obj_rvars ), SGS_OBJPROPTYPE_VAROBJ, SGS_OBJPROP_NOWRITE ),
+	SGS_OBJPROP_END(),
+};
+
+static sgs_ObjInterface dbgsrv_oi_dbg[1] =
+{{
+	"DBGSRV",
+	NULL, NULL,
+	NULL, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL,
+	dbgsrv_oi_props
+}};
+
+static int dbgsrv_vars_index( SGS_CTX, sgs_VarObj* obj, int write )
+{
+	char* varname;
+	sgs_SizeVal varnamesize;
+	sgs_DebugServer* D = (sgs_DebugServer*) obj->data;
+	if( sgs_ParseString( C, 0, &varname, &varnamesize ) )
+	{
+		sgs_StackFrame* F = D->cur_frame;
+		if( F && F->iptr != NULL && F->func->data.F->dbg_varinfo != NULL )
+		{
+			char *varinfo, *varinfoend;
+			uint8_t* cl;
+			uint8_t clsrcount;
+			uint32_t curinstrid, dbgvarsize;
+			sgs_SizeVal first, end;
+			dbgsrv_stackRange( C, F, &first, &end );
+			if( F->clsrref )
+			{
+				cl = (uint8_t*) F->clsrref->data;
+				clsrcount = (uint8_t) *SGS_ASSUME_ALIGNED( cl + sizeof(sgs_Variable), sgs_clsrcount_t );
+			}
+			curinstrid = F->iptr - sgs_func_bytecode( F->func->data.F );
+			
+			varinfo = F->func->data.F->dbg_varinfo;
+			memcpy( &dbgvarsize, varinfo, sizeof(dbgvarsize) );
+			varinfoend = varinfo + dbgvarsize;
+			varinfo += sizeof(dbgvarsize);
+			while( varinfo < varinfoend )
+			{
+				uint32_t from, to;
+				int16_t pos;
+				uint8_t len;
+				
+				memcpy( &from, varinfo, sizeof(from) );
+				varinfo += sizeof(from);
+				memcpy( &to, varinfo, sizeof(to) );
+				varinfo += sizeof(to);
+				memcpy( &pos, varinfo, sizeof(pos) );
+				varinfo += sizeof(pos);
+				memcpy( &len, varinfo, sizeof(len) );
+				varinfo += sizeof(len);
+				if( from <= curinstrid && curinstrid < to )
+				{
+					if( len == varnamesize && memcmp( varinfo, varname, len ) == 0 )
+					{
+						if( pos == 0 )
+						{
+							sgs_Variable idx, val;
+							sgs_InitStringBuf( C, &idx, varinfo, len );
+							if( write )
+							{
+								sgs_SetGlobal( C, idx, sgs_StackItem( C, 1 ) );
+							}
+							else if( sgs_GetGlobal( C, idx, &val ) )
+							{
+								sgs_PushVariable( C, val );
+							}
+							else
+							{
+								sgs_Msg( C, SGS_ERROR, "referenced global variable is not defined" );
+							}
+							sgs_Release( C, &idx );
+							sgs_Release( C, &val );
+							return SGS_SUCCESS;
+						}
+						else if( pos < 0 )
+						{
+							pos = -1 - pos;
+							if( pos >= clsrcount )
+							{
+								return sgs_Msg( C, SGS_ERROR, "variable index in debug info is out of range" );
+							}
+							else
+							{
+								if( write )
+								{
+									sgs_Assign( C, &F->clsrlist[ pos ]->var, stk_poff( C, 1 ) );
+									return SGS_SUCCESS;
+								}
+								else
+									return sgs_PushVariable( C, F->clsrlist[ pos ]->var );
+							}
+						}
+						else
+						{
+							pos -= 1;
+							if( pos >= end - first )
+							{
+								return sgs_Msg( C, SGS_ERROR, "variable index in debug info is out of range" );
+							}
+							else
+							{
+								if( write )
+								{
+									sgs_Assign( C, &C->stack_base[ first + pos ], stk_poff( C, 1 ) );
+									return SGS_SUCCESS;
+								}
+								else
+									return sgs_PushVariable( C, C->stack_base[ first + pos ] );
+							}
+						}
+					}
+				}
+				varinfo += len;
+			}
+		}
+	}
+	return SGS_ENOTFND;
+}
+
+static int dbgsrv_vars_getindex( SGS_CTX, sgs_VarObj* obj )
+{
+	return dbgsrv_vars_index( C, obj, 0 );
+}
+
+static int dbgsrv_vars_setindex( SGS_CTX, sgs_VarObj* obj )
+{
+	return dbgsrv_vars_index( C, obj, 1 );
+}
+
+static sgs_ObjInterface dbgsrv_oi_vars[1] =
+{{
+	"DBGSRV_VARS",
+	NULL, NULL,
+	dbgsrv_vars_getindex, dbgsrv_vars_setindex,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL,
+	NULL,
+}};
+
+static sgs_ObjInterface dbgsrv_oi_rvars[1] =
+{{
+	"DBGSRV_RVARS",
+	NULL, NULL,
+	dbgsrv_vars_getindex, NULL,
+	NULL, NULL, NULL, NULL,
+	NULL, NULL,
+	NULL,
+}};
+
+
 sgs_DebugServer* sgs_CreateDebugServer( SGS_CTX, int port )
 {
+	sgs_Variable var;
 	sgs_DebugServer* D = sgs_Alloc( sgs_DebugServer );
 	
 	D->C = sgs_RootContext( C );
@@ -817,6 +1030,17 @@ sgs_DebugServer* sgs_CreateDebugServer( SGS_CTX, int port )
 	D->stksize = 0;
 	
 	D->maxdepth = 5;
+	sgs_CreateObject( C, &var, D, dbgsrv_oi_dbg );
+	D->obj_dbg = var.data.O;
+	sgs_CreateObject( C, &var, D, dbgsrv_oi_vars );
+	D->obj_vars = var.data.O;
+	sgs_CreateObject( C, &var, D, dbgsrv_oi_rvars );
+	D->obj_rvars = var.data.O;
+	sgs_ObjSetMetaMethodEnable( D->obj_rvars, 1 );
+	D->cur_frame = NULL;
+	D->cur_thread = NULL;
+	
+	sgs_SetProperty( C, sgs_Registry( C, SGS_REG_ROOT ), "$dbg", sgs_MakeObjPtrNoRef( D->obj_dbg ) );
 	
 	D->breakpoints = sgs_membuf_create();
 	D->brkflags = DBGSRV_BREAK_MESSAGE;
@@ -829,15 +1053,27 @@ sgs_DebugServer* sgs_CreateDebugServer( SGS_CTX, int port )
 
 void sgs_CloseDebugServer( sgs_DebugServer* D )
 {
+	SGS_CTX = D->C;
+	
 	if( ( D->brkflags & DBGSRV_BREAK_NEXT_ANY ) || D->linebreak_prev.func )
 	{
-		sgs_ErrWritef( D->C, "Scripting engine was stopped before next breakpoint could be reached.\n" );
+		sgs_ErrWritef( C, "Scripting engine was stopped before next breakpoint could be reached.\n" );
 	}
-	sgs_SetMsgFunc( D->C, D->pfn, D->pctx );
-	sgs_SetHookFunc( D->C, D->hfn, D->hctx );
-	sgs_membuf_destroy( &D->input, D->C );
-	sgs_membuf_destroy( &D->breakpoints, D->C );
-	sgs_Free( D->C, D );
+	sgs_SetMsgFunc( C, D->pfn, D->pctx );
+	sgs_SetHookFunc( C, D->hfn, D->hctx );
+	
+	sgs_PushString( C, "$dbg" );
+	sgs_Unset( C, sgs_Registry( C, SGS_REG_ROOT ), sgs_StackItem( C, -1 ) );
+	sgs_Pop( C, 1 );
+	
+	sgs_ObjRelease( C, D->obj_dbg );
+	sgs_ObjRelease( C, D->obj_vars );
+	sgs_ObjRelease( C, D->obj_rvars );
+	
+	sgs_membuf_destroy( &D->input, C );
+	sgs_membuf_destroy( &D->breakpoints, C );
+	
+	sgs_Free( C, D );
 }
 
 void sgs_DebugServerCmd( sgs_DebugServer* D, const char* cmd )

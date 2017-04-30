@@ -4414,6 +4414,13 @@ SGSBOOL sgsSTD_GlobalSet( SGS_CTX, sgs_Variable* idx, sgs_Variable* val )
 	{
 		if( name[1] == 'G' )
 		{
+			if( obj->iface != sgsstd_dict_iface && obj->iface != sgsstd_map_iface )
+			{
+				sgs_Msg( C, SGS_ERROR, "_G has been programmatically set to a custom object"
+					" (possibly by the debugger) and cannot be changed at this time" );
+				return SGS_FALSE;
+			}
+			
 			if( val->type != SGS_VT_OBJECT ||
 				( val->data.O->iface != sgsstd_dict_iface && val->data.O->iface != sgsstd_map_iface ) )
 			{
