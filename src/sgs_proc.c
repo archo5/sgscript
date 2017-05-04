@@ -2839,10 +2839,11 @@ restart_loop:
 						VAR_RELEASE( &pdst[ i ] );
 					}
 				}
-				stk_popto( C, SF->func );
-				C->num_last_returned = 1;
 				
 				vm_frame_pop( C );
+				
+				stk_popto( C, SF->func );
+				C->num_last_returned = 1;
 				
 				goto restart_loop;
 			}

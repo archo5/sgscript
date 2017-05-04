@@ -40,12 +40,15 @@ macro( cppbc_header TARGET CPPFILE HFILE INCNAME )
 		endforeach()
 	endif()
 	
+	set( TMPFN cppbc_tmp_${HFILE} )
+	string( REPLACE "/" "$" TMPFN "${TMPFN}" )
+	string( REPLACE "\\" "$" TMPFN "${TMPFN}" )
 	add_custom_command(
 		OUTPUT "${CMAKE_SOURCE_DIR}/${CPPFILE}"
 		DEPENDS "${CMAKE_SOURCE_DIR}/${HFILE}"
-		COMMAND ${SGSVM_PATH} ARGS -p ${SGSCPPBC_PATH} -cmake0 cppbc_tmp.cpp "${CMAKE_SOURCE_DIR}/${HFILE}"
-		COMMAND ${CMAKE_CXX_COMPILER} ARGS ${CPPBC_PP_ARGS} cppbc_tmp.i cppbc_tmp.cpp ${CFLAGS}
-		COMMAND ${SGSVM_PATH} ARGS -p ${SGSCPPBC_PATH} -o "${CMAKE_SOURCE_DIR}/${CPPFILE}" -iname ${INCNAME} cppbc_tmp.i
+		COMMAND ${SGSVM_PATH} ARGS -p ${SGSCPPBC_PATH} -cmake0 ${TMPFN}.cpp "${CMAKE_SOURCE_DIR}/${HFILE}"
+		COMMAND ${CMAKE_CXX_COMPILER} ARGS ${CPPBC_PP_ARGS} ${TMPFN}.i ${TMPFN}.cpp ${CFLAGS}
+		COMMAND ${SGSVM_PATH} ARGS -p ${SGSCPPBC_PATH} -o "${CMAKE_SOURCE_DIR}/${CPPFILE}" -iname ${INCNAME} ${TMPFN}.i
 	)
 endmacro( cppbc_header )
 

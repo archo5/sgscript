@@ -351,11 +351,12 @@ function cppbc_parse_vardecl( code, bSkipName )
 	lct = null;
 	for( i = 0; i < code.length; ++i )
 	{
-		cct = cppbc_get_vdchar_type( chr( code[i] ) );
+		cc = chr( code[i] );
+		cct = cppbc_get_vdchar_type( cc );
 		if( cct !== lct || ( cct != "N" && cct != "S" ) )
 			out.push("");
 		lct = cct;
-		out[out.size-1] $= chr( code[i] );
+		out[out.size-1] $= cc;
 	}
 	
 	name = "";
