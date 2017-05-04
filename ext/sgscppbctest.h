@@ -25,7 +25,7 @@ struct Vec3
 	
 	SGS_PROPERTY_FUNC( READ _get_length ) SGS_ALIAS( float length );
 	SGS_METHOD float getLength() const { return _get_length(); }
-	SGS_METHOD void setLength( float len )
+	SGS_METHOD void setLength( float len = 1.0f )
 	{
 		if( x == 0 && y == 0 && z == 0 )
 			x = 1;
@@ -37,6 +37,12 @@ struct Vec3
 		x *= len;
 		y *= len;
 		z *= len;
+	}
+	SGS_METHOD virtual void setOneVal( float v )
+	{
+		x = v;
+		y = v;
+		z = v;
 	}
 	SGS_IFUNC( CONVERT ) int _convert( SGS_CTX, sgs_VarObj* data, int type )
 	{

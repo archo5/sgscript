@@ -310,7 +310,7 @@ function cppbc_find_fp_name( scode )
 	skipped = false;
 	while( pos > 0 )
 	{
-		item = chr( scode[ pos ] );
+		item = scode[ pos ];
 		if( item == ")" )
 		{
 			level++;
@@ -345,7 +345,10 @@ function cppbc_parse_vardecl( code, bSkipName )
 		code = string_trim( code );
 	}
 	
-	// strip bitfield size
+	// remove assignment
+	code = re_replace( code, "#[ \n\r\t]*?=.*$#", "" );
+	
+	// remove bitfield size
 	code = re_replace( code, "#[ \n\r\t]*:[ \n\r\t]*[0-9]+$#", "" );
 	
 	lct = null;
@@ -437,6 +440,9 @@ function cppbc_examine_method( code, is_static, methodname )
 		code = string_part( code, inbr + 1, outbr - inbr - 1 );
 		code = string_trim( code );
 	}
+	
+	// remove "virtual"
+	code = re_replace( code, "#^virtual[ \t\v\r\n]+#", "" );
 	
 	ispmatch = re_match( code, "#([a-zA-Z0-9_]+)[ \t\v\r\n]*\\(#", RE_RETURN_BOTH );
 	
