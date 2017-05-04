@@ -645,7 +645,9 @@ There are several built-in accessors for the variable types that are available.
 <table>
 <tr><th>name</th><th>variable type</th><th>accessor type</th><th>description</th></tr>
 <tr><td>length</td><td>string</td><td>property</td><td>returns the length of the string, in bytes</td></tr>
-<tr><td>char. at</td><td>string</td><td>index</td><td>returns the character from the specified position</td></tr>
+<tr><td>first</td><td>string</td><td>property</td><td>returns the first char.code (byte) in string</td></tr>
+<tr><td>last</td><td>string</td><td>property</td><td>returns the last char.code (byte) in string</td></tr>
+<tr><td>char. at</td><td>string</td><td>index</td><td>returns the char.code from the specified position</td></tr>
 <tr><td>apply</td><td>SGS/C function</td><td>property</td><td>function that allows to specify &quot;this&quot; &amp; arg. array</td></tr>
 <tr><td>was_aborted</td><td>thread</td><td>property</td><td>returns if thread was aborted</td></tr>
 <tr><td>not_started</td><td>thread</td><td>property</td><td>returns if coroutine was not started yet</td></tr>
@@ -2144,6 +2146,7 @@ This library is loaded on initialization and contains the functions and constant
 </li><li><a href="#toptr-function">toptr</a> - returns a variable, converted to pointer
 </li><li><a href="#parseint-function">parseint</a> - try to parse a variable as integer, return the value or null on failure
 </li><li><a href="#parsereal-function">parsereal</a> - try to parse a variable as string, return the value or null on failure
+</li><li><a href="#chr-function">chr</a> - create a single character string from integer character code
 </li><li><a href="#typeof-function">typeof</a> - returns the type string of a variable
 </li><li><a href="#typeid-function">typeid</a> - returns type ID of a variable
 </li><li><a href="#typeptr-function">typeptr</a> - returns type interface pointer from object variables
@@ -2311,6 +2314,7 @@ parseint( parseint ); // returns null</pre></div>
 parsereal( &quot;3e+2&quot; ); // returns 300.0
 parsereal( &quot;0xff&quot; ); // returns 255.0
 parsereal( parsereal ); // returns null</pre></div>
+<div class='item'><a name='chr-function'></a><hr><h2>chr [function]</h2><h3>chr( int code )</h3><h4>returns a single character string from integer character code</h4><pre>chr( 35 ); // returns string [1] &quot;#&quot;</pre></div>
 <div class='item'><a name='typeof-function'></a><hr><h2>typeof [function]</h2><h3>typeof( var )</h3><h4>returns the type name of variable <code>var</code>, as string</h4><ul><li>this function is equivalent to <a href="#sgs-TypeOf-function">sgs_TypeOf</a> in the C API</li></ul><pre>typeof( 5 ); // returns &quot;real&quot;
 typeof( [] ); // returns &quot;array&quot;</pre></div>
 <div class='item'><a name='typeid-function'></a><hr><h2>typeid [function]</h2><h3>typeid( var )</h3><h4>returns the first 4 bits of the variable <code>var</code> type flags, as <code>int</code></h4><ul><li>returns one of the values mapped to VT_NULL/VT_BOOL/VT_INT/VT_REAL/VT_STRING/VT_FUNC/VT_CFUNC/VT_OBJECT/VT_PTR/VT_THREAD
@@ -2673,6 +2677,7 @@ a.unique( true ); // returns [5,3,2]</pre></div>
 </li><li><a href="#array-process-function">array_process [function]</a>
 </li><li><a href="#array-sized-function">array_sized [function]</a>
 </li><li><a href="#assert-function">assert [function]</a>
+</li><li><a href="#chr-function">chr [function]</a>
 </li><li><a href="#class-function">class [function]</a>
 </li><li><a href="#clone-function">clone [function]</a>
 </li><li><a href="#co-create-function">co_create [function]</a>
@@ -3245,7 +3250,6 @@ This library contains the string handling functions. In all functions, except th
 </li><li><a href="#string-compare-function">string_compare</a> - compare strings as byte arrays
 </li><li><a href="#string-implode-function">string_implode</a> - combine an array of strings, putting a separator string between each two consecutive strings
 </li><li><a href="#string-explode-function">string_explode</a> - split string into parts, separated by the specified separator string
-</li><li><a href="#string-charcode-function">string_charcode</a> - get the character code (byte value, as integer) from the specified position in string
 </li><li><a href="#string-frombytes-function">string_frombytes</a> - make a string from an array of integer values, interpreted as bytes
 </li><li><a href="#string-utf8-decode-function">string_utf8_decode</a> - decode a UTF-8 string into an array of code points
 </li><li><a href="#string-utf8-encode-function">string_utf8_encode</a> - encode an array of code points into a UTF-8 string
@@ -3313,8 +3317,6 @@ string_compare( &quot;file.txt&quot;, &quot;.txt&quot;, 0, -4 ); // int 0</pre><
 <div class='item'><a name='string-explode-function'></a><hr><h2>string_explode [function]</h2><h3>string_explode( string str, string sep )</h3><h4>splits the string <code>str</code> into an array of substrings, separated by string <code>sep</code></h4><pre>string_explode( &quot;www.example.com&quot;, &quot;.&quot; ); // [&quot;www&quot;,&quot;example&quot;,&quot;com&quot;]
 string_explode( &quot;x&quot;, &quot;-&quot; ); // [&quot;x&quot;]
 string_explode( &quot;/some//data&quot;, &quot;/&quot; ); // [&quot;&quot;,&quot;some&quot;,&quot;&quot;,&quot;data&quot;]</pre></div>
-<div class='item'><a name='string-charcode-function'></a><hr><h2>string_charcode [function]</h2><h3>string_charcode( string str, int offset = 0 )</h3><h4>returns the byte value / ASCII character code of the specified byte in the string</h4><pre>string_charcode( &quot;Test&quot; ); // int 84
-string_charcode( &quot;Test&quot;, 3 ); // int 116</pre></div>
 <div class='item'><a name='string-frombytes-function'></a><hr><h2>string_frombytes [function]</h2><h3>string_frombytes( int byteval )</h3><h3>string_frombytes( array bytes )</h3><h4>returns a string, created from either one byte value (overload #1) or an array of byte values (overload #2)</h4><ul><li>byte values must be in the range [0-255]</li></ul><pre>string_frombytes( 53 ); // string [1] &quot;5&quot;
 string_frombytes([ 84, 101, 115, 116 ]); // string [4] &quot;Test&quot;</pre></div>
 <div class='item'><a name='string-utf8-decode-function'></a><hr><h2>string_utf8_decode [function]</h2><h3>string_utf8_decode( string ustr )</h3><h4>returns an array of Unicode code points, decoded from the UTF-8 string <code>ustr</code></h4><ul><li>invalid byte sequences will add 0xFFFD to the array</li></ul><pre>string_utf8_decode( &quot;pie&quot; ); // [112,105,101]
@@ -3336,8 +3338,7 @@ iter_getdata( it ); // returns 27161</pre></div>
 </p><ul><li><code>prealloc</code> specifies number of bytes to be preallocated on the buffer to avoid continuous reallocations during string generation
 </li><li>the format specifier has the form {&lt;id&gt;:&lt;specifier&gt;} where &quot;id&quot; is the argument index to use and specifier is a <a href="#fmt-text-function">fmt_text</a> specifier
 </li><li>argument indices to be used in specifiers start from 1</li></ul><pre>print string_format( &quot;{1:d} -&gt; {1:x}&quot;, 1337 ); // prints &quot;1337 -&gt; 539&quot;</pre></div>
-<div class='item'><a name='ALL-SGScript-string-functions-A-Z'></a><hr><h2>ALL SGScript string functions (A-Z)</h2><ul><li><a href="#string-charcode-function">string_charcode [function]</a>
-</li><li><a href="#string-compare-function">string_compare [function]</a>
+<div class='item'><a name='ALL-SGScript-string-functions-A-Z'></a><hr><h2>ALL SGScript string functions (A-Z)</h2><ul><li><a href="#string-compare-function">string_compare [function]</a>
 </li><li><a href="#string-count-function">string_count [function]</a>
 </li><li><a href="#string-cut-function">string_cut [function]</a>
 </li><li><a href="#string-explode-function">string_explode [function]</a>

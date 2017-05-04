@@ -2005,6 +2005,7 @@ static int sgsstd_fileI_open( SGS_CTX )
 	if( FVAR )
 		fclose( FVAR );
 	
+	sgs_Method( C );
 	sgs_SetObjectData( C, 0, data = fopen( path, g_io_fileflagmodes[ ff ] ) );
 	
 	CRET( !!data );
@@ -2023,6 +2024,7 @@ static int sgsstd_fileI_close( SGS_CTX )
 	{
 		res = 1;
 		fclose( FVAR );
+		sgs_Method( C );
 		sgs_SetObjectData( C, 0, NULL );
 	}
 	
@@ -3926,27 +3928,6 @@ static int sgsstd_string_explode( SGS_CTX )
 	return sgs_CreateArray( C, NULL, sgs_StackSize( C ) - ssz );
 }
 
-static int sgsstd_string_charcode( SGS_CTX )
-{
-	char* a;
-	sgs_SizeVal asize;
-	sgs_Int off = 0;
-	
-	SGSFN( "string_charcode" );
-	
-	if( !sgs_LoadArgs( C, "m|i", &a, &asize, &off ) )
-		return 0;
-	
-	if( off < 0 )
-		off += asize;
-	
-	if( off < 0 || off >= (sgs_Int) asize )
-		STDLIB_WARN( "index out of bounds" )
-	
-	sgs_PushInt( C, (unsigned char) a[ off ] );
-	return 1;
-}
-
 static int sgsstd_string_frombytes( SGS_CTX )
 {
 	char* buf;
@@ -4431,7 +4412,7 @@ static const sgs_RegFuncConst s_fconsts[] =
 	STDLIB_FN( string_toupper ), STDLIB_FN( string_tolower ),
 	STDLIB_FN( string_compare ),
 	STDLIB_FN( string_implode ), STDLIB_FN( string_explode ),
-	STDLIB_FN( string_charcode ), STDLIB_FN( string_frombytes ),
+	STDLIB_FN( string_frombytes ),
 	STDLIB_FN( string_utf8_decode ), STDLIB_FN( string_utf8_encode ),
 	STDLIB_FN( string_utf8_offset ), STDLIB_FN( string_utf8_length ),
 	STDLIB_FN( string_utf8_iterator ),

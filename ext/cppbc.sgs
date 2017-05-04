@@ -218,7 +218,7 @@ function cppbc_fix_type( type )
 	if( !type )
 		return cppbc_error( "missing type detected" );
 	
-	if( type.length && type[ type.length - 1 ] == ">" )
+	if( type.length && type.last == ">"c )
 		type $= " ";
 	
 	return type;
@@ -310,7 +310,7 @@ function cppbc_find_fp_name( scode )
 	skipped = false;
 	while( pos > 0 )
 	{
-		item = scode[ pos ];
+		item = chr( scode[ pos ] );
 		if( item == ")" )
 		{
 			level++;
@@ -351,11 +351,11 @@ function cppbc_parse_vardecl( code, bSkipName )
 	lct = null;
 	for( i = 0; i < code.length; ++i )
 	{
-		cct = cppbc_get_vdchar_type( code[i] );
+		cct = cppbc_get_vdchar_type( chr( code[i] ) );
 		if( cct !== lct || ( cct != "N" && cct != "S" ) )
 			out.push("");
 		lct = cct;
-		out[out.size-1] $= code[i];
+		out[out.size-1] $= chr( code[i] );
 	}
 	
 	name = "";
@@ -400,7 +400,7 @@ function cppbc_split_cs( code )
 	
 	for( i = 0; i < code.length; ++i )
 	{
-		cc = code[i];
+		cc = chr( code[i] );
 		if( cc == "<" || cc == "(" || cc == "[" )
 		{
 			stack.push( cc );
@@ -946,7 +946,7 @@ function cppbc_generate_code( objects, includes )
 				
 				getvar3rd = "";
 				ptype = param;
-				if( param[ param.length - 1 ] == "*" )
+				if( param.last == "*"c )
 				{
 					getvar3rd = "Obj";
 					ptype = string_part( param, 0, -1 );
@@ -1110,7 +1110,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 					"%OBJ%" = obj.name,
 					"%NAME%" = if( isset( item, "varname" ), item.varname || item.name, item.name ),
 					"%TYPEFUNC%" = if( cppbc_type_is_voidptr( item.type ), "sgs_GetPtr", "sgs_GetVar<" $ cppbc_fix_type( item.type ) $ ">()" ),
-					"%ISOBJ%" = if( string_part( item.type, 0, 4 ) != "void" && item.type[ item.type.length - 1 ] == "*", ", true", "" ),
+					"%ISOBJ%" = if( string_part( item.type, 0, 4 ) != "void" && item.type.last == "*"c, ", true", "" ),
 				});
 			}
 		}

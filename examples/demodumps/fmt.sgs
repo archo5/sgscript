@@ -10,9 +10,9 @@ function hexit( data )
 	{
 		if( out.length )
 			out $= " ";
-		cc = string_charcode( data, i );
-		out $= tbl[ cc >> 4 ];
-		out $= tbl[ cc & 15 ];
+		cc = data[ i ];
+		out $= chr( tbl[ cc >> 4 ] );
+		out $= chr( tbl[ cc & 15 ] );
 	}
 	return out;
 }

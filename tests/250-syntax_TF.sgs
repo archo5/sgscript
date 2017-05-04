@@ -12,7 +12,7 @@ function str2ias( str )
 {
 	out = [];
 	for( i = 0; i < str.length; ++i )
-		out.push( string_charcode( str[ i ] ) );
+		out.push( str[ i ] );
 	return tostring( out );
 }
 

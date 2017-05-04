@@ -130,6 +130,26 @@ check_err ``
 check_out `int (13)
 `
 
+// `character literals`
+rec ``
+exec `printvar( '#'c, "!" c );`
+result `SUCCESS`
+check_err ``
+check_out `int (35)
+int (33)
+`
+
+// `BAD character literals`
+rec ``
+exec `print(''c);`
+result `ECOMP`
+check_err `[E:[line 1] expected 1 character in character literal]`
+rec_err ``
+exec `print("ab"c);`
+result `ECOMP`
+check_err `[E:[line 1] expected 1 character in character literal]`
+check_out ``
+
 // `extra comma / indexing syntax`
 rec ``
 exec `var x = [1,2,];
@@ -245,12 +265,12 @@ exec `
 //     012345678901
 //    -210987654321
 str = "what is this";
-println( str[0]$str[3]$str[11]$str[-5]$str[-1]$str[-12] );
-println( str[-13]$str[12]$str[str] );
+println([str[0],str[3],str[11],str[-5],str[-1],str[-12]]); // 'wts sw'
+println([str[-13],str[12],str[str]]);
 `
 result `SUCCESS`
-check_out `wts sw
-nullnullnull
+check_out `[119,116,115,32,115,119]
+[null,null,null]
 `
 check_err `[W:String index out of bounds][W:String index out of bounds][W:Expected integer as string index]`
 

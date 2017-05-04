@@ -745,7 +745,9 @@ There are several built-in accessors for the variable types that are available.
 --------------------------------------------------------------------------------------------------------
 !    name    !  variable type  !  accessor type  !                     description                     !
 |   length   |      string     |    property     |     returns the length of the string, in bytes      |
-|  char. at  |      string     |     index       |  returns the character from the specified position  |
+|    first   |      string     |    property     |    returns the first char.code (byte) in string     |
+|    last    |      string     |    property     |     returns the last char.code (byte) in string     |
+|  char. at  |      string     |     index       |  returns the char.code from the specified position  |
 |    apply   |  SGS/C function |    property     | function that allows to specify "this" & arg. array |
 | was_aborted|      thread     |    property     |            returns if thread was aborted            |
 | not_started|      thread     |    property     |       returns if coroutine was not started yet      |
@@ -4002,6 +4004,7 @@ This library is loaded on initialization and contains the functions and constant
 -- @toptr - returns a variable, converted to pointer
 -- @parseint - try to parse a variable as integer, return the value or null on failure
 -- @parsereal - try to parse a variable as string, return the value or null on failure
+-- @chr - create a single character string from integer character code
 -- @typeof - returns the type string of a variable
 -- @typeid - returns type ID of a variable
 -- @typeptr - returns type interface pointer from object variables
@@ -4437,6 +4440,14 @@ This library is loaded on initialization and contains the functions and constant
     parsereal( "3e+2" ); // returns 300.0
     parsereal( "0xff" ); // returns 255.0
     parsereal( parsereal ); // returns null
+
+
+# chr [function]
+
+== chr( int code )
+=== returns a single character string from integer character code
+
+    chr( 35 ); // returns string [1] "#"
 
 
 # typeof [function]
@@ -6696,7 +6707,6 @@ This library contains the string handling functions. In all functions, except th
 - @string_compare - compare strings as byte arrays
 - @string_implode - combine an array of strings, putting a separator string between each two consecutive strings
 - @string_explode - split string into parts, separated by the specified separator string
-- @string_charcode - get the character code (byte value, as integer) from the specified position in string
 - @string_frombytes - make a string from an array of integer values, interpreted as bytes
 - @string_utf8_decode - decode a UTF-8 string into an array of code points
 - @string_utf8_encode - encode an array of code points into a UTF-8 string
@@ -6906,15 +6916,6 @@ This library contains the string handling functions. In all functions, except th
     string_explode( "www.example.com", "." ); // ["www","example","com"]
     string_explode( "x", "-" ); // ["x"]
     string_explode( "/some//data", "/" ); // ["","some","","data"]
-
-
-# string_charcode [function]
-
-== string_charcode( string str, int offset = 0 )
-=== returns the byte value / ASCII character code of the specified byte in the string
-
-    string_charcode( "Test" ); // int 84
-    string_charcode( "Test", 3 ); // int 116
 
 
 # string_frombytes [function]

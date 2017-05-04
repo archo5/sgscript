@@ -833,11 +833,27 @@ SFTRET parse_exp( SFTC, char* endtoklist, int etlsize )
 			SFTC_UNEXP;
 			goto fail;
 		}
-		else if( SFTC_IS( SGS_ST_STRING )
-			  || SFTC_IS( SGS_ST_NUMINT )
+		else if( SFTC_IS( SGS_ST_STRING ) )
+		{
+			cur = cur->next = make_node( SGS_SFT_CONST, SFTC_AT, NULL, NULL );
+			if( sgsT_IsIdent( sgsT_Next( SFTC_AT ), "c" ) )
+			{
+				uint32_t val;
+				SGS_AS_UINT32( val, SFTC_AT + 1 );
+				if( val != 1 )
+				{
+					SFTC_PRINTERR( "expected 1 character in character literal" );
+					goto fail;
+				}
+				SFTC_NEXT;
+			}
+		}
+		else if( SFTC_IS( SGS_ST_NUMINT )
 			  || SFTC_IS( SGS_ST_NUMREAL )
 			  || SFTC_IS( SGS_ST_NUMPTR ) )
+		{
 			cur = cur->next = make_node( SGS_SFT_CONST, SFTC_AT, NULL, NULL );
+		}
 		else if( SFTC_IS( SGS_ST_IDENT ) )
 		{
 			if( SFTC_IS_ID( "map" ) && sgsT_Next( SFTC_AT ) && *sgsT_Next( SFTC_AT ) == '{' )

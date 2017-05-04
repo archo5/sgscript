@@ -41,7 +41,7 @@ function load_docfile( name )
 	tags = [];
 	foreach( id, line : lines )
 	{
-		if( line.length < 1 || line[0] != "#" )
+		if( line.length < 1 || line[0] != "#"c )
 		{
 			if( tags.size && isset( tags.last, "lines" ) )
 			{

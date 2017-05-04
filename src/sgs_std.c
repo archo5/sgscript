@@ -2002,6 +2002,16 @@ static int sgsstd_parsereal( SGS_CTX )
 	return 1;
 }
 
+static int sgsstd_chr( SGS_CTX )
+{
+	char c;
+	SGSFN( "chr" );
+	if( !sgs_LoadArgs( C, "c", &c ) )
+		return 0;
+	sgs_PushStringBuf( C, &c, 1 );
+	return 1;
+}
+
 
 static int sgsstd_typeof( SGS_CTX )
 {
@@ -4011,7 +4021,7 @@ static sgs_RegFuncConst regfuncs[] =
 	STDLIB_FN( get_iterator ), STDLIB_FN( iter_advance ), STDLIB_FN( iter_getdata ),
 	/* types */
 	STDLIB_FN( tobool ), STDLIB_FN( toint ), STDLIB_FN( toreal ), STDLIB_FN( tostring ), STDLIB_FN( toptr ),
-	STDLIB_FN( parseint ), STDLIB_FN( parsereal ),
+	STDLIB_FN( parseint ), STDLIB_FN( parsereal ), STDLIB_FN( chr ),
 	STDLIB_FN( typeof ), STDLIB_FN( typeid ), STDLIB_FN( typeptr ), STDLIB_FN( typeptr_by_name ),
 	STDLIB_FN( is_numeric ), STDLIB_FN( is_callable ),
 	STDLIB_FN( is_array ), STDLIB_FN( is_dict ), STDLIB_FN( is_map ),

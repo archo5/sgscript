@@ -1375,7 +1375,8 @@ static int vm_getidx_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* obj
 			return SGS_EBOUNDS;
 		}
 		pos = ( pos + size ) % size;
-		sgsVM_VarCreateString( C, outmaybe, sgs_var_cstr( obj ) + pos, 1 );
+		outmaybe->type = SGS_VT_INT;
+		outmaybe->data.I = (unsigned char) sgs_var_cstr( obj )[ pos ];
 		return 0;
 	}
 
@@ -1395,9 +1396,38 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* ob
 		switch( obj->type )
 		{
 		case SGS_VT_STRING:
+			if( !strcmp( prop, "first" ) )
+			{
+				if( obj->data.S->size )
+				{
+					outmaybe->type = SGS_VT_INT;
+					outmaybe->data.I = (unsigned char) sgs_var_cstr( obj )[ 0 ];
+					return 0;
+				}
+				else
+				{
+					sgs_Msg( C, SGS_WARNING, "cannot get first character of empty string" );
+					return SGS_EINPROC;
+				}
+			}
+			if( !strcmp( prop, "last" ) )
+			{
+				if( obj->data.S->size )
+				{
+					outmaybe->type = SGS_VT_INT;
+					outmaybe->data.I = (unsigned char) sgs_var_cstr( obj )[ obj->data.S->size - 1 ];
+					return 0;
+				}
+				else
+				{
+					sgs_Msg( C, SGS_WARNING, "cannot get last character of empty string" );
+					return SGS_EINPROC;
+				}
+			}
 			if( !strcmp( prop, "length" ) )
 			{
-				*outmaybe = sgs_MakeInt( obj->data.S->size );
+				outmaybe->type = SGS_VT_INT;
+				outmaybe->data.I = obj->data.S->size;
 				return 0;
 			}
 			break;
@@ -3847,7 +3877,10 @@ static SGSBOOL sgs_parse_path_key( SGS_CTX, const char* fn, size_t at,
 			sgs_InitString( C, pkey, P );
 	}
 	else if( S >= 0 )
-		*pkey = sgs_MakeInt( S );
+	{
+		pkey->type = SGS_VT_INT;
+		pkey->data.I = S;
+	}
 	else
 	{
 		sgs_Msg( C, SGS_INTERR, "%s: (pos. %d) internal path parsing error", fn, (int) at );

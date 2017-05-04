@@ -1305,8 +1305,22 @@ static SGSBOOL compile_const( SGS_FNTCMP_ARGS, rcpos_t* opos )
 	else if( *node->token == SGS_ST_STRING )
 	{
 		uint32_t val;
+		sgs_TokenList next = sgsT_Next( node->token );
 		SGS_AS_UINT32( val, node->token + 1 );
-		*opos = BC_CONSTENC( add_const_s( C, func, val, (const char*) node->token + 5 ) );
+		
+		if( sgsT_IsIdent( next, "c" ) )
+		{
+			if( val != 1 )
+			{
+				QINTERR( 1013 );
+				return 0;
+			}
+			*opos = BC_CONSTENC( add_const_i( C, func, *((const char*) node->token + 5) ) );
+		}
+		else
+		{
+			*opos = BC_CONSTENC( add_const_s( C, func, val, (const char*) node->token + 5 ) );
+		}
 	}
 	else
 	{

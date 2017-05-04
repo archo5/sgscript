@@ -154,12 +154,6 @@ testEqual( string_explode( "a....5", ".." )$'', "[a,,5]", "string_explode - SMC 
 testEqual( string_explode( "a...5", ".." )$'', "[a,.5]", "string_explode - SMC tricky middle" );
 testEqual( string_explode( "abc5", "" )$'', "[a,b,c,5]", "string_explode - empty separator string" );
 
-	section( "string_charcode" );
-testEqual( string_charcode( "%?" ), 37, "string_charcode - default behavior" );
-testEqual( string_charcode( "%?", -1 ), 63, "string_charcode - reverse indexing" );
-ERRORS = ""; testEqual( string_charcode( "%?", -3 ), null, "string_charcode - invalid reverse index" );
-	testEqual( ERRORS, "[W:string_charcode(): index out of bounds]" );
-
 	section( "string_frombytes" );
 testEqual( string_frombytes( 33 ), "!", "string_frombytes - integer" );
 testEqual( string_frombytes([72,101,108,108,111]), "Hello", "string_frombytes - array" );
