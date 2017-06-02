@@ -19,6 +19,14 @@ Account::Handle pushAccount( SGS_CTX, sgsString name )
 	return Account::Handle( acc );
 }
 
+AccountExt::Handle pushAccountExt( SGS_CTX, sgsString name )
+{
+	AccountExt* acc = SGS_CREATECLASS( C, NULL, AccountExt, () );
+	if( name.not_null() )
+		acc->name = name;
+	return AccountExt::Handle( acc );
+}
+
 static void test_core_features()
 {
 	printf("> ");
@@ -156,6 +164,33 @@ static void test_object_account()
 	destroy_context( C );
 }
 
+static void test_object_accountext()
+{
+	printf("> ");
+	puts( testname = "object test - account[ext]" );
+	SGS_CTX = get_context();
+	{
+		AccountExt::Handle aA = pushAccountExt( C, sgsString( C, "C for 'Chief'" ) );
+		
+		// own properties
+		{
+			SGS_SCOPE;
+			sgsVariable vA = aA;
+			vA.setprop( "nameExt", sgsString( C, "ExtTest" ) );
+		}
+		
+		// dump objects
+		{
+			SGS_SCOPE;
+			sgsEnv( C ).getprop( "printvar" ).tcall<void>( C, aA );
+		}
+		
+		// free handles before destroying the engine to destroy the objects
+		aA = AccountExt::Handle();
+	}
+	destroy_context( C );
+}
+
 static void test_object_xref()
 {
 	printf("> ");
@@ -222,6 +257,7 @@ int main( int argc, char** argv )
 	test_core_features();
 	test_object_vec3();
 	test_object_account();
+	test_object_accountext();
 	test_object_xref();
 	
 	puts( "[cppbc"

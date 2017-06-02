@@ -62,9 +62,19 @@ struct _sgsInterface
 # define SGS_OBJECT_LITE \
 	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj ); \
 	static int _sgs_gcmark( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgs_getindex( SGS_ARGS_GETINDEXFUNC ); \
-	static int _sgs_setindex( SGS_ARGS_SETINDEXFUNC ); \
+	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int type ); \
+	static int _sgs_serialize( SGS_CTX, sgs_VarObj* obj ); \
 	static int _sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
+	static int _sgs_getnext( SGS_CTX, sgs_VarObj* obj, int flags ); \
+	static int _sgs_call( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgs_expr( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgsimpl_destruct( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgsimpl_gcmark( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgsimpl_getindex( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgsimpl_setindex( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgsimpl_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
 	static _sgsInterface _sgs_interface;
 # define SGS_OBJECT \
 	SGS_OBJECT_LITE \
@@ -603,7 +613,7 @@ public:
 	{
 		return sgsVariable( C, sgs_ObjGetMetaObj( get_object_struct() ) );
 	}
-	bool get_metamethods_enabled(){ return sgs_ObjGetMetaMethodEnable( get_object_struct() ); }
+	bool get_metamethods_enabled(){ return sgs_ObjGetMetaMethodEnable( get_object_struct() ) != 0; }
 	void enable_metamethods( bool e ){ sgs_ObjSetMetaMethodEnable( get_object_struct(), e ); }
 	
 	/* indexing */
@@ -631,7 +641,7 @@ public:
 	
 	bool setsubitem( sgsVariable key, sgsVariable val, bool prop )
 	{
-		return sgs_SetIndex( C, var, key.var, val.var, prop );
+		return sgs_SetIndex( C, var, key.var, val.var, prop ) != 0;
 	}
 	bool setsubitem( const char* key, sgsVariable val, bool prop )
 	{

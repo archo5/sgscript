@@ -453,16 +453,6 @@ sgs_CreateObjectIPA( C, NULL, sizeof( mystruct ), object_iface ); // preferred m
         if( strcmp( str, &quot;do_smth_else&quot; ) == 0 ) return sgs_PushCFunc( C, object_do_smth_else );
     }
     return SGS_ENOTFND; // return that the specified key was not found in object
-}
-// a slightly cleaner but less hands-on, the macro-based version:
-int object_getindex( SGS_ARGS_GETINDEXFUNC )
-{
-    SGS_BEGIN_INDEXFUNC
-        SGS_CASE( &quot;data_pointer&quot; ) return sgs_PushPtr( C, obj-&gt;data );
-        
-        SGS_CASE( &quot;do_something&quot; ) return sgs_PushCFunc( C, object_do_something );
-        SGS_CASE( &quot;do_smth_else&quot; ) return sgs_PushCFunc( C, object_do_smth_else );
-    SGS_END_INDEXFUNC
 }</pre><ul><li>This is a very basic index/property reading callback.
 <ul><li>On request for key <code>data_pointer</code>, it returns pointer to allocated memory.
 </li><li>On requests for the other two keys, it returns the associated methods.

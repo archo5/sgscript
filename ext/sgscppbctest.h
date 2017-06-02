@@ -127,6 +127,17 @@ public:
 	}
 };
 
+class AccountExt : public Account
+{
+public:
+	
+	typedef sgsHandle< AccountExt > Handle;
+	
+	SGS_OBJECT_INHERIT( Account );
+	
+	SGS_PROPERTY sgsString nameExt;
+};
+
 
 struct XRef
 {

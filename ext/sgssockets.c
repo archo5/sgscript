@@ -218,7 +218,7 @@ static void sockaddr_push_full_addr_string( SGS_CTX, sgs_VarObj* obj )
 		sgs_PushString( C, "-" );
 }
 
-static int sockaddr_getindex( SGS_ARGS_GETINDEXFUNC )
+static int sockaddr_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* name;
 	if( sgs_ParseString( C, 0, &name, NULL ) )
@@ -296,7 +296,7 @@ static int sockaddr_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int sockaddr_setindex( SGS_ARGS_SETINDEXFUNC )
+static int sockaddr_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* name;
 	if( sgs_ParseString( C, 0, &name, NULL ) )
@@ -324,7 +324,7 @@ static int sockaddr_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
-static int sockaddr_expr( SGS_ARGS_OBJFUNC )
+static int sockaddr_expr( SGS_CTX, sgs_VarObj* obj )
 {
 	int eop = sgs_ObjectArg( C );
 	if( eop == SGS_EOP_COMPARE )
@@ -797,7 +797,7 @@ static int socketI_getpeername( SGS_CTX )
 	STDLIB_WARN( "failed to get peer name" )
 }
 
-static int socket_getindex( SGS_ARGS_GETINDEXFUNC )
+static int socket_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* name;
 	if( sgs_ParseString( C, 0, &name, NULL ) )
@@ -903,7 +903,7 @@ static int socket_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int socket_setindex( SGS_ARGS_SETINDEXFUNC )
+static int socket_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* name;
 	if( sgs_ParseString( C, 0, &name, NULL ) )

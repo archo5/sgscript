@@ -4176,23 +4176,6 @@ static int utf8it_destruct( SGS_CTX, sgs_VarObj* obj )
 	return SGS_SUCCESS;
 }
 
-static int utf8it_setindex( SGS_ARGS_SETINDEXFUNC )
-{
-	U8I_HDR;
-	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "offset" )
-		{
-			sgs_Int V;
-			if( sgs_ParseInt( C, 1, &V ) )
-			{
-				IT->i = U8I_PREPOS | (uint32_t) V;
-				return SGS_SUCCESS;
-			}
-			return SGS_EINVAL;
-		}
-	SGS_END_INDEXFUNC;
-}
-
 static int utf8it_convert( SGS_CTX, sgs_VarObj* obj, int type )
 {
 	U8I_HDR;
@@ -4260,17 +4243,31 @@ static int utf8it_getnext( SGS_CTX, sgs_VarObj* obj, int what )
 	}
 }
 
+static int sgs_utf8it_prop_offset_write( SGS_CTX, sgs_VarObj* obj )
+{
+	sgs_Int V;
+	U8I_HDR;
+	if( sgs_ParseInt( C, 0, &V ) )
+	{
+		IT->i = U8I_PREPOS | (uint32_t) V;
+		return SGS_SUCCESS;
+	}
+	return SGS_EINVAL;
+}
+
 static const sgs_ObjProp utf8_iterator_props[] =
 {
 	SGS_OBJPROP_OFFSET( "string", offsetof( utf8iter, str ), SGS_OBJPROPTYPE_VARSTR, SGS_OBJPROP_NOWRITE ),
-	SGS_OBJPROP_OFFSET( "offset", offsetof( utf8iter, i ), SGS_OBJPROPTYPE_U32, 0 ),
+	SGS_OBJPROP_CALLBACK( "offset", NULL, sgs_utf8it_prop_offset_write,
+		SGS_OBJPROP_NOREAD | SGS_OBJPROP_NOLIST | SGS_OBJPROP_NODUMP ),
+	SGS_OBJPROP_OFFSET( "offset", offsetof( utf8iter, i ), SGS_OBJPROPTYPE_U32, SGS_OBJPROP_NOWRITE ),
 	SGS_OBJPROP_END(),
 };
 static sgs_ObjInterface utf8_iterator_iface[1] =
 {{
 	"utf8_iterator",
 	utf8it_destruct, NULL,
-	NULL, utf8it_setindex,
+	NULL, NULL,
 	utf8it_convert, utf8it_serialize, NULL, utf8it_getnext,
 	NULL, NULL,
 	utf8_iterator_props,

@@ -410,19 +410,22 @@ static int ppthreadP_state( SGS_CTX, sgs_VarObj* obj )
 }
 
 
-static int ppthread_getindex( SGS_ARGS_GETINDEXFUNC )
+static int ppthread_getindex( SGS_CTX, sgs_VarObj* obj )
 {
-	SGS_BEGIN_INDEXFUNC
-		SGS_CASE( "start" )  IFN( ppthreadI_start )
-		SGS_CASE( "wait" )   IFN( ppthreadI_wait )
+	char* str;
+	if( sgs_ParseString( C, 0, &str, NULL ) )
+	{
+		if( !strcmp( str, "start" ) )  IFN( ppthreadI_start )
+		if( !strcmp( str, "wait" ) )   IFN( ppthreadI_wait )
 		
-		SGS_CASE( "has" )    IFN( ppthreadI_has )
-		SGS_CASE( "get" )    IFN( ppthreadI_get )
-		SGS_CASE( "set" )    IFN( ppthreadI_set )
-		SGS_CASE( "set_if" ) IFN( ppthreadI_set_if )
+		if( !strcmp( str, "has" ) )    IFN( ppthreadI_has )
+		if( !strcmp( str, "get" ) )    IFN( ppthreadI_get )
+		if( !strcmp( str, "set" ) )    IFN( ppthreadI_set )
+		if( !strcmp( str, "set_if" ) ) IFN( ppthreadI_set_if )
 		
-		SGS_CASE( "state" )  return ppthreadP_state( C, obj );
-	SGS_END_INDEXFUNC;
+		if( !strcmp( str, "state" ) )  return ppthreadP_state( C, obj );
+	}
+	return SGS_ENOTFND;
 }
 
 static int ppthread_destruct( SGS_CTX, sgs_VarObj* obj )

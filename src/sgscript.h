@@ -1221,13 +1221,6 @@ static SGS_INLINE SGSRESULT sgs_StdScriptFSFunc( void* ctx, SGS_CTX, int op, sgs
 
 #define SGS_RETURN_THIS( C ) sgs_Method( C ); sgs_SetStackSize( C, 1 ); return 1;
 
-#define SGS_ARGS_OBJFUNC SGS_CTX, sgs_VarObj* obj
-#define SGS_ARGS_GETINDEXFUNC SGS_CTX, sgs_VarObj* obj
-#define SGS_ARGS_SETINDEXFUNC SGS_CTX, sgs_VarObj* obj
-#define SGS_BEGIN_INDEXFUNC char* str; if( sgs_ParseString( C, 0, &str, NULL ) ){
-#define SGS_END_INDEXFUNC } return SGS_ENOTFND;
-#define SGS_CASE( name ) if( !strcmp( str, name ) )
-
 
 #ifdef __cplusplus
 }

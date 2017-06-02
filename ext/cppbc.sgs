@@ -9,11 +9,11 @@ global ERR_OOC = "SGS_OBJECT outside class/struct";
 
 global DEFAULT_OBJ_IFUNCS =
 {
-	"destruct" = "_sgs_destruct",
-	"gcmark" = "_sgs_gcmark",
-	"getindex" = "_sgs_getindex",
-	"setindex" = "_sgs_setindex",
-	"dump" = "_sgs_dump",
+	"destruct" = "_sgsimpl_destruct",
+	"gcmark" = "_sgsimpl_gcmark",
+	"getindex" = "_sgsimpl_getindex",
+	"setindex" = "_sgsimpl_setindex",
+	"dump" = "_sgsimpl_dump",
 };
 
 global OBJ_IFUNC_POS =
@@ -864,39 +864,6 @@ function cppbc_find_objects( code )
 }
 
 
-function cppbc_extend_objects( objects )
-{
-	foreach( obj : objects )
-	{
-		nitems = {};
-		foreach( inhname : obj.inherited )
-		{
-			if( inhname == obj.name )
-				cppbc_error( "cannot inherit yourself (" $ inhname $ ")" );
-			inhobj = null;
-			foreach( oo : objects )
-			{
-				if( oo.name == inhname )
-				{
-					inhobj = oo;
-					break;
-				}
-			}
-			if( inhobj === null )
-				cppbc_error( "cannot find inherited object (" $ inhname $ ")" );
-			
-			foreach( ni : inhobj.items )
-				nitems[ ni.what $ "/" $ ni.name ] = ni;
-			if( obj.bstores.size == 0 )
-				obj.bstores = inhobj.bstores;
-		}
-		foreach( ni : obj.items )
-			nitems[ ni.what $ "/" $ ni.name ] = ni;
-		obj.items = get_values( nitems );
-	}
-}
-
-
 function cppbc_generate_code( objects, includes )
 {
 	// header
@@ -1004,10 +971,35 @@ static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 		}
 		
 		// interface functions
+		// - WRAPPERS
+		foreach( ifname ,: OBJ_IFUNC_POS )
+		{
+			ifunc = @ifuncs[ ifname ];
+			if( ifname == "convert" || ifname == "dump" || ifname == "getnext" )
+			{
+				out ..= "\nint " .. obj.name .. "::_sgs_" .. ifname
+					.. "( SGS_CTX, sgs_VarObj* obj, int param ){ return ";
+				if( ifunc === null )
+					out ..= "SGS_ENOTSUP";
+				else
+					out ..= ifunc .. "( C, obj, param )";
+			}
+			else
+			{
+				out ..= "\nint " .. obj.name .. "::_sgs_" .. ifname
+					.. "( SGS_CTX, sgs_VarObj* obj ){ return ";
+				if( ifunc === null )
+					out ..= "SGS_ENOTSUP";
+				else
+					out ..= ifunc .. "( C, obj )";
+			}
+			out ..= "; }\n";
+		}
+		
 		// - OP_DESTRUCT
 		out $= string_translate(
 "
-int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
+int %OBJ%::_sgsimpl_destruct( SGS_CTX, sgs_VarObj* obj )
 {"
 	$ dtorchanger $ "
 	static_cast<%OBJ%*>( obj->data )->~%OBJ%();
@@ -1017,7 +1009,7 @@ int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
 		, { "%OBJ%" = obj.name } );
 		
 		// - OP_GCMARK
-		out $= "\nint " $ obj.name $ "::_sgs_gcmark( SGS_CTX, sgs_VarObj* obj )\n{";
+		out $= "\nint " $ obj.name $ "::_sgsimpl_gcmark( SGS_CTX, sgs_VarObj* obj )\n{";
 		out $= tmpchanger;
 		foreach( item : obj.items )
 		{
@@ -1026,15 +1018,19 @@ int %OBJ%::_sgs_destruct( SGS_CTX, sgs_VarObj* obj )
 			out $= "\n\tsgs_GCMarkVar( C, static_cast<"$
 				obj.name$"*>( obj->data )->"$item.name$" );";
 		}
+		if( obj.inherited )
+			out ..= "\n\t" .. obj.inherited[0] .. "::_sgs_gcmark( C, obj );";
 		out $= "\n\treturn SGS_SUCCESS;\n}\n";
 		
 		// - OP_GETINDEX
 		out $=
 "
-int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
+int " $ obj.name $ "::_sgsimpl_getindex( SGS_CTX, sgs_VarObj* obj )
 {"
 	$ tmpchanger $ "
-	SGS_BEGIN_INDEXFUNC";
+	char* str;
+	if( sgs_ParseString( C, 0, &str, NULL ) )
+	{";
 		foreach( item : obj.items )
 		{
 			itemline = null;
@@ -1061,7 +1057,7 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 			if( itemline )
 			{
 				out $= string_translate( "
-		SGS_CASE( \"%NAME%\" ){ "$itemline$" return SGS_SUCCESS; }"
+		if( !strcmp( str, \"%NAME%\" ) ){ "$itemline$" return SGS_SUCCESS; }"
 				, {
 					"%OBJ%" = obj.name,
 					"%NAME%" = if( isset( item, "varname" ), item.varname || item.name, item.name ),
@@ -1078,17 +1074,20 @@ int " $ obj.name $ "::_sgs_getindex( SGS_ARGS_GETINDEXFUNC )
 			$ ", sgs_StackItem( C, 0 ), sgs_ObjectArg( C ) ) ) return SGS_SUCCESS;";
 		}
 		out $= "
-	SGS_END_INDEXFUNC;
+	}
+	return " .. if( obj.inherited, obj.inherited[0] .. "::_sgs_getindex( C, obj )", "SGS_ENOTFND" ) .. ";
 }
 ";
 		
 		// - OP_SETINDEX
 		out $=
 "
-int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
+int " $ obj.name $ "::_sgsimpl_setindex( SGS_CTX, sgs_VarObj* obj )
 {"
 	$ tmpchanger $ "
-	SGS_BEGIN_INDEXFUNC";
+	char* str;
+	if( sgs_ParseString( C, 0, &str, NULL ) )
+	{";
 		foreach( item : obj.items )
 		{
 			itemline = null;
@@ -1112,7 +1111,7 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			if( itemline )
 			{
 				out $= string_translate( "
-		SGS_CASE( \"%NAME%\" ){ "$itemline$" return SGS_SUCCESS; }"
+		if( !strcmp( str, \"%NAME%\" ) ){ "$itemline$" return SGS_SUCCESS; }"
 				, {
 					"%OBJ%" = obj.name,
 					"%NAME%" = if( isset( item, "varname" ), item.varname || item.name, item.name ),
@@ -1130,12 +1129,13 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			$ ", sgs_StackItem( C, 0 ), sgs_StackItem( C, 1 ), sgs_ObjectArg( C ) ) ) return SGS_SUCCESS;";
 		}
 		out $= "
-	SGS_END_INDEXFUNC;
+	}
+	return " .. if( obj.inherited, obj.inherited[0] .. "::_sgs_setindex( C, obj )", "SGS_ENOTFND" ) .. ";
 }
 ";
 		
 		// - OP_DUMP
-		out $= "\nint " $ obj.name $ "::_sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth )\n{";
+		out $= "\nint " $ obj.name $ "::_sgsimpl_dump( SGS_CTX, sgs_VarObj* obj, int depth )\n{";
 		out $= tmpchanger;
 		out $= "\n\tchar bfr[ "$ obj.name.length + 32 $" ];";
 		out $= "\n\tsprintf( bfr, \""$obj.name$" (%p) %s\", obj->data, depth > 0 ? \"\\n{\" : \" ...\" );";
@@ -1172,21 +1172,28 @@ int " $ obj.name $ "::_sgs_setindex( SGS_ARGS_SETINDEXFUNC )
 			dumpvarorder.remove( item.name );
 		}
 		// 2. push it
+		dpcount = dict_size( dumpvars ) * 2;
+		if( obj.inherited )
+		{
+			dpcount += 2;
+			out ..= "\n\t\tsgs_PushStringLit( C, \"\\n[inherited] \" );";
+			out ..= "\n\t\t" .. obj.inherited[0] .. "::_sgs_dump( C, obj, depth );";
+		}
 		foreach( name : dumpvarorder )
 		{
 			src = dumpvars[ name ];
 			vld = dumpvalid[ name ];
 			out $= "\n\t\t{ ";
-			out $= "sgs_PushString( C, \"\\n"$name$" = \" ); ";
+			out $= "sgs_PushStringLit( C, \"\\n"$name$" = \" ); ";
 			if( vld !== null )
 			{
-				out $= "if( !( static_cast<"$obj.name$"*>( obj->data )->"$vld$" ) ) sgs_PushString( C, \"<inaccessible>\" ); else ";
+				out $= "if( !( static_cast<"$obj.name$"*>( obj->data )->"$vld$" ) ) sgs_PushStringLit( C, \"<inaccessible>\" ); else ";
 			}
 			out $= "sgs_DumpData( C, static_cast<"$obj.name$"*>( obj->data )->"$src$", depth ).push( C );";
 			out $= " }";
 		}
-		out $= "\n\t\tsgs_StringConcat( C, "$dict_size(dumpvars)*2$" );\n\t\tsgs_PadString( C );";
-		out $= "\n\t\tsgs_PushString( C, \"\\n}\" );";
+		out $= "\n\t\tsgs_StringConcat( C, " .. dpcount .. " );\n\t\tsgs_PadString( C );";
+		out $= "\n\t\tsgs_PushStringLit( C, \"\\n}\" );";
 		out $= "\n\t\tsgs_StringConcat( C, 3 );";
 		out $= "\n\t}";
 		out $= "\n\treturn SGS_SUCCESS;\n}\n";
@@ -1270,7 +1277,6 @@ function cppbc_parse_file( code, inclcode, includes )
 	}
 	objects = get_concat( inclobjects, objects );
 	
-	cppbc_extend_objects( objects );
 	gcode = cppbc_generate_code( objects, includes );
 	return gcode;
 }

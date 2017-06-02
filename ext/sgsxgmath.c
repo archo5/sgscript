@@ -121,7 +121,7 @@ static const sgs_ObjProp xgm_v2_props[] =
 	SGS_OBJPROP_END(),
 };
 
-static int xgm_v2_getindex( SGS_ARGS_GETINDEXFUNC )
+static int xgm_v2_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	XGM_OHDR;
@@ -165,7 +165,7 @@ static int xgm_v2_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v2_setindex( SGS_ARGS_SETINDEXFUNC )
+static int xgm_v2_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_VT* hdr = (XGM_VT*) obj->data;
 	
@@ -186,7 +186,7 @@ static int xgm_v2_setindex( SGS_ARGS_SETINDEXFUNC )
 		char* str;
 		if( !sgs_ParseString( C, 0, &str, NULL ) )
 			return SGS_EINVAL;
-		SGS_CASE( "angle" )
+		if( !strcmp( str, "angle" ) )
 		{
 			if( !sgs_ParseReal( C, 1, &vv ) )
 				return SGS_EINVAL;
@@ -202,7 +202,7 @@ static int xgm_v2_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v2_expr( SGS_ARGS_OBJFUNC )
+static int xgm_v2_expr( SGS_CTX, sgs_VarObj* obj )
 {
 	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_ADD ||
@@ -338,7 +338,7 @@ static const sgs_ObjProp xgm_v3_props[] =
 	SGS_OBJPROP_END(),
 };
 
-static int xgm_v3_getindex( SGS_ARGS_GETINDEXFUNC )
+static int xgm_v3_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	sgs_SizeVal size;
@@ -381,7 +381,7 @@ static int xgm_v3_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v3_setindex( SGS_ARGS_SETINDEXFUNC )
+static int xgm_v3_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	sgs_Real val;
 	XGM_OHDR;
@@ -399,7 +399,7 @@ static int xgm_v3_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v3_expr( SGS_ARGS_OBJFUNC )
+static int xgm_v3_expr( SGS_CTX, sgs_VarObj* obj )
 {
 	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_ADD ||
@@ -561,7 +561,7 @@ static const sgs_ObjProp xgm_v4_props[] =
 	SGS_OBJPROP_END(),
 };
 
-static int xgm_v4_getindex( SGS_ARGS_GETINDEXFUNC )
+static int xgm_v4_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	XGM_OHDR;
@@ -603,7 +603,7 @@ static int xgm_v4_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v4_setindex( SGS_ARGS_SETINDEXFUNC )
+static int xgm_v4_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	sgs_Real val;
 	XGM_OHDR;
@@ -621,7 +621,7 @@ static int xgm_v4_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_v4_expr( SGS_ARGS_OBJFUNC )
+static int xgm_v4_expr( SGS_CTX, sgs_VarObj* obj )
 {
 	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_ADD ||
@@ -893,7 +893,7 @@ static const sgs_ObjProp xgm_b2_props[] =
 	SGS_OBJPROP_END()
 };
 
-static int xgm_b2_getindex( SGS_ARGS_GETINDEXFUNC )
+static int xgm_b2_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
 	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
@@ -905,7 +905,7 @@ static int xgm_b2_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_b2_setindex( SGS_ARGS_SETINDEXFUNC )
+static int xgm_b2_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_OHDR;
 	if( sgs_ItemType( C, 0 ) == SGS_VT_INT )
@@ -925,7 +925,7 @@ static int xgm_b2_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_b2_expr( SGS_ARGS_OBJFUNC )
+static int xgm_b2_expr( SGS_CTX, sgs_VarObj* obj )
 {
 	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_COMPARE )
@@ -1154,25 +1154,25 @@ static const sgs_ObjProp xgm_b3_props[] =
 	SGS_OBJPROP_END(),
 };
 
-static int xgm_b3_getindex( SGS_ARGS_GETINDEXFUNC )
+static int xgm_b3_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	XGM_OHDR;
 	if( sgs_ParseString( C, 0, &str, NULL ) )
 	{
-		SGS_CASE( "p1" )     return sgs_CreateVec3p( C, NULL, hdr );
-		SGS_CASE( "p2" )     return sgs_CreateVec3p( C, NULL, hdr + 3 );
-		SGS_CASE( "width" )  return sgs_PushReal( C, hdr[3] - hdr[0] );
-		SGS_CASE( "height" ) return sgs_PushReal( C, hdr[4] - hdr[1] );
-		SGS_CASE( "depth" )  return sgs_PushReal( C, hdr[5] - hdr[2] );
-		SGS_CASE( "center" ) return sgs_CreateVec3( C, NULL, (hdr[0]+hdr[3])*0.5f, (hdr[1]+hdr[4])*0.5f, (hdr[2]+hdr[5])*0.5f );
-		SGS_CASE( "area" )   return sgs_PushReal( C, (hdr[3] - hdr[0]) * (hdr[4] - hdr[1]) * (hdr[5] - hdr[2]) );
-		SGS_CASE( "valid" )  return sgs_PushBool( C, hdr[3] >= hdr[0] && hdr[4] >= hdr[1] && hdr[5] >= hdr[2] );
+		if( !strcmp( str, "p1" ) )     return sgs_CreateVec3p( C, NULL, hdr );
+		if( !strcmp( str, "p2" ) )     return sgs_CreateVec3p( C, NULL, hdr + 3 );
+		if( !strcmp( str, "width" ) )  return sgs_PushReal( C, hdr[3] - hdr[0] );
+		if( !strcmp( str, "height" ) ) return sgs_PushReal( C, hdr[4] - hdr[1] );
+		if( !strcmp( str, "depth" ) )  return sgs_PushReal( C, hdr[5] - hdr[2] );
+		if( !strcmp( str, "center" ) ) return sgs_CreateVec3( C, NULL, (hdr[0]+hdr[3])*0.5f, (hdr[1]+hdr[4])*0.5f, (hdr[2]+hdr[5])*0.5f );
+		if( !strcmp( str, "area" ) )   return sgs_PushReal( C, (hdr[3] - hdr[0]) * (hdr[4] - hdr[1]) * (hdr[5] - hdr[2]) );
+		if( !strcmp( str, "valid" ) )  return sgs_PushBool( C, hdr[3] >= hdr[0] && hdr[4] >= hdr[1] && hdr[5] >= hdr[2] );
 	}
 	return SGS_ENOTFND;
 }
 
-static int xgm_b3_setindex( SGS_ARGS_SETINDEXFUNC )
+static int xgm_b3_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	XGM_OHDR;
@@ -1184,7 +1184,7 @@ static int xgm_b3_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_b3_expr( SGS_ARGS_OBJFUNC )
+static int xgm_b3_expr( SGS_CTX, sgs_VarObj* obj )
 {
 	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_COMPARE )
@@ -1315,7 +1315,7 @@ static const sgs_ObjProp xgm_col_props[] =
 	SGS_OBJPROP_END(),
 };
 
-static int xgm_col_getindex( SGS_ARGS_GETINDEXFUNC )
+static int xgm_col_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	XGM_OHDR;
@@ -1336,7 +1336,7 @@ static int xgm_col_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_col_setindex( SGS_ARGS_SETINDEXFUNC )
+static int xgm_col_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	sgs_Real val;
 	XGM_OHDR;
@@ -1353,7 +1353,7 @@ static int xgm_col_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_col_expr( SGS_ARGS_OBJFUNC )
+static int xgm_col_expr( SGS_CTX, sgs_VarObj* obj )
 {
 	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_ADD ||
@@ -2082,7 +2082,7 @@ static const sgs_ObjProp xgm_quat_props[] =
 	SGS_OBJPROP_END(),
 };
 
-static int xgm_quat_getindex( SGS_ARGS_GETINDEXFUNC )
+static int xgm_quat_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	XGM_OHDR;
@@ -2138,7 +2138,7 @@ static int xgm_quat_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_quat_setindex( SGS_ARGS_SETINDEXFUNC )
+static int xgm_quat_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	sgs_Real val;
 	XGM_OHDR;
@@ -2156,7 +2156,7 @@ static int xgm_quat_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_quat_expr( SGS_ARGS_OBJFUNC )
+static int xgm_quat_expr( SGS_CTX, sgs_VarObj* obj )
 {
 	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_ADD ||
@@ -2675,7 +2675,7 @@ static const sgs_ObjProp xgm_m3_props[] =
 	SGS_OBJPROP_END(),
 };
 
-static int xgm_m3_getindex( SGS_ARGS_GETINDEXFUNC )
+static int xgm_m3_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	XGM_OHDR;
@@ -2711,7 +2711,7 @@ static int xgm_m3_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_m3_setindex( SGS_ARGS_SETINDEXFUNC )
+static int xgm_m3_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	XGM_OHDR;
@@ -2752,7 +2752,7 @@ static int xgm_m3_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_m3_expr( SGS_ARGS_OBJFUNC )
+static int xgm_m3_expr( SGS_CTX, sgs_VarObj* obj )
 {
 	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_COMPARE )
@@ -3214,7 +3214,7 @@ static const sgs_ObjProp xgm_m4_props[] =
 	SGS_OBJPROP_END(),
 };
 
-static int xgm_m4_getindex( SGS_ARGS_GETINDEXFUNC )
+static int xgm_m4_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	XGM_OHDR;
@@ -3260,7 +3260,7 @@ static int xgm_m4_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_m4_setindex( SGS_ARGS_SETINDEXFUNC )
+static int xgm_m4_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	char* str;
 	XGM_OHDR;
@@ -3301,7 +3301,7 @@ static int xgm_m4_setindex( SGS_ARGS_SETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_m4_expr( SGS_ARGS_OBJFUNC )
+static int xgm_m4_expr( SGS_CTX, sgs_VarObj* obj )
 {
 	int type = sgs_ObjectArg( C );
 	if( type == SGS_EOP_COMPARE )
@@ -3710,7 +3710,7 @@ static const sgs_ObjProp xgm_fla_props[] =
 	SGS_OBJPROP_END(),
 };
 
-static int xgm_fla_getindex( SGS_ARGS_GETINDEXFUNC )
+static int xgm_fla_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	XGM_FLAHDR;
 	
@@ -3739,7 +3739,7 @@ static int xgm_fla_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int xgm_fla_setindex( SGS_ARGS_SETINDEXFUNC )
+static int xgm_fla_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	sgs_Real val;
 	XGM_FLAHDR;

@@ -709,7 +709,7 @@ static int sgsstd_array_prop_last_write( SGS_CTX, sgs_VarObj* obj )
 	return SGS_SUCCESS;
 }
 
-int sgsstd_array_getindex( SGS_ARGS_GETINDEXFUNC )
+int sgsstd_array_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	if( C->object_arg == 0 )
 	{
@@ -727,7 +727,7 @@ int sgsstd_array_getindex( SGS_ARGS_GETINDEXFUNC )
 	return SGS_ENOTFND;
 }
 
-static int sgsstd_array_setindex( SGS_ARGS_SETINDEXFUNC )
+static int sgsstd_array_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	if( C->object_arg )
 		return SGS_ENOTSUP;
@@ -1138,7 +1138,7 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 	return sgsstd_vht_dump( C, obj, depth, "dict" );
 }
 
-/* ref'd in sgs_proc.c */ int sgsstd_dict_getindex( SGS_ARGS_GETINDEXFUNC )
+/* ref'd in sgs_proc.c */ int sgsstd_dict_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	sgs_VHTVar* pair = NULL;
 	HTHDR;
@@ -1155,7 +1155,7 @@ static int sgsstd_dict_dump( SGS_CTX, sgs_VarObj* obj, int depth )
 	return SGS_EINVAL;
 }
 
-static int sgsstd_dict_setindex( SGS_ARGS_SETINDEXFUNC )
+static int sgsstd_dict_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	HTHDR;
 	if( sgs_ParseString( C, 0, NULL, NULL ) )
@@ -1390,7 +1390,7 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_ENOTSUP;
 }
 
-/* copy in sgs_proc.c */ static int sgsstd_map_getindex( SGS_ARGS_GETINDEXFUNC )
+/* copy in sgs_proc.c */ static int sgsstd_map_getindex( SGS_CTX, sgs_VarObj* obj )
 {
 	sgs_VHTVar* pair = NULL;
 	HTHDR;
@@ -1403,7 +1403,7 @@ static int sgsstd_map_convert( SGS_CTX, sgs_VarObj* obj, int type )
 	return SGS_SUCCESS;
 }
 
-static int sgsstd_map_setindex( SGS_ARGS_SETINDEXFUNC )
+static int sgsstd_map_setindex( SGS_CTX, sgs_VarObj* obj )
 {
 	HTHDR;
 	sgs_vht_set( ht, C, stk_poff( C, 0 ), stk_poff( C, 1 ) );

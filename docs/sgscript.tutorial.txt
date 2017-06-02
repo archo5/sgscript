@@ -675,16 +675,6 @@ This section describes various use cases and how to apply the SGScript C API to 
         }
         return SGS_ENOTFND; // return that the specified key was not found in object
     }
-    // a slightly cleaner but less hands-on, the macro-based version:
-    int object_getindex( SGS_ARGS_GETINDEXFUNC )
-    {
-        SGS_BEGIN_INDEXFUNC
-            SGS_CASE( "data_pointer" ) return sgs_PushPtr( C, obj->data );
-            
-            SGS_CASE( "do_something" ) return sgs_PushCFunc( C, object_do_something );
-            SGS_CASE( "do_smth_else" ) return sgs_PushCFunc( C, object_do_smth_else );
-        SGS_END_INDEXFUNC
-    }
 
 - This is a very basic index/property reading callback.
 -- On request for key `data_pointer`, it returns pointer to allocated memory.
