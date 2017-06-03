@@ -961,7 +961,9 @@ static int _sgs_method__%OBJ%__%NAME%( sgs_Context* callerCtx )
 "
 static int _sgs_method__%OBJ%__%NAME%( sgs_Context* callerCtx )
 {
-	%OBJ%* data; if( !SGS_PARSE_METHOD( callerCtx, %OBJ%::_sgs_interface, data, %OBJ%, %NAME% ) ) return 0;"
+	sgsLiteObjectBase* base;
+	if( !SGS_PARSE_METHOD( callerCtx, %OBJ%::_sgs_interface, base, %OBJ%, %NAME% ) ) return 0;
+	%OBJ%* data = static_cast<%OBJ%*>( base );"
 	$ mtdchanger $ "
 	%LINE%
 }
