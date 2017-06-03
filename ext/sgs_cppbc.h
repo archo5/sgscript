@@ -19,12 +19,15 @@
 #endif
 
 
+struct sgsLiteObjectBase {};
+struct sgsObjectBase : sgsLiteObjectBase
+{
+	sgsObjectBase() : m_sgsObject(NULL), C(NULL){}
+	sgs_VarObj* m_sgsObject;
+	SGS_CTX;
+};
+
 #ifndef SGS_CPPBC_PROCESS
-# if __cplusplus >= 201103L
-#  define SGS_CPPBC_DEFINIT( x ) = x
-# else
-#  define SGS_CPPBC_DEFINIT( x )
-# endif
 struct _sgsInterface
 {
 	_sgsInterface( const sgs_ObjInterface& src, sgs_CFunc ifn, _sgsInterface* pif = NULL )
@@ -60,26 +63,33 @@ struct _sgsInterface
 #else
 # define SGS_CPPBC_IGNORE(x) x
 # define SGS_OBJECT_LITE \
-	static int _sgs_destruct( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgs_gcmark( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgs_getindex( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgs_setindex( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int type ); \
-	static int _sgs_serialize( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
-	static int _sgs_getnext( SGS_CTX, sgs_VarObj* obj, int flags ); \
-	static int _sgs_call( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgs_expr( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgsimpl_destruct( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgsimpl_gcmark( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgsimpl_getindex( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgsimpl_setindex( SGS_CTX, sgs_VarObj* obj ); \
-	static int _sgsimpl_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
+	int _sgs_destruct( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgs_gcmark( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgs_getindex( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgs_setindex( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgs_convert( SGS_CTX, sgs_VarObj* obj, int type ); \
+	int _sgs_serialize( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgs_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
+	int _sgs_getnext( SGS_CTX, sgs_VarObj* obj, int flags ); \
+	int _sgs_call( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgs_expr( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgslocal_destruct( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgslocal_gcmark( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgslocal_getindex( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgslocal_setindex( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgslocal_convert( SGS_CTX, sgs_VarObj* obj, int type ); \
+	static int _sgslocal_serialize( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgslocal_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
+	static int _sgslocal_getnext( SGS_CTX, sgs_VarObj* obj, int flags ); \
+	static int _sgslocal_call( SGS_CTX, sgs_VarObj* obj ); \
+	static int _sgslocal_expr( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgsimpl_destruct( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgsimpl_gcmark( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgsimpl_getindex( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgsimpl_setindex( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgsimpl_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
 	static _sgsInterface _sgs_interface;
-# define SGS_OBJECT \
-	SGS_OBJECT_LITE \
-	sgs_VarObj* m_sgsObject SGS_CPPBC_DEFINIT(nullptr); \
-	SGS_CTX SGS_CPPBC_DEFINIT(nullptr);
+# define SGS_OBJECT SGS_OBJECT_LITE
 # define SGS_OBJECT_INHERIT( name ) SGS_OBJECT_LITE
 # define SGS_NO_EXPORT
 # define SGS_NO_DESTRUCT
@@ -323,15 +333,20 @@ public:
 		return *this;
 	}
 	
-	operator T*(){ return object ? static_cast<T*>( object->data ) : NULL; }
-	operator const T*() const { return object ? static_cast<T*>( object->data ) : NULL; }
+	operator T*(){ return get(); }
+	operator const T*() const { return get(); }
 	
-	T* operator -> (){ return object ? static_cast<T*>( object->data ) : NULL; }
-	const T* operator -> () const { return object ? static_cast<T*>( object->data ) : NULL; }
+	T* operator -> (){ return get(); }
+	const T* operator -> () const { return get(); }
 	
 	bool operator < ( const sgsHandle& h ) const { return object < h.object; }
 	bool operator == ( const sgsHandle& h ) const { return object == h.object; }
 	bool operator != ( const sgsHandle& h ) const { return object != h.object; }
+	
+	sgsLiteObjectBase* get_liteobj(){ return object ? static_cast<sgsLiteObjectBase*>( object->data ) : NULL; }
+	const sgsLiteObjectBase* get_liteobj() const { return object ? static_cast<sgsLiteObjectBase*>( object->data ) : NULL; }
+	T* get(){ return object ? static_cast<T*>( get_liteobj() ) : NULL; }
+	const T* get() const { return object ? static_cast<T*>( get_liteobj() ) : NULL; }
 	
 	void gcmark() const { if( object ) sgs_ObjGCMark( C, object ); }
 	
@@ -489,13 +504,14 @@ public:
 		var = v;
 		_acquire();
 	}
-	sgsVariable( sgs_Context* c, sgs_Variable* v ) : C(sgs_RootContext(c))
+	sgsVariable( sgs_Context* c, sgs_Variable* v, bool transfer = false ) : C(sgs_RootContext(c))
 	{
 		var.type = SGS_VT_NULL;
 		if( v && v->type != SGS_VT_NULL )
 		{
 			var = *v;
-			_acquire();
+			if( !transfer )
+				_acquire();
 		}
 	}
 	sgsVariable( sgs_Context* c, sgs_VarObj* o ) : C(sgs_RootContext(c))
@@ -763,6 +779,66 @@ inline sgsVariable sgsString::get_variable()
 }
 
 
+struct sgsVarIterator
+{
+	sgsVarIterator( SGS_CTX, sgs_Variable* var ){ _Init( C, var ); }
+	sgsVarIterator( sgsVariable var ){ _Init( var.get_ctx(), &var.var ); }
+	void _Init( SGS_CTX, sgs_Variable* var )
+	{
+		if( !C )
+			return;
+		sgs_Variable it;
+		if( SGS_SUCCEEDED( sgs_CreateIterator( C, &it, *var ) ) )
+		{
+			m_iter = sgsVariable( C, &it, /* transfer ownership = */ true );
+		}
+	}
+	
+	sgsVariable GetKey()
+	{
+		sgsVariable out( m_iter.get_ctx() );
+		if( m_iter.get_ctx() )
+			sgs_IterGetData( m_iter.get_ctx(), m_iter.var, &out.var, NULL );
+		return out;
+	}
+	sgsVariable GetValue()
+	{
+		sgsVariable out( m_iter.get_ctx() );
+		if( m_iter.get_ctx() )
+			sgs_IterGetData( m_iter.get_ctx(), m_iter.var, NULL, &out.var );
+		return out;
+	}
+	bool Advance()
+	{
+		return m_iter.get_ctx() && sgs_IterAdvance( m_iter.get_ctx(), m_iter.var ) > 0;
+	}
+	
+	sgsVariable m_iter;
+};
+
+inline void sgsAssignProperties( sgsVariable to, sgsVariable from, const char* exclprefix )
+{
+	if( !( from.not_null() && to.not_null() ) )
+		return;
+	
+	size_t eplen = exclprefix ? strlen( exclprefix ) : 0;
+	
+	sgsVarIterator it( from );
+	while( it.Advance() )
+	{
+		sgsVariable key = it.GetKey();
+		if( exclprefix && key.is_string() )
+		{
+			sgsString str = key.get_string();
+			if( str.size() >= eplen &&
+				memcmp( str.c_str(), exclprefix, eplen ) == 0 )
+				continue;
+		}
+		to.setindex( key, it.GetValue() );
+	}
+}
+
+
 /* GCMark<T> */
 template< class T > void sgs_GCMarkVar( SGS_CTX, T& var ){}
 template<> inline void sgs_GCMarkVar<sgs_Variable>( SGS_CTX, sgs_Variable& v ){ sgs_GCMark( C, &v ); }
@@ -1019,7 +1095,7 @@ template< class T > sgsVariable sgs_GetClassInterface( SGS_CTX )
 
 template< class T > void sgs_CreateClass( SGS_CTX, sgs_Variable* out, T* inst )
 {
-	sgs_CreateObject( C, out, inst, T::_sgs_interface );
+	sgs_CreateObject( C, out, static_cast<sgsLiteObjectBase*>(inst), T::_sgs_interface );
 	inst->m_sgsObject = out ? sgs_GetObjectStructP( out ) : sgs_GetObjectStruct( C, -1 );
 	inst->C = sgs_RootContext( C );
 	T::_sgs_interface.init( C, out );
@@ -1028,6 +1104,7 @@ template< class T > T* sgs_CreateClassIPA( SGS_CTX, sgs_Variable* out )
 {
 	T* data = static_cast<T*>( sgs_CreateObjectIPA( C, out, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
 	data->m_sgsObject = out ? sgs_GetObjectStructP( out ) : sgs_GetObjectStruct( C, -1 );
+	data->m_sgsObject->data = static_cast<sgsLiteObjectBase*>( data );
 	data->C = sgs_RootContext( C );
 	T::_sgs_interface.init( C, out );
 	return data;
@@ -1050,12 +1127,14 @@ template< class T > T* sgs_CreateClassFrom( SGS_CTX, sgs_Variable* out, T* inst 
 
 template< class T > void sgs_CreateLiteClass( SGS_CTX, sgs_Variable* out, T* inst )
 {
-	sgs_CreateObject( C, out, inst, T::_sgs_interface );
+	sgs_CreateObject( C, out, static_cast<sgsLiteObjectBase*>(inst), T::_sgs_interface );
 	T::_sgs_interface.init( C, out );
 }
 template< class T > T* sgs_CreateLiteClassIPA( SGS_CTX, sgs_Variable* out )
 {
 	T* ret = static_cast<T*>( sgs_CreateObjectIPA( C, out, (sgs_SizeVal) sizeof(T), T::_sgs_interface ) );
+	sgs_VarObj* obj = out ? sgs_GetObjectStructP( out ) : sgs_GetObjectStruct( C, -1 );
+	obj->data = static_cast<sgsLiteObjectBase*>( ret );
 	T::_sgs_interface.init( C, out );
 	return ret;
 }

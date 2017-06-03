@@ -11,7 +11,7 @@
 
 #include "sgs_cppbc.h"
 
-struct Vec3
+struct Vec3 : sgsLiteObjectBase
 {
 	SGS_OBJECT_LITE;
 	
@@ -59,7 +59,7 @@ struct Vec3
 };
 
 
-class Account
+class Account : public sgsObjectBase
 {
 public:
 	
@@ -127,7 +127,12 @@ public:
 	}
 };
 
-class AccountExt : public Account
+struct Padding
+{
+	int _padding;
+};
+
+class AccountExt : public Padding, public Account
 {
 public:
 	
@@ -139,7 +144,7 @@ public:
 };
 
 
-struct XRef
+struct XRef : sgsObjectBase
 {
 	typedef sgsHandle< XRef > Handle;
 	SGS_OBJECT;

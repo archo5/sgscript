@@ -889,9 +889,9 @@ function cppbc_generate_code( objects, includes )
 		ifuncs = clone( DEFAULT_OBJ_IFUNCS );
 		
 		// context changing
-		dtorchanger = if( obj.is_lite, "", "\n\tstatic_cast<" $ obj.name $ "*>( obj->data )->C = C;" );
-		tmpchanger = if( obj.is_lite, "", "\n\t_sgsTmpChanger<sgs_Context*> _tmpchg( static_cast<" $ obj.name $ "*>( obj->data )->C, C );" );
-		mtdchanger = if( obj.is_lite, "", "\n\t_sgsTmpChanger<sgs_Context*> _tmpchg( data->C, C );" );
+		dtorchanger = if( obj.is_lite, "", "\n\tC = callerCtx;" );
+		tmpchanger = if( obj.is_lite, "", "\n\t_sgsTmpChanger<sgs_Context*> _tmpchg( C, callerCtx );" );
+		mtdchanger = if( obj.is_lite, "", "\n\t_sgsTmpChanger<sgs_Context*> _tmpchg( data->C, callerCtx );" );
 		
 		// load the ifuncs
 		foreach( item : obj.items )
@@ -928,9 +928,9 @@ function cppbc_generate_code( objects, includes )
 				fixedtype = cppbc_fix_type( ptype );
 				
 				if( fixedtype == "sgs_Context" || fixedtype == "SGS_CTX" )
-					line $= "C";
+					line $= "callerCtx";
 				else
-					line $= string_format( "sgs_GetVar{3}<{1}>()(C,{2})", fixedtype, param_id++, getvar3rd );
+					line $= string_format( "sgs_GetVar{3}<{1}>()(callerCtx,{2})", fixedtype, param_id++, getvar3rd );
 			}
 			
 			call_fmt = if( item.is_static, "{3}::{1}( {2} )", "data->{1}( {2} )" );
@@ -939,7 +939,7 @@ function cppbc_generate_code( objects, includes )
 			if( item.type == "SGS_MULTRET" )
 				line = "return " $ line $ ";";
 			else if( item.type != "void" )
-				line = "sgs_PushVar(C," $ line $ "); return 1;";
+				line = "sgs_PushVar(callerCtx," $ line $ "); return 1;";
 			else
 				line $= "; return 0;";
 			
@@ -947,7 +947,7 @@ function cppbc_generate_code( objects, includes )
 			{
 				out $= string_translate(
 "
-static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
+static int _sgs_method__%OBJ%__%NAME%( sgs_Context* callerCtx )
 {
 	SGSFN( \"%OBJ%.%NAME%\" );
 	%LINE%
@@ -959,9 +959,9 @@ static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 			{
 				out $= string_translate(
 "
-static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
+static int _sgs_method__%OBJ%__%NAME%( sgs_Context* callerCtx )
 {
-	%OBJ%* data; if( !SGS_PARSE_METHOD( C, %OBJ%::_sgs_interface, data, %OBJ%, %NAME% ) ) return 0;"
+	%OBJ%* data; if( !SGS_PARSE_METHOD( callerCtx, %OBJ%::_sgs_interface, data, %OBJ%, %NAME% ) ) return 0;"
 	$ mtdchanger $ "
 	%LINE%
 }
@@ -971,87 +971,96 @@ static int _sgs_method__%OBJ%__%NAME%( SGS_CTX )
 		}
 		
 		// interface functions
-		// - WRAPPERS
+		// - INHERITANCE & LOCAL STATIC INTERFACES
 		foreach( ifname ,: OBJ_IFUNC_POS )
 		{
 			ifunc = @ifuncs[ ifname ];
 			if( ifname == "convert" || ifname == "dump" || ifname == "getnext" )
 			{
-				out ..= "\nint " .. obj.name .. "::_sgs_" .. ifname
-					.. "( SGS_CTX, sgs_VarObj* obj, int param ){ return ";
-				if( ifunc === null )
-					out ..= "SGS_ENOTSUP";
-				else
-					out ..= ifunc .. "( C, obj, param )";
+				args = "( sgs_Context* callerCtx, sgs_VarObj* obj, int param )";
+				params = "( callerCtx, obj, param )";
 			}
 			else
 			{
-				out ..= "\nint " .. obj.name .. "::_sgs_" .. ifname
-					.. "( SGS_CTX, sgs_VarObj* obj ){ return ";
-				if( ifunc === null )
-					out ..= "SGS_ENOTSUP";
-				else
-					out ..= ifunc .. "( C, obj )";
+				args = "( sgs_Context* callerCtx, sgs_VarObj* obj )";
+				params = "( callerCtx, obj )";
 			}
-			out ..= "; }\n";
+			
+			// inheritable function
+			out ..= "\nint " .. obj.name .. "::_sgs_" .. ifname
+				.. args .. "{ return ";
+			if( ifunc === null )
+				out ..= "SGS_ENOTSUP";
+			else
+				out ..= ifunc .. params;
+			out ..= "; }";
+			
+			// local static interface
+			out ..= "\nint " .. obj.name .. "::_sgslocal_" .. ifname
+				.. args .. "{ return ";
+			if( ifunc === null )
+				out ..= "SGS_ENOTSUP";
+			else
+				out ..= "static_cast<" .. obj.name .. "*>( static_cast<sgsLiteObjectBase*>( obj->data ) )->" .. ifunc .. params;
+			out ..= "; }";
 		}
+		out ..= "\n";
 		
 		// - OP_DESTRUCT
 		out $= string_translate(
 "
-int %OBJ%::_sgsimpl_destruct( SGS_CTX, sgs_VarObj* obj )
+int %OBJ%::_sgsimpl_destruct( sgs_Context* callerCtx, sgs_VarObj* obj )
 {"
 	$ dtorchanger $ "
-	static_cast<%OBJ%*>( obj->data )->~%OBJ%();
+	this->~%OBJ%();
 	return SGS_SUCCESS;
 }
 "
 		, { "%OBJ%" = obj.name } );
 		
 		// - OP_GCMARK
-		out $= "\nint " $ obj.name $ "::_sgsimpl_gcmark( SGS_CTX, sgs_VarObj* obj )\n{";
+		out $= "\nint " $ obj.name $ "::_sgsimpl_gcmark( sgs_Context* callerCtx, sgs_VarObj* obj )\n{";
 		out $= tmpchanger;
 		foreach( item : obj.items )
 		{
 			if( item.what != "GCREF" )
 				continue;
-			out $= "\n\tsgs_GCMarkVar( C, static_cast<"$
-				obj.name$"*>( obj->data )->"$item.name$" );";
+			out $= "\n\tsgs_GCMarkVar( callerCtx, "$item.name$" );";
 		}
 		if( obj.inherited )
-			out ..= "\n\t" .. obj.inherited[0] .. "::_sgs_gcmark( C, obj );";
+			out ..= "\n\t" .. obj.inherited[0] .. "::_sgs_gcmark( callerCtx, obj );";
 		out $= "\n\treturn SGS_SUCCESS;\n}\n";
 		
 		// - OP_GETINDEX
 		out $=
 "
-int " $ obj.name $ "::_sgsimpl_getindex( SGS_CTX, sgs_VarObj* obj )
+int " $ obj.name $ "::_sgsimpl_getindex( sgs_Context* callerCtx, sgs_VarObj* obj )
 {"
 	$ tmpchanger $ "
 	char* str;
-	if( sgs_ParseString( C, 0, &str, NULL ) )
+	if( sgs_ParseString( callerCtx, 0, &str, NULL ) )
 	{";
 		foreach( item : obj.items )
 		{
 			itemline = null;
 			if( item.what == "METHOD" && obj.new_iface == false )
-				itemline = "sgs_PushCFunc( C, _sgs_method__%OBJ%__"$item.varname$" );";
+				itemline = "sgs_PushCFunc( callerCtx, _sgs_method__%OBJ%__"$item.varname$" );";
 			else if( item.what == "PROPERTY" )
 			{
 				if( item.access <= 0 )
-					itemline = "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.name$" );";
+					itemline = "%TYPEFUNC%( callerCtx, "$item.name$" );";
 			}
 			else if( item.what == "PROPERTY_FUNC" )
 			{
 				itemline = "";
 				if( item.validate !== null )
-					itemline $= "if( !( static_cast<%OBJ%*>( obj->data )->"$item.validate$" ) ){ return SGS_EINPROC; } ";
+					itemline $= "if( !( "$item.validate$" ) ){ return SGS_EINPROC; } ";
 				if( item.read === true )
-					itemline $= "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.srcname$" );";
+					itemline $= "%TYPEFUNC%( callerCtx, "$item.srcname$" );";
 				else if( item.read )
-					itemline $= "%TYPEFUNC%( C, static_cast<%OBJ%*>( obj->data )->"$item.read$"() );";
+					itemline $= "%TYPEFUNC%( callerCtx, "$item.read$"() );";
 				if( item.readcb )
-					itemline $= "\n\t\t\tstatic_cast<%OBJ%*>( obj->data )->"$item.readcb$"();";
+					itemline $= "\n\t\t\t"$item.readcb$"();";
 			}
 			
 			if( itemline )
@@ -1070,23 +1079,23 @@ int " $ obj.name $ "::_sgsimpl_getindex( SGS_CTX, sgs_VarObj* obj )
 			if( !item.read )
 				continue;
 			out $= "
-		if( sgs_PushIndex( C, static_cast<" $ obj.name $ "*>( obj->data )->" $ item.code
-			$ ", sgs_StackItem( C, 0 ), sgs_ObjectArg( C ) ) ) return SGS_SUCCESS;";
+		if( sgs_PushIndex( callerCtx, " $ item.code
+			$ ", sgs_StackItem( callerCtx, 0 ), sgs_ObjectArg( callerCtx ) ) ) return SGS_SUCCESS;";
 		}
 		out $= "
 	}
-	return " .. if( obj.inherited, obj.inherited[0] .. "::_sgs_getindex( C, obj )", "SGS_ENOTFND" ) .. ";
+	return " .. if( obj.inherited, obj.inherited[0] .. "::_sgs_getindex( callerCtx, obj )", "SGS_ENOTFND" ) .. ";
 }
 ";
 		
 		// - OP_SETINDEX
 		out $=
 "
-int " $ obj.name $ "::_sgsimpl_setindex( SGS_CTX, sgs_VarObj* obj )
+int " $ obj.name $ "::_sgsimpl_setindex( sgs_Context* callerCtx, sgs_VarObj* obj )
 {"
 	$ tmpchanger $ "
 	char* str;
-	if( sgs_ParseString( C, 0, &str, NULL ) )
+	if( sgs_ParseString( callerCtx, 0, &str, NULL ) )
 	{";
 		foreach( item : obj.items )
 		{
@@ -1094,19 +1103,19 @@ int " $ obj.name $ "::_sgsimpl_setindex( SGS_CTX, sgs_VarObj* obj )
 			if( item.what == "PROPERTY" )
 			{
 				if( item.access >= 0 )
-					itemline = "static_cast<%OBJ%*>( obj->data )->"$item.name$" = %TYPEFUNC%( C, 1%ISOBJ% );";
+					itemline = ""$item.name$" = %TYPEFUNC%( callerCtx, 1%ISOBJ% );";
 			}
 			else if( item.what == "PROPERTY_FUNC" )
 			{
 				itemline = "";
 				if( item.validate !== null )
-					itemline $= "if( !( static_cast<%OBJ%*>( obj->data )->"$item.validate$" ) ){ return SGS_EINPROC; } ";
+					itemline $= "if( !( "$item.validate$" ) ){ return SGS_EINPROC; } ";
 				if( item.write === true )
-					itemline $= "static_cast<%OBJ%*>( obj->data )->"$item.srcname$" = %TYPEFUNC%( C, 1%ISOBJ% );";
+					itemline $= ""$item.srcname$" = %TYPEFUNC%( callerCtx, 1%ISOBJ% );";
 				else if( item.write )
-					itemline $= "static_cast<%OBJ%*>( obj->data )->"$item.write$"( %TYPEFUNC%( C, 1%ISOBJ% ) );";
+					itemline $= ""$item.write$"( %TYPEFUNC%( callerCtx, 1%ISOBJ% ) );";
 				if( item.writecb )
-					itemline $= "\n\t\t\tstatic_cast<%OBJ%*>( obj->data )->"$item.writecb$"();";
+					itemline $= "\n\t\t\t"$item.writecb$"();";
 			}
 			if( itemline )
 			{
@@ -1125,21 +1134,23 @@ int " $ obj.name $ "::_sgsimpl_setindex( SGS_CTX, sgs_VarObj* obj )
 			if( !item.write )
 				continue;
 			out $= "
-		if( sgs_SetIndex( C, static_cast<" $ obj.name $ "*>( obj->data )->" $ item.code
-			$ ", sgs_StackItem( C, 0 ), sgs_StackItem( C, 1 ), sgs_ObjectArg( C ) ) ) return SGS_SUCCESS;";
+		if( sgs_SetIndex( callerCtx, " .. item.code
+			$ ", sgs_StackItem( callerCtx, 0 ), sgs_StackItem( callerCtx, 1 ), sgs_ObjectArg( callerCtx ) ) ) return SGS_SUCCESS;";
 		}
 		out $= "
 	}
-	return " .. if( obj.inherited, obj.inherited[0] .. "::_sgs_setindex( C, obj )", "SGS_ENOTFND" ) .. ";
+	return " .. if( obj.inherited, obj.inherited[0] .. "::_sgs_setindex( callerCtx, obj )", "SGS_ENOTFND" ) .. ";
 }
 ";
 		
 		// - OP_DUMP
-		out $= "\nint " $ obj.name $ "::_sgsimpl_dump( SGS_CTX, sgs_VarObj* obj, int depth )\n{";
+		out $= "\nint " $ obj.name $ "::_sgsimpl_dump( sgs_Context* callerCtx, sgs_VarObj* obj, int depth )\n{";
 		out $= tmpchanger;
 		out $= "\n\tchar bfr[ "$ obj.name.length + 32 $" ];";
-		out $= "\n\tsprintf( bfr, \""$obj.name$" (%p) %s\", obj->data, depth > 0 ? \"\\n{\" : \" ...\" );";
-		out $= "\n\tsgs_PushString( C, bfr );";
+		out $= "\n\tsprintf( bfr, \""$obj.name$" (obj=%p, base=%p) %s\",";
+		out ..= "\n\t\tstatic_cast< " .. obj.name .. "* >( static_cast<sgsLiteObjectBase*>( obj->data ) ),";
+		out ..= "\n\t\tobj->data, depth > 0 ? \"\\n{\" : \" ...\" );";
+		out $= "\n\tsgs_PushString( callerCtx, bfr );";
 		out $= "\n\tif( depth > 0 )\n\t{";
 		// 1. compile a list
 		dumpvars = {};
@@ -1176,25 +1187,25 @@ int " $ obj.name $ "::_sgsimpl_setindex( SGS_CTX, sgs_VarObj* obj )
 		if( obj.inherited )
 		{
 			dpcount += 2;
-			out ..= "\n\t\tsgs_PushStringLit( C, \"\\n[inherited] \" );";
-			out ..= "\n\t\t" .. obj.inherited[0] .. "::_sgs_dump( C, obj, depth );";
+			out ..= "\n\t\tsgs_PushStringLit( callerCtx, \"\\n[inherited] \" );";
+			out ..= "\n\t\t" .. obj.inherited[0] .. "::_sgs_dump( callerCtx, obj, depth );";
 		}
 		foreach( name : dumpvarorder )
 		{
 			src = dumpvars[ name ];
 			vld = dumpvalid[ name ];
 			out $= "\n\t\t{ ";
-			out $= "sgs_PushStringLit( C, \"\\n"$name$" = \" ); ";
+			out $= "sgs_PushStringLit( callerCtx, \"\\n"$name$" = \" ); ";
 			if( vld !== null )
 			{
-				out $= "if( !( static_cast<"$obj.name$"*>( obj->data )->"$vld$" ) ) sgs_PushStringLit( C, \"<inaccessible>\" ); else ";
+				out $= "if( !( "$vld$" ) ) sgs_PushStringLit( callerCtx, \"<inaccessible>\" ); else ";
 			}
-			out $= "sgs_DumpData( C, static_cast<"$obj.name$"*>( obj->data )->"$src$", depth ).push( C );";
+			out $= "sgs_DumpData( callerCtx, "$src$", depth ).push( callerCtx );";
 			out $= " }";
 		}
-		out $= "\n\t\tsgs_StringConcat( C, " .. dpcount .. " );\n\t\tsgs_PadString( C );";
-		out $= "\n\t\tsgs_PushStringLit( C, \"\\n}\" );";
-		out $= "\n\t\tsgs_StringConcat( C, 3 );";
+		out $= "\n\t\tsgs_StringConcat( callerCtx, " .. dpcount .. " );\n\t\tsgs_PadString( callerCtx );";
+		out $= "\n\t\tsgs_PushStringLit( callerCtx, \"\\n}\" );";
+		out $= "\n\t\tsgs_StringConcat( callerCtx, 3 );";
 		out $= "\n\t}";
 		out $= "\n\treturn SGS_SUCCESS;\n}\n";
 		
@@ -1234,7 +1245,7 @@ static int " $ obj.name $ "__sgs_ifn( SGS_CTX )
 		// interface
 		funcnames = [].resize( OBJ_IFUNC_COUNT );
 		foreach( ifname, ifunc : ifuncs )
-			funcnames[ OBJ_IFUNC_POS[ ifname ] ] = ifunc;
+			funcnames[ OBJ_IFUNC_POS[ ifname ] ] = "_sgslocal_" .. ifname;
 		out $=
 "
 static sgs_ObjInterface " $ obj.name $ "__sgs_interface =

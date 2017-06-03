@@ -76,12 +76,12 @@ static void test_object_vec3()
 		sgs_GlobalCall( C, "printvar", 1, 0 );
 		{
 			char compstr[ 256 ];
-			sprintf( compstr, "Vec3 (%p) \n{\n"
+			sprintf( compstr, "Vec3 (obj=%p, base=%p) \n{\n"
 				"  x = real (%g)\n"
 				"  y = real (%g)\n"
 				"  z = real (%g)\n"
 				"  length = real (%g)\n}\n",
-				obj, obj->x, obj->y, obj->z, obj->getLength() );
+				obj, static_cast<sgsLiteObjectBase*>(obj), obj->x, obj->y, obj->z, obj->getLength() );
 			atf_check_output( compstr );
 		}
 		// print .length

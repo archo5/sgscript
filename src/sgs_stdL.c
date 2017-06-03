@@ -2523,6 +2523,7 @@ MATHFUNC_CN( abs, fabs )
 MATHFUNC( floor )
 MATHFUNC( ceil )
 MATHFUNC_CN( round, myround )
+MATHFUNC( exp )
 
 MATHFUNC( sin )
 MATHFUNC( cos )
@@ -2542,7 +2543,7 @@ static const sgs_RegRealConst m_rconsts[] =
 static const sgs_RegFuncConst m_fconsts[] =
 {
 	STDLIB_FN( abs ), STDLIB_FN( floor ), STDLIB_FN( ceil ), STDLIB_FN( round ),
-	STDLIB_FN( pow ), STDLIB_FN( sqrt ), STDLIB_FN( log ),
+	STDLIB_FN( pow ), STDLIB_FN( sqrt ), STDLIB_FN( exp ), STDLIB_FN( log ),
 	STDLIB_FN( sin ), STDLIB_FN( cos ), STDLIB_FN( tan ),
 	STDLIB_FN( asin ), STDLIB_FN( acos ), STDLIB_FN( atan ), STDLIB_FN( atan2 ),
 	STDLIB_FN( deg2rad ), STDLIB_FN( rad2deg ),
