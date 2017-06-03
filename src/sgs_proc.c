@@ -4000,8 +4000,20 @@ fail:
 
 int sgs_ArgErrorExt( SGS_CTX, int argid, int gotthis, const char* expect, const char* expfx )
 {
-	const char* got = sgs_StackSize( C ) <= argid ? "nothing" : 
-		sgs_CodeString( SGS_CODE_VT, (int) sgs_ItemType( C, argid ) );
+	const char* got;
+	if( sgs_StackSize( C ) <= argid )
+		got = "nothing";
+	else
+	{
+		uint32_t type = sgs_ItemType( C, argid );
+		got = sgs_CodeString( SGS_CODE_VT, (int) type );
+		if( type == SGS_VT_OBJECT )
+		{
+			sgs_ObjInterface* iface = sgs_GetObjectIface( C, argid );
+			if( iface && iface->name )
+				got = iface->name;
+		}
+	}
 	if( argid == 0 && gotthis )
 		return sgs_Msg( C, SGS_WARNING, "'this' - expected %s%s, got %s", expfx, expect, got );
 	else
@@ -4430,6 +4442,20 @@ SGSBOOL sgs_ParseMethod( SGS_CTX, sgs_ObjInterface* iface, void** ptrout, const 
 	int method_call = sgs_Method( C );
 	SGSFN( name );
 	if( !sgs_IsObject( C, 0, iface ) )
+	{
+		sgs_ArgErrorExt( C, 0, method_call, iface->name, "" );
+		return SGS_FALSE;
+	}
+	*ptrout = p_objdata( stk_poff( C, 0 ) );
+	sgs_ForceHideThis( C );
+	return SGS_TRUE;
+}
+
+SGSBOOL sgs_ParseMethodInh( SGS_CTX, sgs_ObjInterface* iface, void** ptrout, const char* name )
+{
+	int method_call = sgs_Method( C );
+	SGSFN( name );
+	if( !sgs_IsObjectInh( C, 0, iface ) )
 	{
 		sgs_ArgErrorExt( C, 0, method_call, iface->name, "" );
 		return SGS_FALSE;
@@ -5089,6 +5115,21 @@ SGSBOOL sgs_IsObjectP( sgs_Variable* var, sgs_ObjInterface* iface )
 	return var->type == SGS_VT_OBJECT && var->data.O->iface == iface;
 }
 
+SGSBOOL sgs_IsObjectInhP( sgs_Variable* var, sgs_ObjInterface* iface )
+{
+	const sgs_ObjInterface* p;
+	if( var->type != SGS_VT_OBJECT )
+		return 0;
+	p = var->data.O->iface;
+	while( p )
+	{
+		if( p == iface )
+			return 1;
+		p = p->parent;
+	}
+	return 0;
+}
+
 SGSBOOL sgs_IsCallableP( sgs_Variable* var )
 {
 	uint32_t ty = var->type;
@@ -5262,6 +5303,12 @@ SGSBOOL sgs_IsObject( SGS_CTX, StkIdx item, sgs_ObjInterface* iface )
 {
 	sgs_Variable var = sgs_OptStackItem( C, item );
 	return var.type == SGS_VT_OBJECT && var.data.O->iface == iface;
+}
+
+SGSBOOL sgs_IsObjectInh( SGS_CTX, sgs_StkIdx item, sgs_ObjInterface* iface )
+{
+	sgs_Variable var = sgs_OptStackItem( C, item );
+	return sgs_IsObjectInhP( &var, iface );
 }
 
 SGSBOOL sgs_IsCallable( SGS_CTX, StkIdx item )

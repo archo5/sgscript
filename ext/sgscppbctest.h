@@ -89,6 +89,7 @@ public:
 	std::vector< int > vectorTest2; SGS_DUMP( vectorTest2 );
 	SGS_PROPERTY std::string stdStringTest1;
 	SGS_PROPERTY std::string stdStringTest2;
+	SGS_METHOD bool returnsTrue(){ return true; }
 	
 	/* `Handle` must be resolved since it's going to be used out of scope */
 	SGS_METHOD bool sendMoney( Account::Handle to, float amount, sgsString currency )

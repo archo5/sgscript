@@ -962,7 +962,7 @@ static int _sgs_method__%OBJ%__%NAME%( sgs_Context* callerCtx )
 static int _sgs_method__%OBJ%__%NAME%( sgs_Context* callerCtx )
 {
 	sgsLiteObjectBase* base;
-	if( !SGS_PARSE_METHOD( callerCtx, %OBJ%::_sgs_interface, base, %OBJ%, %NAME% ) ) return 0;
+	if( !sgs_ParseMethodInh( callerCtx, %OBJ%::_sgs_interface, (void**) &base, \"%OBJ%.%NAME%\" ) ) return 0;
 	%OBJ%* data = static_cast<%OBJ%*>( base );"
 	$ mtdchanger $ "
 	%LINE%
@@ -1148,7 +1148,7 @@ int " $ obj.name $ "::_sgsimpl_setindex( sgs_Context* callerCtx, sgs_VarObj* obj
 		// - OP_DUMP
 		out $= "\nint " $ obj.name $ "::_sgsimpl_dump( sgs_Context* callerCtx, sgs_VarObj* obj, int depth )\n{";
 		out $= tmpchanger;
-		out $= "\n\tchar bfr[ "$ obj.name.length + 32 $" ];";
+		out $= "\n\tchar bfr[ "$ obj.name.length + 64 $" ];";
 		out $= "\n\tsprintf( bfr, \""$obj.name$" (obj=%p, base=%p) %s\",";
 		out ..= "\n\t\tstatic_cast< " .. obj.name .. "* >( static_cast<sgsLiteObjectBase*>( obj->data ) ),";
 		out ..= "\n\t\tobj->data, depth > 0 ? \"\\n{\" : \" ...\" );";
@@ -1238,7 +1238,13 @@ static int " $ obj.name $ "__sgs_ifn( SGS_CTX )
 	sgs_CreateDict( C, NULL, 0 );
 	sgs_StoreFuncConsts( C, sgs_StackItem( C, -1 ),
 		" $ obj.name $ "__sgs_funcs,
-		-1, \"" $ obj.name $ ".\" );
+		-1, \"" $ obj.name $ ".\" );";
+			if( obj.inherited )
+			{
+				out ..= "\n\tsgsVariable mo = sgs_GetClassInterface< " .. obj.inherited[0] .. " >( C );";
+				out ..= "\n\tsgs_ObjSetMetaObj( C, sgs_GetObjectStruct( C, -1 ), mo.get_object_struct() );";
+			}
+			out ..= "
 	return 1;
 }
 ";
@@ -1250,22 +1256,26 @@ static int " $ obj.name $ "__sgs_ifn( SGS_CTX )
 			funcnames[ OBJ_IFUNC_POS[ ifname ] ] = "_sgslocal_" .. ifname;
 		out $=
 "
-static sgs_ObjInterface " $ obj.name $ "__sgs_interface =
+static sgs_ObjInterface " .. obj.name .. "__sgs_interface =
 {
-	\"" $ obj.name $ "\",
+	\"" .. obj.name .. "\",
 	";
 		
 		foreach( ifunc : funcnames )
-			out $= if( ifunc === null, "NULL, ", string_format( "{1}::{2}, ", obj.name, ifunc ) );
+			out ..= if( ifunc === null, "NULL, ", string_format( "{1}::{2}, ", obj.name, ifunc ) );
 		
-		inhptr = "";
+		// PROPS
+		out ..= "\n\tNULL,";
+		
 		if( obj.inherited )
-			inhptr $= ", &" $ obj.inherited[0] $ "::_sgs_interface";
+		{
+			// PARENT
+			out ..= "\n\t" .. obj.inherited[0] .. "::_sgs_interface,";
+		}
 		
-		out $=
-"
+		out ..= "
 };
-_sgsInterface " $ obj.name $ "::_sgs_interface(" $ obj.name $ "__sgs_interface, " $ ifn $ inhptr $ ");
+_sgsInterface " .. obj.name .. "::_sgs_interface(" .. obj.name .. "__sgs_interface, " .. ifn .. ");
 
 ";
 	}

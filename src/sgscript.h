@@ -582,7 +582,8 @@ sgs_ObjProp;
 		(SGS_OBJPROP_NOLIST|SGS_OBJPROP_NODUMP), (void*)(func), NULL }
 #define SGS_OBJPROP_END() { NULL, 0, 0, 0, NULL, NULL }
 
-typedef struct sgs_ObjInterface
+typedef struct sgs_ObjInterface sgs_ObjInterface;
+struct sgs_ObjInterface
 {
 	const char* name;
 	
@@ -601,8 +602,8 @@ typedef struct sgs_ObjInterface
 	sgs_OC_Self expr;
 	
 	const sgs_ObjProp* proplist;
-}
-sgs_ObjInterface;
+	const sgs_ObjInterface* parent;
+};
 
 struct sgs_ObjData
 {
@@ -969,8 +970,8 @@ typedef int (*sgs_ArgCheckFunc)
 SGS_APIFUNC SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args );
 SGS_APIFUNC SGSBOOL sgs_LoadArgsExt( SGS_CTX, int from, const char* cmd, ... );
 SGS_APIFUNC SGSBOOL sgs_LoadArgs( SGS_CTX, const char* cmd, ... );
-SGS_APIFUNC SGSBOOL sgs_ParseMethod( SGS_CTX, sgs_ObjInterface* iface, void** ptrout,
-	const char* name );
+SGS_APIFUNC SGSBOOL sgs_ParseMethod( SGS_CTX, sgs_ObjInterface* iface, void** ptrout, const char* name );
+SGS_APIFUNC SGSBOOL sgs_ParseMethodInh( SGS_CTX, sgs_ObjInterface* iface, void** ptrout, const char* name );
 #define SGS_PARSE_METHOD( C, iface, ptr, objname, methodname ) \
 	sgs_ParseMethod( C, iface, (void**) &ptr, #objname "." #methodname )
 
@@ -1058,6 +1059,7 @@ SGS_APIFUNC char* sgs_ToStringBufFastP( SGS_CTX, sgs_Variable* var, sgs_SizeVal*
 
 SGS_APIFUNC SGSBOOL sgs_IsObjectP( sgs_Variable* var, sgs_ObjInterface* iface );
 #define sgs_IsTypeP( C, var, name ) sgs_IsObjectP( var, sgs_FindType( C, name ) )
+SGS_APIFUNC SGSBOOL sgs_IsObjectInhP( sgs_Variable* var, sgs_ObjInterface* iface );
 SGS_APIFUNC SGSBOOL sgs_IsCallableP( sgs_Variable* var );
 SGS_APIFUNC SGSBOOL sgs_ParseStringP( SGS_CTX, sgs_Variable* var, char** out, sgs_SizeVal* size );
 
@@ -1074,6 +1076,7 @@ SGS_APIFUNC char* sgs_ToStringBufFast( SGS_CTX, sgs_StkIdx item, sgs_SizeVal* ou
 
 SGS_APIFUNC SGSBOOL sgs_IsObject( SGS_CTX, sgs_StkIdx item, sgs_ObjInterface* iface );
 #define sgs_IsType( C, item, name ) sgs_IsObject( C, item, sgs_FindType( C, name ) )
+SGS_APIFUNC SGSBOOL sgs_IsObjectInh( SGS_CTX, sgs_StkIdx item, sgs_ObjInterface* iface );
 SGS_APIFUNC SGSBOOL sgs_IsCallable( SGS_CTX, sgs_StkIdx item );
 SGS_APIFUNC SGSBOOL sgs_ParseBool( SGS_CTX, sgs_StkIdx item, sgs_Bool* out );
 SGS_APIFUNC SGSBOOL sgs_ParseInt( SGS_CTX, sgs_StkIdx item, sgs_Int* out );

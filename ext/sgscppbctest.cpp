@@ -185,6 +185,13 @@ static void test_object_accountext()
 			sgsEnv( C ).getprop( "printvar" ).tcall<void>( C, aA );
 		}
 		
+		// method from inherited class
+		{
+			SGS_SCOPE;
+			bool val = aA.get_variable().tthiscall<bool>( C, "returnsTrue" );
+			atf_assert( val == true );
+		}
+		
 		// free handles before destroying the engine to destroy the objects
 		aA = AccountExt::Handle();
 	}

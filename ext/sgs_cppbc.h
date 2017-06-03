@@ -30,14 +30,9 @@ struct sgsObjectBase : sgsLiteObjectBase
 #ifndef SGS_CPPBC_PROCESS
 struct _sgsInterface
 {
-	_sgsInterface( const sgs_ObjInterface& src, sgs_CFunc ifn, _sgsInterface* pif = NULL )
-	: iface(src), iface_func(ifn), inh_parent(pif), inh_child(NULL), inh_sibling(NULL)
+	_sgsInterface( const sgs_ObjInterface& src, sgs_CFunc ifn )
+	: iface(src), iface_func(ifn)
 	{
-		if( pif )
-		{
-			inh_sibling = pif->inh_child;
-			pif->inh_child = this;
-		}
 	}
 	void init( SGS_CTX, sgs_Variable* out ) const
 	{
@@ -54,9 +49,6 @@ struct _sgsInterface
 	sgs_ObjInterface* operator -> (){ return &iface; }
 	sgs_ObjInterface iface;
 	sgs_CFunc iface_func;
-	_sgsInterface* inh_parent;
-	_sgsInterface* inh_child;
-	_sgsInterface* inh_sibling;
 };
 #ifdef SGS_CPPBC_PP
 # define SGS_CPPBC_IGNORE(x)
@@ -238,16 +230,13 @@ sgs_ObjInterface sgsArrayIterator<OwningClass>::_sgs_interface[1] =
 // traverse the hierarchy to find the child class in it
 // can't do it in reverse for now
 // (no way to indicate that sgs_ObjInterface can be downcasted to _sgsInterface)
-inline bool _sgsIsChild( sgs_ObjInterface* child, _sgsInterface* parent )
+inline bool _sgsIsChild( const sgs_ObjInterface* child, const sgs_ObjInterface* parent )
 {
-	_sgsInterface* p = parent->inh_child;
-	while( p )
+	while( child )
 	{
-		if( &p->iface == child )
+		if( child == parent )
 			return true;
-		if( _sgsIsChild( child, p ) )
-			return true;
-		p = p->inh_sibling;
+		child = child->parent;
 	}
 	return false;
 }
@@ -297,7 +286,7 @@ public:
 		if( !obj )
 			return;
 		if( obj->iface == T::_sgs_interface ||
-			( cast && _sgsIsChild( obj->iface, &T::_sgs_interface ) ) )
+			( cast && _sgsIsChild( obj->iface, T::_sgs_interface ) ) )
 		{
 			object = obj;
 			_acquire();
