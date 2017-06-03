@@ -46,11 +46,10 @@ struct Vec3 : sgsLiteObjectBase
 	}
 	SGS_IFUNC( CONVERT ) int _convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
-		Vec3* V = (Vec3*) data->data;
 		if( type == SGS_VT_STRING )
 		{
 			char bfr[ 128 ] = {0};
-			snprintf( bfr, 127, "Vec3(%g;%g;%g)", V->x, V->y, V->z );
+			snprintf( bfr, 127, "Vec3(%g;%g;%g)", x, y, z );
 			sgs_PushString( C, bfr );
 			return SGS_SUCCESS;
 		}
@@ -114,11 +113,10 @@ public:
 	
 	SGS_IFUNC( CONVERT ) int _convert( SGS_CTX, sgs_VarObj* data, int type )
 	{
-		Account* A = (Account*) data->data;
 		if( type == SGS_VT_STRING )
 		{
 			sgs_PushString( C, "Account(" );
-			A->name.push( C );
+			name.push( C );
 			sgs_PushString( C, ")" );
 			sgs_StringConcat( C, 3 );
 			return SGS_SUCCESS;

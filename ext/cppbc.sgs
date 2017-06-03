@@ -949,7 +949,7 @@ function cppbc_generate_code( objects, includes )
 "
 static int _sgs_method__%OBJ%__%NAME%( sgs_Context* callerCtx )
 {
-	SGSFN( \"%OBJ%.%NAME%\" );
+	sgs_FuncName( callerCtx, \"%OBJ%.%NAME%\" );
 	%LINE%
 }
 "

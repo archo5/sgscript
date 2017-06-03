@@ -106,7 +106,7 @@ struct _sgsInterface
 # define SGS_DUMP( what )
 # define SGS_NODUMP( what )
 # define SGS_BACKING_STORE( what )
-# define SGS_IFUNC( type ) static
+# define SGS_IFUNC( type )
 # define SGS_ALIAS( func )
 # define SGS_CPPBC_INHERIT_BEGIN
 # define SGS_CPPBC_INHERIT_END
