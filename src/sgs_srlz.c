@@ -10,6 +10,9 @@
 #endif
 
 
+#define NUMBER_OUT_OF_RANGE( x, maxn ) (((unsigned)(x)) >= ((unsigned)(maxn)))
+
+
 static int _serialize_function( SGS_CTX, sgs_iFunc* func, sgs_MemBuf* out )
 {
 	if( sgsBC_Func2Buf( C, func, out ) == SGS_FALSE )
@@ -42,6 +45,7 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 	
 	SRLZ_DEBUG( printf( "SRLZ thread_serialize\n" ) );
 	
+#define _WRITERL( x ) { sgs_membuf_appbuf( &buf, C, &x, 8 ); }
 #define _WRITE32( x ) { int32_t _tmp = (int32_t)(x); sgs_membuf_appbuf( &buf, C, &_tmp, 4 ); }
 #define _WRITE8( x ) { sgs_membuf_appchr( &buf, C, (char)(x) ); }
 	
@@ -101,6 +105,9 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 	_WRITE32( ctx->apilev );
 	_WRITE32( ctx->last_errno );
 	_WRITE32( ctx->state );
+	_WRITERL( ctx->st_timeout );
+	_WRITERL( ctx->wait_timer );
+	_WRITERL( ctx->tm_accum );
 	_WRITE32( ctx->stack_top - ctx->stack_base );
 	_WRITE32( ctx->stack_off - ctx->stack_base );
 	_WRITE32( ctx->stack_mem );
@@ -150,6 +157,7 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 	sgs_membuf_appbuf( outbuf, C, buf.ptr, buf.size );
 	sgs_membuf_destroy( &buf, C );
 	
+#undef _WRITERL
 #undef _WRITE32
 #undef _WRITE8
 	return 1;
@@ -166,6 +174,7 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 	
 	SRLZ_DEBUG( printf( "USRZ thread_unserialize\n" ) );
 	
+#define _READRL( x ) { if( buf + 8 > bufend ) goto fail; memcpy( &x, buf, 8 ); buf += 8; }
 #define _READ32( x ) { if( buf + 4 > bufend ) goto fail; memcpy( &x, buf, 4 ); buf += 4; }
 #define _READ8( x ) { if( buf + 1 > bufend ) goto fail; x = (uint8_t) *buf++; }
 	
@@ -185,6 +194,9 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 		_READ32( ctx->apilev );
 		_READ32( ctx->last_errno );
 		_READ32( ctx->state );
+		_READRL( ctx->st_timeout );
+		_READRL( ctx->wait_timer );
+		_READRL( ctx->tm_accum );
 		_READ32( stacklen );
 		_READ32( stackoff );
 		_READ32( ctx->stack_mem );
@@ -270,6 +282,7 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 		}
 	}
 	
+#undef _READRL
 #undef _READ32
 #undef _READ8
 	
@@ -578,6 +591,22 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 }
 
 
+/*
+	mode 2 commands:
+	P - base type (null/bool/int/real/string/func)
+	O - object
+	C - single closure
+	Q - closure object
+	f - closure function
+	< - closure variable
+	T - thread
+	p - set thread parent
+	S - symbol
+	. - set property
+	[ - set index
+	R - return value
+*/
+
 typedef struct sgs_serialize2_data
 {
 	int mode;
@@ -690,7 +719,32 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 	}
 	else if( var.type == SGS_VT_THREAD )
 	{
-		SRLZ_DEBUG( printf( "SRLZ new thread\n" ) );
+		int32_t parent_th_idx = 0;
+		sgs_Context* parent;
+		
+		SRLZ_DEBUG( printf( "SRLZ new thread (%p)\n", var.data.T ) );
+		
+		parent = var.data.T->parent;
+		if( parent && parent != sgs_RootContext( C ) )
+		{
+			sgs_Variable pvT;
+			pvT.type = SGS_VT_THREAD;
+			pvT.data.T = parent;
+			
+			SRLZ_DEBUG( printf( "SRLZ thread has non-root parent (%p)\n", parent ) );
+			
+			sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &pvT );
+			if( vv )
+			{
+				parent_th_idx = (int32_t) ( vv - pSD->servartable.vars );
+			}
+			else
+			{
+				sgs_Msg( C, SGS_ERROR, "thread has an unserialized non-root parent" );
+				pSD->ret = SGS_FALSE;
+				goto end;
+			}
+		}
 		
 		if( !sgs__thread_serialize( C, var.data.T, &pSD->data, &pSD->argarray ) )
 		{
@@ -698,6 +752,39 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 			pSD->ret = SGS_FALSE;
 			goto end;
 		}
+		
+		srlz_mode2_addvar( C, pSD, &var );
+		if( parent )
+		{
+			SRLZ_DEBUG( printf( "SRLZ new thread parent (%p)\n", parent ) );
+			
+			sgs_membuf_appchr( &pSD->data, C, 'p' );
+			sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
+			if( parent == sgs_RootContext( C ) )
+			{
+				sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
+			}
+			else
+			{
+				sgs_membuf_appbuf( &pSD->data, C, &parent_th_idx, sizeof(parent_th_idx) );
+			}
+		}
+		
+		/* subthreads */
+		{
+			size_t argarrsize = pSD->argarray.size;
+			sgs_Context* subT = var.data.T->subthreads;
+			while( subT )
+			{
+				sgs_Variable svT;
+				svT.type = SGS_VT_THREAD;
+				svT.data.T = subT;
+				sgs_SerializeInt_V2( C, svT );
+				subT = subT->st_next;
+			}
+			sgs_membuf_erase( &pSD->argarray, argarrsize, pSD->argarray.size );
+		}
+		goto end; /* variable added already, must skip that step */
 	}
 	else if( var.type == SGS_VT_OBJECT )
 	{
@@ -1031,7 +1118,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 						goto fail;
 					SGS_AS_INT32( strsz, str );
 					str += 4;
-					if( str > strend - strsz && !sgs_unserr_incomp( C ) )
+					if( NUMBER_OUT_OF_RANGE( strsz, strend - str ) && !sgs_unserr_incomp( C ) )
 						goto fail;
 					sgs_InitStringBuf( C, &var, str, strsz );
 					str += strsz;
@@ -1272,6 +1359,40 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				goto fail;
 			sgs_Pop( C, argc );
 			sgs_InitThreadPtr( &var, T );
+		}
+		else if( c == 'p' )
+		{
+			sgs_Context *T, *P;
+			int32_t thread, parent;
+			
+			sgs_Variable* varlist = SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable );
+			
+			SRLZ_DEBUG( printf( "USRZ found [p]arent of a thread\n" ) );
+			
+			if( str > strend-8 && !sgs_unserr_incomp( C ) )
+				goto fail;
+			SGS_AS_INT32( thread, str );
+			SGS_AS_INT32( parent, str+4 );
+			str += 8;
+			
+			SRLZ_DEBUG( printf( "- thread=%d parent=%d\n", (int) thread, (int) parent ) );
+			
+			if( thread < 0 || thread >= (int32_t) ( mb.size / sizeof( sgs_Variable ) ) ||
+				parent < 0 || parent >= (int32_t) ( mb.size / sizeof( sgs_Variable ) ) ||
+				varlist[ thread ].type != SGS_VT_THREAD ||
+				varlist[ parent ].type != SGS_VT_THREAD )
+			{
+				sgs_unserr_error( C );
+				goto fail;
+			}
+			
+			T = varlist[ thread ].data.T;
+			P = thread == parent ? sgs_RootContext( C ) : varlist[ parent ].data.T;
+			T->parent = P;
+			T->st_next = P->subthreads;
+			P->subthreads = T;
+			T->refcount++;
+			continue;
 		}
 		else if( c == 'S' )
 		{

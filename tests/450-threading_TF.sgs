@@ -303,6 +303,32 @@ for( i = 0; i < 5; ++i ) process_threads();
 testEqual( ''$syarr, "[3]", "event [end-on] - signaled, thread aborted" );
 
 
+	section( "thread serialization" );
+global ERRORS = "";
+assert(sys_stat(1)==1,"thread count must be 1");
+t = thread (function()
+{
+	subthread (function()
+	{
+		yield;
+		println("[subthread]");
+	})();
+	yield;
+	println("[thread]");
+})();
+testEqual( sys_stat(1), 3, "both threads still waiting" );
+st = serialize(t);
+t = null;
+testEqual( sys_stat(1), 3, "both threads still waiting (after ref. free)" );
+process_threads();
+testEqual( sys_stat(1), 1, "both threads have finished" );
+unserialize(st);
+testEqual( sys_stat(1), 3, "both threads have been restored" );
+process_threads();
+testEqual( sys_stat(1), 1, "both threads have finished" );
+testEqual( ERRORS, "", "serialization - no errors" );
+
+
 
 //
 print( "\n\nTesting finished!\nRan ", tests_ran, " tests of which ", tests_failed, " failed.\n" );

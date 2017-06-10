@@ -477,6 +477,7 @@ namespace SGScript
 			public OC_Self expr;
 
 			public IntPtr proplist;
+			public IntPtr parent;
 		};
 		public static int ObjInterfaceSize { get { return Marshal.SizeOf( typeof( ObjInterface ) ); } }
 

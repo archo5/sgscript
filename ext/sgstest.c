@@ -579,7 +579,7 @@ main( int argc, char** argv )
 	{
 		printf( "- one test: %s\n", testname );
 	}
-
+	
 	if( testname )
 	{
 		printf( "\n/// Executing test %s...\n", testname );
@@ -588,11 +588,10 @@ main( int argc, char** argv )
 		exec_test( testname, testname );
 		return 0;
 	}
-
+	
 	exec_tests( dirname );
-
+	
 	printf( "\n///\n/// Tests failed:  %d  / %d\n///\n", tests_failed, tests_executed );
-	printf( "..note: some tests may fail in different ways,\nmight want to review the logs..\n\n" );
-
+	
 	return 0;
 }
