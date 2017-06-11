@@ -960,7 +960,7 @@ static SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Va
 	if( !prop || ( prop->flags & SGS_OBJPROP_NOREAD ) )
 		return SGS_ENOTFND;
 	
-	mem = (void*)( ((char*) O->data) + (uint32_t)prop->offset_or_getcb );
+	mem = (void*)( ((char*) O->data) + (size_t) prop->offset_or_getcb );
 	switch( prop->type )
 	{
 	case SGS_OBJPROPTYPE_U8BOOL:
@@ -1160,7 +1160,7 @@ static SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_V
 	if( !prop || ( prop->flags & SGS_OBJPROP_NOWRITE ) )
 		return SGS_ENOTFND;
 	
-	mem = (void*)( ((char*) O->data) + (uint32_t)prop->offset_or_getcb );
+	mem = (void*)( ((char*) O->data) + (size_t) prop->offset_or_getcb );
 	switch( prop->type )
 	{
 	case SGS_OBJPROPTYPE_U8BOOL:

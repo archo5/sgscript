@@ -1,6 +1,6 @@
 
 // compile with:
-// emcc sgs_em.c -o sgscript.js -s EXPORTED_FUNCTIONS="['_runsgs']" -O2 --memory-init-file 0
+// emcc sgs_em.c -o sgscript.js -s EXPORTED_FUNCTIONS="['_runsgs']" -Os --memory-init-file 0
 
 #define SGS_INTERNAL_STRINGTABLES
 #define SGS_USE_FILESYSTEM

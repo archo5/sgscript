@@ -198,7 +198,7 @@ static int find_var( sgs_MemBuf* S, const char* str, unsigned len )
 	while( vp != vend )
 	{
 		if( vp->nmlength == len && !memcmp( vp->name, str, len ) )
-			return vp - vstart;
+			return (int)( vp - vstart );
 		vp++;
 	}
 	return -1;
@@ -219,7 +219,7 @@ static int add_var( sgs_MemBuf* S, SGS_CTX, const char* str, unsigned len )
 	int pos = find_var( S, str, len );
 	if( pos < 0 )
 	{
-		sgs_FCVar nv = { str, len, 0 };
+		sgs_FCVar nv = { str, (uint16_t) len, 0 };
 		sgs_membuf_appbuf( S, C, &nv, sizeof(nv) );
 		return SGS_TRUE;
 	}
@@ -966,7 +966,7 @@ static void varinfo_add( sgs_MemBuf* out, SGS_CTX, sgs_MemBuf* vars, int base, u
 				global = 0
 				closure = -1-based negative
 			*/
-			int16_t off = base ? base * ( vp - vstart + 1 ) : 0;
+			int16_t off = base ? (int16_t)( base * ( vp - vstart + 1 ) ) : 0;
 			
 			sgs_membuf_appbuf( out, C, &zero32, sizeof(zero32) );
 			sgs_membuf_appbuf( out, C, &icount, sizeof(icount) );
@@ -1033,7 +1033,7 @@ sgs_iFunc* sgsBC_ConvertFunc( SGS_CTX, sgs_FuncCtx* nfctx,
 		varinfo_add( &varinfo, C, &nfctx->vars, 1, icount );
 		varinfo_add( &varinfo, C, &nfctx->gvars, 0, icount );
 		varinfo_add( &varinfo, C, &nfctx->clsr, -1, icount );
-		varinfosize = varinfo.size;
+		varinfosize = (uint32_t) varinfo.size;
 		memcpy( varinfo.ptr, &varinfosize, sizeof(varinfosize) );
 		F->dbg_varinfo = varinfo.ptr;
 	}
@@ -2159,7 +2159,7 @@ static int compile_fn_base( SGS_FNTCMP_ARGS, int args )
 	if( !preparse_clsrlists( C, func, node ) ) return 0;
 	if( !preparse_varlists( C, func, node ) ) return 0;
 	expand_varlist( &C->fctx->vars, C );
-	comp_reg_alloc_n( C, C->fctx->vars.size / sizeof( sgs_FCVar ) );
+	comp_reg_alloc_n( C, (int)( C->fctx->vars.size / sizeof( sgs_FCVar ) ) );
 	args += func->gotthis;
 	
 	if( !preparse_funcorder( C, func, node ) ) return 0;

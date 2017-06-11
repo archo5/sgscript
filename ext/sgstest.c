@@ -506,7 +506,7 @@ static void exec_test( const char* fname, const char* nameonly )
 			}
 			else if( strcmp( ident_start, "threadcount" ) == 0 )
 			{
-				int got = sgs_Stat( C, SGS_STAT_STATECOUNT ), expected = atoi( decoded_value );
+				int got = (int) sgs_Stat( C, SGS_STAT_STATECOUNT ), expected = atoi( decoded_value );
 				if( got != expected )
 				{
 					printf( "[%s] ERROR in 'threadcount': expected %d, got %d\n",
@@ -537,7 +537,7 @@ static void exec_test( const char* fname, const char* nameonly )
 					{
 						size_t n = sgs_GetStringSize( C, -1 );
 						serialize_slots_n[ slot ] = n;
-						serialize_slots_p[ slot ] = malloc( n );
+						serialize_slots_p[ slot ] = (char*) malloc( n );
 						memcpy( serialize_slots_p[ slot ], sgs_GetStringPtr( C, -1 ), n );
 					}
 					sgs_Pop( C, 1 );
@@ -555,7 +555,8 @@ static void exec_test( const char* fname, const char* nameonly )
 				else
 				{
 					sgs_Variable str;
-					sgs_InitStringBuf( C, &str, serialize_slots_p[ slot ], serialize_slots_n[ slot ] );
+					sgs_InitStringBuf( C, &str, serialize_slots_p[ slot ],
+						(sgs_SizeVal) serialize_slots_n[ slot ] );
 					if( !sgs_UnserializeAll( C, str ) )
 					{
 						printf( "[%s] ERROR in 'unserialize_all': failed to unserialize\n",

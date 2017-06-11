@@ -118,7 +118,7 @@ extern "C" {
 /* stack frame pool settings */
 #define SGS_STACKFRAMEPOOL_SIZE 512
 
-#define SGS_STATEPOOL_ENABLE 0
+#define SGS_STATEPOOL_ENABLE 1
 
 /* inclusion system settings:
 	- name of entry point function to look for
@@ -254,6 +254,8 @@ On top of that, OSX Clang seems to align sgs_Variable to 4 bytes even though ..
 #  define SGS_OS_TYPE "Mac OS X"
 #elif __ANDROID__
 #  define SGS_OS_TYPE "Android"
+#elif __EMSCRIPTEN__
+#  define SGS_OS_TYPE "Browser"
 #elif __linux || __linux__
 #  define SGS_OS_TYPE "Linux"
 #elif __unix || __unix__

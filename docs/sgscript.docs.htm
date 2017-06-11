@@ -1130,7 +1130,9 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> - specify the unserialization function and argument count to use for the object
 </li><li><a href="#sgs-SerializeObjIndex-function">sgs_SerializeObjIndex</a> - serialize an object&#39;s property/index
 </li><li><a href="#sgs-SerializeSGSON-function">sgs_SerializeSGSON</a> - serialize the given variable into a text format
-</li><li><a href="#sgs-UnserializeSGSON-Ext-functions">sgs_UnserializeSGSON(Ext)</a> - unserialize the given variable from a byte stream</li></ul></div>
+</li><li><a href="#sgs-UnserializeSGSON-Ext-functions">sgs_UnserializeSGSON(Ext)</a> - unserialize the given variable from a byte stream
+</li><li><a href="#sgs-SerializeAll-function">sgs_SerializeAll</a> - perform full state serialization
+</li><li><a href="#sgs-UnserializeAll-function">sgs_UnserializeAll</a> - unserialize full state, replacing everything except symbols</li></ul></div>
 <div class='item'><a name='String-helpers'></a><hr><h2>String helpers</h2><ul><li><a href="#sgs-PadString-function">sgs_PadString</a> - return a string with two spaces appended to all newline characters
 </li><li><a href="#sgs-ToPrintSafeString-function">sgs_ToPrintSafeString</a> - return a string with all non-printable (except space), non-ASCII characters converted to a character hex code
 </li><li><a href="#sgs-StringConcat-function">sgs_StringConcat</a> - concatenate two or more variables into a string</li></ul></div>
@@ -1384,6 +1386,7 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-ResumeState-functions">sgs_ResumeState*** [functions]</a>
 </li><li><a href="#sgs-RootContext-function">sgs_RootContext [function]</a>
 </li><li><a href="#sgs-Serialize-Ext-functions">sgs_Serialize(Ext) [functions]</a>
+</li><li><a href="#sgs-SerializeAll-function">sgs_SerializeAll [function]</a>
 </li><li><a href="#sgs-SerializeObjIndex-function">sgs_SerializeObjIndex [function]</a>
 </li><li><a href="#sgs-SerializeObject-function">sgs_SerializeObject [function]</a>
 </li><li><a href="#sgs-SerializeSGSON-function">sgs_SerializeSGSON [function]</a>
@@ -1421,6 +1424,7 @@ Closures can be created from both SGScript and the C API, though both options ha
 </li><li><a href="#sgs-TypeOf-function">sgs_TypeOf [function]</a>
 </li><li><a href="#sgs-UnregisterType-function">sgs_UnregisterType [function]</a>
 </li><li><a href="#sgs-Unserialize-Ext-functions">sgs_Unserialize(Ext) [functions]</a>
+</li><li><a href="#sgs-UnserializeAll-function">sgs_UnserializeAll [function]</a>
 </li><li><a href="#sgs-UnserializeSGSON-Ext-functions">sgs_UnserializeSGSON(Ext) [functions]</a>
 </li><li><a href="#sgs-Unset-function">sgs_Unset [function]</a>
 </li><li><a href="#sgs-WriteErrorInfo-function">sgs_WriteErrorInfo [function]</a>
@@ -1664,8 +1668,10 @@ After a successful call, all arguments will be popped off the stack and the expe
 </li><li>Default serialization mode is 2 or the current mode inside object serialization callback.
 </li><li>The following variable types can be serialized:
 <ul><li>symbols (variables that can be found in the symbol table);
-</li><li>null, bool, int, real, string, func (SGS function);
-</li><li>objects with the SERIALIZE interface function defined.</li></ul></li></ul></div>
+<ul><li>any resource you can&#39;t serialize and should reacquire instead, put in the symbol table (see <a href="#sgs-RegSymbol-function">sgs_RegSymbol</a> / <a href="#sym-register-function">sym_register)</a>
+</li></ul><li>null, bool, int, real, string, func (SGS function), thread;
+</li><li>objects with the SERIALIZE interface function defined.
+</li></ul><li>If a thread has a non-root parent thread, it cannot be serialized.</li></ul></div>
 <div class='item'><a name='sgs-Unserialize-Ext-functions'></a><hr><h2>sgs_Unserialize(Ext) [functions]</h2><h3>SGSBOOL sgs_Unserialize( sgs_Context* C, sgs_Variable var )</h3><h4>Unserialize the given variable (decode the byte stream).</h4><h3>SGSBOOL sgs_UnserializeExt( sgs_Context* C, sgs_Variable var, int mode )</h3><h4>Same as above, also allows to specify serialization mode.</h4><p>
 <em class='notice-bgr'>Be mindful of the data sources you use - calls to any global function can be placed in the byte stream.</em>
 </p><ul><li><code>sgs_Unserialize</code> is alias of <code>sgs_UnserializeExt( C, var, SGS_SERIALIZE_DEFAULT )</code>
@@ -1681,6 +1687,12 @@ After a successful call, all arguments will be popped off the stack and the expe
 <ul><li>if <code>tab</code> is <code>NULL</code>, the text output is tightly packed, without any extra spaces</li></ul></li></ul></div>
 <div class='item'><a name='sgs-UnserializeSGSON-Ext-functions'></a><hr><h2>sgs_UnserializeSGSON(Ext) [functions]</h2><h3>void sgs_UnserializeSGSON( sgs_Context* C, const char* str )</h3><h4>Unserialize the given variable from a byte stream.</h4><h3>void sgs_UnserializeSGSONExt( sgs_Context* C, const char* str, size_t size )</h3><h4>Allows to pass a string buffer to the parsing function.</h4><ul><li><code>sgs_UnserializeSGSON</code> is alias to <code>sgs_UnserializeSGSONExt( C, str, SGS_STRINGLENGTHFUNC( str ) )</code>
 </li><li>This is the same as creating a string variable and calling <code>sgs_UnserializeExt( C, &lt;var&gt;, 3 )</code></li></ul></div>
+<div class='item'><a name='sgs-SerializeAll-function'></a><hr><h2>sgs_SerializeAll [function]</h2><h3>void sgs_SerializeAll( sgs_Context* C )</h3><h4>Serialize most of the engine state.</h4><ul><li>Mode 2 serialization is performed on the root context, usual rules apply.
+</li><li>Symbol table is not serialized (since it is used in resolving serialized function/object references in the first place)</li></ul></div>
+<div class='item'><a name='sgs-UnserializeAll-function'></a><hr><h2>sgs_UnserializeAll [function]</h2><h3>SGSBOOL sgs_UnserializeAll( sgs_Context* C, sgs_Variable var )</h3><h4>Unserialize most of the engine state by decoding the given byte stream.</h4><ul><li>Rules of regular mode 2 unserialization apply.
+</li><li>Root context pointer is not changed, though other threads (states) may be replaced.
+</li><li>References will not be lost and states will not be freed for as long as there is a reference, however if replacement was intended, it will have to be done manually afterwards.
+</li><li>Same goes for other fully external (not managed as part of some object) object/function variable references.</li></ul></div>
 <div class='item'><a name='sgs-Assign-function'></a><hr><h2>sgs_Assign [function]</h2><h3>void sgs_Assign( sgs_Context* C, sgs_Variable* var_to, sgs_Variable* var_from )</h3><h4>Acquire <code>var_from</code>, release <code>var_to</code>, copy <code>var_from</code> to <code>var_to</code>.</h4></div>
 <div class='item'><a name='sgs-ArithOp-function'></a><hr><h2>sgs_ArithOp [function]</h2><h3>void sgs_ArithOp( sgs_Context* C, sgs_Variable* out, sgs_Variable* A, sgs_Variable* B, int op )</h3><h4>Perform the specified operation on variables A and B, returning the value on <code>out</code>.</h4><p>
 <em class='notice-bgr'>This function prints errors, exactly like VM would (internally there are the same functions).</em>
@@ -2017,7 +2029,7 @@ None.
 </p><h5>Stack frame:</h5><p>
 Empty.
 </p><h5>Return values:</h5><ul><li>Non-negative value if successful, negative on error.</li></ul><h5>Additional notes:</h5><p>
-Callback requires no data but expects that <a href="#sgs-Serialize-Ext-functions">sgs_Serialize</a> / <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> is successfully called once. In the case of sgs_SerializeObject, the necessary number (equal to argument count, passed to the function) of sgs_Serialize calls must be made before it.
+Callback requires no data but expects that <a href="#sgs-SerializeAll-function">sgs_Serialize</a> / <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> is successfully called once. In the case of sgs_SerializeObject, the necessary number (equal to argument count, passed to the function) of sgs_Serialize calls must be made before it.
 </p><h4>DUMP - debug dump callback</h4><h5>When called:</h5><ul><li><a href="#printvar-function">printvar</a>, <a href="#dumpvar-function">dumpvar</a>, <a href="#printvar-ext-function">printvar_ext</a>, <a href="#dumpvar-ext-function">dumpvar_ext</a> in SGScript.
 </li><li><a href="#sgs-DumpVar-function">sgs_DumpVar</a> in the C API.</li></ul><h5>Additional arguments:</h5><ul><li>int maxdepth -- remaining recursion depth of dump to be passed on to <a href="#sgs-DumpVar-function">sgs_DumpVar</a> calls.</li></ul><h5>Stack frame:</h5><p>
 Empty at beginning. Expected to have at least one item on stack after a successful conversion. The topmost one is used.
@@ -3122,6 +3134,7 @@ rad2deg( -M_PI / 2 ); // real (-90)</pre></div>
 <ul><li>&quot;Windows&quot; (_WIN32/__WIN32__/__WINDOWS__)
 </li><li>&quot;Mac OS X&quot; (__APPLE__)
 </li><li>&quot;Android&quot; (__ANDROID__)
+</li><li>&quot;Browser&quot; (__EMSCRIPTEN__)
 </li><li>&quot;Linux&quot; (__linux/__linux__)
 </li><li>&quot;Unix&quot; (__unix/__unix__)
 </li><li>&quot;POSIX&quot; (__posix)
@@ -3448,7 +3461,7 @@ sgs_InitIDbg( contextPtr, &amp;debugger );
 sgs_CloseIDbg( contextPtr, &amp;debugger );</pre></div>
 <div class='item'><a name='Additional-info'></a><hr><h2>Additional info</h2></div>
 <div class='item'><a name='Serialization-in-SGScript'></a><hr><h2>Serialization in SGScript</h2><p>
-In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the &quot;<a href="#serialize-function">serialize</a>&quot; function and deserialization is done with &quot;<a href="#unserialize-function">unserialize</a>&quot;. The C API has similar functions: <a href="#sgs-Serialize-Ext-functions">sgs_Serialize(Ext)</a> / <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> and <a href="#sgs-Unserialize-Ext-functions">sgs_Unserialize</a>, respectively.
+In SGScript, serialization is conversion to a binary stream of a specific format. Serialization in the language API is done by calling the &quot;<a href="#serialize-function">serialize</a>&quot; function and deserialization is done with &quot;<a href="#unserialize-function">unserialize</a>&quot;. The C API has similar functions: <a href="#sgs-Serialize-Ext-functions">sgs_Serialize(Ext)</a> / <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> and <a href="#sgs-UnserializeAll-function">sgs_Unserialize</a>, respectively.
 </p><p>
 <em class='notice-bgr'>check the &quot;Possible gotchas&quot; part of this page if it is intended to trust the end user with access to serialized data</em>
 </p><h4>The format (modes 1 and 2)</h4><ul><li>a list of operations
@@ -3472,7 +3485,7 @@ In SGScript, serialization is conversion to a binary stream of a specific format
 </li><li>objects will have SERIALIZE operation called
 <ul><li>if operation is not defined, everything will stop
 </li><li>if object is an array, all variables in it will be serialized using <a href="#sgs-Serialize-Ext-functions">sgs_Serialize(Ext)</a> and <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> will generate a call to &#39;array&#39;
-</li><li>if object is a &#39;dict&#39; or a &#39;map&#39;, all keys and values in it will be serialized using <a href="#sgs-Serialize-Ext-functions">sgs_Serialize</a> and <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> will generate a call to &#39;dict&#39;/&#39;map&#39;</li></ul></li></ul></li></ul><h4>Deserialization</h4><ul><li>&quot;<a href="#unserialize-function">unserialize</a>&quot; is called
+</li><li>if object is a &#39;dict&#39; or a &#39;map&#39;, all keys and values in it will be serialized using <a href="#sgs-SerializeAll-function">sgs_Serialize</a> and <a href="#sgs-SerializeObject-function">sgs_SerializeObject</a> will generate a call to &#39;dict&#39;/&#39;map&#39;</li></ul></li></ul></li></ul><h4>Deserialization</h4><ul><li>&quot;<a href="#unserialize-function">unserialize</a>&quot; is called
 </li><li>&quot;<a href="#sgs-Unserialize-Ext-functions">sgs_Unserialize(Ext)</a>&quot; is called internally
 </li><li>&quot;push&quot;, &quot;call&quot;, &quot;symbol&quot; operations are executed, thus regenerating the data
 <ul><li>&quot;push&quot; operation pushes a variable on the stack

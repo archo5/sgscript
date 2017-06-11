@@ -1,4 +1,8 @@
 
+**TODO** (--/--/--):
+
+- **added full state serialization**
+
 **1.4.1** (2016/09/20):
 
 - **SGS.NET v1.0 released**

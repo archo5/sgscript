@@ -1430,6 +1430,8 @@ Closures can be created from both SGScript and the C API, though both options ha
 - @sgs_SerializeObjIndex - serialize an object's property/index
 - @sgs_SerializeSGSON - serialize the given variable into a text format
 - @sgs_UnserializeSGSON(Ext) - unserialize the given variable from a byte stream
+- @sgs_SerializeAll - perform full state serialization
+- @sgs_UnserializeAll - unserialize full state, replacing everything except symbols
 
 
 # String helpers [info]
@@ -2467,8 +2469,10 @@ After a successful call, all arguments will be popped off the stack and the expe
 - Default serialization mode is 2 or the current mode inside object serialization callback.
 - The following variable types can be serialized:
 -- symbols (variables that can be found in the symbol table);
--- null, bool, int, real, string, func (SGS function);
+--- any resource you can't serialize and should reacquire instead, put in the symbol table (see @sgs_RegSymbol / @sym_register)
+-- null, bool, int, real, string, func (SGS function), thread;
 -- objects with the SERIALIZE interface function defined.
+- If a thread has a non-root parent thread, it cannot be serialized.
 
 
 # sgs_Unserialize(Ext) [functions]
@@ -2523,6 +2527,26 @@ After a successful call, all arguments will be popped off the stack and the expe
 
 - `sgs_UnserializeSGSON` is alias to `sgs_UnserializeSGSONExt( C, str, SGS_STRINGLENGTHFUNC( str ) )`
 - This is the same as creating a string variable and calling `sgs_UnserializeExt( C, <var>, 3 )`
+
+
+# sgs_SerializeAll [function]
+
+== void sgs_SerializeAll( sgs_Context* C )
+=== Serialize most of the engine state.
+
+- Mode 2 serialization is performed on the root context, usual rules apply.
+- Symbol table is not serialized (since it is used in resolving serialized function/object references in the first place)
+
+
+# sgs_UnserializeAll [function]
+
+== SGSBOOL sgs_UnserializeAll( sgs_Context* C, sgs_Variable var )
+=== Unserialize most of the engine state by decoding the given byte stream.
+
+- Rules of regular mode 2 unserialization apply.
+- Root context pointer is not changed, though other threads (states) may be replaced.
+- References will not be lost and states will not be freed for as long as there is a reference, however if replacement was intended, it will have to be done manually afterwards.
+- Same goes for other fully external (not managed as part of some object) object/function variable references.
 
 
 # sgs_Assign [function]
@@ -6448,6 +6472,7 @@ This library contains the basic math functions for processing real values.
 -- "Windows" (_WIN32/__WIN32__/__WINDOWS__)
 -- "Mac OS X" (__APPLE__)
 -- "Android" (__ANDROID__)
+-- "Browser" (__EMSCRIPTEN__)
 -- "Linux" (__linux/__linux__)
 -- "Unix" (__unix/__unix__)
 -- "POSIX" (__posix)
