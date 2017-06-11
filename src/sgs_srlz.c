@@ -38,272 +38,6 @@ static int _unserialize_function( SGS_CTX, const char* buf, size_t sz, sgs_Varia
 }
 
 
-static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* outbuf, sgs_MemBuf* argarray )
-{
-	sgs_MemBuf buf = sgs_membuf_create();
-	sgs_StackFrame* sf;
-	
-	SRLZ_DEBUG( printf( "SRLZ thread_serialize\n" ) );
-	
-#define _WRITERL( x ) { sgs_membuf_appbuf( &buf, C, &x, 8 ); }
-#define _WRITE32( x ) { int32_t _tmp = (int32_t)(x); sgs_membuf_appbuf( &buf, C, &_tmp, 4 ); }
-#define _WRITE8( x ) { sgs_membuf_appchr( &buf, C, (char)(x) ); }
-	
-	/* failure condition: cannot serialize self */
-	if( C == ctx && !( C->shared->global_flags & SGS_SHF_SERIALIZE_ALL ) )
-		return 0;
-	/* failure condition: C functions in stack frame */
-	sf = ctx->sf_first;
-	while( sf )
-	{
-		if( sf->iptr == NULL )
-			return 0;
-		sf = sf->next;
-	}
-	
-	/* variables: _G */
-	SRLZ_DEBUG( printf( "SRLZ thread _G\n" ) );
-	{
-		sgs_Variable v_obj; v_obj.type = SGS_VT_OBJECT; v_obj.data.O = ctx->_G;
-		sgs_Serialize( C, v_obj );
-	}
-	/* variables: stack */
-	SRLZ_DEBUG( printf( "SRLZ thread STACK\n" ) );
-	{
-		sgs_Variable* p = ctx->stack_base;
-		sf = ctx->sf_first;
-		while( p != ctx->stack_top )
-		{
-			/* if stack position equals frame function position and ..
-			.. frame has a closure ref., serialize closure instead of its func. */
-			int hasclsr = 0;
-			if( sf && sf->func == p )
-			{
-				SRLZ_DEBUG( printf( "SRLZ thread found function at %d\n", (int)( sf->func - ctx->stack_base ) ) );
-				if( sf->clsrref )
-				{
-					SRLZ_DEBUG( printf( "^ it has closure\n" ) );
-					sgs_Variable vobj;
-					vobj.type = SGS_VT_OBJECT;
-					vobj.data.O = sf->clsrref;
-					sgs_Serialize( C, vobj );
-					hasclsr = 1;
-				}
-				/* next frames won't appear on stack before this position */
-				sf = sf->next;
-			}
-			if( !hasclsr )
-				sgs_Serialize( C, *p );
-			p++;
-		}
-	}
-	
-	SRLZ_DEBUG( printf( "SRLZ thread CORE\n" ) );
-	_WRITE32( 0x5C057A7E ); /* Serialized COroutine STATE */
-	/* POD: main context */
-	_WRITE32( ctx->minlev );
-	_WRITE32( ctx->apilev );
-	_WRITE32( ctx->last_errno );
-	_WRITE32( ctx->state );
-	_WRITERL( ctx->st_timeout );
-	_WRITERL( ctx->wait_timer );
-	_WRITERL( ctx->tm_accum );
-	_WRITE32( ctx->stack_top - ctx->stack_base );
-	_WRITE32( ctx->stack_off - ctx->stack_base );
-	_WRITE32( ctx->stack_mem );
-	_WRITE32( ctx->sf_count );
-	_WRITE32( ctx->num_last_returned );
-	/* stack frames */
-	SRLZ_DEBUG( printf( "SRLZ thread FRAMES\n" ) );
-	sf = ctx->sf_first;
-	while( sf )
-	{
-		/* 'code' will be taken from function */
-		if( sf->func->type == SGS_VT_FUNC )
-		{
-			sgs_iFunc* F = sf->func->data.F;
-			_WRITE32( sf->func - ctx->stack_base );
-			_WRITE32( sf->iptr - sgs_func_bytecode( F ) );
-			_WRITE32( sgs_func_instr_count( F ) ); /* - for validation */
-			_WRITE32( sgs_func_const_count( F ) ); /* - for validation */
-		}
-		else
-		{
-			SRLZ_DEBUG( printf( "SRLZ THREAD NOT VT_FUNC\n" ) );
-			goto fail;
-		}
-		/* 'cptr' will be taken from function */
-		/* 'nfname' is irrelevant for non-native functions */
-		/* 'prev', 'next', 'cached' are system pointers */
-		_WRITE32( sf->argbeg );
-		_WRITE32( sf->stkoff );
-		_WRITE32( sf->errsup );
-		_WRITE8( sf->argcount );
-		_WRITE8( sf->flags );
-		sf = sf->next;
-	}
-	
-	SRLZ_DEBUG( printf( "SRLZ emit thread\n" ) );
-	sgs_membuf_appchr( outbuf, C, 'T' );
-	if( argarray )
-	{
-		uint32_t argcount = (uint32_t)( 1 /* _G */
-			+ ( ctx->stack_top - ctx->stack_base ) /* stack */ );
-		sgs_membuf_appbuf( outbuf, C, &argcount, 4 );
-		sgs_membuf_appbuf( outbuf, C, argarray->ptr + argarray->size - argcount * 4, argcount * 4 );
-		sgs_membuf_erase( argarray, argarray->size - argcount * 4, argarray->size );
-	}
-	
-	sgs_membuf_appbuf( outbuf, C, buf.ptr, buf.size );
-	sgs_membuf_destroy( &buf, C );
-	
-	if( ctx == sgs_RootContext( C ) )
-	{
-		sgs_membuf_appchr( outbuf, C, 'r' );
-	}
-	
-#undef _WRITERL
-#undef _WRITE32
-#undef _WRITE8
-	return 1;
-fail:
-	SRLZ_DEBUG( printf( "SRLZ serialize_thread ERROR\n" ) );
-	sgs_membuf_destroy( &buf, C );
-	return 0;
-}
-
-static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char* bufend )
-{
-	char *buf = *pbuf;
-	sgs_Context* ctx = sgsCTX_ForkState( C, SGS_FALSE );
-	
-	SRLZ_DEBUG( printf( "USRZ thread_unserialize\n" ) );
-	
-#define _READRL( x ) { if( buf + 8 > bufend ) goto fail; memcpy( &x, buf, 8 ); buf += 8; }
-#define _READ32( x ) { if( buf + 4 > bufend ) goto fail; memcpy( &x, buf, 4 ); buf += 4; }
-#define _READ8( x ) { if( buf + 1 > bufend ) goto fail; x = (uint8_t) *buf++; }
-	
-	{
-		int32_t i, tag, stacklen, stackoff, sfnum;
-		
-		SRLZ_DEBUG( printf( "USRZ thread CORE\n" ) );
-		_READ32( tag );
-		if( tag != 0x5C057A7E )
-		{
-			SRLZ_DEBUG( printf( "USRZ THREAD NOT 5C057A7E ([s]erialized [co]routine [state])\n" ) );
-			goto fail;
-		}
-		
-		/* POD: context */
-		_READ32( ctx->minlev );
-		_READ32( ctx->apilev );
-		_READ32( ctx->last_errno );
-		_READ32( ctx->state );
-		_READRL( ctx->st_timeout );
-		_READRL( ctx->wait_timer );
-		_READRL( ctx->tm_accum );
-		_READ32( stacklen );
-		_READ32( stackoff );
-		_READ32( ctx->stack_mem );
-		_READ32( sfnum );
-		_READ32( ctx->num_last_returned );
-		
-		/* variables: _G */
-		SRLZ_DEBUG( printf( "USRZ thread _G\n" ) );
-		ctx->_G = sgs_StackItem( C, 0 ).data.O;
-		sgs_ObjAcquire( ctx, ctx->_G );
-		
-		/* variables: stack */
-		SRLZ_DEBUG( printf( "USRZ thread STACK\n" ) );
-		sgs_BreakIf( ctx->stack_top != ctx->stack_base );
-		for( i = 0; i < stacklen; ++i )
-			sgs_PushVariable( ctx, sgs_StackItem( C, 1 + i ) );
-		sgs_BreakIf( ctx->stack_top != ctx->stack_base + stacklen );
-		if( stackoff > stacklen )
-		{
-			SRLZ_DEBUG( printf( "USRZ THREAD stackoff > stacklen\n" ) );
-			goto fail;
-		}
-		ctx->stack_off = ctx->stack_base + stackoff;
-		
-		/* stack frames */
-		SRLZ_DEBUG( printf( "USRZ thread FRAMES\n" ) );
-		for( i = 0; i < sfnum; ++i )
-		{
-			sgs_StackFrame* sf;
-			int32_t funcoff, iptrpos, iendpos, ccount;
-			
-			/* POD: stack frames */
-			_READ32( funcoff );
-			SRLZ_DEBUG( printf( "USRZ thread frame funcoff = %d\n", (int) funcoff ) );
-			if( funcoff < 0 || funcoff >= stacklen )
-			{
-				SRLZ_DEBUG( printf( "USRZ THREAD funcoff out of bounds [0;stacklen)\n" ) );
-				goto fail;
-			}
-			
-			if( !sgsVM_PushStackFrame( ctx, ctx->stack_base + funcoff ) )
-			{
-				SRLZ_DEBUG( printf( "USRZ THREAD PushStackFrame failed\n" ) );
-				goto fail;
-			}
-			sf = ctx->sf_last;
-			
-			/* 'code' will be taken from function */
-			if( sf->func->type == SGS_VT_FUNC )
-			{
-				sgs_iFunc* F = sf->func->data.F;
-				_READ32( iptrpos );
-				_READ32( iendpos ); /* - for validation */
-				if( iendpos != sgs_func_instr_count( F ) )
-				{
-					SRLZ_DEBUG( printf( "USRZ THREAD code size mismatch\n" ) );
-					goto fail;
-				}
-				sf->iptr = sgs_func_bytecode( F ) + iptrpos;
-				_READ32( ccount ); /* - for validation */
-				if( ccount != sgs_func_const_count( F ) )
-				{
-					SRLZ_DEBUG( printf( "USRZ THREAD constant count mismatch\n" ) );
-					goto fail;
-				}
-			}
-			else
-			{
-				SRLZ_DEBUG( printf( "USRZ THREAD function NOT VT_FUNC (type=%d)\n", sf->func->type ) );
-				SRLZ_DEBUG( if( sf->func->type == SGS_VT_OBJECT )
-					printf( "^ iface = %s\n", sf->func->data.O->iface->name ) );
-				goto fail;
-			}
-			
-			/* 'cptr' will be taken from function */
-			/* 'nfname' is irrelevant for non-native functions */
-			/* 'prev', 'next', 'cached' are system pointers */
-			_READ32( sf->argbeg );
-			_READ32( sf->stkoff );
-			_READ32( sf->errsup );
-			_READ8( sf->argcount );
-			_READ8( sf->flags );
-		}
-	}
-	
-#undef _READRL
-#undef _READ32
-#undef _READ8
-	
-	/* finalize */
-	*pbuf = buf;
-	sgs_BreakIf( ctx->refcount != 0 );
-	*pT = ctx;
-	SRLZ_DEBUG( printf( "USRZ thread_unserialize DONE\n" ) );
-	return 1;
-fail:
-	SRLZ_DEBUG( printf( "USRZ thread_unserialize ERROR\n" ) );
-	sgsCTX_FreeState( ctx );
-	return 0;
-}
-
-
 typedef struct sgs_serialize1_data
 {
 	int mode;
@@ -577,13 +311,6 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 				return sgs_unserr_objcall( C );
 			str += fnsz;
 		}
-		else if( c == 'T' )
-		{
-			sgs_Context* T = NULL;
-			if( !sgs__thread_unserialize( C, &T, &str, strend ) )
-				return sgs_unserr_incomp( C );
-			sgs_PushThreadPtr( C, T );
-		}
 		else if( c == 'S' )
 		{
 			sgs_Variable sym;
@@ -639,6 +366,277 @@ typedef struct sgs_serialize2_data
 sgs_serialize2_data;
 
 #define SGS_VTSPC_CLOSURE 0xf0
+
+static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* outbuf, sgs_MemBuf* argarray )
+{
+	sgs_MemBuf buf = sgs_membuf_create();
+	sgs_StackFrame* sf;
+	
+	SRLZ_DEBUG( printf( "SRLZ thread_serialize\n" ) );
+	
+#define _WRITERL( x ) { sgs_membuf_appbuf( &buf, C, &x, 8 ); }
+#define _WRITE32( x ) { int32_t _tmp = (int32_t)(x); sgs_membuf_appbuf( &buf, C, &_tmp, 4 ); }
+#define _WRITE8( x ) { sgs_membuf_appchr( &buf, C, (char)(x) ); }
+	
+	/* failure condition: cannot serialize self */
+	if( C == ctx && !( C->shared->global_flags & SGS_SHF_SERIALIZE_ALL ) )
+		return 0;
+	/* failure condition: C functions in stack frame */
+	sf = ctx->sf_first;
+	while( sf )
+	{
+		if( sf->iptr == NULL )
+			return 0;
+		sf = sf->next;
+	}
+	
+	/* variables: _G */
+	SRLZ_DEBUG( printf( "SRLZ thread _G\n" ) );
+	{
+		sgs_Variable v_obj; v_obj.type = SGS_VT_OBJECT; v_obj.data.O = ctx->_G;
+		sgs_Serialize( C, v_obj );
+	}
+	/* variables: stack */
+	SRLZ_DEBUG( printf( "SRLZ thread STACK\n" ) );
+	{
+		sgs_Variable* p = ctx->stack_base;
+		sf = ctx->sf_first;
+		while( p != ctx->stack_top )
+		{
+			/* if stack position equals frame function position and ..
+			.. frame has a closure ref., serialize closure instead of its func. */
+			int hasclsr = 0;
+			if( sf && sf->func == p )
+			{
+				SRLZ_DEBUG( printf( "SRLZ thread found function at %d\n", (int)( sf->func - ctx->stack_base ) ) );
+				if( sf->clsrref )
+				{
+					SRLZ_DEBUG( printf( "^ it has closure\n" ) );
+					sgs_Variable vobj;
+					vobj.type = SGS_VT_OBJECT;
+					vobj.data.O = sf->clsrref;
+					sgs_Serialize( C, vobj );
+					hasclsr = 1;
+				}
+				/* next frames won't appear on stack before this position */
+				sf = sf->next;
+			}
+			if( !hasclsr )
+				sgs_Serialize( C, *p );
+			p++;
+		}
+	}
+	
+	SRLZ_DEBUG( printf( "SRLZ thread CORE\n" ) );
+	_WRITE32( 0x5C057A7E ); /* Serialized COroutine STATE */
+	/* POD: main context */
+	_WRITE32( ctx->minlev );
+	_WRITE32( ctx->apilev );
+	_WRITE32( ctx->last_errno );
+	_WRITE32( ctx->state );
+	_WRITERL( ctx->st_timeout );
+	_WRITERL( ctx->wait_timer );
+	_WRITERL( ctx->tm_accum );
+	_WRITE32( ctx->stack_top - ctx->stack_base );
+	_WRITE32( ctx->stack_off - ctx->stack_base );
+	_WRITE32( ctx->stack_mem );
+	_WRITE32( ctx->sf_count );
+	_WRITE32( ctx->num_last_returned );
+	/* stack frames */
+	SRLZ_DEBUG( printf( "SRLZ thread FRAMES\n" ) );
+	sf = ctx->sf_first;
+	while( sf )
+	{
+		/* 'code' will be taken from function */
+		if( sf->func->type == SGS_VT_FUNC )
+		{
+			sgs_iFunc* F = sf->func->data.F;
+			_WRITE32( sf->func - ctx->stack_base );
+			_WRITE32( sf->iptr - sgs_func_bytecode( F ) );
+			_WRITE32( sgs_func_instr_count( F ) ); /* - for validation */
+			_WRITE32( sgs_func_const_count( F ) ); /* - for validation */
+		}
+		else
+		{
+			SRLZ_DEBUG( printf( "SRLZ THREAD NOT VT_FUNC\n" ) );
+			goto fail;
+		}
+		/* 'cptr' will be taken from function */
+		/* 'nfname' is irrelevant for non-native functions */
+		/* 'prev', 'next', 'cached' are system pointers */
+		_WRITE32( sf->argbeg );
+		_WRITE32( sf->stkoff );
+		_WRITE32( sf->errsup );
+		_WRITE8( sf->argcount );
+		_WRITE8( sf->flags );
+		sf = sf->next;
+	}
+	
+	SRLZ_DEBUG( printf( "SRLZ emit thread\n" ) );
+	sgs_membuf_appchr( outbuf, C, 'T' );
+	if( argarray )
+	{
+		uint32_t argcount = (uint32_t)( 1 /* _G */
+			+ ( ctx->stack_top - ctx->stack_base ) /* stack */ );
+		sgs_membuf_appbuf( outbuf, C, &argcount, 4 );
+		sgs_membuf_appbuf( outbuf, C, argarray->ptr + argarray->size - argcount * 4, argcount * 4 );
+		sgs_membuf_erase( argarray, argarray->size - argcount * 4, argarray->size );
+	}
+	
+	sgs_membuf_appbuf( outbuf, C, buf.ptr, buf.size );
+	sgs_membuf_destroy( &buf, C );
+	
+	if( ctx == sgs_RootContext( C ) )
+	{
+		sgs_membuf_appchr( outbuf, C, 'r' );
+	}
+	
+#undef _WRITERL
+#undef _WRITE32
+#undef _WRITE8
+	return 1;
+fail:
+	SRLZ_DEBUG( printf( "SRLZ serialize_thread ERROR\n" ) );
+	sgs_membuf_destroy( &buf, C );
+	return 0;
+}
+
+static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char* bufend )
+{
+	char *buf = *pbuf;
+	sgs_Context* ctx = sgsCTX_ForkState( C, SGS_FALSE );
+	
+	SRLZ_DEBUG( printf( "USRZ thread_unserialize\n" ) );
+	
+#define _READRL( x ) { if( buf + 8 > bufend ) goto fail; memcpy( &x, buf, 8 ); buf += 8; }
+#define _READ32( x ) { if( buf + 4 > bufend ) goto fail; memcpy( &x, buf, 4 ); buf += 4; }
+#define _READ8( x ) { if( buf + 1 > bufend ) goto fail; x = (uint8_t) *buf++; }
+	
+	{
+		int32_t i, tag, stacklen, stackoff, sfnum;
+		
+		SRLZ_DEBUG( printf( "USRZ thread CORE\n" ) );
+		_READ32( tag );
+		if( tag != 0x5C057A7E )
+		{
+			SRLZ_DEBUG( printf( "USRZ THREAD NOT 5C057A7E ([s]erialized [co]routine [state])\n" ) );
+			goto fail;
+		}
+		
+		/* POD: context */
+		_READ32( ctx->minlev );
+		_READ32( ctx->apilev );
+		_READ32( ctx->last_errno );
+		_READ32( ctx->state );
+		_READRL( ctx->st_timeout );
+		_READRL( ctx->wait_timer );
+		_READRL( ctx->tm_accum );
+		_READ32( stacklen );
+		_READ32( stackoff );
+		_READ32( ctx->stack_mem );
+		_READ32( sfnum );
+		_READ32( ctx->num_last_returned );
+		
+		/* variables: _G */
+		SRLZ_DEBUG( printf( "USRZ thread _G\n" ) );
+		ctx->_G = sgs_StackItem( C, 0 ).data.O;
+		sgs_ObjAcquire( ctx, ctx->_G );
+		
+		/* variables: stack */
+		SRLZ_DEBUG( printf( "USRZ thread STACK\n" ) );
+		sgs_BreakIf( ctx->stack_top != ctx->stack_base );
+		for( i = 0; i < stacklen; ++i )
+			sgs_PushVariable( ctx, sgs_StackItem( C, 1 + i ) );
+		sgs_BreakIf( ctx->stack_top != ctx->stack_base + stacklen );
+		if( stackoff > stacklen )
+		{
+			SRLZ_DEBUG( printf( "USRZ THREAD stackoff > stacklen\n" ) );
+			goto fail;
+		}
+		ctx->stack_off = ctx->stack_base + stackoff;
+		
+		/* stack frames */
+		SRLZ_DEBUG( printf( "USRZ thread FRAMES\n" ) );
+		for( i = 0; i < sfnum; ++i )
+		{
+			sgs_StackFrame* sf;
+			int32_t funcoff, iptrpos, iendpos, ccount;
+			
+			/* POD: stack frames */
+			_READ32( funcoff );
+			SRLZ_DEBUG( printf( "USRZ thread frame funcoff = %d\n", (int) funcoff ) );
+			if( funcoff < 0 || funcoff >= stacklen )
+			{
+				SRLZ_DEBUG( printf( "USRZ THREAD funcoff out of bounds [0;stacklen)\n" ) );
+				goto fail;
+			}
+			
+			if( !sgsVM_PushStackFrame( ctx, ctx->stack_base + funcoff ) )
+			{
+				SRLZ_DEBUG( printf( "USRZ THREAD PushStackFrame failed\n" ) );
+				goto fail;
+			}
+			sf = ctx->sf_last;
+			
+			/* 'code' will be taken from function */
+			if( sf->func->type == SGS_VT_FUNC )
+			{
+				sgs_iFunc* F = sf->func->data.F;
+				_READ32( iptrpos );
+				_READ32( iendpos ); /* - for validation */
+				if( iendpos != sgs_func_instr_count( F ) )
+				{
+					SRLZ_DEBUG( printf( "USRZ THREAD code size mismatch\n" ) );
+					goto fail;
+				}
+				sf->iptr = sgs_func_bytecode( F ) + iptrpos;
+				_READ32( ccount ); /* - for validation */
+				if( ccount != sgs_func_const_count( F ) )
+				{
+					SRLZ_DEBUG( printf( "USRZ THREAD constant count mismatch\n" ) );
+					goto fail;
+				}
+			}
+			else
+			{
+				SRLZ_DEBUG( printf( "USRZ THREAD function NOT VT_FUNC (type=%d)\n", sf->func->type ) );
+				SRLZ_DEBUG( if( sf->func->type == SGS_VT_OBJECT )
+					printf( "^ iface = %s\n", sf->func->data.O->iface->name ) );
+				goto fail;
+			}
+			
+			/* 'cptr' will be taken from function */
+			/* 'nfname' is irrelevant for non-native functions */
+			/* 'prev', 'next', 'cached' are system pointers */
+			_READ32( sf->argbeg );
+			_READ32( sf->stkoff );
+			_READ32( sf->errsup );
+			_READ8( sf->argcount );
+			_READ8( sf->flags );
+		}
+	}
+	
+#undef _READRL
+#undef _READ32
+#undef _READ8
+	
+	/* finalize */
+	*pbuf = buf;
+	sgs_BreakIf( ctx->refcount != 0 );
+	*pT = ctx;
+	SRLZ_DEBUG( printf( "USRZ thread_unserialize DONE\n" ) );
+	return 1;
+fail:
+	SRLZ_DEBUG( printf( "USRZ thread_unserialize ERROR\n" ) );
+	sgsCTX_FreeState( ctx );
+	return 0;
+}
+
+#define ARGS_POP( n ) sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - (n)*4, pSD->argarray.size )
+#define W_CHAR( ch ) sgs_membuf_appchr( &pSD->data, C, (ch) )
+#define W_ARGS( n ) sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - (n)*4, (n)*4 )
+#define W_BUF( p, s ) sgs_membuf_appbuf( &pSD->data, C, (p), (s) )
+#define W_ITEM( x ) W_BUF( &(x), sizeof(x) )
 
 static void srlz_mode2_addvar( SGS_CTX, sgs_serialize2_data* pSD, sgs_Variable* pvar )
 {
@@ -706,9 +704,9 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 			
 			SRLZ_DEBUG( printf( "SRLZ emit symbol\n" ) );
 			
-			sgs_membuf_appchr( &pSD->data, C, 'S' );
-			sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
-			sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4, pSD->argarray.size );
+			W_CHAR( 'S' );
+			W_ARGS( 1 );
+			ARGS_POP( 1 );
 			sgs_Release( C, &sym );
 			
 			goto addvar;
@@ -732,9 +730,9 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		
 		SRLZ_DEBUG( printf( "SRLZ emit closure\n" ) );
 		
-		sgs_membuf_appchr( &pSD->data, C, 'C' );
-		sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
-		sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4, pSD->argarray.size );
+		W_CHAR( 'C' );
+		W_ARGS( 1 );
+		ARGS_POP( 1 );
 	}
 	else if( var.type == SGS_VT_THREAD )
 	{
@@ -779,15 +777,15 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		{
 			SRLZ_DEBUG( printf( "SRLZ new thread parent (%p)\n", parent ) );
 			
-			sgs_membuf_appchr( &pSD->data, C, 'p' );
-			sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
+			W_CHAR( 'p' );
+			W_ARGS( 1 );
 			if( parent == sgs_RootContext( C ) && !( C->shared->global_flags & SGS_SHF_SERIALIZE_ALL ) )
 			{
-				sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
+				W_ARGS( 1 );
 			}
 			else
 			{
-				sgs_membuf_appbuf( &pSD->data, C, &parent_th_idx, sizeof(parent_th_idx) );
+				W_ITEM( parent_th_idx );
 			}
 		}
 		
@@ -842,7 +840,7 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 				
 				SRLZ_DEBUG( printf( "SRLZ emit obj/closure (%d args)\n", (int) args ) );
 				
-				sgs_membuf_appbuf( &pSD->data, C, pb, 5 );
+				W_BUF( pb, 5 );
 			}
 			srlz_mode2_addvar( C, pSD, &var );
 			
@@ -850,9 +848,9 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 			sgs_SerializeInt_V2( C, *(sgs_Variable*) O->data );
 			
 			SRLZ_DEBUG( printf( "SRLZ emit obj/closure [f]unc\n" ) );
-			sgs_membuf_appchr( &pSD->data, C, 'f' );
-			sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 8, 8 );
-			sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4, pSD->argarray.size );
+			W_CHAR( 'f' );
+			W_ARGS( 2 );
+			ARGS_POP( 1 );
 			
 			for( i = 0; i < count; ++i )
 			{
@@ -867,10 +865,10 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 				
 				SRLZ_DEBUG( printf( "SRLZ emit obj/closure [<] argument variable\n" ) );
 				
-				sgs_membuf_appchr( &pSD->data, C, '<' );
-				sgs_membuf_appbuf( &pSD->data, C, &idx, sizeof(idx) );
-				sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 8, 8 );
-				sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4, pSD->argarray.size );
+				W_CHAR( '<' );
+				W_ITEM( idx );
+				W_ARGS( 2 );
+				ARGS_POP( 1 );
 			}
 			
 			goto end;
@@ -890,7 +888,7 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 				/* save position of target object */
 				SGS_AS_INT32( mo_arg, pSD->argarray.ptr + pSD->argarray.size - 4 );
 				/* remove the meta-object from arguments */
-				sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4, pSD->argarray.size );
+				ARGS_POP( 1 );
 				/* check if argument array size was not changed */
 				sgs_BreakIf( origsize != pSD->argarray.size );
 			}
@@ -941,17 +939,17 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		
 		SRLZ_DEBUG( printf( "SRLZ new/emit basic type (%d)\n", (int) var.type ) );
 		
-		sgs_membuf_appbuf( &pSD->data, C, pb, 2 );
+		W_BUF( pb, 2 );
 		switch( var.type )
 		{
 		case SGS_VT_NULL: break;
 		/* WP: var.data.B uses only bit 0 */
-		case SGS_VT_BOOL: { char b = (char) var.data.B; sgs_membuf_appbuf( &pSD->data, C, &b, 1 ); } break;
-		case SGS_VT_INT: sgs_membuf_appbuf( &pSD->data, C, &var.data.I, sizeof( sgs_Int ) ); break;
-		case SGS_VT_REAL: sgs_membuf_appbuf( &pSD->data, C, &var.data.R, sizeof( sgs_Real ) ); break;
+		case SGS_VT_BOOL: W_CHAR( var.data.B ); break;
+		case SGS_VT_INT: W_ITEM( var.data.I ); break;
+		case SGS_VT_REAL: W_ITEM( var.data.R ); break;
 		case SGS_VT_STRING:
-			sgs_membuf_appbuf( &pSD->data, C, &var.data.S->size, 4 );
-			sgs_membuf_appbuf( &pSD->data, C, sgs_var_cstr( &var ), var.data.S->size );
+			W_ITEM( var.data.S->size );
+			W_BUF( sgs_var_cstr( &var ), var.data.S->size );
 			break;
 		case SGS_VT_FUNC:
 			{
@@ -988,8 +986,8 @@ end:
 		{
 			SRLZ_DEBUG( printf( "SRLZ emit return (arg count=%d)\n", SD.argarray.size / 4 ) );
 			
-			sgs_membuf_appchr( &SD.data, C, 'R' );
-			sgs_membuf_appbuf( &SD.data, C, SD.argarray.ptr + SD.argarray.size - 4, 4 );
+			W_CHAR( 'R' );
+			W_ARGS( 1 );
 		}
 		if( SD.ret )
 		{
@@ -1017,7 +1015,6 @@ end:
 
 void sgs_SerializeObjectInt_V2( SGS_CTX, sgs_StkIdx args, const char* func, size_t fnsize )
 {
-	size_t argsize;
 	sgs_serialize2_data* pSD = (sgs_serialize2_data*) C->serialize_state;
 	
 	if( args < 0 || (size_t) args > pSD->argarray.size / sizeof(sgs_StkIdx) )
@@ -1041,17 +1038,15 @@ void sgs_SerializeObjectInt_V2( SGS_CTX, sgs_StkIdx args, const char* func, size
 			memcpy( &pb[7], &pSD->metaObjArg, 4 );
 		}
 		
-		sgs_membuf_appbuf( &pSD->data, C, pb, 11 );
+		W_BUF( pb, 11 );
 	}
 	
 	/* write args */
-	argsize = sizeof(sgs_StkIdx) * (size_t) args; /* WP: added error condition */
-	sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - argsize, argsize );
-	/* pop written args */
-	sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - argsize, pSD->argarray.size );
+	W_ARGS( args );
+	ARGS_POP( args );
 	/* write function name */
-	sgs_membuf_appbuf( &pSD->data, C, func, fnsize );
-	sgs_membuf_appchr( &pSD->data, C, '\0' );
+	W_BUF( func, fnsize );
+	W_CHAR( '\0' );
 	/* register the object variable */
 	{
 		sgs_Variable objvar;
@@ -1071,11 +1066,17 @@ static void sgs_SerializeObjIndexInt_V2( SGS_CTX, int isprop )
 		return;
 	}
 	/* expecting 3 arguments: object, key, value */
-	sgs_membuf_appchr( &pSD->data, C, isprop ? '.' : '[' );
-	sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4 * 3, 4 * 3 );
+	W_CHAR( isprop ? '.' : '[' );
+	W_ARGS( 3 );
 	/* remove only 2 of them */
-	sgs_membuf_erase( &pSD->argarray, pSD->argarray.size - 4 * 2, pSD->argarray.size );
+	ARGS_POP( 2 );
 }
+
+#undef ARGS_POP
+#undef W_CHAR
+#undef W_ARGS
+#undef W_BUF
+#undef W_ITEM
 
 SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 {
