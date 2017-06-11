@@ -348,3 +348,57 @@ check_out `[subthread]
 [thread]
 `
 check_err ``
+
+// `root ctx + thread + subthread + full serialize/unserialize + deep global ref`
+reboot ``
+rec ``
+exec `
+t = thread (function()
+{
+	subthread (function()
+	{
+	//	global gt = _T; // TODO IMPLEMENT "unserialized non-root parent"
+		yield;
+		println("[subthread]");
+	})();
+	yield;
+	println("[thread]");
+})();
+`
+check_out ``
+check_err ``
+result `SUCCESS`
+threadcount `3`
+serialize_all `0`
+threadcount `3`
+exec `process_threads();`
+result `SUCCESS`
+threadcount `1`
+check_out `[subthread]
+[thread]
+`
+check_err ``
+
+rec ``
+unserialize_all `0`
+threadcount `3`
+exec `process_threads();`
+result `SUCCESS`
+threadcount `1`
+check_out `[subthread]
+[thread]
+`
+check_err ``
+
+reboot ``
+threadcount `1`
+rec ``
+unserialize_all `0`
+threadcount `3`
+exec `process_threads();`
+result `SUCCESS`
+threadcount `1`
+check_out `[subthread]
+[thread]
+`
+check_err ``

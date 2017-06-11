@@ -345,7 +345,8 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 	f - closure function
 	< - closure variable
 	T - thread
-	r - set thread as root
+	+r - set thread as root (must be immediately after T)
+	g - set thread global
 	p - set thread parent
 	S - symbol
 	. - set property
@@ -390,12 +391,6 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 		sf = sf->next;
 	}
 	
-	/* variables: _G */
-	SRLZ_DEBUG( printf( "SRLZ thread _G\n" ) );
-	{
-		sgs_Variable v_obj; v_obj.type = SGS_VT_OBJECT; v_obj.data.O = ctx->_G;
-		sgs_Serialize( C, v_obj );
-	}
 	/* variables: stack */
 	SRLZ_DEBUG( printf( "SRLZ thread STACK\n" ) );
 	{
@@ -476,8 +471,7 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 	sgs_membuf_appchr( outbuf, C, 'T' );
 	if( argarray )
 	{
-		uint32_t argcount = (uint32_t)( 1 /* _G */
-			+ ( ctx->stack_top - ctx->stack_base ) /* stack */ );
+		uint32_t argcount = (uint32_t)( ctx->stack_top - ctx->stack_base ); /* stack */
 		sgs_membuf_appbuf( outbuf, C, &argcount, 4 );
 		sgs_membuf_appbuf( outbuf, C, argarray->ptr + argarray->size - argcount * 4, argcount * 4 );
 		sgs_membuf_erase( argarray, argarray->size - argcount * 4, argarray->size );
@@ -537,16 +531,11 @@ static int sgs__thread_unserialize( SGS_CTX, sgs_Context** pT, char** pbuf, char
 		_READ32( sfnum );
 		_READ32( ctx->num_last_returned );
 		
-		/* variables: _G */
-		SRLZ_DEBUG( printf( "USRZ thread _G\n" ) );
-		ctx->_G = sgs_StackItem( C, 0 ).data.O;
-		sgs_ObjAcquire( ctx, ctx->_G );
-		
 		/* variables: stack */
 		SRLZ_DEBUG( printf( "USRZ thread STACK\n" ) );
 		sgs_BreakIf( ctx->stack_top != ctx->stack_base );
 		for( i = 0; i < stacklen; ++i )
-			sgs_PushVariable( ctx, sgs_StackItem( C, 1 + i ) );
+			sgs_PushVariable( ctx, sgs_StackItem( C, i ) );
 		sgs_BreakIf( ctx->stack_top != ctx->stack_base + stacklen );
 		if( stackoff > stacklen )
 		{
@@ -773,6 +762,17 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		}
 		
 		srlz_mode2_addvar( C, pSD, &var );
+		
+		/* variables: _G */
+		SRLZ_DEBUG( printf( "SRLZ thread _G\n" ) );
+		{
+			sgs_Variable v_obj; v_obj.type = SGS_VT_OBJECT; v_obj.data.O = var.data.T->_G;
+			sgs_SerializeInt_V2( C, v_obj );
+		}
+		W_CHAR( 'g' );
+		W_ARGS( 2 );
+		ARGS_POP( 1 );
+		
 		if( parent )
 		{
 			SRLZ_DEBUG( printf( "SRLZ new thread parent (%p)\n", parent ) );
@@ -1392,6 +1392,38 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 				T = sgs_RootContext( C );
 			}
 			sgs_InitThreadPtr( &var, T );
+		}
+		else if( c == 'g' )
+		{
+			sgs_Context *T;
+			sgs_VarObj* G;
+			int32_t thread, global;
+			
+			sgs_Variable* varlist = SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable );
+			
+			SRLZ_DEBUG( printf( "USRZ found [g]lobal env of a thread\n" ) );
+			
+			if( str > strend-8 && !sgs_unserr_incomp( C ) )
+				goto fail;
+			SGS_AS_INT32( thread, str );
+			SGS_AS_INT32( global, str+4 );
+			str += 8;
+			
+			SRLZ_DEBUG( printf( "- thread=%d global=%d\n", (int) thread, (int) global ) );
+			
+			if( thread < 0 || thread >= (int32_t) ( mb.size / sizeof( sgs_Variable ) ) ||
+				global < 0 || global >= (int32_t) ( mb.size / sizeof( sgs_Variable ) ) ||
+				varlist[ thread ].type != SGS_VT_THREAD ||
+				varlist[ global ].type != SGS_VT_OBJECT )
+			{
+				sgs_unserr_error( C );
+				goto fail;
+			}
+			
+			T = varlist[ thread ].data.T;
+			G = varlist[ global ].data.O;
+			sgs_ObjAssign( C, &T->_G, G );
+			continue;
 		}
 		else if( c == 'p' )
 		{
