@@ -295,3 +295,56 @@ null
 [a]
 null
 `
+
+// `root ctx + thread + subthread + full serialize/unserialize`
+reboot ``
+rec ``
+exec `
+t = thread (function()
+{
+	subthread (function()
+	{
+		yield;
+		println("[subthread]");
+	})();
+	yield;
+	println("[thread]");
+})();
+`
+check_out ``
+check_err ``
+result `SUCCESS`
+threadcount `3`
+serialize_all `0`
+threadcount `3`
+exec `process_threads();`
+result `SUCCESS`
+threadcount `1`
+check_out `[subthread]
+[thread]
+`
+check_err ``
+
+rec ``
+unserialize_all `0`
+threadcount `3`
+exec `process_threads();`
+result `SUCCESS`
+threadcount `1`
+check_out `[subthread]
+[thread]
+`
+check_err ``
+
+reboot ``
+threadcount `1`
+rec ``
+unserialize_all `0`
+threadcount `3`
+exec `process_threads();`
+result `SUCCESS`
+threadcount `1`
+check_out `[subthread]
+[thread]
+`
+check_err ``

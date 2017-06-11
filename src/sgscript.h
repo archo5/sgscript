@@ -118,6 +118,8 @@ extern "C" {
 /* stack frame pool settings */
 #define SGS_STACKFRAMEPOOL_SIZE 512
 
+#define SGS_STATEPOOL_ENABLE 0
+
 /* inclusion system settings:
 	- name of entry point function to look for
 	- the default include path */
@@ -1039,6 +1041,9 @@ SGS_APIFUNC SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode );
 SGS_APIFUNC void sgs_SerializeSGSON( SGS_CTX, sgs_Variable var, const char* tab );
 SGS_APIFUNC void sgs_UnserializeSGSONExt( SGS_CTX, const char* str, size_t size );
 #define sgs_UnserializeSGSON( C, str ) sgs_UnserializeSGSONExt( C, str, SGS_STRINGLENGTHFUNC( str ) )
+
+SGS_APIFUNC void sgs_SerializeAll( SGS_CTX );
+SGS_APIFUNC SGSBOOL sgs_UnserializeAll( SGS_CTX, sgs_Variable var );
 
 SGS_APIFUNC int sgs_Compare( SGS_CTX, sgs_Variable* v1, sgs_Variable* v2 );
 SGS_APIFUNC SGSBOOL sgs_EqualTypes( sgs_Variable* v1, sgs_Variable* v2 );

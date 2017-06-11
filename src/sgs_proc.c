@@ -29,6 +29,7 @@ typedef union intreal_t
 intreal_t;
 
 
+#if SGS_OBJPOOL_SIZE > 0
 /* to work with both insertion and removal algorithms, this function has the following rules:
 - return the index of the first found item with the right size or just after the right size
 - if all sizes are less than specified, return the size of the object pool
@@ -49,6 +50,7 @@ static int32_t objpool_binary_search( SGS_SHCTX, uint32_t appsize )
 	}
 	return pmin;
 }
+#endif
 
 static void var_free_object( SGS_CTX, sgs_VarObj* O )
 {
@@ -2815,6 +2817,8 @@ restart_loop:
 #endif
 			if( SF->flags & SGS_SF_REENTER )
 			{
+				sgs_Variable* sf_func;
+				
 				/* move argument, if expected, to prev_stack_frame->func
 				(=location of the expected argument list)
 				.. then pop stack frame */
@@ -2840,9 +2844,10 @@ restart_loop:
 					}
 				}
 				
+				sf_func = SF->func;
 				vm_frame_pop( C );
 				
-				stk_popto( C, SF->func );
+				stk_popto( C, sf_func );
 				C->num_last_returned = 1;
 				
 				goto restart_loop;

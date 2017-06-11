@@ -652,6 +652,8 @@ struct sgs_StackFrame
 #define SGS_SF_ARGC_EXPECTED( sf ) \
 	((sf)->func->type == SGS_VT_FUNC ? (sf)->func->data.F->numargs : 0)
 
+#define SGS_SHF_SERIALIZE_ALL 0x01
+
 typedef struct sgs_ShCtx sgs_ShCtx;
 #define SGS_SHCTX sgs_ShCtx* S
 #define SGS_SHCTX_USE SGS_SHCTX = C->shared
@@ -685,6 +687,8 @@ struct sgs_ShCtx
 	/* > object info */
 	sgs_VarObj*   objs;
 	int32_t       objcount;
+	/* <> */
+	uint8_t       global_flags;
 	/* >> object GC */
 	uint8_t       redblue;
 	uint16_t      gcrun;

@@ -6,6 +6,7 @@
 
 const char* testname = "<none>";
 static int verbose = 0;
+static int serialize_unserialize_all_test = 0;
 
 /* API */
 
@@ -69,6 +70,18 @@ void atf_assert_string_( const char* str1, const char* str2, const char* msg, in
 *             *
 \*************/
 
+
+void serialize_test( sgs_Context* C )
+{
+	sgs_Variable srlz;
+	sgs_SerializeAll( C );
+	sgs_GetStackItem( C, -1, &srlz );
+	sgs_Pop( C, 1 );
+	atf_assert( srlz.type == SGS_VT_STRING );
+	
+	atf_assert( sgs_UnserializeAll( C, srlz ) );
+	sgs_Release( C, &srlz );
+}
 
 sgs_Context* currctx;
 sgs_MemBuf outbuf;
@@ -138,6 +151,11 @@ sgs_Context* get_context_( int redir_out )
 sgs_Context* get_context(){ return get_context_( REDIR_FILE ); }
 void pre_destroy_context( SGS_CTX )
 {
+	if( serialize_unserialize_all_test )
+	{
+		serialize_test( C );
+	}
+	
 	if( C->shared->output_fn == outfn_buffer )
 	{
 		sgs_membuf_destroy( &outbuf, C );

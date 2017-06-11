@@ -77,6 +77,11 @@ main( int argc, char** argv )
 	
 	for( i = 1; i < argc; ++i )
 	{
+		if( !strcmp( argv[ i ], "-suat" ) )
+		{
+			serialize_unserialize_all_test = 1;
+			puts( "will serialize/unserialize full state before destroying each context" );
+		}
 		if( !strcmp( argv[ i ], "-v" ) )
 			verbose++;
 		if( !strcmp( argv[ i ], "-t" ) )

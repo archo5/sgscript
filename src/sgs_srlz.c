@@ -50,7 +50,7 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 #define _WRITE8( x ) { sgs_membuf_appchr( &buf, C, (char)(x) ); }
 	
 	/* failure condition: cannot serialize self */
-	if( C == ctx )
+	if( C == ctx && !( C->shared->global_flags & SGS_SHF_SERIALIZE_ALL ) )
 		return 0;
 	/* failure condition: C functions in stack frame */
 	sf = ctx->sf_first;
@@ -156,6 +156,11 @@ static SGSBOOL sgs__thread_serialize( SGS_CTX, sgs_Context* ctx, sgs_MemBuf* out
 	
 	sgs_membuf_appbuf( outbuf, C, buf.ptr, buf.size );
 	sgs_membuf_destroy( &buf, C );
+	
+	if( ctx == sgs_RootContext( C ) )
+	{
+		sgs_membuf_appchr( outbuf, C, 'r' );
+	}
 	
 #undef _WRITERL
 #undef _WRITE32
@@ -467,7 +472,20 @@ static void sgs_SerializeObjIndexInt_V1( SGS_CTX, int isprop )
 #define sgs_unserr_incomp( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: incomplete data [L%d]", __LINE__ )
 #define sgs_unserr_error( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: error in data [L%d]", __LINE__ )
 #define sgs_unserr_objcall( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: could not create object from function [L%d]", __LINE__ )
-#define sgs_unserr_symfail( C ) sgs_Msg( C, SGS_WARNING, "failed to unserialize: could not map name to symbol [L%d]", __LINE__ )
+static int sgs_unserr_symfail_( SGS_CTX, sgs_Variable var, int line )
+{
+	if( var.type == SGS_VT_STRING )
+	{
+		sgs_Msg( C, SGS_WARNING, "failed to unserialize: could not map name (%s) to symbol [L%d]",
+			sgs_var_cstr( &var ), line );
+	}
+	else
+	{
+		sgs_Msg( C, SGS_WARNING, "failed to unserialize: could not map name to symbol [L%d]", line );
+	}
+	return 0;
+}
+#define sgs_unserr_symfail( C, var ) sgs_unserr_symfail_( C, var, __LINE__ )
 
 SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 {
@@ -571,7 +589,7 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 			sgs_Variable sym;
 			if( !sgs_GetSymbol( C, sgs_StackItem( C, -1 ), &sym ) )
 			{
-				return sgs_unserr_symfail( C );
+				return sgs_unserr_symfail( C, sgs_StackItem( C, -1 ) );
 			}
 			sgs_Pop( C, 1 );
 			fstk_push_leave( C, &sym );
@@ -600,6 +618,7 @@ SGSBOOL sgs_UnserializeInt_V1( SGS_CTX, char* str, char* strend )
 	f - closure function
 	< - closure variable
 	T - thread
+	r - set thread as root
 	p - set thread parent
 	S - symbol
 	. - set property
@@ -725,15 +744,17 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		SRLZ_DEBUG( printf( "SRLZ new thread (%p)\n", var.data.T ) );
 		
 		parent = var.data.T->parent;
-		if( parent && parent != sgs_RootContext( C ) )
+		if( parent && ( parent != sgs_RootContext( C ) ||
+			( C->shared->global_flags & SGS_SHF_SERIALIZE_ALL ) ) )
 		{
+			sgs_VHTVar* vv;
 			sgs_Variable pvT;
 			pvT.type = SGS_VT_THREAD;
 			pvT.data.T = parent;
 			
 			SRLZ_DEBUG( printf( "SRLZ thread has non-root parent (%p)\n", parent ) );
 			
-			sgs_VHTVar* vv = sgs_vht_get( &pSD->servartable, &pvT );
+			vv = sgs_vht_get( &pSD->servartable, &pvT );
 			if( vv )
 			{
 				parent_th_idx = (int32_t) ( vv - pSD->servartable.vars );
@@ -760,7 +781,7 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 			
 			sgs_membuf_appchr( &pSD->data, C, 'p' );
 			sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
-			if( parent == sgs_RootContext( C ) )
+			if( parent == sgs_RootContext( C ) && !( C->shared->global_flags & SGS_SHF_SERIALIZE_ALL ) )
 			{
 				sgs_membuf_appbuf( &pSD->data, C, pSD->argarray.ptr + pSD->argarray.size - 4, 4 );
 			}
@@ -965,7 +986,7 @@ end:
 			SD.ret = 0;
 		else
 		{
-			SRLZ_DEBUG( printf( "SRLZ emit return\n" ) );
+			SRLZ_DEBUG( printf( "SRLZ emit return (arg count=%d)\n", SD.argarray.size / 4 ) );
 			
 			sgs_membuf_appchr( &SD.data, C, 'R' );
 			sgs_membuf_appbuf( &SD.data, C, SD.argarray.ptr + SD.argarray.size - 4, 4 );
@@ -1060,6 +1081,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 {
 	int32_t retpos = -1;
 	sgs_Variable var;
+	sgs_Context* newroot = NULL;
 	SGSBOOL res = SGS_FALSE;
 	sgs_MemBuf mb = sgs_membuf_create();
 	_STACK_PREPARE;
@@ -1358,6 +1380,16 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			if( !sgs__thread_unserialize( C, &T, &str, strend ) && !sgs_unserr_incomp( C ) )
 				goto fail;
 			sgs_Pop( C, argc );
+			
+			/* set thread as root (only with full state serialization) */
+			/* the workaround here replaces root variable with current actual root pointer */
+			/* root pointer will eventually be preserved so all variable references should point to it */
+			if( str < strend && *str == 'r' )
+			{
+				str++;
+				newroot = T;
+				T = sgs_RootContext( C );
+			}
 			sgs_InitThreadPtr( &var, T );
 		}
 		else if( c == 'p' )
@@ -1388,6 +1420,12 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			
 			T = varlist[ thread ].data.T;
 			P = thread == parent ? sgs_RootContext( C ) : varlist[ parent ].data.T;
+			/* to allow data to be easily freed on failure, temporary root ctx ptr is used */
+			/* this will later be replaced by real root pointer, if all goes well */
+			if( newroot && P == sgs_RootContext( C ) )
+			{
+				P = newroot;
+			}
 			T->parent = P;
 			T->st_next = P->subthreads;
 			P->subthreads = T;
@@ -1414,7 +1452,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			}
 			if( !sgs_GetSymbol( C, (SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ pos ], &var ) )
 			{
-				sgs_unserr_symfail( C );
+				sgs_unserr_symfail( C, (SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ pos ] );
 				goto fail;
 			}
 		}
@@ -1472,7 +1510,9 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 	SRLZ_DEBUG( printf( "USRZ === mode 2 END ===\n" ) );
 	if( mb.size )
 	{
-		if( retpos >= 0 )
+		if( newroot )
+			sgs_PushThreadPtr( C, newroot );
+		else if( retpos >= 0 )
 			sgs_PushVariable( C, (SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ retpos ] );
 		else
 			sgs_PushVariable( C, *SGS_ASSUME_ALIGNED( mb.ptr + mb.size - sizeof(sgs_Variable), sgs_Variable ) );
@@ -2430,6 +2470,95 @@ void sgs_UnserializeSGSONExt( SGS_CTX, const char* str, size_t size )
 		sgs_Msg( C, SGS_ERROR, "failed to parse SGSON (position %d, %.8s...", ret - str, ret );
 	}
 	sgs_PopSkip( C, sgs_StackSize( C ) - stksize - 1, 1 );
+}
+
+
+
+void sgs_SerializeAll( SGS_CTX )
+{
+	sgs_Variable vN, vkG, vG, vT;
+	vN.type = SGS_VT_NULL;
+	vG.type = SGS_VT_NULL;
+	vT.type = SGS_VT_THREAD;
+	vT.data.T = sgs_RootContext( C );
+	
+	C->shared->global_flags |= SGS_SHF_SERIALIZE_ALL;
+	
+	/* disable _G symbol */
+	sgs_InitStringLit( C, &vkG, "_G" );
+	if( sgs_GetSymbol( C, vkG, &vG ) )
+	{
+		sgs_vht_set( (sgs_VHTable*) C->shared->_SYM->data, C, &vG, &vN );
+	}
+	
+	sgs_SerializeExt( C, vT, 2 );
+	
+	/* restore _G symbol */
+	if( vG.type != SGS_VT_NULL )
+	{
+		sgs_vht_set( (sgs_VHTable*) C->shared->_SYM->data, C, &vG, &vkG );
+		sgs_Release( C, &vG );
+	}
+	sgs_Release( C, &vkG );
+	
+	C->shared->global_flags &= ~SGS_SHF_SERIALIZE_ALL;
+}
+
+SGSBOOL sgs_UnserializeAll( SGS_CTX, sgs_Variable var )
+{
+	sgs_Context* T;
+	sgs_Variable vU;
+	if( C != sgs_RootContext( C ) )
+	{
+		sgs_Msg( C, SGS_ERROR, "C is not root context" );
+		return 0;
+	}
+	
+	sgs_UnserializeExt( C, var, 2 );
+	sgs_GetStackItem( C, -1, &vU );
+	sgs_Pop( C, 1 );
+	if( vU.type != SGS_VT_THREAD )
+	{
+		sgs_Release( C, &vU );
+		return 0;
+	}
+	T = vU.data.T;
+	if( T->parent )
+	{
+		sgs_Msg( C, SGS_ERROR, "root thread cannot have a parent" );
+		sgs_ReleaseState( T );
+		return 0;
+	}
+	
+	/* swap deserialized / root context data to keep root pointer when freeing old data */
+	{
+		sgs_Context ccopy, *Cprev, *Cnext, *Tprev, *Tnext, *cc;
+		
+		cc = T->subthreads;
+		while( cc )
+		{
+			cc->parent = C;
+			cc = cc->st_next;
+		}
+		
+		Cprev = C->prev;
+		Cnext = C->next;
+		Tprev = T->prev;
+		Tnext = T->next;
+		
+		memcpy( &ccopy, C, sizeof(*C) );
+		memcpy( C, T, sizeof(*C) );
+		memcpy( T, &ccopy, sizeof(*C) );
+		
+		C->prev = Cprev;
+		C->next = Cnext;
+		T->prev = Tprev;
+		T->next = Tnext;
+	}
+	
+	sgs_ReleaseState( T );
+	
+	return 1;
 }
 
 

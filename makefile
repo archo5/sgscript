@@ -108,10 +108,11 @@ vm: $(OUTDIR)/sgsvm$(BINEXT)
 c: $(OUTDIR)/sgsc$(BINEXT)
 
 # test tool aliases
+TEST_ARGS = --dir tests $(TEST_XARGS)
 test: build_test
-	$(OUTDIR)/sgstest --dir tests
+	$(OUTDIR)/sgstest $(TEST_ARGS)
 apitest: build_apitest
-	$(OUTDIR)/sgsapitest
+	$(OUTDIR)/sgsapitest $(APITEST_ARGS)
 
 .PHONY: tools
 tools: xgmath json pproc sockets meta build_test build_apitest vm c

@@ -72,6 +72,7 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	
 	S->objs = NULL;
 	S->objcount = 0;
+	S->global_flags = 0;
 	S->redblue = 0;
 	S->gcrun = SGS_FALSE;
 	S->objpool_size = 0;
@@ -249,6 +250,7 @@ static void ctx_destroy( SGS_CTX )
 	S->statecount--;
 	
 	// free the context
+#if SGS_STATEPOOL_ENABLE
 	if( C->prev == NULL && C->next == NULL )
 	{
 		int_memory( S, C, 0 );
@@ -258,6 +260,9 @@ static void ctx_destroy( SGS_CTX )
 		C->next = S->ctx_pool;
 		S->ctx_pool = C;
 	}
+#else
+	int_memory( S, C, 0 );
+#endif
 }
 
 static void shctx_destroy( SGS_SHCTX )

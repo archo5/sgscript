@@ -11,6 +11,7 @@
 
 const char* outfile = "tests-output.log";
 const char* outfile_errors = "tests-errors.log";
+static int serialize_unserialize_all_test = 0;
 
 
 
@@ -201,6 +202,20 @@ static void checkdestroy_context( sgs_Context* C )
 	/* pre-destroy */
 	all &= C->stack_top == C->stack_base;
 	if( C->stack_top != C->stack_base ) printf( ATTMKR "stack left in bad state\n" );
+	
+	if( serialize_unserialize_all_test )
+	{
+		sgs_Variable srlz;
+		sgs_SerializeAll( C );
+		sgs_GetStackItem( C, -1, &srlz );
+		sgs_Pop( C, 1 );
+		if( srlz.type != SGS_VT_STRING )
+			printf( "[SUAT] failed to serialize!\n" );
+		
+		if( !sgs_UnserializeAll( C, srlz ) )
+			printf( "[SUAT] failed to unserialize!\n" );
+		sgs_Release( C, &srlz );
+	}
 
 	/* DESTROY */
 	sgs_DestroyEngine( C );
@@ -263,9 +278,18 @@ static int memstreq_nnl( const char* mem, size_t memsz, const char* str )
 static void exec_test( const char* fname, const char* nameonly )
 {
 	FILE* fp, *fpe;
-	int retval, disp, is_MT, is_TF;
+	int i, retval, disp, is_MT, is_TF;
 	sgs_Context* C;
 	double tm1, tm2;
+#define MAX_SERIALIZE_SLOTS 10
+	char* serialize_slots_p[ MAX_SERIALIZE_SLOTS ];
+	size_t serialize_slots_n[ MAX_SERIALIZE_SLOTS ];
+	
+	for( i = 0; i < MAX_SERIALIZE_SLOTS; ++i )
+	{
+		serialize_slots_p[ i ] = NULL;
+		serialize_slots_n[ i ] = 0;
+	}
 	
 	disp = calc_disp( nameonly );
 	is_MT = strstr( nameonly, "MT" ) != NULL;
@@ -397,6 +421,7 @@ static void exec_test( const char* fname, const char* nameonly )
 				strncpy( testname, decoded_value, 64 );
 				testname[ 63 ] = 0;
 				printf( "." );
+				fprintf( fpe, "----- subtest:[%s] -----\n", testname );
 			}
 			else if( strcmp( ident_start, "exec" ) == 0 )
 			{
@@ -479,6 +504,67 @@ static void exec_test( const char* fname, const char* nameonly )
 				static int which = 0;
 				printf( "[BEEP %d]", ++which );
 			}
+			else if( strcmp( ident_start, "threadcount" ) == 0 )
+			{
+				int got = sgs_Stat( C, SGS_STAT_STATECOUNT ), expected = atoi( decoded_value );
+				if( got != expected )
+				{
+					printf( "[%s] ERROR in 'threadcount': expected %d, got %d\n",
+						testname, expected, got );
+					retval = SGS_EINPROC;
+				}
+			}
+			else if( strcmp( ident_start, "serialize_all" ) == 0 )
+			{
+				int slot = atoi( decoded_value );
+				if( slot < 0 || slot > MAX_SERIALIZE_SLOTS )
+				{
+					printf( "[%s] ERROR in 'serialize_all': bad slot ID: %d, "
+						"expected [0-%d)\n", testname, slot, MAX_SERIALIZE_SLOTS );
+					retval = SGS_EINPROC;
+				}
+				else
+				{
+					sgs_SerializeAll( C );
+					if( sgs_ItemType( C, -1 ) != SGS_VT_STRING )
+					{
+						printf( "[%s] ERROR in 'serialize_all': failed to serialize - "
+							"expected VT_STRING(%d), got %d\n", testname, SGS_VT_STRING,
+							sgs_ItemType( C, -1 ) );
+						retval = SGS_EINPROC;
+					}
+					else
+					{
+						size_t n = sgs_GetStringSize( C, -1 );
+						serialize_slots_n[ slot ] = n;
+						serialize_slots_p[ slot ] = malloc( n );
+						memcpy( serialize_slots_p[ slot ], sgs_GetStringPtr( C, -1 ), n );
+					}
+					sgs_Pop( C, 1 );
+				}
+			}
+			else if( strcmp( ident_start, "unserialize_all" ) == 0 )
+			{
+				int slot = atoi( decoded_value );
+				if( slot < 0 || slot > MAX_SERIALIZE_SLOTS )
+				{
+					printf( "[%s] ERROR in 'serialize_all': bad slot ID: %d, "
+						"expected [0-%d)\n", testname, slot, MAX_SERIALIZE_SLOTS );
+					retval = SGS_EINPROC;
+				}
+				else
+				{
+					sgs_Variable str;
+					sgs_InitStringBuf( C, &str, serialize_slots_p[ slot ], serialize_slots_n[ slot ] );
+					if( !sgs_UnserializeAll( C, str ) )
+					{
+						printf( "[%s] ERROR in 'unserialize_all': failed to unserialize\n",
+							testname );
+						retval = SGS_EINPROC;
+					}
+					sgs_Release( C, &str );
+				}
+			}
 			
 			free( decoded_value );
 		}
@@ -486,6 +572,8 @@ static void exec_test( const char* fname, const char* nameonly )
 		free( data_alloc );
 		sgs_membuf_destroy( &outbuf, C );
 		sgs_membuf_destroy( &errbuf, C );
+		sgs_SetErrOutputFunc( C, SGSOUTPUTFN_DEFAULT, stderr );
+		sgs_SetOutputFunc( C, SGSOUTPUTFN_DEFAULT, stdout );
 	}
 	else
 	{
@@ -508,6 +596,12 @@ static void exec_test( const char* fname, const char* nameonly )
 				retval = SGS_EINPROC;
 			sgs_Pop( C, 1 );
 		}
+	}
+	
+	for( i = 0; i < MAX_SERIALIZE_SLOTS; ++i )
+	{
+		if( serialize_slots_p[ i ] )
+			free( serialize_slots_p[ i ] );
 	}
 
 	fprintf( fp, "\n\n" );
@@ -573,6 +667,11 @@ main( int argc, char** argv )
 			dirname = argv[++i];
 		else if( ( !strcmp( argv[i], "--test" ) || !strcmp( argv[i], "-t" ) ) && i + 1 < argc )
 			testname = argv[++i];
+		else if( !strcmp( argv[i], "-suat" ) )
+		{
+			serialize_unserialize_all_test = 1;
+			puts( "will serialize/unserialize full state before destroying each context" );
+		}
 	}
 	printf("- test directory: %s\n", dirname );
 	if( testname )
