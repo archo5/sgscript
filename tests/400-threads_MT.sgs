@@ -357,8 +357,8 @@ t = thread (function()
 {
 	subthread (function()
 	{
-		global gt = _T; // shuffle the serialization order
-	//	stackref = _T; // TODO circular-ref-safe serialization
+		global gt = _T; // shuffle the serialization order, also add circular refs
+		stackref = _T; // more circular refs
 		yield;
 		global gt = null; // free the references
 		stackref = null;
