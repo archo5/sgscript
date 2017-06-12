@@ -349,7 +349,7 @@ check_out `[subthread]
 `
 check_err ``
 
-// `root ctx + thread + subthread + full serialize/unserialize + deep global ref`
+// `3 threads + FS&U + deep stack/global refs`
 reboot ``
 rec ``
 exec `
@@ -357,8 +357,11 @@ t = thread (function()
 {
 	subthread (function()
 	{
-	//	global gt = _T; // TODO IMPLEMENT "unserialized non-root parent"
+		global gt = _T; // shuffle the serialization order
+	//	stackref = _T; // TODO circular-ref-safe serialization
 		yield;
+		global gt = null; // free the references
+		stackref = null;
 		println("[subthread]");
 	})();
 	yield;

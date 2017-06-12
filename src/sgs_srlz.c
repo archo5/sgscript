@@ -725,36 +725,11 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 	}
 	else if( var.type == SGS_VT_THREAD )
 	{
-		int32_t parent_th_idx = 0;
-		sgs_Context* parent;
+		sgs_Context* T = var.data.T;
 		
-		SRLZ_DEBUG( printf( "SRLZ new thread (%p)\n", var.data.T ) );
+		SRLZ_DEBUG( printf( "SRLZ new thread (%p)\n", T ) );
 		
-		parent = var.data.T->parent;
-		if( parent && ( parent != sgs_RootContext( C ) ||
-			( C->shared->global_flags & SGS_SHF_SERIALIZE_ALL ) ) )
-		{
-			sgs_VHTVar* vv;
-			sgs_Variable pvT;
-			pvT.type = SGS_VT_THREAD;
-			pvT.data.T = parent;
-			
-			SRLZ_DEBUG( printf( "SRLZ thread has non-root parent (%p)\n", parent ) );
-			
-			vv = sgs_vht_get( &pSD->servartable, &pvT );
-			if( vv )
-			{
-				parent_th_idx = (int32_t) ( vv - pSD->servartable.vars );
-			}
-			else
-			{
-				sgs_Msg( C, SGS_ERROR, "thread has an unserialized non-root parent" );
-				pSD->ret = SGS_FALSE;
-				goto end;
-			}
-		}
-		
-		if( !sgs__thread_serialize( C, var.data.T, &pSD->data, &pSD->argarray ) )
+		if( !sgs__thread_serialize( C, T, &pSD->data, &pSD->argarray ) )
 		{
 			sgs_Msg( C, SGS_ERROR, "failed to serialize thread" );
 			pSD->ret = SGS_FALSE;
@@ -766,33 +741,68 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		/* variables: _G */
 		SRLZ_DEBUG( printf( "SRLZ thread _G\n" ) );
 		{
-			sgs_Variable v_obj; v_obj.type = SGS_VT_OBJECT; v_obj.data.O = var.data.T->_G;
-			sgs_SerializeInt_V2( C, v_obj );
+			sgs_Variable vG;
+			vG.type = SGS_VT_OBJECT;
+			vG.data.O = T->_G;
+			sgs_SerializeInt_V2( C, vG );
 		}
 		W_CHAR( 'g' );
 		W_ARGS( 2 );
 		ARGS_POP( 1 );
 		
-		if( parent )
+		if( T->parent )
 		{
+			sgs_Variable pvT;
+			sgs_Context* parent = T->parent;
+			pvT.type = SGS_VT_THREAD;
+			pvT.data.T = parent;
+			
 			SRLZ_DEBUG( printf( "SRLZ new thread parent (%p)\n", parent ) );
 			
-			W_CHAR( 'p' );
-			W_ARGS( 1 );
-			if( parent == sgs_RootContext( C ) && !( C->shared->global_flags & SGS_SHF_SERIALIZE_ALL ) )
+			if( C->shared->global_flags & SGS_SHF_SERIALIZE_ALL )
 			{
-				W_ARGS( 1 );
+				sgs_SerializeInt_V2( C, pvT );
+				
+				W_CHAR( 'p' );
+				W_ARGS( 2 );
+				ARGS_POP( 1 );
 			}
 			else
 			{
-				W_ITEM( parent_th_idx );
+				W_CHAR( 'p' );
+				W_ARGS( 1 );
+				if( parent == sgs_RootContext( C ) )
+				{
+					W_ARGS( 1 );
+				}
+				else
+				{
+					int32_t parent_th_idx = 0;
+					sgs_VHTVar* vv;
+					
+					SRLZ_DEBUG( printf( "SRLZ thread has non-root parent\n" ) );
+					
+					vv = sgs_vht_get( &pSD->servartable, &pvT );
+					if( vv )
+					{
+						parent_th_idx = (int32_t) ( vv - pSD->servartable.vars );
+					}
+					else
+					{
+						sgs_Msg( C, SGS_ERROR, "thread has an unserialized non-root parent" );
+						pSD->ret = SGS_FALSE;
+						goto end;
+					}
+					
+					W_ITEM( parent_th_idx );
+				}
 			}
 		}
 		
 		/* subthreads */
 		{
 			size_t argarrsize = pSD->argarray.size;
-			sgs_Context* subT = var.data.T->subthreads;
+			sgs_Context* subT = T->subthreads;
 			while( subT )
 			{
 				sgs_Variable svT;
