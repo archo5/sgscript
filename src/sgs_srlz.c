@@ -1499,19 +1499,21 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 	}
 	
 	SRLZ_DEBUG( printf( "USRZ === mode 2 END ===\n" ) );
-	if( mb.size )
+	if( mb.size && retpos >= 0 )
 	{
 		if( newroot )
 			sgs_PushThreadPtr( C, newroot );
-		else if( retpos >= 0 )
-			sgs_PushVariable( C, (SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ retpos ] );
 		else
-			sgs_PushVariable( C, *SGS_ASSUME_ALIGNED( mb.ptr + mb.size - sizeof(sgs_Variable), sgs_Variable ) );
+			sgs_PushVariable( C, (SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable ))[ retpos ] );
 	}
-	res = mb.size != 0;
+	else
+		sgs_PushNull( C );
+	res = mb.size != 0 && retpos >= 0;
 fail:
 	if( failfree_T )
 		sgsCTX_FreeState( failfree_T );
+	if( newroot && retpos < 0 )
+		sgsCTX_FreeState( newroot );
 	_STACK_UNPROTECT_SKIP( res );
 	{
 		sgs_Variable* ptr = SGS_ASSUME_ALIGNED( mb.ptr, sgs_Variable );

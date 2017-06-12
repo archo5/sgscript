@@ -54,6 +54,7 @@ void exec_tests( const char* onlythis )
 	int i, count = all_tests_count();
 	for( i = 0; i < count; ++i )
 	{
+		fsuat_not_this_test = 0;
 		if( onlythis && strcmp( all_tests[ i ].nm, onlythis ) )
 			continue;
 		testname = all_tests[ i ].nm;
@@ -81,6 +82,12 @@ main( int argc, char** argv )
 		{
 			serialize_unserialize_all_test = 1;
 			puts( "will serialize/unserialize full state before destroying each context" );
+		}
+		if( !strcmp( argv[ i ], "-fsuat" ) )
+		{
+			serialize_unserialize_all_test = 2;
+			puts( "will serialize/unserialize full state before destroying each context" );
+			puts( "+ check all shorter (incomplete) buffers that they don't leak" );
 		}
 		if( !strcmp( argv[ i ], "-v" ) )
 			verbose++;
@@ -1370,6 +1377,8 @@ DEFINE_TEST( hash_table )
 		symbol_table_stats = { verbose >= 1, 1 },
 		random_table_stats = { verbose >= 1 };
 	SGS_CTX = get_context();
+	
+	fsuat_not_this_test = 1;
 	
 	if( verbose >= 1 ) printf( "\n--- global table ---\n" );
 	sgs_vht_analyze( (sgs_VHTable*) C->_G->data, &global_table_stats );

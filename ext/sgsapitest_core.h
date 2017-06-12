@@ -7,6 +7,7 @@
 const char* testname = "<none>";
 static int verbose = 0;
 static int serialize_unserialize_all_test = 0;
+static int fsuat_not_this_test = 0;
 
 /* API */
 
@@ -79,7 +80,27 @@ void serialize_test( sgs_Context* C )
 	sgs_Pop( C, 1 );
 	atf_assert( srlz.type == SGS_VT_STRING );
 	
-	atf_assert( sgs_UnserializeAll( C, srlz ) );
+	if( serialize_unserialize_all_test >= 2 && !fsuat_not_this_test )
+	{
+		sgs_SizeVal i, sz, inc;
+		for( i = 0, sz = sgs_GetStringSizeP( &srlz ), inc = sz / 5000 + 1; i <= sz; i += inc )
+		{
+			int unsrlz_result;
+			sgs_Variable tmp;
+			sgs_InitStringBuf( C, &tmp, sgs_GetStringPtrP( &srlz ), i );
+			unsrlz_result = sgs_UnserializeAll( C, tmp );
+			if( unsrlz_result != ( i == sz ) )
+			{
+				printf( "UNSERIALIZE - UNEXPECTED RESULT (%d) test %d/%d\n", unsrlz_result, i, sz );
+			}
+			atf_assert( unsrlz_result == ( i == sz ) );
+			sgs_Release( C, &tmp );
+		}
+	}
+	else
+	{
+		atf_assert( sgs_UnserializeAll( C, srlz ) );
+	}
 	sgs_Release( C, &srlz );
 }
 
