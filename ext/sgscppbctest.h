@@ -19,9 +19,9 @@ struct Vec3 : sgsLiteObjectBase
 	
 	float _get_length() const { return (float) sqrtf(x*x+y*y+z*z); }
 	
-	SGS_PROPERTY float x;
-	SGS_PROPERTY float y;
-	SGS_PROPERTY float z;
+	SGS_PROPFN( RW SERIALIZE 0 ) float x;
+	SGS_PROPFN( RW SERIALIZE 1 ) float y;
+	SGS_PROPFN( RW SERIALIZE 2 ) float z;
 	
 	SGS_PROPERTY_FUNC( READ _get_length ) SGS_ALIAS( float length );
 	SGS_METHOD float getLength() const { return _get_length(); }

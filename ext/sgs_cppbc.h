@@ -95,6 +95,7 @@ struct _sgsInterface
 # define SGS_MULTRET int
 # define SGS_PROPERTY
 # define SGS_PROPERTY_FUNC( funcs )
+# define SGS_PROPFN( funcs )
 # define SGS_GCREF( mbname )
 # define SGS_DUMP( what )
 # define SGS_NODUMP( what )
@@ -615,9 +616,10 @@ public:
 	void gcmark() { if( C ) sgs_GCMark( C, &var ); }
 	bool not_null() const { return var.type != SGS_VT_NULL; }
 	bool is_object( sgs_ObjInterface* iface ){ return !!sgs_IsObjectP( &var, iface ); }
-	template< class T > bool is_handle(){ return sgs_IsObjectP( &var, T::_sgs_interface ); }
+	template< class T > bool is_object(){ return sgs_IsObjectP( &var, T::_sgs_interface ); }
 	sgs_VarObj* get_object_struct() const { return var.type == SGS_VT_OBJECT ? var.data.O : NULL; }
-	template< class T > T* get_object_data(){ return (T*) sgs_GetObjectDataP( &var ); }
+	template< class T > T* get_raw_object_data(){ return (T*) sgs_GetObjectDataP( &var ); }
+	template< class T > T* get_object_data(){ return static_cast<T*>((sgsLiteObjectBase*)sgs_GetObjectDataP( &var )); }
 	template< class T > sgsHandle<T> get_handle(){ return sgsHandle<T>( C, &var ); }
 	template< class T > sgsHandle<T> downcast(){ return sgsHandle<T>( C, &var, true ); }
 	int type_id() const { return (int) var.type; }

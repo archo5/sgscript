@@ -566,7 +566,7 @@ function cppbc_examine_property_func( code )
 	
 	function specitem( item )
 	{
-		return item == "READ" || item == "WRITE" ||
+		return item == "READ" || item == "WRITE" || item == "RW" ||
 			item == "READ_CALLBACK" || item == "WRITE_CALLBACK" ||
 			item == "VARNAME" || item == "VALIDATE" || item == "SOURCE" ||
 			item == "SERIALIZE";
@@ -598,6 +598,11 @@ function cppbc_examine_property_func( code )
 				writemethod = arg;
 			else
 				writemethod = true;
+		}
+		else if( item == "RW" )
+		{
+			readmethod = true;
+			writemethod = true;
 		}
 		else if( item == "READ_CALLBACK" )
 		{
@@ -638,7 +643,7 @@ function cppbc_examine_property_func( code )
 		{
 			if( arg === "off" )
 				serialize = false;
-			else if( parseint( arg ) )
+			else if( parseint( arg ) !== null )
 				serialize = parseint( arg );
 			else
 				cppbc_error( "SERIALIZE: expected 'off' or argument number" );
@@ -775,7 +780,7 @@ function cppbc_examine_object( code, pos )
 	matches = re_match_all( blockcode, "#("
 		$"SGS_METHOD_NAMED|SGS_METHOD|"
 		$"SGS_STATICMETHOD_NAMED|SGS_STATICMETHOD|"
-		$"SGS_PROPERTY_FUNC|SGS_PROPERTY|"
+		$"SGS_PROPERTY_FUNC|SGS_PROPFN|SGS_PROPERTY|"
 		$"SGS_IFUNC|SGS_GCREF|"
 		$"SGS_DUMP|SGS_NODUMP|SGS_BACKING_STORE)"
 		$"(.*?)[;\\{]#ms", RE_RETURN_BOTH );
@@ -793,7 +798,7 @@ function cppbc_examine_object( code, pos )
 			item = cppbc_examine_method_named( match[2][0], true );
 		else if( match[1][0] == "SGS_PROPERTY" )
 			item = cppbc_examine_property( match[2][0] );
-		else if( match[1][0] == "SGS_PROPERTY_FUNC" )
+		else if( match[1][0] == "SGS_PROPERTY_FUNC" || match[1][0] == "SGS_PROPFN" )
 			item = cppbc_examine_property_func( match[2][0] );
 		else if( match[1][0] == "SGS_IFUNC" )
 			item = cppbc_examine_ifunc( match[2][0] );
@@ -824,6 +829,7 @@ function cppbc_examine_object( code, pos )
 		items,
 		no_export = re_match( blockcode, "#SGS_NO_EXPORT#" ),
 		no_destruct = re_match( blockcode, "#SGS_NO_DESTRUCT#" ),
+		no_unserialize = re_match( blockcode, "#SGS_NO_UNSERIALIZE#" ),
 		inherited,
 		bstores,
 	};
@@ -874,8 +880,9 @@ function cppbc_find_objects( code )
 }
 
 
-function cppbc_item_reading_code( item )
+function cppbc_item_reading_code( item, validate )
 {
+	validate ??= true;
 	if( item.what != "PROPERTY" && item.what != "PROPERTY_FUNC" )
 		return;
 	
@@ -889,7 +896,7 @@ function cppbc_item_reading_code( item )
 	else if( item.what == "PROPERTY_FUNC" )
 	{
 		itemline = "";
-		if( item.validate !== null )
+		if( item.validate !== null && validate )
 			itemline ..= "if( !( " .. item.validate .. " ) ){ return SGS_EINPROC; } ";
 		if( item.read === true )
 			itemline ..= typefunc .. "( callerCtx, " .. item.srcname .. " );";
@@ -1164,7 +1171,38 @@ int " $ obj.name $ "::_sgsimpl_setindex( sgs_Context* callerCtx, sgs_VarObj* obj
 		out ..= "\n\tsgs_Variable key;";
 		out ..= "\n\t(void) key;"; // avoid warnings in case of no serializable properties
 		out ..= tmpchanger;
-		out ..= "\n\tsgs_SerializeObject( callerCtx, 0, \"sgsUnserialize_" .. obj.name .. "\" );";
+		
+		out ..= "\n\tif( obj->iface == _sgs_interface )";
+		out ..= "\n\t{";
+		args = [];
+		foreach( item : obj.items )
+		{
+			if( item.what != "PROPERTY_FUNC" )
+				continue;
+			if( typeof( item.serialize ) != "int" )
+				continue;
+			if( item.validate )
+				cppbc_error( obj.name .. " serialization - validated properties (" .. item.name .. ") are not yet supported" );
+			
+			count = item.serialize + 1;
+			if( args.size < count )
+				args.resize( count );
+			
+			args[ item.serialize ] = cppbc_item_reading_code( item );
+		}
+		foreach( slotid, v : args )
+		{
+			out ..= "\n\t\t" .. v;
+			out ..= "\n\t\tsgs_Serialize( callerCtx, sgs_StackItem( callerCtx, -1 ) );";
+			out ..= "\n\t\tsgs_Pop( callerCtx, 1 );";
+			if( v === null )
+				cppbc_error( "unserialize for " .. obj.name .. " - unused argument slot " .. slotid );
+		}
+		
+		out ..= "\n\t\tsgs_SerializeObject( callerCtx, " .. args.size .. ", \"sgsUnserialize_" .. obj.name .. "\" );";
+		out ..= "\n\t}";
+		
+		covered_props = {};
 		foreach( item : obj.items )
 		{
 			if( item.what == "PROPERTY" )
@@ -1176,17 +1214,55 @@ int " $ obj.name $ "::_sgsimpl_setindex( sgs_Context* callerCtx, sgs_VarObj* obj
 			{
 				// can't write to it, can't serialize
 				if( !item.write ) continue;
-				// not allowed to serialize
-				if( item.serialize === false ) continue;
+				// not allowed to serialize or serialized as argument
+				if( item.serialize !== true ) continue;
+				// validated properties are in the second pass
+				if( item.validate ) continue;
 			}
 			else continue; // methods & markers not supported
 			
+			// filter out local aliases
+			srcname = @item.srcname ?? item.name;
+			if( @covered_props[ srcname ] )
+				continue;
+			covered_props[ srcname ] = true;
+			
 			propname = @item.varname ?? item.name;
 			out ..= "\n\tsgs_InitStringLit( callerCtx, &key, \"" .. propname .. "\" );";
-			out ..= "\n\t" .. cppbc_item_reading_code( item );
+			out ..= "\n\t" .. cppbc_item_reading_code( item, false );
 			out ..= "\n\tsgs_SerializeObjIndex( callerCtx, key, sgs_StackItem( callerCtx, -1 ), 1 );";
 			out ..= "\n\tsgs_Pop( callerCtx, 1 );";
 			out ..= "\n\tsgs_Release( callerCtx, &key );";
+		}
+		foreach( item : obj.items )
+		{
+			if( item.what != "PROPERTY_FUNC" ) continue;
+			// can't write to it, can't serialize
+			if( !item.write ) continue;
+			// not allowed to serialize or serialized as argument
+			if( item.serialize !== true ) continue;
+			// this is the second pass for validated properties only
+			if( !item.validate ) continue;
+			
+			// filter out local aliases
+			srcname = @item.srcname ?? item.name;
+			if( @covered_props[ srcname ] )
+				continue;
+			covered_props[ srcname ] = true;
+			
+			propname = @item.varname ?? item.name;
+			out ..= "\n\tif( " .. item.validate .. " )";
+			out ..= "\n\t{";
+			out ..= "\n\t\tsgs_InitStringLit( callerCtx, &key, \"" .. propname .. "\" );";
+			out ..= "\n\t\t" .. cppbc_item_reading_code( item, false );
+			out ..= "\n\t\tsgs_SerializeObjIndex( callerCtx, key, sgs_StackItem( callerCtx, -1 ), 1 );";
+			out ..= "\n\t\tsgs_Pop( callerCtx, 1 );";
+			out ..= "\n\t\tsgs_Release( callerCtx, &key );";
+			out ..= "\n\t}";
+		}
+		if( obj.inherited )
+		{
+			out ..= "\n\t" .. obj.inherited[0] .. "::_sgsimpl_serialize( C, obj );";
 		}
 		out ..= "\n\treturn SGS_SUCCESS;\n}\n";
 		
@@ -1250,11 +1326,55 @@ int " $ obj.name $ "::_sgsimpl_setindex( sgs_Context* callerCtx, sgs_VarObj* obj
 			out $= "sgs_DumpData( callerCtx, "$src$", depth ).push( callerCtx );";
 			out $= " }";
 		}
-		out $= "\n\t\tsgs_StringConcat( callerCtx, " .. dpcount .. " );\n\t\tsgs_PadString( callerCtx );";
-		out $= "\n\t\tsgs_PushStringLit( callerCtx, \"\\n}\" );";
-		out $= "\n\t\tsgs_StringConcat( callerCtx, 3 );";
-		out $= "\n\t}";
-		out $= "\n\treturn SGS_SUCCESS;\n}\n";
+		out ..= "\n\t\tsgs_StringConcat( callerCtx, " .. dpcount .. " );\n\t\tsgs_PadString( callerCtx );";
+		out ..= "\n\t\tsgs_PushStringLit( callerCtx, \"\\n}\" );";
+		out ..= "\n\t\tsgs_StringConcat( callerCtx, 3 );";
+		out ..= "\n\t}";
+		out ..= "\n\treturn SGS_SUCCESS;\n}\n";
+		
+		if( obj.no_unserialize == false )
+		{
+			args = [];
+			foreach( item : obj.items )
+			{
+				if( item.what != "PROPERTY_FUNC" )
+					continue;
+				if( typeof( item.serialize ) != "int" )
+					continue;
+				
+				count = item.serialize + 1;
+				if( args.size < count )
+					args.resize( count );
+				
+				typefunc = if( cppbc_type_is_voidptr( item.type ), "sgs_GetPtr", "sgs_GetVar<" $ cppbc_fix_type( item.type ) $ ">()" );
+				isobj = if( string_part( item.type, 0, 4 ) != "void" && item.type.last == "*"c, ", true", "" );
+				itemline = typefunc .. "( C, " .. item.serialize .. isobj .. " )";
+				
+				args[ item.serialize ] = itemline;
+			}
+			foreach( slotid, v : args )
+			{
+				if( v === null )
+					cppbc_error( "unserialize for " .. obj.name .. " - unused argument slot " .. slotid );
+			}
+			argstr = string_implode( args, ", " );
+			
+			out ..= "\nint sgsUnserialize_" .. obj.name .. "( SGS_CTX )";
+			out ..= "\n{";
+			if( obj.is_lite )
+			{
+				out ..= "\n\tSGS_CREATELITECLASS( C, NULL, " .. obj.name .. ", ( " .. argstr .. " ) );";
+			}
+			else
+			{
+				out ..= "\n\tSGS_CREATECLASS( C, NULL, " .. obj.name .. ", ( " .. argstr .. " ) );";
+			}
+			out ..= "\n\treturn 1;";
+			out ..= "\n}";
+			out ..= "\nstatic sgs_RegFuncConst sgsUnserializeRFC_" .. obj.name .. "[] =";
+			out ..= "\n{ { \"sgsUnserialize_" .. obj.name .. "\", sgsUnserialize_" .. obj.name .. " } };";
+			out ..= "\n";
+		}
 		
 		// new interface
 		{
@@ -1286,6 +1406,10 @@ static int " $ obj.name $ "__sgs_ifn( SGS_CTX )
 			{
 				out ..= "\n\tsgsVariable mo = sgs_GetClassInterface< " .. obj.inherited[0] .. " >( C );";
 				out ..= "\n\tsgs_ObjSetMetaObj( C, sgs_GetObjectStruct( C, -1 ), mo.get_object_struct() );";
+			}
+			if( obj.no_unserialize == false )
+			{
+				out ..= "\n\tsgs_RegFuncConsts( C, sgsUnserializeRFC_" .. obj.name .. ", 1 );";
 			}
 			out ..= "
 	return 1;

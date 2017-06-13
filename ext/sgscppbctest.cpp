@@ -98,6 +98,22 @@ static void test_object_vec3()
 		sgs_PushReal( C, 4.5 );
 		sgs_ThisCall( C, 1, 0 );
 		sgs_GlobalCall( C, "print", 1, 0 );
+		
+		// serialize & unserialize
+		{
+			SGS_SCOPE;
+			Vec3* orig = SGS_CREATELITECLASS( C, NULL, Vec3, (1,2,3) );
+			sgsString srlz = sgsVariable( C, 0 ).serialize();
+			atf_assert( srlz.not_null() );
+			sgsVariable uV = srlz.unserialize();
+			atf_assert( uV.is_object<Vec3>() );
+			Vec3* usv = uV.get_object_data<Vec3>();
+			sgsEnv( C ).getprop( "printvar" ).tcall<void>( C, uV );
+			atf_assert( orig->x == usv->x );
+			atf_assert( orig->y == usv->y );
+			atf_assert( orig->z == usv->z );
+		}
+		
 	}
 	destroy_context( C );
 }
@@ -157,6 +173,18 @@ static void test_object_account()
 			atf_assert( val == 62 );
 		}
 		
+		// serialize & unserialize
+		{
+			SGS_SCOPE;
+			sgsString srlz = aA.serialize();
+			atf_assert( srlz.not_null() );
+			sgsVariable uV = srlz.unserialize();
+			atf_assert( uV.is_object<Account>() );
+			Account::Handle uA = uV.get_handle<Account>();
+			sgsEnv( C ).getprop( "printvar" ).tcall<void>( C, uA );
+			atf_assert( aA->name == uA->name );
+		}
+		
 		// free handles before destroying the engine to destroy the objects
 		aA = Account::Handle();
 		aB = Account::Handle();
@@ -197,10 +225,12 @@ static void test_object_accountext()
 			SGS_SCOPE;
 			sgsString srlz = aA.serialize();
 			atf_assert( srlz.not_null() );
-			sgsVariable uA = srlz.unserialize();
-			// TODO implement unserialize function generation
+			sgsVariable uV = srlz.unserialize();
+			atf_assert( uV.is_object<AccountExt>() );
+			AccountExt::Handle uA = uV.get_handle<AccountExt>();
 			sgsEnv( C ).getprop( "printvar" ).tcall<void>( C, uA );
-		//	atf_assert( uA.is_handle<AccountExt>() );
+			atf_assert( aA->name == uA->name );
+			atf_assert( aA->nameExt == uA->nameExt );
 		}
 		
 		// free handles before destroying the engine to destroy the objects
