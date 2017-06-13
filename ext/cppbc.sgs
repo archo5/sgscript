@@ -13,6 +13,7 @@ global DEFAULT_OBJ_IFUNCS =
 	"gcmark" = "_sgsimpl_gcmark",
 	"getindex" = "_sgsimpl_getindex",
 	"setindex" = "_sgsimpl_setindex",
+	"serialize" = "_sgsimpl_serialize",
 	"dump" = "_sgsimpl_dump",
 };
 
@@ -560,13 +561,15 @@ function cppbc_examine_property_func( code )
 	varname = null;
 	validate = null;
 	source = null;
+	serialize = true;
 	lastitem = "";
 	
 	function specitem( item )
 	{
 		return item == "READ" || item == "WRITE" ||
 			item == "READ_CALLBACK" || item == "WRITE_CALLBACK" ||
-			item == "VARNAME" || item == "VALIDATE" || item == "SOURCE";
+			item == "VARNAME" || item == "VALIDATE" || item == "SOURCE" ||
+			item == "SERIALIZE";
 	}
 	
 	for( i = 0; i < items.size; i = iend )
@@ -631,6 +634,15 @@ function cppbc_examine_property_func( code )
 			else
 				cppbc_error( "SOURCE: expected data source" );
 		}
+		else if( item == "SERIALIZE" )
+		{
+			if( arg === "off" )
+				serialize = false;
+			else if( parseint( arg ) )
+				serialize = parseint( arg );
+			else
+				cppbc_error( "SERIALIZE: expected 'off' or argument number" );
+		}
 		else
 			cppbc_error( "unexpected item: " $ item );
 	}
@@ -645,9 +657,10 @@ function cppbc_examine_property_func( code )
 		write = writemethod,
 		readcb = readcallback,
 		writecb = writecallback,
-		varname = varname,
+		varname,
 		srcname = if( source, source, vd.name ),
-		validate = validate,
+		validate,
+		serialize,
 	};
 }
 
@@ -671,8 +684,8 @@ function cppbc_examine_ifunc( code )
 	
 	return {
 		what = "IFUNC",
-		name = name,
-		type = type,
+		name,
+		type,
 	};
 }
 
@@ -808,9 +821,6 @@ function cppbc_examine_object( code, pos )
 	{
 		name = classname,
 		is_lite = re_match( blockcode, "#SGS_OBJECT_LITE#" ),
-		new_iface = ( NEW_IFACE
-			+ re_match( blockcode, "#SGS_NEW_IFACE#" )
-			- re_match( blockcode, "#SGS_OLD_IFACE#" ) ) > 0,
 		items,
 		no_export = re_match( blockcode, "#SGS_NO_EXPORT#" ),
 		no_destruct = re_match( blockcode, "#SGS_NO_DESTRUCT#" ),
@@ -861,6 +871,34 @@ function cppbc_find_objects( code )
 	
 //	printvar_ext( objects, 10 );
 	return objects;
+}
+
+
+function cppbc_item_reading_code( item )
+{
+	if( item.what != "PROPERTY" && item.what != "PROPERTY_FUNC" )
+		return;
+	
+	itemline = null;
+	typefunc = if( cppbc_type_is_voidptr( item.type ), "sgs_PushPtr", "sgs_PushVar" );
+	if( item.what == "PROPERTY" )
+	{
+		if( item.access <= 0 )
+			itemline = typefunc .. "( callerCtx, " .. item.name .. " );";
+	}
+	else if( item.what == "PROPERTY_FUNC" )
+	{
+		itemline = "";
+		if( item.validate !== null )
+			itemline ..= "if( !( " .. item.validate .. " ) ){ return SGS_EINPROC; } ";
+		if( item.read === true )
+			itemline ..= typefunc .. "( callerCtx, " .. item.srcname .. " );";
+		else if( item.read )
+			itemline ..= typefunc .. "( callerCtx, " .. item.read .. "() );";
+		if( item.readcb )
+			itemline ..= "\n\t\t\t" .. item.readcb .. "();";
+	}
+	return itemline;
 }
 
 
@@ -1044,36 +1082,12 @@ int " $ obj.name $ "::_sgsimpl_getindex( sgs_Context* callerCtx, sgs_VarObj* obj
 	{";
 		foreach( item : obj.items )
 		{
-			itemline = null;
-			if( item.what == "METHOD" && obj.new_iface == false )
-				itemline = "sgs_PushCFunc( callerCtx, _sgs_method__%OBJ%__"$item.varname$" );";
-			else if( item.what == "PROPERTY" )
-			{
-				if( item.access <= 0 )
-					itemline = "%TYPEFUNC%( callerCtx, "$item.name$" );";
-			}
-			else if( item.what == "PROPERTY_FUNC" )
-			{
-				itemline = "";
-				if( item.validate !== null )
-					itemline $= "if( !( "$item.validate$" ) ){ return SGS_EINPROC; } ";
-				if( item.read === true )
-					itemline $= "%TYPEFUNC%( callerCtx, "$item.srcname$" );";
-				else if( item.read )
-					itemline $= "%TYPEFUNC%( callerCtx, "$item.read$"() );";
-				if( item.readcb )
-					itemline $= "\n\t\t\t"$item.readcb$"();";
-			}
+			itemline = cppbc_item_reading_code( item );
 			
 			if( itemline )
 			{
-				out $= string_translate( "
-		if( !strcmp( str, \"%NAME%\" ) ){ "$itemline$" return SGS_SUCCESS; }"
-				, {
-					"%OBJ%" = obj.name,
-					"%NAME%" = if( isset( item, "varname" ), item.varname || item.name, item.name ),
-					"%TYPEFUNC%" = if( cppbc_type_is_voidptr( item.type ), "sgs_PushPtr", "sgs_PushVar" ),
-				} );
+				propname = @item.varname ?? item.name;
+				out ..= "\n\t\tif( !strcmp( str, \"" .. propname .. "\" ) ){ " .. itemline .. " return SGS_SUCCESS; }";
 			}
 		}
 		foreach( item : obj.bstores )
@@ -1125,7 +1139,7 @@ int " $ obj.name $ "::_sgsimpl_setindex( sgs_Context* callerCtx, sgs_VarObj* obj
 		if( !strcmp( str, \"%NAME%\" ) ){ "$itemline$" return SGS_SUCCESS; }"
 				, {
 					"%OBJ%" = obj.name,
-					"%NAME%" = if( isset( item, "varname" ), item.varname || item.name, item.name ),
+					"%NAME%" = @item.varname ?? item.name,
 					"%TYPEFUNC%" = if( cppbc_type_is_voidptr( item.type ), "sgs_GetPtr", "sgs_GetVar<" $ cppbc_fix_type( item.type ) $ ">()" ),
 					"%ISOBJ%" = if( string_part( item.type, 0, 4 ) != "void" && item.type.last == "*"c, ", true", "" ),
 				});
@@ -1144,6 +1158,37 @@ int " $ obj.name $ "::_sgsimpl_setindex( sgs_Context* callerCtx, sgs_VarObj* obj
 	return " .. if( obj.inherited, obj.inherited[0] .. "::_sgs_setindex( callerCtx, obj )", "SGS_ENOTFND" ) .. ";
 }
 ";
+		
+		// - OP_SERIALIZE
+		out ..= "\nint " .. obj.name .. "::_sgsimpl_serialize( sgs_Context* callerCtx, sgs_VarObj* obj )\n{";
+		out ..= "\n\tsgs_Variable key;";
+		out ..= "\n\t(void) key;"; // avoid warnings in case of no serializable properties
+		out ..= tmpchanger;
+		out ..= "\n\tsgs_SerializeObject( callerCtx, 0, \"sgsUnserialize_" .. obj.name .. "\" );";
+		foreach( item : obj.items )
+		{
+			if( item.what == "PROPERTY" )
+			{
+				// can't write to it, can't serialize
+				if( item.access < 0 ) continue;
+			}
+			else if( item.what == "PROPERTY_FUNC" )
+			{
+				// can't write to it, can't serialize
+				if( !item.write ) continue;
+				// not allowed to serialize
+				if( item.serialize === false ) continue;
+			}
+			else continue; // methods & markers not supported
+			
+			propname = @item.varname ?? item.name;
+			out ..= "\n\tsgs_InitStringLit( callerCtx, &key, \"" .. propname .. "\" );";
+			out ..= "\n\t" .. cppbc_item_reading_code( item );
+			out ..= "\n\tsgs_SerializeObjIndex( callerCtx, key, sgs_StackItem( callerCtx, -1 ), 1 );";
+			out ..= "\n\tsgs_Pop( callerCtx, 1 );";
+			out ..= "\n\tsgs_Release( callerCtx, &key );";
+		}
+		out ..= "\n\treturn SGS_SUCCESS;\n}\n";
 		
 		// - OP_DUMP
 		out $= "\nint " $ obj.name $ "::_sgsimpl_dump( sgs_Context* callerCtx, sgs_VarObj* obj, int depth )\n{";
@@ -1212,8 +1257,6 @@ int " $ obj.name $ "::_sgsimpl_setindex( sgs_Context* callerCtx, sgs_VarObj* obj
 		out $= "\n\treturn SGS_SUCCESS;\n}\n";
 		
 		// new interface
-		ifn = "NULL";
-		if( obj.new_iface )
 		{
 			ifn = obj.name $ "__sgs_ifn";
 			out $=
@@ -1315,7 +1358,6 @@ global OUT = null;
 global INCLCODE = "";
 global INCRENAME = null;
 global PRINT_TIMESTAMP = false;
-global NEW_IFACE = true;
 
 function readfile( f )
 {
@@ -1328,7 +1370,6 @@ function readfile( f )
 for( i = 0; i < argv.size; ++i )
 {
 	if( argv[ i ] == "-add-timestamp" ){ PRINT_TIMESTAMP = false; }
-	else if( argv[ i ] == "-def-old-iface" ){ NEW_IFACE = false; }
 	else if( argv[ i ] == "-o" )
 	{
 		i++;

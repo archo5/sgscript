@@ -192,6 +192,17 @@ static void test_object_accountext()
 			atf_assert( val == true );
 		}
 		
+		// serialize & unserialize
+		{
+			SGS_SCOPE;
+			sgsString srlz = aA.serialize();
+			atf_assert( srlz.not_null() );
+			sgsVariable uA = srlz.unserialize();
+			// TODO implement unserialize function generation
+			sgsEnv( C ).getprop( "printvar" ).tcall<void>( C, uA );
+		//	atf_assert( uA.is_handle<AccountExt>() );
+		}
+		
 		// free handles before destroying the engine to destroy the objects
 		aA = AccountExt::Handle();
 	}

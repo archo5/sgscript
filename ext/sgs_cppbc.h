@@ -79,6 +79,7 @@ struct _sgsInterface
 	int _sgsimpl_gcmark( SGS_CTX, sgs_VarObj* obj ); \
 	int _sgsimpl_getindex( SGS_CTX, sgs_VarObj* obj ); \
 	int _sgsimpl_setindex( SGS_CTX, sgs_VarObj* obj ); \
+	int _sgsimpl_serialize( SGS_CTX, sgs_VarObj* obj ); \
 	int _sgsimpl_dump( SGS_CTX, sgs_VarObj* obj, int depth ); \
 	static _sgsInterface _sgs_interface;
 # define SGS_OBJECT SGS_OBJECT_LITE
@@ -145,14 +146,17 @@ public:
 #define SGS_SCOPE SGS_CSCOPE( C )
 
 
-enum EsgsMaybeNot { sgsMaybeNot };
+enum sgsEMaybeNot { sgsMaybeNot };
+enum sgsEPickAndPop { sgsPickAndPop };
+enum sgsEMayNotExist { sgsMayNotExist };
+
 
 template< class T >
 class sgsMaybe /* nullable PODs */
 {
 public:
 	sgsMaybe() : isset(false) {};
-	sgsMaybe( EsgsMaybeNot ) : isset(false) {};
+	sgsMaybe( sgsEMaybeNot ) : isset(false) {};
 	sgsMaybe( const T& val ) : data(val), isset(true) {}
 	
 	void set( const T& val ){ data = val; isset = true; }
@@ -337,6 +341,7 @@ public:
 	T* get(){ return object ? static_cast<T*>( get_liteobj() ) : NULL; }
 	const T* get() const { return object ? static_cast<T*>( get_liteobj() ) : NULL; }
 	
+	class sgsString serialize( int mode = 2 );
 	void gcmark() const { if( object ) sgs_ObjGCMark( C, object ); }
 	
 	void push( sgs_Context* c ) const { assert( c ); sgs_Variable v;
@@ -371,6 +376,16 @@ public:
 			sgs_GetStackItem( c, item, &v );
 			str = v.data.S;
 		}
+	}
+	sgsString( sgs_Context* c, sgsEPickAndPop ) : str(NULL), C(sgs_RootContext(c))
+	{
+		if( sgs_ParseString( c, -1, NULL, NULL ) )
+		{
+			sgs_Variable v;
+			sgs_GetStackItem( c, -1, &v );
+			str = v.data.S;
+		}
+		sgs_Pop( C, 1 );
 	}
 	sgsString( sgs_Context* c, sgs_Variable* var ) : str(NULL), C(sgs_RootContext(c))
 	{
@@ -443,6 +458,7 @@ public:
 		v.type = str ? SGS_VT_STRING : SGS_VT_NULL; v.data.S = str; sgs_PushVariable( c, v ); }
 	bool not_null(){ return !!str; }
 	class sgsVariable get_variable();
+	class sgsVariable unserialize( int mode = 2, bool* result = NULL );
 	
 	sgs_iStr* str;
 	
@@ -462,9 +478,6 @@ class sgsVariable
 {
 public:
 	
-	enum EPickAndPop { PickAndPop };
-	enum EMayNotExist { MayNotExist };
-	
 	sgsVariable() : C(NULL) { var.type = SGS_VT_NULL; };
 	sgsVariable( const sgsVariable& h ) : var(h.var), C(h.C)
 	{
@@ -477,12 +490,12 @@ public:
 		var = sgs_StackItem( c, item );
 		_acquire();
 	}
-	sgsVariable( sgs_Context* c, sgs_StkIdx item, EMayNotExist ) : C(sgs_RootContext(c))
+	sgsVariable( sgs_Context* c, sgs_StkIdx item, sgsEMayNotExist ) : C(sgs_RootContext(c))
 	{
 		var = sgs_OptStackItem( c, item );
 		_acquire();
 	}
-	sgsVariable( sgs_Context* c, EPickAndPop ) : C(sgs_RootContext(c))
+	sgsVariable( sgs_Context* c, sgsEPickAndPop ) : C(sgs_RootContext(c))
 	{
 		var = sgs_StackItem( c, -1 );
 		_acquire();
@@ -620,6 +633,13 @@ public:
 	}
 	bool get_metamethods_enabled(){ return sgs_ObjGetMetaMethodEnable( get_object_struct() ) != 0; }
 	void enable_metamethods( bool e ){ sgs_ObjSetMetaMethodEnable( get_object_struct(), e ); }
+	sgsString serialize( int mode = 2 )
+	{
+		if( !C )
+			return sgsString();
+		sgs_SerializeExt( C, var, mode );
+		return sgsString( C, sgsPickAndPop );
+	}
 	
 	/* indexing */
 	sgsVariable getsubitem( sgsVariable key, bool prop )
@@ -759,12 +779,31 @@ inline sgsVariable sgsHandle<T>::get_variable()
 	return sgsVariable( C, &v );
 }
 
+template< class T >
+sgsString sgsHandle<T>::serialize( int mode )
+{
+	return get_variable().serialize( mode );
+}
+
 inline sgsVariable sgsString::get_variable()
 {
 	sgs_Variable v;
 	v.type = str ? SGS_VT_STRING : SGS_VT_NULL;
 	v.data.S = str;
 	return sgsVariable( C, &v );
+}
+
+inline sgsVariable sgsString::unserialize( int mode, bool* result )
+{
+	if( !C ) return sgsVariable();
+	if( !str ) return sgsVariable( C );
+	sgs_Variable v;
+	v.type = SGS_VT_STRING;
+	v.data.S = str;
+	bool r = sgs_UnserializeExt( C, v, mode ) != 0;
+	if( result )
+		*result = r;
+	return sgsVariable( C, sgsPickAndPop );
 }
 
 
@@ -1014,7 +1053,7 @@ template< class O >
 struct sgs_GetVar< sgsHandle<O> > { sgsHandle<O> operator () ( SGS_CTX, sgs_StkIdx item ) const {
 	return sgsHandle<O>( C, item ); } };
 template<> struct sgs_GetVar< sgsVariable > { sgsVariable operator () ( SGS_CTX, sgs_StkIdx item ) const {
-	return sgsVariable( C, item, sgsVariable::MayNotExist ); } };
+	return sgsVariable( C, item, sgsMayNotExist ); } };
 
 
 template< class T > T sgsVariable::get()

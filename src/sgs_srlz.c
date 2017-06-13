@@ -2112,6 +2112,7 @@ SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode )
 		sgs_PushNull( C );
 		return 0;
 	}
+	sgs_Pop( C, 1 );
 	
 	strend = str + size;
 	
@@ -2130,6 +2131,8 @@ SGSBOOL sgs_UnserializeExt( SGS_CTX, sgs_Variable var, int mode )
 		sgs_Msg( C, SGS_APIERR, "sgs_UnserializeExt: bad mode (%d)", mode );
 	}
 	_STACK_UNPROTECT_SKIP( res );
+	if( !res )
+		sgs_PushNull( C );
 	return res;
 }
 
