@@ -742,13 +742,19 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 				
 				sgs_Msg( C, SGS_WARNING, "Cannot serialize object of type '%s'", O->iface->name );
 				pSD->ret = SGS_FALSE;
+				{ int32_t v = 0; sgs_membuf_appbuf( &pSD->argarray, C, &v, sizeof(v) ); }
 				goto end;
 			}
 			pSD->curObj = O;
 			_STACK_PROTECT;
 			C->object_arg = 2;
 			pSD->metaObjArg = mo_arg;
-			pSD->ret = SGS_SUCCEEDED( O->iface->serialize( C, O ) );
+			if( SGS_FAILED( O->iface->serialize( C, O ) ) )
+			{
+				sgs_Msg( C, SGS_WARNING, "failed to serialize object of type '%s'", O->iface->name );
+				pSD->ret = 0;
+				{ int32_t v = 0; sgs_membuf_appbuf( &pSD->argarray, C, &v, sizeof(v) ); }
+			}
 			pSD->metaObjArg = prev_mo_arg;
 			C->object_arg = parg;
 			_STACK_UNPROTECT;
@@ -824,7 +830,10 @@ end:
 		SRLZ_DEBUG( printf( "SRLZ -- mode 2 AT END --\n" ) );
 		
 		if( SD.argarray.size == 0 )
+		{
+			sgs_Msg( C, SGS_ERROR, "sgs_Serialize: unknown argument array error" );
 			SD.ret = 0;
+		}
 		else
 		{
 			SRLZ_DEBUG( printf( "SRLZ emit return (arg count=%d)\n", SD.argarray.size / 4 ) );
