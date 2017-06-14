@@ -84,10 +84,9 @@ struct _sgsInterface
 	static _sgsInterface _sgs_interface;
 # define SGS_OBJECT SGS_OBJECT_LITE
 # define SGS_OBJECT_INHERIT( name ) SGS_OBJECT_LITE
-# define SGS_NO_EXPORT
 # define SGS_NO_DESTRUCT
-# define SGS_OLD_IFACE
-# define SGS_NEW_IFACE
+# define SGS_NO_SERIALIZE
+# define SGS_NO_UNSERIALIZE
 # define SGS_METHOD
 # define SGS_METHOD_NAMED( name )
 # define SGS_STATICMETHOD static
@@ -102,6 +101,7 @@ struct _sgsInterface
 # define SGS_BACKING_STORE( what )
 # define SGS_IFUNC( type )
 # define SGS_ALIAS( func )
+# define SGS_UNSERIALIZE_FUNC( func )
 # define SGS_CPPBC_INHERIT_BEGIN
 # define SGS_CPPBC_INHERIT_END
 #endif

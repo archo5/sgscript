@@ -734,6 +734,14 @@ function cppbc_examine_backingstore( code )
 	return { code, read, write };
 }
 
+function cppbc_examine_unserialize_func( code )
+{
+	code = string_trim( code );
+	code = string_cut( code, 1, -2 );
+	code = string_trim( code );
+	return code;
+}
+
 
 function cppbc_examine_object( code, pos )
 {
@@ -762,6 +770,7 @@ function cppbc_examine_object( code, pos )
 	blockcode = string_cut( code, bounds[0] + 1, bounds[1] - 1 );
 	blockcode = cppbc_remove_blocks( blockcode );
 	
+	unserialize_func = null;
 	bstores = [];
 	inherited = {};
 	inh_matches = re_match_all( blockcode, "#SGS_OBJECT_INHERIT[ \t\v\n\r]*\\(([a-zA-Z0-9_ \t\v\n\r,]*)\\)#ms", RE_RETURN_CAPTURED );
@@ -782,7 +791,7 @@ function cppbc_examine_object( code, pos )
 		$"SGS_STATICMETHOD_NAMED|SGS_STATICMETHOD|"
 		$"SGS_PROPERTY_FUNC|SGS_PROPFN|SGS_PROPERTY|"
 		$"SGS_IFUNC|SGS_GCREF|"
-		$"SGS_DUMP|SGS_NODUMP|SGS_BACKING_STORE)"
+		$"SGS_DUMP|SGS_NODUMP|SGS_BACKING_STORE|SGS_UNSERIALIZE_FUNC)"
 		$"(.*?)[;\\{]#ms", RE_RETURN_BOTH );
 	foreach( match : matches )
 	{
@@ -810,6 +819,8 @@ function cppbc_examine_object( code, pos )
 			item = cppbc_examine_namelist( match[2][0], "NODUMP" );
 		else if( match[1][0] == "SGS_BACKING_STORE" )
 			bstores.push( cppbc_examine_backingstore( match[2][0] ) );
+		else if( match[1][0] == "SGS_UNSERIALIZE_FUNC" )
+			unserialize_func = cppbc_examine_unserialize_func( match[2][0] );
 		
 		if( typeof(item) == "array" )
 		{
@@ -827,11 +838,13 @@ function cppbc_examine_object( code, pos )
 		name = classname,
 		is_lite = re_match( blockcode, "#SGS_OBJECT_LITE#" ),
 		items,
-		no_export = re_match( blockcode, "#SGS_NO_EXPORT#" ),
+		no_export = false,
 		no_destruct = re_match( blockcode, "#SGS_NO_DESTRUCT#" ),
+		no_serialize = re_match( blockcode, "#SGS_NO_SERIALIZE#" ),
 		no_unserialize = re_match( blockcode, "#SGS_NO_UNSERIALIZE#" ),
 		inherited,
 		bstores,
+		unserialize_func,
 	};
 }
 
@@ -949,6 +962,8 @@ function cppbc_generate_code( objects, includes )
 		
 		if( obj.no_destruct )
 			ifuncs[ "destruct" ] = null;
+		if( obj.no_serialize )
+			ifuncs[ "serialize" ] = null;
 		
 		// method wrappers
 		foreach( item : obj.items )
@@ -1361,15 +1376,22 @@ int " $ obj.name $ "::_sgsimpl_setindex( sgs_Context* callerCtx, sgs_VarObj* obj
 			
 			out ..= "\nint sgsUnserialize_" .. obj.name .. "( SGS_CTX )";
 			out ..= "\n{";
-			if( obj.is_lite )
+			if( obj.unserialize_func )
+			{
+				if( argstr )
+					argstr = ", " .. argstr;
+				out ..= "\n\treturn " .. obj.name .. "::" .. obj.unserialize_func .. "( C" .. argstr .. " );";
+			}
+			else if( obj.is_lite )
 			{
 				out ..= "\n\tSGS_CREATELITECLASS( C, NULL, " .. obj.name .. ", ( " .. argstr .. " ) );";
+				out ..= "\n\treturn 1;";
 			}
 			else
 			{
 				out ..= "\n\tSGS_CREATECLASS( C, NULL, " .. obj.name .. ", ( " .. argstr .. " ) );";
+				out ..= "\n\treturn 1;";
 			}
-			out ..= "\n\treturn 1;";
 			out ..= "\n}";
 			out ..= "\nstatic sgs_RegFuncConst sgsUnserializeRFC_" .. obj.name .. "[] =";
 			out ..= "\n{ { \"sgsUnserialize_" .. obj.name .. "\", sgsUnserialize_" .. obj.name .. " } };";
@@ -1550,5 +1572,11 @@ if( OUT === null )
 }
 
 code = cppbc_parse_file( readfile( IN ), INCLCODE, [INCRENAME ?? IN] );
+
+// fix newlines
+code = string_replace( code, "\r\n", "\n" );
+if( os_gettype() == "Windows" )
+	code = string_replace( code, "\n", "\r\n" );
+
 io_file_write( OUT, code );
 

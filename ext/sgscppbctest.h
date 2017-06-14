@@ -150,6 +150,13 @@ struct XRef : sgsObjectBase
 	SGS_PROPERTY Handle other;
 	SGS_PROPERTY Handle other2;
 	
+	static int recreate( SGS_CTX )
+	{
+		SGS_CREATECLASS( C, NULL, XRef, () );
+		return 1;
+	}
+	SGS_UNSERIALIZE_FUNC( recreate );
+	
 	~XRef()
 	{
 		printf( "XRef(obj=%p, rc=%d) dtor\n", m_sgsObject, int(m_sgsObject->refcount) );
