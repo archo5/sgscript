@@ -1434,6 +1434,7 @@ static int " $ obj.name $ "__sgs_ifn( SGS_CTX )
 				out ..= "\n\tsgs_RegFuncConsts( C, sgsUnserializeRFC_" .. obj.name .. ", 1 );";
 			}
 			out ..= "
+	sgs_RegSymbol( C, \"\", \"" .. obj.name .. "\", sgs_StackItem( C, -1 ) );
 	return 1;
 }
 ";

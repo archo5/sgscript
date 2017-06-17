@@ -383,7 +383,9 @@ static void srlz_mode2_addvar( SGS_CTX, sgs_serialize2_data* pSD, sgs_Variable* 
 	idxvar.type = SGS_VT_INT;
 	idxvar.data.I = argidx;
 	sgs_vht_set( &pSD->servartable, C, pvar, &idxvar );
+	sgs_BreakIf( sgs_vht_size( &pSD->servartable ) == argidx );
 	sgs_membuf_appbuf( &pSD->argarray, C, &argidx, sizeof(argidx) );
+	SRLZ_DEBUG( printf( "^ created var %d\n", (int) argidx ) );
 }
 
 void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
@@ -836,7 +838,7 @@ end:
 		}
 		else
 		{
-			SRLZ_DEBUG( printf( "SRLZ emit return (arg count=%d)\n", SD.argarray.size / 4 ) );
+			SRLZ_DEBUG( printf( "SRLZ emit return (arg count=%d)\n", (int)( SD.argarray.size / 4 ) ) );
 			
 			W_CHAR( 'R' );
 			W_ARGS( 1 );
@@ -867,12 +869,25 @@ end:
 
 void sgs_SerializeObjectInt_V2( SGS_CTX, sgs_StkIdx args, const char* func, size_t fnsize )
 {
+	sgs_VHTVar* idxvar;
+	sgs_Variable objvar;
 	sgs_serialize2_data* pSD = (sgs_serialize2_data*) C->serialize_state;
 	
 	if( args < 0 || (size_t) args > pSD->argarray.size / sizeof(sgs_StkIdx) )
 	{
 		sgs_Msg( C, SGS_APIERR, "sgs_SerializeObject: specified "
 			"more arguments than there are serialized items" );
+		return;
+	}
+
+	objvar.type = SGS_VT_OBJECT;
+	objvar.data.O = pSD->curObj;
+	if( ( idxvar = sgs_vht_get( &pSD->servartable, &objvar ) ) != NULL )
+	{
+		/* object was already registered during argument serialization */
+		uint32_t arg = (uint32_t) idxvar->val.data.I;
+		ARGS_POP( args );
+		sgs_membuf_appbuf( &pSD->argarray, C, &arg, sizeof(arg) );
 		return;
 	}
 	
@@ -900,12 +915,7 @@ void sgs_SerializeObjectInt_V2( SGS_CTX, sgs_StkIdx args, const char* func, size
 	W_BUF( func, fnsize );
 	W_CHAR( '\0' );
 	/* register the object variable */
-	{
-		sgs_Variable objvar;
-		objvar.type = SGS_VT_OBJECT;
-		objvar.data.O = pSD->curObj;
-		srlz_mode2_addvar( C, pSD, &objvar );
-	}
+	srlz_mode2_addvar( C, pSD, &objvar );
 }
 
 static void sgs_SerializeObjIndexInt_V2( SGS_CTX, int isprop )
@@ -1059,7 +1069,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			if( str > strend - fnsz && !sgs_unserr_incomp( C ) )
 				goto fail;
 			
-			SRLZ_DEBUG( printf( "- args=%d mmenable=%s func=%s\n", argc, mm_enable ? "Y" : "n", str ) );
+			SRLZ_DEBUG( printf( "- args=%d mo=%d mmenable=%s func=%s\n", (int) argc, (int) mo_arg, mm_enable ? "Y" : "n", str ) );
 			
 			subsz = sgs_StackSize( C ) - argc;
 			ret = SGS_SUCCEEDED( sgs_GlobalCall( C, str, argc, 1 ) );
@@ -1468,6 +1478,7 @@ SGSBOOL sgs_UnserializeInt_V2( SGS_CTX, char* str, char* strend )
 			SGS_AS_INT32( pobj, str );
 			SGS_AS_INT32( pkey, str + 4 );
 			SGS_AS_INT32( pval, str + 8 );
+			SRLZ_DEBUG( printf( "- obj=%d key=%d val=%d\n", (int) pobj, (int) pkey, (int) pval ) );
 			str += 12;
 			if( pobj < 0 || pobj >= pend ||
 				pkey < 0 || pkey >= pend ||
