@@ -179,7 +179,7 @@ static void readstring( SGS_CTX, sgs_MemBuf* out, sgs_LineNum* line, const char*
 		while( i < length )
 		{
 			char c = code[ i ];
-			if( detectline( code, i ) )
+			if( detectline( code, i - 2 ) )
 				(*line)++;
 			if( c == endchr && code[i-1] == endchr && code[i-2] == endchr )
 			{

@@ -491,6 +491,24 @@ result `SUCCESS`
 check_err ``
 check_out ``
 
+// `bug 00034 - bad line number after unescaped multiline string w/ empty 1st line`
+rec ``
+exec `x = """""";
+println( sys_backtrace()[0].line );
+x = """pad
+""";
+println( sys_backtrace()[0].line );
+x = """
+""";
+println( sys_backtrace()[0].line );
+`
+result `SUCCESS`
+check_err ``
+check_out `2
+5
+8
+`
+
 // `bug xxxxx - out of bounds memory read triggers (for checkers only)`
 exec `/`
 result `ECOMP`
