@@ -50,6 +50,10 @@ sgs_ProfData;
 #define SGS_PROF_OPTIME   2
 #define SGS_PROF_MEMUSAGE 3
 
+#define SGS_PROFDUMP_DATAONLY 0 /* only data and nothing else, for parsing */
+#define SGS_PROFDUMP_MINREAD  1 /* the minimum readable data, for separate files */
+#define SGS_PROFDUMP_FULL     2 /* with prefixes and suffixes, for finding in stdout */
+
 
 /* initialize profiler and attach to context */
 void sgs_ProfInit( SGS_CTX, sgs_Prof* P, int mode );
@@ -64,7 +68,9 @@ void sgs_ProfDetach( SGS_CTX, sgs_Prof* P );
 void sgs_ProfClose( SGS_CTX, sgs_Prof* P );
 
 /* dump profiler measurements */
-void sgs_ProfDump( SGS_CTX, sgs_Prof* P );
+/* it's using the sgs_Write* API so output file can be overridden there */
+#define sgs_ProfDump( C, P ) sgs_ProfDumpExt( C, P, SGS_PROFDUMP_FULL )
+void sgs_ProfDumpExt( SGS_CTX, sgs_Prof* P, int pfxsfx );
 
 
 #ifdef __cplusplus

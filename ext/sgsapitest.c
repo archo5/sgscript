@@ -1168,9 +1168,9 @@ DEFINE_TEST( profiling )
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Time by call stack frame" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main> -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::[C func:rand] -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::test::rand -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::test::[C func:rand] -" ) != NULL );
 	atf_assert( atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) < 0.2f ); /* verify for the next test */
 	atf_assert( strstr( outbuf.ptr, "<non-callable type>" ) == NULL );
 	sgs_ProfClose( C, &P );
@@ -1197,10 +1197,10 @@ DEFINE_TEST( profiling )
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Time by call stack frame" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main> -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::[C func:rand] -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test1 -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test1::test2 -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::test1::test2::yield -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::test1::test2::[C func:yield] -" ) != NULL );
 	atf_assert(
 		atof( STR_AFTER( outbuf.ptr, "<main> - " ) ) >=
 		atof( STR_AFTER( outbuf.ptr, "<main>::test1 - " ) )
@@ -1209,7 +1209,7 @@ DEFINE_TEST( profiling )
 		atof( STR_AFTER( outbuf.ptr, "<main>::test1 - " ) ) >=
 		atof( STR_AFTER( outbuf.ptr, "<main>::test1::test2 - " ) )
 	);
-	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::[C func:randf] -" ) != NULL );
 	/* sleep should not affect the profile */
 	atf_assert( atof( strstr( outbuf.ptr, "<main> - " ) + 9 ) < 0.5f );
 	atf_assert( strstr( outbuf.ptr, "<non-callable type>" ) == NULL );
@@ -1229,9 +1229,9 @@ DEFINE_TEST( profiling )
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Time by call stack frame" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main> -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::abort -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) == NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::[C func:rand] -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::[C func:abort] -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::[C func:randf] -" ) == NULL );
 	atf_assert( strstr( outbuf.ptr, "<non-callable type>" ) == NULL );
 	sgs_ProfClose( C, &P );
 	sgs_membuf_resize( &outbuf, C, 0 ); /* clear the buffer */
@@ -1334,9 +1334,9 @@ DEFINE_TEST( profiling )
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Memory usage by call stack frame" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main> -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::[C func:rand] -" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main>::test -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::test::rand -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::test::[C func:rand] -" ) != NULL );
 	{
 		char* firsttime = strstr( outbuf.ptr, "." ) - 1;
 		atf_assert( *(firsttime-1) == ' ' && atof( firsttime ) < 0.51f ); /* first entry should not exceed 0.51 (64-bit) */
@@ -1357,9 +1357,9 @@ DEFINE_TEST( profiling )
 	/* puts( outbuf.ptr ); //*/
 	atf_assert( strstr( outbuf.ptr, "Memory usage by call stack frame" ) != NULL );
 	atf_assert( strstr( outbuf.ptr, "<main> -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::rand -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::abort -" ) != NULL );
-	atf_assert( strstr( outbuf.ptr, "<main>::randf -" ) == NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::[C func:rand] -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::[C func:abort] -" ) != NULL );
+	atf_assert( strstr( outbuf.ptr, "<main>::[C func:randf] -" ) == NULL );
 	{
 		char* firsttime = strstr( outbuf.ptr, "." ) - 1;
 		atf_assert( *(firsttime-1) == ' ' && atof( firsttime ) < 0.5f ); /* first entry should not exceed 0.5f */

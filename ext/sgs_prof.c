@@ -7,6 +7,57 @@
 #include "sgs_prof.h"
 
 
+static void appendfuncident( SGS_CTX, sgs_MemBuf* mb, sgs_StackFrame* sf )
+{
+	/* include trailing 0 in function name */
+	if( sf->func->type == SGS_VT_CFUNC )
+	{
+		/* C function */
+		int wrotesym = 0;
+		sgs_Variable sym;
+		if( sf->nfname )
+		{
+			sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "[C func:" ) );
+			sgs_membuf_appbuf( mb, C, sf->nfname, strlen( sf->nfname ) );
+			sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "]" ) + 1 ); /* tr0 */
+			return;
+		}
+		if( sgs_GetSymbol( C, *sf->func, &sym ) )
+		{
+			if( sym.type == SGS_VT_STRING )
+			{
+				wrotesym = 1;
+				sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "[C func:" ) );
+				sgs_membuf_appbuf( mb, C, sgs_var_cstr( &sym ), sym.data.S->size );
+				sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "]" ) + 1 ); /* tr0 */
+			}
+			sgs_Release( C, &sym );
+		}
+		if( !wrotesym )
+		{
+			sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "[C function]" ) + 1 ); /* tr0 */
+		}
+	}
+	else if( sf->func->type == SGS_VT_FUNC && sf->func->data.F->sfuncname->size == 0 )
+	{
+		char bfr[ 32 ];
+		sgs_iFunc* f = sf->func->data.F;
+		/* anonymous function */
+		sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "<anon.func@" ) );
+		if( f->sfilename->size )
+		{
+			sgs_membuf_appbuf( mb, C, sgs_str_c_cstr( f->sfilename ), f->sfilename->size );
+		}
+		sgs_membuf_appbuf( mb, C, bfr, sprintf( bfr, ":%u]", f->linenum ) + 1 ); /* tr0 */
+	}
+	else
+	{
+		const char* fname = "<error>";
+		sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
+		sgs_membuf_appbuf( mb, C, fname, strlen( fname ) + 1 ); /* tr0 */
+	}
+}
+
 
 typedef struct _mode1item
 {
@@ -76,20 +127,14 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 			sgs_membuf_resize( &P->keytmp, C, 0 );
 			while( sf && sf != items[ i ].frame )
 			{
-				const char* fname = "<error>";
-				sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
-				sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
-				sgs_membuf_appchr( &P->keytmp, C, 0 );
+				appendfuncident( C, &P->keytmp, sf );
 				sf = sf->next;
 			}
 			
 			/* iterate removable frames (assuming frame pointers are valid) */
 			for( ; i < itemcount; ++i )
 			{
-				const char* fname = "<error>";
-				sgs_StackFrameInfo( C, items[ i ].frame, &fname, NULL, NULL );
-				sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
-				sgs_membuf_appchr( &P->keytmp, C, 0 );
+				appendfuncident( C, &P->keytmp, items[ i ].frame );
 				
 				/* commit time addition */
 				{
@@ -180,7 +225,7 @@ static int dpm1sf( const void* p1, const void* p2 )
 }
 
 
-static void dumpProfMode1( sgs_Prof* P, SGS_CTX )
+static void dumpProfMode1( sgs_Prof* P, SGS_CTX, int pfxsfx )
 {
 	int i;
 	sgs_VHTVar* pbuf = sgs_Alloc_n( sgs_VHTVar, (size_t) P->timings.size );
@@ -189,7 +234,8 @@ static void dumpProfMode1( sgs_Prof* P, SGS_CTX )
 	
 	qsort( pbuf, (size_t) P->timings.size, sizeof(sgs_VHTVar), dpm1sf );
 	
-	sgs_Writef( C, "--- Time by call stack frame ---\n" );
+	if( pfxsfx >= SGS_PROFDUMP_FULL )
+		sgs_Writef( C, "--- Time by call stack frame ---\n" );
 	for( i = 0; i < P->timings.size; ++i )
 	{
 		const char *s, *send;
@@ -205,7 +251,8 @@ static void dumpProfMode1( sgs_Prof* P, SGS_CTX )
 		}
 		sgs_Writef( C, " - %f\n", p->val.data.R );
 	}
-	sgs_Writef( C, "---\n" );
+	if( pfxsfx >= SGS_PROFDUMP_FULL )
+		sgs_Writef( C, "---\n" );
 	sgs_Free( C, pbuf );
 }
 
@@ -296,14 +343,16 @@ static int its_sort( const void* p1, const void* p2 )
 	return 0;
 }
 
-static void dumpProfMode2( sgs_Prof* P, SGS_CTX )
+static void dumpProfMode2( sgs_Prof* P, SGS_CTX, int pfxsfx )
 {
 	int i;
 	icts* temp;
 	uint32_t totalcnt = 0, c;
 	double total = 0, t;
-	sgs_Writef( C, "--- Time by VM instruction ---\n" );
-	sgs_Writef( C, "|      NAME      |     TIME     |    COUNT    |\n" );
+	if( pfxsfx >= SGS_PROFDUMP_FULL )
+		sgs_Writef( C, "--- Time by VM instruction ---\n" );
+	if( pfxsfx >= SGS_PROFDUMP_MINREAD )
+		sgs_Writef( C, "|      NAME      |     TIME     |    COUNT    |\n" );
 	temp = (icts*) sgs_Malloc( C, sizeof( icts ) * TOPCNT );
 	for( i = 0; i < TOPCNT; ++i )
 	{
@@ -324,7 +373,8 @@ static void dumpProfMode2( sgs_Prof* P, SGS_CTX )
 		sgs_Writef( C, "| %14s - %12f - %11d |\n", str, temp[ i ].t, temp[ i ].c );
 	}
 	sgs_Free( C, temp );
-	sgs_Writef( C, "///\n| %14s - %12f - %11d |\n---\n", "Total", total, totalcnt );
+	if( pfxsfx >= SGS_PROFDUMP_MINREAD )
+		sgs_Writef( C, "///\n| %14s - %12f - %11d |\n---\n", "Total", total, totalcnt );
 }
 
 
@@ -402,20 +452,14 @@ static void mode3hook( void* userdata, SGS_CTX, int evid )
 			sgs_membuf_resize( &P->keytmp, C, 0 );
 			while( sf && sf != items[ i ].frame )
 			{
-				const char* fname = "<error>";
-				sgs_StackFrameInfo( C, sf, &fname, NULL, NULL );
-				sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
-				sgs_membuf_appchr( &P->keytmp, C, 0 );
+				appendfuncident( C, &P->keytmp, sf );
 				sf = sf->next;
 			}
 			
 			/* iterate removable frames (assuming frame pointers are valid) */
 			for( ; i < itemcount; ++i )
 			{
-				const char* fname = "<error>";
-				sgs_StackFrameInfo( C, items[ i ].frame, &fname, NULL, NULL );
-				sgs_membuf_appbuf( &P->keytmp, C, fname, strlen( fname ) );
-				sgs_membuf_appchr( &P->keytmp, C, 0 );
+				appendfuncident( C, &P->keytmp, items[ i ].frame );
 				
 				/* commit memory addition */
 				{
@@ -525,7 +569,7 @@ static int dpm3sf( const void* p1, const void* p2 )
 	return ret;
 }
 
-static void dumpProfMode3( sgs_Prof* P, SGS_CTX )
+static void dumpProfMode3( sgs_Prof* P, SGS_CTX, int pfxsfx )
 {
 	int i;
 	sgs_VHTVar* pbuf = sgs_Alloc_n( sgs_VHTVar, (size_t) P->timings.size );
@@ -534,7 +578,8 @@ static void dumpProfMode3( sgs_Prof* P, SGS_CTX )
 	
 	qsort( pbuf, (size_t) P->timings.size, sizeof(sgs_VHTVar), dpm3sf );
 	
-	sgs_Writef( C, "--- Memory usage by call stack frame ---\n" );
+	if( pfxsfx >= SGS_PROFDUMP_FULL )
+		sgs_Writef( C, "--- Memory usage by call stack frame ---\n" );
 	for( i = 0; i < P->timings.size; ++i )
 	{
 		const char *s, *send;
@@ -552,7 +597,8 @@ static void dumpProfMode3( sgs_Prof* P, SGS_CTX )
 		sgs_Writef( C, " - %d allocs, %d frees, %d delta blocks, %.3f delta memory (kB)\n",
 			PD->numallocs, PD->numfrees, PD->numblocks, PD->szdelta / 1024.0 );
 	}
-	sgs_Writef( C, "---\n" );
+	if( pfxsfx >= SGS_PROFDUMP_FULL )
+		sgs_Writef( C, "---\n" );
 	sgs_Free( C, pbuf );
 }
 
@@ -641,12 +687,12 @@ void sgs_ProfClose( SGS_CTX, sgs_Prof* P )
 	sgs_vht_free( &P->ctx2prof, C );
 }
 
-void sgs_ProfDump( SGS_CTX, sgs_Prof* P )
+void sgs_ProfDumpExt( SGS_CTX, sgs_Prof* P, int pfxsfx )
 {
 	if( P->mode == SGS_PROF_FUNCTIME )
-		dumpProfMode1( P, C );
+		dumpProfMode1( P, C, pfxsfx );
 	else if( P->mode == SGS_PROF_OPTIME )
-		dumpProfMode2( P, C );
+		dumpProfMode2( P, C, pfxsfx );
 	else if( P->mode == SGS_PROF_MEMUSAGE )
-		dumpProfMode3( P, C );
+		dumpProfMode3( P, C, pfxsfx );
 }
