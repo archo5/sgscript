@@ -13,8 +13,7 @@ static void appendfuncident( SGS_CTX, sgs_MemBuf* mb, sgs_StackFrame* sf )
 	if( sf->func->type == SGS_VT_CFUNC )
 	{
 		/* C function */
-		int wrotesym = 0;
-		sgs_Variable sym;
+		sgs_VHTVar* symlookup;
 		if( sf->nfname )
 		{
 			sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "[C func:" ) );
@@ -22,20 +21,17 @@ static void appendfuncident( SGS_CTX, sgs_MemBuf* mb, sgs_StackFrame* sf )
 			sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "]" ) + 1 ); /* tr0 */
 			return;
 		}
-		if( sgs_GetSymbol( C, *sf->func, &sym ) )
+		
+		symlookup = sgs_vht_get( (sgs_VHTable*) C->shared->_SYM->data, sf->func );
+		if( symlookup && symlookup->val.type == SGS_VT_STRING )
 		{
-			if( sym.type == SGS_VT_STRING )
-			{
-				wrotesym = 1;
-				sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "[C func:" ) );
-				sgs_membuf_appbuf( mb, C, sgs_var_cstr( &sym ), sym.data.S->size );
-				sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "]" ) + 1 ); /* tr0 */
-			}
-			sgs_Release( C, &sym );
+			sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "[C func:" ) );
+			sgs_membuf_appbuf( mb, C, sgs_var_cstr( &symlookup->val ), symlookup->val.data.S->size );
+			sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "]" ) + 1 ); /* tr0 */
 		}
-		if( !wrotesym )
+		else
 		{
-			sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "[C function]" ) + 1 ); /* tr0 */
+			sgs_membuf_appbuf( mb, C, SGS_STRLITBUF( "[C func:?]" ) + 1 ); /* tr0 */
 		}
 	}
 	else if( sf->func->type == SGS_VT_FUNC && sf->func->data.F->sfuncname->size == 0 )
@@ -191,6 +187,7 @@ static void mode1hook( void* userdata, SGS_CTX, int evid )
 static void initProfModeData1( sgs_ProfData* P, SGS_CTX )
 {
 	P->keytmp = sgs_membuf_create();
+	sgs_membuf_reserve( &P->keytmp, C, 1024 ); /* to avoid mysterious allocations on first use */
 	P->frametmp = sgs_membuf_create();
 	sgs_SetHookFunc( C, mode1hook, P );
 }
