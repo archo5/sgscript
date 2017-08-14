@@ -45,9 +45,13 @@ static void test_core_features()
 		atf_assert( !sa.same_as( sc ) );
 		atf_assert( !sa.not_null() );
 		atf_assert( sc.not_null() );
+		atf_assert( sa.is_null() );
+		atf_assert( !sc.is_null() );
 		
 		sgsVariable va, vb;
 		atf_assert( va == vb );
+		atf_assert( va.is_null() );
+		atf_assert( !va.not_null() );
 		
 		atf_check_errors( "" );
 	}

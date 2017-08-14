@@ -871,7 +871,7 @@ DEFINE_TEST( sgson_tools )
 	sgs_UnserializeSGSON( C, "{{{{{" );
 	atf_assert( sgs_StackSize( C ) == 1 ); /* must still have a return value */
 	atf_assert( sgs_ItemType( C, -1 ) == SGS_VT_NULL ); /* ... which is null */
-	atf_check_errors( "[E:failed to parse SGSON (position 1, {{{{...]" );
+	atf_check_errors( "[E:failed to parse SGSON (position 1, {{{{...)]" );
 	sgs_Pop( C, 1 );
 	
 	destroy_context( C );

@@ -347,7 +347,8 @@ public:
 	
 	void push( sgs_Context* c ) const { assert( c ); sgs_Variable v;
 		v.type = object ? SGS_VT_OBJECT : SGS_VT_NULL; v.data.O = object; sgs_PushVariable( c, v ); }
-	bool not_null(){ return !!object; }
+	bool is_null() const { return !object; }
+	bool not_null() const { return !!object; }
 	class sgsVariable get_variable();
 	
 	sgs_VarObj* object;
@@ -457,7 +458,8 @@ public:
 	
 	void push( sgs_Context* c ) const { assert( c ); sgs_Variable v;
 		v.type = str ? SGS_VT_STRING : SGS_VT_NULL; v.data.S = str; sgs_PushVariable( c, v ); }
-	bool not_null(){ return !!str; }
+	bool is_null() const { return !str; }
+	bool not_null() const { return !!str; }
 	class sgsVariable get_variable();
 	class sgsVariable unserialize( int mode = 2, bool* result = NULL );
 	
@@ -614,6 +616,7 @@ public:
 	
 	void push( sgs_Context* c ) const { assert( c ); sgs_PushVariable( c, var ); }
 	void gcmark() { if( C ) sgs_GCMark( C, &var ); }
+	bool is_null() const { return var.type == SGS_VT_NULL; }
 	bool not_null() const { return var.type != SGS_VT_NULL; }
 	bool is_object( sgs_ObjInterface* iface ){ return !!sgs_IsObjectP( &var, iface ); }
 	template< class T > bool is_object(){ return sgs_IsObjectP( &var, T::_sgs_interface ); }
@@ -625,6 +628,9 @@ public:
 	int type_id() const { return (int) var.type; }
 	bool is_string() const { return var.type == SGS_VT_STRING; }
 	sgsString get_string(){ return is_string() ? sgsString( C, var.data.S ) : sgsString(); }
+	bool is_array() const { return sgs_IsArray( var ) != 0; }
+	bool is_dict() const { return sgs_IsDict( var ) != 0; }
+	bool is_map() const { return sgs_IsMap( var ) != 0; }
 	void set_meta_obj( sgsVariable metaobj )
 	{
 		sgs_ObjSetMetaObj( C, get_object_struct(), metaobj.get_object_struct() );
@@ -641,6 +647,28 @@ public:
 			return sgsString();
 		sgs_SerializeExt( C, var, mode );
 		return sgsString( C, sgsPickAndPop );
+	}
+	
+	void create_array( sgs_Context* c, int n = 0 )
+	{
+		if( !c && !n ) c = C;
+		_release();
+		sgs_CreateArray( c, &var, n );
+		C = sgs_RootContext( c );
+	}
+	void create_dict( sgs_Context* c, int n = 0 )
+	{
+		if( !c && !n ) c = C;
+		_release();
+		sgs_CreateDict( c, &var, n );
+		C = sgs_RootContext( c );
+	}
+	void create_map( sgs_Context* c, int n = 0 )
+	{
+		if( !c && !n ) c = C;
+		_release();
+		sgs_CreateMap( c, &var, n );
+		C = sgs_RootContext( c );
 	}
 	
 	/* indexing */

@@ -2486,10 +2486,10 @@ void sgs_UnserializeSGSONExt( SGS_CTX, const char* str, size_t size )
 	sgs_membuf_appchr( &stack, C, 0 );
 	ret = sgson_parse( C, &stack, str, (sgs_SizeVal) size );
 	sgs_membuf_destroy( &stack, C );
-	if( ret )
+	if( size == 0 || ret )
 	{
 		sgs_PushNull( C );
-		sgs_Msg( C, SGS_ERROR, "failed to parse SGSON (position %d, %.8s...", ret - str, ret );
+		sgs_Msg( C, SGS_ERROR, "failed to parse SGSON (position %d, %.8s...)", ret - str, ret );
 	}
 	sgs_PopSkip( C, sgs_StackSize( C ) - stksize - 1, 1 );
 }
