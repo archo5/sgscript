@@ -669,7 +669,8 @@ static int _push_metamethod_buf_( SGS_CTX, sgs_VarObj* metaobj, const char* name
 	sgs_Variable fvar, kvar, ovar = sgs_MakeObjPtrNoRef( metaobj );
 	if( !metaobj )
 		return 0;
-	sgs_InitStringBuf( C, &kvar, name, (sgs_SizeVal) namelen );
+	if( !sgsVM_VarGetString( C, &kvar, name, (sgs_SizeVal) namelen ) )
+		return 0;
 	ret = sgs_GetIndex( C, ovar, kvar, &fvar, 0 );
 	VAR_RELEASE( &kvar );
 	if( ret )
