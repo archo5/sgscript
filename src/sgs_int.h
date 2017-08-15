@@ -202,10 +202,13 @@ SGS_APIFUNC void sgsT_DumpList( SGS_CTX, sgs_TokenList tlist, sgs_TokenList tend
 #define SGS_SFT_NEWCALL 36 /* new */
 #define SGS_SFT_FORNUMI 37 /* numeric 'for' with integers */
 #define SGS_SFT_FORNUMR 38 /* numeric 'for' with real values */
-#define SGS_SFT_DCLTREE 39
 /* threading addons */
 #define SGS_SFT_THRCALL 40 /* thread */
 #define SGS_SFT_STHCALL 41 /* subthread */
+/* structure addons */
+#define SGS_SFT_DCLTREE 50
+#define SGS_SFT_DTENTER 51
+#define SGS_SFT_DTEXIT  52
 #define SGS_SFT_HEAPBIT 255
 
 typedef struct sgs_FTNode sgs_FTNode;

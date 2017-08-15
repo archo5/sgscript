@@ -196,6 +196,20 @@ bool (true)
 rec ``
 exec `class A
 {
+	function __construct()
+	{
+		println( "C" );
+		this.id = 0;
+	}
+	function __add_child( parent, key )
+	{
+		println( "AC:", parent, "<", key, "[", this.id, "]" );
+		return this.id++;
+	}
+	function __set_attrib( node, key, val )
+	{
+		println( "SA:", node, "[", key, "]=", val );
+	}
 }
 decltree dt1 : A {}
 decltree dt2 : A
@@ -203,9 +217,71 @@ decltree dt2 : A
 	key = "value";
 	subnode
 	{
-		key1 = "value1";
+		key1 = 123;
+		sub2 {}
 	}
-}`
+}
+print(isset(_G,"dt1"));`
 result `SUCCESS`
 check_err ``
-check_out ``
+check_out `true`
+
+// `decltree instantiations`
+rec ``
+exec `
+new dt1();
+new dt2();`
+result `SUCCESS`
+check_err ``
+check_out `C
+C
+SA:null[key]=value
+AC:null<subnode[0]
+SA:0[key1]=123
+AC:0<sub2[1]
+`
+
+// `decltree dict maker`
+rec ``
+exec `
+class DictMaker
+{
+	function __construct()
+	{
+		this.root = {};
+	}
+	function __add_child( parent, key )
+	{
+		d = {};
+		(parent ?? this.root)[ key ] = d;
+		return d;
+	}
+	function __set_attrib( node, key, val )
+	{
+		(node ?? this.root)[ key ] = val;
+	}
+}
+decltree DMExample : DictMaker
+{
+	key = "value";
+	subnode
+	{
+		key1 = 123;
+		sub2 {}
+	}
+}
+printvar( (new DMExample()).root );`
+result `SUCCESS`
+check_err ``
+check_out `dict (2)
+{
+  key = string [5] "value"
+  subnode = dict (2)
+  {
+    key1 = int (123)
+    sub2 = dict (0)
+    {
+    }
+  }
+}
+`

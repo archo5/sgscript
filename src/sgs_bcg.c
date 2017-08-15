@@ -685,6 +685,10 @@ static int preparse_varlists( SGS_FNTCMP_ARGS )
 				ch = ch->next;
 			}
 		}
+		else if( node->type == SGS_SFT_DCLTREE )
+		{
+			ret &= register_gv( C, func, node );
+		}
 		else if( node->type == SGS_SFT_KEYWORD && node->token && sgsT_IsKeyword( node->token, "this" ) )
 		{
 			int pos = find_var( &C->fctx->vars, "this", 4 );
@@ -3107,7 +3111,186 @@ fornum_add_default_incr:
 		break;
 		
 	case SGS_SFT_DCLTREE:
-		/* TODO */
+		{
+			sgs_FTNode *n_name, *n_clsname;
+			rcpos_t clsvar, funcvar;
+			sgs_TokenList tk_name, tk_clsname;
+			
+			rcpos_t regstate = C->fctx->regs;
+			
+			n_name = node->child;
+			n_clsname = n_name->next;
+			tk_name = n_name->token;
+			tk_clsname = n_clsname->token;
+			
+			/* create class */
+			{
+				rcpos_t r_name, r_inhname;
+				clsvar = comp_reg_alloc( C );
+				compile_ident( C, func, n_name, &r_name );
+				compile_ident( C, func, n_clsname, &r_inhname );
+				INSTR_WRITE( SGS_SI_CLASS, clsvar, r_name, r_inhname );
+				compile_ident_w( C, func, n_name, clsvar );
+			}
+			/* generate constructor function */
+			{
+				sgs_FuncCtx* old_fctx;
+				sgs_FuncCtx* ctor_fctx;
+				sgs_CompFunc* ctcf;
+				
+				old_fctx = C->fctx;
+				ctor_fctx = fctx_create( C );
+				C->fctx = ctor_fctx;
+				ctcf = &ctor_fctx->cfunc;
+				ctcf->gotthis = 1;
+				ctcf->numargs = 1;
+				
+				
+				/* call inherited ctor, if it exists */
+				{
+					rcpos_t cstr_clsname, cstr_ctorname;
+					
+					cstr_clsname = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, tk_clsname[1], (char*) tk_clsname + 2 ) );
+					cstr_ctorname = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, sizeof("__construct") - 1, "__construct" ) );
+					
+					comp_reg_alloc_n( C, 2 );
+					
+					/* r2 = _G[<class>] */
+					add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETVAR, 2, cstr_clsname, 0 ) );
+					/* r1 = @r2["__construct"] */
+					add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_INT, 0, 0, SGS_INT_ERRSUP_INC ) );
+					add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, 1, 2, cstr_ctorname ) );
+					add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_INT, 0, 0, SGS_INT_ERRSUP_DEC ) );
+					/* if( !r1 ) goto SkipCall */
+					add_instr( C, ctcf, node, SGS_INSTR_MAKE_EX( SGS_SI_JMPF, 1, 1 ) );
+					/* r2!r1() */
+					add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 0, 0x101, 2 ) );
+					/* SkipCall: */
+					/* modified registers: r1, r2 ***/
+					
+					comp_reg_unwind( C, 0 );
+				}
+				/* tree generation */
+				{
+					static const rcpos_t r_parent = 3, r_node = 4;
+					
+					rcpos_t cstr_pop, cstr_set_attrib, cstr_add_child;
+					sgs_FTNode* n = n_clsname->next;
+					
+					cstr_pop = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, sizeof("pop") - 1, "pop" ) );
+					cstr_set_attrib = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, sizeof("__set_attrib") - 1, "__set_attrib" ) );
+					cstr_add_child = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, sizeof("__add_child") - 1, "__add_child" ) );
+					
+					/* register allocation:
+						- r0 - this
+						- r1 - call:<array.pop>
+						- r2 - stack
+						- r3 - parent
+						- r4 - node
+						--------------- disposable area starts here ---------------
+						- r5 - call:<this.__add_child>/<this.__set_attrib>
+						- r6 - call:this
+						- r7-r9 - call:args
+					*/
+					
+					comp_reg_alloc_n( C, 9 );
+					
+					/*** stack = []; parent = null; node = null */
+					/* r2 = [] */
+					add_instr( C, ctcf, node, SGS_INSTR_MAKE_EX( SGS_SI_ARRAY, 0, 2 ) );
+					
+					while( n )
+					{
+						if( n->type == SGS_SFT_DTENTER )
+						{
+							/*** stack.push( parent ); parent = node */
+							/* r2.push( r3 ) */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_ARRPUSH, 2, 0, 3 ) );
+							/* r3 = r4 */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 3, r_node, 0 ) );
+						}
+						else if( n->type == SGS_SFT_DTEXIT )
+						{
+							/*** parent = stack.pop() */
+							/* r1 = r2.pop */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, 1, 2, cstr_pop ) );
+							/* r2!r1() */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 0, 0x101, 2 ) );
+							/* r3 = r1 */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 3, 1, 0 ) );
+						}
+						else if( n->type == SGS_SFT_IDENT )
+						{
+							rcpos_t cstr_key;
+							if( n->child )
+							{
+								sgs_FTNode* val = n->child;
+								
+								/*** this.__set_attrib( node, key, <value_expr> ) */
+								/* r5 = r0.__set_attrib */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, 5, 0, cstr_set_attrib ) );
+								/* r6 = r0 */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 6, 0, 0 ) );
+								/* r7 = r3 */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 7, r_node, 0 ) );
+								/* r8 = <key> */
+								cstr_key = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, n->token[1], (char*) n->token + 2 ) );
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 8, cstr_key, 0 ) );
+								/* r9 = <val> */
+								if( !compile_node_rrw( C, ctcf, val, 9 ) ) goto fail;
+								comp_reg_unwind( C, 9 );
+								/* r6!r5( r7, r8, r9 ) */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 1, 0x105, 9 ) );
+							}
+							else
+							{
+								/*** node = this.__add_child( parent, key ) */
+								/* r5 = r0.__add_child */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, 5, 0, cstr_add_child ) );
+								/* r6 = r0 */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 6, 0, 0 ) );
+								/* r7 = r3 */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 7, r_parent, 0 ) );
+								/* r8 = <key> */
+								cstr_key = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, n->token[1], (char*) n->token + 2 ) );
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 8, cstr_key, 0 ) );
+								/* r5 = r6!r5( r7, r8 ) */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 1, 0x105, 8 ) );
+								/* r4 = r5 */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_node, 5, 0 ) );
+							}
+						}
+						else
+						{
+							QINTERR( 1031 );
+						}
+						n = n->next;
+					}
+				}
+				
+				/* finalize function */
+				add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_RETN, 0, 0, 0 ) );
+				comp_reg_unwind( C, 0 );
+				ctcf->numtmp = ctor_fctx->lastreg - ctcf->numargs;
+				C->fctx = old_fctx;
+				
+				/* register function & add to class */
+				{
+					rcpos_t keypos;
+					char name[ 255 + sizeof(".__construct") ]; /* ident(255) + '.__construct' */
+					memcpy( name, tk_name + 2, tk_name[1] );
+					memcpy( name + tk_name[1], SGS_STRLITBUF( ".__construct" ) );
+					
+					funcvar = BC_CONSTENC( add_const_f( C, func, ctor_fctx,
+						name, tk_name[1] + sizeof( ".__construct" ) - 1, sgsT_LineNum( node->token ) ) );
+					keypos = BC_CONSTENC( add_const_s( C, func, sizeof("__construct") - 1, "__construct" ) );
+					INSTR_WRITE( SGS_SI_SETPROP, clsvar, keypos, funcvar );
+				}
+				fctx_destroy( C, ctor_fctx );
+			}
+			
+			comp_reg_unwind( C, regstate );
+		}
 		break;
 		
 	case SGS_SFT_VARLIST:
