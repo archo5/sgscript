@@ -3106,6 +3106,10 @@ fornum_add_default_incr:
 		}
 		break;
 		
+	case SGS_SFT_DCLTREE:
+		/* TODO */
+		break;
+		
 	case SGS_SFT_VARLIST:
 	case SGS_SFT_GVLIST:
 		{

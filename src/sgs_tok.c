@@ -157,7 +157,8 @@ static void readident( SGS_CTX, sgs_MemBuf* out, const char* code, int32_t* at, 
 		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("return") ) ||
 		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("this") ) ||
 		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("new") ) ||
-		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("defer") ) )
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("defer") ) ||
+		ident_equal( out->ptr + pos_rev + 2, sz, SGS_STRLITBUF("decltree") ) )
 	{
 		out->ptr[ pos_rev ] = SGS_ST_KEYWORD;
 	}

@@ -537,6 +537,8 @@ static void exec_test( const char* fname, const char* nameonly )
 					{
 						size_t n = sgs_GetStringSize( C, -1 );
 						serialize_slots_n[ slot ] = n;
+						if( serialize_slots_p[ slot ] )
+							free( serialize_slots_p[ slot ] );
 						serialize_slots_p[ slot ] = (char*) malloc( n );
 						memcpy( serialize_slots_p[ slot ], sgs_GetStringPtr( C, -1 ), n );
 					}

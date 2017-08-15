@@ -1451,6 +1451,110 @@ fail:
 	return NULL;
 }
 
+SFTRET parse_decltree( SFTC )
+{
+#define DECLTREE_MAX_DEPTH 1024
+	sgs_FTNode* nodes[ DECLTREE_MAX_DEPTH ];
+	sgs_FTNode* instgts[ DECLTREE_MAX_DEPTH ];
+	sgs_FTNode* tmpnn;
+	int i, level = 1;
+	
+	nodes[ 0 ] = make_node( SGS_SFT_DCLTREE, SFTC_AT, NULL, NULL );
+	instgts[ 0 ] = nodes[ 0 ];
+	
+	if( !SFTC_IS( SGS_ST_IDENT ) ) goto intro_parse_fail;
+	SFTC_NEXT;
+	if( !SFTC_IS( ':' ) ) goto intro_parse_fail;
+	SFTC_NEXT;
+	if( !SFTC_IS( SGS_ST_IDENT ) ) goto intro_parse_fail;
+	SFTC_NEXT;
+	if( !SFTC_IS( '{' ) ) goto intro_parse_fail;
+	SFTC_NEXT;
+	
+	for(;;)
+	{
+		if( SFTC_IS( '}' ) )
+		{
+			level--;
+			SFTC_NEXT;
+			if( level == 0 )
+			{
+				return nodes[ 0 ];
+			}
+			continue;
+		}
+		if( !SFTC_IS( SGS_ST_IDENT ) )
+		{
+			SFTC_PRINTERR( "Expected key identifier in 'decltree'" );
+			goto fail;
+		}
+		
+		/* append identifier */
+		tmpnn = make_node( SGS_SFT_IDENT, SFTC_AT, NULL, NULL );
+		if( instgts[ level - 1 ] == nodes[ level - 1 ] )
+			instgts[ level - 1 ]->child = tmpnn;
+		else
+			instgts[ level - 1 ]->next = tmpnn;
+		instgts[ level - 1 ] = tmpnn;
+		
+		SFTC_NEXT;
+		
+		if( SFTC_IS( SGS_ST_OP_SET ) ) /* = */
+		{
+			SFTC_NEXT;
+			tmpnn = parse_exp( F, ";", 1 );
+			if( !tmpnn )
+				goto fail;
+			
+			/* only child nodes can be blocks */
+			sgs_BreakIf( tmpnn->type == SGS_SFT_BLOCK );
+			
+			/* append expression */
+			if( instgts[ level - 1 ] == nodes[ level - 1 ] )
+				instgts[ level - 1 ]->child = tmpnn;
+			else
+				instgts[ level - 1 ]->next = tmpnn;
+			instgts[ level - 1 ] = tmpnn;
+		}
+		else if( SFTC_IS( '{' ) )
+		{
+			if( level == DECLTREE_MAX_DEPTH )
+			{
+				SFTC_PRINTERR( "Max. depth of 'decltree' (1024) exceeded" );
+				goto fail;
+			}
+			
+			/* append subnode block */
+			tmpnn = make_node( SGS_SFT_BLOCK, SFTC_AT, NULL, NULL );
+			if( instgts[ level - 1 ] == nodes[ level - 1 ] )
+				instgts[ level - 1 ]->child = tmpnn;
+			else
+				instgts[ level - 1 ]->next = tmpnn;
+			instgts[ level - 1 ] = tmpnn;
+			
+			/* push subnode to stack */
+			instgts[ level ] = nodes[ level ] = tmpnn;
+			level++;
+		}
+		else
+		{
+			SFTC_PRINTERR( "Expected '=' or '{' after key identifier in 'decltree'" );
+			goto fail;
+		}
+		
+		SFTC_NEXT;
+	}
+	
+intro_parse_fail:
+	SFTC_PRINTERR( "Expected 'decltree <treename> : <classname> { ... }'" );
+fail:
+	for( i = 0; i < level; ++i )
+	{
+		SFTC_DESTROY( nodes[ i ] );
+	}
+	return NULL;
+}
+
 SFTRET parse_class( SFTC )
 {
 	sgs_FTNode *node, **nit;
@@ -1686,6 +1790,15 @@ SFTRET parse_stmt( SFTC )
 		if( !node )
 			goto fail;
 		return make_node( SGS_SFT_DEFER, orig, NULL, node );
+	}
+	else if( SFTC_ISKEY( "decltree" ) )
+	{
+		sgs_TokenList orig = SFTC_AT;
+		SFTC_NEXT;
+		node = parse_decltree( F );
+		if( !node )
+			goto fail;
+		return make_node( SGS_SFT_DCLTREE, orig, NULL, node );
 	}
 #define NOT_FCALL ( !sgsT_Next( F->at ) || '(' != *sgsT_Next( F->at ) )
 	else if( SFTC_IS_ID( "class" ) && NOT_FCALL )

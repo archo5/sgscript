@@ -191,3 +191,21 @@ bool (true)
 registered: ext2
 bool (true)
 `
+
+// `decltree definitions`
+rec ``
+exec `class A
+{
+}
+decltree dt1 : A {}
+decltree dt2 : A
+{
+	key = "value";
+	subnode
+	{
+		key1 = "value1";
+	}
+}`
+result `SUCCESS`
+check_err ``
+check_out ``
