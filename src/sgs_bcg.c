@@ -3183,12 +3183,12 @@ fornum_add_default_incr:
 					
 					/* register allocation:
 						- r0 - this
-						- r1 - call:<array.pop>
+						- r1 - ----
 						- r2 - stack
 						- r3 - parent
 						- r4 - node
 						--------------- disposable area starts here ---------------
-						- r5 - call:<this.__add_child>/<this.__set_attrib>
+						- r5 - call:<this.__add_child>/<this.__set_attrib>/<array.pop>
 						- r6 - call:this
 						- r7-r9 - call:args
 					*/
@@ -3212,12 +3212,14 @@ fornum_add_default_incr:
 						else if( n->type == SGS_SFT_DTEXIT )
 						{
 							/*** parent = stack.pop() */
-							/* r1 = r2.pop */
-							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, 1, 2, cstr_pop ) );
-							/* r2!r1() */
-							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 0, 0x101, 2 ) );
-							/* r3 = r1 */
-							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 3, 1, 0 ) );
+							/* r5 = r2.pop */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, 5, 2, cstr_pop ) );
+							/* r6 = r2 */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 6, 2, 0 ) );
+							/* r5 = r6!r5() */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 1, 0x105, 6 ) );
+							/* r3 = r5 */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 3, 5, 0 ) );
 						}
 						else if( n->type == SGS_SFT_IDENT )
 						{

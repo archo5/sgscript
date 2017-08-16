@@ -267,7 +267,14 @@ decltree DMExample : DictMaker
 	subnode
 	{
 		key1 = 123;
-		sub2 {}
+		sub2
+		{
+			key2 = 456.0;
+		}
+		sub3
+		{
+			key3 = true;
+		}
 	}
 }
 printvar( (new DMExample()).root );`
@@ -276,11 +283,16 @@ check_err ``
 check_out `dict (2)
 {
   key = string [5] "value"
-  subnode = dict (2)
+  subnode = dict (3)
   {
     key1 = int (123)
-    sub2 = dict (0)
+    sub2 = dict (1)
     {
+      key2 = real (456)
+    }
+    sub3 = dict (1)
+    {
+      key3 = bool (true)
     }
   }
 }
