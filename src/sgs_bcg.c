@@ -192,8 +192,8 @@ static void fctx_defer_add( SGS_CTX, sgs_FTNode* stmt )
 static int find_var( sgs_MemBuf* S, const char* str, unsigned len )
 {
 	sgs_FCVar *vp,
-		*vstart = (sgs_FCVar*) S->ptr,
-		*vend = (sgs_FCVar*)( S->ptr + S->size );
+		*vstart = SGS_ASSUME_ALIGNED( S->ptr, sgs_FCVar ),
+		*vend = SGS_ASSUME_ALIGNED( S->ptr + S->size, sgs_FCVar );
 	vp = vstart;
 	while( vp != vend )
 	{
@@ -207,8 +207,8 @@ static int find_var( sgs_MemBuf* S, const char* str, unsigned len )
 static sgs_FCVar* find_nth_var( sgs_MemBuf* S, int which )
 {
 	sgs_FCVar
-		*vstart = (sgs_FCVar*) S->ptr,
-		*vend = (sgs_FCVar*)( S->ptr + S->size );
+		*vstart = SGS_ASSUME_ALIGNED( S->ptr, sgs_FCVar ),
+		*vend = SGS_ASSUME_ALIGNED( S->ptr + S->size, sgs_FCVar );
 	if( which < 0 || which >= ( vend - vstart ) )
 		return NULL;
 	return vstart + which;
@@ -231,7 +231,7 @@ static void expand_varlist( sgs_MemBuf* S, SGS_CTX )
 	size_t i, count = S->size / sizeof( sgs_FCVar );
 	for( i = 0; i < count; ++i )
 	{
-		sgs_FCVar* vstart = (sgs_FCVar*) S->ptr;
+		sgs_FCVar* vstart = SGS_ASSUME_ALIGNED( S->ptr, sgs_FCVar );
 		if( vstart[ i ].mode == SGS_FCV_MODE_NUMFOR )
 		{
 			static const sgs_FCVar nvs[] =
@@ -957,8 +957,8 @@ static void varinfo_add( sgs_MemBuf* out, SGS_CTX, sgs_MemBuf* vars, int base, u
 	static const uint32_t zero32 = 0;
 	
 	sgs_FCVar *vp,
-		*vstart = (sgs_FCVar*) vars->ptr,
-		*vend = (sgs_FCVar*)( vars->ptr + vars->size );
+		*vstart = SGS_ASSUME_ALIGNED( vars->ptr, sgs_FCVar ),
+		*vend = SGS_ASSUME_ALIGNED( vars->ptr + vars->size, sgs_FCVar );
 	for( vp = vstart; vp != vend; ++vp )
 	{
 		/* ignore _G since it's always available */
@@ -3279,7 +3279,7 @@ fornum_add_default_incr:
 					rcpos_t keypos;
 					char name[ 255 + sizeof(".__construct") ]; /* ident(255) + '.__construct' */
 					memcpy( name, tk_name + 2, tk_name[1] );
-					memcpy( name + tk_name[1], SGS_STRLITBUF( ".__construct" ) );
+					memcpy( name + tk_name[1], ".__construct", sizeof( ".__construct" ) - 1 );
 					
 					funcvar = BC_CONSTENC( add_const_f( C, func, ctor_fctx,
 						name, tk_name[1] + sizeof( ".__construct" ) - 1, sgsT_LineNum( node->token ) ) );
