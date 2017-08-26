@@ -3248,13 +3248,13 @@ fornum_add_default_incr:
 								
 								comp_reg_alloc_n( C, 5 );
 								
-								/*** this.__set_attrib( node, key, <value_expr> ) */
+								/*** this.__set_attrib( parent, key, <value_expr> ) */
 								/* r_callfn = r_this.__set_attrib */
 								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, r_callfn, r_this, cstr_set_attrib ) );
 								/* r_callthis = r_this */
 								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callthis, r_this, 0 ) );
 								/* r_callarg[0] = r_node */
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callarg0, r_node, 0 ) );
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callarg0, r_parent, 0 ) );
 								/* r_callarg[1] = <key> */
 								cstr_key = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, n->token[1], (char*) n->token + 2 ) );
 								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callarg0+1, cstr_key, 0 ) );

@@ -221,7 +221,9 @@ decltree dt2 : A
 		sub2( false ) {}
 		sub3( _G.dt1.__name, 5 ) {}
 		sub4( "q6" ) {}
+		key2 = "val!";
 	}
+	key3 = "val.";
 }
 println(isset(_G,"dt1"));
 println(isset(_G,"dt2"));
@@ -247,6 +249,8 @@ SA:0[key1]=123
 AC:0<sub2[1](false,null)
 AC:0<sub3[2](dt1,5)
 AC:0<sub4[3](q6,null)
+SA:0[key2]=val!
+SA:null[key3]=val.
 `
 
 // `decltree dict maker`
