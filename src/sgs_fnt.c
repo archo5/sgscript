@@ -1489,7 +1489,7 @@ SFTRET parse_decltree( SFTC )
 		}
 		if( !SFTC_IS( SGS_ST_IDENT ) )
 		{
-			SFTC_PRINTERR( "Expected key identifier in 'decltree'" );
+			SFTC_PRINTERR( "expected key identifier in 'decltree'" );
 			goto fail;
 		}
 		
@@ -1514,9 +1514,32 @@ SFTRET parse_decltree( SFTC )
 			instgt = instgt->next = make_node( SGS_SFT_DTENTER, SFTC_AT, NULL, NULL );
 			level++;
 		}
+		else if( SFTC_IS( '(' ) )
+		{
+			/* argument list for previous node */
+			SFTC_NEXT;
+			tmpnn = parse_explist( F, ')' );
+			if( !tmpnn )
+				goto fail;
+			
+			/* attach expression list */
+			tmpnn->type = SGS_SFT_DTNPRM;
+			instgt->child = tmpnn;
+			
+			SFTC_NEXT;
+			if( !SFTC_IS( '{' ) )
+			{
+				SFTC_PRINTERR( "expected '{' after subnode argument list in 'decltree'" );
+				goto fail;
+			}
+			
+			/* append subnode block */
+			instgt = instgt->next = make_node( SGS_SFT_DTENTER, SFTC_AT, NULL, NULL );
+			level++;
+		}
 		else
 		{
-			SFTC_PRINTERR( "Expected '=' or '{' after key identifier in 'decltree'" );
+			SFTC_PRINTERR( "expected '=', '(' or '{' after key identifier in 'decltree'" );
 			goto fail;
 		}
 		

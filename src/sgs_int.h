@@ -209,6 +209,7 @@ SGS_APIFUNC void sgsT_DumpList( SGS_CTX, sgs_TokenList tlist, sgs_TokenList tend
 #define SGS_SFT_DCLTREE 50
 #define SGS_SFT_DTENTER 51
 #define SGS_SFT_DTEXIT  52
+#define SGS_SFT_DTNPRM  53
 #define SGS_SFT_HEAPBIT 255
 
 typedef struct sgs_FTNode sgs_FTNode;

@@ -3150,8 +3150,8 @@ fornum_add_default_incr:
 				{
 					rcpos_t cstr_clsname, cstr_ctorname;
 					
-					cstr_clsname = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, tk_clsname[1], (char*) tk_clsname + 2 ) );
-					cstr_ctorname = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, sizeof("__construct") - 1, "__construct" ) );
+					cstr_clsname = SGS_CONSTENC( add_const_s( C, ctcf, tk_clsname[1], (char*) tk_clsname + 2 ) );
+					cstr_ctorname = SGS_CONSTENC( add_const_s( C, ctcf, sizeof("__construct") - 1, "__construct" ) );
 					
 					comp_reg_alloc_n( C, 2 );
 					
@@ -3172,94 +3172,137 @@ fornum_add_default_incr:
 				}
 				/* tree generation */
 				{
-					static const rcpos_t r_parent = 3, r_node = 4;
+					enum regs
+					{
+						r_this,
+						r_stack,
+						r_parent,
+						r_node,
+						r_callfn,
+						r_callthis,
+						r_callarg0,
+						
+						r_callret0 = r_callfn,
+						r_postcallunwind = r_callfn,
+					};
 					
-					rcpos_t cstr_pop, cstr_set_attrib, cstr_add_child;
+					rcpos_t cnull, cstr_pop, cstr_set_attrib, cstr_add_child;
 					sgs_FTNode* n = n_clsname->next;
 					
-					cstr_pop = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, sizeof("pop") - 1, "pop" ) );
-					cstr_set_attrib = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, sizeof("__set_attrib") - 1, "__set_attrib" ) );
-					cstr_add_child = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, sizeof("__add_child") - 1, "__add_child" ) );
+					cnull = SGS_CONSTENC( add_const_null( C, ctcf ) );
+					cstr_pop = SGS_CONSTENC( add_const_s( C, ctcf, sizeof("pop") - 1, "pop" ) );
+					cstr_set_attrib = SGS_CONSTENC( add_const_s( C, ctcf, sizeof("__set_attrib") - 1, "__set_attrib" ) );
+					cstr_add_child = SGS_CONSTENC( add_const_s( C, ctcf, sizeof("__add_child") - 1, "__add_child" ) );
 					
 					/* register allocation:
-						- r0 - this
-						- r1 - ----
-						- r2 - stack
-						- r3 - parent
-						- r4 - node
+						- r0 - this (argument)
+						- r1 - stack
+						- r2 - parent
+						- r3 - node
 						--------------- disposable area starts here ---------------
-						- r5 - call:<this.__add_child>/<this.__set_attrib>/<array.pop>
-						- r6 - call:this
-						- r7-r9 - call:args
+						- r4 - call:func:<this.__add_child>/<this.__set_attrib>/<array.pop>
+						- r5 - call:this
+						- r6+- call:args
 					*/
 					
-					comp_reg_alloc_n( C, 9 );
+					comp_reg_alloc_n( C, 4 );
 					
 					/*** stack = []; parent = null; node = null */
-					/* r2 = [] */
-					add_instr( C, ctcf, node, SGS_INSTR_MAKE_EX( SGS_SI_ARRAY, 0, 2 ) );
+					/* r_stack = [] */
+					add_instr( C, ctcf, node, SGS_INSTR_MAKE_EX( SGS_SI_ARRAY, 0, r_stack ) );
+					add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_parent, cnull, 0 ) );
+					/* r_node is null as part of function init */
 					
 					while( n )
 					{
 						if( n->type == SGS_SFT_DTENTER )
 						{
 							/*** stack.push( parent ); parent = node */
-							/* r2.push( r3 ) */
-							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_ARRPUSH, 2, 0, 3 ) );
-							/* r3 = r4 */
-							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 3, r_node, 0 ) );
+							/* r_stack.push( r_parent ) */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_ARRPUSH, r_stack, 0, r_parent ) );
+							/* r_parent = r_node */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_parent, r_node, 0 ) );
 						}
 						else if( n->type == SGS_SFT_DTEXIT )
 						{
+							comp_reg_alloc_n( C, 2 );
+							
 							/*** parent = stack.pop() */
-							/* r5 = r2.pop */
-							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, 5, 2, cstr_pop ) );
-							/* r6 = r2 */
-							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 6, 2, 0 ) );
-							/* r5 = r6!r5() */
-							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 1, 0x105, 6 ) );
-							/* r3 = r5 */
-							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 3, 5, 0 ) );
+							/* r_callfn = r_stack.pop */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, r_callfn, r_stack, cstr_pop ) );
+							/* r_callthis = r_stack */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callthis, r_stack, 0 ) );
+							/* r_callret[0] = r_callthis!r_callfn() */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 1, 0x100 | r_callfn, r_callthis ) );
+							/* r_parent = r_callret[0] */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_parent, r_callret0, 0 ) );
+							
+							comp_reg_unwind( C, r_postcallunwind );
 						}
 						else if( n->type == SGS_SFT_IDENT )
 						{
 							rcpos_t cstr_key;
-							if( n->child )
+							if( n->child && n->child->type != SGS_SFT_DTNPRM )
 							{
 								sgs_FTNode* val = n->child;
 								
+								comp_reg_alloc_n( C, 5 );
+								
 								/*** this.__set_attrib( node, key, <value_expr> ) */
-								/* r5 = r0.__set_attrib */
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, 5, 0, cstr_set_attrib ) );
-								/* r6 = r0 */
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 6, 0, 0 ) );
-								/* r7 = r3 */
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 7, r_node, 0 ) );
-								/* r8 = <key> */
+								/* r_callfn = r_this.__set_attrib */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, r_callfn, r_this, cstr_set_attrib ) );
+								/* r_callthis = r_this */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callthis, r_this, 0 ) );
+								/* r_callarg[0] = r_node */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callarg0, r_node, 0 ) );
+								/* r_callarg[1] = <key> */
 								cstr_key = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, n->token[1], (char*) n->token + 2 ) );
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 8, cstr_key, 0 ) );
-								/* r9 = <val> */
-								if( !compile_node_rrw( C, ctcf, val, 9 ) ) goto fail;
-								comp_reg_unwind( C, 9 );
-								/* r6!r5( r7, r8, r9 ) */
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 1, 0x105, 9 ) );
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callarg0+1, cstr_key, 0 ) );
+								/* r_callarg[2] = <val> */
+								if( !compile_node_rrw( C, ctcf, val, r_callarg0+2 ) ) goto fail;
+								comp_reg_unwind( C, r_callarg0+3 );
+								/* r_callthis!r_callfn( r_callarg[0-2] ) */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 0, 0x100 | r_callfn, r_callarg0+2 ) );
+								
+								comp_reg_unwind( C, r_postcallunwind );
 							}
 							else
 							{
-								/*** node = this.__add_child( parent, key ) */
-								/* r5 = r0.__add_child */
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, 5, 0, cstr_add_child ) );
-								/* r6 = r0 */
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 6, 0, 0 ) );
-								/* r7 = r3 */
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 7, r_parent, 0 ) );
-								/* r8 = <key> */
+								int args = 2;
+								
+								comp_reg_alloc_n( C, 4 );
+								
+								/*** node = this.__add_child( parent, key, <args> ) */
+								/* r_callfn = r_this.__add_child */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, r_callfn, r_this, cstr_add_child ) );
+								/* r_callthis = r_this */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callthis, r_this, 0 ) );
+								/* r_callarg[0] = r_parent */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callarg0, r_parent, 0 ) );
+								/* r_callarg[1] = <key> */
 								cstr_key = const_maybeload( C, ctcf, node, add_const_s( C, ctcf, n->token[1], (char*) n->token + 2 ) );
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 8, cstr_key, 0 ) );
-								/* r5 = r6!r5( r7, r8 ) */
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 1, 0x105, 8 ) );
-								/* r4 = r5 */
-								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_node, 5, 0 ) );
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callarg0+1, cstr_key, 0 ) );
+								if( n->child )
+								{
+									sgs_FTNode* ch = n->child->child;
+									while( ch )
+									{
+										/* use regular register allocation to utilize built-in checks & pad for compile_node() */
+										rcpos_t out = comp_reg_alloc( C );
+										sgs_BreakIf( out != r_callarg0 + args );
+										if( !compile_node_rrw( C, ctcf, ch, r_callarg0 + args ) )
+											goto fail;
+										ch = ch->next;
+										args++;
+									}
+								}
+								comp_reg_unwind( C, r_callarg0 + args );
+								/* r_callret[0] = r_callthis!r_callfn( r_callarg[0-1] ) */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 1, 0x100 | r_callfn, r_callarg0+args-1 ) );
+								/* r_node = r_callret[0] */
+								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_node, r_callret0, 0 ) );
+								
+								comp_reg_unwind( C, r_postcallunwind );
 							}
 						}
 						else

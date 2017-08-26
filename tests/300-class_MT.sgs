@@ -201,9 +201,9 @@ exec `class A
 		println( "C" );
 		this.id = 0;
 	}
-	function __add_child( parent, key )
+	function __add_child( parent, key, myparam1, myparam2 )
 	{
-		println( "AC:", parent, "<", key, "[", this.id, "]" );
+		println( "AC:", parent, "<", key, "[", this.id, "](", myparam1, ",", myparam2, ")" );
 		return this.id++;
 	}
 	function __set_attrib( node, key, val )
@@ -218,13 +218,19 @@ decltree dt2 : A
 	subnode
 	{
 		key1 = 123;
-		sub2 {}
+		sub2( false ) {}
+		sub3( _G.dt1.__name, 5 ) {}
+		sub4( "q6" ) {}
 	}
 }
-print(isset(_G,"dt1"));`
+println(isset(_G,"dt1"));
+println(isset(_G,"dt2"));
+`
 result `SUCCESS`
 check_err ``
-check_out `true`
+check_out `true
+true
+`
 
 // `decltree instantiations`
 rec ``
@@ -236,9 +242,11 @@ check_err ``
 check_out `C
 C
 SA:null[key]=value
-AC:null<subnode[0]
+AC:null<subnode[0](null,null)
 SA:0[key1]=123
-AC:0<sub2[1]
+AC:0<sub2[1](false,null)
+AC:0<sub3[2](dt1,5)
+AC:0<sub4[3](q6,null)
 `
 
 // `decltree dict maker`
