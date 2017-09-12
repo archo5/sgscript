@@ -908,21 +908,30 @@ static void vm_convert_stack_string( SGS_CTX, StkIdx item )
 	VM mutation
 */
 
+#define markcb_obj( S, obj, P ) if( (S)->object_mark_cb ) \
+	{ sgs_Variable objvar; objvar.type = SGS_VT_OBJECT; objvar.data.O = (P); \
+	(S)->object_mark_cb( S->ctx_root, S->object_mark_userdata, obj, &objvar ); }
+#define markcb_ctx( S, obj, P ) if( (S)->object_mark_cb ) \
+	{ sgs_Variable ctxvar; ctxvar.type = SGS_VT_THREAD; ctxvar.data.T = (P); \
+	(S)->object_mark_cb( S->ctx_root, S->object_mark_userdata, obj, &ctxvar ); }
 #define obj_gcmark( S, O ) { if( (O)->redblue != (S)->redblue ) obj_gcmark_do( S, O ); }
-#define vm_gcmark( S, var ) { if( var->type == SGS_VT_OBJECT ) obj_gcmark( S, var->data.O ); }
 static void obj_gcmark_do( SGS_SHCTX, sgs_VarObj* O )
 {
 	O->redblue = S->redblue;
 	if( O->iface->gcmark )
 	{
-		SGS_CTX = S->ctx_root;
 		_STACK_PREPARE;
+		sgs_VarObj* prevparent = S->object_mark_parent;
+		SGS_CTX = S->ctx_root;
+		S->object_mark_parent = O;
 		_STACK_PROTECT;
 		O->iface->gcmark( C, O );
 		_STACK_UNPROTECT;
+		S->object_mark_parent = prevparent;
 	}
 	if( O->metaobj )
 	{
+		markcb_obj( S, O->metaobj, O );
 		obj_gcmark( S, O->metaobj );
 	}
 }
@@ -4313,7 +4322,7 @@ SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 						case 't':
 						case 'h': va_arg( *args, sgs_SizeVal* ); break;
 						case 'o': va_arg( *args, void** ); break;
-						case '*': va_arg( *args, sgs_ObjInterface** ); break;
+						case '*': va_arg( *args, sgs_VarObj** ); break;
 						}
 					}
 					break;
@@ -4337,7 +4346,7 @@ SGSBOOL sgs_LoadArgsExtVA( SGS_CTX, int from, const char* cmd, va_list* args )
 					case 'h': *va_arg( *args, sgs_SizeVal* ) =
 						sgs_vht_size( ((sgs_VHTable*) O->data) ); break;
 					case 'o': *va_arg( *args, void** ) = O->data; break;
-					case '*': *va_arg( *args, sgs_ObjInterface** ) = O->iface; break;
+					case '*': *va_arg( *args, sgs_VarObj** ) = O; break;
 					}
 				}
 			}
@@ -4846,7 +4855,7 @@ void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth )
 	}
 }
 
-static void sgsVM_GCExecute( SGS_SHCTX )
+static void sgsVM_GCExecute( SGS_SHCTX, int sweep )
 {
 	sgs_Variable *vbeg, *vend;
 	sgs_VarObj* p;
@@ -4859,6 +4868,7 @@ static void sgsVM_GCExecute( SGS_SHCTX )
 	/* - interfaces */
 	if( S->array_iface )
 	{
+		markcb_ctx( S, S->array_iface, S->ctx_root );
 		obj_gcmark( S, S->array_iface );
 	}
 	/* - registry */
@@ -4871,7 +4881,11 @@ static void sgsVM_GCExecute( SGS_SHCTX )
 		vbeg = C->stack_base; vend = C->stack_top;
 		while( vbeg < vend )
 		{
-			vm_gcmark( S, vbeg );
+			if( vbeg->type == SGS_VT_OBJECT )
+			{
+				markcb_ctx( S, vbeg->data.O, C );
+				obj_gcmark( S, vbeg->data.O );
+			}
 			vbeg++;
 		}
 		/* FRAMES */
@@ -4880,7 +4894,10 @@ static void sgsVM_GCExecute( SGS_SHCTX )
 			while( sf )
 			{
 				if( sf->clsrref )
+				{
+					markcb_ctx( S, sf->clsrref, C );
 					obj_gcmark( S, sf->clsrref );
+				}
 				sf = sf->next;
 			}
 		}
@@ -4894,34 +4911,56 @@ static void sgsVM_GCExecute( SGS_SHCTX )
 	}
 	
 	/* -- SWEEP -- */
-	C = S->state_list; // any context is good enough here
-	C->refcount++;
-	/* destruct objects */
-	p = S->objs;
-	while( p ){
-		sgs_VarObj* pn = p->next;
-		if( p->redblue != S->redblue )
-			var_destruct_object( C, p );
-		p = pn;
+	if( sweep )
+	{
+		C = S->ctx_root;
+		/* destruct objects */
+		p = S->objs;
+		while( p )
+		{
+			sgs_VarObj* pn = p->next;
+			if( p->redblue != S->redblue )
+				var_destruct_object( C, p );
+			p = pn;
+		}
+		
+		/* free variables */
+		p = S->objs;
+		while( p )
+		{
+			sgs_VarObj* pn = p->next;
+			if( p->redblue != S->redblue )
+				var_free_object( C, p );
+			p = pn;
+		}
+		
+		S->gcrun = SGS_FALSE;
 	}
-	
-	/* free variables */
-	p = S->objs;
-	while( p ){
-		sgs_VarObj* pn = p->next;
-		if( p->redblue != S->redblue )
-			var_free_object( C, p );
-		p = pn;
+	else
+	{
+		/* just make sure all redblue states are equal for subsequent calls to work */
+		p = S->objs;
+		while( p )
+		{
+			p->redblue = S->redblue;
+			p = p->next;
+		}
 	}
-	
-	C->refcount--;
-	S->gcrun = SGS_FALSE;
 }
 
 void sgs_GCExecute( SGS_CTX )
 {
 	SGS_SHCTX_USE;
-	sgsVM_GCExecute( S );
+	sgsVM_GCExecute( S, 1 );
+}
+
+void sgs_WalkObjects( SGS_CTX, sgs_WalkObjCb cb, void* data )
+{
+	SGS_SHCTX_USE;
+	S->object_mark_cb = cb;
+	S->object_mark_userdata = data;
+	sgsVM_GCExecute( S, 0 );
+	S->object_mark_cb = NULL;
 }
 
 
@@ -5533,7 +5572,11 @@ void sgs_Release( SGS_CTX, sgs_Variable* var )
 void sgs_GCMark( SGS_CTX, sgs_Variable* var )
 {
 	SGS_SHCTX_USE;
-	vm_gcmark( S, var );
+	if( var->type == SGS_VT_OBJECT )
+	{
+		markcb_obj( S, var->data.O, S->object_mark_parent );
+		obj_gcmark( S, var->data.O );
+	}
 }
 
 void sgs_ObjAcquire( SGS_CTX, sgs_VarObj* obj )
@@ -5551,6 +5594,7 @@ void sgs_ObjRelease( SGS_CTX, sgs_VarObj* obj )
 void sgs_ObjGCMark( SGS_CTX, sgs_VarObj* obj )
 {
 	SGS_SHCTX_USE;
+	markcb_obj( S, obj, S->object_mark_parent );
 	obj_gcmark( S, obj );
 }
 

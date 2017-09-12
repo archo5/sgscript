@@ -697,6 +697,9 @@ struct sgs_ShCtx
 	/* >> object GC */
 	uint8_t       redblue;
 	uint16_t      gcrun;
+	sgs_VarObj*   object_mark_parent;
+	sgs_WalkObjCb object_mark_cb;
+	void*         object_mark_userdata;
 	/* >> object pool */
 	sgs_ObjPoolItem* objpool_data;
 	int32_t       objpool_size;

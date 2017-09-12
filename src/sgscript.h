@@ -1011,6 +1011,8 @@ SGS_APIFUNC SGSBOOL sgs_GlobalCall( SGS_CTX, const char* name, int args, int exp
 SGS_APIFUNC void sgs_TypeOf( SGS_CTX, sgs_Variable var );
 SGS_APIFUNC void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth );
 SGS_APIFUNC void sgs_GCExecute( SGS_CTX );
+typedef void (*sgs_WalkObjCb) ( sgs_Context*, void* /* data */, sgs_VarObj* /* obj */, sgs_Variable* /* parent */ );
+SGS_APIFUNC void sgs_WalkObjects( SGS_CTX, sgs_WalkObjCb cb, void* data );
 
 SGS_APIFUNC const char* sgs_DebugDumpVarExt( SGS_CTX, sgs_Variable var, int maxdepth );
 #define sgs_DebugDumpVar( C, var ) sgs_DebugDumpVarExt( C, var, 5 )

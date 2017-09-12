@@ -3935,6 +3935,71 @@ static int sgsstd_gc_collect( SGS_CTX )
 	return 1;
 }
 
+typedef struct ParentWalk
+{
+	sgs_VarObj* tgtobj;
+	sgs_MemBuf outbuf;
+	uint32_t numrefs;
+}
+ParentWalk;
+
+static void walk_get_parents( SGS_CTX, void* data, sgs_VarObj* obj, sgs_Variable* parent )
+{
+	sgs_Variable *pv, *pvend;
+	ParentWalk* pw = (ParentWalk*) data;
+	
+	if( obj != pw->tgtobj )
+		return;
+	
+	pw->numrefs++;
+	pv = (sgs_Variable*) pw->outbuf.ptr;
+	pvend = (sgs_Variable*) ( pw->outbuf.ptr + pw->outbuf.size );
+	for( ; pv != pvend; ++pv )
+	{
+		if( pv->type != parent->type )
+			continue;
+		switch( parent->type )
+		{
+		case SGS_VT_OBJECT:
+			if( pv->data.O == parent->data.O )
+				return;
+			continue;
+		case SGS_VT_THREAD:
+			if( pv->data.T == parent->data.T )
+				return;
+			continue;
+		}
+	}
+	sgs_membuf_appbuf( &pw->outbuf, C, parent, sizeof(*parent) );
+}
+
+static int sgsstd_gc_findparents( SGS_CTX )
+{
+	ParentWalk pw;
+	
+	SGSFN( "gc_findparents" );
+	if( !sgs_LoadArgs( C, "*", &pw.tgtobj ) )
+		return 0;
+	
+	pw.outbuf = sgs_membuf_create();
+	pw.numrefs = 0;
+	sgs_WalkObjects( C, walk_get_parents, &pw );
+	
+	{
+		sgs_Variable *pv, *pvend;
+		pv = (sgs_Variable*) pw.outbuf.ptr;
+		pvend = (sgs_Variable*) ( pw.outbuf.ptr + pw.outbuf.size );
+		for( ; pv != pvend; ++pv )
+		{
+			fstk_push( C, pv );
+		}
+		sgs_CreateArray( C, NULL, pw.outbuf.size / sizeof(sgs_Variable) );
+		sgs_PushInt( C, pw.numrefs );
+		sgs_membuf_destroy( &pw.outbuf, C );
+		return 2;
+	}
+}
+
 
 static int sgsstd_serialize( SGS_CTX )
 {
@@ -4058,7 +4123,7 @@ static sgs_RegFuncConst regfuncs[] =
 	STDLIB_FN( sys_replevel ), STDLIB_FN( sys_stat ),
 	STDLIB_FN( errno ), STDLIB_FN( errno_string ), STDLIB_FN( errno_value ),
 	STDLIB_FN( dumpvar ), STDLIB_FN( dumpvar_ext ),
-	STDLIB_FN( gc_collect ),
+	STDLIB_FN( gc_collect ), STDLIB_FN( gc_findparents ),
 	STDLIB_FN( serialize ), STDLIB_FN( unserialize ),
 	STDLIB_FN( sgson_encode ), STDLIB_FN( sgson_decode ),
 };

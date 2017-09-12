@@ -2221,7 +2221,7 @@ Closures can be created from both SGScript and the C API, though both options ha
 - `t` -- check for `dict` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `h` -- check for `map` (returns sgs_SizeVal size, use -1 as starting value to check optional arguments)
 - `o` -- check for specific `object` (requires sgs_ObjInterface* interface, returns <type>* data - the data pointer)
-- `*` -- check for any `object` (returns sgs_ObjInterface* interface)
+- `*` -- check for any `object` (returns sgs_VarObj*)
 - `&` -- check for `pointer` (returns void* data - the pointer)
 - `v` -- check for any (non-null if strict, returns sgs_Variable data)
 - `x` -- call a custom checking function (requires sgs_ArgCheckFunc, everything else depends on function)

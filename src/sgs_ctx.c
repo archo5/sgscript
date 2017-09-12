@@ -75,6 +75,9 @@ sgs_Context* sgs_CreateEngineExt( sgs_MemFunc memfunc, void* mfuserdata )
 	S->global_flags = 0;
 	S->redblue = 0;
 	S->gcrun = SGS_FALSE;
+	S->object_mark_parent = NULL;
+	S->object_mark_cb = NULL;
+	S->object_mark_userdata = NULL;
 	S->objpool_size = 0;
 	S->ctx_pool = NULL;
 	S->ctx_pool_size = 0;

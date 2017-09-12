@@ -201,3 +201,13 @@ setprop/getprop test // z.prop: {}
 nonexistant property/index test: |null|null|
 {spe=cial}
 `
+
+// `gc_findparents`
+rec ``
+exec `a = [];
+b = [a];
+a.push(b);
+print(tostring(gc_findparents(a)) == "[" .. _T .. ",array]");`
+result `SUCCESS`
+check_err ``
+check_out `true`
