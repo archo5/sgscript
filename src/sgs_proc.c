@@ -4933,8 +4933,6 @@ static void sgsVM_GCExecute( SGS_SHCTX, int sweep )
 				var_free_object( C, p );
 			p = pn;
 		}
-		
-		S->gcrun = SGS_FALSE;
 	}
 	else
 	{
@@ -4946,6 +4944,8 @@ static void sgsVM_GCExecute( SGS_SHCTX, int sweep )
 			p = p->next;
 		}
 	}
+	
+	S->gcrun = SGS_FALSE;
 }
 
 void sgs_GCExecute( SGS_CTX )
