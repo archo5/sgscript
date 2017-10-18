@@ -1593,6 +1593,14 @@ sgs_serialize3_data;
 
 #define sgs_isid( c ) ( sgs_isalnum( c ) || (c) == '_' )
 
+static int sgson_is_basic_type( sgs_Variable* var )
+{
+	return var->type == SGS_VT_NULL
+		|| var->type == SGS_VT_BOOL
+		|| var->type == SGS_VT_INT
+		|| var->type == SGS_VT_REAL;
+}
+
 static int sgson_encode_var( SGS_CTX, sgs_serialize3_data* data,
 	int depth, const char* tab, sgs_SizeVal tablen )
 {
@@ -1704,7 +1712,16 @@ static int sgson_encode_var( SGS_CTX, sgs_serialize3_data* data,
 				{
 					if( i )
 						sgs_membuf_appchr( buf, C, ',' );
-					sgson_tab( buf, C, depth, tab, tablen );
+
+					if( i % 16 && sgson_is_basic_type( &data->servartable.vars[ args[ i - 1 ] ].key ) &&
+						sgson_is_basic_type( &data->servartable.vars[ args[ i ] ].key ) )
+					{
+						sgs_membuf_appchr( buf, C, ' ' );
+					}
+					else
+					{
+						sgson_tab( buf, C, depth, tab, tablen );
+					}
 					
 					sgs_PushVariable( C, data->servartable.vars[ args[ i ] ].key );
 					if( !sgson_encode_var( C, data, depth, tab, tablen ) )
