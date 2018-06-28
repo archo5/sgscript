@@ -3162,7 +3162,9 @@ fornum_add_default_incr:
 					add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, 1, 2, cstr_ctorname ) );
 					add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_INT, 0, 0, SGS_INT_ERRSUP_DEC ) );
 					/* if( !r1 ) goto SkipCall */
-					add_instr( C, ctcf, node, SGS_INSTR_MAKE_EX( SGS_SI_JMPF, 1, 1 ) );
+					add_instr( C, ctcf, node, SGS_INSTR_MAKE_EX( SGS_SI_JMPN, 2, 1 ) );
+					/* r2 = this */
+					add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, 2, 0, 0 ) );
 					/* r2!r1() */
 					add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 0, 0x101, 2 ) );
 					/* SkipCall: */
@@ -3186,13 +3188,14 @@ fornum_add_default_incr:
 						r_postcallunwind = r_callfn,
 					};
 					
-					rcpos_t cnull, cstr_pop, cstr_set_attrib, cstr_add_child;
+					rcpos_t cnull, cstr_pop, cstr_set_attrib, cstr_add_child, cstr_close_node;
 					sgs_FTNode* n = n_clsname->next;
 					
 					cnull = SGS_CONSTENC( add_const_null( C, ctcf ) );
 					cstr_pop = SGS_CONSTENC( add_const_s( C, ctcf, sizeof("pop") - 1, "pop" ) );
 					cstr_set_attrib = SGS_CONSTENC( add_const_s( C, ctcf, sizeof("__set_attrib") - 1, "__set_attrib" ) );
 					cstr_add_child = SGS_CONSTENC( add_const_s( C, ctcf, sizeof("__add_child") - 1, "__add_child" ) );
+					cstr_close_node = SGS_CONSTENC( add_const_s( C, ctcf, sizeof("__close_node") - 1, "__close_node" ) );
 					
 					/* register allocation:
 						- r0 - this (argument)
@@ -3200,7 +3203,7 @@ fornum_add_default_incr:
 						- r2 - parent
 						- r3 - node
 						--------------- disposable area starts here ---------------
-						- r4 - call:func:<this.__add_child>/<this.__set_attrib>/<array.pop>
+						- r4 - call:func:<this.__add_child>/<this.__set_attrib>/<this.__close_node>/<array.pop>
 						- r5 - call:this
 						- r6+- call:args
 					*/
@@ -3225,9 +3228,12 @@ fornum_add_default_incr:
 						}
 						else if( n->type == SGS_SFT_DTEXIT )
 						{
-							comp_reg_alloc_n( C, 2 );
+							comp_reg_alloc_n( C, 4 );
 							
-							/*** parent = stack.pop() */
+							/*** node = parent; parent = stack.pop() */
+							/* r_node = r_parent */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_node, r_parent, 0 ) );
+							
 							/* r_callfn = r_stack.pop */
 							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, r_callfn, r_stack, cstr_pop ) );
 							/* r_callthis = r_stack */
@@ -3236,6 +3242,24 @@ fornum_add_default_incr:
 							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 1, 0x100 | r_callfn, r_callthis ) );
 							/* r_parent = r_callret[0] */
 							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_parent, r_callret0, 0 ) );
+							
+							/*** if( @this.__close_node !== null ) this.__close_node( parent, node ) */
+							/* error supression ++ */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE_EX( SGS_SI_INT, 0, SGS_INT_ERRSUP_INC ) );
+							/* r_callfn = r_this.__close_node */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_GETPROP, r_callfn, r_this, cstr_close_node ) );
+							/* error supression -- */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE_EX( SGS_SI_INT, 0, SGS_INT_ERRSUP_DEC ) );
+							/* if( r_callfn === null ) jump over [4] instrs */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE_EX( SGS_SI_JMPN, 4, r_callfn ) );
+							/* r_callthis = r_this */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callthis, r_this, 0 ) );
+							/* r_callarg[0] = r_parent */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callarg0, r_parent, 0 ) );
+							/* r_callarg[1] = r_node */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_callarg0+1, r_node, 0 ) );
+							/* r_callthis!r_callfn( r_callarg[0-1] ) */
+							add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 1, 0x100 | r_callfn, r_callarg0+1 ) );
 							
 							comp_reg_unwind( C, r_postcallunwind );
 						}
@@ -3297,7 +3321,7 @@ fornum_add_default_incr:
 									}
 								}
 								comp_reg_unwind( C, r_callarg0 + args );
-								/* r_callret[0] = r_callthis!r_callfn( r_callarg[0-1] ) */
+								/* r_callret[0] = r_callthis!r_callfn( r_callarg[0-...] ) */
 								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_CALL, 1, 0x100 | r_callfn, r_callarg0+args-1 ) );
 								/* r_node = r_callret[0] */
 								add_instr( C, ctcf, node, SGS_INSTR_MAKE( SGS_SI_SET, r_node, r_callret0, 0 ) );

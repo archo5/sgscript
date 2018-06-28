@@ -340,7 +340,7 @@ public:
 	sgsLiteObjectBase* get_liteobj(){ return object ? static_cast<sgsLiteObjectBase*>( object->data ) : NULL; }
 	const sgsLiteObjectBase* get_liteobj() const { return object ? static_cast<sgsLiteObjectBase*>( object->data ) : NULL; }
 	T* get(){ return object ? static_cast<T*>( get_liteobj() ) : NULL; }
-	const T* get() const { return object ? static_cast<T*>( get_liteobj() ) : NULL; }
+	const T* get() const { return object ? static_cast<const T*>( get_liteobj() ) : NULL; }
 	
 	class sgsString serialize( int mode = 2 );
 	void gcmark() const { if( object ) sgs_ObjGCMark( C, object ); }
@@ -683,7 +683,7 @@ public:
 	{
 		if( !not_null() )
 		{
-			return sgsVariable();
+			return sgsVariable( C );
 		}
 		return getsubitem( sgsString( C, key ).get_variable(), prop );
 	}
