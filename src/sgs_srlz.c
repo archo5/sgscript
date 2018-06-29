@@ -58,7 +58,7 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 	}
 	pSD = (sgs_serialize1_data*) C->serialize_state;
 	
-	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC ||
+	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC || var.type == SGS_VT_DFUNC ||
 		var.type == SGS_VT_FUNC || var.type == SGS_VT_THREAD )
 	{
 		sgs_Variable sym = sgs_MakeNull();
@@ -90,7 +90,7 @@ void sgs_SerializeInt_V1( SGS_CTX, sgs_Variable var )
 		_STACK_UNPROTECT;
 		goto end;
 	}
-	else if( var.type == SGS_VT_CFUNC )
+	else if( var.type == SGS_VT_CFUNC || var.type == SGS_VT_DFUNC )
 	{
 		sgs_Msg( C, SGS_ERROR, "serialization mode 1 does not support C function serialization" );
 		pSD->ret = SGS_FALSE;
@@ -426,7 +426,7 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 		}
 	}
 	
-	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC ||
+	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC || var.type == SGS_VT_DFUNC ||
 		var.type == SGS_VT_FUNC || var.type == SGS_VT_THREAD )
 	{
 		sgs_Variable sym = sgs_MakeNull();
@@ -765,7 +765,7 @@ void sgs_SerializeInt_V2( SGS_CTX, sgs_Variable var )
 			goto end;
 		}
 	}
-	else if( var.type == SGS_VT_CFUNC )
+	else if( var.type == SGS_VT_CFUNC || var.type == SGS_VT_DFUNC )
 	{
 		SRLZ_DEBUG( printf( "SRLZ cfunc BAD\n" ) );
 		sgs_Msg( C, SGS_WARNING, "Cannot serialize C functions" );
@@ -1678,6 +1678,7 @@ static int sgson_encode_var( SGS_CTX, sgs_serialize3_data* data,
 		}
 	case SGS_VT_FUNC:
 	case SGS_VT_CFUNC:
+	case SGS_VT_DFUNC:
 	case SGS_VT_PTR:
 	case SGS_VT_THREAD:
 	case SGS_VT_OBJECT:
@@ -1848,7 +1849,7 @@ void sgs_SerializeInt_V3( SGS_CTX, sgs_Variable var, const char* tab, sgs_SizeVa
 	pSD = (sgs_serialize3_data*) C->serialize_state;
 	
 	/* SYMBOLS */
-	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC ||
+	if( var.type == SGS_VT_OBJECT || var.type == SGS_VT_CFUNC || var.type == SGS_VT_DFUNC ||
 		var.type == SGS_VT_FUNC || var.type == SGS_VT_THREAD || var.type == SGS_VT_PTR )
 	{
 		int32_t argidx;
@@ -1903,7 +1904,7 @@ void sgs_SerializeInt_V3( SGS_CTX, sgs_Variable var, const char* tab, sgs_SizeVa
 		ret = 0;
 		goto fail;
 	}
-	else if( var.type == SGS_VT_FUNC || var.type == SGS_VT_CFUNC )
+	else if( var.type == SGS_VT_FUNC || var.type == SGS_VT_CFUNC || var.type == SGS_VT_DFUNC )
 	{
 		sgs_Msg( C, SGS_WARNING, "serialization mode 3 (SGSON text)"
 			" does not support function serialization" );

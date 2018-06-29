@@ -136,6 +136,8 @@ void ast_destroy( SGS_CTX, AST* ast )
 }
 
 int sgs_dummy_func( SGS_CTX ){ return 0; }
+int sgs_dummy_funcDF( SGS_CTX, sgs_DFunc* df ){ return 0; }
+sgs_DFunc sgs_dummy_funcDFS = { sgs_dummy_funcDF };
 sgs_ObjInterface sgs_dummy_iface[1] =
 {{
 	"dummy",
@@ -180,12 +182,13 @@ DEFINE_TEST( stack_101 )
 	sgs_PushStringBuf( C, "what is this", 7 );
 	sgs_PushString( C, "what is this" );
 	sgs_PushCFunc( C, sgs_dummy_func );
+	sgs_PushDFunc( C, &sgs_dummy_funcDFS );
 	sgs_CreateObject( C, NULL, NULL, sgs_dummy_iface );
 	sgs_PushVariable( C, sgs_dummy_var );
 	
 	atf_assert( C->stack_base == C->stack_off );
-	atf_assert( sgs_StackSize( C ) == 9 );
-	atf_assert( C->stack_top == C->stack_off + 9 );
+	atf_assert( sgs_StackSize( C ) == 10 );
+	atf_assert( C->stack_top == C->stack_off + 10 );
 	
 	atf_assert( C->stack_off[0].type == SGS_VT_NULL );
 	atf_assert( C->stack_off[1].type == SGS_VT_BOOL );
@@ -194,8 +197,9 @@ DEFINE_TEST( stack_101 )
 	atf_assert( C->stack_off[4].type == SGS_VT_STRING );
 	atf_assert( C->stack_off[5].type == SGS_VT_STRING );
 	atf_assert( C->stack_off[6].type == SGS_VT_CFUNC );
-	atf_assert( C->stack_off[7].type == SGS_VT_OBJECT );
-	atf_assert( C->stack_off[8].type == SGS_VT_NULL );
+	atf_assert( C->stack_off[7].type == SGS_VT_DFUNC );
+	atf_assert( C->stack_off[8].type == SGS_VT_OBJECT );
+	atf_assert( C->stack_off[9].type == SGS_VT_NULL );
 	
 	atf_assert( C->stack_off[1].data.B == 1 );
 	atf_assert( C->stack_off[2].data.I == 1337 );
@@ -205,14 +209,15 @@ DEFINE_TEST( stack_101 )
 	atf_assert( C->stack_off[5].data.S->size == 12 );
 	atf_assert_string( sgs_var_cstr( C->stack_off+5 ), "what is this" );
 	atf_assert( C->stack_off[6].data.C == sgs_dummy_func );
-	atf_assert( C->stack_off[7].data.O->data == NULL );
-	atf_assert( C->stack_off[7].data.O->iface == sgs_dummy_iface );
+	atf_assert( C->stack_off[7].data.D == &sgs_dummy_funcDFS );
+	atf_assert( C->stack_off[8].data.O->data == NULL );
+	atf_assert( C->stack_off[8].data.O->iface == sgs_dummy_iface );
+	
+	sgs_Pop( C, 11 );
+	atf_assert( sgs_StackSize( C ) == 10 );
+	atf_assert( C->stack_top == C->stack_off + 10 );
 	
 	sgs_Pop( C, 10 );
-	atf_assert( sgs_StackSize( C ) == 9 );
-	atf_assert( C->stack_top == C->stack_off + 9 );
-	
-	sgs_Pop( C, 9 );
 	atf_assert( C->stack_off == C->stack_top );
 	atf_assert( C->stack_base == C->stack_off );
 	atf_assert( sgs_StackSize( C ) == 0 );
@@ -395,6 +400,44 @@ DEFINE_TEST( stack_negidx )
 	atf_assert( sgs_GetInt( C, -1 ) == 42 );
 	sgs_Pop( C, 1 );
 	atf_assert( sgs_StackSize( C ) == 1 );
+	
+	destroy_context( C );
+}
+
+typedef struct sgs_testdfdata
+{
+	sgs_DFuncPF func;
+	int data;
+}
+sgs_testdfdata;
+int sgs_testdfunc( SGS_CTX, sgs_DFunc* df )
+{
+	sgs_PushInt( C, ((sgs_testdfdata*) df)->data );
+	return 1;
+}
+sgs_testdfdata g_testdfdata[2] =
+{
+	{ sgs_testdfunc, 5 },
+	{ sgs_testdfunc, 13 },
+};
+
+DEFINE_TEST( dfunc )
+{
+	SGS_CTX = get_context();
+
+	sgs_PushDFunc( C, (sgs_DFunc*) &g_testdfdata[0] );
+	sgs_Call( C, 0, 1 );
+	atf_assert( sgs_StackSize( C ) == 1 );
+	atf_assert( sgs_ItemType( C, 0 ) == SGS_VT_INT );
+	atf_assert( sgs_GetInt( C, 0 ) == 5 );
+	sgs_Pop( C, 1 );
+	
+	sgs_PushDFunc( C, (sgs_DFunc*) &g_testdfdata[1] );
+	sgs_Call( C, 0, 1 );
+	atf_assert( sgs_StackSize( C ) == 1 );
+	atf_assert( sgs_ItemType( C, 0 ) == SGS_VT_INT );
+	atf_assert( sgs_GetInt( C, 0 ) == 13 );
+	sgs_Pop( C, 1 );
 	
 	destroy_context( C );
 }
@@ -1478,6 +1521,7 @@ test_t all_tests[] =
 	TST( stack_push ),
 	TST( stack_propindex ),
 	TST( stack_negidx ),
+	TST( dfunc ),
 	TST( indexing ),
 	TST( globals_101 ),
 	TST( libraries ),

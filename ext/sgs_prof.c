@@ -10,7 +10,7 @@
 static void appendfuncident( SGS_CTX, sgs_MemBuf* mb, sgs_StackFrame* sf )
 {
 	/* include trailing 0 in function name */
-	if( sf->func->type == SGS_VT_CFUNC )
+	if( sf->func->type == SGS_VT_CFUNC || sf->func->type == SGS_VT_DFUNC )
 	{
 		/* C function */
 		sgs_VHTVar* symlookup;

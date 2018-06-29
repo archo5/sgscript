@@ -583,6 +583,7 @@ public:
 			return var.data.S->size < h.var.data.S->size; }
 		case SGS_VT_FUNC: return var.data.F < h.var.data.F;
 		case SGS_VT_CFUNC: return var.data.C < h.var.data.C;
+		case SGS_VT_DFUNC: return var.data.D < h.var.data.D;
 		case SGS_VT_OBJECT: return var.data.O < h.var.data.O;
 		case SGS_VT_PTR: return var.data.P < h.var.data.P;
 		}
@@ -607,6 +608,7 @@ public:
 	#endif
 		case SGS_VT_FUNC: return var.data.F == h.var.data.F;
 		case SGS_VT_CFUNC: return var.data.C == h.var.data.C;
+		case SGS_VT_DFUNC: return var.data.D == h.var.data.D;
 		case SGS_VT_OBJECT: return var.data.O == h.var.data.O;
 		case SGS_VT_PTR: return var.data.P == h.var.data.P;
 		}
@@ -720,6 +722,7 @@ public:
 	sgsVariable& set_ptr( void* v ){ _release(); var = sgs_MakePtr( v ); return *this; }
 	sgsVariable& set( sgsString v ){ _release(); if( v.not_null() ){ C = v.get_ctx(); var.type = SGS_VT_STRING; var.data.S = v.str; _acquire(); } return *this; }
 	sgsVariable& set( sgs_CFunc v ){ _release(); var = sgs_MakeCFunc( v ); return *this; }
+	sgsVariable& set( sgs_DFunc* v ){ _release(); var = sgs_MakeDFunc( v ); return *this; }
 	template< class T > sgsVariable& set( sgsHandle< T > v ){ _release(); C = v.object->C; sgs_InitObjectPtr( C, &var, v.object ); return *this; }
 	template< class T > sgsVariable& set( T* v ){ _release(); C = v->C; sgs_InitObjectPtr( C, &var, v->m_sgsObject ); return *this; }
 	void call( sgs_Context* c, int args = 0, int ret = 0 )
@@ -1013,6 +1016,7 @@ SGS_DECL_PUSHVAR( double, sgs_PushReal );
 template<> inline void sgs_PushVar<sgsString>( SGS_CTX, const sgsString& v ){ v.push( C ); }
 inline void sgs_PushVar( SGS_CTX, const char* v ){ sgs_PushString( C, v ); }
 SGS_DECL_PUSHVAR( sgs_CFunc, sgs_PushCFunc );
+inline void sgs_PushVar( SGS_CTX, sgs_DFunc* v ){ sgs_PushDFunc( C, v ); }
 #ifdef SGS_CPPBC_WITH_STD_STRING
 template<> inline void sgs_PushVar<std::string>( SGS_CTX, const std::string& v ){ sgs_PushStringBuf( C, v.c_str(), (sgs_SizeVal) v.size() ); }
 #endif

@@ -747,7 +747,8 @@ namespace SGScript
 				case VarType.Real: return v.GetReal();
 				case VarType.String: return v.GetString();
 				case VarType.Func:
-				case VarType.CFunc: return v;
+				case VarType.CFunc:
+				case VarType.DFunc: return v;
 				case VarType.Object:
 					IObjectBase iob = IObjectBase.GetFromVarObj( v.var.data.O );
 					if( iob != null )

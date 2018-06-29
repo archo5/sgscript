@@ -1172,7 +1172,7 @@ static void dumpvar( SGS_CTX, sgs_Variable* var )
 	}
 	/* WP: var->type base type info uses bits 1-8 */
 	if( var->type == SGS_VT_STRING ||
-		var->type == SGS_VT_FUNC || var->type == SGS_VT_CFUNC ||
+		var->type == SGS_VT_FUNC || var->type == SGS_VT_CFUNC || var->type == SGS_VT_DFUNC ||
 		var->type == SGS_VT_OBJECT || var->type == SGS_VT_THREAD )
 		sgs_Writef( C, "%s (size:%d)", g_varnames[ var->type ], sgsVM_VarSize( var ) );
 	else
@@ -1195,6 +1195,7 @@ static void dumpvar( SGS_CTX, sgs_Variable* var )
 			(int) var->data.F->numtmp, (int) var->data.F->numclsr, (int) var->data.F->inclsr );
 		break;
 	case SGS_VT_CFUNC: sgs_Writef( C, " = %p", var->data.C ); break;
+	case SGS_VT_DFUNC: sgs_Writef( C, " = %p", var->data.D ); break;
 	case SGS_VT_OBJECT: sgs_Writef( C, " = " ); dumpobj( C, var->data.O ); break;
 	case SGS_VT_PTR: sgs_Writef( C, " = %p", var->data.P ); break;
 	}
@@ -1521,6 +1522,10 @@ void sgs_StackFrameInfo( SGS_CTX, sgs_StackFrame* frame, const char** name, cons
 	} break;
 	case SGS_VT_CFUNC: {
 		N = frame->nfname ? frame->nfname : "[C function]";
+		F = "[C code]";
+	} break;
+	case SGS_VT_DFUNC: {
+		N = frame->nfname ? frame->nfname : "[C function w/ data]";
 		F = "[C code]";
 	} break;
 	case SGS_VT_OBJECT: {

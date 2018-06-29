@@ -156,6 +156,7 @@ sgs_Hash sgs_HashVar( const sgs_Variable* v )
 	case SGS_VT_REAL: size = sizeof( sgs_Real ); break;
 	case SGS_VT_FUNC:
 	case SGS_VT_CFUNC:
+	case SGS_VT_DFUNC:
 	case SGS_VT_OBJECT:
 	case SGS_VT_PTR:
 	case SGS_VT_THREAD:
@@ -224,6 +225,7 @@ static int equal_variables( sgs_Variable* v1, sgs_Variable* v2 )
 #endif
 	case SGS_VT_FUNC: return v1->data.F == v2->data.F;
 	case SGS_VT_CFUNC: return v1->data.C == v2->data.C;
+	case SGS_VT_DFUNC: return v1->data.D == v2->data.D;
 	case SGS_VT_OBJECT: return v1->data.O == v2->data.O;
 	case SGS_VT_PTR: return v1->data.P == v2->data.P;
 	case SGS_VT_THREAD: return v1->data.T == v2->data.T;

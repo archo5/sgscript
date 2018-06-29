@@ -918,6 +918,7 @@ namespace SGScript
 				case VarType.String: return var.data.S == v.var.data.S; // all strings are interned
 				case VarType.Func: // union pointer overlap
 				case VarType.CFunc:
+				case VarType.DFunc:
 				case VarType.Object:
 				case VarType.Ptr:
 				case VarType.Thread: return var.data.T == v.var.data.T;
@@ -936,6 +937,7 @@ namespace SGScript
 				case VarType.String: // union pointer overlap
 				case VarType.Func:
 				case VarType.CFunc:
+				case VarType.DFunc:
 				case VarType.Object:
 				case VarType.Ptr:
 				case VarType.Thread: code ^= var.data.P.GetHashCode(); break;

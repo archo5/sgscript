@@ -300,7 +300,8 @@ namespace SGScript
 		Object = 7,
 		Ptr =    8,
 		Thread = 9,
-		COUNT  = 10,
+		DFunc =  10,
+		COUNT =  11,
 	}
 
 	public enum Stat : int
@@ -508,6 +509,7 @@ namespace SGScript
 			[FieldOffset(0)] public IntPtr S;
 			[FieldOffset(0)] public IntPtr F;
 			[FieldOffset(0)] public IntPtr C;
+			[FieldOffset(0)] public IntPtr D;
 			[FieldOffset(0)] public IntPtr O;
 			[FieldOffset(0)] public IntPtr P;
 			[FieldOffset(0)] public IntPtr T;
@@ -683,6 +685,7 @@ namespace SGScript
 		public static Variable MakeInt( Int64 v ){ Variable var = new Variable(); var.type = VarType.Int; var.data.I = v; return var; }
 		public static Variable MakeReal( double v ){ Variable var = new Variable(); var.type = VarType.Real; var.data.R = v; return var; }
 		public static Variable MakeCFunc( IntPtr v ){ Variable var = new Variable(); var.type = VarType.CFunc; var.data.C = v; return var; }
+		public static Variable MakeDFunc( IntPtr v ){ Variable var = new Variable(); var.type = VarType.DFunc; var.data.D = v; return var; }
 		public static Variable MakeObjPtrNoRef( IntPtr v ){ Variable var = new Variable(); var.type = VarType.Object; var.data.O = v; return var; }
 		public static Variable MakePtr( IntPtr v ){ Variable var = new Variable(); var.type = VarType.Ptr; var.data.P = v; return var; }
 

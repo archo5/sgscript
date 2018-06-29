@@ -2064,7 +2064,7 @@ static int sgsstd_is_numeric( SGS_CTX )
 	
 	ty = sgs_ItemType( C, 0 );
 	if( ty == SGS_VT_NULL || ty == SGS_VT_FUNC ||
-		ty == SGS_VT_CFUNC || ty == SGS_VT_OBJECT )
+		ty == SGS_VT_CFUNC || ty == SGS_VT_DFUNC || ty == SGS_VT_OBJECT )
 		res = SGS_FALSE;
 	else
 		res = ty != SGS_VT_STRING || sgs_IsNumericString(
@@ -4142,6 +4142,7 @@ static const sgs_RegIntConst regiconsts[] =
 	{ "VT_STRING", SGS_VT_STRING },
 	{ "VT_FUNC", SGS_VT_FUNC },
 	{ "VT_CFUNC", SGS_VT_CFUNC },
+	{ "VT_DFUNC", SGS_VT_DFUNC },
 	{ "VT_OBJECT", SGS_VT_OBJECT },
 	{ "VT_PTR", SGS_VT_PTR },
 	{ "VT_THREAD", SGS_VT_THREAD },

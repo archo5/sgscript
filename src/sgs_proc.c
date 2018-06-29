@@ -696,8 +696,10 @@ static sgs_Bool var_getbool( SGS_CTX, const sgs_Variable* var )
 	case SGS_VT_INT: return var->data.I != 0;
 	case SGS_VT_REAL: return var->data.R != 0;
 	case SGS_VT_STRING: return !!var->data.S->size;
-	case SGS_VT_FUNC: return SGS_TRUE;
-	case SGS_VT_CFUNC: return SGS_TRUE;
+	case SGS_VT_FUNC:
+	case SGS_VT_CFUNC:
+	case SGS_VT_DFUNC:
+		return SGS_TRUE;
 	case SGS_VT_OBJECT:
 		{
 			sgs_VarObj* O = var->data.O;
@@ -826,6 +828,7 @@ static void init_var_string( SGS_CTX, sgs_Variable* out, sgs_Variable* var )
 	case SGS_VT_REAL: snprintf( buf, 31, "%g", var->data.R ); sgs_InitString( C, out, buf ); break;
 	case SGS_VT_FUNC: sgs_InitStringLit( C, out, "function" ); break;
 	case SGS_VT_CFUNC: sgs_InitStringLit( C, out, "C function" ); break;
+	case SGS_VT_DFUNC: sgs_InitStringLit( C, out, "C function w/ data" ); break;
 	case SGS_VT_OBJECT:
 		{
 			sgs_VarObj* O = var->data.O;
@@ -1121,6 +1124,11 @@ static SGSRESULT sgs_ReadProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_Va
 		outvar->data.C = (sgs_CFunc) prop->offset_or_getcb;
 		return 0;
 		
+	case SGS_OBJPROPTYPE_CBDFUNC:
+		outvar->type = SGS_VT_DFUNC;
+		outvar->data.D = (sgs_DFunc*) prop->offset_or_getcb;
+		return 0;
+		
 	case SGS_OBJPROPTYPE_CUSTOM:
 		if( prop->offset_or_getcb )
 		{
@@ -1320,6 +1328,7 @@ static SGSRESULT sgs_WriteProp( SGS_CTX, sgs_VarObj* O, sgs_Variable* idx, sgs_V
 		/* cannot edit constants */
 	case SGS_OBJPROPTYPE_ICONST:
 	case SGS_OBJPROPTYPE_CBFUNC:
+	case SGS_OBJPROPTYPE_CBDFUNC:
 		return SGS_ENOTSUP;
 		
 	case SGS_OBJPROPTYPE_CUSTOM:
@@ -1445,6 +1454,7 @@ static int vm_getprop_builtin( SGS_CTX, sgs_Variable* outmaybe, sgs_Variable* ob
 			break;
 		case SGS_VT_FUNC:
 		case SGS_VT_CFUNC:
+		case SGS_VT_DFUNC:
 			if( !strcmp( prop, "apply" ) )
 			{
 				*outmaybe = sgs_MakeCFunc( sgs_specfn_apply );
@@ -2003,6 +2013,7 @@ static SGSBOOL vm_is_nonarith_type( uint32_t t )
 {
 	return t == SGS_VT_FUNC
 		|| t == SGS_VT_CFUNC
+		|| t == SGS_VT_DFUNC
 		|| t == SGS_VT_PTR
 		|| t == SGS_VT_THREAD;
 }
@@ -2429,7 +2440,7 @@ static void vm_ctor( SGS_CTX, sgs_Variable* inst, sgs_Variable* ctorfunc, int ar
 static void vm_make_new( SGS_CTX, int outcls, int lastarg )
 {
 	sgs_Variable inst, clscopy = *stk_poff( C, outcls );
-	if( clscopy.type == SGS_VT_FUNC || clscopy.type == SGS_VT_CFUNC )
+	if( clscopy.type == SGS_VT_FUNC || clscopy.type == SGS_VT_CFUNC || clscopy.type == SGS_VT_DFUNC )
 	{
 		sgsSTD_MakeDict( C, &inst, 0 );
 		vm_ctor( C, &inst, &clscopy, outcls + 1, lastarg + 1 );
@@ -2551,6 +2562,23 @@ static int vm_call( SGS_CTX, int args, int gotthis, int* outrvc, int can_reenter
 			C->stack_off = C->stack_top - args;
 			SGS_PERFEVENT( ps_precall_end( (unsigned) -1, 1, FUNCTYPE_CFN ) );
 			rvc = (*pfunc->data.C)( C );
+			if( rvc > SGS_STACKFRAMESIZE )
+			{
+				sgs_Msg( C, SGS_ERROR, "Function returned more variables than there was on the stack" );
+				rvc = 0;
+				ret = 0;
+			}
+			if( rvc < 0 )
+			{
+				sgs_Msg( C, SGS_ERROR, "The function could not be called" );
+				rvc = 0;
+				ret = 0;
+			}
+		} break;
+		case SGS_VT_DFUNC: {
+			C->stack_off = C->stack_top - args;
+			SGS_PERFEVENT( ps_precall_end( (unsigned) -1, 1, FUNCTYPE_CFN ) );
+			rvc = (*pfunc->data.D->func)( C, pfunc->data.D );
 			if( rvc > SGS_STACKFRAMESIZE )
 			{
 				sgs_Msg( C, SGS_ERROR, "Function returned more variables than there was on the stack" );
@@ -3316,6 +3344,7 @@ void sgsVM_VarDump( SGS_CTX, const sgs_Variable* var )
 		sgs_ErrWritef( C, var->data.S->size > 16 ? "...\"" : "\"" ); break;
 	case SGS_VT_FUNC: sgs_ErrWritef( C, " [rc:%" PRId32"]", var->data.F->refcount ); break;
 	case SGS_VT_CFUNC: sgs_ErrWritef( C, " = %p", (void*)(size_t) var->data.C ); break;
+	case SGS_VT_DFUNC: sgs_ErrWritef( C, " = %p", (void*)(size_t) var->data.D ); break;
 	case SGS_VT_OBJECT: sgs_ErrWritef( C, " [rc:%" PRId32"] = %p", var->data.O->refcount, var->data.O ); break;
 	case SGS_VT_PTR: sgs_ErrWritef( C, " = %p", var->data.P ); break;
 	case SGS_VT_THREAD: sgs_ErrWritef( C, " [rc:%" PRId32"] = %p", var->data.T->refcount, var->data.T ); break;
@@ -3502,6 +3531,15 @@ SGSONE sgs_PushCFunc( SGS_CTX, sgs_CFunc func )
 	sgs_Variable var;
 	var.type = SGS_VT_CFUNC;
 	var.data.C = func;
+	fstk_push_leave( C, &var );
+	return 1;
+}
+
+SGSONE sgs_PushDFunc( SGS_CTX, sgs_DFunc* func )
+{
+	sgs_Variable var;
+	var.type = SGS_VT_DFUNC;
+	var.data.D = func;
 	fstk_push_leave( C, &var );
 	return 1;
 }
@@ -4691,6 +4729,7 @@ void sgs_TypeOf( SGS_CTX, sgs_Variable var )
 	case SGS_VT_REAL:   ty = "real"; break;
 	case SGS_VT_STRING: ty = "string"; break;
 	case SGS_VT_CFUNC:  ty = "cfunc"; break;
+	case SGS_VT_DFUNC:  ty = "dfunc"; break;
 	case SGS_VT_FUNC:   ty = "func"; break;
 	case SGS_VT_OBJECT:
 		{
@@ -4802,6 +4841,13 @@ void sgs_DumpVar( SGS_CTX, sgs_Variable var, int maxdepth )
 		{
 			char buf[ 32 ];
 			sprintf( buf, "C function (%p)", var.data.C );
+			sgs_PushString( C, buf );
+		}
+		break;
+	case SGS_VT_DFUNC:
+		{
+			char buf[ 48 ];
+			sprintf( buf, "C function w/ data (%p)", var.data.D );
 			sgs_PushString( C, buf );
 		}
 		break;
@@ -5178,7 +5224,7 @@ SGSBOOL sgs_IsObjectInhP( sgs_Variable* var, sgs_ObjInterface* iface )
 SGSBOOL sgs_IsCallableP( sgs_Variable* var )
 {
 	uint32_t ty = var->type;
-	if( ty == SGS_VT_FUNC || ty == SGS_VT_CFUNC )
+	if( ty == SGS_VT_FUNC || ty == SGS_VT_CFUNC || ty == SGS_VT_DFUNC )
 		return 1;
 	if( ty == SGS_VT_OBJECT && var->data.O->iface->call )
 		return 1;
@@ -5186,7 +5232,7 @@ SGSBOOL sgs_IsCallableP( sgs_Variable* var )
 }
 
 #define SGS_IS_SYSTEM_TYPE( ty ) ((ty) == SGS_VT_NULL || (ty) == SGS_VT_FUNC || \
-	(ty) == SGS_VT_CFUNC || (ty) == SGS_VT_PTR || (ty) == SGS_VT_THREAD)
+	(ty) == SGS_VT_CFUNC || (ty) == SGS_VT_DFUNC || (ty) == SGS_VT_PTR || (ty) == SGS_VT_THREAD)
 
 SGSBOOL sgs_ParseBoolP( SGS_CTX, sgs_Variable* var, sgs_Bool* out )
 {
@@ -5360,7 +5406,7 @@ SGSBOOL sgs_IsCallable( SGS_CTX, StkIdx item )
 {
 	uint32_t ty = sgs_ItemType( C, item );
 	
-	if( ty == SGS_VT_FUNC || ty == SGS_VT_CFUNC )
+	if( ty == SGS_VT_FUNC || ty == SGS_VT_CFUNC || ty == SGS_VT_DFUNC )
 		return 1;
 	if( ty == SGS_VT_OBJECT && sgs_GetObjectIface( C, item )->call )
 		return 1;

@@ -355,6 +355,13 @@ typedef struct  sgs_Context sgs_Context;
 typedef struct  sgs_Variable sgs_Variable;
 typedef struct  sgs_StackFrame sgs_StackFrame;
 typedef int (*sgs_CFunc) ( sgs_Context* );
+/* DFunc: define your own struct with sgs_DFuncPF as first member and cast to this */
+typedef struct sgs_DFunc sgs_DFunc;
+typedef int (*sgs_DFuncPF) ( sgs_Context*, sgs_DFunc* );
+struct sgs_DFunc
+{
+	sgs_DFuncPF func;
+};
 
 #define sgs_Integer sgs_Int
 #define sgs_Float sgs_Real
@@ -513,7 +520,8 @@ sgs_ParserConfig;
 #define SGS_VT_OBJECT 7
 #define SGS_VT_PTR    8
 #define SGS_VT_THREAD 9
-#define SGS_VT__COUNT 10
+#define SGS_VT_DFUNC  10
+#define SGS_VT__COUNT 11
 
 /* - object data */
 typedef struct sgs_ObjData sgs_VarObj;
@@ -553,6 +561,7 @@ typedef int (*sgs_OC_SlPr) ( sgs_Context*, sgs_VarObj*, int );
 #define SGS_OBJPROPTYPE_VARSTR  35 /* sgs_iStr* */
 #define SGS_OBJPROPTYPE_THREAD  36 /* sgs_Context* */
 #define SGS_OBJPROPTYPE_OBJBOOL 37 /* special case: obj->data { true = obj, false = NULL } */
+#define SGS_OBJPROPTYPE_CBDFUNC 252 /* sgs_DFunc* from 'offset_or_cb' */
 #define SGS_OBJPROPTYPE_ICONST 253 /* integer constant from 'offset_or_cb' */
 #define SGS_OBJPROPTYPE_CBFUNC 254 /* sgs_CFunc from 'offset_or_cb' */
 #define SGS_OBJPROPTYPE_CUSTOM 255 /* callback */
@@ -645,6 +654,7 @@ typedef union sgs_VarData
 	sgs_iStr*    S;
 	sgs_iFunc*   F;
 	sgs_CFunc    C;
+	sgs_DFunc*   D;
 	sgs_VarObj*  O;
 	void*        P;
 	sgs_Context* T;
@@ -865,6 +875,10 @@ static SGS_INLINE sgs_Variable sgs_MakeCFunc( sgs_CFunc v )
 {
 	sgs_Variable out; out.type = SGS_VT_CFUNC; out.data.C = v; return out;
 }
+static SGS_INLINE sgs_Variable sgs_MakeDFunc( sgs_DFunc* v )
+{
+	sgs_Variable out; out.type = SGS_VT_DFUNC; out.data.D = v; return out;
+}
 static SGS_INLINE sgs_Variable sgs_MakeObjPtrNoRef( sgs_VarObj* o )
 {
 	sgs_Variable out; out.type = SGS_VT_OBJECT; out.data.O = o; return out;
@@ -902,6 +916,7 @@ SGS_APIFUNC SGSONE sgs_PushStringBuf( SGS_CTX, const char* str, sgs_SizeVal size
 #define sgs_PushStringLit( C, strlit ) (sgs_PushStringBuf( (C), SGS_STRLITBUF(strlit) ))
 SGS_APIFUNC SGSONE sgs_PushString( SGS_CTX, const char* str );
 SGS_APIFUNC SGSONE sgs_PushCFunc( SGS_CTX, sgs_CFunc func );
+SGS_APIFUNC SGSONE sgs_PushDFunc( SGS_CTX, sgs_DFunc* func );
 SGS_APIFUNC SGSONE sgs_PushObjectPtr( SGS_CTX, sgs_VarObj* obj );
 SGS_APIFUNC SGSONE sgs_PushThreadPtr( SGS_CTX, sgs_Context* T );
 SGS_APIFUNC SGSONE sgs_PushPtr( SGS_CTX, void* ptr );
