@@ -1125,7 +1125,7 @@ static int fs_check_cc( const char* str, sgs_SizeVal size, char c )
 }
 
 static int _stream_readcc( SGS_CTX, sgsstd_fmtstream_t* hdr,
-	sgs_MemBuf* B, sgs_SizeVal numbytes, char* ccstr, sgs_SizeVal ccsize )
+	sgs_MemBuf* B, sgs_SizeVal numbytes, const char* ccstr, sgs_SizeVal ccsize )
 {
 	if( numbytes > 0 )
 	{
@@ -1242,17 +1242,22 @@ static int sgsstd_fmtstreamI_read_real( SGS_CTX )
 	return ret;
 }
 
-static int sgsstd_fmtstreamI_read_int( SGS_CTX )
+static int sgsstd_fmtstreamI_read_int_base( SGS_CTX, const char* name,
+	const char* pattern, size_t patsize, const char* pfx, size_t pfxsize )
 {
 	SGSBOOL ret, conv = SGS_TRUE;
 	sgs_SizeVal numbytes = 128;
 	sgs_MemBuf B = sgs_membuf_create();
 	
-	SGSFS_IHDR( read_int )
+	sgsstd_fmtstream_t* hdr;
+	if( !sgs_ParseMethod( C, sgsstd_fmtstream_iface, (void**) &hdr, name ) ) return 0;
+	
+	sgs_membuf_appbuf( &B, C, pfx, pfxsize );
+	
 	if( !sgs_LoadArgs( C, "|bl", &conv, &numbytes ) )
 		return 0;
 	
-	ret = _stream_readcc( C, hdr, &B, numbytes, "-+0-9A-Fa-fxob", 14 );
+	ret = _stream_readcc( C, hdr, &B, numbytes, pattern, patsize );
 	if( ret )
 	{
 		if( conv )
@@ -1267,123 +1272,31 @@ static int sgsstd_fmtstreamI_read_int( SGS_CTX )
 	}
 	sgs_membuf_destroy( &B, C );
 	return ret;
+}
+
+static int sgsstd_fmtstreamI_read_int( SGS_CTX )
+{
+	return sgsstd_fmtstreamI_read_int_base( C, "fmtstream.read_int", "-+0-9A-Fa-fxob", 14, NULL, 0 );
 }
 
 static int sgsstd_fmtstreamI_read_binary_int( SGS_CTX )
 {
-	SGSBOOL ret, conv = SGS_TRUE;
-	sgs_SizeVal numbytes = 128;
-	sgs_MemBuf B = sgs_membuf_create();
-	
-	SGSFS_IHDR( read_binary_int )
-	
-	sgs_membuf_appbuf( &B, C, "0b", 2 );
-	
-	if( !sgs_LoadArgs( C, "|bl", &conv, &numbytes ) )
-		return 0;
-	
-	ret = _stream_readcc( C, hdr, &B, numbytes, "0-1", 3 );
-	if( ret )
-	{
-		if( conv )
-			sgs_PushInt( C, sgs_util_atoi( B.ptr, B.size ) );
-		else if( B.size > 0x7fffffff )
-		{
-			sgs_membuf_destroy( &B, C );
-			STDLIB_WARN( "read more data than allowed to store" );
-		}
-		else
-			sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
-	}
-	sgs_membuf_destroy( &B, C );
-	return ret;
+	return sgsstd_fmtstreamI_read_int_base( C, "fmtstream.read_binary_int", "0-1", 3, "0b", 2 );
 }
 
 static int sgsstd_fmtstreamI_read_octal_int( SGS_CTX )
 {
-	SGSBOOL ret, conv = SGS_TRUE;
-	sgs_SizeVal numbytes = 128;
-	sgs_MemBuf B = sgs_membuf_create();
-	
-	SGSFS_IHDR( read_octal_int )
-	
-	sgs_membuf_appbuf( &B, C, "0o", 2 );
-	
-	if( !sgs_LoadArgs( C, "|bl", &conv, &numbytes ) )
-		return 0;
-	
-	ret = _stream_readcc( C, hdr, &B, numbytes, "0-7", 3 );
-	if( ret )
-	{
-		if( conv )
-			sgs_PushInt( C, sgs_util_atoi( B.ptr, B.size ) );
-		else if( B.size > 0x7fffffff )
-		{
-			sgs_membuf_destroy( &B, C );
-			STDLIB_WARN( "read more data than allowed to store" );
-		}
-		else
-			sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
-	}
-	sgs_membuf_destroy( &B, C );
-	return ret;
+	return sgsstd_fmtstreamI_read_int_base( C, "fmtstream.read_octal_int", "0-7", 3, "0o", 2 );
 }
 
 static int sgsstd_fmtstreamI_read_decimal_int( SGS_CTX )
 {
-	SGSBOOL ret, conv = SGS_TRUE;
-	sgs_SizeVal numbytes = 128;
-	sgs_MemBuf B = sgs_membuf_create();
-	
-	SGSFS_IHDR( read_decimal_int )
-	if( !sgs_LoadArgs( C, "|bl", &conv, &numbytes ) )
-		return 0;
-	
-	ret = _stream_readcc( C, hdr, &B, numbytes, "-+0-9", 5 );
-	if( ret )
-	{
-		if( conv )
-			sgs_PushInt( C, sgs_util_atoi( B.ptr, B.size ) );
-		else if( B.size > 0x7fffffff )
-		{
-			sgs_membuf_destroy( &B, C );
-			STDLIB_WARN( "read more data than allowed to store" );
-		}
-		else
-			sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
-	}
-	sgs_membuf_destroy( &B, C );
-	return ret;
+	return sgsstd_fmtstreamI_read_int_base( C, "fmtstream.read_decimal_int", "-+0-9", 5, NULL, 0 );
 }
 
 static int sgsstd_fmtstreamI_read_hex_int( SGS_CTX )
 {
-	SGSBOOL ret, conv = SGS_TRUE;
-	sgs_SizeVal numbytes = 128;
-	sgs_MemBuf B = sgs_membuf_create();
-	
-	SGSFS_IHDR( read_hex_int )
-	
-	sgs_membuf_appbuf( &B, C, "0x", 2 );
-	
-	if( !sgs_LoadArgs( C, "|bl", &conv, &numbytes ) )
-		return 0;
-	
-	ret = _stream_readcc( C, hdr, &B, numbytes, "0-9a-fA-F", 9 );
-	if( ret )
-	{
-		if( conv )
-			sgs_PushInt( C, sgs_util_atoi( B.ptr, B.size ) );
-		else if( B.size > 0x7fffffff )
-		{
-			sgs_membuf_destroy( &B, C );
-			STDLIB_WARN( "read more data than allowed to store" );
-		}
-		else
-			sgs_PushStringBuf( C, B.ptr, (sgs_SizeVal) B.size );
-	}
-	sgs_membuf_destroy( &B, C );
-	return ret;
+	return sgsstd_fmtstreamI_read_int_base( C, "fmtstream.read_hex_int", "0-9a-fA-F", 9, "0x", 2 );
 }
 
 static int sgsstd_fmtstreamI_check( SGS_CTX )
